@@ -21,7 +21,8 @@ func TestCheckPath(t *testing.T) {
 			checker, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      let x = /%s/random
+                      let x: Path = /%[1]s/foo
+                      let y = /%[1]s/bar
                     `,
 					domain.Identifier(),
 				),
