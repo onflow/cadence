@@ -1630,7 +1630,7 @@ func (e *MissingDestructorError) StartPosition() ast.Position {
 }
 
 func (e *MissingDestructorError) EndPosition() ast.Position {
-	return e.FirstFieldPos
+	return e.FirstFieldPos.Shifted(len(e.FirstFieldName) - 1)
 }
 
 // InvalidDestructorParametersError
@@ -2471,3 +2471,53 @@ func (e *InvalidPathDomainError) SecondaryError() string {
 		e.ActualDomain,
 	)
 }
+
+// InvalidTypeArgumentCountError
+
+type InvalidTypeArgumentCountError struct {
+	TypeParameterCount int
+	TypeArgumentCount  int
+	ast.Range
+}
+
+func (e *InvalidTypeArgumentCountError) Error() string {
+	return "incorrect number of type arguments"
+}
+
+func (e *InvalidTypeArgumentCountError) SecondaryError() string {
+	return fmt.Sprintf(
+		"expected up to %d, got %d",
+		e.TypeParameterCount,
+		e.TypeArgumentCount,
+	)
+}
+
+func (e *InvalidTypeArgumentCountError) isSemanticError() {}
+
+// InvalidTypeArgumentsError
+
+type InvalidTypeArgumentsError struct {
+	ast.Range
+}
+
+func (e *InvalidTypeArgumentsError) Error() string {
+	return "invalid type arguments, invoked function is not generic"
+}
+
+func (e *InvalidTypeArgumentsError) isSemanticError() {}
+
+// TypeParameterTypeInferenceError
+
+type TypeParameterTypeInferenceError struct {
+	Name string
+	ast.Range
+}
+
+func (e *TypeParameterTypeInferenceError) Error() string {
+	return fmt.Sprintf(
+		"type parameter could not be inferred: `%s`",
+		e.Name,
+	)
+}
+
+func (e *TypeParameterTypeInferenceError) isSemanticError() {}
