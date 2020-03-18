@@ -177,7 +177,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 	runtimeStorage *interpreterRuntimeStorage,
-) *interpreter.CompositeValue {
+) Value {
 	return interpreter.NewAuthAccountValue(
 		addressValue,
 		r.newSetCodeFunction(addressValue, runtimeInterface, runtimeStorage),

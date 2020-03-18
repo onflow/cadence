@@ -576,6 +576,44 @@ func (*StringType) CanHaveMembers() bool {
 	return true
 }
 
+var stringTypeConcatFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "other",
+			TypeAnnotation: NewTypeAnnotation(&StringType{}),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&StringType{},
+	),
+}
+
+var stringTypeSliceFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Identifier:     "from",
+			TypeAnnotation: NewTypeAnnotation(&IntType{}),
+		},
+		{
+			Identifier:     "upTo",
+			TypeAnnotation: NewTypeAnnotation(&IntType{}),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&StringType{},
+	),
+}
+
+var stringTypeDecodeHexFunctionType = &FunctionType{
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&VariableSizedType{
+			// TODO: change to UInt8
+			Type: &IntType{},
+		},
+	),
+}
+
 func (t *StringType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
 	newFunction := func(functionType *FunctionType) *Member {
 		return NewPublicFunctionMember(t, identifier, functionType)
@@ -583,51 +621,13 @@ func (t *StringType) GetMember(identifier string, _ ast.Range, _ func(error)) *M
 
 	switch identifier {
 	case "concat":
-		return newFunction(
-			&FunctionType{
-				Parameters: []*Parameter{
-					{
-						Label:          ArgumentLabelNotRequired,
-						Identifier:     "other",
-						TypeAnnotation: NewTypeAnnotation(&StringType{}),
-					},
-				},
-				ReturnTypeAnnotation: NewTypeAnnotation(
-					&StringType{},
-				),
-			},
-		)
+		return newFunction(stringTypeConcatFunctionType)
 
 	case "slice":
-		return newFunction(
-			&FunctionType{
-				Parameters: []*Parameter{
-					{
-						Identifier:     "from",
-						TypeAnnotation: NewTypeAnnotation(&IntType{}),
-					},
-					{
-						Identifier:     "upTo",
-						TypeAnnotation: NewTypeAnnotation(&IntType{}),
-					},
-				},
-				ReturnTypeAnnotation: NewTypeAnnotation(
-					&StringType{},
-				),
-			},
-		)
+		return newFunction(stringTypeSliceFunctionType)
 
 	case "decodeHex":
-		return newFunction(
-			&FunctionType{
-				ReturnTypeAnnotation: NewTypeAnnotation(
-					&VariableSizedType{
-						// TODO: change to UInt8
-						Type: &IntType{},
-					},
-				),
-			},
-		)
+		return newFunction(stringTypeDecodeHexFunctionType)
 
 	case "length":
 		return NewPublicConstantFieldMember(t, identifier, &IntType{})
@@ -2357,6 +2357,7 @@ type InvokableType interface {
 	InvocationFunctionType() *FunctionType
 	InvocationGenericFunctionType() *GenericFunctionType
 	CheckArgumentExpressions(checker *Checker, argumentExpressions []ast.Expression)
+	ArgumentLabels() []string
 }
 
 // GenericTypeAnnotation is a type annotation which is generic,
@@ -2791,6 +2792,23 @@ func (*GenericFunctionType) CheckArgumentExpressions(_ *Checker, _ []ast.Express
 	// NO-OP: no checks for normal functions
 }
 
+func (t *GenericFunctionType) ArgumentLabels() (argumentLabels []string) {
+
+	for _, parameter := range t.Parameters {
+
+		argumentLabel := ArgumentLabelNotRequired
+		if parameter.Label != "" {
+			argumentLabel = parameter.Label
+		} else if parameter.Identifier != "" {
+			argumentLabel = parameter.Identifier
+		}
+
+		argumentLabels = append(argumentLabels, argumentLabel)
+	}
+
+	return
+}
+
 // FunctionType is a monomorphic function type.
 //
 type FunctionType struct {
@@ -2956,6 +2974,23 @@ func (t *FunctionType) ContainsFirstLevelResourceInterfaceType() bool {
 	}
 
 	return false
+}
+
+func (t *FunctionType) ArgumentLabels() (argumentLabels []string) {
+
+	for _, parameter := range t.Parameters {
+
+		argumentLabel := ArgumentLabelNotRequired
+		if parameter.Label != "" {
+			argumentLabel = parameter.Label
+		} else if parameter.Identifier != "" {
+			argumentLabel = parameter.Identifier
+		}
+
+		argumentLabels = append(argumentLabels, argumentLabel)
+	}
+
+	return
 }
 
 // SpecialFunctionType is the the type representing a special function,
@@ -3360,12 +3395,70 @@ func (*AuthAccountType) CanHaveMembers() bool {
 	return true
 }
 
+var authAccountSetCodeFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "code",
+			TypeAnnotation: NewTypeAnnotation(
+				&VariableSizedType{
+					// TODO: UInt8. Requires array literals of integer literals
+					//   to be type compatible with with [UInt8]
+					Type: &IntType{},
+				},
+			),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&VoidType{},
+	),
+	// additional arguments are passed to the contract initializer
+	RequiredArgumentCount: (func() *int {
+		var count = 2
+		return &count
+	})(),
+}
+
+var authAccountAddPublicKeyFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "key",
+			TypeAnnotation: NewTypeAnnotation(
+				&VariableSizedType{
+					// TODO: UInt8. Requires array literals of integer literals
+					//   to be type compatible with with [UInt8]
+					Type: &IntType{},
+				},
+			),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&VoidType{},
+	),
+}
+
+var authAccountRemovePublicKeyFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "index",
+			TypeAnnotation: NewTypeAnnotation(
+				&IntType{},
+			),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&VoidType{},
+	),
+}
+
 func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
 	newField := func(fieldType Type) *Member {
 		return NewPublicConstantFieldMember(t, identifier, fieldType)
 	}
 
-	newFunction := func(functionType *FunctionType) *Member {
+	newFunction := func(functionType InvokableType) *Member {
 		return NewPublicFunctionMember(t, identifier, functionType)
 	}
 
@@ -3380,71 +3473,14 @@ func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error
 		return newField(&ReferencesType{Assignable: true})
 
 	case "setCode":
-		return newFunction(
-			&FunctionType{
-				Parameters: []*Parameter{
-					{
-						Label:      ArgumentLabelNotRequired,
-						Identifier: "code",
-						TypeAnnotation: NewTypeAnnotation(
-							&VariableSizedType{
-								// TODO: UInt8. Requires array literals of integer literals
-								//   to be type compatible with with [UInt8]
-								Type: &IntType{},
-							},
-						),
-					},
-				},
-				ReturnTypeAnnotation: NewTypeAnnotation(
-					&VoidType{},
-				),
-				// additional arguments are passed to the contract initializer
-				RequiredArgumentCount: (func() *int {
-					var count = 2
-					return &count
-				})(),
-			},
-		)
+		return newFunction(authAccountSetCodeFunctionType)
 
 	case "addPublicKey":
-		return newFunction(
-			&FunctionType{
-				Parameters: []*Parameter{
-					{
-						Label:      ArgumentLabelNotRequired,
-						Identifier: "key",
-						TypeAnnotation: NewTypeAnnotation(
-							&VariableSizedType{
-								// TODO: UInt8. Requires array literals of integer literals
-								//   to be type compatible with with [UInt8]
-								Type: &IntType{},
-							},
-						),
-					},
-				},
-				ReturnTypeAnnotation: NewTypeAnnotation(
-					&VoidType{},
-				),
-			},
-		)
+		return newFunction(authAccountAddPublicKeyFunctionType)
 
 	case "removePublicKey":
-		return newFunction(
-			&FunctionType{
-				Parameters: []*Parameter{
-					{
-						Label:      ArgumentLabelNotRequired,
-						Identifier: "index",
-						TypeAnnotation: NewTypeAnnotation(
-							&IntType{},
-						),
-					},
-				},
-				ReturnTypeAnnotation: NewTypeAnnotation(
-					&VoidType{},
-				),
-			},
-		)
+		return newFunction(authAccountRemovePublicKeyFunctionType)
+
 
 	default:
 		return nil
@@ -3525,21 +3561,7 @@ type Member struct {
 	Predeclared bool
 }
 
-func NewPublicFunctionMember(containerType Type, identifier string, functionType *FunctionType) *Member {
-
-	var argumentLabels []string
-
-	for _, parameter := range functionType.Parameters {
-
-		argumentLabel := ArgumentLabelNotRequired
-		if parameter.Label != "" {
-			argumentLabel = parameter.Label
-		} else if parameter.Identifier != "" {
-			argumentLabel = parameter.Identifier
-		}
-
-		argumentLabels = append(argumentLabels, argumentLabel)
-	}
+func NewPublicFunctionMember(containerType Type, identifier string, invokableType InvokableType) *Member {
 
 	return &Member{
 		ContainerType:   containerType,
@@ -3547,8 +3569,8 @@ func NewPublicFunctionMember(containerType Type, identifier string, functionType
 		Identifier:      ast.Identifier{Identifier: identifier},
 		DeclarationKind: common.DeclarationKindFunction,
 		VariableKind:    ast.VariableKindConstant,
-		TypeAnnotation:  &TypeAnnotation{Type: functionType},
-		ArgumentLabels:  argumentLabels,
+		TypeAnnotation:  &TypeAnnotation{Type: invokableType},
+		ArgumentLabels:  invokableType.ArgumentLabels(),
 	}
 }
 
