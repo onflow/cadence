@@ -156,7 +156,9 @@ func TestRuntimeTransactionWithAccount(t *testing.T) {
 			return nil
 		},
 		getSigningAccounts: func() []Address {
-			return []Address{{42}}
+			return []Address{
+				common.BytesToAddress([]byte{42}),
+			}
 		},
 		log: func(message string) {
 			loggedMessage = message
@@ -166,7 +168,7 @@ func TestRuntimeTransactionWithAccount(t *testing.T) {
 	err := runtime.ExecuteTransaction(script, runtimeInterface, utils.TestLocation)
 	require.NoError(t, err)
 
-	assert.Equal(t, "2a00000000000000000000000000000000000000", loggedMessage)
+	assert.Equal(t, "0x2a", loggedMessage)
 }
 
 func TestRuntimeProgramWithNoTransaction(t *testing.T) {
@@ -1039,7 +1041,7 @@ func TestRuntimeAccountAddress(t *testing.T) {
 
 	var loggedMessages []string
 
-	address := common.Address{42}
+	address := common.BytesToAddress([]byte{42})
 
 	runtimeInterface := &testRuntimeInterface{
 		getSigningAccounts: func() []Address {
@@ -1053,7 +1055,7 @@ func TestRuntimeAccountAddress(t *testing.T) {
 	err := runtime.ExecuteTransaction(script, runtimeInterface, utils.TestLocation)
 	require.NoError(t, err)
 
-	assert.Equal(t, []string{fmt.Sprint(address)}, loggedMessages)
+	assert.Equal(t, []string{"0x2a"}, loggedMessages)
 }
 
 func TestRuntimePublicAccountAddress(t *testing.T) {
