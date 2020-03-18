@@ -140,6 +140,13 @@ func (PublishedType) IsDynamicType() {}
 type FunctionType struct{}
 
 func (FunctionType) IsDynamicType() {}
+
+// PathType
+
+type PathType struct{}
+
+func (PathType) IsDynamicType() {}
+
 // AuthAccountType
 
 type AuthAccountType struct{}

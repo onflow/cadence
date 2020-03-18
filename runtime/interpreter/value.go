@@ -4498,10 +4498,8 @@ func init() {
 func (PathValue) IsValue() {}
 
 func (PathValue) DynamicType(_ *Interpreter) DynamicType {
-	return NilType{}
+	return PathType{}
 }
-
-func (PathValue) isOptionalValue() {}
 
 func (v PathValue) Copy() Value {
 	return v
