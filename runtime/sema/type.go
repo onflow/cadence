@@ -3453,6 +3453,37 @@ var authAccountRemovePublicKeyFunctionType = &FunctionType{
 	),
 }
 
+var authAccountSaveFunctionType = func() *GenericFunctionType {
+
+	typeParameter := &TypeParameter{
+		Type: &AnyResourceType{},
+		Name: "T",
+	}
+
+	return &GenericFunctionType{
+		Parameters: []*GenericParameter{
+			{
+				Label:      ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: &GenericTypeAnnotation{
+					TypeParameter: typeParameter,
+				},
+			},
+			{
+				Identifier: "path",
+				TypeAnnotation: &GenericTypeAnnotation{
+					TypeAnnotation: NewTypeAnnotation(&PathType{}),
+				},
+			},
+		},
+		ReturnTypeAnnotation: &GenericTypeAnnotation{
+			TypeAnnotation: NewTypeAnnotation(
+				&VoidType{},
+			),
+		},
+	}
+}()
+
 func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
 	newField := func(fieldType Type) *Member {
 		return NewPublicConstantFieldMember(t, identifier, fieldType)
@@ -3481,6 +3512,8 @@ func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error
 	case "removePublicKey":
 		return newFunction(authAccountRemovePublicKeyFunctionType)
 
+	case "save":
+		return newFunction(authAccountSaveFunctionType)
 
 	default:
 		return nil
