@@ -4521,3 +4521,45 @@ func (v PathValue) Destroy(_ *Interpreter, _ LocationPosition) trampoline.Trampo
 func (v PathValue) String() string {
 	return fmt.Sprintf("/%s/%s", v.Domain, v.Identifier)
 }
+
+// CapabilityValue
+
+type CapabilityValue struct {
+	Account AccountValue
+	Path    PathValue
+}
+
+func init() {
+	gob.Register(CapabilityValue{})
+}
+
+func (CapabilityValue) IsValue() {}
+
+func (CapabilityValue) DynamicType(_ *Interpreter) DynamicType {
+	return CapabilityType{}
+}
+
+func (v CapabilityValue) Copy() Value {
+	return v
+}
+
+func (CapabilityValue) GetOwner() *common.Address {
+	// value is never owned
+	return nil
+}
+
+func (CapabilityValue) SetOwner(_ *common.Address) {
+	// NO-OP: value cannot be owned
+}
+
+func (v CapabilityValue) Destroy(_ *Interpreter, _ LocationPosition) trampoline.Trampoline {
+	return trampoline.Done{}
+}
+
+func (v CapabilityValue) String() string {
+	return fmt.Sprintf(
+		"/%s/%s",
+		v.Account.AddressValue(),
+		v.Path,
+	)
+}
