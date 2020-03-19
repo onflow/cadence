@@ -1,4 +1,4 @@
-package language_test
+package cadence_test
 
 import (
 	"testing"
@@ -6,10 +6,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dapperlabs/flow-go/language"
-	"github.com/dapperlabs/flow-go/language/runtime/ast"
-	"github.com/dapperlabs/flow-go/language/runtime/common"
-	"github.com/dapperlabs/flow-go/language/runtime/sema"
+	"github.com/dapperlabs/cadence"
+	"github.com/dapperlabs/cadence/runtime/ast"
+	"github.com/dapperlabs/cadence/runtime/common"
+	"github.com/dapperlabs/cadence/runtime/sema"
 )
 
 const testLocation = ast.StringLocation("test")
@@ -88,26 +88,26 @@ func TestConvert(t *testing.T) {
 			Pos:             &position,
 		}
 
-		ex, err := language.ConvertType(ty, program, variable)
+		ex, err := cadence.ConvertType(ty, program, variable)
 		assert.NoError(t, err)
 
-		assert.IsType(t, language.StructType{}, ex)
-		s := ex.(language.StructType)
+		assert.IsType(t, cadence.StructType{}, ex)
+		s := ex.(cadence.StructType)
 
 		assert.Equal(t, identifier, s.Identifier)
 		require.Len(t, s.Fields, 1)
 
 		assert.Equal(t, "fieldA", s.Fields[0].Identifier)
-		assert.IsType(t, language.IntType{}, s.Fields[0].Type)
+		assert.IsType(t, cadence.IntType{}, s.Fields[0].Type)
 	})
 
 	t.Run("string", func(t *testing.T) {
 		ty := &sema.StringType{}
 
-		ex, err := language.ConvertType(ty, nil, nil)
+		ex, err := cadence.ConvertType(ty, nil, nil)
 		assert.NoError(t, err)
 
-		assert.IsType(t, language.StringType{}, ex)
+		assert.IsType(t, cadence.StringType{}, ex)
 	})
 
 	t.Run("events", func(t *testing.T) {
@@ -192,19 +192,19 @@ func TestConvert(t *testing.T) {
 			Pos:        &position,
 		}
 
-		ex, err := language.ConvertType(ty, program, variable)
+		ex, err := cadence.ConvertType(ty, program, variable)
 		assert.NoError(t, err)
 
-		assert.IsType(t, language.EventType{}, ex)
+		assert.IsType(t, cadence.EventType{}, ex)
 
-		event := ex.(language.EventType)
+		event := ex.(cadence.EventType)
 
 		require.Len(t, event.Fields, 2)
 		assert.Equal(t, "where", event.Fields[0].Identifier)
-		assert.IsType(t, language.IntType{}, event.Fields[0].Type)
+		assert.IsType(t, cadence.IntType{}, event.Fields[0].Type)
 
 		assert.Equal(t, "who", event.Fields[1].Identifier)
-		assert.IsType(t, language.StringType{}, event.Fields[1].Type)
+		assert.IsType(t, cadence.StringType{}, event.Fields[1].Type)
 
 		require.Len(t, event.Initializers[0], 2)
 		assert.Equal(t, "magic_caster", event.Initializers[0][0].Label)

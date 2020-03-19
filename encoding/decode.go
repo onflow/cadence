@@ -8,7 +8,7 @@ import (
 
 	xdr "github.com/davecgh/go-xdr/xdr2"
 
-	"github.com/dapperlabs/flow-go/language"
+	"github.com/dapperlabs/cadence"
 )
 
 // A Decoder decodes XDR-encoded representations of Cadence values.
@@ -20,7 +20,7 @@ type Decoder struct {
 //
 // This function returns an error if the bytes do not match the given type
 // definition.
-func Decode(t language.Type, b []byte) (language.Value, error) {
+func Decode(t cadence.Type, b []byte) (cadence.Value, error) {
 	r := bytes.NewReader(b)
 	dec := NewDecoder(r)
 
@@ -43,73 +43,73 @@ func NewDecoder(r io.Reader) *Decoder {
 //
 // This function returns an error if the bytes do not match the given type
 // definition.
-func (d *Decoder) Decode(t language.Type) (language.Value, error) {
+func (d *Decoder) Decode(t cadence.Type) (cadence.Value, error) {
 	switch x := t.(type) {
-	case language.VoidType:
+	case cadence.VoidType:
 		return d.DecodeVoid()
-	case language.OptionalType:
+	case cadence.OptionalType:
 		return d.DecodeOptional(x)
-	case language.BoolType:
+	case cadence.BoolType:
 		return d.DecodeBool()
-	case language.StringType:
+	case cadence.StringType:
 		return d.DecodeString()
-	case language.BytesType:
+	case cadence.BytesType:
 		return d.DecodeBytes()
-	case language.AddressType:
+	case cadence.AddressType:
 		return d.DecodeAddress()
-	case language.IntType:
+	case cadence.IntType:
 		return d.DecodeInt()
-	case language.Int8Type:
+	case cadence.Int8Type:
 		return d.DecodeInt8()
-	case language.Int16Type:
+	case cadence.Int16Type:
 		return d.DecodeInt16()
-	case language.Int32Type:
+	case cadence.Int32Type:
 		return d.DecodeInt32()
-	case language.Int64Type:
+	case cadence.Int64Type:
 		return d.DecodeInt64()
-	case language.Int128Type:
+	case cadence.Int128Type:
 		return d.DecodeInt128()
-	case language.Int256Type:
+	case cadence.Int256Type:
 		return d.DecodeInt256()
-	case language.UIntType:
+	case cadence.UIntType:
 		return d.DecodeUInt()
-	case language.UInt8Type:
+	case cadence.UInt8Type:
 		return d.DecodeUInt8()
-	case language.UInt16Type:
+	case cadence.UInt16Type:
 		return d.DecodeUInt16()
-	case language.UInt32Type:
+	case cadence.UInt32Type:
 		return d.DecodeUInt32()
-	case language.UInt64Type:
+	case cadence.UInt64Type:
 		return d.DecodeUInt64()
-	case language.UInt128Type:
+	case cadence.UInt128Type:
 		return d.DecodeUInt128()
-	case language.UInt256Type:
+	case cadence.UInt256Type:
 		return d.DecodeUInt256()
-	case language.Word8Type:
+	case cadence.Word8Type:
 		return d.DecodeWord8()
-	case language.Word16Type:
+	case cadence.Word16Type:
 		return d.DecodeWord16()
-	case language.Word32Type:
+	case cadence.Word32Type:
 		return d.DecodeWord32()
-	case language.Word64Type:
+	case cadence.Word64Type:
 		return d.DecodeWord64()
-	case language.Fix64Type:
+	case cadence.Fix64Type:
 		return d.DecodeFix64()
-	case language.UFix64Type:
+	case cadence.UFix64Type:
 		return d.DecodeUFix64()
-	case language.VariableSizedArrayType:
+	case cadence.VariableSizedArrayType:
 		return d.DecodeVariableSizedArray(x)
-	case language.ConstantSizedArrayType:
+	case cadence.ConstantSizedArrayType:
 		return d.DecodeConstantSizedArray(x)
-	case language.DictionaryType:
+	case cadence.DictionaryType:
 		return d.DecodeDictionary(x)
-	case language.CompositeType:
+	case cadence.CompositeType:
 		return d.DecodeComposite(x)
-	case language.ResourceType:
+	case cadence.ResourceType:
 		return d.DecodeComposite(x.CompositeType)
-	case language.StructType:
+	case cadence.StructType:
 		return d.DecodeComposite(x.CompositeType)
-	case language.EventType:
+	case cadence.EventType:
 		return d.DecodeComposite(x.CompositeType)
 
 	default:
@@ -122,9 +122,9 @@ func (d *Decoder) Decode(t language.Type) (language.Value, error) {
 // VoidType values are skipped by the decoder because they are empty by
 // definition, but this function still exists in order to support composite
 // types that contain void values.
-func (d *Decoder) DecodeVoid() (language.Void, error) {
+func (d *Decoder) DecodeVoid() (cadence.Void, error) {
 	// void values are not encoded
-	return language.Void{}, nil
+	return cadence.Void{}, nil
 }
 
 // DecodeOptional reads the XDR-encoded representation of an optional value.
@@ -132,7 +132,7 @@ func (d *Decoder) DecodeVoid() (language.Void, error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.19
 //  RFC Section 4.19 - Optional-Data
 //  Union of boolean and encoded value
-func (d *Decoder) DecodeOptional(t language.OptionalType) (v language.Optional, err error) {
+func (d *Decoder) DecodeOptional(t cadence.OptionalType) (v cadence.Optional, err error) {
 	hasValue, err := d.DecodeBool()
 	if err != nil {
 		return v, err
@@ -144,10 +144,10 @@ func (d *Decoder) DecodeOptional(t language.OptionalType) (v language.Optional, 
 			return v, err
 		}
 
-		return language.Optional{Value: value}, nil
+		return cadence.Optional{Value: value}, nil
 	}
 
-	return language.Optional{Value: nil}, nil
+	return cadence.Optional{Value: nil}, nil
 }
 
 // DecodeBool reads the XDR-encoded representation of a boolean value.
@@ -155,13 +155,13 @@ func (d *Decoder) DecodeOptional(t language.OptionalType) (v language.Optional, 
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.4
 //  RFC Section 4.4 - Boolean
 //  Represented as an XDR encoded enumeration where 0 is false and 1 is true
-func (d *Decoder) DecodeBool() (v language.Bool, err error) {
+func (d *Decoder) DecodeBool() (v cadence.Bool, err error) {
 	b, _, err := d.dec.DecodeBool()
 	if err != nil {
 		return v, err
 	}
 
-	return language.NewBool(b), nil
+	return cadence.NewBool(b), nil
 }
 
 // DecodeString reads the XDR-encoded representation of a string value.
@@ -169,13 +169,13 @@ func (d *Decoder) DecodeBool() (v language.Bool, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.11
 //  RFC Section 4.11 - StringType
 //  Unsigned integer length followed by bytes zero-padded to a multiple of four
-func (d *Decoder) DecodeString() (v language.String, err error) {
+func (d *Decoder) DecodeString() (v cadence.String, err error) {
 	str, _, err := d.dec.DecodeString()
 	if err != nil {
 		return v, err
 	}
 
-	return language.NewString(str), nil
+	return cadence.NewString(str), nil
 }
 
 // DecodeBytes reads the XDR-encoded representation of a byte array.
@@ -183,7 +183,7 @@ func (d *Decoder) DecodeString() (v language.String, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.10
 //  RFC Section 4.10 - Variable-Length Opaque Data
 //  Unsigned integer length followed by fixed opaque data of that length
-func (d *Decoder) DecodeBytes() (v language.Bytes, err error) {
+func (d *Decoder) DecodeBytes() (v cadence.Bytes, err error) {
 	b, _, err := d.dec.DecodeOpaque()
 	if err != nil {
 		return v, err
@@ -193,7 +193,7 @@ func (d *Decoder) DecodeBytes() (v language.Bytes, err error) {
 		b = []byte{}
 	}
 
-	return language.NewBytes(b), nil
+	return cadence.NewBytes(b), nil
 }
 
 // DecodeAddress reads the XDR-encoded representation of an address.
@@ -201,13 +201,13 @@ func (d *Decoder) DecodeBytes() (v language.Bytes, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.9
 //  RFC Section 4.9 - Fixed-Length Opaque Data
 //  Fixed-length uninterpreted data zero-padded to a multiple of four
-func (d *Decoder) DecodeAddress() (v language.Address, err error) {
+func (d *Decoder) DecodeAddress() (v cadence.Address, err error) {
 	b, _, err := d.dec.DecodeFixedOpaque(20)
 	if err != nil {
 		return v, err
 	}
 
-	return language.NewAddressFromBytes(b), nil
+	return cadence.NewAddressFromBytes(b), nil
 }
 
 // DecodeInt reads the XDR-encoded representation of an arbitrary-precision
@@ -220,12 +220,12 @@ func (d *Decoder) DecodeAddress() (v language.Address, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.10
 //  RFC Section 4.10 - Variable-Length Opaque Data
 //  Unsigned integer length followed by fixed opaque data of that length
-func (d *Decoder) DecodeInt() (v language.Int, err error) {
+func (d *Decoder) DecodeInt() (v cadence.Int, err error) {
 	i, err := d.decodeBig()
 	if err != nil {
 		return v, err
 	}
-	return language.NewIntFromBig(i), nil
+	return cadence.NewIntFromBig(i), nil
 }
 
 // decodeBig reads the XDR-encoded representation of an arbitrary-precision
@@ -262,13 +262,13 @@ func (d *Decoder) decodeBig() (i *big.Int, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.1
 //  RFC Section 4.1 - Integer
 //  32-bit big-endian signed integer in range [-2147483648, 2147483647]
-func (d *Decoder) DecodeInt8() (v language.Int8, err error) {
+func (d *Decoder) DecodeInt8() (v cadence.Int8, err error) {
 	i, _, err := d.dec.DecodeInt()
 	if err != nil {
 		return v, err
 	}
 
-	return language.NewInt8(int8(i)), nil
+	return cadence.NewInt8(int8(i)), nil
 }
 
 // DecodeInt16 reads the XDR-encoded representation of an int-16 value.
@@ -276,13 +276,13 @@ func (d *Decoder) DecodeInt8() (v language.Int8, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.1
 //  RFC Section 4.1 - Integer
 //  32-bit big-endian signed integer in range [-2147483648, 2147483647]
-func (d *Decoder) DecodeInt16() (v language.Int16, err error) {
+func (d *Decoder) DecodeInt16() (v cadence.Int16, err error) {
 	i, _, err := d.dec.DecodeInt()
 	if err != nil {
 		return v, err
 	}
 
-	return language.NewInt16(int16(i)), nil
+	return cadence.NewInt16(int16(i)), nil
 }
 
 // DecodeInt32 reads the XDR-encoded representation of an int-32 value.
@@ -290,13 +290,13 @@ func (d *Decoder) DecodeInt16() (v language.Int16, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.1
 //  RFC Section 4.1 - Integer
 //  32-bit big-endian signed integer in range [-2147483648, 2147483647]
-func (d *Decoder) DecodeInt32() (v language.Int32, err error) {
+func (d *Decoder) DecodeInt32() (v cadence.Int32, err error) {
 	i, _, err := d.dec.DecodeInt()
 	if err != nil {
 		return v, err
 	}
 
-	return language.NewInt32(i), nil
+	return cadence.NewInt32(i), nil
 }
 
 // DecodeInt64 reads the XDR-encoded representation of an int-64 value.
@@ -304,13 +304,13 @@ func (d *Decoder) DecodeInt32() (v language.Int32, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.5
 //  RFC Section 4.5 - Hyper Integer
 //  64-bit big-endian signed integer in range [-9223372036854775808, 9223372036854775807]
-func (d *Decoder) DecodeInt64() (v language.Int64, err error) {
+func (d *Decoder) DecodeInt64() (v cadence.Int64, err error) {
 	i, _, err := d.dec.DecodeHyper()
 	if err != nil {
 		return v, err
 	}
 
-	return language.NewInt64(i), nil
+	return cadence.NewInt64(i), nil
 }
 
 // DecodeInt128 reads the XDR-encoded representation of an arbitrary-precision
@@ -323,12 +323,12 @@ func (d *Decoder) DecodeInt64() (v language.Int64, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.10
 //  RFC Section 4.10 - Variable-Length Opaque Data
 //  Unsigned integer length followed by fixed opaque data of that length
-func (d *Decoder) DecodeInt128() (v language.Int128, err error) {
+func (d *Decoder) DecodeInt128() (v cadence.Int128, err error) {
 	i, err := d.decodeBig()
 	if err != nil {
 		return v, err
 	}
-	return language.NewInt128FromBig(i), nil
+	return cadence.NewInt128FromBig(i), nil
 }
 
 // DecodeInt256 reads the XDR-encoded representation of an arbitrary-precision
@@ -341,12 +341,12 @@ func (d *Decoder) DecodeInt128() (v language.Int128, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.10
 //  RFC Section 4.10 - Variable-Length Opaque Data
 //  Unsigned integer length followed by fixed opaque data of that length
-func (d *Decoder) DecodeInt256() (v language.Int256, err error) {
+func (d *Decoder) DecodeInt256() (v cadence.Int256, err error) {
 	i, err := d.decodeBig()
 	if err != nil {
 		return v, err
 	}
-	return language.NewInt256FromBig(i), nil
+	return cadence.NewInt256FromBig(i), nil
 }
 
 // DecodeUInt reads the XDR-encoded representation of an arbitrary-precision
@@ -359,12 +359,12 @@ func (d *Decoder) DecodeInt256() (v language.Int256, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.10
 //  RFC Section 4.10 - Variable-Length Opaque Data
 //  Unsigned integer length followed by fixed opaque data of that length
-func (d *Decoder) DecodeUInt() (v language.UInt, err error) {
+func (d *Decoder) DecodeUInt() (v cadence.UInt, err error) {
 	i, err := d.decodeBig()
 	if err != nil {
 		return v, err
 	}
-	return language.NewUIntFromBig(i), nil
+	return cadence.NewUIntFromBig(i), nil
 }
 
 // DecodeUInt8 reads the XDR-encoded representation of a uint-8 value.
@@ -372,13 +372,13 @@ func (d *Decoder) DecodeUInt() (v language.UInt, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.2
 //  RFC Section 4.2 - Unsigned Integer
 //  32-bit big-endian unsigned integer in range [0, 4294967295]
-func (d *Decoder) DecodeUInt8() (v language.UInt8, err error) {
+func (d *Decoder) DecodeUInt8() (v cadence.UInt8, err error) {
 	i, _, err := d.dec.DecodeUint()
 	if err != nil {
 		return v, err
 	}
 
-	return language.NewUInt8(uint8(i)), nil
+	return cadence.NewUInt8(uint8(i)), nil
 }
 
 // DecodeUInt16 reads the XDR-encoded representation of a uint-16 value.
@@ -386,13 +386,13 @@ func (d *Decoder) DecodeUInt8() (v language.UInt8, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.2
 //  RFC Section 4.2 - Unsigned Integer
 //  32-bit big-endian unsigned integer in range [0, 4294967295]
-func (d *Decoder) DecodeUInt16() (v language.UInt16, err error) {
+func (d *Decoder) DecodeUInt16() (v cadence.UInt16, err error) {
 	i, _, err := d.dec.DecodeUint()
 	if err != nil {
 		return v, err
 	}
 
-	return language.NewUInt16(uint16(i)), nil
+	return cadence.NewUInt16(uint16(i)), nil
 }
 
 // DecodeUInt32 reads the XDR-encoded representation of a uint-32 value.
@@ -400,13 +400,13 @@ func (d *Decoder) DecodeUInt16() (v language.UInt16, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.2
 //  RFC Section 4.2 - Unsigned Integer
 //  32-bit big-endian unsigned integer in range [0, 4294967295]
-func (d *Decoder) DecodeUInt32() (v language.UInt32, err error) {
+func (d *Decoder) DecodeUInt32() (v cadence.UInt32, err error) {
 	i, _, err := d.dec.DecodeUint()
 	if err != nil {
 		return v, err
 	}
 
-	return language.NewUInt32(i), nil
+	return cadence.NewUInt32(i), nil
 }
 
 // DecodeUInt64 reads the XDR-encoded representation of a uint-64 value.
@@ -414,13 +414,13 @@ func (d *Decoder) DecodeUInt32() (v language.UInt32, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.5
 //  RFC Section 4.5 - Unsigned Hyper Integer
 //  64-bit big-endian unsigned integer in range [0, 18446744073709551615]
-func (d *Decoder) DecodeUInt64() (v language.UInt64, err error) {
+func (d *Decoder) DecodeUInt64() (v cadence.UInt64, err error) {
 	i, _, err := d.dec.DecodeUhyper()
 	if err != nil {
 		return v, err
 	}
 
-	return language.NewUInt64(i), nil
+	return cadence.NewUInt64(i), nil
 }
 
 // DecodeUInt128 reads the XDR-encoded representation of an arbitrary-precision
@@ -433,12 +433,12 @@ func (d *Decoder) DecodeUInt64() (v language.UInt64, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.10
 //  RFC Section 4.10 - Variable-Length Opaque Data
 //  Unsigned integer length followed by fixed opaque data of that length
-func (d *Decoder) DecodeUInt128() (v language.UInt128, err error) {
+func (d *Decoder) DecodeUInt128() (v cadence.UInt128, err error) {
 	i, err := d.decodeBig()
 	if err != nil {
 		return v, err
 	}
-	return language.NewUInt128FromBig(i), nil
+	return cadence.NewUInt128FromBig(i), nil
 }
 
 // DecodeUInt256 reads the XDR-encoded representation of an arbitrary-precision
@@ -451,12 +451,12 @@ func (d *Decoder) DecodeUInt128() (v language.UInt128, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.10
 //  RFC Section 4.10 - Variable-Length Opaque Data
 //  Unsigned integer length followed by fixed opaque data of that length
-func (d *Decoder) DecodeUInt256() (v language.UInt256, err error) {
+func (d *Decoder) DecodeUInt256() (v cadence.UInt256, err error) {
 	i, err := d.decodeBig()
 	if err != nil {
 		return v, err
 	}
-	return language.NewUInt256FromBig(i), nil
+	return cadence.NewUInt256FromBig(i), nil
 }
 
 // DecodeWord8 reads the XDR-encoded representation of a uint-8 value.
@@ -464,13 +464,13 @@ func (d *Decoder) DecodeUInt256() (v language.UInt256, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.2
 //  RFC Section 4.2 - Unsigned Integer
 //  32-bit big-endian unsigned integer in range [0, 4294967295]
-func (d *Decoder) DecodeWord8() (v language.Word8, err error) {
+func (d *Decoder) DecodeWord8() (v cadence.Word8, err error) {
 	i, _, err := d.dec.DecodeUint()
 	if err != nil {
 		return v, err
 	}
 
-	return language.NewWord8(uint8(i)), nil
+	return cadence.NewWord8(uint8(i)), nil
 }
 
 // DecodeWord16 reads the XDR-encoded representation of a uint-16 value.
@@ -478,13 +478,13 @@ func (d *Decoder) DecodeWord8() (v language.Word8, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.2
 //  RFC Section 4.2 - Unsigned Integer
 //  32-bit big-endian unsigned integer in range [0, 4294967295]
-func (d *Decoder) DecodeWord16() (v language.Word16, err error) {
+func (d *Decoder) DecodeWord16() (v cadence.Word16, err error) {
 	i, _, err := d.dec.DecodeUint()
 	if err != nil {
 		return v, err
 	}
 
-	return language.NewWord16(uint16(i)), nil
+	return cadence.NewWord16(uint16(i)), nil
 }
 
 // DecodeWord32 reads the XDR-encoded representation of a uint-32 value.
@@ -492,13 +492,13 @@ func (d *Decoder) DecodeWord16() (v language.Word16, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.2
 //  RFC Section 4.2 - Unsigned Integer
 //  32-bit big-endian unsigned integer in range [0, 4294967295]
-func (d *Decoder) DecodeWord32() (v language.Word32, err error) {
+func (d *Decoder) DecodeWord32() (v cadence.Word32, err error) {
 	i, _, err := d.dec.DecodeUint()
 	if err != nil {
 		return v, err
 	}
 
-	return language.NewWord32(i), nil
+	return cadence.NewWord32(i), nil
 }
 
 // DecodeWord64 reads the XDR-encoded representation of a uint-64 value.
@@ -506,13 +506,13 @@ func (d *Decoder) DecodeWord32() (v language.Word32, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.5
 //  RFC Section 4.5 - Unsigned Hyper Integer
 //  64-bit big-endian unsigned integer in range [0, 18446744073709551615]
-func (d *Decoder) DecodeWord64() (v language.Word64, err error) {
+func (d *Decoder) DecodeWord64() (v cadence.Word64, err error) {
 	i, _, err := d.dec.DecodeUhyper()
 	if err != nil {
 		return v, err
 	}
 
-	return language.NewWord64(i), nil
+	return cadence.NewWord64(i), nil
 }
 
 // DecodeFix64 reads the XDR-encoded representation of an int-64 value.
@@ -520,13 +520,13 @@ func (d *Decoder) DecodeWord64() (v language.Word64, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.5
 //  RFC Section 4.5 - Hyper Integer
 //  64-bit big-endian signed integer in range [-9223372036854775808, 9223372036854775807]
-func (d *Decoder) DecodeFix64() (v language.Fix64, err error) {
+func (d *Decoder) DecodeFix64() (v cadence.Fix64, err error) {
 	i, _, err := d.dec.DecodeHyper()
 	if err != nil {
 		return v, err
 	}
 
-	return language.NewFix64(i), nil
+	return cadence.NewFix64(i), nil
 }
 
 // DecodeUFix64 reads the XDR-encoded representation of a uint-64 value.
@@ -534,13 +534,13 @@ func (d *Decoder) DecodeFix64() (v language.Fix64, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.5
 //  RFC Section 4.5 - Unsigned Hyper Integer
 //  64-bit big-endian unsigned integer in range [0, 18446744073709551615]
-func (d *Decoder) DecodeUFix64() (v language.UFix64, err error) {
+func (d *Decoder) DecodeUFix64() (v cadence.UFix64, err error) {
 	i, _, err := d.dec.DecodeUhyper()
 	if err != nil {
 		return v, err
 	}
 
-	return language.NewUFix64(i), nil
+	return cadence.NewUFix64(i), nil
 }
 
 // DecodeVariableSizedArray reads the XDR-encoded representation of a
@@ -549,7 +549,7 @@ func (d *Decoder) DecodeUFix64() (v language.UFix64, err error) {
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.13
 //  RFC Section 4.13 - Variable-Length Array
 //  Unsigned integer length followed by individually XDR-encoded array elements
-func (d *Decoder) DecodeVariableSizedArray(t language.VariableSizedArrayType) (v language.VariableSizedArray, err error) {
+func (d *Decoder) DecodeVariableSizedArray(t cadence.VariableSizedArrayType) (v cadence.VariableSizedArray, err error) {
 	size, _, err := d.dec.DecodeUint()
 	if err != nil {
 		return v, err
@@ -560,7 +560,7 @@ func (d *Decoder) DecodeVariableSizedArray(t language.VariableSizedArrayType) (v
 		return v, err
 	}
 
-	return language.NewVariableSizedArray(vals), nil
+	return cadence.NewVariableSizedArray(vals), nil
 }
 
 // DecodeConstantSizedArray reads the XDR-encoded representation of a
@@ -569,13 +569,13 @@ func (d *Decoder) DecodeVariableSizedArray(t language.VariableSizedArrayType) (v
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.12
 //  RFC Section 4.12 - Fixed-Length Array
 //  Individually XDR-encoded array elements
-func (d *Decoder) DecodeConstantSizedArray(t language.ConstantSizedArrayType) (v language.ConstantSizedArray, err error) {
+func (d *Decoder) DecodeConstantSizedArray(t cadence.ConstantSizedArrayType) (v cadence.ConstantSizedArray, err error) {
 	vals, err := d.decodeArray(t.ElementType, t.Size)
 	if err != nil {
 		return v, err
 	}
 
-	return language.NewConstantSizedArray(vals), nil
+	return cadence.NewConstantSizedArray(vals), nil
 }
 
 // decodeArray reads the XDR-encoded representation of a constant-sized array.
@@ -583,8 +583,8 @@ func (d *Decoder) DecodeConstantSizedArray(t language.ConstantSizedArrayType) (v
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.12
 //  RFC Section 4.12 - Fixed-Length Array
 //  Individually XDR-encoded array elements
-func (d *Decoder) decodeArray(t language.Type, size uint) ([]language.Value, error) {
-	array := make([]language.Value, size)
+func (d *Decoder) decodeArray(t cadence.Type, size uint) ([]cadence.Value, error) {
+	array := make([]cadence.Value, size)
 
 	var i uint
 	for i = 0; i < size; i++ {
@@ -604,7 +604,7 @@ func (d *Decoder) decodeArray(t language.Type, size uint) ([]language.Value, err
 // The size of the dictionary is encoded as an unsigned integer, followed by
 // the dictionary keys, then elements, each represented as individually
 // XDR-encoded array elements.
-func (d *Decoder) DecodeDictionary(t language.DictionaryType) (v language.Dictionary, err error) {
+func (d *Decoder) DecodeDictionary(t cadence.DictionaryType) (v cadence.Dictionary, err error) {
 	size, _, err := d.dec.DecodeUint()
 	if err != nil {
 		return v, err
@@ -620,26 +620,26 @@ func (d *Decoder) DecodeDictionary(t language.DictionaryType) (v language.Dictio
 		return v, err
 	}
 
-	pairs := make([]language.KeyValuePair, size)
+	pairs := make([]cadence.KeyValuePair, size)
 
 	for i := 0; i < int(size); i++ {
 		key := keys[i]
 		element := elements[i]
 
-		pairs[i] = language.KeyValuePair{
+		pairs[i] = cadence.KeyValuePair{
 			Key:   key,
 			Value: element,
 		}
 	}
 
-	return language.NewDictionary(pairs), nil
+	return cadence.NewDictionary(pairs), nil
 }
 
 // DecodeComposite reads the XDR-encoded representation of a composite value.
 //
 // A composite is encoded as a fixed-length array of its field values.
-func (d *Decoder) DecodeComposite(t language.CompositeType) (v language.Composite, err error) {
-	vals := make([]language.Value, len(t.Fields))
+func (d *Decoder) DecodeComposite(t cadence.CompositeType) (v cadence.Composite, err error) {
+	vals := make([]cadence.Value, len(t.Fields))
 
 	for i, field := range t.Fields {
 		value, err := d.Decode(field.Type)
@@ -650,5 +650,5 @@ func (d *Decoder) DecodeComposite(t language.CompositeType) (v language.Composit
 		vals[i] = value
 	}
 
-	return language.NewComposite(vals), nil
+	return cadence.NewComposite(vals), nil
 }

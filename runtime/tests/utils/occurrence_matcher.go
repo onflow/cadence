@@ -1,8 +1,8 @@
 package utils
 
 import (
-	"github.com/dapperlabs/flow-go/language/runtime/common"
-	"github.com/dapperlabs/flow-go/language/runtime/sema"
+	"github.com/dapperlabs/cadence/runtime/common"
+	"github.com/dapperlabs/cadence/runtime/sema"
 )
 
 type OccurrenceMatcher struct {

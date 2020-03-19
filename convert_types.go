@@ -1,13 +1,13 @@
-package language
+package cadence
 
 import (
 	"fmt"
 	"sort"
 
-	"github.com/dapperlabs/flow-go/language/runtime"
-	"github.com/dapperlabs/flow-go/language/runtime/ast"
-	"github.com/dapperlabs/flow-go/language/runtime/common"
-	"github.com/dapperlabs/flow-go/language/runtime/sema"
+	"github.com/dapperlabs/cadence/runtime"
+	"github.com/dapperlabs/cadence/runtime/ast"
+	"github.com/dapperlabs/cadence/runtime/common"
+	"github.com/dapperlabs/cadence/runtime/sema"
 )
 
 // ConvertType converts a runtime type to its corresponding Go representation.

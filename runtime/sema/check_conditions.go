@@ -1,6 +1,6 @@
 package sema
 
-import "github.com/dapperlabs/flow-go/language/runtime/ast"
+import "github.com/dapperlabs/cadence/runtime/ast"
 
 func (checker *Checker) visitConditions(conditions []*ast.Condition) {
 

@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/dapperlabs/flow-go/language/runtime/ast"
+	"github.com/dapperlabs/cadence/runtime/ast"
 )
 
 type (

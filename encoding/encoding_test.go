@@ -8,31 +8,31 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dapperlabs/flow-go/language"
-	"github.com/dapperlabs/flow-go/language/encoding"
+	"github.com/dapperlabs/cadence"
+	"github.com/dapperlabs/cadence/encoding"
 )
 
 type encodeTest struct {
 	name string
-	typ  language.Type
-	val  language.Value
+	typ  cadence.Type
+	val  cadence.Value
 }
 
 func TestEncodeVoid(t *testing.T) {
-	testEncode(t, language.VoidType{}, language.Void{})
+	testEncode(t, cadence.VoidType{}, cadence.Void{})
 }
 
 func TestEncodeString(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"EmptyString",
-			language.StringType{},
-			language.NewString(""),
+			cadence.StringType{},
+			cadence.NewString(""),
 		},
 		{
 			"SimpleString",
-			language.StringType{},
-			language.NewString("abcdefg"),
+			cadence.StringType{},
+			cadence.NewString("abcdefg"),
 		},
 	}...)
 }
@@ -41,13 +41,13 @@ func TestEncodeOptional(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Nil",
-			language.OptionalType{Type: nil},
-			language.NewOptional(nil),
+			cadence.OptionalType{Type: nil},
+			cadence.NewOptional(nil),
 		},
 		{
 			"SomeString",
-			language.OptionalType{Type: language.StringType{}},
-			language.NewOptional(language.NewString("abcdefg")),
+			cadence.OptionalType{Type: cadence.StringType{}},
+			cadence.NewOptional(cadence.NewString("abcdefg")),
 		},
 	}...)
 }
@@ -56,13 +56,13 @@ func TestEncodeBool(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"True",
-			language.BoolType{},
-			language.NewBool(true),
+			cadence.BoolType{},
+			cadence.NewBool(true),
 		},
 		{
 			"False",
-			language.BoolType{},
-			language.NewBool(false),
+			cadence.BoolType{},
+			cadence.NewBool(false),
 		},
 	}...)
 }
@@ -71,19 +71,19 @@ func TestEncodeBytes(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"EmptyBytes",
-			language.BytesType{},
-			language.NewBytes([]byte{}),
+			cadence.BytesType{},
+			cadence.NewBytes([]byte{}),
 		},
 		{
 			"SimpleBytes",
-			language.BytesType{},
-			language.NewBytes([]byte{1, 2, 3, 4, 5}),
+			cadence.BytesType{},
+			cadence.NewBytes([]byte{1, 2, 3, 4, 5}),
 		},
 	}...)
 }
 
 func TestEncodeAddress(t *testing.T) {
-	testEncode(t, language.AddressType{}, language.NewAddress([20]byte{1, 2, 3, 4, 5}))
+	testEncode(t, cadence.AddressType{}, cadence.NewAddress([20]byte{1, 2, 3, 4, 5}))
 }
 
 func TestEncodeInt(t *testing.T) {
@@ -92,25 +92,25 @@ func TestEncodeInt(t *testing.T) {
 
 	largerThanMaxUint64 := encodeTest{
 		"LargerThanMaxUint64",
-		language.IntType{},
-		language.NewIntFromBig(x),
+		cadence.IntType{},
+		cadence.NewIntFromBig(x),
 	}
 
 	testAllEncode(t, []encodeTest{
 		{
 			"Negative",
-			language.IntType{},
-			language.NewInt(-42),
+			cadence.IntType{},
+			cadence.NewInt(-42),
 		},
 		{
 			"Zero",
-			language.IntType{},
-			language.NewInt(0),
+			cadence.IntType{},
+			cadence.NewInt(0),
 		},
 		{
 			"Positive",
-			language.IntType{},
-			language.NewInt(42),
+			cadence.IntType{},
+			cadence.NewInt(42),
 		},
 		largerThanMaxUint64,
 	}...)
@@ -120,18 +120,18 @@ func TestEncodeInt8(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Min",
-			language.Int8Type{},
-			language.NewInt8(math.MinInt8),
+			cadence.Int8Type{},
+			cadence.NewInt8(math.MinInt8),
 		},
 		{
 			"Zero",
-			language.Int8Type{},
-			language.NewInt8(0),
+			cadence.Int8Type{},
+			cadence.NewInt8(0),
 		},
 		{
 			"Max",
-			language.Int8Type{},
-			language.NewInt8(math.MaxInt8),
+			cadence.Int8Type{},
+			cadence.NewInt8(math.MaxInt8),
 		},
 	}...)
 }
@@ -140,18 +140,18 @@ func TestEncodeInt16(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Min",
-			language.Int16Type{},
-			language.NewInt16(math.MinInt16),
+			cadence.Int16Type{},
+			cadence.NewInt16(math.MinInt16),
 		},
 		{
 			"Zero",
-			language.Int16Type{},
-			language.NewInt16(0),
+			cadence.Int16Type{},
+			cadence.NewInt16(0),
 		},
 		{
 			"Max",
-			language.Int16Type{},
-			language.NewInt16(math.MaxInt16),
+			cadence.Int16Type{},
+			cadence.NewInt16(math.MaxInt16),
 		},
 	}...)
 }
@@ -160,18 +160,18 @@ func TestEncodeInt32(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Min",
-			language.Int32Type{},
-			language.NewInt32(math.MinInt32),
+			cadence.Int32Type{},
+			cadence.NewInt32(math.MinInt32),
 		},
 		{
 			"Zero",
-			language.Int32Type{},
-			language.NewInt32(0),
+			cadence.Int32Type{},
+			cadence.NewInt32(0),
 		},
 		{
 			"Max",
-			language.Int32Type{},
-			language.NewInt32(math.MaxInt32),
+			cadence.Int32Type{},
+			cadence.NewInt32(math.MaxInt32),
 		},
 	}...)
 }
@@ -180,18 +180,18 @@ func TestEncodeInt64(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Min",
-			language.Int64Type{},
-			language.NewInt64(math.MinInt64),
+			cadence.Int64Type{},
+			cadence.NewInt64(math.MinInt64),
 		},
 		{
 			"Zero",
-			language.Int64Type{},
-			language.NewInt64(0),
+			cadence.Int64Type{},
+			cadence.NewInt64(0),
 		},
 		{
 			"Max",
-			language.Int64Type{},
-			language.NewInt64(math.MaxInt64),
+			cadence.Int64Type{},
+			cadence.NewInt64(math.MaxInt64),
 		},
 	}...)
 }
@@ -200,13 +200,13 @@ func TestEncodeUint8(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Zero",
-			language.UInt8Type{},
-			language.NewUInt8(0),
+			cadence.UInt8Type{},
+			cadence.NewUInt8(0),
 		},
 		{
 			"Max",
-			language.UInt8Type{},
-			language.NewUInt8(math.MaxUint8),
+			cadence.UInt8Type{},
+			cadence.NewUInt8(math.MaxUint8),
 		},
 	}...)
 }
@@ -215,13 +215,13 @@ func TestEncodeUint16(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Zero",
-			language.UInt16Type{},
-			language.NewUInt16(0),
+			cadence.UInt16Type{},
+			cadence.NewUInt16(0),
 		},
 		{
 			"Max",
-			language.UInt16Type{},
-			language.NewUInt16(math.MaxUint8),
+			cadence.UInt16Type{},
+			cadence.NewUInt16(math.MaxUint8),
 		},
 	}...)
 }
@@ -230,13 +230,13 @@ func TestEncodeUint32(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Zero",
-			language.UInt32Type{},
-			language.NewUInt32(0),
+			cadence.UInt32Type{},
+			cadence.NewUInt32(0),
 		},
 		{
 			"Max",
-			language.UInt32Type{},
-			language.NewUInt32(math.MaxUint32),
+			cadence.UInt32Type{},
+			cadence.NewUInt32(math.MaxUint32),
 		},
 	}...)
 }
@@ -245,13 +245,13 @@ func TestEncodeUint64(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Zero",
-			language.UInt64Type{},
-			language.NewUInt64(0),
+			cadence.UInt64Type{},
+			cadence.NewUInt64(0),
 		},
 		{
 			"Max",
-			language.UInt64Type{},
-			language.NewUInt64(math.MaxUint64),
+			cadence.UInt64Type{},
+			cadence.NewUInt64(math.MaxUint64),
 		},
 	}...)
 }
@@ -259,52 +259,52 @@ func TestEncodeUint64(t *testing.T) {
 func TestEncodeVariableSizedArray(t *testing.T) {
 	emptyArray := encodeTest{
 		"EmptyArray",
-		language.VariableSizedArrayType{
-			ElementType: language.IntType{},
+		cadence.VariableSizedArrayType{
+			ElementType: cadence.IntType{},
 		},
-		language.NewVariableSizedArray([]language.Value{}),
+		cadence.NewVariableSizedArray([]cadence.Value{}),
 	}
 
 	intArray := encodeTest{
 		"IntArray",
-		language.VariableSizedArrayType{
-			ElementType: language.IntType{},
+		cadence.VariableSizedArrayType{
+			ElementType: cadence.IntType{},
 		},
-		language.NewVariableSizedArray([]language.Value{
-			language.NewInt(1),
-			language.NewInt(2),
-			language.NewInt(3),
+		cadence.NewVariableSizedArray([]cadence.Value{
+			cadence.NewInt(1),
+			cadence.NewInt(2),
+			cadence.NewInt(3),
 		}),
 	}
 
 	compositeArray := encodeTest{
 		"CompositeArray",
-		language.VariableSizedArrayType{
-			ElementType: language.CompositeType{
-				Fields: []language.Field{
+		cadence.VariableSizedArrayType{
+			ElementType: cadence.CompositeType{
+				Fields: []cadence.Field{
 					{
 						Identifier: "a",
-						Type:       language.StringType{},
+						Type:       cadence.StringType{},
 					},
 					{
 						Identifier: "b",
-						Type:       language.IntType{},
+						Type:       cadence.IntType{},
 					},
 				},
 			},
 		},
-		language.NewVariableSizedArray([]language.Value{
-			language.NewComposite([]language.Value{
-				language.NewString("a"),
-				language.NewInt(1),
+		cadence.NewVariableSizedArray([]cadence.Value{
+			cadence.NewComposite([]cadence.Value{
+				cadence.NewString("a"),
+				cadence.NewInt(1),
 			}),
-			language.NewComposite([]language.Value{
-				language.NewString("b"),
-				language.NewInt(1),
+			cadence.NewComposite([]cadence.Value{
+				cadence.NewString("b"),
+				cadence.NewInt(1),
 			}),
-			language.NewComposite([]language.Value{
-				language.NewString("c"),
-				language.NewInt(1),
+			cadence.NewComposite([]cadence.Value{
+				cadence.NewString("c"),
+				cadence.NewInt(1),
 			}),
 		}),
 	}
@@ -320,22 +320,22 @@ func TestEncodeConstantSizedArray(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"EmptyArray",
-			language.ConstantSizedArrayType{
+			cadence.ConstantSizedArrayType{
 				Size:        0,
-				ElementType: language.IntType{},
+				ElementType: cadence.IntType{},
 			},
-			language.NewConstantSizedArray([]language.Value{}),
+			cadence.NewConstantSizedArray([]cadence.Value{}),
 		},
 		{
 			"IntArray",
-			language.ConstantSizedArrayType{
+			cadence.ConstantSizedArrayType{
 				Size:        3,
-				ElementType: language.IntType{},
+				ElementType: cadence.IntType{},
 			},
-			language.NewConstantSizedArray([]language.Value{
-				language.NewInt(1),
-				language.NewInt(2),
-				language.NewInt(3),
+			cadence.NewConstantSizedArray([]cadence.Value{
+				cadence.NewInt(1),
+				cadence.NewInt(2),
+				cadence.NewInt(3),
 			}),
 		},
 	}...)
@@ -344,60 +344,60 @@ func TestEncodeConstantSizedArray(t *testing.T) {
 func TestEncodeDictionary(t *testing.T) {
 	simpleDict := encodeTest{
 		"SimpleDict",
-		language.DictionaryType{
-			KeyType:     language.StringType{},
-			ElementType: language.IntType{},
+		cadence.DictionaryType{
+			KeyType:     cadence.StringType{},
+			ElementType: cadence.IntType{},
 		},
-		language.NewDictionary([]language.KeyValuePair{
+		cadence.NewDictionary([]cadence.KeyValuePair{
 			{
-				language.NewString("a"),
-				language.NewInt(1),
+				cadence.NewString("a"),
+				cadence.NewInt(1),
 			},
 			{
-				language.NewString("b"),
-				language.NewInt(2),
+				cadence.NewString("b"),
+				cadence.NewInt(2),
 			},
 			{
-				language.NewString("c"),
-				language.NewInt(3),
+				cadence.NewString("c"),
+				cadence.NewInt(3),
 			},
 		}),
 	}
 
 	nestedDict := encodeTest{
 		"NestedDict",
-		language.DictionaryType{
-			KeyType: language.StringType{},
-			ElementType: language.DictionaryType{
-				KeyType:     language.StringType{},
-				ElementType: language.IntType{},
+		cadence.DictionaryType{
+			KeyType: cadence.StringType{},
+			ElementType: cadence.DictionaryType{
+				KeyType:     cadence.StringType{},
+				ElementType: cadence.IntType{},
 			},
 		},
-		language.NewDictionary([]language.KeyValuePair{
+		cadence.NewDictionary([]cadence.KeyValuePair{
 			{
-				language.NewString("a"),
-				language.NewDictionary([]language.KeyValuePair{
+				cadence.NewString("a"),
+				cadence.NewDictionary([]cadence.KeyValuePair{
 					{
-						language.NewString("1"),
-						language.NewInt(1),
+						cadence.NewString("1"),
+						cadence.NewInt(1),
 					},
 				}),
 			},
 			{
-				language.NewString("b"),
-				language.NewDictionary([]language.KeyValuePair{
+				cadence.NewString("b"),
+				cadence.NewDictionary([]cadence.KeyValuePair{
 					{
-						language.NewString("2"),
-						language.NewInt(2),
+						cadence.NewString("2"),
+						cadence.NewInt(2),
 					},
 				}),
 			},
 			{
-				language.NewString("c"),
-				language.NewDictionary([]language.KeyValuePair{
+				cadence.NewString("c"),
+				cadence.NewDictionary([]cadence.KeyValuePair{
 					{
-						language.NewString("3"),
-						language.NewInt(3),
+						cadence.NewString("3"),
+						cadence.NewInt(3),
 					},
 				}),
 			},
@@ -406,41 +406,41 @@ func TestEncodeDictionary(t *testing.T) {
 
 	compositeDict := encodeTest{
 		"CompositeDict",
-		language.DictionaryType{
-			KeyType: language.StringType{},
-			ElementType: language.CompositeType{
-				Fields: []language.Field{
+		cadence.DictionaryType{
+			KeyType: cadence.StringType{},
+			ElementType: cadence.CompositeType{
+				Fields: []cadence.Field{
 					{
 						Identifier: "a",
-						Type:       language.StringType{},
+						Type:       cadence.StringType{},
 					},
 					{
 						Identifier: "b",
-						Type:       language.IntType{},
+						Type:       cadence.IntType{},
 					},
 				},
 			},
 		},
-		language.NewDictionary([]language.KeyValuePair{
+		cadence.NewDictionary([]cadence.KeyValuePair{
 			{
-				language.NewString("a"),
-				language.NewComposite([]language.Value{
-					language.NewString("a"),
-					language.NewInt(1),
+				cadence.NewString("a"),
+				cadence.NewComposite([]cadence.Value{
+					cadence.NewString("a"),
+					cadence.NewInt(1),
 				}),
 			},
 			{
-				language.NewString("b"),
-				language.NewComposite([]language.Value{
-					language.NewString("b"),
-					language.NewInt(2),
+				cadence.NewString("b"),
+				cadence.NewComposite([]cadence.Value{
+					cadence.NewString("b"),
+					cadence.NewInt(2),
 				}),
 			},
 			{
-				language.NewString("c"),
-				language.NewComposite([]language.Value{
-					language.NewString("c"),
-					language.NewInt(3),
+				cadence.NewString("c"),
+				cadence.NewComposite([]cadence.Value{
+					cadence.NewString("c"),
+					cadence.NewInt(3),
 				}),
 			},
 		}),
@@ -456,97 +456,97 @@ func TestEncodeDictionary(t *testing.T) {
 func TestEncodeComposite(t *testing.T) {
 	simpleComp := encodeTest{
 		"SimpleComposite",
-		language.CompositeType{
-			Fields: []language.Field{
+		cadence.CompositeType{
+			Fields: []cadence.Field{
 				{
 					Identifier: "a",
-					Type:       language.StringType{},
+					Type:       cadence.StringType{},
 				},
 				{
 					Identifier: "b",
-					Type:       language.StringType{},
+					Type:       cadence.StringType{},
 				},
 			},
 		},
-		language.NewComposite([]language.Value{
-			language.NewString("foo"),
-			language.NewString("bar"),
+		cadence.NewComposite([]cadence.Value{
+			cadence.NewString("foo"),
+			cadence.NewString("bar"),
 		}),
 	}
 
 	multiTypeComp := encodeTest{
 		"MultiTypeComposite",
-		language.CompositeType{
-			Fields: []language.Field{
+		cadence.CompositeType{
+			Fields: []cadence.Field{
 				{
 					Identifier: "a",
-					Type:       language.StringType{},
+					Type:       cadence.StringType{},
 				},
 				{
 					Identifier: "b",
-					Type:       language.IntType{},
+					Type:       cadence.IntType{},
 				},
 				{
 					Identifier: "c",
-					Type:       language.BoolType{},
+					Type:       cadence.BoolType{},
 				},
 			},
 		},
-		language.NewComposite([]language.Value{
-			language.NewString("foo"),
-			language.NewInt(42),
-			language.NewBool(true),
+		cadence.NewComposite([]cadence.Value{
+			cadence.NewString("foo"),
+			cadence.NewInt(42),
+			cadence.NewBool(true),
 		}),
 	}
 
 	arrayComp := encodeTest{
 		"ArrayComposite",
-		language.CompositeType{
-			Fields: []language.Field{
+		cadence.CompositeType{
+			Fields: []cadence.Field{
 				{
 					Identifier: "a",
-					Type: language.VariableSizedArrayType{
-						ElementType: language.IntType{},
+					Type: cadence.VariableSizedArrayType{
+						ElementType: cadence.IntType{},
 					},
 				},
 			},
 		},
-		language.NewComposite([]language.Value{
-			language.NewVariableSizedArray([]language.Value{
-				language.NewInt(1),
-				language.NewInt(2),
-				language.NewInt(3),
-				language.NewInt(4),
-				language.NewInt(5),
+		cadence.NewComposite([]cadence.Value{
+			cadence.NewVariableSizedArray([]cadence.Value{
+				cadence.NewInt(1),
+				cadence.NewInt(2),
+				cadence.NewInt(3),
+				cadence.NewInt(4),
+				cadence.NewInt(5),
 			}),
 		}),
 	}
 
 	nestedComp := encodeTest{
 		"NestedComposite",
-		language.CompositeType{
-			Fields: []language.Field{
+		cadence.CompositeType{
+			Fields: []cadence.Field{
 				{
 					Identifier: "a",
-					Type:       language.StringType{},
+					Type:       cadence.StringType{},
 				},
 				{
 					Identifier: "b",
-					Type: language.CompositeType{
-						Fields: []language.Field{
+					Type: cadence.CompositeType{
+						Fields: []cadence.Field{
 							{
 								Identifier: "c",
-								Type:       language.IntType{},
+								Type:       cadence.IntType{},
 							},
 						},
 					},
 				},
 			},
 		},
-		language.NewComposite([]language.Value{
-			language.NewString("foo"),
-			language.NewComposite([]language.Value{
-				language.NewInt(42),
+		cadence.NewComposite([]cadence.Value{
+			cadence.NewString("foo"),
+			cadence.NewComposite([]cadence.Value{
+				cadence.NewInt(42),
 			}),
 		}),
 	}
@@ -562,48 +562,48 @@ func TestEncodeComposite(t *testing.T) {
 func TestEncodeEvent(t *testing.T) {
 	simpleEvent := encodeTest{
 		"SimpleEvent",
-		language.EventType{
-			CompositeType: language.CompositeType{
-				Fields: []language.Field{
+		cadence.EventType{
+			CompositeType: cadence.CompositeType{
+				Fields: []cadence.Field{
 					{
 						Identifier: "a",
-						Type:       language.IntType{},
+						Type:       cadence.IntType{},
 					},
 					{
 						Identifier: "b",
-						Type:       language.StringType{},
+						Type:       cadence.StringType{},
 					},
 				},
 			},
 		},
-		language.NewComposite(
-			[]language.Value{
-				language.NewInt(1),
-				language.NewString("foo"),
+		cadence.NewComposite(
+			[]cadence.Value{
+				cadence.NewInt(1),
+				cadence.NewString("foo"),
 			},
 		),
 	}
 
 	compositeEvent := encodeTest{
 		"CompositeEvent",
-		language.EventType{
-			CompositeType: language.CompositeType{
-				Fields: []language.Field{
+		cadence.EventType{
+			CompositeType: cadence.CompositeType{
+				Fields: []cadence.Field{
 					{
 						Identifier: "a",
-						Type:       language.StringType{},
+						Type:       cadence.StringType{},
 					},
 					{
 						Identifier: "b",
-						Type: language.CompositeType{
-							Fields: []language.Field{
+						Type: cadence.CompositeType{
+							Fields: []cadence.Field{
 								{
 									Identifier: "c",
-									Type:       language.StringType{},
+									Type:       cadence.StringType{},
 								},
 								{
 									Identifier: "d",
-									Type:       language.IntType{},
+									Type:       cadence.IntType{},
 								},
 							},
 						},
@@ -611,13 +611,13 @@ func TestEncodeEvent(t *testing.T) {
 				},
 			},
 		},
-		language.NewComposite(
-			[]language.Value{
-				language.NewString("foo"),
-				language.NewComposite(
-					[]language.Value{
-						language.NewString("bar"),
-						language.NewInt(42),
+		cadence.NewComposite(
+			[]cadence.Value{
+				cadence.NewString("foo"),
+				cadence.NewComposite(
+					[]cadence.Value{
+						cadence.NewString("bar"),
+						cadence.NewInt(42),
 					},
 				),
 			},
@@ -637,7 +637,7 @@ func testAllEncode(t *testing.T, tests ...encodeTest) {
 
 const numTrials = 250
 
-func testEncode(t *testing.T, typ language.Type, val language.Value) {
+func testEncode(t *testing.T, typ cadence.Type, val cadence.Value) {
 	b1, err := encoding.Encode(val)
 	require.NoError(t, err)
 

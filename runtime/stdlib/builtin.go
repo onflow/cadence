@@ -3,10 +3,10 @@ package stdlib
 import (
 	"fmt"
 
-	"github.com/dapperlabs/flow-go/language/runtime/ast"
-	"github.com/dapperlabs/flow-go/language/runtime/interpreter"
-	"github.com/dapperlabs/flow-go/language/runtime/sema"
-	"github.com/dapperlabs/flow-go/language/runtime/trampoline"
+	"github.com/dapperlabs/cadence/runtime/ast"
+	"github.com/dapperlabs/cadence/runtime/interpreter"
+	"github.com/dapperlabs/cadence/runtime/sema"
+	"github.com/dapperlabs/cadence/runtime/trampoline"
 )
 
 // This file defines functions built-in to Cadence.

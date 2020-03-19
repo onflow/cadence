@@ -1,7 +1,7 @@
 package interpreter
 
 import (
-	"github.com/dapperlabs/flow-go/language/runtime/sema"
+	"github.com/dapperlabs/cadence/runtime/sema"
 )
 
 type DynamicType interface {

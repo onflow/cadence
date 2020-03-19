@@ -1,12 +1,12 @@
-package language
+package cadence
 
 import (
 	"fmt"
 	"math/big"
 	"sort"
 
-	"github.com/dapperlabs/flow-go/language/runtime"
-	"github.com/dapperlabs/flow-go/language/runtime/interpreter"
+	"github.com/dapperlabs/cadence/runtime"
+	"github.com/dapperlabs/cadence/runtime/interpreter"
 )
 
 // ConvertValue converts a runtime value to its corresponding Go representation.

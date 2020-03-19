@@ -7,10 +7,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dapperlabs/flow-go/language/runtime/common"
-	"github.com/dapperlabs/flow-go/language/runtime/errors"
-	"github.com/dapperlabs/flow-go/language/runtime/sema"
-	. "github.com/dapperlabs/flow-go/language/runtime/tests/utils"
+	"github.com/dapperlabs/cadence/runtime/common"
+	"github.com/dapperlabs/cadence/runtime/errors"
+	"github.com/dapperlabs/cadence/runtime/sema"
+	. "github.com/dapperlabs/cadence/runtime/tests/utils"
 )
 
 func constructorArguments(compositeKind common.CompositeKind) string {

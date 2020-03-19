@@ -1,7 +1,7 @@
 package ast
 
 import (
-	"github.com/dapperlabs/flow-go/language/runtime/errors"
+	"github.com/dapperlabs/cadence/runtime/errors"
 )
 
 //go:generate stringer -type=Operation

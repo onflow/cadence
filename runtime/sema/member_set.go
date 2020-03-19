@@ -1,7 +1,7 @@
 package sema
 
 import (
-	interfaceentry "github.com/dapperlabs/flow-go/language/runtime/common/interface_entry"
+	interfaceentry "github.com/dapperlabs/cadence/runtime/common/interface_entry"
 	"github.com/raviqqe/hamt"
 )
 

@@ -1,4 +1,4 @@
-module github.com/dapperlabs/flow-go/language
+module github.com/dapperlabs/cadence
 
 go 1.13
 

@@ -1,13 +1,13 @@
 package interpreter
 
 import (
-	"github.com/dapperlabs/flow-go/language/runtime/ast"
-	"github.com/dapperlabs/flow-go/language/runtime/common"
-	"github.com/dapperlabs/flow-go/language/runtime/errors"
-	"github.com/dapperlabs/flow-go/language/runtime/sema"
+	"github.com/dapperlabs/cadence/runtime/ast"
+	"github.com/dapperlabs/cadence/runtime/common"
+	"github.com/dapperlabs/cadence/runtime/errors"
+	"github.com/dapperlabs/cadence/runtime/sema"
 	"github.com/raviqqe/hamt"
 	// revive:disable:dot-imports
-	. "github.com/dapperlabs/flow-go/language/runtime/trampoline"
+	. "github.com/dapperlabs/cadence/runtime/trampoline"
 	// revive:enable
 )
 
