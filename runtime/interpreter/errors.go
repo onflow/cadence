@@ -184,12 +184,8 @@ func (e *ForceNilError) Error() string {
 // TypeMismatchError
 
 type TypeMismatchError struct {
-	ExpectedType  sema.Type
-	LocationRange LocationRange
-}
-
-func (e *TypeMismatchError) ImportLocation() ast.Location {
-	return e.LocationRange.Location
+	ExpectedType sema.Type
+	LocationRange
 }
 
 func (e *TypeMismatchError) Error() string {
@@ -199,10 +195,34 @@ func (e *TypeMismatchError) Error() string {
 	)
 }
 
-func (e *TypeMismatchError) StartPosition() ast.Position {
-	return e.LocationRange.StartPos
+// InvalidSavePathDomainError
+
+type InvalidSavePathDomainError struct {
+	ActualDomain   common.PathDomain
+	ExpectedDomain common.PathDomain
+	LocationRange
 }
 
-func (e *TypeMismatchError) EndPosition() ast.Position {
-	return e.LocationRange.EndPos
+func (e *InvalidSavePathDomainError) Error() string {
+	return fmt.Sprintf(
+		"invalid path domain when saving value: expected `%s`, got `%s`",
+		e.ExpectedDomain.Identifier(),
+		e.ActualDomain.Identifier(),
+	)
+}
+
+// OverwriteError
+
+type OverwriteError struct {
+	Address common.Address
+	Path    PathValue
+	LocationRange
+}
+
+func (e *OverwriteError) Error() string {
+	return fmt.Sprintf(
+		"failed to save object: path %s in account %s already stores an object",
+		e.Path,
+		e.Address,
+	)
 }

@@ -4407,6 +4407,9 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 	case "removePublicKey":
 		return v.removePublicKeyFunction
 
+	case "save":
+		return inter.authAccountSaveFunction(v.Address)
+
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -4488,7 +4491,7 @@ func (PublicAccountValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _
 // PathValue
 
 type PathValue struct {
-	Domain     string
+	Domain     common.PathDomain
 	Identifier string
 }
 
