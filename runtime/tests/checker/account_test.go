@@ -69,7 +69,7 @@ func TestCheckAccount(t *testing.T) {
 
               fun test() {
                   let r <- create R()
-                  account.save(<-r, path: /storage/r)
+                  account.save(<-r, to: /storage/r)
               }
             `,
 		)

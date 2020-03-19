@@ -3470,6 +3470,7 @@ var authAccountSaveFunctionType = func() *GenericFunctionType {
 				},
 			},
 			{
+				Label:      "to",
 				Identifier: "path",
 				TypeAnnotation: &GenericTypeAnnotation{
 					TypeAnnotation: NewTypeAnnotation(&PathType{}),
