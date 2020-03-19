@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dapperlabs/flow-go/language/runtime/errors"
-	"github.com/dapperlabs/flow-go/language/runtime/sema"
+	"github.com/dapperlabs/cadence/runtime/errors"
+	"github.com/dapperlabs/cadence/runtime/sema"
 )
 
 // Error is the containing type for all errors produced by the runtime.

@@ -6,8 +6,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dapperlabs/flow-go/language/runtime/ast"
-	"github.com/dapperlabs/flow-go/language/runtime/parser"
+	"github.com/dapperlabs/cadence/runtime/ast"
+	"github.com/dapperlabs/cadence/runtime/parser"
 )
 
 func TestBeforeExtractor(t *testing.T) {

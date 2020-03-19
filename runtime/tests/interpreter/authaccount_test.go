@@ -7,12 +7,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dapperlabs/flow-go/language/runtime/common"
-	"github.com/dapperlabs/flow-go/language/runtime/errors"
-	"github.com/dapperlabs/flow-go/language/runtime/interpreter"
-	"github.com/dapperlabs/flow-go/language/runtime/sema"
-	"github.com/dapperlabs/flow-go/language/runtime/stdlib"
-	"github.com/dapperlabs/flow-go/language/runtime/trampoline"
+	"github.com/dapperlabs/cadence/runtime/common"
+	"github.com/dapperlabs/cadence/runtime/errors"
+	"github.com/dapperlabs/cadence/runtime/interpreter"
+	"github.com/dapperlabs/cadence/runtime/sema"
+	"github.com/dapperlabs/cadence/runtime/stdlib"
+	"github.com/dapperlabs/cadence/runtime/trampoline"
 )
 
 func TestInterpretAuthAccount(t *testing.T) {

@@ -6,10 +6,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dapperlabs/flow-go/language/runtime/ast"
-	"github.com/dapperlabs/flow-go/language/runtime/errors"
-	"github.com/dapperlabs/flow-go/language/runtime/interpreter"
-	"github.com/dapperlabs/flow-go/language/runtime/trampoline"
+	"github.com/dapperlabs/cadence/runtime/ast"
+	"github.com/dapperlabs/cadence/runtime/errors"
+	"github.com/dapperlabs/cadence/runtime/interpreter"
+	"github.com/dapperlabs/cadence/runtime/trampoline"
 )
 
 func TestInterpretTransactions(t *testing.T) {

@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/dapperlabs/flow-go/language/runtime/ast"
+	"github.com/dapperlabs/cadence/runtime/ast"
 )
 
 func TestOptionalSubtyping(t *testing.T) {

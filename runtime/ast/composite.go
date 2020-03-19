@@ -1,7 +1,7 @@
 package ast
 
 import (
-	"github.com/dapperlabs/flow-go/language/runtime/common"
+	"github.com/dapperlabs/cadence/runtime/common"
 )
 
 // CompositeDeclaration

@@ -1,8 +1,8 @@
 package sema
 
 import (
-	"github.com/dapperlabs/flow-go/language/runtime/ast"
-	"github.com/dapperlabs/flow-go/language/runtime/errors"
+	"github.com/dapperlabs/cadence/runtime/ast"
+	"github.com/dapperlabs/cadence/runtime/errors"
 )
 
 func (checker *Checker) VisitIfStatement(statement *ast.IfStatement) ast.Repr {

@@ -1,8 +1,8 @@
 package runtime
 
 import (
-	"github.com/dapperlabs/flow-go/language/runtime/common"
-	"github.com/dapperlabs/flow-go/language/runtime/interpreter"
+	"github.com/dapperlabs/cadence/runtime/common"
+	"github.com/dapperlabs/cadence/runtime/interpreter"
 )
 
 type Value = interpreter.Value

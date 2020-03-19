@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/gob"
 
-	"github.com/dapperlabs/flow-go/language/runtime/errors"
-	"github.com/dapperlabs/flow-go/language/runtime/interpreter"
+	"github.com/dapperlabs/cadence/runtime/errors"
+	"github.com/dapperlabs/cadence/runtime/interpreter"
 )
 
 type storageKey struct {

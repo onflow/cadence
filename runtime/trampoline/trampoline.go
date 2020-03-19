@@ -1,7 +1,7 @@
 package trampoline
 
 import (
-	"github.com/dapperlabs/flow-go/language/runtime/errors"
+	"github.com/dapperlabs/cadence/runtime/errors"
 )
 
 // Based on "Stackless Scala With Free" by Rúnar Óli Bjarnason:

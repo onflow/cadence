@@ -3,7 +3,7 @@ package activations
 import (
 	"github.com/raviqqe/hamt"
 
-	"github.com/dapperlabs/flow-go/language/runtime/common"
+	"github.com/dapperlabs/cadence/runtime/common"
 )
 
 // Activations is a stack of activation records.

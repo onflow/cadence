@@ -3,9 +3,9 @@ package sema
 import (
 	"github.com/raviqqe/hamt"
 
-	"github.com/dapperlabs/flow-go/language/runtime/activations"
-	"github.com/dapperlabs/flow-go/language/runtime/ast"
-	"github.com/dapperlabs/flow-go/language/runtime/common"
+	"github.com/dapperlabs/cadence/runtime/activations"
+	"github.com/dapperlabs/cadence/runtime/ast"
+	"github.com/dapperlabs/cadence/runtime/common"
 )
 
 type VariableActivations struct {
