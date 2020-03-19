@@ -15,11 +15,6 @@ test:
 install-tools:
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ${GOPATH}/bin v1.23.8
 
-# Check if the go version is 1.13. flow-go only supports go 1.13
-.PHONY: check-go-version
-check-go-version:
-	go version | grep 1.13
-
 .PHONY: lint
 lint:
 	golangci-lint run -v ./...
@@ -41,4 +36,4 @@ ifeq ($(COVER), true)
 endif
 
 .PHONY: ci
-ci: install-tools check-go-version tidy lint test coverage
+ci: install-tools tidy lint test coverage
