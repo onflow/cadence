@@ -7704,3 +7704,22 @@ func TestParsePathLiteral(t *testing.T) {
 
 	utils.AssertEqualWithDiff(t, expected, actual)
 }
+
+func TestParseInvalidForceCast(t *testing.T) {
+
+	_, _, err := parser.ParseReplInput("1 as!! Int\n")
+
+	require.Error(t, err)
+
+	assert.IsType(t, parser.Error{}, err)
+
+	errors := err.(parser.Error).Errors
+	assert.Len(t, errors, 1)
+
+	syntaxError := errors[0].(*parser.SyntaxError)
+
+	assert.Equal(t,
+		Position{Offset: 5, Line: 1, Column: 5},
+		syntaxError.Pos,
+	)
+}

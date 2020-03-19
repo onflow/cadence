@@ -509,8 +509,13 @@ func NewCadenceParser(input antlr.TokenStream) *CadenceParser {
 // either is a line terminator, or is a multi line comment that
 // contains a line terminator.
 func (p *CadenceParser) lineTerminatorAhead() bool {
+	index := p.GetCurrentToken().GetTokenIndex()
+	if index == 0 {
+		return false
+	}
+
 	// Get the token ahead of the current index.
-	possibleIndexEosToken := p.GetCurrentToken().GetTokenIndex() - 1
+	possibleIndexEosToken := index - 1
 	ahead := p.GetTokenStream().Get(possibleIndexEosToken)
 
 	if ahead.GetChannel() != antlr.LexerHidden {
@@ -540,6 +545,9 @@ func (p *CadenceParser) lineTerminatorAhead() bool {
 
 func (p *CadenceParser) noWhitespace() bool {
 	index := p.GetCurrentToken().GetTokenIndex()
+	if index == 0 {
+		return true
+	}
 	return p.GetTokenStream().Get(index-1).GetTokenType() != CadenceParserWS
 }
 
