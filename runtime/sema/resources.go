@@ -1,9 +1,10 @@
 package sema
 
 import (
+	"github.com/raviqqe/hamt"
+
 	"github.com/dapperlabs/cadence/runtime/ast"
 	interfaceentry "github.com/dapperlabs/cadence/runtime/common/interface_entry"
-	"github.com/raviqqe/hamt"
 )
 
 // ResourceInfo is the info for a resource.

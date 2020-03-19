@@ -2728,11 +2728,7 @@ func (t *GenericFunctionType) IsInvalidType() bool {
 		}
 	}
 
-	if t.ReturnTypeAnnotation.IsInvalidType() {
-		return true
-	}
-
-	return false
+	return t.ReturnTypeAnnotation.IsInvalidType()
 }
 
 func (t *GenericFunctionType) TypeAnnotationState() TypeAnnotationState {
@@ -2772,11 +2768,7 @@ func (t *GenericFunctionType) ContainsFirstLevelResourceInterfaceType() bool {
 		}
 	}
 
-	if t.ReturnTypeAnnotation.ContainsFirstLevelResourceInterfaceType() {
-		return true
-	}
-
-	return false
+	return t.ReturnTypeAnnotation.ContainsFirstLevelResourceInterfaceType()
 }
 
 func (t *GenericFunctionType) InvocationFunctionType() *FunctionType {
@@ -2919,11 +2911,7 @@ func (t *FunctionType) IsInvalidType() bool {
 		}
 	}
 
-	if t.ReturnTypeAnnotation.Type.IsInvalidType() {
-		return true
-	}
-
-	return false
+	return t.ReturnTypeAnnotation.Type.IsInvalidType()
 }
 
 func (t *FunctionType) TypeAnnotationState() TypeAnnotationState {
@@ -2951,11 +2939,7 @@ func (t *FunctionType) ContainsFirstLevelResourceInterfaceType() bool {
 		}
 	}
 
-	if t.ReturnTypeAnnotation.Type.ContainsFirstLevelResourceInterfaceType() {
-		return true
-	}
-
-	return false
+	return t.ReturnTypeAnnotation.Type.ContainsFirstLevelResourceInterfaceType()
 }
 
 // SpecialFunctionType is the the type representing a special function,
