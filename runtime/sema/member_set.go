@@ -1,8 +1,9 @@
 package sema
 
 import (
-	interfaceentry "github.com/dapperlabs/cadence/runtime/common/interface_entry"
 	"github.com/raviqqe/hamt"
+
+	interfaceentry "github.com/dapperlabs/cadence/runtime/common/interface_entry"
 )
 
 // MemberSet is an immutable set of field assignments.

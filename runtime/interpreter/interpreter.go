@@ -12,6 +12,7 @@ import (
 	"github.com/dapperlabs/cadence/runtime/common"
 	"github.com/dapperlabs/cadence/runtime/errors"
 	"github.com/dapperlabs/cadence/runtime/sema"
+
 	// revive:disable
 	. "github.com/dapperlabs/cadence/runtime/trampoline"
 	// revive:enable

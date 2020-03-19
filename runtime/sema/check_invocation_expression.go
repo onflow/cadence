@@ -66,8 +66,6 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 
 	// invoked expression has function type
 
-	var returnType Type = &InvalidType{}
-
 	argumentTypes, functionType := checker.checkInvocation(invocationExpression, invokableType)
 	checker.Elaboration.InvocationExpressionArgumentTypes[invocationExpression] = argumentTypes
 
@@ -89,7 +87,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 		)
 	}
 
-	returnType = functionType.ReturnTypeAnnotation.Type
+	returnType := functionType.ReturnTypeAnnotation.Type
 	checker.Elaboration.InvocationExpressionReturnTypes[invocationExpression] = returnType
 
 	parameters := functionType.Parameters
