@@ -4,7 +4,7 @@ import (
 	"encoding/gob"
 	"fmt"
 
-	"github.com/dapperlabs/flow-go/language/runtime/common"
+	"github.com/dapperlabs/cadence/runtime/common"
 )
 
 // Identifier

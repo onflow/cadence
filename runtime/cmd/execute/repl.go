@@ -8,9 +8,9 @@ import (
 	"github.com/c-bata/go-prompt"
 	"github.com/logrusorgru/aurora"
 
-	"github.com/dapperlabs/flow-go/language/runtime"
-	"github.com/dapperlabs/flow-go/language/runtime/cmd"
-	"github.com/dapperlabs/flow-go/language/runtime/interpreter"
+	"github.com/dapperlabs/cadence/runtime"
+	"github.com/dapperlabs/cadence/runtime/cmd"
+	"github.com/dapperlabs/cadence/runtime/interpreter"
 )
 
 const replFilename = "REPL"

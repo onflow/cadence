@@ -6,8 +6,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/dapperlabs/flow-go/language/runtime/common"
-	"github.com/dapperlabs/flow-go/language/runtime/interpreter"
+	"github.com/dapperlabs/cadence/runtime/common"
+	"github.com/dapperlabs/cadence/runtime/interpreter"
 )
 
 func TestInterpretPath(t *testing.T) {

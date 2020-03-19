@@ -5,9 +5,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/dapperlabs/flow-go/language/runtime/sema"
-	"github.com/dapperlabs/flow-go/language/runtime/stdlib"
-	. "github.com/dapperlabs/flow-go/language/runtime/tests/utils"
+	"github.com/dapperlabs/cadence/runtime/sema"
+	"github.com/dapperlabs/cadence/runtime/stdlib"
+	. "github.com/dapperlabs/cadence/runtime/tests/utils"
 )
 
 func TestCheckAssertWithoutMessage(t *testing.T) {

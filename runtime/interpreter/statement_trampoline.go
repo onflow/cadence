@@ -1,7 +1,7 @@
 package interpreter
 
 import (
-	"github.com/dapperlabs/flow-go/language/runtime/trampoline"
+	"github.com/dapperlabs/cadence/runtime/trampoline"
 )
 
 type StatementTrampoline struct {

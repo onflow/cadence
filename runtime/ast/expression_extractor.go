@@ -3,7 +3,7 @@ package ast
 import (
 	"fmt"
 
-	"github.com/dapperlabs/flow-go/language/runtime/errors"
+	"github.com/dapperlabs/cadence/runtime/errors"
 )
 
 type BoolExtractor interface {

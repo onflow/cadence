@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/dapperlabs/flow-go/language/runtime/cmd/execute"
+	"github.com/dapperlabs/cadence/runtime/cmd/execute"
 )
 
 func main() {

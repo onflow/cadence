@@ -3,9 +3,9 @@ package sema
 import (
 	"fmt"
 
-	"github.com/dapperlabs/flow-go/language/runtime/ast"
-	"github.com/dapperlabs/flow-go/language/runtime/common"
-	"github.com/dapperlabs/flow-go/language/runtime/common/intervalst"
+	"github.com/dapperlabs/cadence/runtime/ast"
+	"github.com/dapperlabs/cadence/runtime/common"
+	"github.com/dapperlabs/cadence/runtime/common/intervalst"
 )
 
 type Position struct {

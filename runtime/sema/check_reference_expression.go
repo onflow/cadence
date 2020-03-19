@@ -1,7 +1,7 @@
 package sema
 
 import (
-	"github.com/dapperlabs/flow-go/language/runtime/ast"
+	"github.com/dapperlabs/cadence/runtime/ast"
 )
 
 // VisitReferenceExpression checks a reference expression `&t as T`,
