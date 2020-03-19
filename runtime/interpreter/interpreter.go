@@ -1858,7 +1858,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 						arguments,
 						argumentTypes,
 						parameterTypes,
-						invocationExpression.StartPosition(),
+						ast.NewRangeFromPositioned(invocationExpression),
 					)
 
 					// If this is invocation is optional chaining, wrap the result
@@ -1880,7 +1880,7 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 	arguments []Value,
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
-	pos ast.Position,
+	invocationRange ast.Range,
 ) (value Value, err error) {
 	// recover internal panics and return them as an error
 	defer recoverErrors(func(internalErr error) {
@@ -1892,7 +1892,7 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 		arguments,
 		argumentTypes,
 		parameterTypes,
-		pos,
+		invocationRange,
 	)
 
 	result := interpreter.runAllStatements(trampoline)
@@ -1907,7 +1907,7 @@ func (interpreter *Interpreter) functionValueInvocationTrampoline(
 	arguments []Value,
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
-	pos ast.Position,
+	invocationRange ast.Range,
 ) Trampoline {
 
 	parameterTypeCount := len(parameterTypes)
@@ -1925,17 +1925,19 @@ func (interpreter *Interpreter) functionValueInvocationTrampoline(
 
 	// TODO: optimize: only potentially used by host-functions
 
-	location := LocationPosition{
-		Position: pos,
+	locationRange := LocationRange{
 		Location: interpreter.Checker.Location,
+		Range:    invocationRange,
 	}
 
-	return function.Invoke(Invocation{
-		Arguments:     argumentCopies,
-		ArgumentTypes: argumentTypes,
-		Location:      location,
-		Interpreter:   interpreter,
-	})
+	return function.Invoke(
+		Invocation{
+			Arguments:     argumentCopies,
+			ArgumentTypes: argumentTypes,
+			LocationRange: locationRange,
+			Interpreter:   interpreter,
+		},
+	)
 }
 
 func (interpreter *Interpreter) invokeInterpretedFunction(
@@ -3100,12 +3102,13 @@ func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyEx
 			value := result.(Value)
 
 			// TODO: optimize: only potentially used by host-functions
-			location := LocationPosition{
-				Position: expression.StartPosition(),
+
+			locationRange := LocationRange{
 				Location: interpreter.Checker.Location,
+				Range:    ast.NewRangeFromPositioned(expression),
 			}
 
-			return value.(DestroyableValue).Destroy(interpreter, location)
+			return value.(DestroyableValue).Destroy(interpreter, locationRange)
 		})
 }
 

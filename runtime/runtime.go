@@ -523,7 +523,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 			constructorArguments,
 			constructorArgumentTypes,
 			false,
-			invocation.Location.Position,
+			invocation.LocationRange.Range,
 		)
 
 		codeValue := fromBytes(code)
@@ -624,7 +624,7 @@ func (r *interpreterRuntime) newSetCodeFunction(
 				constructorArguments,
 				constructorArgumentTypes,
 				true,
-				invocation.Location.Position,
+				invocation.LocationRange.Range,
 			)
 
 			codeValue := fromBytes(code)
@@ -651,7 +651,7 @@ func (r *interpreterRuntime) updateAccountCode(
 	constructorArguments []interpreter.Value,
 	constructorArgumentTypes []sema.Type,
 	checkPermission bool,
-	invocationPosition ast.Position,
+	invocationRange ast.Range,
 ) (contractTypes []*sema.CompositeType) {
 	location := AddressLocation(addressValue[:])
 
@@ -693,7 +693,7 @@ func (r *interpreterRuntime) updateAccountCode(
 			runtimeStorage,
 			checker,
 			functions,
-			invocationPosition,
+			invocationRange,
 		)
 
 		if err != nil {
@@ -758,7 +758,7 @@ func (r *interpreterRuntime) instantiateContract(
 	runtimeStorage *interpreterRuntimeStorage,
 	checker *sema.Checker,
 	functions stdlib.StandardLibraryFunctions,
-	invocationPos ast.Position,
+	invocationRange ast.Range,
 ) (
 	interpreter.Value,
 	error,
@@ -821,7 +821,7 @@ func (r *interpreterRuntime) instantiateContract(
 						constructorArguments,
 						argumentTypes,
 						parameterTypes,
-						invocationPos,
+						invocationRange,
 					)
 					if err != nil {
 						panic(err)

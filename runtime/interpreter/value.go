@@ -59,7 +59,7 @@ type EquatableValue interface {
 // DestroyableValue
 
 type DestroyableValue interface {
-	Destroy(*Interpreter, LocationPosition) trampoline.Trampoline
+	Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline
 }
 
 // HasKeyString
@@ -375,11 +375,11 @@ func (v *ArrayValue) SetOwner(owner *common.Address) {
 	}
 }
 
-func (v *ArrayValue) Destroy(interpreter *Interpreter, location LocationPosition) trampoline.Trampoline {
+func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
 	var result trampoline.Trampoline = trampoline.Done{}
 	for _, value := range v.Values {
 		result = result.FlatMap(func(_ interface{}) trampoline.Trampoline {
-			return value.(DestroyableValue).Destroy(interpreter, location)
+			return value.(DestroyableValue).Destroy(interpreter, locationRange)
 		})
 	}
 	return result
@@ -3320,7 +3320,7 @@ func init() {
 	gob.Register(&CompositeValue{})
 }
 
-func (v *CompositeValue) Destroy(interpreter *Interpreter, location LocationPosition) trampoline.Trampoline {
+func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
 
 	// if composite was deserialized, dynamically link in the destructor
 	if v.Destructor == nil {
@@ -3338,7 +3338,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, location LocationPosi
 			Self:          v,
 			Arguments:     nil,
 			ArgumentTypes: nil,
-			Location:      location,
+			LocationRange: locationRange,
 			Interpreter:   interpreter,
 		}
 
@@ -3653,7 +3653,7 @@ func (v *DictionaryValue) SetOwner(owner *common.Address) {
 	}
 }
 
-func (v *DictionaryValue) Destroy(interpreter *Interpreter, location LocationPosition) trampoline.Trampoline {
+func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
 	var result trampoline.Trampoline = trampoline.Done{}
 
 	maybeDestroy := func(value interface{}) {
@@ -3664,7 +3664,7 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, location LocationPos
 
 		result = result.
 			FlatMap(func(_ interface{}) trampoline.Trampoline {
-				return destroyableValue.Destroy(interpreter, location)
+				return destroyableValue.Destroy(interpreter, locationRange)
 			})
 	}
 
@@ -3941,7 +3941,7 @@ func (NilValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (v NilValue) Destroy(_ *Interpreter, _ LocationPosition) trampoline.Trampoline {
+func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
 	return trampoline.Done{}
 }
 
@@ -3998,8 +3998,8 @@ func (v *SomeValue) SetOwner(owner *common.Address) {
 	v.Value.SetOwner(owner)
 }
 
-func (v *SomeValue) Destroy(interpreter *Interpreter, location LocationPosition) trampoline.Trampoline {
-	return v.Value.(DestroyableValue).Destroy(interpreter, location)
+func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
+	return v.Value.(DestroyableValue).Destroy(interpreter, locationRange)
 }
 
 func (v *SomeValue) String() string {
@@ -4375,7 +4375,7 @@ func (AuthAccountValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (v AuthAccountValue) Destroy(_ *Interpreter, _ LocationPosition) trampoline.Trampoline {
+func (v AuthAccountValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
 	return trampoline.Done{}
 }
 
@@ -4383,7 +4383,7 @@ func (v AuthAccountValue) String() string {
 	return fmt.Sprintf("AuthAccount(%s)", v.Address)
 }
 
-func (v AuthAccountValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case "address":
 		return v.Address
@@ -4515,7 +4515,7 @@ func (PathValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (v PathValue) Destroy(_ *Interpreter, _ LocationPosition) trampoline.Trampoline {
+func (v PathValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
 	return trampoline.Done{}
 }
 
@@ -4553,7 +4553,7 @@ func (CapabilityValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (v CapabilityValue) Destroy(_ *Interpreter, _ LocationPosition) trampoline.Trampoline {
+func (v CapabilityValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
 	return trampoline.Done{}
 }
 

@@ -17,7 +17,7 @@ type Invocation struct {
 	Self          *CompositeValue
 	Arguments     []Value
 	ArgumentTypes []sema.Type
-	Location      LocationPosition
+	LocationRange LocationRange
 	Interpreter   *Interpreter
 }
 
