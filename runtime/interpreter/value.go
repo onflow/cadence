@@ -4458,7 +4458,7 @@ func (PublicAccountValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (v PublicAccountValue) Destroy(_ *Interpreter, _ LocationPosition) trampoline.Trampoline {
+func (v PublicAccountValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
 	return trampoline.Done{}
 }
 

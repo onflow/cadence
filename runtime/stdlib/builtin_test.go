@@ -32,8 +32,8 @@ func TestAssert(t *testing.T) {
 	_, err = inter.Invoke("assert", false, "oops")
 	assert.Equal(t,
 		AssertionError{
-			Message:  "oops",
-			Location: interpreter.LocationPosition{},
+			Message:       "oops",
+			LocationRange: interpreter.LocationRange{},
 		},
 		err,
 	)
@@ -41,8 +41,8 @@ func TestAssert(t *testing.T) {
 	_, err = inter.Invoke("assert", false)
 	assert.Equal(t,
 		AssertionError{
-			Message:  "",
-			Location: interpreter.LocationPosition{},
+			Message:       "",
+			LocationRange: interpreter.LocationRange{},
 		},
 		err)
 
@@ -71,8 +71,8 @@ func TestPanic(t *testing.T) {
 	_, err = inter.Invoke("panic", "oops")
 	assert.Equal(t,
 		PanicError{
-			Message:  "oops",
-			Location: interpreter.LocationPosition{},
+			Message:       "oops",
+			LocationRange: interpreter.LocationRange{},
 		},
 		err)
 }
