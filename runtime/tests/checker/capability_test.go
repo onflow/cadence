@@ -3,10 +3,10 @@ package checker
 import (
 	"testing"
 
+	"github.com/dapperlabs/cadence/runtime/sema"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/dapperlabs/flow-go/language/runtime/sema"
 )
 
 func TestCheckCapability(t *testing.T) {
