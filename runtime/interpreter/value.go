@@ -3433,7 +3433,9 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 
 		address := AddressValue(*v.Owner)
 
-		return NewSomeValueOwningNonCopying(NewPublicAccountValue(address))
+		return NewSomeValueOwningNonCopying(
+			PublicAccountValue{Address: address},
+		)
 	}
 
 	value, ok := v.Fields[name]
@@ -4287,7 +4289,8 @@ func (v AddressValue) KeyString() string {
 }
 
 func (v AddressValue) String() string {
-	return fmt.Sprintf("%x", [common.AddressLength]byte(v))
+	hexString := fmt.Sprintf("%x", [common.AddressLength]byte(v))
+	return fmt.Sprintf("0x%s", strings.TrimLeft(hexString, "0"))
 }
 
 func (AddressValue) GetOwner() *common.Address {
@@ -4315,40 +4318,171 @@ func (v AddressValue) ToAddress() common.Address {
 	return common.Address(v)
 }
 
+// AccountValue
+
+type AccountValue interface {
+	isAccountValue()
+	AddressValue() AddressValue
+}
+
 // AuthAccountValue
 
-func NewAuthAccountValue(addressValue AddressValue, setCode, addPublicKey, removePublicKey FunctionValue) *CompositeValue {
-	address := addressValue.ToAddress()
+type AuthAccountValue struct {
+	Address                 AddressValue
+	setCodeFunction         FunctionValue
+	addPublicKeyFunction    FunctionValue
+	removePublicKeyFunction FunctionValue
+}
 
-	return &CompositeValue{
-		Kind:   common.CompositeKindStructure,
-		TypeID: (&sema.AuthAccountType{}).ID(),
-		InjectedFields: map[string]Value{
-			"address":         addressValue,
-			"storage":         StorageValue{Address: address},
-			"published":       PublishedValue{Address: address},
-			"setCode":         setCode,
-			"addPublicKey":    addPublicKey,
-			"removePublicKey": removePublicKey,
-		},
+func NewAuthAccountValue(
+	address AddressValue,
+	setCodeFunction, addPublicKeyFunction, removePublicKeyFunction FunctionValue,
+) AuthAccountValue {
+	return AuthAccountValue{
+		Address:                 address,
+		setCodeFunction:         setCodeFunction,
+		addPublicKeyFunction:    addPublicKeyFunction,
+		removePublicKeyFunction: removePublicKeyFunction,
 	}
+}
+
+func init() {
+	gob.Register(AuthAccountValue{})
+}
+
+func (AuthAccountValue) IsValue() {}
+
+func (AuthAccountValue) isAccountValue() {}
+
+func (v AuthAccountValue) AddressValue() AddressValue {
+	return v.Address
+}
+
+func (AuthAccountValue) DynamicType(_ *Interpreter) DynamicType {
+	return AuthAccountType{}
+}
+
+func (v AuthAccountValue) Copy() Value {
+	return v
+}
+
+func (AuthAccountValue) GetOwner() *common.Address {
+	// value is never owned
+	return nil
+}
+
+func (AuthAccountValue) SetOwner(_ *common.Address) {
+	// NO-OP: value cannot be owned
+}
+
+func (v AuthAccountValue) Destroy(_ *Interpreter, _ LocationPosition) trampoline.Trampoline {
+	return trampoline.Done{}
+}
+
+func (v AuthAccountValue) String() string {
+	return fmt.Sprintf("AuthAccount(%s)", v.Address)
+}
+
+func (v AuthAccountValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+	case "address":
+		return v.Address
+
+	case "storage":
+		return StorageValue{
+			Address: v.Address.ToAddress(),
+		}
+
+	case "published":
+		return PublishedValue{
+			Address: v.Address.ToAddress(),
+		}
+
+	case "setCode":
+		return v.setCodeFunction
+
+	case "addPublicKey":
+		return v.addPublicKeyFunction
+
+	case "removePublicKey":
+		return v.removePublicKeyFunction
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (AuthAccountValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
 }
 
 // PublicAccountValue
 
-func NewPublicAccountValue(addressValue AddressValue) *CompositeValue {
-	address := addressValue.ToAddress()
+type PublicAccountValue struct {
+	Address    AddressValue
+	Identifier string
+}
 
-	return &CompositeValue{
-		Kind:   common.CompositeKindStructure,
-		TypeID: (&sema.PublicAccountType{}).ID(),
-		InjectedFields: map[string]Value{
-			"address": addressValue,
-			"published": PublishedValue{
-				Address: address,
-			},
-		},
+func NewPublicAccountValue(address AddressValue) PublicAccountValue {
+	return PublicAccountValue{
+		Address: address,
 	}
+}
+
+func init() {
+	gob.Register(PublicAccountValue{})
+}
+
+func (PublicAccountValue) IsValue() {}
+
+func (PublicAccountValue) isAccountValue() {}
+
+func (v PublicAccountValue) AddressValue() AddressValue {
+	return v.Address
+}
+
+func (PublicAccountValue) DynamicType(_ *Interpreter) DynamicType {
+	return AuthAccountType{}
+}
+
+func (v PublicAccountValue) Copy() Value {
+	return v
+}
+
+func (PublicAccountValue) GetOwner() *common.Address {
+	// value is never owned
+	return nil
+}
+
+func (PublicAccountValue) SetOwner(_ *common.Address) {
+	// NO-OP: value cannot be owned
+}
+
+func (v PublicAccountValue) Destroy(_ *Interpreter, _ LocationPosition) trampoline.Trampoline {
+	return trampoline.Done{}
+}
+
+func (v PublicAccountValue) String() string {
+	return fmt.Sprintf("PublicAccount(%s)", v.Address)
+}
+
+func (v PublicAccountValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+	case "address":
+		return v.Address
+
+	case "published":
+		return PublishedValue{
+			Address: v.Address.ToAddress(),
+		}
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (PublicAccountValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
 }
 
 // PathValue
@@ -4365,10 +4499,8 @@ func init() {
 func (PathValue) IsValue() {}
 
 func (PathValue) DynamicType(_ *Interpreter) DynamicType {
-	return NilType{}
+	return PathType{}
 }
-
-func (PathValue) isOptionalValue() {}
 
 func (v PathValue) Copy() Value {
 	return v
@@ -4389,4 +4521,46 @@ func (v PathValue) Destroy(_ *Interpreter, _ LocationPosition) trampoline.Trampo
 
 func (v PathValue) String() string {
 	return fmt.Sprintf("/%s/%s", v.Domain, v.Identifier)
+}
+
+// CapabilityValue
+
+type CapabilityValue struct {
+	Account AccountValue
+	Path    PathValue
+}
+
+func init() {
+	gob.Register(CapabilityValue{})
+}
+
+func (CapabilityValue) IsValue() {}
+
+func (CapabilityValue) DynamicType(_ *Interpreter) DynamicType {
+	return CapabilityType{}
+}
+
+func (v CapabilityValue) Copy() Value {
+	return v
+}
+
+func (CapabilityValue) GetOwner() *common.Address {
+	// value is never owned
+	return nil
+}
+
+func (CapabilityValue) SetOwner(_ *common.Address) {
+	// NO-OP: value cannot be owned
+}
+
+func (v CapabilityValue) Destroy(_ *Interpreter, _ LocationPosition) trampoline.Trampoline {
+	return trampoline.Done{}
+}
+
+func (v CapabilityValue) String() string {
+	return fmt.Sprintf(
+		"/%s/%s",
+		v.Account.AddressValue(),
+		v.Path,
+	)
 }

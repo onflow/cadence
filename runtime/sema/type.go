@@ -3007,6 +3007,8 @@ func init() {
 		&AddressType{},
 		&AuthAccountType{},
 		&PublicAccountType{},
+		&PathType{},
+		&CapabilityType{},
 	}
 
 	types := append(
@@ -4942,5 +4944,44 @@ func (*PathType) TypeAnnotationState() TypeAnnotationState {
 }
 
 func (*PathType) ContainsFirstLevelResourceInterfaceType() bool {
+	return false
+}
+
+// CapabilityType
+
+type CapabilityType struct{}
+
+func (*CapabilityType) IsType() {}
+
+func (*CapabilityType) String() string {
+	return "Capability"
+}
+
+func (*CapabilityType) QualifiedString() string {
+	return "Capability"
+}
+
+func (*CapabilityType) ID() TypeID {
+	return "Capability"
+}
+
+func (*CapabilityType) Equal(other Type) bool {
+	_, ok := other.(*CapabilityType)
+	return ok
+}
+
+func (*CapabilityType) IsResourceType() bool {
+	return false
+}
+
+func (*CapabilityType) IsInvalidType() bool {
+	return false
+}
+
+func (*CapabilityType) TypeAnnotationState() TypeAnnotationState {
+	return TypeAnnotationStateValid
+}
+
+func (*CapabilityType) ContainsFirstLevelResourceInterfaceType() bool {
 	return false
 }
