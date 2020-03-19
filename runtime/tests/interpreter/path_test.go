@@ -27,7 +27,7 @@ func TestInterpretPath(t *testing.T) {
 
 			assert.Equal(t,
 				interpreter.PathValue{
-					Domain:     domain.Identifier(),
+					Domain:     domain,
 					Identifier: "random",
 				},
 				inter.Globals["x"].Value,

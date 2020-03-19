@@ -91,7 +91,7 @@ func makeContractValueHandler(
 				arguments,
 				argumentTypes,
 				parameterTypes,
-				ast.Position{},
+				ast.Range{},
 			)
 			if err != nil {
 				panic(err)
