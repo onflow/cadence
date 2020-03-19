@@ -10,44 +10,52 @@ grammar Cadence;
 }
 
 @parser::members {
-    // Returns true if on the current index of the parser's
-    // token stream a token exists on the Hidden channel which
-    // either is a line terminator, or is a multi line comment that
-    // contains a line terminator.
-    func (p *CadenceParser) lineTerminatorAhead() bool {
-        // Get the token ahead of the current index.
-        possibleIndexEosToken := p.GetCurrentToken().GetTokenIndex() - 1
-        ahead := p.GetTokenStream().Get(possibleIndexEosToken)
+	// Returns true if on the current index of the parser's
+	// token stream a token exists on the Hidden channel which
+	// either is a line terminator, or is a multi line comment that
+	// contains a line terminator.
+	func (p *CadenceParser) lineTerminatorAhead() bool {
+		index := p.GetCurrentToken().GetTokenIndex()
+		if index == 0 {
+			return false
+		}
 
-        if ahead.GetChannel() != antlr.LexerHidden {
-            // We're only interested in tokens on the HIDDEN channel.
-            return true
-        }
+		// Get the token ahead of the current index.
+		possibleIndexEosToken := index - 1
+		ahead := p.GetTokenStream().Get(possibleIndexEosToken)
 
-        if ahead.GetTokenType() == CadenceParserTerminator {
-            // There is definitely a line terminator ahead.
-            return true
-        }
+		if ahead.GetChannel() != antlr.LexerHidden {
+			// We're only interested in tokens on the HIDDEN channel.
+			return true
+		}
 
-        if ahead.GetTokenType() == CadenceParserWS {
-            // Get the token ahead of the current whitespaces.
-            possibleIndexEosToken = p.GetCurrentToken().GetTokenIndex() - 2
-            ahead = p.GetTokenStream().Get(possibleIndexEosToken)
-        }
+		if ahead.GetTokenType() == CadenceParserTerminator {
+			// There is definitely a line terminator ahead.
+			return true
+		}
 
-        // Get the token's text and type.
-        text := ahead.GetText()
-        _type := ahead.GetTokenType()
+		if ahead.GetTokenType() == CadenceParserWS {
+			// Get the token ahead of the current whitespaces.
+			possibleIndexEosToken = p.GetCurrentToken().GetTokenIndex() - 2
+			ahead = p.GetTokenStream().Get(possibleIndexEosToken)
+		}
 
-        // Check if the token is, or contains a line terminator.
-        return (_type == CadenceParserBlockComment && (strings.Contains(text, "\r") || strings.Contains(text, "\n"))) ||
-            (_type == CadenceParserTerminator)
-    }
+		// Get the token's text and type.
+		text := ahead.GetText()
+		_type := ahead.GetTokenType()
 
-    func (p *CadenceParser) noWhitespace() bool {
-    	index := p.GetCurrentToken().GetTokenIndex()
-    	return p.GetTokenStream().Get(index-1).GetTokenType() != CadenceParserWS
-    }
+		// Check if the token is, or contains a line terminator.
+		return (_type == CadenceParserBlockComment && (strings.Contains(text, "\r") || strings.Contains(text, "\n"))) ||
+			(_type == CadenceParserTerminator)
+	}
+
+	func (p *CadenceParser) noWhitespace() bool {
+		index := p.GetCurrentToken().GetTokenIndex()
+		if index == 0 {
+			return true
+		}
+		return p.GetTokenStream().Get(index-1).GetTokenType() != CadenceParserWS
+	}
 }
 
 program
