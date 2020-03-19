@@ -96,11 +96,7 @@ func (e *TransactionNotDeclaredError) Error() string {
 type ConditionError struct {
 	ConditionKind ast.ConditionKind
 	Message       string
-	LocationRange LocationRange
-}
-
-func (e *ConditionError) ImportLocation() ast.Location {
-	return e.LocationRange.Location
+	LocationRange
 }
 
 func (e *ConditionError) Error() string {
@@ -108,14 +104,6 @@ func (e *ConditionError) Error() string {
 		return fmt.Sprintf("%s failed", e.ConditionKind.Name())
 	}
 	return fmt.Sprintf("%s failed: %s", e.ConditionKind.Name(), e.Message)
-}
-
-func (e *ConditionError) StartPosition() ast.Position {
-	return e.LocationRange.StartPos
-}
-
-func (e *ConditionError) EndPosition() ast.Position {
-	return e.LocationRange.EndPos
 }
 
 // RedeclarationError
@@ -131,23 +119,11 @@ func (e *RedeclarationError) Error() string {
 // DereferenceError
 
 type DereferenceError struct {
-	LocationRange LocationRange
-}
-
-func (e *DereferenceError) ImportLocation() ast.Location {
-	return e.LocationRange.Location
+	LocationRange
 }
 
 func (e *DereferenceError) Error() string {
 	return "dereference failed"
-}
-
-func (e *DereferenceError) StartPosition() ast.Position {
-	return e.LocationRange.StartPos
-}
-
-func (e *DereferenceError) EndPosition() ast.Position {
-	return e.LocationRange.EndPos
 }
 
 // OverflowError
@@ -178,67 +154,31 @@ func (e DivisionByZeroError) Error() string {
 
 type DestroyedCompositeError struct {
 	CompositeKind common.CompositeKind
-	LocationRange LocationRange
-}
-
-func (e *DestroyedCompositeError) ImportLocation() ast.Location {
-	return e.LocationRange.Location
+	LocationRange
 }
 
 func (e *DestroyedCompositeError) Error() string {
 	return fmt.Sprintf("%s is destroyed", e.CompositeKind)
 }
 
-func (e *DestroyedCompositeError) StartPosition() ast.Position {
-	return e.LocationRange.StartPos
-}
-
-func (e *DestroyedCompositeError) EndPosition() ast.Position {
-	return e.LocationRange.EndPos
-}
-
 // ForceAssignmentToNonNilResourceError
 
 type ForceAssignmentToNonNilResourceError struct {
-	LocationRange LocationRange
-}
-
-func (e *ForceAssignmentToNonNilResourceError) ImportLocation() ast.Location {
-	return e.LocationRange.Location
+	LocationRange
 }
 
 func (e *ForceAssignmentToNonNilResourceError) Error() string {
 	return "force assignment to non-nil resource-typed value"
 }
 
-func (e *ForceAssignmentToNonNilResourceError) StartPosition() ast.Position {
-	return e.LocationRange.StartPos
-}
-
-func (e *ForceAssignmentToNonNilResourceError) EndPosition() ast.Position {
-	return e.LocationRange.EndPos
-}
-
 // ForceNilError
 
 type ForceNilError struct {
-	LocationRange LocationRange
-}
-
-func (e *ForceNilError) ImportLocation() ast.Location {
-	return e.LocationRange.Location
+	LocationRange
 }
 
 func (e *ForceNilError) Error() string {
 	return "unexpectedly found nil while forcing an Optional value"
-}
-
-func (e *ForceNilError) StartPosition() ast.Position {
-	return e.LocationRange.StartPos
-}
-
-func (e *ForceNilError) EndPosition() ast.Position {
-	return e.LocationRange.EndPos
 }
 
 // TypeMismatchError

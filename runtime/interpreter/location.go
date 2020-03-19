@@ -17,3 +17,7 @@ type LocationRange struct {
 	Location ast.Location
 	ast.Range
 }
+
+func (r LocationRange) ImportLocation() ast.Location {
+	return r.Location
+}
