@@ -181,6 +181,10 @@ func TestInterpretTransactions(t *testing.T) {
 		assert.IsType(t, &interpreter.ArgumentCountError{}, err)
 	})
 
+	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
+		panic(errors.NewUnreachableError())
+	})
+
 	t.Run("TooManyArguments", func(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
           transaction {
@@ -193,10 +197,6 @@ func TestInterpretTransactions(t *testing.T) {
             execute {}
           }
         `)
-
-		panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
-			panic(errors.NewUnreachableError())
-		})
 
 		signer1 := interpreter.NewAuthAccountValue(
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
@@ -237,7 +237,12 @@ func TestInterpretTransactions(t *testing.T) {
 
 		transactionArguments := []interface{}{1, true}
 		prepareArguments := []interface{}{
-			interpreter.NewAuthAccountValue(interpreter.AddressValue{}, nil, nil, nil),
+			interpreter.NewAuthAccountValue(
+				interpreter.AddressValue{},
+				panicFunction,
+				panicFunction,
+				panicFunction,
+			),
 		}
 
 		arguments := append(transactionArguments, prepareArguments...)
