@@ -28,6 +28,14 @@ func init() {
 	}
 }
 
+func PathDomainFromIdentifier(domain string) PathDomain {
+	result, ok := AllPathDomainsByIdentifier[domain]
+	if !ok {
+		return PathDomainUnknown
+	}
+	return result
+}
+
 func (i PathDomain) Identifier() string {
 	switch i {
 	case PathDomainStorage:
