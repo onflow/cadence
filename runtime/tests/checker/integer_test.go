@@ -396,3 +396,14 @@ func TestCheckInvalidUnsignedIntegerNegate(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckInvalidIntegerConversionFunctionWithoutArgs(t *testing.T) {
+
+	_, err := ParseAndCheck(t, `
+      let e = Int()
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
+}

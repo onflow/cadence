@@ -3190,6 +3190,10 @@ func init() {
 
 func numberFunctionArgumentExpressionsChecker(numberType Type) func(*Checker, []ast.Expression) {
 	return func(checker *Checker, argumentExpressions []ast.Expression) {
+		if len(argumentExpressions) < 1 {
+			return
+		}
+
 		switch numberExpression := argumentExpressions[0].(type) {
 		case *ast.IntegerExpression:
 			checker.checkIntegerLiteral(numberExpression, numberType)
