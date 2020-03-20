@@ -17,7 +17,7 @@ func TestCrashers(t *testing.T) {
 
 	f, err := os.Open(crashersDir)
 	if err != nil {
-		t.Fatal(err)
+		t.Skip()
 	}
 
 	files, err := f.Readdir(-1)
