@@ -7723,3 +7723,12 @@ func TestParseInvalidForceCast(t *testing.T) {
 		syntaxError.Pos,
 	)
 }
+
+func TestParseInvalidNegativeIntegerLiteralWithIncorrectPrefix(t *testing.T) {
+
+	_, _, err := parser.ParseProgram(`
+	    let e = -0K0
+	`)
+
+	require.Error(t, err)
+}
