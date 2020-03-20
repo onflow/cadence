@@ -419,4 +419,23 @@ func TestCheckInvalidIntegerConversionFunctionWithoutArgs(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckFixedPointToIntegerConversion(t *testing.T) {
+
+	for _, ty := range sema.AllIntegerTypes {
+
+		t.Run(ty.String(), func(t *testing.T) {
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      let e = %s(0.0)
+                    `,
+					ty,
+				),
+			)
+
+			require.NoError(t, err)
+		})
+	}
 }

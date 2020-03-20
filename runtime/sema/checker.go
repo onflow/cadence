@@ -539,8 +539,8 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 // checkIntegerLiteral checks that the value of the integer literal
 // fits into range of the target integer type
 //
-func (checker *Checker) checkIntegerLiteral(expression *ast.IntegerExpression, integerType Type) {
-	ranged := integerType.(IntegerRangedType)
+func (checker *Checker) checkIntegerLiteral(expression *ast.IntegerExpression, targetType Type) {
+	ranged := targetType.(IntegerRangedType)
 	minInt := ranged.MinInt()
 	maxInt := ranged.MaxInt()
 
@@ -550,7 +550,7 @@ func (checker *Checker) checkIntegerLiteral(expression *ast.IntegerExpression, i
 
 	checker.report(
 		&InvalidIntegerLiteralRangeError{
-			ExpectedType:   integerType,
+			ExpectedType:   targetType,
 			ExpectedMinInt: minInt,
 			ExpectedMaxInt: maxInt,
 			Range:          ast.NewRangeFromPositioned(expression),
@@ -561,50 +561,76 @@ func (checker *Checker) checkIntegerLiteral(expression *ast.IntegerExpression, i
 // checkFixedPointLiteral checks that the value of the fixed-point literal
 // fits into range of the target fixed-point type
 //
-func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpression, fixedPointType Type) {
+func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpression, targetType Type) {
 
-	// Check the integer range
+	// The target type might just be an integer type,
+	// in which case only the integer range can be checked.
 
-	ranged := fixedPointType.(FractionalRangedType)
-	minInt := ranged.MinInt()
-	maxInt := ranged.MaxInt()
-	scale := ranged.Scale()
-	minFractional := ranged.MinFractional()
-	maxFractional := ranged.MaxFractional()
+	switch targetType := targetType.(type) {
+	case IntegerRangedType:
+		minInt := targetType.MinInt()
+		maxInt := targetType.MaxInt()
 
-	if expression.Scale > scale {
+		integerValue := big.NewInt(0).Set(expression.UnsignedInteger)
+
+		if expression.Negative {
+			expression.UnsignedInteger.Neg(expression.UnsignedInteger)
+		}
+
+		if checker.checkIntegerRange(integerValue, minInt, maxInt) {
+			return
+		}
+
 		checker.report(
-			&InvalidFixedPointLiteralScaleError{
-				ExpectedType:  fixedPointType,
-				ExpectedScale: scale,
-				Range:         ast.NewRangeFromPositioned(expression),
+			&InvalidIntegerLiteralRangeError{
+				ExpectedType:   targetType,
+				ExpectedMinInt: minInt,
+				ExpectedMaxInt: maxInt,
+				Range:          ast.NewRangeFromPositioned(expression),
 			},
 		)
 
-		return
-	}
+	case FractionalRangedType:
+		minInt := targetType.MinInt()
+		maxInt := targetType.MaxInt()
+		scale := targetType.Scale()
+		minFractional := targetType.MinFractional()
+		maxFractional := targetType.MaxFractional()
 
-	if !checker.checkFixedPointRange(
-		expression.Negative,
-		expression.UnsignedInteger,
-		expression.Fractional,
-		minInt,
-		minFractional,
-		maxInt,
-		maxFractional,
-	) {
-		checker.report(
-			&InvalidFixedPointLiteralRangeError{
-				ExpectedType:          fixedPointType,
-				ExpectedMinInt:        minInt,
-				ExpectedMinFractional: minFractional,
-				ExpectedMaxInt:        maxInt,
-				ExpectedMaxFractional: maxFractional,
-				Range:                 ast.NewRangeFromPositioned(expression),
-			},
-		)
+		if expression.Scale > scale {
+			checker.report(
+				&InvalidFixedPointLiteralScaleError{
+					ExpectedType:  targetType,
+					ExpectedScale: scale,
+					Range:         ast.NewRangeFromPositioned(expression),
+				},
+			)
 
-		return
+			return
+		}
+
+		if !checker.checkFixedPointRange(
+			expression.Negative,
+			expression.UnsignedInteger,
+			expression.Fractional,
+			minInt,
+			minFractional,
+			maxInt,
+			maxFractional,
+		) {
+			checker.report(
+				&InvalidFixedPointLiteralRangeError{
+					ExpectedType:          targetType,
+					ExpectedMinInt:        minInt,
+					ExpectedMinFractional: minFractional,
+					ExpectedMaxInt:        maxInt,
+					ExpectedMaxFractional: maxFractional,
+					Range:                 ast.NewRangeFromPositioned(expression),
+				},
+			)
+
+			return
+		}
 	}
 }
 
