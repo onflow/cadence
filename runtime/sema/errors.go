@@ -762,21 +762,30 @@ type InitializerMismatch struct {
 //  use `InitializerMismatch`, `MissingMembers`, `MemberMismatches`, etc
 
 type ConformanceError struct {
-	CompositeType               *CompositeType
-	InterfaceType               *InterfaceType
-	InitializerMismatch         *InitializerMismatch
-	MissingMembers              []*Member
-	MemberMismatches            []MemberMismatch
-	MissingNestedCompositeTypes []*CompositeType
-	Pos                         ast.Position
+	CompositeType                  *CompositeType
+	InterfaceType                  *InterfaceType
+	InitializerMismatch            *InitializerMismatch
+	MissingMembers                 []*Member
+	MemberMismatches               []MemberMismatch
+	MissingNestedCompositeTypes    []*CompositeType
+	Pos                            ast.Position
+	InterfaceTypeIsTypeRequirement bool
 }
 
 func (e *ConformanceError) Error() string {
+	var interfaceDescription string
+	if e.InterfaceTypeIsTypeRequirement {
+		interfaceDescription = "type requirement"
+	} else {
+		interfaceDescription = "interface"
+	}
+
 	return fmt.Sprintf(
-		"%s `%s` does not conform to %s `%s`",
+		"%s `%s` does not conform to %s %s `%s`",
 		e.CompositeType.Kind.Name(),
 		e.CompositeType.QualifiedString(),
-		e.InterfaceType.CompositeKind.DeclarationKind(true).Name(),
+		e.InterfaceType.CompositeKind.Name(),
+		interfaceDescription,
 		e.InterfaceType.QualifiedString(),
 	)
 }
