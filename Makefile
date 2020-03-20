@@ -6,6 +6,9 @@ GOPRIVATE=github.com/dapperlabs/*
 
 GOPATH ?= $(HOME)/go
 
+# Ensure go bin path is in path (Especially for CI)
+PATH := $(PATH):$(GOPATH)/bin
+
 .PHONY: test
 test:
 	# test all packages
