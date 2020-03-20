@@ -3178,10 +3178,15 @@ func init() {
 				ReturnTypeAnnotation: &TypeAnnotation{Type: addressType},
 			},
 			ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression) {
+				if len(argumentExpressions) < 1 {
+					return
+				}
+
 				intExpression, ok := argumentExpressions[0].(*ast.IntegerExpression)
 				if !ok {
 					return
 				}
+
 				checker.checkAddressLiteral(intExpression)
 			},
 		},

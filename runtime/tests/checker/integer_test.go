@@ -399,11 +399,24 @@ func TestCheckInvalidUnsignedIntegerNegate(t *testing.T) {
 
 func TestCheckInvalidIntegerConversionFunctionWithoutArgs(t *testing.T) {
 
-	_, err := ParseAndCheck(t, `
-      let e = Int()
-    `)
+	for _, ty := range allIntegerTypesAndAddressType {
 
-	errs := ExpectCheckerErrors(t, err, 1)
+		t.Run(ty.String(), func(t *testing.T) {
 
-	assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      let e = %s()
+                    `,
+					ty,
+				),
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
+
+		})
+	}
+}
 }
