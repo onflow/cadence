@@ -58,7 +58,7 @@ func convertValue(value interpreter.Value, inter *interpreter.Interpreter) Value
 	panic(fmt.Sprintf("cannot convert value of type %T", value))
 }
 
-// ConvertEvent convert a runtime event to its native Go representation.
+// ConvertEvent converts a runtime event to its native Go representation.
 func ConvertEvent(event runtime.Event) Event {
 	fields := make([]Value, len(event.Fields))
 
