@@ -9,21 +9,26 @@ import (
 	"github.com/dapperlabs/cadence/runtime/interpreter"
 )
 
+
 // ConvertValue converts a runtime value to its corresponding Go representation.
 func ConvertValue(value runtime.Value) (Value, error) {
+	return convertValue(value.Value, value.Interpreter())
+}
+
+func convertValue(value interpreter.Value, inter *interpreter.Interpreter) (Value, error) {
 	switch v := value.(type) {
 	case interpreter.VoidValue:
 		return NewVoid(), nil
 	case interpreter.NilValue:
 		return NewOptional(nil), nil
 	case *interpreter.SomeValue:
-		return convertSomeValue(v)
+		return convertSomeValue(v, inter)
 	case interpreter.BoolValue:
 		return NewBool(bool(v)), nil
 	case *interpreter.StringValue:
 		return NewString(v.Str), nil
 	case *interpreter.ArrayValue:
-		return convertArrayValue(v)
+		return convertArrayValue(v, inter)
 	case interpreter.IntValue:
 		return NewIntFromBig(big.NewInt(0).Set(v.Int)), nil
 	case interpreter.Int8Value:
@@ -43,9 +48,9 @@ func ConvertValue(value runtime.Value) (Value, error) {
 	case interpreter.UInt64Value:
 		return NewUInt64(uint64(v)), nil
 	case *interpreter.CompositeValue:
-		return convertCompositeValue(v)
+		return convertCompositeValue(v, inter)
 	case *interpreter.DictionaryValue:
-		return convertDictionaryValue(v)
+		return convertDictionaryValue(v, inter)
 	case interpreter.AddressValue:
 		return NewAddress(v), nil
 	}
@@ -53,8 +58,23 @@ func ConvertValue(value runtime.Value) (Value, error) {
 	return nil, fmt.Errorf("cannot convert value of type %T", value)
 }
 
-func convertSomeValue(v *interpreter.SomeValue) (Value, error) {
-	convertedValue, err := ConvertValue(v.Value)
+func ConvertEvent(event runtime.Event) (Event, error) {
+	fields := make([]Value, len(event.Fields))
+
+	for i, field := range event.Fields {
+		convertedField, err := convertValue(field, field.Interpreter())
+		if err != nil {
+			return Event{}, err
+		}
+
+		fields[i] = convertedField
+	}
+
+	return NewEvent(fields), nil
+}
+
+func convertSomeValue(v *interpreter.SomeValue, inter *interpreter.Interpreter) (Value, error) {
+	convertedValue, err := convertValue(v.Value, inter)
 	if err != nil {
 		return nil, err
 	}
@@ -62,11 +82,11 @@ func convertSomeValue(v *interpreter.SomeValue) (Value, error) {
 	return NewOptional(convertedValue), nil
 }
 
-func convertArrayValue(v *interpreter.ArrayValue) (Value, error) {
+func convertArrayValue(v *interpreter.ArrayValue, inter *interpreter.Interpreter) (Value, error) {
 	vals := make([]Value, len(v.Values))
 
 	for i, value := range v.Values {
-		convertedValue, err := ConvertValue(value)
+		convertedValue, err := convertValue(value, inter)
 		if err != nil {
 			return nil, err
 		}
@@ -77,7 +97,7 @@ func convertArrayValue(v *interpreter.ArrayValue) (Value, error) {
 	return NewVariableSizedArray(vals), nil
 }
 
-func convertCompositeValue(v *interpreter.CompositeValue) (Value, error) {
+func convertCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Interpreter) (Value, error) {
 	fields := make([]Value, len(v.Fields))
 
 	keys := make([]string, 0, len(v.Fields))
@@ -91,7 +111,7 @@ func convertCompositeValue(v *interpreter.CompositeValue) (Value, error) {
 	for i, key := range keys {
 		field := v.Fields[key]
 
-		convertedField, err := ConvertValue(field)
+		convertedField, err := convertValue(field, inter)
 		if err != nil {
 			return nil, err
 		}
@@ -102,19 +122,19 @@ func convertCompositeValue(v *interpreter.CompositeValue) (Value, error) {
 	return NewComposite(fields), nil
 }
 
-func convertDictionaryValue(v *interpreter.DictionaryValue) (Value, error) {
+func convertDictionaryValue(v *interpreter.DictionaryValue, inter *interpreter.Interpreter) (Value, error) {
 	pairs := make([]KeyValuePair, v.Count())
 
 	for i, keyValue := range v.Keys.Values {
 		key := keyValue.(interpreter.HasKeyString).KeyString()
 		value := v.Entries[key]
 
-		convertedKey, err := ConvertValue(keyValue)
+		convertedKey, err := convertValue(keyValue, inter)
 		if err != nil {
 			return nil, err
 		}
 
-		convertedValue, err := ConvertValue(value)
+		convertedValue, err := convertValue(value, inter)
 		if err != nil {
 			return nil, err
 		}

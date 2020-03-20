@@ -109,13 +109,13 @@ func (r *interpreterRuntime) ExecuteScript(script []byte, runtimeInterface Inter
 
 	checker, err := r.parseAndCheckProgram(script, runtimeInterface, location, functions, nil)
 	if err != nil {
-		return nil, newError(err)
+		return Value{}, newError(err)
 	}
 
 	_, ok := checker.GlobalValues["main"]
 	if !ok {
 		// TODO: error because no main?
-		return nil, nil
+		return Value{}, nil
 	}
 
 	value, err := r.interpret(
@@ -129,7 +129,7 @@ func (r *interpreterRuntime) ExecuteScript(script []byte, runtimeInterface Inter
 		},
 	)
 	if err != nil {
-		return nil, newError(err)
+		return Value{}, newError(err)
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage.
@@ -150,27 +150,28 @@ func (r *interpreterRuntime) interpret(
 	options []interpreter.Option,
 	f func(inter *interpreter.Interpreter) (interpreter.Value, error),
 ) (
-	interpreter.Value,
+	Value,
 	error,
 ) {
 	inter, err := r.newInterpreter(checker, functions, runtimeInterface, runtimeStorage, options)
 	if err != nil {
-		return nil, err
+		return Value{}, err
 	}
 
 	if err := inter.Interpret(); err != nil {
-		return nil, err
+		return Value{}, err
 	}
 
 	if f != nil {
 		value, err := f(inter)
 		if err != nil {
-			return nil, err
+			return Value{}, err
 		}
-		return value, nil
+
+		return newRuntimeValue(value, inter), nil
 	}
 
-	return nil, nil
+	return Value{}, nil
 }
 
 func (r *interpreterRuntime) newAuthAccountValue(
@@ -449,7 +450,7 @@ func (r *interpreterRuntime) parse(script []byte) (program *ast.Program, err err
 
 // emitEvent converts an event value to native Go types and emits it to the runtime interface.
 func (r *interpreterRuntime) emitEvent(
-	_ *interpreter.Interpreter,
+	inter *interpreter.Interpreter,
 	runtimeInterface Interface,
 	event *interpreter.CompositeValue,
 	eventType *sema.CompositeType,
@@ -457,7 +458,7 @@ func (r *interpreterRuntime) emitEvent(
 	fields := make([]Value, len(eventType.ConstructorParameters))
 
 	for i, parameter := range eventType.ConstructorParameters {
-		fields[i] = event.Fields[parameter.Identifier]
+		fields[i] = newRuntimeValue(event.Fields[parameter.Identifier], inter)
 	}
 
 	eventValue := Event{
@@ -471,7 +472,7 @@ func (r *interpreterRuntime) emitEvent(
 func (r *interpreterRuntime) emitAccountEvent(
 	eventType *sema.CompositeType,
 	runtimeInterface Interface,
-	eventFields []interpreter.Value,
+	eventFields []Value,
 ) {
 	eventValue := Event{
 		Type:   eventType,
@@ -505,12 +506,12 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 			panic(fmt.Sprintf("Account requires the second parameter to be an array of bytes ([Int])"))
 		}
 
-		accountAddress, err := runtimeInterface.CreateAccount(publicKeys)
+		address, err := runtimeInterface.CreateAccount(publicKeys)
 		if err != nil {
 			panic(err)
 		}
 
-		accountAddressValue := interpreter.NewAddressValue(accountAddress)
+		addressValue := interpreter.NewAddressValue(address)
 
 		constructorArguments := invocation.Arguments[requiredArgumentCount:]
 		constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
@@ -519,7 +520,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 			runtimeInterface,
 			runtimeStorage,
 			code,
-			accountAddressValue,
+			addressValue,
 			constructorArguments,
 			constructorArgumentTypes,
 			false,
@@ -533,10 +534,14 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 		r.emitAccountEvent(
 			stdlib.AccountCreatedEventType,
 			runtimeInterface,
-			[]Value{accountAddressValue, codeValue, contractTypeIDs},
+			[]Value{
+				newRuntimeValue(addressValue, nil),
+				newRuntimeValue(codeValue, nil),
+				newRuntimeValue(contractTypeIDs, nil),
+			},
 		)
 
-		account := r.newAuthAccountValue(accountAddressValue, runtimeInterface, runtimeStorage)
+		account := r.newAuthAccountValue(addressValue, runtimeInterface, runtimeStorage)
 
 		return trampoline.Done{Result: account}
 	}
@@ -563,7 +568,10 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 			r.emitAccountEvent(
 				stdlib.AccountKeyAddedEventType,
 				runtimeInterface,
-				[]Value{addressValue, publicKeyValue},
+				[]Value{
+					newRuntimeValue(addressValue, nil),
+					newRuntimeValue(publicKeyValue, nil),
+				},
 			)
 
 			result := interpreter.VoidValue{}
@@ -590,7 +598,10 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 			r.emitAccountEvent(
 				stdlib.AccountKeyRemovedEventType,
 				runtimeInterface,
-				[]Value{addressValue, publicKeyValue},
+				[]Value{
+					newRuntimeValue(addressValue, nil),
+					newRuntimeValue(publicKeyValue, nil),
+				},
 			)
 
 			result := interpreter.VoidValue{}
@@ -634,7 +645,11 @@ func (r *interpreterRuntime) newSetCodeFunction(
 			r.emitAccountEvent(
 				stdlib.AccountCodeUpdatedEventType,
 				runtimeInterface,
-				[]Value{addressValue, codeValue, contractTypeIDs},
+				[]Value{
+					newRuntimeValue(addressValue, nil),
+					newRuntimeValue(codeValue, nil),
+					newRuntimeValue(contractTypeIDs, nil),
+				},
 			)
 
 			result := interpreter.VoidValue{}
@@ -945,7 +960,8 @@ func fromBytes(buf []byte) *interpreter.ArrayValue {
 }
 
 func compositeTypesToIDValues(types []*sema.CompositeType) *interpreter.ArrayValue {
-	typeIDValues := make([]Value, len(types))
+	typeIDValues := make([]interpreter.Value, len(types))
+
 	for i, typ := range types {
 		typeIDValues[i] = interpreter.NewStringValue(string(typ.ID()))
 	}
@@ -972,7 +988,7 @@ func (BlockValue) DynamicType(*interpreter.Interpreter) interpreter.DynamicType 
 	return nil
 }
 
-func (v BlockValue) Copy() Value {
+func (v BlockValue) Copy() interpreter.Value {
 	return v
 }
 
@@ -985,13 +1001,13 @@ func (BlockValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (v BlockValue) GetMember(_ *interpreter.Interpreter, _ interpreter.LocationRange, name string) Value {
+func (v BlockValue) GetMember(_ *interpreter.Interpreter, _ interpreter.LocationRange, name string) interpreter.Value {
 	switch name {
 	case "number":
 		return interpreter.UInt64Value(v.Number)
 
 	case "id":
-		var values = make([]Value, stdlib.BlockIDSize)
+		var values = make([]interpreter.Value, stdlib.BlockIDSize)
 		for i, b := range v.ID {
 			values[i] = interpreter.UInt8Value(b)
 		}
@@ -1016,7 +1032,7 @@ func (v BlockValue) GetMember(_ *interpreter.Interpreter, _ interpreter.Location
 	}
 }
 
-func (v BlockValue) SetMember(_ *interpreter.Interpreter, _ interpreter.LocationRange, _ string, _ Value) {
+func (v BlockValue) SetMember(_ *interpreter.Interpreter, _ interpreter.LocationRange, _ string, _ interpreter.Value) {
 	panic(runtimeErrors.NewUnreachableError())
 }
 

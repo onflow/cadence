@@ -868,3 +868,13 @@ func (v Composite) ToGoValue() interface{} {
 
 	return ret
 }
+
+// Event
+
+type Event struct {
+	Composite
+}
+
+func NewEvent(fields []Value) Event {
+	return Event{NewComposite(fields)}
+}
