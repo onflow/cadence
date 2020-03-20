@@ -32,7 +32,8 @@ func TestCrashers(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 
-			data, err := ioutil.ReadFile(path.Join(crashersDir, name))
+			var data []byte
+			data, err = ioutil.ReadFile(path.Join(crashersDir, name))
 			if err != nil {
 				t.Fatal(err)
 			}
