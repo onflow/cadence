@@ -104,6 +104,8 @@ func (k DeclarationKind) Name() string {
 		return "execute"
 	case DeclarationKindTypeParameter:
 		return "type parameter"
+	case DeclarationKindUnknown:
+		return "unknown"
 	}
 
 	panic(errors.NewUnreachableError())
@@ -147,9 +149,7 @@ func (k DeclarationKind) Keywords() string {
 		return "prepare"
 	case DeclarationKindExecute:
 		return "execute"
-	case DeclarationKindTypeParameter:
+	default:
 		return ""
 	}
-
-	panic(errors.NewUnreachableError())
 }

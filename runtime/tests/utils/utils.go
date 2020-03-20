@@ -87,6 +87,12 @@ func ExpectCheckerErrors(t *testing.T, err error, len int) []error {
 
 	require.Len(t, errs, len)
 
+	// Get the error message, to check that it can be successfully generated
+
+	for _, checkerErr := range errs {
+		_ = checkerErr.Error()
+	}
+
 	return errs
 }
 
