@@ -567,29 +567,6 @@ func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpress
 	// in which case only the integer range can be checked.
 
 	switch targetType := targetType.(type) {
-	case IntegerRangedType:
-		minInt := targetType.MinInt()
-		maxInt := targetType.MaxInt()
-
-		integerValue := big.NewInt(0).Set(expression.UnsignedInteger)
-
-		if expression.Negative {
-			expression.UnsignedInteger.Neg(expression.UnsignedInteger)
-		}
-
-		if checker.checkIntegerRange(integerValue, minInt, maxInt) {
-			return
-		}
-
-		checker.report(
-			&InvalidIntegerLiteralRangeError{
-				ExpectedType:   targetType,
-				ExpectedMinInt: minInt,
-				ExpectedMaxInt: maxInt,
-				Range:          ast.NewRangeFromPositioned(expression),
-			},
-		)
-
 	case FractionalRangedType:
 		minInt := targetType.MinInt()
 		maxInt := targetType.MaxInt()
@@ -631,6 +608,29 @@ func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpress
 
 			return
 		}
+
+	case IntegerRangedType:
+		minInt := targetType.MinInt()
+		maxInt := targetType.MaxInt()
+
+		integerValue := big.NewInt(0).Set(expression.UnsignedInteger)
+
+		if expression.Negative {
+			expression.UnsignedInteger.Neg(expression.UnsignedInteger)
+		}
+
+		if checker.checkIntegerRange(integerValue, minInt, maxInt) {
+			return
+		}
+
+		checker.report(
+			&InvalidIntegerLiteralRangeError{
+				ExpectedType:   targetType,
+				ExpectedMinInt: minInt,
+				ExpectedMaxInt: maxInt,
+				Range:          ast.NewRangeFromPositioned(expression),
+			},
+		)
 	}
 }
 
