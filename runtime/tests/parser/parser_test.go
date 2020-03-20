@@ -2080,7 +2080,14 @@ func TestParseParametersAndArrayTypes(t *testing.T) {
 									Pos:        Position{Offset: 30, Line: 2, Column: 29},
 								},
 							},
-							Size: 2,
+							Size: &IntegerExpression{
+								Value: big.NewInt(2),
+								Base:  10,
+								Range: Range{
+									StartPos: Position{Offset: 37, Line: 2, Column: 36},
+									EndPos:   Position{Offset: 37, Line: 2, Column: 36},
+								},
+							},
 							Range: Range{
 								StartPos: Position{Offset: 29, Line: 2, Column: 28},
 								EndPos:   Position{Offset: 38, Line: 2, Column: 37},
@@ -2108,7 +2115,14 @@ func TestParseParametersAndArrayTypes(t *testing.T) {
 										Pos:        Position{Offset: 46, Line: 2, Column: 45},
 									},
 								},
-								Size: 3,
+								Size: &IntegerExpression{
+									Value: big.NewInt(3),
+									Base:  10,
+									Range: Range{
+										StartPos: Position{Offset: 53, Line: 2, Column: 52},
+										EndPos:   Position{Offset: 53, Line: 2, Column: 52},
+									},
+								},
 								Range: Range{
 									StartPos: Position{Offset: 45, Line: 2, Column: 44},
 									EndPos:   Position{Offset: 54, Line: 2, Column: 53},
@@ -2461,6 +2475,8 @@ func TestParseInvalidOctalIntegerLiteralWithLeadingUnderscore(t *testing.T) {
 
 	errors := err.(parser.Error).Errors
 	assert.Len(t, errors, 1)
+
+	require.IsType(t, &parser.InvalidIntegerLiteralError{}, errors[0])
 
 	syntaxError := errors[0].(*parser.InvalidIntegerLiteralError)
 
@@ -3232,7 +3248,14 @@ func TestParseFunctionArrayType(t *testing.T) {
 						EndPos:   Position{Offset: 27, Line: 2, Column: 26},
 					},
 				},
-				Size: 2,
+				Size: &IntegerExpression{
+					Value: big.NewInt(2),
+					Base:  10,
+					Range: Range{
+						StartPos: Position{Offset: 31, Line: 2, Column: 30},
+						EndPos:   Position{Offset: 31, Line: 2, Column: 30},
+					},
+				},
 				Range: Range{
 					StartPos: Position{Offset: 13, Line: 2, Column: 12},
 					EndPos:   Position{Offset: 32, Line: 2, Column: 31},
@@ -3299,7 +3322,14 @@ func TestParseFunctionTypeWithArrayReturnType(t *testing.T) {
 								Pos:        Position{Offset: 23, Line: 2, Column: 22},
 							},
 						},
-						Size: 2,
+						Size: &IntegerExpression{
+							Value: big.NewInt(2),
+							Base:  10,
+							Range: Range{
+								StartPos: Position{Offset: 30, Line: 2, Column: 29},
+								EndPos:   Position{Offset: 30, Line: 2, Column: 29},
+							},
+						},
 						Range: Range{
 							StartPos: Position{Offset: 22, Line: 2, Column: 21},
 							EndPos:   Position{Offset: 31, Line: 2, Column: 30},
@@ -6224,7 +6254,10 @@ func TestParseRestrictedReferenceTypeWithBaseType(t *testing.T) {
 									},
 								},
 							},
-							EndPos: Position{Offset: 19, Line: 2, Column: 18},
+							Range: Range{
+								StartPos: Position{Offset: 16, Line: 2, Column: 15},
+								EndPos:   Position{Offset: 19, Line: 2, Column: 18},
+							},
 						},
 						StartPos: Position{Offset: 15, Line: 2, Column: 14},
 					},
@@ -6278,7 +6311,10 @@ func TestParseRestrictedReferenceTypeWithoutBaseType(t *testing.T) {
 									},
 								},
 							},
-							EndPos: Position{Offset: 18, Line: 2, Column: 17},
+							Range: Range{
+								StartPos: Position{Offset: 16, Line: 2, Column: 15},
+								EndPos:   Position{Offset: 18, Line: 2, Column: 17},
+							},
 						},
 						StartPos: Position{Offset: 15, Line: 2, Column: 14},
 					},
@@ -6338,7 +6374,10 @@ func TestParseOptionalRestrictedResourceType(t *testing.T) {
 									},
 								},
 							},
-							EndPos: Position{Offset: 19, Line: 2, Column: 18},
+							Range: Range{
+								StartPos: Position{Offset: 16, Line: 2, Column: 15},
+								EndPos:   Position{Offset: 19, Line: 2, Column: 18},
+							},
 						},
 						EndPos: Position{Offset: 20, Line: 2, Column: 19},
 					},
@@ -6392,7 +6431,10 @@ func TestParseOptionalRestrictedResourceTypeOnlyRestrictions(t *testing.T) {
 									},
 								},
 							},
-							EndPos: Position{Offset: 18, Line: 2, Column: 17},
+							Range: Range{
+								StartPos: Position{Offset: 16, Line: 2, Column: 15},
+								EndPos:   Position{Offset: 18, Line: 2, Column: 17},
+							},
 						},
 						EndPos: Position{Offset: 19, Line: 2, Column: 18},
 					},
@@ -7731,4 +7773,20 @@ func TestParseInvalidNegativeIntegerLiteralWithIncorrectPrefix(t *testing.T) {
 	`)
 
 	require.Error(t, err)
+}
+
+func TestParseConstantSizedSizedArrayWithTrailingUnderscoreSize(t *testing.T) {
+
+	actual, _, err := parser.ParseProgram(`
+	  let T:[d;0_]=0
+	`)
+
+	assert.NotNil(t, actual)
+
+	assert.IsType(t, parser.Error{}, err)
+
+	errors := err.(parser.Error).Errors
+	assert.Len(t, errors, 1)
+
+	require.IsType(t, &parser.InvalidIntegerLiteralError{}, errors[0])
 }

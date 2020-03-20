@@ -505,3 +505,16 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 	assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[0])
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
+
+func TestCheckInvalidReferenceExpression(t *testing.T) {
+
+	_, err := ParseAndCheckStorage(t, `
+          let y = &x as {}
+        `,
+	)
+
+	errs := ExpectCheckerErrors(t, err, 2)
+
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[1])
+}

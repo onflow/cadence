@@ -2,6 +2,8 @@ package checker
 
 import (
 	"fmt"
+	"math"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -775,9 +777,7 @@ func TestCheckInvalidDictionaryIndexingAssignmentWithType(t *testing.T) {
 func TestCheckConstantSizedArrayDeclaration(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
-      fun test() {
-          let x: [Int; 3] = [1, 2, 3]
-      }
+      let x: [Int; 3] = [1, 2, 3]
     `)
 
 	require.NoError(t, err)
@@ -786,15 +786,72 @@ func TestCheckConstantSizedArrayDeclaration(t *testing.T) {
 func TestCheckInvalidConstantSizedArrayDeclarationCountMismatchTooMany(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
-      fun test() {
-          let x: [Int; 2] = [1, 2, 3]
-      }
+      let x: [Int; 2] = [1, 2, 3]
     `)
 
 	errs := ExpectCheckerErrors(t, err, 2)
 
 	assert.IsType(t, &sema.ConstantSizedArrayLiteralSizeError{}, errs[0])
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+}
+
+func TestCheckInvalidConstantSizedArrayDeclarationOutOfRangeSize(t *testing.T) {
+
+	t.Run("negative", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+          let x: [Int; -1] = []
+		`)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidConstantSizedTypeSizeError{}, errs[0])
+	})
+
+	t.Run("too large", func(t *testing.T) {
+
+		tooLarge := big.NewInt(0).SetUint64(math.MaxUint64)
+		tooLarge.Add(tooLarge, big.NewInt(1))
+
+		_, err := ParseAndCheck(t,
+			fmt.Sprintf(
+				`
+                  let x: [Int; %s] = []
+			    `,
+				tooLarge,
+			),
+		)
+
+		errs := ExpectCheckerErrors(t, err, 3)
+
+		assert.IsType(t, &sema.InvalidConstantSizedTypeSizeError{}, errs[0])
+		assert.IsType(t, &sema.ConstantSizedArrayLiteralSizeError{}, errs[1])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+	})
+}
+
+func TestCheckInvalidConstantSizedArrayDeclarationBase(t *testing.T) {
+
+	for _, size := range []string{"0x42", "0b1010", "0o10"} {
+
+		t.Run(size, func(t *testing.T) {
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      let x: [Int; %s] = []
+                    `,
+					size,
+				),
+			)
+
+			errs := ExpectCheckerErrors(t, err, 3)
+
+			assert.IsType(t, &sema.InvalidConstantSizedTypeBaseError{}, errs[0])
+			assert.IsType(t, &sema.ConstantSizedArrayLiteralSizeError{}, errs[1])
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+		})
+	}
 }
 
 func TestCheckDictionaryKeyTypesExpressions(t *testing.T) {

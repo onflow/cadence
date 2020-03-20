@@ -246,7 +246,7 @@ variableSizedType
     ;
 
 constantSizedType
-    : '[' fullType ';' size=DecimalLiteral ']'
+    : '[' fullType ';' size=integerLiteral ']'
     ;
 
 dictionaryType

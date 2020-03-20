@@ -3,7 +3,6 @@ package parser
 import (
 	"encoding/hex"
 	"math/big"
-	"strconv"
 	"strings"
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
@@ -677,10 +676,7 @@ func (v *ProgramVisitor) VisitVariableSizedType(ctx *VariableSizedTypeContext) i
 func (v *ProgramVisitor) VisitConstantSizedType(ctx *ConstantSizedTypeContext) interface{} {
 	elementType := ctx.FullType().Accept(v).(ast.Type)
 
-	size, err := strconv.Atoi(ctx.size.GetText())
-	if err != nil {
-		return nil
-	}
+	size := ctx.size.Accept(v).(*ast.IntegerExpression)
 
 	startPosition, endPosition := PositionRangeFromContext(ctx)
 
@@ -781,12 +777,22 @@ func (v *ProgramVisitor) VisitInnerType(ctx *InnerTypeContext) interface{} {
 	if typeRestrictionsCtx != nil {
 		restrictions := typeRestrictionsCtx.Accept(v).([]*ast.NominalType)
 
+		var startPos ast.Position
+		if result != nil {
+			startPos = result.StartPosition()
+		} else {
+			startPos = PositionFromToken(typeRestrictionsCtx.GetStart())
+		}
+
 		endPos := PositionFromToken(typeRestrictionsCtx.GetStop())
 
 		result = &ast.RestrictedType{
 			Type:         result,
 			Restrictions: restrictions,
-			EndPos:       endPos,
+			Range: ast.Range{
+				StartPos: startPos,
+				EndPos:   endPos,
+			},
 		}
 	}
 
