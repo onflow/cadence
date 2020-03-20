@@ -734,61 +734,29 @@ func (v UFix64) ToGoValue() interface{} {
 	return uint64(v)
 }
 
-// VariableSizedArray
+// Array
 
-type VariableSizedArray struct {
+type Array struct {
 	typ    Type
 	Values []Value
 }
 
-func NewVariableSizedArray(values []Value) VariableSizedArray {
-	return VariableSizedArray{Values: values}
+func NewArray(values []Value) Array {
+	return Array{Values: values}
 }
 
-func (VariableSizedArray) isValue() {}
+func (Array) isValue() {}
 
-func (v VariableSizedArray) Type() Type {
+func (v Array) Type() Type {
 	return v.typ
 }
 
-func (v VariableSizedArray) WithType(typ Type) VariableSizedArray {
+func (v Array) WithType(typ Type) Array {
 	v.typ = typ
 	return v
 }
 
-func (v VariableSizedArray) ToGoValue() interface{} {
-	ret := make([]interface{}, len(v.Values))
-
-	for i, e := range v.Values {
-		ret[i] = e.ToGoValue()
-	}
-
-	return ret
-}
-
-// ConstantSizedArray
-
-type ConstantSizedArray struct {
-	typ    Type
-	Values []Value
-}
-
-func NewConstantSizedArray(values []Value) ConstantSizedArray {
-	return ConstantSizedArray{Values: values}
-}
-
-func (ConstantSizedArray) isValue() {}
-
-func (v ConstantSizedArray) Type() Type {
-	return v.typ
-}
-
-func (v ConstantSizedArray) WithType(typ Type) ConstantSizedArray {
-	v.typ = typ
-	return v
-}
-
-func (v ConstantSizedArray) ToGoValue() interface{} {
+func (v Array) ToGoValue() interface{} {
 	ret := make([]interface{}, len(v.Values))
 
 	for i, e := range v.Values {
