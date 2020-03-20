@@ -1622,7 +1622,7 @@ func (v *ProgramVisitor) VisitFixedPointLiteral(ctx *FixedPointLiteralContext) i
 
 func (v *ProgramVisitor) VisitIntegerLiteral(ctx *IntegerLiteralContext) interface{} {
 	intExpression := ctx.PositiveIntegerLiteral().Accept(v).(*ast.IntegerExpression)
-	if ctx.Minus() != nil {
+	if ctx.Minus() != nil && intExpression.Value != nil {
 		intExpression.Value.Neg(intExpression.Value)
 	}
 	return intExpression
