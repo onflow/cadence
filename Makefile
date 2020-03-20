@@ -1,6 +1,3 @@
-# Name of the cover profile
-COVER_PROFILE := cover.out
-
 # Disable go sum database lookup for private repos
 GOPRIVATE=github.com/dapperlabs/*
 
@@ -12,7 +9,7 @@ PATH := $(PATH):$(GOPATH)/bin
 .PHONY: test
 test:
 	# test all packages
-	GO111MODULE=on go test -coverprofile=$(COVER_PROFILE) $(if $(JSON_OUTPUT),-json,) ./...
+	GO111MODULE=on go test $(if $(JSON_OUTPUT),-json,) ./...
 
 .PHONY: install-tools
 install-tools:
@@ -27,16 +24,5 @@ lint:
 tidy:
 	go mod tidy; git diff --exit-code
 
-.PHONY: coverage
-coverage:
-ifeq ($(COVER), true)
-	# Cover summary has to produce cover.json
-	COVER_PROFILE=$(COVER_PROFILE) ./cover-summary.sh
-	# file has to be called index.html
-	gocov-html cover.json > index.html
-	# coverage.zip will automatically be picked up by teamcity
-	zip coverage.zip index.html
-endif
-
 .PHONY: ci
-ci: install-tools tidy lint test coverage
+ci: install-tools tidy lint test
