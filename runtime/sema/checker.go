@@ -1,6 +1,7 @@
 package sema
 
 import (
+	"math"
 	"math/big"
 
 	"github.com/rivo/uniseg"
@@ -505,16 +506,19 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 				valueElementType := variableSizedValueType.ElementType(false)
 				targetElementType := constantSizedTargetType.ElementType(false)
 
-				literalCount := len(typedExpression.Values)
+				literalCount := uint64(len(typedExpression.Values))
 
 				if IsSubType(valueElementType, targetElementType) {
 
-					if literalCount == constantSizedTargetType.Size {
+					expectedSize := constantSizedTargetType.Size
+
+					if literalCount == expectedSize {
 						return true
 					}
+
 					checker.report(
 						&ConstantSizedArrayLiteralSizeError{
-							ExpectedSize: constantSizedTargetType.Size,
+							ExpectedSize: expectedSize,
 							ActualSize:   literalCount,
 							Range:        typedExpression.Range,
 						},
@@ -1043,9 +1047,47 @@ func (checker *Checker) convertFunctionType(t *ast.FunctionType) Type {
 
 func (checker *Checker) convertConstantSizedType(t *ast.ConstantSizedType) Type {
 	elementType := checker.ConvertType(t.Type)
+
+	size := t.Size.Value
+
+	if !t.Size.Value.IsUint64() {
+		minSize := big.NewInt(0)
+		maxSize := big.NewInt(0).SetUint64(math.MaxUint64)
+
+		checker.report(
+			&InvalidConstantSizedTypeSizeError{
+				ActualSize:     t.Size.Value,
+				ExpectedMinInt: minSize,
+				ExpectedMaxInt: maxSize,
+				Range:          ast.NewRangeFromPositioned(t.Size),
+			},
+		)
+
+		switch {
+		case t.Size.Value.Cmp(minSize) < 0:
+			size = minSize
+
+		case t.Size.Value.Cmp(maxSize) > 0:
+			size = maxSize
+		}
+	}
+
+	finalSize := size.Uint64()
+
+	const expectedBase = 10
+	if t.Size.Base != expectedBase {
+		checker.report(
+			&InvalidConstantSizedTypeBaseError{
+				ActualBase:   t.Size.Base,
+				ExpectedBase: expectedBase,
+				Range:        ast.NewRangeFromPositioned(t.Size),
+			},
+		)
+	}
+
 	return &ConstantSizedType{
 		Type: elementType,
-		Size: t.Size,
+		Size: finalSize,
 	}
 }
 

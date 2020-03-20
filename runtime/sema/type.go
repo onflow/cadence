@@ -2286,7 +2286,7 @@ func (t *VariableSizedType) IndexingType() Type {
 // ConstantSizedType is a constant sized array type
 type ConstantSizedType struct {
 	Type
-	Size int
+	Size uint64
 }
 
 func (*ConstantSizedType) IsType()      {}
