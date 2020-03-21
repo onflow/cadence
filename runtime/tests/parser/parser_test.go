@@ -50,7 +50,9 @@ func TestParseInvalidIncompleteConstKeyword(t *testing.T) {
 
 	assert.Nil(t, actual)
 
-	assert.IsType(t, parser.Error{}, err)
+	require.Error(t, err)
+
+	require.IsType(t, parser.Error{}, err)
 
 	errors := err.(parser.Error).Errors
 	assert.Len(t, errors, 1)
@@ -73,7 +75,9 @@ func TestParseInvalidIncompleteStringLiteral(t *testing.T) {
 
 	assert.Nil(t, actual)
 
-	assert.IsType(t, parser.Error{}, err)
+	require.Error(t, err)
+
+	require.IsType(t, parser.Error{}, err)
 
 	errors := err.(parser.Error).Errors
 	assert.Len(t, errors, 3)
@@ -147,7 +151,9 @@ func TestParseInvalidIncompleteConstantDeclaration1(t *testing.T) {
 
 	assert.Nil(t, actual)
 
-	assert.IsType(t, parser.Error{}, err)
+	require.Error(t, err)
+
+	require.IsType(t, parser.Error{}, err)
 
 	errors := err.(parser.Error).Errors
 	assert.Len(t, errors, 1)
@@ -172,7 +178,9 @@ func TestParseInvalidIncompleteConstantDeclaration2(t *testing.T) {
 
 	assert.Nil(t, actual)
 
-	assert.IsType(t, parser.Error{}, err)
+	require.Error(t, err)
+
+	require.IsType(t, parser.Error{}, err)
 
 	errors := err.(parser.Error).Errors
 	assert.Len(t, errors, 2)
@@ -2450,7 +2458,9 @@ func TestParseInvalidIntegerLiteralPrefixWithout(t *testing.T) {
 
 		_, _, err := parser.ParseProgram(fmt.Sprintf(`let x = 0%s`, prefix))
 
-		assert.IsType(t, parser.Error{}, err)
+		require.Error(t, err)
+
+		require.IsType(t, parser.Error{}, err)
 
 		errors := err.(parser.Error).Errors
 		assert.Len(t, errors, 1)
@@ -2471,7 +2481,9 @@ func TestParseInvalidOctalIntegerLiteralWithLeadingUnderscore(t *testing.T) {
 
 	assert.NotNil(t, actual)
 
-	assert.IsType(t, parser.Error{}, err)
+	require.Error(t, err)
+
+	require.IsType(t, parser.Error{}, err)
 
 	errors := err.(parser.Error).Errors
 	assert.Len(t, errors, 1)
@@ -2545,7 +2557,9 @@ func TestParseInvalidOctalIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 
 	assert.NotNil(t, actual)
 
-	assert.IsType(t, parser.Error{}, err)
+	require.Error(t, err)
+
+	require.IsType(t, parser.Error{}, err)
 
 	errors := err.(parser.Error).Errors
 	assert.Len(t, errors, 1)
@@ -2581,7 +2595,9 @@ func TestParseInvalidBinaryIntegerLiteralWithLeadingUnderscore(t *testing.T) {
 
 	assert.NotNil(t, actual)
 
-	assert.IsType(t, parser.Error{}, err)
+	require.Error(t, err)
+
+	require.IsType(t, parser.Error{}, err)
 
 	errors := err.(parser.Error).Errors
 	assert.Len(t, errors, 1)
@@ -2617,7 +2633,9 @@ func TestParseInvalidBinaryIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 
 	assert.NotNil(t, actual)
 
-	assert.IsType(t, parser.Error{}, err)
+	require.Error(t, err)
+
+	require.IsType(t, parser.Error{}, err)
 
 	errors := err.(parser.Error).Errors
 	assert.Len(t, errors, 1)
@@ -2653,7 +2671,9 @@ func TestParseInvalidDecimalIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 
 	assert.NotNil(t, actual)
 
-	assert.IsType(t, parser.Error{}, err)
+	require.Error(t, err)
+
+	require.IsType(t, parser.Error{}, err)
 
 	errors := err.(parser.Error).Errors
 	assert.Len(t, errors, 1)
@@ -2689,7 +2709,9 @@ func TestParseInvalidHexadecimalIntegerLiteralWithLeadingUnderscore(t *testing.T
 
 	assert.NotNil(t, actual)
 
-	assert.IsType(t, parser.Error{}, err)
+	require.Error(t, err)
+
+	require.IsType(t, parser.Error{}, err)
 
 	errors := err.(parser.Error).Errors
 	assert.Len(t, errors, 1)
@@ -2725,7 +2747,9 @@ func TestParseInvalidHexadecimalIntegerLiteralWithTrailingUnderscore(t *testing.
 
 	assert.NotNil(t, actual)
 
-	assert.IsType(t, parser.Error{}, err)
+	require.Error(t, err)
+
+	require.IsType(t, parser.Error{}, err)
 
 	errors := err.(parser.Error).Errors
 	assert.Len(t, errors, 1)
@@ -2762,7 +2786,9 @@ func TestParseInvalidIntegerLiteral(t *testing.T) {
 
 	assert.NotNil(t, actual)
 
-	assert.IsType(t, parser.Error{}, err)
+	require.Error(t, err)
+
+	require.IsType(t, parser.Error{}, err)
 
 	errors := err.(parser.Error).Errors
 	assert.Len(t, errors, 1)
@@ -3692,7 +3718,9 @@ func TestParseInvalidDoubleIntegerUnary(t *testing.T) {
 
 	assert.NotNil(t, program)
 
-	assert.IsType(t, parser.Error{}, err)
+	require.Error(t, err)
+
+	require.IsType(t, parser.Error{}, err)
 
 	assert.Equal(t,
 		[]error{
@@ -3712,7 +3740,9 @@ func TestParseInvalidDoubleBooleanUnary(t *testing.T) {
 
 	assert.NotNil(t, program)
 
-	assert.IsType(t, parser.Error{}, err)
+	require.Error(t, err)
+
+	require.IsType(t, parser.Error{}, err)
 
 	assert.Equal(t,
 		[]error{
@@ -4951,7 +4981,9 @@ func TestParseInvalidMultipleSemicolonsBetweenDeclarations(t *testing.T) {
 
 	assert.Nil(t, actual)
 
-	assert.IsType(t, parser.Error{}, err)
+	require.Error(t, err)
+
+	require.IsType(t, parser.Error{}, err)
 
 	errors := err.(parser.Error).Errors
 	assert.Len(t, errors, 1)
@@ -4974,7 +5006,9 @@ func TestParseInvalidTypeWithWhitespace(t *testing.T) {
 
 	assert.Nil(t, actual)
 
-	assert.IsType(t, parser.Error{}, err)
+	require.Error(t, err)
+
+	require.IsType(t, parser.Error{}, err)
 
 	errors := err.(parser.Error).Errors
 	assert.Len(t, errors, 1)
@@ -7753,7 +7787,7 @@ func TestParseInvalidForceCast(t *testing.T) {
 
 	require.Error(t, err)
 
-	assert.IsType(t, parser.Error{}, err)
+	require.IsType(t, parser.Error{}, err)
 
 	errors := err.(parser.Error).Errors
 	assert.Len(t, errors, 1)
@@ -7783,10 +7817,106 @@ func TestParseConstantSizedSizedArrayWithTrailingUnderscoreSize(t *testing.T) {
 
 	assert.NotNil(t, actual)
 
-	assert.IsType(t, parser.Error{}, err)
+	require.Error(t, err)
+
+	require.IsType(t, parser.Error{}, err)
 
 	errors := err.(parser.Error).Errors
 	assert.Len(t, errors, 1)
 
 	require.IsType(t, &parser.InvalidIntegerLiteralError{}, errors[0])
+}
+
+func TestParsePreconditionWithUnaryNegation(t *testing.T) {
+
+	actual, _, err := parser.ParseProgram(`
+	  fun test() {
+          pre {
+              true: "one"
+              !false: "two"
+          }
+      }
+	`)
+
+	require.NoError(t, err)
+
+	a := &FunctionDeclaration{
+		Access: AccessNotSpecified,
+		Identifier: Identifier{
+			Identifier: "test",
+			Pos:        Position{Offset: 8, Line: 2, Column: 7},
+		},
+		ParameterList: &ParameterList{
+			Range: Range{
+				StartPos: Position{Offset: 12, Line: 2, Column: 11},
+				EndPos:   Position{Offset: 13, Line: 2, Column: 12},
+			},
+		},
+		ReturnTypeAnnotation: &TypeAnnotation{
+			Type: &NominalType{
+				Identifier: Identifier{
+					Pos: Position{Offset: 13, Line: 2, Column: 12},
+				},
+			},
+			StartPos: Position{Offset: 13, Line: 2, Column: 12},
+		},
+		FunctionBlock: &FunctionBlock{
+			Block: &Block{
+				Range: Range{
+					StartPos: Position{Offset: 15, Line: 2, Column: 14},
+					EndPos:   Position{Offset: 105, Line: 7, Column: 6},
+				},
+			},
+			PreConditions: &Conditions{
+				{
+					Kind: ConditionKindPre,
+					Test: &BoolExpression{
+						Value: true,
+						Range: Range{
+							StartPos: Position{Offset: 47, Line: 4, Column: 14},
+							EndPos:   Position{Offset: 50, Line: 4, Column: 17},
+						},
+					},
+					Message: &StringExpression{
+						Value: "one",
+						Range: Range{
+							StartPos: Position{Offset: 53, Line: 4, Column: 20},
+							EndPos:   Position{Offset: 57, Line: 4, Column: 24},
+						},
+					},
+				},
+				{
+					Kind: ConditionKindPre,
+					Test: &UnaryExpression{
+						Operation: OperationNegate,
+						Expression: &BoolExpression{
+							Value: false,
+							Range: Range{
+								StartPos: Position{Offset: 74, Line: 5, Column: 15},
+								EndPos:   Position{Offset: 78, Line: 5, Column: 19},
+							},
+						},
+						Range: Range{
+							StartPos: Position{Offset: 73, Line: 5, Column: 14},
+							EndPos:   Position{Offset: 78, Line: 5, Column: 19},
+						},
+					},
+					Message: &StringExpression{
+						Value: "two",
+						Range: Range{
+							StartPos: Position{Offset: 81, Line: 5, Column: 22},
+							EndPos:   Position{Offset: 85, Line: 5, Column: 26},
+						},
+					},
+				},
+			},
+		},
+		StartPos: Position{Offset: 4, Line: 2, Column: 3},
+	}
+
+	expected := &Program{
+		Declarations: []Declaration{a},
+	}
+
+	utils.AssertEqualWithDiff(t, expected, actual)
 }

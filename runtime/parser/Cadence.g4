@@ -26,7 +26,7 @@ grammar Cadence;
 
 		if ahead.GetChannel() != antlr.LexerHidden {
 			// We're only interested in tokens on the HIDDEN channel.
-			return true
+			return false
 		}
 
 		if ahead.GetTokenType() == CadenceParserTerminator {
@@ -433,9 +433,9 @@ postfixExpression
     | literal                                                             #literalExpression
     | Fun parameterList (':' returnType=typeAnnotation)? functionBlock    #functionExpression
     | '(' expression ')'                                                  #nestedExpression
-    | postfixExpression invocation                                        #invocationExpression
+    | postfixExpression {!p.lineTerminatorAhead()}? invocation            #invocationExpression
     | postfixExpression expressionAccess                                  #accessExpression
-    | postfixExpression '!'                                               #forceExpression
+    | postfixExpression {!p.lineTerminatorAhead()}? '!'                   #forceExpression
     ;
 
 equalityOp
@@ -519,7 +519,7 @@ referenceExpression
 
 expressionAccess
     : memberAccess
-    | bracketExpression
+    | {!p.lineTerminatorAhead()}? bracketExpression
     ;
 
 memberAccess
