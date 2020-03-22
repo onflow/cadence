@@ -437,7 +437,7 @@ func (checker *Checker) checkInvocationArgumentCount(
 func (checker *Checker) reportInvalidTypeArgumentCount(
 	typeArgumentCount int,
 	typeParameterCount int,
-	allTypeArguments []ast.Type,
+	allTypeArguments []*ast.TypeAnnotation,
 ) {
 	exceedingTypeArgumentIndexStart := typeArgumentCount - typeParameterCount - 1
 
@@ -460,18 +460,21 @@ func (checker *Checker) reportInvalidTypeArgumentCount(
 }
 
 func (checker *Checker) checkAndBindGenericTypeParameterTypeArguments(
-	typeArguments []ast.Type,
+	typeArguments []*ast.TypeAnnotation,
 	typeParameters []*TypeParameter,
 	typeParameterTypes map[*TypeParameter]Type,
 ) {
 	for i := 0; i < len(typeArguments); i++ {
 		rawTypeArgument := typeArguments[i]
 
-		typeArgument := checker.ConvertType(rawTypeArgument)
+		typeArgument := checker.ConvertTypeAnnotation(rawTypeArgument)
+		checker.checkTypeAnnotation(typeArgument, rawTypeArgument)
+
+		ty := typeArgument.Type
 
 		// Don't check or bind invalid type arguments
 
-		if typeArgument.IsInvalidType() {
+		if ty.IsInvalidType() {
 			continue
 		}
 
@@ -480,12 +483,12 @@ func (checker *Checker) checkAndBindGenericTypeParameterTypeArguments(
 		// If the type parameter corresponding to the type argument has a type bound,
 		// then check that the argument is a subtype of the type bound.
 
-		err := typeParameter.checkTypeBound(typeArgument, ast.NewRangeFromPositioned(rawTypeArgument))
+		err := typeParameter.checkTypeBound(ty, ast.NewRangeFromPositioned(rawTypeArgument))
 		checker.report(err)
 
 		// Bind the type argument to the type parameter
 
-		typeParameterTypes[typeParameter] = typeArgument
+		typeParameterTypes[typeParameter] = ty
 	}
 }
 
