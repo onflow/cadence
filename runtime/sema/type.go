@@ -54,16 +54,50 @@ type Type interface {
 	String() string
 	QualifiedString() string
 	Equal(other Type) bool
+
+	// IsResourceType returns true if the type is itself a resource (a `CompositeType` with resource kind),
+	// or it contains a resource type (e.g. for optionals, arrays, dictionaries, etc.)
 	IsResourceType() bool
+
+	// IsInvalidType returns true if the type is itself the invalid type (see `InvalidType`),
+	// or it contains an invalid type (e.g. for optionals, arrays, dictionaries, etc.)
 	IsInvalidType() bool
+
 	TypeAnnotationState() TypeAnnotationState
 	ContainsFirstLevelResourceInterfaceType() bool
+
+	// Unify attempts to unify the given type with this type, i.e., resolve type parameters
+	// in generic types (see `GenericType`) using the given type parameters.
+	//
+	// For a generic type, unification assigns a given type with a type parameter.
+	//
+	// If the type parameter has not been previously unified with a type,
+	// through an explicitly provided type argument in an invocation
+	// or through a previous unification, the type parameter is assigned the given type.
+	//
+	// If the type parameter has already been previously unified with a type,
+	// the type parameter's unified .
+	//
+	// The boolean return value indicates if a generic type was encountered during unification.
+	// For primitives (e.g. `Int`, `String`, etc.) it would be false, as .
+	// For types with nested types (e.g. optionals, arrays, and dictionaries)
+	// the result is the successful unification of the inner types.
+	//
+	// The boolean return value does *not* indicate if unification succeeded or not.
+	//
 	Unify(
 		other Type,
 		typeParameters map[*TypeParameter]Type,
 		report func(err error),
 		outerRange ast.Range,
 	) bool
+
+	// Resolve returns a type that is free of generic types (see `GenericType`),
+	// i.e. it resolves the type parameters in generic types given the type parameter
+	// unifications of `typeParameters`.
+	//
+	// If resolution fails, it returns `nil`.
+	//
 	Resolve(typeParameters map[*TypeParameter]Type) Type
 }
 
