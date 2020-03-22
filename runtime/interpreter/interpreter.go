@@ -3210,7 +3210,7 @@ func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpressi
 	}
 }
 
-func (interpreter *Interpreter) checkStored(storageAddress common.Address, key string) bool {
+func (interpreter *Interpreter) storedValueExists(storageAddress common.Address, key string) bool {
 	return interpreter.storageExistenceHandler(interpreter, storageAddress, key)
 }
 
@@ -3438,7 +3438,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 // \x1F = Information Separator One
 //
 func storageKey(path PathValue) string {
-	return fmt.Sprintf("%s\x1F%s", path.Domain, path.Identifier)
+	return fmt.Sprintf("%s\x1F%s", path.Domain.Identifier(), path.Identifier)
 }
 
 func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) HostFunctionValue {
@@ -3450,20 +3450,13 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 		address := addressValue.ToAddress()
 		key := storageKey(path)
 
-		const expectedDomain = common.PathDomainStorage
-		actualDomain := path.Domain
+		// Ensure the path has a `storage` domain
 
-		if actualDomain != expectedDomain {
-			panic(
-				&InvalidSavePathDomainError{
-					ExpectedDomain: expectedDomain,
-					ActualDomain:   actualDomain,
-					LocationRange:  invocation.LocationRange,
-				},
-			)
-		}
+		interpreter.checkStorageDomain(path, invocation.LocationRange)
 
-		if interpreter.checkStored(address, key) {
+		// Prevent an overwrite
+
+		if interpreter.storedValueExists(address, key) {
 			panic(
 				&OverwriteError{
 					Address:       address,
@@ -3473,6 +3466,8 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 			)
 		}
 
+		// Write new value
+
 		interpreter.writeStored(
 			address,
 			key,
@@ -3480,5 +3475,66 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 		)
 
 		return Done{Result: VoidValue{}}
+	})
+}
+
+func (interpreter *Interpreter) checkStorageDomain(path PathValue, locationRange LocationRange) {
+	const expectedDomain = common.PathDomainStorage
+	actualDomain := path.Domain
+
+	if actualDomain != expectedDomain {
+		panic(
+			&InvalidPathDomainError{
+				ExpectedDomain: expectedDomain,
+				ActualDomain:   actualDomain,
+				LocationRange:  locationRange,
+			},
+		)
+	}
+}
+
+func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValue) HostFunctionValue {
+	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+
+		path := invocation.Arguments[0].(PathValue)
+
+		address := addressValue.ToAddress()
+		key := storageKey(path)
+
+		// Ensure the path has a `storage` domain
+
+		interpreter.checkStorageDomain(path, invocation.LocationRange)
+
+		value := interpreter.readStored(address, key)
+
+		switch value := value.(type) {
+		case NilValue:
+			return Done{Result: value}
+
+		case *SomeValue:
+
+			// If there is value stored for the given path,
+			// check that it satisfies the type given as the type argument.
+
+			var ty sema.Type
+			for _, ty = range invocation.TypeParameterTypes {
+				break
+			}
+
+			dynamicType := value.Value.DynamicType(interpreter)
+			if !interpreter.IsSubType(dynamicType, ty) {
+				return Done{Result: NilValue{}}
+			}
+
+			// Remove the value from storage,
+			// but only if the type check succeeded.
+
+			interpreter.writeStored(address, key, NilValue{})
+
+			return Done{Result: value}
+
+		default:
+			panic(errors.NewUnreachableError())
+		}
 	})
 }
