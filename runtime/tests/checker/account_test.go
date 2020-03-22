@@ -62,7 +62,7 @@ func TestCheckAccount(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("saving resources", func(t *testing.T) {
+	t.Run("saving resources: implicit type argument", func(t *testing.T) {
 		_, err := ParseAndCheckAccount(t,
 			`
               resource R {}
@@ -75,5 +75,40 @@ func TestCheckAccount(t *testing.T) {
 		)
 
 		require.NoError(t, err)
+	})
+
+	t.Run("saving resources: explicit type argument", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t,
+			`
+              resource R {}
+
+              fun test() {
+                  let r <- create R()
+                  account.save<R>(<-r, to: /storage/r)
+              }
+            `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("saving resources: explicit type argument, incorect", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t,
+			`
+              resource R {}
+
+              resource T {}
+
+              fun test() {
+                  let r <- create R()
+                  account.save<T>(<-r, to: /storage/r)
+              }
+            `,
+		)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 }

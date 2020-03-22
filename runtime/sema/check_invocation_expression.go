@@ -3,7 +3,6 @@ package sema
 import (
 	"github.com/dapperlabs/cadence/runtime/ast"
 	"github.com/dapperlabs/cadence/runtime/common"
-	"github.com/dapperlabs/cadence/runtime/errors"
 )
 
 func (checker *Checker) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) ast.Repr {
@@ -66,7 +65,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 
 	// invoked expression has function type
 
-	argumentTypes, functionType := checker.checkInvocation(invocationExpression, invokableType)
+	argumentTypes, returnType := checker.checkInvocation(invocationExpression, invokableType)
 	checker.Elaboration.InvocationExpressionArgumentTypes[invocationExpression] = argumentTypes
 
 	// If the invocation refers directly to the name of the function as stated in the declaration,
@@ -86,16 +85,6 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 			typedInvokedExpression,
 		)
 	}
-
-	returnType := functionType.ReturnTypeAnnotation.Type
-	checker.Elaboration.InvocationExpressionReturnTypes[invocationExpression] = returnType
-
-	parameters := functionType.Parameters
-	parameterTypes := make([]Type, len(parameters))
-	for i, parameter := range parameters {
-		parameterTypes[i] = parameter.TypeAnnotation.Type
-	}
-	checker.Elaboration.InvocationExpressionParameterTypes[invocationExpression] = parameterTypes
 
 	checker.checkConstructorInvocationWithResourceResult(
 		invocationExpression,
@@ -234,52 +223,18 @@ func (checker *Checker) checkInvocationArgumentLabels(
 	}
 }
 
-func (checker *Checker) checkTypeBound(typeArgument Type, typeParameter *TypeParameter, pos ast.HasPosition) {
-	if typeParameter.Type == nil ||
-		typeParameter.Type.IsInvalidType() {
-
-		return
-	}
-
-	if !IsSubType(typeArgument, typeParameter.Type) {
-
-		checker.report(
-			&TypeMismatchError{
-				ExpectedType: typeParameter.Type,
-				ActualType:   typeArgument,
-				Range:        ast.NewRangeFromPositioned(pos),
-			},
-		)
-	}
-}
-
 func (checker *Checker) checkInvocation(
 	invocationExpression *ast.InvocationExpression,
 	invokableType InvokableType,
 ) (
 	argumentTypes []Type,
-	functionType *FunctionType,
+	returnType Type,
 ) {
-	// The function type is either concrete (monomorphic, `*FunctionType`)
-	// or it is generic (polymorphic, `*GenericFunctionType`, a "type scheme").
+	functionType := invokableType.InvocationFunctionType()
 
-	genericFunctionType := invokableType.InvocationGenericFunctionType()
-	functionType = invokableType.InvocationFunctionType()
-
-	// In each case, get the parameter count and required argument count.
-
-	var parameterCount int
-	var requiredArgumentCount *int
-	var typeParameterCount int
-
-	if genericFunctionType != nil {
-		parameterCount = len(genericFunctionType.Parameters)
-		requiredArgumentCount = genericFunctionType.RequiredArgumentCount
-		typeParameterCount = len(genericFunctionType.TypeParameters)
-	} else {
-		parameterCount = len(functionType.Parameters)
-		requiredArgumentCount = functionType.RequiredArgumentCount
-	}
+	parameterCount := len(functionType.Parameters)
+	requiredArgumentCount := functionType.RequiredArgumentCount
+	typeParameterCount := len(functionType.TypeParameters)
 
 	// Check the type arguments and bind them to type parameters
 
@@ -287,49 +242,35 @@ func (checker *Checker) checkInvocation(
 
 	typeParameters := make(map[*TypeParameter]Type, typeParameterCount)
 
-	if genericFunctionType != nil {
+	// If the function type is generic, the invocation might provide
+	// explicit type arguments for the type parameters.
 
-		// If the function type is generic, the invocation might provide
-		// explicit type arguments for the type parameters.
+	// Check that the number of type arguments does not exceed
+	// the number of type parameters
 
-		// Check that the number of type arguments does not exceed
-		// the number of type parameters
+	validTypeArgumentCount := typeArgumentCount
 
-		validTypeArgumentCount := typeArgumentCount
+	if typeArgumentCount > typeParameterCount {
 
-		if typeArgumentCount > typeParameterCount {
+		validTypeArgumentCount = typeParameterCount
 
-			validTypeArgumentCount = typeParameterCount
-
-			checker.reportInvalidTypeArgumentCount(
-				typeArgumentCount,
-				typeParameterCount,
-				invocationExpression.TypeArguments,
-			)
-		}
-
-		// Check all non-superfluous type arguments
-		// and bind them to the type parameters
-
-		validTypeArguments := invocationExpression.TypeArguments[:validTypeArgumentCount]
-
-		checker.checkAndBindGenericTypeParameterTypeArguments(
-			validTypeArguments,
-			genericFunctionType.TypeParameters,
-			typeParameters,
+		checker.reportInvalidTypeArgumentCount(
+			typeArgumentCount,
+			typeParameterCount,
+			invocationExpression.TypeArguments,
 		)
-
-	} else {
-		// If the function type is monomorphic, no argument types are allowed,
-		// and no binding is necessary.
-
-		if typeArgumentCount > 0 {
-			checker.reportInvalidTypeArguments(
-				invocationExpression.TypeArguments,
-				typeArgumentCount,
-			)
-		}
 	}
+
+	// Check all non-superfluous type arguments
+	// and bind them to the type parameters
+
+	validTypeArguments := invocationExpression.TypeArguments[:validTypeArgumentCount]
+
+	checker.checkAndBindGenericTypeParameterTypeArguments(
+		validTypeArguments,
+		functionType.TypeParameters,
+		typeParameters,
+	)
 
 	// Check that the invocation's argument count matches the function's parameter count
 
@@ -349,19 +290,20 @@ func (checker *Checker) checkInvocation(
 	}
 
 	argumentTypes = make([]Type, argumentCount)
+	parameterTypes := make([]Type, argumentCount)
 
 	// Check all the required arguments
 
 	for argumentIndex := 0; argumentIndex < minCount; argumentIndex++ {
 
-		checker.checkInvocationRequiredArgument(
-			invocationExpression.Arguments,
-			argumentIndex,
-			genericFunctionType,
-			functionType,
-			argumentTypes,
-			typeParameters,
-		)
+		parameterTypes[argumentIndex] =
+			checker.checkInvocationRequiredArgument(
+				invocationExpression.Arguments,
+				argumentIndex,
+				functionType,
+				argumentTypes,
+				typeParameters,
+			)
 	}
 
 	// Add extra argument types
@@ -381,41 +323,38 @@ func (checker *Checker) checkInvocation(
 
 	invokableType.CheckArgumentExpressions(checker, argumentExpressions)
 
-	// If the function type is generic, prepare the concrete function type
-
-	if genericFunctionType != nil {
-		functionType = checker.instantiateGenericFunction(
-			genericFunctionType,
-			typeParameters,
-		)
+	returnType = functionType.ReturnTypeAnnotation.Type.Resolve(typeParameters)
+	if returnType == nil {
+		// TODO: report error? does `checkTypeParameterInference` below already do that?
+		returnType = &InvalidType{}
 	}
 
 	// Check all type parameters have been bound to a type.
 
-	if genericFunctionType != nil {
-		checker.checkTypeParameterInference(
-			genericFunctionType,
-			typeParameters,
-			invocationExpression,
-		)
-	}
+	checker.checkTypeParameterInference(
+		functionType,
+		typeParameters,
+		invocationExpression,
+	)
 
-	// Save the type parameter's types in the elaboration
+	// Save types in the elaboration
 
 	checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression] = typeParameters
+	checker.Elaboration.InvocationExpressionParameterTypes[invocationExpression] = parameterTypes
+	checker.Elaboration.InvocationExpressionReturnTypes[invocationExpression] = returnType
 
-	return argumentTypes, functionType
+	return argumentTypes, returnType
 }
 
 // checkTypeParameterInference checks that all type parameters
 // of the given generic function type have been assigned a type.
 //
 func (checker *Checker) checkTypeParameterInference(
-	genericFunctionType *GenericFunctionType,
+	functionType *FunctionType,
 	typeParameters map[*TypeParameter]Type,
 	invocationExpression *ast.InvocationExpression,
 ) {
-	for _, typeParameter := range genericFunctionType.TypeParameters {
+	for _, typeParameter := range functionType.TypeParameters {
 		if typeParameters[typeParameter] != nil {
 			continue
 		}
@@ -429,158 +368,45 @@ func (checker *Checker) checkTypeParameterInference(
 	}
 }
 
-// instantiateGenericFunction returns a concrete function type
-// for the given generic function type based on the given type parameter bindings.
-//
-func (checker *Checker) instantiateGenericFunction(
-	genericFunctionType *GenericFunctionType,
-	typeParameters map[*TypeParameter]Type,
-) *FunctionType {
-
-	parameters := make([]*Parameter, len(genericFunctionType.Parameters))
-
-	// Prepare the concrete parameters from the generic function's parameter,
-	// which potentially has a generic type parameter annotation.
-
-	for i, parameter := range genericFunctionType.Parameters {
-
-		var parameterType Type
-
-		genericTypeAnnotation := parameter.TypeAnnotation
-		switch {
-		case genericTypeAnnotation.TypeAnnotation != nil:
-			parameterType = genericTypeAnnotation.TypeAnnotation.Type
-
-		case genericTypeAnnotation.TypeParameter != nil:
-			typeParameter := genericTypeAnnotation.TypeParameter
-			parameterType = typeParameters[typeParameter]
-
-			if parameterType == nil {
-				parameterType = &InvalidType{}
-
-				// NOTE: will be reported at end of function
-			}
-
-		default:
-			panic(errors.NewUnreachableError())
-		}
-
-		parameters[i] = &Parameter{
-			Label:          parameter.Label,
-			Identifier:     parameter.Identifier,
-			TypeAnnotation: NewTypeAnnotation(parameterType),
-		}
-	}
-
-	// Prepare the concrete return type annotation
-	// from the generic function's return type annotation,
-	// which potentially has a generic type parameter annotation.
-
-	var returnType Type
-
-	genericTypeAnnotation := genericFunctionType.ReturnTypeAnnotation
-	switch {
-	case genericTypeAnnotation.TypeAnnotation != nil:
-		returnType = genericTypeAnnotation.TypeAnnotation.Type
-
-	case genericTypeAnnotation.TypeParameter != nil:
-		typeParameter := genericTypeAnnotation.TypeParameter
-		returnType = typeParameters[typeParameter]
-
-		if returnType == nil {
-			returnType = &InvalidType{}
-
-			// NOTE: will be reported at end of function
-		}
-
-	default:
-		panic(errors.NewUnreachableError())
-	}
-
-	return &FunctionType{
-		Parameters:            parameters,
-		ReturnTypeAnnotation:  NewTypeAnnotation(returnType),
-		RequiredArgumentCount: genericFunctionType.RequiredArgumentCount,
-	}
-}
-
 func (checker *Checker) checkInvocationRequiredArgument(
 	arguments ast.Arguments,
 	argumentIndex int,
-	genericFunctionType *GenericFunctionType,
 	functionType *FunctionType,
 	argumentTypes []Type,
 	typeParameters map[*TypeParameter]Type,
+) (
+	parameterType Type,
 ) {
 	argument := arguments[argumentIndex]
-
 	argumentType := argument.Expression.Accept(checker).(Type)
-
-	var parameterType Type
-	var typeParameter *TypeParameter
-
-	if genericFunctionType != nil {
-		parameter := genericFunctionType.Parameters[argumentIndex]
-
-		// If the function is generic, the parameter might be either a concrete type annotation,
-		// or the parameter refers to a type parameter.
-
-		genericTypeAnnotation := parameter.TypeAnnotation
-		switch {
-		case genericTypeAnnotation.TypeAnnotation != nil:
-			parameterType = genericTypeAnnotation.TypeAnnotation.Type
-
-		case genericTypeAnnotation.TypeParameter != nil:
-			typeParameter = genericTypeAnnotation.TypeParameter
-
-		default:
-			panic(errors.NewUnreachableError())
-		}
-	} else {
-		parameter := functionType.Parameters[argumentIndex]
-		parameterType = parameter.TypeAnnotation.Type
-	}
-
 	argumentTypes[argumentIndex] = argumentType
 
 	checker.checkInvocationArgumentMove(argument.Expression, argumentType)
 
-	switch {
-	case parameterType != nil:
-		// Check that the type of the argument matches the type of the parameter.
+	parameter := functionType.Parameters[argumentIndex]
 
-		checker.checkInvocationArgumentParameterTypeCompatibility(argument.Expression, argumentType, parameterType)
+	// Try to unify the parameter type with the argument type.
+	// If unification fails, fall back to the parameter type for now.
 
-	case typeParameter != nil:
-		if unifiedType, ok := typeParameters[typeParameter]; ok {
+	argumentRange := ast.NewRangeFromPositioned(argument.Expression)
 
-			// If the type parameter is already bound to a type argument
-			// (either explicit by a type argument, or implicit through an argument's type),
-			// check that this argument's type matches the
-
-			if !argumentType.Equal(unifiedType) {
-				checker.report(
-					&TypeMismatchError{
-						ExpectedType: unifiedType,
-						ActualType:   argumentType,
-						Range:        ast.NewRangeFromPositioned(argument.Expression),
-					},
-				)
-			}
-		} else {
-			// If the type parameter is not uet bound to a type argument, bind it.
-
-			typeParameters[typeParameter] = argumentType
-
-			// If the type parameter corresponding to the type argument has a type bound,
-			// then check that the argument's type is a subtype of the type bound.
-
-			checker.checkTypeBound(argumentType, typeParameter, argument.Expression)
+	parameterType = parameter.TypeAnnotation.Type
+	if parameterType.Unify(argumentType, typeParameters, checker.report, argumentRange) {
+		parameterType = parameterType.Resolve(typeParameters)
+		if parameterType == nil {
+			parameterType = &InvalidType{}
 		}
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	// Check that the type of the argument matches the type of the parameter.
+
+	checker.checkInvocationArgumentParameterTypeCompatibility(
+		argument.Expression,
+		argumentType,
+		parameterType,
+	)
+
+	return parameterType
 }
 
 func (checker *Checker) checkInvocationArgumentCount(
@@ -606,21 +432,6 @@ func (checker *Checker) checkInvocationArgumentCount(
 			},
 		)
 	}
-}
-
-func (checker *Checker) reportInvalidTypeArguments(typeArguments []ast.Type, typeArgumentCount int) {
-	firstSuperfluousTypeArgument := typeArguments[0]
-
-	lastSuperfluousTypeArgument := typeArguments[typeArgumentCount-1]
-
-	checker.report(
-		&InvalidTypeArgumentsError{
-			Range: ast.Range{
-				StartPos: firstSuperfluousTypeArgument.StartPosition(),
-				EndPos:   lastSuperfluousTypeArgument.EndPosition(),
-			},
-		},
-	)
 }
 
 func (checker *Checker) reportInvalidTypeArgumentCount(
@@ -669,7 +480,8 @@ func (checker *Checker) checkAndBindGenericTypeParameterTypeArguments(
 		// If the type parameter corresponding to the type argument has a type bound,
 		// then check that the argument is a subtype of the type bound.
 
-		checker.checkTypeBound(typeArgument, typeParameter, rawTypeArgument)
+		err := typeParameter.checkTypeBound(typeArgument, ast.NewRangeFromPositioned(rawTypeArgument))
+		checker.report(err)
 
 		// Bind the type argument to the type parameter
 

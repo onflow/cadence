@@ -16,21 +16,24 @@ const SelfIdentifier = "self"
 const BeforeIdentifier = "before"
 const ResultIdentifier = "result"
 
-var beforeType = func() *GenericFunctionType {
+var beforeType = func() *FunctionType {
+
 	typeParameter := &TypeParameter{
 		Name: "T",
 		Type: &AnyStructType{},
 	}
 
-	typeAnnotation := &GenericTypeAnnotation{
-		TypeParameter: typeParameter,
-	}
+	typeAnnotation := NewTypeAnnotation(
+		&GenericType{
+			TypeParameter: typeParameter,
+		},
+	)
 
-	return &GenericFunctionType{
+	return &FunctionType{
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*GenericParameter{
+		Parameters: []*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "value",
@@ -1762,7 +1765,9 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 			addPredeclaredMember(NewPublicConstantFieldMember(
 				containerType,
 				"owner",
-				&OptionalType{&PublicAccountType{}},
+				&OptionalType{
+					Type: &PublicAccountType{},
+				},
 			))
 		}
 	}
