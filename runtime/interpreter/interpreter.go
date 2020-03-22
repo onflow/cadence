@@ -1874,6 +1874,8 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 				FlatMap(func(result interface{}) Trampoline {
 					arguments := result.(*ArrayValue).Values
 
+					typeParameterTypes :=
+						interpreter.Checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression]
 					argumentTypes :=
 						interpreter.Checker.Elaboration.InvocationExpressionArgumentTypes[invocationExpression]
 					parameterTypes :=
@@ -1884,6 +1886,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 						arguments,
 						argumentTypes,
 						parameterTypes,
+						typeParameterTypes,
 						ast.NewRangeFromPositioned(invocationExpression),
 					)
 
@@ -1918,6 +1921,7 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 		arguments,
 		argumentTypes,
 		parameterTypes,
+		nil,
 		invocationRange,
 	)
 
@@ -1933,6 +1937,7 @@ func (interpreter *Interpreter) functionValueInvocationTrampoline(
 	arguments []Value,
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
+	typeParameterTypes map[*sema.TypeParameter]sema.Type,
 	invocationRange ast.Range,
 ) Trampoline {
 
@@ -1958,10 +1963,11 @@ func (interpreter *Interpreter) functionValueInvocationTrampoline(
 
 	return function.Invoke(
 		Invocation{
-			Arguments:     argumentCopies,
-			ArgumentTypes: argumentTypes,
-			LocationRange: locationRange,
-			Interpreter:   interpreter,
+			Arguments:          argumentCopies,
+			ArgumentTypes:      argumentTypes,
+			TypeParameterTypes: typeParameterTypes,
+			LocationRange:      locationRange,
+			Interpreter:        interpreter,
 		},
 	)
 }
