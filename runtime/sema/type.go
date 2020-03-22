@@ -3745,6 +3745,34 @@ var authAccountSaveFunctionType = func() *FunctionType {
 	}
 }()
 
+var authAccountLoadFunctionType = func() *FunctionType {
+
+	typeParameter := &TypeParameter{
+		Type: &AnyResourceType{},
+		Name: "T",
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:          "from",
+				Identifier:     "path",
+				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: &GenericType{
+					TypeParameter: typeParameter,
+				},
+			},
+		),
+	}
+}()
+
 func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
 	newField := func(fieldType Type) *Member {
 		return NewPublicConstantFieldMember(t, identifier, fieldType)
@@ -3775,6 +3803,9 @@ func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error
 
 	case "save":
 		return newFunction(authAccountSaveFunctionType)
+
+	case "load":
+		return newFunction(authAccountLoadFunctionType)
 
 	default:
 		return nil
