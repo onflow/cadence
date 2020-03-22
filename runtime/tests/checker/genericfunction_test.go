@@ -66,7 +66,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		_, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test<X>() 
+              let res = test<X>()
             `,
 			&sema.FunctionType{
 				TypeParameters:        nil,
@@ -90,7 +90,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		_, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test() 
+              let res = test()
             `,
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -116,7 +116,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		checker, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test<Int>() 
+              let res = test<Int>()
             `,
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -150,7 +150,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		checker, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test(1) 
+              let res = test(1)
             `,
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -194,7 +194,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		_, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test() 
+              let res = test()
             `,
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -231,7 +231,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		_, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test<Int>("1") 
+              let res = test<Int>("1")
             `,
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -268,7 +268,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		_, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test<Int>(1) 
+              let res = test<Int>(1)
             `,
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -302,7 +302,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		checker, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test(1, 2) 
+              let res = test(1, 2)
             `,
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -355,7 +355,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		_, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test(1, "2") 
+              let res = test(1, "2")
             `,
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -401,7 +401,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		_, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test() 
+              let res = test()
             `,
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -431,7 +431,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		checker, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test<Int>() 
+              let res = test<Int>()
             `,
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -474,7 +474,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		checker, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test(1) 
+              let res = test(1)
             `,
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -527,7 +527,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		checker, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test<Int>() 
+              let res = test<Int>()
             `,
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -561,7 +561,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		_, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test<String>() 
+              let res = test<String>()
             `,
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -587,7 +587,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		_, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test("test") 
+              let res = test("test")
             `,
 			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
@@ -614,40 +614,195 @@ func TestCheckGenericFunction(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
-	t.Run("valid: one type parameter, one type argument, no parameters, no arguments, optional generic return type", func(t *testing.T) {
+	t.Run("valid: one type parameter, one type argument, no parameters, no arguments, generic return type", func(t *testing.T) {
 
-		typeParameter := &sema.TypeParameter{
-			Name: "T",
-			Type: &sema.NumberType{},
+		type test struct {
+			name         string
+			generateType func(innerType sema.Type) sema.Type
 		}
 
-		checker, err := parseAndCheckWithTestValue(t,
-			`
-              let res = test<Int>() 
-            `,
-			&sema.FunctionType{
-				TypeParameters: []*sema.TypeParameter{
-					typeParameter,
+		tests := []test{
+			{
+				name: "optional",
+				generateType: func(innerType sema.Type) sema.Type {
+					return &sema.OptionalType{
+						Type: innerType,
+					}
 				},
-				Parameters: nil,
-				ReturnTypeAnnotation: sema.NewTypeAnnotation(
-					&sema.OptionalType{
-						Type: &sema.GenericType{
-							TypeParameter: typeParameter,
+			},
+			{
+				name: "variable-sized array",
+				generateType: func(innerType sema.Type) sema.Type {
+					return &sema.VariableSizedType{
+						Type: innerType,
+					}
+				},
+			},
+			{
+				name: "constant-sized array",
+				generateType: func(innerType sema.Type) sema.Type {
+					return &sema.ConstantSizedType{
+						Type: innerType,
+						Size: 2,
+					}
+				},
+			},
+			{
+				name: "dictionary",
+				generateType: func(innerType sema.Type) sema.Type {
+					return &sema.DictionaryType{
+						KeyType:   innerType,
+						ValueType: innerType,
+					}
+				},
+			},
+		}
+
+		for _, test := range tests {
+
+			t.Run(test.name, func(t *testing.T) {
+
+				typeParameter := &sema.TypeParameter{
+					Name: "T",
+					Type: &sema.NumberType{},
+				}
+
+				checker, err := parseAndCheckWithTestValue(t,
+					`
+                      let res = test<Int>()
+                    `,
+					&sema.FunctionType{
+						TypeParameters: []*sema.TypeParameter{
+							typeParameter,
 						},
+						Parameters: nil,
+						ReturnTypeAnnotation: sema.NewTypeAnnotation(
+							test.generateType(
+								&sema.GenericType{
+									TypeParameter: typeParameter,
+								},
+							),
+						),
+						RequiredArgumentCount: nil,
 					},
-				),
-				RequiredArgumentCount: nil,
-			},
-		)
+				)
 
-		require.NoError(t, err)
+				require.NoError(t, err)
 
-		assert.Equal(t,
-			&sema.OptionalType{
-				Type: &sema.IntType{},
-			},
-			checker.GlobalValues["res"].Type,
-		)
+				assert.Equal(t,
+					test.generateType(&sema.IntType{}),
+					checker.GlobalValues["res"].Type,
+				)
+			})
+		}
 	})
+
+	t.Run("valid: one type parameter, no type argument, one parameter, one argument, generic return type", func(t *testing.T) {
+
+		type test struct {
+			name         string
+			generateType func(innerType sema.Type) sema.Type
+			declarations string
+			argument     string
+		}
+
+		tests := []test{
+			{
+				name: "optional",
+				generateType: func(innerType sema.Type) sema.Type {
+					return &sema.OptionalType{
+						Type: innerType,
+					}
+				},
+				declarations: "let x: Int? = 1",
+				argument:     "x",
+			},
+			{
+				name: "variable-sized array",
+				generateType: func(innerType sema.Type) sema.Type {
+					return &sema.VariableSizedType{
+						Type: innerType,
+					}
+				},
+				argument: "[1, 2, 3]",
+			},
+			{
+				name: "constant-sized array",
+				generateType: func(innerType sema.Type) sema.Type {
+					return &sema.ConstantSizedType{
+						Type: innerType,
+						Size: 2,
+					}
+				},
+				declarations: "let xs: [Int; 2] = [1, 2]",
+				argument:     "xs",
+			},
+			{
+				name: "dictionary",
+				generateType: func(innerType sema.Type) sema.Type {
+					return &sema.DictionaryType{
+						KeyType:   innerType,
+						ValueType: innerType,
+					}
+				},
+				argument: "{1: 2}",
+			},
+		}
+
+		for _, test := range tests {
+
+			t.Run(test.name, func(t *testing.T) {
+
+				typeParameter := &sema.TypeParameter{
+					Name: "T",
+					Type: &sema.NumberType{},
+				}
+
+				checker, err := parseAndCheckWithTestValue(t,
+					fmt.Sprintf(
+						`
+                          %[1]s
+                          let res = test(%[2]s)
+                        `,
+						test.declarations,
+						test.argument,
+					),
+					&sema.FunctionType{
+						TypeParameters: []*sema.TypeParameter{
+							typeParameter,
+						},
+						Parameters: []*sema.Parameter{
+							{
+								Label:      sema.ArgumentLabelNotRequired,
+								Identifier: "value",
+								TypeAnnotation: sema.NewTypeAnnotation(
+									test.generateType(
+										&sema.GenericType{
+											TypeParameter: typeParameter,
+										},
+									),
+								),
+							},
+						},
+						ReturnTypeAnnotation: sema.NewTypeAnnotation(
+							test.generateType(
+								&sema.GenericType{
+									TypeParameter: typeParameter,
+								},
+							),
+						),
+						RequiredArgumentCount: nil,
+					},
+				)
+
+				require.NoError(t, err)
+
+				assert.Equal(t,
+					test.generateType(&sema.IntType{}),
+					checker.GlobalValues["res"].Type,
+				)
+			})
+		}
+	})
+
 }
