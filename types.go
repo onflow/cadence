@@ -4,14 +4,10 @@ import (
 	"fmt"
 )
 
-// revive:disable:redefines-builtin-id
-
 type Type interface {
 	isType()
 	ID() string
 }
-
-// revive:enable
 
 // AnyType
 

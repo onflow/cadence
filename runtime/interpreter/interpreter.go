@@ -13,9 +13,7 @@ import (
 	"github.com/dapperlabs/cadence/runtime/errors"
 	"github.com/dapperlabs/cadence/runtime/sema"
 
-	// revive:disable
 	. "github.com/dapperlabs/cadence/runtime/trampoline"
-	// revive:enable
 )
 
 type controlReturn interface {
@@ -479,7 +477,7 @@ type Statement struct {
 	Line       int
 }
 
-func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (result interface{}, statement *Statement) {
+func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}, *Statement) {
 	for {
 		statement := getStatement(t)
 
@@ -1052,14 +1050,16 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 
 			return statement.Block.Accept(interpreter).(Trampoline).
 				FlatMap(func(value interface{}) Trampoline {
-					if _, ok := value.(loopBreak); ok {
+
+					switch value.(type) {
+					case loopBreak:
 						return Done{}
-						// revive:disable:empty-block
-					} else if _, ok := value.(loopContinue); ok {
-						// revive:enable
+
+					case loopContinue:
 						// NO-OP
-					} else if functionReturn, ok := value.(functionReturn); ok {
-						return Done{Result: functionReturn}
+
+					case functionReturn:
+						return Done{Result: value}
 					}
 
 					// recurse
@@ -1473,7 +1473,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		return interpreter.visitBinaryOperation(expression).
 			Map(func(result interface{}) interface{} {
 				tuple := result.(valueTuple)
-				return BoolValue(!interpreter.testEqual(tuple.left, tuple.right))
+				return !interpreter.testEqual(tuple.left, tuple.right)
 			})
 
 	case ast.OperationOr:
@@ -2630,12 +2630,15 @@ func (interpreter *Interpreter) boxOptional(value Value, valueType, targetType s
 			break
 		}
 
-		if some, ok := inner.(*SomeValue); ok {
-			inner = some.Value
-		} else if _, ok := inner.(NilValue); ok {
+		switch typedInner := inner.(type) {
+		case *SomeValue:
+			inner = typedInner.Value
+
+		case NilValue:
 			// NOTE: nested nil will be unboxed!
 			return inner
-		} else {
+
+		default:
 			value = NewSomeValueOwningNonCopying(value)
 			valueType = &sema.OptionalType{
 				Type: valueType,
