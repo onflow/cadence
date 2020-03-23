@@ -1,8 +1,11 @@
 package interpreter_test
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -7933,4 +7936,129 @@ func TestInterpretForce(t *testing.T) {
 
 		assert.IsType(t, &interpreter.ForceNilError{}, err)
 	})
+}
+
+func permutations(xs []string) (res [][]string) {
+	var f func([]string, int)
+	f = func(a []string, k int) {
+		if k == len(a) {
+			res = append(res, append([]string{}, a...))
+		} else {
+			for i := k; i < len(xs); i++ {
+				a[k], a[i] = a[i], a[k]
+				f(a, k+1)
+				a[k], a[i] = a[i], a[k]
+			}
+		}
+	}
+
+	f(xs, 0)
+
+	return res
+}
+
+func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
+
+	fieldValues := map[string]int{
+		"a": 1,
+		"b": 2,
+		"c": 3,
+	}
+
+	initializations := make([]string, 0, len(fieldValues))
+
+	for name, value := range fieldValues {
+		initialization := fmt.Sprintf("self.%s = %d", name, value)
+		initializations = append(initializations, initialization)
+	}
+
+	allInitializations := permutations(initializations)
+
+	encodings := make([][]byte, len(allInitializations))
+
+	for i, initialization := range allInitializations {
+
+		inter := parseCheckAndInterpret(t,
+			fmt.Sprintf(
+				`
+                  struct Test {
+                      let a: Int
+                      let b: Int
+                      let c: Int
+
+                      init() {
+                          %s
+                      }
+                  }
+
+                  let test = Test()
+                `,
+				strings.Join(initialization, "\n"),
+			),
+		)
+
+		test := inter.Globals["test"].Value.(*interpreter.CompositeValue)
+
+		w := new(bytes.Buffer)
+		encoder := gob.NewEncoder(w)
+		err := encoder.Encode(test)
+		require.NoError(t, err)
+
+		encodings[i] = w.Bytes()
+	}
+
+	expected := encodings[0]
+
+	for _, actual := range encodings[1:] {
+		require.Equal(t, expected, actual)
+	}
+}
+func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
+
+	fieldValues := map[string]int{
+		"a": 1,
+		"b": 2,
+		"c": 3,
+	}
+
+	initializations := make([]string, 0, len(fieldValues))
+
+	for name, value := range fieldValues {
+		initialization := fmt.Sprintf(`xs["%s"] = %d`, name, value)
+		initializations = append(initializations, initialization)
+	}
+
+	for _, initialization := range permutations(initializations) {
+
+		inter := parseCheckAndInterpret(t,
+			fmt.Sprintf(
+				`
+                  fun construct(): {String: Int} {
+                      let xs: {String: Int} = {}
+                      %s
+                      return xs
+                  }
+
+                  let test = construct()
+                `,
+				strings.Join(initialization, "\n"),
+			),
+		)
+
+		test := inter.Globals["test"].Value
+
+		w := new(bytes.Buffer)
+		encoder := gob.NewEncoder(w)
+		err := encoder.Encode(&test)
+		require.NoError(t, err)
+
+		encoded := w.Bytes()
+
+		var decoded interpreter.Value
+		decoder := gob.NewDecoder(bytes.NewReader(encoded))
+		err = decoder.Decode(&decoded)
+		require.NoError(t, err)
+
+		require.Equal(t, test, decoded)
+	}
 }
