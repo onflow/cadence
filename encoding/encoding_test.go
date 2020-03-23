@@ -350,16 +350,16 @@ func TestEncodeDictionary(t *testing.T) {
 		},
 		cadence.NewDictionary([]cadence.KeyValuePair{
 			{
-				cadence.NewString("a"),
-				cadence.NewInt(1),
+				Key:   cadence.NewString("a"),
+				Value: cadence.NewInt(1),
 			},
 			{
-				cadence.NewString("b"),
-				cadence.NewInt(2),
+				Key:   cadence.NewString("b"),
+				Value: cadence.NewInt(2),
 			},
 			{
-				cadence.NewString("c"),
-				cadence.NewInt(3),
+				Key:   cadence.NewString("c"),
+				Value: cadence.NewInt(3),
 			},
 		}),
 	}
@@ -375,29 +375,29 @@ func TestEncodeDictionary(t *testing.T) {
 		},
 		cadence.NewDictionary([]cadence.KeyValuePair{
 			{
-				cadence.NewString("a"),
-				cadence.NewDictionary([]cadence.KeyValuePair{
+				Key: cadence.NewString("a"),
+				Value: cadence.NewDictionary([]cadence.KeyValuePair{
 					{
-						cadence.NewString("1"),
-						cadence.NewInt(1),
+						Key:   cadence.NewString("1"),
+						Value: cadence.NewInt(1),
 					},
 				}),
 			},
 			{
-				cadence.NewString("b"),
-				cadence.NewDictionary([]cadence.KeyValuePair{
+				Key: cadence.NewString("b"),
+				Value: cadence.NewDictionary([]cadence.KeyValuePair{
 					{
-						cadence.NewString("2"),
-						cadence.NewInt(2),
+						Key:   cadence.NewString("2"),
+						Value: cadence.NewInt(2),
 					},
 				}),
 			},
 			{
-				cadence.NewString("c"),
-				cadence.NewDictionary([]cadence.KeyValuePair{
+				Key: cadence.NewString("c"),
+				Value: cadence.NewDictionary([]cadence.KeyValuePair{
 					{
-						cadence.NewString("3"),
-						cadence.NewInt(3),
+						Key:   cadence.NewString("3"),
+						Value: cadence.NewInt(3),
 					},
 				}),
 			},
@@ -423,22 +423,22 @@ func TestEncodeDictionary(t *testing.T) {
 		},
 		cadence.NewDictionary([]cadence.KeyValuePair{
 			{
-				cadence.NewString("a"),
-				cadence.NewComposite([]cadence.Value{
+				Key: cadence.NewString("a"),
+				Value: cadence.NewComposite([]cadence.Value{
 					cadence.NewString("a"),
 					cadence.NewInt(1),
 				}),
 			},
 			{
-				cadence.NewString("b"),
-				cadence.NewComposite([]cadence.Value{
+				Key: cadence.NewString("b"),
+				Value: cadence.NewComposite([]cadence.Value{
 					cadence.NewString("b"),
 					cadence.NewInt(2),
 				}),
 			},
 			{
-				cadence.NewString("c"),
-				cadence.NewComposite([]cadence.Value{
+				Key: cadence.NewString("c"),
+				Value: cadence.NewComposite([]cadence.Value{
 					cadence.NewString("c"),
 					cadence.NewInt(3),
 				}),

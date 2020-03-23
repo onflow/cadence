@@ -1,14 +1,14 @@
 package interpreter
 
 import (
+	"github.com/raviqqe/hamt"
+
 	"github.com/dapperlabs/cadence/runtime/ast"
 	"github.com/dapperlabs/cadence/runtime/common"
 	"github.com/dapperlabs/cadence/runtime/errors"
 	"github.com/dapperlabs/cadence/runtime/sema"
-	"github.com/raviqqe/hamt"
-	// revive:disable:dot-imports
+
 	. "github.com/dapperlabs/cadence/runtime/trampoline"
-	// revive:enable
 )
 
 // Invocation
@@ -17,7 +17,7 @@ type Invocation struct {
 	Self          *CompositeValue
 	Arguments     []Value
 	ArgumentTypes []sema.Type
-	Location      LocationPosition
+	LocationRange LocationRange
 	Interpreter   *Interpreter
 }
 

@@ -76,16 +76,8 @@ func (functions StandardLibraryFunctions) ToValues() map[string]interpreter.Valu
 // AssertionError
 
 type AssertionError struct {
-	Message  string
-	Location interpreter.LocationPosition
-}
-
-func (e AssertionError) StartPosition() ast.Position {
-	return e.Location.Position
-}
-
-func (e AssertionError) EndPosition() ast.Position {
-	return e.Location.Position
+	Message string
+	interpreter.LocationRange
 }
 
 func (e AssertionError) Error() string {
@@ -94,8 +86,4 @@ func (e AssertionError) Error() string {
 		return message
 	}
 	return fmt.Sprintf("%s: %s", message, e.Message)
-}
-
-func (e AssertionError) ImportLocation() ast.Location {
-	return e.Location.Location
 }

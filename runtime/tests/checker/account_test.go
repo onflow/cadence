@@ -61,4 +61,19 @@ func TestCheckAccount(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("saving resources", func(t *testing.T) {
+		_, err := ParseAndCheckAccount(t,
+			`
+              resource R {}
+
+              fun test() {
+                  let r <- create R()
+                  account.save(<-r, to: /storage/r)
+              }
+            `,
+		)
+
+		require.NoError(t, err)
+	})
 }

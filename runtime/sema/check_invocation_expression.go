@@ -66,8 +66,6 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 
 	// invoked expression has function type
 
-	var returnType Type = &InvalidType{}
-
 	argumentTypes, functionType := checker.checkInvocation(invocationExpression, invokableType)
 	checker.Elaboration.InvocationExpressionArgumentTypes[invocationExpression] = argumentTypes
 
@@ -89,7 +87,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 		)
 	}
 
-	returnType = functionType.ReturnTypeAnnotation.Type
+	returnType := functionType.ReturnTypeAnnotation.Type
 	checker.Elaboration.InvocationExpressionReturnTypes[invocationExpression] = returnType
 
 	parameters := functionType.Parameters
@@ -543,10 +541,15 @@ func (checker *Checker) checkInvocationRequiredArgument(
 		parameterType = parameter.TypeAnnotation.Type
 	}
 
+	argumentTypes[argumentIndex] = argumentType
+
+	checker.checkInvocationArgumentMove(argument.Expression, argumentType)
+
 	switch {
 	case parameterType != nil:
-		// Check that the type of the argument matches the type of the parameter
-		argumentTypes[argumentIndex] = checker.checkInvocationArgumentType(argument.Expression, argumentType, parameterType)
+		// Check that the type of the argument matches the type of the parameter.
+
+		checker.checkInvocationArgumentParameterTypeCompatibility(argument.Expression, argumentType, parameterType)
 
 	case typeParameter != nil:
 		if unifiedType, ok := typeParameters[typeParameter]; ok {
@@ -674,11 +677,18 @@ func (checker *Checker) checkAndBindGenericTypeParameterTypeArguments(
 	}
 }
 
-func (checker *Checker) checkInvocationArgumentType(argument ast.Expression, argumentType, parameterType Type) Type {
+func (checker *Checker) checkInvocationArgumentParameterTypeCompatibility(
+	argument ast.Expression,
+	argumentType, parameterType Type,
+) {
 
-	if !argumentType.IsInvalidType() &&
-		!parameterType.IsInvalidType() &&
-		!checker.checkTypeCompatibility(argument, argumentType, parameterType) {
+	if argumentType.IsInvalidType() ||
+		parameterType.IsInvalidType() {
+
+		return
+	}
+
+	if !checker.checkTypeCompatibility(argument, argumentType, parameterType) {
 
 		checker.report(
 			&TypeMismatchError{
@@ -688,6 +698,9 @@ func (checker *Checker) checkInvocationArgumentType(argument ast.Expression, arg
 			},
 		)
 	}
+}
+
+func (checker *Checker) checkInvocationArgumentMove(argument ast.Expression, argumentType Type) Type {
 
 	checker.checkVariableMove(argument)
 	checker.checkResourceMoveOperation(argument, argumentType)

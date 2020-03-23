@@ -12,6 +12,7 @@ import (
 	"github.com/dapperlabs/cadence/runtime/common"
 	"github.com/dapperlabs/cadence/runtime/errors"
 	"github.com/dapperlabs/cadence/runtime/sema"
+
 	// revive:disable
 	. "github.com/dapperlabs/cadence/runtime/trampoline"
 	// revive:enable
@@ -71,6 +72,14 @@ type OnStatementFunc func(
 	inter *Interpreter,
 	statement *Statement,
 )
+
+// StorageExistenceHandlerFunc is a function that handles storage existence checks.
+//
+type StorageExistenceHandlerFunc func(
+	inter *Interpreter,
+	storageAddress common.Address,
+	key string,
+) bool
 
 // StorageReadHandlerFunc is a function that handles storage reads.
 //
@@ -167,6 +176,7 @@ type Interpreter struct {
 	Transactions                   []*HostFunctionValue
 	onEventEmitted                 OnEventEmittedFunc
 	onStatement                    OnStatementFunc
+	storageExistenceHandler        StorageExistenceHandlerFunc
 	storageReadHandler             StorageReadHandlerFunc
 	storageWriteHandler            StorageWriteHandlerFunc
 	storageKeyHandler              StorageKeyHandlerFunc
@@ -211,6 +221,16 @@ func WithPredefinedValues(predefinedValues map[string]Value) Option {
 			}
 		}
 
+		return nil
+	}
+}
+
+// WithStorageExistenceHandler returns an interpreter option which sets the given function
+// as the function that is used when a storage key is checked for existence.
+//
+func WithStorageExistenceHandler(handler StorageExistenceHandlerFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetStorageExistenceHandler(handler)
 		return nil
 	}
 }
@@ -343,6 +363,12 @@ func (interpreter *Interpreter) SetOnEventEmittedHandler(function OnEventEmitted
 //
 func (interpreter *Interpreter) SetOnStatementHandler(function OnStatementFunc) {
 	interpreter.onStatement = function
+}
+
+// SetStorageExistenceHandler sets the function that is used when a storage key is checked for existence.
+//
+func (interpreter *Interpreter) SetStorageExistenceHandler(function StorageExistenceHandlerFunc) {
+	interpreter.storageExistenceHandler = function
 }
 
 // SetStorageReadHandler sets the function that is used when a stored value is read.
@@ -1858,7 +1884,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 						arguments,
 						argumentTypes,
 						parameterTypes,
-						invocationExpression.StartPosition(),
+						ast.NewRangeFromPositioned(invocationExpression),
 					)
 
 					// If this is invocation is optional chaining, wrap the result
@@ -1880,7 +1906,7 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 	arguments []Value,
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
-	pos ast.Position,
+	invocationRange ast.Range,
 ) (value Value, err error) {
 	// recover internal panics and return them as an error
 	defer recoverErrors(func(internalErr error) {
@@ -1892,7 +1918,7 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 		arguments,
 		argumentTypes,
 		parameterTypes,
-		pos,
+		invocationRange,
 	)
 
 	result := interpreter.runAllStatements(trampoline)
@@ -1907,7 +1933,7 @@ func (interpreter *Interpreter) functionValueInvocationTrampoline(
 	arguments []Value,
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
-	pos ast.Position,
+	invocationRange ast.Range,
 ) Trampoline {
 
 	parameterTypeCount := len(parameterTypes)
@@ -1925,17 +1951,19 @@ func (interpreter *Interpreter) functionValueInvocationTrampoline(
 
 	// TODO: optimize: only potentially used by host-functions
 
-	location := LocationPosition{
-		Position: pos,
+	locationRange := LocationRange{
 		Location: interpreter.Checker.Location,
+		Range:    invocationRange,
 	}
 
-	return function.Invoke(Invocation{
-		Arguments:     argumentCopies,
-		ArgumentTypes: argumentTypes,
-		Location:      location,
-		Interpreter:   interpreter,
-	})
+	return function.Invoke(
+		Invocation{
+			Arguments:     argumentCopies,
+			ArgumentTypes: argumentTypes,
+			LocationRange: locationRange,
+			Interpreter:   interpreter,
+		},
+	)
 }
 
 func (interpreter *Interpreter) invokeInterpretedFunction(
@@ -2858,6 +2886,7 @@ func (interpreter *Interpreter) ensureLoaded(location ast.Location, loadProgram 
 		WithPredefinedValues(interpreter.PredefinedValues),
 		WithOnEventEmittedHandler(interpreter.onEventEmitted),
 		WithOnStatementHandler(interpreter.onStatement),
+		WithStorageExistenceHandler(interpreter.storageExistenceHandler),
 		WithStorageReadHandler(interpreter.storageReadHandler),
 		WithStorageWriteHandler(interpreter.storageWriteHandler),
 		WithStorageKeyHandler(interpreter.storageKeyHandler),
@@ -3100,12 +3129,13 @@ func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyEx
 			value := result.(Value)
 
 			// TODO: optimize: only potentially used by host-functions
-			location := LocationPosition{
-				Position: expression.StartPosition(),
+
+			locationRange := LocationRange{
 				Location: interpreter.Checker.Location,
+				Range:    ast.NewRangeFromPositioned(expression),
 			}
 
-			return value.(DestroyableValue).Destroy(interpreter, location)
+			return value.(DestroyableValue).Destroy(interpreter, locationRange)
 		})
 }
 
@@ -3164,12 +3194,18 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 }
 
 func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpression) ast.Repr {
+	domain := common.PathDomainFromIdentifier(expression.Domain.Identifier)
+
 	return Done{
 		Result: PathValue{
-			Domain:     expression.Domain.Identifier,
+			Domain:     domain,
 			Identifier: expression.Identifier.Identifier,
 		},
 	}
+}
+
+func (interpreter *Interpreter) checkStored(storageAddress common.Address, key string) bool {
+	return interpreter.storageExistenceHandler(interpreter, storageAddress, key)
 }
 
 func (interpreter *Interpreter) readStored(storageAddress common.Address, key string) OptionalValue {
@@ -3388,4 +3424,55 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 	}
 
 	return false
+}
+
+// storageKey returns the storage identifier with the proper prefix
+// for the given path.
+//
+// \x1F = Information Separator One
+//
+func storageKey(path PathValue) string {
+	return fmt.Sprintf("%s\x1F%s", path.Domain, path.Identifier)
+}
+
+func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) HostFunctionValue {
+	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+
+		value := invocation.Arguments[0]
+		path := invocation.Arguments[1].(PathValue)
+
+		address := addressValue.ToAddress()
+		key := storageKey(path)
+
+		const expectedDomain = common.PathDomainStorage
+		actualDomain := path.Domain
+
+		if actualDomain != expectedDomain {
+			panic(
+				&InvalidSavePathDomainError{
+					ExpectedDomain: expectedDomain,
+					ActualDomain:   actualDomain,
+					LocationRange:  invocation.LocationRange,
+				},
+			)
+		}
+
+		if interpreter.checkStored(address, key) {
+			panic(
+				&OverwriteError{
+					Address:       address,
+					Path:          path,
+					LocationRange: invocation.LocationRange,
+				},
+			)
+		}
+
+		interpreter.writeStored(
+			address,
+			key,
+			&SomeValue{Value: value},
+		)
+
+		return Done{Result: VoidValue{}}
+	})
 }

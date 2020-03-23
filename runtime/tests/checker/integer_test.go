@@ -396,3 +396,46 @@ func TestCheckInvalidUnsignedIntegerNegate(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckInvalidIntegerConversionFunctionWithoutArgs(t *testing.T) {
+
+	for _, ty := range allIntegerTypesAndAddressType {
+
+		t.Run(ty.String(), func(t *testing.T) {
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      let e = %s()
+                    `,
+					ty,
+				),
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.ArgumentCountError{}, errs[0])
+
+		})
+	}
+}
+
+func TestCheckFixedPointToIntegerConversion(t *testing.T) {
+
+	for _, ty := range sema.AllIntegerTypes {
+
+		t.Run(ty.String(), func(t *testing.T) {
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      let e = %s(0.0)
+                    `,
+					ty,
+				),
+			)
+
+			require.NoError(t, err)
+		})
+	}
+}

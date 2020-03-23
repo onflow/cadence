@@ -26,3 +26,7 @@ language/tools/vscode-extension/out/*
 # Go mod ignores
 .history
 
+# go-fuzz
+crashers
+corpus
+suppressions
