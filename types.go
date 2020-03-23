@@ -318,6 +318,10 @@ func (UFix64Type) ID() string {
 	return "UFix64"
 }
 
+type ArrayType interface {
+	Element() Type
+}
+
 // VariableSizedArrayType
 
 type VariableSizedArrayType struct {
@@ -328,6 +332,10 @@ func (VariableSizedArrayType) isType() {}
 
 func (t VariableSizedArrayType) ID() string {
 	return fmt.Sprintf("[%s]", t.ElementType.ID())
+}
+
+func (v VariableSizedArrayType) Element() Type {
+	return v.ElementType
 }
 
 // ConstantSizedArrayType
@@ -341,6 +349,10 @@ func (ConstantSizedArrayType) isType() {}
 
 func (t ConstantSizedArrayType) ID() string {
 	return fmt.Sprintf("[%s;%d]", t.ElementType.ID(), t.Size)
+}
+
+func (v ConstantSizedArrayType) Element() Type {
+	return v.ElementType
 }
 
 // DictionaryType
