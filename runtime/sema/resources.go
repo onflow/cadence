@@ -1,6 +1,9 @@
 package sema
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/raviqqe/hamt"
 
 	"github.com/dapperlabs/cadence/runtime/ast"
@@ -24,6 +27,30 @@ type ResourceInfo struct {
 type Resources struct {
 	resources hamt.Map
 	Returns   bool
+}
+
+func (ris *Resources) String() string {
+	var builder strings.Builder
+	builder.WriteString("Resources:")
+	ris.ForEachResourceInfo(func(resource interface{}, info ResourceInfo) {
+		builder.WriteString("- ")
+		builder.WriteString(fmt.Sprint(resource))
+		builder.WriteString(": ")
+		builder.WriteString(fmt.Sprint(info))
+		builder.WriteRune('\n')
+	})
+	return builder.String()
+}
+
+func (ris *Resources) ForEachResourceInfo(f func(resource interface{}, info ResourceInfo)) {
+	var resource interface{}
+	var info ResourceInfo
+
+	resources := ris
+	for resources.Size() != 0 {
+		resource, info, resources = resources.FirstRest()
+		f(resource, info)
+	}
 }
 
 // entry returns a `hamt` entry for the given resource.
