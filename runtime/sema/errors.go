@@ -762,21 +762,30 @@ type InitializerMismatch struct {
 //  use `InitializerMismatch`, `MissingMembers`, `MemberMismatches`, etc
 
 type ConformanceError struct {
-	CompositeType               *CompositeType
-	InterfaceType               *InterfaceType
-	InitializerMismatch         *InitializerMismatch
-	MissingMembers              []*Member
-	MemberMismatches            []MemberMismatch
-	MissingNestedCompositeTypes []*CompositeType
-	Pos                         ast.Position
+	CompositeType                  *CompositeType
+	InterfaceType                  *InterfaceType
+	InitializerMismatch            *InitializerMismatch
+	MissingMembers                 []*Member
+	MemberMismatches               []MemberMismatch
+	MissingNestedCompositeTypes    []*CompositeType
+	Pos                            ast.Position
+	InterfaceTypeIsTypeRequirement bool
 }
 
 func (e *ConformanceError) Error() string {
+	var interfaceDescription string
+	if e.InterfaceTypeIsTypeRequirement {
+		interfaceDescription = "type requirement"
+	} else {
+		interfaceDescription = "interface"
+	}
+
 	return fmt.Sprintf(
-		"%s `%s` does not conform to %s `%s`",
+		"%s `%s` does not conform to %s %s `%s`",
 		e.CompositeType.Kind.Name(),
 		e.CompositeType.QualifiedString(),
-		e.InterfaceType.CompositeKind.DeclarationKind(true).Name(),
+		e.InterfaceType.CompositeKind.Name(),
+		interfaceDescription,
 		e.InterfaceType.QualifiedString(),
 	)
 }
@@ -2310,8 +2319,8 @@ func (e *InvalidMoveError) EndPosition() ast.Position {
 // ConstantSizedArrayLiteralSizeError
 
 type ConstantSizedArrayLiteralSizeError struct {
-	ActualSize   int
-	ExpectedSize int
+	ActualSize   uint64
+	ExpectedSize uint64
 	ast.Range
 }
 
@@ -2521,3 +2530,49 @@ func (e *TypeParameterTypeInferenceError) Error() string {
 }
 
 func (e *TypeParameterTypeInferenceError) isSemanticError() {}
+
+// InvalidConstantSizedTypeBaseError
+
+type InvalidConstantSizedTypeBaseError struct {
+	ActualBase   int
+	ExpectedBase int
+	ast.Range
+}
+
+func (e *InvalidConstantSizedTypeBaseError) Error() string {
+	return "invalid base for constant sized type size"
+}
+
+func (e *InvalidConstantSizedTypeBaseError) SecondaryError() string {
+	return fmt.Sprintf(
+		"expected %d, got %d",
+		e.ActualBase,
+		e.ExpectedBase,
+	)
+}
+
+func (e *InvalidConstantSizedTypeBaseError) isSemanticError() {}
+
+// InvalidConstantSizedTypeSizeError
+
+type InvalidConstantSizedTypeSizeError struct {
+	ActualSize     *big.Int
+	ExpectedMinInt *big.Int
+	ExpectedMaxInt *big.Int
+	ast.Range
+}
+
+func (e *InvalidConstantSizedTypeSizeError) Error() string {
+	return "invalid size for constant sized type"
+}
+
+func (e *InvalidConstantSizedTypeSizeError) SecondaryError() string {
+	return fmt.Sprintf(
+		"expected value in range [%s, %s], got %s",
+		e.ExpectedMinInt,
+		e.ExpectedMaxInt,
+		e.ActualSize,
+	)
+}
+
+func (e *InvalidConstantSizedTypeSizeError) isSemanticError() {}

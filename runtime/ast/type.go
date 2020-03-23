@@ -108,14 +108,14 @@ func (t *VariableSizedType) String() string {
 
 type ConstantSizedType struct {
 	Type Type
-	Size int
+	Size *IntegerExpression
 	Range
 }
 
 func (*ConstantSizedType) isType() {}
 
 func (t *ConstantSizedType) String() string {
-	return fmt.Sprintf("[%s; %d]", t.Type, t.Size)
+	return fmt.Sprintf("[%s; %s]", t.Type, t.Size)
 }
 
 // DictionaryType
@@ -187,14 +187,16 @@ func (t *ReferenceType) EndPosition() Position {
 type RestrictedType struct {
 	Type         Type
 	Restrictions []*NominalType
-	EndPos       Position
+	Range
 }
 
 func (*RestrictedType) isType() {}
 
 func (t *RestrictedType) String() string {
 	var builder strings.Builder
-	builder.WriteString(t.Type.String())
+	if t.Type != nil {
+		builder.WriteString(t.Type.String())
+	}
 	builder.WriteRune('{')
 	for i, restriction := range t.Restrictions {
 		if i > 0 {
@@ -204,12 +206,4 @@ func (t *RestrictedType) String() string {
 	}
 	builder.WriteRune('}')
 	return builder.String()
-}
-
-func (t *RestrictedType) StartPosition() Position {
-	return t.Type.StartPosition()
-}
-
-func (t *RestrictedType) EndPosition() Position {
-	return t.EndPos
 }

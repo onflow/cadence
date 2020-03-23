@@ -3,7 +3,6 @@ package stdlib
 import (
 	"fmt"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
 	"github.com/dapperlabs/cadence/runtime/interpreter"
 	"github.com/dapperlabs/cadence/runtime/sema"
 	"github.com/dapperlabs/cadence/runtime/trampoline"
@@ -43,8 +42,8 @@ var AssertFunction = NewStandardLibraryFunction(
 				message = invocation.Arguments[1].(*interpreter.StringValue).Str
 			}
 			panic(AssertionError{
-				Message:  message,
-				Location: invocation.Location,
+				Message:       message,
+				LocationRange: invocation.LocationRange,
 			})
 		}
 		return trampoline.Done{}
@@ -58,24 +57,12 @@ var AssertFunction = NewStandardLibraryFunction(
 // PanicError
 
 type PanicError struct {
-	Message  string
-	Location interpreter.LocationPosition
-}
-
-func (e PanicError) StartPosition() ast.Position {
-	return e.Location.Position
-}
-
-func (e PanicError) EndPosition() ast.Position {
-	return e.Location.Position
+	Message string
+	interpreter.LocationRange
 }
 
 func (e PanicError) Error() string {
 	return fmt.Sprintf("panic: %s", e.Message)
-}
-
-func (e PanicError) ImportLocation() ast.Location {
-	return e.Location.Location
 }
 
 // PanicFunction
@@ -97,8 +84,8 @@ var PanicFunction = NewStandardLibraryFunction(
 	func(invocation interpreter.Invocation) trampoline.Trampoline {
 		message := invocation.Arguments[0].(*interpreter.StringValue)
 		panic(PanicError{
-			Message:  message.Str,
-			Location: invocation.Location,
+			Message:       message.Str,
+			LocationRange: invocation.LocationRange,
 		})
 	},
 	nil,

@@ -1,4 +1,4 @@
-# Flow Runtime
+# Cadence Runtime
 
 ## Usage
 

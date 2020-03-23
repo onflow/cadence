@@ -1,6 +1,7 @@
 package sema
 
 import (
+	"math"
 	"math/big"
 
 	"github.com/rivo/uniseg"
@@ -505,16 +506,19 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 				valueElementType := variableSizedValueType.ElementType(false)
 				targetElementType := constantSizedTargetType.ElementType(false)
 
-				literalCount := len(typedExpression.Values)
+				literalCount := uint64(len(typedExpression.Values))
 
 				if IsSubType(valueElementType, targetElementType) {
 
-					if literalCount == constantSizedTargetType.Size {
+					expectedSize := constantSizedTargetType.Size
+
+					if literalCount == expectedSize {
 						return true
 					}
+
 					checker.report(
 						&ConstantSizedArrayLiteralSizeError{
-							ExpectedSize: constantSizedTargetType.Size,
+							ExpectedSize: expectedSize,
 							ActualSize:   literalCount,
 							Range:        typedExpression.Range,
 						},
@@ -539,8 +543,8 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 // checkIntegerLiteral checks that the value of the integer literal
 // fits into range of the target integer type
 //
-func (checker *Checker) checkIntegerLiteral(expression *ast.IntegerExpression, integerType Type) {
-	ranged := integerType.(IntegerRangedType)
+func (checker *Checker) checkIntegerLiteral(expression *ast.IntegerExpression, targetType Type) {
+	ranged := targetType.(IntegerRangedType)
 	minInt := ranged.MinInt()
 	maxInt := ranged.MaxInt()
 
@@ -550,7 +554,7 @@ func (checker *Checker) checkIntegerLiteral(expression *ast.IntegerExpression, i
 
 	checker.report(
 		&InvalidIntegerLiteralRangeError{
-			ExpectedType:   integerType,
+			ExpectedType:   targetType,
 			ExpectedMinInt: minInt,
 			ExpectedMaxInt: maxInt,
 			Range:          ast.NewRangeFromPositioned(expression),
@@ -561,50 +565,76 @@ func (checker *Checker) checkIntegerLiteral(expression *ast.IntegerExpression, i
 // checkFixedPointLiteral checks that the value of the fixed-point literal
 // fits into range of the target fixed-point type
 //
-func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpression, fixedPointType Type) {
+func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpression, targetType Type) {
 
-	// Check the integer range
+	// The target type might just be an integer type,
+	// in which case only the integer range can be checked.
 
-	ranged := fixedPointType.(FractionalRangedType)
-	minInt := ranged.MinInt()
-	maxInt := ranged.MaxInt()
-	scale := ranged.Scale()
-	minFractional := ranged.MinFractional()
-	maxFractional := ranged.MaxFractional()
+	switch targetType := targetType.(type) {
+	case FractionalRangedType:
+		minInt := targetType.MinInt()
+		maxInt := targetType.MaxInt()
+		scale := targetType.Scale()
+		minFractional := targetType.MinFractional()
+		maxFractional := targetType.MaxFractional()
 
-	if expression.Scale > scale {
+		if expression.Scale > scale {
+			checker.report(
+				&InvalidFixedPointLiteralScaleError{
+					ExpectedType:  targetType,
+					ExpectedScale: scale,
+					Range:         ast.NewRangeFromPositioned(expression),
+				},
+			)
+
+			return
+		}
+
+		if !checker.checkFixedPointRange(
+			expression.Negative,
+			expression.UnsignedInteger,
+			expression.Fractional,
+			minInt,
+			minFractional,
+			maxInt,
+			maxFractional,
+		) {
+			checker.report(
+				&InvalidFixedPointLiteralRangeError{
+					ExpectedType:          targetType,
+					ExpectedMinInt:        minInt,
+					ExpectedMinFractional: minFractional,
+					ExpectedMaxInt:        maxInt,
+					ExpectedMaxFractional: maxFractional,
+					Range:                 ast.NewRangeFromPositioned(expression),
+				},
+			)
+
+			return
+		}
+
+	case IntegerRangedType:
+		minInt := targetType.MinInt()
+		maxInt := targetType.MaxInt()
+
+		integerValue := big.NewInt(0).Set(expression.UnsignedInteger)
+
+		if expression.Negative {
+			expression.UnsignedInteger.Neg(expression.UnsignedInteger)
+		}
+
+		if checker.checkIntegerRange(integerValue, minInt, maxInt) {
+			return
+		}
+
 		checker.report(
-			&InvalidFixedPointLiteralScaleError{
-				ExpectedType:  fixedPointType,
-				ExpectedScale: scale,
-				Range:         ast.NewRangeFromPositioned(expression),
+			&InvalidIntegerLiteralRangeError{
+				ExpectedType:   targetType,
+				ExpectedMinInt: minInt,
+				ExpectedMaxInt: maxInt,
+				Range:          ast.NewRangeFromPositioned(expression),
 			},
 		)
-
-		return
-	}
-
-	if !checker.checkFixedPointRange(
-		expression.Negative,
-		expression.UnsignedInteger,
-		expression.Fractional,
-		minInt,
-		minFractional,
-		maxInt,
-		maxFractional,
-	) {
-		checker.report(
-			&InvalidFixedPointLiteralRangeError{
-				ExpectedType:          fixedPointType,
-				ExpectedMinInt:        minInt,
-				ExpectedMinFractional: minFractional,
-				ExpectedMaxInt:        maxInt,
-				ExpectedMaxFractional: maxFractional,
-				Range:                 ast.NewRangeFromPositioned(expression),
-			},
-		)
-
-		return
 	}
 }
 
@@ -1017,9 +1047,47 @@ func (checker *Checker) convertFunctionType(t *ast.FunctionType) Type {
 
 func (checker *Checker) convertConstantSizedType(t *ast.ConstantSizedType) Type {
 	elementType := checker.ConvertType(t.Type)
+
+	size := t.Size.Value
+
+	if !t.Size.Value.IsUint64() {
+		minSize := big.NewInt(0)
+		maxSize := big.NewInt(0).SetUint64(math.MaxUint64)
+
+		checker.report(
+			&InvalidConstantSizedTypeSizeError{
+				ActualSize:     t.Size.Value,
+				ExpectedMinInt: minSize,
+				ExpectedMaxInt: maxSize,
+				Range:          ast.NewRangeFromPositioned(t.Size),
+			},
+		)
+
+		switch {
+		case t.Size.Value.Cmp(minSize) < 0:
+			size = minSize
+
+		case t.Size.Value.Cmp(maxSize) > 0:
+			size = maxSize
+		}
+	}
+
+	finalSize := size.Uint64()
+
+	const expectedBase = 10
+	if t.Size.Base != expectedBase {
+		checker.report(
+			&InvalidConstantSizedTypeBaseError{
+				ActualBase:   t.Size.Base,
+				ExpectedBase: expectedBase,
+				Range:        ast.NewRangeFromPositioned(t.Size),
+			},
+		)
+	}
+
 	return &ConstantSizedType{
 		Type: elementType,
-		Size: t.Size,
+		Size: finalSize,
 	}
 }
 

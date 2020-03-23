@@ -143,7 +143,10 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 			compositeType,
 			interfaceType,
 			interfaceNominalType.Identifier,
-			checkMissingMembers,
+			compositeConformanceCheckOptions{
+				checkMissingMembers:            checkMissingMembers,
+				interfaceTypeIsTypeRequirement: false,
+			},
 		)
 	}
 
@@ -641,12 +644,17 @@ func (checker *Checker) conformances(declaration *ast.CompositeDeclaration, comp
 	return interfaceTypes
 }
 
+type compositeConformanceCheckOptions struct {
+	checkMissingMembers            bool
+	interfaceTypeIsTypeRequirement bool
+}
+
 func (checker *Checker) checkCompositeConformance(
 	compositeDeclaration *ast.CompositeDeclaration,
 	compositeType *CompositeType,
 	interfaceType *InterfaceType,
 	compositeKindMismatchIdentifier ast.Identifier,
-	checkMissingMembers bool,
+	options compositeConformanceCheckOptions,
 ) {
 	var missingMembers []*Member
 	var memberMismatches []MemberMismatch
@@ -703,7 +711,7 @@ func (checker *Checker) checkCompositeConformance(
 
 		compositeMember, ok := compositeType.Members[name]
 		if !ok {
-			if checkMissingMembers {
+			if options.checkMissingMembers {
 				missingMembers = append(missingMembers, interfaceMember)
 			}
 			continue
@@ -746,13 +754,14 @@ func (checker *Checker) checkCompositeConformance(
 
 		checker.report(
 			&ConformanceError{
-				CompositeType:               compositeType,
-				InterfaceType:               interfaceType,
-				Pos:                         compositeDeclaration.Identifier.Pos,
-				InitializerMismatch:         initializerMismatch,
-				MissingMembers:              missingMembers,
-				MemberMismatches:            memberMismatches,
-				MissingNestedCompositeTypes: missingNestedCompositeTypes,
+				CompositeType:                  compositeType,
+				InterfaceType:                  interfaceType,
+				Pos:                            compositeDeclaration.Identifier.Pos,
+				InitializerMismatch:            initializerMismatch,
+				MissingMembers:                 missingMembers,
+				MemberMismatches:               memberMismatches,
+				MissingNestedCompositeTypes:    missingNestedCompositeTypes,
+				InterfaceTypeIsTypeRequirement: options.interfaceTypeIsTypeRequirement,
 			},
 		)
 	}
@@ -923,7 +932,10 @@ func (checker *Checker) checkTypeRequirement(
 		declaredCompositeType,
 		interfaceType,
 		compositeDeclaration.Identifier,
-		true,
+		compositeConformanceCheckOptions{
+			checkMissingMembers:            true,
+			interfaceTypeIsTypeRequirement: true,
+		},
 	)
 }
 
