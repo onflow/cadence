@@ -105,7 +105,11 @@ func convertCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Int
 		fields[i] = convertValue(field, inter)
 	}
 
-	return NewComposite(fields)
+	dynamicType := v.DynamicType(inter).(interpreter.CompositeType)
+
+	t := ConvertType(dynamicType.StaticType)
+
+	return NewComposite(fields).WithType(t)
 }
 
 func convertDictionaryValue(v *interpreter.DictionaryValue, inter *interpreter.Interpreter) Value {
