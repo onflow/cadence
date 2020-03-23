@@ -1,4 +1,4 @@
-package encoding_test
+package xdr_test
 
 import (
 	"math"
@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/dapperlabs/cadence"
-	"github.com/dapperlabs/cadence/encoding"
+	"github.com/dapperlabs/cadence/encoding/xdr"
 )
 
 type encodeTest struct {
@@ -638,19 +638,19 @@ func testAllEncode(t *testing.T, tests ...encodeTest) {
 const numTrials = 250
 
 func testEncode(t *testing.T, typ cadence.Type, val cadence.Value) {
-	b1, err := encoding.Encode(val)
+	b1, err := xdr.Encode(val)
 	require.NoError(t, err)
 
 	t.Logf("Encoded value: %x", b1)
 
 	// encoding should be deterministic, repeat to confirm
 	for i := 0; i < numTrials; i++ {
-		b2, err := encoding.Encode(val)
+		b2, err := xdr.Encode(val)
 		require.NoError(t, err)
 		assert.Equal(t, b1, b2)
 	}
 
-	decodedVal, err := encoding.Decode(typ, b1)
+	decodedVal, err := xdr.Decode(typ, b1)
 	require.NoError(t, err)
 
 	assert.Equal(t, val, decodedVal)
