@@ -94,10 +94,8 @@ func (e *Encoder) Encode(v cadence.Value) error {
 		return e.EncodeFix64(x)
 	case cadence.UFix64:
 		return e.EncodeUFix64(x)
-	case cadence.VariableSizedArray:
-		return e.EncodeVariableSizedArray(x)
-	case cadence.ConstantSizedArray:
-		return e.EncodeConstantSizedArray(x)
+	case cadence.Array:
+		return e.EncodeArray(x)
 	case cadence.Dictionary:
 		return e.EncodeDictionary(x)
 	case cadence.Composite:
@@ -425,13 +423,12 @@ func (e *Encoder) EncodeUFix64(v cadence.UFix64) error {
 	return err
 }
 
-// EncodeVariableSizedArray writes the XDR-encoded representation of a
-// variable-sized array.
+// EncodeArray writes the XDR-encoded representation of an array.
 //
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.13
 //  RFC Section 4.13 - Variable-Length Array
 //  Unsigned integer length followed by individually XDR-encoded array elements
-func (e *Encoder) EncodeVariableSizedArray(v cadence.VariableSizedArray) error {
+func (e *Encoder) EncodeArray(v cadence.Array) error {
 	size := uint32(len(v.Values))
 
 	_, err := e.enc.EncodeUint(size)
@@ -439,16 +436,6 @@ func (e *Encoder) EncodeVariableSizedArray(v cadence.VariableSizedArray) error {
 		return err
 	}
 
-	return e.encodeArray(v.Values)
-}
-
-// EncodeConstantSizedArray writes the XDR-encoded representation of a
-// constant-sized array.
-//
-// Reference: https://tools.ietf.org/html/rfc4506#section-4.12
-//  RFC Section 4.12 - Fixed-Length Array
-//  Individually XDR-encoded array elements
-func (e *Encoder) EncodeConstantSizedArray(v cadence.ConstantSizedArray) error {
 	return e.encodeArray(v.Values)
 }
 
