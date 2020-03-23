@@ -3788,7 +3788,7 @@ var authAccountBorrowFunctionType = func() *FunctionType {
 		},
 		Parameters: []*Parameter{
 			{
-				Label:          "at",
+				Label:          "from",
 				Identifier:     "path",
 				TypeAnnotation: NewTypeAnnotation(&PathType{}),
 			},

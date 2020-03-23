@@ -156,7 +156,7 @@ func TestCheckAccount(t *testing.T) {
 
           resource R {}
 
-          let r <- account.borrow(at: /storage/r)
+          let r <- account.borrow(from: /storage/r)
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
@@ -183,7 +183,7 @@ func TestCheckAccount(t *testing.T) {
 					`
                       resource R {}
 
-                      let r = account.borrow<%s &R>(at: /storage/r)
+                      let r = account.borrow<%s &R>(from: /storage/r)
                     `,
 					authKeyword,
 				),
@@ -213,7 +213,7 @@ func TestCheckAccount(t *testing.T) {
 
           resource R {}
 
-          let r <- account.borrow<@R>(at: /storage/r)
+          let r <- account.borrow<@R>(from: /storage/r)
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)

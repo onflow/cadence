@@ -3538,3 +3538,54 @@ func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValu
 		}
 	})
 }
+
+func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressValue) HostFunctionValue {
+	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+
+		path := invocation.Arguments[0].(PathValue)
+
+		address := addressValue.ToAddress()
+		key := storageKey(path)
+
+		// Ensure the path has a `storage` domain
+
+		interpreter.checkStorageDomain(path, invocation.LocationRange)
+
+		value := interpreter.readStored(address, key)
+
+		switch value := value.(type) {
+		case NilValue:
+			return Done{Result: value}
+
+		case *SomeValue:
+
+			// If there is value stored for the given path,
+			// check that it satisfies the type given as the type argument.
+
+			var ty sema.Type
+			for _, ty = range invocation.TypeParameterTypes {
+				break
+			}
+
+			referenceType := ty.(*sema.ReferenceType)
+
+			dynamicType := value.Value.DynamicType(interpreter)
+			if !interpreter.IsSubType(dynamicType, referenceType.Type) {
+				return Done{Result: NilValue{}}
+			}
+
+			reference := &StorageReferenceValue{
+				Authorized:           referenceType.Authorized,
+				TargetStorageAddress: address,
+				TargetKey:            key,
+				// NOTE: new value has no owner
+				Owner: nil,
+			}
+
+			return Done{Result: &SomeValue{Value: reference}}
+
+		default:
+			panic(errors.NewUnreachableError())
+		}
+	})
+}
