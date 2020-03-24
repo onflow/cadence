@@ -9,7 +9,6 @@ import (
 	"github.com/dapperlabs/cadence/runtime/interpreter"
 )
 
-
 // ConvertValue converts a runtime value to its native Go representation.
 func ConvertValue(value runtime.Value) Value {
 	return convertValue(value.Value, value.Interpreter())
@@ -39,6 +38,12 @@ func convertValue(value interpreter.Value, inter *interpreter.Interpreter) Value
 		return NewInt32(int32(v))
 	case interpreter.Int64Value:
 		return NewInt64(int64(v))
+	case interpreter.Int128Value:
+		return NewInt128FromBig(big.NewInt(0).Set(v.Int))
+	case interpreter.Int256Value:
+		return NewInt256FromBig(big.NewInt(0).Set(v.Int))
+	case interpreter.UIntValue:
+		return NewUIntFromBig(big.NewInt(0).Set(v.Int))
 	case interpreter.UInt8Value:
 		return NewUInt8(uint8(v))
 	case interpreter.UInt16Value:
@@ -47,6 +52,22 @@ func convertValue(value interpreter.Value, inter *interpreter.Interpreter) Value
 		return NewUInt32(uint32(v))
 	case interpreter.UInt64Value:
 		return NewUInt64(uint64(v))
+	case interpreter.UInt128Value:
+		return NewUInt128FromBig(big.NewInt(0).Set(v.Int))
+	case interpreter.UInt256Value:
+		return NewUInt256FromBig(big.NewInt(0).Set(v.Int))
+	case interpreter.Word8Value:
+		return NewWord8(uint8(v))
+	case interpreter.Word16Value:
+		return NewWord16(uint16(v))
+	case interpreter.Word32Value:
+		return NewWord32(uint32(v))
+	case interpreter.Word64Value:
+		return NewWord64(uint64(v))
+	case interpreter.Fix64Value:
+		return NewFix64(int64(v))
+	case interpreter.UFix64Value:
+		return NewUFix64(uint64(v))
 	case *interpreter.CompositeValue:
 		return convertCompositeValue(v, inter)
 	case *interpreter.DictionaryValue:
@@ -54,7 +75,7 @@ func convertValue(value interpreter.Value, inter *interpreter.Interpreter) Value
 	case interpreter.AddressValue:
 		return NewAddress(v)
 	}
-	
+
 	panic(fmt.Sprintf("cannot convert value of type %T", value))
 }
 
