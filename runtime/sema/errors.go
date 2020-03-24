@@ -2503,18 +2503,6 @@ func (e *InvalidTypeArgumentCountError) SecondaryError() string {
 
 func (e *InvalidTypeArgumentCountError) isSemanticError() {}
 
-// InvalidTypeArgumentsError
-
-type InvalidTypeArgumentsError struct {
-	ast.Range
-}
-
-func (e *InvalidTypeArgumentsError) Error() string {
-	return "invalid type arguments, invoked function is not generic"
-}
-
-func (e *InvalidTypeArgumentsError) isSemanticError() {}
-
 // TypeParameterTypeInferenceError
 
 type TypeParameterTypeInferenceError struct {
@@ -2576,3 +2564,27 @@ func (e *InvalidConstantSizedTypeSizeError) SecondaryError() string {
 }
 
 func (e *InvalidConstantSizedTypeSizeError) isSemanticError() {}
+
+// TypeParameterTypeMismatchError
+
+type TypeParameterTypeMismatchError struct {
+	TypeParameter *TypeParameter
+	ExpectedType  Type
+	ActualType    Type
+	ast.Range
+}
+
+func (e *TypeParameterTypeMismatchError) Error() string {
+	return "mismatched types for type parameter"
+}
+
+func (*TypeParameterTypeMismatchError) isSemanticError() {}
+
+func (e *TypeParameterTypeMismatchError) SecondaryError() string {
+	return fmt.Sprintf(
+		"type parameter %s is bound to `%s`, but got `%s` here",
+		e.TypeParameter.Name,
+		e.ExpectedType.QualifiedString(),
+		e.ActualType.QualifiedString(),
+	)
+}
