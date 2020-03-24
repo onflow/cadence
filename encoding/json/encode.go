@@ -1,13 +1,65 @@
 package json
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math/big"
 	"strconv"
 
 	"github.com/dapperlabs/cadence"
 )
+
+// An Encoder converts Cadence values into JSON-encoded bytes.
+type Encoder struct {
+	enc *json.Encoder
+}
+
+// Encode returns the JSON-encoded representation of the given value.
+func Encode(value cadence.Value) ([]byte, error) {
+	var w bytes.Buffer
+	enc := NewEncoder(&w)
+
+	err := enc.Encode(value)
+	if err != nil {
+		return nil, err
+	}
+
+	return w.Bytes(), nil
+}
+
+// NewEncoder initializes an Encoder that will write JSON-encoded bytes to the
+// given io.Writer.
+func NewEncoder(w io.Writer) *Encoder {
+	return &Encoder{enc: json.NewEncoder(w)}
+}
+
+// Encode writes the JSON-encoded representation of the given value to this
+// encoder's io.Writer.
+//
+// This function returns an error if the given value's type is not supported
+// by this encoder.
+func (e *Encoder) Encode(value cadence.Value) (err error) {
+	// capture panics that occur during struct preparation
+	defer func() {
+		if r := recover(); r != nil {
+			var ok bool
+			err, ok = r.(error)
+			if !ok {
+				err = fmt.Errorf("%v", r)
+			}
+
+			err = fmt.Errorf("failed to encode value: %w", err)
+		}
+	}()
+
+	preparedValue := e.encode(value)
+
+	return e.enc.Encode(&preparedValue)
+}
+
+// JSON struct definitions
 
 type value interface{}
 
@@ -35,20 +87,8 @@ type compositeField struct {
 	Value value  `json:"value"`
 }
 
-type Encoder struct{}
-
-func Encode(v cadence.Value) ([]byte, error) {
-	enc := NewEncoder()
-
-	s := enc.encode(v)
-
-	return json.Marshal(&s)
-}
-
-func NewEncoder() *Encoder {
-	return &Encoder{}
-}
-
+// encode traverses the object graph of the provided value and constructs
+// a struct representation that can be marshalled to JSON.
 func (e *Encoder) encode(v cadence.Value) value {
 	switch x := v.(type) {
 	case cadence.Void:
@@ -313,6 +353,8 @@ func (e *Encoder) encodeComposite(v cadence.Composite) value {
 	case cadence.EventType:
 		kind = "Event"
 		compositeType = c.CompositeType
+	default:
+		panic(fmt.Errorf("invalid composite type %T, must be Struct, Resource or Event", c))
 	}
 
 	fieldTypes := compositeType.Fields
