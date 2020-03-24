@@ -1,6 +1,7 @@
 package json_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -38,12 +39,18 @@ func TestEncodeNestedResource(t *testing.T) {
         }
     `
 
+	expectedJSON := `{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Resource","value":{"id":"test.Bar","fields":[{"name":"x","value":{"type":"Int","value":"42"}}]}}}]}}`
+
 	actual := convertValueFromScript(t, script)
 
 	actualJSON, err := json.Encode(actual)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	t.Log(string(actualJSON))
+	assert.Equal(t, expectedJSON, trimJSON(actualJSON))
+}
+
+func trimJSON(b []byte) string {
+	return strings.TrimSuffix(string(b), "\n")
 }
 
 func convertValueFromScript(t *testing.T, script string) cadence.Value {
