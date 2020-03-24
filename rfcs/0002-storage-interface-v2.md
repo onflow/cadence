@@ -191,6 +191,55 @@ If the `<path>` part of the Capability syntax is just an identifier,
 then the part is dynamic and is considered a variable which should have the type `Path`.
 The `<path>` part of the Capability syntax may also be a Path literal.
 
+## Examples
+
+```cadence
+// Setup
+transaction {
+    prepare(account: AuthAccount) {
+
+        // Create a new Vault and store it
+        account.save(
+            <-create Vault(),
+            to: /storage/ExampleVault)
+
+        // Create a private withdrawal capability, to be used for default payments.
+        account.link<&{Provider}>(
+            /private/ExampleProvider,
+            target: /storage/ExampleVault
+        )
+
+        // Create a public deposit capability, to be used when someone wants to send me money.
+        account.link<&{Receiver}(
+           /public/ExampleReceiver,
+           target: /storage/ExampleVault
+        )
+    }
+}
+```
+
+```cadence
+// Transfer
+transaction(amount: UFix64) {
+
+    let tokensToSend: &{Provider}
+
+    prepare(signer: AuthAccout) {
+        self.tokensToSend <-
+            signer.getCapability(/private/ExampleProvider)!
+            .borrow<&{Provider}>()!
+            .withdraw(amount)
+    }
+
+    execute {
+        getAccount(0x02)
+            .getCapability(/public/ExampleReceiver)
+            .borrow<&{Receiver}()!
+            .deposit(<-tokensToSend)
+    }
+}
+```
+
 ## Future Work
 
 - Introspection for links and capabilities.
