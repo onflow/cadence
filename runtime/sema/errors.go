@@ -2576,3 +2576,15 @@ func (e *InvalidConstantSizedTypeSizeError) SecondaryError() string {
 }
 
 func (e *InvalidConstantSizedTypeSizeError) isSemanticError() {}
+
+// UnsupportedResourceForLoopError
+
+type UnsupportedResourceForLoopError struct {
+	ast.Range
+}
+
+func (e *UnsupportedResourceForLoopError) Error() string {
+	return "cannot loop over resources"
+}
+
+func (e *UnsupportedResourceForLoopError) isSemanticError() {}

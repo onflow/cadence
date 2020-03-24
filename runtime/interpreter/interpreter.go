@@ -1068,6 +1068,58 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 		})
 }
 
+func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) ast.Repr {
+	interpreter.activations.PushCurrent()
+
+	variable := interpreter.declareVariable(
+		statement.Identifier.Identifier,
+		nil,
+	)
+
+	var loop func(i, count int, values []Value) Trampoline
+	loop = func(i, count int, values []Value) Trampoline {
+
+		if i == count {
+			return Done{}
+		}
+
+		variable.Value = values[i]
+
+		return statement.Block.Accept(interpreter).(Trampoline).
+			FlatMap(func(value interface{}) Trampoline {
+
+				switch value.(type) {
+				case loopBreak:
+					return Done{}
+
+				case loopContinue:
+					// NO-OP
+
+				case functionReturn:
+					return Done{Result: value}
+				}
+
+				// recurse
+				if i == count {
+					return Done{}
+				}
+				return loop(i+1, count, values)
+			})
+	}
+
+	return statement.Value.Accept(interpreter).(Trampoline).
+		FlatMap(func(result interface{}) Trampoline {
+
+			values := result.(*ArrayValue).Values[:]
+			count := len(values)
+
+			return loop(0, count, values)
+		}).
+		Then(func(_ interface{}) {
+			interpreter.activations.Pop()
+		})
+}
+
 func (interpreter *Interpreter) visitPotentialStorageRemoval(expression ast.Expression) Trampoline {
 	movingStorageIndexExpression := interpreter.movingStorageIndexExpression(expression)
 	if movingStorageIndexExpression == nil {

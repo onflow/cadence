@@ -288,6 +288,7 @@ statement
     | continueStatement
     | ifStatement
     | whileStatement
+    | forStatement
     | emitStatement
     // NOTE: allow all declarations, even structures, in parser,
     // then check identifier declaration is variable/constant or function
@@ -324,6 +325,10 @@ ifStatement
 
 whileStatement
     : While expression block
+    ;
+
+forStatement
+    : For identifier In expression block
     ;
 
 emitStatement
@@ -638,6 +643,9 @@ Else : 'else' ;
 
 While : 'while' ;
 
+For : 'for' ;
+In : 'in' ;
+
 True : 'true' ;
 False : 'false' ;
 
@@ -664,6 +672,7 @@ identifier
     | Account
     | Self
     | Auth
+    | In
     ;
 
 Identifier
