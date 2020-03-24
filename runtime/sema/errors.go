@@ -423,6 +423,16 @@ func (e *InvalidBinaryOperandsError) Error() string {
 
 func (*InvalidBinaryOperandsError) isSemanticError() {}
 
+// InvalidNilCoalescingRightResourceOperandError
+
+type InvalidNilCoalescingRightResourceOperandError struct {
+	ast.Range
+}
+
+func (e *InvalidNilCoalescingRightResourceOperandError) Error() string {
+	return "nil-coalescing with right-hand resource is not supported at the moment"
+}
+
 // ControlStatementError
 
 type ControlStatementError struct {
