@@ -1,6 +1,7 @@
 package cadence
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -8,6 +9,7 @@ import (
 
 	"github.com/dapperlabs/cadence/runtime"
 	"github.com/dapperlabs/cadence/runtime/interpreter"
+	"github.com/dapperlabs/cadence/runtime/sema"
 )
 
 func TestConvertVoidValue(t *testing.T) {
@@ -354,6 +356,44 @@ func TestConvertNestedResource(t *testing.T) {
 	}).WithType(fooResourceType)
 
 	assert.Equal(t, expected, actual)
+}
+
+func TestConvertIntegers(t *testing.T) {
+
+	for _, integerType := range sema.AllIntegerTypes {
+
+		script := fmt.Sprintf(
+			`
+              pub fun main(): %s {
+                  return 42
+              }
+            `,
+			integerType,
+		)
+
+		assert.NotPanics(t, func() {
+			convertValueFromScript(t, script)
+		})
+	}
+}
+
+func TestConvertFixedPoint(t *testing.T) {
+
+	for _, fixedPointType := range sema.AllFixedPointTypes {
+
+		script := fmt.Sprintf(
+			`
+              pub fun main(): %s {
+                  return 1.23
+              }
+            `,
+			fixedPointType,
+		)
+
+		assert.NotPanics(t, func() {
+			convertValueFromScript(t, script)
+		})
+	}
 }
 
 func convertValueFromScript(t *testing.T, script string) Value {
