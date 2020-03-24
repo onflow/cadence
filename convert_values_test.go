@@ -379,7 +379,7 @@ func TestConvertIntegers(t *testing.T) {
 
 func TestConvertFixedPoint(t *testing.T) {
 
-	for _, integerType := range sema.AllFixedPointTypes {
+	for _, fixedPointType := range sema.AllFixedPointTypes {
 
 		script := fmt.Sprintf(
 			`
@@ -387,7 +387,7 @@ func TestConvertFixedPoint(t *testing.T) {
                   return 1.23
               }
             `,
-			integerType,
+			fixedPointType,
 		)
 
 		assert.NotPanics(t, func() {
