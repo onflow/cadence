@@ -68,7 +68,7 @@ type jsonValueObject struct {
 	Value jsonValue `json:"value"`
 }
 
-type jsonEmptyjsonValueObject struct {
+type jsonEmptyValueObject struct {
 	Type string `json:"type"`
 }
 
@@ -149,7 +149,7 @@ func (e *Encoder) prepare(v cadence.Value) jsonValue {
 }
 
 func (e *Encoder) prepareVoid() jsonValue {
-	return jsonEmptyjsonValueObject{Type: "Void"}
+	return jsonEmptyValueObject{Type: "Void"}
 }
 
 func (e *Encoder) prepareOptional(v cadence.Optional) jsonValue {
