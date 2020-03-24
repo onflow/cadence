@@ -262,7 +262,7 @@ func TestEncodeVariableSizedArray(t *testing.T) {
 		cadence.VariableSizedArrayType{
 			ElementType: cadence.IntType{},
 		},
-		cadence.NewVariableSizedArray([]cadence.Value{}),
+		cadence.NewArray([]cadence.Value{}),
 	}
 
 	intArray := encodeTest{
@@ -270,7 +270,7 @@ func TestEncodeVariableSizedArray(t *testing.T) {
 		cadence.VariableSizedArrayType{
 			ElementType: cadence.IntType{},
 		},
-		cadence.NewVariableSizedArray([]cadence.Value{
+		cadence.NewArray([]cadence.Value{
 			cadence.NewInt(1),
 			cadence.NewInt(2),
 			cadence.NewInt(3),
@@ -293,7 +293,7 @@ func TestEncodeVariableSizedArray(t *testing.T) {
 				},
 			},
 		},
-		cadence.NewVariableSizedArray([]cadence.Value{
+		cadence.NewArray([]cadence.Value{
 			cadence.NewComposite([]cadence.Value{
 				cadence.NewString("a"),
 				cadence.NewInt(1),
@@ -324,7 +324,7 @@ func TestEncodeConstantSizedArray(t *testing.T) {
 				Size:        0,
 				ElementType: cadence.IntType{},
 			},
-			cadence.NewConstantSizedArray([]cadence.Value{}),
+			cadence.NewArray([]cadence.Value{}),
 		},
 		{
 			"IntArray",
@@ -332,7 +332,7 @@ func TestEncodeConstantSizedArray(t *testing.T) {
 				Size:        3,
 				ElementType: cadence.IntType{},
 			},
-			cadence.NewConstantSizedArray([]cadence.Value{
+			cadence.NewArray([]cadence.Value{
 				cadence.NewInt(1),
 				cadence.NewInt(2),
 				cadence.NewInt(3),
@@ -512,7 +512,7 @@ func TestEncodeComposite(t *testing.T) {
 			},
 		},
 		cadence.NewComposite([]cadence.Value{
-			cadence.NewVariableSizedArray([]cadence.Value{
+			cadence.NewArray([]cadence.Value{
 				cadence.NewInt(1),
 				cadence.NewInt(2),
 				cadence.NewInt(3),

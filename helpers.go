@@ -36,7 +36,7 @@ func NewValue(value interface{}) (Value, error) {
 			values[i] = t
 		}
 
-		return NewVariableSizedArray(values), nil
+		return NewArray(values), nil
 	case nil:
 		return NewNil(), nil
 	}
@@ -100,10 +100,10 @@ func CastToUInt16(value Value) (uint16, error) {
 	return u, nil
 }
 
-func CastToVariableSizedArray(value Value) ([]interface{}, error) {
-	casted, ok := value.(VariableSizedArray)
+func CastToArray(value Value) ([]interface{}, error) {
+	casted, ok := value.(Array)
 	if !ok {
-		return nil, fmt.Errorf("%T is not a values.VariableSizedArray", value)
+		return nil, fmt.Errorf("%T is not a values.Array", value)
 	}
 
 	goValue := casted.ToGoValue()

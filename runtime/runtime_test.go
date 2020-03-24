@@ -112,7 +112,7 @@ func TestRuntimeImport(t *testing.T) {
 	value, err := runtime.ExecuteScript(script, runtimeInterface, utils.TestLocation)
 	require.NoError(t, err)
 
-	assert.Equal(t, interpreter.NewIntValue(42), value)
+	assert.Equal(t, interpreter.NewIntValue(42), value.Value)
 }
 
 func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
@@ -1600,14 +1600,14 @@ func TestRuntimeContractAccount(t *testing.T) {
 		value, err := runtime.ExecuteScript(script1, runtimeInterface, utils.TestLocation)
 		require.NoError(t, err)
 
-		assert.Equal(t, addressValue, value)
+		assert.Equal(t, addressValue, value.Value)
 	})
 
 	t.Run("", func(t *testing.T) {
 		value, err := runtime.ExecuteScript(script2, runtimeInterface, utils.TestLocation)
 		require.NoError(t, err)
 
-		assert.Equal(t, addressValue, value)
+		assert.Equal(t, addressValue, value.Value)
 	})
 }
 
