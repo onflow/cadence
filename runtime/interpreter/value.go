@@ -4413,6 +4413,9 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 	case "save":
 		return inter.authAccountSaveFunction(v.Address)
 
+	case "borrow":
+		return inter.authAccountBorrowFunction(v.Address)
+
 	default:
 		panic(errors.NewUnreachableError())
 	}

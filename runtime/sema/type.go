@@ -3771,6 +3771,36 @@ var authAccountLoadFunctionType = func() *FunctionType {
 	}
 }()
 
+var authAccountBorrowFunctionType = func() *FunctionType {
+
+	typeParameter := &TypeParameter{
+		Type: &ReferenceType{
+			Type: &AnyResourceType{},
+		},
+		Name: "T",
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:          "from",
+				Identifier:     "path",
+				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: &GenericType{
+					TypeParameter: typeParameter,
+				},
+			},
+		),
+	}
+}()
+
 func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
 	newField := func(fieldType Type) *Member {
 		return NewPublicConstantFieldMember(t, identifier, fieldType)
@@ -3804,6 +3834,9 @@ func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error
 
 	case "load":
 		return newFunction(authAccountLoadFunctionType)
+
+	case "borrow":
+		return newFunction(authAccountBorrowFunctionType)
 
 	default:
 		return nil
