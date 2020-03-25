@@ -143,6 +143,8 @@ func (e *Encoder) prepare(v cadence.Value) jsonValue {
 		return e.prepareDictionary(x)
 	case cadence.Composite:
 		return e.prepareComposite(x)
+	case cadence.Event:
+		return e.prepareComposite(x.Composite)
 	default:
 		return fmt.Errorf("unsupported value: %T, %v", v, v)
 	}
@@ -153,15 +155,21 @@ func (e *Encoder) prepareVoid() jsonValue {
 }
 
 func (e *Encoder) prepareOptional(v cadence.Optional) jsonValue {
+	var value interface{}
+
+	if v.Value != nil {
+		value = e.prepare(v.Value)
+	}
+
 	return jsonValueObject{
 		Type:  "Optional",
-		Value: v.Value,
+		Value: value,
 	}
 }
 
 func (e *Encoder) prepareBool(v cadence.Bool) jsonValue {
 	return jsonValueObject{
-		Type:  "Optional",
+		Type:  "Bool",
 		Value: v,
 	}
 }
@@ -176,7 +184,7 @@ func (e *Encoder) prepareString(v cadence.String) jsonValue {
 func (e *Encoder) prepareAddress(v cadence.Address) jsonValue {
 	return jsonValueObject{
 		Type:  "Address",
-		Value: v.Hex(),
+		Value: encodeBytes(v.Bytes()),
 	}
 }
 
@@ -190,28 +198,28 @@ func (e *Encoder) prepareInt(v cadence.Int) jsonValue {
 func (e *Encoder) prepareInt8(v cadence.Int8) jsonValue {
 	return jsonValueObject{
 		Type:  "Int8",
-		Value: encodeInt(int(v)),
+		Value: encodeInt(int64(v)),
 	}
 }
 
 func (e *Encoder) prepareInt16(v cadence.Int16) jsonValue {
 	return jsonValueObject{
 		Type:  "Int16",
-		Value: encodeInt(int(v)),
+		Value: encodeInt(int64(v)),
 	}
 }
 
 func (e *Encoder) prepareInt32(v cadence.Int32) jsonValue {
 	return jsonValueObject{
 		Type:  "Int32",
-		Value: encodeInt(int(v)),
+		Value: encodeInt(int64(v)),
 	}
 }
 
 func (e *Encoder) prepareInt64(v cadence.Int64) jsonValue {
 	return jsonValueObject{
 		Type:  "Int64",
-		Value: encodeInt(int(v)),
+		Value: encodeInt(int64(v)),
 	}
 }
 
@@ -239,28 +247,28 @@ func (e *Encoder) prepareUInt(v cadence.UInt) jsonValue {
 func (e *Encoder) prepareUInt8(v cadence.UInt8) jsonValue {
 	return jsonValueObject{
 		Type:  "UInt8",
-		Value: encodeInt(int(v)),
+		Value: encodeUInt(uint64(v)),
 	}
 }
 
 func (e *Encoder) prepareUInt16(v cadence.UInt16) jsonValue {
 	return jsonValueObject{
 		Type:  "UInt16",
-		Value: encodeInt(int(v)),
+		Value: encodeUInt(uint64(v)),
 	}
 }
 
 func (e *Encoder) prepareUInt32(v cadence.UInt32) jsonValue {
 	return jsonValueObject{
 		Type:  "UInt32",
-		Value: encodeInt(int(v)),
+		Value: encodeUInt(uint64(v)),
 	}
 }
 
 func (e *Encoder) prepareUInt64(v cadence.UInt64) jsonValue {
 	return jsonValueObject{
 		Type:  "UInt64",
-		Value: encodeInt(int(v)),
+		Value: encodeUInt(uint64(v)),
 	}
 }
 
@@ -281,28 +289,28 @@ func (e *Encoder) prepareUInt256(v cadence.UInt256) jsonValue {
 func (e *Encoder) prepareWord8(v cadence.Word8) jsonValue {
 	return jsonValueObject{
 		Type:  "Word8",
-		Value: encodeInt(int(v)),
+		Value: encodeUInt(uint64(v)),
 	}
 }
 
 func (e *Encoder) prepareWord16(v cadence.Word16) jsonValue {
 	return jsonValueObject{
 		Type:  "Word16",
-		Value: encodeInt(int(v)),
+		Value: encodeUInt(uint64(v)),
 	}
 }
 
 func (e *Encoder) prepareWord32(v cadence.Word32) jsonValue {
 	return jsonValueObject{
 		Type:  "Word32",
-		Value: encodeInt(int(v)),
+		Value: encodeUInt(uint64(v)),
 	}
 }
 
 func (e *Encoder) prepareWord64(v cadence.Word64) jsonValue {
 	return jsonValueObject{
 		Type:  "Word64",
-		Value: encodeInt(int(v)),
+		Value: encodeUInt(uint64(v)),
 	}
 }
 
@@ -375,10 +383,18 @@ func (e *Encoder) prepareComposite(v cadence.Composite) jsonValue {
 	}
 }
 
+func encodeBytes(v []byte) string {
+	return fmt.Sprintf("0x%x", v)
+}
+
 func encodeBig(v *big.Int) string {
 	return v.String()
 }
 
-func encodeInt(v int) string {
-	return strconv.Itoa(v)
+func encodeInt(v int64) string {
+	return strconv.FormatInt(v, 10)
+}
+
+func encodeUInt(v uint64) string {
+	return strconv.FormatUint(v, 10)
 }
