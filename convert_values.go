@@ -29,7 +29,7 @@ func convertValue(value interpreter.Value, inter *interpreter.Interpreter) Value
 	case *interpreter.ArrayValue:
 		return convertArrayValue(v, inter)
 	case interpreter.IntValue:
-		return NewIntFromBig(v.Int)
+		return NewIntFromBig(big.NewInt(0).Set(v.Int))
 	case interpreter.Int8Value:
 		return NewInt8(int8(v))
 	case interpreter.Int16Value:
