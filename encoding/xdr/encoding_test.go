@@ -277,42 +277,31 @@ func TestEncodeVariableSizedArray(t *testing.T) {
 		}),
 	}
 
-	compositeArray := encodeTest{
-		"Composites",
+	resourceArray := encodeTest{
+		"Resources",
 		cadence.VariableSizedArrayType{
-			ElementType: cadence.CompositeType{
-				Fields: []cadence.Field{
-					{
-						Identifier: "a",
-						Type:       cadence.StringType{},
-					},
-					{
-						Identifier: "b",
-						Type:       cadence.IntType{},
-					},
-				},
-			},
+			ElementType: fooResourceType,
 		},
 		cadence.NewArray([]cadence.Value{
-			cadence.NewComposite([]cadence.Value{
+			cadence.NewResource([]cadence.Value{
 				cadence.NewString("a"),
 				cadence.NewInt(1),
-			}),
-			cadence.NewComposite([]cadence.Value{
+			}).WithType(fooResourceType),
+			cadence.NewResource([]cadence.Value{
 				cadence.NewString("b"),
 				cadence.NewInt(1),
-			}),
-			cadence.NewComposite([]cadence.Value{
+			}).WithType(fooResourceType),
+			cadence.NewResource([]cadence.Value{
 				cadence.NewString("c"),
 				cadence.NewInt(1),
-			}),
+			}).WithType(fooResourceType),
 		}),
 	}
 
 	testAllEncode(t,
 		emptyArray,
 		intArray,
-		compositeArray,
+		resourceArray,
 	)
 }
 
@@ -404,44 +393,33 @@ func TestEncodeDictionary(t *testing.T) {
 		}),
 	}
 
-	compositeDict := encodeTest{
-		"Composites",
+	resourceDict := encodeTest{
+		"Resources",
 		cadence.DictionaryType{
-			KeyType: cadence.StringType{},
-			ElementType: cadence.CompositeType{
-				Fields: []cadence.Field{
-					{
-						Identifier: "a",
-						Type:       cadence.StringType{},
-					},
-					{
-						Identifier: "b",
-						Type:       cadence.IntType{},
-					},
-				},
-			},
+			KeyType:     cadence.StringType{},
+			ElementType: fooResourceType,
 		},
 		cadence.NewDictionary([]cadence.KeyValuePair{
 			{
 				Key: cadence.NewString("a"),
-				Value: cadence.NewComposite([]cadence.Value{
+				Value: cadence.NewResource([]cadence.Value{
 					cadence.NewString("a"),
 					cadence.NewInt(1),
-				}),
+				}).WithType(fooResourceType),
 			},
 			{
 				Key: cadence.NewString("b"),
-				Value: cadence.NewComposite([]cadence.Value{
+				Value: cadence.NewResource([]cadence.Value{
 					cadence.NewString("b"),
 					cadence.NewInt(2),
-				}),
+				}).WithType(fooResourceType),
 			},
 			{
 				Key: cadence.NewString("c"),
-				Value: cadence.NewComposite([]cadence.Value{
+				Value: cadence.NewResource([]cadence.Value{
 					cadence.NewString("c"),
 					cadence.NewInt(3),
-				}),
+				}).WithType(fooResourceType),
 			},
 		}),
 	}
@@ -449,69 +427,62 @@ func TestEncodeDictionary(t *testing.T) {
 	testAllEncode(t,
 		simpleDict,
 		nestedDict,
-		compositeDict,
+		resourceDict,
 	)
 }
 
-func TestEncodeComposite(t *testing.T) {
-	simpleComp := encodeTest{
+func TestEncodeResource(t *testing.T) {
+	simpleResource := encodeTest{
 		"Simple",
-		cadence.CompositeType{
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type:       cadence.StringType{},
-				},
-				{
-					Identifier: "b",
-					Type:       cadence.StringType{},
-				},
-			},
-		},
-		cadence.NewComposite([]cadence.Value{
+		fooResourceType,
+		cadence.NewResource([]cadence.Value{
 			cadence.NewString("foo"),
-			cadence.NewString("bar"),
-		}),
+			cadence.NewInt(42),
+		}).WithType(fooResourceType),
 	}
 
-	multiTypeComp := encodeTest{
-		"MultipleTypes",
-		cadence.CompositeType{
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type:       cadence.StringType{},
-				},
-				{
-					Identifier: "b",
-					Type:       cadence.IntType{},
-				},
-				{
-					Identifier: "c",
-					Type:       cadence.BoolType{},
-				},
+	multiTypeResourceType := cadence.ResourceType{
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.StringType{},
+			},
+			{
+				Identifier: "b",
+				Type:       cadence.IntType{},
+			},
+			{
+				Identifier: "c",
+				Type:       cadence.BoolType{},
 			},
 		},
-		cadence.NewComposite([]cadence.Value{
+	}
+
+	multiTypeResource := encodeTest{
+		"MultipleTypes",
+		multiTypeResourceType,
+		cadence.NewResource([]cadence.Value{
 			cadence.NewString("foo"),
 			cadence.NewInt(42),
 			cadence.NewBool(true),
-		}),
+		}).WithType(multiTypeResourceType),
 	}
 
-	arrayComp := encodeTest{
-		"ArrayField",
-		cadence.CompositeType{
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type: cadence.VariableSizedArrayType{
-						ElementType: cadence.IntType{},
-					},
+	arrayResourceType := cadence.ResourceType{
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type: cadence.VariableSizedArrayType{
+					ElementType: cadence.IntType{},
 				},
 			},
 		},
-		cadence.NewComposite([]cadence.Value{
+	}
+
+	arrayResource := encodeTest{
+		"ArrayField",
+		arrayResourceType,
+		cadence.NewResource([]cadence.Value{
 			cadence.NewArray([]cadence.Value{
 				cadence.NewInt(1),
 				cadence.NewInt(2),
@@ -519,112 +490,105 @@ func TestEncodeComposite(t *testing.T) {
 				cadence.NewInt(4),
 				cadence.NewInt(5),
 			}),
-		}),
+		}).WithType(arrayResourceType),
 	}
 
-	nestedComp := encodeTest{
-		"Nested",
-		cadence.CompositeType{
-			Fields: []cadence.Field{
-				{
-					Identifier: "a",
-					Type:       cadence.StringType{},
-				},
-				{
-					Identifier: "b",
-					Type: cadence.CompositeType{
-						Fields: []cadence.Field{
-							{
-								Identifier: "c",
-								Type:       cadence.IntType{},
-							},
-						},
-					},
-				},
+	innerResourceType := cadence.ResourceType{
+		Fields: []cadence.Field{
+			{
+				Identifier: "c",
+				Type:       cadence.IntType{},
 			},
 		},
-		cadence.NewComposite([]cadence.Value{
+	}
+
+	outerResourceType := cadence.ResourceType{
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.StringType{},
+			},
+			{
+				Identifier: "b",
+				Type:       innerResourceType,
+			},
+		},
+	}
+
+	nestedResource := encodeTest{
+		"Nested",
+		outerResourceType,
+		cadence.NewResource([]cadence.Value{
 			cadence.NewString("foo"),
-			cadence.NewComposite([]cadence.Value{
+			cadence.NewResource([]cadence.Value{
 				cadence.NewInt(42),
-			}),
-		}),
+			}).WithType(innerResourceType),
+		}).WithType(outerResourceType),
 	}
 
 	testAllEncode(t,
-		simpleComp,
-		multiTypeComp,
-		arrayComp,
-		nestedComp,
+		simpleResource,
+		multiTypeResource,
+		arrayResource,
+		nestedResource,
 	)
 }
 
 func TestEncodeEvent(t *testing.T) {
-	simpleEvent := encodeTest{
-		"Simple",
-		cadence.EventType{
-			CompositeType: cadence.CompositeType{
-				Fields: []cadence.Field{
-					{
-						Identifier: "a",
-						Type:       cadence.IntType{},
-					},
-					{
-						Identifier: "b",
-						Type:       cadence.StringType{},
-					},
-				},
+	simpleEventType := cadence.EventType{
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.IntType{},
+			},
+			{
+				Identifier: "b",
+				Type:       cadence.StringType{},
 			},
 		},
-		cadence.NewComposite(
+	}
+
+	simpleEvent := encodeTest{
+		"Simple",
+		simpleEventType,
+		cadence.NewEvent(
 			[]cadence.Value{
 				cadence.NewInt(1),
 				cadence.NewString("foo"),
 			},
-		),
+		).WithType(simpleEventType),
 	}
 
-	compositeEvent := encodeTest{
-		"CompositeField",
-		cadence.EventType{
-			CompositeType: cadence.CompositeType{
-				Fields: []cadence.Field{
-					{
-						Identifier: "a",
-						Type:       cadence.StringType{},
-					},
-					{
-						Identifier: "b",
-						Type: cadence.CompositeType{
-							Fields: []cadence.Field{
-								{
-									Identifier: "c",
-									Type:       cadence.StringType{},
-								},
-								{
-									Identifier: "d",
-									Type:       cadence.IntType{},
-								},
-							},
-						},
-					},
-				},
+	resourceEventType := cadence.EventType{
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.StringType{},
+			},
+			{
+				Identifier: "b",
+				Type:       fooResourceType,
 			},
 		},
-		cadence.NewComposite(
+	}
+
+	resourceEvent := encodeTest{
+		"ResourceField",
+		resourceEventType,
+		cadence.NewEvent(
 			[]cadence.Value{
 				cadence.NewString("foo"),
-				cadence.NewComposite(
+				cadence.NewResource(
 					[]cadence.Value{
 						cadence.NewString("bar"),
 						cadence.NewInt(42),
 					},
-				),
+				).WithType(fooResourceType),
 			},
-		),
+		).WithType(resourceEventType),
 	}
 
-	testAllEncode(t, simpleEvent, compositeEvent)
+	testAllEncode(t, simpleEvent, resourceEvent)
 }
 
 func testAllEncode(t *testing.T, tests ...encodeTest) {
@@ -654,4 +618,19 @@ func testEncode(t *testing.T, typ cadence.Type, val cadence.Value) {
 	require.NoError(t, err)
 
 	assert.Equal(t, val, decodedVal)
+}
+
+var fooResourceType = cadence.ResourceType{
+	TypeID:     "test.Foo",
+	Identifier: "Foo",
+	Fields: []cadence.Field{
+		{
+			Identifier: "a",
+			Type:       cadence.StringType{},
+		},
+		{
+			Identifier: "b",
+			Type:       cadence.IntType{},
+		},
+	},
 }

@@ -101,14 +101,12 @@ func (d *Decoder) Decode(t cadence.Type) (cadence.Value, error) {
 		return d.DecodeArray(x)
 	case cadence.DictionaryType:
 		return d.DecodeDictionary(x)
-	case cadence.CompositeType:
-		return d.DecodeComposite(x)
 	case cadence.ResourceType:
-		return d.DecodeComposite(x.CompositeType)
+		return d.DecodeResource(x)
 	case cadence.StructType:
-		return d.DecodeComposite(x.CompositeType)
+		return d.DecodeStruct(x)
 	case cadence.EventType:
-		return d.DecodeComposite(x.CompositeType)
+		return d.DecodeEvent(x)
 
 	default:
 		return nil, fmt.Errorf("unsupported type: %T", t)
@@ -617,20 +615,65 @@ func (d *Decoder) DecodeDictionary(t cadence.DictionaryType) (v cadence.Dictiona
 	return cadence.NewDictionary(pairs), nil
 }
 
-// DecodeComposite reads the XDR-encoded representation of a composite value.
+// DecodeStruct reads the XDR-encoded representation of a struct value.
+//
+// A struct is encoded as a fixed-length array of its field values.
+func (d *Decoder) DecodeStruct(t cadence.StructType) (v cadence.Struct, err error) {
+	fields, err := d.decodeComposite(t.Fields)
+	if err != nil {
+		return v, err
+	}
+
+	return cadence.Struct{
+		StructType: t,
+		Fields:     fields,
+	}, nil
+}
+
+// DecodeResource reads the XDR-encoded representation of a resource value.
+//
+// A resource is encoded as a fixed-length array of its field values.
+func (d *Decoder) DecodeResource(t cadence.ResourceType) (v cadence.Resource, err error) {
+	fields, err := d.decodeComposite(t.Fields)
+	if err != nil {
+		return v, err
+	}
+
+	return cadence.Resource{
+		ResourceType: t,
+		Fields:       fields,
+	}, nil
+}
+
+// DecodeEvent reads the XDR-encoded representation of an event value.
+//
+// An event is encoded as a fixed-length array of its field values.
+func (d *Decoder) DecodeEvent(t cadence.EventType) (v cadence.Event, err error) {
+	fields, err := d.decodeComposite(t.Fields)
+	if err != nil {
+		return v, err
+	}
+
+	return cadence.Event{
+		EventType: t,
+		Fields:    fields,
+	}, nil
+}
+
+// decodeComposite reads the XDR-encoded representation of a composite value.
 //
 // A composite is encoded as a fixed-length array of its field values.
-func (d *Decoder) DecodeComposite(t cadence.CompositeType) (v cadence.Composite, err error) {
-	vals := make([]cadence.Value, len(t.Fields))
+func (d *Decoder) decodeComposite(fields []cadence.Field) (vals []cadence.Value, err error) {
+	vals = make([]cadence.Value, len(fields))
 
-	for i, field := range t.Fields {
+	for i, field := range fields {
 		value, err := d.Decode(field.Type)
 		if err != nil {
-			return v, err
+			return nil, err
 		}
 
 		vals[i] = value
 	}
 
-	return cadence.NewComposite(vals), nil
+	return vals, nil
 }
