@@ -91,9 +91,9 @@ func convertConstantSizedType(t *sema.ConstantSizedType) Type {
 	convertedElement := ConvertType(t.Type)
 
 	return ConstantSizedArrayType{
-			Size:        uint(t.Size),
-			ElementType: convertedElement,
-		}
+		Size:        uint(t.Size),
+		ElementType: convertedElement,
+	}
 }
 
 func convertCompositeType(t *sema.CompositeType) Type {
@@ -122,25 +122,26 @@ func convertCompositeType(t *sema.CompositeType) Type {
 		})
 	}
 
-	composite := CompositeType{
-		Identifier:   t.Identifier,
-		Fields:       fields,
-	}.WithID(string(t.ID()))
+	id := string(t.ID())
 
 	switch t.Kind {
 	case common.CompositeKindStructure:
 		return StructType{
-			CompositeType: composite,
+			TypeID:     id,
+			Identifier: t.Identifier,
+			Fields:     fields,
 		}
-
 	case common.CompositeKindResource:
 		return ResourceType{
-			CompositeType: composite,
+			TypeID:     id,
+			Identifier: t.Identifier,
+			Fields:     fields,
 		}
-
 	case common.CompositeKindEvent:
 		return EventType{
-			CompositeType: composite,
+			TypeID:     id,
+			Identifier: t.Identifier,
+			Fields:     fields,
 		}
 	}
 

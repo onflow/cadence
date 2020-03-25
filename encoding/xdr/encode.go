@@ -98,8 +98,12 @@ func (e *Encoder) Encode(v cadence.Value) error {
 		return e.EncodeArray(x)
 	case cadence.Dictionary:
 		return e.EncodeDictionary(x)
-	case cadence.Composite:
-		return e.EncodeComposite(x)
+	case cadence.Struct:
+		return e.EncodeStruct(x)
+	case cadence.Resource:
+		return e.EncodeResource(x)
+	case cadence.Event:
+		return e.EncodeEvent(x)
 	default:
 		return fmt.Errorf("unsupported value: %T, %v", v, v)
 	}
@@ -486,9 +490,21 @@ func (e *Encoder) EncodeDictionary(v cadence.Dictionary) error {
 	return e.encodeArray(elements)
 }
 
-// EncodeComposite writes the XDR-encoded representation of a composite value.
+func (e *Encoder) EncodeStruct(v cadence.Struct) error {
+	return e.encodeComposite(v.Fields)
+}
+
+func (e *Encoder) EncodeResource(v cadence.Resource) error {
+	return e.encodeComposite(v.Fields)
+}
+
+func (e *Encoder) EncodeEvent(v cadence.Event) error {
+	return e.encodeComposite(v.Fields)
+}
+
+// encodeComposite writes the XDR-encoded representation of a composite value.
 //
 // A composite is encoded as a fixed-length array of its field values.
-func (e *Encoder) EncodeComposite(v cadence.Composite) error {
-	return e.encodeArray(v.Fields)
+func (e *Encoder) encodeComposite(fields []cadence.Value) error {
+	return e.encodeArray(fields)
 }

@@ -216,6 +216,41 @@ func TestConvertUFix64Value(t *testing.T) {
 	assert.Equal(t, NewUFix64(123000000), value)
 }
 
+func TestConvertIntegerValuesFromScript(t *testing.T) {
+	for _, integerType := range sema.AllIntegerTypes {
+
+		script := fmt.Sprintf(
+			`
+              pub fun main(): %s {
+                  return 42
+              }
+            `,
+			integerType,
+		)
+
+		assert.NotPanics(t, func() {
+			convertValueFromScript(t, script)
+		})
+	}
+}
+
+func TestConvertFixedPointValuesFromScript(t *testing.T) {
+	for _, fixedPointType := range sema.AllFixedPointTypes {
+		script := fmt.Sprintf(
+			`
+              pub fun main(): %s {
+                  return 1.23
+              }
+            `,
+			fixedPointType,
+		)
+
+		assert.NotPanics(t, func() {
+			convertValueFromScript(t, script)
+		})
+	}
+}
+
 func TestConvertDictionaryValue(t *testing.T) {
 	t.Run("Empty", func(t *testing.T) {
 		script := `
@@ -271,6 +306,27 @@ func TestConvertAddressValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
+func TestConvertStructValue(t *testing.T) {
+	script := `
+        access(all) struct Foo {
+            access(all) let bar: Int
+        
+            init(bar: Int) {
+                self.bar = bar
+            }
+        }
+    
+        access(all) fun main(): Foo {
+            return Foo(bar: 42)
+        }
+    `
+
+	actual := convertValueFromScript(t, script)
+	expected := NewStruct([]Value{NewInt(42)}).WithType(fooStructType)
+
+	assert.Equal(t, expected, actual)
+}
+
 func TestConvertResourceValue(t *testing.T) {
 	script := `
         access(all) resource Foo {
@@ -287,8 +343,7 @@ func TestConvertResourceValue(t *testing.T) {
     `
 
 	actual := convertValueFromScript(t, script)
-	expected :=
-		NewComposite([]Value{NewInt(42)}).WithType(fooResourceType)
+	expected := NewResource([]Value{NewInt(42)}).WithType(fooResourceType)
 
 	assert.Equal(t, expected, actual)
 }
@@ -310,8 +365,8 @@ func TestConvertResourceArrayValue(t *testing.T) {
 
 	actual := convertValueFromScript(t, script)
 	expected := NewArray([]Value{
-		NewComposite([]Value{NewInt(1)}).WithType(fooResourceType),
-		NewComposite([]Value{NewInt(2)}).WithType(fooResourceType),
+		NewResource([]Value{NewInt(1)}).WithType(fooResourceType),
+		NewResource([]Value{NewInt(2)}).WithType(fooResourceType),
 	})
 
 	assert.Equal(t, expected, actual)
@@ -339,11 +394,11 @@ func TestConvertResourceDictionaryValue(t *testing.T) {
 	expected := NewDictionary([]KeyValuePair{
 		{
 			Key:   NewString("a"),
-			Value: NewComposite([]Value{NewInt(1)}).WithType(fooResourceType),
+			Value: NewResource([]Value{NewInt(1)}).WithType(fooResourceType),
 		},
 		{
 			Key:   NewString("b"),
-			Value: NewComposite([]Value{NewInt(2)}).WithType(fooResourceType),
+			Value: NewResource([]Value{NewInt(2)}).WithType(fooResourceType),
 		},
 	})
 
@@ -352,27 +407,25 @@ func TestConvertResourceDictionaryValue(t *testing.T) {
 
 func TestConvertNestedResourceValue(t *testing.T) {
 	barResourceType := ResourceType{
-		CompositeType{
-			Identifier: "Bar",
-			Fields: []Field{
-				{
-					Identifier: "x",
-					Type:       IntType{},
-				},
+		TypeID:     "test.Bar",
+		Identifier: "Bar",
+		Fields: []Field{
+			{
+				Identifier: "x",
+				Type:       IntType{},
 			},
-		}.WithID("test.Bar"),
+		},
 	}
 
 	fooResourceType := ResourceType{
-		CompositeType{
-			Identifier: "Foo",
-			Fields: []Field{
-				{
-					Identifier: "bar",
-					Type:       barResourceType,
-				},
+		TypeID:     "test.Foo",
+		Identifier: "Foo",
+		Fields: []Field{
+			{
+				Identifier: "bar",
+				Type:       barResourceType,
 			},
-		}.WithID("test.Foo"),
+		},
 	}
 
 	script := `
@@ -402,49 +455,55 @@ func TestConvertNestedResourceValue(t *testing.T) {
     `
 
 	actual := convertValueFromScript(t, script)
-	expected := NewComposite([]Value{
-		NewComposite([]Value{NewInt(42)}).WithType(barResourceType),
+	expected := NewResource([]Value{
+		NewResource([]Value{NewInt(42)}).WithType(barResourceType),
 	}).WithType(fooResourceType)
 
 	assert.Equal(t, expected, actual)
 }
 
-func TestConvertIntegers(t *testing.T) {
+func TestConvertEventValue(t *testing.T) {
+	script := `
+        access(all) event Foo(bar: Int)
+    
+        access(all) fun main() {
+            emit Foo(bar: 42)
+        }
+    `
 
-	for _, integerType := range sema.AllIntegerTypes {
+	actual := convertEventFromScript(t, script)
+	expected := NewEvent([]Value{NewInt(42)}).WithType(fooEventType)
 
-		script := fmt.Sprintf(
-			`
-              pub fun main(): %s {
-                  return 42
-              }
-            `,
-			integerType,
-		)
-
-		assert.NotPanics(t, func() {
-			convertValueFromScript(t, script)
-		})
-	}
+	assert.Equal(t, expected, actual)
 }
 
-func TestConvertFixedPoint(t *testing.T) {
+// mock runtime.Interface to capture events
+type eventCapturingInterface struct {
+	runtime.EmptyRuntimeInterface
+	events []runtime.Event
+}
 
-	for _, fixedPointType := range sema.AllFixedPointTypes {
+func (t *eventCapturingInterface) EmitEvent(event runtime.Event) {
+	t.events = append(t.events, event)
+}
 
-		script := fmt.Sprintf(
-			`
-              pub fun main(): %s {
-                  return 1.23
-              }
-            `,
-			fixedPointType,
-		)
+func convertEventFromScript(t *testing.T, script string) Event {
+	rt := runtime.NewInterpreterRuntime()
 
-		assert.NotPanics(t, func() {
-			convertValueFromScript(t, script)
-		})
-	}
+	inter := &eventCapturingInterface{}
+
+	_, err := rt.ExecuteScript(
+		[]byte(script),
+		inter,
+		testLocation,
+	)
+
+	require.NoError(t, err)
+	require.Len(t, inter.events, 1)
+
+	event := inter.events[0]
+
+	return ConvertEvent(event)
 }
 
 func convertValueFromScript(t *testing.T, script string) Value {
@@ -453,7 +512,7 @@ func convertValueFromScript(t *testing.T, script string) Value {
 	value, err := rt.ExecuteScript(
 		[]byte(script),
 		nil,
-		runtime.StringLocation("test"),
+		testLocation,
 	)
 
 	require.NoError(t, err)
@@ -461,14 +520,32 @@ func convertValueFromScript(t *testing.T, script string) Value {
 	return ConvertValue(value)
 }
 
+const testLocation = runtime.StringLocation("test")
+
+const fooID = "Foo"
+
+var fooTypeID = fmt.Sprintf("%s.%s", testLocation, fooID)
+var fooFields = []Field{
+	{
+		Identifier: "bar",
+		Type:       IntType{},
+	},
+}
+
+var fooStructType = StructType{
+	TypeID:     fooTypeID,
+	Identifier: fooID,
+	Fields:     fooFields,
+}
+
 var fooResourceType = ResourceType{
-	CompositeType{
-		Identifier: "Foo",
-		Fields: []Field{
-			{
-				Identifier: "bar",
-				Type:       IntType{},
-			},
-		},
-	}.WithID("test.Foo"),
+	TypeID:     fooTypeID,
+	Identifier: fooID,
+	Fields:     fooFields,
+}
+
+var fooEventType = EventType{
+	TypeID:     fooTypeID,
+	Identifier: fooID,
+	Fields:     fooFields,
 }

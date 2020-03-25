@@ -383,42 +383,49 @@ type Parameter struct {
 	Type       Type
 }
 
-// CompositeType
+// StructType
 
-type CompositeType struct {
-	typeID       string
+type StructType struct {
+	TypeID       string
 	Identifier   string
 	Fields       []Field
 	Initializers [][]Parameter
 }
 
-func (CompositeType) isType() {}
+func (StructType) isType() {}
 
-func (t CompositeType) ID() string {
-	return t.typeID
-}
-
-func (t CompositeType) WithID(id string) CompositeType {
-	t.typeID = id
-	return t
-}
-
-// StructType
-
-type StructType struct {
-	CompositeType
+func (t StructType) ID() string {
+	return t.TypeID
 }
 
 // ResourceType
 
 type ResourceType struct {
-	CompositeType
+	TypeID       string
+	Identifier   string
+	Fields       []Field
+	Initializers [][]Parameter
+}
+
+func (ResourceType) isType() {}
+
+func (t ResourceType) ID() string {
+	return t.TypeID
 }
 
 // EventType
 
 type EventType struct {
-	CompositeType
+	TypeID      string
+	Identifier  string
+	Fields      []Field
+	Initializer []Parameter
+}
+
+func (EventType) isType() {}
+
+func (t EventType) ID() string {
+	return t.TypeID
 }
 
 // Function

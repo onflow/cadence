@@ -129,11 +129,3 @@ func CastToInt(value Value) (int, error) {
 	}
 	return u, nil
 }
-
-func CastToComposite(value Value) (Composite, error) {
-	u, ok := value.(Composite)
-	if !ok {
-		return Composite{}, fmt.Errorf("%T is not a Composite", value)
-	}
-	return u, nil
-}

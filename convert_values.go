@@ -6,12 +6,25 @@ import (
 	"sort"
 
 	"github.com/dapperlabs/cadence/runtime"
+	"github.com/dapperlabs/cadence/runtime/common"
 	"github.com/dapperlabs/cadence/runtime/interpreter"
+	"github.com/dapperlabs/cadence/runtime/sema"
 )
 
 // ConvertValue converts a runtime value to its native Go representation.
 func ConvertValue(value runtime.Value) Value {
 	return convertValue(value.Value, value.Interpreter())
+}
+
+// ConvertEvent converts a runtime event to its native Go representation.
+func ConvertEvent(event runtime.Event) Event {
+	fields := make([]Value, len(event.Fields))
+
+	for i, field := range event.Fields {
+		fields[i] = convertValue(field.Value, field.Interpreter())
+	}
+
+	return NewEvent(fields).WithType(ConvertType(event.Type).(EventType))
 }
 
 func convertValue(value interpreter.Value, inter *interpreter.Interpreter) Value {
@@ -79,17 +92,6 @@ func convertValue(value interpreter.Value, inter *interpreter.Interpreter) Value
 	panic(fmt.Sprintf("cannot convert value of type %T", value))
 }
 
-// ConvertEvent converts a runtime event to its native Go representation.
-func ConvertEvent(event runtime.Event) Event {
-	fields := make([]Value, len(event.Fields))
-
-	for i, field := range event.Fields {
-		fields[i] = convertValue(field, field.Interpreter())
-	}
-
-	return NewEvent(fields)
-}
-
 func convertSomeValue(v *interpreter.SomeValue, inter *interpreter.Interpreter) Value {
 	if v.Value == nil {
 		return NewOptional(nil)
@@ -127,10 +129,20 @@ func convertCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Int
 	}
 
 	dynamicType := v.DynamicType(inter).(interpreter.CompositeType)
+	staticType := dynamicType.StaticType.(*sema.CompositeType)
 
-	t := ConvertType(dynamicType.StaticType)
+	t := ConvertType(staticType)
 
-	return NewComposite(fields).WithType(t)
+	switch staticType.Kind {
+	case common.CompositeKindStructure:
+		return NewStruct(fields).WithType(t.(StructType))
+	case common.CompositeKindResource:
+		return NewResource(fields).WithType(t.(ResourceType))
+	case common.CompositeKindEvent:
+		return NewEvent(fields).WithType(t.(EventType))
+	}
+
+	panic(fmt.Errorf("invalid composite kind `%s`, must be Struct, Resource or Event", staticType.Kind))
 }
 
 func convertDictionaryValue(v *interpreter.DictionaryValue, inter *interpreter.Interpreter) Value {
