@@ -383,6 +383,21 @@ func TestEncodeWord32(t *testing.T) {
 	}...)
 }
 
+func TestEncodeWord64(t *testing.T) {
+	testAllEncode(t, []encodeTest{
+		{
+			"Zero",
+			cadence.NewWord64(0),
+			`{"type":"Word64","value":"0"}`,
+		},
+		{
+			"Max",
+			cadence.NewWord64(math.MaxUint64),
+			`{"type":"Word64","value":"18446744073709551615"}`,
+		},
+	}...)
+}
+
 func TestEncodeFix64(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
