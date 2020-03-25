@@ -383,17 +383,47 @@ func TestEncodeWord32(t *testing.T) {
 	}...)
 }
 
-func TestEncodeWord64(t *testing.T) {
+func TestEncodeFix64(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Zero",
-			cadence.NewWord64(0),
-			`{"type":"Word64","value":"0"}`,
+			cadence.NewFix64(0),
+			`{"type":"Fix64","value":"0.00000000"}`,
 		},
 		{
-			"Max",
-			cadence.NewWord64(uint64(math.MaxUint64)),
-			`{"type":"Word64","value":"18446744073709551615"}`,
+			"789.00123010",
+			cadence.NewFix64(78_900_123_010),
+			`{"type":"Fix64","value":"789.00123010"}`,
+		},
+		{
+			"1234.056",
+			cadence.NewFix64(123_405_600_000),
+			`{"type":"Fix64","value":"1234.05600000"}`,
+		},
+		{
+			"-12345.006789",
+			cadence.NewFix64(-1_234_500_678_900),
+			`{"type":"Fix64","value":"-12345.00678900"}`,
+		},
+	}...)
+}
+
+func TestEncodeUFix64(t *testing.T) {
+	testAllEncode(t, []encodeTest{
+		{
+			"Zero",
+			cadence.NewUFix64(0),
+			`{"type":"UFix64","value":"0.00000000"}`,
+		},
+		{
+			"789.00123010",
+			cadence.NewUFix64(78_900_123_010),
+			`{"type":"UFix64","value":"789.00123010"}`,
+		},
+		{
+			"1234.056",
+			cadence.NewUFix64(123_405_600_000),
+			`{"type":"UFix64","value":"1234.05600000"}`,
 		},
 	}...)
 }
