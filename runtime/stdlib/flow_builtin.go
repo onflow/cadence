@@ -311,6 +311,14 @@ func (t *BlockType) GetMember(identifier string, _ ast.Range, _ func(error)) *se
 	}
 }
 
+func (t *BlockType) Unify(_ sema.Type, _ map[*sema.TypeParameter]sema.Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *BlockType) Resolve(_ map[*sema.TypeParameter]sema.Type) sema.Type {
+	return t
+}
+
 var FlowBuiltInTypes = StandardLibraryTypes{
 	StandardLibraryType{
 		Name: "Block",

@@ -54,10 +54,11 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 	// Check it and ensure the value type is *compatible* with the type annotation
 
 	if declaration.TypeAnnotation != nil {
-		typeAnnotation := checker.ConvertTypeAnnotation(declaration.TypeAnnotation)
-		declarationType = typeAnnotation.Type
 
+		typeAnnotation := checker.ConvertTypeAnnotation(declaration.TypeAnnotation)
 		checker.checkTypeAnnotation(typeAnnotation, declaration.TypeAnnotation)
+
+		declarationType = typeAnnotation.Type
 
 		// check the value type is a subtype of the declaration type
 		if declarationType != nil && valueType != nil && !valueIsInvalid && !declarationType.IsInvalidType() {

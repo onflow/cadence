@@ -70,8 +70,9 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 	case BinaryOperationKindBooleanLogic,
 		BinaryOperationKindNilCoalescing:
 
-		// Right hand side will maybe be evaluated. That means that
-		// resource invalidation and returns are not definite, but only potential
+		// The evaluation of the right-hand side is not guaranteed.
+		// That means that resource invalidation and returns
+		// are not definite, but only potential.
 
 		rightType := checker.checkPotentiallyUnevaluated(func() Type {
 			return expression.Right.Accept(checker).(Type)
@@ -271,7 +272,15 @@ func (checker *Checker) checkBinaryExpressionNilCoalescing(
 	leftOptional, leftIsOptional := leftType.(*OptionalType)
 
 	if !leftIsInvalid {
+
+		checker.recordResourceInvalidation(
+			expression.Left,
+			leftType,
+			ResourceInvalidationKindMove,
+		)
+
 		if !leftIsOptional {
+
 			checker.report(
 				&InvalidBinaryOperandError{
 					Operation:    operation,
@@ -296,7 +305,18 @@ func (checker *Checker) checkBinaryExpressionNilCoalescing(
 	canNarrow := false
 
 	if !rightIsInvalid {
+
+		if rightType.IsResourceType() {
+
+			checker.report(
+				&InvalidNilCoalescingRightResourceOperandError{
+					Range: ast.NewRangeFromPositioned(expression.Right),
+				},
+			)
+		}
+
 		if !IsSubType(rightType, leftOptional) {
+
 			checker.report(
 				&InvalidBinaryOperandError{
 					Operation:    operation,

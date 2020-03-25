@@ -218,43 +218,6 @@ func TestRestrictedResourceType_StringAndID(t *testing.T) {
 			ty.ID(),
 		)
 	})
-
-	t.Run("no base type", func(t *testing.T) {
-
-		interfaceType := &InterfaceType{
-			CompositeKind: common.CompositeKindResource,
-			Identifier:    "I",
-			Location:      ast.StringLocation("b"),
-		}
-
-		ty := &RestrictedResourceType{
-			Restrictions: []*InterfaceType{interfaceType},
-		}
-
-		assert.Equal(t,
-			"{I}",
-			ty.String(),
-		)
-
-		assert.Equal(t,
-			TypeID("{b.I}"),
-			ty.ID(),
-		)
-	})
-
-	t.Run("no restrictions, no base type", func(t *testing.T) {
-		ty := &RestrictedResourceType{}
-
-		assert.Equal(t,
-			"{}",
-			ty.String(),
-		)
-
-		assert.Equal(t,
-			TypeID("{}"),
-			ty.ID(),
-		)
-	})
 }
 
 func TestRestrictedResourceType_Equals(t *testing.T) {

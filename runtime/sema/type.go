@@ -1,5 +1,3 @@
-//revive:disable
-
 package sema
 
 import (
@@ -54,10 +52,51 @@ type Type interface {
 	String() string
 	QualifiedString() string
 	Equal(other Type) bool
+
+	// IsResourceType returns true if the type is itself a resource (a `CompositeType` with resource kind),
+	// or it contains a resource type (e.g. for optionals, arrays, dictionaries, etc.)
 	IsResourceType() bool
+
+	// IsInvalidType returns true if the type is itself the invalid type (see `InvalidType`),
+	// or it contains an invalid type (e.g. for optionals, arrays, dictionaries, etc.)
 	IsInvalidType() bool
+
 	TypeAnnotationState() TypeAnnotationState
 	ContainsFirstLevelResourceInterfaceType() bool
+
+	// Unify attempts to unify the given type with this type, i.e., resolve type parameters
+	// in generic types (see `GenericType`) using the given type parameters.
+	//
+	// For a generic type, unification assigns a given type with a type parameter.
+	//
+	// If the type parameter has not been previously unified with a type,
+	// through an explicitly provided type argument in an invocation
+	// or through a previous unification, the type parameter is assigned the given type.
+	//
+	// If the type parameter has already been previously unified with a type,
+	// the type parameter's unified .
+	//
+	// The boolean return value indicates if a generic type was encountered during unification.
+	// For primitives (e.g. `Int`, `String`, etc.) it would be false, as .
+	// For types with nested types (e.g. optionals, arrays, and dictionaries)
+	// the result is the successful unification of the inner types.
+	//
+	// The boolean return value does *not* indicate if unification succeeded or not.
+	//
+	Unify(
+		other Type,
+		typeParameters map[*TypeParameter]Type,
+		report func(err error),
+		outerRange ast.Range,
+	) bool
+
+	// Resolve returns a type that is free of generic types (see `GenericType`),
+	// i.e. it resolves the type parameters in generic types given the type parameter
+	// unifications of `typeParameters`.
+	//
+	// If resolution fails, it returns `nil`.
+	//
+	Resolve(typeParameters map[*TypeParameter]Type) Type
 }
 
 // ValueIndexableType is a type which can be indexed into using a value
@@ -211,6 +250,14 @@ func (*AnyType) ContainsFirstLevelResourceInterfaceType() bool {
 	return false
 }
 
+func (*AnyType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *AnyType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // AnyStructType represents the top type of all non-resource types
 type AnyStructType struct{}
 
@@ -247,6 +294,14 @@ func (*AnyStructType) TypeAnnotationState() TypeAnnotationState {
 
 func (*AnyStructType) ContainsFirstLevelResourceInterfaceType() bool {
 	return false
+}
+
+func (*AnyStructType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *AnyStructType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // AnyResourceType represents the top type of all resource types
@@ -287,6 +342,14 @@ func (*AnyResourceType) ContainsFirstLevelResourceInterfaceType() bool {
 	return false
 }
 
+func (*AnyResourceType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *AnyResourceType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // NeverType represents the bottom type
 type NeverType struct{}
 
@@ -325,6 +388,14 @@ func (*NeverType) ContainsFirstLevelResourceInterfaceType() bool {
 	return false
 }
 
+func (*NeverType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *NeverType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // VoidType represents the void type
 type VoidType struct{}
 
@@ -361,6 +432,14 @@ func (*VoidType) TypeAnnotationState() TypeAnnotationState {
 
 func (*VoidType) ContainsFirstLevelResourceInterfaceType() bool {
 	return false
+}
+
+func (*VoidType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *VoidType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // InvalidType represents a type that is invalid.
@@ -402,6 +481,14 @@ func (*InvalidType) TypeAnnotationState() TypeAnnotationState {
 
 func (*InvalidType) ContainsFirstLevelResourceInterfaceType() bool {
 	return false
+}
+
+func (*InvalidType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *InvalidType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // OptionalType represents the optional variant of another type
@@ -457,6 +544,120 @@ func (t *OptionalType) ContainsFirstLevelResourceInterfaceType() bool {
 	return t.Type.ContainsFirstLevelResourceInterfaceType()
 }
 
+func (t *OptionalType) Unify(other Type, typeParameters map[*TypeParameter]Type, report func(err error), outerRange ast.Range) bool {
+	otherOptional, ok := other.(*OptionalType)
+	if !ok {
+		return false
+	}
+
+	return t.Type.Unify(otherOptional.Type, typeParameters, report, outerRange)
+}
+
+func (t *OptionalType) Resolve(typeParameters map[*TypeParameter]Type) Type {
+
+	newInnerType := t.Type.Resolve(typeParameters)
+	if newInnerType == nil {
+		return nil
+	}
+
+	return &OptionalType{
+		Type: newInnerType,
+	}
+}
+
+// GenericType
+//
+type GenericType struct {
+	TypeParameter *TypeParameter
+}
+
+func (*GenericType) IsType() {}
+
+func (t *GenericType) String() string {
+	return t.TypeParameter.Name
+}
+
+func (t *GenericType) QualifiedString() string {
+	return t.TypeParameter.Name
+}
+
+func (t *GenericType) ID() TypeID {
+	return TypeID(t.TypeParameter.Name)
+}
+
+func (t *GenericType) Equal(other Type) bool {
+	otherType, ok := other.(*GenericType)
+	if !ok {
+		return false
+	}
+	return t.TypeParameter == otherType.TypeParameter
+}
+
+func (t *GenericType) IsResourceType() bool {
+	return false
+}
+
+func (t *GenericType) IsInvalidType() bool {
+	return false
+}
+
+func (t *GenericType) TypeAnnotationState() TypeAnnotationState {
+	return TypeAnnotationStateValid
+}
+
+func (t *GenericType) ContainsFirstLevelResourceInterfaceType() bool {
+	return false
+}
+
+func (t *GenericType) Unify(
+	other Type,
+	typeParameters map[*TypeParameter]Type,
+	report func(err error),
+	outerRange ast.Range,
+) bool {
+
+	if unifiedType, ok := typeParameters[t.TypeParameter]; ok {
+
+		// If the type parameter is already unified with a type argument
+		// (either explicit by a type argument, or implicit through an argument's type),
+		// check that this argument's type matches the unified type
+
+		if !other.Equal(unifiedType) {
+			report(
+				&TypeParameterTypeMismatchError{
+					TypeParameter: t.TypeParameter,
+					ExpectedType:  unifiedType,
+					ActualType:    other,
+					Range:         outerRange,
+				},
+			)
+		}
+
+	} else {
+		// If the type parameter is not yet unified to a type argument, unify it.
+
+		typeParameters[t.TypeParameter] = other
+
+		// If the type parameter corresponding to the type argument has a type bound,
+		// then check that the argument's type is a subtype of the type bound.
+
+		err := t.TypeParameter.checkTypeBound(other, outerRange)
+		if err != nil {
+			report(err)
+		}
+	}
+
+	return true
+}
+
+func (t *GenericType) Resolve(typeParameters map[*TypeParameter]Type) Type {
+	ty, ok := typeParameters[t.TypeParameter]
+	if !ok {
+		return nil
+	}
+	return ty
+}
+
 // BoolType represents the boolean type
 type BoolType struct{}
 
@@ -493,6 +694,14 @@ func (*BoolType) TypeAnnotationState() TypeAnnotationState {
 
 func (*BoolType) ContainsFirstLevelResourceInterfaceType() bool {
 	return false
+}
+
+func (*BoolType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *BoolType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // CharacterType represents the character type
@@ -532,6 +741,14 @@ func (*CharacterType) TypeAnnotationState() TypeAnnotationState {
 
 func (*CharacterType) ContainsFirstLevelResourceInterfaceType() bool {
 	return false
+}
+
+func (*CharacterType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *CharacterType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // StringType represents the string type
@@ -649,6 +866,14 @@ func (t *StringType) IndexingType() Type {
 	return &IntegerType{}
 }
 
+func (*StringType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *StringType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // NumberType represents the super-type of all signed number types
 type NumberType struct{}
 
@@ -695,6 +920,14 @@ func (*NumberType) MaxInt() *big.Int {
 	return nil
 }
 
+func (*NumberType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *NumberType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // SignedNumberType represents the super-type of all signed number types
 type SignedNumberType struct{}
 
@@ -739,6 +972,14 @@ func (*SignedNumberType) MinInt() *big.Int {
 
 func (*SignedNumberType) MaxInt() *big.Int {
 	return nil
+}
+
+func (*SignedNumberType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *SignedNumberType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // IntegerRangedType
@@ -802,6 +1043,14 @@ func (*IntegerType) MaxInt() *big.Int {
 	return nil
 }
 
+func (*IntegerType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *IntegerType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // SignedIntegerType represents the super-type of all signed integer types
 type SignedIntegerType struct{}
 
@@ -848,6 +1097,14 @@ func (*SignedIntegerType) MaxInt() *big.Int {
 	return nil
 }
 
+func (*SignedIntegerType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *SignedIntegerType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // IntType represents the arbitrary-precision integer type `Int`
 type IntType struct{}
 
@@ -892,6 +1149,14 @@ func (*IntType) MinInt() *big.Int {
 
 func (*IntType) MaxInt() *big.Int {
 	return nil
+}
+
+func (*IntType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *IntType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // Int8Type represents the 8-bit signed integer type `Int8`
@@ -944,6 +1209,14 @@ func (*Int8Type) MaxInt() *big.Int {
 	return Int8TypeMaxInt
 }
 
+func (*Int8Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *Int8Type) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // Int16Type represents the 16-bit signed integer type `Int16`
 type Int16Type struct{}
 
@@ -991,6 +1264,14 @@ func (*Int16Type) MinInt() *big.Int {
 
 func (*Int16Type) MaxInt() *big.Int {
 	return Int16TypeMaxInt
+}
+
+func (*Int16Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *Int16Type) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // Int32Type represents the 32-bit signed integer type `Int32`
@@ -1042,6 +1323,14 @@ func (*Int32Type) MaxInt() *big.Int {
 	return Int32TypeMaxInt
 }
 
+func (*Int32Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *Int32Type) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // Int64Type represents the 64-bit signed integer type `Int64`
 type Int64Type struct{}
 
@@ -1089,6 +1378,14 @@ func (*Int64Type) MinInt() *big.Int {
 
 func (*Int64Type) MaxInt() *big.Int {
 	return Int64TypeMaxInt
+}
+
+func (*Int64Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *Int64Type) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // Int128Type represents the 128-bit signed integer type `Int128`
@@ -1152,6 +1449,14 @@ func (*Int128Type) MaxInt() *big.Int {
 	return Int128TypeMaxInt
 }
 
+func (*Int128Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *Int128Type) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // Int256Type represents the 256-bit signed integer type `Int256`
 type Int256Type struct{}
 
@@ -1213,6 +1518,14 @@ func (*Int256Type) MaxInt() *big.Int {
 	return Int256TypeMaxInt
 }
 
+func (*Int256Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *Int256Type) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // UIntType represents the arbitrary-precision unsigned integer type `UInt`
 type UIntType struct{}
 
@@ -1259,6 +1572,14 @@ func (*UIntType) MinInt() *big.Int {
 
 func (*UIntType) MaxInt() *big.Int {
 	return nil
+}
+
+func (*UIntType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *UIntType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // UInt8Type represents the 8-bit unsigned integer type `UInt8`
@@ -1311,6 +1632,14 @@ func (*UInt8Type) MaxInt() *big.Int {
 	return UInt8TypeMaxInt
 }
 
+func (*UInt8Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *UInt8Type) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // UInt16Type represents the 16-bit unsigned integer type `UInt16`
 // which checks for overflow and underflow
 type UInt16Type struct{}
@@ -1359,6 +1688,14 @@ func (*UInt16Type) MinInt() *big.Int {
 
 func (*UInt16Type) MaxInt() *big.Int {
 	return UInt16TypeMaxInt
+}
+
+func (*UInt16Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *UInt16Type) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // UInt32Type represents the 32-bit unsigned integer type `UInt32`
@@ -1411,6 +1748,14 @@ func (*UInt32Type) MaxInt() *big.Int {
 	return UInt32TypeMaxInt
 }
 
+func (*UInt32Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *UInt32Type) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // UInt64Type represents the 64-bit unsigned integer type `UInt64`
 // which checks for overflow and underflow
 type UInt64Type struct{}
@@ -1459,6 +1804,14 @@ func (*UInt64Type) MinInt() *big.Int {
 
 func (*UInt64Type) MaxInt() *big.Int {
 	return UInt64TypeMaxInt
+}
+
+func (*UInt64Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *UInt64Type) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // UInt128Type represents the 128-bit unsigned integer type `UInt128`
@@ -1517,6 +1870,14 @@ func (*UInt128Type) MaxInt() *big.Int {
 	return UInt128TypeMaxInt
 }
 
+func (*UInt128Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *UInt128Type) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // UInt256Type represents the 256-bit unsigned integer type `UInt256`
 // which checks for overflow and underflow
 type UInt256Type struct{}
@@ -1573,6 +1934,14 @@ func (*UInt256Type) MaxInt() *big.Int {
 	return UInt256TypeMaxInt
 }
 
+func (*UInt256Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *UInt256Type) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // Word8Type represents the 8-bit unsigned integer type `Word8`
 // which does NOT check for overflow and underflow
 type Word8Type struct{}
@@ -1621,6 +1990,14 @@ func (*Word8Type) MinInt() *big.Int {
 
 func (*Word8Type) MaxInt() *big.Int {
 	return Word8TypeMaxInt
+}
+
+func (*Word8Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *Word8Type) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // Word16Type represents the 16-bit unsigned integer type `Word16`
@@ -1673,6 +2050,14 @@ func (*Word16Type) MaxInt() *big.Int {
 	return Word16TypeMaxInt
 }
 
+func (*Word16Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *Word16Type) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // Word32Type represents the 32-bit unsigned integer type `Word32`
 // which does NOT check for overflow and underflow
 type Word32Type struct{}
@@ -1721,6 +2106,14 @@ func (*Word32Type) MinInt() *big.Int {
 
 func (*Word32Type) MaxInt() *big.Int {
 	return Word32TypeMaxInt
+}
+
+func (*Word32Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *Word32Type) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // Word64Type represents the 64-bit unsigned integer type `Word64`
@@ -1773,6 +2166,14 @@ func (*Word64Type) MaxInt() *big.Int {
 	return Word64TypeMaxInt
 }
 
+func (*Word64Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *Word64Type) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // FixedPointType represents the super-type of all fixed-point types
 type FixedPointType struct{}
 
@@ -1819,6 +2220,14 @@ func (*FixedPointType) MaxInt() *big.Int {
 	return nil
 }
 
+func (*FixedPointType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *FixedPointType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // SignedFixedPointType represents the super-type of all signed fixed-point types
 type SignedFixedPointType struct{}
 
@@ -1863,6 +2272,14 @@ func (*SignedFixedPointType) MinInt() *big.Int {
 
 func (*SignedFixedPointType) MaxInt() *big.Int {
 	return nil
+}
+
+func (*SignedFixedPointType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *SignedFixedPointType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 const Fix64Scale uint = 8
@@ -1936,6 +2353,14 @@ func (*Fix64Type) MaxFractional() *big.Int {
 	return Fix64TypeMaxFractional
 }
 
+func (*Fix64Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *Fix64Type) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
 // which has a scale of 1E9, and checks for overflow and underflow
 type UFix64Type struct{}
@@ -1998,6 +2423,14 @@ func (*UFix64Type) MinFractional() *big.Int {
 
 func (*UFix64Type) MaxFractional() *big.Int {
 	return UFix64TypeMaxFractional
+}
+
+func (*UFix64Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *UFix64Type) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // ArrayType
@@ -2220,7 +2653,7 @@ func getArrayMember(arrayType ArrayType, field string, targetRange ast.Range, re
 
 // VariableSizedType is a variable sized array type
 type VariableSizedType struct {
-	Type
+	Type Type
 }
 
 func (*VariableSizedType) IsType()      {}
@@ -2283,9 +2716,34 @@ func (t *VariableSizedType) IndexingType() Type {
 	return &IntegerType{}
 }
 
+func (t *VariableSizedType) Unify(
+	other Type,
+	typeParameters map[*TypeParameter]Type,
+	report func(err error),
+	outerRange ast.Range,
+) bool {
+	otherArray, ok := other.(*VariableSizedType)
+	if !ok {
+		return false
+	}
+
+	return t.Type.Unify(otherArray.Type, typeParameters, report, outerRange)
+}
+
+func (t *VariableSizedType) Resolve(typeParameters map[*TypeParameter]Type) Type {
+	newInnerType := t.Type.Resolve(typeParameters)
+	if newInnerType == nil {
+		return nil
+	}
+
+	return &VariableSizedType{
+		Type: newInnerType,
+	}
+}
+
 // ConstantSizedType is a constant sized array type
 type ConstantSizedType struct {
-	Type
+	Type Type
 	Size uint64
 }
 
@@ -2350,80 +2808,43 @@ func (t *ConstantSizedType) IndexingType() Type {
 	return &IntegerType{}
 }
 
+func (t *ConstantSizedType) Unify(
+	other Type,
+	typeParameters map[*TypeParameter]Type,
+	report func(err error),
+	outerRange ast.Range,
+) bool {
+	otherArray, ok := other.(*ConstantSizedType)
+	if !ok {
+		return false
+	}
+
+	if t.Size != otherArray.Size {
+		return false
+	}
+
+	return t.Type.Unify(otherArray.Type, typeParameters, report, outerRange)
+}
+
+func (t *ConstantSizedType) Resolve(typeParameters map[*TypeParameter]Type) Type {
+	newInnerType := t.Type.Resolve(typeParameters)
+	if newInnerType == nil {
+		return nil
+	}
+
+	return &ConstantSizedType{
+		Type: newInnerType,
+		Size: t.Size,
+	}
+}
+
 // InvokableType
 
 type InvokableType interface {
 	Type
 	InvocationFunctionType() *FunctionType
-	InvocationGenericFunctionType() *GenericFunctionType
 	CheckArgumentExpressions(checker *Checker, argumentExpressions []ast.Expression)
 	ArgumentLabels() []string
-}
-
-// GenericTypeAnnotation is a type annotation which is generic,
-// i.e., it is either a type instance (`TypeAnnotation` is set),
-// or it is a type variable (`TypeParameter` is set).
-//
-type GenericTypeAnnotation struct {
-	TypeAnnotation *TypeAnnotation
-	TypeParameter  *TypeParameter
-}
-
-func (a *GenericTypeAnnotation) String() string {
-	if a.TypeParameter != nil {
-		return a.TypeParameter.Name
-	}
-
-	return a.TypeAnnotation.String()
-}
-
-func (a *GenericTypeAnnotation) QualifiedString() string {
-	if a.TypeParameter != nil {
-		return a.TypeParameter.Name
-	}
-
-	return a.TypeAnnotation.QualifiedString()
-}
-
-func (a *GenericTypeAnnotation) Equal(other *GenericTypeAnnotation) bool {
-	if a.TypeParameter != nil {
-		return other.TypeParameter != nil &&
-			a.TypeParameter.Equal(other.TypeParameter)
-	}
-
-	return other.TypeAnnotation != nil &&
-		a.TypeAnnotation.Equal(other.TypeAnnotation)
-}
-
-func (a *GenericTypeAnnotation) TypeID() TypeID {
-	if a.TypeParameter != nil {
-		return a.TypeParameter.Type.ID()
-	}
-	return a.TypeAnnotation.Type.ID()
-}
-
-func (a *GenericTypeAnnotation) IsInvalidType() bool {
-	return (a.TypeParameter != nil && a.TypeParameter.Type.IsInvalidType()) ||
-		(a.TypeAnnotation != nil && a.TypeAnnotation.Type.IsInvalidType())
-}
-
-func (a *GenericTypeAnnotation) TypeAnnotationState() TypeAnnotationState {
-	if a.TypeParameter != nil {
-		typeParameterTypeAnnotationState := a.TypeParameter.Type.TypeAnnotationState()
-		if typeParameterTypeAnnotationState != TypeAnnotationStateValid {
-			return typeParameterTypeAnnotationState
-		}
-	}
-
-	return a.TypeAnnotation.Type.TypeAnnotationState()
-}
-
-func (a *GenericTypeAnnotation) ContainsFirstLevelResourceInterfaceType() bool {
-	if a.TypeParameter != nil && a.TypeParameter.Type.ContainsFirstLevelResourceInterfaceType() {
-		return true
-	}
-
-	return a.TypeAnnotation.Type.ContainsFirstLevelResourceInterfaceType()
 }
 
 // Parameter
@@ -2521,30 +2942,22 @@ func (p TypeParameter) Equal(other *TypeParameter) bool {
 		(p.Type == nil || !p.Type.Equal(other.Type))
 }
 
-// GenericParameter
+func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
+	if p.Type == nil ||
+		p.Type.IsInvalidType() {
 
-type GenericParameter struct {
-	Label          string
-	Identifier     string
-	TypeAnnotation *GenericTypeAnnotation
-}
+		return nil
+	}
 
-func (p *GenericParameter) String() string {
-	return formatParameter(
-		true,
-		p.Label,
-		p.Identifier,
-		p.TypeAnnotation.String(),
-	)
-}
+	if !IsSubType(ty, p.Type) {
+		return &TypeMismatchError{
+			ExpectedType: p.Type,
+			ActualType:   ty,
+			Range:        typeRange,
+		}
+	}
 
-func (p *GenericParameter) QualifiedString() string {
-	return formatParameter(
-		true,
-		p.Label,
-		p.Identifier,
-		p.TypeAnnotation.QualifiedString(),
-	)
+	return nil
 }
 
 // Function types
@@ -2590,19 +3003,27 @@ func formatFunctionType(
 	return builder.String()
 }
 
-// GenericFunctionType is a polymoprhic function type
-// (a "type scheme").
+// FunctionType is a monomorphic function type.
 //
-type GenericFunctionType struct {
+type FunctionType struct {
 	TypeParameters        []*TypeParameter
-	Parameters            []*GenericParameter
-	ReturnTypeAnnotation  *GenericTypeAnnotation
+	Parameters            []*Parameter
+	ReturnTypeAnnotation  *TypeAnnotation
 	RequiredArgumentCount *int
 }
 
-func (*GenericFunctionType) IsType() {}
+func (*FunctionType) IsType() {}
 
-func (t *GenericFunctionType) String() string {
+func (t *FunctionType) InvocationFunctionType() *FunctionType {
+	return t
+}
+
+func (*FunctionType) CheckArgumentExpressions(_ *Checker, _ []ast.Expression) {
+	// NO-OP: no checks for normal functions
+}
+
+func (t *FunctionType) String() string {
+
 	typeParameters := make([]string, len(t.TypeParameters))
 
 	for i, typeParameter := range t.TypeParameters {
@@ -2625,7 +3046,8 @@ func (t *GenericFunctionType) String() string {
 	)
 }
 
-func (t *GenericFunctionType) QualifiedString() string {
+func (t *FunctionType) QualifiedString() string {
+
 	typeParameters := make([]string, len(t.TypeParameters))
 
 	for i, typeParameter := range t.TypeParameters {
@@ -2649,7 +3071,7 @@ func (t *GenericFunctionType) QualifiedString() string {
 }
 
 // NOTE: parameter names and argument labels are *not* part of the ID!
-func (t *GenericFunctionType) ID() TypeID {
+func (t *FunctionType) ID() TypeID {
 	typeParameters := make([]string, len(t.TypeParameters))
 
 	for i, typeParameter := range t.TypeParameters {
@@ -2659,10 +3081,10 @@ func (t *GenericFunctionType) ID() TypeID {
 	parameters := make([]string, len(t.Parameters))
 
 	for i, parameter := range t.Parameters {
-		parameters[i] = string(parameter.TypeAnnotation.TypeID())
+		parameters[i] = string(parameter.TypeAnnotation.Type.ID())
 	}
 
-	returnTypeAnnotation := string(t.ReturnTypeAnnotation.TypeID())
+	returnTypeAnnotation := string(t.ReturnTypeAnnotation.Type.ID())
 
 	return TypeID(
 		formatFunctionType(
@@ -2674,8 +3096,9 @@ func (t *GenericFunctionType) ID() TypeID {
 	)
 }
 
-func (t *GenericFunctionType) Equal(other Type) bool {
-	otherFunction, ok := other.(*GenericFunctionType)
+// NOTE: parameter names and argument labels are intentionally *not* considered!
+func (t *FunctionType) Equal(other Type) bool {
+	otherFunction, ok := other.(*FunctionType)
 	if !ok {
 		return false
 	}
@@ -2711,194 +3134,6 @@ func (t *GenericFunctionType) Equal(other Type) bool {
 	return t.ReturnTypeAnnotation.Equal(otherFunction.ReturnTypeAnnotation)
 }
 
-func (t *GenericFunctionType) IsResourceType() bool {
-	return false
-}
-
-func (t *GenericFunctionType) IsInvalidType() bool {
-
-	for _, typeParameter := range t.TypeParameters {
-		if typeParameter.Type.IsInvalidType() {
-			return true
-		}
-	}
-
-	for _, parameter := range t.Parameters {
-		if parameter.TypeAnnotation.IsInvalidType() {
-			return true
-		}
-	}
-
-	return t.ReturnTypeAnnotation.IsInvalidType()
-}
-
-func (t *GenericFunctionType) TypeAnnotationState() TypeAnnotationState {
-	for _, typeParameter := range t.TypeParameters {
-		typeParameterTypeAnnotationState := typeParameter.Type.TypeAnnotationState()
-		if typeParameterTypeAnnotationState != TypeAnnotationStateValid {
-			return typeParameterTypeAnnotationState
-		}
-	}
-
-	for _, parameter := range t.Parameters {
-		parameterTypeAnnotationState := parameter.TypeAnnotation.TypeAnnotationState()
-		if parameterTypeAnnotationState != TypeAnnotationStateValid {
-			return parameterTypeAnnotationState
-		}
-	}
-
-	returnTypeAnnotationState := t.ReturnTypeAnnotation.TypeAnnotationState()
-	if returnTypeAnnotationState != TypeAnnotationStateValid {
-		return returnTypeAnnotationState
-	}
-
-	return TypeAnnotationStateValid
-}
-
-func (t *GenericFunctionType) ContainsFirstLevelResourceInterfaceType() bool {
-
-	for _, typeParameter := range t.TypeParameters {
-		if typeParameter.Type.ContainsFirstLevelResourceInterfaceType() {
-			return true
-		}
-	}
-
-	for _, parameter := range t.Parameters {
-		if parameter.TypeAnnotation.ContainsFirstLevelResourceInterfaceType() {
-			return true
-		}
-	}
-
-	return t.ReturnTypeAnnotation.ContainsFirstLevelResourceInterfaceType()
-}
-
-func (t *GenericFunctionType) InvocationFunctionType() *FunctionType {
-	return nil
-}
-
-func (t *GenericFunctionType) InvocationGenericFunctionType() *GenericFunctionType {
-	return t
-}
-
-func (*GenericFunctionType) CheckArgumentExpressions(_ *Checker, _ []ast.Expression) {
-	// NO-OP: no checks for normal functions
-}
-
-func (t *GenericFunctionType) ArgumentLabels() (argumentLabels []string) {
-
-	for _, parameter := range t.Parameters {
-
-		argumentLabel := ArgumentLabelNotRequired
-		if parameter.Label != "" {
-			argumentLabel = parameter.Label
-		} else if parameter.Identifier != "" {
-			argumentLabel = parameter.Identifier
-		}
-
-		argumentLabels = append(argumentLabels, argumentLabel)
-	}
-
-	return
-}
-
-// FunctionType is a monomorphic function type.
-//
-type FunctionType struct {
-	Parameters            []*Parameter
-	ReturnTypeAnnotation  *TypeAnnotation
-	RequiredArgumentCount *int
-}
-
-func (*FunctionType) IsType() {}
-
-func (t *FunctionType) InvocationFunctionType() *FunctionType {
-	return t
-}
-
-func (t *FunctionType) InvocationGenericFunctionType() *GenericFunctionType {
-	return nil
-}
-
-func (*FunctionType) CheckArgumentExpressions(_ *Checker, _ []ast.Expression) {
-	// NO-OP: no checks for normal functions
-}
-
-func (t *FunctionType) String() string {
-	parameters := make([]string, len(t.Parameters))
-
-	for i, parameter := range t.Parameters {
-		parameters[i] = parameter.String()
-	}
-
-	returnTypeAnnotation := t.ReturnTypeAnnotation.String()
-
-	return formatFunctionType(
-		true,
-		nil,
-		parameters,
-		returnTypeAnnotation,
-	)
-}
-
-func (t *FunctionType) QualifiedString() string {
-	parameters := make([]string, len(t.Parameters))
-
-	for i, parameter := range t.Parameters {
-		parameters[i] = parameter.QualifiedString()
-	}
-
-	returnTypeAnnotation := t.ReturnTypeAnnotation.QualifiedString()
-
-	return formatFunctionType(
-		true,
-		nil,
-		parameters,
-		returnTypeAnnotation,
-	)
-}
-
-// NOTE: parameter names and argument labels are *not* part of the ID!
-func (t *FunctionType) ID() TypeID {
-
-	parameters := make([]string, len(t.Parameters))
-
-	for i, parameter := range t.Parameters {
-		parameters[i] = string(parameter.TypeAnnotation.Type.ID())
-	}
-
-	returnTypeAnnotation := string(t.ReturnTypeAnnotation.Type.ID())
-
-	return TypeID(
-		formatFunctionType(
-			false,
-			nil,
-			parameters,
-			returnTypeAnnotation,
-		),
-	)
-}
-
-// NOTE: parameter names and argument labels are intentionally *not* considered!
-func (t *FunctionType) Equal(other Type) bool {
-	otherFunction, ok := other.(*FunctionType)
-	if !ok {
-		return false
-	}
-
-	if len(t.Parameters) != len(otherFunction.Parameters) {
-		return false
-	}
-
-	for i, parameter := range t.Parameters {
-		otherParameter := otherFunction.Parameters[i]
-		if !parameter.TypeAnnotation.Equal(otherParameter.TypeAnnotation) {
-			return false
-		}
-	}
-
-	return t.ReturnTypeAnnotation.Equal(otherFunction.ReturnTypeAnnotation)
-}
-
 // NOTE: argument labels *are* considered! parameter names are intentionally *not* considered!
 func (t *FunctionType) EqualIncludingArgumentLabels(other Type) bool {
 	if !t.Equal(other) {
@@ -2923,6 +3158,12 @@ func (*FunctionType) IsResourceType() bool {
 
 func (t *FunctionType) IsInvalidType() bool {
 
+	for _, typeParameter := range t.TypeParameters {
+		if typeParameter.Type.IsInvalidType() {
+			return true
+		}
+	}
+
 	for _, parameter := range t.Parameters {
 		if parameter.TypeAnnotation.Type.IsInvalidType() {
 			return true
@@ -2933,6 +3174,13 @@ func (t *FunctionType) IsInvalidType() bool {
 }
 
 func (t *FunctionType) TypeAnnotationState() TypeAnnotationState {
+
+	for _, typeParameter := range t.TypeParameters {
+		typeParameterTypeAnnotationState := typeParameter.Type.TypeAnnotationState()
+		if typeParameterTypeAnnotationState != TypeAnnotationStateValid {
+			return typeParameterTypeAnnotationState
+		}
+	}
 
 	for _, parameter := range t.Parameters {
 		parameterTypeAnnotationState := parameter.TypeAnnotation.TypeAnnotationState()
@@ -2975,6 +3223,15 @@ func (t *FunctionType) ArgumentLabels() (argumentLabels []string) {
 	}
 
 	return
+}
+
+func (*FunctionType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	// TODO:
+	return false
+}
+
+func (t *FunctionType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // SpecialFunctionType is the the type representing a special function,
@@ -3345,6 +3602,15 @@ func (t *CompositeType) AllConformances() []*InterfaceType {
 	return t.Conformances
 }
 
+func (*CompositeType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	// TODO:
+	return false
+}
+
+func (t *CompositeType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // AuthAccountType
 
 type AuthAccountType struct{}
@@ -3446,35 +3712,62 @@ var authAccountRemovePublicKeyFunctionType = &FunctionType{
 	),
 }
 
-var authAccountSaveFunctionType = func() *GenericFunctionType {
+var authAccountSaveFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		Type: &AnyResourceType{},
 		Name: "T",
 	}
 
-	return &GenericFunctionType{
-		Parameters: []*GenericParameter{
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
 			{
 				Label:      ArgumentLabelNotRequired,
 				Identifier: "value",
-				TypeAnnotation: &GenericTypeAnnotation{
+				TypeAnnotation: NewTypeAnnotation(
+					&GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
+			},
+			{
+				Label:          "to",
+				Identifier:     "path",
+				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
+	}
+}()
+
+var authAccountLoadFunctionType = func() *FunctionType {
+
+	typeParameter := &TypeParameter{
+		Type: &AnyResourceType{},
+		Name: "T",
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:          "from",
+				Identifier:     "path",
+				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: &GenericType{
 					TypeParameter: typeParameter,
 				},
 			},
-			{
-				Label:      "to",
-				Identifier: "path",
-				TypeAnnotation: &GenericTypeAnnotation{
-					TypeAnnotation: NewTypeAnnotation(&PathType{}),
-				},
-			},
-		},
-		ReturnTypeAnnotation: &GenericTypeAnnotation{
-			TypeAnnotation: NewTypeAnnotation(
-				&VoidType{},
-			),
-		},
+		),
 	}
 }()
 
@@ -3509,9 +3802,20 @@ func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error
 	case "save":
 		return newFunction(authAccountSaveFunctionType)
 
+	case "load":
+		return newFunction(authAccountLoadFunctionType)
+
 	default:
 		return nil
 	}
+}
+
+func (*AuthAccountType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *AuthAccountType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // PublicAccountType
@@ -3572,6 +3876,14 @@ func (t *PublicAccountType) GetMember(identifier string, _ ast.Range, _ func(err
 	default:
 		return nil
 	}
+}
+
+func (*PublicAccountType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *PublicAccountType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // Member
@@ -3687,6 +3999,15 @@ func (*InterfaceType) TypeAnnotationState() TypeAnnotationState {
 
 func (t *InterfaceType) ContainsFirstLevelResourceInterfaceType() bool {
 	return t.CompositeKind == common.CompositeKindResource
+}
+
+func (*InterfaceType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	// TODO:
+	return false
+}
+
+func (t *InterfaceType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // DictionaryType
@@ -3869,6 +4190,38 @@ type DictionaryEntryType struct {
 	ValueType Type
 }
 
+func (t *DictionaryType) Unify(
+	other Type,
+	typeParameters map[*TypeParameter]Type,
+	report func(err error),
+	outerRange ast.Range,
+) bool {
+	otherDictionary, ok := other.(*DictionaryType)
+	if !ok {
+		return false
+	}
+
+	return t.KeyType.Unify(otherDictionary.KeyType, typeParameters, report, outerRange) &&
+		t.ValueType.Unify(otherDictionary.ValueType, typeParameters, report, outerRange)
+}
+
+func (t *DictionaryType) Resolve(typeParameters map[*TypeParameter]Type) Type {
+	newKeyType := t.KeyType.Resolve(typeParameters)
+	if newKeyType == nil {
+		return nil
+	}
+
+	newValueType := t.ValueType.Resolve(typeParameters)
+	if newValueType == nil {
+		return nil
+	}
+
+	return &DictionaryType{
+		KeyType:   newKeyType,
+		ValueType: newValueType,
+	}
+}
+
 // StorageType
 
 type StorageType struct{}
@@ -3939,6 +4292,14 @@ func (t *StorageType) ElementType(indexingType Type, _ bool) Type {
 	return &OptionalType{Type: indexingType}
 }
 
+func (*StorageType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *StorageType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // ReferencesType is the heterogeneous dictionary that
 // is indexed by reference types and has references as values
 
@@ -4001,6 +4362,14 @@ func (t *ReferencesType) IsValidIndexingType(indexingType Type) (isValid bool, e
 	}
 
 	return true, ""
+}
+
+func (*ReferencesType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *ReferencesType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // ReferenceType represents the reference to a value
@@ -4116,6 +4485,16 @@ func (t *ReferenceType) IndexingType() Type {
 	return referencedType.IndexingType()
 }
 
+func (*ReferenceType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	// TODO:
+	return false
+}
+
+func (t *ReferenceType) Resolve(_ map[*TypeParameter]Type) Type {
+	// TODO:
+	return t
+}
+
 // AddressType represents the address type
 type AddressType struct{}
 
@@ -4169,6 +4548,14 @@ func (*AddressType) MinInt() *big.Int {
 
 func (*AddressType) MaxInt() *big.Int {
 	return AddressTypeMaxInt
+}
+
+func (*AddressType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *AddressType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
 
 // IsSubType determines if the given subtype is a subtype
@@ -4785,6 +5172,14 @@ func (t *TransactionType) GetMember(identifier string, _ ast.Range, _ func(error
 	return t.Members[identifier]
 }
 
+func (*TransactionType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *TransactionType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // InterfaceSet
 
 type InterfaceSet map[*InterfaceType]struct{}
@@ -4825,9 +5220,7 @@ func (*RestrictedResourceType) IsType() {}
 
 func (t *RestrictedResourceType) String() string {
 	var result strings.Builder
-	if t.Type != nil {
-		result.WriteString(t.Type.String())
-	}
+	result.WriteString(t.Type.String())
 	result.WriteRune('{')
 	for i, restriction := range t.Restrictions {
 		if i > 0 {
@@ -4841,9 +5234,7 @@ func (t *RestrictedResourceType) String() string {
 
 func (t *RestrictedResourceType) QualifiedString() string {
 	var result strings.Builder
-	if t.Type != nil {
-		result.WriteString(t.Type.QualifiedString())
-	}
+	result.WriteString(t.Type.QualifiedString())
 	result.WriteRune('{')
 	for i, restriction := range t.Restrictions {
 		if i > 0 {
@@ -4857,9 +5248,7 @@ func (t *RestrictedResourceType) QualifiedString() string {
 
 func (t *RestrictedResourceType) ID() TypeID {
 	var result strings.Builder
-	if t.Type != nil {
-		result.WriteString(string(t.Type.ID()))
-	}
+	result.WriteString(string(t.Type.ID()))
 	result.WriteRune('{')
 	for i, restriction := range t.Restrictions {
 		if i > 0 {
@@ -4957,6 +5346,16 @@ func (t *RestrictedResourceType) GetMember(identifier string, targetRange ast.Ra
 	return nil
 }
 
+func (*RestrictedResourceType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	// TODO: how do we unify the restriction sets?
+	return false
+}
+
+func (t *RestrictedResourceType) Resolve(_ map[*TypeParameter]Type) Type {
+	// TODO:
+	return t
+}
+
 // PathType
 
 type PathType struct{}
@@ -4996,6 +5395,14 @@ func (*PathType) ContainsFirstLevelResourceInterfaceType() bool {
 	return false
 }
 
+func (*PathType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *PathType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
 // CapabilityType
 
 type CapabilityType struct{}
@@ -5033,4 +5440,12 @@ func (*CapabilityType) TypeAnnotationState() TypeAnnotationState {
 
 func (*CapabilityType) ContainsFirstLevelResourceInterfaceType() bool {
 	return false
+}
+
+func (*CapabilityType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *CapabilityType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }

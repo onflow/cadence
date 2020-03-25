@@ -16,21 +16,24 @@ const SelfIdentifier = "self"
 const BeforeIdentifier = "before"
 const ResultIdentifier = "result"
 
-var beforeType = func() *GenericFunctionType {
+var beforeType = func() *FunctionType {
+
 	typeParameter := &TypeParameter{
 		Name: "T",
 		Type: &AnyStructType{},
 	}
 
-	typeAnnotation := &GenericTypeAnnotation{
-		TypeParameter: typeParameter,
-	}
+	typeAnnotation := NewTypeAnnotation(
+		&GenericType{
+			TypeParameter: typeParameter,
+		},
+	)
 
-	return &GenericFunctionType{
+	return &FunctionType{
 		TypeParameters: []*TypeParameter{
 			typeParameter,
 		},
-		Parameters: []*GenericParameter{
+		Parameters: []*Parameter{
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "value",
@@ -1026,13 +1029,18 @@ func (checker *Checker) convertOptionalType(t *ast.OptionalType) Type {
 	}
 }
 
+// convertFunctionType converts the given AST function type into a sema function type.
+//
+// NOTE: type annotations ar *NOT* checked!
+//
 func (checker *Checker) convertFunctionType(t *ast.FunctionType) Type {
 	var parameters []*Parameter
+
 	for _, parameterTypeAnnotation := range t.ParameterTypeAnnotations {
-		parameterTypeAnnotation := checker.ConvertTypeAnnotation(parameterTypeAnnotation)
+		convertedParameterTypeAnnotation := checker.ConvertTypeAnnotation(parameterTypeAnnotation)
 		parameters = append(parameters,
 			&Parameter{
-				TypeAnnotation: parameterTypeAnnotation,
+				TypeAnnotation: convertedParameterTypeAnnotation,
 			},
 		)
 	}
@@ -1161,6 +1169,8 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 // ConvertTypeAnnotation converts an AST type annotation representation
 // to a sema type annotation
 //
+// NOTE: type annotations ar *NOT* checked!
+//
 func (checker *Checker) ConvertTypeAnnotation(typeAnnotation *ast.TypeAnnotation) *TypeAnnotation {
 	convertedType := checker.ConvertType(typeAnnotation.Type)
 	return &TypeAnnotation{
@@ -1174,6 +1184,7 @@ func (checker *Checker) functionType(
 	returnTypeAnnotation *ast.TypeAnnotation,
 ) *FunctionType {
 	convertedParameters := checker.parameters(parameterList)
+
 	convertedReturnTypeAnnotation :=
 		checker.ConvertTypeAnnotation(returnTypeAnnotation)
 
@@ -1762,7 +1773,9 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 			addPredeclaredMember(NewPublicConstantFieldMember(
 				containerType,
 				"owner",
-				&OptionalType{&PublicAccountType{}},
+				&OptionalType{
+					Type: &PublicAccountType{},
+				},
 			))
 		}
 	}

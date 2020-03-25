@@ -14,11 +14,12 @@ import (
 // Invocation
 
 type Invocation struct {
-	Self          *CompositeValue
-	Arguments     []Value
-	ArgumentTypes []sema.Type
-	LocationRange LocationRange
-	Interpreter   *Interpreter
+	Self               *CompositeValue
+	Arguments          []Value
+	ArgumentTypes      []sema.Type
+	TypeParameterTypes map[*sema.TypeParameter]sema.Type
+	LocationRange      LocationRange
+	Interpreter        *Interpreter
 }
 
 // FunctionValue

@@ -216,6 +216,41 @@ func TestConvertUFix64Value(t *testing.T) {
 	assert.Equal(t, NewUFix64(123000000), value)
 }
 
+func TestConvertIntegerValuesFromScript(t *testing.T) {
+	for _, integerType := range sema.AllIntegerTypes {
+
+		script := fmt.Sprintf(
+			`
+              pub fun main(): %s {
+                  return 42
+              }
+            `,
+			integerType,
+		)
+
+		assert.NotPanics(t, func() {
+			convertValueFromScript(t, script)
+		})
+	}
+}
+
+func TestConvertFixedPointValuesFromScript(t *testing.T) {
+	for _, fixedPointType := range sema.AllFixedPointTypes {
+		script := fmt.Sprintf(
+			`
+              pub fun main(): %s {
+                  return 1.23
+              }
+            `,
+			fixedPointType,
+		)
+
+		assert.NotPanics(t, func() {
+			convertValueFromScript(t, script)
+		})
+	}
+}
+
 func TestConvertDictionaryValue(t *testing.T) {
 	t.Run("Empty", func(t *testing.T) {
 		script := `
