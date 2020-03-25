@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -388,24 +389,29 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 func (v *ArrayValue) GobEncode() ([]byte, error) {
 	w := new(bytes.Buffer)
 	encoder := gob.NewEncoder(w)
+
 	err := encoder.Encode(v.Values)
 	if err != nil {
 		return nil, err
 	}
+
 	return w.Bytes(), nil
 }
 
 func (v *ArrayValue) GobDecode(buf []byte) error {
 	r := bytes.NewBuffer(buf)
 	decoder := gob.NewDecoder(r)
+
 	err := decoder.Decode(&v.Values)
 	if err != nil {
 		return err
 	}
+
 	// NOTE: ensure the `Values` slice is properly allocated
 	if v.Values == nil {
 		v.Values = make([]Value, 0)
 	}
+
 	return nil
 }
 
@@ -3502,48 +3508,94 @@ func (v *CompositeValue) SetMember(_ *Interpreter, locationRange LocationRange, 
 func (v *CompositeValue) GobEncode() ([]byte, error) {
 	w := new(bytes.Buffer)
 	encoder := gob.NewEncoder(w)
+
 	// NOTE: important: decode as pointer, so gob sees
 	// the interface, not the concrete type
 	err := encoder.Encode(&v.Location)
 	if err != nil {
 		return nil, err
 	}
+
 	err = encoder.Encode(v.TypeID)
 	if err != nil {
 		return nil, err
 	}
+
 	err = encoder.Encode(v.Kind)
 	if err != nil {
 		return nil, err
 	}
-	err = encoder.Encode(v.Fields)
+
+	// Encode fields in increasing order
+
+	fieldNames := make([]string, 0, len(v.Fields))
+
+	for name := range v.Fields {
+		fieldNames = append(fieldNames, name)
+	}
+
+	sort.Strings(fieldNames)
+
+	err = encoder.Encode(fieldNames)
 	if err != nil {
 		return nil, err
 	}
+
+	fieldValues := make([]Value, 0, len(v.Fields))
+
+	for _, name := range fieldNames {
+		fieldValues = append(fieldValues, v.Fields[name])
+	}
+
+	err = encoder.Encode(fieldValues)
+	if err != nil {
+		return nil, err
+	}
+
 	// NOTE: *not* encoding functions and destructor – linked in on-demand
+
 	return w.Bytes(), nil
 }
 
 func (v *CompositeValue) GobDecode(buf []byte) error {
 	r := bytes.NewBuffer(buf)
 	decoder := gob.NewDecoder(r)
+
 	err := decoder.Decode(&v.Location)
 	if err != nil {
 		return err
 	}
+
 	err = decoder.Decode(&v.TypeID)
 	if err != nil {
 		return err
 	}
+
 	err = decoder.Decode(&v.Kind)
 	if err != nil {
 		return err
 	}
-	err = decoder.Decode(&v.Fields)
+
+	var fieldNames []string
+	err = decoder.Decode(&fieldNames)
 	if err != nil {
 		return err
 	}
+
+	var fieldValues []Value
+	err = decoder.Decode(&fieldValues)
+	if err != nil {
+		return err
+	}
+
+	v.Fields = make(map[string]Value, len(fieldNames))
+
+	for i, fieldName := range fieldNames {
+		v.Fields[fieldName] = fieldValues[i]
+	}
+
 	// NOTE: *not* decoding functions – linked in on-demand
+
 	return nil
 }
 
@@ -3844,6 +3896,74 @@ func (v *DictionaryValue) Insert(keyValue Value, value Value) (existingValue Val
 	}
 
 	return existingValue
+}
+
+func (v *DictionaryValue) GobEncode() ([]byte, error) {
+	w := new(bytes.Buffer)
+	encoder := gob.NewEncoder(w)
+
+	err := encoder.Encode(v.Keys)
+	if err != nil {
+		return nil, err
+	}
+
+	// Encode entries in increasing order
+
+	entryNames := make([]string, 0, len(v.Entries))
+
+	for name := range v.Entries {
+		entryNames = append(entryNames, name)
+	}
+
+	sort.Strings(entryNames)
+
+	err = encoder.Encode(entryNames)
+	if err != nil {
+		return nil, err
+	}
+
+	entryValues := make([]Value, 0, len(v.Entries))
+
+	for _, name := range entryNames {
+		entryValues = append(entryValues, v.Entries[name])
+	}
+
+	err = encoder.Encode(entryValues)
+	if err != nil {
+		return nil, err
+	}
+
+	return w.Bytes(), nil
+}
+
+func (v *DictionaryValue) GobDecode(buf []byte) error {
+	r := bytes.NewBuffer(buf)
+	decoder := gob.NewDecoder(r)
+
+	err := decoder.Decode(&v.Keys)
+	if err != nil {
+		return err
+	}
+
+	var entryNames []string
+	err = decoder.Decode(&entryNames)
+	if err != nil {
+		return err
+	}
+
+	var entryValues []Value
+	err = decoder.Decode(&entryValues)
+	if err != nil {
+		return err
+	}
+
+	v.Entries = make(map[string]Value, len(entryNames))
+
+	for i, entryName := range entryNames {
+		v.Entries[entryName] = entryValues[i]
+	}
+
+	return nil
 }
 
 type DictionaryEntryValues struct {
