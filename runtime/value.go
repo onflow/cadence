@@ -12,18 +12,18 @@ import (
 // and environments.
 type Value struct {
 	interpreter.Value
-	interpreter *interpreter.Interpreter
+	inter *interpreter.Interpreter
 }
 
 func newRuntimeValue(value interpreter.Value, inter *interpreter.Interpreter) Value {
 	return Value{
-		Value:       value,
-		interpreter: inter,
+		Value: value,
+		inter: inter,
 	}
 }
 
 func (v Value) Interpreter() *interpreter.Interpreter {
-	return v.interpreter
+	return v.inter
 }
 
 type Event struct {
