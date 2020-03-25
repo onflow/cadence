@@ -636,7 +636,7 @@ func testEncode(t *testing.T, val cadence.Value, expectedJSON string) {
 }
 
 var fooResourceType = cadence.ResourceType{
-	cadence.CompositeType{
+	CompositeType: cadence.CompositeType{
 		Identifier: "Foo",
 		Fields: []cadence.Field{
 			{
