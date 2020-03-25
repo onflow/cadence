@@ -1,4 +1,4 @@
-package encoding
+package xdr
 
 import (
 	"bytes"
