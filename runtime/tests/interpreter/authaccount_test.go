@@ -650,7 +650,7 @@ func TestInterpretAuthAccountLink(t *testing.T) {
 				require.Len(t, storedValues, 2)
 			})
 
-			t.Run("borrow R2", func(t *testing.T) {
+			t.Run("link R2", func(t *testing.T) {
 
 				// first link
 
