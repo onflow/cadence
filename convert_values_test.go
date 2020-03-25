@@ -428,6 +428,50 @@ func TestConvertNestedResourceValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
+func TestConvertEventValue(t *testing.T) {
+	script := `
+        access(all) event Foo(bar: Int)
+    
+        access(all) fun main() {
+            emit Foo(bar: 42)
+        }
+    `
+
+	actual := convertEventFromScript(t, script)
+	expected := NewEvent([]Value{NewInt(42)}).WithType(fooEventType)
+
+	assert.Equal(t, expected, actual)
+}
+
+// mock runtime.Interface to capture events
+type eventCapturingInterface struct {
+	runtime.EmptyRuntimeInterface
+	events []runtime.Event
+}
+
+func (t *eventCapturingInterface) EmitEvent(event runtime.Event) {
+	t.events = append(t.events, event)
+}
+
+func convertEventFromScript(t *testing.T, script string) Event {
+	rt := runtime.NewInterpreterRuntime()
+
+	inter := &eventCapturingInterface{}
+
+	_, err := rt.ExecuteScript(
+		[]byte(script),
+		inter,
+		testLocation,
+	)
+
+	require.NoError(t, err)
+	require.Len(t, inter.events, 1)
+
+	event := inter.events[0]
+
+	return ConvertEvent(event)
+}
+
 func convertValueFromScript(t *testing.T, script string) Value {
 	rt := runtime.NewInterpreterRuntime()
 
