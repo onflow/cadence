@@ -25,12 +25,12 @@ func TestEncodeVoid(t *testing.T) {
 func TestEncodeString(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
-			"EmptyString",
+			"Empty",
 			cadence.StringType{},
 			cadence.NewString(""),
 		},
 		{
-			"SimpleString",
+			"Non-empty",
 			cadence.StringType{},
 			cadence.NewString("abcdefg"),
 		},
@@ -45,7 +45,7 @@ func TestEncodeOptional(t *testing.T) {
 			cadence.NewOptional(nil),
 		},
 		{
-			"SomeString",
+			"Non-nil",
 			cadence.OptionalType{Type: cadence.StringType{}},
 			cadence.NewOptional(cadence.NewString("abcdefg")),
 		},
@@ -70,12 +70,12 @@ func TestEncodeBool(t *testing.T) {
 func TestEncodeBytes(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
-			"EmptyBytes",
+			"Empty",
 			cadence.BytesType{},
 			cadence.NewBytes([]byte{}),
 		},
 		{
-			"SimpleBytes",
+			"Non-empty",
 			cadence.BytesType{},
 			cadence.NewBytes([]byte{1, 2, 3, 4, 5}),
 		},
@@ -196,7 +196,7 @@ func TestEncodeInt64(t *testing.T) {
 	}...)
 }
 
-func TestEncodeUint8(t *testing.T) {
+func TestEncodeUInt8(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Zero",
@@ -211,7 +211,7 @@ func TestEncodeUint8(t *testing.T) {
 	}...)
 }
 
-func TestEncodeUint16(t *testing.T) {
+func TestEncodeUInt16(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Zero",
@@ -226,7 +226,7 @@ func TestEncodeUint16(t *testing.T) {
 	}...)
 }
 
-func TestEncodeUint32(t *testing.T) {
+func TestEncodeUInt32(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Zero",
@@ -241,7 +241,7 @@ func TestEncodeUint32(t *testing.T) {
 	}...)
 }
 
-func TestEncodeUint64(t *testing.T) {
+func TestEncodeUInt64(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Zero",
@@ -258,7 +258,7 @@ func TestEncodeUint64(t *testing.T) {
 
 func TestEncodeVariableSizedArray(t *testing.T) {
 	emptyArray := encodeTest{
-		"EmptyArray",
+		"Empty",
 		cadence.VariableSizedArrayType{
 			ElementType: cadence.IntType{},
 		},
@@ -266,7 +266,7 @@ func TestEncodeVariableSizedArray(t *testing.T) {
 	}
 
 	intArray := encodeTest{
-		"IntArray",
+		"Integers",
 		cadence.VariableSizedArrayType{
 			ElementType: cadence.IntType{},
 		},
@@ -278,7 +278,7 @@ func TestEncodeVariableSizedArray(t *testing.T) {
 	}
 
 	compositeArray := encodeTest{
-		"CompositeArray",
+		"Composites",
 		cadence.VariableSizedArrayType{
 			ElementType: cadence.CompositeType{
 				Fields: []cadence.Field{
@@ -319,7 +319,7 @@ func TestEncodeVariableSizedArray(t *testing.T) {
 func TestEncodeConstantSizedArray(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
-			"EmptyArray",
+			"Empty",
 			cadence.ConstantSizedArrayType{
 				Size:        0,
 				ElementType: cadence.IntType{},
@@ -327,7 +327,7 @@ func TestEncodeConstantSizedArray(t *testing.T) {
 			cadence.NewArray([]cadence.Value{}),
 		},
 		{
-			"IntArray",
+			"Integers",
 			cadence.ConstantSizedArrayType{
 				Size:        3,
 				ElementType: cadence.IntType{},
@@ -343,7 +343,7 @@ func TestEncodeConstantSizedArray(t *testing.T) {
 
 func TestEncodeDictionary(t *testing.T) {
 	simpleDict := encodeTest{
-		"SimpleDict",
+		"Simple",
 		cadence.DictionaryType{
 			KeyType:     cadence.StringType{},
 			ElementType: cadence.IntType{},
@@ -365,7 +365,7 @@ func TestEncodeDictionary(t *testing.T) {
 	}
 
 	nestedDict := encodeTest{
-		"NestedDict",
+		"Nested",
 		cadence.DictionaryType{
 			KeyType: cadence.StringType{},
 			ElementType: cadence.DictionaryType{
@@ -405,7 +405,7 @@ func TestEncodeDictionary(t *testing.T) {
 	}
 
 	compositeDict := encodeTest{
-		"CompositeDict",
+		"Composites",
 		cadence.DictionaryType{
 			KeyType: cadence.StringType{},
 			ElementType: cadence.CompositeType{
@@ -455,7 +455,7 @@ func TestEncodeDictionary(t *testing.T) {
 
 func TestEncodeComposite(t *testing.T) {
 	simpleComp := encodeTest{
-		"SimpleComposite",
+		"Simple",
 		cadence.CompositeType{
 			Fields: []cadence.Field{
 				{
@@ -475,7 +475,7 @@ func TestEncodeComposite(t *testing.T) {
 	}
 
 	multiTypeComp := encodeTest{
-		"MultiTypeComposite",
+		"MultipleTypes",
 		cadence.CompositeType{
 			Fields: []cadence.Field{
 				{
@@ -500,7 +500,7 @@ func TestEncodeComposite(t *testing.T) {
 	}
 
 	arrayComp := encodeTest{
-		"ArrayComposite",
+		"ArrayField",
 		cadence.CompositeType{
 			Fields: []cadence.Field{
 				{
@@ -523,7 +523,7 @@ func TestEncodeComposite(t *testing.T) {
 	}
 
 	nestedComp := encodeTest{
-		"NestedComposite",
+		"Nested",
 		cadence.CompositeType{
 			Fields: []cadence.Field{
 				{
@@ -561,7 +561,7 @@ func TestEncodeComposite(t *testing.T) {
 
 func TestEncodeEvent(t *testing.T) {
 	simpleEvent := encodeTest{
-		"SimpleEvent",
+		"Simple",
 		cadence.EventType{
 			CompositeType: cadence.CompositeType{
 				Fields: []cadence.Field{
@@ -585,7 +585,7 @@ func TestEncodeEvent(t *testing.T) {
 	}
 
 	compositeEvent := encodeTest{
-		"CompositeEvent",
+		"CompositeField",
 		cadence.EventType{
 			CompositeType: cadence.CompositeType{
 				Fields: []cadence.Field{
