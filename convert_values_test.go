@@ -1,6 +1,7 @@
 package cadence
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -371,27 +372,25 @@ func TestConvertResourceDictionaryValue(t *testing.T) {
 
 func TestConvertNestedResourceValue(t *testing.T) {
 	barResourceType := ResourceType{
-		CompositeType{
-			Identifier: "Bar",
-			Fields: []Field{
-				{
-					Identifier: "x",
-					Type:       IntType{},
-				},
+		TypeID:     "test.Bar",
+		Identifier: "Bar",
+		Fields: []Field{
+			{
+				Identifier: "x",
+				Type:       IntType{},
 			},
-		}.WithID("test.Bar"),
+		},
 	}
 
 	fooResourceType := ResourceType{
-		CompositeType{
-			Identifier: "Foo",
-			Fields: []Field{
-				{
-					Identifier: "bar",
-					Type:       barResourceType,
-				},
+		TypeID:     "test.Foo",
+		Identifier: "Foo",
+		Fields: []Field{
+			{
+				Identifier: "bar",
+				Type:       barResourceType,
 			},
-		}.WithID("test.Foo"),
+		},
 	}
 
 	script := `
@@ -486,17 +485,32 @@ func convertValueFromScript(t *testing.T, script string) Value {
 	return ConvertValue(value)
 }
 
-var testLocation = runtime.StringLocation("test")
-var fooStructType = StructType{fooCompositeType}
-var fooResourceType = ResourceType{fooCompositeType}
-var fooEventType = EventType{fooCompositeType}
+const testLocation = runtime.StringLocation("test")
 
-var fooCompositeType = CompositeType{
-	Identifier: "Foo",
-	Fields: []Field{
-		{
-			Identifier: "bar",
-			Type:       IntType{},
-		},
+const fooID = "Foo"
+
+var fooTypeID = fmt.Sprintf("%s.%s", testLocation, fooID)
+var fooFields = []Field{
+	{
+		Identifier: "bar",
+		Type:       IntType{},
 	},
-}.WithID("test.Foo")
+}
+
+var fooStructType = StructType{
+	TypeID:     fooTypeID,
+	Identifier: fooID,
+	Fields:     fooFields,
+}
+
+var fooResourceType = ResourceType{
+	TypeID:     fooTypeID,
+	Identifier: fooID,
+	Fields:     fooFields,
+}
+
+var fooEventType = EventType{
+	TypeID:     fooTypeID,
+	Identifier: fooID,
+	Fields:     fooFields,
+}

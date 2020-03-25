@@ -23,7 +23,7 @@ func ConvertEvent(event runtime.Event) Event {
 		fields[i] = convertValue(field.Value, field.Interpreter())
 	}
 
-	return NewEvent(fields).WithType(ConvertType(event.Type))
+	return NewEvent(fields).WithType(ConvertType(event.Type).(EventType))
 }
 
 func convertValue(value interpreter.Value, inter *interpreter.Interpreter) Value {
@@ -134,11 +134,11 @@ func convertCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Int
 
 	switch staticType.Kind {
 	case common.CompositeKindStructure:
-		return NewStruct(fields).WithType(t)
+		return NewStruct(fields).WithType(t.(StructType))
 	case common.CompositeKindResource:
-		return NewResource(fields).WithType(t)
+		return NewResource(fields).WithType(t.(ResourceType))
 	case common.CompositeKindEvent:
-		return NewEvent(fields).WithType(t)
+		return NewEvent(fields).WithType(t.(EventType))
 	}
 
 	panic(fmt.Errorf("invalid composite kind `%s`, must be Struct, Resource or Event", staticType.Kind))
