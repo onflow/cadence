@@ -63,10 +63,6 @@ func (i *EmptyRuntimeInterface) GetSigningAccounts() []Address {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) Log(message string) {
-	return
-}
+func (i *EmptyRuntimeInterface) Log(message string) {}
 
-func (i *EmptyRuntimeInterface) EmitEvent(event Event) {
-	return
-}
+func (i *EmptyRuntimeInterface) EmitEvent(event Event) {}
