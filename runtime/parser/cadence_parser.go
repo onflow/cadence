@@ -377,8 +377,8 @@ var parserATN = []uint16{
 	7, 8, 2, 2, 789, 790, 5, 186, 94, 2, 790, 157, 3, 2, 2, 2, 791, 794, 7,
 	9, 2, 2, 792, 795, 5, 108, 55, 2, 793, 795, 5, 54, 28, 2, 794, 792, 3,
 	2, 2, 2, 794, 793, 3, 2, 2, 2, 795, 796, 3, 2, 2, 2, 796, 797, 7, 10, 2,
-	2, 797, 159, 3, 2, 2, 2, 798, 807, 7, 17, 2, 2, 799, 804, 5, 54, 28, 2,
-	800, 801, 7, 6, 2, 2, 801, 803, 5, 54, 28, 2, 802, 800, 3, 2, 2, 2, 803,
+	2, 797, 159, 3, 2, 2, 2, 798, 807, 7, 17, 2, 2, 799, 804, 5, 52, 27, 2,
+	800, 801, 7, 6, 2, 2, 801, 803, 5, 52, 27, 2, 802, 800, 3, 2, 2, 2, 803,
 	806, 3, 2, 2, 2, 804, 802, 3, 2, 2, 2, 804, 805, 3, 2, 2, 2, 805, 808,
 	3, 2, 2, 2, 806, 804, 3, 2, 2, 2, 807, 799, 3, 2, 2, 2, 807, 808, 3, 2,
 	2, 2, 808, 809, 3, 2, 2, 2, 809, 811, 7, 18, 2, 2, 810, 798, 3, 2, 2, 2,
@@ -13424,27 +13424,27 @@ func (s *InvocationContext) Argument(i int) IArgumentContext {
 	return t.(IArgumentContext)
 }
 
-func (s *InvocationContext) AllFullType() []IFullTypeContext {
-	var ts = s.GetTypedRuleContexts(reflect.TypeOf((*IFullTypeContext)(nil)).Elem())
-	var tst = make([]IFullTypeContext, len(ts))
+func (s *InvocationContext) AllTypeAnnotation() []ITypeAnnotationContext {
+	var ts = s.GetTypedRuleContexts(reflect.TypeOf((*ITypeAnnotationContext)(nil)).Elem())
+	var tst = make([]ITypeAnnotationContext, len(ts))
 
 	for i, t := range ts {
 		if t != nil {
-			tst[i] = t.(IFullTypeContext)
+			tst[i] = t.(ITypeAnnotationContext)
 		}
 	}
 
 	return tst
 }
 
-func (s *InvocationContext) FullType(i int) IFullTypeContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IFullTypeContext)(nil)).Elem(), i)
+func (s *InvocationContext) TypeAnnotation(i int) ITypeAnnotationContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*ITypeAnnotationContext)(nil)).Elem(), i)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IFullTypeContext)
+	return t.(ITypeAnnotationContext)
 }
 
 func (s *InvocationContext) GetRuleContext() antlr.RuleContext {
@@ -13512,10 +13512,10 @@ func (p *CadenceParser) Invocation() (localctx IInvocationContext) {
 		p.GetErrorHandler().Sync(p)
 		_la = p.GetTokenStream().LA(1)
 
-		if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<CadenceParserT__1)|(1<<CadenceParserT__6)|(1<<CadenceParserAuth)|(1<<CadenceParserAmpersand))) != 0) || (((_la-35)&-(0x1f+1)) == 0 && ((1<<uint((_la-35)))&((1<<(CadenceParserOpenParen-35))|(1<<(CadenceParserStruct-35))|(1<<(CadenceParserResource-35))|(1<<(CadenceParserContract-35))|(1<<(CadenceParserEvent-35))|(1<<(CadenceParserEmit-35))|(1<<(CadenceParserAccess-35))|(1<<(CadenceParserAll-35))|(1<<(CadenceParserSelf-35))|(1<<(CadenceParserAccount-35))|(1<<(CadenceParserFrom-35)))) != 0) || (((_la-67)&-(0x1f+1)) == 0 && ((1<<uint((_la-67)))&((1<<(CadenceParserCreate-67))|(1<<(CadenceParserDestroy-67))|(1<<(CadenceParserIdentifier-67)))) != 0) {
+		if (((_la)&-(0x1f+1)) == 0 && ((1<<uint(_la))&((1<<CadenceParserT__1)|(1<<CadenceParserT__6)|(1<<CadenceParserAuth)|(1<<CadenceParserAmpersand))) != 0) || (((_la-34)&-(0x1f+1)) == 0 && ((1<<uint((_la-34)))&((1<<(CadenceParserResourceAnnotation-34))|(1<<(CadenceParserOpenParen-34))|(1<<(CadenceParserStruct-34))|(1<<(CadenceParserResource-34))|(1<<(CadenceParserContract-34))|(1<<(CadenceParserEvent-34))|(1<<(CadenceParserEmit-34))|(1<<(CadenceParserAccess-34))|(1<<(CadenceParserAll-34))|(1<<(CadenceParserSelf-34))|(1<<(CadenceParserAccount-34)))) != 0) || (((_la-66)&-(0x1f+1)) == 0 && ((1<<uint((_la-66)))&((1<<(CadenceParserFrom-66))|(1<<(CadenceParserCreate-66))|(1<<(CadenceParserDestroy-66))|(1<<(CadenceParserIdentifier-66)))) != 0) {
 			{
 				p.SetState(797)
-				p.FullType()
+				p.TypeAnnotation()
 			}
 			p.SetState(802)
 			p.GetErrorHandler().Sync(p)
@@ -13528,7 +13528,7 @@ func (p *CadenceParser) Invocation() (localctx IInvocationContext) {
 				}
 				{
 					p.SetState(799)
-					p.FullType()
+					p.TypeAnnotation()
 				}
 
 				p.SetState(804)

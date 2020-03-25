@@ -4407,6 +4407,9 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 	case "removePublicKey":
 		return v.removePublicKeyFunction
 
+	case "load":
+		return inter.authAccountLoadFunction(v.Address)
+
 	case "save":
 		return inter.authAccountSaveFunction(v.Address)
 

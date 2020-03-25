@@ -532,7 +532,7 @@ bracketExpression
     ;
 
 invocation
-    : ('<' ( fullType (',' fullType )* )? '>')?
+    : ('<' ( typeAnnotation (',' typeAnnotation )* )? '>')?
       '(' ( argument (',' argument)* )? ')'
     ;
 

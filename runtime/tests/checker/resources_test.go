@@ -3272,7 +3272,7 @@ func TestCheckResourceFieldUseAndDestruction(t *testing.T) {
              self.ris <- {"first": <-ri}
          }
 
-         pub fun use() {
+         fun use() {
             let ri <- self.ris.remove(key: "first")
             absorb(<-ri)
          }
@@ -3877,4 +3877,56 @@ func TestCheckRestrictedAnyResourceType(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+}
+
+func TestCheckInvalidOptionalResourceNilCoalescingResourceLoss(t *testing.T) {
+
+	_, err := ParseAndCheckWithPanic(t, `
+
+      resource R {}
+
+      fun returnResourceOpt() {
+          let optR: @R? <- create R()
+          let r <- optR ?? panic("no R")
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+}
+
+func TestCheckOptionalResourceCoalescingAndReturn(t *testing.T) {
+
+	_, err := ParseAndCheckWithPanic(t, `
+
+      resource R {}
+
+      fun returnResourceOpt(): @R {
+          let optR: @R? <- create R()
+          return <- (optR ?? panic("no R"))
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckInvalidOptionalResourceCoalescingRightSide(t *testing.T) {
+
+	_, err := ParseAndCheckWithPanic(t, `
+
+      resource R {}
+
+      fun returnResourceOpt(): @R {
+          let r1: @R? <- create R()
+          let r2: @R <- create R()
+          return <- (r1 ?? r2)
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 3)
+
+	assert.IsType(t, &sema.InvalidNilCoalescingRightResourceOperandError{}, errs[0])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
+	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
 }
