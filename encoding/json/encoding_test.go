@@ -429,16 +429,14 @@ func TestEncodeUFix64(t *testing.T) {
 }
 
 var resourceType = cadence.ResourceType{
-	CompositeType: cadence.CompositeType{
-		Fields: []cadence.Field{
-			{
-				Identifier: "a",
-				Type:       cadence.StringType{},
-			},
-			{
-				Identifier: "b",
-				Type:       cadence.IntType{},
-			},
+	Fields: []cadence.Field{
+		{
+			Identifier: "a",
+			Type:       cadence.StringType{},
+		},
+		{
+			Identifier: "b",
+			Type:       cadence.IntType{},
 		},
 	},
 }
@@ -463,15 +461,15 @@ func TestEncodeArray(t *testing.T) {
 	resourceArray := encodeTest{
 		"Resources",
 		cadence.NewArray([]cadence.Value{
-			cadence.NewComposite([]cadence.Value{
+			cadence.NewResource([]cadence.Value{
 				cadence.NewString("a"),
 				cadence.NewInt(1),
 			}).WithType(resourceType),
-			cadence.NewComposite([]cadence.Value{
+			cadence.NewResource([]cadence.Value{
 				cadence.NewString("b"),
 				cadence.NewInt(1),
 			}).WithType(resourceType),
-			cadence.NewComposite([]cadence.Value{
+			cadence.NewResource([]cadence.Value{
 				cadence.NewString("c"),
 				cadence.NewInt(1),
 			}).WithType(resourceType),
@@ -545,19 +543,19 @@ func TestEncodeDictionary(t *testing.T) {
 		cadence.NewDictionary([]cadence.KeyValuePair{
 			{
 				Key: cadence.NewString("a"),
-				Value: cadence.NewComposite([]cadence.Value{
+				Value: cadence.NewResource([]cadence.Value{
 					cadence.NewInt(1),
 				}).WithType(fooResourceType),
 			},
 			{
 				Key: cadence.NewString("b"),
-				Value: cadence.NewComposite([]cadence.Value{
+				Value: cadence.NewResource([]cadence.Value{
 					cadence.NewInt(2),
 				}).WithType(fooResourceType),
 			},
 			{
 				Key: cadence.NewString("c"),
-				Value: cadence.NewComposite([]cadence.Value{
+				Value: cadence.NewResource([]cadence.Value{
 					cadence.NewInt(3),
 				}).WithType(fooResourceType),
 			},
@@ -628,6 +626,10 @@ func TestEncodeNestedResource(t *testing.T) {
 	testEncode(t, v, expectedJSON)
 }
 
+func TestEncodeStruct(t *testing.T) {
+	// TODO: test struct encoding
+}
+
 func TestEncodeEvent(t *testing.T) {
 	// TODO: test event encoding
 }
@@ -666,13 +668,12 @@ func testEncode(t *testing.T, val cadence.Value, expectedJSON string) {
 }
 
 var fooResourceType = cadence.ResourceType{
-	CompositeType: cadence.CompositeType{
-		Identifier: "Foo",
-		Fields: []cadence.Field{
-			{
-				Identifier: "bar",
-				Type:       cadence.IntType{},
-			},
+	TypeID:     "test.Foo",
+	Identifier: "Foo",
+	Fields: []cadence.Field{
+		{
+			Identifier: "bar",
+			Type:       cadence.IntType{},
 		},
-	}.WithID("test.Foo"),
+	},
 }

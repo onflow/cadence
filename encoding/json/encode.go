@@ -147,10 +147,12 @@ func (e *Encoder) prepare(v cadence.Value) jsonValue {
 		return e.prepareArray(x)
 	case cadence.Dictionary:
 		return e.prepareDictionary(x)
-	case cadence.Composite:
-		return e.prepareComposite(x)
+	case cadence.Struct:
+		return e.prepareStruct(x)
+	case cadence.Resource:
+		return e.prepareResource(x)
 	case cadence.Event:
-		return e.prepareComposite(x.Composite)
+		return e.prepareEvent(x)
 	default:
 		return fmt.Errorf("unsupported value: %T, %v", v, v)
 	}
@@ -363,32 +365,25 @@ func (e *Encoder) prepareDictionary(v cadence.Dictionary) jsonValue {
 	}
 }
 
-func (e *Encoder) prepareComposite(v cadence.Composite) jsonValue {
-	var kind string
-	var compositeType cadence.CompositeType
+func (e *Encoder) prepareStruct(v cadence.Struct) jsonValue {
+	return e.prepareComposite("Struct", v.StructType.ID(), v.StructType.Fields, v.Fields)
+}
 
-	switch c := v.Type().(type) {
-	case cadence.StructType:
-		kind = "Struct"
-		compositeType = c.CompositeType
-	case cadence.ResourceType:
-		kind = "Resource"
-		compositeType = c.CompositeType
-	case cadence.EventType:
-		kind = "Event"
-		compositeType = c.CompositeType
-	default:
-		panic(fmt.Errorf("invalid composite type %T, must be Struct, Resource or Event", c))
-	}
+func (e *Encoder) prepareResource(v cadence.Resource) jsonValue {
+	return e.prepareComposite("Resource", v.ResourceType.ID(), v.ResourceType.Fields, v.Fields)
+}
 
-	fieldTypes := compositeType.Fields
+func (e *Encoder) prepareEvent(v cadence.Event) jsonValue {
+	return e.prepareComposite("Event", v.EventType.ID(), v.EventType.Fields, v.Fields)
+}
 
-	fields := make([]jsonCompositeField, len(v.Fields))
+func (e *Encoder) prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cadence.Value) jsonValue {
+	compositeFields := make([]jsonCompositeField, len(fields))
 
-	for i, value := range v.Fields {
+	for i, value := range fields {
 		fieldType := fieldTypes[i]
 
-		fields[i] = jsonCompositeField{
+		compositeFields[i] = jsonCompositeField{
 			Name:  fieldType.Identifier,
 			Value: e.prepare(value),
 		}
@@ -397,8 +392,8 @@ func (e *Encoder) prepareComposite(v cadence.Composite) jsonValue {
 	return jsonValueObject{
 		Type: kind,
 		Value: jsonCompositeValue{
-			ID:     v.Type().ID(),
-			Fields: fields,
+			ID:     id,
+			Fields: compositeFields,
 		},
 	}
 }
