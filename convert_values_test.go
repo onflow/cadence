@@ -23,13 +23,13 @@ func TestConvertNilValue(t *testing.T) {
 }
 
 func TestConvertSomeValue(t *testing.T) {
-	t.Run("nil", func(t *testing.T) {
+	t.Run("Nil", func(t *testing.T) {
 		value := convertValue(&interpreter.SomeValue{Value: nil}, nil)
 
 		assert.Equal(t, NewOptional(nil), value)
 	})
 
-	t.Run("value", func(t *testing.T) {
+	t.Run("Non-nil", func(t *testing.T) {
 		value := convertValue(
 			&interpreter.SomeValue{Value: interpreter.NewIntValue(42)},
 			nil,
@@ -40,13 +40,13 @@ func TestConvertSomeValue(t *testing.T) {
 }
 
 func TestConvertBoolValue(t *testing.T) {
-	t.Run("true", func(t *testing.T) {
+	t.Run("True", func(t *testing.T) {
 		value := convertValue(interpreter.BoolValue(true), nil)
 
 		assert.Equal(t, NewBool(true), value)
 	})
 
-	t.Run("false", func(t *testing.T) {
+	t.Run("False", func(t *testing.T) {
 		value := convertValue(interpreter.BoolValue(false), nil)
 
 		assert.Equal(t, NewBool(false), value)
@@ -54,13 +54,13 @@ func TestConvertBoolValue(t *testing.T) {
 }
 
 func TestConvertStringValue(t *testing.T) {
-	t.Run("empty", func(t *testing.T) {
+	t.Run("Empty", func(t *testing.T) {
 		value := convertValue(&interpreter.StringValue{Str: ""}, nil)
 
 		assert.Equal(t, NewString(""), value)
 	})
 
-	t.Run("non-empty", func(t *testing.T) {
+	t.Run("Non-empty", func(t *testing.T) {
 		value := convertValue(&interpreter.StringValue{Str: "foo"}, nil)
 
 		assert.Equal(t, NewString("foo"), value)
@@ -68,13 +68,13 @@ func TestConvertStringValue(t *testing.T) {
 }
 
 func TestConvertArrayValue(t *testing.T) {
-	t.Run("empty", func(t *testing.T) {
+	t.Run("Empty", func(t *testing.T) {
 		value := convertValue(&interpreter.ArrayValue{Values: nil}, nil)
 
 		assert.Equal(t, NewArray([]Value{}), value)
 	})
 
-	t.Run("non-empty", func(t *testing.T) {
+	t.Run("Non-empty", func(t *testing.T) {
 		value := convertValue(
 			&interpreter.ArrayValue{
 				Values: []interpreter.Value{
@@ -148,43 +148,8 @@ func TestConvertUInt64Value(t *testing.T) {
 	assert.Equal(t, NewUInt64(42), value)
 }
 
-var fooResourceType = ResourceType{
-	CompositeType{
-		typeID:     "test.Foo",
-		Identifier: "Foo",
-		Fields: []Field{
-			{
-				Identifier: "bar",
-				Type:       IntType{},
-			},
-		},
-	},
-}
-
-func TestConvertCompositeValue(t *testing.T) {
-	script := `
-        access(all) resource Foo {
-            access(all) let bar: Int
-        
-            init(bar: Int) {
-                self.bar = bar
-            }
-        }
-    
-        access(all) fun main(): @Foo {
-            return <- create Foo(bar: 42)
-        }
-    `
-
-	actual := convertValueFromScript(t, script)
-	expected :=
-		NewComposite([]Value{NewInt(42)}).WithType(fooResourceType)
-
-	assert.Equal(t, expected, actual)
-}
-
 func TestConvertDictionaryValue(t *testing.T) {
-	t.Run("empty", func(t *testing.T) {
+	t.Run("Empty", func(t *testing.T) {
 		script := `
             access(all) fun main(): {String: Int} {
                 return {}
@@ -197,7 +162,7 @@ func TestConvertDictionaryValue(t *testing.T) {
 		assert.Equal(t, expected, actual)
 	})
 
-	t.Run("non-empty", func(t *testing.T) {
+	t.Run("Non-empty", func(t *testing.T) {
 		script := `
             access(all) fun main(): {String: Int} {
                 return {
@@ -238,7 +203,29 @@ func TestConvertAddressValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestConvertResourceArray(t *testing.T) {
+func TestConvertResourceValue(t *testing.T) {
+	script := `
+        access(all) resource Foo {
+            access(all) let bar: Int
+        
+            init(bar: Int) {
+                self.bar = bar
+            }
+        }
+    
+        access(all) fun main(): @Foo {
+            return <- create Foo(bar: 42)
+        }
+    `
+
+	actual := convertValueFromScript(t, script)
+	expected :=
+		NewComposite([]Value{NewInt(42)}).WithType(fooResourceType)
+
+	assert.Equal(t, expected, actual)
+}
+
+func TestConvertResourceArrayValue(t *testing.T) {
 	script := `
         access(all) resource Foo {
             access(all) let bar: Int
@@ -262,7 +249,7 @@ func TestConvertResourceArray(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestConvertResourceDictionary(t *testing.T) {
+func TestConvertResourceDictionaryValue(t *testing.T) {
 	script := `
         access(all) resource Foo {
             access(all) let bar: Int
@@ -295,10 +282,9 @@ func TestConvertResourceDictionary(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestConvertNestedResource(t *testing.T) {
+func TestConvertNestedResourceValue(t *testing.T) {
 	barResourceType := ResourceType{
 		CompositeType{
-			typeID:     "test.Bar",
 			Identifier: "Bar",
 			Fields: []Field{
 				{
@@ -306,12 +292,11 @@ func TestConvertNestedResource(t *testing.T) {
 					Type:       IntType{},
 				},
 			},
-		},
+		}.WithID("test.Bar"),
 	}
 
 	fooResourceType := ResourceType{
 		CompositeType{
-			typeID:     "test.Foo",
 			Identifier: "Foo",
 			Fields: []Field{
 				{
@@ -319,7 +304,7 @@ func TestConvertNestedResource(t *testing.T) {
 					Type:       barResourceType,
 				},
 			},
-		},
+		}.WithID("test.Foo"),
 	}
 
 	script := `
@@ -368,4 +353,16 @@ func convertValueFromScript(t *testing.T, script string) Value {
 	require.NoError(t, err)
 
 	return ConvertValue(value)
+}
+
+var fooResourceType = ResourceType{
+	CompositeType{
+		Identifier: "Foo",
+		Fields: []Field{
+			{
+				Identifier: "bar",
+				Type:       IntType{},
+			},
+		},
+	}.WithID("test.Foo"),
 }
