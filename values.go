@@ -808,8 +808,8 @@ type KeyValuePair struct {
 // Struct
 
 type Struct struct {
-	typ    Type
-	Fields []Value
+	StructType StructType
+	Fields     []Value
 }
 
 func NewStruct(fields []Value) Struct {
@@ -819,11 +819,11 @@ func NewStruct(fields []Value) Struct {
 func (Struct) isValue() {}
 
 func (v Struct) Type() Type {
-	return v.typ
+	return v.StructType
 }
 
-func (v Struct) WithType(typ Type) Struct {
-	v.typ = typ
+func (v Struct) WithType(typ StructType) Struct {
+	v.StructType = typ
 	return v
 }
 
@@ -840,8 +840,8 @@ func (v Struct) ToGoValue() interface{} {
 // Resource
 
 type Resource struct {
-	typ    Type
-	Fields []Value
+	ResourceType ResourceType
+	Fields       []Value
 }
 
 func NewResource(fields []Value) Resource {
@@ -851,11 +851,11 @@ func NewResource(fields []Value) Resource {
 func (Resource) isValue() {}
 
 func (v Resource) Type() Type {
-	return v.typ
+	return v.ResourceType
 }
 
-func (v Resource) WithType(typ Type) Resource {
-	v.typ = typ
+func (v Resource) WithType(typ ResourceType) Resource {
+	v.ResourceType = typ
 	return v
 }
 
@@ -872,8 +872,8 @@ func (v Resource) ToGoValue() interface{} {
 // Event
 
 type Event struct {
-	typ    Type
-	Fields []Value
+	EventType EventType
+	Fields    []Value
 }
 
 func NewEvent(fields []Value) Event {
@@ -883,11 +883,11 @@ func NewEvent(fields []Value) Event {
 func (Event) isValue() {}
 
 func (v Event) Type() Type {
-	return v.typ
+	return v.EventType
 }
 
-func (v Event) WithType(typ Type) Event {
-	v.typ = typ
+func (v Event) WithType(typ EventType) Event {
+	v.EventType = typ
 	return v
 }
 
