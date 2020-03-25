@@ -28,15 +28,11 @@ func (e *TypeAnnotation) EndPosition() Position {
 	return e.Type.EndPosition()
 }
 
-// revive:disable:redefines-builtin-id
-
 type Type interface {
 	HasPosition
 	fmt.Stringer
 	isType()
 }
-
-// revive:enable
 
 // NominalType represents a named type
 

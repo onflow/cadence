@@ -275,7 +275,7 @@ func (args Arguments) String() string {
 
 type InvocationExpression struct {
 	InvokedExpression Expression
-	TypeArguments     []Type
+	TypeArguments     []*TypeAnnotation
 	Arguments         Arguments
 	EndPos            Position
 }

@@ -34,6 +34,7 @@ func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
 func TestCheckAccount(t *testing.T) {
 
 	t.Run("storage is assignable", func(t *testing.T) {
+
 		_, err := ParseAndCheckAccount(t,
 			`
               resource R {}
@@ -49,6 +50,7 @@ func TestCheckAccount(t *testing.T) {
 	})
 
 	t.Run("published is assignable", func(t *testing.T) {
+
 		_, err := ParseAndCheckAccount(t,
 			`
               resource R {}
@@ -62,7 +64,8 @@ func TestCheckAccount(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("saving resources", func(t *testing.T) {
+	t.Run("saving resources: implicit type argument", func(t *testing.T) {
+
 		_, err := ParseAndCheckAccount(t,
 			`
               resource R {}
@@ -71,6 +74,71 @@ func TestCheckAccount(t *testing.T) {
                   let r <- create R()
                   account.save(<-r, to: /storage/r)
               }
+            `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("saving resources: explicit type argument", func(t *testing.T) {
+
+		_, err := ParseAndCheckAccount(t,
+			`
+              resource R {}
+
+              fun test() {
+                  let r <- create R()
+                  account.save<@R>(<-r, to: /storage/r)
+              }
+            `,
+		)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("saving resources: explicit type argument, incorrect", func(t *testing.T) {
+
+		_, err := ParseAndCheckAccount(t,
+			`
+              resource R {}
+
+              resource T {}
+
+              fun test() {
+                  let r <- create R()
+                  account.save<@T>(<-r, to: /storage/r)
+              }
+            `,
+		)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+		require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	})
+
+	t.Run("loading resources: missing type argument", func(t *testing.T) {
+
+		_, err := ParseAndCheckAccount(t,
+			`
+              resource R {}
+
+              let r <- account.load(from: /storage/r)
+            `,
+		)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+	})
+
+	t.Run("loading resources: explicit type argument", func(t *testing.T) {
+
+		_, err := ParseAndCheckAccount(t,
+			`
+              resource R {}
+
+              let r <- account.load<@R>(from: /storage/r)
             `,
 		)
 

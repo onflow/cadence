@@ -2,6 +2,7 @@ package cadence
 
 import (
 	"fmt"
+	"math/big"
 	"sort"
 
 	"github.com/dapperlabs/cadence/runtime"
@@ -38,11 +39,11 @@ func convertValue(value interpreter.Value, inter *interpreter.Interpreter) Value
 	case interpreter.Int64Value:
 		return NewInt64(int64(v))
 	case interpreter.Int128Value:
-		return NewInt128FromBig(v.Int)
+		return NewInt128FromBig(big.NewInt(0).Set(v.Int))
 	case interpreter.Int256Value:
-		return NewInt256FromBig(v.Int)
+		return NewInt256FromBig(big.NewInt(0).Set(v.Int))
 	case interpreter.UIntValue:
-		return NewUIntFromBig(v.Int)
+		return NewUIntFromBig(big.NewInt(0).Set(v.Int))
 	case interpreter.UInt8Value:
 		return NewUInt8(uint8(v))
 	case interpreter.UInt16Value:
@@ -52,9 +53,9 @@ func convertValue(value interpreter.Value, inter *interpreter.Interpreter) Value
 	case interpreter.UInt64Value:
 		return NewUInt64(uint64(v))
 	case interpreter.UInt128Value:
-		return NewUInt128FromBig(v.Int)
+		return NewUInt128FromBig(big.NewInt(0).Set(v.Int))
 	case interpreter.UInt256Value:
-		return NewUInt256FromBig(v.Int)
+		return NewUInt256FromBig(big.NewInt(0).Set(v.Int))
 	case interpreter.Word8Value:
 		return NewWord8(uint8(v))
 	case interpreter.Word16Value:

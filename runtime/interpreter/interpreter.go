@@ -13,9 +13,7 @@ import (
 	"github.com/dapperlabs/cadence/runtime/errors"
 	"github.com/dapperlabs/cadence/runtime/sema"
 
-	// revive:disable
 	. "github.com/dapperlabs/cadence/runtime/trampoline"
-	// revive:enable
 )
 
 type controlReturn interface {
@@ -479,7 +477,7 @@ type Statement struct {
 	Line       int
 }
 
-func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (result interface{}, statement *Statement) {
+func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}, *Statement) {
 	for {
 		statement := getStatement(t)
 
@@ -1052,14 +1050,16 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 
 			return statement.Block.Accept(interpreter).(Trampoline).
 				FlatMap(func(value interface{}) Trampoline {
-					if _, ok := value.(loopBreak); ok {
+
+					switch value.(type) {
+					case loopBreak:
 						return Done{}
-						// revive:disable:empty-block
-					} else if _, ok := value.(loopContinue); ok {
-						// revive:enable
+
+					case loopContinue:
 						// NO-OP
-					} else if functionReturn, ok := value.(functionReturn); ok {
-						return Done{Result: functionReturn}
+
+					case functionReturn:
+						return Done{Result: value}
 					}
 
 					// recurse
@@ -1473,7 +1473,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 		return interpreter.visitBinaryOperation(expression).
 			Map(func(result interface{}) interface{} {
 				tuple := result.(valueTuple)
-				return BoolValue(!interpreter.testEqual(tuple.left, tuple.right))
+				return !interpreter.testEqual(tuple.left, tuple.right)
 			})
 
 	case ast.OperationOr:
@@ -1874,6 +1874,8 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 				FlatMap(func(result interface{}) Trampoline {
 					arguments := result.(*ArrayValue).Values
 
+					typeParameterTypes :=
+						interpreter.Checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression]
 					argumentTypes :=
 						interpreter.Checker.Elaboration.InvocationExpressionArgumentTypes[invocationExpression]
 					parameterTypes :=
@@ -1884,6 +1886,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 						arguments,
 						argumentTypes,
 						parameterTypes,
+						typeParameterTypes,
 						ast.NewRangeFromPositioned(invocationExpression),
 					)
 
@@ -1918,6 +1921,7 @@ func (interpreter *Interpreter) InvokeFunctionValue(
 		arguments,
 		argumentTypes,
 		parameterTypes,
+		nil,
 		invocationRange,
 	)
 
@@ -1933,6 +1937,7 @@ func (interpreter *Interpreter) functionValueInvocationTrampoline(
 	arguments []Value,
 	argumentTypes []sema.Type,
 	parameterTypes []sema.Type,
+	typeParameterTypes map[*sema.TypeParameter]sema.Type,
 	invocationRange ast.Range,
 ) Trampoline {
 
@@ -1958,10 +1963,11 @@ func (interpreter *Interpreter) functionValueInvocationTrampoline(
 
 	return function.Invoke(
 		Invocation{
-			Arguments:     argumentCopies,
-			ArgumentTypes: argumentTypes,
-			LocationRange: locationRange,
-			Interpreter:   interpreter,
+			Arguments:          argumentCopies,
+			ArgumentTypes:      argumentTypes,
+			TypeParameterTypes: typeParameterTypes,
+			LocationRange:      locationRange,
+			Interpreter:        interpreter,
 		},
 	)
 }
@@ -2630,12 +2636,15 @@ func (interpreter *Interpreter) boxOptional(value Value, valueType, targetType s
 			break
 		}
 
-		if some, ok := inner.(*SomeValue); ok {
-			inner = some.Value
-		} else if _, ok := inner.(NilValue); ok {
+		switch typedInner := inner.(type) {
+		case *SomeValue:
+			inner = typedInner.Value
+
+		case NilValue:
 			// NOTE: nested nil will be unboxed!
 			return inner
-		} else {
+
+		default:
 			value = NewSomeValueOwningNonCopying(value)
 			valueType = &sema.OptionalType{
 				Type: valueType,
@@ -3204,7 +3213,7 @@ func (interpreter *Interpreter) VisitPathExpression(expression *ast.PathExpressi
 	}
 }
 
-func (interpreter *Interpreter) checkStored(storageAddress common.Address, key string) bool {
+func (interpreter *Interpreter) storedValueExists(storageAddress common.Address, key string) bool {
 	return interpreter.storageExistenceHandler(interpreter, storageAddress, key)
 }
 
@@ -3432,7 +3441,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 // \x1F = Information Separator One
 //
 func storageKey(path PathValue) string {
-	return fmt.Sprintf("%s\x1F%s", path.Domain, path.Identifier)
+	return fmt.Sprintf("%s\x1F%s", path.Domain.Identifier(), path.Identifier)
 }
 
 func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) HostFunctionValue {
@@ -3444,20 +3453,13 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 		address := addressValue.ToAddress()
 		key := storageKey(path)
 
-		const expectedDomain = common.PathDomainStorage
-		actualDomain := path.Domain
+		// Ensure the path has a `storage` domain
 
-		if actualDomain != expectedDomain {
-			panic(
-				&InvalidSavePathDomainError{
-					ExpectedDomain: expectedDomain,
-					ActualDomain:   actualDomain,
-					LocationRange:  invocation.LocationRange,
-				},
-			)
-		}
+		interpreter.checkStorageDomain(path, invocation.LocationRange)
 
-		if interpreter.checkStored(address, key) {
+		// Prevent an overwrite
+
+		if interpreter.storedValueExists(address, key) {
 			panic(
 				&OverwriteError{
 					Address:       address,
@@ -3467,6 +3469,8 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 			)
 		}
 
+		// Write new value
+
 		interpreter.writeStored(
 			address,
 			key,
@@ -3474,5 +3478,66 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 		)
 
 		return Done{Result: VoidValue{}}
+	})
+}
+
+func (interpreter *Interpreter) checkStorageDomain(path PathValue, locationRange LocationRange) {
+	const expectedDomain = common.PathDomainStorage
+	actualDomain := path.Domain
+
+	if actualDomain != expectedDomain {
+		panic(
+			&InvalidPathDomainError{
+				ExpectedDomain: expectedDomain,
+				ActualDomain:   actualDomain,
+				LocationRange:  locationRange,
+			},
+		)
+	}
+}
+
+func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValue) HostFunctionValue {
+	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+
+		path := invocation.Arguments[0].(PathValue)
+
+		address := addressValue.ToAddress()
+		key := storageKey(path)
+
+		// Ensure the path has a `storage` domain
+
+		interpreter.checkStorageDomain(path, invocation.LocationRange)
+
+		value := interpreter.readStored(address, key)
+
+		switch value := value.(type) {
+		case NilValue:
+			return Done{Result: value}
+
+		case *SomeValue:
+
+			// If there is value stored for the given path,
+			// check that it satisfies the type given as the type argument.
+
+			var ty sema.Type
+			for _, ty = range invocation.TypeParameterTypes {
+				break
+			}
+
+			dynamicType := value.Value.DynamicType(interpreter)
+			if !interpreter.IsSubType(dynamicType, ty) {
+				return Done{Result: NilValue{}}
+			}
+
+			// Remove the value from storage,
+			// but only if the type check succeeded.
+
+			interpreter.writeStored(address, key, NilValue{})
+
+			return Done{Result: value}
+
+		default:
+			panic(errors.NewUnreachableError())
+		}
 	})
 }

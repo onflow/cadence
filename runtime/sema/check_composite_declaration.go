@@ -1026,7 +1026,6 @@ func (checker *Checker) nonEventMembersAndOrigins(
 		identifier := field.Identifier.Identifier
 
 		fieldTypeAnnotation := checker.ConvertTypeAnnotation(field.TypeAnnotation)
-
 		checker.checkTypeAnnotation(fieldTypeAnnotation, field.TypeAnnotation)
 
 		members[identifier] = &Member{

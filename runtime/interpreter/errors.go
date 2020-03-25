@@ -195,17 +195,21 @@ func (e *TypeMismatchError) Error() string {
 	)
 }
 
-// InvalidSavePathDomainError
+// InvalidPathDomainError
 
-type InvalidSavePathDomainError struct {
+type InvalidPathDomainError struct {
 	ActualDomain   common.PathDomain
 	ExpectedDomain common.PathDomain
 	LocationRange
 }
 
-func (e *InvalidSavePathDomainError) Error() string {
+func (e *InvalidPathDomainError) Error() string {
+	return "invalid path domain"
+}
+
+func (e *InvalidPathDomainError) SecondaryError() string {
 	return fmt.Sprintf(
-		"invalid path domain when saving value: expected `%s`, got `%s`",
+		"expected `%s`, got `%s`",
 		e.ExpectedDomain.Identifier(),
 		e.ActualDomain.Identifier(),
 	)
