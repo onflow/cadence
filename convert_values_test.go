@@ -270,6 +270,27 @@ func TestConvertAddressValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
+func TestConvertStructValue(t *testing.T) {
+	script := `
+        access(all) struct Foo {
+            access(all) let bar: Int
+        
+            init(bar: Int) {
+                self.bar = bar
+            }
+        }
+    
+        access(all) fun main(): Foo {
+            return Foo(bar: 42)
+        }
+    `
+
+	actual := convertValueFromScript(t, script)
+	expected := NewStruct([]Value{NewInt(42)}).WithType(fooStructType)
+
+	assert.Equal(t, expected, actual)
+}
+
 func TestConvertResourceValue(t *testing.T) {
 	script := `
         access(all) resource Foo {
@@ -286,8 +307,7 @@ func TestConvertResourceValue(t *testing.T) {
     `
 
 	actual := convertValueFromScript(t, script)
-	expected :=
-		NewComposite([]Value{NewInt(42)}).WithType(fooResourceType)
+	expected := NewResource([]Value{NewInt(42)}).WithType(fooResourceType)
 
 	assert.Equal(t, expected, actual)
 }
@@ -309,8 +329,8 @@ func TestConvertResourceArrayValue(t *testing.T) {
 
 	actual := convertValueFromScript(t, script)
 	expected := NewArray([]Value{
-		NewComposite([]Value{NewInt(1)}).WithType(fooResourceType),
-		NewComposite([]Value{NewInt(2)}).WithType(fooResourceType),
+		NewResource([]Value{NewInt(1)}).WithType(fooResourceType),
+		NewResource([]Value{NewInt(2)}).WithType(fooResourceType),
 	})
 
 	assert.Equal(t, expected, actual)
@@ -338,11 +358,11 @@ func TestConvertResourceDictionaryValue(t *testing.T) {
 	expected := NewDictionary([]KeyValuePair{
 		{
 			Key:   NewString("a"),
-			Value: NewComposite([]Value{NewInt(1)}).WithType(fooResourceType),
+			Value: NewResource([]Value{NewInt(1)}).WithType(fooResourceType),
 		},
 		{
 			Key:   NewString("b"),
-			Value: NewComposite([]Value{NewInt(2)}).WithType(fooResourceType),
+			Value: NewResource([]Value{NewInt(2)}).WithType(fooResourceType),
 		},
 	})
 
@@ -401,8 +421,8 @@ func TestConvertNestedResourceValue(t *testing.T) {
     `
 
 	actual := convertValueFromScript(t, script)
-	expected := NewComposite([]Value{
-		NewComposite([]Value{NewInt(42)}).WithType(barResourceType),
+	expected := NewResource([]Value{
+		NewResource([]Value{NewInt(42)}).WithType(barResourceType),
 	}).WithType(fooResourceType)
 
 	assert.Equal(t, expected, actual)
@@ -414,7 +434,7 @@ func convertValueFromScript(t *testing.T, script string) Value {
 	value, err := rt.ExecuteScript(
 		[]byte(script),
 		nil,
-		runtime.StringLocation("test"),
+		testLocation,
 	)
 
 	require.NoError(t, err)
@@ -422,14 +442,17 @@ func convertValueFromScript(t *testing.T, script string) Value {
 	return ConvertValue(value)
 }
 
-var fooResourceType = ResourceType{
-	CompositeType{
-		Identifier: "Foo",
-		Fields: []Field{
-			{
-				Identifier: "bar",
-				Type:       IntType{},
-			},
+var testLocation = runtime.StringLocation("test")
+var fooStructType = StructType{fooCompositeType}
+var fooResourceType = ResourceType{fooCompositeType}
+var fooEventType = EventType{fooCompositeType}
+
+var fooCompositeType = CompositeType{
+	Identifier: "Foo",
+	Fields: []Field{
+		{
+			Identifier: "bar",
+			Type:       IntType{},
 		},
-	}.WithID("test.Foo"),
-}
+	},
+}.WithID("test.Foo")

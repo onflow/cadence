@@ -805,29 +805,61 @@ type KeyValuePair struct {
 	Value Value
 }
 
-// Composite
+// Struct
 
-type Composite struct {
+type Struct struct {
 	typ    Type
 	Fields []Value
 }
 
-func NewComposite(fields []Value) Composite {
-	return Composite{Fields: fields}
+func NewStruct(fields []Value) Struct {
+	return Struct{Fields: fields}
 }
 
-func (Composite) isValue() {}
+func (Struct) isValue() {}
 
-func (v Composite) Type() Type {
+func (v Struct) Type() Type {
 	return v.typ
 }
 
-func (v Composite) WithType(typ Type) Composite {
+func (v Struct) WithType(typ Type) Struct {
 	v.typ = typ
 	return v
 }
 
-func (v Composite) ToGoValue() interface{} {
+func (v Struct) ToGoValue() interface{} {
+	ret := make([]interface{}, len(v.Fields))
+
+	for i, field := range v.Fields {
+		ret[i] = field.ToGoValue()
+	}
+
+	return ret
+}
+
+// Resource
+
+type Resource struct {
+	typ    Type
+	Fields []Value
+}
+
+func NewResource(fields []Value) Resource {
+	return Resource{Fields: fields}
+}
+
+func (Resource) isValue() {}
+
+func (v Resource) Type() Type {
+	return v.typ
+}
+
+func (v Resource) WithType(typ Type) Resource {
+	v.typ = typ
+	return v
+}
+
+func (v Resource) ToGoValue() interface{} {
 	ret := make([]interface{}, len(v.Fields))
 
 	for i, field := range v.Fields {
@@ -840,9 +872,31 @@ func (v Composite) ToGoValue() interface{} {
 // Event
 
 type Event struct {
-	Composite
+	typ    Type
+	Fields []Value
 }
 
 func NewEvent(fields []Value) Event {
-	return Event{NewComposite(fields)}
+	return Event{Fields: fields}
+}
+
+func (Event) isValue() {}
+
+func (v Event) Type() Type {
+	return v.typ
+}
+
+func (v Event) WithType(typ Type) Event {
+	v.typ = typ
+	return v
+}
+
+func (v Event) ToGoValue() interface{} {
+	ret := make([]interface{}, len(v.Fields))
+
+	for i, field := range v.Fields {
+		ret[i] = field.ToGoValue()
+	}
+
+	return ret
 }

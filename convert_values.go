@@ -126,10 +126,20 @@ func convertCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Int
 	}
 
 	dynamicType := v.DynamicType(inter).(interpreter.CompositeType)
+	staticType := dynamicType.StaticType.(*sema.CompositeType)
 
-	t := ConvertType(dynamicType.StaticType)
+	t := ConvertType(staticType)
 
-	return NewComposite(fields).WithType(t)
+	switch staticType.Kind {
+	case common.CompositeKindStructure:
+		return NewStruct(fields).WithType(t)
+	case common.CompositeKindResource:
+		return NewResource(fields).WithType(t)
+	case common.CompositeKindEvent:
+		return NewEvent(fields).WithType(t)
+	}
+
+	panic(fmt.Errorf("invalid composite kind `%s`, must be Struct, Resource or Event", staticType.Kind))
 }
 
 func convertDictionaryValue(v *interpreter.DictionaryValue, inter *interpreter.Interpreter) Value {
