@@ -126,6 +126,24 @@ func TestConvertInt64Value(t *testing.T) {
 	assert.Equal(t, NewInt64(42), value)
 }
 
+func TestConvertInt128Value(t *testing.T) {
+	value := convertValue(interpreter.Int128Value{Int: sema.Int128TypeMaxInt}, nil)
+
+	assert.Equal(t, NewInt128FromBig(sema.Int128TypeMaxInt), value)
+}
+
+func TestConvertInt256Value(t *testing.T) {
+	value := convertValue(interpreter.Int256Value{Int: sema.Int256TypeMaxInt}, nil)
+
+	assert.Equal(t, NewInt256FromBig(sema.Int256TypeMaxInt), value)
+}
+
+func TestConvertUIntValue(t *testing.T) {
+	value := convertValue(interpreter.NewUIntValue(42), nil)
+
+	assert.Equal(t, NewUInt(42), value)
+}
+
 func TestConvertUInt8Value(t *testing.T) {
 	value := convertValue(interpreter.UInt8Value(42), nil)
 
@@ -148,6 +166,54 @@ func TestConvertUInt64Value(t *testing.T) {
 	value := convertValue(interpreter.UInt64Value(42), nil)
 
 	assert.Equal(t, NewUInt64(42), value)
+}
+
+func TestConvertUInt128Value(t *testing.T) {
+	value := convertValue(interpreter.UInt128Value{Int: sema.UInt128TypeMaxInt}, nil)
+
+	assert.Equal(t, NewUInt128FromBig(sema.UInt128TypeMaxInt), value)
+}
+
+func TestConvertUInt256Value(t *testing.T) {
+	value := convertValue(interpreter.UInt256Value{Int: sema.UInt256TypeMaxInt}, nil)
+
+	assert.Equal(t, NewUInt256FromBig(sema.UInt256TypeMaxInt), value)
+}
+
+func TestConvertWord8Value(t *testing.T) {
+	value := convertValue(interpreter.UInt8Value(42), nil)
+
+	assert.Equal(t, NewUInt8(42), value)
+}
+
+func TestConvertWord16Value(t *testing.T) {
+	value := convertValue(interpreter.UInt16Value(42), nil)
+
+	assert.Equal(t, NewUInt16(42), value)
+}
+
+func TestConvertWord32Value(t *testing.T) {
+	value := convertValue(interpreter.UInt32Value(42), nil)
+
+	assert.Equal(t, NewUInt32(42), value)
+}
+
+func TestConvertWord64Value(t *testing.T) {
+	value := convertValue(interpreter.UInt64Value(42), nil)
+
+	assert.Equal(t, NewUInt64(42), value)
+}
+
+func TestConvertFix64Value(t *testing.T) {
+	value := convertValue(interpreter.Fix64Value(-123000000), nil)
+
+	assert.Equal(t, NewFix64(-123000000), value)
+}
+
+func TestConvertUFix64Value(t *testing.T) {
+	value := convertValue(interpreter.UFix64Value(123000000), nil)
+
+	assert.Equal(t, NewUFix64(123000000), value)
 }
 
 func TestConvertDictionaryValue(t *testing.T) {

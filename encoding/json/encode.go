@@ -7,8 +7,10 @@ import (
 	"io"
 	"math/big"
 	"strconv"
+	"strings"
 
 	"github.com/dapperlabs/cadence"
+	"github.com/dapperlabs/cadence/runtime/sema"
 )
 
 // An Encoder converts Cadence values into JSON-encoded bytes.
@@ -137,6 +139,10 @@ func (e *Encoder) prepare(v cadence.Value) jsonValue {
 		return e.prepareWord32(x)
 	case cadence.Word64:
 		return e.prepareWord64(x)
+	case cadence.Fix64:
+		return e.prepareFix64(x)
+	case cadence.UFix64:
+		return e.prepareUFix64(x)
 	case cadence.Array:
 		return e.prepareArray(x)
 	case cadence.Dictionary:
@@ -314,6 +320,20 @@ func (e *Encoder) prepareWord64(v cadence.Word64) jsonValue {
 	}
 }
 
+func (e *Encoder) prepareFix64(v cadence.Fix64) jsonValue {
+	return jsonValueObject{
+		Type:  "Fix64",
+		Value: encodeFix64(int64(v)),
+	}
+}
+
+func (e *Encoder) prepareUFix64(v cadence.UFix64) jsonValue {
+	return jsonValueObject{
+		Type:  "UFix64",
+		Value: encodeUFix64(uint64(v)),
+	}
+}
+
 func (e *Encoder) prepareArray(v cadence.Array) jsonValue {
 	values := make([]jsonValue, len(v.Values))
 
@@ -397,4 +417,39 @@ func encodeInt(v int64) string {
 
 func encodeUInt(v uint64) string {
 	return strconv.FormatUint(v, 10)
+}
+
+func encodeFix64(v int64) string {
+	integer := v / sema.Fix64Factor
+	fraction := v % sema.Fix64Factor
+
+	negative := fraction < 0
+
+	var builder strings.Builder
+
+	if negative {
+		fraction = -fraction
+		if integer == 0 {
+			builder.WriteRune('-')
+		}
+	}
+
+	builder.WriteString(fmt.Sprintf(
+		"%d.%08d",
+		integer,
+		fraction,
+	))
+
+	return builder.String()
+}
+
+func encodeUFix64(v uint64) string {
+	integer := v / sema.Fix64Factor
+	fraction := v % sema.Fix64Factor
+
+	return fmt.Sprintf(
+		"%d.%08d",
+		integer,
+		fraction,
+	)
 }
