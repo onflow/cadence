@@ -128,7 +128,7 @@ func convertCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Int
 		fields[i] = convertValue(field, inter)
 	}
 
-	dynamicType := v.DynamicType(inter).(interpreter.CompositeType)
+	dynamicType := v.DynamicType(inter).(interpreter.CompositeDynamicType)
 	staticType := dynamicType.StaticType.(*sema.CompositeType)
 
 	t := ConvertType(staticType)
