@@ -7573,6 +7573,52 @@ func TestInterpretNonStorageReferenceAfterDestruction(t *testing.T) {
 	assert.IsType(t, &interpreter.DestroyedCompositeError{}, err)
 }
 
+func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
+
+	inter := parseCheckAndInterpret(t,
+		`
+          resource Foo {
+              let name: String
+
+              init(name: String) {
+                  self.name = name
+              }
+          }
+
+
+          fun testSome(): String {
+              let xs: @{String: Foo} <- {"yes": <-create Foo(name: "YES")}
+              let ref = &xs["yes"] as &Foo
+              let name = ref.name
+              destroy xs
+              return name
+          }
+
+          fun testNil(): String {
+              let xs: @{String: Foo} <- {}
+              let ref = &xs["no"] as &Foo
+              let name = ref.name
+              destroy xs
+              return name
+          }
+        `,
+	)
+
+	t.Run("some", func(t *testing.T) {
+		value, err := inter.Invoke("testSome")
+		require.NoError(t, err)
+
+		assert.Equal(t, interpreter.NewStringValue("YES"), value)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		_, err := inter.Invoke("testNil")
+		require.Error(t, err)
+
+		assert.IsType(t, &interpreter.DereferenceError{}, err)
+	})
+}
+
 func TestInterpretFix64(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t,
