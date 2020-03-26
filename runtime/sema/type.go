@@ -3833,7 +3833,23 @@ var authAccountLinkFunctionType = func() *FunctionType {
 	}
 }()
 
+var accountGetCapabilityFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "path",
+			TypeAnnotation: NewTypeAnnotation(&PathType{}),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: &CapabilityType{},
+		},
+	),
+}
+
 func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+
 	newField := func(fieldType Type) *Member {
 		return NewPublicConstantFieldMember(t, identifier, fieldType)
 	}
@@ -3872,6 +3888,9 @@ func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error
 
 	case "link":
 		return newFunction(authAccountLinkFunctionType)
+
+	case "getCapability":
+		return newFunction(accountGetCapabilityFunctionType)
 
 	default:
 		return nil
@@ -3930,8 +3949,13 @@ func (*PublicAccountType) CanHaveMembers() bool {
 }
 
 func (t *PublicAccountType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+
 	newField := func(fieldType Type) *Member {
 		return NewPublicConstantFieldMember(t, identifier, fieldType)
+	}
+
+	newFunction := func(functionType InvokableType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
 	}
 
 	switch identifier {
@@ -3940,6 +3964,9 @@ func (t *PublicAccountType) GetMember(identifier string, _ ast.Range, _ func(err
 
 	case "published":
 		return newField(&ReferencesType{Assignable: false})
+
+	case "getCapability":
+		return newFunction(accountGetCapabilityFunctionType)
 
 	default:
 		return nil

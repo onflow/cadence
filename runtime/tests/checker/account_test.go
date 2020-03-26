@@ -12,20 +12,24 @@ import (
 	. "github.com/dapperlabs/cadence/runtime/tests/utils"
 )
 
-var accountValueDeclaration = stdlib.StandardLibraryValue{
-	Name:       "account",
-	Type:       &sema.AuthAccountType{},
-	Kind:       common.DeclarationKindConstant,
-	IsConstant: true,
-}
-
 func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
+
+	constantDeclaration := func(name string, ty sema.Type) stdlib.StandardLibraryValue {
+		return stdlib.StandardLibraryValue{
+			Name:       name,
+			Type:       ty,
+			Kind:       common.DeclarationKindConstant,
+			IsConstant: true,
+		}
+	}
+
 	return ParseAndCheckWithOptions(t,
 		code,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(map[string]sema.ValueDeclaration{
-					"account": accountValueDeclaration,
+					"authAccount":   constantDeclaration("authAccount", &sema.AuthAccountType{}),
+					"publicAccount": constantDeclaration("publicAccount", &sema.PublicAccountType{}),
 				}),
 			},
 		},
@@ -41,7 +45,7 @@ func TestCheckAccount(t *testing.T) {
           resource R {}
 
           fun test(): @R? {
-              let r <- account.storage[R] <- create R()
+              let r <- authAccount.storage[R] <- create R()
               return <-r
           }
         `)
@@ -56,7 +60,7 @@ func TestCheckAccount(t *testing.T) {
           resource R {}
 
           fun test() {
-              account.published[&R] = &account.storage[R] as &R
+              authAccount.published[&R] = &authAccount.storage[R] as &R
           }
         `)
 
@@ -71,7 +75,7 @@ func TestCheckAccount(t *testing.T) {
 
           fun test() {
               let r <- create R()
-              account.save(<-r, to: /storage/r)
+              authAccount.save(<-r, to: /storage/r)
           }
         `)
 
@@ -86,7 +90,7 @@ func TestCheckAccount(t *testing.T) {
 
           fun test() {
               let r <- create R()
-              account.save<@R>(<-r, to: /storage/r)
+              authAccount.save<@R>(<-r, to: /storage/r)
           }
         `)
 
@@ -103,7 +107,7 @@ func TestCheckAccount(t *testing.T) {
 
           fun test() {
               let r <- create R()
-              account.save<@T>(<-r, to: /storage/r)
+              authAccount.save<@T>(<-r, to: /storage/r)
           }
         `)
 
@@ -119,7 +123,7 @@ func TestCheckAccount(t *testing.T) {
 
           resource R {}
 
-          let r <- account.load(from: /storage/r)
+          let r <- authAccount.load(from: /storage/r)
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
@@ -133,7 +137,7 @@ func TestCheckAccount(t *testing.T) {
 
           resource R {}
 
-          let r <- account.load<@R>(from: /storage/r)
+          let r <- authAccount.load<@R>(from: /storage/r)
         `)
 
 		require.NoError(t, err)
@@ -156,7 +160,7 @@ func TestCheckAccount(t *testing.T) {
 
           resource R {}
 
-          let r <- account.borrow(from: /storage/r)
+          let r <- authAccount.borrow(from: /storage/r)
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
@@ -183,7 +187,7 @@ func TestCheckAccount(t *testing.T) {
 					`
                       resource R {}
 
-                      let r = account.borrow<%s &R>(from: /storage/r)
+                      let r = authAccount.borrow<%s &R>(from: /storage/r)
                     `,
 					authKeyword,
 				),
@@ -213,7 +217,7 @@ func TestCheckAccount(t *testing.T) {
 
           resource R {}
 
-          let r <- account.borrow<@R>(from: /storage/r)
+          let r <- authAccount.borrow<@R>(from: /storage/r)
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
@@ -228,7 +232,7 @@ func TestCheckAccount(t *testing.T) {
           resource R {}
 
           fun test(): Capability? {
-              return account.link(/public/r, target: /storage/r)
+              return authAccount.link(/public/r, target: /storage/r)
           }
         `)
 
@@ -257,7 +261,7 @@ func TestCheckAccount(t *testing.T) {
                       resource R {}
 
                       fun test(): Capability? {
-                          return account.link<%s &R>(/public/r, target: /storage/r)
+                          return authAccount.link<%s &R>(/public/r, target: /storage/r)
                       }
                     `,
 					authKeyword,
@@ -275,7 +279,7 @@ func TestCheckAccount(t *testing.T) {
           resource R {}
 
           fun test(): Capability? {
-              return account.link<@R>(/public/r, target: /storage/r)
+              return authAccount.link<@R>(/public/r, target: /storage/r)
           }
         `)
 
@@ -283,4 +287,32 @@ func TestCheckAccount(t *testing.T) {
 
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+
+		for accountType, accountVariable := range map[string]string{
+			"AuthAccount":   "authAccount",
+			"PublicAccount": "publicAccount",
+		} {
+
+			t.Run(fmt.Sprintf("%s.getCapability: %s", accountType, domain), func(t *testing.T) {
+
+				_, err := ParseAndCheckAccount(
+					t,
+					fmt.Sprintf(
+						`
+	                      fun test(): Capability? {
+	                          return %[1]s.getCapability(/%[2]s/r)
+	                      }
+	                    `,
+						accountVariable,
+						domain.Identifier(),
+					),
+				)
+
+				require.NoError(t, err)
+			})
+		}
+	}
+
 }
