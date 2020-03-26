@@ -5544,3 +5544,45 @@ func (*CapabilityType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error
 func (t *CapabilityType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
+
+var capabilityBorrowFunctionType = func() *FunctionType {
+
+	typeParameter := &TypeParameter{
+		Type: &ReferenceType{
+			Type: &AnyResourceType{},
+		},
+		Name: "T",
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: &GenericType{
+					TypeParameter: typeParameter,
+				},
+			},
+		),
+	}
+}()
+
+func (t *CapabilityType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *CapabilityType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+
+	newFunction := func(functionType InvokableType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case "borrow":
+		return newFunction(capabilityBorrowFunctionType)
+
+	default:
+		return nil
+	}
+}

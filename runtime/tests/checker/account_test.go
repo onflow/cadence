@@ -158,9 +158,7 @@ func TestCheckAccount(t *testing.T) {
 
 		_, err := ParseAndCheckAccount(t, `
 
-          resource R {}
-
-          let r <- authAccount.borrow(from: /storage/r)
+          let r = authAccount.borrow(from: /storage/r)
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
@@ -314,5 +312,4 @@ func TestCheckAccount(t *testing.T) {
 			})
 		}
 	}
-
 }
