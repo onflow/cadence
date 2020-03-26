@@ -3161,6 +3161,8 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 				indexingType := interpreter.Checker.Elaboration.IndexExpressionIndexingTypes[indexExpression]
 				key := interpreter.storageKeyHandler(interpreter, storage.Address, indexingType)
 
+				key = PrefixedStorageKey(key, AccessLevelPrivate)
+
 				referenceValue := &StorageReferenceValue{
 					Authorized:           authorized,
 					TargetStorageAddress: storage.Address,

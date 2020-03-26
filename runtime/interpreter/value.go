@@ -4226,9 +4226,7 @@ func (v *StorageReferenceValue) SetOwner(owner *common.Address) {
 }
 
 func (v *StorageReferenceValue) referencedValue(interpreter *Interpreter) *Value {
-	key := PrefixedStorageKey(v.TargetKey, AccessLevelPrivate)
-
-	switch referenced := interpreter.readStored(v.TargetStorageAddress, key).(type) {
+	switch referenced := interpreter.readStored(v.TargetStorageAddress, v.TargetKey).(type) {
 	case *SomeValue:
 		return &referenced.Value
 	case NilValue:

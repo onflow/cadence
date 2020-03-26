@@ -295,7 +295,13 @@ func TestInterpretAuthAccountBorrow(t *testing.T) {
 			t,
 			true,
 			`
-              resource R {}
+              resource R {
+                  let foo: Int
+
+                  init() {
+                      self.foo = 42
+                  }
+              }
 
               resource R2 {}
 
@@ -306,6 +312,10 @@ func TestInterpretAuthAccountBorrow(t *testing.T) {
 
               fun borrowR(): &R? {
                   return account.borrow<&R>(from: /storage/r)
+              }
+
+              fun foo(): Int {
+                  return account.borrow<&R>(from: /storage/r)!.foo
               }
 
               fun borrowR2(): &R2? {
@@ -333,6 +343,16 @@ func TestInterpretAuthAccountBorrow(t *testing.T) {
 			innerValue := value.(*interpreter.SomeValue).Value
 
 			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
+
+			// NOTE: check loaded value was *not* removed from storage
+			require.Len(t, storedValues, 1)
+
+			// foo
+
+			value, err = inter.Invoke("foo")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NewIntValue(42), value)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, storedValues, 1)

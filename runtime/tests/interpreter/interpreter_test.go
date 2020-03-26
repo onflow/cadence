@@ -5883,7 +5883,10 @@ func TestInterpretReferenceExpression(t *testing.T) {
 		&interpreter.StorageReferenceValue{
 			TargetStorageAddress: storageValue.Address,
 			// TODO: improve
-			TargetKey: string(rType.ID()),
+			TargetKey: interpreter.PrefixedStorageKey(
+				string(rType.ID()),
+				interpreter.AccessLevelPrivate,
+			),
 		},
 		value,
 	)
