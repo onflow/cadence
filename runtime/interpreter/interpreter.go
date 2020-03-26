@@ -3295,7 +3295,7 @@ func (interpreter *Interpreter) newConverterFunction(converter ValueConverter) F
 
 func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Type) bool {
 	switch typedSubType := subType.(type) {
-	case VoidType:
+	case VoidDynamicType:
 		switch superType.(type) {
 		case *sema.VoidType, *sema.AnyStructType:
 			return true
@@ -3304,7 +3304,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 			return false
 		}
 
-	case StringType:
+	case StringDynamicType:
 		switch superType.(type) {
 		case *sema.StringType, *sema.AnyStructType:
 			return true
@@ -3313,7 +3313,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 			return false
 		}
 
-	case BoolType:
+	case BoolDynamicType:
 		switch superType.(type) {
 		case *sema.BoolType, *sema.AnyStructType:
 			return true
@@ -3322,7 +3322,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 			return false
 		}
 
-	case AddressType:
+	case AddressDynamicType:
 		switch superType.(type) {
 		case *sema.AddressType, *sema.AnyStructType:
 			return true
@@ -3331,13 +3331,13 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 			return false
 		}
 
-	case NumberType:
+	case NumberDynamicType:
 		return sema.IsSubType(typedSubType.StaticType, superType)
 
-	case CompositeType:
+	case CompositeDynamicType:
 		return sema.IsSubType(typedSubType.StaticType, superType)
 
-	case ArrayType:
+	case ArrayDynamicType:
 		var superTypeElementType sema.Type
 
 		switch typedSuperType := superType.(type) {
@@ -3362,7 +3362,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 
 		return true
 
-	case DictionaryType:
+	case DictionaryDynamicType:
 
 		switch typedSuperType := superType.(type) {
 		case *sema.DictionaryType:
@@ -3383,7 +3383,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 			return false
 		}
 
-	case NilType:
+	case NilDynamicType:
 		switch superType.(type) {
 		case *sema.OptionalType, *sema.AnyStructType, *sema.AnyResourceType:
 			return true
@@ -3392,7 +3392,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 			return false
 		}
 
-	case SomeType:
+	case SomeDynamicType:
 		switch typedSuperType := superType.(type) {
 		case *sema.OptionalType:
 			return interpreter.IsSubType(typedSubType.InnerType, typedSuperType.Type)
@@ -3404,7 +3404,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 			return false
 		}
 
-	case StorageType:
+	case StorageDynamicType:
 		switch superType.(type) {
 		case *sema.StorageType, *sema.AnyStructType:
 			return true
@@ -3413,7 +3413,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 			return false
 		}
 
-	case ReferenceType:
+	case ReferenceDynamicType:
 		switch typedSuperType := superType.(type) {
 		case *sema.AnyStructType:
 			return true

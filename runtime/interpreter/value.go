@@ -80,7 +80,7 @@ func init() {
 func (VoidValue) IsValue() {}
 
 func (VoidValue) DynamicType(_ *Interpreter) DynamicType {
-	return VoidType{}
+	return VoidDynamicType{}
 }
 
 func (v VoidValue) Copy() Value {
@@ -111,7 +111,7 @@ func init() {
 func (BoolValue) IsValue() {}
 
 func (BoolValue) DynamicType(_ *Interpreter) DynamicType {
-	return BoolType{}
+	return BoolDynamicType{}
 }
 
 func (v BoolValue) Copy() Value {
@@ -164,7 +164,7 @@ func NewStringValue(str string) *StringValue {
 func (*StringValue) IsValue() {}
 
 func (*StringValue) DynamicType(_ *Interpreter) DynamicType {
-	return StringType{}
+	return StringDynamicType{}
 }
 
 func (v *StringValue) Copy() Value {
@@ -346,7 +346,7 @@ func (v *ArrayValue) DynamicType(interpreter *Interpreter) DynamicType {
 		elementTypes[i] = value.DynamicType(interpreter)
 	}
 
-	return ArrayType{
+	return ArrayDynamicType{
 		ElementTypes: elementTypes,
 	}
 }
@@ -618,7 +618,7 @@ func ConvertInt(value Value, _ *Interpreter) Value {
 func (v IntValue) IsValue() {}
 
 func (IntValue) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.IntType{}}
+	return NumberDynamicType{&sema.IntType{}}
 }
 
 func (v IntValue) Copy() Value {
@@ -734,7 +734,7 @@ func init() {
 func (Int8Value) IsValue() {}
 
 func (Int8Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.Int8Type{}}
+	return NumberDynamicType{&sema.Int8Type{}}
 }
 
 func (v Int8Value) Copy() Value {
@@ -880,7 +880,7 @@ func init() {
 func (Int16Value) IsValue() {}
 
 func (Int16Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.Int16Type{}}
+	return NumberDynamicType{&sema.Int16Type{}}
 }
 
 func (v Int16Value) Copy() Value {
@@ -1026,7 +1026,7 @@ func init() {
 func (Int32Value) IsValue() {}
 
 func (Int32Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.Int32Type{}}
+	return NumberDynamicType{&sema.Int32Type{}}
 }
 
 func (v Int32Value) Copy() Value {
@@ -1172,7 +1172,7 @@ func init() {
 func (Int64Value) IsValue() {}
 
 func (Int64Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.Int64Type{}}
+	return NumberDynamicType{&sema.Int64Type{}}
 }
 
 func (v Int64Value) Copy() Value {
@@ -1324,7 +1324,7 @@ func init() {
 func (v Int128Value) IsValue() {}
 
 func (Int128Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.Int128Type{}}
+	return NumberDynamicType{&sema.Int128Type{}}
 }
 
 func (v Int128Value) Copy() Value {
@@ -1503,7 +1503,7 @@ func init() {
 func (v Int256Value) IsValue() {}
 
 func (Int256Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.Int256Type{}}
+	return NumberDynamicType{&sema.Int256Type{}}
 }
 
 func (v Int256Value) Copy() Value {
@@ -1694,7 +1694,7 @@ func ConvertUInt(value Value, _ *Interpreter) Value {
 func (v UIntValue) IsValue() {}
 
 func (UIntValue) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.UIntType{}}
+	return NumberDynamicType{&sema.UIntType{}}
 }
 
 func (v UIntValue) Copy() Value {
@@ -1813,7 +1813,7 @@ func init() {
 func (UInt8Value) IsValue() {}
 
 func (UInt8Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.UInt8Type{}}
+	return NumberDynamicType{&sema.UInt8Type{}}
 }
 
 func (v UInt8Value) Copy() Value {
@@ -1927,7 +1927,7 @@ func init() {
 func (UInt16Value) IsValue() {}
 
 func (UInt16Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.UInt16Type{}}
+	return NumberDynamicType{&sema.UInt16Type{}}
 }
 
 func (v UInt16Value) Copy() Value {
@@ -2039,7 +2039,7 @@ func init() {
 func (UInt32Value) IsValue() {}
 
 func (UInt32Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.UInt32Type{}}
+	return NumberDynamicType{&sema.UInt32Type{}}
 }
 
 func (v UInt32Value) Copy() Value {
@@ -2153,7 +2153,7 @@ func init() {
 func (UInt64Value) IsValue() {}
 
 func (UInt64Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.UInt64Type{}}
+	return NumberDynamicType{&sema.UInt64Type{}}
 }
 
 func (v UInt64Value) Copy() Value {
@@ -2274,7 +2274,7 @@ func init() {
 func (v UInt128Value) IsValue() {}
 
 func (UInt128Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.UInt128Type{}}
+	return NumberDynamicType{&sema.UInt128Type{}}
 }
 
 func (v UInt128Value) Copy() Value {
@@ -2423,7 +2423,7 @@ func init() {
 func (v UInt256Value) IsValue() {}
 
 func (UInt256Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.UInt256Type{}}
+	return NumberDynamicType{&sema.UInt256Type{}}
 }
 
 func (v UInt256Value) Copy() Value {
@@ -2570,7 +2570,7 @@ func init() {
 func (Word8Value) IsValue() {}
 
 func (Word8Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.Word8Type{}}
+	return NumberDynamicType{&sema.Word8Type{}}
 }
 
 func (v Word8Value) Copy() Value {
@@ -2670,7 +2670,7 @@ func init() {
 func (Word16Value) IsValue() {}
 
 func (Word16Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.Word16Type{}}
+	return NumberDynamicType{&sema.Word16Type{}}
 }
 
 func (v Word16Value) Copy() Value {
@@ -2768,7 +2768,7 @@ func init() {
 func (Word32Value) IsValue() {}
 
 func (Word32Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.Word32Type{}}
+	return NumberDynamicType{&sema.Word32Type{}}
 }
 
 func (v Word32Value) Copy() Value {
@@ -2868,7 +2868,7 @@ func init() {
 func (Word64Value) IsValue() {}
 
 func (Word64Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.Word64Type{}}
+	return NumberDynamicType{&sema.Word64Type{}}
 }
 
 func (v Word64Value) Copy() Value {
@@ -2968,7 +2968,7 @@ func init() {
 func (Fix64Value) IsValue() {}
 
 func (Fix64Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.Fix64Type{}}
+	return NumberDynamicType{&sema.Fix64Type{}}
 }
 
 func (v Fix64Value) Copy() Value {
@@ -3151,7 +3151,7 @@ func NewUFix64ValueWithFraction(integer, fraction uint64) UFix64Value {
 func (UFix64Value) IsValue() {}
 
 func (UFix64Value) DynamicType(_ *Interpreter) DynamicType {
-	return NumberType{&sema.UFix64Type{}}
+	return NumberDynamicType{&sema.UFix64Type{}}
 }
 
 func (v UFix64Value) Copy() Value {
@@ -3367,7 +3367,7 @@ func (v *CompositeValue) DynamicType(interpreter *Interpreter) DynamicType {
 	checker := interpreter.allCheckers[locationID]
 	staticType := checker.Elaboration.CompositeTypes[qualifiedIdentifier]
 
-	return CompositeType{StaticType: staticType}
+	return CompositeDynamicType{StaticType: staticType}
 }
 
 func (v *CompositeValue) Copy() Value {
@@ -3666,7 +3666,7 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter) DynamicType {
 			}
 	}
 
-	return DictionaryType{
+	return DictionaryDynamicType{
 		EntryTypes: entryTypes,
 	}
 }
@@ -4043,7 +4043,7 @@ func init() {
 func (NilValue) IsValue() {}
 
 func (NilValue) DynamicType(_ *Interpreter) DynamicType {
-	return NilType{}
+	return NilDynamicType{}
 }
 
 func (NilValue) isOptionalValue() {}
@@ -4091,7 +4091,7 @@ func (*SomeValue) IsValue() {}
 
 func (v *SomeValue) DynamicType(interpreter *Interpreter) DynamicType {
 	innerType := v.Value.DynamicType(interpreter)
-	return SomeType{InnerType: innerType}
+	return SomeDynamicType{InnerType: innerType}
 }
 
 func (*SomeValue) isOptionalValue() {}
@@ -4135,7 +4135,7 @@ type StorageValue struct {
 func (StorageValue) IsValue() {}
 
 func (v StorageValue) DynamicType(_ *Interpreter) DynamicType {
-	return StorageType{}
+	return StorageDynamicType{}
 }
 
 func (v StorageValue) Copy() Value {
@@ -4161,7 +4161,7 @@ type PublishedValue struct {
 func (PublishedValue) IsValue() {}
 
 func (v PublishedValue) DynamicType(_ *Interpreter) DynamicType {
-	return PublishedType{}
+	return PublishedDynamicType{}
 }
 
 func (v PublishedValue) Copy() Value {
@@ -4201,7 +4201,7 @@ func (v *StorageReferenceValue) DynamicType(interpreter *Interpreter) DynamicTyp
 
 	innerType := (*referencedValue).DynamicType(interpreter)
 
-	return StorageReferenceType{
+	return StorageReferenceDynamicType{
 		authorized: v.Authorized,
 		innerType:  innerType,
 	}
@@ -4309,7 +4309,7 @@ func (*EphemeralReferenceValue) IsValue() {}
 func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter) DynamicType {
 	innerType := v.Value.DynamicType(interpreter)
 
-	return EphemeralReferenceType{
+	return EphemeralReferenceDynamicType{
 		authorized: v.Authorized,
 		innerType:  innerType,
 	}
@@ -4397,7 +4397,7 @@ func ConvertAddress(value Value, _ *Interpreter) Value {
 func (AddressValue) IsValue() {}
 
 func (AddressValue) DynamicType(_ *Interpreter) DynamicType {
-	return AddressType{}
+	return AddressDynamicType{}
 }
 
 func (v AddressValue) Copy() Value {
@@ -4479,7 +4479,7 @@ func (v AuthAccountValue) AddressValue() AddressValue {
 }
 
 func (AuthAccountValue) DynamicType(_ *Interpreter) DynamicType {
-	return AuthAccountType{}
+	return AuthAccountDynamicType{}
 }
 
 func (v AuthAccountValue) Copy() Value {
@@ -4617,7 +4617,7 @@ func (v PublicAccountValue) AddressValue() AddressValue {
 }
 
 func (PublicAccountValue) DynamicType(_ *Interpreter) DynamicType {
-	return AuthAccountType{}
+	return AuthAccountDynamicType{}
 }
 
 func (v PublicAccountValue) Copy() Value {
@@ -4677,7 +4677,7 @@ func init() {
 func (PathValue) IsValue() {}
 
 func (PathValue) DynamicType(_ *Interpreter) DynamicType {
-	return PathType{}
+	return PathDynamicType{}
 }
 
 func (v PathValue) Copy() Value {
@@ -4719,7 +4719,7 @@ func init() {
 func (CapabilityValue) IsValue() {}
 
 func (CapabilityValue) DynamicType(_ *Interpreter) DynamicType {
-	return CapabilityType{}
+	return CapabilityDynamicType{}
 }
 
 func (v CapabilityValue) Copy() Value {

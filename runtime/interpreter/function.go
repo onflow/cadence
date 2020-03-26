@@ -46,7 +46,7 @@ type InterpretedFunctionValue struct {
 func (InterpretedFunctionValue) IsValue() {}
 
 func (InterpretedFunctionValue) DynamicType(_ *Interpreter) DynamicType {
-	return FunctionType{}
+	return FunctionDynamicType{}
 }
 
 func (f InterpretedFunctionValue) Copy() Value {
@@ -88,7 +88,7 @@ func NewHostFunctionValue(
 func (HostFunctionValue) IsValue() {}
 
 func (HostFunctionValue) DynamicType(_ *Interpreter) DynamicType {
-	return FunctionType{}
+	return FunctionDynamicType{}
 }
 
 func (f HostFunctionValue) Copy() Value {
@@ -128,7 +128,7 @@ type BoundFunctionValue struct {
 func (BoundFunctionValue) IsValue() {}
 
 func (BoundFunctionValue) DynamicType(_ *Interpreter) DynamicType {
-	return FunctionType{}
+	return FunctionDynamicType{}
 }
 
 func (f BoundFunctionValue) Copy() Value {
