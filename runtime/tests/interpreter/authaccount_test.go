@@ -451,7 +451,7 @@ func TestInterpretAuthAccountLink(t *testing.T) {
 
 				innerValue := value.(*interpreter.SomeValue).Value
 
-				assert.IsType(t, interpreter.LinkValue{}, innerValue)
+				assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
 
 				// stored value + link
 				require.Len(t, storedValues, 2)
@@ -478,7 +478,7 @@ func TestInterpretAuthAccountLink(t *testing.T) {
 
 				innerValue := value.(*interpreter.SomeValue).Value
 
-				assert.IsType(t, interpreter.LinkValue{}, innerValue)
+				assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
 
 				// stored value + link
 				require.Len(t, storedValues, 3)
