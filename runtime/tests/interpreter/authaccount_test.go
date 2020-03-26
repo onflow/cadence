@@ -15,71 +15,100 @@ import (
 	"github.com/dapperlabs/cadence/runtime/trampoline"
 )
 
-func TestInterpretAuthAccountSave(t *testing.T) {
-
-	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
-		panic(errors.NewUnreachableError())
-	})
+func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter, map[string]interpreter.OptionalValue) {
 
 	address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-	authAccountValue := interpreter.NewAuthAccountValue(
-		address,
-		panicFunction,
-		panicFunction,
-		panicFunction,
-	)
+	var ty sema.Type
+	var accountValue interpreter.Value
+
+	if auth {
+		panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
+			panic(errors.NewUnreachableError())
+		})
+
+		ty = &sema.AuthAccountType{}
+		accountValue = interpreter.NewAuthAccountValue(
+			address,
+			panicFunction,
+			panicFunction,
+			panicFunction,
+		)
+	} else {
+		ty = &sema.PublicAccountType{}
+		accountValue = interpreter.NewPublicAccountValue(address)
+	}
 
 	valueDeclarations := map[string]sema.ValueDeclaration{
-		"authAccount": stdlib.StandardLibraryValue{
-			Name:       "authAccount",
-			Type:       &sema.AuthAccountType{},
+		"account": stdlib.StandardLibraryValue{
+			Name:       "account",
+			Type:       ty,
 			Kind:       common.DeclarationKindConstant,
 			IsConstant: true,
 		},
 	}
 
-	t.Run("valid", func(t *testing.T) {
+	storedValues := map[string]interpreter.OptionalValue{}
 
-		storedValues := map[string]interpreter.OptionalValue{}
+	// NOTE: checker, getter and setter are very naive for testing purposes and don't remove nil values
+	//
 
-		// NOTE: checker, getter and setter are very naive for testing purposes and don't remove nil values
-		//
+	storageChecker := func(_ *interpreter.Interpreter, _ common.Address, key string) bool {
+		_, ok := storedValues[key]
+		return ok
+	}
 
-		checked := false
-
-		storageChecker := func(_ *interpreter.Interpreter, _ common.Address, key string) bool {
-			checked = true
-
-			_, ok := storedValues[key]
-			return ok
-		}
-
-		storageSetter := func(_ *interpreter.Interpreter, _ common.Address, key string, value interpreter.OptionalValue) {
+	storageSetter := func(_ *interpreter.Interpreter, _ common.Address, key string, value interpreter.OptionalValue) {
+		if _, ok := value.(interpreter.NilValue); ok {
+			delete(storedValues, key)
+		} else {
 			storedValues[key] = value
 		}
+	}
 
-		inter := parseCheckAndInterpretWithOptions(t,
+	storageGetter := func(_ *interpreter.Interpreter, _ common.Address, key string) interpreter.OptionalValue {
+		value := storedValues[key]
+		if value == nil {
+			return interpreter.NilValue{}
+		}
+		return value
+	}
+
+	inter := parseCheckAndInterpretWithOptions(t,
+		code,
+		ParseCheckAndInterpretOptions{
+			CheckerOptions: []sema.Option{
+				sema.WithPredeclaredValues(valueDeclarations),
+			},
+			Options: []interpreter.Option{
+				interpreter.WithPredefinedValues(map[string]interpreter.Value{
+					"account": accountValue,
+				}),
+				interpreter.WithStorageExistenceHandler(storageChecker),
+				interpreter.WithStorageReadHandler(storageGetter),
+				interpreter.WithStorageWriteHandler(storageSetter),
+			},
+		},
+	)
+
+	return inter, storedValues
+}
+
+func TestInterpretAuthAccountSave(t *testing.T) {
+
+	t.Run("valid", func(t *testing.T) {
+
+		inter, storedValues := testAccount(
+			t,
+			true,
 			`
               resource R {}
 
               fun test() {
                   let r <- create R()
-                  authAccount.save(<-r, to: /storage/r)
+                  account.save(<-r, to: /storage/r)
               }
             `,
-			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(valueDeclarations),
-				},
-				Options: []interpreter.Option{
-					interpreter.WithPredefinedValues(map[string]interpreter.Value{
-						"authAccount": authAccountValue,
-					}),
-					interpreter.WithStorageExistenceHandler(storageChecker),
-					interpreter.WithStorageWriteHandler(storageSetter),
-				},
-			},
 		)
 
 		// Save first value
@@ -88,8 +117,6 @@ func TestInterpretAuthAccountSave(t *testing.T) {
 
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)
-
-			assert.True(t, checked)
 
 			require.Len(t, storedValues, 1)
 			for _, value := range storedValues {
@@ -123,28 +150,20 @@ func TestInterpretAuthAccountSave(t *testing.T) {
 
 		t.Run(fmt.Sprintf("invalid: %s domain", domain), func(t *testing.T) {
 
-			inter := parseCheckAndInterpretWithOptions(t,
+			inter, _ := testAccount(
+				t,
+				true,
 				fmt.Sprintf(
 					`
                       resource R {}
 
                       fun test() {
                           let r <- create R()
-                          authAccount.save(<-r, to: /%s/r)
+                          account.save(<-r, to: /%s/r)
                       }
                     `,
 					domain.Identifier(),
 				),
-				ParseCheckAndInterpretOptions{
-					CheckerOptions: []sema.Option{
-						sema.WithPredeclaredValues(valueDeclarations),
-					},
-					Options: []interpreter.Option{
-						interpreter.WithPredefinedValues(map[string]interpreter.Value{
-							"authAccount": authAccountValue,
-						}),
-					},
-				},
 			)
 
 			_, err := inter.Invoke("test")
@@ -159,60 +178,11 @@ func TestInterpretAuthAccountSave(t *testing.T) {
 
 func TestInterpretAuthAccountLoad(t *testing.T) {
 
-	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
-		panic(errors.NewUnreachableError())
-	})
-
-	address := interpreter.NewAddressValueFromBytes([]byte{42})
-
-	authAccountValue := interpreter.NewAuthAccountValue(
-		address,
-		panicFunction,
-		panicFunction,
-		panicFunction,
-	)
-
-	valueDeclarations := map[string]sema.ValueDeclaration{
-		"authAccount": stdlib.StandardLibraryValue{
-			Name:       "authAccount",
-			Type:       &sema.AuthAccountType{},
-			Kind:       common.DeclarationKindConstant,
-			IsConstant: true,
-		},
-	}
-
 	t.Run("valid", func(t *testing.T) {
 
-		storedValues := map[string]interpreter.OptionalValue{}
-
-		// NOTE: checker, getter and setter are very naive for testing purposes and don't remove nil values
-
-		checked := false
-
-		storageChecker := func(_ *interpreter.Interpreter, _ common.Address, key string) bool {
-			checked = true
-
-			_, ok := storedValues[key]
-			return ok
-		}
-
-		storageSetter := func(_ *interpreter.Interpreter, _ common.Address, key string, value interpreter.OptionalValue) {
-			if _, ok := value.(interpreter.NilValue); ok {
-				delete(storedValues, key)
-			} else {
-				storedValues[key] = value
-			}
-		}
-
-		storageGetter := func(_ *interpreter.Interpreter, _ common.Address, key string) interpreter.OptionalValue {
-			value := storedValues[key]
-			if value == nil {
-				return interpreter.NilValue{}
-			}
-			return value
-		}
-
-		inter := parseCheckAndInterpretWithOptions(t,
+		inter, storedValues := testAccount(
+			t,
+			true,
 			`
               resource R {}
 
@@ -220,30 +190,17 @@ func TestInterpretAuthAccountLoad(t *testing.T) {
 
               fun save() {
                   let r <- create R()
-                  authAccount.save(<-r, to: /storage/r)
+                  account.save(<-r, to: /storage/r)
               }
 
               fun loadR(): @R? {
-                  return <-authAccount.load<@R>(from: /storage/r)
+                  return <-account.load<@R>(from: /storage/r)
               }
 
               fun loadR2(): @R2? {
-                  return <-authAccount.load<@R2>(from: /storage/r)
+                  return <-account.load<@R2>(from: /storage/r)
               }
             `,
-			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(valueDeclarations),
-				},
-				Options: []interpreter.Option{
-					interpreter.WithPredefinedValues(map[string]interpreter.Value{
-						"authAccount": authAccountValue,
-					}),
-					interpreter.WithStorageExistenceHandler(storageChecker),
-					interpreter.WithStorageReadHandler(storageGetter),
-					interpreter.WithStorageWriteHandler(storageSetter),
-				},
-			},
 		)
 
 		t.Run("save R and load R ", func(t *testing.T) {
@@ -265,8 +222,6 @@ func TestInterpretAuthAccountLoad(t *testing.T) {
 			innerValue := value.(*interpreter.SomeValue).Value
 
 			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
-
-			assert.True(t, checked)
 
 			// NOTE: check loaded value was removed from storage
 			require.Len(t, storedValues, 0)
@@ -308,27 +263,19 @@ func TestInterpretAuthAccountLoad(t *testing.T) {
 
 		t.Run(fmt.Sprintf("invalid: %s domain", domain), func(t *testing.T) {
 
-			inter := parseCheckAndInterpretWithOptions(t,
+			inter, _ := testAccount(
+				t,
+				true,
 				fmt.Sprintf(
 					`
 	                 resource R {}
 
 	                 fun test(): @R? {
-	                     return <-authAccount.load<@R>(from: /%s/r)
+	                     return <-account.load<@R>(from: /%s/r)
 	                 }
 	               `,
 					domain.Identifier(),
 				),
-				ParseCheckAndInterpretOptions{
-					CheckerOptions: []sema.Option{
-						sema.WithPredeclaredValues(valueDeclarations),
-					},
-					Options: []interpreter.Option{
-						interpreter.WithPredefinedValues(map[string]interpreter.Value{
-							"authAccount": authAccountValue,
-						}),
-					},
-				},
 			)
 
 			_, err := inter.Invoke("test")
@@ -342,60 +289,11 @@ func TestInterpretAuthAccountLoad(t *testing.T) {
 
 func TestInterpretAuthAccountBorrow(t *testing.T) {
 
-	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
-		panic(errors.NewUnreachableError())
-	})
-
-	address := interpreter.NewAddressValueFromBytes([]byte{42})
-
-	authAccountValue := interpreter.NewAuthAccountValue(
-		address,
-		panicFunction,
-		panicFunction,
-		panicFunction,
-	)
-
-	valueDeclarations := map[string]sema.ValueDeclaration{
-		"authAccount": stdlib.StandardLibraryValue{
-			Name:       "authAccount",
-			Type:       &sema.AuthAccountType{},
-			Kind:       common.DeclarationKindConstant,
-			IsConstant: true,
-		},
-	}
-
 	t.Run("valid", func(t *testing.T) {
 
-		storedValues := map[string]interpreter.OptionalValue{}
-
-		// NOTE: checker, getter and setter are very naive for testing purposes and don't remove nil values
-
-		checked := false
-
-		storageChecker := func(_ *interpreter.Interpreter, _ common.Address, key string) bool {
-			checked = true
-
-			_, ok := storedValues[key]
-			return ok
-		}
-
-		storageSetter := func(_ *interpreter.Interpreter, _ common.Address, key string, value interpreter.OptionalValue) {
-			if _, ok := value.(interpreter.NilValue); ok {
-				delete(storedValues, key)
-			} else {
-				storedValues[key] = value
-			}
-		}
-
-		storageGetter := func(_ *interpreter.Interpreter, _ common.Address, key string) interpreter.OptionalValue {
-			value := storedValues[key]
-			if value == nil {
-				return interpreter.NilValue{}
-			}
-			return value
-		}
-
-		inter := parseCheckAndInterpretWithOptions(t,
+		inter, storedValues := testAccount(
+			t,
+			true,
 			`
               resource R {}
 
@@ -403,30 +301,17 @@ func TestInterpretAuthAccountBorrow(t *testing.T) {
 
               fun save() {
                   let r <- create R()
-                  authAccount.save(<-r, to: /storage/r)
+                  account.save(<-r, to: /storage/r)
               }
 
               fun borrowR(): &R? {
-                  return authAccount.borrow<&R>(from: /storage/r)
+                  return account.borrow<&R>(from: /storage/r)
               }
 
               fun borrowR2(): &R2? {
-                  return authAccount.borrow<&R2>(from: /storage/r)
+                  return account.borrow<&R2>(from: /storage/r)
               }
             `,
-			ParseCheckAndInterpretOptions{
-				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(valueDeclarations),
-				},
-				Options: []interpreter.Option{
-					interpreter.WithPredefinedValues(map[string]interpreter.Value{
-						"authAccount": authAccountValue,
-					}),
-					interpreter.WithStorageExistenceHandler(storageChecker),
-					interpreter.WithStorageReadHandler(storageGetter),
-					interpreter.WithStorageWriteHandler(storageSetter),
-				},
-			},
 		)
 
 		// save
@@ -448,8 +333,6 @@ func TestInterpretAuthAccountBorrow(t *testing.T) {
 			innerValue := value.(*interpreter.SomeValue).Value
 
 			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
-
-			assert.True(t, checked)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, storedValues, 1)
@@ -491,27 +374,150 @@ func TestInterpretAuthAccountBorrow(t *testing.T) {
 
 		t.Run(fmt.Sprintf("invalid: %s domain", domain), func(t *testing.T) {
 
-			inter := parseCheckAndInterpretWithOptions(t,
+			inter, _ := testAccount(
+				t,
+				true,
 				fmt.Sprintf(
 					`
 	                  resource R {}
 
 	                  fun test(): &R? {
-	                      return authAccount.borrow<&R>(from: /%s/r)
+	                      return account.borrow<&R>(from: /%s/r)
 	                  }
 	                `,
 					domain.Identifier(),
 				),
-				ParseCheckAndInterpretOptions{
-					CheckerOptions: []sema.Option{
-						sema.WithPredeclaredValues(valueDeclarations),
-					},
-					Options: []interpreter.Option{
-						interpreter.WithPredefinedValues(map[string]interpreter.Value{
-							"authAccount": authAccountValue,
-						}),
-					},
-				},
+			)
+
+			_, err := inter.Invoke("test")
+
+			require.Error(t, err)
+
+			require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+		})
+	}
+}
+
+func TestInterpretAuthAccountLink(t *testing.T) {
+
+	for _, capabilityDomain := range []common.PathDomain{
+		common.PathDomainPrivate,
+		common.PathDomainPublic,
+	} {
+
+		t.Run(capabilityDomain.Name(), func(t *testing.T) {
+
+			inter, storedValues := testAccount(
+				t,
+				true,
+				fmt.Sprintf(
+					`
+	                  resource R {}
+
+	                  resource R2 {}
+
+	                  fun save() {
+	                      let r <- create R()
+	                      account.save(<-r, to: /storage/r)
+	                  }
+
+	                  fun linkR(): Capability? {
+	                      return account.link<&R>(/%[1]s/r, target: /storage/r)
+	                  }
+
+	                  fun linkR2(): Capability? {
+	                      return account.link<&R2>(/%[1]s/r2, target: /storage/r)
+	                  }
+	                `,
+					capabilityDomain.Identifier(),
+				),
+			)
+
+			// save
+
+			_, err := inter.Invoke("save")
+			require.NoError(t, err)
+
+			require.Len(t, storedValues, 1)
+
+			t.Run("link R", func(t *testing.T) {
+
+				// first link
+
+				value, err := inter.Invoke("linkR")
+				require.NoError(t, err)
+
+				require.IsType(t, &interpreter.SomeValue{}, value)
+
+				innerValue := value.(*interpreter.SomeValue).Value
+
+				assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
+
+				// stored value + link
+				require.Len(t, storedValues, 2)
+
+				// second link
+
+				value, err = inter.Invoke("linkR")
+				require.NoError(t, err)
+
+				require.IsType(t, interpreter.NilValue{}, value)
+
+				// NOTE: check loaded value was *not* removed from storage
+				require.Len(t, storedValues, 2)
+			})
+
+			t.Run("link R2", func(t *testing.T) {
+
+				// first link
+
+				value, err := inter.Invoke("linkR2")
+				require.NoError(t, err)
+
+				require.IsType(t, &interpreter.SomeValue{}, value)
+
+				innerValue := value.(*interpreter.SomeValue).Value
+
+				assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
+
+				// stored value + link
+				require.Len(t, storedValues, 3)
+
+				// second link
+
+				value, err = inter.Invoke("linkR2")
+				require.NoError(t, err)
+
+				require.IsType(t, interpreter.NilValue{}, value)
+
+				// NOTE: check loaded value was *not* removed from storage
+				require.Len(t, storedValues, 3)
+			})
+		})
+	}
+
+	for _, targetDomain := range common.AllPathDomainsByIdentifier {
+
+		testName := fmt.Sprintf(
+			"invalid: new capability path: storage domain, target path: %s domain",
+			targetDomain,
+		)
+
+		t.Run(testName, func(t *testing.T) {
+
+			inter, _ := testAccount(
+				t,
+				true,
+				fmt.Sprintf(
+					`
+	                 resource R {}
+
+	                 fun test() {
+	                     account.link<&R>(/storage/r, target: /%s/r)
+	                 }
+	               `,
+					targetDomain.Identifier(),
+				),
 			)
 
 			_, err := inter.Invoke("test")

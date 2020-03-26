@@ -4416,6 +4416,9 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 	case "borrow":
 		return inter.authAccountBorrowFunction(v.Address)
 
+	case "link":
+		return inter.authAccountLinkFunction(v.Address)
+
 	default:
 		panic(errors.NewUnreachableError())
 	}
@@ -4529,13 +4532,17 @@ func (v PathValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampolin
 }
 
 func (v PathValue) String() string {
-	return fmt.Sprintf("/%s/%s", v.Domain, v.Identifier)
+	return fmt.Sprintf(
+		"/%s/%s",
+		v.Domain.Identifier(),
+		v.Identifier,
+	)
 }
 
 // CapabilityValue
 
 type CapabilityValue struct {
-	Account AccountValue
+	Address AddressValue
 	Path    PathValue
 }
 
@@ -4568,8 +4575,8 @@ func (v CapabilityValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Tra
 
 func (v CapabilityValue) String() string {
 	return fmt.Sprintf(
-		"/%s/%s",
-		v.Account.AddressValue(),
+		"/%s%s",
+		v.Address,
 		v.Path,
 	)
 }
