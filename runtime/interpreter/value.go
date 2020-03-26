@@ -4503,6 +4503,46 @@ func (v AuthAccountValue) String() string {
 	return fmt.Sprintf("AuthAccount(%s)", v.Address)
 }
 
+func accountGetCapabilityFunction(
+	addressValue AddressValue,
+	authorized bool,
+) HostFunctionValue {
+	return NewHostFunctionValue(func(invocation Invocation) trampoline.Trampoline {
+
+		path := invocation.Arguments[0].(PathValue)
+
+		if authorized {
+
+			// If the account is an authorized account (`AuthAccount`),
+			// ensure the path has a `private` or `public` domain.
+
+			checkPathDomain(
+				path,
+				invocation.LocationRange,
+				common.PathDomainPrivate,
+				common.PathDomainPublic,
+			)
+		} else {
+
+			// If the account is a public account (`PublicAccount`),
+			// ensure the path has a `public` domain.
+
+			checkPathDomain(
+				path,
+				invocation.LocationRange,
+				common.PathDomainPublic,
+			)
+		}
+
+		capability := CapabilityValue{
+			Address: addressValue,
+			Path:    path,
+		}
+
+		return trampoline.Done{Result: capability}
+	})
+}
+
 func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case "address":
@@ -4538,6 +4578,9 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 
 	case "link":
 		return inter.authAccountLinkFunction(v.Address)
+
+	case "getCapability":
+		return accountGetCapabilityFunction(v.Address, true)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -4607,6 +4650,9 @@ func (v PublicAccountValue) GetMember(_ *Interpreter, _ LocationRange, name stri
 		return PublishedValue{
 			Address: v.Address.ToAddress(),
 		}
+
+	case "getCapability":
+		return accountGetCapabilityFunction(v.Address, false)
 
 	default:
 		panic(errors.NewUnreachableError())

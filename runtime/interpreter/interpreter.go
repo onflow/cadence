@@ -3444,7 +3444,7 @@ func storageKey(path PathValue) string {
 	return fmt.Sprintf("%s\x1F%s", path.Domain.Identifier(), path.Identifier)
 }
 
-func (interpreter *Interpreter) checkPathDomain(
+func checkPathDomain(
 	path PathValue,
 	locationRange LocationRange,
 	expectedDomains ...common.PathDomain,
@@ -3477,7 +3477,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 		// Ensure the path has a `storage` domain
 
-		interpreter.checkPathDomain(
+		checkPathDomain(
 			path,
 			invocation.LocationRange,
 			common.PathDomainStorage,
@@ -3517,7 +3517,7 @@ func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValu
 
 		// Ensure the path has a `storage` domain
 
-		interpreter.checkPathDomain(
+		checkPathDomain(
 			path,
 			invocation.LocationRange,
 			common.PathDomainStorage,
@@ -3567,7 +3567,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 		// Ensure the path has a `storage` domain
 
-		interpreter.checkPathDomain(
+		checkPathDomain(
 			path,
 			invocation.LocationRange,
 			common.PathDomainStorage,
@@ -3624,7 +3624,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 		// Ensure the path has a `private` or `public` domain
 
-		interpreter.checkPathDomain(
+		checkPathDomain(
 			newCapabilityPath,
 			invocation.LocationRange,
 			common.PathDomainPrivate,

@@ -451,7 +451,7 @@ func TestInterpretAuthAccountLink(t *testing.T) {
 
 				innerValue := value.(*interpreter.SomeValue).Value
 
-				assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
+				assert.IsType(t, interpreter.LinkValue{}, innerValue)
 
 				// stored value + link
 				require.Len(t, storedValues, 2)
@@ -478,7 +478,7 @@ func TestInterpretAuthAccountLink(t *testing.T) {
 
 				innerValue := value.(*interpreter.SomeValue).Value
 
-				assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
+				assert.IsType(t, interpreter.LinkValue{}, innerValue)
 
 				// stored value + link
 				require.Len(t, storedValues, 3)
@@ -526,5 +526,60 @@ func TestInterpretAuthAccountLink(t *testing.T) {
 
 			require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
 		})
+	}
+}
+
+func TestInterpretAccountGetCapability(t *testing.T) {
+
+	tests := map[bool][]common.PathDomain{
+		true: {
+			common.PathDomainPublic,
+			common.PathDomainPrivate,
+		},
+		false: {
+			common.PathDomainPublic,
+		},
+	}
+
+	for auth, validDomains := range tests {
+
+		for _, domain := range common.AllPathDomainsByIdentifier {
+
+			t.Run(fmt.Sprintf("auth: %v, domain: %s", auth, domain), func(t *testing.T) {
+
+				inter, _ := testAccount(
+					t,
+					auth,
+					fmt.Sprintf(
+						`
+	                      fun test(): Capability? {
+	                          return account.getCapability(/%[1]s/r)
+	                      }
+	                    `,
+						domain.Identifier(),
+					),
+				)
+
+				_, err := inter.Invoke("test")
+
+				isValid := false
+
+				for _, validDomain := range validDomains {
+
+					if domain == validDomain {
+
+						isValid = true
+
+						require.NoError(t, err)
+
+						break
+					}
+				}
+
+				if !isValid {
+					require.Error(t, err)
+				}
+			})
+		}
 	}
 }
