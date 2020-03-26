@@ -54,4 +54,19 @@ func TestCheckForce(t *testing.T) {
 			checker.GlobalValues["y"].Type,
 		)
 	})
+
+	t.Run("invalid: force resource multiple times", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          let x: @R? <- create R()
+          let x2 <- x!
+          let x3 <- x!
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
 }
