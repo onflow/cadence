@@ -4746,3 +4746,45 @@ func (v CapabilityValue) String() string {
 		v.Path,
 	)
 }
+
+// LinkValue
+
+type LinkValue struct {
+	Capability CapabilityValue
+	Type       StaticType
+}
+
+func init() {
+	gob.Register(CapabilityValue{})
+}
+
+func (LinkValue) IsValue() {}
+
+func (LinkValue) DynamicType(_ *Interpreter) DynamicType {
+	return CapabilityDynamicType{}
+}
+
+func (v LinkValue) Copy() Value {
+	return v
+}
+
+func (LinkValue) GetOwner() *common.Address {
+	// value is never owned
+	return nil
+}
+
+func (LinkValue) SetOwner(_ *common.Address) {
+	// NO-OP: value cannot be owned
+}
+
+func (v LinkValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
+	return trampoline.Done{}
+}
+
+func (v LinkValue) String() string {
+	return fmt.Sprintf(
+		"Link(type: %s, capability: %s)",
+		v.Type,
+		v.Capability,
+	)
+}

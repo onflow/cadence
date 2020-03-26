@@ -3617,6 +3617,16 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 		address := addressValue.ToAddress()
 
+		var referenceType *sema.ReferenceType
+		for _, ty := range invocation.TypeParameterTypes {
+			referenceType = ty.(*sema.ReferenceType)
+			break
+		}
+
+		if referenceType == nil {
+			panic(errors.NewUnreachableError())
+		}
+
 		newCapabilityPath := invocation.Arguments[0].(PathValue)
 		targetPath := invocation.Arguments[1].(PathValue)
 
@@ -3637,12 +3647,17 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 		// Write new value
 
-		value := NewSomeValueOwningNonCopying(
-			CapabilityValue{
-				Address: addressValue,
-				Path:    targetPath,
-			},
-		)
+		capabilityValue := CapabilityValue{
+			Address: addressValue,
+			Path:    targetPath,
+		}
+
+		linkValue := LinkValue{
+			Capability: capabilityValue,
+			Type:       ConvertSemaToStaticType(referenceType),
+		}
+
+		value := NewSomeValueOwningNonCopying(linkValue)
 
 		interpreter.writeStored(
 			address,
