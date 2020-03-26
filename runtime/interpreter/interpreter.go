@@ -1898,7 +1898,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 					}
 
 					return invocation.Map(func(result interface{}) interface{} {
-						return &SomeValue{Value: result.(Value)}
+						return NewSomeValueOwningNonCopying(result.(Value))
 					})
 				})
 		})
@@ -3502,7 +3502,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 		interpreter.writeStored(
 			address,
 			key,
-			&SomeValue{Value: value},
+			NewSomeValueOwningNonCopying(value),
 		)
 
 		return Done{Result: VoidValue{}}
@@ -3606,7 +3606,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 				Owner: nil,
 			}
 
-			return Done{Result: &SomeValue{Value: reference}}
+			return Done{Result: NewSomeValueOwningNonCopying(reference)}
 
 		default:
 			panic(errors.NewUnreachableError())
