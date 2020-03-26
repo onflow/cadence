@@ -3444,6 +3444,28 @@ func storageKey(path PathValue) string {
 	return fmt.Sprintf("%s\x1F%s", path.Domain.Identifier(), path.Identifier)
 }
 
+func (interpreter *Interpreter) checkPathDomain(
+	path PathValue,
+	locationRange LocationRange,
+	expectedDomains ...common.PathDomain,
+) {
+	actualDomain := path.Domain
+
+	for _, expectedDomain := range expectedDomains {
+		if actualDomain == expectedDomain {
+			return
+		}
+	}
+
+	panic(
+		&InvalidPathDomainError{
+			ActualDomain:    actualDomain,
+			ExpectedDomains: expectedDomains,
+			LocationRange:   locationRange,
+		},
+	)
+}
+
 func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) HostFunctionValue {
 	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
 
@@ -3455,7 +3477,11 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 		// Ensure the path has a `storage` domain
 
-		interpreter.checkStorageDomain(path, invocation.LocationRange)
+		interpreter.checkPathDomain(
+			path,
+			invocation.LocationRange,
+			common.PathDomainStorage,
+		)
 
 		// Prevent an overwrite
 
@@ -3481,32 +3507,21 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 	})
 }
 
-func (interpreter *Interpreter) checkStorageDomain(path PathValue, locationRange LocationRange) {
-	const expectedDomain = common.PathDomainStorage
-	actualDomain := path.Domain
-
-	if actualDomain != expectedDomain {
-		panic(
-			&InvalidPathDomainError{
-				ExpectedDomain: expectedDomain,
-				ActualDomain:   actualDomain,
-				LocationRange:  locationRange,
-			},
-		)
-	}
-}
-
 func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValue) HostFunctionValue {
 	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
 
-		path := invocation.Arguments[0].(PathValue)
-
 		address := addressValue.ToAddress()
+
+		path := invocation.Arguments[0].(PathValue)
 		key := storageKey(path)
 
 		// Ensure the path has a `storage` domain
 
-		interpreter.checkStorageDomain(path, invocation.LocationRange)
+		interpreter.checkPathDomain(
+			path,
+			invocation.LocationRange,
+			common.PathDomainStorage,
+		)
 
 		value := interpreter.readStored(address, key)
 
@@ -3545,14 +3560,18 @@ func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValu
 func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressValue) HostFunctionValue {
 	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
 
-		path := invocation.Arguments[0].(PathValue)
-
 		address := addressValue.ToAddress()
+
+		path := invocation.Arguments[0].(PathValue)
 		key := storageKey(path)
 
 		// Ensure the path has a `storage` domain
 
-		interpreter.checkStorageDomain(path, invocation.LocationRange)
+		interpreter.checkPathDomain(
+			path,
+			invocation.LocationRange,
+			common.PathDomainStorage,
+		)
 
 		value := interpreter.readStored(address, key)
 
@@ -3590,5 +3609,47 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 		default:
 			panic(errors.NewUnreachableError())
 		}
+	})
+}
+
+func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValue) HostFunctionValue {
+	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+
+		address := addressValue.ToAddress()
+
+		newCapabilityPath := invocation.Arguments[0].(PathValue)
+		targetPath := invocation.Arguments[1].(PathValue)
+
+		newCapabilityKey := storageKey(newCapabilityPath)
+
+		// Ensure the path has a `private` or `public` domain
+
+		interpreter.checkPathDomain(
+			newCapabilityPath,
+			invocation.LocationRange,
+			common.PathDomainPrivate,
+			common.PathDomainPublic,
+		)
+
+		if interpreter.storedValueExists(address, newCapabilityKey) {
+			return Done{Result: NilValue{}}
+		}
+
+		// Write new value
+
+		value := NewSomeValueOwningNonCopying(
+			CapabilityValue{
+				Address: addressValue,
+				Path:    targetPath,
+			},
+		)
+
+		interpreter.writeStored(
+			address,
+			newCapabilityKey,
+			value,
+		)
+
+		return Done{Result: value}
 	})
 }

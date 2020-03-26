@@ -221,4 +221,66 @@ func TestCheckAccount(t *testing.T) {
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
+	t.Run("linking: missing type argument", func(t *testing.T) {
+
+		_, err := ParseAndCheckAccount(t, `
+
+          resource R {}
+
+          fun test(): Capability? {
+              return account.link(/public/r, target: /storage/r)
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+	})
+
+	for _, auth := range []bool{false, true} {
+
+		authKeyword := ""
+		if auth {
+			authKeyword = "auth"
+		}
+
+		testName := fmt.Sprintf(
+			"linking: explicit type argument, %s reference",
+			authKeyword,
+		)
+
+		t.Run(testName, func(t *testing.T) {
+
+			_, err := ParseAndCheckAccount(t,
+				fmt.Sprintf(
+					`
+                      resource R {}
+
+                      fun test(): Capability? {
+                          return account.link<%s &R>(/public/r, target: /storage/r)
+                      }
+                    `,
+					authKeyword,
+				),
+			)
+
+			require.NoError(t, err)
+		})
+	}
+
+	t.Run("linking: explicit type argument, non-reference type", func(t *testing.T) {
+
+		_, err := ParseAndCheckAccount(t, `
+
+          resource R {}
+
+          fun test(): Capability? {
+              return account.link<@R>(/public/r, target: /storage/r)
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 }

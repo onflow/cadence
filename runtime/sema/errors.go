@@ -338,10 +338,10 @@ func (e *IncorrectArgumentLabelError) Error() string {
 func (e *IncorrectArgumentLabelError) SecondaryError() string {
 	expected := "none"
 	if e.ExpectedArgumentLabel != "" {
-		expected = e.ExpectedArgumentLabel
+		expected = fmt.Sprintf("`%s`", e.ExpectedArgumentLabel)
 	}
 	return fmt.Sprintf(
-		"expected `%s`, got `%s`",
+		"expected %s, got `%s`",
 		expected,
 		e.ActualArgumentLabel,
 	)
