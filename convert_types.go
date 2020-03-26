@@ -70,6 +70,8 @@ func ConvertType(typ runtime.Type) Type {
 		return convertCompositeType(t)
 	case *sema.DictionaryType:
 		return convertDictionaryType(t)
+	case *sema.FunctionType:
+		return convertFunctionType(t)
 	}
 
 	panic(fmt.Sprintf("cannot convert type of type %T", typ))
@@ -156,4 +158,25 @@ func convertDictionaryType(t *sema.DictionaryType) Type {
 		KeyType:     convertedKeyType,
 		ElementType: convertedElementType,
 	}
+}
+
+func convertFunctionType(t *sema.FunctionType) Type {
+	convertedReturnType := ConvertType(t.ReturnTypeAnnotation.Type)
+
+	parameters := make([]Parameter, len(t.Parameters))
+
+	for i, parameter := range t.Parameters {
+		convertedParameterType := ConvertType(parameter.TypeAnnotation.Type)
+
+		parameters[i] = Parameter{
+			Label:      parameter.Label,
+			Identifier: parameter.Identifier,
+			Type:       convertedParameterType,
+		}
+	}
+
+	return Function{
+		Parameters: parameters,
+		ReturnType: convertedReturnType,
+	}.WithID(string(t.ID()))
 }
