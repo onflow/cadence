@@ -3446,26 +3446,34 @@ func storageKey(path PathValue) string {
 	return fmt.Sprintf("%s\x1F%s", path.Domain.Identifier(), path.Identifier)
 }
 
-func checkPathDomain(
+func mustPathDomain(
 	path PathValue,
 	locationRange LocationRange,
 	expectedDomains ...common.PathDomain,
 ) {
-	actualDomain := path.Domain
-
-	for _, expectedDomain := range expectedDomains {
-		if actualDomain == expectedDomain {
-			return
-		}
+	if checkPathDomain(path, expectedDomains...) {
+		return
 	}
 
 	panic(
 		&InvalidPathDomainError{
-			ActualDomain:    actualDomain,
+			ActualDomain:    path.Domain,
 			ExpectedDomains: expectedDomains,
 			LocationRange:   locationRange,
 		},
 	)
+}
+
+func checkPathDomain(path PathValue, expectedDomains ...common.PathDomain) bool {
+	actualDomain := path.Domain
+
+	for _, expectedDomain := range expectedDomains {
+		if actualDomain == expectedDomain {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) HostFunctionValue {
@@ -3479,7 +3487,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 		// Ensure the path has a `storage` domain
 
-		checkPathDomain(
+		mustPathDomain(
 			path,
 			invocation.LocationRange,
 			common.PathDomainStorage,
@@ -3490,7 +3498,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 		if interpreter.storedValueExists(address, key) {
 			panic(
 				&OverwriteError{
-					Address:       address,
+					Address:       addressValue,
 					Path:          path,
 					LocationRange: invocation.LocationRange,
 				},
@@ -3519,7 +3527,7 @@ func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValu
 
 		// Ensure the path has a `storage` domain
 
-		checkPathDomain(
+		mustPathDomain(
 			path,
 			invocation.LocationRange,
 			common.PathDomainStorage,
@@ -3569,7 +3577,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 		// Ensure the path has a `storage` domain
 
-		checkPathDomain(
+		mustPathDomain(
 			path,
 			invocation.LocationRange,
 			common.PathDomainStorage,
@@ -3636,7 +3644,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 		// Ensure the path has a `private` or `public` domain
 
-		checkPathDomain(
+		mustPathDomain(
 			newCapabilityPath,
 			invocation.LocationRange,
 			common.PathDomainPrivate,
@@ -3649,24 +3657,131 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 		// Write new value
 
-		capabilityValue := CapabilityValue{
-			Address: addressValue,
-			Path:    targetPath,
-		}
-
-		linkValue := LinkValue{
-			Capability: capabilityValue,
-			Type:       ConvertSemaToStaticType(referenceType),
-		}
-
-		value := NewSomeValueOwningNonCopying(linkValue)
+		storedValue := NewSomeValueOwningNonCopying(
+			LinkValue{
+				TargetPath: targetPath,
+				Type:       ConvertSemaToStaticType(referenceType),
+			},
+		)
 
 		interpreter.writeStored(
 			address,
 			newCapabilityKey,
-			value,
+			storedValue,
 		)
 
-		return Done{Result: value}
+		returnValue := NewSomeValueOwningNonCopying(
+			CapabilityValue{
+				Address: addressValue,
+				Path:    targetPath,
+			},
+		)
+
+		return Done{Result: returnValue}
 	})
+}
+
+func (interpreter *Interpreter) capabilityBorrowFunction(addressValue AddressValue, path PathValue) HostFunctionValue {
+	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+
+		address := addressValue.ToAddress()
+
+		key := storageKey(path)
+
+		var wantedType sema.Type
+		for _, wantedType = range invocation.TypeParameterTypes {
+			break
+		}
+
+		if wantedType == nil {
+			panic(errors.NewUnreachableError())
+		}
+
+		wantedReferenceType := wantedType.(*sema.ReferenceType)
+
+		seenKeys := map[string]struct{}{}
+		paths := []PathValue{path}
+
+		for {
+			// Detect cyclic links
+
+			if _, ok := seenKeys[key]; ok {
+				panic(&CyclicLinkError{
+					Address:       addressValue,
+					Paths:         paths,
+					LocationRange: invocation.LocationRange,
+				})
+			} else {
+				seenKeys[key] = struct{}{}
+			}
+
+			value := interpreter.readStored(address, key)
+
+			switch value := value.(type) {
+			case NilValue:
+				return Done{Result: value}
+
+			case *SomeValue:
+
+				if link, ok := value.Value.(LinkValue); ok {
+
+					allowedType := interpreter.convertStaticToSemaType(link.Type)
+
+					if !sema.IsSubType(allowedType, wantedType) {
+						return Done{Result: NilValue{}}
+					}
+
+					targetPath := link.TargetPath
+					paths = append(paths, targetPath)
+					key = storageKey(targetPath)
+
+				} else {
+					reference := &StorageReferenceValue{
+						Authorized:           wantedReferenceType.Authorized,
+						TargetStorageAddress: address,
+						TargetKey:            key,
+						// NOTE: new value has no owner
+						Owner: nil,
+					}
+
+					return Done{Result: NewSomeValueOwningNonCopying(reference)}
+				}
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+		}
+	})
+}
+
+func (interpreter *Interpreter) convertStaticToSemaType(staticType StaticType) sema.Type {
+	return ConvertStaticToSemaType(
+		staticType,
+		func(typeID sema.TypeID) *sema.InterfaceType {
+			return interpreter.getInterfaceType(typeID)
+		},
+		func(typeID sema.TypeID) *sema.CompositeType {
+			return interpreter.getCompositeType(typeID)
+		},
+	)
+}
+
+func (interpreter *Interpreter) getCompositeType(typeID sema.TypeID) *sema.CompositeType {
+	locationID, qualifiedIdentifier := sema.SplitCompositeTypeID(typeID)
+	if locationID == "" {
+		panic("failed to split composite type ID")
+	}
+
+	checker := interpreter.allCheckers[locationID]
+	return checker.Elaboration.CompositeTypes[qualifiedIdentifier]
+}
+
+func (interpreter *Interpreter) getInterfaceType(typeID sema.TypeID) *sema.InterfaceType {
+	locationID, qualifiedIdentifier := sema.SplitCompositeTypeID(typeID)
+	if locationID == "" {
+		panic("failed to split composite type ID")
+	}
+
+	checker := interpreter.allCheckers[locationID]
+	return checker.Elaboration.InterfaceTypes[qualifiedIdentifier]
 }

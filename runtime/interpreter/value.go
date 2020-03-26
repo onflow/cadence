@@ -3359,14 +3359,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 func (*CompositeValue) IsValue() {}
 
 func (v *CompositeValue) DynamicType(interpreter *Interpreter) DynamicType {
-	locationID, qualifiedIdentifier := sema.SplitCompositeTypeID(v.TypeID)
-	if locationID == "" {
-		panic("failed to split composite type ID")
-	}
-
-	checker := interpreter.allCheckers[locationID]
-	staticType := checker.Elaboration.CompositeTypes[qualifiedIdentifier]
-
+	staticType := interpreter.getCompositeType(v.TypeID)
 	return CompositeDynamicType{StaticType: staticType}
 }
 
@@ -4514,22 +4507,24 @@ func accountGetCapabilityFunction(
 			// If the account is an authorized account (`AuthAccount`),
 			// ensure the path has a `private` or `public` domain.
 
-			checkPathDomain(
+			if !checkPathDomain(
 				path,
-				invocation.LocationRange,
 				common.PathDomainPrivate,
 				common.PathDomainPublic,
-			)
+			) {
+				return trampoline.Done{Result: NilValue{}}
+			}
 		} else {
 
 			// If the account is a public account (`PublicAccount`),
 			// ensure the path has a `public` domain.
 
-			checkPathDomain(
+			if !checkPathDomain(
 				path,
-				invocation.LocationRange,
 				common.PathDomainPublic,
-			)
+			) {
+				return trampoline.Done{Result: NilValue{}}
+			}
 		}
 
 		capability := CapabilityValue{
@@ -4537,7 +4532,9 @@ func accountGetCapabilityFunction(
 			Path:    path,
 		}
 
-		return trampoline.Done{Result: capability}
+		result := NewSomeValueOwningNonCopying(capability)
+
+		return trampoline.Done{Result: result}
 	})
 }
 
@@ -4745,10 +4742,24 @@ func (v CapabilityValue) String() string {
 	)
 }
 
+func (v CapabilityValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+	case "borrow":
+		return inter.capabilityBorrowFunction(v.Address, v.Path)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (CapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
 // LinkValue
 
 type LinkValue struct {
-	Capability CapabilityValue
+	TargetPath PathValue
 	Type       StaticType
 }
 
@@ -4781,8 +4792,8 @@ func (v LinkValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampolin
 
 func (v LinkValue) String() string {
 	return fmt.Sprintf(
-		"Link(type: %s, capability: %s)",
+		"Link(type: %s, targetPath: %s)",
 		v.Type,
-		v.Capability,
+		v.TargetPath,
 	)
 }

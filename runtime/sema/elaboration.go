@@ -48,6 +48,7 @@ type Elaboration struct {
 	IsReferenceIntoStorage                 map[*ast.ReferenceExpression]bool
 	// Keyed by qualified identifier
 	CompositeTypes                         map[string]*CompositeType
+	InterfaceTypes                         map[string]*InterfaceType
 	InvocationExpressionTypeParameterTypes map[*ast.InvocationExpression]map[*TypeParameter]Type
 }
 
@@ -89,6 +90,7 @@ func NewElaboration() *Elaboration {
 		EmitStatementEventTypes:                map[*ast.EmitStatement]*CompositeType{},
 		IsReferenceIntoStorage:                 map[*ast.ReferenceExpression]bool{},
 		CompositeTypes:                         map[string]*CompositeType{},
+		InterfaceTypes:                         map[string]*InterfaceType{},
 		InvocationExpressionTypeParameterTypes: map[*ast.InvocationExpression]map[*TypeParameter]Type{},
 	}
 }

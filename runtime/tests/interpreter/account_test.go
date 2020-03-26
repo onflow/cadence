@@ -471,7 +471,7 @@ func TestInterpretAuthAccountLink(t *testing.T) {
 
 				innerValue := value.(*interpreter.SomeValue).Value
 
-				assert.IsType(t, interpreter.LinkValue{}, innerValue)
+				assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
 
 				// stored value + link
 				require.Len(t, storedValues, 2)
@@ -498,7 +498,7 @@ func TestInterpretAuthAccountLink(t *testing.T) {
 
 				innerValue := value.(*interpreter.SomeValue).Value
 
-				assert.IsType(t, interpreter.LinkValue{}, innerValue)
+				assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
 
 				// stored value + link
 				require.Len(t, storedValues, 3)
@@ -580,7 +580,9 @@ func TestInterpretAccountGetCapability(t *testing.T) {
 					),
 				)
 
-				_, err := inter.Invoke("test")
+				value, err := inter.Invoke("test")
+
+				require.NoError(t, err)
 
 				isValid := false
 
@@ -590,14 +592,14 @@ func TestInterpretAccountGetCapability(t *testing.T) {
 
 						isValid = true
 
-						require.NoError(t, err)
+						require.IsType(t, &interpreter.SomeValue{}, value)
 
 						break
 					}
 				}
 
 				if !isValid {
-					require.Error(t, err)
+					require.IsType(t, interpreter.NilValue{}, value)
 				}
 			})
 		}
