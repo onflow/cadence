@@ -162,7 +162,7 @@ func decodeJSON(v interface{}) cadence.Value {
 	panic(ErrInvalidJSONCadence)
 }
 
-func decodeVoid(m map[string]interface{}) cadence.Value {
+func decodeVoid(m map[string]interface{}) cadence.Void {
 	// object should not contain fields other than "type"
 	if len(m) != 1 {
 		// TODO: improve error message
@@ -172,7 +172,7 @@ func decodeVoid(m map[string]interface{}) cadence.Value {
 	return cadence.NewVoid()
 }
 
-func decodeOptional(valueJSON interface{}) cadence.Value {
+func decodeOptional(valueJSON interface{}) cadence.Optional {
 	if valueJSON == nil {
 		return cadence.NewOptional(nil)
 	}
@@ -180,15 +180,15 @@ func decodeOptional(valueJSON interface{}) cadence.Value {
 	return cadence.NewOptional(decodeJSON(valueJSON))
 }
 
-func decodeBool(valueJSON interface{}) cadence.Value {
+func decodeBool(valueJSON interface{}) cadence.Bool {
 	return cadence.NewBool(toBool(valueJSON))
 }
 
-func decodeString(valueJSON interface{}) cadence.Value {
+func decodeString(valueJSON interface{}) cadence.String {
 	return cadence.NewString(toString(valueJSON))
 }
 
-func decodeAddress(valueJSON interface{}) cadence.Value {
+func decodeAddress(valueJSON interface{}) cadence.Address {
 	v := toString(valueJSON)
 
 	// must include 0x prefix
@@ -219,11 +219,11 @@ func decodeBigInt(valueJSON interface{}) *big.Int {
 	return i
 }
 
-func decodeInt(valueJSON interface{}) cadence.Value {
+func decodeInt(valueJSON interface{}) cadence.Int {
 	return cadence.NewIntFromBig(decodeBigInt(valueJSON))
 }
 
-func decodeInt8(valueJSON interface{}) cadence.Value {
+func decodeInt8(valueJSON interface{}) cadence.Int8 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseInt(v, 10, 8)
@@ -235,7 +235,7 @@ func decodeInt8(valueJSON interface{}) cadence.Value {
 	return cadence.NewInt8(int8(i))
 }
 
-func decodeInt16(valueJSON interface{}) cadence.Value {
+func decodeInt16(valueJSON interface{}) cadence.Int16 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseInt(v, 10, 16)
@@ -247,7 +247,7 @@ func decodeInt16(valueJSON interface{}) cadence.Value {
 	return cadence.NewInt16(int16(i))
 }
 
-func decodeInt32(valueJSON interface{}) cadence.Value {
+func decodeInt32(valueJSON interface{}) cadence.Int32 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseInt(v, 10, 32)
@@ -259,7 +259,7 @@ func decodeInt32(valueJSON interface{}) cadence.Value {
 	return cadence.NewInt32(int32(i))
 }
 
-func decodeInt64(valueJSON interface{}) cadence.Value {
+func decodeInt64(valueJSON interface{}) cadence.Int64 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseInt(v, 10, 64)
@@ -271,19 +271,19 @@ func decodeInt64(valueJSON interface{}) cadence.Value {
 	return cadence.NewInt64(i)
 }
 
-func decodeInt128(valueJSON interface{}) cadence.Value {
+func decodeInt128(valueJSON interface{}) cadence.Int128 {
 	return cadence.NewInt128FromBig(decodeBigInt(valueJSON))
 }
 
-func decodeInt256(valueJSON interface{}) cadence.Value {
+func decodeInt256(valueJSON interface{}) cadence.Int256 {
 	return cadence.NewInt256FromBig(decodeBigInt(valueJSON))
 }
 
-func decodeUInt(valueJSON interface{}) cadence.Value {
+func decodeUInt(valueJSON interface{}) cadence.UInt {
 	return cadence.NewUIntFromBig(decodeBigInt(valueJSON))
 }
 
-func decodeUInt8(valueJSON interface{}) cadence.Value {
+func decodeUInt8(valueJSON interface{}) cadence.UInt8 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 8)
@@ -295,7 +295,7 @@ func decodeUInt8(valueJSON interface{}) cadence.Value {
 	return cadence.NewUInt8(uint8(i))
 }
 
-func decodeUInt16(valueJSON interface{}) cadence.Value {
+func decodeUInt16(valueJSON interface{}) cadence.UInt16 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 16)
@@ -307,7 +307,7 @@ func decodeUInt16(valueJSON interface{}) cadence.Value {
 	return cadence.NewUInt16(uint16(i))
 }
 
-func decodeUInt32(valueJSON interface{}) cadence.Value {
+func decodeUInt32(valueJSON interface{}) cadence.UInt32 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 32)
@@ -319,7 +319,7 @@ func decodeUInt32(valueJSON interface{}) cadence.Value {
 	return cadence.NewUInt32(uint32(i))
 }
 
-func decodeUInt64(valueJSON interface{}) cadence.Value {
+func decodeUInt64(valueJSON interface{}) cadence.UInt64 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 64)
@@ -331,15 +331,15 @@ func decodeUInt64(valueJSON interface{}) cadence.Value {
 	return cadence.NewUInt64(i)
 }
 
-func decodeUInt128(valueJSON interface{}) cadence.Value {
+func decodeUInt128(valueJSON interface{}) cadence.UInt128 {
 	return cadence.NewUInt128FromBig(decodeBigInt(valueJSON))
 }
 
-func decodeUInt256(valueJSON interface{}) cadence.Value {
+func decodeUInt256(valueJSON interface{}) cadence.UInt256 {
 	return cadence.NewUInt256FromBig(decodeBigInt(valueJSON))
 }
 
-func decodeWord8(valueJSON interface{}) cadence.Value {
+func decodeWord8(valueJSON interface{}) cadence.Word8 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 8)
@@ -351,7 +351,7 @@ func decodeWord8(valueJSON interface{}) cadence.Value {
 	return cadence.NewWord8(uint8(i))
 }
 
-func decodeWord16(valueJSON interface{}) cadence.Value {
+func decodeWord16(valueJSON interface{}) cadence.Word16 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 16)
@@ -363,7 +363,7 @@ func decodeWord16(valueJSON interface{}) cadence.Value {
 	return cadence.NewWord16(uint16(i))
 }
 
-func decodeWord32(valueJSON interface{}) cadence.Value {
+func decodeWord32(valueJSON interface{}) cadence.Word32 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 32)
@@ -375,7 +375,7 @@ func decodeWord32(valueJSON interface{}) cadence.Value {
 	return cadence.NewWord32(uint32(i))
 }
 
-func decodeWord64(valueJSON interface{}) cadence.Value {
+func decodeWord64(valueJSON interface{}) cadence.Word64 {
 	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 64)
@@ -387,7 +387,7 @@ func decodeWord64(valueJSON interface{}) cadence.Value {
 	return cadence.NewWord64(i)
 }
 
-func decodeFix64(valueJSON interface{}) cadence.Value {
+func decodeFix64(valueJSON interface{}) cadence.Fix64 {
 	v := decodeFixString(valueJSON)
 
 	i, err := strconv.ParseInt(v, 10, 64)
@@ -399,7 +399,7 @@ func decodeFix64(valueJSON interface{}) cadence.Value {
 	return cadence.NewFix64(i)
 }
 
-func decodeUFix64(valueJSON interface{}) cadence.Value {
+func decodeUFix64(valueJSON interface{}) cadence.UFix64 {
 	v := decodeFixString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 64)
@@ -436,11 +436,11 @@ func decodeValues(valueJSON interface{}) []cadence.Value {
 	return values
 }
 
-func decodeArray(valueJSON interface{}) cadence.Value {
+func decodeArray(valueJSON interface{}) cadence.Array {
 	return cadence.NewArray(decodeValues(valueJSON))
 }
 
-func decodeDictionary(valueJSON interface{}) cadence.Value {
+func decodeDictionary(valueJSON interface{}) cadence.Dictionary {
 	v := toSlice(valueJSON)
 
 	pairs := make([]cadence.KeyValuePair, len(v))
@@ -512,7 +512,7 @@ func decodeCompositeField(valueJSON interface{}) (cadence.Value, cadence.Field) 
 	return value, field
 }
 
-func decodeStruct(valueJSON interface{}) cadence.Value {
+func decodeStruct(valueJSON interface{}) cadence.Struct {
 	comp := decodeComposite(valueJSON)
 
 	return cadence.NewStruct(comp.fieldValues).WithType(cadence.StructType{
@@ -522,7 +522,7 @@ func decodeStruct(valueJSON interface{}) cadence.Value {
 	})
 }
 
-func decodeResource(valueJSON interface{}) cadence.Value {
+func decodeResource(valueJSON interface{}) cadence.Resource {
 	comp := decodeComposite(valueJSON)
 
 	return cadence.NewResource(comp.fieldValues).WithType(cadence.ResourceType{
@@ -532,7 +532,7 @@ func decodeResource(valueJSON interface{}) cadence.Value {
 	})
 }
 
-func decodeEvent(valueJSON interface{}) cadence.Value {
+func decodeEvent(valueJSON interface{}) cadence.Event {
 	comp := decodeComposite(valueJSON)
 
 	return cadence.NewEvent(comp.fieldValues).WithType(cadence.EventType{
