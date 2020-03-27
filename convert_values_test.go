@@ -18,6 +18,13 @@ func TestConvertVoidValue(t *testing.T) {
 	assert.Equal(t, NewVoid(), value)
 }
 
+func TestConvertNilValue(t *testing.T) {
+
+	value := convertValue(interpreter.NilValue{}, nil)
+
+	assert.Equal(t, NewOptional(nil), value)
+}
+
 func TestConvertSomeValue(t *testing.T) {
 	t.Run("Nil", func(t *testing.T) {
 		value := convertValue(&interpreter.SomeValue{Value: nil}, nil)
