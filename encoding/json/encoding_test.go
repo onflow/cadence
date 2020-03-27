@@ -443,19 +443,6 @@ func TestEncodeUFix64(t *testing.T) {
 	}...)
 }
 
-var resourceType = cadence.ResourceType{
-	Fields: []cadence.Field{
-		{
-			Identifier: "a",
-			Type:       cadence.StringType{},
-		},
-		{
-			Identifier: "b",
-			Type:       cadence.IntType{},
-		},
-	},
-}
-
 func TestEncodeArray(t *testing.T) {
 	emptyArray := encodeTest{
 		"Empty",
@@ -477,19 +464,16 @@ func TestEncodeArray(t *testing.T) {
 		"Resources",
 		cadence.NewArray([]cadence.Value{
 			cadence.NewResource([]cadence.Value{
-				cadence.NewString("a"),
 				cadence.NewInt(1),
-			}).WithType(resourceType),
+			}).WithType(fooResourceType),
 			cadence.NewResource([]cadence.Value{
-				cadence.NewString("b"),
-				cadence.NewInt(1),
-			}).WithType(resourceType),
+				cadence.NewInt(2),
+			}).WithType(fooResourceType),
 			cadence.NewResource([]cadence.Value{
-				cadence.NewString("c"),
-				cadence.NewInt(1),
-			}).WithType(resourceType),
+				cadence.NewInt(3),
+			}).WithType(fooResourceType),
 		}),
-		`{"type":"Array","value":[{"type":"Resource","value":{"id":"","fields":[{"name":"a","value":{"type":"String","value":"a"}},{"name":"b","value":{"type":"Int","value":"1"}}]}},{"type":"Resource","value":{"id":"","fields":[{"name":"a","value":{"type":"String","value":"b"}},{"name":"b","value":{"type":"Int","value":"1"}}]}},{"type":"Resource","value":{"id":"","fields":[{"name":"a","value":{"type":"String","value":"c"}},{"name":"b","value":{"type":"Int","value":"1"}}]}}]}`,
+		`{"type":"Array","value":[{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"1"}}]}},{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"2"}}]}},{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"3"}}]}}]}`,
 	}
 
 	testAllEncode(t,
@@ -680,6 +664,12 @@ func testEncode(t *testing.T, val cadence.Value, expectedJSON string) {
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedJSON, trimJSON(actualJSON))
+
+	// JSON should decode to original value
+	decodedVal, err := json.Decode(actualJSON)
+	require.NoError(t, err)
+
+	assert.Equal(t, val, decodedVal)
 }
 
 var fooResourceType = cadence.ResourceType{

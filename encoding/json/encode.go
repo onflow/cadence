@@ -89,6 +89,39 @@ type jsonCompositeField struct {
 	Value jsonValue `json:"value"`
 }
 
+const (
+	voidTypeStr       = "Void"
+	optionalTypeStr   = "Optional"
+	boolTypeStr       = "Bool"
+	stringTypeStr     = "String"
+	addressTypeStr    = "Address"
+	intTypeStr        = "Int"
+	int8TypeStr       = "Int8"
+	int16TypeStr      = "Int16"
+	int32TypeStr      = "Int32"
+	int64TypeStr      = "Int64"
+	int128TypeStr     = "Int128"
+	int256TypeStr     = "Int256"
+	uintTypeStr       = "UInt"
+	uint8TypeStr      = "UInt8"
+	uint16TypeStr     = "UInt16"
+	uint32TypeStr     = "UInt32"
+	uint64TypeStr     = "UInt64"
+	uint128TypeStr    = "UInt128"
+	uint256TypeStr    = "UInt256"
+	word8TypeStr      = "Word8"
+	word16TypeStr     = "Word16"
+	word32TypeStr     = "Word32"
+	word64TypeStr     = "Word64"
+	fix64TypeStr      = "Fix64"
+	ufix64TypeStr     = "UFix64"
+	arrayTypeStr      = "Array"
+	dictionaryTypeStr = "Dictionary"
+	structTypeStr     = "Struct"
+	resourceTypeStr   = "Resource"
+	eventTypeStr      = "Event"
+)
+
 // prepare traverses the object graph of the provided value and constructs
 // a struct representation that can be marshalled to JSON.
 func (e *Encoder) prepare(v cadence.Value) jsonValue {
@@ -159,7 +192,7 @@ func (e *Encoder) prepare(v cadence.Value) jsonValue {
 }
 
 func (e *Encoder) prepareVoid() jsonValue {
-	return jsonEmptyValueObject{Type: "Void"}
+	return jsonEmptyValueObject{Type: voidTypeStr}
 }
 
 func (e *Encoder) prepareOptional(v cadence.Optional) jsonValue {
@@ -170,168 +203,168 @@ func (e *Encoder) prepareOptional(v cadence.Optional) jsonValue {
 	}
 
 	return jsonValueObject{
-		Type:  "Optional",
+		Type:  optionalTypeStr,
 		Value: value,
 	}
 }
 
 func (e *Encoder) prepareBool(v cadence.Bool) jsonValue {
 	return jsonValueObject{
-		Type:  "Bool",
+		Type:  boolTypeStr,
 		Value: v,
 	}
 }
 
 func (e *Encoder) prepareString(v cadence.String) jsonValue {
 	return jsonValueObject{
-		Type:  "String",
+		Type:  stringTypeStr,
 		Value: v,
 	}
 }
 
 func (e *Encoder) prepareAddress(v cadence.Address) jsonValue {
 	return jsonValueObject{
-		Type:  "Address",
+		Type:  addressTypeStr,
 		Value: encodeBytes(v.Bytes()),
 	}
 }
 
 func (e *Encoder) prepareInt(v cadence.Int) jsonValue {
 	return jsonValueObject{
-		Type:  "Int",
+		Type:  intTypeStr,
 		Value: encodeBig(v.Big()),
 	}
 }
 
 func (e *Encoder) prepareInt8(v cadence.Int8) jsonValue {
 	return jsonValueObject{
-		Type:  "Int8",
+		Type:  int8TypeStr,
 		Value: encodeInt(int64(v)),
 	}
 }
 
 func (e *Encoder) prepareInt16(v cadence.Int16) jsonValue {
 	return jsonValueObject{
-		Type:  "Int16",
+		Type:  int16TypeStr,
 		Value: encodeInt(int64(v)),
 	}
 }
 
 func (e *Encoder) prepareInt32(v cadence.Int32) jsonValue {
 	return jsonValueObject{
-		Type:  "Int32",
+		Type:  int32TypeStr,
 		Value: encodeInt(int64(v)),
 	}
 }
 
 func (e *Encoder) prepareInt64(v cadence.Int64) jsonValue {
 	return jsonValueObject{
-		Type:  "Int64",
+		Type:  int64TypeStr,
 		Value: encodeInt(int64(v)),
 	}
 }
 
 func (e *Encoder) prepareInt128(v cadence.Int128) jsonValue {
 	return jsonValueObject{
-		Type:  "Int128",
+		Type:  int128TypeStr,
 		Value: encodeBig(v.Big()),
 	}
 }
 
 func (e *Encoder) prepareInt256(v cadence.Int256) jsonValue {
 	return jsonValueObject{
-		Type:  "Int256",
+		Type:  int256TypeStr,
 		Value: encodeBig(v.Big()),
 	}
 }
 
 func (e *Encoder) prepareUInt(v cadence.UInt) jsonValue {
 	return jsonValueObject{
-		Type:  "UInt",
+		Type:  uintTypeStr,
 		Value: encodeBig(v.Big()),
 	}
 }
 
 func (e *Encoder) prepareUInt8(v cadence.UInt8) jsonValue {
 	return jsonValueObject{
-		Type:  "UInt8",
+		Type:  uint8TypeStr,
 		Value: encodeUInt(uint64(v)),
 	}
 }
 
 func (e *Encoder) prepareUInt16(v cadence.UInt16) jsonValue {
 	return jsonValueObject{
-		Type:  "UInt16",
+		Type:  uint16TypeStr,
 		Value: encodeUInt(uint64(v)),
 	}
 }
 
 func (e *Encoder) prepareUInt32(v cadence.UInt32) jsonValue {
 	return jsonValueObject{
-		Type:  "UInt32",
+		Type:  uint32TypeStr,
 		Value: encodeUInt(uint64(v)),
 	}
 }
 
 func (e *Encoder) prepareUInt64(v cadence.UInt64) jsonValue {
 	return jsonValueObject{
-		Type:  "UInt64",
+		Type:  uint64TypeStr,
 		Value: encodeUInt(uint64(v)),
 	}
 }
 
 func (e *Encoder) prepareUInt128(v cadence.UInt128) jsonValue {
 	return jsonValueObject{
-		Type:  "UInt128",
+		Type:  uint128TypeStr,
 		Value: encodeBig(v.Big()),
 	}
 }
 
 func (e *Encoder) prepareUInt256(v cadence.UInt256) jsonValue {
 	return jsonValueObject{
-		Type:  "UInt256",
+		Type:  uint256TypeStr,
 		Value: encodeBig(v.Big()),
 	}
 }
 
 func (e *Encoder) prepareWord8(v cadence.Word8) jsonValue {
 	return jsonValueObject{
-		Type:  "Word8",
+		Type:  word8TypeStr,
 		Value: encodeUInt(uint64(v)),
 	}
 }
 
 func (e *Encoder) prepareWord16(v cadence.Word16) jsonValue {
 	return jsonValueObject{
-		Type:  "Word16",
+		Type:  word16TypeStr,
 		Value: encodeUInt(uint64(v)),
 	}
 }
 
 func (e *Encoder) prepareWord32(v cadence.Word32) jsonValue {
 	return jsonValueObject{
-		Type:  "Word32",
+		Type:  word32TypeStr,
 		Value: encodeUInt(uint64(v)),
 	}
 }
 
 func (e *Encoder) prepareWord64(v cadence.Word64) jsonValue {
 	return jsonValueObject{
-		Type:  "Word64",
+		Type:  word64TypeStr,
 		Value: encodeUInt(uint64(v)),
 	}
 }
 
 func (e *Encoder) prepareFix64(v cadence.Fix64) jsonValue {
 	return jsonValueObject{
-		Type:  "Fix64",
+		Type:  fix64TypeStr,
 		Value: encodeFix64(int64(v)),
 	}
 }
 
 func (e *Encoder) prepareUFix64(v cadence.UFix64) jsonValue {
 	return jsonValueObject{
-		Type:  "UFix64",
+		Type:  ufix64TypeStr,
 		Value: encodeUFix64(uint64(v)),
 	}
 }
@@ -344,7 +377,7 @@ func (e *Encoder) prepareArray(v cadence.Array) jsonValue {
 	}
 
 	return jsonValueObject{
-		Type:  "Array",
+		Type:  arrayTypeStr,
 		Value: values,
 	}
 }
@@ -360,21 +393,21 @@ func (e *Encoder) prepareDictionary(v cadence.Dictionary) jsonValue {
 	}
 
 	return jsonValueObject{
-		Type:  "Dictionary",
+		Type:  dictionaryTypeStr,
 		Value: items,
 	}
 }
 
 func (e *Encoder) prepareStruct(v cadence.Struct) jsonValue {
-	return e.prepareComposite("Struct", v.StructType.ID(), v.StructType.Fields, v.Fields)
+	return e.prepareComposite(stringTypeStr, v.StructType.ID(), v.StructType.Fields, v.Fields)
 }
 
 func (e *Encoder) prepareResource(v cadence.Resource) jsonValue {
-	return e.prepareComposite("Resource", v.ResourceType.ID(), v.ResourceType.Fields, v.Fields)
+	return e.prepareComposite(resourceTypeStr, v.ResourceType.ID(), v.ResourceType.Fields, v.Fields)
 }
 
 func (e *Encoder) prepareEvent(v cadence.Event) jsonValue {
-	return e.prepareComposite("Event", v.EventType.ID(), v.EventType.Fields, v.Fields)
+	return e.prepareComposite(eventTypeStr, v.EventType.ID(), v.EventType.Fields, v.Fields)
 }
 
 func (e *Encoder) prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cadence.Value) jsonValue {
