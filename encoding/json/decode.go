@@ -65,48 +65,22 @@ const (
 
 var ErrDecode = errors.New("failed to decode")
 
-func getType(m map[string]interface{}) string {
-	t, hasType := m[typeKey]
-	if !hasType {
-		panic(ErrDecode)
-	}
-
-	typeStr, isString := t.(string)
-	if !isString {
-		panic(ErrDecode)
-	}
-
-	return typeStr
-}
-
-func getValue(m map[string]interface{}) interface{} {
-	valueJSON, hasValue := m[valueKey]
-	if !hasValue {
-		panic(ErrDecode)
-	}
-
-	return valueJSON
-}
-
 func decodeJSON(v interface{}) cadence.Value {
-	m, isMap := v.(map[string]interface{})
-	if !isMap {
-		panic(ErrDecode)
-	}
+	obj := toObject(v)
 
-	typeStr := getType(m)
+	typeStr := obj.GetString(typeKey)
 
 	// void is a special case, does not have "value" field
 	if typeStr == voidTypeStr {
-		return decodeVoid(m)
+		return decodeVoid(obj)
 	}
 
 	// object should only contain two keys: "type", "value"
-	if len(m) != 2 {
+	if len(obj) != 2 {
 		panic(ErrDecode)
 	}
 
-	valueJSON := getValue(m)
+	valueJSON := obj.Get(valueKey)
 
 	switch typeStr {
 	case optionalTypeStr:
@@ -175,6 +149,7 @@ func decodeJSON(v interface{}) cadence.Value {
 func decodeVoid(m map[string]interface{}) cadence.Value {
 	// object should not contain fields other than "type"
 	if len(m) != 1 {
+		// TODO: improve error message
 		panic(ErrDecode)
 	}
 
@@ -190,35 +165,25 @@ func decodeOptional(valueJSON interface{}) cadence.Value {
 }
 
 func decodeBool(valueJSON interface{}) cadence.Value {
-	v, isBool := valueJSON.(bool)
-	if !isBool {
-		panic(ErrDecode)
-	}
-
-	return cadence.NewBool(v)
+	return cadence.NewBool(toBool(valueJSON))
 }
 
 func decodeString(valueJSON interface{}) cadence.Value {
-	v, isString := valueJSON.(string)
-	if !isString {
-		panic(ErrDecode)
-	}
-
-	return cadence.NewString(v)
+	return cadence.NewString(toString(valueJSON))
 }
 
 func decodeAddress(valueJSON interface{}) cadence.Value {
-	v, isString := valueJSON.(string)
-	if !isString {
-		panic(ErrDecode)
-	}
+	v := toString(valueJSON)
 
+	// must include 0x prefix
 	if v[:2] != "0x" {
+		// TODO: improve error message
 		panic(ErrDecode)
 	}
 
 	b, err := hex.DecodeString(v[2:])
 	if err != nil {
+		// TODO: improve error message
 		panic(ErrDecode)
 	}
 
@@ -226,14 +191,12 @@ func decodeAddress(valueJSON interface{}) cadence.Value {
 }
 
 func decodeBigInt(valueJSON interface{}) *big.Int {
-	v, isString := valueJSON.(string)
-	if !isString {
-		panic(ErrDecode)
-	}
+	v := toString(valueJSON)
 
 	i := new(big.Int)
 	i, ok := i.SetString(v, 10)
 	if !ok {
+		// TODO: improve error message
 		panic(ErrDecode)
 	}
 
@@ -245,13 +208,11 @@ func decodeInt(valueJSON interface{}) cadence.Value {
 }
 
 func decodeInt8(valueJSON interface{}) cadence.Value {
-	v, isString := valueJSON.(string)
-	if !isString {
-		panic(ErrDecode)
-	}
+	v := toString(valueJSON)
 
 	i, err := strconv.ParseInt(v, 10, 8)
 	if err != nil {
+		// TODO: improve error message
 		panic(ErrDecode)
 	}
 
@@ -259,13 +220,11 @@ func decodeInt8(valueJSON interface{}) cadence.Value {
 }
 
 func decodeInt16(valueJSON interface{}) cadence.Value {
-	v, isString := valueJSON.(string)
-	if !isString {
-		panic(ErrDecode)
-	}
+	v := toString(valueJSON)
 
 	i, err := strconv.ParseInt(v, 10, 16)
 	if err != nil {
+		// TODO: improve error message
 		panic(ErrDecode)
 	}
 
@@ -273,13 +232,11 @@ func decodeInt16(valueJSON interface{}) cadence.Value {
 }
 
 func decodeInt32(valueJSON interface{}) cadence.Value {
-	v, isString := valueJSON.(string)
-	if !isString {
-		panic(ErrDecode)
-	}
+	v := toString(valueJSON)
 
 	i, err := strconv.ParseInt(v, 10, 32)
 	if err != nil {
+		// TODO: improve error message
 		panic(ErrDecode)
 	}
 
@@ -287,13 +244,11 @@ func decodeInt32(valueJSON interface{}) cadence.Value {
 }
 
 func decodeInt64(valueJSON interface{}) cadence.Value {
-	v, isString := valueJSON.(string)
-	if !isString {
-		panic(ErrDecode)
-	}
+	v := toString(valueJSON)
 
 	i, err := strconv.ParseInt(v, 10, 64)
 	if err != nil {
+		// TODO: improve error message
 		panic(ErrDecode)
 	}
 
@@ -313,13 +268,11 @@ func decodeUInt(valueJSON interface{}) cadence.Value {
 }
 
 func decodeUInt8(valueJSON interface{}) cadence.Value {
-	v, isString := valueJSON.(string)
-	if !isString {
-		panic(ErrDecode)
-	}
+	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 8)
 	if err != nil {
+		// TODO: improve error message
 		panic(ErrDecode)
 	}
 
@@ -327,13 +280,11 @@ func decodeUInt8(valueJSON interface{}) cadence.Value {
 }
 
 func decodeUInt16(valueJSON interface{}) cadence.Value {
-	v, isString := valueJSON.(string)
-	if !isString {
-		panic(ErrDecode)
-	}
+	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 16)
 	if err != nil {
+		// TODO: improve error message
 		panic(ErrDecode)
 	}
 
@@ -341,13 +292,11 @@ func decodeUInt16(valueJSON interface{}) cadence.Value {
 }
 
 func decodeUInt32(valueJSON interface{}) cadence.Value {
-	v, isString := valueJSON.(string)
-	if !isString {
-		panic(ErrDecode)
-	}
+	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 32)
 	if err != nil {
+		// TODO: improve error message
 		panic(ErrDecode)
 	}
 
@@ -355,13 +304,11 @@ func decodeUInt32(valueJSON interface{}) cadence.Value {
 }
 
 func decodeUInt64(valueJSON interface{}) cadence.Value {
-	v, isString := valueJSON.(string)
-	if !isString {
-		panic(ErrDecode)
-	}
+	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 64)
 	if err != nil {
+		// TODO: improve error message
 		panic(ErrDecode)
 	}
 
@@ -377,13 +324,11 @@ func decodeUInt256(valueJSON interface{}) cadence.Value {
 }
 
 func decodeWord8(valueJSON interface{}) cadence.Value {
-	v, isString := valueJSON.(string)
-	if !isString {
-		panic(ErrDecode)
-	}
+	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 8)
 	if err != nil {
+		// TODO: improve error message
 		panic(ErrDecode)
 	}
 
@@ -391,13 +336,11 @@ func decodeWord8(valueJSON interface{}) cadence.Value {
 }
 
 func decodeWord16(valueJSON interface{}) cadence.Value {
-	v, isString := valueJSON.(string)
-	if !isString {
-		panic(ErrDecode)
-	}
+	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 16)
 	if err != nil {
+		// TODO: improve error message
 		panic(ErrDecode)
 	}
 
@@ -405,13 +348,11 @@ func decodeWord16(valueJSON interface{}) cadence.Value {
 }
 
 func decodeWord32(valueJSON interface{}) cadence.Value {
-	v, isString := valueJSON.(string)
-	if !isString {
-		panic(ErrDecode)
-	}
+	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 32)
 	if err != nil {
+		// TODO: improve error message
 		panic(ErrDecode)
 	}
 
@@ -419,13 +360,11 @@ func decodeWord32(valueJSON interface{}) cadence.Value {
 }
 
 func decodeWord64(valueJSON interface{}) cadence.Value {
-	v, isString := valueJSON.(string)
-	if !isString {
-		panic(ErrDecode)
-	}
+	v := toString(valueJSON)
 
 	i, err := strconv.ParseUint(v, 10, 64)
 	if err != nil {
+		// TODO: improve error message
 		panic(ErrDecode)
 	}
 
@@ -433,10 +372,11 @@ func decodeWord64(valueJSON interface{}) cadence.Value {
 }
 
 func decodeFix64(valueJSON interface{}) cadence.Value {
-	str := decodeFixString(valueJSON)
+	v := decodeFixString(valueJSON)
 
-	i, err := strconv.ParseInt(str, 10, 64)
+	i, err := strconv.ParseInt(v, 10, 64)
 	if err != nil {
+		// TODO: improve error message
 		panic(ErrDecode)
 	}
 
@@ -444,10 +384,11 @@ func decodeFix64(valueJSON interface{}) cadence.Value {
 }
 
 func decodeUFix64(valueJSON interface{}) cadence.Value {
-	str := decodeFixString(valueJSON)
+	v := decodeFixString(valueJSON)
 
-	i, err := strconv.ParseUint(str, 10, 64)
+	i, err := strconv.ParseUint(v, 10, 64)
 	if err != nil {
+		// TODO: improve error message
 		panic(ErrDecode)
 	}
 
@@ -455,24 +396,20 @@ func decodeUFix64(valueJSON interface{}) cadence.Value {
 }
 
 func decodeFixString(valueJSON interface{}) string {
-	v, isString := valueJSON.(string)
-	if !isString {
+	v := toString(valueJSON)
+
+	// must contain single decimal point
+	parts := strings.Split(v, ".")
+	if len(parts) != 2 {
+		// TODO: improve error message
 		panic(ErrDecode)
 	}
 
-	pieces := strings.Split(v, ".")
-	if len(pieces) != 2 {
-		panic(ErrDecode)
-	}
-
-	return pieces[0] + pieces[1]
+	return parts[0] + parts[1]
 }
 
 func decodeValues(valueJSON interface{}) []cadence.Value {
-	v, isSlice := valueJSON.([]interface{})
-	if !isSlice {
-		panic(ErrDecode)
-	}
+	v := toSlice(valueJSON)
 
 	values := make([]cadence.Value, len(v))
 
@@ -488,36 +425,27 @@ func decodeArray(valueJSON interface{}) cadence.Value {
 }
 
 func decodeDictionary(valueJSON interface{}) cadence.Value {
-	v, isSlice := valueJSON.([]interface{})
-	if !isSlice {
-		panic(ErrDecode)
-	}
+	v := toSlice(valueJSON)
 
 	pairs := make([]cadence.KeyValuePair, len(v))
 
 	for i, val := range v {
-		m, isMap := val.(map[string]interface{})
-		if !isMap {
-			panic(ErrDecode)
-		}
-
-		key, hasKey := m["key"]
-		if !hasKey {
-			panic(ErrDecode)
-		}
-
-		value, hasValue := m["value"]
-		if !hasValue {
-			panic(ErrDecode)
-		}
-
-		pairs[i] = cadence.KeyValuePair{
-			Key:   decodeJSON(key),
-			Value: decodeJSON(value),
-		}
+		pairs[i] = decodeKeyValuePair(val)
 	}
 
 	return cadence.NewDictionary(pairs)
+}
+
+func decodeKeyValuePair(valueJSON interface{}) cadence.KeyValuePair {
+	obj := toObject(valueJSON)
+
+	key := obj.GetValue("key")
+	value := obj.GetValue("value")
+
+	return cadence.KeyValuePair{
+		Key:   key,
+		Value: value,
+	}
 }
 
 type composite struct {
@@ -528,76 +456,44 @@ type composite struct {
 }
 
 func decodeComposite(valueJSON interface{}) composite {
-	m, isMap := valueJSON.(map[string]interface{})
-	if !isMap {
-		panic(ErrDecode)
+	obj := toObject(valueJSON)
+
+	typeID := obj.GetString("id")
+
+	identifier := identifierFromTypeID(typeID)
+
+	fields := obj.GetSlice("fields")
+
+	fieldValues := make([]cadence.Value, len(fields))
+	fieldTypes := make([]cadence.Field, len(fields))
+
+	for i, field := range fields {
+		value, fieldType := decodeCompositeField(field)
+
+		fieldValues[i] = value
+		fieldTypes[i] = fieldType
 	}
 
-	typeID, hasID := m["id"]
-	if !hasID {
-		panic(ErrDecode)
-	}
-
-	typeIDStr, isString := typeID.(string)
-	if !isString {
-		panic(ErrDecode)
-	}
-
-	pieces := strings.Split(typeIDStr, ".")
-	if len(pieces) < 2 {
-		panic(ErrDecode)
-	}
-
-	identifier := pieces[len(pieces)-1]
-
-	fields, hasFields := m["fields"]
-	if !hasFields {
-		panic(ErrDecode)
-	}
-
-	v, isSlice := fields.([]interface{})
-	if !isSlice {
-		panic(ErrDecode)
-	}
-
-	fieldValues := make([]cadence.Value, len(v))
-	fieldTypes := make([]cadence.Field, len(v))
-
-	for i, field := range v {
-		m, isMap := field.(map[string]interface{})
-		if !isMap {
-			panic(ErrDecode)
-		}
-
-		name, hasName := m["name"]
-		if !hasName {
-			panic(ErrDecode)
-		}
-
-		nameStr, isString := name.(string)
-		if !isString {
-			panic(ErrDecode)
-		}
-
-		value, hasValue := m["value"]
-		if !hasValue {
-			panic(ErrDecode)
-		}
-
-		decodedValue := decodeJSON(value)
-
-		fieldValues[i] = decodedValue
-		fieldTypes[i] = cadence.Field{
-			Identifier: nameStr,
-			Type:       decodedValue.Type(),
-		}
-	}
 	return composite{
-		typeID:      typeIDStr,
+		typeID:      typeID,
 		identifier:  identifier,
 		fieldValues: fieldValues,
 		fieldTypes:  fieldTypes,
 	}
+}
+
+func decodeCompositeField(valueJSON interface{}) (cadence.Value, cadence.Field) {
+	obj := toObject(valueJSON)
+
+	name := obj.GetString("name")
+	value := obj.GetValue("value")
+
+	field := cadence.Field{
+		Identifier: name,
+		Type:       value.Type(),
+	}
+
+	return value, field
 }
 
 func decodeStruct(valueJSON interface{}) cadence.Value {
@@ -628,4 +524,89 @@ func decodeEvent(valueJSON interface{}) cadence.Value {
 		Identifier: comp.identifier,
 		Fields:     comp.fieldTypes,
 	})
+}
+
+// JSON types
+
+type jsonObject map[string]interface{}
+
+func (obj jsonObject) Get(key string) interface{} {
+	v, hasKey := obj[key]
+	if !hasKey {
+		// TODO: improve error message
+		panic(ErrDecode)
+	}
+
+	return v
+}
+
+func (obj jsonObject) GetString(key string) string {
+	v := obj.Get(key)
+	return toString(v)
+}
+
+func (obj jsonObject) GetSlice(key string) []interface{} {
+	v := obj.Get(key)
+	return toSlice(v)
+}
+
+func (obj jsonObject) GetValue(key string) cadence.Value {
+	v := obj.Get(key)
+	return decodeJSON(v)
+}
+
+// JSON conversion helpers
+
+func toBool(valueJSON interface{}) bool {
+	v, isBool := valueJSON.(bool)
+	if !isBool {
+		// TODO: improve error message
+		panic(ErrDecode)
+	}
+
+	return v
+}
+
+func toString(valueJSON interface{}) string {
+	v, isString := valueJSON.(string)
+	if !isString {
+		// TODO: improve error message
+		panic(ErrDecode)
+	}
+
+	return v
+}
+
+func toSlice(valueJSON interface{}) []interface{} {
+	v, isSlice := valueJSON.([]interface{})
+	if !isSlice {
+		// TODO: improve error message
+		panic(ErrDecode)
+	}
+
+	return v
+}
+
+func toObject(valueJSON interface{}) jsonObject {
+	v, isMap := valueJSON.(map[string]interface{})
+	if !isMap {
+		// TODO: improve error message
+		panic(ErrDecode)
+	}
+
+	return v
+}
+
+func identifierFromTypeID(typeID string) string {
+	// fully-qualified type ID must have at least two parts
+	// (namespace + ID)
+	// e.g. foo.Bar
+	parts := strings.Split(typeID, ".")
+	if len(parts) < 2 {
+		// TODO: improve error message
+		panic(ErrDecode)
+	}
+
+	// parse ID from fully-qualified type ID
+	return parts[len(parts)-1]
 }
