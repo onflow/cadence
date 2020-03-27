@@ -31,24 +31,6 @@ func (Void) ToGoValue() interface{} {
 	return nil
 }
 
-// Nil
-
-type Nil struct{}
-
-func NewNil() Nil {
-	return Nil{}
-}
-
-func (Nil) isValue() {}
-
-func (Nil) Type() Type {
-	return nil
-}
-
-func (Nil) ToGoValue() interface{} {
-	return nil
-}
-
 // Optional
 
 type Optional struct {
