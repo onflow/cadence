@@ -3710,77 +3710,117 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 	})
 }
 
-func (interpreter *Interpreter) capabilityBorrowFunction(addressValue AddressValue, path PathValue) HostFunctionValue {
+func (interpreter *Interpreter) capabilityBorrowFunction(addressValue AddressValue, pathValue PathValue) HostFunctionValue {
 	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+
+		targetStorageKey, authorized :=
+			interpreter.getCapabilityFinalTargetStorageKey(
+				addressValue,
+				pathValue,
+				invocation,
+			)
+
+		if targetStorageKey == "" {
+			return Done{Result: NilValue{}}
+		}
 
 		address := addressValue.ToAddress()
 
-		key := storageKey(path)
-
-		var wantedType sema.Type
-		for _, wantedType = range invocation.TypeParameterTypes {
-			break
+		reference := &StorageReferenceValue{
+			Authorized:           authorized,
+			TargetStorageAddress: address,
+			TargetKey:            targetStorageKey,
+			// NOTE: new value has no owner
+			Owner: nil,
 		}
 
-		if wantedType == nil {
-			panic(errors.NewUnreachableError())
+		return Done{Result: NewSomeValueOwningNonCopying(reference)}
+	})
+}
+
+func (interpreter *Interpreter) capabilityCheckFunction(addressValue AddressValue, pathValue PathValue) HostFunctionValue {
+	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+
+		targetStorageKey, _ :=
+			interpreter.getCapabilityFinalTargetStorageKey(
+				addressValue,
+				pathValue,
+				invocation,
+			)
+
+		isValid := targetStorageKey != ""
+
+		return Done{Result: BoolValue(isValid)}
+	})
+}
+
+func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
+	addressValue AddressValue,
+	path PathValue,
+	invocation Invocation,
+) (
+	finalStorageKey string,
+	authorized bool,
+) {
+	address := addressValue.ToAddress()
+
+	key := storageKey(path)
+
+	var wantedType sema.Type
+	for _, wantedType = range invocation.TypeParameterTypes {
+		break
+	}
+
+	if wantedType == nil {
+		panic(errors.NewUnreachableError())
+	}
+
+	wantedReferenceType := wantedType.(*sema.ReferenceType)
+
+	seenKeys := map[string]struct{}{}
+	paths := []PathValue{path}
+
+	for {
+		// Detect cyclic links
+
+		if _, ok := seenKeys[key]; ok {
+			panic(&CyclicLinkError{
+				Address:       addressValue,
+				Paths:         paths,
+				LocationRange: invocation.LocationRange,
+			})
+		} else {
+			seenKeys[key] = struct{}{}
 		}
 
-		wantedReferenceType := wantedType.(*sema.ReferenceType)
+		value := interpreter.readStored(address, key)
 
-		seenKeys := map[string]struct{}{}
-		paths := []PathValue{path}
+		switch value := value.(type) {
+		case NilValue:
+			return "", false
 
-		for {
-			// Detect cyclic links
+		case *SomeValue:
 
-			if _, ok := seenKeys[key]; ok {
-				panic(&CyclicLinkError{
-					Address:       addressValue,
-					Paths:         paths,
-					LocationRange: invocation.LocationRange,
-				})
-			} else {
-				seenKeys[key] = struct{}{}
-			}
+			if link, ok := value.Value.(LinkValue); ok {
 
-			value := interpreter.readStored(address, key)
+				allowedType := interpreter.convertStaticToSemaType(link.Type)
 
-			switch value := value.(type) {
-			case NilValue:
-				return Done{Result: value}
-
-			case *SomeValue:
-
-				if link, ok := value.Value.(LinkValue); ok {
-
-					allowedType := interpreter.convertStaticToSemaType(link.Type)
-
-					if !sema.IsSubType(allowedType, wantedType) {
-						return Done{Result: NilValue{}}
-					}
-
-					targetPath := link.TargetPath
-					paths = append(paths, targetPath)
-					key = storageKey(targetPath)
-
-				} else {
-					reference := &StorageReferenceValue{
-						Authorized:           wantedReferenceType.Authorized,
-						TargetStorageAddress: address,
-						TargetKey:            key,
-						// NOTE: new value has no owner
-						Owner: nil,
-					}
-
-					return Done{Result: NewSomeValueOwningNonCopying(reference)}
+				if !sema.IsSubType(allowedType, wantedType) {
+					return "", false
 				}
 
-			default:
-				panic(errors.NewUnreachableError())
+				targetPath := link.TargetPath
+				paths = append(paths, targetPath)
+				key = storageKey(targetPath)
+
+			} else {
+				return key, wantedReferenceType.Authorized
 			}
+
+		default:
+			panic(errors.NewUnreachableError())
 		}
-	})
+	}
 }
 
 func (interpreter *Interpreter) convertStaticToSemaType(staticType StaticType) sema.Type {
