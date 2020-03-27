@@ -102,4 +102,70 @@ func TestCheckCapability(t *testing.T) {
 
 		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
+
+	t.Run("checking: missing type argument", func(t *testing.T) {
+
+		_, err := ParseAndCheckWithPanic(t, `
+
+          let capability: Capability = panic("")
+
+          let ok = capability.check()
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+	})
+
+	for _, auth := range []bool{false, true} {
+
+		authKeyword := ""
+		if auth {
+			authKeyword = "auth"
+		}
+
+		testName := fmt.Sprintf(
+			"checking: explicit type argument, %s reference",
+			authKeyword,
+		)
+
+		t.Run(testName, func(t *testing.T) {
+
+			checker, err := ParseAndCheckWithPanic(t,
+				fmt.Sprintf(
+					`
+                      resource R {}
+
+                      let capability: Capability = panic("")
+
+                      let ok = capability.check<%s &R>()
+                    `,
+					authKeyword,
+				),
+			)
+
+			require.NoError(t, err)
+
+			require.Equal(t,
+				&sema.BoolType{},
+				checker.GlobalValues["ok"].Type,
+			)
+		})
+	}
+
+	t.Run("checking: explicit type argument, non-reference type", func(t *testing.T) {
+
+		_, err := ParseAndCheckWithPanic(t, `
+
+          resource R {}
+
+          let capability: Capability = panic("")
+
+          let ok = capability.check<@R>()
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 }
