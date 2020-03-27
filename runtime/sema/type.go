@@ -3833,6 +3833,17 @@ var authAccountLinkFunctionType = func() *FunctionType {
 	}
 }()
 
+var authAccountUnlinkFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "capabilityPath",
+			TypeAnnotation: NewTypeAnnotation(&PathType{}),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
+}
+
 var accountGetCapabilityFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
@@ -3888,6 +3899,9 @@ func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error
 
 	case "link":
 		return newFunction(authAccountLinkFunctionType)
+
+	case "unlink":
+		return newFunction(authAccountUnlinkFunctionType)
 
 	case "getCapability":
 		return newFunction(accountGetCapabilityFunctionType)
