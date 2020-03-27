@@ -233,7 +233,7 @@ transaction(amount: UFix64) {
 
     execute {
         getAccount(0x02)
-            .getCapability(/public/ExampleReceiver)
+            .getCapability(/public/ExampleReceiver)!
             .borrow<&{Receiver}()!
             .deposit(<-tokensToSend)
     }
