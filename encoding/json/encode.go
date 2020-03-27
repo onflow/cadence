@@ -398,7 +398,7 @@ func (e *Encoder) prepareDictionary(v cadence.Dictionary) jsonValue {
 }
 
 func (e *Encoder) prepareStruct(v cadence.Struct) jsonValue {
-	return e.prepareComposite(stringTypeStr, v.StructType.ID(), v.StructType.Fields, v.Fields)
+	return e.prepareComposite(structTypeStr, v.StructType.ID(), v.StructType.Fields, v.Fields)
 }
 
 func (e *Encoder) prepareResource(v cadence.Resource) jsonValue {
@@ -410,6 +410,10 @@ func (e *Encoder) prepareEvent(v cadence.Event) jsonValue {
 }
 
 func (e *Encoder) prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cadence.Value) jsonValue {
+	if len(fieldTypes) != len(fields) {
+		panic(fmt.Errorf("%s value does not contain fields compatible with declared type", kind))
+	}
+
 	compositeFields := make([]jsonCompositeField, len(fields))
 
 	for i, value := range fields {

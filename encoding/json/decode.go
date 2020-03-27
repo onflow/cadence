@@ -46,10 +46,10 @@ func NewDecoder(r io.Reader) *Decoder {
 //
 // This function returns an error if the bytes represent JSON that is malformed
 // or does not conform to the Cadence JSON specification.
-func (d *Decoder) Decode() (cadence.Value, error) {
+func (d *Decoder) Decode() (value cadence.Value, err error) {
 	jsonMap := make(map[string]interface{})
 
-	err := d.dec.Decode(&jsonMap)
+	err = d.dec.Decode(&jsonMap)
 	if err != nil {
 		return nil, fmt.Errorf("json-cdc: failed to decode valid JSON structure: %w", err)
 	}
@@ -66,7 +66,7 @@ func (d *Decoder) Decode() (cadence.Value, error) {
 		}
 	}()
 
-	value := decodeJSON(jsonMap)
+	value = decodeJSON(jsonMap)
 	return value, nil
 }
 
@@ -75,7 +75,7 @@ const (
 	valueKey = "value"
 )
 
-var ErrDecode = errors.New("failed to decode")
+var ErrInvalidJSONCadence = errors.New("invalid JSON Cadence structure")
 
 func decodeJSON(v interface{}) cadence.Value {
 	obj := toObject(v)
@@ -89,7 +89,7 @@ func decodeJSON(v interface{}) cadence.Value {
 
 	// object should only contain two keys: "type", "value"
 	if len(obj) != 2 {
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	valueJSON := obj.Get(valueKey)
@@ -155,14 +155,14 @@ func decodeJSON(v interface{}) cadence.Value {
 		return decodeEvent(valueJSON)
 	}
 
-	panic(ErrDecode)
+	panic(ErrInvalidJSONCadence)
 }
 
 func decodeVoid(m map[string]interface{}) cadence.Value {
 	// object should not contain fields other than "type"
 	if len(m) != 1 {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return cadence.NewVoid()
@@ -190,13 +190,13 @@ func decodeAddress(valueJSON interface{}) cadence.Value {
 	// must include 0x prefix
 	if v[:2] != "0x" {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	b, err := hex.DecodeString(v[2:])
 	if err != nil {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return cadence.NewAddressFromBytes(b)
@@ -209,7 +209,7 @@ func decodeBigInt(valueJSON interface{}) *big.Int {
 	i, ok := i.SetString(v, 10)
 	if !ok {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return i
@@ -225,7 +225,7 @@ func decodeInt8(valueJSON interface{}) cadence.Value {
 	i, err := strconv.ParseInt(v, 10, 8)
 	if err != nil {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return cadence.NewInt8(int8(i))
@@ -237,7 +237,7 @@ func decodeInt16(valueJSON interface{}) cadence.Value {
 	i, err := strconv.ParseInt(v, 10, 16)
 	if err != nil {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return cadence.NewInt16(int16(i))
@@ -249,7 +249,7 @@ func decodeInt32(valueJSON interface{}) cadence.Value {
 	i, err := strconv.ParseInt(v, 10, 32)
 	if err != nil {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return cadence.NewInt32(int32(i))
@@ -261,7 +261,7 @@ func decodeInt64(valueJSON interface{}) cadence.Value {
 	i, err := strconv.ParseInt(v, 10, 64)
 	if err != nil {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return cadence.NewInt64(i)
@@ -285,7 +285,7 @@ func decodeUInt8(valueJSON interface{}) cadence.Value {
 	i, err := strconv.ParseUint(v, 10, 8)
 	if err != nil {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return cadence.NewUInt8(uint8(i))
@@ -297,7 +297,7 @@ func decodeUInt16(valueJSON interface{}) cadence.Value {
 	i, err := strconv.ParseUint(v, 10, 16)
 	if err != nil {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return cadence.NewUInt16(uint16(i))
@@ -309,7 +309,7 @@ func decodeUInt32(valueJSON interface{}) cadence.Value {
 	i, err := strconv.ParseUint(v, 10, 32)
 	if err != nil {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return cadence.NewUInt32(uint32(i))
@@ -321,7 +321,7 @@ func decodeUInt64(valueJSON interface{}) cadence.Value {
 	i, err := strconv.ParseUint(v, 10, 64)
 	if err != nil {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return cadence.NewUInt64(i)
@@ -341,7 +341,7 @@ func decodeWord8(valueJSON interface{}) cadence.Value {
 	i, err := strconv.ParseUint(v, 10, 8)
 	if err != nil {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return cadence.NewWord8(uint8(i))
@@ -353,7 +353,7 @@ func decodeWord16(valueJSON interface{}) cadence.Value {
 	i, err := strconv.ParseUint(v, 10, 16)
 	if err != nil {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return cadence.NewWord16(uint16(i))
@@ -365,7 +365,7 @@ func decodeWord32(valueJSON interface{}) cadence.Value {
 	i, err := strconv.ParseUint(v, 10, 32)
 	if err != nil {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return cadence.NewWord32(uint32(i))
@@ -377,7 +377,7 @@ func decodeWord64(valueJSON interface{}) cadence.Value {
 	i, err := strconv.ParseUint(v, 10, 64)
 	if err != nil {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return cadence.NewWord64(i)
@@ -389,7 +389,7 @@ func decodeFix64(valueJSON interface{}) cadence.Value {
 	i, err := strconv.ParseInt(v, 10, 64)
 	if err != nil {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return cadence.NewFix64(i)
@@ -401,7 +401,7 @@ func decodeUFix64(valueJSON interface{}) cadence.Value {
 	i, err := strconv.ParseUint(v, 10, 64)
 	if err != nil {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return cadence.NewUFix64(i)
@@ -414,7 +414,7 @@ func decodeFixString(valueJSON interface{}) string {
 	parts := strings.Split(v, ".")
 	if len(parts) != 2 {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return parts[0] + parts[1]
@@ -546,7 +546,7 @@ func (obj jsonObject) Get(key string) interface{} {
 	v, hasKey := obj[key]
 	if !hasKey {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return v
@@ -573,7 +573,7 @@ func toBool(valueJSON interface{}) bool {
 	v, isBool := valueJSON.(bool)
 	if !isBool {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return v
@@ -583,7 +583,7 @@ func toString(valueJSON interface{}) string {
 	v, isString := valueJSON.(string)
 	if !isString {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return v
@@ -593,7 +593,7 @@ func toSlice(valueJSON interface{}) []interface{} {
 	v, isSlice := valueJSON.([]interface{})
 	if !isSlice {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return v
@@ -603,7 +603,7 @@ func toObject(valueJSON interface{}) jsonObject {
 	v, isMap := valueJSON.(map[string]interface{})
 	if !isMap {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	return v
@@ -616,7 +616,7 @@ func identifierFromTypeID(typeID string) string {
 	parts := strings.Split(typeID, ".")
 	if len(parts) < 2 {
 		// TODO: improve error message
-		panic(ErrDecode)
+		panic(ErrInvalidJSONCadence)
 	}
 
 	// parse ID from fully-qualified type ID

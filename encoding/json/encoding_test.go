@@ -626,11 +626,123 @@ func TestEncodeNestedResource(t *testing.T) {
 }
 
 func TestEncodeStruct(t *testing.T) {
-	// TODO: test struct encoding
+	simpleStructType := cadence.StructType{
+		TypeID:     "test.FooStruct",
+		Identifier: "FooStruct",
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.IntType{},
+			},
+			{
+				Identifier: "b",
+				Type:       cadence.StringType{},
+			},
+		},
+	}
+
+	simpleStruct := encodeTest{
+		"Simple",
+		cadence.NewStruct(
+			[]cadence.Value{
+				cadence.NewInt(1),
+				cadence.NewString("foo"),
+			},
+		).WithType(simpleStructType),
+		`{"type":"Struct","value":{"id":"test.FooStruct","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
+	}
+
+	resourceStructType := cadence.StructType{
+		TypeID:     "test.FooStruct",
+		Identifier: "FooStruct",
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.StringType{},
+			},
+			{
+				Identifier: "b",
+				Type:       fooResourceType,
+			},
+		},
+	}
+
+	resourceStruct := encodeTest{
+		"Resources",
+		cadence.NewStruct(
+			[]cadence.Value{
+				cadence.NewString("foo"),
+				cadence.NewResource(
+					[]cadence.Value{
+						cadence.NewInt(42),
+					},
+				).WithType(fooResourceType),
+			},
+		).WithType(resourceStructType),
+		`{"type":"Struct","value":{"id":"test.FooStruct","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
+	}
+
+	testAllEncode(t, simpleStruct, resourceStruct)
 }
 
 func TestEncodeEvent(t *testing.T) {
-	// TODO: test event encoding
+	simpleEventType := cadence.EventType{
+		TypeID:     "test.FooEvent",
+		Identifier: "FooEvent",
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.IntType{},
+			},
+			{
+				Identifier: "b",
+				Type:       cadence.StringType{},
+			},
+		},
+	}
+
+	simpleEvent := encodeTest{
+		"Simple",
+		cadence.NewEvent(
+			[]cadence.Value{
+				cadence.NewInt(1),
+				cadence.NewString("foo"),
+			},
+		).WithType(simpleEventType),
+		`{"type":"Event","value":{"id":"test.FooEvent","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
+	}
+
+	resourceEventType := cadence.EventType{
+		TypeID:     "test.FooEvent",
+		Identifier: "FooEvent",
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.StringType{},
+			},
+			{
+				Identifier: "b",
+				Type:       fooResourceType,
+			},
+		},
+	}
+
+	resourceEvent := encodeTest{
+		"Resources",
+		cadence.NewEvent(
+			[]cadence.Value{
+				cadence.NewString("foo"),
+				cadence.NewResource(
+					[]cadence.Value{
+						cadence.NewInt(42),
+					},
+				).WithType(fooResourceType),
+			},
+		).WithType(resourceEventType),
+		`{"type":"Event","value":{"id":"test.FooEvent","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
+	}
+
+	testAllEncode(t, simpleEvent, resourceEvent)
 }
 
 func trimJSON(b []byte) string {
