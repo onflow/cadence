@@ -46,13 +46,12 @@ func (e *Encoder) Encode(value cadence.Value) (err error) {
 	// capture panics that occur during struct preparation
 	defer func() {
 		if r := recover(); r != nil {
-			var ok bool
-			err, ok = r.(error)
-			if !ok {
-				err = fmt.Errorf("%v", r)
+			panicErr, isError := r.(error)
+			if !isError {
+				panic(r)
 			}
 
-			err = fmt.Errorf("failed to encode value: %w", err)
+			err = fmt.Errorf("failed to encode value: %w", panicErr)
 		}
 	}()
 

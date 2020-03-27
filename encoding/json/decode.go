@@ -54,6 +54,18 @@ func (d *Decoder) Decode() (cadence.Value, error) {
 		return nil, fmt.Errorf("json-cdc: failed to decode valid JSON structure: %w", err)
 	}
 
+	// capture panics that occur during decoding
+	defer func() {
+		if r := recover(); r != nil {
+			panicErr, isError := r.(error)
+			if !isError {
+				panic(r)
+			}
+
+			err = fmt.Errorf("failed to decode value: %w", panicErr)
+		}
+	}()
+
 	value := decodeJSON(jsonMap)
 	return value, nil
 }
