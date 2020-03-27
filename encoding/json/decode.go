@@ -21,8 +21,8 @@ type Decoder struct {
 
 // Decode returns a Cadence value decoded from its JSON-encoded representation.
 //
-// This function returns an error if the bytes do not match the given type
-// definition.
+// This function returns an error if the bytes represent JSON that is malformed
+// or does not conform to the JSON Cadence specification.
 func Decode(b []byte) (cadence.Value, error) {
 	r := bytes.NewReader(b)
 	dec := NewDecoder(r)
@@ -45,7 +45,7 @@ func NewDecoder(r io.Reader) *Decoder {
 // Cadence value.
 //
 // This function returns an error if the bytes represent JSON that is malformed
-// or does not conform to the Cadence JSON specification.
+// or does not conform to the JSON Cadence specification.
 func (d *Decoder) Decode() (value cadence.Value, err error) {
 	jsonMap := make(map[string]interface{})
 
