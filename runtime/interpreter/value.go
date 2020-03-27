@@ -4307,7 +4307,12 @@ type EphemeralReferenceValue struct {
 func (*EphemeralReferenceValue) IsValue() {}
 
 func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter) DynamicType {
-	innerType := v.Value.DynamicType(interpreter)
+	referencedValue := v.referencedValue()
+	if referencedValue == nil {
+		panic(&DereferenceError{})
+	}
+
+	innerType := (*referencedValue).DynamicType(interpreter)
 
 	return EphemeralReferenceType{
 		authorized: v.Authorized,
@@ -4328,23 +4333,65 @@ func (v *EphemeralReferenceValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
+func (v *EphemeralReferenceValue) referencedValue() *Value {
+	// Just like for storage references, references to optionals are unwrapped,
+	// i.e. a reference to `nil` aborts when dereferenced.
+
+	switch referenced := v.Value.(type) {
+	case *SomeValue:
+		return &referenced.Value
+	case NilValue:
+		return nil
+	default:
+		return &v.Value
+	}
+}
+
 func (v *EphemeralReferenceValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return v.Value.(MemberAccessibleValue).
+	referencedValue := v.referencedValue()
+	if referencedValue == nil {
+		panic(&DereferenceError{
+			LocationRange: locationRange,
+		})
+	}
+
+	return (*referencedValue).(MemberAccessibleValue).
 		GetMember(interpreter, locationRange, name)
 }
 
 func (v *EphemeralReferenceValue) SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) {
-	v.Value.(MemberAccessibleValue).
+	referencedValue := v.referencedValue()
+	if referencedValue == nil {
+		panic(&DereferenceError{
+			LocationRange: locationRange,
+		})
+	}
+
+	(*referencedValue).(MemberAccessibleValue).
 		SetMember(interpreter, locationRange, name, value)
 }
 
 func (v *EphemeralReferenceValue) Get(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
-	return v.Value.(ValueIndexableValue).
+	referencedValue := v.referencedValue()
+	if referencedValue == nil {
+		panic(&DereferenceError{
+			LocationRange: locationRange,
+		})
+	}
+
+	return (*referencedValue).(ValueIndexableValue).
 		Get(interpreter, locationRange, key)
 }
 
 func (v *EphemeralReferenceValue) Set(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
-	v.Value.(ValueIndexableValue).
+	referencedValue := v.referencedValue()
+	if referencedValue == nil {
+		panic(&DereferenceError{
+			LocationRange: locationRange,
+		})
+	}
+
+	(*referencedValue).(ValueIndexableValue).
 		Set(interpreter, locationRange, key, value)
 }
 
