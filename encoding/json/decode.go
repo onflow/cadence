@@ -71,8 +71,12 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 }
 
 const (
-	typeKey  = "type"
-	valueKey = "value"
+	typeKey   = "type"
+	valueKey  = "value"
+	keyKey    = "key"
+	nameKey   = "name"
+	fieldsKey = "fields"
+	idKey     = "id"
 )
 
 var ErrInvalidJSONCadence = errors.New("invalid JSON Cadence structure")
@@ -451,8 +455,8 @@ func decodeDictionary(valueJSON interface{}) cadence.Value {
 func decodeKeyValuePair(valueJSON interface{}) cadence.KeyValuePair {
 	obj := toObject(valueJSON)
 
-	key := obj.GetValue("key")
-	value := obj.GetValue("value")
+	key := obj.GetValue(keyKey)
+	value := obj.GetValue(valueKey)
 
 	return cadence.KeyValuePair{
 		Key:   key,
@@ -470,11 +474,11 @@ type composite struct {
 func decodeComposite(valueJSON interface{}) composite {
 	obj := toObject(valueJSON)
 
-	typeID := obj.GetString("id")
+	typeID := obj.GetString(idKey)
 
 	identifier := identifierFromTypeID(typeID)
 
-	fields := obj.GetSlice("fields")
+	fields := obj.GetSlice(fieldsKey)
 
 	fieldValues := make([]cadence.Value, len(fields))
 	fieldTypes := make([]cadence.Field, len(fields))
@@ -497,8 +501,8 @@ func decodeComposite(valueJSON interface{}) composite {
 func decodeCompositeField(valueJSON interface{}) (cadence.Value, cadence.Field) {
 	obj := toObject(valueJSON)
 
-	name := obj.GetString("name")
-	value := obj.GetValue("value")
+	name := obj.GetString(nameKey)
+	value := obj.GetValue(valueKey)
 
 	field := cadence.Field{
 		Identifier: name,
