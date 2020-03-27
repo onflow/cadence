@@ -8108,3 +8108,40 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 		require.Equal(t, test, decoded)
 	}
 }
+
+func TestInterpretEphemeralReferenceToOptional(t *testing.T) {
+
+	_ = parseCheckAndInterpretWithOptions(t,
+		`
+          contract C {
+
+              var rs: @{Int: R}
+
+              resource R {
+                  pub let id: Int
+
+                  init(id: Int) {
+                      self.id = id
+                  }
+              }
+
+              fun borrow(id: Int): &R {
+                  return &C.rs[id] as &R
+              }
+
+              init() {
+                  self.rs <- {}
+                  self.rs[1] <-! create R(id: 1)
+                  let ref = self.borrow(id: 1)
+                  ref.id
+              }
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			Options: []interpreter.Option{
+				makeContractValueHandler(nil, nil, nil),
+			},
+		},
+	)
+
+}
