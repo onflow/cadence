@@ -58,7 +58,7 @@ Objects can be moved into/out of storage through functions of a Signing Account 
    Moves an object into storage from memory.
 
   - Works with Resource or Value types.
-  - Returns `nil` if the storage slot is not empty.
+  - Aborts if the storage slot is not empty.
   - Value types that have been saved are still accessible in memory (the value is copied).
 
    The path must be a Storage Path.
