@@ -19,9 +19,10 @@ func TestConvertVoidValue(t *testing.T) {
 }
 
 func TestConvertNilValue(t *testing.T) {
+
 	value := convertValue(interpreter.NilValue{}, nil)
 
-	assert.Equal(t, NewNil(), value)
+	assert.Equal(t, NewOptional(nil), value)
 }
 
 func TestConvertSomeValue(t *testing.T) {

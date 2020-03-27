@@ -32,7 +32,7 @@ func convertValue(value interpreter.Value, inter *interpreter.Interpreter) Value
 	case interpreter.VoidValue:
 		return NewVoid()
 	case interpreter.NilValue:
-		return NewNil()
+		return NewOptional(nil)
 	case *interpreter.SomeValue:
 		return convertSomeValue(v, inter)
 	case interpreter.BoolValue:
