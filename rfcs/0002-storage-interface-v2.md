@@ -114,7 +114,7 @@ Capabilities can be created through the `link` function of a Signing Account (`A
      It is not necessary for the target to lead to a valid object; the target slot could be empty, or could lead to an object which does not provide the necessary type interface.
 
   - `T`: A type parameter that defines how the capability can be borrowed,
-     i.e. what a what type the stored value can be accessed.
+     i.e. what type the stored value can be accessed as.
 
      For example, if the stored value at the target path has type `@Kitty` (which conforms to interface `NFT`):
 
