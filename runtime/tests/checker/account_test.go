@@ -454,6 +454,29 @@ func TestCheckAccount(t *testing.T) {
 
 	for _, domain := range common.AllPathDomainsByIdentifier {
 
+		// NOTE: storage domain is statically valid at the moment
+
+		testName := fmt.Sprintf(
+			"AuthAccount.getLinkTarget: %s",
+			domain.Name(),
+		)
+		t.Run(testName, func(t *testing.T) {
+
+			_, err := ParseAndCheckAccount(t,
+				fmt.Sprintf(
+					`
+                      let path: Path? = authAccount.getLinkTarget(/%s/r)
+                    `,
+					domain.Identifier(),
+				),
+			)
+
+			require.NoError(t, err)
+		})
+	}
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+
 		for accountType, accountVariable := range map[string]string{
 			"AuthAccount":   "authAccount",
 			"PublicAccount": "publicAccount",
