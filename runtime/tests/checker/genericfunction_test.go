@@ -34,24 +34,6 @@ func parseAndCheckWithTestValue(t *testing.T, code string, ty sema.Type) (*sema.
 
 func TestCheckGenericFunction(t *testing.T) {
 
-	t.Run("invalid: no type parameters, one type argument, no parameters, no arguments, no return type: not generic", func(t *testing.T) {
-
-		_, err := parseAndCheckWithTestValue(t,
-			`
-              let res = test<X>() 
-            `,
-			&sema.FunctionType{
-				Parameters:            nil,
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
-				RequiredArgumentCount: nil,
-			},
-		)
-
-		errs := ExpectCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.InvalidTypeArgumentsError{}, errs[0])
-	})
-
 	t.Run("valid: no type parameters, no type arguments, no parameters, no arguments, no return type", func(t *testing.T) {
 
 		for _, variant := range []string{"", "<>"} {
@@ -63,12 +45,10 @@ func TestCheckGenericFunction(t *testing.T) {
                     `,
 					variant,
 				),
-				&sema.GenericFunctionType{
-					TypeParameters: nil,
-					Parameters:     nil,
-					ReturnTypeAnnotation: &sema.GenericTypeAnnotation{
-						TypeAnnotation: sema.NewTypeAnnotation(&sema.VoidType{}),
-					},
+				&sema.FunctionType{
+					TypeParameters:        nil,
+					Parameters:            nil,
+					ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
 					RequiredArgumentCount: nil,
 				},
 			)
@@ -86,14 +66,12 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		_, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test<X>() 
+              let res = test<X>()
             `,
-			&sema.GenericFunctionType{
-				TypeParameters: nil,
-				Parameters:     nil,
-				ReturnTypeAnnotation: &sema.GenericTypeAnnotation{
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.VoidType{}),
-				},
+			&sema.FunctionType{
+				TypeParameters:        nil,
+				Parameters:            nil,
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -112,16 +90,14 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		_, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test() 
+              let res = test()
             `,
-			&sema.GenericFunctionType{
+			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: nil,
-				ReturnTypeAnnotation: &sema.GenericTypeAnnotation{
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.VoidType{}),
-				},
+				Parameters:            nil,
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -140,16 +116,14 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		checker, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test<Int>() 
+              let res = test<Int>()
             `,
-			&sema.GenericFunctionType{
+			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: nil,
-				ReturnTypeAnnotation: &sema.GenericTypeAnnotation{
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.VoidType{}),
-				},
+				Parameters:            nil,
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -176,24 +150,24 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		checker, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test(1) 
+              let res = test(1)
             `,
-			&sema.GenericFunctionType{
+			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.GenericParameter{
+				Parameters: []*sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "value",
-						TypeAnnotation: &sema.GenericTypeAnnotation{
-							TypeParameter: typeParameter,
-						},
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
 					},
 				},
-				ReturnTypeAnnotation: &sema.GenericTypeAnnotation{
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.VoidType{}),
-				},
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -220,24 +194,24 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		_, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test() 
+              let res = test()
             `,
-			&sema.GenericFunctionType{
+			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.GenericParameter{
+				Parameters: []*sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "value",
-						TypeAnnotation: &sema.GenericTypeAnnotation{
-							TypeParameter: typeParameter,
-						},
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
 					},
 				},
-				ReturnTypeAnnotation: &sema.GenericTypeAnnotation{
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.VoidType{}),
-				},
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -257,31 +231,32 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		_, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test<Int>("1") 
+              let res = test<Int>("1")
             `,
-			&sema.GenericFunctionType{
+			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.GenericParameter{
+				Parameters: []*sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "value",
-						TypeAnnotation: &sema.GenericTypeAnnotation{
-							TypeParameter: typeParameter,
-						},
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
 					},
 				},
-				ReturnTypeAnnotation: &sema.GenericTypeAnnotation{
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.VoidType{}),
-				},
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
 				RequiredArgumentCount: nil,
 			},
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := ExpectCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
 	t.Run("valid: one type parameter, one type argument, one parameter, one arguments", func(t *testing.T) {
@@ -293,24 +268,24 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		_, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test<Int>(1) 
+              let res = test<Int>(1)
             `,
-			&sema.GenericFunctionType{
+			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.GenericParameter{
+				Parameters: []*sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "value",
-						TypeAnnotation: &sema.GenericTypeAnnotation{
-							TypeParameter: typeParameter,
-						},
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
 					},
 				},
-				ReturnTypeAnnotation: &sema.GenericTypeAnnotation{
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.VoidType{}),
-				},
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -327,31 +302,33 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		checker, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test(1, 2) 
+              let res = test(1, 2)
             `,
-			&sema.GenericFunctionType{
+			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.GenericParameter{
+				Parameters: []*sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "first",
-						TypeAnnotation: &sema.GenericTypeAnnotation{
-							TypeParameter: typeParameter,
-						},
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
 					},
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "second",
-						TypeAnnotation: &sema.GenericTypeAnnotation{
-							TypeParameter: typeParameter,
-						},
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
 					},
 				},
-				ReturnTypeAnnotation: &sema.GenericTypeAnnotation{
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.VoidType{}),
-				},
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -378,38 +355,41 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		_, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test(1, "2") 
+              let res = test(1, "2")
             `,
-			&sema.GenericFunctionType{
+			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.GenericParameter{
+				Parameters: []*sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "first",
-						TypeAnnotation: &sema.GenericTypeAnnotation{
-							TypeParameter: typeParameter,
-						},
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
 					},
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "second",
-						TypeAnnotation: &sema.GenericTypeAnnotation{
-							TypeParameter: typeParameter,
-						},
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
 					},
 				},
-				ReturnTypeAnnotation: &sema.GenericTypeAnnotation{
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.VoidType{}),
-				},
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
 				RequiredArgumentCount: nil,
 			},
 		)
 
-		errs := ExpectCheckerErrors(t, err, 1)
+		errs := ExpectCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
 	t.Run("invalid: one type parameter, no type argument, no parameters, no arguments, return type", func(t *testing.T) {
@@ -421,16 +401,18 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		_, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test() 
+              let res = test()
             `,
-			&sema.GenericFunctionType{
+			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
 				Parameters: nil,
-				ReturnTypeAnnotation: &sema.GenericTypeAnnotation{
-					TypeParameter: typeParameter,
-				},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -449,16 +431,18 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		checker, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test<Int>() 
+              let res = test<Int>()
             `,
-			&sema.GenericFunctionType{
+			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
 				Parameters: nil,
-				ReturnTypeAnnotation: &sema.GenericTypeAnnotation{
-					TypeParameter: typeParameter,
-				},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -490,24 +474,28 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		checker, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test(1) 
+              let res = test(1)
             `,
-			&sema.GenericFunctionType{
+			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.GenericParameter{
+				Parameters: []*sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "value",
-						TypeAnnotation: &sema.GenericTypeAnnotation{
-							TypeParameter: typeParameter,
-						},
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
 					},
 				},
-				ReturnTypeAnnotation: &sema.GenericTypeAnnotation{
-					TypeParameter: typeParameter,
-				},
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -539,16 +527,14 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		checker, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test<Int>() 
+              let res = test<Int>()
             `,
-			&sema.GenericFunctionType{
+			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: nil,
-				ReturnTypeAnnotation: &sema.GenericTypeAnnotation{
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.VoidType{}),
-				},
+				Parameters:            nil,
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -575,16 +561,14 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		_, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test<String>() 
+              let res = test<String>()
             `,
-			&sema.GenericFunctionType{
+			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: nil,
-				ReturnTypeAnnotation: &sema.GenericTypeAnnotation{
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.VoidType{}),
-				},
+				Parameters:            nil,
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -603,24 +587,24 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		_, err := parseAndCheckWithTestValue(t,
 			`
-              let res = test("test") 
+              let res = test("test")
             `,
-			&sema.GenericFunctionType{
+			&sema.FunctionType{
 				TypeParameters: []*sema.TypeParameter{
 					typeParameter,
 				},
-				Parameters: []*sema.GenericParameter{
+				Parameters: []*sema.Parameter{
 					{
 						Label:      sema.ArgumentLabelNotRequired,
 						Identifier: "value",
-						TypeAnnotation: &sema.GenericTypeAnnotation{
-							TypeParameter: typeParameter,
-						},
+						TypeAnnotation: sema.NewTypeAnnotation(
+							&sema.GenericType{
+								TypeParameter: typeParameter,
+							},
+						),
 					},
 				},
-				ReturnTypeAnnotation: &sema.GenericTypeAnnotation{
-					TypeAnnotation: sema.NewTypeAnnotation(&sema.VoidType{}),
-				},
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -628,6 +612,197 @@ func TestCheckGenericFunction(t *testing.T) {
 		errs := ExpectCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("valid: one type parameter, one type argument, no parameters, no arguments, generic return type", func(t *testing.T) {
+
+		type test struct {
+			name         string
+			generateType func(innerType sema.Type) sema.Type
+		}
+
+		tests := []test{
+			{
+				name: "optional",
+				generateType: func(innerType sema.Type) sema.Type {
+					return &sema.OptionalType{
+						Type: innerType,
+					}
+				},
+			},
+			{
+				name: "variable-sized array",
+				generateType: func(innerType sema.Type) sema.Type {
+					return &sema.VariableSizedType{
+						Type: innerType,
+					}
+				},
+			},
+			{
+				name: "constant-sized array",
+				generateType: func(innerType sema.Type) sema.Type {
+					return &sema.ConstantSizedType{
+						Type: innerType,
+						Size: 2,
+					}
+				},
+			},
+			{
+				name: "dictionary",
+				generateType: func(innerType sema.Type) sema.Type {
+					return &sema.DictionaryType{
+						KeyType:   innerType,
+						ValueType: innerType,
+					}
+				},
+			},
+		}
+
+		for _, test := range tests {
+
+			t.Run(test.name, func(t *testing.T) {
+
+				typeParameter := &sema.TypeParameter{
+					Name: "T",
+					Type: &sema.NumberType{},
+				}
+
+				checker, err := parseAndCheckWithTestValue(t,
+					`
+                      let res = test<Int>()
+                    `,
+					&sema.FunctionType{
+						TypeParameters: []*sema.TypeParameter{
+							typeParameter,
+						},
+						Parameters: nil,
+						ReturnTypeAnnotation: sema.NewTypeAnnotation(
+							test.generateType(
+								&sema.GenericType{
+									TypeParameter: typeParameter,
+								},
+							),
+						),
+						RequiredArgumentCount: nil,
+					},
+				)
+
+				require.NoError(t, err)
+
+				assert.Equal(t,
+					test.generateType(&sema.IntType{}),
+					checker.GlobalValues["res"].Type,
+				)
+			})
+		}
+	})
+
+	t.Run("valid: one type parameter, no type argument, one parameter, one argument, generic return type", func(t *testing.T) {
+
+		type test struct {
+			name         string
+			generateType func(innerType sema.Type) sema.Type
+			declarations string
+			argument     string
+		}
+
+		tests := []test{
+			{
+				name: "optional",
+				generateType: func(innerType sema.Type) sema.Type {
+					return &sema.OptionalType{
+						Type: innerType,
+					}
+				},
+				declarations: "let x: Int? = 1",
+				argument:     "x",
+			},
+			{
+				name: "variable-sized array",
+				generateType: func(innerType sema.Type) sema.Type {
+					return &sema.VariableSizedType{
+						Type: innerType,
+					}
+				},
+				argument: "[1, 2, 3]",
+			},
+			{
+				name: "constant-sized array",
+				generateType: func(innerType sema.Type) sema.Type {
+					return &sema.ConstantSizedType{
+						Type: innerType,
+						Size: 2,
+					}
+				},
+				declarations: "let xs: [Int; 2] = [1, 2]",
+				argument:     "xs",
+			},
+			{
+				name: "dictionary",
+				generateType: func(innerType sema.Type) sema.Type {
+					return &sema.DictionaryType{
+						KeyType:   innerType,
+						ValueType: innerType,
+					}
+				},
+				argument: "{1: 2}",
+			},
+		}
+
+		for _, test := range tests {
+
+			t.Run(test.name, func(t *testing.T) {
+
+				typeParameter := &sema.TypeParameter{
+					Name: "T",
+					Type: &sema.NumberType{},
+				}
+
+				checker, err := parseAndCheckWithTestValue(t,
+					fmt.Sprintf(
+						`
+                          %[1]s
+                          let res = test(%[2]s)
+                        `,
+						test.declarations,
+						test.argument,
+					),
+					&sema.FunctionType{
+						TypeParameters: []*sema.TypeParameter{
+							typeParameter,
+						},
+						Parameters: []*sema.Parameter{
+							{
+								Label:      sema.ArgumentLabelNotRequired,
+								Identifier: "value",
+								TypeAnnotation: sema.NewTypeAnnotation(
+									test.generateType(
+										&sema.GenericType{
+											TypeParameter: typeParameter,
+										},
+									),
+								),
+							},
+						},
+						ReturnTypeAnnotation: sema.NewTypeAnnotation(
+							test.generateType(
+								&sema.GenericType{
+									TypeParameter: typeParameter,
+								},
+							),
+						),
+						RequiredArgumentCount: nil,
+					},
+				)
+
+				require.NoError(t, err)
+
+				assert.Equal(t,
+					test.generateType(&sema.IntType{}),
+					checker.GlobalValues["res"].Type,
+				)
+			})
+		}
 	})
 
 }

@@ -1,4 +1,4 @@
-package encoding
+package xdr
 
 import (
 	"bytes"
@@ -94,14 +94,16 @@ func (e *Encoder) Encode(v cadence.Value) error {
 		return e.EncodeFix64(x)
 	case cadence.UFix64:
 		return e.EncodeUFix64(x)
-	case cadence.VariableSizedArray:
-		return e.EncodeVariableSizedArray(x)
-	case cadence.ConstantSizedArray:
-		return e.EncodeConstantSizedArray(x)
+	case cadence.Array:
+		return e.EncodeArray(x)
 	case cadence.Dictionary:
 		return e.EncodeDictionary(x)
-	case cadence.Composite:
-		return e.EncodeComposite(x)
+	case cadence.Struct:
+		return e.EncodeStruct(x)
+	case cadence.Resource:
+		return e.EncodeResource(x)
+	case cadence.Event:
+		return e.EncodeEvent(x)
 	default:
 		return fmt.Errorf("unsupported value: %T, %v", v, v)
 	}
@@ -425,13 +427,12 @@ func (e *Encoder) EncodeUFix64(v cadence.UFix64) error {
 	return err
 }
 
-// EncodeVariableSizedArray writes the XDR-encoded representation of a
-// variable-sized array.
+// EncodeArray writes the XDR-encoded representation of an array.
 //
 // Reference: https://tools.ietf.org/html/rfc4506#section-4.13
 //  RFC Section 4.13 - Variable-Length Array
 //  Unsigned integer length followed by individually XDR-encoded array elements
-func (e *Encoder) EncodeVariableSizedArray(v cadence.VariableSizedArray) error {
+func (e *Encoder) EncodeArray(v cadence.Array) error {
 	size := uint32(len(v.Values))
 
 	_, err := e.enc.EncodeUint(size)
@@ -439,16 +440,6 @@ func (e *Encoder) EncodeVariableSizedArray(v cadence.VariableSizedArray) error {
 		return err
 	}
 
-	return e.encodeArray(v.Values)
-}
-
-// EncodeConstantSizedArray writes the XDR-encoded representation of a
-// constant-sized array.
-//
-// Reference: https://tools.ietf.org/html/rfc4506#section-4.12
-//  RFC Section 4.12 - Fixed-Length Array
-//  Individually XDR-encoded array elements
-func (e *Encoder) EncodeConstantSizedArray(v cadence.ConstantSizedArray) error {
 	return e.encodeArray(v.Values)
 }
 
@@ -499,9 +490,21 @@ func (e *Encoder) EncodeDictionary(v cadence.Dictionary) error {
 	return e.encodeArray(elements)
 }
 
-// EncodeComposite writes the XDR-encoded representation of a composite value.
+func (e *Encoder) EncodeStruct(v cadence.Struct) error {
+	return e.encodeComposite(v.Fields)
+}
+
+func (e *Encoder) EncodeResource(v cadence.Resource) error {
+	return e.encodeComposite(v.Fields)
+}
+
+func (e *Encoder) EncodeEvent(v cadence.Event) error {
+	return e.encodeComposite(v.Fields)
+}
+
+// encodeComposite writes the XDR-encoded representation of a composite value.
 //
 // A composite is encoded as a fixed-length array of its field values.
-func (e *Encoder) EncodeComposite(v cadence.Composite) error {
-	return e.encodeArray(v.Fields)
+func (e *Encoder) encodeComposite(fields []cadence.Value) error {
+	return e.encodeArray(fields)
 }

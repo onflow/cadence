@@ -1967,11 +1967,11 @@ func (v *ProgramVisitor) VisitInvocation(ctx *InvocationContext) interface{} {
 
 	// type arguments
 
-	var typeArguments []ast.Type
-	for _, typeArgument := range ctx.AllFullType() {
+	var typeArguments []*ast.TypeAnnotation
+	for _, typeArgument := range ctx.AllTypeAnnotation() {
 		typeArguments = append(
 			typeArguments,
-			typeArgument.Accept(v).(ast.Type),
+			typeArgument.Accept(v).(*ast.TypeAnnotation),
 		)
 	}
 

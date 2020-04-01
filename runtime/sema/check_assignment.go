@@ -80,13 +80,11 @@ func (checker *Checker) checkAssignment(
 
 	checker.checkVariableMove(value)
 
-	if valueType.IsResourceType() {
-		checker.recordResourceInvalidation(
-			value,
-			valueType,
-			ResourceInvalidationKindMove,
-		)
-	}
+	checker.recordResourceInvalidation(
+		value,
+		valueType,
+		ResourceInvalidationKindMove,
+	)
 
 	return
 }

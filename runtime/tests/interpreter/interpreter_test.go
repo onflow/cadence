@@ -1,8 +1,11 @@
 package interpreter_test
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -7474,6 +7477,52 @@ func TestInterpretNonStorageReferenceAfterDestruction(t *testing.T) {
 	assert.IsType(t, &interpreter.DestroyedCompositeError{}, err)
 }
 
+func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
+
+	inter := parseCheckAndInterpret(t,
+		`
+          resource Foo {
+              let name: String
+
+              init(name: String) {
+                  self.name = name
+              }
+          }
+
+
+          fun testSome(): String {
+              let xs: @{String: Foo} <- {"yes": <-create Foo(name: "YES")}
+              let ref = &xs["yes"] as &Foo
+              let name = ref.name
+              destroy xs
+              return name
+          }
+
+          fun testNil(): String {
+              let xs: @{String: Foo} <- {}
+              let ref = &xs["no"] as &Foo
+              let name = ref.name
+              destroy xs
+              return name
+          }
+        `,
+	)
+
+	t.Run("some", func(t *testing.T) {
+		value, err := inter.Invoke("testSome")
+		require.NoError(t, err)
+
+		assert.Equal(t, interpreter.NewStringValue("YES"), value)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		_, err := inter.Invoke("testNil")
+		require.Error(t, err)
+
+		assert.IsType(t, &interpreter.DereferenceError{}, err)
+	})
+}
+
 func TestInterpretFix64(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t,
@@ -7836,5 +7885,230 @@ func TestInterpretForce(t *testing.T) {
 		require.Error(t, err)
 
 		assert.IsType(t, &interpreter.ForceNilError{}, err)
+	})
+}
+
+func permutations(xs []string) (res [][]string) {
+	var f func([]string, int)
+	f = func(a []string, k int) {
+		if k == len(a) {
+			res = append(res, append([]string{}, a...))
+		} else {
+			for i := k; i < len(xs); i++ {
+				a[k], a[i] = a[i], a[k]
+				f(a, k+1)
+				a[k], a[i] = a[i], a[k]
+			}
+		}
+	}
+
+	f(xs, 0)
+
+	return res
+}
+
+func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
+
+	fieldValues := map[string]int{
+		"a": 1,
+		"b": 2,
+		"c": 3,
+	}
+
+	initializations := make([]string, 0, len(fieldValues))
+
+	for name, value := range fieldValues {
+		initialization := fmt.Sprintf("self.%s = %d", name, value)
+		initializations = append(initializations, initialization)
+	}
+
+	allInitializations := permutations(initializations)
+
+	encodings := make([][]byte, len(allInitializations))
+
+	for i, initialization := range allInitializations {
+
+		inter := parseCheckAndInterpret(t,
+			fmt.Sprintf(
+				`
+                  struct Test {
+                      let a: Int
+                      let b: Int
+                      let c: Int
+
+                      init() {
+                          %s
+                      }
+                  }
+
+                  let test = Test()
+                `,
+				strings.Join(initialization, "\n"),
+			),
+		)
+
+		test := inter.Globals["test"].Value.(*interpreter.CompositeValue)
+
+		w := new(bytes.Buffer)
+		encoder := gob.NewEncoder(w)
+		err := encoder.Encode(test)
+		require.NoError(t, err)
+
+		encodings[i] = w.Bytes()
+	}
+
+	expected := encodings[0]
+
+	for _, actual := range encodings[1:] {
+		require.Equal(t, expected, actual)
+	}
+}
+func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
+
+	fieldValues := map[string]int{
+		"a": 1,
+		"b": 2,
+		"c": 3,
+	}
+
+	initializations := make([]string, 0, len(fieldValues))
+
+	for name, value := range fieldValues {
+		initialization := fmt.Sprintf(`xs["%s"] = %d`, name, value)
+		initializations = append(initializations, initialization)
+	}
+
+	for _, initialization := range permutations(initializations) {
+
+		inter := parseCheckAndInterpret(t,
+			fmt.Sprintf(
+				`
+                  fun construct(): {String: Int} {
+                      let xs: {String: Int} = {}
+                      %s
+                      return xs
+                  }
+
+                  let test = construct()
+                `,
+				strings.Join(initialization, "\n"),
+			),
+		)
+
+		test := inter.Globals["test"].Value
+
+		w := new(bytes.Buffer)
+		encoder := gob.NewEncoder(w)
+		err := encoder.Encode(&test)
+		require.NoError(t, err)
+
+		encoded := w.Bytes()
+
+		var decoded interpreter.Value
+		decoder := gob.NewDecoder(bytes.NewReader(encoded))
+		err = decoder.Decode(&decoded)
+		require.NoError(t, err)
+
+		require.Equal(t, test, decoded)
+	}
+}
+
+func TestInterpretEphemeralReferenceToOptional(t *testing.T) {
+
+	_ = parseCheckAndInterpretWithOptions(t,
+		`
+          contract C {
+
+              var rs: @{Int: R}
+
+              resource R {
+                  pub let id: Int
+
+                  init(id: Int) {
+                      self.id = id
+                  }
+              }
+
+              fun borrow(id: Int): &R {
+                  return &C.rs[id] as &R
+              }
+
+              init() {
+                  self.rs <- {}
+                  self.rs[1] <-! create R(id: 1)
+                  let ref = self.borrow(id: 1)
+                  ref.id
+              }
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			Options: []interpreter.Option{
+				makeContractValueHandler(nil, nil, nil),
+			},
+		},
+	)
+}
+
+func TestInterpretNestedDeclarationOrder(t *testing.T) {
+
+	t.Run("A, B", func(t *testing.T) {
+		_ = parseCheckAndInterpretWithOptions(t,
+			`
+          pub contract Test {
+
+              pub resource A {
+
+                  pub fun b(): @B {
+                      return <-create B()
+                  }
+              }
+
+              pub resource B {}
+
+              init() {
+                  let a <- create A()
+                  let b <- a.b()
+                  destroy a
+                  destroy b
+              }
+          }
+        `,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					makeContractValueHandler(nil, nil, nil),
+				},
+			},
+		)
+	})
+
+	t.Run("B, A", func(t *testing.T) {
+
+		_ = parseCheckAndInterpretWithOptions(t,
+			`
+          pub contract Test {
+
+              pub resource B {}
+
+              pub resource A {
+
+                  pub fun b(): @B {
+                      return <-create B()
+                  }
+              }
+
+              init() {
+                  let a <- create A()
+                  let b <- a.b()
+                  destroy a
+                  destroy b
+              }
+          }
+        `,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					makeContractValueHandler(nil, nil, nil),
+				},
+			},
+		)
 	})
 }

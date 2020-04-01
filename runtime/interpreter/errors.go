@@ -195,18 +195,29 @@ func (e *TypeMismatchError) Error() string {
 	)
 }
 
-// InvalidSavePathDomainError
+// InvalidPathDomainError
 
-type InvalidSavePathDomainError struct {
-	ActualDomain   common.PathDomain
-	ExpectedDomain common.PathDomain
+type InvalidPathDomainError struct {
+	ActualDomain    common.PathDomain
+	ExpectedDomains []common.PathDomain
 	LocationRange
 }
 
-func (e *InvalidSavePathDomainError) Error() string {
+func (e *InvalidPathDomainError) Error() string {
+	return "invalid path domain"
+}
+
+func (e *InvalidPathDomainError) SecondaryError() string {
+
+	domainNames := make([]string, len(e.ExpectedDomains))
+
+	for i, domain := range e.ExpectedDomains {
+		domainNames[i] = domain.Name()
+	}
+
 	return fmt.Sprintf(
-		"invalid path domain when saving value: expected `%s`, got `%s`",
-		e.ExpectedDomain.Identifier(),
+		"expected %s, got `%s`",
+		common.EnumerateWords(domainNames, "or"),
 		e.ActualDomain.Identifier(),
 	)
 }

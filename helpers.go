@@ -36,9 +36,9 @@ func NewValue(value interface{}) (Value, error) {
 			values[i] = t
 		}
 
-		return NewVariableSizedArray(values), nil
+		return NewArray(values), nil
 	case nil:
-		return NewNil(), nil
+		return NewOptional(nil), nil
 	}
 
 	return nil, fmt.Errorf("value type %T cannot be converted to ABI value type", value)
@@ -100,10 +100,10 @@ func CastToUInt16(value Value) (uint16, error) {
 	return u, nil
 }
 
-func CastToVariableSizedArray(value Value) ([]interface{}, error) {
-	casted, ok := value.(VariableSizedArray)
+func CastToArray(value Value) ([]interface{}, error) {
+	casted, ok := value.(Array)
 	if !ok {
-		return nil, fmt.Errorf("%T is not a values.VariableSizedArray", value)
+		return nil, fmt.Errorf("%T is not a values.Array", value)
 	}
 
 	goValue := casted.ToGoValue()
@@ -126,14 +126,6 @@ func CastToInt(value Value) (int, error) {
 	u, ok := goValue.(int)
 	if !ok {
 		return 0, fmt.Errorf("%T %v is not a int", value, value)
-	}
-	return u, nil
-}
-
-func CastToComposite(value Value) (Composite, error) {
-	u, ok := value.(Composite)
-	if !ok {
-		return Composite{}, fmt.Errorf("%T is not a Composite", value)
 	}
 	return u, nil
 }

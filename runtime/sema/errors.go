@@ -338,10 +338,10 @@ func (e *IncorrectArgumentLabelError) Error() string {
 func (e *IncorrectArgumentLabelError) SecondaryError() string {
 	expected := "none"
 	if e.ExpectedArgumentLabel != "" {
-		expected = e.ExpectedArgumentLabel
+		expected = fmt.Sprintf("`%s`", e.ExpectedArgumentLabel)
 	}
 	return fmt.Sprintf(
-		"expected `%s`, got `%s`",
+		"expected %s, got `%s`",
 		expected,
 		e.ActualArgumentLabel,
 	)
@@ -422,6 +422,16 @@ func (e *InvalidBinaryOperandsError) Error() string {
 }
 
 func (*InvalidBinaryOperandsError) isSemanticError() {}
+
+// InvalidNilCoalescingRightResourceOperandError
+
+type InvalidNilCoalescingRightResourceOperandError struct {
+	ast.Range
+}
+
+func (e *InvalidNilCoalescingRightResourceOperandError) Error() string {
+	return "nil-coalescing with right-hand resource is not supported at the moment"
+}
 
 // ControlStatementError
 
@@ -2503,18 +2513,6 @@ func (e *InvalidTypeArgumentCountError) SecondaryError() string {
 
 func (e *InvalidTypeArgumentCountError) isSemanticError() {}
 
-// InvalidTypeArgumentsError
-
-type InvalidTypeArgumentsError struct {
-	ast.Range
-}
-
-func (e *InvalidTypeArgumentsError) Error() string {
-	return "invalid type arguments, invoked function is not generic"
-}
-
-func (e *InvalidTypeArgumentsError) isSemanticError() {}
-
 // TypeParameterTypeInferenceError
 
 type TypeParameterTypeInferenceError struct {
@@ -2588,3 +2586,27 @@ func (e *UnsupportedResourceForLoopError) Error() string {
 }
 
 func (e *UnsupportedResourceForLoopError) isSemanticError() {}
+
+// TypeParameterTypeMismatchError
+
+type TypeParameterTypeMismatchError struct {
+	TypeParameter *TypeParameter
+	ExpectedType  Type
+	ActualType    Type
+	ast.Range
+}
+
+func (e *TypeParameterTypeMismatchError) Error() string {
+	return "mismatched types for type parameter"
+}
+
+func (*TypeParameterTypeMismatchError) isSemanticError() {}
+
+func (e *TypeParameterTypeMismatchError) SecondaryError() string {
+	return fmt.Sprintf(
+		"type parameter %s is bound to `%s`, but got `%s` here",
+		e.TypeParameter.Name,
+		e.ExpectedType.QualifiedString(),
+		e.ActualType.QualifiedString(),
+	)
+}

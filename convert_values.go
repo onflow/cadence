@@ -6,78 +6,113 @@ import (
 	"sort"
 
 	"github.com/dapperlabs/cadence/runtime"
+	"github.com/dapperlabs/cadence/runtime/common"
 	"github.com/dapperlabs/cadence/runtime/interpreter"
+	"github.com/dapperlabs/cadence/runtime/sema"
 )
 
-// ConvertValue converts a runtime value to its corresponding Go representation.
-func ConvertValue(value runtime.Value) (Value, error) {
+// ConvertValue converts a runtime value to its native Go representation.
+func ConvertValue(value runtime.Value) Value {
+	return convertValue(value.Value, value.Interpreter())
+}
+
+// ConvertEvent converts a runtime event to its native Go representation.
+func ConvertEvent(event runtime.Event) Event {
+	fields := make([]Value, len(event.Fields))
+
+	for i, field := range event.Fields {
+		fields[i] = convertValue(field.Value, field.Interpreter())
+	}
+
+	return NewEvent(fields).WithType(ConvertType(event.Type).(EventType))
+}
+
+func convertValue(value interpreter.Value, inter *interpreter.Interpreter) Value {
 	switch v := value.(type) {
 	case interpreter.VoidValue:
-		return NewVoid(), nil
+		return NewVoid()
 	case interpreter.NilValue:
-		return NewOptional(nil), nil
+		return NewOptional(nil)
 	case *interpreter.SomeValue:
-		return convertSomeValue(v)
+		return convertSomeValue(v, inter)
 	case interpreter.BoolValue:
-		return NewBool(bool(v)), nil
+		return NewBool(bool(v))
 	case *interpreter.StringValue:
-		return NewString(v.Str), nil
+		return NewString(v.Str)
 	case *interpreter.ArrayValue:
-		return convertArrayValue(v)
+		return convertArrayValue(v, inter)
 	case interpreter.IntValue:
-		return NewIntFromBig(big.NewInt(0).Set(v.Int)), nil
+		return NewIntFromBig(big.NewInt(0).Set(v.Int))
 	case interpreter.Int8Value:
-		return NewInt8(int8(v)), nil
+		return NewInt8(int8(v))
 	case interpreter.Int16Value:
-		return NewInt16(int16(v)), nil
+		return NewInt16(int16(v))
 	case interpreter.Int32Value:
-		return NewInt32(int32(v)), nil
+		return NewInt32(int32(v))
 	case interpreter.Int64Value:
-		return NewInt64(int64(v)), nil
+		return NewInt64(int64(v))
+	case interpreter.Int128Value:
+		return NewInt128FromBig(big.NewInt(0).Set(v.Int))
+	case interpreter.Int256Value:
+		return NewInt256FromBig(big.NewInt(0).Set(v.Int))
+	case interpreter.UIntValue:
+		return NewUIntFromBig(big.NewInt(0).Set(v.Int))
 	case interpreter.UInt8Value:
-		return NewUInt8(uint8(v)), nil
+		return NewUInt8(uint8(v))
 	case interpreter.UInt16Value:
-		return NewUInt16(uint16(v)), nil
+		return NewUInt16(uint16(v))
 	case interpreter.UInt32Value:
-		return NewUInt32(uint32(v)), nil
+		return NewUInt32(uint32(v))
 	case interpreter.UInt64Value:
-		return NewUInt64(uint64(v)), nil
+		return NewUInt64(uint64(v))
+	case interpreter.UInt128Value:
+		return NewUInt128FromBig(big.NewInt(0).Set(v.Int))
+	case interpreter.UInt256Value:
+		return NewUInt256FromBig(big.NewInt(0).Set(v.Int))
+	case interpreter.Word8Value:
+		return NewWord8(uint8(v))
+	case interpreter.Word16Value:
+		return NewWord16(uint16(v))
+	case interpreter.Word32Value:
+		return NewWord32(uint32(v))
+	case interpreter.Word64Value:
+		return NewWord64(uint64(v))
+	case interpreter.Fix64Value:
+		return NewFix64(int64(v))
+	case interpreter.UFix64Value:
+		return NewUFix64(uint64(v))
 	case *interpreter.CompositeValue:
-		return convertCompositeValue(v)
+		return convertCompositeValue(v, inter)
 	case *interpreter.DictionaryValue:
-		return convertDictionaryValue(v)
+		return convertDictionaryValue(v, inter)
 	case interpreter.AddressValue:
-		return NewAddress(v), nil
+		return NewAddress(v)
 	}
 
-	return nil, fmt.Errorf("cannot convert value of type %T", value)
+	panic(fmt.Sprintf("cannot convert value of type %T", value))
 }
 
-func convertSomeValue(v *interpreter.SomeValue) (Value, error) {
-	convertedValue, err := ConvertValue(v.Value)
-	if err != nil {
-		return nil, err
+func convertSomeValue(v *interpreter.SomeValue, inter *interpreter.Interpreter) Value {
+	if v.Value == nil {
+		return NewOptional(nil)
 	}
 
-	return NewOptional(convertedValue), nil
+	value := convertValue(v.Value, inter)
+
+	return NewOptional(value)
 }
 
-func convertArrayValue(v *interpreter.ArrayValue) (Value, error) {
-	vals := make([]Value, len(v.Values))
+func convertArrayValue(v *interpreter.ArrayValue, inter *interpreter.Interpreter) Value {
+	values := make([]Value, len(v.Values))
 
 	for i, value := range v.Values {
-		convertedValue, err := ConvertValue(value)
-		if err != nil {
-			return nil, err
-		}
-
-		vals[i] = convertedValue
+		values[i] = convertValue(value, inter)
 	}
 
-	return NewVariableSizedArray(vals), nil
+	return NewArray(values)
 }
 
-func convertCompositeValue(v *interpreter.CompositeValue) (Value, error) {
+func convertCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Interpreter) Value {
 	fields := make([]Value, len(v.Fields))
 
 	keys := make([]string, 0, len(v.Fields))
@@ -90,34 +125,35 @@ func convertCompositeValue(v *interpreter.CompositeValue) (Value, error) {
 
 	for i, key := range keys {
 		field := v.Fields[key]
-
-		convertedField, err := ConvertValue(field)
-		if err != nil {
-			return nil, err
-		}
-
-		fields[i] = convertedField
+		fields[i] = convertValue(field, inter)
 	}
 
-	return NewComposite(fields), nil
+	dynamicType := v.DynamicType(inter).(interpreter.CompositeType)
+	staticType := dynamicType.StaticType.(*sema.CompositeType)
+
+	t := ConvertType(staticType)
+
+	switch staticType.Kind {
+	case common.CompositeKindStructure:
+		return NewStruct(fields).WithType(t.(StructType))
+	case common.CompositeKindResource:
+		return NewResource(fields).WithType(t.(ResourceType))
+	case common.CompositeKindEvent:
+		return NewEvent(fields).WithType(t.(EventType))
+	}
+
+	panic(fmt.Errorf("invalid composite kind `%s`, must be Struct, Resource or Event", staticType.Kind))
 }
 
-func convertDictionaryValue(v *interpreter.DictionaryValue) (Value, error) {
+func convertDictionaryValue(v *interpreter.DictionaryValue, inter *interpreter.Interpreter) Value {
 	pairs := make([]KeyValuePair, v.Count())
 
 	for i, keyValue := range v.Keys.Values {
 		key := keyValue.(interpreter.HasKeyString).KeyString()
 		value := v.Entries[key]
 
-		convertedKey, err := ConvertValue(keyValue)
-		if err != nil {
-			return nil, err
-		}
-
-		convertedValue, err := ConvertValue(value)
-		if err != nil {
-			return nil, err
-		}
+		convertedKey := convertValue(keyValue, inter)
+		convertedValue := convertValue(value, inter)
 
 		pairs[i] = KeyValuePair{
 			Key:   convertedKey,
@@ -125,5 +161,5 @@ func convertDictionaryValue(v *interpreter.DictionaryValue) (Value, error) {
 		}
 	}
 
-	return NewDictionary(pairs), nil
+	return NewDictionary(pairs)
 }
