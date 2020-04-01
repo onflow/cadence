@@ -549,6 +549,88 @@ func TestInterpretAuthAccountLink(t *testing.T) {
 	}
 }
 
+func TestInterpretAuthAccountUnlink(t *testing.T) {
+
+	for _, capabilityDomain := range []common.PathDomain{
+		common.PathDomainPrivate,
+		common.PathDomainPublic,
+	} {
+
+		t.Run(capabilityDomain.Name(), func(t *testing.T) {
+
+			inter, storedValues := testAccount(
+				t,
+				true,
+				fmt.Sprintf(
+					`
+	                  resource R {}
+
+	                  resource R2 {}
+
+	                  fun saveAndLinkR() {
+	                      let r <- create R()
+	                      account.save(<-r, to: /storage/r)
+	                      account.link<&R>(/%[1]s/r, target: /storage/r)
+	                  }
+
+	                  fun unlinkR() {
+	                      account.unlink(/%[1]s/r)
+	                  }
+
+                      fun unlinkR2() {
+	                      account.unlink(/%[1]s/r2)
+	                  }
+	                `,
+					capabilityDomain.Identifier(),
+				),
+			)
+
+			// save and link
+
+			_, err := inter.Invoke("saveAndLinkR")
+			require.NoError(t, err)
+
+			require.Len(t, storedValues, 2)
+
+			t.Run("unlink R", func(t *testing.T) {
+				_, err := inter.Invoke("unlinkR")
+				require.NoError(t, err)
+
+				require.Len(t, storedValues, 1)
+			})
+
+			t.Run("unlink R2", func(t *testing.T) {
+
+				_, err := inter.Invoke("unlinkR2")
+				require.NoError(t, err)
+
+				require.Len(t, storedValues, 1)
+			})
+		})
+	}
+
+	t.Run("storage", func(t *testing.T) {
+
+		inter, _ := testAccount(
+			t,
+			true,
+			`
+	          resource R {}
+
+	          fun test() {
+	              account.unlink(/storage/r)
+	          }
+	        `,
+		)
+
+		_, err := inter.Invoke("test")
+
+		require.Error(t, err)
+
+		require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+	})
+}
+
 func TestInterpretAccountGetCapability(t *testing.T) {
 
 	tests := map[bool][]common.PathDomain{

@@ -3681,6 +3681,35 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 	})
 }
 
+func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressValue) HostFunctionValue {
+	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+
+		address := addressValue.ToAddress()
+
+		capabilityPath := invocation.Arguments[0].(PathValue)
+		capabilityKey := storageKey(capabilityPath)
+
+		// Ensure the path has a `private` or `public` domain
+
+		mustPathDomain(
+			capabilityPath,
+			invocation.LocationRange,
+			common.PathDomainPrivate,
+			common.PathDomainPublic,
+		)
+
+		// Write new value
+
+		interpreter.writeStored(
+			address,
+			capabilityKey,
+			NilValue{},
+		)
+
+		return Done{Result: VoidValue{}}
+	})
+}
+
 func (interpreter *Interpreter) capabilityBorrowFunction(addressValue AddressValue, path PathValue) HostFunctionValue {
 	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
 
