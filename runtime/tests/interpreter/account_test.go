@@ -631,6 +631,98 @@ func TestInterpretAuthAccountUnlink(t *testing.T) {
 	})
 }
 
+func TestInterpretAuthAccountGetLinkTarget(t *testing.T) {
+
+	for _, capabilityDomain := range []common.PathDomain{
+		common.PathDomainPrivate,
+		common.PathDomainPublic,
+	} {
+
+		t.Run(capabilityDomain.Name(), func(t *testing.T) {
+
+			inter, storedValues := testAccount(
+				t,
+				true,
+				fmt.Sprintf(
+					`
+	                  resource R {}
+
+	                  fun link() {
+	                      account.link<&R>(/%[1]s/r, target: /storage/r)
+	                  }
+
+	                  fun existing(): Path? {
+	                      return account.getLinkTarget(/%[1]s/r)
+	                  }
+
+                      fun nonExisting(): Path? {
+	                      return account.getLinkTarget(/%[1]s/r2)
+	                  }
+	                `,
+					capabilityDomain.Identifier(),
+				),
+			)
+
+			// link
+
+			_, err := inter.Invoke("link")
+			require.NoError(t, err)
+
+			require.Len(t, storedValues, 1)
+
+			t.Run("existing", func(t *testing.T) {
+				value, err := inter.Invoke("existing")
+				require.NoError(t, err)
+
+				require.IsType(t, &interpreter.SomeValue{}, value)
+
+				innerValue := value.(*interpreter.SomeValue).Value
+
+				assert.Equal(t,
+					interpreter.PathValue{
+						Domain:     common.PathDomainStorage,
+						Identifier: "r",
+					},
+					innerValue,
+				)
+
+				require.Len(t, storedValues, 1)
+			})
+
+			t.Run("nonExisting", func(t *testing.T) {
+
+				value, err := inter.Invoke("nonExisting")
+				require.NoError(t, err)
+
+				require.Equal(t, interpreter.NilValue{}, value)
+
+				require.Len(t, storedValues, 1)
+			})
+		})
+	}
+
+	t.Run("storage", func(t *testing.T) {
+
+		inter, _ := testAccount(
+			t,
+			true,
+			`
+	          resource R {}
+
+	          fun test() {
+	              account.getLinkTarget(/storage/r)
+	          }
+	        `,
+		)
+
+		_, err := inter.Invoke("test")
+
+		require.Error(t, err)
+
+		require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+	})
+}
+
 func TestInterpretAccountGetCapability(t *testing.T) {
 
 	tests := map[bool][]common.PathDomain{

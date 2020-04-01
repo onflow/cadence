@@ -3859,6 +3859,21 @@ var accountGetCapabilityFunctionType = &FunctionType{
 	),
 }
 
+var accountGetLinkTargetFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:          ArgumentLabelNotRequired,
+			Identifier:     "capabilityPath",
+			TypeAnnotation: NewTypeAnnotation(&PathType{}),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&OptionalType{
+			Type: &PathType{},
+		},
+	),
+}
+
 func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
 
 	newField := func(fieldType Type) *Member {
@@ -3905,6 +3920,9 @@ func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error
 
 	case "getCapability":
 		return newFunction(accountGetCapabilityFunctionType)
+
+	case "getLinkTarget":
+		return newFunction(accountGetLinkTargetFunctionType)
 
 	default:
 		return nil
@@ -3981,6 +3999,9 @@ func (t *PublicAccountType) GetMember(identifier string, _ ast.Range, _ func(err
 
 	case "getCapability":
 		return newFunction(accountGetCapabilityFunctionType)
+
+	case "getLinkTarget":
+		return newFunction(accountGetLinkTargetFunctionType)
 
 	default:
 		return nil
