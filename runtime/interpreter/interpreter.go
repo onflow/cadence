@@ -545,9 +545,11 @@ func (interpreter *Interpreter) prepareInterpretation() {
 	for _, declaration := range program.InterfaceDeclarations() {
 		interpreter.declareVariable(declaration.Identifier.Identifier, nil)
 	}
+
 	for _, declaration := range program.CompositeDeclarations() {
 		interpreter.declareVariable(declaration.Identifier.Identifier, nil)
 	}
+
 	for _, declaration := range program.FunctionDeclarations() {
 		interpreter.declareVariable(declaration.Identifier.Identifier, nil)
 	}
@@ -2177,6 +2179,23 @@ func (interpreter *Interpreter) declareCompositeValue(
 	(func() {
 		interpreter.activations.PushCurrent()
 		defer interpreter.activations.Pop()
+
+		// Pre-declare empty variables for all interfaces, composites, and function declarations
+		predeclare := func(identifier ast.Identifier) {
+			name := identifier.Identifier
+			lexicalScope = lexicalScope.Insert(
+				common.StringEntry(name),
+				interpreter.declareVariable(name, nil),
+			)
+		}
+
+		for _, nestedInterfaceDeclaration := range declaration.InterfaceDeclarations {
+			predeclare(nestedInterfaceDeclaration.Identifier)
+		}
+
+		for _, nestedCompositeDeclaration := range declaration.CompositeDeclarations {
+			predeclare(nestedCompositeDeclaration.Identifier)
+		}
 
 		for _, nestedInterfaceDeclaration := range declaration.InterfaceDeclarations {
 			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)

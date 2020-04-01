@@ -8143,5 +8143,68 @@ func TestInterpretEphemeralReferenceToOptional(t *testing.T) {
 			},
 		},
 	)
+}
 
+func TestInterpretNestedDeclarationOrder(t *testing.T) {
+
+	t.Run("A, B", func(t *testing.T) {
+		_ = parseCheckAndInterpretWithOptions(t,
+			`
+          pub contract Test {
+
+              pub resource A {
+
+                  pub fun b(): @B {
+                      return <-create B()
+                  }
+              }
+
+              pub resource B {}
+
+              init() {
+                  let a <- create A()
+                  let b <- a.b()
+                  destroy a
+                  destroy b
+              }
+          }
+        `,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					makeContractValueHandler(nil, nil, nil),
+				},
+			},
+		)
+	})
+
+	t.Run("B, A", func(t *testing.T) {
+
+		_ = parseCheckAndInterpretWithOptions(t,
+			`
+          pub contract Test {
+
+              pub resource B {}
+
+              pub resource A {
+
+                  pub fun b(): @B {
+                      return <-create B()
+                  }
+              }
+
+              init() {
+                  let a <- create A()
+                  let b <- a.b()
+                  destroy a
+                  destroy b
+              }
+          }
+        `,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					makeContractValueHandler(nil, nil, nil),
+				},
+			},
+		)
+	})
 }
