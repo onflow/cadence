@@ -106,16 +106,16 @@ func (t OptionalStaticType) String() string {
 	return fmt.Sprintf("%s?", t.Type)
 }
 
-// RestrictedResourceStaticType
+// RestrictedStaticType
 
-type RestrictedResourceStaticType struct {
+type RestrictedStaticType struct {
 	Type         StaticType
 	Restrictions []sema.TypeID
 }
 
-func (RestrictedResourceStaticType) isStaticType() {}
+func (RestrictedStaticType) isStaticType() {}
 
-func (t RestrictedResourceStaticType) String() string {
+func (t RestrictedStaticType) String() string {
 	restrictions := make([]string, len(t.Restrictions))
 
 	for i, restriction := range t.Restrictions {
@@ -175,14 +175,14 @@ func ConvertSemaToStaticType(typ sema.Type) StaticType {
 			Type: ConvertSemaToStaticType(t.Type),
 		}
 
-	case *sema.RestrictedResourceType:
+	case *sema.RestrictedType:
 		restrictions := make([]sema.TypeID, len(t.Restrictions))
 
 		for i, restriction := range t.Restrictions {
 			restrictions[i] = restriction.ID()
 		}
 
-		return RestrictedResourceStaticType{
+		return RestrictedStaticType{
 			Type:         ConvertSemaToStaticType(t.Type),
 			Restrictions: restrictions,
 		}
@@ -240,14 +240,14 @@ func ConvertStaticToSemaType(
 			Type: ConvertStaticToSemaType(t.Type, getInterface, getComposite),
 		}
 
-	case RestrictedResourceStaticType:
+	case RestrictedStaticType:
 		restrictions := make([]*sema.InterfaceType, len(t.Restrictions))
 
 		for i, restriction := range t.Restrictions {
 			restrictions[i] = getInterface(restriction)
 		}
 
-		return &sema.RestrictedResourceType{
+		return &sema.RestrictedType{
 			Type:         ConvertStaticToSemaType(t.Type, getInterface, getComposite),
 			Restrictions: restrictions,
 		}

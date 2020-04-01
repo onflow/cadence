@@ -60,7 +60,6 @@ func TestCheckDynamicCastingAnyStruct(t *testing.T) {
 
 				assert.IsType(t, &sema.AlwaysFailingResourceCastingTypeError{}, errs[0])
 			})
-
 		})
 	}
 }
@@ -694,7 +693,7 @@ func TestCheckDynamicCastingStructInterface(t *testing.T) {
 	types := []string{
 		"AnyStruct",
 		"S",
-		"I",
+		"AnyStruct{I}",
 	}
 
 	for _, operation := range dynamicCastingOperations {
@@ -760,14 +759,20 @@ func TestCheckDynamicCastingStructInterface(t *testing.T) {
                               struct interface I2 {}
 
                               let i: %[1]s = S()
-                              let s: I2? = i %[2]s I2
+                              let s: AnyStruct{I2}? = i %[2]s AnyStruct{I2}
                             `,
 							fromType,
 							operation.Symbol(),
 						),
 					)
 
-					require.NoError(t, err)
+					if fromType == "S" {
+						errs := ExpectCheckerErrors(t, err, 1)
+
+						assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					} else {
+						require.NoError(t, err)
+					}
 				})
 			}
 		})
@@ -846,22 +851,22 @@ func TestCheckDynamicCastingResourceInterface(t *testing.T) {
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
-                     resource interface I {}
+                          resource interface I {}
 
-                     resource R: I {}
+                          resource R: I {}
 
-                     resource T: I {}
+                          resource T: I {}
 
-                     fun test(): @T? {
-                         let i: @%s <- create R()
-                         if let r <- i as? @T {
-                             return <-r
-                         } else {
-                             destroy i
-                             return nil
-                         }
-                     }
-                   `,
+                          fun test(): @T? {
+                              let i: @%s <- create R()
+                              if let r <- i as? @T {
+                                  return <-r
+                              } else {
+                                  destroy i
+                                  return nil
+                              }
+                          }
+                        `,
 						fromType,
 					),
 				)

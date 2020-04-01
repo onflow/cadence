@@ -137,7 +137,7 @@ func TestIsResourceType_StructNestedInDictionary(t *testing.T) {
 	assert.False(t, ty.IsResourceType())
 }
 
-func TestRestrictedResourceType_StringAndID(t *testing.T) {
+func TestRestrictedType_StringAndID(t *testing.T) {
 
 	t.Run("base type and restriction", func(t *testing.T) {
 		interfaceType := &InterfaceType{
@@ -146,7 +146,7 @@ func TestRestrictedResourceType_StringAndID(t *testing.T) {
 			Location:      ast.StringLocation("b"),
 		}
 
-		ty := &RestrictedResourceType{
+		ty := &RestrictedType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
@@ -179,7 +179,7 @@ func TestRestrictedResourceType_StringAndID(t *testing.T) {
 			Location:      ast.StringLocation("c"),
 		}
 
-		ty := &RestrictedResourceType{
+		ty := &RestrictedType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
@@ -200,7 +200,7 @@ func TestRestrictedResourceType_StringAndID(t *testing.T) {
 	})
 
 	t.Run("no restrictions", func(t *testing.T) {
-		ty := &RestrictedResourceType{
+		ty := &RestrictedType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
@@ -220,7 +220,7 @@ func TestRestrictedResourceType_StringAndID(t *testing.T) {
 	})
 }
 
-func TestRestrictedResourceType_Equals(t *testing.T) {
+func TestRestrictedType_Equals(t *testing.T) {
 
 	t.Run("same base type and more restrictions", func(t *testing.T) {
 
@@ -236,7 +236,7 @@ func TestRestrictedResourceType_Equals(t *testing.T) {
 			Location:      ast.StringLocation("b"),
 		}
 
-		a := &RestrictedResourceType{
+		a := &RestrictedType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
@@ -245,7 +245,7 @@ func TestRestrictedResourceType_Equals(t *testing.T) {
 			Restrictions: []*InterfaceType{i1},
 		}
 
-		b := &RestrictedResourceType{
+		b := &RestrictedType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
@@ -271,7 +271,7 @@ func TestRestrictedResourceType_Equals(t *testing.T) {
 			Location:      ast.StringLocation("b"),
 		}
 
-		a := &RestrictedResourceType{
+		a := &RestrictedType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
@@ -280,7 +280,7 @@ func TestRestrictedResourceType_Equals(t *testing.T) {
 			Restrictions: []*InterfaceType{i1, i2},
 		}
 
-		b := &RestrictedResourceType{
+		b := &RestrictedType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
@@ -305,7 +305,7 @@ func TestRestrictedResourceType_Equals(t *testing.T) {
 			Location:      ast.StringLocation("b"),
 		}
 
-		a := &RestrictedResourceType{
+		a := &RestrictedType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
@@ -314,7 +314,7 @@ func TestRestrictedResourceType_Equals(t *testing.T) {
 			Restrictions: []*InterfaceType{i1, i2},
 		}
 
-		b := &RestrictedResourceType{
+		b := &RestrictedType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
@@ -340,7 +340,7 @@ func TestRestrictedResourceType_Equals(t *testing.T) {
 			Location:      ast.StringLocation("b"),
 		}
 
-		a := &RestrictedResourceType{
+		a := &RestrictedType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R1",
@@ -349,7 +349,7 @@ func TestRestrictedResourceType_Equals(t *testing.T) {
 			Restrictions: []*InterfaceType{i1, i2},
 		}
 
-		b := &RestrictedResourceType{
+		b := &RestrictedType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R2",
@@ -362,7 +362,7 @@ func TestRestrictedResourceType_Equals(t *testing.T) {
 	})
 }
 
-func TestRestrictedResourceType_GetMember(t *testing.T) {
+func TestRestrictedType_GetMember(t *testing.T) {
 
 	t.Run("forbid undeclared members", func(t *testing.T) {
 		resourceType := &CompositeType{
@@ -371,7 +371,7 @@ func TestRestrictedResourceType_GetMember(t *testing.T) {
 			Location:   ast.StringLocation("a"),
 			Members:    map[string]*Member{},
 		}
-		ty := &RestrictedResourceType{
+		ty := &RestrictedType{
 			Type:         resourceType,
 			Restrictions: []*InterfaceType{},
 		}
@@ -401,7 +401,7 @@ func TestRestrictedResourceType_GetMember(t *testing.T) {
 			Location:   ast.StringLocation("a"),
 			Members:    map[string]*Member{},
 		}
-		restrictedType := &RestrictedResourceType{
+		restrictedType := &RestrictedType{
 			Type: resourceType,
 			Restrictions: []*InterfaceType{
 				interfaceType,

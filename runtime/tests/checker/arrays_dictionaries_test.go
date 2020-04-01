@@ -611,8 +611,11 @@ func TestCheckArraySubtyping(t *testing.T) {
 			}
 
 			interfaceType := "I"
-			if kind == common.CompositeKindResource {
+			switch kind {
+			case common.CompositeKindResource:
 				interfaceType = "AnyResource{I}"
+			case common.CompositeKindStructure:
+				interfaceType = "AnyStruct{I}"
 			}
 
 			_, err := ParseAndCheck(t,
@@ -667,8 +670,11 @@ func TestCheckDictionarySubtyping(t *testing.T) {
 			}
 
 			interfaceType := "I"
-			if kind == common.CompositeKindResource {
+			switch kind {
+			case common.CompositeKindResource:
 				interfaceType = "AnyResource{I}"
+			case common.CompositeKindStructure:
+				interfaceType = "AnyStruct{I}"
 			}
 
 			_, err := ParseAndCheck(t,

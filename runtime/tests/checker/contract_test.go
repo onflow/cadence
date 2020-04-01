@@ -472,28 +472,55 @@ func TestCheckContractNestedDeclarationsComplex(t *testing.T) {
 
 						firstQualifiedTypeAnnotation := "C.A"
 						firstLocalTypeAnnotation := "A"
-						if firstIsInterface && firstKind == common.CompositeKindResource {
-							firstQualifiedTypeAnnotation = fmt.Sprintf(
-								"AnyResource{%s}",
-								firstQualifiedTypeAnnotation,
-							)
-							firstLocalTypeAnnotation = fmt.Sprintf(
-								"AnyResource{%s}",
-								firstLocalTypeAnnotation,
-							)
+						if firstIsInterface {
+							switch firstKind {
+							case common.CompositeKindResource:
+								firstQualifiedTypeAnnotation = fmt.Sprintf(
+									"AnyResource{%s}",
+									firstQualifiedTypeAnnotation,
+								)
+								firstLocalTypeAnnotation = fmt.Sprintf(
+									"AnyResource{%s}",
+									firstLocalTypeAnnotation,
+								)
+
+							case common.CompositeKindStructure:
+								firstQualifiedTypeAnnotation = fmt.Sprintf(
+									"AnyStruct{%s}",
+									firstQualifiedTypeAnnotation,
+								)
+								firstLocalTypeAnnotation = fmt.Sprintf(
+									"AnyStruct{%s}",
+									firstLocalTypeAnnotation,
+								)
+
+							}
 						}
 
 						secondQualifiedTypeAnnotation := "C.B"
 						secondLocalTypeAnnotation := "B"
-						if secondIsInterface && secondKind == common.CompositeKindResource {
-							secondQualifiedTypeAnnotation = fmt.Sprintf(
-								"AnyResource{%s}",
-								secondQualifiedTypeAnnotation,
-							)
-							secondLocalTypeAnnotation = fmt.Sprintf(
-								"AnyResource{%s}",
-								secondLocalTypeAnnotation,
-							)
+						if secondIsInterface {
+							switch secondKind {
+							case common.CompositeKindResource:
+								secondQualifiedTypeAnnotation = fmt.Sprintf(
+									"AnyResource{%s}",
+									secondQualifiedTypeAnnotation,
+								)
+								secondLocalTypeAnnotation = fmt.Sprintf(
+									"AnyResource{%s}",
+									secondLocalTypeAnnotation,
+								)
+
+							case common.CompositeKindStructure:
+								secondQualifiedTypeAnnotation = fmt.Sprintf(
+									"AnyStruct{%s}",
+									secondQualifiedTypeAnnotation,
+								)
+								secondLocalTypeAnnotation = fmt.Sprintf(
+									"AnyStruct{%s}",
+									secondLocalTypeAnnotation,
+								)
+							}
 						}
 
 						t.Run(testName, func(t *testing.T) {

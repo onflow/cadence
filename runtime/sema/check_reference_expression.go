@@ -47,19 +47,6 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 	checker.Elaboration.IsReferenceIntoStorage[referenceExpression] = targetIsStorage
 
-	// Check that the referenced expression's type is a resource type
-
-	if !referencedType.IsInvalidType() &&
-		!referencedType.IsResourceType() {
-
-		checker.report(
-			&NonResourceTypeReferenceError{
-				ActualType: referencedType,
-				Range:      ast.NewRangeFromPositioned(referencedExpression),
-			},
-		)
-	}
-
 	// Check that the references expression's type is not optional
 
 	if _, ok := referencedType.(*OptionalType); ok {

@@ -822,8 +822,11 @@ func TestCheckAccessInterfaceFunction(t *testing.T) {
 					identifier = "TestImpl"
 				} else {
 					interfaceType := "Test"
-					if compositeKind == common.CompositeKindResource {
+					switch compositeKind {
+					case common.CompositeKindResource:
 						interfaceType = "AnyResource{Test}"
+					case common.CompositeKindStructure:
+						interfaceType = "AnyStruct{Test}"
 					}
 
 					setupCode = fmt.Sprintf(
@@ -1047,8 +1050,11 @@ func TestCheckAccessInterfaceFieldRead(t *testing.T) {
 					identifier = "TestImpl"
 				} else {
 					interfaceType := "Test"
-					if compositeKind == common.CompositeKindResource {
+					switch compositeKind {
+					case common.CompositeKindResource:
 						interfaceType = "AnyResource{Test}"
+					case common.CompositeKindStructure:
+						interfaceType = "AnyStruct{Test}"
 					}
 
 					setupCode = fmt.Sprintf(
@@ -1291,8 +1297,11 @@ func TestCheckAccessInterfaceFieldWrite(t *testing.T) {
 				} else {
 
 					interfaceType := "Test"
-					if compositeKind == common.CompositeKindResource {
+					switch compositeKind {
+					case common.CompositeKindResource:
 						interfaceType = "AnyResource{Test}"
+					case common.CompositeKindStructure:
+						interfaceType = "AnyStruct{Test}"
 					}
 
 					setupCode = fmt.Sprintf(
@@ -1930,7 +1939,7 @@ func TestCheckAccessSameContractInnerStructInterfaceField(t *testing.T) {
                           }
 
                           fun useB() {
-                              let b: B = A.BImpl()
+                              let b: AnyStruct{B} = A.BImpl()
                               b.field
                           }
                       }
@@ -2024,7 +2033,7 @@ func TestCheckAccessOtherContractInnerStructInterfaceField(t *testing.T) {
 
                       contract C {
                           fun useB() {
-                              let b: A.B = A.BImpl()
+                              let b: AnyStruct{A.B} = A.BImpl()
                               b.field
                           }
                       }

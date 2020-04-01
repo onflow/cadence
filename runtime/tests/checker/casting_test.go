@@ -11,20 +11,31 @@ import (
 	. "github.com/dapperlabs/cadence/runtime/tests/utils"
 )
 
-func TestCheckCastingIntLiteralToInt8(t *testing.T) {
+func TestCheckCastingIntLiteralToIntegerType(t *testing.T) {
 
-	checker, err := ParseAndCheck(t, `
-      let x = 1 as Int8
-    `)
+	for _, integerType := range sema.AllIntegerTypes {
 
-	require.NoError(t, err)
+		t.Run(integerType.String(), func(t *testing.T) {
 
-	assert.Equal(t,
-		&sema.Int8Type{},
-		checker.GlobalValues["x"].Type,
-	)
+			checker, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      let x = 1 as %s
+                    `,
+					integerType,
+				),
+			)
 
-	assert.NotEmpty(t, checker.Elaboration.CastingTargetTypes)
+			require.NoError(t, err)
+
+			assert.Equal(t,
+				integerType,
+				checker.GlobalValues["x"].Type,
+			)
+
+			assert.NotEmpty(t, checker.Elaboration.CastingTargetTypes)
+		})
+	}
 }
 
 func TestCheckInvalidCastingIntLiteralToString(t *testing.T) {
@@ -88,9 +99,9 @@ func TestCheckCastingArrayLiteral(t *testing.T) {
 
 func TestCheckCastResourceType(t *testing.T) {
 
-	// Supertype: Restricted resource
+	// Supertype: Restricted type
 
-	t.Run("restricted resource -> restricted resource: fewer restrictions", func(t *testing.T) {
+	t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
 
 		const types = `
           resource interface I1 {}
@@ -114,7 +125,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			r2Type := checker.GlobalValues["r2"].Type
 
 			require.IsType(t,
-				&sema.RestrictedResourceType{},
+				&sema.RestrictedType{},
 				r2Type,
 			)
 		})
@@ -139,7 +150,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted resource -> restricted resource: more restrictions", func(t *testing.T) {
+	t.Run("restricted type -> restricted type: more restrictions", func(t *testing.T) {
 
 		const types = `
           resource interface I1 {}
@@ -163,7 +174,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			r2Type := checker.GlobalValues["r2"].Type
 
 			require.IsType(t,
-				&sema.RestrictedResourceType{},
+				&sema.RestrictedType{},
 				r2Type,
 			)
 		})
@@ -188,7 +199,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted resource -> restricted resource: different resource", func(t *testing.T) {
+	t.Run("restricted type -> restricted type: different resource", func(t *testing.T) {
 
 		const types = `
           resource interface I {}
@@ -234,7 +245,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("unrestricted resource -> restricted resource: same resource", func(t *testing.T) {
+	t.Run("unrestricted type -> restricted type: same resource", func(t *testing.T) {
 
 		const types = `
           resource interface I {}
@@ -256,7 +267,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			r2Type := checker.GlobalValues["r2"].Type
 
 			require.IsType(t,
-				&sema.RestrictedResourceType{},
+				&sema.RestrictedType{},
 				r2Type,
 			)
 		})
@@ -281,7 +292,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("unrestricted resource -> restricted resource: different resource", func(t *testing.T) {
+	t.Run("unrestricted type -> restricted type: different resource", func(t *testing.T) {
 
 		const types = `
           resource interface I {}
@@ -327,7 +338,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("AnyResource -> conforming restricted resource", func(t *testing.T) {
+	t.Run("AnyResource -> conforming restricted type", func(t *testing.T) {
 
 		const types = `
           resource interface RI {}
@@ -371,7 +382,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyResource -> conforming restricted resource", func(t *testing.T) {
+	t.Run("restricted AnyResource -> conforming restricted type", func(t *testing.T) {
 
 		const types = `
           resource interface RI {}
@@ -415,7 +426,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyResource -> non-conforming restricted resource", func(t *testing.T) {
+	t.Run("restricted AnyResource -> non-conforming restricted type", func(t *testing.T) {
 
 		const types = `
           resource interface RI {}
@@ -466,7 +477,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 	// Supertype: Resource (unrestricted)
 
-	t.Run("restricted resource -> unrestricted resource: same resource", func(t *testing.T) {
+	t.Run("restricted type -> unrestricted type: same resource", func(t *testing.T) {
 
 		const types = `
           resource interface I {}
@@ -513,7 +524,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted resource -> unrestricted resource: different resource", func(t *testing.T) {
+	t.Run("restricted type -> unrestricted type: different resource", func(t *testing.T) {
 
 		const types = `
           resource interface I {}
@@ -648,7 +659,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("AnyResource -> unrestricted resource", func(t *testing.T) {
+	t.Run("AnyResource -> unrestricted type", func(t *testing.T) {
 
 		const types = `
            resource interface RI {}
@@ -778,7 +789,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted resource -> restricted AnyResource with conformance in restriction", func(t *testing.T) {
+	t.Run("restricted type -> restricted AnyResource with conformance in restriction", func(t *testing.T) {
 
 		const types = `
           resource interface I {}
@@ -804,7 +815,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			r2Type := checker.GlobalValues["r2"].Type
 
 			require.IsType(t,
-				&sema.RestrictedResourceType{
+				&sema.RestrictedType{
 					Type: &sema.AnyResourceType{},
 					Restrictions: []*sema.InterfaceType{
 						iType.(*sema.InterfaceType),
@@ -834,7 +845,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted resource -> restricted AnyResource with conformance not in restriction", func(t *testing.T) {
+	t.Run("restricted type -> restricted AnyResource with conformance not in restriction", func(t *testing.T) {
 
 		const types = `
           resource interface I1 {}
@@ -862,7 +873,7 @@ func TestCheckCastResourceType(t *testing.T) {
 			r2Type := checker.GlobalValues["r2"].Type
 
 			require.IsType(t,
-				&sema.RestrictedResourceType{
+				&sema.RestrictedType{
 					Type: &sema.AnyResourceType{},
 					Restrictions: []*sema.InterfaceType{
 						i2Type.(*sema.InterfaceType),
@@ -892,7 +903,7 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted resource -> restricted AnyResource with non-conformance restriction", func(t *testing.T) {
+	t.Run("restricted type -> restricted AnyResource with non-conformance restriction", func(t *testing.T) {
 
 		const types = `
           resource interface I1 {}
@@ -1112,7 +1123,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 	// Supertype: AnyResource
 
-	t.Run("restricted resource -> AnyResource", func(t *testing.T) {
+	t.Run("restricted type -> AnyResource", func(t *testing.T) {
 
 		const types = `
           resource interface I1 {}
@@ -1196,14 +1207,10 @@ func TestCheckCastResourceType(t *testing.T) {
 		})
 	})
 
-	t.Run("unrestricted resource -> AnyResource", func(t *testing.T) {
+	t.Run("unrestricted type -> AnyResource", func(t *testing.T) {
 
 		const types = `
-           resource interface I1 {}
-
-           resource interface I2 {}
-
-           resource R: I1, I2 {}
+           resource R {}
         `
 
 		t.Run("static", func(t *testing.T) {
@@ -1238,55 +1245,1089 @@ func TestCheckCastResourceType(t *testing.T) {
 	})
 }
 
-func TestCheckReferenceTypeSubTyping(t *testing.T) {
+func TestCheckCastStructType(t *testing.T) {
 
-	for _, ty := range []string{"R", "AnyResource{I}", "R{I}"} {
+	// Supertype: Restricted type
 
-		t.Run(fmt.Sprintf("auth to non-auth: %s", ty), func(t *testing.T) {
+	t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
+
+		const types = `
+          struct interface I1 {}
+
+          struct interface I2 {}
+
+          struct S: I1, I2 {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			checker, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S{I1, I2} = S()
+                  let s2 = s as S{I2}
+                `,
+			)
+
+			require.NoError(t, err)
+
+			s2Type := checker.GlobalValues["s2"].Type
+
+			require.IsType(t,
+				&sema.RestrictedType{},
+				s2Type,
+			)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			checker, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S{I1, I2} = S()
+                  let s2 = s as? S{I2}
+                `,
+			)
+
+			require.NoError(t, err)
+
+			s2Type := checker.GlobalValues["s2"].Type
+
+			require.IsType(t,
+				&sema.OptionalType{
+					Type: &sema.RestrictedType{},
+				},
+				s2Type,
+			)
+		})
+	})
+
+	t.Run("restricted type -> restricted type: more restrictions", func(t *testing.T) {
+
+		const types = `
+          struct interface I1 {}
+
+          struct interface I2 {}
+
+          struct S: I1, I2 {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			checker, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S{I1} = S()
+                  let s2 = s as S{I1, I2}
+                `,
+			)
+
+			require.NoError(t, err)
+
+			s2Type := checker.GlobalValues["s2"].Type
+
+			require.IsType(t,
+				&sema.RestrictedType{},
+				s2Type,
+			)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
 
 			_, err := ParseAndCheckStorage(t,
-				fmt.Sprintf(`
-                      resource interface I {}
-
-                      resource R: I {}
-
-                      let ref = &storage[R] as auth &%[1]s
-                      let ref2 = ref as &%[1]s
-                    `,
-					ty,
-				),
+				types+`
+                  let s: S{I1} = S()
+                  let s2 = s as? S{I1, I2}
+                `,
 			)
 
 			require.NoError(t, err)
 		})
+	})
 
-		t.Run(fmt.Sprintf("non-auth to auth: %s", ty), func(t *testing.T) {
+	t.Run("restricted type -> restricted type: different struct", func(t *testing.T) {
+
+		const types = `
+          struct interface I {}
+
+          struct S1: I {}
+
+          struct S2: I {}
+        `
+
+		t.Run("static", func(t *testing.T) {
 
 			_, err := ParseAndCheckStorage(t,
-				fmt.Sprintf(`
-                      resource interface I {}
-
-                      resource R: I {}
-
-                      let ref = &storage[R] as &%[1]s
-                      let ref2 = ref as auth &%[1]s
-                    `,
-					ty,
-				),
+				types+`
+                  let s: S1{I} = S1()
+                  let s2 = s as S2{I}
+                `,
 			)
 
 			errs := ExpectCheckerErrors(t, err, 1)
 
 			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 		})
-	}
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S1{I} = S1()
+                  let s2 = s as? S2{I}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+	})
+
+	t.Run("unrestricted type -> restricted type: same struct", func(t *testing.T) {
+
+		const types = `
+          struct interface I {}
+
+          struct S: I {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			checker, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S = S()
+                  let s2 = s as S{I}
+                `,
+			)
+
+			require.NoError(t, err)
+
+			s2Type := checker.GlobalValues["s2"].Type
+
+			require.IsType(t,
+				&sema.RestrictedType{},
+				s2Type,
+			)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S = S()
+                  let s2 = s as? S{I}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("unrestricted type -> restricted type: different struct", func(t *testing.T) {
+
+		const types = `
+          struct interface I {}
+
+          struct S1: I {}
+
+          struct S2: I {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S1 = S1()
+                  let s2 = s as S2{I}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                   let s: S1 = S1()
+                   let s2 = s as? S2{I}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+	})
+
+	t.Run("AnyStruct -> conforming restricted type", func(t *testing.T) {
+
+		const types = `
+          struct interface SI {}
+
+          struct S: SI {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct = S()
+                  let s2 = s as S{SI}
+                `,
+			)
+
+			// NOTE: static cast not allowed, only dynamic
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct = S()
+                  let s2 = s as? S{SI}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted AnyStruct -> conforming restricted type", func(t *testing.T) {
+
+		const types = `
+          struct interface SI {}
+
+          struct S: SI {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct{SI} = S()
+                  let s2 = s as S{SI}
+                `,
+			)
+
+			// NOTE: static cast not allowed, only dynamic
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct{SI} = S()
+                  let s2 = s as? S{SI}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted AnyStruct -> non-conforming restricted type", func(t *testing.T) {
+
+		const types = `
+          struct interface SI {}
+
+          struct S {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct{SI} = S()
+                  let s2 = s as S{SI}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 3)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct{SI} = S()
+                  let s2 = s as? S{SI}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 2)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+		})
+	})
+
+	// Supertype: Struct (unrestricted)
+
+	t.Run("restricted type -> unrestricted type: same struct", func(t *testing.T) {
+
+		const types = `
+          struct interface I {}
+
+          struct S: I {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			checker, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S{I} = S()
+                  let s2 = s as S
+                `,
+			)
+
+			require.NoError(t, err)
+
+			s2Type := checker.GlobalValues["s2"].Type
+
+			require.IsType(t,
+				&sema.CompositeType{},
+				s2Type,
+			)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S{I} = S()
+                  let s2 = s as? S
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted type -> unrestricted type: different struct", func(t *testing.T) {
+
+		const types = `
+          struct interface I {}
+
+          struct S: I {}
+
+          struct T: I {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: T{I} = S()
+                  let t = s as T
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: T{I} = S()
+                  let t = s as? T
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+	})
+
+	t.Run("restricted AnyStruct -> conforming struct", func(t *testing.T) {
+
+		const types = `
+           struct interface SI {}
+
+           struct S: SI {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct{SI} = S()
+                  let s2 = s as S
+                `,
+			)
+
+			// NOTE: static cast not allowed, only dynamic
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct{SI} = S()
+                  let s2 = s as? S
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted AnyStruct -> non-conforming struct", func(t *testing.T) {
+
+		const types = `
+           struct interface SI {}
+
+           struct S {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct{SI} = S()
+                  let s2 = s as S
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 2)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct{SI} = S()
+                  let s2 = s as? S
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+	})
+
+	t.Run("AnyStruct -> unrestricted type", func(t *testing.T) {
+
+		const types = `
+           struct interface SI {}
+
+           struct S: SI {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct = S()
+                  let s2 = s as S
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct = S()
+                  let s2 = s as? S
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	// Supertype: restricted AnyStruct
+
+	t.Run("struct -> restricted AnyStruct with non-conformance restriction", func(t *testing.T) {
+
+		const types = `
+          struct interface SI {}
+
+          // NOTE: S does not conform to SI
+          struct S {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S = S()
+                  let s2 = s as AnyStruct{SI}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S = S()
+                  let s2 = s as? AnyStruct{SI}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+	})
+
+	t.Run("struct -> restricted AnyStruct with conformance restriction", func(t *testing.T) {
+
+		const types = `
+          struct interface SI {}
+
+          struct S: SI {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S = S()
+                  let s2 = s as AnyStruct{SI}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S = S()
+                  let s2 = s as? AnyStruct{SI}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted type -> restricted AnyStruct with conformance in restriction", func(t *testing.T) {
+
+		const types = `
+          struct interface I {}
+
+          struct S: I {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			checker, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S{I} = S()
+                  let s2 = s as AnyStruct{I}
+                `,
+			)
+
+			require.NoError(t, err)
+
+			iType := checker.GlobalTypes["I"].Type
+
+			require.IsType(t, &sema.InterfaceType{}, iType)
+
+			s2Type := checker.GlobalValues["s2"].Type
+
+			require.IsType(t,
+				&sema.RestrictedType{
+					Type: &sema.AnyStructType{},
+					Restrictions: []*sema.InterfaceType{
+						iType.(*sema.InterfaceType),
+					},
+				},
+				s2Type,
+			)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S{I} = S()
+                  let s2 = s as? AnyStruct{I}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted type -> restricted AnyStruct with conformance not in restriction", func(t *testing.T) {
+
+		const types = `
+          struct interface I1 {}
+
+          struct interface I2 {}
+
+          struct S: I1, I2 {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			checker, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S{I1} = S()
+                  let s2 = s as AnyStruct{I2}
+                `,
+			)
+
+			require.NoError(t, err)
+
+			i2Type := checker.GlobalTypes["I2"].Type
+
+			require.IsType(t, &sema.InterfaceType{}, i2Type)
+
+			s2Type := checker.GlobalValues["s2"].Type
+
+			require.IsType(t,
+				&sema.RestrictedType{
+					Type: &sema.AnyStructType{},
+					Restrictions: []*sema.InterfaceType{
+						i2Type.(*sema.InterfaceType),
+					},
+				},
+				s2Type,
+			)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S{I1} = S()
+                  let s2 = s as? AnyStruct{I2}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted type -> restricted AnyStruct with non-conformance restriction", func(t *testing.T) {
+
+		const types = `
+          struct interface I1 {}
+
+          struct interface I2 {}
+
+          struct S: I1 {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S{I1} = S()
+                  let s2 = s as AnyStruct{I2}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S{I1} = S()
+                  let s2 = s as? AnyStruct{I2}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+	})
+
+	t.Run("restricted AnyStruct -> restricted AnyStruct: fewer restrictions", func(t *testing.T) {
+
+		const types = `
+          struct interface I1 {}
+
+          struct interface I2 {}
+
+          struct S: I1, I2 {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct{I1, I2} = S()
+                  let s2 = s as AnyStruct{I2}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct{I1, I2} = S()
+                  let s2 = s as? AnyStruct{I2}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted AnyStruct -> restricted AnyStruct: more restrictions", func(t *testing.T) {
+
+		const types = `
+          struct interface I1 {}
+
+          struct interface I2 {}
+
+          struct S: I1, I2 {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct{I1} = S()
+                  let s2 = s as AnyStruct{I1, I2}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct{I1} = S()
+                  let s2 = s as? AnyStruct{I1, I2}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted AnyStruct -> restricted AnyStruct with non-conformance restriction", func(t *testing.T) {
+
+		const types = `
+          struct interface I1 {}
+
+          struct interface I2 {}
+
+          struct S: I1 {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct{I1} = S()
+                  let s2 = s as AnyStruct{I1, I2}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct{I1} = S()
+                  let s2 = s as? AnyStruct{I1, I2}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("AnyStruct -> restricted AnyStruct", func(t *testing.T) {
+
+		const types = `
+          struct interface I {}
+
+          struct S: I {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct = S()
+                  let s2 = s as AnyStruct{I}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct = S()
+                  let s2 = s as? AnyStruct{I}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	// Supertype: AnyStruct
+
+	t.Run("restricted type -> AnyStruct", func(t *testing.T) {
+
+		const types = `
+          struct interface I1 {}
+
+          struct interface I2 {}
+
+          struct S: I1, I2 {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S{I1} = S()
+                  let s2 = s as AnyStruct
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: S{I1} = S()
+                  let s2 = s as? AnyStruct
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted AnyStruct -> AnyStruct", func(t *testing.T) {
+
+		const types = `
+          struct interface I1 {}
+
+          struct interface I2 {}
+
+          struct S: I1, I2 {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct{I1} = S()
+                  let s2 = s as AnyStruct
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s: AnyStruct{I1} = S()
+                  let s2 = s as? AnyStruct
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("unrestricted type -> AnyStruct", func(t *testing.T) {
+
+		const types = `
+           struct S {}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s = S()
+                  let s2 = s as AnyStruct
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+			_, err := ParseAndCheckStorage(t,
+				types+`
+                  let s = S()
+                  let s2 = s as? AnyStruct
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
 }
 
-func TestCheckCastAuthorizedReferenceType(t *testing.T) {
+func TestCheckReferenceTypeSubTyping(t *testing.T) {
 
-	// Supertype: Restricted resource
+	t.Run("resource", func(t *testing.T) {
 
-	t.Run("restricted resource -> restricted resource: fewer restrictions", func(t *testing.T) {
+		for _, ty := range []string{"R", "AnyResource{I}", "R{I}"} {
+
+			t.Run(fmt.Sprintf("auth to non-auth: %s", ty), func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(`
+                          resource interface I {}
+
+                          resource R: I {}
+
+                          let r <- create R()
+                          let ref = &r as auth &%[1]s
+                          let ref2 = ref as &%[1]s
+                        `,
+						ty,
+					),
+				)
+
+				require.NoError(t, err)
+			})
+
+			t.Run(fmt.Sprintf("non-auth to auth: %s", ty), func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(`
+                          resource interface I {}
+
+                          resource R: I {}
+
+                          let r <- create R()
+                          let ref = &r as &%[1]s
+                          let ref2 = ref as auth &%[1]s
+                        `,
+						ty,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
+		}
+
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		for _, ty := range []string{"S", "AnyStruct{I}", "S{I}"} {
+
+			t.Run(fmt.Sprintf("auth to non-auth: %s", ty), func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(`
+                          struct interface I {}
+
+                          struct S: I {}
+
+                          let s = S()
+                          let ref = &s as auth &%[1]s
+                          let ref2 = ref as &%[1]s
+                        `,
+						ty,
+					),
+				)
+
+				require.NoError(t, err)
+			})
+
+			t.Run(fmt.Sprintf("non-auth to auth: %s", ty), func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface I {}
+
+                          struct S: I {}
+
+                          let s = S()
+                          let ref = &s as &%[1]s
+                          let ref2 = ref as auth &%[1]s
+                        `,
+						ty,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
+		}
+
+	})
+}
+
+func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
+
+	// Supertype: Restricted type
+
+	t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
 
 		const setup = `
           resource interface I1 {}
@@ -1321,7 +2362,7 @@ func TestCheckCastAuthorizedReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted resource -> restricted resource: more restrictions", func(t *testing.T) {
+	t.Run("restricted type -> restricted type: more restrictions", func(t *testing.T) {
 
 		const setup = `
           resource interface I1 {}
@@ -1356,7 +2397,7 @@ func TestCheckCastAuthorizedReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted resource -> restricted resource: different resource", func(t *testing.T) {
+	t.Run("restricted type -> restricted type: different resource", func(t *testing.T) {
 
 		const setup = `
           resource interface I {}
@@ -1395,7 +2436,7 @@ func TestCheckCastAuthorizedReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("unrestricted resource -> restricted resource: same resource", func(t *testing.T) {
+	t.Run("unrestricted type -> restricted type: same resource", func(t *testing.T) {
 
 		const setup = `
           resource interface I {}
@@ -1429,7 +2470,7 @@ func TestCheckCastAuthorizedReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("unrestricted resource -> restricted resource: different resource", func(t *testing.T) {
+	t.Run("unrestricted type -> restricted type: different resource", func(t *testing.T) {
 
 		const setup = `
           resource interface I {}
@@ -1468,7 +2509,7 @@ func TestCheckCastAuthorizedReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyResource -> conforming restricted resource", func(t *testing.T) {
+	t.Run("restricted AnyResource -> conforming restricted type", func(t *testing.T) {
 
 		const setup = `
           resource interface RI {}
@@ -1505,7 +2546,7 @@ func TestCheckCastAuthorizedReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("AnyResource -> conforming restricted resource", func(t *testing.T) {
+	t.Run("AnyResource -> conforming restricted type", func(t *testing.T) {
 
 		const setup = `
           resource interface RI {}
@@ -1540,7 +2581,7 @@ func TestCheckCastAuthorizedReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted AnyResource -> non-conforming restricted resource", func(t *testing.T) {
+	t.Run("restricted AnyResource -> non-conforming restricted type", func(t *testing.T) {
 
 		const setup = `
           resource interface RI {}
@@ -1582,7 +2623,7 @@ func TestCheckCastAuthorizedReferenceType(t *testing.T) {
 
 	// Supertype: Resource (unrestricted)
 
-	t.Run("restricted resource -> unrestricted resource: same resource", func(t *testing.T) {
+	t.Run("restricted type -> unrestricted type: same resource", func(t *testing.T) {
 
 		const setup = `
           resource interface I {}
@@ -1615,7 +2656,7 @@ func TestCheckCastAuthorizedReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted resource -> unrestricted resource: different resource", func(t *testing.T) {
+	t.Run("restricted type -> unrestricted type: different resource", func(t *testing.T) {
 
 		const setup = `
           resource interface I {}
@@ -1729,7 +2770,7 @@ func TestCheckCastAuthorizedReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("AnyResource -> unrestricted resource", func(t *testing.T) {
+	t.Run("AnyResource -> unrestricted type", func(t *testing.T) {
 
 		const setup = `
           resource interface RI {}
@@ -1837,7 +2878,7 @@ func TestCheckCastAuthorizedReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted resource -> restricted AnyResource with conformance in restriction", func(t *testing.T) {
+	t.Run("restricted type -> restricted AnyResource with conformance in restriction", func(t *testing.T) {
 
 		const setup = `
           resource interface I {}
@@ -1870,7 +2911,7 @@ func TestCheckCastAuthorizedReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted resource -> restricted AnyResource with conformance not in restriction", func(t *testing.T) {
+	t.Run("restricted type -> restricted AnyResource with conformance not in restriction", func(t *testing.T) {
 
 		const setup = `
           resource interface I1 {}
@@ -1905,7 +2946,7 @@ func TestCheckCastAuthorizedReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("restricted resource -> restricted AnyResource with non-conformance restriction", func(t *testing.T) {
+	t.Run("restricted type -> restricted AnyResource with non-conformance restriction", func(t *testing.T) {
 
 		const setup = `
           resource interface I1 {}
@@ -2090,7 +3131,7 @@ func TestCheckCastAuthorizedReferenceType(t *testing.T) {
 
 	// Supertype: AnyResource
 
-	t.Run("restricted resource -> AnyResource", func(t *testing.T) {
+	t.Run("restricted type -> AnyResource", func(t *testing.T) {
 
 		const setup = `
           resource interface I1 {}
@@ -2160,7 +3201,7 @@ func TestCheckCastAuthorizedReferenceType(t *testing.T) {
 		})
 	})
 
-	t.Run("unrestricted resource -> AnyResource", func(t *testing.T) {
+	t.Run("unrestricted type -> AnyResource", func(t *testing.T) {
 
 		const setup = `
           resource interface I1 {}
@@ -2196,7 +3237,946 @@ func TestCheckCastAuthorizedReferenceType(t *testing.T) {
 	})
 }
 
-func TestCheckCastUnauthorizedReferenceType(t *testing.T) {
+func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
+
+	// Supertype: Restricted type
+
+	t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
+
+		const setup = `
+          struct interface I1 {}
+
+          struct interface I2 {}
+
+          struct S: I1, I2 {}
+
+          let x = S()
+          let s = &x as auth &S{I1, I2}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &S{I2}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &S{I2}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted type -> restricted type: more restrictions", func(t *testing.T) {
+
+		const setup = `
+          struct interface I1 {}
+
+          struct interface I2 {}
+
+          struct S: I1, I2 {}
+
+          let x = S()
+          let s = &x as auth &S{I1}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &S{I1, I2}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &S{I1, I2}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted type -> restricted type: different struct", func(t *testing.T) {
+
+		const setup = `
+          struct interface I {}
+
+          struct S1: I {}
+
+          struct S2: I {}
+
+          let x = S1()
+          let s = &x as auth &S1{I}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &S2{I}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &S2{I}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+	})
+
+	t.Run("unrestricted type -> restricted type: same struct", func(t *testing.T) {
+
+		const setup = `
+          struct interface I {}
+
+          struct S: I {}
+
+          let x = S()
+          let s = &x as auth &S
+
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &S{I}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &S{I}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("unrestricted type -> restricted type: different struct", func(t *testing.T) {
+
+		const setup = `
+          struct interface I {}
+
+          struct S1: I {}
+
+          struct S2: I {}
+
+          let x = S1()
+          let s = &x as auth &S1
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &S2{I}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &S2{I}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+	})
+
+	t.Run("restricted AnyStruct -> conforming restricted type", func(t *testing.T) {
+
+		const setup = `
+          struct interface SI {}
+
+          struct S: SI {}
+
+          let x = S()
+          let s = &x as auth &AnyStruct{SI}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &S{SI}
+                `,
+			)
+
+			// NOTE: static cast not allowed, only dynamic
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &S{SI}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("AnyStruct -> conforming restricted type", func(t *testing.T) {
+
+		const setup = `
+          struct interface SI {}
+
+          struct S: SI {}
+
+          let x = S()
+          let s = &x as auth &AnyStruct
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &S{SI}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &S{SI}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted AnyStruct -> non-conforming restricted type", func(t *testing.T) {
+
+		const setup = `
+          struct interface SI {}
+
+          struct S {}
+
+          let x = S()
+          let s = &x as auth &AnyStruct{SI}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &S{SI}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 3)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &S{SI}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 2)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+		})
+	})
+
+	// Supertype: Struct (unrestricted)
+
+	t.Run("restricted type -> unrestricted type: same struct", func(t *testing.T) {
+
+		const setup = `
+          struct interface I {}
+
+          struct S: I {}
+
+          let x = S()
+          let s = &x as auth &S{I}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &S
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &S
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted type -> unrestricted type: different struct", func(t *testing.T) {
+
+		const setup = `
+          struct interface I {}
+
+          struct S: I {}
+
+          struct T: I {}
+
+          let x = S()
+          let s = &x as auth &S{I}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let t = s as &T
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let t = s as? &T
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+	})
+
+	t.Run("restricted AnyStruct -> conforming struct", func(t *testing.T) {
+
+		const setup = `
+          struct interface RI {}
+
+          struct S: RI {}
+
+          let x = S()
+          let s = &x as auth &AnyStruct{RI}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &S
+                `,
+			)
+
+			// NOTE: static cast not allowed, only dynamic
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &S
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted AnyStruct -> non-conforming struct", func(t *testing.T) {
+
+		const setup = `
+          struct interface RI {}
+
+          struct S {}
+
+          let x = S()
+          let s = &x as auth &AnyStruct{RI}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &S
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 2)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &S
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+	})
+
+	t.Run("AnyStruct -> unrestricted type", func(t *testing.T) {
+
+		const setup = `
+          struct interface SI {}
+
+          struct S: SI {}
+
+          let x = S()
+          let s = &x as auth &AnyStruct
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &S
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &S
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	// Supertype: restricted AnyStruct
+
+	t.Run("struct -> restricted AnyStruct with non-conformance restriction", func(t *testing.T) {
+
+		const setup = `
+          struct interface SI {}
+
+          // NOTE: S does not conform to SI
+          struct S {}
+
+          let x = S()
+          let s = &x as auth &S
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &AnyStruct{SI}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &AnyStruct{SI}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+	})
+
+	t.Run("struct -> restricted AnyStruct with conformance restriction", func(t *testing.T) {
+
+		const setup = `
+          struct interface SI {}
+
+          struct S: SI {}
+
+          let x = S()
+          let s = &x as auth &S
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &AnyStruct{SI}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &AnyStruct{SI}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted type -> restricted AnyStruct with conformance in restriction", func(t *testing.T) {
+
+		const setup = `
+          struct interface I {}
+
+          struct S: I {}
+
+          let x = S()
+          let s = &x as auth &S{I}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &AnyStruct{I}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &AnyStruct{I}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted type -> restricted AnyStruct with conformance not in restriction", func(t *testing.T) {
+
+		const setup = `
+          struct interface I1 {}
+
+          struct interface I2 {}
+
+          struct S: I1, I2 {}
+
+          let x = S()
+          let s = &x as auth &S{I1}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &AnyStruct{I2}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &AnyStruct{I2}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted type -> restricted AnyStruct with non-conformance restriction", func(t *testing.T) {
+
+		const setup = `
+          struct interface I1 {}
+
+          struct interface I2 {}
+
+          struct S: I1 {}
+
+          let x = S()
+          let s = &x as auth &S{I1}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &AnyStruct{I2}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &AnyStruct{I2}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+	})
+
+	t.Run("restricted AnyStruct -> restricted AnyStruct: fewer restrictions", func(t *testing.T) {
+
+		const setup = `
+          struct interface I1 {}
+
+          struct interface I2 {}
+
+          struct S: I1, I2 {}
+
+          let x = S()
+          let s = &x as auth &AnyStruct{I1, I2}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &AnyStruct{I2}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &AnyStruct{I2}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted AnyStruct -> restricted AnyStruct: more restrictions", func(t *testing.T) {
+
+		const setup = `
+          struct interface I1 {}
+
+          struct interface I2 {}
+
+          struct S: I1, I2 {}
+
+          let x = S()
+          let s = &x as auth &AnyStruct{I1}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &AnyStruct{I1, I2}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &AnyStruct{I1, I2}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted AnyStruct -> restricted AnyStruct with non-conformance restriction", func(t *testing.T) {
+
+		const setup = `
+          struct interface I1 {}
+
+          struct interface I2 {}
+
+          struct S: I1 {}
+
+          let x = S()
+          let s = &x as auth &AnyStruct{I1}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &AnyStruct{I1, I2}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &AnyStruct{I1, I2}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("AnyStruct -> restricted AnyStruct", func(t *testing.T) {
+
+		const setup = `
+          struct interface I {}
+
+          struct S: I {}
+
+          let x = S()
+          let s = &x as auth &AnyStruct
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &AnyStruct{I}
+                `,
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &AnyStruct{I}
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	// Supertype: AnyStruct
+
+	t.Run("restricted type -> AnyStruct", func(t *testing.T) {
+
+		const setup = `
+          struct interface I1 {}
+
+          struct interface I2 {}
+
+          struct S: I1, I2 {}
+
+          let x = S()
+          let s = &x as auth &S{I1}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &AnyStruct
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &AnyStruct
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("restricted AnyStruct -> AnyStruct", func(t *testing.T) {
+
+		const setup = `
+          struct interface I1 {}
+
+          struct interface I2 {}
+
+          struct S: I1, I2 {}
+
+          let x = S()
+          let s = &x as auth &AnyStruct{I1}
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &AnyStruct
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &AnyStruct
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+
+	t.Run("unrestricted type -> AnyStruct", func(t *testing.T) {
+
+		const setup = `
+          struct interface I1 {}
+
+          struct interface I2 {}
+
+          struct S: I1, I2 {}
+
+          let x = S()
+          let s = &x as auth &S
+        `
+
+		t.Run("static", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as &AnyStruct
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+
+		t.Run("dynamic", func(t *testing.T) {
+
+			_, err := ParseAndCheckStorage(t,
+				setup+`
+                  let s2 = s as? &AnyStruct
+                `,
+			)
+
+			require.NoError(t, err)
+		})
+	})
+}
+
+func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
 	for name, op := range map[string]string{
 		"static":  "as",
@@ -2205,9 +4185,9 @@ func TestCheckCastUnauthorizedReferenceType(t *testing.T) {
 
 		t.Run(name, func(t *testing.T) {
 
-			// Supertype: Restricted resource
+			// Supertype: Restricted type
 
-			t.Run("restricted resource -> restricted resource: fewer restrictions", func(t *testing.T) {
+			t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
 
 				_, err := ParseAndCheckStorage(t,
 					fmt.Sprintf(
@@ -2228,7 +4208,7 @@ func TestCheckCastUnauthorizedReferenceType(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("restricted resource -> restricted resource: more restrictions", func(t *testing.T) {
+			t.Run("restricted type -> restricted type: more restrictions", func(t *testing.T) {
 
 				_, err := ParseAndCheckStorage(t,
 					fmt.Sprintf(
@@ -2251,7 +4231,7 @@ func TestCheckCastUnauthorizedReferenceType(t *testing.T) {
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
 
-			t.Run("restricted resource -> restricted resource: different resource", func(t *testing.T) {
+			t.Run("restricted type -> restricted type: different resource", func(t *testing.T) {
 
 				_, err := ParseAndCheckStorage(t,
 					fmt.Sprintf(
@@ -2274,7 +4254,7 @@ func TestCheckCastUnauthorizedReferenceType(t *testing.T) {
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
 
-			t.Run("unrestricted resource -> restricted resource: same resource", func(t *testing.T) {
+			t.Run("unrestricted type -> restricted type: same resource", func(t *testing.T) {
 
 				_, err := ParseAndCheckStorage(t,
 					fmt.Sprintf(
@@ -2293,7 +4273,7 @@ func TestCheckCastUnauthorizedReferenceType(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("unrestricted resource -> restricted resource: different resource", func(t *testing.T) {
+			t.Run("unrestricted type -> restricted type: different resource", func(t *testing.T) {
 
 				_, err := ParseAndCheckStorage(t,
 					fmt.Sprintf(
@@ -2316,7 +4296,7 @@ func TestCheckCastUnauthorizedReferenceType(t *testing.T) {
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
 
-			t.Run("restricted AnyResource -> conforming restricted resource", func(t *testing.T) {
+			t.Run("restricted AnyResource -> conforming restricted type", func(t *testing.T) {
 
 				_, err := ParseAndCheckStorage(t,
 					fmt.Sprintf(
@@ -2337,7 +4317,7 @@ func TestCheckCastUnauthorizedReferenceType(t *testing.T) {
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
 
-			t.Run("AnyResource -> conforming restricted resource", func(t *testing.T) {
+			t.Run("AnyResource -> conforming restricted type", func(t *testing.T) {
 
 				_, err := ParseAndCheckStorage(t,
 					fmt.Sprintf(
@@ -2358,7 +4338,7 @@ func TestCheckCastUnauthorizedReferenceType(t *testing.T) {
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
 
-			t.Run("restricted AnyResource -> non-conforming restricted resource", func(t *testing.T) {
+			t.Run("restricted AnyResource -> non-conforming restricted type", func(t *testing.T) {
 
 				_, err := ParseAndCheckStorage(t,
 					fmt.Sprintf(
@@ -2383,7 +4363,7 @@ func TestCheckCastUnauthorizedReferenceType(t *testing.T) {
 
 			// Supertype: Resource (unrestricted)
 
-			t.Run("restricted resource -> unrestricted resource", func(t *testing.T) {
+			t.Run("restricted type -> unrestricted type", func(t *testing.T) {
 
 				_, err := ParseAndCheckStorage(t,
 					fmt.Sprintf(
@@ -2404,7 +4384,7 @@ func TestCheckCastUnauthorizedReferenceType(t *testing.T) {
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
 
-			t.Run("restricted resource -> unrestricted resource: different resource", func(t *testing.T) {
+			t.Run("restricted type -> unrestricted type: different resource", func(t *testing.T) {
 
 				_, err := ParseAndCheckStorage(t,
 					fmt.Sprintf(
@@ -2470,7 +4450,7 @@ func TestCheckCastUnauthorizedReferenceType(t *testing.T) {
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 			})
 
-			t.Run("AnyResource -> unrestricted resource", func(t *testing.T) {
+			t.Run("AnyResource -> unrestricted type", func(t *testing.T) {
 
 				_, err := ParseAndCheckStorage(t,
 					fmt.Sprintf(
@@ -2534,7 +4514,7 @@ func TestCheckCastUnauthorizedReferenceType(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("restricted resource -> restricted AnyResource with conformance in restriction", func(t *testing.T) {
+			t.Run("restricted type -> restricted AnyResource with conformance in restriction", func(t *testing.T) {
 
 				_, err := ParseAndCheckStorage(t,
 					fmt.Sprintf(
@@ -2553,7 +4533,7 @@ func TestCheckCastUnauthorizedReferenceType(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("restricted resource -> restricted AnyResource with conformance not in restriction", func(t *testing.T) {
+			t.Run("restricted type -> restricted AnyResource with conformance not in restriction", func(t *testing.T) {
 
 				_, err := ParseAndCheckStorage(t,
 					fmt.Sprintf(
@@ -2576,7 +4556,7 @@ func TestCheckCastUnauthorizedReferenceType(t *testing.T) {
 				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 			})
 
-			t.Run("restricted resource -> restricted AnyResource with non-conformance restriction", func(t *testing.T) {
+			t.Run("restricted type -> restricted AnyResource with non-conformance restriction", func(t *testing.T) {
 
 				_, err := ParseAndCheckStorage(t,
 					fmt.Sprintf(
@@ -2690,7 +4670,7 @@ func TestCheckCastUnauthorizedReferenceType(t *testing.T) {
 
 			// Supertype: AnyResource
 
-			t.Run("restricted resource -> AnyResource", func(t *testing.T) {
+			t.Run("restricted type -> AnyResource", func(t *testing.T) {
 
 				_, err := ParseAndCheckStorage(t,
 					fmt.Sprintf(
@@ -2732,7 +4712,7 @@ func TestCheckCastUnauthorizedReferenceType(t *testing.T) {
 				require.NoError(t, err)
 			})
 
-			t.Run("unrestricted resource -> AnyResource", func(t *testing.T) {
+			t.Run("unrestricted type -> AnyResource", func(t *testing.T) {
 
 				_, err := ParseAndCheckStorage(t,
 					fmt.Sprintf(
@@ -2753,6 +4733,591 @@ func TestCheckCastUnauthorizedReferenceType(t *testing.T) {
 				require.NoError(t, err)
 			})
 
+		})
+	}
+}
+
+func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
+
+	for name, op := range map[string]string{
+		"static":  "as",
+		"dynamic": "as?",
+	} {
+
+		t.Run(name, func(t *testing.T) {
+
+			// Supertype: Restricted type
+
+			t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface I1 {}
+
+                          struct interface I2 {}
+
+                          struct S: I1, I2 {}
+
+                          let x = S()
+                          let s = &x as &S{I1, I2}
+                          let s2 = s %s &S{I2}
+                        `,
+						op,
+					),
+				)
+
+				require.NoError(t, err)
+			})
+
+			t.Run("restricted type -> restricted type: more restrictions", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface I1 {}
+
+                          struct interface I2 {}
+
+                          struct S: I1, I2 {}
+
+                          let x = S()
+                          let s = &x as &S{I1}
+                          let s2 = s %s &S{I1, I2}
+                        `,
+						op,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
+
+			t.Run("restricted type -> restricted type: different resource", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface I {}
+
+                          struct S1: I {}
+
+                          struct S2: I {}
+
+                          let x = S1()
+                          let s = &x as &S1{I}
+                          let s2 = s %s &S2{I}
+                        `,
+						op,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
+
+			t.Run("unrestricted type -> restricted type: same resource", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface I {}
+
+                          struct S: I {}
+
+                          let x = S()
+                          let s = &x as &S
+                          let s2 = s %s &S{I}
+                        `,
+						op,
+					),
+				)
+
+				require.NoError(t, err)
+			})
+
+			t.Run("unrestricted type -> restricted type: different resource", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface I {}
+
+                          struct S1: I {}
+
+                          struct S2: I {}
+
+                          let x = S1()
+                          let s = &x as &S1
+                          let s2 = s %s &S2{I}
+                        `,
+						op,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
+
+			t.Run("restricted AnyStruct -> conforming restricted type", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface RI {}
+
+                          struct S: RI {}
+
+                          let x = S()
+                          let s = &x as &AnyStruct{RI}
+                          let s2 = s %s &S{RI}
+                        `,
+						op,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
+
+			t.Run("AnyStruct -> conforming restricted type", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface RI {}
+
+                          struct S: RI {}
+
+                          let x = S()
+                          let s = &x as &AnyStruct
+                          let s2 = s %s &S{RI}
+                        `,
+						op,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
+
+			t.Run("restricted AnyStruct -> non-conforming restricted type", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface RI {}
+
+                          struct S {}
+
+                          let x = S()
+                          let s = &x as &AnyStruct{RI}
+                          let s2 = s %s &S{RI}
+                        `,
+						op,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 3)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
+			})
+
+			// Supertype: Resource (unrestricted)
+
+			t.Run("restricted type -> unrestricted type", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface I {}
+
+                          struct S: I {}
+
+                          let x = S()
+                          let s = &x as &S{I}
+                          let s2 = s %s &S
+                        `,
+						op,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
+
+			t.Run("restricted type -> unrestricted type: different resource", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface I {}
+
+                          struct S: I {}
+
+                          struct T: I {}
+
+                          let x = S()
+                          let s = &x as &S{I}
+                          let t = s %s &T
+                        `,
+						op,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
+
+			t.Run("restricted AnyStruct -> conforming resource", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface RI {}
+
+                          struct S: RI {}
+
+                          let x = S()
+                          let s = &x as &AnyStruct{RI}
+                          let s2 = s %s &S
+                        `,
+						op,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
+
+			t.Run("restricted AnyStruct -> non-conforming resource", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface RI {}
+
+                          struct S {}
+
+                          let x = S()
+                          let s = &x as &AnyStruct{RI}
+                          let s2 = s %s &S
+                        `,
+						op,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 2)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+			})
+
+			t.Run("AnyStruct -> unrestricted type", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface RI {}
+
+                          struct S: RI {}
+
+                          let x = S()
+                          let s = &x as &AnyStruct
+                          let s2 = s %s &S
+                        `,
+						op,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
+
+			// Supertype: restricted AnyStruct
+
+			t.Run("resource -> restricted non-conformance", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface RI {}
+
+                          // NOTE: R does not conform to RI
+                          struct S {}
+
+                          let x = S()
+                          let s = &x as &S
+                          let s2 = s %s &AnyStruct{RI}
+                        `,
+						op,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
+
+			t.Run("resource -> restricted AnyStruct with conformance restriction", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface RI {}
+
+                          struct S: RI {}
+
+                          let x = S()
+                          let s = &x as &S
+                          let s2 = s %s &AnyStruct{RI}
+                        `,
+						op,
+					),
+				)
+
+				require.NoError(t, err)
+			})
+
+			t.Run("restricted type -> restricted AnyStruct with conformance in restriction", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface I {}
+
+                          struct S: I {}
+
+                          let x = S()
+                          let s = &x as &S{I}
+                          let s2 = s %s &AnyStruct{I}
+                        `,
+						op,
+					),
+				)
+
+				require.NoError(t, err)
+			})
+
+			t.Run("restricted type -> restricted AnyStruct with conformance not in restriction", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface I1 {}
+
+                          struct interface I2 {}
+
+                          struct S: I1, I2 {}
+
+                          let x = S()
+                          let s = &x as &S{I1}
+                          let s2 = s %s &AnyStruct{I2}
+                        `,
+						op,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
+
+			t.Run("restricted type -> restricted AnyStruct with non-conformance restriction", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface I1 {}
+
+                          struct interface I2 {}
+
+                          struct S: I1 {}
+
+                          let x = S()
+                          let s = &x as &S{I1}
+                          let s2 = s %s &AnyStruct{I2}
+                        `,
+						op,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+			})
+
+			t.Run("restricted AnyStruct -> restricted AnyStruct: fewer restrictions", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface I1 {}
+
+                          struct interface I2 {}
+
+                          struct S: I1, I2 {}
+
+                          let x = S()
+                          let s = &x as &AnyStruct{I1, I2}
+                          let s2 = s %s &AnyStruct{I2}
+                        `,
+						op,
+					),
+				)
+
+				require.NoError(t, err)
+			})
+
+			t.Run("restricted AnyStruct -> restricted AnyStruct: more restrictions", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface I1 {}
+
+                          struct interface I2 {}
+
+                          struct S: I1, I2 {}
+
+                          let x = S()
+                          let s = &x as &AnyStruct{I1}
+                          let s2 = s %s &AnyStruct{I1, I2}
+                        `,
+						op,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
+
+			t.Run("restricted AnyStruct -> restricted AnyStruct with non-conformance restriction", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface I1 {}
+
+                          struct interface I2 {}
+
+                          struct S: I1 {}
+
+                          let x = S()
+                          let s = &x as &AnyStruct{I1}
+                          let s2 = s %s &AnyStruct{I1, I2}
+		                `,
+						op,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
+
+			t.Run("AnyStruct -> restricted AnyStruct", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface I {}
+
+                          struct S: I {}
+
+                          let x = S()
+                          let s = &x as &AnyStruct
+                          let s2 = s %s &AnyStruct{I}
+                        `,
+						op,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
+
+			// Supertype: AnyStruct
+
+			t.Run("restricted type -> AnyStruct", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface I1 {}
+
+                          struct interface I2 {}
+
+                          struct S: I1, I2 {}
+
+                          let x = S()
+                          let s = &x as &S{I1}
+                          let s2 = s %s &AnyStruct
+                        `,
+						op,
+					),
+				)
+
+				require.NoError(t, err)
+			})
+
+			t.Run("restricted AnyStruct -> AnyStruct", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface I1 {}
+
+                          struct interface I2 {}
+
+                          struct S: I1, I2 {}
+
+                          let x = S()
+                          let s = &x as &AnyStruct{I1}
+                          let s2 = s %s &AnyStruct
+                        `,
+						op,
+					),
+				)
+
+				require.NoError(t, err)
+			})
+
+			t.Run("unrestricted type -> AnyStruct", func(t *testing.T) {
+
+				_, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          struct interface I1 {}
+
+                          struct interface I2 {}
+
+                          struct S: I1, I2 {}
+
+                          let x = S()
+                          let s = &x as &S
+                          let s2 = s %s &AnyStruct
+                        `,
+						op,
+					),
+				)
+
+				require.NoError(t, err)
+			})
 		})
 	}
 }
