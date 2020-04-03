@@ -4028,16 +4028,14 @@ a declaration can be accessed or called.
 - **access(account)** means the declaration is only accessible/visible in the
   scope of the entire account where it is defined. This means that
   other contracts in the account are able to access it, 
-  and that it can be accessed by transaction code that is signed by the account
-  where it is stored.
 
   An element is specified with account access 
   by using the `access(account)` keyword.
 
 - **access(contract)** means the declaration is only accessible/visible in the
   scope of the contract that defined it. This means that other types 
-  and functions that are defined in the contract can access it, but not other
-  contracts in the same account.
+  and functions that are defined in the same contract can access it, 
+  but not other contracts in the same account.
 
   An element is specified with contract access 
   by using the `access(contract)` keyword.
@@ -4045,9 +4043,9 @@ a declaration can be accessed or called.
 - Private or **access(self)** means the declaration is only accessible/visible
   in the current and inner scopes.
 
-  For example, an access(self) field can only be
+  For example, an `access(self)` field can only be
   accessed by functions of the type is part of,
-  not by code that uses an instance of the type in an outer scope.
+  not by code in an outer scope.
 
   This level is specified by using the `access(self)` keyword.
 
@@ -4058,26 +4056,26 @@ The `(set)` suffix can be used to make variables also publicly writable.
 
 To summarize the behavior for variable declarations, constant declarations, and fields:
 
-| Declaration kind | Access modifier    | Read scope                              | Write scope       |
-|:-----------------|:-------------------|:----------------------------------------|:------------------|
-| `let`            | `access(self)`     | Current and inner                       | *None*            |
-| `let`            | `access(contract)` | Current, inner, and its contract        | *None*            |
-| `let`            | `access(account)`  | Current, inner, and account signed code | *None*            |
-| `let`            | `pub`,`access(all)`| **All**                                 | *None*            |
-| `var`            | `access(self)`     | Current and inner                       | Current and inner |
-| `var`            | `access(contract)` | Current, inner, and its contract        | Current and inner |
-| `var`            | `access(account)`  | Current, inner, and account signed code | Current and inner |
-| `var`            | `pub`,`access(all)`| **All**                                 | Current and inner |
-| `var`            | `pub(set)`         | **All**                                 | **All**           |
+| Declaration kind | Access modifier    | Read scope                            | Write scope       |
+|:-----------------|:-------------------|:--------------------------------------|:------------------|
+| `let`            | `access(self)`     | Current and inner                     | *None*            |
+| `let`            | `access(contract)` | Current, inner, and its contract      | *None*            |
+| `let`            | `access(account)`  | Current, inner, and account contracts | *None*            |
+| `let`            | `pub`,`access(all)`| **All**                               | *None*            |
+| `var`            | `access(self)`     | Current and inner                     | Current and inner |
+| `var`            | `access(contract)` | Current, inner, and its contract      | Current and inner |
+| `var`            | `access(account)`  | Current, inner, and account contracts | Current and inner |
+| `var`            | `pub`,`access(all)`| **All**                               | Current and inner |
+| `var`            | `pub(set)`         | **All**                               | **All**           |
 
 To summarize the behavior for functions, structures, resources, and interfaces:
 
-| Declaration kind                                                    | Access modifier       | Access scope                            |
-|:--------------------------------------------------------------------|:----------------------|:----------------------------------------|
-| `fun`,`struct`,`resource`,`struct interface`,`resource interface`   | `access(self)`        | Current and inner                       |
-| `fun`,`struct`,`resource`,`struct interface`,`resource interface`   | `access(contract)`    | Current, inner, and its contract        |
-| `fun`,`struct`,`resource`,`struct interface`,`resource interface`   | `access(account)`     | Current, inner, and account signed code |
-| `fun`,`struct`,`resource`,`struct interface`,`resource interface`   | `pub`,`access(all)`   | **All**                                 |
+| Declaration kind                                                    | Access modifier       | Access scope                          |
+|:--------------------------------------------------------------------|:----------------------|:--------------------------------------|
+| `fun`,`struct`,`resource`,`struct interface`,`resource interface`   | `access(self)`        | Current and inner                     |
+| `fun`,`struct`,`resource`,`struct interface`,`resource interface`   | `access(contract)`    | Current, inner, and its contract      |
+| `fun`,`struct`,`resource`,`struct interface`,`resource interface`   | `access(account)`     | Current, inner, and account contracts |
+| `fun`,`struct`,`resource`,`struct interface`,`resource interface`   | `pub`,`access(all)`   | **All**                               |
 
 Currently, all contract defined types must have an access declaration, but
 only code within the [contract](#contracts) in which the type is declared
