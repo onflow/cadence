@@ -3714,10 +3714,7 @@ var authAccountRemovePublicKeyFunctionType = &FunctionType{
 
 var authAccountSaveFunctionType = func() *FunctionType {
 
-	typeParameter := &TypeParameter{
-		Type: &AnyResourceType{},
-		Name: "T",
-	}
+	typeParameter := &TypeParameter{Name: "T"}
 
 	return &FunctionType{
 		TypeParameters: []*TypeParameter{
@@ -3745,10 +3742,7 @@ var authAccountSaveFunctionType = func() *FunctionType {
 
 var authAccountLoadFunctionType = func() *FunctionType {
 
-	typeParameter := &TypeParameter{
-		Type: &AnyResourceType{},
-		Name: "T",
-	}
+	typeParameter := &TypeParameter{Name: "T"}
 
 	return &FunctionType{
 		TypeParameters: []*TypeParameter{
@@ -3775,7 +3769,7 @@ var authAccountBorrowFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		Type: &ReferenceType{
-			Type: &AnyResourceType{},
+			Type: &AnyType{},
 		},
 		Name: "T",
 	}
@@ -3805,7 +3799,7 @@ var authAccountLinkFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		Type: &ReferenceType{
-			Type: &AnyResourceType{},
+			Type: &AnyType{},
 		},
 		Name: "T",
 	}
@@ -4845,12 +4839,13 @@ func IsSubType(subType Type, superType Type) bool {
 		case *RestrictedType:
 
 			switch restrictedSuperType := typedInnerSuperType.Type.(type) {
-			case *AnyResourceType, *AnyStructType:
+			case *AnyResourceType, *AnyStructType, *AnyType:
 
 				switch typedInnerSubType := typedSubType.Type.(type) {
 				case *RestrictedType:
 					// An unauthorized reference to a restricted type `&T{Us}`
-					// is a subtype of a reference to a restricted type `&AnyResource{Vs}` / `&AnyStruct{Vs}`:
+					// is a subtype of a reference to a restricted type
+					// `&AnyResource{Vs}` / `&AnyStruct{Vs}` / `&Any{Vs}`:
 					// if the `T` is a subset of the supertype's restricted type,
 					// and `Vs` is a subset of `Us`.
 					//
@@ -4864,8 +4859,9 @@ func IsSubType(subType Type, superType Type) bool {
 
 				case *CompositeType:
 					// An unauthorized reference to an unrestricted type `&T`
-					// is a subtype of a reference to a restricted type `&AnyResource{Us}` / `&AnyStruct{Us}`:
-					// When `T != AnyResource && T != AnyStruct`:
+					// is a subtype of a reference to a restricted type
+					// `&AnyResource{Us}` / `&AnyStruct{Us}` / `&Any{Us}`:
+					// When `T != AnyResource && T != AnyStruct && T != Any`:
 					// if `T` conforms to `Us`.
 					//
 					// The holder of the reference may only restrict the reference.
@@ -4875,10 +4871,11 @@ func IsSubType(subType Type, superType Type) bool {
 						typedInnerSuperType.RestrictionSet().
 							IsSubsetOf(typedInnerSubType.ConformanceSet())
 
-				case *AnyResourceType, *AnyStructType:
+				case *AnyResourceType, *AnyStructType, *AnyType:
 					// An unauthorized reference to an unrestricted type `&T`
-					// is a subtype of a reference to a restricted type `&AnyResource{Us}` / `&AnyStruct{Us}`:
-					// When `T == AnyResource || T == AnyStruct`: never.
+					// is a subtype of a reference to a restricted type
+					// `&AnyResource{Us}` / `&AnyStruct{Us}` / `&Any{Us}`:
+					// When `T == AnyResource || T == AnyStruct || T == Any`: never.
 					//
 					// The holder of the reference may not gain more permissions or knowledge.
 
@@ -4895,7 +4892,7 @@ func IsSubType(subType Type, superType Type) bool {
 
 					switch typedInnerSubType.Type.(type) {
 					case *CompositeType:
-						// When `T != AnyResource && T != AnyStruct`:
+						// When `T != AnyResource && T != AnyStruct && T != Any`:
 						// if `T == V` and `Ws` is a subset of `Us`.
 						//
 						// The holder of the reference may not gain more permissions or knowledge
@@ -4905,8 +4902,8 @@ func IsSubType(subType Type, superType Type) bool {
 							typedInnerSuperType.RestrictionSet().
 								IsSubsetOf(typedInnerSubType.RestrictionSet())
 
-					case *AnyResourceType, *AnyStructType:
-						// When `T == AnyResource || T == AnyStruct`: never.
+					case *AnyResourceType, *AnyStructType, *AnyType:
+						// When `T == AnyResource || T == AnyStruct || T == Any`: never.
 
 						return false
 					}
@@ -4914,16 +4911,16 @@ func IsSubType(subType Type, superType Type) bool {
 				case *CompositeType:
 					// An unauthorized reference to an unrestricted type `&T`
 					// is a subtype of a reference to a restricted type `&U{Vs}`:
-					// When `T != AnyResource && T != AnyStruct`: if `T == U`.
+					// When `T != AnyResource && T != AnyStruct && T != Any`: if `T == U`.
 					//
 					// The holder of the reference may only further restrict the reference.
 
 					return typedInnerSubType == typedInnerSuperType.Type
 
-				case *AnyResourceType, *AnyStructType:
+				case *AnyResourceType, *AnyStructType, *AnyType:
 					// An unauthorized reference to an unrestricted type `&T`
 					// is a subtype of a reference to a restricted type `&U{Vs}`:
-					// When `T == AnyResource || T == AnyStruct`: never.
+					// When `T == AnyResource || T == AnyStruct || T == Any`: never.
 					//
 					// The holder of the reference may not gain more permissions or knowledge.
 
@@ -4938,6 +4935,14 @@ func IsSubType(subType Type, superType Type) bool {
 			// The holder of the reference may not gain more permissions or knowledge.
 
 			return false
+
+		case *AnyType:
+
+			// An unauthorized reference to a restricted type `&T{Us}`
+			// or to a unrestricted type `&T`
+			// is a subtype of the type `&Any`: always.
+
+			return true
 
 		case *AnyResourceType:
 
@@ -5030,17 +5035,17 @@ func IsSubType(subType Type, superType Type) bool {
 	case *RestrictedType:
 
 		switch restrictedSuperType := typedSuperType.Type.(type) {
-		case *AnyResourceType, *AnyStructType:
+		case *AnyResourceType, *AnyStructType, *AnyType:
 
 			switch typedSubType := subType.(type) {
 			case *RestrictedType:
 
 				// A restricted type `T{Us}`
-				// is a subtype of a restricted type `AnyResource{Vs}` / `AnyStruct{Vs}`:
+				// is a subtype of a restricted type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
 
 				switch restrictedSubtype := typedSubType.Type.(type) {
-				case *AnyResourceType, *AnyStructType:
-					// When `T == AnyResource || T == AnyStruct`:
+				case *AnyResourceType, *AnyStructType, *AnyType:
+					// When `T == AnyResource || T == AnyStruct || T == Any`:
 					// if the restricted type of the subtype
 					// is a subtype of the restricted supertype,
 					// and `Vs` is a subset of `Us`.
@@ -5050,7 +5055,7 @@ func IsSubType(subType Type, superType Type) bool {
 							IsSubsetOf(typedSubType.RestrictionSet())
 
 				case *CompositeType:
-					// When `T != AnyResource && T != AnyStruct`:
+					// When `T != AnyResource && T != AnyStruct && T != Any`:
 					// if the restricted type of the subtype
 					// is a subtype of the restricted supertype,
 					// and `T` conforms to `Vs`.
@@ -5066,6 +5071,7 @@ func IsSubType(subType Type, superType Type) bool {
 				// `AnyResource` is a subtype of a restricted type
 				// - `AnyResource{Us}`: not statically;
 				// - `AnyStruct{Us}`: never.
+				// - `Any{Us}`: not statically;
 
 				return false
 
@@ -5073,12 +5079,21 @@ func IsSubType(subType Type, superType Type) bool {
 				// `AnyStruct` is a subtype of a restricted type
 				// - `AnyStruct{Us}`: not statically.
 				// - `AnyResource{Us}`: never;
+				// - `Any{Us}`: not statically.
+
+				return false
+
+			case *AnyType:
+				// `Any` is a subtype of a restricted type
+				// - `Any{Us}: not statically.`
+				// - `AnyStruct{Us}`: never;
+				// - `AnyResource{Us}`: never;
 
 				return false
 
 			case *CompositeType:
 				// An unrestricted type `T`
-				// is a subtype of a restricted type `AnyResource{Us}` / `AnyStruct{Us}`:
+				// is a subtype of a restricted type `AnyResource{Us}` / `AnyStruct{Us}` / `Any{Us}`:
 				// if `T` is a subtype of the restricted supertype,
 				// and `T` conforms to `Us`.
 
@@ -5096,13 +5111,13 @@ func IsSubType(subType Type, superType Type) bool {
 				// is a subtype of a restricted type `V{Ws}`:
 
 				switch restrictedSubType := typedSubType.Type.(type) {
-				case *AnyResourceType, *AnyStructType:
-					// When `T == AnyResource || T == AnyStruct`:
+				case *AnyResourceType, *AnyStructType, *AnyType:
+					// When `T == AnyResource || T == AnyStruct || T == Any`:
 					// not statically.
 					return false
 
 				case *CompositeType:
-					// When `T != AnyResource && T != AnyStructType`: if `T == V`.
+					// When `T != AnyResource && T != AnyStructType && T != Any`: if `T == V`.
 					//
 					// `Us` and `Ws` do *not* have to be subsets:
 					// The owner may freely restrict and unrestrict.
@@ -5118,9 +5133,9 @@ func IsSubType(subType Type, superType Type) bool {
 
 				return typedSubType == typedSuperType.Type
 
-			case *AnyResourceType, *AnyStructType:
+			case *AnyResourceType, *AnyStructType, *AnyType:
 				// An unrestricted type `T`
-				// is a subtype of a restricted type `AnyResource{Vs}` / `AnyStruct{Vs}`:
+				// is a subtype of a restricted type `AnyResource{Vs}` / `AnyStruct{Vs}` / `Any{Vs}`:
 				// not statically.
 
 				return false
@@ -5138,8 +5153,8 @@ func IsSubType(subType Type, superType Type) bool {
 			// is a subtype of an unrestricted type `V`:
 
 			switch restrictedSubType := typedSubType.Type.(type) {
-			case *AnyResourceType, *AnyStructType:
-				// When `T == AnyResource || T == AnyStruct`: not statically.
+			case *AnyResourceType, *AnyStructType, *AnyType:
+				// When `T == AnyResource || T == AnyStruct || T == Any`: not statically.
 				return false
 
 			case *CompositeType:
@@ -5157,7 +5172,7 @@ func IsSubType(subType Type, superType Type) bool {
 		case *CompositeType:
 
 			// Resources are not subtypes of resource interfaces.
-			// (Use `AnyResource` / `AnyStruct` with restriction instead).
+			// (Use `AnyResource` / `AnyStruct` / `Any` with restriction instead).
 
 			if typedSuperType.CompositeKind == common.CompositeKindResource ||
 				typedSuperType.CompositeKind == common.CompositeKindStructure {
@@ -5634,7 +5649,7 @@ var capabilityBorrowFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		Type: &ReferenceType{
-			Type: &AnyResourceType{},
+			Type: &AnyType{},
 		},
 		Name: "T",
 	}
@@ -5657,7 +5672,7 @@ var capabilityCheckFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		Type: &ReferenceType{
-			Type: &AnyResourceType{},
+			Type: &AnyType{},
 		},
 		Name: "T",
 	}

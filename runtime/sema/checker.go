@@ -999,7 +999,7 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 			reportInvalidRestrictedType()
 		}
 
-	case *AnyResourceType, *AnyStructType:
+	case *AnyResourceType, *AnyStructType, *AnyType:
 		break
 
 	default:

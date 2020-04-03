@@ -8,240 +8,565 @@ import (
 	"github.com/dapperlabs/cadence/runtime/interpreter"
 )
 
-func TestInterpretCapabilityBorrow(t *testing.T) {
+func TestInterpretCapabilityBorrowResource(t *testing.T) {
 
-	inter, _ := testAccount(
-		t,
-		true,
-		`
-          resource R {
-              let foo: Int
+	t.Run("resource", func(t *testing.T) {
 
-              init() {
-                  self.foo = 42
+		inter, _ := testAccount(
+			t,
+			true,
+			`
+              resource R {
+                  let foo: Int
+
+                  init() {
+                      self.foo = 42
+                  }
               }
-          }
 
-          resource R2 {}
+              resource R2 {}
 
-          fun saveAndLink() {
-              let r <- create R()
-              account.save(<-r, to: /storage/r)
+              resource S {
+                  let foo: Int
 
-              account.link<&R>(/public/single, target: /storage/r)
+                  init() {
+                      self.foo = 42
+                  }
+              }
 
-              account.link<&R>(/public/double, target: /public/single)
+              fun saveAndLink() {
+                  let r <- create R()
+                  account.save(<-r, to: /storage/r)
 
-              account.link<&R>(/public/nonExistent, target: /storage/nonExistent)
+                  account.link<&R>(/public/single, target: /storage/r)
 
-              account.link<&R>(/public/loop1, target: /public/loop2)
-              account.link<&R>(/public/loop2, target: /public/loop1)
-          }
+                  account.link<&R>(/public/double, target: /public/single)
 
-          fun foo(_ path: Path): Int {
-              return account.getCapability(path)!.borrow<&R>()!.foo
-          }
+                  account.link<&R>(/public/nonExistent, target: /storage/nonExistent)
 
-          fun single(): Int {
-              return foo(/public/single)
-          }
+                  account.link<&R>(/public/loop1, target: /public/loop2)
+                  account.link<&R>(/public/loop2, target: /public/loop1)
+              }
 
-          fun singleAuth(): auth &R? {
-              return account.getCapability(/public/single)!.borrow<auth &R>()
-          }
+              fun foo(_ path: Path): Int {
+                  return account.getCapability(path)!.borrow<&R>()!.foo
+              }
 
-          fun singleR2(): &R2? {
-              return account.getCapability(/public/single)!.borrow<&R2>()
-          }
+              fun single(): Int {
+                  return foo(/public/single)
+              }
 
-          fun double(): Int {
-              return foo(/public/double)
-          }
+              fun singleAuth(): auth &R? {
+                  return account.getCapability(/public/single)!.borrow<auth &R>()
+              }
 
-          fun nonExistent(): Int {
-              return foo(/public/nonExistent)
-          }
+              fun singleR2(): &R2? {
+                  return account.getCapability(/public/single)!.borrow<&R2>()
+              }
 
-          fun loop(): Int {
-              return foo(/public/loop1)
-          }
-        `,
-	)
+              fun singleS(): &S? {
+                  return account.getCapability(/public/single)!.borrow<&S>()
+              }
 
-	// save
+              fun double(): Int {
+                  return foo(/public/double)
+              }
 
-	_, err := inter.Invoke("saveAndLink")
-	require.NoError(t, err)
+              fun nonExistent(): Int {
+                  return foo(/public/nonExistent)
+              }
 
-	t.Run("single", func(t *testing.T) {
-
-		value, err := inter.Invoke("single")
-		require.NoError(t, err)
-
-		require.Equal(t, interpreter.NewIntValue(42), value)
-	})
-
-	t.Run("single auth", func(t *testing.T) {
-
-		value, err := inter.Invoke("singleR2")
-		require.NoError(t, err)
-
-		require.Equal(t, interpreter.NilValue{}, value)
-	})
-
-	t.Run("single R2", func(t *testing.T) {
-
-		value, err := inter.Invoke("singleAuth")
-		require.NoError(t, err)
-
-		require.Equal(t, interpreter.NilValue{}, value)
-	})
-
-	t.Run("double", func(t *testing.T) {
-
-		value, err := inter.Invoke("double")
-		require.NoError(t, err)
-
-		require.Equal(t, interpreter.NewIntValue(42), value)
-	})
-
-	t.Run("nonExistent", func(t *testing.T) {
-
-		_, err := inter.Invoke("nonExistent")
-		require.Error(t, err)
-
-		require.IsType(t, &interpreter.ForceNilError{}, err)
-	})
-
-	t.Run("loop", func(t *testing.T) {
-
-		_, err := inter.Invoke("loop")
-		require.Error(t, err)
-
-		require.IsType(t, &interpreter.CyclicLinkError{}, err)
-
-		require.Equal(t,
-			err.Error(),
-			"cyclic link in account 0x2a: /public/loop1 -> /public/loop2 -> /public/loop1",
+              fun loop(): Int {
+                  return foo(/public/loop1)
+              }
+            `,
 		)
+
+		// save
+
+		_, err := inter.Invoke("saveAndLink")
+		require.NoError(t, err)
+
+		t.Run("single", func(t *testing.T) {
+
+			value, err := inter.Invoke("single")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NewIntValue(42), value)
+		})
+
+		t.Run("single R2", func(t *testing.T) {
+
+			value, err := inter.Invoke("singleR2")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NilValue{}, value)
+		})
+
+		t.Run("single S", func(t *testing.T) {
+
+			value, err := inter.Invoke("singleS")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NilValue{}, value)
+		})
+
+		t.Run("single auth", func(t *testing.T) {
+
+			value, err := inter.Invoke("singleAuth")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NilValue{}, value)
+		})
+
+		t.Run("double", func(t *testing.T) {
+
+			value, err := inter.Invoke("double")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NewIntValue(42), value)
+		})
+
+		t.Run("nonExistent", func(t *testing.T) {
+
+			_, err := inter.Invoke("nonExistent")
+			require.Error(t, err)
+
+			require.IsType(t, &interpreter.ForceNilError{}, err)
+		})
+
+		t.Run("loop", func(t *testing.T) {
+
+			_, err := inter.Invoke("loop")
+			require.Error(t, err)
+
+			require.IsType(t, &interpreter.CyclicLinkError{}, err)
+
+			require.Equal(t,
+				err.Error(),
+				"cyclic link in account 0x2a: /public/loop1 -> /public/loop2 -> /public/loop1",
+			)
+		})
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		inter, _ := testAccount(
+			t,
+			true,
+			`
+              struct S {
+                  let foo: Int
+
+                  init() {
+                      self.foo = 42
+                  }
+              }
+
+              struct S2 {}
+
+              resource R {
+                  let foo: Int
+
+                  init() {
+                      self.foo = 42
+                  }
+              }
+
+              fun saveAndLink() {
+                  let s = S()
+                  account.save(s, to: /storage/s)
+
+                  account.link<&S>(/public/single, target: /storage/s)
+
+                  account.link<&S>(/public/double, target: /public/single)
+
+                  account.link<&S>(/public/nonExistent, target: /storage/nonExistent)
+
+                  account.link<&S>(/public/loop1, target: /public/loop2)
+                  account.link<&S>(/public/loop2, target: /public/loop1)
+              }
+
+              fun foo(_ path: Path): Int {
+                  return account.getCapability(path)!.borrow<&S>()!.foo
+              }
+
+              fun single(): Int {
+                  return foo(/public/single)
+              }
+
+              fun singleAuth(): auth &S? {
+                  return account.getCapability(/public/single)!.borrow<auth &S>()
+              }
+
+              fun singleS2(): &S2? {
+                  return account.getCapability(/public/single)!.borrow<&S2>()
+              }
+
+              fun singleR(): &R? {
+                  return account.getCapability(/public/single)!.borrow<&R>()
+              }
+
+              fun double(): Int {
+                  return foo(/public/double)
+              }
+
+              fun nonExistent(): Int {
+                  return foo(/public/nonExistent)
+              }
+
+              fun loop(): Int {
+                  return foo(/public/loop1)
+              }
+            `,
+		)
+
+		// save
+
+		_, err := inter.Invoke("saveAndLink")
+		require.NoError(t, err)
+
+		t.Run("single", func(t *testing.T) {
+
+			value, err := inter.Invoke("single")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NewIntValue(42), value)
+		})
+
+		t.Run("single S2", func(t *testing.T) {
+
+			value, err := inter.Invoke("singleS2")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NilValue{}, value)
+		})
+
+		t.Run("single R", func(t *testing.T) {
+
+			value, err := inter.Invoke("singleR")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NilValue{}, value)
+		})
+
+		t.Run("single auth", func(t *testing.T) {
+
+			value, err := inter.Invoke("singleAuth")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NilValue{}, value)
+		})
+
+		t.Run("double", func(t *testing.T) {
+
+			value, err := inter.Invoke("double")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NewIntValue(42), value)
+		})
+
+		t.Run("nonExistent", func(t *testing.T) {
+
+			_, err := inter.Invoke("nonExistent")
+			require.Error(t, err)
+
+			require.IsType(t, &interpreter.ForceNilError{}, err)
+		})
+
+		t.Run("loop", func(t *testing.T) {
+
+			_, err := inter.Invoke("loop")
+			require.Error(t, err)
+
+			require.IsType(t, &interpreter.CyclicLinkError{}, err)
+
+			require.Equal(t,
+				err.Error(),
+				"cyclic link in account 0x2a: /public/loop1 -> /public/loop2 -> /public/loop1",
+			)
+		})
 	})
 }
 
 func TestInterpretCapabilityCheck(t *testing.T) {
 
-	inter, _ := testAccount(
-		t,
-		true,
-		`
-          resource R {
-              let foo: Int
+	t.Run("resource", func(t *testing.T) {
 
-              init() {
-                  self.foo = 42
+		inter, _ := testAccount(
+			t,
+			true,
+			`
+              resource R {
+                  let foo: Int
+
+                  init() {
+                      self.foo = 42
+                  }
               }
-          }
 
-          resource R2 {}
+              resource R2 {}
 
-          fun saveAndLink() {
-              let r <- create R()
-              account.save(<-r, to: /storage/r)
+              struct S {
+                  let foo: Int
 
-              account.link<&R>(/public/single, target: /storage/r)
+                  init() {
+                      self.foo = 42
+                  }
+              }
 
-              account.link<&R>(/public/double, target: /public/single)
+              fun saveAndLink() {
+                  let r <- create R()
+                  account.save(<-r, to: /storage/r)
 
-              account.link<&R>(/public/nonExistent, target: /storage/nonExistent)
+                  account.link<&R>(/public/single, target: /storage/r)
 
-              account.link<&R>(/public/loop1, target: /public/loop2)
-              account.link<&R>(/public/loop2, target: /public/loop1)
-          }
+                  account.link<&R>(/public/double, target: /public/single)
 
-          fun check(_ path: Path): Bool {
-              return account.getCapability(path)!.check<&R>()
-          }
+                  account.link<&R>(/public/nonExistent, target: /storage/nonExistent)
 
-          fun single(): Bool {
-              return check(/public/single)
-          }
+                  account.link<&R>(/public/loop1, target: /public/loop2)
+                  account.link<&R>(/public/loop2, target: /public/loop1)
+              }
 
-          fun singleAuth(): Bool {
-              return account.getCapability(/public/single)!.check<auth &R>()
-          }
+              fun check(_ path: Path): Bool {
+                  return account.getCapability(path)!.check<&R>()
+              }
 
-          fun singleR2(): Bool {
-              return account.getCapability(/public/single)!.check<&R2>()
-          }
+              fun single(): Bool {
+                  return check(/public/single)
+              }
 
-          fun double(): Bool {
-              return check(/public/double)
-          }
+              fun singleAuth(): Bool {
+                  return account.getCapability(/public/single)!.check<auth &R>()
+              }
 
-          fun nonExistent(): Bool {
-              return check(/public/nonExistent)
-          }
+              fun singleR2(): Bool {
+                  return account.getCapability(/public/single)!.check<&R2>()
+              }
 
-          fun loop(): Bool {
-              return check(/public/loop1)
-          }
-        `,
-	)
+              fun singleS(): Bool {
+                  return account.getCapability(/public/single)!.check<&S>()
+              }
 
-	// save
+              fun double(): Bool {
+                  return check(/public/double)
+              }
 
-	_, err := inter.Invoke("saveAndLink")
-	require.NoError(t, err)
+              fun nonExistent(): Bool {
+                  return check(/public/nonExistent)
+              }
 
-	t.Run("single", func(t *testing.T) {
-
-		value, err := inter.Invoke("single")
-		require.NoError(t, err)
-
-		require.Equal(t, interpreter.BoolValue(true), value)
-	})
-
-	t.Run("single auth", func(t *testing.T) {
-
-		value, err := inter.Invoke("singleAuth")
-		require.NoError(t, err)
-
-		require.Equal(t, interpreter.BoolValue(false), value)
-	})
-
-	t.Run("single R2", func(t *testing.T) {
-
-		value, err := inter.Invoke("singleR2")
-		require.NoError(t, err)
-
-		require.Equal(t, interpreter.BoolValue(false), value)
-	})
-
-	t.Run("double", func(t *testing.T) {
-
-		value, err := inter.Invoke("double")
-		require.NoError(t, err)
-
-		require.Equal(t, interpreter.BoolValue(true), value)
-	})
-
-	t.Run("nonExistent", func(t *testing.T) {
-
-		value, err := inter.Invoke("nonExistent")
-		require.NoError(t, err)
-
-		require.Equal(t, interpreter.BoolValue(false), value)
-	})
-
-	t.Run("loop", func(t *testing.T) {
-
-		_, err := inter.Invoke("loop")
-		require.Error(t, err)
-
-		require.IsType(t, &interpreter.CyclicLinkError{}, err)
-
-		require.Equal(t,
-			err.Error(),
-			"cyclic link in account 0x2a: /public/loop1 -> /public/loop2 -> /public/loop1",
+              fun loop(): Bool {
+                  return check(/public/loop1)
+              }
+            `,
 		)
+
+		// save
+
+		_, err := inter.Invoke("saveAndLink")
+		require.NoError(t, err)
+
+		t.Run("single", func(t *testing.T) {
+
+			value, err := inter.Invoke("single")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.BoolValue(true), value)
+		})
+
+		t.Run("single auth", func(t *testing.T) {
+
+			value, err := inter.Invoke("singleAuth")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.BoolValue(false), value)
+		})
+
+		t.Run("single R2", func(t *testing.T) {
+
+			value, err := inter.Invoke("singleR2")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.BoolValue(false), value)
+		})
+
+		t.Run("single S", func(t *testing.T) {
+
+			value, err := inter.Invoke("singleS")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.BoolValue(false), value)
+		})
+
+		t.Run("double", func(t *testing.T) {
+
+			value, err := inter.Invoke("double")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.BoolValue(true), value)
+		})
+
+		t.Run("nonExistent", func(t *testing.T) {
+
+			value, err := inter.Invoke("nonExistent")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.BoolValue(false), value)
+		})
+
+		t.Run("loop", func(t *testing.T) {
+
+			_, err := inter.Invoke("loop")
+			require.Error(t, err)
+
+			require.IsType(t, &interpreter.CyclicLinkError{}, err)
+
+			require.Equal(t,
+				err.Error(),
+				"cyclic link in account 0x2a: /public/loop1 -> /public/loop2 -> /public/loop1",
+			)
+		})
 	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		inter, _ := testAccount(
+			t,
+			true,
+			`
+              struct S {
+                  let foo: Int
+
+                  init() {
+                      self.foo = 42
+                  }
+              }
+
+              resource S2 {}
+
+              resource R {
+                  let foo: Int
+
+                  init() {
+                      self.foo = 42
+                  }
+              }
+
+              fun saveAndLink() {
+                  let s = S()
+                  account.save(s, to: /storage/s)
+
+                  account.link<&S>(/public/single, target: /storage/s)
+
+                  account.link<&S>(/public/double, target: /public/single)
+
+                  account.link<&S>(/public/nonExistent, target: /storage/nonExistent)
+
+                  account.link<&S>(/public/loop1, target: /public/loop2)
+                  account.link<&S>(/public/loop2, target: /public/loop1)
+              }
+
+              fun check(_ path: Path): Bool {
+                  return account.getCapability(path)!.check<&S>()
+              }
+
+              fun single(): Bool {
+                  return check(/public/single)
+              }
+
+              fun singleAuth(): Bool {
+                  return account.getCapability(/public/single)!.check<auth &S>()
+              }
+
+              fun singleS2(): Bool {
+                  return account.getCapability(/public/single)!.check<&S2>()
+              }
+
+              fun singleR(): Bool {
+                  return account.getCapability(/public/single)!.check<&R>()
+              }
+
+              fun double(): Bool {
+                  return check(/public/double)
+              }
+
+              fun nonExistent(): Bool {
+                  return check(/public/nonExistent)
+              }
+
+              fun loop(): Bool {
+                  return check(/public/loop1)
+              }
+            `,
+		)
+
+		// save
+
+		_, err := inter.Invoke("saveAndLink")
+		require.NoError(t, err)
+
+		t.Run("single", func(t *testing.T) {
+
+			value, err := inter.Invoke("single")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.BoolValue(true), value)
+		})
+
+		t.Run("single auth", func(t *testing.T) {
+
+			value, err := inter.Invoke("singleAuth")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.BoolValue(false), value)
+		})
+
+		t.Run("single S2", func(t *testing.T) {
+
+			value, err := inter.Invoke("singleS2")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.BoolValue(false), value)
+		})
+
+		t.Run("single R", func(t *testing.T) {
+
+			value, err := inter.Invoke("singleR")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.BoolValue(false), value)
+		})
+
+		t.Run("double", func(t *testing.T) {
+
+			value, err := inter.Invoke("double")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.BoolValue(true), value)
+		})
+
+		t.Run("nonExistent", func(t *testing.T) {
+
+			value, err := inter.Invoke("nonExistent")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.BoolValue(false), value)
+		})
+
+		t.Run("loop", func(t *testing.T) {
+
+			_, err := inter.Invoke("loop")
+			require.Error(t, err)
+
+			require.IsType(t, &interpreter.CyclicLinkError{}, err)
+
+			require.Equal(t,
+				err.Error(),
+				"cyclic link in account 0x2a: /public/loop1 -> /public/loop2 -> /public/loop1",
+			)
+		})
+	})
+
 }
