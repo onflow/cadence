@@ -151,6 +151,9 @@ type CadenceListener interface {
 	// EnterWhileStatement is called when entering the whileStatement production.
 	EnterWhileStatement(c *WhileStatementContext)
 
+	// EnterForStatement is called when entering the forStatement production.
+	EnterForStatement(c *ForStatementContext)
+
 	// EnterEmitStatement is called when entering the emitStatement production.
 	EnterEmitStatement(c *EmitStatementContext)
 
@@ -462,6 +465,9 @@ type CadenceListener interface {
 
 	// ExitWhileStatement is called when exiting the whileStatement production.
 	ExitWhileStatement(c *WhileStatementContext)
+
+	// ExitForStatement is called when exiting the forStatement production.
+	ExitForStatement(c *ForStatementContext)
 
 	// ExitEmitStatement is called when exiting the emitStatement production.
 	ExitEmitStatement(c *EmitStatementContext)

@@ -1296,102 +1296,6 @@ func TestInterpretIfStatement(t *testing.T) {
 	}
 }
 
-func TestInterpretWhileStatement(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-       fun test(): Int {
-           var x = 0
-           while x < 5 {
-               x = x + 2
-           }
-           return x
-       }
-
-    `)
-
-	value, err := inter.Invoke("test")
-	require.NoError(t, err)
-
-	assert.Equal(t,
-		interpreter.NewIntValue(6),
-		value,
-	)
-}
-
-func TestInterpretWhileStatementWithReturn(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-       fun test(): Int {
-           var x = 0
-           while x < 10 {
-               x = x + 2
-               if x > 5 {
-                   return x
-               }
-           }
-           return x
-       }
-    `)
-
-	value, err := inter.Invoke("test")
-	require.NoError(t, err)
-
-	assert.Equal(t,
-		interpreter.NewIntValue(6),
-		value,
-	)
-}
-
-func TestInterpretWhileStatementWithContinue(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-       fun test(): Int {
-           var i = 0
-           var x = 0
-           while i < 10 {
-               i = i + 1
-               if i < 5 {
-                   continue
-               }
-               x = x + 1
-           }
-           return x
-       }
-    `)
-
-	value, err := inter.Invoke("test")
-	require.NoError(t, err)
-
-	assert.Equal(t,
-		interpreter.NewIntValue(6),
-		value,
-	)
-}
-
-func TestInterpretWhileStatementWithBreak(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-       fun test(): Int {
-           var x = 0
-           while x < 10 {
-               x = x + 1
-               if x == 5 {
-                   break
-               }
-           }
-           return x
-       }
-    `)
-
-	value, err := inter.Invoke("test")
-	require.NoError(t, err)
-
-	assert.Equal(t,
-		interpreter.NewIntValue(5),
-		value,
-	)
-}
-
 func TestInterpretExpressionStatement(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
@@ -7576,6 +7480,52 @@ func TestInterpretNonStorageReferenceAfterDestruction(t *testing.T) {
 	assert.IsType(t, &interpreter.DestroyedCompositeError{}, err)
 }
 
+func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
+
+	inter := parseCheckAndInterpret(t,
+		`
+          resource Foo {
+              let name: String
+
+              init(name: String) {
+                  self.name = name
+              }
+          }
+
+
+          fun testSome(): String {
+              let xs: @{String: Foo} <- {"yes": <-create Foo(name: "YES")}
+              let ref = &xs["yes"] as &Foo
+              let name = ref.name
+              destroy xs
+              return name
+          }
+
+          fun testNil(): String {
+              let xs: @{String: Foo} <- {}
+              let ref = &xs["no"] as &Foo
+              let name = ref.name
+              destroy xs
+              return name
+          }
+        `,
+	)
+
+	t.Run("some", func(t *testing.T) {
+		value, err := inter.Invoke("testSome")
+		require.NoError(t, err)
+
+		assert.Equal(t, interpreter.NewStringValue("YES"), value)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+		_, err := inter.Invoke("testNil")
+		require.Error(t, err)
+
+		assert.IsType(t, &interpreter.DereferenceError{}, err)
+	})
+}
+
 func TestInterpretFix64(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t,
@@ -8064,4 +8014,104 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 
 		require.Equal(t, test, decoded)
 	}
+}
+
+func TestInterpretEphemeralReferenceToOptional(t *testing.T) {
+
+	_ = parseCheckAndInterpretWithOptions(t,
+		`
+          contract C {
+
+              var rs: @{Int: R}
+
+              resource R {
+                  pub let id: Int
+
+                  init(id: Int) {
+                      self.id = id
+                  }
+              }
+
+              fun borrow(id: Int): &R {
+                  return &C.rs[id] as &R
+              }
+
+              init() {
+                  self.rs <- {}
+                  self.rs[1] <-! create R(id: 1)
+                  let ref = self.borrow(id: 1)
+                  ref.id
+              }
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			Options: []interpreter.Option{
+				makeContractValueHandler(nil, nil, nil),
+			},
+		},
+	)
+}
+
+func TestInterpretNestedDeclarationOrder(t *testing.T) {
+
+	t.Run("A, B", func(t *testing.T) {
+		_ = parseCheckAndInterpretWithOptions(t,
+			`
+          pub contract Test {
+
+              pub resource A {
+
+                  pub fun b(): @B {
+                      return <-create B()
+                  }
+              }
+
+              pub resource B {}
+
+              init() {
+                  let a <- create A()
+                  let b <- a.b()
+                  destroy a
+                  destroy b
+              }
+          }
+        `,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					makeContractValueHandler(nil, nil, nil),
+				},
+			},
+		)
+	})
+
+	t.Run("B, A", func(t *testing.T) {
+
+		_ = parseCheckAndInterpretWithOptions(t,
+			`
+          pub contract Test {
+
+              pub resource B {}
+
+              pub resource A {
+
+                  pub fun b(): @B {
+                      return <-create B()
+                  }
+              }
+
+              init() {
+                  let a <- create A()
+                  let b <- a.b()
+                  destroy a
+                  destroy b
+              }
+          }
+        `,
+			ParseCheckAndInterpretOptions{
+				Options: []interpreter.Option{
+					makeContractValueHandler(nil, nil, nil),
+				},
+			},
+		)
+	})
 }

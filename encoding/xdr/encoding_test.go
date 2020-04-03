@@ -573,7 +573,7 @@ func TestEncodeEvent(t *testing.T) {
 	}
 
 	resourceEvent := encodeTest{
-		"ResourceField",
+		"Resources",
 		resourceEventType,
 		cadence.NewEvent(
 			[]cadence.Value{

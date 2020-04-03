@@ -128,13 +128,27 @@ Capabilities can be created through the `link` function of a Signing Account (`A
 
   - Returns `nil` if a link for the given path already exists.
 
+  - Does **not** check if the target path is valid/exists,
+    and does **not** check if the target value conforms to the given type.
+    The link is latent. The target value might be stored after the link is created,
+    the target value might be moved out after the link has been created.
+
 Capabilities can be removed through the `unlink` function of a Signing Account (`AuthAccount`):
 
 - `fun unlink(_ path: Path)`:
 
   - `path`: A Public Path or a Private Path.
 
-Existing capabilities can be accessed by path using getCapability(), defined on Signing Accounts (`AuthAccount`) and Public Accounts (`PublicAccount):
+Capability targets can be queried using the `getLinkTarget` function:
+
+- `getLinkTarget(_ path: Path): Path?`
+
+  - `path`: A Public Path or a Private Path.
+
+  - Returns the target path if a capability exists at the given path, or `nil` if it does not.
+
+Existing capabilities can be accessed by path using `getCapability`,
+defined on Signing Accounts (`AuthAccount`) and Public Accounts (`PublicAccount):
 
 - `fun getCapability(at: Path): Capability?`
 
@@ -145,6 +159,9 @@ Existing capabilities can be accessed by path using getCapability(), defined on 
   - Returns `nil`:
     - For Public Accounts, if passed a Private Path or Storage Path.
     - For Signing Accounts, if passed a Storage Path.
+
+  - Does **not** check if the target exists. The link is latent.
+    Use `Capability.check` to check if the target exists currently.
 
 #### Checking and Borrowing Capabilities
 
@@ -190,6 +207,13 @@ which should either have the type `AuthAccount` (authorized) or `PublicAccount` 
 If the `<path>` part of the Capability syntax is just an identifier,
 then the part is dynamic and is considered a variable which should have the type `Path`.
 The `<path>` part of the Capability syntax may also be a Path literal.
+
+### Borrowing
+
+```cadence
+let providerA: &{Provider} = borrow! capability as &{Provider}
+let providerB: &{Provider}? = borrow? capability as &{Provider}?
+```
 
 ## Examples
 

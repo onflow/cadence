@@ -545,9 +545,11 @@ func (interpreter *Interpreter) prepareInterpretation() {
 	for _, declaration := range program.InterfaceDeclarations() {
 		interpreter.declareVariable(declaration.Identifier.Identifier, nil)
 	}
+
 	for _, declaration := range program.CompositeDeclarations() {
 		interpreter.declareVariable(declaration.Identifier.Identifier, nil)
 	}
+
 	for _, declaration := range program.FunctionDeclarations() {
 		interpreter.declareVariable(declaration.Identifier.Identifier, nil)
 	}
@@ -1065,6 +1067,58 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 					// recurse
 					return statement.Accept(interpreter).(Trampoline)
 				})
+		})
+}
+
+func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) ast.Repr {
+	interpreter.activations.PushCurrent()
+
+	variable := interpreter.declareVariable(
+		statement.Identifier.Identifier,
+		nil,
+	)
+
+	var loop func(i, count int, values []Value) Trampoline
+	loop = func(i, count int, values []Value) Trampoline {
+
+		if i == count {
+			return Done{}
+		}
+
+		variable.Value = values[i]
+
+		return statement.Block.Accept(interpreter).(Trampoline).
+			FlatMap(func(value interface{}) Trampoline {
+
+				switch value.(type) {
+				case loopBreak:
+					return Done{}
+
+				case loopContinue:
+					// NO-OP
+
+				case functionReturn:
+					return Done{Result: value}
+				}
+
+				// recurse
+				if i == count {
+					return Done{}
+				}
+				return loop(i+1, count, values)
+			})
+	}
+
+	return statement.Value.Accept(interpreter).(Trampoline).
+		FlatMap(func(result interface{}) Trampoline {
+
+			values := result.(*ArrayValue).Values[:]
+			count := len(values)
+
+			return loop(0, count, values)
+		}).
+		Then(func(_ interface{}) {
+			interpreter.activations.Pop()
 		})
 }
 
@@ -2177,6 +2231,23 @@ func (interpreter *Interpreter) declareCompositeValue(
 	(func() {
 		interpreter.activations.PushCurrent()
 		defer interpreter.activations.Pop()
+
+		// Pre-declare empty variables for all interfaces, composites, and function declarations
+		predeclare := func(identifier ast.Identifier) {
+			name := identifier.Identifier
+			lexicalScope = lexicalScope.Insert(
+				common.StringEntry(name),
+				interpreter.declareVariable(name, nil),
+			)
+		}
+
+		for _, nestedInterfaceDeclaration := range declaration.InterfaceDeclarations {
+			predeclare(nestedInterfaceDeclaration.Identifier)
+		}
+
+		for _, nestedCompositeDeclaration := range declaration.CompositeDeclarations {
+			predeclare(nestedCompositeDeclaration.Identifier)
+		}
 
 		for _, nestedInterfaceDeclaration := range declaration.InterfaceDeclarations {
 			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
@@ -3544,6 +3615,9 @@ func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValu
 			// If there is value stored for the given path,
 			// check that it satisfies the type given as the type argument.
 
+			// `Invocation.TypeParameterTypes` is a map, so get the first
+			// element / type by iterating over the values of the map.
+
 			var ty sema.Type
 			for _, ty = range invocation.TypeParameterTypes {
 				break
@@ -3594,6 +3668,9 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 			// If there is value stored for the given path,
 			// check that it satisfies the type given as the type argument.
 
+			// `Invocation.TypeParameterTypes` is a map, so get the first
+			// element / type by iterating over the values of the map.
+
 			var ty sema.Type
 			for _, ty = range invocation.TypeParameterTypes {
 				break
@@ -3626,6 +3703,9 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
 
 		address := addressValue.ToAddress()
+
+		// `Invocation.TypeParameterTypes` is a map, so get the first
+		// element / type by iterating over the values of the map.
 
 		var referenceType *sema.ReferenceType
 		for _, ty := range invocation.TypeParameterTypes {
@@ -3765,6 +3845,9 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 	address := addressValue.ToAddress()
 
 	key := storageKey(path)
+
+	// `Invocation.TypeParameterTypes` is a map, so get the first
+	// element / type by iterating over the values of the map.
 
 	var wantedType sema.Type
 	for _, wantedType = range invocation.TypeParameterTypes {
