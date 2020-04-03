@@ -4621,6 +4621,9 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 	case "link":
 		return inter.authAccountLinkFunction(v.Address)
 
+	case "unlink":
+		return inter.authAccountUnlinkFunction(v.Address)
+
 	case "getCapability":
 		return accountGetCapabilityFunction(v.Address, true)
 
