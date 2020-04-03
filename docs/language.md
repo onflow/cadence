@@ -3986,7 +3986,7 @@ and making other parts inaccessible/invisible.
 
 In Flow and Cadence, there are two types of access control:
 
-1. Access control between accounts using capability security.
+1. Access control on objects in account storage using capability security.
 
     Within Flow, a caller is not able to access an object
     unless it owns the object or has a specific reference to that object.
@@ -3995,67 +3995,97 @@ In Flow and Cadence, there are two types of access control:
     unless the owner of the account has granted them access
     by providing references to the objects.
 
-2. Access control within programs using `private` and `public` keywords.
+2. Access control within contracts and objects
+   using `pub` and `access` keywords.
 
-   Assuming the caller has a valid reference that satisfies the first type of access control,
-   these keywords further govern how access is controlled.
+   For the explanations of the following keywords, we assume that
+   the defining type is either a contract, where capability security
+   doesn't apply, or that the caller would have valid access to the object
+   governed by capability security.
 
 The high-level reference-based security (point 1 above)
 will be covered in a later section.
-For now, it is assumed that all callers have complete
-access to the objects in the descriptions and examples.
 
 Top-level declarations
 (variables, constants, functions, structures, resources, interfaces)
-and fields (in structures, and resources) are either private or public.
+and fields (in structures, and resources) are always only able to be written
+to in the scope where it is defined (self).
 
-- **Private** means the declaration is only accessible/visible
-  in the current and inner scopes.
+There are four levels of access control defined in the code that specify where
+a declaration can be accessed or called.
 
-  For example, a private field can only be
-  accessed by functions of the type is part of,
-  not by code that uses an instance of the type in an outer scope.
+- **Public** or **access(all)** means the declaration 
+  is accessible/visible in all scopes.
 
-- **Public** means the declaration is accessible/visible in all scopes.
-
-  This includes the current and inner scopes like for private,
-  and the outer scopes.
+  This includes the current scope, inner scopes, and the outer scopes.
 
   For example, a public field in a type can be accessed using the access syntax
   on an instance of the type in an outer scope.
   This does not allow the declaration to be publicly writable though.
 
-**By default, everything is private.**
-An element is made public by using the `pub` keyword.
+  An element is made public by using the `pub` or `access(all)` keywords.
+
+- **access(account)** means the declaration is only accessible/visible in the
+  scope of the entire account where it is defined. This means that
+  other contracts in the account are able to access it, 
+
+  An element is specified with account access 
+  by using the `access(account)` keyword.
+
+- **access(contract)** means the declaration is only accessible/visible in the
+  scope of the contract that defined it. This means that other types 
+  and functions that are defined in the same contract can access it, 
+  but not other contracts in the same account.
+
+  An element is specified with contract access 
+  by using the `access(contract)` keyword.
+
+- Private or **access(self)** means the declaration is only accessible/visible
+  in the current and inner scopes.
+
+  For example, an `access(self)` field can only be
+  accessed by functions of the type is part of,
+  not by code in an outer scope.
+
+  This level is specified by using the `access(self)` keyword.
+
+**Access level must be specified for each declaration**
+
 
 The `(set)` suffix can be used to make variables also publicly writable.
 
 To summarize the behavior for variable declarations, constant declarations, and fields:
 
-| Declaration kind | Access modifier    | Read scope        | Write scope       |
-|:-----------------|:-------------------|:------------------|:------------------|
-| `let`            |                    | Current and inner | *None*            |
-| `let`            | `pub`              | **All**           | *None*            |
-| `var`            |                    | Current and inner | Current and inner |
-| `var`            | `pub`              | **All**           | Current and inner |
-| `var`            | `pub(set)`         | **All**           | **All**           |
+| Declaration kind | Access modifier    | Read scope                            | Write scope       |
+|:-----------------|:-------------------|:--------------------------------------|:------------------|
+| `let`            | `access(self)`     | Current and inner                     | *None*            |
+| `let`            | `access(contract)` | Current, inner, and its contract      | *None*            |
+| `let`            | `access(account)`  | Current, inner, and account contracts | *None*            |
+| `let`            | `pub`,`access(all)`| **All**                               | *None*            |
+| `var`            | `access(self)`     | Current and inner                     | Current and inner |
+| `var`            | `access(contract)` | Current, inner, and its contract      | Current and inner |
+| `var`            | `access(account)`  | Current, inner, and account contracts | Current and inner |
+| `var`            | `pub`,`access(all)`| **All**                               | Current and inner |
+| `var`            | `pub(set)`         | **All**                               | **All**           |
 
 To summarize the behavior for functions, structures, resources, and interfaces:
 
-| Declaration kind                                                        | Access modifier       | Access scope      |
-|:------------------------------------------------------------------------|:----------------------|:------------------|
-| `fun`, `struct`, `resource`, `struct interface`, `resource interface`   |                       | Current and inner |
-| `fun`, `struct`, `resource`, `struct interface`, `resource interface`   | `pub`                 | **All**           |
+| Declaration kind                                                    | Access modifier       | Access scope                          |
+|:--------------------------------------------------------------------|:----------------------|:--------------------------------------|
+| `fun`,`struct`,`resource`,`struct interface`,`resource interface`   | `access(self)`        | Current and inner                     |
+| `fun`,`struct`,`resource`,`struct interface`,`resource interface`   | `access(contract)`    | Current, inner, and its contract      |
+| `fun`,`struct`,`resource`,`struct interface`,`resource interface`   | `access(account)`     | Current, inner, and account contracts |
+| `fun`,`struct`,`resource`,`struct interface`,`resource interface`   | `pub`,`access(all)`   | **All**                               |
 
-Currently, all types must be declared public and are visible to all code.
-However, that does not imply that any code may instantiate the type:
+Currently, all contract defined types must have an access declaration, but
 only code within the [contract](#contracts) in which the type is declared
-is allowed to create instances of the type. See the linked contracts section for more information.
+is allowed to create instances of the type. 
+See the linked contracts section for more information.
 
 ```cadence,file=access-control-globals.cdc
 // Declare a private constant, inaccessible/invisible in outer scope.
 //
-let a = 1
+access(self) let a = 1
 
 // Declare a public constant, accessible/visible in all scopes.
 //
@@ -4070,7 +4100,7 @@ pub struct SomeStruct {
     // Declare a private constant field which is only readable
     // in the current and inner scopes.
     //
-    let a: Int
+    access(self) let a: Int
 
     // Declare a public constant field which is readable in all scopes.
     //
@@ -4079,7 +4109,7 @@ pub struct SomeStruct {
     // Declare a private variable field which is only readable
     // and writable in the current and inner scopes.
     //
-    var c: Int
+    access(self) var c: Int
 
     // Declare a public variable field which is not settable,
     // so it is only writable in the current and inner scopes,
@@ -4097,7 +4127,7 @@ pub struct SomeStruct {
     // Declare a private function which is only callable
     // in the current and inner scopes.
     //
-    fun privateTest() {
+    access(self) fun privateTest() {
         // ...
     }
 
@@ -4211,7 +4241,7 @@ The special type `Self` can be used to refer to the type implementing the interf
 // Declare a resource interface for a fungible token.
 // Only resources can implement this resource interface.
 //
-resource interface FungibleToken {
+pub resource interface FungibleToken {
 
     // Require the implementing type to provide a field for the balance
     // that is readable in all scopes (`pub`).
@@ -4336,7 +4366,7 @@ in terms of name, parameter argument labels, parameter types, and the return typ
 // It has a variable field named `balance`, that can be written
 // by functions of the type, but outer scopes can only read it.
 //
-resource ExampleToken: FungibleToken {
+pub resource ExampleToken: FungibleToken {
 
     // Implement the required field `balance` for the `FungibleToken` interface.
     // The interface does not specify if the field must be variable, constant,
@@ -4809,7 +4839,8 @@ followed by the `from` keyword, and then followed by the location.
 
 If importing a local file, the location is a string literal, and the path to the file.
 
-If importing an external type, the location is an address literal, and the address
+If importing an external type in a different account, 
+the location is an address literal, and the address
 of the account where the declarations are deployed to and published.
 
 ```cadence,file=imports.cdc
