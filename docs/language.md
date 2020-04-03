@@ -5464,37 +5464,105 @@ Transactions are structured as such:
 
 First, the transaction can import any number of types from external accounts
 using the import syntax.
+```cadence,file=import.cdc
+import FungibleToken from 0x01
+```
 
-Next is the body of the transaction, which is broken into three main phases:
+The body is declared using the `transaction` keyword and its contents
+are contained in curly braces.
+
+Next is the body of the transaction,
+which first contains local variable declarations that are valid
+throughout the whole of the transaction.
+
+```cadence,file=transaction.cdc
+transaction{
+    // transaction contents
+    let localVar: Int
+
+    ...
+}
+```
+
+
+then three optional main phases:
 Preparation, execution, and postconditions, only in that order.
 Each phase is a block of code that executes sequentially.
 
-- The **prepare phase** acts like the initializer in a composite type,
-  i.e., it initializes fields that can then be used in the execution phase.
+- The **prepare phase** (declared using the `prepare` keyword)
+  acts like the initializer in a composite type,
+  i.e., it has to initialize the local fields of the transaction
+  that can then be used in the execution phase.
 
-  The prepare phase has the permissions to read from and write to the storage
-  of all the accounts that signed the transaction.
+  The prepare phase also has access to the private account objects
+  (`AuthAccount`) of the accounts that signed it. 
+  These private account objects have to be declared as parameters 
+  to the prepare phase, one for each signer of the transaction:
 
-- The **execute phase** is where interaction with external contracts happens.
+  ```cadence,file=prepare-args.cdc
+  // There needs to be exactly as many AuthAccount parameters
+  // as there are signers for the transaction
+  // In this case, there would be two signers
+
+  prepare(acct1: AuthAccount, acct2: AuthAccount) {
+      let privateResource <- acct1.storage[Resource] <- nil
+      destroy privateResource
+  }
+  ```
+
+  have the permissions to read from and write to the private storage
+  of the account, which cannot be directly accessed anywhere else.
+
+- The **execute phase** (declared using the `execute` keyword) 
+  is where interaction with external accounts 
+  and contracts should usually happen.
 
   This usually involves interacting with contracts with public types
-  and functions that are deployed in other accounts.
+  and functions, calling functions using references to other accounts'
+  objects, and performing specific computation on these values.
 
-- The **postcondition phase** is where the transaction can check
-  that its functionality was executed correctly.
+  This phase does not have access to any account's private account objects
+  and can only access public contract fields and functions, 
+  public account objects (`PublicAccount`) using the built-in `getAccount`
+  function, and any local transaction variables 
+  that were initialized in the `prepare` block.
 
-Transactions are declared using the `transaction` keyword.
+  ```cadence,file=execute.cdc
+    execute {
+        // Invalid: Cannot access the private account object
+        //
 
-Within the transaction, but before the prepare phase,
-any number of constants and/or variables can be declared.
-These are valid within the entire scope of the transaction.
+        let privateResource <- acct1.storage[Resource] <- nil
+        destroy privateResource
 
-The prepare phase is declared using the `prepare` keyword
-and the execution phase can be declared using the `execute` keyword.
-The `post` section can be used to declare postconditions.
+        // Valid: Can access any account's public Account object
+
+        let pubacct = getAccount(0x03)
+  }
+
+  ```
+
+
+- The **postcondition phase** (declared using the `post` keyword) 
+  is where the transaction can check
+  that its functionality was executed correctly with specific condition checks.
+
+  If any of the condition checks register as `false` the transaction will fail
+  and be completely reverted.
+
+  Only condition checks are allowed in this section. No actual computation
+  or modification of values is allowed.
+
+  ```cadence,file=post.cdc
+    post {
+        result.balance == 30: "Balance after transaction is incorrect!"
+    }
+
+  ```
 
 ```cadence,file=transaction-declaration.cdc
 // Optional: Importing external types from other accounts using `import`.
+import HelloWorld from 0x01
 
 transaction {
 
@@ -5503,7 +5571,7 @@ transaction {
     // The prepare phase needs to have as many account parameters
     // as there are signers for the transaction.
     //
-    prepare(signer1: Account) {
+    prepare(signer1: AuthAccount) {
         // ...
     }
 
@@ -5517,284 +5585,77 @@ transaction {
 }
 ```
 
-### Deploying Code
 
-Transactions can deploy contract code to the storage of any of the signing accounts.
 
-Here is an example of a resource interface that will be deployed to an account.
-Imagine it is in a file named `FungibleToken.cdc`.
+### Importing and using Deployed Contract Code
 
-```cadence,file=fungible-token-interface.cdc
-// Declare resource interfaces for the two parts of a fungible token:
-// - A provider, which allows withdrawing tokens
-// - A receiver, which allows depositing tokens
-//
-pub resource interface Provider {
+Deploying contract code to an account was covered 
+in the [Deploying and Updating Contracts](### Deploying and Updating Contracts) section of the spec.
 
-    pub fun withdraw(amount: Int): @FungibleToken {
-        pre {
-            amount > 0:
-                "withdrawal amount must be positive"
-        }
-        post {
-            result.balance == amount:
-                "incorrect amount returned"
-        }
-    }
+Once a contract or contract interface has been deployed to an account,
+anybody can import the type from account where it was deployed to and use it in their
+contracts or transactions.
 
-    pub fun transfer(to: &Receiver, amount: Int)
-}
+<!--
 
-pub resource interface Receiver {
-    pub fun deposit(token: @FungibleToken)
-}
+TODO
 
-// Declare a resource interface for a fungible token.
-//
-// It requires that conforming implementations also implement
-// the interfaces `Provider` and `Receiver`.
-//
-pub resource interface FungibleToken: Provider, Receiver {
+#### Document how contract code is imported and used in another contract with simpler examples than FungibleToken
 
-    pub balance: Int {
-        set(newBalance) {
-            post {
-                newBalance >= 0:
-                    "Balances are always set as non-negative numbers"
-            }
-        }
-    }
-
-    init(balance: Int) {
-        post {
-            self.balance == balance:
-                "the balance must be initialized to the initial balance"
-        }
-    }
-
-    pub fun withdraw(amount: Int): @Self {
-        pre {
-            amount <= self.balance:
-                "insufficient funds: the amount must be smaller or equal to the balance"
-        }
-        post {
-            self.balance == before(self.balance) - amount:
-                "Incorrect amount removed"
-        }
-    }
-
-    pub fun deposit(token: @Self) {
-        post {
-            self.balance == before(self.balance) + token.balance:
-                "the amount must be added to the balance"
-        }
-    }
-
-    pub fun transfer(to: &Receiver, amount: Int) {
-        pre {
-            amount <= self.balance:
-                "Insufficient funds"
-        }
-        post {
-            self.balance == before(self.balance) - amount:
-                "Incorrect amount removed"
-        }
-    }
-}
-```
-
-The transaction will import the above file to use it in the code.
-Transactions can refer to local code with the `import` keyword,
-followed by the name of the type, the `from` keyword,
-and the string literal for the path of the file which contains the code of the type.
-
-<!-- TODO:
-     move explanation for import statement into separate section?
-     also see below for version referring to deployed code with an address
 -->
 
-```cadence,file=deploy-resource-interface.cdc
-// Import the resource interface type `FungibleToken`
-// from the local file "FungibleToken.cdc".
-//
-import FungibleToken from "FungibleToken.cdc"
-
-// Run a transaction which deploys the code for the resource interface
-// `FungibleToken` and makes it publicly available by publishing it.
-//
-transaction {
-
-    prepare(signer: Account) {
-        // Store the code for the resource interface type `FungibleToken`
-        // in the signing account.
-        //
-        signer.storage[FungibleToken] = FungibleToken
-    }
-}
-```
-
-Now, anybody can import the type `FungibleToken` from the signing account
-and concrete fungible token implementations that conform to the interface can be created.
-
-Imagine this declaration below for a concrete fungible token implementation conforming
-to the fungible token interface is in a local file named `ExampleToken.cdc`.
-
 ```cadence,file=example-token.cdc
-// Import the resource interface type `FungibleToken`,
-// which was deployed above, in this example to the account with address 0x23.
-//
-import FungibleToken from 0x23
 
-// Declare a resource named `ExampleToken`, which is a concrete fungible token,
-// i.e. it implements the resource interface `FungibleToken`.
-//
-resource ExampleToken: FungibleToken {
-
-    pub var balance: Int
-
-    init(balance: Int) {
-        self.balance = balance
-    }
-
-    pub fun withdraw(amount: Int): @ExampleToken {
-        self.balance = self.balance - amount
-        return <-create ExampleToken(balance: amount)
-    }
-
-    pub fun deposit(token: @ExampleToken) {
-        self.balance = self.balance + token.balance
-        destroy token
-    }
-
-    // The function `transfer` combines the functions `withdraw` and `deposit`
-    // into a single function call
-    pub fun transfer(to: &Receiver, amount: Int) {
-        // Deposit the tokens that withdraw creates into the
-        // recipient's account using their deposit reference
-        to.deposit(from: <-self.withdraw(amount: amount))
-    }
-}
-
-// Declare a function that lets any user create an example token
-// with an initial empty balance.
-//
-pub fun newEmptyExampleToken(): @ExampleToken {
-    return <-create ExampleToken(balance: 0)
-}
 ```
 
-Again, the type must be stored in the owners account.
+Again, the type must be deployed to the account where it is being imported from.
 
 Once code is deployed, it can be used in other code and in transactions.
+<!--
+
+TODO
+
+#### Document how to create objects of types defined in other contracts
+
+-->
+
+### Storing Resources and Structs in Account Storage
+
+<!--
+
+TODO
+
+#### Document how to store objects in account storage
+
+-->
+
+
+### Creating public links to your Private Objects
+
+<!--
+
+TODO
+
+#### Document how to create a link to a storage object
+
+-->
+
+
+### Creating capabilities based on the links to private objects
+
+<!--
+
+TODO
+
+#### Document how to create capabilities and references with a simple example
+
+-->
 
 In most situations it is important to expose only a subset of the functionality
-of the stored values,
+of the stored resource objects
 because some of the functionality should only be available to the owner.
 
-The following transaction creates an empty token and stores it in the signer's account.
-This allows the owner to withdraw and deposit.
 
-However, the deposit function should be available to anyone. To achieve this,
-an additional reference to the token is created, stored, and published,
-which has the type `Receiver`, i.e. it only exposes the `deposit` function.
-
-```cadence,file=deploy-example-token.cdc
-// import the `ExampleToken`, `newEmptyExampleToken`, `Receiver`, and `Provider` from the account who created them
-import ExampleToken, newEmptyExampleToken, Receiver, Provider from 0x42
-
-// Run a transaction which stored the code and an instance for the resource type `ExampleToken`
-//
-transaction {
-
-    prepare(signer: Account) {
-        // Create a new token as an optional.
-        var tokenA: @ExampleToken? <- newEmptyExampleToken()
-
-        // Store the new token in storage by replacing whatever
-        // is in the existing location.
-        let oldToken <- signer.storage[ExampleToken] <- tokenA
-        // destroy the empty old resource.
-        destroy oldToken
-
-        // create references to the stored `ExampleToken`.
-        // `Receiver` is for external calls.
-        // `Provider` is for internal calls by the owner.
-        // The `Receiver` references is stored in the `published` object
-        // because an account will usually want anyone to be able to read
-        // their balance and call their deposit function
-        //
-        signer.published[&Receiver] = &signer.storage[ExampleToken] as &Receiver
-
-        // The `Provider` reference is stored in account storage
-        // because an account will not want to expose its withdraw method
-        // to the public
-        signer.storage[&Provider] = &signer.storage[ExampleToken] as &Provider
-    }
-}
-```
-
-Now, the resource type `ExampleToken` is stored in the account
-and its `Receiver` interface is available via the `published` object
-so that anyone can interact with it by importing it from the account.
-
-Once an account is prepared in such a way, transactions can be run that deposit
-tokens into the account.
-
-```cadence,file=send-transaction.cdc
-// Import the resource type `ExampleToken`, `Provider`, and `Receiver`
-// in this example deployed to the account with address 0x42.
-//
-import ExampleToken, Provider, Receiver from 0x42
-
-// Execute a transaction which sends five coins from one account to another.
-//
-// The transaction fails unless there is a `FungibleToken.Provider` available
-// for the sending account and there is a public `FungibleToken.Receiver`
-// available for the recipient account.
-//
-// Only a signature from the sender is required.
-// No signature from the recipient is required, as the receiver reference
-// is published/publicly available (if it exists for the recipient).
-//
-transaction {
-
-    let providerRef: &Provider
-
-    prepare(signer: Account) {
-
-        // Get the provider reference from the signer's account storage.
-        //
-        // As the access is performed in the prepare phase of the transaction,
-        // the unpublished reference `&Provider` can be accessed.
-        //
-        // If the signer's account has no provider reference stored in it,
-        // or it is not published, abort the transaction.
-        //
-        providerRef = signer.storage[&Provider] ?? panic("Signer has no provider")
-    }
-
-    execute {
-        // Get the recipient's account. In this example it has the address 0x1234.
-        //
-        let recipient = getAccount(0x1234)
-
-        // Note that the recipient's account is not a signing account –
-        // deposits need no signature, the recipient's receiver is published
-        // and can be used by anyone (if set up in this manner).
-
-        // Get the receiver reference from the recipient's account storage.
-        // If the recipient's account has no receiver reference stored in it,
-        // or it is not published, abort the transaction.
-        //
-        let receiverRef = recipient.published[&Receiver] ?? panic("Recipient has no receiver")
-
-        // Call the provider's transfer function which withdraws 5 tokens
-        // from their account and deposits it to the receiver's account
-        // using the reference to their deposit function.
-        //
-        self.providerRef.transfer(to: receiverRef, amount: 5)
-    }
-}
 ```
 
 ## Built-in Functions
