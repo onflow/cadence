@@ -401,7 +401,7 @@ func TestInterpretAuthAccountLoad(t *testing.T) {
                 `,
 			)
 
-			t.Run("save R and load R ", func(t *testing.T) {
+			t.Run("save S and load S", func(t *testing.T) {
 
 				// save
 
@@ -484,6 +484,123 @@ func TestInterpretAuthAccountLoad(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestInterpretAuthAccountCopy(t *testing.T) {
+
+	t.Run("valid", func(t *testing.T) {
+
+		const code = `
+          struct S {}
+
+          struct S2 {}
+
+          fun save() {
+              let s = S()
+              account.save(s, to: /storage/s)
+          }
+
+          fun copyS(): S? {
+              return account.copy<S>(from: /storage/s)
+          }
+
+          fun copyS2(): S2? {
+              return account.copy<S2>(from: /storage/s)
+          }
+        `
+
+		t.Run("save S and copy S ", func(t *testing.T) {
+
+			inter, storedValues := testAccount(
+				t,
+				true,
+				code,
+			)
+
+			// save
+
+			_, err := inter.Invoke("save")
+			require.NoError(t, err)
+
+			require.Len(t, storedValues, 1)
+
+			testCopyS := func() {
+
+				value, err := inter.Invoke("copyS")
+				require.NoError(t, err)
+
+				require.IsType(t, &interpreter.SomeValue{}, value)
+
+				innerValue := value.(*interpreter.SomeValue).Value
+
+				assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
+
+				// NOTE: check loaded value was *not* removed from storage
+				require.Len(t, storedValues, 1)
+			}
+
+			testCopyS()
+
+			testCopyS()
+		})
+
+		t.Run("save S and copy S2", func(t *testing.T) {
+
+			inter, storedValues := testAccount(
+				t,
+				true,
+				code,
+			)
+
+			// save
+
+			_, err := inter.Invoke("save")
+			require.NoError(t, err)
+
+			require.Len(t, storedValues, 1)
+
+			// load
+
+			value, err := inter.Invoke("copyS2")
+			require.NoError(t, err)
+
+			require.IsType(t, interpreter.NilValue{}, value)
+
+			// NOTE: check loaded value was *not* removed from storage
+			require.Len(t, storedValues, 1)
+		})
+	})
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+
+		if domain == common.PathDomainStorage {
+			continue
+		}
+
+		t.Run(fmt.Sprintf("invalid: %s domain", domain), func(t *testing.T) {
+
+			inter, _ := testAccount(
+				t,
+				true,
+				fmt.Sprintf(
+					`
+	                  struct S {}
+
+	                  fun test(): S? {
+	                      return account.load<S>(from: /%s/s)
+	                  }
+	                `,
+					domain.Identifier(),
+				),
+			)
+
+			_, err := inter.Invoke("test")
+
+			require.Error(t, err)
+
+			require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+		})
+	}
 
 }
 

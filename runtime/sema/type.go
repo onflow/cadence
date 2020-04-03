@@ -3765,6 +3765,34 @@ var authAccountLoadFunctionType = func() *FunctionType {
 	}
 }()
 
+var authAccountCopyFunctionType = func() *FunctionType {
+
+	typeParameter := &TypeParameter{
+		Name:      "T",
+		TypeBound: &AnyStructType{},
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:          "from",
+				Identifier:     "path",
+				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: &GenericType{
+					TypeParameter: typeParameter,
+				},
+			},
+		),
+	}
+}()
+
 var authAccountBorrowFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
@@ -3902,6 +3930,9 @@ func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error
 
 	case "load":
 		return newFunction(authAccountLoadFunctionType)
+
+	case "copy":
+		return newFunction(authAccountCopyFunctionType)
 
 	case "borrow":
 		return newFunction(authAccountBorrowFunctionType)

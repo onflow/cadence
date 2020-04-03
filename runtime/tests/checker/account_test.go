@@ -351,6 +351,92 @@ func TestCheckAccount(t *testing.T) {
 		// NOTE: all domains are statically valid at the moment
 
 		testName := fmt.Sprintf(
+			"AuthAccount.copy: missing type argument, %s",
+			domain.Name(),
+		)
+
+		t.Run(testName, func(t *testing.T) {
+
+			_, err := ParseAndCheckAccount(t,
+				fmt.Sprintf(
+					`
+                      struct S {}
+
+                      let s = authAccount.copy(from: /%s/s)
+                    `,
+					domain.Identifier(),
+				),
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+		})
+	}
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+
+		// NOTE: all domains are statically valid at the moment
+
+		testName := fmt.Sprintf(
+			"AuthAccount.copy: explicit type argument, %s",
+			domain.Name(),
+		)
+
+		t.Run(testName, func(t *testing.T) {
+
+			t.Run("struct", func(t *testing.T) {
+
+				checker, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          struct S {}
+
+                          let s = authAccount.copy<S>(from: /%s/s)
+                        `,
+						domain.Identifier(),
+					),
+				)
+
+				require.NoError(t, err)
+
+				sType := checker.GlobalTypes["S"].Type
+
+				sValueType := checker.GlobalValues["s"].Type
+
+				require.Equal(t,
+					&sema.OptionalType{
+						Type: sType,
+					},
+					sValueType,
+				)
+			})
+
+			t.Run("resource", func(t *testing.T) {
+
+				_, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          resource R {}
+
+                          let r <- authAccount.copy<@R>(from: /%s/r)
+                        `,
+						domain.Identifier(),
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
+		})
+	}
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+
+		// NOTE: all domains are statically valid at the moment
+
+		testName := fmt.Sprintf(
 			"AuthAccount.borrow: missing type argument, %s",
 			domain.Name(),
 		)
