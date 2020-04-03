@@ -84,8 +84,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	t.Run("invalid: one type parameter, no type argument, no parameters, no arguments: missing explicit type argument", func(t *testing.T) {
 
 		typeParameter := &sema.TypeParameter{
-			Name: "T",
-			Type: nil,
+			Name:      "T",
+			TypeBound: nil,
 		}
 
 		_, err := parseAndCheckWithTestValue(t,
@@ -110,8 +110,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	t.Run("valid: one type parameter, one type argument, no parameters, no arguments", func(t *testing.T) {
 
 		typeParameter := &sema.TypeParameter{
-			Name: "T",
-			Type: nil,
+			Name:      "T",
+			TypeBound: nil,
 		}
 
 		checker, err := parseAndCheckWithTestValue(t,
@@ -144,8 +144,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	t.Run("valid: one type parameter, no type argument, one parameter, one arguments", func(t *testing.T) {
 
 		typeParameter := &sema.TypeParameter{
-			Name: "T",
-			Type: nil,
+			Name:      "T",
+			TypeBound: nil,
 		}
 
 		checker, err := parseAndCheckWithTestValue(t,
@@ -188,8 +188,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	t.Run("invalid: one type parameter, no type argument, one parameter, no argument", func(t *testing.T) {
 
 		typeParameter := &sema.TypeParameter{
-			Name: "T",
-			Type: nil,
+			Name:      "T",
+			TypeBound: nil,
 		}
 
 		_, err := parseAndCheckWithTestValue(t,
@@ -225,8 +225,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	t.Run("invalid: one type parameter, one type argument, one parameter, one arguments: type mismatch", func(t *testing.T) {
 
 		typeParameter := &sema.TypeParameter{
-			Name: "T",
-			Type: nil,
+			Name:      "T",
+			TypeBound: nil,
 		}
 
 		_, err := parseAndCheckWithTestValue(t,
@@ -262,8 +262,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	t.Run("valid: one type parameter, one type argument, one parameter, one arguments", func(t *testing.T) {
 
 		typeParameter := &sema.TypeParameter{
-			Name: "T",
-			Type: nil,
+			Name:      "T",
+			TypeBound: nil,
 		}
 
 		_, err := parseAndCheckWithTestValue(t,
@@ -296,8 +296,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	t.Run("valid: one type parameter, no type argument, two parameters, two argument: matching argument types", func(t *testing.T) {
 
 		typeParameter := &sema.TypeParameter{
-			Name: "T",
-			Type: nil,
+			Name:      "T",
+			TypeBound: nil,
 		}
 
 		checker, err := parseAndCheckWithTestValue(t,
@@ -349,8 +349,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	t.Run("invalid: one type parameter, no type argument, two parameters, two argument: not matching argument types", func(t *testing.T) {
 
 		typeParameter := &sema.TypeParameter{
-			Name: "T",
-			Type: nil,
+			Name:      "T",
+			TypeBound: nil,
 		}
 
 		_, err := parseAndCheckWithTestValue(t,
@@ -395,8 +395,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	t.Run("invalid: one type parameter, no type argument, no parameters, no arguments, return type", func(t *testing.T) {
 
 		typeParameter := &sema.TypeParameter{
-			Name: "T",
-			Type: nil,
+			Name:      "T",
+			TypeBound: nil,
 		}
 
 		_, err := parseAndCheckWithTestValue(t,
@@ -425,8 +425,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	t.Run("valid: one type parameter, one type argument, no parameters, no arguments, return type", func(t *testing.T) {
 
 		typeParameter := &sema.TypeParameter{
-			Name: "T",
-			Type: nil,
+			Name:      "T",
+			TypeBound: nil,
 		}
 
 		checker, err := parseAndCheckWithTestValue(t,
@@ -468,8 +468,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	t.Run("valid: one type parameter, one type argument, one parameter, one argument, return type", func(t *testing.T) {
 
 		typeParameter := &sema.TypeParameter{
-			Name: "T",
-			Type: nil,
+			Name:      "T",
+			TypeBound: nil,
 		}
 
 		checker, err := parseAndCheckWithTestValue(t,
@@ -521,8 +521,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	t.Run("valid: one type parameter with type bound, one type argument, no parameters, no arguments", func(t *testing.T) {
 
 		typeParameter := &sema.TypeParameter{
-			Name: "T",
-			Type: &sema.NumberType{},
+			Name:      "T",
+			TypeBound: &sema.NumberType{},
 		}
 
 		checker, err := parseAndCheckWithTestValue(t,
@@ -555,8 +555,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	t.Run("invalid: one type parameter with type bound, one type argument, no parameters, no arguments: bound not satisfied", func(t *testing.T) {
 
 		typeParameter := &sema.TypeParameter{
-			Name: "T",
-			Type: &sema.NumberType{},
+			Name:      "T",
+			TypeBound: &sema.NumberType{},
 		}
 
 		_, err := parseAndCheckWithTestValue(t,
@@ -581,8 +581,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	t.Run("invalid: one type parameter with type bound, no type argument, one parameter, one argument: bound not satisfied", func(t *testing.T) {
 
 		typeParameter := &sema.TypeParameter{
-			Name: "T",
-			Type: &sema.NumberType{},
+			Name:      "T",
+			TypeBound: &sema.NumberType{},
 		}
 
 		_, err := parseAndCheckWithTestValue(t,
@@ -663,8 +663,8 @@ func TestCheckGenericFunction(t *testing.T) {
 			t.Run(test.name, func(t *testing.T) {
 
 				typeParameter := &sema.TypeParameter{
-					Name: "T",
-					Type: &sema.NumberType{},
+					Name:      "T",
+					TypeBound: &sema.NumberType{},
 				}
 
 				checker, err := parseAndCheckWithTestValue(t,
@@ -754,8 +754,8 @@ func TestCheckGenericFunction(t *testing.T) {
 			t.Run(test.name, func(t *testing.T) {
 
 				typeParameter := &sema.TypeParameter{
-					Name: "T",
-					Type: &sema.NumberType{},
+					Name:      "T",
+					TypeBound: &sema.NumberType{},
 				}
 
 				checker, err := parseAndCheckWithTestValue(t,

@@ -19,8 +19,8 @@ const ResultIdentifier = "result"
 var beforeType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
-		Name: "T",
-		Type: &AnyStructType{},
+		Name:      "T",
+		TypeBound: &AnyStructType{},
 	}
 
 	typeAnnotation := NewTypeAnnotation(
