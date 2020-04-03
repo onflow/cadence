@@ -3544,6 +3544,9 @@ func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValu
 			// If there is value stored for the given path,
 			// check that it satisfies the type given as the type argument.
 
+			// `Invocation.TypeParameterTypes` is a map, so get the first
+			// element / type by iterating over the values of the map.
+
 			var ty sema.Type
 			for _, ty = range invocation.TypeParameterTypes {
 				break
@@ -3594,6 +3597,9 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 			// If there is value stored for the given path,
 			// check that it satisfies the type given as the type argument.
 
+			// `Invocation.TypeParameterTypes` is a map, so get the first
+			// element / type by iterating over the values of the map.
+
 			var ty sema.Type
 			for _, ty = range invocation.TypeParameterTypes {
 				break
@@ -3626,6 +3632,9 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
 
 		address := addressValue.ToAddress()
+
+		// `Invocation.TypeParameterTypes` is a map, so get the first
+		// element / type by iterating over the values of the map.
 
 		var referenceType *sema.ReferenceType
 		for _, ty := range invocation.TypeParameterTypes {
@@ -3687,6 +3696,9 @@ func (interpreter *Interpreter) capabilityBorrowFunction(addressValue AddressVal
 		address := addressValue.ToAddress()
 
 		key := storageKey(path)
+
+		// `Invocation.TypeParameterTypes` is a map, so get the first
+		// element / type by iterating over the values of the map.
 
 		var wantedType sema.Type
 		for _, wantedType = range invocation.TypeParameterTypes {
