@@ -1112,15 +1112,30 @@ func (v *ProgramVisitor) VisitWhileStatement(ctx *WhileStatementContext) interfa
 	test := ctx.Expression().Accept(v).(ast.Expression)
 	block := ctx.Block().Accept(v).(*ast.Block)
 
-	startPosition, endPosition := PositionRangeFromContext(ctx)
+	startPosition := PositionFromToken(ctx.GetStart())
 
 	return &ast.WhileStatement{
-		Test:  test,
-		Block: block,
-		Range: ast.Range{
-			StartPos: startPosition,
-			EndPos:   endPosition,
-		},
+		Test:     test,
+		Block:    block,
+		StartPos: startPosition,
+	}
+}
+
+func (v *ProgramVisitor) VisitForStatement(ctx *ForStatementContext) interface{} {
+
+	identifier := ctx.Identifier().Accept(v).(ast.Identifier)
+
+	value := ctx.Expression().Accept(v).(ast.Expression)
+
+	block := ctx.Block().Accept(v).(*ast.Block)
+
+	startPosition := PositionFromToken(ctx.GetStart())
+
+	return &ast.ForStatement{
+		Identifier: identifier,
+		Value:      value,
+		Block:      block,
+		StartPos:   startPosition,
 	}
 }
 

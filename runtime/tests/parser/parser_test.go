@@ -1725,15 +1725,82 @@ func TestParseWhileStatement(t *testing.T) {
 								EndPos:   Position{Offset: 120, Line: 7, Column: 12},
 							},
 						},
-						Range: Range{
-							StartPos: Position{Offset: 31, Line: 3, Column: 12},
-							EndPos:   Position{Offset: 120, Line: 7, Column: 12},
-						},
+						StartPos: Position{Offset: 31, Line: 3, Column: 12},
 					},
 				},
 				Range: Range{
 					StartPos: Position{Offset: 17, Line: 2, Column: 16},
 					EndPos:   Position{Offset: 130, Line: 8, Column: 8},
+				},
+			},
+		},
+		StartPos: Position{Offset: 6, Line: 2, Column: 5},
+	}
+
+	expected := &Program{
+		Declarations: []Declaration{test},
+	}
+
+	utils.AssertEqualWithDiff(t, expected, actual)
+}
+
+func TestParseForStatement(t *testing.T) {
+
+	actual, _, err := parser.ParseProgram(`
+	    fun test() {
+            for x in xs {}
+        }
+	`)
+
+	require.NoError(t, err)
+
+	test := &FunctionDeclaration{
+		Access: AccessNotSpecified,
+		Identifier: Identifier{
+			Identifier: "test",
+			Pos:        Position{Offset: 10, Line: 2, Column: 9},
+		},
+		ParameterList: &ParameterList{
+			Range: Range{
+				StartPos: Position{Offset: 14, Line: 2, Column: 13},
+				EndPos:   Position{Offset: 15, Line: 2, Column: 14},
+			},
+		},
+		ReturnTypeAnnotation: &TypeAnnotation{
+			IsResource: false,
+			Type: &NominalType{
+				Identifier: Identifier{
+					Pos: Position{Offset: 15, Line: 2, Column: 14},
+				},
+			},
+			StartPos: Position{Offset: 15, Line: 2, Column: 14},
+		},
+		FunctionBlock: &FunctionBlock{
+			Block: &Block{
+				Statements: []Statement{
+					&ForStatement{
+						Identifier: Identifier{
+							Identifier: "x",
+							Pos:        Position{Offset: 35, Line: 3, Column: 16},
+						},
+						Value: &IdentifierExpression{
+							Identifier: Identifier{
+								Identifier: "xs",
+								Pos:        Position{Offset: 40, Line: 3, Column: 21},
+							},
+						},
+						Block: &Block{
+							Range: Range{
+								StartPos: Position{Offset: 43, Line: 3, Column: 24},
+								EndPos:   Position{Offset: 44, Line: 3, Column: 25},
+							},
+						},
+						StartPos: Position{Offset: 31, Line: 3, Column: 12},
+					},
+				},
+				Range: Range{
+					StartPos: Position{Offset: 17, Line: 2, Column: 16},
+					EndPos:   Position{Offset: 54, Line: 4, Column: 8},
 				},
 			},
 		},
