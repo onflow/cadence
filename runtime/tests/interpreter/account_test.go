@@ -295,7 +295,13 @@ func TestInterpretAuthAccountBorrow(t *testing.T) {
 			t,
 			true,
 			`
-              resource R {}
+              resource R {
+                  let foo: Int
+
+                  init() {
+                      self.foo = 42
+                  }
+              }
 
               resource R2 {}
 
@@ -306,6 +312,10 @@ func TestInterpretAuthAccountBorrow(t *testing.T) {
 
               fun borrowR(): &R? {
                   return account.borrow<&R>(from: /storage/r)
+              }
+
+              fun foo(): Int {
+                  return account.borrow<&R>(from: /storage/r)!.foo
               }
 
               fun borrowR2(): &R2? {
@@ -333,6 +343,16 @@ func TestInterpretAuthAccountBorrow(t *testing.T) {
 			innerValue := value.(*interpreter.SomeValue).Value
 
 			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
+
+			// NOTE: check loaded value was *not* removed from storage
+			require.Len(t, storedValues, 1)
+
+			// foo
+
+			value, err = inter.Invoke("foo")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NewIntValue(42), value)
 
 			// NOTE: check loaded value was *not* removed from storage
 			require.Len(t, storedValues, 1)
@@ -526,5 +546,62 @@ func TestInterpretAuthAccountLink(t *testing.T) {
 
 			require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
 		})
+	}
+}
+
+func TestInterpretAccountGetCapability(t *testing.T) {
+
+	tests := map[bool][]common.PathDomain{
+		true: {
+			common.PathDomainPublic,
+			common.PathDomainPrivate,
+		},
+		false: {
+			common.PathDomainPublic,
+		},
+	}
+
+	for auth, validDomains := range tests {
+
+		for _, domain := range common.AllPathDomainsByIdentifier {
+
+			t.Run(fmt.Sprintf("auth: %v, domain: %s", auth, domain), func(t *testing.T) {
+
+				inter, _ := testAccount(
+					t,
+					auth,
+					fmt.Sprintf(
+						`
+	                      fun test(): Capability? {
+	                          return account.getCapability(/%[1]s/r)
+	                      }
+	                    `,
+						domain.Identifier(),
+					),
+				)
+
+				value, err := inter.Invoke("test")
+
+				require.NoError(t, err)
+
+				isValid := false
+
+				for _, validDomain := range validDomains {
+
+					if domain == validDomain {
+
+						isValid = true
+
+						require.IsType(t, &interpreter.SomeValue{}, value)
+
+						break
+					}
+				}
+
+				if !isValid {
+					require.IsType(t, interpreter.NilValue{}, value)
+				}
+			})
+		}
 	}
 }

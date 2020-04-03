@@ -8,159 +8,159 @@ type DynamicType interface {
 	IsDynamicType()
 }
 
-type ReferenceType interface {
+type ReferenceDynamicType interface {
 	DynamicType
 	isReferenceType()
 	Authorized() bool
 	InnerType() DynamicType
 }
 
-// VoidType
+// VoidDynamicType
 
-type VoidType struct{}
+type VoidDynamicType struct{}
 
-func (VoidType) IsDynamicType() {}
+func (VoidDynamicType) IsDynamicType() {}
 
-// StringType
+// StringDynamicType
 
-type StringType struct{}
+type StringDynamicType struct{}
 
-func (StringType) IsDynamicType() {}
+func (StringDynamicType) IsDynamicType() {}
 
-// BoolType
+// BoolDynamicType
 
-type BoolType struct{}
+type BoolDynamicType struct{}
 
-func (BoolType) IsDynamicType() {}
+func (BoolDynamicType) IsDynamicType() {}
 
-// ArrayType
+// ArrayDynamicType
 
-type ArrayType struct {
+type ArrayDynamicType struct {
 	ElementTypes []DynamicType
 }
 
-func (ArrayType) IsDynamicType() {}
+func (ArrayDynamicType) IsDynamicType() {}
 
-// NumberType
+// NumberDynamicType
 
-type NumberType struct {
+type NumberDynamicType struct {
 	StaticType sema.Type
 }
 
-func (NumberType) IsDynamicType() {}
+func (NumberDynamicType) IsDynamicType() {}
 
-// CompositeType
+// CompositeDynamicType
 
-type CompositeType struct {
+type CompositeDynamicType struct {
 	StaticType sema.Type
 }
 
-func (CompositeType) IsDynamicType() {}
+func (CompositeDynamicType) IsDynamicType() {}
 
-// DictionaryType
+// DictionaryDynamicType
 
-type DictionaryType struct {
+type DictionaryDynamicType struct {
 	EntryTypes []struct{ KeyType, ValueType DynamicType }
 }
 
-func (DictionaryType) IsDynamicType() {}
+func (DictionaryDynamicType) IsDynamicType() {}
 
-// NilType
+// NilDynamicType
 
-type NilType struct{}
+type NilDynamicType struct{}
 
-func (NilType) IsDynamicType() {}
+func (NilDynamicType) IsDynamicType() {}
 
-// SomeType
+// SomeDynamicType
 
-type SomeType struct {
+type SomeDynamicType struct {
 	InnerType DynamicType
 }
 
-func (SomeType) IsDynamicType() {}
+func (SomeDynamicType) IsDynamicType() {}
 
-// StorageType
+// StorageDynamicType
 
-type StorageType struct{}
+type StorageDynamicType struct{}
 
-func (StorageType) IsDynamicType() {}
+func (StorageDynamicType) IsDynamicType() {}
 
-// StorageReferenceType
+// StorageReferenceDynamicType
 
-type StorageReferenceType struct {
+type StorageReferenceDynamicType struct {
 	authorized bool
 	innerType  DynamicType
 }
 
-func (StorageReferenceType) IsDynamicType() {}
+func (StorageReferenceDynamicType) IsDynamicType() {}
 
-func (StorageReferenceType) isReferenceType() {}
+func (StorageReferenceDynamicType) isReferenceType() {}
 
-func (t StorageReferenceType) Authorized() bool {
+func (t StorageReferenceDynamicType) Authorized() bool {
 	return t.authorized
 }
 
-func (t StorageReferenceType) InnerType() DynamicType {
+func (t StorageReferenceDynamicType) InnerType() DynamicType {
 	return t.innerType
 }
 
-// EphemeralReferenceType
+// EphemeralReferenceDynamicType
 
-type EphemeralReferenceType struct {
+type EphemeralReferenceDynamicType struct {
 	authorized bool
 	innerType  DynamicType
 }
 
-func (EphemeralReferenceType) IsDynamicType() {}
+func (EphemeralReferenceDynamicType) IsDynamicType() {}
 
-func (EphemeralReferenceType) isReferenceType() {}
+func (EphemeralReferenceDynamicType) isReferenceType() {}
 
-func (t EphemeralReferenceType) Authorized() bool {
+func (t EphemeralReferenceDynamicType) Authorized() bool {
 	return t.authorized
 }
 
-func (t EphemeralReferenceType) InnerType() DynamicType {
+func (t EphemeralReferenceDynamicType) InnerType() DynamicType {
 	return t.innerType
 }
 
-// AddressType
+// AddressDynamicType
 
-type AddressType struct{}
+type AddressDynamicType struct{}
 
-func (AddressType) IsDynamicType() {}
+func (AddressDynamicType) IsDynamicType() {}
 
-// PublishedType
+// PublishedDynamicType
 
-type PublishedType struct{}
+type PublishedDynamicType struct{}
 
-func (PublishedType) IsDynamicType() {}
+func (PublishedDynamicType) IsDynamicType() {}
 
-// FunctionType
+// FunctionDynamicType
 
-type FunctionType struct{}
+type FunctionDynamicType struct{}
 
-func (FunctionType) IsDynamicType() {}
+func (FunctionDynamicType) IsDynamicType() {}
 
-// PathType
+// PathDynamicType
 
-type PathType struct{}
+type PathDynamicType struct{}
 
-func (PathType) IsDynamicType() {}
+func (PathDynamicType) IsDynamicType() {}
 
-// CapabilityType
+// CapabilityDynamicType
 
-type CapabilityType struct{}
+type CapabilityDynamicType struct{}
 
-func (CapabilityType) IsDynamicType() {}
+func (CapabilityDynamicType) IsDynamicType() {}
 
-// AuthAccountType
+// AuthAccountDynamicType
 
-type AuthAccountType struct{}
+type AuthAccountDynamicType struct{}
 
-func (AuthAccountType) IsDynamicType() {}
+func (AuthAccountDynamicType) IsDynamicType() {}
 
-// PublicAccountType
+// PublicAccountDynamicType
 
-type PublicAccountType struct{}
+type PublicAccountDynamicType struct{}
 
-func (PublicAccountType) IsDynamicType() {}
+func (PublicAccountDynamicType) IsDynamicType() {}

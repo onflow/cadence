@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/dapperlabs/cadence/runtime/ast"
 	"github.com/dapperlabs/cadence/runtime/common"
@@ -225,7 +226,7 @@ func (e *InvalidPathDomainError) SecondaryError() string {
 // OverwriteError
 
 type OverwriteError struct {
-	Address common.Address
+	Address AddressValue
 	Path    PathValue
 	LocationRange
 }
@@ -235,5 +236,30 @@ func (e *OverwriteError) Error() string {
 		"failed to save object: path %s in account %s already stores an object",
 		e.Path,
 		e.Address,
+	)
+}
+
+// CyclicLinkError
+
+type CyclicLinkError struct {
+	Address AddressValue
+	Paths   []PathValue
+	LocationRange
+}
+
+func (e *CyclicLinkError) Error() string {
+	var builder strings.Builder
+	for i, path := range e.Paths {
+		if i > 0 {
+			builder.WriteString(" -> ")
+		}
+		builder.WriteString(path.String())
+	}
+	paths := builder.String()
+
+	return fmt.Sprintf(
+		"cyclic link in account %s: %s",
+		e.Address,
+		paths,
 	)
 }

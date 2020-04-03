@@ -1952,7 +1952,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 					}
 
 					return invocation.Map(func(result interface{}) interface{} {
-						return &SomeValue{Value: result.(Value)}
+						return NewSomeValueOwningNonCopying(result.(Value))
 					})
 				})
 		})
@@ -3232,6 +3232,8 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 				indexingType := interpreter.Checker.Elaboration.IndexExpressionIndexingTypes[indexExpression]
 				key := interpreter.storageKeyHandler(interpreter, storage.Address, indexingType)
 
+				key = PrefixedStorageKey(key, AccessLevelPrivate)
+
 				referenceValue := &StorageReferenceValue{
 					Authorized:           authorized,
 					TargetStorageAddress: storage.Address,
@@ -3366,7 +3368,7 @@ func (interpreter *Interpreter) newConverterFunction(converter ValueConverter) F
 
 func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Type) bool {
 	switch typedSubType := subType.(type) {
-	case VoidType:
+	case VoidDynamicType:
 		switch superType.(type) {
 		case *sema.VoidType, *sema.AnyStructType:
 			return true
@@ -3375,7 +3377,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 			return false
 		}
 
-	case StringType:
+	case StringDynamicType:
 		switch superType.(type) {
 		case *sema.StringType, *sema.AnyStructType:
 			return true
@@ -3384,7 +3386,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 			return false
 		}
 
-	case BoolType:
+	case BoolDynamicType:
 		switch superType.(type) {
 		case *sema.BoolType, *sema.AnyStructType:
 			return true
@@ -3393,7 +3395,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 			return false
 		}
 
-	case AddressType:
+	case AddressDynamicType:
 		switch superType.(type) {
 		case *sema.AddressType, *sema.AnyStructType:
 			return true
@@ -3402,13 +3404,13 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 			return false
 		}
 
-	case NumberType:
+	case NumberDynamicType:
 		return sema.IsSubType(typedSubType.StaticType, superType)
 
-	case CompositeType:
+	case CompositeDynamicType:
 		return sema.IsSubType(typedSubType.StaticType, superType)
 
-	case ArrayType:
+	case ArrayDynamicType:
 		var superTypeElementType sema.Type
 
 		switch typedSuperType := superType.(type) {
@@ -3433,7 +3435,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 
 		return true
 
-	case DictionaryType:
+	case DictionaryDynamicType:
 
 		switch typedSuperType := superType.(type) {
 		case *sema.DictionaryType:
@@ -3454,7 +3456,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 			return false
 		}
 
-	case NilType:
+	case NilDynamicType:
 		switch superType.(type) {
 		case *sema.OptionalType, *sema.AnyStructType, *sema.AnyResourceType:
 			return true
@@ -3463,7 +3465,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 			return false
 		}
 
-	case SomeType:
+	case SomeDynamicType:
 		switch typedSuperType := superType.(type) {
 		case *sema.OptionalType:
 			return interpreter.IsSubType(typedSubType.InnerType, typedSuperType.Type)
@@ -3475,7 +3477,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 			return false
 		}
 
-	case StorageType:
+	case StorageDynamicType:
 		switch superType.(type) {
 		case *sema.StorageType, *sema.AnyStructType:
 			return true
@@ -3484,7 +3486,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 			return false
 		}
 
-	case ReferenceType:
+	case ReferenceDynamicType:
 		switch typedSuperType := superType.(type) {
 		case *sema.AnyStructType:
 			return true
@@ -3515,26 +3517,34 @@ func storageKey(path PathValue) string {
 	return fmt.Sprintf("%s\x1F%s", path.Domain.Identifier(), path.Identifier)
 }
 
-func (interpreter *Interpreter) checkPathDomain(
+func mustPathDomain(
 	path PathValue,
 	locationRange LocationRange,
 	expectedDomains ...common.PathDomain,
 ) {
-	actualDomain := path.Domain
-
-	for _, expectedDomain := range expectedDomains {
-		if actualDomain == expectedDomain {
-			return
-		}
+	if checkPathDomain(path, expectedDomains...) {
+		return
 	}
 
 	panic(
 		&InvalidPathDomainError{
-			ActualDomain:    actualDomain,
+			ActualDomain:    path.Domain,
 			ExpectedDomains: expectedDomains,
 			LocationRange:   locationRange,
 		},
 	)
+}
+
+func checkPathDomain(path PathValue, expectedDomains ...common.PathDomain) bool {
+	actualDomain := path.Domain
+
+	for _, expectedDomain := range expectedDomains {
+		if actualDomain == expectedDomain {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) HostFunctionValue {
@@ -3548,7 +3558,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 		// Ensure the path has a `storage` domain
 
-		interpreter.checkPathDomain(
+		mustPathDomain(
 			path,
 			invocation.LocationRange,
 			common.PathDomainStorage,
@@ -3559,7 +3569,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 		if interpreter.storedValueExists(address, key) {
 			panic(
 				&OverwriteError{
-					Address:       address,
+					Address:       addressValue,
 					Path:          path,
 					LocationRange: invocation.LocationRange,
 				},
@@ -3571,7 +3581,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 		interpreter.writeStored(
 			address,
 			key,
-			&SomeValue{Value: value},
+			NewSomeValueOwningNonCopying(value),
 		)
 
 		return Done{Result: VoidValue{}}
@@ -3588,7 +3598,7 @@ func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValu
 
 		// Ensure the path has a `storage` domain
 
-		interpreter.checkPathDomain(
+		mustPathDomain(
 			path,
 			invocation.LocationRange,
 			common.PathDomainStorage,
@@ -3604,6 +3614,9 @@ func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValu
 
 			// If there is value stored for the given path,
 			// check that it satisfies the type given as the type argument.
+
+			// `Invocation.TypeParameterTypes` is a map, so get the first
+			// element / type by iterating over the values of the map.
 
 			var ty sema.Type
 			for _, ty = range invocation.TypeParameterTypes {
@@ -3638,7 +3651,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 		// Ensure the path has a `storage` domain
 
-		interpreter.checkPathDomain(
+		mustPathDomain(
 			path,
 			invocation.LocationRange,
 			common.PathDomainStorage,
@@ -3654,6 +3667,9 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 			// If there is value stored for the given path,
 			// check that it satisfies the type given as the type argument.
+
+			// `Invocation.TypeParameterTypes` is a map, so get the first
+			// element / type by iterating over the values of the map.
 
 			var ty sema.Type
 			for _, ty = range invocation.TypeParameterTypes {
@@ -3675,7 +3691,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 				Owner: nil,
 			}
 
-			return Done{Result: &SomeValue{Value: reference}}
+			return Done{Result: NewSomeValueOwningNonCopying(reference)}
 
 		default:
 			panic(errors.NewUnreachableError())
@@ -3688,6 +3704,19 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 		address := addressValue.ToAddress()
 
+		// `Invocation.TypeParameterTypes` is a map, so get the first
+		// element / type by iterating over the values of the map.
+
+		var referenceType *sema.ReferenceType
+		for _, ty := range invocation.TypeParameterTypes {
+			referenceType = ty.(*sema.ReferenceType)
+			break
+		}
+
+		if referenceType == nil {
+			panic(errors.NewUnreachableError())
+		}
+
 		newCapabilityPath := invocation.Arguments[0].(PathValue)
 		targetPath := invocation.Arguments[1].(PathValue)
 
@@ -3695,7 +3724,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 		// Ensure the path has a `private` or `public` domain
 
-		interpreter.checkPathDomain(
+		mustPathDomain(
 			newCapabilityPath,
 			invocation.LocationRange,
 			common.PathDomainPrivate,
@@ -3708,19 +3737,134 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 		// Write new value
 
-		value := NewSomeValueOwningNonCopying(
-			CapabilityValue{
-				Address: addressValue,
-				Path:    targetPath,
+		storedValue := NewSomeValueOwningNonCopying(
+			LinkValue{
+				TargetPath: targetPath,
+				Type:       ConvertSemaToStaticType(referenceType),
 			},
 		)
 
 		interpreter.writeStored(
 			address,
 			newCapabilityKey,
-			value,
+			storedValue,
 		)
 
-		return Done{Result: value}
+		returnValue := NewSomeValueOwningNonCopying(
+			CapabilityValue{
+				Address: addressValue,
+				Path:    targetPath,
+			},
+		)
+
+		return Done{Result: returnValue}
 	})
+}
+
+func (interpreter *Interpreter) capabilityBorrowFunction(addressValue AddressValue, path PathValue) HostFunctionValue {
+	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+
+		address := addressValue.ToAddress()
+
+		key := storageKey(path)
+
+		// `Invocation.TypeParameterTypes` is a map, so get the first
+		// element / type by iterating over the values of the map.
+
+		var wantedType sema.Type
+		for _, wantedType = range invocation.TypeParameterTypes {
+			break
+		}
+
+		if wantedType == nil {
+			panic(errors.NewUnreachableError())
+		}
+
+		wantedReferenceType := wantedType.(*sema.ReferenceType)
+
+		seenKeys := map[string]struct{}{}
+		paths := []PathValue{path}
+
+		for {
+			// Detect cyclic links
+
+			if _, ok := seenKeys[key]; ok {
+				panic(&CyclicLinkError{
+					Address:       addressValue,
+					Paths:         paths,
+					LocationRange: invocation.LocationRange,
+				})
+			} else {
+				seenKeys[key] = struct{}{}
+			}
+
+			value := interpreter.readStored(address, key)
+
+			switch value := value.(type) {
+			case NilValue:
+				return Done{Result: value}
+
+			case *SomeValue:
+
+				if link, ok := value.Value.(LinkValue); ok {
+
+					allowedType := interpreter.convertStaticToSemaType(link.Type)
+
+					if !sema.IsSubType(allowedType, wantedType) {
+						return Done{Result: NilValue{}}
+					}
+
+					targetPath := link.TargetPath
+					paths = append(paths, targetPath)
+					key = storageKey(targetPath)
+
+				} else {
+					reference := &StorageReferenceValue{
+						Authorized:           wantedReferenceType.Authorized,
+						TargetStorageAddress: address,
+						TargetKey:            key,
+						// NOTE: new value has no owner
+						Owner: nil,
+					}
+
+					return Done{Result: NewSomeValueOwningNonCopying(reference)}
+				}
+
+			default:
+				panic(errors.NewUnreachableError())
+			}
+		}
+	})
+}
+
+func (interpreter *Interpreter) convertStaticToSemaType(staticType StaticType) sema.Type {
+	return ConvertStaticToSemaType(
+		staticType,
+		func(typeID sema.TypeID) *sema.InterfaceType {
+			return interpreter.getInterfaceType(typeID)
+		},
+		func(typeID sema.TypeID) *sema.CompositeType {
+			return interpreter.getCompositeType(typeID)
+		},
+	)
+}
+
+func (interpreter *Interpreter) getCompositeType(typeID sema.TypeID) *sema.CompositeType {
+	locationID, qualifiedIdentifier := sema.SplitCompositeTypeID(typeID)
+	if locationID == "" {
+		panic("failed to split composite type ID")
+	}
+
+	checker := interpreter.allCheckers[locationID]
+	return checker.Elaboration.CompositeTypes[qualifiedIdentifier]
+}
+
+func (interpreter *Interpreter) getInterfaceType(typeID sema.TypeID) *sema.InterfaceType {
+	locationID, qualifiedIdentifier := sema.SplitCompositeTypeID(typeID)
+	if locationID == "" {
+		panic("failed to split composite type ID")
+	}
+
+	checker := interpreter.allCheckers[locationID]
+	return checker.Elaboration.InterfaceTypes[qualifiedIdentifier]
 }

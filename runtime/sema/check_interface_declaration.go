@@ -213,6 +213,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 	)
 
 	checker.Elaboration.InterfaceDeclarationTypes[declaration] = interfaceType
+	checker.Elaboration.InterfaceTypes[interfaceType.QualifiedIdentifier()] = interfaceType
 
 	// Activate new scope for nested declarations
 
