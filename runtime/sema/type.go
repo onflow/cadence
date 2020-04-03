@@ -5582,6 +5582,23 @@ var capabilityBorrowFunctionType = func() *FunctionType {
 	}
 }()
 
+var capabilityCheckFunctionType = func() *FunctionType {
+
+	typeParameter := &TypeParameter{
+		Type: &ReferenceType{
+			Type: &AnyResourceType{},
+		},
+		Name: "T",
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(&BoolType{}),
+	}
+}()
+
 func (t *CapabilityType) CanHaveMembers() bool {
 	return true
 }
@@ -5595,6 +5612,9 @@ func (t *CapabilityType) GetMember(identifier string, _ ast.Range, _ func(error)
 	switch identifier {
 	case "borrow":
 		return newFunction(capabilityBorrowFunctionType)
+
+	case "check":
+		return newFunction(capabilityCheckFunctionType)
 
 	default:
 		return nil

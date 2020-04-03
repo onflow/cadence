@@ -4797,6 +4797,9 @@ func (v CapabilityValue) GetMember(inter *Interpreter, _ LocationRange, name str
 	case "borrow":
 		return inter.capabilityBorrowFunction(v.Address, v.Path)
 
+	case "check":
+		return inter.capabilityCheckFunction(v.Address, v.Path)
+
 	default:
 		panic(errors.NewUnreachableError())
 	}
