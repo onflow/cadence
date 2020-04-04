@@ -311,6 +311,12 @@ func (s *BaseCadenceListener) EnterWhileStatement(ctx *WhileStatementContext) {}
 // ExitWhileStatement is called when production whileStatement is exited.
 func (s *BaseCadenceListener) ExitWhileStatement(ctx *WhileStatementContext) {}
 
+// EnterForStatement is called when production forStatement is entered.
+func (s *BaseCadenceListener) EnterForStatement(ctx *ForStatementContext) {}
+
+// ExitForStatement is called when production forStatement is exited.
+func (s *BaseCadenceListener) ExitForStatement(ctx *ForStatementContext) {}
+
 // EnterEmitStatement is called when production emitStatement is entered.
 func (s *BaseCadenceListener) EnterEmitStatement(ctx *EmitStatementContext) {}
 

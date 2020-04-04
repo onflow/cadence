@@ -3848,7 +3848,7 @@ var accountGetCapabilityFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
-			Identifier:     "path",
+			Identifier:     "capabilityPath",
 			TypeAnnotation: NewTypeAnnotation(&PathType{}),
 		},
 	},

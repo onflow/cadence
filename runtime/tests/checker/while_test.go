@@ -46,7 +46,7 @@ func TestCheckInvalidWhileBlock(t *testing.T) {
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
 
-func TestCheckBreakStatement(t *testing.T) {
+func TestCheckWhileBreakStatement(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
        fun test() {
@@ -59,7 +59,7 @@ func TestCheckBreakStatement(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestCheckInvalidBreakStatement(t *testing.T) {
+func TestCheckInvalidWhileBreakStatement(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
        fun test() {
@@ -76,7 +76,7 @@ func TestCheckInvalidBreakStatement(t *testing.T) {
 	assert.IsType(t, &sema.ControlStatementError{}, errs[0])
 }
 
-func TestCheckContinueStatement(t *testing.T) {
+func TestCheckWhileContinueStatement(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
        fun test() {
@@ -89,7 +89,7 @@ func TestCheckContinueStatement(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestCheckInvalidContinueStatement(t *testing.T) {
+func TestCheckInvalidWhileContinueStatement(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
        fun test() {
