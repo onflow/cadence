@@ -787,8 +787,7 @@ to values which have an optional type.
 let a = 1
 
 // Invalid: force-unwrap operator is applied to a value which has a 
-// non-optional type
-// (a has the non-optional type `Int`).
+// non-optional type (`a` has the non-optional type `Int`).
 //
 let b = a!
 ```
@@ -801,46 +800,15 @@ let b = a!
 let c = 1!
 ```
 
-#### Force-assignment operator (`=!` or `<-!`)
+#### Force-assignment operator (`<-!`)
 
-The force-assignment operator (`=!` or `<-!`) assigns a value to an optional-typed variable if the variable is nil.
-If the variable is non-nil, the execution of the program aborts.
+The force-assignment operator (`<-!`) assigns a resource-typed value to an
+optional-typed variable if the variable is nil.
+If the variable being assigned to is non-nil, 
+the execution of the program aborts.
 
-```cadence
-// Declare a constant which has an optional integer type
-//
-let a: Int? = nil
-
-// Force assign a value to `a`.
-// Since `a` is nil, the assignment succeeds.
-//
-let a: Int =! 4
-
-// Declare another optional constant which contains a value
-let b: Int? = 5
-
-// Force assign a value to `b`.
-// Since `b` is non-nil, the assignment fails and the program aborts.
-let b: =! 6
-```
-
-The force-assignment operator can only be applied
-to values which have an optional type.
-
-```cadence
-// Declare a constant with a non-optional integer type.
-//
-let a = 1
-
-// Invalid: force-assignment operator is applied to a value which has a 
-// non-optional type
-// (a has the non-optional type `Int`).
-//
-let a =! 5
-```
-
-The force-assignment operator can also be used for 
-[resource types](#resources) and the move operator (`<-!`), 
+The force-assignment operator is only used for 
+[resource types](#resources) and the move operator (`<-`), 
 which are covered in a later section.
 
 
@@ -2627,19 +2595,19 @@ while a < 5 {
 ### Looping: For-in statement
 
 For-in statements allow a certain piece of code to be executed repeatedly for 
-each element in an array or a dictionary.
+each element in an array.
 
 The for-in statement starts with the `for` keyword, followed by the name of 
 the element that is used in each iteration of the loop, 
-followed by the `in` keyword, and then followed by the array or dictionary
-that is being interated through in the loop. 
+followed by the `in` keyword, and then followed by the array
+that is being iterated through in the loop. 
 
 Then, the code that should be repeatedly executed in each iteration of the loop
 is enclosed in curly braces.
 
 If there are no elements in the data structure, the code in the loop will not
 be executed at all. Otherwise, the code will execute as many times
-as there are elements in the data structure.
+as there are elements in the array.
 
 ```cadence,file=control-flow-for.cdc
 var array = ["Hello", "World", "Foo", "Bar"]
@@ -2655,7 +2623,7 @@ for element in array {
 
 ```
 
-The `continue` statement can be used to stop the current iteration of a loop and start the next iteration.
+In for-loops and while-loops, the `continue` statement can be used to stop the current iteration of a loop and start the next iteration.
 
 ```cadence,file=control-flow-continue.cdc
 var i = 0
@@ -2671,7 +2639,8 @@ while i < 10 {
 // `x` is `8`
 ```
 
-The `break` statement can be used to stop the loop.
+The `break` statement can be used to stop the execution 
+of a for-loop or a while-loop.
 
 ```cadence,file=control-flow-break.cdc
 var x = 0
