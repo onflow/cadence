@@ -5533,7 +5533,7 @@ Each phase is a block of code that executes sequentially.
 
   ```cadence,file=prepare-args.cdc
   // There needs to be exactly as many `AuthAccount`-typed parameters
-  // as there are signers for the transaction
+  // as there are signers for the transaction.
   // In this case, there would be two signers
 
   prepare(acct1: AuthAccount, acct2: AuthAccount) {
@@ -5547,7 +5547,7 @@ Each phase is a block of code that executes sequentially.
   of the account, which cannot be directly accessed anywhere else.
 
 - The **execute phase** (declared using the `execute` keyword) 
-  is where interaction with external accounts 
+  is where interaction with other accounts 
   and contracts should usually happen.
 
   This usually involves interacting with contracts with public types
