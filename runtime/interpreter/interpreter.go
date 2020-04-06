@@ -3761,6 +3761,47 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 	})
 }
 
+func (interpreter *Interpreter) authAccountGetLinkTargetFunction(addressValue AddressValue) HostFunctionValue {
+	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+
+		address := addressValue.ToAddress()
+
+		capabilityPath := invocation.Arguments[0].(PathValue)
+
+		capabilityKey := storageKey(capabilityPath)
+
+		// Ensure the path has a `private` or `public` domain
+
+		mustPathDomain(
+			capabilityPath,
+			invocation.LocationRange,
+			common.PathDomainPrivate,
+			common.PathDomainPublic,
+		)
+
+		value := interpreter.readStored(address, capabilityKey)
+
+		switch value := value.(type) {
+		case NilValue:
+			return Done{Result: value}
+
+		case *SomeValue:
+
+			link, ok := value.Value.(LinkValue)
+			if !ok {
+				return Done{Result: NilValue{}}
+			}
+
+			returnValue := NewSomeValueOwningNonCopying(link.TargetPath)
+
+			return Done{Result: returnValue}
+
+		default:
+			panic(errors.NewUnreachableError())
+		}
+	})
+}
+
 func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressValue) HostFunctionValue {
 	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
 
