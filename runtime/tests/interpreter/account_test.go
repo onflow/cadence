@@ -19,33 +19,48 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 
 	address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-	var ty sema.Type
-	var accountValue interpreter.Value
+	valueDeclarations := map[string]sema.ValueDeclaration{}
+	values := map[string]interpreter.Value{}
 
-	if auth {
-		panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
-			panic(errors.NewUnreachableError())
-		})
+	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
+		panic(errors.NewUnreachableError())
+	})
 
-		ty = &sema.AuthAccountType{}
-		accountValue = interpreter.NewAuthAccountValue(
-			address,
-			panicFunction,
-			panicFunction,
-			panicFunction,
-		)
-	} else {
-		ty = &sema.PublicAccountType{}
-		accountValue = interpreter.NewPublicAccountValue(address)
+	// `authAccount`
+
+	valueDeclarations["authAccount"] = stdlib.StandardLibraryValue{
+		Name:       "authAccount",
+		Type:       &sema.AuthAccountType{},
+		Kind:       common.DeclarationKindConstant,
+		IsConstant: true,
 	}
 
-	valueDeclarations := map[string]sema.ValueDeclaration{
-		"account": stdlib.StandardLibraryValue{
-			Name:       "account",
-			Type:       ty,
-			Kind:       common.DeclarationKindConstant,
-			IsConstant: true,
-		},
+	values["authAccount"] = interpreter.NewAuthAccountValue(
+		address,
+		panicFunction,
+		panicFunction,
+		panicFunction,
+	)
+
+	// `pubAccount`
+
+	valueDeclarations["pubAccount"] = stdlib.StandardLibraryValue{
+		Name:       "pubAccount",
+		Type:       &sema.PublicAccountType{},
+		Kind:       common.DeclarationKindConstant,
+		IsConstant: true,
+	}
+
+	values["pubAccount"] = interpreter.NewPublicAccountValue(address)
+
+	// `account`
+
+	if auth {
+		valueDeclarations["account"] = valueDeclarations["authAccount"]
+		values["account"] = values["authAccount"]
+	} else {
+		valueDeclarations["account"] = valueDeclarations["pubAccount"]
+		values["account"] = values["pubAccount"]
 	}
 
 	storedValues := map[string]interpreter.OptionalValue{}
@@ -81,9 +96,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 				sema.WithPredeclaredValues(valueDeclarations),
 			},
 			Options: []interpreter.Option{
-				interpreter.WithPredefinedValues(map[string]interpreter.Value{
-					"account": accountValue,
-				}),
+				interpreter.WithPredefinedValues(values),
 				interpreter.WithStorageExistenceHandler(storageChecker),
 				interpreter.WithStorageReadHandler(storageGetter),
 				interpreter.WithStorageWriteHandler(storageSetter),
