@@ -5495,6 +5495,7 @@ Transactions are structured as such:
 
 First, the transaction can import any number of types from external accounts
 using the import syntax.
+
 ```cadence,file=import.cdc
 import FungibleToken from 0x01
 ```
@@ -5507,7 +5508,7 @@ which first contains local variable declarations that are valid
 throughout the whole of the transaction.
 
 ```cadence,file=transaction.cdc
-transaction{
+transaction {
     // transaction contents
     let localVar: Int
 
@@ -5525,13 +5526,13 @@ Each phase is a block of code that executes sequentially.
   i.e., it has to initialize the local fields of the transaction
   that can then be used in the execution phase.
 
-  The prepare phase also has access to the private account objects
+  The prepare phase also has access to the authorized account objects
   (`AuthAccount`) of the accounts that signed it. 
-  These private account objects have to be declared as parameters 
+  These authorized account objects have to be declared as parameters 
   to the prepare phase, one for each signer of the transaction:
 
   ```cadence,file=prepare-args.cdc
-  // There needs to be exactly as many AuthAccount parameters
+  // There needs to be exactly as many `AuthAccount`-typed parameters
   // as there are signers for the transaction
   // In this case, there would be two signers
 
@@ -5541,7 +5542,8 @@ Each phase is a block of code that executes sequentially.
   }
   ```
 
-  have the permissions to read from and write to the private storage
+  `AuthAccount` objects have the permissions 
+  to read from and write to the private storage
   of the account, which cannot be directly accessed anywhere else.
 
 - The **execute phase** (declared using the `execute` keyword) 
@@ -5560,8 +5562,8 @@ Each phase is a block of code that executes sequentially.
 
   ```cadence,file=execute.cdc
     execute {
-        // Invalid: Cannot access the private account object
-        //
+        // Invalid: Cannot access the private account object,
+        // as `acct1` is not in scope
 
         let privateResource <- acct1.storage[Resource] <- nil
         destroy privateResource
@@ -5578,7 +5580,7 @@ Each phase is a block of code that executes sequentially.
   is where the transaction can check
   that its functionality was executed correctly with specific condition checks.
 
-  If any of the condition checks register as `false` the transaction will fail
+  If any of the condition checks result in `false`, the transaction will fail
   and be completely reverted.
 
   Only condition checks are allowed in this section. No actual computation
@@ -5621,10 +5623,10 @@ transaction {
 ### Importing and using Deployed Contract Code
 
 Deploying contract code to an account was covered 
-in the [Deploying and Updating Contracts](### Deploying and Updating Contracts) section of the spec.
+in the [Deploying and Updating Contracts](#Deploying-and-Updating-Contracts) section of the spec.
 
 Once a contract or contract interface has been deployed to an account,
-anybody can import the type from account where it was deployed to and use it in their
+anybody can import the type from the account where it was deployed to and use it in their
 contracts or transactions.
 
 <!--
