@@ -22,17 +22,20 @@ func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) ast.R
 		)
 	}
 
-	// The body of the loop will maybe be evaluated. That means that
-	// resource invalidation and returns are not definite, but only potential
+	// The body of the loop will maybe be evaluated.
+	// That means that resource invalidations and
+	// returns are not definite, but only potential.
 
-	checker.checkPotentiallyUnevaluated(func() Type {
+	_ = checker.checkPotentiallyUnevaluated(func() Type {
 		checker.functionActivations.WithLoop(func() {
 			statement.Block.Accept(checker)
 		})
-		return &VoidType{}
+
+		// ignored
+		return nil
 	})
 
-	checker.reportResourceUsesInLoop(statement.StartPos, statement.EndPos)
+	checker.reportResourceUsesInLoop(statement.StartPos, statement.EndPosition())
 
 	return nil
 }

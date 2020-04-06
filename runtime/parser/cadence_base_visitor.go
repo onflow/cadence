@@ -199,6 +199,10 @@ func (v *BaseCadenceVisitor) VisitWhileStatement(ctx *WhileStatementContext) int
 	return v.VisitChildren(ctx)
 }
 
+func (v *BaseCadenceVisitor) VisitForStatement(ctx *ForStatementContext) interface{} {
+	return v.VisitChildren(ctx)
+}
+
 func (v *BaseCadenceVisitor) VisitEmitStatement(ctx *EmitStatementContext) interface{} {
 	return v.VisitChildren(ctx)
 }

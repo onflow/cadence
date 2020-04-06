@@ -155,6 +155,9 @@ type CadenceVisitor interface {
 	// Visit a parse tree produced by CadenceParser#whileStatement.
 	VisitWhileStatement(ctx *WhileStatementContext) interface{}
 
+	// Visit a parse tree produced by CadenceParser#forStatement.
+	VisitForStatement(ctx *ForStatementContext) interface{}
+
 	// Visit a parse tree produced by CadenceParser#emitStatement.
 	VisitEmitStatement(ctx *EmitStatementContext) interface{}
 

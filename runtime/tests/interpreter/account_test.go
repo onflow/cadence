@@ -19,33 +19,48 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 
 	address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-	var ty sema.Type
-	var accountValue interpreter.Value
+	valueDeclarations := map[string]sema.ValueDeclaration{}
+	values := map[string]interpreter.Value{}
 
-	if auth {
-		panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
-			panic(errors.NewUnreachableError())
-		})
+	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
+		panic(errors.NewUnreachableError())
+	})
 
-		ty = &sema.AuthAccountType{}
-		accountValue = interpreter.NewAuthAccountValue(
-			address,
-			panicFunction,
-			panicFunction,
-			panicFunction,
-		)
-	} else {
-		ty = &sema.PublicAccountType{}
-		accountValue = interpreter.NewPublicAccountValue(address)
+	// `authAccount`
+
+	valueDeclarations["authAccount"] = stdlib.StandardLibraryValue{
+		Name:       "authAccount",
+		Type:       &sema.AuthAccountType{},
+		Kind:       common.DeclarationKindConstant,
+		IsConstant: true,
 	}
 
-	valueDeclarations := map[string]sema.ValueDeclaration{
-		"account": stdlib.StandardLibraryValue{
-			Name:       "account",
-			Type:       ty,
-			Kind:       common.DeclarationKindConstant,
-			IsConstant: true,
-		},
+	values["authAccount"] = interpreter.NewAuthAccountValue(
+		address,
+		panicFunction,
+		panicFunction,
+		panicFunction,
+	)
+
+	// `pubAccount`
+
+	valueDeclarations["pubAccount"] = stdlib.StandardLibraryValue{
+		Name:       "pubAccount",
+		Type:       &sema.PublicAccountType{},
+		Kind:       common.DeclarationKindConstant,
+		IsConstant: true,
+	}
+
+	values["pubAccount"] = interpreter.NewPublicAccountValue(address)
+
+	// `account`
+
+	if auth {
+		valueDeclarations["account"] = valueDeclarations["authAccount"]
+		values["account"] = values["authAccount"]
+	} else {
+		valueDeclarations["account"] = valueDeclarations["pubAccount"]
+		values["account"] = values["pubAccount"]
 	}
 
 	storedValues := map[string]interpreter.OptionalValue{}
@@ -81,9 +96,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 				sema.WithPredeclaredValues(valueDeclarations),
 			},
 			Options: []interpreter.Option{
-				interpreter.WithPredefinedValues(map[string]interpreter.Value{
-					"account": accountValue,
-				}),
+				interpreter.WithPredefinedValues(values),
 				interpreter.WithStorageExistenceHandler(storageChecker),
 				interpreter.WithStorageReadHandler(storageGetter),
 				interpreter.WithStorageWriteHandler(storageSetter),
@@ -545,6 +558,187 @@ func TestInterpretAuthAccountLink(t *testing.T) {
 			require.Error(t, err)
 
 			require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+		})
+	}
+}
+
+func TestInterpretAuthAccountUnlink(t *testing.T) {
+
+	for _, capabilityDomain := range []common.PathDomain{
+		common.PathDomainPrivate,
+		common.PathDomainPublic,
+	} {
+
+		t.Run(capabilityDomain.Name(), func(t *testing.T) {
+
+			inter, storedValues := testAccount(
+				t,
+				true,
+				fmt.Sprintf(
+					`
+	                  resource R {}
+
+	                  resource R2 {}
+
+	                  fun saveAndLinkR() {
+	                      let r <- create R()
+	                      account.save(<-r, to: /storage/r)
+	                      account.link<&R>(/%[1]s/r, target: /storage/r)
+	                  }
+
+	                  fun unlinkR() {
+	                      account.unlink(/%[1]s/r)
+	                  }
+
+                      fun unlinkR2() {
+	                      account.unlink(/%[1]s/r2)
+	                  }
+	                `,
+					capabilityDomain.Identifier(),
+				),
+			)
+
+			// save and link
+
+			_, err := inter.Invoke("saveAndLinkR")
+			require.NoError(t, err)
+
+			require.Len(t, storedValues, 2)
+
+			t.Run("unlink R", func(t *testing.T) {
+				_, err := inter.Invoke("unlinkR")
+				require.NoError(t, err)
+
+				require.Len(t, storedValues, 1)
+			})
+
+			t.Run("unlink R2", func(t *testing.T) {
+
+				_, err := inter.Invoke("unlinkR2")
+				require.NoError(t, err)
+
+				require.Len(t, storedValues, 1)
+			})
+		})
+	}
+
+	t.Run("storage", func(t *testing.T) {
+
+		inter, _ := testAccount(
+			t,
+			true,
+			`
+	          resource R {}
+
+	          fun test() {
+	              account.unlink(/storage/r)
+	          }
+	        `,
+		)
+
+		_, err := inter.Invoke("test")
+
+		require.Error(t, err)
+
+		require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+	})
+}
+
+func TestInterpretAuthAccountGetLinkTarget(t *testing.T) {
+
+	for _, auth := range []bool{true, false} {
+
+		t.Run(fmt.Sprintf("auth: %v", auth), func(t *testing.T) {
+
+			for _, capabilityDomain := range []common.PathDomain{
+				common.PathDomainPrivate,
+				common.PathDomainPublic,
+			} {
+
+				t.Run(capabilityDomain.Name(), func(t *testing.T) {
+
+					inter, storedValues := testAccount(
+						t,
+						auth,
+						fmt.Sprintf(
+							`
+	                          resource R {}
+
+	                          fun link() {
+	                              authAccount.link<&R>(/%[1]s/r, target: /storage/r)
+	                          }
+
+	                          fun existing(): Path? {
+	                              return account.getLinkTarget(/%[1]s/r)
+	                          }
+
+                              fun nonExisting(): Path? {
+	                              return account.getLinkTarget(/%[1]s/r2)
+	                          }
+	                        `,
+							capabilityDomain.Identifier(),
+						),
+					)
+
+					// link
+
+					_, err := inter.Invoke("link")
+					require.NoError(t, err)
+
+					require.Len(t, storedValues, 1)
+
+					t.Run("existing", func(t *testing.T) {
+						value, err := inter.Invoke("existing")
+						require.NoError(t, err)
+
+						require.IsType(t, &interpreter.SomeValue{}, value)
+
+						innerValue := value.(*interpreter.SomeValue).Value
+
+						assert.Equal(t,
+							interpreter.PathValue{
+								Domain:     common.PathDomainStorage,
+								Identifier: "r",
+							},
+							innerValue,
+						)
+
+						require.Len(t, storedValues, 1)
+					})
+
+					t.Run("nonExisting", func(t *testing.T) {
+
+						value, err := inter.Invoke("nonExisting")
+						require.NoError(t, err)
+
+						require.Equal(t, interpreter.NilValue{}, value)
+
+						require.Len(t, storedValues, 1)
+					})
+				})
+			}
+
+			t.Run("storage", func(t *testing.T) {
+
+				inter, _ := testAccount(
+					t,
+					auth,
+					`
+	                  resource R {}
+
+	                  fun test() {
+	                      account.getLinkTarget(/storage/r)
+	                  }
+	                `,
+				)
+
+				_, err := inter.Invoke("test")
+
+				require.Error(t, err)
+
+				require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+			})
+
 		})
 	}
 }

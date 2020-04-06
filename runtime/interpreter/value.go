@@ -4298,7 +4298,12 @@ type EphemeralReferenceValue struct {
 func (*EphemeralReferenceValue) IsValue() {}
 
 func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter) DynamicType {
-	innerType := v.Value.DynamicType(interpreter)
+	referencedValue := v.referencedValue()
+	if referencedValue == nil {
+		panic(&DereferenceError{})
+	}
+
+	innerType := (*referencedValue).DynamicType(interpreter)
 
 	return EphemeralReferenceDynamicType{
 		authorized: v.Authorized,
@@ -4319,23 +4324,65 @@ func (v *EphemeralReferenceValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
+func (v *EphemeralReferenceValue) referencedValue() *Value {
+	// Just like for storage references, references to optionals are unwrapped,
+	// i.e. a reference to `nil` aborts when dereferenced.
+
+	switch referenced := v.Value.(type) {
+	case *SomeValue:
+		return &referenced.Value
+	case NilValue:
+		return nil
+	default:
+		return &v.Value
+	}
+}
+
 func (v *EphemeralReferenceValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	return v.Value.(MemberAccessibleValue).
+	referencedValue := v.referencedValue()
+	if referencedValue == nil {
+		panic(&DereferenceError{
+			LocationRange: locationRange,
+		})
+	}
+
+	return (*referencedValue).(MemberAccessibleValue).
 		GetMember(interpreter, locationRange, name)
 }
 
 func (v *EphemeralReferenceValue) SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) {
-	v.Value.(MemberAccessibleValue).
+	referencedValue := v.referencedValue()
+	if referencedValue == nil {
+		panic(&DereferenceError{
+			LocationRange: locationRange,
+		})
+	}
+
+	(*referencedValue).(MemberAccessibleValue).
 		SetMember(interpreter, locationRange, name, value)
 }
 
 func (v *EphemeralReferenceValue) Get(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
-	return v.Value.(ValueIndexableValue).
+	referencedValue := v.referencedValue()
+	if referencedValue == nil {
+		panic(&DereferenceError{
+			LocationRange: locationRange,
+		})
+	}
+
+	return (*referencedValue).(ValueIndexableValue).
 		Get(interpreter, locationRange, key)
 }
 
 func (v *EphemeralReferenceValue) Set(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
-	v.Value.(ValueIndexableValue).
+	referencedValue := v.referencedValue()
+	if referencedValue == nil {
+		panic(&DereferenceError{
+			LocationRange: locationRange,
+		})
+	}
+
+	(*referencedValue).(ValueIndexableValue).
 		Set(interpreter, locationRange, key, value)
 }
 
@@ -4574,6 +4621,12 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 	case "link":
 		return inter.authAccountLinkFunction(v.Address)
 
+	case "unlink":
+		return inter.authAccountUnlinkFunction(v.Address)
+
+	case "getLinkTarget":
+		return inter.authAccountGetLinkTargetFunction(v.Address)
+
 	case "getCapability":
 		return accountGetCapabilityFunction(v.Address, true)
 
@@ -4636,7 +4689,7 @@ func (v PublicAccountValue) String() string {
 	return fmt.Sprintf("PublicAccount(%s)", v.Address)
 }
 
-func (v PublicAccountValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v PublicAccountValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case "address":
 		return v.Address
@@ -4648,6 +4701,9 @@ func (v PublicAccountValue) GetMember(_ *Interpreter, _ LocationRange, name stri
 
 	case "getCapability":
 		return accountGetCapabilityFunction(v.Address, false)
+
+	case "getLinkTarget":
+		return inter.authAccountGetLinkTargetFunction(v.Address)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -4746,6 +4802,9 @@ func (v CapabilityValue) GetMember(inter *Interpreter, _ LocationRange, name str
 	switch name {
 	case "borrow":
 		return inter.capabilityBorrowFunction(v.Address, v.Path)
+
+	case "check":
+		return inter.capabilityCheckFunction(v.Address, v.Path)
 
 	default:
 		panic(errors.NewUnreachableError())

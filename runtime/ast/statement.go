@@ -77,15 +77,46 @@ func (s *IfStatement) Accept(visitor Visitor) Repr {
 // WhileStatement
 
 type WhileStatement struct {
-	Test  Expression
-	Block *Block
-	Range
+	Test     Expression
+	Block    *Block
+	StartPos Position
 }
 
 func (*WhileStatement) isStatement() {}
 
 func (s *WhileStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitWhileStatement(s)
+}
+
+func (s *WhileStatement) StartPosition() Position {
+	return s.StartPos
+}
+
+func (s *WhileStatement) EndPosition() Position {
+	return s.Block.EndPosition()
+}
+
+// ForStatement
+
+type ForStatement struct {
+	Identifier Identifier
+	Value      Expression
+	Block      *Block
+	StartPos   Position
+}
+
+func (*ForStatement) isStatement() {}
+
+func (s *ForStatement) Accept(visitor Visitor) Repr {
+	return visitor.VisitForStatement(s)
+}
+
+func (s *ForStatement) StartPosition() Position {
+	return s.StartPos
+}
+
+func (s *ForStatement) EndPosition() Position {
+	return s.Block.EndPosition()
 }
 
 // EmitStatement

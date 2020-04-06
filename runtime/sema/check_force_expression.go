@@ -12,6 +12,12 @@ func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) as
 		return valueType
 	}
 
+	checker.recordResourceInvalidation(
+		expression.Expression,
+		valueType,
+		ResourceInvalidationKindMove,
+	)
+
 	optionalType, ok := valueType.(*OptionalType)
 	if !ok {
 		checker.report(
