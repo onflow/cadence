@@ -4932,8 +4932,8 @@ func IsSubType(subType Type, superType Type) bool {
 			}
 
 		case *CompositeType:
-			// An unauthorized reference is not a subtype of a reference to a resource type `&V`
-			// (e.g. reference to a restricted type `&T{Us}`, or reference to a resource interface type `&T`)
+			// An unauthorized reference is not a subtype of a reference to a composite type `&V`
+			// (e.g. reference to a restricted type `&T{Us}`, or reference to an interface type `&T`)
 			//
 			// The holder of the reference may not gain more permissions or knowledge.
 
