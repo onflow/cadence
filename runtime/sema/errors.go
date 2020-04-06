@@ -1133,7 +1133,10 @@ type MissingResourceAnnotationError struct {
 }
 
 func (e *MissingResourceAnnotationError) Error() string {
-	return "missing resource annotation: `@`"
+	return fmt.Sprintf(
+		"missing resource annotation: `%s`",
+		common.CompositeKindResource.Annotation(),
+	)
 }
 
 func (*MissingResourceAnnotationError) isSemanticError() {}
@@ -1166,30 +1169,39 @@ type InvalidResourceAnnotationError struct {
 }
 
 func (e *InvalidResourceAnnotationError) Error() string {
-	return "invalid resource annotation: `@`"
+	return fmt.Sprintf(
+		"invalid resource annotation: `%s`",
+		common.CompositeKindResource.Annotation(),
+	)
 }
 
 func (*InvalidResourceAnnotationError) isSemanticError() {}
 
-// InvalidResourceInterfaceTypeError
+// InvalidInterfaceTypeError
 
-type InvalidResourceInterfaceTypeError struct {
+type InvalidInterfaceTypeError struct {
 	Type Type
 	ast.Range
 }
 
-func (e *InvalidResourceInterfaceTypeError) Error() string {
-	return "invalid resource interface type"
+func (e *InvalidInterfaceTypeError) Error() string {
+	return "invalid interface type"
 }
 
-func (e *InvalidResourceInterfaceTypeError) SecondaryError() string {
+func (e *InvalidInterfaceTypeError) SecondaryError() string {
+	var restrictedAny Type = &AnyStructType{}
+	if e.Type.IsResourceType() {
+		restrictedAny = &AnyResourceType{}
+	}
+
 	return fmt.Sprintf(
-		"got `%[1]s`; consider `AnyResource{...}` when using a resource interface",
+		"got `%[1]s`; consider using `%[2]s{%[1]s}`",
 		e.Type.QualifiedString(),
+		restrictedAny,
 	)
 }
 
-func (*InvalidResourceInterfaceTypeError) isSemanticError() {}
+func (*InvalidInterfaceTypeError) isSemanticError() {}
 
 // IncorrectTransferOperationError
 
@@ -1797,26 +1809,6 @@ func (e *InvalidResourceDictionaryMemberError) Error() string {
 
 func (*InvalidResourceDictionaryMemberError) isSemanticError() {}
 
-// NonResourceReferenceTypeError
-
-type NonResourceReferenceTypeError struct {
-	ActualType Type
-	ast.Range
-}
-
-func (e *NonResourceReferenceTypeError) Error() string {
-	return "invalid reference type"
-}
-
-func (e *NonResourceReferenceTypeError) SecondaryError() string {
-	return fmt.Sprintf(
-		"expected resource type, got `%s`",
-		e.ActualType.QualifiedString(),
-	)
-}
-
-func (*NonResourceReferenceTypeError) isSemanticError() {}
-
 // NonReferenceTypeReferenceError
 
 type NonReferenceTypeReferenceError struct {
@@ -1836,26 +1828,6 @@ func (e *NonReferenceTypeReferenceError) SecondaryError() string {
 }
 
 func (*NonReferenceTypeReferenceError) isSemanticError() {}
-
-// NonResourceTypeReferenceError
-
-type NonResourceTypeReferenceError struct {
-	ActualType Type
-	ast.Range
-}
-
-func (e *NonResourceTypeReferenceError) Error() string {
-	return "cannot create reference"
-}
-
-func (e *NonResourceTypeReferenceError) SecondaryError() string {
-	return fmt.Sprintf(
-		"expected resource type, got `%s`",
-		e.ActualType.QualifiedString(),
-	)
-}
-
-func (*NonResourceTypeReferenceError) isSemanticError() {}
 
 // OptionalTypeReferenceError
 
@@ -2357,7 +2329,7 @@ type InvalidRestrictedTypeError struct {
 
 func (e *InvalidRestrictedTypeError) Error() string {
 	return fmt.Sprintf(
-		"cannot restrict non-resource type: %s",
+		"cannot restrict type: %s",
 		e.Type.QualifiedString(),
 	)
 }
@@ -2373,12 +2345,30 @@ type InvalidRestrictionTypeError struct {
 
 func (e *InvalidRestrictionTypeError) Error() string {
 	return fmt.Sprintf(
-		"cannot restrict using non-resource interface type: %s",
+		"cannot restrict using non-resource/structure interface type: %s",
 		e.Type.QualifiedString(),
 	)
 }
 
 func (*InvalidRestrictionTypeError) isSemanticError() {}
+
+// RestrictionCompositeKindMismatchError
+
+type RestrictionCompositeKindMismatchError struct {
+	CompositeKind         common.CompositeKind
+	PreviousCompositeKind common.CompositeKind
+	ast.Range
+}
+
+func (e *RestrictionCompositeKindMismatchError) Error() string {
+	return fmt.Sprintf(
+		"interface kind %s does not match previous interface kind %s",
+		e.CompositeKind,
+		e.PreviousCompositeKind,
+	)
+}
+
+func (*RestrictionCompositeKindMismatchError) isSemanticError() {}
 
 // InvalidRestrictionTypeDuplicateError
 
@@ -2443,6 +2433,18 @@ func (e *RestrictionMemberClashError) Error() string {
 }
 
 func (*RestrictionMemberClashError) isSemanticError() {}
+
+// AmbiguousRestrictedTypeError
+
+type AmbiguousRestrictedTypeError struct {
+	ast.Range
+}
+
+func (e *AmbiguousRestrictedTypeError) Error() string {
+	return "ambiguous restricted type"
+}
+
+func (*AmbiguousRestrictedTypeError) isSemanticError() {}
 
 // NonOptionalForceError
 

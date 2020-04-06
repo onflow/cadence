@@ -3401,8 +3401,11 @@ func TestInterpretInterfaceConformanceNoRequirements(t *testing.T) {
 		}
 
 		interfaceType := "Test"
-		if compositeKind == common.CompositeKindResource {
+		switch compositeKind {
+		case common.CompositeKindResource:
 			interfaceType = "AnyResource{Test}"
+		case common.CompositeKindStructure:
+			interfaceType = "AnyStruct{Test}"
 		}
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
@@ -3451,8 +3454,11 @@ func TestInterpretInterfaceFieldUse(t *testing.T) {
 			identifier = "TestImpl"
 		} else {
 			interfaceType := "Test"
-			if compositeKind == common.CompositeKindResource {
+			switch compositeKind {
+			case common.CompositeKindResource:
 				interfaceType = "AnyResource{Test}"
+			case common.CompositeKindStructure:
+				interfaceType = "AnyStruct{Test}"
 			}
 
 			setupCode = fmt.Sprintf(
@@ -3529,8 +3535,11 @@ func TestInterpretInterfaceFunctionUse(t *testing.T) {
 			identifier = "TestImpl"
 		} else {
 			interfaceType := "Test"
-			if compositeKind == common.CompositeKindResource {
+			switch compositeKind {
+			case common.CompositeKindResource:
 				interfaceType = "AnyResource{Test}"
+			case common.CompositeKindStructure:
+				interfaceType = "AnyStruct{Test}"
 			}
 
 			setupCode = fmt.Sprintf(
@@ -3596,8 +3605,11 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 			identifier = "TestImpl"
 		} else {
 			interfaceType := "Test"
-			if compositeKind == common.CompositeKindResource {
+			switch compositeKind {
+			case common.CompositeKindResource:
 				interfaceType = "AnyResource{Test}"
+			case common.CompositeKindStructure:
+				interfaceType = "AnyStruct{Test}"
 			}
 
 			setupCode = fmt.Sprintf(
@@ -3700,8 +3712,11 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 					if compositeKind != common.CompositeKindContract {
 
 						interfaceType := "Test"
-						if compositeKind == common.CompositeKindResource {
+						switch compositeKind {
+						case common.CompositeKindResource:
 							interfaceType = "AnyResource{Test}"
+						case common.CompositeKindStructure:
+							interfaceType = "AnyStruct{Test}"
 						}
 
 						testFunction =

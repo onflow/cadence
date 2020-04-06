@@ -6441,7 +6441,7 @@ func TestParseRestrictedReferenceTypeWithoutBaseType(t *testing.T) {
 	utils.AssertEqualWithDiff(t, expected, actual)
 }
 
-func TestParseOptionalRestrictedResourceType(t *testing.T) {
+func TestParseOptionalRestrictedType(t *testing.T) {
 
 	actual, _, err := parser.ParseProgram(`
        let x: @R{I}? = 1
@@ -6504,7 +6504,7 @@ func TestParseOptionalRestrictedResourceType(t *testing.T) {
 	utils.AssertEqualWithDiff(t, expected, actual)
 }
 
-func TestParseOptionalRestrictedResourceTypeOnlyRestrictions(t *testing.T) {
+func TestParseOptionalRestrictedTypeOnlyRestrictions(t *testing.T) {
 
 	actual, _, err := parser.ParseProgram(`
        let x: @{I}? = 1

@@ -12,112 +12,236 @@ import (
 
 func TestCheckReferenceTypeOuter(t *testing.T) {
 
-	_, err := ParseAndCheck(t, `
-      resource R {}
+	t.Run("resource", func(t *testing.T) {
 
-      fun test(r: &[R]) {}
-    `)
+		_, err := ParseAndCheck(t, `
+          resource R {}
 
-	require.NoError(t, err)
+          fun test(r: &[R]) {}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+          struct S {}
+
+          fun test(s: &[S]) {}
+        `)
+
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckReferenceTypeInner(t *testing.T) {
 
-	_, err := ParseAndCheck(t, `
-      resource R {}
+	t.Run("resource", func(t *testing.T) {
 
-      fun test(r: [&R]) {}
-    `)
+		_, err := ParseAndCheck(t, `
+          resource R {}
 
-	require.NoError(t, err)
+          fun test(r: [&R]) {}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+          struct S {}
+
+          fun test(s: [&S]) {}
+        `)
+
+		require.NoError(t, err)
+	})
+
 }
 
 func TestCheckNestedReferenceType(t *testing.T) {
 
-	_, err := ParseAndCheck(t, `
-      resource R {}
+	t.Run("resource", func(t *testing.T) {
 
-      fun test(r: &[&R]) {}
-    `)
+		_, err := ParseAndCheck(t, `
+          resource R {}
 
-	require.Error(t, err)
+          fun test(r: &[&R]) {}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+          struct S {}
+
+          fun test(s: &[&S]) {}
+        `)
+
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckInvalidReferenceType(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
-      fun test(r: &R) {}
+      fun test(t: &T) {}
     `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+
 }
 
-func TestCheckReferenceExpressionWithResourceResultType(t *testing.T) {
+func TestCheckReferenceExpressionWithCompositeResultType(t *testing.T) {
 
-	checker, err := ParseAndCheckStorage(t, `
+	t.Run("resource", func(t *testing.T) {
+
+		checker, err := ParseAndCheck(t, `
           resource R {}
 
-          let ref = &storage[R] as &R
-        `,
-	)
+          let r <- create R()
+          let ref = &r as &R
+        `)
 
-	require.NoError(t, err)
+		require.NoError(t, err)
 
-	refValueType := checker.GlobalValues["ref"].Type
+		refValueType := checker.GlobalValues["ref"].Type
 
-	assert.IsType(t,
-		&sema.ReferenceType{},
-		refValueType,
-	)
+		assert.IsType(t,
+			&sema.ReferenceType{},
+			refValueType,
+		)
 
-	assert.IsType(t,
-		&sema.CompositeType{},
-		refValueType.(*sema.ReferenceType).Type,
-	)
+		assert.IsType(t,
+			&sema.CompositeType{},
+			refValueType.(*sema.ReferenceType).Type,
+		)
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		checker, err := ParseAndCheck(t, `
+          struct S {}
+
+          let s = S()
+          let ref = &s as &S
+        `)
+
+		require.NoError(t, err)
+
+		refValueType := checker.GlobalValues["ref"].Type
+
+		assert.IsType(t,
+			&sema.ReferenceType{},
+			refValueType,
+		)
+
+		assert.IsType(t,
+			&sema.CompositeType{},
+			refValueType.(*sema.ReferenceType).Type,
+		)
+	})
 }
 
-func TestCheckReferenceExpressionWithResourceInterfaceResultType(t *testing.T) {
+func TestCheckReferenceExpressionWithInterfaceResultType(t *testing.T) {
 
-	_, err := ParseAndCheckStorage(t, `
+	t.Run("resource", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
           resource interface I {}
           resource R: I {}
 
-          let ref = &storage[R] as &I
-        `,
-	)
+          let r <- create R()
+          let ref = &r as &I
+        `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+		errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+          struct interface I {}
+          struct S: I {}
+
+          let s = S()
+          let ref = &s as &I
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 }
 
-func TestCheckReferenceExpressionWithRestrictedAnyResourceResultType(t *testing.T) {
+func TestCheckReferenceExpressionWithRestrictedAnyResultType(t *testing.T) {
 
-	_, err := ParseAndCheckStorage(t, `
+	t.Run("resource", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
           resource interface I {}
           resource R: I {}
 
-          let ref = &storage[R] as &AnyResource{I}
-        `,
-	)
+          let r <- create R()
+          let ref = &r as &AnyResource{I}
+        `)
 
-	require.NoError(t, err)
+		require.NoError(t, err)
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+          struct interface I {}
+          struct S: I {}
+
+          let s = S()
+          let ref = &s as &AnyStruct{I}
+        `)
+
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckInvalidReferenceExpressionType(t *testing.T) {
 
-	_, err := ParseAndCheckStorage(t, `
+	t.Run("resource", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
           resource R {}
 
-          let ref = &storage[R] as &X
+          let r <- create R() 
+          let ref = &r as &X
         `,
-	)
+		)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+		errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+          struct S {}
+
+          let s = S() 
+          let ref = &s as &X
+        `,
+		)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
 }
 
 func TestCheckInvalidReferenceExpressionStorageIndexType(t *testing.T) {
@@ -134,40 +258,40 @@ func TestCheckInvalidReferenceExpressionStorageIndexType(t *testing.T) {
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
 
-func TestCheckInvalidReferenceExpressionNonResourceReferencedType(t *testing.T) {
+func TestCheckInvalidReferenceExpressionTypeMismatchStructResource(t *testing.T) {
 
-	_, err := ParseAndCheckStorage(t, `
+	t.Run("struct / resource", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
           struct S {}
           resource R {}
 
-          let ref = &storage[S] as &R
-        `,
-	)
+          let s = S()
+          let ref = &s as &R
+        `)
 
-	errs := ExpectCheckerErrors(t, err, 3)
+		errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchWithDescriptionError{}, errs[0])
-	assert.IsType(t, &sema.NonResourceTypeReferenceError{}, errs[1])
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[2])
-}
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 
-func TestCheckInvalidReferenceExpressionNonResourceResultType(t *testing.T) {
+	t.Run("resource / struct", func(t *testing.T) {
 
-	_, err := ParseAndCheckStorage(t, `
-          resource R {}
+		_, err := ParseAndCheck(t, `
           struct S {}
+          resource R {}
 
-          let ref = &storage[R] as &S
-        `,
-	)
+          let r <- create R()
+          let ref = &r as &S
+        `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+		errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.NonResourceReferenceTypeError{}, errs[0])
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 }
 
-func TestCheckInvalidReferenceExpressionNonResourceTypes(t *testing.T) {
+func TestCheckInvalidReferenceExpressionDifferentStructs(t *testing.T) {
 
 	_, err := ParseAndCheckStorage(t, `
           struct S {}
@@ -177,15 +301,12 @@ func TestCheckInvalidReferenceExpressionNonResourceTypes(t *testing.T) {
         `,
 	)
 
-	errs := ExpectCheckerErrors(t, err, 4)
+	errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.TypeMismatchWithDescriptionError{}, errs[0])
-	assert.IsType(t, &sema.NonResourceTypeReferenceError{}, errs[1])
-	assert.IsType(t, &sema.NonResourceReferenceTypeError{}, errs[2])
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[3])
+	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
 
-func TestCheckInvalidReferenceExpressionTypeMismatch(t *testing.T) {
+func TestCheckInvalidReferenceExpressionTypeMismatchDifferentResources(t *testing.T) {
 
 	_, err := ParseAndCheckStorage(t, `
           resource R {}
@@ -202,7 +323,7 @@ func TestCheckInvalidReferenceExpressionTypeMismatch(t *testing.T) {
 
 func TestCheckReferenceToNonStorage(t *testing.T) {
 
-	t.Run("non-resource variable", func(t *testing.T) {
+	t.Run("struct variable", func(t *testing.T) {
 
 		_, err := ParseAndCheckStorage(t, `
           struct S {}
@@ -212,10 +333,7 @@ func TestCheckReferenceToNonStorage(t *testing.T) {
         `,
 		)
 
-		errs := ExpectCheckerErrors(t, err, 2)
-
-		assert.IsType(t, &sema.NonResourceTypeReferenceError{}, errs[0])
-		assert.IsType(t, &sema.NonResourceReferenceTypeError{}, errs[1])
+		require.NoError(t, err)
 	})
 
 	t.Run("resource variable", func(t *testing.T) {
@@ -506,10 +624,36 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
-func TestCheckInvalidReferenceExpression(t *testing.T) {
+func TestCheckInvalidReferenceExpressionNonReferenceAmbiguous(t *testing.T) {
 
 	_, err := ParseAndCheckStorage(t, `
           let y = &x as {}
+        `,
+	)
+
+	errs := ExpectCheckerErrors(t, err, 2)
+
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	assert.IsType(t, &sema.AmbiguousRestrictedTypeError{}, errs[1])
+}
+
+func TestCheckInvalidReferenceExpressionNonReferenceAnyResource(t *testing.T) {
+
+	_, err := ParseAndCheckStorage(t, `
+          let y = &x as AnyResource{}
+        `,
+	)
+
+	errs := ExpectCheckerErrors(t, err, 2)
+
+	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	assert.IsType(t, &sema.NonReferenceTypeReferenceError{}, errs[1])
+}
+
+func TestCheckInvalidReferenceExpressionNonReferenceAnyStruct(t *testing.T) {
+
+	_, err := ParseAndCheckStorage(t, `
+          let y = &x as AnyStruct{}
         `,
 	)
 

@@ -10,9 +10,10 @@ import (
 	. "github.com/dapperlabs/cadence/runtime/tests/utils"
 )
 
-func TestCheckRestrictedResourceType(t *testing.T) {
+func TestCheckRestrictedType(t *testing.T) {
 
-	t.Run("no restrictions", func(t *testing.T) {
+	t.Run("resource: no restrictions", func(t *testing.T) {
+
 		_, err := ParseAndCheck(t, `
             resource R {}
 
@@ -22,7 +23,19 @@ func TestCheckRestrictedResourceType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("one restriction", func(t *testing.T) {
+	t.Run("struct: no restrictions", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            struct S {}
+
+            let r: S{} = S()
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource: one restriction", func(t *testing.T) {
+
 		_, err := ParseAndCheck(t, `
             resource interface I1 {}
 
@@ -36,7 +49,23 @@ func TestCheckRestrictedResourceType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("reference to restriction", func(t *testing.T) {
+	t.Run("struct: one restriction", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            struct interface I1 {}
+
+            struct interface I2 {}
+
+            struct S: I1, I2 {}
+
+            let r: S{I1} = S()
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("reference to resource restriction", func(t *testing.T) {
+
 		_, err := ParseAndCheck(t, `
             resource R {}
 
@@ -47,7 +76,20 @@ func TestCheckRestrictedResourceType(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("non-conformance restriction", func(t *testing.T) {
+	t.Run("reference to struct restriction", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            struct S {}
+
+            let s = S()
+            let ref: &S{} = &s as &S
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource: non-conformance restriction", func(t *testing.T) {
+
 		_, err := ParseAndCheck(t, `
             resource interface I {}
 
@@ -62,7 +104,24 @@ func TestCheckRestrictedResourceType(t *testing.T) {
 		assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[0])
 	})
 
-	t.Run("duplicate restriction", func(t *testing.T) {
+	t.Run("struct: non-conformance restriction", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            struct interface I {}
+
+            // NOTE: S does not conform to I
+            struct S {}
+
+            let s: S{I} = S()
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[0])
+	})
+
+	t.Run("resource: duplicate restriction", func(t *testing.T) {
+
 		_, err := ParseAndCheck(t, `
             resource interface I {}
 
@@ -77,7 +136,24 @@ func TestCheckRestrictedResourceType(t *testing.T) {
 		assert.IsType(t, &sema.InvalidRestrictionTypeDuplicateError{}, errs[0])
 	})
 
-	t.Run("non-resource interface restriction", func(t *testing.T) {
+	t.Run("struct: duplicate restriction", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            struct interface I {}
+
+            struct S: I {}
+
+            // NOTE: I is duplicated
+            let s: S{I, I} = S()
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidRestrictionTypeDuplicateError{}, errs[0])
+	})
+
+	t.Run("restricted resource, with structure interface restriction", func(t *testing.T) {
+
 		_, err := ParseAndCheck(t, `
             struct interface I {}
 
@@ -86,31 +162,28 @@ func TestCheckRestrictedResourceType(t *testing.T) {
             let r: @R{I} <- create R()
         `)
 
-		errs := ExpectCheckerErrors(t, err, 2)
+		errs := ExpectCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
-		assert.IsType(t, &sema.InvalidRestrictionTypeError{}, errs[1])
 	})
 
-	t.Run("non-resource restriction", func(t *testing.T) {
+	t.Run("restricted struct, with resource interface restriction", func(t *testing.T) {
+
 		_, err := ParseAndCheck(t, `
-            struct interface I {}
+            resource interface I {}
 
             struct S: I {}
 
-            let r: S{I} = S()
+            let s: S{I} = S()
         `)
 
-		errs := ExpectCheckerErrors(t, err, 5)
+		errs := ExpectCheckerErrors(t, err, 1)
 
-		assert.IsType(t, &sema.InvalidRestrictedTypeError{}, errs[0])
-		assert.IsType(t, &sema.InvalidRestrictionTypeError{}, errs[1])
-		assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[2])
-		assert.IsType(t, &sema.TypeMismatchError{}, errs[3])
-		assert.IsType(t, &sema.IncorrectTransferOperationError{}, errs[4])
+		assert.IsType(t, &sema.CompositeKindMismatchError{}, errs[0])
 	})
 
-	t.Run("non-concrete resource restriction", func(t *testing.T) {
+	t.Run("resource: non-concrete restricted type", func(t *testing.T) {
+
 		_, err := ParseAndCheck(t, `
             resource interface I {}
 
@@ -125,7 +198,24 @@ func TestCheckRestrictedResourceType(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
-	t.Run("resource interface restriction", func(t *testing.T) {
+	t.Run("struct: non-concrete restricted type", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            struct interface I {}
+
+            struct S: I {}
+
+            let s: [S]{I} = [S()]
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidRestrictedTypeError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	})
+
+	t.Run("restricted resource interface ", func(t *testing.T) {
+
 		_, err := ParseAndCheck(t, `
             resource interface I {}
 
@@ -138,13 +228,28 @@ func TestCheckRestrictedResourceType(t *testing.T) {
 
 		assert.IsType(t, &sema.InvalidRestrictedTypeError{}, errs[0])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	})
 
+	t.Run("restricted struct interface", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            struct interface I {}
+
+            struct S: I {}
+
+            let s: I{} = S()
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidRestrictedTypeError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 }
 
-func TestCheckRestrictedResourceTypeMemberAccess(t *testing.T) {
+func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
 
-	t.Run("no restrictions", func(t *testing.T) {
+	t.Run("no restrictions: resource", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             resource R {
@@ -167,7 +272,30 @@ func TestCheckRestrictedResourceTypeMemberAccess(t *testing.T) {
 		assert.IsType(t, &sema.InvalidRestrictedTypeMemberAccessError{}, errs[0])
 	})
 
-	t.Run("restriction with member", func(t *testing.T) {
+	t.Run("no restrictions: struct", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            struct S {
+                let n: Int
+
+                init(n: Int) {
+                    self.n = n
+                }
+            }
+
+            fun test() {
+                let s: S{} = S(n: 1)
+                s.n
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidRestrictedTypeMemberAccessError{}, errs[0])
+	})
+
+	t.Run("restriction with member: resource", func(t *testing.T) {
+
 		_, err := ParseAndCheck(t, `
 
             resource interface I {
@@ -192,7 +320,33 @@ func TestCheckRestrictedResourceTypeMemberAccess(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restriction without member", func(t *testing.T) {
+	t.Run("restriction with member: struct", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+
+            struct interface I {
+                let n: Int
+            }
+
+            struct S: I {
+                let n: Int
+
+                init(n: Int) {
+                    self.n = n
+                }
+            }
+
+            fun test() {
+                let s: S{I} = S(n: 1)
+                s.n
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("restriction without member: resource", func(t *testing.T) {
+
 		_, err := ParseAndCheck(t, `
 
             resource interface I {
@@ -219,7 +373,35 @@ func TestCheckRestrictedResourceTypeMemberAccess(t *testing.T) {
 		assert.IsType(t, &sema.InvalidRestrictedTypeMemberAccessError{}, errs[0])
 	})
 
-	t.Run("restrictions with clashing members", func(t *testing.T) {
+	t.Run("restriction without member: struct", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+
+            struct interface I {
+                // NOTE: no declaration for 'n'
+            }
+
+            struct S: I {
+                let n: Int
+
+                init(n: Int) {
+                    self.n = n
+                }
+            }
+
+            fun test() {
+                let s: S{I} = S(n: 1)
+                s.n
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.InvalidRestrictedTypeMemberAccessError{}, errs[0])
+	})
+
+	t.Run("restrictions with clashing members: resource", func(t *testing.T) {
+
 		_, err := ParseAndCheck(t, `
 
             resource interface I1 {
@@ -250,11 +432,43 @@ func TestCheckRestrictedResourceTypeMemberAccess(t *testing.T) {
 		assert.IsType(t, &sema.ConformanceError{}, errs[0])
 		assert.IsType(t, &sema.RestrictionMemberClashError{}, errs[1])
 	})
+
+	t.Run("restrictions with clashing members: struct", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+
+            struct interface I1 {
+                let n: Int
+            }
+
+            struct interface I2 {
+                let n: Bool
+            }
+
+            struct S: I1, I2 {
+                let n: Int
+
+                init(n: Int) {
+                    self.n = n
+                }
+            }
+
+            fun test() {
+                let s: S{I1, I2} = S(n: 1)
+                s.n
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.ConformanceError{}, errs[0])
+		assert.IsType(t, &sema.RestrictionMemberClashError{}, errs[1])
+	})
 }
 
-func TestCheckRestrictedResourceTypeSubtyping(t *testing.T) {
+func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 
-	t.Run("resource type to restricted resource type with same type, no restriction", func(t *testing.T) {
+	t.Run("resource type to restricted type with same type, no restriction", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             resource R {}
@@ -268,7 +482,18 @@ func TestCheckRestrictedResourceTypeSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("resource type to restricted resource type with same type, one restriction", func(t *testing.T) {
+	t.Run("struct type to restricted type with same type, no restriction", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            struct S {}
+
+            let s: S{} = S() 
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource type to restricted type with same type, one restriction", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             resource interface I1 {}
@@ -286,7 +511,22 @@ func TestCheckRestrictedResourceTypeSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("resource type to restricted resource type with different restricted type", func(t *testing.T) {
+	t.Run("struct type to restricted type with same type, one restriction", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            struct interface I1 {}
+
+            struct interface I2 {}
+
+            struct S: I1, I2 {}
+
+            let s: S{I1} = S()
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("resource type to restricted type with different restricted type", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             resource R {}
@@ -304,7 +544,22 @@ func TestCheckRestrictedResourceTypeSubtyping(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
-	t.Run("restricted resource type to restricted resource type with same type, no restrictions", func(t *testing.T) {
+	t.Run("struct type to restricted type with different restricted type", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            struct R {}
+
+            struct S {}
+
+            let s: S{} = R()
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("restricted resource type to restricted type with same type, no restrictions", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             resource R {}
@@ -319,7 +574,21 @@ func TestCheckRestrictedResourceTypeSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted resource type to restricted resource type with same type, 0 to 1 restriction", func(t *testing.T) {
+	t.Run("restricted struct type to restricted type with same type, no restrictions", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            struct S {}
+
+            fun test() {
+                let s: S{} = S()
+                let s2: S{} = s
+            }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("restricted resource type to restricted type with same type, 0 to 1 restriction", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             resource interface I1 {}
@@ -338,7 +607,23 @@ func TestCheckRestrictedResourceTypeSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted resource type to restricted resource type with same type, 1 to 2 restrictions", func(t *testing.T) {
+	t.Run("restricted struct type to restricted type with same type, 0 to 1 restriction", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            struct interface I1 {}
+
+            struct interface I2 {}
+
+            struct S: I1, I2 {}
+
+            let s: S{} = S()
+            let s2: S{I1} = s
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("restricted resource type to restricted type with same type, 1 to 2 restrictions", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             resource interface I1 {}
@@ -357,7 +642,24 @@ func TestCheckRestrictedResourceTypeSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted resource type to restricted resource type with same type, reordered restrictions", func(t *testing.T) {
+	t.Run("restricted struct type to restricted type with same type, 1 to 2 restrictions", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+
+            struct interface I1 {}
+
+            struct interface I2 {}
+
+            struct S: I1, I2 {}
+
+            let s: S{I2} = S()
+            let s2: S{I1, I2} = s
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("restricted resource type to restricted type with same type, reordered restrictions", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             resource interface I1 {}
@@ -376,7 +678,23 @@ func TestCheckRestrictedResourceTypeSubtyping(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("restricted resource type to restricted resource type with same type, fewer restrictions", func(t *testing.T) {
+	t.Run("restricted struct type to restricted type with same type, reordered restrictions", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            struct interface I1 {}
+
+            struct interface I2 {}
+
+            struct S: I1, I2 {}
+
+            let s: S{I2, I1} = S()
+            let s2: S{I1, I2} = s
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("restricted resource type to restricted type with same type, fewer restrictions", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
             resource interface I1 {}
@@ -390,6 +708,22 @@ func TestCheckRestrictedResourceTypeSubtyping(t *testing.T) {
                 let r2: @R{I2} <- r
                 destroy r2
             }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("restricted struct type to restricted type with same type, fewer restrictions", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            struct interface I1 {}
+
+            struct interface I2 {}
+
+            struct S: I1, I2 {}
+
+            let s: S{I1, I2} = S()
+            let s2: S{I2} = s
         `)
 
 		require.NoError(t, err)
@@ -413,40 +747,68 @@ func TestCheckRestrictedResourceTypeSubtyping(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("restricted struct type to struct type", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            struct interface I1 {}
+
+            struct interface I2 {}
+
+            struct S: I1, I2 {}
+
+            let s: S{I1} = S()
+            let s2: S = s
+        `)
+
+		require.NoError(t, err)
+	})
 }
 
-func TestCheckRestrictedResourceTypeNoType(t *testing.T) {
+func TestCheckRestrictedTypeNoType(t *testing.T) {
 
-	const types = `
+	const resourceTypes = `
       resource interface I1 {}
 
       resource interface I2 {}
     `
 
+	const structTypes = `
+      struct interface I1 {}
+
+      struct interface I2 {}
+    `
+
 	t.Run("resource: empty", func(t *testing.T) {
 
-		checker, err := ParseAndCheckWithPanic(t,
-			types+`
+		_, err := ParseAndCheckWithPanic(t,
+			resourceTypes+`
               let r: @{} <- panic("")
             `,
 		)
 
-		require.NoError(t, err)
+		errs := ExpectCheckerErrors(t, err, 1)
 
-		rType := checker.GlobalValues["r"].Type
-		require.IsType(t, &sema.RestrictedResourceType{}, rType)
+		assert.IsType(t, &sema.AmbiguousRestrictedTypeError{}, errs[0])
+	})
 
-		ty := rType.(*sema.RestrictedResourceType)
+	t.Run("struct: empty", func(t *testing.T) {
 
-		assert.IsType(t, &sema.AnyResourceType{}, ty.Type)
+		_, err := ParseAndCheckWithPanic(t,
+			structTypes+`
+              let s: {} = panic("")
+            `,
+		)
 
-		require.Len(t, ty.Restrictions, 0)
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AmbiguousRestrictedTypeError{}, errs[0])
 	})
 
 	t.Run("resource: one", func(t *testing.T) {
 
 		checker, err := ParseAndCheckWithPanic(t,
-			types+`
+			resourceTypes+`
               let r: @{I1} <- panic("")
             `,
 		)
@@ -454,11 +816,35 @@ func TestCheckRestrictedResourceTypeNoType(t *testing.T) {
 		require.NoError(t, err)
 
 		rType := checker.GlobalValues["r"].Type
-		require.IsType(t, &sema.RestrictedResourceType{}, rType)
+		require.IsType(t, &sema.RestrictedType{}, rType)
 
-		ty := rType.(*sema.RestrictedResourceType)
+		ty := rType.(*sema.RestrictedType)
 
 		assert.IsType(t, &sema.AnyResourceType{}, ty.Type)
+
+		require.Len(t, ty.Restrictions, 1)
+		assert.Same(t,
+			checker.GlobalTypes["I1"].Type,
+			ty.Restrictions[0],
+		)
+	})
+
+	t.Run("struct: one", func(t *testing.T) {
+
+		checker, err := ParseAndCheckWithPanic(t,
+			structTypes+`
+              let s: {I1} = panic("")
+            `,
+		)
+
+		require.NoError(t, err)
+
+		rType := checker.GlobalValues["s"].Type
+		require.IsType(t, &sema.RestrictedType{}, rType)
+
+		ty := rType.(*sema.RestrictedType)
+
+		assert.IsType(t, &sema.AnyStructType{}, ty.Type)
 
 		require.Len(t, ty.Restrictions, 1)
 		assert.Same(t,
@@ -470,7 +856,7 @@ func TestCheckRestrictedResourceTypeNoType(t *testing.T) {
 	t.Run("resource: two", func(t *testing.T) {
 
 		checker, err := ParseAndCheckWithPanic(t,
-			types+`
+			resourceTypes+`
               let r: @{I1, I2} <- panic("")
             `,
 		)
@@ -478,9 +864,9 @@ func TestCheckRestrictedResourceTypeNoType(t *testing.T) {
 		require.NoError(t, err)
 
 		rType := checker.GlobalValues["r"].Type
-		require.IsType(t, &sema.RestrictedResourceType{}, rType)
+		require.IsType(t, &sema.RestrictedType{}, rType)
 
-		ty := rType.(*sema.RestrictedResourceType)
+		ty := rType.(*sema.RestrictedType)
 
 		assert.IsType(t, &sema.AnyResourceType{}, ty.Type)
 
@@ -495,33 +881,51 @@ func TestCheckRestrictedResourceTypeNoType(t *testing.T) {
 		)
 	})
 
-	t.Run("reference: empty", func(t *testing.T) {
+	t.Run("struct: two", func(t *testing.T) {
 
 		checker, err := ParseAndCheckWithPanic(t,
-			types+`
-              let ref: &{} = panic("")
+			structTypes+`
+              let s: {I1, I2} = panic("")
             `,
 		)
 
 		require.NoError(t, err)
 
-		refType := checker.GlobalValues["ref"].Type
-		require.IsType(t, &sema.ReferenceType{}, refType)
+		rType := checker.GlobalValues["s"].Type
+		require.IsType(t, &sema.RestrictedType{}, rType)
 
-		rType := refType.(*sema.ReferenceType).Type
-		require.IsType(t, &sema.RestrictedResourceType{}, rType)
+		ty := rType.(*sema.RestrictedType)
 
-		ty := rType.(*sema.RestrictedResourceType)
+		assert.IsType(t, &sema.AnyStructType{}, ty.Type)
 
-		assert.IsType(t, &sema.AnyResourceType{}, ty.Type)
-
-		require.Len(t, ty.Restrictions, 0)
+		require.Len(t, ty.Restrictions, 2)
+		assert.Same(t,
+			checker.GlobalTypes["I1"].Type,
+			ty.Restrictions[0],
+		)
+		assert.Same(t,
+			checker.GlobalTypes["I2"].Type,
+			ty.Restrictions[1],
+		)
 	})
 
-	t.Run("reference: one", func(t *testing.T) {
+	t.Run("reference: empty", func(t *testing.T) {
+
+		_, err := ParseAndCheckWithPanic(t,
+			resourceTypes+`
+              let ref: &{} = panic("")
+            `,
+		)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.AmbiguousRestrictedTypeError{}, errs[0])
+	})
+
+	t.Run("resource reference: one", func(t *testing.T) {
 
 		checker, err := ParseAndCheckWithPanic(t,
-			types+`
+			resourceTypes+`
               let ref: &{I1} = panic("")
             `,
 		)
@@ -532,9 +936,9 @@ func TestCheckRestrictedResourceTypeNoType(t *testing.T) {
 		require.IsType(t, &sema.ReferenceType{}, refType)
 
 		rType := refType.(*sema.ReferenceType).Type
-		require.IsType(t, &sema.RestrictedResourceType{}, rType)
+		require.IsType(t, &sema.RestrictedType{}, rType)
 
-		ty := rType.(*sema.RestrictedResourceType)
+		ty := rType.(*sema.RestrictedType)
 
 		assert.IsType(t, &sema.AnyResourceType{}, ty.Type)
 
@@ -545,10 +949,37 @@ func TestCheckRestrictedResourceTypeNoType(t *testing.T) {
 		)
 	})
 
-	t.Run("reference: two", func(t *testing.T) {
+	t.Run("struct reference: one", func(t *testing.T) {
 
 		checker, err := ParseAndCheckWithPanic(t,
-			types+`
+			structTypes+`
+              let ref: &{I1} = panic("")
+            `,
+		)
+
+		require.NoError(t, err)
+
+		refType := checker.GlobalValues["ref"].Type
+		require.IsType(t, &sema.ReferenceType{}, refType)
+
+		rType := refType.(*sema.ReferenceType).Type
+		require.IsType(t, &sema.RestrictedType{}, rType)
+
+		ty := rType.(*sema.RestrictedType)
+
+		assert.IsType(t, &sema.AnyStructType{}, ty.Type)
+
+		require.Len(t, ty.Restrictions, 1)
+		assert.Same(t,
+			checker.GlobalTypes["I1"].Type,
+			ty.Restrictions[0],
+		)
+	})
+
+	t.Run("resource reference: two", func(t *testing.T) {
+
+		checker, err := ParseAndCheckWithPanic(t,
+			resourceTypes+`
               let ref: &{I1, I2} = panic("")
             `,
 		)
@@ -559,11 +990,42 @@ func TestCheckRestrictedResourceTypeNoType(t *testing.T) {
 		require.IsType(t, &sema.ReferenceType{}, refType)
 
 		rType := refType.(*sema.ReferenceType).Type
-		require.IsType(t, &sema.RestrictedResourceType{}, rType)
+		require.IsType(t, &sema.RestrictedType{}, rType)
 
-		ty := rType.(*sema.RestrictedResourceType)
+		ty := rType.(*sema.RestrictedType)
 
 		assert.IsType(t, &sema.AnyResourceType{}, ty.Type)
+
+		require.Len(t, ty.Restrictions, 2)
+		assert.Same(t,
+			checker.GlobalTypes["I1"].Type,
+			ty.Restrictions[0],
+		)
+		assert.Same(t,
+			checker.GlobalTypes["I2"].Type,
+			ty.Restrictions[1],
+		)
+	})
+
+	t.Run("struct reference: two", func(t *testing.T) {
+
+		checker, err := ParseAndCheckWithPanic(t,
+			structTypes+`
+              let ref: &{I1, I2} = panic("")
+            `,
+		)
+
+		require.NoError(t, err)
+
+		refType := checker.GlobalValues["ref"].Type
+		require.IsType(t, &sema.ReferenceType{}, refType)
+
+		rType := refType.(*sema.ReferenceType).Type
+		require.IsType(t, &sema.RestrictedType{}, rType)
+
+		ty := rType.(*sema.RestrictedType)
+
+		assert.IsType(t, &sema.AnyStructType{}, ty.Type)
 
 		require.Len(t, ty.Restrictions, 2)
 		assert.Same(t,

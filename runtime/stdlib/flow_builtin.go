@@ -272,7 +272,7 @@ func (*BlockType) IsInvalidType() bool {
 	return false
 }
 
-func (*BlockType) ContainsFirstLevelResourceInterfaceType() bool {
+func (*BlockType) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 

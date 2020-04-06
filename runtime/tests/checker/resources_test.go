@@ -2346,10 +2346,13 @@ func testResourceNesting(
 	t.Run(testName, func(t *testing.T) {
 
 		innerTypeAnnotation := "T"
-		if innerIsInterface &&
-			innerCompositeKind == common.CompositeKindResource {
-
-			innerTypeAnnotation = "AnyResource{T}"
+		if innerIsInterface {
+			switch innerCompositeKind {
+			case common.CompositeKindResource:
+				innerTypeAnnotation = "AnyResource{T}"
+			case common.CompositeKindStructure:
+				innerTypeAnnotation = "AnyStruct{T}"
+			}
 		}
 
 		// Prepare the initializer, if needed.
@@ -2534,7 +2537,7 @@ func TestCheckInvalidResourceInterfaceUseAsType(t *testing.T) {
 
 	errs := ExpectCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.InvalidResourceInterfaceTypeError{}, errs[0])
+	assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 }
 
@@ -3832,7 +3835,7 @@ func TestCheckInvalidResourceInterfaceType(t *testing.T) {
 
 		errs := ExpectCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.InvalidResourceInterfaceTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 
@@ -3847,7 +3850,7 @@ func TestCheckInvalidResourceInterfaceType(t *testing.T) {
 
 		errs := ExpectCheckerErrors(t, err, 2)
 
-		assert.IsType(t, &sema.InvalidResourceInterfaceTypeError{}, errs[0])
+		assert.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
 	})
 }
