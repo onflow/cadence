@@ -4692,7 +4692,7 @@ func (v PublicAccountValue) String() string {
 	return fmt.Sprintf("PublicAccount(%s)", v.Address)
 }
 
-func (v PublicAccountValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v PublicAccountValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case "address":
 		return v.Address
@@ -4704,6 +4704,9 @@ func (v PublicAccountValue) GetMember(_ *Interpreter, _ LocationRange, name stri
 
 	case "getCapability":
 		return accountGetCapabilityFunction(v.Address, false)
+
+	case "getLinkTarget":
+		return inter.authAccountGetLinkTargetFunction(v.Address)
 
 	default:
 		panic(errors.NewUnreachableError())
