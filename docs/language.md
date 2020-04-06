@@ -748,6 +748,102 @@ let c = a ?? b
 let d = a ?? false
 ```
 
+#### Force Unwrap (`!`)
+
+The force-unwrap operator (`!`) returns
+the value inside an optional if it contains a value,
+or panics and aborts the execution if the optional has no value,
+i.e., the optional value is `nil`.
+
+```cadence
+// Declare a constant which has an optional integer type
+//
+let a: Int? = nil
+
+// Declare a constant with a non-optional integer type,
+// which is initialized to `a` if `a` is non-nil.
+// If `a` is nil, the program aborts.
+//
+let b: Int = a!
+// The program aborts because `a` is nil.
+
+// Declare another optional integer constant
+let c: Int? = 3
+
+// Declare a non-optional integer 
+// which is initialized to `c` if `a` is non-nil.
+// If `c` is nil, the program aborts.
+let d: Int = c!
+// `d` is initialized to 3 because c isn't nil.
+
+```
+
+The force-unwrap operator can only be applied
+to values which have an optional type.
+
+```cadence
+// Declare a constant with a non-optional integer type.
+//
+let a = 1
+
+// Invalid: force-unwrap operator is applied to a value which has a 
+// non-optional type
+// (a has the non-optional type `Int`).
+//
+let b = a!
+```
+
+```cadence
+// Invalid: The force-unwrap operator is applied 
+// to a value which has a non-optional type
+// (the integer literal is of type `Int`).
+//
+let c = 1!
+```
+
+#### Force-assignment operator (`=!` or `<-!`)
+
+The force-assignment operator (`=!` or `<-!`) assigns a value to an optional-typed variable if the variable is nil.
+If the variable is non-nil, the execution of the program aborts.
+
+```cadence
+// Declare a constant which has an optional integer type
+//
+let a: Int? = nil
+
+// Force assign a value to `a`.
+// Since `a` is nil, the assignment succeeds.
+//
+let a: Int =! 4
+
+// Declare another optional constant which contains a value
+let b: Int? = 5
+
+// Force assign a value to `b`.
+// Since `b` is non-nil, the assignment fails and the program aborts.
+let b: =! 6
+```
+
+The force-assignment operator can only be applied
+to values which have an optional type.
+
+```cadence
+// Declare a constant with a non-optional integer type.
+//
+let a = 1
+
+// Invalid: force-assignment operator is applied to a value which has a 
+// non-optional type
+// (a has the non-optional type `Int`).
+//
+let a =! 5
+```
+
+The force-assignment operator can also be used for 
+[resource types](#resources) and the move operator (`<-!`), 
+which are covered in a later section.
+
+
 #### Conditional Downcasting Operator
 
 > 🚧 Status: The conditional downcasting operator `as?` is implemented,
@@ -2528,7 +2624,38 @@ while a < 5 {
 // `a` is `5`
 ```
 
-The `continue` statement can be used to stop the current iteration of the loop and start the next iteration.
+### Looping: For-in statement
+
+For-in statements allow a certain piece of code to be executed repeatedly for 
+each element in an array or a dictionary.
+
+The for-in statement starts with the `for` keyword, followed by the name of 
+the element that is used in each iteration of the loop, 
+followed by the `in` keyword, and then followed by the array or dictionary
+that is being interated through in the loop. 
+
+Then, the code that should be repeatedly executed in each iteration of the loop
+is enclosed in curly braces.
+
+If there are no elements in the data structure, the code in the loop will not
+be executed at all. Otherwise, the code will execute as many times
+as there are elements in the data structure.
+
+```cadence,file=control-flow-for.cdc
+var array = ["Hello", "World", "Foo", "Bar"]
+for element in array {
+    log(element)
+}
+
+// The loop would log:
+// "Hello"
+// "World"
+// "Foo"
+// "Bar"
+
+```
+
+The `continue` statement can be used to stop the current iteration of a loop and start the next iteration.
 
 ```cadence,file=control-flow-continue.cdc
 var i = 0
