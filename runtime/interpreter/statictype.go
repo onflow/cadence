@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"encoding/gob"
 	"fmt"
 	"strings"
 
@@ -26,6 +27,10 @@ type TypeStaticType struct {
 	Type sema.Type
 }
 
+func init() {
+	gob.Register(TypeStaticType{})
+}
+
 func (TypeStaticType) isStaticType() {}
 
 func (t TypeStaticType) String() string {
@@ -36,6 +41,10 @@ func (t TypeStaticType) String() string {
 
 type CompositeStaticType struct {
 	TypeID sema.TypeID
+}
+
+func init() {
+	gob.Register(CompositeStaticType{})
 }
 
 func (CompositeStaticType) isStaticType() {}
@@ -50,6 +59,10 @@ type InterfaceStaticType struct {
 	TypeID sema.TypeID
 }
 
+func init() {
+	gob.Register(InterfaceStaticType{})
+}
+
 func (InterfaceStaticType) isStaticType() {}
 
 func (t InterfaceStaticType) String() string {
@@ -60,6 +73,10 @@ func (t InterfaceStaticType) String() string {
 
 type VariableSizedStaticType struct {
 	Type StaticType
+}
+
+func init() {
+	gob.Register(VariableSizedStaticType{})
 }
 
 func (VariableSizedStaticType) isStaticType() {}
@@ -75,6 +92,10 @@ type ConstantSizedStaticType struct {
 	Size uint64
 }
 
+func init() {
+	gob.Register(ConstantSizedStaticType{})
+}
+
 func (ConstantSizedStaticType) isStaticType() {}
 
 func (t ConstantSizedStaticType) String() string {
@@ -86,6 +107,10 @@ func (t ConstantSizedStaticType) String() string {
 type DictionaryStaticType struct {
 	KeyType   StaticType
 	ValueType StaticType
+}
+
+func init() {
+	gob.Register(DictionaryStaticType{})
 }
 
 func (DictionaryStaticType) isStaticType() {}
@@ -100,6 +125,10 @@ type OptionalStaticType struct {
 	Type StaticType
 }
 
+func init() {
+	gob.Register(OptionalStaticType{})
+}
+
 func (OptionalStaticType) isStaticType() {}
 
 func (t OptionalStaticType) String() string {
@@ -111,6 +140,10 @@ func (t OptionalStaticType) String() string {
 type RestrictedStaticType struct {
 	Type         StaticType
 	Restrictions []sema.TypeID
+}
+
+func init() {
+	gob.Register(RestrictedStaticType{})
 }
 
 func (RestrictedStaticType) isStaticType() {}
@@ -130,6 +163,10 @@ func (t RestrictedStaticType) String() string {
 type ReferenceStaticType struct {
 	Authorized bool
 	Type       StaticType
+}
+
+func init() {
+	gob.Register(ReferenceStaticType{})
 }
 
 func (ReferenceStaticType) isStaticType() {}
