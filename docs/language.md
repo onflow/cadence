@@ -809,7 +809,7 @@ the execution of the program aborts.
 
 The force-assignment operator is only used for 
 [resource types](#resources) and the move operator (`<-`), 
-which are covered in a later section.
+which are covered the resources section of this document.
 
 
 #### Conditional Downcasting Operator
@@ -2569,7 +2569,9 @@ if let number = noNumber {
 }
 ```
 
-### Looping: while-statement
+### Looping: 
+
+#### while-statement
 
 While-statements allow a certain piece of code to be executed repeatedly, as long as a condition remains true.
 
@@ -2592,7 +2594,7 @@ while a < 5 {
 // `a` is `5`
 ```
 
-### Looping: For-in statement
+#### For-in statement
 
 For-in statements allow a certain piece of code to be executed repeatedly for 
 each element in an array.
@@ -2623,6 +2625,8 @@ for element in array {
 
 ```
 
+#### continue and break
+
 In for-loops and while-loops, the `continue` statement can be used to stop the current iteration of a loop and start the next iteration.
 
 ```cadence,file=control-flow-continue.cdc
@@ -2635,8 +2639,20 @@ while i < 10 {
     }
     x = x + 1
 }
-
 // `x` is `8`
+
+
+let array = [2, 2, 3]
+var sum = 0
+for element in array {
+    if element == 2 {
+        continue
+    } 
+    sum = sum + element
+}
+
+// `sum` is `3`
+
 ```
 
 The `break` statement can be used to stop the execution 
@@ -2650,8 +2666,19 @@ while x < 10 {
         break
     }
 }
-
 // `x` is `5`
+
+
+let array = [1, 2, 3]
+var sum = 0
+for element in array {
+    if element == 2 {
+        break
+    } 
+    sum = sum + element
+}
+
+// `sum` is `1`
 ```
 
 ### Immediate function return: return-statement
