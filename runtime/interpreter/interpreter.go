@@ -1318,65 +1318,22 @@ func (interpreter *Interpreter) identifierExpressionGetterSetter(identifierExpre
 func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast.IndexExpression) Trampoline {
 	return indexExpression.TargetExpression.Accept(interpreter).(Trampoline).
 		FlatMap(func(result interface{}) Trampoline {
-			switch typedResult := result.(type) {
-			case ValueIndexableValue:
-				return indexExpression.IndexingExpression.Accept(interpreter).(Trampoline).
-					FlatMap(func(result interface{}) Trampoline {
-						indexingValue := result.(Value)
-						locationRange := interpreter.locationRange(indexExpression)
-						return Done{
-							Result: getterSetter{
-								get: func() Value {
-									return typedResult.Get(interpreter, locationRange, indexingValue)
-								},
-								set: func(value Value) {
-									typedResult.Set(interpreter, locationRange, indexingValue, value)
-								},
+			typedResult := result.(ValueIndexableValue)
+			return indexExpression.IndexingExpression.Accept(interpreter).(Trampoline).
+				FlatMap(func(result interface{}) Trampoline {
+					indexingValue := result.(Value)
+					locationRange := interpreter.locationRange(indexExpression)
+					return Done{
+						Result: getterSetter{
+							get: func() Value {
+								return typedResult.Get(interpreter, locationRange, indexingValue)
 							},
-						}
-					})
-
-			case StorageValue:
-				return interpreter.visitStorageIndexExpression(indexExpression, typedResult.Address, AccessLevelPrivate)
-
-			case PublishedValue:
-				return interpreter.visitStorageIndexExpression(indexExpression, typedResult.Address, AccessLevelPublic)
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
-		})
-}
-
-func (interpreter *Interpreter) visitStorageIndexExpression(
-	indexExpression *ast.IndexExpression,
-	storageAddress common.Address,
-	accessLevel AccessLevel,
-) Trampoline {
-	indexingType := interpreter.Checker.Elaboration.IndexExpressionIndexingTypes[indexExpression]
-	rawKey := interpreter.storageKeyHandler(interpreter, storageAddress, indexingType)
-	key := PrefixedStorageKey(rawKey, accessLevel)
-	return Done{
-		Result: getterSetter{
-			get: func() Value {
-				return interpreter.readStored(storageAddress, key)
-			},
-			set: func(value Value) {
-				interpreter.writeStored(storageAddress, key, value.(OptionalValue))
-			},
-		},
-	}
-}
-
-func (interpreter *Interpreter) visitReadStorageIndexExpression(
-	expression *ast.IndexExpression,
-	storageAddress common.Address,
-	accessLevel AccessLevel,
-) Trampoline {
-	return interpreter.visitStorageIndexExpression(expression, storageAddress, accessLevel).
-		Map(func(result interface{}) interface{} {
-			getterSetter := result.(getterSetter)
-			return getterSetter.get()
+							set: func(value Value) {
+								typedResult.Set(interpreter, locationRange, indexingValue, value)
+							},
+						},
+					}
+				})
 		})
 }
 
@@ -1845,33 +1802,14 @@ func PrefixedStorageKey(key string, accessLevel AccessLevel) string {
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {
 	return expression.TargetExpression.Accept(interpreter).(Trampoline).
 		FlatMap(func(result interface{}) Trampoline {
-			switch typedResult := result.(type) {
-			case ValueIndexableValue:
-				return expression.IndexingExpression.Accept(interpreter).(Trampoline).
-					FlatMap(func(result interface{}) Trampoline {
-						indexingValue := result.(Value)
-						locationRange := interpreter.locationRange(expression)
-						value := typedResult.Get(interpreter, locationRange, indexingValue)
-						return Done{Result: value}
-					})
-
-			case StorageValue:
-				return interpreter.visitReadStorageIndexExpression(
-					expression,
-					typedResult.Address,
-					AccessLevelPrivate,
-				)
-
-			case PublishedValue:
-				return interpreter.visitReadStorageIndexExpression(
-					expression,
-					typedResult.Address,
-					AccessLevelPublic,
-				)
-
-			default:
-				panic(errors.NewUnreachableError())
-			}
+			typedResult := result.(ValueIndexableValue)
+			return expression.IndexingExpression.Accept(interpreter).(Trampoline).
+				FlatMap(func(result interface{}) Trampoline {
+					indexingValue := result.(Value)
+					locationRange := interpreter.locationRange(expression)
+					value := typedResult.Get(interpreter, locationRange, indexingValue)
+					return Done{Result: value}
+				})
 		})
 }
 
@@ -3223,36 +3161,13 @@ func (interpreter *Interpreter) VisitReferenceExpression(referenceExpression *as
 
 	authorized := referenceExpression.Type.(*ast.ReferenceType).Authorized
 
-	if interpreter.Checker.Elaboration.IsReferenceIntoStorage[referenceExpression] {
-		indexExpression := referenceExpression.Expression.(*ast.IndexExpression)
-		return indexExpression.TargetExpression.Accept(interpreter).(Trampoline).
-			FlatMap(func(result interface{}) Trampoline {
-				storage := result.(StorageValue)
-
-				indexingType := interpreter.Checker.Elaboration.IndexExpressionIndexingTypes[indexExpression]
-				key := interpreter.storageKeyHandler(interpreter, storage.Address, indexingType)
-
-				key = PrefixedStorageKey(key, AccessLevelPrivate)
-
-				referenceValue := &StorageReferenceValue{
-					Authorized:           authorized,
-					TargetStorageAddress: storage.Address,
-					TargetKey:            key,
-					// NOTE: new value has no owner
-					Owner: nil,
-				}
-
-				return Done{Result: referenceValue}
-			})
-	} else {
-		return referenceExpression.Expression.Accept(interpreter).(Trampoline).
-			Map(func(result interface{}) interface{} {
-				return &EphemeralReferenceValue{
-					Authorized: authorized,
-					Value:      result.(Value),
-				}
-			})
-	}
+	return referenceExpression.Expression.Accept(interpreter).(Trampoline).
+		Map(func(result interface{}) interface{} {
+			return &EphemeralReferenceValue{
+				Authorized: authorized,
+				Value:      result.(Value),
+			}
+		})
 }
 
 func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpression) ast.Repr {
@@ -3363,8 +3278,6 @@ func (interpreter *Interpreter) newConverterFunction(converter ValueConverter) F
 // - Account
 // - PublicAccount
 // - Block
-// - Storage
-// - References
 
 func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Type) bool {
 	switch typedSubType := subType.(type) {
@@ -3471,15 +3384,6 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 			return interpreter.IsSubType(typedSubType.InnerType, typedSuperType.Type)
 
 		case *sema.AnyStructType, *sema.AnyResourceType:
-			return true
-
-		default:
-			return false
-		}
-
-	case StorageDynamicType:
-		switch superType.(type) {
-		case *sema.StorageType, *sema.AnyStructType:
 			return true
 
 		default:
