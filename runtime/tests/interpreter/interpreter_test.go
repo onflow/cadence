@@ -5065,81 +5065,6 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
 	require.NoError(t, err)
 }
 
-var storageValueDeclaration = map[string]sema.ValueDeclaration{
-	"storage": stdlib.StandardLibraryValue{
-		Name:       "storage",
-		Type:       &sema.StorageType{},
-		Kind:       common.DeclarationKindConstant,
-		IsConstant: true,
-	},
-}
-
-func TestInterpretStorage(t *testing.T) {
-
-	storedValues := map[string]interpreter.OptionalValue{}
-
-	// NOTE: Getter and Setter are very naive for testing purposes and don't remove nil values
-	//
-
-	getter := func(_ *interpreter.Interpreter, _ common.Address, key string) interpreter.OptionalValue {
-		value, ok := storedValues[key]
-		if !ok {
-			return interpreter.NilValue{}
-		}
-		return value
-	}
-
-	setter := func(_ *interpreter.Interpreter, _ common.Address, key string, value interpreter.OptionalValue) {
-		storedValues[key] = value
-	}
-
-	storageValue := interpreter.StorageValue{}
-
-	inter := parseCheckAndInterpretWithOptions(t,
-		`
-          pub resource R {}
-
-          pub fun test(): @R? {
-              let oldR <- storage[R] <- create R()
-              destroy oldR
-
-              let storedR <- storage[R] <- nil
-              return <-storedR
-          }
-        `,
-		ParseCheckAndInterpretOptions{
-			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(storageValueDeclaration),
-			},
-			Options: []interpreter.Option{
-				interpreter.WithPredefinedValues(map[string]interpreter.Value{
-					"storage": storageValue,
-				}),
-				interpreter.WithStorageReadHandler(getter),
-				interpreter.WithStorageWriteHandler(setter),
-				interpreter.WithStorageKeyHandler(
-					func(_ *interpreter.Interpreter, _ common.Address, indexingType sema.Type) string {
-						return string(indexingType.ID())
-					},
-				),
-			},
-		},
-	)
-
-	value, err := inter.Invoke("test")
-	require.NoError(t, err)
-
-	require.IsType(t,
-		&interpreter.SomeValue{},
-		value,
-	)
-
-	assert.IsType(t,
-		&interpreter.CompositeValue{},
-		value.(*interpreter.SomeValue).Value,
-	)
-}
-
 func TestInterpretSwapVariables(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
@@ -5762,133 +5687,58 @@ func TestInterpretSwapResourceDictionaryElementRemoveUsingNil(t *testing.T) {
 
 func TestInterpretReferenceExpression(t *testing.T) {
 
-	storageValue := interpreter.StorageValue{}
+	inter := parseCheckAndInterpret(t, `
+      pub resource R {}
 
-	inter := parseCheckAndInterpretWithOptions(t, `
-          pub resource R {}
-
-          pub fun test(): &R {
-              return &storage[R] as &R
-          }
-        `,
-		ParseCheckAndInterpretOptions{
-			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(storageValueDeclaration),
-			},
-			Options: []interpreter.Option{
-				interpreter.WithPredefinedValues(map[string]interpreter.Value{
-					"storage": storageValue,
-				}),
-				interpreter.WithStorageKeyHandler(
-					func(_ *interpreter.Interpreter, _ common.Address, indexingType sema.Type) string {
-						return string(indexingType.ID())
-					},
-				),
-			},
-		},
-	)
+      pub fun test(): &R {
+          let r <- create R()
+          let ref = &r as &R
+          destroy r
+          return ref
+      }
+    `)
 
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
 
 	require.IsType(t,
-		&interpreter.StorageReferenceValue{},
-		value,
-	)
-
-	rType := inter.Checker.GlobalTypes["R"].Type
-
-	require.Equal(t,
-		&interpreter.StorageReferenceValue{
-			TargetStorageAddress: storageValue.Address,
-			// TODO: improve
-			TargetKey: interpreter.PrefixedStorageKey(
-				string(rType.ID()),
-				interpreter.AccessLevelPrivate,
-			),
-		},
+		&interpreter.EphemeralReferenceValue{},
 		value,
 	)
 }
 
 func TestInterpretReferenceUse(t *testing.T) {
 
-	storedValues := map[string]interpreter.OptionalValue{}
+	inter := parseCheckAndInterpret(t, `
+      pub resource R {
+          pub(set) var x: Int
 
-	storageAddress := common.Address{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-	}
-
-	// NOTE: Getter and Setter are very naive for testing purposes and don't remove nil values
-	getter := func(_ *interpreter.Interpreter, address common.Address, key string) interpreter.OptionalValue {
-		assert.Equal(t, storageAddress, address)
-
-		value, ok := storedValues[key]
-		if !ok {
-			return interpreter.NilValue{}
-		}
-		return value
-	}
-
-	setter := func(_ *interpreter.Interpreter, address common.Address, key string, value interpreter.OptionalValue) {
-		assert.Equal(t, storageAddress, address)
-
-		storedValues[key] = value
-	}
-
-	storageValue := interpreter.StorageValue{
-		Address: storageAddress,
-	}
-
-	inter := parseCheckAndInterpretWithOptions(t, `
-          pub resource R {
-              pub(set) var x: Int
-
-              init() {
-                  self.x = 0
-              }
-
-              pub fun setX(_ newX: Int) {
-                  self.x = newX
-              }
+          init() {
+              self.x = 0
           }
 
-          pub fun test(): [Int] {
-              var r: @R? <- create R()
-              storage[R] <-> r
-              // there was no old value, but it must be discarded
-              destroy r
-
-              let ref1 = &storage[R] as &R
-              let ref2 = &storage[R] as &R
-
-              ref1.x = 1
-              let x1 = ref1.x
-              ref1.setX(2)
-              let x2 = ref1.x
-
-              let x3 = ref2.x
-              return [x1, x2, x3]
+          pub fun setX(_ newX: Int) {
+              self.x = newX
           }
-        `,
-		ParseCheckAndInterpretOptions{
-			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(storageValueDeclaration),
-			},
-			Options: []interpreter.Option{
-				interpreter.WithPredefinedValues(map[string]interpreter.Value{
-					"storage": storageValue,
-				}),
-				interpreter.WithStorageReadHandler(getter),
-				interpreter.WithStorageWriteHandler(setter),
-				interpreter.WithStorageKeyHandler(
-					func(_ *interpreter.Interpreter, _ common.Address, indexingType sema.Type) string {
-						return string(indexingType.ID())
-					},
-				),
-			},
-		},
-	)
+      }
+
+      pub fun test(): [Int] {
+          let r <- create R()
+
+          let ref1 = &r as &R
+          let ref2 = &r as &R
+
+          ref1.x = 1
+          let x1 = ref1.x
+          ref1.setX(2)
+          let x2 = ref1.x
+
+          let x3 = ref2.x
+          let res = [x1, x2, x3]
+          destroy r
+          return res
+      }
+    `)
 
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
@@ -5905,75 +5755,32 @@ func TestInterpretReferenceUse(t *testing.T) {
 
 func TestInterpretReferenceUseAccess(t *testing.T) {
 
-	storedValues := map[string]interpreter.OptionalValue{}
+	inter := parseCheckAndInterpret(t, `
+      pub resource R {
+          pub(set) var x: Int
 
-	storageAddress := common.Address{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-	}
-
-	// NOTE: Getter and Setter are very naive for testing purposes and don't remove nil values
-	getter := func(_ *interpreter.Interpreter, _ common.Address, key string) interpreter.OptionalValue {
-		value, ok := storedValues[key]
-		if !ok {
-			return interpreter.NilValue{}
-		}
-		return value
-	}
-
-	setter := func(_ *interpreter.Interpreter, _ common.Address, key string, value interpreter.OptionalValue) {
-		storedValues[key] = value
-	}
-
-	storageValue := interpreter.StorageValue{
-		Address: storageAddress,
-	}
-
-	inter := parseCheckAndInterpretWithOptions(t, `
-          pub resource R {
-              pub(set) var x: Int
-
-              init() {
-                  self.x = 0
-              }
-
-              pub fun setX(_ newX: Int) {
-                  self.x = newX
-              }
+          init() {
+              self.x = 0
           }
 
-          pub fun test(): [Int] {
-              var rs: @[R]? <- [<-create R()]
-              storage[[R]] <-> rs
-              // there was no old value, but it must be discarded
-              destroy rs
-
-              let ref = &storage[[R]] as &[R]
-              let x0 = ref[0].x
-              ref[0].x = 1
-              let x1 = ref[0].x
-              ref[0].setX(2)
-              let x2 = ref[0].x
-              return [x0, x1, x2]
+          pub fun setX(_ newX: Int) {
+              self.x = newX
           }
-        `,
-		ParseCheckAndInterpretOptions{
-			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(storageValueDeclaration),
-			},
-			Options: []interpreter.Option{
-				interpreter.WithPredefinedValues(map[string]interpreter.Value{
-					"storage": storageValue,
-				}),
-				interpreter.WithStorageReadHandler(getter),
-				interpreter.WithStorageWriteHandler(setter),
-				interpreter.WithStorageKeyHandler(
-					func(_ *interpreter.Interpreter, _ common.Address, indexingType sema.Type) string {
-						return string(indexingType.ID())
-					},
-				),
-			},
-		},
-	)
+      }
+
+      pub fun test(): [Int] {
+          let rs <- [<-create R()]
+          let ref = &rs as &[R]
+          let x0 = ref[0].x
+          ref[0].x = 1
+          let x1 = ref[0].x
+          ref[0].setX(2)
+          let x2 = ref[0].x
+          let res = [x0, x1, x2]
+          destroy rs
+          return res
+      }
+    `)
 
 	value, err := inter.Invoke("test")
 	require.NoError(t, err)
@@ -5990,64 +5797,21 @@ func TestInterpretReferenceUseAccess(t *testing.T) {
 
 func TestInterpretReferenceDereferenceFailure(t *testing.T) {
 
-	storedValues := map[string]interpreter.OptionalValue{}
+	inter := parseCheckAndInterpret(t, `
+      pub resource R {
+          pub fun foo() {}
+      }
 
-	storageAddress := common.Address{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-	}
-
-	// NOTE: Getter and Setter are very naive for testing purposes and don't remove nil values
-	getter := func(_ *interpreter.Interpreter, address common.Address, key string) interpreter.OptionalValue {
-		assert.Equal(t, storageAddress, address)
-
-		value, ok := storedValues[key]
-		if !ok {
-			return interpreter.NilValue{}
-		}
-		return value
-	}
-
-	setter := func(_ *interpreter.Interpreter, address common.Address, key string, value interpreter.OptionalValue) {
-		assert.Equal(t, storageAddress, address)
-
-		storedValues[key] = value
-	}
-
-	storageValue := interpreter.StorageValue{
-		Address: storageAddress,
-	}
-
-	inter := parseCheckAndInterpretWithOptions(t, `
-          pub resource R {
-              pub fun foo() {}
-          }
-
-          pub fun test() {
-              let ref = &storage[R] as &R
-              ref.foo()
-          }
-        `,
-		ParseCheckAndInterpretOptions{
-			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(storageValueDeclaration),
-			},
-			Options: []interpreter.Option{
-				interpreter.WithPredefinedValues(map[string]interpreter.Value{
-					"storage": storageValue,
-				}),
-				interpreter.WithStorageReadHandler(getter),
-				interpreter.WithStorageWriteHandler(setter),
-				interpreter.WithStorageKeyHandler(
-					func(_ *interpreter.Interpreter, _ common.Address, indexingType sema.Type) string {
-						return string(indexingType.ID())
-					},
-				),
-			},
-		},
-	)
+      pub fun test() {
+          let r <- create R()
+          let ref = &r as &R
+          destroy r
+          ref.foo()
+      }
+    `)
 
 	_, err := inter.Invoke("test")
-	assert.IsType(t, &interpreter.DereferenceError{}, err)
+	assert.IsType(t, &interpreter.DestroyedCompositeError{}, err)
 }
 
 func TestInterpretInvalidForwardReferenceCall(t *testing.T) {
@@ -6450,293 +6214,6 @@ func TestInterpretOptionalChainingFunctionCall(t *testing.T) {
 	)
 }
 
-// TestInterpretStorageResourceMoveRemovalInSwap tests that reading but also
-// resource moving from storage results in a deletion from storage,
-// when the storage index expression is located in a swap statement
-//
-func TestInterpretStorageResourceMoveRemovalInSwap(t *testing.T) {
-
-	allStoredValues := map[common.Address]map[string]interpreter.OptionalValue{}
-
-	// NOTE: Getter and Setter are very naive for testing purposes and don't remove nil values
-	getter := func(_ *interpreter.Interpreter, address common.Address, key string) interpreter.OptionalValue {
-		storedValues := allStoredValues[address]
-		if storedValues == nil {
-			storedValues = map[string]interpreter.OptionalValue{}
-			allStoredValues[address] = storedValues
-		}
-
-		value, ok := storedValues[key]
-		if !ok {
-			return interpreter.NilValue{}
-		}
-		return value
-	}
-
-	setter := func(_ *interpreter.Interpreter, address common.Address, key string, value interpreter.OptionalValue) {
-		storedValues := allStoredValues[address]
-		if storedValues == nil {
-			storedValues = map[string]interpreter.OptionalValue{}
-			allStoredValues[address] = storedValues
-		}
-
-		storedValues[key] = value
-	}
-
-	storageAddress1 := common.Address{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-	}
-	storageValue1 := interpreter.StorageValue{
-		Address: storageAddress1,
-	}
-
-	storageAddress2 := common.Address{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-	}
-	storageValue2 := interpreter.StorageValue{
-		Address: storageAddress2,
-	}
-
-	inter := parseCheckAndInterpretWithOptions(t, `
-          pub resource R {}
-
-          pub fun test() {
-              var r: @R? <- nil
-              storage1[R] <-> r
-              storage2[R] <-> r
-              // there was no old value, but it must be discarded
-              destroy r
-          }
-        `,
-		ParseCheckAndInterpretOptions{
-			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(
-					map[string]sema.ValueDeclaration{
-						"storage1": stdlib.StandardLibraryValue{
-							Name:       "storage1",
-							Type:       &sema.StorageType{},
-							Kind:       common.DeclarationKindConstant,
-							IsConstant: true,
-						},
-						"storage2": stdlib.StandardLibraryValue{
-							Name:       "storage2",
-							Type:       &sema.StorageType{},
-							Kind:       common.DeclarationKindConstant,
-							IsConstant: true,
-						},
-					},
-				),
-			},
-			Options: []interpreter.Option{
-				interpreter.WithPredefinedValues(map[string]interpreter.Value{
-					"storage1": storageValue1,
-					"storage2": storageValue2,
-				}),
-				interpreter.WithStorageReadHandler(getter),
-				interpreter.WithStorageWriteHandler(setter),
-				interpreter.WithStorageKeyHandler(
-					func(_ *interpreter.Interpreter, _ common.Address, indexingType sema.Type) string {
-						return string(indexingType.ID())
-					},
-				),
-			},
-		},
-	)
-
-	rType := inter.Checker.GlobalTypes["R"].Type.(*sema.CompositeType)
-
-	storageKey := interpreter.PrefixedStorageKey(string(rType.ID()), interpreter.AccessLevelPrivate)
-
-	originalValue := &interpreter.CompositeValue{
-		TypeID: rType.ID(),
-		Kind:   common.CompositeKindResource,
-		Fields: map[string]interpreter.Value{},
-		Owner:  &storageAddress1,
-	}
-
-	allStoredValues[storageAddress1] = map[string]interpreter.OptionalValue{
-		storageKey: interpreter.NewSomeValueOwningNonCopying(
-			originalValue,
-		),
-	}
-
-	_, err := inter.Invoke("test")
-	require.NoError(t, err)
-
-	// Assert the ownership of the resource changed to account 2
-
-	assert.Equal(t,
-		&storageAddress2,
-		originalValue.GetOwner(),
-	)
-
-	// Assert the resource was removed from storage of account 1
-
-	storedValue1 := allStoredValues[storageAddress1][storageKey]
-
-	assert.Equal(t,
-		interpreter.NilValue{},
-		storedValue1,
-	)
-
-	// Assert the resource was moved into storage of account 2
-
-	storedValue2 := allStoredValues[storageAddress2][storageKey]
-
-	require.IsType(t,
-		&interpreter.SomeValue{},
-		storedValue2,
-	)
-
-	assert.Equal(t,
-		&storageAddress2,
-		storedValue2.(*interpreter.SomeValue).Value.GetOwner(),
-	)
-}
-
-// TestInterpretStorageResourceMoveRemovalInVariableDeclaration tests that reading but also
-// resource moving from storage results in a deletion from storage,
-// when the storage index expression is located in a variable declaration
-//
-func TestInterpretStorageResourceMoveRemovalInVariableDeclaration(t *testing.T) {
-
-	allStoredValues := map[common.Address]map[string]interpreter.OptionalValue{}
-
-	// NOTE: Getter and Setter are very naive for testing purposes and don't remove nil values
-	getter := func(_ *interpreter.Interpreter, address common.Address, key string) interpreter.OptionalValue {
-		storedValues := allStoredValues[address]
-		if storedValues == nil {
-			storedValues = map[string]interpreter.OptionalValue{}
-			allStoredValues[address] = storedValues
-		}
-
-		value, ok := storedValues[key]
-		if !ok {
-			return interpreter.NilValue{}
-		}
-		return value
-	}
-
-	setter := func(_ *interpreter.Interpreter, address common.Address, key string, value interpreter.OptionalValue) {
-		storedValues := allStoredValues[address]
-		if storedValues == nil {
-			storedValues = map[string]interpreter.OptionalValue{}
-			allStoredValues[address] = storedValues
-		}
-
-		storedValues[key] = value
-	}
-
-	storageAddress1 := common.Address{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-	}
-	storageValue1 := interpreter.StorageValue{
-		Address: storageAddress1,
-	}
-
-	storageAddress2 := common.Address{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-	}
-	storageValue2 := interpreter.StorageValue{
-		Address: storageAddress2,
-	}
-
-	inter := parseCheckAndInterpretWithOptions(t, `
-          pub resource R {}
-
-          pub fun test() {
-              let r <- storage1[R] <- nil
-              let r2 <- storage2[R] <- r
-              // there was no old value, but it must be discarded
-              destroy r2
-          }
-        `,
-		ParseCheckAndInterpretOptions{
-			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(
-					map[string]sema.ValueDeclaration{
-						"storage1": stdlib.StandardLibraryValue{
-							Name:       "storage1",
-							Type:       &sema.StorageType{},
-							Kind:       common.DeclarationKindConstant,
-							IsConstant: true,
-						},
-						"storage2": stdlib.StandardLibraryValue{
-							Name:       "storage2",
-							Type:       &sema.StorageType{},
-							Kind:       common.DeclarationKindConstant,
-							IsConstant: true,
-						},
-					},
-				),
-			},
-			Options: []interpreter.Option{
-				interpreter.WithPredefinedValues(map[string]interpreter.Value{
-					"storage1": storageValue1,
-					"storage2": storageValue2,
-				}),
-				interpreter.WithStorageReadHandler(getter),
-				interpreter.WithStorageWriteHandler(setter),
-				interpreter.WithStorageKeyHandler(
-					func(_ *interpreter.Interpreter, _ common.Address, indexingType sema.Type) string {
-						return string(indexingType.ID())
-					},
-				),
-			},
-		},
-	)
-
-	rType := inter.Checker.GlobalTypes["R"].Type.(*sema.CompositeType)
-
-	storageKey := interpreter.PrefixedStorageKey(string(rType.ID()), interpreter.AccessLevelPrivate)
-
-	originalValue := &interpreter.CompositeValue{
-		TypeID: rType.ID(),
-		Kind:   common.CompositeKindResource,
-		Fields: map[string]interpreter.Value{},
-		Owner:  &storageAddress1,
-	}
-
-	allStoredValues[storageAddress1] = map[string]interpreter.OptionalValue{
-		storageKey: interpreter.NewSomeValueOwningNonCopying(
-			originalValue,
-		),
-	}
-
-	_, err := inter.Invoke("test")
-	require.NoError(t, err)
-
-	// Assert the ownership of the resource changed to account 2
-
-	assert.Equal(t,
-		&storageAddress2,
-		originalValue.GetOwner(),
-	)
-
-	// Assert the resource was removed from storage of account 1
-
-	storedValue1 := allStoredValues[storageAddress1][storageKey]
-
-	assert.Equal(t,
-		interpreter.NilValue{},
-		storedValue1,
-	)
-
-	// Assert the resource was moved into storage of account 2
-
-	storedValue2 := allStoredValues[storageAddress2][storageKey]
-
-	require.IsType(t,
-		&interpreter.SomeValue{},
-		storedValue2,
-	)
-
-	assert.Equal(t,
-		&storageAddress2,
-		storedValue2.(*interpreter.SomeValue).Value.GetOwner(),
-	)
-}
-
 func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
 
 	standardLibraryFunctions :=
@@ -7103,64 +6580,6 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 
 	_, err = inter.Invoke("test")
 	assert.IsType(t, &interpreter.ConditionError{}, err)
-}
-
-// See https://github.com/dapperlabs/flow-go/issues/1869
-//
-func TestInterpretPostConditionWithElaborationAccess(t *testing.T) {
-
-	storedValues := map[string]interpreter.OptionalValue{}
-
-	// NOTE: Getter and Setter are very naive for testing purposes and don't remove nil values
-	//
-
-	getter := func(_ *interpreter.Interpreter, _ common.Address, key string) interpreter.OptionalValue {
-		value, ok := storedValues[key]
-		if !ok {
-			return interpreter.NilValue{}
-		}
-		return value
-	}
-
-	setter := func(_ *interpreter.Interpreter, _ common.Address, key string, value interpreter.OptionalValue) {
-		storedValues[key] = value
-	}
-
-	storageValue := interpreter.StorageValue{}
-
-	inter := parseCheckAndInterpretWithOptions(t,
-		`
-          pub resource R {}
-
-          pub fun test() {
-              post {
-                  storage[R] != nil
-              }
-              let oldR <- storage[R] <- create R()
-              destroy oldR
-          }
-        `,
-		ParseCheckAndInterpretOptions{
-			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(storageValueDeclaration),
-			},
-			Options: []interpreter.Option{
-				interpreter.WithPredefinedValues(map[string]interpreter.Value{
-					"storage": storageValue,
-				}),
-				interpreter.WithStorageReadHandler(getter),
-				interpreter.WithStorageWriteHandler(setter),
-				interpreter.WithStorageKeyHandler(
-					func(_ *interpreter.Interpreter, _ common.Address, indexingType sema.Type) string {
-						return string(indexingType.ID())
-					},
-				),
-			},
-		},
-	)
-
-	_, err := inter.Invoke("test")
-	require.NoError(t, err)
 }
 
 func TestInterpretFunctionPostConditionInInterface(t *testing.T) {
@@ -7724,6 +7143,11 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 	// NOTE: Getter and Setter are very naive for testing purposes and don't remove nil values
 	//
 
+	checker := func(_ *interpreter.Interpreter, _ common.Address, key string) bool {
+		_, ok := storedValues[key]
+		return ok
+	}
+
 	getter := func(_ *interpreter.Interpreter, _ common.Address, key string) interpreter.OptionalValue {
 		value, ok := storedValues[key]
 		if !ok {
@@ -7736,13 +7160,11 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		storedValues[key] = value
 	}
 
-	interpreter.AddressValue{}.Hex()
-
-	storageValue := interpreter.StorageValue{
-		Address: common.Address{
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-		},
+	address := common.Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 	}
+
+	addressValue := interpreter.AddressValue(address)
 
 	code := `
       pub resource R {}
@@ -7753,24 +7175,48 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
           let r <- create R()
           addresses.append(r.owner?.address)
 
-          let oldR <- storage[R] <- r
-          destroy oldR
-          addresses.append(storage[R]?.owner?.address)
+          account.save(<-r, to: /storage/r)
+
+          let ref = account.borrow<&R>(from: /storage/r)
+          addresses.append(ref?.owner?.address)
 
           return addresses
       }
     `
 
+	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
+		panic(errors.NewUnreachableError())
+	})
+
+	// `authAccount`
+
+	valueDeclarations := map[string]sema.ValueDeclaration{
+		"account": stdlib.StandardLibraryValue{
+			Name:       "account",
+			Type:       &sema.AuthAccountType{},
+			Kind:       common.DeclarationKindConstant,
+			IsConstant: true,
+		},
+	}
+
+	values := map[string]interpreter.Value{
+		"account": interpreter.NewAuthAccountValue(
+			addressValue,
+			panicFunction,
+			panicFunction,
+			panicFunction,
+		),
+	}
+
 	inter := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(storageValueDeclaration),
+				sema.WithPredeclaredValues(valueDeclarations),
 			},
 			Options: []interpreter.Option{
-				interpreter.WithPredefinedValues(map[string]interpreter.Value{
-					"storage": storageValue,
-				}),
+				interpreter.WithPredefinedValues(values),
+				interpreter.WithStorageExistenceHandler(checker),
 				interpreter.WithStorageReadHandler(getter),
 				interpreter.WithStorageWriteHandler(setter),
 				interpreter.WithStorageKeyHandler(
@@ -7788,7 +7234,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 	assert.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
 			interpreter.NilValue{},
-			interpreter.NewSomeValueOwningNonCopying(interpreter.AddressValue(storageValue.Address)),
+			interpreter.NewSomeValueOwningNonCopying(interpreter.AddressValue(address)),
 		),
 		result,
 	)
