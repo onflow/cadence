@@ -4062,12 +4062,6 @@ func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error
 	case "address":
 		return newField(&AddressType{})
 
-	case "storage":
-		return newField(&StorageType{})
-
-	case "published":
-		return newField(&ReferencesType{Assignable: true})
-
 	case "setCode":
 		return newFunction(authAccountSetCodeFunctionType)
 
@@ -4174,9 +4168,6 @@ func (t *PublicAccountType) GetMember(identifier string, _ ast.Range, _ func(err
 	switch identifier {
 	case "address":
 		return newField(&AddressType{})
-
-	case "published":
-		return newField(&ReferencesType{Assignable: false})
 
 	case "getCapability":
 		return newFunction(accountGetCapabilityFunctionType)
