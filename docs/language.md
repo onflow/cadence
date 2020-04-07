@@ -748,6 +748,70 @@ let c = a ?? b
 let d = a ?? false
 ```
 
+#### Force Unwrap (`!`)
+
+The force-unwrap operator (`!`) returns
+the value inside an optional if it contains a value,
+or panics and aborts the execution if the optional has no value,
+i.e., the optional value is `nil`.
+
+```cadence
+// Declare a constant which has an optional integer type
+//
+let a: Int? = nil
+
+// Declare a constant with a non-optional integer type,
+// which is initialized to `a` if `a` is non-nil.
+// If `a` is nil, the program aborts.
+//
+let b: Int = a!
+// The program aborts because `a` is nil.
+
+// Declare another optional integer constant
+let c: Int? = 3
+
+// Declare a non-optional integer 
+// which is initialized to `c` if `a` is non-nil.
+// If `c` is nil, the program aborts.
+let d: Int = c!
+// `d` is initialized to 3 because c isn't nil.
+
+```
+
+The force-unwrap operator can only be applied
+to values which have an optional type.
+
+```cadence
+// Declare a constant with a non-optional integer type.
+//
+let a = 1
+
+// Invalid: force-unwrap operator is applied to a value which has a 
+// non-optional type (`a` has the non-optional type `Int`).
+//
+let b = a!
+```
+
+```cadence
+// Invalid: The force-unwrap operator is applied 
+// to a value which has a non-optional type
+// (the integer literal is of type `Int`).
+//
+let c = 1!
+```
+
+#### Force-assignment operator (`<-!`)
+
+The force-assignment operator (`<-!`) assigns a resource-typed value to an
+optional-typed variable if the variable is nil.
+If the variable being assigned to is non-nil, 
+the execution of the program aborts.
+
+The force-assignment operator is only used for 
+[resource types](#resources) and the move operator (`<-`), 
+which are covered the resources section of this document.
+
+
 #### Conditional Downcasting Operator
 
 > 🚧 Status: The conditional downcasting operator `as?` is implemented,
@@ -2505,7 +2569,9 @@ if let number = noNumber {
 }
 ```
 
-### Looping: while-statement
+### Looping: 
+
+#### while-statement
 
 While-statements allow a certain piece of code to be executed repeatedly, as long as a condition remains true.
 
@@ -2528,7 +2594,40 @@ while a < 5 {
 // `a` is `5`
 ```
 
-The `continue` statement can be used to stop the current iteration of the loop and start the next iteration.
+#### For-in statement
+
+For-in statements allow a certain piece of code to be executed repeatedly for 
+each element in an array.
+
+The for-in statement starts with the `for` keyword, followed by the name of 
+the element that is used in each iteration of the loop, 
+followed by the `in` keyword, and then followed by the array
+that is being iterated through in the loop. 
+
+Then, the code that should be repeatedly executed in each iteration of the loop
+is enclosed in curly braces.
+
+If there are no elements in the data structure, the code in the loop will not
+be executed at all. Otherwise, the code will execute as many times
+as there are elements in the array.
+
+```cadence,file=control-flow-for.cdc
+var array = ["Hello", "World", "Foo", "Bar"]
+for element in array {
+    log(element)
+}
+
+// The loop would log:
+// "Hello"
+// "World"
+// "Foo"
+// "Bar"
+
+```
+
+#### continue and break
+
+In for-loops and while-loops, the `continue` statement can be used to stop the current iteration of a loop and start the next iteration.
 
 ```cadence,file=control-flow-continue.cdc
 var i = 0
@@ -2540,11 +2639,24 @@ while i < 10 {
     }
     x = x + 1
 }
-
 // `x` is `8`
+
+
+let array = [2, 2, 3]
+var sum = 0
+for element in array {
+    if element == 2 {
+        continue
+    } 
+    sum = sum + element
+}
+
+// `sum` is `3`
+
 ```
 
-The `break` statement can be used to stop the loop.
+The `break` statement can be used to stop the execution 
+of a for-loop or a while-loop.
 
 ```cadence,file=control-flow-break.cdc
 var x = 0
@@ -2554,8 +2666,19 @@ while x < 10 {
         break
     }
 }
-
 // `x` is `5`
+
+
+let array = [1, 2, 3]
+var sum = 0
+for element in array {
+    if element == 2 {
+        break
+    } 
+    sum = sum + element
+}
+
+// `sum` is `1`
 ```
 
 ### Immediate function return: return-statement
