@@ -3507,8 +3507,8 @@ If the object doesn't exist, the value will always be `nil`
 When calling a function on an optional like this, if the object doesn't exist,
 nothing will happen and the execution will continue.
 
-It is still invalid
-to access a field of an optional composite type that is not declared.
+It is still invalid to access an undeclared field 
+of an optional composite type.
 
 ```cadence,file=optional-chaining.cdc
 // Declare a struct with a field and method.
@@ -3529,9 +3529,9 @@ pub struct Value {
     }
 }
 
-// create a new instance of the struct as an optional
+// Create a new instance of the struct as an optional
 let value: Value? = Value()
-// create another optional with the same type, but nil
+// Create another optional with the same type, but nil
 let noValue: Value? = nil
 
 // Access the `number` field using optional chaining
@@ -3563,13 +3563,12 @@ Forced-Optional chaining is used by adding a `!`
 before the `.` access operator for fields or
 functions of an optional composite type.
 
-When getting a field value or
-calling a function with a return value, the access returns
-the value.
+When getting a field value or calling a function with a return value, 
+the access returns the value.
 If the object doesn't exist, the execution will panic and revert.
 
-It is still invalid
-to access a field of an optional composite type that is not declared.
+It is still invalid to access an undeclared field 
+of an optional composite type.
 
 ```cadence,file=optional-chaining.cdc
 // Declare a struct with a field and method.
@@ -3590,9 +3589,9 @@ pub struct Value {
     }
 }
 
-// create a new instance of the struct as an optional
+// Create a new instance of the struct as an optional
 let value: Value? = Value()
-// create another optional with the same type, but nil
+// Create another optional with the same type, but nil
 let noValue: Value? = nil
 
 // Access the `number` field using force-optional chaining
@@ -3875,7 +3874,7 @@ x <-> replacement
 
 // Or use the other swap statement `<- target <-`
 // This statement moves the resource out of x 
-// at the sametime that replacement is being moved into it.
+// at the same time that replacement is being moved into it.
 let oldX <- x <- create R()
 // oldX still needs to be explicitly handled after this statement
 destroy oldX
