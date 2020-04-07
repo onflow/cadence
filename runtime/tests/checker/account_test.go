@@ -38,35 +38,6 @@ func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
 
 func TestCheckAccount(t *testing.T) {
 
-	t.Run("AuthAccount.storage is assignable", func(t *testing.T) {
-
-		_, err := ParseAndCheckAccount(t, `
-
-          resource R {}
-
-          fun test(): @R? {
-              let r <- authAccount.storage[R] <- create R()
-              return <-r
-          }
-        `)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("AuthAccount.published is assignable", func(t *testing.T) {
-
-		_, err := ParseAndCheckAccount(t, `
-
-          resource R {}
-
-          fun test() {
-              authAccount.published[&R] = &authAccount.storage[R] as &R
-          }
-        `)
-
-		require.NoError(t, err)
-	})
-
 	for _, domain := range common.AllPathDomainsByIdentifier {
 
 		// NOTE: all domains are statically valid at the moment
