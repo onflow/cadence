@@ -375,10 +375,8 @@ func (e *MemberExpression) EndPosition() Position {
 // IndexExpression
 
 type IndexExpression struct {
-	TargetExpression Expression
-	// only IndexingExpression or IndexingType is set
+	TargetExpression   Expression
 	IndexingExpression Expression
-	IndexingType       Type
 	Range
 }
 
@@ -402,16 +400,9 @@ func (e *IndexExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 	return visitor.VisitIndexExpression(e)
 }
 func (e *IndexExpression) String() string {
-	var indexString string
-	if e.IndexingExpression != nil {
-		indexString = e.IndexingExpression.String()
-	} else {
-		indexString = e.IndexingType.String()
-	}
-
 	return fmt.Sprintf(
 		"%s[%s]",
-		e.TargetExpression, indexString,
+		e.TargetExpression, e.IndexingExpression,
 	)
 }
 
