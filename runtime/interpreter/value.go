@@ -4759,7 +4759,7 @@ type LinkValue struct {
 }
 
 func init() {
-	gob.Register(CapabilityValue{})
+	gob.Register(LinkValue{})
 }
 
 func (LinkValue) IsValue() {}
