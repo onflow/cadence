@@ -108,16 +108,6 @@ type ValueIndexableType interface {
 	IndexingType() Type
 }
 
-// TypeIndexableType is a type which can be indexed into using a type
-//
-type TypeIndexableType interface {
-	Type
-	isTypeIndexableType()
-	IsAssignable() bool
-	IsValidIndexingType(indexingType Type) (isValid bool, expectedTypeDescription string)
-	ElementType(indexingType Type, isAssignment bool) Type
-}
-
 // MemberAccessibleType is a type which might have members
 //
 type MemberAccessibleType interface {
