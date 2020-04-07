@@ -4119,58 +4119,6 @@ func (v *SomeValue) String() string {
 	return fmt.Sprint(v.Value)
 }
 
-// StorageValue
-
-type StorageValue struct {
-	Address common.Address
-}
-
-func (StorageValue) IsValue() {}
-
-func (v StorageValue) DynamicType(_ *Interpreter) DynamicType {
-	return StorageDynamicType{}
-}
-
-func (v StorageValue) Copy() Value {
-	return StorageValue{
-		Address: v.Address,
-	}
-}
-
-func (v StorageValue) GetOwner() *common.Address {
-	return &v.Address
-}
-
-func (StorageValue) SetOwner(_ *common.Address) {
-	// NO-OP: ownership cannot be changed
-}
-
-// PublishedValue
-
-type PublishedValue struct {
-	Address common.Address
-}
-
-func (PublishedValue) IsValue() {}
-
-func (v PublishedValue) DynamicType(_ *Interpreter) DynamicType {
-	return PublishedDynamicType{}
-}
-
-func (v PublishedValue) Copy() Value {
-	return PublishedValue{
-		Address: v.Address,
-	}
-}
-
-func (v PublishedValue) GetOwner() *common.Address {
-	return &v.Address
-}
-
-func (PublishedValue) SetOwner(_ *common.Address) {
-	// NO-OP: ownership cannot be changed
-}
-
 // StorageReferenceValue
 
 type StorageReferenceValue struct {
@@ -4590,16 +4538,6 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 	case "address":
 		return v.Address
 
-	case "storage":
-		return StorageValue{
-			Address: v.Address.ToAddress(),
-		}
-
-	case "published":
-		return PublishedValue{
-			Address: v.Address.ToAddress(),
-		}
-
 	case "setCode":
 		return v.setCodeFunction
 
@@ -4696,11 +4634,6 @@ func (v PublicAccountValue) GetMember(inter *Interpreter, _ LocationRange, name 
 	switch name {
 	case "address":
 		return v.Address
-
-	case "published":
-		return PublishedValue{
-			Address: v.Address.ToAddress(),
-		}
 
 	case "getCapability":
 		return accountGetCapabilityFunction(v.Address, false)
