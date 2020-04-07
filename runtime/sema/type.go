@@ -1,6 +1,7 @@
 package sema
 
 import (
+	"encoding/gob"
 	"fmt"
 	"math"
 	"math/big"
@@ -205,6 +206,10 @@ func NewTypeAnnotation(ty Type) *TypeAnnotation {
 // NOTE: This type is only used internally and not available in programs.
 type AnyType struct{}
 
+func init() {
+	gob.Register(&AnyType{})
+}
+
 func (*AnyType) IsType() {}
 
 func (*AnyType) String() string {
@@ -250,6 +255,10 @@ func (t *AnyType) Resolve(_ map[*TypeParameter]Type) Type {
 
 // AnyStructType represents the top type of all non-resource types
 type AnyStructType struct{}
+
+func init() {
+	gob.Register(&AnyStructType{})
+}
 
 func (*AnyStructType) IsType() {}
 
@@ -297,6 +306,10 @@ func (t *AnyStructType) Resolve(_ map[*TypeParameter]Type) Type {
 // AnyResourceType represents the top type of all resource types
 type AnyResourceType struct{}
 
+func init() {
+	gob.Register(&AnyResourceType{})
+}
+
 func (*AnyResourceType) IsType() {}
 
 func (*AnyResourceType) String() string {
@@ -343,6 +356,10 @@ func (t *AnyResourceType) Resolve(_ map[*TypeParameter]Type) Type {
 // NeverType represents the bottom type
 type NeverType struct{}
 
+func init() {
+	gob.Register(&NeverType{})
+}
+
 func (*NeverType) IsType() {}
 
 func (*NeverType) String() string {
@@ -388,6 +405,10 @@ func (t *NeverType) Resolve(_ map[*TypeParameter]Type) Type {
 
 // VoidType represents the void type
 type VoidType struct{}
+
+func init() {
+	gob.Register(&VoidType{})
+}
 
 func (*VoidType) IsType() {}
 
@@ -438,6 +459,10 @@ func (t *VoidType) Resolve(_ map[*TypeParameter]Type) Type {
 //
 type InvalidType struct{}
 
+func init() {
+	gob.Register(&InvalidType{})
+}
+
 func (*InvalidType) IsType() {}
 
 func (*InvalidType) String() string {
@@ -484,6 +509,10 @@ func (t *InvalidType) Resolve(_ map[*TypeParameter]Type) Type {
 // OptionalType represents the optional variant of another type
 type OptionalType struct {
 	Type Type
+}
+
+func init() {
+	gob.Register(&OptionalType{})
 }
 
 func (*OptionalType) IsType() {}
@@ -651,6 +680,10 @@ func (t *GenericType) Resolve(typeParameters map[*TypeParameter]Type) Type {
 // BoolType represents the boolean type
 type BoolType struct{}
 
+func init() {
+	gob.Register(&BoolType{})
+}
+
 func (*BoolType) IsType() {}
 
 func (*BoolType) String() string {
@@ -698,6 +731,10 @@ func (t *BoolType) Resolve(_ map[*TypeParameter]Type) Type {
 
 type CharacterType struct{}
 
+func init() {
+	gob.Register(&CharacterType{})
+}
+
 func (*CharacterType) IsType() {}
 
 func (*CharacterType) String() string {
@@ -743,6 +780,10 @@ func (t *CharacterType) Resolve(_ map[*TypeParameter]Type) Type {
 
 // StringType represents the string type
 type StringType struct{}
+
+func init() {
+	gob.Register(&StringType{})
+}
 
 func (*StringType) IsType() {}
 
@@ -867,6 +908,10 @@ func (t *StringType) Resolve(_ map[*TypeParameter]Type) Type {
 // NumberType represents the super-type of all signed number types
 type NumberType struct{}
 
+func init() {
+	gob.Register(&NumberType{})
+}
+
 func (*NumberType) IsType() {}
 
 func (*NumberType) String() string {
@@ -920,6 +965,10 @@ func (t *NumberType) Resolve(_ map[*TypeParameter]Type) Type {
 
 // SignedNumberType represents the super-type of all signed number types
 type SignedNumberType struct{}
+
+func init() {
+	gob.Register(&SignedNumberType{})
+}
 
 func (*SignedNumberType) IsType() {}
 
@@ -990,6 +1039,10 @@ type FractionalRangedType interface {
 // IntegerType represents the super-type of all integer types
 type IntegerType struct{}
 
+func init() {
+	gob.Register(&IntegerType{})
+}
+
 func (*IntegerType) IsType() {}
 
 func (*IntegerType) String() string {
@@ -1043,6 +1096,10 @@ func (t *IntegerType) Resolve(_ map[*TypeParameter]Type) Type {
 
 // SignedIntegerType represents the super-type of all signed integer types
 type SignedIntegerType struct{}
+
+func init() {
+	gob.Register(&SignedIntegerType{})
+}
 
 func (*SignedIntegerType) IsType() {}
 
@@ -1098,6 +1155,10 @@ func (t *SignedIntegerType) Resolve(_ map[*TypeParameter]Type) Type {
 // IntType represents the arbitrary-precision integer type `Int`
 type IntType struct{}
 
+func init() {
+	gob.Register(&IntType{})
+}
+
 func (*IntType) IsType() {}
 
 func (*IntType) String() string {
@@ -1152,6 +1213,10 @@ func (t *IntType) Resolve(_ map[*TypeParameter]Type) Type {
 // Int8Type represents the 8-bit signed integer type `Int8`
 
 type Int8Type struct{}
+
+func init() {
+	gob.Register(&Int8Type{})
+}
 
 func (*Int8Type) IsType() {}
 
@@ -1210,6 +1275,10 @@ func (t *Int8Type) Resolve(_ map[*TypeParameter]Type) Type {
 // Int16Type represents the 16-bit signed integer type `Int16`
 type Int16Type struct{}
 
+func init() {
+	gob.Register(&Int16Type{})
+}
+
 func (*Int16Type) IsType() {}
 
 func (*Int16Type) String() string {
@@ -1266,6 +1335,10 @@ func (t *Int16Type) Resolve(_ map[*TypeParameter]Type) Type {
 
 // Int32Type represents the 32-bit signed integer type `Int32`
 type Int32Type struct{}
+
+func init() {
+	gob.Register(&Int32Type{})
+}
 
 func (*Int32Type) IsType() {}
 
@@ -1324,6 +1397,10 @@ func (t *Int32Type) Resolve(_ map[*TypeParameter]Type) Type {
 // Int64Type represents the 64-bit signed integer type `Int64`
 type Int64Type struct{}
 
+func init() {
+	gob.Register(&Int64Type{})
+}
+
 func (*Int64Type) IsType() {}
 
 func (*Int64Type) String() string {
@@ -1380,6 +1457,10 @@ func (t *Int64Type) Resolve(_ map[*TypeParameter]Type) Type {
 
 // Int128Type represents the 128-bit signed integer type `Int128`
 type Int128Type struct{}
+
+func init() {
+	gob.Register(&Int128Type{})
+}
 
 func (*Int128Type) IsType() {}
 
@@ -1450,6 +1531,10 @@ func (t *Int128Type) Resolve(_ map[*TypeParameter]Type) Type {
 // Int256Type represents the 256-bit signed integer type `Int256`
 type Int256Type struct{}
 
+func init() {
+	gob.Register(&Int256Type{})
+}
+
 func (*Int256Type) IsType() {}
 
 func (*Int256Type) String() string {
@@ -1519,6 +1604,10 @@ func (t *Int256Type) Resolve(_ map[*TypeParameter]Type) Type {
 // UIntType represents the arbitrary-precision unsigned integer type `UInt`
 type UIntType struct{}
 
+func init() {
+	gob.Register(&UIntType{})
+}
+
 func (*UIntType) IsType() {}
 
 func (*UIntType) String() string {
@@ -1575,6 +1664,10 @@ func (t *UIntType) Resolve(_ map[*TypeParameter]Type) Type {
 // UInt8Type represents the 8-bit unsigned integer type `UInt8`
 // which checks for overflow and underflow
 type UInt8Type struct{}
+
+func init() {
+	gob.Register(&UInt8Type{})
+}
 
 func (*UInt8Type) IsType() {}
 
@@ -1634,6 +1727,10 @@ func (t *UInt8Type) Resolve(_ map[*TypeParameter]Type) Type {
 // which checks for overflow and underflow
 type UInt16Type struct{}
 
+func init() {
+	gob.Register(&UInt16Type{})
+}
+
 func (*UInt16Type) IsType() {}
 
 func (*UInt16Type) String() string {
@@ -1691,6 +1788,10 @@ func (t *UInt16Type) Resolve(_ map[*TypeParameter]Type) Type {
 // UInt32Type represents the 32-bit unsigned integer type `UInt32`
 // which checks for overflow and underflow
 type UInt32Type struct{}
+
+func init() {
+	gob.Register(&UInt32Type{})
+}
 
 func (*UInt32Type) IsType() {}
 
@@ -1750,6 +1851,10 @@ func (t *UInt32Type) Resolve(_ map[*TypeParameter]Type) Type {
 // which checks for overflow and underflow
 type UInt64Type struct{}
 
+func init() {
+	gob.Register(&UInt64Type{})
+}
+
 func (*UInt64Type) IsType() {}
 
 func (*UInt64Type) String() string {
@@ -1807,6 +1912,10 @@ func (t *UInt64Type) Resolve(_ map[*TypeParameter]Type) Type {
 // UInt128Type represents the 128-bit unsigned integer type `UInt128`
 // which checks for overflow and underflow
 type UInt128Type struct{}
+
+func init() {
+	gob.Register(&UInt128Type{})
+}
 
 func (*UInt128Type) IsType() {}
 
@@ -1872,6 +1981,10 @@ func (t *UInt128Type) Resolve(_ map[*TypeParameter]Type) Type {
 // which checks for overflow and underflow
 type UInt256Type struct{}
 
+func init() {
+	gob.Register(&UInt256Type{})
+}
+
 func (*UInt256Type) IsType() {}
 
 func (*UInt256Type) String() string {
@@ -1936,6 +2049,10 @@ func (t *UInt256Type) Resolve(_ map[*TypeParameter]Type) Type {
 // which does NOT check for overflow and underflow
 type Word8Type struct{}
 
+func init() {
+	gob.Register(&Word8Type{})
+}
+
 func (*Word8Type) IsType() {}
 
 func (*Word8Type) String() string {
@@ -1993,6 +2110,10 @@ func (t *Word8Type) Resolve(_ map[*TypeParameter]Type) Type {
 // Word16Type represents the 16-bit unsigned integer type `Word16`
 // which does NOT check for overflow and underflow
 type Word16Type struct{}
+
+func init() {
+	gob.Register(&Word16Type{})
+}
 
 func (*Word16Type) IsType() {}
 
@@ -2052,6 +2173,10 @@ func (t *Word16Type) Resolve(_ map[*TypeParameter]Type) Type {
 // which does NOT check for overflow and underflow
 type Word32Type struct{}
 
+func init() {
+	gob.Register(&Word32Type{})
+}
+
 func (*Word32Type) IsType() {}
 
 func (*Word32Type) String() string {
@@ -2110,6 +2235,10 @@ func (t *Word32Type) Resolve(_ map[*TypeParameter]Type) Type {
 // which does NOT check for overflow and underflow
 type Word64Type struct{}
 
+func init() {
+	gob.Register(&Word64Type{})
+}
+
 func (*Word64Type) IsType() {}
 
 func (*Word64Type) String() string {
@@ -2167,6 +2296,10 @@ func (t *Word64Type) Resolve(_ map[*TypeParameter]Type) Type {
 // FixedPointType represents the super-type of all fixed-point types
 type FixedPointType struct{}
 
+func init() {
+	gob.Register(&FixedPointType{})
+}
+
 func (*FixedPointType) IsType() {}
 
 func (*FixedPointType) String() string {
@@ -2220,6 +2353,10 @@ func (t *FixedPointType) Resolve(_ map[*TypeParameter]Type) Type {
 
 // SignedFixedPointType represents the super-type of all signed fixed-point types
 type SignedFixedPointType struct{}
+
+func init() {
+	gob.Register(&SignedFixedPointType{})
+}
 
 func (*SignedFixedPointType) IsType() {}
 
@@ -2278,6 +2415,10 @@ const Fix64Factor = 100_000_000
 // Fix64Type represents the 64-bit signed decimal fixed-point type `Fix64`
 // which has a scale of Fix64Scale, and checks for overflow and underflow
 type Fix64Type struct{}
+
+func init() {
+	gob.Register(&Fix64Type{})
+}
 
 func (*Fix64Type) IsType() {}
 
@@ -2354,6 +2495,10 @@ func (t *Fix64Type) Resolve(_ map[*TypeParameter]Type) Type {
 // UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
 // which has a scale of 1E9, and checks for overflow and underflow
 type UFix64Type struct{}
+
+func init() {
+	gob.Register(&UFix64Type{})
+}
 
 func (*UFix64Type) IsType() {}
 
@@ -2646,7 +2791,12 @@ type VariableSizedType struct {
 	Type Type
 }
 
-func (*VariableSizedType) IsType()      {}
+func init() {
+	gob.Register(&VariableSizedType{})
+}
+
+func (*VariableSizedType) IsType() {}
+
 func (*VariableSizedType) isArrayType() {}
 
 func (t *VariableSizedType) String() string {
@@ -2737,7 +2887,12 @@ type ConstantSizedType struct {
 	Size uint64
 }
 
-func (*ConstantSizedType) IsType()      {}
+func init() {
+	gob.Register(&ConstantSizedType{})
+}
+
+func (*ConstantSizedType) IsType() {}
+
 func (*ConstantSizedType) isArrayType() {}
 
 func (t *ConstantSizedType) String() string {
@@ -3000,6 +3155,10 @@ type FunctionType struct {
 	Parameters            []*Parameter
 	ReturnTypeAnnotation  *TypeAnnotation
 	RequiredArgumentCount *int
+}
+
+func init() {
+	gob.Register(&FunctionType{})
 }
 
 func (*FunctionType) IsType() {}
@@ -3452,7 +3611,6 @@ func numberFunctionArgumentExpressionsChecker(numberType Type) func(*Checker, []
 
 		case *ast.FixedPointExpression:
 			checker.checkFixedPointLiteral(numberExpression, numberType)
-
 		}
 	}
 }
@@ -3604,6 +3762,10 @@ func (t *CompositeType) Resolve(_ map[*TypeParameter]Type) Type {
 // AuthAccountType
 
 type AuthAccountType struct{}
+
+func init() {
+	gob.Register(&AuthAccountType{})
+}
 
 func (*AuthAccountType) IsType() {}
 
@@ -3956,6 +4118,10 @@ func (t *AuthAccountType) Resolve(_ map[*TypeParameter]Type) Type {
 
 type PublicAccountType struct{}
 
+func init() {
+	gob.Register(&PublicAccountType{})
+}
+
 func (*PublicAccountType) IsType() {}
 
 func (*PublicAccountType) String() string {
@@ -4080,6 +4246,9 @@ type InterfaceType struct {
 	InitializerParameters []*Parameter
 	ContainerType         Type
 	NestedTypes           map[string]Type
+
+func init() {
+	gob.Register(&InterfaceType{})
 }
 
 func (*InterfaceType) IsType() {}
@@ -4156,11 +4325,19 @@ func (t *InterfaceType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (t *InterfaceType) NestedTypes() map[string]Type {
+	return t.nestedTypes
+}
+
 // DictionaryType
 
 type DictionaryType struct {
 	KeyType   Type
 	ValueType Type
+}
+
+func init() {
+	gob.Register(&DictionaryType{})
 }
 
 func (*DictionaryType) IsType() {}
@@ -4374,6 +4551,10 @@ type ReferenceType struct {
 	Type       Type
 }
 
+func init() {
+	gob.Register(&ReferenceType{})
+}
+
 func (*ReferenceType) IsType() {}
 
 func (t *ReferenceType) String() string {
@@ -4493,6 +4674,10 @@ func (t *ReferenceType) Resolve(_ map[*TypeParameter]Type) Type {
 
 // AddressType represents the address type
 type AddressType struct{}
+
+func init() {
+	gob.Register(&AddressType{})
+}
 
 func (*AddressType) IsType() {}
 
@@ -5190,6 +5375,10 @@ func (*TransactionType) ExecuteFunctionType() *SpecialFunctionType {
 	}
 }
 
+func init() {
+	gob.Register(&TransactionType{})
+}
+
 func (*TransactionType) IsType() {}
 
 func (*TransactionType) String() string {
@@ -5275,6 +5464,10 @@ func (t *RestrictedType) RestrictionSet() InterfaceSet {
 		}
 	}
 	return t.restrictionSet
+}
+
+func init() {
+	gob.Register(&RestrictedType{})
 }
 
 func (*RestrictedType) IsType() {}
@@ -5434,6 +5627,10 @@ func (t *RestrictedType) Resolve(_ map[*TypeParameter]Type) Type {
 
 type PathType struct{}
 
+func init() {
+	gob.Register(&PathType{})
+}
+
 func (*PathType) IsType() {}
 
 func (*PathType) String() string {
@@ -5480,6 +5677,10 @@ func (t *PathType) Resolve(_ map[*TypeParameter]Type) Type {
 // CapabilityType
 
 type CapabilityType struct{}
+
+func init() {
+	gob.Register(&CapabilityType{})
+}
 
 func (*CapabilityType) IsType() {}
 

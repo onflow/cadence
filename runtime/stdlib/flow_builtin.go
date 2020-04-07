@@ -1,6 +1,8 @@
 package stdlib
 
 import (
+	"encoding/gob"
+
 	"github.com/dapperlabs/cadence/runtime/ast"
 	"github.com/dapperlabs/cadence/runtime/common"
 	"github.com/dapperlabs/cadence/runtime/interpreter"
@@ -240,6 +242,10 @@ var AccountCodeUpdatedEventType = newFlowEventType(
 // BlockType
 
 type BlockType struct{}
+
+func init() {
+	gob.Register(&BlockType{})
+}
 
 func (*BlockType) IsType() {}
 
