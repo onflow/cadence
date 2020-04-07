@@ -17,6 +17,7 @@ import (
 
 type testRuntimeInterface struct {
 	resolveImport      func(Location) ([]byte, error)
+	valueExists        func(controller, owner, key []byte) (exists bool, err error)
 	getValue           func(controller, owner, key []byte) (value []byte, err error)
 	setValue           func(controller, owner, key, value []byte) (err error)
 	createAccount      func(publicKeys [][]byte) (address Address, err error)
@@ -31,6 +32,10 @@ type testRuntimeInterface struct {
 
 func (i *testRuntimeInterface) ResolveImport(location Location) ([]byte, error) {
 	return i.resolveImport(location)
+}
+
+func (i *testRuntimeInterface) ValueExists(controller, owner, key []byte) (exists bool, err error) {
+	return i.valueExists(controller, owner, key)
 }
 
 func (i *testRuntimeInterface) GetValue(controller, owner, key []byte) (value []byte, err error) {

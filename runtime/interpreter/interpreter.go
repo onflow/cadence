@@ -3865,31 +3865,35 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 func (interpreter *Interpreter) convertStaticToSemaType(staticType StaticType) sema.Type {
 	return ConvertStaticToSemaType(
 		staticType,
-		func(typeID sema.TypeID) *sema.InterfaceType {
-			return interpreter.getInterfaceType(typeID)
+		func(location ast.Location, typeID sema.TypeID) *sema.InterfaceType {
+			return interpreter.getInterfaceType(location, typeID)
 		},
-		func(typeID sema.TypeID) *sema.CompositeType {
-			return interpreter.getCompositeType(typeID)
+		func(location ast.Location, typeID sema.TypeID) *sema.CompositeType {
+			return interpreter.getCompositeType(location, typeID)
 		},
 	)
 }
 
-func (interpreter *Interpreter) getCompositeType(typeID sema.TypeID) *sema.CompositeType {
-	locationID, qualifiedIdentifier := sema.SplitCompositeTypeID(typeID)
-	if locationID == "" {
-		panic("failed to split composite type ID")
-	}
+func (interpreter *Interpreter) getElaboration(location ast.Location) *sema.Elaboration {
 
-	checker := interpreter.allCheckers[locationID]
-	return checker.Elaboration.CompositeTypes[qualifiedIdentifier]
+	// Ensure the program for this location is loaded,
+	// so its checker is available
+
+	inter := interpreter.ensureLoaded(location, func() *ast.Program {
+		return interpreter.importProgramHandler(interpreter, location)
+	})
+
+	locationID := location.ID()
+
+	return inter.allCheckers[locationID].Elaboration
 }
 
-func (interpreter *Interpreter) getInterfaceType(typeID sema.TypeID) *sema.InterfaceType {
-	locationID, qualifiedIdentifier := sema.SplitCompositeTypeID(typeID)
-	if locationID == "" {
-		panic("failed to split composite type ID")
-	}
+func (interpreter *Interpreter) getCompositeType(location ast.Location, typeID sema.TypeID) *sema.CompositeType {
+	elaboration := interpreter.getElaboration(location)
+	return elaboration.CompositeTypes[typeID]
+}
 
-	checker := interpreter.allCheckers[locationID]
-	return checker.Elaboration.InterfaceTypes[qualifiedIdentifier]
+func (interpreter *Interpreter) getInterfaceType(location ast.Location, typeID sema.TypeID) *sema.InterfaceType {
+	elaboration := interpreter.getElaboration(location)
+	return elaboration.InterfaceTypes[typeID]
 }

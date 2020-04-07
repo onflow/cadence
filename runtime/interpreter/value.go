@@ -3359,8 +3359,10 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 func (*CompositeValue) IsValue() {}
 
 func (v *CompositeValue) DynamicType(interpreter *Interpreter) DynamicType {
-	staticType := interpreter.getCompositeType(v.TypeID)
-	return CompositeDynamicType{StaticType: staticType}
+	staticType := interpreter.getCompositeType(v.Location, v.TypeID)
+	return CompositeDynamicType{
+		StaticType: staticType,
+	}
 }
 
 func (v *CompositeValue) Copy() Value {

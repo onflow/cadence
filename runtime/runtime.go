@@ -316,6 +316,11 @@ func (r *interpreterRuntime) newInterpreter(
 				r.emitEvent(inter, runtimeInterface, eventValue, eventType)
 			},
 		),
+		interpreter.WithStorageExistenceHandler(
+			func(_ *interpreter.Interpreter, address common.Address, key string) bool {
+				return runtimeStorage.valueExists(string(address[:]), key)
+			},
+		),
 		interpreter.WithStorageReadHandler(
 			func(_ *interpreter.Interpreter, address common.Address, key string) interpreter.OptionalValue {
 				return runtimeStorage.readValue(string(address[:]), key)
