@@ -217,39 +217,59 @@ func TestRuntimeStorage(t *testing.T) {
 
 	tests := map[string]string{
 		"resource": `
-          let r <- signer.storage[R] <- createR()
+          let r <- signer.load<@R>(from: /storage/r)
           log(r == nil)
           destroy r
-          let r2 <- signer.storage[R] <- nil
+
+          signer.save(<-createR(), to: /storage/r)
+          let r2 <- signer.load<@R>(from: /storage/r)
           log(r2 != nil)
           destroy r2
         `,
-		"reference": `
-          log(signer.storage[&R] == nil)
-          let oldR <- signer.storage[R] <- createR()
-          destroy oldR
+		"struct": `
+          let s = signer.load<S>(from: /storage/s)
+          log(s == nil)
 
-          signer.storage[&R] = &signer.storage[R] as &R
-          log(signer.storage[&R] != nil)
+          signer.save(S(), to: /storage/s)
+          let s2 = signer.load<S>(from: /storage/s)
+          log(s2 != nil)
         `,
 		"resource array": `
-          let rs <- signer.storage[[R]] <- [<-createR()]
-          log(rs == nil)
-          destroy rs
+		  let rs <- signer.load<@[R]>(from: /storage/rs)
+		  log(rs == nil)
+		  destroy rs
 
-          let rs2 <- signer.storage[[R]] <- nil
-          log(rs2 != nil)
-          destroy rs2
-        `,
+		  signer.save(<-[<-createR()], to: /storage/rs)
+		  let rs2 <- signer.load<@[R]>(from: /storage/rs)
+		  log(rs2 != nil)
+		  destroy rs2
+		`,
+		"struct array": `
+		  let s = signer.load<[S]>(from: /storage/s)
+		  log(s == nil)
+
+		  signer.save([S()], to: /storage/s)
+		  let s2 = signer.load<[S]>(from: /storage/s)
+		  log(s2 != nil)
+		`,
 		"resource dictionary": `
-          let rs <- signer.storage[{String: R}] <- {"r": <-createR()}
-          log(rs == nil)
-          destroy rs
+		  let rs <- signer.load<@{String: R}>(from: /storage/rs)
+		  log(rs == nil)
+		  destroy rs
 
-          let rs2 <- signer.storage[{String: R}] <- nil
-          log(rs2 != nil)
-          destroy rs2
-        `,
+          signer.save(<-{"r": <-createR()}, to: /storage/rs)
+		  let rs2 <- signer.load<@{String: R}>(from: /storage/rs)
+		  log(rs2 != nil)
+		  destroy rs2
+		`,
+		"struct dictionary": `
+		  let s = signer.load<{String: S}>(from: /storage/s)
+		  log(s == nil)
+
+          signer.save({"s": S()}, to: /storage/s)
+		  let rs2 = signer.load<{String: S}>(from: /storage/s)
+		  log(rs2 != nil)
+		`,
 	}
 
 	for name, code := range tests {
@@ -262,6 +282,8 @@ func TestRuntimeStorage(t *testing.T) {
               pub fun createR(): @R {
                 return <-create R()
               }
+
+              pub struct S {}
             `)
 
 			script := []byte(fmt.Sprintf(`
@@ -335,11 +357,8 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
       transaction {
 
         prepare(signer: AuthAccount) {
-          var container: @Container? <- createContainer()
-          signer.storage[Container] <-> container
-          destroy container
-          let ref = &signer.storage[Container] as &Container
-          signer.storage[&Container] = ref
+          signer.save(<-createContainer(), to: /storage/container)
+          signer.link<&Container>(/public/container, target: /storage/container)
         }
       }
     `)
@@ -349,7 +368,9 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 
       transaction {
         prepare(signer: AuthAccount) {
-          let ref = signer.storage[&Container] ?? panic("no container")
+          let publicAccount = getAccount(signer.address)
+          let ref = publicAccount.getCapability(/public/container)!.borrow<&Container>()!
+
           let length = ref.values.length
           ref.values.append(1)
           let length2 = ref.values.length
@@ -362,7 +383,9 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 
       transaction {
         prepare(signer: AuthAccount) {
-          let ref = signer.storage[&Container] ?? panic("no container")
+          let publicAccount = getAccount(signer.address)
+          let ref = publicAccount.getCapability(/public/container)!.borrow<&Container>()!
+
           let length = ref.values.length
           ref.values.append(2)
           let length2 = ref.values.length
@@ -381,6 +404,10 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 			default:
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
+		},
+		valueExists: func(controller, owner, key []byte) (bool, error) {
+			_, ok := storedValues[string(key)]
+			return ok, nil
 		},
 		getValue: func(controller, owner, key []byte) (value []byte, err error) {
 			return storedValues[string(key)], nil
@@ -432,11 +459,7 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
       transaction {
 
         prepare(signer: AuthAccount) {
-          let existing <- signer.storage[DeepThought] <- createDeepThought()
-          if existing != nil {
-             panic("already initialized")
-          }
-          destroy existing
+          signer.save(<-createDeepThought(), to: /storage/deepThought)
         }
       }
     `)
@@ -446,7 +469,7 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 
       transaction {
         prepare(signer: AuthAccount) {
-          let answer = signer.storage[DeepThought]?.answer()
+          let answer = signer.borrow<&DeepThought>(from: /storage/deepThought)?.answer()
           log(answer ?? 0)
         }
       }
@@ -463,6 +486,10 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 			default:
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
+		},
+		valueExists: func(controller, owner, key []byte) (bool, error) {
+			_, ok := storedValues[string(key)]
+			return ok, nil
 		},
 		getValue: func(controller, owner, key []byte) (value []byte, err error) {
 			return storedValues[string(key)], nil
@@ -512,12 +539,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
       transaction {
         prepare(signer: AuthAccount) {
-          let oldNumber <- signer.storage[Number] <- createNumber(42)
-          if oldNumber != nil {
-             panic("already initialized")
-          }
-          destroy oldNumber
-
+          signer.save(<-createNumber(42), to: /storage/number)
         }
       }
     `)
@@ -527,7 +549,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
       transaction {
         prepare(signer: AuthAccount) {
-          if let number <- signer.storage[Number] <- nil {
+          if let number <- signer.load<@Number>(from: /storage/number) {
             log(number.n)
             destroy number
           }
@@ -546,6 +568,10 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 			default:
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
+		},
+		valueExists: func(controller, owner, key []byte) (bool, error) {
+			_, ok := storedValues[string(key)]
+			return ok, nil
 		},
 		getValue: func(controller, owner, key []byte) (value []byte, err error) {
 			return storedValues[string(key)], nil
@@ -599,8 +625,7 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 
       transaction {
         prepare(signer: AuthAccount) {
-          let oldY <- signer.storage[Y] <- createY()
-          destroy oldY
+          signer.save(<-createY(), to: /storage/y)
         }
       }
     `)
@@ -610,7 +635,7 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 
       transaction {
         prepare(signer: AuthAccount) {
-          let y <- signer.storage[Y] <- nil
+          let y <- signer.load<@Y>(from: /storage/y)
           y?.x()
           destroy y
         }
@@ -627,6 +652,10 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 			default:
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
+		},
+		valueExists: func(controller, owner, key []byte) (bool, error) {
+			_, ok := storedValues[string(key)]
+			return ok, nil
 		},
 		getValue: func(controller, owner, key []byte) (value []byte, err error) {
 			return storedValues[string(key)], nil
@@ -668,11 +697,7 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
       transaction {
 
         prepare(signer: AuthAccount) {
-          let r <- signer.storage[R] <- createR()
-          if r != nil {
-             panic("already initialized")
-          }
-          destroy r
+          signer.save(<-createR(), to: /storage/r)
         }
       }
     `)
@@ -683,7 +708,7 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
       transaction {
 
         prepare(signer: AuthAccount) {
-          let ref = &signer.storage[R] as &R
+          let ref = signer.borrow<&R>(from: /storage/r)!
           ref.x()
         }
       }
@@ -701,6 +726,10 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 			default:
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
+		},
+		valueExists: func(controller, owner, key []byte) (bool, error) {
+			_, ok := storedValues[string(key)]
+			return ok, nil
 		},
 		getValue: func(controller, owner, key []byte) (value []byte, err error) {
 			return storedValues[string(key)], nil
@@ -726,7 +755,7 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 	assert.Equal(t, []string{"\"x!\""}, loggedMessages)
 }
 
-func TestRuntimeResourceContractUseThroughStoredReference(t *testing.T) {
+func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
@@ -747,13 +776,8 @@ func TestRuntimeResourceContractUseThroughStoredReference(t *testing.T) {
       transaction {
 
         prepare(signer: AuthAccount) {
-          let r <- signer.storage[R] <- createR()
-          if r != nil {
-             panic("already initialized")
-          }
-          destroy r
-
-          signer.storage[&R] = &signer.storage[R] as &R
+          signer.save(<-createR(), to: /storage/r)
+          signer.link<&R>(/public/r, target: /storage/r)
         }
       }
     `)
@@ -763,7 +787,8 @@ func TestRuntimeResourceContractUseThroughStoredReference(t *testing.T) {
 
       transaction {
         prepare(signer: AuthAccount) {
-          let ref = signer.storage[&R] ?? panic("no R ref")
+          let publicAccount = getAccount(signer.address)
+          let ref = publicAccount.getCapability(/public/r)!.borrow<&R>()!
           ref.x()
         }
       }
@@ -781,6 +806,10 @@ func TestRuntimeResourceContractUseThroughStoredReference(t *testing.T) {
 			default:
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
+		},
+		valueExists: func(controller, owner, key []byte) (bool, error) {
+			_, ok := storedValues[string(key)]
+			return ok, nil
 		},
 		getValue: func(controller, owner, key []byte) (value []byte, err error) {
 			return storedValues[string(key)], nil
@@ -835,14 +864,8 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 
       transaction {
         prepare(signer: AuthAccount) {
-          var r: @R? <- createR()
-          signer.storage[R] <-> r
-          if r != nil {
-            panic("already initialized")
-          }
-          destroy r
-
-          signer.storage[&AnyResource{RI}] = &signer.storage[R] as &AnyResource{RI}
+          signer.save(<-createR(), to: /storage/r)
+          signer.link<&AnyResource{RI}>(/public/r, target: /storage/r)
         }
       }
     `)
@@ -857,7 +880,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 
       transaction {
         prepare(signer: AuthAccount) {
-          let ref = signer.storage[&AnyResource{RI}] ?? panic("no RI ref")
+          let ref = signer.getCapability(/public/r)!.borrow<&AnyResource{RI}>()!
           ref.x()
         }
       }
@@ -878,10 +901,14 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		getValue: func(controller, owner, key []byte) (value []byte, err error) {
+		valueExists: func(controller, owner, key []byte) (bool, error) {
+			_, ok := storedValues[string(key)]
+			return ok, nil
+		},
+		getValue: func(controller, owner, key []byte) ([]byte, error) {
 			return storedValues[string(key)], nil
 		},
-		setValue: func(controller, owner, key, value []byte) (err error) {
+		setValue: func(controller, owner, key, value []byte) error {
 			storedValues[string(key)] = value
 			return nil
 		},
@@ -975,11 +1002,9 @@ func TestRuntimeStorageChanges(t *testing.T) {
 
       transaction {
         prepare(signer: AuthAccount) {
-          var x: @X? <- createX()
-          signer.storage[X] <-> x
-          destroy x
+          signer.save(<-createX(), to: /storage/x)
 
-          let ref = &signer.storage[X] as &X
+          let ref = signer.borrow<&X>(from: /storage/x)!
           ref.x = 1
         }
       }
@@ -990,7 +1015,7 @@ func TestRuntimeStorageChanges(t *testing.T) {
 
       transaction {
         prepare(signer: AuthAccount) {
-          let ref = &signer.storage[X] as &X
+          let ref = signer.borrow<&X>(from: /storage/x)!
           log(ref.x)
         }
       }
@@ -1008,6 +1033,10 @@ func TestRuntimeStorageChanges(t *testing.T) {
 			default:
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
+		},
+		valueExists: func(controller, owner, key []byte) (exists bool, err error) {
+			_, ok := storedValues[string(key)]
+			return ok, nil
 		},
 		getValue: func(controller, owner, key []byte) (value []byte, err error) {
 			return storedValues[string(key)], nil
@@ -1113,9 +1142,8 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 
       transaction {
         prepare(signer: AuthAccount) {
-          let existing <- signer.storage[R] <- createR()
-          destroy existing
-          signer.published[&R] = &signer.storage[R] as &R
+          signer.save(<-createR(), to: /storage/r)
+          signer.link<&R>(/public/r, target: /storage/r)
         }
       }
     `)
@@ -1130,7 +1158,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
               transaction {
 
                 prepare(signer: AuthAccount) {
-                  log(getAccount(0x%s).published[&R]?.test() ?? 0)
+                  log(getAccount(0x%s).getCapability(/public/r)!.borrow<&R>()!.test())
                 }
               }
             `,
@@ -1150,6 +1178,10 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 			default:
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
+		},
+		valueExists: func(controller, owner, key []byte) (bool, error) {
+			_, ok := storedValues[string(key)]
+			return ok, nil
 		},
 		getValue: func(controller, owner, key []byte) ([]byte, error) {
 			return storedValues[string(key)], nil
@@ -1635,8 +1667,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 
             init() {
                 // store nested resource in account on deployment
-                let oldR <- self.account.storage[R] <- create R()
-                destroy oldR
+                self.account.save(<-create R(), to: /storage/r)
             }
         }
     `)
@@ -1647,7 +1678,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 		transaction {
 
 			prepare(acct: AuthAccount) {
-				log(acct.storage[Test.R]?.hello())
+				log(acct.borrow<&Test.R>(from: /storage/r)?.hello())
 			}
 		}
 	`)
@@ -1671,6 +1702,10 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 	runtimeInterface := &testRuntimeInterface{
 		resolveImport: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
+		},
+		valueExists: func(controller, owner, key []byte) (bool, error) {
+			_, ok := storedValues[string(key)]
+			return ok, nil
 		},
 		getValue: func(controller, owner, key []byte) (value []byte, err error) {
 			return storedValues[string(key)], nil
@@ -1792,11 +1827,8 @@ pub contract FungibleToken {
     }
 
     init() {
-        let oldVault <- self.account.storage[Vault] <- create Vault(balance: 30)
-        destroy oldVault
-
-        let oldMinter <- self.account.storage[VaultMinter] <- create VaultMinter()
-        destroy oldMinter
+        self.account.save(<-create Vault(balance: 30), to: /storage/vault)
+        self.account.save(<-create VaultMinter(), to: /storage/minter)
     }
 }
 `
@@ -1832,11 +1864,15 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 
           prepare(acct: AuthAccount) {
 
-              acct.published[&AnyResource{FungibleToken.Receiver}] =
-                  &acct.storage[FungibleToken.Vault] as &AnyResource{FungibleToken.Receiver}
+              acct.link<&AnyResource{FungibleToken.Receiver}>(
+                  /public/receiver,
+                  target: /storage/vault
+              )
 
-              acct.storage[&FungibleToken.Vault] =
-                  &acct.storage[FungibleToken.Vault] as &FungibleToken.Vault
+              acct.link<&FungibleToken.Vault>(
+                  /private/vault,
+                  target: /storage/vault
+              )
           }
       }
     `)
@@ -1848,19 +1884,19 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
       transaction {
 
           prepare(acct: AuthAccount) {
-              // create a new vault instance
-              let vaultA <- FungibleToken.createEmptyVault()
+              let vault <- FungibleToken.createEmptyVault()
 
-              // store it in the account storage
-              // and destroy whatever was there previously
-              let oldVault <- acct.storage[FungibleToken.Vault] <- vaultA
-              destroy oldVault
+              acct.save(<-vault, to: /storage/vault)
 
-              acct.published[&AnyResource{FungibleToken.Receiver}] =
-                  &acct.storage[FungibleToken.Vault] as &AnyResource{FungibleToken.Receiver}
+              acct.link<&AnyResource{FungibleToken.Receiver}>(
+                  /public/receiver,
+                  target: /storage/vault
+              )
 
-              acct.storage[&FungibleToken.Vault] =
-                  &acct.storage[FungibleToken.Vault] as &FungibleToken.Vault
+              acct.link<&FungibleToken.Vault>(
+                  /private/vault,
+                  target: /storage/vault
+              )
           }
       }
     `)
@@ -1879,6 +1915,10 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
+		},
+		valueExists: func(controller, owner, key []byte) (bool, error) {
+			_, ok := storedValues[storageKey(string(controller), string(owner), string(key))]
+			return ok, nil
 		},
 		getValue: func(controller, owner, key []byte) (value []byte, err error) {
 			return storedValues[storageKey(string(controller), string(owner), string(key))], nil
@@ -1942,11 +1982,15 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
       transaction {
 
           prepare(acct: AuthAccount) {
-              acct.published[&AnyResource{FungibleToken.Receiver}] =
-                  &acct.storage[FungibleToken.Vault] as &AnyResource{FungibleToken.Receiver}
+              acct.link<&AnyResource{FungibleToken.Receiver}>(
+                  /public/receiver,
+                  target: /storage/vault
+              )
 
-              acct.storage[&FungibleToken.Vault] =
-                  &acct.storage[FungibleToken.Vault] as &FungibleToken.Vault
+              acct.link<&FungibleToken.Vault>(
+                  /private/vault,
+                  target: /storage/vault
+              )
           }
       }
     `)
@@ -1958,19 +2002,19 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
       transaction {
 
           prepare(acct: AuthAccount) {
-              // create a new vault instance
-              let vaultA <- FungibleToken.createEmptyVault()
+              let vault <- FungibleToken.createEmptyVault()
 
-              // store it in the account storage
-              // and destroy whatever was there previously
-              let oldVault <- acct.storage[FungibleToken.Vault] <- vaultA
-              destroy oldVault
+              acct.save(<-vault, to: /storage/vault)
 
-              acct.published[&AnyResource{FungibleToken.Receiver}] =
-                  &acct.storage[FungibleToken.Vault] as &AnyResource{FungibleToken.Receiver}
+              acct.link<&AnyResource{FungibleToken.Receiver}>(
+                  /public/receiver,
+                  target: /storage/vault
+              )
 
-              acct.storage[&FungibleToken.Vault] =
-                  &acct.storage[FungibleToken.Vault] as &FungibleToken.Vault
+              acct.link<&FungibleToken.Vault>(
+                  /private/vault,
+                  target: /storage/vault
+              )
           }
       }
     `)
@@ -1989,6 +2033,10 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
+		},
+		valueExists: func(controller, owner, key []byte) (bool, error) {
+			_, ok := storedValues[storageKey(string(controller), string(owner), string(key))]
+			return ok, nil
 		},
 		getValue: func(controller, owner, key []byte) (value []byte, err error) {
 			return storedValues[storageKey(string(controller), string(owner), string(key))], nil
@@ -2015,8 +2063,6 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 
 	err := runtime.ExecuteTransaction(deploy, runtimeInterface, utils.TestLocation)
 	require.NoError(t, err)
-
-	signerAccount = address2Value
 
 	err = runtime.ExecuteTransaction(setup1Transaction, runtimeInterface, utils.TestLocation)
 	require.NoError(t, err)
@@ -2080,8 +2126,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 
 	  transaction {
 	      prepare(signer: AuthAccount) {
-	          let oldR <- signer.storage[AnyResource{TestContractInterface.RInterface}] <- TestContract.createR()
-	          destroy oldR
+	          signer.save(<-TestContract.createR(), to: /storage/r)
 	      }
 	  }
 	`)
@@ -2099,7 +2144,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 
 	              transaction {
 	                  prepare(signer: AuthAccount) {
-	                      signer.storage[AnyResource{TestContractInterface.RInterface}]?.check(a: %d, b: %d)
+	                      signer.borrow<&AnyResource{TestContractInterface.RInterface}>(from: /storage/r)?.check(a: %d, b: %d)
 	                  }
 	              }
 	            `,
@@ -2123,6 +2168,10 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
+		},
+		valueExists: func(controller, owner, key []byte) (bool, error) {
+			_, ok := storedValues[storageKey(string(controller), string(owner), string(key))]
+			return ok, nil
 		},
 		getValue: func(controller, owner, key []byte) (value []byte, err error) {
 			return storedValues[storageKey(string(controller), string(owner), string(key))], nil
