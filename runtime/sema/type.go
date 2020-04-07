@@ -124,6 +124,25 @@ type ContainedType interface {
 	GetContainerType() Type
 }
 
+// ContainerType is a type which might have nested types
+
+type ContainerType interface {
+	Type
+	NestedTypes() map[string]Type
+}
+
+func VisitContainerAndNested(t ContainerType, visit func(ty Type)) {
+	visit(t)
+
+	for _, nestedType := range t.NestedTypes() {
+		if nestedContainerType, ok := nestedType.(ContainerType); ok {
+			VisitContainerAndNested(nestedContainerType, visit)
+		} else {
+			visit(nestedType)
+		}
+	}
+}
+
 // CompositeKindedType is a type which has a composite kind
 //
 type CompositeKindedType interface {
@@ -3627,7 +3646,7 @@ type CompositeType struct {
 	Members        map[string]*Member
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
-	NestedTypes           map[string]Type
+	nestedTypes           map[string]Type
 	ContainerType         Type
 }
 
@@ -3675,14 +3694,6 @@ func (t *CompositeType) ID() TypeID {
 	return TypeID(fmt.Sprintf("%s.%s", t.Location.ID(), t.QualifiedIdentifier()))
 }
 
-func SplitCompositeTypeID(compositeTypeID TypeID) (locationID ast.LocationID, qualifiedIdentifier string) {
-	parts := strings.SplitN(string(compositeTypeID), ".", 2)
-	if len(parts) != 2 {
-		return "", ""
-	}
-	return ast.LocationID(parts[0]), parts[1]
-}
-
 func (t *CompositeType) Equal(other Type) bool {
 	otherStructure, ok := other.(*CompositeType)
 	if !ok {
@@ -3725,7 +3736,7 @@ func (t *CompositeType) InterfaceType() *InterfaceType {
 		Members:               t.Members,
 		InitializerParameters: t.ConstructorParameters,
 		ContainerType:         t.ContainerType,
-		NestedTypes:           t.NestedTypes,
+		nestedTypes:           t.nestedTypes,
 	}
 }
 
@@ -3735,7 +3746,7 @@ func (t *CompositeType) TypeRequirements() []*CompositeType {
 
 	if containerComposite, ok := t.ContainerType.(*CompositeType); ok {
 		for _, conformance := range containerComposite.Conformances {
-			ty := conformance.NestedTypes[t.Identifier]
+			ty := conformance.nestedTypes[t.Identifier]
 			typeRequirement, ok := ty.(*CompositeType)
 			if !ok {
 				continue
@@ -3761,6 +3772,10 @@ func (*CompositeType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error)
 
 func (t *CompositeType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (t *CompositeType) NestedTypes() map[string]Type {
+	return t.nestedTypes
 }
 
 // AuthAccountType
@@ -4240,7 +4255,8 @@ type InterfaceType struct {
 	// TODO: add support for overloaded initializers
 	InitializerParameters []*Parameter
 	ContainerType         Type
-	NestedTypes           map[string]Type
+	nestedTypes           map[string]Type
+}
 
 func init() {
 	gob.Register(&InterfaceType{})
