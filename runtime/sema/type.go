@@ -3641,6 +3641,10 @@ func (t *CompositeType) ConformanceSet() InterfaceSet {
 	return t.conformanceSet
 }
 
+func init() {
+	gob.Register(&CompositeType{})
+}
+
 func (*CompositeType) IsType() {}
 
 func (t *CompositeType) String() string {
