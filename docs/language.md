@@ -2959,11 +2959,11 @@ but not in structures, as that would allow resources to be copied.
 Structures are declared using the `struct` keyword and resources are declared using the `resource` keyword. The keyword is followed by the name.
 
 ```cadence,file=composite-type-declaration.cdc
-struct SomeStruct {
+pub struct SomeStruct {
     // ...
 }
 
-resource SomeResource {
+pub resource SomeResource {
     // ...
 }
 ```
@@ -2973,13 +2973,14 @@ Structures and resources are types.
 Structures are created (instantiated) by calling the type like a function.
 
 ```cadence,file=structure-instantiation.cdc
-SomeStruct()
+// instantiate a new struct object and assign it to a constant
+let a = SomeStruct()
 ```
 
 The constructor function may require parameters if the [initializer](#composite-type-fields)
 of the composite type requires them.
 
-Composite types can only be declared within [contract](#contracts)
+Composite types can only be declared within [contracts](#contracts)
 and not locally in functions.
 They can also not be nested.
 
@@ -2988,7 +2989,8 @@ Resource must be created (instantiated) by using the `create` keyword and callin
 Resources can only be created in functions and types that are declared in the same contract in which the resource is declared.
 
 ```cadence,file=resource-instantiation.cdc
-create SomeResource()
+// instantiate a new resource object and assign it to a constant
+let b <- create SomeResource()
 ```
 
 ### Composite Type Fields
@@ -3062,7 +3064,7 @@ and the name of the field.
 // private so they cannot be accessed in outer scopes.
 // Access control will be explained in a later section.
 //
-struct Token {
+pub struct Token {
     pub let id: Int
     pub var balance: Int
 
@@ -3076,7 +3078,7 @@ struct Token {
 Note that it is invalid to provide the initial value for a field in the field declaration.
 
 ```cadence
-struct StructureWithConstantField {
+pub struct StructureWithConstantField {
     // Invalid: It is invalid to provide an initial value in the field declaration.
     // The field must be initialized by setting the initial value in the initializer.
     //
@@ -3087,7 +3089,7 @@ struct StructureWithConstantField {
 The field access syntax must be used to access fields –  fields are not available as variables.
 
 ```cadence
-struct Token {
+pub struct Token {
     pub let id: Int
 
     init(initialID: Int) {
@@ -3102,14 +3104,17 @@ struct Token {
 The initializer is **not** automatically derived from the fields, it must be explicitly declared.
 
 ```cadence
-struct Token {
+pub struct Token {
     pub let id: Int
 
     // Invalid: Missing initializer initializing field `id`.
 }
 ```
 
-A composite value can be created by calling the constructor and the value's fields can be accessed.
+A composite value can be created by calling the constructor and providing
+the field values as arguments.
+
+The value's fields can be accessed on the object after it is created.
 
 ```cadence,file=composite-type-fields-assignment.cdc
 let token = Token(id: 42, balance: 1_000_00)
@@ -3149,7 +3154,7 @@ Initializers support overloading. This allows for example providing default valu
 // A second initializer is provided for convenience to initialize the `id` field
 // with a given value, and the `balance` field with the default value `0`.
 //
-struct Token {
+pub struct Token {
     let id: Int
     var balance: Int
 
@@ -3178,14 +3183,13 @@ Getters are declared using the `get` keyword.
 Getters have no parameters and their return type is implicitly the type of the field.
 
 ```cadence,file=composite-type-field-getter.cdc
-struct GetterExample {
+pub struct GetterExample {
 
     // Declare a variable field named `balance` with a getter
     // which ensures the read value is always non-negative.
     //
     pub var balance: Int {
         get {
-
            if self.balance < 0 {
                return 0
            }
@@ -3215,7 +3219,7 @@ Another type cannot be specified. Setters have no return type.
 The types of values assigned to setters must always match the field's type.
 
 ```cadence,file=composite-type-field-setter.cdc
-struct SetterExample {
+pub struct SetterExample {
 
     // Declare a variable field named `balance` with a setter
     // which requires written values to be positive.
@@ -3288,7 +3292,7 @@ Synthetic fields are readable and writable when both a getter and a setter is de
 // NOTE: the tracker only implements some functionality to demonstrate
 // synthetic fields, it is incomplete (e.g. assignments to `goal` are not handled properly).
 //
-struct GoalTracker {
+pub struct GoalTracker {
 
     pub var goal: Int
     pub var completed: Int
@@ -3344,7 +3348,7 @@ Just like in the initializer, the special constant `self` refers to the composit
 // Declare a structure named "Rectangle", which represents a rectangle
 // and has variable fields for the width and height.
 //
-struct Rectangle {
+pub struct Rectangle {
     pub var width: Int
     pub var height: Int
 
@@ -3374,7 +3378,7 @@ Functions support overloading.
 // Declare a structure named "Rectangle", which represents a rectangle
 // and has variable fields for the width and height.
 //
-struct Rectangle {
+pub struct Rectangle {
     pub var width: Int
     pub var height: Int
 
@@ -3458,7 +3462,7 @@ Accessing a field or calling a function of a structure does not copy it.
 ```cadence,file=struct-behavior.cdc
 // Declare a structure named `SomeStruct`, with a variable integer field.
 //
-struct SomeStruct {
+pub struct SomeStruct {
     pub var value: Int
 
     init(value: Int) {
@@ -3503,8 +3507,8 @@ If the object doesn't exist, the value will always be `nil`
 When calling a function on an optional like this, if the object doesn't exist,
 nothing will happen and the execution will continue.
 
-It is still invalid
-to access a field of an optional composite type that is not declared.
+It is still invalid to access an undeclared field 
+of an optional composite type.
 
 ```cadence,file=optional-chaining.cdc
 // Declare a struct with a field and method.
@@ -3525,9 +3529,9 @@ pub struct Value {
     }
 }
 
-// create a new instance of the struct as an optional
+// Create a new instance of the struct as an optional
 let value: Value? = Value()
-// create another optional with the same type, but nil
+// Create another optional with the same type, but nil
 let noValue: Value? = nil
 
 // Access the `number` field using optional chaining
@@ -3551,7 +3555,68 @@ noValue?.set(new: 4)
 let sixOpt = value?.setAndReturn(new: 6)
 let six = sixOpt ?? 0
 // `six` is `6`
+```
 
+This is also possible by using the force-unwrap operator (`!`).
+
+Forced-Optional chaining is used by adding a `!`
+before the `.` access operator for fields or
+functions of an optional composite type.
+
+When getting a field value or calling a function with a return value, 
+the access returns the value.
+If the object doesn't exist, the execution will panic and revert.
+
+It is still invalid to access an undeclared field 
+of an optional composite type.
+
+```cadence,file=optional-chaining.cdc
+// Declare a struct with a field and method.
+pub struct Value {
+    pub var number: Int
+
+    init() {
+        self.number = 2
+    }
+
+    pub fun set(new: Int) {
+        self.number = new
+    }
+
+    pub fun setAndReturn(new: Int): Int {
+        self.number = new
+        return new
+    }
+}
+
+// Create a new instance of the struct as an optional
+let value: Value? = Value()
+// Create another optional with the same type, but nil
+let noValue: Value? = nil
+
+// Access the `number` field using force-optional chaining
+let two = value!.number
+// `two` is `2`
+
+// Try to access the `number` field of `noValue`, which has type `Value?`
+// Error: This time, since `noValue` is `nil`, The program execution will 
+// revert
+let number = noValue!.number
+
+// Call the `set` function of the struct
+
+// This succeeds and sets the value to 4
+value!.set(new: 4)
+
+// Error: Since `noValue` is nil, the value is not set 
+// and the program execution reverts.
+noValue!.set(new: 4)
+
+// Call the `setAndReturn` function, which returns an `Int`
+// Because we use force-unwrap before calling the function, 
+// the return value is type `Int`
+let six = value!.setAndReturn(new: 6)
+// `six` is `6`
 ```
 
 #### Resources
@@ -3568,15 +3633,15 @@ when assigned to a different variable,
 when passed as an argument to a function,
 and when returned from a function.
 
-Resources are **destroyed** using the `destroy` keyword.
+Resources can be explicitly **destroyed** using the `destroy` keyword.
 
 Accessing a field or calling a function of a resource does not move or destroy it.
 
-When the resource was moved, the constant or variable
+When the resource is moved, the constant or variable
 that referred to the resource before the move becomes **invalid**.
 An **invalid** resource cannot be used again.
 
-To make the behaviour of resource types explicit,
+To make the usage and behaviour of resource types explicit,
 the prefix `@` must be used in type annotations
 of variable or constant declarations, parameters, and return types.
 
@@ -3589,7 +3654,7 @@ and when it is returned from a function.
 ```cadence,file=resource-behavior.cdc
 // Declare a resource named `SomeResource`, with a variable integer field.
 //
-resource SomeResource {
+pub resource SomeResource {
     pub var value: Int
 
     init(value: Int) {
@@ -3612,13 +3677,13 @@ a.value
 
 // Constant `b` owns the resource.
 //
-b.value = 1
+b.value // equals 0
 
 // Declare a function which accepts a resource.
 //
 // The parameter has a resource type, so the type name must be prefixed with `@`.
 //
-fun use(resource: @SomeResource) {
+pub fun use(resource: @SomeResource) {
     // ...
 }
 
@@ -3632,12 +3697,18 @@ use(resource: <-b)
 b.value
 ```
 
-```cadence,file=resource-loss.cdc
-// Declare another, unrelated value of resource type `SomeResource`.
-//
-let c <- create SomeResource(value: 10)
+A resource object cannot go out of scope and be dynamically lost. 
+The program must either explicitly destroy it or move it to another context.
 
-// Invalid: `c` is not used, but must be; it cannot be lost.
+```cadence,file=resource-loss.cdc
+{
+    // Declare another, unrelated value of resource type `SomeResource`.
+    //
+    let c <- create SomeResource(value: 10)
+
+    // Invalid: `c` is not used before the end of the scope, but must be.
+    // It cannot be lost.
+}
 ```
 
 ```cadence,file=resource-destruction.cdc
@@ -3655,7 +3726,8 @@ destroy d
 d.value
 ```
 
-To make it explicit that the type is moved,
+To make it explicit that the type is a resource type 
+and must follow the rules associated with resources,
 it must be prefixed with `@` in all type annotations,
 e.g. for variable declarations, parameters, or return types.
 
@@ -3670,7 +3742,7 @@ let someResource: @SomeResource <- create SomeResource(value: 5)
 //
 // The parameter has a resource type, so the type name must be prefixed with `@`.
 //
-fun use(resource: @SomeResource) {
+pub fun use(resource: @SomeResource) {
     destroy resource
 }
 
@@ -3679,7 +3751,7 @@ fun use(resource: @SomeResource) {
 // The return type is a resource type, so the type name must be prefixed with `@`.
 // The return statement must also use the `<-` operator to make it explicit the resource is moved.
 //
-fun get(): @SomeResource {
+pub fun get(): @SomeResource {
     let newResource <- create SomeResource()
     return <-newResource
 }
@@ -3691,7 +3763,7 @@ Resources **must** be used exactly once.
 // Declare a function which consumes a resource but does not use it.
 // This function is invalid, because it would cause a loss of the resource.
 //
-fun forgetToUse(resource: @SomeResource) {
+pub fun forgetToUse(resource: @SomeResource) {
     // Invalid: The resource parameter `resource` is not used, but must be.
 }
 ```
@@ -3718,7 +3790,7 @@ res.value
 // Declare a function which has a resource parameter but does not use it.
 // This function is invalid, because it would cause a loss of the resource.
 //
-fun forgetToUse(resource: @SomeResource) {
+pub fun forgetToUse(resource: @SomeResource) {
     // Invalid: The resource parameter `resource` is not used, but must be.
 }
 ```
@@ -3728,7 +3800,7 @@ fun forgetToUse(resource: @SomeResource) {
 // This function is invalid, because it does not always use the resource parameter,
 // which would cause a loss of the resource.
 //
-fun sometimesDestroy(resource: @SomeResource, destroy: Bool) {
+pub fun sometimesDestroy(resource: @SomeResource, destroy: Bool) {
     if destroyResource {
         destroy resource
     }
@@ -3743,7 +3815,7 @@ fun sometimesDestroy(resource: @SomeResource, destroy: Bool) {
 // This function is valid, as it always uses the resource parameter,
 // and does not cause a loss of the resource.
 //
-fun alwaysUse(resource: @SomeResource, destroyResource: Bool) {
+pub fun alwaysUse(resource: @SomeResource, destroyResource: Bool) {
     if destroyResource {
         destroy resource
     } else {
@@ -3759,7 +3831,7 @@ fun alwaysUse(resource: @SomeResource, destroyResource: Bool) {
 // This function is invalid, because it does not always use the resource parameter,
 // which would cause a loss of the resource.
 //
-fun returnBeforeDestroy(: Bool) {
+pub fun returnBeforeDestroy(: Bool) {
     let res <- create SomeResource(value: 1)
     if move {
         use(resource: <-res)
@@ -3780,10 +3852,10 @@ fun returnBeforeDestroy(: Bool) {
 
 Resource variables cannot be assigned to as that would lead to the loss of the variable's current resource value.
 
-Instead, use a swap statement (`<->`) to replace the resource variable with another resource.
+Instead, use a swap statement (`<->`) or shift statement (`<- target <-`) to replace the resource variable with another resource.
 
 ```cadence,file=resource-variable-invalid-assignment.cdc
-resource R {}
+pub resource R {}
 
 var x <- create R()
 var y <- create R()
@@ -3799,6 +3871,13 @@ var replacement <- create R()
 x <-> replacement
 // `x` is the new resource.
 // `replacement` is the old resource.
+
+// Or use the shift statement (`<- target <-`)
+// This statement moves the resource out of `x` and into `oldX`,
+// and at the same time assigns `x` with the new value on the right-hand side.
+let oldX <- x <- create R()
+// oldX still needs to be explicitly handled after this statement
+destroy oldX
 ```
 
 #### Resource Destructors
@@ -3810,7 +3889,7 @@ A resource may have only one destructor.
 ```cadence,file=resource-destructor.cdc
 var destructorCalled = false
 
-resource Resource {
+pub resource Resource {
 
     // Declare a destructor for the resource, which is executed
     // when the resource is destroyed.
@@ -3834,7 +3913,7 @@ it **must** declare a destructor,
 which **must** invalidate all resource fields, i.e. move or destroy them.
 
 ```cadence,file=resource-nested-field.cdc
-resource Child {
+pub resource Child {
     let name: String
 
     init(name: String)
@@ -3846,7 +3925,7 @@ resource Child {
 // The resource *must* declare a destructor
 // and the destructor *must* invalidate the resource field.
 //
-resource Parent {
+pub resource Parent {
     let name: String
     var child: @Child
 
@@ -3912,7 +3991,7 @@ Arrays and dictionaries behave differently when they contain resources:
 Indexing into an array to read an element at a certain index or assign to it,
 or indexing into a dictionary to read a value for a certain key or set a value for the key is **not** allowed.
 
-Instead, use a swap statement to replace the accessed resource with another resource.
+Instead, use a swap statement (`<->`) or shift statement (`<- target <-`) to replace the accessed resource with another resource.
 
 ```cadence,file=resource-in-array.cdc
 resource R {}
@@ -3942,6 +4021,12 @@ var res <- create R()
 resources[0] <-> res
 // `resources[0]` now contains the new resource.
 // `res` now contains the old resource.
+
+// Use the shift statement to move the new resource into
+// the array at the same time that the old resource is being moved out
+let oldRes <- resources[0] <- create R()
+// The old object still needs to be handled
+destroy oldRes
 ```
 
 The same applies to dictionaries.
@@ -3977,6 +4062,12 @@ var res <- create R()
 resources["r1"] <-> res
 // `resources["r1"]` now contains the new resource.
 // `res` now contains the old resource.
+
+// Use the shift statement to move the new resource into
+// the dictionary at the same time that the old resource is being moved out
+let oldRes <- resources["r2"] <- create R()
+// The old object still needs to be handled
+destroy oldRes
 ```
 
 Resources cannot be moved into arrays and dictionaries multiple times,
@@ -4323,6 +4414,10 @@ There are three kinds of interfaces:
 
 Structure, resource, and contract types may implement multiple interfaces.
 
+Nominal typing applies to composite types that implement interfaces.
+This means that a type only implements an interface 
+if it has explicitly declared it.
+
 Interfaces consist of the function and field requirements
 that a type implementing the interface must provide implementations for.
 Interface requirements, and therefore also their implementations,
@@ -4470,9 +4565,10 @@ and the name of one or more interfaces that the composite type implements.
 
 This will tell the checker to enforce any requirements from the specified interfaces onto the declared type.
 
-A type implements (conforms to) an interface if it provides field declarations
-for all fields required by the interface and provides implementations for all functions
-required by the interface.
+A type implements (conforms to) an interface if it declares 
+the implementation in its signature, provides field declarations
+for all fields required by the interface, 
+and provides implementations for all functions required by the interface.
 
 The field declarations in the implementing type must match the field requirements
 in the interface in terms of name, type, and declaration kind (e.g. constant, variable)
@@ -4590,7 +4686,7 @@ and an implementation may provide a variable field which is public,
 but also publicly settable (the `pub(set)` keyword is specified).
 
 ```cadence
-struct interface AnInterface {
+pub struct interface AnInterface {
     // Require the implementing type to provide a publicly readable
     // field named `a` that has type `Int`. It may be a constant field,
     // a variable field, or a synthetic field.
@@ -4598,7 +4694,7 @@ struct interface AnInterface {
     pub a: Int
 }
 
-struct AnImplementation: AnInterface {
+pub struct AnImplementation: AnInterface {
     // Declare a publicly settable variable field named `a` that has type `Int`.
     // This implementation satisfies the requirement for interface `AnInterface`:
     // The field is at least publicly readable, but this implementation also
@@ -4624,14 +4720,14 @@ Values implementing an interface can be used as initial values for constants and
 // Require implementing types to provide a field which returns the area,
 // and a function which scales the shape by a given factor.
 //
-struct interface Shape {
+pub struct interface Shape {
     pub area: Int
     pub fun scale(factor: Int)
 }
 
 // Declare a structure named `Square` the implements the `Shape` interface.
 //
-struct Square: Shape {
+pub struct Square: Shape {
     // In addition to the required fields from the interface,
     // the type can also declare additional fields.
     //
@@ -4663,7 +4759,7 @@ struct Square: Shape {
 
 // Declare a structure named `Rectangle` that also implements the `Shape` interface.
 //
-struct Rectangle: Shape {
+pub struct Rectangle: Shape {
     pub var width: Int
     pub var height: Int
 
@@ -4738,18 +4834,18 @@ and one or more names of interfaces of the same kind, separated by commas.
 ```cadence,file=interface-implementation-requirement.cdc
 // Declare a structure interface named `Shape`.
 //
-struct interface Shape {}
+pub struct interface Shape {}
 
 // Declare a structure interface named `Polygon`.
 // Require implementing types to also implement the structure interface `Shape`.
 //
-struct interface Polygon: Shape {}
+pub struct interface Polygon: Shape {}
 
 // Declare a structure named `Hexagon` that implements the `Polygon` interface.
 // This also is required to implement the `Shape` interface,
 // because the `Polygon` interface requires it.
 //
-struct Hexagon: Polygon {}
+pub struct Hexagon: Polygon {}
 
 ```
 
