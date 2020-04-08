@@ -1790,15 +1790,6 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 		})
 }
 
-// PrefixedStorageKey returns the storage identifier with the proper prefix
-// based on the given access level.
-//
-// \x1F = Information Separator One
-//
-func PrefixedStorageKey(key string, accessLevel AccessLevel) string {
-	return fmt.Sprintf("%s\x1F%s", accessLevel.Prefix(), key)
-}
-
 func (interpreter *Interpreter) VisitIndexExpression(expression *ast.IndexExpression) ast.Repr {
 	return expression.TargetExpression.Accept(interpreter).(Trampoline).
 		FlatMap(func(result interface{}) Trampoline {
