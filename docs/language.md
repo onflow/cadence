@@ -748,6 +748,70 @@ let c = a ?? b
 let d = a ?? false
 ```
 
+#### Force Unwrap (`!`)
+
+The force-unwrap operator (`!`) returns
+the value inside an optional if it contains a value,
+or panics and aborts the execution if the optional has no value,
+i.e., the optional value is `nil`.
+
+```cadence
+// Declare a constant which has an optional integer type
+//
+let a: Int? = nil
+
+// Declare a constant with a non-optional integer type,
+// which is initialized to `a` if `a` is non-nil.
+// If `a` is nil, the program aborts.
+//
+let b: Int = a!
+// The program aborts because `a` is nil.
+
+// Declare another optional integer constant
+let c: Int? = 3
+
+// Declare a non-optional integer
+// which is initialized to `c` if `a` is non-nil.
+// If `c` is nil, the program aborts.
+let d: Int = c!
+// `d` is initialized to 3 because c isn't nil.
+
+```
+
+The force-unwrap operator can only be applied
+to values which have an optional type.
+
+```cadence
+// Declare a constant with a non-optional integer type.
+//
+let a = 1
+
+// Invalid: force-unwrap operator is applied to a value which has a
+// non-optional type (`a` has the non-optional type `Int`).
+//
+let b = a!
+```
+
+```cadence
+// Invalid: The force-unwrap operator is applied
+// to a value which has a non-optional type
+// (the integer literal is of type `Int`).
+//
+let c = 1!
+```
+
+#### Force-assignment operator (`<-!`)
+
+The force-assignment operator (`<-!`) assigns a resource-typed value to an
+optional-typed variable if the variable is nil.
+If the variable being assigned to is non-nil,
+the execution of the program aborts.
+
+The force-assignment operator is only used for
+[resource types](#resources) and the move operator (`<-`),
+which are covered the resources section of this document.
+
+
 #### Conditional Downcasting Operator
 
 > 🚧 Status: The conditional downcasting operator `as?` is implemented,
@@ -2505,7 +2569,9 @@ if let number = noNumber {
 }
 ```
 
-### Looping: while-statement
+### Looping:
+
+#### while-statement
 
 While-statements allow a certain piece of code to be executed repeatedly, as long as a condition remains true.
 
@@ -2528,7 +2594,40 @@ while a < 5 {
 // `a` is `5`
 ```
 
-The `continue` statement can be used to stop the current iteration of the loop and start the next iteration.
+#### For-in statement
+
+For-in statements allow a certain piece of code to be executed repeatedly for
+each element in an array.
+
+The for-in statement starts with the `for` keyword, followed by the name of
+the element that is used in each iteration of the loop,
+followed by the `in` keyword, and then followed by the array
+that is being iterated through in the loop.
+
+Then, the code that should be repeatedly executed in each iteration of the loop
+is enclosed in curly braces.
+
+If there are no elements in the data structure, the code in the loop will not
+be executed at all. Otherwise, the code will execute as many times
+as there are elements in the array.
+
+```cadence,file=control-flow-for.cdc
+var array = ["Hello", "World", "Foo", "Bar"]
+for element in array {
+    log(element)
+}
+
+// The loop would log:
+// "Hello"
+// "World"
+// "Foo"
+// "Bar"
+
+```
+
+#### continue and break
+
+In for-loops and while-loops, the `continue` statement can be used to stop the current iteration of a loop and start the next iteration.
 
 ```cadence,file=control-flow-continue.cdc
 var i = 0
@@ -2540,11 +2639,24 @@ while i < 10 {
     }
     x = x + 1
 }
-
 // `x` is `8`
+
+
+let array = [2, 2, 3]
+var sum = 0
+for element in array {
+    if element == 2 {
+        continue
+    }
+    sum = sum + element
+}
+
+// `sum` is `3`
+
 ```
 
-The `break` statement can be used to stop the loop.
+The `break` statement can be used to stop the execution
+of a for-loop or a while-loop.
 
 ```cadence,file=control-flow-break.cdc
 var x = 0
@@ -2554,8 +2666,19 @@ while x < 10 {
         break
     }
 }
-
 // `x` is `5`
+
+
+let array = [1, 2, 3]
+var sum = 0
+for element in array {
+    if element == 2 {
+        break
+    }
+    sum = sum + element
+}
+
+// `sum` is `1`
 ```
 
 ### Immediate function return: return-statement
@@ -2686,7 +2809,7 @@ automatically converted to a non-optional integer `Int`,
 or vice-versa.
 
 ```cadence,file=type-safety-add.cdc
-fun add(_ a: Int8, _ b: Int8): Int {
+fun add(_ a: Int8, _ b: Int8): Int8 {
     return a + b
 }
 
@@ -2836,11 +2959,11 @@ but not in structures, as that would allow resources to be copied.
 Structures are declared using the `struct` keyword and resources are declared using the `resource` keyword. The keyword is followed by the name.
 
 ```cadence,file=composite-type-declaration.cdc
-struct SomeStruct {
+pub struct SomeStruct {
     // ...
 }
 
-resource SomeResource {
+pub resource SomeResource {
     // ...
 }
 ```
@@ -2850,13 +2973,14 @@ Structures and resources are types.
 Structures are created (instantiated) by calling the type like a function.
 
 ```cadence,file=structure-instantiation.cdc
-SomeStruct()
+// instantiate a new struct object and assign it to a constant
+let a = SomeStruct()
 ```
 
 The constructor function may require parameters if the [initializer](#composite-type-fields)
 of the composite type requires them.
 
-Composite types can only be declared within [contract](#contracts)
+Composite types can only be declared within [contracts](#contracts)
 and not locally in functions.
 They can also not be nested.
 
@@ -2865,7 +2989,8 @@ Resource must be created (instantiated) by using the `create` keyword and callin
 Resources can only be created in functions and types that are declared in the same contract in which the resource is declared.
 
 ```cadence,file=resource-instantiation.cdc
-create SomeResource()
+// instantiate a new resource object and assign it to a constant
+let b <- create SomeResource()
 ```
 
 ### Composite Type Fields
@@ -2939,7 +3064,7 @@ and the name of the field.
 // private so they cannot be accessed in outer scopes.
 // Access control will be explained in a later section.
 //
-struct Token {
+pub struct Token {
     pub let id: Int
     pub var balance: Int
 
@@ -2953,7 +3078,7 @@ struct Token {
 Note that it is invalid to provide the initial value for a field in the field declaration.
 
 ```cadence
-struct StructureWithConstantField {
+pub struct StructureWithConstantField {
     // Invalid: It is invalid to provide an initial value in the field declaration.
     // The field must be initialized by setting the initial value in the initializer.
     //
@@ -2964,7 +3089,7 @@ struct StructureWithConstantField {
 The field access syntax must be used to access fields –  fields are not available as variables.
 
 ```cadence
-struct Token {
+pub struct Token {
     pub let id: Int
 
     init(initialID: Int) {
@@ -2979,14 +3104,17 @@ struct Token {
 The initializer is **not** automatically derived from the fields, it must be explicitly declared.
 
 ```cadence
-struct Token {
+pub struct Token {
     pub let id: Int
 
     // Invalid: Missing initializer initializing field `id`.
 }
 ```
 
-A composite value can be created by calling the constructor and the value's fields can be accessed.
+A composite value can be created by calling the constructor and providing
+the field values as arguments.
+
+The value's fields can be accessed on the object after it is created.
 
 ```cadence,file=composite-type-fields-assignment.cdc
 let token = Token(id: 42, balance: 1_000_00)
@@ -3026,7 +3154,7 @@ Initializers support overloading. This allows for example providing default valu
 // A second initializer is provided for convenience to initialize the `id` field
 // with a given value, and the `balance` field with the default value `0`.
 //
-struct Token {
+pub struct Token {
     let id: Int
     var balance: Int
 
@@ -3055,14 +3183,13 @@ Getters are declared using the `get` keyword.
 Getters have no parameters and their return type is implicitly the type of the field.
 
 ```cadence,file=composite-type-field-getter.cdc
-struct GetterExample {
+pub struct GetterExample {
 
     // Declare a variable field named `balance` with a getter
     // which ensures the read value is always non-negative.
     //
     pub var balance: Int {
         get {
-
            if self.balance < 0 {
                return 0
            }
@@ -3092,7 +3219,7 @@ Another type cannot be specified. Setters have no return type.
 The types of values assigned to setters must always match the field's type.
 
 ```cadence,file=composite-type-field-setter.cdc
-struct SetterExample {
+pub struct SetterExample {
 
     // Declare a variable field named `balance` with a setter
     // which requires written values to be positive.
@@ -3165,7 +3292,7 @@ Synthetic fields are readable and writable when both a getter and a setter is de
 // NOTE: the tracker only implements some functionality to demonstrate
 // synthetic fields, it is incomplete (e.g. assignments to `goal` are not handled properly).
 //
-struct GoalTracker {
+pub struct GoalTracker {
 
     pub var goal: Int
     pub var completed: Int
@@ -3221,7 +3348,7 @@ Just like in the initializer, the special constant `self` refers to the composit
 // Declare a structure named "Rectangle", which represents a rectangle
 // and has variable fields for the width and height.
 //
-struct Rectangle {
+pub struct Rectangle {
     pub var width: Int
     pub var height: Int
 
@@ -3251,7 +3378,7 @@ Functions support overloading.
 // Declare a structure named "Rectangle", which represents a rectangle
 // and has variable fields for the width and height.
 //
-struct Rectangle {
+pub struct Rectangle {
     pub var width: Int
     pub var height: Int
 
@@ -3335,7 +3462,7 @@ Accessing a field or calling a function of a structure does not copy it.
 ```cadence,file=struct-behavior.cdc
 // Declare a structure named `SomeStruct`, with a variable integer field.
 //
-struct SomeStruct {
+pub struct SomeStruct {
     pub var value: Int
 
     init(value: Int) {
@@ -3380,8 +3507,8 @@ If the object doesn't exist, the value will always be `nil`
 When calling a function on an optional like this, if the object doesn't exist,
 nothing will happen and the execution will continue.
 
-It is still invalid
-to access a field of an optional composite type that is not declared.
+It is still invalid to access an undeclared field
+of an optional composite type.
 
 ```cadence,file=optional-chaining.cdc
 // Declare a struct with a field and method.
@@ -3402,9 +3529,9 @@ pub struct Value {
     }
 }
 
-// create a new instance of the struct as an optional
+// Create a new instance of the struct as an optional
 let value: Value? = Value()
-// create another optional with the same type, but nil
+// Create another optional with the same type, but nil
 let noValue: Value? = nil
 
 // Access the `number` field using optional chaining
@@ -3428,7 +3555,68 @@ noValue?.set(new: 4)
 let sixOpt = value?.setAndReturn(new: 6)
 let six = sixOpt ?? 0
 // `six` is `6`
+```
 
+This is also possible by using the force-unwrap operator (`!`).
+
+Forced-Optional chaining is used by adding a `!`
+before the `.` access operator for fields or
+functions of an optional composite type.
+
+When getting a field value or calling a function with a return value,
+the access returns the value.
+If the object doesn't exist, the execution will panic and revert.
+
+It is still invalid to access an undeclared field
+of an optional composite type.
+
+```cadence,file=optional-chaining.cdc
+// Declare a struct with a field and method.
+pub struct Value {
+    pub var number: Int
+
+    init() {
+        self.number = 2
+    }
+
+    pub fun set(new: Int) {
+        self.number = new
+    }
+
+    pub fun setAndReturn(new: Int): Int {
+        self.number = new
+        return new
+    }
+}
+
+// Create a new instance of the struct as an optional
+let value: Value? = Value()
+// Create another optional with the same type, but nil
+let noValue: Value? = nil
+
+// Access the `number` field using force-optional chaining
+let two = value!.number
+// `two` is `2`
+
+// Try to access the `number` field of `noValue`, which has type `Value?`
+// Error: This time, since `noValue` is `nil`, The program execution will
+// revert
+let number = noValue!.number
+
+// Call the `set` function of the struct
+
+// This succeeds and sets the value to 4
+value!.set(new: 4)
+
+// Error: Since `noValue` is nil, the value is not set
+// and the program execution reverts.
+noValue!.set(new: 4)
+
+// Call the `setAndReturn` function, which returns an `Int`
+// Because we use force-unwrap before calling the function,
+// the return value is type `Int`
+let six = value!.setAndReturn(new: 6)
+// `six` is `6`
 ```
 
 #### Resources
@@ -3445,15 +3633,15 @@ when assigned to a different variable,
 when passed as an argument to a function,
 and when returned from a function.
 
-Resources are **destroyed** using the `destroy` keyword.
+Resources can be explicitly **destroyed** using the `destroy` keyword.
 
 Accessing a field or calling a function of a resource does not move or destroy it.
 
-When the resource was moved, the constant or variable
+When the resource is moved, the constant or variable
 that referred to the resource before the move becomes **invalid**.
 An **invalid** resource cannot be used again.
 
-To make the behaviour of resource types explicit,
+To make the usage and behaviour of resource types explicit,
 the prefix `@` must be used in type annotations
 of variable or constant declarations, parameters, and return types.
 
@@ -3466,7 +3654,7 @@ and when it is returned from a function.
 ```cadence,file=resource-behavior.cdc
 // Declare a resource named `SomeResource`, with a variable integer field.
 //
-resource SomeResource {
+pub resource SomeResource {
     pub var value: Int
 
     init(value: Int) {
@@ -3489,13 +3677,13 @@ a.value
 
 // Constant `b` owns the resource.
 //
-b.value = 1
+b.value // equals 0
 
 // Declare a function which accepts a resource.
 //
 // The parameter has a resource type, so the type name must be prefixed with `@`.
 //
-fun use(resource: @SomeResource) {
+pub fun use(resource: @SomeResource) {
     // ...
 }
 
@@ -3509,12 +3697,18 @@ use(resource: <-b)
 b.value
 ```
 
-```cadence,file=resource-loss.cdc
-// Declare another, unrelated value of resource type `SomeResource`.
-//
-let c <- create SomeResource(value: 10)
+A resource object cannot go out of scope and be dynamically lost.
+The program must either explicitly destroy it or move it to another context.
 
-// Invalid: `c` is not used, but must be; it cannot be lost.
+```cadence,file=resource-loss.cdc
+{
+    // Declare another, unrelated value of resource type `SomeResource`.
+    //
+    let c <- create SomeResource(value: 10)
+
+    // Invalid: `c` is not used before the end of the scope, but must be.
+    // It cannot be lost.
+}
 ```
 
 ```cadence,file=resource-destruction.cdc
@@ -3532,7 +3726,8 @@ destroy d
 d.value
 ```
 
-To make it explicit that the type is moved,
+To make it explicit that the type is a resource type
+and must follow the rules associated with resources,
 it must be prefixed with `@` in all type annotations,
 e.g. for variable declarations, parameters, or return types.
 
@@ -3547,7 +3742,7 @@ let someResource: @SomeResource <- create SomeResource(value: 5)
 //
 // The parameter has a resource type, so the type name must be prefixed with `@`.
 //
-fun use(resource: @SomeResource) {
+pub fun use(resource: @SomeResource) {
     destroy resource
 }
 
@@ -3556,7 +3751,7 @@ fun use(resource: @SomeResource) {
 // The return type is a resource type, so the type name must be prefixed with `@`.
 // The return statement must also use the `<-` operator to make it explicit the resource is moved.
 //
-fun get(): @SomeResource {
+pub fun get(): @SomeResource {
     let newResource <- create SomeResource()
     return <-newResource
 }
@@ -3568,7 +3763,7 @@ Resources **must** be used exactly once.
 // Declare a function which consumes a resource but does not use it.
 // This function is invalid, because it would cause a loss of the resource.
 //
-fun forgetToUse(resource: @SomeResource) {
+pub fun forgetToUse(resource: @SomeResource) {
     // Invalid: The resource parameter `resource` is not used, but must be.
 }
 ```
@@ -3595,7 +3790,7 @@ res.value
 // Declare a function which has a resource parameter but does not use it.
 // This function is invalid, because it would cause a loss of the resource.
 //
-fun forgetToUse(resource: @SomeResource) {
+pub fun forgetToUse(resource: @SomeResource) {
     // Invalid: The resource parameter `resource` is not used, but must be.
 }
 ```
@@ -3605,7 +3800,7 @@ fun forgetToUse(resource: @SomeResource) {
 // This function is invalid, because it does not always use the resource parameter,
 // which would cause a loss of the resource.
 //
-fun sometimesDestroy(resource: @SomeResource, destroy: Bool) {
+pub fun sometimesDestroy(resource: @SomeResource, destroy: Bool) {
     if destroyResource {
         destroy resource
     }
@@ -3620,7 +3815,7 @@ fun sometimesDestroy(resource: @SomeResource, destroy: Bool) {
 // This function is valid, as it always uses the resource parameter,
 // and does not cause a loss of the resource.
 //
-fun alwaysUse(resource: @SomeResource, destroyResource: Bool) {
+pub fun alwaysUse(resource: @SomeResource, destroyResource: Bool) {
     if destroyResource {
         destroy resource
     } else {
@@ -3636,7 +3831,7 @@ fun alwaysUse(resource: @SomeResource, destroyResource: Bool) {
 // This function is invalid, because it does not always use the resource parameter,
 // which would cause a loss of the resource.
 //
-fun returnBeforeDestroy(: Bool) {
+pub fun returnBeforeDestroy(: Bool) {
     let res <- create SomeResource(value: 1)
     if move {
         use(resource: <-res)
@@ -3657,10 +3852,10 @@ fun returnBeforeDestroy(: Bool) {
 
 Resource variables cannot be assigned to as that would lead to the loss of the variable's current resource value.
 
-Instead, use a swap statement (`<->`) to replace the resource variable with another resource.
+Instead, use a swap statement (`<->`) or shift statement (`<- target <-`) to replace the resource variable with another resource.
 
 ```cadence,file=resource-variable-invalid-assignment.cdc
-resource R {}
+pub resource R {}
 
 var x <- create R()
 var y <- create R()
@@ -3676,6 +3871,13 @@ var replacement <- create R()
 x <-> replacement
 // `x` is the new resource.
 // `replacement` is the old resource.
+
+// Or use the shift statement (`<- target <-`)
+// This statement moves the resource out of `x` and into `oldX`,
+// and at the same time assigns `x` with the new value on the right-hand side.
+let oldX <- x <- create R()
+// oldX still needs to be explicitly handled after this statement
+destroy oldX
 ```
 
 #### Resource Destructors
@@ -3687,7 +3889,7 @@ A resource may have only one destructor.
 ```cadence,file=resource-destructor.cdc
 var destructorCalled = false
 
-resource Resource {
+pub resource Resource {
 
     // Declare a destructor for the resource, which is executed
     // when the resource is destroyed.
@@ -3711,7 +3913,7 @@ it **must** declare a destructor,
 which **must** invalidate all resource fields, i.e. move or destroy them.
 
 ```cadence,file=resource-nested-field.cdc
-resource Child {
+pub resource Child {
     let name: String
 
     init(name: String)
@@ -3723,7 +3925,7 @@ resource Child {
 // The resource *must* declare a destructor
 // and the destructor *must* invalidate the resource field.
 //
-resource Parent {
+pub resource Parent {
     let name: String
     var child: @Child
 
@@ -3789,7 +3991,7 @@ Arrays and dictionaries behave differently when they contain resources:
 Indexing into an array to read an element at a certain index or assign to it,
 or indexing into a dictionary to read a value for a certain key or set a value for the key is **not** allowed.
 
-Instead, use a swap statement to replace the accessed resource with another resource.
+Instead, use a swap statement (`<->`) or shift statement (`<- target <-`) to replace the accessed resource with another resource.
 
 ```cadence,file=resource-in-array.cdc
 resource R {}
@@ -3819,6 +4021,12 @@ var res <- create R()
 resources[0] <-> res
 // `resources[0]` now contains the new resource.
 // `res` now contains the old resource.
+
+// Use the shift statement to move the new resource into
+// the array at the same time that the old resource is being moved out
+let oldRes <- resources[0] <- create R()
+// The old object still needs to be handled
+destroy oldRes
 ```
 
 The same applies to dictionaries.
@@ -3854,6 +4062,12 @@ var res <- create R()
 resources["r1"] <-> res
 // `resources["r1"]` now contains the new resource.
 // `res` now contains the old resource.
+
+// Use the shift statement to move the new resource into
+// the dictionary at the same time that the old resource is being moved out
+let oldRes <- resources["r2"] <- create R()
+// The old object still needs to be handled
+destroy oldRes
 ```
 
 Resources cannot be moved into arrays and dictionaries multiple times,
@@ -4014,7 +4228,7 @@ to in the scope where it is defined (self).
 There are four levels of access control defined in the code that specify where
 a declaration can be accessed or called.
 
-- **Public** or **access(all)** means the declaration 
+- **Public** or **access(all)** means the declaration
   is accessible/visible in all scopes.
 
   This includes the current scope, inner scopes, and the outer scopes.
@@ -4027,17 +4241,17 @@ a declaration can be accessed or called.
 
 - **access(account)** means the declaration is only accessible/visible in the
   scope of the entire account where it is defined. This means that
-  other contracts in the account are able to access it, 
+  other contracts in the account are able to access it,
 
-  An element is specified with account access 
+  An element is specified with account access
   by using the `access(account)` keyword.
 
 - **access(contract)** means the declaration is only accessible/visible in the
-  scope of the contract that defined it. This means that other types 
-  and functions that are defined in the same contract can access it, 
+  scope of the contract that defined it. This means that other types
+  and functions that are defined in the same contract can access it,
   but not other contracts in the same account.
 
-  An element is specified with contract access 
+  An element is specified with contract access
   by using the `access(contract)` keyword.
 
 - Private or **access(self)** means the declaration is only accessible/visible
@@ -4079,7 +4293,7 @@ To summarize the behavior for functions, structures, resources, and interfaces:
 
 Currently, all contract defined types must have an access declaration, but
 only code within the [contract](#contracts) in which the type is declared
-is allowed to create instances of the type. 
+is allowed to create instances of the type.
 See the linked contracts section for more information.
 
 ```cadence,file=access-control-globals.cdc
@@ -4199,6 +4413,10 @@ There are three kinds of interfaces:
 - **Contract interfaces**: implemented by [contracts](#contracts)
 
 Structure, resource, and contract types may implement multiple interfaces.
+
+Nominal typing applies to composite types that implement interfaces.
+This means that a type only implements an interface
+if it has explicitly declared it.
 
 Interfaces consist of the function and field requirements
 that a type implementing the interface must provide implementations for.
@@ -4347,9 +4565,10 @@ and the name of one or more interfaces that the composite type implements.
 
 This will tell the checker to enforce any requirements from the specified interfaces onto the declared type.
 
-A type implements (conforms to) an interface if it provides field declarations
-for all fields required by the interface and provides implementations for all functions
-required by the interface.
+A type implements (conforms to) an interface if it declares
+the implementation in its signature, provides field declarations
+for all fields required by the interface,
+and provides implementations for all functions required by the interface.
 
 The field declarations in the implementing type must match the field requirements
 in the interface in terms of name, type, and declaration kind (e.g. constant, variable)
@@ -4467,7 +4686,7 @@ and an implementation may provide a variable field which is public,
 but also publicly settable (the `pub(set)` keyword is specified).
 
 ```cadence
-struct interface AnInterface {
+pub struct interface AnInterface {
     // Require the implementing type to provide a publicly readable
     // field named `a` that has type `Int`. It may be a constant field,
     // a variable field, or a synthetic field.
@@ -4475,7 +4694,7 @@ struct interface AnInterface {
     pub a: Int
 }
 
-struct AnImplementation: AnInterface {
+pub struct AnImplementation: AnInterface {
     // Declare a publicly settable variable field named `a` that has type `Int`.
     // This implementation satisfies the requirement for interface `AnInterface`:
     // The field is at least publicly readable, but this implementation also
@@ -4501,14 +4720,14 @@ Values implementing an interface can be used as initial values for constants and
 // Require implementing types to provide a field which returns the area,
 // and a function which scales the shape by a given factor.
 //
-struct interface Shape {
+pub struct interface Shape {
     pub area: Int
     pub fun scale(factor: Int)
 }
 
 // Declare a structure named `Square` the implements the `Shape` interface.
 //
-struct Square: Shape {
+pub struct Square: Shape {
     // In addition to the required fields from the interface,
     // the type can also declare additional fields.
     //
@@ -4540,7 +4759,7 @@ struct Square: Shape {
 
 // Declare a structure named `Rectangle` that also implements the `Shape` interface.
 //
-struct Rectangle: Shape {
+pub struct Rectangle: Shape {
     pub var width: Int
     pub var height: Int
 
@@ -4615,18 +4834,18 @@ and one or more names of interfaces of the same kind, separated by commas.
 ```cadence,file=interface-implementation-requirement.cdc
 // Declare a structure interface named `Shape`.
 //
-struct interface Shape {}
+pub struct interface Shape {}
 
 // Declare a structure interface named `Polygon`.
 // Require implementing types to also implement the structure interface `Shape`.
 //
-struct interface Polygon: Shape {}
+pub struct interface Polygon: Shape {}
 
 // Declare a structure named `Hexagon` that implements the `Polygon` interface.
 // This also is required to implement the `Shape` interface,
 // because the `Polygon` interface requires it.
 //
-struct Hexagon: Polygon {}
+pub struct Hexagon: Polygon {}
 
 ```
 
@@ -4839,7 +5058,9 @@ followed by the `from` keyword, and then followed by the location.
 
 If importing a local file, the location is a string literal, and the path to the file.
 
-If importing an external type in a different account, 
+> 🚧 Status: Imports from local files are not currently implemented.
+
+If importing an external type in a different account,
 the location is an address literal, and the address
 of the account where the declarations are deployed to and published.
 
@@ -5527,8 +5748,8 @@ Each phase is a block of code that executes sequentially.
   that can then be used in the execution phase.
 
   The prepare phase also has access to the authorized account objects
-  (`AuthAccount`) of the accounts that signed it. 
-  These authorized account objects have to be declared as parameters 
+  (`AuthAccount`) of the accounts that signed it.
+  These authorized account objects have to be declared as parameters
   to the prepare phase, one for each signer of the transaction:
 
   ```cadence,file=prepare-args.cdc
@@ -5542,12 +5763,12 @@ Each phase is a block of code that executes sequentially.
   }
   ```
 
-  `AuthAccount` objects have the permissions 
+  `AuthAccount` objects have the permissions
   to read from and write to the private storage
   of the account, which cannot be directly accessed anywhere else.
 
-- The **execute phase** (declared using the `execute` keyword) 
-  is where interaction with other accounts 
+- The **execute phase** (declared using the `execute` keyword)
+  is where interaction with other accounts
   and contracts should usually happen.
 
   This usually involves interacting with contracts with public types
@@ -5555,9 +5776,9 @@ Each phase is a block of code that executes sequentially.
   objects, and performing specific computation on these values.
 
   This phase does not have access to any account's private account objects
-  and can only access public contract fields and functions, 
+  and can only access public contract fields and functions,
   public account objects (`PublicAccount`) using the built-in `getAccount`
-  function, and any local transaction variables 
+  function, and any local transaction variables
   that were initialized in the `prepare` block.
 
   ```cadence,file=execute.cdc
@@ -5576,7 +5797,7 @@ Each phase is a block of code that executes sequentially.
   ```
 
 
-- The **postcondition phase** (declared using the `post` keyword) 
+- The **postcondition phase** (declared using the `post` keyword)
   is where the transaction can check
   that its functionality was executed correctly with specific condition checks.
 
@@ -5622,7 +5843,7 @@ transaction {
 
 ### Importing and using Deployed Contract Code
 
-Deploying contract code to an account was covered 
+Deploying contract code to an account was covered
 in the [Deploying and Updating Contracts](#Deploying-and-Updating-Contracts) section of the spec.
 
 Once a contract or contract interface has been deployed to an account,
@@ -5651,45 +5872,6 @@ TODO
 #### Document how to create objects of types defined in other contracts
 
 -->
-
-### Storing Resources and Structs in Account Storage
-
-<!--
-
-TODO
-
-#### Document how to store objects in account storage
-
--->
-
-
-### Creating public links to your Private Objects
-
-<!--
-
-TODO
-
-#### Document how to create a link to a storage object
-
--->
-
-
-### Creating capabilities based on the links to private objects
-
-<!--
-
-TODO
-
-#### Document how to create capabilities and references with a simple example
-
--->
-
-In most situations it is important to expose only a subset of the functionality
-of the stored resource objects
-because some of the functionality should only be available to the owner.
-
-
-```
 
 ## Built-in Functions
 
