@@ -770,7 +770,7 @@ let b: Int = a!
 // Declare another optional integer constant
 let c: Int? = 3
 
-// Declare a non-optional integer 
+// Declare a non-optional integer
 // which is initialized to `c` if `a` is non-nil.
 // If `c` is nil, the program aborts.
 let d: Int = c!
@@ -786,14 +786,14 @@ to values which have an optional type.
 //
 let a = 1
 
-// Invalid: force-unwrap operator is applied to a value which has a 
+// Invalid: force-unwrap operator is applied to a value which has a
 // non-optional type (`a` has the non-optional type `Int`).
 //
 let b = a!
 ```
 
 ```cadence
-// Invalid: The force-unwrap operator is applied 
+// Invalid: The force-unwrap operator is applied
 // to a value which has a non-optional type
 // (the integer literal is of type `Int`).
 //
@@ -804,11 +804,11 @@ let c = 1!
 
 The force-assignment operator (`<-!`) assigns a resource-typed value to an
 optional-typed variable if the variable is nil.
-If the variable being assigned to is non-nil, 
+If the variable being assigned to is non-nil,
 the execution of the program aborts.
 
-The force-assignment operator is only used for 
-[resource types](#resources) and the move operator (`<-`), 
+The force-assignment operator is only used for
+[resource types](#resources) and the move operator (`<-`),
 which are covered the resources section of this document.
 
 
@@ -2569,7 +2569,7 @@ if let number = noNumber {
 }
 ```
 
-### Looping: 
+### Looping:
 
 #### while-statement
 
@@ -2596,13 +2596,13 @@ while a < 5 {
 
 #### For-in statement
 
-For-in statements allow a certain piece of code to be executed repeatedly for 
+For-in statements allow a certain piece of code to be executed repeatedly for
 each element in an array.
 
-The for-in statement starts with the `for` keyword, followed by the name of 
-the element that is used in each iteration of the loop, 
+The for-in statement starts with the `for` keyword, followed by the name of
+the element that is used in each iteration of the loop,
 followed by the `in` keyword, and then followed by the array
-that is being iterated through in the loop. 
+that is being iterated through in the loop.
 
 Then, the code that should be repeatedly executed in each iteration of the loop
 is enclosed in curly braces.
@@ -2647,7 +2647,7 @@ var sum = 0
 for element in array {
     if element == 2 {
         continue
-    } 
+    }
     sum = sum + element
 }
 
@@ -2655,7 +2655,7 @@ for element in array {
 
 ```
 
-The `break` statement can be used to stop the execution 
+The `break` statement can be used to stop the execution
 of a for-loop or a while-loop.
 
 ```cadence,file=control-flow-break.cdc
@@ -2674,7 +2674,7 @@ var sum = 0
 for element in array {
     if element == 2 {
         break
-    } 
+    }
     sum = sum + element
 }
 
@@ -3507,7 +3507,7 @@ If the object doesn't exist, the value will always be `nil`
 When calling a function on an optional like this, if the object doesn't exist,
 nothing will happen and the execution will continue.
 
-It is still invalid to access an undeclared field 
+It is still invalid to access an undeclared field
 of an optional composite type.
 
 ```cadence,file=optional-chaining.cdc
@@ -3563,11 +3563,11 @@ Forced-Optional chaining is used by adding a `!`
 before the `.` access operator for fields or
 functions of an optional composite type.
 
-When getting a field value or calling a function with a return value, 
+When getting a field value or calling a function with a return value,
 the access returns the value.
 If the object doesn't exist, the execution will panic and revert.
 
-It is still invalid to access an undeclared field 
+It is still invalid to access an undeclared field
 of an optional composite type.
 
 ```cadence,file=optional-chaining.cdc
@@ -3599,7 +3599,7 @@ let two = value!.number
 // `two` is `2`
 
 // Try to access the `number` field of `noValue`, which has type `Value?`
-// Error: This time, since `noValue` is `nil`, The program execution will 
+// Error: This time, since `noValue` is `nil`, The program execution will
 // revert
 let number = noValue!.number
 
@@ -3608,12 +3608,12 @@ let number = noValue!.number
 // This succeeds and sets the value to 4
 value!.set(new: 4)
 
-// Error: Since `noValue` is nil, the value is not set 
+// Error: Since `noValue` is nil, the value is not set
 // and the program execution reverts.
 noValue!.set(new: 4)
 
 // Call the `setAndReturn` function, which returns an `Int`
-// Because we use force-unwrap before calling the function, 
+// Because we use force-unwrap before calling the function,
 // the return value is type `Int`
 let six = value!.setAndReturn(new: 6)
 // `six` is `6`
@@ -3697,7 +3697,7 @@ use(resource: <-b)
 b.value
 ```
 
-A resource object cannot go out of scope and be dynamically lost. 
+A resource object cannot go out of scope and be dynamically lost.
 The program must either explicitly destroy it or move it to another context.
 
 ```cadence,file=resource-loss.cdc
@@ -3726,7 +3726,7 @@ destroy d
 d.value
 ```
 
-To make it explicit that the type is a resource type 
+To make it explicit that the type is a resource type
 and must follow the rules associated with resources,
 it must be prefixed with `@` in all type annotations,
 e.g. for variable declarations, parameters, or return types.
@@ -4228,7 +4228,7 @@ to in the scope where it is defined (self).
 There are four levels of access control defined in the code that specify where
 a declaration can be accessed or called.
 
-- **Public** or **access(all)** means the declaration 
+- **Public** or **access(all)** means the declaration
   is accessible/visible in all scopes.
 
   This includes the current scope, inner scopes, and the outer scopes.
@@ -4241,17 +4241,17 @@ a declaration can be accessed or called.
 
 - **access(account)** means the declaration is only accessible/visible in the
   scope of the entire account where it is defined. This means that
-  other contracts in the account are able to access it, 
+  other contracts in the account are able to access it,
 
-  An element is specified with account access 
+  An element is specified with account access
   by using the `access(account)` keyword.
 
 - **access(contract)** means the declaration is only accessible/visible in the
-  scope of the contract that defined it. This means that other types 
-  and functions that are defined in the same contract can access it, 
+  scope of the contract that defined it. This means that other types
+  and functions that are defined in the same contract can access it,
   but not other contracts in the same account.
 
-  An element is specified with contract access 
+  An element is specified with contract access
   by using the `access(contract)` keyword.
 
 - Private or **access(self)** means the declaration is only accessible/visible
@@ -4293,7 +4293,7 @@ To summarize the behavior for functions, structures, resources, and interfaces:
 
 Currently, all contract defined types must have an access declaration, but
 only code within the [contract](#contracts) in which the type is declared
-is allowed to create instances of the type. 
+is allowed to create instances of the type.
 See the linked contracts section for more information.
 
 ```cadence,file=access-control-globals.cdc
@@ -4415,7 +4415,7 @@ There are three kinds of interfaces:
 Structure, resource, and contract types may implement multiple interfaces.
 
 Nominal typing applies to composite types that implement interfaces.
-This means that a type only implements an interface 
+This means that a type only implements an interface
 if it has explicitly declared it.
 
 Interfaces consist of the function and field requirements
@@ -4565,9 +4565,9 @@ and the name of one or more interfaces that the composite type implements.
 
 This will tell the checker to enforce any requirements from the specified interfaces onto the declared type.
 
-A type implements (conforms to) an interface if it declares 
+A type implements (conforms to) an interface if it declares
 the implementation in its signature, provides field declarations
-for all fields required by the interface, 
+for all fields required by the interface,
 and provides implementations for all functions required by the interface.
 
 The field declarations in the implementing type must match the field requirements
@@ -5060,7 +5060,7 @@ If importing a local file, the location is a string literal, and the path to the
 
 > 🚧 Status: Imports from local files are not currently implemented.
 
-If importing an external type in a different account, 
+If importing an external type in a different account,
 the location is an address literal, and the address
 of the account where the declarations are deployed to and published.
 
@@ -5748,8 +5748,8 @@ Each phase is a block of code that executes sequentially.
   that can then be used in the execution phase.
 
   The prepare phase also has access to the authorized account objects
-  (`AuthAccount`) of the accounts that signed it. 
-  These authorized account objects have to be declared as parameters 
+  (`AuthAccount`) of the accounts that signed it.
+  These authorized account objects have to be declared as parameters
   to the prepare phase, one for each signer of the transaction:
 
   ```cadence,file=prepare-args.cdc
@@ -5763,12 +5763,12 @@ Each phase is a block of code that executes sequentially.
   }
   ```
 
-  `AuthAccount` objects have the permissions 
+  `AuthAccount` objects have the permissions
   to read from and write to the private storage
   of the account, which cannot be directly accessed anywhere else.
 
-- The **execute phase** (declared using the `execute` keyword) 
-  is where interaction with other accounts 
+- The **execute phase** (declared using the `execute` keyword)
+  is where interaction with other accounts
   and contracts should usually happen.
 
   This usually involves interacting with contracts with public types
@@ -5776,9 +5776,9 @@ Each phase is a block of code that executes sequentially.
   objects, and performing specific computation on these values.
 
   This phase does not have access to any account's private account objects
-  and can only access public contract fields and functions, 
+  and can only access public contract fields and functions,
   public account objects (`PublicAccount`) using the built-in `getAccount`
-  function, and any local transaction variables 
+  function, and any local transaction variables
   that were initialized in the `prepare` block.
 
   ```cadence,file=execute.cdc
@@ -5797,7 +5797,7 @@ Each phase is a block of code that executes sequentially.
   ```
 
 
-- The **postcondition phase** (declared using the `post` keyword) 
+- The **postcondition phase** (declared using the `post` keyword)
   is where the transaction can check
   that its functionality was executed correctly with specific condition checks.
 
@@ -5843,7 +5843,7 @@ transaction {
 
 ### Importing and using Deployed Contract Code
 
-Deploying contract code to an account was covered 
+Deploying contract code to an account was covered
 in the [Deploying and Updating Contracts](#Deploying-and-Updating-Contracts) section of the spec.
 
 Once a contract or contract interface has been deployed to an account,
@@ -5872,8 +5872,6 @@ TODO
 #### Document how to create objects of types defined in other contracts
 
 -->
-
-```
 
 ## Built-in Functions
 

@@ -44,6 +44,10 @@ function highlight(options) {
     const highlighter = await highlighterPromise
 
     async function visitor(node) {
+      if (!node.lang) {
+        throw new Error('Missing language tag at line ' + node.position.start.line)
+      }
+
       const language = node.lang.split(',')[0]
 
       const grammar = await highlighter.getLanguageGrammar(language)
