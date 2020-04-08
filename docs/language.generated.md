@@ -41,6 +41,8 @@ _Bastian Müller, Dieter Shirley, Joshua Hannan_
     -   [Optionals](#optionals)
 
         -   [Nil-Coalescing Operator](#nil-coalescing-operator)
+        -   [Force Unwrap (`!`)](#force-unwrap-)
+        -   [Force-assignment operator (`<-!`)](#force-assignment-operator--)
         -   [Conditional Downcasting Operator](#conditional-downcasting-operator)
 
     -   [Never](#never)
@@ -91,8 +93,15 @@ _Bastian Müller, Dieter Shirley, Joshua Hannan_
 -   [Control flow](#control-flow)
 
     -   [Conditional branching: if-statement](#conditional-branching-if-statement)
+
     -   [Optional Binding](#optional-binding)
-    -   [Looping: while-statement](#looping-while-statement)
+
+    -   [Looping:](#looping)
+
+        -   [while-statement](#while-statement)
+        -   [For-in statement](#for-in-statement)
+        -   [continue and break](#continue-and-break)
+
     -   [Immediate function return: return-statement](#immediate-function-return-return-statement)
 
 -   [Scope](#scope)
@@ -168,7 +177,7 @@ _Bastian Müller, Dieter Shirley, Joshua Hannan_
 
 -   [Transactions](#transactions)
 
-    -   [Deploying Code](#deploying-code)
+    -   [Importing and using Deployed Contract Code](#importing-and-using-deployed-contract-code)
 
 -   [Built-in Functions](#built-in-functions)
 
@@ -888,6 +897,66 @@ be the non-optional or optional type matching the type of the left-hand side.
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> d = a ?? </span><span style="color: #0000FF">false</span><span>
 </span></pre></code>
+
+#### [](#force-unwrap-)Force Unwrap (`!`)
+
+The force-unwrap operator (`!`) returns
+the value inside an optional if it contains a value,
+or panics and aborts the execution if the optional has no value,
+i.e., the optional value is `nil`.
+
+<code><pre><span style="color: #008000">// Declare a constant which has an optional integer type</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> a: </span><span style="color: #0000FF">Int</span><span style="color: #000000">? = </span><span style="color: #0000FF">nil</span><span>
+</span><span>
+</span><span style="color: #008000">// Declare a constant with a non-optional integer type,</span><span>
+</span><span style="color: #008000">// which is initialized to `a` if `a` is non-nil.</span><span>
+</span><span style="color: #008000">// If `a` is nil, the program aborts.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> b: </span><span style="color: #0000FF">Int</span><span style="color: #000000"> = a!</span><span>
+</span><span style="color: #008000">// The program aborts because `a` is nil.</span><span>
+</span><span>
+</span><span style="color: #008000">// Declare another optional integer constant</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> c: </span><span style="color: #0000FF">Int</span><span style="color: #000000">? = </span><span style="color: #09885A">3</span><span>
+</span><span>
+</span><span style="color: #008000">// Declare a non-optional integer</span><span>
+</span><span style="color: #008000">// which is initialized to `c` if `a` is non-nil.</span><span>
+</span><span style="color: #008000">// If `c` is nil, the program aborts.</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> d: </span><span style="color: #0000FF">Int</span><span style="color: #000000"> = c!</span><span>
+</span><span style="color: #008000">// `d` is initialized to 3 because c isn't nil.</span><span>
+</span><span>
+</span></pre></code>
+
+The force-unwrap operator can only be applied
+to values which have an optional type.
+
+<code><pre><span style="color: #008000">// Declare a constant with a non-optional integer type.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> a = </span><span style="color: #09885A">1</span><span>
+</span><span>
+</span><span style="color: #008000">// Invalid: force-unwrap operator is applied to a value which has a</span><span>
+</span><span style="color: #008000">// non-optional type (`a` has the non-optional type `Int`).</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> b = a!</span><span>
+</span></pre></code>
+
+<code><pre><span style="color: #008000">// Invalid: The force-unwrap operator is applied</span><span>
+</span><span style="color: #008000">// to a value which has a non-optional type</span><span>
+</span><span style="color: #008000">// (the integer literal is of type `Int`).</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> c = </span><span style="color: #09885A">1</span><span style="color: #000000">!</span><span>
+</span></pre></code>
+
+#### [](#force-assignment-operator--)Force-assignment operator (`<-!`)
+
+The force-assignment operator (`<-!`) assigns a resource-typed value to an
+optional-typed variable if the variable is nil.
+If the variable being assigned to is non-nil,
+the execution of the program aborts.
+
+The force-assignment operator is only used for
+[resource types](#resources) and the move operator (`<-`),
+which are covered the resources section of this document.
 
 #### [](#conditional-downcasting-operator)Conditional Downcasting Operator
 
@@ -2556,7 +2625,9 @@ Optional bindings are declared using the `if` keyword like an if-statement, but 
 </span><span style="color: #000000">}</span><span>
 </span></pre></code>
 
-### [](#looping-while-statement)Looping: while-statement
+### [](#looping)Looping:
+
+#### [](#while-statement)while-statement
 
 While-statements allow a certain piece of code to be executed repeatedly, as long as a condition remains true.
 
@@ -2578,7 +2649,39 @@ Thus, the piece of code is executed zero or more times.
 </span><span style="color: #008000">// `a` is `5`</span><span>
 </span></pre></code>
 
-The `continue` statement can be used to stop the current iteration of the loop and start the next iteration.
+#### [](#for-in-statement)For-in statement
+
+For-in statements allow a certain piece of code to be executed repeatedly for
+each element in an array.
+
+The for-in statement starts with the `for` keyword, followed by the name of
+the element that is used in each iteration of the loop,
+followed by the `in` keyword, and then followed by the array
+that is being iterated through in the loop.
+
+Then, the code that should be repeatedly executed in each iteration of the loop
+is enclosed in curly braces.
+
+If there are no elements in the data structure, the code in the loop will not
+be executed at all. Otherwise, the code will execute as many times
+as there are elements in the array.
+
+<code><pre><span style="color: #0000FF">var</span><span style="color: #000000"> array = [</span><span style="color: #A31515">"Hello"</span><span style="color: #000000">, </span><span style="color: #A31515">"World"</span><span style="color: #000000">, </span><span style="color: #A31515">"Foo"</span><span style="color: #000000">, </span><span style="color: #A31515">"Bar"</span><span style="color: #000000">]</span><span>
+</span><span style="color: #000000">for element in array {</span><span>
+</span><span style="color: #000000">    log(element)</span><span>
+</span><span style="color: #000000">}</span><span>
+</span><span>
+</span><span style="color: #008000">// The loop would log:</span><span>
+</span><span style="color: #008000">// "Hello"</span><span>
+</span><span style="color: #008000">// "World"</span><span>
+</span><span style="color: #008000">// "Foo"</span><span>
+</span><span style="color: #008000">// "Bar"</span><span>
+</span><span>
+</span></pre></code>
+
+#### [](#continue-and-break)continue and break
+
+In for-loops and while-loops, the `continue` statement can be used to stop the current iteration of a loop and start the next iteration.
 
 <code><pre><span style="color: #0000FF">var</span><span style="color: #000000"> i = </span><span style="color: #09885A">0</span><span>
 </span><span style="color: #0000FF">var</span><span style="color: #000000"> x = </span><span style="color: #09885A">0</span><span>
@@ -2589,11 +2692,24 @@ The `continue` statement can be used to stop the current iteration of the loop a
 </span><span style="color: #000000">    }</span><span>
 </span><span style="color: #000000">    x = x + </span><span style="color: #09885A">1</span><span>
 </span><span style="color: #000000">}</span><span>
-</span><span>
 </span><span style="color: #008000">// `x` is `8`</span><span>
+</span><span>
+</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> array = [</span><span style="color: #09885A">2</span><span style="color: #000000">, </span><span style="color: #09885A">2</span><span style="color: #000000">, </span><span style="color: #09885A">3</span><span style="color: #000000">]</span><span>
+</span><span style="color: #0000FF">var</span><span style="color: #000000"> sum = </span><span style="color: #09885A">0</span><span>
+</span><span style="color: #000000">for element in array {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">if</span><span style="color: #000000"> element == </span><span style="color: #09885A">2</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">continue</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span style="color: #000000">    sum = sum + element</span><span>
+</span><span style="color: #000000">}</span><span>
+</span><span>
+</span><span style="color: #008000">// `sum` is `3`</span><span>
+</span><span>
 </span></pre></code>
 
-The `break` statement can be used to stop the loop.
+The `break` statement can be used to stop the execution
+of a for-loop or a while-loop.
 
 <code><pre><span style="color: #0000FF">var</span><span style="color: #000000"> x = </span><span style="color: #09885A">0</span><span>
 </span><span style="color: #0000FF">while</span><span style="color: #000000"> x &#x3C; </span><span style="color: #09885A">10</span><span style="color: #000000"> {</span><span>
@@ -2602,8 +2718,19 @@ The `break` statement can be used to stop the loop.
 </span><span style="color: #000000">        </span><span style="color: #0000FF">break</span><span>
 </span><span style="color: #000000">    }</span><span>
 </span><span style="color: #000000">}</span><span>
-</span><span>
 </span><span style="color: #008000">// `x` is `5`</span><span>
+</span><span>
+</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> array = [</span><span style="color: #09885A">1</span><span style="color: #000000">, </span><span style="color: #09885A">2</span><span style="color: #000000">, </span><span style="color: #09885A">3</span><span style="color: #000000">]</span><span>
+</span><span style="color: #0000FF">var</span><span style="color: #000000"> sum = </span><span style="color: #09885A">0</span><span>
+</span><span style="color: #000000">for element in array {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">if</span><span style="color: #000000"> element == </span><span style="color: #09885A">2</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">break</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span style="color: #000000">    sum = sum + element</span><span>
+</span><span style="color: #000000">}</span><span>
+</span><span>
+</span><span style="color: #008000">// `sum` is `1`</span><span>
 </span></pre></code>
 
 ### [](#immediate-function-return-return-statement)Immediate function return: return-statement
@@ -2868,11 +2995,11 @@ but not in structures, as that would allow resources to be copied.
 
 Structures are declared using the `struct` keyword and resources are declared using the `resource` keyword. The keyword is followed by the name.
 
-<code><pre><span style="color: #0000FF">struct</span><span style="color: #000000"> SomeStruct {</span><span>
+<code><pre><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> SomeStruct {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// ...</span><span>
 </span><span style="color: #000000">}</span><span>
 </span><span>
-</span><span style="color: #0000FF">resource</span><span style="color: #000000"> SomeResource {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">resource</span><span style="color: #000000"> SomeResource {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// ...</span><span>
 </span><span style="color: #000000">}</span><span>
 </span></pre></code>
@@ -2881,13 +3008,14 @@ Structures and resources are types.
 
 Structures are created (instantiated) by calling the type like a function.
 
-<code><pre><span style="color: #000000">SomeStruct()</span><span>
+<code><pre><span style="color: #008000">// instantiate a new struct object and assign it to a constant</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> a = SomeStruct()</span><span>
 </span></pre></code>
 
 The constructor function may require parameters if the [initializer](#composite-type-fields)
 of the composite type requires them.
 
-Composite types can only be declared within [contract](#contracts)
+Composite types can only be declared within [contracts](#contracts)
 and not locally in functions.
 They can also not be nested.
 
@@ -2895,7 +3023,8 @@ Resource must be created (instantiated) by using the `create` keyword and callin
 
 Resources can only be created in functions and types that are declared in the same contract in which the resource is declared.
 
-<code><pre><span style="color: #0000FF">create</span><span style="color: #000000"> SomeResource()</span><span>
+<code><pre><span style="color: #008000">// instantiate a new resource object and assign it to a constant</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> b &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> SomeResource()</span><span>
 </span></pre></code>
 
 ### [](#composite-type-fields)Composite Type Fields
@@ -2968,7 +3097,7 @@ and the name of the field.
 </span><span style="color: #008000">// private so they cannot be accessed in outer scopes.</span><span>
 </span><span style="color: #008000">// Access control will be explained in a later section.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">struct</span><span style="color: #000000"> Token {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> Token {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> id: </span><span style="color: #0000FF">Int</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> balance: </span><span style="color: #0000FF">Int</span><span>
 </span><span>
@@ -2981,7 +3110,7 @@ and the name of the field.
 
 Note that it is invalid to provide the initial value for a field in the field declaration.
 
-<code><pre><span style="color: #0000FF">struct</span><span style="color: #000000"> StructureWithConstantField {</span><span>
+<code><pre><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> StructureWithConstantField {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// Invalid: It is invalid to provide an initial value in the field declaration.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// The field must be initialized by setting the initial value in the initializer.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
@@ -2991,7 +3120,7 @@ Note that it is invalid to provide the initial value for a field in the field de
 
 The field access syntax must be used to access fields –  fields are not available as variables.
 
-<code><pre><span style="color: #0000FF">struct</span><span style="color: #000000"> Token {</span><span>
+<code><pre><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> Token {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> id: </span><span style="color: #0000FF">Int</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">init</span><span style="color: #000000">(initialID: </span><span style="color: #0000FF">Int</span><span style="color: #000000">) {</span><span>
@@ -3005,14 +3134,17 @@ The field access syntax must be used to access fields –  fields are not availa
 
 The initializer is **not** automatically derived from the fields, it must be explicitly declared.
 
-<code><pre><span style="color: #0000FF">struct</span><span style="color: #000000"> Token {</span><span>
+<code><pre><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> Token {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> id: </span><span style="color: #0000FF">Int</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// Invalid: Missing initializer initializing field `id`.</span><span>
 </span><span style="color: #000000">}</span><span>
 </span></pre></code>
 
-A composite value can be created by calling the constructor and the value&#x27;s fields can be accessed.
+A composite value can be created by calling the constructor and providing
+the field values as arguments.
+
+The value&#x27;s fields can be accessed on the object after it is created.
 
 <code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> token = Token(id: </span><span style="color: #09885A">42</span><span style="color: #000000">, balance: </span><span style="color: #09885A">1_000_00</span><span style="color: #000000">)</span><span>
 </span><span>
@@ -3050,7 +3182,7 @@ Initializers support overloading. This allows for example providing default valu
 </span><span style="color: #008000">// A second initializer is provided for convenience to initialize the `id` field</span><span>
 </span><span style="color: #008000">// with a given value, and the `balance` field with the default value `0`.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">struct</span><span style="color: #000000"> Token {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> Token {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> id: </span><span style="color: #0000FF">Int</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">var</span><span style="color: #000000"> balance: </span><span style="color: #0000FF">Int</span><span>
 </span><span>
@@ -3078,14 +3210,13 @@ Getters and setters are enclosed in opening and closing braces, after the field&
 Getters are declared using the `get` keyword.
 Getters have no parameters and their return type is implicitly the type of the field.
 
-<code><pre><span style="color: #0000FF">struct</span><span style="color: #000000"> GetterExample {</span><span>
+<code><pre><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> GetterExample {</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// Declare a variable field named `balance` with a getter</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// which ensures the read value is always non-negative.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> balance: </span><span style="color: #0000FF">Int</span><span style="color: #000000"> {</span><span>
 </span><span style="color: #000000">        </span><span style="color: #0000FF">get</span><span style="color: #000000"> {</span><span>
-</span><span>
 </span><span style="color: #000000">           </span><span style="color: #0000FF">if</span><span style="color: #000000"> </span><span style="color: #0000FF">self</span><span style="color: #000000">.balance &#x3C; </span><span style="color: #09885A">0</span><span style="color: #000000"> {</span><span>
 </span><span style="color: #000000">               </span><span style="color: #0000FF">return</span><span style="color: #000000"> </span><span style="color: #09885A">0</span><span>
 </span><span style="color: #000000">           }</span><span>
@@ -3114,7 +3245,7 @@ Another type cannot be specified. Setters have no return type.
 
 The types of values assigned to setters must always match the field&#x27;s type.
 
-<code><pre><span style="color: #0000FF">struct</span><span style="color: #000000"> SetterExample {</span><span>
+<code><pre><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> SetterExample {</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// Declare a variable field named `balance` with a setter</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// which requires written values to be positive.</span><span>
@@ -3185,7 +3316,7 @@ Synthetic fields are readable and writable when both a getter and a setter is de
 </span><span style="color: #008000">// NOTE: the tracker only implements some functionality to demonstrate</span><span>
 </span><span style="color: #008000">// synthetic fields, it is incomplete (e.g. assignments to `goal` are not handled properly).</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">struct</span><span style="color: #000000"> GoalTracker {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> GoalTracker {</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> goal: </span><span style="color: #0000FF">Int</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> completed: </span><span style="color: #0000FF">Int</span><span>
@@ -3240,7 +3371,7 @@ Just like in the initializer, the special constant `self` refers to the composit
 <code><pre><span style="color: #008000">// Declare a structure named "Rectangle", which represents a rectangle</span><span>
 </span><span style="color: #008000">// and has variable fields for the width and height.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">struct</span><span style="color: #000000"> Rectangle {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> Rectangle {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> width: </span><span style="color: #0000FF">Int</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> height: </span><span style="color: #0000FF">Int</span><span>
 </span><span>
@@ -3269,7 +3400,7 @@ Functions support overloading.
 <code><pre><span style="color: #008000">// Declare a structure named "Rectangle", which represents a rectangle</span><span>
 </span><span style="color: #008000">// and has variable fields for the width and height.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">struct</span><span style="color: #000000"> Rectangle {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> Rectangle {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> width: </span><span style="color: #0000FF">Int</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> height: </span><span style="color: #0000FF">Int</span><span>
 </span><span>
@@ -3351,7 +3482,7 @@ Accessing a field or calling a function of a structure does not copy it.
 
 <code><pre><span style="color: #008000">// Declare a structure named `SomeStruct`, with a variable integer field.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">struct</span><span style="color: #000000"> SomeStruct {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> SomeStruct {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> value: </span><span style="color: #0000FF">Int</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">init</span><span style="color: #000000">(value: </span><span style="color: #0000FF">Int</span><span style="color: #000000">) {</span><span>
@@ -3396,8 +3527,8 @@ If the object doesn&#x27;t exist, the value will always be `nil`
 When calling a function on an optional like this, if the object doesn&#x27;t exist,
 nothing will happen and the execution will continue.
 
-It is still invalid
-to access a field of an optional composite type that is not declared.
+It is still invalid to access an undeclared field
+of an optional composite type.
 
 <code><pre><span style="color: #008000">// Declare a struct with a field and method.</span><span>
 </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> Value {</span><span>
@@ -3417,9 +3548,9 @@ to access a field of an optional composite type that is not declared.
 </span><span style="color: #000000">    }</span><span>
 </span><span style="color: #000000">}</span><span>
 </span><span>
-</span><span style="color: #008000">// create a new instance of the struct as an optional</span><span>
+</span><span style="color: #008000">// Create a new instance of the struct as an optional</span><span>
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> value: </span><span style="color: #0000FF">Value</span><span style="color: #000000">? = Value()</span><span>
-</span><span style="color: #008000">// create another optional with the same type, but nil</span><span>
+</span><span style="color: #008000">// Create another optional with the same type, but nil</span><span>
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> noValue: </span><span style="color: #0000FF">Value</span><span style="color: #000000">? = </span><span style="color: #0000FF">nil</span><span>
 </span><span>
 </span><span style="color: #008000">// Access the `number` field using optional chaining</span><span>
@@ -3443,7 +3574,67 @@ to access a field of an optional composite type that is not declared.
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> sixOpt = value?.setAndReturn(new: </span><span style="color: #09885A">6</span><span style="color: #000000">)</span><span>
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> six = sixOpt ?? </span><span style="color: #09885A">0</span><span>
 </span><span style="color: #008000">// `six` is `6`</span><span>
+</span></pre></code>
+
+This is also possible by using the force-unwrap operator (`!`).
+
+Forced-Optional chaining is used by adding a `!`
+before the `.` access operator for fields or
+functions of an optional composite type.
+
+When getting a field value or calling a function with a return value,
+the access returns the value.
+If the object doesn&#x27;t exist, the execution will panic and revert.
+
+It is still invalid to access an undeclared field
+of an optional composite type.
+
+<code><pre><span style="color: #008000">// Declare a struct with a field and method.</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> Value {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> number: </span><span style="color: #0000FF">Int</span><span>
 </span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">init</span><span style="color: #000000">() {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.number = </span><span style="color: #09885A">2</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> set(new: </span><span style="color: #0000FF">Int</span><span style="color: #000000">) {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.number = new</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> setAndReturn(new: </span><span style="color: #0000FF">Int</span><span style="color: #000000">): </span><span style="color: #0000FF">Int</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.number = new</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">return</span><span style="color: #000000"> new</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span style="color: #000000">}</span><span>
+</span><span>
+</span><span style="color: #008000">// Create a new instance of the struct as an optional</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> value: </span><span style="color: #0000FF">Value</span><span style="color: #000000">? = Value()</span><span>
+</span><span style="color: #008000">// Create another optional with the same type, but nil</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> noValue: </span><span style="color: #0000FF">Value</span><span style="color: #000000">? = </span><span style="color: #0000FF">nil</span><span>
+</span><span>
+</span><span style="color: #008000">// Access the `number` field using force-optional chaining</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> two = value!.number</span><span>
+</span><span style="color: #008000">// `two` is `2`</span><span>
+</span><span>
+</span><span style="color: #008000">// Try to access the `number` field of `noValue`, which has type `Value?`</span><span>
+</span><span style="color: #008000">// Error: This time, since `noValue` is `nil`, The program execution will</span><span>
+</span><span style="color: #008000">// revert</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> number = noValue!.number</span><span>
+</span><span>
+</span><span style="color: #008000">// Call the `set` function of the struct</span><span>
+</span><span>
+</span><span style="color: #008000">// This succeeds and sets the value to 4</span><span>
+</span><span style="color: #000000">value!.set(new: </span><span style="color: #09885A">4</span><span style="color: #000000">)</span><span>
+</span><span>
+</span><span style="color: #008000">// Error: Since `noValue` is nil, the value is not set</span><span>
+</span><span style="color: #008000">// and the program execution reverts.</span><span>
+</span><span style="color: #000000">noValue!.set(new: </span><span style="color: #09885A">4</span><span style="color: #000000">)</span><span>
+</span><span>
+</span><span style="color: #008000">// Call the `setAndReturn` function, which returns an `Int`</span><span>
+</span><span style="color: #008000">// Because we use force-unwrap before calling the function,</span><span>
+</span><span style="color: #008000">// the return value is type `Int`</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> six = value!.setAndReturn(new: </span><span style="color: #09885A">6</span><span style="color: #000000">)</span><span>
+</span><span style="color: #008000">// `six` is `6`</span><span>
 </span></pre></code>
 
 #### [](#resources)Resources
@@ -3460,15 +3651,15 @@ when assigned to a different variable,
 when passed as an argument to a function,
 and when returned from a function.
 
-Resources are **destroyed** using the `destroy` keyword.
+Resources can be explicitly **destroyed** using the `destroy` keyword.
 
 Accessing a field or calling a function of a resource does not move or destroy it.
 
-When the resource was moved, the constant or variable
+When the resource is moved, the constant or variable
 that referred to the resource before the move becomes **invalid**.
 An **invalid** resource cannot be used again.
 
-To make the behaviour of resource types explicit,
+To make the usage and behaviour of resource types explicit,
 the prefix `@` must be used in type annotations
 of variable or constant declarations, parameters, and return types.
 
@@ -3480,7 +3671,7 @@ and when it is returned from a function.
 
 <code><pre><span style="color: #008000">// Declare a resource named `SomeResource`, with a variable integer field.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">resource</span><span style="color: #000000"> SomeResource {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">resource</span><span style="color: #000000"> SomeResource {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> value: </span><span style="color: #0000FF">Int</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">init</span><span style="color: #000000">(value: </span><span style="color: #0000FF">Int</span><span style="color: #000000">) {</span><span>
@@ -3503,13 +3694,13 @@ and when it is returned from a function.
 </span><span>
 </span><span style="color: #008000">// Constant `b` owns the resource.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">b.value = </span><span style="color: #09885A">1</span><span>
+</span><span style="color: #000000">b.value </span><span style="color: #008000">// equals 0</span><span>
 </span><span>
 </span><span style="color: #008000">// Declare a function which accepts a resource.</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #008000">// The parameter has a resource type, so the type name must be prefixed with `@`.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">fun</span><span style="color: #000000"> use(resource: @</span><span style="color: #0000FF">SomeResource</span><span style="color: #000000">) {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> use(resource: @</span><span style="color: #0000FF">SomeResource</span><span style="color: #000000">) {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// ...</span><span>
 </span><span style="color: #000000">}</span><span>
 </span><span>
@@ -3523,11 +3714,17 @@ and when it is returned from a function.
 </span><span style="color: #000000">b.value</span><span>
 </span></pre></code>
 
-<code><pre><span style="color: #008000">// Declare another, unrelated value of resource type `SomeResource`.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> c &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> SomeResource(value: </span><span style="color: #09885A">10</span><span style="color: #000000">)</span><span>
+A resource object cannot go out of scope and be dynamically lost.
+The program must either explicitly destroy it or move it to another context.
+
+<code><pre><span style="color: #000000">{</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// Declare another, unrelated value of resource type `SomeResource`.</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> c &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> SomeResource(value: </span><span style="color: #09885A">10</span><span style="color: #000000">)</span><span>
 </span><span>
-</span><span style="color: #008000">// Invalid: `c` is not used, but must be; it cannot be lost.</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// Invalid: `c` is not used before the end of the scope, but must be.</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// It cannot be lost.</span><span>
+</span><span style="color: #000000">}</span><span>
 </span></pre></code>
 
 <code><pre><span style="color: #008000">// Declare another, unrelated value of resource type `SomeResource`.</span><span>
@@ -3544,7 +3741,8 @@ and when it is returned from a function.
 </span><span style="color: #000000">d.value</span><span>
 </span></pre></code>
 
-To make it explicit that the type is moved,
+To make it explicit that the type is a resource type
+and must follow the rules associated with resources,
 it must be prefixed with `@` in all type annotations,
 e.g. for variable declarations, parameters, or return types.
 
@@ -3558,7 +3756,7 @@ e.g. for variable declarations, parameters, or return types.
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #008000">// The parameter has a resource type, so the type name must be prefixed with `@`.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">fun</span><span style="color: #000000"> use(resource: @</span><span style="color: #0000FF">SomeResource</span><span style="color: #000000">) {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> use(resource: @</span><span style="color: #0000FF">SomeResource</span><span style="color: #000000">) {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">destroy</span><span style="color: #000000"> resource</span><span>
 </span><span style="color: #000000">}</span><span>
 </span><span>
@@ -3567,7 +3765,7 @@ e.g. for variable declarations, parameters, or return types.
 </span><span style="color: #008000">// The return type is a resource type, so the type name must be prefixed with `@`.</span><span>
 </span><span style="color: #008000">// The return statement must also use the `&#x3C;-` operator to make it explicit the resource is moved.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">fun</span><span style="color: #000000"> get(): @</span><span style="color: #0000FF">SomeResource</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> get(): @</span><span style="color: #0000FF">SomeResource</span><span style="color: #000000"> {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> newResource &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> SomeResource()</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">return</span><span style="color: #000000"> &#x3C;-newResource</span><span>
 </span><span style="color: #000000">}</span><span>
@@ -3578,7 +3776,7 @@ Resources **must** be used exactly once.
 <code><pre><span style="color: #008000">// Declare a function which consumes a resource but does not use it.</span><span>
 </span><span style="color: #008000">// This function is invalid, because it would cause a loss of the resource.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">fun</span><span style="color: #000000"> forgetToUse(resource: @</span><span style="color: #0000FF">SomeResource</span><span style="color: #000000">) {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> forgetToUse(resource: @</span><span style="color: #0000FF">SomeResource</span><span style="color: #000000">) {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// Invalid: The resource parameter `resource` is not used, but must be.</span><span>
 </span><span style="color: #000000">}</span><span>
 </span></pre></code>
@@ -3603,7 +3801,7 @@ Resources **must** be used exactly once.
 <code><pre><span style="color: #008000">// Declare a function which has a resource parameter but does not use it.</span><span>
 </span><span style="color: #008000">// This function is invalid, because it would cause a loss of the resource.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">fun</span><span style="color: #000000"> forgetToUse(resource: @</span><span style="color: #0000FF">SomeResource</span><span style="color: #000000">) {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> forgetToUse(resource: @</span><span style="color: #0000FF">SomeResource</span><span style="color: #000000">) {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// Invalid: The resource parameter `resource` is not used, but must be.</span><span>
 </span><span style="color: #000000">}</span><span>
 </span></pre></code>
@@ -3612,7 +3810,7 @@ Resources **must** be used exactly once.
 </span><span style="color: #008000">// This function is invalid, because it does not always use the resource parameter,</span><span>
 </span><span style="color: #008000">// which would cause a loss of the resource.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">fun</span><span style="color: #000000"> sometimesDestroy(resource: @</span><span style="color: #0000FF">SomeResource</span><span style="color: #000000">, destroy: </span><span style="color: #0000FF">Bool</span><span style="color: #000000">) {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> sometimesDestroy(resource: @</span><span style="color: #0000FF">SomeResource</span><span style="color: #000000">, destroy: </span><span style="color: #0000FF">Bool</span><span style="color: #000000">) {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">if</span><span style="color: #000000"> destroyResource {</span><span>
 </span><span style="color: #000000">        </span><span style="color: #0000FF">destroy</span><span style="color: #000000"> resource</span><span>
 </span><span style="color: #000000">    }</span><span>
@@ -3626,7 +3824,7 @@ Resources **must** be used exactly once.
 </span><span style="color: #008000">// This function is valid, as it always uses the resource parameter,</span><span>
 </span><span style="color: #008000">// and does not cause a loss of the resource.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">fun</span><span style="color: #000000"> alwaysUse(resource: @</span><span style="color: #0000FF">SomeResource</span><span style="color: #000000">, destroyResource: </span><span style="color: #0000FF">Bool</span><span style="color: #000000">) {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> alwaysUse(resource: @</span><span style="color: #0000FF">SomeResource</span><span style="color: #000000">, destroyResource: </span><span style="color: #0000FF">Bool</span><span style="color: #000000">) {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">if</span><span style="color: #000000"> destroyResource {</span><span>
 </span><span style="color: #000000">        </span><span style="color: #0000FF">destroy</span><span style="color: #000000"> resource</span><span>
 </span><span style="color: #000000">    } </span><span style="color: #0000FF">else</span><span style="color: #000000"> {</span><span>
@@ -3641,7 +3839,7 @@ Resources **must** be used exactly once.
 </span><span style="color: #008000">// This function is invalid, because it does not always use the resource parameter,</span><span>
 </span><span style="color: #008000">// which would cause a loss of the resource.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">fun</span><span style="color: #000000"> returnBeforeDestroy(: </span><span style="color: #0000FF">Bool</span><span style="color: #000000">) {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> returnBeforeDestroy(: </span><span style="color: #0000FF">Bool</span><span style="color: #000000">) {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> res &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> SomeResource(value: </span><span style="color: #09885A">1</span><span style="color: #000000">)</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">if</span><span style="color: #000000"> move {</span><span>
 </span><span style="color: #000000">        use(resource: &#x3C;-res)</span><span>
@@ -3662,9 +3860,9 @@ Resources **must** be used exactly once.
 
 Resource variables cannot be assigned to as that would lead to the loss of the variable&#x27;s current resource value.
 
-Instead, use a swap statement (`<->`) to replace the resource variable with another resource.
+Instead, use a swap statement (`<->`) or shift statement (`<- target <-`) to replace the resource variable with another resource.
 
-<code><pre><span style="color: #0000FF">resource</span><span style="color: #000000"> R {}</span><span>
+<code><pre><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">resource</span><span style="color: #000000"> R {}</span><span>
 </span><span>
 </span><span style="color: #0000FF">var</span><span style="color: #000000"> x &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> R()</span><span>
 </span><span style="color: #0000FF">var</span><span style="color: #000000"> y &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> R()</span><span>
@@ -3680,6 +3878,13 @@ Instead, use a swap statement (`<->`) to replace the resource variable with anot
 </span><span style="color: #000000">x &#x3C;-> replacement</span><span>
 </span><span style="color: #008000">// `x` is the new resource.</span><span>
 </span><span style="color: #008000">// `replacement` is the old resource.</span><span>
+</span><span>
+</span><span style="color: #008000">// Or use the shift statement (`&#x3C;- target &#x3C;-`)</span><span>
+</span><span style="color: #008000">// This statement moves the resource out of `x` and into `oldX`,</span><span>
+</span><span style="color: #008000">// and at the same time assigns `x` with the new value on the right-hand side.</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> oldX &#x3C;- x &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> R()</span><span>
+</span><span style="color: #008000">// oldX still needs to be explicitly handled after this statement</span><span>
+</span><span style="color: #0000FF">destroy</span><span style="color: #000000"> oldX</span><span>
 </span></pre></code>
 
 #### [](#resource-destructors)Resource Destructors
@@ -3690,7 +3895,7 @@ A resource may have only one destructor.
 
 <code><pre><span style="color: #0000FF">var</span><span style="color: #000000"> destructorCalled = </span><span style="color: #0000FF">false</span><span>
 </span><span>
-</span><span style="color: #0000FF">resource</span><span style="color: #000000"> Resource {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">resource</span><span style="color: #000000"> Resource {</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// Declare a destructor for the resource, which is executed</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// when the resource is destroyed.</span><span>
@@ -3713,7 +3918,7 @@ If a resource type has fields that have a resource type,
 it **must** declare a destructor,
 which **must** invalidate all resource fields, i.e. move or destroy them.
 
-<code><pre><span style="color: #0000FF">resource</span><span style="color: #000000"> Child {</span><span>
+<code><pre><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">resource</span><span style="color: #000000"> Child {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> name: </span><span style="color: #0000FF">String</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">init</span><span style="color: #000000">(name: </span><span style="color: #0000FF">String</span><span style="color: #000000">)</span><span>
@@ -3725,7 +3930,7 @@ which **must** invalidate all resource fields, i.e. move or destroy them.
 </span><span style="color: #008000">// The resource *must* declare a destructor</span><span>
 </span><span style="color: #008000">// and the destructor *must* invalidate the resource field.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">resource</span><span style="color: #000000"> Parent {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">resource</span><span style="color: #000000"> Parent {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> name: </span><span style="color: #0000FF">String</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">var</span><span style="color: #000000"> child: @</span><span style="color: #0000FF">Child</span><span>
 </span><span>
@@ -3789,7 +3994,7 @@ Arrays and dictionaries behave differently when they contain resources:
 Indexing into an array to read an element at a certain index or assign to it,
 or indexing into a dictionary to read a value for a certain key or set a value for the key is **not** allowed.
 
-Instead, use a swap statement to replace the accessed resource with another resource.
+Instead, use a swap statement (`<->`) or shift statement (`<- target <-`) to replace the accessed resource with another resource.
 
 <code><pre><span style="color: #0000FF">resource</span><span style="color: #000000"> R {}</span><span>
 </span><span>
@@ -3818,6 +4023,12 @@ Instead, use a swap statement to replace the accessed resource with another reso
 </span><span style="color: #000000">resources[</span><span style="color: #09885A">0</span><span style="color: #000000">] &#x3C;-> res</span><span>
 </span><span style="color: #008000">// `resources[0]` now contains the new resource.</span><span>
 </span><span style="color: #008000">// `res` now contains the old resource.</span><span>
+</span><span>
+</span><span style="color: #008000">// Use the shift statement to move the new resource into</span><span>
+</span><span style="color: #008000">// the array at the same time that the old resource is being moved out</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> oldRes &#x3C;- resources[</span><span style="color: #09885A">0</span><span style="color: #000000">] &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> R()</span><span>
+</span><span style="color: #008000">// The old object still needs to be handled</span><span>
+</span><span style="color: #0000FF">destroy</span><span style="color: #000000"> oldRes</span><span>
 </span></pre></code>
 
 The same applies to dictionaries.
@@ -3852,6 +4063,12 @@ The same applies to dictionaries.
 </span><span style="color: #000000">resources[</span><span style="color: #A31515">"r1"</span><span style="color: #000000">] &#x3C;-> res</span><span>
 </span><span style="color: #008000">// `resources["r1"]` now contains the new resource.</span><span>
 </span><span style="color: #008000">// `res` now contains the old resource.</span><span>
+</span><span>
+</span><span style="color: #008000">// Use the shift statement to move the new resource into</span><span>
+</span><span style="color: #008000">// the dictionary at the same time that the old resource is being moved out</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> oldRes &#x3C;- resources[</span><span style="color: #A31515">"r2"</span><span style="color: #000000">] &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> R()</span><span>
+</span><span style="color: #008000">// The old object still needs to be handled</span><span>
+</span><span style="color: #0000FF">destroy</span><span style="color: #000000"> oldRes</span><span>
 </span></pre></code>
 
 Resources cannot be moved into arrays and dictionaries multiple times,
@@ -3978,7 +4195,7 @@ and making other parts inaccessible/invisible.
 
 In Flow and Cadence, there are two types of access control:
 
-1.  Access control between accounts using capability security.
+1.  Access control on objects in account storage using capability security.
 
     Within Flow, a caller is not able to access an object
     unless it owns the object or has a specific reference to that object.
@@ -3987,66 +4204,95 @@ In Flow and Cadence, there are two types of access control:
     unless the owner of the account has granted them access
     by providing references to the objects.
 
-2.  Access control within programs using `private` and `public` keywords.
+2.  Access control within contracts and objects
+    using `pub` and `access` keywords.
 
-    Assuming the caller has a valid reference that satisfies the first type of access control,
-    these keywords further govern how access is controlled.
+    For the explanations of the following keywords, we assume that
+    the defining type is either a contract, where capability security
+    doesn&#x27;t apply, or that the caller would have valid access to the object
+    governed by capability security.
 
 The high-level reference-based security (point 1 above)
 will be covered in a later section.
-For now, it is assumed that all callers have complete
-access to the objects in the descriptions and examples.
 
 Top-level declarations
 (variables, constants, functions, structures, resources, interfaces)
-and fields (in structures, and resources) are either private or public.
+and fields (in structures, and resources) are always only able to be written
+to in the scope where it is defined (self).
 
--   **Private** means the declaration is only accessible/visible
-    in the current and inner scopes.
+There are four levels of access control defined in the code that specify where
+a declaration can be accessed or called.
 
-    For example, a private field can only be
-    accessed by functions of the type is part of,
-    not by code that uses an instance of the type in an outer scope.
+-   **Public** or **access(all)** means the declaration
+    is accessible/visible in all scopes.
 
--   **Public** means the declaration is accessible/visible in all scopes.
-
-    This includes the current and inner scopes like for private,
-    and the outer scopes.
+    This includes the current scope, inner scopes, and the outer scopes.
 
     For example, a public field in a type can be accessed using the access syntax
     on an instance of the type in an outer scope.
     This does not allow the declaration to be publicly writable though.
 
-**By default, everything is private.**
-An element is made public by using the `pub` keyword.
+    An element is made public by using the `pub` or `access(all)` keywords.
+
+-   **access(account)** means the declaration is only accessible/visible in the
+    scope of the entire account where it is defined. This means that
+    other contracts in the account are able to access it,
+
+    An element is specified with account access
+    by using the `access(account)` keyword.
+
+-   **access(contract)** means the declaration is only accessible/visible in the
+    scope of the contract that defined it. This means that other types
+    and functions that are defined in the same contract can access it,
+    but not other contracts in the same account.
+
+    An element is specified with contract access
+    by using the `access(contract)` keyword.
+
+-   Private or **access(self)** means the declaration is only accessible/visible
+    in the current and inner scopes.
+
+    For example, an `access(self)` field can only be
+    accessed by functions of the type is part of,
+    not by code in an outer scope.
+
+    This level is specified by using the `access(self)` keyword.
+
+**Access level must be specified for each declaration**
 
 The `(set)` suffix can be used to make variables also publicly writable.
 
 To summarize the behavior for variable declarations, constant declarations, and fields:
 
-| Declaration kind | Access modifier | Read scope        | Write scope       |
-| :--------------- | :-------------- | :---------------- | :---------------- |
-| `let`            |                 | Current and inner | _None_            |
-| `let`            | `pub`           | **All**           | _None_            |
-| `var`            |                 | Current and inner | Current and inner |
-| `var`            | `pub`           | **All**           | Current and inner |
-| `var`            | `pub(set)`      | **All**           | **All**           |
+| Declaration kind | Access modifier     | Read scope                            | Write scope       |
+| :--------------- | :------------------ | :------------------------------------ | :---------------- |
+| `let`            | `access(self)`      | Current and inner                     | _None_            |
+| `let`            | `access(contract)`  | Current, inner, and its contract      | _None_            |
+| `let`            | `access(account)`   | Current, inner, and account contracts | _None_            |
+| `let`            | `pub`,`access(all)` | **All**                               | _None_            |
+| `var`            | `access(self)`      | Current and inner                     | Current and inner |
+| `var`            | `access(contract)`  | Current, inner, and its contract      | Current and inner |
+| `var`            | `access(account)`   | Current, inner, and account contracts | Current and inner |
+| `var`            | `pub`,`access(all)` | **All**                               | Current and inner |
+| `var`            | `pub(set)`          | **All**                               | **All**           |
 
 To summarize the behavior for functions, structures, resources, and interfaces:
 
-| Declaration kind                                                      | Access modifier | Access scope      |
-| :-------------------------------------------------------------------- | :-------------- | :---------------- |
-| `fun`, `struct`, `resource`, `struct interface`, `resource interface` |                 | Current and inner |
-| `fun`, `struct`, `resource`, `struct interface`, `resource interface` | `pub`           | **All**           |
+| Declaration kind                                                  | Access modifier     | Access scope                          |
+| :---------------------------------------------------------------- | :------------------ | :------------------------------------ |
+| `fun`,`struct`,`resource`,`struct interface`,`resource interface` | `access(self)`      | Current and inner                     |
+| `fun`,`struct`,`resource`,`struct interface`,`resource interface` | `access(contract)`  | Current, inner, and its contract      |
+| `fun`,`struct`,`resource`,`struct interface`,`resource interface` | `access(account)`   | Current, inner, and account contracts |
+| `fun`,`struct`,`resource`,`struct interface`,`resource interface` | `pub`,`access(all)` | **All**                               |
 
-Currently, all types must be declared public and are visible to all code.
-However, that does not imply that any code may instantiate the type:
+Currently, all contract defined types must have an access declaration, but
 only code within the [contract](#contracts) in which the type is declared
-is allowed to create instances of the type. See the linked contracts section for more information.
+is allowed to create instances of the type.
+See the linked contracts section for more information.
 
 <code><pre><span style="color: #008000">// Declare a private constant, inaccessible/invisible in outer scope.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> a = </span><span style="color: #09885A">1</span><span>
+</span><span style="color: #000000">access(</span><span style="color: #0000FF">self</span><span style="color: #000000">) </span><span style="color: #0000FF">let</span><span style="color: #000000"> a = </span><span style="color: #09885A">1</span><span>
 </span><span>
 </span><span style="color: #008000">// Declare a public constant, accessible/visible in all scopes.</span><span>
 </span><span style="color: #008000">//</span><span>
@@ -4060,7 +4306,7 @@ is allowed to create instances of the type. See the linked contracts section for
 </span><span style="color: #000000">    </span><span style="color: #008000">// Declare a private constant field which is only readable</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// in the current and inner scopes.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> a: </span><span style="color: #0000FF">Int</span><span>
+</span><span style="color: #000000">    access(</span><span style="color: #0000FF">self</span><span style="color: #000000">) </span><span style="color: #0000FF">let</span><span style="color: #000000"> a: </span><span style="color: #0000FF">Int</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// Declare a public constant field which is readable in all scopes.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
@@ -4069,7 +4315,7 @@ is allowed to create instances of the type. See the linked contracts section for
 </span><span style="color: #000000">    </span><span style="color: #008000">// Declare a private variable field which is only readable</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// and writable in the current and inner scopes.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">var</span><span style="color: #000000"> c: </span><span style="color: #0000FF">Int</span><span>
+</span><span style="color: #000000">    access(</span><span style="color: #0000FF">self</span><span style="color: #000000">) </span><span style="color: #0000FF">var</span><span style="color: #000000"> c: </span><span style="color: #0000FF">Int</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// Declare a public variable field which is not settable,</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// so it is only writable in the current and inner scopes,</span><span>
@@ -4087,7 +4333,7 @@ is allowed to create instances of the type. See the linked contracts section for
 </span><span style="color: #000000">    </span><span style="color: #008000">// Declare a private function which is only callable</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// in the current and inner scopes.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> privateTest() {</span><span>
+</span><span style="color: #000000">    access(</span><span style="color: #0000FF">self</span><span style="color: #000000">) </span><span style="color: #0000FF">fun</span><span style="color: #000000"> privateTest() {</span><span>
 </span><span style="color: #000000">        </span><span style="color: #008000">// ...</span><span>
 </span><span style="color: #000000">    }</span><span>
 </span><span>
@@ -4160,6 +4406,10 @@ There are three kinds of interfaces:
 
 Structure, resource, and contract types may implement multiple interfaces.
 
+Nominal typing applies to composite types that implement interfaces.
+This means that a type only implements an interface
+if it has explicitly declared it.
+
 Interfaces consist of the function and field requirements
 that a type implementing the interface must provide implementations for.
 Interface requirements, and therefore also their implementations,
@@ -4200,7 +4450,7 @@ The special type `Self` can be used to refer to the type implementing the interf
 <code><pre><span style="color: #008000">// Declare a resource interface for a fungible token.</span><span>
 </span><span style="color: #008000">// Only resources can implement this resource interface.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">resource interface</span><span style="color: #000000"> FungibleToken {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">resource interface</span><span style="color: #000000"> FungibleToken {</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// Require the implementing type to provide a field for the balance</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// that is readable in all scopes (`pub`).</span><span>
@@ -4306,9 +4556,10 @@ and the name of one or more interfaces that the composite type implements.
 
 This will tell the checker to enforce any requirements from the specified interfaces onto the declared type.
 
-A type implements (conforms to) an interface if it provides field declarations
-for all fields required by the interface and provides implementations for all functions
-required by the interface.
+A type implements (conforms to) an interface if it declares
+the implementation in its signature, provides field declarations
+for all fields required by the interface,
+and provides implementations for all functions required by the interface.
 
 The field declarations in the implementing type must match the field requirements
 in the interface in terms of name, type, and declaration kind (e.g. constant, variable)
@@ -4324,7 +4575,7 @@ in terms of name, parameter argument labels, parameter types, and the return typ
 </span><span style="color: #008000">// It has a variable field named `balance`, that can be written</span><span>
 </span><span style="color: #008000">// by functions of the type, but outer scopes can only read it.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">resource</span><span style="color: #000000"> ExampleToken: FungibleToken {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">resource</span><span style="color: #000000"> ExampleToken: FungibleToken {</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// Implement the required field `balance` for the `FungibleToken` interface.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// The interface does not specify if the field must be variable, constant,</span><span>
@@ -4424,7 +4675,7 @@ at least public (i.e. the `pub` keyword is specified),
 and an implementation may provide a variable field which is public,
 but also publicly settable (the `pub(set)` keyword is specified).
 
-<code><pre><span style="color: #0000FF">struct interface</span><span style="color: #000000"> AnInterface {</span><span>
+<code><pre><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct interface</span><span style="color: #000000"> AnInterface {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// Require the implementing type to provide a publicly readable</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// field named `a` that has type `Int`. It may be a constant field,</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// a variable field, or a synthetic field.</span><span>
@@ -4432,7 +4683,7 @@ but also publicly settable (the `pub(set)` keyword is specified).
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> a: Int</span><span>
 </span><span style="color: #000000">}</span><span>
 </span><span>
-</span><span style="color: #0000FF">struct</span><span style="color: #000000"> AnImplementation: AnInterface {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> AnImplementation: AnInterface {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// Declare a publicly settable variable field named `a` that has type `Int`.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// This implementation satisfies the requirement for interface `AnInterface`:</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// The field is at least publicly readable, but this implementation also</span><span>
@@ -4457,14 +4708,14 @@ Values implementing an interface can be used as initial values for constants and
 </span><span style="color: #008000">// Require implementing types to provide a field which returns the area,</span><span>
 </span><span style="color: #008000">// and a function which scales the shape by a given factor.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">struct interface</span><span style="color: #000000"> Shape {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct interface</span><span style="color: #000000"> Shape {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> area: Int</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> scale(factor: </span><span style="color: #0000FF">Int</span><span style="color: #000000">)</span><span>
 </span><span style="color: #000000">}</span><span>
 </span><span>
 </span><span style="color: #008000">// Declare a structure named `Square` the implements the `Shape` interface.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">struct</span><span style="color: #000000"> Square: Shape {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> Square: Shape {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// In addition to the required fields from the interface,</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// the type can also declare additional fields.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
@@ -4496,7 +4747,7 @@ Values implementing an interface can be used as initial values for constants and
 </span><span>
 </span><span style="color: #008000">// Declare a structure named `Rectangle` that also implements the `Shape` interface.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">struct</span><span style="color: #000000"> Rectangle: Shape {</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> Rectangle: Shape {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> width: </span><span style="color: #0000FF">Int</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> height: </span><span style="color: #0000FF">Int</span><span>
 </span><span>
@@ -4568,18 +4819,18 @@ and one or more names of interfaces of the same kind, separated by commas.
 
 <code><pre><span style="color: #008000">// Declare a structure interface named `Shape`.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">struct interface</span><span style="color: #000000"> Shape {}</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct interface</span><span style="color: #000000"> Shape {}</span><span>
 </span><span>
 </span><span style="color: #008000">// Declare a structure interface named `Polygon`.</span><span>
 </span><span style="color: #008000">// Require implementing types to also implement the structure interface `Shape`.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">struct interface</span><span style="color: #000000"> Polygon: Shape {}</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct interface</span><span style="color: #000000"> Polygon: Shape {}</span><span>
 </span><span>
 </span><span style="color: #008000">// Declare a structure named `Hexagon` that implements the `Polygon` interface.</span><span>
 </span><span style="color: #008000">// This also is required to implement the `Shape` interface,</span><span>
 </span><span style="color: #008000">// because the `Polygon` interface requires it.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">struct</span><span style="color: #000000"> Hexagon: Polygon {}</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> Hexagon: Polygon {}</span><span>
 </span><span>
 </span></pre></code>
 
@@ -4786,7 +5037,10 @@ followed by the `from` keyword, and then followed by the location.
 
 If importing a local file, the location is a string literal, and the path to the file.
 
-If importing an external type, the location is an address literal, and the address
+> 🚧 Status: Imports from local files are not currently implemented.
+
+If importing an external type in a different account,
+the location is an address literal, and the address
 of the account where the declarations are deployed to and published.
 
 <code><pre><span style="color: #008000">// Import the type `Counter` from a local file.</span><span>
@@ -5418,35 +5672,99 @@ Transactions are structured as such:
 First, the transaction can import any number of types from external accounts
 using the import syntax.
 
-Next is the body of the transaction, which is broken into three main phases:
+<code><pre><span style="color: #0000FF">import</span><span style="color: #000000"> FungibleToken </span><span style="color: #0000FF">from</span><span style="color: #000000"> </span><span style="color: #09885A">0x01</span><span>
+</span></pre></code>
+
+The body is declared using the `transaction` keyword and its contents
+are contained in curly braces.
+
+Next is the body of the transaction,
+which first contains local variable declarations that are valid
+throughout the whole of the transaction.
+
+<code><pre><span style="color: #000000">transaction {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// transaction contents</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> localVar: </span><span style="color: #0000FF">Int</span><span>
+</span><span>
+</span><span style="color: #000000">    ...</span><span>
+</span><span style="color: #000000">}</span><span>
+</span></pre></code>
+
+then three optional main phases:
 Preparation, execution, and postconditions, only in that order.
 Each phase is a block of code that executes sequentially.
 
--   The **prepare phase** acts like the initializer in a composite type,
-    i.e., it initializes fields that can then be used in the execution phase.
+-   The **prepare phase** (declared using the `prepare` keyword)
+    acts like the initializer in a composite type,
+    i.e., it has to initialize the local fields of the transaction
+    that can then be used in the execution phase.
 
-    The prepare phase has the permissions to read from and write to the storage
-    of all the accounts that signed the transaction.
+    The prepare phase also has access to the authorized account objects
+    (`AuthAccount`) of the accounts that signed it.
+    These authorized account objects have to be declared as parameters
+    to the prepare phase, one for each signer of the transaction:
 
--   The **execute phase** is where interaction with external contracts happens.
+    <code><pre><span style="color: #008000">// There needs to be exactly as many `AuthAccount`-typed parameters</span><span>
+    </span><span style="color: #008000">// as there are signers for the transaction.</span><span>
+    </span><span style="color: #008000">// In this case, there would be two signers</span><span>
+    </span><span>
+    </span><span style="color: #000000">prepare(acct1: AuthAccount, acct2: AuthAccount) {</span><span>
+    </span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> privateResource &#x3C;- acct1.storage[Resource] &#x3C;- </span><span style="color: #0000FF">nil</span><span>
+    </span><span style="color: #000000">    </span><span style="color: #0000FF">destroy</span><span style="color: #000000"> privateResource</span><span>
+    </span><span style="color: #000000">}</span><span>
+    </span></pre></code>
+
+    `AuthAccount` objects have the permissions
+    to read from and write to the private storage
+    of the account, which cannot be directly accessed anywhere else.
+
+-   The **execute phase** (declared using the `execute` keyword)
+    is where interaction with other accounts
+    and contracts should usually happen.
 
     This usually involves interacting with contracts with public types
-    and functions that are deployed in other accounts.
+    and functions, calling functions using references to other accounts&#x27;
+    objects, and performing specific computation on these values.
 
--   The **postcondition phase** is where the transaction can check
-    that its functionality was executed correctly.
+    This phase does not have access to any account&#x27;s private account objects
+    and can only access public contract fields and functions,
+    public account objects (`PublicAccount`) using the built-in `getAccount`
+    function, and any local transaction variables
+    that were initialized in the `prepare` block.
 
-Transactions are declared using the `transaction` keyword.
+    <code><pre><span style="color: #000000">  </span><span style="color: #0000FF">execute</span><span style="color: #000000"> {</span><span>
+    </span><span style="color: #000000">      </span><span style="color: #008000">// Invalid: Cannot access the private account object,</span><span>
+    </span><span style="color: #000000">      </span><span style="color: #008000">// as `acct1` is not in scope</span><span>
+    </span><span>
+    </span><span style="color: #000000">      </span><span style="color: #0000FF">let</span><span style="color: #000000"> privateResource &#x3C;- acct1.storage[Resource] &#x3C;- </span><span style="color: #0000FF">nil</span><span>
+    </span><span style="color: #000000">      </span><span style="color: #0000FF">destroy</span><span style="color: #000000"> privateResource</span><span>
+    </span><span>
+    </span><span style="color: #000000">      </span><span style="color: #008000">// Valid: Can access any account's public Account object</span><span>
+    </span><span>
+    </span><span style="color: #000000">      </span><span style="color: #0000FF">let</span><span style="color: #000000"> pubacct = getAccount(</span><span style="color: #09885A">0x03</span><span style="color: #000000">)</span><span>
+    </span><span style="color: #000000">}</span><span>
+    </span><span>
+    </span></pre></code>
 
-Within the transaction, but before the prepare phase,
-any number of constants and/or variables can be declared.
-These are valid within the entire scope of the transaction.
 
-The prepare phase is declared using the `prepare` keyword
-and the execution phase can be declared using the `execute` keyword.
-The `post` section can be used to declare postconditions.
+-   The **postcondition phase** (declared using the `post` keyword)
+    is where the transaction can check
+    that its functionality was executed correctly with specific condition checks.
+
+    If any of the condition checks result in `false`, the transaction will fail
+    and be completely reverted.
+
+    Only condition checks are allowed in this section. No actual computation
+    or modification of values is allowed.
+
+    <code><pre><span style="color: #000000">  </span><span style="color: #0000FF">post</span><span style="color: #000000"> {</span><span>
+    </span><span style="color: #000000">      result.balance == </span><span style="color: #09885A">30</span><span style="color: #000000">: </span><span style="color: #A31515">"Balance after transaction is incorrect!"</span><span>
+    </span><span style="color: #000000">  }</span><span>
+    </span><span>
+    </span></pre></code>
 
 <code><pre><span style="color: #008000">// Optional: Importing external types from other accounts using `import`.</span><span>
+</span><span style="color: #0000FF">import</span><span style="color: #000000"> HelloWorld </span><span style="color: #0000FF">from</span><span style="color: #000000"> </span><span style="color: #09885A">0x01</span><span>
 </span><span>
 </span><span style="color: #000000">transaction {</span><span>
 </span><span>
@@ -5455,7 +5773,7 @@ The `post` section can be used to declare postconditions.
 </span><span style="color: #000000">    </span><span style="color: #008000">// The prepare phase needs to have as many account parameters</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// as there are signers for the transaction.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">    prepare(signer1: Account) {</span><span>
+</span><span style="color: #000000">    prepare(signer1: AuthAccount) {</span><span>
 </span><span style="color: #000000">        </span><span style="color: #008000">// ...</span><span>
 </span><span style="color: #000000">    }</span><span>
 </span><span>
@@ -5469,280 +5787,37 @@ The `post` section can be used to declare postconditions.
 </span><span style="color: #000000">}</span><span>
 </span></pre></code>
 
-### [](#deploying-code)Deploying Code
+### [](#importing-and-using-deployed-contract-code)Importing and using Deployed Contract Code
 
-Transactions can deploy contract code to the storage of any of the signing accounts.
+Deploying contract code to an account was covered
+in the [Deploying and Updating Contracts](#Deploying-and-Updating-Contracts) section of the spec.
 
-Here is an example of a resource interface that will be deployed to an account.
-Imagine it is in a file named `FungibleToken.cdc`.
+Once a contract or contract interface has been deployed to an account,
+anybody can import the type from the account where it was deployed to and use it in their
+contracts or transactions.
 
-<code><pre><span style="color: #008000">// Declare resource interfaces for the two parts of a fungible token:</span><span>
-</span><span style="color: #008000">// - A provider, which allows withdrawing tokens</span><span>
-</span><span style="color: #008000">// - A receiver, which allows depositing tokens</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">resource interface</span><span style="color: #000000"> Provider {</span><span>
-</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> withdraw(amount: </span><span style="color: #0000FF">Int</span><span style="color: #000000">): @</span><span style="color: #0000FF">FungibleToken</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">pre</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">            amount > </span><span style="color: #09885A">0</span><span style="color: #000000">:</span><span>
-</span><span style="color: #000000">                </span><span style="color: #A31515">"withdrawal amount must be positive"</span><span>
-</span><span style="color: #000000">        }</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">post</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">            result.balance == amount:</span><span>
-</span><span style="color: #000000">                </span><span style="color: #A31515">"incorrect amount returned"</span><span>
-</span><span style="color: #000000">        }</span><span>
-</span><span style="color: #000000">    }</span><span>
-</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> transfer(to: &#x26;</span><span style="color: #0000FF">Receiver</span><span style="color: #000000">, amount: </span><span style="color: #0000FF">Int</span><span style="color: #000000">)</span><span>
-</span><span style="color: #000000">}</span><span>
-</span><span>
-</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">resource interface</span><span style="color: #000000"> Receiver {</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> deposit(token: @</span><span style="color: #0000FF">FungibleToken</span><span style="color: #000000">)</span><span>
-</span><span style="color: #000000">}</span><span>
-</span><span>
-</span><span style="color: #008000">// Declare a resource interface for a fungible token.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #008000">// It requires that conforming implementations also implement</span><span>
-</span><span style="color: #008000">// the interfaces `Provider` and `Receiver`.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">resource interface</span><span style="color: #000000"> FungibleToken: Provider, Receiver {</span><span>
-</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> balance: Int {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">set</span><span style="color: #000000">(newBalance) {</span><span>
-</span><span style="color: #000000">            </span><span style="color: #0000FF">post</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">                newBalance >= </span><span style="color: #09885A">0</span><span style="color: #000000">:</span><span>
-</span><span style="color: #000000">                    </span><span style="color: #A31515">"Balances are always set as non-negative numbers"</span><span>
-</span><span style="color: #000000">            }</span><span>
-</span><span style="color: #000000">        }</span><span>
-</span><span style="color: #000000">    }</span><span>
-</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">init</span><span style="color: #000000">(balance: </span><span style="color: #0000FF">Int</span><span style="color: #000000">) {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">post</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">            </span><span style="color: #0000FF">self</span><span style="color: #000000">.balance == balance:</span><span>
-</span><span style="color: #000000">                </span><span style="color: #A31515">"the balance must be initialized to the initial balance"</span><span>
-</span><span style="color: #000000">        }</span><span>
-</span><span style="color: #000000">    }</span><span>
-</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> withdraw(amount: </span><span style="color: #0000FF">Int</span><span style="color: #000000">): @</span><span style="color: #0000FF">Self</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">pre</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">            amount &#x3C;= </span><span style="color: #0000FF">self</span><span style="color: #000000">.balance:</span><span>
-</span><span style="color: #000000">                </span><span style="color: #A31515">"insufficient funds: the amount must be smaller or equal to the balance"</span><span>
-</span><span style="color: #000000">        }</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">post</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">            </span><span style="color: #0000FF">self</span><span style="color: #000000">.balance == before(</span><span style="color: #0000FF">self</span><span style="color: #000000">.balance) - amount:</span><span>
-</span><span style="color: #000000">                </span><span style="color: #A31515">"Incorrect amount removed"</span><span>
-</span><span style="color: #000000">        }</span><span>
-</span><span style="color: #000000">    }</span><span>
-</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> deposit(token: @</span><span style="color: #0000FF">Self</span><span style="color: #000000">) {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">post</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">            </span><span style="color: #0000FF">self</span><span style="color: #000000">.balance == before(</span><span style="color: #0000FF">self</span><span style="color: #000000">.balance) + token.balance:</span><span>
-</span><span style="color: #000000">                </span><span style="color: #A31515">"the amount must be added to the balance"</span><span>
-</span><span style="color: #000000">        }</span><span>
-</span><span style="color: #000000">    }</span><span>
-</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> transfer(to: &#x26;</span><span style="color: #0000FF">Receiver</span><span style="color: #000000">, amount: </span><span style="color: #0000FF">Int</span><span style="color: #000000">) {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">pre</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">            amount &#x3C;= </span><span style="color: #0000FF">self</span><span style="color: #000000">.balance:</span><span>
-</span><span style="color: #000000">                </span><span style="color: #A31515">"Insufficient funds"</span><span>
-</span><span style="color: #000000">        }</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">post</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">            </span><span style="color: #0000FF">self</span><span style="color: #000000">.balance == before(</span><span style="color: #0000FF">self</span><span style="color: #000000">.balance) - amount:</span><span>
-</span><span style="color: #000000">                </span><span style="color: #A31515">"Incorrect amount removed"</span><span>
-</span><span style="color: #000000">        }</span><span>
-</span><span style="color: #000000">    }</span><span>
-</span><span style="color: #000000">}</span><span>
-</span></pre></code>
+<!--
 
-The transaction will import the above file to use it in the code.
-Transactions can refer to local code with the `import` keyword,
-followed by the name of the type, the `from` keyword,
-and the string literal for the path of the file which contains the code of the type.
+TODO
 
-<!-- TODO:
-     move explanation for import statement into separate section?
-     also see below for version referring to deployed code with an address
+#### Document how contract code is imported and used in another contract with simpler examples than FungibleToken
+
 -->
 
-<code><pre><span style="color: #008000">// Import the resource interface type `FungibleToken`</span><span>
-</span><span style="color: #008000">// from the local file "FungibleToken.cdc".</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">import</span><span style="color: #000000"> FungibleToken </span><span style="color: #0000FF">from</span><span style="color: #000000"> </span><span style="color: #A31515">"FungibleToken.cdc"</span><span>
-</span><span>
-</span><span style="color: #008000">// Run a transaction which deploys the code for the resource interface</span><span>
-</span><span style="color: #008000">// `FungibleToken` and makes it publicly available by publishing it.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">transaction {</span><span>
-</span><span>
-</span><span style="color: #000000">    prepare(signer: Account) {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// Store the code for the resource interface type `FungibleToken`</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// in the signing account.</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">        signer.storage[FungibleToken] = FungibleToken</span><span>
-</span><span style="color: #000000">    }</span><span>
-</span><span style="color: #000000">}</span><span>
+<code><pre><span>
 </span></pre></code>
 
-Now, anybody can import the type `FungibleToken` from the signing account
-and concrete fungible token implementations that conform to the interface can be created.
-
-Imagine this declaration below for a concrete fungible token implementation conforming
-to the fungible token interface is in a local file named `ExampleToken.cdc`.
-
-<code><pre><span style="color: #008000">// Import the resource interface type `FungibleToken`,</span><span>
-</span><span style="color: #008000">// which was deployed above, in this example to the account with address 0x23.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">import</span><span style="color: #000000"> FungibleToken </span><span style="color: #0000FF">from</span><span style="color: #000000"> </span><span style="color: #09885A">0x23</span><span>
-</span><span>
-</span><span style="color: #008000">// Declare a resource named `ExampleToken`, which is a concrete fungible token,</span><span>
-</span><span style="color: #008000">// i.e. it implements the resource interface `FungibleToken`.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">resource</span><span style="color: #000000"> ExampleToken: FungibleToken {</span><span>
-</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> balance: </span><span style="color: #0000FF">Int</span><span>
-</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">init</span><span style="color: #000000">(balance: </span><span style="color: #0000FF">Int</span><span style="color: #000000">) {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.balance = balance</span><span>
-</span><span style="color: #000000">    }</span><span>
-</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> withdraw(amount: </span><span style="color: #0000FF">Int</span><span style="color: #000000">): @</span><span style="color: #0000FF">ExampleToken</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.balance = </span><span style="color: #0000FF">self</span><span style="color: #000000">.balance - amount</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">return</span><span style="color: #000000"> &#x3C;-</span><span style="color: #0000FF">create</span><span style="color: #000000"> ExampleToken(balance: amount)</span><span>
-</span><span style="color: #000000">    }</span><span>
-</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> deposit(token: @</span><span style="color: #0000FF">ExampleToken</span><span style="color: #000000">) {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.balance = </span><span style="color: #0000FF">self</span><span style="color: #000000">.balance + token.balance</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">destroy</span><span style="color: #000000"> token</span><span>
-</span><span style="color: #000000">    }</span><span>
-</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// The function `transfer` combines the functions `withdraw` and `deposit`</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// into a single function call</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> transfer(to: &#x26;</span><span style="color: #0000FF">Receiver</span><span style="color: #000000">, amount: </span><span style="color: #0000FF">Int</span><span style="color: #000000">) {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// Deposit the tokens that withdraw creates into the</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// recipient's account using their deposit reference</span><span>
-</span><span style="color: #000000">        to.deposit(from: &#x3C;-</span><span style="color: #0000FF">self</span><span style="color: #000000">.withdraw(amount: amount))</span><span>
-</span><span style="color: #000000">    }</span><span>
-</span><span style="color: #000000">}</span><span>
-</span><span>
-</span><span style="color: #008000">// Declare a function that lets any user create an example token</span><span>
-</span><span style="color: #008000">// with an initial empty balance.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> newEmptyExampleToken(): @</span><span style="color: #0000FF">ExampleToken</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">return</span><span style="color: #000000"> &#x3C;-</span><span style="color: #0000FF">create</span><span style="color: #000000"> ExampleToken(balance: </span><span style="color: #09885A">0</span><span style="color: #000000">)</span><span>
-</span><span style="color: #000000">}</span><span>
-</span></pre></code>
-
-Again, the type must be stored in the owners account.
+Again, the type must be deployed to the account where it is being imported from.
 
 Once code is deployed, it can be used in other code and in transactions.
 
-In most situations it is important to expose only a subset of the functionality
-of the stored values,
-because some of the functionality should only be available to the owner.
+<!--
 
-The following transaction creates an empty token and stores it in the signer&#x27;s account.
-This allows the owner to withdraw and deposit.
+TODO
 
-However, the deposit function should be available to anyone. To achieve this,
-an additional reference to the token is created, stored, and published,
-which has the type `Receiver`, i.e. it only exposes the `deposit` function.
+#### Document how to create objects of types defined in other contracts
 
-<code><pre><span style="color: #008000">// import the `ExampleToken`, `newEmptyExampleToken`, `Receiver`, and `Provider` from the account who created them</span><span>
-</span><span style="color: #0000FF">import</span><span style="color: #000000"> ExampleToken, newEmptyExampleToken, Receiver, Provider </span><span style="color: #0000FF">from</span><span style="color: #000000"> </span><span style="color: #09885A">0x42</span><span>
-</span><span>
-</span><span style="color: #008000">// Run a transaction which stored the code and an instance for the resource type `ExampleToken`</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">transaction {</span><span>
-</span><span>
-</span><span style="color: #000000">    prepare(signer: Account) {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// Create a new token as an optional.</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">var</span><span style="color: #000000"> tokenA: @</span><span style="color: #0000FF">ExampleToken</span><span style="color: #000000">? &#x3C;- newEmptyExampleToken()</span><span>
-</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// Store the new token in storage by replacing whatever</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// is in the existing location.</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">let</span><span style="color: #000000"> oldToken &#x3C;- signer.storage[ExampleToken] &#x3C;- tokenA</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// destroy the empty old resource.</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">destroy</span><span style="color: #000000"> oldToken</span><span>
-</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// create references to the stored `ExampleToken`.</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// `Receiver` is for external calls.</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// `Provider` is for internal calls by the owner.</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// The `Receiver` references is stored in the `published` object</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// because an account will usually want anyone to be able to read</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// their balance and call their deposit function</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">        signer.published[&#x26;Receiver] = &#x26;signer.storage[ExampleToken] as &#x26;Receiver</span><span>
-</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// The `Provider` reference is stored in account storage</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// because an account will not want to expose its withdraw method</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// to the public</span><span>
-</span><span style="color: #000000">        signer.storage[&#x26;Provider] = &#x26;signer.storage[ExampleToken] as &#x26;Provider</span><span>
-</span><span style="color: #000000">    }</span><span>
-</span><span style="color: #000000">}</span><span>
-</span></pre></code>
-
-Now, the resource type `ExampleToken` is stored in the account
-and its `Receiver` interface is available via the `published` object
-so that anyone can interact with it by importing it from the account.
-
-Once an account is prepared in such a way, transactions can be run that deposit
-tokens into the account.
-
-<code><pre><span style="color: #008000">// Import the resource type `ExampleToken`, `Provider`, and `Receiver`</span><span>
-</span><span style="color: #008000">// in this example deployed to the account with address 0x42.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">import</span><span style="color: #000000"> ExampleToken, Provider, Receiver </span><span style="color: #0000FF">from</span><span style="color: #000000"> </span><span style="color: #09885A">0x42</span><span>
-</span><span>
-</span><span style="color: #008000">// Execute a transaction which sends five coins from one account to another.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #008000">// The transaction fails unless there is a `FungibleToken.Provider` available</span><span>
-</span><span style="color: #008000">// for the sending account and there is a public `FungibleToken.Receiver`</span><span>
-</span><span style="color: #008000">// available for the recipient account.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #008000">// Only a signature from the sender is required.</span><span>
-</span><span style="color: #008000">// No signature from the recipient is required, as the receiver reference</span><span>
-</span><span style="color: #008000">// is published/publicly available (if it exists for the recipient).</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">transaction {</span><span>
-</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> providerRef: &#x26;</span><span style="color: #0000FF">Provider</span><span>
-</span><span>
-</span><span style="color: #000000">    prepare(signer: Account) {</span><span>
-</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// Get the provider reference from the signer's account storage.</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// As the access is performed in the prepare phase of the transaction,</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// the unpublished reference `&#x26;Provider` can be accessed.</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// If the signer's account has no provider reference stored in it,</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// or it is not published, abort the transaction.</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">        providerRef = signer.storage[&#x26;Provider] ?? panic(</span><span style="color: #A31515">"Signer has no provider"</span><span style="color: #000000">)</span><span>
-</span><span style="color: #000000">    }</span><span>
-</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">execute</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// Get the recipient's account. In this example it has the address 0x1234.</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">let</span><span style="color: #000000"> recipient = getAccount(</span><span style="color: #09885A">0x1234</span><span style="color: #000000">)</span><span>
-</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// Note that the recipient's account is not a signing account –</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// deposits need no signature, the recipient's receiver is published</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// and can be used by anyone (if set up in this manner).</span><span>
-</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// Get the receiver reference from the recipient's account storage.</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// If the recipient's account has no receiver reference stored in it,</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// or it is not published, abort the transaction.</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">let</span><span style="color: #000000"> receiverRef = recipient.published[&#x26;Receiver] ?? panic(</span><span style="color: #A31515">"Recipient has no receiver"</span><span style="color: #000000">)</span><span>
-</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// Call the provider's transfer function which withdraws 5 tokens</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// from their account and deposits it to the receiver's account</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// using the reference to their deposit function.</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.providerRef.transfer(to: receiverRef, amount: </span><span style="color: #09885A">5</span><span style="color: #000000">)</span><span>
-</span><span style="color: #000000">    }</span><span>
-</span><span style="color: #000000">}</span><span>
-</span></pre></code>
+-->
 
 ## [](#built-in-functions)Built-in Functions
 
