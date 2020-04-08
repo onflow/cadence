@@ -3852,7 +3852,7 @@ pub fun returnBeforeDestroy(: Bool) {
 
 Resource variables cannot be assigned to as that would lead to the loss of the variable's current resource value.
 
-Instead, use a swap statement (`<->`) or (`<- target <-`) to replace the resource variable with another resource.
+Instead, use a swap statement (`<->`) or shift statement (`<- target <-`) to replace the resource variable with another resource.
 
 ```cadence,file=resource-variable-invalid-assignment.cdc
 pub resource R {}
@@ -3872,9 +3872,9 @@ x <-> replacement
 // `x` is the new resource.
 // `replacement` is the old resource.
 
-// Or use the other swap statement `<- target <-`
-// This statement moves the resource out of x 
-// at the same time that replacement is being moved into it.
+// Or use the shift statement (`<- target <-`)
+// This statement moves the resource out of `x` and into `oldX`,
+// and at the same time assigns `x` with the new value on the right-hand side.
 let oldX <- x <- create R()
 // oldX still needs to be explicitly handled after this statement
 destroy oldX
@@ -3991,7 +3991,7 @@ Arrays and dictionaries behave differently when they contain resources:
 Indexing into an array to read an element at a certain index or assign to it,
 or indexing into a dictionary to read a value for a certain key or set a value for the key is **not** allowed.
 
-Instead, use a swap statement (`<->` or `<- target <-`) to replace the accessed resource with another resource.
+Instead, use a swap statement (`<->`) or shift statement (`<- target <-`) to replace the accessed resource with another resource.
 
 ```cadence,file=resource-in-array.cdc
 resource R {}
@@ -4022,7 +4022,7 @@ resources[0] <-> res
 // `resources[0]` now contains the new resource.
 // `res` now contains the old resource.
 
-// Use the alternative swap statement to move the new resource into
+// Use the shift statement to move the new resource into
 // the array at the same time that the old resource is being moved out
 let oldRes <- resources[0] <- create R()
 // The old object still needs to be handled
@@ -4063,7 +4063,7 @@ resources["r1"] <-> res
 // `resources["r1"]` now contains the new resource.
 // `res` now contains the old resource.
 
-// Use the alternative swap statement to move the new resource into
+// Use the shift statement to move the new resource into
 // the dictionary at the same time that the old resource is being moved out
 let oldRes <- resources["r2"] <- create R()
 // The old object still needs to be handled
