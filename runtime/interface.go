@@ -23,6 +23,8 @@ type Interface interface {
 	Log(string)
 	// EmitEvent is called when an event is emitted by the runtime.
 	EmitEvent(Event)
+	// GenerateUuid is called to generate a UUID.
+	GenerateUuid() uint64
 }
 
 type EmptyRuntimeInterface struct{}
@@ -66,3 +68,7 @@ func (i *EmptyRuntimeInterface) GetSigningAccounts() []Address {
 func (i *EmptyRuntimeInterface) Log(message string) {}
 
 func (i *EmptyRuntimeInterface) EmitEvent(event Event) {}
+
+func (i *EmptyRuntimeInterface) GenerateUuid() uint64 {
+	return 0
+}

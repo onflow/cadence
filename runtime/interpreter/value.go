@@ -3426,15 +3426,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	if v.Kind == common.CompositeKindResource &&
 		name == "owner" {
 
-		if v.Owner == nil {
-			return NilValue{}
-		}
-
-		address := AddressValue(*v.Owner)
-
-		return NewSomeValueOwningNonCopying(
-			PublicAccountValue{Address: address},
-		)
+		return v.OwnerValue()
 	}
 
 	value, ok := v.Fields[name]
@@ -3488,6 +3480,18 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	}
 
 	return nil
+}
+
+func (v *CompositeValue) OwnerValue() OptionalValue {
+	if v.Owner == nil {
+		return NilValue{}
+	}
+
+	address := AddressValue(*v.Owner)
+
+	return NewSomeValueOwningNonCopying(
+		PublicAccountValue{Address: address},
+	)
 }
 
 func (v *CompositeValue) SetMember(_ *Interpreter, locationRange LocationRange, name string, value Value) {

@@ -54,9 +54,21 @@ func parseCheckAndInterpretWithOptions(
 		}
 	}
 
+	var uuid uint64 = 0
+
+	interpreterOptions := append(
+		[]interpreter.Option{
+			interpreter.WithUuidHandler(func() uint64 {
+				uuid++
+				return uuid
+			}),
+		},
+		options.Options...,
+	)
+
 	inter, err := interpreter.NewInterpreter(
 		checker,
-		options.Options...,
+		interpreterOptions...,
 	)
 
 	require.NoError(t, err)
@@ -3769,6 +3781,10 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						}
 					}
 
+					uuidHandler := interpreter.WithUuidHandler(func() uint64 {
+						return 0
+					})
+
 					if compositeKind == common.CompositeKindContract {
 
 						inter, err := interpreter.NewInterpreter(
@@ -3784,13 +3800,14 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 									&sema.IntType{},
 								},
 							),
+							uuidHandler,
 						)
 						require.NoError(t, err)
 
 						err = inter.Interpret()
 						check(err)
 					} else {
-						inter, err := interpreter.NewInterpreter(checker)
+						inter, err := interpreter.NewInterpreter(checker, uuidHandler)
 						require.NoError(t, err)
 
 						err = inter.Interpret()

@@ -1796,35 +1796,58 @@ func (checker *Checker) withSelfResourceInvalidationAllowed(f func()) {
 func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 	var predeclaredMembers []*Member
 
-	addPredeclaredMember := func(member *Member) {
-		member.Predeclared = true
-		predeclaredMembers = append(predeclaredMembers, member)
+	addPredeclaredMember := func(identifier string, fieldType Type, access ast.Access, notSerialized bool) {
+		predeclaredMembers = append(predeclaredMembers, &Member{
+			ContainerType:   containerType,
+			Access:          access,
+			Identifier:      ast.Identifier{Identifier: identifier},
+			DeclarationKind: common.DeclarationKindField,
+			VariableKind:    ast.VariableKindConstant,
+			TypeAnnotation:  NewTypeAnnotation(fieldType),
+			Predeclared:     true,
+			NotSerialized:   notSerialized,
+		})
 	}
 
 	if compositeKindedType, ok := containerType.(CompositeKindedType); ok {
 
 		switch compositeKindedType.GetCompositeKind() {
 		case common.CompositeKindContract:
-			// Contracts have a predeclared private field `priv let account: AuthAccount`
 
-			member := NewPublicConstantFieldMember(
-				containerType,
+			// `priv let account: AuthAccount`,
+			// ignored in serialization
+
+			addPredeclaredMember(
 				"account",
 				&AuthAccountType{},
+				ast.AccessPrivate,
+				true,
 			)
-			member.Access = ast.AccessPrivate
-			addPredeclaredMember(member)
 
 		case common.CompositeKindResource:
-			// Resources have a predeclared field `pub let owner: PublicAccount?`
+			// Resources have two predeclared fields:
 
-			addPredeclaredMember(NewPublicConstantFieldMember(
-				containerType,
+			// `pub let owner: PublicAccount?`,
+			// ignored in serialization
+
+			addPredeclaredMember(
 				"owner",
 				&OptionalType{
 					Type: &PublicAccountType{},
 				},
-			))
+				ast.AccessPublic,
+				true,
+			)
+
+			// `pub let uuid: UInt64`,
+			// included in serialization
+
+			addPredeclaredMember(
+				"uuid",
+				&UInt64Type{},
+				ast.AccessPublic,
+				false,
+			)
 		}
 	}
 
