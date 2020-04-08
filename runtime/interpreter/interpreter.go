@@ -3589,6 +3589,15 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 }
 
 func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValue) HostFunctionValue {
+	return interpreter.authAccountReadFunction(addressValue, true)
+}
+
+func (interpreter *Interpreter) authAccountCopyFunction(addressValue AddressValue) HostFunctionValue {
+	return interpreter.authAccountReadFunction(addressValue, false)
+}
+
+func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValue, clear bool) HostFunctionValue {
+
 	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
 
 		address := addressValue.ToAddress()
@@ -3628,10 +3637,12 @@ func (interpreter *Interpreter) authAccountLoadFunction(addressValue AddressValu
 				return Done{Result: NilValue{}}
 			}
 
-			// Remove the value from storage,
-			// but only if the type check succeeded.
+			if clear {
+				// Remove the value from storage,
+				// but only if the type check succeeded.
 
-			interpreter.writeStored(address, key, NilValue{})
+				interpreter.writeStored(address, key, NilValue{})
+			}
 
 			return Done{Result: value}
 

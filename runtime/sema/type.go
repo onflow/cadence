@@ -2911,16 +2911,16 @@ func (p *Parameter) EffectiveArgumentLabel() string {
 // TypeParameter
 
 type TypeParameter struct {
-	Name string
-	Type Type
+	Name      string
+	TypeBound Type
 }
 
 func (p TypeParameter) string(typeFormatter func(Type) string) string {
 	var builder strings.Builder
 	builder.WriteString(p.Name)
-	if p.Type != nil {
+	if p.TypeBound != nil {
 		builder.WriteString(": ")
-		builder.WriteString(typeFormatter(p.Type))
+		builder.WriteString(typeFormatter(p.TypeBound))
 	}
 	return builder.String()
 }
@@ -2939,19 +2939,19 @@ func (p TypeParameter) QualifiedString() string {
 
 func (p TypeParameter) Equal(other *TypeParameter) bool {
 	return p.Name == other.Name &&
-		(p.Type == nil || !p.Type.Equal(other.Type))
+		(p.TypeBound == nil || !p.TypeBound.Equal(other.TypeBound))
 }
 
 func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
-	if p.Type == nil ||
-		p.Type.IsInvalidType() {
+	if p.TypeBound == nil ||
+		p.TypeBound.IsInvalidType() {
 
 		return nil
 	}
 
-	if !IsSubType(ty, p.Type) {
+	if !IsSubType(ty, p.TypeBound) {
 		return &TypeMismatchError{
-			ExpectedType: p.Type,
+			ExpectedType: p.TypeBound,
 			ActualType:   ty,
 			Range:        typeRange,
 		}
@@ -3075,7 +3075,7 @@ func (t *FunctionType) ID() TypeID {
 	typeParameters := make([]string, len(t.TypeParameters))
 
 	for i, typeParameter := range t.TypeParameters {
-		typeParameters[i] = string(typeParameter.Type.ID())
+		typeParameters[i] = string(typeParameter.TypeBound.ID())
 	}
 
 	parameters := make([]string, len(t.Parameters))
@@ -3159,7 +3159,7 @@ func (*FunctionType) IsResourceType() bool {
 func (t *FunctionType) IsInvalidType() bool {
 
 	for _, typeParameter := range t.TypeParameters {
-		if typeParameter.Type.IsInvalidType() {
+		if typeParameter.TypeBound.IsInvalidType() {
 			return true
 		}
 	}
@@ -3176,7 +3176,7 @@ func (t *FunctionType) IsInvalidType() bool {
 func (t *FunctionType) TypeAnnotationState() TypeAnnotationState {
 
 	for _, typeParameter := range t.TypeParameters {
-		typeParameterTypeAnnotationState := typeParameter.Type.TypeAnnotationState()
+		typeParameterTypeAnnotationState := typeParameter.TypeBound.TypeAnnotationState()
 		if typeParameterTypeAnnotationState != TypeAnnotationStateValid {
 			return typeParameterTypeAnnotationState
 		}
@@ -3765,10 +3765,38 @@ var authAccountLoadFunctionType = func() *FunctionType {
 	}
 }()
 
+var authAccountCopyFunctionType = func() *FunctionType {
+
+	typeParameter := &TypeParameter{
+		Name:      "T",
+		TypeBound: &AnyStructType{},
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:          "from",
+				Identifier:     "path",
+				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: &GenericType{
+					TypeParameter: typeParameter,
+				},
+			},
+		),
+	}
+}()
+
 var authAccountBorrowFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
-		Type: &ReferenceType{
+		TypeBound: &ReferenceType{
 			Type: &AnyType{},
 		},
 		Name: "T",
@@ -3798,7 +3826,7 @@ var authAccountBorrowFunctionType = func() *FunctionType {
 var authAccountLinkFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
-		Type: &ReferenceType{
+		TypeBound: &ReferenceType{
 			Type: &AnyType{},
 		},
 		Name: "T",
@@ -3902,6 +3930,9 @@ func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error
 
 	case "load":
 		return newFunction(authAccountLoadFunctionType)
+
+	case "copy":
+		return newFunction(authAccountCopyFunctionType)
 
 	case "borrow":
 		return newFunction(authAccountBorrowFunctionType)
@@ -5648,7 +5679,7 @@ func (t *CapabilityType) Resolve(_ map[*TypeParameter]Type) Type {
 var capabilityBorrowFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
-		Type: &ReferenceType{
+		TypeBound: &ReferenceType{
 			Type: &AnyType{},
 		},
 		Name: "T",
@@ -5671,7 +5702,7 @@ var capabilityBorrowFunctionType = func() *FunctionType {
 var capabilityCheckFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
-		Type: &ReferenceType{
+		TypeBound: &ReferenceType{
 			Type: &AnyType{},
 		},
 		Name: "T",
