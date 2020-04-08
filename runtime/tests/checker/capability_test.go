@@ -56,51 +56,105 @@ func TestCheckCapability(t *testing.T) {
 
 		t.Run(testName, func(t *testing.T) {
 
-			checker, err := ParseAndCheckWithPanic(t,
-				fmt.Sprintf(
-					`
-                      resource R {}
+			t.Run("resource", func(t *testing.T) {
 
-                      let capability: Capability = panic("")
+				checker, err := ParseAndCheckWithPanic(t,
+					fmt.Sprintf(
+						`
+                          resource R {}
 
-                      let r = capability.borrow<%s &R>()
-                    `,
-					authKeyword,
-				),
-			)
+                          let capability: Capability = panic("")
 
-			require.NoError(t, err)
+                          let r = capability.borrow<%s &R>()
+                        `,
+						authKeyword,
+					),
+				)
 
-			rType := checker.GlobalTypes["R"].Type
+				require.NoError(t, err)
 
-			rValueType := checker.GlobalValues["r"].Type
+				rType := checker.GlobalTypes["R"].Type
 
-			require.Equal(t,
-				&sema.OptionalType{
-					Type: &sema.ReferenceType{
-						Authorized: auth,
-						Type:       rType,
+				rValueType := checker.GlobalValues["r"].Type
+
+				require.Equal(t,
+					&sema.OptionalType{
+						Type: &sema.ReferenceType{
+							Authorized: auth,
+							Type:       rType,
+						},
 					},
-				},
-				rValueType,
-			)
+					rValueType,
+				)
+			})
+
+			t.Run("struct", func(t *testing.T) {
+
+				checker, err := ParseAndCheckWithPanic(t,
+					fmt.Sprintf(
+						`
+                          struct S {}
+
+                          let capability: Capability = panic("")
+
+                          let s = capability.borrow<%s &S>()
+                        `,
+						authKeyword,
+					),
+				)
+
+				require.NoError(t, err)
+
+				sType := checker.GlobalTypes["S"].Type
+
+				sValueType := checker.GlobalValues["s"].Type
+
+				require.Equal(t,
+					&sema.OptionalType{
+						Type: &sema.ReferenceType{
+							Authorized: auth,
+							Type:       sType,
+						},
+					},
+					sValueType,
+				)
+			})
 		})
 	}
 
 	t.Run("borrowing: explicit type argument, non-reference type", func(t *testing.T) {
 
-		_, err := ParseAndCheckWithPanic(t, `
+		t.Run("resource", func(t *testing.T) {
 
-          resource R {}
+			_, err := ParseAndCheckWithPanic(t, `
 
-          let capability: Capability = panic("")
+              resource R {}
 
-          let r <- capability.borrow<@R>()
-        `)
+              let capability: Capability = panic("")
 
-		errs := ExpectCheckerErrors(t, err, 1)
+              let r <- capability.borrow<@R>()
+            `)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("struct", func(t *testing.T) {
+
+			_, err := ParseAndCheckWithPanic(t, `
+
+              struct S {}
+
+              let capability: Capability = panic("")
+
+              let s = capability.borrow<S>()
+            `)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
 	})
 
 	t.Run("checking: missing type argument", func(t *testing.T) {
@@ -131,41 +185,86 @@ func TestCheckCapability(t *testing.T) {
 
 		t.Run(testName, func(t *testing.T) {
 
-			checker, err := ParseAndCheckWithPanic(t,
-				fmt.Sprintf(
-					`
-                      resource R {}
+			t.Run("resource", func(t *testing.T) {
 
-                      let capability: Capability = panic("")
+				checker, err := ParseAndCheckWithPanic(t,
+					fmt.Sprintf(
+						`
+                          resource R {}
 
-                      let ok = capability.check<%s &R>()
-                    `,
-					authKeyword,
-				),
-			)
+                          let capability: Capability = panic("")
 
-			require.NoError(t, err)
+                          let ok = capability.check<%s &R>()
+                        `,
+						authKeyword,
+					),
+				)
 
-			require.Equal(t,
-				&sema.BoolType{},
-				checker.GlobalValues["ok"].Type,
-			)
+				require.NoError(t, err)
+
+				require.Equal(t,
+					&sema.BoolType{},
+					checker.GlobalValues["ok"].Type,
+				)
+			})
+
+			t.Run("struct", func(t *testing.T) {
+
+				checker, err := ParseAndCheckWithPanic(t,
+					fmt.Sprintf(
+						`
+                          struct S {}
+
+                          let capability: Capability = panic("")
+
+                          let ok = capability.check<%s &S>()
+                        `,
+						authKeyword,
+					),
+				)
+
+				require.NoError(t, err)
+
+				require.Equal(t,
+					&sema.BoolType{},
+					checker.GlobalValues["ok"].Type,
+				)
+			})
 		})
 	}
 
 	t.Run("checking: explicit type argument, non-reference type", func(t *testing.T) {
 
-		_, err := ParseAndCheckWithPanic(t, `
+		t.Run("resource", func(t *testing.T) {
 
-          resource R {}
+			_, err := ParseAndCheckWithPanic(t, `
 
-          let capability: Capability = panic("")
+              resource R {}
 
-          let ok = capability.check<@R>()
-        `)
+              let capability: Capability = panic("")
 
-		errs := ExpectCheckerErrors(t, err, 1)
+              let ok = capability.check<@R>()
+            `)
 
-		require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run("struct", func(t *testing.T) {
+
+			_, err := ParseAndCheckWithPanic(t, `
+
+              struct S {}
+
+              let capability: Capability = panic("")
+
+              let ok = capability.check<S>()
+            `)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
 	})
 }
