@@ -2809,7 +2809,7 @@ automatically converted to a non-optional integer `Int`,
 or vice-versa.
 
 ```cadence,file=type-safety-add.cdc
-fun add(_ a: Int8, _ b: Int8): Int {
+fun add(_ a: Int8, _ b: Int8): Int8 {
     return a + b
 }
 

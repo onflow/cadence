@@ -439,3 +439,27 @@ func TestCheckFixedPointToIntegerConversion(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckIntegerLiteralArguments(t *testing.T) {
+
+	for _, ty := range sema.AllIntegerTypes {
+
+		t.Run(ty.String(), func(t *testing.T) {
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      fun add(_ a: %[1]s, _ b: %[1]s): %[1]s {
+                          return a + b
+                      }
+
+                      let res = add(1, 2)
+                    `,
+					ty,
+				),
+			)
+
+			require.NoError(t, err)
+		})
+	}
+}
