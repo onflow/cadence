@@ -5058,6 +5058,8 @@ followed by the `from` keyword, and then followed by the location.
 
 If importing a local file, the location is a string literal, and the path to the file.
 
+> 🚧 Status: Imports from local files are not currently implemented.
+
 If importing an external type in a different account, 
 the location is an address literal, and the address
 of the account where the declarations are deployed to and published.
@@ -5870,43 +5872,6 @@ TODO
 #### Document how to create objects of types defined in other contracts
 
 -->
-
-### Storing Resources and Structs in Account Storage
-
-<!--
-
-TODO
-
-#### Document how to store objects in account storage
-
--->
-
-
-### Creating public links to your Private Objects
-
-<!--
-
-TODO
-
-#### Document how to create a link to a storage object
-
--->
-
-
-### Creating capabilities based on the links to private objects
-
-<!--
-
-TODO
-
-#### Document how to create capabilities and references with a simple example
-
--->
-
-In most situations it is important to expose only a subset of the functionality
-of the stored resource objects
-because some of the functionality should only be available to the owner.
-
 
 ```
 
