@@ -26,7 +26,7 @@ func TestInterpretCapabilityBorrowResource(t *testing.T) {
 
               resource R2 {}
 
-              resource S {
+              struct S {
                   let foo: Int
 
                   init() {
@@ -444,7 +444,7 @@ func TestInterpretCapabilityCheck(t *testing.T) {
                   }
               }
 
-              resource S2 {}
+              struct S2 {}
 
               resource R {
                   let foo: Int
