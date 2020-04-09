@@ -2101,7 +2101,7 @@ let clamped = clamp(123, min: 0, max: 100)
 // the function and also in a function call, so no argument label is given,
 // and the parameter name is required as the argument label in a function call.
 //
-fun send(from senderAddress, to receivingAddress: Address, amount: Int) {
+fun send(from senderAddress: Address, to receivingAddress: Address, amount: Int) {
     // The function code is omitted for brevity.
     // ...
 }
@@ -5149,11 +5149,14 @@ All accounts have storage.
 
 Objects are stored under paths in storage.
 Paths consist of a domain and an identifier.
-Objects in storage are always stored in the `storage` domain.
 
 Paths start with the character `/`, followed by the domain, the path separator `/`,
 and finally the identifier.
 For example, the path `/storage/test` has the domain `storage` and the identifier `test`.
+
+There are only three valid domains: `storage`, `private`, and `public`.
+
+Objects in storage are always stored in the `storage` domain.
 
 Both resources and structures can be stored in account storage.
 
