@@ -5076,12 +5076,69 @@ import Counter from 0x299F20A29311B9248F12
 
 ## Accounts
 
-```cadence
-struct interface Account {
-    address: Address
-    storage: Storage  // explained below
-}
-```
+Every account can be accessed through two types:
+
+- As a **Public Account** with the type `PublicAccount`,
+  which represents the publicly available portion of an account.
+
+  ```cadence
+  struct PublicAccount {
+
+      let address: Address
+
+      // Storage operations
+
+      fun getCapability(at: Path): Capability?
+      fun getLinkTarget(_ path: Path): Path?
+  }
+  ```
+
+  Any code can get the `PublicAccount` for an account address
+  using the built-in `getAccount` function:
+
+  ```cadence
+  fun getAccount(_ address: Address): PublicAccount
+  ```
+
+- As an **Authorized Account** with type `AuthAccount`,
+  which represents the authorized portion of an account.
+
+  Access to an `AuthAccount` means having full access to its [storage](#account-storage),
+  public keys, and code.
+
+  Only [signed transactions](#transactions) can get the `AuthAccount` for an account.
+  For each script signer of the transaction, the corresponding `AuthAccount` is passed
+  to the `prepare` phase of the transaction.
+
+  ```cadence
+  struct AuthAccount {
+
+      let address: Address
+
+      // Contract code
+
+      fun setCode(_ code: [Int])
+
+      // Key management
+
+      fun addPublicKey(_ publicKey: [Int])
+      fun removePublicKey(_ index: Int)
+
+      // Storage operations
+
+      fun save<T>(_ value: T, to: Path)
+      fun load<T>(from: Path): T?
+      fun copy<T: AnyStruct>(from: Path): T?
+
+      fun borrow<T: &Any>(from: Path): T?
+
+      fun link<T: &Any>(_ newCapabilityPath: Path, target: Path): Capability?
+      fun getLinkTarget(_ path: Path): Path?
+      fun unlink(_ path: Path)
+
+      fun getCapability(at: Path): Capability?
+    }
+    ```
 
 ## Account Storage
 
