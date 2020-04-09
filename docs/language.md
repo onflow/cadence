@@ -4839,13 +4839,15 @@ pub struct interface Polygon: Shape {}
 // because the `Polygon` interface requires it.
 //
 pub struct Hexagon: Polygon {}
-
 ```
 
 ### Interface Nesting
 
+> 🚧 Status: Currently only contracts and contract interfaces support nested interfaces.
+
 Interfaces can be arbitrarily nested.
-Declaring an interface inside another does not require implementing types of the outer interface to provide an implementation of the inner interfaces.
+Declaring an interface inside another does not require implementing types
+of the outer interface to provide an implementation of the inner interfaces.
 
 ```cadence,file=interface-nesting.cdc
 // Declare a resource interface `OuterInterface`, which declares
@@ -4912,11 +4914,15 @@ resource ExampleToken: FungibleToken {
 
 > 🚧 Status: The `Equatable` interface is not implemented yet.
 
-An equatable type is a type that can be compared for equality. Types are equatable when they  implement the `Equatable` interface.
+An equatable type is a type that can be compared for equality.
+Types are equatable when they  implement the `Equatable` interface.
 
-Equatable types can be compared for equality using the equals operator (`==`) or inequality using the unequals operator (`!=`).
+Equatable types can be compared for equality using the equals operator (`==`)
+or inequality using the unequals operator (`!=`).
 
-Most of the built-in types are equatable, like booleans and integers. Arrays are equatable when their elements are equatable. Dictionaries are equatable when their values are equatable.
+Most of the built-in types are equatable, like booleans and integers.
+Arrays are equatable when their elements are equatable.
+Dictionaries are equatable when their values are equatable.
 
 To make a type equatable the `Equatable` interface must be implemented,
 which requires the implementation of the function `equals`,
@@ -4988,7 +4994,8 @@ Essential components are those that are used in the type's implementation of `Eq
 If two values are equal because their `equals` function returns true,
 then the implementation must return the same integer hash value for each of the two values.
 
-The implementation must also consistently return the same integer hash value during the execution of the program when the essential components have not changed.
+The implementation must also consistently return the same integer hash value during the execution
+of the program when the essential components have not changed.
 The integer hash value must not necessarily be the same across multiple executions.
 
 ```cadence,file=hashable.cdc
