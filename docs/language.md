@@ -968,7 +968,7 @@ let canadianFlag: Character = "\u{1F1E8}\u{1F1E6}"
 
 Strings have multiple built-in functions you can use.
 
-- `length: Int`: Returns the number of characters in the string as an integer.
+- `let length: Int`: Returns the number of characters in the string as an integer.
 
     ```cadence,file=string-length-field.cdc
     let example = "hello"
@@ -978,7 +978,7 @@ Strings have multiple built-in functions you can use.
     // `length` is `5`
     ```
 
-- `concat(_ other: String): String`:
+- `fun concat(_ other: String): String`:
   Concatenates the string `other` to the end of the original string,
   but does not modify the original string.
   This function creates a new string whose length is the sum of the lengths
@@ -993,7 +993,7 @@ Strings have multiple built-in functions you can use.
     // `helloWorld` is now `"helloworld"`
     ```
 
-- `slice(from: Int, upTo: Int): String`:
+- `fun slice(from: Int, upTo: Int): String`:
   Returns a string slice of the characters
   in the given string from start index `from` up to,
   but not including, the end index `upTo`.
@@ -1149,7 +1149,7 @@ that can be used to get information about and manipulate the contents of the arr
 The field `length`, and the functions `concat`, and `contains`
 are available for both variable-sized and fixed-sized or variable-sized arrays.
 
-- `length: Int`:
+- `let length: Int`:
   Returns the number of elements in the array.
 
     ```cadence,file=array-length-field.cdc
@@ -1162,7 +1162,7 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
     // `length` is `4`
     ```
 
-- `concat(_ array: T): T`:
+- `fun concat(_ array: T): T`:
   Concatenates the parameter `array` to the end
   of the array the function is called on,
   but does not modify that array.
@@ -1188,7 +1188,7 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
     // `moreNumbers` is still `[11, 27]`
     ```
 
-- `contains(_ element: T): Bool`:
+- `fun contains(_ element: T): Bool`:
   Indicates whether the given element of type `T` is in the array.
 
     ```cadence,file=array-contains.cdc
@@ -1214,7 +1214,7 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
 The following functions can only be used on variable-sized arrays.
 It is invalid to use one of these functions on a fixed-sized array.
 
-- `append(_ element: T): Void`:
+- `fun append(_ element: T): Void`:
   Adds the new element `element` of type `T` to the end of the array.
 
   The new element must be the same type as all the other elements in the array.
@@ -1231,7 +1231,7 @@ It is invalid to use one of these functions on a fixed-sized array.
     numbers.append("SneakyString")
     ```
 
-- `insert(at index: Int, _ element: T): Void`:
+- `fun insert(at index: Int, _ element: T): Void`:
   Inserts the new element `element` of type `T`
   at the given `index` of the array.
 
@@ -1257,7 +1257,7 @@ It is invalid to use one of these functions on a fixed-sized array.
     numbers.insert(at: 12, 39)
     ```
 
-- `remove(at index: Int): T`:
+- `fun remove(at index: Int): T`:
   Removes the element at the given `index` from the array and returns it.
 
   The `index` must be within the bounds of the array.
@@ -1276,7 +1276,7 @@ It is invalid to use one of these functions on a fixed-sized array.
     numbers.remove(at: 19)
     ```
 
-- `removeFirst(): T`:
+- `fun removeFirst(): T`:
   Removes the first element from the array and returns it.
 
   The array must not be empty.
@@ -1300,7 +1300,7 @@ It is invalid to use one of these functions on a fixed-sized array.
     numbers.removeFirst()
     ```
 
-- `removeLast(): T`:
+- `fun removeLast(): T`:
   Removes the last element from the array and returns it.
 
   The array must not be empty.
@@ -1464,7 +1464,7 @@ booleans[0] = true
 
 #### Dictionary Fields and Functions
 
-- `length: Int`:
+- `fun length: Int`:
   Returns the number of entries in the dictionary.
 
     ```cadence,file=dictionary-length-field.cdc
@@ -1477,7 +1477,7 @@ booleans[0] = true
     // `length` is `2`
     ```
 
-- `remove(key: K): V?`:
+- `fun remove(key: K): V?`:
   Removes the value for the given `key` of type `K` from the dictionary.
 
   Returns the value of type `V` as an optional
@@ -1506,7 +1506,7 @@ booleans[0] = true
     // `numbers` is `{"twentyThree": 23}`
     ```
 
-- `keys: [K]`:
+- `let keys: [K]`:
   Returns an array of the keys of type `K` in the dictionary.  This does not
   modify the dictionary, just returns a copy of the keys as an array.
   If the dictionary is empty, this returns an empty array.
@@ -1521,7 +1521,7 @@ booleans[0] = true
     // `keys` has type `[String]` and is `["fortyTwo","twentyThree"]`
     ```
 
-- `values: [V]`:
+- `let values: [V]`:
   Returns an array of the values of type `V` in the dictionary.  This does not
   modify the dictionary, just returns a copy of the values as an array.
   If the dictionary is empty, this returns an empty array.
@@ -1714,7 +1714,7 @@ do not cause values to overflow or underflow.
 ```cadence,file=operator-add-overflow.cdc
 let a: UInt8 = 255
 
-// Error: The result `256` does not fit in the range of `UInt8`,
+// Run-time error: The result `256` does not fit in the range of `UInt8`,
 // thus a fatal overflow error is raised and the program aborts
 //
 let b = a + 1
@@ -1724,7 +1724,7 @@ let b = a + 1
 let a: Int8 = 100
 let b: Int8 = 100
 
-// Error: The result `10000` does not fit in the range of `Int8`,
+// Run-time error: The result `10000` does not fit in the range of `Int8`,
 // thus a fatal overflow error is raised and the program aborts
 //
 let c = a * b
@@ -1733,7 +1733,7 @@ let c = a * b
 ```cadence,file=operator-unary-negate-overflow.cdc
 let a: Int8 = -128
 
-// Error: The result `128` does not fit in the range of `Int8`,
+// Run-time error: The result `128` does not fit in the range of `Int8`,
 // thus a fatal overflow error is raised and the program aborts
 //
 let b = -a
@@ -2089,7 +2089,7 @@ let clamped = clamp(123, min: 0, max: 100)
 // a potential that a function call accidentally provides arguments in
 // the wrong order.
 //
-// While the parameter names `sendingAccount` and `receivingAccount`
+// While the parameter names `senderAddress` and `receiverAddress`
 // are descriptive inside the function, they might be too verbose
 // to require them as argument labels in function calls.
 //
@@ -2101,22 +2101,22 @@ let clamped = clamp(123, min: 0, max: 100)
 // the function and also in a function call, so no argument label is given,
 // and the parameter name is required as the argument label in a function call.
 //
-fun send(from sendingAccount: Account, to receivingAccount: Account, amount: Int) {
+fun send(from senderAddress: Address, to receivingAddress: Address, amount: Int) {
     // The function code is omitted for brevity.
     // ...
 }
 
-// Declare a constant which refers to the sending account.
+// Declare a constant which refers to the sending account's address.
 //
 // The initial value is omitted for brevity.
 //
-let sender: Account = // ...
+let sender: Address = // ...
 
-// Declare a constant which refers to the receiving account.
+// Declare a constant which refers to the receiving account's address.
 //
 // The initial value is omitted for brevity.
 //
-let receiver: Account = // ...
+let receiver: Address = // ...
 
 // Call the function named `send`.
 //
@@ -2569,7 +2569,7 @@ if let number = noNumber {
 }
 ```
 
-### Looping:
+### Looping
 
 #### while-statement
 
@@ -3599,8 +3599,8 @@ let two = value!.number
 // `two` is `2`
 
 // Try to access the `number` field of `noValue`, which has type `Value?`
-// Error: This time, since `noValue` is `nil`, The program execution will
-// revert
+// Run-time error: This time, since `noValue` is `nil`,
+// the program execution will revert
 let number = noValue!.number
 
 // Call the `set` function of the struct
@@ -3608,7 +3608,7 @@ let number = noValue!.number
 // This succeeds and sets the value to 4
 value!.set(new: 4)
 
-// Error: Since `noValue` is nil, the value is not set
+// Run-time error: Since `noValue` is nil, the value is not set
 // and the program execution reverts.
 noValue!.set(new: 4)
 
@@ -4453,8 +4453,6 @@ Field requirements and function requirements must specify the required level of 
 The access must be at least be public, so the `pub` keyword must be provided.
 Variable field requirements can be specified to also be publicly settable by using the `pub(set)` keyword.
 
-The special type `Self` can be used to refer to the type implementing the interface.
-
 ```cadence,file=interface-declaration.cdc
 // Declare a resource interface for a fungible token.
 // Only resources can implement this resource interface.
@@ -4508,9 +4506,7 @@ pub resource interface FungibleToken {
     //
     // The function must return a new fungible token.
     //
-    // NOTE: `@Self` is the resource type implementing this interface.
-    //
-    pub fun withdraw(amount: Int): @Self {
+    pub fun withdraw(amount: Int): @FungibleToken {
         pre {
             amount > 0:
                 "the amount must be positive"
@@ -4536,10 +4532,7 @@ pub resource interface FungibleToken {
     // is positive, as this condition is already ensured by
     // the field requirement.
     //
-    // NOTE: the first parameter has the type `@Self`,
-    // i.e. the resource type implementing this interface.
-    //
-    pub fun deposit(_ token: @Self) {
+    pub fun deposit(_ token: @FungibleToken) {
         post {
             self.balance == before(self.balance) + token.balance:
                 "the amount must be added to the balance"
@@ -4925,11 +4918,13 @@ Equatable types can be compared for equality using the equals operator (`==`) or
 
 Most of the built-in types are equatable, like booleans and integers. Arrays are equatable when their elements are equatable. Dictionaries are equatable when their values are equatable.
 
-To make a type equatable the `Equatable` interface must be implemented, which requires the implementation of the function `equals`, which accepts another value that the given value should be compared for equality. Note that the parameter type is `Self`, i.e., the other value must have the same type as the implementing type.
+To make a type equatable the `Equatable` interface must be implemented,
+which requires the implementation of the function `equals`,
+which accepts another value that the given value should be compared for equality.
 
 ```cadence,file=equatable.cdc
 struct interface Equatable {
-    pub fun equals(_ other: Self): Bool
+    pub fun equals(_ other: Equatable): Bool
 }
 ```
 
@@ -4947,10 +4942,14 @@ struct Cat: Equatable {
         self.id = id
     }
 
-    pub fun equals(_ other: Self): Bool {
-        // Cats are equal if their identifier matches.
-        //
-        return other.id == self.id
+    pub fun equals(_ other: Equatable): Bool {
+        if let otherCat = other as? Cat {
+            // Cats are equal if their identifier matches.
+            //
+            return otherCat.id == self.id
+        } else {
+            return false
+        }
     }
 }
 
@@ -5018,15 +5017,19 @@ struct Point: Hashable {
     // Implementing the function `equals` will allow points to be compared
     // for equality and satisfies the `Equatable` interface.
     //
-    pub fun equals(_ other: Self): Bool {
-        // Points are equal if their coordinates match.
-        //
-        // The essential components are therefore the fields `x` and `y`,
-        // which must be used in the implementation of the field requirement
-        // `hashValue` of the `Hashable` interface.
-        //
-        return other.x == self.x
-            && other.y == self.y
+    pub fun equals(_ other: Point): Bool {
+        if let otherPoint = other as? Point {
+            // Points are equal if their coordinates match.
+            //
+            // The essential components are therefore the fields `x` and `y`,
+            // which must be used in the implementation of the field requirement
+            // `hashValue` of the `Hashable` interface.
+            //
+            return otherPoint.x == self.x
+                && otherPoint.y == self.y
+        } else {
+            return false
+        }
     }
 
     // Providing an implementation for the hash value field
@@ -5076,27 +5079,137 @@ import Counter from 0x299F20A29311B9248F12
 
 ## Accounts
 
-```cadence
-struct interface Account {
-    address: Address
-    storage: Storage  // explained below
-}
-```
+Every account can be accessed through two types:
+
+- As a **Public Account** with the type `PublicAccount`,
+  which represents the publicly available portion of an account.
+
+  ```cadence
+  struct PublicAccount {
+
+      let address: Address
+
+      // Storage operations
+
+      fun getCapability(at: Path): Capability?
+      fun getLinkTarget(_ path: Path): Path?
+  }
+  ```
+
+  Any code can get the `PublicAccount` for an account address
+  using the built-in `getAccount` function:
+
+  ```cadence
+  fun getAccount(_ address: Address): PublicAccount
+  ```
+
+- As an **Authorized Account** with type `AuthAccount`,
+  which represents the authorized portion of an account.
+
+  Access to an `AuthAccount` means having full access to its [storage](#account-storage),
+  public keys, and code.
+
+  Only [signed transactions](#transactions) can get the `AuthAccount` for an account.
+  For each script signer of the transaction, the corresponding `AuthAccount` is passed
+  to the `prepare` phase of the transaction.
+
+  ```cadence
+  struct AuthAccount {
+
+      let address: Address
+
+      // Contract code
+
+      fun setCode(_ code: [Int])
+
+      // Key management
+
+      fun addPublicKey(_ publicKey: [Int])
+      fun removePublicKey(_ index: Int)
+
+      // Storage operations
+
+      fun save<T>(_ value: T, to: Path)
+      fun load<T>(from: Path): T?
+      fun copy<T: AnyStruct>(from: Path): T?
+
+      fun borrow<T: &Any>(from: Path): T?
+
+      fun link<T: &Any>(_ newCapabilityPath: Path, target: Path): Capability?
+      fun getLinkTarget(_ path: Path): Path?
+      fun unlink(_ path: Path)
+
+      fun getCapability(at: Path): Capability?
+    }
+    ```
 
 ## Account Storage
 
-All accounts have a `storage` object which contains the stored values of the account.
+All accounts have storage.
 
-All accounts also have a `published` object
-which contains the published references
-in an account. This will be covered later.
+Objects are stored under paths in storage.
+Paths consist of a domain and an identifier.
 
-Account storage is a key-value store where the **keys are types**.
-The stored value must be a subtype of the type it is keyed by.
-This means that if the type `Vault` is used as a key,
-the value must be a value that has the type `Vault` or is a subtype of `Vault`.
+Paths start with the character `/`, followed by the domain, the path separator `/`,
+and finally the identifier.
+For example, the path `/storage/test` has the domain `storage` and the identifier `test`.
 
-The index operator `[]` is used for both reading and writing stored values.
+There are only three valid domains: `storage`, `private`, and `public`.
+
+Objects in storage are always stored in the `storage` domain.
+
+Both resources and structures can be stored in account storage.
+
+Account storage is accessed through the following functions of `AuthAccount`.
+This means that any code that has access to the authorized account has access
+to all its stored objects.
+
+- `fun save<T>(_ value: T, to: Path)`:
+
+  Saves an object to account storage.
+  Resources are moved into storage, and structures are copied.
+
+  `T` is the type parameter for the object type.
+  It can be inferred from the argument's type.
+
+  If there is already an object stored under the given path, the program aborts.
+
+  The path must be a storage path, i.e., only the domain `storage` is allowed.
+
+- `fun load<T>(from: Path): T?`:
+
+   Loads an object from account storage.
+   If no object is stored under the given path, the function returns `nil`.
+   If there is an object stored, the stored resource or structure is moved
+   out of storage and returned as an optional.
+   When the function returns, the storage no longer contains an object
+   under the given path.
+
+   `T` is the type parameter for the object type.
+   A type argument for the parameter must be provided explicitly.
+
+   The type `T` must be a supertype of the type of the loaded object.
+   If it is not, the function returns `nil`.
+   The given type must not necessarily be a exactly the same as the type of the loaded object.
+
+   The path must be a storage path, i.e., only the domain `storage` is allowed.
+
+- `fun copy<T>(from: Path): T?`, where `T` is the type parameter for the value type:
+
+   Returns a copy of a structure stored in account storage, without removing it from storage.
+
+   If no strucure is stored under the given path, the function returns `nil`.
+   If there is a structure stored, it is copied.
+   The structure stays stored in storage after the function returns.
+
+   `T` is the type parameter for the structure type.
+   A type argument for the parameter must be provided explicitly.
+
+   The type `T` must be a supertype of the type of the loaded structure.
+   If it is not, the function returns `nil`.
+   The given type must not necessarily be a exactly the same as the type of the loaded object.
+
+   The path must be a storage path, i.e., only the domain `storage` is allowed.
 
 ```cadence,file=account-storage.cdc
 // Declare a resource named `Counter`.
@@ -5109,22 +5222,76 @@ resource Counter {
     }
 }
 
-// Create a new instance of the resource type `Counter` and move it
-// into the storage of the account.
-//
 // In this example the account is available as the constant `account`.
-//
-// The type `Counter` is used as the key to refer to the stored value.
-//
-// A swap must be used to store the counter, because assignment
-// is not available, as it would override a potentially existing counter.
-//
-// To perform the swap, the declaration must be variable and have an optional type.
-//
-var counter: Counter? <- create Counter(count: 42)
-account.storage[Counter] <-> counter
 
-// `counter` is now the counter that was potentially stored before.
+// Create a new instance of the resource type `Counter`
+// and save it in the storage of the account.
+//
+// The path `/storage/counter` is used to refer to the stored value.
+// Its identifier `counter` was chosen freely and could be something else.
+//
+account.save(<-create Counter(count: 42), to: /storage/counter)
+
+// Run-time error: Storage already contains an object under path `/storage/counter`
+//
+account.save(<-create Counter(count: 123), to: /storage/counter)
+
+// Load the `Counter` resource from storage path `/storage/counter`.
+//
+// The new constant `counter` has the type `Counter?`, i.e., it is an optional,
+// and its value is the counter resource, that was saved at the beginning
+// of the example.
+//
+let counter <- account.load<@Counter>(from: /storage/counter)
+
+// The storage is now empty, there is no longer an object stored
+// under the path `/storage/counter`.
+
+// Load the `Counter` resource again from storage path `/storage/counter`.
+//
+// The new constant `counter2` has the type `Counter?` and is `nil`,
+// as nothing is stored under the path `/storage/counter` anymore,
+// because the previous load moved the counter out of storage.
+//
+let counter2 <- account.load<@Counter>(from: /storage/counter)
+
+// Create another new instance of the resource type `Counter`
+// and save it in the storage of the account.
+//
+// The path `/storage/otherCounter` is used to refer to the stored value.
+//
+account.save(<-create Counter(count: 123), to: /storage/otherCounter)
+
+// Load the `Vault` resource from storage path `/storage/otherCounter`.
+//
+// The new constant `vault` has the type `Vault?` and its value is `nil`,
+// as there is a resource with type `Counter` stored under the path,
+// which is not a subtype of the requested type `Vault`.
+//
+let vault <- account.load<@Vault>(from: /storage/otherCounter)
+
+// The storage still stores a `Counter` resource under the path `/storage/otherCounter`.
+
+// Save the string "Hello, World" in storage
+// under the path `/storage/helloWorldMessage`.
+
+account.save("Hello, world!", to: /storage/helloWorldMessage)
+
+// Copy the stored message from storage.
+//
+// After the copy, the storage still stores the string under the path.
+// Unlike `load`, `copy` does not remove the object from storage.
+//
+let message = account.copy<String>(from: /storage/helloWorldMessage)
+
+// Create a new instance of the resource type `Vault`
+// and save it in the storage of the account.
+//
+account.save(<-createEmptyVault(), to: /storage/vault)
+
+// Invalid: Cannot copy a resource, as this would allow arbitrary duplication.
+//
+let vault <- account.copy<@Vault>(from: /storage/vault)
 ```
 
 ## Storage References
