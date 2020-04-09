@@ -4850,8 +4850,11 @@ pub struct Hexagon: Polygon {}
 
 ### Interface Nesting
 
+> 🚧 Status: Currently only contracts and contract interfaces support nested interfaces.
+
 Interfaces can be arbitrarily nested.
-Declaring an interface inside another does not require implementing types of the outer interface to provide an implementation of the inner interfaces.
+Declaring an interface inside another does not require implementing types
+of the outer interface to provide an implementation of the inner interfaces.
 
 ```cadence,file=interface-nesting.cdc
 // Declare a resource interface `OuterInterface`, which declares
