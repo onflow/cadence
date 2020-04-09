@@ -71,3 +71,26 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 		},
 	)
 }
+
+func TestEncodeDecodeComposite(t *testing.T) {
+
+	// TODO: location
+
+	testEncodeDecode(t,
+		map[string]Value{
+			"empty structure": &CompositeValue{
+				TypeID: "TestStruct",
+				Kind:   common.CompositeKindStructure,
+				Fields: map[string]Value{},
+			},
+			"non-empty resource": &CompositeValue{
+				TypeID: "TestResource",
+				Kind:   common.CompositeKindResource,
+				Fields: map[string]Value{
+					"true":   BoolValue(true),
+					"string": NewStringValue("test"),
+				},
+			},
+		},
+	)
+}
