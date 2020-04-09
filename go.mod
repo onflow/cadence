@@ -6,6 +6,7 @@ require (
 	github.com/antlr/antlr4 v0.0.0-20191217191749-ff67971f8580
 	github.com/c-bata/go-prompt v0.2.3
 	github.com/davecgh/go-xdr v0.0.0-20161123171359-e6a2ba005892
+	github.com/fxamacker/cbor/v2 v2.2.0
 	github.com/go-test/deep v1.0.5
 	github.com/logrusorgru/aurora v0.0.0-20191116043053-66b7ad493a23
 	github.com/mattn/go-runewidth v0.0.8 // indirect

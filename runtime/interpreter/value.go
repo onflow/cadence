@@ -331,6 +331,10 @@ func NewArrayValueUnownedNonCopying(values ...Value) *ArrayValue {
 		value.SetOwner(nil)
 	}
 
+	if values == nil {
+		values = make([]Value, 0)
+	}
+
 	return &ArrayValue{
 		Values: values,
 		Owner:  nil,
