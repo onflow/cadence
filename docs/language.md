@@ -4453,8 +4453,6 @@ Field requirements and function requirements must specify the required level of 
 The access must be at least be public, so the `pub` keyword must be provided.
 Variable field requirements can be specified to also be publicly settable by using the `pub(set)` keyword.
 
-The special type `Self` can be used to refer to the type implementing the interface.
-
 ```cadence,file=interface-declaration.cdc
 // Declare a resource interface for a fungible token.
 // Only resources can implement this resource interface.
@@ -4508,9 +4506,7 @@ pub resource interface FungibleToken {
     //
     // The function must return a new fungible token.
     //
-    // NOTE: `@Self` is the resource type implementing this interface.
-    //
-    pub fun withdraw(amount: Int): @Self {
+    pub fun withdraw(amount: Int): @FungibleToken {
         pre {
             amount > 0:
                 "the amount must be positive"
@@ -4536,10 +4532,7 @@ pub resource interface FungibleToken {
     // is positive, as this condition is already ensured by
     // the field requirement.
     //
-    // NOTE: the first parameter has the type `@Self`,
-    // i.e. the resource type implementing this interface.
-    //
-    pub fun deposit(_ token: @Self) {
+    pub fun deposit(_ token: @FungibleToken) {
         post {
             self.balance == before(self.balance) + token.balance:
                 "the amount must be added to the balance"
@@ -4925,11 +4918,13 @@ Equatable types can be compared for equality using the equals operator (`==`) or
 
 Most of the built-in types are equatable, like booleans and integers. Arrays are equatable when their elements are equatable. Dictionaries are equatable when their values are equatable.
 
-To make a type equatable the `Equatable` interface must be implemented, which requires the implementation of the function `equals`, which accepts another value that the given value should be compared for equality. Note that the parameter type is `Self`, i.e., the other value must have the same type as the implementing type.
+To make a type equatable the `Equatable` interface must be implemented,
+which requires the implementation of the function `equals`,
+which accepts another value that the given value should be compared for equality.
 
 ```cadence,file=equatable.cdc
 struct interface Equatable {
-    pub fun equals(_ other: Self): Bool
+    pub fun equals(_ other: Equatable): Bool
 }
 ```
 
@@ -4947,10 +4942,14 @@ struct Cat: Equatable {
         self.id = id
     }
 
-    pub fun equals(_ other: Self): Bool {
-        // Cats are equal if their identifier matches.
-        //
-        return other.id == self.id
+    pub fun equals(_ other: Equatable): Bool {
+        if let otherCat = other as? Cat {
+            // Cats are equal if their identifier matches.
+            //
+            return otherCat.id == self.id
+        } else {
+            return false
+        }
     }
 }
 
@@ -5018,15 +5017,19 @@ struct Point: Hashable {
     // Implementing the function `equals` will allow points to be compared
     // for equality and satisfies the `Equatable` interface.
     //
-    pub fun equals(_ other: Self): Bool {
-        // Points are equal if their coordinates match.
-        //
-        // The essential components are therefore the fields `x` and `y`,
-        // which must be used in the implementation of the field requirement
-        // `hashValue` of the `Hashable` interface.
-        //
-        return other.x == self.x
-            && other.y == self.y
+    pub fun equals(_ other: Point): Bool {
+        if let otherPoint = other as? Point {
+            // Points are equal if their coordinates match.
+            //
+            // The essential components are therefore the fields `x` and `y`,
+            // which must be used in the implementation of the field requirement
+            // `hashValue` of the `Hashable` interface.
+            //
+            return otherPoint.x == self.x
+                && otherPoint.y == self.y
+        } else {
+            return false
+        }
     }
 
     // Providing an implementation for the hash value field
