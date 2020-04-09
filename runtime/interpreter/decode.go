@@ -8,6 +8,7 @@ import (
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/dapperlabs/cadence/runtime/common"
+	"github.com/dapperlabs/cadence/runtime/sema"
 )
 
 // A Decoder decodes CBOR-encoded representations of values.
@@ -77,6 +78,9 @@ func (d *Decoder) decodeValue(v interface{}, owner *common.Address) (Value, erro
 		case cborTagDictionary:
 			return d.decodeDictionary(v.Content, owner)
 
+		case cborTagComposite:
+			return d.decodeComposite(v.Content, owner)
+
 		default:
 			return nil, fmt.Errorf("unsupported decoded tag: %d, %v", v.Number, v.Content)
 		}
@@ -91,7 +95,7 @@ func (d *Decoder) decodeArray(v []interface{}, owner *common.Address) (*ArrayVal
 	for i, value := range v {
 		res, err := d.decodeValue(value, owner)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("invalid array element encoding: %w", err)
 		}
 		values[i] = res
 	}
@@ -103,12 +107,12 @@ func (d *Decoder) decodeArray(v []interface{}, owner *common.Address) (*ArrayVal
 }
 
 func (d *Decoder) decodeDictionary(v interface{}, owner *common.Address) (*DictionaryValue, error) {
-	encoded, ok := v.([]interface{})
+	encoded, ok := v.(map[interface{}]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid dictionary encoding")
+		return nil, fmt.Errorf("invalid dictionary encoding: %T", v)
 	}
 
-	encodedKeys, ok := encoded[0].([]interface{})
+	encodedKeys, ok := encoded[uint64(0)].([]interface{})
 	if !ok {
 		return nil, fmt.Errorf("invalid dictionary keys encoding")
 	}
@@ -118,7 +122,7 @@ func (d *Decoder) decodeDictionary(v interface{}, owner *common.Address) (*Dicti
 		return nil, fmt.Errorf("invalid dictionary keys encoding: %w", err)
 	}
 
-	encodedEntries, ok := encoded[1].(map[interface{}]interface{})
+	encodedEntries, ok := encoded[uint64(1)].(map[interface{}]interface{})
 	if !ok {
 		return nil, fmt.Errorf("invalid dictionary entries encoding")
 	}
@@ -126,13 +130,15 @@ func (d *Decoder) decodeDictionary(v interface{}, owner *common.Address) (*Dicti
 	entries := make(map[string]Value, len(encodedEntries))
 
 	for key, value := range encodedEntries {
-		decodedValue, err := d.decodeValue(value, owner)
-		if err != nil {
-			return nil, err
-		}
+
 		keyString, ok := key.(string)
 		if !ok {
 			return nil, fmt.Errorf("invalid dictionary key encoding")
+		}
+
+		decodedValue, err := d.decodeValue(value, owner)
+		if err != nil {
+			return nil, fmt.Errorf("invalid dictionary value encoding: %w", err)
 		}
 
 		entries[keyString] = decodedValue
@@ -142,5 +148,58 @@ func (d *Decoder) decodeDictionary(v interface{}, owner *common.Address) (*Dicti
 		Keys:    keys,
 		Entries: entries,
 		Owner:   owner,
+	}, nil
+}
+
+func (d *Decoder) decodeComposite(v interface{}, owner *common.Address) (*CompositeValue, error) {
+
+	// TODO: location
+
+	encoded, ok := v.(map[interface{}]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid composite encoding")
+	}
+
+	encodedTypeID, ok := encoded[uint64(0)].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid composite type ID encoding")
+	}
+
+	typeID := sema.TypeID(encodedTypeID)
+
+	// TODO: common.CompositeKind is int, why is it encoded/decoded as uint64?
+	encodedKind, ok := encoded[uint64(1)].(uint64)
+	if !ok {
+		return nil, fmt.Errorf("invalid composite kind encoding")
+	}
+
+	kind := common.CompositeKind(encodedKind)
+
+	encodedFields, ok := encoded[uint64(2)].(map[interface{}]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid composite fields encoding")
+	}
+
+	fields := make(map[string]Value, len(encodedFields))
+
+	for name, value := range encodedFields {
+		nameString, ok := name.(string)
+		if !ok {
+			return nil, fmt.Errorf("invalid dictionary field name encoding")
+		}
+
+		decodedValue, err := d.decodeValue(value, owner)
+		if err != nil {
+			return nil, fmt.Errorf("invalid dictionary field value encoding: %w", err)
+		}
+
+		fields[nameString] = decodedValue
+	}
+
+	return &CompositeValue{
+		TypeID: typeID,
+		Kind:   kind,
+		Fields: fields,
+		Owner:  owner,
 	}, nil
 }

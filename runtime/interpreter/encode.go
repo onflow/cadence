@@ -7,6 +7,9 @@ import (
 	"reflect"
 
 	"github.com/fxamacker/cbor/v2"
+
+	"github.com/dapperlabs/cadence/runtime/common"
+	"github.com/dapperlabs/cadence/runtime/sema"
 )
 
 var cborTagSet cbor.TagSet
@@ -15,6 +18,7 @@ const cborTagBase = 2233623
 
 const (
 	cborTagDictionary = cborTagBase + iota
+	cborTagComposite
 	// TODO: add tags for remaining types
 )
 
@@ -24,14 +28,20 @@ func init() {
 		EncTag: cbor.EncTagRequired,
 		DecTag: cbor.DecTagRequired,
 	}
-	err := cborTagSet.Add(
-		tagOptions,
-		reflect.TypeOf(encodedDictionary{}),
-		cborTagDictionary,
-	)
-	if err != nil {
-		panic(err)
+
+	register := func(tag uint64, ty interface{}) {
+		err := cborTagSet.Add(
+			tagOptions,
+			reflect.TypeOf(ty),
+			tag,
+		)
+		if err != nil {
+			panic(err)
+		}
 	}
+
+	register(cborTagDictionary, encodedDictionary{})
+	register(cborTagComposite, encodedComposite{})
 }
 
 // Encoder converts Values into CBOR-encoded bytes.
@@ -62,7 +72,7 @@ func EncodeValue(value Value) ([]byte, error) {
 //
 func NewEncoder(w io.Writer) (*Encoder, error) {
 	encMode, err := cbor.EncOptions{
-		Sort: cbor.SortCanonical,
+		//Sort: cbor.SortCanonical,
 	}.EncModeWithTags(cborTagSet)
 	if err != nil {
 		return nil, err
@@ -98,6 +108,9 @@ func (e *Encoder) prepare(v Value) interface{} {
 	case *DictionaryValue:
 		return e.prepareDictionary(v)
 
+	case *CompositeValue:
+		return e.prepareComposite(v)
+
 	// TODO: support remaining types
 
 	default:
@@ -124,12 +137,11 @@ func (e *Encoder) prepareArray(v *ArrayValue) []interface{} {
 }
 
 type encodedDictionary struct {
-	_       struct{} `cbor:",toarray"`
-	Keys    interface{}
-	Entries map[string]interface{}
+	Keys    interface{}            `cbor:"0,keyasint"`
+	Entries map[string]interface{} `cbor:"1,keyasint"`
 }
 
-func (e *Encoder) prepareDictionary(v *DictionaryValue) encodedDictionary {
+func (e *Encoder) prepareDictionary(v *DictionaryValue) interface{} {
 	keys := e.prepareArray(v.Keys)
 
 	entries := make(map[string]interface{}, len(v.Entries))
@@ -142,5 +154,28 @@ func (e *Encoder) prepareDictionary(v *DictionaryValue) encodedDictionary {
 	return encodedDictionary{
 		Keys:    keys,
 		Entries: entries,
+	}
+}
+
+type encodedComposite struct {
+	TypeID sema.TypeID            `cbor:"0,keyasint"`
+	Kind   common.CompositeKind   `cbor:"1,keyasint"`
+	Fields map[string]interface{} `cbor:"2,keyasint"`
+}
+
+func (e *Encoder) prepareComposite(v *CompositeValue) interface{} {
+
+	// TODO: location
+
+	fields := make(map[string]interface{}, len(v.Fields))
+
+	for name, value := range v.Fields {
+		fields[name] = e.prepare(value)
+	}
+
+	return encodedComposite{
+		TypeID: v.TypeID,
+		Kind:   v.Kind,
+		Fields: fields,
 	}
 }
