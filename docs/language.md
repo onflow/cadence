@@ -968,7 +968,7 @@ let canadianFlag: Character = "\u{1F1E8}\u{1F1E6}"
 
 Strings have multiple built-in functions you can use.
 
-- `length: Int`: Returns the number of characters in the string as an integer.
+- `let length: Int`: Returns the number of characters in the string as an integer.
 
     ```cadence,file=string-length-field.cdc
     let example = "hello"
@@ -978,7 +978,7 @@ Strings have multiple built-in functions you can use.
     // `length` is `5`
     ```
 
-- `concat(_ other: String): String`:
+- `fun concat(_ other: String): String`:
   Concatenates the string `other` to the end of the original string,
   but does not modify the original string.
   This function creates a new string whose length is the sum of the lengths
@@ -993,7 +993,7 @@ Strings have multiple built-in functions you can use.
     // `helloWorld` is now `"helloworld"`
     ```
 
-- `slice(from: Int, upTo: Int): String`:
+- `fun slice(from: Int, upTo: Int): String`:
   Returns a string slice of the characters
   in the given string from start index `from` up to,
   but not including, the end index `upTo`.
@@ -1149,7 +1149,7 @@ that can be used to get information about and manipulate the contents of the arr
 The field `length`, and the functions `concat`, and `contains`
 are available for both variable-sized and fixed-sized or variable-sized arrays.
 
-- `length: Int`:
+- `let length: Int`:
   Returns the number of elements in the array.
 
     ```cadence,file=array-length-field.cdc
@@ -1162,7 +1162,7 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
     // `length` is `4`
     ```
 
-- `concat(_ array: T): T`:
+- `fun concat(_ array: T): T`:
   Concatenates the parameter `array` to the end
   of the array the function is called on,
   but does not modify that array.
@@ -1188,7 +1188,7 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
     // `moreNumbers` is still `[11, 27]`
     ```
 
-- `contains(_ element: T): Bool`:
+- `fun contains(_ element: T): Bool`:
   Indicates whether the given element of type `T` is in the array.
 
     ```cadence,file=array-contains.cdc
@@ -1214,7 +1214,7 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
 The following functions can only be used on variable-sized arrays.
 It is invalid to use one of these functions on a fixed-sized array.
 
-- `append(_ element: T): Void`:
+- `fun append(_ element: T): Void`:
   Adds the new element `element` of type `T` to the end of the array.
 
   The new element must be the same type as all the other elements in the array.
@@ -1231,7 +1231,7 @@ It is invalid to use one of these functions on a fixed-sized array.
     numbers.append("SneakyString")
     ```
 
-- `insert(at index: Int, _ element: T): Void`:
+- `fun insert(at index: Int, _ element: T): Void`:
   Inserts the new element `element` of type `T`
   at the given `index` of the array.
 
@@ -1257,7 +1257,7 @@ It is invalid to use one of these functions on a fixed-sized array.
     numbers.insert(at: 12, 39)
     ```
 
-- `remove(at index: Int): T`:
+- `fun remove(at index: Int): T`:
   Removes the element at the given `index` from the array and returns it.
 
   The `index` must be within the bounds of the array.
@@ -1276,7 +1276,7 @@ It is invalid to use one of these functions on a fixed-sized array.
     numbers.remove(at: 19)
     ```
 
-- `removeFirst(): T`:
+- `fun removeFirst(): T`:
   Removes the first element from the array and returns it.
 
   The array must not be empty.
@@ -1300,7 +1300,7 @@ It is invalid to use one of these functions on a fixed-sized array.
     numbers.removeFirst()
     ```
 
-- `removeLast(): T`:
+- `fun removeLast(): T`:
   Removes the last element from the array and returns it.
 
   The array must not be empty.
@@ -1464,7 +1464,7 @@ booleans[0] = true
 
 #### Dictionary Fields and Functions
 
-- `length: Int`:
+- `fun length: Int`:
   Returns the number of entries in the dictionary.
 
     ```cadence,file=dictionary-length-field.cdc
@@ -1477,7 +1477,7 @@ booleans[0] = true
     // `length` is `2`
     ```
 
-- `remove(key: K): V?`:
+- `fun remove(key: K): V?`:
   Removes the value for the given `key` of type `K` from the dictionary.
 
   Returns the value of type `V` as an optional
@@ -1506,7 +1506,7 @@ booleans[0] = true
     // `numbers` is `{"twentyThree": 23}`
     ```
 
-- `keys: [K]`:
+- `let keys: [K]`:
   Returns an array of the keys of type `K` in the dictionary.  This does not
   modify the dictionary, just returns a copy of the keys as an array.
   If the dictionary is empty, this returns an empty array.
@@ -1521,7 +1521,7 @@ booleans[0] = true
     // `keys` has type `[String]` and is `["fortyTwo","twentyThree"]`
     ```
 
-- `values: [V]`:
+- `let values: [V]`:
   Returns an array of the values of type `V` in the dictionary.  This does not
   modify the dictionary, just returns a copy of the values as an array.
   If the dictionary is empty, this returns an empty array.
@@ -1714,7 +1714,7 @@ do not cause values to overflow or underflow.
 ```cadence,file=operator-add-overflow.cdc
 let a: UInt8 = 255
 
-// Error: The result `256` does not fit in the range of `UInt8`,
+// Run-time error: The result `256` does not fit in the range of `UInt8`,
 // thus a fatal overflow error is raised and the program aborts
 //
 let b = a + 1
@@ -1724,7 +1724,7 @@ let b = a + 1
 let a: Int8 = 100
 let b: Int8 = 100
 
-// Error: The result `10000` does not fit in the range of `Int8`,
+// Run-time error: The result `10000` does not fit in the range of `Int8`,
 // thus a fatal overflow error is raised and the program aborts
 //
 let c = a * b
@@ -1733,7 +1733,7 @@ let c = a * b
 ```cadence,file=operator-unary-negate-overflow.cdc
 let a: Int8 = -128
 
-// Error: The result `128` does not fit in the range of `Int8`,
+// Run-time error: The result `128` does not fit in the range of `Int8`,
 // thus a fatal overflow error is raised and the program aborts
 //
 let b = -a
@@ -2089,7 +2089,7 @@ let clamped = clamp(123, min: 0, max: 100)
 // a potential that a function call accidentally provides arguments in
 // the wrong order.
 //
-// While the parameter names `sendingAccount` and `receivingAccount`
+// While the parameter names `senderAddress` and `receiverAddress`
 // are descriptive inside the function, they might be too verbose
 // to require them as argument labels in function calls.
 //
@@ -2101,22 +2101,22 @@ let clamped = clamp(123, min: 0, max: 100)
 // the function and also in a function call, so no argument label is given,
 // and the parameter name is required as the argument label in a function call.
 //
-fun send(from sendingAccount: Account, to receivingAccount: Account, amount: Int) {
+fun send(from senderAddress, to receivingAddress: Address, amount: Int) {
     // The function code is omitted for brevity.
     // ...
 }
 
-// Declare a constant which refers to the sending account.
+// Declare a constant which refers to the sending account's address.
 //
 // The initial value is omitted for brevity.
 //
-let sender: Account = // ...
+let sender: Address = // ...
 
-// Declare a constant which refers to the receiving account.
+// Declare a constant which refers to the receiving account's address.
 //
 // The initial value is omitted for brevity.
 //
-let receiver: Account = // ...
+let receiver: Address = // ...
 
 // Call the function named `send`.
 //
@@ -2569,7 +2569,7 @@ if let number = noNumber {
 }
 ```
 
-### Looping:
+### Looping
 
 #### while-statement
 
@@ -3599,8 +3599,8 @@ let two = value!.number
 // `two` is `2`
 
 // Try to access the `number` field of `noValue`, which has type `Value?`
-// Error: This time, since `noValue` is `nil`, The program execution will
-// revert
+// Run-time error: This time, since `noValue` is `nil`,
+// the program execution will revert
 let number = noValue!.number
 
 // Call the `set` function of the struct
@@ -3608,7 +3608,7 @@ let number = noValue!.number
 // This succeeds and sets the value to 4
 value!.set(new: 4)
 
-// Error: Since `noValue` is nil, the value is not set
+// Run-time error: Since `noValue` is nil, the value is not set
 // and the program execution reverts.
 noValue!.set(new: 4)
 
