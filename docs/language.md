@@ -5145,18 +5145,68 @@ Every account can be accessed through two types:
 
 ## Account Storage
 
-All accounts have a `storage` object which contains the stored values of the account.
+All accounts have storage.
 
-All accounts also have a `published` object
-which contains the published references
-in an account. This will be covered later.
+Objects are stored under paths in storage.
+Paths consist of a domain and an identifier.
+Objects in storage are always stored in the `storage` domain.
 
-Account storage is a key-value store where the **keys are types**.
-The stored value must be a subtype of the type it is keyed by.
-This means that if the type `Vault` is used as a key,
-the value must be a value that has the type `Vault` or is a subtype of `Vault`.
+Paths start with the character `/`, followed by the domain, the path separator `/`,
+and finally the identifier.
+For example, the path `/storage/test` has the domain `storage` and the identifier `test`.
 
-The index operator `[]` is used for both reading and writing stored values.
+Both resources and structures can be stored in account storage.
+
+Account storage is accessed through the following functions of `AuthAccount`.
+This means that any code that has access to the authorized account has access
+to all its stored objects.
+
+- `fun save<T>(_ value: T, to: Path)`:
+
+  Saves an object to account storage.
+  Resources are moved into storage, and structures are copied.
+
+  `T` is the type parameter for the object type.
+  It can be inferred from the argument's type.
+
+  If there is already an object stored under the given path, the program aborts.
+
+  The path must be a storage path, i.e., only the domain `storage` is allowed.
+
+- `fun load<T>(from: Path): T?`:
+
+   Loads an object from account storage.
+   If no object is stored under the given path, the function returns `nil`.
+   If there is an object stored, the stored resource or structure is moved
+   out of storage and returned as an optional.
+   When the function returns, the storage no longer contains an object
+   under the given path.
+
+   `T` is the type parameter for the object type.
+   A type argument for the parameter must be provided explicitly.
+
+   The type `T` must be a supertype of the type of the loaded object.
+   If it is not, the function returns `nil`.
+   The given type must not necessarily be a exactly the same as the type of the loaded object.
+
+   The path must be a storage path, i.e., only the domain `storage` is allowed.
+
+- `fun copy<T>(from: Path): T?`, where `T` is the type parameter for the value type:
+
+   Returns a copy of a structure stored in account storage, without removing it from storage.
+
+   If no strucure is stored under the given path, the function returns `nil`.
+   If there is a structure stored, it is copied.
+   The structure stays stored in storage after the function returns.
+
+   `T` is the type parameter for the structure type.
+   A type argument for the parameter must be provided explicitly.
+
+   The type `T` must be a supertype of the type of the loaded structure.
+   If it is not, the function returns `nil`.
+   The given type must not necessarily be a exactly the same as the type of the loaded object.
+
+   The path must be a storage path, i.e., only the domain `storage` is allowed.
 
 ```cadence,file=account-storage.cdc
 // Declare a resource named `Counter`.
@@ -5169,22 +5219,76 @@ resource Counter {
     }
 }
 
-// Create a new instance of the resource type `Counter` and move it
-// into the storage of the account.
-//
 // In this example the account is available as the constant `account`.
-//
-// The type `Counter` is used as the key to refer to the stored value.
-//
-// A swap must be used to store the counter, because assignment
-// is not available, as it would override a potentially existing counter.
-//
-// To perform the swap, the declaration must be variable and have an optional type.
-//
-var counter: Counter? <- create Counter(count: 42)
-account.storage[Counter] <-> counter
 
-// `counter` is now the counter that was potentially stored before.
+// Create a new instance of the resource type `Counter`
+// and save it in the storage of the account.
+//
+// The path `/storage/counter` is used to refer to the stored value.
+// Its identifier `counter` was chosen freely and could be something else.
+//
+account.save(<-create Counter(count: 42), to: /storage/counter)
+
+// Run-time error: Storage already contains an object under path `/storage/counter`
+//
+account.save(<-create Counter(count: 123), to: /storage/counter)
+
+// Load the `Counter` resource from storage path `/storage/counter`.
+//
+// The new constant `counter` has the type `Counter?`, i.e., it is an optional,
+// and its value is the counter resource, that was saved at the beginning
+// of the example.
+//
+let counter <- account.load<@Counter>(from: /storage/counter)
+
+// The storage is now empty, there is no longer an object stored
+// under the path `/storage/counter`.
+
+// Load the `Counter` resource again from storage path `/storage/counter`.
+//
+// The new constant `counter2` has the type `Counter?` and is `nil`,
+// as nothing is stored under the path `/storage/counter` anymore,
+// because the previous load moved the counter out of storage.
+//
+let counter2 <- account.load<@Counter>(from: /storage/counter)
+
+// Create another new instance of the resource type `Counter`
+// and save it in the storage of the account.
+//
+// The path `/storage/otherCounter` is used to refer to the stored value.
+//
+account.save(<-create Counter(count: 123), to: /storage/otherCounter)
+
+// Load the `Vault` resource from storage path `/storage/otherCounter`.
+//
+// The new constant `vault` has the type `Vault?` and its value is `nil`,
+// as there is a resource with type `Counter` stored under the path,
+// which is not a subtype of the requested type `Vault`.
+//
+let vault <- account.load<@Vault>(from: /storage/otherCounter)
+
+// The storage still stores a `Counter` resource under the path `/storage/otherCounter`.
+
+// Save the string "Hello, World" in storage
+// under the path `/storage/helloWorldMessage`.
+
+account.save("Hello, world!", to: /storage/helloWorldMessage)
+
+// Copy the stored message from storage.
+//
+// After the copy, the storage still stores the string under the path.
+// Unlike `load`, `copy` does not remove the object from storage.
+//
+let message = account.copy<String>(from: /storage/helloWorldMessage)
+
+// Create a new instance of the resource type `Vault`
+// and save it in the storage of the account.
+//
+account.save(<-createEmptyVault(), to: /storage/vault)
+
+// Invalid: Cannot copy a resource, as this would allow arbitrary duplication.
+//
+let vault <- account.copy<@Vault>(from: /storage/vault)
 ```
 
 ## Storage References
