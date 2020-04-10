@@ -5061,7 +5061,7 @@ A reference can be used to access fields and call functions on the referenced ob
 References are **copied**, i.e. they are value types.
 
 References are created by using the `&` operator, followed by the object,
-the `as` keyword, and the type through which the should be accessed.
+the `as` keyword, and the type through which they should be accessed.
 The given type must be a supertype of the referenced object's type.
 
 References have the type `&T`, where `T` is the type of the referenced object.
