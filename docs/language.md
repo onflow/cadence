@@ -5056,6 +5056,130 @@ struct Point: Hashable {
 }
 ```
 
+## Restricted Types
+
+<!-- TODO -->
+
+## References
+
+It is possible to create references to objects, i.e. resources or structures.
+A reference can be used to access fields and call functions on the referenced object.
+
+References are **copied**, i.e. they are value types.
+
+References are created by using the `&` operator, followed by the object,
+the `as` keyword, and the type through which they should be accessed.
+The given type must be a supertype of the referenced object's type.
+
+References have the type `&T`, where `T` is the type of the referenced object.
+
+```cadence,file=reference-hello.cdc
+let hello = "Hello"
+
+// Create a reference to the "Hello" string, typed as a `String`
+//
+let helloRef: &String = &hello as &String
+
+helloRef.length // is `5`
+
+// Invalid: Cannot create a reference to `hello`
+// typed as `&Int`, as it has type `String`
+//
+let intRef: &Int = &hello as &Int
+```
+
+References are covariant in their base types.
+For example, `&T` is a subtype of `&U`, if `T` is a subtype of `U`.
+
+```cadence,file=reference-counter.cdc
+
+// Declare a resource interface named `HasCount`,
+// that has a field `count`
+//
+resource interface HasCount {
+    count: Int
+}
+
+// Declare a resource named `Counter` that conforms to `HasCount`
+//
+resource Counter: HasCount {
+    pub var count: Int
+
+    pub init(count: Int) {
+        self.count = count
+    }
+
+    pub fun increment() {
+        self.count = self.count + 1
+    }
+}
+
+// Create a new instance of the resource type `Counter`
+// and create a reference to it, typed as `&Counter`,
+// so the reference allows access to all fields and functions
+// of the counter
+//
+let counter <- create Counter(count: 42)
+let counterRef: &Counter = &counter as &Counter
+
+counterRef.count  // is `42`
+
+counterRef.increment()
+
+counterRef.count  // is `43`
+```
+
+References may be **authorized** or **unauthorized**.
+
+Authorized references have the `auth` modifier, i.e. the full syntax is `auth &T`,
+whereas unauthorized references do not have a modifier.
+
+Authorized references can be freely upcasted and downcasted,
+whereas unauthorized references can only be upcasted.
+Also, authorized references are subtypes of unauthorized references.
+
+```cadence,file=reference-auth.cdc
+
+// Create an unauthorized reference to the counter,
+// typed with the restricted type `&{HasCount}`,
+// i.e. some resource that conforms to the `HasCount` interface
+//
+let countRef: &{HasCount} = &counter as &{HasCount}
+
+countRef.count  // is `43`
+
+// Invalid: The function `increment` is not available
+// for the type `&{HasCount}`
+//
+countRef.increment()
+
+// Invalid: Cannot failably downcast to reference type `&Counter`,
+// as the reference `countRef` is unauthorized.
+//
+// The counter value has type `Counter`, which is a subtype of `{HasCount}`,
+// but as the reference is unauthorized, the cast is not allowed.
+// It is not possible to "look under the covers"
+//
+let counterRef2: &Counter = countRef as? &Counter
+
+// Create an authorized reference to the counter,
+// again with the restricted type `{HasCount}`, i.e. some resource
+// that conforms to the `HasCount` interface
+//
+let authCountRef: auth &{HasCount} = &counter as auth &{HasCount}
+
+// Failably downcast to reference type `&Counter`.
+// This is valid, because the reference `authCountRef` is authorized
+//
+let counterRef3: &Counter = authCountRef as? &Counter
+
+counterRef3.count  // is `43`
+
+counterRef3.increment()
+
+counterRef3.count  // is `44`
+```
+
 ## Imports
 
 Programs can import declarations (types, functions, variables, etc.) from other programs.
@@ -5299,83 +5423,6 @@ account.save(<-createEmptyVault(), to: /storage/vault)
 // Invalid: Cannot copy a resource, as this would allow arbitrary duplication.
 //
 let vault <- account.copy<@Vault>(from: /storage/vault)
-```
-
-## Storage References
-
-It is possible to create references to **storage locations**.
-References allow access to stored values.  A reference can be used to read or
-call fields and methods of stored values
-without having to move or call the fields
-and methods on the storage location directly.
-
-References are **copied**, i.e. they are value types.
-Any number of references to a storage location can be created,
-but only by the account that owns the location being referenced.
-
-Note that references are **not** referencing stored values –
-A reference cannot be used to directly modify a value it references, and
-if the value stored in the references location is moved or removed,
-the reference is not updated and it becomes invalid.
-
-References are created by using the `&` operator,
-followed by the storage location,the `as` keyword,
-and the type through which the stored location should be accessed.
-
-```cadence,file=reference-ex.cdc
-let nameRef: &Name = &account.storage[Name] as &Name
-```
-
-The storage location must be a subtype of the type given after the `as` keyword.
-
-References are covariant in their base types.
-For example, `&R` is a subtype of `&RI`,
-if `R` is a resource, `RI` is a resource interface,
-and resource `R` conforms to (implements) resource interface `RI`.
-
-```cadence,file=storage-reference.cdc
-
-// Declare a resource named `Counter`
-//
-resource Counter: {
-    pub var count: Int
-
-    pub init(count: Int) {
-        self.count = count
-    }
-
-    pub fun increment() {
-        self.count = self.count + 1
-    }
-}
-
-// Create a new instance of the resource type `Counter` and move it
-// into the storage of the account.
-//
-// In this example the account is available as the constant `account`.
-//
-// The type `Counter` is used as the key to refer to the stored value.
-//
-// A swap must be used to store the counter, because assignment
-// is not available, as it would override a potentially existing counter.
-//
-// To perform the swap, the declaration must be variable and have an optional type.
-//
-var counter: Counter? <- create Counter(count: 42)
-account.storage[Counter] <-> counter
-
-// `counter` is now the counter that was potentially stored before.
-
-// Create a reference to the storage location `account.storage[Counter]`
-// and allow access to it as the type `Counter`.
-//
-let counterReference: &Counter = &account.storage[Counter] as &Counter
-
-counterReference.count  // is `42`
-
-counterReference.increment()
-
-counterReference.count  // is `43`
 ```
 
 ### Reference-Based Access Control
