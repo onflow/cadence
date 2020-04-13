@@ -25,6 +25,10 @@ type Interface interface {
 	Log(string)
 	// EmitEvent is called when an event is emitted by the runtime.
 	EmitEvent(Event)
+}
+
+type InterfaceV2 interface {
+	Interface
 	// GenerateUUID is called to generate a UUID.
 	GenerateUUID() uint64
 }
