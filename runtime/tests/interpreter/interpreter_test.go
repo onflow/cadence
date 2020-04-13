@@ -58,7 +58,7 @@ func parseCheckAndInterpretWithOptions(
 
 	interpreterOptions := append(
 		[]interpreter.Option{
-			interpreter.WithUuidHandler(func() uint64 {
+			interpreter.WithUUIDHandler(func() uint64 {
 				uuid++
 				return uuid
 			}),
@@ -3781,7 +3781,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						}
 					}
 
-					uuidHandler := interpreter.WithUuidHandler(func() uint64 {
+					uuidHandler := interpreter.WithUUIDHandler(func() uint64 {
 						return 0
 					})
 

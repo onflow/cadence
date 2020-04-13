@@ -27,7 +27,7 @@ type testRuntimeInterface struct {
 	getSigningAccounts func() []Address
 	log                func(string)
 	emitEvent          func(Event)
-	generateUuid       func() uint64
+	generateUUID       func() uint64
 }
 
 func (i *testRuntimeInterface) ResolveImport(location Location) ([]byte, error) {
@@ -77,11 +77,11 @@ func (i *testRuntimeInterface) EmitEvent(event Event) {
 	i.emitEvent(event)
 }
 
-func (i *testRuntimeInterface) GenerateUuid() uint64 {
-	if i.generateUuid == nil {
+func (i *testRuntimeInterface) GenerateUUID() uint64 {
+	if i.generateUUID == nil {
 		return 0
 	}
-	return i.generateUuid()
+	return i.generateUUID()
 }
 
 func TestRuntimeImport(t *testing.T) {

@@ -360,8 +360,8 @@ func (r *interpreterRuntime) newInterpreter(
 				return nil
 			},
 		),
-		interpreter.WithUuidHandler(func() uint64 {
-			return runtimeInterface.GenerateUuid()
+		interpreter.WithUUIDHandler(func() uint64 {
+			return runtimeInterface.GenerateUUID()
 		}),
 		interpreter.WithContractValueHandler(
 			func(
