@@ -1796,16 +1796,21 @@ func (checker *Checker) withSelfResourceInvalidationAllowed(f func()) {
 func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 	var predeclaredMembers []*Member
 
-	addPredeclaredMember := func(identifier string, fieldType Type, access ast.Access, notSerialized bool) {
+	addPredeclaredMember := func(
+		identifier string,
+		fieldType Type,
+		access ast.Access,
+		ignoreInSerialization bool,
+	) {
 		predeclaredMembers = append(predeclaredMembers, &Member{
-			ContainerType:   containerType,
-			Access:          access,
-			Identifier:      ast.Identifier{Identifier: identifier},
-			DeclarationKind: common.DeclarationKindField,
-			VariableKind:    ast.VariableKindConstant,
-			TypeAnnotation:  NewTypeAnnotation(fieldType),
-			Predeclared:     true,
-			NotSerialized:   notSerialized,
+			ContainerType:         containerType,
+			Access:                access,
+			Identifier:            ast.Identifier{Identifier: identifier},
+			DeclarationKind:       common.DeclarationKindField,
+			VariableKind:          ast.VariableKindConstant,
+			TypeAnnotation:        NewTypeAnnotation(fieldType),
+			Predeclared:           true,
+			IgnoreInSerialization: ignoreInSerialization,
 		})
 	}
 
