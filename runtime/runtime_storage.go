@@ -25,6 +25,45 @@ func newInterpreterRuntimeStorage(runtimeInterface Interface) *interpreterRuntim
 	}
 }
 
+// valueExists is the StorageExistenceHandlerFunc for the interpreter.
+//
+// It checks the cache for values which were already previously loaded/deserialized
+// from storage (through the runtime interface) and returns true if the cached value exists.
+//
+// If there is a cache miss, the key is read from storage through the runtime interface,
+// places in the cache, and returned.
+//
+func (s *interpreterRuntimeStorage) valueExists(
+	storageIdentifier string,
+	key string,
+) bool {
+
+	storageKey := storageKey{
+		storageIdentifier: storageIdentifier,
+		key:               key,
+	}
+
+	// Check cache
+
+	if cachedValue, ok := s.cache[storageKey]; ok {
+		return cachedValue != nil
+	}
+
+	// Cache miss: Ask interface
+
+	// TODO: fix controller
+	exists, err := s.runtimeInterface.ValueExists([]byte(storageIdentifier), []byte{}, []byte(key))
+	if err != nil {
+		panic(err)
+	}
+
+	if !exists {
+		s.cache[storageKey] = nil
+	}
+
+	return exists
+}
+
 // readValue is the StorageReadHandlerFunc for the interpreter.
 //
 // It checks the cache for values which were already previously loaded/deserialized
@@ -43,7 +82,7 @@ func (s *interpreterRuntimeStorage) readValue(
 		key:               key,
 	}
 
-	// Check cache. Returned cached value, if any
+	// Check cache. Return cached value, if any
 
 	if cachedValue, ok := s.cache[storageKey]; ok {
 		if cachedValue == nil {

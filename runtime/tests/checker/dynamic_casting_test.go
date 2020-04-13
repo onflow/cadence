@@ -831,7 +831,7 @@ func TestCheckDynamicCastingResourceInterface(t *testing.T) {
                               fun test(): @%[2]s? {
                                   let i: @%[1]s <- create R()
                                   let r <- i as! @%[2]s
-                                  return <-r 
+                                  return <-r
                               }
                             `,
 							fromType,

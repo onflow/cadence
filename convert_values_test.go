@@ -311,12 +311,12 @@ func TestConvertStructValue(t *testing.T) {
 	script := `
         access(all) struct Foo {
             access(all) let bar: Int
-        
+
             init(bar: Int) {
                 self.bar = bar
             }
         }
-    
+
         access(all) fun main(): Foo {
             return Foo(bar: 42)
         }
@@ -332,12 +332,12 @@ func TestConvertResourceValue(t *testing.T) {
 	script := `
         access(all) resource Foo {
             access(all) let bar: Int
-        
+
             init(bar: Int) {
                 self.bar = bar
             }
         }
-    
+
         access(all) fun main(): @Foo {
             return <- create Foo(bar: 42)
         }
@@ -353,14 +353,14 @@ func TestConvertResourceArrayValue(t *testing.T) {
 	script := `
         access(all) resource Foo {
             access(all) let bar: Int
-        
+
             init(bar: Int) {
                 self.bar = bar
             }
         }
-    
+
         access(all) fun main(): @[Foo] {
-            return <- [<- create Foo(bar: 1), <- create Foo(bar: 2)] 
+            return <- [<- create Foo(bar: 1), <- create Foo(bar: 2)]
         }
     `
 
@@ -377,15 +377,15 @@ func TestConvertResourceDictionaryValue(t *testing.T) {
 	script := `
         access(all) resource Foo {
             access(all) let bar: Int
-        
+
             init(bar: Int) {
                 self.bar = bar
             }
         }
-    
+
         access(all) fun main(): @{String: Foo} {
             return <- {
-                "a": <- create Foo(bar: 1), 
+                "a": <- create Foo(bar: 1),
                 "b": <- create Foo(bar: 2)
             }
         }
@@ -440,7 +440,7 @@ func TestConvertNestedResourceValue(t *testing.T) {
 
         access(all) resource Foo {
             access(all) let bar: @Bar
-        
+
             init(bar: @Bar) {
                 self.bar <- bar
             }
@@ -449,7 +449,7 @@ func TestConvertNestedResourceValue(t *testing.T) {
                 destroy self.bar
             }
         }
-    
+
         access(all) fun main(): @Foo {
             return <- create Foo(bar: <- create Bar(x: 42))
         }
@@ -466,7 +466,7 @@ func TestConvertNestedResourceValue(t *testing.T) {
 func TestConvertEventValue(t *testing.T) {
 	script := `
         access(all) event Foo(bar: Int)
-    
+
         access(all) fun main() {
             emit Foo(bar: 42)
         }

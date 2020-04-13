@@ -16,7 +16,7 @@ func TestCheckIfStatementTest(t *testing.T) {
       fun test() {
           if true {}
       }
-	`)
+    `)
 
 	require.NoError(t, err)
 }
@@ -30,7 +30,7 @@ func TestCheckIfStatementScoping(t *testing.T) {
           }
           x
       }
-	`)
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
@@ -43,7 +43,7 @@ func TestCheckInvalidIfStatementTest(t *testing.T) {
       fun test() {
           if 1 {}
       }
-	`)
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
@@ -58,7 +58,7 @@ func TestCheckInvalidIfStatementElse(t *testing.T) {
               x
           }
       }
-	`)
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
@@ -71,11 +71,11 @@ func TestCheckIfStatementTestWithDeclaration(t *testing.T) {
       fun test(x: Int?): Int {
           if var y = x {
               return y
-		  }
+          }
 
-		  return 0
+          return 0
       }
-	`)
+    `)
 
 	require.NoError(t, err)
 }
@@ -90,7 +90,7 @@ func TestCheckInvalidIfStatementTestWithDeclarationReferenceInElse(t *testing.T)
               y
           }
       }
-	`)
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
@@ -103,11 +103,11 @@ func TestCheckIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
      fun test(x: Int??): Int? {
          if var y = x {
              return y
-		 }
+         }
 
-		 return nil
+         return nil
      }
-	`)
+    `)
 
 	require.NoError(t, err)
 }
@@ -118,11 +118,11 @@ func TestCheckIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotation(t 
      fun test(x: Int??): Int? {
          if var y: Int? = x {
              return y
-		 }
+         }
 
-		 return nil
+         return nil
      }
-	`)
+    `)
 
 	require.NoError(t, err)
 }
@@ -133,11 +133,11 @@ func TestCheckInvalidIfStatementTestWithDeclarationNonOptional(t *testing.T) {
      fun test(x: Int) {
          if var y = x {
              // ...
-		 }
+         }
 
-		 return
+         return
      }
-	`)
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
@@ -150,11 +150,11 @@ func TestCheckInvalidIfStatementTestWithDeclarationSameType(t *testing.T) {
       fun test(x: Int?): Int? {
           if var y: Int? = x {
              return y
-		  }
+          }
 
-		  return nil
+          return nil
       }
-	`)
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 

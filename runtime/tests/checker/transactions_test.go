@@ -328,7 +328,7 @@ func TestCheckTransactions(t *testing.T) {
 			`
 		      resource R {}
 
-		      transaction(rs: @[R]) {}	
+		      transaction(rs: @[R]) {}
 		    `,
 			[]error{
 				&sema.InvalidResourceTransactionParameterError{},

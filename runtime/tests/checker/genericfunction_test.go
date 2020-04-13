@@ -41,7 +41,7 @@ func TestCheckGenericFunction(t *testing.T) {
 			checker, err := parseAndCheckWithTestValue(t,
 				fmt.Sprintf(
 					`
-                      let res = test%s() 
+                      let res = test%s()
                     `,
 					variant,
 				),
