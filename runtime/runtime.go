@@ -366,7 +366,12 @@ func (r *interpreterRuntime) newInterpreter(
 			},
 		),
 		interpreter.WithUUIDHandler(func() uint64 {
-			return runtimeInterface.GenerateUUID()
+			// TODO: move to main interface
+			if runtimeInterfaceV2, ok := runtimeInterface.(InterfaceV2); ok {
+				return runtimeInterfaceV2.GenerateUUID()
+			} else {
+				return 0
+			}
 		}),
 		interpreter.WithContractValueHandler(
 			func(
