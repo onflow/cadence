@@ -51,10 +51,20 @@ func (s *interpreterRuntimeStorage) valueExists(
 
 	// Cache miss: Ask interface
 
-	// TODO: fix controller
-	exists, err := s.runtimeInterface.ValueExists([]byte(storageIdentifier), []byte{}, []byte(key))
-	if err != nil {
-		panic(err)
+	var exists bool
+	if runtimeInterfaceV2, ok := s.runtimeInterface.(InterfaceV2); ok {
+		var err error
+		// TODO: fix controller
+		exists, err = runtimeInterfaceV2.ValueExists([]byte(storageIdentifier), []byte{}, []byte(key))
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		value, err := s.runtimeInterface.GetValue([]byte(storageIdentifier), []byte{}, []byte(key))
+		if err != nil {
+			panic(err)
+		}
+		exists = len(value) > 0
 	}
 
 	if !exists {
