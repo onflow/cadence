@@ -573,12 +573,12 @@ func TestEncodeResource(t *testing.T) {
 	script := `
         access(all) resource Foo {
             access(all) let bar: Int
-        
+
             init(bar: Int) {
                 self.bar = bar
             }
         }
-    
+
         access(all) fun main(): @Foo {
             return <- create Foo(bar: 42)
         }
@@ -603,7 +603,7 @@ func TestEncodeNestedResource(t *testing.T) {
 
         access(all) resource Foo {
             access(all) let bar: @Bar
-        
+
             init(bar: @Bar) {
                 self.bar <- bar
             }
@@ -612,7 +612,7 @@ func TestEncodeNestedResource(t *testing.T) {
                 destroy self.bar
             }
         }
-    
+
         access(all) fun main(): @Foo {
             return <- create Foo(bar: <- create Bar(x: 42))
         }

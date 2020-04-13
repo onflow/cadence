@@ -79,12 +79,6 @@ type SomeDynamicType struct {
 
 func (SomeDynamicType) IsDynamicType() {}
 
-// StorageDynamicType
-
-type StorageDynamicType struct{}
-
-func (StorageDynamicType) IsDynamicType() {}
-
 // StorageReferenceDynamicType
 
 type StorageReferenceDynamicType struct {

@@ -193,7 +193,7 @@ func (checker *Checker) declareCompositeNestedTypes(
 	compositeType := checker.Elaboration.CompositeDeclarationTypes[declaration]
 	nestedDeclarations := checker.Elaboration.CompositeNestedDeclarations[declaration]
 
-	for name, nestedType := range compositeType.NestedTypes {
+	for name, nestedType := range compositeType.nestedTypes {
 		nestedDeclaration := nestedDeclarations[name]
 
 		identifier := nestedDeclaration.DeclarationIdentifier()
@@ -381,7 +381,7 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 		Location:    checker.Location,
 		Kind:        declaration.CompositeKind,
 		Identifier:  identifier.Identifier,
-		NestedTypes: map[string]Type{},
+		nestedTypes: map[string]Type{},
 	}
 
 	variable, err := checker.typeActivations.DeclareType(typeDeclaration{
@@ -398,7 +398,6 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 	)
 
 	checker.Elaboration.CompositeDeclarationTypes[declaration] = compositeType
-	checker.Elaboration.CompositeTypes[compositeType.QualifiedIdentifier()] = compositeType
 
 	// Activate new scope for nested declarations
 
@@ -421,12 +420,12 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 	checker.Elaboration.CompositeNestedDeclarations[declaration] = nestedDeclarations
 
 	for _, nestedInterfaceType := range nestedInterfaceTypes {
-		compositeType.NestedTypes[nestedInterfaceType.Identifier] = nestedInterfaceType
+		compositeType.nestedTypes[nestedInterfaceType.Identifier] = nestedInterfaceType
 		nestedInterfaceType.ContainerType = compositeType
 	}
 
 	for _, nestedCompositeType := range nestedCompositeTypes {
-		compositeType.NestedTypes[nestedCompositeType.Identifier] = nestedCompositeType
+		compositeType.nestedTypes[nestedCompositeType.Identifier] = nestedCompositeType
 		nestedCompositeType.ContainerType = compositeType
 	}
 
@@ -729,7 +728,7 @@ func (checker *Checker) checkCompositeConformance(
 
 	// Determine missing nested composite type definitions
 
-	for name, typeRequirement := range interfaceType.NestedTypes {
+	for name, typeRequirement := range interfaceType.nestedTypes {
 
 		// Only nested composite declarations are type requirements of the interface
 
@@ -738,7 +737,7 @@ func (checker *Checker) checkCompositeConformance(
 			continue
 		}
 
-		nestedCompositeType, ok := compositeType.NestedTypes[name]
+		nestedCompositeType, ok := compositeType.nestedTypes[name]
 		if !ok {
 			missingNestedCompositeTypes = append(missingNestedCompositeTypes, requiredCompositeType)
 			continue

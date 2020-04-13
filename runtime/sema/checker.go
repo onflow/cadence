@@ -336,12 +336,33 @@ func (checker *Checker) VisitProgram(program *ast.Program) ast.Repr {
 
 	// Declare interface and composite types
 
+	registerInElaboration := func(ty Type) {
+		switch typedType := ty.(type) {
+		case *InterfaceType:
+			checker.Elaboration.InterfaceTypes[typedType.ID()] = typedType
+		case *CompositeType:
+			checker.Elaboration.CompositeTypes[typedType.ID()] = typedType
+		default:
+			panic(errors.NewUnreachableError())
+		}
+	}
+
 	for _, declaration := range program.InterfaceDeclarations() {
-		checker.declareInterfaceType(declaration)
+		interfaceType := checker.declareInterfaceType(declaration)
+
+		// NOTE: register types in elaboration
+		// *after* the full container chain is fully set up
+
+		VisitContainerAndNested(interfaceType, registerInElaboration)
 	}
 
 	for _, declaration := range program.CompositeDeclarations() {
-		checker.declareCompositeType(declaration)
+		compositeType := checker.declareCompositeType(declaration)
+
+		// NOTE: register types in elaboration
+		// *after* the full container chain is fully set up
+
+		VisitContainerAndNested(compositeType, registerInElaboration)
 	}
 
 	// Declare interfaces' and composites' members
@@ -1172,11 +1193,8 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 
 	for _, identifier := range t.NestedIdentifiers {
 		switch typedResult := result.(type) {
-		case *CompositeType:
-			result = typedResult.NestedTypes[identifier.Identifier]
-
-		case *InterfaceType:
-			result = typedResult.NestedTypes[identifier.Identifier]
+		case ContainerType:
+			result = typedResult.NestedTypes()[identifier.Identifier]
 
 		default:
 			if !typedResult.IsInvalidType() {

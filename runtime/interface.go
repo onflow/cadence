@@ -3,6 +3,8 @@ package runtime
 type Interface interface {
 	// ResolveImport resolves an import of a program.
 	ResolveImport(Location) ([]byte, error)
+	// ValueExists returns true if the given key exists in the storage, controlled and owned by the given accounts.
+	ValueExists(owner, controller, key []byte) (exists bool, err error)
 	// GetValue gets a value for the given key in the storage, controlled and owned by the given accounts.
 	GetValue(owner, controller, key []byte) (value []byte, err error)
 	// SetValue sets a value for the given key in the storage, controlled and owned by the given accounts.
@@ -31,6 +33,10 @@ type EmptyRuntimeInterface struct{}
 
 func (i *EmptyRuntimeInterface) ResolveImport(location Location) ([]byte, error) {
 	return nil, nil
+}
+
+func (i *EmptyRuntimeInterface) ValueExists(controller, owner, key []byte) (exists bool, err error) {
+	return false, nil
 }
 
 func (i *EmptyRuntimeInterface) GetValue(controller, owner, key []byte) (value []byte, err error) {

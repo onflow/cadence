@@ -65,7 +65,7 @@ func TestCheckInterfaceWithFunction(t *testing.T) {
                       %s interface Test {
                           fun test()
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -91,7 +91,7 @@ func TestCheckInterfaceWithFunctionImplementationAndConditions(t *testing.T) {
                               }
                           }
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -115,7 +115,7 @@ func TestCheckInvalidInterfaceWithFunctionImplementation(t *testing.T) {
                              return 1
                           }
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -140,7 +140,7 @@ func TestCheckInvalidInterfaceWithFunctionImplementationNoConditions(t *testing.
                             // ...
                           }
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -163,7 +163,7 @@ func TestCheckInterfaceWithInitializer(t *testing.T) {
                       %s interface Test {
                           init()
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -186,7 +186,7 @@ func TestCheckInvalidInterfaceWithInitializerImplementation(t *testing.T) {
                             // ...
                           }
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -213,7 +213,7 @@ func TestCheckInterfaceWithInitializerImplementationAndConditions(t *testing.T) 
                               }
                           }
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -309,7 +309,7 @@ func TestCheckInterfaceConformanceNoRequirements(t *testing.T) {
                       %[1]s TestImpl: Test %[2]s
 
                       %[3]s
-	                `,
+                    `,
 					compositeKind.Keyword(),
 					body,
 					useCode,
@@ -389,7 +389,7 @@ func TestCheckInvalidInterfaceConformanceIncompatibleCompositeKinds(t *testing.T
                       %[3]s TestImpl: Test %[4]s
 
                       %[5]s
-	                `,
+                    `,
 					firstKind.Keyword(),
 					firstBody,
 					secondKind.Keyword(),
@@ -471,7 +471,7 @@ func TestCheckInvalidInterfaceConformanceUndeclared(t *testing.T) {
                       %[1]s TestImpl %[2]s
 
                       %[3]s
-	                `,
+                    `,
 					compositeKind.Keyword(),
 					body,
 					useCode,
@@ -513,7 +513,7 @@ func TestCheckInvalidCompositeInterfaceConformanceNonInterface(t *testing.T) {
 				fmt.Sprintf(
 					`
                       %[1]s TestImpl: Int %[2]s
-	                `,
+                    `,
 					kind.Keyword(),
 					body,
 				),
@@ -612,7 +612,7 @@ func TestCheckInvalidInterfaceUndeclaredFieldUse(t *testing.T) {
                       let test: %[2]s%[3]s %[4]s %[5]s TestImpl(x: 1)
 
                       let x = test.x
-    	            `,
+                    `,
 					compositeKind.Keyword(),
 					compositeKind.Annotation(),
 					interfaceType,
@@ -674,7 +674,7 @@ func TestCheckInterfaceFunctionUse(t *testing.T) {
                       %[2]s
 
                       let val = %[3]s.test()
-	                `,
+                    `,
 					compositeKind.Keyword(),
 					setupCode,
 					identifier,
@@ -718,7 +718,7 @@ func TestCheckInvalidInterfaceUndeclaredFunctionUse(t *testing.T) {
                       let test: %[2]s%[3]s %[4]s %[5]s TestImpl%[6]s
 
                       let val = test.test()
-	                `,
+                    `,
 					compositeKind.Keyword(),
 					compositeKind.Annotation(),
 					interfaceType,
@@ -750,7 +750,7 @@ func TestCheckInvalidInterfaceConformanceInitializerExplicitMismatch(t *testing.
                       %[1]s TestImpl: Test {
                           init(x: Bool) {}
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -776,7 +776,7 @@ func TestCheckInvalidInterfaceConformanceInitializerImplicitMismatch(t *testing.
 
                       %[1]s TestImpl: Test {
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -801,7 +801,7 @@ func TestCheckInvalidInterfaceConformanceMissingFunction(t *testing.T) {
                       }
 
                       %[1]s TestImpl: Test {}
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -830,7 +830,7 @@ func TestCheckInvalidInterfaceConformanceFunctionMismatch(t *testing.T) {
                               return true
                           }
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -859,7 +859,7 @@ func TestCheckInvalidInterfaceConformanceFunctionPrivateAccessModifier(t *testin
                               return 1
                           }
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -902,7 +902,7 @@ func TestCheckInvalidInterfaceConformanceMissingField(t *testing.T) {
 
                       %[1]s TestImpl: Test %[3]s
 
-	                `,
+                    `,
 					kind.Keyword(),
 					interfaceBody,
 					conformanceBody,
@@ -934,7 +934,7 @@ func TestCheckInvalidInterfaceConformanceFieldTypeMismatch(t *testing.T) {
                              self.x = x
                           }
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -965,7 +965,7 @@ func TestCheckInvalidInterfaceConformanceFieldPrivateAccessModifier(t *testing.T
                              self.x = x
                           }
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -996,7 +996,7 @@ func TestCheckInvalidInterfaceConformanceFieldMismatchAccessModifierMoreRestrict
                              self.x = x
                           }
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -1023,7 +1023,7 @@ func TestCheckInvalidInterfaceConformanceFunctionMismatchAccessModifierMoreRestr
                       %[1]s TestImpl: Test {
                           access(account) fun x() {}
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -1054,7 +1054,7 @@ func TestCheckInterfaceConformanceFieldMorePermissiveAccessModifier(t *testing.T
                              self.x = x
                           }
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -1081,7 +1081,7 @@ func TestCheckInvalidInterfaceConformanceKindFieldFunctionMismatch(t *testing.T)
                               return true
                           }
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -1112,7 +1112,7 @@ func TestCheckInvalidInterfaceConformanceKindFunctionFieldMismatch(t *testing.T)
                              self.x = x
                           }
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -1143,7 +1143,7 @@ func TestCheckInvalidInterfaceConformanceFieldKindLetVarMismatch(t *testing.T) {
                              self.x = x
                           }
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -1174,7 +1174,7 @@ func TestCheckInvalidInterfaceConformanceFieldKindVarLetMismatch(t *testing.T) {
                              self.x = x
                           }
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -1201,7 +1201,7 @@ func TestCheckInterfaceConformanceFunctionArgumentLabelMatch(t *testing.T) {
                       %[1]s TestImpl: Test {
                           fun x(z: Int) {}
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -1226,7 +1226,7 @@ func TestCheckInvalidInterfaceConformanceFunctionArgumentLabelMismatch(t *testin
                       %[1]s TestImpl: Test {
                           fun x(z: Int) {}
                       }
-	                `,
+                    `,
 					kind.Keyword(),
 				),
 			)
@@ -1261,7 +1261,7 @@ func TestCheckInvalidInterfaceConformanceRepetition(t *testing.T) {
                       %[1]s interface Y %[2]s
 
                       %[1]s TestImpl: X, Y, X {}
-	                `,
+                    `,
 					kind.Keyword(),
 					body,
 				),
@@ -1295,7 +1295,7 @@ func TestCheckInvalidInterfaceTypeAsValue(t *testing.T) {
                       %[1]s interface X %[2]s
 
                       let x = X
-	                `,
+                    `,
 					kind.Keyword(),
 					body,
 				),
@@ -1329,7 +1329,7 @@ func TestCheckInterfaceWithFieldHavingStructType(t *testing.T) {
                           %[2]s interface I {
                               s: %[3]sS
                           }
-	                    `,
+                        `,
 						firstKind.Keyword(),
 						secondKind.Keyword(),
 						firstKind.Annotation(),
@@ -1381,7 +1381,7 @@ func TestCheckInterfaceWithFunctionHavingStructType(t *testing.T) {
                           %[2]s interface I {
                               fun s(): %[3]sS
                           }
-	                    `,
+                        `,
 						firstKind.Keyword(),
 						secondKind.Keyword(),
 						firstKind.Annotation(),
@@ -1468,7 +1468,7 @@ func TestCheckInvalidContractInterfaceConformanceMissingTypeRequirement(t *testi
           contract TestImpl: Test {
               // missing 'Nested'
           }
-	    `,
+        `,
 	)
 
 	errs := ExpectCheckerErrors(t, err, 1)
@@ -1488,7 +1488,7 @@ func TestCheckInvalidContractInterfaceConformanceTypeRequirementKindMismatch(t *
               // expected struct, not struct interface
               struct interface Nested {}
           }
-	    `,
+        `,
 	)
 
 	errs := ExpectCheckerErrors(t, err, 1)
@@ -1508,7 +1508,7 @@ func TestCheckInvalidContractInterfaceConformanceTypeRequirementMismatch(t *test
              // expected struct
              resource Nested {}
          }
-	    `,
+        `,
 	)
 
 	errs := ExpectCheckerErrors(t, err, 1)
@@ -1525,7 +1525,7 @@ func TestCheckContractInterfaceTypeRequirement(t *testing.T) {
                   fun test(): Int
               }
           }
-	    `,
+        `,
 	)
 
 	require.NoError(t, err)
@@ -1542,7 +1542,7 @@ func TestCheckInvalidContractInterfaceTypeRequirementFunctionImplementation(t *t
                   }
               }
           }
-	    `,
+        `,
 	)
 
 	errs := ExpectCheckerErrors(t, err, 1)
@@ -1565,7 +1565,7 @@ func TestCheckInvalidContractInterfaceTypeRequirementMissingFunction(t *testing.
                  // missing function 'test'
              }
           }
-	    `,
+        `,
 	)
 
 	errs := ExpectCheckerErrors(t, err, 1)
@@ -1590,7 +1590,7 @@ func TestCheckContractInterfaceTypeRequirementWithFunction(t *testing.T) {
                   }
              }
           }
-	    `,
+        `,
 	)
 
 	require.NoError(t, err)
@@ -1611,7 +1611,7 @@ func TestCheckContractInterfaceTypeRequirementConformanceMissingMembers(t *testi
                   // 'Nested' is a requirement, not an actual declaration
               }
           }
-	    `,
+        `,
 	)
 
 	require.NoError(t, err)
@@ -1632,7 +1632,7 @@ func TestCheckInvalidContractInterfaceTypeRequirementConformance(t *testing.T) {
                   fun test(): Int
               }
           }
-	    `,
+        `,
 	)
 
 	errs := ExpectCheckerErrors(t, err, 1)
@@ -1659,7 +1659,7 @@ func TestCheckInvalidContractInterfaceTypeRequirementConformanceMissingFunction(
                   // missing function 'test'
               }
           }
-	    `,
+        `,
 	)
 
 	errs := ExpectCheckerErrors(t, err, 1)
@@ -1689,7 +1689,7 @@ func TestCheckInvalidContractInterfaceTypeRequirementMissingConformance(t *testi
                   }
               }
           }
-	    `,
+        `,
 	)
 
 	errs := ExpectCheckerErrors(t, err, 1)
@@ -1720,7 +1720,7 @@ func TestCheckContractInterfaceTypeRequirementImplementation(t *testing.T) {
                   }
               }
           }
-	    `,
+        `,
 	)
 
 	require.NoError(t, err)
@@ -1729,26 +1729,26 @@ func TestCheckContractInterfaceTypeRequirementImplementation(t *testing.T) {
 const fungibleTokenContractInterface = `
   pub contract interface FungibleToken {
 
-	  pub resource interface Provider {
+      pub resource interface Provider {
 
-		  pub fun withdraw(amount: Int): @Vault
-	  }
+          pub fun withdraw(amount: Int): @Vault
+      }
 
-	  pub resource interface Receiver {
+      pub resource interface Receiver {
 
-		  pub fun deposit(vault: @Vault)
-	  }
+          pub fun deposit(vault: @Vault)
+      }
 
-	  pub resource Vault: Provider, Receiver {
+      pub resource Vault: Provider, Receiver {
 
-		  pub balance: Int
+          pub balance: Int
 
-		  init(balance: Int)
-	  }
+          init(balance: Int)
+      }
 
-	  pub fun absorb(vault: @Vault)
+      pub fun absorb(vault: @Vault)
 
-	  pub fun sprout(balance: Int): @Vault
+      pub fun sprout(balance: Int): @Vault
   }
 `
 
@@ -1820,7 +1820,7 @@ func TestCheckContractInterfaceFungibleTokenUse(t *testing.T) {
 
           return receiverBalance
       }
-	`
+    `
 
 	_, err := ParseAndCheck(t, code)
 

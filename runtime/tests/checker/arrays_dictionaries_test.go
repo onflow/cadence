@@ -722,64 +722,6 @@ func TestCheckInvalidArrayElements(t *testing.T) {
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
 
-func TestCheckInvalidArrayIndexingWithType(t *testing.T) {
-
-	_, err := ParseAndCheckStorage(t,
-		`
-          let x = ["xyz"][String?]
-	    `,
-	)
-
-	errs := ExpectCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.InvalidIndexingError{}, errs[0])
-}
-
-func TestCheckInvalidArrayIndexingAssignmentWithType(t *testing.T) {
-
-	_, err := ParseAndCheckStorage(t,
-		`
-          fun test() {
-              let stuff = ["abc"]
-              stuff[String?] = "xyz"
-          }
-	    `,
-	)
-
-	errs := ExpectCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.InvalidIndexingError{}, errs[0])
-}
-
-func TestCheckInvalidDictionaryIndexingWithType(t *testing.T) {
-
-	_, err := ParseAndCheckStorage(t,
-		`
-          let x = {"a": 1}[String?]
-	    `,
-	)
-
-	errs := ExpectCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.InvalidIndexingError{}, errs[0])
-}
-
-func TestCheckInvalidDictionaryIndexingAssignmentWithType(t *testing.T) {
-
-	_, err := ParseAndCheckStorage(t,
-		`
-          fun test() {
-              let stuff = {"a": 1}
-              stuff[String?] = "xyz"
-          }
-	    `,
-	)
-
-	errs := ExpectCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.InvalidIndexingError{}, errs[0])
-}
-
 func TestCheckConstantSizedArrayDeclaration(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `

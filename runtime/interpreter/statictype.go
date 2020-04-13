@@ -1,9 +1,11 @@
 package interpreter
 
 import (
+	"encoding/gob"
 	"fmt"
 	"strings"
 
+	"github.com/dapperlabs/cadence/runtime/ast"
 	"github.com/dapperlabs/cadence/runtime/errors"
 	"github.com/dapperlabs/cadence/runtime/sema"
 )
@@ -26,6 +28,10 @@ type TypeStaticType struct {
 	Type sema.Type
 }
 
+func init() {
+	gob.Register(TypeStaticType{})
+}
+
 func (TypeStaticType) isStaticType() {}
 
 func (t TypeStaticType) String() string {
@@ -35,31 +41,53 @@ func (t TypeStaticType) String() string {
 // CompositeStaticType
 
 type CompositeStaticType struct {
-	TypeID sema.TypeID
+	Location ast.Location
+	TypeID   sema.TypeID
+}
+
+func init() {
+	gob.Register(CompositeStaticType{})
 }
 
 func (CompositeStaticType) isStaticType() {}
 
 func (t CompositeStaticType) String() string {
-	return fmt.Sprintf("CompositeStaticType(TypeID: %s)", t.TypeID)
+	return fmt.Sprintf(
+		"CompositeStaticType(Location: %s, TypeID: %s)",
+		t.Location,
+		t.TypeID,
+	)
 }
 
 // InterfaceStaticType
 
 type InterfaceStaticType struct {
-	TypeID sema.TypeID
+	Location ast.Location
+	TypeID   sema.TypeID
+}
+
+func init() {
+	gob.Register(InterfaceStaticType{})
 }
 
 func (InterfaceStaticType) isStaticType() {}
 
 func (t InterfaceStaticType) String() string {
-	return fmt.Sprintf("InterfaceStaticType(TypeID: %s)", t.TypeID)
+	return fmt.Sprintf(
+		"InterfaceStaticType(Location: %s, TypeID: %s)",
+		t.Location,
+		t.TypeID,
+	)
 }
 
 // VariableSizedStaticType
 
 type VariableSizedStaticType struct {
 	Type StaticType
+}
+
+func init() {
+	gob.Register(VariableSizedStaticType{})
 }
 
 func (VariableSizedStaticType) isStaticType() {}
@@ -75,6 +103,10 @@ type ConstantSizedStaticType struct {
 	Size uint64
 }
 
+func init() {
+	gob.Register(ConstantSizedStaticType{})
+}
+
 func (ConstantSizedStaticType) isStaticType() {}
 
 func (t ConstantSizedStaticType) String() string {
@@ -86,6 +118,10 @@ func (t ConstantSizedStaticType) String() string {
 type DictionaryStaticType struct {
 	KeyType   StaticType
 	ValueType StaticType
+}
+
+func init() {
+	gob.Register(DictionaryStaticType{})
 }
 
 func (DictionaryStaticType) isStaticType() {}
@@ -100,6 +136,10 @@ type OptionalStaticType struct {
 	Type StaticType
 }
 
+func init() {
+	gob.Register(OptionalStaticType{})
+}
+
 func (OptionalStaticType) isStaticType() {}
 
 func (t OptionalStaticType) String() string {
@@ -110,7 +150,11 @@ func (t OptionalStaticType) String() string {
 
 type RestrictedStaticType struct {
 	Type         StaticType
-	Restrictions []sema.TypeID
+	Restrictions []InterfaceStaticType
+}
+
+func init() {
+	gob.Register(RestrictedStaticType{})
 }
 
 func (RestrictedStaticType) isStaticType() {}
@@ -119,7 +163,7 @@ func (t RestrictedStaticType) String() string {
 	restrictions := make([]string, len(t.Restrictions))
 
 	for i, restriction := range t.Restrictions {
-		restrictions[i] = string(restriction)
+		restrictions[i] = restriction.String()
 	}
 
 	return fmt.Sprintf("%s{%s}", t.Type, strings.Join(restrictions, ", "))
@@ -130,6 +174,10 @@ func (t RestrictedStaticType) String() string {
 type ReferenceStaticType struct {
 	Authorized bool
 	Type       StaticType
+}
+
+func init() {
+	gob.Register(ReferenceStaticType{})
 }
 
 func (ReferenceStaticType) isStaticType() {}
@@ -148,7 +196,10 @@ func (t ReferenceStaticType) String() string {
 func ConvertSemaToStaticType(typ sema.Type) StaticType {
 	switch t := typ.(type) {
 	case *sema.CompositeType:
-		return CompositeStaticType{TypeID: t.ID()}
+		return CompositeStaticType{
+			Location: t.Location,
+			TypeID:   t.ID(),
+		}
 
 	case *sema.InterfaceType:
 		return convertToInterfaceStaticType(t)
@@ -176,10 +227,10 @@ func ConvertSemaToStaticType(typ sema.Type) StaticType {
 		}
 
 	case *sema.RestrictedType:
-		restrictions := make([]sema.TypeID, len(t.Restrictions))
+		restrictions := make([]InterfaceStaticType, len(t.Restrictions))
 
 		for i, restriction := range t.Restrictions {
-			restrictions[i] = restriction.ID()
+			restrictions[i] = convertToInterfaceStaticType(restriction)
 		}
 
 		return RestrictedStaticType{
@@ -203,20 +254,23 @@ func convertSemaReferenceToStaticReferenceType(t *sema.ReferenceType) ReferenceS
 }
 
 func convertToInterfaceStaticType(t *sema.InterfaceType) InterfaceStaticType {
-	return InterfaceStaticType{TypeID: t.ID()}
+	return InterfaceStaticType{
+		Location: t.Location,
+		TypeID:   t.ID(),
+	}
 }
 
 func ConvertStaticToSemaType(
 	typ StaticType,
-	getInterface func(id sema.TypeID) *sema.InterfaceType,
-	getComposite func(id sema.TypeID) *sema.CompositeType,
+	getInterface func(location ast.Location, id sema.TypeID) *sema.InterfaceType,
+	getComposite func(location ast.Location, id sema.TypeID) *sema.CompositeType,
 ) sema.Type {
 	switch t := typ.(type) {
 	case CompositeStaticType:
-		return getComposite(t.TypeID)
+		return getComposite(t.Location, t.TypeID)
 
 	case InterfaceStaticType:
-		return getInterface(t.TypeID)
+		return getInterface(t.Location, t.TypeID)
 
 	case VariableSizedStaticType:
 		return &sema.VariableSizedType{
@@ -244,7 +298,7 @@ func ConvertStaticToSemaType(
 		restrictions := make([]*sema.InterfaceType, len(t.Restrictions))
 
 		for i, restriction := range t.Restrictions {
-			restrictions[i] = getInterface(restriction)
+			restrictions[i] = getInterface(restriction.Location, restriction.TypeID)
 		}
 
 		return &sema.RestrictedType{

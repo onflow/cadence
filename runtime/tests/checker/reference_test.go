@@ -1,11 +1,13 @@
 package checker
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/dapperlabs/cadence/runtime/common"
 	"github.com/dapperlabs/cadence/runtime/sema"
 	. "github.com/dapperlabs/cadence/runtime/tests/utils"
 )
@@ -218,10 +220,9 @@ func TestCheckInvalidReferenceExpressionType(t *testing.T) {
 		_, err := ParseAndCheck(t, `
           resource R {}
 
-          let r <- create R() 
+          let r <- create R()
           let ref = &r as &X
-        `,
-		)
+        `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
 
@@ -233,29 +234,14 @@ func TestCheckInvalidReferenceExpressionType(t *testing.T) {
 		_, err := ParseAndCheck(t, `
           struct S {}
 
-          let s = S() 
+          let s = S()
           let ref = &s as &X
-        `,
-		)
+        `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 	})
-}
-
-func TestCheckInvalidReferenceExpressionStorageIndexType(t *testing.T) {
-
-	_, err := ParseAndCheckStorage(t, `
-          resource R {}
-
-          let ref = &storage[X] as &R
-        `,
-	)
-
-	errs := ExpectCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
 }
 
 func TestCheckInvalidReferenceExpressionTypeMismatchStructResource(t *testing.T) {
@@ -293,13 +279,13 @@ func TestCheckInvalidReferenceExpressionTypeMismatchStructResource(t *testing.T)
 
 func TestCheckInvalidReferenceExpressionDifferentStructs(t *testing.T) {
 
-	_, err := ParseAndCheckStorage(t, `
-          struct S {}
-          struct T {}
+	_, err := ParseAndCheck(t, `
+      struct S {}
+      struct T {}
 
-          let ref = &storage[S] as &T
-        `,
-	)
+      let s = S()
+      let ref = &s as &T
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
@@ -308,56 +294,53 @@ func TestCheckInvalidReferenceExpressionDifferentStructs(t *testing.T) {
 
 func TestCheckInvalidReferenceExpressionTypeMismatchDifferentResources(t *testing.T) {
 
-	_, err := ParseAndCheckStorage(t, `
-          resource R {}
-          resource T {}
+	_, err := ParseAndCheck(t, `
+      resource R {}
+      resource T {}
 
-          let ref = &storage[R] as &T
-        `,
-	)
+      let r <- create R()
+      let ref = &r as &T
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
 
-func TestCheckReferenceToNonStorage(t *testing.T) {
+func TestCheckReference(t *testing.T) {
 
 	t.Run("struct variable", func(t *testing.T) {
 
-		_, err := ParseAndCheckStorage(t, `
+		_, err := ParseAndCheck(t, `
           struct S {}
 
           let s = S()
           let ref = &s as &S
-        `,
-		)
+        `)
 
 		require.NoError(t, err)
 	})
 
 	t.Run("resource variable", func(t *testing.T) {
 
-		_, err := ParseAndCheckStorage(t, `
+		_, err := ParseAndCheck(t, `
           resource R {}
 
           let r <- create R()
           let ref = &r as &R
-        `,
-		)
+        `)
 
 		require.NoError(t, err)
 	})
 
 	t.Run("resource array indexing", func(t *testing.T) {
 
-		_, err := ParseAndCheckStorage(t, `
+		_, err := ParseAndCheck(t, `
           resource R {}
 
           let rs <- [<-create R()]
           let ref = &rs[0] as &R
-        `,
-		)
+        `)
 
 		require.NoError(t, err)
 	})
@@ -365,7 +348,9 @@ func TestCheckReferenceToNonStorage(t *testing.T) {
 
 func TestCheckReferenceUse(t *testing.T) {
 
-	_, err := ParseAndCheckStorage(t, `
+	t.Run("resource", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
           resource R {
               var x: Int
 
@@ -379,27 +364,55 @@ func TestCheckReferenceUse(t *testing.T) {
           }
 
           fun test(): [Int] {
-              var r: @R? <- create R()
-              storage[R] <-> r
-              // there was no old value, but it must be discarded
+              let r <- create R()
+              let ref = &r as &R
+              ref.x = 1
+              let x1 = ref.x
+              ref.setX(2)
+              let x2 = ref.x
               destroy r
+              return [x1, x2]
+          }
+        `)
 
-              let ref = &storage[R] as &R
+		require.NoError(t, err)
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+          struct S {
+              var x: Int
+
+              init() {
+                  self.x = 0
+              }
+
+              fun setX(_ newX: Int) {
+                  self.x = newX
+              }
+          }
+
+          fun test(): [Int] {
+              let s = S()
+              let ref = &s as &S
               ref.x = 1
               let x1 = ref.x
               ref.setX(2)
               let x2 = ref.x
               return [x1, x2]
           }
-        `,
-	)
+        `)
 
-	require.NoError(t, err)
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckReferenceUseArray(t *testing.T) {
 
-	_, err := ParseAndCheckStorage(t, `
+	t.Run("resource", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
           resource R {
               var x: Int
 
@@ -413,62 +426,101 @@ func TestCheckReferenceUseArray(t *testing.T) {
           }
 
           fun test(): [Int] {
-              var rs: @[R]? <- [<-create R()]
-              storage[[R]] <-> rs
-              // there was no old value, but it must be discarded
+              let rs <- [<-create R()]
+              let ref = &rs as &[R]
+              ref[0].x = 1
+              let x1 = ref[0].x
+              ref[0].setX(2)
+              let x2 = ref[0].x
               destroy rs
+              return [x1, x2]
+          }
+        `)
 
-              let ref = &storage[[R]] as &[R]
+		require.NoError(t, err)
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+          struct S {
+              var x: Int
+
+              init() {
+                  self.x = 0
+              }
+
+              fun setX(_ newX: Int) {
+                  self.x = newX
+              }
+          }
+
+          fun test(): [Int] {
+              let s = [S()]
+              let ref = &s as &[S]
               ref[0].x = 1
               let x1 = ref[0].x
               ref[0].setX(2)
               let x2 = ref[0].x
               return [x1, x2]
           }
-        `,
-	)
+        `)
 
-	require.NoError(t, err)
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckReferenceIndexingIfReferencedIndexable(t *testing.T) {
 
-	_, err := ParseAndCheckStorage(t, `
+	t.Run("resource", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+
           resource R {}
 
           fun test() {
-              var rs: @[R]? <- [<-create R()]
-              storage[[R]] <-> rs
-              // there was no old value, but it must be discarded
-              destroy rs
-
-              let ref = &storage[[R]] as &[R]
+              let rs <- [<-create R()]
+              let ref = &rs as &[R]
               var other <- create R()
               ref[0] <-> other
+              destroy rs
               destroy other
           }
-        `,
-	)
+        `)
 
-	require.NoError(t, err)
+		require.NoError(t, err)
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+
+          struct S {}
+
+          fun test() {
+              let s = [S()]
+              let ref = &s as &[S]
+              var other = S()
+              ref[0] <-> other
+          }
+        `)
+
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckInvalidReferenceResourceLoss(t *testing.T) {
 
-	_, err := ParseAndCheckStorage(t, `
-          resource R {}
+	_, err := ParseAndCheck(t, `
+      resource R {}
 
-          fun test() {
-              var rs: @[R]? <- [<-create R()]
-              storage[[R]] <-> rs
-              // there was no old value, but it must be discarded
-              destroy rs
-
-              let ref = &storage[[R]] as &[R]
-              ref[0]
-          }
-        `,
-	)
+      fun test() {
+          let rs <- [<-create R()]
+          let ref = &rs as &[R]
+          ref[0]
+          destroy rs
+      }
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
@@ -477,29 +529,50 @@ func TestCheckInvalidReferenceResourceLoss(t *testing.T) {
 
 func TestCheckInvalidReferenceIndexingIfReferencedNotIndexable(t *testing.T) {
 
-	_, err := ParseAndCheckStorage(t, `
+	t.Run("resource", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+
           resource R {}
 
           fun test() {
-              var r: @R? <- create R()
-              storage[R] <-> r
-              // there was no old value, but it must be discarded
+              let r <- create R()
+              let ref = &r as &R
+              ref[0]
               destroy r
+          }
+        `)
 
-              let ref = &storage[R] as &R
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+
+          struct S {}
+
+          fun test() {
+              let s = S()
+              let ref = &s as &S
               ref[0]
           }
-        `,
-	)
+        `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+		errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
+		assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
+	})
 }
 
 func TestCheckResourceInterfaceReferenceFunctionCall(t *testing.T) {
 
-	_, err := ParseAndCheckStorage(t, `
+	t.Run("resource", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+
           resource interface I {
               fun foo()
           }
@@ -509,23 +582,45 @@ func TestCheckResourceInterfaceReferenceFunctionCall(t *testing.T) {
           }
 
           fun test() {
-              var r: @R? <- create R()
-              storage[R] <-> r
-              // there was no old value, but it must be discarded
+              let r <- create R()
+              let ref = &r as &AnyResource{I}
+              ref.foo()
               destroy r
+          }
+        `)
 
-              let ref = &storage[R] as &AnyResource{I}
+		require.NoError(t, err)
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+
+          struct interface I {
+              fun foo()
+          }
+
+          struct S: I {
+              fun foo() {}
+          }
+
+          fun test() {
+              let s = S()
+              let ref = &s as &AnyStruct{I}
               ref.foo()
           }
-        `,
-	)
+        `)
 
-	require.NoError(t, err)
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckInvalidResourceInterfaceReferenceFunctionCall(t *testing.T) {
 
-	_, err := ParseAndCheckStorage(t, `
+	t.Run("resource", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+
           resource interface I {}
 
           resource R: I {
@@ -533,103 +628,132 @@ func TestCheckInvalidResourceInterfaceReferenceFunctionCall(t *testing.T) {
           }
 
           fun test() {
-              var r: @R? <- create R()
-              storage[R] <-> r
-              // there was no old value, but it must be discarded
+              let r <- create R()
+              let ref = &r as &AnyResource{I}
+              ref.foo()
               destroy r
+          }
+        `)
 
-              let ref = &storage[R] as &AnyResource{I}
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+
+          struct interface I {}
+
+          struct S: I {
+              fun foo() {}
+          }
+
+          fun test() {
+              let s = S()
+              let ref = &s as &AnyStruct{I}
               ref.foo()
           }
-        `,
-	)
+        `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
+		errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+		assert.IsType(t, &sema.NotDeclaredMemberError{}, errs[0])
+	})
 }
 
 func TestCheckReferenceExpressionReferenceType(t *testing.T) {
 
-	t.Run("non-auth reference", func(t *testing.T) {
+	for _, kind := range []common.CompositeKind{
+		common.CompositeKindResource,
+		common.CompositeKindStructure,
+	} {
 
-		checker, err := ParseAndCheckStorage(t, `
-          resource R {}
+		for _, auth := range []bool{true, false} {
 
-          let ref = &storage[R] as &R
-        `,
-		)
+			authKeyword := ""
+			if auth {
+				authKeyword = "auth"
+			}
 
-		require.NoError(t, err)
+			t.Run(fmt.Sprintf("%s, auth: %v", kind.Name(), auth), func(t *testing.T) {
 
-		refValueType := checker.GlobalValues["ref"].Type
+				checker, err := ParseAndCheck(t,
+					fmt.Sprintf(
+						`
+                          %[1]s T {}
 
-		require.IsType(t,
-			&sema.ReferenceType{},
-			refValueType,
-		)
+                          let t %[2]s %[3]s T()
+                          let ref = &t as %[4]s &T
+                        `,
+						kind.Keyword(),
+						kind.TransferOperator(),
+						kind.ConstructionKeyword(),
+						authKeyword,
+					),
+				)
 
-		referenceType := refValueType.(*sema.ReferenceType)
+				require.NoError(t, err)
 
-		assert.IsType(t,
-			&sema.CompositeType{},
-			referenceType.Type,
-		)
+				refValueType := checker.GlobalValues["ref"].Type
 
-		assert.False(t, referenceType.Authorized)
-	})
+				require.IsType(t,
+					&sema.ReferenceType{},
+					refValueType,
+				)
 
-	t.Run("auth reference", func(t *testing.T) {
+				referenceType := refValueType.(*sema.ReferenceType)
 
-		checker, err := ParseAndCheckStorage(t, `
-          resource R {}
+				assert.IsType(t,
+					&sema.CompositeType{},
+					referenceType.Type,
+				)
 
-          let ref = &storage[R] as auth &R
-        `,
-		)
-
-		require.NoError(t, err)
-
-		refValueType := checker.GlobalValues["ref"].Type
-
-		require.IsType(t,
-			&sema.ReferenceType{},
-			refValueType,
-		)
-
-		referenceType := refValueType.(*sema.ReferenceType)
-
-		assert.IsType(t,
-			&sema.CompositeType{},
-			referenceType.Type,
-		)
-
-		assert.True(t, referenceType.Authorized)
-	})
+				assert.Equal(t, referenceType.Authorized, auth)
+			})
+		}
+	}
 }
 
 func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 
-	_, err := ParseAndCheckStorage(t, `
+	t.Run("resource", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
           resource R {}
 
           let r: @R? <- create R()
           let ref = &r as &R
-        `,
-	)
+        `)
 
-	errs := ExpectCheckerErrors(t, err, 2)
+		errs := ExpectCheckerErrors(t, err, 2)
 
-	assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[0])
-	assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+          struct S {}
+
+          let s: S? = S()
+          let ref = &s as &S
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	})
 }
 
 func TestCheckInvalidReferenceExpressionNonReferenceAmbiguous(t *testing.T) {
 
-	_, err := ParseAndCheckStorage(t, `
-          let y = &x as {}
-        `,
-	)
+	_, err := ParseAndCheck(t, `
+      let y = &x as {}
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 2)
 
@@ -639,10 +763,9 @@ func TestCheckInvalidReferenceExpressionNonReferenceAmbiguous(t *testing.T) {
 
 func TestCheckInvalidReferenceExpressionNonReferenceAnyResource(t *testing.T) {
 
-	_, err := ParseAndCheckStorage(t, `
-          let y = &x as AnyResource{}
-        `,
-	)
+	_, err := ParseAndCheck(t, `
+      let y = &x as AnyResource{}
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 2)
 
@@ -652,10 +775,9 @@ func TestCheckInvalidReferenceExpressionNonReferenceAnyResource(t *testing.T) {
 
 func TestCheckInvalidReferenceExpressionNonReferenceAnyStruct(t *testing.T) {
 
-	_, err := ParseAndCheckStorage(t, `
-          let y = &x as AnyStruct{}
-        `,
-	)
+	_, err := ParseAndCheck(t, `
+      let y = &x as AnyStruct{}
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 2)
 

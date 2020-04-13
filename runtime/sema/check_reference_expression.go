@@ -16,14 +16,12 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 	// Check that the referenced expression is an index expression and type-check it
 
 	var referencedType Type
-	var targetIsStorage bool
 
 	// If the referenced expression is an index expression, it might be into storage
 
 	indexExpression, isIndexExpression := referencedExpression.(*ast.IndexExpression)
 	if isIndexExpression {
-		var targetType Type
-		referencedType, targetType = checker.visitIndexExpression(indexExpression, false)
+		referencedType = checker.visitIndexExpression(indexExpression, false)
 
 		// The referenced expression will evaluate to an optional type if it is indexing into storage:
 		// the result of the storage access is an optional.
@@ -36,16 +34,11 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 
 		// Check if the index expression's target expression is a storage type
 
-		if !targetType.IsInvalidType() {
-			_, targetIsStorage = targetType.(*StorageType)
-		}
 	} else {
 		// If the referenced expression is not an index expression, check it normally
 
 		referencedType = referencedExpression.Accept(checker).(Type)
 	}
-
-	checker.Elaboration.IsReferenceIntoStorage[referenceExpression] = targetIsStorage
 
 	// Check that the references expression's type is not optional
 

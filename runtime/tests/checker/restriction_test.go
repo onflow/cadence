@@ -487,7 +487,7 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 		_, err := ParseAndCheck(t, `
             struct S {}
 
-            let s: S{} = S() 
+            let s: S{} = S()
         `)
 
 		require.NoError(t, err)

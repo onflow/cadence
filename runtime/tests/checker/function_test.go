@@ -16,7 +16,7 @@ func TestCheckReferenceInFunction(t *testing.T) {
       fun test() {
           test
       }
-	`)
+    `)
 
 	require.NoError(t, err)
 }
@@ -27,7 +27,7 @@ func TestCheckParameterNameWithFunctionName(t *testing.T) {
       fun test(test: Int) {
           test
       }
-	`)
+    `)
 
 	require.NoError(t, err)
 }
@@ -78,7 +78,7 @@ func TestCheckInvalidFunctionDeclarations(t *testing.T) {
           fun foo() {}
           fun foo() {}
       }
-	`)
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
@@ -91,7 +91,7 @@ func TestCheckInvalidFunctionRedeclaration(t *testing.T) {
       fun foo() {
           fun foo() {}
       }
-	`)
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
@@ -102,7 +102,7 @@ func TestCheckFunctionAccess(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
        pub fun test() {}
-	`)
+    `)
 
 	require.NoError(t, err)
 }
@@ -111,7 +111,7 @@ func TestCheckInvalidFunctionAccess(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
        pub(set) fun test() {}
-	`)
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
@@ -124,7 +124,7 @@ func TestCheckReturnWithoutExpression(t *testing.T) {
        fun returnNothing() {
            return
        }
-	`)
+    `)
 
 	require.NoError(t, err)
 }
@@ -135,7 +135,7 @@ func TestCheckAnyReturnType(t *testing.T) {
       fun foo(): AnyStruct {
           return foo
       }
-	`)
+    `)
 
 	require.NoError(t, err)
 }
@@ -144,7 +144,7 @@ func TestCheckInvalidParameterTypes(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       fun test(x: X, y: Y) {}
-	`)
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 2)
 
@@ -158,7 +158,7 @@ func TestCheckInvalidParameterNameRedeclaration(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       fun test(a: Int, a: Int) {}
-	`)
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
@@ -171,7 +171,7 @@ func TestCheckParameterRedeclaration(t *testing.T) {
       fun test(a: Int) {
           let a = 1
       }
-	`)
+    `)
 
 	require.NoError(t, err)
 }
@@ -182,7 +182,7 @@ func TestCheckInvalidParameterAssignment(t *testing.T) {
       fun test(a: Int) {
           a = 1
       }
-	`)
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
@@ -193,7 +193,7 @@ func TestCheckInvalidArgumentLabelRedeclaration(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       fun test(x a: Int, x b: Int) {}
-	`)
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
@@ -204,7 +204,7 @@ func TestCheckArgumentLabelRedeclaration(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       fun test(_ a: Int, _ b: Int) {}
-	`)
+    `)
 
 	require.NoError(t, err)
 }
@@ -215,7 +215,7 @@ func TestCheckInvalidFunctionDeclarationReturnValue(t *testing.T) {
       fun test(): Int {
           return true
       }
-	`)
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
@@ -235,7 +235,7 @@ func TestCheckInvalidResourceCapturingThroughVariable(t *testing.T) {
       }
 
       let test = makeKittyCloner()
-	`)
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
@@ -254,7 +254,7 @@ func TestCheckInvalidResourceCapturingThroughParameter(t *testing.T) {
       }
 
       let test = makeKittyCloner(kitty: <-create Kitty())
-	`)
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
@@ -274,7 +274,7 @@ func TestCheckInvalidSelfResourceCapturing(t *testing.T) {
 
       let kitty <- create Kitty()
       let test = kitty.makeCloner()
-	`)
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 2)
 
@@ -304,7 +304,7 @@ func TestCheckInvalidResourceCapturingJustMemberAccess(t *testing.T) {
       }
 
       let test = makeKittyIdGetter()
-	`)
+    `)
 
 	errs := ExpectCheckerErrors(t, err, 2)
 
