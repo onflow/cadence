@@ -420,7 +420,7 @@ func (interpreter *Interpreter) SetImportProgramHandler(function ImportProgramHa
 	interpreter.importProgramHandler = function
 }
 
-// SetImportProgramHandler sets the function that is used to handle the generation of UUIDs.
+// SetUuidHandler sets the function that is used to handle the generation of UUIDs.
 //
 func (interpreter *Interpreter) SetUuidHandler(function UuidHandlerFunc) {
 	interpreter.uuidHandler = function
