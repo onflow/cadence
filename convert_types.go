@@ -104,7 +104,7 @@ func convertCompositeType(t *sema.CompositeType) Type {
 	// TODO: do not sort fields before export, store in order declared
 	fieldNames := make([]string, 0, len(t.Members))
 	for identifier, member := range t.Members {
-		if member.Predeclared {
+		if member.IgnoreInSerialization {
 			continue
 		}
 		fieldNames = append(fieldNames, identifier)

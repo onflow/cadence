@@ -365,6 +365,9 @@ func (r *interpreterRuntime) newInterpreter(
 				return nil
 			},
 		),
+		interpreter.WithUUIDHandler(func() uint64 {
+			return runtimeInterface.GenerateUUID()
+		}),
 		interpreter.WithContractValueHandler(
 			func(
 				inter *interpreter.Interpreter,

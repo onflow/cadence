@@ -4219,6 +4219,8 @@ type Member struct {
 	ArgumentLabels  []string
 	// Predeclared fields can be considered initialized
 	Predeclared bool
+	// IgnoreInSerialization fields are ignored in serialization
+	IgnoreInSerialization bool
 }
 
 func NewPublicFunctionMember(containerType Type, identifier string, invokableType InvokableType) *Member {

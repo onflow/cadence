@@ -584,7 +584,7 @@ func TestEncodeResource(t *testing.T) {
         }
     `
 
-	expectedJSON := `{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}`
+	expectedJSON := `{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}},{"name":"uuid","value":{"type":"UInt64","value":"0"}}]}}`
 
 	v := convertValueFromScript(t, script)
 
@@ -618,7 +618,7 @@ func TestEncodeNestedResource(t *testing.T) {
         }
     `
 
-	expectedJSON := `{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Resource","value":{"id":"test.Bar","fields":[{"name":"x","value":{"type":"Int","value":"42"}}]}}}]}}`
+	expectedJSON := `{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Resource","value":{"id":"test.Bar","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"x","value":{"type":"Int","value":"42"}}]}}},{"name":"uuid","value":{"type":"UInt64","value":"0"}}]}}`
 
 	v := convertValueFromScript(t, script)
 
@@ -745,16 +745,12 @@ func TestEncodeEvent(t *testing.T) {
 	testAllEncode(t, simpleEvent, resourceEvent)
 }
 
-func trimJSON(b []byte) string {
-	return strings.TrimSuffix(string(b), "\n")
-}
-
 func convertValueFromScript(t *testing.T, script string) cadence.Value {
 	rt := runtime.NewInterpreterRuntime()
 
 	value, err := rt.ExecuteScript(
 		[]byte(script),
-		nil,
+		&runtime.EmptyRuntimeInterface{},
 		runtime.StringLocation("test"),
 	)
 
@@ -769,6 +765,10 @@ func testAllEncode(t *testing.T, tests ...encodeTest) {
 			testEncode(t, test.val, test.expected)
 		})
 	}
+}
+
+func trimJSON(b []byte) string {
+	return strings.TrimSuffix(string(b), "\n")
 }
 
 func testEncode(t *testing.T, val cadence.Value, expectedJSON string) {

@@ -128,6 +128,9 @@ type ImportProgramHandlerFunc func(
 	location ast.Location,
 ) *ast.Program
 
+// UUIDHandlerFunc is a function that handles the generation of UUIDs.
+type UUIDHandlerFunc func() uint64
+
 // compositeTypeCode contains the the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
 // (contract, struct, resource, event).
@@ -181,6 +184,7 @@ type Interpreter struct {
 	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	contractValueHandler           ContractValueHandlerFunc
 	importProgramHandler           ImportProgramHandlerFunc
+	uuidHandler                    UUIDHandlerFunc
 }
 
 type Option func(*Interpreter) error
@@ -289,6 +293,16 @@ func WithContractValueHandler(handler ContractValueHandlerFunc) Option {
 func WithImportProgramHandler(handler ImportProgramHandlerFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetImportProgramHandler(handler)
+		return nil
+	}
+}
+
+// WithUUIDHandler returns an interpreter option which sets the given function
+// as the function that is used to generate UUIDs.
+//
+func WithUUIDHandler(handler UUIDHandlerFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetUUIDHandler(handler)
 		return nil
 	}
 }
@@ -404,6 +418,12 @@ func (interpreter *Interpreter) SetContractValueHandler(function ContractValueHa
 //
 func (interpreter *Interpreter) SetImportProgramHandler(function ImportProgramHandlerFunc) {
 	interpreter.importProgramHandler = function
+}
+
+// SetUUIDHandler sets the function that is used to handle the generation of UUIDs.
+//
+func (interpreter *Interpreter) SetUUIDHandler(function UUIDHandlerFunc) {
+	interpreter.uuidHandler = function
 }
 
 // SetAllInterpreters sets the given map of interpreters as the map of all interpreters.
@@ -2121,6 +2141,8 @@ func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.Compo
 	return Done{}
 }
 
+const ResourceUUIDMemberName = "uuid"
+
 // declareCompositeValue creates and declares the value for
 // the composite declaration.
 //
@@ -2295,11 +2317,18 @@ func (interpreter *Interpreter) declareCompositeValue(
 				)
 			}
 
+			fields := map[string]Value{}
+
+			if declaration.CompositeKind == common.CompositeKindResource {
+				uuid := interpreter.uuidHandler()
+				fields[ResourceUUIDMemberName] = UInt64Value(uuid)
+			}
+
 			value := &CompositeValue{
 				Location:       location,
 				TypeID:         typeID,
 				Kind:           declaration.CompositeKind,
-				Fields:         map[string]Value{},
+				Fields:         fields,
 				InjectedFields: injectedFields,
 				Functions:      functions,
 				Destructor:     destructorFunction,
@@ -2902,6 +2931,7 @@ func (interpreter *Interpreter) ensureLoaded(location ast.Location, loadProgram 
 		WithInjectedCompositeFieldsHandler(interpreter.injectedCompositeFieldsHandler),
 		WithContractValueHandler(interpreter.contractValueHandler),
 		WithImportProgramHandler(interpreter.importProgramHandler),
+		WithUUIDHandler(interpreter.uuidHandler),
 		WithAllInterpreters(interpreter.allInterpreters),
 		WithAllCheckers(interpreter.allCheckers),
 		withTypeCodes(interpreter.typeCodes),
