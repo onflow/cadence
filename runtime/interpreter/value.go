@@ -4616,6 +4616,9 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 	case "load":
 		return inter.authAccountLoadFunction(v.Address)
 
+	case "copy":
+		return inter.authAccountCopyFunction(v.Address)
+
 	case "save":
 		return inter.authAccountSaveFunction(v.Address)
 

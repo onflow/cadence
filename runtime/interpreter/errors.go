@@ -159,7 +159,7 @@ type DestroyedCompositeError struct {
 }
 
 func (e *DestroyedCompositeError) Error() string {
-	return fmt.Sprintf("%s is destroyed", e.CompositeKind)
+	return fmt.Sprintf("%s is destroyed and cannot be accessed anymore", e.CompositeKind.Name())
 }
 
 // ForceAssignmentToNonNilResourceError

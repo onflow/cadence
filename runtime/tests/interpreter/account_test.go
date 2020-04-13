@@ -109,114 +109,426 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 
 func TestInterpretAuthAccountSave(t *testing.T) {
 
-	t.Run("valid", func(t *testing.T) {
+	t.Run("resource", func(t *testing.T) {
 
-		inter, storedValues := testAccount(
-			t,
-			true,
-			`
-              resource R {}
+		t.Run("valid", func(t *testing.T) {
 
-              fun test() {
-                  let r <- create R()
-                  account.save(<-r, to: /storage/r)
-              }
-            `,
-		)
+			inter, storedValues := testAccount(
+				t,
+				true,
+				`
+                  resource R {}
 
-		// Save first value
+                  fun test() {
+                      let r <- create R()
+                      account.save(<-r, to: /storage/r)
+                  }
+                `,
+			)
 
-		t.Run("initial save", func(t *testing.T) {
+			// Save first value
 
-			_, err := inter.Invoke("test")
-			require.NoError(t, err)
+			t.Run("initial save", func(t *testing.T) {
 
-			require.Len(t, storedValues, 1)
-			for _, value := range storedValues {
+				_, err := inter.Invoke("test")
+				require.NoError(t, err)
+
+				require.Len(t, storedValues, 1)
+				for _, value := range storedValues {
+
+					require.IsType(t, &interpreter.SomeValue{}, value)
+
+					innerValue := value.(*interpreter.SomeValue).Value
+
+					assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
+				}
+
+			})
+
+			// Attempt to save again, overwriting should fail
+
+			t.Run("second save", func(t *testing.T) {
+
+				_, err := inter.Invoke("test")
+
+				require.Error(t, err)
+
+				require.IsType(t, &interpreter.OverwriteError{}, err)
+			})
+		})
+
+		for _, domain := range common.AllPathDomainsByIdentifier {
+
+			if domain == common.PathDomainStorage {
+				continue
+			}
+
+			t.Run(fmt.Sprintf("invalid: %s domain", domain), func(t *testing.T) {
+
+				inter, _ := testAccount(
+					t,
+					true,
+					fmt.Sprintf(
+						`
+                          resource R {}
+
+                          fun test() {
+                              let r <- create R()
+                              account.save(<-r, to: /%s/r)
+                          }
+                        `,
+						domain.Identifier(),
+					),
+				)
+
+				_, err := inter.Invoke("test")
+
+				require.Error(t, err)
+
+				require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+			})
+
+		}
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		t.Run("valid", func(t *testing.T) {
+
+			inter, storedValues := testAccount(
+				t,
+				true,
+				`
+                  struct S {}
+
+                  fun test() {
+                      let s = S()
+                      account.save(s, to: /storage/s)
+                  }
+                `,
+			)
+
+			// Save first value
+
+			t.Run("initial save", func(t *testing.T) {
+
+				_, err := inter.Invoke("test")
+				require.NoError(t, err)
+
+				require.Len(t, storedValues, 1)
+				for _, value := range storedValues {
+
+					require.IsType(t, &interpreter.SomeValue{}, value)
+
+					innerValue := value.(*interpreter.SomeValue).Value
+
+					assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
+				}
+
+			})
+
+			// Attempt to save again, overwriting should fail
+
+			t.Run("second save", func(t *testing.T) {
+
+				_, err := inter.Invoke("test")
+
+				require.Error(t, err)
+
+				require.IsType(t, &interpreter.OverwriteError{}, err)
+			})
+		})
+
+		for _, domain := range common.AllPathDomainsByIdentifier {
+
+			if domain == common.PathDomainStorage {
+				continue
+			}
+
+			t.Run(fmt.Sprintf("invalid: %s domain", domain), func(t *testing.T) {
+
+				inter, _ := testAccount(
+					t,
+					true,
+					fmt.Sprintf(
+						`
+                          struct S {}
+
+                          fun test() {
+                              let s = S()
+                              account.save(s, to: /%s/r)
+                          }
+                        `,
+						domain.Identifier(),
+					),
+				)
+
+				_, err := inter.Invoke("test")
+
+				require.Error(t, err)
+
+				require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+			})
+
+		}
+	})
+}
+
+func TestInterpretAuthAccountLoad(t *testing.T) {
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Run("valid", func(t *testing.T) {
+
+			inter, storedValues := testAccount(
+				t,
+				true,
+				`
+                  resource R {}
+
+                  resource R2 {}
+
+                  fun save() {
+                      let r <- create R()
+                      account.save(<-r, to: /storage/r)
+                  }
+
+                  fun loadR(): @R? {
+                      return <-account.load<@R>(from: /storage/r)
+                  }
+
+                  fun loadR2(): @R2? {
+                      return <-account.load<@R2>(from: /storage/r)
+                  }
+                `,
+			)
+
+			t.Run("save R and load R ", func(t *testing.T) {
+
+				// save
+
+				_, err := inter.Invoke("save")
+				require.NoError(t, err)
+
+				require.Len(t, storedValues, 1)
+
+				// first load
+
+				value, err := inter.Invoke("loadR")
+				require.NoError(t, err)
 
 				require.IsType(t, &interpreter.SomeValue{}, value)
 
 				innerValue := value.(*interpreter.SomeValue).Value
 
 				assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
+
+				// NOTE: check loaded value was removed from storage
+				require.Len(t, storedValues, 0)
+
+				// second load
+
+				value, err = inter.Invoke("loadR")
+				require.NoError(t, err)
+
+				require.IsType(t, interpreter.NilValue{}, value)
+			})
+
+			t.Run("save R and load R2", func(t *testing.T) {
+
+				// save
+
+				_, err := inter.Invoke("save")
+				require.NoError(t, err)
+
+				require.Len(t, storedValues, 1)
+
+				// load
+
+				value, err := inter.Invoke("loadR2")
+				require.NoError(t, err)
+
+				require.IsType(t, interpreter.NilValue{}, value)
+
+				// NOTE: check loaded value was *not* removed from storage
+				require.Len(t, storedValues, 1)
+			})
+		})
+
+		for _, domain := range common.AllPathDomainsByIdentifier {
+
+			if domain == common.PathDomainStorage {
+				continue
 			}
 
-		})
+			t.Run(fmt.Sprintf("invalid: %s domain", domain), func(t *testing.T) {
 
-		// Attempt to save again, overwriting should fail
+				inter, _ := testAccount(
+					t,
+					true,
+					fmt.Sprintf(
+						`
+	                       resource R {}
 
-		t.Run("second save", func(t *testing.T) {
+	                       fun test(): @R? {
+	                           return <-account.load<@R>(from: /%s/r)
+	                       }
+	                     `,
+						domain.Identifier(),
+					),
+				)
 
-			_, err := inter.Invoke("test")
+				_, err := inter.Invoke("test")
 
-			require.Error(t, err)
+				require.Error(t, err)
 
-			require.IsType(t, &interpreter.OverwriteError{}, err)
-		})
+				require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+			})
+		}
 	})
 
-	for _, domain := range common.AllPathDomainsByIdentifier {
+	t.Run("struct", func(t *testing.T) {
 
-		if domain == common.PathDomainStorage {
-			continue
-		}
+		t.Run("valid", func(t *testing.T) {
 
-		t.Run(fmt.Sprintf("invalid: %s domain", domain), func(t *testing.T) {
-
-			inter, _ := testAccount(
+			inter, storedValues := testAccount(
 				t,
 				true,
-				fmt.Sprintf(
-					`
-                      resource R {}
+				`
+                  struct S {}
 
-                      fun test() {
-                          let r <- create R()
-                          account.save(<-r, to: /%s/r)
-                      }
-                    `,
-					domain.Identifier(),
-				),
+                  struct S2 {}
+
+                  fun save() {
+                      let s = S()
+                      account.save(s, to: /storage/s)
+                  }
+
+                  fun loadS(): S? {
+                      return account.load<S>(from: /storage/s)
+                  }
+
+                  fun loadS2(): S2? {
+                      return account.load<S2>(from: /storage/s)
+                  }
+                `,
 			)
 
-			_, err := inter.Invoke("test")
+			t.Run("save S and load S", func(t *testing.T) {
 
-			require.Error(t, err)
+				// save
 
-			require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+				_, err := inter.Invoke("save")
+				require.NoError(t, err)
+
+				require.Len(t, storedValues, 1)
+
+				// first load
+
+				value, err := inter.Invoke("loadS")
+				require.NoError(t, err)
+
+				require.IsType(t, &interpreter.SomeValue{}, value)
+
+				innerValue := value.(*interpreter.SomeValue).Value
+
+				assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
+
+				// NOTE: check loaded value was removed from storage
+				require.Len(t, storedValues, 0)
+
+				// second load
+
+				value, err = inter.Invoke("loadS")
+				require.NoError(t, err)
+
+				require.IsType(t, interpreter.NilValue{}, value)
+			})
+
+			t.Run("save S and load S2", func(t *testing.T) {
+
+				// save
+
+				_, err := inter.Invoke("save")
+				require.NoError(t, err)
+
+				require.Len(t, storedValues, 1)
+
+				// load
+
+				value, err := inter.Invoke("loadS2")
+				require.NoError(t, err)
+
+				require.IsType(t, interpreter.NilValue{}, value)
+
+				// NOTE: check loaded value was *not* removed from storage
+				require.Len(t, storedValues, 1)
+			})
 		})
 
-	}
+		for _, domain := range common.AllPathDomainsByIdentifier {
+
+			if domain == common.PathDomainStorage {
+				continue
+			}
+
+			t.Run(fmt.Sprintf("invalid: %s domain", domain), func(t *testing.T) {
+
+				inter, _ := testAccount(
+					t,
+					true,
+					fmt.Sprintf(
+						`
+	                       struct S {}
+
+	                       fun test(): S? {
+	                           return account.load<S>(from: /%s/s)
+	                       }
+	                     `,
+						domain.Identifier(),
+					),
+				)
+
+				_, err := inter.Invoke("test")
+
+				require.Error(t, err)
+
+				require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+			})
+		}
+	})
 }
 
-func TestInterpretAuthAccountLoad(t *testing.T) {
+func TestInterpretAuthAccountCopy(t *testing.T) {
 
 	t.Run("valid", func(t *testing.T) {
 
-		inter, storedValues := testAccount(
-			t,
-			true,
-			`
-              resource R {}
+		const code = `
+          struct S {}
 
-              resource R2 {}
+          struct S2 {}
 
-              fun save() {
-                  let r <- create R()
-                  account.save(<-r, to: /storage/r)
-              }
+          fun save() {
+              let s = S()
+              account.save(s, to: /storage/s)
+          }
 
-              fun loadR(): @R? {
-                  return <-account.load<@R>(from: /storage/r)
-              }
+          fun copyS(): S? {
+              return account.copy<S>(from: /storage/s)
+          }
 
-              fun loadR2(): @R2? {
-                  return <-account.load<@R2>(from: /storage/r)
-              }
-            `,
-		)
+          fun copyS2(): S2? {
+              return account.copy<S2>(from: /storage/s)
+          }
+        `
 
-		t.Run("save R and load R ", func(t *testing.T) {
+		t.Run("save S and copy S ", func(t *testing.T) {
+
+			inter, storedValues := testAccount(
+				t,
+				true,
+				code,
+			)
 
 			// save
 
@@ -225,29 +537,33 @@ func TestInterpretAuthAccountLoad(t *testing.T) {
 
 			require.Len(t, storedValues, 1)
 
-			// first load
+			testCopyS := func() {
 
-			value, err := inter.Invoke("loadR")
-			require.NoError(t, err)
+				value, err := inter.Invoke("copyS")
+				require.NoError(t, err)
 
-			require.IsType(t, &interpreter.SomeValue{}, value)
+				require.IsType(t, &interpreter.SomeValue{}, value)
 
-			innerValue := value.(*interpreter.SomeValue).Value
+				innerValue := value.(*interpreter.SomeValue).Value
 
-			assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
+				assert.IsType(t, &interpreter.CompositeValue{}, innerValue)
 
-			// NOTE: check loaded value was removed from storage
-			require.Len(t, storedValues, 0)
+				// NOTE: check loaded value was *not* removed from storage
+				require.Len(t, storedValues, 1)
+			}
 
-			// second load
+			testCopyS()
 
-			value, err = inter.Invoke("loadR")
-			require.NoError(t, err)
-
-			require.IsType(t, interpreter.NilValue{}, value)
+			testCopyS()
 		})
 
-		t.Run("save R and load R2", func(t *testing.T) {
+		t.Run("save S and copy S2", func(t *testing.T) {
+
+			inter, storedValues := testAccount(
+				t,
+				true,
+				code,
+			)
 
 			// save
 
@@ -258,7 +574,7 @@ func TestInterpretAuthAccountLoad(t *testing.T) {
 
 			// load
 
-			value, err := inter.Invoke("loadR2")
+			value, err := inter.Invoke("copyS2")
 			require.NoError(t, err)
 
 			require.IsType(t, interpreter.NilValue{}, value)
@@ -281,12 +597,12 @@ func TestInterpretAuthAccountLoad(t *testing.T) {
 				true,
 				fmt.Sprintf(
 					`
-	                 resource R {}
+	                  struct S {}
 
-	                 fun test(): @R? {
-	                     return <-account.load<@R>(from: /%s/r)
-	                 }
-	               `,
+	                  fun test(): S? {
+	                      return account.load<S>(from: /%s/s)
+	                  }
+	                `,
 					domain.Identifier(),
 				),
 			)
@@ -298,172 +614,46 @@ func TestInterpretAuthAccountLoad(t *testing.T) {
 			require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
 		})
 	}
+
 }
 
 func TestInterpretAuthAccountBorrow(t *testing.T) {
 
-	t.Run("valid", func(t *testing.T) {
+	t.Run("resource", func(t *testing.T) {
 
-		inter, storedValues := testAccount(
-			t,
-			true,
-			`
-              resource R {
-                  let foo: Int
-
-                  init() {
-                      self.foo = 42
-                  }
-              }
-
-              resource R2 {}
-
-              fun save() {
-                  let r <- create R()
-                  account.save(<-r, to: /storage/r)
-              }
-
-              fun borrowR(): &R? {
-                  return account.borrow<&R>(from: /storage/r)
-              }
-
-              fun foo(): Int {
-                  return account.borrow<&R>(from: /storage/r)!.foo
-              }
-
-              fun borrowR2(): &R2? {
-                  return account.borrow<&R2>(from: /storage/r)
-              }
-            `,
-		)
-
-		// save
-
-		_, err := inter.Invoke("save")
-		require.NoError(t, err)
-
-		require.Len(t, storedValues, 1)
-
-		t.Run("borrow R ", func(t *testing.T) {
-
-			// first borrow
-
-			value, err := inter.Invoke("borrowR")
-			require.NoError(t, err)
-
-			require.IsType(t, &interpreter.SomeValue{}, value)
-
-			innerValue := value.(*interpreter.SomeValue).Value
-
-			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
-
-			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, storedValues, 1)
-
-			// foo
-
-			value, err = inter.Invoke("foo")
-			require.NoError(t, err)
-
-			require.Equal(t, interpreter.NewIntValue(42), value)
-
-			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, storedValues, 1)
-
-			// TODO: should fail, i.e. return nil
-
-			// second borrow
-
-			value, err = inter.Invoke("borrowR")
-			require.NoError(t, err)
-
-			require.IsType(t, &interpreter.SomeValue{}, value)
-
-			innerValue = value.(*interpreter.SomeValue).Value
-
-			assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
-
-			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, storedValues, 1)
-		})
-
-		t.Run("borrow R2", func(t *testing.T) {
-
-			value, err := inter.Invoke("borrowR2")
-			require.NoError(t, err)
-
-			require.IsType(t, interpreter.NilValue{}, value)
-
-			// NOTE: check loaded value was *not* removed from storage
-			require.Len(t, storedValues, 1)
-		})
-	})
-
-	for _, domain := range common.AllPathDomainsByIdentifier {
-
-		if domain == common.PathDomainStorage {
-			continue
-		}
-
-		t.Run(fmt.Sprintf("invalid: %s domain", domain), func(t *testing.T) {
-
-			inter, _ := testAccount(
-				t,
-				true,
-				fmt.Sprintf(
-					`
-	                  resource R {}
-
-	                  fun test(): &R? {
-	                      return account.borrow<&R>(from: /%s/r)
-	                  }
-	                `,
-					domain.Identifier(),
-				),
-			)
-
-			_, err := inter.Invoke("test")
-
-			require.Error(t, err)
-
-			require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
-		})
-	}
-}
-
-func TestInterpretAuthAccountLink(t *testing.T) {
-
-	for _, capabilityDomain := range []common.PathDomain{
-		common.PathDomainPrivate,
-		common.PathDomainPublic,
-	} {
-
-		t.Run(capabilityDomain.Name(), func(t *testing.T) {
+		t.Run("valid", func(t *testing.T) {
 
 			inter, storedValues := testAccount(
 				t,
 				true,
-				fmt.Sprintf(
-					`
-	                  resource R {}
+				`
+                  resource R {
+                      let foo: Int
 
-	                  resource R2 {}
+                      init() {
+                          self.foo = 42
+                      }
+                  }
 
-	                  fun save() {
-	                      let r <- create R()
-	                      account.save(<-r, to: /storage/r)
-	                  }
+                  resource R2 {}
 
-	                  fun linkR(): Capability? {
-	                      return account.link<&R>(/%[1]s/r, target: /storage/r)
-	                  }
+                  fun save() {
+                      let r <- create R()
+                      account.save(<-r, to: /storage/r)
+                  }
 
-	                  fun linkR2(): Capability? {
-	                      return account.link<&R2>(/%[1]s/r2, target: /storage/r)
-	                  }
-	                `,
-					capabilityDomain.Identifier(),
-				),
+                  fun borrowR(): &R? {
+                      return account.borrow<&R>(from: /storage/r)
+                  }
+
+                  fun foo(): Int {
+                      return account.borrow<&R>(from: /storage/r)!.foo
+                  }
+
+                  fun borrowR2(): &R2? {
+                      return account.borrow<&R2>(from: /storage/r)
+                  }
+                `,
 			)
 
 			// save
@@ -473,263 +663,82 @@ func TestInterpretAuthAccountLink(t *testing.T) {
 
 			require.Len(t, storedValues, 1)
 
-			t.Run("link R", func(t *testing.T) {
+			t.Run("borrow R ", func(t *testing.T) {
 
-				// first link
+				// first borrow
 
-				value, err := inter.Invoke("linkR")
+				value, err := inter.Invoke("borrowR")
 				require.NoError(t, err)
 
 				require.IsType(t, &interpreter.SomeValue{}, value)
 
 				innerValue := value.(*interpreter.SomeValue).Value
 
-				assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
-
-				// stored value + link
-				require.Len(t, storedValues, 2)
-
-				// second link
-
-				value, err = inter.Invoke("linkR")
-				require.NoError(t, err)
-
-				require.IsType(t, interpreter.NilValue{}, value)
+				assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
 
 				// NOTE: check loaded value was *not* removed from storage
-				require.Len(t, storedValues, 2)
-			})
+				require.Len(t, storedValues, 1)
 
-			t.Run("link R2", func(t *testing.T) {
+				// foo
 
-				// first link
+				value, err = inter.Invoke("foo")
+				require.NoError(t, err)
 
-				value, err := inter.Invoke("linkR2")
+				require.Equal(t, interpreter.NewIntValue(42), value)
+
+				// NOTE: check loaded value was *not* removed from storage
+				require.Len(t, storedValues, 1)
+
+				// TODO: should fail, i.e. return nil
+
+				// second borrow
+
+				value, err = inter.Invoke("borrowR")
 				require.NoError(t, err)
 
 				require.IsType(t, &interpreter.SomeValue{}, value)
 
-				innerValue := value.(*interpreter.SomeValue).Value
+				innerValue = value.(*interpreter.SomeValue).Value
 
-				assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
+				assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
 
-				// stored value + link
-				require.Len(t, storedValues, 3)
+				// NOTE: check loaded value was *not* removed from storage
+				require.Len(t, storedValues, 1)
+			})
 
-				// second link
+			t.Run("borrow R2", func(t *testing.T) {
 
-				value, err = inter.Invoke("linkR2")
+				value, err := inter.Invoke("borrowR2")
 				require.NoError(t, err)
 
 				require.IsType(t, interpreter.NilValue{}, value)
 
 				// NOTE: check loaded value was *not* removed from storage
-				require.Len(t, storedValues, 3)
-			})
-		})
-	}
-
-	for _, targetDomain := range common.AllPathDomainsByIdentifier {
-
-		testName := fmt.Sprintf(
-			"invalid: new capability path: storage domain, target path: %s domain",
-			targetDomain,
-		)
-
-		t.Run(testName, func(t *testing.T) {
-
-			inter, _ := testAccount(
-				t,
-				true,
-				fmt.Sprintf(
-					`
-	                 resource R {}
-
-	                 fun test() {
-	                     account.link<&R>(/storage/r, target: /%s/r)
-	                 }
-	               `,
-					targetDomain.Identifier(),
-				),
-			)
-
-			_, err := inter.Invoke("test")
-
-			require.Error(t, err)
-
-			require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
-		})
-	}
-}
-
-func TestInterpretAuthAccountUnlink(t *testing.T) {
-
-	for _, capabilityDomain := range []common.PathDomain{
-		common.PathDomainPrivate,
-		common.PathDomainPublic,
-	} {
-
-		t.Run(capabilityDomain.Name(), func(t *testing.T) {
-
-			inter, storedValues := testAccount(
-				t,
-				true,
-				fmt.Sprintf(
-					`
-	                  resource R {}
-
-	                  resource R2 {}
-
-	                  fun saveAndLinkR() {
-	                      let r <- create R()
-	                      account.save(<-r, to: /storage/r)
-	                      account.link<&R>(/%[1]s/r, target: /storage/r)
-	                  }
-
-	                  fun unlinkR() {
-	                      account.unlink(/%[1]s/r)
-	                  }
-
-                      fun unlinkR2() {
-	                      account.unlink(/%[1]s/r2)
-	                  }
-	                `,
-					capabilityDomain.Identifier(),
-				),
-			)
-
-			// save and link
-
-			_, err := inter.Invoke("saveAndLinkR")
-			require.NoError(t, err)
-
-			require.Len(t, storedValues, 2)
-
-			t.Run("unlink R", func(t *testing.T) {
-				_, err := inter.Invoke("unlinkR")
-				require.NoError(t, err)
-
-				require.Len(t, storedValues, 1)
-			})
-
-			t.Run("unlink R2", func(t *testing.T) {
-
-				_, err := inter.Invoke("unlinkR2")
-				require.NoError(t, err)
-
 				require.Len(t, storedValues, 1)
 			})
 		})
-	}
 
-	t.Run("storage", func(t *testing.T) {
+		for _, domain := range common.AllPathDomainsByIdentifier {
 
-		inter, _ := testAccount(
-			t,
-			true,
-			`
-	          resource R {}
-
-	          fun test() {
-	              account.unlink(/storage/r)
-	          }
-	        `,
-		)
-
-		_, err := inter.Invoke("test")
-
-		require.Error(t, err)
-
-		require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
-	})
-}
-
-func TestInterpretAuthAccountGetLinkTarget(t *testing.T) {
-
-	for _, auth := range []bool{true, false} {
-
-		t.Run(fmt.Sprintf("auth: %v", auth), func(t *testing.T) {
-
-			for _, capabilityDomain := range []common.PathDomain{
-				common.PathDomainPrivate,
-				common.PathDomainPublic,
-			} {
-
-				t.Run(capabilityDomain.Name(), func(t *testing.T) {
-
-					inter, storedValues := testAccount(
-						t,
-						auth,
-						fmt.Sprintf(
-							`
-	                          resource R {}
-
-	                          fun link() {
-	                              authAccount.link<&R>(/%[1]s/r, target: /storage/r)
-	                          }
-
-	                          fun existing(): Path? {
-	                              return account.getLinkTarget(/%[1]s/r)
-	                          }
-
-                              fun nonExisting(): Path? {
-	                              return account.getLinkTarget(/%[1]s/r2)
-	                          }
-	                        `,
-							capabilityDomain.Identifier(),
-						),
-					)
-
-					// link
-
-					_, err := inter.Invoke("link")
-					require.NoError(t, err)
-
-					require.Len(t, storedValues, 1)
-
-					t.Run("existing", func(t *testing.T) {
-						value, err := inter.Invoke("existing")
-						require.NoError(t, err)
-
-						require.IsType(t, &interpreter.SomeValue{}, value)
-
-						innerValue := value.(*interpreter.SomeValue).Value
-
-						assert.Equal(t,
-							interpreter.PathValue{
-								Domain:     common.PathDomainStorage,
-								Identifier: "r",
-							},
-							innerValue,
-						)
-
-						require.Len(t, storedValues, 1)
-					})
-
-					t.Run("nonExisting", func(t *testing.T) {
-
-						value, err := inter.Invoke("nonExisting")
-						require.NoError(t, err)
-
-						require.Equal(t, interpreter.NilValue{}, value)
-
-						require.Len(t, storedValues, 1)
-					})
-				})
+			if domain == common.PathDomainStorage {
+				continue
 			}
 
-			t.Run("storage", func(t *testing.T) {
+			t.Run(fmt.Sprintf("invalid: %s domain", domain), func(t *testing.T) {
 
 				inter, _ := testAccount(
 					t,
-					auth,
-					`
-	                  resource R {}
+					true,
+					fmt.Sprintf(
+						`
+	                      resource R {}
 
-	                  fun test() {
-	                      account.getLinkTarget(/storage/r)
-	                  }
-	                `,
+	                      fun test(): &R? {
+	                          return account.borrow<&R>(from: /%s/r)
+	                      }
+	                    `,
+						domain.Identifier(),
+					),
 				)
 
 				_, err := inter.Invoke("test")
@@ -738,7 +747,763 @@ func TestInterpretAuthAccountGetLinkTarget(t *testing.T) {
 
 				require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
 			})
+		}
+	})
 
+	t.Run("struct", func(t *testing.T) {
+
+		t.Run("valid", func(t *testing.T) {
+
+			inter, storedValues := testAccount(
+				t,
+				true,
+				`
+                  struct S {
+                      let foo: Int
+
+                      init() {
+                          self.foo = 42
+                      }
+                  }
+
+                  struct S2 {}
+
+                  fun save() {
+                      let s = S()
+                      account.save(s, to: /storage/s)
+                  }
+
+                  fun borrowS(): &S? {
+                      return account.borrow<&S>(from: /storage/s)
+                  }
+
+                  fun foo(): Int {
+                      return account.borrow<&S>(from: /storage/s)!.foo
+                  }
+
+                  fun borrowS2(): &S2? {
+                      return account.borrow<&S2>(from: /storage/s)
+                  }
+                `,
+			)
+
+			// save
+
+			_, err := inter.Invoke("save")
+			require.NoError(t, err)
+
+			require.Len(t, storedValues, 1)
+
+			t.Run("borrow S", func(t *testing.T) {
+
+				// first borrow
+
+				value, err := inter.Invoke("borrowS")
+				require.NoError(t, err)
+
+				require.IsType(t, &interpreter.SomeValue{}, value)
+
+				innerValue := value.(*interpreter.SomeValue).Value
+
+				assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
+
+				// NOTE: check loaded value was *not* removed from storage
+				require.Len(t, storedValues, 1)
+
+				// foo
+
+				value, err = inter.Invoke("foo")
+				require.NoError(t, err)
+
+				require.Equal(t, interpreter.NewIntValue(42), value)
+
+				// NOTE: check loaded value was *not* removed from storage
+				require.Len(t, storedValues, 1)
+
+				// TODO: should fail, i.e. return nil
+
+				// second borrow
+
+				value, err = inter.Invoke("borrowS")
+				require.NoError(t, err)
+
+				require.IsType(t, &interpreter.SomeValue{}, value)
+
+				innerValue = value.(*interpreter.SomeValue).Value
+
+				assert.IsType(t, &interpreter.StorageReferenceValue{}, innerValue)
+
+				// NOTE: check loaded value was *not* removed from storage
+				require.Len(t, storedValues, 1)
+			})
+
+			t.Run("borrow S2", func(t *testing.T) {
+
+				value, err := inter.Invoke("borrowS2")
+				require.NoError(t, err)
+
+				require.IsType(t, interpreter.NilValue{}, value)
+
+				// NOTE: check loaded value was *not* removed from storage
+				require.Len(t, storedValues, 1)
+			})
+		})
+
+		for _, domain := range common.AllPathDomainsByIdentifier {
+
+			if domain == common.PathDomainStorage {
+				continue
+			}
+
+			t.Run(fmt.Sprintf("invalid: %s domain", domain), func(t *testing.T) {
+
+				inter, _ := testAccount(
+					t,
+					true,
+					fmt.Sprintf(
+						`
+	                      struct S {}
+
+	                      fun test(): &S? {
+	                          return account.borrow<&S>(from: /%s/s)
+	                      }
+	                    `,
+						domain.Identifier(),
+					),
+				)
+
+				_, err := inter.Invoke("test")
+
+				require.Error(t, err)
+
+				require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+			})
+		}
+	})
+}
+
+func TestInterpretAuthAccountLink(t *testing.T) {
+
+	t.Run("resource", func(t *testing.T) {
+
+		for _, capabilityDomain := range []common.PathDomain{
+			common.PathDomainPrivate,
+			common.PathDomainPublic,
+		} {
+
+			t.Run(capabilityDomain.Name(), func(t *testing.T) {
+
+				inter, storedValues := testAccount(
+					t,
+					true,
+					fmt.Sprintf(
+						`
+	                      resource R {}
+
+	                      resource R2 {}
+
+	                      fun save() {
+	                          let r <- create R()
+	                          account.save(<-r, to: /storage/r)
+	                      }
+
+	                      fun linkR(): Capability? {
+	                          return account.link<&R>(/%[1]s/r, target: /storage/r)
+	                      }
+
+	                      fun linkR2(): Capability? {
+	                          return account.link<&R2>(/%[1]s/r2, target: /storage/r)
+	                      }
+	                    `,
+						capabilityDomain.Identifier(),
+					),
+				)
+
+				// save
+
+				_, err := inter.Invoke("save")
+				require.NoError(t, err)
+
+				require.Len(t, storedValues, 1)
+
+				t.Run("link R", func(t *testing.T) {
+
+					// first link
+
+					value, err := inter.Invoke("linkR")
+					require.NoError(t, err)
+
+					require.IsType(t, &interpreter.SomeValue{}, value)
+
+					innerValue := value.(*interpreter.SomeValue).Value
+
+					assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
+
+					// stored value + link
+					require.Len(t, storedValues, 2)
+
+					// second link
+
+					value, err = inter.Invoke("linkR")
+					require.NoError(t, err)
+
+					require.IsType(t, interpreter.NilValue{}, value)
+
+					// NOTE: check loaded value was *not* removed from storage
+					require.Len(t, storedValues, 2)
+				})
+
+				t.Run("link R2", func(t *testing.T) {
+
+					// first link
+
+					value, err := inter.Invoke("linkR2")
+					require.NoError(t, err)
+
+					require.IsType(t, &interpreter.SomeValue{}, value)
+
+					innerValue := value.(*interpreter.SomeValue).Value
+
+					assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
+
+					// stored value + link
+					require.Len(t, storedValues, 3)
+
+					// second link
+
+					value, err = inter.Invoke("linkR2")
+					require.NoError(t, err)
+
+					require.IsType(t, interpreter.NilValue{}, value)
+
+					// NOTE: check loaded value was *not* removed from storage
+					require.Len(t, storedValues, 3)
+				})
+			})
+		}
+
+		for _, targetDomain := range common.AllPathDomainsByIdentifier {
+
+			testName := fmt.Sprintf(
+				"invalid: new capability path: storage domain, target path: %s domain",
+				targetDomain,
+			)
+
+			t.Run(testName, func(t *testing.T) {
+
+				inter, _ := testAccount(
+					t,
+					true,
+					fmt.Sprintf(
+						`
+	                      resource R {}
+
+	                      fun test() {
+	                          account.link<&R>(/storage/r, target: /%s/r)
+	                      }
+	                    `,
+						targetDomain.Identifier(),
+					),
+				)
+
+				_, err := inter.Invoke("test")
+
+				require.Error(t, err)
+
+				require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+			})
+		}
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		for _, capabilityDomain := range []common.PathDomain{
+			common.PathDomainPrivate,
+			common.PathDomainPublic,
+		} {
+
+			t.Run(capabilityDomain.Name(), func(t *testing.T) {
+
+				inter, storedValues := testAccount(
+					t,
+					true,
+					fmt.Sprintf(
+						`
+	                      struct S {}
+
+	                      struct S2 {}
+
+	                      fun save() {
+	                          let s = S()
+	                          account.save(s, to: /storage/s)
+	                      }
+
+	                      fun linkS(): Capability? {
+	                          return account.link<&S>(/%[1]s/s, target: /storage/s)
+	                      }
+
+	                      fun linkS2(): Capability? {
+	                          return account.link<&S2>(/%[1]s/s2, target: /storage/s)
+	                      }
+	                    `,
+						capabilityDomain.Identifier(),
+					),
+				)
+
+				// save
+
+				_, err := inter.Invoke("save")
+				require.NoError(t, err)
+
+				require.Len(t, storedValues, 1)
+
+				t.Run("link S", func(t *testing.T) {
+
+					// first link
+
+					value, err := inter.Invoke("linkS")
+					require.NoError(t, err)
+
+					require.IsType(t, &interpreter.SomeValue{}, value)
+
+					innerValue := value.(*interpreter.SomeValue).Value
+
+					assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
+
+					// stored value + link
+					require.Len(t, storedValues, 2)
+
+					// second link
+
+					value, err = inter.Invoke("linkS")
+					require.NoError(t, err)
+
+					require.IsType(t, interpreter.NilValue{}, value)
+
+					// NOTE: check loaded value was *not* removed from storage
+					require.Len(t, storedValues, 2)
+				})
+
+				t.Run("link S2", func(t *testing.T) {
+
+					// first link
+
+					value, err := inter.Invoke("linkS2")
+					require.NoError(t, err)
+
+					require.IsType(t, &interpreter.SomeValue{}, value)
+
+					innerValue := value.(*interpreter.SomeValue).Value
+
+					assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
+
+					// stored value + link
+					require.Len(t, storedValues, 3)
+
+					// second link
+
+					value, err = inter.Invoke("linkS2")
+					require.NoError(t, err)
+
+					require.IsType(t, interpreter.NilValue{}, value)
+
+					// NOTE: check loaded value was *not* removed from storage
+					require.Len(t, storedValues, 3)
+				})
+			})
+		}
+
+		for _, targetDomain := range common.AllPathDomainsByIdentifier {
+
+			testName := fmt.Sprintf(
+				"invalid: new capability path: storage domain, target path: %s domain",
+				targetDomain,
+			)
+
+			t.Run(testName, func(t *testing.T) {
+
+				inter, _ := testAccount(
+					t,
+					true,
+					fmt.Sprintf(
+						`
+	                      struct S {}
+
+	                      fun test() {
+	                          account.link<&S>(/storage/s, target: /%s/s)
+	                      }
+	                    `,
+						targetDomain.Identifier(),
+					),
+				)
+
+				_, err := inter.Invoke("test")
+
+				require.Error(t, err)
+
+				require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+			})
+		}
+	})
+
+}
+
+func TestInterpretAuthAccountUnlink(t *testing.T) {
+
+	t.Run("resource", func(t *testing.T) {
+
+		for _, capabilityDomain := range []common.PathDomain{
+			common.PathDomainPrivate,
+			common.PathDomainPublic,
+		} {
+
+			t.Run(capabilityDomain.Name(), func(t *testing.T) {
+
+				inter, storedValues := testAccount(
+					t,
+					true,
+					fmt.Sprintf(
+						`
+	                      resource R {}
+
+	                      resource R2 {}
+
+	                      fun saveAndLinkR() {
+	                          let r <- create R()
+	                          account.save(<-r, to: /storage/r)
+	                          account.link<&R>(/%[1]s/r, target: /storage/r)
+	                      }
+
+	                      fun unlinkR() {
+	                          account.unlink(/%[1]s/r)
+	                      }
+
+                          fun unlinkR2() {
+	                          account.unlink(/%[1]s/r2)
+	                      }
+	                    `,
+						capabilityDomain.Identifier(),
+					),
+				)
+
+				// save and link
+
+				_, err := inter.Invoke("saveAndLinkR")
+				require.NoError(t, err)
+
+				require.Len(t, storedValues, 2)
+
+				t.Run("unlink R", func(t *testing.T) {
+					_, err := inter.Invoke("unlinkR")
+					require.NoError(t, err)
+
+					require.Len(t, storedValues, 1)
+				})
+
+				t.Run("unlink R2", func(t *testing.T) {
+
+					_, err := inter.Invoke("unlinkR2")
+					require.NoError(t, err)
+
+					require.Len(t, storedValues, 1)
+				})
+			})
+		}
+
+		t.Run("storage", func(t *testing.T) {
+
+			inter, _ := testAccount(
+				t,
+				true,
+				`
+	              resource R {}
+
+	              fun test() {
+	                  account.unlink(/storage/r)
+	              }
+	            `,
+			)
+
+			_, err := inter.Invoke("test")
+
+			require.Error(t, err)
+
+			require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+		})
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		for _, capabilityDomain := range []common.PathDomain{
+			common.PathDomainPrivate,
+			common.PathDomainPublic,
+		} {
+
+			t.Run(capabilityDomain.Name(), func(t *testing.T) {
+
+				inter, storedValues := testAccount(
+					t,
+					true,
+					fmt.Sprintf(
+						`
+	                      struct S {}
+
+	                      struct S2 {}
+
+	                      fun saveAndLinkS() {
+	                          let s = S()
+	                          account.save(s, to: /storage/s)
+	                          account.link<&S>(/%[1]s/s, target: /storage/s)
+	                      }
+
+	                      fun unlinkS() {
+	                          account.unlink(/%[1]s/s)
+	                      }
+
+                          fun unlinkS2() {
+	                          account.unlink(/%[1]s/s2)
+	                      }
+	                    `,
+						capabilityDomain.Identifier(),
+					),
+				)
+
+				// save and link
+
+				_, err := inter.Invoke("saveAndLinkS")
+				require.NoError(t, err)
+
+				require.Len(t, storedValues, 2)
+
+				t.Run("unlink S", func(t *testing.T) {
+					_, err := inter.Invoke("unlinkS")
+					require.NoError(t, err)
+
+					require.Len(t, storedValues, 1)
+				})
+
+				t.Run("unlink S2", func(t *testing.T) {
+
+					_, err := inter.Invoke("unlinkS2")
+					require.NoError(t, err)
+
+					require.Len(t, storedValues, 1)
+				})
+			})
+		}
+
+		t.Run("storage", func(t *testing.T) {
+
+			inter, _ := testAccount(
+				t,
+				true,
+				`
+	              struct S {}
+
+	              fun test() {
+	                  account.unlink(/storage/s)
+	              }
+	            `,
+			)
+
+			_, err := inter.Invoke("test")
+
+			require.Error(t, err)
+
+			require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+		})
+	})
+}
+
+func TestInterpretAccountGetLinkTarget(t *testing.T) {
+
+	for _, auth := range []bool{true, false} {
+
+		t.Run(fmt.Sprintf("auth: %v", auth), func(t *testing.T) {
+
+			t.Run("resource", func(t *testing.T) {
+
+				for _, capabilityDomain := range []common.PathDomain{
+					common.PathDomainPrivate,
+					common.PathDomainPublic,
+				} {
+
+					t.Run(capabilityDomain.Name(), func(t *testing.T) {
+
+						inter, storedValues := testAccount(
+							t,
+							auth,
+							fmt.Sprintf(
+								`
+	                              resource R {}
+
+	                              fun link() {
+	                                  authAccount.link<&R>(/%[1]s/r, target: /storage/r)
+	                              }
+
+	                              fun existing(): Path? {
+	                                  return account.getLinkTarget(/%[1]s/r)
+	                              }
+
+                                  fun nonExisting(): Path? {
+	                                  return account.getLinkTarget(/%[1]s/r2)
+	                              }
+	                            `,
+								capabilityDomain.Identifier(),
+							),
+						)
+
+						// link
+
+						_, err := inter.Invoke("link")
+						require.NoError(t, err)
+
+						require.Len(t, storedValues, 1)
+
+						t.Run("existing", func(t *testing.T) {
+							value, err := inter.Invoke("existing")
+							require.NoError(t, err)
+
+							require.IsType(t, &interpreter.SomeValue{}, value)
+
+							innerValue := value.(*interpreter.SomeValue).Value
+
+							assert.Equal(t,
+								interpreter.PathValue{
+									Domain:     common.PathDomainStorage,
+									Identifier: "r",
+								},
+								innerValue,
+							)
+
+							require.Len(t, storedValues, 1)
+						})
+
+						t.Run("nonExisting", func(t *testing.T) {
+
+							value, err := inter.Invoke("nonExisting")
+							require.NoError(t, err)
+
+							require.Equal(t, interpreter.NilValue{}, value)
+
+							require.Len(t, storedValues, 1)
+						})
+					})
+				}
+
+				t.Run("storage", func(t *testing.T) {
+
+					inter, _ := testAccount(
+						t,
+						auth,
+						`
+	                      resource R {}
+
+	                      fun test() {
+	                          account.getLinkTarget(/storage/r)
+	                      }
+	                    `,
+					)
+
+					_, err := inter.Invoke("test")
+
+					require.Error(t, err)
+
+					require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+				})
+			})
+
+			t.Run("struct", func(t *testing.T) {
+
+				for _, capabilityDomain := range []common.PathDomain{
+					common.PathDomainPrivate,
+					common.PathDomainPublic,
+				} {
+
+					t.Run(capabilityDomain.Name(), func(t *testing.T) {
+
+						inter, storedValues := testAccount(
+							t,
+							auth,
+							fmt.Sprintf(
+								`
+	                              struct S {}
+
+	                              fun link() {
+	                                  authAccount.link<&S>(/%[1]s/s, target: /storage/s)
+	                              }
+
+	                              fun existing(): Path? {
+	                                  return account.getLinkTarget(/%[1]s/s)
+	                              }
+
+                                  fun nonExisting(): Path? {
+	                                  return account.getLinkTarget(/%[1]s/s2)
+	                              }
+	                            `,
+								capabilityDomain.Identifier(),
+							),
+						)
+
+						// link
+
+						_, err := inter.Invoke("link")
+						require.NoError(t, err)
+
+						require.Len(t, storedValues, 1)
+
+						t.Run("existing", func(t *testing.T) {
+							value, err := inter.Invoke("existing")
+							require.NoError(t, err)
+
+							require.IsType(t, &interpreter.SomeValue{}, value)
+
+							innerValue := value.(*interpreter.SomeValue).Value
+
+							assert.Equal(t,
+								interpreter.PathValue{
+									Domain:     common.PathDomainStorage,
+									Identifier: "s",
+								},
+								innerValue,
+							)
+
+							require.Len(t, storedValues, 1)
+						})
+
+						t.Run("nonExisting", func(t *testing.T) {
+
+							value, err := inter.Invoke("nonExisting")
+							require.NoError(t, err)
+
+							require.Equal(t, interpreter.NilValue{}, value)
+
+							require.Len(t, storedValues, 1)
+						})
+					})
+				}
+
+				t.Run("storage", func(t *testing.T) {
+
+					inter, _ := testAccount(
+						t,
+						auth,
+						`
+	                      struct S {}
+
+	                      fun test() {
+	                          account.getLinkTarget(/storage/s)
+	                      }
+	                    `,
+					)
+
+					_, err := inter.Invoke("test")
+
+					require.Error(t, err)
+
+					require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+				})
+			})
 		})
 	}
 }

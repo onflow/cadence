@@ -19,8 +19,8 @@ const ResultIdentifier = "result"
 var beforeType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
-		Name: "T",
-		Type: &AnyStructType{},
+		Name:      "T",
+		TypeBound: &AnyStructType{},
 	}
 
 	typeAnnotation := NewTypeAnnotation(
@@ -999,7 +999,7 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 			reportInvalidRestrictedType()
 		}
 
-	case *AnyResourceType, *AnyStructType:
+	case *AnyResourceType, *AnyStructType, *AnyType:
 		break
 
 	default:

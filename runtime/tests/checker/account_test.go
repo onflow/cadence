@@ -77,21 +77,45 @@ func TestCheckAccount(t *testing.T) {
 		)
 		t.Run(testName, func(t *testing.T) {
 
-			_, err := ParseAndCheckAccount(t,
-				fmt.Sprintf(
-					`
-                      resource R {}
+			t.Run("resource", func(t *testing.T) {
 
-                      fun test() {
-                          let r <- create R()
-                          authAccount.save(<-r, to: /%s/r)
-                      }
-                    `,
-					domain.Identifier(),
-				),
-			)
+				_, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          resource R {}
 
-			require.NoError(t, err)
+                          fun test() {
+                              let r <- create R()
+                              authAccount.save(<-r, to: /%s/r)
+                          }
+                        `,
+						domain.Identifier(),
+					),
+				)
+
+				require.NoError(t, err)
+			})
+
+			t.Run("struct", func(t *testing.T) {
+
+				_, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          struct S {}
+
+                          fun test() {
+                              let s = S()
+                              authAccount.save(s, to: /%s/s)
+                          }
+                        `,
+						domain.Identifier(),
+					),
+				)
+
+				require.NoError(t, err)
+
+			})
+
 		})
 	}
 
@@ -106,9 +130,11 @@ func TestCheckAccount(t *testing.T) {
 
 		t.Run(testName, func(t *testing.T) {
 
-			_, err := ParseAndCheckAccount(t,
-				fmt.Sprintf(
-					`
+			t.Run("resource", func(t *testing.T) {
+
+				_, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
                       resource R {}
 
                       fun test() {
@@ -116,11 +142,31 @@ func TestCheckAccount(t *testing.T) {
                           authAccount.save<@R>(<-r, to: /%s/r)
                       }
                     `,
-					domain.Identifier(),
-				),
-			)
+						domain.Identifier(),
+					),
+				)
 
-			require.NoError(t, err)
+				require.NoError(t, err)
+			})
+
+			t.Run("struct", func(t *testing.T) {
+
+				_, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          struct S {}
+
+                          fun test() {
+                              let s = S()
+                              authAccount.save<S>(s, to: /%s/s)
+                          }
+                        `,
+						domain.Identifier(),
+					),
+				)
+
+				require.NoError(t, err)
+			})
 		})
 	}
 
@@ -134,9 +180,11 @@ func TestCheckAccount(t *testing.T) {
 		)
 		t.Run(testName, func(t *testing.T) {
 
-			_, err := ParseAndCheckAccount(t,
-				fmt.Sprintf(
-					`
+			t.Run("resource", func(t *testing.T) {
+
+				_, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
                       resource R {}
 
                       resource T {}
@@ -146,14 +194,39 @@ func TestCheckAccount(t *testing.T) {
                           authAccount.save<@T>(<-r, to: /%s/r)
                       }
                     `,
-					domain.Identifier(),
-				),
-			)
+						domain.Identifier(),
+					),
+				)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+				errs := ExpectCheckerErrors(t, err, 2)
 
-			require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-			require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+				require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+			})
+
+			t.Run("struct", func(t *testing.T) {
+
+				_, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          struct S {}
+
+                          struct T {}
+
+                          fun test() {
+                              let s = S()
+                              authAccount.save<T>(s, to: /%s/s)
+                          }
+                        `,
+						domain.Identifier(),
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 2)
+
+				require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+			})
 		})
 	}
 
@@ -168,20 +241,41 @@ func TestCheckAccount(t *testing.T) {
 
 		t.Run(testName, func(t *testing.T) {
 
-			_, err := ParseAndCheckAccount(t,
-				fmt.Sprintf(
-					`
+			t.Run("resource", func(t *testing.T) {
+
+				_, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
                       resource R {}
 
                       let r <- authAccount.load(from: /%s/r)
                     `,
-					domain.Identifier(),
-				),
-			)
+						domain.Identifier(),
+					),
+				)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+				errs := ExpectCheckerErrors(t, err, 1)
 
-			require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+			})
+
+			t.Run("struct", func(t *testing.T) {
+
+				_, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          struct S {}
+
+                          let s = authAccount.load(from: /%s/s)
+                        `,
+						domain.Identifier(),
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+			})
 		})
 	}
 
@@ -196,29 +290,145 @@ func TestCheckAccount(t *testing.T) {
 
 		t.Run(testName, func(t *testing.T) {
 
-			checker, err := ParseAndCheckAccount(t,
-				fmt.Sprintf(
-					`
+			t.Run("resource", func(t *testing.T) {
+
+				checker, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
                       resource R {}
 
                       let r <- authAccount.load<@R>(from: /%s/r)
+                    `,
+						domain.Identifier(),
+					),
+				)
+
+				require.NoError(t, err)
+
+				rType := checker.GlobalTypes["R"].Type
+
+				rValueType := checker.GlobalValues["r"].Type
+
+				require.Equal(t,
+					&sema.OptionalType{
+						Type: rType,
+					},
+					rValueType,
+				)
+			})
+
+			t.Run("struct", func(t *testing.T) {
+
+				checker, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          struct S {}
+
+                          let s = authAccount.load<S>(from: /%s/s)
+                        `,
+						domain.Identifier(),
+					),
+				)
+
+				require.NoError(t, err)
+
+				sType := checker.GlobalTypes["S"].Type
+
+				sValueType := checker.GlobalValues["s"].Type
+
+				require.Equal(t,
+					&sema.OptionalType{
+						Type: sType,
+					},
+					sValueType,
+				)
+			})
+		})
+	}
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+
+		// NOTE: all domains are statically valid at the moment
+
+		testName := fmt.Sprintf(
+			"AuthAccount.copy: missing type argument, %s",
+			domain.Name(),
+		)
+
+		t.Run(testName, func(t *testing.T) {
+
+			_, err := ParseAndCheckAccount(t,
+				fmt.Sprintf(
+					`
+                      struct S {}
+
+                      let s = authAccount.copy(from: /%s/s)
                     `,
 					domain.Identifier(),
 				),
 			)
 
-			require.NoError(t, err)
+			errs := ExpectCheckerErrors(t, err, 1)
 
-			rType := checker.GlobalTypes["R"].Type
+			require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+		})
+	}
 
-			rValueType := checker.GlobalValues["r"].Type
+	for _, domain := range common.AllPathDomainsByIdentifier {
 
-			require.Equal(t,
-				&sema.OptionalType{
-					Type: rType,
-				},
-				rValueType,
-			)
+		// NOTE: all domains are statically valid at the moment
+
+		testName := fmt.Sprintf(
+			"AuthAccount.copy: explicit type argument, %s",
+			domain.Name(),
+		)
+
+		t.Run(testName, func(t *testing.T) {
+
+			t.Run("struct", func(t *testing.T) {
+
+				checker, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          struct S {}
+
+                          let s = authAccount.copy<S>(from: /%s/s)
+                        `,
+						domain.Identifier(),
+					),
+				)
+
+				require.NoError(t, err)
+
+				sType := checker.GlobalTypes["S"].Type
+
+				sValueType := checker.GlobalValues["s"].Type
+
+				require.Equal(t,
+					&sema.OptionalType{
+						Type: sType,
+					},
+					sValueType,
+				)
+			})
+
+			t.Run("resource", func(t *testing.T) {
+
+				_, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          resource R {}
+
+                          let r <- authAccount.copy<@R>(from: /%s/r)
+                        `,
+						domain.Identifier(),
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
 		})
 	}
 
@@ -233,18 +443,37 @@ func TestCheckAccount(t *testing.T) {
 
 		t.Run(testName, func(t *testing.T) {
 
-			_, err := ParseAndCheckAccount(t,
-				fmt.Sprintf(
-					`
-                      let r = authAccount.borrow(from: /%s/r)
-                    `,
-					domain.Identifier(),
-				),
-			)
+			t.Run("resource", func(t *testing.T) {
 
-			errs := ExpectCheckerErrors(t, err, 1)
+				_, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          let r = authAccount.borrow(from: /%s/r)
+                        `,
+						domain.Identifier(),
+					),
+				)
 
-			require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+			})
+
+			t.Run("struct", func(t *testing.T) {
+
+				_, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          let s = authAccount.borrow(from: /%s/s)
+                        `,
+						domain.Identifier(),
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+			})
 		})
 	}
 
@@ -267,33 +496,68 @@ func TestCheckAccount(t *testing.T) {
 
 			t.Run(testName, func(t *testing.T) {
 
-				checker, err := ParseAndCheckAccount(t,
-					fmt.Sprintf(
-						`
-                          resource R {}
+				t.Run("resource", func(t *testing.T) {
 
-                          let r = authAccount.borrow<%s &R>(from: /%s/r)
-                        `,
-						authKeyword,
-						domain.Identifier(),
-					),
-				)
+					checker, err := ParseAndCheckAccount(t,
+						fmt.Sprintf(
+							`
+                              resource R {}
 
-				require.NoError(t, err)
+                              let r = authAccount.borrow<%s &R>(from: /%s/r)
+                            `,
+							authKeyword,
+							domain.Identifier(),
+						),
+					)
 
-				rType := checker.GlobalTypes["R"].Type
+					require.NoError(t, err)
 
-				rValueType := checker.GlobalValues["r"].Type
+					rType := checker.GlobalTypes["R"].Type
 
-				require.Equal(t,
-					&sema.OptionalType{
-						Type: &sema.ReferenceType{
-							Authorized: auth,
-							Type:       rType,
+					rValueType := checker.GlobalValues["r"].Type
+
+					require.Equal(t,
+						&sema.OptionalType{
+							Type: &sema.ReferenceType{
+								Authorized: auth,
+								Type:       rType,
+							},
 						},
-					},
-					rValueType,
-				)
+						rValueType,
+					)
+				})
+
+				t.Run("struct", func(t *testing.T) {
+
+					checker, err := ParseAndCheckAccount(t,
+						fmt.Sprintf(
+							`
+                              struct S {}
+
+                              let s = authAccount.borrow<%s &S>(from: /%s/s)
+                            `,
+							authKeyword,
+							domain.Identifier(),
+						),
+					)
+
+					require.NoError(t, err)
+
+					sType := checker.GlobalTypes["S"].Type
+
+					sValueType := checker.GlobalValues["s"].Type
+
+					require.Equal(t,
+						&sema.OptionalType{
+							Type: &sema.ReferenceType{
+								Authorized: auth,
+								Type:       sType,
+							},
+						},
+						sValueType,
+					)
+				})
+
 			})
 		}
 	}
@@ -309,20 +573,41 @@ func TestCheckAccount(t *testing.T) {
 
 		t.Run(testName, func(t *testing.T) {
 
-			_, err := ParseAndCheckAccount(t,
-				fmt.Sprintf(
-					`
-                      resource R {}
+			t.Run("resource", func(t *testing.T) {
 
-                      let r <- authAccount.borrow<@R>(from: /%s/r)
-                    `,
-					domain.Identifier(),
-				),
-			)
+				_, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          resource R {}
 
-			errs := ExpectCheckerErrors(t, err, 1)
+                          let r <- authAccount.borrow<@R>(from: /%s/r)
+                        `,
+						domain.Identifier(),
+					),
+				)
 
-			require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
+
+			t.Run("struct", func(t *testing.T) {
+
+				_, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          struct S {}
+
+                          let s = authAccount.borrow<S>(from: /%s/s)
+                        `,
+						domain.Identifier(),
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
 		})
 	}
 
@@ -335,22 +620,45 @@ func TestCheckAccount(t *testing.T) {
 
 		t.Run(testName, func(t *testing.T) {
 
-			_, err := ParseAndCheckAccount(t,
-				fmt.Sprintf(
-					`
-                      resource R {}
+			t.Run("resource", func(t *testing.T) {
 
-                      fun test(): Capability? {
-                          return authAccount.link(/%s/r, target: /storage/r)
-                      }
-                    `,
-					domain.Identifier(),
-				),
-			)
+				_, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          resource R {}
 
-			errs := ExpectCheckerErrors(t, err, 1)
+                          fun test(): Capability? {
+                              return authAccount.link(/%s/r, target: /storage/r)
+                          }
+                        `,
+						domain.Identifier(),
+					),
+				)
 
-			require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+			})
+
+			t.Run("struct", func(t *testing.T) {
+
+				_, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          struct S {}
+
+                          fun test(): Capability? {
+                              return authAccount.link(/%s/s, target: /storage/s)
+                          }
+                        `,
+						domain.Identifier(),
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+			})
 		})
 	}
 
@@ -371,21 +679,43 @@ func TestCheckAccount(t *testing.T) {
 
 			t.Run(testName, func(t *testing.T) {
 
-				_, err := ParseAndCheckAccount(t,
-					fmt.Sprintf(
-						`
-                          resource R {}
+				t.Run("resource", func(t *testing.T) {
 
-                          fun test(): Capability? {
-                              return authAccount.link<%s &R>(/%s/r, target: /storage/r)
-                          }
-                        `,
-						authKeyword,
-						domain.Identifier(),
-					),
-				)
+					_, err := ParseAndCheckAccount(t,
+						fmt.Sprintf(
+							`
+                              resource R {}
 
-				require.NoError(t, err)
+                              fun test(): Capability? {
+                                  return authAccount.link<%s &R>(/%s/r, target: /storage/r)
+                              }
+                            `,
+							authKeyword,
+							domain.Identifier(),
+						),
+					)
+
+					require.NoError(t, err)
+				})
+
+				t.Run("struct", func(t *testing.T) {
+
+					_, err := ParseAndCheckAccount(t,
+						fmt.Sprintf(
+							`
+                              struct S {}
+
+                              fun test(): Capability? {
+                                  return authAccount.link<%s &S>(/%s/s, target: /storage/s)
+                              }
+                            `,
+							authKeyword,
+							domain.Identifier(),
+						),
+					)
+
+					require.NoError(t, err)
+				})
 			})
 		}
 	}
@@ -406,23 +736,47 @@ func TestCheckAccount(t *testing.T) {
 
 			t.Run(testName, func(t *testing.T) {
 
-				_, err := ParseAndCheckAccount(t,
-					fmt.Sprintf(
-						`
-                          resource R {}
+				t.Run("resource", func(t *testing.T) {
 
-                          fun test(): Capability? {
-                              return authAccount.link<@R>(/%s/r, target: /%s/r)
-                          }
-                        `,
-						domain.Identifier(),
-						targetDomain.Identifier(),
-					),
-				)
+					_, err := ParseAndCheckAccount(t,
+						fmt.Sprintf(
+							`
+                              resource R {}
 
-				errs := ExpectCheckerErrors(t, err, 1)
+                              fun test(): Capability? {
+                                  return authAccount.link<@R>(/%s/r, target: /%s/r)
+                              }
+                            `,
+							domain.Identifier(),
+							targetDomain.Identifier(),
+						),
+					)
 
-				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					errs := ExpectCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				})
+
+				t.Run("struct", func(t *testing.T) {
+
+					_, err := ParseAndCheckAccount(t,
+						fmt.Sprintf(
+							`
+                              struct S {}
+
+                              fun test(): Capability? {
+                                  return authAccount.link<S>(/%s/s, target: /%s/s)
+                              }
+                            `,
+							domain.Identifier(),
+							targetDomain.Identifier(),
+						),
+					)
+
+					errs := ExpectCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				})
 			})
 		}
 	}
