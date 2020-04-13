@@ -77,7 +77,7 @@ Objects can be moved into/out of storage through functions of a Signing Account 
 
    The path must be a Storage Path.
 
-- `fun copy<T>(from: Path): T?`, where `T` is the type parameter for the value type:
+- `fun copy<T: AnyStruct>(from: Path): T?`, where `T` is the type parameter for the value type:
 
    Returns a copy of a value type in storage without removing it from storage.
 
@@ -141,7 +141,7 @@ Capabilities can be removed through the `unlink` function of a Signing Account (
 
 Capability targets can be queried using the `getLinkTarget` function:
 
-- `getLinkTarget(_ path: Path): Path?`
+- `fun getLinkTarget(_ path: Path): Path?`
 
   - `path`: A Public Path or a Private Path.
 
