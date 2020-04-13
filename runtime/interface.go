@@ -3,8 +3,6 @@ package runtime
 type Interface interface {
 	// ResolveImport resolves an import of a program.
 	ResolveImport(Location) ([]byte, error)
-	// ValueExists returns true if the given key exists in the storage, controlled and owned by the given accounts.
-	ValueExists(owner, controller, key []byte) (exists bool, err error)
 	// GetValue gets a value for the given key in the storage, controlled and owned by the given accounts.
 	GetValue(owner, controller, key []byte) (value []byte, err error)
 	// SetValue sets a value for the given key in the storage, controlled and owned by the given accounts.
@@ -29,6 +27,8 @@ type Interface interface {
 
 type InterfaceV2 interface {
 	Interface
+	// ValueExists returns true if the given key exists in the storage, controlled and owned by the given accounts.
+	ValueExists(owner, controller, key []byte) (exists bool, err error)
 	// GenerateUUID is called to generate a UUID.
 	GenerateUUID() uint64
 }
