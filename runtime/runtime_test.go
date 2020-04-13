@@ -15,11 +15,40 @@ import (
 	"github.com/dapperlabs/cadence/runtime/tests/utils"
 )
 
+type testRuntimeInterfaceStorage struct {
+	valueExists func(controller, owner, key []byte) (exists bool, err error)
+	getValue    func(controller, owner, key []byte) (value []byte, err error)
+	setValue    func(controller, owner, key, value []byte) (err error)
+}
+
+func newTestStorage() testRuntimeInterfaceStorage {
+
+	storageKey := func(owner, controller, key string) string {
+		return strings.Join([]string{owner, controller, key}, "|")
+	}
+
+	storedValues := map[string][]byte{}
+
+	storage := testRuntimeInterfaceStorage{
+		valueExists: func(controller, owner, key []byte) (bool, error) {
+			_, ok := storedValues[storageKey(string(controller), string(owner), string(key))]
+			return ok, nil
+		},
+		getValue: func(controller, owner, key []byte) (value []byte, err error) {
+			return storedValues[storageKey(string(controller), string(owner), string(key))], nil
+		},
+		setValue: func(controller, owner, key, value []byte) (err error) {
+			storedValues[storageKey(string(controller), string(owner), string(key))] = value
+			return nil
+		},
+	}
+
+	return storage
+}
+
 type testRuntimeInterface struct {
 	resolveImport      func(Location) ([]byte, error)
-	valueExists        func(controller, owner, key []byte) (exists bool, err error)
-	getValue           func(controller, owner, key []byte) (value []byte, err error)
-	setValue           func(controller, owner, key, value []byte) (err error)
+	storage            testRuntimeInterfaceStorage
 	createAccount      func(publicKeys [][]byte) (address Address, err error)
 	addAccountKey      func(address Address, publicKey []byte) error
 	removeAccountKey   func(address Address, index int) (publicKey []byte, err error)
@@ -35,15 +64,15 @@ func (i *testRuntimeInterface) ResolveImport(location Location) ([]byte, error) 
 }
 
 func (i *testRuntimeInterface) ValueExists(controller, owner, key []byte) (exists bool, err error) {
-	return i.valueExists(controller, owner, key)
+	return i.storage.valueExists(controller, owner, key)
 }
 
 func (i *testRuntimeInterface) GetValue(controller, owner, key []byte) (value []byte, err error) {
-	return i.getValue(controller, owner, key)
+	return i.storage.getValue(controller, owner, key)
 }
 
 func (i *testRuntimeInterface) SetValue(controller, owner, key, value []byte) (err error) {
-	return i.setValue(controller, owner, key, value)
+	return i.storage.setValue(controller, owner, key, value)
 }
 
 func (i *testRuntimeInterface) CreateAccount(publicKeys [][]byte) (address Address, err error) {
@@ -154,12 +183,6 @@ func TestRuntimeTransactionWithAccount(t *testing.T) {
 	var loggedMessage string
 
 	runtimeInterface := &testRuntimeInterface{
-		getValue: func(controller, owner, key []byte) (value []byte, err error) {
-			return nil, nil
-		},
-		setValue: func(controller, owner, key, value []byte) (err error) {
-			return nil
-		},
 		getSigningAccounts: func() []Address {
 			return []Address{
 				common.BytesToAddress([]byte{42}),
@@ -298,8 +321,6 @@ func TestRuntimeStorage(t *testing.T) {
 				code,
 			))
 
-			storedValues := map[string][]byte{}
-
 			var loggedMessages []string
 
 			runtimeInterface := &testRuntimeInterface{
@@ -311,13 +332,7 @@ func TestRuntimeStorage(t *testing.T) {
 						return nil, fmt.Errorf("unknown import location: %s", location)
 					}
 				},
-				getValue: func(controller, owner, key []byte) (value []byte, err error) {
-					return storedValues[string(key)], nil
-				},
-				setValue: func(controller, owner, key, value []byte) (err error) {
-					storedValues[string(key)] = value
-					return nil
-				},
+				storage: newTestStorage(),
 				getSigningAccounts: func() []Address {
 					return []Address{{42}}
 				},
@@ -394,7 +409,6 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
     `)
 
 	var loggedMessages []string
-	storedValues := map[string][]byte{}
 
 	runtimeInterface := &testRuntimeInterface{
 		resolveImport: func(location Location) (bytes []byte, err error) {
@@ -405,17 +419,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		valueExists: func(controller, owner, key []byte) (bool, error) {
-			_, ok := storedValues[string(key)]
-			return ok, nil
-		},
-		getValue: func(controller, owner, key []byte) (value []byte, err error) {
-			return storedValues[string(key)], nil
-		},
-		setValue: func(controller, owner, key, value []byte) (err error) {
-			storedValues[string(key)] = value
-			return nil
-		},
+		storage: newTestStorage(),
 		getSigningAccounts: func() []Address {
 			return []Address{{42}}
 		},
@@ -476,7 +480,6 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
     `)
 
 	var loggedMessages []string
-	storedValues := map[string][]byte{}
 
 	runtimeInterface := &testRuntimeInterface{
 		resolveImport: func(location Location) (bytes []byte, err error) {
@@ -487,17 +490,7 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		valueExists: func(controller, owner, key []byte) (bool, error) {
-			_, ok := storedValues[string(key)]
-			return ok, nil
-		},
-		getValue: func(controller, owner, key []byte) (value []byte, err error) {
-			return storedValues[string(key)], nil
-		},
-		setValue: func(controller, owner, key, value []byte) (err error) {
-			storedValues[string(key)] = value
-			return nil
-		},
+		storage: newTestStorage(),
 		getSigningAccounts: func() []Address {
 			return []Address{{42}}
 		},
@@ -558,7 +551,6 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
     `)
 
 	var loggedMessages []string
-	storedValues := map[string][]byte{}
 
 	runtimeInterface := &testRuntimeInterface{
 		resolveImport: func(location Location) (bytes []byte, err error) {
@@ -569,17 +561,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		valueExists: func(controller, owner, key []byte) (bool, error) {
-			_, ok := storedValues[string(key)]
-			return ok, nil
-		},
-		getValue: func(controller, owner, key []byte) (value []byte, err error) {
-			return storedValues[string(key)], nil
-		},
-		setValue: func(controller, owner, key, value []byte) (err error) {
-			storedValues[string(key)] = value
-			return nil
-		},
+		storage: newTestStorage(),
 		getSigningAccounts: func() []Address {
 			return []Address{{42}}
 		},
@@ -642,8 +624,6 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
       }
     `)
 
-	storedValues := map[string][]byte{}
-
 	runtimeInterface := &testRuntimeInterface{
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			switch location {
@@ -653,17 +633,7 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		valueExists: func(controller, owner, key []byte) (bool, error) {
-			_, ok := storedValues[string(key)]
-			return ok, nil
-		},
-		getValue: func(controller, owner, key []byte) (value []byte, err error) {
-			return storedValues[string(key)], nil
-		},
-		setValue: func(controller, owner, key, value []byte) (err error) {
-			storedValues[string(key)] = value
-			return nil
-		},
+		storage: newTestStorage(),
 		getSigningAccounts: func() []Address {
 			return []Address{{42}}
 		},
@@ -714,8 +684,6 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
       }
     `)
 
-	storedValues := map[string][]byte{}
-
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
@@ -727,17 +695,7 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		valueExists: func(controller, owner, key []byte) (bool, error) {
-			_, ok := storedValues[string(key)]
-			return ok, nil
-		},
-		getValue: func(controller, owner, key []byte) (value []byte, err error) {
-			return storedValues[string(key)], nil
-		},
-		setValue: func(controller, owner, key, value []byte) (err error) {
-			storedValues[string(key)] = value
-			return nil
-		},
+		storage: newTestStorage(),
 		getSigningAccounts: func() []Address {
 			return []Address{{42}}
 		},
@@ -794,8 +752,6 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
       }
     `)
 
-	storedValues := map[string][]byte{}
-
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
@@ -807,17 +763,7 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		valueExists: func(controller, owner, key []byte) (bool, error) {
-			_, ok := storedValues[string(key)]
-			return ok, nil
-		},
-		getValue: func(controller, owner, key []byte) (value []byte, err error) {
-			return storedValues[string(key)], nil
-		},
-		setValue: func(controller, owner, key, value []byte) (err error) {
-			storedValues[string(key)] = value
-			return nil
-		},
+		storage: newTestStorage(),
 		getSigningAccounts: func() []Address {
 			return []Address{{42}}
 		},
@@ -886,8 +832,6 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
       }
     `)
 
-	storedValues := map[string][]byte{}
-
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
@@ -901,17 +845,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		valueExists: func(controller, owner, key []byte) (bool, error) {
-			_, ok := storedValues[string(key)]
-			return ok, nil
-		},
-		getValue: func(controller, owner, key []byte) ([]byte, error) {
-			return storedValues[string(key)], nil
-		},
-		setValue: func(controller, owner, key, value []byte) error {
-			storedValues[string(key)] = value
-			return nil
-		},
+		storage: newTestStorage(),
 		getSigningAccounts: func() []Address {
 			return []Address{{42}}
 		},
@@ -1021,8 +955,6 @@ func TestRuntimeStorageChanges(t *testing.T) {
       }
     `)
 
-	storedValues := map[string][]byte{}
-
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
@@ -1034,17 +966,7 @@ func TestRuntimeStorageChanges(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		valueExists: func(controller, owner, key []byte) (exists bool, err error) {
-			_, ok := storedValues[string(key)]
-			return ok, nil
-		},
-		getValue: func(controller, owner, key []byte) (value []byte, err error) {
-			return storedValues[string(key)], nil
-		},
-		setValue: func(controller, owner, key, value []byte) (err error) {
-			storedValues[string(key)] = value
-			return nil
-		},
+		storage: newTestStorage(),
 		getSigningAccounts: func() []Address {
 			return []Address{{42}}
 		},
@@ -1168,8 +1090,6 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 
 	var loggedMessages []string
 
-	storedValues := map[string][]byte{}
-
 	runtimeInterface := &testRuntimeInterface{
 		resolveImport: func(location Location) ([]byte, error) {
 			switch location {
@@ -1179,17 +1099,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
-		valueExists: func(controller, owner, key []byte) (bool, error) {
-			_, ok := storedValues[string(key)]
-			return ok, nil
-		},
-		getValue: func(controller, owner, key []byte) ([]byte, error) {
-			return storedValues[string(key)], nil
-		},
-		setValue: func(controller, owner, key, value []byte) (err error) {
-			storedValues[string(key)] = value
-			return nil
-		},
+		storage: newTestStorage(),
 		getSigningAccounts: func() []Address {
 			return []Address{address}
 		},
@@ -1223,12 +1133,7 @@ func TestRuntimeTransactionWithUpdateAccountCodeEmpty(t *testing.T) {
 	var events []Event
 
 	runtimeInterface := &testRuntimeInterface{
-		getValue: func(controller, owner, key []byte) (value []byte, err error) {
-			return nil, nil
-		},
-		setValue: func(controller, owner, key, value []byte) (err error) {
-			return nil
-		},
+		storage: newTestStorage(),
 		getSigningAccounts: func() []Address {
 			return []Address{{42}}
 		},
@@ -1265,12 +1170,7 @@ func TestRuntimeTransactionWithCreateAccountEmpty(t *testing.T) {
 	var events []Event
 
 	runtimeInterface := &testRuntimeInterface{
-		getValue: func(controller, owner, key []byte) (value []byte, err error) {
-			return nil, nil
-		},
-		setValue: func(controller, owner, key, value []byte) (err error) {
-			return nil
-		},
+		storage: newTestStorage(),
 		createAccount: func(publicKeys [][]byte) (address Address, err error) {
 			return Address{42}, nil
 		},
@@ -1459,12 +1359,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 				var events []Event
 
 				runtimeInterface := &testRuntimeInterface{
-					getValue: func(controller, owner, key []byte) (value []byte, err error) {
-						return nil, nil
-					},
-					setValue: func(controller, owner, key, value []byte) (err error) {
-						return nil
-					},
+					storage: newTestStorage(),
 					getSigningAccounts: func() []Address {
 						return []Address{{42}}
 					},
@@ -1521,12 +1416,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 				var events []Event
 
 				runtimeInterface := &testRuntimeInterface{
-					getValue: func(controller, owner, key []byte) (value []byte, err error) {
-						return nil, nil
-					},
-					setValue: func(controller, owner, key, value []byte) (err error) {
-						return nil
-					},
+					storage: newTestStorage(),
 					createAccount: func(publicKeys [][]byte) (address Address, err error) {
 						return Address{42}, nil
 					},
@@ -1601,7 +1491,6 @@ func TestRuntimeContractAccount(t *testing.T) {
 		ArrayValueFromBytes(contract).String(),
 	))
 
-	storedValues := map[string][]byte{}
 	var accountCode []byte
 	var events []Event
 
@@ -1609,13 +1498,7 @@ func TestRuntimeContractAccount(t *testing.T) {
 		resolveImport: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		getValue: func(controller, owner, key []byte) (value []byte, err error) {
-			return storedValues[string(key)], nil
-		},
-		setValue: func(controller, owner, key, value []byte) (err error) {
-			storedValues[string(key)] = value
-			return nil
-		},
+		storage: newTestStorage(),
 		getSigningAccounts: func() []Address {
 			return []Address{addressValue.ToAddress()}
 		},
@@ -1695,7 +1578,6 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 		ArrayValueFromBytes(contract).String(),
 	))
 
-	storedValues := map[string][]byte{}
 	var accountCode []byte
 	var loggedMessage string
 
@@ -1703,17 +1585,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 		resolveImport: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		valueExists: func(controller, owner, key []byte) (bool, error) {
-			_, ok := storedValues[string(key)]
-			return ok, nil
-		},
-		getValue: func(controller, owner, key []byte) (value []byte, err error) {
-			return storedValues[string(key)], nil
-		},
-		setValue: func(controller, owner, key, value []byte) (err error) {
-			storedValues[string(key)] = value
-			return nil
-		},
+		storage: newTestStorage(),
 		getSigningAccounts: func() []Address {
 			return []Address{addressValue}
 		},
@@ -1901,13 +1773,8 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
       }
     `)
 
-	storedValues := map[string][]byte{}
 	accountCodes := map[string][]byte{}
 	var events []Event
-
-	storageKey := func(owner, controller, key string) string {
-		return strings.Join([]string{owner, controller, key}, "|")
-	}
 
 	signerAccount := address1Value
 
@@ -1916,17 +1783,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
 		},
-		valueExists: func(controller, owner, key []byte) (bool, error) {
-			_, ok := storedValues[storageKey(string(controller), string(owner), string(key))]
-			return ok, nil
-		},
-		getValue: func(controller, owner, key []byte) (value []byte, err error) {
-			return storedValues[storageKey(string(controller), string(owner), string(key))], nil
-		},
-		setValue: func(controller, owner, key, value []byte) (err error) {
-			storedValues[storageKey(string(controller), string(owner), string(key))] = value
-			return nil
-		},
+		storage: newTestStorage(),
 		getSigningAccounts: func() []Address {
 			return []Address{signerAccount}
 		},
@@ -2019,13 +1876,8 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
       }
     `)
 
-	storedValues := map[string][]byte{}
 	accountCodes := map[string][]byte{}
 	var events []Event
-
-	storageKey := func(owner, controller, key string) string {
-		return strings.Join([]string{owner, controller, key}, "|")
-	}
 
 	signerAccount := address1Value
 
@@ -2034,17 +1886,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
 		},
-		valueExists: func(controller, owner, key []byte) (bool, error) {
-			_, ok := storedValues[storageKey(string(controller), string(owner), string(key))]
-			return ok, nil
-		},
-		getValue: func(controller, owner, key []byte) (value []byte, err error) {
-			return storedValues[storageKey(string(controller), string(owner), string(key))], nil
-		},
-		setValue: func(controller, owner, key, value []byte) (err error) {
-			storedValues[storageKey(string(controller), string(owner), string(key))] = value
-			return nil
-		},
+		storage: newTestStorage(),
 		createAccount: func(publicKeys [][]byte) (address Address, err error) {
 			return address2Value, nil
 		},
@@ -2154,13 +1996,8 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 		)
 	}
 
-	storedValues := map[string][]byte{}
 	accountCodes := map[string][]byte{}
 	var events []Event
-
-	storageKey := func(owner, controller, key string) string {
-		return strings.Join([]string{owner, controller, key}, "|")
-	}
 
 	var nextAccount byte = 0x2
 
@@ -2169,17 +2006,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
 		},
-		valueExists: func(controller, owner, key []byte) (bool, error) {
-			_, ok := storedValues[storageKey(string(controller), string(owner), string(key))]
-			return ok, nil
-		},
-		getValue: func(controller, owner, key []byte) (value []byte, err error) {
-			return storedValues[storageKey(string(controller), string(owner), string(key))], nil
-		},
-		setValue: func(controller, owner, key, value []byte) (err error) {
-			storedValues[storageKey(string(controller), string(owner), string(key))] = value
-			return nil
-		},
+		storage: newTestStorage(),
 		createAccount: func(publicKeys [][]byte) (address Address, err error) {
 			result := interpreter.NewAddressValueFromBytes([]byte{nextAccount})
 			nextAccount++
@@ -2382,7 +2209,6 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 				),
 			)
 
-			storedValues := map[string][]byte{}
 			var accountCode []byte
 			var events []Event
 
@@ -2390,13 +2216,7 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 				resolveImport: func(_ Location) (bytes []byte, err error) {
 					return accountCode, nil
 				},
-				getValue: func(controller, owner, key []byte) (value []byte, err error) {
-					return storedValues[string(key)], nil
-				},
-				setValue: func(controller, owner, key, value []byte) (err error) {
-					storedValues[string(key)] = value
-					return nil
-				},
+				storage: newTestStorage(),
 				getSigningAccounts: func() []Address {
 					return []Address{addressValue.ToAddress()}
 				},
