@@ -3327,7 +3327,10 @@ func (*FunctionType) IsResourceType() bool {
 func (t *FunctionType) IsInvalidType() bool {
 
 	for _, typeParameter := range t.TypeParameters {
-		if typeParameter.TypeBound.IsInvalidType() {
+
+		if typeParameter.TypeBound != nil &&
+			typeParameter.TypeBound.IsInvalidType() {
+
 			return true
 		}
 	}
