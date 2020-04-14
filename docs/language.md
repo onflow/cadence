@@ -5145,7 +5145,7 @@ The syntax of a restriced type is `T{U1, U2, ... Un}`,
 where `T` is the restricted type, a concrete resource or strucure type,
 and the types `U1` to `Un` are the restrictions, interfaces that `T` conforms to.
 
-Only the members and functions of the union of the restrictions are available.
+Only the members and functions of the union of the set of restrictions are available.
 
 Restricted types are useful for increasing the safety in functions
 that are suposed to only work on a subset of the type.
@@ -5155,73 +5155,94 @@ If the function accidentally attempts to access other functionality,
 this is prevented by the static checker.
 
 ```cadence,file=restricted-types.cdc
-// Declare a resource interface named `Named`, which has a read-only `name` field
+// Declare a resource interface named `HasCount`,
+// which has a read-only `count` field
 //
-resource interface Named {
-    let name: String
+resource interface HasCount {
+    let count: Int
 }
 
-// Declare a resource named `PreciousItem`, which has a writeable `name` field,
-// and conforms to the resource interface `Named`
+// Declare a resource named `Counter`, which has a writeable `count` field,
+// and conforms to the resource interface `HasCount`
 //
-resource PreciousItem: Named {
-    var name: String
+pub resource Counter: HasCount {
+    var count: Int
 
-    init(name: String) {
-        self.name = name
+    init(count: Int) {
+        self.count = count
+    }
+
+    fun increment() {
+        self.count = self.count + 1
     }
 }
 
-// Create an instance of the resource `PreciousItem`
-let item: @PreciousItem <- create PreciousItem(name: "1")
+// Create an instance of the resource `Counter`
+let counter: @Counter <- create Counter(count: 42)
 
-// Change the name of the item
-item.name = "2"
+counterRef.count  // is `42`
 
-// Move the resource in variable `item` to a new variable `restrictedItem`,
-// but typed with the restricted type `PreciousItem{Named}`:
-// The variable may hold any `PreciousItem`, but only the functionality
-// defined in the restriction `Named` may be accessed
+counterRef.increment()
+
+counterRef.count  // is `43`
+
+// Move the resource in variable `counter` to a new variable `restrictedCounter`,
+// but typed with the restricted type `Counter{HasCount}`:
+// The variable may hold any `Counter`, but only the functionality
+// defined in the given restriction, the interface `HasCount`, may be accessed
 //
-let restrictedItem: @PreciousItem{Named} <- item
+let restrictedCounter: @Counter{Count} <- counter
 
-// Invalid: Only functionality of restriction `Named` is available,
-// i.e. the field `name` is read-only
+// Invalid: Only functionality of restriction `Count` is available,
+// i.e. the read-only field `count`, but not the function `increment` of `Counter`
 //
-restrictedItem.name = "3"
+restrictedCounter.increment()
 
-let unrestrictedItem: @PreciousItem <- restrictedItem
-
-// Valid: Resource is unrestricted
+// Move the resource in variable `restrictedCounter` to a new variable `unrestrictedCounter`,
+// again typed as `Counter`, i.e. all functionality of the counter is available
 //
-againUnrestrictedItem.name = "3"
+let unrestrictedCounter: @Counter <- restrictedCounter
 
-// Declare another resource type named `AnotherResource`
-// which implemented the resource interface `Named`
+// Valid: The variable `unrestrictedCounter` has type `Counter`,
+// so all its functionality is available, including the function `increment`
 //
-resource AnotherResource: Named {
-    var name: String
+unrestrictedCounter.increment()
 
-    init(name: String) {
-        self.name = name
+// Declare another resource type named `Strings`
+// which implements the resource interface `HasCount`
+//
+resource Strings: HasCount {
+    var count: Int
+    access(self) var strings: [String]
+
+    init() {
+        self.count = 0
+        self.strings = []
+    }
+
+    fun append(_ string: String) {
+        self.strings.append(string)
+        self.count = self.count + 1
     }
 }
 
-// Invalid: The resource type `AnotherResource` is not compatible
-// with the restricted type `PreciousItem{Named}`.
-// Even though it implements the resource interface `Named`,
-// it is not compatible with `PreciousItem`
-//s
-let item2: @PreciousItem{Named} <- create AnotherResource(name: "other")
+// Invalid: The resource type `Strings` is not compatible
+// with the restricted type `Counter{HasCount}`.
+// Even though the resource `Strings` implements the resource interface `HasCount`,
+// it is not compatible with `Counter`
+//
+let counter2: @Counter{HasCount} <- create Strings()
 ```
 
-In addition to restricting concrete types is also possible to restrict the built-in types
-`AnyStruct`, the supertype of all structures, and `AnyResource`, the supertype of all resources.
-For example, restricted type `AnyResource{Named}` is any resource type
-for which only the functionality of the `Named` resource interface can be used.
+In addition to restricting concrete types is also possible
+to restrict the built-in types `AnyStruct`, the supertype of all structures,
+and `AnyResource`, the supertype of all resources.
+For example, restricted type `AnyResource{HasCount}` is any resource type
+for which only the functionality of the `HasCount` resource interface can be used.
 
 The restricted types `AnyStruct` and `AnyResource` can be ommited.
-For example, the type `{Named}` is any resource that implements the resource interface `Named`.
+For example, the type `{HasCount}` is any resource that implements
+the resource interface `HasCount`.
 
 ```cadence,file=restricted-types-anyresource.cdc
 struct interface HasID {
@@ -5236,7 +5257,7 @@ struct A: HasID {
     }
 }
 
-struct B: HasIDID {
+struct B: HasID {
     let name: String
 
     init(name: String) {
