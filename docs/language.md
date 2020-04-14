@@ -5137,7 +5137,142 @@ struct Point: Hashable {
 
 ## Restricted Types
 
-<!-- TODO -->
+Structure and resource types can be **restricted**. Restrictions are interfaces.
+Restricted types only allow access to a subset of the members and functions
+of the type that is restricted, indicated by the restrictions.
+
+The syntax of a restriced type is `T{U1, U2, ... Un}`,
+where `T` is the restricted type, a concrete resource or strucure type,
+and the types `U1` to `Un` are the restrictions, interfaces that `T` conforms to.
+
+Only the members and functions of the union of the restrictions are available.
+
+Restricted types are useful for increasing the safety in functions
+that are suposed to only work on a subset of the type.
+For example, by using a restricted type for a parameter's type,
+the function may only access the functionality of the restriction:
+If the function accidentally attempts to access other functionality,
+this is prevented by the static checker.
+
+```cadence,file=restricted-types.cdc
+// Declare a resource interface named `Named`, which has a read-only `name` field
+//
+resource interface Named {
+    let name: String
+}
+
+// Declare a resource named `PreciousItem`, which has a writeable `name` field,
+// and conforms to the resource interface `Named`
+//
+resource PreciousItem: Named {
+    var name: String
+
+    init(name: String) {
+        self.name = name
+    }
+}
+
+// Create an instance of the resource `PreciousItem`
+let item: @PreciousItem <- create PreciousItem(name: "1")
+
+// Change the name of the item
+item.name = "2"
+
+// Move the resource in variable `item` to a new variable `restrictedItem`,
+// but typed with the restricted type `PreciousItem{Named}`:
+// The variable may hold any `PreciousItem`, but only the functionality
+// defined in the restriction `Named` may be accessed
+//
+let restrictedItem: @PreciousItem{Named} <- item
+
+// Invalid: Only functionality of restriction `Named` is available,
+// i.e. the field `name` is read-only
+//
+restrictedItem.name = "3"
+
+let unrestrictedItem: @PreciousItem <- restrictedItem
+
+// Valid: Resource is unrestricted
+//
+againUnrestrictedItem.name = "3"
+
+// Declare another resource type named `AnotherResource`
+// which implemented the resource interface `Named`
+//
+resource AnotherResource: Named {
+    var name: String
+
+    init(name: String) {
+        self.name = name
+    }
+}
+
+// Invalid: The resource type `AnotherResource` is not compatible
+// with the restricted type `PreciousItem{Named}`.
+// Even though it implements the resource interface `Named`,
+// it is not compatible with `PreciousItem`
+//s
+let item2: @PreciousItem{Named} <- create AnotherResource(name: "other")
+```
+
+In addition to restricting concrete types is also possible to restrict the built-in types
+`AnyStruct`, the supertype of all structures, and `AnyResource`, the supertype of all resources.
+For example, restricted type `AnyResource{Named}` is any resource type
+for which only the functionality of the `Named` resource interface can be used.
+
+The restricted types `AnyStruct` and `AnyResource` can be ommited.
+For example, the type `{Named}` is any resource that implements the resource interface `Named`.
+
+```cadence,file=restricted-types-anyresource.cdc
+struct interface HasID {
+    let id: String
+}
+
+struct A: HasID {
+    let name: String
+
+    init(name: String) {
+        self.name = name
+    }
+}
+
+struct B: HasIDID {
+    let name: String
+
+    init(name: String) {
+        self.name = name
+    }
+}
+
+// Create two instances, one of type `A`, and one of type `B`.
+// Both types conform to interface `HasID`, so the structs can be assigned
+// to variables with type `AnyResource{HasID}`: Some resource type which only allows
+// access to the functionality of resource interface `HasID`
+
+let hasID1: AnyStruct{HasID} = A(name: "1")
+let hasID2: AnyStruct{HasID} = B(name: "2")
+
+// Declare a function named `getID` which has one parameter with type `{HasID}`.
+// The type `{HasID}` is a short-hand for `AnyStruct{HasID}`:
+// Some structure which only allows access to the functionality of interface `HasID`.
+//
+fun getID(_ value: {HasID}): String {
+    return value.id
+}
+
+let id1 = getID(hasID1)
+// `id1` is "1"
+
+let id2 = getID(hasID2)
+// `id2` is "2"
+```
+
+Only concrete types may be restriced, e.g., the restricted type may not be an array,
+the type `[T]{U}` is invalid.
+
+Restricted types are also useful when giving access to resources and structures
+to potentially untrusted third-party programs through [references](#references),
+which are discussed in the next section.
 
 ## References
 
