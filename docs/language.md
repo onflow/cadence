@@ -6,7 +6,8 @@
 
 ## Introduction
 
-The Cadence Programming Language is a new high-level programming language intended for smart contract development.
+The Cadence Programming Language is a new high-level programming language
+intended for smart contract development.
 
 The language's goals are, in order of importance:
 
@@ -460,12 +461,16 @@ let b = x + 1000000000000000000000000
 
 ### Fixed-Point Numbers
 
+> 🚧 Status: Currently only the 64-bit wide `Fix64` and `UFix64` types are available.
+> More fixed-point number types will be added in a future release.
+
 Fixed-point numbers are useful for representing fractional values.
 They have a fixed number of digits after decimal point.
 
 They are essentially integers which are scaled by a factor.
 For example, the value 1.23 can be represented as 1230 with a scaling factor of 1/1000.
-The scaling factor is the same for all values of the same type and stays the same during calculations.
+The scaling factor is the same for all values of the same type
+and stays the same during calculations.
 
 Fixed-point numbers in Cadence have a scaling factor with a power of 10, instead of a power of 2,
 i.e. they are decimal, not binary.
@@ -811,7 +816,6 @@ The force-assignment operator is only used for
 [resource types](#resources) and the move operator (`<-`),
 which are covered the resources section of this document.
 
-
 #### Conditional Downcasting Operator
 
 > 🚧 Status: The conditional downcasting operator `as?` is implemented,
@@ -928,7 +932,9 @@ let thumbsUpText =
     "This is the first line.\nThis is the second line with an emoji: \u{1F44D}"
 ```
 
-The type `Character` represents a single, human-readable character. Characters are extended grapheme clusters, which consist of one or more Unicode scalars.
+The type `Character` represents a single, human-readable character.
+Characters are extended grapheme clusters,
+which consist of one or more Unicode scalars.
 
 For example, the single character `ü` can be represented
 in several ways in Unicode.
@@ -1092,11 +1098,13 @@ This is safe because arrays are value types and not reference types.
 #### Array Indexing
 
 To get the element of an array at a specific index, the indexing syntax can be used:
-The array is followed by an opening square bracket `[`, the indexing value, and ends with a closing square bracket `]`.
+The array is followed by an opening square bracket `[`, the indexing value,
+and ends with a closing square bracket `]`.
 
 Indexes start at 0 for the first element in the array.
 
-Accessing an element which is out of bounds results in a fatal error at run-time and aborts the program.
+Accessing an element which is out of bounds results in a fatal error at run-time
+and aborts the program.
 
 ```cadence,file=arrays-indexing.cdc
 // Declare an array of integers.
@@ -1707,8 +1715,10 @@ The result is always the same type as the arguments.
 
 The division and remainder operators abort the program when the divisor is zero.
 
-Arithmetic operations on the signed integer types `Int8`, `Int16`, `Int32`, `Int64`, `Int128`, `Int256`,
-and on the unsigned integer types `UInt8`, `UInt16`, `UInt32`, `UInt64`, `UInt128`, `UInt256`,
+Arithmetic operations on the signed integer types
+`Int8`, `Int16`, `Int32`, `Int64`, `Int128`, `Int256`,
+and on the unsigned integer types
+`UInt8`, `UInt16`, `UInt32`, `UInt64`, `UInt128`, `UInt256`,
 do not cause values to overflow or underflow.
 
 ```cadence,file=operator-add-overflow.cdc
@@ -1739,7 +1749,8 @@ let a: Int8 = -128
 let b = -a
 ```
 
-Arithmetic operations on the unsigned integer types `Word8`, `Word16`, `Word32`, `Word64`
+Arithmetic operations on the unsigned integer types
+`Word8`, `Word16`, `Word32`, `Word64`
 may cause values to overflow or underflow.
 
 For example, the maximum value of an unsigned 8-bit integer is 255 (binary 11111111).
@@ -1756,7 +1767,8 @@ let a: Word8 = 255
 a + 1 // is `0`
 ```
 
-Similarly, for the minimum value 0, subtracting 1 wraps around and results in the maximum value 255.
+Similarly, for the minimum value 0,
+subtracting 1 wraps around and results in the maximum value 255.
 
 ```cadence,file=operator-minus.cdc
 //    00000000
@@ -2360,7 +2372,8 @@ test()  // is `2`
 When arguments are passed to a function, they are copied.
 Therefore, values that are passed into a function
 are unchanged in the caller's scope when the function returns.
-This behavior is known as [call-by-value](https://en.wikipedia.org/w/index.php?title=Evaluation_strategy&oldid=896280571#Call_by_value).
+This behavior is known as
+[call-by-value](https://en.wikipedia.org/w/index.php?title=Evaluation_strategy&oldid=896280571#Call_by_value).
 
 ```cadence,file=function-change.cdc
 // Declare a function that changes the first two elements
@@ -2393,13 +2406,23 @@ fun test(x: Int) {
 
 ### Function Preconditions and Postconditions
 
-Functions may have preconditions and may have postconditions. Preconditions and postconditions can be used to restrict the inputs (values for parameters) and output (return value) of a function.
+Functions may have preconditions and may have postconditions.
+Preconditions and postconditions can be used to restrict the inputs (values for parameters)
+and output (return value) of a function.
 
-Preconditions must be true right before the execution of the function. Preconditions are part of the function and introduced by the `pre` keyword, followed by the condition block.
+Preconditions must be true right before the execution of the function.
+Preconditions are part of the function and introduced by the `pre` keyword,
+followed by the condition block.
 
-Postconditions must be true right after the execution of the function. Postconditions are part of the function and introduced by the `post` keyword, followed by the condition block. Postconditions may only occur after preconditions, if any.
+Postconditions must be true right after the execution of the function.
+Postconditions are part of the function and introduced by the `post` keyword,
+followed by the condition block.
+Postconditions may only occur after preconditions, if any.
 
-A conditions block consists of one or more conditions. Conditions are expressions evaluating to a boolean. They may not call functions, i.e., they cannot have side-effects and must be pure expressions. Also, conditions may not contain function expressions.
+A conditions block consists of one or more conditions.
+Conditions are expressions evaluating to a boolean.
+They may not call functions, i.e., they cannot have side-effects and must be pure expressions.
+Also, conditions may not contain function expressions.
 
 <!--
 
@@ -2410,7 +2433,10 @@ See https://github.com/dapperlabs/flow-go/issues/70
 
 -->
 
-Conditions may be written on separate lines, or multiple conditions can be written on the same line, separated by a semicolon. This syntax follows the syntax for [statements](#semicolons).
+Conditions may be written on separate lines,
+or multiple conditions can be written on the same line,
+separated by a semicolon.
+This syntax follows the syntax for [statements](#semicolons).
 
 Following each condition, an optional description can be provided after a colon.
 The condition description is used as an error message when the condition fails.
@@ -2441,12 +2467,14 @@ fun factorial(_ n: Int): Int {
 
 factorial(5)  // is `120`
 
-// Run-time error: The given argument does not satisfy the precondition `n >= 0` of the function, the program aborts.
+// Run-time error: The given argument does not satisfy
+// the precondition `n >= 0` of the function, the program aborts.
 //
 factorial(-2)
 ```
 
-In postconditions, the special function `before` can be used to get the value of an expression just before the function is called.
+In postconditions, the special function `before` can be used
+to get the value of an expression just before the function is called.
 
 ```cadence,file=function-increment.cdc
 var n = 0
@@ -2494,8 +2522,10 @@ if (a != 0) {
 // `b` is `1`
 ```
 
-An additional, optional else-clause can be added to execute another piece of code when the condition is false.
-The else-clause is introduced by the `else` keyword followed by braces that contain the code that should be executed.
+An additional, optional else-clause can be added to execute another piece of code
+when the condition is false.
+The else-clause is introduced by the `else` keyword followed by braces
+that contain the code that should be executed.
 
 ```cadence,file=control-flow-if-else.cdc
 let a = 0
@@ -2543,9 +2573,14 @@ if a == 1 {
 Optional binding allows getting the value inside an optional.
 It is a variant of the if-statement.
 
-If the optional contains a value, the first branch is executed and a temporary constant or variable is declared and set to the value contained in the optional; otherwise, the else branch (if any) is executed.
+If the optional contains a value, the first branch is executed
+and a temporary constant or variable is declared and set to the value contained in the optional;
+otherwise, the else branch (if any) is executed.
 
-Optional bindings are declared using the `if` keyword like an if-statement, but instead of the boolean test value, it is followed by the `let` or `var` keywords, to either introduce a constant or variable, followed by a name, the equal sign (`=`), and the optional value.
+Optional bindings are declared using the `if` keyword like an if-statement,
+but instead of the boolean test value, it is followed by the `let` or `var` keywords,
+to either introduce a constant or variable, followed by a name,
+the equal sign (`=`), and the optional value.
 
 ```cadence,file=control-flow-optional-binding-not-nil.cdc
 let maybeNumber: Int? = 1
@@ -2573,7 +2608,8 @@ if let number = noNumber {
 
 #### while-statement
 
-While-statements allow a certain piece of code to be executed repeatedly, as long as a condition remains true.
+While-statements allow a certain piece of code to be executed repeatedly,
+as long as a condition remains true.
 
 The while-statement starts with the `while` keyword, followed by the condition,
 and the code that should be repeatedly
@@ -2627,7 +2663,8 @@ for element in array {
 
 #### continue and break
 
-In for-loops and while-loops, the `continue` statement can be used to stop the current iteration of a loop and start the next iteration.
+In for-loops and while-loops, the `continue` statement can be used to stop
+the current iteration of a loop and start the next iteration.
 
 ```cadence,file=control-flow-continue.cdc
 var i = 0
@@ -2683,7 +2720,10 @@ for element in array {
 
 ### Immediate function return: return-statement
 
-The return-statement causes a function to return immediately, i.e., any code after the return-statement is not executed. The return-statement starts with the `return` keyword and is followed by an optional expression that should be the return value of the function call.
+The return-statement causes a function to return immediately,
+i.e., any code after the return-statement is not executed.
+The return-statement starts with the `return` keyword
+and is followed by an optional expression that should be the return value of the function call.
 
 <!--
 TODO: examples
@@ -2695,7 +2735,8 @@ TODO: examples
 
 ## Scope
 
-Every function and block (`{` ... `}`) introduces a new scope for declarations. Each function and block can refer to declarations in its scope or any of the outer scopes.
+Every function and block (`{` ... `}`) introduces a new scope for declarations.
+Each function and block can refer to declarations in its scope or any of the outer scopes.
 
 ```cadence,file=scope.cdc
 let x = 10
@@ -2775,7 +2816,9 @@ f()  // is `2`
 The Cadence programming language is a *type-safe* language.
 
 When assigning a new value to a variable, the value must be the same type as the variable.
-For example, if a variable has type `Bool`, it can *only* be assigned a value that has type `Bool`, and not for example a value that has type `Int`.
+For example, if a variable has type `Bool`,
+it can *only* be assigned a value that has type `Bool`,
+and not for example a value that has type `Int`.
 
 ```cadence,file=type-safety-assign-int-to-bool.cdc
 // Declare a variable that has type `Bool`.
@@ -2786,7 +2829,11 @@ var a = true
 a = 0
 ```
 
-When passing arguments to a function, the types of the values must match the function parameters' types. For example, if a function expects an argument that has type `Bool`, *only* a value that has type `Bool` can be provided, and not for example a value which has type `Int`.
+When passing arguments to a function,
+the types of the values must match the function parameters' types.
+For example, if a function expects an argument that has type `Bool`,
+*only* a value that has type `Bool` can be provided,
+and not for example a value which has type `Int`.
 
 ```cadence,file=type-safety-nand.cdc
 fun nand(_ a: Bool, _ b: Bool): Bool {
@@ -2927,7 +2974,8 @@ Each field may have a different type.
 Composite types can only be declared within a [contract](#contracts) and nowhere else.
 
 There are two kinds of composite types.
-The kinds differ in their usage and the behaviour when a value is used as the initial value for a constant or variable,
+The kinds differ in their usage and the behaviour
+when a value is used as the initial value for a constant or variable,
 when the value is assigned to a variable,
 when the value is passed as an argument to a function,
 and when the value is returned from a function:
@@ -2938,17 +2986,27 @@ and when the value is returned from a function:
 
 - [**Resources**](#resources) are **moved**, they are linear types and **must** be used **exactly once**.
 
-    Resources are useful when it is desired to model ownership (a value exists exactly in one location and it should not be lost).
+    Resources are useful when it is desired to model ownership
+    (a value exists exactly in one location and it should not be lost).
 
-    Certain constructs in a blockchain represent assets of real, tangible value, as much as a house or car or bank account.
-    We have to worry about literal loss and theft, perhaps even on the scale of millions of dollars.
+    Certain constructs in a blockchain represent assets of real, tangible value,
+    as much as a house or car or bank account.
+    We have to worry about literal loss and theft,
+    perhaps even on the scale of millions of dollars.
 
     Structures are not an ideal way to represent this ownership because they are copied.
-    This would mean that there could be a risk of having multiple copies of certain assets floating around, which breaks the scarcity requirements needed for these assets to have real value.
+    This would mean that there could be a risk of having multiple copies
+    of certain assets floating around,
+    which breaks the scarcity requirements needed for these assets to have real value.
 
-    A structure is much more useful for representing information that can be grouped together in a logical way, but doesn't have value or a need to be able to be owned or transferred.
+    A structure is much more useful for representing information
+    that can be grouped together in a logical way,
+    but doesn't have value or a need to be able to be owned or transferred.
 
-    A structure could for example be used to contain the information associated with a division of a company, but a resource would be used to represent the assets that have been allocated to that organization for spending.
+    A structure could for example be used to contain the information associated
+    with a division of a company,
+    but a resource would be used to represent the assets that have been allocated
+    to that organization for spending.
 
 Nesting of resources is only allowed within other resource types,
 or in data structures like arrays and dictionaries,
@@ -2956,7 +3014,9 @@ but not in structures, as that would allow resources to be copied.
 
 ### Composite Type Declaration and Creation
 
-Structures are declared using the `struct` keyword and resources are declared using the `resource` keyword. The keyword is followed by the name.
+Structures are declared using the `struct` keyword
+and resources are declared using the `resource` keyword.
+The keyword is followed by the name.
 
 ```cadence,file=composite-type-declaration.cdc
 pub struct SomeStruct {
@@ -2984,9 +3044,11 @@ Composite types can only be declared within [contracts](#contracts)
 and not locally in functions.
 They can also not be nested.
 
-Resource must be created (instantiated) by using the `create` keyword and calling the type like a function.
+Resource must be created (instantiated) by using the `create` keyword
+and calling the type like a function.
 
-Resources can only be created in functions and types that are declared in the same contract in which the resource is declared.
+Resources can only be created in functions and types
+that are declared in the same contract in which the resource is declared.
 
 ```cadence,file=resource-instantiation.cdc
 // instantiate a new resource object and assign it to a constant
@@ -3037,7 +3099,8 @@ There are three kinds of fields:
     Synthetic fields are declared using the `synthetic` keyword.
 
     Synthetic fields must have a getter and a setter.
-    Getters and setters are explained in the [next section](#composite-type-field-getters-and-setters).
+    Getters and setters are explained in the
+    [next section](#composite-type-field-getters-and-setters).
     Synthetic fields are explained in a [separate section](#synthetic-composite-type-fields).
 
 | Field Kind           | Stored in memory | Assignable         | Keyword     |
@@ -3143,7 +3206,8 @@ to the storage of another account, and when it is moved out of account storage.
 
 > 🚧 Status: Initializer overloading is not implemented yet.
 
-Initializers support overloading. This allows for example providing default values for certain parameters.
+Initializers support overloading.
+This allows for example providing default values for certain parameters.
 
 ```cadence,file=composite-type-initializer-overloading.cdc
 // Declare a structure named `Token`, which has a constant field
@@ -3241,7 +3305,9 @@ pub struct SetterExample {
 let example = SetterExample(balance: 10)
 // `example.balance` is `10`
 
-// Run-time error: The precondition of the setter for the field `balance` fails, the program aborts.
+// Run-time error: The precondition of the setter for the field `balance` fails,
+// the program aborts.
+//
 example.balance = -50
 ```
 
@@ -3621,7 +3687,8 @@ let six = value!.setAndReturn(new: 6)
 
 #### Resources
 
-Resources are types that can only exist in **one** location at a time and **must** be used **exactly once**.
+Resources are types that can only exist in **one** location at a time
+and **must** be used **exactly once**.
 
 Resources **must** be created (instantiated) by using the `create` keyword.
 
@@ -3850,9 +3917,11 @@ pub fun returnBeforeDestroy(: Bool) {
 
 #### Resource Variables
 
-Resource variables cannot be assigned to as that would lead to the loss of the variable's current resource value.
+Resource variables cannot be assigned to,
+as that would lead to the loss of the variable's current resource value.
 
-Instead, use a swap statement (`<->`) or shift statement (`<- target <-`) to replace the resource variable with another resource.
+Instead, use a swap statement (`<->`) or shift statement (`<- target <-`)
+to replace the resource variable with another resource.
 
 ```cadence,file=resource-variable-invalid-assignment.cdc
 pub resource R {}
@@ -3988,10 +4057,11 @@ let test = makeCloner(resource: <-create R())
 #### Resources in Arrays and Dictionaries
 
 Arrays and dictionaries behave differently when they contain resources:
-Indexing into an array to read an element at a certain index or assign to it,
-or indexing into a dictionary to read a value for a certain key or set a value for the key is **not** allowed.
+It is **not** allowed to index into an array to read an element at a certain index or assign to it,
+or index into a dictionary to read a value for a certain key or set a value for the key.
 
-Instead, use a swap statement (`<->`) or shift statement (`<- target <-`) to replace the accessed resource with another resource.
+Instead, use a swap statement (`<->`) or shift statement (`<- target <-`)
+to replace the accessed resource with another resource.
 
 ```cadence,file=resource-in-array.cdc
 resource R {}
@@ -4265,7 +4335,6 @@ a declaration can be accessed or called.
 
 **Access level must be specified for each declaration**
 
-
 The `(set)` suffix can be used to make variables also publicly writable.
 
 To summarize the behavior for variable declarations, constant declarations, and fields:
@@ -4426,14 +4495,18 @@ must always be at least public.
 Variable field requirements may be annotated
 to require them to be publicly settable.
 
-Function requirements consist of the name of the function, parameter types, an optional return type,
+Function requirements consist of the name of the function,
+parameter types, an optional return type,
 and optional preconditions and postconditions.
 
 Field requirements consist of the name and the type of the field.
-Field requirements may optionally declare a getter requirement and a setter requirement, each with preconditions and postconditions.
+Field requirements may optionally declare a getter requirement and a setter requirement,
+each with preconditions and postconditions.
 
-Calling functions with preconditions and postconditions on interfaces instead of concrete implementations can improve the security of a program,
-as it ensures that even if implementations change, some aspects of them will always hold.
+Calling functions with preconditions and postconditions on interfaces
+instead of concrete implementations can improve the security of a program,
+as it ensures that even if implementations change,
+some aspects of them will always hold.
 
 ### Interface Declaration
 
@@ -4451,7 +4524,8 @@ a variable field, a constant field, or a synthetic field.
 
 Field requirements and function requirements must specify the required level of access.
 The access must be at least be public, so the `pub` keyword must be provided.
-Variable field requirements can be specified to also be publicly settable by using the `pub(set)` keyword.
+Variable field requirements can be specified to also be publicly settable
+by using the `pub(set)` keyword.
 
 ```cadence,file=interface-declaration.cdc
 // Declare a resource interface for a fungible token.
@@ -4556,7 +4630,8 @@ is done in the type declaration of the composite type (e.g., structure, resource
 The kind and the name of the composite type is followed by a colon (`:`)
 and the name of one or more interfaces that the composite type implements.
 
-This will tell the checker to enforce any requirements from the specified interfaces onto the declared type.
+This will tell the checker to enforce any requirements from the specified interfaces
+onto the declared type.
 
 A type implements (conforms to) an interface if it declares
 the implementation in its signature, provides field declarations
@@ -4672,7 +4747,8 @@ token.withdraw(amount: 100)
 token.withdraw(amount: 90)
 ```
 
-The access level for variable fields in an implementation may be less restrictive than the interface requires.
+The access level for variable fields in an implementation
+may be less restrictive than the interface requires.
 For example, an interface may require a field to be
 at least public (i.e. the `pub` keyword is specified),
 and an implementation may provide a variable field which is public,
@@ -4705,7 +4781,8 @@ pub struct AnImplementation: AnInterface {
 ### Interface Type
 
 Interfaces are types.
-Values implementing an interface can be used as initial values for constants and variables that have the interface as their type.
+Values implementing an interface can be used as initial values
+for constants and variables that have the interface as their type.
 
 ```cadence,file=interface-type.cdc
 // Declare an interface named `Shape`.
@@ -4797,7 +4874,9 @@ shape = Square(length: 30)
 let rectangle: Rectangle = Square(length: 10)
 ```
 
-Fields declared in an interface can be accessed and functions declared in an interface can be called on values of a type that implements the interface.
+Fields declared in an interface can be accessed
+and functions declared in an interface
+can be called on values of a type that implements the interface.
 
 ```cadence,file=interface-type-fields-and-functions.cdc
 // Declare a constant which has the type `Shape`.
@@ -6096,9 +6175,15 @@ TODO
 
 ## Built-in Functions
 
-### Transaction information
+### Block and Transaction Information
 
-There is currently no built-in function that allows getting the address of the signers of a transaction, the current block number, or timestamp.  These are being worked on.
+To get the addresses of the signers of a transaction,
+use the `address` field of each signing `AuthAccount`
+that is passed to the transaction's `prepare` block.
+
+There is currently no built-in function that allows getting the current block number,
+or timestamp.
+These are being worked on.
 
 ### `panic`
 
@@ -6106,7 +6191,8 @@ There is currently no built-in function that allows getting the address of the s
 fun panic(_ message: String): Never
 ```
 
-Terminates the program unconditionally and reports a message which explains why the unrecoverable error occurred.
+Terminates the program unconditionally
+and reports a message which explains why the unrecoverable error occurred.
 
 #### Example
 
@@ -6121,6 +6207,8 @@ let account = optionalAccount ?? panic("missing account")
 fun assert(_ condition: Bool, message: String)
 ```
 
-Terminates the program if the given condition is false, and reports a message which explains how the condition is false. Use this function for internal sanity checks.
+Terminates the program if the given condition is false,
+and reports a message which explains how the condition is false.
+Use this function for internal sanity checks.
 
 The message argument is optional.
