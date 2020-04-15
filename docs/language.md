@@ -5159,20 +5159,20 @@ this is prevented by the static checker.
 // which has a read-only `count` field
 //
 resource interface HasCount {
-    let count: Int
+    pub let count: Int
 }
 
 // Declare a resource named `Counter`, which has a writeable `count` field,
 // and conforms to the resource interface `HasCount`
 //
 pub resource Counter: HasCount {
-    var count: Int
+    pub var count: Int
 
     init(count: Int) {
         self.count = count
     }
 
-    fun increment() {
+    pub fun increment() {
         self.count = self.count + 1
     }
 }
@@ -5211,8 +5211,8 @@ unrestrictedCounter.increment()
 // Declare another resource type named `Strings`
 // which implements the resource interface `HasCount`
 //
-resource Strings: HasCount {
-    var count: Int
+pub resource Strings: HasCount {
+    pub var count: Int
     access(self) var strings: [String]
 
     init() {
@@ -5220,7 +5220,7 @@ resource Strings: HasCount {
         self.strings = []
     }
 
-    fun append(_ string: String) {
+    pub fun append(_ string: String) {
         self.strings.append(string)
         self.count = self.count + 1
     }
@@ -5245,20 +5245,20 @@ For example, the type `{HasCount}` is any resource that implements
 the resource interface `HasCount`.
 
 ```cadence,file=restricted-types-anyresource.cdc
-struct interface HasID {
-    let id: String
+pub struct interface HasID {
+    pub let id: String
 }
 
-struct A: HasID {
-    let name: String
+pub struct A: HasID {
+    pub let name: String
 
     init(name: String) {
         self.name = name
     }
 }
 
-struct B: HasID {
-    let name: String
+pub struct B: HasID {
+    pub let name: String
 
     init(name: String) {
         self.name = name
@@ -5277,7 +5277,7 @@ let hasID2: AnyStruct{HasID} = B(name: "2")
 // The type `{HasID}` is a short-hand for `AnyStruct{HasID}`:
 // Some structure which only allows access to the functionality of interface `HasID`.
 //
-fun getID(_ value: {HasID}): String {
+pub fun getID(_ value: {HasID}): String {
     return value.id
 }
 
