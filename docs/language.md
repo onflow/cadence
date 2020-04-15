@@ -5270,8 +5270,8 @@ struct B: HasID {
 // to variables with type `AnyResource{HasID}`: Some resource type which only allows
 // access to the functionality of resource interface `HasID`
 
-let hasID1: AnyStruct{HasID} = A(name: "1")
-let hasID2: AnyStruct{HasID} = B(name: "2")
+let hasID1: {HasID} = A(name: "1")
+let hasID2: {HasID} = B(name: "2")
 
 // Declare a function named `getID` which has one parameter with type `{HasID}`.
 // The type `{HasID}` is a short-hand for `AnyStruct{HasID}`:
@@ -5556,7 +5556,7 @@ to all its stored objects.
 
    The type `T` must be a supertype of the type of the loaded object.
    If it is not, the function returns `nil`.
-   The given type must not necessarily be a exactly the same as the type of the loaded object.
+   The given type must not necessarily be exactly the same as the type of the loaded object.
 
    The path must be a storage path, i.e., only the domain `storage` is allowed.
 
@@ -5571,13 +5571,14 @@ to all its stored objects.
    `T` is the type parameter for the structure type.
    A type argument for the parameter must be provided explicitly.
 
-   The type `T` must be a supertype of the type of the loaded structure.
+   The type `T` must be a supertype of the type of the copied structure.
    If it is not, the function returns `nil`.
-   The given type must not necessarily be a exactly the same as the type of the loaded object.
+   The given type must not necessarily be exactly the same as the type of the copied structure
+structure.
 
    The path must be a storage path, i.e., only the domain `storage` is allowed.
 
-```cadence,file=account-storage.cdc
+```cadence,file=account-storage-save-load-copy.cdc
 // Declare a resource named `Counter`.
 //
 resource Counter {
@@ -5588,7 +5589,7 @@ resource Counter {
     }
 }
 
-// In this example the account is available as the constant `account`.
+// In this example an authorized account is available through the constant `authAccount`.
 
 // Create a new instance of the resource type `Counter`
 // and save it in the storage of the account.
@@ -5596,11 +5597,11 @@ resource Counter {
 // The path `/storage/counter` is used to refer to the stored value.
 // Its identifier `counter` was chosen freely and could be something else.
 //
-account.save(<-create Counter(count: 42), to: /storage/counter)
+authAccount.save(<-create Counter(count: 42), to: /storage/counter)
 
 // Run-time error: Storage already contains an object under path `/storage/counter`
 //
-account.save(<-create Counter(count: 123), to: /storage/counter)
+authAccount.save(<-create Counter(count: 123), to: /storage/counter)
 
 // Load the `Counter` resource from storage path `/storage/counter`.
 //
@@ -5608,7 +5609,7 @@ account.save(<-create Counter(count: 123), to: /storage/counter)
 // and its value is the counter resource, that was saved at the beginning
 // of the example.
 //
-let counter <- account.load<@Counter>(from: /storage/counter)
+let counter <- authAccount.load<@Counter>(from: /storage/counter)
 
 // The storage is now empty, there is no longer an object stored
 // under the path `/storage/counter`.
@@ -5619,14 +5620,14 @@ let counter <- account.load<@Counter>(from: /storage/counter)
 // as nothing is stored under the path `/storage/counter` anymore,
 // because the previous load moved the counter out of storage.
 //
-let counter2 <- account.load<@Counter>(from: /storage/counter)
+let counter2 <- authAccount.load<@Counter>(from: /storage/counter)
 
 // Create another new instance of the resource type `Counter`
 // and save it in the storage of the account.
 //
 // The path `/storage/otherCounter` is used to refer to the stored value.
 //
-account.save(<-create Counter(count: 123), to: /storage/otherCounter)
+authAccount.save(<-create Counter(count: 123), to: /storage/otherCounter)
 
 // Load the `Vault` resource from storage path `/storage/otherCounter`.
 //
@@ -5634,30 +5635,30 @@ account.save(<-create Counter(count: 123), to: /storage/otherCounter)
 // as there is a resource with type `Counter` stored under the path,
 // which is not a subtype of the requested type `Vault`.
 //
-let vault <- account.load<@Vault>(from: /storage/otherCounter)
+let vault <- authAccount.load<@Vault>(from: /storage/otherCounter)
 
 // The storage still stores a `Counter` resource under the path `/storage/otherCounter`.
 
 // Save the string "Hello, World" in storage
 // under the path `/storage/helloWorldMessage`.
 
-account.save("Hello, world!", to: /storage/helloWorldMessage)
+authAccount.save("Hello, world!", to: /storage/helloWorldMessage)
 
 // Copy the stored message from storage.
 //
 // After the copy, the storage still stores the string under the path.
 // Unlike `load`, `copy` does not remove the object from storage.
 //
-let message = account.copy<String>(from: /storage/helloWorldMessage)
+let message = authAccount.copy<String>(from: /storage/helloWorldMessage)
 
 // Create a new instance of the resource type `Vault`
 // and save it in the storage of the account.
 //
-account.save(<-createEmptyVault(), to: /storage/vault)
+authAccount.save(<-createEmptyVault(), to: /storage/vault)
 
 // Invalid: Cannot copy a resource, as this would allow arbitrary duplication.
 //
-let vault <- account.copy<@Vault>(from: /storage/vault)
+let vault <- authAccount.copy<@Vault>(from: /storage/vault)
 ```
 
 As it is convenient to work with objects in storage
