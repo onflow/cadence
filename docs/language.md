@@ -4580,7 +4580,7 @@ pub resource interface FungibleToken {
     //
     // The function must return a new fungible token.
     //
-    pub fun withdraw(amount: Int): @FungibleToken {
+    pub fun withdraw(amount: Int): @{FungibleToken} {
         pre {
             amount > 0:
                 "the amount must be positive"
@@ -4606,7 +4606,7 @@ pub resource interface FungibleToken {
     // is positive, as this condition is already ensured by
     // the field requirement.
     //
-    pub fun deposit(_ token: @FungibleToken) {
+    pub fun deposit(_ token: @{FungibleToken}) {
         post {
             self.balance == before(self.balance) + token.balance:
                 "the amount must be added to the balance"
@@ -4704,9 +4704,13 @@ pub resource ExampleToken: FungibleToken {
     // NOTE: neither the precondition nor the postcondition declared
     // in the interface have to be repeated here in the implementation.
     //
-    pub fun deposit(_ token: @ExampleToken) {
-        self.balance = self.balance + token.balance
-        destroy token
+    pub fun deposit(_ token: @{FungibleToken}) {
+        if let exampleToken = token as? ExampleToken {
+            self.balance = self.balance + exampleToken.balance
+            destroy exampleToken
+        } else {
+            panic("cannot deposit token which is not an example token")
+        }
     }
 }
 
@@ -4775,7 +4779,6 @@ pub struct AnImplementation: AnInterface {
         self.a = a
     }
 }
-
 ```
 
 ### Interface Type
@@ -4858,7 +4861,7 @@ pub struct Rectangle: Shape {
 
 // Declare a constant that has type `Shape`, which has a value that has type `Rectangle`.
 //
-var shape: Shape = Rectangle(width: 10, height: 20)
+var shape: {Shape} = Rectangle(width: 10, height: 20)
 ```
 
 Values implementing an interface are assignable to variables that have the interface as their type.
@@ -4882,7 +4885,7 @@ can be called on values of a type that implements the interface.
 // Declare a constant which has the type `Shape`.
 // and is initialized with a value that has type `Rectangle`.
 //
-let shape: Shape = Rectangle(width: 2, height: 3)
+let shape: {Shape} = Rectangle(width: 2, height: 3)
 
 // Access the field `area` declared in the interface `Shape`.
 //
@@ -4957,6 +4960,8 @@ struct SomeInner: OuterInterface.InnerInterface {}
 
 ### Nested Type Requirements
 
+> 🚧 Status: Currently only contracts and contract interfaces support nested type requirements.
+
 Interfaces can require implementing types to provide concrete nested types.
 For example, a resource interface may require an implementing type to provide a resource type.
 
@@ -5009,7 +5014,7 @@ which accepts another value that the given value should be compared for equality
 
 ```cadence,file=equatable.cdc
 struct interface Equatable {
-    pub fun equals(_ other: Equatable): Bool
+    pub fun equals(_ other: {Equatable}): Bool
 }
 ```
 
@@ -5027,7 +5032,7 @@ struct Cat: Equatable {
         self.id = id
     }
 
-    pub fun equals(_ other: Equatable): Bool {
+    pub fun equals(_ other: {Equatable}): Bool {
         if let otherCat = other as? Cat {
             // Cats are equal if their identifier matches.
             //
@@ -5103,7 +5108,7 @@ struct Point: Hashable {
     // Implementing the function `equals` will allow points to be compared
     // for equality and satisfies the `Equatable` interface.
     //
-    pub fun equals(_ other: Point): Bool {
+    pub fun equals(_ other: {Equatable}): Bool {
         if let otherPoint = other as? Point {
             // Points are equal if their coordinates match.
             //
