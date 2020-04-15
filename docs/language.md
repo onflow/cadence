@@ -5826,7 +5826,7 @@ of an authorized account (`AuthAccount`) can be used:
 Existing capabilities can be obtained by using the `getCapability` function
 of authorized accounts (`AuthAccount`) and public accounts (`PublicAccount`):
 
-- `fun getCapability(at: Path): Capability?`
+- `fun getCapability(_ at: Path): Capability?`
 
   For public accounts, the function returns a capability
   if the given path is public.
