@@ -4703,7 +4703,7 @@ pub resource ExampleToken: FungibleToken {
     // The function must be public.
     //
     // NOTE: the type of the parameter is `{FungibleToken}`,
-    // i.e., any resoure that implements the resoruce interface `FungibleToken`,
+    // i.e., any resource that implements the resource interface `FungibleToken`,
     // so any other token – however, we want to ensure that only tokens
     // of the same type can be deposited.
     //
