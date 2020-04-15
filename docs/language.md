@@ -5715,11 +5715,15 @@ resource Counter: HasCount {
 authAccount.save(<-create Counter(count: 42), to: /storage/counter)
 
 // Create a reference to the object stored under path `/storage/counter`,
-// typed as `&Counter`
+// typed as `&Counter`.
+//
+// `counterRef` has type `&Counter?` and is a valid reference, i.e. non-`nil`,
+// because the borrow succeeded:
+//
+// There is an object stored under path `/storage/counter`
+// and it has type `Counter`, so it can be borrowed as `&Counter`
 //
 let counterRef = authAccount.borrow<&Counter>(from: /storage/counter)
-
-// `counterRef` has type `&Counter?` and is a
 
 counterRef?.count // is `42`
 
