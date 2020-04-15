@@ -531,7 +531,7 @@ let aNumber = 0x06012c8cf97bead5deae237070f9587f8e7a266d
 `AnyStruct` is the top type of all non-resource types,
 i.e., all non-resource types are a subtype of it.
 
-`@AnyResource` is the top type of all resource types.
+`AnyResource` is the top type of all resource types.
 
 ```cadence
 // Declare a variable that has the type `AnyStruct`.
@@ -556,7 +556,7 @@ someStruct = testStruct
 
 resource Test {}
 
-// Declare a variable that has the type `@AnyResource`.
+// Declare a variable that has the type `AnyResource`.
 // Any resource-typed value can be assigned to it,
 // but not non-resource typed values.
 //
@@ -3748,7 +3748,7 @@ b.value // equals 0
 
 // Declare a function which accepts a resource.
 //
-// The parameter has a resource type, so the type name must be prefixed with `@`.
+// The parameter has a resource type, so the type annotation must be prefixed with `@`.
 //
 pub fun use(resource: @SomeResource) {
     // ...
@@ -3801,13 +3801,13 @@ e.g. for variable declarations, parameters, or return types.
 ```cadence,file=resource-type-annotation.cdc
 // Declare a constant with an explicit type annotation.
 //
-// The constant has a resource type, so the type name must be prefixed with `@`.
+// The constant has a resource type, so the type annotation must be prefixed with `@`.
 //
 let someResource: @SomeResource <- create SomeResource(value: 5)
 
 // Declare a function which consumes a resource and destroys it.
 //
-// The parameter has a resource type, so the type name must be prefixed with `@`.
+// The parameter has a resource type, so the type annotation must be prefixed with `@`.
 //
 pub fun use(resource: @SomeResource) {
     destroy resource
@@ -3815,7 +3815,7 @@ pub fun use(resource: @SomeResource) {
 
 // Declare a function which returns a resource.
 //
-// The return type is a resource type, so the type name must be prefixed with `@`.
+// The return type is a resource type, so the type annotation must be prefixed with `@`.
 // The return statement must also use the `<-` operator to make it explicit the resource is moved.
 //
 pub fun get(): @SomeResource {
@@ -4527,6 +4527,10 @@ The access must be at least be public, so the `pub` keyword must be provided.
 Variable field requirements can be specified to also be publicly settable
 by using the `pub(set)` keyword.
 
+Interfaces can be used in types.
+This is explained in detail in the section [Interfaces in Types](#interfaces-in-types).
+For now, the syntax `{I}` can be read as the type of any value that implements the interface `I`.
+
 ```cadence,file=interface-declaration.cdc
 // Declare a resource interface for a fungible token.
 // Only resources can implement this resource interface.
@@ -4579,8 +4583,10 @@ pub resource interface FungibleToken {
     // must add the amount to the balance.
     //
     // The function must return a new fungible token.
+    // The type `{FungibleToken}` is the type of any resource
+    // that implements the resource interface `FungibleToken`.
     //
-    pub fun withdraw(amount: Int): @FungibleToken {
+    pub fun withdraw(amount: Int): @{FungibleToken} {
         pre {
             amount > 0:
                 "the amount must be positive"
@@ -4599,14 +4605,14 @@ pub resource interface FungibleToken {
     // callable in all scopes, which deposits a fungible token
     // into this fungible token.
     //
-    // The given token must be of the same type – a deposit of another
-    // type is not possible.
-    //
     // No precondition is required to check the given token's balance
     // is positive, as this condition is already ensured by
     // the field requirement.
     //
-    pub fun deposit(_ token: @FungibleToken) {
+    // The parameter type `{FungibleToken}` is the type of any resource
+    // that implements the resource interface `FungibleToken`.
+    //
+    pub fun deposit(_ token: @{FungibleToken}) {
         post {
             self.balance == before(self.balance) + token.balance:
                 "the amount must be added to the balance"
@@ -4696,17 +4702,23 @@ pub resource ExampleToken: FungibleToken {
     //
     // The function must be public.
     //
-    // NOTE: the type of the parameter is `@ExampleToken`,
-    // i.e., only a token of the same type can be deposited.
+    // NOTE: the type of the parameter is `{FungibleToken}`,
+    // i.e., any resource that implements the resource interface `FungibleToken`,
+    // so any other token – however, we want to ensure that only tokens
+    // of the same type can be deposited.
     //
     // This implementation satisfies the required postconditions.
     //
     // NOTE: neither the precondition nor the postcondition declared
     // in the interface have to be repeated here in the implementation.
     //
-    pub fun deposit(_ token: @ExampleToken) {
-        self.balance = self.balance + token.balance
-        destroy token
+    pub fun deposit(_ token: @{FungibleToken}) {
+        if let exampleToken = token as? ExampleToken {
+            self.balance = self.balance + exampleToken.balance
+            destroy exampleToken
+        } else {
+            panic("cannot deposit token which is not an example token")
+        }
     }
 }
 
@@ -4775,14 +4787,16 @@ pub struct AnImplementation: AnInterface {
         self.a = a
     }
 }
-
 ```
 
-### Interface Type
+### Interfaces in Types
 
-Interfaces are types.
-Values implementing an interface can be used as initial values
-for constants and variables that have the interface as their type.
+Interfaces can be used in types: The type `{I}` is the type of all objects
+that implement the interfaace `I`.
+
+This is called a [restricted type](#restricted-types):
+Only the functionality (members and functions) of the interface can be used
+when accessing a value of such a type.
 
 ```cadence,file=interface-type.cdc
 // Declare an interface named `Shape`.
@@ -4791,7 +4805,7 @@ for constants and variables that have the interface as their type.
 // and a function which scales the shape by a given factor.
 //
 pub struct interface Shape {
-    pub area: Int
+    pub fun getArea(): Int
     pub fun scale(factor: Int)
 }
 
@@ -4809,10 +4823,8 @@ pub struct Square: Shape {
     // Since `area` was not declared as a constant, variable,
     // field in the interface, it can be declared.
     //
-    pub synthetic area: Int {
-        get {
-            return self.length * self.length
-        }
+    pub fun getArea(): Int {
+        return self.length * self.length
     }
 
     pub init(length: Int) {
@@ -4836,10 +4848,8 @@ pub struct Rectangle: Shape {
     // Provided the field `area  which is required to conform
     // to the interface `Shape`.
     //
-    pub synthetic area: Int {
-        get {
-            return self.width * self.height
-        }
+    pub fun getArea(): Int {
+        return self.width * self.height
     }
 
     pub init(width: Int, height: Int) {
@@ -4858,7 +4868,7 @@ pub struct Rectangle: Shape {
 
 // Declare a constant that has type `Shape`, which has a value that has type `Rectangle`.
 //
-var shape: Shape = Rectangle(width: 10, height: 20)
+var shape: {Shape} = Rectangle(width: 10, height: 20)
 ```
 
 Values implementing an interface are assignable to variables that have the interface as their type.
@@ -4882,7 +4892,7 @@ can be called on values of a type that implements the interface.
 // Declare a constant which has the type `Shape`.
 // and is initialized with a value that has type `Rectangle`.
 //
-let shape: Shape = Rectangle(width: 2, height: 3)
+let shape: {Shape} = Rectangle(width: 2, height: 3)
 
 // Access the field `area` declared in the interface `Shape`.
 //
@@ -4957,6 +4967,8 @@ struct SomeInner: OuterInterface.InnerInterface {}
 
 ### Nested Type Requirements
 
+> 🚧 Status: Currently only contracts and contract interfaces support nested type requirements.
+
 Interfaces can require implementing types to provide concrete nested types.
 For example, a resource interface may require an implementing type to provide a resource type.
 
@@ -5009,7 +5021,7 @@ which accepts another value that the given value should be compared for equality
 
 ```cadence,file=equatable.cdc
 struct interface Equatable {
-    pub fun equals(_ other: Equatable): Bool
+    pub fun equals(_ other: {Equatable}): Bool
 }
 ```
 
@@ -5027,7 +5039,7 @@ struct Cat: Equatable {
         self.id = id
     }
 
-    pub fun equals(_ other: Equatable): Bool {
+    pub fun equals(_ other: {Equatable}): Bool {
         if let otherCat = other as? Cat {
             // Cats are equal if their identifier matches.
             //
@@ -5103,7 +5115,7 @@ struct Point: Hashable {
     // Implementing the function `equals` will allow points to be compared
     // for equality and satisfies the `Equatable` interface.
     //
-    pub fun equals(_ other: Point): Bool {
+    pub fun equals(_ other: {Equatable}): Bool {
         if let otherPoint = other as? Point {
             // Points are equal if their coordinates match.
             //
@@ -5270,8 +5282,8 @@ pub struct B: HasID {
 // to variables with type `AnyResource{HasID}`: Some resource type which only allows
 // access to the functionality of resource interface `HasID`
 
-let hasID1: AnyStruct{HasID} = A(name: "1")
-let hasID2: AnyStruct{HasID} = B(name: "2")
+let hasID1: {HasID} = A(name: "1")
+let hasID2: {HasID} = B(name: "2")
 
 // Declare a function named `getID` which has one parameter with type `{HasID}`.
 // The type `{HasID}` is a short-hand for `AnyStruct{HasID}`:
@@ -5556,7 +5568,7 @@ to all its stored objects.
 
    The type `T` must be a supertype of the type of the loaded object.
    If it is not, the function returns `nil`.
-   The given type must not necessarily be a exactly the same as the type of the loaded object.
+   The given type must not necessarily be exactly the same as the type of the loaded object.
 
    The path must be a storage path, i.e., only the domain `storage` is allowed.
 
@@ -5571,13 +5583,14 @@ to all its stored objects.
    `T` is the type parameter for the structure type.
    A type argument for the parameter must be provided explicitly.
 
-   The type `T` must be a supertype of the type of the loaded structure.
+   The type `T` must be a supertype of the type of the copied structure.
    If it is not, the function returns `nil`.
-   The given type must not necessarily be a exactly the same as the type of the loaded object.
+   The given type must not necessarily be exactly the same as the type of the copied structure
+structure.
 
    The path must be a storage path, i.e., only the domain `storage` is allowed.
 
-```cadence,file=account-storage.cdc
+```cadence,file=account-storage-save-load-copy.cdc
 // Declare a resource named `Counter`.
 //
 resource Counter {
@@ -5588,7 +5601,7 @@ resource Counter {
     }
 }
 
-// In this example the account is available as the constant `account`.
+// In this example an authorized account is available through the constant `authAccount`.
 
 // Create a new instance of the resource type `Counter`
 // and save it in the storage of the account.
@@ -5596,11 +5609,11 @@ resource Counter {
 // The path `/storage/counter` is used to refer to the stored value.
 // Its identifier `counter` was chosen freely and could be something else.
 //
-account.save(<-create Counter(count: 42), to: /storage/counter)
+authAccount.save(<-create Counter(count: 42), to: /storage/counter)
 
 // Run-time error: Storage already contains an object under path `/storage/counter`
 //
-account.save(<-create Counter(count: 123), to: /storage/counter)
+authAccount.save(<-create Counter(count: 123), to: /storage/counter)
 
 // Load the `Counter` resource from storage path `/storage/counter`.
 //
@@ -5608,7 +5621,7 @@ account.save(<-create Counter(count: 123), to: /storage/counter)
 // and its value is the counter resource, that was saved at the beginning
 // of the example.
 //
-let counter <- account.load<@Counter>(from: /storage/counter)
+let counter <- authAccount.load<@Counter>(from: /storage/counter)
 
 // The storage is now empty, there is no longer an object stored
 // under the path `/storage/counter`.
@@ -5619,14 +5632,14 @@ let counter <- account.load<@Counter>(from: /storage/counter)
 // as nothing is stored under the path `/storage/counter` anymore,
 // because the previous load moved the counter out of storage.
 //
-let counter2 <- account.load<@Counter>(from: /storage/counter)
+let counter2 <- authAccount.load<@Counter>(from: /storage/counter)
 
 // Create another new instance of the resource type `Counter`
 // and save it in the storage of the account.
 //
 // The path `/storage/otherCounter` is used to refer to the stored value.
 //
-account.save(<-create Counter(count: 123), to: /storage/otherCounter)
+authAccount.save(<-create Counter(count: 123), to: /storage/otherCounter)
 
 // Load the `Vault` resource from storage path `/storage/otherCounter`.
 //
@@ -5634,144 +5647,327 @@ account.save(<-create Counter(count: 123), to: /storage/otherCounter)
 // as there is a resource with type `Counter` stored under the path,
 // which is not a subtype of the requested type `Vault`.
 //
-let vault <- account.load<@Vault>(from: /storage/otherCounter)
+let vault <- authAccount.load<@Vault>(from: /storage/otherCounter)
 
 // The storage still stores a `Counter` resource under the path `/storage/otherCounter`.
 
 // Save the string "Hello, World" in storage
 // under the path `/storage/helloWorldMessage`.
 
-account.save("Hello, world!", to: /storage/helloWorldMessage)
+authAccount.save("Hello, world!", to: /storage/helloWorldMessage)
 
 // Copy the stored message from storage.
 //
 // After the copy, the storage still stores the string under the path.
 // Unlike `load`, `copy` does not remove the object from storage.
 //
-let message = account.copy<String>(from: /storage/helloWorldMessage)
+let message = authAccount.copy<String>(from: /storage/helloWorldMessage)
 
 // Create a new instance of the resource type `Vault`
 // and save it in the storage of the account.
 //
-account.save(<-createEmptyVault(), to: /storage/vault)
+authAccount.save(<-createEmptyVault(), to: /storage/vault)
 
 // Invalid: Cannot copy a resource, as this would allow arbitrary duplication.
 //
-let vault <- account.copy<@Vault>(from: /storage/vault)
+let vault <- authAccount.copy<@Vault>(from: /storage/vault)
 ```
 
-### Reference-Based Access Control
+As it is convenient to work with objects in storage
+without having to move them out of storage,
+as it is necessary for resources,
+it is also possible to create references to objects in storage:
+This is possible using the `borrow` function of an `AuthAccount`:
+
+- `fun borrow<T: &Any>(from: Path): T?`
+
+   Returns a reference to an object in storage without removing it from storage.
+   If no object is stored under the given path, the function returns `nil`.
+   If there is an object stored, a reference is returned as an optional.
+
+   `T` is the type parameter for the object type.
+   A type argument for the parameter must be provided explicitly.
+   The type argument must be a reference to any type (`&Any`; `Any` is the supertype of all types).
+   It must be possible top create the given reference type `T` for the stored /  borrowed object.
+   If it is not, the function returns `nil`.
+   The given type must not necessarily be exactly the same as the type of the borrowed object.
+
+   The path must be a storage path, i.e., only the domain `storage` is allowed.
+
+```cadence,file=account-storage-borrow.cdc
+// Declare a resource interface named `HasCount`, that has a field `count`
+//
+resource interface HasCount {
+    count: Int
+}
+
+// Declare a resource named `Counter` that conforms to `HasCount`
+//
+resource Counter: HasCount {
+    pub var count: Int
+
+    pub init(count: Int) {
+        self.count = count
+    }
+}
+
+// In this example an authorized account is available through the constant `authAccount`.
+
+// Create a new instance of the resource type `Counter`
+// and save it in the storage of the account.
+//
+// The path `/storage/counter` is used to refer to the stored value.
+// Its identifier `counter` was chosen freely and could be something else.
+//
+authAccount.save(<-create Counter(count: 42), to: /storage/counter)
+
+// Create a reference to the object stored under path `/storage/counter`,
+// typed as `&Counter`.
+//
+// `counterRef` has type `&Counter?` and is a valid reference, i.e. non-`nil`,
+// because the borrow succeeded:
+//
+// There is an object stored under path `/storage/counter`
+// and it has type `Counter`, so it can be borrowed as `&Counter`
+//
+let counterRef = authAccount.borrow<&Counter>(from: /storage/counter)
+
+counterRef?.count // is `42`
+
+// Create a reference to the object stored under path `/storage/counter`,
+// typed as `&{HasCount}`.
+//
+// `hasCountRef` is non-`nil`, as there is an object stored under path `/storage/counter`,
+// and the stored value of type `Counter` conforms to the requested type `{HasCount}`:
+// the type `Counter` implements the restricted type's restriction `HasCount`
+
+let hasCountRef = authAccount.borrow<&{HasCount}>(from: /storage/counter)
+
+// Create a reference to the object stored under path `/storage/counter`,
+// typed as `&{SomethingElse}`.
+//
+// `otherRef` is `nil`, as there is an object stored under path `/storage/counter`,
+// but the stored value of type `Counter` does not conform to to the requested type `{Other}`:
+// the type `Counter` does not implement the restricted type's restriction `Other`
+
+let otherRef = authAccount.borrow<&{Other}>(from: /storage/counter)
+
+// Create a reference to the object stored under path `/storage/nonExistent`,
+// typed as `&{HasCount}`.
+//
+// `nonExistentRef` is `nil`, as there is nothing stored under path `/storage/nonExistent`
+//
+let nonExistentRef = authAccount.borrow<&{HasCount}>(from: /storage/nonExistent)
+```
+
+## Capability-based Access Control
+
+Users will often want to make it so that specific other users or even anyone else
+can access certain fields and functions of a stored object.
+This can be done by creating a capability.
 
 As was mentioned before, access to stored objects is governed by the
 tenets of [Capability Security](https://en.wikipedia.org/wiki/Capability-based_security).
 This means that if an account wants to be able to access another account's
-stored objects, it must have a valid reference to that object.
+stored objects, it must have a valid capability to that object.
 
-Access to stored objects can be restricted by using interfaces.  When storing a reference,
-it can be stored as an interface so that only the fields and methods that the interface
-specifies are able to be called by those who have a reference.
+Capabilities are identified by a path and link to a target path, not directly to an object.
+Capabilities are either public (any user can get access),
+or private (access to/from the authorized user is necessary).
 
-Based on the above example,
-a user could use an interface to restrict access to only the `count` field.
-Often, other accounts will have functions that take specific references
-as parameters, so this method can be used to create those valid references.
+Public capabilities are created using public paths, i.e. they have the domain `public`.
+After creation they can be obtained from both authorized accounts (`AuthAccount`)
+and public accounts (`PublicAccount`).
 
-```cadence,file=storage-access-control.cdc
+Private capabilities are created using private paths, i.e. they have the domain `private`.
+After creation they can be obtained from authorized accounts (`AuthAccount`),
+but not from public accounts (`PublicAccount`).
 
-// Declare a resource interface `HasCount`.
+Once a capability is created and obtained, it can be borrowed to get a reference
+to the stored object.
+When a capability is created, a type is specified that determines as what type
+the capability can be borrowed.
+This allows exposing and hiding certain functionality of a stored object.
+
+Capabilities are created using the `link` function of an authorized account (`AuthAccount`):
+
+- `fun link<T: &Any>(_ newCapabilityPath: Path, target: Path): Capability?`
+
+  `newCapabilityPath` is the public or private path identifiying the new capability.
+
+  `target` is any public, private, or storage path that leads to the object
+  that will provide the functionality defined by this capability.
+
+  `T` is the type parameter for the capability type.
+  A type argument for the parameter must be provided explicitly.
+
+  The type parameter defines how the capability can be borrowed,
+  i.e., how the stored value can be accessed.
+
+  The link function returns `nil` if a link for the given capability path already exists,
+  or the newly created capability if not.
+
+  It is not necessary for the target path to lead to a valid object;
+  the target path could be empty, or could lead to an object
+  which does not provide the necessary type interface:
+
+  The link function does **not** check if the target path is valid/exists at the time
+  the capability is created and does **not** check if the target value conforms to the given type.
+
+  The link is latent.
+  The target value might be stored after the link is created,
+  and the target value might be moved out after the link has been created.
+
+Capabilities can be removed using the `unlink` function of an authorized account (`AuthAccount`):
+
+- `fun unlink(_ path: Path)`:
+
+  `path` is the public or private path identifying the capability that should be removed.
+
+To get the target path for a capability, the `getLinkTarget` function
+of an authorized account (`AuthAccount`) can be used:
+
+- `fun getLinkTarget(_ path: Path): Path?`
+
+  `path` is the public or private path identifying the capability.
+  The function returns the link target path,
+  if a capability exists at the given path,
+  or `nil` if it does not.
+
+Existing capabilities can be obtained by using the `getCapability` function
+of authorized accounts (`AuthAccount`) and public accounts (`PublicAccount`):
+
+- `fun getCapability(_ at: Path): Capability?`
+
+  For public accounts, the function returns a capability
+  if the given path is public.
+  It is not possible to obtain private capabilities from public accounts.
+  If the path is private or a storage path, the function returns `nil`.
+
+  For authorized accounts, the function returns a capability
+  if the given path is public or private.
+  If the path is a storage path, the function returns `nil`.
+
+The `getCapability` function does **not** check if the target exists.
+The link is latent.
+To check if the target exists currently and could be borrowed,
+the `check` function of the capability can be used:
+
+- `fun check<T: &Any>(): Bool`
+
+  `T` is the type parameter for the reference type.
+   A type argument for the parameter must be provided explicitly.
+
+   The function returns true if the capability currently targets an object
+   that satisfies the given type, i.e. could be borrowed using the given type.
+
+Finally, the capability can be borrowed to get a reference to the stored object.
+This can be done using the `borrow` function of the capability:
+
+- `fun borrow<T: &Any>(): T?`
+
+  The function returns a reference to the object targeted by the capability,
+  provided it can be borrowed using the given type.
+
+  `T` is the type parameter for the reference type.
+   A type argument for the parameter must be provided explicitly.
+
+  The function returns `nil` if the targeted path is empty, i.e. nothing is stored under it,
+  if  the requested type exceeds what is allowed by the capability (or any interim capabilities)
+
+```cadence,file=capabilities.cdc
+// Declare a resource interface named `HasCount`, that has a field `count`
 //
 resource interface HasCount {
-
-    // Require implementations of the interface to provide
-    // a field named `count` which can be publicly read.
-    //
-    pub var count: Int
+    count: Int
 }
 
-// Create another reference to the storage location `account.storage[Counter]`
-// and only allow access to it as the type `HasCount`.
+// Declare a resource named `Counter` that conforms to `HasCount`
 //
-let limitedReference: &HasCount = &account.storage[Counter] as &HasCount
-
-// Read the counter's current count through the limited reference.
-//
-// This is valid because the `HasCount` resource interface declares
-// the field `count`.
-//
-limitedReference.count  // is `43`
-
-// Invalid: The `increment` function is not accessible for the reference,
-// because the reference has the type `&HasCount`,
-// i.e. only fields and functions of type `HasCount` can be used,
-// and `increment` is not declared in it.
-//
-limitedReference.increment()
-```
-
-## Publishing References
-
-Users will often want to make it so anyone can access certain fields
-and methods of an object.  This can be done by publishing a reference to that object.
-
-Publishing a reference is done by storing the reference in the account's `published`
-object.  `published` is a key-value store where the keys are restricted
-to be only reference types.
-
-To continue the example above:
-
-```cadence,file=published-writing.cdc
-resource interface HasCount {
-    // Require implementations of the interface to provide
-    // a field named `count` which can be publicly read.
-    //
+resource Counter: HasCount {
     pub var count: Int
+
+    pub init(count: Int) {
+        self.count = count
+    }
 }
 
-// Create another reference to the storage location `account.storage[Counter]`
-// and only allow access to it as the type `HasCount`.
-//
-let limitedReference: &HasCount = &account.storage[Counter] as &HasCount
+// In this example an authorized account is available through the constant `authAccount`.
 
-// Store the reference in the `published` object.
+// Create a new instance of the resource type `Counter`
+// and save it in the storage of the account.
 //
-account.published[&HasCount] = limitedReference
-
-// Invalid: Cannot store non-reference types in the `published` object.
+// The path `/storage/counter` is used to refer to the stored value.
+// Its identifier `counter` was chosen freely and could be something else.
 //
-account.published[Counter] <- account.storage[Counter]
+authAccount.save(<-create Counter(count: 42), to: /storage/counter)
 
+// Create a public capability that allows access to the stored counter object
+// as the type `{HasCount}`, i.e. only the functionality of reading the field
+//
+authAccount.link<&{HasCount}>(/public/hasCount, target: /storage/counter)
 ```
 
 To get the published portion of an account, the `getAccount` function can be used.
-
-The public account object only has the `published` object, which is read-only,
-and can be used to access all published references of the account.
 
 Imagine that the next example is from a different account as before.
 
 ```cadence,file=published-reading
 
-// Get the public account object for the account that published the reference.
+// Get the public account for the address that stores the counter
 //
-let account = getAccount(0x72)
+let publicAccount = getAccount(0x42)
 
-// Read the `&HasCount` reference from their published object.
+// Get a capability for the counter that is made publicly accessible
+// through the path `/public/hasCount`
 //
-let countRef = account.published[&HasCount] ?? panic("missing Count reference!")
+let countCap = publicAccount.getCapability(/public/hasCount)!
 
-// Read one of the exposed fields in the reference.
+// Borrow the capability to get a reference to the stored counter.
+// Use the type `&{HasCount}`, as this is the type that the capability can be borrowed as.
+// See the example below for borrowing using the type `&Counter`
 //
+// This borrow succeeds, i.e. the result is not `nil`,
+// it is a valid reference, because:
+//
+// 1. Dereferencing the path chain results in a stored object
+//    (`/public/hasCount` links to `/storage/counter`,
+//    and there is an object stored under `/storage/counter`)
+//
+// 2. The stored value is a subtype of the requested type `{HasCount}`
+//    (the stored object has type `Counter` which conforms to interface `HasCount`)
+//
+let countRef = countCap.borrow<&{HasCount}>()!
+
 countRef.count  // is `43`
 
 // Invalid: The `increment` function is not accessible for the reference,
-// because the reference has the type `&HasCount`.
+// because it has the type `&{HasCount}`
 //
 countRef.increment()
 
-// Invalid: Cannot access the account.storage object
-// from the public account object.
+// Attempt to borrow the capability with the type `&Counter`.
+// This results in `nil`, i.e. the borrow fails,
+// because the capability was created/linked using the type `&{HasCount}`.
 //
-let counter = account.storage[Counter]
+// The resource type `Counter` implements the resource interface `HasCount`,
+// so `Counter` is a subtype of `{HasCount}`, but the capability only allows
+// borrowing using unauthorized references of `{HasCount}` (`&{HasCount}`)
+// instead of authorized references (`auth &{HasCount}`),
+// so users of the capability are not allowed to borrow using subtypes,
+// and they can't escalate the type by casting the reference either.
+//
+// This shows how parts of the functionality of stored objects
+// can be safely exposed to other code
+//
+let counterRef = countCap.borrow<&Counter>()
+
+// `counterRef` is `nil`
+
+// Invalid: Cannot access the counter object in storage directly,
+// the `borrow` function is not available for public accounts
+//
+let counterRef2 = publicAccount.borrow<&Counter>(/storage/counter)
 ```
 
 ## Contracts
@@ -5980,8 +6176,8 @@ Imagine that these were declared in the above `FungibleToken` contract.
     }
 
     init(balance: Int) {
-        let oldVault <- self.account.storage[Vault] <- create Vault(balance: 1000)
-        destroy oldVault
+        let vault <- create Vault(balance: 1000)
+        self.account.save(<-vault, to: /storage/initialVault)
     }
 ```
 
@@ -6213,9 +6409,8 @@ Each phase is a block of code that executes sequentially.
   // as there are signers for the transaction.
   // In this case, there would be two signers
 
-  prepare(acct1: AuthAccount, acct2: AuthAccount) {
-      let privateResource <- acct1.storage[Resource] <- nil
-      destroy privateResource
+  prepare(signer1: AuthAccount, signer2: AuthAccount) {
+      // ...
   }
   ```
 
@@ -6231,7 +6426,7 @@ Each phase is a block of code that executes sequentially.
   and functions, calling functions using references to other accounts'
   objects, and performing specific computation on these values.
 
-  This phase does not have access to any account's private account objects
+  This phase does not have access to any signer's authorized account object
   and can only access public contract fields and functions,
   public account objects (`PublicAccount`) using the built-in `getAccount`
   function, and any local transaction variables
@@ -6239,15 +6434,15 @@ Each phase is a block of code that executes sequentially.
 
   ```cadence,file=execute.cdc
     execute {
-        // Invalid: Cannot access the private account object,
-        // as `acct1` is not in scope
+        // Invalid: Cannot access the authorized account object,
+        // as `account1` is not in scope
 
-        let privateResource <- acct1.storage[Resource] <- nil
-        destroy privateResource
+        let resource <- account1.load<@Resource>(from: /storage/resource)
+        destroy resource
 
         // Valid: Can access any account's public Account object
 
-        let pubacct = getAccount(0x03)
+        let publicAccount = getAccount(0x03)
   }
 
   ```
