@@ -6159,8 +6159,8 @@ Imagine that these were declared in the above `FungibleToken` contract.
     }
 
     init(balance: Int) {
-        let oldVault <- self.account.storage[Vault] <- create Vault(balance: 1000)
-        destroy oldVault
+        let vault <- create Vault(balance: 1000)
+        self.account.save(<-vault, to: /storage/initialVault)
     }
 ```
 
@@ -6392,9 +6392,8 @@ Each phase is a block of code that executes sequentially.
   // as there are signers for the transaction.
   // In this case, there would be two signers
 
-  prepare(acct1: AuthAccount, acct2: AuthAccount) {
-      let privateResource <- acct1.storage[Resource] <- nil
-      destroy privateResource
+  prepare(signer1: AuthAccount, signer2: AuthAccount) {
+      // ...
   }
   ```
 
@@ -6410,7 +6409,7 @@ Each phase is a block of code that executes sequentially.
   and functions, calling functions using references to other accounts'
   objects, and performing specific computation on these values.
 
-  This phase does not have access to any account's private account objects
+  This phase does not have access to any signer's authorized account object
   and can only access public contract fields and functions,
   public account objects (`PublicAccount`) using the built-in `getAccount`
   function, and any local transaction variables
@@ -6418,15 +6417,15 @@ Each phase is a block of code that executes sequentially.
 
   ```cadence,file=execute.cdc
     execute {
-        // Invalid: Cannot access the private account object,
-        // as `acct1` is not in scope
+        // Invalid: Cannot access the authorized account object,
+        // as `account1` is not in scope
 
-        let privateResource <- acct1.storage[Resource] <- nil
-        destroy privateResource
+        let resource <- account1.load<@Resource>(from: /storage/resource)
+        destroy resource
 
         // Valid: Can access any account's public Account object
 
-        let pubacct = getAccount(0x03)
+        let publicAccount = getAccount(0x03)
   }
 
   ```
