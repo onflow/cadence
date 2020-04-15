@@ -5660,118 +5660,297 @@ account.save(<-createEmptyVault(), to: /storage/vault)
 let vault <- account.copy<@Vault>(from: /storage/vault)
 ```
 
-### Reference-Based Access Control
+As it is convenient to work with objects in storage
+without having to move them out of storage,
+as it is necessary for resources,
+it is also possible to create references to objects in storage:
+This is possible using the `borrow` function of an `AuthAccount`:
+
+- `fun borrow<T: &Any>(from: Path): T?`
+
+   Returns a reference to an object in storage without removing it from storage.
+   If no object is stored under the given path, the function returns `nil`.
+   If there is an object stored, a reference is returned as an optional.
+
+   `T` is the type parameter for the object type.
+   A type argument for the parameter must be provided explicitly.
+   The type argument must be a reference to any type (`&Any`; `Any` is the supertype of all types).
+   It must be possible top create the given reference type `T` for the stored /  borrowed object.
+   If it is not, the function returns `nil`.
+   The given type must not necessarily be exactly the same as the type of the borrowed object.
+
+   The path must be a storage path, i.e., only the domain `storage` is allowed.
+
+```cadence,file=account-storage-borrow.cdc
+// Declare a resource interface named `HasCount`, that has a field `count`
+//
+resource interface HasCount {
+    count: Int
+}
+
+// Declare a resource named `Counter` that conforms to `HasCount`
+//
+resource Counter: HasCount {
+    pub var count: Int
+
+    pub init(count: Int) {
+        self.count = count
+    }
+}
+
+// In this example an authorized account is available through the constant `authAccount`.
+
+// Create a new instance of the resource type `Counter`
+// and save it in the storage of the account.
+//
+// The path `/storage/counter` is used to refer to the stored value.
+// Its identifier `counter` was chosen freely and could be something else.
+//
+authAccount.save(<-create Counter(count: 42), to: /storage/counter)
+
+// Create a reference to the object stored under path `/storage/counter`,
+// typed as `&Counter`
+//
+let counterRef = authAccount.borrow<&Counter>(from: /storage/counter)
+
+// `counterRef` has type `&Counter?` and is a
+
+counterRef?.count // is `42`
+
+// Create a reference to the object stored under path `/storage/counter`,
+// typed as `&{HasCount}`.
+//
+// `hasCountRef` is non-`nil`, as there is an object stored under path `/storage/counter`,
+// and the stored value of type `Counter` conforms to the requested type `{HasCount}`:
+// the type `Counter` implements the restricted type's restriction `HasCount`
+
+let hasCountRef = authAccount.borrow<&{HasCount}>(from: /storage/counter)
+
+// Create a reference to the object stored under path `/storage/counter`,
+// typed as `&{SomethingElse}`.
+//
+// `otherRef` is `nil`, as there is an object stored under path `/storage/counter`,
+// but the stored value of type `Counter` does not conform to to the requested type `{Other}`:
+// the type `Counter` does not implement the restricted type's restriction `Other`
+
+let otherRef = authAccount.borrow<&{Other}>(from: /storage/counter)
+
+// Create a reference to the object stored under path `/storage/nonExistent`,
+// typed as `&{HasCount}`.
+//
+// `nonExistentRef` is `nil`, as there is nothing stored under path `/storage/nonExistent`
+//
+let nonExistentRef = authAccount.borrow<&{HasCount}>(from: /storage/nonExistent)
+```
+
+## Capability-based Access Control
+
+Users will often want to make it so that specific other users or even anyone else
+can access certain fields and functions of a stored object.
+This can be done by creating a capability.
 
 As was mentioned before, access to stored objects is governed by the
 tenets of [Capability Security](https://en.wikipedia.org/wiki/Capability-based_security).
 This means that if an account wants to be able to access another account's
-stored objects, it must have a valid reference to that object.
+stored objects, it must have a valid capability to that object.
 
-Access to stored objects can be restricted by using interfaces.  When storing a reference,
-it can be stored as an interface so that only the fields and methods that the interface
-specifies are able to be called by those who have a reference.
+Capabilities are identified by a path and link to a target path, not directly to an object.
+Capabilities are either public (any user can get access),
+or private (access to/from the authorized user is necessary).
 
-Based on the above example,
-a user could use an interface to restrict access to only the `count` field.
-Often, other accounts will have functions that take specific references
-as parameters, so this method can be used to create those valid references.
+Public capabilities are created using public paths, i.e. they have the domain `public`.
+After creation they can be obtained from both authorized accounts (`AuthAccount`)
+and public accounts (`PublicAccount`).
 
-```cadence,file=storage-access-control.cdc
+Private capabilities are created using private paths, i.e. they have the domain `private`.
+After creation they can be obtained from authorized accounts (`AuthAccount`),
+but not from public accounts (`PublicAccount`).
 
-// Declare a resource interface `HasCount`.
+Once a capability is created and obtained, it can be borrowed to get a reference
+to the stored object.
+When a capability is created, a type is specified that determines as what type
+the capability can be borrowed.
+This allows exposing and hiding certain functionality of a stored object.
+
+Capabilities are created using the `link` function of an authorized account (`AuthAccount`):
+
+- `fun link<T: &Any>(_ newCapabilityPath: Path, target: Path): Capability?`
+
+  `newCapabilityPath` is the public or private path identifiying the new capability.
+
+  `target` is any public, private, or storage path that leads to the object
+  that will provide the functionality defined by this capability.
+
+  `T` is the type parameter for the capability type.
+  A type argument for the parameter must be provided explicitly.
+
+  The type parameter defines how the capability can be borrowed,
+  i.e., how the stored value can be accessed.
+
+  The link function returns `nil` if a link for the given capability path already exists,
+  or the newly created capability if not.
+
+  It is not necessary for the target path to lead to a valid object;
+  the target path could be empty, or could lead to an object
+  which does not provide the necessary type interface:
+
+  The link function does **not** check if the target path is valid/exists at the time
+  the capability is created and does **not** check if the target value conforms to the given type.
+
+  The link is latent.
+  The target value might be stored after the link is created,
+  and the target value might be moved out after the link has been created.
+
+Capabilities can be removed using the `unlink` function of an authorized account (`AuthAccount`):
+
+- `fun unlink(_ path: Path)`:
+
+  `path` is the public or private path identifying the capability that should be removed.
+
+To get the target path for a capability, the `getLinkTarget` function
+of an authorized account (`AuthAccount`) can be used:
+
+- `fun getLinkTarget(_ path: Path): Path?`
+
+  `path` is the public or private path identifying the capability.
+  The function returns the link target path,
+  if a capability exists at the given path,
+  or `nil` if it does not.
+
+Existing capabilities can be obtained by using the `getCapability` function
+of authorized accounts (`AuthAccount`) and public accounts (`PublicAccount`):
+
+- `fun getCapability(at: Path): Capability?`
+
+  For public accounts, the function returns a capability
+  if the given path is public.
+  It is not possible to obtain private capabilities from public accounts.
+  If the path is private or a storage path, the function returns `nil`.
+
+  For authorized accounts, the function returns a capability
+  if the given path is public or private.
+  If the path is a storage path, the function returns `nil`.
+
+The `getCapability` function does **not** check if the target exists.
+The link is latent.
+To check if the target exists currently and could be borrowed,
+the `check` function of the capability can be used:
+
+- `fun check<T: &Any>(): Bool`
+
+  `T` is the type parameter for the reference type.
+   A type argument for the parameter must be provided explicitly.
+
+   The function returns true if the capability currently targets an object
+   that satisfies the given type, i.e. could be borrowed using the given type.
+
+Finally, the capability can be borrowed to get a reference to the stored object.
+This can be done using the `borrow` function of the capability:
+
+- `fun borrow<T: &Any>(): T?`
+
+  The function returns a reference to the object targeted by the capability,
+  provided it can be borrowed using the given type.
+
+  `T` is the type parameter for the reference type.
+   A type argument for the parameter must be provided explicitly.
+
+  The function returns `nil` if the targeted path is empty, i.e. nothing is stored under it,
+  if  the requested type exceeds what is allowed by the capability (or any interim capabilities)
+
+```cadence,file=capabilities.cdc
+// Declare a resource interface named `HasCount`, that has a field `count`
 //
 resource interface HasCount {
-
-    // Require implementations of the interface to provide
-    // a field named `count` which can be publicly read.
-    //
-    pub var count: Int
+    count: Int
 }
 
-// Create another reference to the storage location `account.storage[Counter]`
-// and only allow access to it as the type `HasCount`.
+// Declare a resource named `Counter` that conforms to `HasCount`
 //
-let limitedReference: &HasCount = &account.storage[Counter] as &HasCount
-
-// Read the counter's current count through the limited reference.
-//
-// This is valid because the `HasCount` resource interface declares
-// the field `count`.
-//
-limitedReference.count  // is `43`
-
-// Invalid: The `increment` function is not accessible for the reference,
-// because the reference has the type `&HasCount`,
-// i.e. only fields and functions of type `HasCount` can be used,
-// and `increment` is not declared in it.
-//
-limitedReference.increment()
-```
-
-## Publishing References
-
-Users will often want to make it so anyone can access certain fields
-and methods of an object.  This can be done by publishing a reference to that object.
-
-Publishing a reference is done by storing the reference in the account's `published`
-object.  `published` is a key-value store where the keys are restricted
-to be only reference types.
-
-To continue the example above:
-
-```cadence,file=published-writing.cdc
-resource interface HasCount {
-    // Require implementations of the interface to provide
-    // a field named `count` which can be publicly read.
-    //
+resource Counter: HasCount {
     pub var count: Int
+
+    pub init(count: Int) {
+        self.count = count
+    }
 }
 
-// Create another reference to the storage location `account.storage[Counter]`
-// and only allow access to it as the type `HasCount`.
-//
-let limitedReference: &HasCount = &account.storage[Counter] as &HasCount
+// In this example an authorized account is available through the constant `authAccount`.
 
-// Store the reference in the `published` object.
+// Create a new instance of the resource type `Counter`
+// and save it in the storage of the account.
 //
-account.published[&HasCount] = limitedReference
-
-// Invalid: Cannot store non-reference types in the `published` object.
+// The path `/storage/counter` is used to refer to the stored value.
+// Its identifier `counter` was chosen freely and could be something else.
 //
-account.published[Counter] <- account.storage[Counter]
+authAccount.save(<-create Counter(count: 42), to: /storage/counter)
 
+// Create a public capability that allows access to the stored counter object
+// as the type `{HasCoun}`, i.e. only the functionality of the
+//
+authAccount.link<&{HasCount}>(/public/hasCount, target: /storage/counter)
 ```
 
 To get the published portion of an account, the `getAccount` function can be used.
-
-The public account object only has the `published` object, which is read-only,
-and can be used to access all published references of the account.
 
 Imagine that the next example is from a different account as before.
 
 ```cadence,file=published-reading
 
-// Get the public account object for the account that published the reference.
+// Get the public account for the address that stores the counter
 //
-let account = getAccount(0x72)
+let publicAccount = getAccount(0x42)
 
-// Read the `&HasCount` reference from their published object.
+// Get a capability for the counter that is made publicly accessible
+// through the path `/public/hasCount`
 //
-let countRef = account.published[&HasCount] ?? panic("missing Count reference!")
+let countCap = publicAccount.getCapability(/public/hasCount)!
 
-// Read one of the exposed fields in the reference.
+// Borrow the capability to get a reference to the stored counter.
+// Use the type `&{HasCount}`, as this is the type that the capability can be borrowed as.
+// See the example below for borrowing using the type `&Counter`
 //
+// This borrow succeeds, i.e. the result is not `nil`,
+// it is a valid reference, because:
+//
+// 1. Dereferencing the path chain results in a stored object
+//    (`/public/hasCount` links to `/storage/counter`,
+//    and there is an object stored under `/storage/counter`)
+//
+// 2. The stored value is a subtype of the requested type `{HasCount}`
+//    (the stored object has type `Counter` which conforms to interface `HasCount`)
+//
+let countRef = countCap.borrow<&{HasCount}>()!
+
 countRef.count  // is `43`
 
 // Invalid: The `increment` function is not accessible for the reference,
-// because the reference has the type `&HasCount`.
+// because it has the type `&{HasCount}`
 //
 countRef.increment()
 
-// Invalid: Cannot access the account.storage object
-// from the public account object.
+// Attempt to borrow the capability with the type `&Counter`.
+// This results in `nil`, i.e. the borrow fails,
+// because the capability was created/linked using the type `&{HasCount}`.
 //
-let counter = account.storage[Counter]
+// The resource type `Counter` implements the resource interface `HasCount`,
+// so `Counter` is a subtype of `{HasCount}`, but the capability only allows
+// borrowing using unauthorized references of `{HasCount}` (`&{HasCount}`)
+// instead of authorized references (`auth &{HasCount}`),
+// so users of the capability are not allowed to borrow using subtypes,
+// and they can't escalate the type by casting the reference either.
+//
+// This shows how parts of the functionality of stored objects
+// can be safely exposed to other code
+//
+let counterRef = countCap.borrow<&Counter>()
+
+// `counterRef` is `nil`
+
+// Invalid: Cannot access the counter object in storage directly,
+// the `borrow` function is not available for public accounts
+//
+let counterRef2 = publicAccount.borrow<&Counter>(/storage/counter)
 ```
 
 ## Contracts
