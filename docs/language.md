@@ -531,7 +531,7 @@ let aNumber = 0x06012c8cf97bead5deae237070f9587f8e7a266d
 `AnyStruct` is the top type of all non-resource types,
 i.e., all non-resource types are a subtype of it.
 
-`@AnyResource` is the top type of all resource types.
+`AnyResource` is the top type of all resource types.
 
 ```cadence
 // Declare a variable that has the type `AnyStruct`.
@@ -556,7 +556,7 @@ someStruct = testStruct
 
 resource Test {}
 
-// Declare a variable that has the type `@AnyResource`.
+// Declare a variable that has the type `AnyResource`.
 // Any resource-typed value can be assigned to it,
 // but not non-resource typed values.
 //
@@ -3748,7 +3748,7 @@ b.value // equals 0
 
 // Declare a function which accepts a resource.
 //
-// The parameter has a resource type, so the type name must be prefixed with `@`.
+// The parameter has a resource type, so the type annotation must be prefixed with `@`.
 //
 pub fun use(resource: @SomeResource) {
     // ...
@@ -3801,13 +3801,13 @@ e.g. for variable declarations, parameters, or return types.
 ```cadence,file=resource-type-annotation.cdc
 // Declare a constant with an explicit type annotation.
 //
-// The constant has a resource type, so the type name must be prefixed with `@`.
+// The constant has a resource type, so the type annotation must be prefixed with `@`.
 //
 let someResource: @SomeResource <- create SomeResource(value: 5)
 
 // Declare a function which consumes a resource and destroys it.
 //
-// The parameter has a resource type, so the type name must be prefixed with `@`.
+// The parameter has a resource type, so the type annotation must be prefixed with `@`.
 //
 pub fun use(resource: @SomeResource) {
     destroy resource
@@ -3815,7 +3815,7 @@ pub fun use(resource: @SomeResource) {
 
 // Declare a function which returns a resource.
 //
-// The return type is a resource type, so the type name must be prefixed with `@`.
+// The return type is a resource type, so the type annotation must be prefixed with `@`.
 // The return statement must also use the `<-` operator to make it explicit the resource is moved.
 //
 pub fun get(): @SomeResource {
@@ -4527,6 +4527,10 @@ The access must be at least be public, so the `pub` keyword must be provided.
 Variable field requirements can be specified to also be publicly settable
 by using the `pub(set)` keyword.
 
+Interfaces can be used in types.
+This is explained in detail in the section [Interfaces in Types](#interfaces-in-types).
+For now, the syntax `{I}` can be read as the type of any value that implements the interface `I`.
+
 ```cadence,file=interface-declaration.cdc
 // Declare a resource interface for a fungible token.
 // Only resources can implement this resource interface.
@@ -4579,6 +4583,8 @@ pub resource interface FungibleToken {
     // must add the amount to the balance.
     //
     // The function must return a new fungible token.
+    // The type `{FungibleToken}` is the type of any resource
+    // that implements the resource interface `FungibleToken`.
     //
     pub fun withdraw(amount: Int): @{FungibleToken} {
         pre {
@@ -4599,12 +4605,12 @@ pub resource interface FungibleToken {
     // callable in all scopes, which deposits a fungible token
     // into this fungible token.
     //
-    // The given token must be of the same type – a deposit of another
-    // type is not possible.
-    //
     // No precondition is required to check the given token's balance
     // is positive, as this condition is already ensured by
     // the field requirement.
+    //
+    // The parameter type `{FungibleToken}` is the type of any resource
+    // that implements the resource interface `FungibleToken`.
     //
     pub fun deposit(_ token: @{FungibleToken}) {
         post {
@@ -4696,8 +4702,10 @@ pub resource ExampleToken: FungibleToken {
     //
     // The function must be public.
     //
-    // NOTE: the type of the parameter is `@ExampleToken`,
-    // i.e., only a token of the same type can be deposited.
+    // NOTE: the type of the parameter is `{FungibleToken}`,
+    // i.e., any resoure that implements the resoruce interface `FungibleToken`,
+    // so any other token – however, we want to ensure that only tokens
+    // of the same type can be deposited.
     //
     // This implementation satisfies the required postconditions.
     //
@@ -4781,11 +4789,14 @@ pub struct AnImplementation: AnInterface {
 }
 ```
 
-### Interface Type
+### Interfaces in Types
 
-Interfaces are types.
-Values implementing an interface can be used as initial values
-for constants and variables that have the interface as their type.
+Interfaces can be used in types: The type `{I}` is the type of all objects
+that implement the interfaace `I`.
+
+This is called a [restricted type](#restricted-types):
+Only the functionality (members and functions) of the interface can be used
+when accessing a value of such a type.
 
 ```cadence,file=interface-type.cdc
 // Declare an interface named `Shape`.
@@ -4794,7 +4805,7 @@ for constants and variables that have the interface as their type.
 // and a function which scales the shape by a given factor.
 //
 pub struct interface Shape {
-    pub area: Int
+    pub fun getArea(): Int
     pub fun scale(factor: Int)
 }
 
@@ -4812,10 +4823,8 @@ pub struct Square: Shape {
     // Since `area` was not declared as a constant, variable,
     // field in the interface, it can be declared.
     //
-    pub synthetic area: Int {
-        get {
-            return self.length * self.length
-        }
+    pub fun getArea(): Int {
+        return self.length * self.length
     }
 
     pub init(length: Int) {
@@ -4839,10 +4848,8 @@ pub struct Rectangle: Shape {
     // Provided the field `area  which is required to conform
     // to the interface `Shape`.
     //
-    pub synthetic area: Int {
-        get {
-            return self.width * self.height
-        }
+    pub fun getArea(): Int {
+        return self.width * self.height
     }
 
     pub init(width: Int, height: Int) {
