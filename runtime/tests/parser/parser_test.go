@@ -6115,7 +6115,6 @@ func TestParseSwapStatement(t *testing.T) {
 									EndPos:   Position{Offset: 34, Line: 3, Column: 14},
 								},
 							},
-							IndexingType: nil,
 							Range: Range{
 								StartPos: Position{Offset: 33, Line: 3, Column: 13},
 								EndPos:   Position{Offset: 35, Line: 3, Column: 15},
@@ -6597,7 +6596,6 @@ func TestParseReference(t *testing.T) {
 								Pos:        Position{Offset: 33, Line: 2, Column: 32},
 							},
 						},
-						IndexingType: nil,
 						Range: Range{
 							StartPos: Position{Offset: 32, Line: 2, Column: 31},
 							EndPos:   Position{Offset: 34, Line: 2, Column: 33},

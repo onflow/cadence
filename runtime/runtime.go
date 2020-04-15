@@ -316,6 +316,11 @@ func (r *interpreterRuntime) newInterpreter(
 				r.emitEvent(inter, runtimeInterface, eventValue, eventType)
 			},
 		),
+		interpreter.WithStorageExistenceHandler(
+			func(_ *interpreter.Interpreter, address common.Address, key string) bool {
+				return runtimeStorage.valueExists(string(address[:]), key)
+			},
+		),
 		interpreter.WithStorageReadHandler(
 			func(_ *interpreter.Interpreter, address common.Address, key string) interpreter.OptionalValue {
 				return runtimeStorage.readValue(string(address[:]), key)
@@ -360,6 +365,14 @@ func (r *interpreterRuntime) newInterpreter(
 				return nil
 			},
 		),
+		interpreter.WithUUIDHandler(func() uint64 {
+			// TODO: move to main interface
+			if runtimeInterfaceV2, ok := runtimeInterface.(InterfaceV2); ok {
+				return runtimeInterfaceV2.GenerateUUID()
+			} else {
+				return 0
+			}
+		}),
 		interpreter.WithContractValueHandler(
 			func(
 				inter *interpreter.Interpreter,

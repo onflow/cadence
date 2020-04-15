@@ -336,12 +336,33 @@ func (checker *Checker) VisitProgram(program *ast.Program) ast.Repr {
 
 	// Declare interface and composite types
 
+	registerInElaboration := func(ty Type) {
+		switch typedType := ty.(type) {
+		case *InterfaceType:
+			checker.Elaboration.InterfaceTypes[typedType.ID()] = typedType
+		case *CompositeType:
+			checker.Elaboration.CompositeTypes[typedType.ID()] = typedType
+		default:
+			panic(errors.NewUnreachableError())
+		}
+	}
+
 	for _, declaration := range program.InterfaceDeclarations() {
-		checker.declareInterfaceType(declaration)
+		interfaceType := checker.declareInterfaceType(declaration)
+
+		// NOTE: register types in elaboration
+		// *after* the full container chain is fully set up
+
+		VisitContainerAndNested(interfaceType, registerInElaboration)
 	}
 
 	for _, declaration := range program.CompositeDeclarations() {
-		checker.declareCompositeType(declaration)
+		compositeType := checker.declareCompositeType(declaration)
+
+		// NOTE: register types in elaboration
+		// *after* the full container chain is fully set up
+
+		VisitContainerAndNested(compositeType, registerInElaboration)
 	}
 
 	// Declare interfaces' and composites' members
@@ -1172,11 +1193,8 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 
 	for _, identifier := range t.NestedIdentifiers {
 		switch typedResult := result.(type) {
-		case *CompositeType:
-			result = typedResult.NestedTypes[identifier.Identifier]
-
-		case *InterfaceType:
-			result = typedResult.NestedTypes[identifier.Identifier]
+		case ContainerType:
+			result = typedResult.NestedTypes()[identifier.Identifier]
 
 		default:
 			if !typedResult.IsInvalidType() {
@@ -1796,35 +1814,63 @@ func (checker *Checker) withSelfResourceInvalidationAllowed(f func()) {
 func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 	var predeclaredMembers []*Member
 
-	addPredeclaredMember := func(member *Member) {
-		member.Predeclared = true
-		predeclaredMembers = append(predeclaredMembers, member)
+	addPredeclaredMember := func(
+		identifier string,
+		fieldType Type,
+		access ast.Access,
+		ignoreInSerialization bool,
+	) {
+		predeclaredMembers = append(predeclaredMembers, &Member{
+			ContainerType:         containerType,
+			Access:                access,
+			Identifier:            ast.Identifier{Identifier: identifier},
+			DeclarationKind:       common.DeclarationKindField,
+			VariableKind:          ast.VariableKindConstant,
+			TypeAnnotation:        NewTypeAnnotation(fieldType),
+			Predeclared:           true,
+			IgnoreInSerialization: ignoreInSerialization,
+		})
 	}
 
 	if compositeKindedType, ok := containerType.(CompositeKindedType); ok {
 
 		switch compositeKindedType.GetCompositeKind() {
 		case common.CompositeKindContract:
-			// Contracts have a predeclared private field `priv let account: AuthAccount`
 
-			member := NewPublicConstantFieldMember(
-				containerType,
+			// `priv let account: AuthAccount`,
+			// ignored in serialization
+
+			addPredeclaredMember(
 				"account",
 				&AuthAccountType{},
+				ast.AccessPrivate,
+				true,
 			)
-			member.Access = ast.AccessPrivate
-			addPredeclaredMember(member)
 
 		case common.CompositeKindResource:
-			// Resources have a predeclared field `pub let owner: PublicAccount?`
+			// Resources have two predeclared fields:
 
-			addPredeclaredMember(NewPublicConstantFieldMember(
-				containerType,
+			// `pub let owner: PublicAccount?`,
+			// ignored in serialization
+
+			addPredeclaredMember(
 				"owner",
 				&OptionalType{
 					Type: &PublicAccountType{},
 				},
-			))
+				ast.AccessPublic,
+				true,
+			)
+
+			// `pub let uuid: UInt64`,
+			// included in serialization
+
+			addPredeclaredMember(
+				"uuid",
+				&UInt64Type{},
+				ast.AccessPublic,
+				false,
+			)
 		}
 	}
 

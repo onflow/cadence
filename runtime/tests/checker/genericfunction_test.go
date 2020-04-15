@@ -41,7 +41,7 @@ func TestCheckGenericFunction(t *testing.T) {
 			checker, err := parseAndCheckWithTestValue(t,
 				fmt.Sprintf(
 					`
-                      let res = test%s() 
+                      let res = test%s()
                     `,
 					variant,
 				),
@@ -804,5 +804,34 @@ func TestCheckGenericFunction(t *testing.T) {
 			})
 		}
 	})
+}
 
+// https://github.com/dapperlabs/flow-go/issues/3275
+func TestCheckGenericFunctionIsInvalid(t *testing.T) {
+
+	typeParameter := &sema.TypeParameter{
+		Name:      "T",
+		TypeBound: nil,
+	}
+
+	genericFunctionType := &sema.FunctionType{
+		TypeParameters: []*sema.TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*sema.Parameter{
+			{
+				Label:      sema.ArgumentLabelNotRequired,
+				Identifier: "value",
+				TypeAnnotation: sema.NewTypeAnnotation(
+					&sema.GenericType{
+						TypeParameter: typeParameter,
+					},
+				),
+			},
+		},
+		ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
+		RequiredArgumentCount: nil,
+	}
+
+	assert.False(t, genericFunctionType.IsInvalidType())
 }

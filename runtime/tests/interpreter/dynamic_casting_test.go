@@ -290,7 +290,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 						inter := parseCheckAndInterpret(t,
 							fmt.Sprintf(
 								`
-                                  fun test(): %[2]s? { 
+                                  fun test(): %[2]s? {
                                       let x: String = "test"
                                       let y: %[1]s = x
                                       return y %[3]s %[2]s
@@ -1055,7 +1055,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 							fmt.Sprintf(
 								`
                                   fun test(): %[2]s? {
-	                                  let x: %[1]s = 42	
+	                                  let x: %[1]s = 42
 	                                  return x %[3]s %[2]s
 	                              }
 	                            `,
@@ -1238,7 +1238,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 						inter := parseCheckAndInterpret(t,
 							fmt.Sprintf(
 								`
-	                              fun test(): {String: %[2]s}? { 
+	                              fun test(): {String: %[2]s}? {
 	                                  let x: {String: Int} = {"test": 42}
 	                                  let y: %[1]s = x
 	                                  return y %[3]s {String: %[2]s}
@@ -2067,7 +2067,7 @@ func returnReferenceCasted(fromType, targetType string, operation ast.Operation,
                   fun test(): %[2]s? {
                       let x = S()
                       let r = &x as %[1]s
-                      return r as? %[2]s 
+                      return r as? %[2]s
                   }
                 `,
 				fromType,

@@ -25,10 +25,22 @@ type Interface interface {
 	EmitEvent(Event)
 }
 
+type InterfaceV2 interface {
+	Interface
+	// ValueExists returns true if the given key exists in the storage, controlled and owned by the given accounts.
+	ValueExists(owner, controller, key []byte) (exists bool, err error)
+	// GenerateUUID is called to generate a UUID.
+	GenerateUUID() uint64
+}
+
 type EmptyRuntimeInterface struct{}
 
 func (i *EmptyRuntimeInterface) ResolveImport(location Location) ([]byte, error) {
 	return nil, nil
+}
+
+func (i *EmptyRuntimeInterface) ValueExists(controller, owner, key []byte) (exists bool, err error) {
+	return false, nil
 }
 
 func (i *EmptyRuntimeInterface) GetValue(controller, owner, key []byte) (value []byte, err error) {
@@ -66,3 +78,7 @@ func (i *EmptyRuntimeInterface) GetSigningAccounts() []Address {
 func (i *EmptyRuntimeInterface) Log(message string) {}
 
 func (i *EmptyRuntimeInterface) EmitEvent(event Event) {}
+
+func (i *EmptyRuntimeInterface) GenerateUUID() uint64 {
+	return 0
+}

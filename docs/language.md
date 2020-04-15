@@ -6,7 +6,8 @@
 
 ## Introduction
 
-The Cadence Programming Language is a new high-level programming language intended for smart contract development.
+The Cadence Programming Language is a new high-level programming language
+intended for smart contract development.
 
 The language's goals are, in order of importance:
 
@@ -460,12 +461,16 @@ let b = x + 1000000000000000000000000
 
 ### Fixed-Point Numbers
 
+> 🚧 Status: Currently only the 64-bit wide `Fix64` and `UFix64` types are available.
+> More fixed-point number types will be added in a future release.
+
 Fixed-point numbers are useful for representing fractional values.
 They have a fixed number of digits after decimal point.
 
 They are essentially integers which are scaled by a factor.
 For example, the value 1.23 can be represented as 1230 with a scaling factor of 1/1000.
-The scaling factor is the same for all values of the same type and stays the same during calculations.
+The scaling factor is the same for all values of the same type
+and stays the same during calculations.
 
 Fixed-point numbers in Cadence have a scaling factor with a power of 10, instead of a power of 2,
 i.e. they are decimal, not binary.
@@ -811,7 +816,6 @@ The force-assignment operator is only used for
 [resource types](#resources) and the move operator (`<-`),
 which are covered the resources section of this document.
 
-
 #### Conditional Downcasting Operator
 
 > 🚧 Status: The conditional downcasting operator `as?` is implemented,
@@ -928,7 +932,9 @@ let thumbsUpText =
     "This is the first line.\nThis is the second line with an emoji: \u{1F44D}"
 ```
 
-The type `Character` represents a single, human-readable character. Characters are extended grapheme clusters, which consist of one or more Unicode scalars.
+The type `Character` represents a single, human-readable character.
+Characters are extended grapheme clusters,
+which consist of one or more Unicode scalars.
 
 For example, the single character `ü` can be represented
 in several ways in Unicode.
@@ -968,7 +974,7 @@ let canadianFlag: Character = "\u{1F1E8}\u{1F1E6}"
 
 Strings have multiple built-in functions you can use.
 
-- `length: Int`: Returns the number of characters in the string as an integer.
+- `let length: Int`: Returns the number of characters in the string as an integer.
 
     ```cadence,file=string-length-field.cdc
     let example = "hello"
@@ -978,7 +984,7 @@ Strings have multiple built-in functions you can use.
     // `length` is `5`
     ```
 
-- `concat(_ other: String): String`:
+- `fun concat(_ other: String): String`:
   Concatenates the string `other` to the end of the original string,
   but does not modify the original string.
   This function creates a new string whose length is the sum of the lengths
@@ -993,7 +999,7 @@ Strings have multiple built-in functions you can use.
     // `helloWorld` is now `"helloworld"`
     ```
 
-- `slice(from: Int, upTo: Int): String`:
+- `fun slice(from: Int, upTo: Int): String`:
   Returns a string slice of the characters
   in the given string from start index `from` up to,
   but not including, the end index `upTo`.
@@ -1092,11 +1098,13 @@ This is safe because arrays are value types and not reference types.
 #### Array Indexing
 
 To get the element of an array at a specific index, the indexing syntax can be used:
-The array is followed by an opening square bracket `[`, the indexing value, and ends with a closing square bracket `]`.
+The array is followed by an opening square bracket `[`, the indexing value,
+and ends with a closing square bracket `]`.
 
 Indexes start at 0 for the first element in the array.
 
-Accessing an element which is out of bounds results in a fatal error at run-time and aborts the program.
+Accessing an element which is out of bounds results in a fatal error at run-time
+and aborts the program.
 
 ```cadence,file=arrays-indexing.cdc
 // Declare an array of integers.
@@ -1149,7 +1157,7 @@ that can be used to get information about and manipulate the contents of the arr
 The field `length`, and the functions `concat`, and `contains`
 are available for both variable-sized and fixed-sized or variable-sized arrays.
 
-- `length: Int`:
+- `let length: Int`:
   Returns the number of elements in the array.
 
     ```cadence,file=array-length-field.cdc
@@ -1162,7 +1170,7 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
     // `length` is `4`
     ```
 
-- `concat(_ array: T): T`:
+- `fun concat(_ array: T): T`:
   Concatenates the parameter `array` to the end
   of the array the function is called on,
   but does not modify that array.
@@ -1188,7 +1196,7 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
     // `moreNumbers` is still `[11, 27]`
     ```
 
-- `contains(_ element: T): Bool`:
+- `fun contains(_ element: T): Bool`:
   Indicates whether the given element of type `T` is in the array.
 
     ```cadence,file=array-contains.cdc
@@ -1214,7 +1222,7 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
 The following functions can only be used on variable-sized arrays.
 It is invalid to use one of these functions on a fixed-sized array.
 
-- `append(_ element: T): Void`:
+- `fun append(_ element: T): Void`:
   Adds the new element `element` of type `T` to the end of the array.
 
   The new element must be the same type as all the other elements in the array.
@@ -1231,7 +1239,7 @@ It is invalid to use one of these functions on a fixed-sized array.
     numbers.append("SneakyString")
     ```
 
-- `insert(at index: Int, _ element: T): Void`:
+- `fun insert(at index: Int, _ element: T): Void`:
   Inserts the new element `element` of type `T`
   at the given `index` of the array.
 
@@ -1257,7 +1265,7 @@ It is invalid to use one of these functions on a fixed-sized array.
     numbers.insert(at: 12, 39)
     ```
 
-- `remove(at index: Int): T`:
+- `fun remove(at index: Int): T`:
   Removes the element at the given `index` from the array and returns it.
 
   The `index` must be within the bounds of the array.
@@ -1276,7 +1284,7 @@ It is invalid to use one of these functions on a fixed-sized array.
     numbers.remove(at: 19)
     ```
 
-- `removeFirst(): T`:
+- `fun removeFirst(): T`:
   Removes the first element from the array and returns it.
 
   The array must not be empty.
@@ -1300,7 +1308,7 @@ It is invalid to use one of these functions on a fixed-sized array.
     numbers.removeFirst()
     ```
 
-- `removeLast(): T`:
+- `fun removeLast(): T`:
   Removes the last element from the array and returns it.
 
   The array must not be empty.
@@ -1464,7 +1472,7 @@ booleans[0] = true
 
 #### Dictionary Fields and Functions
 
-- `length: Int`:
+- `fun length: Int`:
   Returns the number of entries in the dictionary.
 
     ```cadence,file=dictionary-length-field.cdc
@@ -1477,7 +1485,7 @@ booleans[0] = true
     // `length` is `2`
     ```
 
-- `remove(key: K): V?`:
+- `fun remove(key: K): V?`:
   Removes the value for the given `key` of type `K` from the dictionary.
 
   Returns the value of type `V` as an optional
@@ -1506,7 +1514,7 @@ booleans[0] = true
     // `numbers` is `{"twentyThree": 23}`
     ```
 
-- `keys: [K]`:
+- `let keys: [K]`:
   Returns an array of the keys of type `K` in the dictionary.  This does not
   modify the dictionary, just returns a copy of the keys as an array.
   If the dictionary is empty, this returns an empty array.
@@ -1521,7 +1529,7 @@ booleans[0] = true
     // `keys` has type `[String]` and is `["fortyTwo","twentyThree"]`
     ```
 
-- `values: [V]`:
+- `let values: [V]`:
   Returns an array of the values of type `V` in the dictionary.  This does not
   modify the dictionary, just returns a copy of the values as an array.
   If the dictionary is empty, this returns an empty array.
@@ -1707,14 +1715,16 @@ The result is always the same type as the arguments.
 
 The division and remainder operators abort the program when the divisor is zero.
 
-Arithmetic operations on the signed integer types `Int8`, `Int16`, `Int32`, `Int64`, `Int128`, `Int256`,
-and on the unsigned integer types `UInt8`, `UInt16`, `UInt32`, `UInt64`, `UInt128`, `UInt256`,
+Arithmetic operations on the signed integer types
+`Int8`, `Int16`, `Int32`, `Int64`, `Int128`, `Int256`,
+and on the unsigned integer types
+`UInt8`, `UInt16`, `UInt32`, `UInt64`, `UInt128`, `UInt256`,
 do not cause values to overflow or underflow.
 
 ```cadence,file=operator-add-overflow.cdc
 let a: UInt8 = 255
 
-// Error: The result `256` does not fit in the range of `UInt8`,
+// Run-time error: The result `256` does not fit in the range of `UInt8`,
 // thus a fatal overflow error is raised and the program aborts
 //
 let b = a + 1
@@ -1724,7 +1734,7 @@ let b = a + 1
 let a: Int8 = 100
 let b: Int8 = 100
 
-// Error: The result `10000` does not fit in the range of `Int8`,
+// Run-time error: The result `10000` does not fit in the range of `Int8`,
 // thus a fatal overflow error is raised and the program aborts
 //
 let c = a * b
@@ -1733,13 +1743,14 @@ let c = a * b
 ```cadence,file=operator-unary-negate-overflow.cdc
 let a: Int8 = -128
 
-// Error: The result `128` does not fit in the range of `Int8`,
+// Run-time error: The result `128` does not fit in the range of `Int8`,
 // thus a fatal overflow error is raised and the program aborts
 //
 let b = -a
 ```
 
-Arithmetic operations on the unsigned integer types `Word8`, `Word16`, `Word32`, `Word64`
+Arithmetic operations on the unsigned integer types
+`Word8`, `Word16`, `Word32`, `Word64`
 may cause values to overflow or underflow.
 
 For example, the maximum value of an unsigned 8-bit integer is 255 (binary 11111111).
@@ -1756,7 +1767,8 @@ let a: Word8 = 255
 a + 1 // is `0`
 ```
 
-Similarly, for the minimum value 0, subtracting 1 wraps around and results in the maximum value 255.
+Similarly, for the minimum value 0,
+subtracting 1 wraps around and results in the maximum value 255.
 
 ```cadence,file=operator-minus.cdc
 //    00000000
@@ -2089,7 +2101,7 @@ let clamped = clamp(123, min: 0, max: 100)
 // a potential that a function call accidentally provides arguments in
 // the wrong order.
 //
-// While the parameter names `sendingAccount` and `receivingAccount`
+// While the parameter names `senderAddress` and `receiverAddress`
 // are descriptive inside the function, they might be too verbose
 // to require them as argument labels in function calls.
 //
@@ -2101,22 +2113,22 @@ let clamped = clamp(123, min: 0, max: 100)
 // the function and also in a function call, so no argument label is given,
 // and the parameter name is required as the argument label in a function call.
 //
-fun send(from sendingAccount: Account, to receivingAccount: Account, amount: Int) {
+fun send(from senderAddress: Address, to receivingAddress: Address, amount: Int) {
     // The function code is omitted for brevity.
     // ...
 }
 
-// Declare a constant which refers to the sending account.
+// Declare a constant which refers to the sending account's address.
 //
 // The initial value is omitted for brevity.
 //
-let sender: Account = // ...
+let sender: Address = // ...
 
-// Declare a constant which refers to the receiving account.
+// Declare a constant which refers to the receiving account's address.
 //
 // The initial value is omitted for brevity.
 //
-let receiver: Account = // ...
+let receiver: Address = // ...
 
 // Call the function named `send`.
 //
@@ -2360,7 +2372,8 @@ test()  // is `2`
 When arguments are passed to a function, they are copied.
 Therefore, values that are passed into a function
 are unchanged in the caller's scope when the function returns.
-This behavior is known as [call-by-value](https://en.wikipedia.org/w/index.php?title=Evaluation_strategy&oldid=896280571#Call_by_value).
+This behavior is known as
+[call-by-value](https://en.wikipedia.org/w/index.php?title=Evaluation_strategy&oldid=896280571#Call_by_value).
 
 ```cadence,file=function-change.cdc
 // Declare a function that changes the first two elements
@@ -2393,13 +2406,23 @@ fun test(x: Int) {
 
 ### Function Preconditions and Postconditions
 
-Functions may have preconditions and may have postconditions. Preconditions and postconditions can be used to restrict the inputs (values for parameters) and output (return value) of a function.
+Functions may have preconditions and may have postconditions.
+Preconditions and postconditions can be used to restrict the inputs (values for parameters)
+and output (return value) of a function.
 
-Preconditions must be true right before the execution of the function. Preconditions are part of the function and introduced by the `pre` keyword, followed by the condition block.
+Preconditions must be true right before the execution of the function.
+Preconditions are part of the function and introduced by the `pre` keyword,
+followed by the condition block.
 
-Postconditions must be true right after the execution of the function. Postconditions are part of the function and introduced by the `post` keyword, followed by the condition block. Postconditions may only occur after preconditions, if any.
+Postconditions must be true right after the execution of the function.
+Postconditions are part of the function and introduced by the `post` keyword,
+followed by the condition block.
+Postconditions may only occur after preconditions, if any.
 
-A conditions block consists of one or more conditions. Conditions are expressions evaluating to a boolean. They may not call functions, i.e., they cannot have side-effects and must be pure expressions. Also, conditions may not contain function expressions.
+A conditions block consists of one or more conditions.
+Conditions are expressions evaluating to a boolean.
+They may not call functions, i.e., they cannot have side-effects and must be pure expressions.
+Also, conditions may not contain function expressions.
 
 <!--
 
@@ -2410,7 +2433,10 @@ See https://github.com/dapperlabs/flow-go/issues/70
 
 -->
 
-Conditions may be written on separate lines, or multiple conditions can be written on the same line, separated by a semicolon. This syntax follows the syntax for [statements](#semicolons).
+Conditions may be written on separate lines,
+or multiple conditions can be written on the same line,
+separated by a semicolon.
+This syntax follows the syntax for [statements](#semicolons).
 
 Following each condition, an optional description can be provided after a colon.
 The condition description is used as an error message when the condition fails.
@@ -2441,12 +2467,14 @@ fun factorial(_ n: Int): Int {
 
 factorial(5)  // is `120`
 
-// Run-time error: The given argument does not satisfy the precondition `n >= 0` of the function, the program aborts.
+// Run-time error: The given argument does not satisfy
+// the precondition `n >= 0` of the function, the program aborts.
 //
 factorial(-2)
 ```
 
-In postconditions, the special function `before` can be used to get the value of an expression just before the function is called.
+In postconditions, the special function `before` can be used
+to get the value of an expression just before the function is called.
 
 ```cadence,file=function-increment.cdc
 var n = 0
@@ -2494,8 +2522,10 @@ if (a != 0) {
 // `b` is `1`
 ```
 
-An additional, optional else-clause can be added to execute another piece of code when the condition is false.
-The else-clause is introduced by the `else` keyword followed by braces that contain the code that should be executed.
+An additional, optional else-clause can be added to execute another piece of code
+when the condition is false.
+The else-clause is introduced by the `else` keyword followed by braces
+that contain the code that should be executed.
 
 ```cadence,file=control-flow-if-else.cdc
 let a = 0
@@ -2543,9 +2573,14 @@ if a == 1 {
 Optional binding allows getting the value inside an optional.
 It is a variant of the if-statement.
 
-If the optional contains a value, the first branch is executed and a temporary constant or variable is declared and set to the value contained in the optional; otherwise, the else branch (if any) is executed.
+If the optional contains a value, the first branch is executed
+and a temporary constant or variable is declared and set to the value contained in the optional;
+otherwise, the else branch (if any) is executed.
 
-Optional bindings are declared using the `if` keyword like an if-statement, but instead of the boolean test value, it is followed by the `let` or `var` keywords, to either introduce a constant or variable, followed by a name, the equal sign (`=`), and the optional value.
+Optional bindings are declared using the `if` keyword like an if-statement,
+but instead of the boolean test value, it is followed by the `let` or `var` keywords,
+to either introduce a constant or variable, followed by a name,
+the equal sign (`=`), and the optional value.
 
 ```cadence,file=control-flow-optional-binding-not-nil.cdc
 let maybeNumber: Int? = 1
@@ -2569,11 +2604,12 @@ if let number = noNumber {
 }
 ```
 
-### Looping:
+### Looping
 
 #### while-statement
 
-While-statements allow a certain piece of code to be executed repeatedly, as long as a condition remains true.
+While-statements allow a certain piece of code to be executed repeatedly,
+as long as a condition remains true.
 
 The while-statement starts with the `while` keyword, followed by the condition,
 and the code that should be repeatedly
@@ -2627,7 +2663,8 @@ for element in array {
 
 #### continue and break
 
-In for-loops and while-loops, the `continue` statement can be used to stop the current iteration of a loop and start the next iteration.
+In for-loops and while-loops, the `continue` statement can be used to stop
+the current iteration of a loop and start the next iteration.
 
 ```cadence,file=control-flow-continue.cdc
 var i = 0
@@ -2683,7 +2720,10 @@ for element in array {
 
 ### Immediate function return: return-statement
 
-The return-statement causes a function to return immediately, i.e., any code after the return-statement is not executed. The return-statement starts with the `return` keyword and is followed by an optional expression that should be the return value of the function call.
+The return-statement causes a function to return immediately,
+i.e., any code after the return-statement is not executed.
+The return-statement starts with the `return` keyword
+and is followed by an optional expression that should be the return value of the function call.
 
 <!--
 TODO: examples
@@ -2695,7 +2735,8 @@ TODO: examples
 
 ## Scope
 
-Every function and block (`{` ... `}`) introduces a new scope for declarations. Each function and block can refer to declarations in its scope or any of the outer scopes.
+Every function and block (`{` ... `}`) introduces a new scope for declarations.
+Each function and block can refer to declarations in its scope or any of the outer scopes.
 
 ```cadence,file=scope.cdc
 let x = 10
@@ -2775,7 +2816,9 @@ f()  // is `2`
 The Cadence programming language is a *type-safe* language.
 
 When assigning a new value to a variable, the value must be the same type as the variable.
-For example, if a variable has type `Bool`, it can *only* be assigned a value that has type `Bool`, and not for example a value that has type `Int`.
+For example, if a variable has type `Bool`,
+it can *only* be assigned a value that has type `Bool`,
+and not for example a value that has type `Int`.
 
 ```cadence,file=type-safety-assign-int-to-bool.cdc
 // Declare a variable that has type `Bool`.
@@ -2786,7 +2829,11 @@ var a = true
 a = 0
 ```
 
-When passing arguments to a function, the types of the values must match the function parameters' types. For example, if a function expects an argument that has type `Bool`, *only* a value that has type `Bool` can be provided, and not for example a value which has type `Int`.
+When passing arguments to a function,
+the types of the values must match the function parameters' types.
+For example, if a function expects an argument that has type `Bool`,
+*only* a value that has type `Bool` can be provided,
+and not for example a value which has type `Int`.
 
 ```cadence,file=type-safety-nand.cdc
 fun nand(_ a: Bool, _ b: Bool): Bool {
@@ -2927,7 +2974,8 @@ Each field may have a different type.
 Composite types can only be declared within a [contract](#contracts) and nowhere else.
 
 There are two kinds of composite types.
-The kinds differ in their usage and the behaviour when a value is used as the initial value for a constant or variable,
+The kinds differ in their usage and the behaviour
+when a value is used as the initial value for a constant or variable,
 when the value is assigned to a variable,
 when the value is passed as an argument to a function,
 and when the value is returned from a function:
@@ -2938,17 +2986,27 @@ and when the value is returned from a function:
 
 - [**Resources**](#resources) are **moved**, they are linear types and **must** be used **exactly once**.
 
-    Resources are useful when it is desired to model ownership (a value exists exactly in one location and it should not be lost).
+    Resources are useful when it is desired to model ownership
+    (a value exists exactly in one location and it should not be lost).
 
-    Certain constructs in a blockchain represent assets of real, tangible value, as much as a house or car or bank account.
-    We have to worry about literal loss and theft, perhaps even on the scale of millions of dollars.
+    Certain constructs in a blockchain represent assets of real, tangible value,
+    as much as a house or car or bank account.
+    We have to worry about literal loss and theft,
+    perhaps even on the scale of millions of dollars.
 
     Structures are not an ideal way to represent this ownership because they are copied.
-    This would mean that there could be a risk of having multiple copies of certain assets floating around, which breaks the scarcity requirements needed for these assets to have real value.
+    This would mean that there could be a risk of having multiple copies
+    of certain assets floating around,
+    which breaks the scarcity requirements needed for these assets to have real value.
 
-    A structure is much more useful for representing information that can be grouped together in a logical way, but doesn't have value or a need to be able to be owned or transferred.
+    A structure is much more useful for representing information
+    that can be grouped together in a logical way,
+    but doesn't have value or a need to be able to be owned or transferred.
 
-    A structure could for example be used to contain the information associated with a division of a company, but a resource would be used to represent the assets that have been allocated to that organization for spending.
+    A structure could for example be used to contain the information associated
+    with a division of a company,
+    but a resource would be used to represent the assets that have been allocated
+    to that organization for spending.
 
 Nesting of resources is only allowed within other resource types,
 or in data structures like arrays and dictionaries,
@@ -2956,7 +3014,9 @@ but not in structures, as that would allow resources to be copied.
 
 ### Composite Type Declaration and Creation
 
-Structures are declared using the `struct` keyword and resources are declared using the `resource` keyword. The keyword is followed by the name.
+Structures are declared using the `struct` keyword
+and resources are declared using the `resource` keyword.
+The keyword is followed by the name.
 
 ```cadence,file=composite-type-declaration.cdc
 pub struct SomeStruct {
@@ -2984,9 +3044,11 @@ Composite types can only be declared within [contracts](#contracts)
 and not locally in functions.
 They can also not be nested.
 
-Resource must be created (instantiated) by using the `create` keyword and calling the type like a function.
+Resource must be created (instantiated) by using the `create` keyword
+and calling the type like a function.
 
-Resources can only be created in functions and types that are declared in the same contract in which the resource is declared.
+Resources can only be created in functions and types
+that are declared in the same contract in which the resource is declared.
 
 ```cadence,file=resource-instantiation.cdc
 // instantiate a new resource object and assign it to a constant
@@ -3037,7 +3099,8 @@ There are three kinds of fields:
     Synthetic fields are declared using the `synthetic` keyword.
 
     Synthetic fields must have a getter and a setter.
-    Getters and setters are explained in the [next section](#composite-type-field-getters-and-setters).
+    Getters and setters are explained in the
+    [next section](#composite-type-field-getters-and-setters).
     Synthetic fields are explained in a [separate section](#synthetic-composite-type-fields).
 
 | Field Kind           | Stored in memory | Assignable         | Keyword     |
@@ -3143,7 +3206,8 @@ to the storage of another account, and when it is moved out of account storage.
 
 > 🚧 Status: Initializer overloading is not implemented yet.
 
-Initializers support overloading. This allows for example providing default values for certain parameters.
+Initializers support overloading.
+This allows for example providing default values for certain parameters.
 
 ```cadence,file=composite-type-initializer-overloading.cdc
 // Declare a structure named `Token`, which has a constant field
@@ -3241,7 +3305,9 @@ pub struct SetterExample {
 let example = SetterExample(balance: 10)
 // `example.balance` is `10`
 
-// Run-time error: The precondition of the setter for the field `balance` fails, the program aborts.
+// Run-time error: The precondition of the setter for the field `balance` fails,
+// the program aborts.
+//
 example.balance = -50
 ```
 
@@ -3599,8 +3665,8 @@ let two = value!.number
 // `two` is `2`
 
 // Try to access the `number` field of `noValue`, which has type `Value?`
-// Error: This time, since `noValue` is `nil`, The program execution will
-// revert
+// Run-time error: This time, since `noValue` is `nil`,
+// the program execution will revert
 let number = noValue!.number
 
 // Call the `set` function of the struct
@@ -3608,7 +3674,7 @@ let number = noValue!.number
 // This succeeds and sets the value to 4
 value!.set(new: 4)
 
-// Error: Since `noValue` is nil, the value is not set
+// Run-time error: Since `noValue` is nil, the value is not set
 // and the program execution reverts.
 noValue!.set(new: 4)
 
@@ -3621,7 +3687,8 @@ let six = value!.setAndReturn(new: 6)
 
 #### Resources
 
-Resources are types that can only exist in **one** location at a time and **must** be used **exactly once**.
+Resources are types that can only exist in **one** location at a time
+and **must** be used **exactly once**.
 
 Resources **must** be created (instantiated) by using the `create` keyword.
 
@@ -3850,9 +3917,11 @@ pub fun returnBeforeDestroy(: Bool) {
 
 #### Resource Variables
 
-Resource variables cannot be assigned to as that would lead to the loss of the variable's current resource value.
+Resource variables cannot be assigned to,
+as that would lead to the loss of the variable's current resource value.
 
-Instead, use a swap statement (`<->`) or shift statement (`<- target <-`) to replace the resource variable with another resource.
+Instead, use a swap statement (`<->`) or shift statement (`<- target <-`)
+to replace the resource variable with another resource.
 
 ```cadence,file=resource-variable-invalid-assignment.cdc
 pub resource R {}
@@ -3988,10 +4057,11 @@ let test = makeCloner(resource: <-create R())
 #### Resources in Arrays and Dictionaries
 
 Arrays and dictionaries behave differently when they contain resources:
-Indexing into an array to read an element at a certain index or assign to it,
-or indexing into a dictionary to read a value for a certain key or set a value for the key is **not** allowed.
+It is **not** allowed to index into an array to read an element at a certain index or assign to it,
+or index into a dictionary to read a value for a certain key or set a value for the key.
 
-Instead, use a swap statement (`<->`) or shift statement (`<- target <-`) to replace the accessed resource with another resource.
+Instead, use a swap statement (`<->`) or shift statement (`<- target <-`)
+to replace the accessed resource with another resource.
 
 ```cadence,file=resource-in-array.cdc
 resource R {}
@@ -4265,7 +4335,6 @@ a declaration can be accessed or called.
 
 **Access level must be specified for each declaration**
 
-
 The `(set)` suffix can be used to make variables also publicly writable.
 
 To summarize the behavior for variable declarations, constant declarations, and fields:
@@ -4426,14 +4495,18 @@ must always be at least public.
 Variable field requirements may be annotated
 to require them to be publicly settable.
 
-Function requirements consist of the name of the function, parameter types, an optional return type,
+Function requirements consist of the name of the function,
+parameter types, an optional return type,
 and optional preconditions and postconditions.
 
 Field requirements consist of the name and the type of the field.
-Field requirements may optionally declare a getter requirement and a setter requirement, each with preconditions and postconditions.
+Field requirements may optionally declare a getter requirement and a setter requirement,
+each with preconditions and postconditions.
 
-Calling functions with preconditions and postconditions on interfaces instead of concrete implementations can improve the security of a program,
-as it ensures that even if implementations change, some aspects of them will always hold.
+Calling functions with preconditions and postconditions on interfaces
+instead of concrete implementations can improve the security of a program,
+as it ensures that even if implementations change,
+some aspects of them will always hold.
 
 ### Interface Declaration
 
@@ -4451,9 +4524,8 @@ a variable field, a constant field, or a synthetic field.
 
 Field requirements and function requirements must specify the required level of access.
 The access must be at least be public, so the `pub` keyword must be provided.
-Variable field requirements can be specified to also be publicly settable by using the `pub(set)` keyword.
-
-The special type `Self` can be used to refer to the type implementing the interface.
+Variable field requirements can be specified to also be publicly settable
+by using the `pub(set)` keyword.
 
 ```cadence,file=interface-declaration.cdc
 // Declare a resource interface for a fungible token.
@@ -4508,9 +4580,7 @@ pub resource interface FungibleToken {
     //
     // The function must return a new fungible token.
     //
-    // NOTE: `@Self` is the resource type implementing this interface.
-    //
-    pub fun withdraw(amount: Int): @Self {
+    pub fun withdraw(amount: Int): @FungibleToken {
         pre {
             amount > 0:
                 "the amount must be positive"
@@ -4536,10 +4606,7 @@ pub resource interface FungibleToken {
     // is positive, as this condition is already ensured by
     // the field requirement.
     //
-    // NOTE: the first parameter has the type `@Self`,
-    // i.e. the resource type implementing this interface.
-    //
-    pub fun deposit(_ token: @Self) {
+    pub fun deposit(_ token: @FungibleToken) {
         post {
             self.balance == before(self.balance) + token.balance:
                 "the amount must be added to the balance"
@@ -4563,7 +4630,8 @@ is done in the type declaration of the composite type (e.g., structure, resource
 The kind and the name of the composite type is followed by a colon (`:`)
 and the name of one or more interfaces that the composite type implements.
 
-This will tell the checker to enforce any requirements from the specified interfaces onto the declared type.
+This will tell the checker to enforce any requirements from the specified interfaces
+onto the declared type.
 
 A type implements (conforms to) an interface if it declares
 the implementation in its signature, provides field declarations
@@ -4679,7 +4747,8 @@ token.withdraw(amount: 100)
 token.withdraw(amount: 90)
 ```
 
-The access level for variable fields in an implementation may be less restrictive than the interface requires.
+The access level for variable fields in an implementation
+may be less restrictive than the interface requires.
 For example, an interface may require a field to be
 at least public (i.e. the `pub` keyword is specified),
 and an implementation may provide a variable field which is public,
@@ -4712,7 +4781,8 @@ pub struct AnImplementation: AnInterface {
 ### Interface Type
 
 Interfaces are types.
-Values implementing an interface can be used as initial values for constants and variables that have the interface as their type.
+Values implementing an interface can be used as initial values
+for constants and variables that have the interface as their type.
 
 ```cadence,file=interface-type.cdc
 // Declare an interface named `Shape`.
@@ -4804,7 +4874,9 @@ shape = Square(length: 30)
 let rectangle: Rectangle = Square(length: 10)
 ```
 
-Fields declared in an interface can be accessed and functions declared in an interface can be called on values of a type that implements the interface.
+Fields declared in an interface can be accessed
+and functions declared in an interface
+can be called on values of a type that implements the interface.
 
 ```cadence,file=interface-type-fields-and-functions.cdc
 // Declare a constant which has the type `Shape`.
@@ -4846,13 +4918,15 @@ pub struct interface Polygon: Shape {}
 // because the `Polygon` interface requires it.
 //
 pub struct Hexagon: Polygon {}
-
 ```
 
 ### Interface Nesting
 
+> 🚧 Status: Currently only contracts and contract interfaces support nested interfaces.
+
 Interfaces can be arbitrarily nested.
-Declaring an interface inside another does not require implementing types of the outer interface to provide an implementation of the inner interfaces.
+Declaring an interface inside another does not require implementing types
+of the outer interface to provide an implementation of the inner interfaces.
 
 ```cadence,file=interface-nesting.cdc
 // Declare a resource interface `OuterInterface`, which declares
@@ -4919,17 +4993,23 @@ resource ExampleToken: FungibleToken {
 
 > 🚧 Status: The `Equatable` interface is not implemented yet.
 
-An equatable type is a type that can be compared for equality. Types are equatable when they  implement the `Equatable` interface.
+An equatable type is a type that can be compared for equality.
+Types are equatable when they  implement the `Equatable` interface.
 
-Equatable types can be compared for equality using the equals operator (`==`) or inequality using the unequals operator (`!=`).
+Equatable types can be compared for equality using the equals operator (`==`)
+or inequality using the unequals operator (`!=`).
 
-Most of the built-in types are equatable, like booleans and integers. Arrays are equatable when their elements are equatable. Dictionaries are equatable when their values are equatable.
+Most of the built-in types are equatable, like booleans and integers.
+Arrays are equatable when their elements are equatable.
+Dictionaries are equatable when their values are equatable.
 
-To make a type equatable the `Equatable` interface must be implemented, which requires the implementation of the function `equals`, which accepts another value that the given value should be compared for equality. Note that the parameter type is `Self`, i.e., the other value must have the same type as the implementing type.
+To make a type equatable the `Equatable` interface must be implemented,
+which requires the implementation of the function `equals`,
+which accepts another value that the given value should be compared for equality.
 
 ```cadence,file=equatable.cdc
 struct interface Equatable {
-    pub fun equals(_ other: Self): Bool
+    pub fun equals(_ other: Equatable): Bool
 }
 ```
 
@@ -4947,10 +5027,14 @@ struct Cat: Equatable {
         self.id = id
     }
 
-    pub fun equals(_ other: Self): Bool {
-        // Cats are equal if their identifier matches.
-        //
-        return other.id == self.id
+    pub fun equals(_ other: Equatable): Bool {
+        if let otherCat = other as? Cat {
+            // Cats are equal if their identifier matches.
+            //
+            return otherCat.id == self.id
+        } else {
+            return false
+        }
     }
 }
 
@@ -4989,7 +5073,8 @@ Essential components are those that are used in the type's implementation of `Eq
 If two values are equal because their `equals` function returns true,
 then the implementation must return the same integer hash value for each of the two values.
 
-The implementation must also consistently return the same integer hash value during the execution of the program when the essential components have not changed.
+The implementation must also consistently return the same integer hash value during the execution
+of the program when the essential components have not changed.
 The integer hash value must not necessarily be the same across multiple executions.
 
 ```cadence,file=hashable.cdc
@@ -5018,15 +5103,19 @@ struct Point: Hashable {
     // Implementing the function `equals` will allow points to be compared
     // for equality and satisfies the `Equatable` interface.
     //
-    pub fun equals(_ other: Self): Bool {
-        // Points are equal if their coordinates match.
-        //
-        // The essential components are therefore the fields `x` and `y`,
-        // which must be used in the implementation of the field requirement
-        // `hashValue` of the `Hashable` interface.
-        //
-        return other.x == self.x
-            && other.y == self.y
+    pub fun equals(_ other: Point): Bool {
+        if let otherPoint = other as? Point {
+            // Points are equal if their coordinates match.
+            //
+            // The essential components are therefore the fields `x` and `y`,
+            // which must be used in the implementation of the field requirement
+            // `hashValue` of the `Hashable` interface.
+            //
+            return otherPoint.x == self.x
+                && otherPoint.y == self.y
+        } else {
+            return false
+        }
     }
 
     // Providing an implementation for the hash value field
@@ -5044,6 +5133,286 @@ struct Point: Hashable {
         }
     }
 }
+```
+
+## Restricted Types
+
+Structure and resource types can be **restricted**. Restrictions are interfaces.
+Restricted types only allow access to a subset of the members and functions
+of the type that is restricted, indicated by the restrictions.
+
+The syntax of a restriced type is `T{U1, U2, ... Un}`,
+where `T` is the restricted type, a concrete resource or strucure type,
+and the types `U1` to `Un` are the restrictions, interfaces that `T` conforms to.
+
+Only the members and functions of the union of the set of restrictions are available.
+
+Restricted types are useful for increasing the safety in functions
+that are suposed to only work on a subset of the type.
+For example, by using a restricted type for a parameter's type,
+the function may only access the functionality of the restriction:
+If the function accidentally attempts to access other functionality,
+this is prevented by the static checker.
+
+```cadence,file=restricted-types.cdc
+// Declare a resource interface named `HasCount`,
+// which has a read-only `count` field
+//
+resource interface HasCount {
+    pub let count: Int
+}
+
+// Declare a resource named `Counter`, which has a writeable `count` field,
+// and conforms to the resource interface `HasCount`
+//
+pub resource Counter: HasCount {
+    pub var count: Int
+
+    init(count: Int) {
+        self.count = count
+    }
+
+    pub fun increment() {
+        self.count = self.count + 1
+    }
+}
+
+// Create an instance of the resource `Counter`
+let counter: @Counter <- create Counter(count: 42)
+
+counterRef.count  // is `42`
+
+counterRef.increment()
+
+counterRef.count  // is `43`
+
+// Move the resource in variable `counter` to a new variable `restrictedCounter`,
+// but typed with the restricted type `Counter{HasCount}`:
+// The variable may hold any `Counter`, but only the functionality
+// defined in the given restriction, the interface `HasCount`, may be accessed
+//
+let restrictedCounter: @Counter{Count} <- counter
+
+// Invalid: Only functionality of restriction `Count` is available,
+// i.e. the read-only field `count`, but not the function `increment` of `Counter`
+//
+restrictedCounter.increment()
+
+// Move the resource in variable `restrictedCounter` to a new variable `unrestrictedCounter`,
+// again typed as `Counter`, i.e. all functionality of the counter is available
+//
+let unrestrictedCounter: @Counter <- restrictedCounter
+
+// Valid: The variable `unrestrictedCounter` has type `Counter`,
+// so all its functionality is available, including the function `increment`
+//
+unrestrictedCounter.increment()
+
+// Declare another resource type named `Strings`
+// which implements the resource interface `HasCount`
+//
+pub resource Strings: HasCount {
+    pub var count: Int
+    access(self) var strings: [String]
+
+    init() {
+        self.count = 0
+        self.strings = []
+    }
+
+    pub fun append(_ string: String) {
+        self.strings.append(string)
+        self.count = self.count + 1
+    }
+}
+
+// Invalid: The resource type `Strings` is not compatible
+// with the restricted type `Counter{HasCount}`.
+// Even though the resource `Strings` implements the resource interface `HasCount`,
+// it is not compatible with `Counter`
+//
+let counter2: @Counter{HasCount} <- create Strings()
+```
+
+In addition to restricting concrete types is also possible
+to restrict the built-in types `AnyStruct`, the supertype of all structures,
+and `AnyResource`, the supertype of all resources.
+For example, restricted type `AnyResource{HasCount}` is any resource type
+for which only the functionality of the `HasCount` resource interface can be used.
+
+The restricted types `AnyStruct` and `AnyResource` can be ommited.
+For example, the type `{HasCount}` is any resource that implements
+the resource interface `HasCount`.
+
+```cadence,file=restricted-types-anyresource.cdc
+pub struct interface HasID {
+    pub let id: String
+}
+
+pub struct A: HasID {
+    pub let name: String
+
+    init(name: String) {
+        self.name = name
+    }
+}
+
+pub struct B: HasID {
+    pub let name: String
+
+    init(name: String) {
+        self.name = name
+    }
+}
+
+// Create two instances, one of type `A`, and one of type `B`.
+// Both types conform to interface `HasID`, so the structs can be assigned
+// to variables with type `AnyResource{HasID}`: Some resource type which only allows
+// access to the functionality of resource interface `HasID`
+
+let hasID1: AnyStruct{HasID} = A(name: "1")
+let hasID2: AnyStruct{HasID} = B(name: "2")
+
+// Declare a function named `getID` which has one parameter with type `{HasID}`.
+// The type `{HasID}` is a short-hand for `AnyStruct{HasID}`:
+// Some structure which only allows access to the functionality of interface `HasID`.
+//
+pub fun getID(_ value: {HasID}): String {
+    return value.id
+}
+
+let id1 = getID(hasID1)
+// `id1` is "1"
+
+let id2 = getID(hasID2)
+// `id2` is "2"
+```
+
+Only concrete types may be restriced, e.g., the restricted type may not be an array,
+the type `[T]{U}` is invalid.
+
+Restricted types are also useful when giving access to resources and structures
+to potentially untrusted third-party programs through [references](#references),
+which are discussed in the next section.
+
+## References
+
+It is possible to create references to objects, i.e. resources or structures.
+A reference can be used to access fields and call functions on the referenced object.
+
+References are **copied**, i.e. they are value types.
+
+References are created by using the `&` operator, followed by the object,
+the `as` keyword, and the type through which they should be accessed.
+The given type must be a supertype of the referenced object's type.
+
+References have the type `&T`, where `T` is the type of the referenced object.
+
+```cadence,file=reference-hello.cdc
+let hello = "Hello"
+
+// Create a reference to the "Hello" string, typed as a `String`
+//
+let helloRef: &String = &hello as &String
+
+helloRef.length // is `5`
+
+// Invalid: Cannot create a reference to `hello`
+// typed as `&Int`, as it has type `String`
+//
+let intRef: &Int = &hello as &Int
+```
+
+References are covariant in their base types.
+For example, `&T` is a subtype of `&U`, if `T` is a subtype of `U`.
+
+```cadence,file=reference-counter.cdc
+
+// Declare a resource interface named `HasCount`,
+// that has a field `count`
+//
+resource interface HasCount {
+    count: Int
+}
+
+// Declare a resource named `Counter` that conforms to `HasCount`
+//
+resource Counter: HasCount {
+    pub var count: Int
+
+    pub init(count: Int) {
+        self.count = count
+    }
+
+    pub fun increment() {
+        self.count = self.count + 1
+    }
+}
+
+// Create a new instance of the resource type `Counter`
+// and create a reference to it, typed as `&Counter`,
+// so the reference allows access to all fields and functions
+// of the counter
+//
+let counter <- create Counter(count: 42)
+let counterRef: &Counter = &counter as &Counter
+
+counterRef.count  // is `42`
+
+counterRef.increment()
+
+counterRef.count  // is `43`
+```
+
+References may be **authorized** or **unauthorized**.
+
+Authorized references have the `auth` modifier, i.e. the full syntax is `auth &T`,
+whereas unauthorized references do not have a modifier.
+
+Authorized references can be freely upcasted and downcasted,
+whereas unauthorized references can only be upcasted.
+Also, authorized references are subtypes of unauthorized references.
+
+```cadence,file=reference-auth.cdc
+
+// Create an unauthorized reference to the counter,
+// typed with the restricted type `&{HasCount}`,
+// i.e. some resource that conforms to the `HasCount` interface
+//
+let countRef: &{HasCount} = &counter as &{HasCount}
+
+countRef.count  // is `43`
+
+// Invalid: The function `increment` is not available
+// for the type `&{HasCount}`
+//
+countRef.increment()
+
+// Invalid: Cannot failably downcast to reference type `&Counter`,
+// as the reference `countRef` is unauthorized.
+//
+// The counter value has type `Counter`, which is a subtype of `{HasCount}`,
+// but as the reference is unauthorized, the cast is not allowed.
+// It is not possible to "look under the covers"
+//
+let counterRef2: &Counter = countRef as? &Counter
+
+// Create an authorized reference to the counter,
+// again with the restricted type `{HasCount}`, i.e. some resource
+// that conforms to the `HasCount` interface
+//
+let authCountRef: auth &{HasCount} = &counter as auth &{HasCount}
+
+// Failably downcast to reference type `&Counter`.
+// This is valid, because the reference `authCountRef` is authorized
+//
+let counterRef3: &Counter = authCountRef as? &Counter
+
+counterRef3.count  // is `43`
+
+counterRef3.increment()
+
+counterRef3.count  // is `44`
 ```
 
 ## Imports
@@ -5076,27 +5445,137 @@ import Counter from 0x299F20A29311B9248F12
 
 ## Accounts
 
-```cadence
-struct interface Account {
-    address: Address
-    storage: Storage  // explained below
-}
-```
+Every account can be accessed through two types:
+
+- As a **Public Account** with the type `PublicAccount`,
+  which represents the publicly available portion of an account.
+
+  ```cadence
+  struct PublicAccount {
+
+      let address: Address
+
+      // Storage operations
+
+      fun getCapability(at: Path): Capability?
+      fun getLinkTarget(_ path: Path): Path?
+  }
+  ```
+
+  Any code can get the `PublicAccount` for an account address
+  using the built-in `getAccount` function:
+
+  ```cadence
+  fun getAccount(_ address: Address): PublicAccount
+  ```
+
+- As an **Authorized Account** with type `AuthAccount`,
+  which represents the authorized portion of an account.
+
+  Access to an `AuthAccount` means having full access to its [storage](#account-storage),
+  public keys, and code.
+
+  Only [signed transactions](#transactions) can get the `AuthAccount` for an account.
+  For each script signer of the transaction, the corresponding `AuthAccount` is passed
+  to the `prepare` phase of the transaction.
+
+  ```cadence
+  struct AuthAccount {
+
+      let address: Address
+
+      // Contract code
+
+      fun setCode(_ code: [Int])
+
+      // Key management
+
+      fun addPublicKey(_ publicKey: [Int])
+      fun removePublicKey(_ index: Int)
+
+      // Storage operations
+
+      fun save<T>(_ value: T, to: Path)
+      fun load<T>(from: Path): T?
+      fun copy<T: AnyStruct>(from: Path): T?
+
+      fun borrow<T: &Any>(from: Path): T?
+
+      fun link<T: &Any>(_ newCapabilityPath: Path, target: Path): Capability?
+      fun getLinkTarget(_ path: Path): Path?
+      fun unlink(_ path: Path)
+
+      fun getCapability(at: Path): Capability?
+    }
+    ```
 
 ## Account Storage
 
-All accounts have a `storage` object which contains the stored values of the account.
+All accounts have storage.
 
-All accounts also have a `published` object
-which contains the published references
-in an account. This will be covered later.
+Objects are stored under paths in storage.
+Paths consist of a domain and an identifier.
 
-Account storage is a key-value store where the **keys are types**.
-The stored value must be a subtype of the type it is keyed by.
-This means that if the type `Vault` is used as a key,
-the value must be a value that has the type `Vault` or is a subtype of `Vault`.
+Paths start with the character `/`, followed by the domain, the path separator `/`,
+and finally the identifier.
+For example, the path `/storage/test` has the domain `storage` and the identifier `test`.
 
-The index operator `[]` is used for both reading and writing stored values.
+There are only three valid domains: `storage`, `private`, and `public`.
+
+Objects in storage are always stored in the `storage` domain.
+
+Both resources and structures can be stored in account storage.
+
+Account storage is accessed through the following functions of `AuthAccount`.
+This means that any code that has access to the authorized account has access
+to all its stored objects.
+
+- `fun save<T>(_ value: T, to: Path)`:
+
+  Saves an object to account storage.
+  Resources are moved into storage, and structures are copied.
+
+  `T` is the type parameter for the object type.
+  It can be inferred from the argument's type.
+
+  If there is already an object stored under the given path, the program aborts.
+
+  The path must be a storage path, i.e., only the domain `storage` is allowed.
+
+- `fun load<T>(from: Path): T?`:
+
+   Loads an object from account storage.
+   If no object is stored under the given path, the function returns `nil`.
+   If there is an object stored, the stored resource or structure is moved
+   out of storage and returned as an optional.
+   When the function returns, the storage no longer contains an object
+   under the given path.
+
+   `T` is the type parameter for the object type.
+   A type argument for the parameter must be provided explicitly.
+
+   The type `T` must be a supertype of the type of the loaded object.
+   If it is not, the function returns `nil`.
+   The given type must not necessarily be a exactly the same as the type of the loaded object.
+
+   The path must be a storage path, i.e., only the domain `storage` is allowed.
+
+- `fun copy<T>(from: Path): T?`, where `T` is the type parameter for the value type:
+
+   Returns a copy of a structure stored in account storage, without removing it from storage.
+
+   If no strucure is stored under the given path, the function returns `nil`.
+   If there is a structure stored, it is copied.
+   The structure stays stored in storage after the function returns.
+
+   `T` is the type parameter for the structure type.
+   A type argument for the parameter must be provided explicitly.
+
+   The type `T` must be a supertype of the type of the loaded structure.
+   If it is not, the function returns `nil`.
+   The given type must not necessarily be a exactly the same as the type of the loaded object.
+
+   The path must be a storage path, i.e., only the domain `storage` is allowed.
 
 ```cadence,file=account-storage.cdc
 // Declare a resource named `Counter`.
@@ -5109,99 +5588,76 @@ resource Counter {
     }
 }
 
-// Create a new instance of the resource type `Counter` and move it
-// into the storage of the account.
-//
 // In this example the account is available as the constant `account`.
+
+// Create a new instance of the resource type `Counter`
+// and save it in the storage of the account.
 //
-// The type `Counter` is used as the key to refer to the stored value.
+// The path `/storage/counter` is used to refer to the stored value.
+// Its identifier `counter` was chosen freely and could be something else.
 //
-// A swap must be used to store the counter, because assignment
-// is not available, as it would override a potentially existing counter.
+account.save(<-create Counter(count: 42), to: /storage/counter)
+
+// Run-time error: Storage already contains an object under path `/storage/counter`
 //
-// To perform the swap, the declaration must be variable and have an optional type.
+account.save(<-create Counter(count: 123), to: /storage/counter)
+
+// Load the `Counter` resource from storage path `/storage/counter`.
 //
-var counter: Counter? <- create Counter(count: 42)
-account.storage[Counter] <-> counter
-
-// `counter` is now the counter that was potentially stored before.
-```
-
-## Storage References
-
-It is possible to create references to **storage locations**.
-References allow access to stored values.  A reference can be used to read or
-call fields and methods of stored values
-without having to move or call the fields
-and methods on the storage location directly.
-
-References are **copied**, i.e. they are value types.
-Any number of references to a storage location can be created,
-but only by the account that owns the location being referenced.
-
-Note that references are **not** referencing stored values –
-A reference cannot be used to directly modify a value it references, and
-if the value stored in the references location is moved or removed,
-the reference is not updated and it becomes invalid.
-
-References are created by using the `&` operator,
-followed by the storage location,the `as` keyword,
-and the type through which the stored location should be accessed.
-
-```cadence,file=reference-ex.cdc
-let nameRef: &Name = &account.storage[Name] as &Name
-```
-
-The storage location must be a subtype of the type given after the `as` keyword.
-
-References are covariant in their base types.
-For example, `&R` is a subtype of `&RI`,
-if `R` is a resource, `RI` is a resource interface,
-and resource `R` conforms to (implements) resource interface `RI`.
-
-```cadence,file=storage-reference.cdc
-
-// Declare a resource named `Counter`
+// The new constant `counter` has the type `Counter?`, i.e., it is an optional,
+// and its value is the counter resource, that was saved at the beginning
+// of the example.
 //
-resource Counter: {
-    pub var count: Int
+let counter <- account.load<@Counter>(from: /storage/counter)
 
-    pub init(count: Int) {
-        self.count = count
-    }
+// The storage is now empty, there is no longer an object stored
+// under the path `/storage/counter`.
 
-    pub fun increment() {
-        self.count = self.count + 1
-    }
-}
-
-// Create a new instance of the resource type `Counter` and move it
-// into the storage of the account.
+// Load the `Counter` resource again from storage path `/storage/counter`.
 //
-// In this example the account is available as the constant `account`.
+// The new constant `counter2` has the type `Counter?` and is `nil`,
+// as nothing is stored under the path `/storage/counter` anymore,
+// because the previous load moved the counter out of storage.
 //
-// The type `Counter` is used as the key to refer to the stored value.
+let counter2 <- account.load<@Counter>(from: /storage/counter)
+
+// Create another new instance of the resource type `Counter`
+// and save it in the storage of the account.
 //
-// A swap must be used to store the counter, because assignment
-// is not available, as it would override a potentially existing counter.
+// The path `/storage/otherCounter` is used to refer to the stored value.
 //
-// To perform the swap, the declaration must be variable and have an optional type.
+account.save(<-create Counter(count: 123), to: /storage/otherCounter)
+
+// Load the `Vault` resource from storage path `/storage/otherCounter`.
 //
-var counter: Counter? <- create Counter(count: 42)
-account.storage[Counter] <-> counter
-
-// `counter` is now the counter that was potentially stored before.
-
-// Create a reference to the storage location `account.storage[Counter]`
-// and allow access to it as the type `Counter`.
+// The new constant `vault` has the type `Vault?` and its value is `nil`,
+// as there is a resource with type `Counter` stored under the path,
+// which is not a subtype of the requested type `Vault`.
 //
-let counterReference: &Counter = &account.storage[Counter] as &Counter
+let vault <- account.load<@Vault>(from: /storage/otherCounter)
 
-counterReference.count  // is `42`
+// The storage still stores a `Counter` resource under the path `/storage/otherCounter`.
 
-counterReference.increment()
+// Save the string "Hello, World" in storage
+// under the path `/storage/helloWorldMessage`.
 
-counterReference.count  // is `43`
+account.save("Hello, world!", to: /storage/helloWorldMessage)
+
+// Copy the stored message from storage.
+//
+// After the copy, the storage still stores the string under the path.
+// Unlike `load`, `copy` does not remove the object from storage.
+//
+let message = account.copy<String>(from: /storage/helloWorldMessage)
+
+// Create a new instance of the resource type `Vault`
+// and save it in the storage of the account.
+//
+account.save(<-createEmptyVault(), to: /storage/vault)
+
+// Invalid: Cannot copy a resource, as this would allow arbitrary duplication.
+//
+let vault <- account.copy<@Vault>(from: /storage/vault)
 ```
 
 ### Reference-Based Access Control
@@ -5875,9 +6331,15 @@ TODO
 
 ## Built-in Functions
 
-### Transaction information
+### Block and Transaction Information
 
-There is currently no built-in function that allows getting the address of the signers of a transaction, the current block number, or timestamp.  These are being worked on.
+To get the addresses of the signers of a transaction,
+use the `address` field of each signing `AuthAccount`
+that is passed to the transaction's `prepare` block.
+
+There is currently no built-in function that allows getting the current block number,
+or timestamp.
+These are being worked on.
 
 ### `panic`
 
@@ -5885,7 +6347,8 @@ There is currently no built-in function that allows getting the address of the s
 fun panic(_ message: String): Never
 ```
 
-Terminates the program unconditionally and reports a message which explains why the unrecoverable error occurred.
+Terminates the program unconditionally
+and reports a message which explains why the unrecoverable error occurred.
 
 #### Example
 
@@ -5900,6 +6363,8 @@ let account = optionalAccount ?? panic("missing account")
 fun assert(_ condition: Bool, message: String)
 ```
 
-Terminates the program if the given condition is false, and reports a message which explains how the condition is false. Use this function for internal sanity checks.
+Terminates the program if the given condition is false,
+and reports a message which explains how the condition is false.
+Use this function for internal sanity checks.
 
 The message argument is optional.

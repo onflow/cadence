@@ -3363,8 +3363,10 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 func (*CompositeValue) IsValue() {}
 
 func (v *CompositeValue) DynamicType(interpreter *Interpreter) DynamicType {
-	staticType := interpreter.getCompositeType(v.TypeID)
-	return CompositeDynamicType{StaticType: staticType}
+	staticType := interpreter.getCompositeType(v.Location, v.TypeID)
+	return CompositeDynamicType{
+		StaticType: staticType,
+	}
 }
 
 func (v *CompositeValue) Copy() Value {
@@ -3430,15 +3432,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	if v.Kind == common.CompositeKindResource &&
 		name == "owner" {
 
-		if v.Owner == nil {
-			return NilValue{}
-		}
-
-		address := AddressValue(*v.Owner)
-
-		return NewSomeValueOwningNonCopying(
-			PublicAccountValue{Address: address},
-		)
+		return v.OwnerValue()
 	}
 
 	value, ok := v.Fields[name]
@@ -3492,6 +3486,18 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	}
 
 	return nil
+}
+
+func (v *CompositeValue) OwnerValue() OptionalValue {
+	if v.Owner == nil {
+		return NilValue{}
+	}
+
+	address := AddressValue(*v.Owner)
+
+	return NewSomeValueOwningNonCopying(
+		PublicAccountValue{Address: address},
+	)
 }
 
 func (v *CompositeValue) SetMember(_ *Interpreter, locationRange LocationRange, name string, value Value) {
@@ -4123,58 +4129,6 @@ func (v *SomeValue) String() string {
 	return fmt.Sprint(v.Value)
 }
 
-// StorageValue
-
-type StorageValue struct {
-	Address common.Address
-}
-
-func (StorageValue) IsValue() {}
-
-func (v StorageValue) DynamicType(_ *Interpreter) DynamicType {
-	return StorageDynamicType{}
-}
-
-func (v StorageValue) Copy() Value {
-	return StorageValue{
-		Address: v.Address,
-	}
-}
-
-func (v StorageValue) GetOwner() *common.Address {
-	return &v.Address
-}
-
-func (StorageValue) SetOwner(_ *common.Address) {
-	// NO-OP: ownership cannot be changed
-}
-
-// PublishedValue
-
-type PublishedValue struct {
-	Address common.Address
-}
-
-func (PublishedValue) IsValue() {}
-
-func (v PublishedValue) DynamicType(_ *Interpreter) DynamicType {
-	return PublishedDynamicType{}
-}
-
-func (v PublishedValue) Copy() Value {
-	return PublishedValue{
-		Address: v.Address,
-	}
-}
-
-func (v PublishedValue) GetOwner() *common.Address {
-	return &v.Address
-}
-
-func (PublishedValue) SetOwner(_ *common.Address) {
-	// NO-OP: ownership cannot be changed
-}
-
 // StorageReferenceValue
 
 type StorageReferenceValue struct {
@@ -4594,16 +4548,6 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 	case "address":
 		return v.Address
 
-	case "storage":
-		return StorageValue{
-			Address: v.Address.ToAddress(),
-		}
-
-	case "published":
-		return PublishedValue{
-			Address: v.Address.ToAddress(),
-		}
-
 	case "setCode":
 		return v.setCodeFunction
 
@@ -4700,11 +4644,6 @@ func (v PublicAccountValue) GetMember(inter *Interpreter, _ LocationRange, name 
 	switch name {
 	case "address":
 		return v.Address
-
-	case "published":
-		return PublishedValue{
-			Address: v.Address.ToAddress(),
-		}
 
 	case "getCapability":
 		return accountGetCapabilityFunction(v.Address, false)
@@ -4830,7 +4769,7 @@ type LinkValue struct {
 }
 
 func init() {
-	gob.Register(CapabilityValue{})
+	gob.Register(LinkValue{})
 }
 
 func (LinkValue) IsValue() {}

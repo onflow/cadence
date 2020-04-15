@@ -327,19 +327,3 @@ func TestCheckInvalidSwapResourceDictionaryElement(t *testing.T) {
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
-
-func TestCheckSwapStorage(t *testing.T) {
-
-	_, err := ParseAndCheckStorage(t, `
-          resource R {}
-
-          fun test() {
-              var r: @R? <- create R()
-              storage[R] <-> r
-              destroy r
-          }
-        `,
-	)
-
-	assert.NoError(t, err)
-}

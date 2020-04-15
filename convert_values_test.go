@@ -311,12 +311,12 @@ func TestConvertStructValue(t *testing.T) {
 	script := `
         access(all) struct Foo {
             access(all) let bar: Int
-        
+
             init(bar: Int) {
                 self.bar = bar
             }
         }
-    
+
         access(all) fun main(): Foo {
             return Foo(bar: 42)
         }
@@ -332,19 +332,23 @@ func TestConvertResourceValue(t *testing.T) {
 	script := `
         access(all) resource Foo {
             access(all) let bar: Int
-        
+
             init(bar: Int) {
                 self.bar = bar
             }
         }
-    
+
         access(all) fun main(): @Foo {
             return <- create Foo(bar: 42)
         }
     `
 
 	actual := convertValueFromScript(t, script)
-	expected := NewResource([]Value{NewInt(42)}).WithType(fooResourceType)
+	expected :=
+		NewResource([]Value{
+			NewInt(42),
+			NewUInt64(0),
+		}).WithType(fooResourceType)
 
 	assert.Equal(t, expected, actual)
 }
@@ -353,21 +357,27 @@ func TestConvertResourceArrayValue(t *testing.T) {
 	script := `
         access(all) resource Foo {
             access(all) let bar: Int
-        
+
             init(bar: Int) {
                 self.bar = bar
             }
         }
-    
+
         access(all) fun main(): @[Foo] {
-            return <- [<- create Foo(bar: 1), <- create Foo(bar: 2)] 
+            return <- [<- create Foo(bar: 1), <- create Foo(bar: 2)]
         }
     `
 
 	actual := convertValueFromScript(t, script)
 	expected := NewArray([]Value{
-		NewResource([]Value{NewInt(1)}).WithType(fooResourceType),
-		NewResource([]Value{NewInt(2)}).WithType(fooResourceType),
+		NewResource([]Value{
+			NewInt(1),
+			NewUInt64(0),
+		}).WithType(fooResourceType),
+		NewResource([]Value{
+			NewInt(2),
+			NewUInt64(0),
+		}).WithType(fooResourceType),
 	})
 
 	assert.Equal(t, expected, actual)
@@ -377,15 +387,15 @@ func TestConvertResourceDictionaryValue(t *testing.T) {
 	script := `
         access(all) resource Foo {
             access(all) let bar: Int
-        
+
             init(bar: Int) {
                 self.bar = bar
             }
         }
-    
+
         access(all) fun main(): @{String: Foo} {
             return <- {
-                "a": <- create Foo(bar: 1), 
+                "a": <- create Foo(bar: 1),
                 "b": <- create Foo(bar: 2)
             }
         }
@@ -394,12 +404,18 @@ func TestConvertResourceDictionaryValue(t *testing.T) {
 	actual := convertValueFromScript(t, script)
 	expected := NewDictionary([]KeyValuePair{
 		{
-			Key:   NewString("a"),
-			Value: NewResource([]Value{NewInt(1)}).WithType(fooResourceType),
+			Key: NewString("a"),
+			Value: NewResource([]Value{
+				NewInt(1),
+				NewUInt64(0),
+			}).WithType(fooResourceType),
 		},
 		{
-			Key:   NewString("b"),
-			Value: NewResource([]Value{NewInt(2)}).WithType(fooResourceType),
+			Key: NewString("b"),
+			Value: NewResource([]Value{
+				NewInt(2),
+				NewUInt64(0),
+			}).WithType(fooResourceType),
 		},
 	})
 
@@ -411,6 +427,10 @@ func TestConvertNestedResourceValue(t *testing.T) {
 		TypeID:     "test.Bar",
 		Identifier: "Bar",
 		Fields: []Field{
+			{
+				Identifier: "uuid",
+				Type:       UInt64Type{},
+			},
 			{
 				Identifier: "x",
 				Type:       IntType{},
@@ -426,6 +446,10 @@ func TestConvertNestedResourceValue(t *testing.T) {
 				Identifier: "bar",
 				Type:       barResourceType,
 			},
+			{
+				Identifier: "uuid",
+				Type:       UInt64Type{},
+			},
 		},
 	}
 
@@ -440,7 +464,7 @@ func TestConvertNestedResourceValue(t *testing.T) {
 
         access(all) resource Foo {
             access(all) let bar: @Bar
-        
+
             init(bar: @Bar) {
                 self.bar <- bar
             }
@@ -449,7 +473,7 @@ func TestConvertNestedResourceValue(t *testing.T) {
                 destroy self.bar
             }
         }
-    
+
         access(all) fun main(): @Foo {
             return <- create Foo(bar: <- create Bar(x: 42))
         }
@@ -457,7 +481,11 @@ func TestConvertNestedResourceValue(t *testing.T) {
 
 	actual := convertValueFromScript(t, script)
 	expected := NewResource([]Value{
-		NewResource([]Value{NewInt(42)}).WithType(barResourceType),
+		NewResource([]Value{
+			NewUInt64(0),
+			NewInt(42),
+		}).WithType(barResourceType),
+		NewUInt64(0),
 	}).WithType(fooResourceType)
 
 	assert.Equal(t, expected, actual)
@@ -466,7 +494,7 @@ func TestConvertNestedResourceValue(t *testing.T) {
 func TestConvertEventValue(t *testing.T) {
 	script := `
         access(all) event Foo(bar: Int)
-    
+
         access(all) fun main() {
             emit Foo(bar: 42)
         }
@@ -512,7 +540,7 @@ func convertValueFromScript(t *testing.T, script string) Value {
 
 	value, err := rt.ExecuteScript(
 		[]byte(script),
-		nil,
+		&runtime.EmptyRuntimeInterface{},
 		testLocation,
 	)
 
@@ -532,6 +560,16 @@ var fooFields = []Field{
 		Type:       IntType{},
 	},
 }
+var fooResourceFields = []Field{
+	{
+		Identifier: "bar",
+		Type:       IntType{},
+	},
+	{
+		Identifier: "uuid",
+		Type:       UInt64Type{},
+	},
+}
 
 var fooStructType = StructType{
 	TypeID:     fooTypeID,
@@ -542,7 +580,7 @@ var fooStructType = StructType{
 var fooResourceType = ResourceType{
 	TypeID:     fooTypeID,
 	Identifier: fooID,
-	Fields:     fooFields,
+	Fields:     fooResourceFields,
 }
 
 var fooEventType = EventType{

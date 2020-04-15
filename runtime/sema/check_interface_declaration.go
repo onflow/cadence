@@ -121,7 +121,7 @@ func (checker *Checker) declareInterfaceNestedTypes(
 	interfaceType := checker.Elaboration.InterfaceDeclarationTypes[declaration]
 	nestedDeclarations := checker.Elaboration.InterfaceNestedDeclarations[declaration]
 
-	for name, nestedType := range interfaceType.NestedTypes {
+	for name, nestedType := range interfaceType.nestedTypes {
 		nestedDeclaration := nestedDeclarations[name]
 
 		identifier := nestedDeclaration.DeclarationIdentifier()
@@ -196,7 +196,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		Location:      checker.Location,
 		Identifier:    identifier.Identifier,
 		CompositeKind: declaration.CompositeKind,
-		NestedTypes:   map[string]Type{},
+		nestedTypes:   map[string]Type{},
 	}
 
 	variable, err := checker.typeActivations.DeclareType(typeDeclaration{
@@ -213,7 +213,6 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 	)
 
 	checker.Elaboration.InterfaceDeclarationTypes[declaration] = interfaceType
-	checker.Elaboration.InterfaceTypes[interfaceType.QualifiedIdentifier()] = interfaceType
 
 	// Activate new scope for nested declarations
 
@@ -236,12 +235,12 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 	checker.Elaboration.InterfaceNestedDeclarations[declaration] = nestedDeclarations
 
 	for _, nestedInterfaceType := range nestedInterfaceTypes {
-		interfaceType.NestedTypes[nestedInterfaceType.Identifier] = nestedInterfaceType
+		interfaceType.nestedTypes[nestedInterfaceType.Identifier] = nestedInterfaceType
 		nestedInterfaceType.ContainerType = interfaceType
 	}
 
 	for _, nestedCompositeType := range nestedCompositeTypes {
-		interfaceType.NestedTypes[nestedCompositeType.Identifier] = nestedCompositeType
+		interfaceType.nestedTypes[nestedCompositeType.Identifier] = nestedCompositeType
 		nestedCompositeType.ContainerType = interfaceType
 	}
 
