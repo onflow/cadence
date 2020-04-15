@@ -5892,7 +5892,7 @@ resource Counter: HasCount {
 authAccount.save(<-create Counter(count: 42), to: /storage/counter)
 
 // Create a public capability that allows access to the stored counter object
-// as the type `{HasCoun}`, i.e. only the functionality of the
+// as the type `{HasCount}`, i.e. only the functionality of reading the field
 //
 authAccount.link<&{HasCount}>(/public/hasCount, target: /storage/counter)
 ```
