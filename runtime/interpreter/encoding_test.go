@@ -126,6 +126,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 		map[string]Value{
 			"empty":     IntValue{Int: big.NewInt(0)},
 			"non-empty": IntValue{Int: big.NewInt(64)},
+			"signed":    IntValue{Int: big.NewInt(-64)},
 		},
 	)
 }
@@ -137,6 +138,7 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 			"non-empty":    Int8Value(64),
 			"boundary-max": Int8Value(math.MaxInt8),
 			"boundary-min": Int8Value(math.MinInt8),
+			"signed":       Int8Value(math.MinInt8),
 		},
 	)
 }
@@ -147,6 +149,7 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 			"empty":     Int16Value(0),
 			"non-empty": Int16Value(128),
 			"boundary":  Int16Value(math.MaxInt16),
+			"signed":    Int16Value(math.MinInt16),
 		},
 	)
 }
@@ -157,6 +160,7 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 			"empty":     Int32Value(0),
 			"non-empty": Int32Value(128),
 			"boundary":  Int32Value(math.MaxInt32),
+			"signed":    Int32Value(math.MinInt32),
 		},
 	)
 }
@@ -167,6 +171,7 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 			"empty":     Int64Value(0),
 			"non-empty": Int64Value(128),
 			"boundary":  Int64Value(math.MaxInt64),
+			"signed":    Int64Value(math.MinInt64),
 		},
 	)
 }
@@ -176,6 +181,27 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 		map[string]Value{
 			"empty":     UIntValue{Int: big.NewInt(0)},
 			"non-empty": UIntValue{Int: big.NewInt(64)},
+			"signed":    UIntValue{Int: big.NewInt(-64)},
+		},
+	)
+}
+
+func TestEncodeDecodeInt128Value(t *testing.T) {
+	testEncodeDecode(t,
+		map[string]Value{
+			"empty":     Int128Value{Int: big.NewInt(0)},
+			"non-empty": Int128Value{Int: big.NewInt(64)},
+			"signed":    Int128Value{Int: big.NewInt(-64)},
+		},
+	)
+}
+
+func TestEncodeDecodeInt256Value(t *testing.T) {
+	testEncodeDecode(t,
+		map[string]Value{
+			"empty":     Int256Value{Int: big.NewInt(0)},
+			"non-empty": Int256Value{Int: big.NewInt(64)},
+			"signed":    Int256Value{Int: big.NewInt(-64)},
 		},
 	)
 }
@@ -219,6 +245,25 @@ func TestEncodeDecodeUInt64Value(t *testing.T) {
 	)
 }
 
+func TestEncodeDecodeUInt128Value(t *testing.T) {
+	testEncodeDecode(t,
+		map[string]Value{
+			"empty":     UInt128Value{Int: big.NewInt(0)},
+			"non-empty": UInt128Value{Int: big.NewInt(64)},
+			"signed":    UInt128Value{Int: big.NewInt(-64)},
+		},
+	)
+}
+
+func TestEncodeDecodeUInt256Value(t *testing.T) {
+	testEncodeDecode(t,
+		map[string]Value{
+			"empty":     UInt256Value{Int: big.NewInt(0)},
+			"non-empty": UInt256Value{Int: big.NewInt(64)},
+			"signed":    UInt256Value{Int: big.NewInt(-64)},
+		},
+	)
+}
 func TestEncodeDecodeSomeValue(t *testing.T) {
 	owner := common.BytesToAddress([]byte{0x42})
 	testEncodeDecode(t,
@@ -232,29 +277,11 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 	)
 }
 
-func TestEncodeDecodeStorageValue(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]Value{
-			"empty":     &StorageValue{},
-			"non-empty": &StorageValue{Address: common.BytesToAddress([]byte{0x42})},
-		},
-	)
-}
-
-func TestEncodeDecodePublishedValue(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]Value{
-			"empty":     &PublishedValue{},
-			"non-empty": &PublishedValue{Address: common.BytesToAddress([]byte{0x42})},
-		},
-	)
-}
-
 func TestEncodeDecodeStorageReferenceValue(t *testing.T) {
 	owner := common.BytesToAddress([]byte{0x42})
 	testEncodeDecode(t,
 		map[string]Value{
-			"empty": &StorageReferenceValue{},
+			// "empty": &StorageReferenceValue{},
 			"non-empty": &StorageReferenceValue{
 				Authorized:           true,
 				TargetKey:            "",
@@ -283,38 +310,14 @@ func TestEncodeDecodeEphemeralReferenceValue(t *testing.T) {
 func TestEncodeDecodeAddressValue(t *testing.T) {
 	testEncodeDecode(t,
 		map[string]Value{
-			// "empty":     AddressValue{},
+			"empty":     AddressValue{},
 			"non-empty": AddressValue{0x42},
 		},
 	)
 }
 
-func TestEncodeDecodeAuthAccountValue(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]Value{
-			"empty":     AuthAccountValue{},
-			"non-empty": nil,
-		},
-	)
-}
-
-func TestEncodeDecodePublicAccountValue(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]Value{
-			"empty": &PublicAccountValue{
-				Address:    NewAddressValueFromBytes([]byte{0x00}),
-				Identifier: "",
-			},
-			"non-empty": &PublicAccountValue{
-				Address:    NewAddressValueFromBytes([]byte{0x42}),
-				Identifier: "testing",
-			},
-		},
-	)
-}
-
-var emptyPathValue = PathValue{Domain: common.PathDomain(0), Identifier: ""}
-var nonEmptyPathValue = PathValue{Domain: common.PathDomain(1), Identifier: "testing"}
+var emptyPathValue = PathValue{Domain: common.PathDomainUnknown, Identifier: ""}
+var nonEmptyPathValue = PathValue{Domain: common.PathDomainPublic, Identifier: "testing"}
 
 func TestEncodeDecodePathValue(t *testing.T) {
 	testEncodeDecode(t,

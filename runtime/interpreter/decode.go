@@ -104,6 +104,12 @@ func (d *Decoder) decodeValue(v interface{}, owner *common.Address) (Value, erro
 		case cborTagInt64Value:
 			return d.decodeInt64(v.Content, owner)
 
+		case cborTagInt128Value:
+			return d.decodeInt128(v.Content, owner)
+
+		case cborTagInt256Value:
+			return d.decodeInt256(v.Content, owner)
+
 		// Unsigned primitive integers
 
 		case cborTagUIntValue:
@@ -120,6 +126,12 @@ func (d *Decoder) decodeValue(v interface{}, owner *common.Address) (Value, erro
 
 		case cborTagUInt64Value:
 			return d.decodeUInt64(v.Content, owner)
+
+		case cborTagUInt128Value:
+			return d.decodeUInt128(v.Content, owner)
+
+		case cborTagUInt256Value:
+			return d.decodeUInt256(v.Content, owner)
 
 		case cborTagWord8Value:
 			return d.decodeWord8(v.Content, owner)
@@ -144,12 +156,6 @@ func (d *Decoder) decodeValue(v interface{}, owner *common.Address) (Value, erro
 		case cborTagSomeValue:
 			return d.decodeSome(v.Content, owner)
 
-		case cborTagStorageValue:
-			return d.decodeStorage(v.Content, owner)
-
-		case cborTagPublishedValue:
-			return d.decodePublished(v.Content, owner)
-
 		case cborTagStorageReferenceValue:
 			return d.decodeStorageReference(v.Content, owner)
 
@@ -158,12 +164,6 @@ func (d *Decoder) decodeValue(v interface{}, owner *common.Address) (Value, erro
 
 		case cborTagAddressValue:
 			return d.decodeAddress(v.Content, owner)
-
-		case cborTagAuthAccountValue:
-			return d.decodeAuthAccount(v.Content, owner)
-
-		case cborTagPublicAccountValue:
-			return d.decodePublicAccount(v.Content, owner)
 
 		case cborTagPathValue:
 			return d.decodePath(v.Content, owner)
@@ -320,71 +320,215 @@ func (d *Decoder) decodeVoid(v interface{}, owner *common.Address) (VoidValue, e
 }
 
 func (d *Decoder) decodeInt(v interface{}, owner *common.Address) (IntValue, error) {
-	var bigInt *big.Int
+	var bigInt big.Int
 	decodedBytes, ok := v.([]byte)
 	if !ok {
 		return IntValue{}, fmt.Errorf("invalid int encoding")
 	}
-	bigInt = big.NewInt(0)
 	err := bigInt.GobDecode(decodedBytes)
 	if err != nil {
-		return IntValue{}, fmt.Errorf("invalid int value encoding: %w", err)
+		return IntValue{}, fmt.Errorf("invalid int encoding: gob")
 	}
-
-	return IntValue{Int: big.NewInt(v.(int64))}, nil
+	return IntValue{Int: &bigInt}, nil
 }
 
 func (d *Decoder) decodeInt8(v interface{}, owner *common.Address) (Int8Value, error) {
-	return Int8Value(v.(uint64)), nil
+	switch v.(type) {
+	case uint64:
+		return Int8Value(v.(uint64)), nil
+	case int64:
+		return Int8Value(v.(int64)), nil
+	default:
+		return Int8Value(0), fmt.Errorf("unknown int8 encoding")
+	}
 }
 
 func (d *Decoder) decodeInt16(v interface{}, owner *common.Address) (Int16Value, error) {
-	return Int16Value(v.(uint64)), nil
+	switch v.(type) {
+	case uint64:
+		return Int16Value(v.(uint64)), nil
+	case int64:
+		return Int16Value(v.(int64)), nil
+	default:
+		return Int16Value(0), fmt.Errorf("unknown int16 encoding")
+	}
 }
 
 func (d *Decoder) decodeInt32(v interface{}, owner *common.Address) (Int32Value, error) {
-	return Int32Value(v.(uint64)), nil
+	switch v.(type) {
+	case uint64:
+		return Int32Value(v.(uint64)), nil
+	case int64:
+		return Int32Value(v.(int64)), nil
+	default:
+		return Int32Value(0), fmt.Errorf("unknown int32 encoding")
+	}
 }
 
 func (d *Decoder) decodeInt64(v interface{}, owner *common.Address) (Int64Value, error) {
-	return Int64Value(v.(uint64)), nil
+	switch v.(type) {
+	case uint64:
+		return Int64Value(v.(uint64)), nil
+	case int64:
+		return Int64Value(v.(int64)), nil
+	default:
+		return Int64Value(0), fmt.Errorf("unknown int64 encoding")
+	}
+}
+
+func (d *Decoder) decodeInt128(v interface{}, owner *common.Address) (Int128Value, error) {
+	var bigInt big.Int
+	decodedBytes, ok := v.([]byte)
+	if !ok {
+		return Int128Value{}, fmt.Errorf("invalid int128 encoding")
+	}
+	err := bigInt.GobDecode(decodedBytes)
+	if err != nil {
+		return Int128Value{}, fmt.Errorf("invalid int128 encoding: gob: %w", err)
+	}
+	return Int128Value{Int: &bigInt}, nil
+
+}
+
+func (d *Decoder) decodeInt256(v interface{}, owner *common.Address) (Int256Value, error) {
+	var bigInt big.Int
+	decodedBytes, ok := v.([]byte)
+	if !ok {
+		return Int256Value{}, fmt.Errorf("invalid int256 encoding")
+	}
+	err := bigInt.GobDecode(decodedBytes)
+	if err != nil {
+		return Int256Value{}, fmt.Errorf("invalid int256 encoding: gob: %w", err)
+	}
+	return Int256Value{Int: &bigInt}, nil
 }
 
 func (d *Decoder) decodeUInt(v interface{}, owner *common.Address) (UIntValue, error) {
-	// TODO Implement
-	return UIntValue{}, nil
+	var bigInt big.Int
+	decodedBytes, ok := v.([]byte)
+	if !ok {
+		return UIntValue{}, fmt.Errorf("invalid uint encoding")
+	}
+	err := bigInt.GobDecode(decodedBytes)
+	if err != nil {
+		return UIntValue{}, fmt.Errorf("invalid uint encoding: gob")
+	}
+	return UIntValue{Int: &bigInt}, nil
 }
 
 func (d *Decoder) decodeUInt8(v interface{}, owner *common.Address) (UInt8Value, error) {
-	return UInt8Value(v.(uint64)), nil
+	switch v.(type) {
+	case uint64:
+		return UInt8Value(v.(uint64)), nil
+	case int64:
+		return UInt8Value(v.(int64)), nil
+	default:
+		return UInt8Value(0), fmt.Errorf("unknown uint8 encoding")
+	}
 }
 
 func (d *Decoder) decodeUInt16(v interface{}, owner *common.Address) (UInt16Value, error) {
-	return UInt16Value(v.(uint64)), nil
+	switch v.(type) {
+	case uint64:
+		return UInt16Value(v.(uint64)), nil
+	case int64:
+		return UInt16Value(v.(int64)), nil
+	default:
+		return UInt16Value(0), fmt.Errorf("unknown uint16 encoding")
+	}
 }
 
 func (d *Decoder) decodeUInt32(v interface{}, owner *common.Address) (UInt32Value, error) {
-	return UInt32Value(v.(uint64)), nil
+	switch v.(type) {
+	case uint64:
+		return UInt32Value(v.(uint64)), nil
+	case int64:
+		return UInt32Value(v.(int64)), nil
+	default:
+		return UInt32Value(0), fmt.Errorf("unknown UInt32 encoding")
+	}
 }
 
 func (d *Decoder) decodeUInt64(v interface{}, owner *common.Address) (UInt64Value, error) {
-	return UInt64Value(v.(uint64)), nil
+	switch v.(type) {
+	case uint64:
+		return UInt64Value(v.(uint64)), nil
+	case int64:
+		return UInt64Value(v.(int64)), nil
+	default:
+		return UInt64Value(0), fmt.Errorf("unknown UInt64 encoding")
+	}
+}
+
+func (d *Decoder) decodeUInt128(v interface{}, owner *common.Address) (UInt128Value, error) {
+	var bigInt big.Int
+	decodedBytes, ok := v.([]byte)
+	if !ok {
+		return UInt128Value{}, fmt.Errorf("invalid uint128 encoding")
+	}
+	err := bigInt.GobDecode(decodedBytes)
+	if err != nil {
+		return UInt128Value{}, fmt.Errorf("invalid uint256 encoding: gob: %w", err)
+	}
+	return UInt128Value{Int: &bigInt}, nil
+
+}
+
+func (d *Decoder) decodeUInt256(v interface{}, owner *common.Address) (UInt256Value, error) {
+	var bigInt big.Int
+	decodedBytes, ok := v.([]byte)
+	if !ok {
+		return UInt256Value{}, fmt.Errorf("invalid uint256 encoding")
+	}
+	err := bigInt.GobDecode(decodedBytes)
+	if err != nil {
+		return UInt256Value{}, fmt.Errorf("invalid uint256 encoding: gob: %w", err)
+	}
+	return UInt256Value{Int: &bigInt}, nil
 }
 
 func (d *Decoder) decodeWord8(v interface{}, owner *common.Address) (Word8Value, error) {
-	return Word8Value(v.(uint64)), nil
+	switch v.(type) {
+	case uint64:
+		return Word8Value(v.(uint64)), nil
+	case int64:
+		return Word8Value(v.(int64)), nil
+	default:
+		return Word8Value(0), fmt.Errorf("unknown word8 encoding")
+	}
 }
 
 func (d *Decoder) decodeWord16(v interface{}, owner *common.Address) (Word16Value, error) {
-	return Word16Value(v.(uint64)), nil
+	switch v.(type) {
+	case uint64:
+		return Word16Value(v.(uint64)), nil
+	case int64:
+		return Word16Value(v.(int64)), nil
+	default:
+		return Word16Value(0), fmt.Errorf("unknown word16 encoding")
+	}
 }
 
 func (d *Decoder) decodeWord32(v interface{}, owner *common.Address) (Word32Value, error) {
-	return Word32Value(v.(uint64)), nil
+	switch v.(type) {
+	case uint64:
+		return Word32Value(v.(uint64)), nil
+	case int64:
+		return Word32Value(v.(int64)), nil
+	default:
+		return Word32Value(0), fmt.Errorf("unknown word32 encoding")
+	}
 }
 
 func (d *Decoder) decodeWord64(v interface{}, owner *common.Address) (Word64Value, error) {
-	return Word64Value(v.(uint64)), nil
+	switch v.(type) {
+	case uint64:
+		return Word64Value(v.(uint64)), nil
+	case int64:
+		return Word64Value(v.(int64)), nil
+	default:
+		return Word64Value(0), fmt.Errorf("unknown word64 encoding")
+	}
 }
 
 func (d *Decoder) decodeSome(v interface{}, owner *common.Address) (*SomeValue, error) {
@@ -402,24 +546,6 @@ func (d *Decoder) decodeSome(v interface{}, owner *common.Address) (*SomeValue, 
 		Value: value,
 		Owner: owner,
 	}, nil
-}
-
-func (d *Decoder) decodeStorage(v interface{}, owner *common.Address) (*StorageValue, error) {
-	encoded, ok := v.(map[interface{}]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid storage encoding")
-	}
-	address := common.BytesToAddress(encoded[uint64(0)].([]byte))
-	return &StorageValue{Address: address}, nil
-}
-
-func (d *Decoder) decodePublished(v interface{}, owner *common.Address) (*PublishedValue, error) {
-	encoded, ok := v.(map[interface{}]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid published encoding")
-	}
-	address := common.BytesToAddress(encoded[uint64(0)].([]byte))
-	return &PublishedValue{Address: address}, nil
 }
 
 func (d *Decoder) decodeStorageReference(v interface{}, owner *common.Address) (*StorageReferenceValue, error) {
@@ -444,6 +570,7 @@ func (d *Decoder) decodeStorageReference(v interface{}, owner *common.Address) (
 		Authorized:           authorized,
 		TargetStorageAddress: targetStorageAddress,
 		TargetKey:            targetKey,
+		Owner:                owner,
 	}, nil
 }
 
@@ -460,7 +587,7 @@ func (d *Decoder) decodeEphemeralReference(v interface{}, owner *common.Address)
 
 	value, err := d.decodeValue(encoded[uint64(1)], owner)
 	if err != nil {
-		return nil, fmt.Errorf("invalid some value encoding: %w", err)
+		return nil, fmt.Errorf("invalid ephemeralreference value encoding: %w", err)
 	}
 
 	return &EphemeralReferenceValue{
@@ -478,40 +605,52 @@ func (d *Decoder) decodeAddress(v interface{}, owner *common.Address) (AddressVa
 	return address, nil
 }
 
-func (d *Decoder) decodeAuthAccount(v interface{}, owner *common.Address) (*AuthAccountValue, error) {
-	return &AuthAccountValue{}, nil
-}
-
-func (d *Decoder) decodePublicAccount(v interface{}, owner *common.Address) (*PublicAccountValue, error) {
+func (d *Decoder) decodePath(v interface{}, owner *common.Address) (*PathValue, error) {
 	encoded, ok := v.(map[interface{}]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid publicaccount encoding")
+		return nil, fmt.Errorf("invalid path encoding")
 	}
 
-	address, err := d.decodeAddress(encoded[uint64(0)], owner)
-	if err != nil {
-		return nil, fmt.Errorf("invalid publicaccount address encoding: %w", err)
+	domain, ok := encoded[uint64(0)].(uint64)
+	if !ok {
+		return nil, fmt.Errorf("invalid path domain encoding")
 	}
 
 	identifier, ok := encoded[uint64(1)].(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid publicaccount identifier encoding")
+		return nil, fmt.Errorf("invalid path identifier encodingw")
 	}
-
-	return &PublicAccountValue{
-		Address:    address,
-		Identifier: identifier,
-	}, nil
-}
-
-func (d *Decoder) decodePath(v interface{}, owner *common.Address) (*PathValue, error) {
-	return &PathValue{}, nil
+	return &PathValue{Domain: common.PathDomain(domain), Identifier: identifier}, nil
 }
 
 func (d *Decoder) decodeCapability(v interface{}, owner *common.Address) (*CapabilityValue, error) {
-	return &CapabilityValue{}, nil
+	encoded, ok := v.(map[interface{}]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid capability encoding")
+	}
+
+	address, err := d.decodeAddress(encoded[uint64(0)].(cbor.Tag).Content, owner)
+	if err != nil {
+		return nil, fmt.Errorf("invalid capability address encoding: %w", err)
+	}
+
+	path, err := d.decodePath(encoded[uint64(1)].(cbor.Tag).Content, owner)
+	if err != nil {
+		return nil, fmt.Errorf("invalid capability path encoding: %w", err)
+	}
+
+	return &CapabilityValue{Address: address, Path: *path}, nil
 }
 
 func (d *Decoder) decodeLink(v interface{}, owner *common.Address) (*LinkValue, error) {
-	return &LinkValue{}, nil
+	encoded, ok := v.(map[interface{}]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid link encoding")
+	}
+
+	path, err := d.decodePath(encoded[uint64(0)].(cbor.Tag).Content, owner)
+	if err != nil {
+		return nil, fmt.Errorf("invalid link targetpath encoding: %w", err)
+	}
+	return &LinkValue{TargetPath: *path}, nil
 }
