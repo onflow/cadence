@@ -376,7 +376,7 @@ func (s *Server) getAccountKey(address flow.Address) (flow.AccountKey, crypto.Si
 	privateKey, ok := s.accounts[address]
 	if !ok {
 		return flow.AccountKey{}, nil, fmt.Errorf(
-			"cannot sign transaction for account with unknown address %s",
+			"cannot sign transaction: unknown account %s",
 			address,
 		)
 	}
