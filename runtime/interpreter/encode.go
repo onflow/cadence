@@ -27,10 +27,14 @@ const (
 	cborTagInt16Value
 	cborTagInt32Value
 	cborTagInt64Value
+	cborTagInt128Value
+	cborTagInt256Value
 	cborTagUInt8Value
 	cborTagUInt16Value
 	cborTagUInt32Value
 	cborTagUInt64Value
+	cborTagUInt128Value
+	cborTagUInt256Value
 	cborTagWord8Value
 	cborTagWord16Value
 	cborTagWord32Value
@@ -40,13 +44,9 @@ const (
 	cborTagDictionaryValue
 	cborTagCompositeValue
 	cborTagSomeValue
-	cborTagStorageValue
-	cborTagPublishedValue
 	cborTagStorageReferenceValue
 	cborTagEphemeralReferenceValue
 	cborTagAddressValue
-	cborTagAuthAccountValue
-	cborTagPublicAccountValue
 	cborTagPathValue
 	cborTagCapabilityValue
 	cborTagLinkValue
@@ -82,10 +82,14 @@ func init() {
 		cborTagInt16Value:              encodedInt16Value(0),
 		cborTagInt32Value:              encodedInt32Value(0),
 		cborTagInt64Value:              encodedInt64Value(0),
+		cborTagInt128Value:             encodedInt128Value([]byte{}),
+		cborTagInt256Value:             encodedInt256Value([]byte{}),
 		cborTagUInt8Value:              encodedUInt8Value(0),
 		cborTagUInt16Value:             encodedUInt16Value(0),
 		cborTagUInt32Value:             encodedUInt32Value(0),
 		cborTagUInt64Value:             encodedUInt64Value(0),
+		cborTagUInt128Value:            encodedUInt128Value([]byte{}),
+		cborTagUInt256Value:            encodedUInt256Value([]byte{}),
 		cborTagWord8Value:              encodedWord8Value(0),
 		cborTagWord16Value:             encodedWord16Value(0),
 		cborTagWord32Value:             encodedWord32Value(0),
@@ -93,13 +97,9 @@ func init() {
 		cborTagDictionaryValue:         encodedDictionaryValue{},
 		cborTagCompositeValue:          encodedCompositeValue{},
 		cborTagSomeValue:               encodedSomeValue{},
-		cborTagStorageValue:            encodedStorageValue{},
-		cborTagPublishedValue:          encodedPublishedValue{},
 		cborTagStorageReferenceValue:   encodedStorageReferenceValue{},
 		cborTagEphemeralReferenceValue: encodedEphemeralReferenceValue{},
 		cborTagAddressValue:            encodedAddressValue{},
-		cborTagAuthAccountValue:        encodedAuthAccountValue{},
-		cborTagPublicAccountValue:      encodedPublicAccountValue{},
 		cborTagPathValue:               encodedPathValue{},
 		cborTagCapabilityValue:         encodedCapabilityValue{},
 		cborTagLinkValue:               encodedLinkValue{},
@@ -190,11 +190,11 @@ func (e *Encoder) prepare(v Value) interface{} {
 	case Int64Value:
 		return e.prepareInt64(v)
 
-	// case Int128Value:
-	// 	return e.prepareInt128(v)
+	case Int128Value:
+		return e.prepareInt128(v)
 
-	// case Int256Value:
-	// 	return e.prepareInt256(v)
+	case Int256Value:
+		return e.prepareInt256(v)
 
 	// Unsigned Types
 
@@ -213,11 +213,11 @@ func (e *Encoder) prepare(v Value) interface{} {
 	case UInt64Value:
 		return e.prepareUInt64(v)
 
-	// case UInt128Value:
-	// 	return e.prepareUInt128(v)
+	case UInt128Value:
+		return e.prepareUInt128(v)
 
-	// case UInt256Value:
-	// 	return e.prepareUInt256(v)
+	case UInt256Value:
+		return e.prepareUInt256(v)
 
 	// Words
 
@@ -266,12 +266,6 @@ func (e *Encoder) prepare(v Value) interface{} {
 
 	// Storage
 
-	case *StorageValue:
-		return e.prepareStorageValue(v)
-
-	case *PublishedValue:
-		return e.preparePublishedValue(v)
-
 	case *StorageReferenceValue:
 		return e.prepareStorageReferenceValue(v)
 
@@ -280,12 +274,6 @@ func (e *Encoder) prepare(v Value) interface{} {
 
 	case AddressValue:
 		return e.prepareAddressValue(v)
-
-	case *AuthAccountValue:
-		return e.prepareAuthAcccountValue(v)
-
-	case *PublicAccountValue:
-		return e.preparePublicAccountValue(v)
 
 	case *PathValue:
 		return e.preparePathValue(v)
@@ -317,10 +305,14 @@ type encodedInt8Value int8
 type encodedInt16Value int16
 type encodedInt32Value int32
 type encodedInt64Value int64
+type encodedInt128Value []byte
+type encodedInt256Value []byte
 type encodedUInt8Value uint8
 type encodedUInt16Value uint16
 type encodedUInt32Value uint32
 type encodedUInt64Value uint64
+type encodedUInt128Value []byte
+type encodedUInt256Value []byte
 type encodedWord8Value uint8
 type encodedWord16Value uint16
 type encodedWord32Value uint32
@@ -336,11 +328,11 @@ func (e *Encoder) prepareBool(v BoolValue) bool {
 }
 
 func (e *Encoder) prepareInt(v IntValue) interface{} {
-	text, err := v.Int.MarshalText()
+	intBytes, err := v.Int.GobEncode()
 	if err != nil {
-		return encodedIntValue{}
+		return encodedNilValue{}
 	}
-	return encodedIntValue(text)
+	return encodedIntValue(intBytes)
 }
 
 func (e *Encoder) prepareInt8(v Int8Value) interface{} {
@@ -359,13 +351,21 @@ func (e *Encoder) prepareInt64(v Int64Value) interface{} {
 	return encodedInt64Value(v)
 }
 
-// func (e *Encoder) prepareInt128(v Int128Valuecbor.Tag {
-// 	return cbor.Tag{Number: , Content: v.Int}
-// }
+func (e *Encoder) prepareInt128(v Int128Value) interface{} {
+	encodedIntBytes, err := v.Int.GobEncode()
+	if err != nil {
+		return encodedUIntValue{}
+	}
+	return encodedInt128Value(encodedIntBytes)
+}
 
-// func (e *Encoder) prepareInt256(v Int256Valuecbor.Tag {
-// 	return cbor.Tag{Number: , Content: v.Int}
-// }
+func (e *Encoder) prepareInt256(v Int256Value) interface{} {
+	encodedIntBytes, err := v.Int.GobEncode()
+	if err != nil {
+		return encodedUIntValue{}
+	}
+	return encodedInt256Value(encodedIntBytes)
+}
 
 func (e *Encoder) prepareUInt(v UIntValue) interface{} {
 	encodedIntBytes, err := v.Int.GobEncode()
@@ -391,13 +391,21 @@ func (e *Encoder) prepareUInt64(v UInt64Value) interface{} {
 	return encodedUInt64Value(v)
 }
 
-// func (e *Encoder) prepareUInt128(v *IntValueinterface{} {
-// 	return cbor.Tag{Number: UInt, Content: v.Int}
-// }
+func (e *Encoder) prepareUInt128(v UInt128Value) interface{} {
+	encodedIntBytes, err := v.Int.GobEncode()
+	if err != nil {
+		return encodedUIntValue{}
+	}
+	return encodedUInt128Value(encodedIntBytes)
+}
 
-// func (e *Encoder) prepareUInt256(v *IntValueinterface{} {
-// 	return cbor.Tag{Number: UInt, Content: v.Int}
-// }
+func (e *Encoder) prepareUInt256(v UInt256Value) interface{} {
+	encodedIntBytes, err := v.Int.GobEncode()
+	if err != nil {
+		return encodedUIntValue{}
+	}
+	return encodedUInt256Value(encodedIntBytes)
+}
 
 func (e *Encoder) prepareWord8(v Word8Value) interface{} {
 	return encodedWord8Value(v)
@@ -491,26 +499,6 @@ func (e *Encoder) prepareSomeValue(v *SomeValue) interface{} {
 	}
 }
 
-type encodedStorageValue struct {
-	Address [common.AddressLength]byte `cbor:"0,keyasint"`
-}
-
-func (e *Encoder) prepareStorageValue(v *StorageValue) interface{} {
-	fmt.Println("Preparing storagevalue")
-	if len(v.Address) == 0 {
-		return &encodedStorageValue{Address: common.Address{}}
-	}
-	return &encodedStorageValue{Address: v.Address}
-}
-
-type encodedPublishedValue struct {
-	Address [common.AddressLength]byte `cbor:"0,keyasint"`
-}
-
-func (e *Encoder) preparePublishedValue(v *PublishedValue) interface{} {
-	return &encodedPublishedValue{Address: v.Address}
-}
-
 type encodedStorageReferenceValue struct {
 	Authorized           bool                       `cbor:"0,keyasint"`
 	TargetStorageAddress [common.AddressLength]byte `cbor:"1,keyasint"`
@@ -538,26 +526,10 @@ func (e *Encoder) prepareEphemeralReferenceValue(v *EphemeralReferenceValue) int
 
 type encodedAddressValue [common.AddressLength]byte
 
-func (e *Encoder) prepareAddressValue(v AddressValue) interface{} {
-	result := encodedAddressValue{}
-	return result
-}
-
-type encodedAuthAccountValue struct {
-	Address interface{} `cbor:"0,keyasint"`
-}
-
-func (e *Encoder) prepareAuthAcccountValue(v *AuthAccountValue) interface{} {
-	return encodedAuthAccountValue{}
-}
-
-type encodedPublicAccountValue struct {
-	Address    interface{} `cbor:"0,keyasint"`
-	Identifier string      `cbor:"1,keyasint"`
-}
-
-func (e *Encoder) preparePublicAccountValue(v *PublicAccountValue) interface{} {
-	return &encodedPublicAccountValue{Identifier: v.Identifier}
+func (e *Encoder) prepareAddressValue(v AddressValue) encodedAddressValue {
+	encoded := &encodedAddressValue{}
+	copy(encoded[:], v[:])
+	return *encoded
 }
 
 type encodedPathValue struct {
@@ -565,29 +537,69 @@ type encodedPathValue struct {
 	Identifier string `cbor:"1,keyasint"`
 }
 
-func (e *Encoder) preparePathValue(v *PathValue) interface{} {
+func (e *Encoder) preparePathValue(v *PathValue) *encodedPathValue {
 	return &encodedPathValue{Domain: int(v.Domain), Identifier: v.Identifier}
 }
 
 type encodedCapabilityValue struct {
-	Address interface{} `cbor:"0,keyasint"`
-	Path    interface{} `cbor:"1,keyasint"`
+	Address encodedAddressValue `cbor:"0,keyasint"`
+	Path    encodedPathValue    `cbor:"1,keyasint"`
 }
 
 func (e *Encoder) prepareCapabilityValue(v *CapabilityValue) interface{} {
 	return encodedCapabilityValue{
 		Address: e.prepareAddressValue(v.Address),
-		Path:    e.preparePathValue(&v.Path),
+		Path:    *e.preparePathValue(&v.Path),
 	}
 }
 
 type encodedLinkValue struct {
-	TargetPath interface{} `cbor:"0,keyasint"`
-	Type       interface{} `cbor:"1,keyasint"`
+	TargetPath encodedPathValue `cbor:"0,keyasint"`
+	Type       interface{}      `cbor:"1,keyasint"`
 }
 
 func (e *Encoder) prepareLinkValue(v *LinkValue) interface{} {
-	return encodedLinkValue{}
+
+	staticType, err := e.prepareStaticType(&v.Type)
+	if err != nil {
+		return NilValue{}
+	}
+
+	return encodedLinkValue{
+		TargetPath: *e.preparePathValue(&v.TargetPath),
+		Type:       staticType,
+	}
+}
+
+type encodedStaticType struct {
+}
+
+type encodedCompositeStaticType struct {
+}
+
+type encodedInterfaceStaticType struct {
+}
+
+type encodedVariableSizedStaticType struct {
+}
+
+type encodedConstantSizedStaticType struct {
+}
+
+type encodedDictionaryStaticType struct {
+}
+
+type encodedOptionalStaticType struct {
+}
+
+type encodedRestrictedStaticType struct {
+}
+
+type encodedReferenceStaticType struct {
+}
+
+func (e *Encoder) prepareStaticType(t *StaticType) (interface{}, error) {
+	return nil, nil
 }
 
 func (e *Encoder) prepareLocation(l ast.Location) interface{} {
