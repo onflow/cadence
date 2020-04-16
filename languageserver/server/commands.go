@@ -172,6 +172,11 @@ func (s *Server) executeScript(conn protocol.Conn, args ...interface{}) (interfa
 			})
 			return nil, nil
 		}
+	} else {
+		conn.LogMessage(&protocol.LogMessageParams{
+			Type:    protocol.Warning,
+			Message: fmt.Sprintf("Failed to submit transaction: %s", err.Error()),
+		})
 	}
 
 	return nil, err
@@ -378,6 +383,11 @@ func (s *Server) sendTransactionHelper(conn protocol.Conn, script []byte) (flow.
 			})
 			return flow.ZeroID, err
 		}
+	} else {
+		conn.LogMessage(&protocol.LogMessageParams{
+			Type:    protocol.Warning,
+			Message: fmt.Sprintf("Failed to submit transaction: %s", err.Error()),
+		})
 	}
 
 	return tx.ID(), nil
