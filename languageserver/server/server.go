@@ -11,6 +11,7 @@ import (
 	"github.com/dapperlabs/flow-go-sdk"
 	"github.com/dapperlabs/flow-go-sdk/client"
 	"github.com/dapperlabs/flow-go-sdk/crypto"
+	"google.golang.org/grpc"
 
 	"github.com/dapperlabs/cadence/runtime"
 	"github.com/dapperlabs/cadence/runtime/ast"
@@ -100,7 +101,10 @@ func (s *Server) Initialize(
 	s.accounts[flow.RootAddress] = conf.RootAccountKey
 	s.activeAccount = flow.RootAddress
 
-	s.flowClient, err = client.New(s.config.EmulatorAddr)
+	s.flowClient, err = client.New(
+		s.config.EmulatorAddr,
+		grpc.WithInsecure(),
+	)
 	if err != nil {
 		return nil, err
 	}
