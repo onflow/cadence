@@ -1,14 +1,11 @@
 package interpreter
 
 import (
-	"bytes"
 	"encoding/binary"
-	"encoding/gob"
 	"encoding/hex"
 	"fmt"
 	"math"
 	"math/big"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -73,10 +70,6 @@ type HasKeyString interface {
 
 type VoidValue struct{}
 
-func init() {
-	gob.Register(VoidValue{})
-}
-
 func (VoidValue) IsValue() {}
 
 func (VoidValue) DynamicType(_ *Interpreter) DynamicType {
@@ -103,10 +96,6 @@ func (VoidValue) String() string {
 // BoolValue
 
 type BoolValue bool
-
-func init() {
-	gob.Register(BoolValue(true))
-}
 
 func (BoolValue) IsValue() {}
 
@@ -151,10 +140,6 @@ func (v BoolValue) KeyString() string {
 
 type StringValue struct {
 	Str string
-}
-
-func init() {
-	gob.Register(&StringValue{})
 }
 
 func NewStringValue(str string) *StringValue {
@@ -320,10 +305,6 @@ type ArrayValue struct {
 	Owner  *common.Address
 }
 
-func init() {
-	gob.Register(&ArrayValue{})
-}
-
 func NewArrayValueUnownedNonCopying(values ...Value) *ArrayValue {
 	// NOTE: new value has no owner
 
@@ -388,35 +369,6 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		})
 	}
 	return result
-}
-
-func (v *ArrayValue) GobEncode() ([]byte, error) {
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-
-	err := encoder.Encode(v.Values)
-	if err != nil {
-		return nil, err
-	}
-
-	return w.Bytes(), nil
-}
-
-func (v *ArrayValue) GobDecode(buf []byte) error {
-	r := bytes.NewBuffer(buf)
-	decoder := gob.NewDecoder(r)
-
-	err := decoder.Decode(&v.Values)
-	if err != nil {
-		return err
-	}
-
-	// NOTE: ensure the `Values` slice is properly allocated
-	if v.Values == nil {
-		v.Values = make([]Value, 0)
-	}
-
-	return nil
 }
 
 func (v *ArrayValue) Concat(other ConcatenatableValue) Value {
@@ -603,10 +555,6 @@ type IntValue struct {
 	Int *big.Int
 }
 
-func init() {
-	gob.Register(IntValue{})
-}
-
 func NewIntValue(value int64) IntValue {
 	return IntValue{Int: big.NewInt(value)}
 }
@@ -730,10 +678,6 @@ func (v IntValue) Equal(other Value) BoolValue {
 // Int8Value
 
 type Int8Value int8
-
-func init() {
-	gob.Register(Int8Value(0))
-}
 
 func (Int8Value) IsValue() {}
 
@@ -877,10 +821,6 @@ func ConvertInt8(value Value, _ *Interpreter) Value {
 
 type Int16Value int16
 
-func init() {
-	gob.Register(Int16Value(0))
-}
-
 func (Int16Value) IsValue() {}
 
 func (Int16Value) DynamicType(_ *Interpreter) DynamicType {
@@ -1023,10 +963,6 @@ func ConvertInt16(value Value, _ *Interpreter) Value {
 
 type Int32Value int32
 
-func init() {
-	gob.Register(Int32Value(0))
-}
-
 func (Int32Value) IsValue() {}
 
 func (Int32Value) DynamicType(_ *Interpreter) DynamicType {
@@ -1168,10 +1104,6 @@ func ConvertInt32(value Value, _ *Interpreter) Value {
 // Int64Value
 
 type Int64Value int64
-
-func init() {
-	gob.Register(Int64Value(0))
-}
 
 func (Int64Value) IsValue() {}
 
@@ -1319,10 +1251,6 @@ func ConvertInt64(value Value, _ *Interpreter) Value {
 
 type Int128Value struct {
 	Int *big.Int
-}
-
-func init() {
-	gob.Register(Int128Value{})
 }
 
 func (v Int128Value) IsValue() {}
@@ -1500,10 +1428,6 @@ type Int256Value struct {
 	Int *big.Int
 }
 
-func init() {
-	gob.Register(Int256Value{})
-}
-
 func (v Int256Value) IsValue() {}
 
 func (Int256Value) DynamicType(_ *Interpreter) DynamicType {
@@ -1679,10 +1603,6 @@ type UIntValue struct {
 	Int *big.Int
 }
 
-func init() {
-	gob.Register(UIntValue{})
-}
-
 func NewUIntValue(value uint64) UIntValue {
 	return UIntValue{Int: big.NewInt(0).SetUint64(value)}
 }
@@ -1810,10 +1730,6 @@ func (v UIntValue) Equal(other Value) BoolValue {
 
 type UInt8Value uint8
 
-func init() {
-	gob.Register(UInt8Value(0))
-}
-
 func (UInt8Value) IsValue() {}
 
 func (UInt8Value) DynamicType(_ *Interpreter) DynamicType {
@@ -1924,10 +1840,6 @@ func ConvertUInt8(value Value, _ *Interpreter) Value {
 
 type UInt16Value uint16
 
-func init() {
-	gob.Register(UInt16Value(0))
-}
-
 func (UInt16Value) IsValue() {}
 
 func (UInt16Value) DynamicType(_ *Interpreter) DynamicType {
@@ -2035,10 +1947,6 @@ func ConvertUInt16(value Value, _ *Interpreter) Value {
 // UInt32Value
 
 type UInt32Value uint32
-
-func init() {
-	gob.Register(UInt32Value(0))
-}
 
 func (UInt32Value) IsValue() {}
 
@@ -2149,10 +2057,6 @@ func ConvertUInt32(value Value, _ *Interpreter) Value {
 // UInt64Value
 
 type UInt64Value uint64
-
-func init() {
-	gob.Register(UInt64Value(0))
-}
 
 func (UInt64Value) IsValue() {}
 
@@ -2269,10 +2173,6 @@ func ConvertUInt64(value Value, _ *Interpreter) Value {
 
 type UInt128Value struct {
 	Int *big.Int
-}
-
-func init() {
-	gob.Register(UInt128Value{})
 }
 
 func (v UInt128Value) IsValue() {}
@@ -2420,10 +2320,6 @@ type UInt256Value struct {
 	Int *big.Int
 }
 
-func init() {
-	gob.Register(UInt256Value{})
-}
-
 func (v UInt256Value) IsValue() {}
 
 func (UInt256Value) DynamicType(_ *Interpreter) DynamicType {
@@ -2567,10 +2463,6 @@ func ConvertUInt256(value Value, _ *Interpreter) Value {
 
 type Word8Value uint8
 
-func init() {
-	gob.Register(Word8Value(0))
-}
-
 func (Word8Value) IsValue() {}
 
 func (Word8Value) DynamicType(_ *Interpreter) DynamicType {
@@ -2667,10 +2559,6 @@ func ConvertWord8(value Value, _ *Interpreter) Value {
 
 type Word16Value uint16
 
-func init() {
-	gob.Register(Word16Value(0))
-}
-
 func (Word16Value) IsValue() {}
 
 func (Word16Value) DynamicType(_ *Interpreter) DynamicType {
@@ -2764,10 +2652,6 @@ func ConvertWord16(value Value, _ *Interpreter) Value {
 // Word32Value
 
 type Word32Value uint32
-
-func init() {
-	gob.Register(Word32Value(0))
-}
 
 func (Word32Value) IsValue() {}
 
@@ -2865,10 +2749,6 @@ func ConvertWord32(value Value, _ *Interpreter) Value {
 
 type Word64Value uint64
 
-func init() {
-	gob.Register(Word64Value(0))
-}
-
 func (Word64Value) IsValue() {}
 
 func (Word64Value) DynamicType(_ *Interpreter) DynamicType {
@@ -2964,10 +2844,6 @@ func ConvertWord64(value Value, _ *Interpreter) Value {
 // Fix64Value
 
 type Fix64Value int64
-
-func init() {
-	gob.Register(Fix64Value(0))
-}
 
 func (Fix64Value) IsValue() {}
 
@@ -3143,10 +3019,6 @@ func ConvertFix64(value Value, interpreter *Interpreter) Value {
 // UFix64Value
 
 type UFix64Value uint64
-
-func init() {
-	gob.Register(UFix64Value(0))
-}
 
 func NewUFix64ValueWithFraction(integer, fraction uint64) UFix64Value {
 	return UFix64Value(integer*sema.Fix64Factor + fraction)
@@ -3324,10 +3196,6 @@ type CompositeValue struct {
 	Destructor     FunctionValue
 	Owner          *common.Address
 	Destroyed      bool
-}
-
-func init() {
-	gob.Register(&CompositeValue{})
 }
 
 func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
@@ -3508,100 +3376,6 @@ func (v *CompositeValue) SetMember(_ *Interpreter, locationRange LocationRange, 
 	v.Fields[name] = value
 }
 
-func (v *CompositeValue) GobEncode() ([]byte, error) {
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-
-	// NOTE: important: decode as pointer, so gob sees
-	// the interface, not the concrete type
-	err := encoder.Encode(&v.Location)
-	if err != nil {
-		return nil, err
-	}
-
-	err = encoder.Encode(v.TypeID)
-	if err != nil {
-		return nil, err
-	}
-
-	err = encoder.Encode(v.Kind)
-	if err != nil {
-		return nil, err
-	}
-
-	// Encode fields in increasing order
-
-	fieldNames := make([]string, 0, len(v.Fields))
-
-	for name := range v.Fields {
-		fieldNames = append(fieldNames, name)
-	}
-
-	sort.Strings(fieldNames)
-
-	err = encoder.Encode(fieldNames)
-	if err != nil {
-		return nil, err
-	}
-
-	fieldValues := make([]Value, 0, len(v.Fields))
-
-	for _, name := range fieldNames {
-		fieldValues = append(fieldValues, v.Fields[name])
-	}
-
-	err = encoder.Encode(fieldValues)
-	if err != nil {
-		return nil, err
-	}
-
-	// NOTE: *not* encoding functions and destructor – linked in on-demand
-
-	return w.Bytes(), nil
-}
-
-func (v *CompositeValue) GobDecode(buf []byte) error {
-	r := bytes.NewBuffer(buf)
-	decoder := gob.NewDecoder(r)
-
-	err := decoder.Decode(&v.Location)
-	if err != nil {
-		return err
-	}
-
-	err = decoder.Decode(&v.TypeID)
-	if err != nil {
-		return err
-	}
-
-	err = decoder.Decode(&v.Kind)
-	if err != nil {
-		return err
-	}
-
-	var fieldNames []string
-	err = decoder.Decode(&fieldNames)
-	if err != nil {
-		return err
-	}
-
-	var fieldValues []Value
-	err = decoder.Decode(&fieldValues)
-	if err != nil {
-		return err
-	}
-
-	v.Fields = make(map[string]Value, len(fieldNames))
-
-	for i, fieldName := range fieldNames {
-		v.Fields[fieldName] = fieldValues[i]
-	}
-
-	// NOTE: *not* decoding functions – linked in on-demand
-
-	return nil
-}
-
 func (v *CompositeValue) String() string {
 	var builder strings.Builder
 	builder.WriteString(string(v.TypeID))
@@ -3650,10 +3424,6 @@ func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValu
 	}
 
 	return result
-}
-
-func init() {
-	gob.Register(&DictionaryValue{})
 }
 
 func (*DictionaryValue) IsValue() {}
@@ -3901,74 +3671,6 @@ func (v *DictionaryValue) Insert(keyValue Value, value Value) (existingValue Val
 	return existingValue
 }
 
-func (v *DictionaryValue) GobEncode() ([]byte, error) {
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-
-	err := encoder.Encode(v.Keys)
-	if err != nil {
-		return nil, err
-	}
-
-	// Encode entries in increasing order
-
-	entryNames := make([]string, 0, len(v.Entries))
-
-	for name := range v.Entries {
-		entryNames = append(entryNames, name)
-	}
-
-	sort.Strings(entryNames)
-
-	err = encoder.Encode(entryNames)
-	if err != nil {
-		return nil, err
-	}
-
-	entryValues := make([]Value, 0, len(v.Entries))
-
-	for _, name := range entryNames {
-		entryValues = append(entryValues, v.Entries[name])
-	}
-
-	err = encoder.Encode(entryValues)
-	if err != nil {
-		return nil, err
-	}
-
-	return w.Bytes(), nil
-}
-
-func (v *DictionaryValue) GobDecode(buf []byte) error {
-	r := bytes.NewBuffer(buf)
-	decoder := gob.NewDecoder(r)
-
-	err := decoder.Decode(&v.Keys)
-	if err != nil {
-		return err
-	}
-
-	var entryNames []string
-	err = decoder.Decode(&entryNames)
-	if err != nil {
-		return err
-	}
-
-	var entryValues []Value
-	err = decoder.Decode(&entryValues)
-	if err != nil {
-		return err
-	}
-
-	v.Entries = make(map[string]Value, len(entryNames))
-
-	for i, entryName := range entryNames {
-		v.Entries[entryName] = entryValues[i]
-	}
-
-	return nil
-}
-
 type DictionaryEntryValues struct {
 	Key   Value
 	Value Value
@@ -4039,10 +3741,6 @@ type OptionalValue interface {
 
 type NilValue struct{}
 
-func init() {
-	gob.Register(NilValue{})
-}
-
 func (NilValue) IsValue() {}
 
 func (NilValue) DynamicType(_ *Interpreter) DynamicType {
@@ -4077,10 +3775,6 @@ func (NilValue) String() string {
 type SomeValue struct {
 	Value Value
 	Owner *common.Address
-}
-
-func init() {
-	gob.Register(&SomeValue{})
 }
 
 func NewSomeValueOwningNonCopying(value Value) *SomeValue {
@@ -4136,10 +3830,6 @@ type StorageReferenceValue struct {
 	TargetStorageAddress common.Address
 	TargetKey            string
 	Owner                *common.Address
-}
-
-func init() {
-	gob.Register(&StorageReferenceValue{})
 }
 
 func (*StorageReferenceValue) IsValue() {}
@@ -4358,10 +4048,6 @@ func (v *EphemeralReferenceValue) Equal(other Value) BoolValue {
 
 type AddressValue common.Address
 
-func init() {
-	gob.Register(AddressValue{})
-}
-
 func NewAddressValue(a common.Address) AddressValue {
 	return NewAddressValueFromBytes(a[:])
 }
@@ -4460,10 +4146,6 @@ func NewAuthAccountValue(
 		addPublicKeyFunction:    addPublicKeyFunction,
 		removePublicKeyFunction: removePublicKeyFunction,
 	}
-}
-
-func init() {
-	gob.Register(AuthAccountValue{})
 }
 
 func (AuthAccountValue) IsValue() {}
@@ -4603,10 +4285,6 @@ func NewPublicAccountValue(address AddressValue) PublicAccountValue {
 	}
 }
 
-func init() {
-	gob.Register(PublicAccountValue{})
-}
-
 func (PublicAccountValue) IsValue() {}
 
 func (PublicAccountValue) isAccountValue() {}
@@ -4667,10 +4345,6 @@ type PathValue struct {
 	Identifier string
 }
 
-func init() {
-	gob.Register(PathValue{})
-}
-
 func (PathValue) IsValue() {}
 
 func (PathValue) DynamicType(_ *Interpreter) DynamicType {
@@ -4707,10 +4381,6 @@ func (v PathValue) String() string {
 type CapabilityValue struct {
 	Address AddressValue
 	Path    PathValue
-}
-
-func init() {
-	gob.Register(CapabilityValue{})
 }
 
 func (CapabilityValue) IsValue() {}
@@ -4766,10 +4436,6 @@ func (CapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Va
 type LinkValue struct {
 	TargetPath PathValue
 	Type       StaticType
-}
-
-func init() {
-	gob.Register(LinkValue{})
 }
 
 func (LinkValue) IsValue() {}
