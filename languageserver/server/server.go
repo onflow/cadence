@@ -10,6 +10,8 @@ import (
 
 	"github.com/dapperlabs/flow-go-sdk"
 	"github.com/dapperlabs/flow-go-sdk/client"
+	"github.com/dapperlabs/flow-go-sdk/crypto"
+	"google.golang.org/grpc"
 
 	"github.com/dapperlabs/cadence/runtime"
 	"github.com/dapperlabs/cadence/runtime/ast"
@@ -51,8 +53,6 @@ type Server struct {
 	// set of created accounts we can submit transactions for
 	accounts      map[flow.Address]flow.AccountPrivateKey
 	activeAccount flow.Address
-	// the nonce to use when submitting transactions
-	nonce uint64
 }
 
 func NewServer() *Server {
@@ -101,7 +101,10 @@ func (s *Server) Initialize(
 	s.accounts[flow.RootAddress] = conf.RootAccountKey
 	s.activeAccount = flow.RootAddress
 
-	s.flowClient, err = client.New(s.config.EmulatorAddr)
+	s.flowClient, err = client.New(
+		s.config.EmulatorAddr,
+		grpc.WithInsecure(),
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -372,11 +375,32 @@ func (*Server) Exit(_ protocol.Conn) error {
 	return nil
 }
 
-// getNextNonce increments and returns the nonce. This ensures that subsequent
-// transaction submissions aren't duplicates.
-func (s *Server) getNextNonce() uint64 {
-	s.nonce++
-	return s.nonce
+// getAccountKey returns the first account key and signer for the given address.
+func (s *Server) getAccountKey(address flow.Address) (flow.AccountKey, crypto.Signer, error) {
+	privateKey, ok := s.accounts[address]
+	if !ok {
+		return flow.AccountKey{}, nil, fmt.Errorf(
+			"cannot sign transaction: unknown account %s",
+			address,
+		)
+	}
+
+	account, err := s.flowClient.GetAccount(context.Background(), address)
+	if err != nil {
+		return flow.AccountKey{}, nil, err
+	}
+
+	if len(account.Keys) == 0 {
+		return flow.AccountKey{}, nil, fmt.Errorf(
+			"cannot sign transaction: account %s has no keys",
+			address.Hex(),
+		)
+	}
+
+	accountKey := account.Keys[0]
+	signer := crypto.NewNaiveSigner(privateKey.PrivateKey, privateKey.HashAlgo)
+
+	return accountKey, signer, nil
 }
 
 // getDiagnostics parses and checks the given file and generates diagnostics
