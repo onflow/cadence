@@ -1,9 +1,7 @@
 package runtime
 
 import (
-	"bytes"
-	"encoding/gob"
-
+	"github.com/dapperlabs/cadence/runtime/common"
 	"github.com/dapperlabs/cadence/runtime/errors"
 	"github.com/dapperlabs/cadence/runtime/interpreter"
 )
@@ -111,14 +109,15 @@ func (s *interpreterRuntimeStorage) readValue(
 		panic(err)
 	}
 
-	var storedValue interpreter.Value
 	if len(storedData) == 0 {
 		s.cache[storageKey] = nil
 		return interpreter.NilValue{}
 	}
 
-	decoder := gob.NewDecoder(bytes.NewReader(storedData))
-	err = decoder.Decode(&storedValue)
+	var address *common.Address
+	address.SetBytes([]byte(storageIdentifier))
+
+	storedValue, err := interpreter.DecodeValue(storedData, address)
 	if err != nil {
 		panic(err)
 	}
@@ -165,13 +164,11 @@ func (s *interpreterRuntimeStorage) writeCached() {
 
 		var newData []byte
 		if value != nil {
-			var newStoredData bytes.Buffer
-			encoder := gob.NewEncoder(&newStoredData)
-			err := encoder.Encode(&value)
+			encodedValue, err := interpreter.EncodeValue(value)
 			if err != nil {
 				panic(err)
 			}
-			newData = newStoredData.Bytes()
+			newData = encodedValue
 		}
 
 		// TODO: fix controller
