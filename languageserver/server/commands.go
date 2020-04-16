@@ -111,13 +111,9 @@ func (s *Server) submitTransaction(conn protocol.Conn, args ...interface{}) (int
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
 	}
 
-	tx := flow.Transaction{
-		Script:      []byte(doc.text),
-		Payer:       s.activeAccount,
-		Authorizers: []flow.Address{s.activeAccount},
-	}
+	script := []byte(doc.text)
 
-	err := s.sendTransactionHelper(conn, tx)
+	_, err := s.sendTransactionHelper(conn, script)
 	return nil, err
 }
 
@@ -320,13 +316,7 @@ func (s *Server) updateAccountCode(conn protocol.Conn, args ...interface{}) (int
 	accountCode := []byte(doc.text)
 	script := templates.UpdateAccountCode(accountCode)
 
-	tx := flow.Transaction{
-		Script:      script,
-		Payer:       s.activeAccount,
-		Authorizers: []flow.Address{s.activeAccount},
-	}
-
-	err := s.sendTransactionHelper(conn, tx)
+	_, err := s.sendTransactionHelper(conn, script)
 	return nil, err
 }
 
@@ -336,10 +326,21 @@ func (s *Server) updateAccountCode(conn protocol.Conn, args ...interface{}) (int
 //
 // If an error occurs, attempts to show an appropriate message (either via logs
 // or UI popups in the client).
-func (s *Server) sendTransactionHelper(conn protocol.Conn, tx flow.Transaction) error {
-	key, ok := s.accounts[s.activeAccount]
-	if !ok {
-		return fmt.Errorf("cannot sign transaction for account with unknown address %s", s.activeAccount)
+func (s *Server) sendTransactionHelper(conn protocol.Conn, script []byte) (flow.Identifier, error) {
+	accountKey, signer, err := s.getAccountKey(s.activeAccount)
+	if err != nil {
+		return flow.ZeroID, err
+	}
+
+	tx := flow.NewTransaction().
+		SetScript(script).
+		SetProposalKey(s.activeAccount, accountKey.ID, accountKey.SequenceNumber).
+		SetPayer(s.activeAccount).
+		AddAuthorizer(s.activeAccount)
+
+	err = tx.SignEnvelope(s.activeAccount, accountKey.ID, signer)
+	if err != nil {
+		return flow.ZeroID, err
 	}
 
 	conn.LogMessage(&protocol.LogMessageParams{
@@ -347,19 +348,13 @@ func (s *Server) sendTransactionHelper(conn protocol.Conn, tx flow.Transaction) 
 		Message: fmt.Sprintf("submitting transaction %d", tx.ID()),
 	})
 
-	sig, err := keys.SignTransaction(tx, key)
-	if err != nil {
-		return err
-	}
-	tx.AddSignature(s.activeAccount, sig)
-
-	err = s.flowClient.SendTransaction(context.Background(), tx)
+	err = s.flowClient.SendTransaction(context.Background(), *tx)
 	if err == nil {
 		conn.LogMessage(&protocol.LogMessageParams{
 			Type:    protocol.Info,
-			Message: fmt.Sprintf("Submitted transaction nonce=%d\thash=%s", tx.Nonce, tx.Hash().Hex()),
+			Message: fmt.Sprintf("Submitted transaction id=%s", tx.ID().Hex()),
 		})
-		return nil
+		return flow.ZeroID, err
 	}
 
 	grpcErr, ok := status.FromError(err)
@@ -370,7 +365,7 @@ func (s *Server) sendTransactionHelper(conn protocol.Conn, tx flow.Transaction) 
 				Type:    protocol.Warning,
 				Message: "The emulator server is unavailable. Please start the emulator (`cadence.runEmulator`) first.",
 			})
-			return nil
+			return flow.ZeroID, err
 		} else if grpcErr.Code() == codes.InvalidArgument {
 			// The request was invalid
 			conn.ShowMessage(&protocol.ShowMessageParams{
@@ -381,11 +376,11 @@ func (s *Server) sendTransactionHelper(conn protocol.Conn, tx flow.Transaction) 
 				Type:    protocol.Warning,
 				Message: fmt.Sprintf("Failed to submit transaction: %s", grpcErr.Message()),
 			})
-			return nil
+			return flow.ZeroID, err
 		}
 	}
 
-	return err
+	return tx.ID(), nil
 }
 
 // createAccountHelper creates a new account and returns its address.
@@ -402,12 +397,7 @@ func (s *Server) createAccountHelper(conn protocol.Conn) (addr flow.Address, err
 		return addr, fmt.Errorf("failed to generate account creation script: %w", err)
 	}
 
-	tx := flow.Transaction{
-		Script: script,
-		Payer:  s.activeAccount,
-	}
-
-	err = s.sendTransactionHelper(conn, tx)
+	txID, err := s.sendTransactionHelper(conn, script)
 	if err != nil {
 		return addr, err
 	}
@@ -418,7 +408,7 @@ func (s *Server) createAccountHelper(conn protocol.Conn) (addr flow.Address, err
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 	for {
-		txResult, err = s.flowClient.GetTransactionResult(ctx, tx.ID())
+		txResult, err = s.flowClient.GetTransactionResult(ctx, txID)
 		if err != nil {
 			return addr, err
 		}
@@ -430,7 +420,7 @@ func (s *Server) createAccountHelper(conn protocol.Conn) (addr flow.Address, err
 	}
 
 	if len(txResult.Events) != 1 {
-		return addr, fmt.Errorf("failed to get new account address for tx %s", tx.ID().Hex())
+		return addr, fmt.Errorf("failed to get new account address for tx %s", txID.Hex())
 	}
 
 	event := txResult.Events[0]
@@ -439,7 +429,7 @@ func (s *Server) createAccountHelper(conn protocol.Conn) (addr flow.Address, err
 		accountCreatedEvent := flow.AccountCreatedEvent(event)
 		addr = accountCreatedEvent.Address()
 	} else {
-		return addr, fmt.Errorf("invalid event for tx %s", tx.ID().Hex())
+		return addr, fmt.Errorf("invalid event for tx %s", txID.Hex())
 	}
 
 	s.accounts[addr] = s.config.RootAccountKey
