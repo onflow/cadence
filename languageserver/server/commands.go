@@ -112,11 +112,9 @@ func (s *Server) submitTransaction(conn protocol.Conn, args ...interface{}) (int
 	}
 
 	tx := flow.Transaction{
-		Script:         []byte(doc.text),
-		Nonce:          s.getNextNonce(),
-		ComputeLimit:   10,
-		PayerAccount:   s.activeAccount,
-		ScriptAccounts: []flow.Address{s.activeAccount},
+		Script:      []byte(doc.text),
+		Payer:       s.activeAccount,
+		Authorizers: []flow.Address{s.activeAccount},
 	}
 
 	err := s.sendTransactionHelper(conn, tx)
@@ -148,7 +146,7 @@ func (s *Server) executeScript(conn protocol.Conn, args ...interface{}) (interfa
 	}
 
 	script := []byte(doc.text)
-	res, err := s.flowClient.ExecuteScript(context.Background(), script)
+	res, err := s.flowClient.ExecuteScriptAtLatestBlock(context.Background(), script)
 	if err == nil {
 		conn.LogMessage(&protocol.LogMessageParams{
 			Type:    protocol.Info,
@@ -323,11 +321,9 @@ func (s *Server) updateAccountCode(conn protocol.Conn, args ...interface{}) (int
 	script := templates.UpdateAccountCode(accountCode)
 
 	tx := flow.Transaction{
-		Script:         script,
-		Nonce:          s.getNextNonce(),
-		ComputeLimit:   10,
-		PayerAccount:   s.activeAccount,
-		ScriptAccounts: []flow.Address{s.activeAccount},
+		Script:      script,
+		Payer:       s.activeAccount,
+		Authorizers: []flow.Address{s.activeAccount},
 	}
 
 	err := s.sendTransactionHelper(conn, tx)
@@ -348,7 +344,7 @@ func (s *Server) sendTransactionHelper(conn protocol.Conn, tx flow.Transaction) 
 
 	conn.LogMessage(&protocol.LogMessageParams{
 		Type:    protocol.Info,
-		Message: fmt.Sprintf("submitting transaction %d", tx.Nonce),
+		Message: fmt.Sprintf("submitting transaction %d", tx.ID()),
 	})
 
 	sig, err := keys.SignTransaction(tx, key)
@@ -394,24 +390,21 @@ func (s *Server) sendTransactionHelper(conn protocol.Conn, tx flow.Transaction) 
 
 // createAccountHelper creates a new account and returns its address.
 func (s *Server) createAccountHelper(conn protocol.Conn) (addr flow.Address, err error) {
-	accountKey := flow.AccountPublicKey{
+	accountKey := flow.AccountKey{
 		PublicKey: s.config.RootAccountKey.PrivateKey.PublicKey(),
 		SignAlgo:  s.config.RootAccountKey.SignAlgo,
 		HashAlgo:  s.config.RootAccountKey.HashAlgo,
 		Weight:    keys.PublicKeyWeightThreshold,
 	}
 
-	script, err := templates.CreateAccount([]flow.AccountPublicKey{accountKey}, nil)
+	script, err := templates.CreateAccount([]flow.AccountKey{accountKey}, nil)
 	if err != nil {
 		return addr, fmt.Errorf("failed to generate account creation script: %w", err)
 	}
 
 	tx := flow.Transaction{
-		Script:         script,
-		Nonce:          s.getNextNonce(),
-		ComputeLimit:   10,
-		PayerAccount:   s.activeAccount,
-		ScriptAccounts: []flow.Address{},
+		Script: script,
+		Payer:  s.activeAccount,
 	}
 
 	err = s.sendTransactionHelper(conn, tx)
@@ -421,28 +414,33 @@ func (s *Server) createAccountHelper(conn protocol.Conn) (addr flow.Address, err
 
 	// TODO: replace this for loop with a synchronous GetTransaction in SDK
 	// that handles waiting for it to be mined
-	var minedTx *flow.Transaction
+	var txResult *flow.TransactionResult
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 	for {
-		minedTx, err = s.flowClient.GetTransaction(ctx, tx.Hash())
+		txResult, err = s.flowClient.GetTransactionResult(ctx, tx.ID())
 		if err != nil {
 			return addr, err
 		}
-		if minedTx.Status == flow.TransactionFinalized || minedTx.Status == flow.TransactionSealed {
+		if txResult.Status == flow.TransactionStatusFinalized ||
+			txResult.Status == flow.TransactionStatusSealed {
+
 			break
 		}
 	}
 
-	if len(minedTx.Events) != 1 {
-		return addr, fmt.Errorf("failed to get new account address for tx %s", tx.Hash().Hex())
-	}
-	accountCreatedEvent, err := flow.DecodeAccountCreatedEvent(minedTx.Events[0].Payload)
-	if err != nil {
-		return addr, err
+	if len(txResult.Events) != 1 {
+		return addr, fmt.Errorf("failed to get new account address for tx %s", tx.ID().Hex())
 	}
 
-	addr = accountCreatedEvent.Address()
+	event := txResult.Events[0]
+
+	if event.Type == flow.EventAccountCreated {
+		accountCreatedEvent := flow.AccountCreatedEvent(event)
+		addr = accountCreatedEvent.Address()
+	} else {
+		return addr, fmt.Errorf("invalid event for tx %s", tx.ID().Hex())
+	}
 
 	s.accounts[addr] = s.config.RootAccountKey
 
