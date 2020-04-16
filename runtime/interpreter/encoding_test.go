@@ -7,8 +7,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 func testEncodeDecode(t *testing.T, tests map[string]Value) {
@@ -126,7 +126,8 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 		map[string]Value{
 			"empty":     IntValue{Int: big.NewInt(0)},
 			"non-empty": IntValue{Int: big.NewInt(64)},
-			"signed":    IntValue{Int: big.NewInt(-64)},
+
+			"signed": IntValue{Int: big.NewInt(-64)},
 		},
 	)
 }
