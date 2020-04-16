@@ -72,6 +72,8 @@ func ConvertType(typ runtime.Type) Type {
 		return convertDictionaryType(t)
 	case *sema.FunctionType:
 		return convertFunctionType(t)
+	case *sema.AddressType:
+		return AddressType{}
 	}
 
 	panic(fmt.Sprintf("cannot convert type of type %T", typ))

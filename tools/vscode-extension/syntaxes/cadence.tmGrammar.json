@@ -604,7 +604,7 @@
         ]
       },
       "composite": {
-        "begin": "\\b((?:(?:struct|resource|contract)(?:\\s+interface)?)|transaction)\\s+([\\p{L}_][\\p{L}_\\p{N}\\p{M}]*)",
+        "begin": "\\b((?:(?:struct|resource|contract)(?:\\s+interface)?)|transaction|event)\\s+([\\p{L}_][\\p{L}_\\p{N}\\p{M}]*)",
         "beginCaptures": {
           "1": {
             "name": "storage.type.$1.cadence"
@@ -614,7 +614,7 @@
           }
         },
         "end": "(?<=\\})",
-        "name": "meta.definition.type.protocol.cadence",
+        "name": "meta.definition.type.composite.cadence",
         "patterns": [
           {
             "include": "#comments"
