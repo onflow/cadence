@@ -36,9 +36,15 @@ func NewREPL(onError func(error), onResult func(interpreter.Value)) (*REPL, erro
 
 	values := standardLibraryFunctions.ToValues()
 
+	var uuid uint64
+
 	inter, err := interpreter.NewInterpreter(
 		checker,
 		interpreter.WithPredefinedValues(values),
+		interpreter.WithUUIDHandler(func() uint64 {
+			defer func() { uuid++ }()
+			return uuid
+		}),
 	)
 	if err != nil {
 		return nil, err

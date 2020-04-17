@@ -128,9 +128,15 @@ func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checke
 
 	values := standardLibraryFunctions().ToValues()
 
+	var uuid uint64
+
 	inter, err := interpreter.NewInterpreter(
 		checker,
 		interpreter.WithPredefinedValues(values),
+		interpreter.WithUUIDHandler(func() uint64 {
+			defer func() { uuid++ }()
+			return uuid
+		}),
 	)
 	must(err)
 
