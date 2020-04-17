@@ -639,8 +639,8 @@ type encodedOptionalStaticType struct {
 }
 
 type encodedRestrictedStaticType struct {
-	Type         encodedStaticType `cbor:"0,keyasint"`
-	Restrictions interface{}
+	Type         encodedStaticType            `cbor:"0,keyasint"`
+	Restrictions []encodedInterfaceStaticType `cbor:"1,keyasint"`
 }
 
 type encodedReferenceStaticType struct {
@@ -650,7 +650,6 @@ type encodedReferenceStaticType struct {
 
 // Handle the types that conform to the StaticType interface
 func (e *Encoder) prepareStaticType(t StaticType) (interface{}, error) {
-	fmt.Println("Preparing static type: ", t)
 	switch v := t.(type) {
 	case TypeStaticType:
 		if v == (TypeStaticType{}) {
@@ -663,7 +662,6 @@ func (e *Encoder) prepareStaticType(t StaticType) (interface{}, error) {
 		return encodedTypeStaticType{Type: encodedSemaType{Type: staticType}}, nil
 	case CompositeStaticType:
 		if v == (CompositeStaticType{}) {
-			fmt.Println("is empty")
 			return encodedCompositeStaticType{}, nil
 		}
 		return encodedCompositeStaticType{
@@ -708,13 +706,33 @@ func (e *Encoder) prepareStaticType(t StaticType) (interface{}, error) {
 	case OptionalStaticType:
 		staticType, err := e.prepareStaticType(v.Type)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse statictype type: %w", err)
+			return nil, fmt.Errorf("failed to parse optionalstatictype type: %w", err)
 		}
 		return encodedOptionalStaticType{
 			Type: encodedStaticType{Type: staticType},
 		}, nil
 	case RestrictedStaticType:
-		return encodedRestrictedStaticType{}, nil
+		staticType, err := e.prepareStaticType(v.Type)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse restrictedstatictype type: %w", err)
+		}
+		encodedRestrictions := make([]encodedInterfaceStaticType, len(v.Restrictions))
+		for i, restriction := range v.Restrictions {
+			encodedRestriction, err := e.prepareStaticType(restriction)
+			if err != nil {
+				return nil, fmt.Errorf("failed to parse restrictedstatictye restrictions: %w", err)
+			}
+			encodedRestrictionInterfaceStaticType, ok := encodedRestriction.(encodedInterfaceStaticType)
+			if !ok {
+				return nil, fmt.Errorf("failed to parse restrictedstatictype restrictions: type is not interfacestatictype")
+			}
+			encodedRestrictions[i] = encodedRestrictionInterfaceStaticType
+		}
+		fmt.Println(encodedRestrictions)
+		return encodedRestrictedStaticType{
+			Type:         encodedStaticType{Type: staticType},
+			Restrictions: encodedRestrictions,
+		}, nil
 	case ReferenceStaticType:
 		staticType, err := e.prepareStaticType(v.Type)
 		if err != nil {
