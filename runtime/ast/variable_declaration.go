@@ -1,6 +1,6 @@
 package ast
 
-import "github.com/dapperlabs/cadence/runtime/common"
+import "github.com/onflow/cadence/runtime/common"
 
 type VariableDeclaration struct {
 	Access            Access

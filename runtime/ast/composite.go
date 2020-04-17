@@ -1,7 +1,7 @@
 package ast
 
 import (
-	"github.com/dapperlabs/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 // CompositeDeclaration

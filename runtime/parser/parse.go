@@ -7,7 +7,7 @@ import (
 
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/ast"
 )
 
 type errorListener struct {

@@ -1,7 +1,7 @@
 package execute
 
 import (
-	"github.com/dapperlabs/cadence/runtime/cmd"
+	"github.com/onflow/cadence/runtime/cmd"
 )
 
 // Execute parses the given filename and prints any syntax errors.

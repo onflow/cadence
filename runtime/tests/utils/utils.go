@@ -9,10 +9,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/errors"
-	"github.com/dapperlabs/cadence/runtime/parser"
-	"github.com/dapperlabs/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // TestLocation is used as the default location for programs in tests.

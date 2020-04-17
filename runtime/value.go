@@ -1,8 +1,8 @@
 package runtime
 
 import (
-	"github.com/dapperlabs/cadence/runtime/common"
-	"github.com/dapperlabs/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 // A Value is a Cadence value emitted by the runtime.

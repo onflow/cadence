@@ -4,7 +4,7 @@ import (
 	"github.com/raviqqe/hamt"
 	"github.com/segmentio/fasthash/fnv1"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/ast"
 )
 
 type ResourceInvalidation struct {

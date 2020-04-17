@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/dapperlabs/cadence/languageserver/server"
+	"github.com/onflow/cadence/languageserver/server"
 
 	"os"
 

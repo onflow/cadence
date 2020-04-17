@@ -3,10 +3,10 @@ package stdlib
 import (
 	"encoding/gob"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/common"
-	"github.com/dapperlabs/cadence/runtime/interpreter"
-	"github.com/dapperlabs/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // This file defines functions built in to the Flow runtime.

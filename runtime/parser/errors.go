@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 // Error

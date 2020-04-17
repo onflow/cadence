@@ -6,10 +6,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/interpreter"
-	"github.com/dapperlabs/cadence/runtime/sema"
-	"github.com/dapperlabs/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestAssert(t *testing.T) {

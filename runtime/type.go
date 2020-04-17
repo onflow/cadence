@@ -1,5 +1,5 @@
 package runtime
 
-import "github.com/dapperlabs/cadence/runtime/sema"
+import "github.com/onflow/cadence/runtime/sema"
 
 type Type = sema.Type

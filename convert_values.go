@@ -5,10 +5,10 @@ import (
 	"math/big"
 	"sort"
 
-	"github.com/dapperlabs/cadence/runtime"
-	"github.com/dapperlabs/cadence/runtime/common"
-	"github.com/dapperlabs/cadence/runtime/interpreter"
-	"github.com/dapperlabs/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // ConvertValue converts a runtime value to its native Go representation.

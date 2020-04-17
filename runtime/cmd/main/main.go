@@ -3,7 +3,7 @@ package main
 import (
 	"os"
 
-	"github.com/dapperlabs/cadence/runtime/cmd/execute"
+	"github.com/onflow/cadence/runtime/cmd/execute"
 )
 
 func main() {

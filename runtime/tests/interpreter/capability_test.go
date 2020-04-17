@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/dapperlabs/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 func TestInterpretCapabilityBorrowResource(t *testing.T) {

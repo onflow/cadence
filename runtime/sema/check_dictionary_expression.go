@@ -1,6 +1,6 @@
 package sema
 
-import "github.com/dapperlabs/cadence/runtime/ast"
+import "github.com/onflow/cadence/runtime/ast"
 
 func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpression) ast.Repr {
 

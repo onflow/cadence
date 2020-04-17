@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/common"
-	"github.com/dapperlabs/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // unsupportedOperation

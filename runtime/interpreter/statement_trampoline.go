@@ -1,7 +1,7 @@
 package interpreter
 
 import (
-	"github.com/dapperlabs/cadence/runtime/trampoline"
+	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 type StatementTrampoline struct {

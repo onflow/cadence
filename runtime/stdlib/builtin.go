@@ -3,9 +3,9 @@ package stdlib
 import (
 	"fmt"
 
-	"github.com/dapperlabs/cadence/runtime/interpreter"
-	"github.com/dapperlabs/cadence/runtime/sema"
-	"github.com/dapperlabs/cadence/runtime/trampoline"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 // This file defines functions built-in to Cadence.

@@ -1,8 +1,8 @@
 package sema
 
 import (
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) ast.Repr {

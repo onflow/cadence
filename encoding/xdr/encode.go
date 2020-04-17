@@ -8,7 +8,7 @@ import (
 
 	xdr "github.com/davecgh/go-xdr/xdr2"
 
-	"github.com/dapperlabs/cadence"
+	"github.com/onflow/cadence"
 )
 
 // An Encoder converts Cadence values into XDR-encoded bytes.

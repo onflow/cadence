@@ -3,7 +3,7 @@ package sema
 import (
 	"github.com/raviqqe/hamt"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/ast"
 )
 
 type ResourceUse struct {

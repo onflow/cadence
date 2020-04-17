@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/dapperlabs/cadence/runtime"
-	"github.com/dapperlabs/cadence/runtime/common"
-	"github.com/dapperlabs/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // ConvertType converts a runtime type to its corresponding Go representation.

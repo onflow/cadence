@@ -15,7 +15,7 @@ import (
 	"github.com/dapperlabs/flow-go-sdk/keys"
 	"github.com/dapperlabs/flow-go-sdk/templates"
 
-	"github.com/dapperlabs/cadence/languageserver/protocol"
+	"github.com/onflow/cadence/languageserver/protocol"
 )
 
 const (

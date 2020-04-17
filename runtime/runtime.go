@@ -7,14 +7,14 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/common"
-	runtimeErrors "github.com/dapperlabs/cadence/runtime/errors"
-	"github.com/dapperlabs/cadence/runtime/interpreter"
-	"github.com/dapperlabs/cadence/runtime/parser"
-	"github.com/dapperlabs/cadence/runtime/sema"
-	"github.com/dapperlabs/cadence/runtime/stdlib"
-	"github.com/dapperlabs/cadence/runtime/trampoline"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	runtimeErrors "github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 // Runtime is a runtime capable of executing Cadence.

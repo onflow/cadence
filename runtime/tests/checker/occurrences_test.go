@@ -6,9 +6,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dapperlabs/cadence/runtime/common"
-	"github.com/dapperlabs/cadence/runtime/sema"
-	. "github.com/dapperlabs/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 // TODO: implement occurrences for type references

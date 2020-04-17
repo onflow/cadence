@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dapperlabs/cadence"
-	"github.com/dapperlabs/cadence/runtime/sema"
+	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // An Encoder converts Cadence values into JSON-encoded bytes.

@@ -3,7 +3,7 @@ package ast
 import (
 	"fmt"
 
-	"github.com/dapperlabs/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 type BoolExtractor interface {

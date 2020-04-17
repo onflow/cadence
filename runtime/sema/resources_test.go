@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/ast"
 )
 
 func TestResources_Add(t *testing.T) {

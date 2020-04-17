@@ -1,7 +1,7 @@
 package sema
 
 import (
-	"github.com/dapperlabs/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/ast"
 )
 
 func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) ast.Repr {

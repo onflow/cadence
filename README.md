@@ -1,5 +1,5 @@
 # Cadence Programming Language
 
-- [Documentation](https://github.com/dapperlabs/cadence/tree/master/docs)
+- [Documentation](https://github.com/onflow/cadence/tree/master/docs)
 
-- [Reference implementation](https://github.com/dapperlabs/cadence/tree/master/runtime)
+- [Reference implementation](https://github.com/onflow/cadence/tree/master/runtime)

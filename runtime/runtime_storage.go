@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/gob"
 
-	"github.com/dapperlabs/cadence/runtime/errors"
-	"github.com/dapperlabs/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 type storageKey struct {

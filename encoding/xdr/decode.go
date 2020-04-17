@@ -8,7 +8,7 @@ import (
 
 	xdr "github.com/davecgh/go-xdr/xdr2"
 
-	"github.com/dapperlabs/cadence"
+	"github.com/onflow/cadence"
 )
 
 // A Decoder decodes XDR-encoded representations of Cadence values.

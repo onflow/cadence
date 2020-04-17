@@ -3,7 +3,7 @@ package parser
 import (
 	"github.com/antlr/antlr4/runtime/Go/antlr"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/ast"
 )
 
 func PositionFromToken(token antlr.Token) ast.Position {

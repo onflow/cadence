@@ -1,7 +1,7 @@
 package ast
 
 import (
-	"github.com/dapperlabs/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 //go:generate stringer -type=VariableKind

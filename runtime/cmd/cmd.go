@@ -5,12 +5,12 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/dapperlabs/cadence/runtime"
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/interpreter"
-	"github.com/dapperlabs/cadence/runtime/parser"
-	"github.com/dapperlabs/cadence/runtime/sema"
-	"github.com/dapperlabs/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func PrettyPrintError(err error, filename string, codes map[string]string) {

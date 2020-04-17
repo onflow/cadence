@@ -8,8 +8,8 @@ import (
 
 	"github.com/logrusorgru/aurora"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 func colorizeError(message string) string {

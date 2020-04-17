@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/dapperlabs/cadence/runtime/errors"
-	"github.com/dapperlabs/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // Error is the containing type for all errors produced by the runtime.

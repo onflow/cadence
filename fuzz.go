@@ -3,9 +3,9 @@ package cadence
 import (
 	"unicode/utf8"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/parser"
-	"github.com/dapperlabs/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 func Fuzz(data []byte) int {

@@ -3,10 +3,10 @@ package checker
 import (
 	"testing"
 
-	"github.com/dapperlabs/cadence/runtime/common"
-	"github.com/dapperlabs/cadence/runtime/sema"
-	"github.com/dapperlabs/cadence/runtime/stdlib"
-	. "github.com/dapperlabs/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func ParseAndCheckWithPanic(t *testing.T, code string) (*sema.Checker, error) {

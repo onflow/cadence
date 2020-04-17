@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/dapperlabs/cadence"
+	"github.com/onflow/cadence"
 )
 
 const crashersDir = "../../../crashers"

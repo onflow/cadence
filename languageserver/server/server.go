@@ -13,16 +13,16 @@ import (
 	"github.com/dapperlabs/flow-go-sdk/crypto"
 	"google.golang.org/grpc"
 
-	"github.com/dapperlabs/cadence/runtime"
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/common"
-	"github.com/dapperlabs/cadence/runtime/errors"
-	"github.com/dapperlabs/cadence/runtime/parser"
-	"github.com/dapperlabs/cadence/runtime/sema"
-	"github.com/dapperlabs/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 
-	"github.com/dapperlabs/cadence/languageserver/config"
-	"github.com/dapperlabs/cadence/languageserver/protocol"
+	"github.com/onflow/cadence/languageserver/config"
+	"github.com/onflow/cadence/languageserver/protocol"
 )
 
 var valueDeclarations = append(

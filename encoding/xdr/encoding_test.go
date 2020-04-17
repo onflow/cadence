@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dapperlabs/cadence"
-	"github.com/dapperlabs/cadence/encoding/xdr"
+	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/xdr"
 )
 
 type encodeTest struct {

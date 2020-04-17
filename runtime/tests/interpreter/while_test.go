@@ -6,7 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dapperlabs/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 func TestInterpretWhileStatement(t *testing.T) {

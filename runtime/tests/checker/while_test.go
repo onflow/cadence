@@ -5,8 +5,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/dapperlabs/cadence/runtime/sema"
-	. "github.com/dapperlabs/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/runtime/sema"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestCheckInvalidWhileTest(t *testing.T) {

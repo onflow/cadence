@@ -1,7 +1,7 @@
 package interpreter
 
 import (
-	"github.com/dapperlabs/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 type DynamicType interface {
