@@ -353,26 +353,73 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					TypeID: sema.TypeID("test"),
 				},
 			},
-			"non-empty+composite": &LinkValue{
+			"composite": &LinkValue{
 				TargetPath: nonEmptyPathValue,
 				Type: CompositeStaticType{
 					TypeID:   "SimpleStruct",
 					Location: ast.StringLocation("0:10"),
 				},
 			},
-			"non-empty+interface": &LinkValue{
+			"interface": &LinkValue{
 				TargetPath: nonEmptyPathValue,
 				Type: InterfaceStaticType{
 					TypeID:   "SimpleInterface",
 					Location: ast.StringLocation("0:0"),
 				},
 			},
-			"non-empty+variable-sized": &LinkValue{
+			"variable-sized": &LinkValue{
 				TargetPath: nonEmptyPathValue,
 				Type: VariableSizedStaticType{
 					Type: CompositeStaticType{
 						TypeID:   "SimpleStruct",
 						Location: ast.StringLocation("0:0"),
+					},
+				},
+			},
+			"constant-sized": &LinkValue{
+				TargetPath: nonEmptyPathValue,
+				Type: ConstantSizedStaticType{
+					Type: CompositeStaticType{
+						TypeID:   "SimpleStruct",
+						Location: ast.StringLocation("0:0"),
+					},
+					Size: 16,
+				},
+			},
+			"dictionary": &LinkValue{
+				TargetPath: nonEmptyPathValue,
+				Type: DictionaryStaticType{
+					KeyType: CompositeStaticType{
+						TypeID:   "SimpleStruct",
+						Location: ast.StringLocation("0:0"),
+					},
+					ValueType: CompositeStaticType{
+						TypeID:   "SimpleStruct",
+						Location: ast.StringLocation("0:0"),
+					},
+				},
+			},
+			"optional": &LinkValue{
+				TargetPath: nonEmptyPathValue,
+				Type: OptionalStaticType{
+					Type: CompositeStaticType{
+						TypeID:   "SimpleStruct",
+						Location: ast.StringLocation("0:0"),
+					},
+				},
+			},
+			"restricted": &LinkValue{
+				TargetPath: nonEmptyPathValue,
+				Type: RestrictedStaticType{
+					Type: CompositeStaticType{
+						TypeID:   "SimpleStruct",
+						Location: ast.StringLocation("0:0"),
+					},
+					Restrictions: []InterfaceStaticType{
+						InterfaceStaticType{
+							TypeID:   "SimpleInterface",
+							Location: ast.StringLocation("0:0"),
+						},
 					},
 				},
 			},

@@ -661,8 +661,6 @@ func (d *Decoder) decodeLink(v interface{}, owner *common.Address) (*LinkValue, 
 }
 
 func (d *Decoder) decodeStaticType(v interface{}, owner *common.Address) (StaticType, error) {
-	// fmt.Println("decodeStaticType called")
-	fmt.Println("Decoding staticType: ", v)
 	switch v := v.(type) {
 	case cbor.Tag:
 		switch v.Number {
@@ -670,7 +668,6 @@ func (d *Decoder) decodeStaticType(v interface{}, owner *common.Address) (Static
 			if v.Content == nil {
 				return TypeStaticType{}, nil
 			}
-			// fmt.Println(reflect.TypeOf(v.Content))
 			encoded, ok := v.Content.(map[interface{}]interface{})
 			if !ok {
 				return nil, fmt.Errorf("invalid statictype encoding")
@@ -733,13 +730,92 @@ func (d *Decoder) decodeStaticType(v interface{}, owner *common.Address) (Static
 				Type: staticType,
 			}, nil
 		case cborTagConstantSizedStaticType:
-			return nil, fmt.Errorf("constantsizedstatictype not implemented")
+			if v.Content == nil {
+				return ConstantSizedStaticType{}, nil
+			}
+			encoded, ok := v.Content.(map[interface{}]interface{})
+			if !ok {
+				return nil, fmt.Errorf("invalid constantsizedtype encoding")
+			}
+			staticType, err := d.decodeStaticType(encoded[uint64(0)], owner)
+			if err != nil {
+				return nil, fmt.Errorf("invalid constantsizedtype type encoding: %w", err)
+			}
+			size, ok := encoded[uint64(1)].(uint64)
+			if !ok {
+				return nil, fmt.Errorf("invalid constantsizedtype size encoding")
+			}
+			return ConstantSizedStaticType{
+				Type: staticType,
+				Size: size,
+			}, nil
 		case cborTagDictionaryStaticType:
-			return nil, fmt.Errorf("dictionarystatictype not implemented")
+			if v.Content == nil {
+				return DictionaryStaticType{}, nil
+			}
+			encoded, ok := v.Content.(map[interface{}]interface{})
+			if !ok {
+				return nil, fmt.Errorf("invalid dictionarystatictype encoding")
+			}
+			key, err := d.decodeStaticType(encoded[uint64(0)], owner)
+			if err != nil {
+				return nil, fmt.Errorf("invalid dictionarystatictype key encoding: %w", err)
+			}
+			value, err := d.decodeStaticType(encoded[uint64(1)], owner)
+			if err != nil {
+				return nil, fmt.Errorf("invalid dictionarystatictype value encoding: %w", err)
+			}
+			return DictionaryStaticType{
+				KeyType:   key,
+				ValueType: value,
+			}, nil
 		case cborTagOptionalStaticType:
-			return nil, fmt.Errorf("optionalstatictype not implemented")
+			if v.Content == nil {
+				return OptionalStaticType{}, nil
+			}
+			encoded, ok := v.Content.(map[interface{}]interface{})
+			if !ok {
+				return nil, fmt.Errorf("invalid optionalstatictype encoding")
+			}
+			staticType, err := d.decodeStaticType(encoded[uint64(0)], owner)
+			if err != nil {
+				return nil, fmt.Errorf("invalid optionalstatictype type encoding: %w", err)
+			}
+			return OptionalStaticType{
+				Type: staticType,
+			}, nil
 		case cborTagRestrictedStaticType:
-			return nil, fmt.Errorf("restrictedstatictype not implemented")
+			if v.Content == nil {
+				return RestrictedStaticType{}, nil
+			}
+			encoded, ok := v.Content.(map[interface{}]interface{})
+			if !ok {
+				return nil, fmt.Errorf("invalid restrictedstatictype encoding")
+			}
+			staticType, err := d.decodeStaticType(encoded[uint64(0)], owner)
+			if err != nil {
+				return nil, fmt.Errorf("invalid restrictedstatictype type encoding: %w", err)
+			}
+			encodedRestrictions, ok := encoded[uint64(1)].([]interface{})
+			if !ok {
+				return nil, fmt.Errorf("invalid restrictedstatictype restrictions encoding: not an array")
+			}
+			restrictions := make([]InterfaceStaticType, len(encodedRestrictions))
+			for i, encodedRestriction := range encodedRestrictions {
+				r, err := d.decodeStaticType(encodedRestriction, owner)
+				if err != nil {
+					return nil, fmt.Errorf("")
+				}
+				restriction, ok := r.(InterfaceStaticType)
+				if !ok {
+					return nil, fmt.Errorf("")
+				}
+				restrictions[i] = restriction
+			}
+			return RestrictedStaticType{
+				Type:         staticType,
+				Restrictions: restrictions,
+			}, nil
 		case cborTagReferenceStaticType:
 			encoded, ok := v.Content.(map[interface{}]interface{})
 			if !ok {
@@ -763,7 +839,7 @@ func (d *Decoder) decodeStaticType(v interface{}, owner *common.Address) (Static
 	default:
 		return nil, fmt.Errorf("invalid statictype encoding (unrecognized type)")
 	}
-	return nil, fmt.Errorf("nottt implemented")
+	return nil, fmt.Errorf("no valid matching types")
 }
 
 func (d *Decoder) decodeLocation(l interface{}) (ast.Location, error) {
