@@ -652,5 +652,79 @@ func (d *Decoder) decodeLink(v interface{}, owner *common.Address) (*LinkValue, 
 	if err != nil {
 		return nil, fmt.Errorf("invalid link targetpath encoding: %w", err)
 	}
-	return &LinkValue{TargetPath: *path}, nil
+
+	staticType, err := d.decodeStaticType(encoded[uint64(1)], owner)
+	if err != nil {
+		return nil, fmt.Errorf("invalid link type encoding: %w", err)
+	}
+	return &LinkValue{TargetPath: *path, Type: staticType}, nil
+}
+
+func (d *Decoder) decodeStaticType(v interface{}, owner *common.Address) (StaticType, error) {
+	// fmt.Println("decodeStaticType called")
+	switch v := v.(type) {
+	case cbor.Tag:
+		switch v.Number {
+		case cborTagStaticType:
+			if v.Content == nil {
+				return TypeStaticType{}, nil
+			}
+			// fmt.Println(reflect.TypeOf(v.Content))
+			encoded, ok := v.Content.(map[interface{}]interface{})
+			if !ok {
+				return nil, fmt.Errorf("invalid statictype encoding")
+			}
+			return d.decodeStaticType(encoded[uint64(0)], owner)
+		case cborTagCompositeStaticType:
+			encoded, ok := v.Content.(map[interface{}]interface{})
+			if !ok {
+				return nil, fmt.Errorf("invalid statictype encoding")
+			}
+
+			var location ast.Location
+
+			encodedLocation, ok := encoded[uint64(0)].(cbor.Tag)
+			if encoded[uint64(0)] == nil {
+				location = nil
+			} else if !ok {
+				return nil, fmt.Errorf("invalid location encoding")
+			} else {
+				if encodedLocation.Number == cborTagStringLocation {
+					location = ast.StringLocation(encodedLocation.Content.(string))
+				} else if encodedLocation.Number == cborTagAddressLocation {
+					location = ast.AddressLocation(encodedLocation.Content.([]byte))
+				} else {
+					return nil, fmt.Errorf("invalid location encoding tag: %d", encodedLocation.Number)
+				}
+			}
+
+			var typeID sema.TypeID
+			encodedTypeID, ok := encoded[uint64(1)].(string)
+			if encoded[uint64(1)] == nil {
+				typeID = sema.TypeID("")
+			} else if !ok {
+				return nil, fmt.Errorf("invalid composite type ID encoding")
+			}
+
+			typeID = sema.TypeID(encodedTypeID)
+			return CompositeStaticType{
+				Location: location,
+				TypeID:   typeID,
+			}, nil
+		case cborTagInterfaceStaticType:
+			return nil, fmt.Errorf("interface static type not implemented")
+		case cborTagVariableSizedStaticType:
+			return nil, fmt.Errorf("variable sized static type not implemented")
+		case cborTagConstantSizedStaticType:
+			return nil, fmt.Errorf("constant sized static type not implemented")
+		case cborTagDictionaryStaticType:
+			return nil, fmt.Errorf("dictionary sized static type not implemented")
+		}
+	case nil:
+		return TypeStaticType{}, nil
+	default:
+		// fmt.Println(reflect.TypeOf(v))
+		return nil, fmt.Errorf("invalid statictype encoding (unrecognized type)")
+	}
+	return nil, fmt.Errorf("nottt implemented")
 }
