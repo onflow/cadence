@@ -79,7 +79,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (member *M
 		expressionType = accessedExpression.Accept(checker).(Type)
 	}()
 
-	checker.checkAccessResourceLoss(expressionType, accessedExpression)
+	checker.checkUnusedExpressionResourceLoss(expressionType, accessedExpression)
 
 	// If the the access is to a member of `self` and a resource,
 	// its use must be recorded/checked, so that it isn't used after it was invalidated

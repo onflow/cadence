@@ -207,6 +207,9 @@ func (checker *Checker) checkBinaryExpressionEquality(
 		)
 	}
 
+	checker.checkUnusedExpressionResourceLoss(leftType, expression.Left)
+	checker.checkUnusedExpressionResourceLoss(rightType, expression.Right)
+
 	return
 }
 
