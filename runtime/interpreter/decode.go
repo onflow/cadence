@@ -662,6 +662,7 @@ func (d *Decoder) decodeLink(v interface{}, owner *common.Address) (*LinkValue, 
 
 func (d *Decoder) decodeStaticType(v interface{}, owner *common.Address) (StaticType, error) {
 	// fmt.Println("decodeStaticType called")
+	fmt.Println("Decoding staticType: ", v)
 	switch v := v.(type) {
 	case cbor.Tag:
 		switch v.Number {
@@ -681,21 +682,9 @@ func (d *Decoder) decodeStaticType(v interface{}, owner *common.Address) (Static
 				return nil, fmt.Errorf("invalid statictype encoding")
 			}
 
-			var location ast.Location
-
-			encodedLocation, ok := encoded[uint64(0)].(cbor.Tag)
-			if encoded[uint64(0)] == nil {
-				location = nil
-			} else if !ok {
-				return nil, fmt.Errorf("invalid location encoding")
-			} else {
-				if encodedLocation.Number == cborTagStringLocation {
-					location = ast.StringLocation(encodedLocation.Content.(string))
-				} else if encodedLocation.Number == cborTagAddressLocation {
-					location = ast.AddressLocation(encodedLocation.Content.([]byte))
-				} else {
-					return nil, fmt.Errorf("invalid location encoding tag: %d", encodedLocation.Number)
-				}
+			location, err := d.decodeLocation(encoded[uint64(0)])
+			if err != nil {
+				return nil, fmt.Errorf("invalid statictype location encoding: %w", err)
 			}
 
 			var typeID sema.TypeID
@@ -712,19 +701,89 @@ func (d *Decoder) decodeStaticType(v interface{}, owner *common.Address) (Static
 				TypeID:   typeID,
 			}, nil
 		case cborTagInterfaceStaticType:
-			return nil, fmt.Errorf("interface static type not implemented")
+			encoded, ok := v.Content.(map[interface{}]interface{})
+			if !ok {
+				return nil, fmt.Errorf("invalid interfacestatictype encoding")
+			}
+			location, err := d.decodeLocation(encoded[uint64(0)])
+			if err != nil {
+				return nil, fmt.Errorf("invalid interfacestatictype location encoding")
+			}
+			typeID, ok := encoded[uint64(1)].(string)
+			if !ok {
+				return nil, fmt.Errorf("invalid interfacestatictype location encoding")
+			}
+			return InterfaceStaticType{
+				Location: location,
+				TypeID:   sema.TypeID(typeID),
+			}, nil
 		case cborTagVariableSizedStaticType:
-			return nil, fmt.Errorf("variable sized static type not implemented")
+			if v.Content == nil {
+				return VariableSizedStaticType{}, nil
+			}
+			encoded, ok := v.Content.(map[interface{}]interface{})
+			if !ok {
+				return nil, fmt.Errorf("invalid variablesizedtype encoding")
+			}
+			staticType, err := d.decodeStaticType(encoded[uint64(0)], owner)
+			if err != nil {
+				return nil, fmt.Errorf("invalid variabliesizedtype type encoding: %w", err)
+			}
+			return VariableSizedStaticType{
+				Type: staticType,
+			}, nil
 		case cborTagConstantSizedStaticType:
-			return nil, fmt.Errorf("constant sized static type not implemented")
+			return nil, fmt.Errorf("constantsizedstatictype not implemented")
 		case cborTagDictionaryStaticType:
-			return nil, fmt.Errorf("dictionary sized static type not implemented")
+			return nil, fmt.Errorf("dictionarystatictype not implemented")
+		case cborTagOptionalStaticType:
+			return nil, fmt.Errorf("optionalstatictype not implemented")
+		case cborTagRestrictedStaticType:
+			return nil, fmt.Errorf("restrictedstatictype not implemented")
+		case cborTagReferenceStaticType:
+			encoded, ok := v.Content.(map[interface{}]interface{})
+			if !ok {
+				return nil, fmt.Errorf("invalid referencestatictype encoding")
+			}
+			authorized, ok := encoded[uint64(0)].(bool)
+			if !ok {
+				return nil, fmt.Errorf("invalid referencestatictype authorized encoding")
+			}
+			staticType, err := d.decodeStaticType(encoded[uint64(1)], owner)
+			if err != nil {
+				return nil, fmt.Errorf("invalid referencestatictype type encoding: %w", err)
+			}
+			return ReferenceStaticType{
+				Authorized: authorized,
+				Type:       staticType,
+			}, nil
 		}
 	case nil:
 		return TypeStaticType{}, nil
 	default:
-		// fmt.Println(reflect.TypeOf(v))
 		return nil, fmt.Errorf("invalid statictype encoding (unrecognized type)")
 	}
 	return nil, fmt.Errorf("nottt implemented")
+}
+
+func (d *Decoder) decodeLocation(l interface{}) (ast.Location, error) {
+	var location ast.Location
+	if l == nil {
+		return nil, nil
+	}
+
+	encodedLocation, ok := l.(cbor.Tag)
+	if !ok {
+		return nil, fmt.Errorf("invalid location encoding")
+	} else {
+		if encodedLocation.Number == cborTagStringLocation {
+			location = ast.StringLocation(encodedLocation.Content.(string))
+		} else if encodedLocation.Number == cborTagAddressLocation {
+			location = ast.AddressLocation(encodedLocation.Content.([]byte))
+		} else {
+			return nil, fmt.Errorf("invalid location encoding tag: %d", encodedLocation.Number)
+		}
+	}
+
+	return location, nil
 }
