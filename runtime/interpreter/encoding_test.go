@@ -350,13 +350,15 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 		map[string]Value{
 			"empty": &LinkValue{
 				TargetPath: nonEmptyPathValue,
-				Type:       CompositeStaticType{TypeID: sema.TypeID("test")},
+				Type: CompositeStaticType{
+					TypeID: sema.TypeID("test"),
+				},
 			},
 			"non-empty+composite": &LinkValue{
 				TargetPath: nonEmptyPathValue,
 				Type: CompositeStaticType{
 					TypeID:   "SimpleStruct",
-					Location: ast.StringLocation("0:0"),
+					Location: ast.StringLocation("0:10"),
 				},
 			},
 			"non-empty+interface": &LinkValue{
@@ -369,7 +371,10 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			"non-empty+variable-sized": &LinkValue{
 				TargetPath: nonEmptyPathValue,
 				Type: VariableSizedStaticType{
-					Type: TypeStaticType{},
+					Type: CompositeStaticType{
+						TypeID:   "SimpleStruct",
+						Location: ast.StringLocation("0:0"),
+					},
 				},
 			},
 		},

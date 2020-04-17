@@ -15,8 +15,8 @@ import (
 
 var cborTagSet cbor.TagSet
 
-const cborTagBase = 2233623
-
+// const cborTagBase = 2233623
+const cborTagBase = 2000
 const (
 	cborTagNilValue = cborTagBase + iota
 	cborTagVoidValue
@@ -184,6 +184,7 @@ func (e *Encoder) Encode(v Value) error {
 // the representation for the value that can be marshalled to CBOR.
 //
 func (e *Encoder) prepare(v Value) interface{} {
+	fmt.Println("Encoding: ", v)
 	switch v := v.(type) {
 
 	case NilValue:
@@ -305,8 +306,12 @@ func (e *Encoder) prepare(v Value) interface{} {
 	case *CapabilityValue:
 		return e.prepareCapabilityValue(v)
 
+	// TODO Reflect on Kind, if pointer, dereference
 	case *LinkValue:
-		return e.prepareLinkValue(v)
+		return *e.prepareLinkValue(v)
+
+	case LinkValue:
+		return e.prepareLinkValue(&v)
 
 	default:
 		return fmt.Errorf("unsupported value: %[1]T, %[1]v", v)
@@ -580,15 +585,14 @@ type encodedLinkValue struct {
 	Type       encodedStaticType `cbor:"1,keyasint"`
 }
 
-func (e *Encoder) prepareLinkValue(v *LinkValue) interface{} {
-
+func (e *Encoder) prepareLinkValue(v *LinkValue) *encodedLinkValue {
 	staticType, err := e.prepareStaticType(v.Type)
 	if err != nil {
 		fmt.Println(fmt.Errorf("failed to encode linkvalue type: %w\n", err).Error())
-		return encodedLinkValue{}
+		return &encodedLinkValue{}
 	}
 
-	return encodedLinkValue{
+	return &encodedLinkValue{
 		TargetPath: *e.preparePathValue(&v.TargetPath),
 		Type:       encodedStaticType{Type: staticType},
 	}
@@ -646,6 +650,7 @@ type encodedReferenceStaticType struct {
 
 // Handle the types that conform to the StaticType interface
 func (e *Encoder) prepareStaticType(t StaticType) (interface{}, error) {
+	fmt.Println("Preparing static type: ", t)
 	switch v := t.(type) {
 	case TypeStaticType:
 		if v == (TypeStaticType{}) {
@@ -657,7 +662,6 @@ func (e *Encoder) prepareStaticType(t StaticType) (interface{}, error) {
 		}
 		return encodedTypeStaticType{Type: encodedSemaType{Type: staticType}}, nil
 	case CompositeStaticType:
-		fmt.Println("in composite")
 		if v == (CompositeStaticType{}) {
 			fmt.Println("is empty")
 			return encodedCompositeStaticType{}, nil
