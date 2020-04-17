@@ -52,6 +52,17 @@ const (
 	cborTagLinkValue
 	cborTagStringLocation
 	cborTagAddressLocation
+	cborTagStaticType
+	cborTagSemaType
+	cborTagTypeStaticType
+	cborTagCompositeStaticType
+	cborTagInterfaceStaticType
+	cborTagVariableSizedStaticType
+	cborTagConstantSizedStaticType
+	cborTagDictionaryStaticType
+	cborTagOptionalStaticType
+	cborTagRestrictedStaticType
+	cborTagReferenceStaticType
 )
 
 func init() {
@@ -105,6 +116,17 @@ func init() {
 		cborTagLinkValue:               encodedLinkValue{},
 		cborTagStringLocation:          encodedStringLocation(""),
 		cborTagAddressLocation:         encodedAddressLocation{},
+		cborTagStaticType:              encodedStaticType{},
+		cborTagSemaType:                encodedSemaType{},
+		cborTagTypeStaticType:          encodedTypeStaticType{},
+		cborTagCompositeStaticType:     encodedCompositeStaticType{},
+		cborTagInterfaceStaticType:     encodedInterfaceStaticType{},
+		cborTagVariableSizedStaticType: encodedVariableSizedStaticType{},
+		cborTagConstantSizedStaticType: encodedConstantSizedStaticType{},
+		cborTagDictionaryStaticType:    encodedDictionaryStaticType{},
+		cborTagOptionalStaticType:      encodedOptionalStaticType{},
+		cborTagRestrictedStaticType:    encodedRestrictedStaticType{},
+		cborTagReferenceStaticType:     encodedReferenceStaticType{},
 	}
 
 	// Register types
@@ -554,52 +576,153 @@ func (e *Encoder) prepareCapabilityValue(v *CapabilityValue) interface{} {
 }
 
 type encodedLinkValue struct {
-	TargetPath encodedPathValue `cbor:"0,keyasint"`
-	Type       interface{}      `cbor:"1,keyasint"`
+	TargetPath encodedPathValue  `cbor:"0,keyasint"`
+	Type       encodedStaticType `cbor:"1,keyasint"`
 }
 
 func (e *Encoder) prepareLinkValue(v *LinkValue) interface{} {
 
-	staticType, err := e.prepareStaticType(&v.Type)
+	staticType, err := e.prepareStaticType(v.Type)
 	if err != nil {
-		return NilValue{}
+		fmt.Println(fmt.Errorf("failed to encode linkvalue type: %w\n", err).Error())
+		return encodedLinkValue{}
 	}
 
 	return encodedLinkValue{
 		TargetPath: *e.preparePathValue(&v.TargetPath),
-		Type:       staticType,
+		Type:       encodedStaticType{Type: staticType},
 	}
 }
 
 type encodedStaticType struct {
+	Type interface{} `cbor:"0,keyasint"`
+}
+
+type encodedSemaType struct {
+	Type interface{} `cbor:"0,keyasint"`
+}
+
+type encodedTypeStaticType struct {
+	Type encodedSemaType
 }
 
 type encodedCompositeStaticType struct {
+	Location interface{} `cbor:"0,keyasint"`
+	TypeID   string      `cbor:"1,keyasint"`
 }
 
 type encodedInterfaceStaticType struct {
+	Location interface{} `cbor:"0,keyasint"`
+	TypeID   string      `cbor:"1,keyasint"`
 }
 
 type encodedVariableSizedStaticType struct {
+	Type encodedStaticType `cbor:"0,keyasint"`
 }
 
 type encodedConstantSizedStaticType struct {
+	Type encodedStaticType `cbor:"0,keyasint"`
+	Size uint64            `cbor:"1,keyasint"`
 }
 
 type encodedDictionaryStaticType struct {
+	KeyType   encodedStaticType `cbor:"0,keyasint"`
+	ValueType encodedStaticType `cbor:"1,keyasint"`
 }
 
 type encodedOptionalStaticType struct {
+	Type encodedStaticType `cbor:"0,keyasint"`
 }
 
 type encodedRestrictedStaticType struct {
+	Type         encodedStaticType `cbor:"0,keyasint"`
+	Restrictions interface{}
 }
 
 type encodedReferenceStaticType struct {
+	Authorized bool              `cbor:"0,keyasint"`
+	Type       encodedStaticType `cbor:"1,keyasint"`
 }
 
-func (e *Encoder) prepareStaticType(t *StaticType) (interface{}, error) {
-	return nil, nil
+// Handle the types that conform to the StaticType interface
+func (e *Encoder) prepareStaticType(t StaticType) (interface{}, error) {
+	switch v := t.(type) {
+	case TypeStaticType:
+		if v == (TypeStaticType{}) {
+			return encodedTypeStaticType{}, nil
+		}
+		staticType, err := e.prepareStaticType(ConvertSemaToStaticType(v.Type))
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse typestatictype type: %w", err)
+		}
+		return encodedTypeStaticType{Type: encodedSemaType{Type: staticType}}, nil
+	case CompositeStaticType:
+		fmt.Println("in composite")
+		if v == (CompositeStaticType{}) {
+			fmt.Println("is empty")
+			return encodedCompositeStaticType{}, nil
+		}
+		return encodedCompositeStaticType{
+			Location: e.prepareLocation(v.Location),
+			TypeID:   string(v.TypeID),
+		}, nil
+	case InterfaceStaticType:
+		return encodedInterfaceStaticType{
+			Location: e.prepareLocation(v.Location),
+			TypeID:   string(v.TypeID),
+		}, nil
+	case VariableSizedStaticType:
+		staticType, err := e.prepareStaticType(v.Type)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse variablesizedstatictype type: %w", err)
+		}
+		return encodedVariableSizedStaticType{
+			Type: encodedStaticType{Type: staticType},
+		}, nil
+	case ConstantSizedStaticType:
+		staticType, err := e.prepareStaticType(v.Type)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse constantsizedstatictype type: %w", err)
+		}
+		return encodedConstantSizedStaticType{
+			Type: encodedStaticType{Type: staticType},
+			Size: v.Size,
+		}, nil
+	case DictionaryStaticType:
+		keyType, err := e.prepareStaticType(v.KeyType)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse dictionarystatictype keytype: %w", err)
+		}
+		valueType, err := e.prepareStaticType(v.ValueType)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse dictionarystatictype valuetype: %w", err)
+		}
+		return encodedDictionaryStaticType{
+			KeyType:   encodedStaticType{Type: keyType},
+			ValueType: encodedStaticType{Type: valueType},
+		}, nil
+	case OptionalStaticType:
+		staticType, err := e.prepareStaticType(v.Type)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse statictype type: %w", err)
+		}
+		return encodedOptionalStaticType{
+			Type: encodedStaticType{Type: staticType},
+		}, nil
+	case RestrictedStaticType:
+		return encodedRestrictedStaticType{}, nil
+	case ReferenceStaticType:
+		staticType, err := e.prepareStaticType(v.Type)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse constantsizedstatictype type: %w", err)
+		}
+		return encodedReferenceStaticType{
+			Authorized: bool(v.Authorized),
+			Type:       encodedStaticType{Type: staticType},
+		}, nil
+	default:
+		return nil, fmt.Errorf("unsupported statictype type")
+	}
 }
 
 func (e *Encoder) prepareLocation(l ast.Location) interface{} {

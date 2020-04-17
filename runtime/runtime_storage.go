@@ -114,10 +114,8 @@ func (s *interpreterRuntimeStorage) readValue(
 		return interpreter.NilValue{}
 	}
 
-	var address *common.Address
-	address.SetBytes([]byte(storageIdentifier))
-
-	storedValue, err := interpreter.DecodeValue(storedData, address)
+	address := common.BytesToAddress([]byte(storageIdentifier))
+	storedValue, err := interpreter.DecodeValue(storedData, &address)
 	if err != nil {
 		panic(err)
 	}

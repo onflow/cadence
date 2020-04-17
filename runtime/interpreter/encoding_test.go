@@ -9,6 +9,7 @@ import (
 
 	"github.com/dapperlabs/cadence/runtime/ast"
 	"github.com/dapperlabs/cadence/runtime/common"
+	"github.com/dapperlabs/cadence/runtime/sema"
 )
 
 func testEncodeDecode(t *testing.T, tests map[string]Value) {
@@ -347,12 +348,28 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 	testEncodeDecode(t,
 		map[string]Value{
 			"empty": &LinkValue{
-				TargetPath: emptyPathValue,
-				Type:       TypeStaticType{},
-			},
-			"non-empty": &LinkValue{
 				TargetPath: nonEmptyPathValue,
-				Type:       TypeStaticType{},
+				Type:       CompositeStaticType{TypeID: sema.TypeID("test")},
+			},
+			"non-empty+composite": &LinkValue{
+				TargetPath: nonEmptyPathValue,
+				Type: CompositeStaticType{
+					TypeID:   "SimpleStruct",
+					Location: ast.StringLocation("0:0"),
+				},
+			},
+			"non-empty+interface": &LinkValue{
+				TargetPath: nonEmptyPathValue,
+				Type: InterfaceStaticType{
+					TypeID:   "SimpleInterface",
+					Location: ast.StringLocation("0:0"),
+				},
+			},
+			"non-empty+variable-sized": &LinkValue{
+				TargetPath: nonEmptyPathValue,
+				Type: VariableSizedStaticType{
+					Type: TypeStaticType{},
+				},
 			},
 		},
 	)
