@@ -123,14 +123,13 @@ func (s *interpreterRuntimeStorage) readValue(
 		return interpreter.NilValue{}
 	}
 
-	var address *common.Address
-	address.SetBytes([]byte(storageIdentifier))
+	address := common.BytesToAddress([]byte(storageIdentifier))
 
 	var storedValue interpreter.Value
 
 	reportMetric(
 		func() {
-			storedValue, err = interpreter.DecodeValue(storedData, address)
+			storedValue, err = interpreter.DecodeValue(storedData, &address)
 		},
 		s.runtimeInterface,
 		func(metrics Metrics, start, end time.Time) {
