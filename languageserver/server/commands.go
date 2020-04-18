@@ -11,9 +11,9 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 
-	"github.com/dapperlabs/flow-go-sdk"
-	"github.com/dapperlabs/flow-go-sdk/keys"
-	"github.com/dapperlabs/flow-go-sdk/templates"
+	"github.com/onflow/flow-go-sdk"
+	"github.com/onflow/flow-go-sdk/keys"
+	"github.com/onflow/flow-go-sdk/templates"
 
 	"github.com/onflow/cadence/languageserver/protocol"
 )

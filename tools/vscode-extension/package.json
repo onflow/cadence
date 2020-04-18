@@ -6,7 +6,7 @@
   "version": "0.1.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/dapperlabs/flow-go.git"
+    "url": "https://github.com/onflow/cadence.git"
   },
   "engines": {
     "vscode": "^1.36.0"

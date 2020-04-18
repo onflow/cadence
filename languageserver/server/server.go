@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/dapperlabs/flow-go-sdk"
-	"github.com/dapperlabs/flow-go-sdk/client"
-	"github.com/dapperlabs/flow-go-sdk/crypto"
+	"github.com/onflow/flow-go-sdk"
+	"github.com/onflow/flow-go-sdk/client"
+	"github.com/onflow/flow-go-sdk/crypto"
 	"google.golang.org/grpc"
 
 	"github.com/onflow/cadence/runtime"

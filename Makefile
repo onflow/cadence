@@ -1,5 +1,5 @@
 # Disable go sum database lookup for private repos
-GOPRIVATE=github.com/dapperlabs/*
+GOPRIVATE=github.com/onflow/*
 
 GOPATH ?= $(HOME)/go
 

@@ -3,8 +3,8 @@ package config
 import (
 	"errors"
 
-	"github.com/dapperlabs/flow-go-sdk"
-	"github.com/dapperlabs/flow-go-sdk/keys"
+	"github.com/onflow/flow-go-sdk"
+	"github.com/onflow/flow-go-sdk/keys"
 )
 
 // Config defines configuration for the Language Server. These options are
