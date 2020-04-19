@@ -2288,32 +2288,43 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 
       transaction {
 
-          prepare(account: AuthAccount) {
+          prepare(signer: AuthAccount) {
+
               let r <- Test.createR()
               log(r.owner?.address)
               r.logOwnerAddress()
 
-              account.save(<-r, to: /storage/r)
-              account.link<&Test.R>(/public/r, target: /storage/r)
+              signer.save(<-r, to: /storage/r)
+              let ref = signer.borrow<&Test.R>(from: /storage/r)!
+              log(ref.owner?.address)
+              ref.logOwnerAddress()
+
+              signer.link<&Test.R>(/public/r, target: /storage/r)
+
+              let publicAccount = getAccount(0x01)
+              let ref2 = publicAccount.getCapability(/public/r)!.borrow<&Test.R>()!
+              log(ref2.owner?.address)
+              ref2.logOwnerAddress()
           }
       }
     `)
 
 	tx2 := []byte(`
-     import Test from 0x1
-	
-     transaction {
-	
-         prepare(account: AuthAccount) {
-	         let ref1 = account.borrow<&Test.R>(from: /storage/r)!
-             log(ref1.owner?.address)
-             ref1.logOwnerAddress()
-             let acct = getAccount(0x01)
-             let ref2 = acct.getCapability(/public/r)!.borrow<&Test.R>()!
-             log(ref2.owner?.address)
-             ref2.logOwnerAddress()
-         }
-     }
+      import Test from 0x1
+
+      transaction {
+
+          prepare(signer: AuthAccount) {
+              let ref1 = signer.borrow<&Test.R>(from: /storage/r)!
+              log(ref1.owner?.address)
+              ref1.logOwnerAddress()
+
+              let publicAccount = getAccount(0x01)
+              let ref2 = publicAccount.getCapability(/public/r)!.borrow<&Test.R>()!
+              log(ref2.owner?.address)
+              ref2.logOwnerAddress()
+          }
+      }
     `)
 
 	accountCodes := map[string][]byte{}
@@ -2349,11 +2360,24 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 	err = runtime.ExecuteTransaction(tx, runtimeInterface, utils.TestLocation)
 	require.NoError(t, err)
 
+	assert.Equal(t,
+		[]string{
+			"nil", "nil",
+			"0x1", "0x1",
+			"0x1", "0x1",
+		},
+		loggedMessages,
+	)
+
+	loggedMessages = nil
 	err = runtime.ExecuteTransaction(tx2, runtimeInterface, utils.TestLocation)
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		[]string{"nil", "nil", "0x1", "0x1", "0x1", "0x1"},
+		[]string{
+			"0x1", "0x1",
+			"0x1", "0x1",
+		},
 		loggedMessages,
 	)
 }
