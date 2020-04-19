@@ -2295,11 +2295,11 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
               r.logOwnerAddress()
 
               signer.save(<-r, to: /storage/r)
-              let ref = signer.borrow<&Test.R>(from: /storage/r)!
-              log(ref.owner?.address)
-              ref.logOwnerAddress()
-
               signer.link<&Test.R>(/public/r, target: /storage/r)
+
+              let ref1 = signer.borrow<&Test.R>(from: /storage/r)!
+              log(ref1.owner?.address)
+              ref1.logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
               let ref2 = publicAccount.getCapability(/public/r)!.borrow<&Test.R>()!
