@@ -395,6 +395,11 @@ func (v *ArrayValue) GobEncode() ([]byte, error) {
 		return nil, err
 	}
 
+	err = encoder.Encode(v.Owner)
+	if err != nil {
+		return nil, err
+	}
+
 	return w.Bytes(), nil
 }
 
@@ -403,6 +408,11 @@ func (v *ArrayValue) GobDecode(buf []byte) error {
 	decoder := gob.NewDecoder(r)
 
 	err := decoder.Decode(&v.Values)
+	if err != nil {
+		return err
+	}
+
+	err = decoder.Decode(&v.Owner)
 	if err != nil {
 		return err
 	}
@@ -3508,8 +3518,8 @@ func (v *CompositeValue) GobEncode() ([]byte, error) {
 	w := new(bytes.Buffer)
 	encoder := gob.NewEncoder(w)
 
-	// NOTE: important: decode as pointer, so gob sees
-	// the interface, not the concrete type
+	// NOTE: important: encode as pointer,
+	// so gob sees the interface, not the concrete type
 	err := encoder.Encode(&v.Location)
 	if err != nil {
 		return nil, err
@@ -3547,6 +3557,11 @@ func (v *CompositeValue) GobEncode() ([]byte, error) {
 	}
 
 	err = encoder.Encode(fieldValues)
+	if err != nil {
+		return nil, err
+	}
+
+	err = encoder.Encode(v.Owner)
 	if err != nil {
 		return nil, err
 	}
@@ -3591,6 +3606,11 @@ func (v *CompositeValue) GobDecode(buf []byte) error {
 
 	for i, fieldName := range fieldNames {
 		v.Fields[fieldName] = fieldValues[i]
+	}
+
+	err = decoder.Decode(&v.Owner)
+	if err != nil {
+		return err
 	}
 
 	// NOTE: *not* decoding functions – linked in on-demand
@@ -3932,6 +3952,11 @@ func (v *DictionaryValue) GobEncode() ([]byte, error) {
 		return nil, err
 	}
 
+	err = encoder.Encode(v.Owner)
+	if err != nil {
+		return nil, err
+	}
+
 	return w.Bytes(), nil
 }
 
@@ -3960,6 +3985,11 @@ func (v *DictionaryValue) GobDecode(buf []byte) error {
 
 	for i, entryName := range entryNames {
 		v.Entries[entryName] = entryValues[i]
+	}
+
+	err = decoder.Decode(&v.Owner)
+	if err != nil {
+		return err
 	}
 
 	return nil
