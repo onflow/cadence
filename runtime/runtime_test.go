@@ -2244,3 +2244,99 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 		})
 	}
 }
+
+func TestInterpretResourceOwnerFieldUse(t *testing.T) {
+
+	runtime := NewInterpreterRuntime()
+
+	address := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+	}
+
+	contract := []byte(`
+      pub contract Test {
+
+          pub resource R {
+
+              pub fun logOwnerAddress() {
+                log(self.owner?.address)
+              }
+          }
+
+          pub fun createR(): @R {
+              return <-create R()
+          }
+      }
+    `)
+
+	deploy := []byte(
+		fmt.Sprintf(
+			`
+              transaction {
+
+                  prepare(signer: AuthAccount) {
+                      signer.setCode(%s)
+                  }
+              }
+            `,
+			ArrayValueFromBytes(contract).String(),
+		),
+	)
+
+	tx := []byte(`
+      import Test from 0x1
+
+      transaction {
+
+          prepare(account: AuthAccount) {
+              let r <- Test.createR()
+              log(r.owner?.address)
+              r.logOwnerAddress()
+
+              account.save(<-r, to: /storage/r)
+
+              let ref = account.borrow<&Test.R>(from: /storage/r)!
+              log(ref.owner?.address)
+              ref.logOwnerAddress()
+          }
+      }
+    `)
+
+	accountCodes := map[string][]byte{}
+	var events []Event
+
+	var loggedMessages []string
+
+	runtimeInterface := &testRuntimeInterface{
+		resolveImport: func(location Location) (bytes []byte, err error) {
+			key := string(location.(AddressLocation).ID())
+			return accountCodes[key], nil
+		},
+		storage: newTestStorage(),
+		getSigningAccounts: func() []Address {
+			return []Address{address}
+		},
+		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+			key := string(AddressLocation(address[:]).ID())
+			accountCodes[key] = code
+			return nil
+		},
+		emitEvent: func(event Event) {
+			events = append(events, event)
+		},
+		log: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+	}
+
+	err := runtime.ExecuteTransaction(deploy, runtimeInterface, utils.TestLocation)
+	require.NoError(t, err)
+
+	err = runtime.ExecuteTransaction(tx, runtimeInterface, utils.TestLocation)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]string{"nil", "nil", "0x1", "0x1"},
+		loggedMessages,
+	)
+}
