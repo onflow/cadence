@@ -642,22 +642,22 @@ func (d *Decoder) decodeCapability(v interface{}, owner *common.Address) (*Capab
 	return &CapabilityValue{Address: address, Path: *path}, nil
 }
 
-func (d *Decoder) decodeLink(v interface{}, owner *common.Address) (*LinkValue, error) {
+func (d *Decoder) decodeLink(v interface{}, owner *common.Address) (LinkValue, error) {
 	encoded, ok := v.(map[interface{}]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid link encoding")
+		return LinkValue{}, fmt.Errorf("invalid link encoding")
 	}
 
 	path, err := d.decodePath(encoded[uint64(0)].(cbor.Tag).Content, owner)
 	if err != nil {
-		return nil, fmt.Errorf("invalid link targetpath encoding: %w", err)
+		return LinkValue{}, fmt.Errorf("invalid link targetpath encoding: %w", err)
 	}
 
 	staticType, err := d.decodeStaticType(encoded[uint64(1)], owner)
 	if err != nil {
-		return nil, fmt.Errorf("invalid link type encoding: %w", err)
+		return LinkValue{}, fmt.Errorf("invalid link type encoding: %w", err)
 	}
-	return &LinkValue{TargetPath: *path, Type: staticType}, nil
+	return LinkValue{TargetPath: *path, Type: staticType}, nil
 }
 
 func (d *Decoder) decodeStaticType(v interface{}, owner *common.Address) (StaticType, error) {
