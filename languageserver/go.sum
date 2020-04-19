@@ -361,6 +361,8 @@ github.com/olekukonko/tablewriter v0.0.1/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXW
 github.com/olekukonko/tablewriter v0.0.2-0.20190409134802-7e037d187b0c/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXWMclvtLoiIKAKIo=
 github.com/onflow/flow-go-sdk v0.0.0-20200418000618-c361886aa450 h1:hkYkIIPh1d7j8SUueaPUjCiZL74JD4EZNxIFlahkp5o=
 github.com/onflow/flow-go-sdk v0.0.0-20200418000618-c361886aa450/go.mod h1:A0UomCK2j17EPD9MX5vGQya1Wqa5JMXdcZFHZCU5tPM=
+github.com/onflow/flow-go-sdk v0.1.0-alpha.4 h1:hlLO25eX2aR4NP5g7xsu0fUZ05YQQNC0uXnWt3UozyA=
+github.com/onflow/flow-go-sdk v0.1.0-alpha.4/go.mod h1:A0UomCK2j17EPD9MX5vGQya1Wqa5JMXdcZFHZCU5tPM=
 github.com/onflow/flow/protobuf/go/flow v0.1.3 h1:xT/wjpc0CyGo6Jldn3H+5Y2G42tp+TE2Jg2BNA9x/mk=
 github.com/onflow/flow/protobuf/go/flow v0.1.3/go.mod h1:kRugbzZjwQqvevJhrnnCFMJZNmoSJmxlKt6hTGXZojM=
 github.com/onsi/ginkgo v1.6.0/go.mod h1:lLunBs/Ym6LB5Z9jYTR76FiuTmxDTDusOGeTQH+WWjE=
