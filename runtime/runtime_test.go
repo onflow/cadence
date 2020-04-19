@@ -2245,7 +2245,7 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 	}
 }
 
-func TestInterpretResourceOwnerFieldUse(t *testing.T) {
+func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
@@ -2375,6 +2375,161 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 
 	assert.Equal(t,
 		[]string{
+			"0x1", "0x1",
+			"0x1", "0x1",
+		},
+		loggedMessages,
+	)
+}
+
+func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
+
+	runtime := NewInterpreterRuntime()
+
+	address := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+	}
+
+	contract := []byte(`
+      pub contract Test {
+
+          pub resource R {
+
+              pub fun logOwnerAddress() {
+                log(self.owner?.address)
+              }
+          }
+
+          pub fun createR(): @R {
+              return <-create R()
+          }
+      }
+    `)
+
+	deploy := []byte(
+		fmt.Sprintf(
+			`
+              transaction {
+
+                  prepare(signer: AuthAccount) {
+                      signer.setCode(%s)
+                  }
+              }
+            `,
+			ArrayValueFromBytes(contract).String(),
+		),
+	)
+
+	tx := []byte(`
+      import Test from 0x1
+
+      transaction {
+
+          prepare(signer: AuthAccount) {
+
+              let rs <- [
+                  <-Test.createR(),
+                  <-Test.createR()
+              ]
+              log(rs[0].owner?.address)
+              log(rs[1].owner?.address)
+              rs[0].logOwnerAddress()
+              rs[1].logOwnerAddress()
+
+              signer.save(<-rs, to: /storage/rs)
+              signer.link<&[Test.R]>(/public/rs, target: /storage/rs)
+
+              let ref1 = signer.borrow<&[Test.R]>(from: /storage/rs)!
+              log(ref1[0].owner?.address)
+              log(ref1[1].owner?.address)
+              ref1[0].logOwnerAddress()
+              ref1[1].logOwnerAddress()
+
+              let publicAccount = getAccount(0x01)
+              let ref2 = publicAccount.getCapability(/public/rs)!.borrow<&[Test.R]>()!
+              log(ref2[0].owner?.address)
+              log(ref2[1].owner?.address)
+              ref2[0].logOwnerAddress()
+              ref2[1].logOwnerAddress()
+          }
+      }
+    `)
+
+	tx2 := []byte(`
+      import Test from 0x1
+
+      transaction {
+
+          prepare(signer: AuthAccount) {
+              let ref1 = signer.borrow<&[Test.R]>(from: /storage/rs)!
+              log(ref1[0].owner?.address)
+              log(ref1[1].owner?.address)
+              ref1[0].logOwnerAddress()
+              ref1[1].logOwnerAddress()
+
+              let publicAccount = getAccount(0x01)
+              let ref2 = publicAccount.getCapability(/public/rs)!.borrow<&[Test.R]>()!
+              log(ref2[0].owner?.address)
+              log(ref2[1].owner?.address)
+              ref2[0].logOwnerAddress()
+              ref2[1].logOwnerAddress()
+          }
+      }
+    `)
+
+	accountCodes := map[string][]byte{}
+	var events []Event
+
+	var loggedMessages []string
+
+	runtimeInterface := &testRuntimeInterface{
+		resolveImport: func(location Location) (bytes []byte, err error) {
+			key := string(location.(AddressLocation).ID())
+			return accountCodes[key], nil
+		},
+		storage: newTestStorage(),
+		getSigningAccounts: func() []Address {
+			return []Address{address}
+		},
+		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+			key := string(AddressLocation(address[:]).ID())
+			accountCodes[key] = code
+			return nil
+		},
+		emitEvent: func(event Event) {
+			events = append(events, event)
+		},
+		log: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+	}
+
+	err := runtime.ExecuteTransaction(deploy, runtimeInterface, utils.TestLocation)
+	require.NoError(t, err)
+
+	err = runtime.ExecuteTransaction(tx, runtimeInterface, utils.TestLocation)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]string{
+			"nil", "nil",
+			"nil", "nil",
+			"0x1", "0x1",
+			"0x1", "0x1",
+			"0x1", "0x1",
+			"0x1", "0x1",
+		},
+		loggedMessages,
+	)
+
+	loggedMessages = nil
+	err = runtime.ExecuteTransaction(tx2, runtimeInterface, utils.TestLocation)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]string{
+			"0x1", "0x1",
+			"0x1", "0x1",
 			"0x1", "0x1",
 			"0x1", "0x1",
 		},
