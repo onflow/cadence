@@ -348,27 +348,27 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 func TestEncodeDecodeLinkValue(t *testing.T) {
 	testEncodeDecode(t,
 		map[string]Value{
-			"empty": &LinkValue{
+			"empty": LinkValue{
 				TargetPath: nonEmptyPathValue,
 				Type: CompositeStaticType{
 					TypeID: sema.TypeID("test"),
 				},
 			},
-			"composite": &LinkValue{
+			"composite": LinkValue{
 				TargetPath: nonEmptyPathValue,
 				Type: CompositeStaticType{
 					TypeID:   "SimpleStruct",
 					Location: ast.StringLocation("0:10"),
 				},
 			},
-			"interface": &LinkValue{
+			"interface": LinkValue{
 				TargetPath: nonEmptyPathValue,
 				Type: InterfaceStaticType{
 					TypeID:   "SimpleInterface",
 					Location: ast.StringLocation("0:0"),
 				},
 			},
-			"variable-sized": &LinkValue{
+			"variable-sized": LinkValue{
 				TargetPath: nonEmptyPathValue,
 				Type: VariableSizedStaticType{
 					Type: CompositeStaticType{
@@ -377,7 +377,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					},
 				},
 			},
-			"constant-sized": &LinkValue{
+			"constant-sized": LinkValue{
 				TargetPath: nonEmptyPathValue,
 				Type: ConstantSizedStaticType{
 					Type: CompositeStaticType{
@@ -387,7 +387,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					Size: 16,
 				},
 			},
-			"dictionary": &LinkValue{
+			"dictionary": LinkValue{
 				TargetPath: nonEmptyPathValue,
 				Type: DictionaryStaticType{
 					KeyType: CompositeStaticType{
@@ -400,7 +400,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					},
 				},
 			},
-			"optional": &LinkValue{
+			"optional": LinkValue{
 				TargetPath: nonEmptyPathValue,
 				Type: OptionalStaticType{
 					Type: CompositeStaticType{
@@ -409,7 +409,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					},
 				},
 			},
-			"restricted": &LinkValue{
+			"restricted": LinkValue{
 				TargetPath: nonEmptyPathValue,
 				Type: RestrictedStaticType{
 					Type: CompositeStaticType{
