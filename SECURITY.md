@@ -1,0 +1,72 @@
+# Security Policy
+
+Flow was built from the ground up with security in mind.
+Our code, infrastructure, and development methodology helps us keep our users safe.
+
+We really appreciate the community's help.
+Responsible disclosure of vulnerabilities helps to maintain the security and privacy of everyone.
+
+If you care about making a difference, please follow the guidelines below.
+
+## Reporting a Vulnerability
+
+Reports are welcome! Please definitely reach out to us if you have a security concern.
+
+If you believe you may have found a security vulnerability in our project,
+to be on the safe side, **do NOT open a public issue**.
+
+Rather, we prefer you to please send us an email: **security@dapperlabs.com**
+
+To encrypt messages to us, we encourage you to use our PGP key:
+
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+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
+hfVklUOf8O2ZoQZLML11OKkZWXxSMg==
+=HvU0
+-----END PGP PUBLIC KEY BLOCK-----
