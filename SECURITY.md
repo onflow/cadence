@@ -6,7 +6,7 @@ Our code, infrastructure, and development methodology helps us keep our users sa
 We really appreciate the community's help.
 Responsible disclosure of vulnerabilities helps to maintain the security and privacy of everyone.
 
-If you are a researcher that cares about making a difference, please follow the guidelines below.
+If you care about making a difference, please follow the guidelines below.
 
 ## Reporting a Vulnerability
 
