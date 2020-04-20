@@ -2,7 +2,6 @@ package interpreter_test
 
 import (
 	"fmt"
-	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,20 +28,20 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 	}
 
 	tests := []test{
-		{&sema.IntType{}, "42", interpreter.NewIntValue(42)},
-		{&sema.UIntType{}, "42", interpreter.NewUIntValue(42)},
+		{&sema.IntType{}, "42", interpreter.NewIntValueFromInt64(42)},
+		{&sema.UIntType{}, "42", interpreter.NewUIntValueFromUint64(42)},
 		{&sema.Int8Type{}, "42", interpreter.Int8Value(42)},
 		{&sema.Int16Type{}, "42", interpreter.Int16Value(42)},
 		{&sema.Int32Type{}, "42", interpreter.Int32Value(42)},
 		{&sema.Int64Type{}, "42", interpreter.Int64Value(42)},
-		{&sema.Int128Type{}, "42", interpreter.Int128Value{Int: big.NewInt(42)}},
-		{&sema.Int256Type{}, "42", interpreter.Int256Value{Int: big.NewInt(42)}},
+		{&sema.Int128Type{}, "42", interpreter.NewInt128ValueFromInt64(42)},
+		{&sema.Int256Type{}, "42", interpreter.NewInt256ValueFromInt64(42)},
 		{&sema.UInt8Type{}, "42", interpreter.UInt8Value(42)},
 		{&sema.UInt16Type{}, "42", interpreter.UInt16Value(42)},
 		{&sema.UInt32Type{}, "42", interpreter.UInt32Value(42)},
 		{&sema.UInt64Type{}, "42", interpreter.UInt64Value(42)},
-		{&sema.UInt128Type{}, "42", interpreter.UInt128Value{Int: big.NewInt(42)}},
-		{&sema.UInt256Type{}, "42", interpreter.UInt256Value{Int: big.NewInt(42)}},
+		{&sema.UInt128Type{}, "42", interpreter.NewUInt128ValueFromInt64(42)},
+		{&sema.UInt256Type{}, "42", interpreter.NewUInt256ValueFromInt64(42)},
 		{&sema.Word8Type{}, "42", interpreter.Word8Value(42)},
 		{&sema.Word16Type{}, "42", interpreter.Word16Value(42)},
 		{&sema.Word32Type{}, "42", interpreter.Word32Value(42)},
@@ -1016,7 +1015,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 						)
 
 						expectedValue := interpreter.NewSomeValueOwningNonCopying(
-							interpreter.NewIntValue(42),
+							interpreter.NewIntValueFromInt64(42),
 						)
 
 						assert.Equal(t,
@@ -1115,7 +1114,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 						)
 
 						expectedValue := interpreter.NewArrayValueUnownedNonCopying(
-							interpreter.NewIntValue(42),
+							interpreter.NewIntValueFromInt64(42),
 						)
 
 						assert.Equal(t,
@@ -1210,7 +1209,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 						)
 
 						expectedValue := interpreter.NewDictionaryValueUnownedNonCopying(
-							interpreter.NewStringValue("test"), interpreter.NewIntValue(42),
+							interpreter.NewStringValue("test"), interpreter.NewIntValueFromInt64(42),
 						)
 
 						assert.Equal(t,

@@ -26,7 +26,7 @@ func TestInterpretForStatement(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		interpreter.NewIntValue(10),
+		interpreter.NewIntValueFromInt64(10),
 		value,
 	)
 }
@@ -48,7 +48,7 @@ func TestInterpretForStatementWithReturn(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		interpreter.NewIntValue(4),
+		interpreter.NewIntValueFromInt64(4),
 		value,
 	)
 }
@@ -73,8 +73,8 @@ func TestInterpretForStatementWithContinue(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewArrayValueUnownedNonCopying(
-			interpreter.NewIntValue(4),
-			interpreter.NewIntValue(5),
+			interpreter.NewIntValueFromInt64(4),
+			interpreter.NewIntValueFromInt64(5),
 		),
 		value,
 	)
@@ -99,7 +99,7 @@ func TestInterpretForStatementWithBreak(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		interpreter.NewIntValue(4),
+		interpreter.NewIntValueFromInt64(4),
 		value,
 	)
 }

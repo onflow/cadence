@@ -26,7 +26,7 @@ func TestInterpretWhileStatement(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		interpreter.NewIntValue(6),
+		interpreter.NewIntValueFromInt64(6),
 		value,
 	)
 }
@@ -50,7 +50,7 @@ func TestInterpretWhileStatementWithReturn(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		interpreter.NewIntValue(6),
+		interpreter.NewIntValueFromInt64(6),
 		value,
 	)
 }
@@ -76,7 +76,7 @@ func TestInterpretWhileStatementWithContinue(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		interpreter.NewIntValue(6),
+		interpreter.NewIntValueFromInt64(6),
 		value,
 	)
 }
@@ -100,7 +100,7 @@ func TestInterpretWhileStatementWithBreak(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		interpreter.NewIntValue(5),
+		interpreter.NewIntValueFromInt64(5),
 		value,
 	)
 }

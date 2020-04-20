@@ -154,7 +154,7 @@ func TestRuntimeImport(t *testing.T) {
 	value, err := runtime.ExecuteScript(script, runtimeInterface, utils.TestLocation)
 	require.NoError(t, err)
 
-	assert.Equal(t, interpreter.NewIntValue(42), value.Value)
+	assert.Equal(t, interpreter.NewIntValueFromInt64(42), value.Value)
 }
 
 func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
@@ -1292,7 +1292,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
               }
             `,
 			arguments: []argument{
-				interpreter.NewIntValue(1),
+				interpreter.NewIntValueFromInt64(1),
 			},
 			check: expectSuccess,
 		},
@@ -1314,7 +1314,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
               pub contract Test {}
             `,
 			arguments: []argument{
-				interpreter.NewIntValue(1),
+				interpreter.NewIntValueFromInt64(1),
 			},
 			check: expectFailure,
 		},
