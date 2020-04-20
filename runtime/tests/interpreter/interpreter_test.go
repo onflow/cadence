@@ -7430,6 +7430,10 @@ func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
 
 		test := inter.Globals["test"].Value.(*interpreter.CompositeValue)
 
+		test.SetOwner(&common.Address{
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+		})
+
 		w := new(bytes.Buffer)
 		encoder := gob.NewEncoder(w)
 		err := encoder.Encode(test)
@@ -7477,6 +7481,10 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 		)
 
 		test := inter.Globals["test"].Value
+
+		test.SetOwner(&common.Address{
+			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+		})
 
 		w := new(bytes.Buffer)
 		encoder := gob.NewEncoder(w)
