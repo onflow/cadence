@@ -6,6 +6,9 @@ labels: bug, Feedback
 assignees: ''
 
 ---
+### Instructions
+
+Please fill out the template below to the best of your ability and include a label indicating which tool/service you were working with when you encountered the problem.
 
 ### Problem
 
@@ -22,4 +25,3 @@ assignees: ''
 ### Context
 
 <what are you currently working on that this is blocking?>
-
