@@ -30,7 +30,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/keys"
 	"github.com/onflow/flow-go-sdk/templates"
 
 	"github.com/onflow/cadence/languageserver/protocol"
@@ -413,14 +412,14 @@ func (s *Server) sendTransactionHelper(conn protocol.Conn, script []byte) (flow.
 
 // createAccountHelper creates a new account and returns its address.
 func (s *Server) createAccountHelper(conn protocol.Conn) (addr flow.Address, err error) {
-	accountKey := flow.AccountKey{
+	accountKey := &flow.AccountKey{
 		PublicKey: s.config.RootAccountKey.PrivateKey.PublicKey(),
-		SignAlgo:  s.config.RootAccountKey.SignAlgo,
+		SigAlgo:  s.config.RootAccountKey.SigAlgo,
 		HashAlgo:  s.config.RootAccountKey.HashAlgo,
-		Weight:    keys.PublicKeyWeightThreshold,
+		Weight:    flow.AccountKeyWeightThreshold,
 	}
 
-	script, err := templates.CreateAccount([]flow.AccountKey{accountKey}, nil)
+	script, err := templates.CreateAccount([]*flow.AccountKey{accountKey}, nil)
 	if err != nil {
 		return addr, fmt.Errorf("failed to generate account creation script: %w", err)
 	}
