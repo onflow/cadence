@@ -1907,7 +1907,7 @@ func TestDivModInt(t *testing.T) {
 		},
 	} {
 		assert.Panics(t, func() {
-			f(NewIntValue(1), NewIntValue(0))
+			f(NewIntValueFromInt64(1), NewIntValueFromInt64(0))
 		})
 	}
 }

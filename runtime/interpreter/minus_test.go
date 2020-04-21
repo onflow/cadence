@@ -2556,8 +2556,8 @@ func TestMinusUInt(t *testing.T) {
 
 	for _, test := range tests {
 		f := func() {
-			a := NewUIntValue(test.a)
-			b := NewUIntValue(test.b)
+			a := NewUIntValueFromUint64(test.a)
+			b := NewUIntValueFromUint64(test.b)
 			a.Minus(b)
 		}
 		if test.valid {

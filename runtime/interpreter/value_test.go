@@ -118,7 +118,7 @@ func TestSetOwnerArraySetIndex(t *testing.T) {
 	assert.Equal(t, &newOwner, value1.GetOwner())
 	assert.Equal(t, &oldOwner, value2.GetOwner())
 
-	array.Set(nil, LocationRange{}, NewIntValue(0), value2)
+	array.Set(nil, LocationRange{}, NewIntValueFromInt64(0), value2)
 
 	assert.Equal(t, &newOwner, array.GetOwner())
 	assert.Equal(t, &newOwner, value1.GetOwner())

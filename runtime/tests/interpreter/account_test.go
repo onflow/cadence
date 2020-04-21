@@ -702,7 +702,7 @@ func TestInterpretAuthAccountBorrow(t *testing.T) {
 				value, err = inter.Invoke("foo")
 				require.NoError(t, err)
 
-				require.Equal(t, interpreter.NewIntValue(42), value)
+				require.Equal(t, interpreter.NewIntValueFromInt64(42), value)
 
 				// NOTE: check loaded value was *not* removed from storage
 				require.Len(t, storedValues, 1)
@@ -833,7 +833,7 @@ func TestInterpretAuthAccountBorrow(t *testing.T) {
 				value, err = inter.Invoke("foo")
 				require.NoError(t, err)
 
-				require.Equal(t, interpreter.NewIntValue(42), value)
+				require.Equal(t, interpreter.NewIntValueFromInt64(42), value)
 
 				// NOTE: check loaded value was *not* removed from storage
 				require.Len(t, storedValues, 1)

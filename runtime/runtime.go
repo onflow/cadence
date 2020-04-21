@@ -594,7 +594,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
 			index := invocation.Arguments[0].(interpreter.IntValue)
 
-			publicKey, err := runtimeInterface.RemoveAccountKey(addressValue.ToAddress(), index.IntValue())
+			publicKey, err := runtimeInterface.RemoveAccountKey(addressValue.ToAddress(), index.ToInt())
 			if err != nil {
 				panic(err)
 			}
@@ -942,7 +942,7 @@ func toBytes(value interpreter.Value) ([]byte, error) {
 			return nil, errors.New("array value is not an integer")
 		}
 
-		j := intValue.IntValue()
+		j := intValue.ToInt()
 
 		if j < 0 || j > 255 {
 			return nil, errors.New("array value is not in byte range (0-255)")
@@ -957,7 +957,7 @@ func toBytes(value interpreter.Value) ([]byte, error) {
 func fromBytes(buf []byte) *interpreter.ArrayValue {
 	values := make([]interpreter.Value, len(buf))
 	for i, b := range buf {
-		values[i] = interpreter.NewIntValue(int64(b))
+		values[i] = interpreter.NewIntValueFromInt64(int64(b))
 	}
 
 	return &interpreter.ArrayValue{

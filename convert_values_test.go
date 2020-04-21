@@ -52,7 +52,7 @@ func TestConvertSomeValue(t *testing.T) {
 
 	t.Run("Non-nil", func(t *testing.T) {
 		value := convertValue(
-			&interpreter.SomeValue{Value: interpreter.NewIntValue(42)},
+			&interpreter.SomeValue{Value: interpreter.NewIntValueFromInt64(42)},
 			nil,
 		)
 
@@ -99,7 +99,7 @@ func TestConvertArrayValue(t *testing.T) {
 		value := convertValue(
 			&interpreter.ArrayValue{
 				Values: []interpreter.Value{
-					interpreter.NewIntValue(42),
+					interpreter.NewIntValueFromInt64(42),
 					interpreter.NewStringValue("foo"),
 				},
 			},
@@ -116,7 +116,7 @@ func TestConvertArrayValue(t *testing.T) {
 }
 
 func TestConvertIntValue(t *testing.T) {
-	value := convertValue(interpreter.NewIntValue(42), nil)
+	value := convertValue(interpreter.NewIntValueFromInt64(42), nil)
 
 	assert.Equal(t, NewInt(42), value)
 }
@@ -146,19 +146,19 @@ func TestConvertInt64Value(t *testing.T) {
 }
 
 func TestConvertInt128Value(t *testing.T) {
-	value := convertValue(interpreter.Int128Value{Int: sema.Int128TypeMaxInt}, nil)
+	value := convertValue(interpreter.NewInt128ValueFromBigInt(sema.Int128TypeMaxInt), nil)
 
 	assert.Equal(t, NewInt128FromBig(sema.Int128TypeMaxInt), value)
 }
 
 func TestConvertInt256Value(t *testing.T) {
-	value := convertValue(interpreter.Int256Value{Int: sema.Int256TypeMaxInt}, nil)
+	value := convertValue(interpreter.NewInt256ValueFromBigInt(sema.Int256TypeMaxInt), nil)
 
 	assert.Equal(t, NewInt256FromBig(sema.Int256TypeMaxInt), value)
 }
 
 func TestConvertUIntValue(t *testing.T) {
-	value := convertValue(interpreter.NewUIntValue(42), nil)
+	value := convertValue(interpreter.NewUIntValueFromUint64(42), nil)
 
 	assert.Equal(t, NewUInt(42), value)
 }
@@ -188,13 +188,13 @@ func TestConvertUInt64Value(t *testing.T) {
 }
 
 func TestConvertUInt128Value(t *testing.T) {
-	value := convertValue(interpreter.UInt128Value{Int: sema.UInt128TypeMaxInt}, nil)
+	value := convertValue(interpreter.NewUInt128ValueFromBigInt(sema.UInt128TypeMaxInt), nil)
 
 	assert.Equal(t, NewUInt128FromBig(sema.UInt128TypeMaxInt), value)
 }
 
 func TestConvertUInt256Value(t *testing.T) {
-	value := convertValue(interpreter.UInt256Value{Int: sema.UInt256TypeMaxInt}, nil)
+	value := convertValue(interpreter.NewUInt256ValueFromBigInt(sema.UInt256TypeMaxInt), nil)
 
 	assert.Equal(t, NewUInt256FromBig(sema.UInt256TypeMaxInt), value)
 }

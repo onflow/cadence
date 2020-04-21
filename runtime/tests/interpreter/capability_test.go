@@ -110,7 +110,7 @@ func TestInterpretCapabilityBorrowResource(t *testing.T) {
 			value, err := inter.Invoke("single")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewIntValue(42), value)
+			require.Equal(t, interpreter.NewIntValueFromInt64(42), value)
 		})
 
 		t.Run("single R2", func(t *testing.T) {
@@ -142,7 +142,7 @@ func TestInterpretCapabilityBorrowResource(t *testing.T) {
 			value, err := inter.Invoke("double")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewIntValue(42), value)
+			require.Equal(t, interpreter.NewIntValueFromInt64(42), value)
 		})
 
 		t.Run("nonExistent", func(t *testing.T) {
@@ -249,7 +249,7 @@ func TestInterpretCapabilityBorrowResource(t *testing.T) {
 			value, err := inter.Invoke("single")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewIntValue(42), value)
+			require.Equal(t, interpreter.NewIntValueFromInt64(42), value)
 		})
 
 		t.Run("single S2", func(t *testing.T) {
@@ -281,7 +281,7 @@ func TestInterpretCapabilityBorrowResource(t *testing.T) {
 			value, err := inter.Invoke("double")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewIntValue(42), value)
+			require.Equal(t, interpreter.NewIntValueFromInt64(42), value)
 		})
 
 		t.Run("nonExistent", func(t *testing.T) {

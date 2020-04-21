@@ -276,7 +276,7 @@ func TestInterpretTransactions(t *testing.T) {
 			[]interpreter.Value{
 				interpreter.AddressValue{},
 				interpreter.BoolValue(true),
-				interpreter.NewIntValue(1),
+				interpreter.NewIntValueFromInt64(1),
 			},
 			values.(*interpreter.ArrayValue).Values,
 		)
