@@ -62,12 +62,12 @@ func FromInitializationOptions(opts interface{}) (conf Config, err error) {
 
 	rootKeySigAlgoStr, ok := optsMap["rootKeySignatureAlgorithm"].(string)
 	if !ok {
-		return Config{}, errors.New("missing rootPrivateKey field")
+		return Config{}, errors.New("missing rootKeySignatureAlgorithm field")
 	}
 
 	rootKeyHashAlgoStr, ok := optsMap["rootKeyHashAlgorithm"].(string)
 	if !ok {
-		return Config{}, errors.New("missing rootPrivateKey field")
+		return Config{}, errors.New("missing rootKeyHashAlgorithm field")
 	}
 
 	rootAccountKey := AccountPrivateKey{
