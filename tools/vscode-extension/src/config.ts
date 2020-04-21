@@ -5,8 +5,8 @@ export const ROOT_ADDR: string = shortAddress("000000000000000000000000000000000
 
 const CONFIG_FLOW_COMMAND = "flowCommand";
 const CONFIG_ROOT_PRIVATE_KEY = "rootPrivateKey";
-const CONFIG_ROOT_KEY_SIGNING_ALGORITHM = "rootKeySigningAlgorithm";
-const CONFIG_ROOT_KEY_HASHING_ALGORITHM = "rootKeyHashingAlgorithm";
+const CONFIG_ROOT_KEY_SIGNATURE_ALGORITHM = "rootKeySignatureAlgorithm";
+const CONFIG_ROOT_KEY_HASH_ALGORITHM = "rootKeyHashAlgorithm";
 const CONFIG_EMULATOR_ADDRESS = "emulatorAddress";
 const CONFIG_NUM_ACCOUNTS = "numAccounts";
 
@@ -20,8 +20,8 @@ type AccountSet = {[key: string]: Account};
 // The subset of extension configuration used by the language server.
 type ServerConfig = {
     rootPrivateKey: string
-    rootKeySigningAlgorithm: string
-    rootKeyHashingAlgorithm: string
+    rootKeySignatureAlgorithm: string
+    rootKeyHashAlgorithm: string
     emulatorAddress: string
 };
 
@@ -72,14 +72,14 @@ export function getConfig(): Config {
         throw new Error(`Missing ${CONFIG_ROOT_PRIVATE_KEY} config`);
     }
 
-    const rootKeySigningAlgorithm: string | undefined = cadenceConfig.get(CONFIG_ROOT_KEY_SIGNING_ALGORITHM);
-    if (!rootKeySigningAlgorithm) {
-        throw new Error(`Missing ${CONFIG_ROOT_KEY_SIGNING_ALGORITHM} config`);
+    const rootKeySignatureAlgorithm: string | undefined = cadenceConfig.get(CONFIG_ROOT_KEY_SIGNATURE_ALGORITHM);
+    if (!rootKeySignatureAlgorithm) {
+        throw new Error(`Missing ${CONFIG_ROOT_KEY_SIGNATURE_ALGORITHM} config`);
     }
 
-    const rootKeyHashingAlgorithm: string | undefined = cadenceConfig.get(CONFIG_ROOT_KEY_HASHING_ALGORITHM);
-    if (!rootKeyHashingAlgorithm) {
-        throw new Error(`Missing ${CONFIG_ROOT_KEY_HASHING_ALGORITHM} config`);
+    const rootKeyHashAlgorithm: string | undefined = cadenceConfig.get(CONFIG_ROOT_KEY_HASH_ALGORITHM);
+    if (!rootKeyHashAlgorithm) {
+        throw new Error(`Missing ${CONFIG_ROOT_KEY_HASH_ALGORITHM} config`);
     }
 
     const emulatorAddress: string | undefined = cadenceConfig.get(CONFIG_EMULATOR_ADDRESS);
@@ -94,8 +94,8 @@ export function getConfig(): Config {
 
     const serverConfig: ServerConfig = {
         rootPrivateKey,
-        rootKeySigningAlgorithm,
-        rootKeyHashingAlgorithm,
+        rootKeySignatureAlgorithm,
+        rootKeyHashAlgorithm,
         emulatorAddress
     };
 

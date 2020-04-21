@@ -62,16 +62,16 @@
           "description": "The private key of the root account to use when submitting transactions",
           "scope": "resource"
         },
-        "cadence.rootKeySigningAlgorithm": {
+        "cadence.rootKeySignatureAlgorithm": {
           "type": "string",
           "default": "ECDSA_P256",
-          "description": "The signing algorithm of the root account to use when submitting transactions",
+          "description": "The signature algorithm of the root account to use when submitting transactions",
           "scope": "resource"
         },
-        "cadence.rootKeyHashingAlgorithm": {
+        "cadence.rootKeyHashAlgorithm": {
           "type": "string",
           "default": "SHA3_256",
-          "description": "The hashing algorithm of the root account to use when submitting transactions",
+          "description": "The hash algorithm of the root account to use when submitting transactions",
           "scope": "resource"
         },
         "cadence.emulatorAddress": {

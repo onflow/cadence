@@ -47,8 +47,8 @@ const startEmulator = (ext: Extension) => async () => {
             ext.config.flowCommand,
             `emulator`, `start`, `--init`, `--verbose`,
             `--root-priv-key`, serverConfig.rootPrivateKey,
-            `--root-sig-algo`, serverConfig.rootKeySigningAlgorithm,
-            `--root-hash-algo`, serverConfig.rootKeyHashingAlgorithm,
+            `--root-sig-algo`, serverConfig.rootKeySignatureAlgorithm,
+            `--root-hash-algo`, serverConfig.rootKeyHashAlgorithm,
         ].join(" ")
     );
     ext.terminal.show();
