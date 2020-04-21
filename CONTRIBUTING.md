@@ -81,8 +81,10 @@ Create an issue and provide the following information:
 Unsure where to begin contributing to Cadence?
 You can start by looking through these `good-first-issue` and `help-wanted` issues:
 
-- [Beginner issues][good-first-issue] - issues which should only require a few lines of code, and a test or two.
-- [Help wanted issues][help-wanted] - issues which should be a bit more involved than `good-first-issue` issues.
+- [Good first issues][https://github.com/onflow/cadence/labels/good%20first%20issue]:
+  issues which should only require a few lines of code, and a test or two.
+- [Help wanted issues][https://github.com/onflow/cadence/labels/help%20wanted]:
+  issues which should be a bit more involved than `good-first-issue` issues.
 
 Both issue lists are sorted by total number of comments.
 While not perfect, number of comments is a reasonable proxy for impact a given change will have.
