@@ -1523,20 +1523,24 @@ func (checker *Checker) checkWithInitializedMembers(
 	return check()
 }
 
-// checkAccessResourceLoss checks for a resource loss caused by an expression which is accessed
-// (indexed or member). This is basically any expression that does not have an identifier
-// as its "base" expression.
+// checkUnusedExpressionResourceLoss checks for a resource loss caused by an expression
+// which has a resource type, but will not be used after its evaluation,
+// i.e. implicitly dropped at this point.
 //
 // For example, function invocations, array literals, or dictionary literals will cause a resource loss
 // if the expression is accessed immediately: e.g.
 //   - `returnResource()[0]`
-//   - `[<-create R(), <-create R()][0]`,
-//   - `{"resource": <-create R()}.length`
+//   - `[<-create R(), <-create R()][0]`
+//   - in an equality binary expression: `f() != nil`
 //
-// Safe expressions are identifier expressions, an indexing expression into a safe expression,
+// Basically any expression that does not have an identifier as its "base" expression
+// will cause the resource to be lost.
+//
+// Safe expressions are identifier expressions,
+// an indexing expression into a safe expression,
 // or a member access on a safe expression.
 //
-func (checker *Checker) checkAccessResourceLoss(expressionType Type, expression ast.Expression) {
+func (checker *Checker) checkUnusedExpressionResourceLoss(expressionType Type, expression ast.Expression) {
 	if !expressionType.IsResourceType() {
 		return
 	}
