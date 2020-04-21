@@ -40,9 +40,17 @@ const restartServer = (ext: Extension) => async () => {
 // Starts the emulator in a terminal window.
 const startEmulator = (ext: Extension) => async () => {
     // Start the emulator with the root key we gave to the language server.
-    const rootKey = ext.config.serverConfig.rootAccountKey;
+    const {serverConfig} = ext.config
 
-    ext.terminal.sendText(`${ext.config.flowCommand} emulator start --init --verbose --root-key ${rootKey}`);
+    ext.terminal.sendText(
+        [
+            ext.config.flowCommand,
+            `emulator`, `start`, `--init`, `--verbose`,
+            `--root-priv-key`, serverConfig.rootPrivateKey,
+            `--root-sig-algo`, serverConfig.rootKeySignatureAlgorithm,
+            `--root-hash-algo`, serverConfig.rootKeyHashAlgorithm,
+        ].join(" ")
+    );
     ext.terminal.show();
 
     // create default accounts after the emulator has started

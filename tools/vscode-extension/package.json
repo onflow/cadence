@@ -40,7 +40,8 @@
         "command": "cadence.createAccount",
         "category": "Cadence",
         "title": "Create account"
-      }, {
+      },
+      {
         "command": "cadence.switchActiveAccount",
         "category": "Cadence",
         "title": "Switch account"
@@ -55,10 +56,22 @@
           "description": "The command to invoke the Flow CLI",
           "scope": "resource"
         },
-        "cadence.rootAccountKey": {
+        "cadence.rootPrivateKey": {
           "type": "string",
-          "default": "f87db87930770201010420c2e6c8cb9e8c9b9a7afe1df8ae431e68317ff7a9f42f8982b7877a9da76b28a7a00a06082a8648ce3d030107a14403420004c2c482bf01344a085af036f9413dd17a0d98a5b6fb4915c3ad4c3cb574e03ea5e2d47608093a26081c165722621bf9d8ff4b880cac0e7c586af3d86c0818a4af0203",
-          "description": "The encoded private key of the root account to use when submitting transactions",
+          "default": "bf9db4706c2fdb9011ee7e170ccac492f05427b96ab41d8bf2d8c58443704b76",
+          "description": "The private key of the root account to use when submitting transactions",
+          "scope": "resource"
+        },
+        "cadence.rootKeySignatureAlgorithm": {
+          "type": "string",
+          "default": "ECDSA_P256",
+          "description": "The signature algorithm of the root account to use when submitting transactions",
+          "scope": "resource"
+        },
+        "cadence.rootKeyHashAlgorithm": {
+          "type": "string",
+          "default": "SHA3_256",
+          "description": "The hash algorithm of the root account to use when submitting transactions",
           "scope": "resource"
         },
         "cadence.emulatorAddress": {

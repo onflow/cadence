@@ -4,7 +4,9 @@ import {shortAddress} from "./address";
 export const ROOT_ADDR: string = shortAddress("0000000000000000000000000000000000000001");
 
 const CONFIG_FLOW_COMMAND = "flowCommand";
-const CONFIG_ROOT_ACCOUNT_KEY = "rootAccountKey";
+const CONFIG_ROOT_PRIVATE_KEY = "rootPrivateKey";
+const CONFIG_ROOT_KEY_SIGNATURE_ALGORITHM = "rootKeySignatureAlgorithm";
+const CONFIG_ROOT_KEY_HASH_ALGORITHM = "rootKeyHashAlgorithm";
 const CONFIG_EMULATOR_ADDRESS = "emulatorAddress";
 const CONFIG_NUM_ACCOUNTS = "numAccounts";
 
@@ -17,7 +19,9 @@ type AccountSet = {[key: string]: Account};
 
 // The subset of extension configuration used by the language server.
 type ServerConfig = {
-    rootAccountKey: string
+    rootPrivateKey: string
+    rootKeySignatureAlgorithm: string
+    rootKeyHashAlgorithm: string
     emulatorAddress: string
 };
 
@@ -63,9 +67,19 @@ export function getConfig(): Config {
         throw new Error(`Missing ${CONFIG_FLOW_COMMAND} config`);
     }
 
-    const rootAccountKey : string | undefined = cadenceConfig.get(CONFIG_ROOT_ACCOUNT_KEY);
-    if (!rootAccountKey) {
-        throw new Error(`Missing ${CONFIG_ROOT_ACCOUNT_KEY} config`);
+    const rootPrivateKey: string | undefined = cadenceConfig.get(CONFIG_ROOT_PRIVATE_KEY);
+    if (!rootPrivateKey) {
+        throw new Error(`Missing ${CONFIG_ROOT_PRIVATE_KEY} config`);
+    }
+
+    const rootKeySignatureAlgorithm: string | undefined = cadenceConfig.get(CONFIG_ROOT_KEY_SIGNATURE_ALGORITHM);
+    if (!rootKeySignatureAlgorithm) {
+        throw new Error(`Missing ${CONFIG_ROOT_KEY_SIGNATURE_ALGORITHM} config`);
+    }
+
+    const rootKeyHashAlgorithm: string | undefined = cadenceConfig.get(CONFIG_ROOT_KEY_HASH_ALGORITHM);
+    if (!rootKeyHashAlgorithm) {
+        throw new Error(`Missing ${CONFIG_ROOT_KEY_HASH_ALGORITHM} config`);
     }
 
     const emulatorAddress: string | undefined = cadenceConfig.get(CONFIG_EMULATOR_ADDRESS);
@@ -78,7 +92,12 @@ export function getConfig(): Config {
         throw new Error(`Missing ${CONFIG_NUM_ACCOUNTS} config`);
     }
 
-    const serverConfig = {rootAccountKey, emulatorAddress};
+    const serverConfig: ServerConfig = {
+        rootPrivateKey,
+        rootKeySignatureAlgorithm,
+        rootKeyHashAlgorithm,
+        emulatorAddress
+    };
 
     return new Config(flowCommand, numAccounts, serverConfig);
 }

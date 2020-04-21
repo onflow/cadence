@@ -1184,6 +1184,7 @@ func TestCheckResourceCreationInContracts(t *testing.T) {
 }
 
 func TestCheckInvalidResourceLoss(t *testing.T) {
+
 	t.Run("UnassignedResource", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
@@ -1280,6 +1281,38 @@ func TestCheckInvalidResourceLoss(t *testing.T) {
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[1])
+	})
+
+	t.Run("ImmediateComparisonOptionalNil", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            resource Foo {}
+
+            pub fun foo(): @Foo? {
+                return <- create Foo()
+            }
+
+            pub let isNil = foo() == nil
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("ImmediateComparisonArray", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            resource Foo {}
+
+            let empty: @[Foo] <- []
+            let isEmpty = [<- create Foo()] == empty
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 	})
 }
 

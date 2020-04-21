@@ -217,7 +217,7 @@ func (checker *Checker) visitIndexExpression(
 		isAssignment,
 	)
 
-	checker.checkAccessResourceLoss(elementType, targetExpression)
+	checker.checkUnusedExpressionResourceLoss(elementType, targetExpression)
 
 	return elementType
 }
