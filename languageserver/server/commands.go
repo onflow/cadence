@@ -160,43 +160,45 @@ func (s *Server) executeScript(conn protocol.Conn, args ...interface{}) (interfa
 
 	script := []byte(doc.text)
 	res, err := s.flowClient.ExecuteScriptAtLatestBlock(context.Background(), script)
-	if err == nil {
-		conn.LogMessage(&protocol.LogMessageParams{
-			Type:    protocol.Info,
-			Message: fmt.Sprintf("Executed script with result: %v", res),
-		})
-		return res, nil
-	}
+	if err != nil {
 
-	grpcErr, ok := status.FromError(err)
-	if ok {
-		if grpcErr.Code() == codes.Unavailable {
-			// The emulator server isn't running
-			conn.ShowMessage(&protocol.ShowMessageParams{
-				Type:    protocol.Warning,
-				Message: "The emulator server is unavailable. Please start the emulator (`cadence.runEmulator`) first.",
-			})
-			return nil, nil
-		} else if grpcErr.Code() == codes.InvalidArgument {
-			// The request was invalid
-			conn.ShowMessage(&protocol.ShowMessageParams{
-				Type:    protocol.Warning,
-				Message: "The script could not be executed.",
-			})
+		grpcErr, ok := status.FromError(err)
+		if ok {
+			if grpcErr.Code() == codes.Unavailable {
+				// The emulator server isn't running
+				conn.ShowMessage(&protocol.ShowMessageParams{
+					Type:    protocol.Warning,
+					Message: "The emulator server is unavailable. Please start the emulator (`cadence.runEmulator`) first.",
+				})
+				return nil, nil
+			} else if grpcErr.Code() == codes.InvalidArgument {
+				// The request was invalid
+				conn.ShowMessage(&protocol.ShowMessageParams{
+					Type:    protocol.Warning,
+					Message: "The script could not be executed.",
+				})
+				conn.LogMessage(&protocol.LogMessageParams{
+					Type:    protocol.Warning,
+					Message: fmt.Sprintf("Failed to execute script: %s", grpcErr.Message()),
+				})
+				return nil, nil
+			}
+		} else {
 			conn.LogMessage(&protocol.LogMessageParams{
 				Type:    protocol.Warning,
-				Message: fmt.Sprintf("Failed to execute script: %s", grpcErr.Message()),
+				Message: fmt.Sprintf("Failed to submit transaction: %s", err.Error()),
 			})
-			return nil, nil
 		}
-	} else {
-		conn.LogMessage(&protocol.LogMessageParams{
-			Type:    protocol.Warning,
-			Message: fmt.Sprintf("Failed to submit transaction: %s", err.Error()),
-		})
+
+		return nil, err
 	}
 
-	return nil, err
+	conn.LogMessage(&protocol.LogMessageParams{
+		Type:    protocol.Info,
+		Message: fmt.Sprintf("Executed script with result: %v", res),
+	})
+
+	return res, nil
 }
 
 // switchActiveAccount sets the account that is currently active and should be
@@ -371,41 +373,42 @@ func (s *Server) sendTransactionHelper(conn protocol.Conn, script []byte) (flow.
 	})
 
 	err = s.flowClient.SendTransaction(context.Background(), *tx)
-	if err == nil {
-		conn.LogMessage(&protocol.LogMessageParams{
-			Type:    protocol.Info,
-			Message: fmt.Sprintf("Submitted transaction id=%s", tx.ID().Hex()),
-		})
+	if err != nil {
+		grpcErr, ok := status.FromError(err)
+		if ok {
+			if grpcErr.Code() == codes.Unavailable {
+				// The emulator server isn't running
+				conn.ShowMessage(&protocol.ShowMessageParams{
+					Type:    protocol.Warning,
+					Message: "The emulator server is unavailable. Please start the emulator (`cadence.runEmulator`) first.",
+				})
+				return flow.ZeroID, err
+			} else if grpcErr.Code() == codes.InvalidArgument {
+				// The request was invalid
+				conn.ShowMessage(&protocol.ShowMessageParams{
+					Type:    protocol.Warning,
+					Message: "The transaction could not be submitted.",
+				})
+				conn.LogMessage(&protocol.LogMessageParams{
+					Type:    protocol.Warning,
+					Message: fmt.Sprintf("Failed to submit transaction: %s", grpcErr.Message()),
+				})
+				return flow.ZeroID, err
+			}
+		} else {
+			conn.LogMessage(&protocol.LogMessageParams{
+				Type:    protocol.Warning,
+				Message: fmt.Sprintf("Failed to submit transaction: %s", err.Error()),
+			})
+		}
+
 		return flow.ZeroID, err
 	}
 
-	grpcErr, ok := status.FromError(err)
-	if ok {
-		if grpcErr.Code() == codes.Unavailable {
-			// The emulator server isn't running
-			conn.ShowMessage(&protocol.ShowMessageParams{
-				Type:    protocol.Warning,
-				Message: "The emulator server is unavailable. Please start the emulator (`cadence.runEmulator`) first.",
-			})
-			return flow.ZeroID, err
-		} else if grpcErr.Code() == codes.InvalidArgument {
-			// The request was invalid
-			conn.ShowMessage(&protocol.ShowMessageParams{
-				Type:    protocol.Warning,
-				Message: "The transaction could not be submitted.",
-			})
-			conn.LogMessage(&protocol.LogMessageParams{
-				Type:    protocol.Warning,
-				Message: fmt.Sprintf("Failed to submit transaction: %s", grpcErr.Message()),
-			})
-			return flow.ZeroID, err
-		}
-	} else {
-		conn.LogMessage(&protocol.LogMessageParams{
-			Type:    protocol.Warning,
-			Message: fmt.Sprintf("Failed to submit transaction: %s", err.Error()),
-		})
-	}
+	conn.LogMessage(&protocol.LogMessageParams{
+		Type:    protocol.Info,
+		Message: fmt.Sprintf("Submitted transaction id=%s", tx.ID().Hex()),
+	})
 
 	return tx.ID(), nil
 }
@@ -414,7 +417,7 @@ func (s *Server) sendTransactionHelper(conn protocol.Conn, script []byte) (flow.
 func (s *Server) createAccountHelper(conn protocol.Conn) (addr flow.Address, err error) {
 	accountKey := &flow.AccountKey{
 		PublicKey: s.config.RootAccountKey.PrivateKey.PublicKey(),
-		SigAlgo:  s.config.RootAccountKey.SigAlgo,
+		SigAlgo:   s.config.RootAccountKey.SigAlgo,
 		HashAlgo:  s.config.RootAccountKey.HashAlgo,
 		Weight:    flow.AccountKeyWeightThreshold,
 	}
