@@ -130,7 +130,7 @@ func (s *Server) submitTransaction(conn protocol.Conn, args ...interface{}) (int
 
 	script := []byte(doc.text)
 
-	_, err := s.sendTransactionHelper(conn, script)
+	_, err := s.sendTransactionHelper(conn, script, true)
 	return nil, err
 }
 
@@ -340,7 +340,7 @@ func (s *Server) updateAccountCode(conn protocol.Conn, args ...interface{}) (int
 	accountCode := []byte(doc.text)
 	script := templates.UpdateAccountCode(accountCode)
 
-	_, err := s.sendTransactionHelper(conn, script)
+	_, err := s.sendTransactionHelper(conn, script, true)
 	return nil, err
 }
 
@@ -350,7 +350,7 @@ func (s *Server) updateAccountCode(conn protocol.Conn, args ...interface{}) (int
 //
 // If an error occurs, attempts to show an appropriate message (either via logs
 // or UI popups in the client).
-func (s *Server) sendTransactionHelper(conn protocol.Conn, script []byte) (flow.Identifier, error) {
+func (s *Server) sendTransactionHelper(conn protocol.Conn, script []byte, authorize bool) (flow.Identifier, error) {
 	accountKey, signer, err := s.getAccountKey(s.activeAccount)
 	if err != nil {
 		return flow.ZeroID, err
@@ -359,8 +359,11 @@ func (s *Server) sendTransactionHelper(conn protocol.Conn, script []byte) (flow.
 	tx := flow.NewTransaction().
 		SetScript(script).
 		SetProposalKey(s.activeAccount, accountKey.ID, accountKey.SequenceNumber).
-		SetPayer(s.activeAccount).
-		AddAuthorizer(s.activeAccount)
+		SetPayer(s.activeAccount)
+
+	if authorize {
+		tx.AddAuthorizer(s.activeAccount)
+	}
 
 	err = tx.SignEnvelope(s.activeAccount, accountKey.ID, signer)
 	if err != nil {
@@ -427,7 +430,7 @@ func (s *Server) createAccountHelper(conn protocol.Conn) (addr flow.Address, err
 		return addr, fmt.Errorf("failed to generate account creation script: %w", err)
 	}
 
-	txID, err := s.sendTransactionHelper(conn, script)
+	txID, err := s.sendTransactionHelper(conn, script, false)
 	if err != nil {
 		return addr, err
 	}
