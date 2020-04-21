@@ -69,7 +69,7 @@ type Server struct {
 	commands   map[string]CommandHandler
 	flowClient *client.Client
 	// set of created accounts we can submit transactions for
-	accounts      map[flow.Address]flow.AccountPrivateKey
+	accounts      map[flow.Address]config.AccountPrivateKey
 	activeAccount flow.Address
 }
 
@@ -78,7 +78,7 @@ func NewServer() *Server {
 		checkers:  make(map[protocol.DocumentUri]*sema.Checker),
 		documents: make(map[protocol.DocumentUri]document),
 		commands:  make(map[string]CommandHandler),
-		accounts:  make(map[flow.Address]flow.AccountPrivateKey),
+		accounts:  make(map[flow.Address]config.AccountPrivateKey),
 	}
 }
 
@@ -394,10 +394,10 @@ func (*Server) Exit(_ protocol.Conn) error {
 }
 
 // getAccountKey returns the first account key and signer for the given address.
-func (s *Server) getAccountKey(address flow.Address) (flow.AccountKey, crypto.Signer, error) {
+func (s *Server) getAccountKey(address flow.Address) (*flow.AccountKey, crypto.Signer, error) {
 	privateKey, ok := s.accounts[address]
 	if !ok {
-		return flow.AccountKey{}, nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"cannot sign transaction: unknown account %s",
 			address,
 		)
@@ -405,11 +405,11 @@ func (s *Server) getAccountKey(address flow.Address) (flow.AccountKey, crypto.Si
 
 	account, err := s.flowClient.GetAccount(context.Background(), address)
 	if err != nil {
-		return flow.AccountKey{}, nil, err
+		return nil, nil, err
 	}
 
 	if len(account.Keys) == 0 {
-		return flow.AccountKey{}, nil, fmt.Errorf(
+		return nil, nil, fmt.Errorf(
 			"cannot sign transaction: account %s has no keys",
 			address.Hex(),
 		)

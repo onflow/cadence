@@ -21,17 +21,23 @@ package config
 import (
 	"errors"
 
-	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/keys"
+	"github.com/onflow/flow-go-sdk/crypto"
 )
 
 // Config defines configuration for the Language Server. These options are
 // determined by the client and passed to the server at initialization.
 type Config struct {
-	// The key of the root account.
-	RootAccountKey flow.AccountPrivateKey `json:"rootAccountKey"`
 	// The address where the emulator is running.
-	EmulatorAddr string `json:"emulatorAddress"`
+	EmulatorAddr string
+
+	// The root account key information.
+	RootAccountKey AccountPrivateKey
+}
+
+type AccountPrivateKey struct {
+	PrivateKey crypto.PrivateKey
+	SigAlgo crypto.SignatureAlgorithm
+	HashAlgo crypto.HashAlgorithm
 }
 
 // FromInitializationOptions creates a new config instance from the
@@ -44,20 +50,38 @@ func FromInitializationOptions(opts interface{}) (conf Config, err error) {
 		return Config{}, errors.New("")
 	}
 
-	rootAccountKeyHex, ok := optsMap["rootAccountKey"].(string)
-	if !ok {
-		return Config{}, errors.New("missing rootAccountKey field")
-	}
 	emulatorAddr, ok := optsMap["emulatorAddress"].(string)
 	if !ok {
 		return Config{}, errors.New("missing emulatorAddress field")
 	}
 
-	conf.RootAccountKey, err = keys.DecodePrivateKeyHex(rootAccountKeyHex)
+	rootPrivateKeyHex, ok := optsMap["rootPrivateKey"].(string)
+	if !ok {
+		return Config{}, errors.New("missing rootPrivateKey field")
+	}
+
+	rootKeySigAlgoStr, ok := optsMap["rootKeySignatureAlgorithm"].(string)
+	if !ok {
+		return Config{}, errors.New("missing rootKeySignatureAlgorithm field")
+	}
+
+	rootKeyHashAlgoStr, ok := optsMap["rootKeyHashAlgorithm"].(string)
+	if !ok {
+		return Config{}, errors.New("missing rootKeyHashAlgorithm field")
+	}
+
+	rootAccountKey := AccountPrivateKey{
+		SigAlgo:    crypto.StringToSignatureAlgorithm(rootKeySigAlgoStr),
+		HashAlgo:   crypto.StringToHashAlgorithm(rootKeyHashAlgoStr),
+	}
+
+	rootAccountKey.PrivateKey, err = crypto.DecodePrivateKeyHex(rootAccountKey.SigAlgo, rootPrivateKeyHex)
 	if err != nil {
 		return
 	}
+
 	conf.EmulatorAddr = emulatorAddr
+	conf.RootAccountKey = rootAccountKey
 
 	return
 }

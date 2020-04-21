@@ -30,7 +30,6 @@ import (
 	"google.golang.org/grpc/status"
 
 	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/keys"
 	"github.com/onflow/flow-go-sdk/templates"
 
 	"github.com/onflow/cadence/languageserver/protocol"
@@ -131,7 +130,7 @@ func (s *Server) submitTransaction(conn protocol.Conn, args ...interface{}) (int
 
 	script := []byte(doc.text)
 
-	_, err := s.sendTransactionHelper(conn, script)
+	_, err := s.sendTransactionHelper(conn, script, true)
 	return nil, err
 }
 
@@ -161,43 +160,45 @@ func (s *Server) executeScript(conn protocol.Conn, args ...interface{}) (interfa
 
 	script := []byte(doc.text)
 	res, err := s.flowClient.ExecuteScriptAtLatestBlock(context.Background(), script)
-	if err == nil {
-		conn.LogMessage(&protocol.LogMessageParams{
-			Type:    protocol.Info,
-			Message: fmt.Sprintf("Executed script with result: %v", res),
-		})
-		return res, nil
-	}
+	if err != nil {
 
-	grpcErr, ok := status.FromError(err)
-	if ok {
-		if grpcErr.Code() == codes.Unavailable {
-			// The emulator server isn't running
-			conn.ShowMessage(&protocol.ShowMessageParams{
-				Type:    protocol.Warning,
-				Message: "The emulator server is unavailable. Please start the emulator (`cadence.runEmulator`) first.",
-			})
-			return nil, nil
-		} else if grpcErr.Code() == codes.InvalidArgument {
-			// The request was invalid
-			conn.ShowMessage(&protocol.ShowMessageParams{
-				Type:    protocol.Warning,
-				Message: "The script could not be executed.",
-			})
+		grpcErr, ok := status.FromError(err)
+		if ok {
+			if grpcErr.Code() == codes.Unavailable {
+				// The emulator server isn't running
+				conn.ShowMessage(&protocol.ShowMessageParams{
+					Type:    protocol.Warning,
+					Message: "The emulator server is unavailable. Please start the emulator (`cadence.runEmulator`) first.",
+				})
+				return nil, nil
+			} else if grpcErr.Code() == codes.InvalidArgument {
+				// The request was invalid
+				conn.ShowMessage(&protocol.ShowMessageParams{
+					Type:    protocol.Warning,
+					Message: "The script could not be executed.",
+				})
+				conn.LogMessage(&protocol.LogMessageParams{
+					Type:    protocol.Warning,
+					Message: fmt.Sprintf("Failed to execute script: %s", grpcErr.Message()),
+				})
+				return nil, nil
+			}
+		} else {
 			conn.LogMessage(&protocol.LogMessageParams{
 				Type:    protocol.Warning,
-				Message: fmt.Sprintf("Failed to execute script: %s", grpcErr.Message()),
+				Message: fmt.Sprintf("Failed to submit transaction: %s", err.Error()),
 			})
-			return nil, nil
 		}
-	} else {
-		conn.LogMessage(&protocol.LogMessageParams{
-			Type:    protocol.Warning,
-			Message: fmt.Sprintf("Failed to submit transaction: %s", err.Error()),
-		})
+
+		return nil, err
 	}
 
-	return nil, err
+	conn.LogMessage(&protocol.LogMessageParams{
+		Type:    protocol.Info,
+		Message: fmt.Sprintf("Executed script with result: %v", res),
+	})
+
+	return res, nil
 }
 
 // switchActiveAccount sets the account that is currently active and should be
@@ -339,7 +340,7 @@ func (s *Server) updateAccountCode(conn protocol.Conn, args ...interface{}) (int
 	accountCode := []byte(doc.text)
 	script := templates.UpdateAccountCode(accountCode)
 
-	_, err := s.sendTransactionHelper(conn, script)
+	_, err := s.sendTransactionHelper(conn, script, true)
 	return nil, err
 }
 
@@ -349,7 +350,7 @@ func (s *Server) updateAccountCode(conn protocol.Conn, args ...interface{}) (int
 //
 // If an error occurs, attempts to show an appropriate message (either via logs
 // or UI popups in the client).
-func (s *Server) sendTransactionHelper(conn protocol.Conn, script []byte) (flow.Identifier, error) {
+func (s *Server) sendTransactionHelper(conn protocol.Conn, script []byte, authorize bool) (flow.Identifier, error) {
 	accountKey, signer, err := s.getAccountKey(s.activeAccount)
 	if err != nil {
 		return flow.ZeroID, err
@@ -358,8 +359,11 @@ func (s *Server) sendTransactionHelper(conn protocol.Conn, script []byte) (flow.
 	tx := flow.NewTransaction().
 		SetScript(script).
 		SetProposalKey(s.activeAccount, accountKey.ID, accountKey.SequenceNumber).
-		SetPayer(s.activeAccount).
-		AddAuthorizer(s.activeAccount)
+		SetPayer(s.activeAccount)
+
+	if authorize {
+		tx.AddAuthorizer(s.activeAccount)
+	}
 
 	err = tx.SignEnvelope(s.activeAccount, accountKey.ID, signer)
 	if err != nil {
@@ -372,60 +376,61 @@ func (s *Server) sendTransactionHelper(conn protocol.Conn, script []byte) (flow.
 	})
 
 	err = s.flowClient.SendTransaction(context.Background(), *tx)
-	if err == nil {
-		conn.LogMessage(&protocol.LogMessageParams{
-			Type:    protocol.Info,
-			Message: fmt.Sprintf("Submitted transaction id=%s", tx.ID().Hex()),
-		})
+	if err != nil {
+		grpcErr, ok := status.FromError(err)
+		if ok {
+			if grpcErr.Code() == codes.Unavailable {
+				// The emulator server isn't running
+				conn.ShowMessage(&protocol.ShowMessageParams{
+					Type:    protocol.Warning,
+					Message: "The emulator server is unavailable. Please start the emulator (`cadence.runEmulator`) first.",
+				})
+				return flow.ZeroID, err
+			} else if grpcErr.Code() == codes.InvalidArgument {
+				// The request was invalid
+				conn.ShowMessage(&protocol.ShowMessageParams{
+					Type:    protocol.Warning,
+					Message: "The transaction could not be submitted.",
+				})
+				conn.LogMessage(&protocol.LogMessageParams{
+					Type:    protocol.Warning,
+					Message: fmt.Sprintf("Failed to submit transaction: %s", grpcErr.Message()),
+				})
+				return flow.ZeroID, err
+			}
+		} else {
+			conn.LogMessage(&protocol.LogMessageParams{
+				Type:    protocol.Warning,
+				Message: fmt.Sprintf("Failed to submit transaction: %s", err.Error()),
+			})
+		}
+
 		return flow.ZeroID, err
 	}
 
-	grpcErr, ok := status.FromError(err)
-	if ok {
-		if grpcErr.Code() == codes.Unavailable {
-			// The emulator server isn't running
-			conn.ShowMessage(&protocol.ShowMessageParams{
-				Type:    protocol.Warning,
-				Message: "The emulator server is unavailable. Please start the emulator (`cadence.runEmulator`) first.",
-			})
-			return flow.ZeroID, err
-		} else if grpcErr.Code() == codes.InvalidArgument {
-			// The request was invalid
-			conn.ShowMessage(&protocol.ShowMessageParams{
-				Type:    protocol.Warning,
-				Message: "The transaction could not be submitted.",
-			})
-			conn.LogMessage(&protocol.LogMessageParams{
-				Type:    protocol.Warning,
-				Message: fmt.Sprintf("Failed to submit transaction: %s", grpcErr.Message()),
-			})
-			return flow.ZeroID, err
-		}
-	} else {
-		conn.LogMessage(&protocol.LogMessageParams{
-			Type:    protocol.Warning,
-			Message: fmt.Sprintf("Failed to submit transaction: %s", err.Error()),
-		})
-	}
+	conn.LogMessage(&protocol.LogMessageParams{
+		Type:    protocol.Info,
+		Message: fmt.Sprintf("Submitted transaction id=%s", tx.ID().Hex()),
+	})
 
 	return tx.ID(), nil
 }
 
 // createAccountHelper creates a new account and returns its address.
 func (s *Server) createAccountHelper(conn protocol.Conn) (addr flow.Address, err error) {
-	accountKey := flow.AccountKey{
+	accountKey := &flow.AccountKey{
 		PublicKey: s.config.RootAccountKey.PrivateKey.PublicKey(),
-		SignAlgo:  s.config.RootAccountKey.SignAlgo,
+		SigAlgo:   s.config.RootAccountKey.SigAlgo,
 		HashAlgo:  s.config.RootAccountKey.HashAlgo,
-		Weight:    keys.PublicKeyWeightThreshold,
+		Weight:    flow.AccountKeyWeightThreshold,
 	}
 
-	script, err := templates.CreateAccount([]flow.AccountKey{accountKey}, nil)
+	script, err := templates.CreateAccount([]*flow.AccountKey{accountKey}, nil)
 	if err != nil {
 		return addr, fmt.Errorf("failed to generate account creation script: %w", err)
 	}
 
-	txID, err := s.sendTransactionHelper(conn, script)
+	txID, err := s.sendTransactionHelper(conn, script, false)
 	if err != nil {
 		return addr, err
 	}
