@@ -147,7 +147,7 @@
                 <p><a href="#optional-binding">Optional Binding</a></p>
               </li>
               <li>
-                <p><a href="#looping">Looping:</a></p>
+                <p><a href="#looping">Looping</a></p>
                 <ul>
                   <li><a href="#while-statement">while-statement</a></li>
                   <li><a href="#for-in-statement">For-in statement</a></li>
@@ -221,13 +221,19 @@
             <ul>
               <li><a href="#interface-declaration">Interface Declaration</a></li>
               <li><a href="#interface-implementation">Interface Implementation</a></li>
-              <li><a href="#interface-type">Interface Type</a></li>
+              <li><a href="#interfaces-in-types">Interfaces in Types</a></li>
               <li><a href="#interface-implementation-requirements">Interface Implementation Requirements</a></li>
               <li><a href="#interface-nesting">Interface Nesting</a></li>
               <li><a href="#nested-type-requirements">Nested Type Requirements</a></li>
               <li><a href="#equatable-interface"><code>Equatable</code> Interface</a></li>
               <li><a href="#hashable-interface"><code>Hashable</code> Interface</a></li>
             </ul>
+          </li>
+          <li>
+            <p><a href="#restricted-types">Restricted Types</a></p>
+          </li>
+          <li>
+            <p><a href="#references">References</a></p>
           </li>
           <li>
             <p><a href="#imports">Imports</a></p>
@@ -239,13 +245,7 @@
             <p><a href="#account-storage">Account Storage</a></p>
           </li>
           <li>
-            <p><a href="#storage-references">Storage References</a></p>
-            <ul>
-              <li><a href="#reference-based-access-control">Reference-Based Access Control</a></li>
-            </ul>
-          </li>
-          <li>
-            <p><a href="#publishing-references">Publishing References</a></p>
+            <p><a href="#capability-based-access-control">Capability-based Access Control</a></p>
           </li>
           <li>
             <p><a href="#contracts">Contracts</a></p>
@@ -270,7 +270,7 @@
             <p><a href="#built-in-functions">Built-in Functions</a></p>
             <ul>
               <li>
-                <p><a href="#transaction-information">Transaction information</a></p>
+                <p><a href="#block-and-transaction-information">Block and Transaction Information</a></p>
               </li>
               <li>
                 <p><a href="#panic"><code>panic</code></a></p>
@@ -287,7 +287,10 @@
       </section>
       <section>
         <h2 id="introduction"><a href="#introduction" aria-hidden="true"><span class="icon icon-link"></span></a>Introduction</h2>
-        <p>The Cadence Programming Language is a new high-level programming language intended for smart contract development.</p>
+        <p>
+          The Cadence Programming Language is a new high-level programming language
+          intended for smart contract development.
+        </p>
         <p>The language's goals are, in order of importance:</p>
         <ul>
           <li>
@@ -766,6 +769,12 @@
         </section>
         <section>
           <h3 id="fixed-point-numbers"><a href="#fixed-point-numbers" aria-hidden="true"><span class="icon icon-link"></span></a>Fixed-Point Numbers</h3>
+          <blockquote>
+            <p>
+              🚧 Status: Currently only the 64-bit wide <code>Fix64</code> and <code>UFix64</code> types are available.
+              More fixed-point number types will be added in a future release.
+            </p>
+          </blockquote>
           <p>
             Fixed-point numbers are useful for representing fractional values.
             They have a fixed number of digits after decimal point.
@@ -773,7 +782,8 @@
           <p>
             They are essentially integers which are scaled by a factor.
             For example, the value 1.23 can be represented as 1230 with a scaling factor of 1/1000.
-            The scaling factor is the same for all values of the same type and stays the same during calculations.
+            The scaling factor is the same for all values of the same type
+            and stays the same during calculations.
           </p>
           <p>
             Fixed-point numbers in Cadence have a scaling factor with a power of 10, instead of a power of 2,
@@ -838,7 +848,7 @@
             <code>AnyStruct</code> is the top type of all non-resource types,
             i.e., all non-resource types are a subtype of it.
           </p>
-          <p><code>@AnyResource</code> is the top type of all resource types.</p>
+          <p><code>AnyResource</code> is the top type of all resource types.</p>
           <pre><code class="language-cadence"><span style="color: #008000">// Declare a variable that has the type `AnyStruct`.</span><span>
 </span><span style="color: #008000">// Any non-resource typed value can be assigned to it, for example an integer,</span><span>
 </span><span style="color: #008000">// but not resoure-typed values.</span><span>
@@ -861,7 +871,7 @@
 </span><span>
 </span><span style="color: #0000FF">resource</span><span style="color: #000000"> Test {}</span><span>
 </span><span>
-</span><span style="color: #008000">// Declare a variable that has the type `@AnyResource`.</span><span>
+</span><span style="color: #008000">// Declare a variable that has the type `AnyResource`.</span><span>
 </span><span style="color: #008000">// Any resource-typed value can be assigned to it,</span><span>
 </span><span style="color: #008000">// but not non-resource typed values.</span><span>
 </span><span style="color: #008000">//</span><span>
@@ -1222,7 +1232,11 @@
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> thumbsUpText =</span><span>
 </span><span style="color: #000000">    </span><span style="color: #A31515">"This is the first line.\nThis is the second line with an emoji: \u{1F44D}"</span><span>
 </span></code></pre>
-          <p>The type <code>Character</code> represents a single, human-readable character. Characters are extended grapheme clusters, which consist of one or more Unicode scalars.</p>
+          <p>
+            The type <code>Character</code> represents a single, human-readable character.
+            Characters are extended grapheme clusters,
+            which consist of one or more Unicode scalars.
+          </p>
           <p>
             For example, the single character <code>ü</code> can be represented
             in several ways in Unicode.
@@ -1259,7 +1273,7 @@
             <p>Strings have multiple built-in functions you can use.</p>
             <ul>
               <li>
-                <p><code>length: Int</code>: Returns the number of characters in the string as an integer.</p>
+                <p><code>let length: Int</code>: Returns the number of characters in the string as an integer.</p>
                 <pre><code class="language-cadence,file=string-length-field.cdc"><span style="color: #0000FF">let</span><span style="color: #000000"> example = </span><span style="color: #A31515">"hello"</span><span>
 </span><span>
 </span><span style="color: #008000">// Find the number of elements of the string.</span><span>
@@ -1269,7 +1283,7 @@
               </li>
               <li>
                 <p>
-                  <code>concat(_ other: String): String</code>:
+                  <code>fun concat(_ other: String): String</code>:
                   Concatenates the string <code>other</code> to the end of the original string,
                   but does not modify the original string.
                   This function creates a new string whose length is the sum of the lengths
@@ -1285,7 +1299,7 @@
               </li>
               <li>
                 <p>
-                  <code>slice(from: Int, upTo: Int): String</code>:
+                  <code>fun slice(from: Int, upTo: Int): String</code>:
                   Returns a string slice of the characters
                   in the given string from start index <code>from</code> up to,
                   but not including, the end index <code>upTo</code>.
@@ -1378,10 +1392,14 @@
             <h4 id="array-indexing"><a href="#array-indexing" aria-hidden="true"><span class="icon icon-link"></span></a>Array Indexing</h4>
             <p>
               To get the element of an array at a specific index, the indexing syntax can be used:
-              The array is followed by an opening square bracket <code>[</code>, the indexing value, and ends with a closing square bracket <code>]</code>.
+              The array is followed by an opening square bracket <code>[</code>, the indexing value,
+              and ends with a closing square bracket <code>]</code>.
             </p>
             <p>Indexes start at 0 for the first element in the array.</p>
-            <p>Accessing an element which is out of bounds results in a fatal error at run-time and aborts the program.</p>
+            <p>
+              Accessing an element which is out of bounds results in a fatal error at run-time
+              and aborts the program.
+            </p>
             <pre><code class="language-cadence,file=arrays-indexing.cdc"><span style="color: #008000">// Declare an array of integers.</span><span>
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> numbers = [</span><span style="color: #09885A">42</span><span style="color: #000000">, </span><span style="color: #09885A">23</span><span style="color: #000000">]</span><span>
 </span><span>
@@ -1432,7 +1450,7 @@
             <ul>
               <li>
                 <p>
-                  <code>length: Int</code>:
+                  <code>let length: Int</code>:
                   Returns the number of elements in the array.
                 </p>
                 <pre><code class="language-cadence,file=array-length-field.cdc"><span style="color: #008000">// Declare an array of integers.</span><span>
@@ -1446,7 +1464,7 @@
               </li>
               <li>
                 <p>
-                  <code>concat(_ array: T): T</code>:
+                  <code>fun concat(_ array: T): T</code>:
                   Concatenates the parameter <code>array</code> to the end
                   of the array the function is called on,
                   but does not modify that array.
@@ -1473,7 +1491,7 @@
               </li>
               <li>
                 <p>
-                  <code>contains(_ element: T): Bool</code>:
+                  <code>fun contains(_ element: T): Bool</code>:
                   Indicates whether the given element of type <code>T</code> is in the array.
                 </p>
                 <pre><code class="language-cadence,file=array-contains.cdc"><span style="color: #008000">// Declare an array of integers.</span><span>
@@ -1503,7 +1521,7 @@
               <ul>
                 <li>
                   <p>
-                    <code>append(_ element: T): Void</code>:
+                    <code>fun append(_ element: T): Void</code>:
                     Adds the new element <code>element</code> of type <code>T</code> to the end of the array.
                   </p>
                   <p>The new element must be the same type as all the other elements in the array.</p>
@@ -1520,7 +1538,7 @@
                 </li>
                 <li>
                   <p>
-                    <code>insert(at index: Int, _ element: T): Void</code>:
+                    <code>fun insert(at index: Int, _ element: T): Void</code>:
                     Inserts the new element <code>element</code> of type <code>T</code>
                     at the given <code>index</code> of the array.
                   </p>
@@ -1547,7 +1565,7 @@
                 </li>
                 <li>
                   <p>
-                    <code>remove(at index: Int): T</code>:
+                    <code>fun remove(at index: Int): T</code>:
                     Removes the element at the given <code>index</code> from the array and returns it.
                   </p>
                   <p>
@@ -1568,7 +1586,7 @@
                 </li>
                 <li>
                   <p>
-                    <code>removeFirst(): T</code>:
+                    <code>fun removeFirst(): T</code>:
                     Removes the first element from the array and returns it.
                   </p>
                   <p>
@@ -1594,7 +1612,7 @@
                 </li>
                 <li>
                   <p>
-                    <code>removeLast(): T</code>:
+                    <code>fun removeLast(): T</code>:
                     Removes the last element from the array and returns it.
                   </p>
                   <p>
@@ -1755,7 +1773,7 @@
             <ul>
               <li>
                 <p>
-                  <code>length: Int</code>:
+                  <code>fun length: Int</code>:
                   Returns the number of entries in the dictionary.
                 </p>
                 <pre><code class="language-cadence,file=dictionary-length-field.cdc"><span style="color: #008000">// Declare a dictionary mapping strings to integers.</span><span>
@@ -1769,7 +1787,7 @@
               </li>
               <li>
                 <p>
-                  <code>remove(key: K): V?</code>:
+                  <code>fun remove(key: K): V?</code>:
                   Removes the value for the given <code>key</code> of type <code>K</code> from the dictionary.
                 </p>
                 <p>
@@ -1800,7 +1818,7 @@
               </li>
               <li>
                 <p>
-                  <code>keys: [K]</code>:
+                  <code>let keys: [K]</code>:
                   Returns an array of the keys of type <code>K</code> in the dictionary. This does not
                   modify the dictionary, just returns a copy of the keys as an array.
                   If the dictionary is empty, this returns an empty array.
@@ -1816,7 +1834,7 @@
               </li>
               <li>
                 <p>
-                  <code>values: [V]</code>:
+                  <code>let values: [V]</code>:
                   Returns an array of the values of type <code>V</code> in the dictionary. This does not
                   modify the dictionary, just returns a copy of the values as an array.
                   If the dictionary is empty, this returns an empty array.
@@ -2005,13 +2023,15 @@
           </p>
           <p>The division and remainder operators abort the program when the divisor is zero.</p>
           <p>
-            Arithmetic operations on the signed integer types <code>Int8</code>, <code>Int16</code>, <code>Int32</code>, <code>Int64</code>, <code>Int128</code>, <code>Int256</code>,
-            and on the unsigned integer types <code>UInt8</code>, <code>UInt16</code>, <code>UInt32</code>, <code>UInt64</code>, <code>UInt128</code>, <code>UInt256</code>,
+            Arithmetic operations on the signed integer types
+            <code>Int8</code>, <code>Int16</code>, <code>Int32</code>, <code>Int64</code>, <code>Int128</code>, <code>Int256</code>,
+            and on the unsigned integer types
+            <code>UInt8</code>, <code>UInt16</code>, <code>UInt32</code>, <code>UInt64</code>, <code>UInt128</code>, <code>UInt256</code>,
             do not cause values to overflow or underflow.
           </p>
           <pre><code class="language-cadence,file=operator-add-overflow.cdc"><span style="color: #0000FF">let</span><span style="color: #000000"> a: </span><span style="color: #0000FF">UInt8</span><span style="color: #000000"> = </span><span style="color: #09885A">255</span><span>
 </span><span>
-</span><span style="color: #008000">// Error: The result `256` does not fit in the range of `UInt8`,</span><span>
+</span><span style="color: #008000">// Run-time error: The result `256` does not fit in the range of `UInt8`,</span><span>
 </span><span style="color: #008000">// thus a fatal overflow error is raised and the program aborts</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> b = a + </span><span style="color: #09885A">1</span><span>
@@ -2019,20 +2039,21 @@
           <pre><code class="language-cadence,file=operator-times-overflow.cdc"><span style="color: #0000FF">let</span><span style="color: #000000"> a: </span><span style="color: #0000FF">Int8</span><span style="color: #000000"> = </span><span style="color: #09885A">100</span><span>
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> b: </span><span style="color: #0000FF">Int8</span><span style="color: #000000"> = </span><span style="color: #09885A">100</span><span>
 </span><span>
-</span><span style="color: #008000">// Error: The result `10000` does not fit in the range of `Int8`,</span><span>
+</span><span style="color: #008000">// Run-time error: The result `10000` does not fit in the range of `Int8`,</span><span>
 </span><span style="color: #008000">// thus a fatal overflow error is raised and the program aborts</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> c = a * b</span><span>
 </span></code></pre>
           <pre><code class="language-cadence,file=operator-unary-negate-overflow.cdc"><span style="color: #0000FF">let</span><span style="color: #000000"> a: </span><span style="color: #0000FF">Int8</span><span style="color: #000000"> = </span><span style="color: #09885A">-128</span><span>
 </span><span>
-</span><span style="color: #008000">// Error: The result `128` does not fit in the range of `Int8`,</span><span>
+</span><span style="color: #008000">// Run-time error: The result `128` does not fit in the range of `Int8`,</span><span>
 </span><span style="color: #008000">// thus a fatal overflow error is raised and the program aborts</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> b = -a</span><span>
 </span></code></pre>
           <p>
-            Arithmetic operations on the unsigned integer types <code>Word8</code>, <code>Word16</code>, <code>Word32</code>, <code>Word64</code>
+            Arithmetic operations on the unsigned integer types
+            <code>Word8</code>, <code>Word16</code>, <code>Word32</code>, <code>Word64</code>
             may cause values to overflow or underflow.
           </p>
           <p>
@@ -2046,7 +2067,10 @@
           <pre><code class="language-cadence,file=operator-overflow-plus.cdc"><span style="color: #0000FF">let</span><span style="color: #000000"> a: </span><span style="color: #0000FF">Word8</span><span style="color: #000000"> = </span><span style="color: #09885A">255</span><span>
 </span><span style="color: #000000">a + </span><span style="color: #09885A">1</span><span style="color: #000000"> </span><span style="color: #008000">// is `0`</span><span>
 </span></code></pre>
-          <p>Similarly, for the minimum value 0, subtracting 1 wraps around and results in the maximum value 255.</p>
+          <p>
+            Similarly, for the minimum value 0,
+            subtracting 1 wraps around and results in the maximum value 255.
+          </p>
           <pre><code class="language-cadence,file=operator-minus.cdc"><span style="color: #008000">//    00000000</span><span>
 </span><span style="color: #008000">// -         1</span><span>
 </span><span style="color: #008000">// =  11111111 = 255</span><span>
@@ -2359,7 +2383,7 @@
 </span><span style="color: #008000">// a potential that a function call accidentally provides arguments in</span><span>
 </span><span style="color: #008000">// the wrong order.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #008000">// While the parameter names `sendingAccount` and `receivingAccount`</span><span>
+</span><span style="color: #008000">// While the parameter names `senderAddress` and `receiverAddress`</span><span>
 </span><span style="color: #008000">// are descriptive inside the function, they might be too verbose</span><span>
 </span><span style="color: #008000">// to require them as argument labels in function calls.</span><span>
 </span><span style="color: #008000">//</span><span>
@@ -2371,22 +2395,22 @@
 </span><span style="color: #008000">// the function and also in a function call, so no argument label is given,</span><span>
 </span><span style="color: #008000">// and the parameter name is required as the argument label in a function call.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">fun</span><span style="color: #000000"> send(from sendingAccount: </span><span style="color: #0000FF">Account</span><span style="color: #000000">, to receivingAccount: </span><span style="color: #0000FF">Account</span><span style="color: #000000">, amount: </span><span style="color: #0000FF">Int</span><span style="color: #000000">) {</span><span>
+</span><span style="color: #0000FF">fun</span><span style="color: #000000"> send(from senderAddress: </span><span style="color: #0000FF">Address</span><span style="color: #000000">, to receivingAddress: </span><span style="color: #0000FF">Address</span><span style="color: #000000">, amount: </span><span style="color: #0000FF">Int</span><span style="color: #000000">) {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// The function code is omitted for brevity.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// ...</span><span>
 </span><span style="color: #000000">}</span><span>
 </span><span>
-</span><span style="color: #008000">// Declare a constant which refers to the sending account.</span><span>
+</span><span style="color: #008000">// Declare a constant which refers to the sending account's address.</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #008000">// The initial value is omitted for brevity.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> sender: </span><span style="color: #0000FF">Account</span><span style="color: #000000"> = </span><span style="color: #008000">// ...</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> sender: </span><span style="color: #0000FF">Address</span><span style="color: #000000"> = </span><span style="color: #008000">// ...</span><span>
 </span><span>
-</span><span style="color: #008000">// Declare a constant which refers to the receiving account.</span><span>
+</span><span style="color: #008000">// Declare a constant which refers to the receiving account's address.</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #008000">// The initial value is omitted for brevity.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> receiver: </span><span style="color: #0000FF">Account</span><span style="color: #000000"> = </span><span style="color: #008000">// ...</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> receiver: </span><span style="color: #0000FF">Address</span><span style="color: #000000"> = </span><span style="color: #008000">// ...</span><span>
 </span><span>
 </span><span style="color: #008000">// Call the function named `send`.</span><span>
 </span><span style="color: #008000">//</span><span>
@@ -2627,7 +2651,8 @@
             When arguments are passed to a function, they are copied.
             Therefore, values that are passed into a function
             are unchanged in the caller's scope when the function returns.
-            This behavior is known as <a href="https://en.wikipedia.org/w/index.php?title=Evaluation_strategy&#x26;oldid=896280571#Call_by_value">call-by-value</a>.
+            This behavior is known as
+            <a href="https://en.wikipedia.org/w/index.php?title=Evaluation_strategy&#x26;oldid=896280571#Call_by_value">call-by-value</a>.
           </p>
           <pre><code class="language-cadence,file=function-change.cdc"><span style="color: #008000">// Declare a function that changes the first two elements</span><span>
 </span><span style="color: #008000">// of an array of integers.</span><span>
@@ -2656,11 +2681,34 @@
         </section>
         <section>
           <h3 id="function-preconditions-and-postconditions"><a href="#function-preconditions-and-postconditions" aria-hidden="true"><span class="icon icon-link"></span></a>Function Preconditions and Postconditions</h3>
-          <p>Functions may have preconditions and may have postconditions. Preconditions and postconditions can be used to restrict the inputs (values for parameters) and output (return value) of a function.</p>
-          <p>Preconditions must be true right before the execution of the function. Preconditions are part of the function and introduced by the <code>pre</code> keyword, followed by the condition block.</p>
-          <p>Postconditions must be true right after the execution of the function. Postconditions are part of the function and introduced by the <code>post</code> keyword, followed by the condition block. Postconditions may only occur after preconditions, if any.</p>
-          <p>A conditions block consists of one or more conditions. Conditions are expressions evaluating to a boolean. They may not call functions, i.e., they cannot have side-effects and must be pure expressions. Also, conditions may not contain function expressions.</p>
-          <p>Conditions may be written on separate lines, or multiple conditions can be written on the same line, separated by a semicolon. This syntax follows the syntax for <a href="#semicolons">statements</a>.</p>
+          <p>
+            Functions may have preconditions and may have postconditions.
+            Preconditions and postconditions can be used to restrict the inputs (values for parameters)
+            and output (return value) of a function.
+          </p>
+          <p>
+            Preconditions must be true right before the execution of the function.
+            Preconditions are part of the function and introduced by the <code>pre</code> keyword,
+            followed by the condition block.
+          </p>
+          <p>
+            Postconditions must be true right after the execution of the function.
+            Postconditions are part of the function and introduced by the <code>post</code> keyword,
+            followed by the condition block.
+            Postconditions may only occur after preconditions, if any.
+          </p>
+          <p>
+            A conditions block consists of one or more conditions.
+            Conditions are expressions evaluating to a boolean.
+            They may not call functions, i.e., they cannot have side-effects and must be pure expressions.
+            Also, conditions may not contain function expressions.
+          </p>
+          <p>
+            Conditions may be written on separate lines,
+            or multiple conditions can be written on the same line,
+            separated by a semicolon.
+            This syntax follows the syntax for <a href="#semicolons">statements</a>.
+          </p>
           <p>
             Following each condition, an optional description can be provided after a colon.
             The condition description is used as an error message when the condition fails.
@@ -2689,11 +2737,15 @@
 </span><span>
 </span><span style="color: #000000">factorial(</span><span style="color: #09885A">5</span><span style="color: #000000">)  </span><span style="color: #008000">// is `120`</span><span>
 </span><span>
-</span><span style="color: #008000">// Run-time error: The given argument does not satisfy the precondition `n >= 0` of the function, the program aborts.</span><span>
+</span><span style="color: #008000">// Run-time error: The given argument does not satisfy</span><span>
+</span><span style="color: #008000">// the precondition `n >= 0` of the function, the program aborts.</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #000000">factorial(</span><span style="color: #09885A">-2</span><span style="color: #000000">)</span><span>
 </span></code></pre>
-          <p>In postconditions, the special function <code>before</code> can be used to get the value of an expression just before the function is called.</p>
+          <p>
+            In postconditions, the special function <code>before</code> can be used
+            to get the value of an expression just before the function is called.
+          </p>
           <pre><code class="language-cadence,file=function-increment.cdc"><span style="color: #0000FF">var</span><span style="color: #000000"> n = </span><span style="color: #09885A">0</span><span>
 </span><span>
 </span><span style="color: #0000FF">fun</span><span style="color: #000000"> incrementN() {</span><span>
@@ -2738,8 +2790,10 @@
 </span><span style="color: #008000">// `b` is `1`</span><span>
 </span></code></pre>
           <p>
-            An additional, optional else-clause can be added to execute another piece of code when the condition is false.
-            The else-clause is introduced by the <code>else</code> keyword followed by braces that contain the code that should be executed.
+            An additional, optional else-clause can be added to execute another piece of code
+            when the condition is false.
+            The else-clause is introduced by the <code>else</code> keyword followed by braces
+            that contain the code that should be executed.
           </p>
           <pre><code class="language-cadence,file=control-flow-if-else.cdc"><span style="color: #0000FF">let</span><span style="color: #000000"> a = </span><span style="color: #09885A">0</span><span>
 </span><span style="color: #0000FF">var</span><span style="color: #000000"> b = </span><span style="color: #09885A">0</span><span>
@@ -2786,8 +2840,17 @@
             Optional binding allows getting the value inside an optional.
             It is a variant of the if-statement.
           </p>
-          <p>If the optional contains a value, the first branch is executed and a temporary constant or variable is declared and set to the value contained in the optional; otherwise, the else branch (if any) is executed.</p>
-          <p>Optional bindings are declared using the <code>if</code> keyword like an if-statement, but instead of the boolean test value, it is followed by the <code>let</code> or <code>var</code> keywords, to either introduce a constant or variable, followed by a name, the equal sign (<code>=</code>), and the optional value.</p>
+          <p>
+            If the optional contains a value, the first branch is executed
+            and a temporary constant or variable is declared and set to the value contained in the optional;
+            otherwise, the else branch (if any) is executed.
+          </p>
+          <p>
+            Optional bindings are declared using the <code>if</code> keyword like an if-statement,
+            but instead of the boolean test value, it is followed by the <code>let</code> or <code>var</code> keywords,
+            to either introduce a constant or variable, followed by a name,
+            the equal sign (<code>=</code>), and the optional value.
+          </p>
           <pre><code class="language-cadence,file=control-flow-optional-binding-not-nil.cdc"><span style="color: #0000FF">let</span><span style="color: #000000"> maybeNumber: </span><span style="color: #0000FF">Int</span><span style="color: #000000">? = </span><span style="color: #09885A">1</span><span>
 </span><span>
 </span><span style="color: #0000FF">if</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> number = maybeNumber {</span><span>
@@ -2808,10 +2871,13 @@
 </span></code></pre>
         </section>
         <section>
-          <h3 id="looping"><a href="#looping" aria-hidden="true"><span class="icon icon-link"></span></a>Looping:</h3>
+          <h3 id="looping"><a href="#looping" aria-hidden="true"><span class="icon icon-link"></span></a>Looping</h3>
           <section>
             <h4 id="while-statement"><a href="#while-statement" aria-hidden="true"><span class="icon icon-link"></span></a>while-statement</h4>
-            <p>While-statements allow a certain piece of code to be executed repeatedly, as long as a condition remains true.</p>
+            <p>
+              While-statements allow a certain piece of code to be executed repeatedly,
+              as long as a condition remains true.
+            </p>
             <p>
               The while-statement starts with the <code>while</code> keyword, followed by the condition,
               and the code that should be repeatedly
@@ -2868,7 +2934,10 @@
           </section>
           <section>
             <h4 id="continue-and-break"><a href="#continue-and-break" aria-hidden="true"><span class="icon icon-link"></span></a>continue and break</h4>
-            <p>In for-loops and while-loops, the <code>continue</code> statement can be used to stop the current iteration of a loop and start the next iteration.</p>
+            <p>
+              In for-loops and while-loops, the <code>continue</code> statement can be used to stop
+              the current iteration of a loop and start the next iteration.
+            </p>
             <pre><code class="language-cadence,file=control-flow-continue.cdc"><span style="color: #0000FF">var</span><span style="color: #000000"> i = </span><span style="color: #09885A">0</span><span>
 </span><span style="color: #0000FF">var</span><span style="color: #000000"> x = </span><span style="color: #09885A">0</span><span>
 </span><span style="color: #0000FF">while</span><span style="color: #000000"> i &#x3C; </span><span style="color: #09885A">10</span><span style="color: #000000"> {</span><span>
@@ -2922,12 +2991,20 @@
         </section>
         <section>
           <h3 id="immediate-function-return-return-statement"><a href="#immediate-function-return-return-statement" aria-hidden="true"><span class="icon icon-link"></span></a>Immediate function return: return-statement</h3>
-          <p>The return-statement causes a function to return immediately, i.e., any code after the return-statement is not executed. The return-statement starts with the <code>return</code> keyword and is followed by an optional expression that should be the return value of the function call.</p>
+          <p>
+            The return-statement causes a function to return immediately,
+            i.e., any code after the return-statement is not executed.
+            The return-statement starts with the <code>return</code> keyword
+            and is followed by an optional expression that should be the return value of the function call.
+          </p>
         </section>
       </section>
       <section>
         <h2 id="scope"><a href="#scope" aria-hidden="true"><span class="icon icon-link"></span></a>Scope</h2>
-        <p>Every function and block (<code>{</code> ... <code>}</code>) introduces a new scope for declarations. Each function and block can refer to declarations in its scope or any of the outer scopes.</p>
+        <p>
+          Every function and block (<code>{</code> ... <code>}</code>) introduces a new scope for declarations.
+          Each function and block can refer to declarations in its scope or any of the outer scopes.
+        </p>
         <pre><code class="language-cadence,file=scope.cdc"><span style="color: #0000FF">let</span><span style="color: #000000"> x = </span><span style="color: #09885A">10</span><span>
 </span><span>
 </span><span style="color: #0000FF">fun</span><span style="color: #000000"> f(): </span><span style="color: #0000FF">Int</span><span style="color: #000000"> {</span><span>
@@ -2994,7 +3071,9 @@
         <p>The Cadence programming language is a <em>type-safe</em> language.</p>
         <p>
           When assigning a new value to a variable, the value must be the same type as the variable.
-          For example, if a variable has type <code>Bool</code>, it can <em>only</em> be assigned a value that has type <code>Bool</code>, and not for example a value that has type <code>Int</code>.
+          For example, if a variable has type <code>Bool</code>,
+          it can <em>only</em> be assigned a value that has type <code>Bool</code>,
+          and not for example a value that has type <code>Int</code>.
         </p>
         <pre><code class="language-cadence,file=type-safety-assign-int-to-bool.cdc"><span style="color: #008000">// Declare a variable that has type `Bool`.</span><span>
 </span><span style="color: #0000FF">var</span><span style="color: #000000"> a = </span><span style="color: #0000FF">true</span><span>
@@ -3003,7 +3082,13 @@
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #000000">a = </span><span style="color: #09885A">0</span><span>
 </span></code></pre>
-        <p>When passing arguments to a function, the types of the values must match the function parameters' types. For example, if a function expects an argument that has type <code>Bool</code>, <em>only</em> a value that has type <code>Bool</code> can be provided, and not for example a value which has type <code>Int</code>.</p>
+        <p>
+          When passing arguments to a function,
+          the types of the values must match the function parameters' types.
+          For example, if a function expects an argument that has type <code>Bool</code>,
+          <em>only</em> a value that has type <code>Bool</code> can be provided,
+          and not for example a value which has type <code>Int</code>.
+        </p>
         <pre><code class="language-cadence,file=type-safety-nand.cdc"><span style="color: #0000FF">fun</span><span style="color: #000000"> nand(_ a: </span><span style="color: #0000FF">Bool</span><span style="color: #000000">, _ b: </span><span style="color: #0000FF">Bool</span><span style="color: #000000">): </span><span style="color: #0000FF">Bool</span><span style="color: #000000"> {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">return</span><span style="color: #000000"> !(a &#x26;&#x26; b)</span><span>
 </span><span style="color: #000000">}</span><span>
@@ -3023,7 +3108,7 @@
           automatically converted to a non-optional integer <code>Int</code>,
           or vice-versa.
         </p>
-        <pre><code class="language-cadence,file=type-safety-add.cdc"><span style="color: #0000FF">fun</span><span style="color: #000000"> add(_ a: </span><span style="color: #0000FF">Int8</span><span style="color: #000000">, _ b: </span><span style="color: #0000FF">Int8</span><span style="color: #000000">): </span><span style="color: #0000FF">Int</span><span style="color: #000000"> {</span><span>
+        <pre><code class="language-cadence,file=type-safety-add.cdc"><span style="color: #0000FF">fun</span><span style="color: #000000"> add(_ a: </span><span style="color: #0000FF">Int8</span><span style="color: #000000">, _ b: </span><span style="color: #0000FF">Int8</span><span style="color: #000000">): </span><span style="color: #0000FF">Int8</span><span style="color: #000000"> {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">return</span><span style="color: #000000"> a + b</span><span>
 </span><span style="color: #000000">}</span><span>
 </span><span>
@@ -3127,7 +3212,8 @@
         <p>Composite types can only be declared within a <a href="#contracts">contract</a> and nowhere else.</p>
         <p>
           There are two kinds of composite types.
-          The kinds differ in their usage and the behaviour when a value is used as the initial value for a constant or variable,
+          The kinds differ in their usage and the behaviour
+          when a value is used as the initial value for a constant or variable,
           when the value is assigned to a variable,
           when the value is passed as an argument to a function,
           and when the value is returned from a function:
@@ -3139,17 +3225,33 @@
           </li>
           <li>
             <p><a href="#resources"><strong>Resources</strong></a> are <strong>moved</strong>, they are linear types and <strong>must</strong> be used <strong>exactly once</strong>.</p>
-            <p>Resources are useful when it is desired to model ownership (a value exists exactly in one location and it should not be lost).</p>
             <p>
-              Certain constructs in a blockchain represent assets of real, tangible value, as much as a house or car or bank account.
-              We have to worry about literal loss and theft, perhaps even on the scale of millions of dollars.
+              Resources are useful when it is desired to model ownership
+              (a value exists exactly in one location and it should not be lost).
+            </p>
+            <p>
+              Certain constructs in a blockchain represent assets of real, tangible value,
+              as much as a house or car or bank account.
+              We have to worry about literal loss and theft,
+              perhaps even on the scale of millions of dollars.
             </p>
             <p>
               Structures are not an ideal way to represent this ownership because they are copied.
-              This would mean that there could be a risk of having multiple copies of certain assets floating around, which breaks the scarcity requirements needed for these assets to have real value.
+              This would mean that there could be a risk of having multiple copies
+              of certain assets floating around,
+              which breaks the scarcity requirements needed for these assets to have real value.
             </p>
-            <p>A structure is much more useful for representing information that can be grouped together in a logical way, but doesn't have value or a need to be able to be owned or transferred.</p>
-            <p>A structure could for example be used to contain the information associated with a division of a company, but a resource would be used to represent the assets that have been allocated to that organization for spending.</p>
+            <p>
+              A structure is much more useful for representing information
+              that can be grouped together in a logical way,
+              but doesn't have value or a need to be able to be owned or transferred.
+            </p>
+            <p>
+              A structure could for example be used to contain the information associated
+              with a division of a company,
+              but a resource would be used to represent the assets that have been allocated
+              to that organization for spending.
+            </p>
           </li>
         </ul>
         <p>
@@ -3159,7 +3261,11 @@
         </p>
         <section>
           <h3 id="composite-type-declaration-and-creation"><a href="#composite-type-declaration-and-creation" aria-hidden="true"><span class="icon icon-link"></span></a>Composite Type Declaration and Creation</h3>
-          <p>Structures are declared using the <code>struct</code> keyword and resources are declared using the <code>resource</code> keyword. The keyword is followed by the name.</p>
+          <p>
+            Structures are declared using the <code>struct</code> keyword
+            and resources are declared using the <code>resource</code> keyword.
+            The keyword is followed by the name.
+          </p>
           <pre><code class="language-cadence,file=composite-type-declaration.cdc"><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> SomeStruct {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// ...</span><span>
 </span><span style="color: #000000">}</span><span>
@@ -3182,8 +3288,14 @@
             and not locally in functions.
             They can also not be nested.
           </p>
-          <p>Resource must be created (instantiated) by using the <code>create</code> keyword and calling the type like a function.</p>
-          <p>Resources can only be created in functions and types that are declared in the same contract in which the resource is declared.</p>
+          <p>
+            Resource must be created (instantiated) by using the <code>create</code> keyword
+            and calling the type like a function.
+          </p>
+          <p>
+            Resources can only be created in functions and types
+            that are declared in the same contract in which the resource is declared.
+          </p>
           <pre><code class="language-cadence,file=resource-instantiation.cdc"><span style="color: #008000">// instantiate a new resource object and assign it to a constant</span><span>
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> b &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> SomeResource()</span><span>
 </span></code></pre>
@@ -3240,7 +3352,8 @@
               <p>Synthetic fields are declared using the <code>synthetic</code> keyword.</p>
               <p>
                 Synthetic fields must have a getter and a setter.
-                Getters and setters are explained in the <a href="#composite-type-field-getters-and-setters">next section</a>.
+                Getters and setters are explained in the
+                <a href="#composite-type-field-getters-and-setters">next section</a>.
                 Synthetic fields are explained in a <a href="#synthetic-composite-type-fields">separate section</a>.
               </p>
             </li>
@@ -3365,7 +3478,10 @@
           <blockquote>
             <p>🚧 Status: Initializer overloading is not implemented yet.</p>
           </blockquote>
-          <p>Initializers support overloading. This allows for example providing default values for certain parameters.</p>
+          <p>
+            Initializers support overloading.
+            This allows for example providing default values for certain parameters.
+          </p>
           <pre><code class="language-cadence,file=composite-type-initializer-overloading.cdc"><span style="color: #008000">// Declare a structure named `Token`, which has a constant field</span><span>
 </span><span style="color: #008000">// named `id` and a variable field named `balance`.</span><span>
 </span><span style="color: #008000">//</span><span>
@@ -3459,7 +3575,9 @@
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> example = SetterExample(balance: </span><span style="color: #09885A">10</span><span style="color: #000000">)</span><span>
 </span><span style="color: #008000">// `example.balance` is `10`</span><span>
 </span><span>
-</span><span style="color: #008000">// Run-time error: The precondition of the setter for the field `balance` fails, the program aborts.</span><span>
+</span><span style="color: #008000">// Run-time error: The precondition of the setter for the field `balance` fails,</span><span>
+</span><span style="color: #008000">// the program aborts.</span><span>
+</span><span style="color: #008000">//</span><span>
 </span><span style="color: #000000">example.balance = </span><span style="color: #09885A">-50</span><span>
 </span></code></pre>
         </section>
@@ -3814,8 +3932,8 @@
 </span><span style="color: #008000">// `two` is `2`</span><span>
 </span><span>
 </span><span style="color: #008000">// Try to access the `number` field of `noValue`, which has type `Value?`</span><span>
-</span><span style="color: #008000">// Error: This time, since `noValue` is `nil`, The program execution will</span><span>
-</span><span style="color: #008000">// revert</span><span>
+</span><span style="color: #008000">// Run-time error: This time, since `noValue` is `nil`,</span><span>
+</span><span style="color: #008000">// the program execution will revert</span><span>
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> number = noValue!.number</span><span>
 </span><span>
 </span><span style="color: #008000">// Call the `set` function of the struct</span><span>
@@ -3823,7 +3941,7 @@
 </span><span style="color: #008000">// This succeeds and sets the value to 4</span><span>
 </span><span style="color: #000000">value!.set(new: </span><span style="color: #09885A">4</span><span style="color: #000000">)</span><span>
 </span><span>
-</span><span style="color: #008000">// Error: Since `noValue` is nil, the value is not set</span><span>
+</span><span style="color: #008000">// Run-time error: Since `noValue` is nil, the value is not set</span><span>
 </span><span style="color: #008000">// and the program execution reverts.</span><span>
 </span><span style="color: #000000">noValue!.set(new: </span><span style="color: #09885A">4</span><span style="color: #000000">)</span><span>
 </span><span>
@@ -3836,7 +3954,10 @@
           </section>
           <section>
             <h4 id="resources"><a href="#resources" aria-hidden="true"><span class="icon icon-link"></span></a>Resources</h4>
-            <p>Resources are types that can only exist in <strong>one</strong> location at a time and <strong>must</strong> be used <strong>exactly once</strong>.</p>
+            <p>
+              Resources are types that can only exist in <strong>one</strong> location at a time
+              and <strong>must</strong> be used <strong>exactly once</strong>.
+            </p>
             <p>Resources <strong>must</strong> be created (instantiated) by using the <code>create</code> keyword.</p>
             <p>
               At the end of a function which has resources (variables, constants, parameters) in scope,
@@ -3896,7 +4017,7 @@
 </span><span>
 </span><span style="color: #008000">// Declare a function which accepts a resource.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #008000">// The parameter has a resource type, so the type name must be prefixed with `@`.</span><span>
+</span><span style="color: #008000">// The parameter has a resource type, so the type annotation must be prefixed with `@`.</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> use(resource: @</span><span style="color: #0000FF">SomeResource</span><span style="color: #000000">) {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// ...</span><span>
@@ -3945,13 +4066,13 @@
             </p>
             <pre><code class="language-cadence,file=resource-type-annotation.cdc"><span style="color: #008000">// Declare a constant with an explicit type annotation.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #008000">// The constant has a resource type, so the type name must be prefixed with `@`.</span><span>
+</span><span style="color: #008000">// The constant has a resource type, so the type annotation must be prefixed with `@`.</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> someResource: @</span><span style="color: #0000FF">SomeResource</span><span style="color: #000000"> &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> SomeResource(value: </span><span style="color: #09885A">5</span><span style="color: #000000">)</span><span>
 </span><span>
 </span><span style="color: #008000">// Declare a function which consumes a resource and destroys it.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #008000">// The parameter has a resource type, so the type name must be prefixed with `@`.</span><span>
+</span><span style="color: #008000">// The parameter has a resource type, so the type annotation must be prefixed with `@`.</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> use(resource: @</span><span style="color: #0000FF">SomeResource</span><span style="color: #000000">) {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">destroy</span><span style="color: #000000"> resource</span><span>
@@ -3959,7 +4080,7 @@
 </span><span>
 </span><span style="color: #008000">// Declare a function which returns a resource.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #008000">// The return type is a resource type, so the type name must be prefixed with `@`.</span><span>
+</span><span style="color: #008000">// The return type is a resource type, so the type annotation must be prefixed with `@`.</span><span>
 </span><span style="color: #008000">// The return statement must also use the `&#x3C;-` operator to make it explicit the resource is moved.</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> get(): @</span><span style="color: #0000FF">SomeResource</span><span style="color: #000000"> {</span><span>
@@ -4048,8 +4169,14 @@
           </section>
           <section>
             <h4 id="resource-variables"><a href="#resource-variables" aria-hidden="true"><span class="icon icon-link"></span></a>Resource Variables</h4>
-            <p>Resource variables cannot be assigned to as that would lead to the loss of the variable's current resource value.</p>
-            <p>Instead, use a swap statement (<code>&#x3C;-></code>) or shift statement (<code>&#x3C;- target &#x3C;-</code>) to replace the resource variable with another resource.</p>
+            <p>
+              Resource variables cannot be assigned to,
+              as that would lead to the loss of the variable's current resource value.
+            </p>
+            <p>
+              Instead, use a swap statement (<code>&#x3C;-></code>) or shift statement (<code>&#x3C;- target &#x3C;-</code>)
+              to replace the resource variable with another resource.
+            </p>
             <pre><code class="language-cadence,file=resource-variable-invalid-assignment.cdc"><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">resource</span><span style="color: #000000"> R {}</span><span>
 </span><span>
 </span><span style="color: #0000FF">var</span><span style="color: #000000"> x &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> R()</span><span>
@@ -4180,10 +4307,13 @@
             <h4 id="resources-in-arrays-and-dictionaries"><a href="#resources-in-arrays-and-dictionaries" aria-hidden="true"><span class="icon icon-link"></span></a>Resources in Arrays and Dictionaries</h4>
             <p>
               Arrays and dictionaries behave differently when they contain resources:
-              Indexing into an array to read an element at a certain index or assign to it,
-              or indexing into a dictionary to read a value for a certain key or set a value for the key is <strong>not</strong> allowed.
+              It is <strong>not</strong> allowed to index into an array to read an element at a certain index or assign to it,
+              or index into a dictionary to read a value for a certain key or set a value for the key.
             </p>
-            <p>Instead, use a swap statement (<code>&#x3C;-></code>) or shift statement (<code>&#x3C;- target &#x3C;-</code>) to replace the accessed resource with another resource.</p>
+            <p>
+              Instead, use a swap statement (<code>&#x3C;-></code>) or shift statement (<code>&#x3C;- target &#x3C;-</code>)
+              to replace the accessed resource with another resource.
+            </p>
             <pre><code class="language-cadence,file=resource-in-array.cdc"><span style="color: #0000FF">resource</span><span style="color: #000000"> R {}</span><span>
 </span><span>
 </span><span style="color: #008000">// Declare a constant for an array of resources.</span><span>
@@ -4711,16 +4841,20 @@
           to require them to be publicly settable.
         </p>
         <p>
-          Function requirements consist of the name of the function, parameter types, an optional return type,
+          Function requirements consist of the name of the function,
+          parameter types, an optional return type,
           and optional preconditions and postconditions.
         </p>
         <p>
           Field requirements consist of the name and the type of the field.
-          Field requirements may optionally declare a getter requirement and a setter requirement, each with preconditions and postconditions.
+          Field requirements may optionally declare a getter requirement and a setter requirement,
+          each with preconditions and postconditions.
         </p>
         <p>
-          Calling functions with preconditions and postconditions on interfaces instead of concrete implementations can improve the security of a program,
-          as it ensures that even if implementations change, some aspects of them will always hold.
+          Calling functions with preconditions and postconditions on interfaces
+          instead of concrete implementations can improve the security of a program,
+          as it ensures that even if implementations change,
+          some aspects of them will always hold.
         </p>
         <section>
           <h3 id="interface-declaration"><a href="#interface-declaration" aria-hidden="true"><span class="icon icon-link"></span></a>Interface Declaration</h3>
@@ -4741,9 +4875,14 @@
           <p>
             Field requirements and function requirements must specify the required level of access.
             The access must be at least be public, so the <code>pub</code> keyword must be provided.
-            Variable field requirements can be specified to also be publicly settable by using the <code>pub(set)</code> keyword.
+            Variable field requirements can be specified to also be publicly settable
+            by using the <code>pub(set)</code> keyword.
           </p>
-          <p>The special type <code>Self</code> can be used to refer to the type implementing the interface.</p>
+          <p>
+            Interfaces can be used in types.
+            This is explained in detail in the section <a href="#interfaces-in-types">Interfaces in Types</a>.
+            For now, the syntax <code>{I}</code> can be read as the type of any value that implements the interface <code>I</code>.
+          </p>
           <pre><code class="language-cadence,file=interface-declaration.cdc"><span style="color: #008000">// Declare a resource interface for a fungible token.</span><span>
 </span><span style="color: #008000">// Only resources can implement this resource interface.</span><span>
 </span><span style="color: #008000">//</span><span>
@@ -4795,10 +4934,10 @@
 </span><span style="color: #000000">    </span><span style="color: #008000">// must add the amount to the balance.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// The function must return a new fungible token.</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// The type `{FungibleToken}` is the type of any resource</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// that implements the resource interface `FungibleToken`.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// NOTE: `@Self` is the resource type implementing this interface.</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> withdraw(amount: </span><span style="color: #0000FF">Int</span><span style="color: #000000">): @</span><span style="color: #0000FF">Self</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> withdraw(amount: </span><span style="color: #0000FF">Int</span><span style="color: #000000">): @{FungibleToken} {</span><span>
 </span><span style="color: #000000">        </span><span style="color: #0000FF">pre</span><span style="color: #000000"> {</span><span>
 </span><span style="color: #000000">            amount > </span><span style="color: #09885A">0</span><span style="color: #000000">:</span><span>
 </span><span style="color: #000000">                </span><span style="color: #A31515">"the amount must be positive"</span><span>
@@ -4817,17 +4956,14 @@
 </span><span style="color: #000000">    </span><span style="color: #008000">// callable in all scopes, which deposits a fungible token</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// into this fungible token.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// The given token must be of the same type – a deposit of another</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// type is not possible.</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// No precondition is required to check the given token's balance</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// is positive, as this condition is already ensured by</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// the field requirement.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// NOTE: the first parameter has the type `@Self`,</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// i.e. the resource type implementing this interface.</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// The parameter type `{FungibleToken}` is the type of any resource</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// that implements the resource interface `FungibleToken`.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> deposit(_ token: @</span><span style="color: #0000FF">Self</span><span style="color: #000000">) {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> deposit(_ token: @{</span><span style="color: #0000FF">FungibleToken</span><span style="color: #000000">}) {</span><span>
 </span><span style="color: #000000">        </span><span style="color: #0000FF">post</span><span style="color: #000000"> {</span><span>
 </span><span style="color: #000000">            </span><span style="color: #0000FF">self</span><span style="color: #000000">.balance == before(</span><span style="color: #0000FF">self</span><span style="color: #000000">.balance) + token.balance:</span><span>
 </span><span style="color: #000000">                </span><span style="color: #A31515">"the amount must be added to the balance"</span><span>
@@ -4852,7 +4988,10 @@
             The kind and the name of the composite type is followed by a colon (<code>:</code>)
             and the name of one or more interfaces that the composite type implements.
           </p>
-          <p>This will tell the checker to enforce any requirements from the specified interfaces onto the declared type.</p>
+          <p>
+            This will tell the checker to enforce any requirements from the specified interfaces
+            onto the declared type.
+          </p>
           <p>
             A type implements (conforms to) an interface if it declares
             the implementation in its signature, provides field declarations
@@ -4918,17 +5057,23 @@
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// The function must be public.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// NOTE: the type of the parameter is `@ExampleToken`,</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// i.e., only a token of the same type can be deposited.</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// NOTE: the type of the parameter is `{FungibleToken}`,</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// i.e., any resource that implements the resource interface `FungibleToken`,</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// so any other token – however, we want to ensure that only tokens</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// of the same type can be deposited.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// This implementation satisfies the required postconditions.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// NOTE: neither the precondition nor the postcondition declared</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// in the interface have to be repeated here in the implementation.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> deposit(_ token: @</span><span style="color: #0000FF">ExampleToken</span><span style="color: #000000">) {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.balance = </span><span style="color: #0000FF">self</span><span style="color: #000000">.balance + token.balance</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">destroy</span><span style="color: #000000"> token</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> deposit(_ token: @{</span><span style="color: #0000FF">FungibleToken</span><span style="color: #000000">}) {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">if</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> exampleToken = token as? ExampleToken {</span><span>
+</span><span style="color: #000000">            </span><span style="color: #0000FF">self</span><span style="color: #000000">.balance = </span><span style="color: #0000FF">self</span><span style="color: #000000">.balance + exampleToken.balance</span><span>
+</span><span style="color: #000000">            </span><span style="color: #0000FF">destroy</span><span style="color: #000000"> exampleToken</span><span>
+</span><span style="color: #000000">        } </span><span style="color: #0000FF">else</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">            panic(</span><span style="color: #A31515">"cannot deposit token which is not an example token"</span><span style="color: #000000">)</span><span>
+</span><span style="color: #000000">        }</span><span>
 </span><span style="color: #000000">    }</span><span>
 </span><span style="color: #000000">}</span><span>
 </span><span>
@@ -4969,7 +5114,8 @@
 </span><span style="color: #000000">token.withdraw(amount: </span><span style="color: #09885A">90</span><span style="color: #000000">)</span><span>
 </span></code></pre>
           <p>
-            The access level for variable fields in an implementation may be less restrictive than the interface requires.
+            The access level for variable fields in an implementation
+            may be less restrictive than the interface requires.
             For example, an interface may require a field to be
             at least public (i.e. the <code>pub</code> keyword is specified),
             and an implementation may provide a variable field which is public,
@@ -4995,14 +5141,18 @@
 </span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.a = a</span><span>
 </span><span style="color: #000000">    }</span><span>
 </span><span style="color: #000000">}</span><span>
-</span><span>
 </span></code></pre>
         </section>
         <section>
-          <h3 id="interface-type"><a href="#interface-type" aria-hidden="true"><span class="icon icon-link"></span></a>Interface Type</h3>
+          <h3 id="interfaces-in-types"><a href="#interfaces-in-types" aria-hidden="true"><span class="icon icon-link"></span></a>Interfaces in Types</h3>
           <p>
-            Interfaces are types.
-            Values implementing an interface can be used as initial values for constants and variables that have the interface as their type.
+            Interfaces can be used in types: The type <code>{I}</code> is the type of all objects
+            that implement the interfaace <code>I</code>.
+          </p>
+          <p>
+            This is called a <a href="#restricted-types">restricted type</a>:
+            Only the functionality (members and functions) of the interface can be used
+            when accessing a value of such a type.
           </p>
           <pre><code class="language-cadence,file=interface-type.cdc"><span style="color: #008000">// Declare an interface named `Shape`.</span><span>
 </span><span style="color: #008000">//</span><span>
@@ -5010,7 +5160,7 @@
 </span><span style="color: #008000">// and a function which scales the shape by a given factor.</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct interface</span><span style="color: #000000"> Shape {</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> area: Int</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> getArea(): </span><span style="color: #0000FF">Int</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> scale(factor: </span><span style="color: #0000FF">Int</span><span style="color: #000000">)</span><span>
 </span><span style="color: #000000">}</span><span>
 </span><span>
@@ -5028,10 +5178,8 @@
 </span><span style="color: #000000">    </span><span style="color: #008000">// Since `area` was not declared as a constant, variable,</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// field in the interface, it can be declared.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> synthetic area: Int {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">get</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">            </span><span style="color: #0000FF">return</span><span style="color: #000000"> </span><span style="color: #0000FF">self</span><span style="color: #000000">.length * </span><span style="color: #0000FF">self</span><span style="color: #000000">.length</span><span>
-</span><span style="color: #000000">        }</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> getArea(): </span><span style="color: #0000FF">Int</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">return</span><span style="color: #000000"> </span><span style="color: #0000FF">self</span><span style="color: #000000">.length * </span><span style="color: #0000FF">self</span><span style="color: #000000">.length</span><span>
 </span><span style="color: #000000">    }</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">init</span><span style="color: #000000">(length: </span><span style="color: #0000FF">Int</span><span style="color: #000000">) {</span><span>
@@ -5055,10 +5203,8 @@
 </span><span style="color: #000000">    </span><span style="color: #008000">// Provided the field `area  which is required to conform</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// to the interface `Shape`.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> synthetic area: Int {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">get</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">            </span><span style="color: #0000FF">return</span><span style="color: #000000"> </span><span style="color: #0000FF">self</span><span style="color: #000000">.width * </span><span style="color: #0000FF">self</span><span style="color: #000000">.height</span><span>
-</span><span style="color: #000000">        }</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> getArea(): </span><span style="color: #0000FF">Int</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">return</span><span style="color: #000000"> </span><span style="color: #0000FF">self</span><span style="color: #000000">.width * </span><span style="color: #0000FF">self</span><span style="color: #000000">.height</span><span>
 </span><span style="color: #000000">    }</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">init</span><span style="color: #000000">(width: </span><span style="color: #0000FF">Int</span><span style="color: #000000">, height: </span><span style="color: #0000FF">Int</span><span style="color: #000000">) {</span><span>
@@ -5077,7 +5223,7 @@
 </span><span>
 </span><span style="color: #008000">// Declare a constant that has type `Shape`, which has a value that has type `Rectangle`.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">var</span><span style="color: #000000"> shape: </span><span style="color: #0000FF">Shape</span><span style="color: #000000"> = Rectangle(width: </span><span style="color: #09885A">10</span><span style="color: #000000">, height: </span><span style="color: #09885A">20</span><span style="color: #000000">)</span><span>
+</span><span style="color: #0000FF">var</span><span style="color: #000000"> shape: {</span><span style="color: #0000FF">Shape</span><span style="color: #000000">} = Rectangle(width: </span><span style="color: #09885A">10</span><span style="color: #000000">, height: </span><span style="color: #09885A">20</span><span style="color: #000000">)</span><span>
 </span></code></pre>
           <p>Values implementing an interface are assignable to variables that have the interface as their type.</p>
           <pre><code class="language-cadence,file=interface-type-assignment.cdc"><span style="color: #008000">// Assign a value of type `Square` to the variable `shape` that has type `Shape`.</span><span>
@@ -5089,11 +5235,15 @@
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> rectangle: </span><span style="color: #0000FF">Rectangle</span><span style="color: #000000"> = Square(length: </span><span style="color: #09885A">10</span><span style="color: #000000">)</span><span>
 </span></code></pre>
-          <p>Fields declared in an interface can be accessed and functions declared in an interface can be called on values of a type that implements the interface.</p>
+          <p>
+            Fields declared in an interface can be accessed
+            and functions declared in an interface
+            can be called on values of a type that implements the interface.
+          </p>
           <pre><code class="language-cadence,file=interface-type-fields-and-functions.cdc"><span style="color: #008000">// Declare a constant which has the type `Shape`.</span><span>
 </span><span style="color: #008000">// and is initialized with a value that has type `Rectangle`.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> shape: </span><span style="color: #0000FF">Shape</span><span style="color: #000000"> = Rectangle(width: </span><span style="color: #09885A">2</span><span style="color: #000000">, height: </span><span style="color: #09885A">3</span><span style="color: #000000">)</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> shape: {</span><span style="color: #0000FF">Shape</span><span style="color: #000000">} = Rectangle(width: </span><span style="color: #09885A">2</span><span style="color: #000000">, height: </span><span style="color: #09885A">3</span><span style="color: #000000">)</span><span>
 </span><span>
 </span><span style="color: #008000">// Access the field `area` declared in the interface `Shape`.</span><span>
 </span><span style="color: #008000">//</span><span>
@@ -5129,14 +5279,17 @@
 </span><span style="color: #008000">// because the `Polygon` interface requires it.</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> Hexagon: Polygon {}</span><span>
-</span><span>
 </span></code></pre>
         </section>
         <section>
           <h3 id="interface-nesting"><a href="#interface-nesting" aria-hidden="true"><span class="icon icon-link"></span></a>Interface Nesting</h3>
+          <blockquote>
+            <p>🚧 Status: Currently only contracts and contract interfaces support nested interfaces.</p>
+          </blockquote>
           <p>
             Interfaces can be arbitrarily nested.
-            Declaring an interface inside another does not require implementing types of the outer interface to provide an implementation of the inner interfaces.
+            Declaring an interface inside another does not require implementing types
+            of the outer interface to provide an implementation of the inner interfaces.
           </p>
           <pre><code class="language-cadence,file=interface-nesting.cdc"><span style="color: #008000">// Declare a resource interface `OuterInterface`, which declares</span><span>
 </span><span style="color: #008000">// a nested structure interface named `InnerInterface`.</span><span>
@@ -5166,6 +5319,9 @@
         </section>
         <section>
           <h3 id="nested-type-requirements"><a href="#nested-type-requirements" aria-hidden="true"><span class="icon icon-link"></span></a>Nested Type Requirements</h3>
+          <blockquote>
+            <p>🚧 Status: Currently only contracts and contract interfaces support nested type requirements.</p>
+          </blockquote>
           <p>
             Interfaces can require implementing types to provide concrete nested types.
             For example, a resource interface may require an implementing type to provide a resource type.
@@ -5203,12 +5359,26 @@
           <blockquote>
             <p>🚧 Status: The <code>Equatable</code> interface is not implemented yet.</p>
           </blockquote>
-          <p>An equatable type is a type that can be compared for equality. Types are equatable when they implement the <code>Equatable</code> interface.</p>
-          <p>Equatable types can be compared for equality using the equals operator (<code>==</code>) or inequality using the unequals operator (<code>!=</code>).</p>
-          <p>Most of the built-in types are equatable, like booleans and integers. Arrays are equatable when their elements are equatable. Dictionaries are equatable when their values are equatable.</p>
-          <p>To make a type equatable the <code>Equatable</code> interface must be implemented, which requires the implementation of the function <code>equals</code>, which accepts another value that the given value should be compared for equality. Note that the parameter type is <code>Self</code>, i.e., the other value must have the same type as the implementing type.</p>
+          <p>
+            An equatable type is a type that can be compared for equality.
+            Types are equatable when they implement the <code>Equatable</code> interface.
+          </p>
+          <p>
+            Equatable types can be compared for equality using the equals operator (<code>==</code>)
+            or inequality using the unequals operator (<code>!=</code>).
+          </p>
+          <p>
+            Most of the built-in types are equatable, like booleans and integers.
+            Arrays are equatable when their elements are equatable.
+            Dictionaries are equatable when their values are equatable.
+          </p>
+          <p>
+            To make a type equatable the <code>Equatable</code> interface must be implemented,
+            which requires the implementation of the function <code>equals</code>,
+            which accepts another value that the given value should be compared for equality.
+          </p>
           <pre><code class="language-cadence,file=equatable.cdc"><span style="color: #0000FF">struct interface</span><span style="color: #000000"> Equatable {</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> equals(_ other: </span><span style="color: #0000FF">Self</span><span style="color: #000000">): </span><span style="color: #0000FF">Bool</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> equals(_ other: {</span><span style="color: #0000FF">Equatable</span><span style="color: #000000">}): </span><span style="color: #0000FF">Bool</span><span>
 </span><span style="color: #000000">}</span><span>
 </span></code></pre>
           <pre><code class="language-cadence,file=equatable-impl.cdc"><span style="color: #008000">// Declare a struct named `Cat`, which has one field named `id`</span><span>
@@ -5224,10 +5394,14 @@
 </span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.id = id</span><span>
 </span><span style="color: #000000">    }</span><span>
 </span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> equals(_ other: </span><span style="color: #0000FF">Self</span><span style="color: #000000">): </span><span style="color: #0000FF">Bool</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// Cats are equal if their identifier matches.</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">return</span><span style="color: #000000"> other.id == </span><span style="color: #0000FF">self</span><span style="color: #000000">.id</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> equals(_ other: {</span><span style="color: #0000FF">Equatable</span><span style="color: #000000">}): </span><span style="color: #0000FF">Bool</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">if</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> otherCat = other as? Cat {</span><span>
+</span><span style="color: #000000">            </span><span style="color: #008000">// Cats are equal if their identifier matches.</span><span>
+</span><span style="color: #000000">            </span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">            </span><span style="color: #0000FF">return</span><span style="color: #000000"> otherCat.id == </span><span style="color: #0000FF">self</span><span style="color: #000000">.id</span><span>
+</span><span style="color: #000000">        } </span><span style="color: #0000FF">else</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">            </span><span style="color: #0000FF">return</span><span style="color: #000000"> </span><span style="color: #0000FF">false</span><span>
+</span><span style="color: #000000">        }</span><span>
 </span><span style="color: #000000">    }</span><span>
 </span><span style="color: #000000">}</span><span>
 </span><span>
@@ -5272,7 +5446,8 @@
             then the implementation must return the same integer hash value for each of the two values.
           </p>
           <p>
-            The implementation must also consistently return the same integer hash value during the execution of the program when the essential components have not changed.
+            The implementation must also consistently return the same integer hash value during the execution
+            of the program when the essential components have not changed.
             The integer hash value must not necessarily be the same across multiple executions.
           </p>
           <pre><code class="language-cadence,file=hashable.cdc"><span style="color: #0000FF">struct interface</span><span style="color: #000000"> Hashable: Equatable {</span><span>
@@ -5298,15 +5473,19 @@
 </span><span style="color: #000000">    </span><span style="color: #008000">// Implementing the function `equals` will allow points to be compared</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// for equality and satisfies the `Equatable` interface.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> equals(_ other: </span><span style="color: #0000FF">Self</span><span style="color: #000000">): </span><span style="color: #0000FF">Bool</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// Points are equal if their coordinates match.</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// The essential components are therefore the fields `x` and `y`,</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// which must be used in the implementation of the field requirement</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">// `hashValue` of the `Hashable` interface.</span><span>
-</span><span style="color: #000000">        </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">return</span><span style="color: #000000"> other.x == </span><span style="color: #0000FF">self</span><span style="color: #000000">.x</span><span>
-</span><span style="color: #000000">            &#x26;&#x26; other.y == </span><span style="color: #0000FF">self</span><span style="color: #000000">.y</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> equals(_ other: {</span><span style="color: #0000FF">Equatable</span><span style="color: #000000">}): </span><span style="color: #0000FF">Bool</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">if</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> otherPoint = other as? Point {</span><span>
+</span><span style="color: #000000">            </span><span style="color: #008000">// Points are equal if their coordinates match.</span><span>
+</span><span style="color: #000000">            </span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">            </span><span style="color: #008000">// The essential components are therefore the fields `x` and `y`,</span><span>
+</span><span style="color: #000000">            </span><span style="color: #008000">// which must be used in the implementation of the field requirement</span><span>
+</span><span style="color: #000000">            </span><span style="color: #008000">// `hashValue` of the `Hashable` interface.</span><span>
+</span><span style="color: #000000">            </span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">            </span><span style="color: #0000FF">return</span><span style="color: #000000"> otherPoint.x == </span><span style="color: #0000FF">self</span><span style="color: #000000">.x</span><span>
+</span><span style="color: #000000">                &#x26;&#x26; otherPoint.y == </span><span style="color: #0000FF">self</span><span style="color: #000000">.y</span><span>
+</span><span style="color: #000000">        } </span><span style="color: #0000FF">else</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">            </span><span style="color: #0000FF">return</span><span style="color: #000000"> </span><span style="color: #0000FF">false</span><span>
+</span><span style="color: #000000">        }</span><span>
 </span><span style="color: #000000">    }</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// Providing an implementation for the hash value field</span><span>
@@ -5326,6 +5505,286 @@
 </span><span style="color: #000000">}</span><span>
 </span></code></pre>
         </section>
+      </section>
+      <section>
+        <h2 id="restricted-types"><a href="#restricted-types" aria-hidden="true"><span class="icon icon-link"></span></a>Restricted Types</h2>
+        <p>
+          Structure and resource types can be <strong>restricted</strong>. Restrictions are interfaces.
+          Restricted types only allow access to a subset of the members and functions
+          of the type that is restricted, indicated by the restrictions.
+        </p>
+        <p>
+          The syntax of a restriced type is <code>T{U1, U2, ... Un}</code>,
+          where <code>T</code> is the restricted type, a concrete resource or strucure type,
+          and the types <code>U1</code> to <code>Un</code> are the restrictions, interfaces that <code>T</code> conforms to.
+        </p>
+        <p>Only the members and functions of the union of the set of restrictions are available.</p>
+        <p>
+          Restricted types are useful for increasing the safety in functions
+          that are suposed to only work on a subset of the type.
+          For example, by using a restricted type for a parameter's type,
+          the function may only access the functionality of the restriction:
+          If the function accidentally attempts to access other functionality,
+          this is prevented by the static checker.
+        </p>
+        <pre><code class="language-cadence,file=restricted-types.cdc"><span style="color: #008000">// Declare a resource interface named `HasCount`,</span><span>
+</span><span style="color: #008000">// which has a read-only `count` field</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">resource interface</span><span style="color: #000000"> HasCount {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> count: </span><span style="color: #0000FF">Int</span><span>
+</span><span style="color: #000000">}</span><span>
+</span><span>
+</span><span style="color: #008000">// Declare a resource named `Counter`, which has a writeable `count` field,</span><span>
+</span><span style="color: #008000">// and conforms to the resource interface `HasCount`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">resource</span><span style="color: #000000"> Counter: HasCount {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> count: </span><span style="color: #0000FF">Int</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">init</span><span style="color: #000000">(count: </span><span style="color: #0000FF">Int</span><span style="color: #000000">) {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.count = count</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> increment() {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.count = </span><span style="color: #0000FF">self</span><span style="color: #000000">.count + </span><span style="color: #09885A">1</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span style="color: #000000">}</span><span>
+</span><span>
+</span><span style="color: #008000">// Create an instance of the resource `Counter`</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> counter: @</span><span style="color: #0000FF">Counter</span><span style="color: #000000"> &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> Counter(count: </span><span style="color: #09885A">42</span><span style="color: #000000">)</span><span>
+</span><span>
+</span><span style="color: #000000">counterRef.count  </span><span style="color: #008000">// is `42`</span><span>
+</span><span>
+</span><span style="color: #000000">counterRef.increment()</span><span>
+</span><span>
+</span><span style="color: #000000">counterRef.count  </span><span style="color: #008000">// is `43`</span><span>
+</span><span>
+</span><span style="color: #008000">// Move the resource in variable `counter` to a new variable `restrictedCounter`,</span><span>
+</span><span style="color: #008000">// but typed with the restricted type `Counter{HasCount}`:</span><span>
+</span><span style="color: #008000">// The variable may hold any `Counter`, but only the functionality</span><span>
+</span><span style="color: #008000">// defined in the given restriction, the interface `HasCount`, may be accessed</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> restrictedCounter: @</span><span style="color: #0000FF">Counter</span><span style="color: #000000">{</span><span style="color: #0000FF">Count</span><span style="color: #000000">} &#x3C;- counter</span><span>
+</span><span>
+</span><span style="color: #008000">// Invalid: Only functionality of restriction `Count` is available,</span><span>
+</span><span style="color: #008000">// i.e. the read-only field `count`, but not the function `increment` of `Counter`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">restrictedCounter.increment()</span><span>
+</span><span>
+</span><span style="color: #008000">// Move the resource in variable `restrictedCounter` to a new variable `unrestrictedCounter`,</span><span>
+</span><span style="color: #008000">// again typed as `Counter`, i.e. all functionality of the counter is available</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> unrestrictedCounter: @</span><span style="color: #0000FF">Counter</span><span style="color: #000000"> &#x3C;- restrictedCounter</span><span>
+</span><span>
+</span><span style="color: #008000">// Valid: The variable `unrestrictedCounter` has type `Counter`,</span><span>
+</span><span style="color: #008000">// so all its functionality is available, including the function `increment`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">unrestrictedCounter.increment()</span><span>
+</span><span>
+</span><span style="color: #008000">// Declare another resource type named `Strings`</span><span>
+</span><span style="color: #008000">// which implements the resource interface `HasCount`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">resource</span><span style="color: #000000"> Strings: HasCount {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> count: </span><span style="color: #0000FF">Int</span><span>
+</span><span style="color: #000000">    access(</span><span style="color: #0000FF">self</span><span style="color: #000000">) </span><span style="color: #0000FF">var</span><span style="color: #000000"> strings: [</span><span style="color: #0000FF">String</span><span style="color: #000000">]</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">init</span><span style="color: #000000">() {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.count = </span><span style="color: #09885A">0</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.strings = []</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> append(_ string: </span><span style="color: #0000FF">String</span><span style="color: #000000">) {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.strings.append(string)</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.count = </span><span style="color: #0000FF">self</span><span style="color: #000000">.count + </span><span style="color: #09885A">1</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span style="color: #000000">}</span><span>
+</span><span>
+</span><span style="color: #008000">// Invalid: The resource type `Strings` is not compatible</span><span>
+</span><span style="color: #008000">// with the restricted type `Counter{HasCount}`.</span><span>
+</span><span style="color: #008000">// Even though the resource `Strings` implements the resource interface `HasCount`,</span><span>
+</span><span style="color: #008000">// it is not compatible with `Counter`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> counter2: @</span><span style="color: #0000FF">Counter</span><span style="color: #000000">{</span><span style="color: #0000FF">HasCount</span><span style="color: #000000">} &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> Strings()</span><span>
+</span></code></pre>
+        <p>
+          In addition to restricting concrete types is also possible
+          to restrict the built-in types <code>AnyStruct</code>, the supertype of all structures,
+          and <code>AnyResource</code>, the supertype of all resources.
+          For example, restricted type <code>AnyResource{HasCount}</code> is any resource type
+          for which only the functionality of the <code>HasCount</code> resource interface can be used.
+        </p>
+        <p>
+          The restricted types <code>AnyStruct</code> and <code>AnyResource</code> can be ommited.
+          For example, the type <code>{HasCount}</code> is any resource that implements
+          the resource interface <code>HasCount</code>.
+        </p>
+        <pre><code class="language-cadence,file=restricted-types-anyresource.cdc"><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct interface</span><span style="color: #000000"> HasID {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> id: </span><span style="color: #0000FF">String</span><span>
+</span><span style="color: #000000">}</span><span>
+</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> A: HasID {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> name: </span><span style="color: #0000FF">String</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">init</span><span style="color: #000000">(name: </span><span style="color: #0000FF">String</span><span style="color: #000000">) {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.name = name</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span style="color: #000000">}</span><span>
+</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> B: HasID {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> name: </span><span style="color: #0000FF">String</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">init</span><span style="color: #000000">(name: </span><span style="color: #0000FF">String</span><span style="color: #000000">) {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.name = name</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span style="color: #000000">}</span><span>
+</span><span>
+</span><span style="color: #008000">// Create two instances, one of type `A`, and one of type `B`.</span><span>
+</span><span style="color: #008000">// Both types conform to interface `HasID`, so the structs can be assigned</span><span>
+</span><span style="color: #008000">// to variables with type `AnyResource{HasID}`: Some resource type which only allows</span><span>
+</span><span style="color: #008000">// access to the functionality of resource interface `HasID`</span><span>
+</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> hasID1: {</span><span style="color: #0000FF">HasID</span><span style="color: #000000">} = A(name: </span><span style="color: #A31515">"1"</span><span style="color: #000000">)</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> hasID2: {</span><span style="color: #0000FF">HasID</span><span style="color: #000000">} = B(name: </span><span style="color: #A31515">"2"</span><span style="color: #000000">)</span><span>
+</span><span>
+</span><span style="color: #008000">// Declare a function named `getID` which has one parameter with type `{HasID}`.</span><span>
+</span><span style="color: #008000">// The type `{HasID}` is a short-hand for `AnyStruct{HasID}`:</span><span>
+</span><span style="color: #008000">// Some structure which only allows access to the functionality of interface `HasID`.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> getID(_ value: {</span><span style="color: #0000FF">HasID</span><span style="color: #000000">}): </span><span style="color: #0000FF">String</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">return</span><span style="color: #000000"> value.id</span><span>
+</span><span style="color: #000000">}</span><span>
+</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> id1 = getID(hasID1)</span><span>
+</span><span style="color: #008000">// `id1` is "1"</span><span>
+</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> id2 = getID(hasID2)</span><span>
+</span><span style="color: #008000">// `id2` is "2"</span><span>
+</span></code></pre>
+        <p>
+          Only concrete types may be restriced, e.g., the restricted type may not be an array,
+          the type <code>[T]{U}</code> is invalid.
+        </p>
+        <p>
+          Restricted types are also useful when giving access to resources and structures
+          to potentially untrusted third-party programs through <a href="#references">references</a>,
+          which are discussed in the next section.
+        </p>
+      </section>
+      <section>
+        <h2 id="references"><a href="#references" aria-hidden="true"><span class="icon icon-link"></span></a>References</h2>
+        <p>
+          It is possible to create references to objects, i.e. resources or structures.
+          A reference can be used to access fields and call functions on the referenced object.
+        </p>
+        <p>References are <strong>copied</strong>, i.e. they are value types.</p>
+        <p>
+          References are created by using the <code>&#x26;</code> operator, followed by the object,
+          the <code>as</code> keyword, and the type through which they should be accessed.
+          The given type must be a supertype of the referenced object's type.
+        </p>
+        <p>References have the type <code>&#x26;T</code>, where <code>T</code> is the type of the referenced object.</p>
+        <pre><code class="language-cadence,file=reference-hello.cdc"><span style="color: #0000FF">let</span><span style="color: #000000"> hello = </span><span style="color: #A31515">"Hello"</span><span>
+</span><span>
+</span><span style="color: #008000">// Create a reference to the "Hello" string, typed as a `String`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> helloRef: &#x26;</span><span style="color: #0000FF">String</span><span style="color: #000000"> = &#x26;hello as &#x26;String</span><span>
+</span><span>
+</span><span style="color: #000000">helloRef.length </span><span style="color: #008000">// is `5`</span><span>
+</span><span>
+</span><span style="color: #008000">// Invalid: Cannot create a reference to `hello`</span><span>
+</span><span style="color: #008000">// typed as `&#x26;Int`, as it has type `String`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> intRef: &#x26;</span><span style="color: #0000FF">Int</span><span style="color: #000000"> = &#x26;hello as &#x26;Int</span><span>
+</span></code></pre>
+        <p>
+          References are covariant in their base types.
+          For example, <code>&#x26;T</code> is a subtype of <code>&#x26;U</code>, if <code>T</code> is a subtype of <code>U</code>.
+        </p>
+        <pre><code class="language-cadence,file=reference-counter.cdc"><span>
+</span><span style="color: #008000">// Declare a resource interface named `HasCount`,</span><span>
+</span><span style="color: #008000">// that has a field `count`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">resource interface</span><span style="color: #000000"> HasCount {</span><span>
+</span><span style="color: #000000">    count: Int</span><span>
+</span><span style="color: #000000">}</span><span>
+</span><span>
+</span><span style="color: #008000">// Declare a resource named `Counter` that conforms to `HasCount`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">resource</span><span style="color: #000000"> Counter: HasCount {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> count: </span><span style="color: #0000FF">Int</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">init</span><span style="color: #000000">(count: </span><span style="color: #0000FF">Int</span><span style="color: #000000">) {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.count = count</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> increment() {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.count = </span><span style="color: #0000FF">self</span><span style="color: #000000">.count + </span><span style="color: #09885A">1</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span style="color: #000000">}</span><span>
+</span><span>
+</span><span style="color: #008000">// Create a new instance of the resource type `Counter`</span><span>
+</span><span style="color: #008000">// and create a reference to it, typed as `&#x26;Counter`,</span><span>
+</span><span style="color: #008000">// so the reference allows access to all fields and functions</span><span>
+</span><span style="color: #008000">// of the counter</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> counter &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> Counter(count: </span><span style="color: #09885A">42</span><span style="color: #000000">)</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> counterRef: &#x26;</span><span style="color: #0000FF">Counter</span><span style="color: #000000"> = &#x26;counter as &#x26;Counter</span><span>
+</span><span>
+</span><span style="color: #000000">counterRef.count  </span><span style="color: #008000">// is `42`</span><span>
+</span><span>
+</span><span style="color: #000000">counterRef.increment()</span><span>
+</span><span>
+</span><span style="color: #000000">counterRef.count  </span><span style="color: #008000">// is `43`</span><span>
+</span></code></pre>
+        <p>References may be <strong>authorized</strong> or <strong>unauthorized</strong>.</p>
+        <p>
+          Authorized references have the <code>auth</code> modifier, i.e. the full syntax is <code>auth &#x26;T</code>,
+          whereas unauthorized references do not have a modifier.
+        </p>
+        <p>
+          Authorized references can be freely upcasted and downcasted,
+          whereas unauthorized references can only be upcasted.
+          Also, authorized references are subtypes of unauthorized references.
+        </p>
+        <pre><code class="language-cadence,file=reference-auth.cdc"><span>
+</span><span style="color: #008000">// Create an unauthorized reference to the counter,</span><span>
+</span><span style="color: #008000">// typed with the restricted type `&#x26;{HasCount}`,</span><span>
+</span><span style="color: #008000">// i.e. some resource that conforms to the `HasCount` interface</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> countRef: &#x26;{</span><span style="color: #0000FF">HasCount</span><span style="color: #000000">} = &#x26;counter as &#x26;{HasCount}</span><span>
+</span><span>
+</span><span style="color: #000000">countRef.count  </span><span style="color: #008000">// is `43`</span><span>
+</span><span>
+</span><span style="color: #008000">// Invalid: The function `increment` is not available</span><span>
+</span><span style="color: #008000">// for the type `&#x26;{HasCount}`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">countRef.increment()</span><span>
+</span><span>
+</span><span style="color: #008000">// Invalid: Cannot failably downcast to reference type `&#x26;Counter`,</span><span>
+</span><span style="color: #008000">// as the reference `countRef` is unauthorized.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #008000">// The counter value has type `Counter`, which is a subtype of `{HasCount}`,</span><span>
+</span><span style="color: #008000">// but as the reference is unauthorized, the cast is not allowed.</span><span>
+</span><span style="color: #008000">// It is not possible to "look under the covers"</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> counterRef2: &#x26;</span><span style="color: #0000FF">Counter</span><span style="color: #000000"> = countRef as? &#x26;Counter</span><span>
+</span><span>
+</span><span style="color: #008000">// Create an authorized reference to the counter,</span><span>
+</span><span style="color: #008000">// again with the restricted type `{HasCount}`, i.e. some resource</span><span>
+</span><span style="color: #008000">// that conforms to the `HasCount` interface</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> authCountRef: </span><span style="color: #0000FF">auth</span><span style="color: #000000"> &#x26;{</span><span style="color: #0000FF">HasCount</span><span style="color: #000000">} = &#x26;counter as auth &#x26;{HasCount}</span><span>
+</span><span>
+</span><span style="color: #008000">// Failably downcast to reference type `&#x26;Counter`.</span><span>
+</span><span style="color: #008000">// This is valid, because the reference `authCountRef` is authorized</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> counterRef3: &#x26;</span><span style="color: #0000FF">Counter</span><span style="color: #000000"> = authCountRef as? &#x26;Counter</span><span>
+</span><span>
+</span><span style="color: #000000">counterRef3.count  </span><span style="color: #008000">// is `43`</span><span>
+</span><span>
+</span><span style="color: #000000">counterRef3.increment()</span><span>
+</span><span>
+</span><span style="color: #000000">counterRef3.count  </span><span style="color: #008000">// is `44`</span><span>
+</span></code></pre>
       </section>
       <section>
         <h2 id="imports"><a href="#imports" aria-hidden="true"><span class="icon icon-link"></span></a>Imports</h2>
@@ -5356,28 +5815,152 @@
       </section>
       <section>
         <h2 id="accounts"><a href="#accounts" aria-hidden="true"><span class="icon icon-link"></span></a>Accounts</h2>
-        <pre><code class="language-cadence"><span style="color: #0000FF">struct interface</span><span style="color: #000000"> Account {</span><span>
-</span><span style="color: #000000">    address: Address</span><span>
-</span><span style="color: #000000">    storage: Storage  </span><span style="color: #008000">// explained below</span><span>
+        <p>Every account can be accessed through two types:</p>
+        <ul>
+          <li>
+            <p>
+              As a <strong>Public Account</strong> with the type <code>PublicAccount</code>,
+              which represents the publicly available portion of an account.
+            </p>
+            <pre><code class="language-cadence"><span style="color: #0000FF">struct</span><span style="color: #000000"> PublicAccount {</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> address: </span><span style="color: #0000FF">Address</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// Storage operations</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> getCapability(at: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">Capability</span><span style="color: #000000">?</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> getLinkTarget(_ path: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">Path</span><span style="color: #000000">?</span><span>
 </span><span style="color: #000000">}</span><span>
 </span></code></pre>
+            <p>
+              Any code can get the <code>PublicAccount</code> for an account address
+              using the built-in <code>getAccount</code> function:
+            </p>
+            <pre><code class="language-cadence"><span style="color: #0000FF">fun</span><span style="color: #000000"> getAccount(_ address: </span><span style="color: #0000FF">Address</span><span style="color: #000000">): </span><span style="color: #0000FF">PublicAccount</span><span>
+</span></code></pre>
+          </li>
+          <li>
+            <p>
+              As an <strong>Authorized Account</strong> with type <code>AuthAccount</code>,
+              which represents the authorized portion of an account.
+            </p>
+            <p>
+              Access to an <code>AuthAccount</code> means having full access to its <a href="#account-storage">storage</a>,
+              public keys, and code.
+            </p>
+            <p>
+              Only <a href="#transactions">signed transactions</a> can get the <code>AuthAccount</code> for an account.
+              For each script signer of the transaction, the corresponding <code>AuthAccount</code> is passed
+              to the <code>prepare</code> phase of the transaction.
+            </p>
+            <pre><code class="language-cadence"><span style="color: #0000FF">struct</span><span style="color: #000000"> AuthAccount {</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> address: </span><span style="color: #0000FF">Address</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// Contract code</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> setCode(_ code: [</span><span style="color: #0000FF">Int</span><span style="color: #000000">])</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// Key management</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> addPublicKey(_ publicKey: [</span><span style="color: #0000FF">Int</span><span style="color: #000000">])</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> removePublicKey(_ index: </span><span style="color: #0000FF">Int</span><span style="color: #000000">)</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// Storage operations</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> save&#x3C;T>(_ value: </span><span style="color: #0000FF">T</span><span style="color: #000000">, to: </span><span style="color: #0000FF">Path</span><span style="color: #000000">)</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> load&#x3C;T>(from: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">T</span><span style="color: #000000">?</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> copy&#x3C;T: </span><span style="color: #0000FF">AnyStruct</span><span style="color: #000000">>(</span><span style="color: #0000FF">from</span><span style="color: #000000">: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">T</span><span style="color: #000000">?</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> borrow&#x3C;T: &#x26;</span><span style="color: #0000FF">Any</span><span style="color: #000000">>(</span><span style="color: #0000FF">from</span><span style="color: #000000">: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">T</span><span style="color: #000000">?</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> link&#x3C;T: &#x26;</span><span style="color: #0000FF">Any</span><span style="color: #000000">>(</span><span style="color: #0000FF">_</span><span style="color: #000000"> </span><span style="color: #0000FF">newCapabilityPath</span><span style="color: #000000">: </span><span style="color: #0000FF">Path</span><span style="color: #000000">, </span><span style="color: #0000FF">target</span><span style="color: #000000">: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">Capability</span><span style="color: #000000">?</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> getLinkTarget(_ path: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">Path</span><span style="color: #000000">?</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> unlink(_ path: </span><span style="color: #0000FF">Path</span><span style="color: #000000">)</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> getCapability(at: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">Capability</span><span style="color: #000000">?</span><span>
+</span><span style="color: #000000">  }</span><span>
+</span></code></pre>
+          </li>
+        </ul>
       </section>
       <section>
         <h2 id="account-storage"><a href="#account-storage" aria-hidden="true"><span class="icon icon-link"></span></a>Account Storage</h2>
-        <p>All accounts have a <code>storage</code> object which contains the stored values of the account.</p>
+        <p>All accounts have storage.</p>
         <p>
-          All accounts also have a <code>published</code> object
-          which contains the published references
-          in an account. This will be covered later.
+          Objects are stored under paths in storage.
+          Paths consist of a domain and an identifier.
         </p>
         <p>
-          Account storage is a key-value store where the <strong>keys are types</strong>.
-          The stored value must be a subtype of the type it is keyed by.
-          This means that if the type <code>Vault</code> is used as a key,
-          the value must be a value that has the type <code>Vault</code> or is a subtype of <code>Vault</code>.
+          Paths start with the character <code>/</code>, followed by the domain, the path separator <code>/</code>,
+          and finally the identifier.
+          For example, the path <code>/storage/test</code> has the domain <code>storage</code> and the identifier <code>test</code>.
         </p>
-        <p>The index operator <code>[]</code> is used for both reading and writing stored values.</p>
-        <pre><code class="language-cadence,file=account-storage.cdc"><span style="color: #008000">// Declare a resource named `Counter`.</span><span>
+        <p>There are only three valid domains: <code>storage</code>, <code>private</code>, and <code>public</code>.</p>
+        <p>Objects in storage are always stored in the <code>storage</code> domain.</p>
+        <p>Both resources and structures can be stored in account storage.</p>
+        <p>
+          Account storage is accessed through the following functions of <code>AuthAccount</code>.
+          This means that any code that has access to the authorized account has access
+          to all its stored objects.
+        </p>
+        <ul>
+          <li>
+            <p><code>fun save&#x3C;T>(_ value: T, to: Path)</code>:</p>
+            <p>
+              Saves an object to account storage.
+              Resources are moved into storage, and structures are copied.
+            </p>
+            <p>
+              <code>T</code> is the type parameter for the object type.
+              It can be inferred from the argument's type.
+            </p>
+            <p>If there is already an object stored under the given path, the program aborts.</p>
+            <p>The path must be a storage path, i.e., only the domain <code>storage</code> is allowed.</p>
+          </li>
+          <li>
+            <p><code>fun load&#x3C;T>(from: Path): T?</code>:</p>
+            <p>
+              Loads an object from account storage.
+              If no object is stored under the given path, the function returns <code>nil</code>.
+              If there is an object stored, the stored resource or structure is moved
+              out of storage and returned as an optional.
+              When the function returns, the storage no longer contains an object
+              under the given path.
+            </p>
+            <p>
+              <code>T</code> is the type parameter for the object type.
+              A type argument for the parameter must be provided explicitly.
+            </p>
+            <p>
+              The type <code>T</code> must be a supertype of the type of the loaded object.
+              If it is not, the function returns <code>nil</code>.
+              The given type must not necessarily be exactly the same as the type of the loaded object.
+            </p>
+            <p>The path must be a storage path, i.e., only the domain <code>storage</code> is allowed.</p>
+          </li>
+          <li>
+            <p><code>fun copy&#x3C;T>(from: Path): T?</code>, where <code>T</code> is the type parameter for the value type:</p>
+            <p>Returns a copy of a structure stored in account storage, without removing it from storage.</p>
+            <p>
+              If no strucure is stored under the given path, the function returns <code>nil</code>.
+              If there is a structure stored, it is copied.
+              The structure stays stored in storage after the function returns.
+            </p>
+            <p>
+              <code>T</code> is the type parameter for the structure type.
+              A type argument for the parameter must be provided explicitly.
+            </p>
+            <p>
+              The type <code>T</code> must be a supertype of the type of the copied structure.
+              If it is not, the function returns <code>nil</code>.
+              The given type must not necessarily be exactly the same as the type of the copied structure
+              structure.
+            </p>
+            <p>The path must be a storage path, i.e., only the domain <code>storage</code> is allowed.</p>
+          </li>
+        </ul>
+        <pre><code class="language-cadence,file=account-storage-save-load-copy.cdc"><span style="color: #008000">// Declare a resource named `Counter`.</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">resource</span><span style="color: #000000"> Counter {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> count: </span><span style="color: #0000FF">Int</span><span>
@@ -5387,213 +5970,410 @@
 </span><span style="color: #000000">    }</span><span>
 </span><span style="color: #000000">}</span><span>
 </span><span>
-</span><span style="color: #008000">// Create a new instance of the resource type `Counter` and move it</span><span>
-</span><span style="color: #008000">// into the storage of the account.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #008000">// In this example the account is available as the constant `account`.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #008000">// The type `Counter` is used as the key to refer to the stored value.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #008000">// A swap must be used to store the counter, because assignment</span><span>
-</span><span style="color: #008000">// is not available, as it would override a potentially existing counter.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #008000">// To perform the swap, the declaration must be variable and have an optional type.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">var</span><span style="color: #000000"> counter: </span><span style="color: #0000FF">Counter</span><span style="color: #000000">? &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> Counter(count: </span><span style="color: #09885A">42</span><span style="color: #000000">)</span><span>
-</span><span style="color: #000000">account.storage[Counter] &#x3C;-> counter</span><span>
+</span><span style="color: #008000">// In this example an authorized account is available through the constant `authAccount`.</span><span>
 </span><span>
-</span><span style="color: #008000">// `counter` is now the counter that was potentially stored before.</span><span>
-</span></code></pre>
-      </section>
-      <section>
-        <h2 id="storage-references"><a href="#storage-references" aria-hidden="true"><span class="icon icon-link"></span></a>Storage References</h2>
-        <p>
-          It is possible to create references to <strong>storage locations</strong>.
-          References allow access to stored values. A reference can be used to read or
-          call fields and methods of stored values
-          without having to move or call the fields
-          and methods on the storage location directly.
-        </p>
-        <p>
-          References are <strong>copied</strong>, i.e. they are value types.
-          Any number of references to a storage location can be created,
-          but only by the account that owns the location being referenced.
-        </p>
-        <p>
-          Note that references are <strong>not</strong> referencing stored values –
-          A reference cannot be used to directly modify a value it references, and
-          if the value stored in the references location is moved or removed,
-          the reference is not updated and it becomes invalid.
-        </p>
-        <p>
-          References are created by using the <code>&#x26;</code> operator,
-          followed by the storage location,the <code>as</code> keyword,
-          and the type through which the stored location should be accessed.
-        </p>
-        <pre><code class="language-cadence,file=reference-ex.cdc"><span style="color: #0000FF">let</span><span style="color: #000000"> nameRef: &#x26;</span><span style="color: #0000FF">Name</span><span style="color: #000000"> = &#x26;account.storage[Name] as &#x26;Name</span><span>
-</span></code></pre>
-        <p>The storage location must be a subtype of the type given after the <code>as</code> keyword.</p>
-        <p>
-          References are covariant in their base types.
-          For example, <code>&#x26;R</code> is a subtype of <code>&#x26;RI</code>,
-          if <code>R</code> is a resource, <code>RI</code> is a resource interface,
-          and resource <code>R</code> conforms to (implements) resource interface <code>RI</code>.
-        </p>
-        <pre><code class="language-cadence,file=storage-reference.cdc"><span>
-</span><span style="color: #008000">// Declare a resource named `Counter`</span><span>
+</span><span style="color: #008000">// Create a new instance of the resource type `Counter`</span><span>
+</span><span style="color: #008000">// and save it in the storage of the account.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">resource</span><span style="color: #000000"> Counter: {</span><span>
+</span><span style="color: #008000">// The path `/storage/counter` is used to refer to the stored value.</span><span>
+</span><span style="color: #008000">// Its identifier `counter` was chosen freely and could be something else.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">authAccount.save(&#x3C;-create Counter(count: </span><span style="color: #09885A">42</span><span style="color: #000000">), to: /storage/counter)</span><span>
+</span><span>
+</span><span style="color: #008000">// Run-time error: Storage already contains an object under path `/storage/counter`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">authAccount.save(&#x3C;-create Counter(count: </span><span style="color: #09885A">123</span><span style="color: #000000">), to: /storage/counter)</span><span>
+</span><span>
+</span><span style="color: #008000">// Load the `Counter` resource from storage path `/storage/counter`.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #008000">// The new constant `counter` has the type `Counter?`, i.e., it is an optional,</span><span>
+</span><span style="color: #008000">// and its value is the counter resource, that was saved at the beginning</span><span>
+</span><span style="color: #008000">// of the example.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> counter &#x3C;- authAccount.load&#x3C;@Counter>(</span><span style="color: #0000FF">from</span><span style="color: #000000">: /storage/counter)</span><span>
+</span><span>
+</span><span style="color: #008000">// The storage is now empty, there is no longer an object stored</span><span>
+</span><span style="color: #008000">// under the path `/storage/counter`.</span><span>
+</span><span>
+</span><span style="color: #008000">// Load the `Counter` resource again from storage path `/storage/counter`.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #008000">// The new constant `counter2` has the type `Counter?` and is `nil`,</span><span>
+</span><span style="color: #008000">// as nothing is stored under the path `/storage/counter` anymore,</span><span>
+</span><span style="color: #008000">// because the previous load moved the counter out of storage.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> counter2 &#x3C;- authAccount.load&#x3C;@Counter>(</span><span style="color: #0000FF">from</span><span style="color: #000000">: /storage/counter)</span><span>
+</span><span>
+</span><span style="color: #008000">// Create another new instance of the resource type `Counter`</span><span>
+</span><span style="color: #008000">// and save it in the storage of the account.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #008000">// The path `/storage/otherCounter` is used to refer to the stored value.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">authAccount.save(&#x3C;-create Counter(count: </span><span style="color: #09885A">123</span><span style="color: #000000">), to: /storage/otherCounter)</span><span>
+</span><span>
+</span><span style="color: #008000">// Load the `Vault` resource from storage path `/storage/otherCounter`.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #008000">// The new constant `vault` has the type `Vault?` and its value is `nil`,</span><span>
+</span><span style="color: #008000">// as there is a resource with type `Counter` stored under the path,</span><span>
+</span><span style="color: #008000">// which is not a subtype of the requested type `Vault`.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> vault &#x3C;- authAccount.load&#x3C;@Vault>(</span><span style="color: #0000FF">from</span><span style="color: #000000">: /storage/otherCounter)</span><span>
+</span><span>
+</span><span style="color: #008000">// The storage still stores a `Counter` resource under the path `/storage/otherCounter`.</span><span>
+</span><span>
+</span><span style="color: #008000">// Save the string "Hello, World" in storage</span><span>
+</span><span style="color: #008000">// under the path `/storage/helloWorldMessage`.</span><span>
+</span><span>
+</span><span style="color: #000000">authAccount.save(</span><span style="color: #A31515">"Hello, world!"</span><span style="color: #000000">, to: /storage/helloWorldMessage)</span><span>
+</span><span>
+</span><span style="color: #008000">// Copy the stored message from storage.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #008000">// After the copy, the storage still stores the string under the path.</span><span>
+</span><span style="color: #008000">// Unlike `load`, `copy` does not remove the object from storage.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> message = authAccount.copy&#x3C;String>(</span><span style="color: #0000FF">from</span><span style="color: #000000">: /storage/helloWorldMessage)</span><span>
+</span><span>
+</span><span style="color: #008000">// Create a new instance of the resource type `Vault`</span><span>
+</span><span style="color: #008000">// and save it in the storage of the account.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">authAccount.save(&#x3C;-createEmptyVault(), to: /storage/vault)</span><span>
+</span><span>
+</span><span style="color: #008000">// Invalid: Cannot copy a resource, as this would allow arbitrary duplication.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> vault &#x3C;- authAccount.copy&#x3C;@Vault>(</span><span style="color: #0000FF">from</span><span style="color: #000000">: /storage/vault)</span><span>
+</span></code></pre>
+        <p>
+          As it is convenient to work with objects in storage
+          without having to move them out of storage,
+          as it is necessary for resources,
+          it is also possible to create references to objects in storage:
+          This is possible using the <code>borrow</code> function of an <code>AuthAccount</code>:
+        </p>
+        <ul>
+          <li>
+            <p><code>fun borrow&#x3C;T: &#x26;Any>(from: Path): T?</code></p>
+            <p>
+              Returns a reference to an object in storage without removing it from storage.
+              If no object is stored under the given path, the function returns <code>nil</code>.
+              If there is an object stored, a reference is returned as an optional.
+            </p>
+            <p>
+              <code>T</code> is the type parameter for the object type.
+              A type argument for the parameter must be provided explicitly.
+              The type argument must be a reference to any type (<code>&#x26;Any</code>; <code>Any</code> is the supertype of all types).
+              It must be possible top create the given reference type <code>T</code> for the stored / borrowed object.
+              If it is not, the function returns <code>nil</code>.
+              The given type must not necessarily be exactly the same as the type of the borrowed object.
+            </p>
+            <p>The path must be a storage path, i.e., only the domain <code>storage</code> is allowed.</p>
+          </li>
+        </ul>
+        <pre><code class="language-cadence,file=account-storage-borrow.cdc"><span style="color: #008000">// Declare a resource interface named `HasCount`, that has a field `count`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">resource interface</span><span style="color: #000000"> HasCount {</span><span>
+</span><span style="color: #000000">    count: Int</span><span>
+</span><span style="color: #000000">}</span><span>
+</span><span>
+</span><span style="color: #008000">// Declare a resource named `Counter` that conforms to `HasCount`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">resource</span><span style="color: #000000"> Counter: HasCount {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> count: </span><span style="color: #0000FF">Int</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">init</span><span style="color: #000000">(count: </span><span style="color: #0000FF">Int</span><span style="color: #000000">) {</span><span>
 </span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.count = count</span><span>
 </span><span style="color: #000000">    }</span><span>
+</span><span style="color: #000000">}</span><span>
 </span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> increment() {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.count = </span><span style="color: #0000FF">self</span><span style="color: #000000">.count + </span><span style="color: #09885A">1</span><span>
+</span><span style="color: #008000">// In this example an authorized account is available through the constant `authAccount`.</span><span>
+</span><span>
+</span><span style="color: #008000">// Create a new instance of the resource type `Counter`</span><span>
+</span><span style="color: #008000">// and save it in the storage of the account.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #008000">// The path `/storage/counter` is used to refer to the stored value.</span><span>
+</span><span style="color: #008000">// Its identifier `counter` was chosen freely and could be something else.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">authAccount.save(&#x3C;-create Counter(count: </span><span style="color: #09885A">42</span><span style="color: #000000">), to: /storage/counter)</span><span>
+</span><span>
+</span><span style="color: #008000">// Create a reference to the object stored under path `/storage/counter`,</span><span>
+</span><span style="color: #008000">// typed as `&#x26;Counter`.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #008000">// `counterRef` has type `&#x26;Counter?` and is a valid reference, i.e. non-`nil`,</span><span>
+</span><span style="color: #008000">// because the borrow succeeded:</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #008000">// There is an object stored under path `/storage/counter`</span><span>
+</span><span style="color: #008000">// and it has type `Counter`, so it can be borrowed as `&#x26;Counter`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> counterRef = authAccount.borrow&#x3C;&#x26;Counter>(</span><span style="color: #0000FF">from</span><span style="color: #000000">: /storage/counter)</span><span>
+</span><span>
+</span><span style="color: #000000">counterRef?.count </span><span style="color: #008000">// is `42`</span><span>
+</span><span>
+</span><span style="color: #008000">// Create a reference to the object stored under path `/storage/counter`,</span><span>
+</span><span style="color: #008000">// typed as `&#x26;{HasCount}`.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #008000">// `hasCountRef` is non-`nil`, as there is an object stored under path `/storage/counter`,</span><span>
+</span><span style="color: #008000">// and the stored value of type `Counter` conforms to the requested type `{HasCount}`:</span><span>
+</span><span style="color: #008000">// the type `Counter` implements the restricted type's restriction `HasCount`</span><span>
+</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> hasCountRef = authAccount.borrow&#x3C;&#x26;{HasCount}>(</span><span style="color: #0000FF">from</span><span style="color: #000000">: /storage/counter)</span><span>
+</span><span>
+</span><span style="color: #008000">// Create a reference to the object stored under path `/storage/counter`,</span><span>
+</span><span style="color: #008000">// typed as `&#x26;{SomethingElse}`.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #008000">// `otherRef` is `nil`, as there is an object stored under path `/storage/counter`,</span><span>
+</span><span style="color: #008000">// but the stored value of type `Counter` does not conform to to the requested type `{Other}`:</span><span>
+</span><span style="color: #008000">// the type `Counter` does not implement the restricted type's restriction `Other`</span><span>
+</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> otherRef = authAccount.borrow&#x3C;&#x26;{Other}>(</span><span style="color: #0000FF">from</span><span style="color: #000000">: /storage/counter)</span><span>
+</span><span>
+</span><span style="color: #008000">// Create a reference to the object stored under path `/storage/nonExistent`,</span><span>
+</span><span style="color: #008000">// typed as `&#x26;{HasCount}`.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #008000">// `nonExistentRef` is `nil`, as there is nothing stored under path `/storage/nonExistent`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> nonExistentRef = authAccount.borrow&#x3C;&#x26;{HasCount}>(</span><span style="color: #0000FF">from</span><span style="color: #000000">: /storage/nonExistent)</span><span>
+</span></code></pre>
+      </section>
+      <section>
+        <h2 id="capability-based-access-control"><a href="#capability-based-access-control" aria-hidden="true"><span class="icon icon-link"></span></a>Capability-based Access Control</h2>
+        <p>
+          Users will often want to make it so that specific other users or even anyone else
+          can access certain fields and functions of a stored object.
+          This can be done by creating a capability.
+        </p>
+        <p>
+          As was mentioned before, access to stored objects is governed by the
+          tenets of <a href="https://en.wikipedia.org/wiki/Capability-based_security">Capability Security</a>.
+          This means that if an account wants to be able to access another account's
+          stored objects, it must have a valid capability to that object.
+        </p>
+        <p>
+          Capabilities are identified by a path and link to a target path, not directly to an object.
+          Capabilities are either public (any user can get access),
+          or private (access to/from the authorized user is necessary).
+        </p>
+        <p>
+          Public capabilities are created using public paths, i.e. they have the domain <code>public</code>.
+          After creation they can be obtained from both authorized accounts (<code>AuthAccount</code>)
+          and public accounts (<code>PublicAccount</code>).
+        </p>
+        <p>
+          Private capabilities are created using private paths, i.e. they have the domain <code>private</code>.
+          After creation they can be obtained from authorized accounts (<code>AuthAccount</code>),
+          but not from public accounts (<code>PublicAccount</code>).
+        </p>
+        <p>
+          Once a capability is created and obtained, it can be borrowed to get a reference
+          to the stored object.
+          When a capability is created, a type is specified that determines as what type
+          the capability can be borrowed.
+          This allows exposing and hiding certain functionality of a stored object.
+        </p>
+        <p>Capabilities are created using the <code>link</code> function of an authorized account (<code>AuthAccount</code>):</p>
+        <ul>
+          <li>
+            <p><code>fun link&#x3C;T: &#x26;Any>(_ newCapabilityPath: Path, target: Path): Capability?</code></p>
+            <p><code>newCapabilityPath</code> is the public or private path identifiying the new capability.</p>
+            <p>
+              <code>target</code> is any public, private, or storage path that leads to the object
+              that will provide the functionality defined by this capability.
+            </p>
+            <p>
+              <code>T</code> is the type parameter for the capability type.
+              A type argument for the parameter must be provided explicitly.
+            </p>
+            <p>
+              The type parameter defines how the capability can be borrowed,
+              i.e., how the stored value can be accessed.
+            </p>
+            <p>
+              The link function returns <code>nil</code> if a link for the given capability path already exists,
+              or the newly created capability if not.
+            </p>
+            <p>
+              It is not necessary for the target path to lead to a valid object;
+              the target path could be empty, or could lead to an object
+              which does not provide the necessary type interface:
+            </p>
+            <p>
+              The link function does <strong>not</strong> check if the target path is valid/exists at the time
+              the capability is created and does <strong>not</strong> check if the target value conforms to the given type.
+            </p>
+            <p>
+              The link is latent.
+              The target value might be stored after the link is created,
+              and the target value might be moved out after the link has been created.
+            </p>
+          </li>
+        </ul>
+        <p>Capabilities can be removed using the <code>unlink</code> function of an authorized account (<code>AuthAccount</code>):</p>
+        <ul>
+          <li>
+            <p><code>fun unlink(_ path: Path)</code>:</p>
+            <p><code>path</code> is the public or private path identifying the capability that should be removed.</p>
+          </li>
+        </ul>
+        <p>
+          To get the target path for a capability, the <code>getLinkTarget</code> function
+          of an authorized account (<code>AuthAccount</code>) can be used:
+        </p>
+        <ul>
+          <li>
+            <p><code>fun getLinkTarget(_ path: Path): Path?</code></p>
+            <p>
+              <code>path</code> is the public or private path identifying the capability.
+              The function returns the link target path,
+              if a capability exists at the given path,
+              or <code>nil</code> if it does not.
+            </p>
+          </li>
+        </ul>
+        <p>
+          Existing capabilities can be obtained by using the <code>getCapability</code> function
+          of authorized accounts (<code>AuthAccount</code>) and public accounts (<code>PublicAccount</code>):
+        </p>
+        <ul>
+          <li>
+            <p><code>fun getCapability(_ at: Path): Capability?</code></p>
+            <p>
+              For public accounts, the function returns a capability
+              if the given path is public.
+              It is not possible to obtain private capabilities from public accounts.
+              If the path is private or a storage path, the function returns <code>nil</code>.
+            </p>
+            <p>
+              For authorized accounts, the function returns a capability
+              if the given path is public or private.
+              If the path is a storage path, the function returns <code>nil</code>.
+            </p>
+          </li>
+        </ul>
+        <p>
+          The <code>getCapability</code> function does <strong>not</strong> check if the target exists.
+          The link is latent.
+          To check if the target exists currently and could be borrowed,
+          the <code>check</code> function of the capability can be used:
+        </p>
+        <ul>
+          <li>
+            <p><code>fun check&#x3C;T: &#x26;Any>(): Bool</code></p>
+            <p>
+              <code>T</code> is the type parameter for the reference type.
+              A type argument for the parameter must be provided explicitly.
+            </p>
+            <p>
+              The function returns true if the capability currently targets an object
+              that satisfies the given type, i.e. could be borrowed using the given type.
+            </p>
+          </li>
+        </ul>
+        <p>
+          Finally, the capability can be borrowed to get a reference to the stored object.
+          This can be done using the <code>borrow</code> function of the capability:
+        </p>
+        <ul>
+          <li>
+            <p><code>fun borrow&#x3C;T: &#x26;Any>(): T?</code></p>
+            <p>
+              The function returns a reference to the object targeted by the capability,
+              provided it can be borrowed using the given type.
+            </p>
+            <p>
+              <code>T</code> is the type parameter for the reference type.
+              A type argument for the parameter must be provided explicitly.
+            </p>
+            <p>
+              The function returns <code>nil</code> if the targeted path is empty, i.e. nothing is stored under it,
+              if the requested type exceeds what is allowed by the capability (or any interim capabilities)
+            </p>
+          </li>
+        </ul>
+        <pre><code class="language-cadence,file=capabilities.cdc"><span style="color: #008000">// Declare a resource interface named `HasCount`, that has a field `count`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">resource interface</span><span style="color: #000000"> HasCount {</span><span>
+</span><span style="color: #000000">    count: Int</span><span>
+</span><span style="color: #000000">}</span><span>
+</span><span>
+</span><span style="color: #008000">// Declare a resource named `Counter` that conforms to `HasCount`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">resource</span><span style="color: #000000"> Counter: HasCount {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> count: </span><span style="color: #0000FF">Int</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">init</span><span style="color: #000000">(count: </span><span style="color: #0000FF">Int</span><span style="color: #000000">) {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.count = count</span><span>
 </span><span style="color: #000000">    }</span><span>
 </span><span style="color: #000000">}</span><span>
 </span><span>
-</span><span style="color: #008000">// Create a new instance of the resource type `Counter` and move it</span><span>
-</span><span style="color: #008000">// into the storage of the account.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #008000">// In this example the account is available as the constant `account`.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #008000">// The type `Counter` is used as the key to refer to the stored value.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #008000">// A swap must be used to store the counter, because assignment</span><span>
-</span><span style="color: #008000">// is not available, as it would override a potentially existing counter.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #008000">// To perform the swap, the declaration must be variable and have an optional type.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">var</span><span style="color: #000000"> counter: </span><span style="color: #0000FF">Counter</span><span style="color: #000000">? &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> Counter(count: </span><span style="color: #09885A">42</span><span style="color: #000000">)</span><span>
-</span><span style="color: #000000">account.storage[Counter] &#x3C;-> counter</span><span>
+</span><span style="color: #008000">// In this example an authorized account is available through the constant `authAccount`.</span><span>
 </span><span>
-</span><span style="color: #008000">// `counter` is now the counter that was potentially stored before.</span><span>
-</span><span>
-</span><span style="color: #008000">// Create a reference to the storage location `account.storage[Counter]`</span><span>
-</span><span style="color: #008000">// and allow access to it as the type `Counter`.</span><span>
+</span><span style="color: #008000">// Create a new instance of the resource type `Counter`</span><span>
+</span><span style="color: #008000">// and save it in the storage of the account.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> counterReference: &#x26;</span><span style="color: #0000FF">Counter</span><span style="color: #000000"> = &#x26;account.storage[Counter] as &#x26;Counter</span><span>
-</span><span>
-</span><span style="color: #000000">counterReference.count  </span><span style="color: #008000">// is `42`</span><span>
-</span><span>
-</span><span style="color: #000000">counterReference.increment()</span><span>
-</span><span>
-</span><span style="color: #000000">counterReference.count  </span><span style="color: #008000">// is `43`</span><span>
-</span></code></pre>
-        <section>
-          <h3 id="reference-based-access-control"><a href="#reference-based-access-control" aria-hidden="true"><span class="icon icon-link"></span></a>Reference-Based Access Control</h3>
-          <p>
-            As was mentioned before, access to stored objects is governed by the
-            tenets of <a href="https://en.wikipedia.org/wiki/Capability-based_security">Capability Security</a>.
-            This means that if an account wants to be able to access another account's
-            stored objects, it must have a valid reference to that object.
-          </p>
-          <p>
-            Access to stored objects can be restricted by using interfaces. When storing a reference,
-            it can be stored as an interface so that only the fields and methods that the interface
-            specifies are able to be called by those who have a reference.
-          </p>
-          <p>
-            Based on the above example,
-            a user could use an interface to restrict access to only the <code>count</code> field.
-            Often, other accounts will have functions that take specific references
-            as parameters, so this method can be used to create those valid references.
-          </p>
-          <pre><code class="language-cadence,file=storage-access-control.cdc"><span>
-</span><span style="color: #008000">// Declare a resource interface `HasCount`.</span><span>
+</span><span style="color: #008000">// The path `/storage/counter` is used to refer to the stored value.</span><span>
+</span><span style="color: #008000">// Its identifier `counter` was chosen freely and could be something else.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">resource interface</span><span style="color: #000000"> HasCount {</span><span>
+</span><span style="color: #000000">authAccount.save(&#x3C;-create Counter(count: </span><span style="color: #09885A">42</span><span style="color: #000000">), to: /storage/counter)</span><span>
 </span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// Require implementations of the interface to provide</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// a field named `count` which can be publicly read.</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> count: </span><span style="color: #0000FF">Int</span><span>
-</span><span style="color: #000000">}</span><span>
-</span><span>
-</span><span style="color: #008000">// Create another reference to the storage location `account.storage[Counter]`</span><span>
-</span><span style="color: #008000">// and only allow access to it as the type `HasCount`.</span><span>
+</span><span style="color: #008000">// Create a public capability that allows access to the stored counter object</span><span>
+</span><span style="color: #008000">// as the type `{HasCount}`, i.e. only the functionality of reading the field</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> limitedReference: &#x26;</span><span style="color: #0000FF">HasCount</span><span style="color: #000000"> = &#x26;account.storage[Counter] as &#x26;HasCount</span><span>
-</span><span>
-</span><span style="color: #008000">// Read the counter's current count through the limited reference.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #008000">// This is valid because the `HasCount` resource interface declares</span><span>
-</span><span style="color: #008000">// the field `count`.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">limitedReference.count  </span><span style="color: #008000">// is `43`</span><span>
-</span><span>
-</span><span style="color: #008000">// Invalid: The `increment` function is not accessible for the reference,</span><span>
-</span><span style="color: #008000">// because the reference has the type `&#x26;HasCount`,</span><span>
-</span><span style="color: #008000">// i.e. only fields and functions of type `HasCount` can be used,</span><span>
-</span><span style="color: #008000">// and `increment` is not declared in it.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">limitedReference.increment()</span><span>
-</span></code></pre>
-        </section>
-      </section>
-      <section>
-        <h2 id="publishing-references"><a href="#publishing-references" aria-hidden="true"><span class="icon icon-link"></span></a>Publishing References</h2>
-        <p>
-          Users will often want to make it so anyone can access certain fields
-          and methods of an object. This can be done by publishing a reference to that object.
-        </p>
-        <p>
-          Publishing a reference is done by storing the reference in the account's <code>published</code>
-          object. <code>published</code> is a key-value store where the keys are restricted
-          to be only reference types.
-        </p>
-        <p>To continue the example above:</p>
-        <pre><code class="language-cadence,file=published-writing.cdc"><span style="color: #0000FF">resource interface</span><span style="color: #000000"> HasCount {</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// Require implementations of the interface to provide</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// a field named `count` which can be publicly read.</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> count: </span><span style="color: #0000FF">Int</span><span>
-</span><span style="color: #000000">}</span><span>
-</span><span>
-</span><span style="color: #008000">// Create another reference to the storage location `account.storage[Counter]`</span><span>
-</span><span style="color: #008000">// and only allow access to it as the type `HasCount`.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> limitedReference: &#x26;</span><span style="color: #0000FF">HasCount</span><span style="color: #000000"> = &#x26;account.storage[Counter] as &#x26;HasCount</span><span>
-</span><span>
-</span><span style="color: #008000">// Store the reference in the `published` object.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">account.published[&#x26;HasCount] = limitedReference</span><span>
-</span><span>
-</span><span style="color: #008000">// Invalid: Cannot store non-reference types in the `published` object.</span><span>
-</span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">account.published[Counter] &#x3C;- account.storage[Counter]</span><span>
-</span><span>
+</span><span style="color: #000000">authAccount.link&#x3C;&#x26;{HasCount}>(/public/hasCount, target: /storage/counter)</span><span>
 </span></code></pre>
         <p>To get the published portion of an account, the <code>getAccount</code> function can be used.</p>
-        <p>
-          The public account object only has the <code>published</code> object, which is read-only,
-          and can be used to access all published references of the account.
-        </p>
         <p>Imagine that the next example is from a different account as before.</p>
         <pre><code class="language-cadence,file=published-reading"><span>
-</span><span style="color: #008000">// Get the public account object for the account that published the reference.</span><span>
+</span><span style="color: #008000">// Get the public account for the address that stores the counter</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> account = getAccount(</span><span style="color: #09885A">0x72</span><span style="color: #000000">)</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> publicAccount = getAccount(</span><span style="color: #09885A">0x42</span><span style="color: #000000">)</span><span>
 </span><span>
-</span><span style="color: #008000">// Read the `&#x26;HasCount` reference from their published object.</span><span>
+</span><span style="color: #008000">// Get a capability for the counter that is made publicly accessible</span><span>
+</span><span style="color: #008000">// through the path `/public/hasCount`</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> countRef = account.published[&#x26;HasCount] ?? panic(</span><span style="color: #A31515">"missing Count reference!"</span><span style="color: #000000">)</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> countCap = publicAccount.getCapability(/public/hasCount)!</span><span>
 </span><span>
-</span><span style="color: #008000">// Read one of the exposed fields in the reference.</span><span>
+</span><span style="color: #008000">// Borrow the capability to get a reference to the stored counter.</span><span>
+</span><span style="color: #008000">// Use the type `&#x26;{HasCount}`, as this is the type that the capability can be borrowed as.</span><span>
+</span><span style="color: #008000">// See the example below for borrowing using the type `&#x26;Counter`</span><span>
 </span><span style="color: #008000">//</span><span>
+</span><span style="color: #008000">// This borrow succeeds, i.e. the result is not `nil`,</span><span>
+</span><span style="color: #008000">// it is a valid reference, because:</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #008000">// 1. Dereferencing the path chain results in a stored object</span><span>
+</span><span style="color: #008000">//    (`/public/hasCount` links to `/storage/counter`,</span><span>
+</span><span style="color: #008000">//    and there is an object stored under `/storage/counter`)</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #008000">// 2. The stored value is a subtype of the requested type `{HasCount}`</span><span>
+</span><span style="color: #008000">//    (the stored object has type `Counter` which conforms to interface `HasCount`)</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> countRef = countCap.borrow&#x3C;&#x26;{HasCount}>()!</span><span>
+</span><span>
 </span><span style="color: #000000">countRef.count  </span><span style="color: #008000">// is `43`</span><span>
 </span><span>
 </span><span style="color: #008000">// Invalid: The `increment` function is not accessible for the reference,</span><span>
-</span><span style="color: #008000">// because the reference has the type `&#x26;HasCount`.</span><span>
+</span><span style="color: #008000">// because it has the type `&#x26;{HasCount}`</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #000000">countRef.increment()</span><span>
 </span><span>
-</span><span style="color: #008000">// Invalid: Cannot access the account.storage object</span><span>
-</span><span style="color: #008000">// from the public account object.</span><span>
+</span><span style="color: #008000">// Attempt to borrow the capability with the type `&#x26;Counter`.</span><span>
+</span><span style="color: #008000">// This results in `nil`, i.e. the borrow fails,</span><span>
+</span><span style="color: #008000">// because the capability was created/linked using the type `&#x26;{HasCount}`.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> counter = account.storage[Counter]</span><span>
+</span><span style="color: #008000">// The resource type `Counter` implements the resource interface `HasCount`,</span><span>
+</span><span style="color: #008000">// so `Counter` is a subtype of `{HasCount}`, but the capability only allows</span><span>
+</span><span style="color: #008000">// borrowing using unauthorized references of `{HasCount}` (`&#x26;{HasCount}`)</span><span>
+</span><span style="color: #008000">// instead of authorized references (`auth &#x26;{HasCount}`),</span><span>
+</span><span style="color: #008000">// so users of the capability are not allowed to borrow using subtypes,</span><span>
+</span><span style="color: #008000">// and they can't escalate the type by casting the reference either.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #008000">// This shows how parts of the functionality of stored objects</span><span>
+</span><span style="color: #008000">// can be safely exposed to other code</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> counterRef = countCap.borrow&#x3C;&#x26;Counter>()</span><span>
+</span><span>
+</span><span style="color: #008000">// `counterRef` is `nil`</span><span>
+</span><span>
+</span><span style="color: #008000">// Invalid: Cannot access the counter object in storage directly,</span><span>
+</span><span style="color: #008000">// the `borrow` function is not available for public accounts</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> counterRef2 = publicAccount.borrow&#x3C;&#x26;Counter>(/storage/counter)</span><span>
 </span></code></pre>
       </section>
       <section>
@@ -5799,8 +6579,8 @@
 </span><span style="color: #000000">    }</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">init</span><span style="color: #000000">(balance: </span><span style="color: #0000FF">Int</span><span style="color: #000000">) {</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">let</span><span style="color: #000000"> oldVault &#x3C;- </span><span style="color: #0000FF">self</span><span style="color: #000000">.account.storage[Vault] &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> Vault(balance: </span><span style="color: #09885A">1000</span><span style="color: #000000">)</span><span>
-</span><span style="color: #000000">        </span><span style="color: #0000FF">destroy</span><span style="color: #000000"> oldVault</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">let</span><span style="color: #000000"> vault &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> Vault(balance: </span><span style="color: #09885A">1000</span><span style="color: #000000">)</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.account.save(&#x3C;-vault, to: /storage/initialVault)</span><span>
 </span><span style="color: #000000">    }</span><span>
 </span></code></pre>
         <p>
@@ -5910,7 +6690,7 @@
         <h2 id="events"><a href="#events" aria-hidden="true"><span class="icon icon-link"></span></a>Events</h2>
         <p>Events are special values that can be emitted during the execution of a program.</p>
         <p>An event type can be declared with the <code>event</code> keyword.</p>
-        <pre><code class="language-cadence"><span style="color: #000000">event FooEvent(x: Int, y: Int)</span><span>
+        <pre><code class="language-cadence"><span style="color: #0000FF">event</span><span style="color: #000000"> FooEvent(x: Int, y: Int)</span><span>
 </span></code></pre>
         <p>
           The syntax of an event declaration is similar to that of
@@ -5930,12 +6710,12 @@
         </p>
         <pre><code class="language-cadence"><span style="color: #008000">// Invalid: An event cannot be declared globally</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">event GlobalEvent(field: Int)</span><span>
+</span><span style="color: #0000FF">event</span><span style="color: #000000"> GlobalEvent(field: Int)</span><span>
 </span><span>
-</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">contract</span><span style="color: #000000"> Events {</span><span>
+</span><span style="color: #000000">pub contract Events {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// Event with explicit argument labels</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">    event BarEvent(labelA fieldA: Int, labelB fieldB: Int)</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">event</span><span style="color: #000000"> BarEvent(labelA fieldA: Int, labelB fieldB: Int)</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// Invalid: A resource type is not allowed to be used</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// because it would be moved and lost</span><span>
@@ -5948,12 +6728,12 @@
           <h3 id="emitting-events"><a href="#emitting-events" aria-hidden="true"><span class="icon icon-link"></span></a>Emitting events</h3>
           <p>To emit an event from a program, use the <code>emit</code> statement:</p>
           <pre><code class="language-cadence,file=events.cdc"><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">contract</span><span style="color: #000000"> Events {</span><span>
-</span><span style="color: #000000">    event FooEvent(x: Int, y: Int)</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">event</span><span style="color: #000000"> FooEvent(x: Int, y: Int)</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// Event with argument labels</span><span>
 </span><span style="color: #000000">    event BarEvent(labelA fieldA: Int, labelB fieldB: Int)</span><span>
 </span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> events() {</span><span>
+</span><span style="color: #000000">    fun events() {</span><span>
 </span><span style="color: #000000">        </span><span style="color: #0000FF">emit</span><span style="color: #000000"> FooEvent(x: </span><span style="color: #09885A">1</span><span style="color: #000000">, y: </span><span style="color: #09885A">2</span><span style="color: #000000">)</span><span>
 </span><span>
 </span><span style="color: #000000">        </span><span style="color: #008000">// Emit event with explicit argument labels</span><span>
@@ -6027,9 +6807,8 @@
 </span><span style="color: #008000">// as there are signers for the transaction.</span><span>
 </span><span style="color: #008000">// In this case, there would be two signers</span><span>
 </span><span>
-</span><span style="color: #000000">prepare(acct1: AuthAccount, acct2: AuthAccount) {</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> privateResource &#x3C;- acct1.storage[Resource] &#x3C;- </span><span style="color: #0000FF">nil</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">destroy</span><span style="color: #000000"> privateResource</span><span>
+</span><span style="color: #000000">prepare(signer1: AuthAccount, signer2: AuthAccount) {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// ...</span><span>
 </span><span style="color: #000000">}</span><span>
 </span></code></pre>
             <p>
@@ -6050,22 +6829,22 @@
               objects, and performing specific computation on these values.
             </p>
             <p>
-              This phase does not have access to any account's private account objects
+              This phase does not have access to any signer's authorized account object
               and can only access public contract fields and functions,
               public account objects (<code>PublicAccount</code>) using the built-in <code>getAccount</code>
               function, and any local transaction variables
               that were initialized in the <code>prepare</code> block.
             </p>
             <pre><code class="language-cadence,file=execute.cdc"><span style="color: #000000">  </span><span style="color: #0000FF">execute</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">      </span><span style="color: #008000">// Invalid: Cannot access the private account object,</span><span>
-</span><span style="color: #000000">      </span><span style="color: #008000">// as `acct1` is not in scope</span><span>
+</span><span style="color: #000000">      </span><span style="color: #008000">// Invalid: Cannot access the authorized account object,</span><span>
+</span><span style="color: #000000">      </span><span style="color: #008000">// as `account1` is not in scope</span><span>
 </span><span>
-</span><span style="color: #000000">      </span><span style="color: #0000FF">let</span><span style="color: #000000"> privateResource &#x3C;- acct1.storage[Resource] &#x3C;- </span><span style="color: #0000FF">nil</span><span>
-</span><span style="color: #000000">      </span><span style="color: #0000FF">destroy</span><span style="color: #000000"> privateResource</span><span>
+</span><span style="color: #000000">      </span><span style="color: #0000FF">let</span><span style="color: #000000"> resource &#x3C;- account1.load&#x3C;@Resource>(</span><span style="color: #0000FF">from</span><span style="color: #000000">: /storage/resource)</span><span>
+</span><span style="color: #000000">      </span><span style="color: #0000FF">destroy</span><span style="color: #000000"> resource</span><span>
 </span><span>
 </span><span style="color: #000000">      </span><span style="color: #008000">// Valid: Can access any account's public Account object</span><span>
 </span><span>
-</span><span style="color: #000000">      </span><span style="color: #0000FF">let</span><span style="color: #000000"> pubacct = getAccount(</span><span style="color: #09885A">0x03</span><span style="color: #000000">)</span><span>
+</span><span style="color: #000000">      </span><span style="color: #0000FF">let</span><span style="color: #000000"> publicAccount = getAccount(</span><span style="color: #09885A">0x03</span><span style="color: #000000">)</span><span>
 </span><span style="color: #000000">}</span><span>
 </span><span>
 </span></code></pre>
@@ -6136,14 +6915,26 @@
       <section>
         <h2 id="built-in-functions"><a href="#built-in-functions" aria-hidden="true"><span class="icon icon-link"></span></a>Built-in Functions</h2>
         <section>
-          <h3 id="transaction-information"><a href="#transaction-information" aria-hidden="true"><span class="icon icon-link"></span></a>Transaction information</h3>
-          <p>There is currently no built-in function that allows getting the address of the signers of a transaction, the current block number, or timestamp. These are being worked on.</p>
+          <h3 id="block-and-transaction-information"><a href="#block-and-transaction-information" aria-hidden="true"><span class="icon icon-link"></span></a>Block and Transaction Information</h3>
+          <p>
+            To get the addresses of the signers of a transaction,
+            use the <code>address</code> field of each signing <code>AuthAccount</code>
+            that is passed to the transaction's <code>prepare</code> block.
+          </p>
+          <p>
+            There is currently no built-in function that allows getting the current block number,
+            or timestamp.
+            These are being worked on.
+          </p>
         </section>
         <section>
           <h3 id="panic"><a href="#panic" aria-hidden="true"><span class="icon icon-link"></span></a><code>panic</code></h3>
           <pre><code class="language-cadence"><span style="color: #0000FF">fun</span><span style="color: #000000"> panic(_ message: </span><span style="color: #0000FF">String</span><span style="color: #000000">): </span><span style="color: #0000FF">Never</span><span>
 </span></code></pre>
-          <p>Terminates the program unconditionally and reports a message which explains why the unrecoverable error occurred.</p>
+          <p>
+            Terminates the program unconditionally
+            and reports a message which explains why the unrecoverable error occurred.
+          </p>
           <section>
             <h4 id="example"><a href="#example" aria-hidden="true"><span class="icon icon-link"></span></a>Example</h4>
             <pre><code class="language-cadence"><span style="color: #0000FF">let</span><span style="color: #000000"> optionalAccount: </span><span style="color: #0000FF">Account</span><span style="color: #000000">? = </span><span style="color: #008000">// ...</span><span>
@@ -6155,7 +6946,11 @@
           <h3 id="assert"><a href="#assert" aria-hidden="true"><span class="icon icon-link"></span></a><code>assert</code></h3>
           <pre><code class="language-cadence"><span style="color: #0000FF">fun</span><span style="color: #000000"> assert(_ condition: </span><span style="color: #0000FF">Bool</span><span style="color: #000000">, message: </span><span style="color: #0000FF">String</span><span style="color: #000000">)</span><span>
 </span></code></pre>
-          <p>Terminates the program if the given condition is false, and reports a message which explains how the condition is false. Use this function for internal sanity checks.</p>
+          <p>
+            Terminates the program if the given condition is false,
+            and reports a message which explains how the condition is false.
+            Use this function for internal sanity checks.
+          </p>
           <p>The message argument is optional.</p>
         </section>
       </section>
