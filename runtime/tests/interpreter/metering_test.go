@@ -29,7 +29,7 @@ import (
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
-func TestInterpretMetering(t *testing.T) {
+func TestInterpretStatementHandler(t *testing.T) {
 
 	checkerImported, err := ParseAndCheck(t, `
       pub fun a() {
@@ -118,6 +118,98 @@ func TestInterpretMetering(t *testing.T) {
 			{0, 9},
 			{0, 16},
 			{0, 17},
+		},
+		occurrences,
+	)
+}
+
+func TestInterpretLoopIterationHandler(t *testing.T) {
+
+	checkerImported, err := ParseAndCheck(t, `
+      pub fun a() {
+          var i = 1
+          while i <= 4 {
+              i = i + 1
+          }
+
+          for i in [1, 2, 3, 4, 5] {}
+      }
+    `)
+	require.NoError(t, err)
+
+	checkerImporting, err := ParseAndCheckWithOptions(t,
+		`
+          import a from "imported"
+
+          fun b() {
+              var i = 1
+              while i <= 2 {
+                  i = i + 1
+              }
+
+              for i in [1, 2, 3] {}
+
+              a()
+          }
+        `,
+		ParseAndCheckOptions{
+			ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
+				return checkerImported.Program, nil
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	type occurrence struct {
+		interpreterID int
+		line          int
+	}
+
+	var occurrences []occurrence
+	var nextInterpreterID int
+	interpreterIDs := map[*interpreter.Interpreter]int{}
+
+	inter, err := interpreter.NewInterpreter(
+		checkerImporting,
+		interpreter.WithOnLoopIterationHandler(func(inter *interpreter.Interpreter, line int) {
+
+			id, ok := interpreterIDs[inter]
+			if !ok {
+				id = nextInterpreterID
+				nextInterpreterID++
+				interpreterIDs[inter] = id
+			}
+
+			occurrences = append(occurrences, occurrence{
+				interpreterID: id,
+				line:          line,
+			})
+		}),
+	)
+	require.NoError(t, err)
+
+	err = inter.Interpret()
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("b")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]occurrence{
+			{0, 6},
+			{0, 6},
+			{0, 10},
+			{0, 10},
+			{0, 10},
+			{1, 4},
+			{1, 4},
+			{1, 4},
+			{1, 4},
+			{1, 8},
+			{1, 8},
+			{1, 8},
+			{1, 8},
+			{1, 8},
 		},
 		occurrences,
 	)
