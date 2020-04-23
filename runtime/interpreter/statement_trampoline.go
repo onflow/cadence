@@ -23,8 +23,9 @@ import (
 )
 
 type StatementTrampoline struct {
-	F    func() trampoline.Trampoline
-	Line int
+	F           func() trampoline.Trampoline
+	Interpreter *Interpreter
+	Line        int
 }
 
 func (m StatementTrampoline) Resume() interface{} {

@@ -85,7 +85,6 @@ type OnEventEmittedFunc func(
 // OnStatementFunc is a function that is triggered when a statement is about to be executed.
 //
 type OnStatementFunc func(
-	inter *Interpreter,
 	statement *Statement,
 )
 
@@ -511,8 +510,9 @@ func (interpreter *Interpreter) Interpret() (err error) {
 }
 
 type Statement struct {
-	Trampoline Trampoline
-	Line       int
+	Interpreter *Interpreter
+	Trampoline  Trampoline
+	Line        int
 }
 
 func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}, *Statement) {
@@ -523,8 +523,9 @@ func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}
 			return nil, &Statement{
 				// NOTE: resumption using outer trampoline,
 				// not just inner statement trampoline
-				Trampoline: t,
-				Line:       statement.Line,
+				Trampoline:  t,
+				Interpreter: statement.Interpreter,
+				Line:        statement.Line,
 			}
 		}
 
@@ -548,7 +549,7 @@ func (interpreter *Interpreter) runAllStatements(t Trampoline) interface{} {
 		}
 
 		if interpreter.onStatement != nil {
-			interpreter.onStatement(interpreter, statement)
+			interpreter.onStatement(statement)
 		}
 
 		result = statement.Trampoline.Resume()
@@ -885,7 +886,8 @@ func (interpreter *Interpreter) visitStatements(statements []ast.Statement) Tram
 		F: func() Trampoline {
 			return statement.Accept(interpreter).(Trampoline)
 		},
-		Line: line,
+		Interpreter: interpreter,
+		Line:        line,
 	}.FlatMap(func(returnValue interface{}) Trampoline {
 		if _, isReturn := returnValue.(controlReturn); isReturn {
 			return Done{Result: returnValue}
