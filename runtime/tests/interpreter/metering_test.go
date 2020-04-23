@@ -214,3 +214,92 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 		occurrences,
 	)
 }
+
+func TestInterpretFunctionInvocationHandler(t *testing.T) {
+
+	checkerImported, err := ParseAndCheck(t, `
+      pub fun a() {}
+
+      pub fun b() {
+          true
+          true
+          a()
+          true
+          true
+      }
+    `)
+	require.NoError(t, err)
+
+	checkerImporting, err := ParseAndCheckWithOptions(t,
+		`
+          import b from "imported"
+
+          pub fun c() {
+              true
+              true
+              b()
+              true
+              true
+          }
+
+          pub fun d() {
+              true
+              true
+              c()
+              true
+              true
+          }
+        `,
+		ParseAndCheckOptions{
+			ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
+				return checkerImported.Program, nil
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	type occurrence struct {
+		interpreterID int
+		line          int
+	}
+
+	var occurrences []occurrence
+	var nextInterpreterID int
+	interpreterIDs := map[*interpreter.Interpreter]int{}
+
+	inter, err := interpreter.NewInterpreter(
+		checkerImporting,
+		interpreter.WithOnFunctionInvocationHandler(
+			func(inter *interpreter.Interpreter, line int) {
+
+				id, ok := interpreterIDs[inter]
+				if !ok {
+					id = nextInterpreterID
+					nextInterpreterID++
+					interpreterIDs[inter] = id
+				}
+
+				occurrences = append(occurrences, occurrence{
+					interpreterID: id,
+					line:          line,
+				})
+			},
+		),
+	)
+	require.NoError(t, err)
+
+	err = inter.Interpret()
+	require.NoError(t, err)
+
+	_, err = inter.Invoke("d")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]occurrence{
+			{0, 15},
+			{0, 7},
+			{1, 7},
+		},
+		occurrences,
+	)
+}

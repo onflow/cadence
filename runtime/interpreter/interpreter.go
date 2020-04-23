@@ -95,6 +95,13 @@ type OnLoopIterationFunc func(
 	line int,
 )
 
+// OnFunctionInvocationFunc is a function that is triggered when a function is about to be invoked.
+//
+type OnFunctionInvocationFunc func(
+	inter *Interpreter,
+	line int,
+)
+
 // StorageExistenceHandlerFunc is a function that handles storage existence checks.
 //
 type StorageExistenceHandlerFunc func(
@@ -202,6 +209,7 @@ type Interpreter struct {
 	onEventEmitted                 OnEventEmittedFunc
 	onStatement                    OnStatementFunc
 	onLoopIteration                OnLoopIterationFunc
+	onFunctionInvocation           OnFunctionInvocationFunc
 	storageExistenceHandler        StorageExistenceHandlerFunc
 	storageReadHandler             StorageReadHandlerFunc
 	storageWriteHandler            StorageWriteHandlerFunc
@@ -240,6 +248,16 @@ func WithOnStatementHandler(handler OnStatementFunc) Option {
 func WithOnLoopIterationHandler(handler OnLoopIterationFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetOnLoopIterationHandler(handler)
+		return nil
+	}
+}
+
+// WithOnLoopIterationHandler returns an interpreter option which sets
+// the given function as the loop iteration handler.
+//
+func WithOnFunctionInvocationHandler(handler OnFunctionInvocationFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetOnFunctionInvocationHandler(handler)
 		return nil
 	}
 }
@@ -416,6 +434,12 @@ func (interpreter *Interpreter) SetOnStatementHandler(function OnStatementFunc) 
 //
 func (interpreter *Interpreter) SetOnLoopIterationHandler(function OnLoopIterationFunc) {
 	interpreter.onLoopIteration = function
+}
+
+// SetOnFunctionInvocationHandler sets the function that is triggered when a loop iteration is about to be executed.
+//
+func (interpreter *Interpreter) SetOnFunctionInvocationHandler(function OnFunctionInvocationFunc) {
+	interpreter.onFunctionInvocation = function
 }
 
 // SetStorageExistenceHandler sets the function that is used when a storage key is checked for existence.
@@ -1942,6 +1966,8 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 						ast.NewRangeFromPositioned(invocationExpression),
 					)
 
+					interpreter.reportFunctionInvocation(invocationExpression)
+
 					// If this is invocation is optional chaining, wrap the result
 					// as an optional, as the result is expected to be an optional
 
@@ -2974,6 +3000,7 @@ func (interpreter *Interpreter) ensureLoaded(location ast.Location, loadProgram 
 		WithOnEventEmittedHandler(interpreter.onEventEmitted),
 		WithOnStatementHandler(interpreter.onStatement),
 		WithOnLoopIterationHandler(interpreter.onLoopIteration),
+		WithOnFunctionInvocationHandler(interpreter.onFunctionInvocation),
 		WithStorageExistenceHandler(interpreter.storageExistenceHandler),
 		WithStorageReadHandler(interpreter.storageReadHandler),
 		WithStorageWriteHandler(interpreter.storageWriteHandler),
@@ -3976,4 +4003,13 @@ func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
 
 	line := pos.StartPosition().Line
 	interpreter.onLoopIteration(interpreter, line)
+}
+
+func (interpreter *Interpreter) reportFunctionInvocation(pos ast.HasPosition) {
+	if interpreter.onFunctionInvocation == nil {
+		return
+	}
+
+	line := pos.StartPosition().Line
+	interpreter.onFunctionInvocation(interpreter, line)
 }
