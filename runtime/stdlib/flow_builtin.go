@@ -180,17 +180,17 @@ var TypeIDsType = &sema.VariableSizedType{
 	Type: &sema.StringType{},
 }
 
-var addressParameter = &sema.Parameter{
+var AccountEventAddressParameter = &sema.Parameter{
 	Identifier:     "address",
 	TypeAnnotation: sema.NewTypeAnnotation(&sema.AddressType{}),
 }
 
-var codeHashParameter = &sema.Parameter{
+var AccountEventCodeHashParameter = &sema.Parameter{
 	Identifier:     "codeHash",
 	TypeAnnotation: sema.NewTypeAnnotation(HashType),
 }
 
-var publicKeyParameter = &sema.Parameter{
+var AccountEventPublicKeyParameter = &sema.Parameter{
 	Identifier: "publicKey",
 	TypeAnnotation: sema.NewTypeAnnotation(
 		&sema.VariableSizedType{
@@ -199,36 +199,36 @@ var publicKeyParameter = &sema.Parameter{
 	),
 }
 
-var contractsParameter = &sema.Parameter{
+var AccountEventContractsParameter = &sema.Parameter{
 	Identifier:     "contracts",
 	TypeAnnotation: sema.NewTypeAnnotation(TypeIDsType),
 }
 
 var AccountCreatedEventType = newFlowEventType(
 	"AccountCreated",
-	addressParameter,
-	codeHashParameter,
-	contractsParameter,
+	AccountEventAddressParameter,
+	AccountEventCodeHashParameter,
+	AccountEventContractsParameter,
 )
 
 var AccountKeyAddedEventType = newFlowEventType(
 	"AccountKeyAdded",
-	addressParameter,
-	publicKeyParameter,
+	AccountEventAddressParameter,
+	AccountEventPublicKeyParameter,
 )
 
 var AccountKeyRemovedEventType = newFlowEventType(
 	"AccountKeyRemoved",
-	addressParameter,
-	publicKeyParameter,
+	AccountEventAddressParameter,
+	AccountEventPublicKeyParameter,
 )
 
 var AccountCodeUpdatedEventType = newFlowEventType(
 	"AccountCodeUpdated",
-	addressParameter,
-	codeHashParameter,
-	publicKeyParameter,
-	contractsParameter,
+	AccountEventAddressParameter,
+	AccountEventCodeHashParameter,
+	AccountEventPublicKeyParameter,
+	AccountEventContractsParameter,
 )
 
 // BlockType
