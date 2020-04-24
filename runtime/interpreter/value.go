@@ -3320,6 +3320,19 @@ func init() {
 	gob.Register(Fix64Value(0))
 }
 
+func NewFix64ValueWithInteger(integer int64) Fix64Value {
+
+	if integer < sema.Fix64TypeMinInt {
+		panic(UnderflowError{})
+	}
+
+	if integer > sema.Fix64TypeMaxInt {
+		panic(OverflowError{})
+	}
+
+	return Fix64Value(integer * sema.Fix64Factor)
+}
+
 func (Fix64Value) IsValue() {}
 
 func (Fix64Value) DynamicType(_ *Interpreter) DynamicType {
@@ -3497,10 +3510,6 @@ type UFix64Value uint64
 
 func init() {
 	gob.Register(UFix64Value(0))
-}
-
-func NewUFix64ValueWithFraction(integer, fraction uint64) UFix64Value {
-	return UFix64Value(integer*sema.Fix64Factor + fraction)
 }
 
 func (UFix64Value) IsValue() {}

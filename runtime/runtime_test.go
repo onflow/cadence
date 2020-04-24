@@ -2107,16 +2107,16 @@ func TestRuntimeBlock(t *testing.T) {
       transaction {
         prepare() {
           let block = getCurrentBlock()
-          log(block.number)
+          log(block)
+          log(block.height)
           log(block.id)
+          log(block.timestamp)
 
-          let previousBlock = block.previousBlock
-          log(previousBlock?.number)
-          log(previousBlock?.id)
-
-          let nextBlock = block.nextBlock
-          log(nextBlock?.number)
+          let nextBlock = getBlock(at: block.height + UInt64(1))
+          log(nextBlock)
+          log(nextBlock?.height)
           log(nextBlock?.id)
+          log(nextBlock?.timestamp)
         }
       }
     `)
@@ -2137,12 +2137,14 @@ func TestRuntimeBlock(t *testing.T) {
 
 	assert.Equal(t,
 		[]string{
+			"Block(height: 1, id: 0x0000000000000000000000000000000000000000000000000000000000000001, timestamp: 1.00000000)",
 			"1",
 			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]",
-			"nil",
-			"nil",
+			"1.00000000",
+			"Block(height: 2, id: 0x0000000000000000000000000000000000000000000000000000000000000002, timestamp: 2.00000000)",
 			"2",
 			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]",
+			"2.00000000",
 		},
 		loggedMessages,
 	)

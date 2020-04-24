@@ -25,6 +25,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"time"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -497,6 +498,7 @@ func (r *interpreterRuntime) standardLibraryFunctions(
 			GetAccount:      r.newGetAccountFunction(runtimeInterface),
 			Log:             r.newLogFunction(runtimeInterface),
 			GetCurrentBlock: r.newGetCurrentBlockFunction(runtimeInterface),
+			GetBlock:        r.newGetBlockFunction(runtimeInterface),
 		}),
 		stdlib.BuiltinFunctions...,
 	)
@@ -954,41 +956,49 @@ func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpre
 	}
 }
 
-func (r *interpreterRuntime) newGetCurrentBlockFunction(_ Interface) interpreter.HostFunction {
+func (r *interpreterRuntime) getCurrentBlockHeight(runtimeInterface Interface) uint64 {
+	// TODO: https://github.com/dapperlabs/flow-go/issues/552
+	return 1
+}
+
+func (r *interpreterRuntime) getBlockAtHeight(height uint64, runtimeInterface Interface) *BlockValue {
+	// TODO: https://github.com/dapperlabs/flow-go/issues/552
+	//   Return nil if the requested block does not exist.
+	//   For now, always return a fake block.
+
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.BigEndian, height)
+	if err != nil {
+		panic(err)
+	}
+
+	encoded := buf.Bytes()
+	var hash [stdlib.BlockIDSize]byte
+	copy(hash[stdlib.BlockIDSize-len(encoded):], encoded)
+
+	block := NewBlockValue(height, hash, time.Unix(int64(height), 0))
+	return &block
+}
+
+func (r *interpreterRuntime) newGetCurrentBlockFunction(runtimeInterface Interface) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
-		// TODO: https://github.com/dapperlabs/flow-go/issues/552
+		height := r.getCurrentBlockHeight(runtimeInterface)
+		block := r.getBlockAtHeight(height, runtimeInterface)
+		return trampoline.Done{Result: *block}
+	}
+}
 
-		var makeBlock func(uint64) BlockValue
-		makeBlock = func(number uint64) BlockValue {
-
-			buf := new(bytes.Buffer)
-			err := binary.Write(buf, binary.BigEndian, number)
-			if err != nil {
-				panic(err)
-			}
-
-			encoded := buf.Bytes()
-			var hash [stdlib.BlockIDSize]byte
-			copy(hash[stdlib.BlockIDSize-len(encoded):], encoded)
-
-			return BlockValue{
-				Number: number,
-				ID:     hash,
-				NextBlock: func() *BlockValue {
-					nextBlock := makeBlock(number + 1)
-					return &nextBlock
-				},
-				PreviousBlock: func() *BlockValue {
-					if number == 1 {
-						return nil
-					}
-					previousBlock := makeBlock(number - 1)
-					return &previousBlock
-				},
-			}
+func (r *interpreterRuntime) newGetBlockFunction(runtimeInterface Interface) interpreter.HostFunction {
+	return func(invocation interpreter.Invocation) trampoline.Trampoline {
+		height := uint64(invocation.Arguments[0].(interpreter.UInt64Value))
+		block := r.getBlockAtHeight(height, runtimeInterface)
+		var result interpreter.Value
+		if block == nil {
+			result = interpreter.NilValue{}
+		} else {
+			result = interpreter.NewSomeValueOwningNonCopying(*block)
 		}
-
-		return trampoline.Done{Result: makeBlock(1)}
+		return trampoline.Done{Result: result}
 	}
 }
 
@@ -1041,14 +1051,35 @@ func compositeTypesToIDValues(types []*sema.CompositeType) *interpreter.ArrayVal
 // Block
 
 type BlockValue struct {
-	Number        uint64
-	ID            [stdlib.BlockIDSize]byte
-	NextBlock     func() *BlockValue
-	PreviousBlock func() *BlockValue
+	Height    interpreter.UInt64Value
+	ID        *interpreter.ArrayValue
+	Timestamp interpreter.Fix64Value
 }
 
 func init() {
 	gob.Register(&BlockValue{})
+}
+
+func NewBlockValue(height uint64, id [stdlib.BlockIDSize]byte, timestamp time.Time) BlockValue {
+	// height
+	heightValue := interpreter.UInt64Value(height)
+
+	// ID
+	var values = make([]interpreter.Value, stdlib.BlockIDSize)
+	for i, b := range id {
+		values[i] = interpreter.UInt8Value(b)
+	}
+	idValue := &interpreter.ArrayValue{Values: values}
+
+	// timestamp
+	// TODO: verify
+	timestampValue := interpreter.NewFix64ValueWithInteger(timestamp.Unix())
+
+	return BlockValue{
+		Height:    heightValue,
+		ID:        idValue,
+		Timestamp: timestampValue,
+	}
 }
 
 func (BlockValue) IsValue() {}
@@ -1072,29 +1103,14 @@ func (BlockValue) SetOwner(_ *common.Address) {
 
 func (v BlockValue) GetMember(_ *interpreter.Interpreter, _ interpreter.LocationRange, name string) interpreter.Value {
 	switch name {
-	case "number":
-		return interpreter.UInt64Value(v.Number)
+	case "height":
+		return v.Height
 
 	case "id":
-		var values = make([]interpreter.Value, stdlib.BlockIDSize)
-		for i, b := range v.ID {
-			values[i] = interpreter.UInt8Value(b)
-		}
-		return &interpreter.ArrayValue{Values: values}
+		return v.ID
 
-	case "previousBlock":
-		previousBlock := v.PreviousBlock()
-		if previousBlock == nil {
-			return interpreter.NilValue{}
-		}
-		return interpreter.NewSomeValueOwningNonCopying(previousBlock)
-
-	case "nextBlock":
-		nextBlock := v.NextBlock()
-		if nextBlock == nil {
-			return interpreter.NilValue{}
-		}
-		return interpreter.NewSomeValueOwningNonCopying(nextBlock)
+	case "timestamp":
+		return v.Timestamp
 
 	default:
 		panic(runtimeErrors.NewUnreachableError())
@@ -1105,9 +1121,19 @@ func (v BlockValue) SetMember(_ *interpreter.Interpreter, _ interpreter.Location
 	panic(runtimeErrors.NewUnreachableError())
 }
 
+func (v BlockValue) IDAsByteArray() [stdlib.BlockIDSize]byte {
+	var byteArray [stdlib.BlockIDSize]byte
+	for i, b := range v.ID.Values {
+		byteArray[i] = byte(b.(interpreter.UInt8Value))
+	}
+	return byteArray
+}
+
 func (v BlockValue) String() string {
 	return fmt.Sprintf(
-		"Block(number: %d, hash: 0x%x)",
-		v.Number, v.ID,
+		"Block(height: %s, id: 0x%x, timestamp: %s)",
+		v.Height,
+		v.IDAsByteArray(),
+		v.Timestamp,
 	)
 }
