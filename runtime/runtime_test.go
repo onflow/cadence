@@ -25,11 +25,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -1272,14 +1274,43 @@ func ArrayValueFromBytes(bytes []byte) *interpreter.ArrayValue {
 
 func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
-	expectSuccess := func(t *testing.T, err error, accountCode []byte, events []Event) {
+	expectSuccess := func(t *testing.T, err error, accountCode []byte, events []Event, expectedEventType sema.Type) {
 		require.NoError(t, err)
 
 		assert.NotNil(t, accountCode)
-		assert.Len(t, events, 1)
+
+		require.Len(t, events, 1)
+
+		event := events[0]
+
+		require.Same(t, event.Type, expectedEventType)
+
+		expectedEventCompositeType := expectedEventType.(*sema.CompositeType)
+
+		codeHashParameterIndex := -1
+
+		for i, constructorParameter := range expectedEventCompositeType.ConstructorParameters {
+			if constructorParameter.Identifier != stdlib.AccountEventCodeHashParameter.Identifier {
+				continue
+			}
+			codeHashParameterIndex = i
+		}
+
+		if codeHashParameterIndex < 0 {
+			t.Error("couldn't find code hash parameter in event type")
+		}
+
+		expectedCodeHash := sha3.Sum256(accountCode)
+
+		codeHashValue := event.Fields[codeHashParameterIndex].Value
+
+		actualCodeHash, err := interpreter.ByteArrayValueToByteSlice(codeHashValue)
+		require.NoError(t, err)
+
+		require.Equal(t, expectedCodeHash[:], actualCodeHash)
 	}
 
-	expectFailure := func(t *testing.T, err error, accountCode []byte, events []Event) {
+	expectFailure := func(t *testing.T, err error, accountCode []byte, events []Event, _ sema.Type) {
 		require.Error(t, err)
 
 		assert.Nil(t, accountCode)
@@ -1295,7 +1326,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		name      string
 		contract  string
 		arguments []argument
-		check     func(t *testing.T, err error, accountCode []byte, events []Event)
+		check     func(t *testing.T, err error, accountCode []byte, events []Event, expectedEventType sema.Type)
 	}
 
 	tests := []test{
@@ -1353,7 +1384,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		},
 	}
 
-	t.Run("updateAccountCode", func(t *testing.T) {
+	t.Run("AuthAccount.setCode", func(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
@@ -1405,12 +1436,12 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 				err := runtime.ExecuteTransaction(script, runtimeInterface, utils.TestLocation)
 
-				test.check(t, err, accountCode, events)
+				test.check(t, err, accountCode, events, stdlib.AccountCodeUpdatedEventType)
 			})
 		}
 	})
 
-	t.Run("Account", func(t *testing.T) {
+	t.Run("AuthAccount", func(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
@@ -1462,7 +1493,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 				err := runtime.ExecuteTransaction(script, runtimeInterface, utils.TestLocation)
 
-				test.check(t, err, accountCode, events)
+				test.check(t, err, accountCode, events, stdlib.AccountCreatedEventType)
 			})
 		}
 	})
