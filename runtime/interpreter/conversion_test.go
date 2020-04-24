@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"math"
 	"math/big"
 	"testing"
 
@@ -64,11 +65,14 @@ func TestByteValueToByte(t *testing.T) {
 
 	t.Run("valid", func(t *testing.T) {
 
+		const maxInt8Plus2 = math.MaxInt8 + 2
+
 		invalid := map[Value]byte{
 			UInt64Value(2):              2,
 			NewUInt128ValueFromInt64(3): 3,
 			UInt8Value(4):               4,
 			NewIntValueFromInt64(5):     5,
+			UInt8Value(maxInt8Plus2):    maxInt8Plus2,
 		}
 
 		for value, expected := range invalid {

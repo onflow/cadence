@@ -55,7 +55,7 @@ func ByteValueToByte(element Value) (byte, error) {
 
 		integer := bigInt.Uint64()
 
-		if integer > math.MaxInt8 {
+		if integer > math.MaxUint8 {
 			return 0, errors.New("value is not in byte range (0-255)")
 		}
 
@@ -64,7 +64,7 @@ func ByteValueToByte(element Value) (byte, error) {
 	case NumberValue:
 		integer := element.ToInt()
 
-		if integer < 0 || integer > math.MaxInt8 {
+		if integer < 0 || integer > math.MaxUint8 {
 			return 0, errors.New("value is not in byte range (0-255)")
 		}
 
