@@ -22,8 +22,9 @@ import (
 	"bytes"
 	"encoding/binary"
 	"encoding/gob"
-	"errors"
 	"fmt"
+
+	"golang.org/x/crypto/sha3"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -488,6 +489,11 @@ func (r *interpreterRuntime) emitAccountEvent(
 	runtimeInterface.EmitEvent(eventValue)
 }
 
+func CodeToHashValue(code []byte) *interpreter.ArrayValue {
+	codeHash := sha3.Sum256(code)
+	return interpreter.ByteSliceToByteArrayValue(codeHash[:])
+}
+
 func (r *interpreterRuntime) newCreateAccountFunction(
 	runtimeInterface Interface,
 	runtimeStorage *interpreterRuntimeStorage,
@@ -500,14 +506,14 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 		publicKeys := make([][]byte, len(pkValues))
 
 		for i, pkVal := range pkValues {
-			publicKey, err := toBytes(pkVal)
+			publicKey, err := interpreter.ByteArrayValueToByteSlice(pkVal)
 			if err != nil {
 				panic(fmt.Sprintf("Account requires the first parameter to be an array of keys ([[Int]])"))
 			}
 			publicKeys[i] = publicKey
 		}
 
-		code, err := toBytes(invocation.Arguments[1])
+		code, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[1])
 		if err != nil {
 			panic(fmt.Sprintf("Account requires the second parameter to be an array of bytes ([Int])"))
 		}
@@ -533,7 +539,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 			invocation.LocationRange.Range,
 		)
 
-		codeValue := fromBytes(code)
+		codeHashValue := CodeToHashValue(code)
 
 		contractTypeIDs := compositeTypesToIDValues(contractTypes)
 
@@ -542,7 +548,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 			runtimeInterface,
 			[]Value{
 				newRuntimeValue(addressValue, nil),
-				newRuntimeValue(codeValue, nil),
+				newRuntimeValue(codeHashValue, nil),
 				newRuntimeValue(contractTypeIDs, nil),
 			},
 		)
@@ -561,7 +567,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
 			publicKeyValue := invocation.Arguments[0].(*interpreter.ArrayValue)
 
-			publicKey, err := toBytes(publicKeyValue)
+			publicKey, err := interpreter.ByteArrayValueToByteSlice(publicKeyValue)
 			if err != nil {
 				panic(fmt.Sprintf("addPublicKey requires the first parameter to be an array"))
 			}
@@ -599,7 +605,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 				panic(err)
 			}
 
-			publicKeyValue := fromBytes(publicKey)
+			publicKeyValue := interpreter.ByteSliceToByteArrayValue(publicKey)
 
 			r.emitAccountEvent(
 				stdlib.AccountKeyRemovedEventType,
@@ -625,7 +631,7 @@ func (r *interpreterRuntime) newSetCodeFunction(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
 			const requiredArgumentCount = 1
 
-			code, err := toBytes(invocation.Arguments[0])
+			code, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[0])
 			if err != nil {
 				panic(fmt.Sprintf("setCode requires the first parameter to be an array of bytes ([Int])"))
 			}
@@ -644,7 +650,7 @@ func (r *interpreterRuntime) newSetCodeFunction(
 				invocation.LocationRange.Range,
 			)
 
-			codeValue := fromBytes(code)
+			codeHashValue := CodeToHashValue(code)
 
 			contractTypeIDs := compositeTypesToIDValues(contractTypes)
 
@@ -653,7 +659,7 @@ func (r *interpreterRuntime) newSetCodeFunction(
 				runtimeInterface,
 				[]Value{
 					newRuntimeValue(addressValue, nil),
-					newRuntimeValue(codeValue, nil),
+					newRuntimeValue(codeHashValue, nil),
 					newRuntimeValue(contractTypeIDs, nil),
 				},
 			)
@@ -926,42 +932,6 @@ func (r *interpreterRuntime) newGetCurrentBlockFunction(_ Interface) interpreter
 		}
 
 		return trampoline.Done{Result: makeBlock(1)}
-	}
-}
-
-func toBytes(value interpreter.Value) ([]byte, error) {
-	array, ok := value.(*interpreter.ArrayValue)
-	if !ok {
-		return nil, errors.New("value is not an array")
-	}
-
-	result := make([]byte, len(array.Values))
-	for i, arrayValue := range array.Values {
-		intValue, ok := arrayValue.(interpreter.NumberValue)
-		if !ok {
-			return nil, errors.New("array value is not an integer")
-		}
-
-		j := intValue.ToInt()
-
-		if j < 0 || j > 255 {
-			return nil, errors.New("array value is not in byte range (0-255)")
-		}
-
-		result[i] = byte(j)
-	}
-
-	return result, nil
-}
-
-func fromBytes(buf []byte) *interpreter.ArrayValue {
-	values := make([]interpreter.Value, len(buf))
-	for i, b := range buf {
-		values[i] = interpreter.NewIntValueFromInt64(int64(b))
-	}
-
-	return &interpreter.ArrayValue{
-		Values: values,
 	}
 }
 
