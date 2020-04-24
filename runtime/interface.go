@@ -18,9 +18,19 @@
 
 package runtime
 
+import (
+	"errors"
+
+	"github.com/onflow/cadence/runtime/ast"
+)
+
 type Interface interface {
 	// ResolveImport resolves an import of a program.
 	ResolveImport(Location) ([]byte, error)
+	// GetCachedProgram attempts to get a parsed program from a cache.
+	GetCachedProgram(Location) (*ast.Program, error)
+	// CacheProgram adds a parsed program to a cache.
+	CacheProgram(Location, *ast.Program) error
 	// GetValue gets a value for the given key in the storage, controlled and owned by the given accounts.
 	GetValue(owner, controller, key []byte) (value []byte, err error)
 	// SetValue sets a value for the given key in the storage, controlled and owned by the given accounts.
@@ -53,6 +63,13 @@ type EmptyRuntimeInterface struct{}
 
 func (i *EmptyRuntimeInterface) ResolveImport(location Location) ([]byte, error) {
 	return nil, nil
+}
+func (i *EmptyRuntimeInterface) GetCachedProgram(location Location) (*ast.Program, error) {
+	return nil, errors.New("cache not implemented")
+}
+
+func (i *EmptyRuntimeInterface) CacheProgram(location Location, program *ast.Program) error {
+	return nil
 }
 
 func (i *EmptyRuntimeInterface) ValueExists(controller, owner, key []byte) (exists bool, err error) {

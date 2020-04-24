@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -68,6 +69,8 @@ func newTestStorage() testRuntimeInterfaceStorage {
 
 type testRuntimeInterface struct {
 	resolveImport      func(Location) ([]byte, error)
+	getCachedProgram   func(Location) (*ast.Program, error)
+	cacheProgram       func(Location, *ast.Program) error
 	storage            testRuntimeInterfaceStorage
 	createAccount      func(publicKeys [][]byte) (address Address, err error)
 	addAccountKey      func(address Address, publicKey []byte) error
@@ -83,6 +86,14 @@ type testRuntimeInterface struct {
 
 func (i *testRuntimeInterface) ResolveImport(location Location) ([]byte, error) {
 	return i.resolveImport(location)
+}
+
+func (i *testRuntimeInterface) GetCachedProgram(location Location) (*ast.Program, error) {
+	return i.getCachedProgram(location)
+}
+
+func (i *testRuntimeInterface) CacheProgram(location Location, program *ast.Program) error {
+	return i.cacheProgram(location, program)
 }
 
 func (i *testRuntimeInterface) ValueExists(controller, owner, key []byte) (exists bool, err error) {
@@ -166,6 +177,12 @@ func TestRuntimeImport(t *testing.T) {
     `)
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case StringLocation("imported"):
@@ -182,6 +199,49 @@ func TestRuntimeImport(t *testing.T) {
 	assert.Equal(t, interpreter.NewIntValueFromInt64(42), value.Value)
 }
 
+func TestRuntimeCachedProgram(t *testing.T) {
+	var cacheHitSuccess bool
+	programCache := map[ast.LocationID]*ast.Program{}
+
+	runtime := NewInterpreterRuntime()
+	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location ast.Location) (*ast.Program, error) {
+			program, found := programCache[location.ID()]
+			cacheHitSuccess = found
+			if !found {
+				return nil, errors.New("no cache entry")
+			}
+			return program, nil
+		},
+		cacheProgram: func(location ast.Location, program *ast.Program) error {
+			programCache[location.ID()] = program
+			return nil
+		},
+	}
+
+	scriptLocation := ast.StringLocation("test-location")
+
+	script := []byte(`
+      transaction {
+        prepare() {}
+        execute {}
+      }
+	`)
+
+	// Initial call, should parse script, store result in cache.
+	err := runtime.ParseAndCheckProgram(script, runtimeInterface, scriptLocation)
+	assert.NoError(t, err)
+	cachedProgram, exists := programCache[scriptLocation.ID()]
+	assert.True(t, exists)
+	assert.False(t, cacheHitSuccess)
+	assert.NotNil(t, cachedProgram)
+
+	// Call a second time to hit the cache
+	err = runtime.ParseAndCheckProgram(script, runtimeInterface, scriptLocation)
+	assert.NoError(t, err)
+	assert.True(t, cacheHitSuccess)
+}
+
 func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
@@ -193,6 +253,12 @@ func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
     `)
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		getSigningAccounts: func() []Address {
 			return []Address{{42}}
 		},
@@ -216,6 +282,12 @@ func TestRuntimeTransactionWithAccount(t *testing.T) {
 	var loggedMessage string
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		getSigningAccounts: func() []Address {
 			return []Address{
 				common.BytesToAddress([]byte{42}),
@@ -239,7 +311,14 @@ func TestRuntimeProgramWithNoTransaction(t *testing.T) {
       pub fun main() {}
     `)
 
-	runtimeInterface := &testRuntimeInterface{}
+	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
+	}
 
 	err := runtime.ExecuteTransaction(script, runtimeInterface, utils.TestLocation)
 
@@ -260,7 +339,14 @@ func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
       }
     `)
 
-	runtimeInterface := &testRuntimeInterface{}
+	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
+	}
 
 	err := runtime.ExecuteTransaction(script, runtimeInterface, utils.TestLocation)
 
@@ -357,6 +443,12 @@ func TestRuntimeStorage(t *testing.T) {
 			var loggedMessages []string
 
 			runtimeInterface := &testRuntimeInterface{
+				getCachedProgram: func(location Location) (*ast.Program, error) {
+					return nil, errors.New("cache not implemented")
+				},
+				cacheProgram: func(location Location, program *ast.Program) error {
+					return nil
+				},
 				resolveImport: func(location Location) ([]byte, error) {
 					switch location {
 					case StringLocation("imported"):
@@ -444,6 +536,12 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case StringLocation("container"):
@@ -515,6 +613,12 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case StringLocation("deep-thought"):
@@ -586,6 +690,12 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case StringLocation("imported"):
@@ -658,6 +768,12 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
     `)
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case StringLocation("imported"):
@@ -720,6 +836,12 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case StringLocation("imported"):
@@ -788,6 +910,12 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case StringLocation("imported"):
@@ -868,6 +996,12 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case StringLocation("imported1"):
@@ -901,7 +1035,14 @@ func TestParseAndCheckProgram(t *testing.T) {
 		runtime := NewInterpreterRuntime()
 
 		script := []byte("pub fun test(): Int { return 42 }")
-		runtimeInterface := &testRuntimeInterface{}
+		runtimeInterface := &testRuntimeInterface{
+			getCachedProgram: func(location Location) (*ast.Program, error) {
+				return nil, errors.New("cache not implemented")
+			},
+			cacheProgram: func(location Location, program *ast.Program) error {
+				return nil
+			},
+		}
 
 		err := runtime.ParseAndCheckProgram(script, runtimeInterface, utils.TestLocation)
 		assert.NoError(t, err)
@@ -911,7 +1052,14 @@ func TestParseAndCheckProgram(t *testing.T) {
 		runtime := NewInterpreterRuntime()
 
 		script := []byte("invalid syntax")
-		runtimeInterface := &testRuntimeInterface{}
+		runtimeInterface := &testRuntimeInterface{
+			getCachedProgram: func(location Location) (*ast.Program, error) {
+				return nil, errors.New("cache not implemented")
+			},
+			cacheProgram: func(location Location, program *ast.Program) error {
+				return nil
+			},
+		}
 
 		err := runtime.ParseAndCheckProgram(script, runtimeInterface, utils.TestLocation)
 		assert.NotNil(t, err)
@@ -921,8 +1069,14 @@ func TestParseAndCheckProgram(t *testing.T) {
 		runtime := NewInterpreterRuntime()
 
 		script := []byte(`pub let a: Int = "b"`)
-		runtimeInterface := &testRuntimeInterface{}
-
+		runtimeInterface := &testRuntimeInterface{
+			getCachedProgram: func(location Location) (*ast.Program, error) {
+				return nil, errors.New("cache not implemented")
+			},
+			cacheProgram: func(location Location, program *ast.Program) error {
+				return nil
+			},
+		}
 		err := runtime.ParseAndCheckProgram(script, runtimeInterface, utils.TestLocation)
 		assert.NotNil(t, err)
 	})
@@ -938,6 +1092,12 @@ func TestRuntimeSyntaxError(t *testing.T) {
     `)
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		getSigningAccounts: func() []Address {
 			return []Address{{42}}
 		},
@@ -991,6 +1151,12 @@ func TestRuntimeStorageChanges(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case StringLocation("imported"):
@@ -1033,6 +1199,12 @@ func TestRuntimeAccountAddress(t *testing.T) {
 	address := common.BytesToAddress([]byte{42})
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		getSigningAccounts: func() []Address {
 			return []Address{address}
 		},
@@ -1063,6 +1235,12 @@ func TestRuntimePublicAccountAddress(t *testing.T) {
 	address := interpreter.NewAddressValueFromBytes([]byte{0x42})
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		getSigningAccounts: func() []Address {
 			return nil
 		},
@@ -1124,6 +1302,12 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		resolveImport: func(location Location) ([]byte, error) {
 			switch location {
 			case StringLocation("imported"):
@@ -1166,6 +1350,12 @@ func TestRuntimeTransactionWithUpdateAccountCodeEmpty(t *testing.T) {
 	var events []Event
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		storage: newTestStorage(),
 		getSigningAccounts: func() []Address {
 			return []Address{{42}}
@@ -1203,6 +1393,12 @@ func TestRuntimeTransactionWithCreateAccountEmpty(t *testing.T) {
 	var events []Event
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		storage: newTestStorage(),
 		createAccount: func(publicKeys [][]byte) (address Address, err error) {
 			return Address{42}, nil
@@ -1242,6 +1438,12 @@ func TestRuntimeCyclicImport(t *testing.T) {
 	)
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case StringLocation("imported"):
@@ -1421,6 +1623,12 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 				var events []Event
 
 				runtimeInterface := &testRuntimeInterface{
+					getCachedProgram: func(location Location) (*ast.Program, error) {
+						return nil, errors.New("cache not implemented")
+					},
+					cacheProgram: func(location Location, program *ast.Program) error {
+						return nil
+					},
 					storage: newTestStorage(),
 					getSigningAccounts: func() []Address {
 						return []Address{{42}}
@@ -1478,6 +1686,12 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 				var events []Event
 
 				runtimeInterface := &testRuntimeInterface{
+					getCachedProgram: func(location Location) (*ast.Program, error) {
+						return nil, errors.New("cache not implemented")
+					},
+					cacheProgram: func(location Location, program *ast.Program) error {
+						return nil
+					},
 					storage: newTestStorage(),
 					createAccount: func(publicKeys [][]byte) (address Address, err error) {
 						return Address{42}, nil
@@ -1557,6 +1771,12 @@ func TestRuntimeContractAccount(t *testing.T) {
 	var events []Event
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		resolveImport: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
@@ -1644,6 +1864,12 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 	var loggedMessage string
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		resolveImport: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
@@ -1841,6 +2067,12 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 	signerAccount := address1Value
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
@@ -1944,6 +2176,12 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 	signerAccount := address1Value
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
@@ -2064,6 +2302,12 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 	var nextAccount byte = 0x2
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
@@ -2155,6 +2399,12 @@ func TestRuntimeBlock(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		getSigningAccounts: func() []Address {
 			return nil
 		},
@@ -2193,6 +2443,12 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
         `)
 
 		runtimeInterface := &testRuntimeInterface{
+			getCachedProgram: func(location Location) (*ast.Program, error) {
+				return nil, errors.New("cache not implemented")
+			},
+			cacheProgram: func(location Location, program *ast.Program) error {
+				return nil
+			},
 			getSigningAccounts: func() []Address {
 				return nil
 			},
@@ -2212,6 +2468,12 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
         `)
 
 		runtimeInterface := &testRuntimeInterface{
+			getCachedProgram: func(location Location) (*ast.Program, error) {
+				return nil, errors.New("cache not implemented")
+			},
+			cacheProgram: func(location Location, program *ast.Program) error {
+				return nil
+			},
 			getSigningAccounts: func() []Address {
 				return nil
 			},
@@ -2277,6 +2539,12 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 			var events []Event
 
 			runtimeInterface := &testRuntimeInterface{
+				getCachedProgram: func(location Location) (*ast.Program, error) {
+					return nil, errors.New("cache not implemented")
+				},
+				cacheProgram: func(location Location, program *ast.Program) error {
+					return nil
+				},
 				resolveImport: func(_ Location) (bytes []byte, err error) {
 					return accountCode, nil
 				},
@@ -2389,6 +2657,12 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
@@ -2539,6 +2813,12 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
@@ -2694,6 +2974,12 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return nil, errors.New("cache not implemented")
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			return nil
+		},
 		resolveImport: func(location Location) (bytes []byte, err error) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
