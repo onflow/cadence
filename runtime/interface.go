@@ -41,14 +41,12 @@ type Interface interface {
 	Log(string)
 	// EmitEvent is called when an event is emitted by the runtime.
 	EmitEvent(Event)
-}
-
-type InterfaceV2 interface {
-	Interface
 	// ValueExists returns true if the given key exists in the storage, controlled and owned by the given accounts.
 	ValueExists(owner, controller, key []byte) (exists bool, err error)
 	// GenerateUUID is called to generate a UUID.
 	GenerateUUID() uint64
+	// GetComputationLimit returns the computation limit. A value <= 0 means there is no limit
+	GetComputationLimit() uint64
 }
 
 type EmptyRuntimeInterface struct{}
@@ -98,5 +96,9 @@ func (i *EmptyRuntimeInterface) Log(message string) {}
 func (i *EmptyRuntimeInterface) EmitEvent(event Event) {}
 
 func (i *EmptyRuntimeInterface) GenerateUUID() uint64 {
+	return 0
+}
+
+func (i *EmptyRuntimeInterface) GetComputationLimit() uint64 {
 	return 0
 }
