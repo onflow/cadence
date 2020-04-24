@@ -92,3 +92,16 @@ func (e InvalidTransactionParameterTypeError) Error() string {
 		e.Actual,
 	)
 }
+
+// ComputationLimitExceededError
+
+type ComputationLimitExceededError struct {
+	Limit uint64
+}
+
+func (e ComputationLimitExceededError) Error() string {
+	return fmt.Sprintf(
+		"computation limited exceeded: %d",
+		e.Limit,
+	)
+}

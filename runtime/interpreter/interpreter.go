@@ -85,8 +85,21 @@ type OnEventEmittedFunc func(
 // OnStatementFunc is a function that is triggered when a statement is about to be executed.
 //
 type OnStatementFunc func(
-	inter *Interpreter,
 	statement *Statement,
+)
+
+// OnLoopIterationFunc is a function that is triggered when a loop iteration is about to be executed.
+//
+type OnLoopIterationFunc func(
+	inter *Interpreter,
+	line int,
+)
+
+// OnFunctionInvocationFunc is a function that is triggered when a function is about to be invoked.
+//
+type OnFunctionInvocationFunc func(
+	inter *Interpreter,
+	line int,
 )
 
 // StorageExistenceHandlerFunc is a function that handles storage existence checks.
@@ -195,6 +208,8 @@ type Interpreter struct {
 	Transactions                   []*HostFunctionValue
 	onEventEmitted                 OnEventEmittedFunc
 	onStatement                    OnStatementFunc
+	onLoopIteration                OnLoopIterationFunc
+	onFunctionInvocation           OnFunctionInvocationFunc
 	storageExistenceHandler        StorageExistenceHandlerFunc
 	storageReadHandler             StorageReadHandlerFunc
 	storageWriteHandler            StorageWriteHandlerFunc
@@ -223,6 +238,26 @@ func WithOnEventEmittedHandler(handler OnEventEmittedFunc) Option {
 func WithOnStatementHandler(handler OnStatementFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetOnStatementHandler(handler)
+		return nil
+	}
+}
+
+// WithOnLoopIterationHandler returns an interpreter option which sets
+// the given function as the loop iteration handler.
+//
+func WithOnLoopIterationHandler(handler OnLoopIterationFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetOnLoopIterationHandler(handler)
+		return nil
+	}
+}
+
+// WithOnLoopIterationHandler returns an interpreter option which sets
+// the given function as the loop iteration handler.
+//
+func WithOnFunctionInvocationHandler(handler OnFunctionInvocationFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetOnFunctionInvocationHandler(handler)
 		return nil
 	}
 }
@@ -395,6 +430,18 @@ func (interpreter *Interpreter) SetOnStatementHandler(function OnStatementFunc) 
 	interpreter.onStatement = function
 }
 
+// SetOnLoopIterationHandler sets the function that is triggered when a loop iteration is about to be executed.
+//
+func (interpreter *Interpreter) SetOnLoopIterationHandler(function OnLoopIterationFunc) {
+	interpreter.onLoopIteration = function
+}
+
+// SetOnFunctionInvocationHandler sets the function that is triggered when a loop iteration is about to be executed.
+//
+func (interpreter *Interpreter) SetOnFunctionInvocationHandler(function OnFunctionInvocationFunc) {
+	interpreter.onFunctionInvocation = function
+}
+
 // SetStorageExistenceHandler sets the function that is used when a storage key is checked for existence.
 //
 func (interpreter *Interpreter) SetStorageExistenceHandler(function StorageExistenceHandlerFunc) {
@@ -511,8 +558,9 @@ func (interpreter *Interpreter) Interpret() (err error) {
 }
 
 type Statement struct {
-	Trampoline Trampoline
-	Line       int
+	Interpreter *Interpreter
+	Trampoline  Trampoline
+	Line        int
 }
 
 func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}, *Statement) {
@@ -523,8 +571,9 @@ func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}
 			return nil, &Statement{
 				// NOTE: resumption using outer trampoline,
 				// not just inner statement trampoline
-				Trampoline: t,
-				Line:       statement.Line,
+				Trampoline:  t,
+				Interpreter: statement.Interpreter,
+				Line:        statement.Line,
 			}
 		}
 
@@ -548,7 +597,7 @@ func (interpreter *Interpreter) runAllStatements(t Trampoline) interface{} {
 		}
 
 		if interpreter.onStatement != nil {
-			interpreter.onStatement(interpreter, statement)
+			interpreter.onStatement(statement)
 		}
 
 		result = statement.Trampoline.Resume()
@@ -885,7 +934,8 @@ func (interpreter *Interpreter) visitStatements(statements []ast.Statement) Tram
 		F: func() Trampoline {
 			return statement.Accept(interpreter).(Trampoline)
 		},
-		Line: line,
+		Interpreter: interpreter,
+		Line:        line,
 	}.FlatMap(func(returnValue interface{}) Trampoline {
 		if _, isReturn := returnValue.(controlReturn); isReturn {
 			return Done{Result: returnValue}
@@ -1081,12 +1131,15 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 }
 
 func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatement) ast.Repr {
+
 	return statement.Test.Accept(interpreter).(Trampoline).
 		FlatMap(func(result interface{}) Trampoline {
 			value := result.(BoolValue)
 			if !value {
 				return Done{}
 			}
+
+			interpreter.reportLoopIteration(statement)
 
 			return statement.Block.Accept(interpreter).(Trampoline).
 				FlatMap(func(value interface{}) Trampoline {
@@ -1122,6 +1175,8 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 		if i == count {
 			return Done{}
 		}
+
+		interpreter.reportLoopIteration(statement)
 
 		variable.Value = values[i]
 
@@ -1910,6 +1965,8 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 						typeParameterTypes,
 						ast.NewRangeFromPositioned(invocationExpression),
 					)
+
+					interpreter.reportFunctionInvocation(invocationExpression)
 
 					// If this is invocation is optional chaining, wrap the result
 					// as an optional, as the result is expected to be an optional
@@ -2942,6 +2999,8 @@ func (interpreter *Interpreter) ensureLoaded(location ast.Location, loadProgram 
 		WithPredefinedValues(interpreter.PredefinedValues),
 		WithOnEventEmittedHandler(interpreter.onEventEmitted),
 		WithOnStatementHandler(interpreter.onStatement),
+		WithOnLoopIterationHandler(interpreter.onLoopIteration),
+		WithOnFunctionInvocationHandler(interpreter.onFunctionInvocation),
 		WithStorageExistenceHandler(interpreter.storageExistenceHandler),
 		WithStorageReadHandler(interpreter.storageReadHandler),
 		WithStorageWriteHandler(interpreter.storageWriteHandler),
@@ -3935,4 +3994,22 @@ func (interpreter *Interpreter) getCompositeType(location ast.Location, typeID s
 func (interpreter *Interpreter) getInterfaceType(location ast.Location, typeID sema.TypeID) *sema.InterfaceType {
 	elaboration := interpreter.getElaboration(location)
 	return elaboration.InterfaceTypes[typeID]
+}
+
+func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
+	if interpreter.onLoopIteration == nil {
+		return
+	}
+
+	line := pos.StartPosition().Line
+	interpreter.onLoopIteration(interpreter, line)
+}
+
+func (interpreter *Interpreter) reportFunctionInvocation(pos ast.HasPosition) {
+	if interpreter.onFunctionInvocation == nil {
+		return
+	}
+
+	line := pos.StartPosition().Line
+	interpreter.onFunctionInvocation(interpreter, line)
 }

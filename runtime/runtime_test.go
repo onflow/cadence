@@ -78,6 +78,7 @@ type testRuntimeInterface struct {
 	log                func(string)
 	emitEvent          func(Event)
 	generateUUID       func() uint64
+	computationLimit   uint64
 }
 
 func (i *testRuntimeInterface) ResolveImport(location Location) ([]byte, error) {
@@ -136,6 +137,10 @@ func (i *testRuntimeInterface) GenerateUUID() uint64 {
 		return 0
 	}
 	return i.generateUUID()
+}
+
+func (i *testRuntimeInterface) GetComputationLimit() uint64 {
+	return i.computationLimit
 }
 
 func TestRuntimeImport(t *testing.T) {
@@ -2739,4 +2744,94 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
 		},
 		loggedMessages,
 	)
+}
+
+func TestRuntimeComputationLimit(t *testing.T) {
+
+	const computationLimit = 5
+
+	type test struct {
+		name string
+		code string
+		ok   bool
+	}
+
+	tests := []test{
+		{
+			name: "Infinite while loop",
+			code: `
+              while true {}
+            `,
+			ok: false,
+		},
+		{
+			name: "Limited while loop",
+			code: `
+              var i = 0
+              while i < 5 {
+                  i = i + 1
+              }
+            `,
+			ok: false,
+		},
+		{
+			name: "Too many for-in loop iterations",
+			code: `
+              for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] {}
+            `,
+			ok: false,
+		},
+		{
+			name: "Some for-in loop iterations",
+			code: `
+              for i in [1, 2, 3, 4] {}
+            `,
+			ok: true,
+		},
+	}
+
+	for _, test := range tests {
+
+		t.Run(test.name, func(t *testing.T) {
+
+			script := []byte(
+				fmt.Sprintf(
+					`
+                      transaction {
+                          prepare() {
+                              %s
+                          }
+                      }
+                    `,
+					test.code,
+				),
+			)
+
+			runtime := NewInterpreterRuntime()
+
+			runtimeInterface := &testRuntimeInterface{
+				getSigningAccounts: func() []Address {
+					return nil
+				},
+				computationLimit: computationLimit,
+			}
+
+			err := runtime.ExecuteTransaction(script, runtimeInterface, utils.TestLocation)
+			if test.ok {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+
+				require.IsType(t, Error{}, err)
+				err = err.(Error).Unwrap()
+
+				assert.Equal(t,
+					ComputationLimitExceededError{
+						Limit: computationLimit,
+					},
+					err,
+				)
+			}
+		})
+	}
 }
