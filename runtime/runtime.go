@@ -277,9 +277,14 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	functions stdlib.StandardLibraryFunctions,
 	options []sema.Option,
 ) (*sema.Checker, error) {
-	program, err := r.parse(code)
+
+	// If the program has not been previously cached, proceed to parse the program.
+	program, err := runtimeInterface.GetCachedProgram(location)
 	if err != nil {
-		return nil, err
+		program, err = r.parse(code)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	importResolver := r.importResolver(runtimeInterface)
@@ -307,6 +312,12 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	}
 
 	if err := checker.Check(); err != nil {
+		return nil, err
+	}
+
+	// After the program has passed semantic analysis, cache the program AST.
+	err = runtimeInterface.CacheProgram(location, program)
+	if err != nil {
 		return nil, err
 	}
 
