@@ -24,6 +24,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"math"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -321,8 +322,6 @@ func (r *interpreterRuntime) newInterpreter(
 	options []interpreter.Option,
 ) (*interpreter.Interpreter, error) {
 
-	importResolver := r.importResolver(runtimeInterface)
-
 	defaultOptions := []interpreter.Option{
 		interpreter.WithPredefinedValues(functions.ToValues()),
 		interpreter.WithOnEventEmittedHandler(
@@ -334,6 +333,99 @@ func (r *interpreterRuntime) newInterpreter(
 				r.emitEvent(inter, runtimeInterface, eventValue, eventType)
 			},
 		),
+		interpreter.WithStorageKeyHandler(
+			func(_ *interpreter.Interpreter, _ common.Address, indexingType sema.Type) string {
+				return string(indexingType.ID())
+			},
+		),
+		interpreter.WithInjectedCompositeFieldsHandler(
+			r.injectedCompositeFieldsHandler(runtimeInterface, runtimeStorage),
+		),
+		interpreter.WithUUIDHandler(func() uint64 {
+			return runtimeInterface.GenerateUUID()
+		}),
+		interpreter.WithContractValueHandler(
+			func(
+				inter *interpreter.Interpreter,
+				compositeType *sema.CompositeType,
+				_ interpreter.FunctionValue,
+			) *interpreter.CompositeValue {
+				// Load the contract from storage
+				return r.loadContract(compositeType, runtimeStorage)
+			},
+		),
+		interpreter.WithImportProgramHandler(
+			r.importProgramHandler(runtimeInterface),
+		),
+	}
+
+	defaultOptions = append(defaultOptions,
+		r.storageInterpreterOptions(runtimeStorage)...,
+	)
+
+	defaultOptions = append(defaultOptions,
+		r.meteringInterpreterOptions(runtimeInterface)...,
+	)
+
+	return interpreter.NewInterpreter(
+		checker,
+		append(defaultOptions, options...)...,
+	)
+}
+
+func (r *interpreterRuntime) importProgramHandler(runtimeInterface Interface) interpreter.ImportProgramHandlerFunc {
+	importResolver := r.importResolver(runtimeInterface)
+
+	return func(inter *interpreter.Interpreter, location ast.Location) *ast.Program {
+		program, err := importResolver(location)
+		if err != nil {
+			panic(err)
+		}
+
+		err = program.ResolveImports(importResolver)
+		if err != nil {
+			panic(err)
+		}
+
+		return program
+	}
+}
+
+func (r *interpreterRuntime) injectedCompositeFieldsHandler(
+	runtimeInterface Interface,
+	runtimeStorage *interpreterRuntimeStorage,
+) interpreter.InjectedCompositeFieldsHandlerFunc {
+	return func(
+		_ *interpreter.Interpreter,
+		location Location,
+		_ sema.TypeID,
+		compositeKind common.CompositeKind,
+	) map[string]interpreter.Value {
+
+		switch compositeKind {
+		case common.CompositeKindContract:
+			var address []byte
+
+			switch location := location.(type) {
+			case AddressLocation:
+				address = location
+			default:
+				panic(runtimeErrors.NewUnreachableError())
+			}
+
+			addressValue := interpreter.NewAddressValueFromBytes(address)
+
+			return map[string]interpreter.Value{
+				"account": r.newAuthAccountValue(addressValue, runtimeInterface, runtimeStorage),
+			}
+		}
+
+		return nil
+	}
+}
+
+func (r *interpreterRuntime) storageInterpreterOptions(runtimeStorage *interpreterRuntimeStorage) []interpreter.Option {
+	return []interpreter.Option{
 		interpreter.WithStorageExistenceHandler(
 			func(_ *interpreter.Interpreter, address common.Address, key string) bool {
 				return runtimeStorage.valueExists(string(address[:]), key)
@@ -349,79 +441,50 @@ func (r *interpreterRuntime) newInterpreter(
 				runtimeStorage.writeValue(string(address[:]), key, value)
 			},
 		),
-		interpreter.WithStorageKeyHandler(
-			func(_ *interpreter.Interpreter, _ common.Address, indexingType sema.Type) string {
-				return string(indexingType.ID())
+	}
+}
+
+func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interface) []interpreter.Option {
+	limit := runtimeInterface.GetComputationLimit()
+	if limit <= 0 {
+		return nil
+	}
+
+	if limit == math.MaxUint64 {
+		limit--
+	}
+
+	var used uint64
+
+	checkLimit := func() {
+		used++
+
+		if used <= limit {
+			return
+		}
+
+		panic(ComputationLimitExceededError{
+			Limit: limit,
+		})
+	}
+
+	return []interpreter.Option{
+		interpreter.WithOnStatementHandler(
+			func(_ *interpreter.Statement) {
+				checkLimit()
 			},
 		),
-		interpreter.WithInjectedCompositeFieldsHandler(
-			func(
-				_ *interpreter.Interpreter,
-				location Location,
-				_ sema.TypeID,
-				compositeKind common.CompositeKind,
-			) map[string]interpreter.Value {
-
-				switch compositeKind {
-				case common.CompositeKindContract:
-					var address []byte
-
-					switch location := location.(type) {
-					case AddressLocation:
-						address = location
-					default:
-						panic(runtimeErrors.NewUnreachableError())
-					}
-
-					addressValue := interpreter.NewAddressValueFromBytes(address)
-
-					return map[string]interpreter.Value{
-						"account": r.newAuthAccountValue(addressValue, runtimeInterface, runtimeStorage),
-					}
-				}
-
-				return nil
+		interpreter.WithOnLoopIterationHandler(
+			func(_ *interpreter.Interpreter, _ int) {
+				checkLimit()
 			},
 		),
-		interpreter.WithUUIDHandler(func() uint64 {
-			// TODO: move to main interface
-			if runtimeInterfaceV2, ok := runtimeInterface.(InterfaceV2); ok {
-				return runtimeInterfaceV2.GenerateUUID()
-			} else {
-				return 0
-			}
-		}),
-		interpreter.WithContractValueHandler(
-			func(
-				inter *interpreter.Interpreter,
-				compositeType *sema.CompositeType,
-				_ interpreter.FunctionValue,
-			) *interpreter.CompositeValue {
-				// Load the contract from storage
-				return r.loadContract(compositeType, runtimeStorage)
-			},
-		),
-		interpreter.WithImportProgramHandler(
-			func(inter *interpreter.Interpreter, location ast.Location) *ast.Program {
-				program, err := importResolver(location)
-				if err != nil {
-					panic(err)
-				}
-
-				err = program.ResolveImports(importResolver)
-				if err != nil {
-					panic(err)
-				}
-
-				return program
+		interpreter.WithOnFunctionInvocationHandler(
+			func(_ *interpreter.Interpreter, _ int) {
+				checkLimit()
 			},
 		),
 	}
-
-	return interpreter.NewInterpreter(
-		checker,
-		append(defaultOptions, options...)...,
-	)
 }
 
 func (r *interpreterRuntime) standardLibraryFunctions(
