@@ -1054,17 +1054,13 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 
 		// Prepare a set of all the conformances
 
-		allConformances := compositeType.AllConformances()
-		conformancesSet := make(map[*InterfaceType]bool, len(allConformances))
-		for _, conformance := range allConformances {
-			conformancesSet[conformance] = true
-		}
+		conformances := compositeType.ExplicitInterfaceConformanceSet()
 
 		for _, restriction := range restrictions {
 			// The restriction must be an explicit or implicit conformance
 			// of the composite (restricted type)
 
-			if !conformancesSet[restriction] {
+			if !conformances.Includes(restriction) {
 				checker.report(
 					&InvalidNonConformanceRestrictionError{
 						Type:  restriction,
