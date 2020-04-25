@@ -3592,8 +3592,26 @@ func (t *CompositeType) CanHaveMembers() bool {
 	return true
 }
 
-func (t *CompositeType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	return t.Members[identifier]
+func (t *CompositeType) GetMember(identifier string, accessRange ast.Range, report func(error)) *Member {
+	member := t.Members[identifier]
+	if member != nil {
+		return member
+	}
+
+	// Check conformances.
+	// If this composite type results from a normal composite declaration,
+	// it must have members declared for all interfaces it conforms to.
+	// However, if this composite type is a type requirement,
+	// it acts like an interface and does not have to declare members.
+
+	for conformance := range t.ExplicitInterfaceConformanceSet() {
+		member = conformance.GetMember(identifier, accessRange, report)
+		if member != nil {
+			return member
+		}
+	}
+
+	return nil
 }
 
 func (t *CompositeType) IsResourceType() bool {
