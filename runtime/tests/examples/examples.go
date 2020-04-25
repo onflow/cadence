@@ -65,6 +65,7 @@ const ExampleFungibleTokenContract = `
                 self.balance = self.balance + exampleVault.balance
                 destroy exampleVault
             } else {
+               destroy vault
                panic("deposited vault is not an ExampleToken.Vault")
             }
          }

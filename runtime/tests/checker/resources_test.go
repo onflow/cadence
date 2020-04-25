@@ -3545,18 +3545,17 @@ func TestCheckInvalidResourceOptionalBindingFailableCastResourceUseAfterInvalida
 
 func TestCheckInvalidResourceOptionalBindingFailableCastResourceLossMissingElse(t *testing.T) {
 
-	_, err := ParseAndCheck(t,
-		`
-         resource interface RI {}
+	_, err := ParseAndCheck(t, `
+      resource interface RI {}
 
-         resource R: RI {}
+      resource R: RI {}
 
-         fun test() {
-             let ri: @AnyResource{RI} <- create R()
-             if let r <- ri as? @R {
-                 destroy r
-             }
-         }
+      fun test() {
+          let ri: @{RI} <- create R()
+          if let r <- ri as? @R {
+              destroy r
+          }
+      }
     `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
@@ -3566,19 +3565,18 @@ func TestCheckInvalidResourceOptionalBindingFailableCastResourceLossMissingElse(
 
 func TestCheckInvalidResourceOptionalBindingFailableCastResourceUseAfterInvalidationAfterThen(t *testing.T) {
 
-	_, err := ParseAndCheck(t,
-		`
-         resource interface RI {}
+	_, err := ParseAndCheck(t, `
+      resource interface RI {}
 
-         resource R: RI {}
+      resource R: RI {}
 
-         fun test() {
-             let ri: @AnyResource{RI} <- create R()
-             if let r <- ri as? @R {
-                 destroy r
-             }
-             destroy ri
-         }
+      fun test() {
+          let ri: @{RI} <- create R()
+          if let r <- ri as? @R {
+              destroy r
+          }
+          destroy ri
+      }
     `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
@@ -3586,19 +3584,63 @@ func TestCheckInvalidResourceOptionalBindingFailableCastResourceUseAfterInvalida
 	assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
 }
 
+func TestCheckInvalidResourceOptionalBindingFailableCastMissingElse(t *testing.T) {
+
+	t.Run("top-level resource interface to resource", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+          resource interface RI {}
+
+          resource R: RI {}
+
+          fun test(ri: @{RI}) {
+              if let r <- ri as? @R {
+                  destroy r
+              }
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("contract interface resource to contract to resource", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+          contract interface CI {
+              resource R {}
+          }
+
+          contract C: CI {
+              resource R {}
+          }
+
+          fun test(r: @CI.R) {
+              if let r2 <- r as? @C.R {
+                  destroy r2
+              }
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+}
+
 func TestCheckInvalidResourceFailableCastOutsideOptionalBinding(t *testing.T) {
 
-	_, err := ParseAndCheck(t,
-		`
-         resource interface RI {}
+	_, err := ParseAndCheck(t, `
+      resource interface RI {}
 
-         resource R: RI {}
+      resource R: RI {}
 
-         fun test() {
-             let ri: @AnyResource{RI} <- create R()
-             let r <- ri as? @R
-             destroy r
-         }
+      fun test() {
+          let ri: @{RI} <- create R()
+          let r <- ri as? @R
+          destroy r
+      }
     `)
 
 	errs := ExpectCheckerErrors(t, err, 1)
@@ -3978,4 +4020,36 @@ func TestCheckInvalidOptionalResourceCoalescingRightSide(t *testing.T) {
 	assert.IsType(t, &sema.InvalidNilCoalescingRightResourceOperandError{}, errs[0])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[2])
+}
+
+// https://github.com/dapperlabs/flow-go/issues/3407
+//
+// Check that an function's return information
+// does not influence another function's return information.
+//
+func TestCheckInvalidResourceLossInNestedContractResource(t *testing.T) {
+
+	_, err := ParseAndCheckWithPanic(t, `
+
+      pub contract C {
+
+          resource R {
+
+              fun foo(r: @R) {
+                  if let r2 <- r as? @R {
+                      destroy r2
+                  }
+              }
+          }
+
+          pub fun bar() {
+              return
+          }
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+
 }
