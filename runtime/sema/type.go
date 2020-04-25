@@ -3575,7 +3575,7 @@ func (t *CompositeType) Equal(other Type) bool {
 	}
 
 	return otherStructure.Kind == t.Kind &&
-		otherStructure.Identifier == t.Identifier
+		otherStructure.ID() == t.ID()
 }
 
 func (t *CompositeType) CanHaveMembers() bool {
@@ -4157,7 +4157,7 @@ func (t *InterfaceType) Equal(other Type) bool {
 	}
 
 	return otherInterface.CompositeKind == t.CompositeKind &&
-		otherInterface.Identifier == t.Identifier
+		otherInterface.ID() == t.ID()
 }
 
 func (t *InterfaceType) CanHaveMembers() bool {
