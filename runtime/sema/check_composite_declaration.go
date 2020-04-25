@@ -135,7 +135,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 
 	checkMissingMembers := kind != ContainerKindInterface
 
-	for i, interfaceType := range compositeType.Conformances {
+	for i, interfaceType := range compositeType.ExplicitInterfaceConformances {
 		interfaceNominalType := declaration.Conformances[i]
 
 		checker.checkCompositeConformance(
@@ -463,8 +463,8 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 		// Resolve conformances
 
-		conformances := checker.conformances(declaration, compositeType)
-		compositeType.Conformances = conformances
+		conformances := checker.explicitInterfaceConformances(declaration, compositeType)
+		compositeType.ExplicitInterfaceConformances = conformances
 
 		// NOTE: determine initializer parameter types while nested types are in scope,
 		// and after declaring nested types as the initializer may use nested type in parameters
@@ -605,7 +605,10 @@ func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctio
 	return parameters
 }
 
-func (checker *Checker) conformances(declaration *ast.CompositeDeclaration, compositeType *CompositeType) []*InterfaceType {
+func (checker *Checker) explicitInterfaceConformances(
+	declaration *ast.CompositeDeclaration,
+	compositeType *CompositeType,
+) []*InterfaceType {
 
 	var interfaceTypes []*InterfaceType
 	seenConformances := map[string]bool{}
@@ -799,7 +802,7 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 			interfaceMemberFunctionType := interfaceMemberType.(*FunctionType)
 			compositeMemberFunctionType := compositeMemberType.(*FunctionType)
 
-			// TODO: subtype?
+			// TODO: parameters may be supertype, return type may be subtype
 			if !compositeMemberFunctionType.EqualIncludingArgumentLabels(interfaceMemberFunctionType) {
 				return false
 			}
@@ -902,9 +905,9 @@ func (checker *Checker) checkTypeRequirement(
 	// Check that the composite declaration declares at least the conformances
 	// that the type requirement stated
 
-	for _, requiredConformance := range requiredCompositeType.Conformances {
+	for _, requiredConformance := range requiredCompositeType.ExplicitInterfaceConformances {
 		found := false
-		for _, conformance := range declaredCompositeType.Conformances {
+		for _, conformance := range declaredCompositeType.ExplicitInterfaceConformances {
 			if conformance == requiredConformance {
 				found = true
 				break
@@ -924,12 +927,12 @@ func (checker *Checker) checkTypeRequirement(
 	// Check the conformance of the composite to the type requirement
 	// like a top-level composite declaration to an interface type
 
-	interfaceType := requiredCompositeType.InterfaceType()
+	requiredInterfaceType := requiredCompositeType.InterfaceType()
 
 	checker.checkCompositeConformance(
 		compositeDeclaration,
 		declaredCompositeType,
-		interfaceType,
+		requiredInterfaceType,
 		compositeDeclaration.Identifier,
 		compositeConformanceCheckOptions{
 			checkMissingMembers:            true,
