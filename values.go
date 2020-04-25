@@ -21,6 +21,9 @@ package cadence
 import (
 	"fmt"
 	"math/big"
+
+	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 // Value
@@ -29,6 +32,7 @@ type Value interface {
 	isValue()
 	Type() Type
 	ToGoValue() interface{}
+	ToRuntimeValue() runtime.Value
 }
 
 // Void
@@ -49,6 +53,10 @@ func (Void) ToGoValue() interface{} {
 	return nil
 }
 
+func (Void) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.VoidValue{}}
+}
+
 // Optional
 
 type Optional struct {
@@ -65,14 +73,24 @@ func (Optional) Type() Type {
 	return nil
 }
 
-func (o Optional) ToGoValue() interface{} {
-	if o.Value == nil {
+func (v Optional) ToGoValue() interface{} {
+	if v.Value == nil {
 		return nil
 	}
 
-	value := o.Value.ToGoValue()
+	value := v.Value.ToGoValue()
 
 	return value
+}
+
+func (v Optional) ToRuntimeValue() runtime.Value {
+	value := &interpreter.SomeValue{}
+
+	if v.Value != nil {
+		value.Value = v.Value.ToRuntimeValue().Value
+	}
+
+	return runtime.Value{Value: value}
 }
 
 // Bool
@@ -93,6 +111,10 @@ func (v Bool) ToGoValue() interface{} {
 	return bool(v)
 }
 
+func (v Bool) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.BoolValue(v)}
+}
+
 // String
 
 type String string
@@ -111,6 +133,10 @@ func (v String) ToGoValue() interface{} {
 	return string(v)
 }
 
+func (v String) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.NewStringValue(string(v))}
+}
+
 // Bytes
 
 type Bytes []byte
@@ -127,6 +153,10 @@ func (Bytes) Type() Type {
 
 func (v Bytes) ToGoValue() interface{} {
 	return []byte(v)
+}
+
+func (v Bytes) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.ByteSliceToByteArrayValue(v)}
 }
 
 // Address
@@ -153,6 +183,10 @@ func (Address) Type() Type {
 
 func (v Address) ToGoValue() interface{} {
 	return [AddressLength]byte(v)
+}
+
+func (v Address) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.NewAddressValueFromBytes(v.Bytes())}
 }
 
 func (v Address) Bytes() []byte {
@@ -197,6 +231,10 @@ func (v Int) ToGoValue() interface{} {
 	return v.Big()
 }
 
+func (v Int) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.NewIntValueFromBigInt(v.Value)}
+}
+
 func (v Int) Int() int {
 	return int(v.Value.Int64())
 }
@@ -217,6 +255,10 @@ func (Int8) isValue() {}
 
 func (v Int8) ToGoValue() interface{} {
 	return int8(v)
+}
+
+func (v Int8) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.Int8Value(v)}
 }
 
 func (Int8) Type() Type {
@@ -241,6 +283,10 @@ func (v Int16) ToGoValue() interface{} {
 	return int16(v)
 }
 
+func (v Int16) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.Int16Value(v)}
+}
+
 // Int32
 
 type Int32 int32
@@ -259,6 +305,10 @@ func (v Int32) ToGoValue() interface{} {
 	return int32(v)
 }
 
+func (v Int32) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.Int32Value(v)}
+}
+
 // Int64
 
 type Int64 int64
@@ -275,6 +325,10 @@ func (Int64) Type() Type {
 
 func (v Int64) ToGoValue() interface{} {
 	return int64(v)
+}
+
+func (v Int64) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.Int64Value(v)}
 }
 
 // Int128
@@ -300,6 +354,10 @@ func (Int128) Type() Type {
 
 func (v Int128) ToGoValue() interface{} {
 	return v.Big()
+}
+
+func (v Int128) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.NewInt128ValueFromBigInt(v.Value)}
 }
 
 func (v Int128) Int() int {
@@ -333,6 +391,10 @@ func (Int256) Type() Type {
 
 func (v Int256) ToGoValue() interface{} {
 	return v.Big()
+}
+
+func (v Int256) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.NewInt256ValueFromBigInt(v.Value)}
 }
 
 func (v Int256) Int() int {
@@ -370,6 +432,10 @@ func (v UInt) ToGoValue() interface{} {
 	return v.Big()
 }
 
+func (v UInt) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.NewUIntValueFromBigInt(v.Value)}
+}
+
 func (v UInt) Int() int {
 	return int(v.Value.Uint64())
 }
@@ -396,6 +462,10 @@ func (v UInt8) ToGoValue() interface{} {
 	return uint8(v)
 }
 
+func (v UInt8) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.UInt8Value(v)}
+}
+
 // UInt16
 
 type UInt16 uint16
@@ -412,6 +482,10 @@ func (UInt16) Type() Type {
 
 func (v UInt16) ToGoValue() interface{} {
 	return uint16(v)
+}
+
+func (v UInt16) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.UInt16Value(v)}
 }
 
 // UInt32
@@ -432,6 +506,10 @@ func (v UInt32) ToGoValue() interface{} {
 	return uint32(v)
 }
 
+func (v UInt32) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.UInt32Value(v)}
+}
+
 // UInt64
 
 type UInt64 uint64
@@ -448,6 +526,10 @@ func (UInt64) Type() Type {
 
 func (v UInt64) ToGoValue() interface{} {
 	return uint64(v)
+}
+
+func (v UInt64) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.UInt64Value(v)}
 }
 
 // UInt128
@@ -476,6 +558,10 @@ func (UInt128) Type() Type {
 
 func (v UInt128) ToGoValue() interface{} {
 	return v.Big()
+}
+
+func (v UInt128) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.NewUInt128ValueFromBigInt(v.Value)}
 }
 
 func (v UInt128) Int() int {
@@ -514,6 +600,10 @@ func (v UInt256) ToGoValue() interface{} {
 	return v.Big()
 }
 
+func (v UInt256) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.NewUInt256ValueFromBigInt(v.Value)}
+}
+
 func (v UInt256) Int() int {
 	return int(v.Value.Uint64())
 }
@@ -540,6 +630,10 @@ func (v Word8) ToGoValue() interface{} {
 	return uint8(v)
 }
 
+func (v Word8) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.Word8Value(v)}
+}
+
 // Word16
 
 type Word16 uint16
@@ -556,6 +650,10 @@ func (Word16) Type() Type {
 
 func (v Word16) ToGoValue() interface{} {
 	return uint16(v)
+}
+
+func (v Word16) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.Word16Value(v)}
 }
 
 // Word32
@@ -576,6 +674,10 @@ func (v Word32) ToGoValue() interface{} {
 	return uint32(v)
 }
 
+func (v Word32) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.Word32Value(v)}
+}
+
 // Word64
 
 type Word64 uint64
@@ -592,6 +694,10 @@ func (Word64) Type() Type {
 
 func (v Word64) ToGoValue() interface{} {
 	return uint64(v)
+}
+
+func (v Word64) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.Word64Value(v)}
 }
 
 // Fix64
@@ -612,6 +718,10 @@ func (v Fix64) ToGoValue() interface{} {
 	return int64(v)
 }
 
+func (v Fix64) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.Fix64Value(v)}
+}
+
 // UFix64
 
 type UFix64 uint64
@@ -628,6 +738,10 @@ func (UFix64) Type() Type {
 
 func (v UFix64) ToGoValue() interface{} {
 	return uint64(v)
+}
+
+func (v UFix64) ToRuntimeValue() runtime.Value {
+	return runtime.Value{Value: interpreter.UFix64Value(v)}
 }
 
 // Array
@@ -657,6 +771,16 @@ func (v Array) ToGoValue() interface{} {
 	return ret
 }
 
+func (v Array) ToRuntimeValue() runtime.Value {
+	values := make([]interpreter.Value, len(v.Values))
+
+	for i, e := range v.Values {
+		values[i] = e.ToRuntimeValue().Value
+	}
+
+	return runtime.Value{Value: interpreter.NewArrayValueUnownedNonCopying(values...)}
+}
+
 // Dictionary
 
 type Dictionary struct {
@@ -682,6 +806,17 @@ func (v Dictionary) ToGoValue() interface{} {
 	}
 
 	return ret
+}
+
+func (v Dictionary) ToRuntimeValue() runtime.Value {
+	keysAndValues := make([]interpreter.Value, len(v.Pairs)*2)
+
+	for i, pair := range v.Pairs {
+		keysAndValues[i*2] = pair.Key.ToRuntimeValue().Value
+		keysAndValues[i*2+1] = pair.Value.ToRuntimeValue().Value
+	}
+
+	return runtime.Value{Value: interpreter.NewDictionaryValueUnownedNonCopying(keysAndValues...)}
 }
 
 // KeyValuePair
@@ -723,6 +858,10 @@ func (v Struct) ToGoValue() interface{} {
 	return ret
 }
 
+func (v Struct) ToRuntimeValue() runtime.Value {
+	return compositeToRuntimeValue(v.StructType.Fields, v.Fields)
+}
+
 // Resource
 
 type Resource struct {
@@ -755,6 +894,10 @@ func (v Resource) ToGoValue() interface{} {
 	return ret
 }
 
+func (v Resource) ToRuntimeValue() runtime.Value {
+	return compositeToRuntimeValue(v.ResourceType.Fields, v.Fields)
+}
+
 // Event
 
 type Event struct {
@@ -785,4 +928,20 @@ func (v Event) ToGoValue() interface{} {
 	}
 
 	return ret
+}
+
+func (v Event) ToRuntimeValue() runtime.Value {
+	return compositeToRuntimeValue(v.EventType.Fields, v.Fields)
+}
+
+func compositeToRuntimeValue(fieldTypes []Field, fieldValues []Value) runtime.Value {
+	fields := make(map[string]interpreter.Value, len(fieldTypes))
+
+	for i := 0; i < len(fieldTypes) && i < len(fieldValues); i++ {
+		fieldType := fieldTypes[i]
+		fieldValue := fieldValues[i]
+		fields[fieldType.Identifier] = fieldValue.ToRuntimeValue().Value
+	}
+
+	return runtime.Value{Value: &interpreter.CompositeValue{Fields: fields}}
 }

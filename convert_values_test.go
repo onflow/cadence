@@ -30,209 +30,185 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func TestConvertVoidValue(t *testing.T) {
-	value := convertValue(interpreter.VoidValue{}, nil)
-
-	assert.Equal(t, NewVoid(), value)
-}
-
-func TestConvertNilValue(t *testing.T) {
-
-	value := convertValue(interpreter.NilValue{}, nil)
-
-	assert.Equal(t, NewOptional(nil), value)
-}
-
-func TestConvertSomeValue(t *testing.T) {
-	t.Run("Nil", func(t *testing.T) {
-		value := convertValue(&interpreter.SomeValue{Value: nil}, nil)
-
-		assert.Equal(t, NewOptional(nil), value)
-	})
-
-	t.Run("Non-nil", func(t *testing.T) {
-		value := convertValue(
-			&interpreter.SomeValue{Value: interpreter.NewIntValueFromInt64(42)},
-			nil,
-		)
-
-		assert.Equal(t, NewOptional(NewInt(42)), value)
-	})
-}
-
-func TestConvertBoolValue(t *testing.T) {
-	t.Run("True", func(t *testing.T) {
-		value := convertValue(interpreter.BoolValue(true), nil)
-
-		assert.Equal(t, NewBool(true), value)
-	})
-
-	t.Run("False", func(t *testing.T) {
-		value := convertValue(interpreter.BoolValue(false), nil)
-
-		assert.Equal(t, NewBool(false), value)
-	})
-}
-
-func TestConvertStringValue(t *testing.T) {
-	t.Run("Empty", func(t *testing.T) {
-		value := convertValue(&interpreter.StringValue{Str: ""}, nil)
-
-		assert.Equal(t, NewString(""), value)
-	})
-
-	t.Run("Non-empty", func(t *testing.T) {
-		value := convertValue(&interpreter.StringValue{Str: "foo"}, nil)
-
-		assert.Equal(t, NewString("foo"), value)
-	})
-}
-
-func TestConvertArrayValue(t *testing.T) {
-	t.Run("Empty", func(t *testing.T) {
-		value := convertValue(&interpreter.ArrayValue{Values: nil}, nil)
-
-		assert.Equal(t, NewArray([]Value{}), value)
-	})
-
-	t.Run("Non-empty", func(t *testing.T) {
-		value := convertValue(
-			&interpreter.ArrayValue{
-				Values: []interpreter.Value{
-					interpreter.NewIntValueFromInt64(42),
-					interpreter.NewStringValue("foo"),
-				},
+var convertTests = []struct {
+	label       string
+	value       interpreter.Value
+	expected    Value
+	skipReverse bool
+}{
+	{
+		label:    "Void",
+		value:    interpreter.VoidValue{},
+		expected: NewVoid(),
+	},
+	{
+		label:       "Nil",
+		value:       interpreter.NilValue{},
+		expected:    NewOptional(nil),
+		skipReverse: true,
+	},
+	{
+		label:    "SomeValue nil",
+		value:    &interpreter.SomeValue{Value: nil},
+		expected: NewOptional(nil),
+	},
+	{
+		label:    "SomeValue non-nil",
+		value:    &interpreter.SomeValue{Value: interpreter.NewIntValueFromInt64(42)},
+		expected: NewOptional(NewInt(42)),
+	},
+	{
+		label:    "Bool true",
+		value:    interpreter.BoolValue(true),
+		expected: NewBool(true),
+	},
+	{
+		label:    "Bool false",
+		value:    interpreter.BoolValue(false),
+		expected: NewBool(false),
+	},
+	{
+		label:    "String empty",
+		value:    &interpreter.StringValue{Str: ""},
+		expected: NewString(""),
+	},
+	{
+		label:    "String non-empty",
+		value:    &interpreter.StringValue{Str: "foo"},
+		expected: NewString("foo"),
+	},
+	{
+		label:    "Array empty",
+		value:    &interpreter.ArrayValue{Values: []interpreter.Value{}},
+		expected: NewArray([]Value{}),
+	},
+	{
+		label: "Array non-empty",
+		value: &interpreter.ArrayValue{
+			Values: []interpreter.Value{
+				interpreter.NewIntValueFromInt64(42),
+				interpreter.NewStringValue("foo"),
 			},
-			nil,
-		)
-
-		expected := NewArray([]Value{
+		},
+		expected: NewArray([]Value{
 			NewInt(42),
 			NewString("foo"),
+		}),
+	},
+	{
+		label:    "Int",
+		value:    interpreter.NewIntValueFromInt64(42),
+		expected: NewInt(42),
+	},
+	{
+		label:    "Int8",
+		value:    interpreter.Int8Value(42),
+		expected: NewInt8(42),
+	},
+	{
+		label:    "Int16",
+		value:    interpreter.Int16Value(42),
+		expected: NewInt16(42),
+	},
+	{
+		label:    "Int32",
+		value:    interpreter.Int32Value(42),
+		expected: NewInt32(42),
+	},
+	{
+		label:    "Int64",
+		value:    interpreter.Int64Value(42),
+		expected: NewInt64(42),
+	},
+	{
+		label:    "Int128",
+		value:    interpreter.NewInt128ValueFromInt64(42),
+		expected: NewInt128(42),
+	},
+	{
+		label:    "Int256",
+		value:    interpreter.NewInt256ValueFromInt64(42),
+		expected: NewInt256(42),
+	},
+	{
+		label:    "UInt",
+		value:    interpreter.NewUIntValueFromUint64(42),
+		expected: NewUInt(42),
+	},
+	{
+		label:    "UInt8",
+		value:    interpreter.UInt8Value(42),
+		expected: NewUInt8(42),
+	},
+	{
+		label:    "UInt16",
+		value:    interpreter.UInt16Value(42),
+		expected: NewUInt16(42),
+	},
+	{
+		label:    "UInt32",
+		value:    interpreter.UInt32Value(42),
+		expected: NewUInt32(42),
+	},
+	{
+		label:    "UInt64",
+		value:    interpreter.UInt64Value(42),
+		expected: NewUInt64(42),
+	},
+	{
+		label:    "UInt128",
+		value:    interpreter.NewUInt128ValueFromInt64(42),
+		expected: NewUInt128(42),
+	},
+	{
+		label:    "UInt256",
+		value:    interpreter.NewUInt256ValueFromInt64(42),
+		expected: NewUInt256(42),
+	},
+	{
+		label:    "Word8",
+		value:    interpreter.Word8Value(42),
+		expected: NewWord8(42),
+	},
+	{
+		label:    "Word16",
+		value:    interpreter.Word16Value(42),
+		expected: NewWord16(42),
+	},
+	{
+		label:    "Word32",
+		value:    interpreter.Word32Value(42),
+		expected: NewWord32(42),
+	},
+	{
+		label:    "Word64",
+		value:    interpreter.Word64Value(42),
+		expected: NewWord64(42),
+	},
+	{
+		label:    "Fix64",
+		value:    interpreter.Fix64Value(-123000000),
+		expected: NewFix64(-123000000),
+	},
+	{
+		label:    "UFix64",
+		value:    interpreter.UFix64Value(123000000),
+		expected: NewUFix64(123000000),
+	},
+}
+
+func TestConvertValue(t *testing.T) {
+	for _, tt := range convertTests {
+		t.Run(tt.label, func(t *testing.T) {
+			actual := convertValue(tt.value, nil)
+			assert.Equal(t, tt.expected, actual)
+
+			if !tt.skipReverse {
+				original := actual.ToRuntimeValue()
+				assert.Equal(t, tt.value, original.Value)
+			}
 		})
-
-		assert.Equal(t, expected, value)
-	})
-}
-
-func TestConvertIntValue(t *testing.T) {
-	value := convertValue(interpreter.NewIntValueFromInt64(42), nil)
-
-	assert.Equal(t, NewInt(42), value)
-}
-
-func TestConvertInt8Value(t *testing.T) {
-	value := convertValue(interpreter.Int8Value(42), nil)
-
-	assert.Equal(t, NewInt8(42), value)
-}
-
-func TestConvertInt16Value(t *testing.T) {
-	value := convertValue(interpreter.Int16Value(42), nil)
-
-	assert.Equal(t, NewInt16(42), value)
-}
-
-func TestConvertInt32Value(t *testing.T) {
-	value := convertValue(interpreter.Int32Value(42), nil)
-
-	assert.Equal(t, NewInt32(42), value)
-}
-
-func TestConvertInt64Value(t *testing.T) {
-	value := convertValue(interpreter.Int64Value(42), nil)
-
-	assert.Equal(t, NewInt64(42), value)
-}
-
-func TestConvertInt128Value(t *testing.T) {
-	value := convertValue(interpreter.NewInt128ValueFromBigInt(sema.Int128TypeMaxInt), nil)
-
-	assert.Equal(t, NewInt128FromBig(sema.Int128TypeMaxInt), value)
-}
-
-func TestConvertInt256Value(t *testing.T) {
-	value := convertValue(interpreter.NewInt256ValueFromBigInt(sema.Int256TypeMaxInt), nil)
-
-	assert.Equal(t, NewInt256FromBig(sema.Int256TypeMaxInt), value)
-}
-
-func TestConvertUIntValue(t *testing.T) {
-	value := convertValue(interpreter.NewUIntValueFromUint64(42), nil)
-
-	assert.Equal(t, NewUInt(42), value)
-}
-
-func TestConvertUInt8Value(t *testing.T) {
-	value := convertValue(interpreter.UInt8Value(42), nil)
-
-	assert.Equal(t, NewUInt8(42), value)
-}
-
-func TestConvertUInt16Value(t *testing.T) {
-	value := convertValue(interpreter.UInt16Value(42), nil)
-
-	assert.Equal(t, NewUInt16(42), value)
-}
-
-func TestConvertUInt32Value(t *testing.T) {
-	value := convertValue(interpreter.UInt32Value(42), nil)
-
-	assert.Equal(t, NewUInt32(42), value)
-}
-
-func TestConvertUInt64Value(t *testing.T) {
-	value := convertValue(interpreter.UInt64Value(42), nil)
-
-	assert.Equal(t, NewUInt64(42), value)
-}
-
-func TestConvertUInt128Value(t *testing.T) {
-	value := convertValue(interpreter.NewUInt128ValueFromBigInt(sema.UInt128TypeMaxInt), nil)
-
-	assert.Equal(t, NewUInt128FromBig(sema.UInt128TypeMaxInt), value)
-}
-
-func TestConvertUInt256Value(t *testing.T) {
-	value := convertValue(interpreter.NewUInt256ValueFromBigInt(sema.UInt256TypeMaxInt), nil)
-
-	assert.Equal(t, NewUInt256FromBig(sema.UInt256TypeMaxInt), value)
-}
-
-func TestConvertWord8Value(t *testing.T) {
-	value := convertValue(interpreter.UInt8Value(42), nil)
-
-	assert.Equal(t, NewUInt8(42), value)
-}
-
-func TestConvertWord16Value(t *testing.T) {
-	value := convertValue(interpreter.UInt16Value(42), nil)
-
-	assert.Equal(t, NewUInt16(42), value)
-}
-
-func TestConvertWord32Value(t *testing.T) {
-	value := convertValue(interpreter.UInt32Value(42), nil)
-
-	assert.Equal(t, NewUInt32(42), value)
-}
-
-func TestConvertWord64Value(t *testing.T) {
-	value := convertValue(interpreter.UInt64Value(42), nil)
-
-	assert.Equal(t, NewUInt64(42), value)
-}
-
-func TestConvertFix64Value(t *testing.T) {
-	value := convertValue(interpreter.Fix64Value(-123000000), nil)
-
-	assert.Equal(t, NewFix64(-123000000), value)
-}
-
-func TestConvertUFix64Value(t *testing.T) {
-	value := convertValue(interpreter.UFix64Value(123000000), nil)
-
-	assert.Equal(t, NewUFix64(123000000), value)
+	}
 }
 
 func TestConvertIntegerValuesFromScript(t *testing.T) {
@@ -270,7 +246,7 @@ func TestConvertFixedPointValuesFromScript(t *testing.T) {
 	}
 }
 
-func TestConvertDictionaryValue(t *testing.T) {
+func TestConvertDictionaryValueFromScript(t *testing.T) {
 	t.Run("Empty", func(t *testing.T) {
 		script := `
             access(all) fun main(): {String: Int} {
@@ -310,7 +286,7 @@ func TestConvertDictionaryValue(t *testing.T) {
 	})
 }
 
-func TestConvertAddressValue(t *testing.T) {
+func TestConvertAddressValueFromScript(t *testing.T) {
 	script := `
         access(all) fun main(): Address {
             return 0x42
@@ -325,7 +301,7 @@ func TestConvertAddressValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestConvertStructValue(t *testing.T) {
+func TestConvertStructValueFromScript(t *testing.T) {
 	script := `
         access(all) struct Foo {
             access(all) let bar: Int
@@ -346,7 +322,7 @@ func TestConvertStructValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestConvertResourceValue(t *testing.T) {
+func TestConvertResourceValueFromScript(t *testing.T) {
 	script := `
         access(all) resource Foo {
             access(all) let bar: Int
@@ -371,7 +347,7 @@ func TestConvertResourceValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestConvertResourceArrayValue(t *testing.T) {
+func TestConvertResourceArrayValueFromScript(t *testing.T) {
 	script := `
         access(all) resource Foo {
             access(all) let bar: Int
@@ -401,7 +377,7 @@ func TestConvertResourceArrayValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestConvertResourceDictionaryValue(t *testing.T) {
+func TestConvertResourceDictionaryValueFromScript(t *testing.T) {
 	script := `
         access(all) resource Foo {
             access(all) let bar: Int
@@ -440,7 +416,7 @@ func TestConvertResourceDictionaryValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestConvertNestedResourceValue(t *testing.T) {
+func TestConvertNestedResourceValueFromScript(t *testing.T) {
 	barResourceType := ResourceType{
 		TypeID:     "test.Bar",
 		Identifier: "Bar",
@@ -509,7 +485,7 @@ func TestConvertNestedResourceValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestConvertEventValue(t *testing.T) {
+func TestConvertEventValueFromScript(t *testing.T) {
 	script := `
         access(all) event Foo(bar: Int)
 
