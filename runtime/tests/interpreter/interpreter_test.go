@@ -7570,3 +7570,30 @@ func TestInterpretCountDigits256(t *testing.T) {
 		})
 	}
 }
+
+func TestInterpretFailableCastingCompositeTypeConfusion(t *testing.T) {
+
+	inter := parseCheckAndInterpretWithOptions(t,
+		`
+          contract A {
+              struct S {}
+          }
+
+          contract B {
+              struct S {}
+          }
+
+          let s = A.S() as? B.S
+        `,
+		ParseCheckAndInterpretOptions{
+			Options: []interpreter.Option{
+				makeContractValueHandler(nil, nil, nil),
+			},
+		},
+	)
+
+	assert.Equal(t,
+		interpreter.NilValue{},
+		inter.Globals["s"].Value,
+	)
+}
