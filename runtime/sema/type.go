@@ -3515,27 +3515,32 @@ func numberFunctionArgumentExpressionsChecker(numberType Type) func(*Checker, []
 // CompositeType
 
 type CompositeType struct {
-	Location     ast.Location
-	Identifier   string
-	Kind         common.CompositeKind
-	Conformances []*InterfaceType
-	// an internal set of field `Conformances`
-	conformanceSet InterfaceSet
-	Members        map[string]*Member
+	Location   ast.Location
+	Identifier string
+	Kind       common.CompositeKind
+	// an internal set of field `ExplicitInterfaceConformances`
+	explicitInterfaceConformanceSet     InterfaceSet
+	ExplicitInterfaceConformances       []*InterfaceType
+	Members                             map[string]*Member
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
 	nestedTypes           map[string]Type
 	ContainerType         Type
 }
 
-func (t *CompositeType) ConformanceSet() InterfaceSet {
-	if t.conformanceSet == nil {
-		t.conformanceSet = make(InterfaceSet, len(t.Conformances))
-		for _, conformance := range t.Conformances {
-			t.conformanceSet[conformance] = struct{}{}
+func (t *CompositeType) ExplicitInterfaceConformanceSet() InterfaceSet {
+	if t.explicitInterfaceConformanceSet == nil {
+		// TODO: also include conformances' conformances recursively
+		//   once interface can have conformances
+
+		t.explicitInterfaceConformanceSet = make(InterfaceSet, len(t.ExplicitInterfaceConformances))
+		for _, conformance := range t.ExplicitInterfaceConformances {
+			t.explicitInterfaceConformanceSet.Add(conformance)
 		}
 	}
-	return t.conformanceSet
+
+	return t.explicitInterfaceConformanceSet
+}
 }
 
 func (*CompositeType) IsType() {}
@@ -3619,7 +3624,7 @@ func (t *CompositeType) TypeRequirements() []*CompositeType {
 	var typeRequirements []*CompositeType
 
 	if containerComposite, ok := t.ContainerType.(*CompositeType); ok {
-		for _, conformance := range containerComposite.Conformances {
+		for _, conformance := range containerComposite.ExplicitInterfaceConformances {
 			ty := conformance.nestedTypes[t.Identifier]
 			typeRequirement, ok := ty.(*CompositeType)
 			if !ok {
@@ -4784,7 +4789,7 @@ func IsSubType(subType Type, superType Type) bool {
 					// TODO: once interfaces can conform to interfaces, include
 					return IsSubType(typedInnerSubType, restrictedSuperType) &&
 						typedInnerSuperType.RestrictionSet().
-							IsSubsetOf(typedInnerSubType.ConformanceSet())
+							IsSubsetOf(typedInnerSubType.ExplicitInterfaceConformanceSet())
 
 				case *AnyResourceType, *AnyStructType, *AnyType:
 					// An unauthorized reference to an unrestricted type `&T`
@@ -4979,7 +4984,7 @@ func IsSubType(subType Type, superType Type) bool {
 					// TODO: once interfaces can conform to interfaces, include
 					return IsSubType(restrictedSubtype, restrictedSuperType) &&
 						typedSuperType.RestrictionSet().
-							IsSubsetOf(restrictedSubtype.ConformanceSet())
+							IsSubsetOf(restrictedSubtype.ExplicitInterfaceConformanceSet())
 				}
 
 			case *AnyResourceType:
@@ -5014,7 +5019,7 @@ func IsSubType(subType Type, superType Type) bool {
 
 				return IsSubType(typedSubType, typedSuperType.Type) &&
 					typedSuperType.RestrictionSet().
-						IsSubsetOf(typedSubType.ConformanceSet())
+						IsSubsetOf(typedSubType.ExplicitInterfaceConformanceSet())
 			}
 
 		default:
@@ -5103,7 +5108,7 @@ func IsSubType(subType Type, superType Type) bool {
 			}
 
 			// TODO: once interfaces can conform to interfaces, include
-			if _, ok := typedSubType.ConformanceSet()[typedSuperType]; ok {
+			if _, ok := typedSubType.ExplicitInterfaceConformanceSet()[typedSuperType]; ok {
 				return true
 			}
 
@@ -5289,6 +5294,15 @@ func (s InterfaceSet) IsSubsetOf(other InterfaceSet) bool {
 	}
 
 	return true
+}
+
+func (s InterfaceSet) Includes(interfaceType *InterfaceType) bool {
+	_, ok := s[interfaceType]
+	return ok
+}
+
+func (s InterfaceSet) Add(interfaceType *InterfaceType) {
+	s[interfaceType] = struct{}{}
 }
 
 // RestrictedType

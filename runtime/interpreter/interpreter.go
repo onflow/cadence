@@ -2406,8 +2406,8 @@ func (interpreter *Interpreter) declareCompositeValue(
 	// in reverse order: first the conformances, then the type requirements;
 	// each conformances and type requirements in reverse order as well.
 
-	for i := len(compositeType.Conformances) - 1; i >= 0; i-- {
-		conformance := compositeType.Conformances[i]
+	for i := len(compositeType.ExplicitInterfaceConformances) - 1; i >= 0; i-- {
+		conformance := compositeType.ExplicitInterfaceConformances[i]
 
 		wrapFunctions(interpreter.typeCodes.interfaceCodes[conformance.ID()])
 	}
