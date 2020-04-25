@@ -25,9 +25,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/examples"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -1746,84 +1748,31 @@ func TestCheckContractInterfaceTypeRequirementImplementation(t *testing.T) {
 	require.NoError(t, err)
 }
 
-const fungibleTokenContractInterface = `
-  pub contract interface FungibleToken {
-
-      pub resource interface Provider {
-
-          pub fun withdraw(amount: Int): @Vault
-      }
-
-      pub resource interface Receiver {
-
-          pub fun deposit(vault: @Vault)
-      }
-
-      pub resource Vault: Provider, Receiver {
-
-          pub balance: Int
-
-          init(balance: Int)
-      }
-
-      pub fun absorb(vault: @Vault)
-
-      pub fun sprout(balance: Int): @Vault
-  }
-`
-
 func TestCheckContractInterfaceFungibleToken(t *testing.T) {
 
-	_, err := ParseAndCheck(t, fungibleTokenContractInterface)
+	const code = examples.FungibleTokenContractInterface
+	_, err := ParseAndCheck(t, code)
 
-	require.NoError(t, err)
+	if !assert.NoError(t, err) {
+		cmd.PrettyPrintError(err, "", map[string]string{"": code})
+	}
 }
-
-const validExampleFungibleTokenContract = `
-  pub contract ExampleToken: FungibleToken {
-
-     pub resource Vault: FungibleToken.Receiver, FungibleToken.Provider {
-
-         pub var balance: Int
-
-         init(balance: Int) {
-             self.balance = balance
-         }
-
-         pub fun withdraw(amount: Int): @Vault {
-             self.balance = self.balance - amount
-             return <-create Vault(balance: amount)
-         }
-
-         pub fun deposit(vault: @Vault) {
-            self.balance = self.balance + vault.balance
-            destroy vault
-         }
-     }
-
-     pub fun absorb(vault: @Vault) {
-         destroy vault
-     }
-
-     pub fun sprout(balance: Int): @Vault {
-         return <-create Vault(balance: balance)
-     }
-  }
-`
 
 func TestCheckContractInterfaceFungibleTokenConformance(t *testing.T) {
 
-	code := fungibleTokenContractInterface + "\n" + validExampleFungibleTokenContract
+	code := examples.FungibleTokenContractInterface + "\n" + examples.ExampleFungibleTokenContract
 
-	_, err := ParseAndCheck(t, code)
+	_, err := ParseAndCheckWithPanic(t, code)
 
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		cmd.PrettyPrintError(err, "", map[string]string{"": code})
+	}
 }
 
 func TestCheckContractInterfaceFungibleTokenUse(t *testing.T) {
 
-	code := fungibleTokenContractInterface + "\n" +
-		validExampleFungibleTokenContract + "\n" + `
+	code := examples.FungibleTokenContractInterface + "\n" +
+		examples.ExampleFungibleTokenContract + "\n" + `
 
       fun test(): Int {
           let publisher <- ExampleToken.sprout(balance: 100)
@@ -1842,7 +1791,9 @@ func TestCheckContractInterfaceFungibleTokenUse(t *testing.T) {
       }
     `
 
-	_, err := ParseAndCheck(t, code)
+	_, err := ParseAndCheckWithPanic(t, code)
 
-	assert.NoError(t, err)
+	if !assert.NoError(t, err) {
+		cmd.PrettyPrintError(err, "", map[string]string{"": code})
+	}
 }
