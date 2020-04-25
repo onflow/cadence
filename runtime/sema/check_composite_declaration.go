@@ -522,6 +522,29 @@ func (checker *Checker) declareCompositeMembersAndValue(
 				VariableKind:    ast.VariableKindConstant,
 			}
 		}
+
+		// Declare implicit type requirement conformances, if any,
+		// after nested types are declared, and
+		// after explicit conformances are declared.
+		//
+		// For each nested composite type, check if a conformance
+		// declares a nested composite type with the same identifier,
+		// in which case it is a type requirement,
+		// and this nested composite type implicitly conforms to it.
+
+		for nestedTypeIdentifier, nestedType := range compositeType.NestedTypes() {
+			nestedCompositeType, ok := nestedType.(*CompositeType)
+			if !ok {
+				continue
+			}
+
+			for _, compositeTypeConformance := range compositeType.ExplicitInterfaceConformances {
+				conformanceNestedTypes := compositeTypeConformance.NestedTypes()
+				if typeRequirement, ok := conformanceNestedTypes[nestedTypeIdentifier].(*CompositeType); ok {
+					nestedCompositeType.AddImplicitTypeRequirementConformance(typeRequirement)
+				}
+			}
+		}
 	})()
 
 	// Always determine composite constructor type

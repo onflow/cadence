@@ -3664,6 +3664,7 @@ type CompositeType struct {
 	// an internal set of field `ExplicitInterfaceConformances`
 	explicitInterfaceConformanceSet     InterfaceSet
 	ExplicitInterfaceConformances       []*InterfaceType
+	ImplicitTypeRequirementConformances []*CompositeType
 	Members                             map[string]*Member
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
@@ -3684,6 +3685,10 @@ func (t *CompositeType) ExplicitInterfaceConformanceSet() InterfaceSet {
 
 	return t.explicitInterfaceConformanceSet
 }
+
+func (t *CompositeType) AddImplicitTypeRequirementConformance(typeRequirement *CompositeType) {
+	t.ImplicitTypeRequirementConformances =
+		append(t.ImplicitTypeRequirementConformances, typeRequirement)
 }
 
 func init() {
@@ -5244,7 +5249,8 @@ func IsSubType(subType Type, superType Type) bool {
 		// NOTE: type equality case (composite type `T` is subtype of composite type `U`)
 		// is already handled at beginning of function
 
-		if typedSubType, ok := subType.(*RestrictedType); ok {
+		switch typedSubType := subType.(type) {
+		case *RestrictedType:
 
 			// A restricted type `T{Us}`
 			// is a subtype of an unrestricted type `V`:
@@ -5260,6 +5266,16 @@ func IsSubType(subType Type, superType Type) bool {
 				// The owner may freely unrestrict.
 
 				return restrictedSubType == typedSuperType
+			}
+
+		case *CompositeType:
+			// The supertype composite type might be a type requirement.
+			// Check if the subtype composite type implicitly conforms to it.
+
+			for _, conformance := range typedSubType.ImplicitTypeRequirementConformances {
+				if conformance == typedSuperType {
+					return true
+				}
 			}
 		}
 
