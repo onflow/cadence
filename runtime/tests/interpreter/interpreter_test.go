@@ -35,6 +35,7 @@ import (
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/examples"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/onflow/cadence/runtime/trampoline"
 )
@@ -6302,88 +6303,51 @@ func TestInterpretCompositeDeclarationNestedConstructor(t *testing.T) {
 	)
 }
 
-const fungibleTokenContract = `
-  pub contract interface FungibleToken {
-
-      pub resource interface Provider {
-
-          pub fun withdraw(amount: Int): @Vault
-      }
-
-      pub resource interface Receiver {
-
-          pub fun deposit(vault: @Vault)
-      }
-
-      pub resource Vault: Provider, Receiver {
-
-          pub balance: Int
-
-          init(balance: Int)
-      }
-
-      pub fun absorb(vault: @Vault)
-
-      pub fun sprout(balance: Int): @Vault
-  }
-
-  pub contract ExampleToken: FungibleToken {
-
-     pub resource Vault: FungibleToken.Receiver, FungibleToken.Provider {
-
-         pub var balance: Int
-
-         init(balance: Int) {
-             self.balance = balance
-         }
-
-         pub fun withdraw(amount: Int): @Vault {
-             self.balance = self.balance - amount
-             return <-create Vault(balance: amount)
-         }
-
-         pub fun deposit(vault: @Vault) {
-            self.balance = self.balance + vault.balance
-            destroy vault
-         }
-     }
-
-     pub fun absorb(vault: @Vault) {
-         destroy vault
-     }
-
-     pub fun sprout(balance: Int): @Vault {
-         return <-create Vault(balance: balance)
-     }
-  }
-`
-
 func TestInterpretFungibleTokenContract(t *testing.T) {
 
-	code := fungibleTokenContract + "\n" + `
+	code := strings.Join(
+		[]string{
+			examples.FungibleTokenContractInterface,
+			examples.ExampleFungibleTokenContract,
+			`
+              pub fun test(): [Int; 2] {
 
-      pub fun test(): [Int; 2] {
+                  let publisher <- ExampleToken.sprout(balance: 100)
+                  let receiver <- ExampleToken.sprout(balance: 0)
 
-          let publisher <- ExampleToken.sprout(balance: 100)
-          let receiver <- ExampleToken.sprout(balance: 0)
+                  let withdrawn <- publisher.withdraw(amount: 60)
+                  receiver.deposit(vault: <-withdrawn)
 
-          let withdrawn <- publisher.withdraw(amount: 60)
-          receiver.deposit(vault: <-withdrawn)
+                  let publisherBalance = publisher.balance
+                  let receiverBalance = receiver.balance
 
-          let publisherBalance = publisher.balance
-          let receiverBalance = receiver.balance
+                  destroy publisher
+                  destroy receiver
 
-          destroy publisher
-          destroy receiver
+                  return [publisherBalance, receiverBalance]
+              }
+            `,
+		},
+		"\n",
+	)
 
-          return [publisherBalance, receiverBalance]
-      }
-    `
+	standardLibraryFunctions :=
+		stdlib.StandardLibraryFunctions{
+			stdlib.PanicFunction,
+		}
+
+	valueDeclarations := standardLibraryFunctions.ToValueDeclarations()
+	predefinedValues := standardLibraryFunctions.ToValues()
+
 	inter := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
 			Options: []interpreter.Option{
+				interpreter.WithPredefinedValues(predefinedValues),
 				makeContractValueHandler(nil, nil, nil),
+			},
+			CheckerOptions: []sema.Option{
+				sema.WithPredeclaredValues(valueDeclarations),
 			},
 		},
 	)
