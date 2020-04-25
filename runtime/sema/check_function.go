@@ -108,6 +108,14 @@ func (checker *Checker) checkFunction(
 		checker.checkTypeAnnotation(functionType.ReturnTypeAnnotation, returnTypeAnnotation)
 	}
 
+	// Reset the returning state and restore it when leaving
+
+	returned := checker.resources.Returns
+	checker.resources.Returns = false
+	defer func() {
+		checker.resources.Returns = returned
+	}()
+
 	// NOTE: Always declare the function parameters, even if the function body is empty.
 	// For example, event declarations have an initializer with an empty body,
 	// but their parameters (e.g. duplication) needs to still be checked.
