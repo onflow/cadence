@@ -471,15 +471,22 @@ func (*ControlStatementError) isSemanticError() {}
 
 type InvalidAccessModifierError struct {
 	DeclarationKind common.DeclarationKind
+	Explanation     string
 	Access          ast.Access
 	Pos             ast.Position
 }
 
 func (e *InvalidAccessModifierError) Error() string {
+	var explanation string
+	if e.Explanation != "" {
+		explanation = fmt.Sprintf(". %s", e.Explanation)
+	}
+
 	return fmt.Sprintf(
-		"invalid access modifier for %s: `%s`",
+		"invalid access modifier for %s: `%s`%s",
 		e.DeclarationKind.Name(),
 		e.Access.Keyword(),
+		explanation,
 	)
 }
 
@@ -498,13 +505,20 @@ func (e *InvalidAccessModifierError) EndPosition() ast.Position {
 
 type MissingAccessModifierError struct {
 	DeclarationKind common.DeclarationKind
+	Explanation     string
 	Pos             ast.Position
 }
 
 func (e *MissingAccessModifierError) Error() string {
+	var explanation string
+	if e.Explanation != "" {
+		explanation = fmt.Sprintf(". %s", e.Explanation)
+	}
+
 	return fmt.Sprintf(
-		"missing access modifier for %s",
+		"missing access modifier for %s%s",
 		e.DeclarationKind.Name(),
+		explanation,
 	)
 }
 

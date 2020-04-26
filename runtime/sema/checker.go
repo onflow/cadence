@@ -1656,6 +1656,8 @@ func (checker *Checker) ResetErrors() {
 	checker.errors = nil
 }
 
+const invalidTypeDeclarationAccessModifierExplanation = "type declarations must be public for now"
+
 func (checker *Checker) checkDeclarationAccessModifier(
 	access ast.Access,
 	declarationKind common.DeclarationKind,
@@ -1668,6 +1670,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 			checker.report(
 				&InvalidAccessModifierError{
 					Access:          access,
+					Explanation:     "local declarations may not have an access modifier",
 					DeclarationKind: declarationKind,
 					Pos:             startPos,
 				},
@@ -1683,9 +1686,18 @@ func (checker *Checker) checkDeclarationAccessModifier(
 			// and type declarations must be public for now
 
 			if isConstant || isTypeDeclaration {
+				var explanation string
+				switch {
+				case isConstant:
+					explanation = "constants can never be set"
+				case isTypeDeclaration:
+					explanation = invalidTypeDeclarationAccessModifierExplanation
+				}
+
 				checker.report(
 					&InvalidAccessModifierError{
 						Access:          access,
+						Explanation:     explanation,
 						DeclarationKind: declarationKind,
 						Pos:             startPos,
 					},
@@ -1700,6 +1712,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 				checker.report(
 					&InvalidAccessModifierError{
 						Access:          access,
+						Explanation:     invalidTypeDeclarationAccessModifierExplanation,
 						DeclarationKind: declarationKind,
 						Pos:             startPos,
 					},
@@ -1715,6 +1728,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 				checker.report(
 					&InvalidAccessModifierError{
 						Access:          access,
+						Explanation:     invalidTypeDeclarationAccessModifierExplanation,
 						DeclarationKind: declarationKind,
 						Pos:             startPos,
 					},
@@ -1731,6 +1745,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 				checker.report(
 					&MissingAccessModifierError{
 						DeclarationKind: declarationKind,
+						Explanation:     invalidTypeDeclarationAccessModifierExplanation,
 						Pos:             startPos,
 					},
 				)
@@ -2016,4 +2031,12 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation *TypeAnnotation, pos 
 			},
 		)
 	}
+}
+
+func (checker *Checker) ValueActivationDepth() int {
+	return checker.valueActivations.Depth()
+}
+
+func (checker *Checker) TypeActivationDepth() int {
+	return checker.typeActivations.Depth()
 }
