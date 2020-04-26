@@ -4307,13 +4307,14 @@ a declaration can be accessed or called.
   on an instance of the type in an outer scope.
   This does not allow the declaration to be publicly writable though.
 
-  An element is made public by using the `pub` or `access(all)` keywords.
+  An element is made publicly accessible / by any code
+  by using the `pub` or `access(all)` keywords.
 
 - **access(account)** means the declaration is only accessible/visible in the
   scope of the entire account where it is defined. This means that
   other contracts in the account are able to access it,
 
-  An element is specified with account access
+  An element is made accessible by code in the same account (e.g. other contracts)
   by using the `access(account)` keyword.
 
 - **access(contract)** means the declaration is only accessible/visible in the
@@ -4321,7 +4322,7 @@ a declaration can be accessed or called.
   and functions that are defined in the same contract can access it,
   but not other contracts in the same account.
 
-  An element is specified with contract access
+  An element is made accessible by code in the same contract
   by using the `access(contract)` keyword.
 
 - Private or **access(self)** means the declaration is only accessible/visible
@@ -4331,7 +4332,8 @@ a declaration can be accessed or called.
   accessed by functions of the type is part of,
   not by code in an outer scope.
 
-  This level is specified by using the `access(self)` keyword.
+  An element is made accessible by code in the same containing type
+  by using the `access(self)` keyword.
 
 **Access level must be specified for each declaration**
 
@@ -4339,31 +4341,30 @@ The `(set)` suffix can be used to make variables also publicly writable.
 
 To summarize the behavior for variable declarations, constant declarations, and fields:
 
-| Declaration kind | Access modifier    | Read scope                            | Write scope       |
-|:-----------------|:-------------------|:--------------------------------------|:------------------|
-| `let`            | `access(self)`     | Current and inner                     | *None*            |
-| `let`            | `access(contract)` | Current, inner, and its contract      | *None*            |
-| `let`            | `access(account)`  | Current, inner, and account contracts | *None*            |
-| `let`            | `pub`,`access(all)`| **All**                               | *None*            |
-| `var`            | `access(self)`     | Current and inner                     | Current and inner |
-| `var`            | `access(contract)` | Current, inner, and its contract      | Current and inner |
-| `var`            | `access(account)`  | Current, inner, and account contracts | Current and inner |
-| `var`            | `pub`,`access(all)`| **All**                               | Current and inner |
-| `var`            | `pub(set)`         | **All**                               | **All**           |
+| Declaration kind | Access modifier          | Read scope                                           | Write scope       |
+|:-----------------|:-------------------------|:-----------------------------------------------------|:------------------|
+| `let`            | `priv` / `access(self)`  | Current and inner                                    | *None*            |
+| `let`            | `access(contract)`       | Current, inner, and containing contract              | *None*            |
+| `let`            | `access(account)`        | Current, inner, and other contracts in same account  | *None*            |
+| `let`            | `pub`,`access(all)`      | **All**                                              | *None*            |
+| `var`            | `access(self)`           | Current and inner                                    | Current and inner |
+| `var`            | `access(contract)`       | Current, inner, and containing contract              | Current and inner |
+| `var`            | `access(account)`        | Current, inner, and other contracts in same account  | Current and inner |
+| `var`            | `pub` / `access(all)`    | **All**                                              | Current and inner |
+| `var`            | `pub(set)`               | **All**                                              | **All**           |
 
-To summarize the behavior for functions, structures, resources, and interfaces:
+To summarize the for functions:
 
-| Declaration kind                                                    | Access modifier       | Access scope                          |
-|:--------------------------------------------------------------------|:----------------------|:--------------------------------------|
-| `fun`,`struct`,`resource`,`struct interface`,`resource interface`   | `access(self)`        | Current and inner                     |
-| `fun`,`struct`,`resource`,`struct interface`,`resource interface`   | `access(contract)`    | Current, inner, and its contract      |
-| `fun`,`struct`,`resource`,`struct interface`,`resource interface`   | `access(account)`     | Current, inner, and account contracts |
-| `fun`,`struct`,`resource`,`struct interface`,`resource interface`   | `pub`,`access(all)`   | **All**                               |
+| Access modifier          | Access scope                                        |
+|:-------------------------|:----------------------------------------------------|
+| `priv` / `access(self)`  | Current and inner                                   |
+| `access(contract)`       | Current, inner, and containing contract             |
+| `access(account)`        | Current, inner, and other contracts in same account |
+| `pub` / `access(all)`    | **All**                                             |
 
-Currently, all contract defined types must have an access declaration, but
-only code within the [contract](#contracts) in which the type is declared
-is allowed to create instances of the type.
-See the linked contracts section for more information.
+Declarations of structures, resources, and [contracts](#contracts) can only be public.
+However, even though the declarations/types are publicly visible,
+resources can only be created from inside the contract they are declared in.
 
 ```cadence,file=access-control-globals.cdc
 // Declare a private constant, inaccessible/invisible in outer scope.
