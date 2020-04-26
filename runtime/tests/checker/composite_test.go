@@ -1958,26 +1958,14 @@ func TestCheckMutualTypeUseTopLevel(t *testing.T) {
 					firstTypeAnnotation := "A"
 					if firstIsInterface {
 						firstInterfaceKeyword = "interface"
-						switch firstKind {
-						case common.CompositeKindResource:
-							firstTypeAnnotation = "AnyResource{A}"
-
-						case common.CompositeKindStructure:
-							firstTypeAnnotation = "AnyStruct{A}"
-						}
+						firstTypeAnnotation = AsInterfaceType("A", firstKind)
 					}
 
 					secondInterfaceKeyword := ""
 					secondTypeAnnotation := "B"
 					if secondIsInterface {
 						secondInterfaceKeyword = "interface"
-						switch secondKind {
-						case common.CompositeKindResource:
-							secondTypeAnnotation = "AnyResource{B}"
-
-						case common.CompositeKindStructure:
-							secondTypeAnnotation = "AnyStruct{B}"
-						}
+						secondTypeAnnotation = AsInterfaceType("B", secondKind)
 					}
 
 					testName := fmt.Sprintf(

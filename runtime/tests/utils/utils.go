@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
@@ -142,5 +143,14 @@ func AssertEqualWithDiff(t *testing.T, expected, actual interface{}) {
 			"expected: %s\n"+
 			"actual  : %s\n\n"+
 			"%s", expected, actual, s.String()))
+	}
+}
+
+func AsInterfaceType(name string, kind common.CompositeKind) string {
+	switch kind {
+	case common.CompositeKindResource, common.CompositeKindStructure:
+		return fmt.Sprintf("{%s}", name)
+	default:
+		return name
 	}
 }
