@@ -3430,13 +3430,7 @@ func TestInterpretInterfaceConformanceNoRequirements(t *testing.T) {
 			continue
 		}
 
-		interfaceType := "Test"
-		switch compositeKind {
-		case common.CompositeKindResource:
-			interfaceType = "AnyResource{Test}"
-		case common.CompositeKindStructure:
-			interfaceType = "AnyStruct{Test}"
-		}
+		interfaceType := AsInterfaceType("Test", compositeKind)
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
@@ -3483,13 +3477,7 @@ func TestInterpretInterfaceFieldUse(t *testing.T) {
 		if compositeKind == common.CompositeKindContract {
 			identifier = "TestImpl"
 		} else {
-			interfaceType := "Test"
-			switch compositeKind {
-			case common.CompositeKindResource:
-				interfaceType = "AnyResource{Test}"
-			case common.CompositeKindStructure:
-				interfaceType = "AnyStruct{Test}"
-			}
+			interfaceType := AsInterfaceType("Test", compositeKind)
 
 			setupCode = fmt.Sprintf(
 				`pub let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -3564,13 +3552,7 @@ func TestInterpretInterfaceFunctionUse(t *testing.T) {
 		if compositeKind == common.CompositeKindContract {
 			identifier = "TestImpl"
 		} else {
-			interfaceType := "Test"
-			switch compositeKind {
-			case common.CompositeKindResource:
-				interfaceType = "AnyResource{Test}"
-			case common.CompositeKindStructure:
-				interfaceType = "AnyStruct{Test}"
-			}
+			interfaceType := AsInterfaceType("Test", compositeKind)
 
 			setupCode = fmt.Sprintf(
 				`pub let test: %[1]s %[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -3634,13 +3616,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 		if compositeKind == common.CompositeKindContract {
 			identifier = "TestImpl"
 		} else {
-			interfaceType := "Test"
-			switch compositeKind {
-			case common.CompositeKindResource:
-				interfaceType = "AnyResource{Test}"
-			case common.CompositeKindStructure:
-				interfaceType = "AnyStruct{Test}"
-			}
+			interfaceType := AsInterfaceType("Test", compositeKind)
 
 			setupCode = fmt.Sprintf(
 				`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -3741,13 +3717,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 					var testFunction string
 					if compositeKind != common.CompositeKindContract {
 
-						interfaceType := "Test"
-						switch compositeKind {
-						case common.CompositeKindResource:
-							interfaceType = "AnyResource{Test}"
-						case common.CompositeKindStructure:
-							interfaceType = "AnyStruct{Test}"
-						}
+						interfaceType := AsInterfaceType("Test", compositeKind)
 
 						testFunction =
 							fmt.Sprintf(

@@ -2398,12 +2398,7 @@ func testResourceNesting(
 
 		innerTypeAnnotation := "T"
 		if innerIsInterface {
-			switch innerCompositeKind {
-			case common.CompositeKindResource:
-				innerTypeAnnotation = "AnyResource{T}"
-			case common.CompositeKindStructure:
-				innerTypeAnnotation = "AnyStruct{T}"
-			}
+			innerTypeAnnotation = AsInterfaceType("T", innerCompositeKind)
 		}
 
 		// Prepare the initializer, if needed.
@@ -2602,7 +2597,7 @@ func TestCheckResourceInterfaceUseAsType(t *testing.T) {
 
       resource R: I {}
 
-      let r: @AnyResource{I} <- create R()
+      let r: @{I} <- create R()
     `)
 
 	require.NoError(t, err)
@@ -2710,7 +2705,7 @@ func TestCheckAnyResourceDestruction(t *testing.T) {
 
       resource R: I {}
 
-      fun foo(_ i: @AnyResource{I}) {
+      fun foo(_ i: @{I}) {
           destroy i
       }
 
@@ -3320,9 +3315,9 @@ func TestCheckResourceFieldUseAndDestruction(t *testing.T) {
      resource interface RI {}
 
      resource R {
-         var ris: @{String: AnyResource{RI}}
+         var ris: @{String: {RI}}
 
-         init(_ ri: @AnyResource{RI}) {
+         init(_ ri: @{RI}) {
              self.ris <- {"first": <-ri}
          }
 
@@ -3336,7 +3331,7 @@ func TestCheckResourceFieldUseAndDestruction(t *testing.T) {
          }
      }
 
-     fun absorb(_ ri: @AnyResource{RI}?) {
+     fun absorb(_ ri: @{RI}?) {
          destroy ri
      }
    `)
@@ -3490,7 +3485,7 @@ func TestCheckResourceOptionalBindingFailableCast(t *testing.T) {
          resource R: RI {}
 
          fun test() {
-             let ri: @AnyResource{RI} <- create R()
+             let ri: @{RI} <- create R()
              if let r <- ri as? @R {
                  destroy r
              } else {
@@ -3511,7 +3506,7 @@ func TestCheckInvalidResourceOptionalBindingFailableCastResourceUseAfterInvalida
          resource R: RI {}
 
          fun test() {
-             let ri: @AnyResource{RI} <- create R()
+             let ri: @{RI} <- create R()
              if let r <- ri as? @R {
                  destroy r
                  destroy ri
@@ -3535,7 +3530,7 @@ func TestCheckInvalidResourceOptionalBindingFailableCastResourceUseAfterInvalida
          resource R: RI {}
 
          fun test() {
-             let ri: @AnyResource{RI} <- create R()
+             let ri: @{RI} <- create R()
              if let r <- ri as? @R {
                  destroy r
              }

@@ -839,13 +839,7 @@ func TestCheckAccessInterfaceFunction(t *testing.T) {
 				if compositeKind == common.CompositeKindContract {
 					identifier = "TestImpl"
 				} else {
-					interfaceType := "Test"
-					switch compositeKind {
-					case common.CompositeKindResource:
-						interfaceType = "AnyResource{Test}"
-					case common.CompositeKindStructure:
-						interfaceType = "AnyStruct{Test}"
-					}
+					interfaceType := AsInterfaceType("Test", compositeKind)
 
 					setupCode = fmt.Sprintf(
 						`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -1067,13 +1061,7 @@ func TestCheckAccessInterfaceFieldRead(t *testing.T) {
 				if compositeKind == common.CompositeKindContract {
 					identifier = "TestImpl"
 				} else {
-					interfaceType := "Test"
-					switch compositeKind {
-					case common.CompositeKindResource:
-						interfaceType = "AnyResource{Test}"
-					case common.CompositeKindStructure:
-						interfaceType = "AnyStruct{Test}"
-					}
+					interfaceType := AsInterfaceType("Test", compositeKind)
 
 					setupCode = fmt.Sprintf(
 						`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -1314,13 +1302,7 @@ func TestCheckAccessInterfaceFieldWrite(t *testing.T) {
 					identifier = "TestImpl"
 				} else {
 
-					interfaceType := "Test"
-					switch compositeKind {
-					case common.CompositeKindResource:
-						interfaceType = "AnyResource{Test}"
-					case common.CompositeKindStructure:
-						interfaceType = "AnyStruct{Test}"
-					}
+					interfaceType := AsInterfaceType("Test", compositeKind)
 
 					setupCode = fmt.Sprintf(
 						`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
