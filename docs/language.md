@@ -78,7 +78,7 @@ Comments may be nested.
 /* /* this */ is a valid comment */
 ```
 
-Mutli-line comments are balanced.
+Multi-line comments are balanced.
 
 ```cadence,file=invalid-nested-comment.cdc
 /* this is a // comment up to here */ this is not part of the comment */
@@ -406,7 +406,7 @@ and can represent values in the following ranges:
 
 The types are independent types, i.e. not subtypes of each other.
 
-See the section about [artihmetic operators](#arithmetic) for further
+See the section about [arithmetic operators](#arithmetic) for further
 information about the behavior of the different integer types.
 
 ```cadence
@@ -536,7 +536,7 @@ i.e., all non-resource types are a subtype of it.
 ```cadence
 // Declare a variable that has the type `AnyStruct`.
 // Any non-resource typed value can be assigned to it, for example an integer,
-// but not resoure-typed values.
+// but not resource-typed values.
 //
 var someStruct: AnyStruct = 1
 
@@ -619,7 +619,7 @@ let anything: AnyStruct = maybeInt
 ```
 
 [Conditional downcasting](#conditional-downcasting-operator) allows coercing
-a value which has the type `AnyStruct` or `AnyResource` back to its orignal type.
+a value which has the type `AnyStruct` or `AnyResource` back to its original type.
 
 ### Optionals
 
@@ -1003,7 +1003,7 @@ Strings have multiple built-in functions you can use.
   Returns a string slice of the characters
   in the given string from start index `from` up to,
   but not including, the end index `upTo`.
-  This function creates a new string whose length is `upto - from`.
+  This function creates a new string whose length is `upTo - from`.
   It does not modify the original string.
   If either of the parameters are out of
   the bounds of the string, the function will fail.
@@ -2891,7 +2891,7 @@ let a = 1
 
 Array literals are inferred based on the elements of the literal, and to be variable-size.
 
-```cadence,file=type-inference-intergers.cdc
+```cadence,file=type-inference-integers.cdc
 let integers = [1, 2]
 // `integers` has type `[Int]`
 
@@ -2939,7 +2939,7 @@ let array = []
 
 // Instead, specify the array type and the concrete element type, e.g. `Int`.
 //
-let arrary: [Int] = []
+let array: [Int] = []
 ```
 
 ```cadence
@@ -4376,7 +4376,7 @@ access(self) let a = 1
 pub let b = 2
 ```
 
-```cadence,file=acess-control-struct.cdc
+```cadence,file=access-control-struct.cdc
 // Declare a public struct, accessible/visible in all scopes.
 //
 pub struct SomeStruct {
@@ -4793,7 +4793,7 @@ pub struct AnImplementation: AnInterface {
 ### Interfaces in Types
 
 Interfaces can be used in types: The type `{I}` is the type of all objects
-that implement the interfaace `I`.
+that implement the interface `I`.
 
 This is called a [restricted type](#restricted-types):
 Only the functionality (members and functions) of the interface can be used
@@ -5154,14 +5154,14 @@ Structure and resource types can be **restricted**. Restrictions are interfaces.
 Restricted types only allow access to a subset of the members and functions
 of the type that is restricted, indicated by the restrictions.
 
-The syntax of a restriced type is `T{U1, U2, ... Un}`,
-where `T` is the restricted type, a concrete resource or strucure type,
+The syntax of a restricted type is `T{U1, U2, ... Un}`,
+where `T` is the restricted type, a concrete resource or structure type,
 and the types `U1` to `Un` are the restrictions, interfaces that `T` conforms to.
 
 Only the members and functions of the union of the set of restrictions are available.
 
 Restricted types are useful for increasing the safety in functions
-that are suposed to only work on a subset of the type.
+that are supposed to only work on a subset of the type.
 For example, by using a restricted type for a parameter's type,
 the function may only access the functionality of the restriction:
 If the function accidentally attempts to access other functionality,
@@ -5253,7 +5253,7 @@ and `AnyResource`, the supertype of all resources.
 For example, restricted type `AnyResource{HasCount}` is any resource type
 for which only the functionality of the `HasCount` resource interface can be used.
 
-The restricted types `AnyStruct` and `AnyResource` can be ommited.
+The restricted types `AnyStruct` and `AnyResource` can be omitted.
 For example, the type `{HasCount}` is any resource that implements
 the resource interface `HasCount`.
 
@@ -5301,7 +5301,7 @@ let id2 = getID(hasID2)
 // `id2` is "2"
 ```
 
-Only concrete types may be restriced, e.g., the restricted type may not be an array,
+Only concrete types may be restricted, e.g., the restricted type may not be an array,
 the type `[T]{U}` is invalid.
 
 Restricted types are also useful when giving access to resources and structures
@@ -5401,7 +5401,7 @@ countRef.count  // is `43`
 //
 countRef.increment()
 
-// Invalid: Cannot failably downcast to reference type `&Counter`,
+// Invalid: Cannot conditionally downcast to reference type `&Counter`,
 // as the reference `countRef` is unauthorized.
 //
 // The counter value has type `Counter`, which is a subtype of `{HasCount}`,
@@ -5416,7 +5416,7 @@ let counterRef2: &Counter = countRef as? &Counter
 //
 let authCountRef: auth &{HasCount} = &counter as auth &{HasCount}
 
-// Failably downcast to reference type `&Counter`.
+// Conditionally downcast to reference type `&Counter`.
 // This is valid, because the reference `authCountRef` is authorized
 //
 let counterRef3: &Counter = authCountRef as? &Counter
@@ -5577,7 +5577,7 @@ to all its stored objects.
 
    Returns a copy of a structure stored in account storage, without removing it from storage.
 
-   If no strucure is stored under the given path, the function returns `nil`.
+   If no structure is stored under the given path, the function returns `nil`.
    If there is a structure stored, it is copied.
    The structure stays stored in storage after the function returns.
 
@@ -5794,7 +5794,7 @@ Capabilities are created using the `link` function of an authorized account (`Au
 
 - `fun link<T: &Any>(_ newCapabilityPath: Path, target: Path): Capability?`
 
-  `newCapabilityPath` is the public or private path identifiying the new capability.
+  `newCapabilityPath` is the public or private path identifying the new capability.
 
   `target` is any public, private, or storage path that leads to the object
   that will provide the functionality defined by this capability.
@@ -6007,7 +6007,7 @@ pub contract SomeContract {
 
 Contracts cannot be nested in each other.
 
-```cadence,file=contract-invalidnesting.cdc
+```cadence,file=contract-invalid-nesting.cdc
 pub contract Invalid {
 
     // Invalid: Contracts cannot be nested in any other type.
@@ -6281,7 +6281,7 @@ pub contract ExampleContract: InterfaceExample {
     // The contract doesn't need to redeclare the `NestedInterface` interface
     // because it is already declared in the contract interface
 
-    // The resource has to refer to the resrouce interface using the name
+    // The resource has to refer to the resource interface using the name
     // of the contract interface to access it
     //
     pub resource Composite: InterfaceExample.NestedInterface {
@@ -6390,8 +6390,7 @@ transaction {
 }
 ```
 
-
-then three optional main phases:
+Then follow three optional main phases:
 Preparation, execution, and postconditions, only in that order.
 Each phase is a block of code that executes sequentially.
 
@@ -6448,7 +6447,6 @@ Each phase is a block of code that executes sequentially.
 
   ```
 
-
 - The **postcondition phase** (declared using the `post` keyword)
   is where the transaction can check
   that its functionality was executed correctly with specific condition checks.
@@ -6490,8 +6488,6 @@ transaction {
     }
 }
 ```
-
-
 
 ### Importing and using Deployed Contract Code
 
