@@ -1656,7 +1656,7 @@ func (checker *Checker) ResetErrors() {
 	checker.errors = nil
 }
 
-const invalidTypeDeclarationAccessModifierExplanation = "type declarations must be public for now"
+const invalidTypeDeclarationAccessModifierExplanation = "type declarations must be public"
 
 func (checker *Checker) checkDeclarationAccessModifier(
 	access ast.Access,
