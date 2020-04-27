@@ -82,27 +82,14 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
 			"Conformance with missing function",
 			``,
 			`
-              pub struct S {}
-            `,
-			`
               pub struct S {
-                  fun foo() {}
+                  fun foo()
               }
             `,
-			true,
-		},
-		{
-			"Conformance with missing function",
-			``,
 			`
               pub struct S {}
             `,
-			`
-              pub struct S {
-                  fun foo() {}
-              }
-            `,
-			true,
+			false,
 		},
 		{
 			"Conformance with same name, same parameter type, but different argument label",
