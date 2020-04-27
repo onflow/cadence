@@ -31,9 +31,10 @@ import (
 )
 
 var convertTests = []struct {
-	label    string
-	value    interpreter.Value
-	expected cadence.Value
+	label       string
+	value       interpreter.Value
+	expected    cadence.Value
+	skipReverse bool
 }{
 	{
 		label:    "Void",
@@ -41,9 +42,10 @@ var convertTests = []struct {
 		expected: cadence.NewVoid(),
 	},
 	{
-		label:    "Nil",
-		value:    interpreter.NilValue{},
-		expected: cadence.NewOptional(nil),
+		label:       "Nil",
+		value:       interpreter.NilValue{},
+		expected:    cadence.NewOptional(nil),
+		skipReverse: true,
 	},
 	{
 		label:    "SomeValue",
@@ -195,6 +197,11 @@ func TestConvertValue(t *testing.T) {
 		t.Run(tt.label, func(t *testing.T) {
 			actual := convertValue(tt.value, nil)
 			assert.Equal(t, tt.expected, actual)
+
+			if !tt.skipReverse {
+				original := ToRuntimeValue(actual)
+				assert.Equal(t, tt.value, original.Value)
+			}
 		})
 	}
 }
