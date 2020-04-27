@@ -278,7 +278,6 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	options []sema.Option,
 ) (*sema.Checker, error) {
 
-	// If the program has not been previously cached, proceed to parse the program.
 	program, err := runtimeInterface.GetCachedProgram(location)
 	if err != nil {
 		return nil, err
@@ -456,11 +455,31 @@ func (r *interpreterRuntime) standardLibraryFunctions(
 
 func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportResolver {
 	return func(location Location) (program *ast.Program, e error) {
+
+		program, err := runtimeInterface.GetCachedProgram(location)
+		if err != nil {
+			return nil, err
+		}
+		if program != nil {
+			return program, nil
+		}
+
 		script, err := runtimeInterface.ResolveImport(location)
 		if err != nil {
 			return nil, err
 		}
-		return r.parse(script)
+
+		program, err = r.parse(script)
+		if err != nil {
+			return nil, err
+		}
+
+		err = runtimeInterface.CacheProgram(location, program)
+		if err != nil {
+			return nil, err
+		}
+
+		return program, nil
 	}
 }
 
