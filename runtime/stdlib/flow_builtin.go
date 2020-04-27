@@ -100,6 +100,23 @@ var getCurrentBlockFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(&BlockType{}),
 }
 
+var getBlockFunctionType = &sema.FunctionType{
+	Parameters: []*sema.Parameter{
+		{
+			Label:      "at",
+			Identifier: "height",
+			TypeAnnotation: sema.NewTypeAnnotation(
+				&sema.UInt64Type{},
+			),
+		},
+	},
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		&sema.OptionalType{
+			Type: &BlockType{},
+		},
+	),
+}
+
 // FlowBuiltinImpls defines the set of functions needed to implement the Flow
 // built-in functions.
 type FlowBuiltinImpls struct {
@@ -107,6 +124,7 @@ type FlowBuiltinImpls struct {
 	GetAccount      interpreter.HostFunction
 	Log             interpreter.HostFunction
 	GetCurrentBlock interpreter.HostFunction
+	GetBlock        interpreter.HostFunction
 }
 
 // FlowBuiltInFunctions returns a list of standard library functions, bound to
@@ -135,6 +153,12 @@ func FlowBuiltInFunctions(impls FlowBuiltinImpls) StandardLibraryFunctions {
 			"getCurrentBlock",
 			getCurrentBlockFunctionType,
 			impls.GetCurrentBlock,
+			nil,
+		),
+		NewStandardLibraryFunction(
+			"getBlock",
+			getBlockFunctionType,
+			impls.GetBlock,
 			nil,
 		),
 	}
@@ -286,21 +310,17 @@ func (t *BlockType) GetMember(identifier string, _ ast.Range, _ func(error)) *se
 	}
 
 	switch identifier {
-	case "number":
+	case "height":
 		return newField(&sema.UInt64Type{})
+
+	case "timestamp":
+		return newField(&sema.UFix64Type{})
 
 	case "id":
 		return newField(
 			&sema.ConstantSizedType{
 				Type: &sema.UInt8Type{},
 				Size: BlockIDSize,
-			},
-		)
-
-	case "previousBlock", "nextBlock":
-		return newField(
-			&sema.OptionalType{
-				Type: &BlockType{},
 			},
 		)
 

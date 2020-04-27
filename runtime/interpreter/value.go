@@ -797,7 +797,7 @@ func (v Int8Value) ToInt() int {
 func (v Int8Value) Negate() NumberValue {
 	// INT32-C
 	if v == math.MinInt8 {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 	return -v
 }
@@ -806,9 +806,9 @@ func (v Int8Value) Plus(other NumberValue) NumberValue {
 	o := other.(Int8Value)
 	// INT32-C
 	if (o > 0) && (v > (math.MaxInt8 - o)) {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	} else if (o < 0) && (v < (math.MinInt8 - o)) {
-		panic(&UnderflowError{})
+		panic(UnderflowError{})
 	}
 	return v + o
 }
@@ -817,9 +817,9 @@ func (v Int8Value) Minus(other NumberValue) NumberValue {
 	o := other.(Int8Value)
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt8 + o)) {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	} else if (o < 0) && (v > (math.MaxInt8 + o)) {
-		panic(&UnderflowError{})
+		panic(UnderflowError{})
 	}
 	return v - o
 }
@@ -839,21 +839,21 @@ func (v Int8Value) Mul(other NumberValue) NumberValue {
 	if v > 0 {
 		if o > 0 {
 			if v > (math.MaxInt8 / o) {
-				panic(&OverflowError{})
+				panic(OverflowError{})
 			}
 		} else {
 			if o < (math.MinInt8 / v) {
-				panic(&OverflowError{})
+				panic(OverflowError{})
 			}
 		}
 	} else {
 		if o > 0 {
 			if v < (math.MinInt8 / o) {
-				panic(&OverflowError{})
+				panic(OverflowError{})
 			}
 		} else {
 			if (v != 0) && (o < (math.MaxInt8 / v)) {
-				panic(&OverflowError{})
+				panic(OverflowError{})
 			}
 		}
 	}
@@ -903,18 +903,18 @@ func ConvertInt8(value Value, _ *Interpreter) Value {
 	case BigNumberValue:
 		v := value.ToBigInt()
 		if v.Cmp(sema.Int8TypeMaxInt) > 0 {
-			panic(&OverflowError{})
+			panic(OverflowError{})
 		} else if v.Cmp(sema.Int8TypeMinInt) < 0 {
-			panic(&UnderflowError{})
+			panic(UnderflowError{})
 		}
 		res = int8(v.Int64())
 
 	case NumberValue:
 		v := value.ToInt()
 		if v > math.MaxInt8 {
-			panic(&OverflowError{})
+			panic(OverflowError{})
 		} else if v < math.MinInt8 {
-			panic(&UnderflowError{})
+			panic(UnderflowError{})
 		}
 		res = int8(v)
 
@@ -967,7 +967,7 @@ func (v Int16Value) ToInt() int {
 func (v Int16Value) Negate() NumberValue {
 	// INT32-C
 	if v == math.MinInt16 {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 	return -v
 }
@@ -976,9 +976,9 @@ func (v Int16Value) Plus(other NumberValue) NumberValue {
 	o := other.(Int16Value)
 	// INT32-C
 	if (o > 0) && (v > (math.MaxInt16 - o)) {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	} else if (o < 0) && (v < (math.MinInt16 - o)) {
-		panic(&UnderflowError{})
+		panic(UnderflowError{})
 	}
 	return v + o
 }
@@ -987,9 +987,9 @@ func (v Int16Value) Minus(other NumberValue) NumberValue {
 	o := other.(Int16Value)
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt16 + o)) {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	} else if (o < 0) && (v > (math.MaxInt16 + o)) {
-		panic(&UnderflowError{})
+		panic(UnderflowError{})
 	}
 	return v - o
 }
@@ -1009,21 +1009,21 @@ func (v Int16Value) Mul(other NumberValue) NumberValue {
 	if v > 0 {
 		if o > 0 {
 			if v > (math.MaxInt16 / o) {
-				panic(&OverflowError{})
+				panic(OverflowError{})
 			}
 		} else {
 			if o < (math.MinInt16 / v) {
-				panic(&OverflowError{})
+				panic(OverflowError{})
 			}
 		}
 	} else {
 		if o > 0 {
 			if v < (math.MinInt16 / o) {
-				panic(&OverflowError{})
+				panic(OverflowError{})
 			}
 		} else {
 			if (v != 0) && (o < (math.MaxInt16 / v)) {
-				panic(&OverflowError{})
+				panic(OverflowError{})
 			}
 		}
 	}
@@ -1073,18 +1073,18 @@ func ConvertInt16(value Value, _ *Interpreter) Value {
 	case BigNumberValue:
 		v := value.ToBigInt()
 		if v.Cmp(sema.Int16TypeMaxInt) > 0 {
-			panic(&OverflowError{})
+			panic(OverflowError{})
 		} else if v.Cmp(sema.Int16TypeMinInt) < 0 {
-			panic(&UnderflowError{})
+			panic(UnderflowError{})
 		}
 		res = int16(v.Int64())
 
 	case NumberValue:
 		v := value.ToInt()
 		if v > math.MaxInt16 {
-			panic(&OverflowError{})
+			panic(OverflowError{})
 		} else if v < math.MinInt16 {
-			panic(&UnderflowError{})
+			panic(UnderflowError{})
 		}
 		res = int16(v)
 
@@ -1137,7 +1137,7 @@ func (v Int32Value) ToInt() int {
 func (v Int32Value) Negate() NumberValue {
 	// INT32-C
 	if v == math.MinInt32 {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 	return -v
 }
@@ -1146,9 +1146,9 @@ func (v Int32Value) Plus(other NumberValue) NumberValue {
 	o := other.(Int32Value)
 	// INT32-C
 	if (o > 0) && (v > (math.MaxInt32 - o)) {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	} else if (o < 0) && (v < (math.MinInt32 - o)) {
-		panic(&UnderflowError{})
+		panic(UnderflowError{})
 	}
 	return v + o
 }
@@ -1157,9 +1157,9 @@ func (v Int32Value) Minus(other NumberValue) NumberValue {
 	o := other.(Int32Value)
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt32 + o)) {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	} else if (o < 0) && (v > (math.MaxInt32 + o)) {
-		panic(&UnderflowError{})
+		panic(UnderflowError{})
 	}
 	return v - o
 }
@@ -1179,21 +1179,21 @@ func (v Int32Value) Mul(other NumberValue) NumberValue {
 	if v > 0 {
 		if o > 0 {
 			if v > (math.MaxInt32 / o) {
-				panic(&OverflowError{})
+				panic(OverflowError{})
 			}
 		} else {
 			if o < (math.MinInt32 / v) {
-				panic(&OverflowError{})
+				panic(OverflowError{})
 			}
 		}
 	} else {
 		if o > 0 {
 			if v < (math.MinInt32 / o) {
-				panic(&OverflowError{})
+				panic(OverflowError{})
 			}
 		} else {
 			if (v != 0) && (o < (math.MaxInt32 / v)) {
-				panic(&OverflowError{})
+				panic(OverflowError{})
 			}
 		}
 	}
@@ -1243,18 +1243,18 @@ func ConvertInt32(value Value, _ *Interpreter) Value {
 	case BigNumberValue:
 		v := value.ToBigInt()
 		if v.Cmp(sema.Int32TypeMaxInt) > 0 {
-			panic(&OverflowError{})
+			panic(OverflowError{})
 		} else if v.Cmp(sema.Int32TypeMinInt) < 0 {
-			panic(&UnderflowError{})
+			panic(UnderflowError{})
 		}
 		res = int32(v.Int64())
 
 	case NumberValue:
 		v := value.ToInt()
 		if v > math.MaxInt32 {
-			panic(&OverflowError{})
+			panic(OverflowError{})
 		} else if v < math.MinInt32 {
-			panic(&UnderflowError{})
+			panic(UnderflowError{})
 		}
 		res = int32(v)
 
@@ -1307,7 +1307,7 @@ func (v Int64Value) ToInt() int {
 func (v Int64Value) Negate() NumberValue {
 	// INT32-C
 	if v == math.MinInt64 {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 	return -v
 }
@@ -1315,9 +1315,9 @@ func (v Int64Value) Negate() NumberValue {
 func safeAddInt64(a, b int64) int64 {
 	// INT32-C
 	if (b > 0) && (a > (math.MaxInt64 - b)) {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	} else if (b < 0) && (a < (math.MinInt64 - b)) {
-		panic(&UnderflowError{})
+		panic(UnderflowError{})
 	}
 	return a + b
 }
@@ -1331,9 +1331,9 @@ func (v Int64Value) Minus(other NumberValue) NumberValue {
 	o := other.(Int64Value)
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt64 + o)) {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
-		panic(&UnderflowError{})
+		panic(UnderflowError{})
 	}
 	return v - o
 }
@@ -1353,21 +1353,21 @@ func (v Int64Value) Mul(other NumberValue) NumberValue {
 	if v > 0 {
 		if o > 0 {
 			if v > (math.MaxInt64 / o) {
-				panic(&OverflowError{})
+				panic(OverflowError{})
 			}
 		} else {
 			if o < (math.MinInt64 / v) {
-				panic(&OverflowError{})
+				panic(OverflowError{})
 			}
 		}
 	} else {
 		if o > 0 {
 			if v < (math.MinInt64 / o) {
-				panic(&OverflowError{})
+				panic(OverflowError{})
 			}
 		} else {
 			if (v != 0) && (o < (math.MaxInt64 / v)) {
-				panic(&OverflowError{})
+				panic(OverflowError{})
 			}
 		}
 	}
@@ -1417,18 +1417,18 @@ func ConvertInt64(value Value, _ *Interpreter) Value {
 	case BigNumberValue:
 		v := value.ToBigInt()
 		if v.Cmp(sema.Int64TypeMaxInt) > 0 {
-			panic(&OverflowError{})
+			panic(OverflowError{})
 		} else if v.Cmp(sema.Int64TypeMinInt) < 0 {
-			panic(&UnderflowError{})
+			panic(UnderflowError{})
 		}
 		res = v.Int64()
 
 	case NumberValue:
 		v := value.ToInt()
 		if v > math.MaxInt64 {
-			panic(&OverflowError{})
+			panic(OverflowError{})
 		} else if v < math.MinInt64 {
-			panic(&UnderflowError{})
+			panic(UnderflowError{})
 		}
 		res = int64(v)
 
@@ -1499,7 +1499,7 @@ func (v Int128Value) Negate() NumberValue {
 	//       ...
 	//   }
 	if v.BigInt.Cmp(sema.Int128TypeMinInt) == 0 {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 	return Int128Value{big.NewInt(0).Neg(v.BigInt)}
 }
@@ -1639,9 +1639,9 @@ func ConvertInt128(value Value, _ *Interpreter) Value {
 	}
 
 	if v.Cmp(sema.Int128TypeMaxInt) > 0 {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	} else if v.Cmp(sema.Int128TypeMinInt) < 0 {
-		panic(&UnderflowError{})
+		panic(UnderflowError{})
 	}
 
 	return NewInt128ValueFromBigInt(v)
@@ -1707,7 +1707,7 @@ func (v Int256Value) Negate() NumberValue {
 	//       ...
 	//   }
 	if v.BigInt.Cmp(sema.Int256TypeMinInt) == 0 {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 	return Int256Value{BigInt: big.NewInt(0).Neg(v.BigInt)}
 }
@@ -1847,9 +1847,9 @@ func ConvertInt256(value Value, _ *Interpreter) Value {
 	}
 
 	if v.Cmp(sema.Int256TypeMaxInt) > 0 {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	} else if v.Cmp(sema.Int256TypeMinInt) < 0 {
-		panic(&UnderflowError{})
+		panic(UnderflowError{})
 	}
 
 	return NewInt256ValueFromBigInt(v)
@@ -1878,14 +1878,14 @@ func ConvertUInt(value Value, _ *Interpreter) Value {
 	case BigNumberValue:
 		v := value.ToBigInt()
 		if v.Sign() < 0 {
-			panic(&UnderflowError{})
+			panic(UnderflowError{})
 		}
 		return NewUIntValueFromBigInt(value.ToBigInt())
 
 	case NumberValue:
 		v := value.ToInt()
 		if v < 0 {
-			panic(&UnderflowError{})
+			panic(UnderflowError{})
 		}
 		return NewUIntValueFromUint64(uint64(v))
 
@@ -1946,7 +1946,7 @@ func (v UIntValue) Minus(other NumberValue) NumberValue {
 	res := big.NewInt(0)
 	res.Sub(v.BigInt, o.BigInt)
 	if res.Sign() < 0 {
-		panic(&UnderflowError{})
+		panic(UnderflowError{})
 	}
 	return UIntValue{res}
 }
@@ -2081,7 +2081,7 @@ func (v UInt8Value) Mod(other NumberValue) NumberValue {
 func (v UInt8Value) Mul(other NumberValue) NumberValue {
 	o := other.(UInt8Value)
 	if (v > 0) && (o > 0) && (v > (math.MaxUint8 / o)) {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 	return v * o
 }
@@ -2125,18 +2125,18 @@ func ConvertUInt8(value Value, _ *Interpreter) Value {
 	case BigNumberValue:
 		v := value.ToBigInt()
 		if v.Cmp(sema.UInt8TypeMaxInt) > 0 {
-			panic(&OverflowError{})
+			panic(OverflowError{})
 		} else if v.Sign() < 0 {
-			panic(&UnderflowError{})
+			panic(UnderflowError{})
 		}
 		res = uint8(v.Int64())
 
 	case NumberValue:
 		v := value.ToInt()
 		if v > math.MaxUint8 {
-			panic(&OverflowError{})
+			panic(OverflowError{})
 		} else if v < 0 {
-			panic(&UnderflowError{})
+			panic(UnderflowError{})
 		}
 		res = uint8(v)
 
@@ -2217,7 +2217,7 @@ func (v UInt16Value) Mod(other NumberValue) NumberValue {
 func (v UInt16Value) Mul(other NumberValue) NumberValue {
 	o := other.(UInt16Value)
 	if (v > 0) && (o > 0) && (v > (math.MaxUint16 / o)) {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 	return v * o
 }
@@ -2261,18 +2261,18 @@ func ConvertUInt16(value Value, _ *Interpreter) Value {
 	case BigNumberValue:
 		v := value.ToBigInt()
 		if v.Cmp(sema.UInt16TypeMaxInt) > 0 {
-			panic(&OverflowError{})
+			panic(OverflowError{})
 		} else if v.Sign() < 0 {
-			panic(&UnderflowError{})
+			panic(UnderflowError{})
 		}
 		res = uint16(v.Int64())
 
 	case NumberValue:
 		v := value.ToInt()
 		if v > math.MaxUint16 {
-			panic(&OverflowError{})
+			panic(OverflowError{})
 		} else if v < 0 {
-			panic(&UnderflowError{})
+			panic(UnderflowError{})
 		}
 		res = uint16(v)
 
@@ -2355,7 +2355,7 @@ func (v UInt32Value) Mod(other NumberValue) NumberValue {
 func (v UInt32Value) Mul(other NumberValue) NumberValue {
 	o := other.(UInt32Value)
 	if (v > 0) && (o > 0) && (v > (math.MaxUint32 / o)) {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 	return v * o
 }
@@ -2399,18 +2399,18 @@ func ConvertUInt32(value Value, _ *Interpreter) Value {
 	case BigNumberValue:
 		v := value.ToBigInt()
 		if v.Cmp(sema.UInt32TypeMaxInt) > 0 {
-			panic(&OverflowError{})
+			panic(OverflowError{})
 		} else if v.Sign() < 0 {
-			panic(&UnderflowError{})
+			panic(UnderflowError{})
 		}
 		res = uint32(v.Int64())
 
 	case NumberValue:
 		v := value.ToInt()
 		if v > math.MaxUint32 {
-			panic(&OverflowError{})
+			panic(OverflowError{})
 		} else if v < 0 {
-			panic(&UnderflowError{})
+			panic(UnderflowError{})
 		}
 		res = uint32(v)
 
@@ -2498,7 +2498,7 @@ func (v UInt64Value) Mod(other NumberValue) NumberValue {
 func (v UInt64Value) Mul(other NumberValue) NumberValue {
 	o := other.(UInt64Value)
 	if (v > 0) && (o > 0) && (v > (math.MaxUint64 / o)) {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 	return v * o
 }
@@ -2542,16 +2542,16 @@ func ConvertUInt64(value Value, _ *Interpreter) Value {
 	case BigNumberValue:
 		v := value.ToBigInt()
 		if v.Cmp(sema.UInt64TypeMaxInt) > 0 {
-			panic(&OverflowError{})
+			panic(OverflowError{})
 		} else if v.Sign() < 0 {
-			panic(&UnderflowError{})
+			panic(UnderflowError{})
 		}
 		res = uint64(v.Int64())
 
 	case NumberValue:
 		v := value.ToInt()
 		if v < 0 {
-			panic(&UnderflowError{})
+			panic(UnderflowError{})
 		}
 		res = uint64(v)
 
@@ -2732,9 +2732,9 @@ func ConvertUInt128(value Value, _ *Interpreter) Value {
 	}
 
 	if v.Cmp(sema.UInt128TypeMaxInt) > 0 {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	} else if v.Sign() < 0 {
-		panic(&UnderflowError{})
+		panic(UnderflowError{})
 	}
 
 	return NewUInt128ValueFromBigInt(v)
@@ -2910,9 +2910,9 @@ func ConvertUInt256(value Value, _ *Interpreter) Value {
 	}
 
 	if v.Cmp(sema.UInt256TypeMaxInt) > 0 {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	} else if v.Sign() < 0 {
-		panic(&UnderflowError{})
+		panic(UnderflowError{})
 	}
 
 	return NewUInt256ValueFromBigInt(v)
@@ -3320,6 +3320,19 @@ func init() {
 	gob.Register(Fix64Value(0))
 }
 
+func NewFix64ValueWithInteger(integer int64) Fix64Value {
+
+	if integer < sema.Fix64TypeMinInt {
+		panic(UnderflowError{})
+	}
+
+	if integer > sema.Fix64TypeMaxInt {
+		panic(OverflowError{})
+	}
+
+	return Fix64Value(integer * sema.Fix64Factor)
+}
+
 func (Fix64Value) IsValue() {}
 
 func (Fix64Value) DynamicType(_ *Interpreter) DynamicType {
@@ -3367,7 +3380,7 @@ func (v Fix64Value) ToInt() int {
 func (v Fix64Value) Negate() NumberValue {
 	// INT32-C
 	if v == math.MinInt64 {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 	return -v
 }
@@ -3381,9 +3394,9 @@ func (v Fix64Value) Minus(other NumberValue) NumberValue {
 	o := other.(Fix64Value)
 	// INT32-C
 	if (o > 0) && (v < (math.MinInt64 + o)) {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	} else if (o < 0) && (v > (math.MaxInt64 + o)) {
-		panic(&UnderflowError{})
+		panic(UnderflowError{})
 	}
 	return v - o
 }
@@ -3401,30 +3414,30 @@ func (v Fix64Value) Mul(other NumberValue) NumberValue {
 
 	x1y1 := x1 * y1
 	if x1 != 0 && x1y1/x1 != y1 {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 
 	x1y1Fixed := x1y1 * sema.Fix64Factor
 	if x1y1 != 0 && x1y1Fixed/x1y1 != sema.Fix64Factor {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 	x1y1 = x1y1Fixed
 
 	x2y1 := x2 * y1
 	if x2 != 0 && x2y1/x2 != y1 {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 
 	x1y2 := x1 * y2
 	if x1 != 0 && x1y2/x1 != y2 {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 
 	x2 = x2 / Fix64MulPrecision
 	y2 = y2 / Fix64MulPrecision
 	x2y2 := x2 * y2
 	if x2 != 0 && x2y2/x2 != y2 {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 
 	result := x1y1
@@ -3499,10 +3512,6 @@ func init() {
 	gob.Register(UFix64Value(0))
 }
 
-func NewUFix64ValueWithFraction(integer, fraction uint64) UFix64Value {
-	return UFix64Value(integer*sema.Fix64Factor + fraction)
-}
-
 func (UFix64Value) IsValue() {}
 
 func (UFix64Value) DynamicType(_ *Interpreter) DynamicType {
@@ -3574,30 +3583,30 @@ func (v UFix64Value) Mul(other NumberValue) NumberValue {
 
 	x1y1 := x1 * y1
 	if x1 != 0 && x1y1/x1 != y1 {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 
 	x1y1Fixed := x1y1 * factor
 	if x1y1 != 0 && x1y1Fixed/x1y1 != factor {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 	x1y1 = x1y1Fixed
 
 	x2y1 := x2 * y1
 	if x2 != 0 && x2y1/x2 != y1 {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 
 	x1y2 := x1 * y2
 	if x1 != 0 && x1y2/x1 != y2 {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 
 	x2 = x2 / UFix64MulPrecision
 	y2 = y2 / UFix64MulPrecision
 	x2y2 := x2 * y2
 	if x2 != 0 && x2y2/x2 != y2 {
-		panic(&OverflowError{})
+		panic(OverflowError{})
 	}
 
 	result := x1y1
