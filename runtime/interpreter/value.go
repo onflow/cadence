@@ -3374,7 +3374,7 @@ func (v Fix64Value) KeyString() string {
 }
 
 func (v Fix64Value) ToInt() int {
-	return int(v)
+	return int(v / sema.Fix64Factor)
 }
 
 func (v Fix64Value) Negate() NumberValue {
@@ -3547,7 +3547,7 @@ func (v UFix64Value) KeyString() string {
 }
 
 func (v UFix64Value) ToInt() int {
-	return int(v)
+	return int(v / sema.Fix64Factor)
 }
 
 func (v UFix64Value) Negate() NumberValue {

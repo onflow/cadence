@@ -7666,3 +7666,78 @@ func TestInterpretCountDigits256(t *testing.T) {
 		})
 	}
 }
+
+func TestInterpretFixedPointToIntegerConversions(t *testing.T) {
+
+	fixedPointValues := map[string]interpreter.Value{
+		"Fix64":  interpreter.Fix64Value(100 * sema.Fix64Factor),
+		"UFix64": interpreter.UFix64Value(100 * sema.Fix64Factor),
+	}
+
+	for _, fixedPointType := range sema.AllFixedPointTypes {
+		if _, ok := fixedPointValues[fixedPointType.String()]; !ok {
+			panic(fmt.Sprintf("broken test: missing fixed-point type: %s", fixedPointType))
+		}
+	}
+
+	integerValues := map[string]interpreter.Value{
+		// Int*
+		"Int":    interpreter.NewIntValueFromInt64(100),
+		"Int8":   interpreter.Int8Value(100),
+		"Int16":  interpreter.Int16Value(100),
+		"Int32":  interpreter.Int32Value(100),
+		"Int64":  interpreter.Int64Value(100),
+		"Int128": interpreter.NewInt128ValueFromInt64(100),
+		"Int256": interpreter.NewInt256ValueFromInt64(100),
+		// UInt*
+		"UInt":    interpreter.NewUIntValueFromUint64(100),
+		"UInt8":   interpreter.UInt8Value(100),
+		"UInt16":  interpreter.UInt16Value(100),
+		"UInt32":  interpreter.UInt32Value(100),
+		"UInt64":  interpreter.UInt64Value(100),
+		"UInt128": interpreter.NewUInt128ValueFromInt64(100),
+		"UInt256": interpreter.NewUInt256ValueFromInt64(100),
+		// Word*
+		"Word8":  interpreter.Word8Value(100),
+		"Word16": interpreter.Word16Value(100),
+		"Word32": interpreter.Word32Value(100),
+		"Word64": interpreter.Word64Value(100),
+	}
+
+	for _, integerType := range sema.AllIntegerTypes {
+		if _, ok := integerValues[integerType.String()]; !ok {
+			panic(fmt.Sprintf("broken test: missing integer type: %s", integerType))
+		}
+	}
+
+	for fixedPointType, fixedPointValue := range fixedPointValues {
+		t.Run(fixedPointType, func(t *testing.T) {
+
+			for integerType, integerValue := range integerValues {
+				t.Run(integerType, func(t *testing.T) {
+
+					inter := parseCheckAndInterpret(t,
+						fmt.Sprintf(
+							`
+                          let x: %[1]s = 100.0
+                          let y = %[2]s(x)
+                        `,
+							fixedPointType,
+							integerType,
+						),
+					)
+
+					assert.Equal(t,
+						fixedPointValue,
+						inter.Globals["x"].Value,
+					)
+
+					assert.Equal(t,
+						integerValue,
+						inter.Globals["y"].Value,
+					)
+				})
+			}
+		})
+	}
+}
