@@ -16,121 +16,121 @@
  * limitations under the License.
  */
 
-package cadence
+package runtime
 
 import (
 	"fmt"
 	"sort"
 
-	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
 // ConvertValue converts a runtime value to its native Go representation.
-func ConvertValue(value runtime.Value) Value {
+func ConvertValue(value Value) cadence.Value {
 	return convertValue(value.Value, value.Interpreter())
 }
 
 // ConvertEvent converts a runtime event to its native Go representation.
-func ConvertEvent(event runtime.Event) Event {
-	fields := make([]Value, len(event.Fields))
+func ConvertEvent(event Event) cadence.Event {
+	fields := make([]cadence.Value, len(event.Fields))
 
 	for i, field := range event.Fields {
 		fields[i] = convertValue(field.Value, field.Interpreter())
 	}
 
-	return NewEvent(fields).WithType(ConvertType(event.Type).(EventType))
+	return cadence.NewEvent(fields).WithType(ConvertType(event.Type).(cadence.EventType))
 }
 
-func convertValue(value interpreter.Value, inter *interpreter.Interpreter) Value {
+func convertValue(value interpreter.Value, inter *interpreter.Interpreter) cadence.Value {
 	switch v := value.(type) {
 	case interpreter.VoidValue:
-		return NewVoid()
+		return cadence.NewVoid()
 	case interpreter.NilValue:
-		return NewOptional(nil)
+		return cadence.NewOptional(nil)
 	case *interpreter.SomeValue:
 		return convertSomeValue(v, inter)
 	case interpreter.BoolValue:
-		return NewBool(bool(v))
+		return cadence.NewBool(bool(v))
 	case *interpreter.StringValue:
-		return NewString(v.Str)
+		return cadence.NewString(v.Str)
 	case *interpreter.ArrayValue:
 		return convertArrayValue(v, inter)
 	case interpreter.IntValue:
-		return NewIntFromBig(v.ToBigInt())
+		return cadence.NewIntFromBig(v.ToBigInt())
 	case interpreter.Int8Value:
-		return NewInt8(int8(v))
+		return cadence.NewInt8(int8(v))
 	case interpreter.Int16Value:
-		return NewInt16(int16(v))
+		return cadence.NewInt16(int16(v))
 	case interpreter.Int32Value:
-		return NewInt32(int32(v))
+		return cadence.NewInt32(int32(v))
 	case interpreter.Int64Value:
-		return NewInt64(int64(v))
+		return cadence.NewInt64(int64(v))
 	case interpreter.Int128Value:
-		return NewInt128FromBig(v.ToBigInt())
+		return cadence.NewInt128FromBig(v.ToBigInt())
 	case interpreter.Int256Value:
-		return NewInt256FromBig(v.ToBigInt())
+		return cadence.NewInt256FromBig(v.ToBigInt())
 	case interpreter.UIntValue:
-		return NewUIntFromBig(v.ToBigInt())
+		return cadence.NewUIntFromBig(v.ToBigInt())
 	case interpreter.UInt8Value:
-		return NewUInt8(uint8(v))
+		return cadence.NewUInt8(uint8(v))
 	case interpreter.UInt16Value:
-		return NewUInt16(uint16(v))
+		return cadence.NewUInt16(uint16(v))
 	case interpreter.UInt32Value:
-		return NewUInt32(uint32(v))
+		return cadence.NewUInt32(uint32(v))
 	case interpreter.UInt64Value:
-		return NewUInt64(uint64(v))
+		return cadence.NewUInt64(uint64(v))
 	case interpreter.UInt128Value:
-		return NewUInt128FromBig(v.ToBigInt())
+		return cadence.NewUInt128FromBig(v.ToBigInt())
 	case interpreter.UInt256Value:
-		return NewUInt256FromBig(v.ToBigInt())
+		return cadence.NewUInt256FromBig(v.ToBigInt())
 	case interpreter.Word8Value:
-		return NewWord8(uint8(v))
+		return cadence.NewWord8(uint8(v))
 	case interpreter.Word16Value:
-		return NewWord16(uint16(v))
+		return cadence.NewWord16(uint16(v))
 	case interpreter.Word32Value:
-		return NewWord32(uint32(v))
+		return cadence.NewWord32(uint32(v))
 	case interpreter.Word64Value:
-		return NewWord64(uint64(v))
+		return cadence.NewWord64(uint64(v))
 	case interpreter.Fix64Value:
-		return NewFix64(int64(v))
+		return cadence.NewFix64(int64(v))
 	case interpreter.UFix64Value:
-		return NewUFix64(uint64(v))
+		return cadence.NewUFix64(uint64(v))
 	case *interpreter.CompositeValue:
 		return convertCompositeValue(v, inter)
 	case *interpreter.DictionaryValue:
 		return convertDictionaryValue(v, inter)
 	case interpreter.AddressValue:
-		return NewAddress(v)
+		return cadence.NewAddress(v)
 	}
 
 	panic(fmt.Sprintf("cannot convert value of type %T", value))
 }
 
-func convertSomeValue(v *interpreter.SomeValue, inter *interpreter.Interpreter) Value {
+func convertSomeValue(v *interpreter.SomeValue, inter *interpreter.Interpreter) cadence.Value {
 	if v.Value == nil {
-		return NewOptional(nil)
+		return cadence.NewOptional(nil)
 	}
 
 	value := convertValue(v.Value, inter)
 
-	return NewOptional(value)
+	return cadence.NewOptional(value)
 }
 
-func convertArrayValue(v *interpreter.ArrayValue, inter *interpreter.Interpreter) Value {
-	values := make([]Value, len(v.Values))
+func convertArrayValue(v *interpreter.ArrayValue, inter *interpreter.Interpreter) cadence.Value {
+	values := make([]cadence.Value, len(v.Values))
 
 	for i, value := range v.Values {
 		values[i] = convertValue(value, inter)
 	}
 
-	return NewArray(values)
+	return cadence.NewArray(values)
 }
 
-func convertCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Interpreter) Value {
-	fields := make([]Value, len(v.Fields))
+func convertCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Interpreter) cadence.Value {
+	fields := make([]cadence.Value, len(v.Fields))
 
 	keys := make([]string, 0, len(v.Fields))
 	for key := range v.Fields {
@@ -152,18 +152,18 @@ func convertCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Int
 
 	switch staticType.Kind {
 	case common.CompositeKindStructure:
-		return NewStruct(fields).WithType(t.(StructType))
+		return cadence.NewStruct(fields).WithType(t.(cadence.StructType))
 	case common.CompositeKindResource:
-		return NewResource(fields).WithType(t.(ResourceType))
+		return cadence.NewResource(fields).WithType(t.(cadence.ResourceType))
 	case common.CompositeKindEvent:
-		return NewEvent(fields).WithType(t.(EventType))
+		return cadence.NewEvent(fields).WithType(t.(cadence.EventType))
 	}
 
 	panic(fmt.Errorf("invalid composite kind `%s`, must be Struct, Resource or Event", staticType.Kind))
 }
 
-func convertDictionaryValue(v *interpreter.DictionaryValue, inter *interpreter.Interpreter) Value {
-	pairs := make([]KeyValuePair, v.Count())
+func convertDictionaryValue(v *interpreter.DictionaryValue, inter *interpreter.Interpreter) cadence.Value {
+	pairs := make([]cadence.KeyValuePair, v.Count())
 
 	for i, keyValue := range v.Keys.Values {
 		key := keyValue.(interpreter.HasKeyString).KeyString()
@@ -172,11 +172,11 @@ func convertDictionaryValue(v *interpreter.DictionaryValue, inter *interpreter.I
 		convertedKey := convertValue(keyValue, inter)
 		convertedValue := convertValue(value, inter)
 
-		pairs[i] = KeyValuePair{
+		pairs[i] = cadence.KeyValuePair{
 			Key:   convertedKey,
 			Value: convertedValue,
 		}
 	}
 
-	return NewDictionary(pairs)
+	return cadence.NewDictionary(pairs)
 }

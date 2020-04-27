@@ -16,70 +16,70 @@
  * limitations under the License.
  */
 
-package cadence
+package runtime
 
 import (
 	"fmt"
 	"sort"
 
-	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
 // ConvertType converts a runtime type to its corresponding Go representation.
-func ConvertType(typ runtime.Type) Type {
+func ConvertType(typ Type) cadence.Type {
 	switch t := typ.(type) {
 	case *sema.AnyStructType:
-		return AnyStructType{}
+		return cadence.AnyStructType{}
 	case *sema.VoidType:
-		return VoidType{}
+		return cadence.VoidType{}
 	case *sema.OptionalType:
 		return convertOptionalType(t)
 	case *sema.BoolType:
-		return BoolType{}
+		return cadence.BoolType{}
 	case *sema.StringType:
-		return StringType{}
+		return cadence.StringType{}
 	case *sema.IntType:
-		return IntType{}
+		return cadence.IntType{}
 	case *sema.Int8Type:
-		return Int8Type{}
+		return cadence.Int8Type{}
 	case *sema.Int16Type:
-		return Int16Type{}
+		return cadence.Int16Type{}
 	case *sema.Int32Type:
-		return Int32Type{}
+		return cadence.Int32Type{}
 	case *sema.Int64Type:
-		return Int64Type{}
+		return cadence.Int64Type{}
 	case *sema.Int128Type:
-		return Int128Type{}
+		return cadence.Int128Type{}
 	case *sema.Int256Type:
-		return Int256Type{}
+		return cadence.Int256Type{}
 	case *sema.UIntType:
-		return UIntType{}
+		return cadence.UIntType{}
 	case *sema.UInt8Type:
-		return UInt8Type{}
+		return cadence.UInt8Type{}
 	case *sema.UInt16Type:
-		return UInt16Type{}
+		return cadence.UInt16Type{}
 	case *sema.UInt32Type:
-		return UInt32Type{}
+		return cadence.UInt32Type{}
 	case *sema.UInt64Type:
-		return UInt64Type{}
+		return cadence.UInt64Type{}
 	case *sema.UInt128Type:
-		return UInt128Type{}
+		return cadence.UInt128Type{}
 	case *sema.UInt256Type:
-		return UInt256Type{}
+		return cadence.UInt256Type{}
 	case *sema.Word8Type:
-		return Word8Type{}
+		return cadence.Word8Type{}
 	case *sema.Word16Type:
-		return Word16Type{}
+		return cadence.Word16Type{}
 	case *sema.Word32Type:
-		return Word32Type{}
+		return cadence.Word32Type{}
 	case *sema.Word64Type:
-		return Word64Type{}
+		return cadence.Word64Type{}
 	case *sema.Fix64Type:
-		return Fix64Type{}
+		return cadence.Fix64Type{}
 	case *sema.UFix64Type:
-		return UFix64Type{}
+		return cadence.UFix64Type{}
 	case *sema.VariableSizedType:
 		return convertVariableSizedType(t)
 	case *sema.ConstantSizedType:
@@ -91,35 +91,35 @@ func ConvertType(typ runtime.Type) Type {
 	case *sema.FunctionType:
 		return convertFunctionType(t)
 	case *sema.AddressType:
-		return AddressType{}
+		return cadence.AddressType{}
 	}
 
 	panic(fmt.Sprintf("cannot convert type of type %T", typ))
 }
 
-func convertOptionalType(t *sema.OptionalType) Type {
+func convertOptionalType(t *sema.OptionalType) cadence.Type {
 	convertedType := ConvertType(t.Type)
 
-	return OptionalType{Type: convertedType}
+	return cadence.OptionalType{Type: convertedType}
 }
 
-func convertVariableSizedType(t *sema.VariableSizedType) Type {
+func convertVariableSizedType(t *sema.VariableSizedType) cadence.Type {
 	convertedElement := ConvertType(t.Type)
 
-	return VariableSizedArrayType{ElementType: convertedElement}
+	return cadence.VariableSizedArrayType{ElementType: convertedElement}
 }
 
-func convertConstantSizedType(t *sema.ConstantSizedType) Type {
+func convertConstantSizedType(t *sema.ConstantSizedType) cadence.Type {
 	convertedElement := ConvertType(t.Type)
 
-	return ConstantSizedArrayType{
+	return cadence.ConstantSizedArrayType{
 		Size:        uint(t.Size),
 		ElementType: convertedElement,
 	}
 }
 
-func convertCompositeType(t *sema.CompositeType) Type {
-	fields := make([]Field, 0, len(t.Members))
+func convertCompositeType(t *sema.CompositeType) cadence.Type {
+	fields := make([]cadence.Field, 0, len(t.Members))
 
 	// TODO: do not sort fields before export, store in order declared
 	fieldNames := make([]string, 0, len(t.Members))
@@ -138,7 +138,7 @@ func convertCompositeType(t *sema.CompositeType) Type {
 
 		convertedFieldType := ConvertType(field.TypeAnnotation.Type)
 
-		fields = append(fields, Field{
+		fields = append(fields, cadence.Field{
 			Identifier: identifier,
 			Type:       convertedFieldType,
 		})
@@ -148,19 +148,19 @@ func convertCompositeType(t *sema.CompositeType) Type {
 
 	switch t.Kind {
 	case common.CompositeKindStructure:
-		return StructType{
+		return cadence.StructType{
 			TypeID:     id,
 			Identifier: t.Identifier,
 			Fields:     fields,
 		}
 	case common.CompositeKindResource:
-		return ResourceType{
+		return cadence.ResourceType{
 			TypeID:     id,
 			Identifier: t.Identifier,
 			Fields:     fields,
 		}
 	case common.CompositeKindEvent:
-		return EventType{
+		return cadence.EventType{
 			TypeID:     id,
 			Identifier: t.Identifier,
 			Fields:     fields,
@@ -170,32 +170,32 @@ func convertCompositeType(t *sema.CompositeType) Type {
 	panic(fmt.Sprintf("cannot convert type %v of unknown kind %v", t, t.Kind))
 }
 
-func convertDictionaryType(t *sema.DictionaryType) Type {
+func convertDictionaryType(t *sema.DictionaryType) cadence.Type {
 	convertedKeyType := ConvertType(t.KeyType)
 	convertedElementType := ConvertType(t.ValueType)
 
-	return DictionaryType{
+	return cadence.DictionaryType{
 		KeyType:     convertedKeyType,
 		ElementType: convertedElementType,
 	}
 }
 
-func convertFunctionType(t *sema.FunctionType) Type {
+func convertFunctionType(t *sema.FunctionType) cadence.Type {
 	convertedReturnType := ConvertType(t.ReturnTypeAnnotation.Type)
 
-	parameters := make([]Parameter, len(t.Parameters))
+	parameters := make([]cadence.Parameter, len(t.Parameters))
 
 	for i, parameter := range t.Parameters {
 		convertedParameterType := ConvertType(parameter.TypeAnnotation.Type)
 
-		parameters[i] = Parameter{
+		parameters[i] = cadence.Parameter{
 			Label:      parameter.Label,
 			Identifier: parameter.Identifier,
 			Type:       convertedParameterType,
 		}
 	}
 
-	return Function{
+	return cadence.Function{
 		Parameters: parameters,
 		ReturnType: convertedReturnType,
 	}.WithID(string(t.ID()))
