@@ -681,7 +681,11 @@ func (interpreter *Interpreter) declareGlobal(declaration ast.Declaration) {
 	interpreter.Globals[name] = interpreter.findVariable(name)
 }
 
-func (interpreter *Interpreter) prepareInvokeVariable(functionName string, arguments []interface{}) (trampoline Trampoline, err error) {
+func (interpreter *Interpreter) prepareInvokeVariable(
+	functionName string,
+	arguments []Value,
+) (trampoline Trampoline, err error) {
+
 	variable, ok := interpreter.Globals[functionName]
 	if !ok {
 		return nil, &NotDeclaredError{
@@ -716,7 +720,7 @@ func (interpreter *Interpreter) prepareInvokeVariable(functionName string, argum
 
 func (interpreter *Interpreter) prepareInvokeTransaction(
 	index int,
-	arguments []interface{},
+	arguments []Value,
 ) (trampoline Trampoline, err error) {
 	if index >= len(interpreter.Transactions) {
 		return nil, &TransactionNotDeclaredError{Index: index}
@@ -733,20 +737,14 @@ func (interpreter *Interpreter) prepareInvokeTransaction(
 func (interpreter *Interpreter) prepareInvoke(
 	functionValue FunctionValue,
 	functionType *sema.FunctionType,
-	arguments []interface{},
+	arguments []Value,
 ) (trampoline Trampoline, err error) {
-
-	var argumentValues []Value
-	argumentValues, err = ToValues(arguments)
-	if err != nil {
-		return nil, err
-	}
 
 	// ensures the invocation's argument count matches the function's parameter count
 
 	parameters := functionType.Parameters
 	parameterCount := len(parameters)
-	argumentCount := len(argumentValues)
+	argumentCount := len(arguments)
 
 	if argumentCount != parameterCount {
 
@@ -761,7 +759,7 @@ func (interpreter *Interpreter) prepareInvoke(
 	}
 
 	preparedArguments := make([]Value, len(arguments))
-	for i, argument := range argumentValues {
+	for i, argument := range arguments {
 		parameterType := parameters[i].TypeAnnotation.Type
 		// TODO: value type is not known, reject for now
 		switch parameterType.(type) {
@@ -783,7 +781,7 @@ func (interpreter *Interpreter) prepareInvoke(
 	return trampoline, nil
 }
 
-func (interpreter *Interpreter) Invoke(functionName string, arguments ...interface{}) (value Value, err error) {
+func (interpreter *Interpreter) Invoke(functionName string, arguments ...Value) (value Value, err error) {
 	// recover internal panics and return them as an error
 	defer recoverErrors(func(internalErr error) {
 		err = internalErr
@@ -800,7 +798,7 @@ func (interpreter *Interpreter) Invoke(functionName string, arguments ...interfa
 	return result.(Value), nil
 }
 
-func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...interface{}) (err error) {
+func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value) (err error) {
 	// recover internal panics and return them as an error
 	defer recoverErrors(func(internalErr error) {
 		err = internalErr

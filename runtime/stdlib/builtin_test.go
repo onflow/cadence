@@ -47,7 +47,11 @@ func TestAssert(t *testing.T) {
 	)
 	require.Nil(t, err)
 
-	_, err = inter.Invoke("assert", false, "oops")
+	_, err = inter.Invoke(
+		"assert",
+		interpreter.BoolValue(false),
+		interpreter.NewStringValue("oops"),
+	)
 	assert.Equal(t,
 		AssertionError{
 			Message:       "oops",
@@ -56,7 +60,7 @@ func TestAssert(t *testing.T) {
 		err,
 	)
 
-	_, err = inter.Invoke("assert", false)
+	_, err = inter.Invoke("assert", interpreter.BoolValue(false))
 	assert.Equal(t,
 		AssertionError{
 			Message:       "",
@@ -64,10 +68,14 @@ func TestAssert(t *testing.T) {
 		},
 		err)
 
-	_, err = inter.Invoke("assert", true, "oops")
+	_, err = inter.Invoke(
+		"assert",
+		interpreter.BoolValue(true),
+		interpreter.NewStringValue("oops"),
+	)
 	assert.NoError(t, err)
 
-	_, err = inter.Invoke("assert", true)
+	_, err = inter.Invoke("assert", interpreter.BoolValue(true))
 	assert.NoError(t, err)
 }
 
@@ -86,7 +94,7 @@ func TestPanic(t *testing.T) {
 	)
 	require.Nil(t, err)
 
-	_, err = inter.Invoke("panic", "oops")
+	_, err = inter.Invoke("panic", interpreter.NewStringValue("oops"))
 	assert.Equal(t,
 		PanicError{
 			Message:       "oops",

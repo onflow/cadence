@@ -264,7 +264,7 @@ func TestInterpretFunctionSideEffects(t *testing.T) {
        }
     `)
 
-	newValue := big.NewInt(42)
+	newValue := interpreter.NewIntValueFromInt64(42)
 
 	value, err := inter.Invoke("test", newValue)
 	require.NoError(t, err)
@@ -275,7 +275,7 @@ func TestInterpretFunctionSideEffects(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		interpreter.NewIntValueFromBigInt(newValue),
+		newValue,
 		inter.Globals["value"].Value,
 	)
 }
@@ -414,21 +414,18 @@ func TestInterpretParameters(t *testing.T) {
        }
     `)
 
-	value, err := inter.Invoke("returnA", big.NewInt(24), big.NewInt(42))
+	a := interpreter.NewIntValueFromInt64(24)
+	b := interpreter.NewIntValueFromInt64(42)
+
+	value, err := inter.Invoke("returnA", a, b)
 	require.NoError(t, err)
 
-	assert.Equal(t,
-		interpreter.NewIntValueFromInt64(24),
-		value,
-	)
+	assert.Equal(t, a, value)
 
-	value, err = inter.Invoke("returnB", big.NewInt(24), big.NewInt(42))
+	value, err = inter.Invoke("returnB", a, b)
 	require.NoError(t, err)
 
-	assert.Equal(t,
-		interpreter.NewIntValueFromInt64(42),
-		value,
-	)
+	assert.Equal(t, b, value)
 }
 
 func TestInterpretArrayIndexing(t *testing.T) {
@@ -1415,7 +1412,10 @@ func TestInterpretRecursionFib(t *testing.T) {
        }
    `)
 
-	value, err := inter.Invoke("fib", big.NewInt(14))
+	value, err := inter.Invoke(
+		"fib",
+		interpreter.NewIntValueFromInt64(14),
+	)
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -1436,7 +1436,10 @@ func TestInterpretRecursionFactorial(t *testing.T) {
         }
    `)
 
-	value, err := inter.Invoke("factorial", big.NewInt(5))
+	value, err := inter.Invoke(
+		"factorial",
+		interpreter.NewIntValueFromInt64(5),
+	)
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -1818,15 +1821,12 @@ func TestInterpretStructureDeclarationWithField(t *testing.T) {
       }
     `)
 
-	newValue := big.NewInt(42)
+	newValue := interpreter.NewIntValueFromInt64(42)
 
 	value, err := inter.Invoke("test", newValue)
 	require.NoError(t, err)
 
-	assert.Equal(t,
-		interpreter.NewIntValueFromBigInt(newValue),
-		value,
-	)
+	assert.Equal(t, newValue, value)
 }
 
 func TestInterpretStructureDeclarationWithFunction(t *testing.T) {
@@ -1846,7 +1846,7 @@ func TestInterpretStructureDeclarationWithFunction(t *testing.T) {
       }
     `)
 
-	newValue := big.NewInt(42)
+	newValue := interpreter.NewIntValueFromInt64(42)
 
 	value, err := inter.Invoke("test", newValue)
 	require.NoError(t, err)
@@ -1856,10 +1856,7 @@ func TestInterpretStructureDeclarationWithFunction(t *testing.T) {
 		value,
 	)
 
-	assert.Equal(t,
-		interpreter.NewIntValueFromBigInt(newValue),
-		inter.Globals["value"].Value,
-	)
+	assert.Equal(t, newValue, inter.Globals["value"].Value)
 }
 
 func TestInterpretStructureFunctionCall(t *testing.T) {
@@ -1998,17 +1995,17 @@ func TestInterpretFunctionPreCondition(t *testing.T) {
       }
     `)
 
-	_, err := inter.Invoke("test", big.NewInt(42))
+	_, err := inter.Invoke(
+		"test",
+		interpreter.NewIntValueFromInt64(42),
+	)
 	assert.IsType(t, &interpreter.ConditionError{}, err)
 
-	zero := big.NewInt(0)
+	zero := interpreter.NewIntValueFromInt64(0)
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
-	assert.Equal(t,
-		interpreter.NewIntValueFromBigInt(zero),
-		value,
-	)
+	assert.Equal(t, zero, value)
 }
 
 func TestInterpretFunctionPostCondition(t *testing.T) {
@@ -2023,17 +2020,17 @@ func TestInterpretFunctionPostCondition(t *testing.T) {
       }
     `)
 
-	_, err := inter.Invoke("test", big.NewInt(42))
+	_, err := inter.Invoke(
+		"test",
+		interpreter.NewIntValueFromInt64(42),
+	)
 	assert.IsType(t, &interpreter.ConditionError{}, err)
 
-	zero := big.NewInt(0)
+	zero := interpreter.NewIntValueFromInt64(0)
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
-	assert.Equal(t,
-		interpreter.NewIntValueFromBigInt(zero),
-		value,
-	)
+	assert.Equal(t, zero, value)
 }
 
 func TestInterpretFunctionWithResultAndPostConditionWithResult(t *testing.T) {
@@ -2047,17 +2044,17 @@ func TestInterpretFunctionWithResultAndPostConditionWithResult(t *testing.T) {
       }
     `)
 
-	_, err := inter.Invoke("test", big.NewInt(42))
+	_, err := inter.Invoke(
+		"test",
+		interpreter.NewIntValueFromInt64(42),
+	)
 	assert.IsType(t, &interpreter.ConditionError{}, err)
 
-	zero := big.NewInt(0)
+	zero := interpreter.NewIntValueFromInt64(0)
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
-	assert.Equal(t,
-		interpreter.NewIntValueFromBigInt(zero),
-		value,
-	)
+	assert.Equal(t, zero, value)
 }
 
 func TestInterpretFunctionWithoutResultAndPostConditionWithResult(t *testing.T) {
@@ -2169,7 +2166,10 @@ func TestInterpretFunctionPostConditionWithMessageUsingStringLiteral(t *testing.
       }
     `)
 
-	_, err := inter.Invoke("test", big.NewInt(42))
+	_, err := inter.Invoke(
+		"test",
+		interpreter.NewIntValueFromInt64(42),
+	)
 	assert.IsType(t, &interpreter.ConditionError{}, err)
 
 	assert.Equal(t,
@@ -2177,14 +2177,11 @@ func TestInterpretFunctionPostConditionWithMessageUsingStringLiteral(t *testing.
 		err.(*interpreter.ConditionError).Message,
 	)
 
-	zero := big.NewInt(0)
+	zero := interpreter.NewIntValueFromInt64(0)
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
-	assert.Equal(t,
-		interpreter.NewIntValueFromBigInt(zero),
-		value,
-	)
+	assert.Equal(t, zero, value)
 }
 
 func TestInterpretFunctionPostConditionWithMessageUsingResult(t *testing.T) {
@@ -2199,7 +2196,10 @@ func TestInterpretFunctionPostConditionWithMessageUsingResult(t *testing.T) {
       }
     `)
 
-	_, err := inter.Invoke("test", big.NewInt(42))
+	_, err := inter.Invoke(
+		"test",
+		interpreter.NewIntValueFromInt64(42),
+	)
 	assert.IsType(t, &interpreter.ConditionError{}, err)
 
 	assert.Equal(t,
@@ -2207,7 +2207,7 @@ func TestInterpretFunctionPostConditionWithMessageUsingResult(t *testing.T) {
 		err.(*interpreter.ConditionError).Message,
 	)
 
-	zero := big.NewInt(0)
+	zero := interpreter.NewIntValueFromInt64(0)
 	value, err := inter.Invoke("test", zero)
 	require.NoError(t, err)
 
@@ -2228,7 +2228,7 @@ func TestInterpretFunctionPostConditionWithMessageUsingBefore(t *testing.T) {
       }
     `)
 
-	_, err := inter.Invoke("test", "parameter value")
+	_, err := inter.Invoke("test", interpreter.NewStringValue("parameter value"))
 	assert.IsType(t, &interpreter.ConditionError{}, err)
 
 	assert.Equal(t,
@@ -2248,7 +2248,7 @@ func TestInterpretFunctionPostConditionWithMessageUsingParameter(t *testing.T) {
       }
     `)
 
-	_, err := inter.Invoke("test", "parameter value")
+	_, err := inter.Invoke("test", interpreter.NewStringValue("parameter value"))
 	assert.IsType(t, &interpreter.ConditionError{}, err)
 
 	assert.Equal(t,
@@ -2538,7 +2538,7 @@ func TestInterpretMutuallyRecursiveFunctions(t *testing.T) {
       }
     `)
 
-	four := big.NewInt(4)
+	four := interpreter.NewIntValueFromInt64(4)
 
 	value, err := inter.Invoke("isEven", four)
 	require.NoError(t, err)
@@ -2629,7 +2629,10 @@ func TestInterpretOptionalParameterInvokedExternal(t *testing.T) {
       }
     `)
 
-	value, err := inter.Invoke("test", big.NewInt(2))
+	value, err := inter.Invoke(
+		"test",
+		interpreter.NewIntValueFromInt64(2),
+	)
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -2675,7 +2678,7 @@ func TestInterpretOptionalReturn(t *testing.T) {
       }
     `)
 
-	value, err := inter.Invoke("test", big.NewInt(2))
+	value, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(2))
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -3253,7 +3256,10 @@ func TestInterpretIfStatementTestWithDeclaration(t *testing.T) {
     `)
 
 	t.Run("2", func(t *testing.T) {
-		value, err := inter.Invoke("test", big.NewInt(2))
+		value, err := inter.Invoke(
+			"test",
+			interpreter.NewIntValueFromInt64(2),
+		)
 		require.NoError(t, err)
 		assert.Equal(t,
 			interpreter.NewIntValueFromInt64(2),
@@ -3266,7 +3272,7 @@ func TestInterpretIfStatementTestWithDeclaration(t *testing.T) {
 	})
 
 	t.Run("nil", func(t *testing.T) {
-		value, err := inter.Invoke("test", nil)
+		value, err := inter.Invoke("test", interpreter.NilValue{})
 		require.NoError(t, err)
 		assert.Equal(t,
 			interpreter.NewIntValueFromInt64(0),
@@ -3295,7 +3301,10 @@ func TestInterpretIfStatementTestWithDeclarationAndElse(t *testing.T) {
     `)
 
 	t.Run("2", func(t *testing.T) {
-		value, err := inter.Invoke("test", big.NewInt(2))
+		value, err := inter.Invoke(
+			"test",
+			interpreter.NewIntValueFromInt64(2),
+		)
 		require.NoError(t, err)
 		assert.Equal(t,
 			interpreter.NewIntValueFromInt64(2),
@@ -3308,7 +3317,7 @@ func TestInterpretIfStatementTestWithDeclarationAndElse(t *testing.T) {
 	})
 
 	t.Run("nil", func(t *testing.T) {
-		value, err := inter.Invoke("test", nil)
+		value, err := inter.Invoke("test", interpreter.NilValue{})
 		require.NoError(t, err)
 		assert.Equal(t,
 			interpreter.NewIntValueFromInt64(0),
@@ -3339,7 +3348,10 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
     `)
 
 	t.Run("2", func(t *testing.T) {
-		value, err := inter.Invoke("test", big.NewInt(2))
+		value, err := inter.Invoke(
+			"test",
+			interpreter.NewIntValueFromInt64(2),
+		)
 		require.NoError(t, err)
 		assert.Equal(t,
 			interpreter.NewSomeValueOwningNonCopying(
@@ -3354,7 +3366,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 	})
 
 	t.Run("nil", func(t *testing.T) {
-		value, err := inter.Invoke("test", nil)
+		value, err := inter.Invoke("test", interpreter.NilValue{})
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -3387,7 +3399,10 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
     `)
 
 	t.Run("2", func(t *testing.T) {
-		value, err := inter.Invoke("test", big.NewInt(2))
+		value, err := inter.Invoke(
+			"test",
+			interpreter.NewIntValueFromInt64(2),
+		)
 		require.NoError(t, err)
 		assert.Equal(t,
 			interpreter.NewSomeValueOwningNonCopying(
@@ -3403,7 +3418,7 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 	})
 
 	t.Run("nil", func(t *testing.T) {
-		value, err := inter.Invoke("test", nil)
+		value, err := inter.Invoke("test", interpreter.NilValue{})
 		require.NoError(t, err)
 		assert.Equal(t,
 			interpreter.NewSomeValueOwningNonCopying(
@@ -3674,10 +3689,10 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 				},
 			)
 
-			_, err := inter.Invoke("callTest", big.NewInt(0))
+			_, err := inter.Invoke("callTest", interpreter.NewIntValueFromInt64(0))
 			assert.IsType(t, &interpreter.ConditionError{}, err)
 
-			value, err := inter.Invoke("callTest", big.NewInt(1))
+			value, err := inter.Invoke("callTest", interpreter.NewIntValueFromInt64(1))
 			require.NoError(t, err)
 
 			assert.Equal(t,
@@ -3685,7 +3700,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 				value,
 			)
 
-			_, err = inter.Invoke("callTest", big.NewInt(2))
+			_, err = inter.Invoke("callTest", interpreter.NewIntValueFromInt64(2))
 			assert.IsType(t,
 				&interpreter.ConditionError{},
 				err,
@@ -3801,7 +3816,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						err = inter.Interpret()
 						require.NoError(t, err)
 
-						_, err = inter.Invoke("test", big.NewInt(value))
+						_, err = inter.Invoke("test", interpreter.NewIntValueFromInt64(value))
 						check(err)
 					}
 				})
@@ -3857,7 +3872,7 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 	)
 
 	t.Run("-1", func(t *testing.T) {
-		_, err := inter.Invoke("test", big.NewInt(-1))
+		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(-1))
 		require.IsType(t,
 			&interpreter.ConditionError{},
 			err,
@@ -3870,7 +3885,7 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 	})
 
 	t.Run("0", func(t *testing.T) {
-		_, err := inter.Invoke("test", big.NewInt(0))
+		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(0))
 		assert.IsType(t,
 			&interpreter.ConditionError{},
 			err,
@@ -3879,7 +3894,7 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 	})
 
 	t.Run("1", func(t *testing.T) {
-		value, err := inter.Invoke("test", big.NewInt(1))
+		value, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(1))
 		require.NoError(t, err)
 
 		assert.IsType(t,
@@ -3889,7 +3904,7 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 	})
 
 	t.Run("2", func(t *testing.T) {
-		_, err := inter.Invoke("test", big.NewInt(2))
+		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(2))
 		assert.IsType(t,
 			&interpreter.ConditionError{},
 			err,
