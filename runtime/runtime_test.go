@@ -1437,7 +1437,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 				err := runtime.ExecuteTransaction(script, runtimeInterface, utils.TestLocation)
 
-				test.check(t, err, accountCode, events, ConvertType(stdlib.AccountCodeUpdatedEventType))
+				test.check(t, err, accountCode, events, exportType(stdlib.AccountCodeUpdatedEventType))
 			})
 		}
 	})
@@ -1494,7 +1494,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 				err := runtime.ExecuteTransaction(script, runtimeInterface, utils.TestLocation)
 
-				test.check(t, err, accountCode, events, ConvertType(stdlib.AccountCreatedEventType))
+				test.check(t, err, accountCode, events, exportType(stdlib.AccountCreatedEventType))
 			})
 		}
 	})
