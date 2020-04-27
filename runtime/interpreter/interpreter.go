@@ -3199,7 +3199,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			switch expression.Operation {
 			case ast.OperationFailableCast, ast.OperationForceCast:
 				dynamicType := value.DynamicType(interpreter)
-				isSubType := interpreter.IsSubType(dynamicType, expectedType)
+				isSubType := IsSubType(dynamicType, expectedType)
 
 				switch expression.Operation {
 				case ast.OperationFailableCast:
@@ -3377,7 +3377,7 @@ func (interpreter *Interpreter) newConverterFunction(converter ValueConverter) F
 // - PublicAccount
 // - Block
 
-func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Type) bool {
+func IsSubType(subType DynamicType, superType sema.Type) bool {
 	switch typedSubType := subType.(type) {
 	case VoidDynamicType:
 		switch superType.(type) {
@@ -3439,7 +3439,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 		}
 
 		for _, elementType := range typedSubType.ElementTypes {
-			if !interpreter.IsSubType(elementType, superTypeElementType) {
+			if !IsSubType(elementType, superTypeElementType) {
 				return false
 			}
 		}
@@ -3451,8 +3451,8 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 		switch typedSuperType := superType.(type) {
 		case *sema.DictionaryType:
 			for _, entryTypes := range typedSubType.EntryTypes {
-				if !interpreter.IsSubType(entryTypes.KeyType, typedSuperType.KeyType) ||
-					!interpreter.IsSubType(entryTypes.ValueType, typedSuperType.ValueType) {
+				if !IsSubType(entryTypes.KeyType, typedSuperType.KeyType) ||
+					!IsSubType(entryTypes.ValueType, typedSuperType.ValueType) {
 
 					return false
 				}
@@ -3479,7 +3479,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 	case SomeDynamicType:
 		switch typedSuperType := superType.(type) {
 		case *sema.OptionalType:
-			return interpreter.IsSubType(typedSubType.InnerType, typedSuperType.Type)
+			return IsSubType(typedSubType.InnerType, typedSuperType.Type)
 
 		case *sema.AnyStructType, *sema.AnyResourceType:
 			return true
@@ -3495,7 +3495,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 
 		case *sema.ReferenceType:
 			if typedSubType.Authorized() {
-				return interpreter.IsSubType(typedSubType.InnerType(), typedSuperType.Type)
+				return IsSubType(typedSubType.InnerType(), typedSuperType.Type)
 			} else {
 				// NOTE: Allowing all casts for casting unauthorized references is intentional:
 				// all invalid cases have already been rejected statically
@@ -3635,7 +3635,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 			}
 
 			dynamicType := value.Value.DynamicType(interpreter)
-			if !interpreter.IsSubType(dynamicType, ty) {
+			if !IsSubType(dynamicType, ty) {
 				return Done{Result: NilValue{}}
 			}
 
@@ -3692,7 +3692,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 			referenceType := ty.(*sema.ReferenceType)
 
 			dynamicType := value.Value.DynamicType(interpreter)
-			if !interpreter.IsSubType(dynamicType, referenceType.Type) {
+			if !IsSubType(dynamicType, referenceType.Type) {
 				return Done{Result: NilValue{}}
 			}
 
