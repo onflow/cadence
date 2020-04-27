@@ -1305,7 +1305,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		codeHashValue := event.Fields[codeHashParameterIndex]
 
-		actualCodeHash, err := interpreter.ByteArrayValueToByteSlice(ToRuntimeValue(codeHashValue).Value)
+		actualCodeHash, err := interpreter.ByteArrayValueToByteSlice(importValue(codeHashValue))
 		require.NoError(t, err)
 
 		require.Equal(t, expectedCodeHash[:], actualCodeHash)
