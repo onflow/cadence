@@ -141,7 +141,7 @@ func (r *interpreterRuntime) ExecuteScript(
 
 	runtimeStorage.writeCached()
 
-	return ConvertValue(value), nil
+	return exportValue(value), nil
 }
 
 func (r *interpreterRuntime) interpret(
@@ -152,28 +152,28 @@ func (r *interpreterRuntime) interpret(
 	options []interpreter.Option,
 	f func(inter *interpreter.Interpreter) (interpreter.Value, error),
 ) (
-	Value,
+	exportableValue,
 	error,
 ) {
 	inter, err := r.newInterpreter(checker, functions, runtimeInterface, runtimeStorage, options)
 	if err != nil {
-		return Value{}, err
+		return exportableValue{}, err
 	}
 
 	if err := inter.Interpret(); err != nil {
-		return Value{}, err
+		return exportableValue{}, err
 	}
 
 	if f != nil {
 		value, err := f(inter)
 		if err != nil {
-			return Value{}, err
+			return exportableValue{}, err
 		}
 
-		return newRuntimeValue(value, inter), nil
+		return newExportableValue(value, inter), nil
 	}
 
-	return Value{}, nil
+	return exportableValue{}, nil
 }
 
 func (r *interpreterRuntime) newAuthAccountValue(
@@ -567,31 +567,31 @@ func (r *interpreterRuntime) emitEvent(
 	event *interpreter.CompositeValue,
 	eventType *sema.CompositeType,
 ) {
-	fields := make([]Value, len(eventType.ConstructorParameters))
+	fields := make([]exportableValue, len(eventType.ConstructorParameters))
 
 	for i, parameter := range eventType.ConstructorParameters {
-		fields[i] = newRuntimeValue(event.Fields[parameter.Identifier], inter)
+		fields[i] = newExportableValue(event.Fields[parameter.Identifier], inter)
 	}
 
-	eventValue := Event{
+	eventValue := exportableEvent{
 		Type:   eventType,
 		Fields: fields,
 	}
 
-	runtimeInterface.EmitEvent(ConvertEvent(eventValue))
+	runtimeInterface.EmitEvent(exportEvent(eventValue))
 }
 
 func (r *interpreterRuntime) emitAccountEvent(
 	eventType *sema.CompositeType,
 	runtimeInterface Interface,
-	eventFields []Value,
+	eventFields []exportableValue,
 ) {
-	eventValue := Event{
+	eventValue := exportableEvent{
 		Type:   eventType,
 		Fields: eventFields,
 	}
 
-	runtimeInterface.EmitEvent(ConvertEvent(eventValue))
+	runtimeInterface.EmitEvent(exportEvent(eventValue))
 }
 
 func CodeToHashValue(code []byte) *interpreter.ArrayValue {
@@ -651,10 +651,10 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 		r.emitAccountEvent(
 			stdlib.AccountCreatedEventType,
 			runtimeInterface,
-			[]Value{
-				newRuntimeValue(addressValue, nil),
-				newRuntimeValue(codeHashValue, nil),
-				newRuntimeValue(contractTypeIDs, nil),
+			[]exportableValue{
+				newExportableValue(addressValue, nil),
+				newExportableValue(codeHashValue, nil),
+				newExportableValue(contractTypeIDs, nil),
 			},
 		)
 
@@ -685,9 +685,9 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 			r.emitAccountEvent(
 				stdlib.AccountKeyAddedEventType,
 				runtimeInterface,
-				[]Value{
-					newRuntimeValue(addressValue, nil),
-					newRuntimeValue(publicKeyValue, nil),
+				[]exportableValue{
+					newExportableValue(addressValue, nil),
+					newExportableValue(publicKeyValue, nil),
 				},
 			)
 
@@ -715,9 +715,9 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 			r.emitAccountEvent(
 				stdlib.AccountKeyRemovedEventType,
 				runtimeInterface,
-				[]Value{
-					newRuntimeValue(addressValue, nil),
-					newRuntimeValue(publicKeyValue, nil),
+				[]exportableValue{
+					newExportableValue(addressValue, nil),
+					newExportableValue(publicKeyValue, nil),
 				},
 			)
 
@@ -762,10 +762,10 @@ func (r *interpreterRuntime) newSetCodeFunction(
 			r.emitAccountEvent(
 				stdlib.AccountCodeUpdatedEventType,
 				runtimeInterface,
-				[]Value{
-					newRuntimeValue(addressValue, nil),
-					newRuntimeValue(codeHashValue, nil),
-					newRuntimeValue(contractTypeIDs, nil),
+				[]exportableValue{
+					newExportableValue(addressValue, nil),
+					newExportableValue(codeHashValue, nil),
+					newExportableValue(contractTypeIDs, nil),
 				},
 			)
 
