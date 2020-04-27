@@ -199,14 +199,23 @@ func TestRuntimeImport(t *testing.T) {
 }
 
 func TestRuntimeProgramCache(t *testing.T) {
-	var cacheHitSuccess bool
+
 	programCache := map[ast.LocationID]*ast.Program{}
+	cacheHits := make(map[ast.LocationID]bool)
+
+	importedScript := []byte(`
+	transaction {
+		prepare() {}
+		execute {}
+	}
+	`)
+	importedScriptLocation := ast.StringLocation("imported")
 
 	runtime := NewInterpreterRuntime()
 	runtimeInterface := &testRuntimeInterface{
 		getCachedProgram: func(location ast.Location) (*ast.Program, error) {
 			program, found := programCache[location.ID()]
-			cacheHitSuccess = found
+			cacheHits[location.ID()] = found
 			if !found {
 				return nil, nil
 			}
@@ -216,29 +225,84 @@ func TestRuntimeProgramCache(t *testing.T) {
 			programCache[location.ID()] = program
 			return nil
 		},
+		resolveImport: func(location Location) ([]byte, error) {
+			fmt.Println(location.ID())
+			switch location {
+			case importedScriptLocation:
+				return importedScript, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
 	}
 
-	scriptLocation := ast.StringLocation("test-location")
+	t.Run("empty cache, cache miss", func(t *testing.T) {
 
-	script := []byte(`
-      transaction {
-        prepare() {}
-        execute {}
-      }
-	`)
+		script := []byte(`
+		import "imported"
 
-	// Initial call, should parse script, store result in cache.
-	err := runtime.ParseAndCheckProgram(script, runtimeInterface, scriptLocation)
-	assert.NoError(t, err)
-	cachedProgram, exists := programCache[scriptLocation.ID()]
-	assert.True(t, exists)
-	assert.False(t, cacheHitSuccess)
-	assert.NotNil(t, cachedProgram)
+		transaction {
+			prepare() {}
+			execute {}
+		}
+		`)
+		scriptLocation := ast.StringLocation("placeholder")
 
-	// Call a second time to hit the cache
-	err = runtime.ParseAndCheckProgram(script, runtimeInterface, scriptLocation)
-	assert.NoError(t, err)
-	assert.True(t, cacheHitSuccess)
+		// Initial call, should parse script, store result in cache.
+		err := runtime.ParseAndCheckProgram(script, runtimeInterface, scriptLocation)
+		assert.NoError(t, err)
+
+		// Program was added to cache.
+		cachedProgram, exists := programCache[scriptLocation.ID()]
+		assert.True(t, exists)
+		assert.NotNil(t, cachedProgram)
+
+		// Script was not in cache.
+		assert.False(t, cacheHits[scriptLocation.ID()])
+	})
+
+	t.Run("program previously parsed, cache hit", func(t *testing.T) {
+
+		script := []byte(`
+		import "imported"
+
+		transaction {
+			prepare() {}
+			execute {}
+		}
+		`)
+		scriptLocation := ast.StringLocation("placeholder")
+
+		// Call a second time to hit the cache
+		err := runtime.ParseAndCheckProgram(script, runtimeInterface, scriptLocation)
+		assert.NoError(t, err)
+
+		// Script was in cache.
+		assert.True(t, cacheHits[scriptLocation.ID()])
+	})
+
+	t.Run("imported program previously parsed, cache hit", func(t *testing.T) {
+
+		script := []byte(`
+		import "imported"
+
+		transaction {
+			prepare() {}
+			execute {}
+		}
+		`)
+		scriptLocation := ast.StringLocation("placeholder")
+
+		// Call a second time to hit the cache
+		err := runtime.ParseAndCheckProgram(script, runtimeInterface, scriptLocation)
+		assert.NoError(t, err)
+
+		// Script was in cache.
+		assert.True(t, cacheHits[scriptLocation.ID()])
+		// Import was in cache.
+		assert.True(t, cacheHits[importedScriptLocation.ID()])
+	})
+
 }
 
 func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {

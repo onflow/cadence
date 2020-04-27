@@ -62,6 +62,7 @@ type EmptyRuntimeInterface struct{}
 func (i *EmptyRuntimeInterface) ResolveImport(location Location) ([]byte, error) {
 	return nil, nil
 }
+
 func (i *EmptyRuntimeInterface) GetCachedProgram(location Location) (*ast.Program, error) {
 	return nil, nil
 }
