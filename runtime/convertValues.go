@@ -28,138 +28,36 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-// ConvertValue converts a runtime value to its native Go representation.
-func ConvertValue(value Value) cadence.Value {
-	return convertValue(value.Value, value.Interpreter())
+// exportValue converts a runtime value to its native Go representation.
+func exportValue(value exportableValue) cadence.Value {
+	return exportValueWithInterpreter(value.Value, value.Interpreter())
 }
 
-// ConvertEvent converts a runtime event to its native Go representation.
-func ConvertEvent(event Event) cadence.Event {
+// exportEvent converts a runtime event to its native Go representation.
+func exportEvent(event exportableEvent) cadence.Event {
 	fields := make([]cadence.Value, len(event.Fields))
 
 	for i, field := range event.Fields {
-		fields[i] = convertValue(field.Value, field.Interpreter())
+		fields[i] = exportValueWithInterpreter(field.Value, field.Interpreter())
 	}
 
 	return cadence.NewEvent(fields).WithType(ConvertType(event.Type).(cadence.EventType))
 }
 
-// ToRuntimeValue converts a Cadence value to a runtime value.
-func ToRuntimeValue(value cadence.Value) Value {
-	switch v := value.(type) {
-	case cadence.Void:
-		return Value{Value: interpreter.VoidValue{}}
-	case cadence.Optional:
-		if v.Value == nil {
-			return Value{Value: interpreter.NilValue{}}
-		}
-
-		innerValue := ToRuntimeValue(v.Value).Value
-		value := interpreter.NewSomeValueOwningNonCopying(innerValue)
-
-		return Value{Value: value}
-	case cadence.Bool:
-		return Value{Value: interpreter.BoolValue(v)}
-	case cadence.String:
-		return Value{Value: interpreter.NewStringValue(string(v))}
-	case cadence.Bytes:
-		return Value{Value: interpreter.ByteSliceToByteArrayValue(v)}
-	case cadence.Address:
-		return Value{Value: interpreter.NewAddressValueFromBytes(v.Bytes())}
-	case cadence.Int:
-		return Value{Value: interpreter.NewIntValueFromBigInt(v.Big())}
-	case cadence.Int8:
-		return Value{Value: interpreter.Int8Value(v)}
-	case cadence.Int16:
-		return Value{Value: interpreter.Int16Value(v)}
-	case cadence.Int32:
-		return Value{Value: interpreter.Int32Value(v)}
-	case cadence.Int64:
-		return Value{Value: interpreter.Int64Value(v)}
-	case cadence.Int128:
-		return Value{Value: interpreter.NewInt128ValueFromBigInt(v.Big())}
-	case cadence.Int256:
-		return Value{Value: interpreter.NewInt256ValueFromBigInt(v.Big())}
-	case cadence.UInt:
-		return Value{Value: interpreter.NewUIntValueFromBigInt(v.Big())}
-	case cadence.UInt8:
-		return Value{Value: interpreter.UInt8Value(v)}
-	case cadence.UInt16:
-		return Value{Value: interpreter.UInt16Value(v)}
-	case cadence.UInt32:
-		return Value{Value: interpreter.UInt32Value(v)}
-	case cadence.UInt64:
-		return Value{Value: interpreter.UInt64Value(v)}
-	case cadence.UInt128:
-		return Value{Value: interpreter.NewUInt128ValueFromBigInt(v.Big())}
-	case cadence.UInt256:
-		return Value{Value: interpreter.NewUInt256ValueFromBigInt(v.Big())}
-	case cadence.Word8:
-		return Value{Value: interpreter.Word8Value(v)}
-	case cadence.Word16:
-		return Value{Value: interpreter.Word16Value(v)}
-	case cadence.Word32:
-		return Value{Value: interpreter.Word32Value(v)}
-	case cadence.Word64:
-		return Value{Value: interpreter.Word64Value(v)}
-	case cadence.Fix64:
-		return Value{Value: interpreter.Fix64Value(v)}
-	case cadence.UFix64:
-		return Value{Value: interpreter.UFix64Value(v)}
-	case cadence.Array:
-		values := make([]interpreter.Value, len(v.Values))
-
-		for i, elem := range v.Values {
-			values[i] = ToRuntimeValue(elem).Value
-		}
-
-		return Value{Value: interpreter.NewArrayValueUnownedNonCopying(values...)}
-	case cadence.Dictionary:
-		keysAndValues := make([]interpreter.Value, len(v.Pairs)*2)
-
-		for i, pair := range v.Pairs {
-			keysAndValues[i*2] = ToRuntimeValue(pair.Key).Value
-			keysAndValues[i*2+1] = ToRuntimeValue(pair.Value).Value
-		}
-
-		return Value{Value: interpreter.NewDictionaryValueUnownedNonCopying(keysAndValues...)}
-	case cadence.Struct:
-		return compositeToRuntimeValue(v.StructType.Fields, v.Fields)
-	case cadence.Resource:
-		return compositeToRuntimeValue(v.ResourceType.Fields, v.Fields)
-	case cadence.Event:
-		return compositeToRuntimeValue(v.EventType.Fields, v.Fields)
-	}
-
-	panic(fmt.Sprintf("cannot convert value of type %T", value))
-}
-
-func compositeToRuntimeValue(fieldTypes []cadence.Field, fieldValues []cadence.Value) Value {
-	fields := make(map[string]interpreter.Value, len(fieldTypes))
-
-	for i := 0; i < len(fieldTypes) && i < len(fieldValues); i++ {
-		fieldType := fieldTypes[i]
-		fieldValue := fieldValues[i]
-		fields[fieldType.Identifier] = ToRuntimeValue(fieldValue).Value
-	}
-
-	return Value{Value: &interpreter.CompositeValue{Fields: fields}}
-}
-
-func convertValue(value interpreter.Value, inter *interpreter.Interpreter) cadence.Value {
+func exportValueWithInterpreter(value interpreter.Value, inter *interpreter.Interpreter) cadence.Value {
 	switch v := value.(type) {
 	case interpreter.VoidValue:
 		return cadence.NewVoid()
 	case interpreter.NilValue:
 		return cadence.NewOptional(nil)
 	case *interpreter.SomeValue:
-		return convertSomeValue(v, inter)
+		return exportSomeValue(v, inter)
 	case interpreter.BoolValue:
 		return cadence.NewBool(bool(v))
 	case *interpreter.StringValue:
 		return cadence.NewString(v.Str)
 	case *interpreter.ArrayValue:
-		return convertArrayValue(v, inter)
+		return exportArrayValue(v, inter)
 	case interpreter.IntValue:
 		return cadence.NewIntFromBig(v.ToBigInt())
 	case interpreter.Int8Value:
@@ -201,9 +99,9 @@ func convertValue(value interpreter.Value, inter *interpreter.Interpreter) caden
 	case interpreter.UFix64Value:
 		return cadence.NewUFix64(uint64(v))
 	case *interpreter.CompositeValue:
-		return convertCompositeValue(v, inter)
+		return exportCompositeValue(v, inter)
 	case *interpreter.DictionaryValue:
-		return convertDictionaryValue(v, inter)
+		return exportDictionaryValue(v, inter)
 	case interpreter.AddressValue:
 		return cadence.NewAddress(v)
 	}
@@ -211,27 +109,27 @@ func convertValue(value interpreter.Value, inter *interpreter.Interpreter) caden
 	panic(fmt.Sprintf("cannot convert value of type %T", value))
 }
 
-func convertSomeValue(v *interpreter.SomeValue, inter *interpreter.Interpreter) cadence.Value {
+func exportSomeValue(v *interpreter.SomeValue, inter *interpreter.Interpreter) cadence.Value {
 	if v.Value == nil {
 		return cadence.NewOptional(nil)
 	}
 
-	value := convertValue(v.Value, inter)
+	value := exportValueWithInterpreter(v.Value, inter)
 
 	return cadence.NewOptional(value)
 }
 
-func convertArrayValue(v *interpreter.ArrayValue, inter *interpreter.Interpreter) cadence.Value {
+func exportArrayValue(v *interpreter.ArrayValue, inter *interpreter.Interpreter) cadence.Value {
 	values := make([]cadence.Value, len(v.Values))
 
 	for i, value := range v.Values {
-		values[i] = convertValue(value, inter)
+		values[i] = exportValueWithInterpreter(value, inter)
 	}
 
 	return cadence.NewArray(values)
 }
 
-func convertCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Interpreter) cadence.Value {
+func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Interpreter) cadence.Value {
 	fields := make([]cadence.Value, len(v.Fields))
 
 	keys := make([]string, 0, len(v.Fields))
@@ -244,7 +142,7 @@ func convertCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Int
 
 	for i, key := range keys {
 		field := v.Fields[key]
-		fields[i] = convertValue(field, inter)
+		fields[i] = exportValueWithInterpreter(field, inter)
 	}
 
 	dynamicType := v.DynamicType(inter).(interpreter.CompositeDynamicType)
@@ -264,15 +162,15 @@ func convertCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Int
 	panic(fmt.Errorf("invalid composite kind `%s`, must be Struct, Resource or Event", staticType.Kind))
 }
 
-func convertDictionaryValue(v *interpreter.DictionaryValue, inter *interpreter.Interpreter) cadence.Value {
+func exportDictionaryValue(v *interpreter.DictionaryValue, inter *interpreter.Interpreter) cadence.Value {
 	pairs := make([]cadence.KeyValuePair, v.Count())
 
 	for i, keyValue := range v.Keys.Values {
 		key := keyValue.(interpreter.HasKeyString).KeyString()
 		value := v.Entries[key]
 
-		convertedKey := convertValue(keyValue, inter)
-		convertedValue := convertValue(value, inter)
+		convertedKey := exportValueWithInterpreter(keyValue, inter)
+		convertedValue := exportValueWithInterpreter(value, inter)
 
 		pairs[i] = cadence.KeyValuePair{
 			Key:   convertedKey,
@@ -281,4 +179,104 @@ func convertDictionaryValue(v *interpreter.DictionaryValue, inter *interpreter.I
 	}
 
 	return cadence.NewDictionary(pairs)
+}
+
+// importValue converts a Cadence value to a runtime value.
+func importValue(value cadence.Value) interpreter.Value {
+	switch v := value.(type) {
+	case cadence.Void:
+		return interpreter.VoidValue{}
+	case cadence.Optional:
+		if v.Value == nil {
+			return interpreter.NilValue{}
+		}
+
+		innerValue := importValue(v.Value)
+		return interpreter.NewSomeValueOwningNonCopying(innerValue)
+	case cadence.Bool:
+		return interpreter.BoolValue(v)
+	case cadence.String:
+		return interpreter.NewStringValue(string(v))
+	case cadence.Bytes:
+		return interpreter.ByteSliceToByteArrayValue(v)
+	case cadence.Address:
+		return interpreter.NewAddressValueFromBytes(v.Bytes())
+	case cadence.Int:
+		return interpreter.NewIntValueFromBigInt(v.Big())
+	case cadence.Int8:
+		return interpreter.Int8Value(v)
+	case cadence.Int16:
+		return interpreter.Int16Value(v)
+	case cadence.Int32:
+		return interpreter.Int32Value(v)
+	case cadence.Int64:
+		return interpreter.Int64Value(v)
+	case cadence.Int128:
+		return interpreter.NewInt128ValueFromBigInt(v.Big())
+	case cadence.Int256:
+		return interpreter.NewInt256ValueFromBigInt(v.Big())
+	case cadence.UInt:
+		return interpreter.NewUIntValueFromBigInt(v.Big())
+	case cadence.UInt8:
+		return interpreter.UInt8Value(v)
+	case cadence.UInt16:
+		return interpreter.UInt16Value(v)
+	case cadence.UInt32:
+		return interpreter.UInt32Value(v)
+	case cadence.UInt64:
+		return interpreter.UInt64Value(v)
+	case cadence.UInt128:
+		return interpreter.NewUInt128ValueFromBigInt(v.Big())
+	case cadence.UInt256:
+		return interpreter.NewUInt256ValueFromBigInt(v.Big())
+	case cadence.Word8:
+		return interpreter.Word8Value(v)
+	case cadence.Word16:
+		return interpreter.Word16Value(v)
+	case cadence.Word32:
+		return interpreter.Word32Value(v)
+	case cadence.Word64:
+		return interpreter.Word64Value(v)
+	case cadence.Fix64:
+		return interpreter.Fix64Value(v)
+	case cadence.UFix64:
+		return interpreter.UFix64Value(v)
+	case cadence.Array:
+		values := make([]interpreter.Value, len(v.Values))
+
+		for i, elem := range v.Values {
+			values[i] = importValue(elem)
+		}
+
+		return interpreter.NewArrayValueUnownedNonCopying(values...)
+	case cadence.Dictionary:
+		keysAndValues := make([]interpreter.Value, len(v.Pairs)*2)
+
+		for i, pair := range v.Pairs {
+			keysAndValues[i*2] = importValue(pair.Key)
+			keysAndValues[i*2+1] = importValue(pair.Value)
+		}
+
+		return interpreter.NewDictionaryValueUnownedNonCopying(keysAndValues...)
+	case cadence.Struct:
+		return importCompositeValue(v.StructType.Fields, v.Fields)
+	case cadence.Resource:
+		return importCompositeValue(v.ResourceType.Fields, v.Fields)
+	case cadence.Event:
+		return importCompositeValue(v.EventType.Fields, v.Fields)
+	}
+
+	panic(fmt.Sprintf("cannot convert value of type %T", value))
+}
+
+func importCompositeValue(fieldTypes []cadence.Field, fieldValues []cadence.Value) interpreter.Value {
+	fields := make(map[string]interpreter.Value, len(fieldTypes))
+
+	for i := 0; i < len(fieldTypes) && i < len(fieldValues); i++ {
+		fieldType := fieldTypes[i]
+		fieldValue := fieldValues[i]
+		fields[fieldType.Identifier] = importValue(fieldValue)
+	}
+
+	return &interpreter.CompositeValue{Fields: fields}
 }

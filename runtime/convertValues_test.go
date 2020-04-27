@@ -30,7 +30,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-var convertTests = []struct {
+var exportTests = []struct {
 	label       string
 	value       interpreter.Value
 	expected    cadence.Value
@@ -192,21 +192,21 @@ var convertTests = []struct {
 	},
 }
 
-func TestConvertValue(t *testing.T) {
-	for _, tt := range convertTests {
+func TestExportValue(t *testing.T) {
+	for _, tt := range exportTests {
 		t.Run(tt.label, func(t *testing.T) {
-			actual := convertValue(tt.value, nil)
+			actual := exportValueWithInterpreter(tt.value, nil)
 			assert.Equal(t, tt.expected, actual)
 
 			if !tt.skipReverse {
-				original := ToRuntimeValue(actual)
-				assert.Equal(t, tt.value, original.Value)
+				original := importValue(actual)
+				assert.Equal(t, tt.value, original)
 			}
 		})
 	}
 }
 
-func TestConvertIntegerValuesFromScript(t *testing.T) {
+func TestExportIntegerValuesFromScript(t *testing.T) {
 	for _, integerType := range sema.AllIntegerTypes {
 
 		script := fmt.Sprintf(
@@ -219,12 +219,12 @@ func TestConvertIntegerValuesFromScript(t *testing.T) {
 		)
 
 		assert.NotPanics(t, func() {
-			convertValueFromScript(t, script)
+			exportValueFromScript(t, script)
 		})
 	}
 }
 
-func TestConvertFixedPointValuesFromScript(t *testing.T) {
+func TestExportFixedPointValuesFromScript(t *testing.T) {
 	for _, fixedPointType := range sema.AllFixedPointTypes {
 		script := fmt.Sprintf(
 			`
@@ -236,12 +236,12 @@ func TestConvertFixedPointValuesFromScript(t *testing.T) {
 		)
 
 		assert.NotPanics(t, func() {
-			convertValueFromScript(t, script)
+			exportValueFromScript(t, script)
 		})
 	}
 }
 
-func TestConvertDictionaryValue(t *testing.T) {
+func TestExportDictionaryValue(t *testing.T) {
 	t.Run("Empty", func(t *testing.T) {
 		script := `
             access(all) fun main(): {String: Int} {
@@ -249,7 +249,7 @@ func TestConvertDictionaryValue(t *testing.T) {
             }
         `
 
-		actual := convertValueFromScript(t, script)
+		actual := exportValueFromScript(t, script)
 		expected := cadence.NewDictionary([]cadence.KeyValuePair{})
 
 		assert.Equal(t, expected, actual)
@@ -265,7 +265,7 @@ func TestConvertDictionaryValue(t *testing.T) {
             }
         `
 
-		actual := convertValueFromScript(t, script)
+		actual := exportValueFromScript(t, script)
 		expected := cadence.NewDictionary([]cadence.KeyValuePair{
 			{
 				Key:   cadence.NewString("a"),
@@ -281,14 +281,14 @@ func TestConvertDictionaryValue(t *testing.T) {
 	})
 }
 
-func TestConvertAddressValue(t *testing.T) {
+func TestExportAddressValue(t *testing.T) {
 	script := `
         access(all) fun main(): Address {
             return 0x42
         }
     `
 
-	actual := convertValueFromScript(t, script)
+	actual := exportValueFromScript(t, script)
 	expected := cadence.NewAddressFromBytes(
 		[]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x42},
 	)
@@ -296,7 +296,7 @@ func TestConvertAddressValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestConvertStructValue(t *testing.T) {
+func TestExportStructValue(t *testing.T) {
 	script := `
         access(all) struct Foo {
             access(all) let bar: Int
@@ -311,13 +311,13 @@ func TestConvertStructValue(t *testing.T) {
         }
     `
 
-	actual := convertValueFromScript(t, script)
+	actual := exportValueFromScript(t, script)
 	expected := cadence.NewStruct([]cadence.Value{cadence.NewInt(42)}).WithType(fooStructType)
 
 	assert.Equal(t, expected, actual)
 }
 
-func TestConvertResourceValue(t *testing.T) {
+func TestExportResourceValue(t *testing.T) {
 	script := `
         access(all) resource Foo {
             access(all) let bar: Int
@@ -332,7 +332,7 @@ func TestConvertResourceValue(t *testing.T) {
         }
     `
 
-	actual := convertValueFromScript(t, script)
+	actual := exportValueFromScript(t, script)
 	expected :=
 		cadence.NewResource([]cadence.Value{
 			cadence.NewInt(42),
@@ -342,7 +342,7 @@ func TestConvertResourceValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestConvertResourceArrayValue(t *testing.T) {
+func TestExportResourceArrayValue(t *testing.T) {
 	script := `
         access(all) resource Foo {
             access(all) let bar: Int
@@ -357,7 +357,7 @@ func TestConvertResourceArrayValue(t *testing.T) {
         }
     `
 
-	actual := convertValueFromScript(t, script)
+	actual := exportValueFromScript(t, script)
 	expected := cadence.NewArray([]cadence.Value{
 		cadence.NewResource([]cadence.Value{
 			cadence.NewInt(1),
@@ -372,7 +372,7 @@ func TestConvertResourceArrayValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestConvertResourceDictionaryValue(t *testing.T) {
+func TestExportResourceDictionaryValue(t *testing.T) {
 	script := `
         access(all) resource Foo {
             access(all) let bar: Int
@@ -390,7 +390,7 @@ func TestConvertResourceDictionaryValue(t *testing.T) {
         }
     `
 
-	actual := convertValueFromScript(t, script)
+	actual := exportValueFromScript(t, script)
 	expected := cadence.NewDictionary([]cadence.KeyValuePair{
 		{
 			Key: cadence.NewString("a"),
@@ -411,7 +411,7 @@ func TestConvertResourceDictionaryValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestConvertNestedResourceValueFromScript(t *testing.T) {
+func TestExportNestedResourceValueFromScript(t *testing.T) {
 	barResourceType := cadence.ResourceType{
 		TypeID:     "test.Bar",
 		Identifier: "Bar",
@@ -468,7 +468,7 @@ func TestConvertNestedResourceValueFromScript(t *testing.T) {
         }
     `
 
-	actual := convertValueFromScript(t, script)
+	actual := exportValueFromScript(t, script)
 	expected := cadence.NewResource([]cadence.Value{
 		cadence.NewResource([]cadence.Value{
 			cadence.NewUInt64(0),
@@ -480,7 +480,7 @@ func TestConvertNestedResourceValueFromScript(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-func TestConvertEventValue(t *testing.T) {
+func TestExportEventValue(t *testing.T) {
 	script := `
         access(all) event Foo(bar: Int)
 
@@ -489,7 +489,7 @@ func TestConvertEventValue(t *testing.T) {
         }
     `
 
-	actual := convertEventFromScript(t, script)
+	actual := exportEventFromScript(t, script)
 	expected := cadence.NewEvent([]cadence.Value{cadence.NewInt(42)}).WithType(fooEventType)
 
 	assert.Equal(t, expected, actual)
@@ -505,7 +505,7 @@ func (t *eventCapturingInterface) EmitEvent(event cadence.Event) {
 	t.events = append(t.events, event)
 }
 
-func convertEventFromScript(t *testing.T, script string) cadence.Event {
+func exportEventFromScript(t *testing.T, script string) cadence.Event {
 	rt := NewInterpreterRuntime()
 
 	inter := &eventCapturingInterface{}
@@ -524,7 +524,7 @@ func convertEventFromScript(t *testing.T, script string) cadence.Event {
 	return event
 }
 
-func convertValueFromScript(t *testing.T, script string) cadence.Value {
+func exportValueFromScript(t *testing.T, script string) cadence.Value {
 	rt := NewInterpreterRuntime()
 
 	value, err := rt.ExecuteScript(
