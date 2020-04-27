@@ -498,10 +498,10 @@ func TestConvertEventValue(t *testing.T) {
 // mock runtime.Interface to capture events
 type eventCapturingInterface struct {
 	EmptyRuntimeInterface
-	events []Event
+	events []cadence.Event
 }
 
-func (t *eventCapturingInterface) EmitEvent(event Event) {
+func (t *eventCapturingInterface) EmitEvent(event cadence.Event) {
 	t.events = append(t.events, event)
 }
 
@@ -521,7 +521,7 @@ func convertEventFromScript(t *testing.T, script string) cadence.Event {
 
 	event := inter.events[0]
 
-	return ConvertEvent(event)
+	return event
 }
 
 func convertValueFromScript(t *testing.T, script string) cadence.Value {
@@ -535,7 +535,7 @@ func convertValueFromScript(t *testing.T, script string) cadence.Value {
 
 	require.NoError(t, err)
 
-	return ConvertValue(value)
+	return value
 }
 
 const testLocation = StringLocation("test")
