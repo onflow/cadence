@@ -41,7 +41,7 @@ func exportEvent(event exportableEvent) cadence.Event {
 		fields[i] = exportValueWithInterpreter(field.Value, field.Interpreter())
 	}
 
-	return cadence.NewEvent(fields).WithType(ConvertType(event.Type).(cadence.EventType))
+	return cadence.NewEvent(fields).WithType(exportType(event.Type).(cadence.EventType))
 }
 
 func exportValueWithInterpreter(value interpreter.Value, inter *interpreter.Interpreter) cadence.Value {
@@ -148,7 +148,7 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 	dynamicType := v.DynamicType(inter).(interpreter.CompositeDynamicType)
 	staticType := dynamicType.StaticType.(*sema.CompositeType)
 
-	t := ConvertType(staticType)
+	t := exportType(staticType)
 
 	switch staticType.Kind {
 	case common.CompositeKindStructure:

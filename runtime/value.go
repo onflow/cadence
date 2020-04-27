@@ -21,6 +21,7 @@ package runtime
 import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // An exportableValue is a Cadence value emitted by the runtime.
@@ -44,7 +45,7 @@ func (v exportableValue) Interpreter() *interpreter.Interpreter {
 }
 
 type exportableEvent struct {
-	Type   Type
+	Type   sema.Type
 	Fields []exportableValue
 }
 

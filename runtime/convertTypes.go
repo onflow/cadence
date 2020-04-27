@@ -27,15 +27,15 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-// ConvertType converts a runtime type to its corresponding Go representation.
-func ConvertType(typ Type) cadence.Type {
+// exportType converts a runtime type to its corresponding Go representation.
+func exportType(typ sema.Type) cadence.Type {
 	switch t := typ.(type) {
 	case *sema.AnyStructType:
 		return cadence.AnyStructType{}
 	case *sema.VoidType:
 		return cadence.VoidType{}
 	case *sema.OptionalType:
-		return convertOptionalType(t)
+		return exportOptionalType(t)
 	case *sema.BoolType:
 		return cadence.BoolType{}
 	case *sema.StringType:
@@ -81,15 +81,15 @@ func ConvertType(typ Type) cadence.Type {
 	case *sema.UFix64Type:
 		return cadence.UFix64Type{}
 	case *sema.VariableSizedType:
-		return convertVariableSizedType(t)
+		return exportVariableSizedType(t)
 	case *sema.ConstantSizedType:
-		return convertConstantSizedType(t)
+		return exportConstantSizedType(t)
 	case *sema.CompositeType:
-		return convertCompositeType(t)
+		return exportCompositeType(t)
 	case *sema.DictionaryType:
-		return convertDictionaryType(t)
+		return exportDictionaryType(t)
 	case *sema.FunctionType:
-		return convertFunctionType(t)
+		return exportFunctionType(t)
 	case *sema.AddressType:
 		return cadence.AddressType{}
 	}
@@ -97,20 +97,20 @@ func ConvertType(typ Type) cadence.Type {
 	panic(fmt.Sprintf("cannot convert type of type %T", typ))
 }
 
-func convertOptionalType(t *sema.OptionalType) cadence.Type {
-	convertedType := ConvertType(t.Type)
+func exportOptionalType(t *sema.OptionalType) cadence.Type {
+	convertedType := exportType(t.Type)
 
 	return cadence.OptionalType{Type: convertedType}
 }
 
-func convertVariableSizedType(t *sema.VariableSizedType) cadence.Type {
-	convertedElement := ConvertType(t.Type)
+func exportVariableSizedType(t *sema.VariableSizedType) cadence.Type {
+	convertedElement := exportType(t.Type)
 
 	return cadence.VariableSizedArrayType{ElementType: convertedElement}
 }
 
-func convertConstantSizedType(t *sema.ConstantSizedType) cadence.Type {
-	convertedElement := ConvertType(t.Type)
+func exportConstantSizedType(t *sema.ConstantSizedType) cadence.Type {
+	convertedElement := exportType(t.Type)
 
 	return cadence.ConstantSizedArrayType{
 		Size:        uint(t.Size),
@@ -118,7 +118,7 @@ func convertConstantSizedType(t *sema.ConstantSizedType) cadence.Type {
 	}
 }
 
-func convertCompositeType(t *sema.CompositeType) cadence.Type {
+func exportCompositeType(t *sema.CompositeType) cadence.Type {
 	fields := make([]cadence.Field, 0, len(t.Members))
 
 	// TODO: do not sort fields before export, store in order declared
@@ -136,7 +136,7 @@ func convertCompositeType(t *sema.CompositeType) cadence.Type {
 	for _, identifier := range fieldNames {
 		field := t.Members[identifier]
 
-		convertedFieldType := ConvertType(field.TypeAnnotation.Type)
+		convertedFieldType := exportType(field.TypeAnnotation.Type)
 
 		fields = append(fields, cadence.Field{
 			Identifier: identifier,
@@ -170,9 +170,9 @@ func convertCompositeType(t *sema.CompositeType) cadence.Type {
 	panic(fmt.Sprintf("cannot convert type %v of unknown kind %v", t, t.Kind))
 }
 
-func convertDictionaryType(t *sema.DictionaryType) cadence.Type {
-	convertedKeyType := ConvertType(t.KeyType)
-	convertedElementType := ConvertType(t.ValueType)
+func exportDictionaryType(t *sema.DictionaryType) cadence.Type {
+	convertedKeyType := exportType(t.KeyType)
+	convertedElementType := exportType(t.ValueType)
 
 	return cadence.DictionaryType{
 		KeyType:     convertedKeyType,
@@ -180,13 +180,13 @@ func convertDictionaryType(t *sema.DictionaryType) cadence.Type {
 	}
 }
 
-func convertFunctionType(t *sema.FunctionType) cadence.Type {
-	convertedReturnType := ConvertType(t.ReturnTypeAnnotation.Type)
+func exportFunctionType(t *sema.FunctionType) cadence.Type {
+	convertedReturnType := exportType(t.ReturnTypeAnnotation.Type)
 
 	parameters := make([]cadence.Parameter, len(t.Parameters))
 
 	for i, parameter := range t.Parameters {
-		convertedParameterType := ConvertType(parameter.TypeAnnotation.Type)
+		convertedParameterType := exportType(parameter.TypeAnnotation.Type)
 
 		parameters[i] = cadence.Parameter{
 			Label:      parameter.Label,
