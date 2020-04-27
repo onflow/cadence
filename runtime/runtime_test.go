@@ -302,7 +302,6 @@ func TestRuntimeProgramCache(t *testing.T) {
 		// Import was in cache.
 		assert.True(t, cacheHits[importedScriptLocation.ID()])
 	})
-
 }
 
 func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
