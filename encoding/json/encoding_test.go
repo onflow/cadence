@@ -774,7 +774,7 @@ func convertValueFromScript(t *testing.T, script string) cadence.Value {
 
 	require.NoError(t, err)
 
-	return runtime.ConvertValue(value)
+	return value
 }
 
 func testAllEncode(t *testing.T, tests ...encodeTest) {
