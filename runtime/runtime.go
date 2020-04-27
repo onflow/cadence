@@ -281,6 +281,10 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	// If the program has not been previously cached, proceed to parse the program.
 	program, err := runtimeInterface.GetCachedProgram(location)
 	if err != nil {
+		return nil, err
+	}
+
+	if program == nil {
 		program, err = r.parse(code)
 		if err != nil {
 			return nil, err
