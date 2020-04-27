@@ -253,8 +253,12 @@ func TestInterpretTransactions(t *testing.T) {
           }
         `)
 
-		transactionArguments := []interface{}{1, true}
-		prepareArguments := []interface{}{
+		transactionArguments := []interpreter.Value{
+			interpreter.NewIntValueFromInt64(1),
+			interpreter.BoolValue(true),
+		}
+
+		prepareArguments := []interpreter.Value{
 			interpreter.NewAuthAccountValue(
 				interpreter.AddressValue{},
 				panicFunction,
