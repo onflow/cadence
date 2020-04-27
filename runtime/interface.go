@@ -19,8 +19,6 @@
 package runtime
 
 import (
-	"errors"
-
 	"github.com/onflow/cadence/runtime/ast"
 )
 
@@ -65,7 +63,7 @@ func (i *EmptyRuntimeInterface) ResolveImport(location Location) ([]byte, error)
 	return nil, nil
 }
 func (i *EmptyRuntimeInterface) GetCachedProgram(location Location) (*ast.Program, error) {
-	return nil, errors.New("cache not implemented")
+	return nil, nil
 }
 
 func (i *EmptyRuntimeInterface) CacheProgram(location Location, program *ast.Program) error {
