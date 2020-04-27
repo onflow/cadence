@@ -28,6 +28,7 @@ import (
 
 	"golang.org/x/crypto/sha3"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	runtimeErrors "github.com/onflow/cadence/runtime/errors"
@@ -44,7 +45,7 @@ type Runtime interface {
 	//
 	// This function returns an error if the program has errors (e.g syntax errors, type errors),
 	// or if the execution fails.
-	ExecuteScript(script []byte, runtimeInterface Interface, location Location) (Value, error)
+	ExecuteScript(script []byte, runtimeInterface Interface, location Location) (cadence.Value, error)
 
 	// ExecuteTransaction executes the given transaction.
 	//
@@ -98,20 +99,25 @@ func NewInterpreterRuntime() Runtime {
 	return &interpreterRuntime{}
 }
 
-func (r *interpreterRuntime) ExecuteScript(script []byte, runtimeInterface Interface, location Location) (Value, error) {
+func (r *interpreterRuntime) ExecuteScript(
+	script []byte,
+	runtimeInterface Interface,
+	location Location,
+) (cadence.Value, error) {
+
 	runtimeStorage := newInterpreterRuntimeStorage(runtimeInterface)
 
 	functions := r.standardLibraryFunctions(runtimeInterface, runtimeStorage)
 
 	checker, err := r.parseAndCheckProgram(script, runtimeInterface, location, functions, nil)
 	if err != nil {
-		return Value{}, newError(err)
+		return nil, newError(err)
 	}
 
 	_, ok := checker.GlobalValues["main"]
 	if !ok {
 		// TODO: error because no main?
-		return Value{}, nil
+		return nil, nil
 	}
 
 	value, err := r.interpret(
@@ -125,7 +131,7 @@ func (r *interpreterRuntime) ExecuteScript(script []byte, runtimeInterface Inter
 		},
 	)
 	if err != nil {
-		return Value{}, newError(err)
+		return nil, newError(err)
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage.
@@ -135,7 +141,7 @@ func (r *interpreterRuntime) ExecuteScript(script []byte, runtimeInterface Inter
 
 	runtimeStorage.writeCached()
 
-	return value, nil
+	return ConvertValue(value), nil
 }
 
 func (r *interpreterRuntime) interpret(
@@ -538,7 +544,7 @@ func (r *interpreterRuntime) emitEvent(
 		Fields: fields,
 	}
 
-	runtimeInterface.EmitEvent(eventValue)
+	runtimeInterface.EmitEvent(ConvertEvent(eventValue))
 }
 
 func (r *interpreterRuntime) emitAccountEvent(
@@ -551,7 +557,7 @@ func (r *interpreterRuntime) emitAccountEvent(
 		Fields: eventFields,
 	}
 
-	runtimeInterface.EmitEvent(eventValue)
+	runtimeInterface.EmitEvent(ConvertEvent(eventValue))
 }
 
 func CodeToHashValue(code []byte) *interpreter.ArrayValue {

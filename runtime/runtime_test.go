@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/sha3"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -76,7 +77,7 @@ type testRuntimeInterface struct {
 	updateAccountCode  func(address Address, code []byte, checkPermission bool) (err error)
 	getSigningAccounts func() []Address
 	log                func(string)
-	emitEvent          func(Event)
+	emitEvent          func(cadence.Event)
 	generateUUID       func() uint64
 	computationLimit   uint64
 }
@@ -128,7 +129,7 @@ func (i *testRuntimeInterface) Log(message string) {
 	i.log(message)
 }
 
-func (i *testRuntimeInterface) EmitEvent(event Event) {
+func (i *testRuntimeInterface) EmitEvent(event cadence.Event) {
 	i.emitEvent(event)
 }
 
@@ -179,7 +180,7 @@ func TestRuntimeImport(t *testing.T) {
 	value, err := runtime.ExecuteScript(script, runtimeInterface, utils.TestLocation)
 	require.NoError(t, err)
 
-	assert.Equal(t, interpreter.NewIntValueFromInt64(42), value.Value)
+	assert.Equal(t, cadence.NewInt(42), value)
 }
 
 func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
@@ -1163,7 +1164,7 @@ func TestRuntimeTransactionWithUpdateAccountCodeEmpty(t *testing.T) {
     `)
 
 	var accountCode []byte
-	var events []Event
+	var events []cadence.Event
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestStorage(),
@@ -1174,7 +1175,7 @@ func TestRuntimeTransactionWithUpdateAccountCodeEmpty(t *testing.T) {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event Event) {
+		emitEvent: func(event cadence.Event) {
 			events = append(events, event)
 		},
 	}
@@ -1200,7 +1201,7 @@ func TestRuntimeTransactionWithCreateAccountEmpty(t *testing.T) {
     `)
 
 	var accountCode []byte
-	var events []Event
+	var events []cadence.Event
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestStorage(),
@@ -1211,7 +1212,7 @@ func TestRuntimeTransactionWithCreateAccountEmpty(t *testing.T) {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event Event) {
+		emitEvent: func(event cadence.Event) {
 			events = append(events, event)
 		},
 	}
@@ -1274,7 +1275,7 @@ func ArrayValueFromBytes(bytes []byte) *interpreter.ArrayValue {
 
 func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
-	expectSuccess := func(t *testing.T, err error, accountCode []byte, events []Event, expectedEventType sema.Type) {
+	expectSuccess := func(t *testing.T, err error, accountCode []byte, events []cadence.Event, expectedEventType cadence.Type) {
 		require.NoError(t, err)
 
 		assert.NotNil(t, accountCode)
@@ -1283,14 +1284,14 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		event := events[0]
 
-		require.Same(t, event.Type, expectedEventType)
+		require.Equal(t, event.Type(), expectedEventType)
 
-		expectedEventCompositeType := expectedEventType.(*sema.CompositeType)
+		expectedEventCompositeType := expectedEventType.(cadence.EventType)
 
 		codeHashParameterIndex := -1
 
-		for i, constructorParameter := range expectedEventCompositeType.ConstructorParameters {
-			if constructorParameter.Identifier != stdlib.AccountEventCodeHashParameter.Identifier {
+		for i, field := range expectedEventCompositeType.Fields {
+			if field.Identifier != stdlib.AccountEventCodeHashParameter.Identifier {
 				continue
 			}
 			codeHashParameterIndex = i
@@ -1302,15 +1303,15 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		expectedCodeHash := sha3.Sum256(accountCode)
 
-		codeHashValue := event.Fields[codeHashParameterIndex].Value
+		codeHashValue := event.Fields[codeHashParameterIndex]
 
-		actualCodeHash, err := interpreter.ByteArrayValueToByteSlice(codeHashValue)
+		actualCodeHash, err := interpreter.ByteArrayValueToByteSlice(ToRuntimeValue(codeHashValue).Value)
 		require.NoError(t, err)
 
 		require.Equal(t, expectedCodeHash[:], actualCodeHash)
 	}
 
-	expectFailure := func(t *testing.T, err error, accountCode []byte, events []Event, _ sema.Type) {
+	expectFailure := func(t *testing.T, err error, accountCode []byte, events []cadence.Event, _ cadence.Type) {
 		require.Error(t, err)
 
 		assert.Nil(t, accountCode)
@@ -1326,7 +1327,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		name      string
 		contract  string
 		arguments []argument
-		check     func(t *testing.T, err error, accountCode []byte, events []Event, expectedEventType sema.Type)
+		check     func(t *testing.T, err error, accountCode []byte, events []cadence.Event, expectedEventType cadence.Type)
 	}
 
 	tests := []test{
@@ -1418,7 +1419,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 				runtime := NewInterpreterRuntime()
 
 				var accountCode []byte
-				var events []Event
+				var events []cadence.Event
 
 				runtimeInterface := &testRuntimeInterface{
 					storage: newTestStorage(),
@@ -1429,14 +1430,14 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 						accountCode = code
 						return nil
 					},
-					emitEvent: func(event Event) {
+					emitEvent: func(event cadence.Event) {
 						events = append(events, event)
 					},
 				}
 
 				err := runtime.ExecuteTransaction(script, runtimeInterface, utils.TestLocation)
 
-				test.check(t, err, accountCode, events, stdlib.AccountCodeUpdatedEventType)
+				test.check(t, err, accountCode, events, ConvertType(stdlib.AccountCodeUpdatedEventType))
 			})
 		}
 	})
@@ -1475,7 +1476,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 				runtime := NewInterpreterRuntime()
 
 				var accountCode []byte
-				var events []Event
+				var events []cadence.Event
 
 				runtimeInterface := &testRuntimeInterface{
 					storage: newTestStorage(),
@@ -1486,14 +1487,14 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 						accountCode = code
 						return nil
 					},
-					emitEvent: func(event Event) {
+					emitEvent: func(event cadence.Event) {
 						events = append(events, event)
 					},
 				}
 
 				err := runtime.ExecuteTransaction(script, runtimeInterface, utils.TestLocation)
 
-				test.check(t, err, accountCode, events, stdlib.AccountCreatedEventType)
+				test.check(t, err, accountCode, events, ConvertType(stdlib.AccountCreatedEventType))
 			})
 		}
 	})
@@ -1503,9 +1504,9 @@ func TestRuntimeContractAccount(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
-	addressValue := interpreter.AddressValue{
+	addressValue := cadence.NewAddress([20]byte{
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xCA, 0xDE,
-	}
+	})
 
 	contract := []byte(`
       pub contract Test {
@@ -1554,7 +1555,7 @@ func TestRuntimeContractAccount(t *testing.T) {
 	))
 
 	var accountCode []byte
-	var events []Event
+	var events []cadence.Event
 
 	runtimeInterface := &testRuntimeInterface{
 		resolveImport: func(_ Location) (bytes []byte, err error) {
@@ -1562,13 +1563,13 @@ func TestRuntimeContractAccount(t *testing.T) {
 		},
 		storage: newTestStorage(),
 		getSigningAccounts: func() []Address {
-			return []Address{addressValue.ToAddress()}
+			return []Address{common.BytesToAddress(addressValue.Bytes())}
 		},
 		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event Event) {
+		emitEvent: func(event cadence.Event) {
 			events = append(events, event)
 		},
 	}
@@ -1582,14 +1583,14 @@ func TestRuntimeContractAccount(t *testing.T) {
 		value, err := runtime.ExecuteScript(script1, runtimeInterface, utils.TestLocation)
 		require.NoError(t, err)
 
-		assert.Equal(t, addressValue, value.Value)
+		assert.Equal(t, addressValue, value)
 	})
 
 	t.Run("", func(t *testing.T) {
 		value, err := runtime.ExecuteScript(script2, runtimeInterface, utils.TestLocation)
 		require.NoError(t, err)
 
-		assert.Equal(t, addressValue, value.Value)
+		assert.Equal(t, addressValue, value)
 	})
 }
 
@@ -1655,7 +1656,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event Event) {},
+		emitEvent: func(event cadence.Event) {},
 		log: func(message string) {
 			loggedMessage = message
 		},
@@ -1836,7 +1837,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
     `)
 
 	accountCodes := map[string][]byte{}
-	var events []Event
+	var events []cadence.Event
 
 	signerAccount := address1Value
 
@@ -1854,7 +1855,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 			accountCodes[key] = code
 			return nil
 		},
-		emitEvent: func(event Event) {
+		emitEvent: func(event cadence.Event) {
 			events = append(events, event)
 		},
 	}
@@ -1939,7 +1940,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
     `)
 
 	accountCodes := map[string][]byte{}
-	var events []Event
+	var events []cadence.Event
 
 	signerAccount := address1Value
 
@@ -1960,7 +1961,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 			accountCodes[key] = code
 			return nil
 		},
-		emitEvent: func(event Event) {
+		emitEvent: func(event cadence.Event) {
 			events = append(events, event)
 		},
 	}
@@ -2059,7 +2060,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 	}
 
 	accountCodes := map[string][]byte{}
-	var events []Event
+	var events []cadence.Event
 
 	var nextAccount byte = 0x2
 
@@ -2082,7 +2083,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 			accountCodes[key] = code
 			return nil
 		},
-		emitEvent: func(event Event) {
+		emitEvent: func(event cadence.Event) {
 			events = append(events, event)
 		},
 	}
@@ -2274,7 +2275,7 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 			)
 
 			var accountCode []byte
-			var events []Event
+			var events []cadence.Event
 
 			runtimeInterface := &testRuntimeInterface{
 				resolveImport: func(_ Location) (bytes []byte, err error) {
@@ -2288,7 +2289,7 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 					accountCode = code
 					return nil
 				},
-				emitEvent: func(event Event) {
+				emitEvent: func(event cadence.Event) {
 					events = append(events, event)
 				},
 			}
@@ -2384,7 +2385,7 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
     `)
 
 	accountCodes := map[string][]byte{}
-	var events []Event
+	var events []cadence.Event
 
 	var loggedMessages []string
 
@@ -2402,7 +2403,7 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 			accountCodes[key] = code
 			return nil
 		},
-		emitEvent: func(event Event) {
+		emitEvent: func(event cadence.Event) {
 			events = append(events, event)
 		},
 		log: func(message string) {
@@ -2534,7 +2535,7 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
     `)
 
 	accountCodes := map[string][]byte{}
-	var events []Event
+	var events []cadence.Event
 
 	var loggedMessages []string
 
@@ -2552,7 +2553,7 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
 			accountCodes[key] = code
 			return nil
 		},
-		emitEvent: func(event Event) {
+		emitEvent: func(event cadence.Event) {
 			events = append(events, event)
 		},
 		log: func(message string) {
@@ -2689,7 +2690,7 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
     `)
 
 	accountCodes := map[string][]byte{}
-	var events []Event
+	var events []cadence.Event
 
 	var loggedMessages []string
 
@@ -2707,7 +2708,7 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
 			accountCodes[key] = code
 			return nil
 		},
-		emitEvent: func(event Event) {
+		emitEvent: func(event cadence.Event) {
 			events = append(events, event)
 		},
 		log: func(message string) {

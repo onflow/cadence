@@ -18,6 +18,8 @@
 
 package runtime
 
+import "github.com/onflow/cadence"
+
 type Interface interface {
 	// ResolveImport resolves an import of a program.
 	ResolveImport(Location) ([]byte, error)
@@ -40,7 +42,7 @@ type Interface interface {
 	// Log logs a string.
 	Log(string)
 	// EmitEvent is called when an event is emitted by the runtime.
-	EmitEvent(Event)
+	EmitEvent(cadence.Event)
 	// ValueExists returns true if the given key exists in the storage, controlled and owned by the given accounts.
 	ValueExists(owner, controller, key []byte) (exists bool, err error)
 	// GenerateUUID is called to generate a UUID.
@@ -93,7 +95,7 @@ func (i *EmptyRuntimeInterface) GetSigningAccounts() []Address {
 
 func (i *EmptyRuntimeInterface) Log(message string) {}
 
-func (i *EmptyRuntimeInterface) EmitEvent(event Event) {}
+func (i *EmptyRuntimeInterface) EmitEvent(event cadence.Event) {}
 
 func (i *EmptyRuntimeInterface) GenerateUUID() uint64 {
 	return 0
