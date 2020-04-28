@@ -11,13 +11,25 @@ func assignType(v interpreter.Value, t sema.Type, inter *interpreter.Interpreter
 	// types are linked properly
 	switch v := v.(type) {
 	case *interpreter.ArrayValue:
-		return assignArrayType(v, t, inter)
+		err := assignArrayType(v, t, inter)
+		if err != nil {
+			return err
+		}
 	case *interpreter.DictionaryValue:
-		return assignDictionaryType(v, t, inter)
+		err := assignDictionaryType(v, t, inter)
+		if err != nil {
+			return err
+		}
 	case *interpreter.CompositeValue:
-		return assignCompositeType(v, t, inter)
+		err := assignCompositeType(v, t, inter)
+		if err != nil {
+			return err
+		}
 	case *interpreter.SomeValue:
-		return assignSomeType(v, t, inter)
+		err := assignSomeType(v, t, inter)
+		if err != nil {
+			return err
+		}
 	}
 
 	// after type linking, check that argument is a subtype of parameter type
