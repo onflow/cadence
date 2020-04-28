@@ -4705,150 +4705,6 @@ func TestInterpretDictionaryKeyTypes(t *testing.T) {
 	}
 }
 
-func TestInterpretIntegerLiteralTypeConversionInVariableDeclaration(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-        let x: Int8 = 1
-    `)
-
-	assert.Equal(t,
-		interpreter.Int8Value(1),
-		inter.Globals["x"].Value,
-	)
-}
-
-func TestInterpretIntegerLiteralTypeConversionInVariableDeclarationOptional(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-        let x: Int8? = 1
-    `)
-
-	assert.Equal(t,
-		interpreter.NewSomeValueOwningNonCopying(
-			interpreter.Int8Value(1),
-		),
-		inter.Globals["x"].Value,
-	)
-}
-
-func TestInterpretIntegerLiteralTypeConversionInAssignment(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-        var x: Int8 = 1
-        fun test() {
-            x = 2
-        }
-    `)
-
-	assert.Equal(t,
-		interpreter.Int8Value(1),
-		inter.Globals["x"].Value,
-	)
-
-	_, err := inter.Invoke("test")
-	require.NoError(t, err)
-
-	assert.Equal(t,
-		interpreter.Int8Value(2),
-		inter.Globals["x"].Value,
-	)
-}
-
-func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-        var x: Int8? = 1
-        fun test() {
-            x = 2
-        }
-    `)
-
-	assert.Equal(t,
-		interpreter.NewSomeValueOwningNonCopying(
-			interpreter.Int8Value(1),
-		),
-		inter.Globals["x"].Value,
-	)
-
-	_, err := inter.Invoke("test")
-	require.NoError(t, err)
-
-	assert.Equal(t,
-		interpreter.NewSomeValueOwningNonCopying(
-			interpreter.Int8Value(2),
-		),
-		inter.Globals["x"].Value,
-	)
-}
-
-func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgument(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-        fun test(_ x: Int8): Int8 {
-            return x
-        }
-        let x = test(1)
-    `)
-
-	assert.Equal(t,
-		interpreter.Int8Value(1),
-		inter.Globals["x"].Value,
-	)
-}
-
-func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgumentOptional(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-        fun test(_ x: Int8?): Int8? {
-            return x
-        }
-        let x = test(1)
-    `)
-
-	assert.Equal(t,
-		interpreter.NewSomeValueOwningNonCopying(
-			interpreter.Int8Value(1),
-		),
-		inter.Globals["x"].Value,
-	)
-}
-
-func TestInterpretIntegerLiteralTypeConversionInReturn(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-        fun test(): Int8 {
-            return 1
-        }
-    `)
-
-	value, err := inter.Invoke("test")
-	require.NoError(t, err)
-
-	assert.Equal(t,
-		interpreter.Int8Value(1),
-		value,
-	)
-}
-
-func TestInterpretIntegerLiteralTypeConversionInReturnOptional(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-        fun test(): Int8? {
-            return 1
-        }
-    `)
-
-	value, err := inter.Invoke("test")
-	require.NoError(t, err)
-
-	assert.Equal(t,
-		interpreter.NewSomeValueOwningNonCopying(
-			interpreter.Int8Value(1),
-		),
-		value,
-	)
-}
-
 func TestInterpretIndirectDestroy(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
@@ -5915,155 +5771,6 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 	)
 }
 
-func TestInterpretIntegerConversions(t *testing.T) {
-
-	tests := map[string]interpreter.Value{
-		// Int*
-		"Int":    interpreter.NewIntValueFromInt64(100),
-		"Int8":   interpreter.Int8Value(100),
-		"Int16":  interpreter.Int16Value(100),
-		"Int32":  interpreter.Int32Value(100),
-		"Int64":  interpreter.Int64Value(100),
-		"Int128": interpreter.NewInt128ValueFromInt64(100),
-		"Int256": interpreter.NewInt256ValueFromInt64(100),
-		// UInt*
-		"UInt":    interpreter.NewUIntValueFromUint64(100),
-		"UInt8":   interpreter.UInt8Value(100),
-		"UInt16":  interpreter.UInt16Value(100),
-		"UInt32":  interpreter.UInt32Value(100),
-		"UInt64":  interpreter.UInt64Value(100),
-		"UInt128": interpreter.NewUInt128ValueFromInt64(100),
-		"UInt256": interpreter.NewUInt256ValueFromInt64(100),
-		// Word*
-		"Word8":  interpreter.Word8Value(100),
-		"Word16": interpreter.Word16Value(100),
-		"Word32": interpreter.Word32Value(100),
-		"Word64": interpreter.Word64Value(100),
-	}
-
-	for _, integerType := range sema.AllIntegerTypes {
-		if _, ok := tests[integerType.String()]; !ok {
-			panic(fmt.Sprintf("broken test: missing %s", integerType))
-		}
-	}
-
-	for integerType, value := range tests {
-
-		t.Run(integerType, func(t *testing.T) {
-
-			inter := parseCheckAndInterpret(t,
-				fmt.Sprintf(
-					`
-                      let x: %[1]s = 100
-                      let y = %[1]s(90) + %[1]s(10)
-                      let z = y == x
-                    `,
-					integerType,
-				),
-			)
-
-			assert.Equal(t,
-				value,
-				inter.Globals["x"].Value,
-			)
-
-			assert.Equal(t,
-				value,
-				inter.Globals["y"].Value,
-			)
-
-			assert.Equal(t,
-				interpreter.BoolValue(true),
-				inter.Globals["z"].Value,
-			)
-
-		})
-	}
-}
-
-func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-      let x = -0.42
-    `)
-
-	assert.Equal(t,
-		interpreter.Fix64Value(-42000000),
-		inter.Globals["x"].Value,
-	)
-}
-
-func TestInterpretFixedPointConversions(t *testing.T) {
-
-	tests := map[string]interpreter.Value{
-		// Fix*
-		"Fix64": interpreter.Fix64Value(123000000),
-		// UFix*
-		"UFix64": interpreter.UFix64Value(123000000),
-	}
-
-	for _, fixedPointType := range sema.AllFixedPointTypes {
-		if _, ok := tests[fixedPointType.String()]; !ok {
-			panic(fmt.Sprintf("broken test: missing %s", fixedPointType))
-		}
-	}
-
-	for fixedPointType, value := range tests {
-
-		t.Run(fixedPointType, func(t *testing.T) {
-
-			inter := parseCheckAndInterpret(t,
-				fmt.Sprintf(
-					`
-                      let x: %[1]s = 1.23
-                      let y = %[1]s(0.42) + %[1]s(0.81)
-                      let z = y == x
-                    `,
-					fixedPointType,
-				),
-			)
-
-			assert.Equal(t,
-				value,
-				inter.Globals["x"].Value,
-			)
-
-			assert.Equal(t,
-				value,
-				inter.Globals["y"].Value,
-			)
-
-			assert.Equal(t,
-				interpreter.BoolValue(true),
-				inter.Globals["z"].Value,
-			)
-
-		})
-	}
-}
-
-func TestInterpretAddressConversion(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-      let x: Address = 0x1
-      let y = Address(0x2)
-    `)
-
-	assert.Equal(t,
-		interpreter.AddressValue{
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-		},
-		inter.Globals["x"].Value,
-	)
-
-	assert.Equal(t,
-		interpreter.AddressValue{
-			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-		},
-		inter.Globals["y"].Value,
-	)
-}
-
 func TestInterpretCastingIntLiteralToInt8(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
@@ -6976,12 +6683,12 @@ func TestInterpretFix64(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		interpreter.Fix64Value(78_900_123_010),
+		interpreter.UFix64Value(78_900_123_010),
 		inter.Globals["a"].Value,
 	)
 
 	assert.Equal(t,
-		interpreter.Fix64Value(123_405_600_000),
+		interpreter.UFix64Value(123_405_600_000),
 		inter.Globals["b"].Value,
 	)
 
@@ -6995,7 +6702,7 @@ func TestInterpretFix64Mul(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t,
 		`
-          let a = 1.1 * -1.1
+          let a = Fix64(1.1) * -1.1
         `,
 	)
 
@@ -7662,81 +7369,6 @@ func TestInterpretCountDigits256(t *testing.T) {
 					expected,
 					inter.Globals[variableName].Value,
 				)
-			}
-		})
-	}
-}
-
-func TestInterpretFixedPointToIntegerConversions(t *testing.T) {
-
-	fixedPointValues := map[string]interpreter.Value{
-		"Fix64":  interpreter.Fix64Value(100 * sema.Fix64Factor),
-		"UFix64": interpreter.UFix64Value(100 * sema.Fix64Factor),
-	}
-
-	for _, fixedPointType := range sema.AllFixedPointTypes {
-		if _, ok := fixedPointValues[fixedPointType.String()]; !ok {
-			panic(fmt.Sprintf("broken test: missing fixed-point type: %s", fixedPointType))
-		}
-	}
-
-	integerValues := map[string]interpreter.Value{
-		// Int*
-		"Int":    interpreter.NewIntValueFromInt64(100),
-		"Int8":   interpreter.Int8Value(100),
-		"Int16":  interpreter.Int16Value(100),
-		"Int32":  interpreter.Int32Value(100),
-		"Int64":  interpreter.Int64Value(100),
-		"Int128": interpreter.NewInt128ValueFromInt64(100),
-		"Int256": interpreter.NewInt256ValueFromInt64(100),
-		// UInt*
-		"UInt":    interpreter.NewUIntValueFromUint64(100),
-		"UInt8":   interpreter.UInt8Value(100),
-		"UInt16":  interpreter.UInt16Value(100),
-		"UInt32":  interpreter.UInt32Value(100),
-		"UInt64":  interpreter.UInt64Value(100),
-		"UInt128": interpreter.NewUInt128ValueFromInt64(100),
-		"UInt256": interpreter.NewUInt256ValueFromInt64(100),
-		// Word*
-		"Word8":  interpreter.Word8Value(100),
-		"Word16": interpreter.Word16Value(100),
-		"Word32": interpreter.Word32Value(100),
-		"Word64": interpreter.Word64Value(100),
-	}
-
-	for _, integerType := range sema.AllIntegerTypes {
-		if _, ok := integerValues[integerType.String()]; !ok {
-			panic(fmt.Sprintf("broken test: missing integer type: %s", integerType))
-		}
-	}
-
-	for fixedPointType, fixedPointValue := range fixedPointValues {
-		t.Run(fixedPointType, func(t *testing.T) {
-
-			for integerType, integerValue := range integerValues {
-				t.Run(integerType, func(t *testing.T) {
-
-					inter := parseCheckAndInterpret(t,
-						fmt.Sprintf(
-							`
-                          let x: %[1]s = 100.0
-                          let y = %[2]s(x)
-                        `,
-							fixedPointType,
-							integerType,
-						),
-					)
-
-					assert.Equal(t,
-						fixedPointValue,
-						inter.Globals["x"].Value,
-					)
-
-					assert.Equal(t,
-						integerValue,
-						inter.Globals["y"].Value,
-					)
-				})
 			}
 		})
 	}
