@@ -20,7 +20,9 @@ package ast
 
 import (
 	"encoding/gob"
+	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"github.com/onflow/cadence/runtime/common"
 )
@@ -92,6 +94,28 @@ func LocationsMatch(first, second Location) bool {
 	}
 
 	return first.ID() == second.ID()
+}
+
+func LocationFromTypeID(typeID string) Location {
+	pieces := strings.Split(typeID, ".")
+
+	switch len(pieces) {
+	case 3:
+		if pieces[0] == AddressPrefix {
+			address, err := hex.DecodeString(pieces[1])
+			if err != nil {
+				return nil
+			}
+
+			return AddressLocation(address)
+		}
+
+		return nil
+	case 2:
+		return StringLocation(pieces[0])
+	default:
+		return nil
+	}
 }
 
 // LocationID

@@ -23,6 +23,7 @@ import (
 	"sort"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -259,17 +260,17 @@ func importValue(value cadence.Value) interpreter.Value {
 
 		return interpreter.NewDictionaryValueUnownedNonCopying(keysAndValues...)
 	case cadence.Struct:
-		return importCompositeValue(v.StructType.Fields, v.Fields)
+		return importCompositeValue(v.StructType.ID(), v.StructType.Fields, v.Fields)
 	case cadence.Resource:
-		return importCompositeValue(v.ResourceType.Fields, v.Fields)
+		return importCompositeValue(v.ResourceType.ID(), v.ResourceType.Fields, v.Fields)
 	case cadence.Event:
-		return importCompositeValue(v.EventType.Fields, v.Fields)
+		return importCompositeValue(v.EventType.ID(), v.EventType.Fields, v.Fields)
 	}
 
 	panic(fmt.Sprintf("cannot convert value of type %T", value))
 }
 
-func importCompositeValue(fieldTypes []cadence.Field, fieldValues []cadence.Value) interpreter.Value {
+func importCompositeValue(typeID string, fieldTypes []cadence.Field, fieldValues []cadence.Value) interpreter.Value {
 	fields := make(map[string]interpreter.Value, len(fieldTypes))
 
 	for i := 0; i < len(fieldTypes) && i < len(fieldValues); i++ {
@@ -278,5 +279,9 @@ func importCompositeValue(fieldTypes []cadence.Field, fieldValues []cadence.Valu
 		fields[fieldType.Identifier] = importValue(fieldValue)
 	}
 
-	return &interpreter.CompositeValue{Fields: fields}
+	return &interpreter.CompositeValue{
+		Fields:   fields,
+		TypeID:   sema.TypeID(typeID),
+		Location: ast.LocationFromTypeID(typeID),
+	}
 }
