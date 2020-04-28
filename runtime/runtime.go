@@ -51,7 +51,7 @@ type Runtime interface {
 	//
 	// This function returns an error if the program has errors (e.g syntax errors, type errors),
 	// or if the execution fails.
-	ExecuteTransaction(script []byte, runtimeInterface Interface, location Location) error
+	ExecuteTransaction(script []byte, arguments [][]byte, runtimeInterface Interface, location Location) error
 
 	// ParseAndCheckProgram parses and checks the given code without executing the program.
 	//
@@ -191,6 +191,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 
 func (r *interpreterRuntime) ExecuteTransaction(
 	script []byte,
+	arguments [][]byte,
 	runtimeInterface Interface,
 	location Location,
 ) error {
