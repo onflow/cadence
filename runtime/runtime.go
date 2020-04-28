@@ -274,7 +274,10 @@ func (r *interpreterRuntime) ExecuteTransaction(
 				parameterType := parameter.TypeAnnotation.Type
 				argument := arguments[i]
 
-				value, err := runtimeInterface.DecodeArgument(argument, exportType(parameterType))
+				value, err := runtimeInterface.DecodeArgument(
+					argument,
+					exportType(parameterType),
+				)
 				if err != nil {
 					return nil, &InvalidTransactionArgumentError{
 						Index: i,
