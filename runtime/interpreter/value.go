@@ -4354,60 +4354,6 @@ type DictionaryEntryValues struct {
 	Value Value
 }
 
-// ToValue converts a Go value into an interpreter value
-func ToValue(value interface{}) (Value, error) {
-	// TODO: support more types
-	switch value := value.(type) {
-	case *big.Int:
-		return IntValue{value}, nil
-	case int:
-		return NewIntValueFromInt64(int64(value)), nil
-	case int8:
-		return Int8Value(value), nil
-	case int16:
-		return Int16Value(value), nil
-	case int32:
-		return Int32Value(value), nil
-	case int64:
-		return Int64Value(value), nil
-	case uint8:
-		return UInt8Value(value), nil
-	case uint16:
-		return UInt16Value(value), nil
-	case uint32:
-		return UInt32Value(value), nil
-	case uint64:
-		return UInt64Value(value), nil
-	case bool:
-		return BoolValue(value), nil
-	case string:
-		return NewStringValue(value), nil
-	case nil:
-		return NilValue{}, nil
-	}
-
-	return nil, fmt.Errorf("cannot convert Go value to value: %#+v", value)
-}
-
-func ToValues(inputs []interface{}) ([]Value, error) {
-	var newValues []Value
-	for _, argument := range inputs {
-		value, ok := argument.(Value)
-		if !ok {
-			var err error
-			value, err = ToValue(argument)
-			if err != nil {
-				return nil, err
-			}
-		}
-		newValues = append(
-			newValues,
-			value,
-		)
-	}
-	return newValues, nil
-}
-
 // OptionalValue
 
 type OptionalValue interface {

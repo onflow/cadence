@@ -22,32 +22,10 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
-
-func TestToExpression(t *testing.T) {
-
-	testValue := func(expected Value) func(actual Value, err error) {
-		return func(actual Value, err error) {
-			require.NoError(t, err)
-			assert.Equal(t, expected, actual)
-		}
-	}
-
-	testValue(Int8Value(1))(ToValue(int8(1)))
-	testValue(Int16Value(2))(ToValue(int16(2)))
-	testValue(Int32Value(3))(ToValue(int32(3)))
-	testValue(Int64Value(4))(ToValue(int64(4)))
-	testValue(UInt8Value(1))(ToValue(uint8(1)))
-	testValue(UInt16Value(2))(ToValue(uint16(2)))
-	testValue(UInt32Value(3))(ToValue(uint32(3)))
-	testValue(UInt64Value(4))(ToValue(uint64(4)))
-	testValue(BoolValue(true))(ToValue(true))
-	testValue(BoolValue(false))(ToValue(false))
-}
 
 func newTestCompositeValue(owner common.Address) *CompositeValue {
 	return &CompositeValue{
