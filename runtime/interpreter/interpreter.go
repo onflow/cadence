@@ -1747,7 +1747,22 @@ func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerEx
 func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedPointExpression) ast.Repr {
 	// TODO: adjust once/if we support more fixed point types
 	value := interpreter.convertToFixedPointBigInt(expression, sema.Fix64Scale)
-	return Done{Result: Fix64Value(value.Int64())}
+
+	// Return a
+	// Fix64: If the value is negative or in the range of Fix64,
+	// UFix64: otherwise.
+
+	var result Value
+
+	if expression.Negative ||
+		expression.UnsignedInteger.Cmp(sema.Fix64TypeMaxIntBig) <= 0 {
+
+		result = Fix64Value(value.Int64())
+	} else {
+		result = UFix64Value(value.Uint64())
+	}
+
+	return Done{Result: result}
 }
 
 func (interpreter *Interpreter) convertToFixedPointBigInt(expression *ast.FixedPointExpression, scale uint) *big.Int {
