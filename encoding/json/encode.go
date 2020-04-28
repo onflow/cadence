@@ -37,6 +37,8 @@ type Encoder struct {
 }
 
 // Encode returns the JSON-encoded representation of the given value.
+//
+// This function returns an error if the Cadence value cannot be represented as JSON.
 func Encode(value cadence.Value) ([]byte, error) {
 	var w bytes.Buffer
 	enc := NewEncoder(&w)
@@ -47,6 +49,16 @@ func Encode(value cadence.Value) ([]byte, error) {
 	}
 
 	return w.Bytes(), nil
+}
+
+// MustEncode returns the JSON-encoded representation of the given value, or panics
+// if the value cannot be represented as JSON.
+func MustEncode(value cadence.Value) []byte {
+	b, err := Encode(value)
+	if err != nil {
+		panic(err)
+	}
+	return b
 }
 
 // NewEncoder initializes an Encoder that will write JSON-encoded bytes to the
