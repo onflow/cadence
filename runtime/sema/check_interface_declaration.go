@@ -297,7 +297,7 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 		interfaceType,
 		declaration.Members.Fields,
 		declaration.Members.Functions,
-		false,
+		ContainerKindInterface,
 	)
 
 	interfaceType.Members = members

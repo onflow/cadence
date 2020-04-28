@@ -2040,3 +2040,39 @@ func (checker *Checker) ValueActivationDepth() int {
 func (checker *Checker) TypeActivationDepth() int {
 	return checker.typeActivations.Depth()
 }
+
+func (checker *Checker) effectiveMemberAccess(access ast.Access, containerKind ContainerKind) ast.Access {
+	switch containerKind {
+	case ContainerKindComposite:
+		return checker.effectiveCompositeMemberAccess(access)
+	case ContainerKindInterface:
+		return checker.effectiveInterfaceMemberAccess(access)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (checker *Checker) effectiveInterfaceMemberAccess(access ast.Access) ast.Access {
+	if access == ast.AccessNotSpecified {
+		return ast.AccessPublic
+	} else {
+		return access
+	}
+}
+
+func (checker *Checker) effectiveCompositeMemberAccess(access ast.Access) ast.Access {
+	if access != ast.AccessNotSpecified {
+		return access
+	}
+
+	switch checker.accessCheckMode {
+	case AccessCheckModeStrict, AccessCheckModeNotSpecifiedRestricted:
+		return ast.AccessPrivate
+
+	case AccessCheckModeNotSpecifiedUnrestricted, AccessCheckModeNone:
+		return ast.AccessPublic
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
