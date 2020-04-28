@@ -237,7 +237,7 @@ func (r *interpreterRuntime) ExecuteTransaction(
 		}
 	}
 
-	signingAccounts := make([]interface{}, signingAccountsCount)
+	signingAccounts := make([]interpreter.Value, signingAccountsCount)
 
 	for i, address := range signingAccountAddresses {
 		signingAccounts[i] = r.newAuthAccountValue(
