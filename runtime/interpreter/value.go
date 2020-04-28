@@ -605,7 +605,8 @@ type NumberValue interface {
 	GreaterEqual(other NumberValue) BoolValue
 }
 
-// BigNumberValue
+// BigNumberValue.
+// Implemented by values with an integer value outside the range of int64
 
 type BigNumberValue interface {
 	NumberValue
@@ -636,6 +637,7 @@ func ConvertInt(value Value, _ *Interpreter) Value {
 		return NewIntValueFromBigInt(value.ToBigInt())
 
 	case NumberValue:
+		// NOTE: safe, UInt64Value is handled by BigNumberValue above
 		return NewIntValueFromInt64(int64(value.ToInt()))
 
 	default:
@@ -3484,23 +3486,41 @@ func (v Fix64Value) Equal(other Value) BoolValue {
 const Fix64MaxValue = math.MaxInt64
 
 func ConvertFix64(value Value, interpreter *Interpreter) Value {
-	// TODO: https://github.com/dapperlabs/flow-go/issues/2141
-
 	switch value := value.(type) {
-	case UFix64Value:
-		if int(value) > Fix64MaxValue {
-			panic("UFix64 value is larger than maximum value for Fix64")
-		}
-		return Fix64Value(value)
-
 	case Fix64Value:
 		return value
 
+	case UFix64Value:
+		if value > Fix64MaxValue {
+			panic(OverflowError{})
+		}
+		return Fix64Value(value)
+
+	case BigNumberValue:
+		v := value.ToBigInt()
+
+		// First, check if the value is at least in the int64 range.
+		// The integer range for Fix64 is smaller, but this test at least
+		// allows us to call `v.Int64()` safely.
+
+		if !v.IsInt64() {
+			panic(OverflowError{})
+		}
+
+		// Now check that the integer value fits the range of Fix64
+		return NewFix64ValueWithInteger(v.Int64())
+
 	case NumberValue:
-		return Fix64Value(value.ToInt() * sema.Fix64Factor)
+		v := value.ToInt()
+		// Check that the integer value fits the range of Fix64
+		return NewFix64ValueWithInteger(int64(v))
 
 	default:
-		panic(fmt.Sprintf("can't convert %s to Fix64", value.DynamicType(interpreter)))
+		panic(fmt.Sprintf(
+			"can't convert %s to Fix64: %s",
+			value.DynamicType(interpreter),
+			value,
+		))
 	}
 }
 
@@ -3510,6 +3530,15 @@ type UFix64Value uint64
 
 func init() {
 	gob.Register(UFix64Value(0))
+}
+
+func NewUFix64ValueWithInteger(integer uint64) Fix64Value {
+
+	if integer > sema.UFix64TypeMaxInt {
+		panic(OverflowError{})
+	}
+
+	return Fix64Value(integer * sema.Fix64Factor)
 }
 
 func (UFix64Value) IsValue() {}
@@ -3651,23 +3680,48 @@ func (v UFix64Value) Equal(other Value) BoolValue {
 }
 
 func ConvertUFix64(value Value, interpreter *Interpreter) Value {
-	// TODO: https://github.com/dapperlabs/flow-go/issues/2141
-
 	switch value := value.(type) {
-	case Fix64Value:
-		if value < 0 {
-			panic("can't convert negative Fix64 to UFix64")
-		}
-		return UFix64Value(value)
-
 	case UFix64Value:
 		return value
 
+	case Fix64Value:
+		if value < 0 {
+			panic(UnderflowError{})
+		}
+		return UFix64Value(value)
+
+	case BigNumberValue:
+		v := value.ToBigInt()
+
+		if v.Sign() < 0 {
+			panic(UnderflowError{})
+		}
+
+		// First, check if the value is at least in the uint64 range.
+		// The integer range for UFix64 is smaller, but this test at least
+		// allows us to call `v.UInt64()` safely.
+
+		if !v.IsUint64() {
+			panic(OverflowError{})
+		}
+
+		// Now check that the integer value fits the range of UFix64
+		return NewUFix64ValueWithInteger(v.Uint64())
+
 	case NumberValue:
-		return UFix64Value(value.ToInt() * sema.Fix64Factor)
+		v := value.ToInt()
+		if v < 0 {
+			panic(UnderflowError{})
+		}
+		// Check that the integer value fits the range of UFix64
+		return NewUFix64ValueWithInteger(uint64(v))
 
 	default:
-		panic(fmt.Sprintf("can't convert %s to UFix64", value.DynamicType(interpreter)))
+		panic(fmt.Sprintf(
+			"can't convert %s to UFix64: %s",
+			value.DynamicType(interpreter),
+			value,
+		))
 	}
 }
 
