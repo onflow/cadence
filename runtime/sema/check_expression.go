@@ -179,13 +179,11 @@ func (checker *Checker) VisitIntegerExpression(_ *ast.IntegerExpression) ast.Rep
 func (checker *Checker) VisitFixedPointExpression(expression *ast.FixedPointExpression) ast.Repr {
 	// TODO: adjust once/if we support more fixed point types
 
-	if expression.Negative ||
-		expression.UnsignedInteger.IsInt64() {
-
+	if expression.Negative {
 		return &Fix64Type{}
+	} else {
+		return &UFix64Type{}
 	}
-
-	return &UFix64Type{}
 }
 
 func (checker *Checker) VisitStringExpression(_ *ast.StringExpression) ast.Repr {
