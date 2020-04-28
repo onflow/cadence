@@ -22,6 +22,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 func TestDivModUInt8(t *testing.T) {
@@ -3032,4 +3034,168 @@ func TestModInt256(t *testing.T) {
 			assert.Panics(t, f)
 		}
 	}
+}
+
+func TestReciprocalFix64(t *testing.T) {
+
+	assert.PanicsWithValue(t,
+		DivisionByZeroError{},
+		func() {
+			Fix64Value(0).Reciprocal()
+		},
+	)
+
+	assert.Equal(t,
+		Fix64Value(sema.Fix64Factor),
+		Fix64Value(sema.Fix64Factor).Reciprocal(),
+	)
+
+	assert.Equal(t,
+		Fix64Value(1),
+		Fix64Value(Fix64MaxDivisorValue).Reciprocal(),
+	)
+
+	assert.Equal(t,
+		Fix64Value(0),
+		Fix64Value(2*Fix64MaxDivisorValue).Reciprocal(),
+	)
+}
+
+func TestReciprocalUFix64(t *testing.T) {
+
+	assert.PanicsWithValue(t,
+		DivisionByZeroError{},
+		func() {
+			UFix64Value(0).Reciprocal()
+		},
+	)
+
+	assert.Equal(t,
+		UFix64Value(sema.Fix64Factor),
+		UFix64Value(sema.Fix64Factor).Reciprocal(),
+	)
+
+	assert.Equal(t,
+		UFix64Value(1),
+		UFix64Value(Fix64MaxDivisorValue).Reciprocal(),
+	)
+
+	assert.Equal(t,
+		UFix64Value(0),
+		UFix64Value(2*Fix64MaxDivisorValue).Reciprocal(),
+	)
+}
+
+func TestDivFix64(t *testing.T) {
+
+	tests := []struct {
+		a, b  int64
+		valid bool
+	}{
+		{0, 0, false},
+		{1, 0, false},
+		{2, 0, false},
+		{Fix64MaxIntDividend, 0, false},
+		{Fix64MaxIntDividend + 1, 0, false},
+		{-1, 0, false},
+
+		{0, 1, true},
+		{1, 1, true},
+		{2, 1, true},
+		{Fix64MaxIntDividend, 1, true},
+		{Fix64MaxIntDividend + 1, 1, false},
+		{-1, 1, true},
+
+		{0, 2, true},
+		{1, 2, true},
+		{2, 2, true},
+		{Fix64MaxIntDividend, 2, true},
+		{Fix64MaxIntDividend + 1, 2, false},
+		{-1, 2, true},
+
+		{0, -1, true},
+		{1, -1, true},
+		{2, -1, true},
+		{Fix64MaxIntDividend, -1, true},
+		{Fix64MaxIntDividend + 1, -1, false},
+		{-1, -1, true},
+	}
+
+	for _, test := range tests {
+
+		f := func() {
+			a := NewFix64ValueWithInteger(test.a)
+			b := NewFix64ValueWithInteger(test.b)
+			a.Div(b)
+		}
+
+		if test.valid {
+			assert.NotPanics(t, f)
+		} else {
+			assert.Panics(t, f)
+		}
+	}
+
+	assert.Equal(t,
+		Fix64Value(1),
+		NewFix64ValueWithInteger(1).
+			Div(Fix64Value(Fix64MaxDivisorValue)),
+	)
+
+	assert.Panics(t, func() {
+		NewFix64ValueWithInteger(1).
+			Div(Fix64Value(Fix64MaxDivisorValue + 1))
+	})
+}
+
+func TestDivUFix64(t *testing.T) {
+
+	tests := []struct {
+		a, b  uint64
+		valid bool
+	}{
+		{0, 0, false},
+		{1, 0, false},
+		{2, 0, false},
+		{UFix64MaxIntDividend, 0, false},
+		{UFix64MaxIntDividend + 1, 0, false},
+
+		{0, 1, true},
+		{1, 1, true},
+		{2, 1, true},
+		{UFix64MaxIntDividend, 1, true},
+		{UFix64MaxIntDividend + 1, 1, false},
+
+		{0, 2, true},
+		{1, 2, true},
+		{2, 2, true},
+		{UFix64MaxIntDividend, 2, true},
+		{UFix64MaxIntDividend + 1, 2, false},
+	}
+
+	for _, test := range tests {
+
+		f := func() {
+			a := NewUFix64ValueWithInteger(test.a)
+			b := NewUFix64ValueWithInteger(test.b)
+			a.Div(b)
+		}
+
+		if test.valid {
+			assert.NotPanics(t, f)
+		} else {
+			assert.Panics(t, f)
+		}
+	}
+
+	assert.Equal(t,
+		UFix64Value(1),
+		NewUFix64ValueWithInteger(1).
+			Div(UFix64Value(UFix64MaxDivisorValue)),
+	)
+
+	assert.Panics(t, func() {
+		NewUFix64ValueWithInteger(1).
+			Div(UFix64Value(UFix64MaxDivisorValue + 1))
+	})
 }
