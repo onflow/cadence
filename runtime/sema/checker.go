@@ -528,9 +528,12 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 			break
 		}
 
-		if IsSubType(unwrappedTargetType, &FixedPointType{}) {
-			checker.checkFixedPointLiteral(typedExpression, unwrappedTargetType)
+		valueTypeOK := checker.checkFixedPointLiteral(typedExpression, valueType)
 
+		if IsSubType(unwrappedTargetType, &FixedPointType{}) {
+			if valueTypeOK {
+				checker.checkFixedPointLiteral(typedExpression, unwrappedTargetType)
+			}
 			return true
 		}
 
@@ -607,7 +610,7 @@ func (checker *Checker) checkIntegerLiteral(expression *ast.IntegerExpression, t
 // checkFixedPointLiteral checks that the value of the fixed-point literal
 // fits into range of the target fixed-point type
 //
-func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpression, targetType Type) {
+func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpression, targetType Type) bool {
 
 	// The target type might just be an integer type,
 	// in which case only the integer range can be checked.
@@ -629,7 +632,7 @@ func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpress
 				},
 			)
 
-			return
+			return false
 		}
 
 		if !checker.checkFixedPointRange(
@@ -652,7 +655,7 @@ func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpress
 				},
 			)
 
-			return
+			return false
 		}
 
 	case IntegerRangedType:
@@ -665,19 +668,22 @@ func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpress
 			expression.UnsignedInteger.Neg(expression.UnsignedInteger)
 		}
 
-		if checker.checkIntegerRange(integerValue, minInt, maxInt) {
-			return
-		}
+		if !checker.checkIntegerRange(integerValue, minInt, maxInt) {
 
-		checker.report(
-			&InvalidIntegerLiteralRangeError{
-				ExpectedType:   targetType,
-				ExpectedMinInt: minInt,
-				ExpectedMaxInt: maxInt,
-				Range:          ast.NewRangeFromPositioned(expression),
-			},
-		)
+			checker.report(
+				&InvalidIntegerLiteralRangeError{
+					ExpectedType:   targetType,
+					ExpectedMinInt: minInt,
+					ExpectedMaxInt: maxInt,
+					Range:          ast.NewRangeFromPositioned(expression),
+				},
+			)
+
+			return false
+		}
 	}
+
+	return true
 }
 
 // checkAddressLiteral checks that the value of the integer literal
