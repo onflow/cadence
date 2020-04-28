@@ -56,6 +56,8 @@ type Interface interface {
 	GenerateUUID() uint64
 	// GetComputationLimit returns the computation limit. A value <= 0 means there is no limit
 	GetComputationLimit() uint64
+	// DecodeArgument decodes a transaction argument against the given type.
+	DecodeArgument(b []byte, t cadence.Type) (cadence.Value, error)
 }
 
 type EmptyRuntimeInterface struct{}
@@ -118,4 +120,8 @@ func (i *EmptyRuntimeInterface) GenerateUUID() uint64 {
 
 func (i *EmptyRuntimeInterface) GetComputationLimit() uint64 {
 	return 0
+}
+
+func (i *EmptyRuntimeInterface) DecodeArgument(b []byte, t cadence.Type) (cadence.Value, error) {
+	return nil, nil
 }
