@@ -287,12 +287,14 @@ func (r *interpreterRuntime) ExecuteTransaction(
 
 				arg := importValue(value)
 
-				// attempt to assign parameter type to argument
-				err = assignType(arg, parameterType, inter)
-				if err != nil {
+				// check that decoded value is a subtype of static parameter type
+				if !interpreter.IsSubType(arg.DynamicType(inter), parameterType) {
 					return nil, &InvalidTransactionArgumentError{
 						Index: i,
-						Err:   err,
+						Err: &InvalidTypeAssignmentError{
+							Value: arg,
+							Type:  parameterType,
+						},
 					}
 				}
 
