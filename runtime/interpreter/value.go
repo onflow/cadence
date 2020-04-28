@@ -828,7 +828,7 @@ func (v Int8Value) Mod(other NumberValue) NumberValue {
 	o := other.(Int8Value)
 	// INT33-C
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -998,7 +998,7 @@ func (v Int16Value) Mod(other NumberValue) NumberValue {
 	o := other.(Int16Value)
 	// INT33-C
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -1168,7 +1168,7 @@ func (v Int32Value) Mod(other NumberValue) NumberValue {
 	o := other.(Int32Value)
 	// INT33-C
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -1342,7 +1342,7 @@ func (v Int64Value) Mod(other NumberValue) NumberValue {
 	o := other.(Int64Value)
 	// INT33-C
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -2073,7 +2073,7 @@ func (v UInt8Value) Minus(other NumberValue) NumberValue {
 func (v UInt8Value) Mod(other NumberValue) NumberValue {
 	o := other.(UInt8Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -2089,7 +2089,7 @@ func (v UInt8Value) Mul(other NumberValue) NumberValue {
 func (v UInt8Value) Div(other NumberValue) NumberValue {
 	o := other.(UInt8Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -2209,7 +2209,7 @@ func (v UInt16Value) Minus(other NumberValue) NumberValue {
 func (v UInt16Value) Mod(other NumberValue) NumberValue {
 	o := other.(UInt16Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -2225,7 +2225,7 @@ func (v UInt16Value) Mul(other NumberValue) NumberValue {
 func (v UInt16Value) Div(other NumberValue) NumberValue {
 	o := other.(UInt16Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -2347,7 +2347,7 @@ func (v UInt32Value) Minus(other NumberValue) NumberValue {
 func (v UInt32Value) Mod(other NumberValue) NumberValue {
 	o := other.(UInt32Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -2363,7 +2363,7 @@ func (v UInt32Value) Mul(other NumberValue) NumberValue {
 func (v UInt32Value) Div(other NumberValue) NumberValue {
 	o := other.(UInt32Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -2490,7 +2490,7 @@ func (v UInt64Value) Minus(other NumberValue) NumberValue {
 func (v UInt64Value) Mod(other NumberValue) NumberValue {
 	o := other.(UInt64Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -2506,7 +2506,7 @@ func (v UInt64Value) Mul(other NumberValue) NumberValue {
 func (v UInt64Value) Div(other NumberValue) NumberValue {
 	o := other.(UInt64Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -2972,7 +2972,7 @@ func (v Word8Value) Minus(other NumberValue) NumberValue {
 func (v Word8Value) Mod(other NumberValue) NumberValue {
 	o := other.(Word8Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -2984,7 +2984,7 @@ func (v Word8Value) Mul(other NumberValue) NumberValue {
 func (v Word8Value) Div(other NumberValue) NumberValue {
 	o := other.(Word8Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -3069,7 +3069,7 @@ func (v Word16Value) Minus(other NumberValue) NumberValue {
 func (v Word16Value) Mod(other NumberValue) NumberValue {
 	o := other.(Word16Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -3081,7 +3081,7 @@ func (v Word16Value) Mul(other NumberValue) NumberValue {
 func (v Word16Value) Div(other NumberValue) NumberValue {
 	o := other.(Word16Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -3168,7 +3168,7 @@ func (v Word32Value) Minus(other NumberValue) NumberValue {
 func (v Word32Value) Mod(other NumberValue) NumberValue {
 	o := other.(Word32Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -3180,7 +3180,7 @@ func (v Word32Value) Mul(other NumberValue) NumberValue {
 func (v Word32Value) Div(other NumberValue) NumberValue {
 	o := other.(Word32Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -3267,7 +3267,7 @@ func (v Word64Value) Minus(other NumberValue) NumberValue {
 func (v Word64Value) Mod(other NumberValue) NumberValue {
 	o := other.(Word64Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -3279,7 +3279,7 @@ func (v Word64Value) Mul(other NumberValue) NumberValue {
 func (v Word64Value) Div(other NumberValue) NumberValue {
 	o := other.(Word64Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
