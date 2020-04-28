@@ -188,12 +188,7 @@ func importValue(value cadence.Value) interpreter.Value {
 	case cadence.Void:
 		return interpreter.VoidValue{}
 	case cadence.Optional:
-		if v.Value == nil {
-			return interpreter.NilValue{}
-		}
-
-		innerValue := importValue(v.Value)
-		return interpreter.NewSomeValueOwningNonCopying(innerValue)
+		return importOptionalValue(v)
 	case cadence.Bool:
 		return interpreter.BoolValue(v)
 	case cadence.String:
@@ -243,34 +238,56 @@ func importValue(value cadence.Value) interpreter.Value {
 	case cadence.UFix64:
 		return interpreter.UFix64Value(v)
 	case cadence.Array:
-		values := make([]interpreter.Value, len(v.Values))
-
-		for i, elem := range v.Values {
-			values[i] = importValue(elem)
-		}
-
-		return interpreter.NewArrayValueUnownedNonCopying(values...)
+		return importArrayValue(v)
 	case cadence.Dictionary:
-		keysAndValues := make([]interpreter.Value, len(v.Pairs)*2)
-
-		for i, pair := range v.Pairs {
-			keysAndValues[i*2] = importValue(pair.Key)
-			keysAndValues[i*2+1] = importValue(pair.Value)
-		}
-
-		return interpreter.NewDictionaryValueUnownedNonCopying(keysAndValues...)
+		return importDictionaryValue(v)
 	case cadence.Struct:
-		return importCompositeValue(v.StructType.ID(), v.StructType.Fields, v.Fields)
+		return importCompositeValue(common.CompositeKindStructure, v.StructType.ID(), v.StructType.Fields, v.Fields)
 	case cadence.Resource:
-		return importCompositeValue(v.ResourceType.ID(), v.ResourceType.Fields, v.Fields)
+		return importCompositeValue(common.CompositeKindResource, v.ResourceType.ID(), v.ResourceType.Fields, v.Fields)
 	case cadence.Event:
-		return importCompositeValue(v.EventType.ID(), v.EventType.Fields, v.Fields)
+		return importCompositeValue(common.CompositeKindEvent, v.EventType.ID(), v.EventType.Fields, v.Fields)
 	}
 
 	panic(fmt.Sprintf("cannot convert value of type %T", value))
 }
 
-func importCompositeValue(typeID string, fieldTypes []cadence.Field, fieldValues []cadence.Value) interpreter.Value {
+func importOptionalValue(v cadence.Optional) interpreter.Value {
+	if v.Value == nil {
+		return interpreter.NilValue{}
+	}
+
+	innerValue := importValue(v.Value)
+	return interpreter.NewSomeValueOwningNonCopying(innerValue)
+}
+
+func importArrayValue(v cadence.Array) *interpreter.ArrayValue {
+	values := make([]interpreter.Value, len(v.Values))
+
+	for i, elem := range v.Values {
+		values[i] = importValue(elem)
+	}
+
+	return interpreter.NewArrayValueUnownedNonCopying(values...)
+}
+
+func importDictionaryValue(v cadence.Dictionary) *interpreter.DictionaryValue {
+	keysAndValues := make([]interpreter.Value, len(v.Pairs)*2)
+
+	for i, pair := range v.Pairs {
+		keysAndValues[i*2] = importValue(pair.Key)
+		keysAndValues[i*2+1] = importValue(pair.Value)
+	}
+
+	return interpreter.NewDictionaryValueUnownedNonCopying(keysAndValues...)
+}
+
+func importCompositeValue(
+	kind common.CompositeKind,
+	typeID string,
+	fieldTypes []cadence.Field,
+	fieldValues []cadence.Value,
+) *interpreter.CompositeValue {
 	fields := make(map[string]interpreter.Value, len(fieldTypes))
 
 	for i := 0; i < len(fieldTypes) && i < len(fieldValues); i++ {
@@ -280,8 +297,9 @@ func importCompositeValue(typeID string, fieldTypes []cadence.Field, fieldValues
 	}
 
 	return &interpreter.CompositeValue{
-		Fields:   fields,
-		TypeID:   sema.TypeID(typeID),
 		Location: ast.LocationFromTypeID(typeID),
+		Kind:     kind,
+		TypeID:   sema.TypeID(typeID),
+		Fields:   fields,
 	}
 }
