@@ -130,16 +130,32 @@ func (checker *Checker) checkResourceVariableCapturingInFunction(variable *Varia
 }
 
 func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatement) ast.Repr {
-	result := statement.Expression.Accept(checker)
+	expression := statement.Expression
 
-	if ty, ok := result.(Type); ok &&
-		ty.IsResourceType() {
+	ty := expression.Accept(checker).(Type)
 
+	if ty.IsResourceType() {
 		checker.report(
 			&ResourceLossError{
-				Range: ast.NewRangeFromPositioned(statement.Expression),
+				Range: ast.NewRangeFromPositioned(expression),
 			},
 		)
+	}
+
+	// Ensure that a self-standing expression can be converted to it's own type.
+	//
+	// For example, the expression might be a fixed-point expression,
+	// which is inferred to have type Fix64, and the check ensures the literal
+	// fits into the type's range.
+	//
+	// This check is already performed for e.g. variable declarations
+	// and function function arguments.
+	//
+	// It might seem odd that the target type is the value type,
+	// but this is exactly the case for an expression that is a separate statement.
+
+	if !ty.IsInvalidType() {
+		checker.checkTypeCompatibility(expression, ty, ty)
 	}
 
 	return nil
