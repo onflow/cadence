@@ -2579,17 +2579,24 @@ func (*UFix64Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var UFix64TypeMinInt = big.NewInt(0)
-var UFix64TypeMaxInt = big.NewInt(0).SetUint64(math.MaxUint64 / uint64(Fix64Factor))
-var UFix64TypeMinFractional = big.NewInt(0)
-var UFix64TypeMaxFractional = big.NewInt(0).SetUint64(math.MaxUint64 % uint64(Fix64Factor))
+const UFix64TypeMinInt = 0
+const UFix64TypeMaxInt = math.MaxUint64 / uint64(Fix64Factor)
+
+var UFix64TypeMinIntBig = big.NewInt(0).SetUint64(UFix64TypeMinInt)
+var UFix64TypeMaxIntBig = big.NewInt(0).SetUint64(UFix64TypeMaxInt)
+
+const UFix64TypeMinFractional = 0
+const UFix64TypeMaxFractional = math.MaxUint64 % uint64(Fix64Factor)
+
+var UFix64TypeMinFractionalBig = big.NewInt(0).SetUint64(UFix64TypeMinFractional)
+var UFix64TypeMaxFractionalBig = big.NewInt(0).SetUint64(UFix64TypeMaxFractional)
 
 func (*UFix64Type) MinInt() *big.Int {
-	return UFix64TypeMinInt
+	return UFix64TypeMinIntBig
 }
 
 func (*UFix64Type) MaxInt() *big.Int {
-	return UFix64TypeMaxInt
+	return UFix64TypeMaxIntBig
 }
 
 func (*UFix64Type) Scale() uint {
@@ -2597,11 +2604,11 @@ func (*UFix64Type) Scale() uint {
 }
 
 func (*UFix64Type) MinFractional() *big.Int {
-	return UFix64TypeMinFractional
+	return UFix64TypeMinFractionalBig
 }
 
 func (*UFix64Type) MaxFractional() *big.Int {
-	return UFix64TypeMaxFractional
+	return UFix64TypeMaxFractionalBig
 }
 
 func (*UFix64Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
