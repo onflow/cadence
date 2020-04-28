@@ -211,40 +211,53 @@ func (r *interpreterRuntime) ExecuteTransaction(
 	}
 
 	transactionType := transactions[0]
-	transactionFunctionType := transactionType.EntryPointFunctionType()
 
-	signingAccountAddresses := runtimeInterface.GetSigningAccounts()
+	authorizers := runtimeInterface.GetSigningAccounts()
 
 	// check parameter count
 
-	signingAccountsCount := len(signingAccountAddresses)
-	transactionFunctionParameterCount := len(transactionFunctionType.Parameters)
-	if signingAccountsCount != transactionFunctionParameterCount {
+	argumentCount := len(arguments)
+	authorizerCount := len(authorizers)
+	totalArgCount := argumentCount + authorizerCount
+
+	transactionParameterCount := len(transactionType.Parameters)
+	if argumentCount != transactionParameterCount {
+		// TODO: separate errors
 		return newError(InvalidTransactionParameterCountError{
-			Expected: signingAccountsCount,
-			Actual:   transactionFunctionParameterCount,
+			Expected: transactionParameterCount,
+			Actual:   totalArgCount,
 		})
 	}
 
-	// check parameter types
+	transactionAuthorizerCount := len(transactionType.PrepareParameters)
+	if authorizerCount != transactionAuthorizerCount {
+		// TODO: separate errors
+		return newError(InvalidTransactionParameterCountError{
+			Expected: transactionAuthorizerCount,
+			Actual:   totalArgCount,
+		})
+	}
 
-	for _, parameter := range transactionFunctionType.Parameters {
+	// gather authorizers
+
+	authorizerValues := make([]interpreter.Value, authorizerCount)
+
+	for i, address := range authorizers {
+		authorizerValues[i] = r.newAuthAccountValue(
+			interpreter.NewAddressValue(address),
+			runtimeInterface, runtimeStorage,
+		)
+	}
+
+	// check all prepare argument types are `AuthAccount`
+
+	for _, parameter := range transactionType.PrepareParameters {
 		parameterType := parameter.TypeAnnotation.Type
-
 		if !parameterType.Equal(&sema.AuthAccountType{}) {
 			return newError(InvalidTransactionParameterTypeError{
 				Actual: parameterType,
 			})
 		}
-	}
-
-	signingAccounts := make([]interpreter.Value, signingAccountsCount)
-
-	for i, address := range signingAccountAddresses {
-		signingAccounts[i] = r.newAuthAccountValue(
-			interpreter.NewAddressValue(address),
-			runtimeInterface, runtimeStorage,
-		)
 	}
 
 	_, err = r.interpret(
@@ -254,7 +267,38 @@ func (r *interpreterRuntime) ExecuteTransaction(
 		functions,
 		nil,
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
-			err := inter.InvokeTransaction(0, signingAccounts...)
+			argumentValues := make([]interpreter.Value, argumentCount)
+
+			// decode arguments against parameter types
+			for i, parameter := range transactionType.Parameters {
+				parameterType := parameter.TypeAnnotation.Type
+				argument := arguments[i]
+
+				value, err := runtimeInterface.DecodeArgument(argument, exportType(parameterType))
+				if err != nil {
+					return nil, &InvalidTransactionArgumentError{
+						Index: i,
+						Err:   err,
+					}
+				}
+
+				arg := importValue(value)
+
+				// attempt to assign parameter type to argument
+				err = assignType(arg, parameterType, inter)
+				if err != nil {
+					return nil, &InvalidTransactionArgumentError{
+						Index: i,
+						Err:   err,
+					}
+				}
+
+				argumentValues[i] = arg
+			}
+
+			allArguments := append(argumentValues, authorizerValues...)
+
+			err := inter.InvokeTransaction(0, allArguments...)
 			return nil, err
 		},
 	)
