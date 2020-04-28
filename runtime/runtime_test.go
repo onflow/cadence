@@ -226,7 +226,6 @@ func TestRuntimeProgramCache(t *testing.T) {
 			return nil
 		},
 		resolveImport: func(location Location) ([]byte, error) {
-			fmt.Println(location.ID())
 			switch location {
 			case importedScriptLocation:
 				return importedScript, nil
