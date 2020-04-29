@@ -218,23 +218,20 @@ func (r *interpreterRuntime) ExecuteTransaction(
 
 	argumentCount := len(arguments)
 	authorizerCount := len(authorizers)
-	totalArgCount := argumentCount + authorizerCount
 
 	transactionParameterCount := len(transactionType.Parameters)
 	if argumentCount != transactionParameterCount {
-		// TODO: separate errors
 		return newError(InvalidTransactionParameterCountError{
 			Expected: transactionParameterCount,
-			Actual:   totalArgCount,
+			Actual:   argumentCount,
 		})
 	}
 
 	transactionAuthorizerCount := len(transactionType.PrepareParameters)
 	if authorizerCount != transactionAuthorizerCount {
-		// TODO: separate errors
-		return newError(InvalidTransactionParameterCountError{
+		return newError(InvalidTransactionAuthorizerCountError{
 			Expected: transactionAuthorizerCount,
-			Actual:   totalArgCount,
+			Actual:   authorizerCount,
 		})
 	}
 
@@ -254,7 +251,7 @@ func (r *interpreterRuntime) ExecuteTransaction(
 	for _, parameter := range transactionType.PrepareParameters {
 		parameterType := parameter.TypeAnnotation.Type
 		if !parameterType.Equal(&sema.AuthAccountType{}) {
-			return newError(InvalidTransactionParameterTypeError{
+			return newError(InvalidTransactionPrepareParameterError{
 				Actual: parameterType,
 			})
 		}
