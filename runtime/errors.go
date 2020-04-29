@@ -93,15 +93,30 @@ func (e InvalidTransactionParameterCountError) Error() string {
 	)
 }
 
-// InvalidTransactionParameterTypeError
+// InvalidTransactionAuthorizerCountError
 
-type InvalidTransactionParameterTypeError struct {
+type InvalidTransactionAuthorizerCountError struct {
+	Expected int
+	Actual   int
+}
+
+func (e InvalidTransactionAuthorizerCountError) Error() string {
+	return fmt.Sprintf(
+		"authorizer count mismatch for transaction: expected %d, got %d",
+		e.Expected,
+		e.Actual,
+	)
+}
+
+// InvalidTransactionPrepareParameterError
+
+type InvalidTransactionPrepareParameterError struct {
 	Actual sema.Type
 }
 
-func (e InvalidTransactionParameterTypeError) Error() string {
+func (e InvalidTransactionPrepareParameterError) Error() string {
 	return fmt.Sprintf(
-		"parameter type mismatch for transaction: expected `%s`, got `%s`",
+		"invalid prepare statement parameter: expected `%s`, got `%s`",
 		&sema.AuthAccountType{},
 		e.Actual,
 	)
