@@ -420,6 +420,19 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			expectedLogs: []string{"42", `"foo"`},
 		},
 		{
+			label: "Invalid bytes",
+			script: `
+			  transaction(x: Int) { execute {} }
+			`,
+			args: [][]byte{
+				{1, 2, 3, 4}, // not valid JSON-CDC
+			},
+			check: func(t *testing.T, err error) {
+				assert.Error(t, err)
+				assert.IsType(t, &InvalidTransactionArgumentError{}, errors.Unwrap(err))
+			},
+		},
+		{
 			label: "Type mismatch",
 			script: `
 			  transaction(x: Int) {
@@ -435,11 +448,106 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				assert.Error(t, err)
 				assert.IsType(t, &InvalidTransactionArgumentError{}, errors.Unwrap(err))
 				assert.IsType(t, &InvalidTypeAssignmentError{}, errors.Unwrap(errors.Unwrap(err)))
-
 			},
 		},
 		{
-			label: "Composite argument",
+			label: "Address",
+			script: `
+			  transaction(x: Address) {
+				execute {
+				  let acct = getAccount(x)
+				  log(acct.address)
+				}
+			  }
+			`,
+			args: [][]byte{
+				jsoncdc.MustEncode(
+					cadence.NewAddressFromBytes(
+						[]byte{
+							0x0, 0x0, 0x0, 0x0, 0x0,
+							0x0, 0x0, 0x0, 0x0, 0x0,
+							0x0, 0x0, 0x0, 0x0, 0x0,
+							0x0, 0x0, 0x0, 0x0, 0x1,
+						},
+					),
+				),
+			},
+			expectedLogs: []string{"0x1"},
+		},
+		{
+			label: "Array",
+			script: `
+			  transaction(x: [Int]) {
+				execute {
+				  log(x)
+				}
+			  }
+			`,
+			args: [][]byte{
+				jsoncdc.MustEncode(
+					cadence.NewArray(
+						[]cadence.Value{
+							cadence.NewInt(1),
+							cadence.NewInt(2),
+							cadence.NewInt(3),
+						},
+					),
+				),
+			},
+			expectedLogs: []string{"[1, 2, 3]"},
+		},
+		{
+			label: "Dictionary",
+			script: `
+			  transaction(x: {String:Int}) {
+				execute {
+				  log(x["y"])
+				}
+			  }
+			`,
+			args: [][]byte{
+				jsoncdc.MustEncode(
+					cadence.NewDictionary(
+						[]cadence.KeyValuePair{
+							{
+								Key:   cadence.NewString("y"),
+								Value: cadence.NewInt(42),
+							},
+						},
+					),
+				),
+			},
+			expectedLogs: []string{"42"},
+		},
+		{
+			label: "Invalid dictionary",
+			script: `
+			  transaction(x: {String:String}) {
+				execute {
+				  log(x["y"])
+				}
+			  }
+			`,
+			args: [][]byte{
+				jsoncdc.MustEncode(
+					cadence.NewDictionary(
+						[]cadence.KeyValuePair{
+							{
+								Key:   cadence.NewString("y"),
+								Value: cadence.NewInt(42),
+							},
+						},
+					),
+				),
+			},
+			check: func(t *testing.T, err error) {
+				assert.Error(t, err)
+				assert.IsType(t, &InvalidTransactionArgumentError{}, errors.Unwrap(err))
+				assert.IsType(t, &InvalidTypeAssignmentError{}, errors.Unwrap(errors.Unwrap(err)))
+			},
+		},
+		{
+			label: "Struct",
 			script: `
 			  pub struct Foo { 
 				pub var y: String
@@ -473,6 +581,44 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			},
 			expectedLogs: []string{`"bar"`},
 		},
+		{
+			label: "Struct in array",
+			script: `
+			  pub struct Foo { 
+				pub var y: String
+	
+				init() {
+				  self.y = "initial string"
+				}
+ 			  }
+
+			  transaction(f: [Foo]) {
+				execute {
+				  let x = f[0]
+				  log(x.y)
+				}
+			  }
+			`,
+			args: [][]byte{
+				jsoncdc.MustEncode(
+					cadence.NewArray([]cadence.Value{
+						cadence.
+							NewStruct([]cadence.Value{cadence.NewString("bar")}).
+							WithType(cadence.StructType{
+								TypeID:     "test.Foo",
+								Identifier: "Foo",
+								Fields: []cadence.Field{
+									{
+										Identifier: "y",
+										Type:       cadence.StringType{},
+									},
+								},
+							}),
+					}),
+				),
+			},
+			expectedLogs: []string{`"bar"`},
+		},
 	}
 
 	for _, tt := range tests {
@@ -501,8 +647,12 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			if tt.check != nil {
 				tt.check(t, err)
 			} else {
-				require.NoError(t, err)
-				assert.Equal(t, tt.expectedLogs, loggedMessages)
+				if !assert.NoError(t, err) {
+					for err := err; err != nil; err = errors.Unwrap(err) {
+						t.Log(err)
+					}
+				}
+				assert.ElementsMatch(t, tt.expectedLogs, loggedMessages)
 			}
 		})
 	}
