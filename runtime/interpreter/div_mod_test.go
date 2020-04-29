@@ -3148,7 +3148,46 @@ func TestDivFix64(t *testing.T) {
 	})
 }
 
-func TestDivUFix64(t *testing.T) {
+func TestModFix64(t *testing.T) {
+
+	tests := []struct {
+		a, b  Int64Value
+		valid bool
+	}{
+		{0, 0, false},
+		{1, 0, false},
+		{2, 0, false},
+		{-1, 0, false},
+
+		{0, 1, true},
+		{1, 1, true},
+		{2, 1, true},
+		{-1, 1, true},
+
+		{0, 2, true},
+		{1, 2, true},
+		{2, 2, true},
+		{-1, 2, true},
+
+		{0, -1, true},
+		{1, -1, true},
+		{2, -1, true},
+		{-1, -1, true},
+	}
+
+	for _, test := range tests {
+		f := func() {
+			test.a.Mod(test.b)
+		}
+		if test.valid {
+			assert.NotPanics(t, f)
+		} else {
+			assert.Panics(t, f)
+		}
+	}
+}
+
+func TestDivModUFix64(t *testing.T) {
 
 	tests := []struct {
 		a, b  uint64
@@ -3175,16 +3214,26 @@ func TestDivUFix64(t *testing.T) {
 
 	for _, test := range tests {
 
-		f := func() {
-			a := NewUFix64ValueWithInteger(test.a)
-			b := NewUFix64ValueWithInteger(test.b)
-			a.Div(b)
-		}
+		for _, f := range []func(a, b UFix64Value){
+			func(a, b UFix64Value) {
+				a.Div(b)
+			},
+			func(a, b UFix64Value) {
+				a.Mod(b)
+			},
+		} {
 
-		if test.valid {
-			assert.NotPanics(t, f)
-		} else {
-			assert.Panics(t, f)
+			f := func() {
+				a := NewUFix64ValueWithInteger(test.a)
+				b := NewUFix64ValueWithInteger(test.b)
+				f(a, b)
+			}
+
+			if test.valid {
+				assert.NotPanics(t, f)
+			} else {
+				assert.Panics(t, f)
+			}
 		}
 	}
 
