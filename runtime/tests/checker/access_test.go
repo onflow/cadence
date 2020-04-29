@@ -135,9 +135,7 @@ func TestCheckAccessModifierCompositeFunctionDeclaration(t *testing.T) {
 				if expectSuccess {
 					assert.NoError(t, err)
 				} else {
-					errs := ExpectCheckerErrors(t, err, 1)
-
-					assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
+					expectInvalidAccessModifierError(t, err)
 				}
 			})
 		}
@@ -278,9 +276,7 @@ func TestCheckAccessModifierCompositeConstantFieldDeclaration(t *testing.T) {
 					if expectSuccess(isInterface) {
 						assert.NoError(t, err)
 					} else {
-						errs := ExpectCheckerErrors(t, err, 1)
-
-						assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
+						expectInvalidAccessModifierError(t, err)
 					}
 				})
 			}
@@ -328,9 +324,7 @@ func TestCheckAccessModifierCompositeVariableFieldDeclaration(t *testing.T) {
 					// private fields in interfaces are invalid
 
 					if isInterface && access == ast.AccessPrivate {
-						errs := ExpectCheckerErrors(t, err, 1)
-
-						assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
+						expectInvalidAccessModifierError(t, err)
 					} else {
 						assert.NoError(t, err)
 					}
@@ -367,9 +361,7 @@ func TestCheckAccessModifierGlobalFunctionDeclaration(t *testing.T) {
 			if expectSuccess {
 				assert.NoError(t, err)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
+				expectInvalidAccessModifierError(t, err)
 			}
 		})
 	}
@@ -402,9 +394,7 @@ func TestCheckAccessModifierGlobalVariableDeclaration(t *testing.T) {
 			if expectSuccess {
 				assert.NoError(t, err)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
+				expectInvalidAccessModifierError(t, err)
 			}
 		})
 	}
@@ -437,9 +427,7 @@ func TestCheckAccessModifierGlobalConstantDeclaration(t *testing.T) {
 			if expectSuccess {
 				assert.NoError(t, err)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
+				expectInvalidAccessModifierError(t, err)
 			}
 		})
 	}
@@ -483,9 +471,7 @@ func TestCheckAccessModifierLocalVariableDeclaration(t *testing.T) {
 				if expectSuccess {
 					assert.NoError(t, err)
 				} else {
-					errs := ExpectCheckerErrors(t, err, 1)
-
-					assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
+					expectInvalidAccessModifierError(t, err)
 				}
 			})
 		}
@@ -522,9 +508,7 @@ func TestCheckAccessModifierLocalOptionalBinding(t *testing.T) {
 			if expectSuccess {
 				assert.NoError(t, err)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
+				expectInvalidAccessModifierError(t, err)
 			}
 		})
 	}
@@ -559,21 +543,13 @@ func TestCheckAccessModifierLocalFunctionDeclaration(t *testing.T) {
 			if expectSuccess {
 				assert.NoError(t, err)
 			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
+				expectInvalidAccessModifierError(t, err)
 			}
 		})
 	}
 }
 
 func TestCheckAccessModifierGlobalCompositeDeclaration(t *testing.T) {
-
-	expectInvalidAccessModifierError := func(t *testing.T, err error) {
-		errs := ExpectCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
-	}
 
 	expectMissingAccessModifierError := func(t *testing.T, err error) {
 		errs := ExpectCheckerErrors(t, err, 1)
@@ -1971,9 +1947,7 @@ func TestCheckContractNestedDeclarationPrivateAccess(t *testing.T) {
           let num = Outer.num
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.InvalidAccessError{}, errs[0])
+		expectInvalidAccessError(t, err)
 	})
 }
 
@@ -2262,9 +2236,7 @@ func TestCheckInvalidRestrictiveAccessModifier(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
+				expectInvalidAccessModifierError(t, err)
 			})
 
 			t.Run("interface", func(t *testing.T) {
@@ -2281,9 +2253,7 @@ func TestCheckInvalidRestrictiveAccessModifier(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
-
-				assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
+				expectInvalidAccessModifierError(t, err)
 			})
 		})
 	}

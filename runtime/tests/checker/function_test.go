@@ -131,9 +131,7 @@ func TestCheckInvalidFunctionAccess(t *testing.T) {
        pub(set) fun test() {}
     `)
 
-	errs := ExpectCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
+	expectInvalidAccessModifierError(t, err)
 }
 
 func TestCheckReturnWithoutExpression(t *testing.T) {
