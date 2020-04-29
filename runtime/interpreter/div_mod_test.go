@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -3246,5 +3247,89 @@ func TestDivModUFix64(t *testing.T) {
 	assert.Panics(t, func() {
 		NewUFix64ValueWithInteger(1).
 			Div(UFix64Value(UFix64MaxDivisorValue + 1))
+	})
+}
+
+// TestNegativeMod ensures that modulo uses the dividend's sign
+// when an operand is negative
+//
+func TestNegativeMod(t *testing.T) {
+
+	t.Run("integer", func(t *testing.T) {
+
+		tests := map[string]struct{ a, b, expected NumberValue }{
+			"Int8": {
+				Int8Value(-1),
+				Int8Value(5),
+				Int8Value(-1),
+			},
+			"Int16": {
+				Int16Value(-1),
+				Int16Value(5),
+				Int16Value(-1),
+			},
+			"Int32": {
+				Int32Value(-1),
+				Int32Value(5),
+				Int32Value(-1),
+			},
+			"Int64": {
+				Int64Value(-1),
+				Int64Value(5),
+				Int64Value(-1),
+			},
+			"Int128": {
+				NewInt128ValueFromInt64(-1),
+				NewInt128ValueFromInt64(5),
+				NewInt128ValueFromInt64(-1),
+			},
+			"Int256": {
+				NewInt256ValueFromInt64(-1),
+				NewInt256ValueFromInt64(5),
+				NewInt256ValueFromInt64(-1),
+			},
+			"Int": {
+				NewIntValueFromInt64(-1),
+				NewIntValueFromInt64(5),
+				NewIntValueFromInt64(-1),
+			},
+		}
+
+		for _, integerType := range sema.AllSignedIntegerTypes {
+			if _, ok := tests[integerType.String()]; !ok {
+				panic(fmt.Sprintf("broken test: missing %s", integerType))
+			}
+		}
+
+		for _, test := range tests {
+			assert.Equal(t,
+				test.expected,
+				test.a.Mod(test.b),
+			)
+		}
+	})
+
+	t.Run("fixed-point", func(t *testing.T) {
+
+		tests := map[string]struct{ a, b, expected NumberValue }{
+			"Fix64": {
+				NewFix64ValueWithInteger(-1),
+				NewFix64ValueWithInteger(5),
+				NewFix64ValueWithInteger(-1),
+			},
+		}
+
+		for _, integerType := range sema.AllSignedFixedPointTypes {
+			if _, ok := tests[integerType.String()]; !ok {
+				panic(fmt.Sprintf("broken test: missing %s", integerType))
+			}
+		}
+
+		for _, test := range tests {
+			assert.Equal(t,
+				test.expected,
+				test.a.Mod(test.b),
+			)
+		}
 	})
 }
