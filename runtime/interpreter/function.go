@@ -19,6 +19,8 @@
 package interpreter
 
 import (
+	"fmt"
+
 	"github.com/raviqqe/hamt"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -61,6 +63,10 @@ type InterpretedFunctionValue struct {
 	PostConditions   ast.Conditions
 }
 
+func (f InterpretedFunctionValue) String() string {
+	return fmt.Sprintf("Function%s", f.Type.String())
+}
+
 func (InterpretedFunctionValue) IsValue() {}
 
 func (InterpretedFunctionValue) DynamicType(_ *Interpreter) DynamicType {
@@ -93,6 +99,11 @@ type HostFunction func(invocation Invocation) Trampoline
 type HostFunctionValue struct {
 	Function HostFunction
 	Members  map[string]Value
+}
+
+func (f HostFunctionValue) String() string {
+	// TODO: include type
+	return "Function(...)"
 }
 
 func NewHostFunctionValue(
@@ -141,6 +152,10 @@ func (f HostFunctionValue) SetMember(_ *Interpreter, _ LocationRange, _ string, 
 type BoundFunctionValue struct {
 	Function FunctionValue
 	Self     *CompositeValue
+}
+
+func (f BoundFunctionValue) String() string {
+	return fmt.Sprint(f.Function)
 }
 
 func (BoundFunctionValue) IsValue() {}
