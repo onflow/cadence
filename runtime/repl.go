@@ -19,6 +19,8 @@
 package runtime
 
 import (
+	"sort"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -152,7 +154,11 @@ func (r *REPL) Accept(code string) (inputIsComplete bool) {
 	return
 }
 
-func (r *REPL) Suggestions() (result []struct{ Name, Description string }) {
+type REPLSuggestion struct {
+	Name, Description string
+}
+
+func (r *REPL) Suggestions() (result []REPLSuggestion) {
 	names := map[string]string{}
 
 	for name, variable := range r.checker.GlobalValues {
@@ -163,11 +169,17 @@ func (r *REPL) Suggestions() (result []struct{ Name, Description string }) {
 	}
 
 	for name, description := range names {
-		result = append(result, struct{ Name, Description string }{
+		result = append(result, REPLSuggestion{
 			Name:        name,
 			Description: description,
 		})
 	}
+
+	sort.Slice(result, func(i, j int) bool {
+		a := result[i]
+		b := result[j]
+		return a.Name < b.Name
+	})
 
 	return
 }
