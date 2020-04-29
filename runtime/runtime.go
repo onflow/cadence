@@ -246,17 +246,6 @@ func (r *interpreterRuntime) ExecuteTransaction(
 		)
 	}
 
-	// check all prepare argument types are `AuthAccount`
-
-	for _, parameter := range transactionType.PrepareParameters {
-		parameterType := parameter.TypeAnnotation.Type
-		if !parameterType.Equal(&sema.AuthAccountType{}) {
-			return newError(InvalidTransactionPrepareParameterError{
-				Actual: parameterType,
-			})
-		}
-	}
-
 	_, err = r.interpret(
 		runtimeInterface,
 		runtimeStorage,
