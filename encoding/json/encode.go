@@ -1,3 +1,21 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright 2019-2020 Dapper Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package json
 
 import (
@@ -9,8 +27,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/dapperlabs/cadence"
-	"github.com/dapperlabs/cadence/runtime/sema"
+	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // An Encoder converts Cadence values into JSON-encoded bytes.
@@ -19,6 +37,8 @@ type Encoder struct {
 }
 
 // Encode returns the JSON-encoded representation of the given value.
+//
+// This function returns an error if the Cadence value cannot be represented as JSON.
 func Encode(value cadence.Value) ([]byte, error) {
 	var w bytes.Buffer
 	enc := NewEncoder(&w)
@@ -29,6 +49,16 @@ func Encode(value cadence.Value) ([]byte, error) {
 	}
 
 	return w.Bytes(), nil
+}
+
+// MustEncode returns the JSON-encoded representation of the given value, or panics
+// if the value cannot be represented as JSON.
+func MustEncode(value cadence.Value) []byte {
+	b, err := Encode(value)
+	if err != nil {
+		panic(err)
+	}
+	return b
 }
 
 // NewEncoder initializes an Encoder that will write JSON-encoded bytes to the

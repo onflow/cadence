@@ -1,13 +1,33 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright 2019-2020 Dapper Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package runtime
 
 import (
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/errors"
-	"github.com/dapperlabs/cadence/runtime/interpreter"
-	"github.com/dapperlabs/cadence/runtime/parser"
-	"github.com/dapperlabs/cadence/runtime/sema"
-	"github.com/dapperlabs/cadence/runtime/stdlib"
-	"github.com/dapperlabs/cadence/runtime/trampoline"
+	"sort"
+
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/trampoline"
 )
 
 type REPL struct {
@@ -36,9 +56,15 @@ func NewREPL(onError func(error), onResult func(interpreter.Value)) (*REPL, erro
 
 	values := standardLibraryFunctions.ToValues()
 
+	var uuid uint64
+
 	inter, err := interpreter.NewInterpreter(
 		checker,
 		interpreter.WithPredefinedValues(values),
+		interpreter.WithUUIDHandler(func() uint64 {
+			defer func() { uuid++ }()
+			return uuid
+		}),
 	)
 	if err != nil {
 		return nil, err
@@ -128,7 +154,11 @@ func (r *REPL) Accept(code string) (inputIsComplete bool) {
 	return
 }
 
-func (r *REPL) Suggestions() (result []struct{ Name, Description string }) {
+type REPLSuggestion struct {
+	Name, Description string
+}
+
+func (r *REPL) Suggestions() (result []REPLSuggestion) {
 	names := map[string]string{}
 
 	for name, variable := range r.checker.GlobalValues {
@@ -139,11 +169,17 @@ func (r *REPL) Suggestions() (result []struct{ Name, Description string }) {
 	}
 
 	for name, description := range names {
-		result = append(result, struct{ Name, Description string }{
+		result = append(result, REPLSuggestion{
 			Name:        name,
 			Description: description,
 		})
 	}
+
+	sort.Slice(result, func(i, j int) bool {
+		a := result[i]
+		b := result[j]
+		return a.Name < b.Name
+	})
 
 	return
 }

@@ -1,9 +1,28 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright 2019-2020 Dapper Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package runtime
 
 import (
-	"github.com/dapperlabs/cadence/runtime/common"
-	"github.com/dapperlabs/cadence/runtime/errors"
-	"github.com/dapperlabs/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/common"
+
+	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 type storageKey struct {
@@ -48,21 +67,10 @@ func (s *interpreterRuntimeStorage) valueExists(
 	}
 
 	// Cache miss: Ask interface
-
-	var exists bool
-	if runtimeInterfaceV2, ok := s.runtimeInterface.(InterfaceV2); ok {
-		var err error
-		// TODO: fix controller
-		exists, err = runtimeInterfaceV2.ValueExists([]byte(storageIdentifier), []byte{}, []byte(key))
-		if err != nil {
-			panic(err)
-		}
-	} else {
-		value, err := s.runtimeInterface.GetValue([]byte(storageIdentifier), []byte{}, []byte(key))
-		if err != nil {
-			panic(err)
-		}
-		exists = len(value) > 0
+	// TODO: fix controller
+	exists, err := s.runtimeInterface.ValueExists([]byte(storageIdentifier), []byte{}, []byte(key))
+	if err != nil {
+		panic(err)
 	}
 
 	if !exists {

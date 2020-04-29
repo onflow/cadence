@@ -1,3 +1,21 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright 2019-2020 Dapper Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package interpreter
 
 import (
@@ -7,13 +25,13 @@ import (
 
 	"github.com/raviqqe/hamt"
 
-	"github.com/dapperlabs/cadence/runtime/activations"
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/common"
-	"github.com/dapperlabs/cadence/runtime/errors"
-	"github.com/dapperlabs/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/activations"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/sema"
 
-	. "github.com/dapperlabs/cadence/runtime/trampoline"
+	. "github.com/onflow/cadence/runtime/trampoline"
 )
 
 type controlReturn interface {
@@ -67,8 +85,21 @@ type OnEventEmittedFunc func(
 // OnStatementFunc is a function that is triggered when a statement is about to be executed.
 //
 type OnStatementFunc func(
-	inter *Interpreter,
 	statement *Statement,
+)
+
+// OnLoopIterationFunc is a function that is triggered when a loop iteration is about to be executed.
+//
+type OnLoopIterationFunc func(
+	inter *Interpreter,
+	line int,
+)
+
+// OnFunctionInvocationFunc is a function that is triggered when a function is about to be invoked.
+//
+type OnFunctionInvocationFunc func(
+	inter *Interpreter,
+	line int,
 )
 
 // StorageExistenceHandlerFunc is a function that handles storage existence checks.
@@ -177,6 +208,8 @@ type Interpreter struct {
 	Transactions                   []*HostFunctionValue
 	onEventEmitted                 OnEventEmittedFunc
 	onStatement                    OnStatementFunc
+	onLoopIteration                OnLoopIterationFunc
+	onFunctionInvocation           OnFunctionInvocationFunc
 	storageExistenceHandler        StorageExistenceHandlerFunc
 	storageReadHandler             StorageReadHandlerFunc
 	storageWriteHandler            StorageWriteHandlerFunc
@@ -205,6 +238,26 @@ func WithOnEventEmittedHandler(handler OnEventEmittedFunc) Option {
 func WithOnStatementHandler(handler OnStatementFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetOnStatementHandler(handler)
+		return nil
+	}
+}
+
+// WithOnLoopIterationHandler returns an interpreter option which sets
+// the given function as the loop iteration handler.
+//
+func WithOnLoopIterationHandler(handler OnLoopIterationFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetOnLoopIterationHandler(handler)
+		return nil
+	}
+}
+
+// WithOnLoopIterationHandler returns an interpreter option which sets
+// the given function as the loop iteration handler.
+//
+func WithOnFunctionInvocationHandler(handler OnFunctionInvocationFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetOnFunctionInvocationHandler(handler)
 		return nil
 	}
 }
@@ -377,6 +430,18 @@ func (interpreter *Interpreter) SetOnStatementHandler(function OnStatementFunc) 
 	interpreter.onStatement = function
 }
 
+// SetOnLoopIterationHandler sets the function that is triggered when a loop iteration is about to be executed.
+//
+func (interpreter *Interpreter) SetOnLoopIterationHandler(function OnLoopIterationFunc) {
+	interpreter.onLoopIteration = function
+}
+
+// SetOnFunctionInvocationHandler sets the function that is triggered when a loop iteration is about to be executed.
+//
+func (interpreter *Interpreter) SetOnFunctionInvocationHandler(function OnFunctionInvocationFunc) {
+	interpreter.onFunctionInvocation = function
+}
+
 // SetStorageExistenceHandler sets the function that is used when a storage key is checked for existence.
 //
 func (interpreter *Interpreter) SetStorageExistenceHandler(function StorageExistenceHandlerFunc) {
@@ -493,8 +558,9 @@ func (interpreter *Interpreter) Interpret() (err error) {
 }
 
 type Statement struct {
-	Trampoline Trampoline
-	Line       int
+	Interpreter *Interpreter
+	Trampoline  Trampoline
+	Line        int
 }
 
 func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}, *Statement) {
@@ -505,8 +571,9 @@ func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}
 			return nil, &Statement{
 				// NOTE: resumption using outer trampoline,
 				// not just inner statement trampoline
-				Trampoline: t,
-				Line:       statement.Line,
+				Trampoline:  t,
+				Interpreter: statement.Interpreter,
+				Line:        statement.Line,
 			}
 		}
 
@@ -530,7 +597,7 @@ func (interpreter *Interpreter) runAllStatements(t Trampoline) interface{} {
 		}
 
 		if interpreter.onStatement != nil {
-			interpreter.onStatement(interpreter, statement)
+			interpreter.onStatement(statement)
 		}
 
 		result = statement.Trampoline.Resume()
@@ -614,7 +681,11 @@ func (interpreter *Interpreter) declareGlobal(declaration ast.Declaration) {
 	interpreter.Globals[name] = interpreter.findVariable(name)
 }
 
-func (interpreter *Interpreter) prepareInvokeVariable(functionName string, arguments []interface{}) (trampoline Trampoline, err error) {
+func (interpreter *Interpreter) prepareInvokeVariable(
+	functionName string,
+	arguments []Value,
+) (trampoline Trampoline, err error) {
+
 	variable, ok := interpreter.Globals[functionName]
 	if !ok {
 		return nil, &NotDeclaredError{
@@ -649,7 +720,7 @@ func (interpreter *Interpreter) prepareInvokeVariable(functionName string, argum
 
 func (interpreter *Interpreter) prepareInvokeTransaction(
 	index int,
-	arguments []interface{},
+	arguments []Value,
 ) (trampoline Trampoline, err error) {
 	if index >= len(interpreter.Transactions) {
 		return nil, &TransactionNotDeclaredError{Index: index}
@@ -666,20 +737,14 @@ func (interpreter *Interpreter) prepareInvokeTransaction(
 func (interpreter *Interpreter) prepareInvoke(
 	functionValue FunctionValue,
 	functionType *sema.FunctionType,
-	arguments []interface{},
+	arguments []Value,
 ) (trampoline Trampoline, err error) {
-
-	var argumentValues []Value
-	argumentValues, err = ToValues(arguments)
-	if err != nil {
-		return nil, err
-	}
 
 	// ensures the invocation's argument count matches the function's parameter count
 
 	parameters := functionType.Parameters
 	parameterCount := len(parameters)
-	argumentCount := len(argumentValues)
+	argumentCount := len(arguments)
 
 	if argumentCount != parameterCount {
 
@@ -694,7 +759,7 @@ func (interpreter *Interpreter) prepareInvoke(
 	}
 
 	preparedArguments := make([]Value, len(arguments))
-	for i, argument := range argumentValues {
+	for i, argument := range arguments {
 		parameterType := parameters[i].TypeAnnotation.Type
 		// TODO: value type is not known, reject for now
 		switch parameterType.(type) {
@@ -716,7 +781,7 @@ func (interpreter *Interpreter) prepareInvoke(
 	return trampoline, nil
 }
 
-func (interpreter *Interpreter) Invoke(functionName string, arguments ...interface{}) (value Value, err error) {
+func (interpreter *Interpreter) Invoke(functionName string, arguments ...Value) (value Value, err error) {
 	// recover internal panics and return them as an error
 	defer recoverErrors(func(internalErr error) {
 		err = internalErr
@@ -733,7 +798,7 @@ func (interpreter *Interpreter) Invoke(functionName string, arguments ...interfa
 	return result.(Value), nil
 }
 
-func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...interface{}) (err error) {
+func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value) (err error) {
 	// recover internal panics and return them as an error
 	defer recoverErrors(func(internalErr error) {
 		err = internalErr
@@ -867,7 +932,8 @@ func (interpreter *Interpreter) visitStatements(statements []ast.Statement) Tram
 		F: func() Trampoline {
 			return statement.Accept(interpreter).(Trampoline)
 		},
-		Line: line,
+		Interpreter: interpreter,
+		Line:        line,
 	}.FlatMap(func(returnValue interface{}) Trampoline {
 		if _, isReturn := returnValue.(controlReturn); isReturn {
 			return Done{Result: returnValue}
@@ -1063,12 +1129,15 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 }
 
 func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatement) ast.Repr {
+
 	return statement.Test.Accept(interpreter).(Trampoline).
 		FlatMap(func(result interface{}) Trampoline {
 			value := result.(BoolValue)
 			if !value {
 				return Done{}
 			}
+
+			interpreter.reportLoopIteration(statement)
 
 			return statement.Block.Accept(interpreter).(Trampoline).
 				FlatMap(func(value interface{}) Trampoline {
@@ -1104,6 +1173,8 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 		if i == count {
 			return Done{}
 		}
+
+		interpreter.reportLoopIteration(statement)
 
 		variable.Value = values[i]
 
@@ -1892,6 +1963,8 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 						typeParameterTypes,
 						ast.NewRangeFromPositioned(invocationExpression),
 					)
+
+					interpreter.reportFunctionInvocation(invocationExpression)
 
 					// If this is invocation is optional chaining, wrap the result
 					// as an optional, as the result is expected to be an optional
@@ -2924,6 +2997,8 @@ func (interpreter *Interpreter) ensureLoaded(location ast.Location, loadProgram 
 		WithPredefinedValues(interpreter.PredefinedValues),
 		WithOnEventEmittedHandler(interpreter.onEventEmitted),
 		WithOnStatementHandler(interpreter.onStatement),
+		WithOnLoopIterationHandler(interpreter.onLoopIteration),
+		WithOnFunctionInvocationHandler(interpreter.onFunctionInvocation),
 		WithStorageExistenceHandler(interpreter.storageExistenceHandler),
 		WithStorageReadHandler(interpreter.storageReadHandler),
 		WithStorageWriteHandler(interpreter.storageWriteHandler),
@@ -3122,7 +3197,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 			switch expression.Operation {
 			case ast.OperationFailableCast, ast.OperationForceCast:
 				dynamicType := value.DynamicType(interpreter)
-				isSubType := interpreter.IsSubType(dynamicType, expectedType)
+				isSubType := IsSubType(dynamicType, expectedType)
 
 				switch expression.Operation {
 				case ast.OperationFailableCast:
@@ -3300,7 +3375,7 @@ func (interpreter *Interpreter) newConverterFunction(converter ValueConverter) F
 // - PublicAccount
 // - Block
 
-func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Type) bool {
+func IsSubType(subType DynamicType, superType sema.Type) bool {
 	switch typedSubType := subType.(type) {
 	case VoidDynamicType:
 		switch superType.(type) {
@@ -3362,7 +3437,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 		}
 
 		for _, elementType := range typedSubType.ElementTypes {
-			if !interpreter.IsSubType(elementType, superTypeElementType) {
+			if !IsSubType(elementType, superTypeElementType) {
 				return false
 			}
 		}
@@ -3374,8 +3449,8 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 		switch typedSuperType := superType.(type) {
 		case *sema.DictionaryType:
 			for _, entryTypes := range typedSubType.EntryTypes {
-				if !interpreter.IsSubType(entryTypes.KeyType, typedSuperType.KeyType) ||
-					!interpreter.IsSubType(entryTypes.ValueType, typedSuperType.ValueType) {
+				if !IsSubType(entryTypes.KeyType, typedSuperType.KeyType) ||
+					!IsSubType(entryTypes.ValueType, typedSuperType.ValueType) {
 
 					return false
 				}
@@ -3402,7 +3477,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 	case SomeDynamicType:
 		switch typedSuperType := superType.(type) {
 		case *sema.OptionalType:
-			return interpreter.IsSubType(typedSubType.InnerType, typedSuperType.Type)
+			return IsSubType(typedSubType.InnerType, typedSuperType.Type)
 
 		case *sema.AnyStructType, *sema.AnyResourceType:
 			return true
@@ -3418,7 +3493,7 @@ func (interpreter *Interpreter) IsSubType(subType DynamicType, superType sema.Ty
 
 		case *sema.ReferenceType:
 			if typedSubType.Authorized() {
-				return interpreter.IsSubType(typedSubType.InnerType(), typedSuperType.Type)
+				return IsSubType(typedSubType.InnerType(), typedSuperType.Type)
 			} else {
 				// NOTE: Allowing all casts for casting unauthorized references is intentional:
 				// all invalid cases have already been rejected statically
@@ -3558,7 +3633,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 			}
 
 			dynamicType := value.Value.DynamicType(interpreter)
-			if !interpreter.IsSubType(dynamicType, ty) {
+			if !IsSubType(dynamicType, ty) {
 				return Done{Result: NilValue{}}
 			}
 
@@ -3615,7 +3690,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 			referenceType := ty.(*sema.ReferenceType)
 
 			dynamicType := value.Value.DynamicType(interpreter)
-			if !interpreter.IsSubType(dynamicType, referenceType.Type) {
+			if !IsSubType(dynamicType, referenceType.Type) {
 				return Done{Result: NilValue{}}
 			}
 
@@ -3917,4 +3992,22 @@ func (interpreter *Interpreter) getCompositeType(location ast.Location, typeID s
 func (interpreter *Interpreter) getInterfaceType(location ast.Location, typeID sema.TypeID) *sema.InterfaceType {
 	elaboration := interpreter.getElaboration(location)
 	return elaboration.InterfaceTypes[typeID]
+}
+
+func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
+	if interpreter.onLoopIteration == nil {
+		return
+	}
+
+	line := pos.StartPosition().Line
+	interpreter.onLoopIteration(interpreter, line)
+}
+
+func (interpreter *Interpreter) reportFunctionInvocation(pos ast.HasPosition) {
+	if interpreter.onFunctionInvocation == nil {
+		return
+	}
+
+	line := pos.StartPosition().Line
+	interpreter.onFunctionInvocation(interpreter, line)
 }

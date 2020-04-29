@@ -1,12 +1,30 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright 2019-2020 Dapper Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package sema
 
 import (
 	"fmt"
 	"math/big"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/common"
-	"github.com/dapperlabs/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 // astTypeConversionError
@@ -453,15 +471,22 @@ func (*ControlStatementError) isSemanticError() {}
 
 type InvalidAccessModifierError struct {
 	DeclarationKind common.DeclarationKind
+	Explanation     string
 	Access          ast.Access
 	Pos             ast.Position
 }
 
 func (e *InvalidAccessModifierError) Error() string {
+	var explanation string
+	if e.Explanation != "" {
+		explanation = fmt.Sprintf(". %s", e.Explanation)
+	}
+
 	return fmt.Sprintf(
-		"invalid access modifier for %s: `%s`",
+		"invalid access modifier for %s: `%s`%s",
 		e.DeclarationKind.Name(),
 		e.Access.Keyword(),
+		explanation,
 	)
 }
 
@@ -480,13 +505,20 @@ func (e *InvalidAccessModifierError) EndPosition() ast.Position {
 
 type MissingAccessModifierError struct {
 	DeclarationKind common.DeclarationKind
+	Explanation     string
 	Pos             ast.Position
 }
 
 func (e *MissingAccessModifierError) Error() string {
+	var explanation string
+	if e.Explanation != "" {
+		explanation = fmt.Sprintf(". %s", e.Explanation)
+	}
+
 	return fmt.Sprintf(
-		"missing access modifier for %s",
+		"missing access modifier for %s%s",
 		e.DeclarationKind.Name(),
+		explanation,
 	)
 }
 

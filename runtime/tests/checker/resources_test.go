@@ -1,3 +1,21 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright 2019-2020 Dapper Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package checker
 
 import (
@@ -7,11 +25,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/common"
-	"github.com/dapperlabs/cadence/runtime/errors"
-	"github.com/dapperlabs/cadence/runtime/sema"
-	. "github.com/dapperlabs/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/sema"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestCheckFailableCastingWithResourceAnnotation(t *testing.T) {
@@ -1166,6 +1184,7 @@ func TestCheckResourceCreationInContracts(t *testing.T) {
 }
 
 func TestCheckInvalidResourceLoss(t *testing.T) {
+
 	t.Run("UnassignedResource", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
@@ -1262,6 +1281,38 @@ func TestCheckInvalidResourceLoss(t *testing.T) {
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 		assert.IsType(t, &sema.InvalidNestedResourceMoveError{}, errs[1])
+	})
+
+	t.Run("ImmediateComparisonOptionalNil", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            resource Foo {}
+
+            pub fun foo(): @Foo? {
+                return <- create Foo()
+            }
+
+            pub let isNil = foo() == nil
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
+	t.Run("ImmediateComparisonArray", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            resource Foo {}
+
+            let empty: @[Foo] <- []
+            let isEmpty = [<- create Foo()] == empty
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 	})
 }
 
@@ -2347,12 +2398,7 @@ func testResourceNesting(
 
 		innerTypeAnnotation := "T"
 		if innerIsInterface {
-			switch innerCompositeKind {
-			case common.CompositeKindResource:
-				innerTypeAnnotation = "AnyResource{T}"
-			case common.CompositeKindStructure:
-				innerTypeAnnotation = "AnyStruct{T}"
-			}
+			innerTypeAnnotation = AsInterfaceType("T", innerCompositeKind)
 		}
 
 		// Prepare the initializer, if needed.
@@ -2551,7 +2597,7 @@ func TestCheckResourceInterfaceUseAsType(t *testing.T) {
 
       resource R: I {}
 
-      let r: @AnyResource{I} <- create R()
+      let r: @{I} <- create R()
     `)
 
 	require.NoError(t, err)
@@ -2659,7 +2705,7 @@ func TestCheckAnyResourceDestruction(t *testing.T) {
 
       resource R: I {}
 
-      fun foo(_ i: @AnyResource{I}) {
+      fun foo(_ i: @{I}) {
           destroy i
       }
 
@@ -3269,9 +3315,9 @@ func TestCheckResourceFieldUseAndDestruction(t *testing.T) {
      resource interface RI {}
 
      resource R {
-         var ris: @{String: AnyResource{RI}}
+         var ris: @{String: {RI}}
 
-         init(_ ri: @AnyResource{RI}) {
+         init(_ ri: @{RI}) {
              self.ris <- {"first": <-ri}
          }
 
@@ -3285,7 +3331,7 @@ func TestCheckResourceFieldUseAndDestruction(t *testing.T) {
          }
      }
 
-     fun absorb(_ ri: @AnyResource{RI}?) {
+     fun absorb(_ ri: @{RI}?) {
          destroy ri
      }
    `)
@@ -3439,7 +3485,7 @@ func TestCheckResourceOptionalBindingFailableCast(t *testing.T) {
          resource R: RI {}
 
          fun test() {
-             let ri: @AnyResource{RI} <- create R()
+             let ri: @{RI} <- create R()
              if let r <- ri as? @R {
                  destroy r
              } else {
@@ -3460,7 +3506,7 @@ func TestCheckInvalidResourceOptionalBindingFailableCastResourceUseAfterInvalida
          resource R: RI {}
 
          fun test() {
-             let ri: @AnyResource{RI} <- create R()
+             let ri: @{RI} <- create R()
              if let r <- ri as? @R {
                  destroy r
                  destroy ri
@@ -3484,7 +3530,7 @@ func TestCheckInvalidResourceOptionalBindingFailableCastResourceUseAfterInvalida
          resource R: RI {}
 
          fun test() {
-             let ri: @AnyResource{RI} <- create R()
+             let ri: @{RI} <- create R()
              if let r <- ri as? @R {
                  destroy r
              }

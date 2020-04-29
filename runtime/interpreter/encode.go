@@ -8,9 +8,9 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/common"
-	"github.com/dapperlabs/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 var cborTagSet cbor.TagSet
@@ -355,7 +355,7 @@ func (e *Encoder) prepareBool(v BoolValue) bool {
 }
 
 func (e *Encoder) prepareInt(v IntValue) interface{} {
-	intBytes, err := v.Int.GobEncode()
+	intBytes, err := v.BigInt.GobEncode()
 	if err != nil {
 		return encodedNilValue{}
 	}
@@ -379,7 +379,7 @@ func (e *Encoder) prepareInt64(v Int64Value) interface{} {
 }
 
 func (e *Encoder) prepareInt128(v Int128Value) interface{} {
-	encodedIntBytes, err := v.Int.GobEncode()
+	encodedIntBytes, err := v.BigInt.GobEncode()
 	if err != nil {
 		return encodedUIntValue{}
 	}
@@ -387,7 +387,7 @@ func (e *Encoder) prepareInt128(v Int128Value) interface{} {
 }
 
 func (e *Encoder) prepareInt256(v Int256Value) interface{} {
-	encodedIntBytes, err := v.Int.GobEncode()
+	encodedIntBytes, err := v.BigInt.GobEncode()
 	if err != nil {
 		return encodedUIntValue{}
 	}
@@ -395,7 +395,7 @@ func (e *Encoder) prepareInt256(v Int256Value) interface{} {
 }
 
 func (e *Encoder) prepareUInt(v UIntValue) interface{} {
-	encodedIntBytes, err := v.Int.GobEncode()
+	encodedIntBytes, err := v.BigInt.GobEncode()
 	if err != nil {
 		return encodedUIntValue{}
 	}
@@ -419,7 +419,7 @@ func (e *Encoder) prepareUInt64(v UInt64Value) interface{} {
 }
 
 func (e *Encoder) prepareUInt128(v UInt128Value) interface{} {
-	encodedIntBytes, err := v.Int.GobEncode()
+	encodedIntBytes, err := v.BigInt.GobEncode()
 	if err != nil {
 		return encodedUIntValue{}
 	}
@@ -427,7 +427,7 @@ func (e *Encoder) prepareUInt128(v UInt128Value) interface{} {
 }
 
 func (e *Encoder) prepareUInt256(v UInt256Value) interface{} {
-	encodedIntBytes, err := v.Int.GobEncode()
+	encodedIntBytes, err := v.BigInt.GobEncode()
 	if err != nil {
 		return encodedUIntValue{}
 	}

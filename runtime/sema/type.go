@@ -1,3 +1,21 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright 2019-2020 Dapper Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package sema
 
 import (
@@ -7,9 +25,9 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/common"
-	"github.com/dapperlabs/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 func qualifiedIdentifier(identifier string, containerType Type) string {
@@ -2474,21 +2492,28 @@ func (*Fix64Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var Fix64TypeMinInt = big.NewInt(0).SetInt64(math.MinInt64 / Fix64Factor)
-var Fix64TypeMaxInt = big.NewInt(0).SetInt64(math.MaxInt64 / Fix64Factor)
-var Fix64TypeMinFractional = big.NewInt(0).SetInt64(math.MinInt64 % Fix64Factor)
-var Fix64TypeMaxFractional = big.NewInt(0).SetInt64(math.MaxInt64 % Fix64Factor)
+const Fix64TypeMinInt = math.MinInt64 / Fix64Factor
+const Fix64TypeMaxInt = math.MaxInt64 / Fix64Factor
+
+var Fix64TypeMinIntBig = big.NewInt(0).SetInt64(Fix64TypeMinInt)
+var Fix64TypeMaxIntBig = big.NewInt(0).SetInt64(Fix64TypeMaxInt)
+
+const Fix64TypeMinFractional = math.MinInt64 % Fix64Factor
+const Fix64TypeMaxFractional = math.MaxInt64 % Fix64Factor
+
+var Fix64TypeMinFractionalBig = big.NewInt(0).SetInt64(Fix64TypeMinFractional)
+var Fix64TypeMaxFractionalBig = big.NewInt(0).SetInt64(Fix64TypeMaxFractional)
 
 func init() {
-	Fix64TypeMinFractional.Abs(Fix64TypeMinFractional)
+	Fix64TypeMinFractionalBig.Abs(Fix64TypeMinFractionalBig)
 }
 
 func (*Fix64Type) MinInt() *big.Int {
-	return Fix64TypeMinInt
+	return Fix64TypeMinIntBig
 }
 
 func (*Fix64Type) MaxInt() *big.Int {
-	return Fix64TypeMaxInt
+	return Fix64TypeMaxIntBig
 }
 
 func (*Fix64Type) Scale() uint {
@@ -2496,11 +2521,11 @@ func (*Fix64Type) Scale() uint {
 }
 
 func (*Fix64Type) MinFractional() *big.Int {
-	return Fix64TypeMinFractional
+	return Fix64TypeMinFractionalBig
 }
 
 func (*Fix64Type) MaxFractional() *big.Int {
-	return Fix64TypeMaxFractional
+	return Fix64TypeMaxFractionalBig
 }
 
 func (*Fix64Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {

@@ -1,5 +1,5 @@
 import {LanguageClient} from "vscode-languageclient";
-import {ExtensionContext, Uri, window} from "vscode";
+import {ExtensionContext, window} from "vscode";
 import {Config} from "./config";
 import {CREATE_ACCOUNT_SERVER, CREATE_DEFAULT_ACCOUNTS_SERVER, SWITCH_ACCOUNT_SERVER} from "./commands";
 

@@ -2,14 +2,13 @@ package interpreter
 
 import (
 	"math"
-	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/common"
-	"github.com/dapperlabs/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 func testEncodeDecode(t *testing.T, tests map[string]Value) {
@@ -125,9 +124,9 @@ func TestEncodeDecodeComposite(t *testing.T) {
 func TestEncodeDecodeIntValue(t *testing.T) {
 	testEncodeDecode(t,
 		map[string]Value{
-			"empty":     IntValue{Int: big.NewInt(0)},
-			"non-empty": IntValue{Int: big.NewInt(64)},
-			"signed":    IntValue{Int: big.NewInt(-64)},
+			"empty":     NewIntValueFromInt64(0),
+			"non-empty": NewIntValueFromInt64(64),
+			"signed":    NewIntValueFromInt64(-64),
 		},
 	)
 }
@@ -180,9 +179,8 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 func TestEncodeDecodeUIntValue(t *testing.T) {
 	testEncodeDecode(t,
 		map[string]Value{
-			"empty":     UIntValue{Int: big.NewInt(0)},
-			"non-empty": UIntValue{Int: big.NewInt(64)},
-			"signed":    UIntValue{Int: big.NewInt(-64)},
+			"empty":     NewUIntValueFromUint64(0),
+			"non-empty": NewUIntValueFromUint64(64),
 		},
 	)
 }
@@ -190,9 +188,9 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 func TestEncodeDecodeInt128Value(t *testing.T) {
 	testEncodeDecode(t,
 		map[string]Value{
-			"empty":     Int128Value{Int: big.NewInt(0)},
-			"non-empty": Int128Value{Int: big.NewInt(64)},
-			"signed":    Int128Value{Int: big.NewInt(-64)},
+			"empty":     NewInt128ValueFromInt64(0),
+			"non-empty": NewInt128ValueFromInt64(64),
+			"signed":    NewInt128ValueFromInt64(-64),
 		},
 	)
 }
@@ -200,9 +198,9 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 func TestEncodeDecodeInt256Value(t *testing.T) {
 	testEncodeDecode(t,
 		map[string]Value{
-			"empty":     Int256Value{Int: big.NewInt(0)},
-			"non-empty": Int256Value{Int: big.NewInt(64)},
-			"signed":    Int256Value{Int: big.NewInt(-64)},
+			"empty":     NewInt256ValueFromInt64(0),
+			"non-empty": NewInt256ValueFromInt64(64),
+			"signed":    NewInt256ValueFromInt64(-64),
 		},
 	)
 }
@@ -249,9 +247,8 @@ func TestEncodeDecodeUInt64Value(t *testing.T) {
 func TestEncodeDecodeUInt128Value(t *testing.T) {
 	testEncodeDecode(t,
 		map[string]Value{
-			"empty":     UInt128Value{Int: big.NewInt(0)},
-			"non-empty": UInt128Value{Int: big.NewInt(64)},
-			"signed":    UInt128Value{Int: big.NewInt(-64)},
+			"empty":     NewUInt128ValueFromUint64(0),
+			"non-empty": NewUInt128ValueFromUint64(64),
 		},
 	)
 }
@@ -259,9 +256,8 @@ func TestEncodeDecodeUInt128Value(t *testing.T) {
 func TestEncodeDecodeUInt256Value(t *testing.T) {
 	testEncodeDecode(t,
 		map[string]Value{
-			"empty":     UInt256Value{Int: big.NewInt(0)},
-			"non-empty": UInt256Value{Int: big.NewInt(64)},
-			"signed":    UInt256Value{Int: big.NewInt(-64)},
+			"empty":     NewUInt256ValueFromUint64(0),
+			"non-empty": NewUInt256ValueFromUint64(64),
 		},
 	)
 }

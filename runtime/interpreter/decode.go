@@ -8,9 +8,9 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/common"
-	"github.com/dapperlabs/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // A Decoder decodes CBOR-encoded representations of values.
@@ -329,7 +329,7 @@ func (d *Decoder) decodeInt(v interface{}, owner *common.Address) (IntValue, err
 	if err != nil {
 		return IntValue{}, fmt.Errorf("invalid int encoding: gob")
 	}
-	return IntValue{Int: &bigInt}, nil
+	return NewIntValueFromBigInt(&bigInt), nil
 }
 
 func (d *Decoder) decodeInt8(v interface{}, owner *common.Address) (Int8Value, error) {
@@ -386,8 +386,7 @@ func (d *Decoder) decodeInt128(v interface{}, owner *common.Address) (Int128Valu
 	if err != nil {
 		return Int128Value{}, fmt.Errorf("invalid int128 encoding: gob: %w", err)
 	}
-	return Int128Value{Int: &bigInt}, nil
-
+	return NewInt128ValueFromBigInt(&bigInt), nil
 }
 
 func (d *Decoder) decodeInt256(v interface{}, owner *common.Address) (Int256Value, error) {
@@ -400,7 +399,7 @@ func (d *Decoder) decodeInt256(v interface{}, owner *common.Address) (Int256Valu
 	if err != nil {
 		return Int256Value{}, fmt.Errorf("invalid int256 encoding: gob: %w", err)
 	}
-	return Int256Value{Int: &bigInt}, nil
+	return NewInt256ValueFromBigInt(&bigInt), nil
 }
 
 func (d *Decoder) decodeUInt(v interface{}, owner *common.Address) (UIntValue, error) {
@@ -413,7 +412,7 @@ func (d *Decoder) decodeUInt(v interface{}, owner *common.Address) (UIntValue, e
 	if err != nil {
 		return UIntValue{}, fmt.Errorf("invalid uint encoding: gob")
 	}
-	return UIntValue{Int: &bigInt}, nil
+	return NewUIntValueFromBigInt(&bigInt), nil
 }
 
 func (d *Decoder) decodeUInt8(v interface{}, owner *common.Address) (UInt8Value, error) {
@@ -470,8 +469,7 @@ func (d *Decoder) decodeUInt128(v interface{}, owner *common.Address) (UInt128Va
 	if err != nil {
 		return UInt128Value{}, fmt.Errorf("invalid uint256 encoding: gob: %w", err)
 	}
-	return UInt128Value{Int: &bigInt}, nil
-
+	return NewUInt128ValueFromBigInt(&bigInt), nil
 }
 
 func (d *Decoder) decodeUInt256(v interface{}, owner *common.Address) (UInt256Value, error) {
@@ -484,7 +482,7 @@ func (d *Decoder) decodeUInt256(v interface{}, owner *common.Address) (UInt256Va
 	if err != nil {
 		return UInt256Value{}, fmt.Errorf("invalid uint256 encoding: gob: %w", err)
 	}
-	return UInt256Value{Int: &bigInt}, nil
+	return NewUInt256ValueFromBigInt(&bigInt), nil
 }
 
 func (d *Decoder) decodeWord8(v interface{}, owner *common.Address) (Word8Value, error) {

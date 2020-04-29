@@ -1,3 +1,21 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright 2019-2020 Dapper Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package sema
 
 import (
@@ -6,9 +24,9 @@ import (
 
 	"github.com/rivo/uniseg"
 
-	"github.com/dapperlabs/cadence/runtime/ast"
-	"github.com/dapperlabs/cadence/runtime/common"
-	"github.com/dapperlabs/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 const ArgumentLabelNotRequired = "_"
@@ -1505,20 +1523,24 @@ func (checker *Checker) checkWithInitializedMembers(
 	return check()
 }
 
-// checkAccessResourceLoss checks for a resource loss caused by an expression which is accessed
-// (indexed or member). This is basically any expression that does not have an identifier
-// as its "base" expression.
+// checkUnusedExpressionResourceLoss checks for a resource loss caused by an expression
+// which has a resource type, but will not be used after its evaluation,
+// i.e. implicitly dropped at this point.
 //
 // For example, function invocations, array literals, or dictionary literals will cause a resource loss
 // if the expression is accessed immediately: e.g.
 //   - `returnResource()[0]`
-//   - `[<-create R(), <-create R()][0]`,
-//   - `{"resource": <-create R()}.length`
+//   - `[<-create R(), <-create R()][0]`
+//   - in an equality binary expression: `f() != nil`
 //
-// Safe expressions are identifier expressions, an indexing expression into a safe expression,
+// Basically any expression that does not have an identifier as its "base" expression
+// will cause the resource to be lost.
+//
+// Safe expressions are identifier expressions,
+// an indexing expression into a safe expression,
 // or a member access on a safe expression.
 //
-func (checker *Checker) checkAccessResourceLoss(expressionType Type, expression ast.Expression) {
+func (checker *Checker) checkUnusedExpressionResourceLoss(expressionType Type, expression ast.Expression) {
 	if !expressionType.IsResourceType() {
 		return
 	}
@@ -1634,6 +1656,8 @@ func (checker *Checker) ResetErrors() {
 	checker.errors = nil
 }
 
+const invalidTypeDeclarationAccessModifierExplanation = "type declarations must be public"
+
 func (checker *Checker) checkDeclarationAccessModifier(
 	access ast.Access,
 	declarationKind common.DeclarationKind,
@@ -1646,6 +1670,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 			checker.report(
 				&InvalidAccessModifierError{
 					Access:          access,
+					Explanation:     "local declarations may not have an access modifier",
 					DeclarationKind: declarationKind,
 					Pos:             startPos,
 				},
@@ -1661,9 +1686,18 @@ func (checker *Checker) checkDeclarationAccessModifier(
 			// and type declarations must be public for now
 
 			if isConstant || isTypeDeclaration {
+				var explanation string
+				switch {
+				case isConstant:
+					explanation = "constants can never be set"
+				case isTypeDeclaration:
+					explanation = invalidTypeDeclarationAccessModifierExplanation
+				}
+
 				checker.report(
 					&InvalidAccessModifierError{
 						Access:          access,
+						Explanation:     explanation,
 						DeclarationKind: declarationKind,
 						Pos:             startPos,
 					},
@@ -1678,6 +1712,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 				checker.report(
 					&InvalidAccessModifierError{
 						Access:          access,
+						Explanation:     invalidTypeDeclarationAccessModifierExplanation,
 						DeclarationKind: declarationKind,
 						Pos:             startPos,
 					},
@@ -1693,6 +1728,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 				checker.report(
 					&InvalidAccessModifierError{
 						Access:          access,
+						Explanation:     invalidTypeDeclarationAccessModifierExplanation,
 						DeclarationKind: declarationKind,
 						Pos:             startPos,
 					},
@@ -1709,6 +1745,7 @@ func (checker *Checker) checkDeclarationAccessModifier(
 				checker.report(
 					&MissingAccessModifierError{
 						DeclarationKind: declarationKind,
+						Explanation:     invalidTypeDeclarationAccessModifierExplanation,
 						Pos:             startPos,
 					},
 				)
@@ -1994,4 +2031,12 @@ func (checker *Checker) checkTypeAnnotation(typeAnnotation *TypeAnnotation, pos 
 			},
 		)
 	}
+}
+
+func (checker *Checker) ValueActivationDepth() int {
+	return checker.valueActivations.Depth()
+}
+
+func (checker *Checker) TypeActivationDepth() int {
+	return checker.typeActivations.Depth()
 }

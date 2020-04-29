@@ -1,3 +1,21 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright 2019-2020 Dapper Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package checker
 
 import (
@@ -7,10 +25,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/dapperlabs/cadence/runtime/common"
-	"github.com/dapperlabs/cadence/runtime/errors"
-	"github.com/dapperlabs/cadence/runtime/sema"
-	. "github.com/dapperlabs/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/sema"
+	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func constructorArguments(compositeKind common.CompositeKind) string {
@@ -236,13 +254,7 @@ func TestCheckInterfaceUse(t *testing.T) {
 			body = "()"
 		}
 
-		annotationType := "Test"
-		switch kind {
-		case common.CompositeKindResource:
-			annotationType = "AnyResource{Test}"
-		case common.CompositeKindStructure:
-			annotationType = "AnyStruct{Test}"
-		}
+		annotationType := AsInterfaceType("Test", kind)
 
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -279,13 +291,7 @@ func TestCheckInterfaceConformanceNoRequirements(t *testing.T) {
 			body = "()"
 		}
 
-		annotationType := "Test"
-		switch compositeKind {
-		case common.CompositeKindResource:
-			annotationType = "AnyResource{Test}"
-		case common.CompositeKindStructure:
-			annotationType = "AnyStruct{Test}"
-		}
+		annotationType := AsInterfaceType("Test", compositeKind)
 
 		var useCode string
 		if compositeKind != common.CompositeKindContract {
@@ -349,13 +355,7 @@ func TestCheckInvalidInterfaceConformanceIncompatibleCompositeKinds(t *testing.T
 				secondBody = "()"
 			}
 
-			firstKindInterfaceType := "Test"
-			switch firstKind {
-			case common.CompositeKindResource:
-				firstKindInterfaceType = "AnyResource{Test}"
-			case common.CompositeKindStructure:
-				firstKindInterfaceType = "AnyStruct{Test}"
-			}
+			firstKindInterfaceType := AsInterfaceType("Test", firstKind)
 
 			// NOTE: type mismatch is only tested when both kinds are not contracts
 			// (which can not be passed by value)
@@ -435,13 +435,7 @@ func TestCheckInvalidInterfaceConformanceUndeclared(t *testing.T) {
 			continue
 		}
 
-		interfaceType := "Test"
-		switch compositeKind {
-		case common.CompositeKindResource:
-			interfaceType = "AnyResource{Test}"
-		case common.CompositeKindStructure:
-			interfaceType = "AnyStruct{Test}"
-		}
+		interfaceType := AsInterfaceType("Test", compositeKind)
 
 		var useCode string
 		if compositeKind != common.CompositeKindContract {
@@ -537,13 +531,7 @@ func TestCheckInterfaceFieldUse(t *testing.T) {
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
-			interfaceType := "Test"
-			switch compositeKind {
-			case common.CompositeKindResource:
-				interfaceType = "AnyResource{Test}"
-			case common.CompositeKindStructure:
-				interfaceType = "AnyStruct{Test}"
-			}
+			interfaceType := AsInterfaceType("Test", compositeKind)
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
@@ -586,13 +574,7 @@ func TestCheckInvalidInterfaceUndeclaredFieldUse(t *testing.T) {
 			continue
 		}
 
-		interfaceType := "Test"
-		switch compositeKind {
-		case common.CompositeKindResource:
-			interfaceType = "AnyResource{Test}"
-		case common.CompositeKindStructure:
-			interfaceType = "AnyStruct{Test}"
-		}
+		interfaceType := AsInterfaceType("Test", compositeKind)
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
@@ -636,13 +618,7 @@ func TestCheckInterfaceFunctionUse(t *testing.T) {
 		if compositeKind != common.CompositeKindContract {
 			identifier = "test"
 
-			interfaceType := "Test"
-			switch compositeKind {
-			case common.CompositeKindResource:
-				interfaceType = "AnyResource{Test}"
-			case common.CompositeKindStructure:
-				interfaceType = "AnyStruct{Test}"
-			}
+			interfaceType := AsInterfaceType("Test", compositeKind)
 
 			setupCode = fmt.Sprintf(
 				`let test: %[1]s%[2]s %[3]s %[4]s TestImpl%[5]s`,
@@ -696,13 +672,7 @@ func TestCheckInvalidInterfaceUndeclaredFunctionUse(t *testing.T) {
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
-			interfaceType := "Test"
-			switch compositeKind {
-			case common.CompositeKindResource:
-				interfaceType = "AnyResource{Test}"
-			case common.CompositeKindStructure:
-				interfaceType = "AnyStruct{Test}"
-			}
+			interfaceType := AsInterfaceType("Test", compositeKind)
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
