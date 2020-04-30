@@ -41,13 +41,17 @@ const (
 	OperationMul
 	OperationDiv
 	OperationMod
-	OperationConcat
 	OperationNegate
 	OperationNilCoalesce
 	OperationMove
 	OperationCast
 	OperationFailableCast
 	OperationForceCast
+	OperationBitwiseOr
+	OperationBitwiseXor
+	OperationBitwiseAnd
+	OperationBitwiseLeftShift
+	OperationBitwiseRightShift
 )
 
 func (s Operation) Symbol() string {
@@ -78,8 +82,6 @@ func (s Operation) Symbol() string {
 		return "/"
 	case OperationMod:
 		return "%"
-	case OperationConcat:
-		return "&"
 	case OperationNegate:
 		return "!"
 	case OperationNilCoalesce:
@@ -92,6 +94,16 @@ func (s Operation) Symbol() string {
 		return "as?"
 	case OperationForceCast:
 		return "as!"
+	case OperationBitwiseOr:
+		return "|"
+	case OperationBitwiseXor:
+		return "^"
+	case OperationBitwiseAnd:
+		return "&"
+	case OperationBitwiseLeftShift:
+		return "<<"
+	case OperationBitwiseRightShift:
+		return ">>"
 	}
 
 	panic(errors.NewUnreachableError())

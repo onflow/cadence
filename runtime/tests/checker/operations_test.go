@@ -86,7 +86,11 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 	allOperationTests := []operationTests{
 		{
 			operations: []ast.Operation{
-				ast.OperationPlus, ast.OperationMinus, ast.OperationMod, ast.OperationMul, ast.OperationDiv,
+				ast.OperationPlus,
+				ast.OperationMinus,
+				ast.OperationMod,
+				ast.OperationMul,
+				ast.OperationDiv,
 			},
 			tests: []operationTest{
 				{&sema.IntType{}, "1", "2", nil},
@@ -102,7 +106,7 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 					&sema.InvalidBinaryOperandsError{},
 					&sema.TypeMismatchError{},
 				}},
-				{&sema.Int64Type{}, "true", "1.2", []error{
+				{&sema.Fix64Type{}, "true", "1.2", []error{
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 					&sema.TypeMismatchError{},
@@ -123,7 +127,10 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 		},
 		{
 			operations: []ast.Operation{
-				ast.OperationLess, ast.OperationLessEqual, ast.OperationGreater, ast.OperationGreaterEqual,
+				ast.OperationLess,
+				ast.OperationLessEqual,
+				ast.OperationGreater,
+				ast.OperationGreaterEqual,
 			},
 			tests: []operationTest{
 				{&sema.BoolType{}, "1", "2", nil},
@@ -157,7 +164,8 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 		},
 		{
 			operations: []ast.Operation{
-				ast.OperationOr, ast.OperationAnd,
+				ast.OperationOr,
+				ast.OperationAnd,
 			},
 			tests: []operationTest{
 				{&sema.BoolType{}, "true", "false", nil},
@@ -174,7 +182,8 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 		},
 		{
 			operations: []ast.Operation{
-				ast.OperationEqual, ast.OperationUnequal,
+				ast.OperationEqual,
+				ast.OperationUnequal,
 			},
 			tests: []operationTest{
 				{&sema.BoolType{}, "true", "false", nil},
@@ -193,6 +202,49 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 					&sema.InvalidBinaryOperandsError{},
 				}},
 				{&sema.BoolType{}, `"test"`, `"test"`, nil},
+			},
+		},
+		{
+			operations: []ast.Operation{
+				ast.OperationBitwiseOr,
+				ast.OperationBitwiseXor,
+				ast.OperationBitwiseAnd,
+				ast.OperationBitwiseLeftShift,
+				ast.OperationBitwiseRightShift,
+			},
+			tests: []operationTest{
+				{&sema.IntType{}, "1", "2", nil},
+				{&sema.Fix64Type{}, "1.2", "3.4", []error{
+					&sema.InvalidBinaryOperandsError{},
+				}},
+				{&sema.Fix64Type{}, "1.2", "3", []error{
+					&sema.InvalidBinaryOperandError{},
+					&sema.InvalidBinaryOperandsError{},
+				}},
+				{&sema.IntType{}, "1", "2.3", []error{
+					&sema.InvalidBinaryOperandError{},
+					&sema.InvalidBinaryOperandsError{},
+				}},
+				{&sema.IntType{}, "true", "2", []error{
+					&sema.InvalidBinaryOperandError{},
+					&sema.InvalidBinaryOperandsError{},
+					&sema.TypeMismatchError{},
+				}},
+				{&sema.Fix64Type{}, "true", "1.2", []error{
+					&sema.InvalidBinaryOperandsError{},
+					&sema.TypeMismatchError{},
+				}},
+				{&sema.IntType{}, "1", "true", []error{
+					&sema.InvalidBinaryOperandError{},
+					&sema.InvalidBinaryOperandsError{},
+				}},
+				{&sema.Fix64Type{}, "1.2", "true", []error{
+					&sema.InvalidBinaryOperandsError{},
+				}},
+				{&sema.IntType{}, "true", "false", []error{
+					&sema.InvalidBinaryOperandsError{},
+					&sema.TypeMismatchError{},
+				}},
 			},
 		},
 	}
@@ -223,67 +275,6 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 				})
 			}
 		}
-	}
-}
-
-func TestCheckConcatenatingExpression(t *testing.T) {
-	tests := []operationTest{
-		{&sema.StringType{}, `"abc"`, `"def"`, nil},
-		{&sema.StringType{}, `""`, `"def"`, nil},
-		{&sema.StringType{}, `"abc"`, `""`, nil},
-		{&sema.StringType{}, `""`, `""`, nil},
-		{&sema.StringType{}, "1", `"def"`, []error{
-			&sema.InvalidBinaryOperandError{},
-			&sema.InvalidBinaryOperandsError{},
-			&sema.TypeMismatchError{},
-		}},
-		{&sema.StringType{}, `"abc"`, "2", []error{
-			&sema.InvalidBinaryOperandError{},
-			&sema.InvalidBinaryOperandsError{},
-		}},
-		{&sema.StringType{}, "1", "2", []error{
-			&sema.InvalidBinaryOperandsError{},
-			&sema.TypeMismatchError{},
-		}},
-
-		{&sema.VariableSizedType{Type: &sema.IntType{}}, "[1, 2]", "[3, 4]", nil},
-		// TODO: support empty arrays
-		// {&sema.VariableSizedType{Type: &sema.IntType{}}, "[1, 2]", "[]", nil},
-		// {&sema.VariableSizedType{Type: &sema.IntType{}}, "[]", "[3, 4]", nil},
-		// {&sema.VariableSizedType{Type: &sema.IntType{}}, "[]", "[]", nil},
-		{&sema.VariableSizedType{Type: &sema.IntType{}}, "1", "[3, 4]", []error{
-			&sema.InvalidBinaryOperandError{},
-			&sema.InvalidBinaryOperandsError{},
-			&sema.TypeMismatchError{},
-		}},
-		{&sema.VariableSizedType{Type: &sema.IntType{}}, "[1, 2]", "2", []error{
-			&sema.InvalidBinaryOperandError{},
-			&sema.InvalidBinaryOperandsError{},
-		}},
-	}
-
-	for _, test := range tests {
-
-		testName := fmt.Sprintf(
-			"%s / %s %s %s",
-			test.ty, test.left, ast.OperationConcat.Symbol(), test.right,
-		)
-
-		t.Run(testName, func(t *testing.T) {
-
-			_, err := ParseAndCheck(t,
-				fmt.Sprintf(
-					`fun test(): %s { return %s %s %s }`,
-					test.ty, test.left, ast.OperationConcat.Symbol(), test.right,
-				),
-			)
-
-			errs := ExpectCheckerErrors(t, err, len(test.expectedErrors))
-
-			for i, expectedErr := range test.expectedErrors {
-				assert.IsType(t, expectedErr, errs[i])
-			}
-		})
 	}
 }
 
