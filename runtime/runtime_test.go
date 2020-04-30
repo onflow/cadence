@@ -1529,7 +1529,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
       }
     `)
 
-	address := common.Address{42}
+	address := common.BytesToAddress([]byte{42})
 
 	script2 := []byte(
 		fmt.Sprintf(

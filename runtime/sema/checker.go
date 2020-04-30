@@ -681,8 +681,7 @@ func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpress
 }
 
 // checkAddressLiteral checks that the value of the integer literal
-// fits into the range of an address (160 bits / 20 bytes),
-// and is hexadecimal
+// fits into the range of an address (64 bits), and is hexadecimal
 //
 func (checker *Checker) checkAddressLiteral(expression *ast.IntegerExpression) {
 	ranged := &AddressType{}
@@ -697,15 +696,13 @@ func (checker *Checker) checkAddressLiteral(expression *ast.IntegerExpression) {
 		)
 	}
 
-	if checker.checkIntegerRange(expression.Value, rangeMin, rangeMax) {
-		return
+	if !checker.checkIntegerRange(expression.Value, rangeMin, rangeMax) {
+		checker.report(
+			&InvalidAddressLiteralError{
+				Range: ast.NewRangeFromPositioned(expression),
+			},
+		)
 	}
-
-	checker.report(
-		&InvalidAddressLiteralError{
-			Range: ast.NewRangeFromPositioned(expression),
-		},
-	)
 }
 
 func (checker *Checker) checkIntegerRange(value, min, max *big.Int) bool {

@@ -4755,21 +4755,15 @@ func (*AddressType) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var AddressTypeMinInt = big.NewInt(0)
-var AddressTypeMaxInt *big.Int
-
-func init() {
-	AddressTypeMaxInt = big.NewInt(2)
-	AddressTypeMaxInt.Exp(AddressTypeMaxInt, big.NewInt(160), nil)
-	AddressTypeMaxInt.Sub(AddressTypeMaxInt, big.NewInt(1))
-}
+var AddressTypeMinIntBig = new(big.Int)
+var AddressTypeMaxIntBig = new(big.Int).SetUint64(math.MaxUint64)
 
 func (*AddressType) MinInt() *big.Int {
-	return AddressTypeMinInt
+	return AddressTypeMinIntBig
 }
 
 func (*AddressType) MaxInt() *big.Int {
-	return AddressTypeMaxInt
+	return AddressTypeMaxIntBig
 }
 
 func (*AddressType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
