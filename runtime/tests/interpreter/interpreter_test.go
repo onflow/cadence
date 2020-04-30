@@ -1526,7 +1526,7 @@ func TestInterpretHostFunction(t *testing.T) {
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
 			a := invocation.Arguments[0].(interpreter.IntValue).ToBigInt()
 			b := invocation.Arguments[1].(interpreter.IntValue).ToBigInt()
-			value := big.NewInt(0).Add(a, b)
+			value := new(big.Int).Add(a, b)
 			result := interpreter.NewIntValueFromBigInt(value)
 			return trampoline.Done{Result: result}
 		},
@@ -7661,7 +7661,7 @@ func TestInterpretCountDigits256(t *testing.T) {
 				),
 			)
 
-			bigInt, ok := big.NewInt(0).SetString(test.Literal, 10)
+			bigInt, ok := new(big.Int).SetString(test.Literal, 10)
 			require.True(t, ok)
 
 			assert.Equal(t,

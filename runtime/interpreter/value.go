@@ -650,7 +650,7 @@ func (IntValue) DynamicType(_ *Interpreter) DynamicType {
 }
 
 func (v IntValue) Copy() Value {
-	return IntValue{big.NewInt(0).Set(v.BigInt)}
+	return IntValue{new(big.Int).Set(v.BigInt)}
 }
 
 func (IntValue) GetOwner() *common.Address {
@@ -668,7 +668,7 @@ func (v IntValue) ToInt() int {
 }
 
 func (v IntValue) ToBigInt() *big.Int {
-	return big.NewInt(0).Set(v.BigInt)
+	return new(big.Int).Set(v.BigInt)
 }
 
 func (v IntValue) String() string {
@@ -680,26 +680,26 @@ func (v IntValue) KeyString() string {
 }
 
 func (v IntValue) Negate() NumberValue {
-	return NewIntValueFromBigInt(big.NewInt(0).Neg(v.BigInt))
+	return NewIntValueFromBigInt(new(big.Int).Neg(v.BigInt))
 }
 
 func (v IntValue) Plus(other NumberValue) NumberValue {
 	o := other.(IntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Add(v.BigInt, o.BigInt)
 	return IntValue{res}
 }
 
 func (v IntValue) Minus(other NumberValue) NumberValue {
 	o := other.(IntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Sub(v.BigInt, o.BigInt)
 	return IntValue{res}
 }
 
 func (v IntValue) Mod(other NumberValue) NumberValue {
 	o := other.(IntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	// INT33-C
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
@@ -710,14 +710,14 @@ func (v IntValue) Mod(other NumberValue) NumberValue {
 
 func (v IntValue) Mul(other NumberValue) NumberValue {
 	o := other.(IntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	return IntValue{res}
 }
 
 func (v IntValue) Div(other NumberValue) NumberValue {
 	o := other.(IntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	// INT33-C
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
@@ -1464,7 +1464,7 @@ func (Int128Value) DynamicType(_ *Interpreter) DynamicType {
 }
 
 func (v Int128Value) Copy() Value {
-	return Int128Value{BigInt: big.NewInt(0).Set(v.BigInt)}
+	return Int128Value{BigInt: new(big.Int).Set(v.BigInt)}
 }
 
 func (Int128Value) GetOwner() *common.Address {
@@ -1482,7 +1482,7 @@ func (v Int128Value) ToInt() int {
 }
 
 func (v Int128Value) ToBigInt() *big.Int {
-	return big.NewInt(0).Set(v.BigInt)
+	return new(big.Int).Set(v.BigInt)
 }
 
 func (v Int128Value) String() string {
@@ -1501,7 +1501,7 @@ func (v Int128Value) Negate() NumberValue {
 	if v.BigInt.Cmp(sema.Int128TypeMinInt) == 0 {
 		panic(OverflowError{})
 	}
-	return Int128Value{big.NewInt(0).Neg(v.BigInt)}
+	return Int128Value{new(big.Int).Neg(v.BigInt)}
 }
 
 func (v Int128Value) Plus(other NumberValue) NumberValue {
@@ -1518,7 +1518,7 @@ func (v Int128Value) Plus(other NumberValue) NumberValue {
 	//       ...
 	//   }
 	//
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Add(v.BigInt, o.BigInt)
 	if res.Cmp(sema.Int128TypeMinInt) < 0 {
 		panic(UnderflowError{})
@@ -1542,7 +1542,7 @@ func (v Int128Value) Minus(other NumberValue) NumberValue {
 	//       ...
 	//   }
 	//
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Sub(v.BigInt, o.BigInt)
 	if res.Cmp(sema.Int128TypeMinInt) < 0 {
 		panic(UnderflowError{})
@@ -1554,7 +1554,7 @@ func (v Int128Value) Minus(other NumberValue) NumberValue {
 
 func (v Int128Value) Mod(other NumberValue) NumberValue {
 	o := other.(Int128Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	// INT33-C
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
@@ -1565,7 +1565,7 @@ func (v Int128Value) Mod(other NumberValue) NumberValue {
 
 func (v Int128Value) Mul(other NumberValue) NumberValue {
 	o := other.(Int128Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	if res.Cmp(sema.Int128TypeMinInt) < 0 {
 		panic(UnderflowError{})
@@ -1577,7 +1577,7 @@ func (v Int128Value) Mul(other NumberValue) NumberValue {
 
 func (v Int128Value) Div(other NumberValue) NumberValue {
 	o := other.(Int128Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	// INT33-C:
 	//   if o == 0 {
 	//       ...
@@ -1672,7 +1672,7 @@ func (Int256Value) DynamicType(_ *Interpreter) DynamicType {
 }
 
 func (v Int256Value) Copy() Value {
-	return Int256Value{big.NewInt(0).Set(v.BigInt)}
+	return Int256Value{new(big.Int).Set(v.BigInt)}
 }
 
 func (Int256Value) GetOwner() *common.Address {
@@ -1690,7 +1690,7 @@ func (v Int256Value) ToInt() int {
 }
 
 func (v Int256Value) ToBigInt() *big.Int {
-	return big.NewInt(0).Set(v.BigInt)
+	return new(big.Int).Set(v.BigInt)
 }
 
 func (v Int256Value) String() string {
@@ -1709,7 +1709,7 @@ func (v Int256Value) Negate() NumberValue {
 	if v.BigInt.Cmp(sema.Int256TypeMinInt) == 0 {
 		panic(OverflowError{})
 	}
-	return Int256Value{BigInt: big.NewInt(0).Neg(v.BigInt)}
+	return Int256Value{BigInt: new(big.Int).Neg(v.BigInt)}
 }
 
 func (v Int256Value) Plus(other NumberValue) NumberValue {
@@ -1726,7 +1726,7 @@ func (v Int256Value) Plus(other NumberValue) NumberValue {
 	//       ...
 	//   }
 	//
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Add(v.BigInt, o.BigInt)
 	if res.Cmp(sema.Int256TypeMinInt) < 0 {
 		panic(UnderflowError{})
@@ -1750,7 +1750,7 @@ func (v Int256Value) Minus(other NumberValue) NumberValue {
 	//       ...
 	//   }
 	//
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Sub(v.BigInt, o.BigInt)
 	if res.Cmp(sema.Int256TypeMinInt) < 0 {
 		panic(UnderflowError{})
@@ -1762,7 +1762,7 @@ func (v Int256Value) Minus(other NumberValue) NumberValue {
 
 func (v Int256Value) Mod(other NumberValue) NumberValue {
 	o := other.(Int256Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	// INT33-C
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
@@ -1773,7 +1773,7 @@ func (v Int256Value) Mod(other NumberValue) NumberValue {
 
 func (v Int256Value) Mul(other NumberValue) NumberValue {
 	o := other.(Int256Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	if res.Cmp(sema.Int256TypeMinInt) < 0 {
 		panic(UnderflowError{})
@@ -1785,7 +1785,7 @@ func (v Int256Value) Mul(other NumberValue) NumberValue {
 
 func (v Int256Value) Div(other NumberValue) NumberValue {
 	o := other.(Int256Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	// INT33-C:
 	//   if o == 0 {
 	//       ...
@@ -1866,7 +1866,7 @@ func init() {
 }
 
 func NewUIntValueFromUint64(value uint64) UIntValue {
-	return NewUIntValueFromBigInt(big.NewInt(0).SetUint64(value))
+	return NewUIntValueFromBigInt(new(big.Int).SetUint64(value))
 }
 
 func NewUIntValueFromBigInt(value *big.Int) UIntValue {
@@ -1901,7 +1901,7 @@ func (UIntValue) DynamicType(_ *Interpreter) DynamicType {
 }
 
 func (v UIntValue) Copy() Value {
-	return UIntValue{big.NewInt(0).Set(v.BigInt)}
+	return UIntValue{new(big.Int).Set(v.BigInt)}
 }
 
 func (UIntValue) GetOwner() *common.Address {
@@ -1919,7 +1919,7 @@ func (v UIntValue) ToInt() int {
 }
 
 func (v UIntValue) ToBigInt() *big.Int {
-	return big.NewInt(0).Set(v.BigInt)
+	return new(big.Int).Set(v.BigInt)
 }
 
 func (v UIntValue) String() string {
@@ -1936,14 +1936,14 @@ func (v UIntValue) Negate() NumberValue {
 
 func (v UIntValue) Plus(other NumberValue) NumberValue {
 	o := other.(UIntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Add(v.BigInt, o.BigInt)
 	return UIntValue{res}
 }
 
 func (v UIntValue) Minus(other NumberValue) NumberValue {
 	o := other.(UIntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Sub(v.BigInt, o.BigInt)
 	if res.Sign() < 0 {
 		panic(UnderflowError{})
@@ -1953,7 +1953,7 @@ func (v UIntValue) Minus(other NumberValue) NumberValue {
 
 func (v UIntValue) Mod(other NumberValue) NumberValue {
 	o := other.(UIntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	// INT33-C
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
@@ -1964,14 +1964,14 @@ func (v UIntValue) Mod(other NumberValue) NumberValue {
 
 func (v UIntValue) Mul(other NumberValue) NumberValue {
 	o := other.(UIntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	return UIntValue{res}
 }
 
 func (v UIntValue) Div(other NumberValue) NumberValue {
 	o := other.(UIntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	// INT33-C
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
@@ -2587,7 +2587,7 @@ func (UInt128Value) DynamicType(_ *Interpreter) DynamicType {
 }
 
 func (v UInt128Value) Copy() Value {
-	return UInt128Value{big.NewInt(0).Set(v.BigInt)}
+	return UInt128Value{new(big.Int).Set(v.BigInt)}
 }
 
 func (UInt128Value) GetOwner() *common.Address {
@@ -2605,7 +2605,7 @@ func (v UInt128Value) ToInt() int {
 }
 
 func (v UInt128Value) ToBigInt() *big.Int {
-	return big.NewInt(0).Set(v.BigInt)
+	return new(big.Int).Set(v.BigInt)
 }
 
 func (v UInt128Value) String() string {
@@ -2621,7 +2621,7 @@ func (v UInt128Value) Negate() NumberValue {
 }
 
 func (v UInt128Value) Plus(other NumberValue) NumberValue {
-	sum := big.NewInt(0)
+	sum := new(big.Int)
 	sum.Add(v.BigInt, other.(UInt128Value).BigInt)
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just add and check the range of the result.
@@ -2640,7 +2640,7 @@ func (v UInt128Value) Plus(other NumberValue) NumberValue {
 }
 
 func (v UInt128Value) Minus(other NumberValue) NumberValue {
-	diff := big.NewInt(0)
+	diff := new(big.Int)
 	diff.Sub(v.BigInt, other.(UInt128Value).BigInt)
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just subtract and check the range of the result.
@@ -2660,7 +2660,7 @@ func (v UInt128Value) Minus(other NumberValue) NumberValue {
 
 func (v UInt128Value) Mod(other NumberValue) NumberValue {
 	o := other.(UInt128Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -2670,7 +2670,7 @@ func (v UInt128Value) Mod(other NumberValue) NumberValue {
 
 func (v UInt128Value) Mul(other NumberValue) NumberValue {
 	o := other.(UInt128Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	if res.Cmp(sema.UInt128TypeMaxInt) > 0 {
 		panic(OverflowError{})
@@ -2680,7 +2680,7 @@ func (v UInt128Value) Mul(other NumberValue) NumberValue {
 
 func (v UInt128Value) Div(other NumberValue) NumberValue {
 	o := other.(UInt128Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -2765,7 +2765,7 @@ func (UInt256Value) DynamicType(_ *Interpreter) DynamicType {
 }
 
 func (v UInt256Value) Copy() Value {
-	return UInt256Value{big.NewInt(0).Set(v.BigInt)}
+	return UInt256Value{new(big.Int).Set(v.BigInt)}
 }
 
 func (UInt256Value) GetOwner() *common.Address {
@@ -2783,7 +2783,7 @@ func (v UInt256Value) ToInt() int {
 }
 
 func (v UInt256Value) ToBigInt() *big.Int {
-	return big.NewInt(0).Set(v.BigInt)
+	return new(big.Int).Set(v.BigInt)
 }
 
 func (v UInt256Value) String() string {
@@ -2799,7 +2799,7 @@ func (v UInt256Value) Negate() NumberValue {
 }
 
 func (v UInt256Value) Plus(other NumberValue) NumberValue {
-	sum := big.NewInt(0)
+	sum := new(big.Int)
 	sum.Add(v.BigInt, other.(UInt256Value).BigInt)
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just add and check the range of the result.
@@ -2818,7 +2818,7 @@ func (v UInt256Value) Plus(other NumberValue) NumberValue {
 }
 
 func (v UInt256Value) Minus(other NumberValue) NumberValue {
-	diff := big.NewInt(0)
+	diff := new(big.Int)
 	diff.Sub(v.BigInt, other.(UInt256Value).BigInt)
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just subtract and check the range of the result.
@@ -2838,7 +2838,7 @@ func (v UInt256Value) Minus(other NumberValue) NumberValue {
 
 func (v UInt256Value) Mod(other NumberValue) NumberValue {
 	o := other.(UInt256Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -2848,7 +2848,7 @@ func (v UInt256Value) Mod(other NumberValue) NumberValue {
 
 func (v UInt256Value) Mul(other NumberValue) NumberValue {
 	o := other.(UInt256Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	if res.Cmp(sema.UInt256TypeMaxInt) > 0 {
 		panic(OverflowError{})
@@ -2858,7 +2858,7 @@ func (v UInt256Value) Mul(other NumberValue) NumberValue {
 
 func (v UInt256Value) Div(other NumberValue) NumberValue {
 	o := other.(UInt256Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
 	}

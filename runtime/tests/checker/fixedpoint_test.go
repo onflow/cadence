@@ -108,10 +108,10 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 			// min
 
 			minInt := ranged.MinInt()
-			minIntMinusOne := big.NewInt(0).Sub(minInt, big.NewInt(1))
-			minIntPlusOne := big.NewInt(0).Add(minInt, big.NewInt(1))
+			minIntMinusOne := new(big.Int).Sub(minInt, big.NewInt(1))
+			minIntPlusOne := new(big.Int).Add(minInt, big.NewInt(1))
 			minFractional := ranged.MinFractional()
-			minFractionalPlusOne := big.NewInt(0).Add(minFractional, big.NewInt(1))
+			minFractionalPlusOne := new(big.Int).Add(minFractional, big.NewInt(1))
 
 			formatLiteral := func(integer, fractional *big.Int) string {
 				var builder strings.Builder
@@ -187,10 +187,10 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 			// max
 
 			maxInt := ranged.MaxInt()
-			maxIntMinusOne := big.NewInt(0).Sub(maxInt, big.NewInt(1))
-			maxIntPlusOne := big.NewInt(0).Add(maxInt, big.NewInt(1))
+			maxIntMinusOne := new(big.Int).Sub(maxInt, big.NewInt(1))
+			maxIntPlusOne := new(big.Int).Add(maxInt, big.NewInt(1))
 			maxFractional := ranged.MaxFractional()
-			maxFractionalPlusOne := big.NewInt(0).Add(maxFractional, big.NewInt(1))
+			maxFractionalPlusOne := new(big.Int).Add(maxFractional, big.NewInt(1))
 
 			t.Run("max int - 1, max fractional", func(t *testing.T) {
 				_, err := ParseAndCheck(t,

@@ -1960,7 +1960,7 @@ func TestParseAccessAssignment(t *testing.T) {
 										},
 									},
 									IndexingExpression: &IntegerExpression{
-										Value: big.NewInt(0),
+										Value: new(big.Int),
 										Base:  10,
 										Range: Range{
 											StartPos: Position{Offset: 41, Line: 3, Column: 22},
@@ -2075,7 +2075,7 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 										},
 									},
 									IndexingExpression: &IntegerExpression{
-										Value: big.NewInt(0),
+										Value: new(big.Int),
 										Base:  10,
 										Range: Range{
 											StartPos: Position{Offset: 29, Line: 2, Column: 28},
@@ -3880,7 +3880,7 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 				},
 			},
 			Then: &IntegerExpression{
-				Value: big.NewInt(0),
+				Value: new(big.Int),
 				Base:  10,
 				Range: Range{
 					StartPos: Position{Offset: 35, Line: 3, Column: 12},
@@ -4239,7 +4239,7 @@ func TestParsePreAndPostConditions(t *testing.T) {
 						Statements: []Statement{
 							&ReturnStatement{
 								Expression: &IntegerExpression{
-									Value: big.NewInt(0),
+									Value: new(big.Int),
 									Base:  10,
 									Range: Range{
 										StartPos: Position{Offset: 185, Line: 10, Column: 19},
@@ -4269,7 +4269,7 @@ func TestParsePreAndPostConditions(t *testing.T) {
 									},
 								},
 								Right: &IntegerExpression{
-									Value: big.NewInt(0),
+									Value: new(big.Int),
 									Base:  10,
 									Range: Range{
 										StartPos: Position{Offset: 67, Line: 4, Column: 21},
@@ -4289,7 +4289,7 @@ func TestParsePreAndPostConditions(t *testing.T) {
 									},
 								},
 								Right: &IntegerExpression{
-									Value: big.NewInt(0),
+									Value: new(big.Int),
 									Base:  10,
 									Range: Range{
 										StartPos: Position{Offset: 89, Line: 5, Column: 20},
@@ -4311,7 +4311,7 @@ func TestParsePreAndPostConditions(t *testing.T) {
 									},
 								},
 								Right: &IntegerExpression{
-									Value: big.NewInt(0),
+									Value: new(big.Int),
 									Base:  10,
 									Range: Range{
 										StartPos: Position{Offset: 150, Line: 8, Column: 26},
@@ -4528,7 +4528,7 @@ func TestParseConditionMessage(t *testing.T) {
 									},
 								},
 								Right: &IntegerExpression{
-									Value: big.NewInt(0),
+									Value: new(big.Int),
 									Base:  10,
 									Range: Range{
 										StartPos: Position{Offset: 67, Line: 4, Column: 21},
@@ -4718,7 +4718,7 @@ func TestParseFailableCasting(t *testing.T) {
 
 	failableDowncast := &CastingExpression{
 		Expression: &IntegerExpression{
-			Value: big.NewInt(0),
+			Value: new(big.Int),
 			Base:  10,
 			Range: Range{
 				StartPos: Position{Offset: 16, Line: 2, Column: 15},
@@ -6126,7 +6126,7 @@ func TestParseSwapStatement(t *testing.T) {
 								},
 							},
 							IndexingExpression: &IntegerExpression{
-								Value: big.NewInt(0),
+								Value: new(big.Int),
 								Base:  10,
 								Range: Range{
 									StartPos: Position{Offset: 34, Line: 3, Column: 14},
@@ -6969,7 +6969,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 												Pos:       Position{Offset: 90, Line: 7, Column: 13},
 											},
 											Value: &IntegerExpression{
-												Value: big.NewInt(0),
+												Value: new(big.Int),
 												Base:  10,
 												Range: Range{
 													StartPos: Position{Offset: 92, Line: 7, Column: 15},
@@ -7164,7 +7164,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 												Pos:       Position{Offset: 90, Line: 7, Column: 13},
 											},
 											Value: &IntegerExpression{
-												Value: big.NewInt(0),
+												Value: new(big.Int),
 												Base:  10,
 												Range: Range{
 													StartPos: Position{Offset: 92, Line: 7, Column: 15},
@@ -7196,7 +7196,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 									},
 								},
 								Right: &IntegerExpression{
-									Value: big.NewInt(0),
+									Value: new(big.Int),
 									Base:  10,
 									Range: Range{
 										StartPos: Position{Offset: 125, Line: 11, Column: 15},
@@ -7401,7 +7401,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 												Pos:       Position{Offset: 90, Line: 7, Column: 13},
 											},
 											Value: &IntegerExpression{
-												Value: big.NewInt(0),
+												Value: new(big.Int),
 												Base:  10,
 												Range: Range{
 													StartPos: Position{Offset: 92, Line: 7, Column: 15},
@@ -7433,7 +7433,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 									},
 								},
 								Right: &IntegerExpression{
-									Value: big.NewInt(0),
+									Value: new(big.Int),
 									Base:  10,
 									Range: Range{
 										StartPos: Position{Offset: 125, Line: 11, Column: 15},
@@ -7640,7 +7640,7 @@ func TestParseFixedPointExpressionZeroInteger(t *testing.T) {
 		},
 		Value: &FixedPointExpression{
 			Negative:        true,
-			UnsignedInteger: big.NewInt(0),
+			UnsignedInteger: new(big.Int),
 			Fractional:      big.NewInt(1),
 			Scale:           1,
 			Range: Range{

@@ -105,7 +105,7 @@ func TestEncodeAddress(t *testing.T) {
 }
 
 func TestEncodeInt(t *testing.T) {
-	x := big.NewInt(0).SetUint64(math.MaxUint64)
+	x := new(big.Int).SetUint64(math.MaxUint64)
 	x = x.Mul(x, big.NewInt(2))
 
 	largerThanMaxUint64 := encodeTest{

@@ -686,7 +686,7 @@ func uint128(v string) UInt128Value {
 	if v[:2] != "0x" {
 		panic(fmt.Sprintf("invalid value: %s", v))
 	}
-	res, ok := big.NewInt(0).SetString(v[2:], 16)
+	res, ok := new(big.Int).SetString(v[2:], 16)
 	if !ok {
 		panic(fmt.Sprintf("invalid value: %s", v))
 	}
@@ -812,7 +812,7 @@ func uint256(v string) UInt256Value {
 	if v[:2] != "0x" {
 		panic(fmt.Sprintf("invalid value: %s", v))
 	}
-	res, ok := big.NewInt(0).SetString(v[2:], 16)
+	res, ok := new(big.Int).SetString(v[2:], 16)
 	if !ok {
 		panic(fmt.Sprintf("invalid value: %s", v))
 	}
@@ -1937,7 +1937,7 @@ func int128(v string) Int128Value {
 	if v[:2] != "0x" {
 		panic(fmt.Sprintf("invalid value: %s", v))
 	}
-	res, ok := big.NewInt(0).SetString(v[2:], 16)
+	res, ok := new(big.Int).SetString(v[2:], 16)
 	if !ok {
 		panic(fmt.Sprintf("invalid value: %s", v))
 	}
@@ -2062,7 +2062,7 @@ func int256(v string) Int256Value {
 	if v[:2] != "0x" {
 		panic(fmt.Sprintf("invalid value: wrong prefix: %s", v))
 	}
-	res, ok := big.NewInt(0).SetString(v[2:], 16)
+	res, ok := new(big.Int).SetString(v[2:], 16)
 	if !ok {
 		panic(fmt.Sprintf("invalid value: not hex: %s", v))
 	}

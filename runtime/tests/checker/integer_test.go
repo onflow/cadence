@@ -109,13 +109,13 @@ func TestCheckIntegerLiteralRanges(t *testing.T) {
 			min := ty.(sema.IntegerRangedType).MinInt()
 			var minPlusOne *big.Int
 			if min != nil {
-				minPlusOne = big.NewInt(0).Add(min, big.NewInt(1))
+				minPlusOne = new(big.Int).Add(min, big.NewInt(1))
 			}
 
 			max := ty.(sema.IntegerRangedType).MaxInt()
 			var maxMinusOne *big.Int
 			if max != nil {
-				maxMinusOne = big.NewInt(0).Sub(max, big.NewInt(1))
+				maxMinusOne = new(big.Int).Sub(max, big.NewInt(1))
 			}
 
 			var minString string
@@ -224,7 +224,7 @@ func TestCheckInvalidIntegerLiteralValues(t *testing.T) {
 				if _, isAddressType := ty.(*sema.AddressType); isAddressType {
 					minMinusOneString = "-0x1"
 				} else {
-					minMinusOne := big.NewInt(0).Sub(min, big.NewInt(1))
+					minMinusOne := new(big.Int).Sub(min, big.NewInt(1))
 					minMinusOneString = minMinusOne.String()
 				}
 
@@ -255,7 +255,7 @@ func TestCheckInvalidIntegerLiteralValues(t *testing.T) {
 		if max != nil {
 			t.Run(fmt.Sprintf("%s + 1", ty.String()), func(t *testing.T) {
 
-				maxPlusOne := big.NewInt(0).Add(max, big.NewInt(1))
+				maxPlusOne := new(big.Int).Add(max, big.NewInt(1))
 				var maxPlusOneString string
 
 				// addresses are only valid as hexadecimal literals

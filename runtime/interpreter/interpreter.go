@@ -1755,11 +1755,11 @@ func (interpreter *Interpreter) convertToFixedPointBigInt(expression *ast.FixedP
 
 	// integer = expression.UnsignedInteger * 10 ^ scale
 
-	targetScale := big.NewInt(0).SetUint64(uint64(scale))
+	targetScale := new(big.Int).SetUint64(uint64(scale))
 
-	integer := big.NewInt(0).Mul(
+	integer := new(big.Int).Mul(
 		expression.UnsignedInteger,
-		big.NewInt(0).Exp(ten, targetScale, nil),
+		new(big.Int).Exp(ten, targetScale, nil),
 	)
 
 	// fractional = expression.Fractional * 10 ^ (scale - expression.Scale)
@@ -1768,15 +1768,15 @@ func (interpreter *Interpreter) convertToFixedPointBigInt(expression *ast.FixedP
 	if expression.Scale == scale {
 		fractional = expression.Fractional
 	} else if expression.Scale < scale {
-		scaleDiff := big.NewInt(0).SetUint64(uint64(scale - expression.Scale))
-		fractional = big.NewInt(0).Mul(
+		scaleDiff := new(big.Int).SetUint64(uint64(scale - expression.Scale))
+		fractional = new(big.Int).Mul(
 			expression.Fractional,
-			big.NewInt(0).Exp(ten, scaleDiff, nil),
+			new(big.Int).Exp(ten, scaleDiff, nil),
 		)
 	} else {
-		scaleDiff := big.NewInt(0).SetUint64(uint64(expression.Scale - scale))
-		fractional = big.NewInt(0).Div(expression.Fractional,
-			big.NewInt(0).Exp(ten, scaleDiff, nil),
+		scaleDiff := new(big.Int).SetUint64(uint64(expression.Scale - scale))
+		fractional = new(big.Int).Div(expression.Fractional,
+			new(big.Int).Exp(ten, scaleDiff, nil),
 		)
 	}
 
