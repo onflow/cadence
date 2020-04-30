@@ -269,10 +269,6 @@ func (v *BaseCadenceVisitor) VisitNilCoalescingExpression(ctx *NilCoalescingExpr
 	return v.VisitChildren(ctx)
 }
 
-func (v *BaseCadenceVisitor) VisitCastingExpression(ctx *CastingExpressionContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
 func (v *BaseCadenceVisitor) VisitConcatenatingExpression(ctx *ConcatenatingExpressionContext) interface{} {
 	return v.VisitChildren(ctx)
 }
@@ -282,6 +278,10 @@ func (v *BaseCadenceVisitor) VisitAdditiveExpression(ctx *AdditiveExpressionCont
 }
 
 func (v *BaseCadenceVisitor) VisitMultiplicativeExpression(ctx *MultiplicativeExpressionContext) interface{} {
+	return v.VisitChildren(ctx)
+}
+
+func (v *BaseCadenceVisitor) VisitCastingExpression(ctx *CastingExpressionContext) interface{} {
 	return v.VisitChildren(ctx)
 }
 

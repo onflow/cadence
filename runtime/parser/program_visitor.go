@@ -1329,7 +1329,7 @@ func (v *ProgramVisitor) VisitRelationalExpression(ctx *RelationalExpressionCont
 func (v *ProgramVisitor) VisitNilCoalescingExpression(ctx *NilCoalescingExpressionContext) interface{} {
 	// NOTE: right associative
 
-	left := ctx.CastingExpression().Accept(v)
+	left := ctx.ConcatenatingExpression().Accept(v)
 	if left == nil {
 		return nil
 	}
@@ -1346,23 +1346,6 @@ func (v *ProgramVisitor) VisitNilCoalescingExpression(ctx *NilCoalescingExpressi
 		Operation: ast.OperationNilCoalesce,
 		Left:      leftExpression,
 		Right:     rightExpression,
-	}
-}
-
-func (v *ProgramVisitor) VisitCastingExpression(ctx *CastingExpressionContext) interface{} {
-	typeAnnotationContext := ctx.TypeAnnotation()
-	if typeAnnotationContext == nil {
-		return ctx.ConcatenatingExpression().Accept(v)
-	}
-
-	expression := ctx.CastingExpression().Accept(v).(ast.Expression)
-	typeAnnotation := typeAnnotationContext.Accept(v).(*ast.TypeAnnotation)
-	operation := ctx.CastingOp().Accept(v).(ast.Operation)
-
-	return &ast.CastingExpression{
-		Expression:     expression,
-		Operation:      operation,
-		TypeAnnotation: typeAnnotation,
 	}
 }
 
@@ -1410,7 +1393,7 @@ func (v *ProgramVisitor) VisitAdditiveExpression(ctx *AdditiveExpressionContext)
 }
 
 func (v *ProgramVisitor) VisitMultiplicativeExpression(ctx *MultiplicativeExpressionContext) interface{} {
-	right := ctx.UnaryExpression().Accept(v)
+	right := ctx.CastingExpression().Accept(v)
 	if right == nil {
 		return nil
 	}
@@ -1428,6 +1411,23 @@ func (v *ProgramVisitor) VisitMultiplicativeExpression(ctx *MultiplicativeExpres
 		Operation: operation,
 		Left:      leftExpression,
 		Right:     rightExpression,
+	}
+}
+
+func (v *ProgramVisitor) VisitCastingExpression(ctx *CastingExpressionContext) interface{} {
+	typeAnnotationContext := ctx.TypeAnnotation()
+	if typeAnnotationContext == nil {
+		return ctx.UnaryExpression().Accept(v)
+	}
+
+	expression := ctx.CastingExpression().Accept(v).(ast.Expression)
+	typeAnnotation := typeAnnotationContext.Accept(v).(*ast.TypeAnnotation)
+	operation := ctx.CastingOp().Accept(v).(ast.Operation)
+
+	return &ast.CastingExpression{
+		Expression:     expression,
+		Operation:      operation,
+		TypeAnnotation: typeAnnotation,
 	}
 }
 

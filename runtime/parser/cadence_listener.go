@@ -208,9 +208,6 @@ type CadenceListener interface {
 	// EnterNilCoalescingExpression is called when entering the nilCoalescingExpression production.
 	EnterNilCoalescingExpression(c *NilCoalescingExpressionContext)
 
-	// EnterCastingExpression is called when entering the castingExpression production.
-	EnterCastingExpression(c *CastingExpressionContext)
-
 	// EnterConcatenatingExpression is called when entering the concatenatingExpression production.
 	EnterConcatenatingExpression(c *ConcatenatingExpressionContext)
 
@@ -219,6 +216,9 @@ type CadenceListener interface {
 
 	// EnterMultiplicativeExpression is called when entering the multiplicativeExpression production.
 	EnterMultiplicativeExpression(c *MultiplicativeExpressionContext)
+
+	// EnterCastingExpression is called when entering the castingExpression production.
+	EnterCastingExpression(c *CastingExpressionContext)
 
 	// EnterUnaryExpression is called when entering the unaryExpression production.
 	EnterUnaryExpression(c *UnaryExpressionContext)
@@ -523,9 +523,6 @@ type CadenceListener interface {
 	// ExitNilCoalescingExpression is called when exiting the nilCoalescingExpression production.
 	ExitNilCoalescingExpression(c *NilCoalescingExpressionContext)
 
-	// ExitCastingExpression is called when exiting the castingExpression production.
-	ExitCastingExpression(c *CastingExpressionContext)
-
 	// ExitConcatenatingExpression is called when exiting the concatenatingExpression production.
 	ExitConcatenatingExpression(c *ConcatenatingExpressionContext)
 
@@ -534,6 +531,9 @@ type CadenceListener interface {
 
 	// ExitMultiplicativeExpression is called when exiting the multiplicativeExpression production.
 	ExitMultiplicativeExpression(c *MultiplicativeExpressionContext)
+
+	// ExitCastingExpression is called when exiting the castingExpression production.
+	ExitCastingExpression(c *CastingExpressionContext)
 
 	// ExitUnaryExpression is called when exiting the unaryExpression production.
 	ExitUnaryExpression(c *UnaryExpressionContext)

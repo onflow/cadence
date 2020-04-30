@@ -108,15 +108,15 @@ var parserATN = []uint16{
 	3, 60, 3, 60, 3, 60, 3, 60, 3, 60, 3, 60, 7, 60, 651, 10, 60, 12, 60, 14,
 	60, 654, 11, 60, 3, 61, 3, 61, 3, 61, 3, 61, 3, 61, 3, 61, 3, 61, 7, 61,
 	663, 10, 61, 12, 61, 14, 61, 666, 11, 61, 3, 62, 3, 62, 3, 62, 5, 62, 671,
-	10, 62, 3, 63, 3, 63, 3, 63, 3, 63, 3, 63, 3, 63, 3, 63, 7, 63, 680, 10,
-	63, 12, 63, 14, 63, 683, 11, 63, 3, 64, 3, 64, 3, 64, 3, 64, 3, 64, 3,
-	64, 7, 64, 691, 10, 64, 12, 64, 14, 64, 694, 11, 64, 3, 65, 3, 65, 3, 65,
-	3, 65, 3, 65, 3, 65, 3, 65, 7, 65, 703, 10, 65, 12, 65, 14, 65, 706, 11,
-	65, 3, 66, 3, 66, 3, 66, 3, 66, 3, 66, 3, 66, 3, 66, 7, 66, 715, 10, 66,
-	12, 66, 14, 66, 718, 11, 66, 3, 67, 3, 67, 6, 67, 722, 10, 67, 13, 67,
-	14, 67, 723, 3, 67, 3, 67, 5, 67, 728, 10, 67, 3, 68, 3, 68, 3, 68, 3,
-	68, 5, 68, 734, 10, 68, 3, 69, 3, 69, 3, 69, 3, 69, 3, 69, 3, 69, 3, 69,
-	5, 69, 743, 10, 69, 3, 69, 3, 69, 3, 69, 3, 69, 3, 69, 3, 69, 5, 69, 751,
+	10, 62, 3, 63, 3, 63, 3, 63, 3, 63, 3, 63, 3, 63, 7, 63, 679, 10, 63, 12,
+	63, 14, 63, 682, 11, 63, 3, 64, 3, 64, 3, 64, 3, 64, 3, 64, 3, 64, 3, 64,
+	7, 64, 691, 10, 64, 12, 64, 14, 64, 694, 11, 64, 3, 65, 3, 65, 3, 65, 3,
+	65, 3, 65, 3, 65, 3, 65, 7, 65, 703, 10, 65, 12, 65, 14, 65, 706, 11, 65,
+	3, 66, 3, 66, 3, 66, 3, 66, 3, 66, 3, 66, 3, 66, 7, 66, 715, 10, 66, 12,
+	66, 14, 66, 718, 11, 66, 3, 67, 3, 67, 6, 67, 722, 10, 67, 13, 67, 14,
+	67, 723, 3, 67, 3, 67, 5, 67, 728, 10, 67, 3, 68, 3, 68, 3, 68, 3, 68,
+	5, 68, 734, 10, 68, 3, 69, 3, 69, 3, 69, 3, 69, 3, 69, 3, 69, 3, 69, 5,
+	69, 743, 10, 69, 3, 69, 3, 69, 3, 69, 3, 69, 3, 69, 3, 69, 5, 69, 751,
 	10, 69, 3, 69, 3, 69, 3, 69, 3, 69, 3, 69, 3, 69, 3, 69, 3, 69, 7, 69,
 	761, 10, 69, 12, 69, 14, 69, 764, 11, 69, 3, 70, 3, 70, 3, 71, 3, 71, 3,
 	72, 3, 72, 3, 73, 3, 73, 3, 74, 3, 74, 3, 75, 3, 75, 3, 76, 3, 76, 3, 76,
@@ -163,7 +163,7 @@ var parserATN = []uint16{
 	605, 3, 2, 2, 2, 108, 609, 3, 2, 2, 2, 110, 611, 3, 2, 2, 2, 112, 613,
 	3, 2, 2, 2, 114, 621, 3, 2, 2, 2, 116, 632, 3, 2, 2, 2, 118, 643, 3, 2,
 	2, 2, 120, 655, 3, 2, 2, 2, 122, 667, 3, 2, 2, 2, 124, 672, 3, 2, 2, 2,
-	126, 684, 3, 2, 2, 2, 128, 695, 3, 2, 2, 2, 130, 707, 3, 2, 2, 2, 132,
+	126, 683, 3, 2, 2, 2, 128, 695, 3, 2, 2, 2, 130, 707, 3, 2, 2, 2, 132,
 	727, 3, 2, 2, 2, 134, 733, 3, 2, 2, 2, 136, 750, 3, 2, 2, 2, 138, 765,
 	3, 2, 2, 2, 140, 767, 3, 2, 2, 2, 142, 769, 3, 2, 2, 2, 144, 771, 3, 2,
 	2, 2, 146, 773, 3, 2, 2, 2, 148, 775, 3, 2, 2, 2, 150, 777, 3, 2, 2, 2,
@@ -350,20 +350,20 @@ var parserATN = []uint16{
 	662, 3, 2, 2, 2, 664, 665, 3, 2, 2, 2, 665, 121, 3, 2, 2, 2, 666, 664,
 	3, 2, 2, 2, 667, 670, 5, 124, 63, 2, 668, 669, 7, 32, 2, 2, 669, 671, 5,
 	122, 62, 2, 670, 668, 3, 2, 2, 2, 670, 671, 3, 2, 2, 2, 671, 123, 3, 2,
-	2, 2, 672, 673, 8, 63, 1, 2, 673, 674, 5, 126, 64, 2, 674, 681, 3, 2, 2,
-	2, 675, 676, 12, 3, 2, 2, 676, 677, 5, 148, 75, 2, 677, 678, 5, 52, 27,
-	2, 678, 680, 3, 2, 2, 2, 679, 675, 3, 2, 2, 2, 680, 683, 3, 2, 2, 2, 681,
-	679, 3, 2, 2, 2, 681, 682, 3, 2, 2, 2, 682, 125, 3, 2, 2, 2, 683, 681,
-	3, 2, 2, 2, 684, 685, 8, 64, 1, 2, 685, 686, 5, 128, 65, 2, 686, 692, 3,
-	2, 2, 2, 687, 688, 12, 3, 2, 2, 688, 689, 7, 27, 2, 2, 689, 691, 5, 128,
-	65, 2, 690, 687, 3, 2, 2, 2, 691, 694, 3, 2, 2, 2, 692, 690, 3, 2, 2, 2,
-	692, 693, 3, 2, 2, 2, 693, 127, 3, 2, 2, 2, 694, 692, 3, 2, 2, 2, 695,
+	2, 2, 672, 673, 8, 63, 1, 2, 673, 674, 5, 126, 64, 2, 674, 680, 3, 2, 2,
+	2, 675, 676, 12, 3, 2, 2, 676, 677, 7, 27, 2, 2, 677, 679, 5, 126, 64,
+	2, 678, 675, 3, 2, 2, 2, 679, 682, 3, 2, 2, 2, 680, 678, 3, 2, 2, 2, 680,
+	681, 3, 2, 2, 2, 681, 125, 3, 2, 2, 2, 682, 680, 3, 2, 2, 2, 683, 684,
+	8, 64, 1, 2, 684, 685, 5, 128, 65, 2, 685, 692, 3, 2, 2, 2, 686, 687, 12,
+	3, 2, 2, 687, 688, 5, 142, 72, 2, 688, 689, 5, 128, 65, 2, 689, 691, 3,
+	2, 2, 2, 690, 686, 3, 2, 2, 2, 691, 694, 3, 2, 2, 2, 692, 690, 3, 2, 2,
+	2, 692, 693, 3, 2, 2, 2, 693, 127, 3, 2, 2, 2, 694, 692, 3, 2, 2, 2, 695,
 	696, 8, 65, 1, 2, 696, 697, 5, 130, 66, 2, 697, 704, 3, 2, 2, 2, 698, 699,
-	12, 3, 2, 2, 699, 700, 5, 142, 72, 2, 700, 701, 5, 130, 66, 2, 701, 703,
+	12, 3, 2, 2, 699, 700, 5, 144, 73, 2, 700, 701, 5, 130, 66, 2, 701, 703,
 	3, 2, 2, 2, 702, 698, 3, 2, 2, 2, 703, 706, 3, 2, 2, 2, 704, 702, 3, 2,
 	2, 2, 704, 705, 3, 2, 2, 2, 705, 129, 3, 2, 2, 2, 706, 704, 3, 2, 2, 2,
 	707, 708, 8, 66, 1, 2, 708, 709, 5, 132, 67, 2, 709, 716, 3, 2, 2, 2, 710,
-	711, 12, 3, 2, 2, 711, 712, 5, 144, 73, 2, 712, 713, 5, 132, 67, 2, 713,
+	711, 12, 3, 2, 2, 711, 712, 5, 148, 75, 2, 712, 713, 5, 52, 27, 2, 713,
 	715, 3, 2, 2, 2, 714, 710, 3, 2, 2, 2, 715, 718, 3, 2, 2, 2, 716, 714,
 	3, 2, 2, 2, 716, 717, 3, 2, 2, 2, 717, 131, 3, 2, 2, 2, 718, 716, 3, 2,
 	2, 2, 719, 728, 5, 134, 68, 2, 720, 722, 5, 146, 74, 2, 721, 720, 3, 2,
@@ -444,7 +444,7 @@ var parserATN = []uint16{
 	198, 206, 213, 220, 229, 233, 238, 241, 252, 267, 272, 276, 284, 290, 306,
 	309, 315, 323, 327, 340, 344, 353, 360, 368, 371, 384, 387, 392, 399, 404,
 	408, 415, 422, 424, 431, 439, 442, 451, 461, 464, 493, 496, 516, 522, 529,
-	543, 548, 557, 563, 565, 586, 593, 599, 619, 629, 640, 652, 664, 670, 681,
+	543, 548, 557, 563, 565, 586, 593, 599, 619, 629, 640, 652, 664, 670, 680,
 	692, 704, 716, 723, 727, 733, 742, 750, 760, 762, 792, 795, 810, 813, 816,
 	824, 827, 834, 846, 863, 868, 877, 885, 888, 898, 901, 915,
 }
@@ -491,8 +491,8 @@ var ruleNames = []string{
 	"whileStatement", "forStatement", "emitStatement", "variableDeclaration",
 	"assignment", "swap", "transfer", "expression", "conditionalExpression",
 	"orExpression", "andExpression", "equalityExpression", "relationalExpression",
-	"nilCoalescingExpression", "castingExpression", "concatenatingExpression",
-	"additiveExpression", "multiplicativeExpression", "unaryExpression", "primaryExpression",
+	"nilCoalescingExpression", "concatenatingExpression", "additiveExpression",
+	"multiplicativeExpression", "castingExpression", "unaryExpression", "primaryExpression",
 	"postfixExpression", "equalityOp", "relationalOp", "additiveOp", "multiplicativeOp",
 	"unaryOp", "castingOp", "createExpression", "destroyExpression", "referenceExpression",
 	"expressionAccess", "memberAccess", "bracketExpression", "invocation",
@@ -723,10 +723,10 @@ const (
 	CadenceParserRULE_equalityExpression           = 58
 	CadenceParserRULE_relationalExpression         = 59
 	CadenceParserRULE_nilCoalescingExpression      = 60
-	CadenceParserRULE_castingExpression            = 61
-	CadenceParserRULE_concatenatingExpression      = 62
-	CadenceParserRULE_additiveExpression           = 63
-	CadenceParserRULE_multiplicativeExpression     = 64
+	CadenceParserRULE_concatenatingExpression      = 61
+	CadenceParserRULE_additiveExpression           = 62
+	CadenceParserRULE_multiplicativeExpression     = 63
+	CadenceParserRULE_castingExpression            = 64
 	CadenceParserRULE_unaryExpression              = 65
 	CadenceParserRULE_primaryExpression            = 66
 	CadenceParserRULE_postfixExpression            = 67
@@ -10292,14 +10292,14 @@ func NewNilCoalescingExpressionContext(parser antlr.Parser, parent antlr.ParserR
 
 func (s *NilCoalescingExpressionContext) GetParser() antlr.Parser { return s.parser }
 
-func (s *NilCoalescingExpressionContext) CastingExpression() ICastingExpressionContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*ICastingExpressionContext)(nil)).Elem(), 0)
+func (s *NilCoalescingExpressionContext) ConcatenatingExpression() IConcatenatingExpressionContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IConcatenatingExpressionContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(ICastingExpressionContext)
+	return t.(IConcatenatingExpressionContext)
 }
 
 func (s *NilCoalescingExpressionContext) NilCoalescing() antlr.TerminalNode {
@@ -10369,7 +10369,7 @@ func (p *CadenceParser) NilCoalescingExpression() (localctx INilCoalescingExpres
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(665)
-		p.castingExpression(0)
+		p.concatenatingExpression(0)
 	}
 	p.SetState(668)
 	p.GetErrorHandler().Sync(p)
@@ -10384,187 +10384,6 @@ func (p *CadenceParser) NilCoalescingExpression() (localctx INilCoalescingExpres
 			p.NilCoalescingExpression()
 		}
 
-	}
-
-	return localctx
-}
-
-// ICastingExpressionContext is an interface to support dynamic dispatch.
-type ICastingExpressionContext interface {
-	antlr.ParserRuleContext
-
-	// GetParser returns the parser.
-	GetParser() antlr.Parser
-
-	// IsCastingExpressionContext differentiates from other interfaces.
-	IsCastingExpressionContext()
-}
-
-type CastingExpressionContext struct {
-	*antlr.BaseParserRuleContext
-	parser antlr.Parser
-}
-
-func NewEmptyCastingExpressionContext() *CastingExpressionContext {
-	var p = new(CastingExpressionContext)
-	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(nil, -1)
-	p.RuleIndex = CadenceParserRULE_castingExpression
-	return p
-}
-
-func (*CastingExpressionContext) IsCastingExpressionContext() {}
-
-func NewCastingExpressionContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *CastingExpressionContext {
-	var p = new(CastingExpressionContext)
-
-	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(parent, invokingState)
-
-	p.parser = parser
-	p.RuleIndex = CadenceParserRULE_castingExpression
-
-	return p
-}
-
-func (s *CastingExpressionContext) GetParser() antlr.Parser { return s.parser }
-
-func (s *CastingExpressionContext) ConcatenatingExpression() IConcatenatingExpressionContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IConcatenatingExpressionContext)(nil)).Elem(), 0)
-
-	if t == nil {
-		return nil
-	}
-
-	return t.(IConcatenatingExpressionContext)
-}
-
-func (s *CastingExpressionContext) CastingExpression() ICastingExpressionContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*ICastingExpressionContext)(nil)).Elem(), 0)
-
-	if t == nil {
-		return nil
-	}
-
-	return t.(ICastingExpressionContext)
-}
-
-func (s *CastingExpressionContext) CastingOp() ICastingOpContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*ICastingOpContext)(nil)).Elem(), 0)
-
-	if t == nil {
-		return nil
-	}
-
-	return t.(ICastingOpContext)
-}
-
-func (s *CastingExpressionContext) TypeAnnotation() ITypeAnnotationContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*ITypeAnnotationContext)(nil)).Elem(), 0)
-
-	if t == nil {
-		return nil
-	}
-
-	return t.(ITypeAnnotationContext)
-}
-
-func (s *CastingExpressionContext) GetRuleContext() antlr.RuleContext {
-	return s
-}
-
-func (s *CastingExpressionContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
-	return antlr.TreesStringTree(s, ruleNames, recog)
-}
-
-func (s *CastingExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
-	if listenerT, ok := listener.(CadenceListener); ok {
-		listenerT.EnterCastingExpression(s)
-	}
-}
-
-func (s *CastingExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
-	if listenerT, ok := listener.(CadenceListener); ok {
-		listenerT.ExitCastingExpression(s)
-	}
-}
-
-func (s *CastingExpressionContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case CadenceVisitor:
-		return t.VisitCastingExpression(s)
-
-	default:
-		return t.VisitChildren(s)
-	}
-}
-
-func (p *CadenceParser) CastingExpression() (localctx ICastingExpressionContext) {
-	return p.castingExpression(0)
-}
-
-func (p *CadenceParser) castingExpression(_p int) (localctx ICastingExpressionContext) {
-	var _parentctx antlr.ParserRuleContext = p.GetParserRuleContext()
-	_parentState := p.GetState()
-	localctx = NewCastingExpressionContext(p, p.GetParserRuleContext(), _parentState)
-	var _prevctx ICastingExpressionContext = localctx
-	var _ antlr.ParserRuleContext = _prevctx // TODO: To prevent unused variable warning.
-	_startState := 122
-	p.EnterRecursionRule(localctx, 122, CadenceParserRULE_castingExpression, _p)
-
-	defer func() {
-		p.UnrollRecursionContexts(_parentctx)
-	}()
-
-	defer func() {
-		if err := recover(); err != nil {
-			if v, ok := err.(antlr.RecognitionException); ok {
-				localctx.SetException(v)
-				p.GetErrorHandler().ReportError(p, v)
-				p.GetErrorHandler().Recover(p, v)
-			} else {
-				panic(err)
-			}
-		}
-	}()
-
-	var _alt int
-
-	p.EnterOuterAlt(localctx, 1)
-	{
-		p.SetState(671)
-		p.concatenatingExpression(0)
-	}
-
-	p.GetParserRuleContext().SetStop(p.GetTokenStream().LT(-1))
-	p.SetState(679)
-	p.GetErrorHandler().Sync(p)
-	_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 60, p.GetParserRuleContext())
-
-	for _alt != 2 && _alt != antlr.ATNInvalidAltNumber {
-		if _alt == 1 {
-			if p.GetParseListeners() != nil {
-				p.TriggerExitRuleEvent()
-			}
-			_prevctx = localctx
-			localctx = NewCastingExpressionContext(p, _parentctx, _parentState)
-			p.PushNewRecursionContext(localctx, _startState, CadenceParserRULE_castingExpression)
-			p.SetState(673)
-
-			if !(p.Precpred(p.GetParserRuleContext(), 1)) {
-				panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 1)", ""))
-			}
-			{
-				p.SetState(674)
-				p.CastingOp()
-			}
-			{
-				p.SetState(675)
-				p.TypeAnnotation()
-			}
-
-		}
-		p.SetState(681)
-		p.GetErrorHandler().Sync(p)
-		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 60, p.GetParserRuleContext())
 	}
 
 	return localctx
@@ -10672,8 +10491,8 @@ func (p *CadenceParser) concatenatingExpression(_p int) (localctx IConcatenating
 	localctx = NewConcatenatingExpressionContext(p, p.GetParserRuleContext(), _parentState)
 	var _prevctx IConcatenatingExpressionContext = localctx
 	var _ antlr.ParserRuleContext = _prevctx // TODO: To prevent unused variable warning.
-	_startState := 124
-	p.EnterRecursionRule(localctx, 124, CadenceParserRULE_concatenatingExpression, _p)
+	_startState := 122
+	p.EnterRecursionRule(localctx, 122, CadenceParserRULE_concatenatingExpression, _p)
 
 	defer func() {
 		p.UnrollRecursionContexts(_parentctx)
@@ -10695,14 +10514,14 @@ func (p *CadenceParser) concatenatingExpression(_p int) (localctx IConcatenating
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(683)
+		p.SetState(671)
 		p.additiveExpression(0)
 	}
 
 	p.GetParserRuleContext().SetStop(p.GetTokenStream().LT(-1))
-	p.SetState(690)
+	p.SetState(678)
 	p.GetErrorHandler().Sync(p)
-	_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 61, p.GetParserRuleContext())
+	_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 60, p.GetParserRuleContext())
 
 	for _alt != 2 && _alt != antlr.ATNInvalidAltNumber {
 		if _alt == 1 {
@@ -10712,24 +10531,24 @@ func (p *CadenceParser) concatenatingExpression(_p int) (localctx IConcatenating
 			_prevctx = localctx
 			localctx = NewConcatenatingExpressionContext(p, _parentctx, _parentState)
 			p.PushNewRecursionContext(localctx, _startState, CadenceParserRULE_concatenatingExpression)
-			p.SetState(685)
+			p.SetState(673)
 
 			if !(p.Precpred(p.GetParserRuleContext(), 1)) {
 				panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 1)", ""))
 			}
 			{
-				p.SetState(686)
+				p.SetState(674)
 				p.Match(CadenceParserAmpersand)
 			}
 			{
-				p.SetState(687)
+				p.SetState(675)
 				p.additiveExpression(0)
 			}
 
 		}
-		p.SetState(692)
+		p.SetState(680)
 		p.GetErrorHandler().Sync(p)
-		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 61, p.GetParserRuleContext())
+		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 60, p.GetParserRuleContext())
 	}
 
 	return localctx
@@ -10843,8 +10662,8 @@ func (p *CadenceParser) additiveExpression(_p int) (localctx IAdditiveExpression
 	localctx = NewAdditiveExpressionContext(p, p.GetParserRuleContext(), _parentState)
 	var _prevctx IAdditiveExpressionContext = localctx
 	var _ antlr.ParserRuleContext = _prevctx // TODO: To prevent unused variable warning.
-	_startState := 126
-	p.EnterRecursionRule(localctx, 126, CadenceParserRULE_additiveExpression, _p)
+	_startState := 124
+	p.EnterRecursionRule(localctx, 124, CadenceParserRULE_additiveExpression, _p)
 
 	defer func() {
 		p.UnrollRecursionContexts(_parentctx)
@@ -10866,14 +10685,14 @@ func (p *CadenceParser) additiveExpression(_p int) (localctx IAdditiveExpression
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(694)
+		p.SetState(682)
 		p.multiplicativeExpression(0)
 	}
 
 	p.GetParserRuleContext().SetStop(p.GetTokenStream().LT(-1))
-	p.SetState(702)
+	p.SetState(690)
 	p.GetErrorHandler().Sync(p)
-	_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 62, p.GetParserRuleContext())
+	_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 61, p.GetParserRuleContext())
 
 	for _alt != 2 && _alt != antlr.ATNInvalidAltNumber {
 		if _alt == 1 {
@@ -10883,24 +10702,24 @@ func (p *CadenceParser) additiveExpression(_p int) (localctx IAdditiveExpression
 			_prevctx = localctx
 			localctx = NewAdditiveExpressionContext(p, _parentctx, _parentState)
 			p.PushNewRecursionContext(localctx, _startState, CadenceParserRULE_additiveExpression)
-			p.SetState(696)
+			p.SetState(684)
 
 			if !(p.Precpred(p.GetParserRuleContext(), 1)) {
 				panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 1)", ""))
 			}
 			{
-				p.SetState(697)
+				p.SetState(685)
 				p.AdditiveOp()
 			}
 			{
-				p.SetState(698)
+				p.SetState(686)
 				p.multiplicativeExpression(0)
 			}
 
 		}
-		p.SetState(704)
+		p.SetState(692)
 		p.GetErrorHandler().Sync(p)
-		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 62, p.GetParserRuleContext())
+		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 61, p.GetParserRuleContext())
 	}
 
 	return localctx
@@ -10944,14 +10763,14 @@ func NewMultiplicativeExpressionContext(parser antlr.Parser, parent antlr.Parser
 
 func (s *MultiplicativeExpressionContext) GetParser() antlr.Parser { return s.parser }
 
-func (s *MultiplicativeExpressionContext) UnaryExpression() IUnaryExpressionContext {
-	var t = s.GetTypedRuleContext(reflect.TypeOf((*IUnaryExpressionContext)(nil)).Elem(), 0)
+func (s *MultiplicativeExpressionContext) CastingExpression() ICastingExpressionContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*ICastingExpressionContext)(nil)).Elem(), 0)
 
 	if t == nil {
 		return nil
 	}
 
-	return t.(IUnaryExpressionContext)
+	return t.(ICastingExpressionContext)
 }
 
 func (s *MultiplicativeExpressionContext) MultiplicativeExpression() IMultiplicativeExpressionContext {
@@ -11014,8 +10833,189 @@ func (p *CadenceParser) multiplicativeExpression(_p int) (localctx IMultiplicati
 	localctx = NewMultiplicativeExpressionContext(p, p.GetParserRuleContext(), _parentState)
 	var _prevctx IMultiplicativeExpressionContext = localctx
 	var _ antlr.ParserRuleContext = _prevctx // TODO: To prevent unused variable warning.
+	_startState := 126
+	p.EnterRecursionRule(localctx, 126, CadenceParserRULE_multiplicativeExpression, _p)
+
+	defer func() {
+		p.UnrollRecursionContexts(_parentctx)
+	}()
+
+	defer func() {
+		if err := recover(); err != nil {
+			if v, ok := err.(antlr.RecognitionException); ok {
+				localctx.SetException(v)
+				p.GetErrorHandler().ReportError(p, v)
+				p.GetErrorHandler().Recover(p, v)
+			} else {
+				panic(err)
+			}
+		}
+	}()
+
+	var _alt int
+
+	p.EnterOuterAlt(localctx, 1)
+	{
+		p.SetState(694)
+		p.castingExpression(0)
+	}
+
+	p.GetParserRuleContext().SetStop(p.GetTokenStream().LT(-1))
+	p.SetState(702)
+	p.GetErrorHandler().Sync(p)
+	_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 62, p.GetParserRuleContext())
+
+	for _alt != 2 && _alt != antlr.ATNInvalidAltNumber {
+		if _alt == 1 {
+			if p.GetParseListeners() != nil {
+				p.TriggerExitRuleEvent()
+			}
+			_prevctx = localctx
+			localctx = NewMultiplicativeExpressionContext(p, _parentctx, _parentState)
+			p.PushNewRecursionContext(localctx, _startState, CadenceParserRULE_multiplicativeExpression)
+			p.SetState(696)
+
+			if !(p.Precpred(p.GetParserRuleContext(), 1)) {
+				panic(antlr.NewFailedPredicateException(p, "p.Precpred(p.GetParserRuleContext(), 1)", ""))
+			}
+			{
+				p.SetState(697)
+				p.MultiplicativeOp()
+			}
+			{
+				p.SetState(698)
+				p.castingExpression(0)
+			}
+
+		}
+		p.SetState(704)
+		p.GetErrorHandler().Sync(p)
+		_alt = p.GetInterpreter().AdaptivePredict(p.GetTokenStream(), 62, p.GetParserRuleContext())
+	}
+
+	return localctx
+}
+
+// ICastingExpressionContext is an interface to support dynamic dispatch.
+type ICastingExpressionContext interface {
+	antlr.ParserRuleContext
+
+	// GetParser returns the parser.
+	GetParser() antlr.Parser
+
+	// IsCastingExpressionContext differentiates from other interfaces.
+	IsCastingExpressionContext()
+}
+
+type CastingExpressionContext struct {
+	*antlr.BaseParserRuleContext
+	parser antlr.Parser
+}
+
+func NewEmptyCastingExpressionContext() *CastingExpressionContext {
+	var p = new(CastingExpressionContext)
+	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(nil, -1)
+	p.RuleIndex = CadenceParserRULE_castingExpression
+	return p
+}
+
+func (*CastingExpressionContext) IsCastingExpressionContext() {}
+
+func NewCastingExpressionContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *CastingExpressionContext {
+	var p = new(CastingExpressionContext)
+
+	p.BaseParserRuleContext = antlr.NewBaseParserRuleContext(parent, invokingState)
+
+	p.parser = parser
+	p.RuleIndex = CadenceParserRULE_castingExpression
+
+	return p
+}
+
+func (s *CastingExpressionContext) GetParser() antlr.Parser { return s.parser }
+
+func (s *CastingExpressionContext) UnaryExpression() IUnaryExpressionContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*IUnaryExpressionContext)(nil)).Elem(), 0)
+
+	if t == nil {
+		return nil
+	}
+
+	return t.(IUnaryExpressionContext)
+}
+
+func (s *CastingExpressionContext) CastingExpression() ICastingExpressionContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*ICastingExpressionContext)(nil)).Elem(), 0)
+
+	if t == nil {
+		return nil
+	}
+
+	return t.(ICastingExpressionContext)
+}
+
+func (s *CastingExpressionContext) CastingOp() ICastingOpContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*ICastingOpContext)(nil)).Elem(), 0)
+
+	if t == nil {
+		return nil
+	}
+
+	return t.(ICastingOpContext)
+}
+
+func (s *CastingExpressionContext) TypeAnnotation() ITypeAnnotationContext {
+	var t = s.GetTypedRuleContext(reflect.TypeOf((*ITypeAnnotationContext)(nil)).Elem(), 0)
+
+	if t == nil {
+		return nil
+	}
+
+	return t.(ITypeAnnotationContext)
+}
+
+func (s *CastingExpressionContext) GetRuleContext() antlr.RuleContext {
+	return s
+}
+
+func (s *CastingExpressionContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
+	return antlr.TreesStringTree(s, ruleNames, recog)
+}
+
+func (s *CastingExpressionContext) EnterRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(CadenceListener); ok {
+		listenerT.EnterCastingExpression(s)
+	}
+}
+
+func (s *CastingExpressionContext) ExitRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(CadenceListener); ok {
+		listenerT.ExitCastingExpression(s)
+	}
+}
+
+func (s *CastingExpressionContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
+	switch t := visitor.(type) {
+	case CadenceVisitor:
+		return t.VisitCastingExpression(s)
+
+	default:
+		return t.VisitChildren(s)
+	}
+}
+
+func (p *CadenceParser) CastingExpression() (localctx ICastingExpressionContext) {
+	return p.castingExpression(0)
+}
+
+func (p *CadenceParser) castingExpression(_p int) (localctx ICastingExpressionContext) {
+	var _parentctx antlr.ParserRuleContext = p.GetParserRuleContext()
+	_parentState := p.GetState()
+	localctx = NewCastingExpressionContext(p, p.GetParserRuleContext(), _parentState)
+	var _prevctx ICastingExpressionContext = localctx
+	var _ antlr.ParserRuleContext = _prevctx // TODO: To prevent unused variable warning.
 	_startState := 128
-	p.EnterRecursionRule(localctx, 128, CadenceParserRULE_multiplicativeExpression, _p)
+	p.EnterRecursionRule(localctx, 128, CadenceParserRULE_castingExpression, _p)
 
 	defer func() {
 		p.UnrollRecursionContexts(_parentctx)
@@ -11052,8 +11052,8 @@ func (p *CadenceParser) multiplicativeExpression(_p int) (localctx IMultiplicati
 				p.TriggerExitRuleEvent()
 			}
 			_prevctx = localctx
-			localctx = NewMultiplicativeExpressionContext(p, _parentctx, _parentState)
-			p.PushNewRecursionContext(localctx, _startState, CadenceParserRULE_multiplicativeExpression)
+			localctx = NewCastingExpressionContext(p, _parentctx, _parentState)
+			p.PushNewRecursionContext(localctx, _startState, CadenceParserRULE_castingExpression)
 			p.SetState(708)
 
 			if !(p.Precpred(p.GetParserRuleContext(), 1)) {
@@ -11061,11 +11061,11 @@ func (p *CadenceParser) multiplicativeExpression(_p int) (localctx IMultiplicati
 			}
 			{
 				p.SetState(709)
-				p.MultiplicativeOp()
+				p.CastingOp()
 			}
 			{
 				p.SetState(710)
-				p.UnaryExpression()
+				p.TypeAnnotation()
 			}
 
 		}
@@ -16007,32 +16007,32 @@ func (p *CadenceParser) Sempred(localctx antlr.RuleContext, ruleIndex, predIndex
 		return p.RelationalExpression_Sempred(t, predIndex)
 
 	case 61:
-		var t *CastingExpressionContext = nil
-		if localctx != nil {
-			t = localctx.(*CastingExpressionContext)
-		}
-		return p.CastingExpression_Sempred(t, predIndex)
-
-	case 62:
 		var t *ConcatenatingExpressionContext = nil
 		if localctx != nil {
 			t = localctx.(*ConcatenatingExpressionContext)
 		}
 		return p.ConcatenatingExpression_Sempred(t, predIndex)
 
-	case 63:
+	case 62:
 		var t *AdditiveExpressionContext = nil
 		if localctx != nil {
 			t = localctx.(*AdditiveExpressionContext)
 		}
 		return p.AdditiveExpression_Sempred(t, predIndex)
 
-	case 64:
+	case 63:
 		var t *MultiplicativeExpressionContext = nil
 		if localctx != nil {
 			t = localctx.(*MultiplicativeExpressionContext)
 		}
 		return p.MultiplicativeExpression_Sempred(t, predIndex)
+
+	case 64:
+		var t *CastingExpressionContext = nil
+		if localctx != nil {
+			t = localctx.(*CastingExpressionContext)
+		}
+		return p.CastingExpression_Sempred(t, predIndex)
 
 	case 67:
 		var t *PostfixExpressionContext = nil
@@ -16140,7 +16140,7 @@ func (p *CadenceParser) RelationalExpression_Sempred(localctx antlr.RuleContext,
 	}
 }
 
-func (p *CadenceParser) CastingExpression_Sempred(localctx antlr.RuleContext, predIndex int) bool {
+func (p *CadenceParser) ConcatenatingExpression_Sempred(localctx antlr.RuleContext, predIndex int) bool {
 	switch predIndex {
 	case 8:
 		return p.Precpred(p.GetParserRuleContext(), 1)
@@ -16150,7 +16150,7 @@ func (p *CadenceParser) CastingExpression_Sempred(localctx antlr.RuleContext, pr
 	}
 }
 
-func (p *CadenceParser) ConcatenatingExpression_Sempred(localctx antlr.RuleContext, predIndex int) bool {
+func (p *CadenceParser) AdditiveExpression_Sempred(localctx antlr.RuleContext, predIndex int) bool {
 	switch predIndex {
 	case 9:
 		return p.Precpred(p.GetParserRuleContext(), 1)
@@ -16160,7 +16160,7 @@ func (p *CadenceParser) ConcatenatingExpression_Sempred(localctx antlr.RuleConte
 	}
 }
 
-func (p *CadenceParser) AdditiveExpression_Sempred(localctx antlr.RuleContext, predIndex int) bool {
+func (p *CadenceParser) MultiplicativeExpression_Sempred(localctx antlr.RuleContext, predIndex int) bool {
 	switch predIndex {
 	case 10:
 		return p.Precpred(p.GetParserRuleContext(), 1)
@@ -16170,7 +16170,7 @@ func (p *CadenceParser) AdditiveExpression_Sempred(localctx antlr.RuleContext, p
 	}
 }
 
-func (p *CadenceParser) MultiplicativeExpression_Sempred(localctx antlr.RuleContext, predIndex int) bool {
+func (p *CadenceParser) CastingExpression_Sempred(localctx antlr.RuleContext, predIndex int) bool {
 	switch predIndex {
 	case 11:
 		return p.Precpred(p.GetParserRuleContext(), 1)
