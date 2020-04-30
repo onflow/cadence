@@ -407,12 +407,6 @@ func (s *BaseCadenceListener) EnterNilCoalescingExpression(ctx *NilCoalescingExp
 // ExitNilCoalescingExpression is called when production nilCoalescingExpression is exited.
 func (s *BaseCadenceListener) ExitNilCoalescingExpression(ctx *NilCoalescingExpressionContext) {}
 
-// EnterCastingExpression is called when production castingExpression is entered.
-func (s *BaseCadenceListener) EnterCastingExpression(ctx *CastingExpressionContext) {}
-
-// ExitCastingExpression is called when production castingExpression is exited.
-func (s *BaseCadenceListener) ExitCastingExpression(ctx *CastingExpressionContext) {}
-
 // EnterConcatenatingExpression is called when production concatenatingExpression is entered.
 func (s *BaseCadenceListener) EnterConcatenatingExpression(ctx *ConcatenatingExpressionContext) {}
 
@@ -430,6 +424,12 @@ func (s *BaseCadenceListener) EnterMultiplicativeExpression(ctx *MultiplicativeE
 
 // ExitMultiplicativeExpression is called when production multiplicativeExpression is exited.
 func (s *BaseCadenceListener) ExitMultiplicativeExpression(ctx *MultiplicativeExpressionContext) {}
+
+// EnterCastingExpression is called when production castingExpression is entered.
+func (s *BaseCadenceListener) EnterCastingExpression(ctx *CastingExpressionContext) {}
+
+// ExitCastingExpression is called when production castingExpression is exited.
+func (s *BaseCadenceListener) ExitCastingExpression(ctx *CastingExpressionContext) {}
 
 // EnterUnaryExpression is called when production unaryExpression is entered.
 func (s *BaseCadenceListener) EnterUnaryExpression(ctx *UnaryExpressionContext) {}

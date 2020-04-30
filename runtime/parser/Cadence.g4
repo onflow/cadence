@@ -396,12 +396,7 @@ relationalExpression
 
 nilCoalescingExpression
     // NOTE: right associative
-    : castingExpression (NilCoalescing nilCoalescingExpression)?
-    ;
-
-castingExpression
-    : concatenatingExpression
-    | castingExpression castingOp typeAnnotation
+    : concatenatingExpression (NilCoalescing nilCoalescingExpression)?
     ;
 
 concatenatingExpression
@@ -415,8 +410,16 @@ additiveExpression
     ;
 
 multiplicativeExpression
+    : castingExpression
+    | multiplicativeExpression multiplicativeOp castingExpression
+    ;
+
+// Like in Rust and Kotlin, but unlike Swift,
+// casting has precedence over arithmetic
+
+castingExpression
     : unaryExpression
-    | multiplicativeExpression multiplicativeOp unaryExpression
+    | castingExpression castingOp typeAnnotation
     ;
 
 unaryExpression
