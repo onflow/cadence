@@ -1481,88 +1481,142 @@ func (interpreter *Interpreter) visitBinaryOperation(expr *ast.BinaryExpression)
 		})
 }
 
+func (interpreter *Interpreter) visitNumberBinaryOperation(
+	expression *ast.BinaryExpression,
+	f func(left, right NumberValue) Value,
+) ast.Repr {
+	return interpreter.visitBinaryOperation(expression).
+		Map(func(result interface{}) interface{} {
+			tuple := result.(valueTuple)
+			left := tuple.left.(NumberValue)
+			right := tuple.right.(NumberValue)
+			return f(left, right)
+		})
+}
+
 func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpression) ast.Repr {
 	switch expression.Operation {
 	case ast.OperationPlus:
-		return interpreter.visitBinaryOperation(expression).
-			Map(func(result interface{}) interface{} {
-				tuple := result.(valueTuple)
-				left := tuple.left.(NumberValue)
-				right := tuple.right.(NumberValue)
+		return interpreter.visitNumberBinaryOperation(
+			expression,
+			func(left, right NumberValue) Value {
 				return left.Plus(right)
-			})
+			},
+		)
 
 	case ast.OperationMinus:
-		return interpreter.visitBinaryOperation(expression).
-			Map(func(result interface{}) interface{} {
-				tuple := result.(valueTuple)
-				left := tuple.left.(NumberValue)
-				right := tuple.right.(NumberValue)
+		return interpreter.visitNumberBinaryOperation(
+			expression,
+			func(left, right NumberValue) Value {
 				return left.Minus(right)
-			})
+			},
+		)
 
 	case ast.OperationMod:
-		return interpreter.visitBinaryOperation(expression).
-			Map(func(result interface{}) interface{} {
-				tuple := result.(valueTuple)
-				left := tuple.left.(NumberValue)
-				right := tuple.right.(NumberValue)
+		return interpreter.visitNumberBinaryOperation(
+			expression,
+			func(left, right NumberValue) Value {
 				return left.Mod(right)
-			})
+			},
+		)
 
 	case ast.OperationMul:
-		return interpreter.visitBinaryOperation(expression).
-			Map(func(result interface{}) interface{} {
-				tuple := result.(valueTuple)
-				left := tuple.left.(NumberValue)
-				right := tuple.right.(NumberValue)
+		return interpreter.visitNumberBinaryOperation(
+			expression,
+			func(left, right NumberValue) Value {
 				return left.Mul(right)
-			})
+			},
+		)
 
 	case ast.OperationDiv:
-		return interpreter.visitBinaryOperation(expression).
-			Map(func(result interface{}) interface{} {
-				tuple := result.(valueTuple)
-				left := tuple.left.(NumberValue)
-				right := tuple.right.(NumberValue)
+		return interpreter.visitNumberBinaryOperation(
+			expression,
+			func(left, right NumberValue) Value {
 				return left.Div(right)
-			})
+			},
+		)
+
+	case ast.OperationBitwiseOr:
+		return interpreter.visitNumberBinaryOperation(
+			expression,
+			func(left, right NumberValue) Value {
+				leftInteger := left.(IntegerValue)
+				rightInteger := right.(IntegerValue)
+				return leftInteger.BitwiseOr(rightInteger)
+			},
+		)
+
+	case ast.OperationBitwiseXor:
+		return interpreter.visitNumberBinaryOperation(
+			expression,
+			func(left, right NumberValue) Value {
+				leftInteger := left.(IntegerValue)
+				rightInteger := right.(IntegerValue)
+				return leftInteger.BitwiseXor(rightInteger)
+			},
+		)
+
+	case ast.OperationBitwiseAnd:
+		return interpreter.visitNumberBinaryOperation(
+			expression,
+			func(left, right NumberValue) Value {
+				leftInteger := left.(IntegerValue)
+				rightInteger := right.(IntegerValue)
+				return leftInteger.BitwiseAnd(rightInteger)
+			},
+		)
+
+	case ast.OperationBitwiseLeftShift:
+		return interpreter.visitNumberBinaryOperation(
+			expression,
+			func(left, right NumberValue) Value {
+				leftInteger := left.(IntegerValue)
+				rightInteger := right.(IntegerValue)
+				return leftInteger.BitwiseLeftShift(rightInteger)
+			},
+		)
+
+	case ast.OperationBitwiseRightShift:
+		return interpreter.visitNumberBinaryOperation(
+			expression,
+			func(left, right NumberValue) Value {
+				leftInteger := left.(IntegerValue)
+				rightInteger := right.(IntegerValue)
+				return leftInteger.BitwiseRightShift(rightInteger)
+			},
+		)
 
 	case ast.OperationLess:
-		return interpreter.visitBinaryOperation(expression).
-			Map(func(result interface{}) interface{} {
-				tuple := result.(valueTuple)
-				left := tuple.left.(NumberValue)
-				right := tuple.right.(NumberValue)
+		return interpreter.visitNumberBinaryOperation(
+			expression,
+			func(left, right NumberValue) Value {
 				return left.Less(right)
-			})
+			},
+		)
 
 	case ast.OperationLessEqual:
-		return interpreter.visitBinaryOperation(expression).
-			Map(func(result interface{}) interface{} {
-				tuple := result.(valueTuple)
-				left := tuple.left.(NumberValue)
-				right := tuple.right.(NumberValue)
+		return interpreter.visitNumberBinaryOperation(
+			expression,
+			func(left, right NumberValue) Value {
 				return left.LessEqual(right)
-			})
+			},
+		)
 
 	case ast.OperationGreater:
-		return interpreter.visitBinaryOperation(expression).
-			Map(func(result interface{}) interface{} {
-				tuple := result.(valueTuple)
-				left := tuple.left.(NumberValue)
-				right := tuple.right.(NumberValue)
+		return interpreter.visitNumberBinaryOperation(
+			expression,
+			func(left, right NumberValue) Value {
 				return left.Greater(right)
-			})
+			},
+		)
 
 	case ast.OperationGreaterEqual:
-		return interpreter.visitBinaryOperation(expression).
-			Map(func(result interface{}) interface{} {
-				tuple := result.(valueTuple)
-				left := tuple.left.(NumberValue)
-				right := tuple.right.(NumberValue)
+		return interpreter.visitNumberBinaryOperation(
+			expression,
+			func(left, right NumberValue) Value {
 				return left.GreaterEqual(right)
-			})
+			},
+		)
 
 	case ast.OperationEqual:
 		return interpreter.visitBinaryOperation(expression).
@@ -1634,15 +1688,6 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 
 				value := left.(*SomeValue).Value
 				return Done{Result: value}
-			})
-
-	case ast.OperationConcat:
-		return interpreter.visitBinaryOperation(expression).
-			Map(func(result interface{}) interface{} {
-				tuple := result.(valueTuple)
-				left := tuple.left.(ConcatenatableValue)
-				right := tuple.right.(ConcatenatableValue)
-				return left.Concat(right)
 			})
 	}
 
