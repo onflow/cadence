@@ -1329,7 +1329,7 @@ func (v *ProgramVisitor) VisitRelationalExpression(ctx *RelationalExpressionCont
 func (v *ProgramVisitor) VisitNilCoalescingExpression(ctx *NilCoalescingExpressionContext) interface{} {
 	// NOTE: right associative
 
-	left := ctx.ConcatenatingExpression().Accept(v)
+	left := ctx.BitwiseOrExpression().Accept(v)
 	if left == nil {
 		return nil
 	}
@@ -1349,14 +1349,14 @@ func (v *ProgramVisitor) VisitNilCoalescingExpression(ctx *NilCoalescingExpressi
 	}
 }
 
-func (v *ProgramVisitor) VisitConcatenatingExpression(ctx *ConcatenatingExpressionContext) interface{} {
-	right := ctx.AdditiveExpression().Accept(v)
+func (v *ProgramVisitor) VisitBitwiseOrExpression(ctx *BitwiseOrExpressionContext) interface{} {
+	right := ctx.BitwiseXorExpression().Accept(v)
 	if right == nil {
 		return nil
 	}
 	rightExpression := right.(ast.Expression)
 
-	leftContext := ctx.ConcatenatingExpression()
+	leftContext := ctx.BitwiseOrExpression()
 	if leftContext == nil {
 		return rightExpression
 	}
@@ -1364,7 +1364,71 @@ func (v *ProgramVisitor) VisitConcatenatingExpression(ctx *ConcatenatingExpressi
 	leftExpression := leftContext.Accept(v).(ast.Expression)
 
 	return &ast.BinaryExpression{
-		Operation: ast.OperationConcat,
+		Operation: ast.OperationBitwiseOr,
+		Left:      leftExpression,
+		Right:     rightExpression,
+	}
+}
+
+func (v *ProgramVisitor) VisitBitwiseXorExpression(ctx *BitwiseXorExpressionContext) interface{} {
+	right := ctx.BitwiseAndExpression().Accept(v)
+	if right == nil {
+		return nil
+	}
+	rightExpression := right.(ast.Expression)
+
+	leftContext := ctx.BitwiseXorExpression()
+	if leftContext == nil {
+		return rightExpression
+	}
+
+	leftExpression := leftContext.Accept(v).(ast.Expression)
+
+	return &ast.BinaryExpression{
+		Operation: ast.OperationBitwiseXor,
+		Left:      leftExpression,
+		Right:     rightExpression,
+	}
+}
+
+func (v *ProgramVisitor) VisitBitwiseAndExpression(ctx *BitwiseAndExpressionContext) interface{} {
+	right := ctx.BitwiseShiftExpression().Accept(v)
+	if right == nil {
+		return nil
+	}
+	rightExpression := right.(ast.Expression)
+
+	leftContext := ctx.BitwiseAndExpression()
+	if leftContext == nil {
+		return rightExpression
+	}
+
+	leftExpression := leftContext.Accept(v).(ast.Expression)
+
+	return &ast.BinaryExpression{
+		Operation: ast.OperationBitwiseAnd,
+		Left:      leftExpression,
+		Right:     rightExpression,
+	}
+}
+
+func (v *ProgramVisitor) VisitBitwiseShiftExpression(ctx *BitwiseShiftExpressionContext) interface{} {
+	right := ctx.AdditiveExpression().Accept(v)
+	if right == nil {
+		return nil
+	}
+	rightExpression := right.(ast.Expression)
+
+	leftContext := ctx.BitwiseShiftExpression()
+	if leftContext == nil {
+		return rightExpression
+	}
+
+	leftExpression := leftContext.Accept(v).(ast.Expression)
+	operation := ctx.BitwiseShiftOp().Accept(v).(ast.Operation)
+
+	return &ast.BinaryExpression{
+		Operation: operation,
 		Left:      leftExpression,
 		Right:     rightExpression,
 	}
@@ -1622,7 +1686,7 @@ func (v *ProgramVisitor) VisitLiteral(ctx *LiteralContext) interface{} {
 
 func (v *ProgramVisitor) parseFixedPointPart(part string) (integer *big.Int, scale uint) {
 	withoutUnderscores := strings.Replace(part, "_", "", -1)
-	integer, _ = big.NewInt(0).SetString(withoutUnderscores, 10)
+	integer, _ = new(big.Int).SetString(withoutUnderscores, 10)
 	return integer, uint(len(withoutUnderscores))
 }
 
@@ -1693,7 +1757,7 @@ func (v *ProgramVisitor) parseIntegerExpression(token antlr.Token, text string, 
 	withoutUnderscores := strings.Replace(text, "_", "", -1)
 
 	base := kind.Base()
-	value, ok := big.NewInt(0).SetString(withoutUnderscores, base)
+	value, ok := new(big.Int).SetString(withoutUnderscores, base)
 	if !ok {
 		report(InvalidNumberLiteralKindUnknown)
 	}
@@ -2067,6 +2131,19 @@ func (v *ProgramVisitor) VisitRelationalOp(ctx *RelationalOpContext) interface{}
 
 	case ctx.GreaterEqual() != nil:
 		return ast.OperationGreaterEqual
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (v *ProgramVisitor) VisitBitwiseShiftOp(ctx *BitwiseShiftOpContext) interface{} {
+	switch {
+	case ctx.ShiftLeft() != nil:
+		return ast.OperationBitwiseLeftShift
+
+	case ctx.ShiftRight() != nil:
+		return ast.OperationBitwiseRightShift
 
 	default:
 		panic(errors.NewUnreachableError())

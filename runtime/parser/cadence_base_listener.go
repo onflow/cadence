@@ -1,21 +1,3 @@
-/*
- * Cadence - The resource-oriented smart contract programming language
- *
- * Copyright 2019-2020 Dapper Labs, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 // Code generated from parser/Cadence.g4 by ANTLR 4.7.2. DO NOT EDIT.
 
 package parser // Cadence
@@ -407,11 +389,29 @@ func (s *BaseCadenceListener) EnterNilCoalescingExpression(ctx *NilCoalescingExp
 // ExitNilCoalescingExpression is called when production nilCoalescingExpression is exited.
 func (s *BaseCadenceListener) ExitNilCoalescingExpression(ctx *NilCoalescingExpressionContext) {}
 
-// EnterConcatenatingExpression is called when production concatenatingExpression is entered.
-func (s *BaseCadenceListener) EnterConcatenatingExpression(ctx *ConcatenatingExpressionContext) {}
+// EnterBitwiseOrExpression is called when production bitwiseOrExpression is entered.
+func (s *BaseCadenceListener) EnterBitwiseOrExpression(ctx *BitwiseOrExpressionContext) {}
 
-// ExitConcatenatingExpression is called when production concatenatingExpression is exited.
-func (s *BaseCadenceListener) ExitConcatenatingExpression(ctx *ConcatenatingExpressionContext) {}
+// ExitBitwiseOrExpression is called when production bitwiseOrExpression is exited.
+func (s *BaseCadenceListener) ExitBitwiseOrExpression(ctx *BitwiseOrExpressionContext) {}
+
+// EnterBitwiseXorExpression is called when production bitwiseXorExpression is entered.
+func (s *BaseCadenceListener) EnterBitwiseXorExpression(ctx *BitwiseXorExpressionContext) {}
+
+// ExitBitwiseXorExpression is called when production bitwiseXorExpression is exited.
+func (s *BaseCadenceListener) ExitBitwiseXorExpression(ctx *BitwiseXorExpressionContext) {}
+
+// EnterBitwiseAndExpression is called when production bitwiseAndExpression is entered.
+func (s *BaseCadenceListener) EnterBitwiseAndExpression(ctx *BitwiseAndExpressionContext) {}
+
+// ExitBitwiseAndExpression is called when production bitwiseAndExpression is exited.
+func (s *BaseCadenceListener) ExitBitwiseAndExpression(ctx *BitwiseAndExpressionContext) {}
+
+// EnterBitwiseShiftExpression is called when production bitwiseShiftExpression is entered.
+func (s *BaseCadenceListener) EnterBitwiseShiftExpression(ctx *BitwiseShiftExpressionContext) {}
+
+// ExitBitwiseShiftExpression is called when production bitwiseShiftExpression is exited.
+func (s *BaseCadenceListener) ExitBitwiseShiftExpression(ctx *BitwiseShiftExpressionContext) {}
 
 // EnterAdditiveExpression is called when production additiveExpression is entered.
 func (s *BaseCadenceListener) EnterAdditiveExpression(ctx *AdditiveExpressionContext) {}
@@ -496,6 +496,12 @@ func (s *BaseCadenceListener) EnterRelationalOp(ctx *RelationalOpContext) {}
 
 // ExitRelationalOp is called when production relationalOp is exited.
 func (s *BaseCadenceListener) ExitRelationalOp(ctx *RelationalOpContext) {}
+
+// EnterBitwiseShiftOp is called when production bitwiseShiftOp is entered.
+func (s *BaseCadenceListener) EnterBitwiseShiftOp(ctx *BitwiseShiftOpContext) {}
+
+// ExitBitwiseShiftOp is called when production bitwiseShiftOp is exited.
+func (s *BaseCadenceListener) ExitBitwiseShiftOp(ctx *BitwiseShiftOpContext) {}
 
 // EnterAdditiveOp is called when production additiveOp is entered.
 func (s *BaseCadenceListener) EnterAdditiveOp(ctx *AdditiveOpContext) {}

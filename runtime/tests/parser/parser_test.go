@@ -983,85 +983,6 @@ func TestParseMultiplicativeExpression(t *testing.T) {
 	utils.AssertEqualWithDiff(t, expected, actual)
 }
 
-func TestParseConcatenatingExpression(t *testing.T) {
-
-	actual, _, err := parser.ParseProgram(`
-        let a = [1, 2] & [3, 4]
-	`)
-
-	require.NoError(t, err)
-
-	a := &VariableDeclaration{
-		IsConstant: true,
-		Identifier: Identifier{
-			Identifier: "a",
-			Pos:        Position{Offset: 13, Line: 2, Column: 12},
-		},
-		Transfer: &Transfer{
-			Operation: TransferOperationCopy,
-			Pos:       Position{Offset: 15, Line: 2, Column: 14},
-		},
-		Value: &BinaryExpression{
-			Operation: OperationConcat,
-			Left: &ArrayExpression{
-				Values: []Expression{
-					&IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
-						Range: Range{
-							StartPos: Position{Offset: 18, Line: 2, Column: 17},
-							EndPos:   Position{Offset: 18, Line: 2, Column: 17},
-						},
-					},
-					&IntegerExpression{
-						Value: big.NewInt(2),
-						Base:  10,
-						Range: Range{
-							StartPos: Position{Offset: 21, Line: 2, Column: 20},
-							EndPos:   Position{Offset: 21, Line: 2, Column: 20},
-						},
-					},
-				},
-				Range: Range{
-					StartPos: Position{Offset: 17, Line: 2, Column: 16},
-					EndPos:   Position{Offset: 22, Line: 2, Column: 21},
-				},
-			},
-			Right: &ArrayExpression{
-				Values: []Expression{
-					&IntegerExpression{
-						Value: big.NewInt(3),
-						Base:  10,
-						Range: Range{
-							StartPos: Position{Offset: 27, Line: 2, Column: 26},
-							EndPos:   Position{Offset: 27, Line: 2, Column: 26},
-						},
-					},
-					&IntegerExpression{
-						Value: big.NewInt(4),
-						Base:  10,
-						Range: Range{
-							StartPos: Position{Offset: 30, Line: 2, Column: 29},
-							EndPos:   Position{Offset: 30, Line: 2, Column: 29},
-						},
-					},
-				},
-				Range: Range{
-					StartPos: Position{Offset: 26, Line: 2, Column: 25},
-					EndPos:   Position{Offset: 31, Line: 2, Column: 30},
-				},
-			},
-		},
-		StartPos: Position{Offset: 9, Line: 2, Column: 8},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{a},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
-}
-
 func TestParseFunctionExpressionAndReturn(t *testing.T) {
 
 	actual, _, err := parser.ParseProgram(`
@@ -7995,6 +7916,97 @@ func TestParsePreconditionWithUnaryNegation(t *testing.T) {
 			},
 		},
 		StartPos: Position{Offset: 4, Line: 2, Column: 3},
+	}
+
+	expected := &Program{
+		Declarations: []Declaration{a},
+	}
+
+	utils.AssertEqualWithDiff(t, expected, actual)
+}
+
+func TestParseBitwiseExpression(t *testing.T) {
+
+	actual, _, err := parser.ParseProgram(`
+      let a = 1 | 2 ^ 3 & 4 << 5 >> 6
+	`)
+
+	require.NoError(t, err)
+
+	a := &VariableDeclaration{
+		IsConstant: true,
+		Identifier: Identifier{
+			Identifier: "a",
+			Pos:        Position{Offset: 11, Line: 2, Column: 10},
+		},
+		Transfer: &Transfer{
+			Operation: TransferOperationCopy,
+			Pos:       Position{Offset: 13, Line: 2, Column: 12},
+		},
+		Value: &BinaryExpression{
+			Operation: OperationBitwiseOr,
+			Left: &IntegerExpression{
+				Value: big.NewInt(1),
+				Base:  10,
+				Range: Range{
+					StartPos: Position{Offset: 15, Line: 2, Column: 14},
+					EndPos:   Position{Offset: 15, Line: 2, Column: 14},
+				},
+			},
+			Right: &BinaryExpression{
+				Operation: OperationBitwiseXor,
+				Left: &IntegerExpression{
+					Value: big.NewInt(2),
+					Base:  10,
+					Range: Range{
+						StartPos: Position{Offset: 19, Line: 2, Column: 18},
+						EndPos:   Position{Offset: 19, Line: 2, Column: 18},
+					},
+				},
+				Right: &BinaryExpression{
+					Operation: OperationBitwiseAnd,
+					Left: &IntegerExpression{
+						Value: big.NewInt(3),
+						Base:  10,
+						Range: Range{
+							StartPos: Position{Offset: 23, Line: 2, Column: 22},
+							EndPos:   Position{Offset: 23, Line: 2, Column: 22},
+						},
+					},
+					Right: &BinaryExpression{
+						Operation: OperationBitwiseRightShift,
+						Left: &BinaryExpression{
+							Operation: OperationBitwiseLeftShift,
+							Left: &IntegerExpression{
+								Value: big.NewInt(4),
+								Base:  10,
+								Range: Range{
+									StartPos: Position{Offset: 27, Line: 2, Column: 26},
+									EndPos:   Position{Offset: 27, Line: 2, Column: 26},
+								},
+							},
+							Right: &IntegerExpression{
+								Value: big.NewInt(5),
+								Base:  10,
+								Range: Range{
+									StartPos: Position{Offset: 32, Line: 2, Column: 31},
+									EndPos:   Position{Offset: 32, Line: 2, Column: 31},
+								},
+							},
+						},
+						Right: &IntegerExpression{
+							Value: big.NewInt(6),
+							Base:  10,
+							Range: Range{
+								StartPos: Position{Offset: 37, Line: 2, Column: 36},
+								EndPos:   Position{Offset: 37, Line: 2, Column: 36},
+							},
+						},
+					},
+				},
+			},
+		},
+		StartPos: Position{Offset: 7, Line: 2, Column: 6},
 	}
 
 	expected := &Program{

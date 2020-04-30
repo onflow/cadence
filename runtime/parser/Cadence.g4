@@ -396,12 +396,27 @@ relationalExpression
 
 nilCoalescingExpression
     // NOTE: right associative
-    : concatenatingExpression (NilCoalescing nilCoalescingExpression)?
+    : bitwiseOrExpression (NilCoalescing nilCoalescingExpression)?
     ;
 
-concatenatingExpression
+bitwiseOrExpression
+    : bitwiseXorExpression
+    | bitwiseOrExpression '|' bitwiseXorExpression
+    ;
+
+bitwiseXorExpression
+    : bitwiseAndExpression
+    | bitwiseXorExpression '^' bitwiseAndExpression
+    ;
+
+bitwiseAndExpression
+    : bitwiseShiftExpression
+    | bitwiseAndExpression '&' bitwiseShiftExpression
+    ;
+
+bitwiseShiftExpression
     : additiveExpression
-    | concatenatingExpression Ampersand additiveExpression
+    | bitwiseShiftExpression bitwiseShiftOp additiveExpression
     ;
 
 additiveExpression
@@ -465,6 +480,14 @@ Less : '<' ;
 Greater : '>' ;
 LessEqual : '<=' ;
 GreaterEqual : '>=' ;
+
+bitwiseShiftOp
+    : ShiftLeft
+    | ShiftRight
+    ;
+
+ShiftLeft : '<<' ;
+ShiftRight : '>>' ;
 
 additiveOp
     : Plus

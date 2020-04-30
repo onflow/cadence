@@ -1,21 +1,3 @@
-/*
- * Cadence - The resource-oriented smart contract programming language
- *
- * Copyright 2019-2020 Dapper Labs, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 // Code generated from parser/Cadence.g4 by ANTLR 4.7.2. DO NOT EDIT.
 
 package parser // Cadence
@@ -208,8 +190,17 @@ type CadenceListener interface {
 	// EnterNilCoalescingExpression is called when entering the nilCoalescingExpression production.
 	EnterNilCoalescingExpression(c *NilCoalescingExpressionContext)
 
-	// EnterConcatenatingExpression is called when entering the concatenatingExpression production.
-	EnterConcatenatingExpression(c *ConcatenatingExpressionContext)
+	// EnterBitwiseOrExpression is called when entering the bitwiseOrExpression production.
+	EnterBitwiseOrExpression(c *BitwiseOrExpressionContext)
+
+	// EnterBitwiseXorExpression is called when entering the bitwiseXorExpression production.
+	EnterBitwiseXorExpression(c *BitwiseXorExpressionContext)
+
+	// EnterBitwiseAndExpression is called when entering the bitwiseAndExpression production.
+	EnterBitwiseAndExpression(c *BitwiseAndExpressionContext)
+
+	// EnterBitwiseShiftExpression is called when entering the bitwiseShiftExpression production.
+	EnterBitwiseShiftExpression(c *BitwiseShiftExpressionContext)
 
 	// EnterAdditiveExpression is called when entering the additiveExpression production.
 	EnterAdditiveExpression(c *AdditiveExpressionContext)
@@ -252,6 +243,9 @@ type CadenceListener interface {
 
 	// EnterRelationalOp is called when entering the relationalOp production.
 	EnterRelationalOp(c *RelationalOpContext)
+
+	// EnterBitwiseShiftOp is called when entering the bitwiseShiftOp production.
+	EnterBitwiseShiftOp(c *BitwiseShiftOpContext)
 
 	// EnterAdditiveOp is called when entering the additiveOp production.
 	EnterAdditiveOp(c *AdditiveOpContext)
@@ -523,8 +517,17 @@ type CadenceListener interface {
 	// ExitNilCoalescingExpression is called when exiting the nilCoalescingExpression production.
 	ExitNilCoalescingExpression(c *NilCoalescingExpressionContext)
 
-	// ExitConcatenatingExpression is called when exiting the concatenatingExpression production.
-	ExitConcatenatingExpression(c *ConcatenatingExpressionContext)
+	// ExitBitwiseOrExpression is called when exiting the bitwiseOrExpression production.
+	ExitBitwiseOrExpression(c *BitwiseOrExpressionContext)
+
+	// ExitBitwiseXorExpression is called when exiting the bitwiseXorExpression production.
+	ExitBitwiseXorExpression(c *BitwiseXorExpressionContext)
+
+	// ExitBitwiseAndExpression is called when exiting the bitwiseAndExpression production.
+	ExitBitwiseAndExpression(c *BitwiseAndExpressionContext)
+
+	// ExitBitwiseShiftExpression is called when exiting the bitwiseShiftExpression production.
+	ExitBitwiseShiftExpression(c *BitwiseShiftExpressionContext)
 
 	// ExitAdditiveExpression is called when exiting the additiveExpression production.
 	ExitAdditiveExpression(c *AdditiveExpressionContext)
@@ -567,6 +570,9 @@ type CadenceListener interface {
 
 	// ExitRelationalOp is called when exiting the relationalOp production.
 	ExitRelationalOp(c *RelationalOpContext)
+
+	// ExitBitwiseShiftOp is called when exiting the bitwiseShiftOp production.
+	ExitBitwiseShiftOp(c *BitwiseShiftOpContext)
 
 	// ExitAdditiveOp is called when exiting the additiveOp production.
 	ExitAdditiveOp(c *AdditiveOpContext)
