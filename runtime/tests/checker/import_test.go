@@ -281,3 +281,51 @@ func TestCheckInvalidImportCycle(t *testing.T) {
 
 	assert.IsType(t, ast.CyclicImportsError{}, err)
 }
+
+func TestCheckImportVirtual(t *testing.T) {
+
+	const code = `
+       import Crypto
+
+       fun test(): UInt64 {
+           return Crypto.unsafeRandom()
+       }
+    `
+
+	cryptoType := &sema.CompositeType{
+		Location:   ast.IdentifierLocation("Crypto"),
+		Identifier: "Crypto",
+		Kind:       common.CompositeKindStructure,
+	}
+
+	cryptoType.Members = map[string]*sema.Member{
+		"unsafeRandom": sema.NewPublicFunctionMember(
+			cryptoType,
+			"unsafeRandom",
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.UInt64Type{}),
+			},
+		),
+	}
+
+	_, err := ParseAndCheckWithOptions(t,
+		code,
+		ParseAndCheckOptions{
+			Options: []sema.Option{
+				sema.WithImportHandler(func(location ast.Location) sema.Import {
+					return sema.VirtualImport{
+						ValueElements: map[string]sema.ImportElement{
+							"Crypto": {
+								DeclarationKind: common.DeclarationKindStructure,
+								Access:          ast.AccessPublic,
+								Type:            cryptoType,
+							},
+						},
+					}
+				}),
+			},
+		},
+	)
+
+	require.NoError(t, err)
+}

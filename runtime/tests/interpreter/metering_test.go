@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/tests/checker"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretStatementHandler(t *testing.T) {
@@ -95,6 +96,17 @@ func TestInterpretStatementHandler(t *testing.T) {
 					interpreterID: id,
 					line:          statement.Line,
 				})
+			},
+		),
+		interpreter.WithImportLocationHandler(
+			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
+				assert.Equal(t,
+					utils.ImportedLocation,
+					location,
+				)
+				return interpreter.ProgramImport{
+					Program: checkerImported.Program,
+				}
 			},
 		),
 	)
@@ -189,6 +201,17 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 				line:          line,
 			})
 		}),
+		interpreter.WithImportLocationHandler(
+			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
+				assert.Equal(t,
+					utils.ImportedLocation,
+					location,
+				)
+				return interpreter.ProgramImport{
+					Program: checkerImported.Program,
+				}
+			},
+		),
 	)
 	require.NoError(t, err)
 
@@ -289,6 +312,17 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 					interpreterID: id,
 					line:          line,
 				})
+			},
+		),
+		interpreter.WithImportLocationHandler(
+			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
+				assert.Equal(t,
+					utils.ImportedLocation,
+					location,
+				)
+				return interpreter.ProgramImport{
+					Program: checkerImported.Program,
+				}
 			},
 		),
 	)

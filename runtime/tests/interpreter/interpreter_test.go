@@ -4096,7 +4096,20 @@ func TestInterpretImport(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	inter, err := interpreter.NewInterpreter(checkerImporting)
+	inter, err := interpreter.NewInterpreter(
+		checkerImporting,
+		interpreter.WithImportLocationHandler(
+			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
+				assert.Equal(t,
+					ImportedLocation,
+					location,
+				)
+				return interpreter.ProgramImport{
+					Program: checkerImported.Program,
+				}
+			},
+		),
+	)
 	require.NoError(t, err)
 
 	err = inter.Interpret()
@@ -4164,6 +4177,17 @@ func TestInterpretImportError(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		checkerImporting,
 		interpreter.WithPredefinedValues(values),
+		interpreter.WithImportLocationHandler(
+			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
+				assert.Equal(t,
+					ImportedLocation,
+					location,
+				)
+				return interpreter.ProgramImport{
+					Program: checkerImported.Program,
+				}
+			},
+		),
 	)
 	require.NoError(t, err)
 
@@ -5449,7 +5473,20 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
 	)
 	require.NoError(t, err)
 
-	inter, err := interpreter.NewInterpreter(checkerImporting)
+	inter, err := interpreter.NewInterpreter(
+		checkerImporting,
+		interpreter.WithImportLocationHandler(
+			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
+				assert.Equal(t,
+					ImportedLocation,
+					location,
+				)
+				return interpreter.ProgramImport{
+					Program: checkerImported.Program,
+				}
+			},
+		),
+	)
 	require.NoError(t, err)
 
 	err = inter.Interpret()
@@ -6865,7 +6902,20 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	inter, err := interpreter.NewInterpreter(checkerImporting)
+	inter, err := interpreter.NewInterpreter(
+		checkerImporting,
+		interpreter.WithImportLocationHandler(
+			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
+				assert.Equal(t,
+					ImportedLocation,
+					location,
+				)
+				return interpreter.ProgramImport{
+					Program: checkerImported.Program,
+				}
+			},
+		),
+	)
 	require.NoError(t, err)
 
 	err = inter.Interpret()
