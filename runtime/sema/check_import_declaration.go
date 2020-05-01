@@ -29,23 +29,9 @@ func (checker *Checker) VisitImportDeclaration(_ *ast.ImportDeclaration) ast.Rep
 }
 
 func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclaration) ast.Repr {
-	imports := checker.Program.ImportedPrograms()
 
-	locationID := declaration.Location.ID()
-
-	// Find the imported program.
-	// If it is not available, report an error and return
-
-	imported := imports[locationID]
-	if imported == nil {
-		checker.report(
-			&UnresolvedImportError{
-				ImportLocation: declaration.Location,
-				Range:          ast.NewRangeFromPositioned(declaration),
-			},
-		)
-		return nil
-	}
+	location := declaration.Location
+	locationID := location.ID()
 
 	// TODO: allow repeated imports of different sets
 
@@ -55,7 +41,7 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 	if checker.seenImports[locationID] {
 		checker.report(
 			&RepeatedImportError{
-				ImportLocation: declaration.Location,
+				ImportLocation: location,
 				Range: ast.Range{
 					StartPos: declaration.LocationPos,
 					EndPos:   declaration.LocationPos,
@@ -66,18 +52,47 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 	}
 	checker.seenImports[locationID] = true
 
-	importChecker, checkerErr := checker.EnsureLoaded(
-		declaration.Location,
-		func() *ast.Program {
-			return imported
-		},
-	)
-	if checkerErr != nil {
+	// Find the imported program.
+	// If it is not available, ask the import handler, if any.
+	// If no handler is available or the location can also not be resolved using the handler,
+	// report an error and return.
+
+	imports := checker.Program.ImportedPrograms()
+
+	var imp Import
+
+	importedProgram := imports[locationID]
+
+	if importedProgram != nil {
+
+		importChecker, err := checker.EnsureLoaded(
+			location,
+			func() *ast.Program {
+				return importedProgram
+			},
+		)
+		if err != nil {
+			checker.report(
+				&ImportedProgramError{
+					CheckerError:   err,
+					ImportLocation: location,
+					Pos:            declaration.LocationPos,
+				},
+			)
+			return nil
+		}
+
+		imp = CheckerImport{importChecker}
+
+	} else if checker.importHandler != nil {
+		imp = checker.importHandler(location)
+	}
+
+	if imp == nil {
 		checker.report(
-			&ImportedProgramError{
-				CheckerError:   checkerErr,
-				ImportLocation: declaration.Location,
-				Pos:            declaration.LocationPos,
+			&UnresolvedImportError{
+				ImportLocation: location,
+				Range:          ast.NewRangeFromPositioned(declaration),
 			},
 		)
 		return nil
@@ -85,39 +100,20 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 
 	// Attempt to import the requested value declarations
 
-	foundValues, invalidAccessedValues := checker.importVariables(
+	foundValues, invalidAccessedValues := checker.importElements(
 		checker.valueActivations,
 		declaration.Identifiers,
-		importChecker.GlobalValues,
-		func(name string) bool {
-			// Don't import predeclared values
-			if _, ok := importChecker.PredeclaredValues[name]; ok {
-				return false
-			}
-
-			// Don't import base values
-			if _, ok := BaseValues[name]; ok {
-				return false
-			}
-
-			return true
-		},
+		imp.AllValueElements(),
+		imp.IsImportableValue,
 	)
 
 	// Attempt to import the requested type declarations
 
-	foundTypes, invalidAccessedTypes := checker.importVariables(
+	foundTypes, invalidAccessedTypes := checker.importElements(
 		checker.typeActivations,
 		declaration.Identifiers,
-		importChecker.GlobalTypes,
-		func(name string) bool {
-			// don't import predeclared types
-			if _, ok := importChecker.PredeclaredTypes[name]; ok {
-				return false
-			}
-
-			return true
-		},
+		imp.AllTypeElements(),
+		imp.IsImportableType,
 	)
 
 	// For each identifier, report if the import is invalid due to
@@ -126,9 +122,9 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 
 	for _, identifier := range declaration.Identifiers {
 
-		invalidAccessVariable, isInvalidAccess := invalidAccessedValues[identifier]
+		invalidAccessedElement, isInvalidAccess := invalidAccessedValues[identifier]
 		if !isInvalidAccess {
-			invalidAccessVariable, isInvalidAccess = invalidAccessedTypes[identifier]
+			invalidAccessedElement, isInvalidAccess = invalidAccessedTypes[identifier]
 		}
 
 		if !isInvalidAccess {
@@ -138,8 +134,8 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 		checker.report(
 			&InvalidAccessError{
 				Name:              identifier.Identifier,
-				RestrictingAccess: invalidAccessVariable.Access,
-				DeclarationKind:   invalidAccessVariable.DeclarationKind,
+				RestrictingAccess: invalidAccessedElement.Access,
+				DeclarationKind:   invalidAccessedElement.DeclarationKind,
 				Range:             ast.NewRangeFromPositioned(identifier),
 			},
 		)
@@ -160,7 +156,7 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 		missing[identifier] = true
 	}
 
-	checker.handleMissingImports(missing, declaration.Location)
+	checker.handleMissingImports(missing, location)
 
 	return nil
 }
@@ -186,18 +182,22 @@ func (checker *Checker) EnsureLoaded(location ast.Location, loadProgram func() *
 			WithValidTopLevelDeclarationsHandler(checker.validTopLevelDeclarationsHandler),
 			WithAllCheckers(checker.allCheckers),
 			WithCheckHandler(checker.checkHandler),
+			WithImportHandler(checker.importHandler),
 		)
 		if err == nil {
 			checker.allCheckers[locationID] = subChecker
 		}
 	}
 
-	// Check the imported program.
-	// If there is a checker error, return and import nothing
+	// Check the imported program, if any.
 
-	// NOTE: ignore generic `error` result, get internal *CheckerError
-	_ = subChecker.Check()
-	checkerErr := subChecker.CheckerError()
+	var checkerErr *CheckerError
+	if subChecker.Program != nil {
+		// NOTE: ignore generic `error`-typed result, get internal `*CheckerError`
+
+		_ = subChecker.Check()
+		checkerErr = subChecker.CheckerError()
+	}
 
 	return subChecker, checkerErr
 }
@@ -238,42 +238,42 @@ func (checker *Checker) handleMissingImports(missing map[ast.Identifier]bool, im
 	}
 }
 
-func (checker *Checker) importVariables(
+func (checker *Checker) importElements(
 	valueActivations *VariableActivations,
 	requestedIdentifiers []ast.Identifier,
-	availableVariables map[string]*Variable,
+	availableElements map[string]ImportElement,
 	filter func(name string) bool,
 ) (
 	found map[ast.Identifier]bool,
-	invalidAccessed map[ast.Identifier]*Variable,
+	invalidAccessed map[ast.Identifier]ImportElement,
 ) {
 	found = map[ast.Identifier]bool{}
-	invalidAccessed = map[ast.Identifier]*Variable{}
+	invalidAccessed = map[ast.Identifier]ImportElement{}
 
 	// Determine which identifiers are imported /
 	// which variables need to be declared
 
 	explicitlyImported := map[string]ast.Identifier{}
 
-	var variables map[string]*Variable
+	var elements map[string]ImportElement
 	identifiersCount := len(requestedIdentifiers)
-	if identifiersCount > 0 {
-		variables = make(map[string]*Variable, identifiersCount)
+	if identifiersCount > 0 && availableElements != nil {
+		elements = make(map[string]ImportElement, identifiersCount)
 		for _, identifier := range requestedIdentifiers {
 			name := identifier.Identifier
-			variable := availableVariables[name]
-			if variable == nil {
+			element, ok := availableElements[name]
+			if !ok {
 				continue
 			}
-			variables[name] = variable
+			elements[name] = element
 			found[identifier] = true
 			explicitlyImported[name] = identifier
 		}
 	} else {
-		variables = availableVariables
+		elements = availableElements
 	}
 
-	for name, variable := range variables {
+	for name, element := range elements {
 
 		if !filter(name) {
 			continue
@@ -282,14 +282,14 @@ func (checker *Checker) importVariables(
 		// If the variable can't be imported due to restricted access,
 		// report an error, but still import the variable
 
-		access := variable.Access
+		access := element.Access
 
 		if !checker.isReadableAccess(access) {
 
 			// If the variable was imported explicitly, report an error
 
 			if identifier, ok := explicitlyImported[name]; ok {
-				invalidAccessed[identifier] = variable
+				invalidAccessed[identifier] = element
 			} else {
 				// Don't import not explicitly imported inaccessible variable
 				continue
@@ -298,14 +298,14 @@ func (checker *Checker) importVariables(
 
 		_, err := valueActivations.Declare(variableDeclaration{
 			identifier: name,
-			ty:         variable.Type,
+			ty:         element.Type,
 			// TODO: implies that type is "re-exported"
 			access: access,
-			kind:   variable.DeclarationKind,
+			kind:   element.DeclarationKind,
 			// TODO:
 			pos:                      ast.Position{},
 			isConstant:               true,
-			argumentLabels:           variable.ArgumentLabels,
+			argumentLabels:           element.ArgumentLabels,
 			allowOuterScopeShadowing: false,
 		})
 		checker.report(err)

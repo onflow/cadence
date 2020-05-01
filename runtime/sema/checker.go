@@ -62,6 +62,10 @@ var beforeType = func() *FunctionType {
 	}
 }()
 
+type ValidTopLevelDeclarationsHandlerFunc = func(ast.Location) []common.DeclarationKind
+
+type ImportHandlerFunc = func(location ast.Location) Import
+
 // Checker
 
 type Checker struct {
@@ -92,7 +96,8 @@ type Checker struct {
 	allowSelfResourceFieldInvalidation bool
 	Elaboration                        *Elaboration
 	currentMemberExpression            *ast.MemberExpression
-	validTopLevelDeclarationsHandler   func(ast.Location) []common.DeclarationKind
+	validTopLevelDeclarationsHandler   ValidTopLevelDeclarationsHandlerFunc
+	importHandler                      ImportHandlerFunc
 	beforeExtractor                    *BeforeExtractor
 	checkHandler                       CheckHandlerFunc
 }
@@ -139,7 +144,7 @@ func WithAccessCheckMode(mode AccessCheckMode) Option {
 // the slice of declaration kinds which are valid at the top-level
 // for a given location.
 //
-func WithValidTopLevelDeclarationsHandler(handler func(location ast.Location) []common.DeclarationKind) Option {
+func WithValidTopLevelDeclarationsHandler(handler ValidTopLevelDeclarationsHandlerFunc) Option {
 	return func(checker *Checker) error {
 		checker.validTopLevelDeclarationsHandler = handler
 		return nil
@@ -164,6 +169,16 @@ type CheckHandlerFunc func(location ast.Location, check func())
 func WithCheckHandler(handler CheckHandlerFunc) Option {
 	return func(checker *Checker) error {
 		checker.checkHandler = handler
+		return nil
+	}
+}
+
+// WithImportHandler returns a checker option which sets
+// the given handler as function which is used to resolve unresolved imports.
+//
+func WithImportHandler(handler ImportHandlerFunc) Option {
+	return func(checker *Checker) error {
+		checker.importHandler = handler
 		return nil
 	}
 }
