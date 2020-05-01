@@ -443,7 +443,7 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 	t.Parallel()
 
 	barResourceType := cadence.ResourceType{
-		TypeID:     "test.Bar",
+		TypeID:     "S.test.Bar",
 		Identifier: "Bar",
 		Fields: []cadence.Field{
 			{
@@ -458,7 +458,7 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 	}
 
 	fooResourceType := cadence.ResourceType{
-		TypeID:     "test.Foo",
+		TypeID:     "S.test.Foo",
 		Identifier: "Foo",
 		Fields: []cadence.Field{
 			{
@@ -577,7 +577,7 @@ const testLocation = StringLocation("test")
 
 const fooID = "Foo"
 
-var fooTypeID = fmt.Sprintf("%s.%s", testLocation, fooID)
+var fooTypeID = fmt.Sprintf("S.%s.%s", testLocation, fooID)
 var fooFields = []cadence.Field{
 	{
 		Identifier: "bar",

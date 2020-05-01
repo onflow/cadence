@@ -20,7 +20,6 @@ package runtime
 
 import (
 	"encoding/hex"
-	"fmt"
 
 	"github.com/onflow/cadence/runtime/ast"
 )
@@ -33,9 +32,11 @@ type (
 )
 
 const (
-	AddressPrefix            = ast.AddressPrefix
-	TransactionPrefix string = "T"
-	ScriptPrefix      string = "S"
+	IdentifierLocationPrefix  = ast.IdentifierLocationPrefix
+	StringLocationPrefix      = ast.StringLocationPrefix
+	AddressLocationPrefix     = ast.AddressLocationPrefix
+	TransactionLocationPrefix = "t"
+	ScriptLocationPrefix      = "s"
 )
 
 // TransactionLocation
@@ -43,11 +44,7 @@ const (
 type TransactionLocation []byte
 
 func (l TransactionLocation) ID() ast.LocationID {
-	return LocationID(fmt.Sprintf(
-		"%s.%s",
-		TransactionPrefix,
-		l.String(),
-	))
+	return ast.NewLocationID(TransactionLocationPrefix, l.String())
 }
 
 func (l TransactionLocation) String() string {
@@ -59,11 +56,7 @@ func (l TransactionLocation) String() string {
 type ScriptLocation []byte
 
 func (l ScriptLocation) ID() ast.LocationID {
-	return LocationID(fmt.Sprintf(
-		"%s.%s",
-		ScriptPrefix,
-		l.String(),
-	))
+	return ast.NewLocationID(ScriptLocationPrefix, l.String())
 }
 
 func (l ScriptLocation) String() string {

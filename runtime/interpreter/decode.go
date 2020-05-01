@@ -327,6 +327,9 @@ func (d *Decoder) decodeLocation(l interface{}) (ast.Location, error) {
 	case cborTagStringLocation:
 		return d.decodeStringLocation(content)
 
+	case cborTagIdentifierLocation:
+		return d.decodeIdentifierLocation(content)
+
 	default:
 		return nil, fmt.Errorf("invalid location encoding tag: %d", tag.Number)
 	}
@@ -352,6 +355,14 @@ func (d *Decoder) decodeStringLocation(content interface{}) (ast.Location, error
 		return nil, fmt.Errorf("invalid string location encoding: %T", content)
 	}
 	return ast.StringLocation(s), nil
+}
+
+func (d *Decoder) decodeIdentifierLocation(content interface{}) (ast.Location, error) {
+	s, ok := content.(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid identifier location encoding: %T", content)
+	}
+	return ast.IdentifierLocation(s), nil
 }
 
 func (d *Decoder) decodeComposite(v interface{}, path []string) (*CompositeValue, error) {

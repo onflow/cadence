@@ -62,42 +62,50 @@ func TestCompositeType_ID(t *testing.T) {
 
 	t.Parallel()
 
+	location := ast.StringLocation("x")
+
 	t.Run("composite in composite", func(t *testing.T) {
 
 		compositeInComposite :=
 			&CompositeType{
-				Location:   ast.StringLocation("x"),
+				Location:   location,
 				Identifier: "C",
 				ContainerType: &CompositeType{
-					Location:   ast.StringLocation("x"),
+					Location:   location,
 					Identifier: "B",
 					ContainerType: &CompositeType{
-						Location:   ast.StringLocation("x"),
+						Location:   location,
 						Identifier: "A",
 					},
 				},
 			}
 
-		assert.Equal(t, compositeInComposite.ID(), TypeID("x.A.B.C"))
+		assert.Equal(t,
+			TypeID(location.ID()+".A.B.C"),
+			compositeInComposite.ID(),
+		)
 	})
 
 	t.Run("composite in interface", func(t *testing.T) {
 
 		compositeInInterface :=
 			&CompositeType{
-				Location:   ast.StringLocation("x"),
+				Location:   location,
 				Identifier: "C",
 				ContainerType: &InterfaceType{
-					Location:   ast.StringLocation("x"),
+					Location:   location,
 					Identifier: "B",
 					ContainerType: &CompositeType{
-						Location:   ast.StringLocation("x"),
+						Location:   location,
 						Identifier: "A",
 					},
 				},
 			}
 
-		assert.Equal(t, compositeInInterface.ID(), TypeID("x.A.B.C"))
+		assert.Equal(t,
+			TypeID(location.ID()+".A.B.C"),
+			compositeInInterface.ID(),
+		)
 	})
 }
 
@@ -105,42 +113,50 @@ func TestInterfaceType_ID(t *testing.T) {
 
 	t.Parallel()
 
+	location := ast.StringLocation("x")
+
 	t.Run("interface in composite", func(t *testing.T) {
 
 		interfaceInComposite :=
 			&InterfaceType{
-				Location:   ast.StringLocation("x"),
+				Location:   location,
 				Identifier: "C",
 				ContainerType: &CompositeType{
-					Location:   ast.StringLocation("x"),
+					Location:   location,
 					Identifier: "B",
 					ContainerType: &CompositeType{
-						Location:   ast.StringLocation("x"),
+						Location:   location,
 						Identifier: "A",
 					},
 				},
 			}
 
-		assert.Equal(t, interfaceInComposite.ID(), TypeID("x.A.B.C"))
+		assert.Equal(t,
+			TypeID(location.ID()+".A.B.C"),
+			interfaceInComposite.ID(),
+		)
 	})
 
 	t.Run("interface in interface", func(t *testing.T) {
 
 		interfaceInInterface :=
 			&InterfaceType{
-				Location:   ast.StringLocation("x"),
+				Location:   location,
 				Identifier: "C",
 				ContainerType: &InterfaceType{
-					Location:   ast.StringLocation("x"),
+					Location:   location,
 					Identifier: "B",
 					ContainerType: &CompositeType{
-						Location:   ast.StringLocation("x"),
+						Location:   location,
 						Identifier: "A",
 					},
 				},
 			}
 
-		assert.Equal(t, interfaceInInterface.ID(), TypeID("x.A.B.C"))
+		assert.Equal(t,
+			TypeID(location.ID()+".A.B.C"),
+			interfaceInInterface.ID(),
+		)
 	})
 }
 

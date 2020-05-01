@@ -569,7 +569,7 @@ func TestEncodeArray(t *testing.T) {
 				cadence.NewInt(3),
 			}).WithType(fooResourceType),
 		}),
-		`{"type":"Array","value":[{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"1"}}]}},{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"2"}}]}},{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"3"}}]}}]}`,
+		`{"type":"Array","value":[{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"1"}}]}},{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"2"}}]}},{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"3"}}]}}]}`,
 	}
 
 	testAllEncode(t,
@@ -658,7 +658,7 @@ func TestEncodeDictionary(t *testing.T) {
 				}).WithType(fooResourceType),
 			},
 		}),
-		`{"type":"Dictionary","value":[{"key":{"type":"String","value":"a"},"value":{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"1"}}]}}},{"key":{"type":"String","value":"b"},"value":{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"2"}}]}}},{"key":{"type":"String","value":"c"},"value":{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"3"}}]}}}]}`,
+		`{"type":"Dictionary","value":[{"key":{"type":"String","value":"a"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"1"}}]}}},{"key":{"type":"String","value":"b"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"2"}}]}}},{"key":{"type":"String","value":"c"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"3"}}]}}}]}`,
 	}
 
 	testAllEncode(t,
@@ -686,7 +686,7 @@ func TestEncodeResource(t *testing.T) {
         }
     `
 
-	expectedJSON := `{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}},{"name":"uuid","value":{"type":"UInt64","value":"0"}}]}}`
+	expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}},{"name":"uuid","value":{"type":"UInt64","value":"0"}}]}}`
 
 	v := convertValueFromScript(t, script)
 
@@ -723,7 +723,7 @@ func TestEncodeNestedResource(t *testing.T) {
         }
     `
 
-	expectedJSON := `{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Resource","value":{"id":"test.Bar","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"x","value":{"type":"Int","value":"42"}}]}}},{"name":"uuid","value":{"type":"UInt64","value":"0"}}]}}`
+	expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Resource","value":{"id":"S.test.Bar","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"x","value":{"type":"Int","value":"42"}}]}}},{"name":"uuid","value":{"type":"UInt64","value":"0"}}]}}`
 
 	v := convertValueFromScript(t, script)
 
@@ -735,7 +735,7 @@ func TestEncodeStruct(t *testing.T) {
 	t.Parallel()
 
 	simpleStructType := cadence.StructType{
-		TypeID:     "test.FooStruct",
+		TypeID:     "S.test.FooStruct",
 		Identifier: "FooStruct",
 		Fields: []cadence.Field{
 			{
@@ -757,11 +757,11 @@ func TestEncodeStruct(t *testing.T) {
 				cadence.NewString("foo"),
 			},
 		).WithType(simpleStructType),
-		`{"type":"Struct","value":{"id":"test.FooStruct","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
+		`{"type":"Struct","value":{"id":"S.test.FooStruct","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
 	}
 
 	resourceStructType := cadence.StructType{
-		TypeID:     "test.FooStruct",
+		TypeID:     "S.test.FooStruct",
 		Identifier: "FooStruct",
 		Fields: []cadence.Field{
 			{
@@ -787,7 +787,7 @@ func TestEncodeStruct(t *testing.T) {
 				).WithType(fooResourceType),
 			},
 		).WithType(resourceStructType),
-		`{"type":"Struct","value":{"id":"test.FooStruct","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
+		`{"type":"Struct","value":{"id":"S.test.FooStruct","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
 	}
 
 	testAllEncode(t, simpleStruct, resourceStruct)
@@ -798,7 +798,7 @@ func TestEncodeEvent(t *testing.T) {
 	t.Parallel()
 
 	simpleEventType := cadence.EventType{
-		TypeID:     "test.FooEvent",
+		TypeID:     "S.test.FooEvent",
 		Identifier: "FooEvent",
 		Fields: []cadence.Field{
 			{
@@ -820,11 +820,11 @@ func TestEncodeEvent(t *testing.T) {
 				cadence.NewString("foo"),
 			},
 		).WithType(simpleEventType),
-		`{"type":"Event","value":{"id":"test.FooEvent","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
+		`{"type":"Event","value":{"id":"S.test.FooEvent","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
 	}
 
 	resourceEventType := cadence.EventType{
-		TypeID:     "test.FooEvent",
+		TypeID:     "S.test.FooEvent",
 		Identifier: "FooEvent",
 		Fields: []cadence.Field{
 			{
@@ -850,7 +850,7 @@ func TestEncodeEvent(t *testing.T) {
 				).WithType(fooResourceType),
 			},
 		).WithType(resourceEventType),
-		`{"type":"Event","value":{"id":"test.FooEvent","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
+		`{"type":"Event","value":{"id":"S.test.FooEvent","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
 	}
 
 	testAllEncode(t, simpleEvent, resourceEvent)
@@ -897,7 +897,7 @@ func testEncode(t *testing.T, val cadence.Value, expectedJSON string) {
 }
 
 var fooResourceType = cadence.ResourceType{
-	TypeID:     "test.Foo",
+	TypeID:     "S.test.Foo",
 	Identifier: "Foo",
 	Fields: []cadence.Field{
 		{

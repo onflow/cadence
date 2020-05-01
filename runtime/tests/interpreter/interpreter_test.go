@@ -6648,7 +6648,7 @@ func TestInterpretCompositeDeclarationNestedTypeScopingOuterInner(t *testing.T) 
 	)
 
 	assert.Equal(t,
-		sema.TypeID("test.Test.X"),
+		sema.TypeID("S.test.Test.X"),
 		x1.(*interpreter.CompositeValue).TypeID,
 	)
 
@@ -6658,7 +6658,7 @@ func TestInterpretCompositeDeclarationNestedTypeScopingOuterInner(t *testing.T) 
 	)
 
 	assert.Equal(t,
-		sema.TypeID("test.Test.X"),
+		sema.TypeID("S.test.Test.X"),
 		x2.(*interpreter.CompositeValue).TypeID,
 	)
 }
@@ -6691,7 +6691,7 @@ func TestInterpretCompositeDeclarationNestedConstructor(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		sema.TypeID("test.Test.X"),
+		sema.TypeID("S.test.Test.X"),
 		x.(*interpreter.CompositeValue).TypeID,
 	)
 }

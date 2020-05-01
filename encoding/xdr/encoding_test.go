@@ -700,7 +700,7 @@ func testEncode(t *testing.T, typ cadence.Type, val cadence.Value) {
 }
 
 var fooResourceType = cadence.ResourceType{
-	TypeID:     "test.Foo",
+	TypeID:     "S.test.Foo",
 	Identifier: "Foo",
 	Fields: []cadence.Field{
 		{

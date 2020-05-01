@@ -120,7 +120,7 @@ const (
 	// Locations
 	cborTagAddressLocation
 	cborTagStringLocation
-	_
+	cborTagIdentifierLocation
 	_
 	_
 	_
@@ -831,6 +831,12 @@ func (e *Encoder) prepareLocation(l ast.Location) (interface{}, error) {
 	case ast.StringLocation:
 		return cbor.Tag{
 			Number:  cborTagStringLocation,
+			Content: string(l),
+		}, nil
+
+	case ast.IdentifierLocation:
+		return cbor.Tag{
+			Number:  cborTagIdentifierLocation,
 			Content: string(l),
 		}, nil
 
