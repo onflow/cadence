@@ -4935,7 +4935,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	// if composite was deserialized, dynamically link in the destructor
 	if v.Destructor == nil {
-		v.Destructor = interpreter.typeCodes.compositeCodes[v.TypeID].destructorFunction
+		v.Destructor = interpreter.typeCodes.CompositeCodes[v.TypeID].DestructorFunction
 	}
 
 	destructor := v.Destructor
@@ -5082,9 +5082,12 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	// NOTE: standard library values have no location
 
 	if v.Location != nil && !ast.LocationsMatch(interpreter.Checker.Location, v.Location) {
-		interpreter = interpreter.ensureLoaded(v.Location, func() *ast.Program {
-			return interpreter.importProgramHandler(interpreter, v.Location)
-		})
+		interpreter = interpreter.ensureLoaded(
+			v.Location,
+			func() Import {
+				return interpreter.importLocationHandler(interpreter, v.Location)
+			},
+		)
 	}
 
 	// If the composite value was deserialized, dynamically link in the functions
@@ -5123,7 +5126,8 @@ func (v *CompositeValue) InitializeFunctions(interpreter *Interpreter) {
 	if v.Functions != nil {
 		return
 	}
-	v.Functions = interpreter.typeCodes.compositeCodes[v.TypeID].compositeFunctions
+
+	v.Functions = interpreter.typeCodes.CompositeCodes[v.TypeID].CompositeFunctions
 }
 
 func (v *CompositeValue) OwnerValue() OptionalValue {

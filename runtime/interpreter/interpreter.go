@@ -153,49 +153,63 @@ type ContractValueHandlerFunc func(
 	constructor FunctionValue,
 ) *CompositeValue
 
-// ImportProgramHandlerFunc is a function that handles imports of programs.
+// ImportLocationFunc is a function that handles imports of locations.
 //
-type ImportProgramHandlerFunc func(
+type ImportLocationHandlerFunc func(
 	inter *Interpreter,
 	location ast.Location,
-) *ast.Program
+) Import
 
 // UUIDHandlerFunc is a function that handles the generation of UUIDs.
 type UUIDHandlerFunc func() uint64
 
-// compositeTypeCode contains the the "prepared" / "callable" "code"
+// CompositeTypeCode contains the the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
 // (contract, struct, resource, event).
 //
 // As there is no support for inheritance of concrete types,
 // these are the "leaf" nodes in the call chain, and are functions.
 //
-type compositeTypeCode struct {
-	compositeFunctions map[string]FunctionValue
-	destructorFunction FunctionValue
+type CompositeTypeCode struct {
+	CompositeFunctions map[string]FunctionValue
+	DestructorFunction FunctionValue
 }
 
 type FunctionWrapper = func(inner FunctionValue) FunctionValue
 
-// wrapperCode contains the "prepared" / "callable" "code"
+// WrapperCode contains the "prepared" / "callable" "code"
 // for inherited types (interfaces and type requirements).
 //
 // These are "branch" nodes in the call chain, and are function wrappers,
 // i.e. they wrap the functions / function wrappers that inherit them.
 //
-type wrapperCode struct {
-	initializerFunctionWrapper FunctionWrapper
-	destructorFunctionWrapper  FunctionWrapper
-	functionWrappers           map[string]FunctionWrapper
+type WrapperCode struct {
+	InitializerFunctionWrapper FunctionWrapper
+	DestructorFunctionWrapper  FunctionWrapper
+	FunctionWrappers           map[string]FunctionWrapper
 }
 
-// typeCodes is the value which stores the "prepared" / "callable" "code"
+// TypeCodes is the value which stores the "prepared" / "callable" "code"
 // of all composite types, interface types, and type requirements.
 //
-type typeCodes struct {
-	compositeCodes       map[sema.TypeID]compositeTypeCode
-	interfaceCodes       map[sema.TypeID]wrapperCode
-	typeRequirementCodes map[sema.TypeID]wrapperCode
+type TypeCodes struct {
+	CompositeCodes       map[sema.TypeID]CompositeTypeCode
+	InterfaceCodes       map[sema.TypeID]WrapperCode
+	TypeRequirementCodes map[sema.TypeID]WrapperCode
+}
+
+func (c TypeCodes) Merge(codes TypeCodes) {
+	for typeID, code := range codes.CompositeCodes {
+		c.CompositeCodes[typeID] = code
+	}
+
+	for typeID, code := range codes.InterfaceCodes {
+		c.InterfaceCodes[typeID] = code
+	}
+
+	for typeID, code := range codes.TypeRequirementCodes {
+		c.TypeRequirementCodes[typeID] = code
+	}
 }
 
 type Interpreter struct {
@@ -205,7 +219,7 @@ type Interpreter struct {
 	Globals                        map[string]*Variable
 	allInterpreters                map[ast.LocationID]*Interpreter
 	allCheckers                    map[ast.LocationID]*sema.Checker
-	typeCodes                      typeCodes
+	typeCodes                      TypeCodes
 	Transactions                   []*HostFunctionValue
 	onEventEmitted                 OnEventEmittedFunc
 	onStatement                    OnStatementFunc
@@ -217,7 +231,7 @@ type Interpreter struct {
 	storageKeyHandler              StorageKeyHandlerFunc
 	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	contractValueHandler           ContractValueHandlerFunc
-	importProgramHandler           ImportProgramHandlerFunc
+	importLocationHandler          ImportLocationHandlerFunc
 	uuidHandler                    UUIDHandlerFunc
 }
 
@@ -341,12 +355,12 @@ func WithContractValueHandler(handler ContractValueHandlerFunc) Option {
 	}
 }
 
-// WithImportProgramHandler returns an interpreter option which sets the given function
-// as the function that is used to handle the imports of programs.
+// WithImportLocationHandler returns an interpreter option which sets the given function
+// as the function that is used to handle the imports of locations.
 //
-func WithImportProgramHandler(handler ImportProgramHandlerFunc) Option {
+func WithImportLocationHandler(handler ImportLocationHandlerFunc) Option {
 	return func(interpreter *Interpreter) error {
-		interpreter.SetImportProgramHandler(handler)
+		interpreter.SetImportLocationHandler(handler)
 		return nil
 	}
 }
@@ -383,7 +397,7 @@ func WithAllCheckers(allCheckers map[ast.LocationID]*sema.Checker) Option {
 
 // withTypeCodes returns an interpreter option which sets the type codes.
 //
-func withTypeCodes(typeCodes typeCodes) Option {
+func withTypeCodes(typeCodes TypeCodes) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.setTypeCodes(typeCodes)
 		return nil
@@ -400,10 +414,10 @@ func NewInterpreter(checker *sema.Checker, options ...Option) (*Interpreter, err
 	defaultOptions := []Option{
 		WithAllInterpreters(map[ast.LocationID]*Interpreter{}),
 		WithAllCheckers(map[ast.LocationID]*sema.Checker{}),
-		withTypeCodes(typeCodes{
-			compositeCodes:       map[sema.TypeID]compositeTypeCode{},
-			interfaceCodes:       map[sema.TypeID]wrapperCode{},
-			typeRequirementCodes: map[sema.TypeID]wrapperCode{},
+		withTypeCodes(TypeCodes{
+			CompositeCodes:       map[sema.TypeID]CompositeTypeCode{},
+			InterfaceCodes:       map[sema.TypeID]WrapperCode{},
+			TypeRequirementCodes: map[sema.TypeID]WrapperCode{},
 		}),
 	}
 
@@ -480,10 +494,10 @@ func (interpreter *Interpreter) SetContractValueHandler(function ContractValueHa
 	interpreter.contractValueHandler = function
 }
 
-// SetImportProgramHandler sets the function that is used to handle imports of programs.
+// SetImportLocationHandler sets the function that is used to handle imports of locations.
 //
-func (interpreter *Interpreter) SetImportProgramHandler(function ImportProgramHandlerFunc) {
-	interpreter.importProgramHandler = function
+func (interpreter *Interpreter) SetImportLocationHandler(function ImportLocationHandlerFunc) {
+	interpreter.importLocationHandler = function
 }
 
 // SetUUIDHandler sets the function that is used to handle the generation of UUIDs.
@@ -513,7 +527,7 @@ func (interpreter *Interpreter) SetAllCheckers(allCheckers map[ast.LocationID]*s
 
 // setTypeCodes sets the type codes.
 //
-func (interpreter *Interpreter) setTypeCodes(typeCodes typeCodes) {
+func (interpreter *Interpreter) setTypeCodes(typeCodes TypeCodes) {
 	interpreter.typeCodes = typeCodes
 }
 
@@ -2373,12 +2387,12 @@ func (interpreter *Interpreter) declareCompositeValue(
 
 	functions := interpreter.compositeFunctions(declaration, lexicalScope)
 
-	wrapFunctions := func(code wrapperCode) {
+	wrapFunctions := func(code WrapperCode) {
 
 		// Wrap initializer
 
 		initializerFunctionWrapper :=
-			code.initializerFunctionWrapper
+			code.InitializerFunctionWrapper
 
 		if initializerFunctionWrapper != nil {
 			initializerFunction = initializerFunctionWrapper(initializerFunction)
@@ -2387,7 +2401,7 @@ func (interpreter *Interpreter) declareCompositeValue(
 		// Wrap destructor
 
 		destructorFunctionWrapper :=
-			code.destructorFunctionWrapper
+			code.DestructorFunctionWrapper
 
 		if destructorFunctionWrapper != nil {
 			destructorFunction = destructorFunctionWrapper(destructorFunction)
@@ -2395,7 +2409,7 @@ func (interpreter *Interpreter) declareCompositeValue(
 
 		// Wrap functions
 
-		for name, functionWrapper := range code.functionWrappers {
+		for name, functionWrapper := range code.FunctionWrappers {
 			functions[name] = functionWrapper(functions[name])
 		}
 	}
@@ -2410,7 +2424,7 @@ func (interpreter *Interpreter) declareCompositeValue(
 	for i := len(compositeType.ExplicitInterfaceConformances) - 1; i >= 0; i-- {
 		conformance := compositeType.ExplicitInterfaceConformances[i]
 
-		wrapFunctions(interpreter.typeCodes.interfaceCodes[conformance.ID()])
+		wrapFunctions(interpreter.typeCodes.InterfaceCodes[conformance.ID()])
 	}
 
 	typeRequirements := compositeType.TypeRequirements()
@@ -2418,12 +2432,12 @@ func (interpreter *Interpreter) declareCompositeValue(
 	for i := len(typeRequirements) - 1; i >= 0; i-- {
 		typeRequirement := typeRequirements[i]
 
-		wrapFunctions(interpreter.typeCodes.typeRequirementCodes[typeRequirement.ID()])
+		wrapFunctions(interpreter.typeCodes.TypeRequirementCodes[typeRequirement.ID()])
 	}
 
-	interpreter.typeCodes.compositeCodes[compositeType.ID()] = compositeTypeCode{
-		destructorFunction: destructorFunction,
-		compositeFunctions: functions,
+	interpreter.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
+		DestructorFunction: destructorFunction,
+		CompositeFunctions: functions,
 	}
 
 	location := interpreter.Checker.Location
@@ -2861,10 +2875,10 @@ func (interpreter *Interpreter) declareInterface(
 	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
 
-	interpreter.typeCodes.interfaceCodes[typeID] = wrapperCode{
-		initializerFunctionWrapper: initializerFunctionWrapper,
-		destructorFunctionWrapper:  destructorFunctionWrapper,
-		functionWrappers:           functionWrappers,
+	interpreter.typeCodes.InterfaceCodes[typeID] = WrapperCode{
+		InitializerFunctionWrapper: initializerFunctionWrapper,
+		DestructorFunctionWrapper:  destructorFunctionWrapper,
+		FunctionWrappers:           functionWrappers,
 	}
 }
 
@@ -2895,10 +2909,10 @@ func (interpreter *Interpreter) declareTypeRequirement(
 	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
 
-	interpreter.typeCodes.typeRequirementCodes[typeID] = wrapperCode{
-		initializerFunctionWrapper: initializerFunctionWrapper,
-		destructorFunctionWrapper:  destructorFunctionWrapper,
-		functionWrappers:           functionWrappers,
+	interpreter.typeCodes.TypeRequirementCodes[typeID] = WrapperCode{
+		InitializerFunctionWrapper: initializerFunctionWrapper,
+		DestructorFunctionWrapper:  destructorFunctionWrapper,
+		FunctionWrappers:           functionWrappers,
 	}
 }
 
@@ -3024,24 +3038,50 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	}
 }
 
-func (interpreter *Interpreter) ensureLoaded(location ast.Location, loadProgram func() *ast.Program) (subInterpreter *Interpreter) {
+func (interpreter *Interpreter) ensureLoaded(
+	location ast.Location,
+	loadLocation func() Import,
+) (subInterpreter *Interpreter) {
+
 	locationID := location.ID()
 
-	// If sub-interpreter already exists, return it
+	// If a sub-interpreter already exists, return it
+
 	subInterpreter = interpreter.allInterpreters[locationID]
 	if subInterpreter != nil {
 		return subInterpreter
 	}
 
-	// Create a new sub-interpreter and interpret the top-level declarations
-	var checkerErr *sema.CheckerError
+	// Create a sub-checker and sub-interpreter
+
 	var importedChecker *sema.Checker
-	importedChecker, checkerErr = interpreter.Checker.EnsureLoaded(location, loadProgram)
+
+	var imported Import
+
+	var checkerErr *sema.CheckerError
+	importedChecker, checkerErr = interpreter.Checker.EnsureLoaded(location, func() *ast.Program {
+		imported = loadLocation()
+
+		switch imported := imported.(type) {
+		case VirtualImport:
+			return nil
+
+		case ProgramImport:
+			return imported.Program
+
+		default:
+			panic(errors.NewUnreachableError())
+		}
+	})
 	if importedChecker == nil {
 		panic("missing checker")
 	}
 	if checkerErr != nil {
 		panic(checkerErr)
+	}
+
+	if imported == nil {
+		imported = loadLocation()
 	}
 
 	var err error
@@ -3058,7 +3098,7 @@ func (interpreter *Interpreter) ensureLoaded(location ast.Location, loadProgram 
 		WithStorageKeyHandler(interpreter.storageKeyHandler),
 		WithInjectedCompositeFieldsHandler(interpreter.injectedCompositeFieldsHandler),
 		WithContractValueHandler(interpreter.contractValueHandler),
-		WithImportProgramHandler(interpreter.importProgramHandler),
+		WithImportLocationHandler(interpreter.importLocationHandler),
 		WithUUIDHandler(interpreter.uuidHandler),
 		WithAllInterpreters(interpreter.allInterpreters),
 		WithAllCheckers(interpreter.allCheckers),
@@ -3068,7 +3108,29 @@ func (interpreter *Interpreter) ensureLoaded(location ast.Location, loadProgram 
 		panic(err)
 	}
 
-	subInterpreter.runAllStatements(subInterpreter.interpret())
+	switch imported := imported.(type) {
+	case VirtualImport:
+		// If the imported location is a virtual import,
+		// prepare the interpreter
+
+		for name, value := range imported.Globals {
+			variable := &Variable{Value: value}
+			subInterpreter.setVariable(name, variable)
+			subInterpreter.Globals[name] = variable
+		}
+
+		subInterpreter.typeCodes.
+			Merge(imported.TypeCodes)
+
+	case ProgramImport:
+		// If the imported location is an interpreted program,
+		// evaluate its top-level declarations
+
+		subInterpreter.runAllStatements(subInterpreter.interpret())
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 
 	return subInterpreter
 }
@@ -3079,8 +3141,8 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 
 	subInterpreter := interpreter.ensureLoaded(
 		location,
-		func() *ast.Program {
-			return interpreter.importProgramHandler(interpreter, location)
+		func() Import {
+			return interpreter.importLocationHandler(interpreter, location)
 		},
 	)
 
@@ -3103,8 +3165,10 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 	for name, variable := range variables {
 
 		// don't import predeclared values
-		if _, ok := subInterpreter.Checker.PredeclaredValues[name]; ok {
-			continue
+		if subInterpreter.Checker != nil {
+			if _, ok := subInterpreter.Checker.PredeclaredValues[name]; ok {
+				continue
+			}
 		}
 
 		// don't import base values
@@ -3113,6 +3177,7 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 		}
 
 		interpreter.setVariable(name, variable)
+		interpreter.Globals[name] = variable
 	}
 
 	return Done{}
@@ -4056,13 +4121,20 @@ func (interpreter *Interpreter) getElaboration(location ast.Location) *sema.Elab
 	// Ensure the program for this location is loaded,
 	// so its checker is available
 
-	inter := interpreter.ensureLoaded(location, func() *ast.Program {
-		return interpreter.importProgramHandler(interpreter, location)
-	})
+	inter := interpreter.ensureLoaded(
+		location,
+		func() Import {
+			return interpreter.importLocationHandler(interpreter, location)
+		},
+	)
 
 	locationID := location.ID()
 
-	return inter.allCheckers[locationID].Elaboration
+	checker := inter.allCheckers[locationID]
+	if checker == nil {
+		return nil
+	}
+	return checker.Elaboration
 }
 
 func (interpreter *Interpreter) getCompositeType(location ast.Location, typeID sema.TypeID) *sema.CompositeType {
