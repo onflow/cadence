@@ -120,7 +120,8 @@ execute
     ;
 
 importDeclaration
-    : Import (identifier (',' identifier)* From)? (stringLiteral | HexadecimalLiteral)
+    : Import (ids+=identifier (',' ids+=identifier)* From)?
+      (stringLiteral | HexadecimalLiteral | location=identifier)
     ;
 
 access

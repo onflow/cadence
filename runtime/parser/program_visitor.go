@@ -173,17 +173,21 @@ func (v *ProgramVisitor) VisitImportDeclaration(ctx *ImportDeclarationContext) i
 	var locationPos ast.Position
 	var endPos ast.Position
 
+	stringLocationCtx := ctx.StringLiteral()
+	hexadecimalLiteralNode := ctx.HexadecimalLiteral()
+	locationCtx := ctx.location
+
 	// string literal?
-	stringLiteralContext := ctx.StringLiteral()
-	if stringLiteralContext != nil {
-		stringExpression := stringLiteralContext.Accept(v).(*ast.StringExpression)
+	switch {
+	case stringLocationCtx != nil:
+		stringExpression := stringLocationCtx.Accept(v).(*ast.StringExpression)
 		location = ast.StringLocation(stringExpression.Value)
 		locationPos = stringExpression.StartPos
 		endPos = stringExpression.EndPos
-	} else {
+
+	case hexadecimalLiteralNode != nil:
 		// hexadecimal literal (address)
 
-		hexadecimalLiteralNode := ctx.HexadecimalLiteral()
 		text := hexadecimalLiteralNode.GetText()[2:]
 		bytes := []byte(strings.Replace(text, "_", "", -1))
 
@@ -203,14 +207,23 @@ func (v *ProgramVisitor) VisitImportDeclaration(ctx *ImportDeclarationContext) i
 		symbol := hexadecimalLiteralNode.GetSymbol()
 		locationPos = PositionFromToken(symbol)
 		endPos = ast.EndPosition(locationPos, symbol.GetStop())
+
+	case locationCtx != nil:
+		locationIdentifier := locationCtx.Accept(v).(ast.Identifier)
+		location = ast.IdentifierLocation(locationIdentifier.Identifier)
+		locationPos = locationIdentifier.StartPosition()
+		endPos = locationIdentifier.EndPosition()
+
+	default:
+		panic(errors.NewUnreachableError())
 	}
 
-	allIdentifierNodes := ctx.AllIdentifier()
+	idNodes := ctx.ids
 	var identifiers []ast.Identifier
-	if len(allIdentifierNodes) > 0 {
-		identifiers = make([]ast.Identifier, len(allIdentifierNodes))
-		for i, identifierNode := range allIdentifierNodes {
-			identifiers[i] = identifierNode.Accept(v).(ast.Identifier)
+	if len(idNodes) > 0 {
+		identifiers = make([]ast.Identifier, len(idNodes))
+		for i, idNode := range idNodes {
+			identifiers[i] = idNode.Accept(v).(ast.Identifier)
 		}
 	}
 

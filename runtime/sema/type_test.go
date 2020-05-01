@@ -199,7 +199,7 @@ func TestRestrictedType_StringAndID(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			TypeID("a.R{b.I}"),
+			TypeID("S.a.R{S.b.I}"),
 			ty.ID(),
 		)
 	})
@@ -232,7 +232,7 @@ func TestRestrictedType_StringAndID(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			TypeID("a.R{b.I1,c.I2}"),
+			TypeID("S.a.R{S.b.I1,S.c.I2}"),
 			ty.ID(),
 		)
 	})
@@ -252,7 +252,7 @@ func TestRestrictedType_StringAndID(t *testing.T) {
 		)
 
 		assert.Equal(t,
-			TypeID("a.R{}"),
+			TypeID("S.a.R{}"),
 			ty.ID(),
 		)
 	})

@@ -30,7 +30,7 @@ import (
 func newTestCompositeValue(owner common.Address) *CompositeValue {
 	return NewCompositeValue(
 		utils.TestLocation,
-		"Test",
+		"S.test.Test",
 		common.CompositeKindStructure,
 		map[string]Value{},
 		&owner,
