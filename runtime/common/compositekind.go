@@ -24,7 +24,7 @@ import (
 
 //go:generate stringer -type=CompositeKind
 
-type CompositeKind int
+type CompositeKind uint
 
 const (
 	CompositeKindUnknown CompositeKind = iota

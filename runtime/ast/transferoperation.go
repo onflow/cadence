@@ -24,7 +24,7 @@ import (
 
 //go:generate stringer -type=TransferOperation
 
-type TransferOperation int
+type TransferOperation uint
 
 const (
 	TransferOperationUnknown TransferOperation = iota

@@ -24,7 +24,7 @@ import (
 
 //go:generate stringer -type=PathDomain
 
-type PathDomain int
+type PathDomain uint
 
 const (
 	PathDomainUnknown PathDomain = iota

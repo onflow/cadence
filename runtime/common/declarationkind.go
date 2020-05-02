@@ -24,7 +24,7 @@ import (
 
 //go:generate stringer -type=DeclarationKind
 
-type DeclarationKind int
+type DeclarationKind uint
 
 const (
 	DeclarationKindUnknown DeclarationKind = iota
