@@ -1453,27 +1453,27 @@ func (*Int128Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var Int128TypeMinInt *big.Int
+var Int128TypeMinIntBig *big.Int
 
 func init() {
-	Int128TypeMinInt = big.NewInt(-1)
-	Int128TypeMinInt.Lsh(Int128TypeMinInt, 127)
+	Int128TypeMinIntBig = big.NewInt(-1)
+	Int128TypeMinIntBig.Lsh(Int128TypeMinIntBig, 127)
 }
 
-var Int128TypeMaxInt *big.Int
+var Int128TypeMaxIntBig *big.Int
 
 func init() {
-	Int128TypeMaxInt = big.NewInt(1)
-	Int128TypeMaxInt.Lsh(Int128TypeMaxInt, 127)
-	Int128TypeMaxInt.Sub(Int128TypeMaxInt, big.NewInt(1))
+	Int128TypeMaxIntBig = big.NewInt(1)
+	Int128TypeMaxIntBig.Lsh(Int128TypeMaxIntBig, 127)
+	Int128TypeMaxIntBig.Sub(Int128TypeMaxIntBig, big.NewInt(1))
 }
 
 func (*Int128Type) MinInt() *big.Int {
-	return Int128TypeMinInt
+	return Int128TypeMinIntBig
 }
 
 func (*Int128Type) MaxInt() *big.Int {
-	return Int128TypeMaxInt
+	return Int128TypeMaxIntBig
 }
 
 func (*Int128Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -1522,27 +1522,27 @@ func (*Int256Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var Int256TypeMinInt *big.Int
+var Int256TypeMinIntBig *big.Int
 
 func init() {
-	Int256TypeMinInt = big.NewInt(-1)
-	Int256TypeMinInt.Lsh(Int256TypeMinInt, 255)
+	Int256TypeMinIntBig = big.NewInt(-1)
+	Int256TypeMinIntBig.Lsh(Int256TypeMinIntBig, 255)
 }
 
-var Int256TypeMaxInt *big.Int
+var Int256TypeMaxIntBig *big.Int
 
 func init() {
-	Int256TypeMaxInt = big.NewInt(1)
-	Int256TypeMaxInt.Lsh(Int256TypeMaxInt, 255)
-	Int256TypeMaxInt.Sub(Int256TypeMaxInt, big.NewInt(1))
+	Int256TypeMaxIntBig = big.NewInt(1)
+	Int256TypeMaxIntBig.Lsh(Int256TypeMaxIntBig, 255)
+	Int256TypeMaxIntBig.Sub(Int256TypeMaxIntBig, big.NewInt(1))
 }
 
 func (*Int256Type) MinInt() *big.Int {
-	return Int256TypeMinInt
+	return Int256TypeMinIntBig
 }
 
 func (*Int256Type) MaxInt() *big.Int {
-	return Int256TypeMaxInt
+	return Int256TypeMaxIntBig
 }
 
 func (*Int256Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -1880,21 +1880,21 @@ func (*UInt128Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var UInt128TypeMinInt = big.NewInt(0)
-var UInt128TypeMaxInt *big.Int
+var UInt128TypeMinIntBig = big.NewInt(0)
+var UInt128TypeMaxIntBig *big.Int
 
 func init() {
-	UInt128TypeMaxInt = big.NewInt(1)
-	UInt128TypeMaxInt.Lsh(UInt128TypeMaxInt, 128)
-	UInt128TypeMaxInt.Sub(UInt128TypeMaxInt, big.NewInt(1))
+	UInt128TypeMaxIntBig = big.NewInt(1)
+	UInt128TypeMaxIntBig.Lsh(UInt128TypeMaxIntBig, 128)
+	UInt128TypeMaxIntBig.Sub(UInt128TypeMaxIntBig, big.NewInt(1))
 }
 
 func (*UInt128Type) MinInt() *big.Int {
-	return UInt128TypeMinInt
+	return UInt128TypeMinIntBig
 }
 
 func (*UInt128Type) MaxInt() *big.Int {
-	return UInt128TypeMaxInt
+	return UInt128TypeMaxIntBig
 }
 
 func (*UInt128Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -1944,21 +1944,21 @@ func (*UInt256Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var UInt256TypeMinInt = big.NewInt(0)
-var UInt256TypeMaxInt *big.Int
+var UInt256TypeMinIntBig = big.NewInt(0)
+var UInt256TypeMaxIntBig *big.Int
 
 func init() {
-	UInt256TypeMaxInt = big.NewInt(1)
-	UInt256TypeMaxInt.Lsh(UInt256TypeMaxInt, 256)
-	UInt256TypeMaxInt.Sub(UInt256TypeMaxInt, big.NewInt(1))
+	UInt256TypeMaxIntBig = big.NewInt(1)
+	UInt256TypeMaxIntBig.Lsh(UInt256TypeMaxIntBig, 256)
+	UInt256TypeMaxIntBig.Sub(UInt256TypeMaxIntBig, big.NewInt(1))
 }
 
 func (*UInt256Type) MinInt() *big.Int {
-	return UInt256TypeMinInt
+	return UInt256TypeMinIntBig
 }
 
 func (*UInt256Type) MaxInt() *big.Int {
-	return UInt256TypeMaxInt
+	return UInt256TypeMaxIntBig
 }
 
 func (*UInt256Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {

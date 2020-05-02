@@ -690,7 +690,7 @@ func uint128(v string) UInt128Value {
 	if !ok {
 		panic(fmt.Sprintf("invalid value: %s", v))
 	}
-	if res.Cmp(sema.UInt128TypeMaxInt) > 0 {
+	if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
 		panic(fmt.Sprintf("invalid value: larger than max: %s", v))
 	}
 	return NewUInt128ValueFromBigInt(res)
@@ -816,7 +816,7 @@ func uint256(v string) UInt256Value {
 	if !ok {
 		panic(fmt.Sprintf("invalid value: %s", v))
 	}
-	if res.Cmp(sema.UInt256TypeMaxInt) > 0 {
+	if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
 		panic(fmt.Sprintf("invalid value: larger than max: %s", v))
 	}
 	return NewUInt256ValueFromBigInt(res)
@@ -1944,10 +1944,10 @@ func int128(v string) Int128Value {
 	if negative {
 		res.Neg(res)
 	}
-	if res.Cmp(sema.Int128TypeMinInt) < 0 {
+	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
 		panic(fmt.Sprintf("invalid value: smaller than min: %s", v))
 	}
-	if res.Cmp(sema.Int128TypeMaxInt) > 0 {
+	if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
 		panic(fmt.Sprintf("invalid value: larger than max: %s", v))
 	}
 	return Int128Value{BigInt: res}
@@ -2069,10 +2069,10 @@ func int256(v string) Int256Value {
 	if negative {
 		res.Neg(res)
 	}
-	if res.Cmp(sema.Int256TypeMinInt) < 0 {
+	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
 		panic(fmt.Sprintf("invalid value: smaller than min: %s", v))
 	}
-	if res.Cmp(sema.Int256TypeMaxInt) > 0 {
+	if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
 		panic(fmt.Sprintf("invalid value: larger than max: %s", v))
 	}
 	return NewInt256ValueFromBigInt(res)
