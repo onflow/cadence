@@ -20,7 +20,7 @@ package sema
 
 //go:generate stringer -type=TypeAnnotationState
 
-type TypeAnnotationState int
+type TypeAnnotationState uint
 
 const (
 	TypeAnnotationStateUnknown TypeAnnotationState = iota

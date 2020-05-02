@@ -24,7 +24,7 @@ import (
 
 //go:generate stringer -type=OperandSide
 
-type OperandSide int
+type OperandSide uint
 
 const (
 	OperandSideUnknown OperandSide = iota

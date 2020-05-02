@@ -24,7 +24,7 @@ import (
 
 //go:generate stringer -type=ResourceInvalidationKind
 
-type ResourceInvalidationKind int
+type ResourceInvalidationKind uint
 
 const (
 	ResourceInvalidationKindUnknown ResourceInvalidationKind = iota

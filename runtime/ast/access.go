@@ -24,7 +24,7 @@ import (
 
 //go:generate stringer -type=Access
 
-type Access int
+type Access uint
 
 // NOTE: order indicates permissiveness: from least to most permissive!
 
