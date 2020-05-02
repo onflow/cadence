@@ -4,65 +4,151 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math/big"
 	"reflect"
 
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/sema"
 )
+
+// !!! *WARNING* !!!
+//
+// Only add new fields to encoded structs by
+// appending new fields with the next highest key.
+//
+// DO *NOT* REPLACE EXISTING FIELDS!
 
 var cborTagSet cbor.TagSet
 
-// const cborTagBase = 2233623
-const cborTagBase = 2000
+const cborTagPositiveBignum = 0x2
+const cborTagNegativeBignum = 0x3
+
+const cborTagBase = 128
+
+// !!! *WARNING* !!!
+//
+// Only add new types by:
+// - replacing existing placeholders (`_`) with new types
+// - appending new types
+//
+// Only remove types by:
+// - replace existing types with a placeholder `_`
+//
+// DO *NOT* REPLACE EXISTING TYPES!
+// DO *NOT* ADD NEW TYPES IN BETWEEN!
+
 const (
-	cborTagNilValue = cborTagBase + iota
-	cborTagVoidValue
-	cborTagBoolValue
+	cborTagVoidValue = cborTagBase + iota
+	cborTagDictionaryValue
+	cborTagSomeValue
+	cborTagAddressValue
+	cborTagCompositeValue
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+
+	// Int*
 	cborTagIntValue
-	cborTagUIntValue
 	cborTagInt8Value
 	cborTagInt16Value
 	cborTagInt32Value
 	cborTagInt64Value
 	cborTagInt128Value
 	cborTagInt256Value
+	_
+
+	// UInt*
+	cborTagUIntValue
 	cborTagUInt8Value
 	cborTagUInt16Value
 	cborTagUInt32Value
 	cborTagUInt64Value
 	cborTagUInt128Value
 	cborTagUInt256Value
+	_
+
+	// Word*
+	_
 	cborTagWord8Value
 	cborTagWord16Value
 	cborTagWord32Value
 	cborTagWord64Value
+	_ // future: Word128
+	_ // future: Word256
+	_
+
+	// Fix*
+	_
+	_ // future: Fix8
+	_ // future: Fix16
+	_ // future: Fix32
 	cborTagFix64Value
+	_ // future: Fix128
+	_ // future: Fix256
+	_
+
+	// UFix*
+	_
+	_ // future: UFix8
+	_ // future: UFix16
+	_ // future: UFix32
 	cborTagUFix64Value
-	cborTagDictionaryValue
-	cborTagCompositeValue
-	cborTagSomeValue
-	cborTagStorageReferenceValue
-	cborTagEphemeralReferenceValue
-	cborTagAddressValue
+	_ // future: UFix128
+	_ // future: UFix256
+	_
+
+	// Locations
+	cborTagAddressLocation
+	cborTagStringLocation
+	_
+	_
+	_
+	_
+	_
+	_
+
+	// Storage
+
 	cborTagPathValue
 	cborTagCapabilityValue
+	cborTagStorageReferenceValue
 	cborTagLinkValue
-	cborTagStringLocation
-	cborTagAddressLocation
-	cborTagStaticType
-	cborTagSemaType
-	cborTagTypeStaticType
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+
+	// Static Types
+	cborTagPrimitiveStaticType
 	cborTagCompositeStaticType
 	cborTagInterfaceStaticType
 	cborTagVariableSizedStaticType
 	cborTagConstantSizedStaticType
 	cborTagDictionaryStaticType
 	cborTagOptionalStaticType
-	cborTagRestrictedStaticType
 	cborTagReferenceStaticType
+	cborTagRestrictedStaticType
 )
 
 func init() {
@@ -84,47 +170,17 @@ func init() {
 	}
 
 	types := map[uint64]interface{}{
-		cborTagNilValue:  encodedNilValue{},
-		cborTagVoidValue: encodedVoidValue{},
-		// cborTagBoolValue:               false,
-		cborTagIntValue:                encodedIntValue([]byte{}),
-		cborTagUIntValue:               encodedUIntValue([]byte{}),
-		cborTagInt8Value:               encodedInt8Value(0),
-		cborTagInt16Value:              encodedInt16Value(0),
-		cborTagInt32Value:              encodedInt32Value(0),
-		cborTagInt64Value:              encodedInt64Value(0),
-		cborTagInt128Value:             encodedInt128Value([]byte{}),
-		cborTagInt256Value:             encodedInt256Value([]byte{}),
-		cborTagUInt8Value:              encodedUInt8Value(0),
-		cborTagUInt16Value:             encodedUInt16Value(0),
-		cborTagUInt32Value:             encodedUInt32Value(0),
-		cborTagUInt64Value:             encodedUInt64Value(0),
-		cborTagUInt128Value:            encodedUInt128Value([]byte{}),
-		cborTagUInt256Value:            encodedUInt256Value([]byte{}),
-		cborTagWord8Value:              encodedWord8Value(0),
-		cborTagWord16Value:             encodedWord16Value(0),
-		cborTagWord32Value:             encodedWord32Value(0),
-		cborTagWord64Value:             encodedWord64Value(0),
 		cborTagDictionaryValue:         encodedDictionaryValue{},
 		cborTagCompositeValue:          encodedCompositeValue{},
-		cborTagSomeValue:               encodedSomeValue{},
-		cborTagStorageReferenceValue:   encodedStorageReferenceValue{},
-		cborTagEphemeralReferenceValue: encodedEphemeralReferenceValue{},
-		cborTagAddressValue:            encodedAddressValue{},
 		cborTagPathValue:               encodedPathValue{},
 		cborTagCapabilityValue:         encodedCapabilityValue{},
+		cborTagStorageReferenceValue:   encodedStorageReferenceValue{},
 		cborTagLinkValue:               encodedLinkValue{},
-		cborTagStringLocation:          encodedStringLocation(""),
-		cborTagAddressLocation:         encodedAddressLocation{},
-		cborTagStaticType:              encodedStaticType{},
-		cborTagSemaType:                encodedSemaType{},
-		cborTagTypeStaticType:          encodedTypeStaticType{},
 		cborTagCompositeStaticType:     encodedCompositeStaticType{},
 		cborTagInterfaceStaticType:     encodedInterfaceStaticType{},
 		cborTagVariableSizedStaticType: encodedVariableSizedStaticType{},
 		cborTagConstantSizedStaticType: encodedConstantSizedStaticType{},
 		cborTagDictionaryStaticType:    encodedDictionaryStaticType{},
-		cborTagOptionalStaticType:      encodedOptionalStaticType{},
 		cborTagRestrictedStaticType:    encodedRestrictedStaticType{},
 		cborTagReferenceStaticType:     encodedReferenceStaticType{},
 	}
@@ -177,97 +233,106 @@ func NewEncoder(w io.Writer) (*Encoder, error) {
 // by this encoder.
 //
 func (e *Encoder) Encode(v Value) error {
-	return e.enc.Encode(e.prepare(v))
+	prepared, err := e.prepare(v)
+	if err != nil {
+		return err
+	}
+
+	return e.enc.Encode(prepared)
 }
 
 // prepare traverses the object graph of the provided value and returns
 // the representation for the value that can be marshalled to CBOR.
 //
-func (e *Encoder) prepare(v Value) interface{} {
-	fmt.Println("Encoding: ", v)
+func (e *Encoder) prepare(v Value) (interface{}, error) {
 	switch v := v.(type) {
 
 	case NilValue:
-		return e.prepareNil(v)
+		return e.prepareNil(), nil
 
 	case VoidValue:
-		return e.prepareVoid(v)
+		return e.prepareVoid(), nil
 
 	case BoolValue:
-		return e.prepareBool(v)
+		return e.prepareBool(v), nil
 
-	// Signed Types
+	case AddressValue:
+		return e.prepareAddressValue(v), nil
+
+	// Int*
 
 	case IntValue:
-		return e.prepareInt(v)
+		return e.prepareInt(v), nil
 
 	case Int8Value:
-		return e.prepareInt8(v)
+		return e.prepareInt8(v), nil
 
 	case Int16Value:
-		return e.prepareInt16(v)
+		return e.prepareInt16(v), nil
 
 	case Int32Value:
-		return e.prepareInt32(v)
+		return e.prepareInt32(v), nil
 
 	case Int64Value:
-		return e.prepareInt64(v)
+		return e.prepareInt64(v), nil
 
 	case Int128Value:
-		return e.prepareInt128(v)
+		return e.prepareInt128(v), nil
 
 	case Int256Value:
-		return e.prepareInt256(v)
+		return e.prepareInt256(v), nil
 
-	// Unsigned Types
+	// UInt*
 
 	case UIntValue:
-		return e.prepareUInt(v)
+		return e.prepareUInt(v), nil
 
 	case UInt8Value:
-		return e.prepareUInt8(v)
+		return e.prepareUInt8(v), nil
 
 	case UInt16Value:
-		return e.prepareUInt16(v)
+		return e.prepareUInt16(v), nil
 
 	case UInt32Value:
-		return e.prepareUInt32(v)
+		return e.prepareUInt32(v), nil
 
 	case UInt64Value:
-		return e.prepareUInt64(v)
+		return e.prepareUInt64(v), nil
 
 	case UInt128Value:
-		return e.prepareUInt128(v)
+		return e.prepareUInt128(v), nil
 
 	case UInt256Value:
-		return e.prepareUInt256(v)
+		return e.prepareUInt256(v), nil
 
-	// Words
+	// Word*
 
 	case Word8Value:
-		return e.prepareWord8(v)
+		return e.prepareWord8(v), nil
 
 	case Word16Value:
-		return e.prepareWord16(v)
+		return e.prepareWord16(v), nil
 
 	case Word32Value:
-		return e.prepareWord32(v)
+		return e.prepareWord32(v), nil
 
 	case Word64Value:
-		return e.prepareWord64(v)
+		return e.prepareWord64(v), nil
 
-	// Fixed Point
+	// Fix*
 
 	case Fix64Value:
-		return e.prepareFix64(v)
+		return e.prepareFix64(v), nil
+
+	// UFix*
 
 	case UFix64Value:
-		return e.prepareUFix64(v)
+		return e.prepareUFix64(v), nil
 
 	// String
 
 	case *StringValue:
-		return e.prepareString(v)
+		return e.prepareString(v), nil
 
 	// Collections
 
@@ -290,482 +355,545 @@ func (e *Encoder) prepare(v Value) interface{} {
 	// Storage
 
 	case *StorageReferenceValue:
-		return e.prepareStorageReferenceValue(v)
+		return e.prepareStorageReferenceValue(v), nil
 
-	case *EphemeralReferenceValue:
-		return e.prepareEphemeralReferenceValue(v)
+	case PathValue:
+		return e.preparePathValue(v), nil
 
-	case AddressValue:
-		return e.prepareAddressValue(v)
-
-	case *PathValue:
-		return e.preparePathValue(v)
-
-	// Capability
-
-	case *CapabilityValue:
-		return e.prepareCapabilityValue(v)
-
-	// TODO Reflect on Kind, if pointer, dereference
-	case *LinkValue:
-		return *e.prepareLinkValue(v)
+	case CapabilityValue:
+		return e.prepareCapabilityValue(v), nil
 
 	case LinkValue:
-		return e.prepareLinkValue(&v)
+		return e.prepareLinkValue(v)
 
 	default:
-		return fmt.Errorf("unsupported value: %[1]T, %[1]v", v)
+		return nil, fmt.Errorf("unsupported value: %[1]T, %[1]v", v)
 	}
 }
 
-type encodedNilValue struct{}
-
-// TODO Implement properly
-func (e *Encoder) prepareNil(v NilValue) interface{} {
-	return encodedNilValue{}
+func (e *Encoder) prepareNil() interface{} {
+	return nil
 }
 
-type encodedVoidValue struct{}
-type encodedIntValue []byte
-type encodedUIntValue []byte
-type encodedInt8Value int8
-type encodedInt16Value int16
-type encodedInt32Value int32
-type encodedInt64Value int64
-type encodedInt128Value []byte
-type encodedInt256Value []byte
-type encodedUInt8Value uint8
-type encodedUInt16Value uint16
-type encodedUInt32Value uint32
-type encodedUInt64Value uint64
-type encodedUInt128Value []byte
-type encodedUInt256Value []byte
-type encodedWord8Value uint8
-type encodedWord16Value uint16
-type encodedWord32Value uint32
-type encodedWord64Value uint64
+func (e *Encoder) prepareVoid() cbor.Tag {
 
-// TODO Implement properly
-func (e *Encoder) prepareVoid(v VoidValue) interface{} {
-	return encodedVoidValue{}
+	// TODO: optimize: use 0xf7, but decoded by github.com/fxamacker/cbor/v2 as Go `nil`:
+	//   https://github.com/fxamacker/cbor/blob/a6ed6ff68e99cbb076997a08d19f03c453851555/README.md#limitations
+
+	return cbor.Tag{
+		Number: cborTagVoidValue,
+	}
 }
 
 func (e *Encoder) prepareBool(v BoolValue) bool {
 	return bool(v)
 }
 
-func (e *Encoder) prepareInt(v IntValue) interface{} {
-	intBytes, err := v.BigInt.GobEncode()
-	if err != nil {
-		return encodedNilValue{}
+func (e *Encoder) prepareBig(bigInt *big.Int) cbor.Tag {
+	b := bigInt.Bytes()
+	// positive bignum
+	var tag uint64 = cborTagPositiveBignum
+	if bigInt.Sign() < 0 {
+		// negative bignum
+		tag = cborTagNegativeBignum
 	}
-	return encodedIntValue(intBytes)
+	return cbor.Tag{Number: tag, Content: b}
 }
 
-func (e *Encoder) prepareInt8(v Int8Value) interface{} {
-	return encodedInt8Value(v)
-}
-
-func (e *Encoder) prepareInt16(v Int16Value) interface{} {
-	return encodedInt16Value(v)
-}
-
-func (e *Encoder) prepareInt32(v Int32Value) interface{} {
-	return encodedInt32Value(v)
-}
-
-func (e *Encoder) prepareInt64(v Int64Value) interface{} {
-	return encodedInt64Value(v)
-}
-
-func (e *Encoder) prepareInt128(v Int128Value) interface{} {
-	encodedIntBytes, err := v.BigInt.GobEncode()
-	if err != nil {
-		return encodedUIntValue{}
+func (e *Encoder) prepareInt(v IntValue) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagIntValue,
+		Content: e.prepareBig(v.BigInt),
 	}
-	return encodedInt128Value(encodedIntBytes)
 }
 
-func (e *Encoder) prepareInt256(v Int256Value) interface{} {
-	encodedIntBytes, err := v.BigInt.GobEncode()
-	if err != nil {
-		return encodedUIntValue{}
+func (e *Encoder) prepareInt8(v Int8Value) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagInt8Value,
+		Content: v,
 	}
-	return encodedInt256Value(encodedIntBytes)
 }
 
-func (e *Encoder) prepareUInt(v UIntValue) interface{} {
-	encodedIntBytes, err := v.BigInt.GobEncode()
-	if err != nil {
-		return encodedUIntValue{}
+func (e *Encoder) prepareInt16(v Int16Value) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagInt16Value,
+		Content: v,
 	}
-	return encodedUIntValue(encodedIntBytes)
 }
 
-func (e *Encoder) prepareUInt8(v UInt8Value) interface{} {
-	return encodedUInt8Value(v)
-}
-
-func (e *Encoder) prepareUInt16(v UInt16Value) interface{} {
-	return encodedUInt16Value(v)
-}
-
-func (e *Encoder) prepareUInt32(v UInt32Value) interface{} {
-	return encodedUInt32Value(v)
-}
-
-func (e *Encoder) prepareUInt64(v UInt64Value) interface{} {
-	return encodedUInt64Value(v)
-}
-
-func (e *Encoder) prepareUInt128(v UInt128Value) interface{} {
-	encodedIntBytes, err := v.BigInt.GobEncode()
-	if err != nil {
-		return encodedUIntValue{}
+func (e *Encoder) prepareInt32(v Int32Value) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagInt32Value,
+		Content: v,
 	}
-	return encodedUInt128Value(encodedIntBytes)
 }
 
-func (e *Encoder) prepareUInt256(v UInt256Value) interface{} {
-	encodedIntBytes, err := v.BigInt.GobEncode()
-	if err != nil {
-		return encodedUIntValue{}
+func (e *Encoder) prepareInt64(v Int64Value) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagInt64Value,
+		Content: v,
 	}
-	return encodedUInt256Value(encodedIntBytes)
+}
+func (e *Encoder) prepareInt128(v Int128Value) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagInt128Value,
+		Content: e.prepareBig(v.BigInt),
+	}
 }
 
-func (e *Encoder) prepareWord8(v Word8Value) interface{} {
-	return encodedWord8Value(v)
+func (e *Encoder) prepareInt256(v Int256Value) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagInt256Value,
+		Content: e.prepareBig(v.BigInt),
+	}
 }
 
-func (e *Encoder) prepareWord16(v Word16Value) interface{} {
-	return encodedWord16Value(v)
+func (e *Encoder) prepareUInt(v UIntValue) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagUIntValue,
+		Content: e.prepareBig(v.BigInt),
+	}
 }
 
-func (e *Encoder) prepareWord32(v Word32Value) interface{} {
-	return encodedWord32Value(v)
+func (e *Encoder) prepareUInt8(v UInt8Value) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagUInt8Value,
+		Content: v,
+	}
 }
 
-func (e *Encoder) prepareWord64(v Word64Value) interface{} {
-	return encodedWord64Value(v)
+func (e *Encoder) prepareUInt16(v UInt16Value) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagUInt16Value,
+		Content: v,
+	}
+}
+
+func (e *Encoder) prepareUInt32(v UInt32Value) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagUInt32Value,
+		Content: v,
+	}
+}
+
+func (e *Encoder) prepareUInt64(v UInt64Value) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagUInt64Value,
+		Content: v,
+	}
+}
+
+func (e *Encoder) prepareUInt128(v UInt128Value) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagUInt128Value,
+		Content: e.prepareBig(v.BigInt),
+	}
+}
+
+func (e *Encoder) prepareUInt256(v UInt256Value) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagUInt256Value,
+		Content: e.prepareBig(v.BigInt),
+	}
+}
+
+func (e *Encoder) prepareWord8(v Word8Value) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagWord8Value,
+		Content: v,
+	}
+}
+
+func (e *Encoder) prepareWord16(v Word16Value) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagWord16Value,
+		Content: v,
+	}
+}
+
+func (e *Encoder) prepareWord32(v Word32Value) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagWord32Value,
+		Content: v,
+	}
+}
+
+func (e *Encoder) prepareWord64(v Word64Value) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagWord64Value,
+		Content: v,
+	}
 }
 
 func (e *Encoder) prepareFix64(v Fix64Value) cbor.Tag {
-	return cbor.Tag{Number: cborTagFix64Value, Content: v}
+	return cbor.Tag{
+		Number:  cborTagFix64Value,
+		Content: v,
+	}
 }
 
 func (e *Encoder) prepareUFix64(v UFix64Value) cbor.Tag {
-	return cbor.Tag{Number: cborTagUFix64Value, Content: v}
+	return cbor.Tag{
+		Number:  cborTagUFix64Value,
+		Content: v,
+	}
 }
 
 func (e *Encoder) prepareString(v *StringValue) string {
 	return v.Str
 }
 
-func (e *Encoder) prepareArray(v *ArrayValue) []interface{} {
+func (e *Encoder) prepareArray(v *ArrayValue) ([]interface{}, error) {
 	result := make([]interface{}, len(v.Values))
 
 	for i, value := range v.Values {
-		result[i] = e.prepare(value)
+		prepared, err := e.prepare(value)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = prepared
 	}
 
-	return result
+	return result, nil
 }
 
 type encodedDictionaryValue struct {
-	Keys    interface{}            `cbor:"0,keyasint"`
+	Keys    []interface{}          `cbor:"0,keyasint"`
 	Entries map[string]interface{} `cbor:"1,keyasint"`
 }
 
-func (e *Encoder) prepareDictionaryValue(v *DictionaryValue) interface{} {
-	keys := e.prepareArray(v.Keys)
+// TODO: optimize: use CBOR map, but unclear how to preserve ordering
+func (e *Encoder) prepareDictionaryValue(v *DictionaryValue) (interface{}, error) {
+	keys, err := e.prepareArray(v.Keys)
+	if err != nil {
+		return nil, err
+	}
 
 	entries := make(map[string]interface{}, len(v.Entries))
 
 	for _, keyValue := range v.Keys.Values {
 		key := dictionaryKey(keyValue)
-		entries[key] = e.prepare(v.Entries[key])
+		prepared, err := e.prepare(v.Entries[key])
+		if err != nil {
+			return nil, err
+		}
+		entries[key] = prepared
 	}
 
 	return encodedDictionaryValue{
 		Keys:    keys,
 		Entries: entries,
-	}
+	}, nil
 }
 
 type encodedCompositeValue struct {
 	Location interface{}            `cbor:"0,keyasint"`
-	TypeID   sema.TypeID            `cbor:"1,keyasint"`
-	Kind     common.CompositeKind   `cbor:"2,keyasint"`
+	TypeID   string                 `cbor:"1,keyasint"`
+	Kind     uint                   `cbor:"2,keyasint"`
 	Fields   map[string]interface{} `cbor:"3,keyasint"`
 }
 
-func (e *Encoder) prepareCompositeValue(v *CompositeValue) interface{} {
+func (e *Encoder) prepareCompositeValue(v *CompositeValue) (interface{}, error) {
 
 	fields := make(map[string]interface{}, len(v.Fields))
 
 	for name, value := range v.Fields {
-		fields[name] = e.prepare(value)
+		prepared, err := e.prepare(value)
+		if err != nil {
+			return nil, err
+		}
+		fields[name] = prepared
+	}
+
+	location, err := e.prepareLocation(v.Location)
+	if err != nil {
+		return nil, err
 	}
 
 	return encodedCompositeValue{
-		Location: e.prepareLocation(v.Location),
-		TypeID:   v.TypeID,
-		Kind:     v.Kind,
+		Location: location,
+		TypeID:   string(v.TypeID),
+		Kind:     uint(v.Kind),
 		Fields:   fields,
-	}
+	}, nil
 }
 
-type encodedSomeValue struct {
-	Value interface{} `cbor:"0,keyasint"`
-}
-
-func (e *Encoder) prepareSomeValue(v *SomeValue) interface{} {
-	return encodedSomeValue{
-		Value: e.prepare(v.Value),
+func (e *Encoder) prepareSomeValue(v *SomeValue) (interface{}, error) {
+	prepared, err := e.prepare(v.Value)
+	if err != nil {
+		return nil, err
 	}
+
+	return cbor.Tag{
+		Number:  cborTagSomeValue,
+		Content: prepared,
+	}, nil
 }
 
 type encodedStorageReferenceValue struct {
-	Authorized           bool                       `cbor:"0,keyasint"`
-	TargetStorageAddress [common.AddressLength]byte `cbor:"1,keyasint"`
-	TargetKey            string                     `cbor:"2,keyasint"`
-	Owner                [common.AddressLength]byte `cbor:"3,keyasint"`
+	Authorized           bool   `cbor:"0,keyasint"`
+	TargetStorageAddress []byte `cbor:"1,keyasint"`
+	TargetKey            string `cbor:"2,keyasint"`
 }
 
 func (e *Encoder) prepareStorageReferenceValue(v *StorageReferenceValue) interface{} {
-	return &encodedStorageReferenceValue{
+	return encodedStorageReferenceValue{
 		Authorized:           v.Authorized,
-		TargetStorageAddress: v.TargetStorageAddress,
+		TargetStorageAddress: v.TargetStorageAddress.Bytes(),
 		TargetKey:            v.TargetKey,
-		Owner:                *v.Owner,
 	}
 }
 
-type encodedEphemeralReferenceValue struct {
-	Authorized bool        `cbor:"0,keyasint"`
-	Value      interface{} `cbor:"1,keyasint"`
-}
-
-func (e *Encoder) prepareEphemeralReferenceValue(v *EphemeralReferenceValue) interface{} {
-	return &encodedEphemeralReferenceValue{Authorized: v.Authorized, Value: e.prepare(v.Value)}
-}
-
-type encodedAddressValue [common.AddressLength]byte
-
-func (e *Encoder) prepareAddressValue(v AddressValue) encodedAddressValue {
-	encoded := &encodedAddressValue{}
-	copy(encoded[:], v[:])
-	return *encoded
+func (e *Encoder) prepareAddressValue(v AddressValue) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagAddressValue,
+		Content: v.ToAddress().Bytes(),
+	}
 }
 
 type encodedPathValue struct {
-	Domain     int    `cbor:"0,keyasint"`
+	Domain     uint   `cbor:"0,keyasint"`
 	Identifier string `cbor:"1,keyasint"`
 }
 
-func (e *Encoder) preparePathValue(v *PathValue) *encodedPathValue {
-	return &encodedPathValue{Domain: int(v.Domain), Identifier: v.Identifier}
+func (e *Encoder) preparePathValue(v PathValue) encodedPathValue {
+	return encodedPathValue{
+		Domain:     uint(v.Domain),
+		Identifier: v.Identifier,
+	}
 }
 
 type encodedCapabilityValue struct {
-	Address encodedAddressValue `cbor:"0,keyasint"`
-	Path    encodedPathValue    `cbor:"1,keyasint"`
+	Address cbor.Tag         `cbor:"0,keyasint"`
+	Path    encodedPathValue `cbor:"1,keyasint"`
 }
 
-func (e *Encoder) prepareCapabilityValue(v *CapabilityValue) interface{} {
+func (e *Encoder) prepareCapabilityValue(v CapabilityValue) interface{} {
 	return encodedCapabilityValue{
 		Address: e.prepareAddressValue(v.Address),
-		Path:    *e.preparePathValue(&v.Path),
+		Path:    e.preparePathValue(v.Path),
+	}
+}
+
+func (e *Encoder) prepareLocation(l ast.Location) (interface{}, error) {
+	switch l := l.(type) {
+	case ast.AddressLocation:
+		return cbor.Tag{
+			Number:  cborTagAddressLocation,
+			Content: l.ToAddress().Bytes(),
+		}, nil
+
+	case ast.StringLocation:
+		return cbor.Tag{
+			Number:  cborTagStringLocation,
+			Content: string(l),
+		}, nil
+
+	default:
+		return nil, fmt.Errorf("unsupported location: %T", l)
 	}
 }
 
 type encodedLinkValue struct {
-	TargetPath encodedPathValue  `cbor:"0,keyasint"`
-	Type       encodedStaticType `cbor:"1,keyasint"`
+	TargetPath encodedPathValue `cbor:"0,keyasint"`
+	Type       interface{}      `cbor:"1,keyasint"`
 }
 
-func (e *Encoder) prepareLinkValue(v *LinkValue) *encodedLinkValue {
+func (e *Encoder) prepareLinkValue(v LinkValue) (interface{}, error) {
 	staticType, err := e.prepareStaticType(v.Type)
 	if err != nil {
-		fmt.Println(fmt.Errorf("failed to encode linkvalue type: %w\n", err).Error())
-		return &encodedLinkValue{}
+		return nil, err
 	}
-
-	return &encodedLinkValue{
-		TargetPath: *e.preparePathValue(&v.TargetPath),
-		Type:       encodedStaticType{Type: staticType},
-	}
+	return encodedLinkValue{
+		TargetPath: e.preparePathValue(v.TargetPath),
+		Type:       staticType,
+	}, nil
 }
 
-type encodedStaticType struct {
-	Type interface{} `cbor:"0,keyasint"`
-}
-
-type encodedSemaType struct {
-	Type interface{} `cbor:"0,keyasint"`
-}
-
-type encodedTypeStaticType struct {
-	Type encodedSemaType
-}
-
+// TODO: optimize, decode location from type ID
 type encodedCompositeStaticType struct {
 	Location interface{} `cbor:"0,keyasint"`
 	TypeID   string      `cbor:"1,keyasint"`
 }
 
+// TODO: optimize, decode location from type ID
 type encodedInterfaceStaticType struct {
 	Location interface{} `cbor:"0,keyasint"`
 	TypeID   string      `cbor:"1,keyasint"`
 }
 
 type encodedVariableSizedStaticType struct {
-	Type encodedStaticType `cbor:"0,keyasint"`
+	Type interface{} `cbor:"0,keyasint"`
 }
 
 type encodedConstantSizedStaticType struct {
-	Type encodedStaticType `cbor:"0,keyasint"`
-	Size uint64            `cbor:"1,keyasint"`
+	Size uint64      `cbor:"0,keyasint"`
+	Type interface{} `cbor:"1,keyasint"`
 }
 
 type encodedDictionaryStaticType struct {
-	KeyType   encodedStaticType `cbor:"0,keyasint"`
-	ValueType encodedStaticType `cbor:"1,keyasint"`
-}
-
-type encodedOptionalStaticType struct {
-	Type encodedStaticType `cbor:"0,keyasint"`
+	KeyType   interface{} `cbor:"0,keyasint"`
+	ValueType interface{} `cbor:"1,keyasint"`
 }
 
 type encodedRestrictedStaticType struct {
-	Type         encodedStaticType            `cbor:"0,keyasint"`
-	Restrictions []encodedInterfaceStaticType `cbor:"1,keyasint"`
+	Type         interface{}   `cbor:"0,keyasint"`
+	Restrictions []interface{} `cbor:"1,keyasint"`
 }
 
 type encodedReferenceStaticType struct {
-	Authorized bool              `cbor:"0,keyasint"`
-	Type       encodedStaticType `cbor:"1,keyasint"`
+	Authorized bool        `cbor:"0,keyasint"`
+	Type       interface{} `cbor:"1,keyasint"`
 }
 
-// Handle the types that conform to the StaticType interface
 func (e *Encoder) prepareStaticType(t StaticType) (interface{}, error) {
 	switch v := t.(type) {
-	case TypeStaticType:
-		if v == (TypeStaticType{}) {
-			return encodedTypeStaticType{}, nil
-		}
-		staticType, err := e.prepareStaticType(ConvertSemaToStaticType(v.Type))
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse typestatictype type: %w", err)
-		}
-		return encodedTypeStaticType{Type: encodedSemaType{Type: staticType}}, nil
-	case CompositeStaticType:
-		if v == (CompositeStaticType{}) {
-			return encodedCompositeStaticType{}, nil
-		}
-		return encodedCompositeStaticType{
-			Location: e.prepareLocation(v.Location),
-			TypeID:   string(v.TypeID),
-		}, nil
-	case InterfaceStaticType:
-		return encodedInterfaceStaticType{
-			Location: e.prepareLocation(v.Location),
-			TypeID:   string(v.TypeID),
-		}, nil
-	case VariableSizedStaticType:
-		staticType, err := e.prepareStaticType(v.Type)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse variablesizedstatictype type: %w", err)
-		}
-		return encodedVariableSizedStaticType{
-			Type: encodedStaticType{Type: staticType},
-		}, nil
-	case ConstantSizedStaticType:
-		staticType, err := e.prepareStaticType(v.Type)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse constantsizedstatictype type: %w", err)
-		}
-		return encodedConstantSizedStaticType{
-			Type: encodedStaticType{Type: staticType},
-			Size: v.Size,
-		}, nil
-	case DictionaryStaticType:
-		keyType, err := e.prepareStaticType(v.KeyType)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse dictionarystatictype keytype: %w", err)
-		}
-		valueType, err := e.prepareStaticType(v.ValueType)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse dictionarystatictype valuetype: %w", err)
-		}
-		return encodedDictionaryStaticType{
-			KeyType:   encodedStaticType{Type: keyType},
-			ValueType: encodedStaticType{Type: valueType},
-		}, nil
+	case PrimitiveStaticType:
+		return e.preparePrimitiveStaticType(v), nil
+
 	case OptionalStaticType:
-		staticType, err := e.prepareStaticType(v.Type)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse optionalstatictype type: %w", err)
-		}
-		return encodedOptionalStaticType{
-			Type: encodedStaticType{Type: staticType},
-		}, nil
-	case RestrictedStaticType:
-		staticType, err := e.prepareStaticType(v.Type)
-		if err != nil {
-			return nil, fmt.Errorf("failed to parse restrictedstatictype type: %w", err)
-		}
-		encodedRestrictions := make([]encodedInterfaceStaticType, len(v.Restrictions))
-		for i, restriction := range v.Restrictions {
-			encodedRestriction, err := e.prepareStaticType(restriction)
-			if err != nil {
-				return nil, fmt.Errorf("failed to parse restrictedstatictye restrictions: %w", err)
-			}
-			encodedRestrictionInterfaceStaticType, ok := encodedRestriction.(encodedInterfaceStaticType)
-			if !ok {
-				return nil, fmt.Errorf("failed to parse restrictedstatictype restrictions: type is not interfacestatictype")
-			}
-			encodedRestrictions[i] = encodedRestrictionInterfaceStaticType
-		}
-		fmt.Println(encodedRestrictions)
-		return encodedRestrictedStaticType{
-			Type:         encodedStaticType{Type: staticType},
-			Restrictions: encodedRestrictions,
-		}, nil
+		return e.prepareOptionalStaticType(v)
+
+	case CompositeStaticType:
+		return e.prepareCompositeStaticType(v)
+
+	case InterfaceStaticType:
+		return e.prepareInterfaceStaticType(v)
+
+	case VariableSizedStaticType:
+		return e.prepareVariableSizedStaticType(v)
+
+	case ConstantSizedStaticType:
+		return e.prepareConstantSizedStaticType(v)
+
 	case ReferenceStaticType:
-		staticType, err := e.prepareStaticType(v.Type)
+		return e.prepareReferenceStaticType(v)
+
+	case DictionaryStaticType:
+		return e.prepareDictionaryStaticType(v)
+
+	case RestrictedStaticType:
+		return e.prepareRestrictedStaticType(v)
+
+	default:
+		return nil, fmt.Errorf("unsupported static type: %T", t)
+	}
+}
+
+func (e *Encoder) preparePrimitiveStaticType(v PrimitiveStaticType) cbor.Tag {
+	return cbor.Tag{
+		Number:  cborTagPrimitiveStaticType,
+		Content: uint(v),
+	}
+}
+
+func (e *Encoder) prepareOptionalStaticType(v OptionalStaticType) (interface{}, error) {
+	staticType, err := e.prepareStaticType(v.Type)
+	if err != nil {
+		return nil, err
+	}
+
+	return cbor.Tag{
+		Number:  cborTagOptionalStaticType,
+		Content: staticType,
+	}, nil
+}
+
+func (e *Encoder) prepareCompositeStaticType(v CompositeStaticType) (interface{}, error) {
+	location, err := e.prepareLocation(v.Location)
+	if err != nil {
+		return nil, err
+	}
+
+	return encodedCompositeStaticType{
+		Location: location,
+		TypeID:   string(v.TypeID),
+	}, nil
+}
+
+func (e *Encoder) prepareInterfaceStaticType(v InterfaceStaticType) (interface{}, error) {
+	location, err := e.prepareLocation(v.Location)
+	if err != nil {
+		return nil, err
+	}
+
+	return encodedInterfaceStaticType{
+		Location: location,
+		TypeID:   string(v.TypeID),
+	}, nil
+}
+
+func (e *Encoder) prepareVariableSizedStaticType(v VariableSizedStaticType) (interface{}, error) {
+	staticType, err := e.prepareStaticType(v.Type)
+	if err != nil {
+		return nil, err
+	}
+
+	return cbor.Tag{
+		Number:  cborTagVariableSizedStaticType,
+		Content: staticType,
+	}, nil
+}
+
+func (e *Encoder) prepareConstantSizedStaticType(v ConstantSizedStaticType) (interface{}, error) {
+	staticType, err := e.prepareStaticType(v.Type)
+	if err != nil {
+		return nil, err
+	}
+
+	return encodedConstantSizedStaticType{
+		Type: staticType,
+		Size: v.Size,
+	}, nil
+}
+
+func (e *Encoder) prepareReferenceStaticType(v ReferenceStaticType) (interface{}, error) {
+	staticType, err := e.prepareStaticType(v.Type)
+	if err != nil {
+		return nil, err
+	}
+
+	return encodedReferenceStaticType{
+		Authorized: v.Authorized,
+		Type:       staticType,
+	}, nil
+}
+
+func (e *Encoder) prepareDictionaryStaticType(v DictionaryStaticType) (interface{}, error) {
+	keyType, err := e.prepareStaticType(v.KeyType)
+	if err != nil {
+		return nil, err
+	}
+
+	valueType, err := e.prepareStaticType(v.ValueType)
+	if err != nil {
+		return nil, err
+	}
+
+	return encodedDictionaryStaticType{
+		KeyType:   keyType,
+		ValueType: valueType,
+	}, nil
+}
+
+func (e *Encoder) prepareRestrictedStaticType(v RestrictedStaticType) (interface{}, error) {
+	restrictedType, err := e.prepareStaticType(v.Type)
+	if err != nil {
+		return nil, err
+	}
+
+	encodedRestrictions := make([]interface{}, len(v.Restrictions))
+	for i, restriction := range v.Restrictions {
+		encodedRestriction, err := e.prepareStaticType(restriction)
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse constantsizedstatictype type: %w", err)
+			return nil, err
 		}
-		return encodedReferenceStaticType{
-			Authorized: bool(v.Authorized),
-			Type:       encodedStaticType{Type: staticType},
-		}, nil
-	default:
-		return nil, fmt.Errorf("unsupported statictype type")
+
+		encodedRestrictions[i] = encodedRestriction
 	}
-}
 
-func (e *Encoder) prepareLocation(l ast.Location) interface{} {
-	switch l := l.(type) {
-	case ast.StringLocation:
-		return e.prepareStringLocation(l)
-	case ast.AddressLocation:
-		return e.prepareAddressLocation(l)
-	default:
-		return nil
-	}
-}
-
-type encodedStringLocation string
-
-func (e *Encoder) prepareStringLocation(l ast.StringLocation) interface{} {
-	return encodedStringLocation(l.ID())
-}
-
-type encodedAddressLocation []byte
-
-func (e *Encoder) prepareAddressLocation(l ast.AddressLocation) interface{} {
-	return encodedAddressLocation(l)
+	return encodedRestrictedStaticType{
+		Type:         restrictedType,
+		Restrictions: encodedRestrictions,
+	}, nil
 }

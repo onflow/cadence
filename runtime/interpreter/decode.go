@@ -75,104 +75,113 @@ func (d *Decoder) decodeValue(v interface{}, owner *common.Address) (Value, erro
 	case string:
 		return NewStringValue(v), nil
 
+	case nil:
+		return NilValue{}, nil
+
 	case []interface{}:
 		return d.decodeArray(v, owner)
 
 	case cbor.Tag:
 		switch v.Number {
 
-		case cborTagNilValue:
-			return d.decodeNil(v.Content, owner)
-
 		case cborTagVoidValue:
-			return d.decodeVoid(v.Content, owner)
-
-		// Signed primitive integers
-
-		case cborTagIntValue:
-			return d.decodeInt(v.Content, owner)
-
-		case cborTagInt8Value:
-			return d.decodeInt8(v.Content, owner)
-
-		case cborTagInt16Value:
-			return d.decodeInt16(v.Content, owner)
-
-		case cborTagInt32Value:
-			return d.decodeInt32(v.Content, owner)
-
-		case cborTagInt64Value:
-			return d.decodeInt64(v.Content, owner)
-
-		case cborTagInt128Value:
-			return d.decodeInt128(v.Content, owner)
-
-		case cborTagInt256Value:
-			return d.decodeInt256(v.Content, owner)
-
-		// Unsigned primitive integers
-
-		case cborTagUIntValue:
-			return d.decodeUInt(v.Content, owner)
-
-		case cborTagUInt8Value:
-			return d.decodeUInt8(v.Content, owner)
-
-		case cborTagUInt16Value:
-			return d.decodeUInt16(v.Content, owner)
-
-		case cborTagUInt32Value:
-			return d.decodeUInt32(v.Content, owner)
-
-		case cborTagUInt64Value:
-			return d.decodeUInt64(v.Content, owner)
-
-		case cborTagUInt128Value:
-			return d.decodeUInt128(v.Content, owner)
-
-		case cborTagUInt256Value:
-			return d.decodeUInt256(v.Content, owner)
-
-		case cborTagWord8Value:
-			return d.decodeWord8(v.Content, owner)
-
-		case cborTagWord16Value:
-			return d.decodeWord16(v.Content, owner)
-
-		case cborTagWord32Value:
-			return d.decodeWord32(v.Content, owner)
-
-		case cborTagWord64Value:
-			return d.decodeWord64(v.Content, owner)
-
-		// Struct types
+			return VoidValue{}, nil
 
 		case cborTagDictionaryValue:
 			return d.decodeDictionary(v.Content, owner)
 
+		case cborTagSomeValue:
+			return d.decodeSome(v.Content, owner)
+
+		case cborTagAddressValue:
+			return d.decodeAddress(v.Content)
+
 		case cborTagCompositeValue:
 			return d.decodeComposite(v.Content, owner)
 
-		case cborTagSomeValue:
-			return d.decodeSome(v.Content, owner)
+		// Int*
+
+		case cborTagIntValue:
+			return d.decodeInt(v.Content)
+
+		case cborTagInt8Value:
+			return d.decodeInt8(v.Content)
+
+		case cborTagInt16Value:
+			return d.decodeInt16(v.Content)
+
+		case cborTagInt32Value:
+			return d.decodeInt32(v.Content)
+
+		case cborTagInt64Value:
+			return d.decodeInt64(v.Content)
+
+		case cborTagInt128Value:
+			return d.decodeInt128(v.Content)
+
+		case cborTagInt256Value:
+			return d.decodeInt256(v.Content)
+
+		// UInt*
+
+		case cborTagUIntValue:
+			return d.decodeUInt(v.Content)
+
+		case cborTagUInt8Value:
+			return d.decodeUInt8(v.Content)
+
+		case cborTagUInt16Value:
+			return d.decodeUInt16(v.Content)
+
+		case cborTagUInt32Value:
+			return d.decodeUInt32(v.Content)
+
+		case cborTagUInt64Value:
+			return d.decodeUInt64(v.Content)
+
+		case cborTagUInt128Value:
+			return d.decodeUInt128(v.Content)
+
+		case cborTagUInt256Value:
+			return d.decodeUInt256(v.Content)
+
+		// Word*
+
+		case cborTagWord8Value:
+			return d.decodeWord8(v.Content)
+
+		case cborTagWord16Value:
+			return d.decodeWord16(v.Content)
+
+		case cborTagWord32Value:
+			return d.decodeWord32(v.Content)
+
+		case cborTagWord64Value:
+			return d.decodeWord64(v.Content)
+
+		// Fix*
+
+		case cborTagFix64Value:
+			return d.decodeFix64(v.Content)
+
+		// UFix*
+
+		case cborTagUFix64Value:
+			return d.decodeUFix64(v.Content)
+
+		// Storage
+
+		case cborTagPathValue:
+			return d.decodePath(v.Content)
+
+		case cborTagCapabilityValue:
+			return d.decodeCapability(v.Content)
 
 		case cborTagStorageReferenceValue:
 			return d.decodeStorageReference(v.Content, owner)
 
-		case cborTagEphemeralReferenceValue:
-			return d.decodeEphemeralReference(v.Content, owner)
-
-		case cborTagAddressValue:
-			return d.decodeAddress(v.Content, owner)
-
-		case cborTagPathValue:
-			return d.decodePath(v.Content, owner)
-
-		case cborTagCapabilityValue:
-			return d.decodeCapability(v.Content, owner)
-
 		case cborTagLinkValue:
-			return d.decodeLink(v.Content, owner)
+			return d.decodeLink(v.Content)
 
 		default:
 			return nil, fmt.Errorf("unsupported decoded tag: %d, %v", v.Number, v.Content)
@@ -244,44 +253,68 @@ func (d *Decoder) decodeDictionary(v interface{}, owner *common.Address) (*Dicti
 	}, nil
 }
 
+func (d *Decoder) decodeLocation(l interface{}) (ast.Location, error) {
+	tag, ok := l.(cbor.Tag)
+	if !ok {
+		return nil, fmt.Errorf("invalid location encoding: %T", l)
+	}
+
+	switch tag.Number {
+	case cborTagAddressLocation:
+		b, ok := tag.Content.([]byte)
+		if !ok {
+			return nil, fmt.Errorf("invalid address location encoding: %T", tag.Content)
+		}
+		return ast.AddressLocation(b), nil
+
+	case cborTagStringLocation:
+		s, ok := tag.Content.(string)
+		if !ok {
+			return nil, fmt.Errorf("invalid string location encoding: %T", tag.Content)
+		}
+		return ast.StringLocation(s), nil
+
+	default:
+		return nil, fmt.Errorf("invalid location encoding tag: %d", tag.Number)
+	}
+}
+
 func (d *Decoder) decodeComposite(v interface{}, owner *common.Address) (*CompositeValue, error) {
 
 	encoded, ok := v.(map[interface{}]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid composite encoding")
+		return nil, fmt.Errorf("invalid composite encoding: %T", v)
 	}
 
-	var location ast.Location
+	// Location
 
-	encodedLocation, ok := encoded[uint64(0)].(cbor.Tag)
+	location, err := d.decodeLocation(encoded[uint64(0)])
+	if err != nil {
+		return nil, fmt.Errorf("invalid composite location encoding: %w", err)
+	}
+
+	// Type ID
+
+	field2 := encoded[uint64(1)]
+	encodedTypeID, ok := field2.(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid location encoding")
+		return nil, fmt.Errorf("invalid composite type ID encoding: %T", field2)
 	}
-
-	if encodedLocation.Number == cborTagStringLocation {
-		location = ast.StringLocation(encodedLocation.Content.(string))
-	} else if encodedLocation.Number == cborTagAddressLocation {
-		location = ast.AddressLocation(encodedLocation.Content.([]byte))
-	} else {
-		return nil, fmt.Errorf("invalid location encoding tag: %d", encodedLocation.Number)
-	}
-
-	encodedTypeID, ok := encoded[uint64(1)].(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid composite type ID encoding")
-	}
-
 	typeID := sema.TypeID(encodedTypeID)
 
-	// TODO: common.CompositeKind is int, why is it encoded/decoded as uint64?
-	encodedKind, ok := encoded[uint64(2)].(uint64)
-	if !ok {
-		return nil, fmt.Errorf("invalid composite kind encoding")
-	}
+	// Kind
 
+	field3 := encoded[uint64(2)]
+	encodedKind, ok := field3.(uint64)
+	if !ok {
+		return nil, fmt.Errorf("invalid composite kind encoding: %T", field3)
+	}
 	kind := common.CompositeKind(encodedKind)
 
-	encodedFields, ok := encoded[uint64(3)].(map[interface{}]interface{})
+	// Fields
+
+	field4 := encoded[uint64(3)]
+	encodedFields, ok := field4.(map[interface{}]interface{})
 	if !ok {
 		return nil, fmt.Errorf("invalid composite fields encoding")
 	}
@@ -291,7 +324,7 @@ func (d *Decoder) decodeComposite(v interface{}, owner *common.Address) (*Compos
 	for name, value := range encodedFields {
 		nameString, ok := name.(string)
 		if !ok {
-			return nil, fmt.Errorf("invalid dictionary field name encoding")
+			return nil, fmt.Errorf("invalid dictionary field name encoding: %T", name)
 		}
 
 		decodedValue, err := d.decodeValue(value, owner)
@@ -311,231 +344,241 @@ func (d *Decoder) decodeComposite(v interface{}, owner *common.Address) (*Compos
 	}, nil
 }
 
-func (d *Decoder) decodeNil(v interface{}, owner *common.Address) (NilValue, error) {
-	return NilValue{}, nil
-}
-
-func (d *Decoder) decodeVoid(v interface{}, owner *common.Address) (VoidValue, error) {
-	return VoidValue{}, nil
-}
-
-func (d *Decoder) decodeInt(v interface{}, owner *common.Address) (IntValue, error) {
-	var bigInt big.Int
-	decodedBytes, ok := v.([]byte)
+func (d *Decoder) decodeBig(v interface{}) (*big.Int, error) {
+	tag, ok := v.(cbor.Tag)
 	if !ok {
-		return IntValue{}, fmt.Errorf("invalid int encoding")
+		return nil, fmt.Errorf("invalid bignum encoding: %T", v)
 	}
-	err := bigInt.GobDecode(decodedBytes)
-	if err != nil {
-		return IntValue{}, fmt.Errorf("invalid int encoding: gob")
+
+	b := tag.Content.([]byte)
+	if !ok {
+		return nil, fmt.Errorf("invalid bignum content encoding: %T", v)
 	}
-	return NewIntValueFromBigInt(&bigInt), nil
+
+	bigInt := new(big.Int).SetBytes(b)
+
+	switch tag.Number {
+	case cborTagPositiveBignum:
+		break
+	case cborTagNegativeBignum:
+		bigInt.Neg(bigInt)
+	default:
+		return nil, fmt.Errorf("invalid Int content tag: %v", tag.Number)
+	}
+
+	return bigInt, nil
 }
 
-func (d *Decoder) decodeInt8(v interface{}, owner *common.Address) (Int8Value, error) {
+func (d *Decoder) decodeInt(v interface{}) (IntValue, error) {
+	bigInt, err := d.decodeBig(v)
+	if err != nil {
+		return IntValue{}, fmt.Errorf("invalid Int encoding: %w", err)
+	}
+
+	return NewIntValueFromBigInt(bigInt), nil
+}
+
+func (d *Decoder) decodeInt8(v interface{}) (Int8Value, error) {
 	switch v.(type) {
 	case uint64:
 		return Int8Value(v.(uint64)), nil
 	case int64:
 		return Int8Value(v.(int64)), nil
 	default:
-		return Int8Value(0), fmt.Errorf("unknown int8 encoding")
+		return Int8Value(0), fmt.Errorf("unknown Int8 encoding: %T", v)
 	}
 }
 
-func (d *Decoder) decodeInt16(v interface{}, owner *common.Address) (Int16Value, error) {
+func (d *Decoder) decodeInt16(v interface{}) (Int16Value, error) {
 	switch v.(type) {
 	case uint64:
 		return Int16Value(v.(uint64)), nil
 	case int64:
 		return Int16Value(v.(int64)), nil
 	default:
-		return Int16Value(0), fmt.Errorf("unknown int16 encoding")
+		return Int16Value(0), fmt.Errorf("unknown Int16 encoding: %T", v)
 	}
 }
 
-func (d *Decoder) decodeInt32(v interface{}, owner *common.Address) (Int32Value, error) {
+func (d *Decoder) decodeInt32(v interface{}) (Int32Value, error) {
 	switch v.(type) {
 	case uint64:
 		return Int32Value(v.(uint64)), nil
 	case int64:
 		return Int32Value(v.(int64)), nil
 	default:
-		return Int32Value(0), fmt.Errorf("unknown int32 encoding")
+		return Int32Value(0), fmt.Errorf("unknown Int32 encoding: %T", v)
 	}
 }
 
-func (d *Decoder) decodeInt64(v interface{}, owner *common.Address) (Int64Value, error) {
+func (d *Decoder) decodeInt64(v interface{}) (Int64Value, error) {
 	switch v.(type) {
 	case uint64:
 		return Int64Value(v.(uint64)), nil
 	case int64:
 		return Int64Value(v.(int64)), nil
 	default:
-		return Int64Value(0), fmt.Errorf("unknown int64 encoding")
+		return Int64Value(0), fmt.Errorf("unknown Int64 encoding: %T", v)
 	}
 }
 
-func (d *Decoder) decodeInt128(v interface{}, owner *common.Address) (Int128Value, error) {
-	var bigInt big.Int
-	decodedBytes, ok := v.([]byte)
-	if !ok {
-		return Int128Value{}, fmt.Errorf("invalid int128 encoding")
-	}
-	err := bigInt.GobDecode(decodedBytes)
+func (d *Decoder) decodeInt128(v interface{}) (Int128Value, error) {
+	bigInt, err := d.decodeBig(v)
 	if err != nil {
-		return Int128Value{}, fmt.Errorf("invalid int128 encoding: gob: %w", err)
+		return Int128Value{}, fmt.Errorf("invalid Int encoding: %w", err)
 	}
-	return NewInt128ValueFromBigInt(&bigInt), nil
+
+	return NewInt128ValueFromBigInt(bigInt), nil
 }
 
-func (d *Decoder) decodeInt256(v interface{}, owner *common.Address) (Int256Value, error) {
-	var bigInt big.Int
-	decodedBytes, ok := v.([]byte)
-	if !ok {
-		return Int256Value{}, fmt.Errorf("invalid int256 encoding")
-	}
-	err := bigInt.GobDecode(decodedBytes)
+func (d *Decoder) decodeInt256(v interface{}) (Int256Value, error) {
+	bigInt, err := d.decodeBig(v)
 	if err != nil {
-		return Int256Value{}, fmt.Errorf("invalid int256 encoding: gob: %w", err)
+		return Int256Value{}, fmt.Errorf("invalid Int encoding: %w", err)
 	}
-	return NewInt256ValueFromBigInt(&bigInt), nil
+
+	return NewInt256ValueFromBigInt(bigInt), nil
 }
 
-func (d *Decoder) decodeUInt(v interface{}, owner *common.Address) (UIntValue, error) {
-	var bigInt big.Int
-	decodedBytes, ok := v.([]byte)
-	if !ok {
-		return UIntValue{}, fmt.Errorf("invalid uint encoding")
-	}
-	err := bigInt.GobDecode(decodedBytes)
+func (d *Decoder) decodeUInt(v interface{}) (UIntValue, error) {
+	bigInt, err := d.decodeBig(v)
 	if err != nil {
-		return UIntValue{}, fmt.Errorf("invalid uint encoding: gob")
+		return UIntValue{}, fmt.Errorf("invalid Int encoding: %w", err)
 	}
-	return NewUIntValueFromBigInt(&bigInt), nil
+
+	return NewUIntValueFromBigInt(bigInt), nil
 }
 
-func (d *Decoder) decodeUInt8(v interface{}, owner *common.Address) (UInt8Value, error) {
+func (d *Decoder) decodeUInt8(v interface{}) (UInt8Value, error) {
 	switch v.(type) {
 	case uint64:
 		return UInt8Value(v.(uint64)), nil
 	case int64:
 		return UInt8Value(v.(int64)), nil
 	default:
-		return UInt8Value(0), fmt.Errorf("unknown uint8 encoding")
+		return UInt8Value(0), fmt.Errorf("unknown UInt8 encoding: %T", v)
 	}
 }
 
-func (d *Decoder) decodeUInt16(v interface{}, owner *common.Address) (UInt16Value, error) {
+func (d *Decoder) decodeUInt16(v interface{}) (UInt16Value, error) {
 	switch v.(type) {
 	case uint64:
 		return UInt16Value(v.(uint64)), nil
 	case int64:
 		return UInt16Value(v.(int64)), nil
 	default:
-		return UInt16Value(0), fmt.Errorf("unknown uint16 encoding")
+		return UInt16Value(0), fmt.Errorf("unknown UInt16 encoding: %T", v)
 	}
 }
 
-func (d *Decoder) decodeUInt32(v interface{}, owner *common.Address) (UInt32Value, error) {
+func (d *Decoder) decodeUInt32(v interface{}) (UInt32Value, error) {
 	switch v.(type) {
 	case uint64:
 		return UInt32Value(v.(uint64)), nil
 	case int64:
 		return UInt32Value(v.(int64)), nil
 	default:
-		return UInt32Value(0), fmt.Errorf("unknown UInt32 encoding")
+		return UInt32Value(0), fmt.Errorf("unknown UInt32 encoding: %T", v)
 	}
 }
 
-func (d *Decoder) decodeUInt64(v interface{}, owner *common.Address) (UInt64Value, error) {
+func (d *Decoder) decodeUInt64(v interface{}) (UInt64Value, error) {
 	switch v.(type) {
 	case uint64:
 		return UInt64Value(v.(uint64)), nil
 	case int64:
 		return UInt64Value(v.(int64)), nil
 	default:
-		return UInt64Value(0), fmt.Errorf("unknown UInt64 encoding")
+		return UInt64Value(0), fmt.Errorf("unknown UInt64 encoding: %T", v)
 	}
 }
 
-func (d *Decoder) decodeUInt128(v interface{}, owner *common.Address) (UInt128Value, error) {
-	var bigInt big.Int
-	decodedBytes, ok := v.([]byte)
-	if !ok {
-		return UInt128Value{}, fmt.Errorf("invalid uint128 encoding")
-	}
-	err := bigInt.GobDecode(decodedBytes)
+func (d *Decoder) decodeUInt128(v interface{}) (UInt128Value, error) {
+	bigInt, err := d.decodeBig(v)
 	if err != nil {
-		return UInt128Value{}, fmt.Errorf("invalid uint256 encoding: gob: %w", err)
+		return UInt128Value{}, fmt.Errorf("invalid Int encoding: %w", err)
 	}
-	return NewUInt128ValueFromBigInt(&bigInt), nil
+
+	return NewUInt128ValueFromBigInt(bigInt), nil
 }
 
-func (d *Decoder) decodeUInt256(v interface{}, owner *common.Address) (UInt256Value, error) {
-	var bigInt big.Int
-	decodedBytes, ok := v.([]byte)
-	if !ok {
-		return UInt256Value{}, fmt.Errorf("invalid uint256 encoding")
-	}
-	err := bigInt.GobDecode(decodedBytes)
+func (d *Decoder) decodeUInt256(v interface{}) (UInt256Value, error) {
+	bigInt, err := d.decodeBig(v)
 	if err != nil {
-		return UInt256Value{}, fmt.Errorf("invalid uint256 encoding: gob: %w", err)
+		return UInt256Value{}, fmt.Errorf("invalid Int encoding: %w", err)
 	}
-	return NewUInt256ValueFromBigInt(&bigInt), nil
+
+	return NewUInt256ValueFromBigInt(bigInt), nil
 }
 
-func (d *Decoder) decodeWord8(v interface{}, owner *common.Address) (Word8Value, error) {
+func (d *Decoder) decodeWord8(v interface{}) (Word8Value, error) {
 	switch v.(type) {
 	case uint64:
 		return Word8Value(v.(uint64)), nil
 	case int64:
 		return Word8Value(v.(int64)), nil
 	default:
-		return Word8Value(0), fmt.Errorf("unknown word8 encoding")
+		return Word8Value(0), fmt.Errorf("unknown Word8 encoding: %T", v)
 	}
 }
 
-func (d *Decoder) decodeWord16(v interface{}, owner *common.Address) (Word16Value, error) {
+func (d *Decoder) decodeWord16(v interface{}) (Word16Value, error) {
 	switch v.(type) {
 	case uint64:
 		return Word16Value(v.(uint64)), nil
 	case int64:
 		return Word16Value(v.(int64)), nil
 	default:
-		return Word16Value(0), fmt.Errorf("unknown word16 encoding")
+		return Word16Value(0), fmt.Errorf("unknown Word16 encoding: %T", v)
 	}
 }
 
-func (d *Decoder) decodeWord32(v interface{}, owner *common.Address) (Word32Value, error) {
+func (d *Decoder) decodeWord32(v interface{}) (Word32Value, error) {
 	switch v.(type) {
 	case uint64:
 		return Word32Value(v.(uint64)), nil
 	case int64:
 		return Word32Value(v.(int64)), nil
 	default:
-		return Word32Value(0), fmt.Errorf("unknown word32 encoding")
+		return Word32Value(0), fmt.Errorf("unknown Word32 encoding: %T", v)
 	}
 }
 
-func (d *Decoder) decodeWord64(v interface{}, owner *common.Address) (Word64Value, error) {
+func (d *Decoder) decodeWord64(v interface{}) (Word64Value, error) {
 	switch v.(type) {
 	case uint64:
 		return Word64Value(v.(uint64)), nil
 	case int64:
 		return Word64Value(v.(int64)), nil
 	default:
-		return Word64Value(0), fmt.Errorf("unknown word64 encoding")
+		return Word64Value(0), fmt.Errorf("unknown Word64 encoding: %T", v)
+	}
+}
+
+func (d *Decoder) decodeFix64(v interface{}) (Fix64Value, error) {
+	switch v.(type) {
+	case uint64:
+		return Fix64Value(v.(uint64)), nil
+	case int64:
+		return Fix64Value(v.(int64)), nil
+	default:
+		return Fix64Value(0), fmt.Errorf("unknown Fix64 encoding: %T", v)
+	}
+}
+
+func (d *Decoder) decodeUFix64(v interface{}) (UFix64Value, error) {
+	switch v.(type) {
+	case uint64:
+		return UFix64Value(v.(uint64)), nil
+	case int64:
+		return UFix64Value(v.(int64)), nil
+	default:
+		return UFix64Value(0), fmt.Errorf("unknown UFix64 encoding: %T", v)
 	}
 }
 
 func (d *Decoder) decodeSome(v interface{}, owner *common.Address) (*SomeValue, error) {
-	encoded, ok := v.(map[interface{}]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid some encoding")
-	}
-
-	value, err := d.decodeValue(encoded[uint64(0)], owner)
+	value, err := d.decodeValue(v, owner)
 	if err != nil {
 		return nil, fmt.Errorf("invalid some value encoding: %w", err)
 	}
@@ -549,19 +592,24 @@ func (d *Decoder) decodeSome(v interface{}, owner *common.Address) (*SomeValue, 
 func (d *Decoder) decodeStorageReference(v interface{}, owner *common.Address) (*StorageReferenceValue, error) {
 	encoded, ok := v.(map[interface{}]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid storagereference encoding")
+		return nil, fmt.Errorf("invalid storage reference encoding: %T", v)
 	}
 
 	authorized, ok := encoded[uint64(0)].(bool)
 	if !ok {
-		return nil, fmt.Errorf("invalid storagereference authorized encoding")
+		return nil, fmt.Errorf("invalid storage reference authorized encoding: %T", authorized)
 	}
 
-	targetStorageAddress := common.BytesToAddress(encoded[uint64(1)].([]byte))
+	targetStorageAddressBytes, ok := encoded[uint64(1)].([]byte)
+	if !ok {
+		return nil, fmt.Errorf("invalid storage reference target storage address encoding: %T", authorized)
+	}
+
+	targetStorageAddress := common.BytesToAddress(targetStorageAddressBytes)
 
 	targetKey, ok := encoded[uint64(2)].(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid storagereference targetkey encoding")
+		return nil, fmt.Errorf("invalid storage reference target key encoding: %T", targetKey)
 	}
 
 	return &StorageReferenceValue{
@@ -572,292 +620,324 @@ func (d *Decoder) decodeStorageReference(v interface{}, owner *common.Address) (
 	}, nil
 }
 
-func (d *Decoder) decodeEphemeralReference(v interface{}, owner *common.Address) (*EphemeralReferenceValue, error) {
-	encoded, ok := v.(map[interface{}]interface{})
-	if !ok {
-		return nil, fmt.Errorf("invalid ephemeralreference encoding")
-	}
-
-	authorized, ok := encoded[uint64(0)].(bool)
-	if !ok {
-		return nil, fmt.Errorf("invalid ephemeralreference authorized encoding")
-	}
-
-	value, err := d.decodeValue(encoded[uint64(1)], owner)
-	if err != nil {
-		return nil, fmt.Errorf("invalid ephemeralreference value encoding: %w", err)
-	}
-
-	return &EphemeralReferenceValue{
-		Authorized: authorized,
-		Value:      value,
-	}, nil
-}
-
-func (d *Decoder) decodeAddress(v interface{}, owner *common.Address) (AddressValue, error) {
+func (d *Decoder) decodeAddress(v interface{}) (AddressValue, error) {
 	addressBytes, ok := v.([]byte)
 	if !ok {
-		return AddressValue{}, fmt.Errorf("invalid address encoding")
+		return AddressValue{}, fmt.Errorf("invalid address encoding: %T", v)
 	}
 	address := NewAddressValueFromBytes(addressBytes)
 	return address, nil
 }
 
-func (d *Decoder) decodePath(v interface{}, owner *common.Address) (*PathValue, error) {
+func (d *Decoder) decodePath(v interface{}) (PathValue, error) {
 	encoded, ok := v.(map[interface{}]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid path encoding")
+		return PathValue{}, fmt.Errorf("invalid path encoding: %T", v)
 	}
 
-	domain, ok := encoded[uint64(0)].(uint64)
+	field1 := encoded[uint64(0)]
+	domain, ok := field1.(uint64)
 	if !ok {
-		return nil, fmt.Errorf("invalid path domain encoding")
+		return PathValue{}, fmt.Errorf("invalid path domain encoding: %T", field1)
 	}
 
-	identifier, ok := encoded[uint64(1)].(string)
+	field2 := encoded[uint64(1)]
+	identifier, ok := field2.(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid path identifier encodingw")
+		return PathValue{}, fmt.Errorf("invalid path identifier encoding: %T", field2)
 	}
-	return &PathValue{Domain: common.PathDomain(domain), Identifier: identifier}, nil
+
+	return PathValue{
+		Domain:     common.PathDomain(domain),
+		Identifier: identifier,
+	}, nil
 }
 
-func (d *Decoder) decodeCapability(v interface{}, owner *common.Address) (*CapabilityValue, error) {
+func (d *Decoder) decodeCapability(v interface{}) (CapabilityValue, error) {
 	encoded, ok := v.(map[interface{}]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid capability encoding")
+		return CapabilityValue{}, fmt.Errorf("invalid capability encoding: %T", v)
 	}
 
-	address, err := d.decodeAddress(encoded[uint64(0)].(cbor.Tag).Content, owner)
+	// address
+
+	field1 := encoded[uint64(0)]
+	field1Value, err := d.decodeValue(field1, nil)
 	if err != nil {
-		return nil, fmt.Errorf("invalid capability address encoding: %w", err)
+		return CapabilityValue{}, fmt.Errorf("invalid capability address: %w", err)
 	}
 
-	path, err := d.decodePath(encoded[uint64(1)].(cbor.Tag).Content, owner)
+	address, ok := field1Value.(AddressValue)
+	if !ok {
+		return CapabilityValue{}, fmt.Errorf("invalid capability address: %T", address)
+	}
+
+	// path
+
+	field2 := encoded[uint64(1)]
+	field2Value, err := d.decodeValue(field2, nil)
 	if err != nil {
-		return nil, fmt.Errorf("invalid capability path encoding: %w", err)
+		return CapabilityValue{}, fmt.Errorf("invalid capability path: %w", err)
 	}
 
-	return &CapabilityValue{Address: address, Path: *path}, nil
+	path, ok := field2Value.(PathValue)
+	if !ok {
+		return CapabilityValue{}, fmt.Errorf("invalid capability path: %T", path)
+	}
+
+	return CapabilityValue{
+		Address: address,
+		Path:    path,
+	}, nil
 }
 
-func (d *Decoder) decodeLink(v interface{}, owner *common.Address) (LinkValue, error) {
+func (d *Decoder) decodeLink(v interface{}) (LinkValue, error) {
 	encoded, ok := v.(map[interface{}]interface{})
 	if !ok {
 		return LinkValue{}, fmt.Errorf("invalid link encoding")
 	}
 
-	path, err := d.decodePath(encoded[uint64(0)].(cbor.Tag).Content, owner)
+	decodedPath, err := d.decodeValue(encoded[uint64(0)], nil)
 	if err != nil {
-		return LinkValue{}, fmt.Errorf("invalid link targetpath encoding: %w", err)
+		return LinkValue{}, fmt.Errorf("invalid link target path encoding: %w", err)
 	}
 
-	staticType, err := d.decodeStaticType(encoded[uint64(1)], owner)
+	pathValue, ok := decodedPath.(PathValue)
+	if !ok {
+		return LinkValue{}, fmt.Errorf("invalid link target path encoding: %T", decodedPath)
+	}
+
+	decodedStaticType, err := d.decodeStaticType(encoded[uint64(1)])
 	if err != nil {
 		return LinkValue{}, fmt.Errorf("invalid link type encoding: %w", err)
 	}
-	return LinkValue{TargetPath: *path, Type: staticType}, nil
-}
 
-func (d *Decoder) decodeStaticType(v interface{}, owner *common.Address) (StaticType, error) {
-	switch v := v.(type) {
-	case cbor.Tag:
-		switch v.Number {
-		case cborTagStaticType:
-			if v.Content == nil {
-				return TypeStaticType{}, nil
-			}
-			encoded, ok := v.Content.(map[interface{}]interface{})
-			if !ok {
-				return nil, fmt.Errorf("invalid statictype encoding")
-			}
-			return d.decodeStaticType(encoded[uint64(0)], owner)
-		case cborTagCompositeStaticType:
-			encoded, ok := v.Content.(map[interface{}]interface{})
-			if !ok {
-				return nil, fmt.Errorf("invalid statictype encoding")
-			}
-
-			location, err := d.decodeLocation(encoded[uint64(0)])
-			if err != nil {
-				return nil, fmt.Errorf("invalid statictype location encoding: %w", err)
-			}
-
-			var typeID sema.TypeID
-			encodedTypeID, ok := encoded[uint64(1)].(string)
-			if encoded[uint64(1)] == nil {
-				typeID = sema.TypeID("")
-			} else if !ok {
-				return nil, fmt.Errorf("invalid composite type ID encoding")
-			}
-
-			typeID = sema.TypeID(encodedTypeID)
-			return CompositeStaticType{
-				Location: location,
-				TypeID:   typeID,
-			}, nil
-		case cborTagInterfaceStaticType:
-			encoded, ok := v.Content.(map[interface{}]interface{})
-			if !ok {
-				return nil, fmt.Errorf("invalid interfacestatictype encoding")
-			}
-			location, err := d.decodeLocation(encoded[uint64(0)])
-			if err != nil {
-				return nil, fmt.Errorf("invalid interfacestatictype location encoding")
-			}
-			typeID, ok := encoded[uint64(1)].(string)
-			if !ok {
-				return nil, fmt.Errorf("invalid interfacestatictype location encoding")
-			}
-			return InterfaceStaticType{
-				Location: location,
-				TypeID:   sema.TypeID(typeID),
-			}, nil
-		case cborTagVariableSizedStaticType:
-			if v.Content == nil {
-				return VariableSizedStaticType{}, nil
-			}
-			encoded, ok := v.Content.(map[interface{}]interface{})
-			if !ok {
-				return nil, fmt.Errorf("invalid variablesizedtype encoding")
-			}
-			staticType, err := d.decodeStaticType(encoded[uint64(0)], owner)
-			if err != nil {
-				return nil, fmt.Errorf("invalid variabliesizedtype type encoding: %w", err)
-			}
-			return VariableSizedStaticType{
-				Type: staticType,
-			}, nil
-		case cborTagConstantSizedStaticType:
-			if v.Content == nil {
-				return ConstantSizedStaticType{}, nil
-			}
-			encoded, ok := v.Content.(map[interface{}]interface{})
-			if !ok {
-				return nil, fmt.Errorf("invalid constantsizedtype encoding")
-			}
-			staticType, err := d.decodeStaticType(encoded[uint64(0)], owner)
-			if err != nil {
-				return nil, fmt.Errorf("invalid constantsizedtype type encoding: %w", err)
-			}
-			size, ok := encoded[uint64(1)].(uint64)
-			if !ok {
-				return nil, fmt.Errorf("invalid constantsizedtype size encoding")
-			}
-			return ConstantSizedStaticType{
-				Type: staticType,
-				Size: size,
-			}, nil
-		case cborTagDictionaryStaticType:
-			if v.Content == nil {
-				return DictionaryStaticType{}, nil
-			}
-			encoded, ok := v.Content.(map[interface{}]interface{})
-			if !ok {
-				return nil, fmt.Errorf("invalid dictionarystatictype encoding")
-			}
-			key, err := d.decodeStaticType(encoded[uint64(0)], owner)
-			if err != nil {
-				return nil, fmt.Errorf("invalid dictionarystatictype key encoding: %w", err)
-			}
-			value, err := d.decodeStaticType(encoded[uint64(1)], owner)
-			if err != nil {
-				return nil, fmt.Errorf("invalid dictionarystatictype value encoding: %w", err)
-			}
-			return DictionaryStaticType{
-				KeyType:   key,
-				ValueType: value,
-			}, nil
-		case cborTagOptionalStaticType:
-			if v.Content == nil {
-				return OptionalStaticType{}, nil
-			}
-			encoded, ok := v.Content.(map[interface{}]interface{})
-			if !ok {
-				return nil, fmt.Errorf("invalid optionalstatictype encoding")
-			}
-			staticType, err := d.decodeStaticType(encoded[uint64(0)], owner)
-			if err != nil {
-				return nil, fmt.Errorf("invalid optionalstatictype type encoding: %w", err)
-			}
-			return OptionalStaticType{
-				Type: staticType,
-			}, nil
-		case cborTagRestrictedStaticType:
-			if v.Content == nil {
-				return RestrictedStaticType{}, nil
-			}
-			encoded, ok := v.Content.(map[interface{}]interface{})
-			if !ok {
-				return nil, fmt.Errorf("invalid restrictedstatictype encoding")
-			}
-			staticType, err := d.decodeStaticType(encoded[uint64(0)], owner)
-			if err != nil {
-				return nil, fmt.Errorf("invalid restrictedstatictype type encoding: %w", err)
-			}
-			encodedRestrictions, ok := encoded[uint64(1)].([]interface{})
-			if !ok {
-				return nil, fmt.Errorf("invalid restrictedstatictype restrictions encoding: not an array")
-			}
-			restrictions := make([]InterfaceStaticType, len(encodedRestrictions))
-			for i, encodedRestriction := range encodedRestrictions {
-				r, err := d.decodeStaticType(encodedRestriction, owner)
-				if err != nil {
-					return nil, fmt.Errorf("")
-				}
-				restriction, ok := r.(InterfaceStaticType)
-				if !ok {
-					return nil, fmt.Errorf("")
-				}
-				restrictions[i] = restriction
-			}
-			return RestrictedStaticType{
-				Type:         staticType,
-				Restrictions: restrictions,
-			}, nil
-		case cborTagReferenceStaticType:
-			encoded, ok := v.Content.(map[interface{}]interface{})
-			if !ok {
-				return nil, fmt.Errorf("invalid referencestatictype encoding")
-			}
-			authorized, ok := encoded[uint64(0)].(bool)
-			if !ok {
-				return nil, fmt.Errorf("invalid referencestatictype authorized encoding")
-			}
-			staticType, err := d.decodeStaticType(encoded[uint64(1)], owner)
-			if err != nil {
-				return nil, fmt.Errorf("invalid referencestatictype type encoding: %w", err)
-			}
-			return ReferenceStaticType{
-				Authorized: authorized,
-				Type:       staticType,
-			}, nil
-		}
-	case nil:
-		return TypeStaticType{}, nil
-	default:
-		return nil, fmt.Errorf("invalid statictype encoding (unrecognized type)")
-	}
-	return nil, fmt.Errorf("no valid matching types")
-}
-
-func (d *Decoder) decodeLocation(l interface{}) (ast.Location, error) {
-	var location ast.Location
-	if l == nil {
-		return nil, nil
-	}
-
-	encodedLocation, ok := l.(cbor.Tag)
+	staticType, ok := decodedStaticType.(StaticType)
 	if !ok {
-		return nil, fmt.Errorf("invalid location encoding")
-	} else {
-		if encodedLocation.Number == cborTagStringLocation {
-			location = ast.StringLocation(encodedLocation.Content.(string))
-		} else if encodedLocation.Number == cborTagAddressLocation {
-			location = ast.AddressLocation(encodedLocation.Content.([]byte))
-		} else {
-			return nil, fmt.Errorf("invalid location encoding tag: %d", encodedLocation.Number)
-		}
+		return LinkValue{}, fmt.Errorf("invalid link type encoding: %T", decodedStaticType)
 	}
 
-	return location, nil
+	return LinkValue{
+		TargetPath: pathValue,
+		Type:       staticType,
+	}, nil
+}
+
+func (d *Decoder) decodeStaticType(v interface{}) (StaticType, error) {
+	tag, ok := v.(cbor.Tag)
+	if !ok {
+		return nil, fmt.Errorf("invalid static type encoding: %T", v)
+	}
+
+	content := tag.Content
+
+	switch tag.Number {
+	case cborTagPrimitiveStaticType:
+		return d.decodePrimitiveStaticType(content)
+
+	case cborTagOptionalStaticType:
+		return d.decodeOptionalStaticType(content)
+
+	case cborTagCompositeStaticType:
+		return d.decodeCompositeStaticType(content)
+
+	case cborTagInterfaceStaticType:
+		return d.decodeInterfaceStaticType(content)
+
+	case cborTagVariableSizedStaticType:
+		return d.decodeVariableSizedStaticType(content)
+
+	case cborTagConstantSizedStaticType:
+		return d.decodeConstantSizedStaticType(content)
+
+	case cborTagReferenceStaticType:
+		return d.decodeReferenceStaticType(content)
+
+	case cborTagDictionaryStaticType:
+		return d.decodeDictionaryStaticType(content)
+
+	case cborTagRestrictedStaticType:
+		return d.decodeRestrictedStaticType(content)
+
+	default:
+		return nil, fmt.Errorf("invalid static type encoding tag: %d", tag.Number)
+	}
+}
+
+func (d *Decoder) decodePrimitiveStaticType(v interface{}) (PrimitiveStaticType, error) {
+	encoded, ok := v.(uint64)
+	if !ok {
+		return PrimitiveStaticTypeUnknown,
+			fmt.Errorf("invalid primitive static type encoding: %T", v)
+	}
+	return PrimitiveStaticType(encoded), nil
+}
+
+func (d *Decoder) decodeOptionalStaticType(v interface{}) (StaticType, error) {
+	staticType, err := d.decodeStaticType(v)
+	if err != nil {
+		return nil, fmt.Errorf("invalid optional static type inner type encoding: %w", err)
+	}
+	return OptionalStaticType{
+		Type: staticType,
+	}, nil
+}
+
+func (d *Decoder) decodeLocationAndTypeID(v interface{}) (ast.Location, sema.TypeID, error) {
+	encoded, ok := v.(map[interface{}]interface{})
+	if !ok {
+		return nil, "", fmt.Errorf("invalid static type encoding: %T", v)
+	}
+
+	location, err := d.decodeLocation(encoded[uint64(0)])
+	if err != nil {
+		return nil, "", fmt.Errorf("invalid static type location encoding: %w", err)
+	}
+
+	field2 := encoded[uint64(1)]
+	encodedTypeID, ok := field2.(string)
+	if !ok {
+		return nil, "", fmt.Errorf("invalid static type type ID encoding: %T", field2)
+	}
+	typeID := sema.TypeID(encodedTypeID)
+
+	return location, typeID, nil
+}
+
+func (d *Decoder) decodeCompositeStaticType(v interface{}) (StaticType, error) {
+	location, typeID, err := d.decodeLocationAndTypeID(v)
+	if err != nil {
+		return nil, fmt.Errorf("invalid composite static type encoding: %w", err)
+	}
+
+	return CompositeStaticType{
+		Location: location,
+		TypeID:   typeID,
+	}, nil
+}
+
+func (d *Decoder) decodeInterfaceStaticType(v interface{}) (StaticType, error) {
+	location, typeID, err := d.decodeLocationAndTypeID(v)
+	if err != nil {
+		return nil, fmt.Errorf("invalid interface static type encoding: %w", err)
+	}
+
+	return InterfaceStaticType{
+		Location: location,
+		TypeID:   typeID,
+	}, nil
+}
+
+func (d *Decoder) decodeVariableSizedStaticType(v interface{}) (StaticType, error) {
+	staticType, err := d.decodeStaticType(v)
+	if err != nil {
+		return nil, fmt.Errorf("invalid optional static type encoding: %w", err)
+	}
+	return VariableSizedStaticType{
+		Type: staticType,
+	}, nil
+}
+
+func (d *Decoder) decodeConstantSizedStaticType(v interface{}) (StaticType, error) {
+	encoded, ok := v.(map[interface{}]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid constant-sized static type encoding: %T", v)
+	}
+
+	field1 := encoded[uint64(0)]
+	size, ok := field1.(uint64)
+	if !ok {
+		return nil, fmt.Errorf("invalid constant-sized static type size encoding: %T", field1)
+	}
+
+	staticType, err := d.decodeStaticType(encoded[uint64(1)])
+	if err != nil {
+		return nil, fmt.Errorf("invalid constant-sized static type inner type encoding: %w", err)
+	}
+
+	return ConstantSizedStaticType{
+		Type: staticType,
+		Size: size,
+	}, nil
+}
+
+func (d *Decoder) decodeReferenceStaticType(v interface{}) (StaticType, error) {
+	encoded, ok := v.(map[interface{}]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid reference static type encoding: %T", v)
+	}
+
+	field1 := encoded[uint64(0)]
+	authorized, ok := field1.(bool)
+	if !ok {
+		return nil, fmt.Errorf("invalid reference static type authorized encoding: %T", field1)
+	}
+
+	staticType, err := d.decodeStaticType(encoded[uint64(1)])
+	if err != nil {
+		return nil, fmt.Errorf("invalid reference static type inner type encoding: %w", err)
+	}
+
+	return ReferenceStaticType{
+		Authorized: authorized,
+		Type:       staticType,
+	}, nil
+}
+
+func (d *Decoder) decodeDictionaryStaticType(v interface{}) (StaticType, error) {
+	encoded, ok := v.(map[interface{}]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid dictionary static type encoding: %T", v)
+	}
+
+	keyType, err := d.decodeStaticType(encoded[uint64(0)])
+	if err != nil {
+		return nil, fmt.Errorf("invalid dictionary static type key type encoding: %w", err)
+	}
+
+	valueType, err := d.decodeStaticType(encoded[uint64(1)])
+	if err != nil {
+		return nil, fmt.Errorf("invalid dictionary static type value type encoding: %w", err)
+	}
+
+	return DictionaryStaticType{
+		KeyType:   keyType,
+		ValueType: valueType,
+	}, nil
+}
+
+func (d *Decoder) decodeRestrictedStaticType(v interface{}) (StaticType, error) {
+	encoded, ok := v.(map[interface{}]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid restricted static type encoding: %T", v)
+	}
+
+	restrictedType, err := d.decodeStaticType(encoded[uint64(0)])
+	if err != nil {
+		return nil, fmt.Errorf("invalid restricted static type key type encoding: %w", err)
+	}
+
+	field2 := encoded[uint64(1)]
+	encodedRestrictions, ok := field2.([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid restricted static type restrictions encoding: %T", field2)
+	}
+
+	restrictions := make([]InterfaceStaticType, len(encodedRestrictions))
+	for i, encodedRestriction := range encodedRestrictions {
+		r, err := d.decodeStaticType(encodedRestriction)
+		if err != nil {
+			return nil, err
+		}
+		restriction, ok := r.(InterfaceStaticType)
+		if !ok {
+			return nil, fmt.Errorf("invalid restricted static type restriction encoding: %T", r)
+		}
+		restrictions[i] = restriction
+	}
+
+	return RestrictedStaticType{
+		Type:         restrictedType,
+		Restrictions: restrictions,
+	}, nil
 }
