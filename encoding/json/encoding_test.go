@@ -115,12 +115,12 @@ func TestEncodeInt(t *testing.T) {
 		},
 		{
 			"SmallerThanMinInt256",
-			cadence.NewIntFromBig(big.NewInt(0).Sub(sema.Int256TypeMinInt, big.NewInt(10))),
+			cadence.NewIntFromBig(big.NewInt(0).Sub(sema.Int256TypeMinIntBig, big.NewInt(10))),
 			`{"type":"Int","value":"-57896044618658097711785492504343953926634992332820282019728792003956564819978"}`,
 		},
 		{
 			"LargerThanMaxUInt256",
-			cadence.NewIntFromBig(big.NewInt(0).Add(sema.UInt256TypeMaxInt, big.NewInt(10))),
+			cadence.NewIntFromBig(big.NewInt(0).Add(sema.UInt256TypeMaxIntBig, big.NewInt(10))),
 			`{"type":"Int","value":"115792089237316195423570985008687907853269984665640564039457584007913129639945"}`,
 		},
 	}...)
@@ -210,7 +210,7 @@ func TestEncodeInt128(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Min",
-			cadence.NewInt128FromBig(sema.Int128TypeMinInt),
+			cadence.NewInt128FromBig(sema.Int128TypeMinIntBig),
 			`{"type":"Int128","value":"-170141183460469231731687303715884105728"}`,
 		},
 		{
@@ -220,7 +220,7 @@ func TestEncodeInt128(t *testing.T) {
 		},
 		{
 			"Max",
-			cadence.NewInt128FromBig(sema.Int128TypeMaxInt),
+			cadence.NewInt128FromBig(sema.Int128TypeMaxIntBig),
 			`{"type":"Int128","value":"170141183460469231731687303715884105727"}`,
 		},
 	}...)
@@ -230,7 +230,7 @@ func TestEncodeInt256(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Min",
-			cadence.NewInt256FromBig(sema.Int256TypeMinInt),
+			cadence.NewInt256FromBig(sema.Int256TypeMinIntBig),
 			`{"type":"Int256","value":"-57896044618658097711785492504343953926634992332820282019728792003956564819968"}`,
 		},
 		{
@@ -240,7 +240,7 @@ func TestEncodeInt256(t *testing.T) {
 		},
 		{
 			"Max",
-			cadence.NewInt256FromBig(sema.Int256TypeMaxInt),
+			cadence.NewInt256FromBig(sema.Int256TypeMaxIntBig),
 			`{"type":"Int256","value":"57896044618658097711785492504343953926634992332820282019728792003956564819967"}`,
 		},
 	}...)
@@ -260,7 +260,7 @@ func TestEncodeUInt(t *testing.T) {
 		},
 		{
 			"LargerThanMaxUInt256",
-			cadence.NewUIntFromBig(big.NewInt(0).Add(sema.UInt256TypeMaxInt, big.NewInt(10))),
+			cadence.NewUIntFromBig(big.NewInt(0).Add(sema.UInt256TypeMaxIntBig, big.NewInt(10))),
 			`{"type":"UInt","value":"115792089237316195423570985008687907853269984665640564039457584007913129639945"}`,
 		},
 	}...)
@@ -335,7 +335,7 @@ func TestEncodeUInt128(t *testing.T) {
 		},
 		{
 			"Max",
-			cadence.NewUInt128FromBig(sema.UInt128TypeMaxInt),
+			cadence.NewUInt128FromBig(sema.UInt128TypeMaxIntBig),
 			`{"type":"UInt128","value":"340282366920938463463374607431768211455"}`,
 		},
 	}...)
@@ -350,7 +350,7 @@ func TestEncodeUInt256(t *testing.T) {
 		},
 		{
 			"Max",
-			cadence.NewUInt256FromBig(sema.UInt256TypeMaxInt),
+			cadence.NewUInt256FromBig(sema.UInt256TypeMaxIntBig),
 			`{"type":"UInt256","value":"115792089237316195423570985008687907853269984665640564039457584007913129639935"}`,
 		},
 	}...)
