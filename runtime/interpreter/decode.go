@@ -450,47 +450,35 @@ func (d *Decoder) decodeUInt(v interface{}) (UIntValue, error) {
 }
 
 func (d *Decoder) decodeUInt8(v interface{}) (UInt8Value, error) {
-	switch v.(type) {
-	case uint64:
-		return UInt8Value(v.(uint64)), nil
-	case int64:
-		return UInt8Value(v.(int64)), nil
-	default:
-		return UInt8Value(0), fmt.Errorf("unknown UInt8 encoding: %T", v)
+	value, ok := v.(uint64)
+	if !ok {
+		return 0, fmt.Errorf("unknown UInt8 encoding: %T", v)
 	}
+	return UInt8Value(value), nil
 }
 
 func (d *Decoder) decodeUInt16(v interface{}) (UInt16Value, error) {
-	switch v.(type) {
-	case uint64:
-		return UInt16Value(v.(uint64)), nil
-	case int64:
-		return UInt16Value(v.(int64)), nil
-	default:
-		return UInt16Value(0), fmt.Errorf("unknown UInt16 encoding: %T", v)
+	value, ok := v.(uint64)
+	if !ok {
+		return 0, fmt.Errorf("unknown UInt16 encoding: %T", v)
 	}
+	return UInt16Value(value), nil
 }
 
 func (d *Decoder) decodeUInt32(v interface{}) (UInt32Value, error) {
-	switch v.(type) {
-	case uint64:
-		return UInt32Value(v.(uint64)), nil
-	case int64:
-		return UInt32Value(v.(int64)), nil
-	default:
-		return UInt32Value(0), fmt.Errorf("unknown UInt32 encoding: %T", v)
+	value, ok := v.(uint64)
+	if !ok {
+		return 0, fmt.Errorf("unknown UInt32 encoding: %T", v)
 	}
+	return UInt32Value(value), nil
 }
 
 func (d *Decoder) decodeUInt64(v interface{}) (UInt64Value, error) {
-	switch v.(type) {
-	case uint64:
-		return UInt64Value(v.(uint64)), nil
-	case int64:
-		return UInt64Value(v.(int64)), nil
-	default:
-		return UInt64Value(0), fmt.Errorf("unknown UInt64 encoding: %T", v)
+	value, ok := v.(uint64)
+	if !ok {
+		return 0, fmt.Errorf("unknown UInt64 encoding: %T", v)
 	}
+	return UInt64Value(value), nil
 }
 
 func (d *Decoder) decodeUInt128(v interface{}) (UInt128Value, error) {
@@ -512,47 +500,35 @@ func (d *Decoder) decodeUInt256(v interface{}) (UInt256Value, error) {
 }
 
 func (d *Decoder) decodeWord8(v interface{}) (Word8Value, error) {
-	switch v.(type) {
-	case uint64:
-		return Word8Value(v.(uint64)), nil
-	case int64:
-		return Word8Value(v.(int64)), nil
-	default:
-		return Word8Value(0), fmt.Errorf("unknown Word8 encoding: %T", v)
+	value, ok := v.(uint64)
+	if !ok {
+		return 0, fmt.Errorf("unknown Word8 encoding: %T", v)
 	}
+	return Word8Value(value), nil
 }
 
 func (d *Decoder) decodeWord16(v interface{}) (Word16Value, error) {
-	switch v.(type) {
-	case uint64:
-		return Word16Value(v.(uint64)), nil
-	case int64:
-		return Word16Value(v.(int64)), nil
-	default:
-		return Word16Value(0), fmt.Errorf("unknown Word16 encoding: %T", v)
+	value, ok := v.(uint64)
+	if !ok {
+		return 0, fmt.Errorf("unknown Word16 encoding: %T", v)
 	}
+	return Word16Value(value), nil
 }
 
 func (d *Decoder) decodeWord32(v interface{}) (Word32Value, error) {
-	switch v.(type) {
-	case uint64:
-		return Word32Value(v.(uint64)), nil
-	case int64:
-		return Word32Value(v.(int64)), nil
-	default:
-		return Word32Value(0), fmt.Errorf("unknown Word32 encoding: %T", v)
+	value, ok := v.(uint64)
+	if !ok {
+		return 0, fmt.Errorf("unknown Word32 encoding: %T", v)
 	}
+	return Word32Value(value), nil
 }
 
 func (d *Decoder) decodeWord64(v interface{}) (Word64Value, error) {
-	switch v.(type) {
-	case uint64:
-		return Word64Value(v.(uint64)), nil
-	case int64:
-		return Word64Value(v.(int64)), nil
-	default:
-		return Word64Value(0), fmt.Errorf("unknown Word64 encoding: %T", v)
+	value, ok := v.(uint64)
+	if !ok {
+		return 0, fmt.Errorf("unknown Word64 encoding: %T", v)
 	}
+	return Word64Value(value), nil
 }
 
 func (d *Decoder) decodeFix64(v interface{}) (Fix64Value, error) {
