@@ -20,7 +20,7 @@ package sema
 
 //go:generate stringer -type=AccessCheckMode
 
-type AccessCheckMode int
+type AccessCheckMode uint
 
 const (
 	AccessCheckModeStrict AccessCheckMode = iota

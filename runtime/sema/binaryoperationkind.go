@@ -25,7 +25,7 @@ import (
 
 //go:generate stringer -type=BinaryOperationKind
 
-type BinaryOperationKind int
+type BinaryOperationKind uint
 
 const (
 	BinaryOperationKindUnknown BinaryOperationKind = iota

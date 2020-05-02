@@ -24,7 +24,7 @@ import (
 
 //go:generate stringer -type=ControlStatement
 
-type ControlStatement int
+type ControlStatement uint
 
 const (
 	ControlStatementUnknown ControlStatement = iota

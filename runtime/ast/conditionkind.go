@@ -24,7 +24,7 @@ import (
 
 //go:generate stringer -type=ConditionKind
 
-type ConditionKind int
+type ConditionKind uint
 
 const (
 	ConditionKindUnknown ConditionKind = iota

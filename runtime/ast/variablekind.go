@@ -24,7 +24,7 @@ import (
 
 //go:generate stringer -type=VariableKind
 
-type VariableKind int
+type VariableKind uint
 
 const (
 	VariableKindNotSpecified VariableKind = iota
