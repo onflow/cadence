@@ -21,7 +21,6 @@ package runtime
 import (
 	"bytes"
 	"encoding/binary"
-	"encoding/gob"
 	"fmt"
 	"math"
 	"time"
@@ -1147,10 +1146,6 @@ type BlockValue struct {
 	Height    interpreter.UInt64Value
 	ID        *interpreter.ArrayValue
 	Timestamp interpreter.Fix64Value
-}
-
-func init() {
-	gob.Register(&BlockValue{})
 }
 
 func NewBlockValue(height uint64, id [stdlib.BlockIDSize]byte, timestamp time.Time) BlockValue {

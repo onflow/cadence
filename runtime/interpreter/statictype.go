@@ -19,7 +19,6 @@
 package interpreter
 
 import (
-	"encoding/gob"
 	"fmt"
 	"strings"
 
@@ -46,10 +45,6 @@ type TypeStaticType struct {
 	Type sema.Type
 }
 
-func init() {
-	gob.Register(TypeStaticType{})
-}
-
 func (TypeStaticType) isStaticType() {}
 
 func (t TypeStaticType) String() string {
@@ -61,10 +56,6 @@ func (t TypeStaticType) String() string {
 type CompositeStaticType struct {
 	Location ast.Location
 	TypeID   sema.TypeID
-}
-
-func init() {
-	gob.Register(CompositeStaticType{})
 }
 
 func (CompositeStaticType) isStaticType() {}
@@ -84,10 +75,6 @@ type InterfaceStaticType struct {
 	TypeID   sema.TypeID
 }
 
-func init() {
-	gob.Register(InterfaceStaticType{})
-}
-
 func (InterfaceStaticType) isStaticType() {}
 
 func (t InterfaceStaticType) String() string {
@@ -104,10 +91,6 @@ type VariableSizedStaticType struct {
 	Type StaticType
 }
 
-func init() {
-	gob.Register(VariableSizedStaticType{})
-}
-
 func (VariableSizedStaticType) isStaticType() {}
 
 func (t VariableSizedStaticType) String() string {
@@ -119,10 +102,6 @@ func (t VariableSizedStaticType) String() string {
 type ConstantSizedStaticType struct {
 	Type StaticType
 	Size uint64
-}
-
-func init() {
-	gob.Register(ConstantSizedStaticType{})
 }
 
 func (ConstantSizedStaticType) isStaticType() {}
@@ -138,10 +117,6 @@ type DictionaryStaticType struct {
 	ValueType StaticType
 }
 
-func init() {
-	gob.Register(DictionaryStaticType{})
-}
-
 func (DictionaryStaticType) isStaticType() {}
 
 func (t DictionaryStaticType) String() string {
@@ -152,10 +127,6 @@ func (t DictionaryStaticType) String() string {
 
 type OptionalStaticType struct {
 	Type StaticType
-}
-
-func init() {
-	gob.Register(OptionalStaticType{})
 }
 
 func (OptionalStaticType) isStaticType() {}
@@ -169,10 +140,6 @@ func (t OptionalStaticType) String() string {
 type RestrictedStaticType struct {
 	Type         StaticType
 	Restrictions []InterfaceStaticType
-}
-
-func init() {
-	gob.Register(RestrictedStaticType{})
 }
 
 func (RestrictedStaticType) isStaticType() {}
@@ -192,10 +159,6 @@ func (t RestrictedStaticType) String() string {
 type ReferenceStaticType struct {
 	Authorized bool
 	Type       StaticType
-}
-
-func init() {
-	gob.Register(ReferenceStaticType{})
 }
 
 func (ReferenceStaticType) isStaticType() {}
