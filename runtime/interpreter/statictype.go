@@ -39,18 +39,6 @@ type StaticType interface {
 	isStaticType()
 }
 
-// TypeStaticType
-
-type TypeStaticType struct {
-	Type sema.Type
-}
-
-func (TypeStaticType) isStaticType() {}
-
-func (t TypeStaticType) String() string {
-	return t.Type.String()
-}
-
 // CompositeStaticType
 
 type CompositeStaticType struct {
@@ -223,7 +211,11 @@ func ConvertSemaToStaticType(typ sema.Type) StaticType {
 		return convertSemaReferenceToStaticReferenceType(t)
 
 	default:
-		return TypeStaticType{Type: t}
+		primitiveStaticType := ConvertSemaToPrimitiveStaticType(t)
+		if primitiveStaticType == PrimitiveStaticTypeUnknown {
+			return nil
+		}
+		return primitiveStaticType
 	}
 }
 
@@ -293,8 +285,8 @@ func ConvertStaticToSemaType(
 			Type:       ConvertStaticToSemaType(t.Type, getInterface, getComposite),
 		}
 
-	case TypeStaticType:
-		return t.Type
+	case PrimitiveStaticType:
+		return t.SemaType()
 
 	default:
 		panic(errors.NewUnreachableError())
