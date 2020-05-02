@@ -20,7 +20,6 @@ package interpreter_test
 
 import (
 	"bytes"
-	"encoding/gob"
 	"fmt"
 	"math/big"
 	"strings"
@@ -7438,8 +7437,11 @@ func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
 		})
 
 		w := new(bytes.Buffer)
-		encoder := gob.NewEncoder(w)
-		err := encoder.Encode(test)
+
+		encoder, err := interpreter.NewEncoder(w)
+		require.NoError(t, err)
+
+		err = encoder.Encode(test)
 		require.NoError(t, err)
 
 		encodings[i] = w.Bytes()
@@ -7485,20 +7487,25 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 
 		test := inter.Globals["test"].Value
 
-		test.SetOwner(&common.Address{
+		owner := &common.Address{
 			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-		})
+		}
+
+		test.SetOwner(owner)
 
 		w := new(bytes.Buffer)
-		encoder := gob.NewEncoder(w)
-		err := encoder.Encode(&test)
+		encoder, err := interpreter.NewEncoder(w)
+		require.NoError(t, err)
+
+		err = encoder.Encode(test)
 		require.NoError(t, err)
 
 		encoded := w.Bytes()
 
-		var decoded interpreter.Value
-		decoder := gob.NewDecoder(bytes.NewReader(encoded))
-		err = decoder.Decode(&decoded)
+		decoder, err := interpreter.NewDecoder(bytes.NewReader(encoded))
+		require.NoError(t, err)
+
+		decoded, err := decoder.Decode(owner)
 		require.NoError(t, err)
 
 		require.Equal(t, test, decoded)

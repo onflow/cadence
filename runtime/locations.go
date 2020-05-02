@@ -19,7 +19,6 @@
 package runtime
 
 import (
-	"encoding/gob"
 	"encoding/hex"
 	"fmt"
 
@@ -53,10 +52,6 @@ func (l TransactionLocation) ID() ast.LocationID {
 
 func (l TransactionLocation) String() string {
 	return hex.EncodeToString(l)
-}
-
-func init() {
-	gob.Register(TransactionLocation{})
 }
 
 // ScriptLocation

@@ -19,7 +19,6 @@
 package ast
 
 import (
-	"encoding/gob"
 	"encoding/hex"
 	"fmt"
 	"strings"
@@ -130,10 +129,6 @@ func (l StringLocation) ID() LocationID {
 	return LocationID(l)
 }
 
-func init() {
-	gob.Register(StringLocation(""))
-}
-
 // AddressLocation
 
 const AddressPrefix = "A"
@@ -154,10 +149,6 @@ func (l AddressLocation) ID() LocationID {
 
 func (l AddressLocation) ToAddress() common.Address {
 	return common.BytesToAddress(l)
-}
-
-func init() {
-	gob.Register(AddressLocation([]byte{}))
 }
 
 // HasImportLocation
