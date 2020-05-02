@@ -18,6 +18,7 @@ import (
 type encodeDecodeTest struct {
 	value   Value
 	encoded []byte
+	invalid bool
 }
 
 func testEncodeDecode(t *testing.T, tests map[string]encodeDecodeTest) {
@@ -25,26 +26,36 @@ func testEncodeDecode(t *testing.T, tests map[string]encodeDecodeTest) {
 
 	f := func(t *testing.T, test encodeDecodeTest) {
 
-		test.value.SetOwner(&owner)
+		var encoded []byte
+		if test.value != nil {
+			test.value.SetOwner(&owner)
 
-		encoded, err := EncodeValue(test.value)
-		require.NoError(t, err)
+			var err error
+			encoded, err = EncodeValue(test.value)
+			require.NoError(t, err)
 
-		if test.encoded != nil {
-			if !assert.Equal(t, test.encoded, encoded) {
-				fmt.Printf(
-					"\nExpected :%x\n"+
-						"Actual   :%x\n\n",
-					test.encoded,
-					encoded,
-				)
+			if test.encoded != nil {
+				if !assert.Equal(t, test.encoded, encoded) {
+					fmt.Printf(
+						"\nExpected :%x\n"+
+							"Actual   :%x\n\n",
+						test.encoded,
+						encoded,
+					)
+				}
 			}
+		} else {
+			encoded = test.encoded
 		}
 
 		decoded, err := DecodeValue(encoded, &owner)
-		require.NoError(t, err)
+		if test.invalid {
+			require.Error(t, err)
+		} else {
+			require.NoError(t, err)
 
-		require.Equal(t, test.value, decoded)
+			require.Equal(t, test.value, decoded)
+		}
 	}
 
 	if len(tests) == 1 {
@@ -337,7 +348,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			},
 			"empty, address location": {
 				value: &CompositeValue{
-					TypeID:   "A.0x1.TestStrut",
+					TypeID:   "A.0x1.TestStruct",
 					Kind:     common.CompositeKindStructure,
 					Fields:   map[string]Value{},
 					Location: ast.AddressLocation{0x1},
@@ -357,10 +368,10 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					0x1,
 					// key 1
 					0x1,
-					// UTF-8 string, length 15
-					0x6f,
+					// UTF-8 string, length 16
+					0x70,
 					0x41, 0x2e, 0x30, 0x78, 0x31, 0x2e, 0x54, 0x65,
-					0x73, 0x74, 0x53, 0x74, 0x72, 0x75, 0x74,
+					0x73, 0x74, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
 					// key 2
 					0x2,
 					// positive integer 1
@@ -370,6 +381,39 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					// object, 0 pairs of items follow
 					0xa0,
 				},
+			},
+			"empty, address location, address too long": {
+				encoded: []byte{
+					// tag
+					0xd8, cborTagCompositeValue,
+					// object, 4 pairs of items follow
+					0xa4,
+					// key 0
+					0x0,
+					// tag
+					0xd8, cborTagAddressLocation,
+					// byte sequence, length 22
+					0x56,
+					// address
+					0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+					// key 1
+					0x1,
+					// UTF-8 string, length 16
+					0x70,
+					0x41, 0x2e, 0x30, 0x78, 0x31, 0x2e, 0x54, 0x65,
+					0x73, 0x74, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+					// key 2
+					0x2,
+					// positive integer 1
+					0x1,
+					// key 3
+					0x3,
+					// object, 0 pairs of items follow
+					0xa0,
+				},
+				invalid: true,
 			},
 		},
 	)
@@ -1422,6 +1466,19 @@ func TestEncodeDecodeAddressValue(t *testing.T) {
 					// address
 					0x42, 0x0, 0x43, 0x0,
 				},
+			},
+			"too long": {
+				encoded: []byte{
+					// tag
+					0xd8, cborTagAddressValue,
+					// byte sequence, length 22
+					0x56,
+					// address
+					0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+				},
+				invalid: true,
 			},
 		},
 	)

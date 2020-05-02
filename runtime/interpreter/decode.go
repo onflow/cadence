@@ -259,24 +259,40 @@ func (d *Decoder) decodeLocation(l interface{}) (ast.Location, error) {
 		return nil, fmt.Errorf("invalid location encoding: %T", l)
 	}
 
+	content := tag.Content
+
 	switch tag.Number {
 	case cborTagAddressLocation:
-		b, ok := tag.Content.([]byte)
-		if !ok {
-			return nil, fmt.Errorf("invalid address location encoding: %T", tag.Content)
-		}
-		return ast.AddressLocation(b), nil
+		return d.decodeAddressLocation(content)
 
 	case cborTagStringLocation:
-		s, ok := tag.Content.(string)
-		if !ok {
-			return nil, fmt.Errorf("invalid string location encoding: %T", tag.Content)
-		}
-		return ast.StringLocation(s), nil
+		return d.decodeStringLocation(content)
 
 	default:
 		return nil, fmt.Errorf("invalid location encoding tag: %d", tag.Number)
 	}
+}
+
+func (d *Decoder) decodeAddressLocation(content interface{}) (ast.Location, error) {
+	b, ok := content.([]byte)
+	if !ok {
+		return nil, fmt.Errorf("invalid address location encoding: %T", content)
+	}
+
+	err := d.checkAddressLength(b)
+	if err != nil {
+		return nil, err
+	}
+
+	return ast.AddressLocation(b), nil
+}
+
+func (d *Decoder) decodeStringLocation(content interface{}) (ast.Location, error) {
+	s, ok := content.(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid string location encoding: %T", content)
+	}
+	return ast.StringLocation(s), nil
 }
 
 func (d *Decoder) decodeComposite(v interface{}, owner *common.Address) (*CompositeValue, error) {
@@ -596,11 +612,30 @@ func (d *Decoder) decodeStorageReference(v interface{}, owner *common.Address) (
 	}, nil
 }
 
+func (d *Decoder) checkAddressLength(addressBytes []byte) error {
+	actualLength := len(addressBytes)
+	const expectedLength = common.AddressLength
+	if actualLength > expectedLength {
+		return fmt.Errorf(
+			"invalid address length: got %d, expected max %d",
+			actualLength,
+			expectedLength,
+		)
+	}
+	return nil
+}
+
 func (d *Decoder) decodeAddress(v interface{}) (AddressValue, error) {
 	addressBytes, ok := v.([]byte)
 	if !ok {
 		return AddressValue{}, fmt.Errorf("invalid address encoding: %T", v)
 	}
+
+	err := d.checkAddressLength(addressBytes)
+	if err != nil {
+		return AddressValue{}, err
+	}
+
 	address := NewAddressValueFromBytes(addressBytes)
 	return address, nil
 }
