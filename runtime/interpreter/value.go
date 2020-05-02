@@ -1418,10 +1418,10 @@ func (v Int128Value) KeyString() string {
 
 func (v Int128Value) Negate() NumberValue {
 	// INT32-C
-	//   if v == Int128TypeMinInt {
+	//   if v == Int128TypeMinIntBig {
 	//       ...
 	//   }
-	if v.BigInt.Cmp(sema.Int128TypeMinInt) == 0 {
+	if v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0 {
 		panic(OverflowError{})
 	}
 	return Int128Value{big.NewInt(0).Neg(v.BigInt)}
@@ -1435,17 +1435,17 @@ func (v Int128Value) Plus(other NumberValue) NumberValue {
 	// If Go gains a native int128 type and we switch this value
 	// to be based on it, then we need to follow INT32-C:
 	//
-	//   if (o > 0) && (v > (Int128TypeMaxInt - o)) {
+	//   if (o > 0) && (v > (Int128TypeMaxIntBig - o)) {
 	//       ...
-	//   } else if (o < 0) && (v < (Int128TypeMinInt - o)) {
+	//   } else if (o < 0) && (v < (Int128TypeMinIntBig - o)) {
 	//       ...
 	//   }
 	//
 	res := big.NewInt(0)
 	res.Add(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int128TypeMinInt) < 0 {
+	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int128TypeMaxInt) > 0 {
+	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return Int128Value{res}
@@ -1459,17 +1459,17 @@ func (v Int128Value) Minus(other NumberValue) NumberValue {
 	// If Go gains a native int128 type and we switch this value
 	// to be based on it, then we need to follow INT32-C:
 	//
-	//   if (o > 0) && (v < (Int128TypeMinInt + o)) {
+	//   if (o > 0) && (v < (Int128TypeMinIntBig + o)) {
 	// 	     ...
-	//   } else if (o < 0) && (v > (Int128TypeMaxInt + o)) {
+	//   } else if (o < 0) && (v > (Int128TypeMaxIntBig + o)) {
 	//       ...
 	//   }
 	//
 	res := big.NewInt(0)
 	res.Sub(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int128TypeMinInt) < 0 {
+	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int128TypeMaxInt) > 0 {
+	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return Int128Value{res}
@@ -1490,9 +1490,9 @@ func (v Int128Value) Mul(other NumberValue) NumberValue {
 	o := other.(Int128Value)
 	res := big.NewInt(0)
 	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int128TypeMinInt) < 0 {
+	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int128TypeMaxInt) > 0 {
+	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return Int128Value{res}
@@ -1504,14 +1504,14 @@ func (v Int128Value) Div(other NumberValue) NumberValue {
 	// INT33-C:
 	//   if o == 0 {
 	//       ...
-	//   } else if (v == Int128TypeMinInt) && (o == -1) {
+	//   } else if (v == Int128TypeMinIntBig) && (o == -1) {
 	//       ...
 	//   }
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
 	}
 	res.SetInt64(-1)
-	if (v.BigInt.Cmp(sema.Int128TypeMinInt) == 0) && (o.BigInt.Cmp(res) == 0) {
+	if (v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
 		panic(OverflowError{})
 	}
 	res.Div(v.BigInt, o.BigInt)
@@ -1561,9 +1561,9 @@ func ConvertInt128(value Value, _ *Interpreter) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	if v.Cmp(sema.Int128TypeMaxInt) > 0 {
+	if v.Cmp(sema.Int128TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
-	} else if v.Cmp(sema.Int128TypeMinInt) < 0 {
+	} else if v.Cmp(sema.Int128TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
 	}
 
@@ -1622,10 +1622,10 @@ func (v Int256Value) KeyString() string {
 
 func (v Int256Value) Negate() NumberValue {
 	// INT32-C
-	//   if v == Int256TypeMinInt {
+	//   if v == Int256TypeMinIntBig {
 	//       ...
 	//   }
-	if v.BigInt.Cmp(sema.Int256TypeMinInt) == 0 {
+	if v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0 {
 		panic(OverflowError{})
 	}
 	return Int256Value{BigInt: big.NewInt(0).Neg(v.BigInt)}
@@ -1639,17 +1639,17 @@ func (v Int256Value) Plus(other NumberValue) NumberValue {
 	// If Go gains a native int256 type and we switch this value
 	// to be based on it, then we need to follow INT32-C:
 	//
-	//   if (o > 0) && (v > (Int256TypeMaxInt - o)) {
+	//   if (o > 0) && (v > (Int256TypeMaxIntBig - o)) {
 	//       ...
-	//   } else if (o < 0) && (v < (Int256TypeMinInt - o)) {
+	//   } else if (o < 0) && (v < (Int256TypeMinIntBig - o)) {
 	//       ...
 	//   }
 	//
 	res := big.NewInt(0)
 	res.Add(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int256TypeMinInt) < 0 {
+	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int256TypeMaxInt) > 0 {
+	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return Int256Value{res}
@@ -1663,17 +1663,17 @@ func (v Int256Value) Minus(other NumberValue) NumberValue {
 	// If Go gains a native int256 type and we switch this value
 	// to be based on it, then we need to follow INT32-C:
 	//
-	//   if (o > 0) && (v < (Int256TypeMinInt + o)) {
+	//   if (o > 0) && (v < (Int256TypeMinIntBig + o)) {
 	// 	     ...
-	//   } else if (o < 0) && (v > (Int256TypeMaxInt + o)) {
+	//   } else if (o < 0) && (v > (Int256TypeMaxIntBig + o)) {
 	//       ...
 	//   }
 	//
 	res := big.NewInt(0)
 	res.Sub(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int256TypeMinInt) < 0 {
+	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int256TypeMaxInt) > 0 {
+	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return Int256Value{res}
@@ -1694,9 +1694,9 @@ func (v Int256Value) Mul(other NumberValue) NumberValue {
 	o := other.(Int256Value)
 	res := big.NewInt(0)
 	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int256TypeMinInt) < 0 {
+	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int256TypeMaxInt) > 0 {
+	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return Int256Value{res}
@@ -1708,14 +1708,14 @@ func (v Int256Value) Div(other NumberValue) NumberValue {
 	// INT33-C:
 	//   if o == 0 {
 	//       ...
-	//   } else if (v == Int256TypeMinInt) && (o == -1) {
+	//   } else if (v == Int256TypeMinIntBig) && (o == -1) {
 	//       ...
 	//   }
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
 	}
 	res.SetInt64(-1)
-	if (v.BigInt.Cmp(sema.Int256TypeMinInt) == 0) && (o.BigInt.Cmp(res) == 0) {
+	if (v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
 		panic(OverflowError{})
 	}
 	res.Div(v.BigInt, o.BigInt)
@@ -1765,9 +1765,9 @@ func ConvertInt256(value Value, _ *Interpreter) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	if v.Cmp(sema.Int256TypeMaxInt) > 0 {
+	if v.Cmp(sema.Int256TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
-	} else if v.Cmp(sema.Int256TypeMinInt) < 0 {
+	} else if v.Cmp(sema.Int256TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
 	}
 
@@ -2528,7 +2528,7 @@ func (v UInt128Value) Plus(other NumberValue) NumberValue {
 	//      ...
 	//  }
 	//
-	if sum.Cmp(sema.UInt128TypeMaxInt) > 0 {
+	if sum.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return UInt128Value{sum}
@@ -2547,7 +2547,7 @@ func (v UInt128Value) Minus(other NumberValue) NumberValue {
 	// 	     ...
 	//   }
 	//
-	if diff.Cmp(sema.UInt128TypeMinInt) < 0 {
+	if diff.Cmp(sema.UInt128TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
 	}
 	return UInt128Value{diff}
@@ -2567,7 +2567,7 @@ func (v UInt128Value) Mul(other NumberValue) NumberValue {
 	o := other.(UInt128Value)
 	res := big.NewInt(0)
 	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.UInt128TypeMaxInt) > 0 {
+	if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return UInt128Value{res}
@@ -2626,7 +2626,7 @@ func ConvertUInt128(value Value, _ *Interpreter) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	if v.Cmp(sema.UInt128TypeMaxInt) > 0 {
+	if v.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	} else if v.Sign() < 0 {
 		panic(UnderflowError{})
@@ -2702,7 +2702,7 @@ func (v UInt256Value) Plus(other NumberValue) NumberValue {
 	//      ...
 	//  }
 	//
-	if sum.Cmp(sema.UInt256TypeMaxInt) > 0 {
+	if sum.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return UInt256Value{sum}
@@ -2721,7 +2721,7 @@ func (v UInt256Value) Minus(other NumberValue) NumberValue {
 	// 	     ...
 	//   }
 	//
-	if diff.Cmp(sema.UInt256TypeMinInt) < 0 {
+	if diff.Cmp(sema.UInt256TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
 	}
 	return UInt256Value{diff}
@@ -2741,7 +2741,7 @@ func (v UInt256Value) Mul(other NumberValue) NumberValue {
 	o := other.(UInt256Value)
 	res := big.NewInt(0)
 	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.UInt256TypeMaxInt) > 0 {
+	if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return UInt256Value{res}
@@ -2800,7 +2800,7 @@ func ConvertUInt256(value Value, _ *Interpreter) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	if v.Cmp(sema.UInt256TypeMaxInt) > 0 {
+	if v.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	} else if v.Sign() < 0 {
 		panic(UnderflowError{})
