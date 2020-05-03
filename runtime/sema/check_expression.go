@@ -142,7 +142,7 @@ func (checker *Checker) VisitExpressionStatement(statement *ast.ExpressionStatem
 		)
 	}
 
-	// Ensure that a self-standing expression can be converted to it's own type.
+	// Ensure that a self-standing expression can be converted to its own type.
 	//
 	// For example, the expression might be a fixed-point expression,
 	// which is inferred to have type Fix64, and the check ensures the literal
