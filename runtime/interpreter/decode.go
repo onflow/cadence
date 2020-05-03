@@ -367,7 +367,7 @@ func (d *Decoder) decodeBig(v interface{}) (*big.Int, error) {
 		return nil, fmt.Errorf("invalid bignum encoding: %T", v)
 	}
 
-	b := tag.Content.([]byte)
+	b, ok := tag.Content.([]byte)
 	if !ok {
 		return nil, fmt.Errorf("invalid bignum content encoding: %T", v)
 	}
