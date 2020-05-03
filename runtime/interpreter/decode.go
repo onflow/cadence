@@ -675,7 +675,7 @@ func (d *Decoder) decodeFix64(v interface{}) (Fix64Value, error) {
 		return Fix64Value(v), nil
 
 	default:
-		return 0, fmt.Errorf("unknown Int64 encoding: %T", v)
+		return 0, fmt.Errorf("unknown Fix64 encoding: %T", v)
 	}
 }
 
