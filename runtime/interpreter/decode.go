@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"math"
 	"math/big"
 
 	"github.com/fxamacker/cbor/v2"
@@ -395,46 +396,94 @@ func (d *Decoder) decodeInt(v interface{}) (IntValue, error) {
 }
 
 func (d *Decoder) decodeInt8(v interface{}) (Int8Value, error) {
-	switch v.(type) {
+	switch v := v.(type) {
 	case uint64:
-		return Int8Value(v.(uint64)), nil
+		const max = math.MaxInt8
+		if v > max {
+			return 0, fmt.Errorf("invalid Int8: got %d, expected max %d", v, max)
+		}
+		return Int8Value(v), nil
+
 	case int64:
-		return Int8Value(v.(int64)), nil
+		const min = math.MinInt8
+		if v < min {
+			return 0, fmt.Errorf("invalid Int8: got %d, expected min %d", v, min)
+		}
+		const max = math.MaxInt8
+		if v > max {
+			return 0, fmt.Errorf("invalid Int8: got %d, expected max %d", v, max)
+		}
+		return Int8Value(v), nil
+
 	default:
-		return Int8Value(0), fmt.Errorf("unknown Int8 encoding: %T", v)
+		return 0, fmt.Errorf("unknown Int8 encoding: %T", v)
 	}
 }
 
 func (d *Decoder) decodeInt16(v interface{}) (Int16Value, error) {
-	switch v.(type) {
+	switch v := v.(type) {
 	case uint64:
-		return Int16Value(v.(uint64)), nil
+		const max = math.MaxInt16
+		if v > max {
+			return 0, fmt.Errorf("invalid Int16: got %d, expected max %d", v, max)
+		}
+		return Int16Value(v), nil
+
 	case int64:
-		return Int16Value(v.(int64)), nil
+		const min = math.MinInt16
+		if v < min {
+			return 0, fmt.Errorf("invalid Int16: got %d, expected min %d", v, min)
+		}
+		const max = math.MaxInt16
+		if v > max {
+			return 0, fmt.Errorf("invalid Int16: got %d, expected max %d", v, max)
+		}
+		return Int16Value(v), nil
+
 	default:
-		return Int16Value(0), fmt.Errorf("unknown Int16 encoding: %T", v)
+		return 0, fmt.Errorf("unknown Int16 encoding: %T", v)
 	}
 }
 
 func (d *Decoder) decodeInt32(v interface{}) (Int32Value, error) {
-	switch v.(type) {
+	switch v := v.(type) {
 	case uint64:
-		return Int32Value(v.(uint64)), nil
+		const max = math.MaxInt32
+		if v > max {
+			return 0, fmt.Errorf("invalid Int32: got %d, expected max %d", v, max)
+		}
+		return Int32Value(v), nil
+
 	case int64:
-		return Int32Value(v.(int64)), nil
+		const min = math.MinInt32
+		if v < min {
+			return 0, fmt.Errorf("invalid Int32: got %d, expected min %d", v, min)
+		}
+		const max = math.MaxInt32
+		if v > max {
+			return 0, fmt.Errorf("invalid Int32: got %d, expected max %d", v, max)
+		}
+		return Int32Value(v), nil
+
 	default:
-		return Int32Value(0), fmt.Errorf("unknown Int32 encoding: %T", v)
+		return 0, fmt.Errorf("unknown Int32 encoding: %T", v)
 	}
 }
 
 func (d *Decoder) decodeInt64(v interface{}) (Int64Value, error) {
-	switch v.(type) {
+	switch v := v.(type) {
 	case uint64:
-		return Int64Value(v.(uint64)), nil
+		const max = math.MaxInt64
+		if v > max {
+			return 0, fmt.Errorf("invalid Int64: got %d, expected max %d", v, max)
+		}
+		return Int64Value(v), nil
+
 	case int64:
-		return Int64Value(v.(int64)), nil
+		return Int64Value(v), nil
+
 	default:
-		return Int64Value(0), fmt.Errorf("unknown Int64 encoding: %T", v)
+		return 0, fmt.Errorf("unknown Int64 encoding: %T", v)
 	}
 }
 
@@ -442,6 +491,16 @@ func (d *Decoder) decodeInt128(v interface{}) (Int128Value, error) {
 	bigInt, err := d.decodeBig(v)
 	if err != nil {
 		return Int128Value{}, fmt.Errorf("invalid Int encoding: %w", err)
+	}
+
+	min := sema.Int128TypeMinIntBig
+	if bigInt.Cmp(min) < 0 {
+		return Int128Value{}, fmt.Errorf("invalid Int128: got %s, expected min %s", bigInt, min)
+	}
+
+	max := sema.Int128TypeMaxIntBig
+	if bigInt.Cmp(max) > 0 {
+		return Int128Value{}, fmt.Errorf("invalid Int128: got %s, expected max %s", bigInt, max)
 	}
 
 	return NewInt128ValueFromBigInt(bigInt), nil
@@ -453,13 +512,27 @@ func (d *Decoder) decodeInt256(v interface{}) (Int256Value, error) {
 		return Int256Value{}, fmt.Errorf("invalid Int encoding: %w", err)
 	}
 
+	min := sema.Int256TypeMinIntBig
+	if bigInt.Cmp(min) < 0 {
+		return Int256Value{}, fmt.Errorf("invalid Int256: got %s, expected min %s", bigInt, min)
+	}
+
+	max := sema.Int256TypeMaxIntBig
+	if bigInt.Cmp(max) > 0 {
+		return Int256Value{}, fmt.Errorf("invalid Int256: got %s, expected max %s", bigInt, max)
+	}
+
 	return NewInt256ValueFromBigInt(bigInt), nil
 }
 
 func (d *Decoder) decodeUInt(v interface{}) (UIntValue, error) {
 	bigInt, err := d.decodeBig(v)
 	if err != nil {
-		return UIntValue{}, fmt.Errorf("invalid Int encoding: %w", err)
+		return UIntValue{}, fmt.Errorf("invalid UInt encoding: %w", err)
+	}
+
+	if bigInt.Sign() < 0 {
+		return UIntValue{}, fmt.Errorf("invalid UInt: got %s, expected positive", bigInt)
 	}
 
 	return NewUIntValueFromBigInt(bigInt), nil
@@ -470,6 +543,10 @@ func (d *Decoder) decodeUInt8(v interface{}) (UInt8Value, error) {
 	if !ok {
 		return 0, fmt.Errorf("unknown UInt8 encoding: %T", v)
 	}
+	const max = math.MaxUint8
+	if value > max {
+		return 0, fmt.Errorf("invalid UInt8: got %d, expected max %d", v, max)
+	}
 	return UInt8Value(value), nil
 }
 
@@ -478,6 +555,10 @@ func (d *Decoder) decodeUInt16(v interface{}) (UInt16Value, error) {
 	if !ok {
 		return 0, fmt.Errorf("unknown UInt16 encoding: %T", v)
 	}
+	const max = math.MaxUint16
+	if value > max {
+		return 0, fmt.Errorf("invalid UInt16: got %d, expected max %d", v, max)
+	}
 	return UInt16Value(value), nil
 }
 
@@ -485,6 +566,10 @@ func (d *Decoder) decodeUInt32(v interface{}) (UInt32Value, error) {
 	value, ok := v.(uint64)
 	if !ok {
 		return 0, fmt.Errorf("unknown UInt32 encoding: %T", v)
+	}
+	const max = math.MaxUint32
+	if value > max {
+		return 0, fmt.Errorf("invalid UInt32: got %d, expected max %d", v, max)
 	}
 	return UInt32Value(value), nil
 }
@@ -503,6 +588,15 @@ func (d *Decoder) decodeUInt128(v interface{}) (UInt128Value, error) {
 		return UInt128Value{}, fmt.Errorf("invalid Int encoding: %w", err)
 	}
 
+	if bigInt.Sign() < 0 {
+		return UInt128Value{}, fmt.Errorf("invalid UInt128: got %s, expected positive", bigInt)
+	}
+
+	max := sema.UInt128TypeMaxIntBig
+	if bigInt.Cmp(max) > 0 {
+		return UInt128Value{}, fmt.Errorf("invalid UInt128: got %s, expected max %s", bigInt, max)
+	}
+
 	return NewUInt128ValueFromBigInt(bigInt), nil
 }
 
@@ -510,6 +604,15 @@ func (d *Decoder) decodeUInt256(v interface{}) (UInt256Value, error) {
 	bigInt, err := d.decodeBig(v)
 	if err != nil {
 		return UInt256Value{}, fmt.Errorf("invalid Int encoding: %w", err)
+	}
+
+	if bigInt.Sign() < 0 {
+		return UInt256Value{}, fmt.Errorf("invalid UInt256: got %s, expected positive", bigInt)
+	}
+
+	max := sema.UInt256TypeMaxIntBig
+	if bigInt.Cmp(max) > 0 {
+		return UInt256Value{}, fmt.Errorf("invalid UInt256: got %s, expected max %s", bigInt, max)
 	}
 
 	return NewUInt256ValueFromBigInt(bigInt), nil
@@ -520,6 +623,10 @@ func (d *Decoder) decodeWord8(v interface{}) (Word8Value, error) {
 	if !ok {
 		return 0, fmt.Errorf("unknown Word8 encoding: %T", v)
 	}
+	const max = math.MaxUint8
+	if value > max {
+		return 0, fmt.Errorf("invalid Word8: got %d, expected max %d", v, max)
+	}
 	return Word8Value(value), nil
 }
 
@@ -528,6 +635,10 @@ func (d *Decoder) decodeWord16(v interface{}) (Word16Value, error) {
 	if !ok {
 		return 0, fmt.Errorf("unknown Word16 encoding: %T", v)
 	}
+	const max = math.MaxUint16
+	if value > max {
+		return 0, fmt.Errorf("invalid Word16: got %d, expected max %d", v, max)
+	}
 	return Word16Value(value), nil
 }
 
@@ -535,6 +646,10 @@ func (d *Decoder) decodeWord32(v interface{}) (Word32Value, error) {
 	value, ok := v.(uint64)
 	if !ok {
 		return 0, fmt.Errorf("unknown Word32 encoding: %T", v)
+	}
+	const max = math.MaxUint32
+	if value > max {
+		return 0, fmt.Errorf("invalid Word32: got %d, expected max %d", v, max)
 	}
 	return Word32Value(value), nil
 }
@@ -548,25 +663,28 @@ func (d *Decoder) decodeWord64(v interface{}) (Word64Value, error) {
 }
 
 func (d *Decoder) decodeFix64(v interface{}) (Fix64Value, error) {
-	switch v.(type) {
+	switch v := v.(type) {
 	case uint64:
-		return Fix64Value(v.(uint64)), nil
+		const max = math.MaxInt64
+		if v > max {
+			return 0, fmt.Errorf("invalid Fix64: got %d, expected max %d", v, max)
+		}
+		return Fix64Value(v), nil
+
 	case int64:
-		return Fix64Value(v.(int64)), nil
+		return Fix64Value(v), nil
+
 	default:
-		return Fix64Value(0), fmt.Errorf("unknown Fix64 encoding: %T", v)
+		return 0, fmt.Errorf("unknown Int64 encoding: %T", v)
 	}
 }
 
 func (d *Decoder) decodeUFix64(v interface{}) (UFix64Value, error) {
-	switch v.(type) {
-	case uint64:
-		return UFix64Value(v.(uint64)), nil
-	case int64:
-		return UFix64Value(v.(int64)), nil
-	default:
-		return UFix64Value(0), fmt.Errorf("unknown UFix64 encoding: %T", v)
+	value, ok := v.(uint64)
+	if !ok {
+		return 0, fmt.Errorf("unknown UFix64 encoding: %T", v)
 	}
+	return UFix64Value(value), nil
 }
 
 func (d *Decoder) decodeSome(v interface{}, owner *common.Address) (*SomeValue, error) {
