@@ -160,20 +160,31 @@ func (r *interpreterRuntime) interpret(
 		return exportableValue{}, err
 	}
 
-	if err := inter.Interpret(); err != nil {
+	var result interpreter.Value
+
+	r.reportMetric(
+		func() {
+			err = inter.Interpret()
+			if err != nil || f == nil {
+				return
+			}
+			result, err = f(inter)
+		},
+		runtimeInterface,
+		func(metrics Metrics, duration time.Duration) {
+			metrics.ProgramInterpreted(duration)
+		},
+	)
+
+	if err != nil {
 		return exportableValue{}, err
 	}
 
-	if f != nil {
-		value, err := f(inter)
-		if err != nil {
-			return exportableValue{}, err
-		}
-
-		return newExportableValue(value, inter), nil
+	if f == nil {
+		return exportableValue{}, nil
 	}
 
-	return exportableValue{}, nil
+	return newExportableValue(result, inter), nil
 }
 
 func (r *interpreterRuntime) newAuthAccountValue(
@@ -329,7 +340,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	}
 
 	if program == nil {
-		program, err = r.parse(code)
+		program, err = r.parse(code, runtimeInterface)
 		if err != nil {
 			return nil, err
 		}
@@ -359,7 +370,16 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 		return nil, err
 	}
 
-	if err := checker.Check(); err != nil {
+	r.reportMetric(
+		func() {
+			err = checker.Check()
+		},
+		runtimeInterface,
+		func(metrics Metrics, duration time.Duration) {
+			metrics.ProgramChecked(duration)
+		},
+	)
+	if err != nil {
 		return nil, err
 	}
 
@@ -577,7 +597,7 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 			return nil, err
 		}
 
-		program, err = r.parse(script)
+		program, err = r.parse(script, runtimeInterface)
 		if err != nil {
 			return nil, err
 		}
@@ -591,8 +611,35 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 	}
 }
 
-func (r *interpreterRuntime) parse(script []byte) (program *ast.Program, err error) {
-	program, _, err = parser.ParseProgram(string(script))
+func (r *interpreterRuntime) reportMetric(
+	f func(),
+	runtimeInterface Interface,
+	report func(Metrics, time.Duration),
+) {
+	metrics, ok := runtimeInterface.(Metrics)
+	if !ok {
+		f()
+		return
+	}
+
+	start := time.Now()
+	f()
+	elapsed := time.Since(start)
+
+	report(metrics, elapsed)
+}
+
+func (r *interpreterRuntime) parse(script []byte, runtimeInterface Interface) (program *ast.Program, err error) {
+	r.reportMetric(
+		func() {
+			program, _, err = parser.ParseProgram(string(script))
+		},
+		runtimeInterface,
+		func(metrics Metrics, duration time.Duration) {
+			metrics.ProgramParsed(duration)
+		},
+	)
+
 	return
 }
 
