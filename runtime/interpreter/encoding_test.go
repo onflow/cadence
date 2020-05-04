@@ -21,6 +21,8 @@ type encodeDecodeTest struct {
 	invalid bool
 }
 
+const numEncodingTrials = 250
+
 func testEncodeDecode(t *testing.T, tests map[string]encodeDecodeTest) {
 	owner := common.BytesToAddress([]byte{0x42})
 
@@ -43,6 +45,13 @@ func testEncodeDecode(t *testing.T, tests map[string]encodeDecodeTest) {
 						encoded,
 					)
 				}
+			}
+
+			// encoding should be deterministic, repeat to confirm
+			for i := 0; i < numEncodingTrials; i++ {
+				encoded2, err := EncodeValue(test.value)
+				require.NoError(t, err)
+				assert.Equal(t, encoded, encoded2)
 			}
 		} else {
 			encoded = test.encoded
