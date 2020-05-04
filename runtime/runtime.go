@@ -89,6 +89,24 @@ func validTopLevelDeclarations(location ast.Location) []common.DeclarationKind {
 	return nil
 }
 
+func reportMetric(
+	f func(),
+	runtimeInterface Interface,
+	report func(Metrics, time.Duration),
+) {
+	metrics, ok := runtimeInterface.(Metrics)
+	if !ok {
+		f()
+		return
+	}
+
+	start := time.Now()
+	f()
+	elapsed := time.Since(start)
+
+	report(metrics, elapsed)
+}
+
 const contractKey = "contract"
 
 // interpreterRuntime is a interpreter-based version of the Flow runtime.
@@ -162,7 +180,7 @@ func (r *interpreterRuntime) interpret(
 
 	var result interpreter.Value
 
-	r.reportMetric(
+	reportMetric(
 		func() {
 			err = inter.Interpret()
 			if err != nil || f == nil {
@@ -370,7 +388,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 		return nil, err
 	}
 
-	r.reportMetric(
+	reportMetric(
 		func() {
 			err = checker.Check()
 		},
@@ -611,26 +629,8 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 	}
 }
 
-func (r *interpreterRuntime) reportMetric(
-	f func(),
-	runtimeInterface Interface,
-	report func(Metrics, time.Duration),
-) {
-	metrics, ok := runtimeInterface.(Metrics)
-	if !ok {
-		f()
-		return
-	}
-
-	start := time.Now()
-	f()
-	elapsed := time.Since(start)
-
-	report(metrics, elapsed)
-}
-
 func (r *interpreterRuntime) parse(script []byte, runtimeInterface Interface) (program *ast.Program, err error) {
-	r.reportMetric(
+	reportMetric(
 		func() {
 			program, _, err = parser.ParseProgram(string(script))
 		},

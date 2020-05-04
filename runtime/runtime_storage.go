@@ -21,6 +21,7 @@ package runtime
 import (
 	"bytes"
 	"encoding/gob"
+	"time"
 
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -125,7 +126,16 @@ func (s *interpreterRuntimeStorage) readValue(
 	}
 
 	decoder := gob.NewDecoder(bytes.NewReader(storedData))
-	err = decoder.Decode(&storedValue)
+
+	reportMetric(
+		func() {
+			err = decoder.Decode(&storedValue)
+		},
+		s.runtimeInterface,
+		func(metrics Metrics, duration time.Duration) {
+			metrics.ValueDecoded(duration)
+		},
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -174,7 +184,16 @@ func (s *interpreterRuntimeStorage) writeCached() {
 		if value != nil {
 			var newStoredData bytes.Buffer
 			encoder := gob.NewEncoder(&newStoredData)
-			err := encoder.Encode(&value)
+			var err error
+			reportMetric(
+				func() {
+					err = encoder.Encode(&value)
+				},
+				s.runtimeInterface,
+				func(metrics Metrics, duration time.Duration) {
+					metrics.ValueEncoded(duration)
+				},
+			)
 			if err != nil {
 				panic(err)
 			}
