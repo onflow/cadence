@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -85,6 +86,9 @@ type testRuntimeInterface struct {
 	generateUUID       func() uint64
 	computationLimit   uint64
 	decodeArgument     func(b []byte, t cadence.Type) (cadence.Value, error)
+	programParsed      func(duration time.Duration)
+	programChecked     func(duration time.Duration)
+	programInterpreted func(duration time.Duration)
 }
 
 func (i *testRuntimeInterface) ResolveImport(location Location) ([]byte, error) {
@@ -165,6 +169,27 @@ func (i *testRuntimeInterface) GetComputationLimit() uint64 {
 
 func (i *testRuntimeInterface) DecodeArgument(b []byte, t cadence.Type) (cadence.Value, error) {
 	return i.decodeArgument(b, t)
+}
+
+func (i *testRuntimeInterface) ProgramParsed(duration time.Duration) {
+	if i.programParsed == nil {
+		return
+	}
+	i.programParsed(duration)
+}
+
+func (i *testRuntimeInterface) ProgramChecked(duration time.Duration) {
+	if i.programChecked == nil {
+		return
+	}
+	i.programChecked(duration)
+}
+
+func (i *testRuntimeInterface) ProgramInterpreted(duration time.Duration) {
+	if i.programInterpreted == nil {
+		return
+	}
+	i.programInterpreted(duration)
 }
 
 func TestRuntimeImport(t *testing.T) {
@@ -3266,4 +3291,38 @@ func TestRuntimeComputationLimit(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRuntimeMetrics(t *testing.T) {
+	runtime := NewInterpreterRuntime()
+
+	script := []byte(`
+      transaction {
+          prepare() {}
+          execute {}
+      }
+    `)
+
+	var programParsedReports int
+	var programCheckedReports int
+	var programInterpretedReports int
+
+	runtimeInterface := &testRuntimeInterface{
+		programParsed: func(duration time.Duration) {
+			programParsedReports++
+		},
+		programChecked: func(duration time.Duration) {
+			programCheckedReports++
+		},
+		programInterpreted: func(duration time.Duration) {
+			programInterpretedReports++
+		},
+	}
+
+	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, utils.TestLocation)
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, programParsedReports)
+	assert.Equal(t, 1, programCheckedReports)
+	assert.Equal(t, 1, programInterpretedReports)
 }

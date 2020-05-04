@@ -19,6 +19,8 @@
 package runtime
 
 import (
+	"time"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/ast"
 )
@@ -60,49 +62,55 @@ type Interface interface {
 	DecodeArgument(b []byte, t cadence.Type) (cadence.Value, error)
 }
 
+type Metrics interface {
+	ProgramParsed(duration time.Duration)
+	ProgramChecked(duration time.Duration)
+	ProgramInterpreted(duration time.Duration)
+}
+
 type EmptyRuntimeInterface struct{}
 
-func (i *EmptyRuntimeInterface) ResolveImport(location Location) ([]byte, error) {
+func (i *EmptyRuntimeInterface) ResolveImport(_ Location) ([]byte, error) {
 	return nil, nil
 }
 
-func (i *EmptyRuntimeInterface) GetCachedProgram(location Location) (*ast.Program, error) {
+func (i *EmptyRuntimeInterface) GetCachedProgram(_ Location) (*ast.Program, error) {
 	return nil, nil
 }
 
-func (i *EmptyRuntimeInterface) CacheProgram(location Location, program *ast.Program) error {
+func (i *EmptyRuntimeInterface) CacheProgram(_ Location, _ *ast.Program) error {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) ValueExists(controller, owner, key []byte) (exists bool, err error) {
+func (i *EmptyRuntimeInterface) ValueExists(_, _, _ []byte) (exists bool, err error) {
 	return false, nil
 }
 
-func (i *EmptyRuntimeInterface) GetValue(controller, owner, key []byte) (value []byte, err error) {
+func (i *EmptyRuntimeInterface) GetValue(_, _, _ []byte) (value []byte, err error) {
 	return nil, nil
 }
 
-func (i *EmptyRuntimeInterface) SetValue(controller, owner, key, value []byte) error {
+func (i *EmptyRuntimeInterface) SetValue(_, _, _, _ []byte) error {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) CreateAccount(publicKeys [][]byte) (address Address, err error) {
+func (i *EmptyRuntimeInterface) CreateAccount(_ [][]byte) (address Address, err error) {
 	return Address{}, nil
 }
 
-func (i *EmptyRuntimeInterface) AddAccountKey(address Address, publicKey []byte) error {
+func (i *EmptyRuntimeInterface) AddAccountKey(_ Address, _ []byte) error {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) RemoveAccountKey(address Address, index int) (publicKey []byte, err error) {
+func (i *EmptyRuntimeInterface) RemoveAccountKey(_ Address, _ int) (publicKey []byte, err error) {
 	return nil, nil
 }
 
-func (i *EmptyRuntimeInterface) CheckCode(address Address, code []byte) error {
+func (i *EmptyRuntimeInterface) CheckCode(_ Address, _ []byte) error {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) UpdateAccountCode(address Address, code []byte, checkPermission bool) error {
+func (i *EmptyRuntimeInterface) UpdateAccountCode(_ Address, _ []byte, _ bool) error {
 	return nil
 }
 
@@ -110,9 +118,9 @@ func (i *EmptyRuntimeInterface) GetSigningAccounts() []Address {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) Log(message string) {}
+func (i *EmptyRuntimeInterface) Log(_ string) {}
 
-func (i *EmptyRuntimeInterface) EmitEvent(event cadence.Event) {}
+func (i *EmptyRuntimeInterface) EmitEvent(_ cadence.Event) {}
 
 func (i *EmptyRuntimeInterface) GenerateUUID() uint64 {
 	return 0
@@ -122,6 +130,6 @@ func (i *EmptyRuntimeInterface) GetComputationLimit() uint64 {
 	return 0
 }
 
-func (i *EmptyRuntimeInterface) DecodeArgument(b []byte, t cadence.Type) (cadence.Value, error) {
+func (i *EmptyRuntimeInterface) DecodeArgument(_ []byte, _ cadence.Type) (cadence.Value, error) {
 	return nil, nil
 }
