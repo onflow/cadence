@@ -89,6 +89,8 @@ type testRuntimeInterface struct {
 	programParsed      func(duration time.Duration)
 	programChecked     func(duration time.Duration)
 	programInterpreted func(duration time.Duration)
+	valueEncoded       func(duration time.Duration)
+	valueDecoded       func(duration time.Duration)
 }
 
 func (i *testRuntimeInterface) ResolveImport(location Location) ([]byte, error) {
@@ -190,6 +192,20 @@ func (i *testRuntimeInterface) ProgramInterpreted(duration time.Duration) {
 		return
 	}
 	i.programInterpreted(duration)
+}
+
+func (i *testRuntimeInterface) ValueEncoded(duration time.Duration) {
+	if i.valueEncoded == nil {
+		return
+	}
+	i.valueEncoded(duration)
+}
+
+func (i *testRuntimeInterface) ValueDecoded(duration time.Duration) {
+	if i.valueDecoded == nil {
+		return
+	}
+	i.valueDecoded(duration)
 }
 
 func TestRuntimeImport(t *testing.T) {
@@ -3296,9 +3312,20 @@ func TestRuntimeComputationLimit(t *testing.T) {
 func TestRuntimeMetrics(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
-	script := []byte(`
+	script1 := []byte(`
       transaction {
-          prepare() {}
+          prepare(signer: AuthAccount) {
+              signer.save([1, 2, 3], to: /storage/foo)
+          }
+          execute {}
+      }
+    `)
+
+	script2 := []byte(`
+      transaction {
+          prepare(signer: AuthAccount) {
+              signer.load<[Int]>(from: /storage/foo)
+          }
           execute {}
       }
     `)
@@ -3306,8 +3333,14 @@ func TestRuntimeMetrics(t *testing.T) {
 	var programParsedReports int
 	var programCheckedReports int
 	var programInterpretedReports int
+	var valueEncodedReports int
+	var valueDecodedReports int
 
 	runtimeInterface := &testRuntimeInterface{
+		storage: newTestStorage(),
+		getSigningAccounts: func() []Address {
+			return []Address{{42}}
+		},
 		programParsed: func(duration time.Duration) {
 			programParsedReports++
 		},
@@ -3317,12 +3350,32 @@ func TestRuntimeMetrics(t *testing.T) {
 		programInterpreted: func(duration time.Duration) {
 			programInterpretedReports++
 		},
+		valueEncoded: func(duration time.Duration) {
+			valueEncodedReports++
+		},
+		valueDecoded: func(duration time.Duration) {
+			valueDecodedReports++
+		},
 	}
 
-	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, utils.TestLocation)
+	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, utils.TestLocation)
 	require.NoError(t, err)
 
 	assert.Equal(t, 1, programParsedReports)
 	assert.Equal(t, 1, programCheckedReports)
 	assert.Equal(t, 1, programInterpretedReports)
+	assert.Equal(t, 1, valueEncodedReports)
+	assert.Equal(t, 0, valueDecodedReports)
+
+	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, utils.TestLocation)
+	require.NoError(t, err)
+
+	require.NoError(t, err)
+
+	assert.Equal(t, 2, programParsedReports)
+	assert.Equal(t, 2, programCheckedReports)
+	assert.Equal(t, 2, programInterpretedReports)
+	assert.Equal(t, 1, valueEncodedReports)
+	assert.Equal(t, 1, valueDecodedReports)
+
 }

@@ -66,6 +66,8 @@ type Metrics interface {
 	ProgramParsed(duration time.Duration)
 	ProgramChecked(duration time.Duration)
 	ProgramInterpreted(duration time.Duration)
+	ValueEncoded(duration time.Duration)
+	ValueDecoded(duration time.Duration)
 }
 
 type EmptyRuntimeInterface struct{}
