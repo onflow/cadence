@@ -448,19 +448,37 @@ func TestInterpretArrayIndexing(t *testing.T) {
 func TestInterpretArrayIndexingAssignment(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
-       fun test(): Int {
-           let z = [0, 3]
+       let z = [0, 3]
+
+       fun test() {
            z[1] = 2
-           return z[1]
        }
     `)
 
-	value, err := inter.Invoke("test")
+	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
+	actualArray := inter.Globals["z"].Value
+
+	expectedArray := interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewIntValueFromInt64(0),
+		interpreter.NewIntValueFromInt64(3),
+	).Copy().(*interpreter.ArrayValue)
+	expectedArray.SetIndex(1, interpreter.NewIntValueFromInt64(2))
+
+	require.Equal(t,
+		expectedArray,
+		actualArray,
+	)
+
+	assert.True(t, actualArray.Modified())
+
 	assert.Equal(t,
-		interpreter.NewIntValueFromInt64(2),
-		value,
+		[]interpreter.Value{
+			interpreter.NewIntValueFromInt64(0),
+			interpreter.NewIntValueFromInt64(2),
+		},
+		actualArray.(*interpreter.ArrayValue).Values,
 	)
 }
 
@@ -521,20 +539,33 @@ func TestInterpretStringIndexingUnicode(t *testing.T) {
 func TestInterpretStringIndexingAssignment(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
-      fun test(): String {
-          let z = "abc"
-          let y: Character = "d"
+      let z = "abc"
+      let y: Character = "d"
+
+      fun test() {
           z[0] = y
-          return z
       }
     `)
 
-	value, err := inter.Invoke("test")
+	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
+	actualString := inter.Globals["z"].Value
+
+	expectedString := interpreter.NewStringValue("abc").
+		Copy().(*interpreter.StringValue)
+	expectedString.SetIndex(0, interpreter.NewStringValue("d"))
+
+	require.Equal(t,
+		expectedString,
+		actualString,
+	)
+
+	assert.True(t, actualString.Modified())
+
 	assert.Equal(t,
-		value,
-		interpreter.NewStringValue("dbc"),
+		"dbc",
+		actualString.(*interpreter.StringValue).Str,
 	)
 }
 
@@ -1781,26 +1812,30 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
       }
     `)
 
-	actual := inter.Globals["test"].Value.(*interpreter.CompositeValue).
-		GetMember(inter, interpreter.LocationRange{}, "foo")
+	test := inter.Globals["test"].Value.(*interpreter.CompositeValue)
+
+	// the value was initialized,
+	// but was copied in the variable declaration
+	assert.False(t, test.Modified())
+
 	assert.Equal(t,
 		interpreter.NewIntValueFromInt64(1),
-		actual,
+		test.GetField("foo"),
 	)
 
 	value, err := inter.Invoke("callTest")
 	require.NoError(t, err)
+
+	assert.True(t, test.Modified())
 
 	assert.Equal(t,
 		interpreter.VoidValue{},
 		value,
 	)
 
-	actual = inter.Globals["test"].Value.(*interpreter.CompositeValue).
-		GetMember(inter, interpreter.LocationRange{}, "foo")
 	assert.Equal(t,
 		interpreter.NewIntValueFromInt64(3),
-		actual,
+		test.GetField("foo"),
 	)
 }
 
@@ -3902,13 +3937,19 @@ func TestInterpretDictionary(t *testing.T) {
       let x = {"a": 1, "b": 2}
     `)
 
+	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
+		interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
+		interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
+	).Copy()
+
+	actualDict := inter.Globals["x"].Value
+
 	assert.Equal(t,
-		interpreter.NewDictionaryValueUnownedNonCopying(
-			interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
-			interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
-		),
-		inter.Globals["x"].Value,
+		expectedDict,
+		actualDict,
 	)
+
+	assert.False(t, actualDict.Modified())
 }
 
 func TestInterpretDictionaryInsertionOrder(t *testing.T) {
@@ -3917,14 +3958,20 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
       let x = {"c": 3, "a": 1, "b": 2}
     `)
 
+	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
+		interpreter.NewStringValue("c"), interpreter.NewIntValueFromInt64(3),
+		interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
+		interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
+	).Copy()
+
+	actualDict := inter.Globals["x"].Value
+
 	assert.Equal(t,
-		interpreter.NewDictionaryValueUnownedNonCopying(
-			interpreter.NewStringValue("c"), interpreter.NewIntValueFromInt64(3),
-			interpreter.NewStringValue("a"), interpreter.NewIntValueFromInt64(1),
-			interpreter.NewStringValue("b"), interpreter.NewIntValueFromInt64(2),
-		),
-		inter.Globals["x"].Value,
+		expectedDict,
+		actualDict,
 	)
+
+	assert.False(t, actualDict.Modified())
 }
 
 func TestInterpretDictionaryIndexingString(t *testing.T) {
@@ -4025,11 +4072,171 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 		value,
 	)
 
+	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
+		interpreter.NewStringValue("abc"), interpreter.NewIntValueFromInt64(42),
+	).Copy().(*interpreter.DictionaryValue)
+	expectedDict.Set(
+		inter,
+		interpreter.LocationRange{},
+		interpreter.NewStringValue("abc"),
+		interpreter.NewSomeValueOwningNonCopying(
+			interpreter.NewIntValueFromInt64(23),
+		),
+	)
+
+	actualDict := inter.Globals["x"].Value.(*interpreter.DictionaryValue)
+
+	require.Equal(t,
+		expectedDict,
+		actualDict,
+	)
+
+	newValue := actualDict.
+		Get(inter, interpreter.LocationRange{}, interpreter.NewStringValue("abc"))
+
 	assert.Equal(t,
 		interpreter.NewSomeValueOwningNonCopying(interpreter.NewIntValueFromInt64(23)),
-		inter.Globals["x"].Value.(*interpreter.DictionaryValue).
-			Get(inter, interpreter.LocationRange{}, interpreter.NewStringValue("abc")),
+		newValue,
 	)
+
+	assert.Equal(t,
+		map[string]interpreter.Value{
+			"abc": interpreter.NewIntValueFromInt64(23),
+		},
+		actualDict.Entries,
+	)
+
+	assert.Equal(t,
+		[]interpreter.Value{
+			interpreter.NewStringValue("abc"),
+		},
+		actualDict.Keys.Values,
+	)
+
+	assert.True(t, actualDict.Modified())
+}
+
+func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
+
+	inter := parseCheckAndInterpret(t, `
+      let x = {"def": 42}
+      fun test() {
+          x["abc"] = 23
+      }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.VoidValue{},
+		value,
+	)
+
+	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
+		interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(42),
+	).Copy().(*interpreter.DictionaryValue)
+	expectedDict.Set(
+		inter,
+		interpreter.LocationRange{},
+		interpreter.NewStringValue("abc"),
+		interpreter.NewSomeValueOwningNonCopying(
+			interpreter.NewIntValueFromInt64(23),
+		),
+	)
+
+	actualDict := inter.Globals["x"].Value.(*interpreter.DictionaryValue)
+
+	require.Equal(t,
+		expectedDict,
+		actualDict,
+	)
+
+	newValue := actualDict.
+		Get(inter, interpreter.LocationRange{}, interpreter.NewStringValue("abc"))
+
+	assert.Equal(t,
+		interpreter.NewSomeValueOwningNonCopying(interpreter.NewIntValueFromInt64(23)),
+		newValue,
+	)
+
+	assert.Equal(t,
+		map[string]interpreter.Value{
+			"def": interpreter.NewIntValueFromInt64(42),
+			"abc": interpreter.NewIntValueFromInt64(23),
+		},
+		actualDict.Entries,
+	)
+
+	assert.Equal(t,
+		[]interpreter.Value{
+			interpreter.NewStringValue("def"),
+			interpreter.NewStringValue("abc"),
+		},
+		actualDict.Keys.Values,
+	)
+
+	assert.True(t, actualDict.Modified())
+}
+
+func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
+
+	inter := parseCheckAndInterpret(t, `
+      let x = {"def": 42, "abc": 23}
+      fun test() {
+          x["def"] = nil
+      }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.VoidValue{},
+		value,
+	)
+
+	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
+		interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(42),
+		interpreter.NewStringValue("abc"), interpreter.NewIntValueFromInt64(23),
+	).Copy().(*interpreter.DictionaryValue)
+	expectedDict.Set(
+		inter,
+		interpreter.LocationRange{},
+		interpreter.NewStringValue("def"),
+		interpreter.NilValue{},
+	)
+
+	actualDict := inter.Globals["x"].Value.(*interpreter.DictionaryValue)
+
+	require.Equal(t,
+		expectedDict,
+		actualDict,
+	)
+
+	newValue := actualDict.
+		Get(inter, interpreter.LocationRange{}, interpreter.NewStringValue("def"))
+
+	assert.Equal(t,
+		interpreter.NilValue{},
+		newValue,
+	)
+
+	assert.Equal(t,
+		map[string]interpreter.Value{
+			"abc": interpreter.NewIntValueFromInt64(23),
+		},
+		actualDict.Entries,
+	)
+
+	assert.Equal(t,
+		[]interpreter.Value{
+			interpreter.NewStringValue("abc"),
+		},
+		actualDict.Keys.Values,
+	)
+
+	assert.True(t, actualDict.Modified())
 }
 
 func TestInterpretOptionalAnyStruct(t *testing.T) {
@@ -4197,24 +4404,40 @@ func TestInterpretStructureFunctionBindingOutside(t *testing.T) {
 func TestInterpretArrayAppend(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
-      fun test(): [Int] {
-          let x = [1, 2, 3]
-          x.append(4)
-          return x
+      let xs = [1, 2, 3]
+
+      fun test() {
+          xs.append(4)
       }
     `)
 
-	value, err := inter.Invoke("test")
+	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
+	expectedArray := interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewIntValueFromInt64(1),
+		interpreter.NewIntValueFromInt64(2),
+		interpreter.NewIntValueFromInt64(3),
+	).Copy().(*interpreter.ArrayValue)
+	expectedArray.Append(interpreter.NewIntValueFromInt64(4))
+
+	actualArray := inter.Globals["xs"].Value
+
+	require.Equal(t,
+		expectedArray,
+		actualArray,
+	)
+
+	assert.True(t, actualArray.Modified())
+
 	assert.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(3),
 			interpreter.NewIntValueFromInt64(4),
-		),
-		value,
+		},
+		actualArray.(*interpreter.ArrayValue).Values,
 	)
 }
 
@@ -4293,40 +4516,72 @@ func TestInterpretArrayConcatBound(t *testing.T) {
 func TestInterpretArrayInsert(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
-      fun test(): [Int] {
-          let x = [1, 2, 3]
+      let x = [1, 2, 3]
+
+      fun test() {
           x.insert(at: 1, 4)
-          return x
       }
     `)
 
-	value, err := inter.Invoke("test")
+	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
+	expectedArray := interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewIntValueFromInt64(1),
+		interpreter.NewIntValueFromInt64(2),
+		interpreter.NewIntValueFromInt64(3),
+	).Copy().(*interpreter.ArrayValue)
+	expectedArray.Insert(1, interpreter.NewIntValueFromInt64(4))
+
+	actualArray := inter.Globals["x"].Value
+
+	require.Equal(t,
+		expectedArray,
+		actualArray,
+	)
+
+	assert.True(t, actualArray.Modified())
+
 	assert.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(4),
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(3),
-		),
-		value,
+		},
+		actualArray.(*interpreter.ArrayValue).Values,
 	)
 }
 
 func TestInterpretArrayRemove(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
-          let x = [1, 2, 3]
-          let y = x.remove(at: 1)
+      let x = [1, 2, 3]
+      let y = x.remove(at: 1)
     `)
 
+	expectedArray := interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewIntValueFromInt64(1),
+		interpreter.NewIntValueFromInt64(2),
+		interpreter.NewIntValueFromInt64(3),
+	).Copy().(*interpreter.ArrayValue)
+	expectedArray.Remove(1)
+
+	actualArray := inter.Globals["x"].Value
+
+	require.Equal(t,
+		expectedArray,
+		actualArray,
+	)
+
+	assert.True(t, actualArray.Modified())
+
 	assert.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(3),
-		),
-		inter.Globals["x"].Value,
+		},
+		actualArray.(*interpreter.ArrayValue).Values,
 	)
 
 	assert.Equal(t,
@@ -4338,16 +4593,32 @@ func TestInterpretArrayRemove(t *testing.T) {
 func TestInterpretArrayRemoveFirst(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
-          let x = [1, 2, 3]
-          let y = x.removeFirst()
+      let x = [1, 2, 3]
+      let y = x.removeFirst()
     `)
 
+	expectedArray := interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewIntValueFromInt64(1),
+		interpreter.NewIntValueFromInt64(2),
+		interpreter.NewIntValueFromInt64(3),
+	).Copy().(*interpreter.ArrayValue)
+	expectedArray.RemoveFirst()
+
+	actualArray := inter.Globals["x"].Value
+
+	require.Equal(t,
+		expectedArray,
+		actualArray,
+	)
+
+	assert.True(t, actualArray.Modified())
+
 	assert.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(2),
 			interpreter.NewIntValueFromInt64(3),
-		),
-		inter.Globals["x"].Value,
+		},
+		actualArray.(*interpreter.ArrayValue).Values,
 	)
 
 	assert.Equal(t,
@@ -4363,12 +4634,28 @@ func TestInterpretArrayRemoveLast(t *testing.T) {
           let y = x.removeLast()
     `)
 
+	expectedArray := interpreter.NewArrayValueUnownedNonCopying(
+		interpreter.NewIntValueFromInt64(1),
+		interpreter.NewIntValueFromInt64(2),
+		interpreter.NewIntValueFromInt64(3),
+	).Copy().(*interpreter.ArrayValue)
+	expectedArray.RemoveLast()
+
+	actualArray := inter.Globals["x"].Value
+
+	require.Equal(t,
+		expectedArray,
+		actualArray,
+	)
+
+	assert.True(t, actualArray.Modified())
+
 	assert.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
+		[]interpreter.Value{
 			interpreter.NewIntValueFromInt64(1),
 			interpreter.NewIntValueFromInt64(2),
-		),
-		inter.Globals["x"].Value,
+		},
+		actualArray.(*interpreter.ArrayValue).Values,
 	)
 
 	assert.Equal(t,
@@ -4448,24 +4735,38 @@ func TestInterpretStringConcatBound(t *testing.T) {
 func TestInterpretDictionaryRemove(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
-      var removed: Int? = nil
-
-      fun test(): {String: Int} {
-          let x = {"abc": 1, "def": 2}
-          removed = x.remove(key: "abc")
-          return x
-      }
+      let xs = {"abc": 1, "def": 2}
+      let removed = xs.remove(key: "abc")
     `)
 
-	value, err := inter.Invoke("test")
-	require.NoError(t, err)
+	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
+		interpreter.NewStringValue("abc"), interpreter.NewIntValueFromInt64(1),
+		interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(2),
+	).Copy().(*interpreter.DictionaryValue)
+	expectedDict.Remove(interpreter.NewStringValue("abc"))
+
+	actualDict := inter.Globals["xs"].Value.(*interpreter.DictionaryValue)
 
 	assert.Equal(t,
-		interpreter.NewDictionaryValueUnownedNonCopying(
-			interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(2),
-		),
-		value,
+		expectedDict,
+		actualDict,
 	)
+
+	assert.Equal(t,
+		map[string]interpreter.Value{
+			"def": interpreter.NewIntValueFromInt64(2),
+		},
+		actualDict.Entries,
+	)
+
+	assert.Equal(t,
+		[]interpreter.Value{
+			interpreter.NewStringValue("def"),
+		},
+		actualDict.Keys.Values,
+	)
+
+	assert.True(t, actualDict.Modified())
 
 	assert.Equal(t,
 		interpreter.NewSomeValueOwningNonCopying(
@@ -4478,25 +4779,43 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 func TestInterpretDictionaryInsert(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
-      var inserted: Int? = nil
-
-      fun test(): {String: Int} {
-          let x = {"abc": 1, "def": 2}
-          inserted = x.insert(key: "abc", 3)
-          return x
-      }
+      let xs = {"abc": 1, "def": 2}
+      let inserted = xs.insert(key: "abc", 3)
     `)
 
-	value, err := inter.Invoke("test")
-	require.NoError(t, err)
+	expectedDict := interpreter.NewDictionaryValueUnownedNonCopying(
+		interpreter.NewStringValue("abc"), interpreter.NewIntValueFromInt64(1),
+		interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(2),
+	).Copy().(*interpreter.DictionaryValue)
+	expectedDict.Insert(
+		interpreter.NewStringValue("abc"),
+		interpreter.NewIntValueFromInt64(3),
+	)
+
+	actualDict := inter.Globals["xs"].Value.(*interpreter.DictionaryValue)
+
+	require.Equal(t,
+		expectedDict,
+		actualDict,
+	)
 
 	assert.Equal(t,
-		interpreter.NewDictionaryValueUnownedNonCopying(
-			interpreter.NewStringValue("abc"), interpreter.NewIntValueFromInt64(3),
-			interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(2),
-		),
-		value,
+		map[string]interpreter.Value{
+			"abc": interpreter.NewIntValueFromInt64(3),
+			"def": interpreter.NewIntValueFromInt64(2),
+		},
+		actualDict.Entries,
 	)
+
+	assert.Equal(t,
+		[]interpreter.Value{
+			interpreter.NewStringValue("abc"),
+			interpreter.NewStringValue("def"),
+		},
+		actualDict.Keys.Values,
+	)
+
+	assert.True(t, actualDict.Modified())
 
 	assert.Equal(t,
 		interpreter.NewSomeValueOwningNonCopying(
@@ -5293,7 +5612,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 		tests[fmt.Sprintf("{%[1]s: %[1]s}", validType)] =
 			testValue{
-				value:   interpreter.NewDictionaryValueUnownedNonCopying(value.value, value.value),
+				value:   interpreter.NewDictionaryValueUnownedNonCopying(value.value, value.value).Copy(),
 				literal: fmt.Sprintf("{%[1]s as %[2]s: %[1]s as %[2]s}", value, validType),
 			}
 	}
@@ -7035,6 +7354,7 @@ func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
 		require.Equal(t, expected, actual)
 	}
 }
+
 func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 
 	fieldValues := map[string]int{
