@@ -21,74 +21,48 @@ type encodeDecodeTest struct {
 	invalid bool
 }
 
-const numEncodingTrials = 250
-
-func testEncodeDecode(t *testing.T, tests map[string]encodeDecodeTest) {
+func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 	owner := common.BytesToAddress([]byte{0x42})
 
-	f := func(t *testing.T, test encodeDecodeTest) {
+	var encoded []byte
+	if test.value != nil {
+		test.value.SetOwner(&owner)
 
-		var encoded []byte
-		if test.value != nil {
-			test.value.SetOwner(&owner)
+		var err error
+		encoded, err = EncodeValue(test.value)
+		require.NoError(t, err)
 
-			var err error
-			encoded, err = EncodeValue(test.value)
-			require.NoError(t, err)
-
-			if test.encoded != nil {
-				if !assert.Equal(t, test.encoded, encoded) {
-					fmt.Printf(
-						"\nExpected :%x\n"+
-							"Actual   :%x\n\n",
-						test.encoded,
-						encoded,
-					)
-				}
+		if test.encoded != nil {
+			if !assert.Equal(t, test.encoded, encoded) {
+				fmt.Printf(
+					"\nExpected :%x\n"+
+						"Actual   :%x\n\n",
+					test.encoded,
+					encoded,
+				)
 			}
-
-			// encoding should be deterministic, repeat to confirm
-			for i := 0; i < numEncodingTrials; i++ {
-				encoded2, err := EncodeValue(test.value)
-				require.NoError(t, err)
-				assert.Equal(t, encoded, encoded2)
-			}
-		} else {
-			encoded = test.encoded
-		}
-
-		decoded, err := DecodeValue(encoded, &owner)
-		if test.invalid {
-			require.Error(t, err)
-		} else {
-			require.NoError(t, err)
-
-			require.Equal(t, test.value, decoded)
-		}
-	}
-
-	if len(tests) == 1 {
-		for _, test := range tests {
-			f(t, test)
 		}
 	} else {
-		for name, test := range tests {
-			t.Run(name, func(t *testing.T) {
-				f(t, test)
-			})
-		}
+		encoded = test.encoded
+	}
+
+	decoded, err := DecodeValue(encoded, &owner)
+	if test.invalid {
+		require.Error(t, err)
+	} else {
+		require.NoError(t, err)
+
+		require.Equal(t, test.value, decoded)
 	}
 }
 
 func TestEncodeDecodeNilValue(t *testing.T) {
 	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"": {
-				value: NilValue{},
-				encoded: []byte{
-					// null
-					0xf6,
-				},
+		encodeDecodeTest{
+			value: NilValue{},
+			encoded: []byte{
+				// null
+				0xf6,
 			},
 		},
 	)
@@ -96,52 +70,61 @@ func TestEncodeDecodeNilValue(t *testing.T) {
 
 func TestEncodeDecodeVoidValue(t *testing.T) {
 	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"": {
-				value: VoidValue{},
-				encoded: []byte{
-					// tag
-					0xd8, cborTagVoidValue,
-					// null
-					0xf6,
-				},
+		encodeDecodeTest{
+			value: VoidValue{},
+			encoded: []byte{
+				// tag
+				0xd8, cborTagVoidValue,
+				// null
+				0xf6,
 			},
 		},
 	)
 }
 
 func TestEncodeDecodeBool(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"false": {
+
+	t.Run("false", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: BoolValue(false),
 				encoded: []byte{
 					// false
 					0xf4,
 				},
 			},
-			"true": {
+		)
+	})
+
+	t.Run("true", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: BoolValue(true),
 				encoded: []byte{
 					// true
 					0xf5,
 				},
 			},
-		},
-	)
+		)
+	})
 }
 
 func TestEncodeDecodeString(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"empty": {
+
+	t.Run("empty", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewStringValue(""),
 				encoded: []byte{
 					//  UTF-8 string, 0 bytes follow
 					0x60,
 				},
-			},
-			"non-empty": {
+			})
+	})
+
+	t.Run("non-empty", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewStringValue("foo"),
 				encoded: []byte{
 					// UTF-8 string, 3 bytes follow
@@ -150,21 +133,26 @@ func TestEncodeDecodeString(t *testing.T) {
 					0x66, 0x6f, 0x6f,
 				},
 			},
-		},
-	)
+		)
+	})
 }
 
 func TestEncodeDecodeArray(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"empty": {
+
+	t.Run("empty", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewArrayValueUnownedNonCopying(),
 				encoded: []byte{
 					// array, 0 items follow
 					0x80,
 				},
-			},
-			"string and bool": {
+			})
+	})
+
+	t.Run("string and bool", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewArrayValueUnownedNonCopying(
 					NewStringValue("test"),
 					BoolValue(true),
@@ -180,14 +168,15 @@ func TestEncodeDecodeArray(t *testing.T) {
 					0xf5,
 				},
 			},
-		},
-	)
+		)
+	})
 }
 
 func TestEncodeDecodeDictionary(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"empty": {
+
+	t.Run("empty", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewDictionaryValueUnownedNonCopying(),
 				encoded: []byte{
 					// tag
@@ -204,7 +193,12 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 					0xa0,
 				},
 			},
-			"non-empty": {
+		)
+	})
+
+	t.Run("non-empty", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewDictionaryValueUnownedNonCopying(
 					NewStringValue("test"), NewArrayValueUnownedNonCopying(),
 					BoolValue(true), BoolValue(false),
@@ -255,14 +249,15 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 					0xf4,
 				},
 			},
-		},
-	)
+		)
+	})
 }
 
 func TestEncodeDecodeComposite(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"empty structure, string location": {
+
+	t.Run("empty structure, string location", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: &CompositeValue{
 					TypeID:   "S.test.TestStruct",
 					Kind:     common.CompositeKindStructure,
@@ -301,7 +296,12 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					0xa0,
 				},
 			},
-			"non-empty resource": {
+		)
+	})
+
+	t.Run("non-empty resource", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: &CompositeValue{
 					TypeID: "S.test.TestResource",
 					Kind:   common.CompositeKindResource,
@@ -355,7 +355,12 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					0x74, 0x65, 0x73, 0x74,
 				},
 			},
-			"empty, address location": {
+		)
+	})
+
+	t.Run("empty, address location", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: &CompositeValue{
 					TypeID:   "A.0x1.TestStruct",
 					Kind:     common.CompositeKindStructure,
@@ -391,7 +396,12 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					0xa0,
 				},
 			},
-			"empty, address location, address too long": {
+		)
+	})
+
+	t.Run("empty, address location, address too long", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCompositeValue,
@@ -424,17 +434,15 @@ func TestEncodeDecodeComposite(t *testing.T) {
 				},
 				invalid: true,
 			},
-		},
-	)
+		)
+	})
 }
 
 func TestEncodeDecodeIntValue(t *testing.T) {
-	rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
-	require.True(t, ok)
 
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewIntValueFromInt64(0),
 				encoded: []byte{
 					0xd8, cborTagIntValue,
@@ -444,7 +452,12 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 					0x40,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewIntValueFromInt64(42),
 				encoded: []byte{
 					0xd8, cborTagIntValue,
@@ -455,7 +468,12 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 					0x2a,
 				},
 			},
-			"negative": {
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewIntValueFromInt64(-42),
 				encoded: []byte{
 					0xd8, cborTagIntValue,
@@ -466,7 +484,15 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 					0x2a,
 				},
 			},
-			"RFC": {
+		)
+	})
+
+	t.Run("RFC", func(t *testing.T) {
+		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
+		require.True(t, ok)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewIntValueFromBigInt(rfcValue),
 				encoded: []byte{
 					// tag
@@ -478,14 +504,15 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 					0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 				},
 			},
-		},
-	)
+		)
+	})
 }
 
 func TestEncodeDecodeInt8Value(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int8Value(0),
 				encoded: []byte{
 					// tag
@@ -494,7 +521,12 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 					0x0,
 				},
 			},
-			"negative": {
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int8Value(-42),
 				encoded: []byte{
 					// tag
@@ -504,7 +536,12 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 					0x29,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int8Value(42),
 				encoded: []byte{
 					// tag
@@ -514,7 +551,12 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"min": {
+		)
+	})
+
+	t.Run("min", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int8Value(math.MinInt8),
 				encoded: []byte{
 					// tag
@@ -524,24 +566,60 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 					0x7f,
 				},
 			},
-			"max": {
+		)
+	})
+
+	t.Run("<min", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagInt8Value,
+					// negative integer 0xf00
+					0x38,
+					0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int8Value(math.MaxInt8),
 				encoded: []byte{
 					// tag
 					0xd8, cborTagInt8Value,
-					// positive integer 0x7f
+					// positive integer 0x7f00
 					0x18,
 					0x7f,
 				},
 			},
-		},
-	)
+		)
+	})
+
+	t.Run(">max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagInt8Value,
+					// positive integer 0xff
+					0x18,
+					0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
 }
 
 func TestEncodeDecodeInt16Value(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int16Value(0),
 				encoded: []byte{
 					// tag
@@ -550,7 +628,12 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 					0x0,
 				},
 			},
-			"negative": {
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int16Value(-42),
 				encoded: []byte{
 					// tag
@@ -560,7 +643,12 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 					0x29,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int16Value(42),
 				encoded: []byte{
 					// tag
@@ -570,7 +658,12 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"min": {
+		)
+	})
+
+	t.Run("min", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int16Value(math.MinInt16),
 				encoded: []byte{
 					// tag
@@ -580,7 +673,27 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 					0x7f, 0xff,
 				},
 			},
-			"max": {
+		)
+	})
+
+	t.Run("<min", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagInt16Value,
+					// negative integer 0xffff
+					0x39,
+					0xff, 0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int16Value(math.MaxInt16),
 				encoded: []byte{
 					// tag
@@ -590,14 +703,30 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 					0x7f, 0xff,
 				},
 			},
-		},
-	)
+		)
+	})
+
+	t.Run(">max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagInt16Value,
+					// positive integer 0xffff
+					0x19,
+					0xff, 0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
 }
 
 func TestEncodeDecodeInt32Value(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int32Value(0),
 				encoded: []byte{
 					// tag
@@ -606,7 +735,12 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 					0x0,
 				},
 			},
-			"negative": {
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int32Value(-42),
 				encoded: []byte{
 					// tag
@@ -616,7 +750,12 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 					0x29,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int32Value(42),
 				encoded: []byte{
 					// tag
@@ -626,7 +765,12 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"min": {
+		)
+	})
+
+	t.Run("min", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int32Value(math.MinInt32),
 				encoded: []byte{
 					// tag
@@ -636,7 +780,27 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 					0x7f, 0xff, 0xff, 0xff,
 				},
 			},
-			"max": {
+		)
+	})
+
+	t.Run("<min", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagInt32Value,
+					// negative integer 0xffffffff
+					0x3a,
+					0xff, 0xff, 0xff, 0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int32Value(math.MaxInt32),
 				encoded: []byte{
 					// tag
@@ -646,14 +810,30 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 					0x7f, 0xff, 0xff, 0xff,
 				},
 			},
-		},
-	)
+		)
+	})
+
+	t.Run(">max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagInt32Value,
+					// positive integer 0xffffffff
+					0x1a,
+					0xff, 0xff, 0xff, 0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
 }
 
 func TestEncodeDecodeInt64Value(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int64Value(0),
 				encoded: []byte{
 					// tag
@@ -662,7 +842,12 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 					0x0,
 				},
 			},
-			"negative": {
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int64Value(-42),
 				encoded: []byte{
 					// tag
@@ -672,7 +857,12 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 					0x29,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int64Value(42),
 				encoded: []byte{
 					// tag
@@ -682,7 +872,12 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"min": {
+		)
+	})
+
+	t.Run("min", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int64Value(math.MinInt64),
 				encoded: []byte{
 					// tag
@@ -692,7 +887,27 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 					0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				},
 			},
-			"max": {
+		)
+	})
+
+	t.Run("<min", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagInt64Value,
+					// negative integer 0xffffffffffffffff
+					0x3b,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Int64Value(math.MaxInt64),
 				encoded: []byte{
 					// tag
@@ -702,17 +917,30 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 					0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				},
 			},
-		},
-	)
+		)
+	})
+
+	t.Run(">max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagInt64Value,
+					// positive integer 0xffffffffffffffff
+					0x1b,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
 }
 
 func TestEncodeDecodeInt128Value(t *testing.T) {
-	rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
-	require.True(t, ok)
 
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewInt128ValueFromInt64(0),
 				encoded: []byte{
 					0xd8, cborTagInt128Value,
@@ -722,7 +950,12 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 					0x40,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewInt128ValueFromInt64(42),
 				encoded: []byte{
 					0xd8, cborTagInt128Value,
@@ -733,7 +966,12 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"negative": {
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewInt128ValueFromInt64(-42),
 				encoded: []byte{
 					0xd8, cborTagInt128Value,
@@ -744,7 +982,83 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"RFC": {
+		)
+	})
+
+	t.Run("min", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
+				encoded: []byte{
+					0xd8, cborTagInt128Value,
+					// negative bignum
+					0xc3,
+					// byte string, length 16
+					0x50,
+					0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				},
+			},
+		)
+	})
+
+	t.Run("<min", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					0xd8, cborTagInt128Value,
+					// negative bignum
+					0xc3,
+					// byte string, length 16
+					0x50,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewInt128ValueFromBigInt(sema.Int128TypeMaxIntBig),
+				encoded: []byte{
+					0xd8, cborTagInt128Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 16
+					0x50,
+					0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				},
+			},
+		)
+	})
+
+	t.Run(">max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					0xd8, cborTagInt128Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 16
+					0x50,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("RFC", func(t *testing.T) {
+		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
+		require.True(t, ok)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewInt128ValueFromBigInt(rfcValue),
 				encoded: []byte{
 					// tag
@@ -756,17 +1070,15 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 					0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 				},
 			},
-		},
-	)
+		)
+	})
 }
 
 func TestEncodeDecodeInt256Value(t *testing.T) {
-	rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
-	require.True(t, ok)
 
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewInt256ValueFromInt64(0),
 				encoded: []byte{
 					0xd8, cborTagInt256Value,
@@ -776,7 +1088,12 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 					0x40,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewInt256ValueFromInt64(42),
 				encoded: []byte{
 					0xd8, cborTagInt256Value,
@@ -787,7 +1104,12 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"negative": {
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewInt256ValueFromInt64(-42),
 				encoded: []byte{
 					0xd8, cborTagInt256Value,
@@ -798,7 +1120,92 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"RFC": {
+		)
+	})
+
+	t.Run("min", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
+				encoded: []byte{
+					0xd8, cborTagInt256Value,
+					// negative bignum
+					0xc3,
+					// byte string, length 32
+					0x58, 0x20,
+					0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				},
+			},
+		)
+	})
+
+	t.Run("<min", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					0xd8, cborTagInt256Value,
+					// negative bignum
+					0xc3,
+					// byte string, length 32
+					0x58, 0x20,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewInt256ValueFromBigInt(sema.Int256TypeMaxIntBig),
+				encoded: []byte{
+					0xd8, cborTagInt256Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 32
+					0x58, 0x20,
+					0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				},
+			},
+		)
+	})
+
+	t.Run(">max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					0xd8, cborTagInt256Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 32
+					0x58, 0x20,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("RFC", func(t *testing.T) {
+
+		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
+		require.True(t, ok)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewInt256ValueFromBigInt(rfcValue),
 				encoded: []byte{
 					// tag
@@ -810,17 +1217,15 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 					0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 				},
 			},
-		},
-	)
+		)
+	})
 }
 
 func TestEncodeDecodeUIntValue(t *testing.T) {
-	rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
-	require.True(t, ok)
 
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewUIntValueFromUint64(0),
 				encoded: []byte{
 					0xd8, cborTagUIntValue,
@@ -830,7 +1235,28 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 					0x40,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					0xd8, cborTagUIntValue,
+					// negative bignum
+					0xc3,
+					// byte string, length 1
+					0x41,
+					0x2a,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewUIntValueFromUint64(42),
 				encoded: []byte{
 					0xd8, cborTagUIntValue,
@@ -841,7 +1267,16 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 					0x2a,
 				},
 			},
-			"RFC": {
+		)
+	})
+
+	t.Run("RFC", func(t *testing.T) {
+
+		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
+		require.True(t, ok)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewUIntValueFromBigInt(rfcValue),
 				encoded: []byte{
 					// tag
@@ -853,14 +1288,15 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 					0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 				},
 			},
-		},
-	)
+		)
+	})
 }
 
 func TestEncodeDecodeUInt8Value(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: UInt8Value(0),
 				encoded: []byte{
 					// tag
@@ -869,7 +1305,27 @@ func TestEncodeDecodeUInt8Value(t *testing.T) {
 					0x0,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagUInt8Value,
+					// negative integer 42
+					0x38,
+					0x29,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: UInt8Value(42),
 				encoded: []byte{
 					// tag
@@ -879,7 +1335,12 @@ func TestEncodeDecodeUInt8Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"max": {
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: UInt8Value(math.MaxUint8),
 				encoded: []byte{
 					// tag
@@ -889,14 +1350,30 @@ func TestEncodeDecodeUInt8Value(t *testing.T) {
 					0xff,
 				},
 			},
-		},
-	)
+		)
+	})
+
+	t.Run(">max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagUInt8Value,
+					// positive integer 0xffff
+					0x19,
+					0xff, 0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
 }
 
 func TestEncodeDecodeUInt16Value(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: UInt16Value(0),
 				encoded: []byte{
 					// tag
@@ -905,7 +1382,27 @@ func TestEncodeDecodeUInt16Value(t *testing.T) {
 					0x0,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagUInt16Value,
+					// negative integer 42
+					0x38,
+					0x29,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: UInt16Value(42),
 				encoded: []byte{
 					// tag
@@ -915,7 +1412,12 @@ func TestEncodeDecodeUInt16Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"max": {
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: UInt16Value(math.MaxUint16),
 				encoded: []byte{
 					// tag
@@ -925,14 +1427,30 @@ func TestEncodeDecodeUInt16Value(t *testing.T) {
 					0xff, 0xff,
 				},
 			},
-		},
-	)
+		)
+	})
+
+	t.Run(">max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagUInt16Value,
+					// positive integer 0xffffffff
+					0x1a,
+					0xff, 0xff, 0xff, 0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
 }
 
 func TestEncodeDecodeUInt32Value(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: UInt32Value(0),
 				encoded: []byte{
 					// tag
@@ -941,7 +1459,27 @@ func TestEncodeDecodeUInt32Value(t *testing.T) {
 					0x0,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagUInt32Value,
+					// negative integer 42
+					0x38,
+					0x29,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: UInt32Value(42),
 				encoded: []byte{
 					// tag
@@ -951,7 +1489,12 @@ func TestEncodeDecodeUInt32Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"max": {
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: UInt32Value(math.MaxUint32),
 				encoded: []byte{
 					// tag
@@ -961,14 +1504,30 @@ func TestEncodeDecodeUInt32Value(t *testing.T) {
 					0xff, 0xff, 0xff, 0xff,
 				},
 			},
-		},
-	)
+		)
+	})
+
+	t.Run(">max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagUInt32Value,
+					// positive integer 0xffffffffffffffff
+					0x1b,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
 }
 
 func TestEncodeDecodeUInt64Value(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: UInt64Value(0),
 				encoded: []byte{
 					// tag
@@ -977,7 +1536,27 @@ func TestEncodeDecodeUInt64Value(t *testing.T) {
 					0x0,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagUInt64Value,
+					// negative integer 42
+					0x38,
+					0x29,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: UInt64Value(42),
 				encoded: []byte{
 					// tag
@@ -987,7 +1566,12 @@ func TestEncodeDecodeUInt64Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"max": {
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: UInt64Value(math.MaxUint64),
 				encoded: []byte{
 					// tag
@@ -997,17 +1581,15 @@ func TestEncodeDecodeUInt64Value(t *testing.T) {
 					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				},
 			},
-		},
-	)
+		)
+	})
 }
 
 func TestEncodeDecodeUInt128Value(t *testing.T) {
-	rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
-	require.True(t, ok)
 
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewUInt128ValueFromUint64(0),
 				encoded: []byte{
 					0xd8, cborTagUInt128Value,
@@ -1017,7 +1599,12 @@ func TestEncodeDecodeUInt128Value(t *testing.T) {
 					0x40,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewUInt128ValueFromUint64(42),
 				encoded: []byte{
 					0xd8, cborTagUInt128Value,
@@ -1028,7 +1615,66 @@ func TestEncodeDecodeUInt128Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"RFC": {
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewUInt128ValueFromBigInt(sema.UInt128TypeMaxIntBig),
+				encoded: []byte{
+					0xd8, cborTagUInt128Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 16
+					0x50,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				},
+			},
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					0xd8, cborTagUInt128Value,
+					// negative bignum
+					0xc3,
+					// byte string, length 1
+					0x41,
+					0x2a,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run(">max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					0xd8, cborTagUInt128Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 17
+					0x51,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("RFC", func(t *testing.T) {
+		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
+		require.True(t, ok)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewUInt128ValueFromBigInt(rfcValue),
 				encoded: []byte{
 					// tag
@@ -1040,17 +1686,15 @@ func TestEncodeDecodeUInt128Value(t *testing.T) {
 					0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 				},
 			},
-		},
-	)
+		)
+	})
 }
 
 func TestEncodeDecodeUInt256Value(t *testing.T) {
-	rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
-	require.True(t, ok)
 
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewUInt256ValueFromUint64(0),
 				encoded: []byte{
 					0xd8, cborTagUInt256Value,
@@ -1060,7 +1704,12 @@ func TestEncodeDecodeUInt256Value(t *testing.T) {
 					0x40,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewUInt256ValueFromUint64(42),
 				encoded: []byte{
 					0xd8, cborTagUInt256Value,
@@ -1071,7 +1720,55 @@ func TestEncodeDecodeUInt256Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"RFC": {
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					0xd8, cborTagUInt256Value,
+					// negative bignum
+					0xc3,
+					// byte string, length 1
+					0x41,
+					0x2a,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run(">max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					0xd8, cborTagUInt256Value,
+					// positive bignum
+					0xc2,
+					// byte string, length 65
+					0x58, 0x41,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("RFC", func(t *testing.T) {
+		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
+		require.True(t, ok)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: NewUInt256ValueFromBigInt(rfcValue),
 				encoded: []byte{
 					// tag
@@ -1083,14 +1780,15 @@ func TestEncodeDecodeUInt256Value(t *testing.T) {
 					0x01, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
 				},
 			},
-		},
-	)
+		)
+	})
 }
 
 func TestEncodeDecodeWord8Value(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Word8Value(0),
 				encoded: []byte{
 					// tag
@@ -1099,7 +1797,27 @@ func TestEncodeDecodeWord8Value(t *testing.T) {
 					0x0,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagWord8Value,
+					// negative integer 42
+					0x38,
+					0x29,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Word8Value(42),
 				encoded: []byte{
 					// tag
@@ -1109,7 +1827,12 @@ func TestEncodeDecodeWord8Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"max": {
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Word8Value(math.MaxUint8),
 				encoded: []byte{
 					// tag
@@ -1119,14 +1842,30 @@ func TestEncodeDecodeWord8Value(t *testing.T) {
 					0xff,
 				},
 			},
-		},
-	)
+		)
+	})
+
+	t.Run(">max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagWord8Value,
+					// positive integer 0xffff
+					0x19,
+					0xff, 0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
 }
 
 func TestEncodeDecodeWord16Value(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Word16Value(0),
 				encoded: []byte{
 					// tag
@@ -1135,7 +1874,12 @@ func TestEncodeDecodeWord16Value(t *testing.T) {
 					0x0,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Word16Value(42),
 				encoded: []byte{
 					// tag
@@ -1145,7 +1889,12 @@ func TestEncodeDecodeWord16Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"max": {
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Word16Value(math.MaxUint16),
 				encoded: []byte{
 					// tag
@@ -1155,14 +1904,30 @@ func TestEncodeDecodeWord16Value(t *testing.T) {
 					0xff, 0xff,
 				},
 			},
-		},
-	)
+		)
+	})
+
+	t.Run(">max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagWord16Value,
+					// positive integer 0xffffffff
+					0x1a,
+					0xff, 0xff, 0xff, 0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
 }
 
 func TestEncodeDecodeWord32Value(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Word32Value(0),
 				encoded: []byte{
 					// tag
@@ -1171,7 +1936,12 @@ func TestEncodeDecodeWord32Value(t *testing.T) {
 					0x0,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Word32Value(42),
 				encoded: []byte{
 					// tag
@@ -1181,7 +1951,12 @@ func TestEncodeDecodeWord32Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"max": {
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Word32Value(math.MaxUint32),
 				encoded: []byte{
 					// tag
@@ -1191,14 +1966,30 @@ func TestEncodeDecodeWord32Value(t *testing.T) {
 					0xff, 0xff, 0xff, 0xff,
 				},
 			},
-		},
-	)
+		)
+	})
+
+	t.Run(">max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagWord32Value,
+					// positive integer 0xffffffffffffffff
+					0x1b,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
 }
 
 func TestEncodeDecodeWord64Value(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Word64Value(0),
 				encoded: []byte{
 					// tag
@@ -1207,7 +1998,12 @@ func TestEncodeDecodeWord64Value(t *testing.T) {
 					0x0,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Word64Value(42),
 				encoded: []byte{
 					// tag
@@ -1217,7 +2013,12 @@ func TestEncodeDecodeWord64Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"max": {
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Word64Value(math.MaxUint64),
 				encoded: []byte{
 					// tag
@@ -1227,14 +2028,15 @@ func TestEncodeDecodeWord64Value(t *testing.T) {
 					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				},
 			},
-		},
-	)
+		)
+	})
 }
 
 func TestEncodeDecodeSomeValue(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"nil": {
+
+	t.Run("nil", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: &SomeValue{
 					Value: NilValue{},
 				},
@@ -1245,7 +2047,12 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 					0xf6,
 				},
 			},
-			"string": {
+		)
+	})
+
+	t.Run("string", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: &SomeValue{
 					Value: NewStringValue("test"),
 				},
@@ -1258,7 +2065,12 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 					0x74, 0x65, 0x73, 0x74,
 				},
 			},
-			"bool": {
+		)
+	})
+
+	t.Run("bool", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: &SomeValue{
 					Value: BoolValue(true),
 				},
@@ -1269,14 +2081,15 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 					0xf5,
 				},
 			},
-		},
-	)
+		)
+	})
 }
 
 func TestEncodeDecodeFix64Value(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Fix64Value(0),
 				encoded: []byte{
 					// tag
@@ -1285,7 +2098,12 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 					0x0,
 				},
 			},
-			"negative": {
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Fix64Value(-42),
 				encoded: []byte{
 					// tag
@@ -1295,7 +2113,12 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 					0x29,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Fix64Value(42),
 				encoded: []byte{
 					// tag
@@ -1305,7 +2128,12 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"min": {
+		)
+	})
+
+	t.Run("min", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Fix64Value(math.MinInt64),
 				encoded: []byte{
 					// tag
@@ -1315,7 +2143,27 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 					0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				},
 			},
-			"max": {
+		)
+	})
+
+	t.Run("<min", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagFix64Value,
+					// negative integer 0xffffffffffffffff
+					0x3b,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: Fix64Value(math.MaxInt64),
 				encoded: []byte{
 					// tag
@@ -1325,14 +2173,31 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 					0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				},
 			},
-		},
-	)
+		)
+	})
+
+	t.Run(">max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagFix64Value,
+					// positive integer 0xffffffffffffffff
+					0x1b,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				},
+				invalid: true,
+			},
+		)
+	})
+
 }
 
 func TestEncodeDecodeUFix64Value(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"zero": {
+
+	t.Run("zero", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: UFix64Value(0),
 				encoded: []byte{
 					// tag
@@ -1341,7 +2206,27 @@ func TestEncodeDecodeUFix64Value(t *testing.T) {
 					0x0,
 				},
 			},
-			"positive": {
+		)
+	})
+
+	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagUFix64Value,
+					// negative integer 42
+					0x38,
+					0x29,
+				},
+				invalid: true,
+			},
+		)
+	})
+
+	t.Run("positive", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: UFix64Value(42),
 				encoded: []byte{
 					// tag
@@ -1351,7 +2236,12 @@ func TestEncodeDecodeUFix64Value(t *testing.T) {
 					0x2a,
 				},
 			},
-			"max": {
+		)
+	})
+
+	t.Run("max", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: UFix64Value(math.MaxUint64),
 				encoded: []byte{
 					// tag
@@ -1361,14 +2251,15 @@ func TestEncodeDecodeUFix64Value(t *testing.T) {
 					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
 				},
 			},
-		},
-	)
+		)
+	})
 }
 
 func TestEncodeDecodeStorageReferenceValue(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"not-authorized": {
+
+	t.Run("not-authorized", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: &StorageReferenceValue{
 					Authorized:           false,
 					TargetKey:            "test-key1",
@@ -1397,7 +2288,12 @@ func TestEncodeDecodeStorageReferenceValue(t *testing.T) {
 					0x74, 0x65, 0x73, 0x74, 0x2d, 0x6b, 0x65, 0x79, 0x31,
 				},
 			},
-			"authorized": {
+		)
+	})
+
+	t.Run("authorized", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: &StorageReferenceValue{
 					Authorized:           true,
 					TargetKey:            "test-key2",
@@ -1426,15 +2322,15 @@ func TestEncodeDecodeStorageReferenceValue(t *testing.T) {
 					0x74, 0x65, 0x73, 0x74, 0x2d, 0x6b, 0x65, 0x79, 0x32,
 				},
 			},
-		},
-	)
+		)
+	})
 }
 
 func TestEncodeDecodeAddressValue(t *testing.T) {
 
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"empty": {
+	t.Run("empty", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: AddressValue{},
 				encoded: []byte{
 					// tag
@@ -1443,7 +2339,12 @@ func TestEncodeDecodeAddressValue(t *testing.T) {
 					0x40,
 				},
 			},
-			"non-empty": {
+		)
+	})
+
+	t.Run("non-empty", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: AddressValue(common.BytesToAddress([]byte{0x42})),
 				encoded: []byte{
 					// tag
@@ -1454,7 +2355,12 @@ func TestEncodeDecodeAddressValue(t *testing.T) {
 					0x42,
 				},
 			},
-			"with leading zeros": {
+		)
+	})
+
+	t.Run("with leading zeros", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: AddressValue(common.BytesToAddress([]byte{0x0, 0x42})),
 				encoded: []byte{
 					// tag
@@ -1465,7 +2371,12 @@ func TestEncodeDecodeAddressValue(t *testing.T) {
 					0x42,
 				},
 			},
-			"with zeros in-between and at and": {
+		)
+	})
+
+	t.Run("with zeros in-between and at and", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: AddressValue(common.BytesToAddress([]byte{0x0, 0x42, 0x0, 0x43, 0x0})),
 				encoded: []byte{
 					// tag
@@ -1476,7 +2387,12 @@ func TestEncodeDecodeAddressValue(t *testing.T) {
 					0x42, 0x0, 0x43, 0x0,
 				},
 			},
-			"too long": {
+		)
+	})
+
+	t.Run("too long", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				encoded: []byte{
 					// tag
 					0xd8, cborTagAddressValue,
@@ -1489,8 +2405,8 @@ func TestEncodeDecodeAddressValue(t *testing.T) {
 				},
 				invalid: true,
 			},
-		},
-	)
+		)
+	})
 }
 
 var privatePathValue = PathValue{
@@ -1504,9 +2420,10 @@ var publicPathValue = PathValue{
 }
 
 func TestEncodeDecodePathValue(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"private": {
+
+	t.Run("private", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: privatePathValue,
 				encoded: []byte{
 					// tag
@@ -1525,7 +2442,12 @@ func TestEncodeDecodePathValue(t *testing.T) {
 					0x66, 0x6f, 0x6f,
 				},
 			},
-			"public": {
+		)
+	})
+
+	t.Run("public", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: publicPathValue,
 				encoded: []byte{
 					// tag
@@ -1544,14 +2466,15 @@ func TestEncodeDecodePathValue(t *testing.T) {
 					0x62, 0x61, 0x72,
 				},
 			},
-		},
-	)
+		)
+	})
 }
 
 func TestEncodeDecodeCapabilityValue(t *testing.T) {
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"private path": {
+
+	t.Run("private path", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: CapabilityValue{
 					Address: NewAddressValueFromBytes([]byte{0x2}),
 					Path:    privatePathValue,
@@ -1587,7 +2510,12 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 					0x66, 0x6f, 0x6f,
 				},
 			},
-			"public path": {
+		)
+	})
+
+	t.Run("public path", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: CapabilityValue{
 					Address: NewAddressValueFromBytes([]byte{0x3}),
 					Path:    publicPathValue,
@@ -1623,8 +2551,8 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 					0x62, 0x61, 0x72,
 				},
 			},
-		},
-	)
+		)
+	})
 }
 
 func TestEncodeDecodeLinkValue(t *testing.T) {
@@ -1653,9 +2581,9 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 		0x1,
 	}
 
-	testEncodeDecode(t,
-		map[string]encodeDecodeTest{
-			"primitive, Bool": {
+	t.Run("primitive, Bool", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: LinkValue{
 					TargetPath: publicPathValue,
 					Type:       ConvertSemaToPrimitiveStaticType(&sema.BoolType{}),
@@ -1666,7 +2594,12 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					0x6,
 				),
 			},
-			"optional, primitive, bool": {
+		)
+	})
+
+	t.Run("optional, primitive, bool", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: LinkValue{
 					TargetPath: publicPathValue,
 					Type: OptionalStaticType{
@@ -1681,7 +2614,12 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					0x6,
 				),
 			},
-			"composite, struct": {
+		)
+	})
+
+	t.Run("composite, struct", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: LinkValue{
 					TargetPath: publicPathValue,
 					Type: CompositeStaticType{
@@ -1712,7 +2650,12 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					0x75, 0x63, 0x74,
 				),
 			},
-			"interface, struct": {
+		)
+	})
+
+	t.Run("interface, struct", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: LinkValue{
 					TargetPath: publicPathValue,
 					Type: InterfaceStaticType{
@@ -1743,7 +2686,12 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
 				),
 			},
-			"variable-sized, bool": {
+		)
+	})
+
+	t.Run("variable-sized, bool", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: LinkValue{
 					TargetPath: publicPathValue,
 					Type: VariableSizedStaticType{
@@ -1758,7 +2706,12 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					0x6,
 				),
 			},
-			"constant-sized, bool": {
+		)
+	})
+
+	t.Run("constant-sized, bool", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: LinkValue{
 					TargetPath: publicPathValue,
 					Type: ConstantSizedStaticType{
@@ -1782,7 +2735,12 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					0x6,
 				),
 			},
-			"reference type, authorized, bool": {
+		)
+	})
+
+	t.Run("reference type, authorized, bool", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: LinkValue{
 					TargetPath: publicPathValue,
 					Type: ReferenceStaticType{
@@ -1806,7 +2764,12 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					0x6,
 				),
 			},
-			"reference type, unauthorized, bool": {
+		)
+	})
+
+	t.Run("reference type, unauthorized, bool", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: LinkValue{
 					TargetPath: publicPathValue,
 					Type: ReferenceStaticType{
@@ -1830,7 +2793,12 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					0x6,
 				),
 			},
-			"dictionary, bool, string": {
+		)
+	})
+
+	t.Run("dictionary, bool, string", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: LinkValue{
 					TargetPath: publicPathValue,
 					Type: DictionaryStaticType{
@@ -1855,7 +2823,12 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					0x8,
 				),
 			},
-			"restricted": {
+		)
+	})
+
+	t.Run("restricted", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
 				value: LinkValue{
 					TargetPath: publicPathValue,
 					Type: RestrictedStaticType{
@@ -1942,6 +2915,6 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x49, 0x32,
 				),
 			},
-		},
-	)
+		)
+	})
 }
