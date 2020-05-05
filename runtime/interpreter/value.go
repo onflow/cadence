@@ -236,10 +236,13 @@ func (v *StringValue) Get(_ *Interpreter, _ LocationRange, key Value) Value {
 }
 
 func (v *StringValue) Set(_ *Interpreter, _ LocationRange, key Value, value Value) {
-	v.modified = true
+	index := key.(NumberValue).ToInt()
+	char := value.(*StringValue)
+	v.SetIndex(index, char)
+}
 
-	i := key.(NumberValue).ToInt()
-	char := value.(*StringValue).Str
+func (v *StringValue) SetIndex(index int, char *StringValue) {
+	v.modified = true
 
 	str := v.Str
 
@@ -247,7 +250,7 @@ func (v *StringValue) Set(_ *Interpreter, _ LocationRange, key Value, value Valu
 	graphemes := uniseg.NewGraphemes(str)
 	graphemes.Next()
 
-	for j := 0; j < i; j++ {
+	for j := 0; j < index; j++ {
 		graphemes.Next()
 	}
 
@@ -256,7 +259,7 @@ func (v *StringValue) Set(_ *Interpreter, _ LocationRange, key Value, value Valu
 	var sb strings.Builder
 
 	sb.WriteString(str[:start])
-	sb.WriteString(char)
+	sb.WriteString(char.Str)
 	sb.WriteString(str[end:])
 
 	v.Str = sb.String()
@@ -416,12 +419,14 @@ func (v *ArrayValue) Get(_ *Interpreter, _ LocationRange, key Value) Value {
 }
 
 func (v *ArrayValue) Set(_ *Interpreter, _ LocationRange, key Value, value Value) {
+	index := key.(NumberValue).ToInt()
+	v.SetIndex(index, value)
+}
+
+func (v *ArrayValue) SetIndex(index int, value Value) {
 	v.modified = true
-
 	value.SetOwner(v.Owner)
-
-	integerKey := key.(NumberValue).ToInt()
-	v.Values[integerKey] = value
+	v.Values[index] = value
 }
 
 func (v *ArrayValue) String() string {
