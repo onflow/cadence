@@ -132,8 +132,8 @@ func (s *interpreterRuntimeStorage) readValue(
 			err = decoder.Decode(&storedValue)
 		},
 		s.runtimeInterface,
-		func(metrics Metrics, duration time.Duration) {
-			metrics.ValueDecoded(duration)
+		func(metrics Metrics, start, end time.Time) {
+			metrics.ValueDecoded(start, end)
 		},
 	)
 	if err != nil {
@@ -190,8 +190,8 @@ func (s *interpreterRuntimeStorage) writeCached() {
 					err = encoder.Encode(&value)
 				},
 				s.runtimeInterface,
-				func(metrics Metrics, duration time.Duration) {
-					metrics.ValueEncoded(duration)
+				func(metrics Metrics, start, end time.Time) {
+					metrics.ValueEncoded(start, end)
 				},
 			)
 			if err != nil {
