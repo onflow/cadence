@@ -31,15 +31,20 @@ type storageKey struct {
 	key               string
 }
 
+type cacheEntry struct {
+	mustWrite bool
+	value     interpreter.Value
+}
+
 type interpreterRuntimeStorage struct {
 	runtimeInterface Interface
-	cache            map[storageKey]interpreter.Value
+	cache            map[storageKey]cacheEntry
 }
 
 func newInterpreterRuntimeStorage(runtimeInterface Interface) *interpreterRuntimeStorage {
 	return &interpreterRuntimeStorage{
 		runtimeInterface: runtimeInterface,
-		cache:            map[storageKey]interpreter.Value{},
+		cache:            map[storageKey]cacheEntry{},
 	}
 }
 
@@ -56,15 +61,15 @@ func (s *interpreterRuntimeStorage) valueExists(
 	key string,
 ) bool {
 
-	storageKey := storageKey{
+	fullKey := storageKey{
 		storageIdentifier: storageIdentifier,
 		key:               key,
 	}
 
 	// Check cache
 
-	if cachedValue, ok := s.cache[storageKey]; ok {
-		return cachedValue != nil
+	if entry, ok := s.cache[fullKey]; ok {
+		return entry.value != nil
 	}
 
 	// Cache miss: Ask interface
@@ -75,7 +80,10 @@ func (s *interpreterRuntimeStorage) valueExists(
 	}
 
 	if !exists {
-		s.cache[storageKey] = nil
+		s.cache[fullKey] = cacheEntry{
+			mustWrite: false,
+			value:     nil,
+		}
 	}
 
 	return exists
@@ -94,19 +102,19 @@ func (s *interpreterRuntimeStorage) readValue(
 	key string,
 ) interpreter.OptionalValue {
 
-	storageKey := storageKey{
+	fullKey := storageKey{
 		storageIdentifier: storageIdentifier,
 		key:               key,
 	}
 
 	// Check cache. Return cached value, if any
 
-	if cachedValue, ok := s.cache[storageKey]; ok {
-		if cachedValue == nil {
+	if entry, ok := s.cache[fullKey]; ok {
+		if entry.value == nil {
 			return interpreter.NilValue{}
 		}
 
-		return interpreter.NewSomeValueOwningNonCopying(cachedValue)
+		return interpreter.NewSomeValueOwningNonCopying(entry.value)
 	}
 
 	// Cache miss: Load and deserialize the stored value (if any)
@@ -119,7 +127,10 @@ func (s *interpreterRuntimeStorage) readValue(
 	}
 
 	if len(storedData) == 0 {
-		s.cache[storageKey] = nil
+		s.cache[fullKey] = cacheEntry{
+			mustWrite: false,
+			value:     nil,
+		}
 		return interpreter.NilValue{}
 	}
 
@@ -140,7 +151,11 @@ func (s *interpreterRuntimeStorage) readValue(
 		panic(err)
 	}
 
-	s.cache[storageKey] = storedValue
+	s.cache[fullKey] = cacheEntry{
+		mustWrite: false,
+		value:     storedValue,
+	}
+
 	return interpreter.NewSomeValueOwningNonCopying(storedValue)
 }
 
@@ -156,7 +171,7 @@ func (s *interpreterRuntimeStorage) writeValue(
 	key string,
 	value interpreter.OptionalValue,
 ) {
-	storageKey := storageKey{
+	fullKey := storageKey{
 		storageIdentifier: storageIdentifier,
 		key:               key,
 	}
@@ -164,28 +179,39 @@ func (s *interpreterRuntimeStorage) writeValue(
 	// Only write the value to the cache.
 	// The Cache is finally written back through the runtime interface in `writeCached`
 
+	entry := s.cache[fullKey]
+	entry.mustWrite = true
+
 	switch typedValue := value.(type) {
 	case *interpreter.SomeValue:
-		s.cache[storageKey] = typedValue.Value
+		entry.value = typedValue.Value
+
 	case interpreter.NilValue:
-		s.cache[storageKey] = nil
+		entry.value = nil
+
 	default:
 		panic(errors.NewUnreachableError())
 	}
+
+	s.cache[fullKey] = entry
 }
 
 // writeCached serializes/saves all values in the cache in storage (through the runtime interface).
 //
 func (s *interpreterRuntimeStorage) writeCached() {
 
-	for storageKey, value := range s.cache {
+	for fullKey, entry := range s.cache {
+
+		if !entry.mustWrite && (entry.value == nil || !entry.value.Modified()) {
+			continue
+		}
 
 		var newData []byte
-		if value != nil {
+		if entry.value != nil {
 			var err error
 			reportMetric(
 				func() {
-					newData, err = interpreter.EncodeValue(value)
+					newData, err = interpreter.EncodeValue(entry.value)
 				},
 				s.runtimeInterface,
 				func(metrics Metrics, duration time.Duration) {
@@ -199,9 +225,9 @@ func (s *interpreterRuntimeStorage) writeCached() {
 
 		// TODO: fix controller
 		err := s.runtimeInterface.SetValue(
-			[]byte(storageKey.storageIdentifier),
+			[]byte(fullKey.storageIdentifier),
 			[]byte{},
-			[]byte(storageKey.key),
+			[]byte(fullKey.key),
 			newData,
 		)
 		if err != nil {

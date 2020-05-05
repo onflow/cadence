@@ -82,8 +82,12 @@ func (InterpretedFunctionValue) GetOwner() *common.Address {
 	return nil
 }
 
-func (InterpretedFunctionValue) SetOwner(owner *common.Address) {
+func (InterpretedFunctionValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
+}
+
+func (InterpretedFunctionValue) Modified() bool {
+	return false
 }
 
 func (InterpretedFunctionValue) isFunctionValue() {}
@@ -129,8 +133,12 @@ func (HostFunctionValue) GetOwner() *common.Address {
 	return nil
 }
 
-func (HostFunctionValue) SetOwner(owner *common.Address) {
+func (HostFunctionValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
+}
+
+func (HostFunctionValue) Modified() bool {
+	return false
 }
 
 func (HostFunctionValue) isFunctionValue() {}
@@ -139,7 +147,7 @@ func (f HostFunctionValue) Invoke(invocation Invocation) Trampoline {
 	return f.Function(invocation)
 }
 
-func (f HostFunctionValue) GetMember(interpreter *Interpreter, _ LocationRange, name string) Value {
+func (f HostFunctionValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
 	return f.Members[name]
 }
 
@@ -173,8 +181,12 @@ func (BoundFunctionValue) GetOwner() *common.Address {
 	return nil
 }
 
-func (BoundFunctionValue) SetOwner(owner *common.Address) {
+func (BoundFunctionValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
+}
+
+func (BoundFunctionValue) Modified() bool {
+	return false
 }
 
 func (BoundFunctionValue) isFunctionValue() {}
