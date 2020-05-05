@@ -152,12 +152,12 @@ var exportTests = []struct {
 	},
 	{
 		label:    "UInt128",
-		value:    interpreter.NewUInt128ValueFromInt64(42),
+		value:    interpreter.NewUInt128ValueFromUint64(42),
 		expected: cadence.NewUInt128(42),
 	},
 	{
 		label:    "UInt256",
-		value:    interpreter.NewUInt256ValueFromInt64(42),
+		value:    interpreter.NewUInt256ValueFromUint64(42),
 		expected: cadence.NewUInt256(42),
 	},
 	{

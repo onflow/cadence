@@ -32,9 +32,9 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 	t.Run("valid", func(t *testing.T) {
 
 		invalid := map[Value][]byte{
-			NewArrayValueUnownedNonCopying():                                            {},
-			NewArrayValueUnownedNonCopying(UInt64Value(2), NewUInt128ValueFromInt64(3)): {2, 3},
-			NewArrayValueUnownedNonCopying(UInt8Value(4), NewIntValueFromInt64(5)):      {4, 5},
+			NewArrayValueUnownedNonCopying():                                             {},
+			NewArrayValueUnownedNonCopying(UInt64Value(2), NewUInt128ValueFromUint64(3)): {2, 3},
+			NewArrayValueUnownedNonCopying(UInt8Value(4), NewIntValueFromInt64(5)):       {4, 5},
 		}
 
 		for value, expected := range invalid {
@@ -68,11 +68,11 @@ func TestByteValueToByte(t *testing.T) {
 		const maxInt8Plus2 = math.MaxInt8 + 2
 
 		invalid := map[Value]byte{
-			UInt64Value(2):              2,
-			NewUInt128ValueFromInt64(3): 3,
-			UInt8Value(4):               4,
-			NewIntValueFromInt64(5):     5,
-			UInt8Value(maxInt8Plus2):    maxInt8Plus2,
+			UInt64Value(2):               2,
+			NewUInt128ValueFromUint64(3): 3,
+			UInt8Value(4):                4,
+			NewIntValueFromInt64(5):      5,
+			UInt8Value(maxInt8Plus2):     maxInt8Plus2,
 		}
 
 		for value, expected := range invalid {
