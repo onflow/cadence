@@ -131,7 +131,7 @@ func (e *RedeclarationError) ErrorNotes() []errors.ErrorNote {
 	previousEndPos := previousStartPos.Shifted(length - 1)
 
 	return []errors.ErrorNote{
-		RedeclarationNote{
+		&RedeclarationNote{
 			Range: ast.Range{
 				StartPos: previousStartPos,
 				EndPos:   previousEndPos,
@@ -482,12 +482,20 @@ func (e *InvalidAccessModifierError) Error() string {
 		explanation = fmt.Sprintf(". %s", e.Explanation)
 	}
 
-	return fmt.Sprintf(
-		"invalid access modifier for %s: `%s`%s",
-		e.DeclarationKind.Name(),
-		e.Access.Keyword(),
-		explanation,
-	)
+	if e.Access == ast.AccessNotSpecified {
+		return fmt.Sprintf(
+			"invalid effective access modifier for %s%s",
+			e.DeclarationKind.Name(),
+			explanation,
+		)
+	} else {
+		return fmt.Sprintf(
+			"invalid access modifier for %s: `%s`%s",
+			e.DeclarationKind.Name(),
+			e.Access.Keyword(),
+			explanation,
+		)
+	}
 }
 
 func (*InvalidAccessModifierError) isSemanticError() {}
@@ -840,6 +848,30 @@ func (e *ConformanceError) StartPosition() ast.Position {
 
 func (e *ConformanceError) EndPosition() ast.Position {
 	return e.Pos
+}
+
+func (e *ConformanceError) ErrorNotes() (notes []errors.ErrorNote) {
+
+	for _, memberMismatch := range e.MemberMismatches {
+		compositeMemberIdentifierRange :=
+			ast.NewRangeFromPositioned(memberMismatch.CompositeMember.Identifier)
+
+		notes = append(notes, &MemberMismatchNote{
+			Range: compositeMemberIdentifierRange,
+		})
+	}
+
+	return
+}
+
+// MemberMismatchNote
+
+type MemberMismatchNote struct {
+	ast.Range
+}
+
+func (n MemberMismatchNote) Message() string {
+	return "mismatch here"
 }
 
 // DuplicateConformanceError
@@ -1392,7 +1424,7 @@ func (e *ResourceUseAfterInvalidationError) HasInvalidationInPreviousLoopIterati
 
 func (e *ResourceUseAfterInvalidationError) ErrorNotes() (notes []errors.ErrorNote) {
 	for _, invalidation := range e.Invalidations {
-		notes = append(notes, ResourceInvalidationNote{
+		notes = append(notes, &ResourceInvalidationNote{
 			ResourceInvalidation: invalidation,
 			Range: ast.Range{
 				StartPos: invalidation.StartPos,

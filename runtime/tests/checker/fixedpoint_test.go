@@ -100,6 +100,23 @@ func TestCheckFixedPointLiteralTypeConversionInAssignment(t *testing.T) {
 
 func TestCheckFixedPointLiteralRanges(t *testing.T) {
 
+	inferredType := func(t *testing.T, literal string) sema.Type {
+
+		// NOTE: not checking error, because the inferred type
+		// might be used for an invalid literal
+
+		checker, _ := ParseAndCheck(t,
+			fmt.Sprintf(
+				`
+				  let x = %s
+				`,
+				literal,
+			),
+		)
+
+		return checker.GlobalValues["x"].Type
+	}
+
 	for _, ty := range sema.AllFixedPointTypes {
 		t.Run(ty.String(), func(t *testing.T) {
 
@@ -122,43 +139,136 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 			}
 
 			t.Run("min int + 1, min fractional", func(t *testing.T) {
-				_, err := ParseAndCheck(t,
-					fmt.Sprintf(
-						`
-                          let x: %s = %s
-                        `,
-						ty,
-						formatLiteral(minIntPlusOne, minFractional),
-					),
-				)
 
-				assert.NoError(t, err)
+				literal := formatLiteral(minIntPlusOne, minFractional)
+
+				t.Run("variable declaration", func(t *testing.T) {
+
+					_, err := ParseAndCheck(t,
+						fmt.Sprintf(
+							`
+                              let x: %s = %s
+                            `,
+							ty,
+							literal,
+						),
+					)
+
+					assert.NoError(t, err)
+				})
+
+				if inferredType(t, literal).Equal(ty) {
+
+					t.Run("expression statement", func(t *testing.T) {
+
+						_, err := ParseAndCheck(t,
+							fmt.Sprintf(
+								`
+				                  fun test() { %s }
+				                `,
+								literal,
+							),
+						)
+
+						assert.NoError(t, err)
+					})
+				}
 			})
 
 			t.Run("min int, min fractional", func(t *testing.T) {
-				_, err := ParseAndCheck(t,
-					fmt.Sprintf(
-						`
-                          let x: %s = %s
-                        `,
-						ty,
-						formatLiteral(minInt, minFractional),
-					),
-				)
 
-				assert.NoError(t, err)
+				literal := formatLiteral(minInt, minFractional)
+
+				t.Run("variable declaration", func(t *testing.T) {
+
+					_, err := ParseAndCheck(t,
+						fmt.Sprintf(
+							`
+                              let x: %s = %s
+                            `,
+							ty,
+							literal,
+						),
+					)
+
+					assert.NoError(t, err)
+				})
+
+				if inferredType(t, literal).Equal(ty) {
+
+					t.Run("expression statement", func(t *testing.T) {
+
+						_, err := ParseAndCheck(t,
+							fmt.Sprintf(
+								`
+				                  fun test() { %s }
+				                `,
+								literal,
+							),
+						)
+
+						assert.NoError(t, err)
+					})
+				}
 			})
 
 			if minInt.Sign() < 0 {
 
 				t.Run("min int, min fractional - 1", func(t *testing.T) {
+
+					literal := formatLiteral(minInt, minFractionalPlusOne)
+
+					t.Run("variable declaration", func(t *testing.T) {
+
+						_, err := ParseAndCheck(t,
+							fmt.Sprintf(
+								`
+                                  let x: %s = %s
+                                `,
+								ty,
+								literal,
+							),
+						)
+
+						errs := ExpectCheckerErrors(t, err, 1)
+
+						assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
+					})
+
+					if inferredType(t, literal).Equal(ty) {
+
+						t.Run("expression statement", func(t *testing.T) {
+
+							_, err := ParseAndCheck(t,
+								fmt.Sprintf(
+									`
+					                  fun test() { %s }
+					                `,
+									literal,
+								),
+							)
+
+							errs := ExpectCheckerErrors(t, err, 1)
+
+							assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
+						})
+					}
+				})
+			}
+
+			t.Run("min int - 1, min fractional", func(t *testing.T) {
+
+				literal := formatLiteral(minIntMinusOne, minFractional)
+
+				t.Run("variable declaration", func(t *testing.T) {
+
 					_, err := ParseAndCheck(t,
 						fmt.Sprintf(
 							`
-			                  let x: %s = %s
-			                `,
+                              let x: %s = %s
+                            `,
 							ty,
-							formatLiteral(minInt, minFractionalPlusOne),
+							literal,
 						),
 					)
 
@@ -166,22 +276,25 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 
 					assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
 				})
-			}
 
-			t.Run("min int - 1, min fractional", func(t *testing.T) {
-				_, err := ParseAndCheck(t,
-					fmt.Sprintf(
-						`
-                         let x: %s = %s
-                       `,
-						ty,
-						formatLiteral(minIntMinusOne, minFractional),
-					),
-				)
+				if inferredType(t, literal).Equal(ty) {
 
-				errs := ExpectCheckerErrors(t, err, 1)
+					t.Run("expression statement", func(t *testing.T) {
 
-				assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
+						_, err := ParseAndCheck(t,
+							fmt.Sprintf(
+								`
+				                  fun test() { %s }
+				                `,
+								literal,
+							),
+						)
+
+						errs := ExpectCheckerErrors(t, err, 1)
+
+						assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
+					})
+				}
 			})
 
 			// max
@@ -193,63 +306,159 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 			maxFractionalPlusOne := big.NewInt(0).Add(maxFractional, big.NewInt(1))
 
 			t.Run("max int - 1, max fractional", func(t *testing.T) {
-				_, err := ParseAndCheck(t,
-					fmt.Sprintf(
-						`
-			             let x: %s = %s
-			           `,
-						ty,
-						formatLiteral(maxIntMinusOne, maxFractional),
-					),
-				)
 
-				assert.NoError(t, err)
+				literal := formatLiteral(maxIntMinusOne, maxFractional)
+
+				t.Run("variable declaration", func(t *testing.T) {
+
+					_, err := ParseAndCheck(t,
+						fmt.Sprintf(
+							`
+                              let x: %s = %s
+                            `,
+							ty,
+							literal,
+						),
+					)
+
+					assert.NoError(t, err)
+				})
+
+				if inferredType(t, literal).Equal(ty) {
+
+					t.Run("expression statement", func(t *testing.T) {
+
+						_, err := ParseAndCheck(t,
+							fmt.Sprintf(
+								`
+				                  fun test() { %s }
+				                `,
+								literal,
+							),
+						)
+
+						assert.NoError(t, err)
+					})
+				}
 			})
 
 			t.Run("max int, max fractional", func(t *testing.T) {
-				_, err := ParseAndCheck(t,
-					fmt.Sprintf(
-						`
-			             let x: %s = %s
-			           `,
-						ty,
-						formatLiteral(maxInt, maxFractional),
-					),
-				)
 
-				assert.NoError(t, err)
+				literal := formatLiteral(maxInt, maxFractional)
+
+				t.Run("variable declaration", func(t *testing.T) {
+
+					_, err := ParseAndCheck(t,
+						fmt.Sprintf(
+							`
+                              let x: %s = %s
+                            `,
+							ty,
+							literal,
+						),
+					)
+
+					assert.NoError(t, err)
+				})
+
+				if inferredType(t, literal).Equal(ty) {
+
+					t.Run("expression statement", func(t *testing.T) {
+
+						_, err := ParseAndCheck(t,
+							fmt.Sprintf(
+								`
+				                  fun test() { %s }
+				                `,
+								literal,
+							),
+						)
+
+						assert.NoError(t, err)
+					})
+				}
 			})
 
 			t.Run("max int, max fractional + 1", func(t *testing.T) {
-				_, err := ParseAndCheck(t,
-					fmt.Sprintf(
-						`
-			             let x: %[1]s = %s
-			           `,
-						ty,
-						formatLiteral(maxInt, maxFractionalPlusOne),
-					),
-				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				literal := formatLiteral(maxInt, maxFractionalPlusOne)
 
-				assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
+				t.Run("variable declaration", func(t *testing.T) {
+
+					_, err := ParseAndCheck(t,
+						fmt.Sprintf(
+							`
+                              let x: %s = %s
+                            `,
+							ty,
+							literal,
+						),
+					)
+
+					errs := ExpectCheckerErrors(t, err, 1)
+
+					assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
+				})
+
+				if inferredType(t, literal).Equal(ty) {
+
+					t.Run("expression statement", func(t *testing.T) {
+
+						_, err := ParseAndCheck(t,
+							fmt.Sprintf(
+								`
+				                  fun test() { %s }
+				                `,
+								literal,
+							),
+						)
+
+						errs := ExpectCheckerErrors(t, err, 1)
+
+						assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
+					})
+				}
 			})
 
 			t.Run("max int + 1, max fractional", func(t *testing.T) {
-				_, err := ParseAndCheck(t,
-					fmt.Sprintf(
-						`
-			             let x: %s = %s
-			           `,
-						ty,
-						formatLiteral(maxIntPlusOne, maxFractional),
-					),
-				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				literal := formatLiteral(maxIntPlusOne, maxFractional)
 
-				assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
+				t.Run("variable declaration", func(t *testing.T) {
+
+					_, err := ParseAndCheck(t,
+						fmt.Sprintf(
+							`
+                             let x: %s = %s
+                           `,
+							ty,
+							literal,
+						),
+					)
+
+					errs := ExpectCheckerErrors(t, err, 1)
+
+					assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
+				})
+
+				if inferredType(t, literal).Equal(ty) {
+
+					t.Run("expression statement", func(t *testing.T) {
+
+						_, err := ParseAndCheck(t,
+							fmt.Sprintf(
+								`
+                                  fun test() { %s }
+                                `,
+								literal,
+							),
+						)
+
+						errs := ExpectCheckerErrors(t, err, 1)
+
+						assert.IsType(t, &sema.InvalidFixedPointLiteralRangeError{}, errs[0])
+					})
+				}
 			})
 		})
 	}
@@ -410,9 +619,9 @@ func TestCheckFixedPointLiteralScales(t *testing.T) {
 				_, err := ParseAndCheck(t,
 					fmt.Sprintf(
 						`
-			              let withType: %[1]s = 1.%[2]s
+                          let withType: %[1]s = 1.%[2]s
                           let withoutType = 1.%[2]s
-			            `,
+                        `,
 						ty,
 						generateFraction(i),
 					),

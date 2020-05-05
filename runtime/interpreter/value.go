@@ -551,7 +551,8 @@ type NumberValue interface {
 	GreaterEqual(other NumberValue) BoolValue
 }
 
-// BigNumberValue
+// BigNumberValue.
+// Implemented by values with an integer value outside the range of int64
 
 type BigNumberValue interface {
 	NumberValue
@@ -578,6 +579,7 @@ func ConvertInt(value Value, _ *Interpreter) Value {
 		return NewIntValueFromBigInt(value.ToBigInt())
 
 	case NumberValue:
+		// NOTE: safe, UInt64Value is handled by BigNumberValue above
 		return NewIntValueFromInt64(int64(value.ToInt()))
 
 	default:
@@ -766,7 +768,7 @@ func (v Int8Value) Mod(other NumberValue) NumberValue {
 	o := other.(Int8Value)
 	// INT33-C
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -932,7 +934,7 @@ func (v Int16Value) Mod(other NumberValue) NumberValue {
 	o := other.(Int16Value)
 	// INT33-C
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -1098,7 +1100,7 @@ func (v Int32Value) Mod(other NumberValue) NumberValue {
 	o := other.(Int32Value)
 	// INT33-C
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -1268,7 +1270,7 @@ func (v Int64Value) Mod(other NumberValue) NumberValue {
 	o := other.(Int64Value)
 	// INT33-C
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -1378,7 +1380,6 @@ func NewInt128ValueFromInt64(value int64) Int128Value {
 func NewInt128ValueFromBigInt(value *big.Int) Int128Value {
 	return Int128Value{BigInt: value}
 }
-
 func (v Int128Value) IsValue() {}
 
 func (Int128Value) DynamicType(_ *Interpreter) DynamicType {
@@ -1983,7 +1984,7 @@ func (v UInt8Value) Minus(other NumberValue) NumberValue {
 func (v UInt8Value) Mod(other NumberValue) NumberValue {
 	o := other.(UInt8Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -1999,7 +2000,7 @@ func (v UInt8Value) Mul(other NumberValue) NumberValue {
 func (v UInt8Value) Div(other NumberValue) NumberValue {
 	o := other.(UInt8Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -2115,7 +2116,7 @@ func (v UInt16Value) Minus(other NumberValue) NumberValue {
 func (v UInt16Value) Mod(other NumberValue) NumberValue {
 	o := other.(UInt16Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -2131,7 +2132,7 @@ func (v UInt16Value) Mul(other NumberValue) NumberValue {
 func (v UInt16Value) Div(other NumberValue) NumberValue {
 	o := other.(UInt16Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -2249,7 +2250,7 @@ func (v UInt32Value) Minus(other NumberValue) NumberValue {
 func (v UInt32Value) Mod(other NumberValue) NumberValue {
 	o := other.(UInt32Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -2265,7 +2266,7 @@ func (v UInt32Value) Mul(other NumberValue) NumberValue {
 func (v UInt32Value) Div(other NumberValue) NumberValue {
 	o := other.(UInt32Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -2388,7 +2389,7 @@ func (v UInt64Value) Minus(other NumberValue) NumberValue {
 func (v UInt64Value) Mod(other NumberValue) NumberValue {
 	o := other.(UInt64Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -2404,7 +2405,7 @@ func (v UInt64Value) Mul(other NumberValue) NumberValue {
 func (v UInt64Value) Div(other NumberValue) NumberValue {
 	o := other.(UInt64Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -2467,7 +2468,7 @@ type UInt128Value struct {
 }
 
 func NewUInt128ValueFromUint64(value uint64) UInt128Value {
-	return NewUInt128ValueFromBigInt(big.NewInt(0).SetUint64(value))
+	return NewUInt128ValueFromBigInt(new(big.Int).SetUint64(value))
 }
 
 func NewUInt128ValueFromBigInt(value *big.Int) UInt128Value {
@@ -2641,7 +2642,7 @@ type UInt256Value struct {
 }
 
 func NewUInt256ValueFromUint64(value uint64) UInt256Value {
-	return NewUInt256ValueFromBigInt(big.NewInt(0).SetUint64(value))
+	return NewUInt256ValueFromBigInt(new(big.Int).SetUint64(value))
 }
 
 func NewUInt256ValueFromBigInt(value *big.Int) UInt256Value {
@@ -2858,7 +2859,7 @@ func (v Word8Value) Minus(other NumberValue) NumberValue {
 func (v Word8Value) Mod(other NumberValue) NumberValue {
 	o := other.(Word8Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -2870,7 +2871,7 @@ func (v Word8Value) Mul(other NumberValue) NumberValue {
 func (v Word8Value) Div(other NumberValue) NumberValue {
 	o := other.(Word8Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -2951,7 +2952,7 @@ func (v Word16Value) Minus(other NumberValue) NumberValue {
 func (v Word16Value) Mod(other NumberValue) NumberValue {
 	o := other.(Word16Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -2963,7 +2964,7 @@ func (v Word16Value) Mul(other NumberValue) NumberValue {
 func (v Word16Value) Div(other NumberValue) NumberValue {
 	o := other.(Word16Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -3046,7 +3047,7 @@ func (v Word32Value) Minus(other NumberValue) NumberValue {
 func (v Word32Value) Mod(other NumberValue) NumberValue {
 	o := other.(Word32Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -3058,7 +3059,7 @@ func (v Word32Value) Mul(other NumberValue) NumberValue {
 func (v Word32Value) Div(other NumberValue) NumberValue {
 	o := other.(Word32Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -3141,7 +3142,7 @@ func (v Word64Value) Minus(other NumberValue) NumberValue {
 func (v Word64Value) Mod(other NumberValue) NumberValue {
 	o := other.(Word64Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -3153,7 +3154,7 @@ func (v Word64Value) Mul(other NumberValue) NumberValue {
 func (v Word64Value) Div(other NumberValue) NumberValue {
 	o := other.(Word64Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -3354,23 +3355,41 @@ func (v Fix64Value) Equal(other Value) BoolValue {
 const Fix64MaxValue = math.MaxInt64
 
 func ConvertFix64(value Value, interpreter *Interpreter) Value {
-	// TODO: https://github.com/dapperlabs/flow-go/issues/2141
-
 	switch value := value.(type) {
-	case UFix64Value:
-		if int(value) > Fix64MaxValue {
-			panic("UFix64 value is larger than maximum value for Fix64")
-		}
-		return Fix64Value(value)
-
 	case Fix64Value:
 		return value
 
+	case UFix64Value:
+		if value > Fix64MaxValue {
+			panic(OverflowError{})
+		}
+		return Fix64Value(value)
+
+	case BigNumberValue:
+		v := value.ToBigInt()
+
+		// First, check if the value is at least in the int64 range.
+		// The integer range for Fix64 is smaller, but this test at least
+		// allows us to call `v.Int64()` safely.
+
+		if !v.IsInt64() {
+			panic(OverflowError{})
+		}
+
+		// Now check that the integer value fits the range of Fix64
+		return NewFix64ValueWithInteger(v.Int64())
+
 	case NumberValue:
-		return Fix64Value(value.ToInt() * sema.Fix64Factor)
+		v := value.ToInt()
+		// Check that the integer value fits the range of Fix64
+		return NewFix64ValueWithInteger(int64(v))
 
 	default:
-		panic(fmt.Sprintf("can't convert %s to Fix64", value.DynamicType(interpreter)))
+		panic(fmt.Sprintf(
+			"can't convert %s to Fix64: %s",
+			value.DynamicType(interpreter),
+			value,
+		))
 	}
 }
 
@@ -3378,8 +3397,12 @@ func ConvertFix64(value Value, interpreter *Interpreter) Value {
 
 type UFix64Value uint64
 
-func NewUFix64ValueWithFraction(integer, fraction uint64) UFix64Value {
-	return UFix64Value(integer*sema.Fix64Factor + fraction)
+func NewUFix64ValueWithInteger(integer uint64) UFix64Value {
+	if integer > sema.UFix64TypeMaxInt {
+		panic(OverflowError{})
+	}
+
+	return UFix64Value(integer * sema.Fix64Factor)
 }
 
 func (UFix64Value) IsValue() {}
@@ -3521,23 +3544,48 @@ func (v UFix64Value) Equal(other Value) BoolValue {
 }
 
 func ConvertUFix64(value Value, interpreter *Interpreter) Value {
-	// TODO: https://github.com/dapperlabs/flow-go/issues/2141
-
 	switch value := value.(type) {
-	case Fix64Value:
-		if value < 0 {
-			panic("can't convert negative Fix64 to UFix64")
-		}
-		return UFix64Value(value)
-
 	case UFix64Value:
 		return value
 
+	case Fix64Value:
+		if value < 0 {
+			panic(UnderflowError{})
+		}
+		return UFix64Value(value)
+
+	case BigNumberValue:
+		v := value.ToBigInt()
+
+		if v.Sign() < 0 {
+			panic(UnderflowError{})
+		}
+
+		// First, check if the value is at least in the uint64 range.
+		// The integer range for UFix64 is smaller, but this test at least
+		// allows us to call `v.UInt64()` safely.
+
+		if !v.IsUint64() {
+			panic(OverflowError{})
+		}
+
+		// Now check that the integer value fits the range of UFix64
+		return NewUFix64ValueWithInteger(v.Uint64())
+
 	case NumberValue:
-		return UFix64Value(value.ToInt() * sema.Fix64Factor)
+		v := value.ToInt()
+		if v < 0 {
+			panic(UnderflowError{})
+		}
+		// Check that the integer value fits the range of UFix64
+		return NewUFix64ValueWithInteger(uint64(v))
 
 	default:
-		panic(fmt.Sprintf("can't convert %s to UFix64", value.DynamicType(interpreter)))
+		panic(fmt.Sprintf(
+			"can't convert %s to UFix64: %s",
+			value.DynamicType(interpreter),
+			value,
+		))
 	}
 }
 

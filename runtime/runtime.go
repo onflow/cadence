@@ -88,6 +88,24 @@ func validTopLevelDeclarations(location ast.Location) []common.DeclarationKind {
 	return nil
 }
 
+func reportMetric(
+	f func(),
+	runtimeInterface Interface,
+	report func(metrics Metrics, start, end time.Time),
+) {
+	metrics, ok := runtimeInterface.(Metrics)
+	if !ok {
+		f()
+		return
+	}
+
+	start := time.Now()
+	f()
+	end := time.Now()
+
+	report(metrics, start, end)
+}
+
 const contractKey = "contract"
 
 // interpreterRuntime is a interpreter-based version of the Flow runtime.
@@ -159,20 +177,31 @@ func (r *interpreterRuntime) interpret(
 		return exportableValue{}, err
 	}
 
-	if err := inter.Interpret(); err != nil {
+	var result interpreter.Value
+
+	reportMetric(
+		func() {
+			err = inter.Interpret()
+			if err != nil || f == nil {
+				return
+			}
+			result, err = f(inter)
+		},
+		runtimeInterface,
+		func(metrics Metrics, start, end time.Time) {
+			metrics.ProgramInterpreted(start, end)
+		},
+	)
+
+	if err != nil {
 		return exportableValue{}, err
 	}
 
-	if f != nil {
-		value, err := f(inter)
-		if err != nil {
-			return exportableValue{}, err
-		}
-
-		return newExportableValue(value, inter), nil
+	if f == nil {
+		return exportableValue{}, nil
 	}
 
-	return exportableValue{}, nil
+	return newExportableValue(result, inter), nil
 }
 
 func (r *interpreterRuntime) newAuthAccountValue(
@@ -328,7 +357,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	}
 
 	if program == nil {
-		program, err = r.parse(code)
+		program, err = r.parse(code, runtimeInterface)
 		if err != nil {
 			return nil, err
 		}
@@ -358,7 +387,16 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 		return nil, err
 	}
 
-	if err := checker.Check(); err != nil {
+	reportMetric(
+		func() {
+			err = checker.Check()
+		},
+		runtimeInterface,
+		func(metrics Metrics, start, end time.Time) {
+			metrics.ProgramChecked(start, end)
+		},
+	)
+	if err != nil {
 		return nil, err
 	}
 
@@ -576,7 +614,7 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 			return nil, err
 		}
 
-		program, err = r.parse(script)
+		program, err = r.parse(script, runtimeInterface)
 		if err != nil {
 			return nil, err
 		}
@@ -590,8 +628,17 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 	}
 }
 
-func (r *interpreterRuntime) parse(script []byte) (program *ast.Program, err error) {
-	program, _, err = parser.ParseProgram(string(script))
+func (r *interpreterRuntime) parse(script []byte, runtimeInterface Interface) (program *ast.Program, err error) {
+	reportMetric(
+		func() {
+			program, _, err = parser.ParseProgram(string(script))
+		},
+		runtimeInterface,
+		func(metrics Metrics, start, end time.Time) {
+			metrics.ProgramParsed(start, end)
+		},
+	)
+
 	return
 }
 
