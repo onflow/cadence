@@ -1228,7 +1228,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 
 						expectedValue := interpreter.NewDictionaryValueUnownedNonCopying(
 							interpreter.NewStringValue("test"), interpreter.NewIntValueFromInt64(42),
-						)
+						).Copy()
 
 						assert.Equal(t,
 							expectedValue,
