@@ -278,45 +278,6 @@ func TestSetOwnerSomeCopy(t *testing.T) {
 	assert.Equal(t, &newOwner, value.GetOwner())
 }
 
-func TestSetOwnerReference(t *testing.T) {
-	oldOwner := common.Address{0x1}
-	newOwner := common.Address{0x2}
-	targetAddress := common.Address{0x3}
-
-	reference := &StorageReferenceValue{
-		TargetStorageAddress: targetAddress,
-		TargetKey:            "Test",
-		Owner:                &oldOwner,
-	}
-
-	assert.Equal(t, &oldOwner, reference.GetOwner())
-
-	reference.SetOwner(&newOwner)
-
-	assert.Equal(t, &newOwner, reference.GetOwner())
-}
-
-func TestSetOwnerReferenceCopy(t *testing.T) {
-	oldOwner := common.Address{0x1}
-	newOwner := common.Address{0x2}
-	targetAddress := common.Address{0x3}
-
-	reference := &StorageReferenceValue{
-		TargetStorageAddress: targetAddress,
-		TargetKey:            "Test",
-		Owner:                &oldOwner,
-	}
-
-	assert.Equal(t, &oldOwner, reference.GetOwner())
-
-	reference.SetOwner(&newOwner)
-
-	referenceCopy := reference.Copy().(*StorageReferenceValue)
-
-	assert.Nil(t, referenceCopy.GetOwner())
-	assert.Equal(t, &newOwner, reference.GetOwner())
-}
-
 func TestOwnerNewComposite(t *testing.T) {
 	oldOwner := common.Address{0x1}
 

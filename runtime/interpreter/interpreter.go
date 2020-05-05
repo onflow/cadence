@@ -3749,8 +3749,6 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 				Authorized:           referenceType.Authorized,
 				TargetStorageAddress: address,
 				TargetKey:            key,
-				// NOTE: new value has no owner
-				Owner: nil,
 			}
 
 			return Done{Result: NewSomeValueOwningNonCopying(reference)}
@@ -3913,8 +3911,6 @@ func (interpreter *Interpreter) capabilityBorrowFunction(addressValue AddressVal
 			Authorized:           authorized,
 			TargetStorageAddress: address,
 			TargetKey:            targetStorageKey,
-			// NOTE: new value has no owner
-			Owner: nil,
 		}
 
 		return Done{Result: NewSomeValueOwningNonCopying(reference)}

@@ -4804,7 +4804,6 @@ type StorageReferenceValue struct {
 	Authorized           bool
 	TargetStorageAddress common.Address
 	TargetKey            string
-	Owner                *common.Address
 }
 
 func (*StorageReferenceValue) IsValue() {}
@@ -4828,17 +4827,17 @@ func (v *StorageReferenceValue) Copy() Value {
 		Authorized:           v.Authorized,
 		TargetStorageAddress: v.TargetStorageAddress,
 		TargetKey:            v.TargetKey,
-		// NOTE: new value has no owner
-		Owner: nil,
 	}
 }
 
 func (v *StorageReferenceValue) GetOwner() *common.Address {
-	return v.Owner
+	// value is never owned
+	return nil
 }
 
-func (v *StorageReferenceValue) SetOwner(owner *common.Address) {
-	v.Owner = owner
+func (v *StorageReferenceValue) SetOwner(_ *common.Address) {
+	// NO-OP: value cannot be owned
+}
 }
 
 func (v *StorageReferenceValue) referencedValue(interpreter *Interpreter) *Value {
