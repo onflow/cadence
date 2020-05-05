@@ -2467,8 +2467,8 @@ type UInt128Value struct {
 	BigInt *big.Int
 }
 
-func NewUInt128ValueFromInt64(value int64) UInt128Value {
-	return NewUInt128ValueFromBigInt(big.NewInt(value))
+func NewUInt128ValueFromUint64(value uint64) UInt128Value {
+	return NewUInt128ValueFromBigInt(new(big.Int).SetUint64(value))
 }
 
 func NewUInt128ValueFromBigInt(value *big.Int) UInt128Value {
@@ -2641,8 +2641,8 @@ type UInt256Value struct {
 	BigInt *big.Int
 }
 
-func NewUInt256ValueFromInt64(value int64) UInt256Value {
-	return NewUInt256ValueFromBigInt(big.NewInt(value))
+func NewUInt256ValueFromUint64(value uint64) UInt256Value {
+	return NewUInt256ValueFromBigInt(new(big.Int).SetUint64(value))
 }
 
 func NewUInt256ValueFromBigInt(value *big.Int) UInt256Value {

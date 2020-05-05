@@ -11,6 +11,8 @@ require (
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
 	github.com/mattn/go-colorable v0.1.6 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
+	github.com/mattn/go-tty v0.0.3 // indirect
+	github.com/pkg/term v0.0.0-20190109203006-aa71e9d9e942 // indirect
 	github.com/raviqqe/hamt v0.0.0-20190615202029-864fb7caef85
 	github.com/rivo/uniseg v0.1.0
 	github.com/segmentio/fasthash v1.0.1

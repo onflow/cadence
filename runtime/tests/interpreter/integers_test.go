@@ -44,8 +44,8 @@ var testIntegerTypesAndValues = map[string]interpreter.Value{
 	"UInt16":  interpreter.UInt16Value(50),
 	"UInt32":  interpreter.UInt32Value(50),
 	"UInt64":  interpreter.UInt64Value(50),
-	"UInt128": interpreter.NewUInt128ValueFromInt64(50),
-	"UInt256": interpreter.NewUInt256ValueFromInt64(50),
+	"UInt128": interpreter.NewUInt128ValueFromUint64(50),
+	"UInt256": interpreter.NewUInt256ValueFromUint64(50),
 	// Word*
 	"Word8":  interpreter.Word8Value(50),
 	"Word16": interpreter.Word16Value(50),

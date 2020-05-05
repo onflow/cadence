@@ -5368,8 +5368,8 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		"UInt16":  {value: interpreter.UInt16Value(42)},
 		"UInt32":  {value: interpreter.UInt32Value(42)},
 		"UInt64":  {value: interpreter.UInt64Value(42)},
-		"UInt128": {value: interpreter.NewUInt128ValueFromInt64(42)},
-		"UInt256": {value: interpreter.NewUInt256ValueFromInt64(42)},
+		"UInt128": {value: interpreter.NewUInt128ValueFromUint64(42)},
+		"UInt256": {value: interpreter.NewUInt256ValueFromUint64(42)},
 		// Word*
 		"Word8":  {value: interpreter.Word8Value(42)},
 		"Word16": {value: interpreter.Word16Value(42)},
