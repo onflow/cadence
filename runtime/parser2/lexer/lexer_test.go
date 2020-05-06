@@ -22,52 +22,253 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/onflow/cadence/runtime/ast"
 )
 
 func TestLex(t *testing.T) {
 
-	assert.Equal(t,
-		[]Token{
-			{Type: TokenNumber, Value: "0"},
-			{Type: TokenEOF},
-		},
-		Lex("0"),
-	)
+	t.Run("single char number", func(t *testing.T) {
+		assert.Equal(t,
+			[]Token{
+				{
+					Type:  TokenNumber,
+					Value: "0",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+				{
+					Type: TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+			},
+			Lex("0"),
+		)
+	})
 
-	assert.Equal(t,
-		[]Token{
-			{Type: TokenNumber, Value: "01"},
-			{Type: TokenEOF},
-		},
-		Lex("01"),
-	)
+	t.Run("two char number", func(t *testing.T) {
 
-	assert.Equal(t,
-		[]Token{
-			{Type: TokenSpace, Value: " "},
-			{Type: TokenNumber, Value: "01"},
-			{Type: TokenSpace, Value: "\t  "},
-			{Type: TokenNumber, Value: "10"},
-			{Type: TokenEOF},
-		},
-		Lex(" 01\t  10"),
-	)
+		assert.Equal(t,
+			[]Token{
+				{
+					Type:  TokenNumber,
+					Value: "01",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					},
+				},
+				{
+					Type: TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					},
+				},
+			},
+			Lex("01"),
+		)
+	})
 
-	assert.Equal(t,
-		[]Token{
-			{Type: TokenParenOpen},
-			{Type: TokenNumber, Value: "2"},
-			{Type: TokenSpace, Value: " "},
-			{Type: TokenOperatorPlus},
-			{Type: TokenSpace, Value: " "},
-			{Type: TokenNumber, Value: "3"},
-			{Type: TokenParenClose},
-			{Type: TokenSpace, Value: " "},
-			{Type: TokenOperatorMul},
-			{Type: TokenSpace, Value: " "},
-			{Type: TokenNumber, Value: "4"},
-			{Type: TokenEOF},
-		},
-		Lex("(2 + 3) * 4"),
-	)
+	t.Run("two numbers separated by whitespace", func(t *testing.T) {
+
+		assert.Equal(t,
+			[]Token{
+				{
+
+					Type:  TokenSpace,
+					Value: " ",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+				{
+					Type:  TokenNumber,
+					Value: "01",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					},
+				},
+				{
+					Type:  TokenSpace,
+					Value: "\t  ",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+						EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+					},
+				},
+				{
+					Type:  TokenNumber,
+					Value: "10",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					},
+				},
+				{
+					Type: TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					},
+				},
+			},
+			Lex(" 01\t  10"),
+		)
+	})
+
+	t.Run("simple arithmetic", func(t *testing.T) {
+
+		assert.Equal(t,
+			[]Token{
+				{
+					Type: TokenParenOpen,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+				{
+					Type:  TokenNumber,
+					Value: "2",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					},
+				},
+				{
+					Type:  TokenSpace,
+					Value: " ",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					},
+				},
+				{
+					Type: TokenOperatorPlus,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+				},
+				{
+					Type:  TokenSpace,
+					Value: " ",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+						EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+					},
+				},
+				{
+					Type:  TokenNumber,
+					Value: "3",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+						EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+					},
+				},
+				{
+					Type: TokenParenClose,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+				},
+				{
+					Type:  TokenSpace,
+					Value: " ",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					},
+				},
+				{
+					Type: TokenOperatorMul,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+						EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+					},
+				},
+				{
+					Type:  TokenSpace,
+					Value: " ",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+						EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+					},
+				},
+				{
+					Type:  TokenNumber,
+					Value: "4",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
+						EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+					},
+				},
+				{
+					Type: TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
+						EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+					},
+				},
+			},
+			Lex("(2 + 3) * 4"),
+		)
+	})
+
+	t.Run("multiple lines", func(t *testing.T) {
+
+		assert.Equal(t,
+			[]Token{
+				{
+					Type:  TokenNumber,
+					Value: "1",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+				{
+					Type:  TokenSpace,
+					Value: " \n  ",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 2, Column: 2, Offset: 5},
+					},
+				},
+				{
+					Type:  TokenNumber,
+					Value: "2",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 2, Column: 2, Offset: 5},
+						EndPos:   ast.Position{Line: 2, Column: 3, Offset: 6},
+					},
+				},
+				{
+					Type:  TokenSpace,
+					Value: "\n",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 2, Column: 3, Offset: 6},
+						EndPos:   ast.Position{Line: 3, Column: 0, Offset: 7},
+					},
+				},
+				{
+					Type: TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 3, Column: 0, Offset: 7},
+						EndPos:   ast.Position{Line: 3, Column: 0, Offset: 7},
+					},
+				},
+			},
+			Lex("1 \n  2\n"),
+		)
+	})
 }

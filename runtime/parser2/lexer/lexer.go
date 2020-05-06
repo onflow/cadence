@@ -21,11 +21,14 @@ package lexer
 import (
 	"strings"
 	"unicode/utf8"
+
+	"github.com/onflow/cadence/runtime/ast"
 )
 
 type Token struct {
 	Type  TokenType
 	Value interface{}
+	Range ast.Range
 }
 
 func (t Token) Is(ty TokenType) bool {
@@ -33,15 +36,23 @@ func (t Token) Is(ty TokenType) bool {
 }
 
 type lexer struct {
-	input  string
-	start  int // start position of this item.
-	pos    int // current position in the input.
-	width  int
-	tokens []Token
+	input      string
+	tokenRange ast.Range
+	prevEndPos ast.Position
+	tokens     []Token
+	canBackup  bool
 }
 
 func Lex(input string) []Token {
-	l := &lexer{input: input}
+	startPos := ast.Position{Line: 1}
+	l := &lexer{
+		input: input,
+		tokenRange: ast.Range{
+			StartPos: startPos,
+			EndPos:   startPos,
+		},
+		prevEndPos: startPos,
+	}
 	l.run(rootState)
 	return l.tokens
 }
@@ -53,19 +64,29 @@ func (l *lexer) run(state stateFn) {
 }
 
 func (l *lexer) next() rune {
-	if l.pos >= len(l.input) {
-		l.width = 0
+	l.canBackup = true
+
+	endPos := l.tokenRange.EndPos
+	endOffset := endPos.Offset
+
+	l.prevEndPos = endPos
+
+	if endOffset >= len(l.input) {
 		return EOF
 	}
-	r, w := utf8.DecodeRuneInString(l.input[l.pos:])
-	l.width = w
-	l.pos += w
-	return r
-}
 
-// ignore skips over the pending input before this point.
-func (l *lexer) ignore() {
-	l.start = l.pos
+	r, w := utf8.DecodeRuneInString(l.input[endOffset:])
+
+	l.tokenRange.EndPos.Offset += w
+
+	if r == '\n' {
+		l.tokenRange.EndPos.Line++
+		l.tokenRange.EndPos.Column = 0
+	} else {
+		l.tokenRange.EndPos.Column++
+	}
+
+	return r
 }
 
 // peek returns but does not consume
@@ -79,11 +100,18 @@ func (l *lexer) peek() rune {
 // backup steps back one rune.
 // Can be called only once per call of next.
 func (l *lexer) backup() {
-	l.pos -= l.width
+	if !l.canBackup {
+		panic("second backup")
+	}
+	l.canBackup = false
+
+	l.tokenRange.EndPos = l.prevEndPos
 }
 
 func (l *lexer) word() string {
-	return l.input[l.start:l.pos]
+	start := l.tokenRange.StartPos.Offset
+	end := l.tokenRange.EndPos.Offset
+	return l.input[start:end]
 }
 
 func (l *lexer) acceptOne(r rune) bool {
@@ -118,9 +146,13 @@ func (l *lexer) acceptOneOrMore(valid string) bool {
 
 // emitValue passes an item back to the client.
 func (l *lexer) emit(ty TokenType, val interface{}) {
-	token := Token{ty, val}
+	token := Token{
+		Type:  ty,
+		Value: val,
+		Range: l.tokenRange,
+	}
 	l.tokens = append(l.tokens, token)
-	l.start = l.pos
+	l.tokenRange.StartPos = l.tokenRange.EndPos
 }
 
 func (l *lexer) emitType(ty TokenType) {
@@ -144,5 +176,5 @@ func (l *lexer) scanNumber() {
 func (l *lexer) scanSpace() {
 	// lookahead is already lexed.
 	// parse more, if any
-	l.acceptZeroOrMore(" \t")
+	l.acceptZeroOrMore(" \t\n")
 }

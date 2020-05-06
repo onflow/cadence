@@ -30,7 +30,7 @@ func rootState(l *lexer) stateFn {
 	case EOF:
 		l.emitType(TokenEOF)
 		return nil
-	case ' ', '\t':
+	case ' ', '\t', '\n':
 		return spaceState
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		return numberState
