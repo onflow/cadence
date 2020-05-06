@@ -22,7 +22,7 @@ import (
 	"fmt"
 )
 
-const AddressLength = 20
+const AddressLength = 8
 
 type Address [AddressLength]byte
 

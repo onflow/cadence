@@ -216,7 +216,7 @@ func (d *Decoder) DecodeBytes() (v cadence.Bytes, err error) {
 //  RFC Section 4.9 - Fixed-Length Opaque Data
 //  Fixed-length uninterpreted data zero-padded to a multiple of four
 func (d *Decoder) DecodeAddress() (v cadence.Address, err error) {
-	b, _, err := d.dec.DecodeFixedOpaque(20)
+	b, _, err := d.dec.DecodeFixedOpaque(cadence.AddressLength)
 	if err != nil {
 		return v, err
 	}

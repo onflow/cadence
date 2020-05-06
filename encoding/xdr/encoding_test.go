@@ -28,6 +28,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/xdr"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type encodeTest struct {
@@ -101,7 +102,7 @@ func TestEncodeBytes(t *testing.T) {
 }
 
 func TestEncodeAddress(t *testing.T) {
-	testEncode(t, cadence.AddressType{}, cadence.NewAddress([20]byte{1, 2, 3, 4, 5}))
+	testEncode(t, cadence.AddressType{}, cadence.NewAddress([common.AddressLength]byte{1, 2, 3, 4, 5}))
 }
 
 func TestEncodeInt(t *testing.T) {
