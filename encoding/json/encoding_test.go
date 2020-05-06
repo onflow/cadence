@@ -92,7 +92,7 @@ func TestEncodeAddress(t *testing.T) {
 	testEncode(
 		t,
 		cadence.NewAddressFromBytes([]byte{1, 2, 3, 4, 5}),
-		`{"type":"Address","value":"0x0102030405000000000000000000000000000000"}`,
+		`{"type":"Address","value":"0x0102030405000000"}`,
 	)
 }
 
