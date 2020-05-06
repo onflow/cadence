@@ -54,8 +54,13 @@ func (p *parser) report(err error) {
 
 func (p *parser) next() {
 	p.pos++
-	p.current = <-p.tokens
-
+	token, ok := <-p.tokens
+	if !ok {
+		// Channel closed, return EOF token.
+		p.current = lexer.Token{Type: lexer.TokenEOF, Value: nil}
+	} else {
+		p.current = token
+	}
 }
 
 func (p *parser) skipZeroOrOne(tokenType lexer.TokenType) {
