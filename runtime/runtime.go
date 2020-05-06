@@ -673,6 +673,18 @@ func (r *interpreterRuntime) emitAccountEvent(
 		Fields: eventFields,
 	}
 
+	actualLen := len(eventFields)
+	expectedLen := len(eventType.ConstructorParameters)
+
+	if actualLen != expectedLen {
+		panic(fmt.Errorf(
+			"event emission value mismatch: event %s: expected %d, got %d",
+			eventType.QualifiedString(),
+			expectedLen,
+			actualLen,
+		))
+	}
+
 	runtimeInterface.EmitEvent(exportEvent(eventValue))
 }
 
