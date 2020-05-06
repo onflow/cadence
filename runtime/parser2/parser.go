@@ -84,3 +84,12 @@ func (p *parser) skipZeroOrOne(tokenType lexer.TokenType) {
 		p.next()
 	}
 }
+
+func (p *parser) mustOne(tokenType lexer.TokenType) lexer.Token {
+	t := p.current
+	if t.Type != tokenType {
+		panic(fmt.Errorf("expected token type: %s", tokenType))
+	}
+	p.next()
+	return t
+}
