@@ -68,4 +68,91 @@ func TestParseExpression(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("repeated infix, same operator, left associative", func(t *testing.T) {
+		result, errors := Parse("1 + 2 + 3")
+		require.Empty(t, errors)
+
+		assert.Equal(t,
+			&ast.BinaryExpression{
+				Operation: ast.OperationPlus,
+				Left: &ast.BinaryExpression{
+					Operation: ast.OperationPlus,
+					Left: &ast.IntegerExpression{
+						Value: big.NewInt(1),
+						Base:  10,
+					},
+					Right: &ast.IntegerExpression{
+						Value: big.NewInt(2),
+						Base:  10,
+					},
+				},
+				Right: &ast.IntegerExpression{
+					Value: big.NewInt(3),
+					Base:  10,
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("repeated infix, same operator, right associative", func(t *testing.T) {
+		result, errors := Parse("1 ?? 2 ?? 3")
+		require.Empty(t, errors)
+
+		assert.Equal(t,
+			&ast.BinaryExpression{
+				Operation: ast.OperationNilCoalesce,
+				Left: &ast.IntegerExpression{
+					Value: big.NewInt(1),
+					Base:  10,
+				},
+				Right: &ast.BinaryExpression{
+					Operation: ast.OperationNilCoalesce,
+					Left: &ast.IntegerExpression{
+						Value: big.NewInt(2),
+						Base:  10,
+					},
+					Right: &ast.IntegerExpression{
+						Value: big.NewInt(3),
+						Base:  10,
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("mixed infix and prefix", func(t *testing.T) {
+		result, errors := Parse("1 +- 2 ++ 3")
+		require.Empty(t, errors)
+
+		assert.Equal(t,
+			&ast.BinaryExpression{
+				Operation: ast.OperationPlus,
+				Left: &ast.BinaryExpression{
+					Operation: ast.OperationPlus,
+					Left: &ast.IntegerExpression{
+						Value: big.NewInt(1),
+						Base:  10,
+					},
+					Right: &ast.UnaryExpression{
+						Operation: ast.OperationMinus,
+						Expression: &ast.IntegerExpression{
+							Value: big.NewInt(2),
+							Base:  10,
+						},
+					},
+				},
+				Right: &ast.UnaryExpression{
+					Operation: ast.OperationPlus,
+					Expression: &ast.IntegerExpression{
+						Value: big.NewInt(3),
+						Base:  10,
+					},
+				},
+			},
+			result,
+		)
+	})
 }

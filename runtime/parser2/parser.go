@@ -19,7 +19,6 @@
 package parser2
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -31,7 +30,6 @@ type parser struct {
 	current lexer.Token
 	pos     int
 	errors  []error
-	atEnd   bool
 }
 
 func Parse(input string) (ast.Expression, []error) {
@@ -56,10 +54,6 @@ func (p *parser) report(err error) {
 
 func (p *parser) next() {
 	p.pos++
-	p.atEnd = p.pos >= len(p.tokens)
-	if p.atEnd {
-		p.report(errors.New("unexpected end of expression"))
-	}
 	p.current = p.tokens[p.pos]
 }
 

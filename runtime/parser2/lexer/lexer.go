@@ -19,6 +19,7 @@
 package lexer
 
 import (
+	"fmt"
 	"strings"
 	"unicode/utf8"
 
@@ -58,6 +59,15 @@ func Lex(input string) []Token {
 }
 
 func (l *lexer) run(state stateFn) {
+	defer func() {
+		if r := recover(); r != nil {
+			err, ok := r.(error)
+			if !ok {
+				err = fmt.Errorf("lexer: %v", r)
+			}
+			l.emitError(err)
+		}
+	}()
 	for state != nil {
 		state = state(l)
 	}
@@ -177,4 +187,10 @@ func (l *lexer) scanSpace() {
 	// lookahead is already lexed.
 	// parse more, if any
 	l.acceptZeroOrMore(" \t\n")
+}
+
+func (l *lexer) mustOne(r rune) {
+	if !l.acceptOne(r) {
+		panic(fmt.Errorf("expected character: %#U", r))
+	}
 }
