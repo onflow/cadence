@@ -672,131 +672,6 @@ func TestInterpretReturns(t *testing.T) {
 	)
 }
 
-// TODO: perform each operator test for each integer type
-
-func TestInterpretPlusOperator(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-       let x = 2 + 4
-    `)
-
-	assert.Equal(t,
-		interpreter.NewIntValueFromInt64(6),
-		inter.Globals["x"].Value,
-	)
-}
-
-func TestInterpretMinusOperator(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-       let x = 2 - 4
-    `)
-
-	assert.Equal(t,
-		interpreter.NewIntValueFromInt64(-2),
-		inter.Globals["x"].Value,
-	)
-}
-
-func TestInterpretMulOperator(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-       let x = 2 * 4
-    `)
-
-	assert.Equal(t,
-		interpreter.NewIntValueFromInt64(8),
-		inter.Globals["x"].Value,
-	)
-}
-
-func TestInterpretDivOperator(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-       let x = 7 / 3
-    `)
-
-	assert.Equal(t,
-		interpreter.NewIntValueFromInt64(2),
-		inter.Globals["x"].Value,
-	)
-}
-
-func TestInterpretModOperator(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-       let x = 5 % 3
-    `)
-
-	assert.Equal(t,
-		interpreter.NewIntValueFromInt64(2),
-		inter.Globals["x"].Value,
-	)
-}
-
-func TestInterpretConcatOperator(t *testing.T) {
-
-	inter := parseCheckAndInterpret(t, `
-        let a = "abc" & "def"
-        let b = "" & "def"
-        let c = "abc" & ""
-        let d = "" & ""
-
-        let e = [1, 2] & [3, 4]
-        // TODO: support empty arrays
-        // let f = [1, 2] & []
-        // let g = [] & [3, 4]
-        // let h = [] & []
-    `)
-
-	assert.Equal(t,
-		interpreter.NewStringValue("abcdef"),
-		inter.Globals["a"].Value,
-	)
-	assert.Equal(t,
-		interpreter.NewStringValue("def"),
-		inter.Globals["b"].Value,
-	)
-	assert.Equal(t,
-		interpreter.NewStringValue("abc"),
-		inter.Globals["c"].Value,
-	)
-	assert.Equal(t,
-		interpreter.NewStringValue(""),
-		inter.Globals["d"].Value,
-	)
-
-	assert.Equal(t,
-		interpreter.NewArrayValueUnownedNonCopying(
-			interpreter.NewIntValueFromInt64(1),
-			interpreter.NewIntValueFromInt64(2),
-			interpreter.NewIntValueFromInt64(3),
-			interpreter.NewIntValueFromInt64(4),
-		),
-		inter.Globals["e"].Value,
-	)
-
-	// TODO: support empty arrays
-	// Expect(inter.Globals["f"].Value).
-	// 	To(Equal(interpreter.ArrayValue{
-	// 		Values: &[]interpreter.Value{
-	// 			interpreter.NewIntValueFromInt64(1),
-	// 			interpreter.NewIntValueFromInt64(2),
-	// 		},
-	// 	}))
-	// Expect(inter.Globals["g"].Value).
-	// 	To(Equal(interpreter.ArrayValue{
-	// 		Values: &[]interpreter.Value{
-	// 			interpreter.NewIntValueFromInt64(3),
-	// 			interpreter.NewIntValueFromInt64(4),
-	// 		},
-	// 	}))
-	// Expect(inter.Globals["h"].Value).
-	// 	To(Equal(interpreter.ArrayValue{
-	// 		Values: &[]interpreter.Value{},
-	// 	}))
-}
-
 func TestInterpretEqualOperator(t *testing.T) {
 
 	inter := parseCheckAndInterpret(t, `
@@ -1525,7 +1400,7 @@ func TestInterpretHostFunction(t *testing.T) {
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
 			a := invocation.Arguments[0].(interpreter.IntValue).ToBigInt()
 			b := invocation.Arguments[1].(interpreter.IntValue).ToBigInt()
-			value := big.NewInt(0).Add(a, b)
+			value := new(big.Int).Add(a, b)
 			result := interpreter.NewIntValueFromBigInt(value)
 			return trampoline.Done{Result: result}
 		},
@@ -7375,7 +7250,7 @@ func TestInterpretCountDigits256(t *testing.T) {
 				),
 			)
 
-			bigInt, ok := big.NewInt(0).SetString(test.Literal, 10)
+			bigInt, ok := new(big.Int).SetString(test.Literal, 10)
 			require.True(t, ok)
 
 			assert.Equal(t,

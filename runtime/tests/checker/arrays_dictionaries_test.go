@@ -764,7 +764,7 @@ func TestCheckInvalidConstantSizedArrayDeclarationOutOfRangeSize(t *testing.T) {
 
 	t.Run("too large", func(t *testing.T) {
 
-		tooLarge := big.NewInt(0).SetUint64(math.MaxUint64)
+		tooLarge := new(big.Int).SetUint64(math.MaxUint64)
 		tooLarge.Add(tooLarge, big.NewInt(1))
 
 		_, err := ParseAndCheck(t,

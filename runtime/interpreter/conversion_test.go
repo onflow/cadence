@@ -12,7 +12,7 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 
 	t.Run("invalid", func(t *testing.T) {
 
-		largeBigInt, ok := big.NewInt(0).SetString("1000000000000000000000000000000000000000000000", 10)
+		largeBigInt, ok := new(big.Int).SetString("1000000000000000000000000000000000000000000000", 10)
 		require.True(t, ok)
 
 		invalid := []Value{
@@ -49,7 +49,7 @@ func TestByteValueToByte(t *testing.T) {
 
 	t.Run("invalid", func(t *testing.T) {
 
-		largeBigInt, ok := big.NewInt(0).SetString("1000000000000000000000000000000000000000000000", 10)
+		largeBigInt, ok := new(big.Int).SetString("1000000000000000000000000000000000000000000000", 10)
 		require.True(t, ok)
 
 		invalid := []Value{

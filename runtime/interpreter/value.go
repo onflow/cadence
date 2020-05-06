@@ -551,6 +551,15 @@ type NumberValue interface {
 	GreaterEqual(other NumberValue) BoolValue
 }
 
+type IntegerValue interface {
+	NumberValue
+	BitwiseOr(other IntegerValue) IntegerValue
+	BitwiseXor(other IntegerValue) IntegerValue
+	BitwiseAnd(other IntegerValue) IntegerValue
+	BitwiseLeftShift(other IntegerValue) IntegerValue
+	BitwiseRightShift(other IntegerValue) IntegerValue
+}
+
 // BigNumberValue.
 // Implemented by values with an integer value outside the range of int64
 
@@ -594,7 +603,7 @@ func (IntValue) DynamicType(_ *Interpreter) DynamicType {
 }
 
 func (v IntValue) Copy() Value {
-	return IntValue{big.NewInt(0).Set(v.BigInt)}
+	return IntValue{new(big.Int).Set(v.BigInt)}
 }
 
 func (IntValue) GetOwner() *common.Address {
@@ -612,7 +621,7 @@ func (v IntValue) ToInt() int {
 }
 
 func (v IntValue) ToBigInt() *big.Int {
-	return big.NewInt(0).Set(v.BigInt)
+	return new(big.Int).Set(v.BigInt)
 }
 
 func (v IntValue) String() string {
@@ -624,26 +633,26 @@ func (v IntValue) KeyString() string {
 }
 
 func (v IntValue) Negate() NumberValue {
-	return NewIntValueFromBigInt(big.NewInt(0).Neg(v.BigInt))
+	return NewIntValueFromBigInt(new(big.Int).Neg(v.BigInt))
 }
 
 func (v IntValue) Plus(other NumberValue) NumberValue {
 	o := other.(IntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Add(v.BigInt, o.BigInt)
 	return IntValue{res}
 }
 
 func (v IntValue) Minus(other NumberValue) NumberValue {
 	o := other.(IntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Sub(v.BigInt, o.BigInt)
 	return IntValue{res}
 }
 
 func (v IntValue) Mod(other NumberValue) NumberValue {
 	o := other.(IntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	// INT33-C
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
@@ -654,14 +663,14 @@ func (v IntValue) Mod(other NumberValue) NumberValue {
 
 func (v IntValue) Mul(other NumberValue) NumberValue {
 	o := other.(IntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	return IntValue{res}
 }
 
 func (v IntValue) Div(other NumberValue) NumberValue {
 	o := other.(IntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	// INT33-C
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
@@ -697,6 +706,53 @@ func (v IntValue) Equal(other Value) BoolValue {
 	}
 	cmp := v.BigInt.Cmp(otherInt.BigInt)
 	return cmp == 0
+}
+
+func (v IntValue) BitwiseOr(other IntegerValue) IntegerValue {
+	o := other.(IntValue)
+	res := new(big.Int)
+	res.Or(v.BigInt, o.BigInt)
+	return IntValue{res}
+}
+
+func (v IntValue) BitwiseXor(other IntegerValue) IntegerValue {
+	o := other.(IntValue)
+	res := new(big.Int)
+	res.Xor(v.BigInt, o.BigInt)
+	return IntValue{res}
+}
+
+func (v IntValue) BitwiseAnd(other IntegerValue) IntegerValue {
+	o := other.(IntValue)
+	res := new(big.Int)
+	res.And(v.BigInt, o.BigInt)
+	return IntValue{res}
+}
+
+func (v IntValue) BitwiseLeftShift(other IntegerValue) IntegerValue {
+	o := other.(IntValue)
+	res := new(big.Int)
+	if o.BigInt.Sign() < 0 {
+		panic(UnderflowError{})
+	}
+	if !o.BigInt.IsUint64() {
+		panic(OverflowError{})
+	}
+	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+	return IntValue{res}
+}
+
+func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
+	o := other.(IntValue)
+	res := new(big.Int)
+	if o.BigInt.Sign() < 0 {
+		panic(UnderflowError{})
+	}
+	if !o.BigInt.IsUint64() {
+		panic(OverflowError{})
+	}
+	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+	return IntValue{res}
 }
 
 // Int8Value
@@ -865,6 +921,31 @@ func ConvertInt8(value Value, _ *Interpreter) Value {
 	return Int8Value(res)
 }
 
+func (v Int8Value) BitwiseOr(other IntegerValue) IntegerValue {
+	o := other.(Int8Value)
+	return v | o
+}
+
+func (v Int8Value) BitwiseXor(other IntegerValue) IntegerValue {
+	o := other.(Int8Value)
+	return v ^ o
+}
+
+func (v Int8Value) BitwiseAnd(other IntegerValue) IntegerValue {
+	o := other.(Int8Value)
+	return v & o
+}
+
+func (v Int8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+	o := other.(Int8Value)
+	return v << o
+}
+
+func (v Int8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+	o := other.(Int8Value)
+	return v >> o
+}
+
 // Int16Value
 
 type Int16Value int16
@@ -1031,6 +1112,31 @@ func ConvertInt16(value Value, _ *Interpreter) Value {
 	return Int16Value(res)
 }
 
+func (v Int16Value) BitwiseOr(other IntegerValue) IntegerValue {
+	o := other.(Int16Value)
+	return v | o
+}
+
+func (v Int16Value) BitwiseXor(other IntegerValue) IntegerValue {
+	o := other.(Int16Value)
+	return v ^ o
+}
+
+func (v Int16Value) BitwiseAnd(other IntegerValue) IntegerValue {
+	o := other.(Int16Value)
+	return v & o
+}
+
+func (v Int16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+	o := other.(Int16Value)
+	return v << o
+}
+
+func (v Int16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+	o := other.(Int16Value)
+	return v >> o
+}
+
 // Int32Value
 
 type Int32Value int32
@@ -1195,6 +1301,31 @@ func ConvertInt32(value Value, _ *Interpreter) Value {
 	}
 
 	return Int32Value(res)
+}
+
+func (v Int32Value) BitwiseOr(other IntegerValue) IntegerValue {
+	o := other.(Int32Value)
+	return v | o
+}
+
+func (v Int32Value) BitwiseXor(other IntegerValue) IntegerValue {
+	o := other.(Int32Value)
+	return v ^ o
+}
+
+func (v Int32Value) BitwiseAnd(other IntegerValue) IntegerValue {
+	o := other.(Int32Value)
+	return v & o
+}
+
+func (v Int32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+	o := other.(Int32Value)
+	return v << o
+}
+
+func (v Int32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+	o := other.(Int32Value)
+	return v >> o
 }
 
 // Int64Value
@@ -1367,6 +1498,31 @@ func ConvertInt64(value Value, _ *Interpreter) Value {
 	return Int64Value(res)
 }
 
+func (v Int64Value) BitwiseOr(other IntegerValue) IntegerValue {
+	o := other.(Int64Value)
+	return v | o
+}
+
+func (v Int64Value) BitwiseXor(other IntegerValue) IntegerValue {
+	o := other.(Int64Value)
+	return v ^ o
+}
+
+func (v Int64Value) BitwiseAnd(other IntegerValue) IntegerValue {
+	o := other.(Int64Value)
+	return v & o
+}
+
+func (v Int64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+	o := other.(Int64Value)
+	return v << o
+}
+
+func (v Int64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+	o := other.(Int64Value)
+	return v >> o
+}
+
 // Int128Value
 
 type Int128Value struct {
@@ -1387,7 +1543,7 @@ func (Int128Value) DynamicType(_ *Interpreter) DynamicType {
 }
 
 func (v Int128Value) Copy() Value {
-	return Int128Value{BigInt: big.NewInt(0).Set(v.BigInt)}
+	return Int128Value{BigInt: new(big.Int).Set(v.BigInt)}
 }
 
 func (Int128Value) GetOwner() *common.Address {
@@ -1405,7 +1561,7 @@ func (v Int128Value) ToInt() int {
 }
 
 func (v Int128Value) ToBigInt() *big.Int {
-	return big.NewInt(0).Set(v.BigInt)
+	return new(big.Int).Set(v.BigInt)
 }
 
 func (v Int128Value) String() string {
@@ -1424,7 +1580,7 @@ func (v Int128Value) Negate() NumberValue {
 	if v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0 {
 		panic(OverflowError{})
 	}
-	return Int128Value{big.NewInt(0).Neg(v.BigInt)}
+	return Int128Value{new(big.Int).Neg(v.BigInt)}
 }
 
 func (v Int128Value) Plus(other NumberValue) NumberValue {
@@ -1441,7 +1597,7 @@ func (v Int128Value) Plus(other NumberValue) NumberValue {
 	//       ...
 	//   }
 	//
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Add(v.BigInt, o.BigInt)
 	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
@@ -1465,7 +1621,7 @@ func (v Int128Value) Minus(other NumberValue) NumberValue {
 	//       ...
 	//   }
 	//
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Sub(v.BigInt, o.BigInt)
 	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
@@ -1477,7 +1633,7 @@ func (v Int128Value) Minus(other NumberValue) NumberValue {
 
 func (v Int128Value) Mod(other NumberValue) NumberValue {
 	o := other.(Int128Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	// INT33-C
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
@@ -1488,7 +1644,7 @@ func (v Int128Value) Mod(other NumberValue) NumberValue {
 
 func (v Int128Value) Mul(other NumberValue) NumberValue {
 	o := other.(Int128Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
@@ -1500,7 +1656,7 @@ func (v Int128Value) Mul(other NumberValue) NumberValue {
 
 func (v Int128Value) Div(other NumberValue) NumberValue {
 	o := other.(Int128Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	// INT33-C:
 	//   if o == 0 {
 	//       ...
@@ -1570,6 +1726,53 @@ func ConvertInt128(value Value, _ *Interpreter) Value {
 	return NewInt128ValueFromBigInt(v)
 }
 
+func (v Int128Value) BitwiseOr(other IntegerValue) IntegerValue {
+	o := other.(Int128Value)
+	res := new(big.Int)
+	res.Or(v.BigInt, o.BigInt)
+	return Int128Value{res}
+}
+
+func (v Int128Value) BitwiseXor(other IntegerValue) IntegerValue {
+	o := other.(Int128Value)
+	res := new(big.Int)
+	res.Xor(v.BigInt, o.BigInt)
+	return Int128Value{res}
+}
+
+func (v Int128Value) BitwiseAnd(other IntegerValue) IntegerValue {
+	o := other.(Int128Value)
+	res := new(big.Int)
+	res.And(v.BigInt, o.BigInt)
+	return Int128Value{res}
+}
+
+func (v Int128Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+	o := other.(Int128Value)
+	res := new(big.Int)
+	if o.BigInt.Sign() < 0 {
+		panic(UnderflowError{})
+	}
+	if !o.BigInt.IsUint64() {
+		panic(OverflowError{})
+	}
+	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+	return Int128Value{res}
+}
+
+func (v Int128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+	o := other.(Int128Value)
+	res := new(big.Int)
+	if o.BigInt.Sign() < 0 {
+		panic(UnderflowError{})
+	}
+	if !o.BigInt.IsUint64() {
+		panic(OverflowError{})
+	}
+	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+	return Int128Value{res}
+}
+
 // Int256Value
 
 type Int256Value struct {
@@ -1591,7 +1794,7 @@ func (Int256Value) DynamicType(_ *Interpreter) DynamicType {
 }
 
 func (v Int256Value) Copy() Value {
-	return Int256Value{big.NewInt(0).Set(v.BigInt)}
+	return Int256Value{new(big.Int).Set(v.BigInt)}
 }
 
 func (Int256Value) GetOwner() *common.Address {
@@ -1609,7 +1812,7 @@ func (v Int256Value) ToInt() int {
 }
 
 func (v Int256Value) ToBigInt() *big.Int {
-	return big.NewInt(0).Set(v.BigInt)
+	return new(big.Int).Set(v.BigInt)
 }
 
 func (v Int256Value) String() string {
@@ -1628,7 +1831,7 @@ func (v Int256Value) Negate() NumberValue {
 	if v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0 {
 		panic(OverflowError{})
 	}
-	return Int256Value{BigInt: big.NewInt(0).Neg(v.BigInt)}
+	return Int256Value{BigInt: new(big.Int).Neg(v.BigInt)}
 }
 
 func (v Int256Value) Plus(other NumberValue) NumberValue {
@@ -1645,7 +1848,7 @@ func (v Int256Value) Plus(other NumberValue) NumberValue {
 	//       ...
 	//   }
 	//
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Add(v.BigInt, o.BigInt)
 	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
@@ -1669,7 +1872,7 @@ func (v Int256Value) Minus(other NumberValue) NumberValue {
 	//       ...
 	//   }
 	//
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Sub(v.BigInt, o.BigInt)
 	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
@@ -1681,7 +1884,7 @@ func (v Int256Value) Minus(other NumberValue) NumberValue {
 
 func (v Int256Value) Mod(other NumberValue) NumberValue {
 	o := other.(Int256Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	// INT33-C
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
@@ -1692,7 +1895,7 @@ func (v Int256Value) Mod(other NumberValue) NumberValue {
 
 func (v Int256Value) Mul(other NumberValue) NumberValue {
 	o := other.(Int256Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
@@ -1704,7 +1907,7 @@ func (v Int256Value) Mul(other NumberValue) NumberValue {
 
 func (v Int256Value) Div(other NumberValue) NumberValue {
 	o := other.(Int256Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	// INT33-C:
 	//   if o == 0 {
 	//       ...
@@ -1774,6 +1977,53 @@ func ConvertInt256(value Value, _ *Interpreter) Value {
 	return NewInt256ValueFromBigInt(v)
 }
 
+func (v Int256Value) BitwiseOr(other IntegerValue) IntegerValue {
+	o := other.(Int256Value)
+	res := new(big.Int)
+	res.Or(v.BigInt, o.BigInt)
+	return Int256Value{res}
+}
+
+func (v Int256Value) BitwiseXor(other IntegerValue) IntegerValue {
+	o := other.(Int256Value)
+	res := new(big.Int)
+	res.Xor(v.BigInt, o.BigInt)
+	return Int256Value{res}
+}
+
+func (v Int256Value) BitwiseAnd(other IntegerValue) IntegerValue {
+	o := other.(Int256Value)
+	res := new(big.Int)
+	res.And(v.BigInt, o.BigInt)
+	return Int256Value{res}
+}
+
+func (v Int256Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+	o := other.(Int256Value)
+	res := new(big.Int)
+	if o.BigInt.Sign() < 0 {
+		panic(UnderflowError{})
+	}
+	if !o.BigInt.IsUint64() {
+		panic(OverflowError{})
+	}
+	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+	return Int256Value{res}
+}
+
+func (v Int256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+	o := other.(Int256Value)
+	res := new(big.Int)
+	if o.BigInt.Sign() < 0 {
+		panic(UnderflowError{})
+	}
+	if !o.BigInt.IsUint64() {
+		panic(OverflowError{})
+	}
+	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+	return Int256Value{res}
+}
+
 // UIntValue
 
 type UIntValue struct {
@@ -1781,7 +2031,7 @@ type UIntValue struct {
 }
 
 func NewUIntValueFromUint64(value uint64) UIntValue {
-	return NewUIntValueFromBigInt(big.NewInt(0).SetUint64(value))
+	return NewUIntValueFromBigInt(new(big.Int).SetUint64(value))
 }
 
 func NewUIntValueFromBigInt(value *big.Int) UIntValue {
@@ -1816,7 +2066,7 @@ func (UIntValue) DynamicType(_ *Interpreter) DynamicType {
 }
 
 func (v UIntValue) Copy() Value {
-	return UIntValue{big.NewInt(0).Set(v.BigInt)}
+	return UIntValue{new(big.Int).Set(v.BigInt)}
 }
 
 func (UIntValue) GetOwner() *common.Address {
@@ -1834,7 +2084,7 @@ func (v UIntValue) ToInt() int {
 }
 
 func (v UIntValue) ToBigInt() *big.Int {
-	return big.NewInt(0).Set(v.BigInt)
+	return new(big.Int).Set(v.BigInt)
 }
 
 func (v UIntValue) String() string {
@@ -1851,14 +2101,14 @@ func (v UIntValue) Negate() NumberValue {
 
 func (v UIntValue) Plus(other NumberValue) NumberValue {
 	o := other.(UIntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Add(v.BigInt, o.BigInt)
 	return UIntValue{res}
 }
 
 func (v UIntValue) Minus(other NumberValue) NumberValue {
 	o := other.(UIntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Sub(v.BigInt, o.BigInt)
 	if res.Sign() < 0 {
 		panic(UnderflowError{})
@@ -1868,7 +2118,7 @@ func (v UIntValue) Minus(other NumberValue) NumberValue {
 
 func (v UIntValue) Mod(other NumberValue) NumberValue {
 	o := other.(UIntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	// INT33-C
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
@@ -1879,14 +2129,14 @@ func (v UIntValue) Mod(other NumberValue) NumberValue {
 
 func (v UIntValue) Mul(other NumberValue) NumberValue {
 	o := other.(UIntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	return UIntValue{res}
 }
 
 func (v UIntValue) Div(other NumberValue) NumberValue {
 	o := other.(UIntValue)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	// INT33-C
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
@@ -1922,6 +2172,53 @@ func (v UIntValue) Equal(other Value) BoolValue {
 	}
 	cmp := v.BigInt.Cmp(otherUInt.BigInt)
 	return cmp == 0
+}
+
+func (v UIntValue) BitwiseOr(other IntegerValue) IntegerValue {
+	o := other.(UIntValue)
+	res := new(big.Int)
+	res.Or(v.BigInt, o.BigInt)
+	return UIntValue{res}
+}
+
+func (v UIntValue) BitwiseXor(other IntegerValue) IntegerValue {
+	o := other.(UIntValue)
+	res := new(big.Int)
+	res.Xor(v.BigInt, o.BigInt)
+	return UIntValue{res}
+}
+
+func (v UIntValue) BitwiseAnd(other IntegerValue) IntegerValue {
+	o := other.(UIntValue)
+	res := new(big.Int)
+	res.And(v.BigInt, o.BigInt)
+	return UIntValue{res}
+}
+
+func (v UIntValue) BitwiseLeftShift(other IntegerValue) IntegerValue {
+	o := other.(UIntValue)
+	res := new(big.Int)
+	if o.BigInt.Sign() < 0 {
+		panic(UnderflowError{})
+	}
+	if !o.BigInt.IsUint64() {
+		panic(OverflowError{})
+	}
+	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+	return UIntValue{res}
+}
+
+func (v UIntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
+	o := other.(UIntValue)
+	res := new(big.Int)
+	if o.BigInt.Sign() < 0 {
+		panic(UnderflowError{})
+	}
+	if !o.BigInt.IsUint64() {
+		panic(OverflowError{})
+	}
+	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+	return UIntValue{res}
 }
 
 // UInt8Value
@@ -2058,6 +2355,31 @@ func ConvertUInt8(value Value, _ *Interpreter) Value {
 	return UInt8Value(res)
 }
 
+func (v UInt8Value) BitwiseOr(other IntegerValue) IntegerValue {
+	o := other.(UInt8Value)
+	return v | o
+}
+
+func (v UInt8Value) BitwiseXor(other IntegerValue) IntegerValue {
+	o := other.(UInt8Value)
+	return v ^ o
+}
+
+func (v UInt8Value) BitwiseAnd(other IntegerValue) IntegerValue {
+	o := other.(UInt8Value)
+	return v & o
+}
+
+func (v UInt8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+	o := other.(UInt8Value)
+	return v << o
+}
+
+func (v UInt8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+	o := other.(UInt8Value)
+	return v >> o
+}
+
 // UInt16Value
 
 type UInt16Value uint16
@@ -2188,6 +2510,31 @@ func ConvertUInt16(value Value, _ *Interpreter) Value {
 	}
 
 	return UInt16Value(res)
+}
+
+func (v UInt16Value) BitwiseOr(other IntegerValue) IntegerValue {
+	o := other.(UInt16Value)
+	return v | o
+}
+
+func (v UInt16Value) BitwiseXor(other IntegerValue) IntegerValue {
+	o := other.(UInt16Value)
+	return v ^ o
+}
+
+func (v UInt16Value) BitwiseAnd(other IntegerValue) IntegerValue {
+	o := other.(UInt16Value)
+	return v & o
+}
+
+func (v UInt16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+	o := other.(UInt16Value)
+	return v << o
+}
+
+func (v UInt16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+	o := other.(UInt16Value)
+	return v >> o
 }
 
 // UInt32Value
@@ -2322,6 +2669,31 @@ func ConvertUInt32(value Value, _ *Interpreter) Value {
 	}
 
 	return UInt32Value(res)
+}
+
+func (v UInt32Value) BitwiseOr(other IntegerValue) IntegerValue {
+	o := other.(UInt32Value)
+	return v | o
+}
+
+func (v UInt32Value) BitwiseXor(other IntegerValue) IntegerValue {
+	o := other.(UInt32Value)
+	return v ^ o
+}
+
+func (v UInt32Value) BitwiseAnd(other IntegerValue) IntegerValue {
+	o := other.(UInt32Value)
+	return v & o
+}
+
+func (v UInt32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+	o := other.(UInt32Value)
+	return v << o
+}
+
+func (v UInt32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+	o := other.(UInt32Value)
+	return v >> o
 }
 
 // UInt64Value
@@ -2461,6 +2833,31 @@ func ConvertUInt64(value Value, _ *Interpreter) Value {
 	return UInt64Value(res)
 }
 
+func (v UInt64Value) BitwiseOr(other IntegerValue) IntegerValue {
+	o := other.(UInt64Value)
+	return v | o
+}
+
+func (v UInt64Value) BitwiseXor(other IntegerValue) IntegerValue {
+	o := other.(UInt64Value)
+	return v ^ o
+}
+
+func (v UInt64Value) BitwiseAnd(other IntegerValue) IntegerValue {
+	o := other.(UInt64Value)
+	return v & o
+}
+
+func (v UInt64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+	o := other.(UInt64Value)
+	return v << o
+}
+
+func (v UInt64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+	o := other.(UInt64Value)
+	return v >> o
+}
+
 // UInt128Value
 
 type UInt128Value struct {
@@ -2482,7 +2879,7 @@ func (UInt128Value) DynamicType(_ *Interpreter) DynamicType {
 }
 
 func (v UInt128Value) Copy() Value {
-	return UInt128Value{big.NewInt(0).Set(v.BigInt)}
+	return UInt128Value{new(big.Int).Set(v.BigInt)}
 }
 
 func (UInt128Value) GetOwner() *common.Address {
@@ -2500,7 +2897,7 @@ func (v UInt128Value) ToInt() int {
 }
 
 func (v UInt128Value) ToBigInt() *big.Int {
-	return big.NewInt(0).Set(v.BigInt)
+	return new(big.Int).Set(v.BigInt)
 }
 
 func (v UInt128Value) String() string {
@@ -2516,7 +2913,7 @@ func (v UInt128Value) Negate() NumberValue {
 }
 
 func (v UInt128Value) Plus(other NumberValue) NumberValue {
-	sum := big.NewInt(0)
+	sum := new(big.Int)
 	sum.Add(v.BigInt, other.(UInt128Value).BigInt)
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just add and check the range of the result.
@@ -2535,7 +2932,7 @@ func (v UInt128Value) Plus(other NumberValue) NumberValue {
 }
 
 func (v UInt128Value) Minus(other NumberValue) NumberValue {
-	diff := big.NewInt(0)
+	diff := new(big.Int)
 	diff.Sub(v.BigInt, other.(UInt128Value).BigInt)
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just subtract and check the range of the result.
@@ -2555,7 +2952,7 @@ func (v UInt128Value) Minus(other NumberValue) NumberValue {
 
 func (v UInt128Value) Mod(other NumberValue) NumberValue {
 	o := other.(UInt128Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -2565,7 +2962,7 @@ func (v UInt128Value) Mod(other NumberValue) NumberValue {
 
 func (v UInt128Value) Mul(other NumberValue) NumberValue {
 	o := other.(UInt128Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
@@ -2575,7 +2972,7 @@ func (v UInt128Value) Mul(other NumberValue) NumberValue {
 
 func (v UInt128Value) Div(other NumberValue) NumberValue {
 	o := other.(UInt128Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -2635,6 +3032,53 @@ func ConvertUInt128(value Value, _ *Interpreter) Value {
 	return NewUInt128ValueFromBigInt(v)
 }
 
+func (v UInt128Value) BitwiseOr(other IntegerValue) IntegerValue {
+	o := other.(UInt128Value)
+	res := new(big.Int)
+	res.Or(v.BigInt, o.BigInt)
+	return UInt128Value{res}
+}
+
+func (v UInt128Value) BitwiseXor(other IntegerValue) IntegerValue {
+	o := other.(UInt128Value)
+	res := new(big.Int)
+	res.Xor(v.BigInt, o.BigInt)
+	return UInt128Value{res}
+}
+
+func (v UInt128Value) BitwiseAnd(other IntegerValue) IntegerValue {
+	o := other.(UInt128Value)
+	res := new(big.Int)
+	res.And(v.BigInt, o.BigInt)
+	return UInt128Value{res}
+}
+
+func (v UInt128Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+	o := other.(UInt128Value)
+	res := new(big.Int)
+	if o.BigInt.Sign() < 0 {
+		panic(UnderflowError{})
+	}
+	if !o.BigInt.IsUint64() {
+		panic(OverflowError{})
+	}
+	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+	return UInt128Value{res}
+}
+
+func (v UInt128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+	o := other.(UInt128Value)
+	res := new(big.Int)
+	if o.BigInt.Sign() < 0 {
+		panic(UnderflowError{})
+	}
+	if !o.BigInt.IsUint64() {
+		panic(OverflowError{})
+	}
+	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+	return UInt128Value{res}
+}
+
 // UInt256Value
 
 type UInt256Value struct {
@@ -2656,7 +3100,7 @@ func (UInt256Value) DynamicType(_ *Interpreter) DynamicType {
 }
 
 func (v UInt256Value) Copy() Value {
-	return UInt256Value{big.NewInt(0).Set(v.BigInt)}
+	return UInt256Value{new(big.Int).Set(v.BigInt)}
 }
 
 func (UInt256Value) GetOwner() *common.Address {
@@ -2674,7 +3118,7 @@ func (v UInt256Value) ToInt() int {
 }
 
 func (v UInt256Value) ToBigInt() *big.Int {
-	return big.NewInt(0).Set(v.BigInt)
+	return new(big.Int).Set(v.BigInt)
 }
 
 func (v UInt256Value) String() string {
@@ -2690,7 +3134,7 @@ func (v UInt256Value) Negate() NumberValue {
 }
 
 func (v UInt256Value) Plus(other NumberValue) NumberValue {
-	sum := big.NewInt(0)
+	sum := new(big.Int)
 	sum.Add(v.BigInt, other.(UInt256Value).BigInt)
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just add and check the range of the result.
@@ -2709,7 +3153,7 @@ func (v UInt256Value) Plus(other NumberValue) NumberValue {
 }
 
 func (v UInt256Value) Minus(other NumberValue) NumberValue {
-	diff := big.NewInt(0)
+	diff := new(big.Int)
 	diff.Sub(v.BigInt, other.(UInt256Value).BigInt)
 	// Given that this value is backed by an arbitrary size integer,
 	// we can just subtract and check the range of the result.
@@ -2729,7 +3173,7 @@ func (v UInt256Value) Minus(other NumberValue) NumberValue {
 
 func (v UInt256Value) Mod(other NumberValue) NumberValue {
 	o := other.(UInt256Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -2739,7 +3183,7 @@ func (v UInt256Value) Mod(other NumberValue) NumberValue {
 
 func (v UInt256Value) Mul(other NumberValue) NumberValue {
 	o := other.(UInt256Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
 	if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
@@ -2749,7 +3193,7 @@ func (v UInt256Value) Mul(other NumberValue) NumberValue {
 
 func (v UInt256Value) Div(other NumberValue) NumberValue {
 	o := other.(UInt256Value)
-	res := big.NewInt(0)
+	res := new(big.Int)
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
 	}
@@ -2807,6 +3251,53 @@ func ConvertUInt256(value Value, _ *Interpreter) Value {
 	}
 
 	return NewUInt256ValueFromBigInt(v)
+}
+
+func (v UInt256Value) BitwiseOr(other IntegerValue) IntegerValue {
+	o := other.(UInt256Value)
+	res := new(big.Int)
+	res.Or(v.BigInt, o.BigInt)
+	return UInt256Value{res}
+}
+
+func (v UInt256Value) BitwiseXor(other IntegerValue) IntegerValue {
+	o := other.(UInt256Value)
+	res := new(big.Int)
+	res.Xor(v.BigInt, o.BigInt)
+	return UInt256Value{res}
+}
+
+func (v UInt256Value) BitwiseAnd(other IntegerValue) IntegerValue {
+	o := other.(UInt256Value)
+	res := new(big.Int)
+	res.And(v.BigInt, o.BigInt)
+	return UInt256Value{res}
+}
+
+func (v UInt256Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+	o := other.(UInt256Value)
+	res := new(big.Int)
+	if o.BigInt.Sign() < 0 {
+		panic(UnderflowError{})
+	}
+	if !o.BigInt.IsUint64() {
+		panic(OverflowError{})
+	}
+	res.Lsh(v.BigInt, uint(o.BigInt.Uint64()))
+	return UInt256Value{res}
+}
+
+func (v UInt256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+	o := other.(UInt256Value)
+	res := new(big.Int)
+	if o.BigInt.Sign() < 0 {
+		panic(UnderflowError{})
+	}
+	if !o.BigInt.IsUint64() {
+		panic(OverflowError{})
+	}
+	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
+	return UInt256Value{res}
 }
 
 // Word8Value
@@ -2904,6 +3395,31 @@ func ConvertWord8(value Value, interpreter *Interpreter) Value {
 	return Word8Value(ConvertUInt8(value, interpreter).(UInt8Value))
 }
 
+func (v Word8Value) BitwiseOr(other IntegerValue) IntegerValue {
+	o := other.(Word8Value)
+	return v | o
+}
+
+func (v Word8Value) BitwiseXor(other IntegerValue) IntegerValue {
+	o := other.(Word8Value)
+	return v ^ o
+}
+
+func (v Word8Value) BitwiseAnd(other IntegerValue) IntegerValue {
+	o := other.(Word8Value)
+	return v & o
+}
+
+func (v Word8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+	o := other.(Word8Value)
+	return v << o
+}
+
+func (v Word8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+	o := other.(Word8Value)
+	return v >> o
+}
+
 // Word16Value
 
 type Word16Value uint16
@@ -2995,6 +3511,31 @@ func (v Word16Value) Equal(other Value) BoolValue {
 
 func ConvertWord16(value Value, interpreter *Interpreter) Value {
 	return Word16Value(ConvertUInt16(value, interpreter).(UInt16Value))
+}
+
+func (v Word16Value) BitwiseOr(other IntegerValue) IntegerValue {
+	o := other.(Word16Value)
+	return v | o
+}
+
+func (v Word16Value) BitwiseXor(other IntegerValue) IntegerValue {
+	o := other.(Word16Value)
+	return v ^ o
+}
+
+func (v Word16Value) BitwiseAnd(other IntegerValue) IntegerValue {
+	o := other.(Word16Value)
+	return v & o
+}
+
+func (v Word16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+	o := other.(Word16Value)
+	return v << o
+}
+
+func (v Word16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+	o := other.(Word16Value)
+	return v >> o
 }
 
 // Word32Value
@@ -3092,6 +3633,31 @@ func ConvertWord32(value Value, interpreter *Interpreter) Value {
 	return Word32Value(ConvertUInt32(value, interpreter).(UInt32Value))
 }
 
+func (v Word32Value) BitwiseOr(other IntegerValue) IntegerValue {
+	o := other.(Word32Value)
+	return v | o
+}
+
+func (v Word32Value) BitwiseXor(other IntegerValue) IntegerValue {
+	o := other.(Word32Value)
+	return v ^ o
+}
+
+func (v Word32Value) BitwiseAnd(other IntegerValue) IntegerValue {
+	o := other.(Word32Value)
+	return v & o
+}
+
+func (v Word32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+	o := other.(Word32Value)
+	return v << o
+}
+
+func (v Word32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+	o := other.(Word32Value)
+	return v >> o
+}
+
 // Word64Value
 
 type Word64Value uint64
@@ -3185,6 +3751,31 @@ func (v Word64Value) Equal(other Value) BoolValue {
 
 func ConvertWord64(value Value, interpreter *Interpreter) Value {
 	return Word64Value(ConvertUInt64(value, interpreter).(UInt64Value))
+}
+
+func (v Word64Value) BitwiseOr(other IntegerValue) IntegerValue {
+	o := other.(Word64Value)
+	return v | o
+}
+
+func (v Word64Value) BitwiseXor(other IntegerValue) IntegerValue {
+	o := other.(Word64Value)
+	return v ^ o
+}
+
+func (v Word64Value) BitwiseAnd(other IntegerValue) IntegerValue {
+	o := other.(Word64Value)
+	return v & o
+}
+
+func (v Word64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
+	o := other.(Word64Value)
+	return v << o
+}
+
+func (v Word64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
+	o := other.(Word64Value)
+	return v >> o
 }
 
 // Fix64Value

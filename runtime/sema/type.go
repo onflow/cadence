@@ -1225,8 +1225,8 @@ func (*Int8Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var Int8TypeMinInt = big.NewInt(0).SetInt64(math.MinInt8)
-var Int8TypeMaxInt = big.NewInt(0).SetInt64(math.MaxInt8)
+var Int8TypeMinInt = new(big.Int).SetInt64(math.MinInt8)
+var Int8TypeMaxInt = new(big.Int).SetInt64(math.MaxInt8)
 
 func (*Int8Type) MinInt() *big.Int {
 	return Int8TypeMinInt
@@ -1282,8 +1282,8 @@ func (*Int16Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var Int16TypeMinInt = big.NewInt(0).SetInt64(math.MinInt16)
-var Int16TypeMaxInt = big.NewInt(0).SetInt64(math.MaxInt16)
+var Int16TypeMinInt = new(big.Int).SetInt64(math.MinInt16)
+var Int16TypeMaxInt = new(big.Int).SetInt64(math.MaxInt16)
 
 func (*Int16Type) MinInt() *big.Int {
 	return Int16TypeMinInt
@@ -1339,8 +1339,8 @@ func (*Int32Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var Int32TypeMinInt = big.NewInt(0).SetInt64(math.MinInt32)
-var Int32TypeMaxInt = big.NewInt(0).SetInt64(math.MaxInt32)
+var Int32TypeMinInt = new(big.Int).SetInt64(math.MinInt32)
+var Int32TypeMaxInt = new(big.Int).SetInt64(math.MaxInt32)
 
 func (*Int32Type) MinInt() *big.Int {
 	return Int32TypeMinInt
@@ -1396,8 +1396,8 @@ func (*Int64Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var Int64TypeMinInt = big.NewInt(0).SetInt64(math.MinInt64)
-var Int64TypeMaxInt = big.NewInt(0).SetInt64(math.MaxInt64)
+var Int64TypeMinInt = new(big.Int).SetInt64(math.MinInt64)
+var Int64TypeMaxInt = new(big.Int).SetInt64(math.MaxInt64)
 
 func (*Int64Type) MinInt() *big.Int {
 	return Int64TypeMinInt
@@ -1591,7 +1591,7 @@ func (*UIntType) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var UIntTypeMin = big.NewInt(0)
+var UIntTypeMin = new(big.Int)
 
 func (*UIntType) MinInt() *big.Int {
 	return UIntTypeMin
@@ -1648,8 +1648,8 @@ func (*UInt8Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var UInt8TypeMinInt = big.NewInt(0)
-var UInt8TypeMaxInt = big.NewInt(0).SetUint64(math.MaxUint8)
+var UInt8TypeMinInt = new(big.Int)
+var UInt8TypeMaxInt = new(big.Int).SetUint64(math.MaxUint8)
 
 func (*UInt8Type) MinInt() *big.Int {
 	return UInt8TypeMinInt
@@ -1706,8 +1706,8 @@ func (*UInt16Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var UInt16TypeMinInt = big.NewInt(0)
-var UInt16TypeMaxInt = big.NewInt(0).SetUint64(math.MaxUint16)
+var UInt16TypeMinInt = new(big.Int)
+var UInt16TypeMaxInt = new(big.Int).SetUint64(math.MaxUint16)
 
 func (*UInt16Type) MinInt() *big.Int {
 	return UInt16TypeMinInt
@@ -1764,8 +1764,8 @@ func (*UInt32Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var UInt32TypeMinInt = big.NewInt(0)
-var UInt32TypeMaxInt = big.NewInt(0).SetUint64(math.MaxUint32)
+var UInt32TypeMinInt = new(big.Int)
+var UInt32TypeMaxInt = new(big.Int).SetUint64(math.MaxUint32)
 
 func (*UInt32Type) MinInt() *big.Int {
 	return UInt32TypeMinInt
@@ -1822,8 +1822,8 @@ func (*UInt64Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var UInt64TypeMinInt = big.NewInt(0)
-var UInt64TypeMaxInt = big.NewInt(0).SetUint64(math.MaxUint64)
+var UInt64TypeMinInt = new(big.Int)
+var UInt64TypeMaxInt = new(big.Int).SetUint64(math.MaxUint64)
 
 func (*UInt64Type) MinInt() *big.Int {
 	return UInt64TypeMinInt
@@ -1880,7 +1880,7 @@ func (*UInt128Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var UInt128TypeMinIntBig = big.NewInt(0)
+var UInt128TypeMinIntBig = new(big.Int)
 var UInt128TypeMaxIntBig *big.Int
 
 func init() {
@@ -1944,7 +1944,7 @@ func (*UInt256Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var UInt256TypeMinIntBig = big.NewInt(0)
+var UInt256TypeMinIntBig = new(big.Int)
 var UInt256TypeMaxIntBig *big.Int
 
 func init() {
@@ -2008,8 +2008,8 @@ func (*Word8Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var Word8TypeMinInt = big.NewInt(0)
-var Word8TypeMaxInt = big.NewInt(0).SetUint64(math.MaxUint8)
+var Word8TypeMinInt = new(big.Int)
+var Word8TypeMaxInt = new(big.Int).SetUint64(math.MaxUint8)
 
 func (*Word8Type) MinInt() *big.Int {
 	return Word8TypeMinInt
@@ -2066,8 +2066,8 @@ func (*Word16Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var Word16TypeMinInt = big.NewInt(0)
-var Word16TypeMaxInt = big.NewInt(0).SetUint64(math.MaxUint16)
+var Word16TypeMinInt = new(big.Int)
+var Word16TypeMaxInt = new(big.Int).SetUint64(math.MaxUint16)
 
 func (*Word16Type) MinInt() *big.Int {
 	return Word16TypeMinInt
@@ -2124,8 +2124,8 @@ func (*Word32Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var Word32TypeMinInt = big.NewInt(0)
-var Word32TypeMaxInt = big.NewInt(0).SetUint64(math.MaxUint32)
+var Word32TypeMinInt = new(big.Int)
+var Word32TypeMaxInt = new(big.Int).SetUint64(math.MaxUint32)
 
 func (*Word32Type) MinInt() *big.Int {
 	return Word32TypeMinInt
@@ -2182,8 +2182,8 @@ func (*Word64Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var Word64TypeMinInt = big.NewInt(0)
-var Word64TypeMaxInt = big.NewInt(0).SetUint64(math.MaxUint64)
+var Word64TypeMinInt = new(big.Int)
+var Word64TypeMaxInt = new(big.Int).SetUint64(math.MaxUint64)
 
 func (*Word64Type) MinInt() *big.Int {
 	return Word64TypeMinInt
@@ -2354,14 +2354,14 @@ func (*Fix64Type) ContainsFirstLevelInterfaceType() bool {
 const Fix64TypeMinInt = math.MinInt64 / Fix64Factor
 const Fix64TypeMaxInt = math.MaxInt64 / Fix64Factor
 
-var Fix64TypeMinIntBig = big.NewInt(0).SetInt64(Fix64TypeMinInt)
-var Fix64TypeMaxIntBig = big.NewInt(0).SetInt64(Fix64TypeMaxInt)
+var Fix64TypeMinIntBig = new(big.Int).SetInt64(Fix64TypeMinInt)
+var Fix64TypeMaxIntBig = new(big.Int).SetInt64(Fix64TypeMaxInt)
 
 const Fix64TypeMinFractional = math.MinInt64 % Fix64Factor
 const Fix64TypeMaxFractional = math.MaxInt64 % Fix64Factor
 
-var Fix64TypeMinFractionalBig = big.NewInt(0).SetInt64(Fix64TypeMinFractional)
-var Fix64TypeMaxFractionalBig = big.NewInt(0).SetInt64(Fix64TypeMaxFractional)
+var Fix64TypeMinFractionalBig = new(big.Int).SetInt64(Fix64TypeMinFractional)
+var Fix64TypeMaxFractionalBig = new(big.Int).SetInt64(Fix64TypeMaxFractional)
 
 func init() {
 	Fix64TypeMinFractionalBig.Abs(Fix64TypeMinFractionalBig)
@@ -2437,14 +2437,14 @@ func (*UFix64Type) ContainsFirstLevelInterfaceType() bool {
 const UFix64TypeMinInt = 0
 const UFix64TypeMaxInt = math.MaxUint64 / uint64(Fix64Factor)
 
-var UFix64TypeMinIntBig = big.NewInt(0).SetUint64(UFix64TypeMinInt)
-var UFix64TypeMaxIntBig = big.NewInt(0).SetUint64(UFix64TypeMaxInt)
+var UFix64TypeMinIntBig = new(big.Int).SetUint64(UFix64TypeMinInt)
+var UFix64TypeMaxIntBig = new(big.Int).SetUint64(UFix64TypeMaxInt)
 
 const UFix64TypeMinFractional = 0
 const UFix64TypeMaxFractional = math.MaxUint64 % uint64(Fix64Factor)
 
-var UFix64TypeMinFractionalBig = big.NewInt(0).SetUint64(UFix64TypeMinFractional)
-var UFix64TypeMaxFractionalBig = big.NewInt(0).SetUint64(UFix64TypeMaxFractional)
+var UFix64TypeMinFractionalBig = new(big.Int).SetUint64(UFix64TypeMinFractional)
+var UFix64TypeMaxFractionalBig = new(big.Int).SetUint64(UFix64TypeMaxFractional)
 
 func (*UFix64Type) MinInt() *big.Int {
 	return UFix64TypeMinIntBig

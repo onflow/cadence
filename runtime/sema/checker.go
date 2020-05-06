@@ -662,7 +662,7 @@ func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpress
 		minInt := targetType.MinInt()
 		maxInt := targetType.MaxInt()
 
-		integerValue := big.NewInt(0).Set(expression.UnsignedInteger)
+		integerValue := new(big.Int).Set(expression.UnsignedInteger)
 
 		if expression.Negative {
 			expression.UnsignedInteger.Neg(expression.UnsignedInteger)
@@ -724,7 +724,7 @@ func (checker *Checker) checkFixedPointRange(
 ) bool {
 	minIntSign := minInt.Sign()
 
-	integerValue := big.NewInt(0).Set(unsignedIntegerValue)
+	integerValue := new(big.Int).Set(unsignedIntegerValue)
 	if negative {
 		if minIntSign == 0 && negative {
 			return false
@@ -1149,8 +1149,8 @@ func (checker *Checker) convertConstantSizedType(t *ast.ConstantSizedType) Type 
 	size := t.Size.Value
 
 	if !t.Size.Value.IsUint64() {
-		minSize := big.NewInt(0)
-		maxSize := big.NewInt(0).SetUint64(math.MaxUint64)
+		minSize := new(big.Int)
+		maxSize := new(big.Int).SetUint64(math.MaxUint64)
 
 		checker.report(
 			&InvalidConstantSizedTypeSizeError{

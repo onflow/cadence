@@ -48,7 +48,7 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 	case BinaryOperationKindArithmetic,
 		BinaryOperationKindNonEqualityComparison,
 		BinaryOperationKindEquality,
-		BinaryOperationKindConcatenation:
+		BinaryOperationKindBitwise:
 
 		// Right hand side will always be evaluated
 
@@ -59,9 +59,10 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 
 		switch operationKind {
 		case BinaryOperationKindArithmetic,
-			BinaryOperationKindNonEqualityComparison:
+			BinaryOperationKindNonEqualityComparison,
+			BinaryOperationKindBitwise:
 
-			return checker.checkBinaryExpressionArithmeticOrNonEqualityComparison(
+			return checker.checkBinaryExpressionArithmeticOrNonEqualityComparisonOrBitwise(
 				expression, operation, operationKind,
 				leftType, rightType,
 				leftIsInvalid, rightIsInvalid, anyInvalid,
@@ -69,13 +70,6 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 
 		case BinaryOperationKindEquality:
 			return checker.checkBinaryExpressionEquality(
-				expression, operation, operationKind,
-				leftType, rightType,
-				leftIsInvalid, rightIsInvalid, anyInvalid,
-			)
-
-		case BinaryOperationKindConcatenation:
-			return checker.checkBinaryExpressionConcatenation(
 				expression, operation, operationKind,
 				leftType, rightType,
 				leftIsInvalid, rightIsInvalid, anyInvalid,
@@ -128,17 +122,34 @@ func (checker *Checker) VisitBinaryExpression(expression *ast.BinaryExpression) 
 	}
 }
 
-func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparison(
+func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparisonOrBitwise(
 	expression *ast.BinaryExpression,
 	operation ast.Operation,
 	operationKind BinaryOperationKind,
 	leftType, rightType Type,
 	leftIsInvalid, rightIsInvalid, anyInvalid bool,
 ) Type {
-	// check both types are number subtypes
+	// check both types are number/integer subtypes
 
-	leftIsNumber := IsSubType(leftType, &NumberType{})
-	rightIsNumber := IsSubType(rightType, &NumberType{})
+	var expectedSuperType Type
+
+	switch operationKind {
+	case BinaryOperationKindArithmetic,
+		BinaryOperationKindNonEqualityComparison:
+
+		expectedSuperType = &NumberType{}
+
+	case BinaryOperationKindBitwise:
+		expectedSuperType = &IntegerType{}
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+
+	leftIsNumber := IsSubType(leftType, expectedSuperType)
+	rightIsNumber := IsSubType(rightType, expectedSuperType)
+
+	reportedInvalidOperands := false
 
 	if !leftIsNumber && !rightIsNumber {
 		if !anyInvalid {
@@ -150,6 +161,7 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparison(
 					Range:     ast.NewRangeFromPositioned(expression),
 				},
 			)
+			reportedInvalidOperands = true
 		}
 	} else if !leftIsNumber {
 		if !leftIsInvalid {
@@ -157,7 +169,7 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparison(
 				&InvalidBinaryOperandError{
 					Operation:    operation,
 					Side:         common.OperandSideLeft,
-					ExpectedType: &NumberType{},
+					ExpectedType: expectedSuperType,
 					ActualType:   leftType,
 					Range:        ast.NewRangeFromPositioned(expression.Left),
 				},
@@ -169,7 +181,7 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparison(
 				&InvalidBinaryOperandError{
 					Operation:    operation,
 					Side:         common.OperandSideRight,
-					ExpectedType: &NumberType{},
+					ExpectedType: expectedSuperType,
 					ActualType:   rightType,
 					Range:        ast.NewRangeFromPositioned(expression.Right),
 				},
@@ -178,7 +190,11 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparison(
 	}
 
 	// check both types are equal
-	if !anyInvalid && !leftType.Equal(rightType) {
+
+	if !reportedInvalidOperands &&
+		!anyInvalid &&
+		!leftType.Equal(rightType) {
+
 		checker.report(
 			&InvalidBinaryOperandsError{
 				Operation: operation,
@@ -190,14 +206,17 @@ func (checker *Checker) checkBinaryExpressionArithmeticOrNonEqualityComparison(
 	}
 
 	switch operationKind {
-	case BinaryOperationKindArithmetic:
+	case BinaryOperationKindArithmetic,
+		BinaryOperationKindBitwise:
+
 		return leftType
 
 	case BinaryOperationKindNonEqualityComparison:
 		return &BoolType{}
-	}
 
-	panic(errors.NewUnreachableError())
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (checker *Checker) checkBinaryExpressionEquality(
@@ -356,68 +375,4 @@ func (checker *Checker) checkBinaryExpressionNilCoalescing(
 		return leftOptional
 	}
 	return leftInner
-}
-
-func (checker *Checker) checkBinaryExpressionConcatenation(
-	expression *ast.BinaryExpression,
-	operation ast.Operation,
-	operationKind BinaryOperationKind,
-	leftType, rightType Type,
-	leftIsInvalid, rightIsInvalid, anyInvalid bool,
-) Type {
-
-	// check both types are concatenatable
-	leftIsConcat := IsConcatenatableType(leftType)
-	rightIsConcat := IsConcatenatableType(rightType)
-
-	if !leftIsConcat && !rightIsConcat {
-		if !anyInvalid {
-			checker.report(
-				&InvalidBinaryOperandsError{
-					Operation: operation,
-					LeftType:  leftType,
-					RightType: rightType,
-					Range:     ast.NewRangeFromPositioned(expression),
-				},
-			)
-		}
-	} else if !leftIsConcat {
-		if !leftIsInvalid {
-			checker.report(
-				&InvalidBinaryOperandError{
-					Operation:    operation,
-					Side:         common.OperandSideLeft,
-					ExpectedType: rightType,
-					ActualType:   leftType,
-					Range:        ast.NewRangeFromPositioned(expression.Left),
-				},
-			)
-		}
-	} else if !rightIsConcat {
-		if !rightIsInvalid {
-			checker.report(
-				&InvalidBinaryOperandError{
-					Operation:    operation,
-					Side:         common.OperandSideRight,
-					ExpectedType: leftType,
-					ActualType:   rightType,
-					Range:        ast.NewRangeFromPositioned(expression.Right),
-				},
-			)
-		}
-	}
-
-	// check both types are equal
-	if !leftType.Equal(rightType) {
-		checker.report(
-			&InvalidBinaryOperandsError{
-				Operation: operation,
-				LeftType:  leftType,
-				RightType: rightType,
-				Range:     ast.NewRangeFromPositioned(expression),
-			},
-		)
-	}
-
-	return leftType
 }

@@ -262,7 +262,7 @@ func (d *Decoder) decodeBig() (i *big.Int, err error) {
 
 	isPositive := b[0] == 1
 
-	i = big.NewInt(0).SetBytes(b[1:])
+	i = new(big.Int).SetBytes(b[1:])
 
 	if !isPositive {
 		i = i.Neg(i)
