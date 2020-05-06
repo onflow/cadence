@@ -28,18 +28,25 @@ import (
 )
 
 type infixFunc func(left, right ast.Expression) ast.Expression
-type nullDenotationFunc func(lexer.Token) ast.Expression
+type prefixFunc func(right ast.Expression) ast.Expression
+type nullDenotationFunc func(parser *parser, token lexer.Token) ast.Expression
 
 type literal struct {
 	tokenType      lexer.TokenType
 	nullDenotation nullDenotationFunc
 }
 
-type infixOperator struct {
+type infix struct {
 	tokenType        lexer.TokenType
 	leftBindingPower int
 	rightAssociative bool
 	leftDenotation   infixFunc
+}
+
+type prefix struct {
+	tokenType      lexer.TokenType
+	bindingPower   int
+	nullDenotation prefixFunc
 }
 
 var nullDenotations = map[lexer.TokenType]nullDenotationFunc{}
@@ -51,33 +58,80 @@ var leftDenotations = map[lexer.TokenType]leftDenotationFunc{}
 
 func define(def interface{}) {
 	switch def := def.(type) {
-	case infixOperator:
-		leftBindingPowers[def.tokenType] = def.leftBindingPower
+	case infix:
+		tokenType := def.tokenType
+
+		setLeftBindingPower(tokenType, def.leftBindingPower)
 
 		rightBindingPower := def.leftBindingPower
 		if def.rightAssociative {
 			rightBindingPower -= 1
 		}
 
-		leftDenotations[def.tokenType] = func(parser *parser, left ast.Expression) ast.Expression {
-			right := parseExpression(parser, rightBindingPower)
-			return def.leftDenotation(left, right)
-		}
+		setLeftDenotation(
+			tokenType,
+			func(parser *parser, left ast.Expression) ast.Expression {
+				right := parseExpression(parser, rightBindingPower)
+				return def.leftDenotation(left, right)
+			},
+		)
 
 	case literal:
-		nullDenotations[def.tokenType] = def.nullDenotation
-		leftBindingPowers[def.tokenType] = 0
+		tokenType := def.tokenType
+		setNullDenotation(tokenType, def.nullDenotation)
+		setLeftBindingPower(tokenType, 0)
+
+	case prefix:
+		tokenType := def.tokenType
+		setLeftBindingPower(tokenType, 0)
+		setNullDenotation(
+			tokenType,
+			func(parser *parser, token lexer.Token) ast.Expression {
+				right := parseExpression(parser, def.bindingPower)
+				return def.nullDenotation(right)
+			},
+		)
 
 	default:
 		panic(errors.NewUnreachableError())
 	}
 }
 
+func setNullDenotation(tokenType lexer.TokenType, nullDenotation nullDenotationFunc) {
+	current := nullDenotations[tokenType]
+	if current != nil {
+		panic(fmt.Errorf(
+			"null denotation for token type %s exists",
+			tokenType,
+		))
+	}
+	nullDenotations[tokenType] = nullDenotation
+}
+
+func setLeftBindingPower(tokenType lexer.TokenType, power int) {
+	current := leftBindingPowers[tokenType]
+	if current > power {
+		return
+	}
+	leftBindingPowers[tokenType] = power
+}
+
+func setLeftDenotation(tokenType lexer.TokenType, leftDenotation leftDenotationFunc) {
+	current := leftDenotations[tokenType]
+	if current != nil {
+		panic(fmt.Errorf(
+			"left denotation for token type %s exists",
+			tokenType,
+		))
+	}
+	leftDenotations[tokenType] = leftDenotation
+}
+
 func init() {
 
-	define(infixOperator{
+	define(infix{
 		tokenType:        lexer.TokenOperatorPlus,
-		leftBindingPower: 10,
+		leftBindingPower: 110,
 		leftDenotation: func(left, right ast.Expression) ast.Expression {
 			return &ast.BinaryExpression{
 				Operation: ast.OperationPlus,
@@ -87,9 +141,9 @@ func init() {
 		},
 	})
 
-	define(infixOperator{
+	define(infix{
 		tokenType:        lexer.TokenOperatorMinus,
-		leftBindingPower: 10,
+		leftBindingPower: 110,
 		leftDenotation: func(left, right ast.Expression) ast.Expression {
 			return &ast.BinaryExpression{
 				Operation: ast.OperationMinus,
@@ -99,9 +153,9 @@ func init() {
 		},
 	})
 
-	define(infixOperator{
+	define(infix{
 		tokenType:        lexer.TokenOperatorMul,
-		leftBindingPower: 20,
+		leftBindingPower: 120,
 		leftDenotation: func(left, right ast.Expression) ast.Expression {
 			return &ast.BinaryExpression{
 				Operation: ast.OperationMul,
@@ -111,9 +165,9 @@ func init() {
 		},
 	})
 
-	define(infixOperator{
+	define(infix{
 		tokenType:        lexer.TokenOperatorDiv,
-		leftBindingPower: 20,
+		leftBindingPower: 120,
 		leftDenotation: func(left, right ast.Expression) ast.Expression {
 			return &ast.BinaryExpression{
 				Operation: ast.OperationDiv,
@@ -123,13 +177,48 @@ func init() {
 		},
 	})
 
+	define(infix{
+		tokenType:        lexer.TokenOperatorNilCoalesce,
+		leftBindingPower: 100,
+		rightAssociative: true,
+		leftDenotation: func(left, right ast.Expression) ast.Expression {
+			return &ast.BinaryExpression{
+				Operation: ast.OperationNilCoalesce,
+				Left:      left,
+				Right:     right,
+			}
+		},
+	})
+
 	define(literal{
 		tokenType: lexer.TokenNumber,
-		nullDenotation: func(token lexer.Token) ast.Expression {
+		nullDenotation: func(_ *parser, token lexer.Token) ast.Expression {
 			value, _ := new(big.Int).SetString(token.Value.(string), 10)
 			return &ast.IntegerExpression{
 				Value: value,
 				Base:  10,
+			}
+		},
+	})
+
+	define(prefix{
+		tokenType:    lexer.TokenOperatorMinus,
+		bindingPower: 130,
+		nullDenotation: func(right ast.Expression) ast.Expression {
+			return &ast.UnaryExpression{
+				Operation:  ast.OperationMinus,
+				Expression: right,
+			}
+		},
+	})
+
+	define(prefix{
+		tokenType:    lexer.TokenOperatorPlus,
+		bindingPower: 130,
+		nullDenotation: func(right ast.Expression) ast.Expression {
+			return &ast.UnaryExpression{
+				Operation:  ast.OperationPlus,
+				Expression: right,
 			}
 		},
 	})
@@ -139,37 +228,30 @@ func init() {
 
 func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 	p.skipZeroOrOne(lexer.TokenSpace)
-	current := p.current
+	t := p.current
 	p.next()
 	p.skipZeroOrOne(lexer.TokenSpace)
-	next := p.current
 
-	left := applyNullDenotation(current)
-	if p.atEnd {
-		return left
-	}
+	left := applyNullDenotation(p, t)
 
-	for rightBindingPower < leftBindingPower(next.Type) {
-		current = next
+	for rightBindingPower < leftBindingPower(p.current.Type) {
+		t = p.current
 		p.next()
 		p.skipZeroOrOne(lexer.TokenSpace)
 
-		next = p.current
-		left = applyLeftDenotation(p, current.Type, left)
-		if p.atEnd {
-			return left
-		}
+		left = applyLeftDenotation(p, t.Type, left)
 	}
 
 	return left
 }
 
-func applyNullDenotation(token lexer.Token) ast.Expression {
-	nullDenotation, ok := nullDenotations[token.Type]
+func applyNullDenotation(p *parser, token lexer.Token) ast.Expression {
+	tokenType := token.Type
+	nullDenotation, ok := nullDenotations[tokenType]
 	if !ok {
-		panic(fmt.Errorf("missing null denotation for token type: %v", token.Type))
+		panic(fmt.Errorf("missing null denotation for token type: %v", tokenType))
 	}
-	return nullDenotation(token)
+	return nullDenotation(p, token)
 }
 
 func leftBindingPower(tokenType lexer.TokenType) int {
@@ -180,10 +262,10 @@ func leftBindingPower(tokenType lexer.TokenType) int {
 	return result
 }
 
-func applyLeftDenotation(parser *parser, tokenType lexer.TokenType, left ast.Expression) ast.Expression {
+func applyLeftDenotation(p *parser, tokenType lexer.TokenType, left ast.Expression) ast.Expression {
 	leftDenotation, ok := leftDenotations[tokenType]
 	if !ok {
 		panic(fmt.Errorf("missing left denotation for token type: %v", tokenType))
 	}
-	return leftDenotation(parser, left)
+	return leftDenotation(p, left)
 }

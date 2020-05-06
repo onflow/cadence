@@ -33,6 +33,7 @@ const (
 	TokenOperatorMinus
 	TokenOperatorMul
 	TokenOperatorDiv
+	TokenOperatorNilCoalesce
 	TokenParenOpen
 	TokenParenClose
 	TokenBraceOpen

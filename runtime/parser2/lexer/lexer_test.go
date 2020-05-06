@@ -19,6 +19,7 @@
 package lexer
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -269,6 +270,92 @@ func TestLex(t *testing.T) {
 				},
 			},
 			Lex("1 \n  2\n"),
+		)
+	})
+
+	t.Run("nil-coalesce", func(t *testing.T) {
+		assert.Equal(t,
+			[]Token{
+				{
+					Type:  TokenNumber,
+					Value: "1",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+				{
+					Type:  TokenSpace,
+					Value: " ",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					},
+				},
+				{
+					Type: TokenOperatorNilCoalesce,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+				},
+				{
+					Type:  TokenSpace,
+					Value: " ",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+						EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+					},
+				},
+				{
+					Type:  TokenNumber,
+					Value: "2",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+						EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+					},
+				},
+				{
+					Type: TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+						EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+					},
+				},
+			},
+			Lex("1 ?? 2"),
+		)
+	})
+
+	t.Run("invalid nil-coalesce", func(t *testing.T) {
+		assert.Equal(t,
+			[]Token{
+				{
+					Type:  TokenNumber,
+					Value: "1",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+				{
+					Type:  TokenSpace,
+					Value: " ",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					},
+				},
+				{
+					Type:  TokenError,
+					Value: errors.New("expected character: U+003F '?'"),
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					},
+				},
+			},
+			Lex("1 ?X"),
 		)
 	})
 }

@@ -42,6 +42,9 @@ func rootState(l *lexer) stateFn {
 		l.emitType(TokenOperatorMul)
 	case '%':
 		l.emitType(TokenOperatorDiv)
+	case '?':
+		l.mustOne('?')
+		l.emitType(TokenOperatorNilCoalesce)
 	case '(':
 		l.emitType(TokenParenOpen)
 	case ')':
