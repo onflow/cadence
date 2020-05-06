@@ -57,6 +57,10 @@ func rootState(l *lexer) stateFn {
 		l.emitType(TokenBracketOpen)
 	case ']':
 		l.emitType(TokenBracketClose)
+	case ',':
+		l.emitType(TokenComma)
+	case ':':
+		l.emitType(TokenColon)
 	case '_':
 		return identifierState
 

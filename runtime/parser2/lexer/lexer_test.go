@@ -532,6 +532,36 @@ func TestLex(t *testing.T) {
 		})
 	})
 
+	t.Run("colon and comma", func(t *testing.T) {
+		withTokens(Lex(":,"), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type: TokenColon,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					{
+						Type: TokenComma,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
 
 	t.Run("brackets and braces", func(t *testing.T) {
 		withTokens(Lex("[}]{"), func(tokens []Token) {
@@ -578,4 +608,5 @@ func TestLex(t *testing.T) {
 			)
 		})
 	})
+
 }
