@@ -230,9 +230,9 @@ func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 	p.skipZeroOrOne(lexer.TokenSpace)
 	t := p.current
 	p.next()
-	p.skipZeroOrOne(lexer.TokenSpace)
 
 	left := applyNullDenotation(p, t)
+	p.skipZeroOrOne(lexer.TokenSpace)
 
 	for rightBindingPower < leftBindingPower(p.current.Type) {
 		t = p.current
