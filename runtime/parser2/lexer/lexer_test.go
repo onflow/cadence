@@ -380,4 +380,55 @@ func TestLex(t *testing.T) {
 			)
 		})
 	})
+
+	t.Run("identifier", func(t *testing.T) {
+		withTokens(Lex("test"), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type:  TokenIdentifier,
+						Value: "test",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
+
+	t.Run("identifier with leading underscore and trailing numbers", func(t *testing.T) {
+		withTokens(Lex("_test_123"), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type:  TokenIdentifier,
+						Value: "_test_123",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
+
 }

@@ -29,6 +29,7 @@ const (
 	TokenEOF
 	TokenSpace
 	TokenNumber
+	TokenIdentifier
 	TokenOperatorPlus
 	TokenOperatorMinus
 	TokenOperatorMul
