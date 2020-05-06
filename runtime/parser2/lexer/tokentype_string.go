@@ -12,22 +12,23 @@ func _() {
 	_ = x[TokenEOF-1]
 	_ = x[TokenSpace-2]
 	_ = x[TokenNumber-3]
-	_ = x[TokenOperatorPlus-4]
-	_ = x[TokenOperatorMinus-5]
-	_ = x[TokenOperatorMul-6]
-	_ = x[TokenOperatorDiv-7]
-	_ = x[TokenOperatorNilCoalesce-8]
-	_ = x[TokenParenOpen-9]
-	_ = x[TokenParenClose-10]
-	_ = x[TokenBraceOpen-11]
-	_ = x[TokenBraceClose-12]
-	_ = x[TokenBracketOpen-13]
-	_ = x[TokenBracketClose-14]
+	_ = x[TokenIdentifier-4]
+	_ = x[TokenOperatorPlus-5]
+	_ = x[TokenOperatorMinus-6]
+	_ = x[TokenOperatorMul-7]
+	_ = x[TokenOperatorDiv-8]
+	_ = x[TokenOperatorNilCoalesce-9]
+	_ = x[TokenParenOpen-10]
+	_ = x[TokenParenClose-11]
+	_ = x[TokenBraceOpen-12]
+	_ = x[TokenBraceClose-13]
+	_ = x[TokenBracketOpen-14]
+	_ = x[TokenBracketClose-15]
 }
 
-const _TokenType_name = "ErrorEOFSpaceNumberOperatorPlusOperatorMinusOperatorMulOperatorDivOperatorNilCoalesceParenOpenParenCloseBraceOpenBraceCloseBracketOpenBracketClose"
+const _TokenType_name = "ErrorEOFSpaceNumberIdentifierOperatorPlusOperatorMinusOperatorMulOperatorDivOperatorNilCoalesceParenOpenParenCloseBraceOpenBraceCloseBracketOpenBracketClose"
 
-var _TokenType_index = [...]uint8{0, 5, 8, 13, 19, 31, 44, 55, 66, 85, 94, 104, 113, 123, 134, 146}
+var _TokenType_index = [...]uint8{0, 5, 8, 13, 19, 29, 41, 54, 65, 76, 95, 104, 114, 123, 133, 144, 156}
 
 func (i TokenType) String() string {
 	if i >= TokenType(len(_TokenType_index)-1) {

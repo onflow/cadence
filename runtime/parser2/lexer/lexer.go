@@ -38,7 +38,8 @@ func (t Token) Is(ty TokenType) bool {
 
 type lexer struct {
 	input      string
-	tokenRange ast.Range
+	startPos   ast.Position
+	endPos     ast.Position
 	prevEndPos ast.Position
 	tokens     chan Token
 	canBackup  bool
@@ -47,11 +48,9 @@ type lexer struct {
 func Lex(input string) chan Token {
 	startPos := ast.Position{Line: 1}
 	l := &lexer{
-		input: input,
-		tokenRange: ast.Range{
-			StartPos: startPos,
-			EndPos:   startPos,
-		},
+		input:      input,
+		startPos:   startPos,
+		endPos:     startPos,
 		prevEndPos: startPos,
 		tokens:     make(chan Token),
 	}
@@ -79,7 +78,7 @@ func (l *lexer) run(state stateFn) {
 func (l *lexer) next() rune {
 	l.canBackup = true
 
-	endPos := l.tokenRange.EndPos
+	endPos := l.endPos
 	endOffset := endPos.Offset
 
 	l.prevEndPos = endPos
@@ -90,13 +89,13 @@ func (l *lexer) next() rune {
 
 	r, w := utf8.DecodeRuneInString(l.input[endOffset:])
 
-	l.tokenRange.EndPos.Offset += w
+	l.endPos.Offset += w
 
 	if r == '\n' {
-		l.tokenRange.EndPos.Line++
-		l.tokenRange.EndPos.Column = 0
+		l.endPos.Line++
+		l.endPos.Column = 0
 	} else {
-		l.tokenRange.EndPos.Column++
+		l.endPos.Column++
 	}
 
 	return r
@@ -106,24 +105,24 @@ func (l *lexer) next() rune {
 // the next rune in the input.
 func (l *lexer) peek() rune {
 	r := l.next()
-	l.backup()
+	l.backupOne()
 	return r
 }
 
-// backup steps back one rune.
+// backupOne steps back one rune.
 // Can be called only once per call of next.
-func (l *lexer) backup() {
+func (l *lexer) backupOne() {
 	if !l.canBackup {
 		panic("second backup")
 	}
 	l.canBackup = false
 
-	l.tokenRange.EndPos = l.prevEndPos
+	l.endPos = l.prevEndPos
 }
 
 func (l *lexer) word() string {
-	start := l.tokenRange.StartPos.Offset
-	end := l.tokenRange.EndPos.Offset
+	start := l.startPos.Offset
+	end := l.endPos.Offset
 	return l.input[start:end]
 }
 
@@ -131,7 +130,7 @@ func (l *lexer) acceptOne(r rune) bool {
 	if l.next() == r {
 		return true
 	}
-	l.backup()
+	l.backupOne()
 	return false
 }
 
@@ -139,14 +138,14 @@ func (l *lexer) acceptAny(valid string) bool {
 	if strings.ContainsRune(valid, l.next()) {
 		return true
 	}
-	l.backup()
+	l.backupOne()
 	return false
 }
 
 func (l *lexer) acceptZeroOrMore(valid string) {
 	for strings.ContainsRune(valid, l.next()) {
 	}
-	l.backup()
+	l.backupOne()
 }
 
 func (l *lexer) acceptOneOrMore(valid string) bool {
@@ -162,10 +161,13 @@ func (l *lexer) emit(ty TokenType, val interface{}) {
 	token := Token{
 		Type:  ty,
 		Value: val,
-		Range: l.tokenRange,
+		Range: ast.Range{
+			StartPos: l.startPos,
+			EndPos:   l.endPos,
+		},
 	}
 	l.tokens <- token
-	l.tokenRange.StartPos = l.tokenRange.EndPos
+	l.startPos = l.endPos
 }
 
 func (l *lexer) emitType(ty TokenType) {
@@ -195,5 +197,46 @@ func (l *lexer) scanSpace() {
 func (l *lexer) mustOne(r rune) {
 	if !l.acceptOne(r) {
 		panic(fmt.Errorf("expected character: %#U", r))
+	}
+}
+
+func (l *lexer) acceptAll(string string) bool {
+	endPos := l.endPos
+	prevEndPos := l.prevEndPos
+
+	for _, r := range string {
+		if l.next() != r {
+			l.endPos = endPos
+			l.prevEndPos = prevEndPos
+
+			return false
+		}
+	}
+
+	return true
+}
+
+func (l *lexer) scanIdentifier() {
+	// lookahead is already lexed.
+	// parse more, if any
+	l.acceptWhile(func(r rune) bool {
+		return r >= 'a' && r <= 'z' ||
+			r >= 'A' && r <= 'Z' ||
+			r >= '0' && r <= '9' ||
+			r == '_'
+	})
+}
+
+func (l *lexer) acceptWhile(f func(rune) bool) {
+
+	for {
+		r := l.next()
+
+		if f(r) {
+			continue
+		}
+
+		l.backupOne()
+		return
 	}
 }

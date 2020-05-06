@@ -57,8 +57,19 @@ func rootState(l *lexer) stateFn {
 		l.emitType(TokenBracketOpen)
 	case ']':
 		l.emitType(TokenBracketClose)
+	case '_':
+		return identifierState
+
 	default:
-		return l.error(fmt.Errorf("unrecognized character: %#U", r))
+		switch {
+		case r >= 'a' && r <= 'z' ||
+			r >= 'A' && r <= 'Z':
+
+			return identifierState
+
+		default:
+			return l.error(fmt.Errorf("unrecognized character: %#U", r))
+		}
 	}
 	return rootState
 }
@@ -77,5 +88,11 @@ func numberState(l *lexer) stateFn {
 func spaceState(l *lexer) stateFn {
 	l.scanSpace()
 	l.emitValue(TokenSpace)
+	return rootState
+}
+
+func identifierState(l *lexer) stateFn {
+	l.scanIdentifier()
+	l.emitValue(TokenIdentifier)
 	return rootState
 }
