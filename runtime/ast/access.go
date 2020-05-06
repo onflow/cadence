@@ -24,7 +24,7 @@ import (
 
 //go:generate stringer -type=Access
 
-type Access int
+type Access uint
 
 // NOTE: order indicates permissiveness: from least to most permissive!
 
@@ -41,12 +41,21 @@ func (a Access) IsLessPermissiveThan(otherAccess Access) bool {
 	return a < otherAccess
 }
 
-var Accesses = []Access{
+// TODO: remove.
+//   only used by tests which are not updated yet
+//   to include contract and account access
+
+var BasicAccesses = []Access{
 	AccessNotSpecified,
 	AccessPrivate,
 	AccessPublic,
 	AccessPublicSettable,
 }
+
+var AllAccesses = append(BasicAccesses[:],
+	AccessContract,
+	AccessAccount,
+)
 
 func (a Access) Keyword() string {
 	switch a {

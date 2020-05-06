@@ -20,7 +20,7 @@ package sema
 
 //go:generate stringer -type=ContainerKind
 
-type ContainerKind int
+type ContainerKind uint
 
 const (
 	ContainerKindUnknown ContainerKind = iota

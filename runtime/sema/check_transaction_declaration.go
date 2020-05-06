@@ -249,7 +249,7 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		transactionType,
 		declaration.Fields,
 		nil,
-		true,
+		ContainerKindComposite,
 	)
 
 	checker.memberOrigins[transactionType] = origins

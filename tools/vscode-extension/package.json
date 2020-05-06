@@ -121,7 +121,9 @@
     "watch": "tsc -watch -p ./",
     "postinstall": "node ./node_modules/vscode/bin/install",
     "test": "npm run compile && node ./node_modules/vscode/bin/test",
-    "package": "./node_modules/.bin/vsce package"
+    "package": "./node_modules/.bin/vsce package",
+    "snyk-protect": "snyk protect",
+    "prepare": "npm run snyk-protect"
   },
   "devDependencies": {
     "typescript": "^3.3.1",
@@ -132,6 +134,8 @@
   },
   "dependencies": {
     "vsce": "^1.69.0",
-    "vscode-languageclient": "~4.4.0"
-  }
+    "vscode-languageclient": "~4.4.0",
+    "snyk": "^1.316.1"
+  },
+  "snyk": true
 }

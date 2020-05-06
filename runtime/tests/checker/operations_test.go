@@ -94,8 +94,9 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 			},
 			tests: []operationTest{
 				{&sema.IntType{}, "1", "2", nil},
-				{&sema.Fix64Type{}, "1.2", "3.4", nil},
-				{&sema.Fix64Type{}, "1.2", "3", []error{
+				{&sema.UFix64Type{}, "1.2", "3.4", nil},
+				{&sema.Fix64Type{}, "-1.2", "-3.4", nil},
+				{&sema.UFix64Type{}, "1.2", "3", []error{
 					&sema.InvalidBinaryOperandsError{},
 				}},
 				{&sema.IntType{}, "1", "2.3", []error{
@@ -115,7 +116,7 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.Fix64Type{}, "1.2", "true", []error{
+				{&sema.UFix64Type{}, "1.2", "true", []error{
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
@@ -214,10 +215,10 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 			},
 			tests: []operationTest{
 				{&sema.IntType{}, "1", "2", nil},
-				{&sema.Fix64Type{}, "1.2", "3.4", []error{
+				{&sema.UFix64Type{}, "1.2", "3.4", []error{
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.Fix64Type{}, "1.2", "3", []error{
+				{&sema.UFix64Type{}, "1.2", "3", []error{
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
@@ -230,7 +231,7 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 					&sema.InvalidBinaryOperandsError{},
 					&sema.TypeMismatchError{},
 				}},
-				{&sema.Fix64Type{}, "true", "1.2", []error{
+				{&sema.UFix64Type{}, "true", "1.2", []error{
 					&sema.InvalidBinaryOperandsError{},
 					&sema.TypeMismatchError{},
 				}},
@@ -238,7 +239,7 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 					&sema.InvalidBinaryOperandError{},
 					&sema.InvalidBinaryOperandsError{},
 				}},
-				{&sema.Fix64Type{}, "1.2", "true", []error{
+				{&sema.UFix64Type{}, "1.2", "true", []error{
 					&sema.InvalidBinaryOperandsError{},
 				}},
 				{&sema.IntType{}, "true", "false", []error{

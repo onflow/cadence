@@ -24,7 +24,7 @@ import (
 
 //go:generate stringer -type=Operation
 
-type Operation int
+type Operation uint
 
 const (
 	OperationUnknown Operation = iota

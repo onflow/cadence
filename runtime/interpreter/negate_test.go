@@ -56,13 +56,13 @@ func TestNegate(t *testing.T) {
 
 	t.Run("Int128", func(t *testing.T) {
 		assert.Panics(t, func() {
-			Int128Value{new(big.Int).Set(sema.Int128TypeMinInt)}.Negate()
+			Int128Value{new(big.Int).Set(sema.Int128TypeMinIntBig)}.Negate()
 		})
 	})
 
 	t.Run("Int256", func(t *testing.T) {
 		assert.Panics(t, func() {
-			Int256Value{new(big.Int).Set(sema.Int256TypeMinInt)}.Negate()
+			Int256Value{new(big.Int).Set(sema.Int256TypeMinIntBig)}.Negate()
 		})
 	})
 }

@@ -6753,7 +6753,7 @@ func TestParseAccessModifiers(t *testing.T) {
 	}
 
 	for _, declaration := range declarations {
-		for _, access := range Accesses {
+		for _, access := range BasicAccesses {
 			testName := fmt.Sprintf("%s/%s", declaration.name, access)
 			t.Run(testName, func(t *testing.T) {
 				program := fmt.Sprintf(declaration.code, access.Keyword())

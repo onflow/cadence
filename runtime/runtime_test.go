@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -85,6 +86,11 @@ type testRuntimeInterface struct {
 	generateUUID       func() uint64
 	computationLimit   uint64
 	decodeArgument     func(b []byte, t cadence.Type) (cadence.Value, error)
+	programParsed      func(start, end time.Time)
+	programChecked     func(start, end time.Time)
+	programInterpreted func(start, end time.Time)
+	valueEncoded       func(start, end time.Time)
+	valueDecoded       func(start, end time.Time)
 }
 
 func (i *testRuntimeInterface) ResolveImport(location Location) ([]byte, error) {
@@ -165,6 +171,41 @@ func (i *testRuntimeInterface) GetComputationLimit() uint64 {
 
 func (i *testRuntimeInterface) DecodeArgument(b []byte, t cadence.Type) (cadence.Value, error) {
 	return i.decodeArgument(b, t)
+}
+
+func (i *testRuntimeInterface) ProgramParsed(start, end time.Time) {
+	if i.programParsed == nil {
+		return
+	}
+	i.programParsed(start, end)
+}
+
+func (i *testRuntimeInterface) ProgramChecked(start, end time.Time) {
+	if i.programChecked == nil {
+		return
+	}
+	i.programChecked(start, end)
+}
+
+func (i *testRuntimeInterface) ProgramInterpreted(start, end time.Time) {
+	if i.programInterpreted == nil {
+		return
+	}
+	i.programInterpreted(start, end)
+}
+
+func (i *testRuntimeInterface) ValueEncoded(start, end time.Time) {
+	if i.valueEncoded == nil {
+		return
+	}
+	i.valueEncoded(start, end)
+}
+
+func (i *testRuntimeInterface) ValueDecoded(start, end time.Time) {
+	if i.valueDecoded == nil {
+		return
+	}
+	i.valueDecoded(start, end)
 }
 
 func TestRuntimeImport(t *testing.T) {
@@ -1529,7 +1570,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
       }
     `)
 
-	address := common.Address{42}
+	address := common.BytesToAddress([]byte{42})
 
 	script2 := []byte(
 		fmt.Sprintf(
@@ -3266,4 +3307,75 @@ func TestRuntimeComputationLimit(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRuntimeMetrics(t *testing.T) {
+	runtime := NewInterpreterRuntime()
+
+	script1 := []byte(`
+      transaction {
+          prepare(signer: AuthAccount) {
+              signer.save([1, 2, 3], to: /storage/foo)
+          }
+          execute {}
+      }
+    `)
+
+	script2 := []byte(`
+      transaction {
+          prepare(signer: AuthAccount) {
+              signer.load<[Int]>(from: /storage/foo)
+          }
+          execute {}
+      }
+    `)
+
+	var programParsedReports int
+	var programCheckedReports int
+	var programInterpretedReports int
+	var valueEncodedReports int
+	var valueDecodedReports int
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestStorage(),
+		getSigningAccounts: func() []Address {
+			return []Address{{42}}
+		},
+		programParsed: func(start, end time.Time) {
+			programParsedReports++
+		},
+		programChecked: func(start, end time.Time) {
+			programCheckedReports++
+		},
+		programInterpreted: func(start, end time.Time) {
+			programInterpretedReports++
+		},
+		valueEncoded: func(start, end time.Time) {
+			valueEncodedReports++
+		},
+		valueDecoded: func(start, end time.Time) {
+			valueDecodedReports++
+		},
+	}
+
+	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, utils.TestLocation)
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, programParsedReports)
+	assert.Equal(t, 1, programCheckedReports)
+	assert.Equal(t, 1, programInterpretedReports)
+	assert.Equal(t, 1, valueEncodedReports)
+	assert.Equal(t, 0, valueDecodedReports)
+
+	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, utils.TestLocation)
+	require.NoError(t, err)
+
+	require.NoError(t, err)
+
+	assert.Equal(t, 2, programParsedReports)
+	assert.Equal(t, 2, programCheckedReports)
+	assert.Equal(t, 2, programInterpretedReports)
+	assert.Equal(t, 1, valueEncodedReports)
+	assert.Equal(t, 1, valueDecodedReports)
+
 }

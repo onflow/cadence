@@ -19,7 +19,6 @@
 package sema
 
 import (
-	"encoding/gob"
 	"fmt"
 	"math"
 	"math/big"
@@ -243,10 +242,6 @@ func NewTypeAnnotation(ty Type) *TypeAnnotation {
 // NOTE: This type is only used internally and not available in programs.
 type AnyType struct{}
 
-func init() {
-	gob.Register(&AnyType{})
-}
-
 func (*AnyType) IsType() {}
 
 func (*AnyType) String() string {
@@ -292,10 +287,6 @@ func (t *AnyType) Resolve(_ map[*TypeParameter]Type) Type {
 
 // AnyStructType represents the top type of all non-resource types
 type AnyStructType struct{}
-
-func init() {
-	gob.Register(&AnyStructType{})
-}
 
 func (*AnyStructType) IsType() {}
 
@@ -343,10 +334,6 @@ func (t *AnyStructType) Resolve(_ map[*TypeParameter]Type) Type {
 // AnyResourceType represents the top type of all resource types
 type AnyResourceType struct{}
 
-func init() {
-	gob.Register(&AnyResourceType{})
-}
-
 func (*AnyResourceType) IsType() {}
 
 func (*AnyResourceType) String() string {
@@ -393,10 +380,6 @@ func (t *AnyResourceType) Resolve(_ map[*TypeParameter]Type) Type {
 // NeverType represents the bottom type
 type NeverType struct{}
 
-func init() {
-	gob.Register(&NeverType{})
-}
-
 func (*NeverType) IsType() {}
 
 func (*NeverType) String() string {
@@ -442,10 +425,6 @@ func (t *NeverType) Resolve(_ map[*TypeParameter]Type) Type {
 
 // VoidType represents the void type
 type VoidType struct{}
-
-func init() {
-	gob.Register(&VoidType{})
-}
 
 func (*VoidType) IsType() {}
 
@@ -496,10 +475,6 @@ func (t *VoidType) Resolve(_ map[*TypeParameter]Type) Type {
 //
 type InvalidType struct{}
 
-func init() {
-	gob.Register(&InvalidType{})
-}
-
 func (*InvalidType) IsType() {}
 
 func (*InvalidType) String() string {
@@ -546,10 +521,6 @@ func (t *InvalidType) Resolve(_ map[*TypeParameter]Type) Type {
 // OptionalType represents the optional variant of another type
 type OptionalType struct {
 	Type Type
-}
-
-func init() {
-	gob.Register(&OptionalType{})
 }
 
 func (*OptionalType) IsType() {}
@@ -717,10 +688,6 @@ func (t *GenericType) Resolve(typeParameters map[*TypeParameter]Type) Type {
 // BoolType represents the boolean type
 type BoolType struct{}
 
-func init() {
-	gob.Register(&BoolType{})
-}
-
 func (*BoolType) IsType() {}
 
 func (*BoolType) String() string {
@@ -768,10 +735,6 @@ func (t *BoolType) Resolve(_ map[*TypeParameter]Type) Type {
 
 type CharacterType struct{}
 
-func init() {
-	gob.Register(&CharacterType{})
-}
-
 func (*CharacterType) IsType() {}
 
 func (*CharacterType) String() string {
@@ -817,10 +780,6 @@ func (t *CharacterType) Resolve(_ map[*TypeParameter]Type) Type {
 
 // StringType represents the string type
 type StringType struct{}
-
-func init() {
-	gob.Register(&StringType{})
-}
 
 func (*StringType) IsType() {}
 
@@ -945,10 +904,6 @@ func (t *StringType) Resolve(_ map[*TypeParameter]Type) Type {
 // NumberType represents the super-type of all signed number types
 type NumberType struct{}
 
-func init() {
-	gob.Register(&NumberType{})
-}
-
 func (*NumberType) IsType() {}
 
 func (*NumberType) String() string {
@@ -1002,10 +957,6 @@ func (t *NumberType) Resolve(_ map[*TypeParameter]Type) Type {
 
 // SignedNumberType represents the super-type of all signed number types
 type SignedNumberType struct{}
-
-func init() {
-	gob.Register(&SignedNumberType{})
-}
 
 func (*SignedNumberType) IsType() {}
 
@@ -1076,10 +1027,6 @@ type FractionalRangedType interface {
 // IntegerType represents the super-type of all integer types
 type IntegerType struct{}
 
-func init() {
-	gob.Register(&IntegerType{})
-}
-
 func (*IntegerType) IsType() {}
 
 func (*IntegerType) String() string {
@@ -1133,10 +1080,6 @@ func (t *IntegerType) Resolve(_ map[*TypeParameter]Type) Type {
 
 // SignedIntegerType represents the super-type of all signed integer types
 type SignedIntegerType struct{}
-
-func init() {
-	gob.Register(&SignedIntegerType{})
-}
 
 func (*SignedIntegerType) IsType() {}
 
@@ -1192,10 +1135,6 @@ func (t *SignedIntegerType) Resolve(_ map[*TypeParameter]Type) Type {
 // IntType represents the arbitrary-precision integer type `Int`
 type IntType struct{}
 
-func init() {
-	gob.Register(&IntType{})
-}
-
 func (*IntType) IsType() {}
 
 func (*IntType) String() string {
@@ -1250,10 +1189,6 @@ func (t *IntType) Resolve(_ map[*TypeParameter]Type) Type {
 // Int8Type represents the 8-bit signed integer type `Int8`
 
 type Int8Type struct{}
-
-func init() {
-	gob.Register(&Int8Type{})
-}
 
 func (*Int8Type) IsType() {}
 
@@ -1312,10 +1247,6 @@ func (t *Int8Type) Resolve(_ map[*TypeParameter]Type) Type {
 // Int16Type represents the 16-bit signed integer type `Int16`
 type Int16Type struct{}
 
-func init() {
-	gob.Register(&Int16Type{})
-}
-
 func (*Int16Type) IsType() {}
 
 func (*Int16Type) String() string {
@@ -1372,10 +1303,6 @@ func (t *Int16Type) Resolve(_ map[*TypeParameter]Type) Type {
 
 // Int32Type represents the 32-bit signed integer type `Int32`
 type Int32Type struct{}
-
-func init() {
-	gob.Register(&Int32Type{})
-}
 
 func (*Int32Type) IsType() {}
 
@@ -1434,10 +1361,6 @@ func (t *Int32Type) Resolve(_ map[*TypeParameter]Type) Type {
 // Int64Type represents the 64-bit signed integer type `Int64`
 type Int64Type struct{}
 
-func init() {
-	gob.Register(&Int64Type{})
-}
-
 func (*Int64Type) IsType() {}
 
 func (*Int64Type) String() string {
@@ -1495,10 +1418,6 @@ func (t *Int64Type) Resolve(_ map[*TypeParameter]Type) Type {
 // Int128Type represents the 128-bit signed integer type `Int128`
 type Int128Type struct{}
 
-func init() {
-	gob.Register(&Int128Type{})
-}
-
 func (*Int128Type) IsType() {}
 
 func (*Int128Type) String() string {
@@ -1534,27 +1453,27 @@ func (*Int128Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var Int128TypeMinInt *big.Int
+var Int128TypeMinIntBig *big.Int
 
 func init() {
-	Int128TypeMinInt = big.NewInt(-1)
-	Int128TypeMinInt.Lsh(Int128TypeMinInt, 127)
+	Int128TypeMinIntBig = big.NewInt(-1)
+	Int128TypeMinIntBig.Lsh(Int128TypeMinIntBig, 127)
 }
 
-var Int128TypeMaxInt *big.Int
+var Int128TypeMaxIntBig *big.Int
 
 func init() {
-	Int128TypeMaxInt = big.NewInt(1)
-	Int128TypeMaxInt.Lsh(Int128TypeMaxInt, 127)
-	Int128TypeMaxInt.Sub(Int128TypeMaxInt, big.NewInt(1))
+	Int128TypeMaxIntBig = big.NewInt(1)
+	Int128TypeMaxIntBig.Lsh(Int128TypeMaxIntBig, 127)
+	Int128TypeMaxIntBig.Sub(Int128TypeMaxIntBig, big.NewInt(1))
 }
 
 func (*Int128Type) MinInt() *big.Int {
-	return Int128TypeMinInt
+	return Int128TypeMinIntBig
 }
 
 func (*Int128Type) MaxInt() *big.Int {
-	return Int128TypeMaxInt
+	return Int128TypeMaxIntBig
 }
 
 func (*Int128Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -1567,10 +1486,6 @@ func (t *Int128Type) Resolve(_ map[*TypeParameter]Type) Type {
 
 // Int256Type represents the 256-bit signed integer type `Int256`
 type Int256Type struct{}
-
-func init() {
-	gob.Register(&Int256Type{})
-}
 
 func (*Int256Type) IsType() {}
 
@@ -1607,27 +1522,27 @@ func (*Int256Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var Int256TypeMinInt *big.Int
+var Int256TypeMinIntBig *big.Int
 
 func init() {
-	Int256TypeMinInt = big.NewInt(-1)
-	Int256TypeMinInt.Lsh(Int256TypeMinInt, 255)
+	Int256TypeMinIntBig = big.NewInt(-1)
+	Int256TypeMinIntBig.Lsh(Int256TypeMinIntBig, 255)
 }
 
-var Int256TypeMaxInt *big.Int
+var Int256TypeMaxIntBig *big.Int
 
 func init() {
-	Int256TypeMaxInt = big.NewInt(1)
-	Int256TypeMaxInt.Lsh(Int256TypeMaxInt, 255)
-	Int256TypeMaxInt.Sub(Int256TypeMaxInt, big.NewInt(1))
+	Int256TypeMaxIntBig = big.NewInt(1)
+	Int256TypeMaxIntBig.Lsh(Int256TypeMaxIntBig, 255)
+	Int256TypeMaxIntBig.Sub(Int256TypeMaxIntBig, big.NewInt(1))
 }
 
 func (*Int256Type) MinInt() *big.Int {
-	return Int256TypeMinInt
+	return Int256TypeMinIntBig
 }
 
 func (*Int256Type) MaxInt() *big.Int {
-	return Int256TypeMaxInt
+	return Int256TypeMaxIntBig
 }
 
 func (*Int256Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -1640,10 +1555,6 @@ func (t *Int256Type) Resolve(_ map[*TypeParameter]Type) Type {
 
 // UIntType represents the arbitrary-precision unsigned integer type `UInt`
 type UIntType struct{}
-
-func init() {
-	gob.Register(&UIntType{})
-}
 
 func (*UIntType) IsType() {}
 
@@ -1701,10 +1612,6 @@ func (t *UIntType) Resolve(_ map[*TypeParameter]Type) Type {
 // UInt8Type represents the 8-bit unsigned integer type `UInt8`
 // which checks for overflow and underflow
 type UInt8Type struct{}
-
-func init() {
-	gob.Register(&UInt8Type{})
-}
 
 func (*UInt8Type) IsType() {}
 
@@ -1764,10 +1671,6 @@ func (t *UInt8Type) Resolve(_ map[*TypeParameter]Type) Type {
 // which checks for overflow and underflow
 type UInt16Type struct{}
 
-func init() {
-	gob.Register(&UInt16Type{})
-}
-
 func (*UInt16Type) IsType() {}
 
 func (*UInt16Type) String() string {
@@ -1825,10 +1728,6 @@ func (t *UInt16Type) Resolve(_ map[*TypeParameter]Type) Type {
 // UInt32Type represents the 32-bit unsigned integer type `UInt32`
 // which checks for overflow and underflow
 type UInt32Type struct{}
-
-func init() {
-	gob.Register(&UInt32Type{})
-}
 
 func (*UInt32Type) IsType() {}
 
@@ -1888,10 +1787,6 @@ func (t *UInt32Type) Resolve(_ map[*TypeParameter]Type) Type {
 // which checks for overflow and underflow
 type UInt64Type struct{}
 
-func init() {
-	gob.Register(&UInt64Type{})
-}
-
 func (*UInt64Type) IsType() {}
 
 func (*UInt64Type) String() string {
@@ -1950,10 +1845,6 @@ func (t *UInt64Type) Resolve(_ map[*TypeParameter]Type) Type {
 // which checks for overflow and underflow
 type UInt128Type struct{}
 
-func init() {
-	gob.Register(&UInt128Type{})
-}
-
 func (*UInt128Type) IsType() {}
 
 func (*UInt128Type) String() string {
@@ -1989,21 +1880,21 @@ func (*UInt128Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var UInt128TypeMinInt = new(big.Int)
-var UInt128TypeMaxInt *big.Int
+var UInt128TypeMinIntBig = new(big.Int)
+var UInt128TypeMaxIntBig *big.Int
 
 func init() {
-	UInt128TypeMaxInt = big.NewInt(1)
-	UInt128TypeMaxInt.Lsh(UInt128TypeMaxInt, 128)
-	UInt128TypeMaxInt.Sub(UInt128TypeMaxInt, big.NewInt(1))
+	UInt128TypeMaxIntBig = big.NewInt(1)
+	UInt128TypeMaxIntBig.Lsh(UInt128TypeMaxIntBig, 128)
+	UInt128TypeMaxIntBig.Sub(UInt128TypeMaxIntBig, big.NewInt(1))
 }
 
 func (*UInt128Type) MinInt() *big.Int {
-	return UInt128TypeMinInt
+	return UInt128TypeMinIntBig
 }
 
 func (*UInt128Type) MaxInt() *big.Int {
-	return UInt128TypeMaxInt
+	return UInt128TypeMaxIntBig
 }
 
 func (*UInt128Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -2017,10 +1908,6 @@ func (t *UInt128Type) Resolve(_ map[*TypeParameter]Type) Type {
 // UInt256Type represents the 256-bit unsigned integer type `UInt256`
 // which checks for overflow and underflow
 type UInt256Type struct{}
-
-func init() {
-	gob.Register(&UInt256Type{})
-}
 
 func (*UInt256Type) IsType() {}
 
@@ -2057,21 +1944,21 @@ func (*UInt256Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var UInt256TypeMinInt = new(big.Int)
-var UInt256TypeMaxInt *big.Int
+var UInt256TypeMinIntBig = new(big.Int)
+var UInt256TypeMaxIntBig *big.Int
 
 func init() {
-	UInt256TypeMaxInt = big.NewInt(1)
-	UInt256TypeMaxInt.Lsh(UInt256TypeMaxInt, 256)
-	UInt256TypeMaxInt.Sub(UInt256TypeMaxInt, big.NewInt(1))
+	UInt256TypeMaxIntBig = big.NewInt(1)
+	UInt256TypeMaxIntBig.Lsh(UInt256TypeMaxIntBig, 256)
+	UInt256TypeMaxIntBig.Sub(UInt256TypeMaxIntBig, big.NewInt(1))
 }
 
 func (*UInt256Type) MinInt() *big.Int {
-	return UInt256TypeMinInt
+	return UInt256TypeMinIntBig
 }
 
 func (*UInt256Type) MaxInt() *big.Int {
-	return UInt256TypeMaxInt
+	return UInt256TypeMaxIntBig
 }
 
 func (*UInt256Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -2085,10 +1972,6 @@ func (t *UInt256Type) Resolve(_ map[*TypeParameter]Type) Type {
 // Word8Type represents the 8-bit unsigned integer type `Word8`
 // which does NOT check for overflow and underflow
 type Word8Type struct{}
-
-func init() {
-	gob.Register(&Word8Type{})
-}
 
 func (*Word8Type) IsType() {}
 
@@ -2148,10 +2031,6 @@ func (t *Word8Type) Resolve(_ map[*TypeParameter]Type) Type {
 // which does NOT check for overflow and underflow
 type Word16Type struct{}
 
-func init() {
-	gob.Register(&Word16Type{})
-}
-
 func (*Word16Type) IsType() {}
 
 func (*Word16Type) String() string {
@@ -2209,10 +2088,6 @@ func (t *Word16Type) Resolve(_ map[*TypeParameter]Type) Type {
 // Word32Type represents the 32-bit unsigned integer type `Word32`
 // which does NOT check for overflow and underflow
 type Word32Type struct{}
-
-func init() {
-	gob.Register(&Word32Type{})
-}
 
 func (*Word32Type) IsType() {}
 
@@ -2272,10 +2147,6 @@ func (t *Word32Type) Resolve(_ map[*TypeParameter]Type) Type {
 // which does NOT check for overflow and underflow
 type Word64Type struct{}
 
-func init() {
-	gob.Register(&Word64Type{})
-}
-
 func (*Word64Type) IsType() {}
 
 func (*Word64Type) String() string {
@@ -2333,10 +2204,6 @@ func (t *Word64Type) Resolve(_ map[*TypeParameter]Type) Type {
 // FixedPointType represents the super-type of all fixed-point types
 type FixedPointType struct{}
 
-func init() {
-	gob.Register(&FixedPointType{})
-}
-
 func (*FixedPointType) IsType() {}
 
 func (*FixedPointType) String() string {
@@ -2390,10 +2257,6 @@ func (t *FixedPointType) Resolve(_ map[*TypeParameter]Type) Type {
 
 // SignedFixedPointType represents the super-type of all signed fixed-point types
 type SignedFixedPointType struct{}
-
-func init() {
-	gob.Register(&SignedFixedPointType{})
-}
 
 func (*SignedFixedPointType) IsType() {}
 
@@ -2452,10 +2315,6 @@ const Fix64Factor = 100_000_000
 // Fix64Type represents the 64-bit signed decimal fixed-point type `Fix64`
 // which has a scale of Fix64Scale, and checks for overflow and underflow
 type Fix64Type struct{}
-
-func init() {
-	gob.Register(&Fix64Type{})
-}
 
 func (*Fix64Type) IsType() {}
 
@@ -2540,10 +2399,6 @@ func (t *Fix64Type) Resolve(_ map[*TypeParameter]Type) Type {
 // which has a scale of 1E9, and checks for overflow and underflow
 type UFix64Type struct{}
 
-func init() {
-	gob.Register(&UFix64Type{})
-}
-
 func (*UFix64Type) IsType() {}
 
 func (*UFix64Type) String() string {
@@ -2579,17 +2434,24 @@ func (*UFix64Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var UFix64TypeMinInt = new(big.Int)
-var UFix64TypeMaxInt = new(big.Int).SetUint64(math.MaxUint64 / uint64(Fix64Factor))
-var UFix64TypeMinFractional = new(big.Int)
-var UFix64TypeMaxFractional = new(big.Int).SetUint64(math.MaxUint64 % uint64(Fix64Factor))
+const UFix64TypeMinInt = 0
+const UFix64TypeMaxInt = math.MaxUint64 / uint64(Fix64Factor)
+
+var UFix64TypeMinIntBig = new(big.Int).SetUint64(UFix64TypeMinInt)
+var UFix64TypeMaxIntBig = new(big.Int).SetUint64(UFix64TypeMaxInt)
+
+const UFix64TypeMinFractional = 0
+const UFix64TypeMaxFractional = math.MaxUint64 % uint64(Fix64Factor)
+
+var UFix64TypeMinFractionalBig = new(big.Int).SetUint64(UFix64TypeMinFractional)
+var UFix64TypeMaxFractionalBig = new(big.Int).SetUint64(UFix64TypeMaxFractional)
 
 func (*UFix64Type) MinInt() *big.Int {
-	return UFix64TypeMinInt
+	return UFix64TypeMinIntBig
 }
 
 func (*UFix64Type) MaxInt() *big.Int {
-	return UFix64TypeMaxInt
+	return UFix64TypeMaxIntBig
 }
 
 func (*UFix64Type) Scale() uint {
@@ -2597,11 +2459,11 @@ func (*UFix64Type) Scale() uint {
 }
 
 func (*UFix64Type) MinFractional() *big.Int {
-	return UFix64TypeMinFractional
+	return UFix64TypeMinFractionalBig
 }
 
 func (*UFix64Type) MaxFractional() *big.Int {
-	return UFix64TypeMaxFractional
+	return UFix64TypeMaxFractionalBig
 }
 
 func (*UFix64Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -2835,10 +2697,6 @@ type VariableSizedType struct {
 	Type Type
 }
 
-func init() {
-	gob.Register(&VariableSizedType{})
-}
-
 func (*VariableSizedType) IsType() {}
 
 func (*VariableSizedType) isArrayType() {}
@@ -2929,10 +2787,6 @@ func (t *VariableSizedType) Resolve(typeParameters map[*TypeParameter]Type) Type
 type ConstantSizedType struct {
 	Type Type
 	Size uint64
-}
-
-func init() {
-	gob.Register(&ConstantSizedType{})
 }
 
 func (*ConstantSizedType) IsType() {}
@@ -3199,10 +3053,6 @@ type FunctionType struct {
 	Parameters            []*Parameter
 	ReturnTypeAnnotation  *TypeAnnotation
 	RequiredArgumentCount *int
-}
-
-func init() {
-	gob.Register(&FunctionType{})
 }
 
 func (*FunctionType) IsType() {}
@@ -3688,10 +3538,6 @@ func (t *CompositeType) ConformanceSet() InterfaceSet {
 	return t.conformanceSet
 }
 
-func init() {
-	gob.Register(&CompositeType{})
-}
-
 func (*CompositeType) IsType() {}
 
 func (t *CompositeType) String() string {
@@ -3809,10 +3655,6 @@ func (t *CompositeType) NestedTypes() map[string]Type {
 // AuthAccountType
 
 type AuthAccountType struct{}
-
-func init() {
-	gob.Register(&AuthAccountType{})
-}
 
 func (*AuthAccountType) IsType() {}
 
@@ -4159,10 +4001,6 @@ func (t *AuthAccountType) Resolve(_ map[*TypeParameter]Type) Type {
 
 type PublicAccountType struct{}
 
-func init() {
-	gob.Register(&PublicAccountType{})
-}
-
 func (*PublicAccountType) IsType() {}
 
 func (*PublicAccountType) String() string {
@@ -4288,10 +4126,6 @@ type InterfaceType struct {
 	nestedTypes           map[string]Type
 }
 
-func init() {
-	gob.Register(&InterfaceType{})
-}
-
 func (*InterfaceType) IsType() {}
 
 func (t *InterfaceType) String() string {
@@ -4375,10 +4209,6 @@ func (t *InterfaceType) NestedTypes() map[string]Type {
 type DictionaryType struct {
 	KeyType   Type
 	ValueType Type
-}
-
-func init() {
-	gob.Register(&DictionaryType{})
 }
 
 func (*DictionaryType) IsType() {}
@@ -4592,10 +4422,6 @@ type ReferenceType struct {
 	Type       Type
 }
 
-func init() {
-	gob.Register(&ReferenceType{})
-}
-
 func (*ReferenceType) IsType() {}
 
 func (t *ReferenceType) String() string {
@@ -4716,10 +4542,6 @@ func (t *ReferenceType) Resolve(_ map[*TypeParameter]Type) Type {
 // AddressType represents the address type
 type AddressType struct{}
 
-func init() {
-	gob.Register(&AddressType{})
-}
-
 func (*AddressType) IsType() {}
 
 func (*AddressType) String() string {
@@ -4755,21 +4577,15 @@ func (*AddressType) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-var AddressTypeMinInt = new(big.Int)
-var AddressTypeMaxInt *big.Int
-
-func init() {
-	AddressTypeMaxInt = big.NewInt(2)
-	AddressTypeMaxInt.Exp(AddressTypeMaxInt, big.NewInt(160), nil)
-	AddressTypeMaxInt.Sub(AddressTypeMaxInt, big.NewInt(1))
-}
+var AddressTypeMinIntBig = new(big.Int)
+var AddressTypeMaxIntBig = new(big.Int).SetUint64(math.MaxUint64)
 
 func (*AddressType) MinInt() *big.Int {
-	return AddressTypeMinInt
+	return AddressTypeMinIntBig
 }
 
 func (*AddressType) MaxInt() *big.Int {
-	return AddressTypeMaxInt
+	return AddressTypeMaxIntBig
 }
 
 func (*AddressType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -5416,10 +5232,6 @@ func (*TransactionType) ExecuteFunctionType() *SpecialFunctionType {
 	}
 }
 
-func init() {
-	gob.Register(&TransactionType{})
-}
-
 func (*TransactionType) IsType() {}
 
 func (*TransactionType) String() string {
@@ -5505,10 +5317,6 @@ func (t *RestrictedType) RestrictionSet() InterfaceSet {
 		}
 	}
 	return t.restrictionSet
-}
-
-func init() {
-	gob.Register(&RestrictedType{})
 }
 
 func (*RestrictedType) IsType() {}
@@ -5668,10 +5476,6 @@ func (t *RestrictedType) Resolve(_ map[*TypeParameter]Type) Type {
 
 type PathType struct{}
 
-func init() {
-	gob.Register(&PathType{})
-}
-
 func (*PathType) IsType() {}
 
 func (*PathType) String() string {
@@ -5718,10 +5522,6 @@ func (t *PathType) Resolve(_ map[*TypeParameter]Type) Type {
 // CapabilityType
 
 type CapabilityType struct{}
-
-func init() {
-	gob.Register(&CapabilityType{})
-}
 
 func (*CapabilityType) IsType() {}
 

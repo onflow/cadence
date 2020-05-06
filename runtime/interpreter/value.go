@@ -1,14 +1,11 @@
 package interpreter
 
 import (
-	"bytes"
 	"encoding/binary"
-	"encoding/gob"
 	"encoding/hex"
 	"fmt"
 	"math"
 	"math/big"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -75,10 +72,6 @@ type HasKeyString interface {
 
 type VoidValue struct{}
 
-func init() {
-	gob.Register(VoidValue{})
-}
-
 func (VoidValue) IsValue() {}
 
 func (VoidValue) DynamicType(_ *Interpreter) DynamicType {
@@ -105,10 +98,6 @@ func (VoidValue) String() string {
 // BoolValue
 
 type BoolValue bool
-
-func init() {
-	gob.Register(BoolValue(true))
-}
 
 func (BoolValue) IsValue() {}
 
@@ -153,10 +142,6 @@ func (v BoolValue) KeyString() string {
 
 type StringValue struct {
 	Str string
-}
-
-func init() {
-	gob.Register(&StringValue{})
 }
 
 func NewStringValue(str string) *StringValue {
@@ -322,15 +307,15 @@ type ArrayValue struct {
 	Owner  *common.Address
 }
 
-func init() {
-	gob.Register(&ArrayValue{})
-}
-
 func NewArrayValueUnownedNonCopying(values ...Value) *ArrayValue {
 	// NOTE: new value has no owner
 
 	for _, value := range values {
 		value.SetOwner(nil)
+	}
+
+	if values == nil {
+		values = make([]Value, 0)
 	}
 
 	return &ArrayValue{
@@ -386,45 +371,6 @@ func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRan
 		})
 	}
 	return result
-}
-
-func (v *ArrayValue) GobEncode() ([]byte, error) {
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-
-	err := encoder.Encode(v.Values)
-	if err != nil {
-		return nil, err
-	}
-
-	err = encoder.Encode(v.Owner)
-	if err != nil {
-		return nil, err
-	}
-
-	return w.Bytes(), nil
-}
-
-func (v *ArrayValue) GobDecode(buf []byte) error {
-	r := bytes.NewBuffer(buf)
-	decoder := gob.NewDecoder(r)
-
-	err := decoder.Decode(&v.Values)
-	if err != nil {
-		return err
-	}
-
-	err = decoder.Decode(&v.Owner)
-	if err != nil {
-		return err
-	}
-
-	// NOTE: ensure the `Values` slice is properly allocated
-	if v.Values == nil {
-		v.Values = make([]Value, 0)
-	}
-
-	return nil
 }
 
 func (v *ArrayValue) Concat(other ConcatenatableValue) Value {
@@ -614,7 +560,8 @@ type IntegerValue interface {
 	BitwiseRightShift(other IntegerValue) IntegerValue
 }
 
-// BigNumberValue
+// BigNumberValue.
+// Implemented by values with an integer value outside the range of int64
 
 type BigNumberValue interface {
 	NumberValue
@@ -625,10 +572,6 @@ type BigNumberValue interface {
 
 type IntValue struct {
 	BigInt *big.Int
-}
-
-func init() {
-	gob.Register(IntValue{})
 }
 
 func NewIntValueFromInt64(value int64) IntValue {
@@ -645,6 +588,7 @@ func ConvertInt(value Value, _ *Interpreter) Value {
 		return NewIntValueFromBigInt(value.ToBigInt())
 
 	case NumberValue:
+		// NOTE: safe, UInt64Value is handled by BigNumberValue above
 		return NewIntValueFromInt64(int64(value.ToInt()))
 
 	default:
@@ -815,10 +759,6 @@ func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 
 type Int8Value int8
 
-func init() {
-	gob.Register(Int8Value(0))
-}
-
 func (Int8Value) IsValue() {}
 
 func (Int8Value) DynamicType(_ *Interpreter) DynamicType {
@@ -884,7 +824,7 @@ func (v Int8Value) Mod(other NumberValue) NumberValue {
 	o := other.(Int8Value)
 	// INT33-C
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -1010,10 +950,6 @@ func (v Int8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 
 type Int16Value int16
 
-func init() {
-	gob.Register(Int16Value(0))
-}
-
 func (Int16Value) IsValue() {}
 
 func (Int16Value) DynamicType(_ *Interpreter) DynamicType {
@@ -1079,7 +1015,7 @@ func (v Int16Value) Mod(other NumberValue) NumberValue {
 	o := other.(Int16Value)
 	// INT33-C
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -1205,10 +1141,6 @@ func (v Int16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 
 type Int32Value int32
 
-func init() {
-	gob.Register(Int32Value(0))
-}
-
 func (Int32Value) IsValue() {}
 
 func (Int32Value) DynamicType(_ *Interpreter) DynamicType {
@@ -1274,7 +1206,7 @@ func (v Int32Value) Mod(other NumberValue) NumberValue {
 	o := other.(Int32Value)
 	// INT33-C
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -1400,10 +1332,6 @@ func (v Int32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 
 type Int64Value int64
 
-func init() {
-	gob.Register(Int64Value(0))
-}
-
 func (Int64Value) IsValue() {}
 
 func (Int64Value) DynamicType(_ *Interpreter) DynamicType {
@@ -1473,7 +1401,7 @@ func (v Int64Value) Mod(other NumberValue) NumberValue {
 	o := other.(Int64Value)
 	// INT33-C
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -1601,10 +1529,6 @@ type Int128Value struct {
 	BigInt *big.Int
 }
 
-func init() {
-	gob.Register(Int128Value{})
-}
-
 func NewInt128ValueFromInt64(value int64) Int128Value {
 	return NewInt128ValueFromBigInt(big.NewInt(value))
 }
@@ -1612,7 +1536,6 @@ func NewInt128ValueFromInt64(value int64) Int128Value {
 func NewInt128ValueFromBigInt(value *big.Int) Int128Value {
 	return Int128Value{BigInt: value}
 }
-
 func (v Int128Value) IsValue() {}
 
 func (Int128Value) DynamicType(_ *Interpreter) DynamicType {
@@ -1651,10 +1574,10 @@ func (v Int128Value) KeyString() string {
 
 func (v Int128Value) Negate() NumberValue {
 	// INT32-C
-	//   if v == Int128TypeMinInt {
+	//   if v == Int128TypeMinIntBig {
 	//       ...
 	//   }
-	if v.BigInt.Cmp(sema.Int128TypeMinInt) == 0 {
+	if v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0 {
 		panic(OverflowError{})
 	}
 	return Int128Value{new(big.Int).Neg(v.BigInt)}
@@ -1668,17 +1591,17 @@ func (v Int128Value) Plus(other NumberValue) NumberValue {
 	// If Go gains a native int128 type and we switch this value
 	// to be based on it, then we need to follow INT32-C:
 	//
-	//   if (o > 0) && (v > (Int128TypeMaxInt - o)) {
+	//   if (o > 0) && (v > (Int128TypeMaxIntBig - o)) {
 	//       ...
-	//   } else if (o < 0) && (v < (Int128TypeMinInt - o)) {
+	//   } else if (o < 0) && (v < (Int128TypeMinIntBig - o)) {
 	//       ...
 	//   }
 	//
 	res := new(big.Int)
 	res.Add(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int128TypeMinInt) < 0 {
+	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int128TypeMaxInt) > 0 {
+	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return Int128Value{res}
@@ -1692,17 +1615,17 @@ func (v Int128Value) Minus(other NumberValue) NumberValue {
 	// If Go gains a native int128 type and we switch this value
 	// to be based on it, then we need to follow INT32-C:
 	//
-	//   if (o > 0) && (v < (Int128TypeMinInt + o)) {
+	//   if (o > 0) && (v < (Int128TypeMinIntBig + o)) {
 	// 	     ...
-	//   } else if (o < 0) && (v > (Int128TypeMaxInt + o)) {
+	//   } else if (o < 0) && (v > (Int128TypeMaxIntBig + o)) {
 	//       ...
 	//   }
 	//
 	res := new(big.Int)
 	res.Sub(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int128TypeMinInt) < 0 {
+	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int128TypeMaxInt) > 0 {
+	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return Int128Value{res}
@@ -1723,9 +1646,9 @@ func (v Int128Value) Mul(other NumberValue) NumberValue {
 	o := other.(Int128Value)
 	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int128TypeMinInt) < 0 {
+	if res.Cmp(sema.Int128TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int128TypeMaxInt) > 0 {
+	} else if res.Cmp(sema.Int128TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return Int128Value{res}
@@ -1737,14 +1660,14 @@ func (v Int128Value) Div(other NumberValue) NumberValue {
 	// INT33-C:
 	//   if o == 0 {
 	//       ...
-	//   } else if (v == Int128TypeMinInt) && (o == -1) {
+	//   } else if (v == Int128TypeMinIntBig) && (o == -1) {
 	//       ...
 	//   }
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
 	}
 	res.SetInt64(-1)
-	if (v.BigInt.Cmp(sema.Int128TypeMinInt) == 0) && (o.BigInt.Cmp(res) == 0) {
+	if (v.BigInt.Cmp(sema.Int128TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
 		panic(OverflowError{})
 	}
 	res.Div(v.BigInt, o.BigInt)
@@ -1794,9 +1717,9 @@ func ConvertInt128(value Value, _ *Interpreter) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	if v.Cmp(sema.Int128TypeMaxInt) > 0 {
+	if v.Cmp(sema.Int128TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
-	} else if v.Cmp(sema.Int128TypeMinInt) < 0 {
+	} else if v.Cmp(sema.Int128TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
 	}
 
@@ -1856,10 +1779,6 @@ type Int256Value struct {
 	BigInt *big.Int
 }
 
-func init() {
-	gob.Register(Int256Value{})
-}
-
 func NewInt256ValueFromInt64(value int64) Int256Value {
 	return NewInt256ValueFromBigInt(big.NewInt(value))
 }
@@ -1906,10 +1825,10 @@ func (v Int256Value) KeyString() string {
 
 func (v Int256Value) Negate() NumberValue {
 	// INT32-C
-	//   if v == Int256TypeMinInt {
+	//   if v == Int256TypeMinIntBig {
 	//       ...
 	//   }
-	if v.BigInt.Cmp(sema.Int256TypeMinInt) == 0 {
+	if v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0 {
 		panic(OverflowError{})
 	}
 	return Int256Value{BigInt: new(big.Int).Neg(v.BigInt)}
@@ -1923,17 +1842,17 @@ func (v Int256Value) Plus(other NumberValue) NumberValue {
 	// If Go gains a native int256 type and we switch this value
 	// to be based on it, then we need to follow INT32-C:
 	//
-	//   if (o > 0) && (v > (Int256TypeMaxInt - o)) {
+	//   if (o > 0) && (v > (Int256TypeMaxIntBig - o)) {
 	//       ...
-	//   } else if (o < 0) && (v < (Int256TypeMinInt - o)) {
+	//   } else if (o < 0) && (v < (Int256TypeMinIntBig - o)) {
 	//       ...
 	//   }
 	//
 	res := new(big.Int)
 	res.Add(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int256TypeMinInt) < 0 {
+	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int256TypeMaxInt) > 0 {
+	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return Int256Value{res}
@@ -1947,17 +1866,17 @@ func (v Int256Value) Minus(other NumberValue) NumberValue {
 	// If Go gains a native int256 type and we switch this value
 	// to be based on it, then we need to follow INT32-C:
 	//
-	//   if (o > 0) && (v < (Int256TypeMinInt + o)) {
+	//   if (o > 0) && (v < (Int256TypeMinIntBig + o)) {
 	// 	     ...
-	//   } else if (o < 0) && (v > (Int256TypeMaxInt + o)) {
+	//   } else if (o < 0) && (v > (Int256TypeMaxIntBig + o)) {
 	//       ...
 	//   }
 	//
 	res := new(big.Int)
 	res.Sub(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int256TypeMinInt) < 0 {
+	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int256TypeMaxInt) > 0 {
+	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return Int256Value{res}
@@ -1978,9 +1897,9 @@ func (v Int256Value) Mul(other NumberValue) NumberValue {
 	o := other.(Int256Value)
 	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.Int256TypeMinInt) < 0 {
+	if res.Cmp(sema.Int256TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
-	} else if res.Cmp(sema.Int256TypeMaxInt) > 0 {
+	} else if res.Cmp(sema.Int256TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return Int256Value{res}
@@ -1992,14 +1911,14 @@ func (v Int256Value) Div(other NumberValue) NumberValue {
 	// INT33-C:
 	//   if o == 0 {
 	//       ...
-	//   } else if (v == Int256TypeMinInt) && (o == -1) {
+	//   } else if (v == Int256TypeMinIntBig) && (o == -1) {
 	//       ...
 	//   }
 	if o.BigInt.Cmp(res) == 0 {
 		panic(DivisionByZeroError{})
 	}
 	res.SetInt64(-1)
-	if (v.BigInt.Cmp(sema.Int256TypeMinInt) == 0) && (o.BigInt.Cmp(res) == 0) {
+	if (v.BigInt.Cmp(sema.Int256TypeMinIntBig) == 0) && (o.BigInt.Cmp(res) == 0) {
 		panic(OverflowError{})
 	}
 	res.Div(v.BigInt, o.BigInt)
@@ -2049,9 +1968,9 @@ func ConvertInt256(value Value, _ *Interpreter) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	if v.Cmp(sema.Int256TypeMaxInt) > 0 {
+	if v.Cmp(sema.Int256TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
-	} else if v.Cmp(sema.Int256TypeMinInt) < 0 {
+	} else if v.Cmp(sema.Int256TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
 	}
 
@@ -2109,10 +2028,6 @@ func (v Int256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 
 type UIntValue struct {
 	BigInt *big.Int
-}
-
-func init() {
-	gob.Register(UIntValue{})
 }
 
 func NewUIntValueFromUint64(value uint64) UIntValue {
@@ -2310,10 +2225,6 @@ func (v UIntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 
 type UInt8Value uint8
 
-func init() {
-	gob.Register(UInt8Value(0))
-}
-
 func (UInt8Value) IsValue() {}
 
 func (UInt8Value) DynamicType(_ *Interpreter) DynamicType {
@@ -2370,7 +2281,7 @@ func (v UInt8Value) Minus(other NumberValue) NumberValue {
 func (v UInt8Value) Mod(other NumberValue) NumberValue {
 	o := other.(UInt8Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -2386,7 +2297,7 @@ func (v UInt8Value) Mul(other NumberValue) NumberValue {
 func (v UInt8Value) Div(other NumberValue) NumberValue {
 	o := other.(UInt8Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -2473,10 +2384,6 @@ func (v UInt8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 
 type UInt16Value uint16
 
-func init() {
-	gob.Register(UInt16Value(0))
-}
-
 func (UInt16Value) IsValue() {}
 
 func (UInt16Value) DynamicType(_ *Interpreter) DynamicType {
@@ -2531,7 +2438,7 @@ func (v UInt16Value) Minus(other NumberValue) NumberValue {
 func (v UInt16Value) Mod(other NumberValue) NumberValue {
 	o := other.(UInt16Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -2547,7 +2454,7 @@ func (v UInt16Value) Mul(other NumberValue) NumberValue {
 func (v UInt16Value) Div(other NumberValue) NumberValue {
 	o := other.(UInt16Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -2634,10 +2541,6 @@ func (v UInt16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 
 type UInt32Value uint32
 
-func init() {
-	gob.Register(UInt32Value(0))
-}
-
 func (UInt32Value) IsValue() {}
 
 func (UInt32Value) DynamicType(_ *Interpreter) DynamicType {
@@ -2694,7 +2597,7 @@ func (v UInt32Value) Minus(other NumberValue) NumberValue {
 func (v UInt32Value) Mod(other NumberValue) NumberValue {
 	o := other.(UInt32Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -2710,7 +2613,7 @@ func (v UInt32Value) Mul(other NumberValue) NumberValue {
 func (v UInt32Value) Div(other NumberValue) NumberValue {
 	o := other.(UInt32Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -2797,10 +2700,6 @@ func (v UInt32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 
 type UInt64Value uint64
 
-func init() {
-	gob.Register(UInt64Value(0))
-}
-
 func (UInt64Value) IsValue() {}
 
 func (UInt64Value) DynamicType(_ *Interpreter) DynamicType {
@@ -2862,7 +2761,7 @@ func (v UInt64Value) Minus(other NumberValue) NumberValue {
 func (v UInt64Value) Mod(other NumberValue) NumberValue {
 	o := other.(UInt64Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -2878,7 +2777,7 @@ func (v UInt64Value) Mul(other NumberValue) NumberValue {
 func (v UInt64Value) Div(other NumberValue) NumberValue {
 	o := other.(UInt64Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -2965,12 +2864,8 @@ type UInt128Value struct {
 	BigInt *big.Int
 }
 
-func init() {
-	gob.Register(UInt128Value{})
-}
-
-func NewUInt128ValueFromInt64(value int64) UInt128Value {
-	return NewUInt128ValueFromBigInt(big.NewInt(value))
+func NewUInt128ValueFromUint64(value uint64) UInt128Value {
+	return NewUInt128ValueFromBigInt(new(big.Int).SetUint64(value))
 }
 
 func NewUInt128ValueFromBigInt(value *big.Int) UInt128Value {
@@ -3030,7 +2925,7 @@ func (v UInt128Value) Plus(other NumberValue) NumberValue {
 	//      ...
 	//  }
 	//
-	if sum.Cmp(sema.UInt128TypeMaxInt) > 0 {
+	if sum.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return UInt128Value{sum}
@@ -3049,7 +2944,7 @@ func (v UInt128Value) Minus(other NumberValue) NumberValue {
 	// 	     ...
 	//   }
 	//
-	if diff.Cmp(sema.UInt128TypeMinInt) < 0 {
+	if diff.Cmp(sema.UInt128TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
 	}
 	return UInt128Value{diff}
@@ -3069,7 +2964,7 @@ func (v UInt128Value) Mul(other NumberValue) NumberValue {
 	o := other.(UInt128Value)
 	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.UInt128TypeMaxInt) > 0 {
+	if res.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return UInt128Value{res}
@@ -3128,7 +3023,7 @@ func ConvertUInt128(value Value, _ *Interpreter) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	if v.Cmp(sema.UInt128TypeMaxInt) > 0 {
+	if v.Cmp(sema.UInt128TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	} else if v.Sign() < 0 {
 		panic(UnderflowError{})
@@ -3190,12 +3085,8 @@ type UInt256Value struct {
 	BigInt *big.Int
 }
 
-func init() {
-	gob.Register(UInt256Value{})
-}
-
-func NewUInt256ValueFromInt64(value int64) UInt256Value {
-	return NewUInt256ValueFromBigInt(big.NewInt(value))
+func NewUInt256ValueFromUint64(value uint64) UInt256Value {
+	return NewUInt256ValueFromBigInt(new(big.Int).SetUint64(value))
 }
 
 func NewUInt256ValueFromBigInt(value *big.Int) UInt256Value {
@@ -3255,7 +3146,7 @@ func (v UInt256Value) Plus(other NumberValue) NumberValue {
 	//      ...
 	//  }
 	//
-	if sum.Cmp(sema.UInt256TypeMaxInt) > 0 {
+	if sum.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return UInt256Value{sum}
@@ -3274,7 +3165,7 @@ func (v UInt256Value) Minus(other NumberValue) NumberValue {
 	// 	     ...
 	//   }
 	//
-	if diff.Cmp(sema.UInt256TypeMinInt) < 0 {
+	if diff.Cmp(sema.UInt256TypeMinIntBig) < 0 {
 		panic(UnderflowError{})
 	}
 	return UInt256Value{diff}
@@ -3294,7 +3185,7 @@ func (v UInt256Value) Mul(other NumberValue) NumberValue {
 	o := other.(UInt256Value)
 	res := new(big.Int)
 	res.Mul(v.BigInt, o.BigInt)
-	if res.Cmp(sema.UInt256TypeMaxInt) > 0 {
+	if res.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	}
 	return UInt256Value{res}
@@ -3353,7 +3244,7 @@ func ConvertUInt256(value Value, _ *Interpreter) Value {
 		panic(errors.NewUnreachableError())
 	}
 
-	if v.Cmp(sema.UInt256TypeMaxInt) > 0 {
+	if v.Cmp(sema.UInt256TypeMaxIntBig) > 0 {
 		panic(OverflowError{})
 	} else if v.Sign() < 0 {
 		panic(UnderflowError{})
@@ -3413,10 +3304,6 @@ func (v UInt256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 
 type Word8Value uint8
 
-func init() {
-	gob.Register(Word8Value(0))
-}
-
 func (Word8Value) IsValue() {}
 
 func (Word8Value) DynamicType(_ *Interpreter) DynamicType {
@@ -3463,7 +3350,7 @@ func (v Word8Value) Minus(other NumberValue) NumberValue {
 func (v Word8Value) Mod(other NumberValue) NumberValue {
 	o := other.(Word8Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -3475,7 +3362,7 @@ func (v Word8Value) Mul(other NumberValue) NumberValue {
 func (v Word8Value) Div(other NumberValue) NumberValue {
 	o := other.(Word8Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -3537,10 +3424,6 @@ func (v Word8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 
 type Word16Value uint16
 
-func init() {
-	gob.Register(Word16Value(0))
-}
-
 func (Word16Value) IsValue() {}
 
 func (Word16Value) DynamicType(_ *Interpreter) DynamicType {
@@ -3585,7 +3468,7 @@ func (v Word16Value) Minus(other NumberValue) NumberValue {
 func (v Word16Value) Mod(other NumberValue) NumberValue {
 	o := other.(Word16Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -3597,7 +3480,7 @@ func (v Word16Value) Mul(other NumberValue) NumberValue {
 func (v Word16Value) Div(other NumberValue) NumberValue {
 	o := other.(Word16Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -3659,10 +3542,6 @@ func (v Word16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 
 type Word32Value uint32
 
-func init() {
-	gob.Register(Word32Value(0))
-}
-
 func (Word32Value) IsValue() {}
 
 func (Word32Value) DynamicType(_ *Interpreter) DynamicType {
@@ -3709,7 +3588,7 @@ func (v Word32Value) Minus(other NumberValue) NumberValue {
 func (v Word32Value) Mod(other NumberValue) NumberValue {
 	o := other.(Word32Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -3721,7 +3600,7 @@ func (v Word32Value) Mul(other NumberValue) NumberValue {
 func (v Word32Value) Div(other NumberValue) NumberValue {
 	o := other.(Word32Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -3783,10 +3662,6 @@ func (v Word32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 
 type Word64Value uint64
 
-func init() {
-	gob.Register(Word64Value(0))
-}
-
 func (Word64Value) IsValue() {}
 
 func (Word64Value) DynamicType(_ *Interpreter) DynamicType {
@@ -3833,7 +3708,7 @@ func (v Word64Value) Minus(other NumberValue) NumberValue {
 func (v Word64Value) Mod(other NumberValue) NumberValue {
 	o := other.(Word64Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v % o
 }
@@ -3845,7 +3720,7 @@ func (v Word64Value) Mul(other NumberValue) NumberValue {
 func (v Word64Value) Div(other NumberValue) NumberValue {
 	o := other.(Word64Value)
 	if o == 0 {
-		panic(&DivisionByZeroError{})
+		panic(DivisionByZeroError{})
 	}
 	return v / o
 }
@@ -3906,10 +3781,6 @@ func (v Word64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 // Fix64Value
 
 type Fix64Value int64
-
-func init() {
-	gob.Register(Fix64Value(0))
-}
 
 func NewFix64ValueWithInteger(integer int64) Fix64Value {
 
@@ -4075,23 +3946,41 @@ func (v Fix64Value) Equal(other Value) BoolValue {
 const Fix64MaxValue = math.MaxInt64
 
 func ConvertFix64(value Value, interpreter *Interpreter) Value {
-	// TODO: https://github.com/dapperlabs/flow-go/issues/2141
-
 	switch value := value.(type) {
-	case UFix64Value:
-		if int(value) > Fix64MaxValue {
-			panic("UFix64 value is larger than maximum value for Fix64")
-		}
-		return Fix64Value(value)
-
 	case Fix64Value:
 		return value
 
+	case UFix64Value:
+		if value > Fix64MaxValue {
+			panic(OverflowError{})
+		}
+		return Fix64Value(value)
+
+	case BigNumberValue:
+		v := value.ToBigInt()
+
+		// First, check if the value is at least in the int64 range.
+		// The integer range for Fix64 is smaller, but this test at least
+		// allows us to call `v.Int64()` safely.
+
+		if !v.IsInt64() {
+			panic(OverflowError{})
+		}
+
+		// Now check that the integer value fits the range of Fix64
+		return NewFix64ValueWithInteger(v.Int64())
+
 	case NumberValue:
-		return Fix64Value(value.ToInt() * sema.Fix64Factor)
+		v := value.ToInt()
+		// Check that the integer value fits the range of Fix64
+		return NewFix64ValueWithInteger(int64(v))
 
 	default:
-		panic(fmt.Sprintf("can't convert %s to Fix64", value.DynamicType(interpreter)))
+		panic(fmt.Sprintf(
+			"can't convert %s to Fix64: %s",
+			value.DynamicType(interpreter),
+			value,
+		))
 	}
 }
 
@@ -4099,8 +3988,12 @@ func ConvertFix64(value Value, interpreter *Interpreter) Value {
 
 type UFix64Value uint64
 
-func init() {
-	gob.Register(UFix64Value(0))
+func NewUFix64ValueWithInteger(integer uint64) UFix64Value {
+	if integer > sema.UFix64TypeMaxInt {
+		panic(OverflowError{})
+	}
+
+	return UFix64Value(integer * sema.Fix64Factor)
 }
 
 func (UFix64Value) IsValue() {}
@@ -4242,23 +4135,48 @@ func (v UFix64Value) Equal(other Value) BoolValue {
 }
 
 func ConvertUFix64(value Value, interpreter *Interpreter) Value {
-	// TODO: https://github.com/dapperlabs/flow-go/issues/2141
-
 	switch value := value.(type) {
-	case Fix64Value:
-		if value < 0 {
-			panic("can't convert negative Fix64 to UFix64")
-		}
-		return UFix64Value(value)
-
 	case UFix64Value:
 		return value
 
+	case Fix64Value:
+		if value < 0 {
+			panic(UnderflowError{})
+		}
+		return UFix64Value(value)
+
+	case BigNumberValue:
+		v := value.ToBigInt()
+
+		if v.Sign() < 0 {
+			panic(UnderflowError{})
+		}
+
+		// First, check if the value is at least in the uint64 range.
+		// The integer range for UFix64 is smaller, but this test at least
+		// allows us to call `v.UInt64()` safely.
+
+		if !v.IsUint64() {
+			panic(OverflowError{})
+		}
+
+		// Now check that the integer value fits the range of UFix64
+		return NewUFix64ValueWithInteger(v.Uint64())
+
 	case NumberValue:
-		return UFix64Value(value.ToInt() * sema.Fix64Factor)
+		v := value.ToInt()
+		if v < 0 {
+			panic(UnderflowError{})
+		}
+		// Check that the integer value fits the range of UFix64
+		return NewUFix64ValueWithInteger(uint64(v))
 
 	default:
-		panic(fmt.Sprintf("can't convert %s to UFix64", value.DynamicType(interpreter)))
+		panic(fmt.Sprintf(
+			"can't convert %s to UFix64: %s",
+			value.DynamicType(interpreter),
+			value,
+		))
 	}
 }
 
@@ -4275,10 +4193,6 @@ type CompositeValue struct {
 	Destructor     FunctionValue
 	Owner          *common.Address
 	Destroyed      bool
-}
-
-func init() {
-	gob.Register(&CompositeValue{})
 }
 
 func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
@@ -4459,110 +4373,6 @@ func (v *CompositeValue) SetMember(_ *Interpreter, locationRange LocationRange, 
 	v.Fields[name] = value
 }
 
-func (v *CompositeValue) GobEncode() ([]byte, error) {
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-
-	// NOTE: important: encode as pointer,
-	// so gob sees the interface, not the concrete type
-	err := encoder.Encode(&v.Location)
-	if err != nil {
-		return nil, err
-	}
-
-	err = encoder.Encode(v.TypeID)
-	if err != nil {
-		return nil, err
-	}
-
-	err = encoder.Encode(v.Kind)
-	if err != nil {
-		return nil, err
-	}
-
-	// Encode fields in increasing order
-
-	fieldNames := make([]string, 0, len(v.Fields))
-
-	for name := range v.Fields {
-		fieldNames = append(fieldNames, name)
-	}
-
-	sort.Strings(fieldNames)
-
-	err = encoder.Encode(fieldNames)
-	if err != nil {
-		return nil, err
-	}
-
-	fieldValues := make([]Value, 0, len(v.Fields))
-
-	for _, name := range fieldNames {
-		fieldValues = append(fieldValues, v.Fields[name])
-	}
-
-	err = encoder.Encode(fieldValues)
-	if err != nil {
-		return nil, err
-	}
-
-	err = encoder.Encode(v.Owner)
-	if err != nil {
-		return nil, err
-	}
-
-	// NOTE: *not* encoding functions and destructor – linked in on-demand
-
-	return w.Bytes(), nil
-}
-
-func (v *CompositeValue) GobDecode(buf []byte) error {
-	r := bytes.NewBuffer(buf)
-	decoder := gob.NewDecoder(r)
-
-	err := decoder.Decode(&v.Location)
-	if err != nil {
-		return err
-	}
-
-	err = decoder.Decode(&v.TypeID)
-	if err != nil {
-		return err
-	}
-
-	err = decoder.Decode(&v.Kind)
-	if err != nil {
-		return err
-	}
-
-	var fieldNames []string
-	err = decoder.Decode(&fieldNames)
-	if err != nil {
-		return err
-	}
-
-	var fieldValues []Value
-	err = decoder.Decode(&fieldValues)
-	if err != nil {
-		return err
-	}
-
-	v.Fields = make(map[string]Value, len(fieldNames))
-
-	for i, fieldName := range fieldNames {
-		v.Fields[fieldName] = fieldValues[i]
-	}
-
-	err = decoder.Decode(&v.Owner)
-	if err != nil {
-		return err
-	}
-
-	// NOTE: *not* decoding functions – linked in on-demand
-
-	return nil
-}
-
 func (v *CompositeValue) String() string {
 	var builder strings.Builder
 	builder.WriteString(string(v.TypeID))
@@ -4611,10 +4421,6 @@ func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValu
 	}
 
 	return result
-}
-
-func init() {
-	gob.Register(&DictionaryValue{})
 }
 
 func (*DictionaryValue) IsValue() {}
@@ -4862,84 +4668,6 @@ func (v *DictionaryValue) Insert(keyValue Value, value Value) (existingValue Val
 	return existingValue
 }
 
-func (v *DictionaryValue) GobEncode() ([]byte, error) {
-	w := new(bytes.Buffer)
-	encoder := gob.NewEncoder(w)
-
-	err := encoder.Encode(v.Keys)
-	if err != nil {
-		return nil, err
-	}
-
-	// Encode entries in increasing order
-
-	entryNames := make([]string, 0, len(v.Entries))
-
-	for name := range v.Entries {
-		entryNames = append(entryNames, name)
-	}
-
-	sort.Strings(entryNames)
-
-	err = encoder.Encode(entryNames)
-	if err != nil {
-		return nil, err
-	}
-
-	entryValues := make([]Value, 0, len(v.Entries))
-
-	for _, name := range entryNames {
-		entryValues = append(entryValues, v.Entries[name])
-	}
-
-	err = encoder.Encode(entryValues)
-	if err != nil {
-		return nil, err
-	}
-
-	err = encoder.Encode(v.Owner)
-	if err != nil {
-		return nil, err
-	}
-
-	return w.Bytes(), nil
-}
-
-func (v *DictionaryValue) GobDecode(buf []byte) error {
-	r := bytes.NewBuffer(buf)
-	decoder := gob.NewDecoder(r)
-
-	err := decoder.Decode(&v.Keys)
-	if err != nil {
-		return err
-	}
-
-	var entryNames []string
-	err = decoder.Decode(&entryNames)
-	if err != nil {
-		return err
-	}
-
-	var entryValues []Value
-	err = decoder.Decode(&entryValues)
-	if err != nil {
-		return err
-	}
-
-	v.Entries = make(map[string]Value, len(entryNames))
-
-	for i, entryName := range entryNames {
-		v.Entries[entryName] = entryValues[i]
-	}
-
-	err = decoder.Decode(&v.Owner)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
 type DictionaryEntryValues struct {
 	Key   Value
 	Value Value
@@ -4955,10 +4683,6 @@ type OptionalValue interface {
 // NilValue
 
 type NilValue struct{}
-
-func init() {
-	gob.Register(NilValue{})
-}
 
 func (NilValue) IsValue() {}
 
@@ -4994,10 +4718,6 @@ func (NilValue) String() string {
 type SomeValue struct {
 	Value Value
 	Owner *common.Address
-}
-
-func init() {
-	gob.Register(&SomeValue{})
 }
 
 func NewSomeValueOwningNonCopying(value Value) *SomeValue {
@@ -5053,10 +4773,6 @@ type StorageReferenceValue struct {
 	TargetStorageAddress common.Address
 	TargetKey            string
 	Owner                *common.Address
-}
-
-func init() {
-	gob.Register(&StorageReferenceValue{})
 }
 
 func (*StorageReferenceValue) IsValue() {}
@@ -5275,10 +4991,6 @@ func (v *EphemeralReferenceValue) Equal(other Value) BoolValue {
 
 type AddressValue common.Address
 
-func init() {
-	gob.Register(AddressValue{})
-}
-
 func NewAddressValue(a common.Address) AddressValue {
 	return NewAddressValueFromBytes(a[:])
 }
@@ -5377,10 +5089,6 @@ func NewAuthAccountValue(
 		addPublicKeyFunction:    addPublicKeyFunction,
 		removePublicKeyFunction: removePublicKeyFunction,
 	}
-}
-
-func init() {
-	gob.Register(AuthAccountValue{})
 }
 
 func (AuthAccountValue) IsValue() {}
@@ -5520,10 +5228,6 @@ func NewPublicAccountValue(address AddressValue) PublicAccountValue {
 	}
 }
 
-func init() {
-	gob.Register(PublicAccountValue{})
-}
-
 func (PublicAccountValue) IsValue() {}
 
 func (PublicAccountValue) isAccountValue() {}
@@ -5584,10 +5288,6 @@ type PathValue struct {
 	Identifier string
 }
 
-func init() {
-	gob.Register(PathValue{})
-}
-
 func (PathValue) IsValue() {}
 
 func (PathValue) DynamicType(_ *Interpreter) DynamicType {
@@ -5624,10 +5324,6 @@ func (v PathValue) String() string {
 type CapabilityValue struct {
 	Address AddressValue
 	Path    PathValue
-}
-
-func init() {
-	gob.Register(CapabilityValue{})
 }
 
 func (CapabilityValue) IsValue() {}
@@ -5683,10 +5379,6 @@ func (CapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Va
 type LinkValue struct {
 	TargetPath PathValue
 	Type       StaticType
-}
-
-func init() {
-	gob.Register(LinkValue{})
 }
 
 func (LinkValue) IsValue() {}

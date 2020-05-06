@@ -489,7 +489,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 				compositeType,
 				declaration.Members.Fields,
 				declaration.Members.Functions,
-				kind != ContainerKindInterface,
+				kind,
 			)
 		}
 
@@ -819,13 +819,10 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 
 	// Check access
 
-	if compositeMember.Access == ast.AccessPrivate {
-		return false
-	}
+	effectiveInterfaceMemberAccess := checker.effectiveInterfaceMemberAccess(interfaceMember.Access)
+	effectiveCompositeMemberAccess := checker.effectiveCompositeMemberAccess(compositeMember.Access)
 
-	if interfaceMember.Access != ast.AccessNotSpecified &&
-		compositeMember.Access.IsLessPermissiveThan(interfaceMember.Access) {
-
+	if effectiveCompositeMemberAccess.IsLessPermissiveThan(effectiveInterfaceMemberAccess) {
 		return false
 	}
 
@@ -981,11 +978,14 @@ func (checker *Checker) nonEventMembersAndOrigins(
 	containerType Type,
 	fields []*ast.FieldDeclaration,
 	functions []*ast.FunctionDeclaration,
-	requireVariableKind bool,
+	containerKind ContainerKind,
 ) (
 	members map[string]*Member,
 	origins map[string]*Origin,
 ) {
+	requireVariableKind := containerKind != ContainerKindInterface
+	requireNonPrivateMemberAccess := containerKind == ContainerKindInterface
+
 	memberCount := len(fields) + len(functions)
 	members = make(map[string]*Member, memberCount)
 	origins = make(map[string]*Origin, memberCount)
@@ -1027,11 +1027,28 @@ func (checker *Checker) nonEventMembersAndOrigins(
 		fieldTypeAnnotation := checker.ConvertTypeAnnotation(field.TypeAnnotation)
 		checker.checkTypeAnnotation(fieldTypeAnnotation, field.TypeAnnotation)
 
+		const declarationKind = common.DeclarationKindField
+
+		effectiveAccess := checker.effectiveMemberAccess(field.Access, containerKind)
+
+		if requireNonPrivateMemberAccess &&
+			effectiveAccess == ast.AccessPrivate {
+
+			checker.report(
+				&InvalidAccessModifierError{
+					DeclarationKind: declarationKind,
+					Access:          field.Access,
+					Explanation:     "private fields can never be used",
+					Pos:             field.StartPos,
+				},
+			)
+		}
+
 		members[identifier] = &Member{
 			ContainerType:   containerType,
 			Access:          field.Access,
 			Identifier:      field.Identifier,
-			DeclarationKind: common.DeclarationKindField,
+			DeclarationKind: declarationKind,
 			TypeAnnotation:  fieldTypeAnnotation,
 			VariableKind:    field.VariableKind,
 		}
@@ -1070,11 +1087,28 @@ func (checker *Checker) nonEventMembersAndOrigins(
 
 		fieldTypeAnnotation := &TypeAnnotation{Type: functionType}
 
+		const declarationKind = common.DeclarationKindFunction
+
+		effectiveAccess := checker.effectiveMemberAccess(function.Access, containerKind)
+
+		if requireNonPrivateMemberAccess &&
+			effectiveAccess == ast.AccessPrivate {
+
+			checker.report(
+				&InvalidAccessModifierError{
+					DeclarationKind: declarationKind,
+					Access:          function.Access,
+					Explanation:     "private functions can never be used",
+					Pos:             function.StartPos,
+				},
+			)
+		}
+
 		members[identifier] = &Member{
 			ContainerType:   containerType,
 			Access:          function.Access,
 			Identifier:      function.Identifier,
-			DeclarationKind: common.DeclarationKindFunction,
+			DeclarationKind: declarationKind,
 			TypeAnnotation:  fieldTypeAnnotation,
 			VariableKind:    ast.VariableKindConstant,
 			ArgumentLabels:  argumentLabels,

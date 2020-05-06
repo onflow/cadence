@@ -528,9 +528,12 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 			break
 		}
 
-		if IsSubType(unwrappedTargetType, &FixedPointType{}) {
-			checker.checkFixedPointLiteral(typedExpression, unwrappedTargetType)
+		valueTypeOK := checker.checkFixedPointLiteral(typedExpression, valueType)
 
+		if IsSubType(unwrappedTargetType, &FixedPointType{}) {
+			if valueTypeOK {
+				checker.checkFixedPointLiteral(typedExpression, unwrappedTargetType)
+			}
 			return true
 		}
 
@@ -607,7 +610,7 @@ func (checker *Checker) checkIntegerLiteral(expression *ast.IntegerExpression, t
 // checkFixedPointLiteral checks that the value of the fixed-point literal
 // fits into range of the target fixed-point type
 //
-func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpression, targetType Type) {
+func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpression, targetType Type) bool {
 
 	// The target type might just be an integer type,
 	// in which case only the integer range can be checked.
@@ -629,7 +632,7 @@ func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpress
 				},
 			)
 
-			return
+			return false
 		}
 
 		if !checker.checkFixedPointRange(
@@ -652,7 +655,7 @@ func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpress
 				},
 			)
 
-			return
+			return false
 		}
 
 	case IntegerRangedType:
@@ -665,24 +668,26 @@ func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpress
 			expression.UnsignedInteger.Neg(expression.UnsignedInteger)
 		}
 
-		if checker.checkIntegerRange(integerValue, minInt, maxInt) {
-			return
-		}
+		if !checker.checkIntegerRange(integerValue, minInt, maxInt) {
 
-		checker.report(
-			&InvalidIntegerLiteralRangeError{
-				ExpectedType:   targetType,
-				ExpectedMinInt: minInt,
-				ExpectedMaxInt: maxInt,
-				Range:          ast.NewRangeFromPositioned(expression),
-			},
-		)
+			checker.report(
+				&InvalidIntegerLiteralRangeError{
+					ExpectedType:   targetType,
+					ExpectedMinInt: minInt,
+					ExpectedMaxInt: maxInt,
+					Range:          ast.NewRangeFromPositioned(expression),
+				},
+			)
+
+			return false
+		}
 	}
+
+	return true
 }
 
 // checkAddressLiteral checks that the value of the integer literal
-// fits into the range of an address (160 bits / 20 bytes),
-// and is hexadecimal
+// fits into the range of an address (64 bits), and is hexadecimal
 //
 func (checker *Checker) checkAddressLiteral(expression *ast.IntegerExpression) {
 	ranged := &AddressType{}
@@ -697,15 +702,13 @@ func (checker *Checker) checkAddressLiteral(expression *ast.IntegerExpression) {
 		)
 	}
 
-	if checker.checkIntegerRange(expression.Value, rangeMin, rangeMax) {
-		return
+	if !checker.checkIntegerRange(expression.Value, rangeMin, rangeMax) {
+		checker.report(
+			&InvalidAddressLiteralError{
+				Range: ast.NewRangeFromPositioned(expression),
+			},
+		)
 	}
-
-	checker.report(
-		&InvalidAddressLiteralError{
-			Range: ast.NewRangeFromPositioned(expression),
-		},
-	)
 }
 
 func (checker *Checker) checkIntegerRange(value, min, max *big.Int) bool {
@@ -2039,4 +2042,40 @@ func (checker *Checker) ValueActivationDepth() int {
 
 func (checker *Checker) TypeActivationDepth() int {
 	return checker.typeActivations.Depth()
+}
+
+func (checker *Checker) effectiveMemberAccess(access ast.Access, containerKind ContainerKind) ast.Access {
+	switch containerKind {
+	case ContainerKindComposite:
+		return checker.effectiveCompositeMemberAccess(access)
+	case ContainerKindInterface:
+		return checker.effectiveInterfaceMemberAccess(access)
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (checker *Checker) effectiveInterfaceMemberAccess(access ast.Access) ast.Access {
+	if access == ast.AccessNotSpecified {
+		return ast.AccessPublic
+	} else {
+		return access
+	}
+}
+
+func (checker *Checker) effectiveCompositeMemberAccess(access ast.Access) ast.Access {
+	if access != ast.AccessNotSpecified {
+		return access
+	}
+
+	switch checker.accessCheckMode {
+	case AccessCheckModeStrict, AccessCheckModeNotSpecifiedRestricted:
+		return ast.AccessPrivate
+
+	case AccessCheckModeNotSpecifiedUnrestricted, AccessCheckModeNone:
+		return ast.AccessPublic
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }

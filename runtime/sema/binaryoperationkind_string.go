@@ -22,7 +22,7 @@ const _BinaryOperationKind_name = "BinaryOperationKindUnknownBinaryOperationKind
 var _BinaryOperationKind_index = [...]uint8{0, 26, 55, 95, 126, 153, 185, 211}
 
 func (i BinaryOperationKind) String() string {
-	if i < 0 || i >= BinaryOperationKind(len(_BinaryOperationKind_index)-1) {
+	if i >= BinaryOperationKind(len(_BinaryOperationKind_index)-1) {
 		return "BinaryOperationKind(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
 	return _BinaryOperationKind_name[_BinaryOperationKind_index[i]:_BinaryOperationKind_index[i+1]]

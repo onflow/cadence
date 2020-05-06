@@ -19,8 +19,6 @@
 package stdlib
 
 import (
-	"encoding/gob"
-
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -258,10 +256,6 @@ var AccountCodeUpdatedEventType = newFlowEventType(
 // BlockType
 
 type BlockType struct{}
-
-func init() {
-	gob.Register(&BlockType{})
-}
 
 func (*BlockType) IsType() {}
 

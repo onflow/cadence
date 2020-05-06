@@ -19,9 +19,9 @@
 package runtime
 
 import (
-	"bytes"
-	"encoding/gob"
+	"time"
 
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
@@ -118,14 +118,24 @@ func (s *interpreterRuntimeStorage) readValue(
 		panic(err)
 	}
 
-	var storedValue interpreter.Value
 	if len(storedData) == 0 {
 		s.cache[storageKey] = nil
 		return interpreter.NilValue{}
 	}
 
-	decoder := gob.NewDecoder(bytes.NewReader(storedData))
-	err = decoder.Decode(&storedValue)
+	address := common.BytesToAddress([]byte(storageIdentifier))
+
+	var storedValue interpreter.Value
+
+	reportMetric(
+		func() {
+			storedValue, err = interpreter.DecodeValue(storedData, &address)
+		},
+		s.runtimeInterface,
+		func(metrics Metrics, start, end time.Time) {
+			metrics.ValueDecoded(start, end)
+		},
+	)
 	if err != nil {
 		panic(err)
 	}
@@ -172,13 +182,19 @@ func (s *interpreterRuntimeStorage) writeCached() {
 
 		var newData []byte
 		if value != nil {
-			var newStoredData bytes.Buffer
-			encoder := gob.NewEncoder(&newStoredData)
-			err := encoder.Encode(&value)
+			var err error
+			reportMetric(
+				func() {
+					newData, err = interpreter.EncodeValue(value)
+				},
+				s.runtimeInterface,
+				func(metrics Metrics, start, end time.Time) {
+					metrics.ValueEncoded(start, end)
+				},
+			)
 			if err != nil {
 				panic(err)
 			}
-			newData = newStoredData.Bytes()
 		}
 
 		// TODO: fix controller

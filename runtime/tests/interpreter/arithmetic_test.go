@@ -43,8 +43,8 @@ var integerTestValues = map[string]interpreter.NumberValue{
 	"UInt16":  interpreter.UInt16Value(60),
 	"UInt32":  interpreter.UInt32Value(60),
 	"UInt64":  interpreter.UInt64Value(60),
-	"UInt128": interpreter.NewUInt128ValueFromInt64(60),
-	"UInt256": interpreter.NewUInt256ValueFromInt64(60),
+	"UInt128": interpreter.NewUInt128ValueFromUint64(60),
+	"UInt256": interpreter.NewUInt256ValueFromUint64(60),
 	// Word*
 	"Word8":  interpreter.Word8Value(60),
 	"Word16": interpreter.Word16Value(60),
