@@ -26,7 +26,7 @@ import (
 )
 
 type parser struct {
-	tokens  []lexer.Token
+	tokens  chan lexer.Token
 	current lexer.Token
 	pos     int
 	errors  []error
@@ -36,7 +36,7 @@ func Parse(input string) (ast.Expression, []error) {
 	tokens := lexer.Lex(input)
 	p := &parser{
 		tokens:  tokens,
-		current: tokens[0],
+		current: <-tokens,
 	}
 
 	expr := parseExpression(p, 0)
@@ -54,7 +54,8 @@ func (p *parser) report(err error) {
 
 func (p *parser) next() {
 	p.pos++
-	p.current = p.tokens[p.pos]
+	p.current = <-p.tokens
+
 }
 
 func (p *parser) skipZeroOrOne(tokenType lexer.TokenType) {
