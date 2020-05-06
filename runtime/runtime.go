@@ -91,7 +91,7 @@ func validTopLevelDeclarations(location ast.Location) []common.DeclarationKind {
 func reportMetric(
 	f func(),
 	runtimeInterface Interface,
-	report func(metrics Metrics, start, end time.Time),
+	report func(Metrics, time.Duration),
 ) {
 	metrics, ok := runtimeInterface.(Metrics)
 	if !ok {
@@ -101,9 +101,9 @@ func reportMetric(
 
 	start := time.Now()
 	f()
-	end := time.Now()
+	elapsed := time.Since(start)
 
-	report(metrics, start, end)
+	report(metrics, elapsed)
 }
 
 const contractKey = "contract"
@@ -188,8 +188,8 @@ func (r *interpreterRuntime) interpret(
 			result, err = f(inter)
 		},
 		runtimeInterface,
-		func(metrics Metrics, start, end time.Time) {
-			metrics.ProgramInterpreted(start, end)
+		func(metrics Metrics, duration time.Duration) {
+			metrics.ProgramInterpreted(duration)
 		},
 	)
 
@@ -392,8 +392,8 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 			err = checker.Check()
 		},
 		runtimeInterface,
-		func(metrics Metrics, start, end time.Time) {
-			metrics.ProgramChecked(start, end)
+		func(metrics Metrics, duration time.Duration) {
+			metrics.ProgramChecked(duration)
 		},
 	)
 	if err != nil {
@@ -634,8 +634,8 @@ func (r *interpreterRuntime) parse(script []byte, runtimeInterface Interface) (p
 			program, _, err = parser.ParseProgram(string(script))
 		},
 		runtimeInterface,
-		func(metrics Metrics, start, end time.Time) {
-			metrics.ProgramParsed(start, end)
+		func(metrics Metrics, duration time.Duration) {
+			metrics.ProgramParsed(duration)
 		},
 	)
 

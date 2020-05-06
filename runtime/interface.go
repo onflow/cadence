@@ -63,11 +63,11 @@ type Interface interface {
 }
 
 type Metrics interface {
-	ProgramParsed(start, end time.Time)
-	ProgramChecked(start, end time.Time)
-	ProgramInterpreted(start, end time.Time)
-	ValueEncoded(start, end time.Time)
-	ValueDecoded(start, end time.Time)
+	ProgramParsed(duration time.Duration)
+	ProgramChecked(duration time.Duration)
+	ProgramInterpreted(duration time.Duration)
+	ValueEncoded(duration time.Duration)
+	ValueDecoded(duration time.Duration)
 }
 
 type EmptyRuntimeInterface struct{}
