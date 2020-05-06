@@ -91,8 +91,8 @@ func TestEncodeString(t *testing.T) {
 func TestEncodeAddress(t *testing.T) {
 	testEncode(
 		t,
-		cadence.NewAddressFromBytes([]byte{1, 2, 3, 4, 5}),
-		`{"type":"Address","value":"0x0102030405000000"}`,
+		cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+		`{"type":"Address","value":"0x0000000102030405"}`,
 	)
 }
 

@@ -503,7 +503,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			`,
 			args: [][]byte{
 				jsoncdc.MustEncode(
-					cadence.NewAddressFromBytes(
+					cadence.BytesToAddress(
 						[]byte{
 							0x0, 0x0, 0x0, 0x0,
 							0x0, 0x0, 0x0, 0x1,
