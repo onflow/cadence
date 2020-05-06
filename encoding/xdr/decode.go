@@ -221,7 +221,7 @@ func (d *Decoder) DecodeAddress() (v cadence.Address, err error) {
 		return v, err
 	}
 
-	return cadence.NewAddressFromBytes(b), nil
+	return cadence.BytesToAddress(b), nil
 }
 
 // DecodeInt reads the XDR-encoded representation of an arbitrary-precision
