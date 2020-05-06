@@ -40,11 +40,11 @@ type lexer struct {
 	input      string
 	tokenRange ast.Range
 	prevEndPos ast.Position
-	tokens     []Token
+	tokens     chan Token
 	canBackup  bool
 }
 
-func Lex(input string) []Token {
+func Lex(input string) chan Token {
 	startPos := ast.Position{Line: 1}
 	l := &lexer{
 		input: input,
@@ -53,8 +53,9 @@ func Lex(input string) []Token {
 			EndPos:   startPos,
 		},
 		prevEndPos: startPos,
+		tokens:     make(chan Token),
 	}
-	l.run(rootState)
+	go l.run(rootState)
 	return l.tokens
 }
 
@@ -67,6 +68,8 @@ func (l *lexer) run(state stateFn) {
 			}
 			l.emitError(err)
 		}
+		// Close token channel, no token remaining
+		close(l.tokens)
 	}()
 	for state != nil {
 		state = state(l)
@@ -161,7 +164,7 @@ func (l *lexer) emit(ty TokenType, val interface{}) {
 		Value: val,
 		Range: l.tokenRange,
 	}
-	l.tokens = append(l.tokens, token)
+	l.tokens <- token
 	l.tokenRange.StartPos = l.tokenRange.EndPos
 }
 
