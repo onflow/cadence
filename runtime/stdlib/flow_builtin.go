@@ -249,7 +249,6 @@ var AccountCodeUpdatedEventType = newFlowEventType(
 	"AccountCodeUpdated",
 	AccountEventAddressParameter,
 	AccountEventCodeHashParameter,
-	AccountEventPublicKeyParameter,
 	AccountEventContractsParameter,
 )
 
