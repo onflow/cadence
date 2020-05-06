@@ -86,11 +86,11 @@ type testRuntimeInterface struct {
 	generateUUID       func() uint64
 	computationLimit   uint64
 	decodeArgument     func(b []byte, t cadence.Type) (cadence.Value, error)
-	programParsed      func(start, end time.Time)
-	programChecked     func(start, end time.Time)
-	programInterpreted func(start, end time.Time)
-	valueEncoded       func(start, end time.Time)
-	valueDecoded       func(start, end time.Time)
+	programParsed      func(duration time.Duration)
+	programChecked     func(duration time.Duration)
+	programInterpreted func(duration time.Duration)
+	valueEncoded       func(duration time.Duration)
+	valueDecoded       func(duration time.Duration)
 }
 
 func (i *testRuntimeInterface) ResolveImport(location Location) ([]byte, error) {
@@ -173,39 +173,39 @@ func (i *testRuntimeInterface) DecodeArgument(b []byte, t cadence.Type) (cadence
 	return i.decodeArgument(b, t)
 }
 
-func (i *testRuntimeInterface) ProgramParsed(start, end time.Time) {
+func (i *testRuntimeInterface) ProgramParsed(duration time.Duration) {
 	if i.programParsed == nil {
 		return
 	}
-	i.programParsed(start, end)
+	i.programParsed(duration)
 }
 
-func (i *testRuntimeInterface) ProgramChecked(start, end time.Time) {
+func (i *testRuntimeInterface) ProgramChecked(duration time.Duration) {
 	if i.programChecked == nil {
 		return
 	}
-	i.programChecked(start, end)
+	i.programChecked(duration)
 }
 
-func (i *testRuntimeInterface) ProgramInterpreted(start, end time.Time) {
+func (i *testRuntimeInterface) ProgramInterpreted(duration time.Duration) {
 	if i.programInterpreted == nil {
 		return
 	}
-	i.programInterpreted(start, end)
+	i.programInterpreted(duration)
 }
 
-func (i *testRuntimeInterface) ValueEncoded(start, end time.Time) {
+func (i *testRuntimeInterface) ValueEncoded(duration time.Duration) {
 	if i.valueEncoded == nil {
 		return
 	}
-	i.valueEncoded(start, end)
+	i.valueEncoded(duration)
 }
 
-func (i *testRuntimeInterface) ValueDecoded(start, end time.Time) {
+func (i *testRuntimeInterface) ValueDecoded(duration time.Duration) {
 	if i.valueDecoded == nil {
 		return
 	}
-	i.valueDecoded(start, end)
+	i.valueDecoded(duration)
 }
 
 func TestRuntimeImport(t *testing.T) {
@@ -3341,19 +3341,19 @@ func TestRuntimeMetrics(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{{42}}
 		},
-		programParsed: func(start, end time.Time) {
+		programParsed: func(duration time.Duration) {
 			programParsedReports++
 		},
-		programChecked: func(start, end time.Time) {
+		programChecked: func(duration time.Duration) {
 			programCheckedReports++
 		},
-		programInterpreted: func(start, end time.Time) {
+		programInterpreted: func(duration time.Duration) {
 			programInterpretedReports++
 		},
-		valueEncoded: func(start, end time.Time) {
+		valueEncoded: func(duration time.Duration) {
 			valueEncodedReports++
 		},
-		valueDecoded: func(start, end time.Time) {
+		valueDecoded: func(duration time.Duration) {
 			valueDecodedReports++
 		},
 	}
