@@ -138,6 +138,7 @@ func (r *interpreterRuntime) ExecuteScript(
 	}
 
 	value, err := r.interpret(
+		location,
 		runtimeInterface,
 		runtimeStorage,
 		checker,
@@ -161,13 +162,16 @@ func (r *interpreterRuntime) ExecuteScript(
 	return exportValue(value), nil
 }
 
+type interpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, error)
+
 func (r *interpreterRuntime) interpret(
+	location ast.Location,
 	runtimeInterface Interface,
 	runtimeStorage *interpreterRuntimeStorage,
 	checker *sema.Checker,
 	functions stdlib.StandardLibraryFunctions,
 	options []interpreter.Option,
-	f func(inter *interpreter.Interpreter) (interpreter.Value, error),
+	f interpretFunc,
 ) (
 	exportableValue,
 	error,
@@ -189,7 +193,7 @@ func (r *interpreterRuntime) interpret(
 		},
 		runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
-			metrics.ProgramInterpreted(duration)
+			metrics.ProgramInterpreted(location, duration)
 		},
 	)
 
@@ -275,51 +279,19 @@ func (r *interpreterRuntime) ExecuteTransaction(
 	}
 
 	_, err = r.interpret(
+		location,
 		runtimeInterface,
 		runtimeStorage,
 		checker,
 		functions,
 		nil,
-		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
-			argumentValues := make([]interpreter.Value, argumentCount)
-
-			// decode arguments against parameter types
-			for i, parameter := range transactionType.Parameters {
-				parameterType := parameter.TypeAnnotation.Type
-				argument := arguments[i]
-
-				value, err := runtimeInterface.DecodeArgument(
-					argument,
-					exportType(parameterType),
-				)
-				if err != nil {
-					return nil, &InvalidTransactionArgumentError{
-						Index: i,
-						Err:   err,
-					}
-				}
-
-				arg := importValue(value)
-
-				// check that decoded value is a subtype of static parameter type
-				if !interpreter.IsSubType(arg.DynamicType(inter), parameterType) {
-					return nil, &InvalidTransactionArgumentError{
-						Index: i,
-						Err: &InvalidTypeAssignmentError{
-							Value: arg,
-							Type:  parameterType,
-						},
-					}
-				}
-
-				argumentValues[i] = arg
-			}
-
-			allArguments := append(argumentValues, authorizerValues...)
-
-			err := inter.InvokeTransaction(0, allArguments...)
-			return nil, err
-		},
+		r.transactionExecutionFunction(
+			argumentCount,
+			transactionType,
+			arguments,
+			runtimeInterface,
+			authorizerValues,
+		),
 	)
 	if err != nil {
 		return newError(err)
@@ -329,6 +301,55 @@ func (r *interpreterRuntime) ExecuteTransaction(
 	runtimeStorage.writeCached()
 
 	return nil
+}
+
+func (r *interpreterRuntime) transactionExecutionFunction(
+	argumentCount int,
+	transactionType *sema.TransactionType,
+	arguments [][]byte,
+	runtimeInterface Interface,
+	authorizerValues []interpreter.Value,
+) interpretFunc {
+	return func(inter *interpreter.Interpreter) (interpreter.Value, error) {
+		argumentValues := make([]interpreter.Value, argumentCount)
+
+		// decode arguments against parameter types
+		for i, parameter := range transactionType.Parameters {
+			parameterType := parameter.TypeAnnotation.Type
+			argument := arguments[i]
+
+			value, err := runtimeInterface.DecodeArgument(
+				argument,
+				exportType(parameterType),
+			)
+			if err != nil {
+				return nil, &InvalidTransactionArgumentError{
+					Index: i,
+					Err:   err,
+				}
+			}
+
+			arg := importValue(value)
+
+			// check that decoded value is a subtype of static parameter type
+			if !interpreter.IsSubType(arg.DynamicType(inter), parameterType) {
+				return nil, &InvalidTransactionArgumentError{
+					Index: i,
+					Err: &InvalidTypeAssignmentError{
+						Value: arg,
+						Type:  parameterType,
+					},
+				}
+			}
+
+			argumentValues[i] = arg
+		}
+
+		allArguments := append(argumentValues, authorizerValues...)
+
+		err := inter.InvokeTransaction(0, allArguments...)
+		return nil, err
+	}
 }
 
 func (r *interpreterRuntime) ParseAndCheckProgram(script []byte, runtimeInterface Interface, location Location) error {
@@ -357,7 +378,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	}
 
 	if program == nil {
-		program, err = r.parse(code, runtimeInterface)
+		program, err = r.parse(location, code, runtimeInterface)
 		if err != nil {
 			return nil, err
 		}
@@ -379,6 +400,17 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 				sema.WithPredeclaredValues(valueDeclarations),
 				sema.WithPredeclaredTypes(typeDeclarations),
 				sema.WithValidTopLevelDeclarationsHandler(validTopLevelDeclarations),
+				sema.WithCheckHandler(func(location ast.Location, check func()) {
+					reportMetric(
+						func() {
+							check()
+						},
+						runtimeInterface,
+						func(metrics Metrics, duration time.Duration) {
+							metrics.ProgramChecked(location, duration)
+						},
+					)
+				}),
 			},
 			options...,
 		)...,
@@ -387,15 +419,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 		return nil, err
 	}
 
-	reportMetric(
-		func() {
-			err = checker.Check()
-		},
-		runtimeInterface,
-		func(metrics Metrics, duration time.Duration) {
-			metrics.ProgramChecked(duration)
-		},
-	)
+	err = checker.Check()
 	if err != nil {
 		return nil, err
 	}
@@ -614,7 +638,7 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 			return nil, err
 		}
 
-		program, err = r.parse(script, runtimeInterface)
+		program, err = r.parse(location, script, runtimeInterface)
 		if err != nil {
 			return nil, err
 		}
@@ -628,14 +652,21 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 	}
 }
 
-func (r *interpreterRuntime) parse(script []byte, runtimeInterface Interface) (program *ast.Program, err error) {
+func (r *interpreterRuntime) parse(
+	location ast.Location,
+	script []byte,
+	runtimeInterface Interface,
+) (
+	program *ast.Program,
+	err error,
+) {
 	reportMetric(
 		func() {
 			program, _, err = parser.ParseProgram(string(script))
 		},
 		runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
-			metrics.ProgramParsed(duration)
+			metrics.ProgramParsed(location, duration)
 		},
 	)
 
@@ -912,6 +943,7 @@ func (r *interpreterRuntime) updateAccountCode(
 		contractType := contractTypes[0]
 
 		contract, err := r.instantiateContract(
+			location,
 			contractType,
 			constructorArguments,
 			constructorArgumentTypes,
@@ -977,6 +1009,7 @@ func (r *interpreterRuntime) loadContract(
 }
 
 func (r *interpreterRuntime) instantiateContract(
+	location ast.Location,
 	contractType *sema.CompositeType,
 	constructorArguments []interpreter.Value,
 	argumentTypes []sema.Type,
@@ -1065,6 +1098,7 @@ func (r *interpreterRuntime) instantiateContract(
 	}
 
 	_, err := r.interpret(
+		location,
 		runtimeInterface,
 		runtimeStorage,
 		checker,

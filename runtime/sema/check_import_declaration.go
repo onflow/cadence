@@ -185,6 +185,7 @@ func (checker *Checker) EnsureLoaded(location ast.Location, loadProgram func() *
 			WithAccessCheckMode(checker.accessCheckMode),
 			WithValidTopLevelDeclarationsHandler(checker.validTopLevelDeclarationsHandler),
 			WithAllCheckers(checker.allCheckers),
+			WithCheckHandler(checker.checkHandler),
 		)
 		if err == nil {
 			checker.allCheckers[locationID] = subChecker
