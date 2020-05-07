@@ -41,6 +41,7 @@ const (
 	TokenBraceClose
 	TokenBracketOpen
 	TokenBracketClose
+	TokenQuestionMark
 	TokenComma
 	TokenColon
 )

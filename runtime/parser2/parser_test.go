@@ -292,4 +292,42 @@ func TestParseExpression(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("conditional", func(t *testing.T) {
+		result, errors := Parse("a ? b : c ? d : e")
+		require.Empty(t, errors)
+
+		assert.Equal(t,
+			&ast.ConditionalExpression{
+				Test: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "a",
+					},
+				},
+				Then: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "b",
+					},
+				},
+				Else: &ast.ConditionalExpression{
+					Test: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "c",
+						},
+					},
+					Then: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "d",
+						},
+					},
+					Else: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "e",
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
 }

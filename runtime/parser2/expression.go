@@ -238,6 +238,7 @@ func init() {
 	defineArrayExpression()
 	defineDictionaryExpression()
 	definePathExpression()
+	defineConditionalExpression()
 
 	leftBindingPowers[lexer.TokenComma] = lowestBindingPower
 
@@ -297,6 +298,21 @@ func defineDictionaryExpression() {
 		p.mustOne(lexer.TokenBraceClose)
 		return &ast.DictionaryExpression{
 			Entries: entries,
+		}
+	}
+}
+
+func defineConditionalExpression() {
+	leftBindingPowers[lexer.TokenQuestionMark] = 20
+	leftDenotations[lexer.TokenQuestionMark] = func(p *parser, left ast.Expression) ast.Expression {
+		testExpression := left
+		thenExpression := parseExpression(p, lowestBindingPower)
+		p.mustOne(lexer.TokenColon)
+		elseExpression := parseExpression(p, lowestBindingPower)
+		return &ast.ConditionalExpression{
+			Test: testExpression,
+			Then: thenExpression,
+			Else: elseExpression,
 		}
 	}
 }

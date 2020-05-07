@@ -43,8 +43,11 @@ func rootState(l *lexer) stateFn {
 	case '/':
 		l.emitType(TokenSlash)
 	case '?':
-		l.mustOne('?')
-		l.emitType(TokenNilCoalesce)
+		if l.acceptOne('?') {
+			l.emitType(TokenNilCoalesce)
+		} else {
+			l.emitType(TokenQuestionMark)
+		}
 	case '(':
 		l.emitType(TokenParenOpen)
 	case ')':

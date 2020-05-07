@@ -19,7 +19,6 @@
 package lexer
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -448,40 +447,6 @@ func TestLex(t *testing.T) {
 		})
 	})
 
-	t.Run("invalid nil-coalesce", func(t *testing.T) {
-		withTokens(Lex("1 ?X"), func(tokens []Token) {
-			assert.Equal(t,
-				[]Token{
-					{
-						Type:  TokenNumber,
-						Value: "1",
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
-						},
-					},
-					{
-						Type:  TokenSpace,
-						Value: " ",
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
-						},
-					},
-					{
-						Type:  TokenError,
-						Value: errors.New("expected character: U+003F '?'"),
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
-						},
-					},
-				},
-				tokens,
-			)
-		})
-	})
-
 	t.Run("identifier", func(t *testing.T) {
 		withTokens(Lex("test"), func(tokens []Token) {
 			assert.Equal(t,
@@ -532,8 +497,8 @@ func TestLex(t *testing.T) {
 		})
 	})
 
-	t.Run("colon and comma", func(t *testing.T) {
-		withTokens(Lex(":,"), func(tokens []Token) {
+	t.Run("colon, comma, question mark", func(t *testing.T) {
+		withTokens(Lex(":,?"), func(tokens []Token) {
 			assert.Equal(t,
 				[]Token{
 					{
@@ -551,10 +516,17 @@ func TestLex(t *testing.T) {
 						},
 					},
 					{
-						Type: TokenEOF,
+						Type: TokenQuestionMark,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 						},
 					},
 				},
