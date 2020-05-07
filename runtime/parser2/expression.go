@@ -27,6 +27,8 @@ import (
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
+const lowestBindingPower = 0
+
 type infixFunc func(left, right ast.Expression) ast.Expression
 type prefixFunc func(right ast.Expression) ast.Expression
 type nullDenotationFunc func(parser *parser, token lexer.Token) ast.Expression
@@ -79,11 +81,11 @@ func define(def interface{}) {
 	case literal:
 		tokenType := def.tokenType
 		setNullDenotation(tokenType, def.nullDenotation)
-		setLeftBindingPower(tokenType, 0)
+		setLeftBindingPower(tokenType, lowestBindingPower)
 
 	case prefix:
 		tokenType := def.tokenType
-		setLeftBindingPower(tokenType, 0)
+		setLeftBindingPower(tokenType, lowestBindingPower)
 		setNullDenotation(
 			tokenType,
 			func(parser *parser, token lexer.Token) ast.Expression {
@@ -130,7 +132,7 @@ func setLeftDenotation(tokenType lexer.TokenType, leftDenotation leftDenotationF
 func init() {
 
 	define(infix{
-		tokenType:        lexer.TokenOperatorPlus,
+		tokenType:        lexer.TokenPlus,
 		leftBindingPower: 110,
 		leftDenotation: func(left, right ast.Expression) ast.Expression {
 			return &ast.BinaryExpression{
@@ -142,7 +144,7 @@ func init() {
 	})
 
 	define(infix{
-		tokenType:        lexer.TokenOperatorMinus,
+		tokenType:        lexer.TokenMinus,
 		leftBindingPower: 110,
 		leftDenotation: func(left, right ast.Expression) ast.Expression {
 			return &ast.BinaryExpression{
@@ -154,7 +156,7 @@ func init() {
 	})
 
 	define(infix{
-		tokenType:        lexer.TokenOperatorMul,
+		tokenType:        lexer.TokenStar,
 		leftBindingPower: 120,
 		leftDenotation: func(left, right ast.Expression) ast.Expression {
 			return &ast.BinaryExpression{
@@ -166,7 +168,7 @@ func init() {
 	})
 
 	define(infix{
-		tokenType:        lexer.TokenOperatorDiv,
+		tokenType:        lexer.TokenSlash,
 		leftBindingPower: 120,
 		leftDenotation: func(left, right ast.Expression) ast.Expression {
 			return &ast.BinaryExpression{
@@ -178,7 +180,7 @@ func init() {
 	})
 
 	define(infix{
-		tokenType:        lexer.TokenOperatorNilCoalesce,
+		tokenType:        lexer.TokenNilCoalesce,
 		leftBindingPower: 100,
 		rightAssociative: true,
 		leftDenotation: func(left, right ast.Expression) ast.Expression {
@@ -201,8 +203,17 @@ func init() {
 		},
 	})
 
+	define(literal{
+		tokenType: lexer.TokenIdentifier,
+		nullDenotation: func(_ *parser, token lexer.Token) ast.Expression {
+			return &ast.IdentifierExpression{
+				Identifier: tokenToIdentifier(token),
+			}
+		},
+	})
+
 	define(prefix{
-		tokenType:    lexer.TokenOperatorMinus,
+		tokenType:    lexer.TokenMinus,
 		bindingPower: 130,
 		nullDenotation: func(right ast.Expression) ast.Expression {
 			return &ast.UnaryExpression{
@@ -213,7 +224,7 @@ func init() {
 	})
 
 	define(prefix{
-		tokenType:    lexer.TokenOperatorPlus,
+		tokenType:    lexer.TokenPlus,
 		bindingPower: 130,
 		nullDenotation: func(right ast.Expression) ast.Expression {
 			return &ast.UnaryExpression{
@@ -223,16 +234,120 @@ func init() {
 		},
 	})
 
-	leftBindingPowers[lexer.TokenEOF] = 0
+	defineNestedExpression()
+	defineArrayExpression()
+	defineDictionaryExpression()
+	definePathExpression()
+	defineConditionalExpression()
+
+	leftBindingPowers[lexer.TokenComma] = lowestBindingPower
+
+	leftBindingPowers[lexer.TokenColon] = lowestBindingPower
+
+	leftBindingPowers[lexer.TokenEOF] = lowestBindingPower
+}
+
+func defineNestedExpression() {
+	leftBindingPowers[lexer.TokenParenOpen] = 150
+	leftBindingPowers[lexer.TokenParenClose] = lowestBindingPower
+	nullDenotations[lexer.TokenParenOpen] = func(p *parser, token lexer.Token) ast.Expression {
+		expression := parseExpression(p, lowestBindingPower)
+		p.mustOne(lexer.TokenParenClose)
+		return expression
+	}
+}
+
+func defineArrayExpression() {
+	leftBindingPowers[lexer.TokenBracketOpen] = 150
+	leftBindingPowers[lexer.TokenBracketClose] = lowestBindingPower
+	nullDenotations[lexer.TokenBracketOpen] = func(p *parser, token lexer.Token) ast.Expression {
+		var values []ast.Expression
+		for p.current.Type != lexer.TokenBracketClose {
+			value := parseExpression(p, lowestBindingPower)
+			values = append(values, value)
+			if p.current.Type != lexer.TokenComma {
+				break
+			}
+			p.mustOne(lexer.TokenComma)
+		}
+		p.mustOne(lexer.TokenBracketClose)
+		return &ast.ArrayExpression{
+			Values: values,
+		}
+	}
+}
+
+func defineDictionaryExpression() {
+	leftBindingPowers[lexer.TokenBraceOpen] = 150
+	leftBindingPowers[lexer.TokenBraceClose] = lowestBindingPower
+	nullDenotations[lexer.TokenBraceOpen] = func(p *parser, token lexer.Token) ast.Expression {
+		var entries []ast.Entry
+		for p.current.Type != lexer.TokenBraceClose {
+			key := parseExpression(p, lowestBindingPower)
+			p.mustOne(lexer.TokenColon)
+			value := parseExpression(p, lowestBindingPower)
+			entries = append(entries, ast.Entry{
+				Key:   key,
+				Value: value,
+			})
+			if p.current.Type != lexer.TokenComma {
+				break
+			}
+			p.mustOne(lexer.TokenComma)
+		}
+		p.mustOne(lexer.TokenBraceClose)
+		return &ast.DictionaryExpression{
+			Entries: entries,
+		}
+	}
+}
+
+func defineConditionalExpression() {
+	leftBindingPowers[lexer.TokenQuestionMark] = 20
+	leftDenotations[lexer.TokenQuestionMark] = func(p *parser, left ast.Expression) ast.Expression {
+		testExpression := left
+		thenExpression := parseExpression(p, lowestBindingPower)
+		p.mustOne(lexer.TokenColon)
+		elseExpression := parseExpression(p, lowestBindingPower)
+		return &ast.ConditionalExpression{
+			Test: testExpression,
+			Then: thenExpression,
+			Else: elseExpression,
+		}
+	}
+}
+
+func definePathExpression() {
+	leftBindingPowers[lexer.TokenSlash] = 150
+	nullDenotations[lexer.TokenSlash] = func(p *parser, token lexer.Token) ast.Expression {
+		domain := mustIdentifier(p)
+		p.mustOne(lexer.TokenSlash)
+		identifier := mustIdentifier(p)
+		return &ast.PathExpression{
+			Domain:     domain,
+			Identifier: identifier,
+		}
+	}
+}
+
+func mustIdentifier(p *parser) ast.Identifier {
+	identifier := p.mustOne(lexer.TokenIdentifier)
+	return tokenToIdentifier(identifier)
+}
+
+func tokenToIdentifier(identifier lexer.Token) ast.Identifier {
+	return ast.Identifier{
+		Identifier: identifier.Value.(string),
+	}
 }
 
 func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 	p.skipZeroOrOne(lexer.TokenSpace)
 	t := p.current
 	p.next()
-	p.skipZeroOrOne(lexer.TokenSpace)
 
 	left := applyNullDenotation(p, t)
+	p.skipZeroOrOne(lexer.TokenSpace)
 
 	for rightBindingPower < leftBindingPower(p.current.Type) {
 		t = p.current

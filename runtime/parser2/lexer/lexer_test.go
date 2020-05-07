@@ -19,7 +19,6 @@
 package lexer
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -141,7 +140,7 @@ func TestLex(t *testing.T) {
 		})
 	})
 
-	t.Run("simple arithmetic", func(t *testing.T) {
+	t.Run("simple arithmetic: plus and times", func(t *testing.T) {
 		withTokens(Lex("(2 + 3) * 4"), func(tokens []Token) {
 			assert.Equal(t,
 				[]Token{
@@ -169,7 +168,7 @@ func TestLex(t *testing.T) {
 						},
 					},
 					{
-						Type: TokenOperatorPlus,
+						Type: TokenPlus,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
 							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -207,7 +206,108 @@ func TestLex(t *testing.T) {
 						},
 					},
 					{
-						Type: TokenOperatorMul,
+						Type: TokenStar,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
+					},
+					{
+						Type:  TokenSpace,
+						Value: " ",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+						},
+					},
+					{
+						Type:  TokenNumber,
+						Value: "4",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
+							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
+							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
+
+	t.Run("simple arithmetic: minus and div", func(t *testing.T) {
+		withTokens(Lex("(2 - 3) / 4"), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type: TokenParenOpen,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					{
+						Type:  TokenNumber,
+						Value: "2",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					{
+						Type:  TokenSpace,
+						Value: " ",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+					},
+					{
+						Type: TokenMinus,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+					{
+						Type:  TokenSpace,
+						Value: " ",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
+					},
+					{
+						Type:  TokenNumber,
+						Value: "3",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
+					},
+					{
+						Type: TokenParenClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					{
+						Type:  TokenSpace,
+						Value: " ",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
+					},
+					{
+						Type: TokenSlash,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
@@ -312,7 +412,7 @@ func TestLex(t *testing.T) {
 						},
 					},
 					{
-						Type: TokenOperatorNilCoalesce,
+						Type: TokenNilCoalesce,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -339,40 +439,6 @@ func TestLex(t *testing.T) {
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
 							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
-						},
-					},
-				},
-				tokens,
-			)
-		})
-	})
-
-	t.Run("invalid nil-coalesce", func(t *testing.T) {
-		withTokens(Lex("1 ?X"), func(tokens []Token) {
-			assert.Equal(t,
-				[]Token{
-					{
-						Type:  TokenNumber,
-						Value: "1",
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
-						},
-					},
-					{
-						Type:  TokenSpace,
-						Value: " ",
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
-						},
-					},
-					{
-						Type:  TokenError,
-						Value: errors.New("expected character: U+003F '?'"),
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 						},
 					},
 				},
@@ -423,6 +489,90 @@ func TestLex(t *testing.T) {
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
 							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
+
+	t.Run("colon, comma, question mark", func(t *testing.T) {
+		withTokens(Lex(":,?"), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type: TokenColon,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					{
+						Type: TokenComma,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					{
+						Type: TokenQuestionMark,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
+
+	t.Run("brackets and braces", func(t *testing.T) {
+		withTokens(Lex("[}]{"), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type: TokenBracketOpen,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					{
+						Type: TokenBraceClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					{
+						Type: TokenBracketClose,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+					},
+
+					{
+						Type: TokenBraceOpen,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
 						},
 					},
 				},

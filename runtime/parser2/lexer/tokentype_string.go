@@ -13,22 +13,25 @@ func _() {
 	_ = x[TokenSpace-2]
 	_ = x[TokenNumber-3]
 	_ = x[TokenIdentifier-4]
-	_ = x[TokenOperatorPlus-5]
-	_ = x[TokenOperatorMinus-6]
-	_ = x[TokenOperatorMul-7]
-	_ = x[TokenOperatorDiv-8]
-	_ = x[TokenOperatorNilCoalesce-9]
+	_ = x[TokenPlus-5]
+	_ = x[TokenMinus-6]
+	_ = x[TokenStar-7]
+	_ = x[TokenSlash-8]
+	_ = x[TokenNilCoalesce-9]
 	_ = x[TokenParenOpen-10]
 	_ = x[TokenParenClose-11]
 	_ = x[TokenBraceOpen-12]
 	_ = x[TokenBraceClose-13]
 	_ = x[TokenBracketOpen-14]
 	_ = x[TokenBracketClose-15]
+	_ = x[TokenQuestionMark-16]
+	_ = x[TokenComma-17]
+	_ = x[TokenColon-18]
 }
 
-const _TokenType_name = "ErrorEOFSpaceNumberIdentifierOperatorPlusOperatorMinusOperatorMulOperatorDivOperatorNilCoalesceParenOpenParenCloseBraceOpenBraceCloseBracketOpenBracketClose"
+const _TokenType_name = "ErrorEOFSpaceNumberIdentifierPlusMinusStarSlashNilCoalesceParenOpenParenCloseBraceOpenBraceCloseBracketOpenBracketCloseQuestionMarkCommaColon"
 
-var _TokenType_index = [...]uint8{0, 5, 8, 13, 19, 29, 41, 54, 65, 76, 95, 104, 114, 123, 133, 144, 156}
+var _TokenType_index = [...]uint8{0, 5, 8, 13, 19, 29, 33, 38, 42, 47, 58, 67, 77, 86, 96, 107, 119, 131, 136, 141}
 
 func (i TokenType) String() string {
 	if i >= TokenType(len(_TokenType_index)-1) {

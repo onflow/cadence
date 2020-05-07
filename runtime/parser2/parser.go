@@ -32,12 +32,28 @@ type parser struct {
 	errors  []error
 }
 
-func Parse(input string) (ast.Expression, []error) {
+func Parse(input string) (result ast.Expression, errors []error) {
 	tokens := lexer.Lex(input)
 	p := &parser{
-		tokens:  tokens,
-		current: <-tokens,
+		tokens: tokens,
+		pos:    -1,
 	}
+
+	defer func() {
+		if r := recover(); r != nil {
+			err, ok := r.(error)
+			if !ok {
+				err = fmt.Errorf("lexer: %v", r)
+			}
+
+			p.report(err)
+
+			result = nil
+			errors = p.errors
+		}
+	}()
+
+	p.next()
 
 	expr := parseExpression(p, 0)
 
@@ -57,7 +73,7 @@ func (p *parser) next() {
 	token, ok := <-p.tokens
 	if !ok {
 		// Channel closed, return EOF token.
-		p.current = lexer.Token{Type: lexer.TokenEOF, Value: nil}
+		p.current = lexer.Token{Type: lexer.TokenEOF}
 	} else {
 		p.current = token
 	}
@@ -67,4 +83,13 @@ func (p *parser) skipZeroOrOne(tokenType lexer.TokenType) {
 	for p.current.Type == tokenType {
 		p.next()
 	}
+}
+
+func (p *parser) mustOne(tokenType lexer.TokenType) lexer.Token {
+	t := p.current
+	if t.Type != tokenType {
+		panic(fmt.Errorf("expected token type: %s", tokenType))
+	}
+	p.next()
+	return t
 }

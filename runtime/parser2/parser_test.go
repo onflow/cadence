@@ -155,4 +155,179 @@ func TestParseExpression(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("nested expression", func(t *testing.T) {
+		result, errors := Parse("(1 + 2) * 3")
+		require.Empty(t, errors)
+
+		assert.Equal(t,
+			&ast.BinaryExpression{
+				Operation: ast.OperationMul,
+				Left: &ast.BinaryExpression{
+					Operation: ast.OperationPlus,
+					Left: &ast.IntegerExpression{
+						Value: big.NewInt(1),
+						Base:  10,
+					},
+					Right: &ast.IntegerExpression{
+						Value: big.NewInt(2),
+						Base:  10,
+					},
+				},
+				Right: &ast.IntegerExpression{
+					Value: big.NewInt(3),
+					Base:  10,
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("array expression", func(t *testing.T) {
+		result, errors := Parse("[ 1,2 + 3, 4  ,  5 ]")
+		require.Empty(t, errors)
+
+		assert.Equal(t,
+			&ast.ArrayExpression{
+				Values: []ast.Expression{
+					&ast.IntegerExpression{
+						Value: big.NewInt(1),
+						Base:  10,
+					},
+					&ast.BinaryExpression{
+						Operation: ast.OperationPlus,
+						Left: &ast.IntegerExpression{
+							Value: big.NewInt(2),
+							Base:  10,
+						},
+						Right: &ast.IntegerExpression{
+							Value: big.NewInt(3),
+							Base:  10,
+						},
+					},
+					&ast.IntegerExpression{
+						Value: big.NewInt(4),
+						Base:  10,
+					},
+					&ast.IntegerExpression{
+						Value: big.NewInt(5),
+						Base:  10,
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("dictionary expression", func(t *testing.T) {
+		result, errors := Parse("{ 1:2 + 3, 4  :  5 }")
+		require.Empty(t, errors)
+
+		assert.Equal(t,
+			&ast.DictionaryExpression{
+				Entries: []ast.Entry{
+					{
+						Key: &ast.IntegerExpression{
+							Value: big.NewInt(1),
+							Base:  10,
+						},
+						Value: &ast.BinaryExpression{
+							Operation: ast.OperationPlus,
+							Left: &ast.IntegerExpression{
+								Value: big.NewInt(2),
+								Base:  10,
+							},
+							Right: &ast.IntegerExpression{
+								Value: big.NewInt(3),
+								Base:  10,
+							},
+						},
+					},
+					{
+						Key: &ast.IntegerExpression{
+							Value: big.NewInt(4),
+							Base:  10,
+						},
+						Value: &ast.IntegerExpression{
+							Value: big.NewInt(5),
+							Base:  10,
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("identifier in addition", func(t *testing.T) {
+		result, errors := Parse("a + 3")
+		require.Empty(t, errors)
+
+		assert.Equal(t,
+			&ast.BinaryExpression{
+				Operation: ast.OperationPlus,
+				Left: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "a",
+					},
+				},
+				Right: &ast.IntegerExpression{
+					Value: big.NewInt(3),
+					Base:  10,
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("path expression", func(t *testing.T) {
+		result, errors := Parse("/foo/bar")
+		require.Empty(t, errors)
+
+		assert.Equal(t,
+			&ast.PathExpression{
+				Domain:     ast.Identifier{Identifier: "foo"},
+				Identifier: ast.Identifier{Identifier: "bar"},
+			},
+			result,
+		)
+	})
+
+	t.Run("conditional", func(t *testing.T) {
+		result, errors := Parse("a ? b : c ? d : e")
+		require.Empty(t, errors)
+
+		assert.Equal(t,
+			&ast.ConditionalExpression{
+				Test: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "a",
+					},
+				},
+				Then: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "b",
+					},
+				},
+				Else: &ast.ConditionalExpression{
+					Test: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "c",
+						},
+					},
+					Then: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "d",
+						},
+					},
+					Else: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "e",
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
 }

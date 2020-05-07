@@ -30,15 +30,18 @@ const (
 	TokenSpace
 	TokenNumber
 	TokenIdentifier
-	TokenOperatorPlus
-	TokenOperatorMinus
-	TokenOperatorMul
-	TokenOperatorDiv
-	TokenOperatorNilCoalesce
+	TokenPlus
+	TokenMinus
+	TokenStar
+	TokenSlash
+	TokenNilCoalesce
 	TokenParenOpen
 	TokenParenClose
 	TokenBraceOpen
 	TokenBraceClose
 	TokenBracketOpen
 	TokenBracketClose
+	TokenQuestionMark
+	TokenComma
+	TokenColon
 )

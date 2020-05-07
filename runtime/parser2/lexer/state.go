@@ -35,16 +35,19 @@ func rootState(l *lexer) stateFn {
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		return numberState
 	case '+':
-		l.emitType(TokenOperatorPlus)
+		l.emitType(TokenPlus)
 	case '-':
-		l.emitType(TokenOperatorMinus)
+		l.emitType(TokenMinus)
 	case '*':
-		l.emitType(TokenOperatorMul)
-	case '%':
-		l.emitType(TokenOperatorDiv)
+		l.emitType(TokenStar)
+	case '/':
+		l.emitType(TokenSlash)
 	case '?':
-		l.mustOne('?')
-		l.emitType(TokenOperatorNilCoalesce)
+		if l.acceptOne('?') {
+			l.emitType(TokenNilCoalesce)
+		} else {
+			l.emitType(TokenQuestionMark)
+		}
 	case '(':
 		l.emitType(TokenParenOpen)
 	case ')':
@@ -57,6 +60,10 @@ func rootState(l *lexer) stateFn {
 		l.emitType(TokenBracketOpen)
 	case ']':
 		l.emitType(TokenBracketClose)
+	case ',':
+		l.emitType(TokenComma)
+	case ':':
+		l.emitType(TokenColon)
 	case '_':
 		return identifierState
 

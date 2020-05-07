@@ -67,9 +67,11 @@ func (l *lexer) run(state stateFn) {
 			}
 			l.emitError(err)
 		}
+
 		// Close token channel, no token remaining
 		close(l.tokens)
 	}()
+
 	for state != nil {
 		state = state(l)
 	}
@@ -185,7 +187,9 @@ func (l *lexer) emitError(err error) {
 func (l *lexer) scanNumber() {
 	// lookahead is already lexed.
 	// parse more, if any
-	l.acceptZeroOrMore("0123456789")
+	l.acceptWhile(func(r rune) bool {
+		return r >= '0' && r <= '9'
+	})
 }
 
 func (l *lexer) scanSpace() {
