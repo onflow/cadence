@@ -183,6 +183,33 @@ func TestParseExpression(t *testing.T) {
 		)
 	})
 
+	t.Run("less and greater", func(t *testing.T) {
+		result, errors := Parse("1 < 2 > 3")
+		require.Empty(t, errors)
+
+		assert.Equal(t,
+			&ast.BinaryExpression{
+				Operation: ast.OperationGreater,
+				Left: &ast.BinaryExpression{
+					Operation: ast.OperationLess,
+					Left: &ast.IntegerExpression{
+						Value: big.NewInt(1),
+						Base:  10,
+					},
+					Right: &ast.IntegerExpression{
+						Value: big.NewInt(2),
+						Base:  10,
+					},
+				},
+				Right: &ast.IntegerExpression{
+					Value: big.NewInt(3),
+					Base:  10,
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("array expression", func(t *testing.T) {
 		result, errors := Parse("[ 1,2 + 3, 4  ,  5 ]")
 		require.Empty(t, errors)
@@ -324,6 +351,41 @@ func TestParseExpression(t *testing.T) {
 						Identifier: ast.Identifier{
 							Identifier: "e",
 						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("boolean expressions", func(t *testing.T) {
+		result, errors := Parse("true + false")
+		require.Empty(t, errors)
+
+		assert.Equal(t,
+			&ast.BinaryExpression{
+				Operation: ast.OperationPlus,
+				Left: &ast.BoolExpression{
+					Value: true,
+				},
+				Right: &ast.BoolExpression{
+					Value: false,
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("move operator", func(t *testing.T) {
+		result, errors := Parse("(<-x)")
+		require.Empty(t, errors)
+
+		assert.Equal(t,
+			&ast.UnaryExpression{
+				Operation: ast.OperationMove,
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "x",
 					},
 				},
 			},

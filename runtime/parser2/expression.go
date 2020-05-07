@@ -45,10 +45,23 @@ type infix struct {
 	leftDenotation   infixFunc
 }
 
+type binary struct {
+	tokenType        lexer.TokenType
+	leftBindingPower int
+	rightAssociative bool
+	operation        ast.Operation
+}
+
 type prefix struct {
 	tokenType      lexer.TokenType
 	bindingPower   int
 	nullDenotation prefixFunc
+}
+
+type unary struct {
+	tokenType    lexer.TokenType
+	bindingPower int
+	operation    ast.Operation
 }
 
 var nullDenotations = map[lexer.TokenType]nullDenotationFunc{}
@@ -78,6 +91,20 @@ func define(def interface{}) {
 			},
 		)
 
+	case binary:
+		define(infix{
+			tokenType:        def.tokenType,
+			leftBindingPower: def.leftBindingPower,
+			rightAssociative: def.rightAssociative,
+			leftDenotation: func(left, right ast.Expression) ast.Expression {
+				return &ast.BinaryExpression{
+					Operation: def.operation,
+					Left:      left,
+					Right:     right,
+				}
+			},
+		})
+
 	case literal:
 		tokenType := def.tokenType
 		setNullDenotation(tokenType, def.nullDenotation)
@@ -93,6 +120,18 @@ func define(def interface{}) {
 				return def.nullDenotation(right)
 			},
 		)
+
+	case unary:
+		define(prefix{
+			tokenType:    def.tokenType,
+			bindingPower: def.bindingPower,
+			nullDenotation: func(right ast.Expression) ast.Expression {
+				return &ast.UnaryExpression{
+					Operation:  def.operation,
+					Expression: right,
+				}
+			},
+		})
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -131,65 +170,47 @@ func setLeftDenotation(tokenType lexer.TokenType, leftDenotation leftDenotationF
 
 func init() {
 
-	define(infix{
-		tokenType:        lexer.TokenPlus,
-		leftBindingPower: 110,
-		leftDenotation: func(left, right ast.Expression) ast.Expression {
-			return &ast.BinaryExpression{
-				Operation: ast.OperationPlus,
-				Left:      left,
-				Right:     right,
-			}
-		},
+	define(binary{
+		tokenType:        lexer.TokenLess,
+		leftBindingPower: 60,
+		operation:        ast.OperationLess,
 	})
 
-	define(infix{
-		tokenType:        lexer.TokenMinus,
-		leftBindingPower: 110,
-		leftDenotation: func(left, right ast.Expression) ast.Expression {
-			return &ast.BinaryExpression{
-				Operation: ast.OperationMinus,
-				Left:      left,
-				Right:     right,
-			}
-		},
+	define(binary{
+		tokenType:        lexer.TokenGreater,
+		leftBindingPower: 60,
+		operation:        ast.OperationGreater,
 	})
 
-	define(infix{
-		tokenType:        lexer.TokenStar,
-		leftBindingPower: 120,
-		leftDenotation: func(left, right ast.Expression) ast.Expression {
-			return &ast.BinaryExpression{
-				Operation: ast.OperationMul,
-				Left:      left,
-				Right:     right,
-			}
-		},
-	})
-
-	define(infix{
-		tokenType:        lexer.TokenSlash,
-		leftBindingPower: 120,
-		leftDenotation: func(left, right ast.Expression) ast.Expression {
-			return &ast.BinaryExpression{
-				Operation: ast.OperationDiv,
-				Left:      left,
-				Right:     right,
-			}
-		},
-	})
-
-	define(infix{
+	define(binary{
 		tokenType:        lexer.TokenNilCoalesce,
 		leftBindingPower: 100,
+		operation:        ast.OperationNilCoalesce,
 		rightAssociative: true,
-		leftDenotation: func(left, right ast.Expression) ast.Expression {
-			return &ast.BinaryExpression{
-				Operation: ast.OperationNilCoalesce,
-				Left:      left,
-				Right:     right,
-			}
-		},
+	})
+
+	define(binary{
+		tokenType:        lexer.TokenPlus,
+		leftBindingPower: 110,
+		operation:        ast.OperationPlus,
+	})
+
+	define(binary{
+		tokenType:        lexer.TokenMinus,
+		leftBindingPower: 110,
+		operation:        ast.OperationMinus,
+	})
+
+	define(binary{
+		tokenType:        lexer.TokenStar,
+		leftBindingPower: 120,
+		operation:        ast.OperationMul,
+	})
+
+	define(binary{
+		tokenType:        lexer.TokenSlash,
+		leftBindingPower: 120,
+		operation:        ast.OperationDiv,
 	})
 
 	define(literal{
@@ -206,32 +227,41 @@ func init() {
 	define(literal{
 		tokenType: lexer.TokenIdentifier,
 		nullDenotation: func(_ *parser, token lexer.Token) ast.Expression {
-			return &ast.IdentifierExpression{
-				Identifier: tokenToIdentifier(token),
+			switch token.Value {
+			case "true":
+				return &ast.BoolExpression{
+					Value: true,
+				}
+
+			case "false":
+				return &ast.BoolExpression{
+					Value: false,
+				}
+
+			default:
+				return &ast.IdentifierExpression{
+					Identifier: tokenToIdentifier(token),
+				}
 			}
 		},
 	})
 
-	define(prefix{
+	define(unary{
 		tokenType:    lexer.TokenMinus,
 		bindingPower: 130,
-		nullDenotation: func(right ast.Expression) ast.Expression {
-			return &ast.UnaryExpression{
-				Operation:  ast.OperationMinus,
-				Expression: right,
-			}
-		},
+		operation:    ast.OperationMinus,
 	})
 
-	define(prefix{
+	define(unary{
 		tokenType:    lexer.TokenPlus,
 		bindingPower: 130,
-		nullDenotation: func(right ast.Expression) ast.Expression {
-			return &ast.UnaryExpression{
-				Operation:  ast.OperationPlus,
-				Expression: right,
-			}
-		},
+		operation:    ast.OperationPlus,
+	})
+
+	define(unary{
+		tokenType:    lexer.TokenLeftArrow,
+		bindingPower: 130,
+		operation:    ast.OperationMove,
 	})
 
 	defineNestedExpression()

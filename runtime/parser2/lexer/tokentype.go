@@ -44,4 +44,7 @@ const (
 	TokenQuestionMark
 	TokenComma
 	TokenColon
+	TokenLeftArrow
+	TokenLess
+	TokenGreater
 )
