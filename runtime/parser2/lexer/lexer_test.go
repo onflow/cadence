@@ -49,7 +49,7 @@ func TestLex(t *testing.T) {
 						Value: "0",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
 					},
 					{
@@ -74,7 +74,7 @@ func TestLex(t *testing.T) {
 						Value: "01",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
 						},
 					},
 					{
@@ -100,7 +100,7 @@ func TestLex(t *testing.T) {
 						Value: " ",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
 					},
 					{
@@ -108,7 +108,7 @@ func TestLex(t *testing.T) {
 						Value: "01",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
 						},
 					},
 					{
@@ -116,7 +116,7 @@ func TestLex(t *testing.T) {
 						Value: "\t  ",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
 						},
 					},
 					{
@@ -124,7 +124,7 @@ func TestLex(t *testing.T) {
 						Value: "10",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
-							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
 						},
 					},
 					{
@@ -148,7 +148,7 @@ func TestLex(t *testing.T) {
 						Type: TokenParenOpen,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
 					},
 					{
@@ -156,7 +156,7 @@ func TestLex(t *testing.T) {
 						Value: "2",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
 						},
 					},
 					{
@@ -164,14 +164,14 @@ func TestLex(t *testing.T) {
 						Value: " ",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
 						},
 					},
 					{
 						Type: TokenPlus,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 						},
 					},
 					{
@@ -179,7 +179,7 @@ func TestLex(t *testing.T) {
 						Value: " ",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
 						},
 					},
 					{
@@ -187,14 +187,14 @@ func TestLex(t *testing.T) {
 						Value: "3",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
 						},
 					},
 					{
 						Type: TokenParenClose,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
-							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
 						},
 					},
 					{
@@ -202,14 +202,14 @@ func TestLex(t *testing.T) {
 						Value: " ",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
-							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
 						},
 					},
 					{
 						Type: TokenStar,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
-							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
 						},
 					},
 					{
@@ -217,7 +217,7 @@ func TestLex(t *testing.T) {
 						Value: " ",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
-							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
 						},
 					},
 					{
@@ -225,7 +225,7 @@ func TestLex(t *testing.T) {
 						Value: "4",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
-							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
 						},
 					},
 					{
@@ -249,7 +249,7 @@ func TestLex(t *testing.T) {
 						Type: TokenParenOpen,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
 					},
 					{
@@ -257,7 +257,7 @@ func TestLex(t *testing.T) {
 						Value: "2",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
 						},
 					},
 					{
@@ -265,14 +265,14 @@ func TestLex(t *testing.T) {
 						Value: " ",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
 						},
 					},
 					{
 						Type: TokenMinus,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 						},
 					},
 					{
@@ -280,7 +280,7 @@ func TestLex(t *testing.T) {
 						Value: " ",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
 						},
 					},
 					{
@@ -288,14 +288,14 @@ func TestLex(t *testing.T) {
 						Value: "3",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
 						},
 					},
 					{
 						Type: TokenParenClose,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
-							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
 						},
 					},
 					{
@@ -303,14 +303,14 @@ func TestLex(t *testing.T) {
 						Value: " ",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
-							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
 						},
 					},
 					{
 						Type: TokenSlash,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
-							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
 						},
 					},
 					{
@@ -318,7 +318,7 @@ func TestLex(t *testing.T) {
 						Value: " ",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
-							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
 						},
 					},
 					{
@@ -326,7 +326,7 @@ func TestLex(t *testing.T) {
 						Value: "4",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
-							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
 						},
 					},
 					{
@@ -351,7 +351,7 @@ func TestLex(t *testing.T) {
 						Value: "1",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
 					},
 					{
@@ -359,7 +359,7 @@ func TestLex(t *testing.T) {
 						Value: " \n  ",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 2, Column: 2, Offset: 5},
+							EndPos:   ast.Position{Line: 2, Column: 1, Offset: 4},
 						},
 					},
 					{
@@ -367,7 +367,7 @@ func TestLex(t *testing.T) {
 						Value: "2",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 2, Column: 2, Offset: 5},
-							EndPos:   ast.Position{Line: 2, Column: 3, Offset: 6},
+							EndPos:   ast.Position{Line: 2, Column: 2, Offset: 5},
 						},
 					},
 					{
@@ -375,7 +375,7 @@ func TestLex(t *testing.T) {
 						Value: "\n",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 2, Column: 3, Offset: 6},
-							EndPos:   ast.Position{Line: 3, Column: 0, Offset: 7},
+							EndPos:   ast.Position{Line: 2, Column: 3, Offset: 6},
 						},
 					},
 					{
@@ -400,7 +400,7 @@ func TestLex(t *testing.T) {
 						Value: "1",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
 					},
 					{
@@ -408,14 +408,14 @@ func TestLex(t *testing.T) {
 						Value: " ",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
 						},
 					},
 					{
 						Type: TokenNilCoalesce,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 						},
 					},
 					{
@@ -423,7 +423,7 @@ func TestLex(t *testing.T) {
 						Value: " ",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
 						},
 					},
 					{
@@ -431,7 +431,7 @@ func TestLex(t *testing.T) {
 						Value: "2",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
 						},
 					},
 					{
@@ -456,7 +456,7 @@ func TestLex(t *testing.T) {
 						Value: "test",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 						},
 					},
 					{
@@ -481,7 +481,7 @@ func TestLex(t *testing.T) {
 						Value: "_test_123",
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
 						},
 					},
 					{
@@ -505,21 +505,21 @@ func TestLex(t *testing.T) {
 						Type: TokenColon,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
 					},
 					{
 						Type: TokenComma,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
 						},
 					},
 					{
 						Type: TokenQuestionMark,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
 						},
 					},
 					{
@@ -543,21 +543,21 @@ func TestLex(t *testing.T) {
 						Type: TokenBracketOpen,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
 					},
 					{
 						Type: TokenBraceClose,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
 						},
 					},
 					{
 						Type: TokenBracketClose,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
 						},
 					},
 
@@ -565,7 +565,7 @@ func TestLex(t *testing.T) {
 						Type: TokenBraceOpen,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
-							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 						},
 					},
 					{
@@ -589,21 +589,21 @@ func TestLex(t *testing.T) {
 						Type: TokenLess,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
 					},
 					{
 						Type: TokenGreater,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
-							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
 						},
 					},
 					{
 						Type: TokenLeftArrow,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 						},
 					},
 					{
