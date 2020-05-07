@@ -86,9 +86,9 @@ type testRuntimeInterface struct {
 	generateUUID       func() uint64
 	computationLimit   uint64
 	decodeArgument     func(b []byte, t cadence.Type) (cadence.Value, error)
-	programParsed      func(duration time.Duration)
-	programChecked     func(duration time.Duration)
-	programInterpreted func(duration time.Duration)
+	programParsed      func(location ast.Location, duration time.Duration)
+	programChecked     func(location ast.Location, duration time.Duration)
+	programInterpreted func(location ast.Location, duration time.Duration)
 	valueEncoded       func(duration time.Duration)
 	valueDecoded       func(duration time.Duration)
 }
@@ -173,25 +173,25 @@ func (i *testRuntimeInterface) DecodeArgument(b []byte, t cadence.Type) (cadence
 	return i.decodeArgument(b, t)
 }
 
-func (i *testRuntimeInterface) ProgramParsed(duration time.Duration) {
+func (i *testRuntimeInterface) ProgramParsed(location ast.Location, duration time.Duration) {
 	if i.programParsed == nil {
 		return
 	}
-	i.programParsed(duration)
+	i.programParsed(location, duration)
 }
 
-func (i *testRuntimeInterface) ProgramChecked(duration time.Duration) {
+func (i *testRuntimeInterface) ProgramChecked(location ast.Location, duration time.Duration) {
 	if i.programChecked == nil {
 		return
 	}
-	i.programChecked(duration)
+	i.programChecked(location, duration)
 }
 
-func (i *testRuntimeInterface) ProgramInterpreted(duration time.Duration) {
+func (i *testRuntimeInterface) ProgramInterpreted(location ast.Location, duration time.Duration) {
 	if i.programInterpreted == nil {
 		return
 	}
-	i.programInterpreted(duration)
+	i.programInterpreted(location, duration)
 }
 
 func (i *testRuntimeInterface) ValueEncoded(duration time.Duration) {
@@ -3310,70 +3310,150 @@ func TestRuntimeComputationLimit(t *testing.T) {
 func TestRuntimeMetrics(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
+	imported1Location := StringLocation("imported1")
+
+	importedScript1 := []byte(`
+      pub fun generate(): [Int] {
+        return [1, 2, 3]
+      }
+    `)
+
+	imported2Location := StringLocation("imported2")
+
+	importedScript2 := []byte(`
+      pub fun getPath(): Path {
+        return /storage/foo
+      }
+    `)
+
 	script1 := []byte(`
+      import "imported1"
+
       transaction {
           prepare(signer: AuthAccount) {
-              signer.save([1, 2, 3], to: /storage/foo)
+              signer.save(generate(), to: /storage/foo)
           }
           execute {}
       }
     `)
 
 	script2 := []byte(`
+      import "imported2"
+
       transaction {
           prepare(signer: AuthAccount) {
-              signer.load<[Int]>(from: /storage/foo)
+              signer.load<[Int]>(from: getPath())
           }
           execute {}
       }
     `)
 
-	var programParsedReports int
-	var programCheckedReports int
-	var programInterpretedReports int
-	var valueEncodedReports int
-	var valueDecodedReports int
+	storage := newTestStorage()
 
-	runtimeInterface := &testRuntimeInterface{
-		storage: newTestStorage(),
-		getSigningAccounts: func() []Address {
-			return []Address{{42}}
-		},
-		programParsed: func(duration time.Duration) {
-			programParsedReports++
-		},
-		programChecked: func(duration time.Duration) {
-			programCheckedReports++
-		},
-		programInterpreted: func(duration time.Duration) {
-			programInterpretedReports++
-		},
-		valueEncoded: func(duration time.Duration) {
-			valueEncodedReports++
-		},
-		valueDecoded: func(duration time.Duration) {
-			valueDecodedReports++
-		},
+	type reports struct {
+		programParsed      map[ast.Location]int
+		programChecked     map[ast.Location]int
+		programInterpreted map[ast.Location]int
+		valueEncoded       int
+		valueDecoded       int
 	}
 
-	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, utils.TestLocation)
+	newRuntimeInterface := func() (runtimeInterface Interface, r *reports) {
+
+		r = &reports{
+			programParsed:      map[ast.Location]int{},
+			programChecked:     map[ast.Location]int{},
+			programInterpreted: map[ast.Location]int{},
+		}
+
+		runtimeInterface = &testRuntimeInterface{
+			storage: storage,
+			getSigningAccounts: func() []Address {
+				return []Address{{42}}
+			},
+			resolveImport: func(location Location) (bytes []byte, err error) {
+				switch location {
+				case imported1Location:
+					return importedScript1, nil
+				case imported2Location:
+					return importedScript2, nil
+				default:
+					return nil, fmt.Errorf("unknown import location: %s", location)
+				}
+			},
+			programParsed: func(location ast.Location, duration time.Duration) {
+				r.programParsed[location]++
+			},
+			programChecked: func(location ast.Location, duration time.Duration) {
+				r.programChecked[location]++
+			},
+			programInterpreted: func(location ast.Location, duration time.Duration) {
+				r.programInterpreted[location]++
+			},
+			valueEncoded: func(duration time.Duration) {
+				r.valueEncoded++
+			},
+			valueDecoded: func(duration time.Duration) {
+				r.valueDecoded++
+			},
+		}
+
+		return
+	}
+
+	i1, r1 := newRuntimeInterface()
+
+	err := runtime.ExecuteTransaction(script1, nil, i1, utils.TestLocation)
 	require.NoError(t, err)
 
-	assert.Equal(t, 1, programParsedReports)
-	assert.Equal(t, 1, programCheckedReports)
-	assert.Equal(t, 1, programInterpretedReports)
-	assert.Equal(t, 1, valueEncodedReports)
-	assert.Equal(t, 0, valueDecodedReports)
+	assert.Equal(t,
+		map[ast.Location]int{
+			utils.TestLocation: 1,
+			imported1Location:  1,
+		},
+		r1.programParsed,
+	)
+	assert.Equal(t,
+		map[ast.Location]int{
+			utils.TestLocation: 1,
+			imported1Location:  1,
+		},
+		r1.programChecked,
+	)
+	assert.Equal(t,
+		map[ast.Location]int{
+			utils.TestLocation: 1,
+		},
+		r1.programInterpreted,
+	)
+	assert.Equal(t, 1, r1.valueEncoded)
+	assert.Equal(t, 0, r1.valueDecoded)
 
-	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, utils.TestLocation)
+	i2, r2 := newRuntimeInterface()
+
+	err = runtime.ExecuteTransaction(script2, nil, i2, utils.TestLocation)
 	require.NoError(t, err)
 
-	require.NoError(t, err)
-
-	assert.Equal(t, 2, programParsedReports)
-	assert.Equal(t, 2, programCheckedReports)
-	assert.Equal(t, 2, programInterpretedReports)
-	assert.Equal(t, 1, valueEncodedReports)
-	assert.Equal(t, 1, valueDecodedReports)
-
+	assert.Equal(t,
+		map[ast.Location]int{
+			utils.TestLocation: 1,
+			imported2Location:  1,
+		},
+		r2.programParsed,
+	)
+	assert.Equal(t,
+		map[ast.Location]int{
+			utils.TestLocation: 1,
+			imported2Location:  1,
+		},
+		r2.programChecked,
+	)
+	assert.Equal(t,
+		map[ast.Location]int{
+			utils.TestLocation: 1,
+		},
+		r2.programInterpreted,
+	)
+	assert.Equal(t, 0, r2.valueEncoded)
+	assert.Equal(t, 1, r2.valueDecoded)
 }

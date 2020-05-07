@@ -94,6 +94,7 @@ type Checker struct {
 	currentMemberExpression            *ast.MemberExpression
 	validTopLevelDeclarationsHandler   func(ast.Location) []common.DeclarationKind
 	beforeExtractor                    *BeforeExtractor
+	checkHandler                       CheckHandlerFunc
 }
 
 type Option func(*Checker) error
@@ -151,6 +152,18 @@ func WithValidTopLevelDeclarationsHandler(handler func(location ast.Location) []
 func WithAllCheckers(allCheckers map[ast.LocationID]*Checker) Option {
 	return func(checker *Checker) error {
 		checker.SetAllCheckers(allCheckers)
+		return nil
+	}
+}
+
+type CheckHandlerFunc func(location ast.Location, check func())
+
+// WithCheckHandler returns a checker option which sets
+// the given function as the handler for the checking of the program.
+//
+func WithCheckHandler(handler CheckHandlerFunc) Option {
+	return func(checker *Checker) error {
+		checker.checkHandler = handler
 		return nil
 	}
 }
@@ -293,7 +306,14 @@ func (checker *Checker) IsChecked() bool {
 func (checker *Checker) Check() error {
 	if !checker.IsChecked() {
 		checker.errors = nil
-		checker.Program.Accept(checker)
+		check := func() {
+			checker.Program.Accept(checker)
+		}
+		if checker.checkHandler != nil {
+			checker.checkHandler(checker.Location, check)
+		} else {
+			check()
+		}
 		checker.isChecked = true
 	}
 	err := checker.CheckerError()

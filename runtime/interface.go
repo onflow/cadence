@@ -63,9 +63,9 @@ type Interface interface {
 }
 
 type Metrics interface {
-	ProgramParsed(duration time.Duration)
-	ProgramChecked(duration time.Duration)
-	ProgramInterpreted(duration time.Duration)
+	ProgramParsed(location ast.Location, duration time.Duration)
+	ProgramChecked(location ast.Location, duration time.Duration)
+	ProgramInterpreted(location ast.Location, duration time.Duration)
 	ValueEncoded(duration time.Duration)
 	ValueDecoded(duration time.Duration)
 }
