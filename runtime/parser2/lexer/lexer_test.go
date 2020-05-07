@@ -581,4 +581,42 @@ func TestLex(t *testing.T) {
 		})
 	})
 
+	t.Run("less than, greater than, and left arrow", func(t *testing.T) {
+		withTokens(Lex("<><-"), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type: TokenLess,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					{
+						Type: TokenGreater,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					{
+						Type: TokenLeftArrow,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
+
 }

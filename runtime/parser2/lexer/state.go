@@ -30,10 +30,6 @@ func rootState(l *lexer) stateFn {
 	case EOF:
 		l.emitType(TokenEOF)
 		return nil
-	case ' ', '\t', '\n':
-		return spaceState
-	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-		return numberState
 	case '+':
 		l.emitType(TokenPlus)
 	case '-':
@@ -42,12 +38,6 @@ func rootState(l *lexer) stateFn {
 		l.emitType(TokenStar)
 	case '/':
 		l.emitType(TokenSlash)
-	case '?':
-		if l.acceptOne('?') {
-			l.emitType(TokenNilCoalesce)
-		} else {
-			l.emitType(TokenQuestionMark)
-		}
 	case '(':
 		l.emitType(TokenParenOpen)
 	case ')':
@@ -64,9 +54,26 @@ func rootState(l *lexer) stateFn {
 		l.emitType(TokenComma)
 	case ':':
 		l.emitType(TokenColon)
+	case '>':
+		l.emitType(TokenGreater)
 	case '_':
 		return identifierState
-
+	case ' ', '\t', '\n':
+		return spaceState
+	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+		return numberState
+	case '?':
+		if l.acceptOne('?') {
+			l.emitType(TokenNilCoalesce)
+		} else {
+			l.emitType(TokenQuestionMark)
+		}
+	case '<':
+		if l.acceptOne('-') {
+			l.emitType(TokenLeftArrow)
+		} else {
+			l.emitType(TokenLess)
+		}
 	default:
 		switch {
 		case r >= 'a' && r <= 'z' ||
