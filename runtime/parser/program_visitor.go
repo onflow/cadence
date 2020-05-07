@@ -1519,15 +1519,11 @@ func (v *ProgramVisitor) VisitUnaryExpression(ctx *UnaryExpressionContext) inter
 	operation := ctx.UnaryOp(0).Accept(v).(ast.Operation)
 
 	startPosition := PositionFromToken(ctx.GetStart())
-	endPosition := expression.EndPosition()
 
 	return &ast.UnaryExpression{
 		Operation:  operation,
 		Expression: expression,
-		Range: ast.Range{
-			StartPos: startPosition,
-			EndPos:   endPosition,
-		},
+		StartPos:   startPosition,
 	}
 }
 

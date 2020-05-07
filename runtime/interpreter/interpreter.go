@@ -1751,10 +1751,7 @@ func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpres
 			panic(&unsupportedOperation{
 				kind:      common.OperationKindUnary,
 				operation: expression.Operation,
-				Range: ast.Range{
-					StartPos: expression.StartPos,
-					EndPos:   expression.EndPos,
-				},
+				Range:     ast.NewRangeFromPositioned(expression),
 			})
 		})
 }
