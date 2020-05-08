@@ -244,10 +244,21 @@ func (l *lexer) scanNumber() {
 	})
 }
 
-func (l *lexer) scanSpace() {
+func (l *lexer) scanSpace() (containsNewline bool) {
 	// lookahead is already lexed.
 	// parse more, if any
-	l.acceptZeroOrMore(" \t\n")
+	l.acceptWhile(func(r rune) bool {
+		switch r {
+		case ' ', '\t':
+			return true
+		case '\n':
+			containsNewline = true
+			return true
+		default:
+			return false
+		}
+	})
+	return
 }
 
 func (l *lexer) acceptAll(string string) bool {

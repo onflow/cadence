@@ -16,40 +16,17 @@
  * limitations under the License.
  */
 
-package lexer
+package parser2
 
-//go:generate stringer -type=TokenType -trimprefix Token
+type trampoline func() []trampoline
 
-type TokenType uint8
+func runTrampoline(start trampoline) {
+	ts := []trampoline{start}
 
-const EOF rune = -1
-
-const (
-	TokenError TokenType = iota
-	TokenEOF
-	TokenSpace
-	TokenNumber
-	TokenIdentifier
-	TokenString
-	TokenPlus
-	TokenMinus
-	TokenStar
-	TokenSlash
-	TokenNilCoalesce
-	TokenParenOpen
-	TokenParenClose
-	TokenBraceOpen
-	TokenBraceClose
-	TokenBracketOpen
-	TokenBracketClose
-	TokenQuestionMark
-	TokenComma
-	TokenColon
-	TokenSemicolon
-	TokenLeftArrow
-	TokenLess
-	TokenGreater
-	TokenBlockCommentStart
-	TokenBlockCommentContent
-	TokenBlockCommentEnd
-)
+	for len(ts) > 0 {
+		var t trampoline
+		t, ts = ts[0], ts[1:]
+		more := t()
+		ts = append(ts, more...)
+	}
+}

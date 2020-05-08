@@ -310,10 +310,10 @@ func defineArrayExpression() {
 	leftBindingPowers[lexer.TokenBracketClose] = lowestBindingPower
 	nullDenotations[lexer.TokenBracketOpen] = func(p *parser, startToken lexer.Token) ast.Expression {
 		var values []ast.Expression
-		for p.current.Type != lexer.TokenBracketClose {
+		for !p.current.Is(lexer.TokenBracketClose) {
 			value := parseExpression(p, lowestBindingPower)
 			values = append(values, value)
-			if p.current.Type != lexer.TokenComma {
+			if !p.current.Is(lexer.TokenComma) {
 				break
 			}
 			p.mustOne(lexer.TokenComma)
@@ -334,7 +334,7 @@ func defineDictionaryExpression() {
 	leftBindingPowers[lexer.TokenBraceClose] = lowestBindingPower
 	nullDenotations[lexer.TokenBraceOpen] = func(p *parser, startToken lexer.Token) ast.Expression {
 		var entries []ast.Entry
-		for p.current.Type != lexer.TokenBraceClose {
+		for !p.current.Is(lexer.TokenBraceClose) {
 			key := parseExpression(p, lowestBindingPower)
 			p.mustOne(lexer.TokenColon)
 			value := parseExpression(p, lowestBindingPower)
@@ -342,7 +342,7 @@ func defineDictionaryExpression() {
 				Key:   key,
 				Value: value,
 			})
-			if p.current.Type != lexer.TokenComma {
+			if !p.current.Is(lexer.TokenComma) {
 				break
 			}
 			p.mustOne(lexer.TokenComma)
@@ -400,22 +400,22 @@ func tokenToIdentifier(identifier lexer.Token) ast.Identifier {
 }
 
 func parseExpression(p *parser, rightBindingPower int) ast.Expression {
-	p.skipSpaceAndComments()
+	p.skipSpaceAndComments(true)
 	t := p.current
 	p.next()
-	p.skipSpaceAndComments()
+	p.skipSpaceAndComments(true)
 
 	left := applyNullDenotation(p, t)
 	if left == nil {
 		return nil
 	}
 
-	p.skipSpaceAndComments()
+	p.skipSpaceAndComments(true)
 
 	for rightBindingPower < leftBindingPower(p.current.Type) {
 		t = p.current
 		p.next()
-		p.skipSpaceAndComments()
+		p.skipSpaceAndComments(true)
 
 		left = applyLeftDenotation(p, t.Type, left)
 	}
