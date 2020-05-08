@@ -62,6 +62,8 @@ func rootState(l *lexer) stateFn {
 		return spaceState
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		return numberState
+	case '"':
+		return stringState
 	case '?':
 		if l.acceptOne('?') {
 			l.emitType(TokenNilCoalesce)
@@ -108,5 +110,11 @@ func spaceState(l *lexer) stateFn {
 func identifierState(l *lexer) stateFn {
 	l.scanIdentifier()
 	l.emitValue(TokenIdentifier)
+	return rootState
+}
+
+func stringState(l *lexer) stateFn {
+	l.scanString('"')
+	l.emitValue(TokenString)
 	return rootState
 }

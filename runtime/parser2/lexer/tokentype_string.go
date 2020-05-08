@@ -13,28 +13,29 @@ func _() {
 	_ = x[TokenSpace-2]
 	_ = x[TokenNumber-3]
 	_ = x[TokenIdentifier-4]
-	_ = x[TokenPlus-5]
-	_ = x[TokenMinus-6]
-	_ = x[TokenStar-7]
-	_ = x[TokenSlash-8]
-	_ = x[TokenNilCoalesce-9]
-	_ = x[TokenParenOpen-10]
-	_ = x[TokenParenClose-11]
-	_ = x[TokenBraceOpen-12]
-	_ = x[TokenBraceClose-13]
-	_ = x[TokenBracketOpen-14]
-	_ = x[TokenBracketClose-15]
-	_ = x[TokenQuestionMark-16]
-	_ = x[TokenComma-17]
-	_ = x[TokenColon-18]
-	_ = x[TokenLeftArrow-19]
-	_ = x[TokenLess-20]
-	_ = x[TokenGreater-21]
+	_ = x[TokenString-5]
+	_ = x[TokenPlus-6]
+	_ = x[TokenMinus-7]
+	_ = x[TokenStar-8]
+	_ = x[TokenSlash-9]
+	_ = x[TokenNilCoalesce-10]
+	_ = x[TokenParenOpen-11]
+	_ = x[TokenParenClose-12]
+	_ = x[TokenBraceOpen-13]
+	_ = x[TokenBraceClose-14]
+	_ = x[TokenBracketOpen-15]
+	_ = x[TokenBracketClose-16]
+	_ = x[TokenQuestionMark-17]
+	_ = x[TokenComma-18]
+	_ = x[TokenColon-19]
+	_ = x[TokenLeftArrow-20]
+	_ = x[TokenLess-21]
+	_ = x[TokenGreater-22]
 }
 
-const _TokenType_name = "ErrorEOFSpaceNumberIdentifierPlusMinusStarSlashNilCoalesceParenOpenParenCloseBraceOpenBraceCloseBracketOpenBracketCloseQuestionMarkCommaColonLeftArrowLessGreater"
+const _TokenType_name = "ErrorEOFSpaceNumberIdentifierStringPlusMinusStarSlashNilCoalesceParenOpenParenCloseBraceOpenBraceCloseBracketOpenBracketCloseQuestionMarkCommaColonLeftArrowLessGreater"
 
-var _TokenType_index = [...]uint8{0, 5, 8, 13, 19, 29, 33, 38, 42, 47, 58, 67, 77, 86, 96, 107, 119, 131, 136, 141, 150, 154, 161}
+var _TokenType_index = [...]uint8{0, 5, 8, 13, 19, 29, 35, 39, 44, 48, 53, 64, 73, 83, 92, 102, 113, 125, 137, 142, 147, 156, 160, 167}
 
 func (i TokenType) String() string {
 	if i >= TokenType(len(_TokenType_index)-1) {

@@ -21,6 +21,8 @@ package parser2
 import (
 	"fmt"
 	"math/big"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
@@ -107,8 +109,8 @@ func define(def interface{}) {
 
 	case literal:
 		tokenType := def.tokenType
-		setNullDenotation(tokenType, def.nullDenotation)
 		setLeftBindingPower(tokenType, lowestBindingPower)
+		setNullDenotation(tokenType, def.nullDenotation)
 
 	case prefix:
 		tokenType := def.tokenType
@@ -246,6 +248,18 @@ func init() {
 				return &ast.IdentifierExpression{
 					Identifier: tokenToIdentifier(token),
 				}
+			}
+		},
+	})
+
+	define(literal{
+		tokenType: lexer.TokenString,
+		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
+			parsedString, errs := parseStringLiteral(token.Value.(string))
+			p.report(errs...)
+			return &ast.StringExpression{
+				Value: parsedString,
+				Range: token.Range,
 			}
 		},
 	})
@@ -427,4 +441,185 @@ func applyLeftDenotation(p *parser, tokenType lexer.TokenType, left ast.Expressi
 		panic(fmt.Errorf("missing left denotation for token type: %v", tokenType))
 	}
 	return leftDenotation(p, left)
+}
+
+// parseStringLiteral parses a whole string literal, including start and end quotes
+//
+func parseStringLiteral(s string) (result string, errs []error) {
+	report := func(err error) {
+		errs = append(errs, err)
+	}
+
+	l := len(s)
+	if l == 0 {
+		report(fmt.Errorf("missing start of string literal: expected '\"'"))
+		return
+	}
+
+	if l >= 1 {
+		first := s[0]
+		if first != '"' {
+			report(fmt.Errorf("invalid start of string literal: expected '\"', got %q", first))
+		}
+	}
+
+	missingEnd := false
+	endOffset := l
+	if l >= 2 {
+		last := s[l-1]
+		if last != '"' {
+			missingEnd = true
+		} else {
+			endOffset = l - 1
+		}
+	} else {
+		missingEnd = true
+	}
+
+	var innerErrs []error
+	result, innerErrs = parseStringLiteralContent(s[1:endOffset])
+	errs = append(errs, innerErrs...)
+
+	if missingEnd {
+		report(fmt.Errorf("invalid end of string literal: missing '\"'"))
+	}
+
+	return
+}
+
+// parseStringLiteralContent parses the string literal contents, excluding start and end quotes
+//
+func parseStringLiteralContent(s string) (result string, errs []error) {
+
+	var builder strings.Builder
+	defer func() {
+		result = builder.String()
+	}()
+
+	report := func(err error) {
+		errs = append(errs, err)
+	}
+
+	l := len(s)
+
+	var r rune
+	i := 0
+
+	atEnd := i >= l
+
+	advance := func() {
+		if atEnd {
+			r = lexer.EOF
+			return
+		}
+
+		var w int
+		r, w = utf8.DecodeRuneInString(s[i:])
+		i += w
+
+		atEnd = i >= l
+	}
+
+	for i < l {
+		advance()
+
+		if r != '\\' {
+			builder.WriteRune(r)
+			continue
+		}
+
+		if atEnd {
+			report(fmt.Errorf("incomplete escape sequence: missing character after escape character"))
+			return
+		}
+
+		advance()
+
+		switch r {
+		case '0':
+			builder.WriteByte(0)
+		case 'n':
+			builder.WriteByte('\n')
+		case 'r':
+			builder.WriteByte('\r')
+		case 't':
+			builder.WriteByte('\t')
+		case '"':
+			builder.WriteByte('"')
+		case '\'':
+			builder.WriteByte('\'')
+		case '\\':
+			builder.WriteByte('\\')
+		case 'u':
+			if atEnd {
+				report(fmt.Errorf(
+					"incomplete Unicode escape sequence: missing character '{' after escape character",
+				))
+				return
+			}
+			advance()
+			if r != '{' {
+				report(fmt.Errorf("invalid Unicode escape sequence: expected '{', got %q", r))
+				continue
+			}
+
+			var r2 rune
+			valid := true
+			j := 0
+			for ; !atEnd && j < 8; j++ {
+				advance()
+				if r == '}' {
+					break
+				}
+
+				d := parseHex(r)
+
+				if d < 0 {
+					report(fmt.Errorf("invalid Unicode escape sequence: expected hex digit, got %q", r))
+					valid = false
+				} else {
+					r2 = r2<<4 | d
+				}
+			}
+
+			if j > 0 && valid {
+				builder.WriteRune(r2)
+			}
+
+			if r != '}' {
+				advance()
+			}
+
+			switch r {
+			case '}':
+				break
+			case lexer.EOF:
+				report(fmt.Errorf(
+					"incomplete Unicode escape sequence: missing character '}' after escape character",
+				))
+			default:
+				report(fmt.Errorf("incomplete Unicode escape sequence: expected '}', got %q", r))
+			}
+
+		default:
+			// TODO: include index/column in error
+			report(fmt.Errorf("invalid escape character: %q", r))
+			// skip invalid escape character, don't write to result
+		}
+	}
+
+	return
+}
+
+func parseHex(r rune) rune {
+	switch {
+	case '0' <= r && r <= '9':
+		return r - '0'
+	case 'a' <= r && r <= 'f':
+		return r - 'a' + 10
+	case 'A' <= r && r <= 'F':
+		return r - 'A' + 10
+	}
+
+	return -1
 }
