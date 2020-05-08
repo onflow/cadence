@@ -97,7 +97,7 @@ func TestLex(t *testing.T) {
 					{
 
 						Type:  TokenSpace,
-						Value: " ",
+						Value: Space{" ", false},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -113,7 +113,7 @@ func TestLex(t *testing.T) {
 					},
 					{
 						Type:  TokenSpace,
-						Value: "\t  ",
+						Value: Space{"\t  ", false},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
 							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
@@ -161,7 +161,7 @@ func TestLex(t *testing.T) {
 					},
 					{
 						Type:  TokenSpace,
-						Value: " ",
+						Value: Space{" ", false},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
@@ -176,7 +176,7 @@ func TestLex(t *testing.T) {
 					},
 					{
 						Type:  TokenSpace,
-						Value: " ",
+						Value: Space{" ", false},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -199,7 +199,7 @@ func TestLex(t *testing.T) {
 					},
 					{
 						Type:  TokenSpace,
-						Value: " ",
+						Value: Space{" ", false},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
 							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
@@ -214,7 +214,7 @@ func TestLex(t *testing.T) {
 					},
 					{
 						Type:  TokenSpace,
-						Value: " ",
+						Value: Space{" ", false},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
 							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
@@ -262,7 +262,7 @@ func TestLex(t *testing.T) {
 					},
 					{
 						Type:  TokenSpace,
-						Value: " ",
+						Value: Space{" ", false},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
@@ -277,7 +277,7 @@ func TestLex(t *testing.T) {
 					},
 					{
 						Type:  TokenSpace,
-						Value: " ",
+						Value: Space{" ", false},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -300,7 +300,7 @@ func TestLex(t *testing.T) {
 					},
 					{
 						Type:  TokenSpace,
-						Value: " ",
+						Value: Space{" ", false},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
 							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
@@ -315,7 +315,7 @@ func TestLex(t *testing.T) {
 					},
 					{
 						Type:  TokenSpace,
-						Value: " ",
+						Value: Space{" ", false},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
 							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
@@ -356,7 +356,7 @@ func TestLex(t *testing.T) {
 					},
 					{
 						Type:  TokenSpace,
-						Value: " \n  ",
+						Value: Space{" \n  ", true},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 							EndPos:   ast.Position{Line: 2, Column: 1, Offset: 4},
@@ -372,7 +372,7 @@ func TestLex(t *testing.T) {
 					},
 					{
 						Type:  TokenSpace,
-						Value: "\n",
+						Value: Space{"\n", true},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 2, Column: 3, Offset: 6},
 							EndPos:   ast.Position{Line: 2, Column: 3, Offset: 6},
@@ -405,7 +405,7 @@ func TestLex(t *testing.T) {
 					},
 					{
 						Type:  TokenSpace,
-						Value: " ",
+						Value: Space{" ", false},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -420,7 +420,7 @@ func TestLex(t *testing.T) {
 					},
 					{
 						Type:  TokenSpace,
-						Value: " ",
+						Value: Space{" ", false},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -497,8 +497,8 @@ func TestLex(t *testing.T) {
 		})
 	})
 
-	t.Run("colon, comma, question mark", func(t *testing.T) {
-		withTokens(Lex(":,?"), func(tokens []Token) {
+	t.Run("colon, comma, semicolon, question mark", func(t *testing.T) {
+		withTokens(Lex(":,;?"), func(tokens []Token) {
 			assert.Equal(t,
 				[]Token{
 					{
@@ -516,17 +516,24 @@ func TestLex(t *testing.T) {
 						},
 					},
 					{
-						Type: TokenQuestionMark,
+						Type: TokenSemicolon,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
 						},
 					},
 					{
-						Type: TokenEOF,
+						Type: TokenQuestionMark,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
 							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
 						},
 					},
 				},
@@ -761,7 +768,7 @@ func TestLexString(t *testing.T) {
 					},
 					{
 						Type:  TokenSpace,
-						Value: "\n",
+						Value: Space{"\n", true},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -794,7 +801,7 @@ func TestLexString(t *testing.T) {
 					},
 					{
 						Type:  TokenSpace,
-						Value: "\n",
+						Value: Space{"\n", true},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
 							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
@@ -877,7 +884,7 @@ func TestLexString(t *testing.T) {
 					},
 					{
 						Type:  TokenSpace,
-						Value: "\n",
+						Value: Space{"\n", true},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
@@ -1011,7 +1018,7 @@ func TestLexComment(t *testing.T) {
 					},
 					{
 						Type:  TokenSpace,
-						Value: "  ",
+						Value: Space{"  ", false},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 28, Offset: 28},
 							EndPos:   ast.Position{Line: 1, Column: 29, Offset: 29},

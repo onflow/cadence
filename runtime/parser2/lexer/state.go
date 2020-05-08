@@ -51,14 +51,18 @@ func rootState(l *lexer) stateFn {
 			l.emitType(TokenBracketClose)
 		case ',':
 			l.emitType(TokenComma)
+		case ';':
+			l.emitType(TokenSemicolon)
 		case ':':
 			l.emitType(TokenColon)
 		case '>':
 			l.emitType(TokenGreater)
 		case '_':
 			return identifierState
-		case ' ', '\t', '\n':
-			return spaceState
+		case ' ', '\t':
+			return spaceState(false)
+		case '\n':
+			return spaceState(true)
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			return numberState
 		case '"':
@@ -107,10 +111,26 @@ func numberState(l *lexer) stateFn {
 	return rootState
 }
 
-func spaceState(l *lexer) stateFn {
-	l.scanSpace()
-	l.emitValue(TokenSpace)
-	return rootState
+type Space struct {
+	String          string
+	ContainsNewline bool
+}
+
+func spaceState(startIsNewline bool) stateFn {
+	return func(l *lexer) stateFn {
+		containsNewline := l.scanSpace()
+		containsNewline = containsNewline || startIsNewline
+		l.emit(
+			TokenSpace,
+			Space{
+				String:          l.word(),
+				ContainsNewline: containsNewline,
+			},
+			l.startPosition(),
+			true,
+		)
+		return rootState
+	}
 }
 
 func identifierState(l *lexer) stateFn {
