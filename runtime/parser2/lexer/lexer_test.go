@@ -618,5 +618,281 @@ func TestLex(t *testing.T) {
 			)
 		})
 	})
+}
 
+func TestLexString(t *testing.T) {
+
+	t.Run("valid, empty", func(t *testing.T) {
+		withTokens(Lex(`""`), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type:  TokenString,
+						Value: `""`,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
+
+	t.Run("valid, non-empty", func(t *testing.T) {
+		withTokens(Lex(`"test"`), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type:  TokenString,
+						Value: `"test"`,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
+
+	t.Run("valid, with valid tab escape", func(t *testing.T) {
+		withTokens(Lex(`"te\tst"`), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type:  TokenString,
+						Value: `"te\tst"`,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
+
+	t.Run("valid, with invalid escape character", func(t *testing.T) {
+		withTokens(Lex(`"te\Xst"`), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type:  TokenString,
+						Value: `"te\Xst"`,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
+
+	t.Run("valid, with valid quote escape", func(t *testing.T) {
+		withTokens(Lex(`"te\"st"`), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type:  TokenString,
+						Value: `"te\"st"`,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
+
+	t.Run("invalid, empty, not terminated at line end", func(t *testing.T) {
+		withTokens(Lex("\"\n"), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type:  TokenString,
+						Value: "\"",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					{
+						Type:  TokenSpace,
+						Value: "\n",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 0, Offset: 2},
+							EndPos:   ast.Position{Line: 2, Column: 0, Offset: 2},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
+
+	t.Run("invalid, non-empty, not terminated at line end", func(t *testing.T) {
+		withTokens(Lex("\"te\n"), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type:  TokenString,
+						Value: "\"te",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					{
+						Type:  TokenSpace,
+						Value: "\n",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 0, Offset: 4},
+							EndPos:   ast.Position{Line: 2, Column: 0, Offset: 4},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
+
+	t.Run("invalid, empty, not terminated at end of file", func(t *testing.T) {
+		withTokens(Lex("\""), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type:  TokenString,
+						Value: "\"",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
+
+	t.Run("invalid, non-empty, not terminated at end of file", func(t *testing.T) {
+		withTokens(Lex("\"te"), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type:  TokenString,
+						Value: "\"te",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
+
+	t.Run("invalid, missing escape character", func(t *testing.T) {
+		withTokens(Lex("\"\\\n"), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type:  TokenString,
+						Value: "\"\\",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					{
+						Type:  TokenSpace,
+						Value: "\n",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 0, Offset: 3},
+							EndPos:   ast.Position{Line: 2, Column: 0, Offset: 3},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
 }

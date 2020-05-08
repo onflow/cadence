@@ -64,8 +64,8 @@ func Parse(input string) (result ast.Expression, errors []error) {
 	return expr, p.errors
 }
 
-func (p *parser) report(err error) {
-	p.errors = append(p.errors, err)
+func (p *parser) report(err ...error) {
+	p.errors = append(p.errors, err...)
 }
 
 func (p *parser) next() {
@@ -73,10 +73,15 @@ func (p *parser) next() {
 	token, ok := <-p.tokens
 	if !ok {
 		// Channel closed, return EOF token.
-		p.current = lexer.Token{Type: lexer.TokenEOF}
-	} else {
-		p.current = token
+		token = lexer.Token{Type: lexer.TokenEOF}
+	} else if token.Type == lexer.TokenError {
+		// Report error token as error, skip.
+		p.report(token.Value.(error))
+		p.next()
+		return
 	}
+
+	p.current = token
 }
 
 func (p *parser) skipZeroOrOne(tokenType lexer.TokenType) {

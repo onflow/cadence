@@ -155,19 +155,15 @@ func (l *lexer) acceptOneOrMore(valid string) bool {
 	return true
 }
 
-// emitValue passes an item back to the client.
-func (l *lexer) emit(ty TokenType, val interface{}) {
+// emit writes a token to the channel.
+func (l *lexer) emit(ty TokenType, val interface{}, rangeStart ast.Position, consume bool) {
 	endPos := l.endPos()
 
 	token := Token{
 		Type:  ty,
 		Value: val,
 		Range: ast.Range{
-			StartPos: ast.Position{
-				Line:   l.startPos.line,
-				Column: l.startPos.column,
-				Offset: l.startOffset,
-			},
+			StartPos: rangeStart,
 			EndPos: ast.Position{
 				Line:   endPos.line,
 				Column: endPos.column,
@@ -176,16 +172,27 @@ func (l *lexer) emit(ty TokenType, val interface{}) {
 		},
 	}
 	l.tokens <- token
-	l.startOffset = l.endOffset
 
-	l.startPos = endPos
-	r, _ := utf8.DecodeRuneInString(l.input[l.endOffset-1:])
+	if consume {
+		l.startOffset = l.endOffset
 
-	if r == '\n' {
-		l.startPos.line++
-		l.startPos.column = 0
-	} else {
-		l.startPos.column++
+		l.startPos = endPos
+		r, _ := utf8.DecodeRuneInString(l.input[l.endOffset-1:])
+
+		if r == '\n' {
+			l.startPos.line++
+			l.startPos.column = 0
+		} else {
+			l.startPos.column++
+		}
+	}
+}
+
+func (l *lexer) startPosition() ast.Position {
+	return ast.Position{
+		Line:   l.startPos.line,
+		Column: l.startPos.column,
+		Offset: l.startOffset,
 	}
 }
 
@@ -212,15 +219,21 @@ func (l *lexer) endPos() position {
 }
 
 func (l *lexer) emitType(ty TokenType) {
-	l.emit(ty, nil)
+	l.emit(ty, nil, l.startPosition(), true)
 }
 
 func (l *lexer) emitValue(ty TokenType) {
-	l.emit(ty, l.word())
+	l.emit(ty, l.word(), l.startPosition(), true)
 }
 
 func (l *lexer) emitError(err error) {
-	l.emit(TokenError, err)
+	endPos := l.endPos()
+	rangeStart := ast.Position{
+		Line:   endPos.line,
+		Column: endPos.column,
+		Offset: l.endOffset - 1,
+	}
+	l.emit(TokenError, err, rangeStart, false)
 }
 
 func (l *lexer) scanNumber() {
@@ -235,12 +248,6 @@ func (l *lexer) scanSpace() {
 	// lookahead is already lexed.
 	// parse more, if any
 	l.acceptZeroOrMore(" \t\n")
-}
-
-func (l *lexer) mustOne(r rune) {
-	if !l.acceptOne(r) {
-		panic(fmt.Errorf("expected character: %#U", r))
-	}
 }
 
 func (l *lexer) acceptAll(string string) bool {
@@ -279,5 +286,26 @@ func (l *lexer) acceptWhile(f func(rune) bool) {
 
 		l.backupOne()
 		return
+	}
+}
+
+func (l *lexer) scanString(quote rune) {
+	r := l.next()
+	for r != quote {
+		switch r {
+		case '\n', EOF:
+			// NOTE: invalid end of string handled by parser
+			l.backupOne()
+			return
+		case '\\':
+			r = l.next()
+			switch r {
+			case '\n', EOF:
+				// NOTE: invalid end of string handled by parser
+				l.backupOne()
+				return
+			}
+		}
+		r = l.next()
 	}
 }
