@@ -30,6 +30,7 @@ const (
 	TokenSpace
 	TokenNumber
 	TokenIdentifier
+	TokenString
 	TokenPlus
 	TokenMinus
 	TokenStar
