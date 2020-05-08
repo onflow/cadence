@@ -48,4 +48,7 @@ const (
 	TokenLeftArrow
 	TokenLess
 	TokenGreater
+	TokenCommentStart
+	TokenCommentContent
+	TokenCommentEnd
 )

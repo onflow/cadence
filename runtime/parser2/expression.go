@@ -400,17 +400,22 @@ func tokenToIdentifier(identifier lexer.Token) ast.Identifier {
 }
 
 func parseExpression(p *parser, rightBindingPower int) ast.Expression {
-	p.skipZeroOrOne(lexer.TokenSpace)
+	p.skipSpaceAndComments()
 	t := p.current
 	p.next()
+	p.skipSpaceAndComments()
 
 	left := applyNullDenotation(p, t)
-	p.skipZeroOrOne(lexer.TokenSpace)
+	if left == nil {
+		return nil
+	}
+
+	p.skipSpaceAndComments()
 
 	for rightBindingPower < leftBindingPower(p.current.Type) {
 		t = p.current
 		p.next()
-		p.skipZeroOrOne(lexer.TokenSpace)
+		p.skipSpaceAndComments()
 
 		left = applyLeftDenotation(p, t.Type, left)
 	}
@@ -422,7 +427,7 @@ func applyNullDenotation(p *parser, token lexer.Token) ast.Expression {
 	tokenType := token.Type
 	nullDenotation, ok := nullDenotations[tokenType]
 	if !ok {
-		panic(fmt.Errorf("missing null denotation for token type: %v", tokenType))
+		return nil
 	}
 	return nullDenotation(p, token)
 }
