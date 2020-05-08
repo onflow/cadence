@@ -896,3 +896,138 @@ func TestLexString(t *testing.T) {
 		})
 	})
 }
+
+func TestLexComment(t *testing.T) {
+
+	t.Run("nested 1", func(t *testing.T) {
+		withTokens(Lex(`/*  // *X /* \\*  */`), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type: TokenCommentStart,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					{
+						Type:  TokenCommentContent,
+						Value: `  // *X `,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
+					},
+					{
+						Type: TokenCommentStart,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
+							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+						},
+					},
+					{
+						Type:  TokenCommentContent,
+						Value: ` \\*  `,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
+							EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
+						},
+					},
+					{
+						Type: TokenCommentEnd,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 18, Offset: 18},
+							EndPos:   ast.Position{Line: 1, Column: 19, Offset: 19},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 20, Offset: 20},
+							EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
+
+	t.Run("nested 2", func(t *testing.T) {
+		withTokens(Lex(`/* test foo /* bar */ asd */  `), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type: TokenCommentStart,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					{
+						Type:  TokenCommentContent,
+						Value: ` test foo `,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+						},
+					},
+					{
+						Type: TokenCommentStart,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
+							EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+						},
+					},
+					{
+						Type:  TokenCommentContent,
+						Value: ` bar `,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
+							EndPos:   ast.Position{Line: 1, Column: 18, Offset: 18},
+						},
+					},
+					{
+						Type: TokenCommentEnd,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 19, Offset: 19},
+							EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
+						},
+					},
+					{
+						Type:  TokenCommentContent,
+						Value: ` asd `,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 21, Offset: 21},
+							EndPos:   ast.Position{Line: 1, Column: 25, Offset: 25},
+						},
+					},
+					{
+						Type: TokenCommentEnd,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 26, Offset: 26},
+							EndPos:   ast.Position{Line: 1, Column: 27, Offset: 27},
+						},
+					},
+					{
+						Type:  TokenSpace,
+						Value: "  ",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 28, Offset: 28},
+							EndPos:   ast.Position{Line: 1, Column: 29, Offset: 29},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 30, Offset: 30},
+							EndPos:   ast.Position{Line: 1, Column: 30, Offset: 30},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
+
+}
