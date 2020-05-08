@@ -39,7 +39,7 @@ import (
 func TestParseSimpleInfixExpression(t *testing.T) {
 
 	t.Run("no spaces", func(t *testing.T) {
-		result, errs := Parse("1+2*3")
+		result, errs := ParseExpression("1+2*3")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -78,7 +78,7 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 	})
 
 	t.Run("with spaces", func(t *testing.T) {
-		result, errs := Parse("  1   +   2  *   3 ")
+		result, errs := ParseExpression("  1   +   2  *   3 ")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -117,7 +117,7 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 	})
 
 	t.Run("repeated infix, same operator, left associative", func(t *testing.T) {
-		result, errs := Parse("1 + 2 + 3")
+		result, errs := ParseExpression("1 + 2 + 3")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -156,7 +156,7 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 	})
 
 	t.Run("repeated infix, same operator, right associative", func(t *testing.T) {
-		result, errs := Parse("1 ?? 2 ?? 3")
+		result, errs := ParseExpression("1 ?? 2 ?? 3")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -198,7 +198,7 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 func TestParseAdvancedExpression(t *testing.T) {
 
 	t.Run("mixed infix and prefix", func(t *testing.T) {
-		result, errs := Parse("1 +- 2 ++ 3")
+		result, errs := ParseExpression("1 +- 2 ++ 3")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -245,7 +245,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 	})
 
 	t.Run("nested expression", func(t *testing.T) {
-		result, errs := Parse("(1 + 2) * 3")
+		result, errs := ParseExpression("(1 + 2) * 3")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -284,7 +284,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 	})
 
 	t.Run("less and greater", func(t *testing.T) {
-		result, errs := Parse("1 < 2 > 3")
+		result, errs := ParseExpression("1 < 2 > 3")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -323,7 +323,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 	})
 
 	t.Run("conditional", func(t *testing.T) {
-		result, errs := Parse("a ? b : c ? d : e")
+		result, errs := ParseExpression("a ? b : c ? d : e")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -366,7 +366,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 	})
 
 	t.Run("boolean expressions", func(t *testing.T) {
-		result, errs := Parse("true + false")
+		result, errs := ParseExpression("true + false")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -392,7 +392,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 	})
 
 	t.Run("move operator, nested", func(t *testing.T) {
-		result, errs := Parse("(<-x)")
+		result, errs := ParseExpression("(<-x)")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -415,7 +415,7 @@ func TestParseAdvancedExpression(t *testing.T) {
 func TestParseArrayExpression(t *testing.T) {
 
 	t.Run("array expression", func(t *testing.T) {
-		result, errs := Parse("[ 1,2 + 3, 4  ,  5 ]")
+		result, errs := ParseExpression("[ 1,2 + 3, 4  ,  5 ]")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -478,7 +478,7 @@ func TestParseArrayExpression(t *testing.T) {
 func TestParseDictionaryExpression(t *testing.T) {
 
 	t.Run("dictionary expression", func(t *testing.T) {
-		result, errs := Parse("{ 1:2 + 3, 4  :  5 }")
+		result, errs := ParseExpression("{ 1:2 + 3, 4  :  5 }")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -545,7 +545,7 @@ func TestParseDictionaryExpression(t *testing.T) {
 func TestParseIdentifier(t *testing.T) {
 
 	t.Run("identifier in addition", func(t *testing.T) {
-		result, errs := Parse("a + 3")
+		result, errs := ParseExpression("a + 3")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -573,7 +573,7 @@ func TestParseIdentifier(t *testing.T) {
 
 func TestParsePath(t *testing.T) {
 
-	result, errs := Parse("/foo/bar")
+	result, errs := ParseExpression("/foo/bar")
 	require.Empty(t, errs)
 
 	utils.AssertEqualWithDiff(t,
@@ -595,7 +595,7 @@ func TestParsePath(t *testing.T) {
 func TestParseString(t *testing.T) {
 
 	t.Run("valid, empty", func(t *testing.T) {
-		result, errs := Parse("\"\"")
+		result, errs := ParseExpression("\"\"")
 		assert.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -611,7 +611,7 @@ func TestParseString(t *testing.T) {
 	})
 
 	t.Run("invalid, empty, missing end at end of file", func(t *testing.T) {
-		result, errs := Parse("\"")
+		result, errs := ParseExpression("\"")
 		assert.Equal(t,
 			[]error{
 				errors.New("invalid end of string literal: missing '\"'"),
@@ -632,7 +632,7 @@ func TestParseString(t *testing.T) {
 	})
 
 	t.Run("invalid, empty, missing end at end of line", func(t *testing.T) {
-		result, errs := Parse("\"\n")
+		result, errs := ParseExpression("\"\n")
 		assert.Equal(t,
 			[]error{
 				errors.New("invalid end of string literal: missing '\"'"),
@@ -653,7 +653,7 @@ func TestParseString(t *testing.T) {
 	})
 
 	t.Run("invalid, non-empty, missing end at end of file", func(t *testing.T) {
-		result, errs := Parse("\"t")
+		result, errs := ParseExpression("\"t")
 		assert.Equal(t,
 			[]error{
 				errors.New("invalid end of string literal: missing '\"'"),
@@ -674,7 +674,7 @@ func TestParseString(t *testing.T) {
 	})
 
 	t.Run("invalid, non-empty, missing end at end of line", func(t *testing.T) {
-		result, errs := Parse("\"t\n")
+		result, errs := ParseExpression("\"t\n")
 		assert.Equal(t,
 			[]error{
 				errors.New("invalid end of string literal: missing '\"'"),
@@ -695,7 +695,7 @@ func TestParseString(t *testing.T) {
 	})
 
 	t.Run("invalid, non-empty, missing escape character", func(t *testing.T) {
-		result, errs := Parse("\"\\")
+		result, errs := ParseExpression("\"\\")
 		assert.Equal(t,
 			[]error{
 				errors.New("incomplete escape sequence: missing character after escape character"),
@@ -717,7 +717,7 @@ func TestParseString(t *testing.T) {
 	})
 
 	t.Run("valid, with escapes", func(t *testing.T) {
-		result, errs := Parse(`"te\tst\"te\u{1F3CE}\u{FE0F}xt"`)
+		result, errs := ParseExpression(`"te\tst\"te\u{1F3CE}\u{FE0F}xt"`)
 		assert.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -733,7 +733,7 @@ func TestParseString(t *testing.T) {
 	})
 
 	t.Run("invalid, unknown escape character", func(t *testing.T) {
-		result, errs := Parse(`"te\Xst"`)
+		result, errs := ParseExpression(`"te\Xst"`)
 		assert.Equal(t,
 			[]error{
 				errors.New("invalid escape character: 'X'"),
@@ -754,7 +754,7 @@ func TestParseString(t *testing.T) {
 	})
 
 	t.Run("invalid, missing '{' after Unicode escape character", func(t *testing.T) {
-		result, errs := Parse(`"te\u`)
+		result, errs := ParseExpression(`"te\u`)
 		assert.Equal(t,
 			[]error{
 				errors.New("incomplete Unicode escape sequence: missing character '{' after escape character"),
@@ -776,7 +776,7 @@ func TestParseString(t *testing.T) {
 	})
 
 	t.Run("invalid, invalid character after Unicode escape character", func(t *testing.T) {
-		result, errs := Parse(`"te\us`)
+		result, errs := ParseExpression(`"te\us`)
 		assert.Equal(t,
 			[]error{
 				errors.New("invalid Unicode escape sequence: expected '{', got 's'"),
@@ -798,7 +798,7 @@ func TestParseString(t *testing.T) {
 	})
 
 	t.Run("invalid, missing '}' after Unicode escape sequence digits", func(t *testing.T) {
-		result, errs := Parse(`"te\u{`)
+		result, errs := ParseExpression(`"te\u{`)
 		assert.Equal(t,
 			[]error{
 				errors.New("incomplete Unicode escape sequence: missing character '}' after escape character"),
@@ -820,7 +820,7 @@ func TestParseString(t *testing.T) {
 	})
 
 	t.Run("valid, empty Unicode escape sequence", func(t *testing.T) {
-		result, errs := Parse(`"te\u{}"`)
+		result, errs := ParseExpression(`"te\u{}"`)
 		assert.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -836,7 +836,7 @@ func TestParseString(t *testing.T) {
 	})
 
 	t.Run("valid, non-empty Unicode escape sequence", func(t *testing.T) {
-		result, errs := Parse(
+		result, errs := ParseExpression(
 			`"te\u{73}t ` +
 				`\u{4A}J\u{4a}J ` +
 				`\u{4B}K\u{4b}K ` +
@@ -860,7 +860,7 @@ func TestParseString(t *testing.T) {
 	})
 
 	t.Run("invalid, non-empty Unicode escape sequence", func(t *testing.T) {
-		result, errs := Parse(`"te\u{X}st"`)
+		result, errs := ParseExpression(`"te\u{X}st"`)
 		assert.Equal(t,
 			[]error{
 				errors.New("invalid Unicode escape sequence: expected hex digit, got 'X'"),
@@ -881,11 +881,22 @@ func TestParseString(t *testing.T) {
 	})
 }
 
+func TestParseComment(t *testing.T) {
+
+	result, errs := ParseExpression(" /* test  foo/* bar  */ asd*/ ")
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		nil,
+		result,
+	)
+}
+
 func BenchmarkParseInfix(b *testing.B) {
 
 	b.Run("new", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			Parse("(8 - 1 + 3) * 6 - ((3 + 7) * 2)")
+			ParseExpression("(8 - 1 + 3) * 6 - ((3 + 7) * 2)")
 		}
 	})
 
@@ -912,7 +923,7 @@ func BenchmarkParseArray(b *testing.B) {
 
 	b.Run("new", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			Parse(lit)
+			ParseExpression(lit)
 		}
 	})
 
