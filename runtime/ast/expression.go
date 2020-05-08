@@ -463,7 +463,7 @@ func (e *ConditionalExpression) EndPosition() Position {
 type UnaryExpression struct {
 	Operation  Operation
 	Expression Expression
-	Range
+	StartPos   Position
 }
 
 func (*UnaryExpression) isExpression() {}
@@ -483,6 +483,14 @@ func (e *UnaryExpression) String() string {
 		"%s%s",
 		e.Operation.Symbol(), e.Expression,
 	)
+}
+
+func (e *UnaryExpression) StartPosition() Position {
+	return e.StartPos
+}
+
+func (e *UnaryExpression) EndPosition() Position {
+	return e.Expression.EndPosition()
 }
 
 // BinaryExpression

@@ -692,10 +692,7 @@ func TestParseUnaryExpression(t *testing.T) {
 					Pos:        Position{Offset: 17, Line: 2, Column: 16},
 				},
 			},
-			Range: Range{
-				StartPos: Position{Offset: 16, Line: 2, Column: 15},
-				EndPos:   Position{Offset: 19, Line: 2, Column: 18},
-			},
+			StartPos: Position{Offset: 16, Line: 2, Column: 15},
 		},
 		StartPos: Position{Offset: 6, Line: 2, Column: 5},
 	}
@@ -5390,10 +5387,7 @@ func TestParseMoveOperator(t *testing.T) {
 								Pos:        Position{Offset: 21, Line: 2, Column: 20},
 							},
 						},
-						Range: Range{
-							StartPos: Position{Offset: 19, Line: 2, Column: 18},
-							EndPos:   Position{Offset: 21, Line: 2, Column: 20},
-						},
+						StartPos: Position{Offset: 19, Line: 2, Column: 18},
 					},
 				},
 			},
@@ -7900,10 +7894,7 @@ func TestParsePreconditionWithUnaryNegation(t *testing.T) {
 								EndPos:   Position{Offset: 78, Line: 5, Column: 19},
 							},
 						},
-						Range: Range{
-							StartPos: Position{Offset: 73, Line: 5, Column: 14},
-							EndPos:   Position{Offset: 78, Line: 5, Column: 19},
-						},
+						StartPos: Position{Offset: 73, Line: 5, Column: 14},
 					},
 					Message: &StringExpression{
 						Value: "two",

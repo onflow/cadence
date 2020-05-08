@@ -36,23 +36,28 @@ func (t Token) Is(ty TokenType) bool {
 	return t.Type == ty
 }
 
+type position struct {
+	line   int
+	column int
+}
+
 type lexer struct {
-	input      string
-	startPos   ast.Position
-	endPos     ast.Position
-	prevEndPos ast.Position
-	tokens     chan Token
-	canBackup  bool
+	input         string
+	startOffset   int
+	endOffset     int
+	prevEndOffset int
+	tokens        chan Token
+	canBackup     bool
+	startPos      position
 }
 
 func Lex(input string) chan Token {
-	startPos := ast.Position{Line: 1}
 	l := &lexer{
-		input:      input,
-		startPos:   startPos,
-		endPos:     startPos,
-		prevEndPos: startPos,
-		tokens:     make(chan Token),
+		input:         input,
+		startPos:      position{line: 1},
+		endOffset:     0,
+		prevEndOffset: 0,
+		tokens:        make(chan Token),
 	}
 	go l.run(rootState)
 	return l.tokens
@@ -80,25 +85,17 @@ func (l *lexer) run(state stateFn) {
 func (l *lexer) next() rune {
 	l.canBackup = true
 
-	endPos := l.endPos
-	endOffset := endPos.Offset
+	endOffset := l.endOffset
 
-	l.prevEndPos = endPos
+	l.prevEndOffset = endOffset
 
-	if endOffset >= len(l.input) {
-		return EOF
+	r := EOF
+	w := 1
+	if endOffset < len(l.input) {
+		r, w = utf8.DecodeRuneInString(l.input[endOffset:])
 	}
 
-	r, w := utf8.DecodeRuneInString(l.input[endOffset:])
-
-	l.endPos.Offset += w
-
-	if r == '\n' {
-		l.endPos.Line++
-		l.endPos.Column = 0
-	} else {
-		l.endPos.Column++
-	}
+	l.endOffset += w
 
 	return r
 }
@@ -119,12 +116,12 @@ func (l *lexer) backupOne() {
 	}
 	l.canBackup = false
 
-	l.endPos = l.prevEndPos
+	l.endOffset = l.prevEndOffset
 }
 
 func (l *lexer) word() string {
-	start := l.startPos.Offset
-	end := l.endPos.Offset
+	start := l.startOffset
+	end := l.endOffset
 	return l.input[start:end]
 }
 
@@ -160,16 +157,58 @@ func (l *lexer) acceptOneOrMore(valid string) bool {
 
 // emitValue passes an item back to the client.
 func (l *lexer) emit(ty TokenType, val interface{}) {
+	endPos := l.endPos()
+
 	token := Token{
 		Type:  ty,
 		Value: val,
 		Range: ast.Range{
-			StartPos: l.startPos,
-			EndPos:   l.endPos,
+			StartPos: ast.Position{
+				Line:   l.startPos.line,
+				Column: l.startPos.column,
+				Offset: l.startOffset,
+			},
+			EndPos: ast.Position{
+				Line:   endPos.line,
+				Column: endPos.column,
+				Offset: l.endOffset - 1,
+			},
 		},
 	}
 	l.tokens <- token
-	l.startPos = l.endPos
+	l.startOffset = l.endOffset
+
+	l.startPos = endPos
+	r, _ := utf8.DecodeRuneInString(l.input[l.endOffset-1:])
+
+	if r == '\n' {
+		l.startPos.line++
+		l.startPos.column = 0
+	} else {
+		l.startPos.column++
+	}
+}
+
+func (l *lexer) endPos() position {
+	startOffset := l.startOffset
+	endOffset := l.endOffset
+
+	endPos := l.startPos
+
+	var w int
+	for offset := startOffset; offset < endOffset-1; offset += w {
+		var r rune
+		r, w = utf8.DecodeRuneInString(l.input[offset:])
+
+		if r == '\n' {
+			endPos.line++
+			endPos.column = 0
+		} else {
+			endPos.column++
+		}
+	}
+
+	return endPos
 }
 
 func (l *lexer) emitType(ty TokenType) {
@@ -205,13 +244,11 @@ func (l *lexer) mustOne(r rune) {
 }
 
 func (l *lexer) acceptAll(string string) bool {
-	endPos := l.endPos
-	prevEndPos := l.prevEndPos
+	endOffset := l.endOffset
 
 	for _, r := range string {
 		if l.next() != r {
-			l.endPos = endPos
-			l.prevEndPos = prevEndPos
+			l.endOffset = endOffset
 
 			return false
 		}

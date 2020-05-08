@@ -30,7 +30,7 @@ import (
 const lowestBindingPower = 0
 
 type infixFunc func(left, right ast.Expression) ast.Expression
-type prefixFunc func(right ast.Expression) ast.Expression
+type prefixFunc func(right ast.Expression, tokenRange ast.Range) ast.Expression
 type nullDenotationFunc func(parser *parser, token lexer.Token) ast.Expression
 
 type literal struct {
@@ -117,7 +117,7 @@ func define(def interface{}) {
 			tokenType,
 			func(parser *parser, token lexer.Token) ast.Expression {
 				right := parseExpression(parser, def.bindingPower)
-				return def.nullDenotation(right)
+				return def.nullDenotation(right, token.Range)
 			},
 		)
 
@@ -125,10 +125,11 @@ func define(def interface{}) {
 		define(prefix{
 			tokenType:    def.tokenType,
 			bindingPower: def.bindingPower,
-			nullDenotation: func(right ast.Expression) ast.Expression {
+			nullDenotation: func(right ast.Expression, tokenRange ast.Range) ast.Expression {
 				return &ast.UnaryExpression{
 					Operation:  def.operation,
 					Expression: right,
+					StartPos:   tokenRange.StartPos,
 				}
 			},
 		})
@@ -220,6 +221,7 @@ func init() {
 			return &ast.IntegerExpression{
 				Value: value,
 				Base:  10,
+				Range: token.Range,
 			}
 		},
 	})
@@ -231,11 +233,13 @@ func init() {
 			case "true":
 				return &ast.BoolExpression{
 					Value: true,
+					Range: token.Range,
 				}
 
 			case "false":
 				return &ast.BoolExpression{
 					Value: false,
+					Range: token.Range,
 				}
 
 			default:
@@ -290,7 +294,7 @@ func defineNestedExpression() {
 func defineArrayExpression() {
 	leftBindingPowers[lexer.TokenBracketOpen] = 150
 	leftBindingPowers[lexer.TokenBracketClose] = lowestBindingPower
-	nullDenotations[lexer.TokenBracketOpen] = func(p *parser, token lexer.Token) ast.Expression {
+	nullDenotations[lexer.TokenBracketOpen] = func(p *parser, startToken lexer.Token) ast.Expression {
 		var values []ast.Expression
 		for p.current.Type != lexer.TokenBracketClose {
 			value := parseExpression(p, lowestBindingPower)
@@ -300,9 +304,13 @@ func defineArrayExpression() {
 			}
 			p.mustOne(lexer.TokenComma)
 		}
-		p.mustOne(lexer.TokenBracketClose)
+		endToken := p.mustOne(lexer.TokenBracketClose)
 		return &ast.ArrayExpression{
 			Values: values,
+			Range: ast.Range{
+				StartPos: startToken.Range.StartPos,
+				EndPos:   endToken.Range.EndPos,
+			},
 		}
 	}
 }
@@ -310,7 +318,7 @@ func defineArrayExpression() {
 func defineDictionaryExpression() {
 	leftBindingPowers[lexer.TokenBraceOpen] = 150
 	leftBindingPowers[lexer.TokenBraceClose] = lowestBindingPower
-	nullDenotations[lexer.TokenBraceOpen] = func(p *parser, token lexer.Token) ast.Expression {
+	nullDenotations[lexer.TokenBraceOpen] = func(p *parser, startToken lexer.Token) ast.Expression {
 		var entries []ast.Entry
 		for p.current.Type != lexer.TokenBraceClose {
 			key := parseExpression(p, lowestBindingPower)
@@ -325,9 +333,13 @@ func defineDictionaryExpression() {
 			}
 			p.mustOne(lexer.TokenComma)
 		}
-		p.mustOne(lexer.TokenBraceClose)
+		endToken := p.mustOne(lexer.TokenBraceClose)
 		return &ast.DictionaryExpression{
 			Entries: entries,
+			Range: ast.Range{
+				StartPos: startToken.Range.StartPos,
+				EndPos:   endToken.Range.EndPos,
+			},
 		}
 	}
 }
@@ -356,6 +368,7 @@ func definePathExpression() {
 		return &ast.PathExpression{
 			Domain:     domain,
 			Identifier: identifier,
+			StartPos:   token.Range.StartPos,
 		}
 	}
 }
@@ -368,6 +381,7 @@ func mustIdentifier(p *parser) ast.Identifier {
 func tokenToIdentifier(identifier lexer.Token) ast.Identifier {
 	return ast.Identifier{
 		Identifier: identifier.Value.(string),
+		Pos:        identifier.Range.StartPos,
 	}
 }
 
