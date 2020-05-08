@@ -450,39 +450,40 @@ func applyLeftDenotation(p *parser, tokenType lexer.TokenType, left ast.Expressi
 
 // parseStringLiteral parses a whole string literal, including start and end quotes
 //
-func parseStringLiteral(s string) (result string, errs []error) {
+func parseStringLiteral(literal string) (result string, errs []error) {
 	report := func(err error) {
 		errs = append(errs, err)
 	}
 
-	l := len(s)
-	if l == 0 {
+	length := len(literal)
+	if length == 0 {
 		report(fmt.Errorf("missing start of string literal: expected '\"'"))
 		return
 	}
 
-	if l >= 1 {
-		first := s[0]
+	if length >= 1 {
+		first := literal[0]
 		if first != '"' {
 			report(fmt.Errorf("invalid start of string literal: expected '\"', got %q", first))
 		}
 	}
 
 	missingEnd := false
-	endOffset := l
-	if l >= 2 {
-		last := s[l-1]
+	endOffset := length
+	if length >= 2 {
+		lastIndex := length - 1
+		last := literal[lastIndex]
 		if last != '"' {
 			missingEnd = true
 		} else {
-			endOffset = l - 1
+			endOffset = lastIndex
 		}
 	} else {
 		missingEnd = true
 	}
 
 	var innerErrs []error
-	result, innerErrs = parseStringLiteralContent(s[1:endOffset])
+	result, innerErrs = parseStringLiteralContent(literal[1:endOffset])
 	errs = append(errs, innerErrs...)
 
 	if missingEnd {
@@ -505,12 +506,12 @@ func parseStringLiteralContent(s string) (result string, errs []error) {
 		errs = append(errs, err)
 	}
 
-	l := len(s)
+	length := len(s)
 
 	var r rune
-	i := 0
+	index := 0
 
-	atEnd := i >= l
+	atEnd := index >= length
 
 	advance := func() {
 		if atEnd {
@@ -518,14 +519,14 @@ func parseStringLiteralContent(s string) (result string, errs []error) {
 			return
 		}
 
-		var w int
-		r, w = utf8.DecodeRuneInString(s[i:])
-		i += w
+		var width int
+		r, width = utf8.DecodeRuneInString(s[index:])
+		index += width
 
-		atEnd = i >= l
+		atEnd = index >= length
 	}
 
-	for i < l {
+	for index < length {
 		advance()
 
 		if r != '\\' {
@@ -570,24 +571,24 @@ func parseStringLiteralContent(s string) (result string, errs []error) {
 
 			var r2 rune
 			valid := true
-			j := 0
-			for ; !atEnd && j < 8; j++ {
+			digitIndex := 0
+			for ; !atEnd && digitIndex < 8; digitIndex++ {
 				advance()
 				if r == '}' {
 					break
 				}
 
-				d := parseHex(r)
+				parsed := parseHex(r)
 
-				if d < 0 {
+				if parsed < 0 {
 					report(fmt.Errorf("invalid Unicode escape sequence: expected hex digit, got %q", r))
 					valid = false
 				} else {
-					r2 = r2<<4 | d
+					r2 = r2<<4 | parsed
 				}
 			}
 
-			if j > 0 && valid {
+			if digitIndex > 0 && valid {
 				builder.WriteRune(r2)
 			}
 
