@@ -881,15 +881,58 @@ func TestParseString(t *testing.T) {
 	})
 }
 
-func TestParseComment(t *testing.T) {
+func TestParseBlockComment(t *testing.T) {
 
-	result, errs := ParseExpression(" /* test  foo/* bar  */ asd*/ ")
-	require.Empty(t, errs)
+	t.Run("nested comment, nothing else", func(t *testing.T) {
 
-	utils.AssertEqualWithDiff(t,
-		nil,
-		result,
-	)
+		result, errs := ParseExpression(" /* test  foo/* bar  */ asd*/ ")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			nil,
+			result,
+		)
+	})
+
+	t.Run("two comments", func(t *testing.T) {
+
+		result, errs := ParseExpression(" /*test  foo*/ /* bar  */ ")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			nil,
+			result,
+		)
+	})
+
+	t.Run("in infix", func(t *testing.T) {
+
+		result, errs := ParseExpression(" 1/*test  foo*/+/* bar  */ 2  ")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.BinaryExpression{
+				Operation: ast.OperationPlus,
+				Left: &ast.IntegerExpression{
+					Value: big.NewInt(1),
+					Base:  10,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+				Right: &ast.IntegerExpression{
+					Value: big.NewInt(2),
+					Base:  10,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 27, Offset: 27},
+						EndPos:   ast.Position{Line: 1, Column: 27, Offset: 27},
+					},
+				},
+			},
+			result,
+		)
+	})
 }
 
 func BenchmarkParseInfix(b *testing.B) {

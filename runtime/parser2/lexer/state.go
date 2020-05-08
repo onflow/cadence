@@ -65,8 +65,8 @@ func rootState(l *lexer) stateFn {
 			return stringState
 		case '/':
 			if l.acceptOne('*') {
-				l.emitType(TokenCommentStart)
-				return commentState(0)
+				l.emitType(TokenBlockCommentStart)
+				return blockCommentState(0)
 			} else {
 				l.emitType(TokenSlash)
 			}
@@ -125,7 +125,7 @@ func stringState(l *lexer) stateFn {
 	return rootState
 }
 
-func commentState(nesting int) stateFn {
+func blockCommentState(nesting int) stateFn {
 	if nesting < 0 {
 		return rootState
 	}
@@ -141,10 +141,10 @@ func commentState(nesting int) stateFn {
 			if l.acceptOne('*') {
 				starOffset := l.endOffset
 				l.endOffset = beforeSlashOffset
-				l.emitValue(TokenCommentContent)
+				l.emitValue(TokenBlockCommentContent)
 				l.endOffset = starOffset
-				l.emitType(TokenCommentStart)
-				return commentState(nesting + 1)
+				l.emitType(TokenBlockCommentStart)
+				return blockCommentState(nesting + 1)
 			}
 
 		case '*':
@@ -152,13 +152,13 @@ func commentState(nesting int) stateFn {
 			if l.acceptOne('/') {
 				slashOffset := l.endOffset
 				l.endOffset = beforeStarOffset
-				l.emitValue(TokenCommentContent)
+				l.emitValue(TokenBlockCommentContent)
 				l.endOffset = slashOffset
-				l.emitType(TokenCommentEnd)
-				return commentState(nesting - 1)
+				l.emitType(TokenBlockCommentEnd)
+				return blockCommentState(nesting - 1)
 			}
 		}
 
-		return commentState(nesting)
+		return blockCommentState(nesting)
 	}
 }

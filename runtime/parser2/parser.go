@@ -116,7 +116,7 @@ func (p *parser) mustOne(tokenType lexer.TokenType) lexer.Token {
 func (p *parser) skipSpaceAndComments() {
 	for {
 		p.skipZeroOrOne(lexer.TokenSpace)
-		if p.current.Type != lexer.TokenCommentStart {
+		if p.current.Type != lexer.TokenBlockCommentStart {
 			break
 		}
 		// TODO: use comment?
@@ -143,12 +143,13 @@ func (p *parser) parseCommentContent() (comment string) {
 				case lexer.TokenEOF:
 					p.report(fmt.Errorf("missing comment end"))
 					return nil
-				case lexer.TokenCommentContent:
+				case lexer.TokenBlockCommentContent:
 					builder.WriteString(p.current.Value.(string))
-				case lexer.TokenCommentEnd:
+				case lexer.TokenBlockCommentEnd:
 					builder.WriteString("*/")
+					p.next()
 					return nil
-				case lexer.TokenCommentStart:
+				case lexer.TokenBlockCommentStart:
 					builder.WriteString("/*")
 
 					// parse inner content, then rest of this comment
