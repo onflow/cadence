@@ -48,7 +48,7 @@ const (
 	TokenLeftArrow
 	TokenLess
 	TokenGreater
-	TokenCommentStart
-	TokenCommentContent
-	TokenCommentEnd
+	TokenBlockCommentStart
+	TokenBlockCommentContent
+	TokenBlockCommentEnd
 )

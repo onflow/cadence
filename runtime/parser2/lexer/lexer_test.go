@@ -904,14 +904,14 @@ func TestLexComment(t *testing.T) {
 			assert.Equal(t,
 				[]Token{
 					{
-						Type: TokenCommentStart,
+						Type: TokenBlockCommentStart,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
 						},
 					},
 					{
-						Type:  TokenCommentContent,
+						Type:  TokenBlockCommentContent,
 						Value: `  // *X `,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
@@ -919,14 +919,14 @@ func TestLexComment(t *testing.T) {
 						},
 					},
 					{
-						Type: TokenCommentStart,
+						Type: TokenBlockCommentStart,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
 							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
 						},
 					},
 					{
-						Type:  TokenCommentContent,
+						Type:  TokenBlockCommentContent,
 						Value: ` \\*  `,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
@@ -934,7 +934,7 @@ func TestLexComment(t *testing.T) {
 						},
 					},
 					{
-						Type: TokenCommentEnd,
+						Type: TokenBlockCommentEnd,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 18, Offset: 18},
 							EndPos:   ast.Position{Line: 1, Column: 19, Offset: 19},
@@ -958,14 +958,14 @@ func TestLexComment(t *testing.T) {
 			assert.Equal(t,
 				[]Token{
 					{
-						Type: TokenCommentStart,
+						Type: TokenBlockCommentStart,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
 						},
 					},
 					{
-						Type:  TokenCommentContent,
+						Type:  TokenBlockCommentContent,
 						Value: ` test foo `,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
@@ -973,14 +973,14 @@ func TestLexComment(t *testing.T) {
 						},
 					},
 					{
-						Type: TokenCommentStart,
+						Type: TokenBlockCommentStart,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
 							EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
 						},
 					},
 					{
-						Type:  TokenCommentContent,
+						Type:  TokenBlockCommentContent,
 						Value: ` bar `,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
@@ -988,14 +988,14 @@ func TestLexComment(t *testing.T) {
 						},
 					},
 					{
-						Type: TokenCommentEnd,
+						Type: TokenBlockCommentEnd,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 19, Offset: 19},
 							EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
 						},
 					},
 					{
-						Type:  TokenCommentContent,
+						Type:  TokenBlockCommentContent,
 						Value: ` asd `,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 21, Offset: 21},
@@ -1003,7 +1003,7 @@ func TestLexComment(t *testing.T) {
 						},
 					},
 					{
-						Type: TokenCommentEnd,
+						Type: TokenBlockCommentEnd,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 26, Offset: 26},
 							EndPos:   ast.Position{Line: 1, Column: 27, Offset: 27},
