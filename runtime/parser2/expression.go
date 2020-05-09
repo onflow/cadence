@@ -287,17 +287,10 @@ func init() {
 	defineDictionaryExpression()
 	definePathExpression()
 	defineConditionalExpression()
-
-	leftBindingPowers[lexer.TokenComma] = lowestBindingPower
-
-	leftBindingPowers[lexer.TokenColon] = lowestBindingPower
-
-	leftBindingPowers[lexer.TokenEOF] = lowestBindingPower
 }
 
 func defineNestedExpression() {
 	leftBindingPowers[lexer.TokenParenOpen] = 150
-	leftBindingPowers[lexer.TokenParenClose] = lowestBindingPower
 	nullDenotations[lexer.TokenParenOpen] = func(p *parser, token lexer.Token) ast.Expression {
 		expression := parseExpression(p, lowestBindingPower)
 		p.mustOne(lexer.TokenParenClose)
@@ -307,7 +300,6 @@ func defineNestedExpression() {
 
 func defineArrayExpression() {
 	leftBindingPowers[lexer.TokenBracketOpen] = 150
-	leftBindingPowers[lexer.TokenBracketClose] = lowestBindingPower
 	nullDenotations[lexer.TokenBracketOpen] = func(p *parser, startToken lexer.Token) ast.Expression {
 		var values []ast.Expression
 		for !p.current.Is(lexer.TokenBracketClose) {
@@ -330,8 +322,6 @@ func defineArrayExpression() {
 }
 
 func defineDictionaryExpression() {
-	leftBindingPowers[lexer.TokenBraceOpen] = 150
-	leftBindingPowers[lexer.TokenBraceClose] = lowestBindingPower
 	nullDenotations[lexer.TokenBraceOpen] = func(p *parser, startToken lexer.Token) ast.Expression {
 		var entries []ast.Entry
 		for !p.current.Is(lexer.TokenBraceClose) {
@@ -412,7 +402,7 @@ func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 
 	p.skipSpaceAndComments(true)
 
-	for rightBindingPower < leftBindingPower(p.current.Type) {
+	for rightBindingPower < leftBindingPowers[p.current.Type] {
 		t = p.current
 		p.next()
 		p.skipSpaceAndComments(true)
@@ -430,14 +420,6 @@ func applyNullDenotation(p *parser, token lexer.Token) ast.Expression {
 		return nil
 	}
 	return nullDenotation(p, token)
-}
-
-func leftBindingPower(tokenType lexer.TokenType) int {
-	result, ok := leftBindingPowers[tokenType]
-	if !ok {
-		panic(fmt.Errorf("missing left binding power for token type: %v", tokenType))
-	}
-	return result
 }
 
 func applyLeftDenotation(p *parser, tokenType lexer.TokenType, left ast.Expression) ast.Expression {

@@ -126,3 +126,313 @@ func TestParseReturnStatement(t *testing.T) {
 		)
 	})
 }
+
+func TestParseIfStatement(t *testing.T) {
+
+	t.Run("only empty then", func(t *testing.T) {
+		result, errs := ParseStatements("if true { }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.IfStatement{
+					Test: &ast.BoolExpression{
+						Value: true,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
+					},
+					Then: &ast.Block{
+						Statements: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("only then, two statements on one line", func(t *testing.T) {
+		result, errs := ParseStatements("if true { 1 ; 2 }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.IfStatement{
+					Test: &ast.BoolExpression{
+						Value: true,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
+					},
+					Then: &ast.Block{
+						Statements: []ast.Statement{
+							&ast.ExpressionStatement{
+								Expression: &ast.IntegerExpression{
+									Value: big.NewInt(1),
+									Base:  10,
+									Range: ast.Range{
+										StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
+										EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+									},
+								},
+							},
+							&ast.ExpressionStatement{
+								Expression: &ast.IntegerExpression{
+									Value: big.NewInt(2),
+									Base:  10,
+									Range: ast.Range{
+										StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
+										EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
+									},
+								},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 16, Offset: 16},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("only then, two statements on multiple lines", func(t *testing.T) {
+		result, errs := ParseStatements("if true { 1 \n 2 }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.IfStatement{
+					Test: &ast.BoolExpression{
+						Value: true,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
+					},
+					Then: &ast.Block{
+						Statements: []ast.Statement{
+							&ast.ExpressionStatement{
+								Expression: &ast.IntegerExpression{
+									Value: big.NewInt(1),
+									Base:  10,
+									Range: ast.Range{
+										StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
+										EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+									},
+								},
+							},
+							&ast.ExpressionStatement{
+								Expression: &ast.IntegerExpression{
+									Value: big.NewInt(2),
+									Base:  10,
+									Range: ast.Range{
+										StartPos: ast.Position{Line: 2, Column: 1, Offset: 14},
+										EndPos:   ast.Position{Line: 2, Column: 1, Offset: 14},
+									},
+								},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 2, Column: 3, Offset: 16},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("with else", func(t *testing.T) {
+		result, errs := ParseStatements("if true { 1 } else { 2 }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.IfStatement{
+					Test: &ast.BoolExpression{
+						Value: true,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
+					},
+					Then: &ast.Block{
+						Statements: []ast.Statement{
+							&ast.ExpressionStatement{
+								Expression: &ast.IntegerExpression{
+									Value: big.NewInt(1),
+									Base:  10,
+									Range: ast.Range{
+										StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
+										EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+									},
+								},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 12, Offset: 12},
+						},
+					},
+					Else: &ast.Block{
+						Statements: []ast.Statement{
+							&ast.ExpressionStatement{
+								Expression: &ast.IntegerExpression{
+									Value: big.NewInt(2),
+									Base:  10,
+									Range: ast.Range{
+										StartPos: ast.Position{Line: 1, Column: 21, Offset: 21},
+										EndPos:   ast.Position{Line: 1, Column: 21, Offset: 21},
+									},
+								},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 19, Offset: 19},
+							EndPos:   ast.Position{Line: 1, Column: 23, Offset: 23},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("with else if and else, no space", func(t *testing.T) {
+		result, errs := ParseStatements("if true{1}else if true {2} else{3}")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.IfStatement{
+					Test: &ast.BoolExpression{
+						Value: true,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
+					},
+					Then: &ast.Block{
+						Statements: []ast.Statement{
+							&ast.ExpressionStatement{
+								Expression: &ast.IntegerExpression{
+									Value: big.NewInt(1),
+									Base:  10,
+									Range: ast.Range{
+										StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+										EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+									},
+								},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
+					},
+					Else: &ast.Block{
+						Statements: []ast.Statement{
+							&ast.IfStatement{
+								Test: &ast.BoolExpression{
+									Value: true,
+									Range: ast.Range{
+										StartPos: ast.Position{Line: 1, Column: 18, Offset: 18},
+										EndPos:   ast.Position{Line: 1, Column: 21, Offset: 21},
+									},
+								},
+								Then: &ast.Block{
+									Statements: []ast.Statement{
+										&ast.ExpressionStatement{
+											Expression: &ast.IntegerExpression{
+												Value: big.NewInt(2),
+												Base:  10,
+												Range: ast.Range{
+													StartPos: ast.Position{Line: 1, Column: 24, Offset: 24},
+													EndPos:   ast.Position{Line: 1, Column: 24, Offset: 24},
+												},
+											},
+										},
+									},
+									Range: ast.Range{
+										StartPos: ast.Position{Line: 1, Column: 23, Offset: 23},
+										EndPos:   ast.Position{Line: 1, Column: 25, Offset: 25},
+									},
+								},
+								Else: &ast.Block{
+									Statements: []ast.Statement{
+										&ast.ExpressionStatement{
+											Expression: &ast.IntegerExpression{
+												Value: big.NewInt(3),
+												Base:  10,
+												Range: ast.Range{
+													StartPos: ast.Position{Line: 1, Column: 32, Offset: 32},
+													EndPos:   ast.Position{Line: 1, Column: 32, Offset: 32},
+												},
+											},
+										},
+									},
+									Range: ast.Range{
+										StartPos: ast.Position{Line: 1, Column: 31, Offset: 31},
+										EndPos:   ast.Position{Line: 1, Column: 33, Offset: 33},
+									},
+								},
+								StartPos: ast.Position{Line: 1, Column: 15, Offset: 15},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 15, Offset: 15},
+							EndPos:   ast.Position{Line: 1, Column: 33, Offset: 33},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+}
+
+func TestParseWhileStatement(t *testing.T) {
+
+	t.Run("empty block", func(t *testing.T) {
+		result, errs := ParseStatements("while true { }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.WhileStatement{
+					Test: &ast.BoolExpression{
+						Value: true,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
+					},
+					Block: &ast.Block{
+						Statements: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
+							EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+}
