@@ -588,8 +588,8 @@ func TestLex(t *testing.T) {
 		})
 	})
 
-	t.Run("less than, greater than, and left arrow", func(t *testing.T) {
-		withTokens(Lex("<><-"), func(tokens []Token) {
+	t.Run("less than, equal, greater than, and left arrow", func(t *testing.T) {
+		withTokens(Lex("<=><-"), func(tokens []Token) {
 			assert.Equal(t,
 				[]Token{
 					{
@@ -600,24 +600,31 @@ func TestLex(t *testing.T) {
 						},
 					},
 					{
-						Type: TokenGreater,
+						Type: TokenEqual,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
 						},
 					},
 					{
-						Type: TokenLeftArrow,
+						Type: TokenGreater,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					{
+						Type: TokenLeftArrow,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
 						},
 					},
 					{
 						Type: TokenEOF,
 						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
-							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
 						},
 					},
 				},
