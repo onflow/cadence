@@ -32,14 +32,15 @@ func _() {
 	_ = x[TokenLeftArrow-21]
 	_ = x[TokenLess-22]
 	_ = x[TokenGreater-23]
-	_ = x[TokenBlockCommentStart-24]
-	_ = x[TokenBlockCommentContent-25]
-	_ = x[TokenBlockCommentEnd-26]
+	_ = x[TokenEqual-24]
+	_ = x[TokenBlockCommentStart-25]
+	_ = x[TokenBlockCommentContent-26]
+	_ = x[TokenBlockCommentEnd-27]
 }
 
-const _TokenType_name = "ErrorEOFSpaceNumberIdentifierStringPlusMinusStarSlashNilCoalesceParenOpenParenCloseBraceOpenBraceCloseBracketOpenBracketCloseQuestionMarkCommaColonSemicolonLeftArrowLessGreaterBlockCommentStartBlockCommentContentBlockCommentEnd"
+const _TokenType_name = "ErrorEOFSpaceNumberIdentifierStringPlusMinusStarSlashNilCoalesceParenOpenParenCloseBraceOpenBraceCloseBracketOpenBracketCloseQuestionMarkCommaColonSemicolonLeftArrowLessGreaterEqualBlockCommentStartBlockCommentContentBlockCommentEnd"
 
-var _TokenType_index = [...]uint8{0, 5, 8, 13, 19, 29, 35, 39, 44, 48, 53, 64, 73, 83, 92, 102, 113, 125, 137, 142, 147, 156, 165, 169, 176, 193, 212, 227}
+var _TokenType_index = [...]uint8{0, 5, 8, 13, 19, 29, 35, 39, 44, 48, 53, 64, 73, 83, 92, 102, 113, 125, 137, 142, 147, 156, 165, 169, 176, 181, 198, 217, 232}
 
 func (i TokenType) String() string {
 	if i >= TokenType(len(_TokenType_index)-1) {

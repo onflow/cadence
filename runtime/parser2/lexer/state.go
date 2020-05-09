@@ -57,6 +57,8 @@ func rootState(l *lexer) stateFn {
 			l.emitType(TokenColon)
 		case '>':
 			l.emitType(TokenGreater)
+		case '=':
+			l.emitType(TokenEqual)
 		case '_':
 			return identifierState
 		case ' ', '\t':

@@ -60,13 +60,20 @@ func parseStatement(p *parser) ast.Statement {
 		}
 	}
 
+	declaration := parseDeclaration(p)
+	// TODO: allow more
+	if variableDeclaration, ok := declaration.(*ast.VariableDeclaration); ok {
+		return variableDeclaration
+	}
+
 	expression := parseExpression(p, lowestBindingPower)
-	if expression == nil {
-		return nil
+	if expression != nil {
+		return &ast.ExpressionStatement{
+			Expression: expression,
+		}
 	}
-	return &ast.ExpressionStatement{
-		Expression: expression,
-	}
+
+	return nil
 }
 
 func parseReturnStatement(p *parser) *ast.ReturnStatement {
