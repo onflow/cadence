@@ -19,18 +19,20 @@
 package parser2
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
-func parseStatements(p *parser) (statements []ast.Statement) {
+func parseStatements(p *parser, endTokenType lexer.TokenType) (statements []ast.Statement) {
 	for {
 		p.skipSpaceAndComments(true)
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
 			p.next()
 			continue
-		case lexer.TokenEOF:
+		case endTokenType, lexer.TokenEOF:
 			return
 		default:
 			statement := parseStatement(p)
@@ -45,11 +47,16 @@ func parseStatements(p *parser) (statements []ast.Statement) {
 
 func parseStatement(p *parser) ast.Statement {
 	p.skipSpaceAndComments(true)
+
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
 		switch p.current.Value {
 		case "return":
 			return parseReturnStatement(p)
+		case "if":
+			return parseIfStatement(p)
+		case "while":
+			return parseWhileStatement(p)
 		}
 	}
 
@@ -81,6 +88,109 @@ func parseReturnStatement(p *parser) *ast.ReturnStatement {
 		Range: ast.Range{
 			StartPos: tokenRange.StartPos,
 			EndPos:   endPosition,
+		},
+	}
+}
+
+func parseIfStatement(p *parser) *ast.IfStatement {
+
+	var ifStatements []*ast.IfStatement
+
+	for {
+		startPos := p.current.Range.StartPos
+		p.next()
+
+		expression := parseExpression(p, lowestBindingPower)
+		if expression == nil {
+			panic(fmt.Errorf("expected test expression"))
+		}
+
+		thenBlock := parseBlock(p)
+		if thenBlock == nil {
+			panic(fmt.Errorf("expected block for then branch"))
+		}
+
+		var elseBlock *ast.Block
+
+		parseNested := false
+
+		p.skipSpaceAndComments(true)
+		if p.current.IsString(lexer.TokenIdentifier, "else") {
+			p.next()
+
+			p.skipSpaceAndComments(true)
+			if p.current.IsString(lexer.TokenIdentifier, "if") {
+				parseNested = true
+			} else {
+				elseBlock = parseBlock(p)
+				if elseBlock == nil {
+					panic(fmt.Errorf("expected block for else branch"))
+				}
+			}
+		}
+
+		ifStatements = append(ifStatements,
+			&ast.IfStatement{
+				Test:     expression,
+				Then:     thenBlock,
+				Else:     elseBlock,
+				StartPos: startPos,
+			},
+		)
+
+		if !parseNested {
+			break
+		}
+	}
+
+	length := len(ifStatements)
+
+	result := ifStatements[length-1]
+
+	for i := length - 2; i >= 0; i-- {
+		outer := ifStatements[i]
+		outer.Else = &ast.Block{
+			Statements: []ast.Statement{result},
+			Range:      ast.NewRangeFromPositioned(result),
+		}
+		result = outer
+	}
+
+	return result
+}
+
+func parseWhileStatement(p *parser) *ast.WhileStatement {
+
+	startPos := p.current.Range.StartPos
+	p.next()
+
+	expression := parseExpression(p, lowestBindingPower)
+	if expression == nil {
+		panic(fmt.Errorf("expected test expression"))
+	}
+
+	block := parseBlock(p)
+	if block == nil {
+		panic(fmt.Errorf("expected block for then branch"))
+	}
+
+	return &ast.WhileStatement{
+		Test:     expression,
+		Block:    block,
+		StartPos: startPos,
+	}
+}
+
+func parseBlock(p *parser) *ast.Block {
+	startToken := p.mustOne(lexer.TokenBraceOpen)
+	statements := parseStatements(p, lexer.TokenBraceClose)
+	endToken := p.mustOne(lexer.TokenBraceClose)
+
+	return &ast.Block{
+		Statements: statements,
+		Range: ast.Range{
+			StartPos: startToken.Range.StartPos,
+			EndPos:   endToken.Range.EndPos,
 		},
 	}
 }

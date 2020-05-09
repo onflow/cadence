@@ -137,7 +137,7 @@ func ParseExpression(input string) (expression ast.Expression, errors []error) {
 func ParseStatements(input string) (statements []ast.Statement, errors []error) {
 	var res interface{}
 	res, errors = Parse(input, func(p *parser) interface{} {
-		return parseStatements(p)
+		return parseStatements(p, lexer.TokenEOF)
 	})
 	if res == nil {
 		statements = nil

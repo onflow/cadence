@@ -36,6 +36,17 @@ func (t Token) Is(ty TokenType) bool {
 	return t.Type == ty
 }
 
+func (t Token) IsString(ty TokenType, s string) bool {
+	if !t.Is(ty) {
+		return false
+	}
+	v, ok := t.Value.(string)
+	if !ok {
+		return false
+	}
+	return v == s
+}
+
 type position struct {
 	line   int
 	column int
