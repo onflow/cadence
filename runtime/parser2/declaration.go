@@ -63,9 +63,6 @@ func parseVariableDeclaration(p *parser) *ast.VariableDeclaration {
 
 	// TODO: access
 
-	//  leftTransfer=transfer leftExpression=expression
-	//  (rightTransfer=transfer rightExpression=expression)?
-
 	startPos := p.current.Range.StartPos
 
 	isLet := p.current.Value == "let"
