@@ -29,7 +29,7 @@ import (
 type Token struct {
 	Type  TokenType
 	Value interface{}
-	Range ast.Range
+	ast.Range
 }
 
 func (t Token) Is(ty TokenType) bool {
