@@ -62,8 +62,11 @@ func parseStatement(p *parser) ast.Statement {
 
 	declaration := parseDeclaration(p)
 	// TODO: allow more
-	if variableDeclaration, ok := declaration.(*ast.VariableDeclaration); ok {
-		return variableDeclaration
+	switch declaration := declaration.(type) {
+	case *ast.VariableDeclaration:
+		return declaration
+	case *ast.FunctionDeclaration:
+		return declaration
 	}
 
 	expression := parseExpression(p, lowestBindingPower)
@@ -104,7 +107,7 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 	var ifStatements []*ast.IfStatement
 
 	for {
-		startPos := p.current.Range.StartPos
+		startPos := p.current.StartPos
 		p.next()
 
 		expression := parseExpression(p, lowestBindingPower)
@@ -168,7 +171,7 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 
 func parseWhileStatement(p *parser) *ast.WhileStatement {
 
-	startPos := p.current.Range.StartPos
+	startPos := p.current.StartPos
 	p.next()
 
 	expression := parseExpression(p, lowestBindingPower)
@@ -196,8 +199,8 @@ func parseBlock(p *parser) *ast.Block {
 	return &ast.Block{
 		Statements: statements,
 		Range: ast.Range{
-			StartPos: startToken.Range.StartPos,
-			EndPos:   endToken.Range.EndPos,
+			StartPos: startToken.StartPos,
+			EndPos:   endToken.EndPos,
 		},
 	}
 }

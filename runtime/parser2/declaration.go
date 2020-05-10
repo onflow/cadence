@@ -53,6 +53,8 @@ func parseDeclaration(p *parser) ast.Declaration {
 		switch p.current.Value {
 		case "var", "let":
 			return parseVariableDeclaration(p)
+		case "fun":
+			return parseFunctionDeclaration(p)
 		}
 	}
 
@@ -63,14 +65,14 @@ func parseVariableDeclaration(p *parser) *ast.VariableDeclaration {
 
 	// TODO: access
 
-	startPos := p.current.Range.StartPos
+	startPos := p.current.StartPos
 
 	isLet := p.current.Value == "let"
 
 	if !p.current.Is(lexer.TokenIdentifier) ||
 		!(isLet || p.current.Value == "var") {
 
-		panic(fmt.Errorf("expected 'var' or 'let', got %s", p.current.Type))
+		panic(fmt.Errorf("expected kind kind of variable, 'var' or 'let', got %s", p.current.Type))
 	}
 
 	p.next()
@@ -82,12 +84,12 @@ func parseVariableDeclaration(p *parser) *ast.VariableDeclaration {
 
 	identifier := ast.Identifier{
 		Identifier: p.current.Value.(string),
-		Pos:        p.current.Range.StartPos,
+		Pos:        p.current.StartPos,
 	}
 
 	p.next()
 
-	// TODO: type
+	// TODO: type annotation
 	//p.skipSpaceAndComments(true)
 	//if p.current.Is(lexer.TokenColon) {
 	//
@@ -105,6 +107,8 @@ func parseVariableDeclaration(p *parser) *ast.VariableDeclaration {
 	if value == nil {
 		panic(fmt.Errorf("expected initial value for variable"))
 	}
+
+	// TODO: second transfer and value
 
 	return &ast.VariableDeclaration{
 		// TODO: Access
@@ -134,12 +138,159 @@ func parseTransfer(p *parser) *ast.Transfer {
 		return nil
 	}
 
-	startPos := p.current.Range.StartPos
+	startPos := p.current.StartPos
 
 	p.next()
 
 	return &ast.Transfer{
 		Operation: operation,
 		Pos:       startPos,
+	}
+}
+
+func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
+	var parameters []*ast.Parameter
+
+	p.skipSpaceAndComments(true)
+
+	if !p.current.Is(lexer.TokenParenOpen) {
+		panic(fmt.Errorf("expected '(' as start of parameter list, got %s", p.current.Type))
+	}
+
+	startPos := p.current.StartPos
+	p.next()
+
+	var endPos ast.Position
+
+	atEnd := false
+	for !atEnd {
+		p.skipSpaceAndComments(true)
+		switch p.current.Type {
+		case lexer.TokenIdentifier:
+			parameter := parseParameter(p)
+			parameters = append(parameters, parameter)
+		case lexer.TokenComma:
+			p.next()
+		case lexer.TokenParenClose:
+			endPos = p.current.EndPos
+			p.next()
+			atEnd = true
+			break
+		case lexer.TokenEOF:
+			panic(fmt.Errorf("missing ')' at end of parameter list"))
+		default:
+			panic(fmt.Errorf("unexpected token in parameter list: %s", p.current.Type))
+		}
+	}
+
+	return &ast.ParameterList{
+		Parameters: parameters,
+		Range: ast.Range{
+			StartPos: startPos,
+			EndPos:   endPos,
+		},
+	}
+}
+
+func parseParameter(p *parser) *ast.Parameter {
+	p.skipSpaceAndComments(true)
+
+	startPos := p.current.StartPos
+	parameterPos := startPos
+
+	if !p.current.Is(lexer.TokenIdentifier) {
+		panic(fmt.Errorf("expected argument label or parameter name, got %s", p.current.Type))
+	}
+	argumentLabel := ""
+	parameterName := p.current.Value.(string)
+	p.next()
+
+	// If another identifier is provided, then the previous identifier
+	// is the argument label, and this identifier is the parameter name
+
+	p.skipSpaceAndComments(true)
+	if p.current.Is(lexer.TokenIdentifier) {
+		argumentLabel = parameterName
+		parameterName = p.current.Value.(string)
+		parameterPos = p.current.StartPos
+
+		p.next()
+		p.skipSpaceAndComments(true)
+	}
+
+	if !p.current.Is(lexer.TokenColon) {
+		panic(fmt.Errorf("expected ':' after argument label/parameter name, got %s", p.current.Type))
+	}
+
+	// TODO: change to type annotation's end pos
+	endPos := p.current.EndPos
+
+	p.next()
+
+	// TODO: type annotation
+
+	return &ast.Parameter{
+		Label: argumentLabel,
+		Identifier: ast.Identifier{
+			Identifier: parameterName,
+			Pos:        parameterPos,
+		},
+		// TODO: TypeAnnotation,
+		Range: ast.Range{
+			StartPos: startPos,
+			EndPos:   endPos,
+		},
+	}
+}
+
+// Fun identifier parameterList (':' returnType=typeAnnotation)? functionBlock?
+
+func parseFunctionDeclaration(p *parser) *ast.FunctionDeclaration {
+
+	// TODO: access
+
+	startPos := p.current.StartPos
+
+	if !p.current.IsString(lexer.TokenIdentifier, "fun") {
+		panic(fmt.Errorf("expected function keyword 'fun', got %s", p.current.Type))
+	}
+
+	p.next()
+
+	p.skipSpaceAndComments(true)
+	if !p.current.Is(lexer.TokenIdentifier) {
+		panic(fmt.Errorf("expected identifier after start of function declaration"))
+	}
+
+	identifier := ast.Identifier{
+		Identifier: p.current.Value.(string),
+		Pos:        p.current.StartPos,
+	}
+
+	p.next()
+
+	parameterList := parseParameterList(p)
+
+	// TODO: return type annotation
+	//p.skipSpaceAndComments(true)
+	//if p.current.Is(lexer.TokenColon) {
+	//
+	//}
+
+	p.skipSpaceAndComments(true)
+
+	// TODO: parse function block
+	block := parseBlock(p)
+	functionBlock := &ast.FunctionBlock{
+		Block: block,
+	}
+
+	return &ast.FunctionDeclaration{
+		// TODO: Access
+		Identifier:    identifier,
+		ParameterList: parameterList,
+		// TODO: ReturnTypeAnnotation
+		FunctionBlock: functionBlock,
+		StartPos:      startPos,
 	}
 }

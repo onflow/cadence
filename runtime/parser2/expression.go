@@ -244,6 +244,9 @@ func init() {
 					Range: token.Range,
 				}
 
+			case "nil":
+				return &ast.NilExpression{}
+
 			default:
 				return &ast.IdentifierExpression{
 					Identifier: tokenToIdentifier(token),
@@ -314,8 +317,8 @@ func defineArrayExpression() {
 		return &ast.ArrayExpression{
 			Values: values,
 			Range: ast.Range{
-				StartPos: startToken.Range.StartPos,
-				EndPos:   endToken.Range.EndPos,
+				StartPos: startToken.StartPos,
+				EndPos:   endToken.EndPos,
 			},
 		}
 	}
@@ -341,8 +344,8 @@ func defineDictionaryExpression() {
 		return &ast.DictionaryExpression{
 			Entries: entries,
 			Range: ast.Range{
-				StartPos: startToken.Range.StartPos,
-				EndPos:   endToken.Range.EndPos,
+				StartPos: startToken.StartPos,
+				EndPos:   endToken.EndPos,
 			},
 		}
 	}
@@ -372,7 +375,7 @@ func definePathExpression() {
 		return &ast.PathExpression{
 			Domain:     domain,
 			Identifier: identifier,
-			StartPos:   token.Range.StartPos,
+			StartPos:   token.StartPos,
 		}
 	}
 }
@@ -385,7 +388,7 @@ func mustIdentifier(p *parser) ast.Identifier {
 func tokenToIdentifier(identifier lexer.Token) ast.Identifier {
 	return ast.Identifier{
 		Identifier: identifier.Value.(string),
-		Pos:        identifier.Range.StartPos,
+		Pos:        identifier.StartPos,
 	}
 }
 
