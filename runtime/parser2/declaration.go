@@ -88,12 +88,16 @@ func parseVariableDeclaration(p *parser) *ast.VariableDeclaration {
 	}
 
 	p.next()
+	p.skipSpaceAndComments(true)
 
-	// TODO: type annotation
-	//p.skipSpaceAndComments(true)
-	//if p.current.Is(lexer.TokenColon) {
-	//
-	//}
+	var typeAnnotation *ast.TypeAnnotation
+
+	if p.current.Is(lexer.TokenColon) {
+		p.next()
+		p.skipSpaceAndComments(true)
+
+		typeAnnotation = parseTypeAnnotation(p)
+	}
 
 	p.skipSpaceAndComments(true)
 	transfer := parseTransfer(p)
@@ -112,12 +116,12 @@ func parseVariableDeclaration(p *parser) *ast.VariableDeclaration {
 
 	return &ast.VariableDeclaration{
 		// TODO: Access
-		IsConstant: isLet,
-		Identifier: identifier,
-		// TODO: TypeAnnotation
-		Value:    value,
-		Transfer: transfer,
-		StartPos: startPos,
+		IsConstant:     isLet,
+		Identifier:     identifier,
+		TypeAnnotation: typeAnnotation,
+		Value:          value,
+		Transfer:       transfer,
+		StartPos:       startPos,
 		// TODO: SecondTransfer, SecondValue
 	}
 }
@@ -222,12 +226,12 @@ func parseParameter(p *parser) *ast.Parameter {
 		panic(fmt.Errorf("expected ':' after argument label/parameter name, got %s", p.current.Type))
 	}
 
-	// TODO: change to type annotation's end pos
-	endPos := p.current.EndPos
-
 	p.next()
+	p.skipSpaceAndComments(true)
 
-	// TODO: type annotation
+	typeAnnotation := parseTypeAnnotation(p)
+
+	endPos := typeAnnotation.EndPosition()
 
 	return &ast.Parameter{
 		Label: argumentLabel,
@@ -235,7 +239,7 @@ func parseParameter(p *parser) *ast.Parameter {
 			Identifier: parameterName,
 			Pos:        parameterPos,
 		},
-		// TODO: TypeAnnotation,
+		TypeAnnotation: typeAnnotation,
 		Range: ast.Range{
 			StartPos: startPos,
 			EndPos:   endPos,
@@ -271,13 +275,15 @@ func parseFunctionDeclaration(p *parser) *ast.FunctionDeclaration {
 
 	parameterList := parseParameterList(p)
 
-	// TODO: return type annotation
-	//p.skipSpaceAndComments(true)
-	//if p.current.Is(lexer.TokenColon) {
-	//
-	//}
+	var returnTypeAnnotation *ast.TypeAnnotation
 
 	p.skipSpaceAndComments(true)
+	if p.current.Is(lexer.TokenColon) {
+		p.next()
+		p.skipSpaceAndComments(true)
+		returnTypeAnnotation = parseTypeAnnotation(p)
+		p.skipSpaceAndComments(true)
+	}
 
 	// TODO: parse function block
 	block := parseBlock(p)
@@ -287,10 +293,10 @@ func parseFunctionDeclaration(p *parser) *ast.FunctionDeclaration {
 
 	return &ast.FunctionDeclaration{
 		// TODO: Access
-		Identifier:    identifier,
-		ParameterList: parameterList,
-		// TODO: ReturnTypeAnnotation
-		FunctionBlock: functionBlock,
-		StartPos:      startPos,
+		Identifier:           identifier,
+		ParameterList:        parameterList,
+		ReturnTypeAnnotation: returnTypeAnnotation,
+		FunctionBlock:        functionBlock,
+		StartPos:             startPos,
 	}
 }
