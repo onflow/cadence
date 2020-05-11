@@ -203,7 +203,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 					NewStringValue("test"), NewArrayValueUnownedNonCopying(),
 					BoolValue(true), BoolValue(false),
 					NewStringValue("foo"), NewStringValue("bar"),
-				),
+				).Copy(),
 				encoded: []byte{
 					// tag
 					0xd8, cborTagDictionaryValue,

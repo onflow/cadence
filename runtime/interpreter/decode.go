@@ -699,7 +699,7 @@ func (d *Decoder) decodeSome(v interface{}, owner *common.Address) (*SomeValue, 
 	}, nil
 }
 
-func (d *Decoder) decodeStorageReference(v interface{}, owner *common.Address) (*StorageReferenceValue, error) {
+func (d *Decoder) decodeStorageReference(v interface{}, _ *common.Address) (*StorageReferenceValue, error) {
 	encoded, ok := v.(map[interface{}]interface{})
 	if !ok {
 		return nil, fmt.Errorf("invalid storage reference encoding: %T", v)
@@ -726,7 +726,6 @@ func (d *Decoder) decodeStorageReference(v interface{}, owner *common.Address) (
 		Authorized:           authorized,
 		TargetStorageAddress: targetStorageAddress,
 		TargetKey:            targetKey,
-		Owner:                owner,
 	}, nil
 }
 
