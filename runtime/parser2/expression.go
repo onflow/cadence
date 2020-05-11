@@ -29,72 +29,70 @@ import (
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
-const lowestBindingPower = 0
+type infixExprFunc func(left, right ast.Expression) ast.Expression
+type prefixExprFunc func(right ast.Expression, tokenRange ast.Range) ast.Expression
+type exprNullDenotationFunc func(parser *parser, token lexer.Token) ast.Expression
 
-type infixFunc func(left, right ast.Expression) ast.Expression
-type prefixFunc func(right ast.Expression, tokenRange ast.Range) ast.Expression
-type nullDenotationFunc func(parser *parser, token lexer.Token) ast.Expression
-
-type literal struct {
+type literalExpr struct {
 	tokenType      lexer.TokenType
-	nullDenotation nullDenotationFunc
+	nullDenotation exprNullDenotationFunc
 }
 
-type infix struct {
+type infixExpr struct {
 	tokenType        lexer.TokenType
 	leftBindingPower int
 	rightAssociative bool
-	leftDenotation   infixFunc
+	leftDenotation   infixExprFunc
 }
 
-type binary struct {
+type binaryExpr struct {
 	tokenType        lexer.TokenType
 	leftBindingPower int
 	rightAssociative bool
 	operation        ast.Operation
 }
 
-type prefix struct {
+type prefixExpr struct {
 	tokenType      lexer.TokenType
 	bindingPower   int
-	nullDenotation prefixFunc
+	nullDenotation prefixExprFunc
 }
 
-type unary struct {
+type unaryExpr struct {
 	tokenType    lexer.TokenType
 	bindingPower int
 	operation    ast.Operation
 }
 
-var nullDenotations = map[lexer.TokenType]nullDenotationFunc{}
+var exprNullDenotations = map[lexer.TokenType]exprNullDenotationFunc{}
 
-type leftDenotationFunc func(parser *parser, left ast.Expression) ast.Expression
+type exprLeftDenotationFunc func(parser *parser, token lexer.Token, left ast.Expression) ast.Expression
 
-var leftBindingPowers = map[lexer.TokenType]int{}
-var leftDenotations = map[lexer.TokenType]leftDenotationFunc{}
+var exprLeftBindingPowers = map[lexer.TokenType]int{}
+var exprLeftDenotations = map[lexer.TokenType]exprLeftDenotationFunc{}
 
-func define(def interface{}) {
+func defineExpr(def interface{}) {
 	switch def := def.(type) {
-	case infix:
+	case infixExpr:
 		tokenType := def.tokenType
 
-		setLeftBindingPower(tokenType, def.leftBindingPower)
+		setExprLeftBindingPower(tokenType, def.leftBindingPower)
 
 		rightBindingPower := def.leftBindingPower
 		if def.rightAssociative {
 			rightBindingPower -= 1
 		}
 
-		setLeftDenotation(
+		setExprLeftDenotation(
 			tokenType,
-			func(parser *parser, left ast.Expression) ast.Expression {
+			func(parser *parser, _ lexer.Token, left ast.Expression) ast.Expression {
 				right := parseExpression(parser, rightBindingPower)
 				return def.leftDenotation(left, right)
 			},
 		)
 
-	case binary:
-		define(infix{
+	case binaryExpr:
+		defineExpr(infixExpr{
 			tokenType:        def.tokenType,
 			leftBindingPower: def.leftBindingPower,
 			rightAssociative: def.rightAssociative,
@@ -107,15 +105,13 @@ func define(def interface{}) {
 			},
 		})
 
-	case literal:
+	case literalExpr:
 		tokenType := def.tokenType
-		setLeftBindingPower(tokenType, lowestBindingPower)
-		setNullDenotation(tokenType, def.nullDenotation)
+		setExprNullDenotation(tokenType, def.nullDenotation)
 
-	case prefix:
+	case prefixExpr:
 		tokenType := def.tokenType
-		setLeftBindingPower(tokenType, lowestBindingPower)
-		setNullDenotation(
+		setExprNullDenotation(
 			tokenType,
 			func(parser *parser, token lexer.Token) ast.Expression {
 				right := parseExpression(parser, def.bindingPower)
@@ -123,8 +119,8 @@ func define(def interface{}) {
 			},
 		)
 
-	case unary:
-		define(prefix{
+	case unaryExpr:
+		defineExpr(prefixExpr{
 			tokenType:    def.tokenType,
 			bindingPower: def.bindingPower,
 			nullDenotation: func(right ast.Expression, tokenRange ast.Range) ast.Expression {
@@ -141,94 +137,163 @@ func define(def interface{}) {
 	}
 }
 
-func setNullDenotation(tokenType lexer.TokenType, nullDenotation nullDenotationFunc) {
-	current := nullDenotations[tokenType]
+func setExprNullDenotation(tokenType lexer.TokenType, nullDenotation exprNullDenotationFunc) {
+	current := exprNullDenotations[tokenType]
 	if current != nil {
 		panic(fmt.Errorf(
-			"null denotation for token type %s exists",
+			"expression null denotation for token type %s exists",
 			tokenType,
 		))
 	}
-	nullDenotations[tokenType] = nullDenotation
+	exprNullDenotations[tokenType] = nullDenotation
 }
 
-func setLeftBindingPower(tokenType lexer.TokenType, power int) {
-	current := leftBindingPowers[tokenType]
+func setExprLeftBindingPower(tokenType lexer.TokenType, power int) {
+	current := exprLeftBindingPowers[tokenType]
 	if current > power {
 		return
 	}
-	leftBindingPowers[tokenType] = power
+	exprLeftBindingPowers[tokenType] = power
 }
 
-func setLeftDenotation(tokenType lexer.TokenType, leftDenotation leftDenotationFunc) {
-	current := leftDenotations[tokenType]
+func setExprLeftDenotation(tokenType lexer.TokenType, leftDenotation exprLeftDenotationFunc) {
+	current := exprLeftDenotations[tokenType]
 	if current != nil {
 		panic(fmt.Errorf(
-			"left denotation for token type %s exists",
+			"expression left denotation for token type %s exists",
 			tokenType,
 		))
 	}
-	leftDenotations[tokenType] = leftDenotation
+	exprLeftDenotations[tokenType] = leftDenotation
 }
 
 func init() {
 
-	define(binary{
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenVerticalBarVerticalBar,
+		leftBindingPower: 30,
+		rightAssociative: true,
+		operation:        ast.OperationOr,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenAmpersandAmpersand,
+		leftBindingPower: 40,
+		rightAssociative: true,
+		operation:        ast.OperationAnd,
+	})
+
+	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenLess,
-		leftBindingPower: 60,
+		leftBindingPower: 50,
 		operation:        ast.OperationLess,
 	})
 
-	define(binary{
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenLessEqual,
+		leftBindingPower: 50,
+		operation:        ast.OperationLessEqual,
+	})
+
+	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenGreater,
-		leftBindingPower: 60,
+		leftBindingPower: 50,
 		operation:        ast.OperationGreater,
 	})
 
-	define(binary{
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenGreaterEqual,
+		leftBindingPower: 50,
+		operation:        ast.OperationGreaterEqual,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenEqual,
+		leftBindingPower: 50,
+		operation:        ast.OperationEqual,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenNotEqual,
+		leftBindingPower: 50,
+		operation:        ast.OperationNotEqual,
+	})
+
+	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenNilCoalesce,
-		leftBindingPower: 100,
+		leftBindingPower: 60,
 		operation:        ast.OperationNilCoalesce,
 		rightAssociative: true,
 	})
 
-	define(binary{
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenVerticalBar,
+		leftBindingPower: 70,
+		operation:        ast.OperationBitwiseOr,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenCaret,
+		leftBindingPower: 80,
+		operation:        ast.OperationBitwiseXor,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenAmpersand,
+		leftBindingPower: 90,
+		operation:        ast.OperationBitwiseAnd,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenLessLess,
+		leftBindingPower: 100,
+		operation:        ast.OperationBitwiseLeftShift,
+	})
+
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenGreaterGreater,
+		leftBindingPower: 100,
+		operation:        ast.OperationBitwiseRightShift,
+	})
+
+	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenPlus,
 		leftBindingPower: 110,
 		operation:        ast.OperationPlus,
 	})
 
-	define(binary{
+	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenMinus,
 		leftBindingPower: 110,
 		operation:        ast.OperationMinus,
 	})
 
-	define(binary{
+	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenStar,
 		leftBindingPower: 120,
 		operation:        ast.OperationMul,
 	})
 
-	define(binary{
+	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenSlash,
 		leftBindingPower: 120,
 		operation:        ast.OperationDiv,
 	})
 
-	define(literal{
+	defineExpr(binaryExpr{
+		tokenType:        lexer.TokenPercent,
+		leftBindingPower: 120,
+		operation:        ast.OperationMod,
+	})
+
+	defineExpr(literalExpr{
 		tokenType: lexer.TokenNumber,
 		nullDenotation: func(_ *parser, token lexer.Token) ast.Expression {
-			value, _ := new(big.Int).SetString(token.Value.(string), 10)
-			return &ast.IntegerExpression{
-				Value: value,
-				Base:  10,
-				Range: token.Range,
-			}
+			return parseNumber(token)
 		},
 	})
 
-	define(literal{
+	defineExpr(literalExpr{
 		tokenType: lexer.TokenIdentifier,
 		nullDenotation: func(_ *parser, token lexer.Token) ast.Expression {
 			switch token.Value {
@@ -255,7 +320,7 @@ func init() {
 		},
 	})
 
-	define(literal{
+	defineExpr(literalExpr{
 		tokenType: lexer.TokenString,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
 			parsedString, errs := parseStringLiteral(token.Value.(string))
@@ -267,19 +332,25 @@ func init() {
 		},
 	})
 
-	define(unary{
+	defineExpr(unaryExpr{
 		tokenType:    lexer.TokenMinus,
 		bindingPower: 130,
 		operation:    ast.OperationMinus,
 	})
 
-	define(unary{
+	defineExpr(unaryExpr{
 		tokenType:    lexer.TokenPlus,
 		bindingPower: 130,
 		operation:    ast.OperationPlus,
 	})
 
-	define(unary{
+	defineExpr(unaryExpr{
+		tokenType:    lexer.TokenNot,
+		bindingPower: 130,
+		operation:    ast.OperationNegate,
+	})
+
+	defineExpr(unaryExpr{
 		tokenType:    lexer.TokenLeftArrow,
 		bindingPower: 130,
 		operation:    ast.OperationMove,
@@ -292,104 +363,117 @@ func init() {
 	defineConditionalExpression()
 }
 
-func defineNestedExpression() {
-	leftBindingPowers[lexer.TokenParenOpen] = 150
-	nullDenotations[lexer.TokenParenOpen] = func(p *parser, token lexer.Token) ast.Expression {
-		expression := parseExpression(p, lowestBindingPower)
-		p.mustOne(lexer.TokenParenClose)
-		return expression
+func parseNumber(token lexer.Token) ast.Expression {
+	// TODO: extend
+	value, _ := new(big.Int).SetString(token.Value.(string), 10)
+	return &ast.IntegerExpression{
+		Value: value,
+		Base:  10,
+		Range: token.Range,
 	}
+}
+
+func defineNestedExpression() {
+	setExprLeftBindingPower(lexer.TokenParenOpen, 150)
+	setExprNullDenotation(
+		lexer.TokenParenOpen,
+		func(p *parser, token lexer.Token) ast.Expression {
+			expression := parseExpression(p, lowestBindingPower)
+			p.mustOne(lexer.TokenParenClose)
+			return expression
+		},
+	)
 }
 
 func defineArrayExpression() {
-	leftBindingPowers[lexer.TokenBracketOpen] = 150
-	nullDenotations[lexer.TokenBracketOpen] = func(p *parser, startToken lexer.Token) ast.Expression {
-		var values []ast.Expression
-		for !p.current.Is(lexer.TokenBracketClose) {
-			value := parseExpression(p, lowestBindingPower)
-			values = append(values, value)
-			if !p.current.Is(lexer.TokenComma) {
-				break
+	setExprLeftBindingPower(lexer.TokenBracketOpen, 150)
+	setExprNullDenotation(
+		lexer.TokenBracketOpen,
+		func(p *parser, startToken lexer.Token) ast.Expression {
+			var values []ast.Expression
+			for !p.current.Is(lexer.TokenBracketClose) {
+				value := parseExpression(p, lowestBindingPower)
+				values = append(values, value)
+				if !p.current.Is(lexer.TokenComma) {
+					break
+				}
+				p.mustOne(lexer.TokenComma)
 			}
-			p.mustOne(lexer.TokenComma)
-		}
-		endToken := p.mustOne(lexer.TokenBracketClose)
-		return &ast.ArrayExpression{
-			Values: values,
-			Range: ast.Range{
-				StartPos: startToken.StartPos,
-				EndPos:   endToken.EndPos,
-			},
-		}
-	}
+			endToken := p.mustOne(lexer.TokenBracketClose)
+			return &ast.ArrayExpression{
+				Values: values,
+				Range: ast.Range{
+					StartPos: startToken.StartPos,
+					EndPos:   endToken.EndPos,
+				},
+			}
+		},
+	)
 }
 
 func defineDictionaryExpression() {
-	nullDenotations[lexer.TokenBraceOpen] = func(p *parser, startToken lexer.Token) ast.Expression {
-		var entries []ast.Entry
-		for !p.current.Is(lexer.TokenBraceClose) {
-			key := parseExpression(p, lowestBindingPower)
-			p.mustOne(lexer.TokenColon)
-			value := parseExpression(p, lowestBindingPower)
-			entries = append(entries, ast.Entry{
-				Key:   key,
-				Value: value,
-			})
-			if !p.current.Is(lexer.TokenComma) {
-				break
+	setExprNullDenotation(
+		lexer.TokenBraceOpen,
+		func(p *parser, startToken lexer.Token) ast.Expression {
+			var entries []ast.Entry
+			for !p.current.Is(lexer.TokenBraceClose) {
+				key := parseExpression(p, lowestBindingPower)
+				p.mustOne(lexer.TokenColon)
+				value := parseExpression(p, lowestBindingPower)
+				entries = append(entries, ast.Entry{
+					Key:   key,
+					Value: value,
+				})
+				if !p.current.Is(lexer.TokenComma) {
+					break
+				}
+				p.mustOne(lexer.TokenComma)
 			}
-			p.mustOne(lexer.TokenComma)
-		}
-		endToken := p.mustOne(lexer.TokenBraceClose)
-		return &ast.DictionaryExpression{
-			Entries: entries,
-			Range: ast.Range{
-				StartPos: startToken.StartPos,
-				EndPos:   endToken.EndPos,
-			},
-		}
-	}
+			endToken := p.mustOne(lexer.TokenBraceClose)
+			return &ast.DictionaryExpression{
+				Entries: entries,
+				Range: ast.Range{
+					StartPos: startToken.StartPos,
+					EndPos:   endToken.EndPos,
+				},
+			}
+		},
+	)
 }
 
 func defineConditionalExpression() {
-	leftBindingPowers[lexer.TokenQuestionMark] = 20
-	leftDenotations[lexer.TokenQuestionMark] = func(p *parser, left ast.Expression) ast.Expression {
-		testExpression := left
-		thenExpression := parseExpression(p, lowestBindingPower)
-		p.mustOne(lexer.TokenColon)
-		elseExpression := parseExpression(p, lowestBindingPower)
-		return &ast.ConditionalExpression{
-			Test: testExpression,
-			Then: thenExpression,
-			Else: elseExpression,
-		}
-	}
+	setExprLeftBindingPower(lexer.TokenQuestionMark, 20)
+	setExprLeftDenotation(
+		lexer.TokenQuestionMark,
+		func(p *parser, _ lexer.Token, left ast.Expression) ast.Expression {
+			testExpression := left
+			thenExpression := parseExpression(p, lowestBindingPower)
+			p.mustOne(lexer.TokenColon)
+			elseExpression := parseExpression(p, lowestBindingPower)
+			return &ast.ConditionalExpression{
+				Test: testExpression,
+				Then: thenExpression,
+				Else: elseExpression,
+			}
+		},
+	)
 }
 
 func definePathExpression() {
-	leftBindingPowers[lexer.TokenSlash] = 150
-	nullDenotations[lexer.TokenSlash] = func(p *parser, token lexer.Token) ast.Expression {
-		domain := mustIdentifier(p)
-		p.mustOne(lexer.TokenSlash)
-		identifier := mustIdentifier(p)
-		return &ast.PathExpression{
-			Domain:     domain,
-			Identifier: identifier,
-			StartPos:   token.StartPos,
-		}
-	}
-}
-
-func mustIdentifier(p *parser) ast.Identifier {
-	identifier := p.mustOne(lexer.TokenIdentifier)
-	return tokenToIdentifier(identifier)
-}
-
-func tokenToIdentifier(identifier lexer.Token) ast.Identifier {
-	return ast.Identifier{
-		Identifier: identifier.Value.(string),
-		Pos:        identifier.StartPos,
-	}
+	setExprLeftBindingPower(lexer.TokenSlash, 150)
+	setExprNullDenotation(
+		lexer.TokenSlash,
+		func(p *parser, token lexer.Token) ast.Expression {
+			domain := mustIdentifier(p)
+			p.mustOne(lexer.TokenSlash)
+			identifier := mustIdentifier(p)
+			return &ast.PathExpression{
+				Domain:     domain,
+				Identifier: identifier,
+				StartPos:   token.StartPos,
+			}
+		},
+	)
 }
 
 func parseExpression(p *parser, rightBindingPower int) ast.Expression {
@@ -398,39 +482,39 @@ func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 	p.next()
 	p.skipSpaceAndComments(true)
 
-	left := applyNullDenotation(p, t)
+	left := applyExprNullDenotation(p, t)
 	if left == nil {
 		return nil
 	}
 
 	p.skipSpaceAndComments(true)
 
-	for rightBindingPower < leftBindingPowers[p.current.Type] {
+	for rightBindingPower < exprLeftBindingPowers[p.current.Type] {
 		t = p.current
 		p.next()
 		p.skipSpaceAndComments(true)
 
-		left = applyLeftDenotation(p, t.Type, left)
+		left = applyExprLeftDenotation(p, t, left)
 	}
 
 	return left
 }
 
-func applyNullDenotation(p *parser, token lexer.Token) ast.Expression {
+func applyExprNullDenotation(p *parser, token lexer.Token) ast.Expression {
 	tokenType := token.Type
-	nullDenotation, ok := nullDenotations[tokenType]
+	nullDenotation, ok := exprNullDenotations[tokenType]
 	if !ok {
 		return nil
 	}
 	return nullDenotation(p, token)
 }
 
-func applyLeftDenotation(p *parser, tokenType lexer.TokenType, left ast.Expression) ast.Expression {
-	leftDenotation, ok := leftDenotations[tokenType]
+func applyExprLeftDenotation(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
+	leftDenotation, ok := exprLeftDenotations[token.Type]
 	if !ok {
-		panic(fmt.Errorf("missing left denotation for token type: %v", tokenType))
+		panic(fmt.Errorf("missing left denotation for token type: %v", token.Type))
 	}
-	return leftDenotation(p, left)
+	return leftDenotation(p, token, left)
 }
 
 // parseStringLiteral parses a whole string literal, including start and end quotes
@@ -478,7 +562,7 @@ func parseStringLiteral(literal string) (result string, errs []error) {
 	return
 }
 
-// parseStringLiteralContent parses the string literal contents, excluding start and end quotes
+// parseStringLiteralContent parses the string literalExpr contents, excluding start and end quotes
 //
 func parseStringLiteralContent(s string) (result string, errs []error) {
 
