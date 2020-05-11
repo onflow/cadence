@@ -53,6 +53,10 @@ func parseStatement(p *parser) ast.Statement {
 		switch p.current.Value {
 		case keywordReturn:
 			return parseReturnStatement(p)
+		case keywordBreak:
+			return parseBreakStatement(p)
+		case keywordContinue:
+			return parseContinueStatement(p)
 		case keywordIf:
 			return parseIfStatement(p)
 		case keywordWhile:
@@ -99,6 +103,24 @@ func parseReturnStatement(p *parser) *ast.ReturnStatement {
 			StartPos: tokenRange.StartPos,
 			EndPos:   endPosition,
 		},
+	}
+}
+
+func parseBreakStatement(p *parser) *ast.BreakStatement {
+	tokenRange := p.current.Range
+	p.next()
+
+	return &ast.BreakStatement{
+		Range: tokenRange,
+	}
+}
+
+func parseContinueStatement(p *parser) *ast.ContinueStatement {
+	tokenRange := p.current.Range
+	p.next()
+
+	return &ast.ContinueStatement{
+		Range: tokenRange,
 	}
 }
 
