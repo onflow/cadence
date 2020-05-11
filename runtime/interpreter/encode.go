@@ -727,7 +727,7 @@ type encodedVariableSizedStaticType struct {
 }
 
 type encodedConstantSizedStaticType struct {
-	Size uint64      `cbor:"0,keyasint"`
+	Size int64       `cbor:"0,keyasint"`
 	Type interface{} `cbor:"1,keyasint"`
 }
 

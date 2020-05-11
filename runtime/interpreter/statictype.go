@@ -89,7 +89,7 @@ func (t VariableSizedStaticType) String() string {
 
 type ConstantSizedStaticType struct {
 	Type StaticType
-	Size uint64
+	Size int64
 }
 
 func (ConstantSizedStaticType) isStaticType() {}

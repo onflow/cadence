@@ -979,6 +979,15 @@ func (d *Decoder) decodeConstantSizedStaticType(v interface{}) (StaticType, erro
 		return nil, fmt.Errorf("invalid constant-sized static type size encoding: %T", field1)
 	}
 
+	const max = math.MaxInt64
+	if size > max {
+		return nil, fmt.Errorf(
+			"invalid constant-sized static type size: got %d, expected max %d",
+			size,
+			max,
+		)
+	}
+
 	staticType, err := d.decodeStaticType(encoded[uint64(1)])
 	if err != nil {
 		return nil, fmt.Errorf("invalid constant-sized static type inner type encoding: %w", err)
@@ -986,7 +995,7 @@ func (d *Decoder) decodeConstantSizedStaticType(v interface{}) (StaticType, erro
 
 	return ConstantSizedStaticType{
 		Type: staticType,
-		Size: size,
+		Size: int64(size),
 	}, nil
 }
 
