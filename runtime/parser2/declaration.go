@@ -133,9 +133,8 @@ func parseTransfer(p *parser) *ast.Transfer {
 		operation = ast.TransferOperationCopy
 	case lexer.TokenLeftArrow:
 		operation = ast.TransferOperationMove
-		// TODO:
-		//case lexer.TokenLeftArrowExclamation:
-		//	operation = ast.TransferOperationMoveForced
+	case lexer.TokenLeftArrowExclamation:
+		operation = ast.TransferOperationMoveForced
 	}
 
 	if operation == ast.TransferOperationUnknown {
