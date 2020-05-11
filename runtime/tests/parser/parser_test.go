@@ -4179,7 +4179,7 @@ func TestParsePreAndPostConditions(t *testing.T) {
 						{
 							Kind: ConditionKindPre,
 							Test: &BinaryExpression{
-								Operation: OperationUnequal,
+								Operation: OperationNotEqual,
 								Left: &IdentifierExpression{
 									Identifier: Identifier{
 										Identifier: "n",

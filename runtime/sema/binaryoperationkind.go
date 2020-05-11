@@ -60,7 +60,7 @@ func binaryOperationKind(operation ast.Operation) BinaryOperationKind {
 		return BinaryOperationKindBooleanLogic
 
 	case ast.OperationEqual,
-		ast.OperationUnequal:
+		ast.OperationNotEqual:
 
 		return BinaryOperationKindEquality
 

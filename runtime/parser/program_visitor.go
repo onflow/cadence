@@ -2107,7 +2107,7 @@ func (v *ProgramVisitor) VisitEqualityOp(ctx *EqualityOpContext) interface{} {
 		return ast.OperationEqual
 
 	case ctx.Unequal() != nil:
-		return ast.OperationUnequal
+		return ast.OperationNotEqual
 
 	default:
 		panic(errors.NewUnreachableError())

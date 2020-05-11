@@ -184,7 +184,7 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 		{
 			operations: []ast.Operation{
 				ast.OperationEqual,
-				ast.OperationUnequal,
+				ast.OperationNotEqual,
 			},
 			tests: []operationTest{
 				{&sema.BoolType{}, "true", "false", nil},
