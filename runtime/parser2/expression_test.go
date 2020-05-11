@@ -1002,6 +1002,113 @@ func TestInvocation(t *testing.T) {
 			result,
 		)
 	})
+	t.Run("invocation, with parameters, nested", func(t *testing.T) {
+		result, errors := ParseExpression("f(1,g(2))")
+		require.Empty(t, errors)
+		assert.Equal(t,
+			&ast.InvocationExpression{
+				InvokedExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "f",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				Arguments: []*ast.Argument{
+					{
+						Label: "",
+						Expression: &ast.IntegerExpression{
+							Value: big.NewInt(1),
+							Base:  10,
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+								EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+							},
+						},
+					},
+					{
+						Label: "",
+						Expression: &ast.InvocationExpression{
+							InvokedExpression: &ast.IdentifierExpression{
+								Identifier: ast.Identifier{
+									Identifier: "g",
+									Pos:        ast.Position{Offset: 4, Line: 1, Column: 4},
+								},
+							},
+							Arguments: []*ast.Argument{
+								{
+									Label: "",
+									Expression: &ast.IntegerExpression{
+										Value: big.NewInt(2),
+										Base:  10,
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+											EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+										},
+									},
+								},
+							},
+							EndPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+						},
+					},
+				},
+				EndPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+			},
+			result,
+		)
+	})
+	t.Run("invocation, with parameters, nested, string", func(t *testing.T) {
+		result, errors := ParseExpression("f(1,g(\"test\"))")
+		require.Empty(t, errors)
+		assert.Equal(t,
+			&ast.InvocationExpression{
+				InvokedExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "f",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				Arguments: []*ast.Argument{
+					{
+						Label: "",
+						Expression: &ast.IntegerExpression{
+							Value: big.NewInt(1),
+							Base:  10,
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+								EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+							},
+						},
+					},
+					{
+						Label: "",
+						Expression: &ast.InvocationExpression{
+							InvokedExpression: &ast.IdentifierExpression{
+								Identifier: ast.Identifier{
+									Identifier: "g",
+									Pos:        ast.Position{Offset: 4, Line: 1, Column: 4},
+								},
+							},
+							Arguments: []*ast.Argument{
+								{
+									Label: "",
+									Expression: &ast.StringExpression{
+										Value: "test",
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+											EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+										},
+									},
+								},
+							},
+							EndPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+						},
+					},
+				},
+				EndPos: ast.Position{Offset: 13, Line: 1, Column: 13},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseBlockComment(t *testing.T) {
