@@ -51,11 +51,11 @@ func parseStatement(p *parser) ast.Statement {
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
 		switch p.current.Value {
-		case "return":
+		case keywordReturn:
 			return parseReturnStatement(p)
-		case "if":
+		case keywordIf:
 			return parseIfStatement(p)
-		case "while":
+		case keywordWhile:
 			return parseWhileStatement(p)
 		}
 	}
@@ -115,11 +115,11 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 		parseNested := false
 
 		p.skipSpaceAndComments(true)
-		if p.current.IsString(lexer.TokenIdentifier, "else") {
+		if p.current.IsString(lexer.TokenIdentifier, keywordElse) {
 			p.next()
 
 			p.skipSpaceAndComments(true)
-			if p.current.IsString(lexer.TokenIdentifier, "if") {
+			if p.current.IsString(lexer.TokenIdentifier, keywordIf) {
 				parseNested = true
 			} else {
 				elseBlock = parseBlock(p)

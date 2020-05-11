@@ -25,13 +25,16 @@ import (
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
+const blockCommentStart = "/*"
+const blockCommentEnd = "*/"
+
 func (p *parser) parseCommentContent() (comment string) {
 	var builder strings.Builder
 	defer func() {
 		comment = builder.String()
 	}()
 
-	builder.WriteString("/*")
+	builder.WriteString(blockCommentStart)
 
 	var t trampoline
 	t = func(builder *strings.Builder) trampoline {
@@ -47,11 +50,11 @@ func (p *parser) parseCommentContent() (comment string) {
 				case lexer.TokenBlockCommentContent:
 					builder.WriteString(p.current.Value.(string))
 				case lexer.TokenBlockCommentEnd:
-					builder.WriteString("*/")
+					builder.WriteString(blockCommentEnd)
 					p.next()
 					return nil
 				case lexer.TokenBlockCommentStart:
-					builder.WriteString("/*")
+					builder.WriteString(blockCommentStart)
 
 					// parse inner content, then rest of this comment
 					return []trampoline{t, t}

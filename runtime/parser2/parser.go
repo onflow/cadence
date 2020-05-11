@@ -25,6 +25,13 @@ import (
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
+const keywordIf = "if"
+const keywordElse = "else"
+const keywordWhile = "while"
+const keywordReturn = "return"
+const keywordTrue = "true"
+const keywordFalse = "false"
+
 type parser struct {
 	tokens  chan lexer.Token
 	current lexer.Token
