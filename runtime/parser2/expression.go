@@ -80,7 +80,7 @@ func defineExpr(def interface{}) {
 
 		rightBindingPower := def.leftBindingPower
 		if def.rightAssociative {
-			rightBindingPower -= 1
+			rightBindingPower--
 		}
 
 		setExprLeftDenotation(
@@ -357,6 +357,7 @@ func init() {
 	})
 
 	defineNestedExpression()
+	defineInvocationExpression()
 	defineArrayExpression()
 	defineDictionaryExpression()
 	definePathExpression()
@@ -371,6 +372,42 @@ func parseNumber(token lexer.Token) ast.Expression {
 		Base:  10,
 		Range: token.Range,
 	}
+}
+
+func defineInvocationExpression() {
+	setExprLeftDenotation(
+		lexer.TokenParenOpen,
+		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
+			var arguments []*ast.Argument
+			var endPos ast.Position
+			atEnd := false
+			for !atEnd {
+				p.skipSpaceAndComments(true)
+				switch p.current.Type {
+				case lexer.TokenComma:
+					p.next()
+				case lexer.TokenParenClose:
+					endPos = p.current.EndPos
+					p.next()
+					atEnd = true
+					break
+				case lexer.TokenEOF:
+					panic(fmt.Errorf("missing ')' at end of invocation argument list"))
+				default:
+					argument := &ast.Argument{
+						Label:      "",
+						Expression: parseExpression(p, lowestBindingPower),
+					}
+					arguments = append(arguments, argument)
+				}
+			}
+			return &ast.InvocationExpression{
+				InvokedExpression: left,
+				Arguments:         arguments,
+				EndPos:            endPos,
+			}
+		},
+	)
 }
 
 func defineNestedExpression() {
