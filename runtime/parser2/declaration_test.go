@@ -122,6 +122,45 @@ func TestParseVariableDeclaration(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("let, resource type annotation, move, one value", func(t *testing.T) {
+		result, errs := ParseStatements("let r2: @R <- r")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.VariableDeclaration{
+					IsConstant: true,
+					Identifier: ast.Identifier{
+						Identifier: "r2",
+						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+					TypeAnnotation: &ast.TypeAnnotation{
+						IsResource: true,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "R",
+								Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+					},
+					Value: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "r",
+							Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
+					},
+					Transfer: &ast.Transfer{
+						Operation: ast.TransferOperationMove,
+						Pos:       ast.Position{Line: 1, Column: 11, Offset: 11},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseParameterList(t *testing.T) {
@@ -165,9 +204,8 @@ func TestParseParameterList(t *testing.T) {
 		)
 	})
 
-	// TODO: type annotation
 	t.Run("one, without argument label", func(t *testing.T) {
-		result, errs := parse("( a : )")
+		result, errs := parse("( a : Int )")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -179,25 +217,33 @@ func TestParseParameterList(t *testing.T) {
 							Identifier: "a",
 							Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
 						},
-						TypeAnnotation: nil,
+						TypeAnnotation: &ast.TypeAnnotation{
+							IsResource: false,
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "Int",
+									Pos:        ast.Position{Line: 1, Column: 6, Offset: 6},
+								},
+							},
+							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
 						},
 					},
 				},
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-					EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+					EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
 				},
 			},
 			result,
 		)
 	})
 
-	// TODO: type annotation
 	t.Run("one, with argument label", func(t *testing.T) {
-		result, errs := parse("( a b : )")
+		result, errs := parse("( a b : Int )")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -209,25 +255,33 @@ func TestParseParameterList(t *testing.T) {
 							Identifier: "b",
 							Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
 						},
-						TypeAnnotation: nil,
+						TypeAnnotation: &ast.TypeAnnotation{
+							IsResource: false,
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "Int",
+									Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+								},
+							},
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
 						},
 					},
 				},
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-					EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					EndPos:   ast.Position{Line: 1, Column: 12, Offset: 12},
 				},
 			},
 			result,
 		)
 	})
 
-	// TODO: type annotation
 	t.Run("two, with and without argument label", func(t *testing.T) {
-		result, errs := parse("( a b : , c : )")
+		result, errs := parse("( a b : Int , c : Int )")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -239,28 +293,46 @@ func TestParseParameterList(t *testing.T) {
 							Identifier: "b",
 							Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
 						},
-						TypeAnnotation: nil,
+						TypeAnnotation: &ast.TypeAnnotation{
+							IsResource: false,
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "Int",
+									Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+								},
+							},
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
-							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
 						},
 					},
 					{
 						Label: "",
 						Identifier: ast.Identifier{
 							Identifier: "c",
-							Pos:        ast.Position{Line: 1, Column: 10, Offset: 10},
+							Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
 						},
-						TypeAnnotation: nil,
+						TypeAnnotation: &ast.TypeAnnotation{
+							IsResource: false,
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "Int",
+									Pos:        ast.Position{Line: 1, Column: 18, Offset: 18},
+								},
+							},
+							StartPos: ast.Position{Line: 1, Column: 18, Offset: 18},
+						},
 						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
-							EndPos:   ast.Position{Line: 1, Column: 12, Offset: 12},
+							StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
+							EndPos:   ast.Position{Line: 1, Column: 20, Offset: 20},
 						},
 					},
 				},
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-					EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
+					EndPos:   ast.Position{Line: 1, Column: 22, Offset: 22},
 				},
 			},
 			result,
@@ -270,7 +342,7 @@ func TestParseParameterList(t *testing.T) {
 
 func TestParseFunctionDeclaration(t *testing.T) {
 
-	t.Run("simple", func(t *testing.T) {
+	t.Run("without return type", func(t *testing.T) {
 		result, errs := ParseStatements("fun foo () { }")
 		require.Empty(t, errs)
 
@@ -293,6 +365,48 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							Range: ast.Range{
 								StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
 								EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("with return type", func(t *testing.T) {
+		result, errs := ParseStatements("fun foo (): X { }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.FunctionDeclaration{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "X",
+								Pos:        ast.Position{Line: 1, Column: 12, Offset: 12},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 14, Offset: 14},
+								EndPos:   ast.Position{Line: 1, Column: 16, Offset: 16},
 							},
 						},
 					},
