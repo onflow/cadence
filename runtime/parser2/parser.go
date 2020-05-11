@@ -34,6 +34,8 @@ const keywordReturn = "return"
 const keywordTrue = "true"
 const keywordFalse = "false"
 
+const lowestBindingPower = 0
+
 type parser struct {
 	tokens  chan lexer.Token
 	current lexer.Token
@@ -130,10 +132,22 @@ func (p *parser) skipSpaceAndComments(skipNewlines bool) (containsNewline bool) 
 	return
 }
 
+func mustIdentifier(p *parser) ast.Identifier {
+	identifier := p.mustOne(lexer.TokenIdentifier)
+	return tokenToIdentifier(identifier)
+}
+
+func tokenToIdentifier(identifier lexer.Token) ast.Identifier {
+	return ast.Identifier{
+		Identifier: identifier.Value.(string),
+		Pos:        identifier.StartPos,
+	}
+}
+
 func ParseExpression(input string) (expression ast.Expression, errors []error) {
 	var res interface{}
 	res, errors = Parse(input, func(p *parser) interface{} {
-		return parseExpression(p, 0)
+		return parseExpression(p, lowestBindingPower)
 	})
 	if res == nil {
 		expression = nil
@@ -153,5 +167,18 @@ func ParseStatements(input string) (statements []ast.Statement, errors []error) 
 		return
 	}
 	statements = res.([]ast.Statement)
+	return
+}
+
+func ParseType(input string) (ty ast.Type, errors []error) {
+	var res interface{}
+	res, errors = Parse(input, func(p *parser) interface{} {
+		return parseType(p, lowestBindingPower)
+	})
+	if res == nil {
+		ty = nil
+		return
+	}
+	ty = res.(ast.Type)
 	return
 }
