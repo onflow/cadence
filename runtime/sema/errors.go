@@ -2365,8 +2365,8 @@ func (e *InvalidMoveError) EndPosition() ast.Position {
 // ConstantSizedArrayLiteralSizeError
 
 type ConstantSizedArrayLiteralSizeError struct {
-	ActualSize   uint64
-	ExpectedSize uint64
+	ActualSize   int64
+	ExpectedSize int64
 	ast.Range
 }
 
