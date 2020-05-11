@@ -2786,7 +2786,7 @@ func (t *VariableSizedType) Resolve(typeParameters map[*TypeParameter]Type) Type
 // ConstantSizedType is a constant sized array type
 type ConstantSizedType struct {
 	Type Type
-	Size uint64
+	Size int64
 }
 
 func (*ConstantSizedType) IsType() {}

@@ -571,7 +571,7 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 				valueElementType := variableSizedValueType.ElementType(false)
 				targetElementType := constantSizedTargetType.ElementType(false)
 
-				literalCount := uint64(len(typedExpression.Values))
+				literalCount := int64(len(typedExpression.Values))
 
 				if IsSubType(valueElementType, targetElementType) {
 
@@ -1168,9 +1168,9 @@ func (checker *Checker) convertConstantSizedType(t *ast.ConstantSizedType) Type 
 
 	size := t.Size.Value
 
-	if !t.Size.Value.IsUint64() {
+	if !t.Size.Value.IsInt64() || t.Size.Value.Sign() < 0 {
 		minSize := new(big.Int)
-		maxSize := new(big.Int).SetUint64(math.MaxUint64)
+		maxSize := new(big.Int).SetInt64(math.MaxInt64)
 
 		checker.report(
 			&InvalidConstantSizedTypeSizeError{
@@ -1190,7 +1190,7 @@ func (checker *Checker) convertConstantSizedType(t *ast.ConstantSizedType) Type 
 		}
 	}
 
-	finalSize := size.Uint64()
+	finalSize := size.Int64()
 
 	const expectedBase = 10
 	if t.Size.Base != expectedBase {
