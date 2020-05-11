@@ -35,6 +35,7 @@ const (
 	TokenMinus
 	TokenStar
 	TokenSlash
+	TokenPercent
 	TokenNilCoalesce
 	TokenParenOpen
 	TokenParenClose
@@ -45,12 +46,26 @@ const (
 	TokenQuestionMark
 	TokenComma
 	TokenColon
+	TokenDot
 	TokenSemicolon
 	TokenLeftArrow
+	TokenLeftArrowExclamation
 	TokenLess
+	TokenLessEqual
+	TokenLessLess
 	TokenGreater
+	TokenGreaterEqual
+	TokenGreaterGreater
 	TokenEqual
+	TokenNot
+	TokenNotEqual
 	TokenBlockCommentStart
 	TokenBlockCommentContent
 	TokenBlockCommentEnd
+	TokenAmpersand
+	TokenAmpersandAmpersand
+	TokenCaret
+	TokenVerticalBar
+	TokenVerticalBarVerticalBar
+	TokenAt
 )

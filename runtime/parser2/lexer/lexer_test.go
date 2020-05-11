@@ -498,7 +498,7 @@ func TestLex(t *testing.T) {
 	})
 
 	t.Run("colon, comma, semicolon, question mark", func(t *testing.T) {
-		withTokens(Lex(":,;?"), func(tokens []Token) {
+		withTokens(Lex(":,;?."), func(tokens []Token) {
 			assert.Equal(t,
 				[]Token{
 					{
@@ -530,10 +530,17 @@ func TestLex(t *testing.T) {
 						},
 					},
 					{
-						Type: TokenEOF,
+						Type: TokenDot,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
 						},
 					},
 				},
@@ -588,19 +595,19 @@ func TestLex(t *testing.T) {
 		})
 	})
 
-	t.Run("less than, equal, greater than, and left arrow", func(t *testing.T) {
-		withTokens(Lex("<=><-"), func(tokens []Token) {
+	t.Run("comparisons", func(t *testing.T) {
+		withTokens(Lex("=<><-<=>="), func(tokens []Token) {
 			assert.Equal(t,
 				[]Token{
 					{
-						Type: TokenLess,
+						Type: TokenEqual,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
 					},
 					{
-						Type: TokenEqual,
+						Type: TokenLess,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 							EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -621,10 +628,24 @@ func TestLex(t *testing.T) {
 						},
 					},
 					{
-						Type: TokenEOF,
+						Type: TokenLessEqual,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
+					},
+					{
+						Type: TokenGreaterEqual,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
 						},
 					},
 				},
