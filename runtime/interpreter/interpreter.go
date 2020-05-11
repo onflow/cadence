@@ -1625,7 +1625,7 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 				return interpreter.testEqual(tuple.left, tuple.right)
 			})
 
-	case ast.OperationUnequal:
+	case ast.OperationNotEqual:
 		return interpreter.visitBinaryOperation(expression).
 			Map(func(result interface{}) interface{} {
 				tuple := result.(valueTuple)

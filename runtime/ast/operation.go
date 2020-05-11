@@ -31,7 +31,7 @@ const (
 	OperationOr
 	OperationAnd
 	OperationEqual
-	OperationUnequal
+	OperationNotEqual
 	OperationLess
 	OperationGreater
 	OperationLessEqual
@@ -62,7 +62,7 @@ func (s Operation) Symbol() string {
 		return "&&"
 	case OperationEqual:
 		return "=="
-	case OperationUnequal:
+	case OperationNotEqual:
 		return "!="
 	case OperationLess:
 		return "<"

@@ -12,7 +12,7 @@ func _() {
 	_ = x[OperationOr-1]
 	_ = x[OperationAnd-2]
 	_ = x[OperationEqual-3]
-	_ = x[OperationUnequal-4]
+	_ = x[OperationNotEqual-4]
 	_ = x[OperationLess-5]
 	_ = x[OperationGreater-6]
 	_ = x[OperationLessEqual-7]
@@ -35,9 +35,9 @@ func _() {
 	_ = x[OperationBitwiseRightShift-24]
 }
 
-const _Operation_name = "OperationUnknownOperationOrOperationAndOperationEqualOperationUnequalOperationLessOperationGreaterOperationLessEqualOperationGreaterEqualOperationPlusOperationMinusOperationMulOperationDivOperationModOperationNegateOperationNilCoalesceOperationMoveOperationCastOperationFailableCastOperationForceCastOperationBitwiseOrOperationBitwiseXorOperationBitwiseAndOperationBitwiseLeftShiftOperationBitwiseRightShift"
+const _Operation_name = "OperationUnknownOperationOrOperationAndOperationEqualOperationNotEqualOperationLessOperationGreaterOperationLessEqualOperationGreaterEqualOperationPlusOperationMinusOperationMulOperationDivOperationModOperationNegateOperationNilCoalesceOperationMoveOperationCastOperationFailableCastOperationForceCastOperationBitwiseOrOperationBitwiseXorOperationBitwiseAndOperationBitwiseLeftShiftOperationBitwiseRightShift"
 
-var _Operation_index = [...]uint16{0, 16, 27, 39, 53, 69, 82, 98, 116, 137, 150, 164, 176, 188, 200, 215, 235, 248, 261, 282, 300, 318, 337, 356, 381, 407}
+var _Operation_index = [...]uint16{0, 16, 27, 39, 53, 70, 83, 99, 117, 138, 151, 165, 177, 189, 201, 216, 236, 249, 262, 283, 301, 319, 338, 357, 382, 408}
 
 func (i Operation) String() string {
 	if i >= Operation(len(_Operation_index)-1) {
