@@ -2,7 +2,6 @@ package interpreter
 
 import (
 	"encoding/binary"
-	"encoding/gob"
 	"encoding/hex"
 	"fmt"
 	"math"
