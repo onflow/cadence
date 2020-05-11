@@ -155,7 +155,10 @@ type StringValue struct {
 }
 
 func NewStringValue(str string) *StringValue {
-	return &StringValue{Str: str}
+	return &StringValue{
+		Str:      str,
+		modified: true,
+	}
 }
 
 func (*StringValue) IsValue() {}
@@ -165,7 +168,7 @@ func (*StringValue) DynamicType(_ *Interpreter) DynamicType {
 }
 
 func (v *StringValue) Copy() Value {
-	return &StringValue{Str: v.Str}
+	return NewStringValue(v.Str)
 }
 
 func (*StringValue) GetOwner() *common.Address {
@@ -339,8 +342,9 @@ func NewArrayValueUnownedNonCopying(values ...Value) *ArrayValue {
 	}
 
 	return &ArrayValue{
-		Values: values,
-		Owner:  nil,
+		Values:   values,
+		modified: true,
+		Owner:    nil,
 	}
 }
 
@@ -4356,6 +4360,26 @@ type CompositeValue struct {
 	modified       bool
 }
 
+func NewCompositeValue(
+	location ast.Location,
+	typeID sema.TypeID,
+	kind common.CompositeKind,
+	fields map[string]Value,
+	owner *common.Address,
+) *CompositeValue {
+	if fields == nil {
+		fields = map[string]Value{}
+	}
+	return &CompositeValue{
+		Location: location,
+		TypeID:   typeID,
+		Kind:     kind,
+		Fields:   fields,
+		Owner:    owner,
+		modified: true,
+	}
+}
+
 func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
 
 	// if composite was deserialized, dynamically link in the destructor
@@ -4424,7 +4448,8 @@ func (v *CompositeValue) Copy() Value {
 		Destructor:     v.Destructor,
 		destroyed:      v.destroyed,
 		// NOTE: new value has no owner
-		Owner: nil,
+		Owner:    nil,
+		modified: true,
 	}
 }
 
@@ -4510,9 +4535,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	// If the composite value was deserialized, dynamically link in the functions
 	// and get injected fields
 
-	if v.Functions == nil {
-		v.Functions = interpreter.typeCodes.compositeCodes[v.TypeID].compositeFunctions
-	}
+	v.InitializeFunctions(interpreter)
 
 	if v.InjectedFields == nil && interpreter.injectedCompositeFieldsHandler != nil {
 		v.InjectedFields = interpreter.injectedCompositeFieldsHandler(
@@ -4539,6 +4562,13 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	}
 
 	return nil
+}
+
+func (v *CompositeValue) InitializeFunctions(interpreter *Interpreter) {
+	if v.Functions != nil {
+		return
+	}
+	v.Functions = interpreter.typeCodes.compositeCodes[v.TypeID].compositeFunctions
 }
 
 func (v *CompositeValue) OwnerValue() OptionalValue {
@@ -4604,7 +4634,8 @@ func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValu
 		Keys:    NewArrayValueUnownedNonCopying(),
 		Entries: make(map[string]Value, keysAndValuesCount/2),
 		// NOTE: new value has no owner
-		Owner: nil,
+		Owner:    nil,
+		modified: true,
 	}
 
 	for i := 0; i < keysAndValuesCount; i += 2 {
@@ -4644,7 +4675,8 @@ func (v *DictionaryValue) Copy() Value {
 		Keys:    newKeys,
 		Entries: newEntries,
 		// NOTE: new value has no owner
-		Owner: nil,
+		Owner:    nil,
+		modified: true,
 	}
 }
 

@@ -1814,9 +1814,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 
 	test := inter.Globals["test"].Value.(*interpreter.CompositeValue)
 
-	// the value was initialized,
-	// but was copied in the variable declaration
-	assert.False(t, test.Modified())
+	assert.True(t, test.Modified())
 
 	assert.Equal(t,
 		interpreter.NewIntValueFromInt64(1),
@@ -3949,7 +3947,7 @@ func TestInterpretDictionary(t *testing.T) {
 		actualDict,
 	)
 
-	assert.False(t, actualDict.Modified())
+	assert.True(t, actualDict.Modified())
 }
 
 func TestInterpretDictionaryInsertionOrder(t *testing.T) {
@@ -3971,7 +3969,7 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
 		actualDict,
 	)
 
-	assert.False(t, actualDict.Modified())
+	assert.True(t, actualDict.Modified())
 }
 
 func TestInterpretDictionaryIndexingString(t *testing.T) {
@@ -5489,38 +5487,45 @@ func TestInterpretEmitEvent(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
+	transferEventType := inter.Checker.GlobalTypes["Transfer"].Type
+	transferAmountEventType := inter.Checker.GlobalTypes["TransferAmount"].Type
+
 	expectedEvents := []*interpreter.CompositeValue{
-		{
-			Kind:     common.CompositeKindEvent,
-			Location: TestLocation,
-			TypeID:   inter.Checker.GlobalTypes["Transfer"].Type.ID(),
-			Fields: map[string]interpreter.Value{
+		interpreter.NewCompositeValue(
+			TestLocation,
+			transferEventType.ID(),
+			common.CompositeKindEvent,
+			map[string]interpreter.Value{
 				"to":   interpreter.NewIntValueFromInt64(1),
 				"from": interpreter.NewIntValueFromInt64(2),
 			},
-			Functions: map[string]interpreter.FunctionValue{},
-		},
-		{
-			Kind:     common.CompositeKindEvent,
-			Location: TestLocation,
-			TypeID:   inter.Checker.GlobalTypes["Transfer"].Type.ID(),
-			Fields: map[string]interpreter.Value{
+			nil,
+		),
+		interpreter.NewCompositeValue(
+			TestLocation,
+			transferEventType.ID(),
+			common.CompositeKindEvent,
+			map[string]interpreter.Value{
 				"to":   interpreter.NewIntValueFromInt64(3),
 				"from": interpreter.NewIntValueFromInt64(4),
 			},
-			Functions: map[string]interpreter.FunctionValue{},
-		},
-		{
-			Kind:     common.CompositeKindEvent,
-			Location: TestLocation,
-			TypeID:   inter.Checker.GlobalTypes["TransferAmount"].Type.ID(),
-			Fields: map[string]interpreter.Value{
+			nil,
+		),
+		interpreter.NewCompositeValue(
+			TestLocation,
+			transferAmountEventType.ID(),
+			common.CompositeKindEvent,
+			map[string]interpreter.Value{
 				"to":     interpreter.NewIntValueFromInt64(1),
 				"from":   interpreter.NewIntValueFromInt64(2),
 				"amount": interpreter.NewIntValueFromInt64(100),
 			},
-			Functions: map[string]interpreter.FunctionValue{},
-		},
+			nil,
+		),
+	}
+
+	for _, event := range expectedEvents {
+		event.InitializeFunctions(inter)
 	}
 
 	assert.Equal(t, expectedEvents, actualEvents)
@@ -5647,15 +5652,19 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			require.NoError(t, err)
 
 			expectedEvents := []*interpreter.CompositeValue{
-				{
-					Kind:     common.CompositeKindEvent,
-					Location: TestLocation,
-					TypeID:   inter.Checker.GlobalTypes["Test"].Type.ID(),
-					Fields: map[string]interpreter.Value{
+				interpreter.NewCompositeValue(
+					TestLocation,
+					inter.Checker.GlobalTypes["Test"].Type.ID(),
+					common.CompositeKindEvent,
+					map[string]interpreter.Value{
 						"value": value.value,
 					},
-					Functions: map[string]interpreter.FunctionValue{},
-				},
+					nil,
+				),
+			}
+
+			for _, event := range expectedEvents {
+				event.InitializeFunctions(inter)
 			}
 
 			assert.Equal(t,
