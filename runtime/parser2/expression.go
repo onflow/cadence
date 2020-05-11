@@ -141,7 +141,7 @@ func setExprNullDenotation(tokenType lexer.TokenType, nullDenotation exprNullDen
 	current := exprNullDenotations[tokenType]
 	if current != nil {
 		panic(fmt.Errorf(
-			"expression null denotation for token type %s exists",
+			"expression null denotation for token %q already exists",
 			tokenType,
 		))
 	}
@@ -160,7 +160,7 @@ func setExprLeftDenotation(tokenType lexer.TokenType, leftDenotation exprLeftDen
 	current := exprLeftDenotations[tokenType]
 	if current != nil {
 		panic(fmt.Errorf(
-			"expression left denotation for token type %s exists",
+			"expression left denotation for token %q already exists",
 			tokenType,
 		))
 	}
@@ -208,7 +208,7 @@ func init() {
 	})
 
 	defineExpr(binaryExpr{
-		tokenType:        lexer.TokenEqual,
+		tokenType:        lexer.TokenEqualEqual,
 		leftBindingPower: 50,
 		operation:        ast.OperationEqual,
 	})
@@ -309,7 +309,7 @@ func init() {
 					Range: token.Range,
 				}
 
-			case "nil":
+			case keywordNil:
 				return &ast.NilExpression{}
 
 			default:
@@ -512,7 +512,7 @@ func applyExprNullDenotation(p *parser, token lexer.Token) ast.Expression {
 func applyExprLeftDenotation(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
 	leftDenotation, ok := exprLeftDenotations[token.Type]
 	if !ok {
-		panic(fmt.Errorf("missing left denotation for token type: %v", token.Type))
+		panic(fmt.Errorf("missing left denotation for token %q", token.Type))
 	}
 	return leftDenotation(p, token, left)
 }

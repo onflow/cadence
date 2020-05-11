@@ -51,9 +51,9 @@ func parseDeclaration(p *parser) ast.Declaration {
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
 		switch p.current.Value {
-		case "var", "let":
+		case keywordLet, keywordVar:
 			return parseVariableDeclaration(p)
-		case "fun":
+		case keywordFun:
 			return parseFunctionDeclaration(p)
 		}
 	}
@@ -67,19 +67,26 @@ func parseVariableDeclaration(p *parser) *ast.VariableDeclaration {
 
 	startPos := p.current.StartPos
 
-	isLet := p.current.Value == "let"
+	isLet := p.current.Value == keywordLet
 
 	if !p.current.Is(lexer.TokenIdentifier) ||
-		!(isLet || p.current.Value == "var") {
+		!(isLet || p.current.Value == keywordVar) {
 
-		panic(fmt.Errorf("expected kind kind of variable, 'var' or 'let', got %s", p.current.Type))
+		panic(fmt.Errorf("expected kind kind of variable, %q or %q, got %q",
+			keywordLet,
+			keywordVar,
+			p.current.Type,
+		))
 	}
 
 	p.next()
 
 	p.skipSpaceAndComments(true)
 	if !p.current.Is(lexer.TokenIdentifier) {
-		panic(fmt.Errorf("expected identifier after start of variable declaration"))
+		panic(fmt.Errorf(
+			"expected identifier after start of variable declaration, got %q",
+			p.current.Type,
+		))
 	}
 
 	identifier := ast.Identifier{
@@ -157,13 +164,19 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 	p.skipSpaceAndComments(true)
 
 	if !p.current.Is(lexer.TokenParenOpen) {
-		panic(fmt.Errorf("expected '(' as start of parameter list, got %s", p.current.Type))
+		panic(fmt.Errorf(
+			"expected %q as start of parameter list, got %q",
+			lexer.TokenParenOpen,
+			p.current.Type,
+		))
 	}
 
 	startPos := p.current.StartPos
 	p.next()
 
 	var endPos ast.Position
+
+	expectParameter := true
 
 	atEnd := false
 	for !atEnd {
@@ -172,17 +185,39 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 		case lexer.TokenIdentifier:
 			parameter := parseParameter(p)
 			parameters = append(parameters, parameter)
+			expectParameter = false
 		case lexer.TokenComma:
+			if expectParameter {
+				panic(fmt.Errorf(
+					"expected parameter or end of parameter list, got %q",
+					p.current.Type,
+				))
+			}
 			p.next()
+			expectParameter = true
+
 		case lexer.TokenParenClose:
 			endPos = p.current.EndPos
 			p.next()
 			atEnd = true
 			break
 		case lexer.TokenEOF:
-			panic(fmt.Errorf("missing ')' at end of parameter list"))
+			panic(fmt.Errorf(
+				"missing %q at end of parameter list",
+				lexer.TokenParenClose,
+			))
 		default:
-			panic(fmt.Errorf("unexpected token in parameter list: %s", p.current.Type))
+			if expectParameter {
+				panic(fmt.Errorf(
+					"expected parameter or end of parameter list, got %q",
+					p.current.Type,
+				))
+			} else {
+				panic(fmt.Errorf(
+					"expected comma or end of parameter list, got %q",
+					p.current.Type,
+				))
+			}
 		}
 	}
 
@@ -202,7 +237,10 @@ func parseParameter(p *parser) *ast.Parameter {
 	parameterPos := startPos
 
 	if !p.current.Is(lexer.TokenIdentifier) {
-		panic(fmt.Errorf("expected argument label or parameter name, got %s", p.current.Type))
+		panic(fmt.Errorf(
+			"expected argument label or parameter name, got %q",
+			p.current.Type,
+		))
 	}
 	argumentLabel := ""
 	parameterName := p.current.Value.(string)
@@ -222,7 +260,11 @@ func parseParameter(p *parser) *ast.Parameter {
 	}
 
 	if !p.current.Is(lexer.TokenColon) {
-		panic(fmt.Errorf("expected ':' after argument label/parameter name, got %s", p.current.Type))
+		panic(fmt.Errorf(
+			"expected %q after argument label/parameter name, got %q",
+			lexer.TokenColon,
+			p.current.Type,
+		))
 	}
 
 	p.next()
@@ -246,23 +288,28 @@ func parseParameter(p *parser) *ast.Parameter {
 	}
 }
 
-// Fun identifier parameterList (':' returnType=typeAnnotation)? functionBlock?
-
 func parseFunctionDeclaration(p *parser) *ast.FunctionDeclaration {
 
 	// TODO: access
 
 	startPos := p.current.StartPos
 
-	if !p.current.IsString(lexer.TokenIdentifier, "fun") {
-		panic(fmt.Errorf("expected function keyword 'fun', got %s", p.current.Type))
+	if !p.current.IsString(lexer.TokenIdentifier, keywordFun) {
+		panic(fmt.Errorf(
+			"expected function keyword %q, got %q",
+			keywordFun,
+			p.current.Type,
+		))
 	}
 
 	p.next()
 
 	p.skipSpaceAndComments(true)
 	if !p.current.Is(lexer.TokenIdentifier) {
-		panic(fmt.Errorf("expected identifier after start of function declaration"))
+		panic(fmt.Errorf(
+			"expected identifier after start of function declaration, got %q",
+			p.current.Type,
+		))
 	}
 
 	identifier := ast.Identifier{

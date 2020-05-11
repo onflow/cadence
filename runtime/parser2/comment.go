@@ -45,21 +45,30 @@ func (p *parser) parseCommentContent() (comment string) {
 
 				switch p.current.Type {
 				case lexer.TokenEOF:
-					p.report(fmt.Errorf("missing comment end"))
+					p.report(fmt.Errorf(
+						"missing comment end %q",
+						lexer.TokenBlockCommentEnd,
+					))
 					return nil
+
 				case lexer.TokenBlockCommentContent:
 					builder.WriteString(p.current.Value.(string))
+
 				case lexer.TokenBlockCommentEnd:
 					builder.WriteString(blockCommentEnd)
 					p.next()
 					return nil
+
 				case lexer.TokenBlockCommentStart:
 					builder.WriteString(blockCommentStart)
-
 					// parse inner content, then rest of this comment
 					return []trampoline{t, t}
+
 				default:
-					p.report(fmt.Errorf("unexpected token in comment: %v", p.current))
+					p.report(fmt.Errorf(
+						"unexpected token in comment: %q",
+						p.current.Type,
+					))
 					return nil
 				}
 			}

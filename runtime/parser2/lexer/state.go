@@ -60,7 +60,11 @@ func rootState(l *lexer) stateFn {
 		case '.':
 			l.emitType(TokenDot)
 		case '=':
-			l.emitType(TokenEqual)
+			if l.acceptOne('=') {
+				l.emitType(TokenEqualEqual)
+			} else {
+				l.emitType(TokenEqual)
+			}
 		case '@':
 			l.emitType(TokenAt)
 		case '&':
