@@ -4383,6 +4383,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	return tramp.Then(func(_ interface{}) {
 		v.destroyed = true
+		v.modified = true
 	})
 }
 
