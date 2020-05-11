@@ -28,6 +28,8 @@ import (
 const keywordIf = "if"
 const keywordElse = "else"
 const keywordWhile = "while"
+const keywordBreak = "break"
+const keywordContinue = "continue"
 const keywordReturn = "return"
 const keywordTrue = "true"
 const keywordFalse = "false"
