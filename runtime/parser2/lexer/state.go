@@ -37,6 +37,8 @@ func rootState(l *lexer) stateFn {
 			l.emitType(TokenMinus)
 		case '*':
 			l.emitType(TokenStar)
+		case '%':
+			l.emitType(TokenPercent)
 		case '(':
 			l.emitType(TokenParenOpen)
 		case ')':
@@ -55,10 +57,37 @@ func rootState(l *lexer) stateFn {
 			l.emitType(TokenSemicolon)
 		case ':':
 			l.emitType(TokenColon)
-		case '>':
-			l.emitType(TokenGreater)
+		case '.':
+			l.emitType(TokenDot)
 		case '=':
 			l.emitType(TokenEqual)
+		case '@':
+			l.emitType(TokenAt)
+		case '&':
+			if l.acceptOne('&') {
+				l.emitType(TokenAmpersandAmpersand)
+			} else {
+				l.emitType(TokenAmpersand)
+			}
+		case '^':
+			l.emitType(TokenCaret)
+		case '|':
+			if l.acceptOne('|') {
+				l.emitType(TokenVerticalBarVerticalBar)
+			} else {
+				l.emitType(TokenVerticalBar)
+			}
+		case '>':
+			r = l.next()
+			switch r {
+			case '>':
+				l.emitType(TokenGreaterGreater)
+			case '=':
+				l.emitType(TokenGreaterEqual)
+			default:
+				l.backupOne()
+				l.emitType(TokenGreater)
+			}
 		case '_':
 			return identifierState
 		case ' ', '\t':
@@ -82,10 +111,27 @@ func rootState(l *lexer) stateFn {
 			} else {
 				l.emitType(TokenQuestionMark)
 			}
-		case '<':
-			if l.acceptOne('-') {
-				l.emitType(TokenLeftArrow)
+		case '!':
+			if l.acceptOne('=') {
+				l.emitType(TokenNotEqual)
 			} else {
+				l.emitType(TokenNot)
+			}
+		case '<':
+			r = l.next()
+			switch r {
+			case '-':
+				if l.acceptOne('!') {
+					l.emitType(TokenLeftArrowExclamation)
+				} else {
+					l.emitType(TokenLeftArrow)
+				}
+			case '<':
+				l.emitType(TokenLessLess)
+			case '=':
+				l.emitType(TokenLessEqual)
+			default:
+				l.backupOne()
 				l.emitType(TokenLess)
 			}
 		default:
