@@ -204,8 +204,9 @@ func (d *Decoder) decodeArray(v []interface{}, owner *common.Address) (*ArrayVal
 	}
 
 	return &ArrayValue{
-		Values: values,
-		Owner:  owner,
+		Values:   values,
+		Owner:    owner,
+		modified: true,
 	}, nil
 }
 
@@ -248,9 +249,10 @@ func (d *Decoder) decodeDictionary(v interface{}, owner *common.Address) (*Dicti
 	}
 
 	return &DictionaryValue{
-		Keys:    keys,
-		Entries: entries,
-		Owner:   owner,
+		Keys:     keys,
+		Entries:  entries,
+		Owner:    owner,
+		modified: true,
 	}, nil
 }
 
@@ -352,13 +354,7 @@ func (d *Decoder) decodeComposite(v interface{}, owner *common.Address) (*Compos
 		fields[nameString] = decodedValue
 	}
 
-	return &CompositeValue{
-		Location: location,
-		TypeID:   typeID,
-		Kind:     kind,
-		Fields:   fields,
-		Owner:    owner,
-	}, nil
+	return NewCompositeValue(location, typeID, kind, fields, owner), nil
 }
 
 func (d *Decoder) decodeBig(v interface{}) (*big.Int, error) {

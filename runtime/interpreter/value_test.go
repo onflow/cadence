@@ -28,13 +28,13 @@ import (
 )
 
 func newTestCompositeValue(owner common.Address) *CompositeValue {
-	return &CompositeValue{
-		Location: utils.TestLocation,
-		TypeID:   "Test",
-		Kind:     common.CompositeKindStructure,
-		Fields:   map[string]Value{},
-		Owner:    &owner,
-	}
+	return NewCompositeValue(
+		utils.TestLocation,
+		"Test",
+		common.CompositeKindStructure,
+		map[string]Value{},
+		&owner,
+	)
 }
 
 func TestOwnerNewArray(t *testing.T) {

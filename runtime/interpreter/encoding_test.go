@@ -258,12 +258,13 @@ func TestEncodeDecodeComposite(t *testing.T) {
 	t.Run("empty structure, string location", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: &CompositeValue{
-					TypeID:   "S.test.TestStruct",
-					Kind:     common.CompositeKindStructure,
-					Fields:   map[string]Value{},
-					Location: utils.TestLocation,
-				},
+				value: NewCompositeValue(
+					utils.TestLocation,
+					"S.test.TestStruct",
+					common.CompositeKindStructure,
+					map[string]Value{},
+					nil,
+				),
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCompositeValue,
@@ -302,15 +303,16 @@ func TestEncodeDecodeComposite(t *testing.T) {
 	t.Run("non-empty resource", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: &CompositeValue{
-					TypeID: "S.test.TestResource",
-					Kind:   common.CompositeKindResource,
-					Fields: map[string]Value{
+				value: NewCompositeValue(
+					utils.TestLocation,
+					"S.test.TestResource",
+					common.CompositeKindResource,
+					map[string]Value{
 						"true":   BoolValue(true),
 						"string": NewStringValue("test"),
 					},
-					Location: utils.TestLocation,
-				},
+					nil,
+				),
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCompositeValue,
@@ -361,12 +363,13 @@ func TestEncodeDecodeComposite(t *testing.T) {
 	t.Run("empty, address location", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: &CompositeValue{
-					TypeID:   "A.0x1.TestStruct",
-					Kind:     common.CompositeKindStructure,
-					Fields:   map[string]Value{},
-					Location: ast.AddressLocation{0x1},
-				},
+				value: NewCompositeValue(
+					ast.AddressLocation{0x1},
+					"A.0x1.TestStruct",
+					common.CompositeKindStructure,
+					map[string]Value{},
+					nil,
+				),
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCompositeValue,

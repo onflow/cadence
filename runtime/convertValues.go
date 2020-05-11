@@ -296,10 +296,11 @@ func importCompositeValue(
 		fields[fieldType.Identifier] = importValue(fieldValue)
 	}
 
-	return &interpreter.CompositeValue{
-		Location: ast.LocationFromTypeID(typeID),
-		Kind:     kind,
-		TypeID:   sema.TypeID(typeID),
-		Fields:   fields,
-	}
+	return interpreter.NewCompositeValue(
+		ast.LocationFromTypeID(typeID),
+		sema.TypeID(typeID),
+		kind,
+		fields,
+		nil,
+	)
 }

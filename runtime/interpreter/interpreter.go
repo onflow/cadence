@@ -2457,7 +2457,8 @@ func (interpreter *Interpreter) declareCompositeValue(
 				Functions:      functions,
 				Destructor:     destructorFunction,
 				// NOTE: new value has no owner
-				Owner: nil,
+				Owner:    nil,
+				modified: true,
 			}
 
 			invocation.Self = value
@@ -3148,6 +3149,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 	self := &CompositeValue{
 		Location: interpreter.Checker.Location,
 		Fields:   map[string]Value{},
+		modified: true,
 	}
 
 	transactionFunction := NewHostFunctionValue(
