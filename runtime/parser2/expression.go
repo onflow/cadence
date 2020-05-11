@@ -232,13 +232,13 @@ func init() {
 		tokenType: lexer.TokenIdentifier,
 		nullDenotation: func(_ *parser, token lexer.Token) ast.Expression {
 			switch token.Value {
-			case "true":
+			case keywordTrue:
 				return &ast.BoolExpression{
 					Value: true,
 					Range: token.Range,
 				}
 
-			case "false":
+			case keywordFalse:
 				return &ast.BoolExpression{
 					Value: false,
 					Range: token.Range,
