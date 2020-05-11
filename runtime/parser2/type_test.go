@@ -19,6 +19,7 @@
 package parser2
 
 import (
+	"errors"
 	"math/big"
 	"testing"
 
@@ -187,4 +188,402 @@ func TestParseOptionalReferenceType(t *testing.T) {
 			result,
 		)
 	})
+}
+
+func TestParseRestrictedType(t *testing.T) {
+
+	t.Run("with restricted type, no restrictions", func(t *testing.T) {
+		result, errs := ParseType("T{}")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.RestrictedType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				Restrictions: nil,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("with restricted type, one restriction", func(t *testing.T) {
+		result, errs := ParseType("T{U}")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.RestrictedType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				Restrictions: []*ast.NominalType{
+					{
+						Identifier: ast.Identifier{
+							Identifier: "U",
+							Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("with restricted type, two restrictions", func(t *testing.T) {
+		result, errs := ParseType("T{ U , V }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.RestrictedType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				Restrictions: []*ast.NominalType{
+					{
+						Identifier: ast.Identifier{
+							Identifier: "U",
+							Pos:        ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+					},
+					{
+						Identifier: ast.Identifier{
+							Identifier: "V",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("without restricted type, no restrictions", func(t *testing.T) {
+		result, errs := ParseType("{}")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.RestrictedType{
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("without restricted type, one restriction", func(t *testing.T) {
+		result, errs := ParseType("{ T }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.RestrictedType{
+				Restrictions: []*ast.NominalType{
+					{
+						Identifier: ast.Identifier{
+							Identifier: "T",
+							Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("invalid: without restricted type, missing type after comma", func(t *testing.T) {
+		_, errs := ParseType("{ T , }")
+		require.Equal(t,
+			[]error{
+				errors.New("missing type after comma"),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid: without restricted type, type without comma", func(t *testing.T) {
+		_, errs := ParseType("{ T U }")
+		require.Equal(t,
+			[]error{
+				errors.New("unexpected type"),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid: without restricted type, colon", func(t *testing.T) {
+		_, errs := ParseType("{ T , U : V }")
+		require.Equal(t,
+			[]error{
+				errors.New("unexpected colon in restricted type"),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid: with restricted type, colon", func(t *testing.T) {
+		_, errs := ParseType("T{ T , U : V }")
+		require.Equal(t,
+			[]error{
+				errors.New(`unexpected token: got ":", expected ","`),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid: without restricted type, first is non-nominal", func(t *testing.T) {
+		_, errs := ParseType("{[T]}")
+		require.Equal(t,
+			[]error{
+				errors.New("non-nominal type in restriction list: [T]"),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid: with restricted type, first is non-nominal", func(t *testing.T) {
+		_, errs := ParseType("T{[U]}")
+		require.Equal(t,
+			[]error{
+				errors.New("non-nominal type in restriction list: [U]"),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid: without restricted type, second is non-nominal", func(t *testing.T) {
+		_, errs := ParseType("{T, [U]}")
+		require.Equal(t,
+			[]error{
+				errors.New("non-nominal type in restriction list: [U]"),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid: with restricted type, second is non-nominal", func(t *testing.T) {
+		_, errs := ParseType("T{U, [V]}")
+		require.Equal(t,
+			[]error{
+				errors.New("non-nominal type in restriction list: [V]"),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid: without restricted type, missing end", func(t *testing.T) {
+		_, errs := ParseType("{")
+		require.Equal(t,
+			[]error{
+				errors.New("invalid end, expected type"),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid: with restricted type, missing end", func(t *testing.T) {
+		_, errs := ParseType("T{")
+		require.Equal(t,
+			[]error{
+				errors.New("invalid end, expected type"),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid: without restricted type, missing end after type", func(t *testing.T) {
+		_, errs := ParseType("{U")
+		require.Equal(t,
+			[]error{
+				errors.New("missing end, expected \"}\""),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid: with restricted type, missing end after type", func(t *testing.T) {
+		_, errs := ParseType("T{U")
+		require.Equal(t,
+			[]error{
+				errors.New("missing end, expected \"}\""),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid: without restricted type, missing end after comma", func(t *testing.T) {
+		_, errs := ParseType("{U,")
+		require.Equal(t,
+			[]error{
+				errors.New("invalid end, expected type"),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid: with restricted type, missing end after comma", func(t *testing.T) {
+		_, errs := ParseType("T{U,")
+		require.Equal(t,
+			[]error{
+				errors.New("invalid end, expected type"),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid: without restricted type, just comma", func(t *testing.T) {
+		_, errs := ParseType("{,}")
+		require.Equal(t,
+			[]error{
+				errors.New("unexpected comma in restricted type"),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid: with restricted type, just comma", func(t *testing.T) {
+		_, errs := ParseType("T{,}")
+		require.Equal(t,
+			[]error{
+				errors.New("unexpected comma in restricted type"),
+			},
+			errs,
+		)
+	})
+}
+
+func TestParseDictionaryType(t *testing.T) {
+
+	t.Run("valid", func(t *testing.T) {
+		result, errs := ParseType("{T: U}")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.DictionaryType{
+				KeyType: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+				ValueType: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "U",
+						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("invalid, missing value type", func(t *testing.T) {
+		_, errs := ParseType("{T:}")
+		require.Equal(t,
+			[]error{
+				errors.New("missing dictionary value type"),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid, missing key and value type", func(t *testing.T) {
+		_, errs := ParseType("{:}")
+		require.Equal(t,
+			[]error{
+				errors.New("unexpected colon in dictionary type"),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid, missing key type", func(t *testing.T) {
+		_, errs := ParseType("{:U}")
+		require.Equal(t,
+			[]error{
+				errors.New("unexpected colon in dictionary type"),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid, unexpected comma after value type", func(t *testing.T) {
+		_, errs := ParseType("{T:U,}")
+		require.Equal(t,
+			[]error{
+				errors.New("unexpected comma in dictionary type"),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid, unexpected colon after value type", func(t *testing.T) {
+		_, errs := ParseType("{T:U:}")
+		require.Equal(t,
+			[]error{
+				errors.New("unexpected colon in dictionary type"),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid, unexpected colon after colon", func(t *testing.T) {
+		_, errs := ParseType("{T::U}")
+		require.Equal(t,
+			[]error{
+				errors.New("unexpected colon in dictionary type"),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid, missing value type after colon", func(t *testing.T) {
+		_, errs := ParseType("{T:")
+		require.Equal(t,
+			[]error{
+				errors.New("invalid end, expected type"),
+			},
+			errs,
+		)
+	})
+
+	t.Run("invalid, missing end after key type  and value type", func(t *testing.T) {
+		_, errs := ParseType("{T:U")
+		require.Equal(t,
+			[]error{
+				errors.New("missing end, expected \"}\""),
+			},
+			errs,
+		)
+	})
+
 }

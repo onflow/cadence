@@ -33,6 +33,10 @@ const keywordContinue = "continue"
 const keywordReturn = "return"
 const keywordTrue = "true"
 const keywordFalse = "false"
+const keywordNil = "nil"
+const keywordLet = "let"
+const keywordVar = "var"
+const keywordFun = "fun"
 
 const lowestBindingPower = 0
 
