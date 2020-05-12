@@ -563,7 +563,7 @@ func defineReferenceExpression() {
 }
 
 func defineForceExpression() {
-	setExprLeftBindingPower(lexer.TokenNot, 130)
+	setExprLeftBindingPower(lexer.TokenNot, 140)
 	setExprLeftDenotation(
 		lexer.TokenNot,
 		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {

@@ -1297,6 +1297,26 @@ func TestParseForceExpression(t *testing.T) {
 			result,
 		)
 	})
+	t.Run("force unwrap, precedence, force unwrap before move", func(t *testing.T) {
+		result, errs := ParseExpression("<-t!")
+		require.Empty(t, errs)
+		utils.AssertEqualWithDiff(t,
+			&ast.UnaryExpression{
+				Operation: ast.OperationMove,
+				Expression: &ast.ForceExpression{
+					Expression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "t",
+							Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+					EndPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
 	t.Run("force unwrap, precedence", func(t *testing.T) {
 		result, errs := ParseExpression("10 *  t!")
 		require.Empty(t, errs)
