@@ -37,6 +37,7 @@ const keywordNil = "nil"
 const keywordLet = "let"
 const keywordVar = "var"
 const keywordFun = "fun"
+const keywordAs = "as"
 
 const lowestBindingPower = 0
 

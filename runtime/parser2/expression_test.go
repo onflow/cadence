@@ -885,22 +885,34 @@ func TestParseBlockComment(t *testing.T) {
 
 	t.Run("nested comment, nothing else", func(t *testing.T) {
 
-		result, errs := ParseExpression(" /* test  foo/* bar  */ asd*/ ")
+		result, errs := ParseExpression(" /* test  foo/* bar  */ asd*/ true")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			&ast.BoolExpression{
+				Value: true,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 30, Offset: 30},
+					EndPos:   ast.Position{Line: 1, Column: 33, Offset: 33},
+				},
+			},
 			result,
 		)
 	})
 
 	t.Run("two comments", func(t *testing.T) {
 
-		result, errs := ParseExpression(" /*test  foo*/ /* bar  */ ")
+		result, errs := ParseExpression(" /*test  foo*/ /* bar  */ true")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			nil,
+			&ast.BoolExpression{
+				Value: true,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 26, Offset: 26},
+					EndPos:   ast.Position{Line: 1, Column: 29, Offset: 29},
+				},
+			},
 			result,
 		)
 	})
@@ -975,4 +987,29 @@ func BenchmarkParseArray(b *testing.B) {
 			_, _, _ = oldParser.ParseExpression(lit)
 		}
 	})
+}
+
+func TestParseReference(t *testing.T) {
+
+	result, errs := ParseExpression("& t as T")
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		&ast.ReferenceExpression{
+			Expression: &ast.IdentifierExpression{
+				Identifier: ast.Identifier{
+					Identifier: "t",
+					Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+				},
+			},
+			Type: &ast.NominalType{
+				Identifier: ast.Identifier{
+					Identifier: "T",
+					Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+				},
+			},
+			StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+		},
+		result,
+	)
 }

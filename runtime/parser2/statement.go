@@ -19,8 +19,6 @@
 package parser2
 
 import (
-	"fmt"
-
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
@@ -74,13 +72,9 @@ func parseStatement(p *parser) ast.Statement {
 	}
 
 	expression := parseExpression(p, lowestBindingPower)
-	if expression != nil {
-		return &ast.ExpressionStatement{
-			Expression: expression,
-		}
+	return &ast.ExpressionStatement{
+		Expression: expression,
 	}
-
-	return nil
 }
 
 func parseReturnStatement(p *parser) *ast.ReturnStatement {
@@ -90,9 +84,12 @@ func parseReturnStatement(p *parser) *ast.ReturnStatement {
 	sawNewLine := p.skipSpaceAndComments(false)
 
 	var expression ast.Expression
-	if !sawNewLine {
-		expression = parseExpression(p, lowestBindingPower)
-		if expression != nil {
+	switch p.current.Type {
+	case lexer.TokenEOF, lexer.TokenSemicolon:
+		break
+	default:
+		if !sawNewLine {
+			expression = parseExpression(p, lowestBindingPower)
 			endPosition = expression.EndPosition()
 		}
 	}
@@ -133,14 +130,8 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 		p.next()
 
 		expression := parseExpression(p, lowestBindingPower)
-		if expression == nil {
-			panic(fmt.Errorf("expected test expression"))
-		}
 
 		thenBlock := parseBlock(p)
-		if thenBlock == nil {
-			panic(fmt.Errorf("expected block for then branch"))
-		}
 
 		var elseBlock *ast.Block
 
@@ -155,9 +146,6 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 				parseNested = true
 			} else {
 				elseBlock = parseBlock(p)
-				if elseBlock == nil {
-					panic(fmt.Errorf("expected block for else branch"))
-				}
 			}
 		}
 
@@ -197,14 +185,8 @@ func parseWhileStatement(p *parser) *ast.WhileStatement {
 	p.next()
 
 	expression := parseExpression(p, lowestBindingPower)
-	if expression == nil {
-		panic(fmt.Errorf("expected test expression"))
-	}
 
 	block := parseBlock(p)
-	if block == nil {
-		panic(fmt.Errorf("expected block for then branch"))
-	}
 
 	return &ast.WhileStatement{
 		Test:     expression,

@@ -361,6 +361,11 @@ func init() {
 	defineDictionaryExpression()
 	definePathExpression()
 	defineConditionalExpression()
+	defineReferenceExpression()
+
+	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) ast.Expression {
+		panic("expected expression")
+	})
 }
 
 func parseNumber(token lexer.Token) ast.Expression {
@@ -460,7 +465,6 @@ func defineConditionalExpression() {
 }
 
 func definePathExpression() {
-	setExprLeftBindingPower(lexer.TokenSlash, 150)
 	setExprNullDenotation(
 		lexer.TokenSlash,
 		func(p *parser, token lexer.Token) ast.Expression {
@@ -476,6 +480,38 @@ func definePathExpression() {
 	)
 }
 
+func defineReferenceExpression() {
+	setExprNullDenotation(
+		lexer.TokenAmpersand,
+		func(p *parser, token lexer.Token) ast.Expression {
+			p.skipSpaceAndComments(true)
+			// TODO: maybe require above unary
+			expression := parseExpression(p, lowestBindingPower)
+
+			p.skipSpaceAndComments(true)
+
+			if !p.current.IsString(lexer.TokenIdentifier, keywordAs) {
+				panic(fmt.Errorf(
+					"expected keyword %q, got %q",
+					keywordAs,
+					p.current.Type,
+				))
+			}
+
+			p.next()
+			p.skipSpaceAndComments(true)
+
+			ty := parseType(p, lowestBindingPower)
+
+			return &ast.ReferenceExpression{
+				Expression: expression,
+				Type:       ty,
+				StartPos:   token.StartPos,
+			}
+		},
+	)
+}
+
 func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 	p.skipSpaceAndComments(true)
 	t := p.current
@@ -483,9 +519,6 @@ func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 	p.skipSpaceAndComments(true)
 
 	left := applyExprNullDenotation(p, t)
-	if left == nil {
-		return nil
-	}
 
 	p.skipSpaceAndComments(true)
 
@@ -504,7 +537,7 @@ func applyExprNullDenotation(p *parser, token lexer.Token) ast.Expression {
 	tokenType := token.Type
 	nullDenotation, ok := exprNullDenotations[tokenType]
 	if !ok {
-		return nil
+		panic(fmt.Errorf("missing expression null denotation for token %q", token.Type))
 	}
 	return nullDenotation(p, token)
 }
@@ -512,7 +545,7 @@ func applyExprNullDenotation(p *parser, token lexer.Token) ast.Expression {
 func applyExprLeftDenotation(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
 	leftDenotation, ok := exprLeftDenotations[token.Type]
 	if !ok {
-		panic(fmt.Errorf("missing left denotation for token %q", token.Type))
+		panic(fmt.Errorf("missing expression left denotation for token %q", token.Type))
 	}
 	return leftDenotation(p, token, left)
 }

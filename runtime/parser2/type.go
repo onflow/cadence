@@ -474,9 +474,6 @@ func parseType(p *parser, rightBindingPower int) ast.Type {
 	p.next()
 
 	left := applyTypeNullDenotation(p, t)
-	if left == nil {
-		return nil
-	}
 
 	for rightBindingPower < typeLeftBindingPowers[p.current.Type] {
 		t = p.current
@@ -510,7 +507,7 @@ func applyTypeNullDenotation(p *parser, token lexer.Token) ast.Type {
 	tokenType := token.Type
 	nullDenotation, ok := typeNullDenotations[tokenType]
 	if !ok {
-		return nil
+		panic(fmt.Errorf("missing type null denotation for token %q", token.Type))
 	}
 	return nullDenotation(p, token)
 }
@@ -518,7 +515,7 @@ func applyTypeNullDenotation(p *parser, token lexer.Token) ast.Type {
 func applyTypeLeftDenotation(p *parser, token lexer.Token, left ast.Type) ast.Type {
 	leftDenotation, ok := typeLeftDenotations[token.Type]
 	if !ok {
-		panic(fmt.Errorf("missing left denotation for token %q", token.Type))
+		panic(fmt.Errorf("missing type left denotation for token %q", token.Type))
 	}
 	return leftDenotation(p, token, left)
 }
