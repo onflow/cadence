@@ -376,8 +376,6 @@ func (v *ArrayValue) GetOwner() *common.Address {
 }
 
 func (v *ArrayValue) SetOwner(owner *common.Address) {
-	v.modified = true
-
 	if v.Owner == owner {
 		return
 	}
@@ -4469,8 +4467,6 @@ func (v *CompositeValue) GetOwner() *common.Address {
 }
 
 func (v *CompositeValue) SetOwner(owner *common.Address) {
-	v.modified = true
-
 	if v.Owner == owner {
 		return
 	}
@@ -4689,8 +4685,6 @@ func (v *DictionaryValue) GetOwner() *common.Address {
 }
 
 func (v *DictionaryValue) SetOwner(owner *common.Address) {
-	v.modified = true
-
 	if v.Owner == owner {
 		return
 	}
