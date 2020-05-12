@@ -115,9 +115,6 @@ func parseVariableDeclaration(p *parser) *ast.VariableDeclaration {
 	p.skipSpaceAndComments(true)
 
 	value := parseExpression(p, lowestBindingPower)
-	if value == nil {
-		panic(fmt.Errorf("expected initial value for variable"))
-	}
 
 	// TODO: second transfer and value
 
