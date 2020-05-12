@@ -1131,6 +1131,77 @@ func TestInvocation(t *testing.T) {
 	})
 }
 
+func TestMemberExpression(t *testing.T) {
+	t.Run("member", func(t *testing.T) {
+		result, errors := ParseExpression("f.n")
+		require.Empty(t, errors)
+		assert.Equal(t,
+			&ast.MemberExpression{
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "f",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				Identifier: ast.Identifier{
+					Identifier: "n",
+					Pos:        ast.Position{Offset: 2, Line: 1, Column: 2},
+				},
+			},
+			result,
+		)
+	})
+	t.Run("member, whitespace", func(t *testing.T) {
+		result, errors := ParseExpression("f .n")
+		require.Empty(t, errors)
+		assert.Equal(t,
+			&ast.MemberExpression{
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "f",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				Identifier: ast.Identifier{
+					Identifier: "n",
+					Pos:        ast.Position{Offset: 3, Line: 1, Column: 3},
+				},
+			},
+			result,
+		)
+	})
+	t.Run("member, precedence", func(t *testing.T) {
+		result, errors := ParseExpression("3 * f.n")
+		require.Empty(t, errors)
+		assert.Equal(t,
+			&ast.BinaryExpression{
+				Operation: ast.OperationMul,
+				Left: &ast.IntegerExpression{
+					Value: big.NewInt(3),
+					Base:  10,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+						EndPos:   ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				Right: &ast.MemberExpression{
+					Expression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "f",
+							Pos:        ast.Position{Offset: 4, Line: 1, Column: 4},
+						},
+					},
+					Identifier: ast.Identifier{
+						Identifier: "n",
+						Pos:        ast.Position{Offset: 6, Line: 1, Column: 6},
+					},
+				},
+			},
+			result,
+		)
+	})
+}
+
 func TestParseBlockComment(t *testing.T) {
 
 	t.Run("nested comment, nothing else", func(t *testing.T) {

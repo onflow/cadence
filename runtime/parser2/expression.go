@@ -364,6 +364,7 @@ func init() {
 	defineConditionalExpression()
 	defineReferenceExpression()
 	defineForceExpression()
+  defineMemberExpression()
 
 	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) ast.Expression {
 		panic("expected expression")
@@ -570,6 +571,21 @@ func defineForceExpression() {
 			return &ast.ForceExpression{
 				Expression: left,
 				EndPos:     token.EndPos,
+      }
+		},
+	)
+}
+
+func defineMemberExpression() {
+	setExprLeftBindingPower(lexer.TokenDot, 150)
+	setExprLeftDenotation(
+		lexer.TokenDot,
+		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
+			p.skipSpaceAndComments(true)
+			identifier := mustIdentifier(p)
+			return &ast.MemberExpression{
+				Expression: left,
+				Identifier: identifier,
 			}
 		},
 	)
