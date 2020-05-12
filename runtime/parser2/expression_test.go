@@ -1415,3 +1415,27 @@ func TestParseForceExpression(t *testing.T) {
 		)
 	})
 }
+
+func TestParseCreate(t *testing.T) {
+
+	t.Run("simple", func(t *testing.T) {
+		result, errs := ParseExpression("create T()")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.CreateExpression{
+				InvocationExpression: &ast.InvocationExpression{
+					InvokedExpression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "T",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					EndPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+}

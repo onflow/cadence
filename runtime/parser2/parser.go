@@ -38,6 +38,7 @@ const keywordLet = "let"
 const keywordVar = "var"
 const keywordFun = "fun"
 const keywordAs = "as"
+const keywordCreate = "create"
 
 const lowestBindingPower = 0
 

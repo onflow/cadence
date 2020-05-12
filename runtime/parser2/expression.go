@@ -295,7 +295,7 @@ func init() {
 
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenIdentifier,
-		nullDenotation: func(_ *parser, token lexer.Token) ast.Expression {
+		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
 			switch token.Value {
 			case keywordTrue:
 				return &ast.BoolExpression{
@@ -311,6 +311,9 @@ func init() {
 
 			case keywordNil:
 				return &ast.NilExpression{}
+
+			case keywordCreate:
+				return parseCreateExpressionRemainder(p, token)
 
 			default:
 				return &ast.IdentifierExpression{
@@ -371,6 +374,36 @@ func init() {
 	})
 }
 
+func parseCreateExpressionRemainder(p *parser, token lexer.Token) *ast.CreateExpression {
+	p.skipSpaceAndComments(true)
+	identifier := p.mustOne(lexer.TokenIdentifier)
+	ty := parseNominalTypeRemainder(p, identifier)
+
+	p.skipSpaceAndComments(true)
+	p.mustOne(lexer.TokenParenOpen)
+	arguments, endPos := parseArgumentListRemainder(p)
+
+	var invokedExpression ast.Expression = &ast.IdentifierExpression{
+		Identifier: ty.Identifier,
+	}
+
+	for _, nestedIdentifier := range ty.NestedIdentifiers {
+		invokedExpression = &ast.MemberExpression{
+			Expression: invokedExpression,
+			Identifier: nestedIdentifier,
+		}
+	}
+
+	return &ast.CreateExpression{
+		InvocationExpression: &ast.InvocationExpression{
+			InvokedExpression: invokedExpression,
+			Arguments:         arguments,
+			EndPos:            endPos,
+		},
+		StartPos: token.StartPos,
+	}
+}
+
 func parseNumber(token lexer.Token) ast.Expression {
 	// TODO: extend
 	value, _ := new(big.Int).SetString(token.Value.(string), 10)
@@ -385,44 +418,7 @@ func defineInvocationExpression() {
 	setExprLeftDenotation(
 		lexer.TokenParenOpen,
 		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
-			var arguments []*ast.Argument
-			var endPos ast.Position
-			atEnd := false
-			expectArgument := true
-			for !atEnd {
-				p.skipSpaceAndComments(true)
-
-				switch p.current.Type {
-				case lexer.TokenComma:
-					if expectArgument {
-						panic(fmt.Errorf(
-							"expected argument or end of argument list, got %q",
-							p.current.Type,
-						))
-					}
-					p.next()
-					expectArgument = true
-
-				case lexer.TokenParenClose:
-					endPos = p.current.EndPos
-					p.next()
-					atEnd = true
-
-				case lexer.TokenEOF:
-					panic(fmt.Errorf("missing ')' at end of invocation argument list"))
-
-				default:
-					if !expectArgument {
-						panic(fmt.Errorf("unexpected argument in argument list (expecting delimiter of end of argument list), got %q", p.current.Type))
-					}
-					argument := &ast.Argument{
-						Label:      "",
-						Expression: parseExpression(p, lowestBindingPower),
-					}
-					arguments = append(arguments, argument)
-					expectArgument = false
-				}
-			}
+			arguments, endPos := parseArgumentListRemainder(p)
 			return &ast.InvocationExpression{
 				InvokedExpression: left,
 				Arguments:         arguments,
@@ -430,6 +426,46 @@ func defineInvocationExpression() {
 			}
 		},
 	)
+}
+
+func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos ast.Position) {
+	atEnd := false
+	expectArgument := true
+	for !atEnd {
+		p.skipSpaceAndComments(true)
+
+		switch p.current.Type {
+		case lexer.TokenComma:
+			if expectArgument {
+				panic(fmt.Errorf(
+					"expected argument or end of argument list, got %q",
+					p.current.Type,
+				))
+			}
+			p.next()
+			expectArgument = true
+
+		case lexer.TokenParenClose:
+			endPos = p.current.EndPos
+			p.next()
+			atEnd = true
+
+		case lexer.TokenEOF:
+			panic(fmt.Errorf("missing ')' at end of invocation argument list"))
+
+		default:
+			if !expectArgument {
+				panic(fmt.Errorf("unexpected argument in argument list (expecting delimiter of end of argument list), got %q", p.current.Type))
+			}
+			argument := &ast.Argument{
+				Label:      "",
+				Expression: parseExpression(p, lowestBindingPower),
+			}
+			arguments = append(arguments, argument)
+			expectArgument = false
+		}
+	}
+	return
 }
 
 func defineNestedExpression() {
