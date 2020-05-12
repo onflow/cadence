@@ -1263,3 +1263,64 @@ func TestParseReference(t *testing.T) {
 		result,
 	)
 }
+
+func TestParseForceExpression(t *testing.T) {
+	t.Run("force unwrap", func(t *testing.T) {
+		result, errs := ParseExpression("t!")
+		require.Empty(t, errs)
+		utils.AssertEqualWithDiff(t,
+			&ast.ForceExpression{
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "t",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				EndPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+			},
+			result,
+		)
+	})
+	t.Run("force unwrap, with whitespace", func(t *testing.T) {
+		result, errs := ParseExpression(" t ! ")
+		require.Empty(t, errs)
+		utils.AssertEqualWithDiff(t,
+			&ast.ForceExpression{
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "t",
+						Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+				EndPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+			},
+			result,
+		)
+	})
+	t.Run("force unwrap, precedence", func(t *testing.T) {
+		result, errs := ParseExpression("10 *  t!")
+		require.Empty(t, errs)
+		utils.AssertEqualWithDiff(t,
+			&ast.BinaryExpression{
+				Operation: ast.OperationMul,
+				Left: &ast.IntegerExpression{
+					Value: big.NewInt(1),
+					Base:  10,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+				Right: &ast.ForceExpression{
+					Expression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "t",
+							Pos:        ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
+					},
+					EndPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+				}},
+			result,
+		)
+	})
+}

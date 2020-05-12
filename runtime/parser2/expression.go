@@ -363,6 +363,7 @@ func init() {
 	definePathExpression()
 	defineConditionalExpression()
 	defineReferenceExpression()
+	defineForceExpression()
 
 	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) ast.Expression {
 		panic("expected expression")
@@ -556,6 +557,19 @@ func defineReferenceExpression() {
 				Expression: expression,
 				Type:       ty,
 				StartPos:   token.StartPos,
+			}
+		},
+	)
+}
+
+func defineForceExpression() {
+	setExprLeftBindingPower(lexer.TokenNot, 130)
+	setExprLeftDenotation(
+		lexer.TokenNot,
+		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
+			return &ast.ForceExpression{
+				Expression: left,
+				EndPos:     token.EndPos,
 			}
 		},
 	)
