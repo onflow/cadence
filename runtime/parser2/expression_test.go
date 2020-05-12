@@ -33,6 +33,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	oldParser "github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/parser2/lexer"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -875,6 +876,255 @@ func TestParseString(t *testing.T) {
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
 				},
+			},
+			result,
+		)
+	})
+}
+
+func TestInvocation(t *testing.T) {
+	t.Run("invocation, no parameters", func(t *testing.T) {
+		result, errors := ParseExpression("f()")
+		require.Empty(t, errors)
+		assert.Equal(t,
+			&ast.InvocationExpression{
+				InvokedExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "f",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				Arguments: nil,
+				EndPos:    ast.Position{Offset: 2, Line: 1, Column: 2},
+			},
+			result,
+		)
+	})
+	t.Run("invocation, no parameters, with whitespace", func(t *testing.T) {
+		result, errors := ParseExpression("f ()")
+		require.Empty(t, errors)
+		assert.Equal(t,
+			&ast.InvocationExpression{
+				InvokedExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "f",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				Arguments: nil,
+				EndPos:    ast.Position{Offset: 3, Line: 1, Column: 3},
+			},
+			result,
+		)
+	})
+	t.Run("invocation, no parameters, with whitespace within params", func(t *testing.T) {
+		result, errors := ParseExpression("f ( )")
+		require.Empty(t, errors)
+		assert.Equal(t,
+			&ast.InvocationExpression{
+				InvokedExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "f",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				Arguments: nil,
+				EndPos:    ast.Position{Offset: 4, Line: 1, Column: 4},
+			},
+			result,
+		)
+	})
+	t.Run("invocation, with parameters", func(t *testing.T) {
+		result, errors := ParseExpression("f(1)")
+		require.Empty(t, errors)
+		assert.Equal(t,
+			&ast.InvocationExpression{
+				InvokedExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "f",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				Arguments: []*ast.Argument{
+					{
+						Label: "",
+						Expression: &ast.IntegerExpression{
+							Value: big.NewInt(1),
+							Base:  10,
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+								EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+							},
+						},
+					},
+				},
+				EndPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+			},
+			result,
+		)
+	})
+	t.Run("invocation, with parameters, multiple", func(t *testing.T) {
+		result, errors := ParseExpression("f(1,2)")
+		require.Empty(t, errors)
+		assert.Equal(t,
+			&ast.InvocationExpression{
+				InvokedExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "f",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				Arguments: []*ast.Argument{
+					{
+						Label: "",
+						Expression: &ast.IntegerExpression{
+							Value: big.NewInt(1),
+							Base:  10,
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+								EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+							},
+						},
+					},
+					{
+						Label: "",
+						Expression: &ast.IntegerExpression{
+							Value: big.NewInt(2),
+							Base:  10,
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+				},
+				EndPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+			},
+			result,
+		)
+	})
+	t.Run("invocation should error, no parameters, multiple commas", func(t *testing.T) {
+		_, errors := ParseExpression("f(,,)")
+		require.Error(t, errors[0], fmt.Errorf(
+			"expected argument or end of argument list, got %q",
+			lexer.TokenComma,
+		))
+	})
+	t.Run("invocation should error, with parameter, multiple commas", func(t *testing.T) {
+		_, errors := ParseExpression("f(1,,)")
+		require.Error(t, errors[0], fmt.Errorf(
+			"expected argument or end of argument list, got %q",
+			lexer.TokenComma,
+		))
+	})
+	t.Run("invocation should error, with multiple parameters, no commas", func(t *testing.T) {
+		_, errors := ParseExpression("f(1 2)")
+		require.NotNil(t, errors)
+		require.Error(t, errors[0], fmt.Errorf("unexpected argument in argument list (expecting delimiter of end of argument list), got %q", lexer.TokenIdentifier))
+	})
+	t.Run("invocation, with parameters, nested", func(t *testing.T) {
+		result, errors := ParseExpression("f(1,g(2))")
+		require.Empty(t, errors)
+		assert.Equal(t,
+			&ast.InvocationExpression{
+				InvokedExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "f",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				Arguments: []*ast.Argument{
+					{
+						Label: "",
+						Expression: &ast.IntegerExpression{
+							Value: big.NewInt(1),
+							Base:  10,
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+								EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+							},
+						},
+					},
+					{
+						Label: "",
+						Expression: &ast.InvocationExpression{
+							InvokedExpression: &ast.IdentifierExpression{
+								Identifier: ast.Identifier{
+									Identifier: "g",
+									Pos:        ast.Position{Offset: 4, Line: 1, Column: 4},
+								},
+							},
+							Arguments: []*ast.Argument{
+								{
+									Label: "",
+									Expression: &ast.IntegerExpression{
+										Value: big.NewInt(2),
+										Base:  10,
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+											EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+										},
+									},
+								},
+							},
+							EndPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+						},
+					},
+				},
+				EndPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+			},
+			result,
+		)
+	})
+	t.Run("invocation, with parameters, nested, string", func(t *testing.T) {
+		result, errors := ParseExpression("f(1,g(\"test\"))")
+		require.Empty(t, errors)
+		assert.Equal(t,
+			&ast.InvocationExpression{
+				InvokedExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "f",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				Arguments: []*ast.Argument{
+					{
+						Label: "",
+						Expression: &ast.IntegerExpression{
+							Value: big.NewInt(1),
+							Base:  10,
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 2, Line: 1, Column: 2},
+								EndPos:   ast.Position{Offset: 2, Line: 1, Column: 2},
+							},
+						},
+					},
+					{
+						Label: "",
+						Expression: &ast.InvocationExpression{
+							InvokedExpression: &ast.IdentifierExpression{
+								Identifier: ast.Identifier{
+									Identifier: "g",
+									Pos:        ast.Position{Offset: 4, Line: 1, Column: 4},
+								},
+							},
+							Arguments: []*ast.Argument{
+								{
+									Label: "",
+									Expression: &ast.StringExpression{
+										Value: "test",
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+											EndPos:   ast.Position{Offset: 11, Line: 1, Column: 11},
+										},
+									},
+								},
+							},
+							EndPos: ast.Position{Offset: 12, Line: 1, Column: 12},
+						},
+					},
+				},
+				EndPos: ast.Position{Offset: 13, Line: 1, Column: 13},
 			},
 			result,
 		)
