@@ -883,9 +883,11 @@ func TestParseString(t *testing.T) {
 }
 
 func TestInvocation(t *testing.T) {
-	t.Run("invocation, no parameters", func(t *testing.T) {
-		result, errors := ParseExpression("f()")
-		require.Empty(t, errors)
+
+	t.Run("no arguments", func(t *testing.T) {
+		result, errs := ParseExpression("f()")
+		require.Empty(t, errs)
+
 		assert.Equal(t,
 			&ast.InvocationExpression{
 				InvokedExpression: &ast.IdentifierExpression{
@@ -900,9 +902,11 @@ func TestInvocation(t *testing.T) {
 			result,
 		)
 	})
-	t.Run("invocation, no parameters, with whitespace", func(t *testing.T) {
-		result, errors := ParseExpression("f ()")
-		require.Empty(t, errors)
+
+	t.Run("no arguments, with whitespace", func(t *testing.T) {
+		result, errs := ParseExpression("f ()")
+		require.Empty(t, errs)
+
 		assert.Equal(t,
 			&ast.InvocationExpression{
 				InvokedExpression: &ast.IdentifierExpression{
@@ -917,9 +921,11 @@ func TestInvocation(t *testing.T) {
 			result,
 		)
 	})
-	t.Run("invocation, no parameters, with whitespace within params", func(t *testing.T) {
-		result, errors := ParseExpression("f ( )")
-		require.Empty(t, errors)
+
+	t.Run("no arguments, with whitespace within params", func(t *testing.T) {
+		result, errs := ParseExpression("f ( )")
+		require.Empty(t, errs)
+
 		assert.Equal(t,
 			&ast.InvocationExpression{
 				InvokedExpression: &ast.IdentifierExpression{
@@ -934,9 +940,11 @@ func TestInvocation(t *testing.T) {
 			result,
 		)
 	})
-	t.Run("invocation, with parameters", func(t *testing.T) {
-		result, errors := ParseExpression("f(1)")
-		require.Empty(t, errors)
+
+	t.Run("with arguments", func(t *testing.T) {
+		result, errs := ParseExpression("f(1)")
+		require.Empty(t, errs)
+
 		assert.Equal(t,
 			&ast.InvocationExpression{
 				InvokedExpression: &ast.IdentifierExpression{
@@ -963,9 +971,11 @@ func TestInvocation(t *testing.T) {
 			result,
 		)
 	})
-	t.Run("invocation, with parameters, multiple", func(t *testing.T) {
-		result, errors := ParseExpression("f(1,2)")
-		require.Empty(t, errors)
+
+	t.Run("with arguments, multiple", func(t *testing.T) {
+		result, errs := ParseExpression("f(1,2)")
+		require.Empty(t, errs)
+
 		assert.Equal(t,
 			&ast.InvocationExpression{
 				InvokedExpression: &ast.IdentifierExpression{
@@ -1003,28 +1013,50 @@ func TestInvocation(t *testing.T) {
 			result,
 		)
 	})
-	t.Run("invocation should error, no parameters, multiple commas", func(t *testing.T) {
-		_, errors := ParseExpression("f(,,)")
-		require.Error(t, errors[0], fmt.Errorf(
-			"expected argument or end of argument list, got %q",
-			lexer.TokenComma,
-		))
+
+	t.Run("invalid: no arguments, multiple commas", func(t *testing.T) {
+		_, errs := ParseExpression("f(,,)")
+		require.Equal(t,
+			[]error{
+				fmt.Errorf(
+					"expected argument or end of argument list, got %q",
+					lexer.TokenComma,
+				),
+			},
+			errs,
+		)
 	})
-	t.Run("invocation should error, with parameter, multiple commas", func(t *testing.T) {
-		_, errors := ParseExpression("f(1,,)")
-		require.Error(t, errors[0], fmt.Errorf(
-			"expected argument or end of argument list, got %q",
-			lexer.TokenComma,
-		))
+
+	t.Run("invalid: with argument, multiple commas", func(t *testing.T) {
+		_, errs := ParseExpression("f(1,,)")
+		require.Equal(t,
+			[]error{
+				fmt.Errorf(
+					"expected argument or end of argument list, got %q",
+					lexer.TokenComma,
+				),
+			},
+			errs,
+		)
 	})
-	t.Run("invocation should error, with multiple parameters, no commas", func(t *testing.T) {
-		_, errors := ParseExpression("f(1 2)")
-		require.NotNil(t, errors)
-		require.Error(t, errors[0], fmt.Errorf("unexpected argument in argument list (expecting delimiter of end of argument list), got %q", lexer.TokenIdentifier))
+
+	t.Run("invalid: with multiple argument, no commas", func(t *testing.T) {
+		_, errs := ParseExpression("f(1 2)")
+		require.Equal(t,
+			[]error{
+				fmt.Errorf(
+					"unexpected argument in argument list (expecting delimiter of end of argument list), got %q",
+					lexer.TokenNumber,
+				),
+			},
+			errs,
+		)
 	})
-	t.Run("invocation, with parameters, nested", func(t *testing.T) {
-		result, errors := ParseExpression("f(1,g(2))")
-		require.Empty(t, errors)
+
+	t.Run("with arguments, nested", func(t *testing.T) {
+		result, errs := ParseExpression("f(1,g(2))")
+		require.Empty(t, errs)
+
 		assert.Equal(t,
 			&ast.InvocationExpression{
 				InvokedExpression: &ast.IdentifierExpression{
@@ -1076,9 +1108,11 @@ func TestInvocation(t *testing.T) {
 			result,
 		)
 	})
-	t.Run("invocation, with parameters, nested, string", func(t *testing.T) {
-		result, errors := ParseExpression("f(1,g(\"test\"))")
-		require.Empty(t, errors)
+
+	t.Run("with arguments, nested, string", func(t *testing.T) {
+		result, errs := ParseExpression("f(1,g(\"test\"))")
+		require.Empty(t, errs)
+
 		assert.Equal(t,
 			&ast.InvocationExpression{
 				InvokedExpression: &ast.IdentifierExpression{
@@ -1132,9 +1166,11 @@ func TestInvocation(t *testing.T) {
 }
 
 func TestMemberExpression(t *testing.T) {
-	t.Run("member", func(t *testing.T) {
-		result, errors := ParseExpression("f.n")
-		require.Empty(t, errors)
+
+	t.Run("identifier, no space", func(t *testing.T) {
+		result, errs := ParseExpression("f.n")
+		require.Empty(t, errs)
+
 		assert.Equal(t,
 			&ast.MemberExpression{
 				Expression: &ast.IdentifierExpression{
@@ -1151,9 +1187,11 @@ func TestMemberExpression(t *testing.T) {
 			result,
 		)
 	})
-	t.Run("member, whitespace", func(t *testing.T) {
-		result, errors := ParseExpression("f .n")
-		require.Empty(t, errors)
+
+	t.Run("whitespace between", func(t *testing.T) {
+		result, errs := ParseExpression("f .n")
+		require.Empty(t, errs)
+
 		assert.Equal(t,
 			&ast.MemberExpression{
 				Expression: &ast.IdentifierExpression{
@@ -1170,9 +1208,10 @@ func TestMemberExpression(t *testing.T) {
 			result,
 		)
 	})
-	t.Run("member, precedence", func(t *testing.T) {
-		result, errors := ParseExpression("3 * f.n")
-		require.Empty(t, errors)
+	t.Run("precedence", func(t *testing.T) {
+		result, errs := ParseExpression("3 * f.n")
+		require.Empty(t, errs)
+
 		assert.Equal(t,
 			&ast.BinaryExpression{
 				Operation: ast.OperationMul,
@@ -1336,7 +1375,8 @@ func TestParseReference(t *testing.T) {
 }
 
 func TestParseForceExpression(t *testing.T) {
-	t.Run("force unwrap", func(t *testing.T) {
+
+	t.Run("identifier", func(t *testing.T) {
 		result, errs := ParseExpression("t!")
 		require.Empty(t, errs)
 		utils.AssertEqualWithDiff(t,
@@ -1352,7 +1392,8 @@ func TestParseForceExpression(t *testing.T) {
 			result,
 		)
 	})
-	t.Run("force unwrap, with whitespace", func(t *testing.T) {
+
+	t.Run("with whitespace", func(t *testing.T) {
 		result, errs := ParseExpression(" t ! ")
 		require.Empty(t, errs)
 		utils.AssertEqualWithDiff(t,
@@ -1368,7 +1409,8 @@ func TestParseForceExpression(t *testing.T) {
 			result,
 		)
 	})
-	t.Run("force unwrap, precedence, force unwrap before move", func(t *testing.T) {
+
+	t.Run("precedence, force unwrap before move", func(t *testing.T) {
 		result, errs := ParseExpression("<-t!")
 		require.Empty(t, errs)
 		utils.AssertEqualWithDiff(t,
@@ -1388,7 +1430,8 @@ func TestParseForceExpression(t *testing.T) {
 			result,
 		)
 	})
-	t.Run("force unwrap, precedence", func(t *testing.T) {
+
+	t.Run("precedence", func(t *testing.T) {
 		result, errs := ParseExpression("10 *  t!")
 		require.Empty(t, errs)
 		utils.AssertEqualWithDiff(t,
