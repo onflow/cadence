@@ -7396,7 +7396,7 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 			),
 		)
 
-		test := inter.Globals["test"].Value
+		test := inter.Globals["test"].Value.(*interpreter.DictionaryValue)
 
 		owner := &common.Address{
 			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
@@ -7418,6 +7418,13 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 
 		decoded, err := decoder.Decode(owner)
 		require.NoError(t, err)
+
+		test.SetModified(false)
+		test.Keys.SetModified(false)
+		for _, key := range test.Keys.Values {
+			stringKey := key.(*interpreter.StringValue)
+			stringKey.SetModified(false)
+		}
 
 		require.Equal(t, test, decoded)
 	}
