@@ -568,10 +568,10 @@ func defineMemberExpression() {
 		lexer.TokenDot,
 		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
 			p.skipSpaceAndComments(true)
-			identifierToken := p.mustOne(lexer.TokenIdentifier)
+			identifier := mustIdentifier(p)
 			return &ast.MemberExpression{
 				Expression: left,
-				Identifier: tokenToIdentifier(identifierToken),
+				Identifier: identifier,
 			}
 		},
 	)
