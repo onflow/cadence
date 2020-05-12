@@ -364,7 +364,7 @@ func init() {
 	defineConditionalExpression()
 	defineReferenceExpression()
 	defineForceExpression()
-  defineMemberExpression()
+	defineMemberExpression()
 
 	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) ast.Expression {
 		panic("expected expression")
