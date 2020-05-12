@@ -32,6 +32,8 @@ type storageKey struct {
 }
 
 type cacheEntry struct {
+	// true indicates that the value definitely must be written, independent of the value.
+	// false indicates that the value may has to be written if the value is modified.
 	mustWrite bool
 	value     interpreter.Value
 }
@@ -202,7 +204,7 @@ func (s *interpreterRuntimeStorage) writeCached() {
 
 	for fullKey, entry := range s.cache {
 
-		if !entry.mustWrite && (entry.value == nil || !entry.value.Modified()) {
+		if !entry.mustWrite && entry.value != nil && !entry.value.Modified() {
 			continue
 		}
 
