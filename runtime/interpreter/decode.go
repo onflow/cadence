@@ -74,7 +74,7 @@ func (d *Decoder) decodeValue(v interface{}, owner *common.Address) (Value, erro
 		return BoolValue(v), nil
 
 	case string:
-		return NewStringValue(v), nil
+		return d.decodeString(v), nil
 
 	case nil:
 		return NilValue{}, nil
@@ -193,6 +193,12 @@ func (d *Decoder) decodeValue(v interface{}, owner *common.Address) (Value, erro
 	}
 }
 
+func (d *Decoder) decodeString(v string) Value {
+	value := NewStringValue(v)
+	value.modified = false
+	return value
+}
+
 func (d *Decoder) decodeArray(v []interface{}, owner *common.Address) (*ArrayValue, error) {
 	values := make([]Value, len(v))
 	for i, value := range v {
@@ -206,7 +212,7 @@ func (d *Decoder) decodeArray(v []interface{}, owner *common.Address) (*ArrayVal
 	return &ArrayValue{
 		Values:   values,
 		Owner:    owner,
-		modified: true,
+		modified: false,
 	}, nil
 }
 
@@ -252,7 +258,7 @@ func (d *Decoder) decodeDictionary(v interface{}, owner *common.Address) (*Dicti
 		Keys:     keys,
 		Entries:  entries,
 		Owner:    owner,
-		modified: true,
+		modified: false,
 	}, nil
 }
 
@@ -354,7 +360,9 @@ func (d *Decoder) decodeComposite(v interface{}, owner *common.Address) (*Compos
 		fields[nameString] = decodedValue
 	}
 
-	return NewCompositeValue(location, typeID, kind, fields, owner), nil
+	compositeValue := NewCompositeValue(location, typeID, kind, fields, owner)
+	compositeValue.modified = false
+	return compositeValue, nil
 }
 
 func (d *Decoder) decodeBig(v interface{}) (*big.Int, error) {
