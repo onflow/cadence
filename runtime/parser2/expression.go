@@ -571,7 +571,7 @@ func defineForceExpression() {
 			return &ast.ForceExpression{
 				Expression: left,
 				EndPos:     token.EndPos,
-      }
+			}
 		},
 	)
 }
