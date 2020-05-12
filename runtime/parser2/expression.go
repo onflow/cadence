@@ -381,11 +381,19 @@ func defineInvocationExpression() {
 			var arguments []*ast.Argument
 			var endPos ast.Position
 			atEnd := false
+			expectParameter := true
 			for !atEnd {
 				p.skipSpaceAndComments(true)
 				switch p.current.Type {
 				case lexer.TokenComma:
+					if expectParameter {
+						panic(fmt.Errorf(
+							"expected argument or end of argument list, got %q",
+							p.current.Type,
+						))
+					}
 					p.next()
+					expectParameter = true
 				case lexer.TokenParenClose:
 					endPos = p.current.EndPos
 					p.next()
@@ -394,11 +402,15 @@ func defineInvocationExpression() {
 				case lexer.TokenEOF:
 					panic(fmt.Errorf("missing ')' at end of invocation argument list"))
 				default:
+					if !expectParameter {
+						panic(fmt.Errorf("unexpected argument in argument list (expecting delimiter of end of argument list), got %q", p.current.Type))
+					}
 					argument := &ast.Argument{
 						Label:      "",
 						Expression: parseExpression(p, lowestBindingPower),
 					}
 					arguments = append(arguments, argument)
+					expectParameter = false
 				}
 			}
 			return &ast.InvocationExpression{

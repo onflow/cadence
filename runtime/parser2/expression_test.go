@@ -33,6 +33,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	oldParser "github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/parser2/lexer"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -1001,6 +1002,18 @@ func TestInvocation(t *testing.T) {
 			},
 			result,
 		)
+	})
+	t.Run("invocation should error, with parameter, multiple commas", func(t *testing.T) {
+		_, errors := ParseExpression("f(1,,)")
+		require.Error(t, errors[0], fmt.Errorf(
+			"expected argument or end of argument list, got %q",
+			lexer.TokenComma,
+		))
+	})
+	t.Run("invocation should error, with multiple parameters, no commas", func(t *testing.T) {
+		_, errors := ParseExpression("f(1 2)")
+		require.NotNil(t, errors)
+		require.Error(t, errors[0], fmt.Errorf("unexpected argument in argument list (expecting delimiter of end of argument list), got %q", lexer.TokenIdentifier))
 	})
 	t.Run("invocation, with parameters, nested", func(t *testing.T) {
 		result, errors := ParseExpression("f(1,g(2))")
