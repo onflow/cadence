@@ -112,9 +112,12 @@ func TestEncodeDecodeBool(t *testing.T) {
 func TestEncodeDecodeString(t *testing.T) {
 
 	t.Run("empty", func(t *testing.T) {
+		expected := NewStringValue("")
+		expected.modified = false
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewStringValue(""),
+				value: expected,
 				encoded: []byte{
 					//  UTF-8 string, 0 bytes follow
 					0x60,
@@ -123,9 +126,12 @@ func TestEncodeDecodeString(t *testing.T) {
 	})
 
 	t.Run("non-empty", func(t *testing.T) {
+		expected := NewStringValue("foo")
+		expected.modified = false
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewStringValue("foo"),
+				value: expected,
 				encoded: []byte{
 					// UTF-8 string, 3 bytes follow
 					0x63,
@@ -140,9 +146,12 @@ func TestEncodeDecodeString(t *testing.T) {
 func TestEncodeDecodeArray(t *testing.T) {
 
 	t.Run("empty", func(t *testing.T) {
+		expected := NewArrayValueUnownedNonCopying()
+		expected.modified = false
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewArrayValueUnownedNonCopying(),
+				value: expected,
 				encoded: []byte{
 					// array, 0 items follow
 					0x80,
@@ -151,12 +160,18 @@ func TestEncodeDecodeArray(t *testing.T) {
 	})
 
 	t.Run("string and bool", func(t *testing.T) {
+		expectedString := NewStringValue("test")
+		expectedString.modified = false
+
+		expected := NewArrayValueUnownedNonCopying(
+			expectedString,
+			BoolValue(true),
+		)
+		expected.modified = false
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewArrayValueUnownedNonCopying(
-					NewStringValue("test"),
-					BoolValue(true),
-				),
+				value: expected,
 				encoded: []byte{
 					// array, 2 items follow
 					0x82,
@@ -175,9 +190,13 @@ func TestEncodeDecodeArray(t *testing.T) {
 func TestEncodeDecodeDictionary(t *testing.T) {
 
 	t.Run("empty", func(t *testing.T) {
+		expected := NewDictionaryValueUnownedNonCopying()
+		expected.modified = false
+		expected.Keys.modified = false
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewDictionaryValueUnownedNonCopying(),
+				value: expected,
 				encoded: []byte{
 					// tag
 					0xd8, cborTagDictionaryValue,
@@ -197,13 +216,30 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 	})
 
 	t.Run("non-empty", func(t *testing.T) {
+		key1 := NewStringValue("test")
+		key1.modified = false
+		value1 := NewArrayValueUnownedNonCopying()
+		value1.modified = false
+
+		key2 := BoolValue(true)
+		value2 := BoolValue(false)
+
+		key3 := NewStringValue("foo")
+		key3.modified = false
+		value3 := NewStringValue("bar")
+		value3.modified = false
+
+		expected := NewDictionaryValueUnownedNonCopying(
+			key1, value1,
+			key2, value2,
+			key3, value3,
+		)
+		expected.modified = false
+		expected.Keys.modified = false
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewDictionaryValueUnownedNonCopying(
-					NewStringValue("test"), NewArrayValueUnownedNonCopying(),
-					BoolValue(true), BoolValue(false),
-					NewStringValue("foo"), NewStringValue("bar"),
-				).Copy(),
+				value: expected,
 				encoded: []byte{
 					// tag
 					0xd8, cborTagDictionaryValue,
@@ -256,15 +292,18 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 func TestEncodeDecodeComposite(t *testing.T) {
 
 	t.Run("empty structure, string location", func(t *testing.T) {
+		expected := NewCompositeValue(
+			utils.TestLocation,
+			"S.test.TestStruct",
+			common.CompositeKindStructure,
+			map[string]Value{},
+			nil,
+		)
+		expected.modified = false
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewCompositeValue(
-					utils.TestLocation,
-					"S.test.TestStruct",
-					common.CompositeKindStructure,
-					map[string]Value{},
-					nil,
-				),
+				value: expected,
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCompositeValue,
@@ -301,18 +340,24 @@ func TestEncodeDecodeComposite(t *testing.T) {
 	})
 
 	t.Run("non-empty resource", func(t *testing.T) {
+		stringValue := NewStringValue("test")
+		stringValue.modified = false
+
+		expected := NewCompositeValue(
+			utils.TestLocation,
+			"S.test.TestResource",
+			common.CompositeKindResource,
+			map[string]Value{
+				"true":   BoolValue(true),
+				"string": stringValue,
+			},
+			nil,
+		)
+		expected.modified = false
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewCompositeValue(
-					utils.TestLocation,
-					"S.test.TestResource",
-					common.CompositeKindResource,
-					map[string]Value{
-						"true":   BoolValue(true),
-						"string": NewStringValue("test"),
-					},
-					nil,
-				),
+				value: expected,
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCompositeValue,
@@ -361,15 +406,18 @@ func TestEncodeDecodeComposite(t *testing.T) {
 	})
 
 	t.Run("empty, address location", func(t *testing.T) {
+		expected := NewCompositeValue(
+			ast.AddressLocation{0x1},
+			"A.0x1.TestStruct",
+			common.CompositeKindStructure,
+			map[string]Value{},
+			nil,
+		)
+		expected.modified = false
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewCompositeValue(
-					ast.AddressLocation{0x1},
-					"A.0x1.TestStruct",
-					common.CompositeKindStructure,
-					map[string]Value{},
-					nil,
-				),
+				value: expected,
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCompositeValue,
@@ -2054,10 +2102,13 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 	})
 
 	t.Run("string", func(t *testing.T) {
+		expectedString := NewStringValue("test")
+		expectedString.modified = false
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: &SomeValue{
-					Value: NewStringValue("test"),
+					Value: expectedString,
 				},
 				encoded: []byte{
 					// tag

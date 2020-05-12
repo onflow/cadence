@@ -322,6 +322,10 @@ func (*StringValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value
 	panic(errors.NewUnreachableError())
 }
 
+func (v *StringValue) SetModified(modified bool) {
+	v.modified = false
+}
+
 // ArrayValue
 
 type ArrayValue struct {
@@ -584,6 +588,10 @@ func (v *ArrayValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Valu
 
 func (v *ArrayValue) Count() int {
 	return len(v.Values)
+}
+
+func (v *ArrayValue) SetModified(modified bool) {
+	v.modified = modified
 }
 
 // NumberValue
@@ -4913,6 +4921,10 @@ func (v *DictionaryValue) Insert(keyValue Value, value Value) (existingValue Val
 	}
 
 	return existingValue
+}
+
+func (v *DictionaryValue) SetModified(modified bool) {
+	v.modified = modified
 }
 
 type DictionaryEntryValues struct {
