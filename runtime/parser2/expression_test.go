@@ -1003,6 +1003,13 @@ func TestInvocation(t *testing.T) {
 			result,
 		)
 	})
+	t.Run("invocation should error, no parameters, multiple commas", func(t *testing.T) {
+		_, errors := ParseExpression("f(,,)")
+		require.Error(t, errors[0], fmt.Errorf(
+			"expected argument or end of argument list, got %q",
+			lexer.TokenComma,
+		))
+	})
 	t.Run("invocation should error, with parameter, multiple commas", func(t *testing.T) {
 		_, errors := ParseExpression("f(1,,)")
 		require.Error(t, errors[0], fmt.Errorf(
