@@ -337,7 +337,6 @@ func defineRestrictedOrDictionaryType() {
 					endPos = p.current.EndPos
 					p.next()
 					atEnd = true
-					break
 
 				case lexer.TokenEOF:
 					if expectType {
@@ -430,7 +429,6 @@ func defineRestrictedOrDictionaryType() {
 					endPos = p.current.EndPos
 					p.next()
 					atEnd = true
-					break
 
 				case lexer.TokenEOF:
 					if expectType {

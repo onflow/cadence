@@ -1564,11 +1564,6 @@ func ConvertInt64(value Value, _ *Interpreter) Value {
 
 	case NumberValue:
 		v := value.ToInt()
-		if v > math.MaxInt64 {
-			panic(OverflowError{})
-		} else if v < math.MinInt64 {
-			panic(UnderflowError{})
-		}
 		res = int64(v)
 
 	default:

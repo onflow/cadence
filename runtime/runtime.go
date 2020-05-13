@@ -565,7 +565,7 @@ func (r *interpreterRuntime) storageInterpreterOptions(runtimeStorage *interpret
 
 func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interface) []interpreter.Option {
 	limit := runtimeInterface.GetComputationLimit()
-	if limit <= 0 {
+	if limit == 0 {
 		return nil
 	}
 

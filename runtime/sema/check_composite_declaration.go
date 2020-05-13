@@ -822,11 +822,7 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 	effectiveInterfaceMemberAccess := checker.effectiveInterfaceMemberAccess(interfaceMember.Access)
 	effectiveCompositeMemberAccess := checker.effectiveCompositeMemberAccess(compositeMember.Access)
 
-	if effectiveCompositeMemberAccess.IsLessPermissiveThan(effectiveInterfaceMemberAccess) {
-		return false
-	}
-
-	return true
+	return !effectiveCompositeMemberAccess.IsLessPermissiveThan(effectiveInterfaceMemberAccess)
 }
 
 // checkTypeRequirement checks conformance of a nested type declaration
