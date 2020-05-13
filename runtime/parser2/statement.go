@@ -85,7 +85,7 @@ func parseReturnStatement(p *parser) *ast.ReturnStatement {
 
 	var expression ast.Expression
 	switch p.current.Type {
-	case lexer.TokenEOF, lexer.TokenSemicolon:
+	case lexer.TokenEOF, lexer.TokenSemicolon, lexer.TokenBraceClose:
 		break
 	default:
 		if !sawNewLine {
