@@ -188,3 +188,24 @@ func ParseType(input string) (ty ast.Type, errors []error) {
 	ty = res.(ast.Type)
 	return
 }
+
+func ParseProgram(input string) (program *ast.Program, err error) {
+	var res interface{}
+	var errs []error
+	res, errs = Parse(input, func(p *parser) interface{} {
+		return parseDeclarations(p, lexer.TokenEOF)
+	})
+	if len(errs) > 0 {
+		err = Error{
+			Errors: errs,
+		}
+	}
+	if res == nil {
+		program = nil
+		return
+	}
+	program = &ast.Program{
+		Declarations: res.([]ast.Declaration),
+	}
+	return
+}
