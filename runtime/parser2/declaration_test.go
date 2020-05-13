@@ -360,6 +360,16 @@ func TestParseFunctionDeclaration(t *testing.T) {
 							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
 						},
 					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "",
+								Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+					},
 					FunctionBlock: &ast.FunctionBlock{
 						Block: &ast.Block{
 							Range: ast.Range{
