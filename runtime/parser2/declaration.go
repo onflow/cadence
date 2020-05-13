@@ -331,6 +331,18 @@ func parseFunctionDeclaration(p *parser) *ast.FunctionDeclaration {
 		p.skipSpaceAndComments(true)
 		returnTypeAnnotation = parseTypeAnnotation(p)
 		p.skipSpaceAndComments(true)
+	} else {
+		positionBeforeMissingReturnType := parameterList.EndPos
+		returnType := &ast.NominalType{
+			Identifier: ast.Identifier{
+				Pos: positionBeforeMissingReturnType,
+			},
+		}
+		returnTypeAnnotation = &ast.TypeAnnotation{
+			IsResource: false,
+			Type:       returnType,
+			StartPos:   positionBeforeMissingReturnType,
+		}
 	}
 
 	// TODO: parse function block
