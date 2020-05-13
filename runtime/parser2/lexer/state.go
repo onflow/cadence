@@ -111,7 +111,7 @@ func rootState(l *lexer) stateFn {
 			}
 		case '?':
 			if l.acceptOne('?') {
-				l.emitType(TokenNilCoalesce)
+				l.emitType(TokenDoubleQuestionMark)
 			} else {
 				l.emitType(TokenQuestionMark)
 			}

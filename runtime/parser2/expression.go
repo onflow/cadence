@@ -220,7 +220,7 @@ func init() {
 	})
 
 	defineExpr(binaryExpr{
-		tokenType:        lexer.TokenNilCoalesce,
+		tokenType:        lexer.TokenDoubleQuestionMark,
 		leftBindingPower: 60,
 		operation:        ast.OperationNilCoalesce,
 		rightAssociative: true,
