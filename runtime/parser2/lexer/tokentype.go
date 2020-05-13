@@ -38,7 +38,7 @@ const (
 	TokenStar
 	TokenSlash
 	TokenPercent
-	TokenNilCoalesce
+	TokenDoubleQuestionMark
 	TokenParenOpen
 	TokenParenClose
 	TokenBraceOpen
@@ -95,7 +95,7 @@ func (t TokenType) String() string {
 		return "/"
 	case TokenPercent:
 		return "%"
-	case TokenNilCoalesce:
+	case TokenDoubleQuestionMark:
 		return "??"
 	case TokenParenOpen:
 		return "("

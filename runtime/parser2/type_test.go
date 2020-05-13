@@ -141,6 +141,51 @@ func TestParseOptionalType(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("double", func(t *testing.T) {
+		result, errs := ParseType("Int??")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.OptionalType{
+				Type: &ast.OptionalType{
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Int",
+							Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					EndPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+				},
+				EndPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+			},
+			result,
+		)
+	})
+
+	t.Run("triple", func(t *testing.T) {
+		result, errs := ParseType("Int???")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.OptionalType{
+				Type: &ast.OptionalType{
+					Type: &ast.OptionalType{
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "Int",
+								Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+							},
+						},
+						EndPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+					},
+					EndPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+				},
+				EndPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseReferenceType(t *testing.T) {

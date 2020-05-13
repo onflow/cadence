@@ -412,7 +412,7 @@ func TestLex(t *testing.T) {
 						},
 					},
 					{
-						Type: TokenNilCoalesce,
+						Type: TokenDoubleQuestionMark,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},

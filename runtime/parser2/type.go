@@ -82,7 +82,7 @@ type prefixType struct {
 type postfixType struct {
 	tokenType      lexer.TokenType
 	bindingPower   int
-	nullDenotation postfixTypeFunc
+	leftDenotation postfixTypeFunc
 }
 
 func defineType(def interface{}) {
@@ -102,7 +102,7 @@ func defineType(def interface{}) {
 		setTypeLeftDenotation(
 			tokenType,
 			func(p *parser, token lexer.Token, left ast.Type) ast.Type {
-				return def.nullDenotation(left, token.Range)
+				return def.leftDenotation(left, token.Range)
 			},
 		)
 	case literalType:
@@ -225,12 +225,28 @@ func defineArrayType() {
 }
 
 func defineOptionalType() {
+	const bindingPower = 10
+
 	defineType(postfixType{
 		tokenType:    lexer.TokenQuestionMark,
-		bindingPower: 10,
-		nullDenotation: func(left ast.Type, tokenRange ast.Range) ast.Type {
+		bindingPower: bindingPower,
+		leftDenotation: func(left ast.Type, tokenRange ast.Range) ast.Type {
 			return &ast.OptionalType{
 				Type:   left,
+				EndPos: tokenRange.EndPos,
+			}
+		},
+	})
+
+	defineType(postfixType{
+		tokenType:    lexer.TokenDoubleQuestionMark,
+		bindingPower: bindingPower,
+		leftDenotation: func(left ast.Type, tokenRange ast.Range) ast.Type {
+			return &ast.OptionalType{
+				Type: &ast.OptionalType{
+					Type:   left,
+					EndPos: tokenRange.StartPos,
+				},
 				EndPos: tokenRange.EndPos,
 			}
 		},
