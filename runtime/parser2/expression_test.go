@@ -1482,3 +1482,15 @@ func TestParseCreate(t *testing.T) {
 		)
 	})
 }
+
+func TestParseNil(t *testing.T) {
+	result, errs := ParseExpression(" nil")
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		&ast.NilExpression{
+			Pos: ast.Position{Line: 1, Column: 1, Offset: 1},
+		},
+		result,
+	)
+}

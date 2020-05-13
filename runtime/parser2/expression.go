@@ -310,7 +310,9 @@ func init() {
 				}
 
 			case keywordNil:
-				return &ast.NilExpression{}
+				return &ast.NilExpression{
+					Pos: token.Range.StartPos,
+				}
 
 			case keywordCreate:
 				return parseCreateExpressionRemainder(p, token)
