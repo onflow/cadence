@@ -28,12 +28,15 @@ import (
 func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []ast.Declaration) {
 	for {
 		p.skipSpaceAndComments(true)
+
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
 			p.next()
 			continue
+
 		case endTokenType, lexer.TokenEOF:
 			return
+
 		default:
 			declaration := parseDeclaration(p)
 			if declaration == nil {
@@ -183,6 +186,7 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 			parameter := parseParameter(p)
 			parameters = append(parameters, parameter)
 			expectParameter = false
+
 		case lexer.TokenComma:
 			if expectParameter {
 				panic(fmt.Errorf(
@@ -197,12 +201,13 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 			endPos = p.current.EndPos
 			p.next()
 			atEnd = true
-			break
+
 		case lexer.TokenEOF:
 			panic(fmt.Errorf(
 				"missing %q at end of parameter list",
 				lexer.TokenParenClose,
 			))
+
 		default:
 			if expectParameter {
 				panic(fmt.Errorf(

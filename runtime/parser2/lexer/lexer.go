@@ -20,7 +20,6 @@ package lexer
 
 import (
 	"fmt"
-	"strings"
 	"unicode/utf8"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -111,14 +110,6 @@ func (l *lexer) next() rune {
 	return r
 }
 
-// peek returns but does not consume
-// the next rune in the input.
-func (l *lexer) peek() rune {
-	r := l.next()
-	l.backupOne()
-	return r
-}
-
 // backupOne steps back one rune.
 // Can be called only once per call of next.
 func (l *lexer) backupOne() {
@@ -142,28 +133,6 @@ func (l *lexer) acceptOne(r rune) bool {
 	}
 	l.backupOne()
 	return false
-}
-
-func (l *lexer) acceptAny(valid string) bool {
-	if strings.ContainsRune(valid, l.next()) {
-		return true
-	}
-	l.backupOne()
-	return false
-}
-
-func (l *lexer) acceptZeroOrMore(valid string) {
-	for strings.ContainsRune(valid, l.next()) {
-	}
-	l.backupOne()
-}
-
-func (l *lexer) acceptOneOrMore(valid string) bool {
-	if !l.acceptAny(valid) {
-		return false
-	}
-	l.acceptZeroOrMore(valid)
-	return true
 }
 
 // emit writes a token to the channel.
@@ -270,20 +239,6 @@ func (l *lexer) scanSpace() (containsNewline bool) {
 		}
 	})
 	return
-}
-
-func (l *lexer) acceptAll(string string) bool {
-	endOffset := l.endOffset
-
-	for _, r := range string {
-		if l.next() != r {
-			l.endOffset = endOffset
-
-			return false
-		}
-	}
-
-	return true
 }
 
 func (l *lexer) scanIdentifier() {

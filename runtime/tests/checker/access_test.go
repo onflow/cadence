@@ -36,12 +36,6 @@ func expectSuccess(t *testing.T, err error) {
 	assert.NoError(t, err)
 }
 
-func expectConformanceError(t *testing.T, err error) {
-	errs := ExpectCheckerErrors(t, err, 1)
-
-	assert.IsType(t, &sema.ConformanceError{}, errs[0])
-}
-
 func expectInvalidAccessModifierError(t *testing.T, err error) {
 	errs := ExpectCheckerErrors(t, err, 1)
 
