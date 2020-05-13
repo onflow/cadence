@@ -610,7 +610,8 @@ func (v *ProgramVisitor) VisitParameter(ctx *ParameterContext) interface{} {
 
 	typeAnnotation := ctx.TypeAnnotation().Accept(v).(*ast.TypeAnnotation)
 
-	startPosition, endPosition := PositionRangeFromContext(ctx)
+	startPosition := PositionFromToken(ctx.GetStart())
+	endPosition := typeAnnotation.EndPosition()
 
 	return &ast.Parameter{
 		Label:          label,
