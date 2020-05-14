@@ -99,7 +99,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 		}
 	}
 
-	storageGetter := func(_ *interpreter.Interpreter, _ common.Address, key string) interpreter.OptionalValue {
+	storageGetter := func(_ *interpreter.Interpreter, _ common.Address, key string, deferred bool) interpreter.OptionalValue {
 		value := storedValues[key]
 		if value == nil {
 			return interpreter.NilValue{}

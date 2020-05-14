@@ -5021,10 +5021,13 @@ func (v *CompositeValue) GetField(name string) Value {
 // DictionaryValue
 
 type DictionaryValue struct {
-	Keys     *ArrayValue
-	Entries  map[string]Value
-	Owner    *common.Address
-	modified bool
+	Keys             *ArrayValue
+	Entries          map[string]Value
+	Owner            *common.Address
+	modified         bool
+	DeferredOwner    *common.Address
+	DeferredKeys     map[string]string
+	prevDeferredKeys map[string]string
 }
 
 func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValue {
@@ -5037,8 +5040,11 @@ func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValu
 		Keys:    NewArrayValueUnownedNonCopying(),
 		Entries: make(map[string]Value, keysAndValuesCount/2),
 		// NOTE: new value has no owner
-		Owner:    nil,
-		modified: true,
+		Owner:            nil,
+		modified:         true,
+		DeferredOwner:    nil,
+		DeferredKeys:     nil,
+		prevDeferredKeys: nil,
 	}
 
 	for i := 0; i < keysAndValuesCount; i += 2 {
@@ -5054,10 +5060,13 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter) DynamicType {
 	entryTypes := make([]struct{ KeyType, ValueType DynamicType }, len(v.Keys.Values))
 
 	for i, key := range v.Keys.Values {
+		// NOTE: Force unwrap, otherwise dynamic type check is for optional type.
+		// This is safe because we are iterating over the keys.
+		value := v.Get(interpreter, LocationRange{}, key).(*SomeValue).Value
 		entryTypes[i] =
 			struct{ KeyType, ValueType DynamicType }{
 				KeyType:   key.DynamicType(interpreter),
-				ValueType: v.Entries[dictionaryKey(key)].DynamicType(interpreter),
+				ValueType: value.DynamicType(interpreter),
 			}
 	}
 
@@ -5075,8 +5084,11 @@ func (v *DictionaryValue) Copy() Value {
 	}
 
 	return &DictionaryValue{
-		Keys:    newKeys,
-		Entries: newEntries,
+		Keys:             newKeys,
+		Entries:          newEntries,
+		DeferredOwner:    v.DeferredOwner,
+		DeferredKeys:     v.DeferredKeys,
+		prevDeferredKeys: v.prevDeferredKeys,
 		// NOTE: new value has no owner
 		Owner:    nil,
 		modified: true,
@@ -5142,15 +5154,49 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 		maybeDestroy(value)
 	}
 
+	for _, storageKey := range v.DeferredKeys {
+		interpreter.writeStored(*v.DeferredOwner, storageKey, NilValue{})
+	}
+
+	for _, storageKey := range v.prevDeferredKeys {
+		interpreter.writeStored(*v.DeferredOwner, storageKey, NilValue{})
+	}
+
 	return result
 }
 
-func (v *DictionaryValue) Get(_ *Interpreter, _ LocationRange, keyValue Value) Value {
-	value, ok := v.Entries[dictionaryKey(keyValue)]
-	if !ok {
-		return NilValue{}
+func (v *DictionaryValue) Get(inter *Interpreter, _ LocationRange, keyValue Value) Value {
+	key := dictionaryKey(keyValue)
+	value, ok := v.Entries[key]
+	if ok {
+		return NewSomeValueOwningNonCopying(value)
 	}
-	return NewSomeValueOwningNonCopying(value)
+
+	if v.DeferredKeys != nil {
+		storageKey, ok := v.DeferredKeys[key]
+		if ok {
+			delete(v.DeferredKeys, key)
+			if v.prevDeferredKeys == nil {
+				v.prevDeferredKeys = map[string]string{}
+			}
+			v.prevDeferredKeys[key] = storageKey
+
+			storedValue := inter.readStored(*v.DeferredOwner, storageKey, true)
+			v.Entries[key] = storedValue.(*SomeValue).Value
+
+			// NOTE: *not* writing nil to the storage key,
+			// as this would result in a loss of the value:
+			// the read value is not modified,
+			// so it won't be written back
+
+			// TODO: remove from cache!!!
+
+			return storedValue
+		}
+	}
+
+	return NilValue{}
+
 }
 
 func dictionaryKey(keyValue Value) string {
@@ -5161,7 +5207,7 @@ func dictionaryKey(keyValue Value) string {
 	return hasKeyString.KeyString()
 }
 
-func (v *DictionaryValue) Set(_ *Interpreter, _ LocationRange, keyValue Value, value Value) {
+func (v *DictionaryValue) Set(inter *Interpreter, _ LocationRange, keyValue Value, value Value) {
 	v.modified = true
 
 	switch typedValue := value.(type) {
@@ -5169,7 +5215,7 @@ func (v *DictionaryValue) Set(_ *Interpreter, _ LocationRange, keyValue Value, v
 		v.Insert(keyValue, typedValue.Value)
 
 	case NilValue:
-		v.Remove(keyValue)
+		v.Remove(inter, keyValue)
 		return
 
 	default:
@@ -5223,7 +5269,7 @@ func (v *DictionaryValue) GetMember(_ *Interpreter, _ LocationRange, name string
 			func(invocation Invocation) trampoline.Trampoline {
 				keyValue := invocation.Arguments[0]
 
-				existingValue := v.Remove(keyValue)
+				existingValue := v.Remove(invocation.Interpreter, keyValue)
 
 				var returnValue Value
 				if existingValue == nil {
@@ -5274,11 +5320,17 @@ func (v *DictionaryValue) Count() int {
 }
 
 // TODO: unset owner?
-func (v *DictionaryValue) Remove(keyValue Value) (existingValue Value) {
+func (v *DictionaryValue) Remove(inter *Interpreter, keyValue Value) (existingValue Value) {
 	v.modified = true
 
 	key := dictionaryKey(keyValue)
 	existingValue, exists := v.Entries[key]
+
+	if v.prevDeferredKeys != nil {
+		if storageKey, ok := v.prevDeferredKeys[key]; ok {
+			inter.writeStored(*v.DeferredOwner, storageKey, NilValue{})
+		}
+	}
 
 	if !exists {
 		return nil
@@ -5474,7 +5526,7 @@ func (*StorageReferenceValue) Modified() bool {
 }
 
 func (v *StorageReferenceValue) referencedValue(interpreter *Interpreter) *Value {
-	switch referenced := interpreter.readStored(v.TargetStorageAddress, v.TargetKey).(type) {
+	switch referenced := interpreter.readStored(v.TargetStorageAddress, v.TargetKey, false).(type) {
 	case *SomeValue:
 		return &referenced.Value
 	case NilValue:

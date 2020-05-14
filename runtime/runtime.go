@@ -585,8 +585,8 @@ func (r *interpreterRuntime) storageInterpreterOptions(runtimeStorage *interpret
 			},
 		),
 		interpreter.WithStorageReadHandler(
-			func(_ *interpreter.Interpreter, address common.Address, key string) interpreter.OptionalValue {
-				return runtimeStorage.readValue(string(address[:]), key)
+			func(_ *interpreter.Interpreter, address common.Address, key string, deferred bool) interpreter.OptionalValue {
+				return runtimeStorage.readValue(string(address[:]), key, deferred)
 			},
 		),
 		interpreter.WithStorageWriteHandler(
@@ -1057,6 +1057,7 @@ func (r *interpreterRuntime) loadContract(
 	storedValue := runtimeStorage.readValue(
 		string(address[:]),
 		contractKey,
+		false,
 	)
 	switch typedValue := storedValue.(type) {
 	case *interpreter.SomeValue:

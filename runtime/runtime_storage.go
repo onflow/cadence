@@ -107,6 +107,7 @@ func (s *interpreterRuntimeStorage) valueExists(
 func (s *interpreterRuntimeStorage) readValue(
 	storageIdentifier string,
 	key string,
+	deferred bool,
 ) interpreter.OptionalValue {
 
 	fullKey := storageKey{
@@ -151,7 +152,7 @@ func (s *interpreterRuntimeStorage) readValue(
 
 	reportMetric(
 		func() {
-			storedValue, err = interpreter.DecodeValue(storedData, &address)
+			storedValue, err = interpreter.DecodeValue(storedData, &address, []string{key})
 		},
 		s.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
@@ -162,9 +163,11 @@ func (s *interpreterRuntimeStorage) readValue(
 		panic(err)
 	}
 
-	s.cache[fullKey] = cacheEntry{
-		mustWrite: false,
-		value:     storedValue,
+	if !deferred {
+		s.cache[fullKey] = cacheEntry{
+			mustWrite: false,
+			value:     storedValue,
+		}
 	}
 
 	return interpreter.NewSomeValueOwningNonCopying(storedValue)
@@ -211,26 +214,54 @@ func (s *interpreterRuntimeStorage) writeValue(
 //
 func (s *interpreterRuntimeStorage) writeCached() {
 
+	type writeItem struct {
+		storageKey storageKey
+		value      interpreter.Value
+	}
+
+	var items []writeItem
+
 	for fullKey, entry := range s.cache {
 
 		if !entry.mustWrite && entry.value != nil && !entry.value.Modified() {
 			continue
 		}
 
+		items = append(items, writeItem{
+			storageKey: fullKey,
+			value:      entry.value,
+		})
+	}
+
+	// Don't use a for-range loop, as keys are added while iterating
+	for len(items) > 0 {
+		var item writeItem
+		item, items = items[0], items[1:]
+
 		var newData []byte
-		if entry.value != nil {
+		if item.value != nil {
+			var deferredValues map[string]interpreter.Value
 			var err error
-			reportMetric(
-				func() {
-					newData, err = interpreter.EncodeValue(entry.value)
-				},
-				s.runtimeInterface,
-				func(metrics Metrics, duration time.Duration) {
-					metrics.ValueEncoded(duration)
-				},
-			)
+			newData, deferredValues, err = s.encodeValue(item.value, item.storageKey.key)
 			if err != nil {
 				panic(err)
+			}
+
+			for deferredKey, deferredValue := range deferredValues {
+
+				deferredStorageKey := storageKey{
+					storageIdentifier: item.storageKey.storageIdentifier,
+					key:               deferredKey,
+				}
+
+				if !deferredValue.Modified() {
+					continue
+				}
+
+				items = append(items, writeItem{
+					storageKey: deferredStorageKey,
+					value:      deferredValue,
+				})
 			}
 		}
 
@@ -238,9 +269,9 @@ func (s *interpreterRuntimeStorage) writeCached() {
 		wrapPanic(func() {
 			// TODO: fix controller
 			err = s.runtimeInterface.SetValue(
-				[]byte(fullKey.storageIdentifier),
+				[]byte(item.storageKey.storageIdentifier),
 				[]byte{},
-				[]byte(fullKey.key),
+				[]byte(item.storageKey.key),
 				newData,
 			)
 		})
@@ -248,4 +279,24 @@ func (s *interpreterRuntimeStorage) writeCached() {
 			panic(err)
 		}
 	}
+}
+
+func (s *interpreterRuntimeStorage) encodeValue(
+	value interpreter.Value,
+	path string,
+) (
+	data []byte,
+	deferredValues map[string]interpreter.Value,
+	err error,
+) {
+	reportMetric(
+		func() {
+			data, deferredValues, err = interpreter.EncodeValue(value, []string{path}, true)
+		},
+		s.runtimeInterface,
+		func(metrics Metrics, duration time.Duration) {
+			metrics.ValueEncoded(duration)
+		},
+	)
+	return
 }

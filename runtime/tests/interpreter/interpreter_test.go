@@ -4742,7 +4742,7 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 		interpreter.NewStringValue("abc"), interpreter.NewIntValueFromInt64(1),
 		interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(2),
 	).Copy().(*interpreter.DictionaryValue)
-	expectedDict.Remove(interpreter.NewStringValue("abc"))
+	expectedDict.Remove(nil, interpreter.NewStringValue("abc"))
 
 	actualDict := inter.Globals["xs"].Value.(*interpreter.DictionaryValue)
 
@@ -7041,7 +7041,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		return ok
 	}
 
-	getter := func(_ *interpreter.Interpreter, _ common.Address, key string) interpreter.OptionalValue {
+	getter := func(_ *interpreter.Interpreter, _ common.Address, key string, deferred bool) interpreter.OptionalValue {
 		value, ok := storedValues[key]
 		if !ok {
 			return interpreter.NilValue{}
@@ -7310,15 +7310,10 @@ func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
 			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 		})
 
-		w := new(bytes.Buffer)
-
-		encoder, err := interpreter.NewEncoder(w)
+		encoded, _, err := interpreter.EncodeValue(test, nil, false)
 		require.NoError(t, err)
 
-		err = encoder.Encode(test)
-		require.NoError(t, err)
-
-		encodings[i] = w.Bytes()
+		encodings[i] = encoded
 	}
 
 	expected := encodings[0]
@@ -7368,19 +7363,14 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 
 		test.SetOwner(owner)
 
-		w := new(bytes.Buffer)
-		encoder, err := interpreter.NewEncoder(w)
+		var path []string = nil
+		encoded, _, err := interpreter.EncodeValue(test, path, false)
 		require.NoError(t, err)
-
-		err = encoder.Encode(test)
-		require.NoError(t, err)
-
-		encoded := w.Bytes()
 
 		decoder, err := interpreter.NewDecoder(bytes.NewReader(encoded))
 		require.NoError(t, err)
 
-		decoded, err := decoder.Decode(owner)
+		decoded, err := decoder.Decode(owner, path)
 		require.NoError(t, err)
 
 		test.SetModified(false)

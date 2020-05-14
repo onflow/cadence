@@ -116,6 +116,7 @@ type StorageReadHandlerFunc func(
 	inter *Interpreter,
 	storageAddress common.Address,
 	key string,
+	deferred bool,
 ) OptionalValue
 
 // StorageWriteHandlerFunc is a function that handles storage writes.
@@ -3353,8 +3354,8 @@ func (interpreter *Interpreter) storedValueExists(storageAddress common.Address,
 	return interpreter.storageExistenceHandler(interpreter, storageAddress, key)
 }
 
-func (interpreter *Interpreter) readStored(storageAddress common.Address, key string) OptionalValue {
-	return interpreter.storageReadHandler(interpreter, storageAddress, key)
+func (interpreter *Interpreter) readStored(storageAddress common.Address, key string, deferred bool) OptionalValue {
+	return interpreter.storageReadHandler(interpreter, storageAddress, key, deferred)
 }
 
 func (interpreter *Interpreter) writeStored(storageAddress common.Address, key string, value OptionalValue) {
@@ -3665,7 +3666,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 			common.PathDomainStorage,
 		)
 
-		value := interpreter.readStored(address, key)
+		value := interpreter.readStored(address, key, false)
 
 		switch value := value.(type) {
 		case NilValue:
@@ -3720,7 +3721,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 			common.PathDomainStorage,
 		)
 
-		value := interpreter.readStored(address, key)
+		value := interpreter.readStored(address, key, false)
 
 		switch value := value.(type) {
 		case NilValue:
@@ -3840,7 +3841,7 @@ func (interpreter *Interpreter) authAccountGetLinkTargetFunction(addressValue Ad
 			common.PathDomainPublic,
 		)
 
-		value := interpreter.readStored(address, capabilityKey)
+		value := interpreter.readStored(address, capabilityKey, false)
 
 		switch value := value.(type) {
 		case NilValue:
@@ -3976,7 +3977,7 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 			seenKeys[key] = struct{}{}
 		}
 
-		value := interpreter.readStored(address, key)
+		value := interpreter.readStored(address, key, false)
 
 		switch value := value.(type) {
 		case NilValue:
