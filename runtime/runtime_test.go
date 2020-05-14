@@ -1992,9 +1992,7 @@ func TestRuntimeContractAccount(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
-	addressValue := cadence.NewAddress([common.AddressLength]byte{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xCA, 0xDE,
-	})
+	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
 	contract := []byte(`
       pub contract Test {
@@ -3482,13 +3480,27 @@ func TestRuntimeMetrics(t *testing.T) {
 	assert.Equal(t, 1, r2.valueDecoded)
 }
 
+type testRead struct {
+	controller, owner, key []byte
+}
+
+func (r testRead) String() string {
+	return fmt.Sprintf("%x %s", r.controller, r.key)
+}
+
+type testWrite struct {
+	controller, owner, key, value []byte
+}
+
+func (w testWrite) String() string {
+	return fmt.Sprintf("%x %s", w.controller, w.key)
+}
+
 func TestRuntimeContractWriteback(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
-	addressValue := cadence.NewAddress([common.AddressLength]byte{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xCA, 0xDE,
-	})
+	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
 	contract := []byte(`
       pub contract Test {
@@ -3535,17 +3547,13 @@ func TestRuntimeContractWriteback(t *testing.T) {
        }
     `)
 
-	type write struct {
-		controller, owner, key, value []byte
-	}
-
 	var accountCode []byte
 	var events []cadence.Event
 	var loggedMessages []string
-	var writes []write
+	var writes []testWrite
 
 	onWrite := func(controller, owner, key, value []byte) {
-		writes = append(writes, write{
+		writes = append(writes, testWrite{
 			controller,
 			owner,
 			key,
@@ -3595,9 +3603,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
-	addressValue := cadence.NewAddress([common.AddressLength]byte{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xCA, 0xDE,
-	})
+	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
 	contract := []byte(`
       pub contract Test {
@@ -3641,40 +3647,13 @@ func TestRuntimeStorageWriteback(t *testing.T) {
        }
     `)
 
-	readTx := []byte(`
-	 import Test from 0xCADE
-
-	  transaction {
-
-	     prepare(signer: AuthAccount) {
-	         log(signer.borrow<&Test.R>(from: /storage/r)!.test)
-	     }
-	  }
-	`)
-
-	writeTx := []byte(`
-	 import Test from 0xCADE
-
-	  transaction {
-
-	     prepare(signer: AuthAccount) {
-             let r = signer.borrow<&Test.R>(from: /storage/r)!
-	         r.test = 2
-	     }
-	  }
-	`)
-
-	type write struct {
-		controller, owner, key, value []byte
-	}
-
 	var accountCode []byte
 	var events []cadence.Event
 	var loggedMessages []string
-	var writes []write
+	var writes []testWrite
 
 	onWrite := func(controller, owner, key, value []byte) {
-		writes = append(writes, write{
+		writes = append(writes, testWrite{
 			controller,
 			owner,
 			key,
@@ -3714,10 +3693,33 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 
 	assert.Len(t, writes, 2)
 
+	readTx := []byte(`
+	 import Test from 0xCADE
+
+	  transaction {
+
+	     prepare(signer: AuthAccount) {
+	         log(signer.borrow<&Test.R>(from: /storage/r)!.test)
+	     }
+	  }
+	`)
+
 	err = runtime.ExecuteTransaction(readTx, nil, runtimeInterface, utils.TestLocation)
 	require.NoError(t, err)
 
 	assert.Len(t, writes, 2)
+
+	writeTx := []byte(`
+	 import Test from 0xCADE
+
+	  transaction {
+
+	     prepare(signer: AuthAccount) {
+             let r = signer.borrow<&Test.R>(from: /storage/r)!
+	         r.test = 2
+	     }
+	  }
+	`)
 
 	err = runtime.ExecuteTransaction(writeTx, nil, runtimeInterface, utils.TestLocation)
 	require.NoError(t, err)
