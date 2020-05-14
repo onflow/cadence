@@ -583,6 +583,91 @@ func TestParseDictionaryExpression(t *testing.T) {
 	})
 }
 
+func TestParseIndexExpression(t *testing.T) {
+	t.Run("index expression", func(t *testing.T) {
+		result, errs := ParseExpression("a[0]")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IndexExpression{
+				TargetExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "a",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				IndexingExpression: &ast.IntegerExpression{
+					Value: big.NewInt(0),
+					Base:  10,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+				},
+			},
+			result,
+		)
+	})
+	t.Run("index expression with whitespace", func(t *testing.T) {
+		result, errs := ParseExpression("a [ 0 ]")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IndexExpression{
+				TargetExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "a",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				IndexingExpression: &ast.IntegerExpression{
+					Value: big.NewInt(0),
+					Base:  10,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+				},
+			},
+			result,
+		)
+	})
+	t.Run("index expression with identifier", func(t *testing.T) {
+		result, errs := ParseExpression("a [foo]")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IndexExpression{
+				TargetExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "a",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				IndexingExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 3, Offset: 3},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+				},
+			},
+			result,
+		)
+	})
+}
+
 func TestParseIdentifier(t *testing.T) {
 
 	t.Parallel()

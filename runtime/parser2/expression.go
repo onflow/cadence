@@ -452,6 +452,7 @@ func init() {
 	defineInvocationExpression()
 	defineArrayExpression()
 	defineDictionaryExpression()
+	defineIndexExpression()
 	definePathExpression()
 	defineConditionalExpression()
 	defineReferenceExpression()
@@ -731,6 +732,28 @@ func defineDictionaryExpression() {
 				Entries: entries,
 				Range: ast.Range{
 					StartPos: startToken.StartPos,
+					EndPos:   endToken.EndPos,
+				},
+			}
+		},
+	)
+}
+
+func defineIndexExpression() {
+	setExprLeftBindingPower(lexer.TokenBracketOpen, 150)
+	setExprLeftDenotation(
+		lexer.TokenBracketOpen,
+		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
+			fmt.Println("witihin index expr")
+			target := left
+			firstIndexExpr := parseExpression(p, lowestBindingPower)
+			endToken := p.mustOne(lexer.TokenBracketClose)
+			fmt.Println(p.current)
+			return &ast.IndexExpression{
+				TargetExpression:   target,
+				IndexingExpression: firstIndexExpr,
+				Range: ast.Range{
+					StartPos: target.StartPosition(),
 					EndPos:   endToken.EndPos,
 				},
 			}
