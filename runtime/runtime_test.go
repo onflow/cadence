@@ -3694,15 +3694,15 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	assert.Len(t, writes, 2)
 
 	readTx := []byte(`
-	 import Test from 0xCADE
+     import Test from 0xCADE
 
-	  transaction {
+      transaction {
 
-	     prepare(signer: AuthAccount) {
-	         log(signer.borrow<&Test.R>(from: /storage/r)!.test)
-	     }
-	  }
-	`)
+         prepare(signer: AuthAccount) {
+             log(signer.borrow<&Test.R>(from: /storage/r)!.test)
+         }
+      }
+    `)
 
 	err = runtime.ExecuteTransaction(readTx, nil, runtimeInterface, utils.TestLocation)
 	require.NoError(t, err)
@@ -3710,16 +3710,16 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	assert.Len(t, writes, 2)
 
 	writeTx := []byte(`
-	 import Test from 0xCADE
+     import Test from 0xCADE
 
-	  transaction {
+      transaction {
 
-	     prepare(signer: AuthAccount) {
+         prepare(signer: AuthAccount) {
              let r = signer.borrow<&Test.R>(from: /storage/r)!
-	         r.test = 2
-	     }
-	  }
-	`)
+             r.test = 2
+         }
+      }
+    `)
 
 	err = runtime.ExecuteTransaction(writeTx, nil, runtimeInterface, utils.TestLocation)
 	require.NoError(t, err)
