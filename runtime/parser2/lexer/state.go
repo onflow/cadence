@@ -110,9 +110,14 @@ func rootState(l *lexer) stateFn {
 				l.emitType(TokenSlash)
 			}
 		case '?':
-			if l.acceptOne('?') {
+			r = l.next()
+			switch r {
+			case '?':
 				l.emitType(TokenDoubleQuestionMark)
-			} else {
+			case '.':
+				l.emitType(TokenQuestionMarkDot)
+			default:
+				l.backupOne()
 				l.emitType(TokenQuestionMark)
 			}
 		case '!':

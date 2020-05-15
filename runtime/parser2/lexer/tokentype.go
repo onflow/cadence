@@ -46,6 +46,7 @@ const (
 	TokenBracketOpen
 	TokenBracketClose
 	TokenQuestionMark
+	TokenQuestionMarkDot
 	TokenComma
 	TokenColon
 	TokenDot
@@ -111,6 +112,8 @@ func (t TokenType) String() string {
 		return "]"
 	case TokenQuestionMark:
 		return "?"
+	case TokenQuestionMarkDot:
+		return "?."
 	case TokenComma:
 		return ","
 	case TokenColon:
