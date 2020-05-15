@@ -682,8 +682,13 @@ func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 
 	p.skipSpaceAndComments(true)
 
+	if !supportsExprLeftDenotation(left) {
+		return left
+	}
+
 	for rightBindingPower < exprLeftBindingPowers[p.current.Type] {
 		t = p.current
+
 		p.next()
 		p.skipSpaceAndComments(true)
 
@@ -691,6 +696,18 @@ func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 	}
 
 	return left
+}
+
+// supportsExprLeftDenotation returns true if a left denotation
+// can be applied to the given expression
+//
+func supportsExprLeftDenotation(left ast.Expression) bool {
+	switch left.(type) {
+	case *ast.CreateExpression, *ast.DestroyExpression:
+		return false
+	default:
+		return true
+	}
 }
 
 func applyExprNullDenotation(p *parser, token lexer.Token) ast.Expression {
