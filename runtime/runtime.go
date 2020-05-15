@@ -581,17 +581,17 @@ func (r *interpreterRuntime) storageInterpreterOptions(runtimeStorage *interpret
 	return []interpreter.Option{
 		interpreter.WithStorageExistenceHandler(
 			func(_ *interpreter.Interpreter, address common.Address, key string) bool {
-				return runtimeStorage.valueExists(string(address[:]), key)
+				return runtimeStorage.valueExists(address, key)
 			},
 		),
 		interpreter.WithStorageReadHandler(
 			func(_ *interpreter.Interpreter, address common.Address, key string, deferred bool) interpreter.OptionalValue {
-				return runtimeStorage.readValue(string(address[:]), key, deferred)
+				return runtimeStorage.readValue(address, key, deferred)
 			},
 		),
 		interpreter.WithStorageWriteHandler(
 			func(_ *interpreter.Interpreter, address common.Address, key string, value interpreter.OptionalValue) {
-				runtimeStorage.writeValue(string(address[:]), key, value)
+				runtimeStorage.writeValue(address, key, value)
 			},
 		),
 	}
@@ -1043,7 +1043,7 @@ func (r *interpreterRuntime) writeContract(
 	contractValue interpreter.OptionalValue,
 ) {
 	runtimeStorage.writeValue(
-		string(addressValue[:]),
+		addressValue.ToAddress(),
 		contractKey,
 		contractValue,
 	)
@@ -1055,7 +1055,7 @@ func (r *interpreterRuntime) loadContract(
 ) *interpreter.CompositeValue {
 	address := compositeType.Location.(AddressLocation).ToAddress()
 	storedValue := runtimeStorage.readValue(
-		string(address[:]),
+		address,
 		contractKey,
 		false,
 	)

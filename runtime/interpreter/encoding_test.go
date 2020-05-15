@@ -16,12 +16,12 @@ import (
 )
 
 type encodeDecodeTest struct {
-	value          Value
-	encoded        []byte
-	invalid        bool
-	deferred       bool
-	deferredValues map[string]Value
-	decodedValue   Value
+	value        Value
+	encoded      []byte
+	invalid      bool
+	deferred     bool
+	deferrals    *EncodingDeferrals
+	decodedValue Value
 }
 
 var testOwner = common.BytesToAddress([]byte{0x42})
@@ -29,12 +29,12 @@ var testOwner = common.BytesToAddress([]byte{0x42})
 func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
 	var encoded []byte
-	var deferredValues map[string]Value
+	var deferrals *EncodingDeferrals
 	if test.value != nil {
 		test.value.SetOwner(&testOwner)
 
 		var err error
-		encoded, deferredValues, err = EncodeValue(test.value, nil, test.deferred)
+		encoded, deferrals, err = EncodeValue(test.value, nil, test.deferred)
 		require.NoError(t, err)
 
 		if test.encoded != nil {
@@ -69,9 +69,10 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
 	if test.value != nil {
 		if test.deferred {
-			require.Equal(t, test.deferredValues, deferredValues)
+			require.Equal(t, test.deferrals, deferrals)
 		} else {
-			require.Empty(t, deferredValues)
+			require.Empty(t, deferrals.Values)
+			require.Empty(t, deferrals.Moves)
 		}
 	}
 }
@@ -3049,9 +3050,11 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 					// map, 0 pairs of items follow
 					0xa0,
 				},
-				deferredValues: map[string]Value{
-					"v\x1ftest": value1,
-					"v\x1ftrue": value2,
+				deferrals: &EncodingDeferrals{
+					Values: map[string]Value{
+						"v\x1ftest": value1,
+						"v\x1ftrue": value2,
+					},
 				},
 				decodedValue: &DictionaryValue{
 					Keys:          expected.Keys,
@@ -3121,7 +3124,7 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 					// false
 					0xf4,
 				},
-				deferredValues: map[string]Value{},
+				deferrals: &EncodingDeferrals{Values: map[string]Value{}},
 			},
 		)
 	})

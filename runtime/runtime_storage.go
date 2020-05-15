@@ -27,8 +27,8 @@ import (
 )
 
 type storageKey struct {
-	storageIdentifier string
-	key               string
+	address common.Address
+	key     string
 }
 
 type cacheEntry struct {
@@ -59,13 +59,13 @@ func newInterpreterRuntimeStorage(runtimeInterface Interface) *interpreterRuntim
 // places in the cache, and returned.
 //
 func (s *interpreterRuntimeStorage) valueExists(
-	storageIdentifier string,
+	address common.Address,
 	key string,
 ) bool {
 
 	fullKey := storageKey{
-		storageIdentifier: storageIdentifier,
-		key:               key,
+		address: address,
+		key:     key,
 	}
 
 	// Check cache
@@ -80,7 +80,7 @@ func (s *interpreterRuntimeStorage) valueExists(
 	var err error
 	wrapPanic(func() {
 		// TODO: fix controller
-		exists, err = s.runtimeInterface.ValueExists([]byte(storageIdentifier), []byte{}, []byte(key))
+		exists, err = s.runtimeInterface.ValueExists(address[:], []byte{}, []byte(key))
 	})
 	if err != nil {
 		panic(err)
@@ -105,14 +105,14 @@ func (s *interpreterRuntimeStorage) valueExists(
 // places in the cache, and returned.
 //
 func (s *interpreterRuntimeStorage) readValue(
-	storageIdentifier string,
+	address common.Address,
 	key string,
 	deferred bool,
 ) interpreter.OptionalValue {
 
 	fullKey := storageKey{
-		storageIdentifier: storageIdentifier,
-		key:               key,
+		address: address,
+		key:     key,
 	}
 
 	// Check cache. Return cached value, if any
@@ -132,7 +132,7 @@ func (s *interpreterRuntimeStorage) readValue(
 	var err error
 	wrapPanic(func() {
 		// TODO: fix controller
-		storedData, err = s.runtimeInterface.GetValue([]byte(storageIdentifier), []byte{}, []byte(key))
+		storedData, err = s.runtimeInterface.GetValue(address[:], nil, []byte(key))
 	})
 	if err != nil {
 		panic(err)
@@ -145,8 +145,6 @@ func (s *interpreterRuntimeStorage) readValue(
 		}
 		return interpreter.NilValue{}
 	}
-
-	address := common.BytesToAddress([]byte(storageIdentifier))
 
 	var storedValue interpreter.Value
 
@@ -181,13 +179,13 @@ func (s *interpreterRuntimeStorage) readValue(
 // (The Cache is finally written back through the runtime interface in `writeCached`.)
 //
 func (s *interpreterRuntimeStorage) writeValue(
-	storageIdentifier string,
+	address common.Address,
 	key string,
 	value interpreter.OptionalValue,
 ) {
 	fullKey := storageKey{
-		storageIdentifier: storageIdentifier,
-		key:               key,
+		address: address,
+		key:     key,
 	}
 
 	// Only write the value to the cache.
@@ -240,18 +238,18 @@ func (s *interpreterRuntimeStorage) writeCached() {
 
 		var newData []byte
 		if item.value != nil {
-			var deferredValues map[string]interpreter.Value
+			var deferrals *interpreter.EncodingDeferrals
 			var err error
-			newData, deferredValues, err = s.encodeValue(item.value, item.storageKey.key)
+			newData, deferrals, err = s.encodeValue(item.value, item.storageKey.key)
 			if err != nil {
 				panic(err)
 			}
 
-			for deferredKey, deferredValue := range deferredValues {
+			for deferredKey, deferredValue := range deferrals.Values {
 
 				deferredStorageKey := storageKey{
-					storageIdentifier: item.storageKey.storageIdentifier,
-					key:               deferredKey,
+					address: item.storageKey.address,
+					key:     deferredKey,
 				}
 
 				if !deferredValue.Modified() {
@@ -263,14 +261,24 @@ func (s *interpreterRuntimeStorage) writeCached() {
 					value:      deferredValue,
 				})
 			}
+
+			for _, deferralMove := range deferrals.Moves {
+
+				s.move(
+					deferralMove.DeferredOwner,
+					deferralMove.DeferredStorageKey,
+					deferralMove.NewOwner,
+					deferralMove.NewStorageKey,
+				)
+			}
 		}
 
 		var err error
 		wrapPanic(func() {
 			// TODO: fix controller
 			err = s.runtimeInterface.SetValue(
-				[]byte(item.storageKey.storageIdentifier),
-				[]byte{},
+				item.storageKey.address[:],
+				nil,
 				[]byte(item.storageKey.key),
 				newData,
 			)
@@ -286,12 +294,12 @@ func (s *interpreterRuntimeStorage) encodeValue(
 	path string,
 ) (
 	data []byte,
-	deferredValues map[string]interpreter.Value,
+	deferrals *interpreter.EncodingDeferrals,
 	err error,
 ) {
 	reportMetric(
 		func() {
-			data, deferredValues, err = interpreter.EncodeValue(value, []string{path}, true)
+			data, deferrals, err = interpreter.EncodeValue(value, []string{path}, true)
 		},
 		s.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
@@ -299,4 +307,27 @@ func (s *interpreterRuntimeStorage) encodeValue(
 		},
 	)
 	return
+}
+
+func (s *interpreterRuntimeStorage) move(
+	oldOwner common.Address, oldKey string,
+	newOwner common.Address, newKey string,
+) {
+	// TODO: fix controller
+	data, err := s.runtimeInterface.GetValue(oldOwner[:], nil, []byte(oldKey))
+	if err != nil {
+		panic(err)
+	}
+
+	// TODO: fix controller
+	err = s.runtimeInterface.SetValue(oldOwner[:], nil, []byte(oldKey), nil)
+	if err != nil {
+		panic(err)
+	}
+
+	// TODO: fix controller
+	err = s.runtimeInterface.SetValue(newOwner[:], nil, []byte(newKey), data)
+	if err != nil {
+		panic(err)
+	}
 }

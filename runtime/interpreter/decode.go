@@ -18,21 +18,22 @@ import (
 // A Decoder decodes CBOR-encoded representations of values.
 //
 type Decoder struct {
-	dec *cbor.Decoder
+	decoder *cbor.Decoder
+	owner   *common.Address
 }
 
 // Decode returns a value decoded from its CBOR-encoded representation,
 // for the given owner (can be `nil`).
 //
 func DecodeValue(b []byte, owner *common.Address, path []string) (Value, error) {
-	r := bytes.NewReader(b)
+	reader := bytes.NewReader(b)
 
-	dec, err := NewDecoder(r)
+	decoder, err := NewDecoder(reader, owner)
 	if err != nil {
 		return nil, err
 	}
 
-	v, err := dec.Decode(owner, path)
+	v, err := decoder.Decode(path)
 	if err != nil {
 		return nil, err
 	}
@@ -43,30 +44,33 @@ func DecodeValue(b []byte, owner *common.Address, path []string) (Value, error) 
 // NewDecoder initializes a Decoder that will decode CBOR-encoded bytes from the
 // given io.Reader.
 //
-func NewDecoder(r io.Reader) (*Decoder, error) {
+// It sets the given address as the owner (can be `nil`).
+//
+func NewDecoder(r io.Reader, owner *common.Address) (*Decoder, error) {
 	decMode, err := cbor.DecOptions{}.DecModeWithTags(cborTagSet)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Decoder{decMode.NewDecoder(r)}, nil
+	return &Decoder{
+		decoder: decMode.NewDecoder(r),
+		owner:   owner,
+	}, nil
 }
 
 // Decode reads CBOR-encoded bytes from the io.Reader and decodes them to a value.
 //
-// It sets the given address as the owner (can be `nil`).
-//
-func (d *Decoder) Decode(owner *common.Address, path []string) (Value, error) {
+func (d *Decoder) Decode(path []string) (Value, error) {
 	var v interface{}
-	err := d.dec.Decode(&v)
+	err := d.decoder.Decode(&v)
 	if err != nil {
 		return nil, err
 	}
 
-	return d.decodeValue(v, owner, path)
+	return d.decodeValue(v, path)
 }
 
-func (d *Decoder) decodeValue(v interface{}, owner *common.Address, path []string) (Value, error) {
+func (d *Decoder) decodeValue(v interface{}, path []string) (Value, error) {
 	switch v := v.(type) {
 
 	// CBOR Types
@@ -81,7 +85,7 @@ func (d *Decoder) decodeValue(v interface{}, owner *common.Address, path []strin
 		return NilValue{}, nil
 
 	case []interface{}:
-		return d.decodeArray(v, owner, path)
+		return d.decodeArray(v, path)
 
 	case cbor.Tag:
 		switch v.Number {
@@ -90,16 +94,16 @@ func (d *Decoder) decodeValue(v interface{}, owner *common.Address, path []strin
 			return VoidValue{}, nil
 
 		case cborTagDictionaryValue:
-			return d.decodeDictionary(v.Content, owner, path)
+			return d.decodeDictionary(v.Content, path)
 
 		case cborTagSomeValue:
-			return d.decodeSome(v.Content, owner, path)
+			return d.decodeSome(v.Content, path)
 
 		case cborTagAddressValue:
 			return d.decodeAddress(v.Content)
 
 		case cborTagCompositeValue:
-			return d.decodeComposite(v.Content, owner, path)
+			return d.decodeComposite(v.Content, path)
 
 		// Int*
 
@@ -180,7 +184,7 @@ func (d *Decoder) decodeValue(v interface{}, owner *common.Address, path []strin
 			return d.decodeCapability(v.Content)
 
 		case cborTagStorageReferenceValue:
-			return d.decodeStorageReference(v.Content, owner)
+			return d.decodeStorageReference(v.Content)
 
 		case cborTagLinkValue:
 			return d.decodeLink(v.Content)
@@ -200,11 +204,11 @@ func (d *Decoder) decodeString(v string) Value {
 	return value
 }
 
-func (d *Decoder) decodeArray(v []interface{}, owner *common.Address, path []string) (*ArrayValue, error) {
+func (d *Decoder) decodeArray(v []interface{}, path []string) (*ArrayValue, error) {
 	values := make([]Value, len(v))
 	for i, value := range v {
 		valuePath := append(path[:], strconv.Itoa(i))
-		res, err := d.decodeValue(value, owner, valuePath)
+		res, err := d.decodeValue(value, valuePath)
 		if err != nil {
 			return nil, fmt.Errorf("invalid array element encoding: %w", err)
 		}
@@ -213,12 +217,12 @@ func (d *Decoder) decodeArray(v []interface{}, owner *common.Address, path []str
 
 	return &ArrayValue{
 		Values:   values,
-		Owner:    owner,
+		Owner:    d.owner,
 		modified: false,
 	}, nil
 }
 
-func (d *Decoder) decodeDictionary(v interface{}, owner *common.Address, path []string) (*DictionaryValue, error) {
+func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryValue, error) {
 	encoded, ok := v.(map[interface{}]interface{})
 	if !ok {
 		return nil, fmt.Errorf("invalid dictionary encoding: %T", v)
@@ -230,7 +234,7 @@ func (d *Decoder) decodeDictionary(v interface{}, owner *common.Address, path []
 	}
 
 	keysPath := append(path[:], dictionaryKeyPathPrefix)
-	keys, err := d.decodeArray(encodedKeys, owner, keysPath)
+	keys, err := d.decodeArray(encodedKeys, keysPath)
 	if err != nil {
 		return nil, fmt.Errorf("invalid dictionary keys encoding: %w", err)
 	}
@@ -264,7 +268,7 @@ func (d *Decoder) decodeDictionary(v interface{}, owner *common.Address, path []
 	if isDeferred {
 		deferred = make(map[string]string, keyCount)
 		entries = map[string]Value{}
-		deferredOwner = owner
+		deferredOwner = d.owner
 		for _, keyValue := range keys.Values {
 			key := dictionaryKey(keyValue)
 			deferred[key] = joinPath(append(path[:], dictionaryValuePathPrefix, key))
@@ -281,7 +285,7 @@ func (d *Decoder) decodeDictionary(v interface{}, owner *common.Address, path []
 			}
 
 			valuePath := append(path[:], dictionaryValuePathPrefix, keyString)
-			decodedValue, err := d.decodeValue(value, owner, valuePath)
+			decodedValue, err := d.decodeValue(value, valuePath)
 			if err != nil {
 				return nil, fmt.Errorf("invalid dictionary value encoding: %w", err)
 			}
@@ -293,7 +297,7 @@ func (d *Decoder) decodeDictionary(v interface{}, owner *common.Address, path []
 	return &DictionaryValue{
 		Keys:          keys,
 		Entries:       entries,
-		Owner:         owner,
+		Owner:         d.owner,
 		modified:      false,
 		DeferredOwner: deferredOwner,
 		DeferredKeys:  deferred,
@@ -342,7 +346,7 @@ func (d *Decoder) decodeStringLocation(content interface{}) (ast.Location, error
 	return ast.StringLocation(s), nil
 }
 
-func (d *Decoder) decodeComposite(v interface{}, owner *common.Address, path []string) (*CompositeValue, error) {
+func (d *Decoder) decodeComposite(v interface{}, path []string) (*CompositeValue, error) {
 
 	encoded, ok := v.(map[interface{}]interface{})
 	if !ok {
@@ -390,7 +394,7 @@ func (d *Decoder) decodeComposite(v interface{}, owner *common.Address, path []s
 			return nil, fmt.Errorf("invalid dictionary field name encoding: %T", name)
 		}
 		valuePath := append(path[:], nameString)
-		decodedValue, err := d.decodeValue(value, owner, valuePath)
+		decodedValue, err := d.decodeValue(value, valuePath)
 		if err != nil {
 			return nil, fmt.Errorf("invalid dictionary field value encoding: %w", err)
 		}
@@ -398,7 +402,7 @@ func (d *Decoder) decodeComposite(v interface{}, owner *common.Address, path []s
 		fields[nameString] = decodedValue
 	}
 
-	compositeValue := NewCompositeValue(location, typeID, kind, fields, owner)
+	compositeValue := NewCompositeValue(location, typeID, kind, fields, d.owner)
 	compositeValue.modified = false
 	return compositeValue, nil
 }
@@ -729,19 +733,19 @@ func (d *Decoder) decodeUFix64(v interface{}) (UFix64Value, error) {
 	return UFix64Value(value), nil
 }
 
-func (d *Decoder) decodeSome(v interface{}, owner *common.Address, path []string) (*SomeValue, error) {
-	value, err := d.decodeValue(v, owner, path)
+func (d *Decoder) decodeSome(v interface{}, path []string) (*SomeValue, error) {
+	value, err := d.decodeValue(v, path)
 	if err != nil {
 		return nil, fmt.Errorf("invalid some value encoding: %w", err)
 	}
 
 	return &SomeValue{
 		Value: value,
-		Owner: owner,
+		Owner: d.owner,
 	}, nil
 }
 
-func (d *Decoder) decodeStorageReference(v interface{}, _ *common.Address) (*StorageReferenceValue, error) {
+func (d *Decoder) decodeStorageReference(v interface{}) (*StorageReferenceValue, error) {
 	encoded, ok := v.(map[interface{}]interface{})
 	if !ok {
 		return nil, fmt.Errorf("invalid storage reference encoding: %T", v)
@@ -832,7 +836,7 @@ func (d *Decoder) decodeCapability(v interface{}) (CapabilityValue, error) {
 	// address
 
 	field1 := encoded[uint64(0)]
-	field1Value, err := d.decodeValue(field1, nil, nil)
+	field1Value, err := d.decodeValue(field1, nil)
 	if err != nil {
 		return CapabilityValue{}, fmt.Errorf("invalid capability address: %w", err)
 	}
@@ -845,7 +849,7 @@ func (d *Decoder) decodeCapability(v interface{}) (CapabilityValue, error) {
 	// path
 
 	field2 := encoded[uint64(1)]
-	field2Value, err := d.decodeValue(field2, nil, nil)
+	field2Value, err := d.decodeValue(field2, nil)
 	if err != nil {
 		return CapabilityValue{}, fmt.Errorf("invalid capability path: %w", err)
 	}
@@ -867,7 +871,7 @@ func (d *Decoder) decodeLink(v interface{}) (LinkValue, error) {
 		return LinkValue{}, fmt.Errorf("invalid link encoding")
 	}
 
-	decodedPath, err := d.decodeValue(encoded[uint64(0)], nil, nil)
+	decodedPath, err := d.decodeValue(encoded[uint64(0)], nil)
 	if err != nil {
 		return LinkValue{}, fmt.Errorf("invalid link target path encoding: %w", err)
 	}
