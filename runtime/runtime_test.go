@@ -19,6 +19,8 @@
 package runtime
 
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"strings"
@@ -216,6 +218,23 @@ func (i *testRuntimeInterface) ValueDecoded(duration time.Duration) {
 		return
 	}
 	i.valueDecoded(duration)
+}
+
+func (i *testRuntimeInterface) GetCurrentBlockHeight() uint64 {
+	return 1
+}
+
+func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (hash [32]byte, timestamp int64, exists bool) {
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.BigEndian, height)
+	if err != nil {
+		panic(err)
+	}
+
+	encoded := buf.Bytes()
+	copy(hash[stdlib.BlockIDSize-len(encoded):], encoded)
+
+	return hash, time.Unix(int64(height), 0).UnixNano(), true
 }
 
 func TestRuntimeImport(t *testing.T) {
