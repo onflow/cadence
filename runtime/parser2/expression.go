@@ -628,18 +628,33 @@ func defineForceExpression() {
 }
 
 func defineMemberExpression() {
-	setExprLeftBindingPower(lexer.TokenDot, 150)
+	const bindingPower = 150
+
+	setExprLeftBindingPower(lexer.TokenDot, bindingPower)
 	setExprLeftDenotation(
 		lexer.TokenDot,
 		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
-			p.skipSpaceAndComments(true)
-			identifier := mustIdentifier(p)
-			return &ast.MemberExpression{
-				Expression: left,
-				Identifier: identifier,
-			}
+			return parseMemberAccess(p, left, false)
 		},
 	)
+
+	setExprLeftBindingPower(lexer.TokenQuestionMarkDot, bindingPower)
+	setExprLeftDenotation(
+		lexer.TokenQuestionMarkDot,
+		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
+			return parseMemberAccess(p, left, true)
+		},
+	)
+}
+
+func parseMemberAccess(p *parser, left ast.Expression, optional bool) ast.Expression {
+	p.skipSpaceAndComments(true)
+	identifier := mustIdentifier(p)
+	return &ast.MemberExpression{
+		Optional:   optional,
+		Expression: left,
+		Identifier: identifier,
+	}
 }
 
 func parseExpression(p *parser, rightBindingPower int) ast.Expression {

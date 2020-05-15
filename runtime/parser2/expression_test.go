@@ -1208,6 +1208,7 @@ func TestMemberExpression(t *testing.T) {
 			result,
 		)
 	})
+
 	t.Run("precedence", func(t *testing.T) {
 		result, errs := ParseExpression("3 * f.n")
 		require.Empty(t, errs)
@@ -1234,6 +1235,28 @@ func TestMemberExpression(t *testing.T) {
 						Identifier: "n",
 						Pos:        ast.Position{Offset: 6, Line: 1, Column: 6},
 					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("identifier, optional", func(t *testing.T) {
+		result, errs := ParseExpression("f?.n")
+		require.Empty(t, errs)
+
+		assert.Equal(t,
+			&ast.MemberExpression{
+				Optional: true,
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "f",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				Identifier: ast.Identifier{
+					Identifier: "n",
+					Pos:        ast.Position{Offset: 3, Line: 1, Column: 3},
 				},
 			},
 			result,
