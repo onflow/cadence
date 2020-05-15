@@ -39,6 +39,7 @@ const keywordVar = "var"
 const keywordFun = "fun"
 const keywordAs = "as"
 const keywordCreate = "create"
+const keywordDestroy = "destroy"
 
 const lowestBindingPower = 0
 
