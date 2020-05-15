@@ -744,7 +744,6 @@ func defineIndexExpression() {
 	setExprLeftDenotation(
 		lexer.TokenBracketOpen,
 		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
-			fmt.Println("witihin index expr")
 			firstIndexExpr := parseExpression(p, lowestBindingPower)
 			endToken := p.mustOne(lexer.TokenBracketClose)
 			return &ast.IndexExpression{
