@@ -60,6 +60,10 @@ type Interface interface {
 	GetComputationLimit() uint64
 	// DecodeArgument decodes a transaction argument against the given type.
 	DecodeArgument(b []byte, t cadence.Type) (cadence.Value, error)
+	// GetCurrentBlockHeight returns the current block height.
+	GetCurrentBlockHeight() uint64
+	// GetBlockAtHeight returns the block at the given height.
+	GetBlockAtHeight(height uint64) (hash [32]byte, timestamp int64, exists bool)
 }
 
 type Metrics interface {
@@ -134,4 +138,12 @@ func (i *EmptyRuntimeInterface) GetComputationLimit() uint64 {
 
 func (i *EmptyRuntimeInterface) DecodeArgument(_ []byte, _ cadence.Type) (cadence.Value, error) {
 	return nil, nil
+}
+
+func (i *EmptyRuntimeInterface) GetCurrentBlockHeight() uint64 {
+	return 0
+}
+
+func (i *EmptyRuntimeInterface) GetBlockAtHeight(height uint64) (hash [32]byte, timestamp int64, exists bool) {
+	return
 }

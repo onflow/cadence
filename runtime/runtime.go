@@ -19,8 +19,6 @@
 package runtime
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 	"math"
 	"time"
@@ -1131,26 +1129,17 @@ func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpre
 }
 
 func (r *interpreterRuntime) getCurrentBlockHeight(runtimeInterface Interface) uint64 {
-	// TODO: https://github.com/dapperlabs/flow-go/issues/552
-	return 1
+	return runtimeInterface.GetCurrentBlockHeight()
 }
 
 func (r *interpreterRuntime) getBlockAtHeight(height uint64, runtimeInterface Interface) *BlockValue {
-	// TODO: https://github.com/dapperlabs/flow-go/issues/552
-	//   Return nil if the requested block does not exist.
-	//   For now, always return a fake block.
+	hash, timestamp, ok := runtimeInterface.GetBlockAtHeight(height)
 
-	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.BigEndian, height)
-	if err != nil {
-		panic(err)
+	if !ok {
+		return nil
 	}
 
-	encoded := buf.Bytes()
-	var hash [stdlib.BlockIDSize]byte
-	copy(hash[stdlib.BlockIDSize-len(encoded):], encoded)
-
-	block := NewBlockValue(height, hash, time.Unix(int64(height), 0))
+	block := NewBlockValue(height, hash, time.Unix(0, timestamp))
 	return &block
 }
 
