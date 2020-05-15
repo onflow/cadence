@@ -1566,3 +1566,79 @@ func TestParseLineComment(t *testing.T) {
 		result,
 	)
 }
+
+func TestParseFunctionExpression(t *testing.T) {
+
+	t.Run("without return type", func(t *testing.T) {
+		result, errs := ParseExpression("fun () { }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FunctionExpression{
+				ParameterList: &ast.ParameterList{
+					Parameters: nil,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+						EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+					},
+				},
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "",
+							Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+				},
+				FunctionBlock: &ast.FunctionBlock{
+					Block: &ast.Block{
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+
+	t.Run("with return type", func(t *testing.T) {
+		result, errs := ParseExpression("fun (): X { }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FunctionExpression{
+				ParameterList: &ast.ParameterList{
+					Parameters: nil,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+						EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+					},
+				},
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "X",
+							Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+				},
+				FunctionBlock: &ast.FunctionBlock{
+					Block: &ast.Block{
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
+							EndPos:   ast.Position{Line: 1, Column: 12, Offset: 12},
+						},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+}
