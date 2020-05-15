@@ -65,18 +65,29 @@ const (
 	TokenNot
 	TokenNotEqual
 	TokenBlockCommentStart
-	TokenBlockCommentContent
 	TokenBlockCommentEnd
+	TokenBlockCommentContent
+	TokenLineComment
 	TokenAmpersand
 	TokenAmpersandAmpersand
 	TokenCaret
 	TokenVerticalBar
 	TokenVerticalBarVerticalBar
 	TokenAt
+	// NOTE: not an actual token, must be last item
+	TokenMax
 )
+
+func init() {
+	for t := TokenType(0); t < TokenMax; t++ {
+		_ = t.String()
+	}
+}
 
 func (t TokenType) String() string {
 	switch t {
+	case TokenError:
+		return "error"
 	case TokenEOF:
 		return "EOF"
 	case TokenSpace:
@@ -152,7 +163,9 @@ func (t TokenType) String() string {
 	case TokenBlockCommentStart:
 		return "/*"
 	case TokenBlockCommentContent:
-		return "comment"
+		return "block comment"
+	case TokenLineComment:
+		return "line comment"
 	case TokenBlockCommentEnd:
 		return "*/"
 	case TokenAmpersand:

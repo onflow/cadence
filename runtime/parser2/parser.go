@@ -112,29 +112,32 @@ func (p *parser) mustOne(tokenType lexer.TokenType) lexer.Token {
 }
 
 func (p *parser) skipSpaceAndComments(skipNewlines bool) (containsNewline bool) {
-	for {
-		for {
-			if !p.current.Is(lexer.TokenSpace) {
-				break
-			}
-
+	atEnd := false
+	for !atEnd {
+		switch p.current.Type {
+		case lexer.TokenSpace:
 			space := p.current.Value.(lexer.Space)
 			if space.ContainsNewline {
 				containsNewline = true
 			}
 
 			if containsNewline && !skipNewlines {
-				break
+				return
 			}
 
 			p.next()
-		}
 
-		if !p.current.Is(lexer.TokenBlockCommentStart) {
-			break
+		case lexer.TokenBlockCommentStart:
+			// TODO: use comment?
+			p.parseCommentContent()
+
+		case lexer.TokenLineComment:
+			// TODO: use comment?
+			p.next()
+
+		default:
+			atEnd = true
 		}
-		// TODO: use comment?
-		p.parseCommentContent()
 	}
 	return
 }
