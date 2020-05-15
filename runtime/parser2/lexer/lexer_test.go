@@ -932,7 +932,7 @@ func TestLexString(t *testing.T) {
 	})
 }
 
-func TestLexComment(t *testing.T) {
+func TestLexBlockComment(t *testing.T) {
 
 	t.Run("nested 1", func(t *testing.T) {
 		withTokens(Lex(`/*  // *X /* \\*  */`), func(tokens []Token) {
@@ -1065,4 +1065,138 @@ func TestLexComment(t *testing.T) {
 		})
 	})
 
+}
+
+func TestLexLineComment(t *testing.T) {
+
+	t.Run("no newline", func(t *testing.T) {
+
+		withTokens(Lex(` foo // bar `), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type: TokenSpace,
+						Value: Space{
+							String:          " ",
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					{
+						Type:  TokenIdentifier,
+						Value: "foo",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+					},
+					{
+						Type: TokenSpace,
+						Value: Space{
+							String:          " ",
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+					{
+						Type:  TokenLineComment,
+						Value: "// bar ",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
+							EndPos:   ast.Position{Line: 1, Column: 12, Offset: 12},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
+
+	t.Run("newline", func(t *testing.T) {
+
+		withTokens(Lex(" foo // bar \n baz"), func(tokens []Token) {
+			assert.Equal(t,
+				[]Token{
+					{
+						Type: TokenSpace,
+						Value: Space{
+							String:          " ",
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					{
+						Type:  TokenIdentifier,
+						Value: "foo",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
+					},
+					{
+						Type: TokenSpace,
+						Value: Space{
+							String:          " ",
+							ContainsNewline: false,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+					{
+						Type:  TokenLineComment,
+						Value: "// bar ",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+						},
+					},
+					{
+						Type: TokenSpace,
+						Value: Space{
+							String:          "\n ",
+							ContainsNewline: true,
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
+							EndPos:   ast.Position{Line: 2, Column: 0, Offset: 13},
+						},
+					},
+					{
+						Type:  TokenIdentifier,
+						Value: "baz",
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 1, Offset: 14},
+							EndPos:   ast.Position{Line: 2, Column: 3, Offset: 16},
+						},
+					},
+					{
+						Type: TokenEOF,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 4, Offset: 17},
+							EndPos:   ast.Position{Line: 2, Column: 4, Offset: 17},
+						},
+					},
+				},
+				tokens,
+			)
+		})
+	})
 }

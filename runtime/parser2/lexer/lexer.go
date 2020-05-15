@@ -256,7 +256,7 @@ func (l *lexer) scanLineComment() {
 	// lookahead is already lexed.
 	// parse more, if any
 	l.acceptWhile(func(r rune) bool {
-		return r != '\n'
+		return !(r == '\n' || r == EOF)
 	})
 }
 
