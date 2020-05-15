@@ -251,13 +251,17 @@ func testParse(t *testing.T, code string, expected []Declaration) {
 	t.Run("old", func(t *testing.T) {
 		actual, _, err := parser.ParseProgram(code)
 		require.NoError(t, err)
-		utils.AssertEqualWithDiff(t, expectedProgram, actual)
+		if expected != nil {
+			utils.AssertEqualWithDiff(t, expectedProgram, actual)
+		}
 	})
 
 	t.Run("new", func(t *testing.T) {
 		actual, err := parser2.ParseProgram(code)
 		require.NoError(t, err)
-		utils.AssertEqualWithDiff(t, expectedProgram, actual)
+		if expected != nil {
+			utils.AssertEqualWithDiff(t, expectedProgram, actual)
+		}
 	})
 }
 
@@ -996,73 +1000,71 @@ func TestParseMultiplicativeExpression(t *testing.T) {
 
 func TestParseFunctionExpressionAndReturn(t *testing.T) {
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
 	    let test = fun (): Int { return 1 }
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &VariableDeclaration{
-		IsConstant: true,
-		Identifier: Identifier{
-			Identifier: "test",
-			Pos:        Position{Offset: 10, Line: 2, Column: 9},
-		},
-		Transfer: &Transfer{
-			Operation: TransferOperationCopy,
-			Pos:       Position{Offset: 15, Line: 2, Column: 14},
-		},
-		Value: &FunctionExpression{
-			ParameterList: &ParameterList{
-				Range: Range{
-					StartPos: Position{Offset: 21, Line: 2, Column: 20},
-					EndPos:   Position{Offset: 22, Line: 2, Column: 21},
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&VariableDeclaration{
+				IsConstant: true,
+				Identifier: Identifier{
+					Identifier: "test",
+					Pos:        Position{Offset: 10, Line: 2, Column: 9},
 				},
-			},
-			ReturnTypeAnnotation: &TypeAnnotation{
-				IsResource: false,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "Int",
-						Pos:        Position{Offset: 25, Line: 2, Column: 24},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+					Pos:       Position{Offset: 15, Line: 2, Column: 14},
+				},
+				Value: &FunctionExpression{
+					ParameterList: &ParameterList{
+						Range: Range{
+							StartPos: Position{Offset: 21, Line: 2, Column: 20},
+							EndPos:   Position{Offset: 22, Line: 2, Column: 21},
+						},
 					},
-				},
-				StartPos: Position{Offset: 25, Line: 2, Column: 24},
-			},
-			FunctionBlock: &FunctionBlock{
-				Block: &Block{
-					Statements: []Statement{
-						&ReturnStatement{
-							Expression: &IntegerExpression{
-								Value: big.NewInt(1),
-								Base:  10,
-								Range: Range{
-									StartPos: Position{Offset: 38, Line: 2, Column: 37},
-									EndPos:   Position{Offset: 38, Line: 2, Column: 37},
+					ReturnTypeAnnotation: &TypeAnnotation{
+						IsResource: false,
+						Type: &NominalType{
+							Identifier: Identifier{
+								Identifier: "Int",
+								Pos:        Position{Offset: 25, Line: 2, Column: 24},
+							},
+						},
+						StartPos: Position{Offset: 25, Line: 2, Column: 24},
+					},
+					FunctionBlock: &FunctionBlock{
+						Block: &Block{
+							Statements: []Statement{
+								&ReturnStatement{
+									Expression: &IntegerExpression{
+										Value: big.NewInt(1),
+										Base:  10,
+										Range: Range{
+											StartPos: Position{Offset: 38, Line: 2, Column: 37},
+											EndPos:   Position{Offset: 38, Line: 2, Column: 37},
+										},
+									},
+									Range: Range{
+										StartPos: Position{Offset: 31, Line: 2, Column: 30},
+										EndPos:   Position{Offset: 38, Line: 2, Column: 37},
+									},
 								},
 							},
 							Range: Range{
-								StartPos: Position{Offset: 31, Line: 2, Column: 30},
-								EndPos:   Position{Offset: 38, Line: 2, Column: 37},
+								StartPos: Position{Offset: 29, Line: 2, Column: 28},
+								EndPos:   Position{Offset: 40, Line: 2, Column: 39},
 							},
 						},
 					},
-					Range: Range{
-						StartPos: Position{Offset: 29, Line: 2, Column: 28},
-						EndPos:   Position{Offset: 40, Line: 2, Column: 39},
-					},
+					StartPos: Position{Offset: 17, Line: 2, Column: 16},
 				},
+				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
-			StartPos: Position{Offset: 17, Line: 2, Column: 16},
 		},
-		StartPos: Position{Offset: 6, Line: 2, Column: 5},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+	)
 }
 
 func TestParseFunctionAndBlock(t *testing.T) {
@@ -1256,7 +1258,7 @@ func TestParseFunctionParameterWithLabel(t *testing.T) {
 
 func TestParseIfStatement(t *testing.T) {
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
 	    fun test() {
             if true {
                 return
@@ -1267,137 +1269,135 @@ func TestParseIfStatement(t *testing.T) {
                 2
             }
         }
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &FunctionDeclaration{
-		Access: AccessNotSpecified,
-		Identifier: Identifier{
-			Identifier: "test",
-			Pos:        Position{Offset: 10, Line: 2, Column: 9},
-		},
-		ParameterList: &ParameterList{
-			Range: Range{
-				StartPos: Position{Offset: 14, Line: 2, Column: 13},
-				EndPos:   Position{Offset: 15, Line: 2, Column: 14},
-			},
-		},
-		ReturnTypeAnnotation: &TypeAnnotation{
-			IsResource: false,
-			Type: &NominalType{
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&FunctionDeclaration{
+				Access: AccessNotSpecified,
 				Identifier: Identifier{
-					Pos: Position{Offset: 15, Line: 2, Column: 14},
+					Identifier: "test",
+					Pos:        Position{Offset: 10, Line: 2, Column: 9},
 				},
-			},
-			StartPos: Position{Offset: 15, Line: 2, Column: 14},
-		},
-		FunctionBlock: &FunctionBlock{
-			Block: &Block{
-				Statements: []Statement{
-					&IfStatement{
-						Test: &BoolExpression{
-							Value: true,
-							Range: Range{
-								StartPos: Position{Offset: 34, Line: 3, Column: 15},
-								EndPos:   Position{Offset: 37, Line: 3, Column: 18},
-							},
-						},
-						Then: &Block{
-							Statements: []Statement{
-								&ReturnStatement{
-									Expression: nil,
-									Range: Range{
-										StartPos: Position{Offset: 57, Line: 4, Column: 16},
-										EndPos:   Position{Offset: 62, Line: 4, Column: 21},
-									},
-								},
-							},
-							Range: Range{
-								StartPos: Position{Offset: 39, Line: 3, Column: 20},
-								EndPos:   Position{Offset: 76, Line: 5, Column: 12},
-							},
-						},
-						Else: &Block{
-							Statements: []Statement{
-								&IfStatement{
-									Test: &BoolExpression{
-										Value: false,
-										Range: Range{
-											StartPos: Position{Offset: 86, Line: 5, Column: 22},
-											EndPos:   Position{Offset: 90, Line: 5, Column: 26},
-										},
-									},
-									Then: &Block{
-										Statements: []Statement{
-											&ExpressionStatement{
-												Expression: &BoolExpression{
-													Value: false,
-													Range: Range{
-														StartPos: Position{Offset: 110, Line: 6, Column: 16},
-														EndPos:   Position{Offset: 114, Line: 6, Column: 20},
-													},
-												},
-											},
-											&ExpressionStatement{
-												Expression: &IntegerExpression{
-													Value: big.NewInt(1),
-													Base:  10,
-													Range: Range{
-														StartPos: Position{Offset: 132, Line: 7, Column: 16},
-														EndPos:   Position{Offset: 132, Line: 7, Column: 16},
-													},
-												},
-											},
-										},
-										Range: Range{
-											StartPos: Position{Offset: 92, Line: 5, Column: 28},
-											EndPos:   Position{Offset: 146, Line: 8, Column: 12},
-										},
-									},
-									Else: &Block{
-										Statements: []Statement{
-											&ExpressionStatement{
-												Expression: &IntegerExpression{
-													Value: big.NewInt(2),
-													Base:  10,
-													Range: Range{
-														StartPos: Position{Offset: 171, Line: 9, Column: 16},
-														EndPos:   Position{Offset: 171, Line: 9, Column: 16},
-													},
-												},
-											},
-										},
-										Range: Range{
-											StartPos: Position{Offset: 153, Line: 8, Column: 19},
-											EndPos:   Position{Offset: 185, Line: 10, Column: 12},
-										},
-									},
-									StartPos: Position{Offset: 83, Line: 5, Column: 19},
-								},
-							},
-							Range: Range{
-								StartPos: Position{Offset: 83, Line: 5, Column: 19},
-								EndPos:   Position{Offset: 185, Line: 10, Column: 12},
-							},
-						},
-						StartPos: Position{Offset: 31, Line: 3, Column: 12},
+				ParameterList: &ParameterList{
+					Range: Range{
+						StartPos: Position{Offset: 14, Line: 2, Column: 13},
+						EndPos:   Position{Offset: 15, Line: 2, Column: 14},
 					},
 				},
-				Range: Range{
-					StartPos: Position{Offset: 17, Line: 2, Column: 16},
-					EndPos:   Position{Offset: 195, Line: 11, Column: 8},
+				ReturnTypeAnnotation: &TypeAnnotation{
+					IsResource: false,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Pos: Position{Offset: 15, Line: 2, Column: 14},
+						},
+					},
+					StartPos: Position{Offset: 15, Line: 2, Column: 14},
 				},
+				FunctionBlock: &FunctionBlock{
+					Block: &Block{
+						Statements: []Statement{
+							&IfStatement{
+								Test: &BoolExpression{
+									Value: true,
+									Range: Range{
+										StartPos: Position{Offset: 34, Line: 3, Column: 15},
+										EndPos:   Position{Offset: 37, Line: 3, Column: 18},
+									},
+								},
+								Then: &Block{
+									Statements: []Statement{
+										&ReturnStatement{
+											Expression: nil,
+											Range: Range{
+												StartPos: Position{Offset: 57, Line: 4, Column: 16},
+												EndPos:   Position{Offset: 62, Line: 4, Column: 21},
+											},
+										},
+									},
+									Range: Range{
+										StartPos: Position{Offset: 39, Line: 3, Column: 20},
+										EndPos:   Position{Offset: 76, Line: 5, Column: 12},
+									},
+								},
+								Else: &Block{
+									Statements: []Statement{
+										&IfStatement{
+											Test: &BoolExpression{
+												Value: false,
+												Range: Range{
+													StartPos: Position{Offset: 86, Line: 5, Column: 22},
+													EndPos:   Position{Offset: 90, Line: 5, Column: 26},
+												},
+											},
+											Then: &Block{
+												Statements: []Statement{
+													&ExpressionStatement{
+														Expression: &BoolExpression{
+															Value: false,
+															Range: Range{
+																StartPos: Position{Offset: 110, Line: 6, Column: 16},
+																EndPos:   Position{Offset: 114, Line: 6, Column: 20},
+															},
+														},
+													},
+													&ExpressionStatement{
+														Expression: &IntegerExpression{
+															Value: big.NewInt(1),
+															Base:  10,
+															Range: Range{
+																StartPos: Position{Offset: 132, Line: 7, Column: 16},
+																EndPos:   Position{Offset: 132, Line: 7, Column: 16},
+															},
+														},
+													},
+												},
+												Range: Range{
+													StartPos: Position{Offset: 92, Line: 5, Column: 28},
+													EndPos:   Position{Offset: 146, Line: 8, Column: 12},
+												},
+											},
+											Else: &Block{
+												Statements: []Statement{
+													&ExpressionStatement{
+														Expression: &IntegerExpression{
+															Value: big.NewInt(2),
+															Base:  10,
+															Range: Range{
+																StartPos: Position{Offset: 171, Line: 9, Column: 16},
+																EndPos:   Position{Offset: 171, Line: 9, Column: 16},
+															},
+														},
+													},
+												},
+												Range: Range{
+													StartPos: Position{Offset: 153, Line: 8, Column: 19},
+													EndPos:   Position{Offset: 185, Line: 10, Column: 12},
+												},
+											},
+											StartPos: Position{Offset: 83, Line: 5, Column: 19},
+										},
+									},
+									Range: Range{
+										StartPos: Position{Offset: 83, Line: 5, Column: 19},
+										EndPos:   Position{Offset: 185, Line: 10, Column: 12},
+									},
+								},
+								StartPos: Position{Offset: 31, Line: 3, Column: 12},
+							},
+						},
+						Range: Range{
+							StartPos: Position{Offset: 17, Line: 2, Column: 16},
+							EndPos:   Position{Offset: 195, Line: 11, Column: 8},
+						},
+					},
+				},
+				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		StartPos: Position{Offset: 6, Line: 2, Column: 5},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+	)
 }
 
 func TestParseIfStatementWithVariableDeclaration(t *testing.T) {
@@ -1520,85 +1520,83 @@ func TestParseIfStatementWithVariableDeclaration(t *testing.T) {
 
 func TestParseIfStatementNoElse(t *testing.T) {
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
 	    fun test() {
             if true {
                 return
             }
         }
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &FunctionDeclaration{
-		Access: AccessNotSpecified,
-		Identifier: Identifier{
-			Identifier: "test",
-			Pos:        Position{Offset: 10, Line: 2, Column: 9},
-		},
-		ParameterList: &ParameterList{
-			Range: Range{
-				StartPos: Position{Offset: 14, Line: 2, Column: 13},
-				EndPos:   Position{Offset: 15, Line: 2, Column: 14},
-			},
-		},
-		ReturnTypeAnnotation: &TypeAnnotation{
-			IsResource: false,
-			Type: &NominalType{
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&FunctionDeclaration{
+				Access: AccessNotSpecified,
 				Identifier: Identifier{
-					Pos: Position{Offset: 15, Line: 2, Column: 14},
+					Identifier: "test",
+					Pos:        Position{Offset: 10, Line: 2, Column: 9},
 				},
-			},
-			StartPos: Position{Offset: 15, Line: 2, Column: 14},
-		},
-		FunctionBlock: &FunctionBlock{
-			Block: &Block{
-				Statements: []Statement{
-					&IfStatement{
-						Test: &BoolExpression{
-							Value: true,
-							Range: Range{
-								StartPos: Position{Offset: 34, Line: 3, Column: 15},
-								EndPos:   Position{Offset: 37, Line: 3, Column: 18},
-							},
-						},
-						Then: &Block{
-							Statements: []Statement{
-								&ReturnStatement{
-									Expression: nil,
-									Range: Range{
-										StartPos: Position{Offset: 57, Line: 4, Column: 16},
-										EndPos:   Position{Offset: 62, Line: 4, Column: 21},
-									},
-								},
-							},
-							Range: Range{
-								StartPos: Position{Offset: 39, Line: 3, Column: 20},
-								EndPos:   Position{Offset: 76, Line: 5, Column: 12},
-							},
-						},
-						StartPos: Position{Offset: 31, Line: 3, Column: 12},
+				ParameterList: &ParameterList{
+					Range: Range{
+						StartPos: Position{Offset: 14, Line: 2, Column: 13},
+						EndPos:   Position{Offset: 15, Line: 2, Column: 14},
 					},
 				},
-				Range: Range{
-					StartPos: Position{Offset: 17, Line: 2, Column: 16},
-					EndPos:   Position{Offset: 86, Line: 6, Column: 8},
+				ReturnTypeAnnotation: &TypeAnnotation{
+					IsResource: false,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Pos: Position{Offset: 15, Line: 2, Column: 14},
+						},
+					},
+					StartPos: Position{Offset: 15, Line: 2, Column: 14},
 				},
+				FunctionBlock: &FunctionBlock{
+					Block: &Block{
+						Statements: []Statement{
+							&IfStatement{
+								Test: &BoolExpression{
+									Value: true,
+									Range: Range{
+										StartPos: Position{Offset: 34, Line: 3, Column: 15},
+										EndPos:   Position{Offset: 37, Line: 3, Column: 18},
+									},
+								},
+								Then: &Block{
+									Statements: []Statement{
+										&ReturnStatement{
+											Expression: nil,
+											Range: Range{
+												StartPos: Position{Offset: 57, Line: 4, Column: 16},
+												EndPos:   Position{Offset: 62, Line: 4, Column: 21},
+											},
+										},
+									},
+									Range: Range{
+										StartPos: Position{Offset: 39, Line: 3, Column: 20},
+										EndPos:   Position{Offset: 76, Line: 5, Column: 12},
+									},
+								},
+								StartPos: Position{Offset: 31, Line: 3, Column: 12},
+							},
+						},
+						Range: Range{
+							StartPos: Position{Offset: 17, Line: 2, Column: 16},
+							EndPos:   Position{Offset: 86, Line: 6, Column: 8},
+						},
+					},
+				},
+				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		StartPos: Position{Offset: 6, Line: 2, Column: 5},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+	)
 }
 
 func TestParseWhileStatement(t *testing.T) {
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
 	    fun test() {
             while true {
               return
@@ -1606,86 +1604,84 @@ func TestParseWhileStatement(t *testing.T) {
               continue
             }
         }
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &FunctionDeclaration{
-		Access: AccessNotSpecified,
-		Identifier: Identifier{
-			Identifier: "test",
-			Pos:        Position{Offset: 10, Line: 2, Column: 9},
-		},
-		ParameterList: &ParameterList{
-			Range: Range{
-				StartPos: Position{Offset: 14, Line: 2, Column: 13},
-				EndPos:   Position{Offset: 15, Line: 2, Column: 14},
-			},
-		},
-		ReturnTypeAnnotation: &TypeAnnotation{
-			IsResource: false,
-			Type: &NominalType{
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&FunctionDeclaration{
+				Access: AccessNotSpecified,
 				Identifier: Identifier{
-					Pos: Position{Offset: 15, Line: 2, Column: 14},
+					Identifier: "test",
+					Pos:        Position{Offset: 10, Line: 2, Column: 9},
 				},
-			},
-			StartPos: Position{Offset: 15, Line: 2, Column: 14},
-		},
-		FunctionBlock: &FunctionBlock{
-			Block: &Block{
-				Statements: []Statement{
-					&WhileStatement{
-						Test: &BoolExpression{
-							Value: true,
-							Range: Range{
-								StartPos: Position{Offset: 37, Line: 3, Column: 18},
-								EndPos:   Position{Offset: 40, Line: 3, Column: 21},
-							},
-						},
-						Block: &Block{
-							Statements: []Statement{
-								&ReturnStatement{
-									Expression: nil,
-									Range: Range{
-										StartPos: Position{Offset: 58, Line: 4, Column: 14},
-										EndPos:   Position{Offset: 63, Line: 4, Column: 19},
-									},
-								},
-								&BreakStatement{
-									Range: Range{
-										StartPos: Position{Offset: 79, Line: 5, Column: 14},
-										EndPos:   Position{Offset: 83, Line: 5, Column: 18},
-									},
-								},
-								&ContinueStatement{
-									Range: Range{
-										StartPos: Position{Offset: 99, Line: 6, Column: 14},
-										EndPos:   Position{Offset: 106, Line: 6, Column: 21},
-									},
-								},
-							},
-							Range: Range{
-								StartPos: Position{Offset: 42, Line: 3, Column: 23},
-								EndPos:   Position{Offset: 120, Line: 7, Column: 12},
-							},
-						},
-						StartPos: Position{Offset: 31, Line: 3, Column: 12},
+				ParameterList: &ParameterList{
+					Range: Range{
+						StartPos: Position{Offset: 14, Line: 2, Column: 13},
+						EndPos:   Position{Offset: 15, Line: 2, Column: 14},
 					},
 				},
-				Range: Range{
-					StartPos: Position{Offset: 17, Line: 2, Column: 16},
-					EndPos:   Position{Offset: 130, Line: 8, Column: 8},
+				ReturnTypeAnnotation: &TypeAnnotation{
+					IsResource: false,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Pos: Position{Offset: 15, Line: 2, Column: 14},
+						},
+					},
+					StartPos: Position{Offset: 15, Line: 2, Column: 14},
 				},
+				FunctionBlock: &FunctionBlock{
+					Block: &Block{
+						Statements: []Statement{
+							&WhileStatement{
+								Test: &BoolExpression{
+									Value: true,
+									Range: Range{
+										StartPos: Position{Offset: 37, Line: 3, Column: 18},
+										EndPos:   Position{Offset: 40, Line: 3, Column: 21},
+									},
+								},
+								Block: &Block{
+									Statements: []Statement{
+										&ReturnStatement{
+											Expression: nil,
+											Range: Range{
+												StartPos: Position{Offset: 58, Line: 4, Column: 14},
+												EndPos:   Position{Offset: 63, Line: 4, Column: 19},
+											},
+										},
+										&BreakStatement{
+											Range: Range{
+												StartPos: Position{Offset: 79, Line: 5, Column: 14},
+												EndPos:   Position{Offset: 83, Line: 5, Column: 18},
+											},
+										},
+										&ContinueStatement{
+											Range: Range{
+												StartPos: Position{Offset: 99, Line: 6, Column: 14},
+												EndPos:   Position{Offset: 106, Line: 6, Column: 21},
+											},
+										},
+									},
+									Range: Range{
+										StartPos: Position{Offset: 42, Line: 3, Column: 23},
+										EndPos:   Position{Offset: 120, Line: 7, Column: 12},
+									},
+								},
+								StartPos: Position{Offset: 31, Line: 3, Column: 12},
+							},
+						},
+						Range: Range{
+							StartPos: Position{Offset: 17, Line: 2, Column: 16},
+							EndPos:   Position{Offset: 130, Line: 8, Column: 8},
+						},
+					},
+				},
+				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		StartPos: Position{Offset: 6, Line: 2, Column: 5},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+	)
 }
 
 func TestParseForStatement(t *testing.T) {
@@ -4945,11 +4941,11 @@ func TestParseFieldWithFromIdentifier(t *testing.T) {
 
 func TestParseFunctionWithFromIdentifier(t *testing.T) {
 
-	_, _, err := parser.ParseProgram(`
+	const code = `
         fun send(from: String, to: String) {}
-	`)
+	`
 
-	require.NoError(t, err)
+	testParse(t, code, nil)
 }
 
 func TestParseImportWithFromIdentifier(t *testing.T) {
@@ -5615,71 +5611,70 @@ func TestParseFunctionTypeWithResourceTypeAnnotation(t *testing.T) {
 
 func TestParseFunctionExpressionWithResourceTypeAnnotation(t *testing.T) {
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
         let f = fun (): @R { return X }
-	`)
+	`
 
-	require.NoError(t, err)
+	testParse(
+		t,
+		code,
+		[]Declaration{
 
-	test := &VariableDeclaration{
-		IsConstant: true,
-		Identifier: Identifier{
-			Identifier: "f",
-			Pos:        Position{Offset: 13, Line: 2, Column: 12},
-		},
-		Transfer: &Transfer{
-			Operation: TransferOperationCopy,
-			Pos:       Position{Offset: 15, Line: 2, Column: 14},
-		},
-		Value: &FunctionExpression{
-			ParameterList: &ParameterList{
-				Range: Range{
-					StartPos: Position{Offset: 21, Line: 2, Column: 20},
-					EndPos:   Position{Offset: 22, Line: 2, Column: 21},
+			&VariableDeclaration{
+				IsConstant: true,
+				Identifier: Identifier{
+					Identifier: "f",
+					Pos:        Position{Offset: 13, Line: 2, Column: 12},
 				},
-			},
-			ReturnTypeAnnotation: &TypeAnnotation{
-				IsResource: true,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Identifier: "R",
-						Pos:        Position{Offset: 26, Line: 2, Column: 25},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+					Pos:       Position{Offset: 15, Line: 2, Column: 14},
+				},
+				Value: &FunctionExpression{
+					ParameterList: &ParameterList{
+						Range: Range{
+							StartPos: Position{Offset: 21, Line: 2, Column: 20},
+							EndPos:   Position{Offset: 22, Line: 2, Column: 21},
+						},
 					},
-				},
-				StartPos: Position{Offset: 25, Line: 2, Column: 24},
-			},
-			FunctionBlock: &FunctionBlock{
-				Block: &Block{
-					Statements: []Statement{
-						&ReturnStatement{
-							Expression: &IdentifierExpression{
-								Identifier: Identifier{
-									Identifier: "X",
-									Pos:        Position{Offset: 37, Line: 2, Column: 36},
+					ReturnTypeAnnotation: &TypeAnnotation{
+						IsResource: true,
+						Type: &NominalType{
+							Identifier: Identifier{
+								Identifier: "R",
+								Pos:        Position{Offset: 26, Line: 2, Column: 25},
+							},
+						},
+						StartPos: Position{Offset: 25, Line: 2, Column: 24},
+					},
+					FunctionBlock: &FunctionBlock{
+						Block: &Block{
+							Statements: []Statement{
+								&ReturnStatement{
+									Expression: &IdentifierExpression{
+										Identifier: Identifier{
+											Identifier: "X",
+											Pos:        Position{Offset: 37, Line: 2, Column: 36},
+										},
+									},
+									Range: Range{
+										StartPos: Position{Offset: 30, Line: 2, Column: 29},
+										EndPos:   Position{Offset: 37, Line: 2, Column: 36},
+									},
 								},
 							},
 							Range: Range{
-								StartPos: Position{Offset: 30, Line: 2, Column: 29},
-								EndPos:   Position{Offset: 37, Line: 2, Column: 36},
+								StartPos: Position{Offset: 28, Line: 2, Column: 27},
+								EndPos:   Position{Offset: 39, Line: 2, Column: 38},
 							},
 						},
 					},
-					Range: Range{
-						StartPos: Position{Offset: 28, Line: 2, Column: 27},
-						EndPos:   Position{Offset: 39, Line: 2, Column: 38},
-					},
+					StartPos: Position{Offset: 17, Line: 2, Column: 16},
 				},
+				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
-			StartPos: Position{Offset: 17, Line: 2, Column: 16},
 		},
-		StartPos: Position{Offset: 9, Line: 2, Column: 8},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+	)
 }
 
 func TestParseFailableCastingResourceTypeAnnotation(t *testing.T) {
@@ -5785,119 +5780,117 @@ func TestParseCasting(t *testing.T) {
 
 func TestParseFunctionExpressionStatementAfterVariableDeclarationWithCreateExpression(t *testing.T) {
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
       fun test() {
           let r <- create R()
           (fun () {})()
       }
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &FunctionDeclaration{
-		Access: AccessNotSpecified,
-		Identifier: Identifier{
-			Identifier: "test",
-			Pos:        Position{Offset: 11, Line: 2, Column: 10},
-		},
-		ParameterList: &ParameterList{
-			Range: Range{
-				StartPos: Position{Offset: 15, Line: 2, Column: 14},
-				EndPos:   Position{Offset: 16, Line: 2, Column: 15},
-			},
-		},
-		ReturnTypeAnnotation: &TypeAnnotation{
-			IsResource: false,
-			Type: &NominalType{
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&FunctionDeclaration{
+				Access: AccessNotSpecified,
 				Identifier: Identifier{
-					Identifier: "",
-					Pos:        Position{Offset: 16, Line: 2, Column: 15},
+					Identifier: "test",
+					Pos:        Position{Offset: 11, Line: 2, Column: 10},
 				},
-			},
-			StartPos: Position{Offset: 16, Line: 2, Column: 15},
-		},
-		FunctionBlock: &FunctionBlock{
-			Block: &Block{
-				Statements: []Statement{
-					&VariableDeclaration{
-						IsConstant: true,
+				ParameterList: &ParameterList{
+					Range: Range{
+						StartPos: Position{Offset: 15, Line: 2, Column: 14},
+						EndPos:   Position{Offset: 16, Line: 2, Column: 15},
+					},
+				},
+				ReturnTypeAnnotation: &TypeAnnotation{
+					IsResource: false,
+					Type: &NominalType{
 						Identifier: Identifier{
-							Identifier: "r",
-							Pos:        Position{Offset: 34, Line: 3, Column: 14},
-						},
-						TypeAnnotation: nil,
-						Value: &CreateExpression{
-							InvocationExpression: &InvocationExpression{
-								InvokedExpression: &IdentifierExpression{
-									Identifier: Identifier{
-										Identifier: "R",
-										Pos:        Position{Offset: 46, Line: 3, Column: 26},
-									},
-								},
-								Arguments: nil,
-								EndPos:    Position{Offset: 48, Line: 3, Column: 28},
-							},
-							StartPos: Position{Offset: 39, Line: 3, Column: 19},
-						},
-						Transfer: &Transfer{
-							Operation: TransferOperationMove,
-							Pos:       Position{Offset: 36, Line: 3, Column: 16},
-						},
-						StartPos: Position{Offset: 30, Line: 3, Column: 10},
-					},
-					&ExpressionStatement{
-						Expression: &InvocationExpression{
-							InvokedExpression: &FunctionExpression{
-								ParameterList: &ParameterList{
-									Range: Range{
-										StartPos: Position{Offset: 65, Line: 4, Column: 15},
-										EndPos:   Position{Offset: 66, Line: 4, Column: 16},
-									},
-								},
-								ReturnTypeAnnotation: &TypeAnnotation{
-									IsResource: false,
-									Type: &NominalType{
-										Identifier: Identifier{
-											Identifier: "",
-											Pos:        Position{Offset: 66, Line: 4, Column: 16},
-										},
-									},
-									StartPos: Position{Offset: 66, Line: 4, Column: 16},
-								},
-								FunctionBlock: &FunctionBlock{
-									Block: &Block{
-										Statements: nil,
-										Range: Range{
-											StartPos: Position{Offset: 68, Line: 4, Column: 18},
-											EndPos:   Position{Offset: 69, Line: 4, Column: 19},
-										},
-									},
-									PreConditions:  nil,
-									PostConditions: nil,
-								},
-								StartPos: Position{Offset: 61, Line: 4, Column: 11},
-							},
-							Arguments: nil,
-							EndPos:    Position{Offset: 72, Line: 4, Column: 22},
+							Identifier: "",
+							Pos:        Position{Offset: 16, Line: 2, Column: 15},
 						},
 					},
+					StartPos: Position{Offset: 16, Line: 2, Column: 15},
 				},
-				Range: Range{
-					StartPos: Position{Offset: 18, Line: 2, Column: 17},
-					EndPos:   Position{Offset: 80, Line: 5, Column: 6},
+				FunctionBlock: &FunctionBlock{
+					Block: &Block{
+						Statements: []Statement{
+							&VariableDeclaration{
+								IsConstant: true,
+								Identifier: Identifier{
+									Identifier: "r",
+									Pos:        Position{Offset: 34, Line: 3, Column: 14},
+								},
+								TypeAnnotation: nil,
+								Value: &CreateExpression{
+									InvocationExpression: &InvocationExpression{
+										InvokedExpression: &IdentifierExpression{
+											Identifier: Identifier{
+												Identifier: "R",
+												Pos:        Position{Offset: 46, Line: 3, Column: 26},
+											},
+										},
+										Arguments: nil,
+										EndPos:    Position{Offset: 48, Line: 3, Column: 28},
+									},
+									StartPos: Position{Offset: 39, Line: 3, Column: 19},
+								},
+								Transfer: &Transfer{
+									Operation: TransferOperationMove,
+									Pos:       Position{Offset: 36, Line: 3, Column: 16},
+								},
+								StartPos: Position{Offset: 30, Line: 3, Column: 10},
+							},
+							&ExpressionStatement{
+								Expression: &InvocationExpression{
+									InvokedExpression: &FunctionExpression{
+										ParameterList: &ParameterList{
+											Range: Range{
+												StartPos: Position{Offset: 65, Line: 4, Column: 15},
+												EndPos:   Position{Offset: 66, Line: 4, Column: 16},
+											},
+										},
+										ReturnTypeAnnotation: &TypeAnnotation{
+											IsResource: false,
+											Type: &NominalType{
+												Identifier: Identifier{
+													Identifier: "",
+													Pos:        Position{Offset: 66, Line: 4, Column: 16},
+												},
+											},
+											StartPos: Position{Offset: 66, Line: 4, Column: 16},
+										},
+										FunctionBlock: &FunctionBlock{
+											Block: &Block{
+												Statements: nil,
+												Range: Range{
+													StartPos: Position{Offset: 68, Line: 4, Column: 18},
+													EndPos:   Position{Offset: 69, Line: 4, Column: 19},
+												},
+											},
+											PreConditions:  nil,
+											PostConditions: nil,
+										},
+										StartPos: Position{Offset: 61, Line: 4, Column: 11},
+									},
+									Arguments: nil,
+									EndPos:    Position{Offset: 72, Line: 4, Column: 22},
+								},
+							},
+						},
+						Range: Range{
+							StartPos: Position{Offset: 18, Line: 2, Column: 17},
+							EndPos:   Position{Offset: 80, Line: 5, Column: 6},
+						},
+					},
+					PreConditions:  nil,
+					PostConditions: nil,
 				},
+				StartPos: Position{Offset: 7, Line: 2, Column: 6},
 			},
-			PreConditions:  nil,
-			PostConditions: nil,
 		},
-		StartPos: Position{Offset: 7, Line: 2, Column: 6},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+	)
 }
 
 func TestParseIdentifiers(t *testing.T) {

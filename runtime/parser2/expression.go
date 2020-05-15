@@ -324,6 +324,9 @@ func init() {
 					StartPos:   token.Range.StartPos,
 				}
 
+			case keywordFun:
+				return parseFunctionExpression(p, token)
+
 			default:
 				return &ast.IdentifierExpression{
 					Identifier: tokenToIdentifier(token),
@@ -381,6 +384,18 @@ func init() {
 	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) ast.Expression {
 		panic("expected expression")
 	})
+}
+
+func parseFunctionExpression(p *parser, token lexer.Token) *ast.FunctionExpression {
+
+	parameterList, returnTypeAnnotation, functionBlock := parseFunctionParameterListAndRest(p)
+
+	return &ast.FunctionExpression{
+		ParameterList:        parameterList,
+		ReturnTypeAnnotation: returnTypeAnnotation,
+		FunctionBlock:        functionBlock,
+		StartPos:             token.StartPos,
+	}
 }
 
 func parseCreateExpressionRemainder(p *parser, token lexer.Token) *ast.CreateExpression {
