@@ -317,6 +317,13 @@ func init() {
 			case keywordCreate:
 				return parseCreateExpressionRemainder(p, token)
 
+			case keywordDestroy:
+				expression := parseExpression(p, lowestBindingPower)
+				return &ast.DestroyExpression{
+					Expression: expression,
+					StartPos:   token.Range.StartPos,
+				}
+
 			default:
 				return &ast.IdentifierExpression{
 					Identifier: tokenToIdentifier(token),

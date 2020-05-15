@@ -1494,3 +1494,24 @@ func TestParseNil(t *testing.T) {
 		result,
 	)
 }
+
+func TestParseDestroy(t *testing.T) {
+
+	t.Run("simple", func(t *testing.T) {
+		result, errs := ParseExpression("destroy t")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.DestroyExpression{
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "t",
+						Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+}
