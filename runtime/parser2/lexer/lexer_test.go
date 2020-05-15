@@ -498,7 +498,7 @@ func TestLex(t *testing.T) {
 	})
 
 	t.Run("colon, comma, semicolon, question mark", func(t *testing.T) {
-		withTokens(Lex(":,;?."), func(tokens []Token) {
+		withTokens(Lex(":,;.?"), func(tokens []Token) {
 			assert.Equal(t,
 				[]Token{
 					{
@@ -523,14 +523,14 @@ func TestLex(t *testing.T) {
 						},
 					},
 					{
-						Type: TokenQuestionMark,
+						Type: TokenDot,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
 							EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 						},
 					},
 					{
-						Type: TokenDot,
+						Type: TokenQuestionMark,
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
 							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
