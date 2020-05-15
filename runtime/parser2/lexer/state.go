@@ -103,10 +103,15 @@ func rootState(l *lexer) stateFn {
 		case '"':
 			return stringState
 		case '/':
-			if l.acceptOne('*') {
+			r = l.next()
+			switch r {
+			case '/':
+				return lineCommentState
+			case '*':
 				l.emitType(TokenBlockCommentStart)
 				return blockCommentState(0)
-			} else {
+			default:
+				l.backupOne()
 				l.emitType(TokenSlash)
 			}
 		case '?':
@@ -204,6 +209,12 @@ func identifierState(l *lexer) stateFn {
 func stringState(l *lexer) stateFn {
 	l.scanString('"')
 	l.emitValue(TokenString)
+	return rootState
+}
+
+func lineCommentState(l *lexer) stateFn {
+	l.scanLineComment()
+	l.emitValue(TokenLineComment)
 	return rootState
 }
 

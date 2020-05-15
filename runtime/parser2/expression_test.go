@@ -1538,3 +1538,31 @@ func TestParseDestroy(t *testing.T) {
 		)
 	})
 }
+
+func TestParseLineComment(t *testing.T) {
+	result, errs := ParseExpression(" //// // this is a comment\n 1 / 2")
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		&ast.BinaryExpression{
+			Operation: ast.OperationDiv,
+			Left: &ast.IntegerExpression{
+				Value: big.NewInt(1),
+				Base:  10,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 2, Column: 1, Offset: 28},
+					EndPos:   ast.Position{Line: 2, Column: 1, Offset: 28},
+				},
+			},
+			Right: &ast.IntegerExpression{
+				Value: big.NewInt(2),
+				Base:  10,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 2, Column: 5, Offset: 32},
+					EndPos:   ast.Position{Line: 2, Column: 5, Offset: 32},
+				},
+			},
+		},
+		result,
+	)
+}
