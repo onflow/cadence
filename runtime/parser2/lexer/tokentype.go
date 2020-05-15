@@ -62,7 +62,7 @@ const (
 	TokenGreaterGreater
 	TokenEqual
 	TokenEqualEqual
-	TokenNot
+	TokenExclamationMark
 	TokenNotEqual
 	TokenBlockCommentStart
 	TokenBlockCommentEnd
@@ -156,7 +156,7 @@ func (t TokenType) String() string {
 		return "="
 	case TokenEqualEqual:
 		return "=="
-	case TokenNot:
+	case TokenExclamationMark:
 		return "!"
 	case TokenNotEqual:
 		return "!="

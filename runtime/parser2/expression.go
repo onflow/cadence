@@ -31,6 +31,7 @@ import (
 
 type infixExprFunc func(left, right ast.Expression) ast.Expression
 type prefixExprFunc func(right ast.Expression, tokenRange ast.Range) ast.Expression
+type postfixExprFunc func(left ast.Expression, tokenRange ast.Range) ast.Expression
 type exprNullDenotationFunc func(parser *parser, token lexer.Token) ast.Expression
 
 type literalExpr struct {
@@ -62,6 +63,12 @@ type unaryExpr struct {
 	tokenType    lexer.TokenType
 	bindingPower int
 	operation    ast.Operation
+}
+
+type postfixExpr struct {
+	tokenType      lexer.TokenType
+	bindingPower   int
+	leftDenotation postfixExprFunc
 }
 
 var exprNullDenotations = map[lexer.TokenType]exprNullDenotationFunc{}
@@ -131,6 +138,16 @@ func defineExpr(def interface{}) {
 				}
 			},
 		})
+
+	case postfixExpr:
+		tokenType := def.tokenType
+		setExprLeftBindingPower(tokenType, def.bindingPower)
+		setExprLeftDenotation(
+			tokenType,
+			func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
+				return def.leftDenotation(left, token.Range)
+			},
+		)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -294,6 +311,69 @@ func init() {
 	})
 
 	defineExpr(literalExpr{
+		tokenType: lexer.TokenString,
+		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
+			parsedString, errs := parseStringLiteral(token.Value.(string))
+			p.report(errs...)
+			return &ast.StringExpression{
+				Value: parsedString,
+				Range: token.Range,
+			}
+		},
+	})
+
+	defineExpr(unaryExpr{
+		tokenType:    lexer.TokenMinus,
+		bindingPower: 130,
+		operation:    ast.OperationMinus,
+	})
+
+	defineExpr(unaryExpr{
+		tokenType:    lexer.TokenPlus,
+		bindingPower: 130,
+		operation:    ast.OperationPlus,
+	})
+
+	defineExpr(unaryExpr{
+		tokenType:    lexer.TokenExclamationMark,
+		bindingPower: 130,
+		operation:    ast.OperationNegate,
+	})
+
+	defineExpr(unaryExpr{
+		tokenType:    lexer.TokenLeftArrow,
+		bindingPower: 130,
+		operation:    ast.OperationMove,
+	})
+
+	defineExpr(postfixExpr{
+		tokenType:    lexer.TokenExclamationMark,
+		bindingPower: 140,
+		leftDenotation: func(left ast.Expression, tokenRange ast.Range) ast.Expression {
+			return &ast.ForceExpression{
+				Expression: left,
+				EndPos:     tokenRange.EndPos,
+			}
+		},
+	})
+
+	defineNestedExpression()
+	defineInvocationExpression()
+	defineArrayExpression()
+	defineDictionaryExpression()
+	definePathExpression()
+	defineConditionalExpression()
+	defineReferenceExpression()
+	defineMemberExpression()
+	defineIdentifierExpression()
+
+	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) ast.Expression {
+		panic("expected expression")
+	})
+}
+
+func defineIdentifierExpression() {
+	defineExpr(literalExpr{
 		tokenType: lexer.TokenIdentifier,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
 			switch token.Value {
@@ -333,56 +413,6 @@ func init() {
 				}
 			}
 		},
-	})
-
-	defineExpr(literalExpr{
-		tokenType: lexer.TokenString,
-		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
-			parsedString, errs := parseStringLiteral(token.Value.(string))
-			p.report(errs...)
-			return &ast.StringExpression{
-				Value: parsedString,
-				Range: token.Range,
-			}
-		},
-	})
-
-	defineExpr(unaryExpr{
-		tokenType:    lexer.TokenMinus,
-		bindingPower: 130,
-		operation:    ast.OperationMinus,
-	})
-
-	defineExpr(unaryExpr{
-		tokenType:    lexer.TokenPlus,
-		bindingPower: 130,
-		operation:    ast.OperationPlus,
-	})
-
-	defineExpr(unaryExpr{
-		tokenType:    lexer.TokenNot,
-		bindingPower: 130,
-		operation:    ast.OperationNegate,
-	})
-
-	defineExpr(unaryExpr{
-		tokenType:    lexer.TokenLeftArrow,
-		bindingPower: 130,
-		operation:    ast.OperationMove,
-	})
-
-	defineNestedExpression()
-	defineInvocationExpression()
-	defineArrayExpression()
-	defineDictionaryExpression()
-	definePathExpression()
-	defineConditionalExpression()
-	defineReferenceExpression()
-	defineForceExpression()
-	defineMemberExpression()
-
-	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) ast.Expression {
-		panic("expected expression")
 	})
 }
 
@@ -629,19 +659,6 @@ func defineReferenceExpression() {
 	)
 }
 
-func defineForceExpression() {
-	setExprLeftBindingPower(lexer.TokenNot, 140)
-	setExprLeftDenotation(
-		lexer.TokenNot,
-		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
-			return &ast.ForceExpression{
-				Expression: left,
-				EndPos:     token.EndPos,
-			}
-		},
-	)
-}
-
 func defineMemberExpression() {
 	const bindingPower = 150
 
@@ -672,6 +689,20 @@ func parseMemberAccess(p *parser, left ast.Expression, optional bool) ast.Expres
 	}
 }
 
+func exprLeftDenotationAllowsNewline(tokenType lexer.TokenType) bool {
+
+	// The postfix force unwrap and invocation expressions don't support
+	// newlines before them, as this clashes with a unary negations and
+	// nested expressions on a new line / separate statement
+
+	switch tokenType {
+	case lexer.TokenExclamationMark, lexer.TokenParenOpen:
+		return false
+	default:
+		return true
+	}
+}
+
 func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 	p.skipSpaceAndComments(true)
 	t := p.current
@@ -680,9 +711,9 @@ func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 
 	left := applyExprNullDenotation(p, t)
 
-	p.skipSpaceAndComments(true)
+	newLineAfterLeft := p.skipSpaceAndComments(true)
 
-	if !supportsExprLeftDenotation(left) {
+	if newLineAfterLeft && !exprLeftDenotationAllowsNewline(p.current.Type) {
 		return left
 	}
 
@@ -696,18 +727,6 @@ func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 	}
 
 	return left
-}
-
-// supportsExprLeftDenotation returns true if a left denotation
-// can be applied to the given expression
-//
-func supportsExprLeftDenotation(left ast.Expression) bool {
-	switch left.(type) {
-	case *ast.CreateExpression, *ast.DestroyExpression:
-		return false
-	default:
-		return true
-	}
 }
 
 func applyExprNullDenotation(p *parser, token lexer.Token) ast.Expression {

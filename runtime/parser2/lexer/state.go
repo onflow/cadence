@@ -129,7 +129,7 @@ func rootState(l *lexer) stateFn {
 			if l.acceptOne('=') {
 				l.emitType(TokenNotEqual)
 			} else {
-				l.emitType(TokenNot)
+				l.emitType(TokenExclamationMark)
 			}
 		case '<':
 			r = l.next()
