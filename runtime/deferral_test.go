@@ -163,17 +163,17 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	// Dictionary keys should be written to separate storage keys
 
 	insertTx := []byte(`
-	  import Test from 0xCADE
+      import Test from 0xCADE
 
-	  transaction {
+      transaction {
 
-	     prepare(signer: AuthAccount) {
-	         let c = signer.borrow<&Test.C>(from: /storage/c)!
-	         c.rs["a"] <-! Test.createR(1)
-	         c.rs["b"] <-! Test.createR(2)
-	     }
-	  }
-	`)
+         prepare(signer: AuthAccount) {
+             let c = signer.borrow<&Test.C>(from: /storage/c)!
+             c.rs["a"] <-! Test.createR(1)
+             c.rs["b"] <-! Test.createR(2)
+         }
+      }
+    `)
 
 	clearReadsAndWrites()
 	err = runtime.ExecuteTransaction(insertTx, nil, runtimeInterface, utils.TestLocation)
@@ -200,17 +200,17 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	// Reading a single key should only load that key once
 
 	readTx := []byte(`
-	  import Test from 0xCADE
+      import Test from 0xCADE
 
-	  transaction {
+      transaction {
 
-	     prepare(signer: AuthAccount) {
-	         let c = signer.borrow<&Test.C>(from: /storage/c)!
+         prepare(signer: AuthAccount) {
+             let c = signer.borrow<&Test.C>(from: /storage/c)!
              log(c.rs["b"]?.value)
              log(c.rs["b"]?.value)
-	     }
-	  }
-	`)
+         }
+      }
+    `)
 
 	clearReadsAndWrites()
 	loggedMessages = nil
@@ -239,18 +239,18 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	// the single, associated storage key
 
 	updateTx := []byte(`
-	  import Test from 0xCADE
+      import Test from 0xCADE
 
-	  transaction {
+      transaction {
 
-	     prepare(signer: AuthAccount) {
-	         let c = signer.borrow<&Test.C>(from: /storage/c)!
+         prepare(signer: AuthAccount) {
+             let c = signer.borrow<&Test.C>(from: /storage/c)!
              c.rs["b"]?.increment()
 
              log(c.rs["b"]?.value)
-	     }
-	  }
-	`)
+         }
+      }
+    `)
 
 	clearReadsAndWrites()
 	loggedMessages = nil
@@ -291,19 +291,19 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	// Replace the key with a different resource
 
 	replaceTx := []byte(`
-	  import Test from 0xCADE
+      import Test from 0xCADE
 
-	  transaction {
+      transaction {
 
-	     prepare(signer: AuthAccount) {
-	         let c = signer.borrow<&Test.C>(from: /storage/c)!
+         prepare(signer: AuthAccount) {
+             let c = signer.borrow<&Test.C>(from: /storage/c)!
              log(c.rs["b"]?.value)
              let existing <- c.rs["b"] <- Test.createR(4)
              destroy existing
              log(c.rs["b"]?.value)
-	     }
-	  }
-	`)
+         }
+      }
+    `)
 
 	clearReadsAndWrites()
 	loggedMessages = nil
@@ -344,19 +344,19 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	// Remove the key
 
 	removeTx := []byte(`
-	  import Test from 0xCADE
+      import Test from 0xCADE
 
-	  transaction {
+      transaction {
 
-	     prepare(signer: AuthAccount) {
-	         let c = signer.borrow<&Test.C>(from: /storage/c)!
+         prepare(signer: AuthAccount) {
+             let c = signer.borrow<&Test.C>(from: /storage/c)!
              log(c.rs["b"]?.value)
              let existing <- c.rs["b"] <- nil
              destroy existing
              log(c.rs["b"]?.value)
-	     }
-	  }
-	`)
+         }
+      }
+    `)
 
 	clearReadsAndWrites()
 	loggedMessages = nil
@@ -418,12 +418,12 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	// Replace the collection
 
 	destroyTx := []byte(`
-	  import Test from 0xCADE
+      import Test from 0xCADE
 
-	  transaction {
+      transaction {
 
-	     prepare(signer: AuthAccount) {
-	         if let c <- signer.load<@Test.C>(from: /storage/c) {
+         prepare(signer: AuthAccount) {
+             if let c <- signer.load<@Test.C>(from: /storage/c) {
                  // important: read "a", so the value is in the dictionary value,
                  // but the deferred storage key must still be removed
                  log(c.rs["a"]?.value)
@@ -431,11 +431,11 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
              }
 
              let c2 <- Test.createC()
-	         c2.rs["x"] <-! Test.createR(10)
+             c2.rs["x"] <-! Test.createR(10)
              signer.save(<-c2, to: /storage/c)
-	     }
-	  }
-	`)
+         }
+      }
+    `)
 
 	clearReadsAndWrites()
 	loggedMessages = nil
@@ -630,19 +630,19 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesNested(t *testing.T) {
 	// Dictionary keys should be written to separate storage keys
 
 	insertTx := []byte(`
-	  import Test from 0xCADE
+      import Test from 0xCADE
 
-	  transaction {
+      transaction {
 
-	     prepare(signer: AuthAccount) {
-	         let c = signer.borrow<&Test.C>(from: /storage/c)!
+         prepare(signer: AuthAccount) {
+             let c = signer.borrow<&Test.C>(from: /storage/c)!
              let c2 <- Test.createC2()
              c2.rs["a"] <-! Test.createR(1)
              c2.rs["b"] <-! Test.createR(2)
-	         c.c2s["x"] <-! c2
-	     }
-	  }
-	`)
+             c.c2s["x"] <-! c2
+         }
+      }
+    `)
 
 	clearReadsAndWrites()
 	err = runtime.ExecuteTransaction(insertTx, nil, runtimeInterface, utils.TestLocation)
@@ -672,17 +672,17 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesNested(t *testing.T) {
 	// Reading a single key should only load that key once
 
 	readTx := []byte(`
-	  import Test from 0xCADE
+      import Test from 0xCADE
 
-	  transaction {
+      transaction {
 
-	     prepare(signer: AuthAccount) {
-	         let c = signer.borrow<&Test.C>(from: /storage/c)!
+         prepare(signer: AuthAccount) {
+             let c = signer.borrow<&Test.C>(from: /storage/c)!
              // TODO: use nested optional chaining
              log(c.c2s["x"]?.value(key: "b"))
-	     }
-	  }
-	`)
+         }
+      }
+    `)
 
 	clearReadsAndWrites()
 	loggedMessages = nil
@@ -778,7 +778,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesTransfer(t *testing.T) {
           prepare(signer1: AuthAccount, signer2: AuthAccount) {
               let c <- Test.createC()
               c.rs["a"] <-! Test.createR(1)
-	          c.rs["b"] <-! Test.createR(2)
+              c.rs["b"] <-! Test.createR(2)
               signer1.save(<-c, to: /storage/c)
           }
        }
@@ -881,17 +881,17 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesTransfer(t *testing.T) {
 	// Transfer
 
 	transferTx := []byte(`
-	 import Test from 0x1
+     import Test from 0x1
 
-	 transaction {
+     transaction {
 
-	    prepare(signer1: AuthAccount, signer2: AuthAccount) {
-	        let c <- signer1.load<@Test.C>(from: /storage/c) ?? panic("missing C")
+        prepare(signer1: AuthAccount, signer2: AuthAccount) {
+            let c <- signer1.load<@Test.C>(from: /storage/c) ?? panic("missing C")
             c.rs["x"] <-! Test.createR(42)
-	        signer2.save(<-c, to: /storage/c2)
-	    }
-	 }
-	`)
+            signer2.save(<-c, to: /storage/c2)
+        }
+     }
+    `)
 
 	clearReadsAndWrites()
 	loggedMessages = nil
