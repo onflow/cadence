@@ -20,6 +20,7 @@ package parser2
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
@@ -167,7 +168,22 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 		startPos := p.current.StartPos
 		p.next()
 
-		expression := parseExpression(p, lowestBindingPower)
+		p.skipSpaceAndComments(true)
+
+		var variableDeclaration *ast.VariableDeclaration
+
+		if p.current.Type == lexer.TokenIdentifier {
+			switch p.current.Value {
+			case keywordLet, keywordVar:
+				variableDeclaration = parseVariableDeclaration(p)
+			}
+		}
+
+		var expression ast.Expression
+
+		if variableDeclaration == nil {
+			expression = parseExpression(p, lowestBindingPower)
+		}
 
 		thenBlock := parseBlock(p)
 
@@ -187,14 +203,28 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 			}
 		}
 
-		ifStatements = append(ifStatements,
-			&ast.IfStatement{
-				Test:     expression,
-				Then:     thenBlock,
-				Else:     elseBlock,
-				StartPos: startPos,
-			},
-		)
+		var test ast.IfStatementTest
+		switch {
+		case variableDeclaration != nil:
+			test = variableDeclaration
+		case expression != nil:
+			test = expression
+		default:
+			panic(errors.UnreachableError{})
+		}
+
+		ifStatement := &ast.IfStatement{
+			Test:     test,
+			Then:     thenBlock,
+			Else:     elseBlock,
+			StartPos: startPos,
+		}
+
+		if variableDeclaration != nil {
+			variableDeclaration.ParentIfStatement = ifStatement
+		}
+
+		ifStatements = append(ifStatements, ifStatement)
 
 		if !parseNested {
 			break

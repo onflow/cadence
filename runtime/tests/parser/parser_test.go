@@ -1402,7 +1402,7 @@ func TestParseIfStatement(t *testing.T) {
 
 func TestParseIfStatementWithVariableDeclaration(t *testing.T) {
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
 	    fun test() {
             if var y = x {
                 1
@@ -1410,9 +1410,7 @@ func TestParseIfStatementWithVariableDeclaration(t *testing.T) {
                 2
             }
         }
-	`)
-
-	require.NoError(t, err)
+	`
 
 	ifStatement := &IfStatement{
 		Then: &Block{
@@ -1476,46 +1474,46 @@ func TestParseIfStatementWithVariableDeclaration(t *testing.T) {
 
 	ifStatement.Test = ifTestVariableDeclaration
 
-	test := &FunctionDeclaration{
-		Access: AccessNotSpecified,
-		Identifier: Identifier{
-			Identifier: "test",
-			Pos:        Position{Offset: 10, Line: 2, Column: 9},
-		},
-		ParameterList: &ParameterList{
-			Range: Range{
-				StartPos: Position{Offset: 14, Line: 2, Column: 13},
-				EndPos:   Position{Offset: 15, Line: 2, Column: 14},
-			},
-		},
-		ReturnTypeAnnotation: &TypeAnnotation{
-			IsResource: false,
-			Type: &NominalType{
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&FunctionDeclaration{
+				Access: AccessNotSpecified,
 				Identifier: Identifier{
-					Pos: Position{Offset: 15, Line: 2, Column: 14},
+					Identifier: "test",
+					Pos:        Position{Offset: 10, Line: 2, Column: 9},
 				},
+				ParameterList: &ParameterList{
+					Range: Range{
+						StartPos: Position{Offset: 14, Line: 2, Column: 13},
+						EndPos:   Position{Offset: 15, Line: 2, Column: 14},
+					},
+				},
+				ReturnTypeAnnotation: &TypeAnnotation{
+					IsResource: false,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Pos: Position{Offset: 15, Line: 2, Column: 14},
+						},
+					},
+					StartPos: Position{Offset: 15, Line: 2, Column: 14},
+				},
+				FunctionBlock: &FunctionBlock{
+					Block: &Block{
+						Statements: []Statement{
+							ifStatement,
+						},
+						Range: Range{
+							StartPos: Position{Offset: 17, Line: 2, Column: 16},
+							EndPos:   Position{Offset: 125, Line: 8, Column: 8},
+						},
+					},
+				},
+				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
-			StartPos: Position{Offset: 15, Line: 2, Column: 14},
 		},
-		FunctionBlock: &FunctionBlock{
-			Block: &Block{
-				Statements: []Statement{
-					ifStatement,
-				},
-				Range: Range{
-					StartPos: Position{Offset: 17, Line: 2, Column: 16},
-					EndPos:   Position{Offset: 125, Line: 8, Column: 8},
-				},
-			},
-		},
-		StartPos: Position{Offset: 6, Line: 2, Column: 5},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+	)
 }
 
 func TestParseIfStatementNoElse(t *testing.T) {

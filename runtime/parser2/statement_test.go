@@ -404,6 +404,89 @@ func TestParseIfStatement(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("if-var", func(t *testing.T) {
+		result, errs := ParseStatements("if var x = 1 { }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.IfStatement{
+					Test: &ast.VariableDeclaration{
+						IsConstant: false,
+						Identifier: ast.Identifier{
+							Identifier: "x",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+						Value: &ast.IntegerExpression{
+							Value: big.NewInt(1),
+							Base:  10,
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
+								EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+							},
+						},
+						Transfer: &ast.Transfer{
+							Operation: ast.TransferOperationCopy,
+							Pos:       ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
+						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+					},
+					Then: &ast.Block{
+						Statements: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
+							EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("if-let", func(t *testing.T) {
+		result, errs := ParseStatements("if let x = 1 { }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.IfStatement{
+					Test: &ast.VariableDeclaration{
+						IsConstant: true,
+						Identifier: ast.Identifier{
+							Identifier: "x",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+						Value: &ast.IntegerExpression{
+							Value: big.NewInt(1),
+							Base:  10,
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
+								EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+							},
+						},
+						Transfer: &ast.Transfer{
+							Operation: ast.TransferOperationCopy,
+							Pos:       ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
+						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+					},
+					Then: &ast.Block{
+						Statements: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
+							EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
 }
 
 func TestParseWhileStatement(t *testing.T) {
