@@ -40,6 +40,8 @@ const keywordFun = "fun"
 const keywordAs = "as"
 const keywordCreate = "create"
 const keywordDestroy = "destroy"
+const keywordFor = "for"
+const keywordIn = "in"
 
 const lowestBindingPower = 0
 

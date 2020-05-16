@@ -19,6 +19,8 @@
 package parser2
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
@@ -62,6 +64,8 @@ func parseStatement(p *parser) ast.Statement {
 			return parseIfStatement(p)
 		case keywordWhile:
 			return parseWhileStatement(p)
+		case keywordFor:
+			return parseForStatement(p)
 		}
 	}
 
@@ -260,6 +264,39 @@ func parseWhileStatement(p *parser) *ast.WhileStatement {
 		Test:     expression,
 		Block:    block,
 		StartPos: startPos,
+	}
+}
+
+func parseForStatement(p *parser) *ast.ForStatement {
+
+	startPos := p.current.StartPos
+	p.next()
+
+	p.skipSpaceAndComments(true)
+
+	identifier := mustIdentifier(p)
+
+	p.skipSpaceAndComments(true)
+
+	if !p.current.IsString(lexer.TokenIdentifier, keywordIn) {
+		panic(fmt.Errorf(
+			"expected keyword %q, got %q",
+			keywordIn,
+			p.current.Type,
+		))
+	}
+
+	p.next()
+
+	expression := parseExpression(p, lowestBindingPower)
+
+	block := parseBlock(p)
+
+	return &ast.ForStatement{
+		Identifier: identifier,
+		Block:      block,
+		Value:      expression,
+		StartPos:   startPos,
 	}
 }
 
