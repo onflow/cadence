@@ -75,8 +75,13 @@ func (s *interpreterRuntimeStorage) valueExists(
 	}
 
 	// Cache miss: Ask interface
-	// TODO: fix controller
-	exists, err := s.runtimeInterface.ValueExists([]byte(storageIdentifier), []byte{}, []byte(key))
+
+	var exists bool
+	var err error
+	wrapPanic(func() {
+		// TODO: fix controller
+		exists, err = s.runtimeInterface.ValueExists([]byte(storageIdentifier), []byte{}, []byte(key))
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -122,8 +127,12 @@ func (s *interpreterRuntimeStorage) readValue(
 	// Cache miss: Load and deserialize the stored value (if any)
 	// through the runtime interface
 
-	// TODO: fix controller
-	storedData, err := s.runtimeInterface.GetValue([]byte(storageIdentifier), []byte{}, []byte(key))
+	var storedData []byte
+	var err error
+	wrapPanic(func() {
+		// TODO: fix controller
+		storedData, err = s.runtimeInterface.GetValue([]byte(storageIdentifier), []byte{}, []byte(key))
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -225,13 +234,16 @@ func (s *interpreterRuntimeStorage) writeCached() {
 			}
 		}
 
-		// TODO: fix controller
-		err := s.runtimeInterface.SetValue(
-			[]byte(fullKey.storageIdentifier),
-			[]byte{},
-			[]byte(fullKey.key),
-			newData,
-		)
+		var err error
+		wrapPanic(func() {
+			// TODO: fix controller
+			err = s.runtimeInterface.SetValue(
+				[]byte(fullKey.storageIdentifier),
+				[]byte{},
+				[]byte(fullKey.key),
+				newData,
+			)
+		})
 		if err != nil {
 			panic(err)
 		}
