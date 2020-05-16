@@ -90,7 +90,6 @@ type testRuntimeInterface struct {
 	createAccount      func(publicKeys [][]byte) (address Address, err error)
 	addAccountKey      func(address Address, publicKey []byte) error
 	removeAccountKey   func(address Address, index int) (publicKey []byte, err error)
-	checkCode          func(address Address, code []byte) (err error)
 	updateAccountCode  func(address Address, code []byte, checkPermission bool) (err error)
 	getSigningAccounts func() []Address
 	log                func(string)
@@ -145,10 +144,6 @@ func (i *testRuntimeInterface) AddAccountKey(address Address, publicKey []byte) 
 
 func (i *testRuntimeInterface) RemoveAccountKey(address Address, index int) (publicKey []byte, err error) {
 	return i.removeAccountKey(address, index)
-}
-
-func (i *testRuntimeInterface) CheckCode(address Address, code []byte) (err error) {
-	return i.checkCode(address, code)
 }
 
 func (i *testRuntimeInterface) UpdateAccountCode(address Address, code []byte, checkPermission bool) (err error) {
@@ -224,7 +219,7 @@ func (i *testRuntimeInterface) GetCurrentBlockHeight() uint64 {
 	return 1
 }
 
-func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (hash [32]byte, timestamp int64, exists bool) {
+func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (hash BlockHash, timestamp int64, exists bool) {
 	buf := new(bytes.Buffer)
 	err := binary.Write(buf, binary.BigEndian, height)
 	if err != nil {
@@ -3728,4 +3723,36 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Len(t, writes, 3)
+}
+
+func TestRuntimeExternalError(t *testing.T) {
+	runtime := NewInterpreterRuntime()
+
+	script := []byte(`
+      transaction {
+        prepare() {
+          log("ok")
+        }
+      }
+    `)
+
+	type logPanic struct{}
+
+	runtimeInterface := &testRuntimeInterface{
+		getSigningAccounts: func() []Address {
+			return nil
+		},
+		log: func(message string) {
+			panic(logPanic{})
+		},
+	}
+
+	assert.PanicsWithValue(t,
+		interpreter.ExternalError{
+			Recovered: logPanic{},
+		},
+		func() {
+			_ = runtime.ExecuteTransaction(script, nil, runtimeInterface, utils.TestLocation)
+		},
+	)
 }

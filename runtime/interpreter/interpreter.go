@@ -816,16 +816,15 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 
 func recoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
-		var ok bool
-		// don't recover Go errors
-		goErr, ok := r.(goRuntime.Error)
-		if ok {
-			panic(goErr)
-		}
-
-		err, ok := r.(error)
-		if !ok {
-			err = fmt.Errorf("%v", r)
+		var err error
+		switch r := r.(type) {
+		case goRuntime.Error, ExternalError:
+			// Don't recover Go's or external panics
+			panic(r)
+		case error:
+			err = r
+		default:
+			err = fmt.Errorf("%s", r)
 		}
 
 		onError(err)

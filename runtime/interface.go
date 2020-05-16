@@ -25,6 +25,10 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 )
 
+const BlockHashLength = 32
+
+type BlockHash [BlockHashLength]byte
+
 type Interface interface {
 	// ResolveImport resolves an import of a program.
 	ResolveImport(Location) ([]byte, error)
@@ -42,8 +46,6 @@ type Interface interface {
 	AddAccountKey(address Address, publicKey []byte) error
 	// RemoveAccountKey removes a key from an account by index.
 	RemoveAccountKey(address Address, index int) (publicKey []byte, err error)
-	// CheckCode checks the validity of the code.
-	CheckCode(address Address, code []byte) (err error)
 	// UpdateAccountCode updates the code associated with an account.
 	UpdateAccountCode(address Address, code []byte, checkPermission bool) (err error)
 	// GetSigningAccounts returns the signing accounts.
@@ -59,11 +61,11 @@ type Interface interface {
 	// GetComputationLimit returns the computation limit. A value <= 0 means there is no limit
 	GetComputationLimit() uint64
 	// DecodeArgument decodes a transaction argument against the given type.
-	DecodeArgument(b []byte, t cadence.Type) (cadence.Value, error)
+	DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error)
 	// GetCurrentBlockHeight returns the current block height.
 	GetCurrentBlockHeight() uint64
 	// GetBlockAtHeight returns the block at the given height.
-	GetBlockAtHeight(height uint64) (hash [32]byte, timestamp int64, exists bool)
+	GetBlockAtHeight(height uint64) (hash BlockHash, timestamp int64, exists bool)
 }
 
 type Metrics interface {
@@ -112,10 +114,6 @@ func (i *EmptyRuntimeInterface) RemoveAccountKey(_ Address, _ int) (publicKey []
 	return nil, nil
 }
 
-func (i *EmptyRuntimeInterface) CheckCode(_ Address, _ []byte) error {
-	return nil
-}
-
 func (i *EmptyRuntimeInterface) UpdateAccountCode(_ Address, _ []byte, _ bool) error {
 	return nil
 }
@@ -144,6 +142,6 @@ func (i *EmptyRuntimeInterface) GetCurrentBlockHeight() uint64 {
 	return 0
 }
 
-func (i *EmptyRuntimeInterface) GetBlockAtHeight(height uint64) (hash [32]byte, timestamp int64, exists bool) {
+func (i *EmptyRuntimeInterface) GetBlockAtHeight(_ uint64) (hash BlockHash, timestamp int64, exists bool) {
 	return
 }
