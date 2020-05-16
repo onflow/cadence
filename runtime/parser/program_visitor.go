@@ -1159,33 +1159,15 @@ func (v *ProgramVisitor) VisitForStatement(ctx *ForStatementContext) interface{}
 }
 
 func (v *ProgramVisitor) VisitAssignment(ctx *AssignmentContext) interface{} {
-	target := v.targetExpression(ctx.Identifier(), ctx.AllExpressionAccess())
+	target := ctx.target.Accept(v).(ast.Expression)
 	transfer := ctx.Transfer().Accept(v).(*ast.Transfer)
-	value := ctx.Expression().Accept(v).(ast.Expression)
+	value := ctx.value.Accept(v).(ast.Expression)
 
 	return &ast.AssignmentStatement{
 		Target:   target,
 		Transfer: transfer,
 		Value:    value,
 	}
-}
-
-func (v *ProgramVisitor) targetExpression(
-	identifierContext IIdentifierContext,
-	expressionAccessContexts []IExpressionAccessContext,
-) ast.Expression {
-	identifier := identifierContext.Accept(v).(ast.Identifier)
-	var target ast.Expression = &ast.IdentifierExpression{
-		Identifier: identifier,
-	}
-
-	for _, accessExpressionContext := range expressionAccessContexts {
-		expression := accessExpressionContext.Accept(v)
-		accessExpression := expression.(ast.AccessExpression)
-		target = v.wrapPartialAccessExpression(target, accessExpression)
-	}
-
-	return target
 }
 
 func (v *ProgramVisitor) VisitTransfer(ctx *TransferContext) interface{} {

@@ -108,3 +108,18 @@ func TestCheckInvalidAssignmentToParameter(t *testing.T) {
 
 	assert.IsType(t, &sema.AssignmentToConstantError{}, errs[0])
 }
+
+func TestCheckInvalidAssignmentTargetExpression(t *testing.T) {
+
+	_, err := ParseAndCheck(t, `
+      fun f() {}
+
+      fun test() {
+          f() = 2
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidAssignmentTargetError{}, errs[0])
+}

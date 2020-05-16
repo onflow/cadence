@@ -154,6 +154,19 @@ func (checker *Checker) visitAssignmentValueType(
 		checker.inAssignment = inAssignment
 	}()
 
+	// Check the target is valid (e.g. identifier expression,
+	// indexing expression, or member access expression)
+
+	if _, ok := targetExpression.(ast.TargetExpression); !ok {
+		checker.report(
+			&InvalidAssignmentTargetError{
+				Range: ast.NewRangeFromPositioned(targetExpression),
+			},
+		)
+
+		return &InvalidType{}
+	}
+
 	switch target := targetExpression.(type) {
 	case *ast.IdentifierExpression:
 		return checker.visitIdentifierExpressionAssignment(valueExpression, target, valueType)
@@ -165,9 +178,7 @@ func (checker *Checker) visitAssignmentValueType(
 		return checker.visitMemberExpressionAssignment(valueExpression, target, valueType)
 
 	default:
-		panic(&unsupportedAssignmentTargetExpression{
-			target: target,
-		})
+		panic(errors.NewUnreachableError())
 	}
 }
 
