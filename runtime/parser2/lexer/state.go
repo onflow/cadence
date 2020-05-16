@@ -130,9 +130,14 @@ func rootState(l *lexer) stateFn {
 			r = l.next()
 			switch r {
 			case '-':
-				if l.acceptOne('!') {
+				r = l.next()
+				switch r {
+				case '!':
 					l.emitType(TokenLeftArrowExclamation)
-				} else {
+				case '>':
+					l.emitType(TokenSwap)
+				default:
+					l.backupOne()
 					l.emitType(TokenLeftArrow)
 				}
 			case '<':

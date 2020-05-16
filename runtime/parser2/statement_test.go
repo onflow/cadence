@@ -439,7 +439,7 @@ func TestParseWhileStatement(t *testing.T) {
 
 func TestParseAssignmentStatement(t *testing.T) {
 
-	t.Run("simple", func(t *testing.T) {
+	t.Run("copy", func(t *testing.T) {
 		result, errs := ParseStatements(" x = 1")
 		require.Empty(t, errs)
 
@@ -462,6 +462,96 @@ func TestParseAssignmentStatement(t *testing.T) {
 						Range: ast.Range{
 							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
 							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("move", func(t *testing.T) {
+		result, errs := ParseStatements(" x <- 1")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.AssignmentStatement{
+					Target: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "x",
+							Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					Transfer: &ast.Transfer{
+						Operation: ast.TransferOperationMove,
+						Pos:       ast.Position{Line: 1, Column: 3, Offset: 3},
+					},
+					Value: &ast.IntegerExpression{
+						Value: big.NewInt(1),
+						Base:  10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+							EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("move", func(t *testing.T) {
+		result, errs := ParseStatements(" x <-! 1")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.AssignmentStatement{
+					Target: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "x",
+							Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					Transfer: &ast.Transfer{
+						Operation: ast.TransferOperationMoveForced,
+						Pos:       ast.Position{Line: 1, Column: 3, Offset: 3},
+					},
+					Value: &ast.IntegerExpression{
+						Value: big.NewInt(1),
+						Base:  10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+}
+
+func TestParseSwapStatement(t *testing.T) {
+
+	t.Run("simple", func(t *testing.T) {
+		result, errs := ParseStatements(" x <-> y")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.SwapStatement{
+					Left: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "x",
+							Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					Right: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "y",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
 						},
 					},
 				},
