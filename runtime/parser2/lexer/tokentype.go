@@ -53,6 +53,7 @@ const (
 	TokenSemicolon
 	TokenLeftArrow
 	TokenLeftArrowExclamation
+	TokenSwap
 	TokenLess
 	TokenLessEqual
 	TokenLessLess
@@ -126,6 +127,8 @@ func (t TokenType) String() string {
 		return "<-"
 	case TokenLeftArrowExclamation:
 		return "<-!"
+	case TokenSwap:
+		return "<->"
 	case TokenLess:
 		return "<"
 	case TokenLessEqual:

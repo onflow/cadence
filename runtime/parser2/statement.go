@@ -82,7 +82,7 @@ func parseStatement(p *parser) ast.Statement {
 	expression := parseExpression(p, lowestBindingPower)
 
 	// If the expression is followed by a transfer,
-	// it is actually the target of an assignment statement
+	// it is actually the target of an assignment or swap statement
 
 	p.skipSpaceAndComments(true)
 	switch p.current.Type {
@@ -96,6 +96,16 @@ func parseStatement(p *parser) ast.Statement {
 			Target:   expression,
 			Transfer: transfer,
 			Value:    value,
+		}
+
+	case lexer.TokenSwap:
+		p.next()
+
+		right := parseExpression(p, lowestBindingPower)
+
+		return &ast.SwapStatement{
+			Left:  expression,
+			Right: right,
 		}
 
 	default:
