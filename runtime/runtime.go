@@ -315,7 +315,9 @@ func wrapPanic(f func()) {
 				panic(goErr)
 			}
 
-			panic(interpreter.ExternalError{r})
+			panic(interpreter.ExternalError{
+				Recovered: r,
+			})
 		}
 	}()
 	f()
