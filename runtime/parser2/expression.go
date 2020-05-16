@@ -76,6 +76,7 @@ var exprNullDenotations = map[lexer.TokenType]exprNullDenotationFunc{}
 type exprLeftDenotationFunc func(parser *parser, token lexer.Token, left ast.Expression) ast.Expression
 
 var exprLeftBindingPowers = map[lexer.TokenType]int{}
+var exprIdentifierLeftBindingPowers = map[string]int{}
 var exprLeftDenotations = map[lexer.TokenType]exprLeftDenotationFunc{}
 
 func defineExpr(def interface{}) {
@@ -171,6 +172,14 @@ func setExprLeftBindingPower(tokenType lexer.TokenType, power int) {
 		return
 	}
 	exprLeftBindingPowers[tokenType] = power
+}
+
+func setExprIdentifierLeftBindingPower(keyword string, power int) {
+	current := exprIdentifierLeftBindingPowers[keyword]
+	if current > power {
+		return
+	}
+	exprIdentifierLeftBindingPowers[keyword] = power
 }
 
 func setExprLeftDenotation(tokenType lexer.TokenType, leftDenotation exprLeftDenotationFunc) {
@@ -434,22 +443,20 @@ func defineCastingExpression() {
 
 	const bindingPower = 130
 
-	setExprLeftBindingPower(lexer.TokenIdentifier, bindingPower)
+	setExprIdentifierLeftBindingPower(keywordAs, bindingPower)
 	setExprLeftDenotation(
 		lexer.TokenIdentifier,
 		func(parser *parser, t lexer.Token, left ast.Expression) ast.Expression {
-			if t.Value.(string) != keywordAs {
-				panic(fmt.Errorf(
-					"expected keyword %q, got %q",
-					keywordAs,
-					t.Value,
-				))
-			}
-			right := parseTypeAnnotation(parser)
-			return &ast.CastingExpression{
-				Operation:      ast.OperationCast,
-				Expression:     left,
-				TypeAnnotation: right,
+			switch t.Value.(string) {
+			case keywordAs:
+				right := parseTypeAnnotation(parser)
+				return &ast.CastingExpression{
+					Operation:      ast.OperationCast,
+					Expression:     left,
+					TypeAnnotation: right,
+				}
+			default:
+				panic(errors.NewUnreachableError())
 			}
 		},
 	)
@@ -758,7 +765,7 @@ func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 		return left
 	}
 
-	for rightBindingPower < exprLeftBindingPowers[p.current.Type] {
+	for rightBindingPower < exprLeftBindingPower(p.current) {
 		t = p.current
 
 		p.next()
@@ -768,6 +775,15 @@ func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 	}
 
 	return left
+}
+
+func exprLeftBindingPower(token lexer.Token) int {
+	tokenType := token.Type
+	if tokenType == lexer.TokenIdentifier {
+		identifier := token.Value.(string)
+		return exprIdentifierLeftBindingPowers[identifier]
+	}
+	return exprLeftBindingPowers[tokenType]
 }
 
 func applyExprNullDenotation(p *parser, token lexer.Token) ast.Expression {
