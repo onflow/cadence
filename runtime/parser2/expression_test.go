@@ -1397,6 +1397,95 @@ func TestParseReference(t *testing.T) {
 	)
 }
 
+func TestParseCasts(t *testing.T) {
+
+	t.Run("non-failable", func(t *testing.T) {
+
+		result, errs := ParseExpression(" t as T")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.CastingExpression{
+				Operation: ast.OperationCast,
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "t",
+						Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+				TypeAnnotation: &ast.TypeAnnotation{
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "T",
+							Pos:        ast.Position{Line: 1, Column: 6, Offset: 6},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("failable", func(t *testing.T) {
+
+		result, errs := ParseExpression(" t as? T")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.CastingExpression{
+				Operation: ast.OperationFailableCast,
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "t",
+						Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+				TypeAnnotation: &ast.TypeAnnotation{
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "T",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+				},
+			},
+			result,
+		)
+
+	})
+
+	t.Run("force", func(t *testing.T) {
+
+		result, errs := ParseExpression(" t as! T")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.CastingExpression{
+				Operation: ast.OperationForceCast,
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "t",
+						Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+				TypeAnnotation: &ast.TypeAnnotation{
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "T",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+				},
+			},
+			result,
+		)
+
+	})
+}
+
 func TestParseForceExpression(t *testing.T) {
 
 	t.Run("identifier", func(t *testing.T) {

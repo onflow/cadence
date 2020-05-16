@@ -22,6 +22,8 @@ import (
 	"fmt"
 )
 
+const keywordAs = "as"
+
 type stateFn func(*lexer) stateFn
 
 func rootState(l *lexer) stateFn {
@@ -202,6 +204,19 @@ func spaceState(startIsNewline bool) stateFn {
 
 func identifierState(l *lexer) stateFn {
 	l.scanIdentifier()
+	if l.word() == keywordAs {
+		r := l.next()
+		switch r {
+		case '?':
+			l.emitType(TokenAsQuestionMark)
+			return rootState
+		case '!':
+			l.emitType(TokenAsExclamationMark)
+			return rootState
+		default:
+			l.backupOne()
+		}
+	}
 	l.emitValue(TokenIdentifier)
 	return rootState
 }
