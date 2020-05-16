@@ -436,3 +436,37 @@ func TestParseWhileStatement(t *testing.T) {
 		)
 	})
 }
+
+func TestParseAssignmentStatement(t *testing.T) {
+
+	t.Run("simple", func(t *testing.T) {
+		result, errs := ParseStatements(" x = 1")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.AssignmentStatement{
+					Target: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "x",
+							Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
+						},
+					},
+					Transfer: &ast.Transfer{
+						Operation: ast.TransferOperationCopy,
+						Pos:       ast.Position{Line: 1, Column: 3, Offset: 3},
+					},
+					Value: &ast.IntegerExpression{
+						Value: big.NewInt(1),
+						Base:  10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+}

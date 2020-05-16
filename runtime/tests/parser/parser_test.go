@@ -1760,73 +1760,71 @@ func TestParseForStatement(t *testing.T) {
 
 func TestParseAssignment(t *testing.T) {
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
 	    fun test() {
             a = 1
         }
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &FunctionDeclaration{
-		Access: AccessNotSpecified,
-		Identifier: Identifier{
-			Identifier: "test",
-			Pos:        Position{Offset: 10, Line: 2, Column: 9},
-		},
-		ParameterList: &ParameterList{
-			Range: Range{
-				StartPos: Position{Offset: 14, Line: 2, Column: 13},
-				EndPos:   Position{Offset: 15, Line: 2, Column: 14},
-			},
-		},
-		ReturnTypeAnnotation: &TypeAnnotation{
-			IsResource: false,
-			Type: &NominalType{
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&FunctionDeclaration{
+				Access: AccessNotSpecified,
 				Identifier: Identifier{
-					Pos: Position{Offset: 15, Line: 2, Column: 14},
+					Identifier: "test",
+					Pos:        Position{Offset: 10, Line: 2, Column: 9},
 				},
-			},
-			StartPos: Position{Offset: 15, Line: 2, Column: 14},
-		},
-		FunctionBlock: &FunctionBlock{
-			Block: &Block{
-				Statements: []Statement{
-					&AssignmentStatement{
-						Target: &IdentifierExpression{
-							Identifier: Identifier{
-								Identifier: "a",
-								Pos:        Position{Offset: 31, Line: 3, Column: 12},
+				ParameterList: &ParameterList{
+					Range: Range{
+						StartPos: Position{Offset: 14, Line: 2, Column: 13},
+						EndPos:   Position{Offset: 15, Line: 2, Column: 14},
+					},
+				},
+				ReturnTypeAnnotation: &TypeAnnotation{
+					IsResource: false,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Pos: Position{Offset: 15, Line: 2, Column: 14},
+						},
+					},
+					StartPos: Position{Offset: 15, Line: 2, Column: 14},
+				},
+				FunctionBlock: &FunctionBlock{
+					Block: &Block{
+						Statements: []Statement{
+							&AssignmentStatement{
+								Target: &IdentifierExpression{
+									Identifier: Identifier{
+										Identifier: "a",
+										Pos:        Position{Offset: 31, Line: 3, Column: 12},
+									},
+								},
+								Transfer: &Transfer{
+									Operation: TransferOperationCopy,
+									Pos:       Position{Offset: 33, Line: 3, Column: 14},
+								},
+								Value: &IntegerExpression{
+									Value: big.NewInt(1),
+									Base:  10,
+									Range: Range{
+										StartPos: Position{Offset: 35, Line: 3, Column: 16},
+										EndPos:   Position{Offset: 35, Line: 3, Column: 16},
+									},
+								},
 							},
 						},
-						Transfer: &Transfer{
-							Operation: TransferOperationCopy,
-							Pos:       Position{Offset: 33, Line: 3, Column: 14},
-						},
-						Value: &IntegerExpression{
-							Value: big.NewInt(1),
-							Base:  10,
-							Range: Range{
-								StartPos: Position{Offset: 35, Line: 3, Column: 16},
-								EndPos:   Position{Offset: 35, Line: 3, Column: 16},
-							},
+						Range: Range{
+							StartPos: Position{Offset: 17, Line: 2, Column: 16},
+							EndPos:   Position{Offset: 45, Line: 4, Column: 8},
 						},
 					},
 				},
-				Range: Range{
-					StartPos: Position{Offset: 17, Line: 2, Column: 16},
-					EndPos:   Position{Offset: 45, Line: 4, Column: 8},
-				},
+				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		StartPos: Position{Offset: 6, Line: 2, Column: 5},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+	)
 }
 
 func TestParseAccessAssignment(t *testing.T) {

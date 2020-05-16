@@ -148,13 +148,13 @@ func parseTransfer(p *parser) *ast.Transfer {
 		return nil
 	}
 
-	startPos := p.current.StartPos
+	pos := p.current.StartPos
 
 	p.next()
 
 	return &ast.Transfer{
 		Operation: operation,
-		Pos:       startPos,
+		Pos:       pos,
 	}
 }
 

@@ -46,6 +46,8 @@ func parseStatements(p *parser, endTokenType lexer.TokenType) (statements []ast.
 func parseStatement(p *parser) ast.Statement {
 	p.skipSpaceAndComments(true)
 
+	// It might start with a keyword for a statement
+
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
 		switch p.current.Value {
@@ -62,6 +64,9 @@ func parseStatement(p *parser) ast.Statement {
 		}
 	}
 
+	// If it is not a keyword for a statement,
+	// it might start with a keyword for a declaration
+
 	declaration := parseDeclaration(p)
 	// TODO: allow more
 	switch declaration := declaration.(type) {
@@ -71,9 +76,32 @@ func parseStatement(p *parser) ast.Statement {
 		return declaration
 	}
 
+	// If it is not a statement or declaration,
+	// it must be an expression
+
 	expression := parseExpression(p, lowestBindingPower)
-	return &ast.ExpressionStatement{
-		Expression: expression,
+
+	// If the expression is followed by a transfer,
+	// it is actually the target of an assignment statement
+
+	p.skipSpaceAndComments(true)
+	switch p.current.Type {
+	case lexer.TokenEqual, lexer.TokenLeftArrow, lexer.TokenLeftArrowExclamation:
+		transfer := parseTransfer(p)
+		p.next()
+
+		value := parseExpression(p, lowestBindingPower)
+
+		return &ast.AssignmentStatement{
+			Target:   expression,
+			Transfer: transfer,
+			Value:    value,
+		}
+
+	default:
+		return &ast.ExpressionStatement{
+			Expression: expression,
+		}
 	}
 }
 
