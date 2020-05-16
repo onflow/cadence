@@ -651,3 +651,37 @@ func TestParseSwapStatement(t *testing.T) {
 		)
 	})
 }
+
+func TestParseForStatement(t *testing.T) {
+
+	t.Run("empty block", func(t *testing.T) {
+		result, errs := ParseStatements("for x in y { }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ForStatement{
+					Identifier: ast.Identifier{
+						Identifier: "x",
+						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+					Value: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "y",
+							Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
+					},
+					Block: &ast.Block{
+						Statements: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
+							EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+}
