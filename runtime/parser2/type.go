@@ -533,3 +533,30 @@ func applyTypeLeftDenotation(p *parser, token lexer.Token, left ast.Type) ast.Ty
 	}
 	return leftDenotation(p, token, left)
 }
+
+func parseNominalTypeInvocationRemainder(p *parser) *ast.InvocationExpression {
+	p.skipSpaceAndComments(true)
+	identifier := p.mustOne(lexer.TokenIdentifier)
+	ty := parseNominalTypeRemainder(p, identifier)
+
+	p.skipSpaceAndComments(true)
+	p.mustOne(lexer.TokenParenOpen)
+	arguments, endPos := parseArgumentListRemainder(p)
+
+	var invokedExpression ast.Expression = &ast.IdentifierExpression{
+		Identifier: ty.Identifier,
+	}
+
+	for _, nestedIdentifier := range ty.NestedIdentifiers {
+		invokedExpression = &ast.MemberExpression{
+			Expression: invokedExpression,
+			Identifier: nestedIdentifier,
+		}
+	}
+
+	return &ast.InvocationExpression{
+		InvokedExpression: invokedExpression,
+		Arguments:         arguments,
+		EndPos:            endPos,
+	}
+}

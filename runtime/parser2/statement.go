@@ -66,6 +66,8 @@ func parseStatement(p *parser) ast.Statement {
 			return parseWhileStatement(p)
 		case keywordFor:
 			return parseForStatement(p)
+		case keywordEmit:
+			return parseEmitStatement(p)
 		}
 	}
 
@@ -311,5 +313,16 @@ func parseBlock(p *parser) *ast.Block {
 			StartPos: startToken.StartPos,
 			EndPos:   endToken.EndPos,
 		},
+	}
+}
+
+func parseEmitStatement(p *parser) *ast.EmitStatement {
+	startPos := p.current.StartPos
+	p.next()
+
+	invocation := parseNominalTypeInvocationRemainder(p)
+	return &ast.EmitStatement{
+		InvocationExpression: invocation,
+		StartPos:             startPos,
 	}
 }

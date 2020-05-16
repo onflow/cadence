@@ -42,6 +42,7 @@ const keywordCreate = "create"
 const keywordDestroy = "destroy"
 const keywordFor = "for"
 const keywordIn = "in"
+const keywordEmit = "emit"
 
 const lowestBindingPower = 0
 
