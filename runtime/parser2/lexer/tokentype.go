@@ -74,6 +74,8 @@ const (
 	TokenVerticalBar
 	TokenVerticalBarVerticalBar
 	TokenAt
+	TokenAsExclamationMark
+	TokenAsQuestionMark
 	// NOTE: not an actual token, must be last item
 	TokenMax
 )
@@ -180,6 +182,10 @@ func (t TokenType) String() string {
 		return "||"
 	case TokenAt:
 		return "@"
+	case TokenAsExclamationMark:
+		return "as!"
+	case TokenAsQuestionMark:
+		return "as?"
 	default:
 		panic(errors.NewUnreachableError())
 	}

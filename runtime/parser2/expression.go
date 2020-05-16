@@ -303,6 +303,8 @@ func init() {
 		operation:        ast.OperationMod,
 	})
 
+	defineCastingExpression()
+
 	defineExpr(literalExpr{
 		tokenType: lexer.TokenNumber,
 		nullDenotation: func(_ *parser, token lexer.Token) ast.Expression {
@@ -324,31 +326,31 @@ func init() {
 
 	defineExpr(unaryExpr{
 		tokenType:    lexer.TokenMinus,
-		bindingPower: 130,
+		bindingPower: 140,
 		operation:    ast.OperationMinus,
 	})
 
 	defineExpr(unaryExpr{
 		tokenType:    lexer.TokenPlus,
-		bindingPower: 130,
+		bindingPower: 140,
 		operation:    ast.OperationPlus,
 	})
 
 	defineExpr(unaryExpr{
 		tokenType:    lexer.TokenExclamationMark,
-		bindingPower: 130,
+		bindingPower: 140,
 		operation:    ast.OperationNegate,
 	})
 
 	defineExpr(unaryExpr{
 		tokenType:    lexer.TokenLeftArrow,
-		bindingPower: 130,
+		bindingPower: 140,
 		operation:    ast.OperationMove,
 	})
 
 	defineExpr(postfixExpr{
 		tokenType:    lexer.TokenExclamationMark,
-		bindingPower: 140,
+		bindingPower: 150,
 		leftDenotation: func(left ast.Expression, tokenRange ast.Range) ast.Expression {
 			return &ast.ForceExpression{
 				Expression: left,
@@ -425,6 +427,53 @@ func parseFunctionExpression(p *parser, token lexer.Token) *ast.FunctionExpressi
 		ReturnTypeAnnotation: returnTypeAnnotation,
 		FunctionBlock:        functionBlock,
 		StartPos:             token.StartPos,
+	}
+}
+
+func defineCastingExpression() {
+
+	const bindingPower = 130
+
+	setExprLeftBindingPower(lexer.TokenIdentifier, bindingPower)
+	setExprLeftDenotation(
+		lexer.TokenIdentifier,
+		func(parser *parser, t lexer.Token, left ast.Expression) ast.Expression {
+			if t.Value.(string) != keywordAs {
+				panic(fmt.Errorf(
+					"expected keyword %q, got %q",
+					keywordAs,
+					t.Value,
+				))
+			}
+			right := parseTypeAnnotation(parser)
+			return &ast.CastingExpression{
+				Operation:      ast.OperationCast,
+				Expression:     left,
+				TypeAnnotation: right,
+			}
+		},
+	)
+
+	for tokenType, operation := range map[lexer.TokenType]ast.Operation{
+		lexer.TokenAsExclamationMark: ast.OperationForceCast,
+		lexer.TokenAsQuestionMark:    ast.OperationFailableCast,
+	} {
+		// Rebind operation, so the closure captures to current iteration's value,
+		// i.e. the next iteration doesn't override `operation`
+
+		leftDenotation := (func(operation ast.Operation) exprLeftDenotationFunc {
+			return func(parser *parser, t lexer.Token, left ast.Expression) ast.Expression {
+				right := parseTypeAnnotation(parser)
+				return &ast.CastingExpression{
+					Operation:      operation,
+					Expression:     left,
+					TypeAnnotation: right,
+				}
+			}
+		})(operation)
+
+		setExprLeftBindingPower(tokenType, bindingPower)
+		setExprLeftDenotation(tokenType, leftDenotation)
 	}
 }
 
@@ -526,7 +575,7 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 }
 
 func defineNestedExpression() {
-	setExprLeftBindingPower(lexer.TokenParenOpen, 150)
+	setExprLeftBindingPower(lexer.TokenParenOpen, 160)
 	setExprNullDenotation(
 		lexer.TokenParenOpen,
 		func(p *parser, token lexer.Token) ast.Expression {
@@ -538,7 +587,7 @@ func defineNestedExpression() {
 }
 
 func defineArrayExpression() {
-	setExprLeftBindingPower(lexer.TokenBracketOpen, 150)
+	setExprLeftBindingPower(lexer.TokenBracketOpen, 160)
 	setExprNullDenotation(
 		lexer.TokenBracketOpen,
 		func(p *parser, startToken lexer.Token) ast.Expression {
@@ -637,22 +686,14 @@ func defineReferenceExpression() {
 
 			p.skipSpaceAndComments(true)
 
-			if !p.current.IsString(lexer.TokenIdentifier, keywordAs) {
-				panic(fmt.Errorf(
-					"expected keyword %q, got %q",
-					keywordAs,
-					p.current.Type,
-				))
+			castingExpression, ok := expression.(*ast.CastingExpression)
+			if !ok {
+				panic(fmt.Errorf("expected casting expression"))
 			}
 
-			p.next()
-			p.skipSpaceAndComments(true)
-
-			ty := parseType(p, lowestBindingPower)
-
 			return &ast.ReferenceExpression{
-				Expression: expression,
-				Type:       ty,
+				Expression: castingExpression.Expression,
+				Type:       castingExpression.TypeAnnotation.Type,
 				StartPos:   token.StartPos,
 			}
 		},
@@ -660,7 +701,7 @@ func defineReferenceExpression() {
 }
 
 func defineMemberExpression() {
-	const bindingPower = 150
+	const bindingPower = 160
 
 	setExprLeftBindingPower(lexer.TokenDot, bindingPower)
 	setExprLeftDenotation(
