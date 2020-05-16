@@ -485,32 +485,10 @@ func defineCastingExpression() {
 }
 
 func parseCreateExpressionRemainder(p *parser, token lexer.Token) *ast.CreateExpression {
-	p.skipSpaceAndComments(true)
-	identifier := p.mustOne(lexer.TokenIdentifier)
-	ty := parseNominalTypeRemainder(p, identifier)
-
-	p.skipSpaceAndComments(true)
-	p.mustOne(lexer.TokenParenOpen)
-	arguments, endPos := parseArgumentListRemainder(p)
-
-	var invokedExpression ast.Expression = &ast.IdentifierExpression{
-		Identifier: ty.Identifier,
-	}
-
-	for _, nestedIdentifier := range ty.NestedIdentifiers {
-		invokedExpression = &ast.MemberExpression{
-			Expression: invokedExpression,
-			Identifier: nestedIdentifier,
-		}
-	}
-
+	invocation := parseNominalTypeInvocationRemainder(p)
 	return &ast.CreateExpression{
-		InvocationExpression: &ast.InvocationExpression{
-			InvokedExpression: invokedExpression,
-			Arguments:         arguments,
-			EndPos:            endPos,
-		},
-		StartPos: token.StartPos,
+		InvocationExpression: invocation,
+		StartPos:             token.StartPos,
 	}
 }
 
