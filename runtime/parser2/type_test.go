@@ -651,3 +651,89 @@ func TestParseDictionaryType(t *testing.T) {
 	})
 
 }
+
+func TestParseFunctionType(t *testing.T) {
+
+	t.Run("no parameters, Void return type", func(t *testing.T) {
+		result, errs := ParseType("(():Void)")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FunctionType{
+				ParameterTypeAnnotations: nil,
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Void",
+							Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("three parameters, Int return type", func(t *testing.T) {
+		result, errs := ParseType("( ( String , Bool , @R ) : Int)")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FunctionType{
+				ParameterTypeAnnotations: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "String",
+								Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+					{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "Bool",
+								Pos:        ast.Position{Line: 1, Column: 13, Offset: 13},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
+					},
+					{
+						IsResource: true,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "R",
+								Pos:        ast.Position{Line: 1, Column: 21, Offset: 21},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 20, Offset: 20},
+					},
+				},
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Int",
+							Pos:        ast.Position{Line: 1, Column: 27, Offset: 27},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 27, Offset: 27},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 30, Offset: 30},
+				},
+			},
+			result,
+		)
+	})
+}
