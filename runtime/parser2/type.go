@@ -120,6 +120,7 @@ func init() {
 	defineOptionalType()
 	defineReferenceType()
 	defineRestrictedOrDictionaryType()
+	defineFunctionType()
 
 	setTypeNullDenotation(
 		lexer.TokenIdentifier,
@@ -493,6 +494,83 @@ func defineRestrictedOrDictionaryType() {
 			}
 		},
 	)
+}
+
+func defineFunctionType() {
+	setTypeNullDenotation(
+		lexer.TokenParenOpen,
+		func(p *parser, startToken lexer.Token) ast.Type {
+
+			parameterTypeAnnotations := parseParameterTypeAnnotations(p)
+
+			p.skipSpaceAndComments(true)
+			p.mustOne(lexer.TokenColon)
+
+			p.skipSpaceAndComments(true)
+			returnTypeAnnotation := parseTypeAnnotation(p)
+
+			p.skipSpaceAndComments(true)
+			endToken := p.mustOne(lexer.TokenParenClose)
+
+			return &ast.FunctionType{
+				ParameterTypeAnnotations: parameterTypeAnnotations,
+				ReturnTypeAnnotation:     returnTypeAnnotation,
+				Range: ast.Range{
+					StartPos: startToken.StartPos,
+					EndPos:   endToken.EndPos,
+				},
+			}
+		},
+	)
+}
+
+func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnotation) {
+
+	p.skipSpaceAndComments(true)
+	p.mustOne(lexer.TokenParenOpen)
+
+	expectTypeAnnotation := true
+
+	atEnd := false
+	for !atEnd {
+		p.skipSpaceAndComments(true)
+		switch p.current.Type {
+		case lexer.TokenComma:
+			if expectTypeAnnotation {
+				panic(fmt.Errorf(
+					"expected type annotation or end of list, got %q",
+					p.current.Type,
+				))
+			}
+			p.next()
+			expectTypeAnnotation = true
+
+		case lexer.TokenParenClose:
+			p.next()
+			atEnd = true
+
+		case lexer.TokenEOF:
+			panic(fmt.Errorf(
+				"missing %q at end of list",
+				lexer.TokenParenClose,
+			))
+
+		default:
+			if !expectTypeAnnotation {
+				panic(fmt.Errorf(
+					"expected comma or end of list, got %q",
+					p.current.Type,
+				))
+			}
+
+			typeAnnotation := parseTypeAnnotation(p)
+			typeAnnotations = append(typeAnnotations, typeAnnotation)
+
+			expectTypeAnnotation = false
+		}
+	}
+
+	return
 }
 
 func parseType(p *parser, rightBindingPower int) ast.Type {
