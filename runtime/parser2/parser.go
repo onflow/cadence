@@ -43,6 +43,7 @@ const keywordDestroy = "destroy"
 const keywordFor = "for"
 const keywordIn = "in"
 const keywordEmit = "emit"
+const keywordAuth = "auth"
 
 const lowestBindingPower = 0
 
