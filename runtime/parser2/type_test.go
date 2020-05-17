@@ -208,6 +208,25 @@ func TestParseReferenceType(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("authorized, nominal", func(t *testing.T) {
+		result, errs := ParseType("auth &Int")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.ReferenceType{
+				Authorized: true,
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "Int",
+						Pos:        ast.Position{Line: 1, Column: 6, Offset: 6},
+					},
+				},
+				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseOptionalReferenceType(t *testing.T) {

@@ -85,6 +85,8 @@ type postfixType struct {
 	leftDenotation postfixTypeFunc
 }
 
+const referenceTypeBindingPower = 20
+
 func defineType(def interface{}) {
 	switch def := def.(type) {
 	case prefixType:
@@ -114,20 +116,31 @@ func defineType(def interface{}) {
 }
 
 func init() {
-	defineNominalType()
 	defineArrayType()
 	defineOptionalType()
 	defineReferenceType()
 	defineRestrictedOrDictionaryType()
-}
 
-func defineNominalType() {
-	defineType(literalType{
-		tokenType: lexer.TokenIdentifier,
-		nullDenotation: func(p *parser, token lexer.Token) ast.Type {
-			return parseNominalTypeRemainder(p, token)
+	setTypeNullDenotation(
+		lexer.TokenIdentifier,
+		func(p *parser, token lexer.Token) ast.Type {
+
+			switch token.Value {
+			case keywordAuth:
+				p.skipSpaceAndComments(true)
+				p.mustOne(lexer.TokenAmpersand)
+				right := parseType(p, referenceTypeBindingPower)
+				return &ast.ReferenceType{
+					Authorized: true,
+					Type:       right,
+					StartPos:   token.StartPos,
+				}
+
+			default:
+				return parseNominalTypeRemainder(p, token)
+			}
 		},
-	})
+	)
 }
 
 func parseNominalTypeRemainder(p *parser, token lexer.Token) *ast.NominalType {
@@ -256,7 +269,7 @@ func defineOptionalType() {
 func defineReferenceType() {
 	defineType(prefixType{
 		tokenType:    lexer.TokenAmpersand,
-		bindingPower: 20,
+		bindingPower: referenceTypeBindingPower,
 		nullDenotation: func(right ast.Type, tokenRange ast.Range) ast.Type {
 			return &ast.ReferenceType{
 				Authorized: false,
@@ -389,10 +402,10 @@ func defineRestrictedOrDictionaryType() {
 
 			switch {
 			case restrictedType != nil:
-				restrictedType.Range.EndPos = endPos
+				restrictedType.EndPos = endPos
 				return restrictedType
 			case dictionaryType != nil:
-				dictionaryType.Range.EndPos = endPos
+				dictionaryType.EndPos = endPos
 				return dictionaryType
 			default:
 				restrictedType = &ast.RestrictedType{
