@@ -175,8 +175,71 @@ func (l *lexer) error(err error) stateFn {
 }
 
 func numberState(l *lexer) stateFn {
-	l.scanNumber()
-	l.emitValue(TokenNumber)
+	// lookahead is already lexed.
+	// parse more, if any
+	r := l.current
+	if r == '0' {
+		r = l.next()
+		switch r {
+		case 'b':
+			l.scanBinaryRemainder()
+			if l.endOffset-l.startOffset <= 2 {
+				l.emitError(fmt.Errorf("missing digits"))
+			}
+			l.emitValue(TokenBinaryLiteral)
+
+		case 'o':
+			l.scanOctalRemainder()
+			if l.endOffset-l.startOffset <= 2 {
+				l.emitError(fmt.Errorf("missing digits"))
+			}
+			l.emitValue(TokenOctalLiteral)
+
+		case 'x':
+			l.scanHexadecimalRemainder()
+			if l.endOffset-l.startOffset <= 2 {
+				l.emitError(fmt.Errorf("missing digits"))
+			}
+			l.emitValue(TokenHexadecimalLiteral)
+
+		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+			tokenType := l.scanDecimalOrFixedPointRemainder()
+			l.emitValue(tokenType)
+
+		case '.':
+			l.scanFixedPointRemainder()
+			l.emitValue(TokenFixedPointLiteral)
+
+		case EOF:
+			l.backupOne()
+			l.emitValue(TokenDecimalLiteral)
+
+		default:
+			prefixChar := r
+			isPrefixChar := (r >= 'a' && r <= 'z') ||
+				(r >= 'A' && r <= 'Z')
+
+			r = l.next()
+			if r >= '0' && r <= '9' && isPrefixChar {
+
+				l.backupOne()
+				err := fmt.Errorf("invalid number literal prefix: %q", prefixChar)
+				l.emitError(err)
+				l.next()
+
+				tokenType := l.scanDecimalOrFixedPointRemainder()
+				l.emitValue(tokenType)
+			} else {
+				l.backupOne()
+				l.emitValue(TokenDecimalLiteral)
+			}
+		}
+
+	} else {
+		tokenType := l.scanDecimalOrFixedPointRemainder()
+		l.emitValue(tokenType)
+	}
+
 	return rootState
 }
 
