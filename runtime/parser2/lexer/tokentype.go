@@ -30,7 +30,11 @@ const (
 	TokenError TokenType = iota
 	TokenEOF
 	TokenSpace
-	TokenNumber
+	TokenBinaryLiteral
+	TokenOctalLiteral
+	TokenDecimalLiteral
+	TokenHexadecimalLiteral
+	TokenFixedPointLiteral
 	TokenIdentifier
 	TokenString
 	TokenPlus
@@ -94,8 +98,16 @@ func (t TokenType) String() string {
 		return "EOF"
 	case TokenSpace:
 		return "space"
-	case TokenNumber:
-		return "number"
+	case TokenBinaryLiteral:
+		return "binary integer"
+	case TokenOctalLiteral:
+		return "octal integer"
+	case TokenDecimalLiteral:
+		return "decimal integer"
+	case TokenHexadecimalLiteral:
+		return "hexadecimal integer"
+	case TokenFixedPointLiteral:
+		return "fixed-point number"
 	case TokenIdentifier:
 		return "identifier"
 	case TokenString:
