@@ -216,15 +216,9 @@ func numberState(l *lexer) stateFn {
 
 		default:
 			prefixChar := r
-			isPrefixChar := (r >= 'a' && r <= 'z') ||
-				(r >= 'A' && r <= 'Z')
 
-			r = l.next()
-			if r >= '0' && r <= '9' && isPrefixChar {
-
-				l.backupOne()
-				err := fmt.Errorf("invalid number literal prefix: %q", prefixChar)
-				l.emitError(err)
+			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') {
+				l.emitError(fmt.Errorf("invalid number literal prefix: %q", prefixChar))
 				l.next()
 
 				tokenType := l.scanDecimalOrFixedPointRemainder()

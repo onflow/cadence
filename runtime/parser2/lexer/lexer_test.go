@@ -980,7 +980,7 @@ func TestLexBlockComment(t *testing.T) {
 	})
 }
 
-func TestParseIntegerLiterals(t *testing.T) {
+func TestLexIntegerLiterals(t *testing.T) {
 
 	t.Run("binary prefix, missing trailing digits", func(t *testing.T) {
 		testLex(t,
@@ -1483,6 +1483,37 @@ func TestParseIntegerLiterals(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					},
+				},
+			},
+		)
+	})
+
+	t.Run("whitespace after 0", func(t *testing.T) {
+		testLex(t,
+			"0\n",
+			[]Token{
+				{
+					Type:  TokenDecimalLiteral,
+					Value: "0",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				{
+					Type:  TokenSpace,
+					Value: Space{"\n", true},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+				{
+					Type: TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 2, Column: 0, Offset: 2},
+						EndPos:   ast.Position{Line: 2, Column: 0, Offset: 2},
 					},
 				},
 			},
