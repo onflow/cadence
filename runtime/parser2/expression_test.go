@@ -215,17 +215,13 @@ func TestParseAdvancedExpression(t *testing.T) {
 							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
 						},
 					},
-					Right: &ast.UnaryExpression{
-						Operation: ast.OperationMinus,
-						Expression: &ast.IntegerExpression{
-							Value: big.NewInt(2),
-							Base:  10,
-							Range: ast.Range{
-								StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
-								EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
-							},
+					Right: &ast.IntegerExpression{
+						Value: big.NewInt(-2),
+						Base:  10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
 						},
-						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
 					},
 				},
 				Right: &ast.UnaryExpression{

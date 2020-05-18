@@ -392,10 +392,31 @@ func init() {
 		},
 	})
 
-	defineExpr(unaryExpr{
+	defineExpr(prefixExpr{
 		tokenType:    lexer.TokenMinus,
 		bindingPower: 140,
-		operation:    ast.OperationMinus,
+		nullDenotation: func(right ast.Expression, tokenRange ast.Range) ast.Expression {
+			switch right := right.(type) {
+			case *ast.IntegerExpression:
+				if right.Value != nil {
+					right.Value.Neg(right.Value)
+				}
+				right.StartPos = tokenRange.StartPos
+				return right
+
+			case *ast.FixedPointExpression:
+				right.Negative = true
+				right.StartPos = tokenRange.StartPos
+				return right
+
+			default:
+				return &ast.UnaryExpression{
+					Operation:  ast.OperationMinus,
+					Expression: right,
+					StartPos:   tokenRange.StartPos,
+				}
+			}
+		},
 	})
 
 	defineExpr(unaryExpr{

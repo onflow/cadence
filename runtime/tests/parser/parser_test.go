@@ -3719,6 +3719,76 @@ func TestParseLeftAssociativity(t *testing.T) {
 	)
 }
 
+func TestParseNegativeInteger(t *testing.T) {
+
+	const code = `
+      let a = -42
+	`
+
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&VariableDeclaration{
+				IsConstant: true,
+				Identifier: Identifier{
+					Identifier: "a",
+					Pos:        Position{Offset: 11, Line: 2, Column: 10},
+				},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+					Pos:       Position{Offset: 13, Line: 2, Column: 12},
+				},
+				Value: &IntegerExpression{
+					Value: big.NewInt(-42),
+					Base:  10,
+					Range: Range{
+						StartPos: Position{Offset: 15, Line: 2, Column: 14},
+						EndPos:   Position{Offset: 17, Line: 2, Column: 16},
+					},
+				},
+				StartPos: Position{Offset: 7, Line: 2, Column: 6},
+			},
+		},
+	)
+}
+
+func TestParseNegativeFixedPoint(t *testing.T) {
+
+	const code = `
+      let a = -42.3
+	`
+
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&VariableDeclaration{
+				IsConstant: true,
+				Identifier: Identifier{
+					Identifier: "a",
+					Pos:        Position{Offset: 11, Line: 2, Column: 10},
+				},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+					Pos:       Position{Offset: 13, Line: 2, Column: 12},
+				},
+				Value: &FixedPointExpression{
+					Negative:        true,
+					UnsignedInteger: big.NewInt(42),
+					Fractional:      big.NewInt(3),
+					Scale:           1,
+					Range: Range{
+						StartPos: Position{Offset: 15, Line: 2, Column: 14},
+						EndPos:   Position{Offset: 19, Line: 2, Column: 18},
+					},
+				},
+				StartPos: Position{Offset: 7, Line: 2, Column: 6},
+			},
+		},
+	)
+}
+
 func TestParseInvalidDoubleIntegerUnary(t *testing.T) {
 
 	program, _, err := parser.ParseProgram(`
@@ -7486,76 +7556,72 @@ func TestParseAuthorizedReferenceType(t *testing.T) {
 
 func TestParseFixedPointExpression(t *testing.T) {
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
 	    let a = -1234_5678_90.0009_8765_4321
-	`)
+	`
 
-	require.NoError(t, err)
-
-	a := &VariableDeclaration{
-		IsConstant: true,
-		Identifier: Identifier{Identifier: "a",
-			Pos: Position{Offset: 10, Line: 2, Column: 9},
-		},
-		Transfer: &Transfer{
-			Operation: TransferOperationCopy,
-			Pos:       Position{Offset: 12, Line: 2, Column: 11},
-		},
-		Value: &FixedPointExpression{
-			Negative:        true,
-			UnsignedInteger: big.NewInt(1234567890),
-			Fractional:      big.NewInt(987654321),
-			Scale:           12,
-			Range: Range{
-				StartPos: Position{Offset: 15, Line: 2, Column: 14},
-				EndPos:   Position{Offset: 41, Line: 2, Column: 40},
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&VariableDeclaration{
+				IsConstant: true,
+				Identifier: Identifier{Identifier: "a",
+					Pos: Position{Offset: 10, Line: 2, Column: 9},
+				},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+					Pos:       Position{Offset: 12, Line: 2, Column: 11},
+				},
+				Value: &FixedPointExpression{
+					Negative:        true,
+					UnsignedInteger: big.NewInt(1234567890),
+					Fractional:      big.NewInt(987654321),
+					Scale:           12,
+					Range: Range{
+						StartPos: Position{Offset: 14, Line: 2, Column: 13},
+						EndPos:   Position{Offset: 41, Line: 2, Column: 40},
+					},
+				},
+				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		StartPos: Position{Offset: 6, Line: 2, Column: 5},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{a},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+	)
 }
 
 func TestParseFixedPointExpressionZeroInteger(t *testing.T) {
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
 	    let a = -0.1
-	`)
+	`
 
-	require.NoError(t, err)
-
-	a := &VariableDeclaration{
-		IsConstant: true,
-		Identifier: Identifier{Identifier: "a",
-			Pos: Position{Offset: 10, Line: 2, Column: 9},
-		},
-		Transfer: &Transfer{
-			Operation: TransferOperationCopy,
-			Pos:       Position{Offset: 12, Line: 2, Column: 11},
-		},
-		Value: &FixedPointExpression{
-			Negative:        true,
-			UnsignedInteger: new(big.Int),
-			Fractional:      big.NewInt(1),
-			Scale:           1,
-			Range: Range{
-				StartPos: Position{Offset: 15, Line: 2, Column: 14},
-				EndPos:   Position{Offset: 17, Line: 2, Column: 16},
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&VariableDeclaration{
+				IsConstant: true,
+				Identifier: Identifier{Identifier: "a",
+					Pos: Position{Offset: 10, Line: 2, Column: 9},
+				},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+					Pos:       Position{Offset: 12, Line: 2, Column: 11},
+				},
+				Value: &FixedPointExpression{
+					Negative:        true,
+					UnsignedInteger: new(big.Int),
+					Fractional:      big.NewInt(1),
+					Scale:           1,
+					Range: Range{
+						StartPos: Position{Offset: 14, Line: 2, Column: 13},
+						EndPos:   Position{Offset: 17, Line: 2, Column: 16},
+					},
+				},
+				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		StartPos: Position{Offset: 6, Line: 2, Column: 5},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{a},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+	)
 }
 
 func BenchmarkParseDeploy(b *testing.B) {
