@@ -2248,6 +2248,7 @@ func TestParseDictionaryType(t *testing.T) {
 	utils.AssertEqualWithDiff(t, expected, actual)
 }
 
+// TODO: remove
 func TestParseIntegerLiterals(t *testing.T) {
 
 	actual, _, err := parser.ParseProgram(`
@@ -2350,6 +2351,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 	utils.AssertEqualWithDiff(t, expected, actual)
 }
 
+// TODO: remove
 func TestParseIntegerLiteralsWithUnderscores(t *testing.T) {
 
 	actual, _, err := parser.ParseProgram(`
@@ -2452,6 +2454,7 @@ func TestParseIntegerLiteralsWithUnderscores(t *testing.T) {
 	utils.AssertEqualWithDiff(t, expected, actual)
 }
 
+// TODO: remove
 func TestParseInvalidIntegerLiteralPrefixWithout(t *testing.T) {
 
 	for _, prefix := range []string{"o", "b", "x"} {
@@ -2473,6 +2476,7 @@ func TestParseInvalidIntegerLiteralPrefixWithout(t *testing.T) {
 	}
 }
 
+// TODO: remove
 func TestParseInvalidOctalIntegerLiteralWithLeadingUnderscore(t *testing.T) {
 
 	actual, _, err := parser.ParseProgram(`
@@ -2513,6 +2517,7 @@ func TestParseInvalidOctalIntegerLiteralWithLeadingUnderscore(t *testing.T) {
 	)
 }
 
+// TODO: remove
 func TestParseIntegerLiteralWithLeadingZeros(t *testing.T) {
 
 	actual, _, err := parser.ParseProgram(`
@@ -2549,6 +2554,7 @@ func TestParseIntegerLiteralWithLeadingZeros(t *testing.T) {
 	utils.AssertEqualWithDiff(t, expected, actual)
 }
 
+// TODO: remove
 func TestParseInvalidOctalIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 
 	actual, _, err := parser.ParseProgram(`
@@ -2587,6 +2593,7 @@ func TestParseInvalidOctalIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 	)
 }
 
+// TODO: remove
 func TestParseInvalidBinaryIntegerLiteralWithLeadingUnderscore(t *testing.T) {
 
 	actual, _, err := parser.ParseProgram(`
@@ -2625,6 +2632,7 @@ func TestParseInvalidBinaryIntegerLiteralWithLeadingUnderscore(t *testing.T) {
 	)
 }
 
+// TODO: remove
 func TestParseInvalidBinaryIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 
 	actual, _, err := parser.ParseProgram(`
@@ -2663,6 +2671,7 @@ func TestParseInvalidBinaryIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 	)
 }
 
+// TODO: remove
 func TestParseInvalidDecimalIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 
 	actual, _, err := parser.ParseProgram(`
@@ -2701,6 +2710,7 @@ func TestParseInvalidDecimalIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 	)
 }
 
+// TODO: remove
 func TestParseInvalidHexadecimalIntegerLiteralWithLeadingUnderscore(t *testing.T) {
 
 	actual, _, err := parser.ParseProgram(`
@@ -2739,6 +2749,7 @@ func TestParseInvalidHexadecimalIntegerLiteralWithLeadingUnderscore(t *testing.T
 	)
 }
 
+// TODO: remove
 func TestParseInvalidHexadecimalIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 
 	actual, _, err := parser.ParseProgram(`
@@ -2778,6 +2789,7 @@ func TestParseInvalidHexadecimalIntegerLiteralWithTrailingUnderscore(t *testing.
 
 }
 
+// TODO: remove
 func TestParseInvalidIntegerLiteral(t *testing.T) {
 
 	actual, _, err := parser.ParseProgram(`
@@ -2816,6 +2828,7 @@ func TestParseInvalidIntegerLiteral(t *testing.T) {
 	)
 }
 
+// TODO: remove
 func TestParseDecimalIntegerLiteralWithLeadingZeros(t *testing.T) {
 
 	actual, _, err := parser.ParseProgram(`
@@ -2852,6 +2865,7 @@ func TestParseDecimalIntegerLiteralWithLeadingZeros(t *testing.T) {
 	utils.AssertEqualWithDiff(t, expected, actual)
 }
 
+// TODO: remove
 func TestParseBinaryIntegerLiteralWithLeadingZeros(t *testing.T) {
 
 	actual, _, err := parser.ParseProgram(`
