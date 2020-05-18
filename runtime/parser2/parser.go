@@ -109,7 +109,7 @@ func (p *parser) next() {
 func (p *parser) mustOne(tokenType lexer.TokenType) lexer.Token {
 	t := p.current
 	if !t.Is(tokenType) {
-		panic(fmt.Errorf("expected token type: %s", tokenType))
+		panic(fmt.Errorf("expected token %s", tokenType))
 	}
 	p.next()
 	return t

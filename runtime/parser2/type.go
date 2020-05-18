@@ -39,7 +39,7 @@ func setTypeNullDenotation(tokenType lexer.TokenType, nullDenotation typeNullDen
 	current := typeNullDenotations[tokenType]
 	if current != nil {
 		panic(fmt.Errorf(
-			"type null denotation for token %q already exists",
+			"type null denotation for token %s already exists",
 			tokenType,
 		))
 	}
@@ -58,7 +58,7 @@ func setTypeLeftDenotation(tokenType lexer.TokenType, leftDenotation typeLeftDen
 	current := typeLeftDenotations[tokenType]
 	if current != nil {
 		panic(fmt.Errorf(
-			"type left denotation for token %q already exists",
+			"type left denotation for token %s already exists",
 			tokenType,
 		))
 	}
@@ -155,7 +155,7 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) *ast.NominalType {
 
 		if !nestedToken.Is(lexer.TokenIdentifier) {
 			panic(fmt.Errorf(
-				"expected identifier after %q, got %q",
+				"expected identifier after %s, got %s",
 				lexer.TokenDot,
 				nestedToken.Type,
 			))
@@ -192,20 +192,19 @@ func defineArrayType() {
 
 				p.skipSpaceAndComments(true)
 
-				if !p.current.Is(lexer.TokenNumber) {
+				if !p.current.Is(lexer.TokenDecimalLiteral) {
 					panic(fmt.Errorf(
-						"expected size for constant sized type, got %q",
+						"expected size for constant sized type, got %s",
 						p.current.Type,
 					))
 				}
 
-				numberExpression := parseNumber(p.current)
-				p.next()
+				numberExpression := parseExpression(p, lowestBindingPower)
 
 				integerExpression, ok := numberExpression.(*ast.IntegerExpression)
 				if !ok {
 					p.report(fmt.Errorf(
-						"expected integer size for constant sized type, got %q",
+						"expected integer size for constant sized type, got %s",
 						numberExpression,
 					))
 				} else {
@@ -372,7 +371,7 @@ func defineRestrictedOrDictionaryType() {
 					if expectType {
 						panic(fmt.Errorf("invalid end, expected type"))
 					} else {
-						panic(fmt.Errorf("missing end, expected %q", lexer.TokenBraceClose))
+						panic(fmt.Errorf("missing end, expected %s", lexer.TokenBraceClose))
 					}
 
 				default:
@@ -464,12 +463,17 @@ func defineRestrictedOrDictionaryType() {
 					if expectType {
 						panic(fmt.Errorf("invalid end, expected type"))
 					} else {
-						panic(fmt.Errorf("missing end, expected %q", lexer.TokenBraceClose))
+						panic(fmt.Errorf("missing end, expected %s", lexer.TokenBraceClose))
 					}
 
 				default:
 					if !expectType {
-						panic(fmt.Errorf("unexpected token: got %q, expected \",\"", p.current.Type))
+						panic(fmt.Errorf(
+							"unexpected token: got %s, expected %s or %s",
+							p.current.Type,
+							lexer.TokenComma,
+							lexer.TokenBraceClose,
+						))
 					}
 
 					ty := parseType(p, lowestBindingPower)
@@ -612,7 +616,7 @@ func applyTypeNullDenotation(p *parser, token lexer.Token) ast.Type {
 	tokenType := token.Type
 	nullDenotation, ok := typeNullDenotations[tokenType]
 	if !ok {
-		panic(fmt.Errorf("missing type null denotation for token %q", token.Type))
+		panic(fmt.Errorf("missing type null denotation for token %s", token.Type))
 	}
 	return nullDenotation(p, token)
 }
@@ -620,7 +624,7 @@ func applyTypeNullDenotation(p *parser, token lexer.Token) ast.Type {
 func applyTypeLeftDenotation(p *parser, token lexer.Token, left ast.Type) ast.Type {
 	leftDenotation, ok := typeLeftDenotations[token.Type]
 	if !ok {
-		panic(fmt.Errorf("missing type left denotation for token %q", token.Type))
+		panic(fmt.Errorf("missing type left denotation for token %s", token.Type))
 	}
 	return leftDenotation(p, token, left)
 }

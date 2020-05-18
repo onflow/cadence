@@ -113,91 +113,91 @@ func (t TokenType) String() string {
 	case TokenString:
 		return "string"
 	case TokenPlus:
-		return "+"
+		return `'+'`
 	case TokenMinus:
-		return "-"
+		return `'-'`
 	case TokenStar:
-		return "*"
+		return `'*'`
 	case TokenSlash:
-		return "/"
+		return `'/'`
 	case TokenPercent:
-		return "%"
+		return `'%'`
 	case TokenDoubleQuestionMark:
-		return "??"
+		return `'??'`
 	case TokenParenOpen:
-		return "("
+		return `'('`
 	case TokenParenClose:
-		return ")"
+		return `')'`
 	case TokenBraceOpen:
-		return "{"
+		return `'{'`
 	case TokenBraceClose:
-		return "}"
+		return `'}'`
 	case TokenBracketOpen:
-		return "["
+		return `'['`
 	case TokenBracketClose:
-		return "]"
+		return `']'`
 	case TokenQuestionMark:
-		return "?"
+		return `'?'`
 	case TokenQuestionMarkDot:
-		return "?."
+		return `'?.'`
 	case TokenComma:
-		return ","
+		return `','`
 	case TokenColon:
-		return ":"
+		return `':'`
 	case TokenDot:
-		return "."
+		return `'.'`
 	case TokenSemicolon:
-		return ";"
+		return `';'`
 	case TokenLeftArrow:
-		return "<-"
+		return `'<-'`
 	case TokenLeftArrowExclamation:
-		return "<-!"
+		return `'<-!'`
 	case TokenSwap:
-		return "<->"
+		return `'<->'`
 	case TokenLess:
-		return "<"
+		return `'<'`
 	case TokenLessEqual:
-		return "<="
+		return `'<='`
 	case TokenLessLess:
-		return "<<"
+		return `'<<'`
 	case TokenGreater:
-		return ">"
+		return `'>'`
 	case TokenGreaterEqual:
-		return ">="
+		return `'>='`
 	case TokenGreaterGreater:
-		return ">>"
+		return `'>>'`
 	case TokenEqual:
-		return "="
+		return `'='`
 	case TokenEqualEqual:
-		return "=="
+		return `'=='`
 	case TokenExclamationMark:
-		return "!"
+		return `'!'`
 	case TokenNotEqual:
-		return "!="
+		return `'!='`
 	case TokenBlockCommentStart:
-		return "/*"
+		return `'/*'`
 	case TokenBlockCommentContent:
 		return "block comment"
 	case TokenLineComment:
 		return "line comment"
 	case TokenBlockCommentEnd:
-		return "*/"
+		return `'*/'`
 	case TokenAmpersand:
-		return "&"
+		return `'&'`
 	case TokenAmpersandAmpersand:
-		return "&&"
+		return `'&&'`
 	case TokenCaret:
-		return "^"
+		return `'^'`
 	case TokenVerticalBar:
-		return "|"
+		return `'|'`
 	case TokenVerticalBarVerticalBar:
-		return "||"
+		return `'||'`
 	case TokenAt:
-		return "@"
+		return `'@'`
 	case TokenAsExclamationMark:
-		return "as!"
+		return `'as!'`
 	case TokenAsQuestionMark:
-		return "as?"
+		return `'as?'`
 	default:
 		panic(errors.NewUnreachableError())
 	}
