@@ -315,9 +315,68 @@ func init() {
 	defineCastingExpression()
 
 	defineExpr(literalExpr{
-		tokenType: lexer.TokenNumber,
+		tokenType: lexer.TokenBinaryLiteral,
+		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
+			literal := token.Value.(string)
+			return parseIntegerLiteral(
+				p,
+				literal,
+				literal[2:],
+				IntegerLiteralKindBinary,
+				token.Range,
+			)
+		},
+	})
+
+	defineExpr(literalExpr{
+		tokenType: lexer.TokenOctalLiteral,
+		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
+			literal := token.Value.(string)
+			return parseIntegerLiteral(
+				p,
+				literal,
+				literal[2:],
+				IntegerLiteralKindOctal,
+				token.Range,
+			)
+		},
+	})
+
+	defineExpr(literalExpr{
+		tokenType: lexer.TokenDecimalLiteral,
+		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
+			literal := token.Value.(string)
+			return parseIntegerLiteral(
+				p,
+				literal,
+				literal,
+				IntegerLiteralKindDecimal,
+				token.Range,
+			)
+		},
+	})
+
+	defineExpr(literalExpr{
+		tokenType: lexer.TokenHexadecimalLiteral,
+		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
+			literal := token.Value.(string)
+			return parseIntegerLiteral(
+				p,
+				literal,
+				literal[2:],
+				IntegerLiteralKindHexadecimal,
+				token.Range,
+			)
+		},
+	})
+
+	defineExpr(literalExpr{
+		tokenType: lexer.TokenFixedPointLiteral,
 		nullDenotation: func(_ *parser, token lexer.Token) ast.Expression {
-			return parseNumber(token)
+			return parseFixedPointLiteral(
+				token.Value.(string),
+				token.Range,
+			)
 		},
 	})
 
@@ -489,16 +548,6 @@ func parseCreateExpressionRemainder(p *parser, token lexer.Token) *ast.CreateExp
 	return &ast.CreateExpression{
 		InvocationExpression: invocation,
 		StartPos:             token.StartPos,
-	}
-}
-
-func parseNumber(token lexer.Token) ast.Expression {
-	// TODO: extend
-	value, _ := new(big.Int).SetString(token.Value.(string), 10)
-	return &ast.IntegerExpression{
-		Value: value,
-		Base:  10,
-		Range: token.Range,
 	}
 }
 
@@ -961,4 +1010,64 @@ func parseHex(r rune) rune {
 	}
 
 	return -1
+}
+
+func parseIntegerLiteral(p *parser, literal, text string, kind IntegerLiteralKind, tokenRange ast.Range) *ast.IntegerExpression {
+
+	report := func(invalidKind InvalidNumberLiteralKind) {
+		p.report(
+			&InvalidIntegerLiteralError{
+				IntegerLiteralKind:        kind,
+				InvalidIntegerLiteralKind: invalidKind,
+				// NOTE: not using text, because it has the base-prefix stripped
+				Literal: literal,
+				Range:   tokenRange,
+			},
+		)
+	}
+
+	// check literal has no leading underscore
+
+	if strings.HasPrefix(text, "_") {
+		report(InvalidNumberLiteralKindLeadingUnderscore)
+	}
+
+	// check literal has no trailing underscore
+	if strings.HasSuffix(text, "_") {
+		report(InvalidNumberLiteralKindTrailingUnderscore)
+	}
+
+	withoutUnderscores := strings.Replace(text, "_", "", -1)
+
+	base := kind.Base()
+	value, ok := new(big.Int).SetString(withoutUnderscores, base)
+	if !ok {
+		report(InvalidNumberLiteralKindUnknown)
+	}
+
+	return &ast.IntegerExpression{
+		Value: value,
+		Base:  base,
+		Range: tokenRange,
+	}
+}
+
+func parseFixedPointPart(part string) (integer *big.Int, scale uint) {
+	withoutUnderscores := strings.Replace(part, "_", "", -1)
+	integer, _ = new(big.Int).SetString(withoutUnderscores, 10)
+	return integer, uint(len(withoutUnderscores))
+}
+
+func parseFixedPointLiteral(text string, tokenRange ast.Range) *ast.FixedPointExpression {
+	parts := strings.Split(text, ".")
+	integer, _ := parseFixedPointPart(parts[0])
+	fractional, scale := parseFixedPointPart(parts[1])
+
+	return &ast.FixedPointExpression{
+		Negative:        false,
+		UnsignedInteger: integer,
+		Fractional:      fractional,
+		Scale:           scale,
+		Range:           tokenRange,
+	}
 }

@@ -104,7 +104,7 @@ func TestParseArrayType(t *testing.T) {
 					},
 				},
 				Size: &ast.IntegerExpression{
-					Value: big.NewInt(1),
+					Value: big.NewInt(2),
 					Base:  10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},

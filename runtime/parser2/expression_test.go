@@ -1550,7 +1550,7 @@ func TestParseForceExpression(t *testing.T) {
 			&ast.BinaryExpression{
 				Operation: ast.OperationMul,
 				Left: &ast.IntegerExpression{
-					Value: big.NewInt(1),
+					Value: big.NewInt(10),
 					Base:  10,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1726,6 +1726,630 @@ func TestParseFunctionExpression(t *testing.T) {
 					},
 				},
 				StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+			},
+			result,
+		)
+	})
+}
+
+func TestParseIntegerLiterals(t *testing.T) {
+
+	t.Run("binary prefix, missing trailing digits", func(t *testing.T) {
+
+		result, errs := ParseExpression(`0b`)
+		require.Equal(t,
+			[]error{
+				errors.New("missing digits"),
+				&InvalidIntegerLiteralError{
+					Literal:                   "0b",
+					IntegerLiteralKind:        IntegerLiteralKindBinary,
+					InvalidIntegerLiteralKind: InvalidNumberLiteralKindUnknown,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: nil,
+				Base:  2,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("binary", func(t *testing.T) {
+
+		result, errs := ParseExpression(`0b101010`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(42),
+				Base:  2,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("binary with leading zeros", func(t *testing.T) {
+
+		result, errs := ParseExpression(`0b001000`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(8),
+				Base:  2,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("binary with underscores", func(t *testing.T) {
+
+		result, errs := ParseExpression(`0b101010_101010`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(2730),
+				Base:  2,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("binary with leading underscore", func(t *testing.T) {
+
+		result, errs := ParseExpression(`0b_101010_101010`)
+		require.Equal(t,
+			[]error{
+				&InvalidIntegerLiteralError{
+					Literal:                   "0b_101010_101010",
+					IntegerLiteralKind:        IntegerLiteralKindBinary,
+					InvalidIntegerLiteralKind: InvalidNumberLiteralKindLeadingUnderscore,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
+					},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(2730),
+				Base:  2,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("binary with trailing underscore", func(t *testing.T) {
+
+		result, errs := ParseExpression(`0b101010_101010_`)
+		require.Equal(t,
+			[]error{
+				&InvalidIntegerLiteralError{
+					Literal:                   "0b101010_101010_",
+					IntegerLiteralKind:        IntegerLiteralKindBinary,
+					InvalidIntegerLiteralKind: InvalidNumberLiteralKindTrailingUnderscore,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
+					},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(2730),
+				Base:  2,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 15, Offset: 15},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("octal prefix, missing trailing digits", func(t *testing.T) {
+
+		result, errs := ParseExpression(`0o`)
+		require.Equal(t,
+			[]error{
+				errors.New("missing digits"),
+				&InvalidIntegerLiteralError{
+					Literal:                   `0o`,
+					IntegerLiteralKind:        IntegerLiteralKindOctal,
+					InvalidIntegerLiteralKind: InvalidNumberLiteralKindUnknown,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: nil,
+				Base:  8,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("octal", func(t *testing.T) {
+
+		result, errs := ParseExpression(`0o32`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(26),
+				Base:  8,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("octal with underscores", func(t *testing.T) {
+
+		result, errs := ParseExpression(`0o32_45`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(1701),
+				Base:  8,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("octal with leading underscore", func(t *testing.T) {
+
+		result, errs := ParseExpression(`0o_32_45`)
+		require.Equal(t,
+			[]error{
+				&InvalidIntegerLiteralError{
+					Literal:                   "0o_32_45",
+					IntegerLiteralKind:        IntegerLiteralKindOctal,
+					InvalidIntegerLiteralKind: InvalidNumberLiteralKindLeadingUnderscore,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(1701),
+				Base:  8,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("octal with leading underscore", func(t *testing.T) {
+
+		result, errs := ParseExpression(`0o32_45_`)
+		require.Equal(t,
+			[]error{
+				&InvalidIntegerLiteralError{
+					Literal:                   "0o32_45_",
+					IntegerLiteralKind:        IntegerLiteralKindOctal,
+					InvalidIntegerLiteralKind: InvalidNumberLiteralKindTrailingUnderscore,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(1701),
+				Base:  8,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("decimal", func(t *testing.T) {
+
+		result, errs := ParseExpression(`1234567890`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(1234567890),
+				Base:  10,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("decimal with underscores", func(t *testing.T) {
+
+		result, errs := ParseExpression(`1_234_567_890`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(1234567890),
+				Base:  10,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 12, Offset: 12},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("decimal with trailing underscore", func(t *testing.T) {
+
+		result, errs := ParseExpression(`1_234_567_890_`)
+		require.Equal(t,
+			[]error{
+				&InvalidIntegerLiteralError{
+					Literal:                   "1_234_567_890_",
+					IntegerLiteralKind:        IntegerLiteralKindDecimal,
+					InvalidIntegerLiteralKind: InvalidNumberLiteralKindTrailingUnderscore,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+					},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(1234567890),
+				Base:  10,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("hexadecimal prefix, missing trailing digits", func(t *testing.T) {
+
+		result, errs := ParseExpression(`0x`)
+		require.Equal(t,
+			[]error{
+				errors.New("missing digits"),
+				&InvalidIntegerLiteralError{
+					Literal:                   `0x`,
+					IntegerLiteralKind:        IntegerLiteralKindHexadecimal,
+					InvalidIntegerLiteralKind: InvalidNumberLiteralKindUnknown,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: nil,
+				Base:  16,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("hexadecimal", func(t *testing.T) {
+
+		result, errs := ParseExpression(`0xf2`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(242),
+				Base:  16,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("hexadecimal with underscores", func(t *testing.T) {
+
+		result, errs := ParseExpression(`0xf2_09`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(61961),
+				Base:  16,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("hexadecimal with leading underscore", func(t *testing.T) {
+
+		result, errs := ParseExpression(`0x_f2_09`)
+		require.Equal(t,
+			[]error{
+				&InvalidIntegerLiteralError{
+					Literal:                   "0x_f2_09",
+					IntegerLiteralKind:        IntegerLiteralKindHexadecimal,
+					InvalidIntegerLiteralKind: InvalidNumberLiteralKindLeadingUnderscore,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(61961),
+				Base:  16,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("hexadecimal with trailing underscore", func(t *testing.T) {
+
+		result, errs := ParseExpression(`0xf2_09_`)
+		require.Equal(t,
+			[]error{
+				&InvalidIntegerLiteralError{
+					Literal:                   `0xf2_09_`,
+					IntegerLiteralKind:        IntegerLiteralKindHexadecimal,
+					InvalidIntegerLiteralKind: InvalidNumberLiteralKindTrailingUnderscore,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(61961),
+				Base:  16,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 7, Offset: 7},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("0", func(t *testing.T) {
+
+		result, errs := ParseExpression(`0`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(0),
+				Base:  10,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("01", func(t *testing.T) {
+
+		result, errs := ParseExpression(`01`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(1),
+				Base:  10,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("09", func(t *testing.T) {
+
+		result, errs := ParseExpression(`09`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(9),
+				Base:  10,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("leading zeros", func(t *testing.T) {
+
+		result, errs := ParseExpression("00123")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: big.NewInt(123),
+				Base:  10,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("invalid prefix", func(t *testing.T) {
+		result, errs := ParseExpression(`0z123`)
+		require.Equal(t,
+			[]error{
+				errors.New("invalid number literal prefix: 'z'"),
+				&InvalidIntegerLiteralError{
+					Literal:                   `0z123`,
+					IntegerLiteralKind:        IntegerLiteralKindDecimal,
+					InvalidIntegerLiteralKind: InvalidNumberLiteralKindUnknown,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.IntegerExpression{
+				Value: nil,
+				Base:  10,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+				},
+			},
+			result,
+		)
+	})
+}
+
+func TestParseFixedPoint(t *testing.T) {
+
+	t.Run("with underscores", func(t *testing.T) {
+
+		result, errs := ParseExpression("1234_5678_90.0009_8765_4321")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FixedPointExpression{
+				Negative:        false,
+				UnsignedInteger: big.NewInt(1234567890),
+				Fractional:      big.NewInt(987654321),
+				Scale:           12,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 26, Offset: 26},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("leading zero", func(t *testing.T) {
+
+		result, errs := ParseExpression("0.1")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FixedPointExpression{
+				Negative:        false,
+				UnsignedInteger: big.NewInt(0),
+				Fractional:      big.NewInt(1),
+				Scale:           1,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+				},
 			},
 			result,
 		)
