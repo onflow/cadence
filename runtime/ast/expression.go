@@ -173,7 +173,12 @@ func (e *FixedPointExpression) String() string {
 	}
 	builder.WriteString(e.UnsignedInteger.String())
 	builder.WriteRune('.')
-	builder.WriteString(e.Fractional.String())
+	fractional := e.Fractional.String()
+	var i uint = 0
+	for ; i < (e.Scale - uint(len(fractional))); i++ {
+		builder.WriteRune('0')
+	}
+	builder.WriteString(fractional)
 	return builder.String()
 }
 
