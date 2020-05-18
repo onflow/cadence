@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-package lexer
+package parser2
 
 import (
 	"github.com/onflow/cadence/runtime/errors"
