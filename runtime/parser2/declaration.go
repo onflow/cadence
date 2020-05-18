@@ -72,13 +72,19 @@ func parseVariableDeclaration(p *parser) *ast.VariableDeclaration {
 
 	isLet := p.current.Value == keywordLet
 
-	if !p.current.Is(lexer.TokenIdentifier) ||
-		!(isLet || p.current.Value == keywordVar) {
-
-		panic(fmt.Errorf("expected kind of variable, %q or %q, got %q",
+	if !p.current.Is(lexer.TokenIdentifier) {
+		panic(fmt.Errorf(
+			"expected kind kind of variable, %q or %q, got %s",
 			keywordLet,
 			keywordVar,
 			p.current.Type,
+		))
+	} else if !(isLet || p.current.Value == keywordVar) {
+		panic(fmt.Errorf(
+			"expected kind kind of variable, %q or %q, got %q",
+			keywordLet,
+			keywordVar,
+			p.current.Value,
 		))
 	}
 
@@ -87,7 +93,7 @@ func parseVariableDeclaration(p *parser) *ast.VariableDeclaration {
 	p.skipSpaceAndComments(true)
 	if !p.current.Is(lexer.TokenIdentifier) {
 		panic(fmt.Errorf(
-			"expected identifier after start of variable declaration, got %q",
+			"expected identifier after start of variable declaration, got %s",
 			p.current.Type,
 		))
 	}

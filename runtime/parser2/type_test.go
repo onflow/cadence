@@ -414,7 +414,7 @@ func TestParseRestrictedType(t *testing.T) {
 		_, errs := ParseType("T{ T , U : V }")
 		require.Equal(t,
 			[]error{
-				errors.New(`unexpected token: got ":", expected ","`),
+				errors.New(`unexpected token: got ':', expected ',' or '}'`),
 			},
 			errs,
 		)
@@ -484,7 +484,7 @@ func TestParseRestrictedType(t *testing.T) {
 		_, errs := ParseType("{U")
 		require.Equal(t,
 			[]error{
-				errors.New("missing end, expected \"}\""),
+				errors.New("missing end, expected '}'"),
 			},
 			errs,
 		)
@@ -494,7 +494,7 @@ func TestParseRestrictedType(t *testing.T) {
 		_, errs := ParseType("T{U")
 		require.Equal(t,
 			[]error{
-				errors.New("missing end, expected \"}\""),
+				errors.New("missing end, expected '}'"),
 			},
 			errs,
 		)
@@ -644,7 +644,7 @@ func TestParseDictionaryType(t *testing.T) {
 		_, errs := ParseType("{T:U")
 		require.Equal(t,
 			[]error{
-				errors.New("missing end, expected \"}\""),
+				errors.New("missing end, expected '}'"),
 			},
 			errs,
 		)

@@ -159,7 +159,7 @@ func setExprNullDenotation(tokenType lexer.TokenType, nullDenotation exprNullDen
 	current := exprNullDenotations[tokenType]
 	if current != nil {
 		panic(fmt.Errorf(
-			"expression null denotation for token %q already exists",
+			"expression null denotation for token %s already exists",
 			tokenType,
 		))
 	}
@@ -186,7 +186,7 @@ func setExprLeftDenotation(tokenType lexer.TokenType, leftDenotation exprLeftDen
 	current := exprLeftDenotations[tokenType]
 	if current != nil {
 		panic(fmt.Errorf(
-			"expression left denotation for token %q already exists",
+			"expression left denotation for token %s already exists",
 			tokenType,
 		))
 	}
@@ -526,7 +526,7 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 		case lexer.TokenComma:
 			if expectArgument {
 				panic(fmt.Errorf(
-					"expected argument or end of argument list, got %q",
+					"expected argument or end of argument list, got %s",
 					p.current.Type,
 				))
 			}
@@ -544,7 +544,7 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 		default:
 			if !expectArgument {
 				panic(fmt.Errorf(
-					"unexpected argument in argument list (expecting delimiter of end of argument list), got %q",
+					"unexpected argument in argument list (expecting delimiter of end of argument list), got %s",
 					p.current.Type,
 				))
 			}
@@ -768,7 +768,7 @@ func applyExprNullDenotation(p *parser, token lexer.Token) ast.Expression {
 	tokenType := token.Type
 	nullDenotation, ok := exprNullDenotations[tokenType]
 	if !ok {
-		panic(fmt.Errorf("missing expression null denotation for token %q", token.Type))
+		panic(fmt.Errorf("missing expression null denotation for token %s", token.Type))
 	}
 	return nullDenotation(p, token)
 }
@@ -776,7 +776,7 @@ func applyExprNullDenotation(p *parser, token lexer.Token) ast.Expression {
 func applyExprLeftDenotation(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
 	leftDenotation, ok := exprLeftDenotations[token.Type]
 	if !ok {
-		panic(fmt.Errorf("missing expression left denotation for token %q", token.Type))
+		panic(fmt.Errorf("missing expression left denotation for token %s", token.Type))
 	}
 	return leftDenotation(p, token, left)
 }
