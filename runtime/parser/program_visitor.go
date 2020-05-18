@@ -1681,6 +1681,10 @@ func (v *ProgramVisitor) VisitFixedPointLiteral(ctx *FixedPointLiteralContext) i
 	// NOTE: can't just negate integer, might be 0 and fractional part > 0
 	negative := ctx.Minus() != nil
 
+	if negative {
+		startPosition = PositionFromToken(ctx.Minus().GetSymbol())
+	}
+
 	return &ast.FixedPointExpression{
 		Negative:        negative,
 		UnsignedInteger: integer,
@@ -1695,8 +1699,11 @@ func (v *ProgramVisitor) VisitFixedPointLiteral(ctx *FixedPointLiteralContext) i
 
 func (v *ProgramVisitor) VisitIntegerLiteral(ctx *IntegerLiteralContext) interface{} {
 	intExpression := ctx.PositiveIntegerLiteral().Accept(v).(*ast.IntegerExpression)
-	if ctx.Minus() != nil && intExpression.Value != nil {
-		intExpression.Value.Neg(intExpression.Value)
+	if ctx.Minus() != nil {
+		if intExpression.Value != nil {
+			intExpression.Value.Neg(intExpression.Value)
+		}
+		intExpression.StartPos = PositionFromToken(ctx.GetStart())
 	}
 	return intExpression
 }
