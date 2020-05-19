@@ -819,6 +819,26 @@ func (v IntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return IntValue{res}
 }
 
+func (v IntValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (IntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
 // Int8Value
 
 type Int8Value int8
@@ -1012,6 +1032,26 @@ func (v Int8Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 func (v Int8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	o := other.(Int8Value)
 	return v >> o
+}
+
+func (v Int8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (Int8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
 }
 
 // Int16Value
@@ -1209,6 +1249,26 @@ func (v Int16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
+func (v Int16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (Int16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
 // Int32Value
 
 type Int32Value int32
@@ -1404,6 +1464,26 @@ func (v Int32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
+func (v Int32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (Int32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
 // Int64Value
 
 type Int64Value int64
@@ -1596,6 +1676,26 @@ func (v Int64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 func (v Int64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	o := other.(Int64Value)
 	return v >> o
+}
+
+func (v Int64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (Int64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
 }
 
 // Int128Value
@@ -1850,6 +1950,26 @@ func (v Int128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	}
 	res.Rsh(v.BigInt, uint(o.BigInt.Uint64()))
 	return Int128Value{res}
+}
+
+func (v Int128Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (Int128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
 }
 
 // Int256Value
@@ -2107,6 +2227,26 @@ func (v Int256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return Int256Value{res}
 }
 
+func (v Int256Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (Int256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
 // UIntValue
 
 type UIntValue struct {
@@ -2308,6 +2448,26 @@ func (v UIntValue) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return UIntValue{res}
 }
 
+func (v UIntValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (UIntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
 // UInt8Value
 
 type UInt8Value uint8
@@ -2471,6 +2631,26 @@ func (v UInt8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
+func (v UInt8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (UInt8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
 // UInt16Value
 
 type UInt16Value uint16
@@ -2630,6 +2810,26 @@ func (v UInt16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 func (v UInt16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	o := other.(UInt16Value)
 	return v >> o
+}
+
+func (v UInt16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (UInt16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
 }
 
 // UInt32Value
@@ -2793,6 +2993,26 @@ func (v UInt32Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 func (v UInt32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	o := other.(UInt32Value)
 	return v >> o
+}
+
+func (v UInt32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (UInt32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
 }
 
 // UInt64Value
@@ -2959,6 +3179,26 @@ func (v UInt64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 func (v UInt64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	o := other.(UInt64Value)
 	return v >> o
+}
+
+func (v UInt64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (UInt64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
 }
 
 // UInt128Value
@@ -3186,6 +3426,26 @@ func (v UInt128Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return UInt128Value{res}
 }
 
+func (v UInt128Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (UInt128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
 // UInt256Value
 
 type UInt256Value struct {
@@ -3411,6 +3671,26 @@ func (v UInt256Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return UInt256Value{res}
 }
 
+func (v UInt256Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (UInt256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
 // Word8Value
 
 type Word8Value uint8
@@ -3535,6 +3815,26 @@ func (v Word8Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
+func (v Word8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (Word8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
 // Word16Value
 
 type Word16Value uint16
@@ -3655,6 +3955,26 @@ func (v Word16Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 func (v Word16Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	o := other.(Word16Value)
 	return v >> o
+}
+
+func (v Word16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (Word16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
 }
 
 // Word32Value
@@ -3781,6 +4101,26 @@ func (v Word32Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	return v >> o
 }
 
+func (v Word32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (Word32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
 // Word64Value
 
 type Word64Value uint64
@@ -3903,6 +4243,26 @@ func (v Word64Value) BitwiseLeftShift(other IntegerValue) IntegerValue {
 func (v Word64Value) BitwiseRightShift(other IntegerValue) IntegerValue {
 	o := other.(Word64Value)
 	return v >> o
+}
+
+func (v Word64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (Word64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
 }
 
 // Fix64Value
@@ -4130,6 +4490,26 @@ func ConvertFix64(value Value, interpreter *Interpreter) Value {
 	}
 }
 
+func (v Fix64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (Fix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
 // UFix64Value
 
 type UFix64Value uint64
@@ -4345,6 +4725,26 @@ func ConvertUFix64(value Value, interpreter *Interpreter) Value {
 			value,
 		))
 	}
+}
+
+func (v UFix64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (UFix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
 }
 
 // CompositeValue
@@ -5333,6 +5733,26 @@ func (v AddressValue) Hex() string {
 
 func (v AddressValue) ToAddress() common.Address {
 	return common.Address(v)
+}
+
+func (v AddressValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (AddressValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
 }
 
 // AccountValue

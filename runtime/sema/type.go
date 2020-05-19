@@ -238,6 +238,16 @@ func NewTypeAnnotation(ty Type) *TypeAnnotation {
 	}
 }
 
+// toString
+
+const ToStringFunctionName = "toString"
+
+var toStringFunctionType = &FunctionType{
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&StringType{},
+	),
+}
+
 // AnyType represents the top type of all types.
 // NOTE: This type is only used internally and not available in programs.
 type AnyType struct{}
@@ -955,6 +965,24 @@ func (t *NumberType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*NumberType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *NumberType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
+}
+
 // SignedNumberType represents the super-type of all signed number types
 type SignedNumberType struct{}
 
@@ -1007,6 +1035,24 @@ func (*SignedNumberType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err err
 
 func (t *SignedNumberType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*SignedNumberType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *SignedNumberType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
 }
 
 // IntegerRangedType
@@ -1078,6 +1124,24 @@ func (t *IntegerType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*IntegerType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *IntegerType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
+}
+
 // SignedIntegerType represents the super-type of all signed integer types
 type SignedIntegerType struct{}
 
@@ -1132,6 +1196,24 @@ func (t *SignedIntegerType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*SignedIntegerType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *SignedIntegerType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
+}
+
 // IntType represents the arbitrary-precision integer type `Int`
 type IntType struct{}
 
@@ -1184,6 +1266,24 @@ func (*IntType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ as
 
 func (t *IntType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*IntType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *IntType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
 }
 
 // Int8Type represents the 8-bit signed integer type `Int8`
@@ -1244,6 +1344,24 @@ func (t *Int8Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*Int8Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Int8Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
+}
+
 // Int16Type represents the 16-bit signed integer type `Int16`
 type Int16Type struct{}
 
@@ -1299,6 +1417,24 @@ func (*Int16Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ 
 
 func (t *Int16Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*Int16Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Int16Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
 }
 
 // Int32Type represents the 32-bit signed integer type `Int32`
@@ -1358,6 +1494,24 @@ func (t *Int32Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*Int32Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Int32Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
+}
+
 // Int64Type represents the 64-bit signed integer type `Int64`
 type Int64Type struct{}
 
@@ -1413,6 +1567,24 @@ func (*Int64Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ 
 
 func (t *Int64Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*Int64Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Int64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
 }
 
 // Int128Type represents the 128-bit signed integer type `Int128`
@@ -1484,6 +1656,24 @@ func (t *Int128Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*Int128Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Int128Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
+}
+
 // Int256Type represents the 256-bit signed integer type `Int256`
 type Int256Type struct{}
 
@@ -1553,6 +1743,24 @@ func (t *Int256Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*Int256Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Int256Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
+}
+
 // UIntType represents the arbitrary-precision unsigned integer type `UInt`
 type UIntType struct{}
 
@@ -1607,6 +1815,24 @@ func (*UIntType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ a
 
 func (t *UIntType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*UIntType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *UIntType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
 }
 
 // UInt8Type represents the 8-bit unsigned integer type `UInt8`
@@ -1667,6 +1893,24 @@ func (t *UInt8Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*UInt8Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *UInt8Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
+}
+
 // UInt16Type represents the 16-bit unsigned integer type `UInt16`
 // which checks for overflow and underflow
 type UInt16Type struct{}
@@ -1723,6 +1967,24 @@ func (*UInt16Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _
 
 func (t *UInt16Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*UInt16Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *UInt16Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
 }
 
 // UInt32Type represents the 32-bit unsigned integer type `UInt32`
@@ -1783,6 +2045,24 @@ func (t *UInt32Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*UInt32Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *UInt32Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
+}
+
 // UInt64Type represents the 64-bit unsigned integer type `UInt64`
 // which checks for overflow and underflow
 type UInt64Type struct{}
@@ -1839,6 +2119,24 @@ func (*UInt64Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _
 
 func (t *UInt64Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*UInt64Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *UInt64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
 }
 
 // UInt128Type represents the 128-bit unsigned integer type `UInt128`
@@ -1905,6 +2203,24 @@ func (t *UInt128Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*UInt128Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *UInt128Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
+}
+
 // UInt256Type represents the 256-bit unsigned integer type `UInt256`
 // which checks for overflow and underflow
 type UInt256Type struct{}
@@ -1969,6 +2285,24 @@ func (t *UInt256Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*UInt256Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *UInt256Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
+}
+
 // Word8Type represents the 8-bit unsigned integer type `Word8`
 // which does NOT check for overflow and underflow
 type Word8Type struct{}
@@ -2025,6 +2359,24 @@ func (*Word8Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ 
 
 func (t *Word8Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*Word8Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Word8Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
 }
 
 // Word16Type represents the 16-bit unsigned integer type `Word16`
@@ -2085,6 +2437,24 @@ func (t *Word16Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*Word16Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Word16Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
+}
+
 // Word32Type represents the 32-bit unsigned integer type `Word32`
 // which does NOT check for overflow and underflow
 type Word32Type struct{}
@@ -2141,6 +2511,24 @@ func (*Word32Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _
 
 func (t *Word32Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*Word32Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Word32Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
 }
 
 // Word64Type represents the 64-bit unsigned integer type `Word64`
@@ -2201,6 +2589,24 @@ func (t *Word64Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*Word64Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Word64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
+}
+
 // FixedPointType represents the super-type of all fixed-point types
 type FixedPointType struct{}
 
@@ -2255,6 +2661,24 @@ func (t *FixedPointType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*FixedPointType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *FixedPointType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
+}
+
 // SignedFixedPointType represents the super-type of all signed fixed-point types
 type SignedFixedPointType struct{}
 
@@ -2307,6 +2731,24 @@ func (*SignedFixedPointType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err
 
 func (t *SignedFixedPointType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*SignedFixedPointType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *SignedFixedPointType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
 }
 
 const Fix64Scale uint = 8
@@ -2395,6 +2837,24 @@ func (t *Fix64Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*Fix64Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Fix64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
+}
+
 // UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
 // which has a scale of 1E9, and checks for overflow and underflow
 type UFix64Type struct{}
@@ -2472,6 +2932,24 @@ func (*UFix64Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _
 
 func (t *UFix64Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*UFix64Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *UFix64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
 }
 
 // ArrayType
@@ -4616,6 +5094,24 @@ func (*AddressType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), 
 
 func (t *AddressType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*AddressType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *AddressType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(t, identifier, functionType)
+	}
+
+	switch identifier {
+	case ToStringFunctionName:
+		return newFunction(toStringFunctionType)
+
+	default:
+		return nil
+	}
 }
 
 // IsSubType determines if the given subtype is a subtype
