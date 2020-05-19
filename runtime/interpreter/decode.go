@@ -25,6 +25,10 @@ type Decoder struct {
 // Decode returns a value decoded from its CBOR-encoded representation,
 // for the given owner (can be `nil`).
 //
+// The given path is used to identify values in the object graph.
+// For example, path elements are appended for array elements (the index),
+// dictionary values (the key), and composites (the field name).
+//
 func DecodeValue(b []byte, owner *common.Address, path []string) (Value, error) {
 	reader := bytes.NewReader(b)
 

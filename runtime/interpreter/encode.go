@@ -215,6 +215,17 @@ type Encoder struct {
 
 // EncodeValue returns the CBOR-encoded representation of the given value.
 //
+// The given path is used to identify values in the object graph.
+// For example, path elements are appended for array elements (the index),
+// dictionary values (the key), and composites (the field name).
+//
+// The deferred flag determines if child values should be deferred,
+// i.e. should not be encoded into the result,
+// but e.g. be eventually written to separate storage keys.
+// If true, the deferrals result will contain the values
+// which have not been encoded, and which values need to be moved
+// from a previous storage key to another storage key.
+//
 func EncodeValue(value Value, path []string, deferred bool) (
 	encoded []byte,
 	deferrals *EncodingDeferrals,
