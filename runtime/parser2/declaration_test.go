@@ -33,6 +33,9 @@ func TestParseVariableDeclaration(t *testing.T) {
 	t.Parallel()
 
 	t.Run("var, no type annotation, copy, one value", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("var x = 1")
 		require.Empty(t, errs)
 
@@ -64,6 +67,9 @@ func TestParseVariableDeclaration(t *testing.T) {
 	})
 
 	t.Run("let, no type annotation, copy, one value", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("let x = 1")
 		require.Empty(t, errs)
 
@@ -95,6 +101,9 @@ func TestParseVariableDeclaration(t *testing.T) {
 	})
 
 	t.Run("let, no type annotation, move, one value", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("let x <- 1")
 		require.Empty(t, errs)
 
@@ -126,6 +135,9 @@ func TestParseVariableDeclaration(t *testing.T) {
 	})
 
 	t.Run("let, resource type annotation, move, one value", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("let r2: @R <- r")
 		require.Empty(t, errs)
 
@@ -179,6 +191,9 @@ func TestParseParameterList(t *testing.T) {
 	}
 
 	t.Run("empty", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := parse("()")
 		require.Empty(t, errs)
 
@@ -194,6 +209,9 @@ func TestParseParameterList(t *testing.T) {
 	})
 
 	t.Run("space", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := parse(" (   )")
 		require.Empty(t, errs)
 
@@ -209,6 +227,9 @@ func TestParseParameterList(t *testing.T) {
 	})
 
 	t.Run("one, without argument label", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := parse("( a : Int )")
 		require.Empty(t, errs)
 
@@ -247,6 +268,9 @@ func TestParseParameterList(t *testing.T) {
 	})
 
 	t.Run("one, with argument label", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := parse("( a b : Int )")
 		require.Empty(t, errs)
 
@@ -285,6 +309,9 @@ func TestParseParameterList(t *testing.T) {
 	})
 
 	t.Run("two, with and without argument label", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := parse("( a b : Int , c : Int )")
 		require.Empty(t, errs)
 
@@ -349,6 +376,9 @@ func TestParseFunctionDeclaration(t *testing.T) {
 	t.Parallel()
 
 	t.Run("without return type", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("fun foo () { }")
 		require.Empty(t, errs)
 
@@ -392,6 +422,9 @@ func TestParseFunctionDeclaration(t *testing.T) {
 	})
 
 	t.Run("with return type", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("fun foo (): X { }")
 		require.Empty(t, errs)
 

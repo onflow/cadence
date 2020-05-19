@@ -33,6 +33,9 @@ func TestParseReturnStatement(t *testing.T) {
 	t.Parallel()
 
 	t.Run("no expression", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("return")
 		require.Empty(t, errs)
 
@@ -50,6 +53,9 @@ func TestParseReturnStatement(t *testing.T) {
 	})
 
 	t.Run("expression on same line", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("return 1")
 		require.Empty(t, errs)
 
@@ -75,6 +81,9 @@ func TestParseReturnStatement(t *testing.T) {
 	})
 
 	t.Run("expression on next line, no semicolon", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("return \n1")
 		require.Empty(t, errs)
 
@@ -102,6 +111,9 @@ func TestParseReturnStatement(t *testing.T) {
 	})
 
 	t.Run("expression on next line, semicolon", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("return ;\n1")
 		require.Empty(t, errs)
 
@@ -134,6 +146,9 @@ func TestParseIfStatement(t *testing.T) {
 	t.Parallel()
 
 	t.Run("only empty then", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("if true { }")
 		require.Empty(t, errs)
 
@@ -162,6 +177,9 @@ func TestParseIfStatement(t *testing.T) {
 	})
 
 	t.Run("only then, two statements on one line", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("if true { 1 ; 2 }")
 		require.Empty(t, errs)
 
@@ -211,6 +229,9 @@ func TestParseIfStatement(t *testing.T) {
 	})
 
 	t.Run("only then, two statements on multiple lines", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("if true { 1 \n 2 }")
 		require.Empty(t, errs)
 
@@ -260,6 +281,9 @@ func TestParseIfStatement(t *testing.T) {
 	})
 
 	t.Run("with else", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("if true { 1 } else { 2 }")
 		require.Empty(t, errs)
 
@@ -317,6 +341,9 @@ func TestParseIfStatement(t *testing.T) {
 	})
 
 	t.Run("with else if and else, no space", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("if true{1}else if true {2} else{3}")
 		require.Empty(t, errs)
 
@@ -410,6 +437,9 @@ func TestParseIfStatement(t *testing.T) {
 	})
 
 	t.Run("if-var", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("if var x = 1 { }")
 		require.Empty(t, errs)
 
@@ -455,6 +485,9 @@ func TestParseIfStatement(t *testing.T) {
 	})
 
 	t.Run("if-let", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("if let x = 1 { }")
 		require.Empty(t, errs)
 
@@ -506,6 +539,9 @@ func TestParseWhileStatement(t *testing.T) {
 	t.Parallel()
 
 	t.Run("empty block", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("while true { }")
 		require.Empty(t, errs)
 
@@ -539,6 +575,9 @@ func TestParseAssignmentStatement(t *testing.T) {
 	t.Parallel()
 
 	t.Run("copy", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements(" x = 1")
 		require.Empty(t, errs)
 
@@ -570,6 +609,9 @@ func TestParseAssignmentStatement(t *testing.T) {
 	})
 
 	t.Run("move", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements(" x <- 1")
 		require.Empty(t, errs)
 
@@ -601,6 +643,9 @@ func TestParseAssignmentStatement(t *testing.T) {
 	})
 
 	t.Run("move", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements(" x <-! 1")
 		require.Empty(t, errs)
 
@@ -637,6 +682,9 @@ func TestParseSwapStatement(t *testing.T) {
 	t.Parallel()
 
 	t.Run("simple", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements(" x <-> y")
 		require.Empty(t, errs)
 
@@ -667,6 +715,9 @@ func TestParseForStatement(t *testing.T) {
 	t.Parallel()
 
 	t.Run("empty block", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("for x in y { }")
 		require.Empty(t, errs)
 
@@ -703,6 +754,9 @@ func TestParseEmit(t *testing.T) {
 	t.Parallel()
 
 	t.Run("simple", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseStatements("emit T()")
 		require.Empty(t, errs)
 
