@@ -248,6 +248,28 @@ var toStringFunctionType = &FunctionType{
 	),
 }
 
+var typeBuiltinFunctionTypes = map[TypeID]map[string]*FunctionType{}
+
+func init() {
+	for _, ty := range append(
+		AllNumberTypes[:],
+		&NumberType{},
+		&SignedNumberType{},
+		&FixedPointType{},
+		&SignedFixedPointType{},
+		&IntegerType{},
+		&SignedIntegerType{},
+		&AddressType{},
+	) {
+		functionTypes, ok := typeBuiltinFunctionTypes[ty.ID()]
+		if !ok {
+			functionTypes = map[string]*FunctionType{}
+			typeBuiltinFunctionTypes[ty.ID()] = functionTypes
+		}
+		functionTypes[ToStringFunctionName] = toStringFunctionType
+	}
+}
+
 // AnyType represents the top type of all types.
 // NOTE: This type is only used internally and not available in programs.
 type AnyType struct{}
@@ -970,17 +992,15 @@ func (*NumberType) CanHaveMembers() bool {
 }
 
 func (t *NumberType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // SignedNumberType represents the super-type of all signed number types
@@ -1042,17 +1062,15 @@ func (*SignedNumberType) CanHaveMembers() bool {
 }
 
 func (t *SignedNumberType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // IntegerRangedType
@@ -1129,17 +1147,15 @@ func (*IntegerType) CanHaveMembers() bool {
 }
 
 func (t *IntegerType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // SignedIntegerType represents the super-type of all signed integer types
@@ -1201,17 +1217,15 @@ func (*SignedIntegerType) CanHaveMembers() bool {
 }
 
 func (t *SignedIntegerType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // IntType represents the arbitrary-precision integer type `Int`
@@ -1273,17 +1287,15 @@ func (*IntType) CanHaveMembers() bool {
 }
 
 func (t *IntType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // Int8Type represents the 8-bit signed integer type `Int8`
@@ -1349,17 +1361,15 @@ func (*Int8Type) CanHaveMembers() bool {
 }
 
 func (t *Int8Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // Int16Type represents the 16-bit signed integer type `Int16`
@@ -1424,17 +1434,15 @@ func (*Int16Type) CanHaveMembers() bool {
 }
 
 func (t *Int16Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // Int32Type represents the 32-bit signed integer type `Int32`
@@ -1499,17 +1507,15 @@ func (*Int32Type) CanHaveMembers() bool {
 }
 
 func (t *Int32Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // Int64Type represents the 64-bit signed integer type `Int64`
@@ -1574,17 +1580,15 @@ func (*Int64Type) CanHaveMembers() bool {
 }
 
 func (t *Int64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // Int128Type represents the 128-bit signed integer type `Int128`
@@ -1661,17 +1665,15 @@ func (*Int128Type) CanHaveMembers() bool {
 }
 
 func (t *Int128Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // Int256Type represents the 256-bit signed integer type `Int256`
@@ -1748,17 +1750,15 @@ func (*Int256Type) CanHaveMembers() bool {
 }
 
 func (t *Int256Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // UIntType represents the arbitrary-precision unsigned integer type `UInt`
@@ -1822,17 +1822,15 @@ func (*UIntType) CanHaveMembers() bool {
 }
 
 func (t *UIntType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // UInt8Type represents the 8-bit unsigned integer type `UInt8`
@@ -1898,17 +1896,15 @@ func (*UInt8Type) CanHaveMembers() bool {
 }
 
 func (t *UInt8Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // UInt16Type represents the 16-bit unsigned integer type `UInt16`
@@ -1974,17 +1970,15 @@ func (*UInt16Type) CanHaveMembers() bool {
 }
 
 func (t *UInt16Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // UInt32Type represents the 32-bit unsigned integer type `UInt32`
@@ -2050,17 +2044,15 @@ func (*UInt32Type) CanHaveMembers() bool {
 }
 
 func (t *UInt32Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // UInt64Type represents the 64-bit unsigned integer type `UInt64`
@@ -2126,17 +2118,15 @@ func (*UInt64Type) CanHaveMembers() bool {
 }
 
 func (t *UInt64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // UInt128Type represents the 128-bit unsigned integer type `UInt128`
@@ -2208,17 +2198,15 @@ func (*UInt128Type) CanHaveMembers() bool {
 }
 
 func (t *UInt128Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // UInt256Type represents the 256-bit unsigned integer type `UInt256`
@@ -2290,17 +2278,15 @@ func (*UInt256Type) CanHaveMembers() bool {
 }
 
 func (t *UInt256Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // Word8Type represents the 8-bit unsigned integer type `Word8`
@@ -2366,17 +2352,15 @@ func (*Word8Type) CanHaveMembers() bool {
 }
 
 func (t *Word8Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // Word16Type represents the 16-bit unsigned integer type `Word16`
@@ -2442,17 +2426,15 @@ func (*Word16Type) CanHaveMembers() bool {
 }
 
 func (t *Word16Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // Word32Type represents the 32-bit unsigned integer type `Word32`
@@ -2518,17 +2500,15 @@ func (*Word32Type) CanHaveMembers() bool {
 }
 
 func (t *Word32Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // Word64Type represents the 64-bit unsigned integer type `Word64`
@@ -2594,17 +2574,15 @@ func (*Word64Type) CanHaveMembers() bool {
 }
 
 func (t *Word64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // FixedPointType represents the super-type of all fixed-point types
@@ -2666,17 +2644,15 @@ func (*FixedPointType) CanHaveMembers() bool {
 }
 
 func (t *FixedPointType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // SignedFixedPointType represents the super-type of all signed fixed-point types
@@ -2738,17 +2714,15 @@ func (*SignedFixedPointType) CanHaveMembers() bool {
 }
 
 func (t *SignedFixedPointType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 const Fix64Scale uint = 8
@@ -2842,17 +2816,15 @@ func (*Fix64Type) CanHaveMembers() bool {
 }
 
 func (t *Fix64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
@@ -2939,17 +2911,15 @@ func (*UFix64Type) CanHaveMembers() bool {
 }
 
 func (t *UFix64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // ArrayType
@@ -5101,17 +5071,15 @@ func (*AddressType) CanHaveMembers() bool {
 }
 
 func (t *AddressType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case ToStringFunctionName:
-		return newFunction(toStringFunctionType)
-
-	default:
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
 		return nil
 	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // IsSubType determines if the given subtype is a subtype
