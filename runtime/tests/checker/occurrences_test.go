@@ -34,6 +34,8 @@ import (
 
 func TestCheckOccurrencesVariableDeclarations(t *testing.T) {
 
+	t.Parallel()
+
 	checker, err := ParseAndCheck(t, `
         let x = 1
         var y = x
@@ -85,6 +87,8 @@ nextMatcher:
 }
 
 func TestCheckOccurrencesFunction(t *testing.T) {
+
+	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
 		fun f1(paramX: Int, paramY: Bool) {
@@ -216,6 +220,8 @@ nextMatcher:
 }
 
 func TestCheckOccurrencesStructAndInterface(t *testing.T) {
+
+	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
 		struct interface I1 {}

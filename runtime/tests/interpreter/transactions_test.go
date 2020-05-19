@@ -31,6 +31,9 @@ import (
 )
 
 func TestInterpretTransactions(t *testing.T) {
+
+	t.Parallel()
+
 	t.Run("NoPrepareFunction", func(t *testing.T) {
 		inter := parseCheckAndInterpret(t, `
           transaction {

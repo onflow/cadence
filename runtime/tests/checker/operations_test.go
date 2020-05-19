@@ -33,6 +33,8 @@ import (
 
 func TestCheckInvalidUnaryBooleanNegationOfInteger(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let a = !1
 	`)
@@ -44,6 +46,8 @@ func TestCheckInvalidUnaryBooleanNegationOfInteger(t *testing.T) {
 
 func TestCheckUnaryBooleanNegation(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let a = !true
 	`)
@@ -52,6 +56,8 @@ func TestCheckUnaryBooleanNegation(t *testing.T) {
 }
 
 func TestCheckInvalidUnaryIntegerNegationOfBoolean(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       let a = -true
@@ -63,6 +69,8 @@ func TestCheckInvalidUnaryIntegerNegationOfBoolean(t *testing.T) {
 }
 
 func TestCheckUnaryIntegerNegation(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       let a = -1
@@ -83,6 +91,9 @@ type operationTests struct {
 }
 
 func TestCheckIntegerBinaryOperations(t *testing.T) {
+
+	t.Parallel()
+
 	allOperationTests := []operationTests{
 		{
 			operations: []ast.Operation{
@@ -280,6 +291,8 @@ func TestCheckIntegerBinaryOperations(t *testing.T) {
 }
 
 func TestCheckInvalidCompositeEquality(t *testing.T) {
+
+	t.Parallel()
 
 	for _, compositeKind := range common.AllCompositeKinds {
 

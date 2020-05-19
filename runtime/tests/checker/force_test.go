@@ -30,6 +30,8 @@ import (
 
 func TestCheckForce(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("valid", func(t *testing.T) {
 
 		checker, err := ParseAndCheck(t, `

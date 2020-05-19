@@ -30,6 +30,8 @@ import (
 
 func TestCheckInvalidUnknownDeclarationSwap(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           var x = 1
@@ -43,6 +45,8 @@ func TestCheckInvalidUnknownDeclarationSwap(t *testing.T) {
 }
 
 func TestCheckInvalidLeftConstantSwap(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -59,6 +63,8 @@ func TestCheckInvalidLeftConstantSwap(t *testing.T) {
 
 func TestCheckInvalidRightConstantSwap(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           var x = 2
@@ -74,6 +80,8 @@ func TestCheckInvalidRightConstantSwap(t *testing.T) {
 
 func TestCheckSwap(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           var x = 2
@@ -86,6 +94,8 @@ func TestCheckSwap(t *testing.T) {
 }
 
 func TestCheckInvalidTypesSwap(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -102,6 +112,8 @@ func TestCheckInvalidTypesSwap(t *testing.T) {
 
 func TestCheckInvalidTypesSwap2(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           var x = "2"
@@ -116,6 +128,8 @@ func TestCheckInvalidTypesSwap2(t *testing.T) {
 }
 
 func TestCheckInvalidSwapTargetExpressionLeft(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -135,6 +149,8 @@ func TestCheckInvalidSwapTargetExpressionLeft(t *testing.T) {
 
 func TestCheckInvalidSwapTargetExpressionRight(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           var x = 1
@@ -152,6 +168,8 @@ func TestCheckInvalidSwapTargetExpressionRight(t *testing.T) {
 }
 
 func TestCheckInvalidSwapTargetExpressions(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -171,6 +189,8 @@ func TestCheckInvalidSwapTargetExpressions(t *testing.T) {
 
 func TestCheckSwapOptional(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           var x: Int? = 2
@@ -183,6 +203,8 @@ func TestCheckSwapOptional(t *testing.T) {
 }
 
 func TestCheckSwapResourceArrayElementAndVariable(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -201,6 +223,8 @@ func TestCheckSwapResourceArrayElementAndVariable(t *testing.T) {
 
 func TestCheckSwapResourceArrayElements(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -215,6 +239,8 @@ func TestCheckSwapResourceArrayElements(t *testing.T) {
 }
 
 func TestCheckSwapResourceFields(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -247,6 +273,8 @@ func TestCheckSwapResourceFields(t *testing.T) {
 // to swap fields which are constant (`let`)
 //
 func TestCheckInvalidSwapConstantResourceFields(t *testing.T) {
+
+	t.Parallel()
 
 	for i := 0; i < 2; i++ {
 
@@ -312,6 +340,8 @@ func TestCheckInvalidSwapConstantResourceFields(t *testing.T) {
 
 func TestCheckSwapResourceDictionaryElement(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -328,6 +358,8 @@ func TestCheckSwapResourceDictionaryElement(t *testing.T) {
 }
 
 func TestCheckInvalidSwapResourceDictionaryElement(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}

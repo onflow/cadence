@@ -31,6 +31,8 @@ import (
 
 func TestCheckInvalidCompositeInitializerOverloading(t *testing.T) {
 
+	t.Parallel()
+
 	interfacePossibilities := []bool{true, false}
 
 	for _, kind := range common.CompositeKindsWithBody {
@@ -74,6 +76,8 @@ func TestCheckInvalidCompositeInitializerOverloading(t *testing.T) {
 }
 
 func TestCheckInvalidResourceDestructorOverloading(t *testing.T) {
+
+	t.Parallel()
 
 	interfacePossibilities := []bool{true, false}
 

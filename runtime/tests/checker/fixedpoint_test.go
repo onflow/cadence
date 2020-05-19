@@ -34,6 +34,8 @@ import (
 
 func TestCheckFixedPointLiteralTypeConversionInVariableDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	for _, ty := range sema.AllFixedPointTypes {
 		// Test non-optional and optional type
 
@@ -65,6 +67,8 @@ func TestCheckFixedPointLiteralTypeConversionInVariableDeclaration(t *testing.T)
 }
 
 func TestCheckFixedPointLiteralTypeConversionInAssignment(t *testing.T) {
+
+	t.Parallel()
 
 	for _, ty := range sema.AllFixedPointTypes {
 		// Test non-optional and optional type
@@ -99,6 +103,8 @@ func TestCheckFixedPointLiteralTypeConversionInAssignment(t *testing.T) {
 }
 
 func TestCheckFixedPointLiteralRanges(t *testing.T) {
+
+	t.Parallel()
 
 	inferredType := func(t *testing.T, literal string) sema.Type {
 
@@ -468,6 +474,8 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 //
 func TestCheckInvalidFixedPointLiteralWithNeverReturnType(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
         fun test(): Never {
             return 1.2
@@ -480,6 +488,8 @@ func TestCheckInvalidFixedPointLiteralWithNeverReturnType(t *testing.T) {
 }
 
 func TestCheckFixedPointLiteralTypeConversionInFunctionCallArgument(t *testing.T) {
+
+	t.Parallel()
 
 	for _, ty := range sema.AllFixedPointTypes {
 		// Test non-optional and optional type
@@ -508,6 +518,8 @@ func TestCheckFixedPointLiteralTypeConversionInFunctionCallArgument(t *testing.T
 
 func TestCheckFixedPointLiteralTypeConversionInReturn(t *testing.T) {
 
+	t.Parallel()
+
 	for _, ty := range sema.AllFixedPointTypes {
 		// Test non-optional and optional type
 
@@ -535,6 +547,8 @@ func TestCheckFixedPointLiteralTypeConversionInReturn(t *testing.T) {
 
 func TestCheckSignedFixedPointNegate(t *testing.T) {
 
+	t.Parallel()
+
 	for _, ty := range sema.AllSignedFixedPointTypes {
 		name := ty.String()
 
@@ -555,6 +569,8 @@ func TestCheckSignedFixedPointNegate(t *testing.T) {
 }
 
 func TestCheckInvalidUnsignedFixedPointNegate(t *testing.T) {
+
+	t.Parallel()
 
 	for _, ty := range sema.AllUnsignedFixedPointTypes {
 
@@ -578,6 +594,8 @@ func TestCheckInvalidUnsignedFixedPointNegate(t *testing.T) {
 
 func TestCheckInvalidNegativeZeroUnsignedFixedPoint(t *testing.T) {
 
+	t.Parallel()
+
 	for _, ty := range sema.AllUnsignedFixedPointTypes {
 
 		t.Run(ty.String(), func(t *testing.T) {
@@ -598,6 +616,8 @@ func TestCheckInvalidNegativeZeroUnsignedFixedPoint(t *testing.T) {
 }
 
 func TestCheckFixedPointLiteralScales(t *testing.T) {
+
+	t.Parallel()
 
 	for _, ty := range sema.AllFixedPointTypes {
 		t.Run(ty.String(), func(t *testing.T) {

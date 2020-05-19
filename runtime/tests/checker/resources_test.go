@@ -34,6 +34,8 @@ import (
 
 func TestCheckFailableCastingWithResourceAnnotation(t *testing.T) {
 
+	t.Parallel()
+
 	for _, compositeKind := range common.AllCompositeKinds {
 
 		body := "{}"
@@ -84,6 +86,8 @@ func TestCheckFailableCastingWithResourceAnnotation(t *testing.T) {
 
 func TestCheckFunctionDeclarationParameterWithResourceAnnotation(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.AllCompositeKinds {
 
 		body := "{}"
@@ -129,6 +133,8 @@ func TestCheckFunctionDeclarationParameterWithResourceAnnotation(t *testing.T) {
 
 func TestCheckFunctionDeclarationParameterWithoutResourceAnnotation(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.AllCompositeKinds {
 
 		body := "{}"
@@ -173,6 +179,8 @@ func TestCheckFunctionDeclarationParameterWithoutResourceAnnotation(t *testing.T
 }
 
 func TestCheckFunctionDeclarationReturnTypeWithResourceAnnotation(t *testing.T) {
+
+	t.Parallel()
 
 	for _, compositeKind := range common.AllCompositeKinds {
 
@@ -231,6 +239,8 @@ func TestCheckFunctionDeclarationReturnTypeWithResourceAnnotation(t *testing.T) 
 
 func TestCheckFunctionDeclarationReturnTypeWithoutResourceAnnotation(t *testing.T) {
 
+	t.Parallel()
+
 	for _, compositeKind := range common.AllCompositeKinds {
 
 		if compositeKind == common.CompositeKindContract {
@@ -283,6 +293,8 @@ func TestCheckFunctionDeclarationReturnTypeWithoutResourceAnnotation(t *testing.
 }
 
 func TestCheckVariableDeclarationWithResourceAnnotation(t *testing.T) {
+
+	t.Parallel()
 
 	for _, compositeKind := range common.AllCompositeKinds {
 
@@ -338,6 +350,8 @@ func TestCheckVariableDeclarationWithResourceAnnotation(t *testing.T) {
 
 func TestCheckVariableDeclarationWithoutResourceAnnotation(t *testing.T) {
 
+	t.Parallel()
+
 	for _, compositeKind := range common.AllCompositeKinds {
 
 		if compositeKind == common.CompositeKindContract {
@@ -390,6 +404,8 @@ func TestCheckVariableDeclarationWithoutResourceAnnotation(t *testing.T) {
 }
 
 func TestCheckFieldDeclarationWithResourceAnnotation(t *testing.T) {
+
+	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithBody {
 
@@ -453,6 +469,9 @@ func TestCheckFieldDeclarationWithResourceAnnotation(t *testing.T) {
 }
 
 func TestCheckFieldDeclarationWithoutResourceAnnotation(t *testing.T) {
+
+	t.Parallel()
+
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -511,6 +530,8 @@ func TestCheckFieldDeclarationWithoutResourceAnnotation(t *testing.T) {
 
 func TestCheckFunctionExpressionParameterWithResourceAnnotation(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.AllCompositeKinds {
 
 		body := "{}"
@@ -555,6 +576,8 @@ func TestCheckFunctionExpressionParameterWithResourceAnnotation(t *testing.T) {
 }
 
 func TestCheckFunctionExpressionParameterWithoutResourceAnnotation(t *testing.T) {
+
+	t.Parallel()
 
 	for _, kind := range common.AllCompositeKinds {
 
@@ -601,6 +624,8 @@ func TestCheckFunctionExpressionParameterWithoutResourceAnnotation(t *testing.T)
 }
 
 func TestCheckFunctionExpressionReturnTypeWithResourceAnnotation(t *testing.T) {
+
+	t.Parallel()
 
 	for _, compositeKind := range common.AllCompositeKinds {
 
@@ -658,6 +683,8 @@ func TestCheckFunctionExpressionReturnTypeWithResourceAnnotation(t *testing.T) {
 
 func TestCheckFunctionExpressionReturnTypeWithoutResourceAnnotation(t *testing.T) {
 
+	t.Parallel()
+
 	for _, compositeKind := range common.AllCompositeKinds {
 
 		if compositeKind == common.CompositeKindContract {
@@ -713,6 +740,8 @@ func TestCheckFunctionExpressionReturnTypeWithoutResourceAnnotation(t *testing.T
 
 func TestCheckFunctionTypeParameterWithResourceAnnotation(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.AllCompositeKinds {
 
 		body := "{}"
@@ -760,6 +789,8 @@ func TestCheckFunctionTypeParameterWithResourceAnnotation(t *testing.T) {
 // NOTE: variable type instead of function parameter
 func TestCheckFunctionTypeParameterWithoutResourceAnnotation(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.AllCompositeKinds {
 
 		body := "{}"
@@ -805,6 +836,8 @@ func TestCheckFunctionTypeParameterWithoutResourceAnnotation(t *testing.T) {
 }
 
 func TestCheckFunctionTypeReturnTypeWithResourceAnnotation(t *testing.T) {
+
+	t.Parallel()
 
 	for _, compositeKind := range common.AllCompositeKinds {
 
@@ -864,6 +897,8 @@ func TestCheckFunctionTypeReturnTypeWithResourceAnnotation(t *testing.T) {
 
 func TestCheckFunctionTypeReturnTypeWithoutResourceAnnotation(t *testing.T) {
 
+	t.Parallel()
+
 	for _, compositeKind := range common.AllCompositeKinds {
 
 		if compositeKind == common.CompositeKindContract {
@@ -920,6 +955,8 @@ func TestCheckFunctionTypeReturnTypeWithoutResourceAnnotation(t *testing.T) {
 
 func TestCheckFailableCastingWithoutResourceAnnotation(t *testing.T) {
 
+	t.Parallel()
+
 	for _, compositeKind := range common.AllCompositeKinds {
 
 		body := "{}"
@@ -970,6 +1007,8 @@ func TestCheckFailableCastingWithoutResourceAnnotation(t *testing.T) {
 
 func TestCheckUnaryMove(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -989,6 +1028,8 @@ func TestCheckUnaryMove(t *testing.T) {
 
 func TestCheckImmediateDestroy(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -1001,6 +1042,8 @@ func TestCheckImmediateDestroy(t *testing.T) {
 }
 
 func TestCheckIndirectDestroy(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -1016,6 +1059,8 @@ func TestCheckIndirectDestroy(t *testing.T) {
 
 func TestCheckInvalidResourceCreationWithoutCreate(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -1029,6 +1074,8 @@ func TestCheckInvalidResourceCreationWithoutCreate(t *testing.T) {
 }
 
 func TestCheckInvalidDestroy(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       struct X {}
@@ -1045,6 +1092,8 @@ func TestCheckInvalidDestroy(t *testing.T) {
 
 func TestCheckUnaryCreateAndDestroy(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -1058,6 +1107,8 @@ func TestCheckUnaryCreateAndDestroy(t *testing.T) {
 }
 
 func TestCheckUnaryCreateAndDestroyWithInitializer(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {
@@ -1077,6 +1128,8 @@ func TestCheckUnaryCreateAndDestroyWithInitializer(t *testing.T) {
 }
 
 func TestCheckInvalidUnaryCreateAndDestroyWithWrongInitializerArguments(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {
@@ -1100,6 +1153,8 @@ func TestCheckInvalidUnaryCreateAndDestroyWithWrongInitializerArguments(t *testi
 
 func TestCheckInvalidUnaryCreateStruct(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       struct X {}
 
@@ -1114,6 +1169,8 @@ func TestCheckInvalidUnaryCreateStruct(t *testing.T) {
 }
 
 func TestCheckInvalidCreateImportedResource(t *testing.T) {
+
+	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
       pub resource R {}
@@ -1142,6 +1199,8 @@ func TestCheckInvalidCreateImportedResource(t *testing.T) {
 }
 
 func TestCheckResourceCreationInContracts(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("in sibling contract", func(t *testing.T) {
 
@@ -1184,6 +1243,8 @@ func TestCheckResourceCreationInContracts(t *testing.T) {
 }
 
 func TestCheckInvalidResourceLoss(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("UnassignedResource", func(t *testing.T) {
 
@@ -1318,6 +1379,8 @@ func TestCheckInvalidResourceLoss(t *testing.T) {
 
 func TestCheckResourceReturn(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -1330,6 +1393,8 @@ func TestCheckResourceReturn(t *testing.T) {
 }
 
 func TestCheckInvalidResourceReturnMissingMove(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -1345,6 +1410,8 @@ func TestCheckInvalidResourceReturnMissingMove(t *testing.T) {
 }
 
 func TestCheckInvalidResourceReturnMissingMoveInvalidReturnType(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -1362,6 +1429,8 @@ func TestCheckInvalidResourceReturnMissingMoveInvalidReturnType(t *testing.T) {
 
 func TestCheckInvalidNonResourceReturnWithMove(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       struct X {}
 
@@ -1376,6 +1445,8 @@ func TestCheckInvalidNonResourceReturnWithMove(t *testing.T) {
 }
 
 func TestCheckResourceArgument(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -1393,6 +1464,8 @@ func TestCheckResourceArgument(t *testing.T) {
 }
 
 func TestCheckInvalidResourceArgumentMissingMove(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -1413,6 +1486,8 @@ func TestCheckInvalidResourceArgumentMissingMove(t *testing.T) {
 
 func TestCheckInvalidResourceArgumentMissingMoveInvalidParameterType(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -1431,6 +1506,8 @@ func TestCheckInvalidResourceArgumentMissingMoveInvalidParameterType(t *testing.
 
 func TestCheckInvalidNonResourceArgumentWithMove(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       struct X {}
 
@@ -1448,6 +1525,8 @@ func TestCheckInvalidNonResourceArgumentWithMove(t *testing.T) {
 
 func TestCheckResourceVariableDeclarationTransfer(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -1459,6 +1538,8 @@ func TestCheckResourceVariableDeclarationTransfer(t *testing.T) {
 }
 
 func TestCheckInvalidResourceVariableDeclarationIncorrectTransfer(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -1475,6 +1556,8 @@ func TestCheckInvalidResourceVariableDeclarationIncorrectTransfer(t *testing.T) 
 
 func TestCheckInvalidNonResourceVariableDeclarationMoveTransfer(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       struct X {}
 
@@ -1488,6 +1571,8 @@ func TestCheckInvalidNonResourceVariableDeclarationMoveTransfer(t *testing.T) {
 }
 
 func TestCheckInvalidResourceAssignmentTransfer(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -1506,6 +1591,8 @@ func TestCheckInvalidResourceAssignmentTransfer(t *testing.T) {
 }
 
 func TestCheckInvalidResourceAssignmentIncorrectTransfer(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -1526,6 +1613,8 @@ func TestCheckInvalidResourceAssignmentIncorrectTransfer(t *testing.T) {
 
 func TestCheckInvalidNonResourceAssignmentMoveTransfer(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       struct X {}
 
@@ -1542,6 +1631,8 @@ func TestCheckInvalidNonResourceAssignmentMoveTransfer(t *testing.T) {
 }
 
 func TestCheckResourceAssignmentForceTransfer(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("new to nil", func(t *testing.T) {
 
@@ -1626,6 +1717,8 @@ func TestCheckResourceAssignmentForceTransfer(t *testing.T) {
 
 func TestCheckInvalidResourceLossThroughVariableDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -1640,6 +1733,8 @@ func TestCheckInvalidResourceLossThroughVariableDeclaration(t *testing.T) {
 }
 
 func TestCheckInvalidResourceLossThroughVariableDeclarationAfterCreation(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -1656,6 +1751,8 @@ func TestCheckInvalidResourceLossThroughVariableDeclarationAfterCreation(t *test
 }
 
 func TestCheckInvalidResourceLossThroughAssignment(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -1675,6 +1772,8 @@ func TestCheckInvalidResourceLossThroughAssignment(t *testing.T) {
 
 func TestCheckResourceMoveThroughReturn(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -1688,6 +1787,8 @@ func TestCheckResourceMoveThroughReturn(t *testing.T) {
 }
 
 func TestCheckResourceMoveThroughArgumentPassing(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -1706,6 +1807,8 @@ func TestCheckResourceMoveThroughArgumentPassing(t *testing.T) {
 }
 
 func TestCheckInvalidResourceUseAfterMoveToFunction(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -1727,6 +1830,8 @@ func TestCheckInvalidResourceUseAfterMoveToFunction(t *testing.T) {
 }
 
 func TestCheckInvalidResourceUseAfterMoveToVariable(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -1750,6 +1855,8 @@ func TestCheckInvalidResourceUseAfterMoveToVariable(t *testing.T) {
 }
 
 func TestCheckInvalidResourceFieldUseAfterMoveToVariable(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {
@@ -1777,6 +1884,8 @@ func TestCheckInvalidResourceFieldUseAfterMoveToVariable(t *testing.T) {
 
 func TestCheckResourceUseAfterMoveInIfStatementThenBranch(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -1800,6 +1909,8 @@ func TestCheckResourceUseAfterMoveInIfStatementThenBranch(t *testing.T) {
 
 func TestCheckResourceUseInIfStatement(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -1821,6 +1932,8 @@ func TestCheckResourceUseInIfStatement(t *testing.T) {
 }
 
 func TestCheckResourceUseInNestedIfStatement(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -1847,6 +1960,8 @@ func TestCheckResourceUseInNestedIfStatement(t *testing.T) {
 ////
 
 func TestCheckInvalidResourceUseAfterIfStatement(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -1889,6 +2004,8 @@ func TestCheckInvalidResourceUseAfterIfStatement(t *testing.T) {
 
 func TestCheckInvalidResourceLossAfterDestroyInIfStatementThenBranch(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -1906,6 +2023,8 @@ func TestCheckInvalidResourceLossAfterDestroyInIfStatementThenBranch(t *testing.
 }
 
 func TestCheckInvalidResourceLossAndUseAfterDestroyInIfStatementThenBranch(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {
@@ -1932,6 +2051,8 @@ func TestCheckInvalidResourceLossAndUseAfterDestroyInIfStatementThenBranch(t *te
 
 func TestCheckResourceMoveIntoArray(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -1943,6 +2064,8 @@ func TestCheckResourceMoveIntoArray(t *testing.T) {
 }
 
 func TestCheckInvalidResourceMoveIntoArrayMissingMoveOperation(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -1958,6 +2081,8 @@ func TestCheckInvalidResourceMoveIntoArrayMissingMoveOperation(t *testing.T) {
 
 func TestCheckInvalidNonResourceMoveIntoArray(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       struct X {}
 
@@ -1971,6 +2096,8 @@ func TestCheckInvalidNonResourceMoveIntoArray(t *testing.T) {
 }
 
 func TestCheckInvalidUseAfterResourceMoveIntoArray(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -1986,6 +2113,8 @@ func TestCheckInvalidUseAfterResourceMoveIntoArray(t *testing.T) {
 
 func TestCheckResourceMoveIntoDictionary(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -1997,6 +2126,8 @@ func TestCheckResourceMoveIntoDictionary(t *testing.T) {
 }
 
 func TestCheckInvalidResourceMoveIntoDictionaryMissingMoveOperation(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -2012,6 +2143,8 @@ func TestCheckInvalidResourceMoveIntoDictionaryMissingMoveOperation(t *testing.T
 
 func TestCheckInvalidNonResourceMoveIntoDictionary(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       struct X {}
 
@@ -2025,6 +2158,8 @@ func TestCheckInvalidNonResourceMoveIntoDictionary(t *testing.T) {
 }
 
 func TestCheckInvalidUseAfterResourceMoveIntoDictionary(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -2043,6 +2178,8 @@ func TestCheckInvalidUseAfterResourceMoveIntoDictionary(t *testing.T) {
 
 func TestCheckInvalidUseAfterResourceMoveIntoDictionaryAsKey(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -2057,6 +2194,8 @@ func TestCheckInvalidUseAfterResourceMoveIntoDictionaryAsKey(t *testing.T) {
 }
 
 func TestCheckInvalidResourceUseAfterMoveInWhileStatement(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -2077,6 +2216,8 @@ func TestCheckInvalidResourceUseAfterMoveInWhileStatement(t *testing.T) {
 }
 
 func TestCheckResourceUseInWhileStatement(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {
@@ -2099,6 +2240,8 @@ func TestCheckResourceUseInWhileStatement(t *testing.T) {
 }
 
 func TestCheckInvalidResourceUseInWhileStatementAfterDestroy(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {
@@ -2127,6 +2270,8 @@ func TestCheckInvalidResourceUseInWhileStatementAfterDestroy(t *testing.T) {
 
 func TestCheckInvalidResourceUseInWhileStatementAfterDestroyAndLoss(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -2145,6 +2290,8 @@ func TestCheckInvalidResourceUseInWhileStatementAfterDestroyAndLoss(t *testing.T
 }
 
 func TestCheckInvalidResourceUseInNestedWhileStatementAfterDestroyAndLoss1(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {
@@ -2174,6 +2321,8 @@ func TestCheckInvalidResourceUseInNestedWhileStatementAfterDestroyAndLoss1(t *te
 
 func TestCheckInvalidResourceUseInNestedWhileStatementAfterDestroyAndLoss2(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {
           let id: Int
@@ -2202,6 +2351,8 @@ func TestCheckInvalidResourceUseInNestedWhileStatementAfterDestroyAndLoss2(t *te
 
 func TestCheckResourceUseInNestedWhileStatement(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {
           let id: Int
@@ -2226,6 +2377,8 @@ func TestCheckResourceUseInNestedWhileStatement(t *testing.T) {
 
 func TestCheckInvalidResourceLossThroughReturn(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -2243,6 +2396,8 @@ func TestCheckInvalidResourceLossThroughReturn(t *testing.T) {
 }
 
 func TestCheckInvalidResourceLossThroughReturnInIfStatementThrenBranch(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -2262,6 +2417,8 @@ func TestCheckInvalidResourceLossThroughReturnInIfStatementThrenBranch(t *testin
 }
 
 func TestCheckInvalidResourceLossThroughReturnInIfStatementBranches(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -2290,6 +2447,8 @@ func TestCheckInvalidResourceLossThroughReturnInIfStatementBranches(t *testing.T
 
 func TestCheckResourceWithMoveAndReturnInIfStatementThenAndDestroyInElse(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -2313,6 +2472,8 @@ func TestCheckResourceWithMoveAndReturnInIfStatementThenAndDestroyInElse(t *test
 
 func TestCheckResourceWithMoveAndReturnInIfStatementThenBranch(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -2334,6 +2495,9 @@ func TestCheckResourceWithMoveAndReturnInIfStatementThenBranch(t *testing.T) {
 }
 
 func TestCheckResourceNesting(t *testing.T) {
+
+	t.Parallel()
+
 	interfacePossibilities := []bool{true, false}
 
 	for _, innerCompositeKind := range common.AllCompositeKinds {
@@ -2493,6 +2657,8 @@ func testResourceNesting(
 
 func TestCheckContractResourceField(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource R {}
 
@@ -2509,6 +2675,8 @@ func TestCheckContractResourceField(t *testing.T) {
 }
 
 func TestCheckInvalidContractResourceFieldMove(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource R {}
@@ -2537,6 +2705,8 @@ func TestCheckInvalidContractResourceFieldMove(t *testing.T) {
 //
 func TestCheckResourceInterfaceConformance(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource interface X {
           fun test()
@@ -2555,6 +2725,8 @@ func TestCheckResourceInterfaceConformance(t *testing.T) {
 //
 func TestCheckInvalidResourceInterfaceConformance(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource interface X {
           fun test()
@@ -2572,6 +2744,8 @@ func TestCheckInvalidResourceInterfaceConformance(t *testing.T) {
 // can not be used as a type
 //
 func TestCheckInvalidResourceInterfaceUseAsType(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource interface I {}
@@ -2592,6 +2766,8 @@ func TestCheckInvalidResourceInterfaceUseAsType(t *testing.T) {
 //
 func TestCheckResourceInterfaceUseAsType(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource interface I {}
 
@@ -2604,6 +2780,8 @@ func TestCheckResourceInterfaceUseAsType(t *testing.T) {
 }
 
 func TestCheckResourceArrayIndexing(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource Foo {
@@ -2626,6 +2804,8 @@ func TestCheckResourceArrayIndexing(t *testing.T) {
 }
 
 func TestCheckInvalidResourceLossReturnResourceAndMemberAccess(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {
@@ -2652,6 +2832,8 @@ func TestCheckInvalidResourceLossReturnResourceAndMemberAccess(t *testing.T) {
 
 func TestCheckInvalidResourceLossAfterMoveThroughArrayIndexing(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -2671,6 +2853,8 @@ func TestCheckInvalidResourceLossAfterMoveThroughArrayIndexing(t *testing.T) {
 }
 
 func TestCheckInvalidResourceLossThroughFunctionResultAccess(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource Foo {
@@ -2700,6 +2884,8 @@ func TestCheckInvalidResourceLossThroughFunctionResultAccess(t *testing.T) {
 //
 func TestCheckAnyResourceDestruction(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource interface I {}
 
@@ -2722,6 +2908,8 @@ func TestCheckAnyResourceDestruction(t *testing.T) {
 // a variable declaration. This would partially invalidate the containing resource
 //
 func TestCheckInvalidResourceFieldMoveThroughVariableDeclaration(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource Foo {}
@@ -2761,6 +2949,8 @@ func TestCheckInvalidResourceFieldMoveThroughVariableDeclaration(t *testing.T) {
 //
 func TestCheckInvalidResourceFieldMoveThroughParameter(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource Foo {}
 
@@ -2798,6 +2988,8 @@ func TestCheckInvalidResourceFieldMoveThroughParameter(t *testing.T) {
 
 func TestCheckInvalidResourceFieldMoveSelf(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource Y {}
 
@@ -2830,6 +3022,8 @@ func TestCheckInvalidResourceFieldMoveSelf(t *testing.T) {
 
 func TestCheckInvalidResourceFieldUseAfterDestroy(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource Y {}
 
@@ -2855,6 +3049,8 @@ func TestCheckInvalidResourceFieldUseAfterDestroy(t *testing.T) {
 
 func TestCheckResourceArrayAppend(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -2869,6 +3065,8 @@ func TestCheckResourceArrayAppend(t *testing.T) {
 }
 
 func TestCheckResourceArrayInsert(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -2885,6 +3083,8 @@ func TestCheckResourceArrayInsert(t *testing.T) {
 
 func TestCheckResourceArrayRemove(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -2900,6 +3100,8 @@ func TestCheckResourceArrayRemove(t *testing.T) {
 }
 
 func TestCheckInvalidResourceArrayRemoveResourceLoss(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -2918,6 +3120,8 @@ func TestCheckInvalidResourceArrayRemoveResourceLoss(t *testing.T) {
 
 func TestCheckResourceArrayRemoveFirst(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -2934,6 +3138,8 @@ func TestCheckResourceArrayRemoveFirst(t *testing.T) {
 
 func TestCheckResourceArrayRemoveLast(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -2949,6 +3155,8 @@ func TestCheckResourceArrayRemoveLast(t *testing.T) {
 }
 
 func TestCheckInvalidResourceArrayContains(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -2968,6 +3176,8 @@ func TestCheckInvalidResourceArrayContains(t *testing.T) {
 
 func TestCheckResourceArrayLength(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -2983,6 +3193,8 @@ func TestCheckResourceArrayLength(t *testing.T) {
 }
 
 func TestCheckInvalidResourceArrayConcat(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -3003,6 +3215,8 @@ func TestCheckInvalidResourceArrayConcat(t *testing.T) {
 
 func TestCheckResourceDictionaryRemove(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -3018,6 +3232,8 @@ func TestCheckResourceDictionaryRemove(t *testing.T) {
 }
 
 func TestCheckInvalidResourceDictionaryRemoveResourceLoss(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -3036,6 +3252,8 @@ func TestCheckInvalidResourceDictionaryRemoveResourceLoss(t *testing.T) {
 
 func TestCheckResourceDictionaryInsert(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -3051,6 +3269,8 @@ func TestCheckResourceDictionaryInsert(t *testing.T) {
 }
 
 func TestCheckInvalidResourceDictionaryInsertResourceLoss(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -3069,6 +3289,8 @@ func TestCheckInvalidResourceDictionaryInsertResourceLoss(t *testing.T) {
 
 func TestCheckResourceDictionaryLength(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -3084,6 +3306,8 @@ func TestCheckResourceDictionaryLength(t *testing.T) {
 }
 
 func TestCheckInvalidResourceDictionaryKeys(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -3105,6 +3329,8 @@ func TestCheckInvalidResourceDictionaryKeys(t *testing.T) {
 
 func TestCheckInvalidResourceDictionaryValues(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -3123,6 +3349,8 @@ func TestCheckInvalidResourceDictionaryValues(t *testing.T) {
 }
 
 func TestCheckInvalidResourceLossAfterMoveThroughDictionaryIndexing(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -3144,6 +3372,8 @@ func TestCheckInvalidResourceLossAfterMoveThroughDictionaryIndexing(t *testing.T
 
 func TestCheckInvalidResourceSwap(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource X {}
 
@@ -3160,6 +3390,8 @@ func TestCheckInvalidResourceSwap(t *testing.T) {
 }
 
 func TestCheckInvalidResourceConstantResourceFieldSwap(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource Foo {}
@@ -3193,6 +3425,8 @@ func TestCheckInvalidResourceConstantResourceFieldSwap(t *testing.T) {
 
 func TestCheckResourceVariableResourceFieldSwap(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource Foo {}
 
@@ -3222,6 +3456,8 @@ func TestCheckResourceVariableResourceFieldSwap(t *testing.T) {
 }
 
 func TestCheckInvalidResourceFieldDestroy(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
      resource Foo {}
@@ -3254,6 +3490,8 @@ func TestCheckInvalidResourceFieldDestroy(t *testing.T) {
 }
 
 func TestCheckResourceParameterInInterfaceNoResourceLossError(t *testing.T) {
+
+	t.Parallel()
 
 	declarationKinds := []common.DeclarationKind{
 		common.DeclarationKindInitializer,
@@ -3311,6 +3549,8 @@ func TestCheckResourceParameterInInterfaceNoResourceLossError(t *testing.T) {
 
 func TestCheckResourceFieldUseAndDestruction(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
      resource interface RI {}
 
@@ -3341,6 +3581,8 @@ func TestCheckResourceFieldUseAndDestruction(t *testing.T) {
 
 func TestCheckInvalidResourceMethodBinding(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource R {}
 
@@ -3359,6 +3601,8 @@ func TestCheckInvalidResourceMethodBinding(t *testing.T) {
 
 func TestCheckInvalidResourceMethodCall(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource R {}
 
@@ -3373,6 +3617,8 @@ func TestCheckInvalidResourceMethodCall(t *testing.T) {
 }
 
 func TestCheckResourceOptionalBinding(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource R {}
@@ -3391,6 +3637,8 @@ func TestCheckResourceOptionalBinding(t *testing.T) {
 }
 
 func TestCheckInvalidResourceOptionalBindingResourceLossInThen(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource R {}
@@ -3412,6 +3660,8 @@ func TestCheckInvalidResourceOptionalBindingResourceLossInThen(t *testing.T) {
 
 func TestCheckInvalidResourceOptionalBindingResourceLossInElse(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource R {}
 
@@ -3431,6 +3681,8 @@ func TestCheckInvalidResourceOptionalBindingResourceLossInElse(t *testing.T) {
 }
 
 func TestCheckInvalidResourceOptionalBindingResourceUseAfterInvalidationInThen(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource R {}
@@ -3452,6 +3704,8 @@ func TestCheckInvalidResourceOptionalBindingResourceUseAfterInvalidationInThen(t
 }
 
 func TestCheckInvalidResourceOptionalBindingResourceUseAfterInvalidationAfterBranches(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource R {}
@@ -3478,6 +3732,8 @@ func TestCheckInvalidResourceOptionalBindingResourceUseAfterInvalidationAfterBra
 
 func TestCheckResourceOptionalBindingFailableCast(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t,
 		`
          resource interface RI {}
@@ -3498,6 +3754,8 @@ func TestCheckResourceOptionalBindingFailableCast(t *testing.T) {
 }
 
 func TestCheckInvalidResourceOptionalBindingFailableCastResourceUseAfterInvalidationInThen(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t,
 		`
@@ -3523,6 +3781,8 @@ func TestCheckInvalidResourceOptionalBindingFailableCastResourceUseAfterInvalida
 
 func TestCheckInvalidResourceOptionalBindingFailableCastResourceUseAfterInvalidationAfterBranches(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t,
 		`
          resource interface RI {}
@@ -3545,6 +3805,8 @@ func TestCheckInvalidResourceOptionalBindingFailableCastResourceUseAfterInvalida
 
 func TestCheckInvalidResourceOptionalBindingFailableCastResourceLossMissingElse(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource interface RI {}
 
@@ -3564,6 +3826,8 @@ func TestCheckInvalidResourceOptionalBindingFailableCastResourceLossMissingElse(
 }
 
 func TestCheckInvalidResourceOptionalBindingFailableCastResourceUseAfterInvalidationAfterThen(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource interface RI {}
@@ -3585,6 +3849,8 @@ func TestCheckInvalidResourceOptionalBindingFailableCastResourceUseAfterInvalida
 }
 
 func TestCheckInvalidResourceOptionalBindingFailableCastMissingElse(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("top-level resource interface to resource", func(t *testing.T) {
 
@@ -3631,6 +3897,8 @@ func TestCheckInvalidResourceOptionalBindingFailableCastMissingElse(t *testing.T
 
 func TestCheckInvalidResourceFailableCastOutsideOptionalBinding(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource interface RI {}
 
@@ -3650,6 +3918,8 @@ func TestCheckInvalidResourceFailableCastOutsideOptionalBinding(t *testing.T) {
 
 func TestCheckInvalidUnaryMoveAndCopyTransfer(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource R {}
 
@@ -3665,6 +3935,8 @@ func TestCheckInvalidUnaryMoveAndCopyTransfer(t *testing.T) {
 }
 
 func TestCheckInvalidResourceSelfMoveToFunction(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
 
@@ -3687,6 +3959,8 @@ func TestCheckInvalidResourceSelfMoveToFunction(t *testing.T) {
 
 func TestCheckInvalidResourceSelfMoveInVariableDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
 
       resource X {
@@ -3705,6 +3979,8 @@ func TestCheckInvalidResourceSelfMoveInVariableDeclaration(t *testing.T) {
 
 func TestCheckInvalidResourceSelfDestruction(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
 
       resource X {
@@ -3721,6 +3997,8 @@ func TestCheckInvalidResourceSelfDestruction(t *testing.T) {
 }
 
 func TestCheckInvalidResourceSelfMoveReturnFromFunction(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
 
@@ -3739,6 +4017,8 @@ func TestCheckInvalidResourceSelfMoveReturnFromFunction(t *testing.T) {
 
 func TestCheckInvalidResourceSelfMoveIntoArrayLiteral(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
 
       resource X {
@@ -3756,6 +4036,8 @@ func TestCheckInvalidResourceSelfMoveIntoArrayLiteral(t *testing.T) {
 
 func TestCheckInvalidResourceSelfMoveIntoDictionaryLiteral(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
 
       resource X {
@@ -3772,6 +4054,8 @@ func TestCheckInvalidResourceSelfMoveIntoDictionaryLiteral(t *testing.T) {
 }
 
 func TestCheckInvalidResourceSelfMoveSwap(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
 
@@ -3793,6 +4077,8 @@ func TestCheckInvalidResourceSelfMoveSwap(t *testing.T) {
 
 func TestCheckResourceCreationAndInvalidationInLoop(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
 
       resource X {}
@@ -3812,6 +4098,8 @@ func TestCheckResourceCreationAndInvalidationInLoop(t *testing.T) {
 
 func TestCheckInvalidResourceOwnerField(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource Test {
           let owner: PublicAccount
@@ -3829,6 +4117,8 @@ func TestCheckInvalidResourceOwnerField(t *testing.T) {
 
 func TestCheckInvalidResourceInterfaceOwnerField(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
      resource interface Test {
          let owner: PublicAccount
@@ -3841,6 +4131,8 @@ func TestCheckInvalidResourceInterfaceOwnerField(t *testing.T) {
 }
 
 func TestCheckInvalidResourceOwnerFunction(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
      resource Test {
@@ -3855,6 +4147,8 @@ func TestCheckInvalidResourceOwnerFunction(t *testing.T) {
 
 func TestCheckInvalidResourceInterfaceOwnerFunction(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
      resource interface Test {
          fun owner()
@@ -3867,6 +4161,8 @@ func TestCheckInvalidResourceInterfaceOwnerFunction(t *testing.T) {
 }
 
 func TestCheckResourceOwnerFieldUse(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
      resource Test {
@@ -3882,6 +4178,8 @@ func TestCheckResourceOwnerFieldUse(t *testing.T) {
 
 func TestCheckResourceInterfaceOwnerFieldUse(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
      resource interface Test {
 
@@ -3895,6 +4193,8 @@ func TestCheckResourceInterfaceOwnerFieldUse(t *testing.T) {
 }
 
 func TestCheckInvalidResourceOwnerFieldInitialization(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
      resource Test {
@@ -3911,6 +4211,8 @@ func TestCheckInvalidResourceOwnerFieldInitialization(t *testing.T) {
 }
 
 func TestCheckInvalidResourceInterfaceType(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("direct", func(t *testing.T) {
 		_, err := ParseAndCheck(t, `
@@ -3945,6 +4247,8 @@ func TestCheckInvalidResourceInterfaceType(t *testing.T) {
 
 func TestCheckRestrictedAnyResourceType(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("direct", func(t *testing.T) {
 		_, err := ParseAndCheck(t, `
           resource interface RI {}
@@ -3972,6 +4276,8 @@ func TestCheckRestrictedAnyResourceType(t *testing.T) {
 
 func TestCheckInvalidOptionalResourceNilCoalescingResourceLoss(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheckWithPanic(t, `
 
       resource R {}
@@ -3989,6 +4295,8 @@ func TestCheckInvalidOptionalResourceNilCoalescingResourceLoss(t *testing.T) {
 
 func TestCheckOptionalResourceCoalescingAndReturn(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheckWithPanic(t, `
 
       resource R {}
@@ -4003,6 +4311,8 @@ func TestCheckOptionalResourceCoalescingAndReturn(t *testing.T) {
 }
 
 func TestCheckInvalidOptionalResourceCoalescingRightSide(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheckWithPanic(t, `
 
@@ -4028,6 +4338,8 @@ func TestCheckInvalidOptionalResourceCoalescingRightSide(t *testing.T) {
 // does not influence another function's return information.
 //
 func TestCheckInvalidResourceLossInNestedContractResource(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheckWithPanic(t, `
 

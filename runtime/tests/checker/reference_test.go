@@ -32,6 +32,8 @@ import (
 
 func TestCheckReferenceTypeOuter(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("resource", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
@@ -56,6 +58,8 @@ func TestCheckReferenceTypeOuter(t *testing.T) {
 }
 
 func TestCheckReferenceTypeInner(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
 
@@ -83,6 +87,8 @@ func TestCheckReferenceTypeInner(t *testing.T) {
 
 func TestCheckNestedReferenceType(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("resource", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
@@ -108,6 +114,8 @@ func TestCheckNestedReferenceType(t *testing.T) {
 
 func TestCheckInvalidReferenceType(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(t: &T) {}
     `)
@@ -119,6 +127,8 @@ func TestCheckInvalidReferenceType(t *testing.T) {
 }
 
 func TestCheckReferenceExpressionWithCompositeResultType(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
 
@@ -171,6 +181,8 @@ func TestCheckReferenceExpressionWithCompositeResultType(t *testing.T) {
 
 func TestCheckReferenceExpressionWithInterfaceResultType(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("resource", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
@@ -204,6 +216,8 @@ func TestCheckReferenceExpressionWithInterfaceResultType(t *testing.T) {
 
 func TestCheckReferenceExpressionWithRestrictedAnyResultType(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("resource", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
@@ -232,6 +246,8 @@ func TestCheckReferenceExpressionWithRestrictedAnyResultType(t *testing.T) {
 }
 
 func TestCheckInvalidReferenceExpressionType(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
 
@@ -263,6 +279,8 @@ func TestCheckInvalidReferenceExpressionType(t *testing.T) {
 }
 
 func TestCheckInvalidReferenceExpressionTypeMismatchStructResource(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("struct / resource", func(t *testing.T) {
 
@@ -297,6 +315,8 @@ func TestCheckInvalidReferenceExpressionTypeMismatchStructResource(t *testing.T)
 
 func TestCheckInvalidReferenceExpressionDifferentStructs(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       struct S {}
       struct T {}
@@ -312,6 +332,8 @@ func TestCheckInvalidReferenceExpressionDifferentStructs(t *testing.T) {
 
 func TestCheckInvalidReferenceExpressionTypeMismatchDifferentResources(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource R {}
       resource T {}
@@ -326,6 +348,8 @@ func TestCheckInvalidReferenceExpressionTypeMismatchDifferentResources(t *testin
 }
 
 func TestCheckReference(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("struct variable", func(t *testing.T) {
 
@@ -365,6 +389,8 @@ func TestCheckReference(t *testing.T) {
 }
 
 func TestCheckReferenceUse(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
 
@@ -428,6 +454,8 @@ func TestCheckReferenceUse(t *testing.T) {
 
 func TestCheckReferenceUseArray(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("resource", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
@@ -490,6 +518,8 @@ func TestCheckReferenceUseArray(t *testing.T) {
 
 func TestCheckReferenceIndexingIfReferencedIndexable(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("resource", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
@@ -529,6 +559,8 @@ func TestCheckReferenceIndexingIfReferencedIndexable(t *testing.T) {
 
 func TestCheckInvalidReferenceResourceLoss(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource R {}
 
@@ -546,6 +578,8 @@ func TestCheckInvalidReferenceResourceLoss(t *testing.T) {
 }
 
 func TestCheckInvalidReferenceIndexingIfReferencedNotIndexable(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
 
@@ -586,6 +620,8 @@ func TestCheckInvalidReferenceIndexingIfReferencedNotIndexable(t *testing.T) {
 }
 
 func TestCheckResourceInterfaceReferenceFunctionCall(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
 
@@ -635,6 +671,8 @@ func TestCheckResourceInterfaceReferenceFunctionCall(t *testing.T) {
 
 func TestCheckInvalidResourceInterfaceReferenceFunctionCall(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("resource", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
@@ -682,6 +720,8 @@ func TestCheckInvalidResourceInterfaceReferenceFunctionCall(t *testing.T) {
 }
 
 func TestCheckReferenceExpressionReferenceType(t *testing.T) {
+
+	t.Parallel()
 
 	for _, kind := range []common.CompositeKind{
 		common.CompositeKindResource,
@@ -736,6 +776,8 @@ func TestCheckReferenceExpressionReferenceType(t *testing.T) {
 
 func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("resource", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
@@ -769,6 +811,8 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 
 func TestCheckInvalidReferenceExpressionNonReferenceAmbiguous(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let y = &x as {}
     `)
@@ -781,6 +825,8 @@ func TestCheckInvalidReferenceExpressionNonReferenceAmbiguous(t *testing.T) {
 
 func TestCheckInvalidReferenceExpressionNonReferenceAnyResource(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let y = &x as AnyResource{}
     `)
@@ -792,6 +838,8 @@ func TestCheckInvalidReferenceExpressionNonReferenceAnyResource(t *testing.T) {
 }
 
 func TestCheckInvalidReferenceExpressionNonReferenceAnyStruct(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       let y = &x as AnyStruct{}

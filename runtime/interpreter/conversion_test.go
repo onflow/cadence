@@ -10,6 +10,8 @@ import (
 
 func TestByteArrayValueToByteSlice(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("invalid", func(t *testing.T) {
 
 		largeBigInt, ok := new(big.Int).SetString("1000000000000000000000000000000000000000000000", 10)
@@ -46,6 +48,8 @@ func TestByteArrayValueToByteSlice(t *testing.T) {
 }
 
 func TestByteValueToByte(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("invalid", func(t *testing.T) {
 

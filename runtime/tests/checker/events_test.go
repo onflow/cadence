@@ -35,6 +35,8 @@ import (
 
 func TestCheckEventDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("ValidEvent", func(t *testing.T) {
 		checker, err := ParseAndCheck(t, `
             event Transfer(to: Int, from: Int)
@@ -182,6 +184,8 @@ func TestCheckEventDeclaration(t *testing.T) {
 }
 
 func TestCheckEmitEvent(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("ValidEvent", func(t *testing.T) {
 		_, err := ParseAndCheck(t, `

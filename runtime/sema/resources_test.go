@@ -27,6 +27,9 @@ import (
 )
 
 func TestResources_Add(t *testing.T) {
+
+	t.Parallel()
+
 	resources := &Resources{}
 
 	varX := &Variable{
@@ -127,6 +130,8 @@ func TestResources_Add(t *testing.T) {
 
 func TestResourceResources_FirstRest(t *testing.T) {
 
+	t.Parallel()
+
 	resources := &Resources{}
 
 	varX := &Variable{
@@ -194,6 +199,8 @@ func TestResourceResources_FirstRest(t *testing.T) {
 }
 
 func TestResources_MergeBranches(t *testing.T) {
+
+	t.Parallel()
 
 	resourcesThen := &Resources{}
 	resourcesElse := &Resources{}

@@ -29,6 +29,8 @@ import (
 
 func TestCheckForVariableSized(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           let xs: [Int] = [1, 2, 3]
@@ -42,6 +44,8 @@ func TestCheckForVariableSized(t *testing.T) {
 }
 
 func TestCheckForConstantSized(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -57,6 +61,8 @@ func TestCheckForConstantSized(t *testing.T) {
 
 func TestCheckForEmpty(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           for x in [] {}
@@ -67,6 +73,8 @@ func TestCheckForEmpty(t *testing.T) {
 }
 
 func TestCheckInvalidForValueNonArray(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -80,6 +88,8 @@ func TestCheckInvalidForValueNonArray(t *testing.T) {
 }
 
 func TestCheckInvalidForValueResource(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource R {}
@@ -98,6 +108,8 @@ func TestCheckInvalidForValueResource(t *testing.T) {
 
 func TestCheckInvalidForBlock(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           for x in [1, 2, 3] { y }
@@ -111,6 +123,8 @@ func TestCheckInvalidForBlock(t *testing.T) {
 
 func TestCheckForBreakStatement(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
        fun test() {
            for x in [1, 2, 3] {
@@ -123,6 +137,8 @@ func TestCheckForBreakStatement(t *testing.T) {
 }
 
 func TestCheckInvalidForBreakStatement(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
        fun test() {
@@ -141,6 +157,8 @@ func TestCheckInvalidForBreakStatement(t *testing.T) {
 
 func TestCheckForContinueStatement(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
        fun test() {
            for x in [1, 2, 3] {
@@ -153,6 +171,8 @@ func TestCheckForContinueStatement(t *testing.T) {
 }
 
 func TestCheckInvalidForContinueStatement(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
        fun test() {

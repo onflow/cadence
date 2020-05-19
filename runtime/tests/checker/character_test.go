@@ -30,6 +30,8 @@ import (
 
 func TestCheckCharacterLiteral(t *testing.T) {
 
+	t.Parallel()
+
 	checker, err := ParseAndCheck(t, `
         let a: Character = "a"
     `)
@@ -43,6 +45,8 @@ func TestCheckCharacterLiteral(t *testing.T) {
 }
 
 func TestCheckInvalidCharacterLiteral(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
         let a: Character = "abc"

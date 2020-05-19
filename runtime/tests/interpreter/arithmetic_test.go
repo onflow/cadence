@@ -63,6 +63,8 @@ func init() {
 
 func TestInterpretPlusOperator(t *testing.T) {
 
+	t.Parallel()
+
 	for ty, value := range integerTestValues {
 
 		t.Run(ty, func(t *testing.T) {
@@ -87,6 +89,8 @@ func TestInterpretPlusOperator(t *testing.T) {
 }
 
 func TestInterpretMinusOperator(t *testing.T) {
+
+	t.Parallel()
 
 	for ty, value := range integerTestValues {
 
@@ -113,6 +117,8 @@ func TestInterpretMinusOperator(t *testing.T) {
 
 func TestInterpretMulOperator(t *testing.T) {
 
+	t.Parallel()
+
 	for ty, value := range integerTestValues {
 
 		t.Run(ty, func(t *testing.T) {
@@ -138,6 +144,8 @@ func TestInterpretMulOperator(t *testing.T) {
 
 func TestInterpretDivOperator(t *testing.T) {
 
+	t.Parallel()
+
 	for ty, value := range integerTestValues {
 
 		t.Run(ty, func(t *testing.T) {
@@ -162,6 +170,8 @@ func TestInterpretDivOperator(t *testing.T) {
 }
 
 func TestInterpretModOperator(t *testing.T) {
+
+	t.Parallel()
 
 	for ty, value := range integerTestValues {
 

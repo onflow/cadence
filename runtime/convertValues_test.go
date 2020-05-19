@@ -193,6 +193,9 @@ var exportTests = []struct {
 }
 
 func TestExportValue(t *testing.T) {
+
+	t.Parallel()
+
 	for _, tt := range exportTests {
 		t.Run(tt.label, func(t *testing.T) {
 			actual := exportValueWithInterpreter(tt.value, nil)
@@ -207,6 +210,9 @@ func TestExportValue(t *testing.T) {
 }
 
 func TestExportIntegerValuesFromScript(t *testing.T) {
+
+	t.Parallel()
+
 	for _, integerType := range sema.AllIntegerTypes {
 
 		script := fmt.Sprintf(
@@ -225,6 +231,9 @@ func TestExportIntegerValuesFromScript(t *testing.T) {
 }
 
 func TestExportFixedPointValuesFromScript(t *testing.T) {
+
+	t.Parallel()
+
 	for _, fixedPointType := range sema.AllFixedPointTypes {
 		script := fmt.Sprintf(
 			`
@@ -242,6 +251,9 @@ func TestExportFixedPointValuesFromScript(t *testing.T) {
 }
 
 func TestExportDictionaryValue(t *testing.T) {
+
+	t.Parallel()
+
 	t.Run("Empty", func(t *testing.T) {
 		script := `
             access(all) fun main(): {String: Int} {
@@ -282,6 +294,9 @@ func TestExportDictionaryValue(t *testing.T) {
 }
 
 func TestExportAddressValue(t *testing.T) {
+
+	t.Parallel()
+
 	script := `
         access(all) fun main(): Address {
             return 0x42
@@ -297,6 +312,9 @@ func TestExportAddressValue(t *testing.T) {
 }
 
 func TestExportStructValue(t *testing.T) {
+
+	t.Parallel()
+
 	script := `
         access(all) struct Foo {
             access(all) let bar: Int
@@ -318,6 +336,9 @@ func TestExportStructValue(t *testing.T) {
 }
 
 func TestExportResourceValue(t *testing.T) {
+
+	t.Parallel()
+
 	script := `
         access(all) resource Foo {
             access(all) let bar: Int
@@ -343,6 +364,9 @@ func TestExportResourceValue(t *testing.T) {
 }
 
 func TestExportResourceArrayValue(t *testing.T) {
+
+	t.Parallel()
+
 	script := `
         access(all) resource Foo {
             access(all) let bar: Int
@@ -373,6 +397,9 @@ func TestExportResourceArrayValue(t *testing.T) {
 }
 
 func TestExportResourceDictionaryValue(t *testing.T) {
+
+	t.Parallel()
+
 	script := `
         access(all) resource Foo {
             access(all) let bar: Int
@@ -412,6 +439,9 @@ func TestExportResourceDictionaryValue(t *testing.T) {
 }
 
 func TestExportNestedResourceValueFromScript(t *testing.T) {
+
+	t.Parallel()
+
 	barResourceType := cadence.ResourceType{
 		TypeID:     "test.Bar",
 		Identifier: "Bar",
@@ -481,6 +511,9 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 }
 
 func TestExportEventValue(t *testing.T) {
+
+	t.Parallel()
+
 	script := `
         access(all) event Foo(bar: Int)
 

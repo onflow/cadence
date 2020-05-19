@@ -47,6 +47,8 @@ func testLex(t *testing.T, input string, expected []Token) {
 
 func TestLexBasic(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("two numbers separated by whitespace", func(t *testing.T) {
 		testLex(t,
 			" 01\t  10",
@@ -595,6 +597,8 @@ func TestLexBasic(t *testing.T) {
 
 func TestLexString(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("valid, empty", func(t *testing.T) {
 		testLex(t,
 			`""`,
@@ -852,6 +856,8 @@ func TestLexString(t *testing.T) {
 
 func TestLexBlockComment(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("nested 1", func(t *testing.T) {
 		testLex(t,
 			`/*  // *X /* \\*  */`,
@@ -981,6 +987,8 @@ func TestLexBlockComment(t *testing.T) {
 }
 
 func TestLexIntegerLiterals(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("binary prefix, missing trailing digits", func(t *testing.T) {
 		testLex(t,
@@ -1577,6 +1585,8 @@ func TestLexIntegerLiterals(t *testing.T) {
 
 func TestLexFixedPoint(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("with underscores", func(t *testing.T) {
 		testLex(t,
 			"1234_5678_90.0009_8765_4321",
@@ -1625,6 +1635,8 @@ func TestLexFixedPoint(t *testing.T) {
 }
 
 func TestLexLineComment(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("no newline", func(t *testing.T) {
 

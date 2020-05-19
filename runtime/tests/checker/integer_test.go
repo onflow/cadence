@@ -37,6 +37,8 @@ var allIntegerTypesAndAddressType = append(
 
 func TestCheckIntegerLiteralTypeConversionInVariableDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	for _, ty := range allIntegerTypesAndAddressType {
 		// Test non-optional and optional type
 
@@ -68,6 +70,8 @@ func TestCheckIntegerLiteralTypeConversionInVariableDeclaration(t *testing.T) {
 }
 
 func TestCheckIntegerLiteralTypeConversionInAssignment(t *testing.T) {
+
+	t.Parallel()
 
 	for _, ty := range allIntegerTypesAndAddressType {
 		// Test non-optional and optional type
@@ -102,6 +106,8 @@ func TestCheckIntegerLiteralTypeConversionInAssignment(t *testing.T) {
 }
 
 func TestCheckIntegerLiteralRanges(t *testing.T) {
+
+	t.Parallel()
 
 	for _, ty := range allIntegerTypesAndAddressType {
 		t.Run(ty.String(), func(t *testing.T) {
@@ -213,6 +219,8 @@ func TestCheckIntegerLiteralRanges(t *testing.T) {
 
 func TestCheckInvalidIntegerLiteralValues(t *testing.T) {
 
+	t.Parallel()
+
 	for _, ty := range allIntegerTypesAndAddressType {
 
 		min := ty.(sema.IntegerRangedType).MinInt()
@@ -295,6 +303,8 @@ func TestCheckInvalidIntegerLiteralValues(t *testing.T) {
 //
 func TestCheckInvalidIntegerLiteralWithNeverReturnType(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
         fun test(): Never {
             return 1
@@ -307,6 +317,8 @@ func TestCheckInvalidIntegerLiteralWithNeverReturnType(t *testing.T) {
 }
 
 func TestCheckIntegerLiteralTypeConversionInFunctionCallArgument(t *testing.T) {
+
+	t.Parallel()
 
 	for _, ty := range allIntegerTypesAndAddressType {
 		// Test non-optional and optional type
@@ -335,6 +347,8 @@ func TestCheckIntegerLiteralTypeConversionInFunctionCallArgument(t *testing.T) {
 
 func TestCheckIntegerLiteralTypeConversionInReturn(t *testing.T) {
 
+	t.Parallel()
+
 	for _, ty := range allIntegerTypesAndAddressType {
 		// Test non-optional and optional type
 
@@ -362,6 +376,8 @@ func TestCheckIntegerLiteralTypeConversionInReturn(t *testing.T) {
 
 func TestCheckInvalidAddressDecimal(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
         let a: Address = 1
         let b = Address(2)
@@ -374,6 +390,8 @@ func TestCheckInvalidAddressDecimal(t *testing.T) {
 }
 
 func TestCheckSignedIntegerNegate(t *testing.T) {
+
+	t.Parallel()
 
 	for _, ty := range sema.AllSignedIntegerTypes {
 		name := ty.String()
@@ -394,6 +412,8 @@ func TestCheckSignedIntegerNegate(t *testing.T) {
 }
 
 func TestCheckInvalidUnsignedIntegerNegate(t *testing.T) {
+
+	t.Parallel()
 
 	for _, ty := range sema.AllUnsignedIntegerTypes {
 		name := ty.String()
@@ -416,6 +436,8 @@ func TestCheckInvalidUnsignedIntegerNegate(t *testing.T) {
 }
 
 func TestCheckInvalidIntegerConversionFunctionWithoutArgs(t *testing.T) {
+
+	t.Parallel()
 
 	for _, ty := range allIntegerTypesAndAddressType {
 
@@ -440,6 +462,8 @@ func TestCheckInvalidIntegerConversionFunctionWithoutArgs(t *testing.T) {
 
 func TestCheckFixedPointToIntegerConversion(t *testing.T) {
 
+	t.Parallel()
+
 	for _, ty := range sema.AllIntegerTypes {
 
 		t.Run(ty.String(), func(t *testing.T) {
@@ -459,6 +483,8 @@ func TestCheckFixedPointToIntegerConversion(t *testing.T) {
 }
 
 func TestCheckIntegerLiteralArguments(t *testing.T) {
+
+	t.Parallel()
 
 	for _, ty := range sema.AllIntegerTypes {
 

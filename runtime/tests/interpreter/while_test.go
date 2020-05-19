@@ -29,6 +29,8 @@ import (
 
 func TestInterpretWhileStatement(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
        fun test(): Int {
            var x = 0
@@ -50,6 +52,8 @@ func TestInterpretWhileStatement(t *testing.T) {
 }
 
 func TestInterpretWhileStatementWithReturn(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
        fun test(): Int {
@@ -74,6 +78,8 @@ func TestInterpretWhileStatementWithReturn(t *testing.T) {
 }
 
 func TestInterpretWhileStatementWithContinue(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
        fun test(): Int {
@@ -100,6 +106,8 @@ func TestInterpretWhileStatementWithContinue(t *testing.T) {
 }
 
 func TestInterpretWhileStatementWithBreak(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
        fun test(): Int {

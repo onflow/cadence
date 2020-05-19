@@ -137,6 +137,8 @@ func makeContractValueHandler(
 
 func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
         let x = 1
         let y = true
@@ -182,6 +184,8 @@ func TestInterpretConstantAndVariableDeclarations(t *testing.T) {
 
 func TestInterpretDeclarations(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
         fun test(): Int {
             return 42
@@ -199,6 +203,8 @@ func TestInterpretDeclarations(t *testing.T) {
 
 func TestInterpretInvalidUnknownDeclarationInvocation(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, ``)
 
 	_, err := inter.Invoke("test")
@@ -206,6 +212,8 @@ func TestInterpretInvalidUnknownDeclarationInvocation(t *testing.T) {
 }
 
 func TestInterpretInvalidNonFunctionDeclarationInvocation(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
        let test = 1
@@ -216,6 +224,8 @@ func TestInterpretInvalidNonFunctionDeclarationInvocation(t *testing.T) {
 }
 
 func TestInterpretLexicalScope(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
        let x = 10
@@ -256,6 +266,8 @@ func TestInterpretLexicalScope(t *testing.T) {
 
 func TestInterpretFunctionSideEffects(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
        var value = 0
 
@@ -281,6 +293,8 @@ func TestInterpretFunctionSideEffects(t *testing.T) {
 }
 
 func TestInterpretNoHoisting(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
        let x = 2
@@ -310,6 +324,8 @@ func TestInterpretNoHoisting(t *testing.T) {
 
 func TestInterpretFunctionExpressionsAndScope(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
        let x = 10
 
@@ -330,6 +346,8 @@ func TestInterpretFunctionExpressionsAndScope(t *testing.T) {
 
 func TestInterpretVariableAssignment(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
        fun test(): Int {
            var x = 2
@@ -348,6 +366,8 @@ func TestInterpretVariableAssignment(t *testing.T) {
 }
 
 func TestInterpretGlobalVariableAssignment(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
        var x = 2
@@ -379,6 +399,8 @@ func TestInterpretGlobalVariableAssignment(t *testing.T) {
 
 func TestInterpretConstantRedeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
        let x = 2
 
@@ -403,6 +425,8 @@ func TestInterpretConstantRedeclaration(t *testing.T) {
 }
 
 func TestInterpretParameters(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
        fun returnA(a: Int, b: Int): Int {
@@ -430,6 +454,8 @@ func TestInterpretParameters(t *testing.T) {
 
 func TestInterpretArrayIndexing(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
        fun test(): Int {
            let z = [0, 3]
@@ -447,6 +473,8 @@ func TestInterpretArrayIndexing(t *testing.T) {
 }
 
 func TestInterpretArrayIndexingAssignment(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
        let z = [0, 3]
@@ -485,6 +513,8 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 
 func TestInterpretStringIndexing(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let a = "abc"
       let x = a[0]
@@ -507,6 +537,8 @@ func TestInterpretStringIndexing(t *testing.T) {
 }
 
 func TestInterpretStringIndexingUnicode(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       fun testUnicodeA(): Character {
@@ -538,6 +570,8 @@ func TestInterpretStringIndexingUnicode(t *testing.T) {
 }
 
 func TestInterpretStringIndexingAssignment(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let z = "abc"
@@ -572,6 +606,8 @@ func TestInterpretStringIndexingAssignment(t *testing.T) {
 
 func TestInterpretStringIndexingAssignmentUnicode(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       fun test(): String {
           let z = "cafe chair"
@@ -591,6 +627,8 @@ func TestInterpretStringIndexingAssignmentUnicode(t *testing.T) {
 }
 
 func TestInterpretStringIndexingAssignmentWithCharacterLiteral(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       fun test(): String {
@@ -620,6 +658,9 @@ type stringSliceTest struct {
 }
 
 func TestInterpretStringSlicing(t *testing.T) {
+
+	t.Parallel()
+
 	tests := []stringSliceTest{
 		{"abcdef", 0, 6, "abcdef", nil},
 		{"abcdef", 0, 0, "", nil},
@@ -662,6 +703,8 @@ func TestInterpretStringSlicing(t *testing.T) {
 
 func TestInterpretReturnWithoutExpression(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
        fun returnNothing() {
            return
@@ -678,6 +721,8 @@ func TestInterpretReturnWithoutExpression(t *testing.T) {
 }
 
 func TestInterpretReturns(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpretWithOptions(t,
 		`
@@ -705,6 +750,8 @@ func TestInterpretReturns(t *testing.T) {
 }
 
 func TestInterpretEqualOperator(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       fun testIntegersUnequal(): Bool {
@@ -769,6 +816,8 @@ func TestInterpretEqualOperator(t *testing.T) {
 
 func TestInterpretUnequalOperator(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       fun testIntegersUnequal(): Bool {
           return 5 != 3
@@ -817,6 +866,8 @@ func TestInterpretUnequalOperator(t *testing.T) {
 
 func TestInterpretLessOperator(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       fun testIntegersGreater(): Bool {
           return 5 < 3
@@ -849,6 +900,8 @@ func TestInterpretLessOperator(t *testing.T) {
 }
 
 func TestInterpretLessEqualOperator(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       fun testIntegersGreater(): Bool {
@@ -883,6 +936,8 @@ func TestInterpretLessEqualOperator(t *testing.T) {
 
 func TestInterpretGreaterOperator(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       fun testIntegersGreater(): Bool {
           return 5 > 3
@@ -916,6 +971,8 @@ func TestInterpretGreaterOperator(t *testing.T) {
 
 func TestInterpretGreaterEqualOperator(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       fun testIntegersGreater(): Bool {
           return 5 >= 3
@@ -948,6 +1005,8 @@ func TestInterpretGreaterEqualOperator(t *testing.T) {
 }
 
 func TestInterpretOrOperator(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       fun testTrueTrue(): Bool {
@@ -987,6 +1046,8 @@ func TestInterpretOrOperator(t *testing.T) {
 
 func TestInterpretOrOperatorShortCircuitLeftSuccess(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       var x = false
       var y = false
@@ -1022,6 +1083,8 @@ func TestInterpretOrOperatorShortCircuitLeftSuccess(t *testing.T) {
 
 func TestInterpretOrOperatorShortCircuitLeftFailure(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       var x = false
       var y = false
@@ -1056,6 +1119,8 @@ func TestInterpretOrOperatorShortCircuitLeftFailure(t *testing.T) {
 }
 
 func TestInterpretAndOperator(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       fun testTrueTrue(): Bool {
@@ -1095,6 +1160,8 @@ func TestInterpretAndOperator(t *testing.T) {
 
 func TestInterpretAndOperatorShortCircuitLeftSuccess(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       var x = false
       var y = false
@@ -1130,6 +1197,8 @@ func TestInterpretAndOperatorShortCircuitLeftSuccess(t *testing.T) {
 
 func TestInterpretAndOperatorShortCircuitLeftFailure(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       var x = false
       var y = false
@@ -1164,6 +1233,8 @@ func TestInterpretAndOperatorShortCircuitLeftFailure(t *testing.T) {
 }
 
 func TestInterpretIfStatement(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpretWithOptions(t,
 		`
@@ -1231,6 +1302,8 @@ func TestInterpretIfStatement(t *testing.T) {
 
 func TestInterpretExpressionStatement(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
        var x = 0
 
@@ -1265,6 +1338,8 @@ func TestInterpretExpressionStatement(t *testing.T) {
 
 func TestInterpretConditionalOperator(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
        fun testTrue(): Int {
            return true ? 2 : 3
@@ -1294,6 +1369,8 @@ func TestInterpretConditionalOperator(t *testing.T) {
 
 func TestInterpretFunctionBindingInFunction(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       fun foo(): AnyStruct {
           return foo
@@ -1305,6 +1382,9 @@ func TestInterpretFunctionBindingInFunction(t *testing.T) {
 }
 
 func TestInterpretRecursionFib(t *testing.T) {
+
+	t.Parallel()
+
 	// mainly tests that the function declaration identifier is bound
 	// to the function inside the function and that the arguments
 	// of the function calls are evaluated in the call-site scope
@@ -1332,6 +1412,8 @@ func TestInterpretRecursionFib(t *testing.T) {
 
 func TestInterpretRecursionFactorial(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
         fun factorial(_ n: Int): Int {
             if n < 1 {
@@ -1356,6 +1438,8 @@ func TestInterpretRecursionFactorial(t *testing.T) {
 
 func TestInterpretUnaryIntegerNegation(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x = -2
       let y = -(-2)
@@ -1373,6 +1457,8 @@ func TestInterpretUnaryIntegerNegation(t *testing.T) {
 }
 
 func TestInterpretUnaryBooleanNegation(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let a = !true
@@ -1403,6 +1489,8 @@ func TestInterpretUnaryBooleanNegation(t *testing.T) {
 }
 
 func TestInterpretHostFunction(t *testing.T) {
+
+	t.Parallel()
 
 	program, _, err := parser.ParseProgram(`
       pub let a = test(1, 2)
@@ -1473,6 +1561,8 @@ func TestInterpretHostFunction(t *testing.T) {
 }
 
 func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
+
+	t.Parallel()
 
 	program, _, err := parser.ParseProgram(`
       pub let nothing = test(1, true, "test")
@@ -1550,6 +1640,8 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 
 func TestInterpretCompositeDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	for _, compositeKind := range common.AllCompositeKinds {
 
 		switch compositeKind {
@@ -1596,6 +1688,8 @@ func TestInterpretCompositeDeclaration(t *testing.T) {
 
 func TestInterpretStructureSelfUseInInitializer(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
 
       struct Test {
@@ -1620,6 +1714,8 @@ func TestInterpretStructureSelfUseInInitializer(t *testing.T) {
 }
 
 func TestInterpretStructureConstructorUseInInitializerAndFunction(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
 
@@ -1662,6 +1758,8 @@ func TestInterpretStructureConstructorUseInInitializerAndFunction(t *testing.T) 
 
 func TestInterpretStructureSelfUseInFunction(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
 
       struct Test {
@@ -1687,6 +1785,8 @@ func TestInterpretStructureSelfUseInFunction(t *testing.T) {
 
 func TestInterpretStructureConstructorUseInFunction(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       struct Test {
 
@@ -1710,6 +1810,8 @@ func TestInterpretStructureConstructorUseInFunction(t *testing.T) {
 }
 
 func TestInterpretStructureDeclarationWithField(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
 
@@ -1736,6 +1838,8 @@ func TestInterpretStructureDeclarationWithField(t *testing.T) {
 }
 
 func TestInterpretStructureDeclarationWithFunction(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       var value = 0
@@ -1767,6 +1871,8 @@ func TestInterpretStructureDeclarationWithFunction(t *testing.T) {
 
 func TestInterpretStructureFunctionCall(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       struct Test {
           fun foo(): Int {
@@ -1788,6 +1894,8 @@ func TestInterpretStructureFunctionCall(t *testing.T) {
 }
 
 func TestInterpretStructureFieldAssignment(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       struct Test {
@@ -1840,6 +1948,8 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 
 func TestInterpretStructureInitializesConstant(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       struct Test {
           let foo: Int
@@ -1861,6 +1971,8 @@ func TestInterpretStructureInitializesConstant(t *testing.T) {
 }
 
 func TestInterpretStructureFunctionMutatesSelf(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       struct Test {
@@ -1894,6 +2006,8 @@ func TestInterpretStructureFunctionMutatesSelf(t *testing.T) {
 
 func TestInterpretFunctionPreCondition(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       fun test(x: Int): Int {
           pre {
@@ -1917,6 +2031,8 @@ func TestInterpretFunctionPreCondition(t *testing.T) {
 }
 
 func TestInterpretFunctionPostCondition(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       fun test(x: Int): Int {
@@ -1943,6 +2059,8 @@ func TestInterpretFunctionPostCondition(t *testing.T) {
 
 func TestInterpretFunctionWithResultAndPostConditionWithResult(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       fun test(x: Int): Int {
           post {
@@ -1967,6 +2085,8 @@ func TestInterpretFunctionWithResultAndPostConditionWithResult(t *testing.T) {
 
 func TestInterpretFunctionWithoutResultAndPostConditionWithResult(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       fun test() {
           post {
@@ -1986,6 +2106,8 @@ func TestInterpretFunctionWithoutResultAndPostConditionWithResult(t *testing.T) 
 }
 
 func TestInterpretFunctionPostConditionWithBefore(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       var x = 0
@@ -2011,6 +2133,8 @@ func TestInterpretFunctionPostConditionWithBefore(t *testing.T) {
 }
 
 func TestInterpretFunctionPostConditionWithBeforeFailingPreCondition(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       var x = 0
@@ -2038,6 +2162,8 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPreCondition(t *testing.
 
 func TestInterpretFunctionPostConditionWithBeforeFailingPostCondition(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       var x = 0
 
@@ -2063,6 +2189,8 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPostCondition(t *testing
 }
 
 func TestInterpretFunctionPostConditionWithMessageUsingStringLiteral(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       fun test(x: Int): Int {
@@ -2093,6 +2221,8 @@ func TestInterpretFunctionPostConditionWithMessageUsingStringLiteral(t *testing.
 }
 
 func TestInterpretFunctionPostConditionWithMessageUsingResult(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       fun test(x: Int): String {
@@ -2127,6 +2257,8 @@ func TestInterpretFunctionPostConditionWithMessageUsingResult(t *testing.T) {
 
 func TestInterpretFunctionPostConditionWithMessageUsingBefore(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       fun test(x: String): String {
           post {
@@ -2147,6 +2279,8 @@ func TestInterpretFunctionPostConditionWithMessageUsingBefore(t *testing.T) {
 
 func TestInterpretFunctionPostConditionWithMessageUsingParameter(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       fun test(x: String): String {
           post {
@@ -2166,6 +2300,8 @@ func TestInterpretFunctionPostConditionWithMessageUsingParameter(t *testing.T) {
 }
 
 func TestInterpretStructCopyOnDeclaration(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       struct Cat {
@@ -2197,6 +2333,8 @@ func TestInterpretStructCopyOnDeclaration(t *testing.T) {
 }
 
 func TestInterpretStructCopyOnDeclarationModifiedWithStructFunction(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       struct Cat {
@@ -2233,6 +2371,8 @@ func TestInterpretStructCopyOnDeclarationModifiedWithStructFunction(t *testing.T
 
 func TestInterpretStructCopyOnIdentifierAssignment(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       struct Cat {
           var wasFed: Bool
@@ -2265,6 +2405,8 @@ func TestInterpretStructCopyOnIdentifierAssignment(t *testing.T) {
 
 func TestInterpretStructCopyOnIndexingAssignment(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       struct Cat {
           var wasFed: Bool
@@ -2296,6 +2438,8 @@ func TestInterpretStructCopyOnIndexingAssignment(t *testing.T) {
 }
 
 func TestInterpretStructCopyOnMemberAssignment(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       struct Cat {
@@ -2336,6 +2480,8 @@ func TestInterpretStructCopyOnMemberAssignment(t *testing.T) {
 
 func TestInterpretStructCopyOnPassing(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       struct Cat {
           var wasFed: Bool
@@ -2366,6 +2512,8 @@ func TestInterpretStructCopyOnPassing(t *testing.T) {
 }
 
 func TestInterpretArrayCopy(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
 
@@ -2398,6 +2546,8 @@ func TestInterpretArrayCopy(t *testing.T) {
 
 func TestInterpretStructCopyInArray(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       struct Foo {
           var bar: Int
@@ -2429,6 +2579,8 @@ func TestInterpretStructCopyInArray(t *testing.T) {
 }
 
 func TestInterpretMutuallyRecursiveFunctions(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       fun isEven(_ n: Int): Bool {
@@ -2466,6 +2618,8 @@ func TestInterpretMutuallyRecursiveFunctions(t *testing.T) {
 }
 
 func TestInterpretUseBeforeDeclaration(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       var tests = 0
@@ -2515,6 +2669,8 @@ func TestInterpretUseBeforeDeclaration(t *testing.T) {
 
 func TestInterpretOptionalVariableDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x: Int?? = 2
     `)
@@ -2530,6 +2686,8 @@ func TestInterpretOptionalVariableDeclaration(t *testing.T) {
 }
 
 func TestInterpretOptionalParameterInvokedExternal(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       fun test(x: Int??): Int?? {
@@ -2554,6 +2712,8 @@ func TestInterpretOptionalParameterInvokedExternal(t *testing.T) {
 }
 
 func TestInterpretOptionalParameterInvokedInternal(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       fun testActual(x: Int??): Int?? {
@@ -2580,6 +2740,8 @@ func TestInterpretOptionalParameterInvokedInternal(t *testing.T) {
 
 func TestInterpretOptionalReturn(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       fun test(x: Int): Int?? {
           return x
@@ -2600,6 +2762,8 @@ func TestInterpretOptionalReturn(t *testing.T) {
 }
 
 func TestInterpretOptionalAssignment(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       var x: Int?? = 1
@@ -2629,6 +2793,8 @@ func TestInterpretOptionalAssignment(t *testing.T) {
 
 func TestInterpretNil(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
      let x: Int? = nil
    `)
@@ -2641,6 +2807,8 @@ func TestInterpretNil(t *testing.T) {
 
 func TestInterpretOptionalNestingNil(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
      let x: Int?? = nil
    `)
@@ -2652,6 +2820,8 @@ func TestInterpretOptionalNestingNil(t *testing.T) {
 }
 
 func TestInterpretNilReturnValue(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
      fun test(): Int?? {
@@ -2669,6 +2839,8 @@ func TestInterpretNilReturnValue(t *testing.T) {
 }
 
 func TestInterpretSomeReturnValue(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
      fun test(): Int? {
@@ -2690,6 +2862,8 @@ func TestInterpretSomeReturnValue(t *testing.T) {
 
 func TestInterpretSomeReturnValueFromDictionary(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
      fun test(): Int? {
          let foo: {String: Int} = {"a": 1}
@@ -2710,6 +2884,8 @@ func TestInterpretSomeReturnValueFromDictionary(t *testing.T) {
 
 func TestInterpretNilCoalescingNilIntToOptional(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let one = 1
       let none: Int? = nil
@@ -2725,6 +2901,8 @@ func TestInterpretNilCoalescingNilIntToOptional(t *testing.T) {
 }
 
 func TestInterpretNilCoalescingNilIntToOptionals(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let one = 1
@@ -2742,6 +2920,8 @@ func TestInterpretNilCoalescingNilIntToOptionals(t *testing.T) {
 
 func TestInterpretNilCoalescingNilIntToOptionalNilLiteral(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let one = 1
       let x: Int? = nil ?? one
@@ -2757,6 +2937,8 @@ func TestInterpretNilCoalescingNilIntToOptionalNilLiteral(t *testing.T) {
 
 func TestInterpretNilCoalescingRightSubtype(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x: Int? = nil ?? nil
     `)
@@ -2768,6 +2950,8 @@ func TestInterpretNilCoalescingRightSubtype(t *testing.T) {
 }
 
 func TestInterpretNilCoalescingNilInt(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let one = 1
@@ -2783,6 +2967,8 @@ func TestInterpretNilCoalescingNilInt(t *testing.T) {
 
 func TestInterpretNilCoalescingNilLiteralInt(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let one = 1
       let x: Int = nil ?? one
@@ -2795,6 +2981,8 @@ func TestInterpretNilCoalescingNilLiteralInt(t *testing.T) {
 }
 
 func TestInterpretNilCoalescingShortCircuitLeftSuccess(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       var x = false
@@ -2831,6 +3019,8 @@ func TestInterpretNilCoalescingShortCircuitLeftSuccess(t *testing.T) {
 
 func TestInterpretNilCoalescingShortCircuitLeftFailure(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       var x = false
       var y = false
@@ -2866,6 +3056,8 @@ func TestInterpretNilCoalescingShortCircuitLeftFailure(t *testing.T) {
 
 func TestInterpretNilCoalescingOptionalAnyStructNil(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x: AnyStruct? = nil
       let y = x ?? true
@@ -2879,6 +3071,8 @@ func TestInterpretNilCoalescingOptionalAnyStructNil(t *testing.T) {
 
 func TestInterpretNilCoalescingOptionalAnyStructSome(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x: AnyStruct? = 2
       let y = x ?? true
@@ -2891,6 +3085,8 @@ func TestInterpretNilCoalescingOptionalAnyStructSome(t *testing.T) {
 }
 
 func TestInterpretNilCoalescingOptionalRightHandSide(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let x: Int? = 1
@@ -2908,6 +3104,8 @@ func TestInterpretNilCoalescingOptionalRightHandSide(t *testing.T) {
 
 func TestInterpretNilCoalescingBothOptional(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
      let x: Int?? = 1
      let y: Int? = 2
@@ -2923,6 +3121,8 @@ func TestInterpretNilCoalescingBothOptional(t *testing.T) {
 }
 
 func TestInterpretNilCoalescingBothOptionalLeftNil(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
      let x: Int?? = nil
@@ -2940,6 +3140,8 @@ func TestInterpretNilCoalescingBothOptionalLeftNil(t *testing.T) {
 
 func TestInterpretNilsComparison(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x = nil == nil
    `)
@@ -2951,6 +3153,8 @@ func TestInterpretNilsComparison(t *testing.T) {
 }
 
 func TestInterpretNonOptionalNilComparison(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let x: Int = 1
@@ -2971,6 +3175,8 @@ func TestInterpretNonOptionalNilComparison(t *testing.T) {
 
 func TestInterpretOptionalNilComparison(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
      let x: Int? = 1
      let y = x == nil
@@ -2983,6 +3189,8 @@ func TestInterpretOptionalNilComparison(t *testing.T) {
 }
 
 func TestInterpretNestedOptionalNilComparison(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let x: Int?? = 1
@@ -2997,6 +3205,8 @@ func TestInterpretNestedOptionalNilComparison(t *testing.T) {
 
 func TestInterpretOptionalNilComparisonSwapped(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x: Int? = 1
       let y = nil == x
@@ -3010,6 +3220,8 @@ func TestInterpretOptionalNilComparisonSwapped(t *testing.T) {
 
 func TestInterpretNestedOptionalNilComparisonSwapped(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x: Int?? = 1
       let y = nil == x
@@ -3022,6 +3234,8 @@ func TestInterpretNestedOptionalNilComparisonSwapped(t *testing.T) {
 }
 
 func TestInterpretNestedOptionalComparisonNils(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let x: Int? = nil
@@ -3037,6 +3251,8 @@ func TestInterpretNestedOptionalComparisonNils(t *testing.T) {
 
 func TestInterpretNestedOptionalComparisonValues(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x: Int? = 2
       let y: Int?? = 2
@@ -3050,6 +3266,8 @@ func TestInterpretNestedOptionalComparisonValues(t *testing.T) {
 }
 
 func TestInterpretNestedOptionalComparisonMixed(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let x: Int? = 2
@@ -3065,6 +3283,8 @@ func TestInterpretNestedOptionalComparisonMixed(t *testing.T) {
 
 func TestInterpretOptionalSomeValueComparison(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
      let x: Int? = 1
      let y = x == 1
@@ -3078,6 +3298,8 @@ func TestInterpretOptionalSomeValueComparison(t *testing.T) {
 
 func TestInterpretOptionalNilValueComparison(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
      let x: Int? = nil
      let y = x == 1
@@ -3090,6 +3312,8 @@ func TestInterpretOptionalNilValueComparison(t *testing.T) {
 }
 
 func TestInterpretCompositeNilEquality(t *testing.T) {
+
+	t.Parallel()
 
 	for _, compositeKind := range common.AllCompositeKinds {
 
@@ -3149,6 +3373,8 @@ func TestInterpretCompositeNilEquality(t *testing.T) {
 
 func TestInterpretIfStatementTestWithDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       var branch = 0
 
@@ -3195,6 +3421,8 @@ func TestInterpretIfStatementTestWithDeclaration(t *testing.T) {
 
 func TestInterpretIfStatementTestWithDeclarationAndElse(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       var branch = 0
 
@@ -3240,6 +3468,8 @@ func TestInterpretIfStatementTestWithDeclarationAndElse(t *testing.T) {
 }
 
 func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       var branch = 0
@@ -3292,6 +3522,8 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 
 func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotation(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       var branch = 0
 
@@ -3343,6 +3575,8 @@ func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotatio
 
 func TestInterpretInterfaceConformanceNoRequirements(t *testing.T) {
 
+	t.Parallel()
+
 	for _, compositeKind := range common.AllCompositeKinds {
 
 		if compositeKind == common.CompositeKindContract {
@@ -3389,6 +3623,8 @@ func TestInterpretInterfaceConformanceNoRequirements(t *testing.T) {
 }
 
 func TestInterpretInterfaceFieldUse(t *testing.T) {
+
+	t.Parallel()
 
 	for _, compositeKind := range common.CompositeKindsWithBody {
 
@@ -3465,6 +3701,8 @@ func TestInterpretInterfaceFieldUse(t *testing.T) {
 
 func TestInterpretInterfaceFunctionUse(t *testing.T) {
 
+	t.Parallel()
+
 	for _, compositeKind := range common.CompositeKindsWithBody {
 
 		if !compositeKind.SupportsInterfaces() {
@@ -3527,6 +3765,8 @@ func TestInterpretInterfaceFunctionUse(t *testing.T) {
 }
 
 func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
+
+	t.Parallel()
 
 	for _, compositeKind := range common.CompositeKindsWithBody {
 
@@ -3618,6 +3858,8 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 }
 
 func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
+
+	t.Parallel()
 
 	tests := map[int64]error{
 		0: &interpreter.ConditionError{},
@@ -3735,6 +3977,8 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 
 func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpretWithOptions(t,
 		`
 
@@ -3822,6 +4066,8 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 
 func TestInterpretImport(t *testing.T) {
 
+	t.Parallel()
+
 	checkerImported, err := ParseAndCheck(t, `
       pub fun answer(): Int {
           return 42
@@ -3865,6 +4111,8 @@ func TestInterpretImport(t *testing.T) {
 }
 
 func TestInterpretImportError(t *testing.T) {
+
+	t.Parallel()
 
 	valueDeclarations :=
 		stdlib.StandardLibraryFunctions{
@@ -3932,6 +4180,8 @@ func TestInterpretImportError(t *testing.T) {
 
 func TestInterpretDictionary(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x = {"a": 1, "b": 2}
     `)
@@ -3952,6 +4202,8 @@ func TestInterpretDictionary(t *testing.T) {
 }
 
 func TestInterpretDictionaryInsertionOrder(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let x = {"c": 3, "a": 1, "b": 2}
@@ -3974,6 +4226,8 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
 }
 
 func TestInterpretDictionaryIndexingString(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let x = {"abc": 1, "def": 2}
@@ -4004,6 +4258,8 @@ func TestInterpretDictionaryIndexingString(t *testing.T) {
 
 func TestInterpretDictionaryIndexingBool(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x = {true: 1, false: 2}
       let a = x[true]
@@ -4026,6 +4282,8 @@ func TestInterpretDictionaryIndexingBool(t *testing.T) {
 }
 
 func TestInterpretDictionaryIndexingInt(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let x = {23: "a", 42: "b"}
@@ -4055,6 +4313,8 @@ func TestInterpretDictionaryIndexingInt(t *testing.T) {
 }
 
 func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let x = {"abc": 42}
@@ -4116,6 +4376,8 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 }
 
 func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let x = {"def": 42}
@@ -4180,6 +4442,8 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 
 func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x = {"def": 42, "abc": 23}
       fun test() {
@@ -4240,6 +4504,8 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 
 func TestInterpretOptionalAnyStruct(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x: AnyStruct? = 42
     `)
@@ -4253,6 +4519,8 @@ func TestInterpretOptionalAnyStruct(t *testing.T) {
 }
 
 func TestInterpretOptionalAnyStructFailableCasting(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let x: AnyStruct? = 42
@@ -4275,6 +4543,8 @@ func TestInterpretOptionalAnyStructFailableCasting(t *testing.T) {
 }
 
 func TestInterpretOptionalAnyStructFailableCastingInt(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let x: AnyStruct? = 23
@@ -4304,6 +4574,8 @@ func TestInterpretOptionalAnyStructFailableCastingInt(t *testing.T) {
 
 func TestInterpretOptionalAnyStructFailableCastingNil(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x: AnyStruct? = nil
       let y = x ?? 42
@@ -4330,6 +4602,8 @@ func TestInterpretOptionalAnyStructFailableCastingNil(t *testing.T) {
 
 func TestInterpretLength(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x = "cafe\u{301}".length
       let y = [1, 2, 3].length
@@ -4347,6 +4621,8 @@ func TestInterpretLength(t *testing.T) {
 }
 
 func TestInterpretStructureFunctionBindingInside(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
         struct X {
@@ -4377,6 +4653,8 @@ func TestInterpretStructureFunctionBindingInside(t *testing.T) {
 
 func TestInterpretStructureFunctionBindingOutside(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
         struct X {
             fun foo(): X {
@@ -4401,6 +4679,8 @@ func TestInterpretStructureFunctionBindingOutside(t *testing.T) {
 }
 
 func TestInterpretArrayAppend(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let xs = [1, 2, 3]
@@ -4442,6 +4722,8 @@ func TestInterpretArrayAppend(t *testing.T) {
 
 func TestInterpretArrayAppendBound(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       fun test(): [Int] {
           let x = [1, 2, 3]
@@ -4467,6 +4749,8 @@ func TestInterpretArrayAppendBound(t *testing.T) {
 
 func TestInterpretArrayConcat(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       fun test(): [Int] {
           let a = [1, 2]
@@ -4489,6 +4773,8 @@ func TestInterpretArrayConcat(t *testing.T) {
 }
 
 func TestInterpretArrayConcatBound(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       fun test(): [Int] {
@@ -4513,6 +4799,8 @@ func TestInterpretArrayConcatBound(t *testing.T) {
 }
 
 func TestInterpretArrayInsert(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let x = [1, 2, 3]
@@ -4554,6 +4842,8 @@ func TestInterpretArrayInsert(t *testing.T) {
 
 func TestInterpretArrayRemove(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x = [1, 2, 3]
       let y = x.remove(at: 1)
@@ -4590,6 +4880,8 @@ func TestInterpretArrayRemove(t *testing.T) {
 }
 
 func TestInterpretArrayRemoveFirst(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let x = [1, 2, 3]
@@ -4628,6 +4920,8 @@ func TestInterpretArrayRemoveFirst(t *testing.T) {
 
 func TestInterpretArrayRemoveLast(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
           let x = [1, 2, 3]
           let y = x.removeLast()
@@ -4665,6 +4959,8 @@ func TestInterpretArrayRemoveLast(t *testing.T) {
 
 func TestInterpretArrayContains(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       fun doesContain(): Bool {
           let a = [1, 2]
@@ -4696,6 +4992,8 @@ func TestInterpretArrayContains(t *testing.T) {
 
 func TestInterpretStringConcat(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       fun test(): String {
           let a = "abc"
@@ -4713,6 +5011,8 @@ func TestInterpretStringConcat(t *testing.T) {
 }
 
 func TestInterpretStringConcatBound(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       fun test(): String {
@@ -4732,6 +5032,8 @@ func TestInterpretStringConcatBound(t *testing.T) {
 }
 
 func TestInterpretDictionaryRemove(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let xs = {"abc": 1, "def": 2}
@@ -4776,6 +5078,8 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 }
 
 func TestInterpretDictionaryInsert(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let xs = {"abc": 1, "def": 2}
@@ -4826,6 +5130,8 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 
 func TestInterpretDictionaryKeys(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       fun test(): [String] {
           let dict = {"def": 2, "abc": 1}
@@ -4849,6 +5155,8 @@ func TestInterpretDictionaryKeys(t *testing.T) {
 
 func TestInterpretDictionaryValues(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       fun test(): [Int] {
           let dict = {"def": 2, "abc": 1}
@@ -4871,6 +5179,8 @@ func TestInterpretDictionaryValues(t *testing.T) {
 }
 
 func TestInterpretDictionaryKeyTypes(t *testing.T) {
+
+	t.Parallel()
 
 	tests := map[string]string{
 		"String":    `"abc"`,
@@ -4914,6 +5224,8 @@ func TestInterpretDictionaryKeyTypes(t *testing.T) {
 
 func TestInterpretIndirectDestroy(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       resource X {}
 
@@ -4933,6 +5245,8 @@ func TestInterpretIndirectDestroy(t *testing.T) {
 }
 
 func TestInterpretUnaryMove(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       resource X {}
@@ -4957,6 +5271,8 @@ func TestInterpretUnaryMove(t *testing.T) {
 }
 
 func TestInterpretResourceMoveInArrayAndDestroy(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       var destroys = 0
@@ -5004,6 +5320,8 @@ func TestInterpretResourceMoveInArrayAndDestroy(t *testing.T) {
 
 func TestInterpretResourceMoveInDictionaryAndDestroy(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       var destroys = 0
 
@@ -5042,6 +5360,9 @@ func TestInterpretResourceMoveInDictionaryAndDestroy(t *testing.T) {
 }
 
 func TestInterpretClosure(t *testing.T) {
+
+	t.Parallel()
+
 	// Create a closure that increments and returns
 	// a variable each time it is invoked.
 
@@ -5087,6 +5408,8 @@ func TestInterpretClosure(t *testing.T) {
 // See https://github.com/dapperlabs/flow-go/issues/838
 //
 func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
+
+	t.Parallel()
 
 	checkerImported, err := ParseAndCheck(t, `
       // function must have arguments
@@ -5135,6 +5458,8 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
 
 func TestInterpretSwapVariables(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
        fun test(): [Int] {
            var x = 2
@@ -5157,6 +5482,8 @@ func TestInterpretSwapVariables(t *testing.T) {
 }
 
 func TestInterpretSwapArrayAndField(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
        struct Foo {
@@ -5189,6 +5516,8 @@ func TestInterpretSwapArrayAndField(t *testing.T) {
 
 func TestInterpretResourceDestroyExpressionNoDestructor(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
        resource R {}
 
@@ -5203,6 +5532,8 @@ func TestInterpretResourceDestroyExpressionNoDestructor(t *testing.T) {
 }
 
 func TestInterpretResourceDestroyExpressionDestructor(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
        var ranDestructor = false
@@ -5234,6 +5565,8 @@ func TestInterpretResourceDestroyExpressionDestructor(t *testing.T) {
 }
 
 func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       var ranDestructorA = false
@@ -5291,6 +5624,8 @@ func TestInterpretResourceDestroyExpressionNestedResources(t *testing.T) {
 
 func TestInterpretResourceDestroyArray(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       var destructionCount = 0
 
@@ -5321,6 +5656,8 @@ func TestInterpretResourceDestroyArray(t *testing.T) {
 }
 
 func TestInterpretResourceDestroyDictionary(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       var destructionCount = 0
@@ -5353,6 +5690,8 @@ func TestInterpretResourceDestroyDictionary(t *testing.T) {
 
 func TestInterpretResourceDestroyOptionalSome(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       var destructionCount = 0
 
@@ -5383,6 +5722,8 @@ func TestInterpretResourceDestroyOptionalSome(t *testing.T) {
 }
 
 func TestInterpretResourceDestroyOptionalNil(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       var destructionCount = 0
@@ -5419,6 +5760,8 @@ func TestInterpretResourceDestroyOptionalNil(t *testing.T) {
 //
 func TestInterpretResourceDestroyExpressionResourceInterfaceCondition(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       resource interface I {
           destroy() {
@@ -5443,6 +5786,8 @@ func TestInterpretResourceDestroyExpressionResourceInterfaceCondition(t *testing
 //
 func TestInterpretInterfaceInitializer(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       struct interface I {
           init(a a1: Bool) {
@@ -5464,6 +5809,9 @@ func TestInterpretInterfaceInitializer(t *testing.T) {
 }
 
 func TestInterpretEmitEvent(t *testing.T) {
+
+	t.Parallel()
+
 	var actualEvents []*interpreter.CompositeValue
 
 	inter := parseCheckAndInterpret(t,
@@ -5545,6 +5893,8 @@ func (v testValue) String() string {
 }
 
 func TestInterpretEmitEventParameterTypes(t *testing.T) {
+
+	t.Parallel()
 
 	validTypes := map[string]testValue{
 		"String":    {value: interpreter.NewStringValue("test")},
@@ -5679,6 +6029,8 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 func TestInterpretSwapResourceDictionaryElementReturnSwapped(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       resource X {}
 
@@ -5701,6 +6053,8 @@ func TestInterpretSwapResourceDictionaryElementReturnSwapped(t *testing.T) {
 }
 
 func TestInterpretSwapResourceDictionaryElementReturnDictionary(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       resource X {}
@@ -5738,6 +6092,8 @@ func TestInterpretSwapResourceDictionaryElementReturnDictionary(t *testing.T) {
 
 func TestInterpretSwapResourceDictionaryElementRemoveUsingNil(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       resource X {}
 
@@ -5766,6 +6122,8 @@ func TestInterpretSwapResourceDictionaryElementRemoveUsingNil(t *testing.T) {
 
 func TestInterpretReferenceExpression(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       pub resource R {}
 
@@ -5787,6 +6145,8 @@ func TestInterpretReferenceExpression(t *testing.T) {
 }
 
 func TestInterpretReferenceUse(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       pub resource R {
@@ -5834,6 +6194,8 @@ func TestInterpretReferenceUse(t *testing.T) {
 
 func TestInterpretReferenceUseAccess(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       pub resource R {
           pub(set) var x: Int
@@ -5876,6 +6238,8 @@ func TestInterpretReferenceUseAccess(t *testing.T) {
 
 func TestInterpretReferenceDereferenceFailure(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       pub resource R {
           pub fun foo() {}
@@ -5894,6 +6258,8 @@ func TestInterpretReferenceDereferenceFailure(t *testing.T) {
 }
 
 func TestInterpretInvalidForwardReferenceCall(t *testing.T) {
+
+	t.Parallel()
 
 	// TODO: improve:
 	//   - call to `g` should succeed, but access to `y` should fail with error
@@ -5916,6 +6282,8 @@ func TestInterpretInvalidForwardReferenceCall(t *testing.T) {
 }
 
 func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       resource R {
@@ -5991,6 +6359,8 @@ func TestInterpretVariableDeclarationSecondValue(t *testing.T) {
 
 func TestInterpretCastingIntLiteralToInt8(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x = 42 as Int8
     `)
@@ -6002,6 +6372,8 @@ func TestInterpretCastingIntLiteralToInt8(t *testing.T) {
 }
 
 func TestInterpretCastingIntLiteralToAnyStruct(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       let x = 42 as AnyStruct
@@ -6015,6 +6387,8 @@ func TestInterpretCastingIntLiteralToAnyStruct(t *testing.T) {
 
 func TestInterpretCastingIntLiteralToOptional(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x = 42 as Int?
     `)
@@ -6026,6 +6400,8 @@ func TestInterpretCastingIntLiteralToOptional(t *testing.T) {
 }
 
 func TestInterpretCastingResourceToAnyResource(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       resource R {}
@@ -6047,6 +6423,8 @@ func TestInterpretCastingResourceToAnyResource(t *testing.T) {
 }
 
 func TestInterpretOptionalChainingFieldRead(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t,
 		`
@@ -6080,6 +6458,8 @@ func TestInterpretOptionalChainingFieldRead(t *testing.T) {
 }
 
 func TestInterpretOptionalChainingFunctionRead(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t,
 		`
@@ -6115,6 +6495,8 @@ func TestInterpretOptionalChainingFunctionRead(t *testing.T) {
 
 func TestInterpretOptionalChainingFunctionCall(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t,
 		`
          struct Test {
@@ -6145,6 +6527,8 @@ func TestInterpretOptionalChainingFunctionCall(t *testing.T) {
 }
 
 func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
+
+	t.Parallel()
 
 	standardLibraryFunctions :=
 		stdlib.StandardLibraryFunctions{
@@ -6185,6 +6569,8 @@ func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
 
 func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
 
+	t.Parallel()
+
 	standardLibraryFunctions :=
 		stdlib.StandardLibraryFunctions{
 			stdlib.PanicFunction,
@@ -6221,6 +6607,8 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
 }
 
 func TestInterpretCompositeDeclarationNestedTypeScopingOuterInner(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpretWithOptions(t,
 		`
@@ -6274,6 +6662,8 @@ func TestInterpretCompositeDeclarationNestedTypeScopingOuterInner(t *testing.T) 
 
 func TestInterpretCompositeDeclarationNestedConstructor(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpretWithOptions(t,
 		`
           pub contract Test {
@@ -6304,6 +6694,8 @@ func TestInterpretCompositeDeclarationNestedConstructor(t *testing.T) {
 }
 
 func TestInterpretFungibleTokenContract(t *testing.T) {
+
+	t.Parallel()
 
 	code := strings.Join(
 		[]string{
@@ -6365,6 +6757,8 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 }
 
 func TestInterpretContractAccountFieldUse(t *testing.T) {
+
+	t.Parallel()
 
 	code := `
       pub contract Test {
@@ -6429,6 +6823,8 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 
 func TestInterpretConformToImportedInterface(t *testing.T) {
 
+	t.Parallel()
+
 	checkerImported, err := ParseAndCheck(t, `
       struct interface Foo {
           fun check(answer: Int) {
@@ -6476,6 +6872,8 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 }
 
 func TestInterpretFunctionPostConditionInInterface(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
       struct interface SI {
@@ -6530,6 +6928,8 @@ func TestInterpretFunctionPostConditionInInterface(t *testing.T) {
 
 func TestInterpretFunctionPostConditionWithBeforeInInterface(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       struct interface SI {
           on: Bool
@@ -6583,6 +6983,8 @@ func TestInterpretFunctionPostConditionWithBeforeInInterface(t *testing.T) {
 
 func TestInterpretContractUseInNestedDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpretWithOptions(t, `
           pub contract C {
 
@@ -6619,6 +7021,8 @@ func TestInterpretContractUseInNestedDeclaration(t *testing.T) {
 }
 
 func TestInterpretResourceInterfaceInitializerAndDestructorPreConditions(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t, `
 
@@ -6673,6 +7077,8 @@ func TestInterpretResourceInterfaceInitializerAndDestructorPreConditions(t *test
 }
 
 func TestInterpretResourceTypeRequirementInitializerAndDestructorPreConditions(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpretWithOptions(t,
 		`
@@ -6744,6 +7150,8 @@ func TestInterpretResourceTypeRequirementInitializerAndDestructorPreConditions(t
 
 func TestInterpretNonStorageReference(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t,
 		`
           resource NFT {
@@ -6782,6 +7190,8 @@ func TestInterpretNonStorageReference(t *testing.T) {
 
 func TestInterpretNonStorageReferenceAfterDestruction(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t,
 		`
           resource NFT {
@@ -6808,6 +7218,8 @@ func TestInterpretNonStorageReferenceAfterDestruction(t *testing.T) {
 }
 
 func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpret(t,
 		`
@@ -6855,6 +7267,8 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 
 func TestInterpretFix64(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t,
 		`
           let a = 789.00123010
@@ -6881,6 +7295,8 @@ func TestInterpretFix64(t *testing.T) {
 
 func TestInterpretFix64Mul(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t,
 		`
           let a = Fix64(1.1) * -1.1
@@ -6894,6 +7310,8 @@ func TestInterpretFix64Mul(t *testing.T) {
 }
 
 func TestInterpretHexDecode(t *testing.T) {
+
+	t.Parallel()
 
 	expected := interpreter.NewArrayValueUnownedNonCopying(
 		interpreter.NewIntValueFromInt64(71),
@@ -7008,6 +7426,8 @@ func TestInterpretHexDecode(t *testing.T) {
 
 func TestInterpretOptionalChainingOptionalFieldRead(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       struct Test {
           let x: Int?
@@ -7030,6 +7450,8 @@ func TestInterpretOptionalChainingOptionalFieldRead(t *testing.T) {
 }
 
 func TestInterpretResourceOwnerFieldUse(t *testing.T) {
+
+	t.Parallel()
 
 	storedValues := map[string]interpreter.OptionalValue{}
 
@@ -7135,6 +7557,8 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 
 func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("new to nil", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
@@ -7208,6 +7632,8 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 
 func TestInterpretForce(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("non-nil", func(t *testing.T) {
 
 		inter := parseCheckAndInterpret(t, `
@@ -7265,6 +7691,8 @@ func permutations(xs []string) (res [][]string) {
 }
 
 func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
+
+	t.Parallel()
 
 	fieldValues := map[string]int{
 		"a": 1,
@@ -7329,6 +7757,8 @@ func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
 }
 
 func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
+
+	t.Parallel()
 
 	fieldValues := map[string]int{
 		"a": 1,
@@ -7396,6 +7826,8 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 
 func TestInterpretEphemeralReferenceToOptional(t *testing.T) {
 
+	t.Parallel()
+
 	_ = parseCheckAndInterpretWithOptions(t,
 		`
           contract C {
@@ -7431,6 +7863,8 @@ func TestInterpretEphemeralReferenceToOptional(t *testing.T) {
 }
 
 func TestInterpretNestedDeclarationOrder(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("A, B", func(t *testing.T) {
 		_ = parseCheckAndInterpretWithOptions(t,
@@ -7495,6 +7929,8 @@ func TestInterpretNestedDeclarationOrder(t *testing.T) {
 }
 
 func TestInterpretCountDigits256(t *testing.T) {
+
+	t.Parallel()
 
 	type test struct {
 		Type    sema.Type
@@ -7572,6 +8008,8 @@ func TestInterpretCountDigits256(t *testing.T) {
 }
 
 func TestInterpretFailableCastingCompositeTypeConfusion(t *testing.T) {
+
+	t.Parallel()
 
 	inter := parseCheckAndInterpretWithOptions(t,
 		`

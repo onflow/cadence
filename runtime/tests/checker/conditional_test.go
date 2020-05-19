@@ -30,6 +30,8 @@ import (
 
 func TestCheckConditionalExpressionTest(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           let x = true ? 1 : 2
@@ -40,6 +42,8 @@ func TestCheckConditionalExpressionTest(t *testing.T) {
 }
 
 func TestCheckInvalidConditionalExpressionTest(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -53,6 +57,8 @@ func TestCheckInvalidConditionalExpressionTest(t *testing.T) {
 }
 
 func TestCheckInvalidConditionalExpressionElse(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -69,6 +75,8 @@ func TestCheckInvalidConditionalExpressionElse(t *testing.T) {
 
 func TestCheckInvalidConditionalExpressionTypes(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           let x = true ? 2 : false
@@ -82,6 +90,8 @@ func TestCheckInvalidConditionalExpressionTypes(t *testing.T) {
 
 // TODO: return common super type for conditional
 func TestCheckInvalidAnyConditional(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       let x: AnyStruct = true

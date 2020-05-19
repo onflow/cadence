@@ -31,6 +31,8 @@ import (
 
 func TestCheckInvalidFunctionCallWithTooFewArguments(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun f(x: Int): Int {
           return x
@@ -48,6 +50,8 @@ func TestCheckInvalidFunctionCallWithTooFewArguments(t *testing.T) {
 
 func TestCheckFunctionCallWithArgumentLabel(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun f(x: Int): Int {
           return x
@@ -63,6 +67,8 @@ func TestCheckFunctionCallWithArgumentLabel(t *testing.T) {
 
 func TestCheckFunctionCallWithoutArgumentLabel(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun f(_ x: Int): Int {
           return x
@@ -77,6 +83,8 @@ func TestCheckFunctionCallWithoutArgumentLabel(t *testing.T) {
 }
 
 func TestCheckInvalidFunctionCallWithNotRequiredArgumentLabel(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun f(_ x: Int): Int {
@@ -95,6 +103,8 @@ func TestCheckInvalidFunctionCallWithNotRequiredArgumentLabel(t *testing.T) {
 
 func TestCheckIndirectFunctionCallWithoutArgumentLabel(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun f(x: Int): Int {
           return x
@@ -110,6 +120,8 @@ func TestCheckIndirectFunctionCallWithoutArgumentLabel(t *testing.T) {
 }
 
 func TestCheckFunctionCallMissingArgumentLabel(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun f(x: Int): Int {
@@ -128,6 +140,8 @@ func TestCheckFunctionCallMissingArgumentLabel(t *testing.T) {
 
 func TestCheckFunctionCallIncorrectArgumentLabel(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun f(x: Int): Int {
           return x
@@ -144,6 +158,8 @@ func TestCheckFunctionCallIncorrectArgumentLabel(t *testing.T) {
 }
 
 func TestCheckInvalidFunctionCallWithTooManyArguments(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun f(x: Int): Int {
@@ -164,6 +180,8 @@ func TestCheckInvalidFunctionCallWithTooManyArguments(t *testing.T) {
 
 func TestCheckInvalidFunctionCallOfBool(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): Int {
           return true()
@@ -177,6 +195,8 @@ func TestCheckInvalidFunctionCallOfBool(t *testing.T) {
 
 func TestCheckInvalidFunctionCallOfInteger(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): Int {
           return 2()
@@ -189,6 +209,8 @@ func TestCheckInvalidFunctionCallOfInteger(t *testing.T) {
 }
 
 func TestCheckInvalidFunctionCallWithWrongType(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun f(x: Int): Int {
@@ -206,6 +228,8 @@ func TestCheckInvalidFunctionCallWithWrongType(t *testing.T) {
 }
 
 func TestCheckInvalidFunctionCallWithWrongTypeAndMissingArgumentLabel(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun f(x: Int): Int {
@@ -226,6 +250,8 @@ func TestCheckInvalidFunctionCallWithWrongTypeAndMissingArgumentLabel(t *testing
 
 func TestCheckInvocationOfFunctionFromStructFunction(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun f(x: Int) {}
 
@@ -239,6 +265,8 @@ func TestCheckInvocationOfFunctionFromStructFunction(t *testing.T) {
 }
 
 func TestCheckInvalidStructFunctionInvocation(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
 
@@ -255,6 +283,8 @@ func TestCheckInvalidStructFunctionInvocation(t *testing.T) {
 
 func TestCheckInvocationOfFunctionFromStructFunctionWithSameName(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun x(y: Int) {}
 
@@ -270,6 +300,8 @@ func TestCheckInvocationOfFunctionFromStructFunctionWithSameName(t *testing.T) {
 
 func TestCheckIntricateIntegerBinaryExpression(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let x: Int8 = 100
       let y = (Int8(90) + Int8(10)) == x
@@ -278,6 +310,8 @@ func TestCheckIntricateIntegerBinaryExpression(t *testing.T) {
 }
 
 func TestCheckInvocationWithOnlyVarargs(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheckWithOptions(t,
 		`

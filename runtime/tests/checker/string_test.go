@@ -30,6 +30,8 @@ import (
 
 func TestCheckCharacter(t *testing.T) {
 
+	t.Parallel()
+
 	checker, err := ParseAndCheck(t, `
         let x: Character = "x"
 	`)
@@ -43,6 +45,8 @@ func TestCheckCharacter(t *testing.T) {
 }
 
 func TestCheckCharacterUnicodeScalar(t *testing.T) {
+
+	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
         let x: Character = "\u{1F1FA}\u{1F1F8}"
@@ -58,6 +62,8 @@ func TestCheckCharacterUnicodeScalar(t *testing.T) {
 
 func TestCheckString(t *testing.T) {
 
+	t.Parallel()
+
 	checker, err := ParseAndCheck(t, `
         let x = "x"
 	`)
@@ -72,6 +78,8 @@ func TestCheckString(t *testing.T) {
 
 func TestCheckStringConcat(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
 	  fun test(): String {
 	 	  let a = "abc"
@@ -85,6 +93,8 @@ func TestCheckStringConcat(t *testing.T) {
 }
 
 func TestCheckInvalidStringConcat(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(): String {
@@ -102,6 +112,8 @@ func TestCheckInvalidStringConcat(t *testing.T) {
 
 func TestCheckStringConcatBound(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): String {
 		  let a = "abc"
@@ -116,6 +128,8 @@ func TestCheckStringConcatBound(t *testing.T) {
 
 func TestCheckStringSlice(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
 	  fun test(): String {
 	 	  let a = "abcdef"
@@ -127,6 +141,9 @@ func TestCheckStringSlice(t *testing.T) {
 }
 
 func TestCheckInvalidStringSlice(t *testing.T) {
+
+	t.Parallel()
+
 	t.Run("MissingBothArgumentLabels", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
@@ -167,6 +184,8 @@ func TestCheckInvalidStringSlice(t *testing.T) {
 }
 
 func TestCheckStringSliceBound(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(): String {
@@ -210,6 +229,8 @@ func TestCheckStringSliceBound(t *testing.T) {
 
 func TestCheckStringIndexing(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           let z = "abc"
@@ -221,6 +242,8 @@ func TestCheckStringIndexing(t *testing.T) {
 }
 
 func TestCheckStringIndexingAssignment(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -234,6 +257,8 @@ func TestCheckStringIndexingAssignment(t *testing.T) {
 }
 
 func TestCheckStringIndexingAssignmentWithCharacterLiteral(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {

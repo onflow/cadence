@@ -29,6 +29,8 @@ import (
 
 func TestConstantSizedType_String(t *testing.T) {
 
+	t.Parallel()
+
 	ty := &ConstantSizedType{
 		Type: &VariableSizedType{Type: &IntType{}},
 		Size: 2,
@@ -41,6 +43,8 @@ func TestConstantSizedType_String(t *testing.T) {
 }
 
 func TestConstantSizedType_String_OfFunctionType(t *testing.T) {
+
+	t.Parallel()
 
 	ty := &ConstantSizedType{
 		Type: &FunctionType{
@@ -64,6 +68,8 @@ func TestConstantSizedType_String_OfFunctionType(t *testing.T) {
 
 func TestVariableSizedType_String(t *testing.T) {
 
+	t.Parallel()
+
 	ty := &VariableSizedType{
 		Type: &ConstantSizedType{
 			Type: &IntType{},
@@ -78,6 +84,8 @@ func TestVariableSizedType_String(t *testing.T) {
 }
 
 func TestVariableSizedType_String_OfFunctionType(t *testing.T) {
+
+	t.Parallel()
 
 	ty := &VariableSizedType{
 		Type: &FunctionType{
@@ -100,6 +108,8 @@ func TestVariableSizedType_String_OfFunctionType(t *testing.T) {
 
 func TestIsResourceType_AnyStructNestedInArray(t *testing.T) {
 
+	t.Parallel()
+
 	ty := &VariableSizedType{
 		Type: &AnyStructType{},
 	}
@@ -109,6 +119,8 @@ func TestIsResourceType_AnyStructNestedInArray(t *testing.T) {
 
 func TestIsResourceType_AnyResourceNestedInArray(t *testing.T) {
 
+	t.Parallel()
+
 	ty := &VariableSizedType{
 		Type: &AnyResourceType{},
 	}
@@ -117,6 +129,8 @@ func TestIsResourceType_AnyResourceNestedInArray(t *testing.T) {
 }
 
 func TestIsResourceType_ResourceNestedInArray(t *testing.T) {
+
+	t.Parallel()
 
 	ty := &VariableSizedType{
 		Type: &CompositeType{
@@ -128,6 +142,8 @@ func TestIsResourceType_ResourceNestedInArray(t *testing.T) {
 }
 
 func TestIsResourceType_ResourceNestedInDictionary(t *testing.T) {
+
+	t.Parallel()
 
 	ty := &DictionaryType{
 		KeyType: &StringType{},
@@ -143,6 +159,8 @@ func TestIsResourceType_ResourceNestedInDictionary(t *testing.T) {
 
 func TestIsResourceType_StructNestedInDictionary(t *testing.T) {
 
+	t.Parallel()
+
 	ty := &DictionaryType{
 		KeyType: &StringType{},
 		ValueType: &VariableSizedType{
@@ -156,6 +174,8 @@ func TestIsResourceType_StructNestedInDictionary(t *testing.T) {
 }
 
 func TestRestrictedType_StringAndID(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("base type and restriction", func(t *testing.T) {
 		interfaceType := &InterfaceType{
@@ -239,6 +259,8 @@ func TestRestrictedType_StringAndID(t *testing.T) {
 }
 
 func TestRestrictedType_Equals(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("same base type and more restrictions", func(t *testing.T) {
 
@@ -382,6 +404,8 @@ func TestRestrictedType_Equals(t *testing.T) {
 
 func TestRestrictedType_GetMember(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("forbid undeclared members", func(t *testing.T) {
 		resourceType := &CompositeType{
 			Kind:       common.CompositeKindResource,
@@ -441,6 +465,8 @@ func TestRestrictedType_GetMember(t *testing.T) {
 }
 
 func TestBeforeType_Strings(t *testing.T) {
+
+	t.Parallel()
 
 	expected := "(<T: AnyStruct>(_ value: T): T)"
 

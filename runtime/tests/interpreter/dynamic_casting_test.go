@@ -39,6 +39,8 @@ var dynamicCastingOperations = map[ast.Operation]bool{
 
 func TestInterpretDynamicCastingNumber(t *testing.T) {
 
+	t.Parallel()
+
 	type test struct {
 		ty       sema.Type
 		value    string
@@ -168,6 +170,8 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 
 func TestInterpretDynamicCastingVoid(t *testing.T) {
 
+	t.Parallel()
+
 	types := []sema.Type{
 		&sema.AnyStructType{},
 		&sema.VoidType{},
@@ -256,6 +260,8 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 
 func TestInterpretDynamicCastingString(t *testing.T) {
 
+	t.Parallel()
+
 	types := []sema.Type{
 		&sema.AnyStructType{},
 		&sema.StringType{},
@@ -341,6 +347,8 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 
 func TestInterpretDynamicCastingBool(t *testing.T) {
 
+	t.Parallel()
+
 	types := []sema.Type{
 		&sema.AnyStructType{},
 		&sema.BoolType{},
@@ -425,6 +433,8 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 }
 
 func TestInterpretDynamicCastingAddress(t *testing.T) {
+
+	t.Parallel()
 
 	types := []sema.Type{
 		&sema.AnyStructType{},
@@ -515,6 +525,8 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 }
 
 func TestInterpretDynamicCastingStruct(t *testing.T) {
+
+	t.Parallel()
 
 	types := []string{
 		"AnyStruct",
@@ -754,6 +766,8 @@ func testResourceCastInvalid(t *testing.T, types, fromType, targetType string, o
 
 func TestInterpretDynamicCastingResource(t *testing.T) {
 
+	t.Parallel()
+
 	types := []string{
 		"AnyResource",
 		"R",
@@ -904,6 +918,8 @@ func testStructCastInvalid(t *testing.T, types, fromType, targetType string, ope
 
 func TestInterpretDynamicCastingStructInterface(t *testing.T) {
 
+	t.Parallel()
+
 	types := []string{
 		"AnyStruct",
 		"S",
@@ -954,6 +970,8 @@ func TestInterpretDynamicCastingStructInterface(t *testing.T) {
 
 func TestInterpretDynamicCastingResourceInterface(t *testing.T) {
 
+	t.Parallel()
+
 	types := []string{
 		"AnyResource",
 		"R",
@@ -1003,6 +1021,8 @@ func TestInterpretDynamicCastingResourceInterface(t *testing.T) {
 }
 
 func TestInterpretDynamicCastingSome(t *testing.T) {
+
+	t.Parallel()
 
 	types := []sema.Type{
 		&sema.OptionalType{Type: &sema.IntType{}},
@@ -1104,6 +1124,8 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 
 func TestInterpretDynamicCastingArray(t *testing.T) {
 
+	t.Parallel()
+
 	types := []sema.Type{
 		&sema.VariableSizedType{Type: &sema.IntType{}},
 		&sema.VariableSizedType{Type: &sema.AnyStructType{}},
@@ -1192,6 +1214,8 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 }
 
 func TestInterpretDynamicCastingDictionary(t *testing.T) {
+
+	t.Parallel()
 
 	types := []sema.Type{
 		&sema.DictionaryType{
@@ -1288,6 +1312,8 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 }
 
 func TestInterpretDynamicCastingResourceType(t *testing.T) {
+
+	t.Parallel()
 
 	for operation := range dynamicCastingOperations {
 
@@ -1675,6 +1701,8 @@ func TestInterpretDynamicCastingResourceType(t *testing.T) {
 }
 
 func TestInterpretDynamicCastingStructType(t *testing.T) {
+
+	t.Parallel()
 
 	for operation := range dynamicCastingOperations {
 
@@ -2195,6 +2223,8 @@ func testReferenceCastInvalid(t *testing.T, types, fromType, targetType string, 
 
 func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 
+	t.Parallel()
+
 	for operation := range dynamicCastingOperations {
 
 		t.Run(operation.Symbol(), func(t *testing.T) {
@@ -2601,6 +2631,8 @@ func TestInterpretDynamicCastingAuthorizedResourceReferenceType(t *testing.T) {
 }
 
 func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
+
+	t.Parallel()
 
 	for operation := range dynamicCastingOperations {
 
@@ -3009,6 +3041,8 @@ func TestInterpretDynamicCastingAuthorizedStructReferenceType(t *testing.T) {
 
 func TestInterpretDynamicCastingUnauthorizedResourceReferenceType(t *testing.T) {
 
+	t.Parallel()
+
 	for operation := range dynamicCastingOperations {
 
 		t.Run(operation.Symbol(), func(t *testing.T) {
@@ -3152,6 +3186,8 @@ func TestInterpretDynamicCastingUnauthorizedResourceReferenceType(t *testing.T) 
 }
 
 func TestInterpretDynamicCastingUnauthorizedStructReferenceType(t *testing.T) {
+
+	t.Parallel()
 
 	for operation := range dynamicCastingOperations {
 

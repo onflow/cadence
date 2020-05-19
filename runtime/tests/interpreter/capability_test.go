@@ -28,6 +28,8 @@ import (
 
 func TestInterpretCapabilityBorrowResource(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("resource", func(t *testing.T) {
 
 		inter, _ := testAccount(
@@ -308,6 +310,8 @@ func TestInterpretCapabilityBorrowResource(t *testing.T) {
 }
 
 func TestInterpretCapabilityCheck(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
 

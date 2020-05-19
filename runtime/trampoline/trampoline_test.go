@@ -27,6 +27,8 @@ import (
 
 func TestFlatMapDone(t *testing.T) {
 
+	t.Parallel()
+
 	trampoline := Done{23}.
 		FlatMap(func(value interface{}) Trampoline {
 			number := value.(int)
@@ -37,6 +39,8 @@ func TestFlatMapDone(t *testing.T) {
 }
 
 func TestFlatMapMore(t *testing.T) {
+
+	t.Parallel()
 
 	trampoline :=
 		More(func() Trampoline { return Done{23} }).
@@ -49,6 +53,8 @@ func TestFlatMapMore(t *testing.T) {
 }
 
 func TestFlatMap2(t *testing.T) {
+
+	t.Parallel()
 
 	trampoline :=
 		More(func() Trampoline { return Done{23} }).
@@ -68,6 +74,8 @@ func TestFlatMap2(t *testing.T) {
 
 func TestFlatMap3(t *testing.T) {
 
+	t.Parallel()
+
 	trampoline :=
 		More(func() Trampoline {
 			return Done{23}.
@@ -86,6 +94,8 @@ func TestFlatMap3(t *testing.T) {
 
 func TestMap(t *testing.T) {
 
+	t.Parallel()
+
 	trampoline :=
 		More(func() Trampoline { return Done{23} }).
 			Map(func(value interface{}) interface{} {
@@ -98,6 +108,8 @@ func TestMap(t *testing.T) {
 
 func TestMap2(t *testing.T) {
 
+	t.Parallel()
+
 	trampoline :=
 		Done{23}.
 			Map(func(value interface{}) interface{} {
@@ -109,6 +121,8 @@ func TestMap2(t *testing.T) {
 }
 
 func TestEvenOdd(t *testing.T) {
+
+	t.Parallel()
 
 	var even, odd func(n interface{}) Trampoline
 
@@ -144,6 +158,8 @@ func TestEvenOdd(t *testing.T) {
 }
 
 func TestAckermann(t *testing.T) {
+
+	t.Parallel()
 
 	// The recursive implementation of the Ackermann function
 	// results in a stack overflow even for small inputs:

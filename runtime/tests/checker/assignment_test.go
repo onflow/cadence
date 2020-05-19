@@ -30,6 +30,8 @@ import (
 
 func TestCheckInvalidUnknownDeclarationAssignment(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           x = 2
@@ -42,6 +44,8 @@ func TestCheckInvalidUnknownDeclarationAssignment(t *testing.T) {
 }
 
 func TestCheckInvalidConstantAssignment(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -57,6 +61,8 @@ func TestCheckInvalidConstantAssignment(t *testing.T) {
 
 func TestCheckAssignment(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           var x = 2
@@ -68,6 +74,8 @@ func TestCheckAssignment(t *testing.T) {
 }
 
 func TestCheckInvalidGlobalConstantAssignment(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       let x = 2
@@ -84,6 +92,8 @@ func TestCheckInvalidGlobalConstantAssignment(t *testing.T) {
 
 func TestCheckGlobalVariableAssignment(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       var x = 2
 
@@ -98,6 +108,8 @@ func TestCheckGlobalVariableAssignment(t *testing.T) {
 
 func TestCheckInvalidAssignmentToParameter(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(x: Int8) {
            x = 2
@@ -110,6 +122,8 @@ func TestCheckInvalidAssignmentToParameter(t *testing.T) {
 }
 
 func TestCheckInvalidAssignmentTargetExpression(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun f() {}

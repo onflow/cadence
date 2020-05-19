@@ -30,6 +30,8 @@ import (
 
 func TestCheckInvalidFunctionExpressionReturnValue(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let test = fun (): Int {
           return true
@@ -42,6 +44,8 @@ func TestCheckInvalidFunctionExpressionReturnValue(t *testing.T) {
 }
 
 func TestCheckFunctionExpressionsAndScope(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
        let x = 10

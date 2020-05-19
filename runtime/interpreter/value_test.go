@@ -38,6 +38,9 @@ func newTestCompositeValue(owner common.Address) *CompositeValue {
 }
 
 func TestOwnerNewArray(t *testing.T) {
+
+	t.Parallel()
+
 	oldOwner := common.Address{0x1}
 
 	value := newTestCompositeValue(oldOwner)
@@ -51,6 +54,9 @@ func TestOwnerNewArray(t *testing.T) {
 }
 
 func TestSetOwnerArray(t *testing.T) {
+
+	t.Parallel()
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
@@ -65,6 +71,9 @@ func TestSetOwnerArray(t *testing.T) {
 }
 
 func TestSetOwnerArrayCopy(t *testing.T) {
+
+	t.Parallel()
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
@@ -83,6 +92,9 @@ func TestSetOwnerArrayCopy(t *testing.T) {
 }
 
 func TestSetOwnerArraySetIndex(t *testing.T) {
+
+	t.Parallel()
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
@@ -104,6 +116,9 @@ func TestSetOwnerArraySetIndex(t *testing.T) {
 }
 
 func TestSetOwnerArrayAppend(t *testing.T) {
+
+	t.Parallel()
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
@@ -122,6 +137,9 @@ func TestSetOwnerArrayAppend(t *testing.T) {
 }
 
 func TestSetOwnerArrayInsert(t *testing.T) {
+
+	t.Parallel()
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
@@ -140,6 +158,9 @@ func TestSetOwnerArrayInsert(t *testing.T) {
 }
 
 func TestOwnerNewDictionary(t *testing.T) {
+
+	t.Parallel()
+
 	oldOwner := common.Address{0x1}
 
 	keyValue := NewStringValue("test")
@@ -155,6 +176,9 @@ func TestOwnerNewDictionary(t *testing.T) {
 }
 
 func TestSetOwnerDictionary(t *testing.T) {
+
+	t.Parallel()
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
@@ -170,6 +194,9 @@ func TestSetOwnerDictionary(t *testing.T) {
 }
 
 func TestSetOwnerDictionaryCopy(t *testing.T) {
+
+	t.Parallel()
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
@@ -188,6 +215,9 @@ func TestSetOwnerDictionaryCopy(t *testing.T) {
 }
 
 func TestSetOwnerDictionarySetIndex(t *testing.T) {
+
+	t.Parallel()
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
@@ -212,6 +242,9 @@ func TestSetOwnerDictionarySetIndex(t *testing.T) {
 }
 
 func TestSetOwnerDictionaryInsert(t *testing.T) {
+
+	t.Parallel()
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
@@ -231,6 +264,9 @@ func TestSetOwnerDictionaryInsert(t *testing.T) {
 }
 
 func TestOwnerNewSome(t *testing.T) {
+
+	t.Parallel()
+
 	oldOwner := common.Address{0x1}
 
 	value := newTestCompositeValue(oldOwner)
@@ -244,6 +280,9 @@ func TestOwnerNewSome(t *testing.T) {
 }
 
 func TestSetOwnerSome(t *testing.T) {
+
+	t.Parallel()
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
@@ -260,6 +299,9 @@ func TestSetOwnerSome(t *testing.T) {
 }
 
 func TestSetOwnerSomeCopy(t *testing.T) {
+
+	t.Parallel()
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
@@ -279,6 +321,9 @@ func TestSetOwnerSomeCopy(t *testing.T) {
 }
 
 func TestOwnerNewComposite(t *testing.T) {
+
+	t.Parallel()
+
 	oldOwner := common.Address{0x1}
 
 	composite := newTestCompositeValue(oldOwner)
@@ -287,6 +332,9 @@ func TestOwnerNewComposite(t *testing.T) {
 }
 
 func TestSetOwnerComposite(t *testing.T) {
+
+	t.Parallel()
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 
@@ -304,6 +352,9 @@ func TestSetOwnerComposite(t *testing.T) {
 }
 
 func TestSetOwnerCompositeCopy(t *testing.T) {
+
+	t.Parallel()
+
 	oldOwner := common.Address{0x1}
 
 	value := newTestCompositeValue(oldOwner)
@@ -322,6 +373,9 @@ func TestSetOwnerCompositeCopy(t *testing.T) {
 }
 
 func TestSetOwnerCompositeSetMember(t *testing.T) {
+
+	t.Parallel()
+
 	oldOwner := common.Address{0x1}
 	newOwner := common.Address{0x2}
 

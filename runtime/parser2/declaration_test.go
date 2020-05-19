@@ -30,6 +30,8 @@ import (
 
 func TestParseVariableDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("var, no type annotation, copy, one value", func(t *testing.T) {
 		result, errs := ParseStatements("var x = 1")
 		require.Empty(t, errs)
@@ -164,6 +166,8 @@ func TestParseVariableDeclaration(t *testing.T) {
 }
 
 func TestParseParameterList(t *testing.T) {
+
+	t.Parallel()
 
 	parse := func(input string) (interface{}, []error) {
 		return Parse(
@@ -341,6 +345,8 @@ func TestParseParameterList(t *testing.T) {
 }
 
 func TestParseFunctionDeclaration(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("without return type", func(t *testing.T) {
 		result, errs := ParseStatements("fun foo () { }")

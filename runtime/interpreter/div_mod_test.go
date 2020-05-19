@@ -29,6 +29,8 @@ import (
 
 func TestDivModUInt8(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  UInt8Value
 		valid bool
@@ -98,6 +100,8 @@ func TestDivModUInt8(t *testing.T) {
 }
 
 func TestDivModUInt16(t *testing.T) {
+
+	t.Parallel()
 
 	tests := []struct {
 		a, b  UInt16Value
@@ -169,6 +173,8 @@ func TestDivModUInt16(t *testing.T) {
 
 func TestDivModUInt32(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  UInt32Value
 		valid bool
@@ -238,6 +244,8 @@ func TestDivModUInt32(t *testing.T) {
 }
 
 func TestDivModUInt64(t *testing.T) {
+
+	t.Parallel()
 
 	tests := []struct {
 		a, b  UInt64Value
@@ -398,6 +406,8 @@ func TestDivModUInt64(t *testing.T) {
 }
 
 func TestDivModUInt128(t *testing.T) {
+
+	t.Parallel()
 
 	// NOTE: hex values are integer values, not bit patterns!
 
@@ -560,6 +570,8 @@ func TestDivModUInt128(t *testing.T) {
 }
 
 func TestDivModUInt256(t *testing.T) {
+
+	t.Parallel()
 
 	// NOTE: hex values are integer values, not bit patterns!
 
@@ -1229,6 +1241,8 @@ func TestDivModUInt256(t *testing.T) {
 
 func TestDivInt8(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  Int8Value
 		valid bool
@@ -1291,6 +1305,8 @@ func TestDivInt8(t *testing.T) {
 
 func TestModInt8(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  Int8Value
 		valid bool
@@ -1351,6 +1367,8 @@ func TestModInt8(t *testing.T) {
 }
 
 func TestDivInt16(t *testing.T) {
+
+	t.Parallel()
 
 	tests := []struct {
 		a, b  Int16Value
@@ -1414,6 +1432,8 @@ func TestDivInt16(t *testing.T) {
 
 func TestModInt16(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  Int16Value
 		valid bool
@@ -1474,6 +1494,8 @@ func TestModInt16(t *testing.T) {
 }
 
 func TestDivInt32(t *testing.T) {
+
+	t.Parallel()
 
 	tests := []struct {
 		a, b  Int32Value
@@ -1537,6 +1559,8 @@ func TestDivInt32(t *testing.T) {
 
 func TestModInt32(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  Int32Value
 		valid bool
@@ -1597,6 +1621,8 @@ func TestModInt32(t *testing.T) {
 }
 
 func TestDivInt64(t *testing.T) {
+
+	t.Parallel()
 
 	tests := []struct {
 		a, b  Int64Value
@@ -1750,6 +1776,8 @@ func TestDivInt64(t *testing.T) {
 
 func TestModInt64(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  Int64Value
 		valid bool
@@ -1901,6 +1929,8 @@ func TestModInt64(t *testing.T) {
 
 func TestDivModInt(t *testing.T) {
 
+	t.Parallel()
+
 	for _, f := range []func(a, b IntValue){
 		func(a, b IntValue) {
 			a.Div(b)
@@ -1916,6 +1946,8 @@ func TestDivModInt(t *testing.T) {
 }
 
 func TestDivInt128(t *testing.T) {
+
+	t.Parallel()
 
 	tests := []struct {
 		a, b  Int128Value
@@ -2027,6 +2059,8 @@ func TestDivInt128(t *testing.T) {
 
 func TestModInt128(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  Int128Value
 		valid bool
@@ -2135,6 +2169,8 @@ func TestModInt128(t *testing.T) {
 }
 
 func TestDivInt256(t *testing.T) {
+
+	t.Parallel()
 
 	tests := []struct {
 		a, b  Int256Value
@@ -2588,6 +2624,8 @@ func TestDivInt256(t *testing.T) {
 
 func TestModInt256(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  Int256Value
 		valid bool
@@ -3039,6 +3077,8 @@ func TestModInt256(t *testing.T) {
 
 func TestReciprocalFix64(t *testing.T) {
 
+	t.Parallel()
+
 	assert.PanicsWithValue(t,
 		DivisionByZeroError{},
 		func() {
@@ -3064,6 +3104,8 @@ func TestReciprocalFix64(t *testing.T) {
 
 func TestReciprocalUFix64(t *testing.T) {
 
+	t.Parallel()
+
 	assert.PanicsWithValue(t,
 		DivisionByZeroError{},
 		func() {
@@ -3088,6 +3130,8 @@ func TestReciprocalUFix64(t *testing.T) {
 }
 
 func TestDivFix64(t *testing.T) {
+
+	t.Parallel()
 
 	tests := []struct {
 		a, b  int64
@@ -3151,6 +3195,8 @@ func TestDivFix64(t *testing.T) {
 
 func TestModFix64(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  Int64Value
 		valid bool
@@ -3189,6 +3235,8 @@ func TestModFix64(t *testing.T) {
 }
 
 func TestDivModUFix64(t *testing.T) {
+
+	t.Parallel()
 
 	tests := []struct {
 		a, b  uint64
@@ -3254,6 +3302,8 @@ func TestDivModUFix64(t *testing.T) {
 // when an operand is negative
 //
 func TestNegativeMod(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("integer", func(t *testing.T) {
 

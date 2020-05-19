@@ -32,6 +32,8 @@ import (
 
 func TestCheckPath(t *testing.T) {
 
+	t.Parallel()
+
 	for _, domain := range common.AllPathDomainsByIdentifier {
 
 		t.Run(fmt.Sprintf("valid: %s", domain.Name()), func(t *testing.T) {
