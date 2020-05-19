@@ -40,6 +40,9 @@ func withTokens(tokenChan chan Token, fn func([]Token)) {
 }
 
 func testLex(t *testing.T, input string, expected []Token) {
+
+	t.Parallel()
+
 	withTokens(Lex(input), func(tokens []Token) {
 		assert.Equal(t, expected, tokens)
 	})
