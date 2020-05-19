@@ -23,6 +23,3 @@ lint:
 .PHONY: tidy
 tidy:
 	go mod tidy; git diff --exit-code
-
-.PHONY: ci
-ci: install-tools tidy lint test
