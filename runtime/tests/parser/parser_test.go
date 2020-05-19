@@ -39,6 +39,8 @@ import (
 
 func TestParseReplInput(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseReplInput(`
         struct X {}; let x = X(); x
     `)
@@ -53,6 +55,9 @@ func TestParseReplInput(t *testing.T) {
 }
 
 func TestParseInvalidProgramWithRest(t *testing.T) {
+
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
 	    .asd
 	`)
@@ -62,6 +67,8 @@ func TestParseInvalidProgramWithRest(t *testing.T) {
 }
 
 func TestParseInvalidIncompleteConstKeyword(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
 	    le
@@ -88,6 +95,8 @@ func TestParseInvalidIncompleteConstKeyword(t *testing.T) {
 
 func TestParseInvalidIncompleteStringLiteral(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
 	    let = "Hello, World!
 	`)
@@ -112,6 +121,8 @@ func TestParseInvalidIncompleteStringLiteral(t *testing.T) {
 }
 
 func TestParseNames(t *testing.T) {
+
+	t.Parallel()
 
 	names := map[string]bool{
 		// Valid: title-case
@@ -181,6 +192,8 @@ func TestParseNames(t *testing.T) {
 
 func TestParseInvalidIncompleteConstantDeclaration1(t *testing.T) {
 
+	t.Parallel()
+
 	actual, inputIsComplete, err := parser.ParseProgram(`
 	    let
 	`)
@@ -207,6 +220,8 @@ func TestParseInvalidIncompleteConstantDeclaration1(t *testing.T) {
 }
 
 func TestParseInvalidIncompleteConstantDeclaration2(t *testing.T) {
+
+	t.Parallel()
 
 	actual, inputIsComplete, err := parser.ParseProgram(`
 	    let =
@@ -267,6 +282,8 @@ func testParse(t *testing.T, code string, expected []Declaration) {
 
 func TestParseBoolExpression(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
 	    let a = true
 	`
@@ -300,6 +317,8 @@ func TestParseBoolExpression(t *testing.T) {
 
 func TestParseIdentifierExpression(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
 	    let b = a
 	`
@@ -331,6 +350,8 @@ func TestParseIdentifierExpression(t *testing.T) {
 }
 
 func TestParseArrayExpression(t *testing.T) {
+
+	t.Parallel()
 
 	const code = `
 	    let a = [1, 2]
@@ -380,6 +401,8 @@ func TestParseArrayExpression(t *testing.T) {
 }
 
 func TestParseDictionaryExpression(t *testing.T) {
+
+	t.Parallel()
 
 	const code = `
 	    let x = {"a": 1, "b": 2}
@@ -448,6 +471,8 @@ func TestParseDictionaryExpression(t *testing.T) {
 
 func TestParseInvocationExpressionWithoutLabels(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
 	    let a = b(1, 2)
 	`
@@ -507,6 +532,8 @@ func TestParseInvocationExpressionWithoutLabels(t *testing.T) {
 
 // TODO: new parser
 func TestParseInvocationExpressionWithLabels(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
 	    let a = b(x: 1, y: 2)
@@ -573,6 +600,8 @@ func TestParseInvocationExpressionWithLabels(t *testing.T) {
 
 func TestParseMemberExpression(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
 	    let a = b.c
 	`
@@ -611,6 +640,8 @@ func TestParseMemberExpression(t *testing.T) {
 
 // TODO: new parser
 func TestParseOptionalMemberExpression(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
 	    let a = b?.c
@@ -653,6 +684,8 @@ func TestParseOptionalMemberExpression(t *testing.T) {
 
 // TODO: new parser
 func TestParseIndexExpression(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
 	    let a = b[1]
@@ -702,6 +735,8 @@ func TestParseIndexExpression(t *testing.T) {
 
 func TestParseUnaryExpression(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
 	    let foo = -boo
 	`
@@ -737,6 +772,8 @@ func TestParseUnaryExpression(t *testing.T) {
 }
 
 func TestParseOrExpression(t *testing.T) {
+
+	t.Parallel()
 
 	const code = `
         let a = false || true
@@ -779,6 +816,8 @@ func TestParseOrExpression(t *testing.T) {
 }
 
 func TestParseAndExpression(t *testing.T) {
+
+	t.Parallel()
 
 	const code = `
         let a = false && true
@@ -823,6 +862,8 @@ func TestParseAndExpression(t *testing.T) {
 
 func TestParseEqualityExpression(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
         let a = false == true
 	`
@@ -864,6 +905,8 @@ func TestParseEqualityExpression(t *testing.T) {
 }
 
 func TestParseRelationalExpression(t *testing.T) {
+
+	t.Parallel()
 
 	const code = `
         let a = 1 < 2
@@ -910,6 +953,8 @@ func TestParseRelationalExpression(t *testing.T) {
 
 func TestParseAdditiveExpression(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
         let a = 1 + 2
 	`
@@ -955,6 +1000,8 @@ func TestParseAdditiveExpression(t *testing.T) {
 
 func TestParseMultiplicativeExpression(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
         let a = 1 * 2
 	`
@@ -999,6 +1046,8 @@ func TestParseMultiplicativeExpression(t *testing.T) {
 }
 
 func TestParseFunctionExpressionAndReturn(t *testing.T) {
+
+	t.Parallel()
 
 	const code = `
 	    let test = fun (): Int { return 1 }
@@ -1069,6 +1118,8 @@ func TestParseFunctionExpressionAndReturn(t *testing.T) {
 
 func TestParseFunctionAndBlock(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
 	    fun test() { return }
 	`
@@ -1121,6 +1172,8 @@ func TestParseFunctionAndBlock(t *testing.T) {
 }
 
 func TestParseFunctionParameterWithoutLabel(t *testing.T) {
+
+	t.Parallel()
 
 	const code = `
 	    fun test(x: Int) { }
@@ -1190,6 +1243,8 @@ func TestParseFunctionParameterWithoutLabel(t *testing.T) {
 
 func TestParseFunctionParameterWithLabel(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
 	    fun test(x y: Int) { }
 	`
@@ -1257,6 +1312,8 @@ func TestParseFunctionParameterWithLabel(t *testing.T) {
 }
 
 func TestParseIfStatement(t *testing.T) {
+
+	t.Parallel()
 
 	const code = `
 	    fun test() {
@@ -1402,6 +1459,8 @@ func TestParseIfStatement(t *testing.T) {
 
 func TestParseIfStatementWithVariableDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
 	    fun test() {
             if var y = x {
@@ -1518,6 +1577,8 @@ func TestParseIfStatementWithVariableDeclaration(t *testing.T) {
 
 func TestParseIfStatementNoElse(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
 	    fun test() {
             if true {
@@ -1593,6 +1654,8 @@ func TestParseIfStatementNoElse(t *testing.T) {
 }
 
 func TestParseWhileStatement(t *testing.T) {
+
+	t.Parallel()
 
 	const code = `
 	    fun test() {
@@ -1684,6 +1747,8 @@ func TestParseWhileStatement(t *testing.T) {
 
 func TestParseForStatement(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
 	    fun test() {
             for x in xs {}
@@ -1750,6 +1815,8 @@ func TestParseForStatement(t *testing.T) {
 }
 
 func TestParseAssignment(t *testing.T) {
+
+	t.Parallel()
 
 	const code = `
 	    fun test() {
@@ -1819,6 +1886,8 @@ func TestParseAssignment(t *testing.T) {
 }
 
 func TestParseAccessAssignment(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
 	    fun test() {
@@ -1937,6 +2006,8 @@ func TestParseAccessAssignment(t *testing.T) {
 
 func TestParseExpressionStatementWithAccess(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
 	    fun test() { x.foo.bar[0][1].baz }
 	`)
@@ -2039,6 +2110,8 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 }
 
 func TestParseParametersAndArrayTypes(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
 		pub fun test(a: Int32, b: [Int32; 2], c: [[Int32; 3]]): [[Int64]] {}
@@ -2195,6 +2268,8 @@ func TestParseParametersAndArrayTypes(t *testing.T) {
 
 func TestParseDictionaryType(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
 	    let x: {String: Int} = {}
 	`)
@@ -2250,6 +2325,8 @@ func TestParseDictionaryType(t *testing.T) {
 
 // TODO: remove
 func TestParseIntegerLiterals(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
 		let octal = 0o32
@@ -2354,6 +2431,8 @@ func TestParseIntegerLiterals(t *testing.T) {
 // TODO: remove
 func TestParseIntegerLiteralsWithUnderscores(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
 		let octal = 0o32_45
         let hex = 0xf2_09
@@ -2457,6 +2536,8 @@ func TestParseIntegerLiteralsWithUnderscores(t *testing.T) {
 // TODO: remove
 func TestParseInvalidIntegerLiteralPrefixWithout(t *testing.T) {
 
+	t.Parallel()
+
 	for _, prefix := range []string{"o", "b", "x"} {
 
 		_, _, err := parser.ParseProgram(fmt.Sprintf(`let x = 0%s`, prefix))
@@ -2478,6 +2559,8 @@ func TestParseInvalidIntegerLiteralPrefixWithout(t *testing.T) {
 
 // TODO: remove
 func TestParseInvalidOctalIntegerLiteralWithLeadingUnderscore(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
 		let octal = 0o_32_45
@@ -2520,6 +2603,8 @@ func TestParseInvalidOctalIntegerLiteralWithLeadingUnderscore(t *testing.T) {
 // TODO: remove
 func TestParseIntegerLiteralWithLeadingZeros(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
         let decimal = 0123
 	`)
@@ -2556,6 +2641,8 @@ func TestParseIntegerLiteralWithLeadingZeros(t *testing.T) {
 
 // TODO: remove
 func TestParseInvalidOctalIntegerLiteralWithTrailingUnderscore(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
 		let octal = 0o32_45_
@@ -2596,6 +2683,8 @@ func TestParseInvalidOctalIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 // TODO: remove
 func TestParseInvalidBinaryIntegerLiteralWithLeadingUnderscore(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
 		let binary = 0b_101010_101010
 	`)
@@ -2634,6 +2723,8 @@ func TestParseInvalidBinaryIntegerLiteralWithLeadingUnderscore(t *testing.T) {
 
 // TODO: remove
 func TestParseInvalidBinaryIntegerLiteralWithTrailingUnderscore(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
 		let binary = 0b101010_101010_
@@ -2674,6 +2765,8 @@ func TestParseInvalidBinaryIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 // TODO: remove
 func TestParseInvalidDecimalIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
 		let decimal = 1_234_567_890_
 	`)
@@ -2713,6 +2806,8 @@ func TestParseInvalidDecimalIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 // TODO: remove
 func TestParseInvalidHexadecimalIntegerLiteralWithLeadingUnderscore(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
 		let hex = 0x_f2_09
 	`)
@@ -2751,6 +2846,8 @@ func TestParseInvalidHexadecimalIntegerLiteralWithLeadingUnderscore(t *testing.T
 
 // TODO: remove
 func TestParseInvalidHexadecimalIntegerLiteralWithTrailingUnderscore(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
 		let hex = 0xf2_09_
@@ -2792,6 +2889,8 @@ func TestParseInvalidHexadecimalIntegerLiteralWithTrailingUnderscore(t *testing.
 // TODO: remove
 func TestParseInvalidIntegerLiteral(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
 		let hex = 0z123
 	`)
@@ -2831,6 +2930,8 @@ func TestParseInvalidIntegerLiteral(t *testing.T) {
 // TODO: remove
 func TestParseDecimalIntegerLiteralWithLeadingZeros(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
 		let decimal = 00123
 	`)
@@ -2868,6 +2969,8 @@ func TestParseDecimalIntegerLiteralWithLeadingZeros(t *testing.T) {
 // TODO: remove
 func TestParseBinaryIntegerLiteralWithLeadingZeros(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
 		let binary = 0b001000
 	`)
@@ -2903,6 +3006,8 @@ func TestParseBinaryIntegerLiteralWithLeadingZeros(t *testing.T) {
 }
 
 func TestParseIntegerTypes(t *testing.T) {
+
+	t.Parallel()
 
 	const code = `
 		let a: Int8 = 1
@@ -3166,6 +3271,8 @@ func TestParseIntegerTypes(t *testing.T) {
 
 func TestParseFunctionType(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
 		let add: ((Int8, Int16): Int32) = nothing
 	`)
@@ -3241,6 +3348,8 @@ func TestParseFunctionType(t *testing.T) {
 }
 
 func TestParseFunctionArrayType(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
 		let test: [((Int8): Int16); 2] = []
@@ -3323,6 +3432,8 @@ func TestParseFunctionArrayType(t *testing.T) {
 
 func TestParseFunctionTypeWithArrayReturnType(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
 		let test: ((Int8): [Int16; 2]) = nothing
 	`)
@@ -3403,6 +3514,8 @@ func TestParseFunctionTypeWithArrayReturnType(t *testing.T) {
 }
 
 func TestParseFunctionTypeWithFunctionReturnTypeInParentheses(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
 		let test: ((Int8): ((Int16): Int32)) = nothing
@@ -3491,6 +3604,8 @@ func TestParseFunctionTypeWithFunctionReturnTypeInParentheses(t *testing.T) {
 }
 
 func TestParseFunctionTypeWithFunctionReturnType(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
 		let test: ((Int8): ((Int16): Int32)) = nothing
@@ -3581,6 +3696,8 @@ func TestParseFunctionTypeWithFunctionReturnType(t *testing.T) {
 
 func TestParseMissingReturnType(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
 		let noop: ((): Void) =
             fun () { return }
@@ -3665,6 +3782,8 @@ func TestParseMissingReturnType(t *testing.T) {
 
 func TestParseLeftAssociativity(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
         let a = 1 + 2 + 3
 	`
@@ -3721,6 +3840,8 @@ func TestParseLeftAssociativity(t *testing.T) {
 
 func TestParseNegativeInteger(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
       let a = -42
 	`
@@ -3754,6 +3875,8 @@ func TestParseNegativeInteger(t *testing.T) {
 }
 
 func TestParseNegativeFixedPoint(t *testing.T) {
+
+	t.Parallel()
 
 	const code = `
       let a = -42.3
@@ -3791,6 +3914,8 @@ func TestParseNegativeFixedPoint(t *testing.T) {
 
 func TestParseInvalidDoubleIntegerUnary(t *testing.T) {
 
+	t.Parallel()
+
 	program, _, err := parser.ParseProgram(`
 	   var a = 1
 	   let b = --a
@@ -3814,6 +3939,8 @@ func TestParseInvalidDoubleIntegerUnary(t *testing.T) {
 
 func TestParseInvalidDoubleBooleanUnary(t *testing.T) {
 
+	t.Parallel()
+
 	program, _, err := parser.ParseProgram(`
 	   let b = !!true
 	`)
@@ -3835,6 +3962,8 @@ func TestParseInvalidDoubleBooleanUnary(t *testing.T) {
 }
 
 func TestParseTernaryRightAssociativity(t *testing.T) {
+
+	t.Parallel()
 
 	const code = `
         let a = 2 > 1
@@ -3929,6 +4058,8 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 }
 
 func TestParseStructure(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
         struct Test {
@@ -4123,6 +4254,8 @@ func TestParseStructure(t *testing.T) {
 
 func TestParseStructureWithConformances(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
         struct Test: Foo, Bar {}
 	`)
@@ -4164,6 +4297,8 @@ func TestParseStructureWithConformances(t *testing.T) {
 }
 
 func TestParsePreAndPostConditions(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
         fun test(n: Int) {
@@ -4325,6 +4460,8 @@ func TestParsePreAndPostConditions(t *testing.T) {
 
 func TestParseExpression(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseExpression(`
         before(x + before(y)) + z
 	`)
@@ -4393,6 +4530,8 @@ func TestParseExpression(t *testing.T) {
 
 func TestParseString(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseExpression(`
        "test \0\n\r\t\"\'\\ xyz"
 	`)
@@ -4412,6 +4551,8 @@ func TestParseString(t *testing.T) {
 
 func TestParseStringWithUnicode(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseExpression(`
       "this is a test \t\\new line and race car:\n\u{1F3CE}\u{FE0F}"
 	`)
@@ -4430,6 +4571,8 @@ func TestParseStringWithUnicode(t *testing.T) {
 }
 
 func TestParseConditionMessage(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
         fun test(n: Int) {
@@ -4550,6 +4693,8 @@ func TestParseConditionMessage(t *testing.T) {
 
 func TestParseOptionalType(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
        let x: Int?? = 1
 	`
@@ -4600,6 +4745,8 @@ func TestParseOptionalType(t *testing.T) {
 
 func TestParseNilCoalescing(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
        let x = nil ?? 1
 	`
@@ -4639,6 +4786,8 @@ func TestParseNilCoalescing(t *testing.T) {
 }
 
 func TestParseNilCoalescingRightAssociativity(t *testing.T) {
+
+	t.Parallel()
 
 	// NOTE: only syntactically, not semantically valid
 	const code = `
@@ -4698,6 +4847,8 @@ func TestParseNilCoalescingRightAssociativity(t *testing.T) {
 
 func TestParseFailableCasting(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
        let x = 0 as? Int
 	`)
@@ -4752,6 +4903,8 @@ func TestParseFailableCasting(t *testing.T) {
 }
 
 func TestParseInterface(t *testing.T) {
+
+	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithBody {
 		actual, _, err := parser.ParseProgram(fmt.Sprintf(`
@@ -4889,6 +5042,8 @@ func TestParseInterface(t *testing.T) {
 
 func TestParseImportWithString(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
         import "test.bpl"
 	`)
@@ -4931,6 +5086,8 @@ func TestParseImportWithString(t *testing.T) {
 }
 
 func TestParseImportWithAddress(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
         import 0x1234
@@ -4975,6 +5132,8 @@ func TestParseImportWithAddress(t *testing.T) {
 
 func TestParseImportWithIdentifiers(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
         import A, b from 0x0
 	`)
@@ -5009,6 +5168,8 @@ func TestParseImportWithIdentifiers(t *testing.T) {
 
 func TestParseFieldWithFromIdentifier(t *testing.T) {
 
+	t.Parallel()
+
 	_, _, err := parser.ParseProgram(`
       struct S {
           let from: String
@@ -5020,6 +5181,8 @@ func TestParseFieldWithFromIdentifier(t *testing.T) {
 
 func TestParseFunctionWithFromIdentifier(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
         fun send(from: String, to: String) {}
 	`
@@ -5028,6 +5191,8 @@ func TestParseFunctionWithFromIdentifier(t *testing.T) {
 }
 
 func TestParseImportWithFromIdentifier(t *testing.T) {
+
+	t.Parallel()
 
 	_, _, err := parser.ParseProgram(`
         import from from 0x0
@@ -5038,6 +5203,8 @@ func TestParseImportWithFromIdentifier(t *testing.T) {
 
 func TestParseSemicolonsBetweenDeclarations(t *testing.T) {
 
+	t.Parallel()
+
 	_, _, err := parser.ParseProgram(`
         import from from 0x0;
         fun foo() {};
@@ -5047,6 +5214,8 @@ func TestParseSemicolonsBetweenDeclarations(t *testing.T) {
 }
 
 func TestParseInvalidMultipleSemicolonsBetweenDeclarations(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
         let x = 1;;let y = 2
@@ -5073,6 +5242,8 @@ func TestParseInvalidMultipleSemicolonsBetweenDeclarations(t *testing.T) {
 
 func TestParseInvalidTypeWithWhitespace(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
 	    let x: Int ? = 1
 	`)
@@ -5097,6 +5268,8 @@ func TestParseInvalidTypeWithWhitespace(t *testing.T) {
 }
 
 func TestParseResource(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
         resource Test {}
@@ -5126,6 +5299,8 @@ func TestParseResource(t *testing.T) {
 }
 
 func TestParseEvent(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
         event Transfer(to: Address, from: Address)
@@ -5214,6 +5389,8 @@ func TestParseEvent(t *testing.T) {
 
 func TestParseEventEmitStatement(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
       fun test() {
         emit Transfer(to: 1, from: 2)
@@ -5271,6 +5448,8 @@ func TestParseEventEmitStatement(t *testing.T) {
 
 func TestParseResourceReturnType(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
         fun test(): @X {}
 	`
@@ -5316,6 +5495,8 @@ func TestParseResourceReturnType(t *testing.T) {
 
 func TestParseMovingVariableDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
         let x <- y
 	`
@@ -5347,6 +5528,8 @@ func TestParseMovingVariableDeclaration(t *testing.T) {
 }
 
 func TestParseMoveStatement(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
         fun test() {
@@ -5417,6 +5600,8 @@ func TestParseMoveStatement(t *testing.T) {
 
 func TestParseMoveOperator(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
       let x = foo(<-y)
 	`
@@ -5468,6 +5653,8 @@ func TestParseMoveOperator(t *testing.T) {
 }
 
 func TestParseResourceParameterType(t *testing.T) {
+
+	t.Parallel()
 
 	const code = `
         fun test(x: @X) {}
@@ -5537,6 +5724,8 @@ func TestParseResourceParameterType(t *testing.T) {
 
 func TestParseMovingVariableDeclarationWithTypeAnnotation(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
         let x: @R <- y
 	`)
@@ -5580,6 +5769,8 @@ func TestParseMovingVariableDeclarationWithTypeAnnotation(t *testing.T) {
 }
 
 func TestParseFieldDeclarationWithMoveTypeAnnotation(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
         struct X { x: @R }
@@ -5635,6 +5826,8 @@ func TestParseFieldDeclarationWithMoveTypeAnnotation(t *testing.T) {
 
 func TestParseFunctionTypeWithResourceTypeAnnotation(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
         let f: ((): @R) = g
 	`)
@@ -5689,6 +5882,8 @@ func TestParseFunctionTypeWithResourceTypeAnnotation(t *testing.T) {
 }
 
 func TestParseFunctionExpressionWithResourceTypeAnnotation(t *testing.T) {
+
+	t.Parallel()
 
 	const code = `
         let f = fun (): @R { return X }
@@ -5758,6 +5953,8 @@ func TestParseFunctionExpressionWithResourceTypeAnnotation(t *testing.T) {
 
 func TestParseFailableCastingResourceTypeAnnotation(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
         let y = x as? @R
 	`)
@@ -5809,6 +6006,8 @@ func TestParseFailableCastingResourceTypeAnnotation(t *testing.T) {
 
 func TestParseCasting(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
         let y = x as Y
 	`)
@@ -5858,6 +6057,8 @@ func TestParseCasting(t *testing.T) {
 }
 
 func TestParseFunctionExpressionStatementAfterVariableDeclarationWithCreateExpression(t *testing.T) {
+
+	t.Parallel()
 
 	const code = `
       fun test() {
@@ -5974,6 +6175,8 @@ func TestParseFunctionExpressionStatementAfterVariableDeclarationWithCreateExpre
 
 func TestParseIdentifiers(t *testing.T) {
 
+	t.Parallel()
+
 	for _, name := range []string{"foo", "from", "create", "destroy"} {
 		_, _, err := parser.ParseProgram(fmt.Sprintf(`
           let %s = 1
@@ -5987,6 +6190,8 @@ func TestParseIdentifiers(t *testing.T) {
 // does *not* consume an expression from the next statement as the return value
 //
 func TestParseExpressionStatementAfterReturnStatement(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
       fun test() {
@@ -6058,6 +6263,8 @@ func TestParseExpressionStatementAfterReturnStatement(t *testing.T) {
 }
 
 func TestParseSwapStatement(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
       fun test() {
@@ -6146,6 +6353,8 @@ func TestParseSwapStatement(t *testing.T) {
 
 func TestParseDestructor(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
         resource Test {
             destroy() {}
@@ -6204,6 +6413,8 @@ func TestParseDestructor(t *testing.T) {
 
 func TestParseReferenceType(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
        let x: &[&R] = 1
 	`
@@ -6259,6 +6470,8 @@ func TestParseReferenceType(t *testing.T) {
 
 func TestParseOptionalReference(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
        let x: &R? = 1
 	`
@@ -6309,6 +6522,8 @@ func TestParseOptionalReference(t *testing.T) {
 }
 
 func TestParseRestrictedReferenceTypeWithBaseType(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
        let x: &R{I} = 1
@@ -6373,6 +6588,8 @@ func TestParseRestrictedReferenceTypeWithBaseType(t *testing.T) {
 
 func TestParseRestrictedReferenceTypeWithoutBaseType(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
        let x: &{I} = 1
 	`)
@@ -6429,6 +6646,8 @@ func TestParseRestrictedReferenceTypeWithoutBaseType(t *testing.T) {
 }
 
 func TestParseOptionalRestrictedType(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
        let x: @R{I}? = 1
@@ -6493,6 +6712,8 @@ func TestParseOptionalRestrictedType(t *testing.T) {
 
 func TestParseOptionalRestrictedTypeOnlyRestrictions(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
        let x: @{I}? = 1
 	`)
@@ -6549,6 +6770,8 @@ func TestParseOptionalRestrictedTypeOnlyRestrictions(t *testing.T) {
 }
 
 func TestParseReference(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
        let x = &account.storage[R] as &R
@@ -6613,6 +6836,8 @@ func TestParseReference(t *testing.T) {
 }
 
 func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
         struct Kitty { let id: Int ; init(id: Int) { self.id = id } }
@@ -6739,6 +6964,8 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 
 func TestParseAccessModifiers(t *testing.T) {
 
+	t.Parallel()
+
 	type declaration struct {
 		name, code string
 	}
@@ -6815,6 +7042,9 @@ func TestParseAccessModifiers(t *testing.T) {
 }
 
 func TestParseTransactionDeclaration(t *testing.T) {
+
+	t.Parallel()
+
 	t.Run("EmptyTransaction", func(t *testing.T) {
 		actual, _, err := parser.ParseProgram(`
 		  transaction {}
@@ -7505,6 +7735,8 @@ func TestParseTransactionDeclaration(t *testing.T) {
 
 func TestParseAuthorizedReferenceType(t *testing.T) {
 
+	t.Parallel()
+
 	actual, _, err := parser.ParseProgram(`
        let x: auth &R = 1
 	`)
@@ -7556,6 +7788,8 @@ func TestParseAuthorizedReferenceType(t *testing.T) {
 
 func TestParseFixedPointExpression(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
 	    let a = -1234_5678_90.0009_8765_4321
 	`
@@ -7590,6 +7824,8 @@ func TestParseFixedPointExpression(t *testing.T) {
 }
 
 func TestParseFixedPointExpressionZeroInteger(t *testing.T) {
+
+	t.Parallel()
 
 	const code = `
 	    let a = -0.1
@@ -7794,6 +8030,8 @@ func BenchmarkParseFungibleToken(b *testing.B) {
 
 func TestParsePathLiteral(t *testing.T) {
 
+	t.Parallel()
+
 	const code = `
 	    let a = /foo/bar
 	`
@@ -7829,6 +8067,8 @@ func TestParsePathLiteral(t *testing.T) {
 
 func TestParseInvalidForceCast(t *testing.T) {
 
+	t.Parallel()
+
 	_, _, err := parser.ParseReplInput("1 as!! Int\n")
 
 	require.Error(t, err)
@@ -7848,6 +8088,8 @@ func TestParseInvalidForceCast(t *testing.T) {
 
 func TestParseInvalidNegativeIntegerLiteralWithIncorrectPrefix(t *testing.T) {
 
+	t.Parallel()
+
 	_, _, err := parser.ParseProgram(`
 	    let e = -0K0
 	`)
@@ -7856,6 +8098,8 @@ func TestParseInvalidNegativeIntegerLiteralWithIncorrectPrefix(t *testing.T) {
 }
 
 func TestParseConstantSizedSizedArrayWithTrailingUnderscoreSize(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
 	  let T:[d;0_]=0
@@ -7874,6 +8118,8 @@ func TestParseConstantSizedSizedArrayWithTrailingUnderscoreSize(t *testing.T) {
 }
 
 func TestParsePreconditionWithUnaryNegation(t *testing.T) {
+
+	t.Parallel()
 
 	actual, _, err := parser.ParseProgram(`
 	  fun test() {
@@ -7965,6 +8211,8 @@ func TestParsePreconditionWithUnaryNegation(t *testing.T) {
 }
 
 func TestParseBitwiseExpression(t *testing.T) {
+
+	t.Parallel()
 
 	const code = `
       let a = 1 | 2 ^ 3 & 4 << 5 >> 6

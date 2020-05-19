@@ -29,6 +29,8 @@ import (
 
 func TestCheckAnyStruct(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let a: AnyStruct = 1
       let b: AnyStruct = true
@@ -38,6 +40,8 @@ func TestCheckAnyStruct(t *testing.T) {
 }
 
 func TestCheckInvalidAnyStructResourceType(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource R {}
@@ -54,6 +58,8 @@ func TestCheckInvalidAnyStructResourceType(t *testing.T) {
 
 func TestCheckAnyResource(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource R {}
 
@@ -65,6 +71,8 @@ func TestCheckAnyResource(t *testing.T) {
 }
 
 func TestCheckInvalidAnyResourceNonResourceType(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource R {}

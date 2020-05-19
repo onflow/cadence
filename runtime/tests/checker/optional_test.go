@@ -32,6 +32,8 @@ import (
 
 func TestCheckOptional(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let x: Int? = 1
     `)
@@ -40,6 +42,8 @@ func TestCheckOptional(t *testing.T) {
 }
 
 func TestCheckInvalidOptional(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       let x: Int? = false
@@ -52,6 +56,8 @@ func TestCheckInvalidOptional(t *testing.T) {
 
 func TestCheckOptionalNesting(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let x: Int?? = 1
     `)
@@ -60,6 +66,8 @@ func TestCheckOptionalNesting(t *testing.T) {
 }
 
 func TestCheckNil(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
      let x: Int? = nil
@@ -70,6 +78,8 @@ func TestCheckNil(t *testing.T) {
 
 func TestCheckOptionalNestingNil(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
      let x: Int?? = nil
    `)
@@ -78,6 +88,8 @@ func TestCheckOptionalNestingNil(t *testing.T) {
 }
 
 func TestCheckNilReturnValue(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
      fun test(): Int?? {
@@ -90,6 +102,8 @@ func TestCheckNilReturnValue(t *testing.T) {
 
 func TestCheckInvalidNonOptionalNil(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let x: Int = nil
     `)
@@ -101,6 +115,8 @@ func TestCheckInvalidNonOptionalNil(t *testing.T) {
 
 func TestCheckNilsComparison(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
      let x = nil == nil
    `)
@@ -109,6 +125,8 @@ func TestCheckNilsComparison(t *testing.T) {
 }
 
 func TestCheckOptionalNilComparison(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
      let x: Int? = 1
@@ -120,6 +138,8 @@ func TestCheckOptionalNilComparison(t *testing.T) {
 
 func TestCheckNonOptionalNilComparison(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
      let x: Int = 1
      let y = x == nil
@@ -129,6 +149,8 @@ func TestCheckNonOptionalNilComparison(t *testing.T) {
 }
 
 func TestCheckNonOptionalNilComparisonSwapped(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
      let x: Int = 1
@@ -141,6 +163,8 @@ func TestCheckNonOptionalNilComparisonSwapped(t *testing.T) {
 
 func TestCheckOptionalNilComparisonSwapped(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
      let x: Int? = 1
      let y = nil == x
@@ -150,6 +174,8 @@ func TestCheckOptionalNilComparisonSwapped(t *testing.T) {
 }
 
 func TestCheckNestedOptionalNilComparisonSwapped(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
      let x: Int?? = 1
@@ -161,6 +187,8 @@ func TestCheckNestedOptionalNilComparisonSwapped(t *testing.T) {
 
 func TestCheckNestedOptionalComparison(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
      let x: Int? = nil
      let y: Int?? = nil
@@ -171,6 +199,8 @@ func TestCheckNestedOptionalComparison(t *testing.T) {
 }
 
 func TestCheckInvalidNestedOptionalComparison(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
      let x: Int? = nil
@@ -184,6 +214,8 @@ func TestCheckInvalidNestedOptionalComparison(t *testing.T) {
 }
 
 func TestCheckCompositeNilEquality(t *testing.T) {
+
+	t.Parallel()
 
 	for _, compositeKind := range common.AllCompositeKinds {
 
@@ -230,6 +262,8 @@ func TestCheckCompositeNilEquality(t *testing.T) {
 }
 
 func TestCheckInvalidCompositeNilEquality(t *testing.T) {
+
+	t.Parallel()
 
 	for _, compositeKind := range common.AllCompositeKinds {
 
@@ -287,6 +321,8 @@ func TestCheckInvalidCompositeNilEquality(t *testing.T) {
 
 func TestCheckInvalidNonOptionalReturn(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(x: Int?): Int {
           return x
@@ -299,6 +335,8 @@ func TestCheckInvalidNonOptionalReturn(t *testing.T) {
 }
 
 func TestCheckInvalidOptionalIntegerConversion(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       let x: Int8? = 1

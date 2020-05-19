@@ -28,6 +28,8 @@ import (
 
 func TestProgram_ResolveImports(t *testing.T) {
 
+	t.Parallel()
+
 	makeImportingProgram := func(imported string) *Program {
 		return &Program{
 			Declarations: []Declaration{
@@ -71,6 +73,8 @@ func TestProgram_ResolveImports(t *testing.T) {
 }
 
 func TestProgram_ResolveImportsCycle(t *testing.T) {
+
+	t.Parallel()
 
 	makeImportingProgram := func(imported string) *Program {
 		return &Program{

@@ -63,6 +63,8 @@ func init() {
 
 func TestInterpretIntegerConversions(t *testing.T) {
 
+	t.Parallel()
+
 	for integerType, value := range testIntegerTypesAndValues {
 
 		t.Run(integerType, func(t *testing.T) {
@@ -99,6 +101,8 @@ func TestInterpretIntegerConversions(t *testing.T) {
 
 func TestInterpretAddressConversion(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x: Address = 0x1
       let y = Address(0x2)
@@ -120,6 +124,8 @@ func TestInterpretAddressConversion(t *testing.T) {
 }
 
 func TestInterpretIntegerLiteralTypeConversionInVariableDeclaration(t *testing.T) {
+
+	t.Parallel()
 
 	for integerType, value := range testIntegerTypesAndValues {
 
@@ -145,6 +151,8 @@ func TestInterpretIntegerLiteralTypeConversionInVariableDeclaration(t *testing.T
 
 func TestInterpretIntegerLiteralTypeConversionInVariableDeclarationOptional(t *testing.T) {
 
+	t.Parallel()
+
 	for integerType, value := range testIntegerTypesAndValues {
 
 		t.Run(integerType, func(t *testing.T) {
@@ -167,6 +175,8 @@ func TestInterpretIntegerLiteralTypeConversionInVariableDeclarationOptional(t *t
 }
 
 func TestInterpretIntegerLiteralTypeConversionInAssignment(t *testing.T) {
+
+	t.Parallel()
 
 	for integerType, value := range testIntegerTypesAndValues {
 
@@ -202,6 +212,8 @@ func TestInterpretIntegerLiteralTypeConversionInAssignment(t *testing.T) {
 }
 
 func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T) {
+
+	t.Parallel()
 
 	for integerType, value := range testIntegerTypesAndValues {
 
@@ -241,6 +253,8 @@ func TestInterpretIntegerLiteralTypeConversionInAssignmentOptional(t *testing.T)
 
 func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgument(t *testing.T) {
 
+	t.Parallel()
+
 	for integerType, value := range testIntegerTypesAndValues {
 
 		t.Run(integerType, func(t *testing.T) {
@@ -267,6 +281,8 @@ func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgument(t *testing.
 
 func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgumentOptional(t *testing.T) {
 
+	t.Parallel()
+
 	for integerType, value := range testIntegerTypesAndValues {
 
 		t.Run(integerType, func(t *testing.T) {
@@ -292,6 +308,8 @@ func TestInterpretIntegerLiteralTypeConversionInFunctionCallArgumentOptional(t *
 }
 
 func TestInterpretIntegerLiteralTypeConversionInReturn(t *testing.T) {
+
+	t.Parallel()
 
 	for integerType, value := range testIntegerTypesAndValues {
 
@@ -320,6 +338,8 @@ func TestInterpretIntegerLiteralTypeConversionInReturn(t *testing.T) {
 }
 
 func TestInterpretIntegerLiteralTypeConversionInReturnOptional(t *testing.T) {
+
+	t.Parallel()
 
 	for integerType, value := range testIntegerTypesAndValues {
 

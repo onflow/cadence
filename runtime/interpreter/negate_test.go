@@ -30,6 +30,8 @@ import (
 
 func TestNegate(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("Int8", func(t *testing.T) {
 		assert.Panics(t, func() {
 			Int8Value(math.MinInt8).Negate()

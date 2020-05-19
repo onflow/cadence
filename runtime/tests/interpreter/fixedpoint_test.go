@@ -32,6 +32,8 @@ import (
 
 func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
 
+	t.Parallel()
+
 	inter := parseCheckAndInterpret(t, `
       let x = -0.42
     `)
@@ -43,6 +45,8 @@ func TestInterpretNegativeZeroFixedPoint(t *testing.T) {
 }
 
 func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
+
+	t.Parallel()
 
 	tests := map[string]interpreter.Value{
 		// Fix*
@@ -105,6 +109,8 @@ func init() {
 }
 
 func TestInterpretFixedPointConversions(t *testing.T) {
+
+	t.Parallel()
 
 	// check conversion to integer types
 

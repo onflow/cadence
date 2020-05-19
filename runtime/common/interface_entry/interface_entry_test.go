@@ -26,6 +26,9 @@ import (
 )
 
 func TestInterfaceEntry(t *testing.T) {
+
+	t.Parallel()
+
 	type X struct{}
 	x := X{}
 

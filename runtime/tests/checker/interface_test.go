@@ -42,6 +42,8 @@ func constructorArguments(compositeKind common.CompositeKind) string {
 
 func TestCheckInvalidLocalInterface(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.AllCompositeKinds {
 
 		if !kind.SupportsInterfaces() {
@@ -76,6 +78,8 @@ func TestCheckInvalidLocalInterface(t *testing.T) {
 
 func TestCheckInterfaceWithFunction(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -97,6 +101,8 @@ func TestCheckInterfaceWithFunction(t *testing.T) {
 }
 
 func TestCheckInterfaceWithFunctionImplementationAndConditions(t *testing.T) {
+
+	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
@@ -124,6 +130,8 @@ func TestCheckInterfaceWithFunctionImplementationAndConditions(t *testing.T) {
 
 func TestCheckInvalidInterfaceWithFunctionImplementation(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -148,6 +156,8 @@ func TestCheckInvalidInterfaceWithFunctionImplementation(t *testing.T) {
 }
 
 func TestCheckInvalidInterfaceWithFunctionImplementationNoConditions(t *testing.T) {
+
+	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
@@ -174,6 +184,8 @@ func TestCheckInvalidInterfaceWithFunctionImplementationNoConditions(t *testing.
 
 func TestCheckInterfaceWithInitializer(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -194,6 +206,8 @@ func TestCheckInterfaceWithInitializer(t *testing.T) {
 }
 
 func TestCheckInvalidInterfaceWithInitializerImplementation(t *testing.T) {
+
+	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
@@ -220,6 +234,8 @@ func TestCheckInvalidInterfaceWithInitializerImplementation(t *testing.T) {
 
 func TestCheckInterfaceWithInitializerImplementationAndConditions(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -244,6 +260,8 @@ func TestCheckInterfaceWithInitializerImplementationAndConditions(t *testing.T) 
 }
 
 func TestCheckInterfaceUse(t *testing.T) {
+
+	t.Parallel()
 
 	for _, kind := range common.AllCompositeKinds {
 
@@ -281,6 +299,8 @@ func TestCheckInterfaceUse(t *testing.T) {
 }
 
 func TestCheckInterfaceConformanceNoRequirements(t *testing.T) {
+
+	t.Parallel()
 
 	for _, compositeKind := range common.AllCompositeKinds {
 
@@ -329,6 +349,8 @@ func TestCheckInterfaceConformanceNoRequirements(t *testing.T) {
 }
 
 func TestCheckInvalidInterfaceConformanceIncompatibleCompositeKinds(t *testing.T) {
+
+	t.Parallel()
 
 	for _, firstKind := range common.AllCompositeKinds {
 
@@ -431,6 +453,8 @@ func TestCheckInvalidInterfaceConformanceIncompatibleCompositeKinds(t *testing.T
 
 func TestCheckInvalidInterfaceConformanceUndeclared(t *testing.T) {
 
+	t.Parallel()
+
 	for _, compositeKind := range common.AllCompositeKinds {
 
 		if !compositeKind.SupportsInterfaces() {
@@ -494,6 +518,8 @@ func TestCheckInvalidInterfaceConformanceUndeclared(t *testing.T) {
 
 func TestCheckInvalidCompositeInterfaceConformanceNonInterface(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.AllCompositeKinds {
 
 		if !kind.SupportsInterfaces() {
@@ -525,6 +551,8 @@ func TestCheckInvalidCompositeInterfaceConformanceNonInterface(t *testing.T) {
 }
 
 func TestCheckInterfaceFieldUse(t *testing.T) {
+
+	t.Parallel()
 
 	for _, compositeKind := range common.CompositeKindsWithBody {
 
@@ -571,6 +599,8 @@ func TestCheckInterfaceFieldUse(t *testing.T) {
 
 func TestCheckInvalidInterfaceUndeclaredFieldUse(t *testing.T) {
 
+	t.Parallel()
+
 	for _, compositeKind := range common.CompositeKindsWithBody {
 
 		if compositeKind == common.CompositeKindContract {
@@ -615,6 +645,8 @@ func TestCheckInvalidInterfaceUndeclaredFieldUse(t *testing.T) {
 }
 
 func TestCheckInterfaceFunctionUse(t *testing.T) {
+
+	t.Parallel()
 
 	for _, compositeKind := range common.CompositeKindsWithBody {
 
@@ -668,6 +700,8 @@ func TestCheckInterfaceFunctionUse(t *testing.T) {
 
 func TestCheckInvalidInterfaceUndeclaredFunctionUse(t *testing.T) {
 
+	t.Parallel()
+
 	for _, compositeKind := range common.CompositeKindsWithBody {
 
 		if compositeKind == common.CompositeKindContract {
@@ -711,6 +745,8 @@ func TestCheckInvalidInterfaceUndeclaredFunctionUse(t *testing.T) {
 
 func TestCheckInvalidInterfaceConformanceInitializerExplicitMismatch(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -738,6 +774,8 @@ func TestCheckInvalidInterfaceConformanceInitializerExplicitMismatch(t *testing.
 
 func TestCheckInvalidInterfaceConformanceInitializerImplicitMismatch(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -764,6 +802,8 @@ func TestCheckInvalidInterfaceConformanceInitializerImplicitMismatch(t *testing.
 
 func TestCheckInvalidInterfaceConformanceMissingFunction(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -788,6 +828,8 @@ func TestCheckInvalidInterfaceConformanceMissingFunction(t *testing.T) {
 }
 
 func TestCheckInvalidInterfaceConformanceFunctionMismatch(t *testing.T) {
+
+	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
@@ -818,6 +860,8 @@ func TestCheckInvalidInterfaceConformanceFunctionMismatch(t *testing.T) {
 
 func TestCheckInvalidInterfaceConformanceFunctionPrivateAccessModifier(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -846,6 +890,8 @@ func TestCheckInvalidInterfaceConformanceFunctionPrivateAccessModifier(t *testin
 }
 
 func TestCheckInvalidInterfaceConformanceMissingField(t *testing.T) {
+
+	t.Parallel()
 
 	for _, kind := range common.AllCompositeKinds {
 
@@ -892,6 +938,8 @@ func TestCheckInvalidInterfaceConformanceMissingField(t *testing.T) {
 
 func TestCheckInvalidInterfaceConformanceFieldTypeMismatch(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -921,6 +969,8 @@ func TestCheckInvalidInterfaceConformanceFieldTypeMismatch(t *testing.T) {
 }
 
 func TestCheckInvalidInterfaceConformanceFieldPrivateAccessModifier(t *testing.T) {
+
+	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
@@ -953,6 +1003,8 @@ func TestCheckInvalidInterfaceConformanceFieldPrivateAccessModifier(t *testing.T
 
 func TestCheckInvalidInterfaceConformanceFieldMismatchAccessModifierMoreRestrictive(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -984,6 +1036,8 @@ func TestCheckInvalidInterfaceConformanceFieldMismatchAccessModifierMoreRestrict
 
 func TestCheckInvalidInterfaceConformanceFunctionMismatchAccessModifierMoreRestrictive(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -1010,6 +1064,8 @@ func TestCheckInvalidInterfaceConformanceFunctionMismatchAccessModifierMoreRestr
 }
 
 func TestCheckInterfaceConformanceFieldMorePermissiveAccessModifier(t *testing.T) {
+
+	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
@@ -1040,6 +1096,8 @@ func TestCheckInterfaceConformanceFieldMorePermissiveAccessModifier(t *testing.T
 
 func TestCheckInvalidInterfaceConformanceKindFieldFunctionMismatch(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -1068,6 +1126,8 @@ func TestCheckInvalidInterfaceConformanceKindFieldFunctionMismatch(t *testing.T)
 }
 
 func TestCheckInvalidInterfaceConformanceKindFunctionFieldMismatch(t *testing.T) {
+
+	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
@@ -1100,6 +1160,8 @@ func TestCheckInvalidInterfaceConformanceKindFunctionFieldMismatch(t *testing.T)
 
 func TestCheckInvalidInterfaceConformanceFieldKindLetVarMismatch(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -1130,6 +1192,8 @@ func TestCheckInvalidInterfaceConformanceFieldKindLetVarMismatch(t *testing.T) {
 }
 
 func TestCheckInvalidInterfaceConformanceFieldKindVarLetMismatch(t *testing.T) {
+
+	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
@@ -1162,6 +1226,8 @@ func TestCheckInvalidInterfaceConformanceFieldKindVarLetMismatch(t *testing.T) {
 
 func TestCheckInterfaceConformanceFunctionArgumentLabelMatch(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -1186,6 +1252,8 @@ func TestCheckInterfaceConformanceFunctionArgumentLabelMatch(t *testing.T) {
 }
 
 func TestCheckInvalidInterfaceConformanceFunctionArgumentLabelMismatch(t *testing.T) {
+
+	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithBody {
 		t.Run(kind.Keyword(), func(t *testing.T) {
@@ -1213,6 +1281,8 @@ func TestCheckInvalidInterfaceConformanceFunctionArgumentLabelMismatch(t *testin
 }
 
 func TestCheckInvalidInterfaceConformanceRepetition(t *testing.T) {
+
+	t.Parallel()
 
 	for _, kind := range common.AllCompositeKinds {
 
@@ -1250,6 +1320,8 @@ func TestCheckInvalidInterfaceConformanceRepetition(t *testing.T) {
 
 func TestCheckInvalidInterfaceTypeAsValue(t *testing.T) {
 
+	t.Parallel()
+
 	for _, kind := range common.AllCompositeKinds {
 
 		if !kind.SupportsInterfaces() {
@@ -1283,6 +1355,8 @@ func TestCheckInvalidInterfaceTypeAsValue(t *testing.T) {
 }
 
 func TestCheckInterfaceWithFieldHavingStructType(t *testing.T) {
+
+	t.Parallel()
 
 	for _, firstKind := range common.CompositeKindsWithBody {
 		for _, secondKind := range common.CompositeKindsWithBody {
@@ -1336,6 +1410,8 @@ func TestCheckInterfaceWithFieldHavingStructType(t *testing.T) {
 
 func TestCheckInterfaceWithFunctionHavingStructType(t *testing.T) {
 
+	t.Parallel()
+
 	for _, firstKind := range common.CompositeKindsWithBody {
 		for _, secondKind := range common.CompositeKindsWithBody {
 
@@ -1370,6 +1446,8 @@ func TestCheckInterfaceWithFunctionHavingStructType(t *testing.T) {
 
 func TestCheckInterfaceUseCompositeInInitializer(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       struct Foo {}
 
@@ -1382,6 +1460,8 @@ func TestCheckInterfaceUseCompositeInInitializer(t *testing.T) {
 }
 
 func TestCheckInterfaceSelfUse(t *testing.T) {
+
+	t.Parallel()
 
 	declarationKinds := []common.DeclarationKind{
 		common.DeclarationKindInitializer,
@@ -1433,6 +1513,8 @@ func TestCheckInterfaceSelfUse(t *testing.T) {
 
 func TestCheckInvalidContractInterfaceConformanceMissingTypeRequirement(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t,
 		`
           contract interface Test {
@@ -1451,6 +1533,8 @@ func TestCheckInvalidContractInterfaceConformanceMissingTypeRequirement(t *testi
 }
 
 func TestCheckInvalidContractInterfaceConformanceTypeRequirementKindMismatch(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t,
 		`
@@ -1472,6 +1556,8 @@ func TestCheckInvalidContractInterfaceConformanceTypeRequirementKindMismatch(t *
 
 func TestCheckInvalidContractInterfaceConformanceTypeRequirementMismatch(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t,
 		`
          contract interface Test {
@@ -1492,6 +1578,8 @@ func TestCheckInvalidContractInterfaceConformanceTypeRequirementMismatch(t *test
 
 func TestCheckContractInterfaceTypeRequirement(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t,
 		`
           contract interface Test {
@@ -1506,6 +1594,8 @@ func TestCheckContractInterfaceTypeRequirement(t *testing.T) {
 }
 
 func TestCheckInvalidContractInterfaceTypeRequirementFunctionImplementation(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t,
 		`
@@ -1525,6 +1615,8 @@ func TestCheckInvalidContractInterfaceTypeRequirementFunctionImplementation(t *t
 }
 
 func TestCheckInvalidContractInterfaceTypeRequirementMissingFunction(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t,
 		`
@@ -1549,6 +1641,8 @@ func TestCheckInvalidContractInterfaceTypeRequirementMissingFunction(t *testing.
 
 func TestCheckContractInterfaceTypeRequirementWithFunction(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t,
 		`
           contract interface Test {
@@ -1572,6 +1666,8 @@ func TestCheckContractInterfaceTypeRequirementWithFunction(t *testing.T) {
 
 func TestCheckContractInterfaceTypeRequirementConformanceMissingMembers(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t,
 		`
           contract interface Test {
@@ -1592,6 +1688,8 @@ func TestCheckContractInterfaceTypeRequirementConformanceMissingMembers(t *testi
 }
 
 func TestCheckInvalidContractInterfaceTypeRequirementConformance(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t,
 		`
@@ -1615,6 +1713,8 @@ func TestCheckInvalidContractInterfaceTypeRequirementConformance(t *testing.T) {
 }
 
 func TestCheckInvalidContractInterfaceTypeRequirementConformanceMissingFunction(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t,
 		`
@@ -1642,6 +1742,8 @@ func TestCheckInvalidContractInterfaceTypeRequirementConformanceMissingFunction(
 }
 
 func TestCheckInvalidContractInterfaceTypeRequirementMissingConformance(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t,
 		`
@@ -1673,6 +1775,8 @@ func TestCheckInvalidContractInterfaceTypeRequirementMissingConformance(t *testi
 
 func TestCheckContractInterfaceTypeRequirementImplementation(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t,
 		`
           struct interface OtherInterface {}
@@ -1702,6 +1806,8 @@ func TestCheckContractInterfaceTypeRequirementImplementation(t *testing.T) {
 
 func TestCheckContractInterfaceFungibleToken(t *testing.T) {
 
+	t.Parallel()
+
 	const code = examples.FungibleTokenContractInterface
 	_, err := ParseAndCheck(t, code)
 
@@ -1711,6 +1817,8 @@ func TestCheckContractInterfaceFungibleToken(t *testing.T) {
 }
 
 func TestCheckContractInterfaceFungibleTokenConformance(t *testing.T) {
+
+	t.Parallel()
 
 	code := examples.FungibleTokenContractInterface + "\n" + examples.ExampleFungibleTokenContract
 
@@ -1722,6 +1830,8 @@ func TestCheckContractInterfaceFungibleTokenConformance(t *testing.T) {
 }
 
 func TestCheckContractInterfaceFungibleTokenUse(t *testing.T) {
+
+	t.Parallel()
 
 	code := examples.FungibleTokenContractInterface + "\n" +
 		examples.ExampleFungibleTokenContract + "\n" + `

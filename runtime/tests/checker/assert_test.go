@@ -30,6 +30,8 @@ import (
 
 func TestCheckAssertWithoutMessage(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheckWithOptions(t,
 		`
             pub fun test() {
@@ -51,6 +53,8 @@ func TestCheckAssertWithoutMessage(t *testing.T) {
 }
 
 func TestCheckAssertWithMessage(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheckWithOptions(t,
 		`

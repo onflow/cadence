@@ -30,6 +30,8 @@ import (
 
 func TestParseReturnStatement(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("no expression", func(t *testing.T) {
 		result, errs := ParseStatements("return")
 		require.Empty(t, errs)
@@ -128,6 +130,8 @@ func TestParseReturnStatement(t *testing.T) {
 }
 
 func TestParseIfStatement(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("only empty then", func(t *testing.T) {
 		result, errs := ParseStatements("if true { }")
@@ -499,6 +503,8 @@ func TestParseIfStatement(t *testing.T) {
 
 func TestParseWhileStatement(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("empty block", func(t *testing.T) {
 		result, errs := ParseStatements("while true { }")
 		require.Empty(t, errs)
@@ -529,6 +535,8 @@ func TestParseWhileStatement(t *testing.T) {
 }
 
 func TestParseAssignmentStatement(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("copy", func(t *testing.T) {
 		result, errs := ParseStatements(" x = 1")
@@ -626,6 +634,8 @@ func TestParseAssignmentStatement(t *testing.T) {
 
 func TestParseSwapStatement(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("simple", func(t *testing.T) {
 		result, errs := ParseStatements(" x <-> y")
 		require.Empty(t, errs)
@@ -653,6 +663,8 @@ func TestParseSwapStatement(t *testing.T) {
 }
 
 func TestParseForStatement(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("empty block", func(t *testing.T) {
 		result, errs := ParseStatements("for x in y { }")
@@ -687,6 +699,8 @@ func TestParseForStatement(t *testing.T) {
 }
 
 func TestParseEmit(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("simple", func(t *testing.T) {
 		result, errs := ParseStatements("emit T()")

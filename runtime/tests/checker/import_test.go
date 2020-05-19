@@ -35,6 +35,8 @@ import (
 
 func TestCheckInvalidImport(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
        import "unknown"
     `)
@@ -45,6 +47,8 @@ func TestCheckInvalidImport(t *testing.T) {
 }
 
 func TestCheckInvalidRepeatedImport(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
@@ -64,6 +68,8 @@ func TestCheckInvalidRepeatedImport(t *testing.T) {
 }
 
 func TestCheckImportAll(t *testing.T) {
+
+	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
       pub fun answer(): Int {
@@ -91,6 +97,8 @@ func TestCheckImportAll(t *testing.T) {
 
 func TestCheckInvalidImportUnexported(t *testing.T) {
 
+	t.Parallel()
+
 	checker, err := ParseAndCheck(t, `
        pub let x = 1
     `)
@@ -116,6 +124,8 @@ func TestCheckInvalidImportUnexported(t *testing.T) {
 }
 
 func TestCheckImportSome(t *testing.T) {
+
+	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
       pub fun answer(): Int {
@@ -145,6 +155,8 @@ func TestCheckImportSome(t *testing.T) {
 
 func TestCheckInvalidImportedError(t *testing.T) {
 
+	t.Parallel()
+
 	// NOTE: only parse, don't check imported program.
 	// will be checked by checker checking importing program
 
@@ -171,6 +183,8 @@ func TestCheckInvalidImportedError(t *testing.T) {
 }
 
 func TestCheckImportTypes(t *testing.T) {
+
+	t.Parallel()
 
 	for _, compositeKind := range common.AllCompositeKinds {
 
@@ -246,6 +260,8 @@ func TestCheckImportTypes(t *testing.T) {
 }
 
 func TestCheckInvalidImportCycle(t *testing.T) {
+
+	t.Parallel()
 
 	// NOTE: only parse, don't check imported program.
 	// will be checked by checker checking importing program

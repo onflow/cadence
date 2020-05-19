@@ -78,6 +78,9 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 }
 
 func TestEncodeDecodeNilValue(t *testing.T) {
+
+	t.Parallel()
+
 	testEncodeDecode(t,
 		encodeDecodeTest{
 			value: NilValue{},
@@ -90,6 +93,9 @@ func TestEncodeDecodeNilValue(t *testing.T) {
 }
 
 func TestEncodeDecodeVoidValue(t *testing.T) {
+
+	t.Parallel()
+
 	testEncodeDecode(t,
 		encodeDecodeTest{
 			value: VoidValue{},
@@ -104,6 +110,8 @@ func TestEncodeDecodeVoidValue(t *testing.T) {
 }
 
 func TestEncodeDecodeBool(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("false", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -131,6 +139,8 @@ func TestEncodeDecodeBool(t *testing.T) {
 }
 
 func TestEncodeDecodeString(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
 		expected := NewStringValue("")
@@ -165,6 +175,8 @@ func TestEncodeDecodeString(t *testing.T) {
 }
 
 func TestEncodeDecodeArray(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
 		expected := NewArrayValueUnownedNonCopying()
@@ -209,6 +221,8 @@ func TestEncodeDecodeArray(t *testing.T) {
 }
 
 func TestEncodeDecodeDictionary(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
 		expected := NewDictionaryValueUnownedNonCopying()
@@ -311,6 +325,8 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 }
 
 func TestEncodeDecodeComposite(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("empty structure, string location", func(t *testing.T) {
 		expected := NewCompositeValue(
@@ -512,6 +528,8 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 func TestEncodeDecodeIntValue(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -581,6 +599,8 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 }
 
 func TestEncodeDecodeInt8Value(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -689,6 +709,8 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 
 func TestEncodeDecodeInt16Value(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -795,6 +817,8 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 }
 
 func TestEncodeDecodeInt32Value(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -903,6 +927,8 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 
 func TestEncodeDecodeInt64Value(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1009,6 +1035,8 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 }
 
 func TestEncodeDecodeInt128Value(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -1147,6 +1175,8 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 }
 
 func TestEncodeDecodeInt256Value(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -1295,6 +1325,8 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 
 func TestEncodeDecodeUIntValue(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1365,6 +1397,8 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 }
 
 func TestEncodeDecodeUInt8Value(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -1443,6 +1477,8 @@ func TestEncodeDecodeUInt8Value(t *testing.T) {
 
 func TestEncodeDecodeUInt16Value(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1519,6 +1555,8 @@ func TestEncodeDecodeUInt16Value(t *testing.T) {
 }
 
 func TestEncodeDecodeUInt32Value(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -1597,6 +1635,8 @@ func TestEncodeDecodeUInt32Value(t *testing.T) {
 
 func TestEncodeDecodeUInt64Value(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1658,6 +1698,8 @@ func TestEncodeDecodeUInt64Value(t *testing.T) {
 }
 
 func TestEncodeDecodeUInt128Value(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -1764,6 +1806,8 @@ func TestEncodeDecodeUInt128Value(t *testing.T) {
 
 func TestEncodeDecodeUInt256Value(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1858,6 +1902,8 @@ func TestEncodeDecodeUInt256Value(t *testing.T) {
 
 func TestEncodeDecodeWord8Value(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1935,6 +1981,8 @@ func TestEncodeDecodeWord8Value(t *testing.T) {
 
 func TestEncodeDecodeWord16Value(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1996,6 +2044,8 @@ func TestEncodeDecodeWord16Value(t *testing.T) {
 }
 
 func TestEncodeDecodeWord32Value(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -2059,6 +2109,8 @@ func TestEncodeDecodeWord32Value(t *testing.T) {
 
 func TestEncodeDecodeWord64Value(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -2105,6 +2157,8 @@ func TestEncodeDecodeWord64Value(t *testing.T) {
 }
 
 func TestEncodeDecodeSomeValue(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("nil", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -2161,6 +2215,8 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 }
 
 func TestEncodeDecodeFix64Value(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -2270,6 +2326,8 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 
 func TestEncodeDecodeUFix64Value(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -2331,6 +2389,8 @@ func TestEncodeDecodeUFix64Value(t *testing.T) {
 }
 
 func TestEncodeDecodeStorageReferenceValue(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("not-authorized", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -2402,6 +2462,8 @@ func TestEncodeDecodeStorageReferenceValue(t *testing.T) {
 }
 
 func TestEncodeDecodeAddressValue(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -2496,6 +2558,8 @@ var publicPathValue = PathValue{
 
 func TestEncodeDecodePathValue(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("private", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -2546,6 +2610,8 @@ func TestEncodeDecodePathValue(t *testing.T) {
 }
 
 func TestEncodeDecodeCapabilityValue(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("private path", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -2631,6 +2697,8 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 }
 
 func TestEncodeDecodeLinkValue(t *testing.T) {
+
+	t.Parallel()
 
 	expectedLinkEncodingPrefix := []byte{
 		// tag

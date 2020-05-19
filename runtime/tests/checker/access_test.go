@@ -93,6 +93,8 @@ func expectTwoAccessErrors(t *testing.T, err error) {
 
 func TestCheckAccessModifierCompositeFunctionDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	for _, compositeKind := range common.CompositeKindsWithBody {
 
 		tests := map[ast.Access]bool{
@@ -137,6 +139,8 @@ func TestCheckAccessModifierCompositeFunctionDeclaration(t *testing.T) {
 }
 
 func TestCheckAccessModifierInterfaceFunctionDeclaration(t *testing.T) {
+
+	t.Parallel()
 
 	checkModeTests := map[sema.AccessCheckMode]map[ast.Access]error{
 		sema.AccessCheckModeStrict: {
@@ -215,6 +219,8 @@ func TestCheckAccessModifierInterfaceFunctionDeclaration(t *testing.T) {
 
 func TestCheckAccessModifierCompositeConstantFieldDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	tests := map[ast.Access]func(isInterface bool) bool{
 		ast.AccessNotSpecified: func(_ bool) bool {
 			return true
@@ -280,6 +286,8 @@ func TestCheckAccessModifierCompositeConstantFieldDeclaration(t *testing.T) {
 
 func TestCheckAccessModifierCompositeVariableFieldDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	for _, access := range ast.BasicAccesses {
 		for _, compositeKind := range common.CompositeKindsWithBody {
 			for _, isInterface := range []bool{true, false} {
@@ -330,6 +338,8 @@ func TestCheckAccessModifierCompositeVariableFieldDeclaration(t *testing.T) {
 
 func TestCheckAccessModifierGlobalFunctionDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	tests := map[ast.Access]bool{
 		ast.AccessNotSpecified:   true,
 		ast.AccessPrivate:        true,
@@ -362,6 +372,8 @@ func TestCheckAccessModifierGlobalFunctionDeclaration(t *testing.T) {
 }
 
 func TestCheckAccessModifierGlobalVariableDeclaration(t *testing.T) {
+
+	t.Parallel()
 
 	tests := map[ast.Access]bool{
 		ast.AccessNotSpecified:   true,
@@ -396,6 +408,8 @@ func TestCheckAccessModifierGlobalVariableDeclaration(t *testing.T) {
 
 func TestCheckAccessModifierGlobalConstantDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	tests := map[ast.Access]bool{
 		ast.AccessNotSpecified:   true,
 		ast.AccessPrivate:        true,
@@ -428,6 +442,8 @@ func TestCheckAccessModifierGlobalConstantDeclaration(t *testing.T) {
 }
 
 func TestCheckAccessModifierLocalVariableDeclaration(t *testing.T) {
+
+	t.Parallel()
 
 	tests := map[ast.Access]bool{
 		ast.AccessNotSpecified:   true,
@@ -474,6 +490,8 @@ func TestCheckAccessModifierLocalVariableDeclaration(t *testing.T) {
 
 func TestCheckAccessModifierLocalOptionalBinding(t *testing.T) {
 
+	t.Parallel()
+
 	tests := map[ast.Access]bool{
 		ast.AccessNotSpecified:   true,
 		ast.AccessPrivate:        false,
@@ -510,6 +528,8 @@ func TestCheckAccessModifierLocalOptionalBinding(t *testing.T) {
 
 func TestCheckAccessModifierLocalFunctionDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	tests := map[ast.Access]bool{
 		ast.AccessNotSpecified:   true,
 		ast.AccessPrivate:        false,
@@ -544,6 +564,8 @@ func TestCheckAccessModifierLocalFunctionDeclaration(t *testing.T) {
 }
 
 func TestCheckAccessModifierGlobalCompositeDeclaration(t *testing.T) {
+
+	t.Parallel()
 
 	expectMissingAccessModifierError := func(t *testing.T, err error) {
 		errs := ExpectCheckerErrors(t, err, 1)
@@ -636,6 +658,8 @@ func TestCheckAccessModifierGlobalCompositeDeclaration(t *testing.T) {
 }
 
 func TestCheckAccessImportGlobalValue(t *testing.T) {
+
+	t.Parallel()
 
 	checkModeTests := map[sema.AccessCheckMode]func(*testing.T, error){
 		sema.AccessCheckModeStrict: func(t *testing.T, err error) {
@@ -747,6 +771,8 @@ func TestCheckAccessImportGlobalValue(t *testing.T) {
 
 func TestCheckAccessCompositeFunction(t *testing.T) {
 
+	t.Parallel()
+
 	for _, compositeKind := range common.CompositeKindsWithBody {
 
 		checkModeTests := map[sema.AccessCheckMode]map[ast.Access]func(*testing.T, error){
@@ -851,6 +877,8 @@ func TestCheckAccessCompositeFunction(t *testing.T) {
 }
 
 func TestCheckAccessInterfaceFunction(t *testing.T) {
+
+	t.Parallel()
 
 	for _, compositeKind := range common.CompositeKindsWithBody {
 
@@ -965,6 +993,8 @@ func TestCheckAccessInterfaceFunction(t *testing.T) {
 
 func TestCheckAccessCompositeFieldRead(t *testing.T) {
 
+	t.Parallel()
+
 	checkModeTests := map[sema.AccessCheckMode]map[ast.Access]func(*testing.T, error){
 		sema.AccessCheckModeStrict: {
 			ast.AccessNotSpecified:   nil,
@@ -1073,6 +1103,8 @@ func TestCheckAccessCompositeFieldRead(t *testing.T) {
 }
 
 func TestCheckAccessInterfaceFieldRead(t *testing.T) {
+
+	t.Parallel()
 
 	checkModeTests := map[sema.AccessCheckMode]map[ast.Access]func(*testing.T, error){
 		sema.AccessCheckModeStrict: {
@@ -1191,6 +1223,8 @@ func TestCheckAccessInterfaceFieldRead(t *testing.T) {
 
 func TestCheckAccessCompositeFieldAssignmentAndSwap(t *testing.T) {
 
+	t.Parallel()
+
 	checkModeTests := map[sema.AccessCheckMode]map[ast.Access]func(*testing.T, error){
 		sema.AccessCheckModeStrict: {
 			ast.AccessNotSpecified:   nil,
@@ -1304,6 +1338,8 @@ func TestCheckAccessCompositeFieldAssignmentAndSwap(t *testing.T) {
 }
 
 func TestCheckAccessInterfaceFieldWrite(t *testing.T) {
+
+	t.Parallel()
 
 	expectConformanceAndAccessErrors := func(t *testing.T, err error) {
 		errs := ExpectCheckerErrors(t, err, 5)
@@ -1446,6 +1482,8 @@ func TestCheckAccessInterfaceFieldWrite(t *testing.T) {
 
 func TestCheckAccessCompositeFieldVariableDeclarationWithSecondValue(t *testing.T) {
 
+	t.Parallel()
+
 	checkModeTests := map[sema.AccessCheckMode]map[ast.Access]func(*testing.T, error){
 		sema.AccessCheckModeStrict: {
 			ast.AccessNotSpecified:   nil,
@@ -1537,6 +1575,8 @@ func TestCheckAccessCompositeFieldVariableDeclarationWithSecondValue(t *testing.
 }
 
 func TestCheckAccessInterfaceFieldVariableDeclarationWithSecondValue(t *testing.T) {
+
+	t.Parallel()
 
 	expectPrivateAccessErrors := func(t *testing.T, err error) {
 		errs := ExpectCheckerErrors(t, err, 3)
@@ -1647,6 +1687,8 @@ func TestCheckAccessInterfaceFieldVariableDeclarationWithSecondValue(t *testing.
 }
 
 func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
+
+	t.Parallel()
 
 	worstCase := func(t *testing.T, err error) {
 		errs := ExpectCheckerErrors(t, err, 8)
@@ -1852,6 +1894,8 @@ func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
 
 func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testing.T) {
 
+	t.Parallel()
+
 	// NOTE: only parse, don't check imported program.
 	// will be checked by checker checking importing program
 
@@ -1914,6 +1958,8 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 
 func TestCheckContractNestedDeclarationPrivateAccess(t *testing.T) {
 
+	t.Parallel()
+
 	const contract = `
 	  contract Outer {
 		  priv let num: Int
@@ -1946,6 +1992,8 @@ func TestCheckContractNestedDeclarationPrivateAccess(t *testing.T) {
 }
 
 func TestCheckAccessSameContractInnerStructField(t *testing.T) {
+
+	t.Parallel()
 
 	tests := map[ast.Access]bool{
 		ast.AccessPrivate:  false,
@@ -1989,6 +2037,8 @@ func TestCheckAccessSameContractInnerStructField(t *testing.T) {
 }
 
 func TestCheckAccessSameContractInnerStructInterfaceField(t *testing.T) {
+
+	t.Parallel()
 
 	tests := map[ast.Access]bool{
 		ast.AccessPrivate:  false,
@@ -2037,6 +2087,8 @@ func TestCheckAccessSameContractInnerStructInterfaceField(t *testing.T) {
 
 func TestCheckAccessOtherContractInnerStructField(t *testing.T) {
 
+	t.Parallel()
+
 	tests := map[ast.Access]bool{
 		ast.AccessPrivate:  false,
 		ast.AccessContract: false,
@@ -2081,6 +2133,8 @@ func TestCheckAccessOtherContractInnerStructField(t *testing.T) {
 }
 
 func TestCheckAccessOtherContractInnerStructInterfaceField(t *testing.T) {
+
+	t.Parallel()
 
 	tests := map[ast.Access]bool{
 		ast.AccessPrivate:  false,
@@ -2130,6 +2184,8 @@ func TestCheckAccessOtherContractInnerStructInterfaceField(t *testing.T) {
 }
 
 func TestCheckRestrictiveAccessModifier(t *testing.T) {
+
+	t.Parallel()
 
 	for _, access := range ast.AllAccesses {
 
@@ -2202,6 +2258,8 @@ func TestCheckRestrictiveAccessModifier(t *testing.T) {
 }
 
 func TestCheckInvalidRestrictiveAccessModifier(t *testing.T) {
+
+	t.Parallel()
 
 	for _, access := range ast.AllAccesses {
 

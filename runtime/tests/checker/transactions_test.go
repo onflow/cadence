@@ -29,6 +29,8 @@ import (
 
 func TestCheckTransactions(t *testing.T) {
 
+	t.Parallel()
+
 	type test struct {
 		name   string
 		code   string
@@ -371,6 +373,9 @@ func TestCheckTransactions(t *testing.T) {
 }
 
 func TestCheckTransactionExecuteScope(t *testing.T) {
+
+	t.Parallel()
+
 	// non-global variable declarations do not require access modifiers
 	// execute block should be treated like function block
 
@@ -396,6 +401,8 @@ func TestCheckTransactionExecuteScope(t *testing.T) {
 
 func TestCheckInvalidTransactionSelfMoveToFunction(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
 
       transaction {
@@ -415,6 +422,8 @@ func TestCheckInvalidTransactionSelfMoveToFunction(t *testing.T) {
 
 func TestCheckInvalidTransactionSelfMoveInVariableDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
 
      transaction {
@@ -431,6 +440,8 @@ func TestCheckInvalidTransactionSelfMoveInVariableDeclaration(t *testing.T) {
 }
 
 func TestCheckInvalidTransactionSelfMoveReturnFromFunction(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
 
@@ -449,6 +460,8 @@ func TestCheckInvalidTransactionSelfMoveReturnFromFunction(t *testing.T) {
 
 func TestCheckInvalidTransactionSelfMoveIntoArrayLiteral(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
 
      transaction {
@@ -465,6 +478,8 @@ func TestCheckInvalidTransactionSelfMoveIntoArrayLiteral(t *testing.T) {
 }
 
 func TestCheckInvalidTransactionSelfMoveIntoDictionaryLiteral(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
 

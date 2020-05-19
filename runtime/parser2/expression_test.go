@@ -39,6 +39,8 @@ import (
 
 func TestParseSimpleInfixExpression(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("no spaces", func(t *testing.T) {
 		result, errs := ParseExpression("1+2*3")
 		require.Empty(t, errs)
@@ -197,6 +199,8 @@ func TestParseSimpleInfixExpression(t *testing.T) {
 }
 
 func TestParseAdvancedExpression(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("mixed infix and prefix", func(t *testing.T) {
 		result, errs := ParseExpression("1 +- 2 ++ 3")
@@ -411,6 +415,8 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 func TestParseArrayExpression(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("array expression", func(t *testing.T) {
 		result, errs := ParseExpression("[ 1,2 + 3, 4  ,  5 ]")
 		require.Empty(t, errs)
@@ -473,6 +479,8 @@ func TestParseArrayExpression(t *testing.T) {
 }
 
 func TestParseDictionaryExpression(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("dictionary expression", func(t *testing.T) {
 		result, errs := ParseExpression("{ 1:2 + 3, 4  :  5 }")
@@ -541,6 +549,8 @@ func TestParseDictionaryExpression(t *testing.T) {
 
 func TestParseIdentifier(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("identifier in addition", func(t *testing.T) {
 		result, errs := ParseExpression("a + 3")
 		require.Empty(t, errs)
@@ -570,6 +580,8 @@ func TestParseIdentifier(t *testing.T) {
 
 func TestParsePath(t *testing.T) {
 
+	t.Parallel()
+
 	result, errs := ParseExpression("/foo/bar")
 	require.Empty(t, errs)
 
@@ -590,6 +602,8 @@ func TestParsePath(t *testing.T) {
 }
 
 func TestParseString(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("valid, empty", func(t *testing.T) {
 		result, errs := ParseExpression("\"\"")
@@ -880,6 +894,8 @@ func TestParseString(t *testing.T) {
 
 func TestInvocation(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("no arguments", func(t *testing.T) {
 		result, errs := ParseExpression("f()")
 		require.Empty(t, errs)
@@ -1163,6 +1179,8 @@ func TestInvocation(t *testing.T) {
 
 func TestMemberExpression(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("identifier, no space", func(t *testing.T) {
 		result, errs := ParseExpression("f.n")
 		require.Empty(t, errs)
@@ -1261,6 +1279,8 @@ func TestMemberExpression(t *testing.T) {
 }
 
 func TestParseBlockComment(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("nested comment, nothing else", func(t *testing.T) {
 
@@ -1370,6 +1390,8 @@ func BenchmarkParseArray(b *testing.B) {
 
 func TestParseReference(t *testing.T) {
 
+	t.Parallel()
+
 	result, errs := ParseExpression("& t as T")
 	require.Empty(t, errs)
 
@@ -1394,6 +1416,8 @@ func TestParseReference(t *testing.T) {
 }
 
 func TestParseCasts(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("non-failable", func(t *testing.T) {
 
@@ -1484,6 +1508,8 @@ func TestParseCasts(t *testing.T) {
 
 func TestParseForceExpression(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("identifier", func(t *testing.T) {
 		result, errs := ParseExpression("t!")
 		require.Empty(t, errs)
@@ -1569,6 +1595,8 @@ func TestParseForceExpression(t *testing.T) {
 
 func TestParseCreate(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("simple", func(t *testing.T) {
 		result, errs := ParseExpression("create T()")
 		require.Empty(t, errs)
@@ -1592,6 +1620,9 @@ func TestParseCreate(t *testing.T) {
 }
 
 func TestParseNil(t *testing.T) {
+
+	t.Parallel()
+
 	result, errs := ParseExpression(" nil")
 	require.Empty(t, errs)
 
@@ -1604,6 +1635,8 @@ func TestParseNil(t *testing.T) {
 }
 
 func TestParseDestroy(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("simple", func(t *testing.T) {
 		result, errs := ParseExpression("destroy t")
@@ -1625,6 +1658,9 @@ func TestParseDestroy(t *testing.T) {
 }
 
 func TestParseLineComment(t *testing.T) {
+
+	t.Parallel()
+
 	result, errs := ParseExpression(" //// // this is a comment\n 1 / 2")
 	require.Empty(t, errs)
 
@@ -1653,6 +1689,8 @@ func TestParseLineComment(t *testing.T) {
 }
 
 func TestParseFunctionExpression(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("without return type", func(t *testing.T) {
 		result, errs := ParseExpression("fun () { }")
@@ -1729,6 +1767,8 @@ func TestParseFunctionExpression(t *testing.T) {
 }
 
 func TestParseIntegerLiterals(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("binary prefix, missing trailing digits", func(t *testing.T) {
 
@@ -2310,6 +2350,8 @@ func TestParseIntegerLiterals(t *testing.T) {
 }
 
 func TestParseFixedPoint(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("with underscores", func(t *testing.T) {
 

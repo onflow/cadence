@@ -127,6 +127,8 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 
 func TestInterpretAuthAccountSave(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("resource", func(t *testing.T) {
 
 		t.Run("valid", func(t *testing.T) {
@@ -293,6 +295,8 @@ func TestInterpretAuthAccountSave(t *testing.T) {
 }
 
 func TestInterpretAuthAccountLoad(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
 
@@ -519,6 +523,8 @@ func TestInterpretAuthAccountLoad(t *testing.T) {
 
 func TestInterpretAuthAccountCopy(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("valid", func(t *testing.T) {
 
 		const code = `
@@ -636,6 +642,8 @@ func TestInterpretAuthAccountCopy(t *testing.T) {
 }
 
 func TestInterpretAuthAccountBorrow(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
 
@@ -901,6 +909,8 @@ func TestInterpretAuthAccountBorrow(t *testing.T) {
 }
 
 func TestInterpretAuthAccountLink(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
 
@@ -1168,6 +1178,8 @@ func TestInterpretAuthAccountLink(t *testing.T) {
 
 func TestInterpretAuthAccountUnlink(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("resource", func(t *testing.T) {
 
 		for _, capabilityDomain := range []common.PathDomain{
@@ -1334,6 +1346,8 @@ func TestInterpretAuthAccountUnlink(t *testing.T) {
 }
 
 func TestInterpretAccountGetLinkTarget(t *testing.T) {
+
+	t.Parallel()
 
 	for _, auth := range []bool{true, false} {
 
@@ -1527,6 +1541,8 @@ func TestInterpretAccountGetLinkTarget(t *testing.T) {
 }
 
 func TestInterpretAccountGetCapability(t *testing.T) {
+
+	t.Parallel()
 
 	tests := map[bool][]common.PathDomain{
 		true: {

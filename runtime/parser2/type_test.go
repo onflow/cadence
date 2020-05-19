@@ -31,6 +31,8 @@ import (
 
 func TestParseNominalType(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("simple", func(t *testing.T) {
 		result, errs := ParseType("Int")
 		require.Empty(t, errs)
@@ -69,6 +71,8 @@ func TestParseNominalType(t *testing.T) {
 }
 
 func TestParseArrayType(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("variable", func(t *testing.T) {
 		result, errs := ParseType("[Int]")
@@ -123,6 +127,8 @@ func TestParseArrayType(t *testing.T) {
 }
 
 func TestParseOptionalType(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("nominal", func(t *testing.T) {
 		result, errs := ParseType("Int?")
@@ -190,6 +196,8 @@ func TestParseOptionalType(t *testing.T) {
 
 func TestParseReferenceType(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("unauthorized, nominal", func(t *testing.T) {
 		result, errs := ParseType("&Int")
 		require.Empty(t, errs)
@@ -231,6 +239,8 @@ func TestParseReferenceType(t *testing.T) {
 
 func TestParseOptionalReferenceType(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("unauthorized", func(t *testing.T) {
 		result, errs := ParseType("&Int?")
 		require.Empty(t, errs)
@@ -255,6 +265,8 @@ func TestParseOptionalReferenceType(t *testing.T) {
 }
 
 func TestParseRestrictedType(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("with restricted type, no restrictions", func(t *testing.T) {
 		result, errs := ParseType("T{}")
@@ -543,6 +555,8 @@ func TestParseRestrictedType(t *testing.T) {
 
 func TestParseDictionaryType(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("valid", func(t *testing.T) {
 		result, errs := ParseType("{T: U}")
 		require.Empty(t, errs)
@@ -653,6 +667,8 @@ func TestParseDictionaryType(t *testing.T) {
 }
 
 func TestParseFunctionType(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("no parameters, Void return type", func(t *testing.T) {
 		result, errs := ParseType("(():Void)")

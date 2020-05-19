@@ -30,6 +30,8 @@ import (
 
 func TestCheckOptionalChainingNonOptionalFieldRead(t *testing.T) {
 
+	t.Parallel()
+
 	checker, err := ParseAndCheck(t, `
       struct Test {
           let x: Int
@@ -53,6 +55,8 @@ func TestCheckOptionalChainingNonOptionalFieldRead(t *testing.T) {
 
 func TestCheckOptionalChainingOptionalFieldRead(t *testing.T) {
 
+	t.Parallel()
+
 	checker, err := ParseAndCheck(t, `
       struct Test {
           let x: Int?
@@ -75,6 +79,8 @@ func TestCheckOptionalChainingOptionalFieldRead(t *testing.T) {
 }
 
 func TestCheckOptionalChainingFunctionRead(t *testing.T) {
+
+	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
       struct Test {
@@ -104,6 +110,8 @@ func TestCheckOptionalChainingFunctionRead(t *testing.T) {
 
 func TestCheckOptionalChainingFunctionCall(t *testing.T) {
 
+	t.Parallel()
+
 	checker, err := ParseAndCheck(t, `
       struct Test {
           fun x(): Int {
@@ -126,6 +134,8 @@ func TestCheckOptionalChainingFunctionCall(t *testing.T) {
 
 func TestCheckInvalidOptionalChainingNonOptional(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       struct Test {
           let x: Int
@@ -145,6 +155,8 @@ func TestCheckInvalidOptionalChainingNonOptional(t *testing.T) {
 }
 
 func TestCheckInvalidOptionalChainingFieldAssignment(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       struct Test {

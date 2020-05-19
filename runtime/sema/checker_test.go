@@ -28,6 +28,8 @@ import (
 
 func TestOptionalSubtyping(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("Int? <: Int?", func(t *testing.T) {
 		assert.True(t,
 			IsSubType(
@@ -57,6 +59,8 @@ func TestOptionalSubtyping(t *testing.T) {
 }
 
 func TestCompositeType_ID(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("composite in composite", func(t *testing.T) {
 
@@ -99,6 +103,8 @@ func TestCompositeType_ID(t *testing.T) {
 
 func TestInterfaceType_ID(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("interface in composite", func(t *testing.T) {
 
 		interfaceInComposite :=
@@ -139,6 +145,8 @@ func TestInterfaceType_ID(t *testing.T) {
 }
 
 func TestFunctionSubtyping(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("((Int): Void) <: ((AnyStruct): Void)", func(t *testing.T) {
 		assert.False(t,

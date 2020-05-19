@@ -234,6 +234,8 @@ func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (hash BlockHash, 
 
 func TestRuntimeImport(t *testing.T) {
 
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	importedScript := []byte(`
@@ -272,6 +274,8 @@ func TestRuntimeImport(t *testing.T) {
 }
 
 func TestRuntimeProgramCache(t *testing.T) {
+
+	t.Parallel()
 
 	programCache := map[ast.LocationID]*ast.Program{}
 	cacheHits := make(map[ast.LocationID]bool)
@@ -377,6 +381,9 @@ func TestRuntimeProgramCache(t *testing.T) {
 }
 
 func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -397,6 +404,9 @@ func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
 }
 
 func TestRuntimeTransactionWithAccount(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -427,6 +437,9 @@ func TestRuntimeTransactionWithAccount(t *testing.T) {
 }
 
 func TestRuntimeTransactionWithArguments(t *testing.T) {
+
+	t.Parallel()
+
 	var tests = []struct {
 		label        string
 		script       string
@@ -722,6 +735,9 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 }
 
 func TestRuntimeProgramWithNoTransaction(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -738,6 +754,9 @@ func TestRuntimeProgramWithNoTransaction(t *testing.T) {
 }
 
 func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -759,6 +778,8 @@ func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
 }
 
 func TestRuntimeStorage(t *testing.T) {
+
+	t.Parallel()
 
 	tests := map[string]string{
 		"resource": `
@@ -872,6 +893,9 @@ func TestRuntimeStorage(t *testing.T) {
 }
 
 func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	container := []byte(`
@@ -964,6 +988,9 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 // of a stored resource declared in an imported program
 //
 func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	deepThought := []byte(`
@@ -1034,6 +1061,9 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 // of a stored resource declared in an imported program
 //
 func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
@@ -1106,6 +1136,9 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 // See https://github.com/dapperlabs/flow-go/issues/838
 //
 func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
@@ -1169,6 +1202,9 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 }
 
 func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
@@ -1236,6 +1272,9 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 }
 
 func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
@@ -1304,6 +1343,9 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 }
 
 func TestRuntimeResourceContractWithInterface(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	imported1 := []byte(`
@@ -1386,6 +1428,9 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 }
 
 func TestParseAndCheckProgram(t *testing.T) {
+
+	t.Parallel()
+
 	t.Run("ValidProgram", func(t *testing.T) {
 		runtime := NewInterpreterRuntime()
 
@@ -1418,6 +1463,9 @@ func TestParseAndCheckProgram(t *testing.T) {
 }
 
 func TestRuntimeSyntaxError(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -1437,6 +1485,9 @@ func TestRuntimeSyntaxError(t *testing.T) {
 }
 
 func TestRuntimeStorageChanges(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
@@ -1507,6 +1558,9 @@ func TestRuntimeStorageChanges(t *testing.T) {
 }
 
 func TestRuntimeAccountAddress(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -1537,6 +1591,9 @@ func TestRuntimeAccountAddress(t *testing.T) {
 }
 
 func TestRuntimePublicAccountAddress(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -1567,6 +1624,9 @@ func TestRuntimePublicAccountAddress(t *testing.T) {
 }
 
 func TestRuntimeAccountPublishAndAccess(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
@@ -1640,6 +1700,9 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 }
 
 func TestRuntimeTransactionWithUpdateAccountCodeEmpty(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -1677,6 +1740,9 @@ func TestRuntimeTransactionWithUpdateAccountCodeEmpty(t *testing.T) {
 }
 
 func TestRuntimeTransactionWithCreateAccountEmpty(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -1714,6 +1780,9 @@ func TestRuntimeTransactionWithCreateAccountEmpty(t *testing.T) {
 }
 
 func TestRuntimeCyclicImport(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
@@ -1762,6 +1831,8 @@ func ArrayValueFromBytes(bytes []byte) *interpreter.ArrayValue {
 }
 
 func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
+
+	t.Parallel()
 
 	expectSuccess := func(t *testing.T, err error, accountCode []byte, events []cadence.Event, expectedEventType cadence.Type) {
 		require.NoError(t, err)
@@ -1990,6 +2061,8 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 func TestRuntimeContractAccount(t *testing.T) {
 
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
@@ -2081,6 +2154,9 @@ func TestRuntimeContractAccount(t *testing.T) {
 }
 
 func TestRuntimeContractNestedResource(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	addressValue := Address{
@@ -2256,6 +2332,8 @@ pub contract FungibleToken {
 
 func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	address1Value := Address{
@@ -2360,6 +2438,8 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 
 func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	address1Value := Address{
@@ -2463,6 +2543,8 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 }
 
 func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
+
+	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
 
@@ -2623,6 +2705,9 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 }
 
 func TestRuntimeBlock(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -2674,6 +2759,8 @@ func TestRuntimeBlock(t *testing.T) {
 
 func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("transaction with function", func(t *testing.T) {
 		runtime := NewInterpreterRuntime()
 
@@ -2721,6 +2808,8 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 }
 
 func TestRuntimeStoreIntegerTypes(t *testing.T) {
+
+	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
 
@@ -2793,6 +2882,8 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 }
 
 func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
+
+	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
 
@@ -2930,6 +3021,8 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 }
 
 func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
+
+	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
 
@@ -3086,6 +3179,8 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
 
 func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
 
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	address := Address{
@@ -3241,6 +3336,8 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
 
 func TestRuntimeComputationLimit(t *testing.T) {
 
+	t.Parallel()
+
 	const computationLimit = 5
 
 	type test struct {
@@ -3330,6 +3427,9 @@ func TestRuntimeComputationLimit(t *testing.T) {
 }
 
 func TestRuntimeMetrics(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	imported1Location := StringLocation("imported1")
@@ -3498,6 +3598,8 @@ func (w testWrite) String() string {
 
 func TestRuntimeContractWriteback(t *testing.T) {
 
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
@@ -3600,6 +3702,8 @@ func TestRuntimeContractWriteback(t *testing.T) {
 }
 
 func TestRuntimeStorageWriteback(t *testing.T) {
+
+	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
 
@@ -3728,6 +3832,9 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 }
 
 func TestRuntimeExternalError(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`

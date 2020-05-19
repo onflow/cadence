@@ -99,6 +99,8 @@ func init() {
 
 func TestInterpretBitwiseOr(t *testing.T) {
 
+	t.Parallel()
+
 	for ty, valueFunc := range bitwiseTestValueFunctions {
 
 		t.Run(ty, func(t *testing.T) {
@@ -123,6 +125,8 @@ func TestInterpretBitwiseOr(t *testing.T) {
 }
 
 func TestInterpretBitwiseXor(t *testing.T) {
+
+	t.Parallel()
 
 	for ty, valueFunc := range bitwiseTestValueFunctions {
 
@@ -149,6 +153,8 @@ func TestInterpretBitwiseXor(t *testing.T) {
 
 func TestInterpretBitwiseAnd(t *testing.T) {
 
+	t.Parallel()
+
 	for ty, valueFunc := range bitwiseTestValueFunctions {
 
 		t.Run(ty, func(t *testing.T) {
@@ -174,6 +180,8 @@ func TestInterpretBitwiseAnd(t *testing.T) {
 
 func TestInterpretBitwiseLeftShift(t *testing.T) {
 
+	t.Parallel()
+
 	for ty, valueFunc := range bitwiseTestValueFunctions {
 
 		t.Run(ty, func(t *testing.T) {
@@ -198,6 +206,8 @@ func TestInterpretBitwiseLeftShift(t *testing.T) {
 }
 
 func TestInterpretBitwiseRightShift(t *testing.T) {
+
+	t.Parallel()
 
 	for ty, valueFunc := range bitwiseTestValueFunctions {
 

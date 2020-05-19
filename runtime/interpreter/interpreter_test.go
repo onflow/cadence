@@ -31,6 +31,8 @@ import (
 
 func TestInterpreterOptionalBoxing(t *testing.T) {
 
+	t.Parallel()
+
 	checker, err := sema.NewChecker(nil, utils.TestLocation)
 	require.NoError(t, err)
 
@@ -103,6 +105,8 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 }
 
 func TestInterpreterBoxing(t *testing.T) {
+
+	t.Parallel()
 
 	checker, err := sema.NewChecker(nil, utils.TestLocation)
 	require.NoError(t, err)

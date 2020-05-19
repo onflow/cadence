@@ -30,6 +30,8 @@ import (
 
 func TestCheckReferenceInFunction(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           test
@@ -41,6 +43,8 @@ func TestCheckReferenceInFunction(t *testing.T) {
 
 func TestCheckParameterNameWithFunctionName(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(test: Int) {
           test
@@ -51,6 +55,8 @@ func TestCheckParameterNameWithFunctionName(t *testing.T) {
 }
 
 func TestCheckMutuallyRecursiveFunctions(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun isEven(_ n: Int): Bool {
@@ -73,6 +79,8 @@ func TestCheckMutuallyRecursiveFunctions(t *testing.T) {
 
 func TestCheckMutuallyRecursiveScoping(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun f(): Int {
          return g()
@@ -91,6 +99,8 @@ func TestCheckMutuallyRecursiveScoping(t *testing.T) {
 
 func TestCheckInvalidFunctionDeclarations(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           fun foo() {}
@@ -105,6 +115,8 @@ func TestCheckInvalidFunctionDeclarations(t *testing.T) {
 
 func TestCheckInvalidFunctionRedeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun foo() {
           fun foo() {}
@@ -118,6 +130,8 @@ func TestCheckInvalidFunctionRedeclaration(t *testing.T) {
 
 func TestCheckFunctionAccess(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
        pub fun test() {}
     `)
@@ -127,6 +141,8 @@ func TestCheckFunctionAccess(t *testing.T) {
 
 func TestCheckInvalidFunctionAccess(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
        pub(set) fun test() {}
     `)
@@ -135,6 +151,8 @@ func TestCheckInvalidFunctionAccess(t *testing.T) {
 }
 
 func TestCheckReturnWithoutExpression(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
        fun returnNothing() {
@@ -147,6 +165,8 @@ func TestCheckReturnWithoutExpression(t *testing.T) {
 
 func TestCheckAnyReturnType(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun foo(): AnyStruct {
           return foo
@@ -157,6 +177,8 @@ func TestCheckAnyReturnType(t *testing.T) {
 }
 
 func TestCheckInvalidParameterTypes(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(x: X, y: Y) {}
@@ -172,6 +194,8 @@ func TestCheckInvalidParameterTypes(t *testing.T) {
 
 func TestCheckInvalidParameterNameRedeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(a: Int, a: Int) {}
     `)
@@ -183,6 +207,8 @@ func TestCheckInvalidParameterNameRedeclaration(t *testing.T) {
 
 func TestCheckParameterRedeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(a: Int) {
           let a = 1
@@ -193,6 +219,8 @@ func TestCheckParameterRedeclaration(t *testing.T) {
 }
 
 func TestCheckInvalidParameterAssignment(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(a: Int) {
@@ -207,6 +235,8 @@ func TestCheckInvalidParameterAssignment(t *testing.T) {
 
 func TestCheckInvalidArgumentLabelRedeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(x a: Int, x b: Int) {}
     `)
@@ -218,6 +248,8 @@ func TestCheckInvalidArgumentLabelRedeclaration(t *testing.T) {
 
 func TestCheckArgumentLabelRedeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(_ a: Int, _ b: Int) {}
     `)
@@ -226,6 +258,8 @@ func TestCheckArgumentLabelRedeclaration(t *testing.T) {
 }
 
 func TestCheckInvalidFunctionDeclarationReturnValue(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(): Int {
@@ -239,6 +273,8 @@ func TestCheckInvalidFunctionDeclarationReturnValue(t *testing.T) {
 }
 
 func TestCheckInvalidResourceCapturingThroughVariable(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource Kitty {}
@@ -260,6 +296,8 @@ func TestCheckInvalidResourceCapturingThroughVariable(t *testing.T) {
 
 func TestCheckInvalidResourceCapturingThroughParameter(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       resource Kitty {}
 
@@ -278,6 +316,8 @@ func TestCheckInvalidResourceCapturingThroughParameter(t *testing.T) {
 }
 
 func TestCheckInvalidSelfResourceCapturing(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource Kitty {
@@ -299,6 +339,9 @@ func TestCheckInvalidSelfResourceCapturing(t *testing.T) {
 }
 
 func TestCheckInvalidResourceCapturingJustMemberAccess(t *testing.T) {
+
+	t.Parallel()
+
 	// Resource capturing even just for read access (e.g. reading a member) is invalid
 
 	_, err := ParseAndCheck(t, `

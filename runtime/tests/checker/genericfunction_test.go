@@ -52,6 +52,8 @@ func parseAndCheckWithTestValue(t *testing.T, code string, ty sema.Type) (*sema.
 
 func TestCheckGenericFunction(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("valid: no type parameters, no type arguments, no parameters, no arguments, no return type", func(t *testing.T) {
 
 		for _, variant := range []string{"", "<>"} {
@@ -826,6 +828,8 @@ func TestCheckGenericFunction(t *testing.T) {
 
 // https://github.com/dapperlabs/flow-go/issues/3275
 func TestCheckGenericFunctionIsInvalid(t *testing.T) {
+
+	t.Parallel()
 
 	typeParameter := &sema.TypeParameter{
 		Name:      "T",

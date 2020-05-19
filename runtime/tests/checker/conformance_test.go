@@ -30,6 +30,8 @@ import (
 
 func TestCheckInvalidEventTypeRequirementConformance(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       pub contract interface CI {
 
@@ -48,6 +50,8 @@ func TestCheckInvalidEventTypeRequirementConformance(t *testing.T) {
 }
 
 func TestCheckTypeRequirementConformance(t *testing.T) {
+
+	t.Parallel()
 
 	type test struct {
 		name            string

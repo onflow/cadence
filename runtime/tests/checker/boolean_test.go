@@ -30,6 +30,8 @@ import (
 
 func TestCheckBoolean(t *testing.T) {
 
+	t.Parallel()
+
 	checker, err := ParseAndCheck(t, `
         let x = true
     `)

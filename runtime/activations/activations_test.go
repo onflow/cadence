@@ -25,6 +25,9 @@ import (
 )
 
 func TestActivations(t *testing.T) {
+
+	t.Parallel()
+
 	activations := &Activations{}
 
 	activations.Set("a", 1)

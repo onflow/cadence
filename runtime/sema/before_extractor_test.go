@@ -30,6 +30,8 @@ import (
 
 func TestBeforeExtractor(t *testing.T) {
 
+	t.Parallel()
+
 	expression, inputIsComplete, err := parser.ParseExpression(`
         before(x + before(y)) + z
     `)

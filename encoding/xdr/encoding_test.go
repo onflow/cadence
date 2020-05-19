@@ -38,10 +38,16 @@ type encodeTest struct {
 }
 
 func TestEncodeVoid(t *testing.T) {
+
+	t.Parallel()
+
 	testEncode(t, cadence.VoidType{}, cadence.Void{})
 }
 
 func TestEncodeString(t *testing.T) {
+
+	t.Parallel()
+
 	testAllEncode(t, []encodeTest{
 		{
 			"Empty",
@@ -57,6 +63,9 @@ func TestEncodeString(t *testing.T) {
 }
 
 func TestEncodeOptional(t *testing.T) {
+
+	t.Parallel()
+
 	testAllEncode(t, []encodeTest{
 		{
 			"Nil",
@@ -72,6 +81,9 @@ func TestEncodeOptional(t *testing.T) {
 }
 
 func TestEncodeBool(t *testing.T) {
+
+	t.Parallel()
+
 	testAllEncode(t, []encodeTest{
 		{
 			"True",
@@ -87,6 +99,9 @@ func TestEncodeBool(t *testing.T) {
 }
 
 func TestEncodeBytes(t *testing.T) {
+
+	t.Parallel()
+
 	testAllEncode(t, []encodeTest{
 		{
 			"Empty",
@@ -102,10 +117,16 @@ func TestEncodeBytes(t *testing.T) {
 }
 
 func TestEncodeAddress(t *testing.T) {
+
+	t.Parallel()
+
 	testEncode(t, cadence.AddressType{}, cadence.NewAddress([common.AddressLength]byte{1, 2, 3, 4, 5}))
 }
 
 func TestEncodeInt(t *testing.T) {
+
+	t.Parallel()
+
 	x := new(big.Int).SetUint64(math.MaxUint64)
 	x = x.Mul(x, big.NewInt(2))
 
@@ -136,6 +157,9 @@ func TestEncodeInt(t *testing.T) {
 }
 
 func TestEncodeInt8(t *testing.T) {
+
+	t.Parallel()
+
 	testAllEncode(t, []encodeTest{
 		{
 			"Min",
@@ -156,6 +180,9 @@ func TestEncodeInt8(t *testing.T) {
 }
 
 func TestEncodeInt16(t *testing.T) {
+
+	t.Parallel()
+
 	testAllEncode(t, []encodeTest{
 		{
 			"Min",
@@ -176,6 +203,9 @@ func TestEncodeInt16(t *testing.T) {
 }
 
 func TestEncodeInt32(t *testing.T) {
+
+	t.Parallel()
+
 	testAllEncode(t, []encodeTest{
 		{
 			"Min",
@@ -196,6 +226,9 @@ func TestEncodeInt32(t *testing.T) {
 }
 
 func TestEncodeInt64(t *testing.T) {
+
+	t.Parallel()
+
 	testAllEncode(t, []encodeTest{
 		{
 			"Min",
@@ -216,6 +249,9 @@ func TestEncodeInt64(t *testing.T) {
 }
 
 func TestEncodeUInt8(t *testing.T) {
+
+	t.Parallel()
+
 	testAllEncode(t, []encodeTest{
 		{
 			"Zero",
@@ -231,6 +267,9 @@ func TestEncodeUInt8(t *testing.T) {
 }
 
 func TestEncodeUInt16(t *testing.T) {
+
+	t.Parallel()
+
 	testAllEncode(t, []encodeTest{
 		{
 			"Zero",
@@ -246,6 +285,9 @@ func TestEncodeUInt16(t *testing.T) {
 }
 
 func TestEncodeUInt32(t *testing.T) {
+
+	t.Parallel()
+
 	testAllEncode(t, []encodeTest{
 		{
 			"Zero",
@@ -261,6 +303,9 @@ func TestEncodeUInt32(t *testing.T) {
 }
 
 func TestEncodeUInt64(t *testing.T) {
+
+	t.Parallel()
+
 	testAllEncode(t, []encodeTest{
 		{
 			"Zero",
@@ -276,6 +321,9 @@ func TestEncodeUInt64(t *testing.T) {
 }
 
 func TestEncodeVariableSizedArray(t *testing.T) {
+
+	t.Parallel()
+
 	emptyArray := encodeTest{
 		"Empty",
 		cadence.VariableSizedArrayType{
@@ -325,6 +373,9 @@ func TestEncodeVariableSizedArray(t *testing.T) {
 }
 
 func TestEncodeConstantSizedArray(t *testing.T) {
+
+	t.Parallel()
+
 	testAllEncode(t, []encodeTest{
 		{
 			"Empty",
@@ -350,6 +401,9 @@ func TestEncodeConstantSizedArray(t *testing.T) {
 }
 
 func TestEncodeDictionary(t *testing.T) {
+
+	t.Parallel()
+
 	simpleDict := encodeTest{
 		"Simple",
 		cadence.DictionaryType{
@@ -451,6 +505,9 @@ func TestEncodeDictionary(t *testing.T) {
 }
 
 func TestEncodeResource(t *testing.T) {
+
+	t.Parallel()
+
 	simpleResource := encodeTest{
 		"Simple",
 		fooResourceType,
@@ -554,6 +611,9 @@ func TestEncodeResource(t *testing.T) {
 }
 
 func TestEncodeEvent(t *testing.T) {
+
+	t.Parallel()
+
 	simpleEventType := cadence.EventType{
 		Fields: []cadence.Field{
 			{

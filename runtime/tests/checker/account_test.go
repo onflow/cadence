@@ -56,6 +56,8 @@ func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
 
 func TestCheckAccount(t *testing.T) {
 
+	t.Parallel()
+
 	for _, domain := range common.AllPathDomainsByIdentifier {
 
 		// NOTE: all domains are statically valid at the moment

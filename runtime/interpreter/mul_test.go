@@ -26,6 +26,8 @@ import (
 
 func TestMulUInt8(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  UInt8Value
 		valid bool
@@ -169,6 +171,8 @@ func TestMulUInt8(t *testing.T) {
 }
 
 func TestMulUInt16(t *testing.T) {
+
+	t.Parallel()
 
 	tests := []struct {
 		a, b  UInt16Value
@@ -314,6 +318,8 @@ func TestMulUInt16(t *testing.T) {
 
 func TestMulUInt32(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  UInt32Value
 		valid bool
@@ -458,6 +464,8 @@ func TestMulUInt32(t *testing.T) {
 }
 
 func TestMulUInt64(t *testing.T) {
+
+	t.Parallel()
 
 	tests := []struct {
 		a, b  UInt64Value
@@ -614,6 +622,8 @@ func TestMulUInt64(t *testing.T) {
 
 func TestMulUInt128(t *testing.T) {
 
+	t.Parallel()
+
 	// NOTE: hex values are integer values, not bit patterns!
 
 	tests := []struct {
@@ -769,6 +779,8 @@ func TestMulUInt128(t *testing.T) {
 }
 
 func TestMulUInt256(t *testing.T) {
+
+	t.Parallel()
 
 	// NOTE: hex values are integer values, not bit patterns!
 
@@ -1436,6 +1448,8 @@ func TestMulUInt256(t *testing.T) {
 
 func TestMulInt8(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  Int8Value
 		valid bool
@@ -1613,6 +1627,8 @@ func TestMulInt8(t *testing.T) {
 }
 
 func TestMulInt16(t *testing.T) {
+
+	t.Parallel()
 
 	tests := []struct {
 		a, b  Int16Value
@@ -1799,6 +1815,8 @@ func TestMulInt16(t *testing.T) {
 
 func TestMulInt32(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  Int32Value
 		valid bool
@@ -1968,6 +1986,8 @@ func TestMulInt32(t *testing.T) {
 
 func TestMulInt64(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  Int64Value
 		valid bool
@@ -2123,6 +2143,8 @@ func TestMulInt64(t *testing.T) {
 
 func TestMulInt128(t *testing.T) {
 
+	t.Parallel()
+
 	// NOTE: hex values are integer values, not bit patterns!
 
 	tests := []struct {
@@ -2277,6 +2299,8 @@ func TestMulInt128(t *testing.T) {
 }
 
 func TestMulInt256(t *testing.T) {
+
+	t.Parallel()
 
 	// NOTE: hex values are integer values, not bit patterns!
 

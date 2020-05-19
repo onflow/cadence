@@ -32,6 +32,8 @@ import (
 
 func TestCheckCapability(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("type annotation", func(t *testing.T) {
 
 		checker, err := ParseAndCheckWithPanic(t, `

@@ -32,6 +32,8 @@ import (
 
 func TestCheckInvalidFieldInitializationEmptyInitializer(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       struct Test {
           var foo: Int
@@ -49,6 +51,8 @@ func TestCheckInvalidFieldInitializationEmptyInitializer(t *testing.T) {
 
 func TestCheckFieldInitializationFromArgument(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
        struct Test {
            var foo: Int
@@ -63,6 +67,8 @@ func TestCheckFieldInitializationFromArgument(t *testing.T) {
 }
 
 func TestCheckFieldInitializationWithFunctionCallAfterAllFieldsInitialized(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       struct Test {
@@ -81,6 +87,8 @@ func TestCheckFieldInitializationWithFunctionCallAfterAllFieldsInitialized(t *te
 }
 
 func TestCheckInvalidFieldInitializationWithFunctionCallBeforeAllFieldsInitialized(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       struct Test {
@@ -101,6 +109,8 @@ func TestCheckInvalidFieldInitializationWithFunctionCallBeforeAllFieldsInitializ
 }
 
 func TestCheckInvalidFieldInitializationWithUseBeforeAllFieldsInitialized(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       struct Test {
@@ -124,6 +134,8 @@ func TestCheckInvalidFieldInitializationWithUseBeforeAllFieldsInitialized(t *tes
 
 func TestCheckConstantFieldInitialization(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       struct Test {
           let foo: Int
@@ -138,6 +150,8 @@ func TestCheckConstantFieldInitialization(t *testing.T) {
 }
 
 func TestCheckInvalidRepeatedConstantFieldInitialization(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       struct Test {
@@ -156,6 +170,9 @@ func TestCheckInvalidRepeatedConstantFieldInitialization(t *testing.T) {
 }
 
 func TestCheckFieldInitializationInIfStatement(t *testing.T) {
+
+	t.Parallel()
+
 	t.Run("ValidIfStatement", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
@@ -197,6 +214,8 @@ func TestCheckFieldInitializationInIfStatement(t *testing.T) {
 
 func TestCheckFieldInitializationInWhileStatement(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
         struct Test {
             var foo: Int
@@ -215,6 +234,9 @@ func TestCheckFieldInitializationInWhileStatement(t *testing.T) {
 }
 
 func TestCheckFieldInitializationFromField(t *testing.T) {
+
+	t.Parallel()
+
 	t.Run("FromInitializedField", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
@@ -253,6 +275,9 @@ func TestCheckFieldInitializationFromField(t *testing.T) {
 }
 
 func TestCheckFieldInitializationUsages(t *testing.T) {
+
+	t.Parallel()
+
 	t.Run("InitializedUsage", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
@@ -383,6 +408,8 @@ func TestCheckFieldInitializationUsages(t *testing.T) {
 
 func TestCheckFieldInitializationWithReturn(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("Direct", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
@@ -445,6 +472,8 @@ func TestCheckFieldInitializationWithReturn(t *testing.T) {
 
 func TestCheckFieldInitializationWithPotentialNeverCallInElse(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheckWithPanic(
 		t,
 		`
@@ -467,6 +496,8 @@ func TestCheckFieldInitializationWithPotentialNeverCallInElse(t *testing.T) {
 
 func TestCheckFieldInitializationWithPotentialNeverCallInNilCoalescing(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheckWithPanic(t,
 		`
           struct Test {
@@ -483,6 +514,8 @@ func TestCheckFieldInitializationWithPotentialNeverCallInNilCoalescing(t *testin
 }
 
 func TestCheckInvalidFieldInitializationWithUseOfUninitializedInPrecondition(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       struct Test {

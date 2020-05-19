@@ -33,6 +33,8 @@ import (
 
 func TestCheckConstantAndVariableDeclarations(t *testing.T) {
 
+	t.Parallel()
+
 	checker, err := ParseAndCheck(t, `
         let x = 1
         var y = 1
@@ -53,6 +55,8 @@ func TestCheckConstantAndVariableDeclarations(t *testing.T) {
 
 func TestCheckInvalidGlobalConstantRedeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
         fun x() {}
 
@@ -66,6 +70,8 @@ func TestCheckInvalidGlobalConstantRedeclaration(t *testing.T) {
 }
 
 func TestCheckInvalidGlobalFunctionRedeclaration(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
         let x = true
@@ -81,6 +87,8 @@ func TestCheckInvalidGlobalFunctionRedeclaration(t *testing.T) {
 
 func TestCheckInvalidLocalRedeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
         fun test() {
             let x = true
@@ -94,6 +102,8 @@ func TestCheckInvalidLocalRedeclaration(t *testing.T) {
 }
 
 func TestCheckInvalidLocalFunctionRedeclaration(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
         fun test() {
@@ -111,6 +121,8 @@ func TestCheckInvalidLocalFunctionRedeclaration(t *testing.T) {
 
 func TestCheckInvalidUnknownDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
        fun test() {
            return x
@@ -125,6 +137,8 @@ func TestCheckInvalidUnknownDeclaration(t *testing.T) {
 
 func TestCheckInvalidUnknownDeclarationInGlobal(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
        let x = y
     `)
@@ -135,6 +149,8 @@ func TestCheckInvalidUnknownDeclarationInGlobal(t *testing.T) {
 }
 
 func TestCheckInvalidUnknownDeclarationInGlobalAndUnknownType(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
        let x: X = y
@@ -165,6 +181,8 @@ func TestCheckInvalidUnknownDeclarationInGlobalAndUnknownType(t *testing.T) {
 
 func TestCheckInvalidUnknownDeclarationCallInGlobal(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
        let x = y()
     `)
@@ -175,6 +193,8 @@ func TestCheckInvalidUnknownDeclarationCallInGlobal(t *testing.T) {
 }
 
 func TestCheckInvalidRedeclarations(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(a: Int, a: Int) {
@@ -191,6 +211,8 @@ func TestCheckInvalidRedeclarations(t *testing.T) {
 
 func TestCheckInvalidConstantValue(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let x: Bool = 1
     `)
@@ -201,6 +223,8 @@ func TestCheckInvalidConstantValue(t *testing.T) {
 }
 
 func TestCheckInvalidUse(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -215,6 +239,8 @@ func TestCheckInvalidUse(t *testing.T) {
 
 func TestCheckInvalidVariableDeclarationSecondValueNotDeclared(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
        var y = 2
        let z = y = x
@@ -228,6 +254,8 @@ func TestCheckInvalidVariableDeclarationSecondValueNotDeclared(t *testing.T) {
 
 func TestCheckInvalidVariableDeclarationSecondValueCopyTransfers(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
        var x = 1
        var y = 2
@@ -240,6 +268,8 @@ func TestCheckInvalidVariableDeclarationSecondValueCopyTransfers(t *testing.T) {
 }
 
 func TestCheckInvalidVariableDeclarationSecondValueNotTarget(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       resource X {}
@@ -256,6 +286,8 @@ func TestCheckInvalidVariableDeclarationSecondValueNotTarget(t *testing.T) {
 
 func TestCheckInvalidVariableDeclarationSecondValueCopyTransferSecond(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
      resource R {}
 
@@ -270,6 +302,8 @@ func TestCheckInvalidVariableDeclarationSecondValueCopyTransferSecond(t *testing
 }
 
 func TestCheckInvalidVariableDeclarationSecondValueCopyTransferFirst(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
      resource R {}
@@ -286,6 +320,8 @@ func TestCheckInvalidVariableDeclarationSecondValueCopyTransferFirst(t *testing.
 
 func TestCheckInvalidVariableDeclarationSecondValueConstant(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
      resource R {}
 
@@ -300,6 +336,8 @@ func TestCheckInvalidVariableDeclarationSecondValueConstant(t *testing.T) {
 }
 
 func TestCheckInvalidVariableDeclarationSecondValueTypeMismatch(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
      resource X {}
@@ -317,6 +355,8 @@ func TestCheckInvalidVariableDeclarationSecondValueTypeMismatch(t *testing.T) {
 
 func TestCheckInvalidVariableDeclarationSecondValueUseAfterInvalidation(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
      resource R {}
 
@@ -333,6 +373,8 @@ func TestCheckInvalidVariableDeclarationSecondValueUseAfterInvalidation(t *testi
 }
 
 func TestCheckVariableDeclarationSecondValue(t *testing.T) {
+
+	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
      resource R {}
@@ -368,6 +410,8 @@ func TestCheckVariableDeclarationSecondValue(t *testing.T) {
 }
 
 func TestCheckVariableDeclarationSecondValueDictionary(t *testing.T) {
+
+	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
      resource R {}
@@ -406,6 +450,8 @@ func TestCheckVariableDeclarationSecondValueDictionary(t *testing.T) {
 
 func TestCheckVariableDeclarationSecondValueNil(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
      resource R {}
 
@@ -421,6 +467,8 @@ func TestCheckVariableDeclarationSecondValueNil(t *testing.T) {
 }
 
 func TestCheckTopLevelContractRestriction(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheckWithOptions(t,
 		`
@@ -444,6 +492,8 @@ func TestCheckTopLevelContractRestriction(t *testing.T) {
 }
 
 func TestCheckInvalidTopLevelContractRestriction(t *testing.T) {
+
+	t.Parallel()
 
 	tests := map[string]string{
 		"resource":           `resource Test {}`,
@@ -484,6 +534,8 @@ func TestCheckInvalidTopLevelContractRestriction(t *testing.T) {
 }
 
 func TestCheckInvalidLocalDeclarations(t *testing.T) {
+
+	t.Parallel()
 
 	tests := map[string]string{
 		"transaction": `transaction { execute {} }`,
