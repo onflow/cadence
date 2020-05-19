@@ -34,6 +34,9 @@ func TestParseNominalType(t *testing.T) {
 	t.Parallel()
 
 	t.Run("simple", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseType("Int")
 		require.Empty(t, errs)
 
@@ -49,6 +52,9 @@ func TestParseNominalType(t *testing.T) {
 	})
 
 	t.Run("nested", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseType("Foo.Bar")
 		require.Empty(t, errs)
 
@@ -75,6 +81,9 @@ func TestParseArrayType(t *testing.T) {
 	t.Parallel()
 
 	t.Run("variable", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseType("[Int]")
 		require.Empty(t, errs)
 
@@ -96,6 +105,9 @@ func TestParseArrayType(t *testing.T) {
 	})
 
 	t.Run("constant", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseType("[Int ; 2 ]")
 		require.Empty(t, errs)
 
@@ -131,6 +143,9 @@ func TestParseOptionalType(t *testing.T) {
 	t.Parallel()
 
 	t.Run("nominal", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseType("Int?")
 		require.Empty(t, errs)
 
@@ -149,6 +164,9 @@ func TestParseOptionalType(t *testing.T) {
 	})
 
 	t.Run("double", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseType("Int??")
 		require.Empty(t, errs)
 
@@ -170,6 +188,9 @@ func TestParseOptionalType(t *testing.T) {
 	})
 
 	t.Run("triple", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseType("Int???")
 		require.Empty(t, errs)
 
@@ -199,6 +220,9 @@ func TestParseReferenceType(t *testing.T) {
 	t.Parallel()
 
 	t.Run("unauthorized, nominal", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseType("&Int")
 		require.Empty(t, errs)
 
@@ -218,6 +242,9 @@ func TestParseReferenceType(t *testing.T) {
 	})
 
 	t.Run("authorized, nominal", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseType("auth &Int")
 		require.Empty(t, errs)
 
@@ -242,6 +269,9 @@ func TestParseOptionalReferenceType(t *testing.T) {
 	t.Parallel()
 
 	t.Run("unauthorized", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseType("&Int?")
 		require.Empty(t, errs)
 
@@ -269,6 +299,9 @@ func TestParseRestrictedType(t *testing.T) {
 	t.Parallel()
 
 	t.Run("with restricted type, no restrictions", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseType("T{}")
 		require.Empty(t, errs)
 
@@ -291,6 +324,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("with restricted type, one restriction", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseType("T{U}")
 		require.Empty(t, errs)
 
@@ -320,6 +356,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("with restricted type, two restrictions", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseType("T{ U , V }")
 		require.Empty(t, errs)
 
@@ -355,6 +394,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("without restricted type, no restrictions", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseType("{}")
 		require.Empty(t, errs)
 
@@ -370,6 +412,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("without restricted type, one restriction", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseType("{ T }")
 		require.Empty(t, errs)
 
@@ -393,6 +438,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("invalid: without restricted type, missing type after comma", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("{ T , }")
 		require.Equal(t,
 			[]error{
@@ -403,6 +451,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("invalid: without restricted type, type without comma", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("{ T U }")
 		require.Equal(t,
 			[]error{
@@ -413,6 +464,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("invalid: without restricted type, colon", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("{ T , U : V }")
 		require.Equal(t,
 			[]error{
@@ -423,6 +477,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("invalid: with restricted type, colon", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("T{ T , U : V }")
 		require.Equal(t,
 			[]error{
@@ -433,6 +490,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("invalid: without restricted type, first is non-nominal", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("{[T]}")
 		require.Equal(t,
 			[]error{
@@ -443,6 +503,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("invalid: with restricted type, first is non-nominal", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("T{[U]}")
 		require.Equal(t,
 			[]error{
@@ -453,6 +516,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("invalid: without restricted type, second is non-nominal", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("{T, [U]}")
 		require.Equal(t,
 			[]error{
@@ -463,6 +529,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("invalid: with restricted type, second is non-nominal", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("T{U, [V]}")
 		require.Equal(t,
 			[]error{
@@ -473,6 +542,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("invalid: without restricted type, missing end", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("{")
 		require.Equal(t,
 			[]error{
@@ -483,6 +555,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("invalid: with restricted type, missing end", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("T{")
 		require.Equal(t,
 			[]error{
@@ -493,6 +568,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("invalid: without restricted type, missing end after type", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("{U")
 		require.Equal(t,
 			[]error{
@@ -503,6 +581,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("invalid: with restricted type, missing end after type", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("T{U")
 		require.Equal(t,
 			[]error{
@@ -513,6 +594,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("invalid: without restricted type, missing end after comma", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("{U,")
 		require.Equal(t,
 			[]error{
@@ -523,6 +607,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("invalid: with restricted type, missing end after comma", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("T{U,")
 		require.Equal(t,
 			[]error{
@@ -533,6 +620,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("invalid: without restricted type, just comma", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("{,}")
 		require.Equal(t,
 			[]error{
@@ -543,6 +633,9 @@ func TestParseRestrictedType(t *testing.T) {
 	})
 
 	t.Run("invalid: with restricted type, just comma", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("T{,}")
 		require.Equal(t,
 			[]error{
@@ -558,6 +651,9 @@ func TestParseDictionaryType(t *testing.T) {
 	t.Parallel()
 
 	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseType("{T: U}")
 		require.Empty(t, errs)
 
@@ -585,6 +681,9 @@ func TestParseDictionaryType(t *testing.T) {
 	})
 
 	t.Run("invalid, missing value type", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("{T:}")
 		require.Equal(t,
 			[]error{
@@ -595,6 +694,9 @@ func TestParseDictionaryType(t *testing.T) {
 	})
 
 	t.Run("invalid, missing key and value type", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("{:}")
 		require.Equal(t,
 			[]error{
@@ -605,6 +707,9 @@ func TestParseDictionaryType(t *testing.T) {
 	})
 
 	t.Run("invalid, missing key type", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("{:U}")
 		require.Equal(t,
 			[]error{
@@ -615,6 +720,9 @@ func TestParseDictionaryType(t *testing.T) {
 	})
 
 	t.Run("invalid, unexpected comma after value type", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("{T:U,}")
 		require.Equal(t,
 			[]error{
@@ -625,6 +733,9 @@ func TestParseDictionaryType(t *testing.T) {
 	})
 
 	t.Run("invalid, unexpected colon after value type", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("{T:U:}")
 		require.Equal(t,
 			[]error{
@@ -635,6 +746,9 @@ func TestParseDictionaryType(t *testing.T) {
 	})
 
 	t.Run("invalid, unexpected colon after colon", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("{T::U}")
 		require.Equal(t,
 			[]error{
@@ -645,6 +759,9 @@ func TestParseDictionaryType(t *testing.T) {
 	})
 
 	t.Run("invalid, missing value type after colon", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("{T:")
 		require.Equal(t,
 			[]error{
@@ -655,6 +772,9 @@ func TestParseDictionaryType(t *testing.T) {
 	})
 
 	t.Run("invalid, missing end after key type  and value type", func(t *testing.T) {
+
+		t.Parallel()
+
 		_, errs := ParseType("{T:U")
 		require.Equal(t,
 			[]error{
@@ -671,6 +791,9 @@ func TestParseFunctionType(t *testing.T) {
 	t.Parallel()
 
 	t.Run("no parameters, Void return type", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseType("(():Void)")
 		require.Empty(t, errs)
 
@@ -697,6 +820,9 @@ func TestParseFunctionType(t *testing.T) {
 	})
 
 	t.Run("three parameters, Int return type", func(t *testing.T) {
+
+		t.Parallel()
+
 		result, errs := ParseType("( ( String , Bool , @R ) : Int)")
 		require.Empty(t, errs)
 
