@@ -267,9 +267,13 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 	var deferred map[string]string
 	var deferredOwner *common.Address
 
+	// Are the values in the dictionary deferred, i.e. are they encoded
+	// separately and stored in separate storage keys?
+
 	isDeferred := countMismatch && entryCount == 0
 
 	if isDeferred {
+
 		deferred = make(map[string]string, keyCount)
 		entries = map[string]Value{}
 		deferredOwner = d.owner

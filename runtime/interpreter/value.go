@@ -5021,12 +5021,24 @@ func (v *CompositeValue) GetField(name string) Value {
 // DictionaryValue
 
 type DictionaryValue struct {
-	Keys             *ArrayValue
-	Entries          map[string]Value
-	Owner            *common.Address
-	modified         bool
-	DeferredOwner    *common.Address
-	DeferredKeys     map[string]string
+	Keys     *ArrayValue
+	Entries  map[string]Value
+	Owner    *common.Address
+	modified bool
+	// Deferral of values:
+	//
+	// Values in the dictionary might be deferred, i.e. are they encoded
+	// separately and stored in separate storage keys.
+	//
+	// DeferredOwner is the account in which the deferred values are stored.
+	// The account might differ from the owner: If the dictionary is moved
+	// from one account to another, its owner changes, but its deferred values
+	// stay stored in the deferred owner's account until the end of the transaction.
+	DeferredOwner *common.Address
+	// DeferredKeys are the keys which are deferred and have not been loaded from storage yet.
+	DeferredKeys map[string]string
+	// prevDeferredKeys are the keys which are deferred and have been loaded from storage,
+	// i.e. they are keys that were previously in DeferredKeys.
 	prevDeferredKeys map[string]string
 }
 
@@ -5172,6 +5184,9 @@ func (v *DictionaryValue) Get(inter *Interpreter, _ LocationRange, keyValue Valu
 		return NewSomeValueOwningNonCopying(value)
 	}
 
+	// Is the key a deferred value? If so, load it from storage
+	// and keep it as an entry in memory
+
 	if v.DeferredKeys != nil {
 		storageKey, ok := v.DeferredKeys[key]
 		if ok {
@@ -5188,8 +5203,6 @@ func (v *DictionaryValue) Get(inter *Interpreter, _ LocationRange, keyValue Valu
 			// as this would result in a loss of the value:
 			// the read value is not modified,
 			// so it won't be written back
-
-			// TODO: remove from cache!!!
 
 			return storedValue
 		}
@@ -5325,6 +5338,10 @@ func (v *DictionaryValue) Remove(inter *Interpreter, keyValue Value) (existingVa
 
 	key := dictionaryKey(keyValue)
 	existingValue, exists := v.Entries[key]
+
+	// If a resource that was previously deferred is removed from the dictionary,
+	// we delete its old key in storage, and then rely on resource semantics
+	// to make sure it is stored or destroyed later
 
 	if v.prevDeferredKeys != nil {
 		if storageKey, ok := v.prevDeferredKeys[key]; ok {
