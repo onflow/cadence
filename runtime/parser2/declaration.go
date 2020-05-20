@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
@@ -49,45 +50,152 @@ func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []
 }
 
 func parseDeclaration(p *parser) ast.Declaration {
-	p.skipSpaceAndComments(true)
 
-	switch p.current.Type {
-	case lexer.TokenIdentifier:
-		switch p.current.Value {
-		case keywordLet, keywordVar:
-			return parseVariableDeclaration(p)
-		case keywordFun:
-			return parseFunctionDeclaration(p)
+	access := ast.AccessNotSpecified
+	var accessPos *ast.Position
+
+	for {
+		p.skipSpaceAndComments(true)
+
+		switch p.current.Type {
+		case lexer.TokenIdentifier:
+			switch p.current.Value {
+			case keywordLet, keywordVar:
+				return parseVariableDeclaration(p, access, accessPos)
+
+			case keywordFun:
+				return parseFunctionDeclaration(p, access, accessPos)
+
+			case keywordPriv, keywordPub, keywordAccess:
+				if access != ast.AccessNotSpecified {
+					panic(fmt.Errorf("unexpected access modifier"))
+				}
+				pos := p.current.StartPos
+				accessPos = &pos
+				access = parseAccess(p)
+				continue
+
+			}
 		}
-	}
 
-	return nil
+		return nil
+	}
 }
 
-func parseVariableDeclaration(p *parser) *ast.VariableDeclaration {
+// parseAccess parses an access modifier
+//
+//    access
+//        : 'priv'
+//        | 'pub' ( '(' 'set' ')' )?
+//        | 'access' '(' ( 'self' | 'contract' | 'account' | 'all' ) ')'
+//        ;
+//
+func parseAccess(p *parser) ast.Access {
 
-	// TODO: access
+	switch p.current.Value {
+	case keywordPriv:
+		p.next()
+		return ast.AccessPrivate
+
+	case keywordPub:
+		p.next()
+		p.skipSpaceAndComments(true)
+		if !p.current.Is(lexer.TokenParenOpen) {
+			return ast.AccessPublic
+		}
+
+		p.next()
+		p.skipSpaceAndComments(true)
+
+		if !p.current.Is(lexer.TokenIdentifier) {
+			panic(fmt.Errorf(
+				"expected keyword %q, got %s",
+				keywordSet,
+				p.current.Type,
+			))
+		}
+		if p.current.Value != keywordSet {
+			panic(fmt.Errorf(
+				"expected keyword %q, got %q",
+				keywordSet,
+				p.current.Value,
+			))
+		}
+
+		p.next()
+		p.skipSpaceAndComments(true)
+
+		p.mustOne(lexer.TokenParenClose)
+
+		return ast.AccessPublicSettable
+
+	case keywordAccess:
+		p.next()
+		p.skipSpaceAndComments(true)
+
+		p.mustOne(lexer.TokenParenOpen)
+
+		p.skipSpaceAndComments(true)
+
+		if !p.current.Is(lexer.TokenIdentifier) {
+			panic(fmt.Errorf(
+				"expected keyword %q, %q, %q, or %q, got %s",
+				keywordAll,
+				keywordAccount,
+				keywordContract,
+				keywordSelf,
+				p.current.Type,
+			))
+		}
+
+		var access ast.Access
+
+		switch p.current.Value {
+		case keywordAll:
+			access = ast.AccessPublic
+
+		case keywordAccount:
+			access = ast.AccessAccount
+
+		case keywordContract:
+			access = ast.AccessContract
+
+		case keywordSelf:
+			access = ast.AccessPrivate
+
+		default:
+			panic(fmt.Errorf(
+				"expected keyword %q, %q, %q, or %q, got %q",
+				keywordAll,
+				keywordAccount,
+				keywordContract,
+				keywordSelf,
+				p.current.Value,
+			))
+		}
+
+		p.next()
+		p.skipSpaceAndComments(true)
+
+		p.mustOne(lexer.TokenParenClose)
+
+		return access
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func parseVariableDeclaration(p *parser, access ast.Access, accessPos *ast.Position) *ast.VariableDeclaration {
 
 	startPos := p.current.StartPos
+	if accessPos != nil {
+		startPos = *accessPos
+	}
 
 	isLet := p.current.Value == keywordLet
 
-	if !p.current.Is(lexer.TokenIdentifier) {
-		panic(fmt.Errorf(
-			"expected kind kind of variable, %q or %q, got %s",
-			keywordLet,
-			keywordVar,
-			p.current.Type,
-		))
-	} else if !(isLet || p.current.Value == keywordVar) {
-		panic(fmt.Errorf(
-			"expected kind kind of variable, %q or %q, got %q",
-			keywordLet,
-			keywordVar,
-			p.current.Value,
-		))
-	}
-
+	// skip `let` or `var` keyword
 	p.next()
 
 	p.skipSpaceAndComments(true)
@@ -128,7 +236,7 @@ func parseVariableDeclaration(p *parser) *ast.VariableDeclaration {
 	// TODO: second transfer and value
 
 	return &ast.VariableDeclaration{
-		// TODO: Access
+		Access:         access,
 		IsConstant:     isLet,
 		Identifier:     identifier,
 		TypeAnnotation: typeAnnotation,

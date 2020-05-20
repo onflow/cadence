@@ -44,6 +44,14 @@ const keywordFor = "for"
 const keywordIn = "in"
 const keywordEmit = "emit"
 const keywordAuth = "auth"
+const keywordPriv = "priv"
+const keywordPub = "pub"
+const keywordAccess = "access"
+const keywordSet = "set"
+const keywordAll = "all"
+const keywordSelf = "self"
+const keywordContract = "contract"
+const keywordAccount = "account"
 
 const lowestBindingPower = 0
 
@@ -194,6 +202,19 @@ func ParseType(input string) (ty ast.Type, errors []error) {
 		return
 	}
 	ty = res.(ast.Type)
+	return
+}
+
+func ParseDeclarations(input string) (declarations []ast.Declaration, errors []error) {
+	var res interface{}
+	res, errors = Parse(input, func(p *parser) interface{} {
+		return parseDeclarations(p, lexer.TokenEOF)
+	})
+	if res == nil {
+		declarations = nil
+		return
+	}
+	declarations = res.([]ast.Declaration)
 	return
 }
 

@@ -157,20 +157,14 @@ func parseParameter(p *parser) *ast.Parameter {
 	}
 }
 
-func parseFunctionDeclaration(p *parser) *ast.FunctionDeclaration {
-
-	// TODO: access
+func parseFunctionDeclaration(p *parser, access ast.Access, accessPos *ast.Position) *ast.FunctionDeclaration {
 
 	startPos := p.current.StartPos
-
-	if !p.current.IsString(lexer.TokenIdentifier, keywordFun) {
-		panic(fmt.Errorf(
-			"expected function keyword %q, got %q",
-			keywordFun,
-			p.current.Type,
-		))
+	if accessPos != nil {
+		startPos = *accessPos
 	}
 
+	// skip `fun` keyword
 	p.next()
 
 	p.skipSpaceAndComments(true)
@@ -191,7 +185,7 @@ func parseFunctionDeclaration(p *parser) *ast.FunctionDeclaration {
 	parameterList, returnTypeAnnotation, functionBlock := parseFunctionParameterListAndRest(p)
 
 	return &ast.FunctionDeclaration{
-		// TODO: Access
+		Access:               access,
 		Identifier:           identifier,
 		ParameterList:        parameterList,
 		ReturnTypeAnnotation: returnTypeAnnotation,
