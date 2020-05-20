@@ -408,8 +408,9 @@ func (v *ArrayValue) Modified() bool {
 func (v *ArrayValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
 	var result trampoline.Trampoline = trampoline.Done{}
 	for _, value := range v.Values {
+		capturedValue := value
 		result = result.FlatMap(func(_ interface{}) trampoline.Trampoline {
-			return value.(DestroyableValue).Destroy(interpreter, locationRange)
+			return capturedValue.(DestroyableValue).Destroy(interpreter, locationRange)
 		})
 	}
 	return result
