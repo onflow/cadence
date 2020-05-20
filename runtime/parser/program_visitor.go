@@ -206,9 +206,12 @@ func (v *ProgramVisitor) VisitImportDeclaration(ctx *ImportDeclarationContext) i
 	}
 
 	allIdentifierNodes := ctx.AllIdentifier()
-	identifiers := make([]ast.Identifier, len(allIdentifierNodes))
-	for i, identifierNode := range allIdentifierNodes {
-		identifiers[i] = identifierNode.Accept(v).(ast.Identifier)
+	var identifiers []ast.Identifier
+	if len(allIdentifierNodes) > 0 {
+		identifiers = make([]ast.Identifier, len(allIdentifierNodes))
+		for i, identifierNode := range allIdentifierNodes {
+			identifiers[i] = identifierNode.Accept(v).(ast.Identifier)
+		}
 	}
 
 	return &ast.ImportDeclaration{

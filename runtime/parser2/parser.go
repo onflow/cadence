@@ -52,6 +52,8 @@ const keywordAll = "all"
 const keywordSelf = "self"
 const keywordContract = "contract"
 const keywordAccount = "account"
+const keywordImport = "import"
+const keywordFrom = "from"
 
 const lowestBindingPower = 0
 
