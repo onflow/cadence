@@ -8025,3 +8025,117 @@ func TestInterpretFailableCastingCompositeTypeConfusion(t *testing.T) {
 		inter.Globals["s"].Value,
 	)
 }
+
+func TestInterpretNestedDestroy(t *testing.T) {
+
+	var logs []string
+
+	logFunction := stdlib.NewStandardLibraryFunction(
+		"log",
+		&sema.FunctionType{
+			Parameters: []*sema.Parameter{
+				{
+					Label:          sema.ArgumentLabelNotRequired,
+					Identifier:     "value",
+					TypeAnnotation: sema.NewTypeAnnotation(&sema.AnyStructType{}),
+				},
+			},
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(
+				&sema.VoidType{},
+			),
+		},
+		func(invocation interpreter.Invocation) trampoline.Trampoline {
+			message := fmt.Sprintf("%v", invocation.Arguments[0])
+			logs = append(logs, message)
+			result := interpreter.VoidValue{}
+			return trampoline.Done{Result: result}
+		},
+		nil,
+	)
+
+	valueDeclarations :=
+		stdlib.StandardLibraryFunctions{
+			logFunction,
+		}.ToValueDeclarations()
+
+	values := stdlib.StandardLibraryFunctions{
+		logFunction,
+	}.ToValues()
+
+	inter := parseCheckAndInterpretWithOptions(t,
+		`
+          resource B {
+              let id: Int
+
+              init(_ id: Int){
+                  self.id = id
+              }
+
+              destroy(){
+                  log("destroying B with id:")
+                  log(self.id)
+              }
+          }
+
+          resource A {
+              let id: Int
+              let bs: @[B]
+
+              init(_ id: Int){
+                  self.id = id
+                  self.bs <- []
+              }
+
+              fun add(_ b: @B){
+                  self.bs.append(<-b)
+              }
+
+              destroy() {
+                  log("destroying A with id:")
+                  log(self.id)
+                  destroy self.bs
+              }
+          }
+
+          fun test() {
+              let a <- create A(1)
+              a.add(<- create B(2))
+              a.add(<- create B(3))
+              a.add(<- create B(4))
+
+              destroy a
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			Options: []interpreter.Option{
+				interpreter.WithPredefinedValues(values),
+			},
+			CheckerOptions: []sema.Option{
+				sema.WithPredeclaredValues(valueDeclarations),
+			},
+			HandleCheckerError: nil,
+		},
+	)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.VoidValue{},
+		value,
+	)
+
+	assert.Equal(t,
+		[]string{
+			`"destroying A with id:"`,
+			"1",
+			`"destroying B with id:"`,
+			"2",
+			`"destroying B with id:"`,
+			"3",
+			`"destroying B with id:"`,
+			"4",
+		},
+		logs,
+	)
+}
