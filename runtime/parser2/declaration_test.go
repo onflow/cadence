@@ -19,6 +19,7 @@
 package parser2
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -60,6 +61,41 @@ func TestParseVariableDeclaration(t *testing.T) {
 						Pos:       ast.Position{Line: 1, Column: 6, Offset: 6},
 					},
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("var, no type annotation, copy, one value, pub", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(" pub var x = 1")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.VariableDeclaration{
+					Access:     ast.AccessPublic,
+					IsConstant: false,
+					Identifier: ast.Identifier{
+						Identifier: "x",
+						Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
+					},
+					Value: &ast.IntegerExpression{
+						Value: big.NewInt(1),
+						Base:  10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
+							EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+						},
+					},
+					Transfer: &ast.Transfer{
+						Operation: ast.TransferOperationCopy,
+						Pos:       ast.Position{Line: 1, Column: 11, Offset: 11},
+					},
+					StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 				},
 			},
 			result,
@@ -421,6 +457,53 @@ func TestParseFunctionDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("without return type, pub", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations("pub fun foo () { }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Access: ast.AccessPublic,
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
+							EndPos:   ast.Position{Line: 1, Column: 13, Offset: 13},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "",
+								Pos:        ast.Position{Line: 1, Column: 13, Offset: 13},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 13, Offset: 13},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 15, Offset: 15},
+								EndPos:   ast.Position{Line: 1, Column: 17, Offset: 17},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
 	t.Run("with return type", func(t *testing.T) {
 
 		t.Parallel()
@@ -465,4 +548,218 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			result,
 		)
 	})
+}
+
+func TestParseAccess(t *testing.T) {
+
+	t.Parallel()
+
+	parse := func(input string) (interface{}, []error) {
+		return Parse(
+			input,
+			func(p *parser) interface{} {
+				return parseAccess(p)
+			},
+		)
+	}
+
+	t.Run("pub", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("pub")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessPublic,
+			result,
+		)
+	})
+
+	t.Run("pub(set)", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("pub ( set )")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessPublicSettable,
+			result,
+		)
+	})
+
+	t.Run("pub, missing set keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("pub ( ")
+		require.Equal(t,
+			[]error{
+				fmt.Errorf("expected keyword \"set\", got EOF"),
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			nil,
+			result,
+		)
+	})
+
+	t.Run("pub, missing closing paren", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("pub ( set ")
+		require.Equal(t,
+			[]error{
+				fmt.Errorf("expected token ')'"),
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			nil,
+			result,
+		)
+	})
+
+	t.Run("pub, invalid inner keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("pub ( foo )")
+		require.Equal(t,
+			[]error{
+				fmt.Errorf("expected keyword \"set\", got \"foo\""),
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			nil,
+			result,
+		)
+	})
+
+	t.Run("priv", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("priv")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessPrivate,
+			result,
+		)
+	})
+
+	t.Run("access(all)", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( all )")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessPublic,
+			result,
+		)
+	})
+
+	t.Run("access(account)", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( account )")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessAccount,
+			result,
+		)
+	})
+
+	t.Run("access(contract)", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( contract )")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessContract,
+			result,
+		)
+	})
+
+	t.Run("access(self)", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( self )")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			ast.AccessPrivate,
+			result,
+		)
+	})
+
+	t.Run("access, missing keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( ")
+		require.Equal(t,
+			[]error{
+				fmt.Errorf("expected keyword \"all\", \"account\", \"contract\", or \"self\", got EOF"),
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			nil,
+			result,
+		)
+	})
+
+	t.Run("access, missing closing paren", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( self ")
+		require.Equal(t,
+			[]error{
+				fmt.Errorf("expected token ')'"),
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			nil,
+			result,
+		)
+	})
+
+	t.Run("access, invalid inner keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("access ( foo )")
+		require.Equal(t,
+			[]error{
+				fmt.Errorf("expected keyword \"all\", \"account\", \"contract\", or \"self\", got \"foo\""),
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			nil,
+			result,
+		)
+	})
+
 }
