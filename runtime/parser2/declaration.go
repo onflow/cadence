@@ -19,7 +19,9 @@
 package parser2
 
 import (
+	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
@@ -66,6 +68,9 @@ func parseDeclaration(p *parser) ast.Declaration {
 			case keywordFun:
 				return parseFunctionDeclaration(p, access, accessPos)
 
+			case keywordImport:
+				return parseImportDeclaration(p)
+
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
 					panic(fmt.Errorf("unexpected access modifier"))
@@ -74,7 +79,6 @@ func parseDeclaration(p *parser) ast.Declaration {
 				accessPos = &pos
 				access = parseAccess(p)
 				continue
-
 			}
 		}
 
@@ -206,10 +210,7 @@ func parseVariableDeclaration(p *parser, access ast.Access, accessPos *ast.Posit
 		))
 	}
 
-	identifier := ast.Identifier{
-		Identifier: p.current.Value.(string),
-		Pos:        p.current.StartPos,
-	}
+	identifier := tokenToIdentifier(p.current)
 
 	p.next()
 	p.skipSpaceAndComments(true)
@@ -249,11 +250,14 @@ func parseVariableDeclaration(p *parser, access ast.Access, accessPos *ast.Posit
 
 func parseTransfer(p *parser) *ast.Transfer {
 	var operation ast.TransferOperation
+
 	switch p.current.Type {
 	case lexer.TokenEqual:
 		operation = ast.TransferOperationCopy
+
 	case lexer.TokenLeftArrow:
 		operation = ast.TransferOperationMove
+
 	case lexer.TokenLeftArrowExclamation:
 		operation = ast.TransferOperationMoveForced
 	}
@@ -270,4 +274,236 @@ func parseTransfer(p *parser) *ast.Transfer {
 		Operation: operation,
 		Pos:       pos,
 	}
+}
+
+// parseImportDeclaration parses an import declaration
+//
+//   importDeclaration :
+//       'import'
+//       ( identifier (',' identifier)* 'from' )?
+//       ( string | hexadecimalLiteral | identifier )
+//
+func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
+
+	startPosition := p.current.StartPos
+
+	var identifiers []ast.Identifier
+
+	var location ast.Location
+	var locationPos ast.Position
+	var endPos ast.Position
+
+	parseStringOrAddressLocation := func() {
+		locationPos = p.current.StartPos
+		endPos = p.current.EndPos
+
+		switch p.current.Type {
+		case lexer.TokenString:
+			parsedString, errs := parseStringLiteral(p.current.Value.(string))
+			p.report(errs...)
+			location = ast.StringLocation(parsedString)
+
+		case lexer.TokenHexadecimalLiteral:
+			location = parseHexadecimalLocation(p.current.Value.(string))
+
+		default:
+			panic(errors.NewUnreachableError())
+		}
+
+		p.next()
+	}
+
+	setIdentifierLocation := func(identifier ast.Identifier) {
+		// TODO: create IdentifierLocation once https://github.com/onflow/cadence/pull/55 is merged
+		//location = ast.IdentifierLocation(identifier.Identifier)
+		locationPos = identifier.Pos
+		endPos = identifier.EndPosition()
+	}
+
+	parseLocation := func() {
+		switch p.current.Type {
+		case lexer.TokenString, lexer.TokenHexadecimalLiteral:
+			parseStringOrAddressLocation()
+
+		// TODO: enable once https://github.com/onflow/cadence/pull/55 is merged
+		//case lexer.TokenIdentifier:
+		//	identifier := tokenToIdentifier(p.current)
+		//	setIdentifierLocation(identifier)
+		//  p.next()
+
+		default:
+			panic(fmt.Errorf(
+				"unexpected token in import declaration: got %s, expected string, address, or identifier",
+				p.current.Type,
+			))
+		}
+	}
+
+	parseMoreIdentifiers := func() {
+		expectCommaOrFrom := false
+
+		atEnd := false
+		for !atEnd {
+			p.next()
+			p.skipSpaceAndComments(true)
+
+			switch p.current.Type {
+			case lexer.TokenComma:
+				if !expectCommaOrFrom {
+					panic(fmt.Errorf(
+						"expected %s or keyword %q, got %s",
+						lexer.TokenIdentifier,
+						keywordFrom,
+						p.current.Type,
+					))
+				}
+				expectCommaOrFrom = false
+
+			case lexer.TokenIdentifier:
+
+				if p.current.Value == keywordFrom {
+
+					if !expectCommaOrFrom {
+						panic(fmt.Errorf(
+							"expected %s, got keyword %q",
+							lexer.TokenIdentifier,
+							p.current.Value,
+						))
+					}
+
+					atEnd = true
+
+					p.next()
+					p.skipSpaceAndComments(true)
+
+					parseLocation()
+				} else {
+					identifier := tokenToIdentifier(p.current)
+					identifiers = append(identifiers, identifier)
+
+					expectCommaOrFrom = true
+				}
+
+			case lexer.TokenEOF:
+				panic(fmt.Errorf(
+					"unexpected end in import declaration: expected %s or %s",
+					lexer.TokenIdentifier,
+					lexer.TokenComma,
+				))
+
+			default:
+				panic(fmt.Errorf(
+					"unexpected token in import declaration: got %s, expected keyword %q or %s",
+					p.current.Type,
+					keywordFrom,
+					lexer.TokenComma,
+				))
+			}
+		}
+	}
+
+	maybeParseFromIdentifier := func(identifier ast.Identifier) {
+		// The current identifier is maybe the `from` keyword,
+		// in which case the given (previous) identifier was
+		// an imported identifier and not the import location.
+		//
+		// If it is not the `from` keyword,
+		// the given (previous) identifier is the import location.
+
+		if p.current.Value == keywordFrom {
+			identifiers = append(identifiers, identifier)
+
+			p.next()
+			p.skipSpaceAndComments(true)
+
+			parseLocation()
+
+		} else {
+			// TODO: enable once https://github.com/onflow/cadence/pull/55 is merged
+			//setIdentifierLocation(identifier)
+
+			// TODO: remove once https://github.com/onflow/cadence/pull/55 is merged
+			panic(fmt.Errorf(
+				"unexpected identifier in import declaration: got %q, expected %q",
+				p.current.Value,
+				keywordFrom,
+			))
+		}
+	}
+
+	// Skip the `import` keyword
+	p.next()
+	p.skipSpaceAndComments(true)
+
+	switch p.current.Type {
+	case lexer.TokenString, lexer.TokenHexadecimalLiteral:
+		parseStringOrAddressLocation()
+
+	case lexer.TokenIdentifier:
+		identifier := tokenToIdentifier(p.current)
+
+		p.next()
+		p.skipSpaceAndComments(true)
+
+		switch p.current.Type {
+		case lexer.TokenComma:
+			// The previous identifier is an imported identifier,
+			// not the import location
+			identifiers = append(identifiers, identifier)
+			parseMoreIdentifiers()
+
+		case lexer.TokenIdentifier:
+			maybeParseFromIdentifier(identifier)
+
+		case lexer.TokenEOF:
+			// The previous identifier is the identifier location
+			setIdentifierLocation(identifier)
+
+		default:
+			panic(fmt.Errorf(
+				"unexpected token in import declaration: got %s, expected keyword %q or %s",
+				p.current.Type,
+				keywordFrom,
+				lexer.TokenComma,
+			))
+		}
+
+	case lexer.TokenEOF:
+		panic(fmt.Errorf("unexpected end in import declaration: expected string, address, or identifier"))
+
+	default:
+		panic(fmt.Errorf(
+			"unexpected token in import declaration: got %s, expected string, address, or identifier",
+			p.current.Type,
+		))
+	}
+
+	return &ast.ImportDeclaration{
+		Identifiers: identifiers,
+		Location:    location,
+		Range: ast.Range{
+			StartPos: startPosition,
+			EndPos:   endPos,
+		},
+		LocationPos: locationPos,
+	}
+}
+
+func parseHexadecimalLocation(literal string) ast.AddressLocation {
+	bytes := []byte(strings.Replace(literal[2:], "_", "", -1))
+
+	length := len(bytes)
+	if length%2 == 1 {
+		bytes = append([]byte{'0'}, bytes...)
+		length++
+	}
+
+	address := make([]byte, hex.DecodedLen(length))
+	_, err := hex.Decode(address, bytes)
+	if err != nil {
+		// unreachable, hex literal should always be valid
+		panic(err)
+	}
+
+	return address
 }

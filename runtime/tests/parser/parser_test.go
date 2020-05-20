@@ -257,7 +257,7 @@ func TestParseInvalidIncompleteConstantDeclaration2(t *testing.T) {
 	assert.Contains(t, syntaxError2.Message, "mismatched input")
 }
 
-func testParse(t *testing.T, code string, expected []Declaration) {
+func testParse(t *testing.T, code string, expected []Declaration, use func(actual *Program)) {
 
 	expectedProgram := &Program{
 		Declarations: expected,
@@ -269,6 +269,10 @@ func testParse(t *testing.T, code string, expected []Declaration) {
 		if expected != nil {
 			utils.AssertEqualWithDiff(t, expectedProgram, actual)
 		}
+
+		if use != nil {
+			use(actual)
+		}
 	})
 
 	t.Run("new", func(t *testing.T) {
@@ -276,6 +280,10 @@ func testParse(t *testing.T, code string, expected []Declaration) {
 		require.NoError(t, err)
 		if expected != nil {
 			utils.AssertEqualWithDiff(t, expectedProgram, actual)
+		}
+
+		if use != nil {
+			use(actual)
 		}
 	})
 }
@@ -312,6 +320,7 @@ func TestParseBoolExpression(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -346,6 +355,7 @@ func TestParseIdentifierExpression(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -397,6 +407,7 @@ func TestParseArrayExpression(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -466,6 +477,7 @@ func TestParseDictionaryExpression(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -527,6 +539,7 @@ func TestParseInvocationExpressionWithoutLabels(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -635,6 +648,7 @@ func TestParseMemberExpression(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -768,6 +782,7 @@ func TestParseUnaryExpression(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -812,6 +827,7 @@ func TestParseOrExpression(t *testing.T) {
 				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
+		nil,
 	)
 }
 
@@ -857,6 +873,7 @@ func TestParseAndExpression(t *testing.T) {
 				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
+		nil,
 	)
 }
 
@@ -901,6 +918,7 @@ func TestParseEqualityExpression(t *testing.T) {
 				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
+		nil,
 	)
 }
 
@@ -948,6 +966,7 @@ func TestParseRelationalExpression(t *testing.T) {
 				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
+		nil,
 	)
 }
 
@@ -995,6 +1014,7 @@ func TestParseAdditiveExpression(t *testing.T) {
 				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
+		nil,
 	)
 }
 
@@ -1042,6 +1062,7 @@ func TestParseMultiplicativeExpression(t *testing.T) {
 				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
+		nil,
 	)
 }
 
@@ -1113,6 +1134,7 @@ func TestParseFunctionExpressionAndReturn(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -1168,6 +1190,7 @@ func TestParseFunctionAndBlock(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -1238,6 +1261,7 @@ func TestParseFunctionParameterWithoutLabel(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -1308,6 +1332,7 @@ func TestParseFunctionParameterWithLabel(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -1454,6 +1479,7 @@ func TestParseIfStatement(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -1572,6 +1598,7 @@ func TestParseIfStatementWithVariableDeclaration(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -1650,6 +1677,7 @@ func TestParseIfStatementNoElse(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -1742,6 +1770,7 @@ func TestParseWhileStatement(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -1811,6 +1840,7 @@ func TestParseForStatement(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -1882,6 +1912,7 @@ func TestParseAssignment(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -3262,11 +3293,7 @@ func TestParseIntegerTypes(t *testing.T) {
 		StartPos: Position{Offset: 137, Line: 9, Column: 2},
 	}
 
-	testParse(
-		t,
-		code,
-		[]Declaration{a, b, c, d, e, f, g, h},
-	)
+	testParse(t, code, []Declaration{a, b, c, d, e, f, g, h}, nil)
 }
 
 func TestParseFunctionType(t *testing.T) {
@@ -3835,6 +3862,7 @@ func TestParseLeftAssociativity(t *testing.T) {
 				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
+		nil,
 	)
 }
 
@@ -3846,8 +3874,7 @@ func TestParseNegativeInteger(t *testing.T) {
       let a = -42
 	`
 
-	testParse(
-		t,
+	testParse(t,
 		code,
 		[]Declaration{
 			&VariableDeclaration{
@@ -3871,6 +3898,7 @@ func TestParseNegativeInteger(t *testing.T) {
 				StartPos: Position{Offset: 7, Line: 2, Column: 6},
 			},
 		},
+		nil,
 	)
 }
 
@@ -3909,6 +3937,7 @@ func TestParseNegativeFixedPoint(t *testing.T) {
 				StartPos: Position{Offset: 7, Line: 2, Column: 6},
 			},
 		},
+		nil,
 	)
 }
 
@@ -4054,6 +4083,7 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
+		nil,
 	)
 }
 
@@ -4740,6 +4770,7 @@ func TestParseOptionalType(t *testing.T) {
 				StartPos: Position{Offset: 8, Line: 2, Column: 7},
 			},
 		},
+		nil,
 	)
 }
 
@@ -4751,8 +4782,7 @@ func TestParseNilCoalescing(t *testing.T) {
        let x = nil ?? 1
 	`
 
-	testParse(
-		t,
+	testParse(t,
 		code,
 		[]Declaration{
 			&VariableDeclaration{
@@ -4782,6 +4812,7 @@ func TestParseNilCoalescing(t *testing.T) {
 				StartPos: Position{Offset: 8, Line: 2, Column: 7},
 			},
 		},
+		nil,
 	)
 }
 
@@ -4794,11 +4825,9 @@ func TestParseNilCoalescingRightAssociativity(t *testing.T) {
        let x = 1 ?? 2 ?? 3
 	`
 
-	testParse(
-		t,
+	testParse(t,
 		code,
 		[]Declaration{
-
 			&VariableDeclaration{
 				IsConstant: true,
 				Identifier: Identifier{
@@ -4842,6 +4871,7 @@ func TestParseNilCoalescingRightAssociativity(t *testing.T) {
 				StartPos: Position{Offset: 8, Line: 2, Column: 7},
 			},
 		},
+		nil,
 	)
 }
 
@@ -5044,44 +5074,44 @@ func TestParseImportWithString(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
         import "test.bpl"
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &ImportDeclaration{
-		Identifiers: []Identifier{},
-		Location:    StringLocation("test.bpl"),
-		Range: Range{
-			StartPos: Position{Offset: 9, Line: 2, Column: 8},
-			EndPos:   Position{Offset: 25, Line: 2, Column: 24},
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&ImportDeclaration{
+				Identifiers: nil,
+				Location:    StringLocation("test.bpl"),
+				Range: Range{
+					StartPos: Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   Position{Offset: 25, Line: 2, Column: 24},
+				},
+				LocationPos: Position{Offset: 16, Line: 2, Column: 15},
+			},
 		},
-		LocationPos: Position{Offset: 16, Line: 2, Column: 15},
-	}
+		func(actual *Program) {
 
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
+			importLocation := StringLocation("test.bpl")
 
-	utils.AssertEqualWithDiff(t, expected, actual)
+			actualImports := actual.ImportedPrograms()
 
-	importLocation := StringLocation("test.bpl")
+			assert.Equal(t,
+				map[LocationID]*Program{},
+				actualImports,
+			)
 
-	actualImports := actual.ImportedPrograms()
+			actualImports[importLocation.ID()] = &Program{}
 
-	assert.Equal(t,
-		map[LocationID]*Program{},
-		actualImports,
-	)
-
-	actualImports[importLocation.ID()] = &Program{}
-
-	assert.Equal(t,
-		map[LocationID]*Program{
-			importLocation.ID(): {},
+			assert.Equal(t,
+				map[LocationID]*Program{
+					importLocation.ID(): {},
+				},
+				actualImports,
+			)
 		},
-		actualImports,
 	)
 }
 
@@ -5089,44 +5119,44 @@ func TestParseImportWithAddress(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
         import 0x1234
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &ImportDeclaration{
-		Identifiers: []Identifier{},
-		Location:    AddressLocation([]byte{18, 52}),
-		Range: Range{
-			StartPos: Position{Offset: 9, Line: 2, Column: 8},
-			EndPos:   Position{Offset: 21, Line: 2, Column: 20},
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&ImportDeclaration{
+				Identifiers: nil,
+				Location:    AddressLocation{18, 52},
+				Range: Range{
+					StartPos: Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   Position{Offset: 21, Line: 2, Column: 20},
+				},
+				LocationPos: Position{Offset: 16, Line: 2, Column: 15},
+			},
 		},
-		LocationPos: Position{Offset: 16, Line: 2, Column: 15},
-	}
+		func(actual *Program) {
 
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
+			importLocation := AddressLocation{18, 52}
 
-	utils.AssertEqualWithDiff(t, expected, actual)
+			actualImports := actual.ImportedPrograms()
 
-	importLocation := AddressLocation([]byte{18, 52})
+			assert.Equal(t,
+				map[LocationID]*Program{},
+				actualImports,
+			)
 
-	actualImports := actual.ImportedPrograms()
+			actualImports[importLocation.ID()] = &Program{}
 
-	assert.Equal(t,
-		map[LocationID]*Program{},
-		actualImports,
-	)
-
-	actualImports[importLocation.ID()] = &Program{}
-
-	assert.Equal(t,
-		map[LocationID]*Program{
-			importLocation.ID(): {},
+			assert.Equal(t,
+				map[LocationID]*Program{
+					importLocation.ID(): {},
+				},
+				actualImports,
+			)
 		},
-		actualImports,
 	)
 }
 
@@ -5134,36 +5164,35 @@ func TestParseImportWithIdentifiers(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
         import A, b from 0x0
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &ImportDeclaration{
-		Identifiers: []Identifier{
-			{
-				Identifier: "A",
-				Pos:        Position{Offset: 16, Line: 2, Column: 15},
-			},
-			{
-				Identifier: "b",
-				Pos:        Position{Offset: 19, Line: 2, Column: 18},
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&ImportDeclaration{
+				Identifiers: []Identifier{
+					{
+						Identifier: "A",
+						Pos:        Position{Offset: 16, Line: 2, Column: 15},
+					},
+					{
+						Identifier: "b",
+						Pos:        Position{Offset: 19, Line: 2, Column: 18},
+					},
+				},
+				Location: AddressLocation{0},
+				Range: Range{
+					StartPos: Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   Position{Offset: 28, Line: 2, Column: 27},
+				},
+				LocationPos: Position{Offset: 26, Line: 2, Column: 25},
 			},
 		},
-		Location: AddressLocation([]byte{0}),
-		Range: Range{
-			StartPos: Position{Offset: 9, Line: 2, Column: 8},
-			EndPos:   Position{Offset: 28, Line: 2, Column: 27},
-		},
-		LocationPos: Position{Offset: 26, Line: 2, Column: 25},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseFieldWithFromIdentifier(t *testing.T) {
@@ -5187,18 +5216,37 @@ func TestParseFunctionWithFromIdentifier(t *testing.T) {
         fun send(from: String, to: String) {}
 	`
 
-	testParse(t, code, nil)
+	testParse(t, code, nil, nil)
 }
 
 func TestParseImportWithFromIdentifier(t *testing.T) {
 
 	t.Parallel()
 
-	_, _, err := parser.ParseProgram(`
+	const code = `
         import from from 0x0
-	`)
+	`
 
-	require.NoError(t, err)
+	testParse(t,
+		code,
+		[]Declaration{
+			&ImportDeclaration{
+				Identifiers: []Identifier{
+					{
+						Identifier: "from",
+						Pos:        Position{Offset: 16, Line: 2, Column: 15},
+					},
+				},
+				Location: AddressLocation{0},
+				Range: Range{
+					StartPos: Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   Position{Offset: 28, Line: 2, Column: 27},
+				},
+				LocationPos: Position{Offset: 26, Line: 2, Column: 25},
+			},
+		},
+		nil,
+	)
 }
 
 func TestParseSemicolonsBetweenDeclarations(t *testing.T) {
@@ -5490,6 +5538,7 @@ func TestParseResourceReturnType(t *testing.T) {
 				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
+		nil,
 	)
 }
 
@@ -5524,6 +5573,7 @@ func TestParseMovingVariableDeclaration(t *testing.T) {
 				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
+		nil,
 	)
 }
 
@@ -5649,6 +5699,7 @@ func TestParseMoveOperator(t *testing.T) {
 				StartPos: Position{Offset: 7, Line: 2, Column: 6},
 			},
 		},
+		nil,
 	)
 }
 
@@ -5719,6 +5770,7 @@ func TestParseResourceParameterType(t *testing.T) {
 				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
+		nil,
 	)
 }
 
@@ -5948,6 +6000,7 @@ func TestParseFunctionExpressionWithResourceTypeAnnotation(t *testing.T) {
 				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
+		nil,
 	)
 }
 
@@ -6170,6 +6223,7 @@ func TestParseFunctionExpressionStatementAfterVariableDeclarationWithCreateExpre
 				StartPos: Position{Offset: 7, Line: 2, Column: 6},
 			},
 		},
+		nil,
 	)
 }
 
@@ -6465,6 +6519,7 @@ func TestParseReferenceType(t *testing.T) {
 				StartPos: Position{Offset: 8, Line: 2, Column: 7},
 			},
 		},
+		nil,
 	)
 }
 
@@ -6517,8 +6572,8 @@ func TestParseOptionalReference(t *testing.T) {
 				StartPos: Position{Offset: 8, Line: 2, Column: 7},
 			},
 		},
+		nil,
 	)
-
 }
 
 func TestParseRestrictedReferenceTypeWithBaseType(t *testing.T) {
@@ -7820,6 +7875,7 @@ func TestParseFixedPointExpression(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -7857,6 +7913,7 @@ func TestParseFixedPointExpressionZeroInteger(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -8062,6 +8119,7 @@ func TestParsePathLiteral(t *testing.T) {
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
+		nil,
 	)
 }
 
@@ -8298,5 +8356,6 @@ func TestParseBitwiseExpression(t *testing.T) {
 				StartPos: Position{Offset: 7, Line: 2, Column: 6},
 			},
 		},
+		nil,
 	)
 }

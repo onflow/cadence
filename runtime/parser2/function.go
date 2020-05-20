@@ -32,7 +32,7 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 
 	if !p.current.Is(lexer.TokenParenOpen) {
 		panic(fmt.Errorf(
-			"expected %q as start of parameter list, got %q",
+			"expected %s as start of parameter list, got %s",
 			lexer.TokenParenOpen,
 			p.current.Type,
 		))
@@ -57,7 +57,7 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 		case lexer.TokenComma:
 			if expectParameter {
 				panic(fmt.Errorf(
-					"expected parameter or end of parameter list, got %q",
+					"expected parameter or end of parameter list, got %s",
 					p.current.Type,
 				))
 			}
@@ -71,19 +71,19 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 
 		case lexer.TokenEOF:
 			panic(fmt.Errorf(
-				"missing %q at end of parameter list",
+				"missing %s at end of parameter list",
 				lexer.TokenParenClose,
 			))
 
 		default:
 			if expectParameter {
 				panic(fmt.Errorf(
-					"expected parameter or end of parameter list, got %q",
+					"expected parameter or end of parameter list, got %s",
 					p.current.Type,
 				))
 			} else {
 				panic(fmt.Errorf(
-					"expected comma or end of parameter list, got %q",
+					"expected comma or end of parameter list, got %s",
 					p.current.Type,
 				))
 			}
@@ -107,7 +107,7 @@ func parseParameter(p *parser) *ast.Parameter {
 
 	if !p.current.Is(lexer.TokenIdentifier) {
 		panic(fmt.Errorf(
-			"expected argument label or parameter name, got %q",
+			"expected argument label or parameter name, got %s",
 			p.current.Type,
 		))
 	}
@@ -130,7 +130,7 @@ func parseParameter(p *parser) *ast.Parameter {
 
 	if !p.current.Is(lexer.TokenColon) {
 		panic(fmt.Errorf(
-			"expected %q after argument label/parameter name, got %q",
+			"expected %s after argument label/parameter name, got %s",
 			lexer.TokenColon,
 			p.current.Type,
 		))
@@ -170,7 +170,7 @@ func parseFunctionDeclaration(p *parser, access ast.Access, accessPos *ast.Posit
 	p.skipSpaceAndComments(true)
 	if !p.current.Is(lexer.TokenIdentifier) {
 		panic(fmt.Errorf(
-			"expected identifier after start of function declaration, got %q",
+			"expected identifier after start of function declaration, got %s",
 			p.current.Type,
 		))
 	}

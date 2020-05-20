@@ -19,6 +19,7 @@
 package parser2
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"testing"
@@ -37,11 +38,11 @@ func TestParseVariableDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("var x = 1")
+		result, errs := ParseDeclarations("var x = 1")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			[]ast.Statement{
+			[]ast.Declaration{
 				&ast.VariableDeclaration{
 					IsConstant: false,
 					Identifier: ast.Identifier{
@@ -106,11 +107,11 @@ func TestParseVariableDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("let x = 1")
+		result, errs := ParseDeclarations("let x = 1")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			[]ast.Statement{
+			[]ast.Declaration{
 				&ast.VariableDeclaration{
 					IsConstant: true,
 					Identifier: ast.Identifier{
@@ -140,11 +141,11 @@ func TestParseVariableDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("let x <- 1")
+		result, errs := ParseDeclarations("let x <- 1")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			[]ast.Statement{
+			[]ast.Declaration{
 				&ast.VariableDeclaration{
 					IsConstant: true,
 					Identifier: ast.Identifier{
@@ -174,11 +175,11 @@ func TestParseVariableDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("let r2: @R <- r")
+		result, errs := ParseDeclarations("let r2: @R <- r")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			[]ast.Statement{
+			[]ast.Declaration{
 				&ast.VariableDeclaration{
 					IsConstant: true,
 					Identifier: ast.Identifier{
@@ -415,11 +416,11 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("fun foo () { }")
+		result, errs := ParseDeclarations("fun foo () { }")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			[]ast.Statement{
+			[]ast.Declaration{
 				&ast.FunctionDeclaration{
 					Identifier: ast.Identifier{
 						Identifier: "foo",
@@ -508,11 +509,11 @@ func TestParseFunctionDeclaration(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseStatements("fun foo (): X { }")
+		result, errs := ParseDeclarations("fun foo (): X { }")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			[]ast.Statement{
+			[]ast.Declaration{
 				&ast.FunctionDeclaration{
 					Identifier: ast.Identifier{
 						Identifier: "foo",
@@ -761,5 +762,206 @@ func TestParseAccess(t *testing.T) {
 			result,
 		)
 	})
+}
 
+func TestParseImportDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no identifiers, missing location", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(` import`)
+		require.Equal(t,
+			[]error{
+				errors.New("unexpected end in import declaration: expected string, address, or identifier"),
+			},
+			errs,
+		)
+
+		var expected []ast.Declaration
+
+		utils.AssertEqualWithDiff(t,
+			expected,
+			result,
+		)
+	})
+
+	t.Run("no identifiers, string location", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(` import "foo"`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.ImportDeclaration{
+					Identifiers: nil,
+					Location:    ast.StringLocation("foo"),
+					LocationPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 12, Offset: 12},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("no identifiers, address location", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(` import 0x42`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.ImportDeclaration{
+					Identifiers: nil,
+					Location:    ast.AddressLocation{0x42},
+					LocationPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("no identifiers, integer location", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(` import 1`)
+		require.Equal(t,
+			[]error{
+				errors.New(
+					"unexpected token in import declaration: " +
+						"got decimal integer, expected string, address, or identifier",
+				),
+			},
+			errs,
+		)
+
+		var expected []ast.Declaration
+
+		utils.AssertEqualWithDiff(t,
+			expected,
+			result,
+		)
+
+	})
+
+	t.Run("one identifier, string location", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(` import foo from "bar"`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.ImportDeclaration{
+					Identifiers: []ast.Identifier{
+						{
+							Identifier: "foo",
+							Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
+					},
+					Location:    ast.StringLocation("bar"),
+					LocationPos: ast.Position{Line: 1, Column: 17, Offset: 17},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 21, Offset: 21},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("one identifier, string location, missing from keyword", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(` import foo "bar"`)
+		require.Equal(t,
+			[]error{
+				errors.New(
+					"unexpected token in import declaration: " +
+						"got string, expected keyword \"from\" or ','",
+				),
+			},
+			errs,
+		)
+
+		var expected []ast.Declaration
+
+		utils.AssertEqualWithDiff(t,
+			expected,
+			result,
+		)
+	})
+
+	t.Run("three identifiers, address location", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(` import foo , bar , baz from 0x42`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.ImportDeclaration{
+					Identifiers: []ast.Identifier{
+						{
+							Identifier: "foo",
+							Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
+						{
+							Identifier: "bar",
+							Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
+						{
+							Identifier: "baz",
+							Pos:        ast.Position{Line: 1, Column: 20, Offset: 20},
+						},
+					},
+					Location:    ast.AddressLocation{0x42},
+					LocationPos: ast.Position{Line: 1, Column: 29, Offset: 29},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 32, Offset: 32},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("two identifiers, address location, extra comma", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(` import foo , bar , from 0x42`)
+		require.Equal(t,
+			[]error{
+				errors.New(`expected identifier, got keyword "from"`),
+			},
+			errs,
+		)
+
+		var expected []ast.Declaration
+
+		utils.AssertEqualWithDiff(t,
+			expected,
+			result,
+		)
+	})
 }
