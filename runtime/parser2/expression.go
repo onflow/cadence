@@ -803,11 +803,12 @@ func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 	p.skipSpaceAndComments(true)
 	t := p.current
 	p.next()
-	p.skipSpaceAndComments(true)
+
+	newLineAfterLeft := p.skipSpaceAndComments(true)
 
 	left := applyExprNullDenotation(p, t)
 
-	newLineAfterLeft := p.skipSpaceAndComments(true)
+	newLineAfterLeft = p.skipSpaceAndComments(true) || newLineAfterLeft
 
 	if newLineAfterLeft && !exprLeftDenotationAllowsNewline(p.current.Type) {
 		return left

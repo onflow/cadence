@@ -54,6 +54,8 @@ const keywordContract = "contract"
 const keywordAccount = "account"
 const keywordImport = "import"
 const keywordFrom = "from"
+const keywordPre = "pre"
+const keywordPost = "post"
 
 const lowestBindingPower = 0
 
@@ -131,6 +133,7 @@ func (p *parser) skipSpaceAndComments(skipNewlines bool) (containsNewline bool) 
 		switch p.current.Type {
 		case lexer.TokenSpace:
 			space := p.current.Value.(lexer.Space)
+
 			if space.ContainsNewline {
 				containsNewline = true
 			}

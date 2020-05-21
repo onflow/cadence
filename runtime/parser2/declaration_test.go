@@ -549,6 +549,140 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("without return type, with pre and post conditions", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseStatements(`
+          fun foo () {
+              pre {
+                 true : "test"
+                 2 > 1 : "foo"
+              }
+
+              post {
+                 false
+              }
+
+              bar()
+          }
+        `)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.FunctionDeclaration{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 2, Column: 14, Offset: 15},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 18, Offset: 19},
+							EndPos:   ast.Position{Line: 2, Column: 19, Offset: 20},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "",
+								Pos:        ast.Position{Line: 2, Column: 19, Offset: 20},
+							},
+						},
+						StartPos: ast.Position{Line: 2, Column: 19, Offset: 20},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						PreConditions: &ast.Conditions{
+							{
+								Kind: ast.ConditionKindPre,
+								Test: &ast.BoolExpression{
+									Value: true,
+									Range: ast.Range{
+										StartPos: ast.Position{Line: 4, Column: 17, Offset: 61},
+										EndPos:   ast.Position{Line: 4, Column: 20, Offset: 64},
+									},
+								},
+								Message: &ast.StringExpression{
+									Value: "test",
+									Range: ast.Range{
+										StartPos: ast.Position{Line: 4, Column: 24, Offset: 68},
+										EndPos:   ast.Position{Line: 4, Column: 29, Offset: 73},
+									},
+								},
+							},
+							{
+								Kind: ast.ConditionKindPre,
+								Test: &ast.BinaryExpression{
+									Operation: ast.OperationGreater,
+									Left: &ast.IntegerExpression{
+										Value: big.NewInt(2),
+										Base:  10,
+										Range: ast.Range{
+											StartPos: ast.Position{Line: 5, Column: 17, Offset: 92},
+											EndPos:   ast.Position{Line: 5, Column: 17, Offset: 92},
+										},
+									},
+									Right: &ast.IntegerExpression{
+										Value: big.NewInt(1),
+										Base:  10,
+										Range: ast.Range{
+											StartPos: ast.Position{Line: 5, Column: 21, Offset: 96},
+											EndPos:   ast.Position{Line: 5, Column: 21, Offset: 96},
+										},
+									},
+								},
+								Message: &ast.StringExpression{
+									Value: "foo",
+									Range: ast.Range{
+										StartPos: ast.Position{Line: 5, Column: 25, Offset: 100},
+										EndPos:   ast.Position{Line: 5, Column: 29, Offset: 104},
+									},
+								},
+							},
+						},
+						PostConditions: &ast.Conditions{
+							{
+								Kind: ast.ConditionKindPost,
+								Test: &ast.BoolExpression{
+									Value: false,
+									Range: ast.Range{
+										StartPos: ast.Position{Line: 9, Column: 17, Offset: 161},
+										EndPos:   ast.Position{Line: 9, Column: 21, Offset: 165},
+									},
+								},
+								Message: nil,
+							},
+						},
+						Block: &ast.Block{
+							Statements: []ast.Statement{
+								&ast.ExpressionStatement{
+									Expression: &ast.InvocationExpression{
+										InvokedExpression: &ast.IdentifierExpression{
+											Identifier: ast.Identifier{
+												Identifier: "bar",
+												Pos:        ast.Position{Line: 12, Column: 14, Offset: 198},
+											},
+										},
+										EndPos: ast.Position{Line: 12, Column: 18, Offset: 202},
+									},
+								},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 2, Column: 21, Offset: 22},
+								EndPos:   ast.Position{Line: 13, Column: 10, Offset: 214},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 2, Column: 10, Offset: 11},
+				},
+			},
+			result,
+		)
+	})
+
 }
 
 func TestParseAccess(t *testing.T) {

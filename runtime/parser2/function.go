@@ -221,11 +221,6 @@ func parseFunctionParameterListAndRest(p *parser) (
 		}
 	}
 
-	// TODO: parse function block
-	block := parseBlock(p)
-	functionBlock = &ast.FunctionBlock{
-		Block: block,
-	}
-
+	functionBlock = parseFunctionBlock(p)
 	return
 }

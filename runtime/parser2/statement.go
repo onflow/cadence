@@ -317,6 +317,103 @@ func parseBlock(p *parser) *ast.Block {
 	}
 }
 
+func parseFunctionBlock(p *parser) *ast.FunctionBlock {
+	p.skipSpaceAndComments(true)
+
+	startToken := p.mustOne(lexer.TokenBraceOpen)
+
+	p.skipSpaceAndComments(true)
+
+	var preConditions *ast.Conditions
+	if p.current.IsString(lexer.TokenIdentifier, keywordPre) {
+		p.next()
+		conditions := parseConditions(p, ast.ConditionKindPre)
+		preConditions = &conditions
+	}
+
+	p.skipSpaceAndComments(true)
+
+	var postConditions *ast.Conditions
+	if p.current.IsString(lexer.TokenIdentifier, keywordPost) {
+		p.next()
+		conditions := parseConditions(p, ast.ConditionKindPost)
+		postConditions = &conditions
+	}
+
+	statements := parseStatements(p, lexer.TokenBraceClose)
+
+	endToken := p.mustOne(lexer.TokenBraceClose)
+
+	return &ast.FunctionBlock{
+		Block: &ast.Block{
+			Statements: statements,
+			Range: ast.Range{
+				StartPos: startToken.StartPos,
+				EndPos:   endToken.EndPos,
+			},
+		},
+		PreConditions:  preConditions,
+		PostConditions: postConditions,
+	}
+}
+
+// parseConditions parses conditions (pre/post)
+//
+func parseConditions(p *parser, kind ast.ConditionKind) (conditions ast.Conditions) {
+
+	p.skipSpaceAndComments(true)
+	p.mustOne(lexer.TokenBraceOpen)
+
+	defer func() {
+		p.skipSpaceAndComments(true)
+		p.mustOne(lexer.TokenBraceClose)
+	}()
+
+	for {
+		p.skipSpaceAndComments(true)
+		switch p.current.Type {
+		case lexer.TokenSemicolon:
+			p.next()
+			continue
+
+		case lexer.TokenBraceClose, lexer.TokenEOF:
+			return
+
+		default:
+			condition := parseCondition(p, kind)
+			if condition == nil {
+				return
+			}
+
+			conditions = append(conditions, condition)
+		}
+	}
+}
+
+// parseCondition parses a condition (pre/post)
+//
+//    condition : expression (':' expression )?
+//
+func parseCondition(p *parser, kind ast.ConditionKind) *ast.Condition {
+
+	test := parseExpression(p, lowestBindingPower)
+
+	p.skipSpaceAndComments(true)
+
+	var message ast.Expression
+	if p.current.Is(lexer.TokenColon) {
+		p.next()
+
+		message = parseExpression(p, lowestBindingPower)
+	}
+
+	return &ast.Condition{
+		Kind:    kind,
+		Test:    test,
+		Message: message,
+	}
+}
+
 func parseEmitStatement(p *parser) *ast.EmitStatement {
 	startPos := p.current.StartPos
 	p.next()
