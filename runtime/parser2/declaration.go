@@ -194,6 +194,15 @@ func parseAccess(p *parser) ast.Access {
 	}
 }
 
+// parseVariableDeclaration parses a variable declaration.
+//
+//     variableKind : 'var' | 'let' ;
+//
+//     variableDeclaration :
+//         variableKind identifier ( ':' typeAnnotation )?
+//         transfer expression
+//         ( transfer expression )?
+//
 func parseVariableDeclaration(p *parser, access ast.Access, accessPos *ast.Position) *ast.VariableDeclaration {
 
 	startPos := p.current.StartPos
@@ -203,7 +212,7 @@ func parseVariableDeclaration(p *parser, access ast.Access, accessPos *ast.Posit
 
 	isLet := p.current.Value == keywordLet
 
-	// skip `let` or `var` keyword
+	// Skip the `let` or `var` keyword
 	p.next()
 
 	p.skipSpaceAndComments(true)
@@ -234,11 +243,15 @@ func parseVariableDeclaration(p *parser, access ast.Access, accessPos *ast.Posit
 		panic(fmt.Errorf("expected transfer"))
 	}
 
-	p.skipSpaceAndComments(true)
-
 	value := parseExpression(p, lowestBindingPower)
 
-	// TODO: second transfer and value
+	p.skipSpaceAndComments(true)
+
+	secondTransfer := parseTransfer(p)
+	var secondValue ast.Expression
+	if secondTransfer != nil {
+		secondValue = parseExpression(p, lowestBindingPower)
+	}
 
 	return &ast.VariableDeclaration{
 		Access:         access,
@@ -248,10 +261,15 @@ func parseVariableDeclaration(p *parser, access ast.Access, accessPos *ast.Posit
 		Value:          value,
 		Transfer:       transfer,
 		StartPos:       startPos,
-		// TODO: SecondTransfer, SecondValue
+		SecondTransfer: secondTransfer,
+		SecondValue:    secondValue,
 	}
 }
 
+// parseTransfer parses a transfer.
+//
+//    transfer : '=' | '<-' | '<-!'
+//
 func parseTransfer(p *parser) *ast.Transfer {
 	var operation ast.TransferOperation
 
