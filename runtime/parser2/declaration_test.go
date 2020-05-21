@@ -213,6 +213,49 @@ func TestParseVariableDeclaration(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("var, no type annotation, copy, two values ", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseStatements("var x <- y <- z")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.VariableDeclaration{
+					IsConstant: false,
+					Identifier: ast.Identifier{
+						Identifier: "x",
+						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+					Value: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "y",
+							Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
+					},
+					Transfer: &ast.Transfer{
+						Operation: ast.TransferOperationMove,
+						Pos:       ast.Position{Line: 1, Column: 6, Offset: 6},
+					},
+					SecondValue: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "z",
+							Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+						},
+					},
+					SecondTransfer: &ast.Transfer{
+						Operation: ast.TransferOperationMove,
+						Pos:       ast.Position{Line: 1, Column: 11, Offset: 11},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
 }
 
 func TestParseParameterList(t *testing.T) {
