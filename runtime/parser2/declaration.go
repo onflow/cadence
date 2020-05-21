@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
@@ -70,6 +71,9 @@ func parseDeclaration(p *parser) ast.Declaration {
 
 			case keywordImport:
 				return parseImportDeclaration(p)
+
+			case keywordEvent:
+				return parseEventDeclaration(p, access, accessPos)
 
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
@@ -506,4 +510,60 @@ func parseHexadecimalLocation(literal string) ast.AddressLocation {
 	}
 
 	return address
+}
+
+// parseEventDeclaration parses an event declaration.
+//
+//    eventDeclaration : 'event' identifier parameterList
+//
+func parseEventDeclaration(p *parser, access ast.Access, accessPos *ast.Position) *ast.CompositeDeclaration {
+
+	startPos := p.current.StartPos
+	if accessPos != nil {
+		startPos = *accessPos
+	}
+
+	// Skip the `event` keyword
+	p.next()
+
+	p.skipSpaceAndComments(true)
+	if !p.current.Is(lexer.TokenIdentifier) {
+		panic(fmt.Errorf(
+			"expected identifier after start of event declaration, got %s",
+			p.current.Type,
+		))
+	}
+
+	identifier := ast.Identifier{
+		Identifier: p.current.Value.(string),
+		Pos:        p.current.StartPos,
+	}
+
+	p.next()
+
+	parameterList := parseParameterList(p)
+
+	initializer :=
+		&ast.SpecialFunctionDeclaration{
+			DeclarationKind: common.DeclarationKindInitializer,
+			FunctionDeclaration: &ast.FunctionDeclaration{
+				ParameterList: parameterList,
+				StartPos:      parameterList.StartPos,
+			},
+		}
+
+	return &ast.CompositeDeclaration{
+		Access:        access,
+		CompositeKind: common.CompositeKindEvent,
+		Identifier:    identifier,
+		Members: &ast.Members{
+			SpecialFunctions: []*ast.SpecialFunctionDeclaration{
+				initializer,
+			},
+		},
+		Range: ast.Range{
+			StartPos: startPos,
+			EndPos:   parameterList.EndPos,
+		},
+	}
 }

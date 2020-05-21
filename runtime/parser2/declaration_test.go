@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -1095,6 +1096,140 @@ func TestParseImportDeclaration(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			expected,
+			result,
+		)
+	})
+}
+
+func TestParseEvent(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no parameters", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations("event E()")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+
+				&ast.CompositeDeclaration{
+					CompositeKind: common.CompositeKindEvent,
+					Identifier: ast.Identifier{
+						Identifier: "E",
+						Pos:        ast.Position{Offset: 6, Line: 1, Column: 6},
+					},
+					Members: &ast.Members{
+						SpecialFunctions: []*ast.SpecialFunctionDeclaration{
+							{
+								DeclarationKind: common.DeclarationKindInitializer,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									ParameterList: &ast.ParameterList{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+											EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+										},
+									},
+									StartPos: ast.Position{Offset: 7, Line: 1, Column: 7},
+								},
+							},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("two parameters, private", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(" priv event E2 ( a : Int , b : String )")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+
+				&ast.CompositeDeclaration{
+					Access:        ast.AccessPrivate,
+					CompositeKind: common.CompositeKindEvent,
+					Identifier: ast.Identifier{
+						Identifier: "E2",
+						Pos:        ast.Position{Offset: 12, Line: 1, Column: 12},
+					},
+					Members: &ast.Members{
+						SpecialFunctions: []*ast.SpecialFunctionDeclaration{
+							{
+								DeclarationKind: common.DeclarationKindInitializer,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									ParameterList: &ast.ParameterList{
+										Parameters: []*ast.Parameter{
+											{
+												Label: "",
+												Identifier: ast.Identifier{
+													Identifier: "a",
+													Pos:        ast.Position{Offset: 17, Line: 1, Column: 17},
+												},
+												TypeAnnotation: &ast.TypeAnnotation{
+													IsResource: false,
+													Type: &ast.NominalType{
+														Identifier: ast.Identifier{
+															Identifier: "Int",
+															Pos:        ast.Position{Offset: 21, Line: 1, Column: 21},
+														},
+													},
+													StartPos: ast.Position{Offset: 21, Line: 1, Column: 21},
+												},
+												Range: ast.Range{
+													StartPos: ast.Position{Offset: 17, Line: 1, Column: 17},
+													EndPos:   ast.Position{Offset: 23, Line: 1, Column: 23},
+												},
+											},
+											{
+												Label: "",
+												Identifier: ast.Identifier{
+													Identifier: "b",
+													Pos:        ast.Position{Offset: 27, Line: 1, Column: 27},
+												},
+												TypeAnnotation: &ast.TypeAnnotation{
+													IsResource: false,
+													Type: &ast.NominalType{
+														Identifier: ast.Identifier{
+															Identifier: "String",
+															Pos:        ast.Position{Offset: 31, Line: 1, Column: 31},
+														},
+													},
+													StartPos: ast.Position{Offset: 31, Line: 1, Column: 31},
+												},
+												Range: ast.Range{
+													StartPos: ast.Position{Offset: 27, Line: 1, Column: 27},
+													EndPos:   ast.Position{Offset: 36, Line: 1, Column: 36},
+												},
+											},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 15, Line: 1, Column: 15},
+											EndPos:   ast.Position{Offset: 38, Line: 1, Column: 38},
+										},
+									},
+									StartPos: ast.Position{Offset: 15, Line: 1, Column: 15},
+								},
+							},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
+						EndPos:   ast.Position{Offset: 38, Line: 1, Column: 38},
+					},
+				},
+			},
 			result,
 		)
 	})

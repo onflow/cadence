@@ -5348,89 +5348,87 @@ func TestParseEvent(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
         event Transfer(to: Address, from: Address)
-	`)
+	`
+	testParse(
+		t,
+		code,
+		[]Declaration{
 
-	require.NoError(t, err)
-
-	transfer := &CompositeDeclaration{
-		CompositeKind: common.CompositeKindEvent,
-		Identifier: Identifier{
-			Identifier: "Transfer",
-			Pos:        Position{Offset: 15, Line: 2, Column: 14},
-		},
-		Members: &Members{
-			SpecialFunctions: []*SpecialFunctionDeclaration{
-				{
-					DeclarationKind: common.DeclarationKindInitializer,
-					FunctionDeclaration: &FunctionDeclaration{
-						ParameterList: &ParameterList{
-							Parameters: []*Parameter{
-								{
-									Label: "",
-									Identifier: Identifier{
-										Identifier: "to",
-										Pos:        Position{Offset: 24, Line: 2, Column: 23},
-									},
-									TypeAnnotation: &TypeAnnotation{
-										IsResource: false,
-										Type: &NominalType{
+			&CompositeDeclaration{
+				CompositeKind: common.CompositeKindEvent,
+				Identifier: Identifier{
+					Identifier: "Transfer",
+					Pos:        Position{Offset: 15, Line: 2, Column: 14},
+				},
+				Members: &Members{
+					SpecialFunctions: []*SpecialFunctionDeclaration{
+						{
+							DeclarationKind: common.DeclarationKindInitializer,
+							FunctionDeclaration: &FunctionDeclaration{
+								ParameterList: &ParameterList{
+									Parameters: []*Parameter{
+										{
+											Label: "",
 											Identifier: Identifier{
-												Identifier: "Address",
-												Pos:        Position{Offset: 28, Line: 2, Column: 27},
+												Identifier: "to",
+												Pos:        Position{Offset: 24, Line: 2, Column: 23},
+											},
+											TypeAnnotation: &TypeAnnotation{
+												IsResource: false,
+												Type: &NominalType{
+													Identifier: Identifier{
+														Identifier: "Address",
+														Pos:        Position{Offset: 28, Line: 2, Column: 27},
+													},
+												},
+												StartPos: Position{Offset: 28, Line: 2, Column: 27},
+											},
+											Range: Range{
+												StartPos: Position{Offset: 24, Line: 2, Column: 23},
+												EndPos:   Position{Offset: 34, Line: 2, Column: 33},
 											},
 										},
-										StartPos: Position{Offset: 28, Line: 2, Column: 27},
-									},
-									Range: Range{
-										StartPos: Position{Offset: 24, Line: 2, Column: 23},
-										EndPos:   Position{Offset: 34, Line: 2, Column: 33},
-									},
-								},
-								{
-									Label: "",
-									Identifier: Identifier{
-										Identifier: "from",
-										Pos:        Position{Offset: 37, Line: 2, Column: 36},
-									},
-									TypeAnnotation: &TypeAnnotation{
-										IsResource: false,
-										Type: &NominalType{
+										{
+											Label: "",
 											Identifier: Identifier{
-												Identifier: "Address",
-												Pos:        Position{Offset: 43, Line: 2, Column: 42},
+												Identifier: "from",
+												Pos:        Position{Offset: 37, Line: 2, Column: 36},
+											},
+											TypeAnnotation: &TypeAnnotation{
+												IsResource: false,
+												Type: &NominalType{
+													Identifier: Identifier{
+														Identifier: "Address",
+														Pos:        Position{Offset: 43, Line: 2, Column: 42},
+													},
+												},
+												StartPos: Position{Offset: 43, Line: 2, Column: 42},
+											},
+											Range: Range{
+												StartPos: Position{Offset: 37, Line: 2, Column: 36},
+												EndPos:   Position{Offset: 49, Line: 2, Column: 48},
 											},
 										},
-										StartPos: Position{Offset: 43, Line: 2, Column: 42},
 									},
 									Range: Range{
-										StartPos: Position{Offset: 37, Line: 2, Column: 36},
-										EndPos:   Position{Offset: 49, Line: 2, Column: 48},
+										StartPos: Position{Offset: 23, Line: 2, Column: 22},
+										EndPos:   Position{Offset: 50, Line: 2, Column: 49},
 									},
 								},
-							},
-							Range: Range{
 								StartPos: Position{Offset: 23, Line: 2, Column: 22},
-								EndPos:   Position{Offset: 50, Line: 2, Column: 49},
 							},
 						},
-						StartPos: Position{Offset: 23, Line: 2, Column: 22},
 					},
+				},
+				Range: Range{
+					StartPos: Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   Position{Offset: 50, Line: 2, Column: 49},
 				},
 			},
 		},
-		Range: Range{
-			StartPos: Position{Offset: 9, Line: 2, Column: 8},
-			EndPos:   Position{Offset: 50, Line: 2, Column: 49},
-		},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{transfer},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+	)
 }
 
 func TestParseEventEmitStatement(t *testing.T) {

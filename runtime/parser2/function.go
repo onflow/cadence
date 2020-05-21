@@ -164,7 +164,7 @@ func parseFunctionDeclaration(p *parser, access ast.Access, accessPos *ast.Posit
 		startPos = *accessPos
 	}
 
-	// skip `fun` keyword
+	// Skip the `fun` keyword
 	p.next()
 
 	p.skipSpaceAndComments(true)

@@ -56,6 +56,7 @@ const keywordImport = "import"
 const keywordFrom = "from"
 const keywordPre = "pre"
 const keywordPost = "post"
+const keywordEvent = "event"
 
 const lowestBindingPower = 0
 
