@@ -89,7 +89,7 @@ type testRuntimeInterface struct {
 	getCachedProgram   func(Location) (*ast.Program, error)
 	cacheProgram       func(Location, *ast.Program) error
 	storage            testRuntimeInterfaceStorage
-	createAccount      func(publicKeys [][]byte) (address Address, err error)
+	createAccount      func(publicKeys [][]byte, payer Address) (address Address, err error)
 	addAccountKey      func(address Address, publicKey []byte) error
 	removeAccountKey   func(address Address, index int) (publicKey []byte, err error)
 	updateAccountCode  func(address Address, code []byte, checkPermission bool) (err error)
@@ -136,8 +136,8 @@ func (i *testRuntimeInterface) SetValue(controller, owner, key, value []byte) (e
 	return i.storage.setValue(controller, owner, key, value)
 }
 
-func (i *testRuntimeInterface) CreateAccount(publicKeys [][]byte) (address Address, err error) {
-	return i.createAccount(publicKeys)
+func (i *testRuntimeInterface) CreateAccount(publicKeys [][]byte, payer Address) (address Address, err error) {
+	return i.createAccount(publicKeys, payer)
 }
 
 func (i *testRuntimeInterface) AddAccountKey(address Address, publicKey []byte) error {
@@ -1801,10 +1801,9 @@ func TestRuntimeTransactionWithCreateAccountEmpty(t *testing.T) {
 
 	script := []byte(`
       transaction {
-        prepare() {
-          AuthAccount(publicKeys: [], code: [])
+        prepare(signer: AuthAccount) {
+          AuthAccount(publicKeys: [], code: [], payer: signer)
         }
-        execute {}
       }
     `)
 
@@ -1813,7 +1812,10 @@ func TestRuntimeTransactionWithCreateAccountEmpty(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestStorage(nil, nil),
-		createAccount: func(publicKeys [][]byte) (address Address, err error) {
+		getSigningAccounts: func() []Address {
+			return []Address{{42}}
+		},
+		createAccount: func(publicKeys [][]byte, payer Address) (address Address, err error) {
 			return Address{42}, nil
 		},
 		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
@@ -2082,10 +2084,9 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 				script := []byte(fmt.Sprintf(
 					`
                       transaction {
-                        prepare() {
-                          AuthAccount(publicKeys: [], code: %s%s)
+                        prepare(signer: AuthAccount) {
+                          AuthAccount(publicKeys: [], code: %s, payer: signer%s)
                         }
-                        execute {}
                       }
                     `,
 					contractArrayCode,
@@ -2099,7 +2100,10 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 				runtimeInterface := &testRuntimeInterface{
 					storage: newTestStorage(nil, nil),
-					createAccount: func(publicKeys [][]byte) (address Address, err error) {
+					getSigningAccounts: func() []Address {
+						return []Address{{42}}
+					},
+					createAccount: func(publicKeys [][]byte, payer Address) (address Address, err error) {
 						return Address{42}, nil
 					},
 					updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
@@ -2522,9 +2526,8 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 		`
           transaction {
             prepare(signer: AuthAccount) {
-                AuthAccount(publicKeys: [], code: %s)
+                AuthAccount(publicKeys: [], code: %s, payer: signer)
             }
-            execute {}
           }
         `,
 		ArrayValueFromBytes([]byte(fungibleTokenContract)).String(),
@@ -2584,7 +2587,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 			return accountCodes[key], nil
 		},
 		storage: newTestStorage(nil, nil),
-		createAccount: func(publicKeys [][]byte) (address Address, err error) {
+		createAccount: func(publicKeys [][]byte, payer Address) (address Address, err error) {
 			return address2Value, nil
 		},
 		getSigningAccounts: func() []Address {
@@ -2623,7 +2626,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 			`
               transaction {
                 prepare(signer: AuthAccount) {
-                  AuthAccount(publicKeys: [], code: %s)
+                  AuthAccount(publicKeys: [], code: %s, payer: signer)
                 }
               }
             `,
@@ -2708,7 +2711,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 			return accountCodes[key], nil
 		},
 		storage: newTestStorage(nil, nil),
-		createAccount: func(publicKeys [][]byte) (address Address, err error) {
+		createAccount: func(publicKeys [][]byte, payer Address) (address Address, err error) {
 			result := interpreter.NewAddressValueFromBytes([]byte{nextAccount})
 			nextAccount++
 			return result.ToAddress(), nil
