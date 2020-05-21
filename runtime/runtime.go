@@ -782,7 +782,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 	runtimeStorage *interpreterRuntimeStorage,
 ) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
-		const requiredArgumentCount = 2
+		const requiredArgumentCount = 3
 
 		pkArray := invocation.Arguments[0].(*interpreter.ArrayValue)
 		pkValues := pkArray.Values
@@ -791,19 +791,24 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 		for i, pkVal := range pkValues {
 			publicKey, err := interpreter.ByteArrayValueToByteSlice(pkVal)
 			if err != nil {
-				panic(fmt.Sprintf("Account requires the first parameter to be an array of keys ([[Int]])"))
+				panic(fmt.Sprintf("AuthAccount requires the first parameter to be an array of keys ([[Int]])"))
 			}
 			publicKeys[i] = publicKey
 		}
 
 		code, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[1])
 		if err != nil {
-			panic(fmt.Sprintf("Account requires the second parameter to be an array of bytes ([Int])"))
+			panic(fmt.Sprintf("AuthAccount requires the second parameter to be an array of bytes ([Int])"))
+		}
+
+		payer, ok := invocation.Arguments[2].(interpreter.AccountValue)
+		if !ok {
+			panic(fmt.Sprintf("AuthAccount requires the third parameter to be an AuthAccount"))
 		}
 
 		var address Address
 		wrapPanic(func() {
-			address, err = runtimeInterface.CreateAccount(publicKeys)
+			address, err = runtimeInterface.CreateAccount(publicKeys, payer.AddressValue().ToAddress())
 		})
 		if err != nil {
 			panic(err)
