@@ -572,6 +572,13 @@ func parseCreateExpressionRemainder(p *parser, token lexer.Token) *ast.CreateExp
 	}
 }
 
+// Invocation Expression Grammar:
+//
+// invocation
+// : ('<' ( typeAnnotation (',' typeAnnotation )* )? '>')?
+// '(' ( argument (',' argument)* )? ')'
+// ;
+//
 func defineInvocationExpression() {
 	setExprLeftDenotation(
 		lexer.TokenParenOpen,
@@ -618,15 +625,51 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 					p.current.Type,
 				))
 			}
-			argument := &ast.Argument{
-				Label:      "",
-				Expression: parseExpression(p, lowestBindingPower),
-			}
-			arguments = append(arguments, argument)
+			arguments = append(arguments, parseArgument(p))
 			expectArgument = false
 		}
 	}
 	return
+}
+
+// Invocation Expression Argument Grammar
+//
+// argument
+// : (identifier ':')? expression
+// ;
+//
+func parseArgument(p *parser) *ast.Argument {
+	var label string
+	var labelStartPos, labelEndPos ast.Position
+
+	expr := parseExpression(p, lowestBindingPower)
+	p.skipSpaceAndComments(true)
+
+	// If a colon follows the expression, the expression was our label.
+	if p.current.Is(lexer.TokenColon) {
+		identifier, ok := expr.(*ast.IdentifierExpression)
+		if !ok {
+			panic(fmt.Errorf(
+				"expected identifier for label, got %s",
+				expr,
+			))
+		}
+		label = identifier.Identifier.Identifier
+		labelStartPos = expr.StartPosition()
+		labelEndPos = expr.EndPosition()
+
+		p.next()
+		p.skipSpaceAndComments(true)
+
+		expr = parseExpression(p, lowestBindingPower)
+	}
+
+	return &ast.Argument{
+		Label:         label,
+		LabelStartPos: &labelStartPos,
+		LabelEndPos:   &labelEndPos,
+		Expression:    expr,
+	}
 }
 
 func defineNestedExpression() {
