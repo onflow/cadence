@@ -974,7 +974,7 @@ func TestParseString(t *testing.T) {
 
 func TestInvocation(t *testing.T) {
 
-	t.Parallel()
+	// t.Parallel()
 
 	t.Run("no arguments", func(t *testing.T) {
 
@@ -1049,7 +1049,7 @@ func TestInvocation(t *testing.T) {
 		result, errs := ParseExpression("f(1)")
 		require.Empty(t, errs)
 
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			&ast.InvocationExpression{
 				InvokedExpression: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
@@ -1059,7 +1059,9 @@ func TestInvocation(t *testing.T) {
 				},
 				Arguments: []*ast.Argument{
 					{
-						Label: "",
+						Label:         "",
+						LabelStartPos: &ast.Position{},
+						LabelEndPos:   &ast.Position{},
 						Expression: &ast.IntegerExpression{
 							Value: big.NewInt(1),
 							Base:  10,
@@ -1071,6 +1073,42 @@ func TestInvocation(t *testing.T) {
 					},
 				},
 				EndPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+			},
+			result,
+		)
+	})
+
+	t.Run("with labeled arguments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("f(label:1)")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.InvocationExpression{
+				InvokedExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "f",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				Arguments: []*ast.Argument{
+					{
+						Label:         "label",
+						LabelStartPos: &ast.Position{Offset: 2, Line: 1, Column: 2},
+						LabelEndPos:   &ast.Position{Offset: 6, Line: 1, Column: 6},
+						Expression: &ast.IntegerExpression{
+							Value: big.NewInt(1),
+							Base:  10,
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+								EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+							},
+						},
+					},
+				},
+				EndPos: ast.Position{Offset: 9, Line: 1, Column: 9},
 			},
 			result,
 		)
@@ -1093,7 +1131,9 @@ func TestInvocation(t *testing.T) {
 				},
 				Arguments: []*ast.Argument{
 					{
-						Label: "",
+						Label:         "",
+						LabelStartPos: &ast.Position{},
+						LabelEndPos:   &ast.Position{},
 						Expression: &ast.IntegerExpression{
 							Value: big.NewInt(1),
 							Base:  10,
@@ -1104,7 +1144,9 @@ func TestInvocation(t *testing.T) {
 						},
 					},
 					{
-						Label: "",
+						Label:         "",
+						LabelStartPos: &ast.Position{},
+						LabelEndPos:   &ast.Position{},
 						Expression: &ast.IntegerExpression{
 							Value: big.NewInt(2),
 							Base:  10,
@@ -1116,6 +1158,55 @@ func TestInvocation(t *testing.T) {
 					},
 				},
 				EndPos: ast.Position{Offset: 5, Line: 1, Column: 5},
+			},
+			result,
+		)
+	})
+
+	t.Run("with arguments, multiple, labeled", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("f(a:1,b:2)")
+		require.Empty(t, errs)
+
+		assert.Equal(t,
+			&ast.InvocationExpression{
+				InvokedExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "f",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				Arguments: []*ast.Argument{
+					{
+						Label:         "a",
+						LabelStartPos: &ast.Position{Offset: 2, Line: 1, Column: 2},
+						LabelEndPos:   &ast.Position{Offset: 2, Line: 1, Column: 2},
+						Expression: &ast.IntegerExpression{
+							Value: big.NewInt(1),
+							Base:  10,
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 4, Line: 1, Column: 4},
+								EndPos:   ast.Position{Offset: 4, Line: 1, Column: 4},
+							},
+						},
+					},
+					{
+						Label:         "b",
+						LabelStartPos: &ast.Position{Offset: 6, Line: 1, Column: 6},
+						LabelEndPos:   &ast.Position{Offset: 6, Line: 1, Column: 6},
+						Expression: &ast.IntegerExpression{
+							Value: big.NewInt(2),
+							Base:  10,
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 8, Line: 1, Column: 8},
+								EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+							},
+						},
+					},
+				},
+				EndPos: ast.Position{Offset: 9, Line: 1, Column: 9},
 			},
 			result,
 		)
@@ -1176,7 +1267,7 @@ func TestInvocation(t *testing.T) {
 		result, errs := ParseExpression("f(1,g(2))")
 		require.Empty(t, errs)
 
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			&ast.InvocationExpression{
 				InvokedExpression: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
@@ -1186,7 +1277,9 @@ func TestInvocation(t *testing.T) {
 				},
 				Arguments: []*ast.Argument{
 					{
-						Label: "",
+						Label:         "",
+						LabelStartPos: &ast.Position{},
+						LabelEndPos:   &ast.Position{},
 						Expression: &ast.IntegerExpression{
 							Value: big.NewInt(1),
 							Base:  10,
@@ -1197,7 +1290,9 @@ func TestInvocation(t *testing.T) {
 						},
 					},
 					{
-						Label: "",
+						Label:         "",
+						LabelStartPos: &ast.Position{},
+						LabelEndPos:   &ast.Position{},
 						Expression: &ast.InvocationExpression{
 							InvokedExpression: &ast.IdentifierExpression{
 								Identifier: ast.Identifier{
@@ -1207,7 +1302,9 @@ func TestInvocation(t *testing.T) {
 							},
 							Arguments: []*ast.Argument{
 								{
-									Label: "",
+									Label:         "",
+									LabelStartPos: &ast.Position{},
+									LabelEndPos:   &ast.Position{},
 									Expression: &ast.IntegerExpression{
 										Value: big.NewInt(2),
 										Base:  10,
@@ -1235,7 +1332,7 @@ func TestInvocation(t *testing.T) {
 		result, errs := ParseExpression("f(1,g(\"test\"))")
 		require.Empty(t, errs)
 
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			&ast.InvocationExpression{
 				InvokedExpression: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
@@ -1245,7 +1342,9 @@ func TestInvocation(t *testing.T) {
 				},
 				Arguments: []*ast.Argument{
 					{
-						Label: "",
+						Label:         "",
+						LabelStartPos: &ast.Position{},
+						LabelEndPos:   &ast.Position{},
 						Expression: &ast.IntegerExpression{
 							Value: big.NewInt(1),
 							Base:  10,
@@ -1256,7 +1355,9 @@ func TestInvocation(t *testing.T) {
 						},
 					},
 					{
-						Label: "",
+						Label:         "",
+						LabelStartPos: &ast.Position{},
+						LabelEndPos:   &ast.Position{},
 						Expression: &ast.InvocationExpression{
 							InvokedExpression: &ast.IdentifierExpression{
 								Identifier: ast.Identifier{
@@ -1266,7 +1367,9 @@ func TestInvocation(t *testing.T) {
 							},
 							Arguments: []*ast.Argument{
 								{
-									Label: "",
+									Label:         "",
+									LabelStartPos: &ast.Position{},
+									LabelEndPos:   &ast.Position{},
 									Expression: &ast.StringExpression{
 										Value: "test",
 										Range: ast.Range{
