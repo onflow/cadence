@@ -782,32 +782,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 	runtimeStorage *interpreterRuntimeStorage,
 ) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
-		const requiredArgumentCount = 3
-
-		pkArray := invocation.Arguments[0].(*interpreter.ArrayValue)
-		pkValues := pkArray.Values
-		publicKeys := make([][]byte, len(pkValues))
-
-		for i, pkVal := range pkValues {
-			publicKey, err := interpreter.ByteArrayValueToByteSlice(pkVal)
-			if err != nil {
-				panic(fmt.Sprintf(
-					"%s requires the first parameter to be an array of keys ([[Int]])",
-					&sema.AuthAccountType{},
-				))
-			}
-			publicKeys[i] = publicKey
-		}
-
-		code, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[1])
-		if err != nil {
-			panic(fmt.Sprintf(
-				"%s requires the second parameter to be an array of bytes ([[Int]])",
-				&sema.AuthAccountType{},
-			))
-		}
-
-		payer, ok := invocation.Arguments[2].(interpreter.AuthAccountValue)
+		payer, ok := invocation.Arguments[0].(interpreter.AuthAccountValue)
 		if !ok {
 			panic(fmt.Sprintf(
 				"%[1]s requires the third parameter to be an %[1]s",
@@ -816,8 +791,9 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 		}
 
 		var address Address
+		var err error
 		wrapPanic(func() {
-			address, err = runtimeInterface.CreateAccount(publicKeys, payer.AddressValue().ToAddress())
+			address, err = runtimeInterface.CreateAccount(payer.AddressValue().ToAddress())
 		})
 		if err != nil {
 			panic(err)
@@ -825,31 +801,11 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 
 		addressValue := interpreter.NewAddressValue(address)
 
-		constructorArguments := invocation.Arguments[requiredArgumentCount:]
-		constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
-
-		contractTypes := r.updateAccountCode(
-			runtimeInterface,
-			runtimeStorage,
-			code,
-			addressValue,
-			constructorArguments,
-			constructorArgumentTypes,
-			false,
-			invocation.LocationRange.Range,
-		)
-
-		codeHashValue := CodeToHashValue(code)
-
-		contractTypeIDs := compositeTypesToIDValues(contractTypes)
-
 		r.emitAccountEvent(
 			stdlib.AccountCreatedEventType,
 			runtimeInterface,
 			[]exportableValue{
 				newExportableValue(addressValue, nil),
-				newExportableValue(codeHashValue, nil),
-				newExportableValue(contractTypeIDs, nil),
 			},
 		)
 

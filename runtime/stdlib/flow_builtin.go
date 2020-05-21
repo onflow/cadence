@@ -35,26 +35,6 @@ var accountFunctionType = &sema.FunctionType{
 	Parameters: []*sema.Parameter{
 		{
 			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "publicKeys",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.VariableSizedType{
-					Type: &sema.VariableSizedType{
-						Type: &sema.IntType{},
-					},
-				},
-			),
-		},
-		{
-			Label:      sema.ArgumentLabelNotRequired,
-			Identifier: "code",
-			TypeAnnotation: sema.NewTypeAnnotation(
-				&sema.VariableSizedType{
-					Type: &sema.IntType{},
-				},
-			),
-		},
-		{
-			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "payer",
 			TypeAnnotation: sema.NewTypeAnnotation(
 				&sema.AuthAccountType{},
@@ -64,11 +44,6 @@ var accountFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		&sema.AuthAccountType{},
 	),
-	// additional arguments are passed to the contract initializer
-	RequiredArgumentCount: (func() *int {
-		var count = 3
-		return &count
-	})(),
 }
 
 var getAccountFunctionType = &sema.FunctionType{
@@ -236,8 +211,6 @@ var AccountEventContractsParameter = &sema.Parameter{
 var AccountCreatedEventType = newFlowEventType(
 	"AccountCreated",
 	AccountEventAddressParameter,
-	AccountEventCodeHashParameter,
-	AccountEventContractsParameter,
 )
 
 var AccountKeyAddedEventType = newFlowEventType(
