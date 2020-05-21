@@ -41,7 +41,7 @@ type Interface interface {
 	// SetValue sets a value for the given key in the storage, controlled and owned by the given accounts.
 	SetValue(owner, controller, key, value []byte) (err error)
 	// CreateAccount creates a new account with the given public keys and code.
-	CreateAccount(publicKeys [][]byte) (address Address, err error)
+	CreateAccount(publicKeys [][]byte, payer Address) (address Address, err error)
 	// AddAccountKey appends a key to an account.
 	AddAccountKey(address Address, publicKey []byte) error
 	// RemoveAccountKey removes a key from an account by index.
@@ -102,7 +102,7 @@ func (i *EmptyRuntimeInterface) SetValue(_, _, _, _ []byte) error {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) CreateAccount(_ [][]byte) (address Address, err error) {
+func (i *EmptyRuntimeInterface) CreateAccount(_ [][]byte, _ Address) (address Address, err error) {
 	return Address{}, nil
 }
 

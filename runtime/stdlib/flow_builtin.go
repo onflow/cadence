@@ -53,13 +53,20 @@ var accountFunctionType = &sema.FunctionType{
 				},
 			),
 		},
+		{
+			Label:      sema.ArgumentLabelNotRequired,
+			Identifier: "payer",
+			TypeAnnotation: sema.NewTypeAnnotation(
+				&sema.AuthAccountType{},
+			),
+		},
 	},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		&sema.AuthAccountType{},
 	),
 	// additional arguments are passed to the contract initializer
 	RequiredArgumentCount: (func() *int {
-		var count = 2
+		var count = 3
 		return &count
 	})(),
 }
