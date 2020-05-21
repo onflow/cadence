@@ -125,7 +125,7 @@ func (r *interpreterRuntime) ExecuteScript(
 
 	functions := r.standardLibraryFunctions(runtimeInterface, runtimeStorage)
 
-	checker, err := r.parseAndCheckProgram(script, runtimeInterface, location, functions, nil)
+	checker, err := r.parseAndCheckProgram(script, runtimeInterface, location, functions, nil, true)
 	if err != nil {
 		return nil, newError(err)
 	}
@@ -230,7 +230,7 @@ func (r *interpreterRuntime) ExecuteTransaction(
 
 	functions := r.standardLibraryFunctions(runtimeInterface, runtimeStorage)
 
-	checker, err := r.parseAndCheckProgram(script, runtimeInterface, location, functions, nil)
+	checker, err := r.parseAndCheckProgram(script, runtimeInterface, location, functions, nil, true)
 	if err != nil {
 		return newError(err)
 	}
@@ -381,7 +381,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(script []byte, runtimeInterfac
 	runtimeStorage := newInterpreterRuntimeStorage(runtimeInterface)
 	functions := r.standardLibraryFunctions(runtimeInterface, runtimeStorage)
 
-	_, err := r.parseAndCheckProgram(script, runtimeInterface, location, functions, nil)
+	_, err := r.parseAndCheckProgram(script, runtimeInterface, location, functions, nil, true)
 	if err != nil {
 		return newError(err)
 	}
@@ -395,15 +395,18 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	location Location,
 	functions stdlib.StandardLibraryFunctions,
 	options []sema.Option,
+	useCache bool,
 ) (*sema.Checker, error) {
 
 	var program *ast.Program
 	var err error
-	wrapPanic(func() {
-		program, err = runtimeInterface.GetCachedProgram(location)
-	})
-	if err != nil {
-		return nil, err
+	if useCache {
+		wrapPanic(func() {
+			program, err = runtimeInterface.GetCachedProgram(location)
+		})
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if program == nil {
@@ -978,6 +981,7 @@ func (r *interpreterRuntime) updateAccountCode(
 		location,
 		functions,
 		nil,
+		false,
 	)
 	if err != nil {
 		panic(err)
