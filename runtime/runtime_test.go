@@ -89,7 +89,7 @@ type testRuntimeInterface struct {
 	getCachedProgram   func(Location) (*ast.Program, error)
 	cacheProgram       func(Location, *ast.Program) error
 	storage            testRuntimeInterfaceStorage
-	createAccount      func(publicKeys [][]byte, payer Address) (address Address, err error)
+	createAccount      func(payer Address) (address Address, err error)
 	addAccountKey      func(address Address, publicKey []byte) error
 	removeAccountKey   func(address Address, index int) (publicKey []byte, err error)
 	updateAccountCode  func(address Address, code []byte, checkPermission bool) (err error)
@@ -136,8 +136,8 @@ func (i *testRuntimeInterface) SetValue(controller, owner, key, value []byte) (e
 	return i.storage.setValue(controller, owner, key, value)
 }
 
-func (i *testRuntimeInterface) CreateAccount(publicKeys [][]byte, payer Address) (address Address, err error) {
-	return i.createAccount(publicKeys, payer)
+func (i *testRuntimeInterface) CreateAccount(payer Address) (address Address, err error) {
+	return i.createAccount(payer)
 }
 
 func (i *testRuntimeInterface) AddAccountKey(address Address, publicKey []byte) error {
@@ -1751,7 +1751,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 	assert.Equal(t, []string{"42"}, loggedMessages)
 }
 
-func TestRuntimeTransactionWithUpdateAccountCodeEmpty(t *testing.T) {
+func TestRuntimeTransaction_UpdateAccountCodeEmpty(t *testing.T) {
 
 	t.Parallel()
 
@@ -1793,7 +1793,7 @@ func TestRuntimeTransactionWithUpdateAccountCodeEmpty(t *testing.T) {
 	assert.Len(t, events, 1)
 }
 
-func TestRuntimeTransactionWithCreateAccountEmpty(t *testing.T) {
+func TestRuntimeTransaction_CreateAccountEmpty(t *testing.T) {
 
 	t.Parallel()
 
@@ -1802,12 +1802,11 @@ func TestRuntimeTransactionWithCreateAccountEmpty(t *testing.T) {
 	script := []byte(`
       transaction {
         prepare(signer: AuthAccount) {
-          AuthAccount(publicKeys: [], code: [], payer: signer)
+          AuthAccount(payer: signer)
         }
       }
     `)
 
-	var accountCode []byte
 	var events []cadence.Event
 
 	runtimeInterface := &testRuntimeInterface{
@@ -1815,12 +1814,8 @@ func TestRuntimeTransactionWithCreateAccountEmpty(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{{42}}
 		},
-		createAccount: func(publicKeys [][]byte, payer Address) (address Address, err error) {
+		createAccount: func(payer Address) (address Address, err error) {
 			return Address{42}, nil
-		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
-			accountCode = code
-			return nil
 		},
 		emitEvent: func(event cadence.Event) {
 			events = append(events, event)
@@ -1830,10 +1825,8 @@ func TestRuntimeTransactionWithCreateAccountEmpty(t *testing.T) {
 	nextTransactionLocation := newTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
-
 	require.NoError(t, err)
 
-	assert.NotNil(t, accountCode)
 	assert.Len(t, events, 1)
 }
 
@@ -2004,26 +1997,24 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		},
 	}
 
-	t.Run("AuthAccount.setCode", func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 
-		for _, test := range tests {
-			t.Run(test.name, func(t *testing.T) {
+			contractArrayCode := ArrayValueFromBytes([]byte(test.contract)).String()
 
-				contractArrayCode := ArrayValueFromBytes([]byte(test.contract)).String()
+			argumentCodes := make([]string, len(test.arguments))
 
-				argumentCodes := make([]string, len(test.arguments))
+			for i, argument := range test.arguments {
+				argumentCodes[i] = argument.String()
+			}
 
-				for i, argument := range test.arguments {
-					argumentCodes[i] = argument.String()
-				}
+			argumentCode := strings.Join(argumentCodes, ", ")
+			if len(test.arguments) > 0 {
+				argumentCode = ", " + argumentCode
+			}
 
-				argumentCode := strings.Join(argumentCodes, ", ")
-				if len(test.arguments) > 0 {
-					argumentCode = ", " + argumentCode
-				}
-
-				script := []byte(fmt.Sprintf(
-					`
+			script := []byte(fmt.Sprintf(
+				`
                       transaction {
 
                           prepare(signer: AuthAccount) {
@@ -2031,98 +2022,36 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
                           }
                       }
                     `,
-					contractArrayCode,
-					argumentCode,
-				))
+				contractArrayCode,
+				argumentCode,
+			))
 
-				runtime := NewInterpreterRuntime()
+			runtime := NewInterpreterRuntime()
 
-				var accountCode []byte
-				var events []cadence.Event
+			var accountCode []byte
+			var events []cadence.Event
 
-				runtimeInterface := &testRuntimeInterface{
-					storage: newTestStorage(nil, nil),
-					getSigningAccounts: func() []Address {
-						return []Address{{42}}
-					},
-					updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
-						accountCode = code
-						return nil
-					},
-					emitEvent: func(event cadence.Event) {
-						events = append(events, event)
-					},
-				}
+			runtimeInterface := &testRuntimeInterface{
+				storage: newTestStorage(nil, nil),
+				getSigningAccounts: func() []Address {
+					return []Address{{42}}
+				},
+				updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+					accountCode = code
+					return nil
+				},
+				emitEvent: func(event cadence.Event) {
+					events = append(events, event)
+				},
+			}
 
-				nextTransactionLocation := newTransactionLocationGenerator()
+			nextTransactionLocation := newTransactionLocationGenerator()
 
-				err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
+			err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 
-				test.check(t, err, accountCode, events, exportType(stdlib.AccountCodeUpdatedEventType))
-			})
-		}
-	})
-
-	t.Run("AuthAccount", func(t *testing.T) {
-
-		for _, test := range tests {
-			t.Run(test.name, func(t *testing.T) {
-
-				contractArrayCode := ArrayValueFromBytes([]byte(test.contract)).String()
-
-				argumentCodes := make([]string, len(test.arguments))
-
-				for i, argument := range test.arguments {
-					argumentCodes[i] = argument.String()
-				}
-
-				argumentCode := strings.Join(argumentCodes, ", ")
-				if len(test.arguments) > 0 {
-					argumentCode = ", " + argumentCode
-				}
-
-				script := []byte(fmt.Sprintf(
-					`
-                      transaction {
-                        prepare(signer: AuthAccount) {
-                          AuthAccount(publicKeys: [], code: %s, payer: signer%s)
-                        }
-                      }
-                    `,
-					contractArrayCode,
-					argumentCode,
-				))
-
-				runtime := NewInterpreterRuntime()
-
-				var accountCode []byte
-				var events []cadence.Event
-
-				runtimeInterface := &testRuntimeInterface{
-					storage: newTestStorage(nil, nil),
-					getSigningAccounts: func() []Address {
-						return []Address{{42}}
-					},
-					createAccount: func(publicKeys [][]byte, payer Address) (address Address, err error) {
-						return Address{42}, nil
-					},
-					updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
-						accountCode = code
-						return nil
-					},
-					emitEvent: func(event cadence.Event) {
-						events = append(events, event)
-					},
-				}
-
-				nextTransactionLocation := newTransactionLocationGenerator()
-
-				err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
-
-				test.check(t, err, accountCode, events, exportType(stdlib.AccountCreatedEventType))
-			})
-		}
-	})
+			test.check(t, err, accountCode, events, exportType(stdlib.AccountCodeUpdatedEventType))
+		})
+	}
 }
 
 func TestRuntimeContractAccount(t *testing.T) {
@@ -2526,7 +2455,8 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 		`
           transaction {
             prepare(signer: AuthAccount) {
-                AuthAccount(publicKeys: [], code: %s, payer: signer)
+                let acct = AuthAccount(payer: signer)
+				acct.setCode(%s)
             }
           }
         `,
@@ -2587,7 +2517,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 			return accountCodes[key], nil
 		},
 		storage: newTestStorage(nil, nil),
-		createAccount: func(publicKeys [][]byte, payer Address) (address Address, err error) {
+		createAccount: func(payer Address) (address Address, err error) {
 			return address2Value, nil
 		},
 		getSigningAccounts: func() []Address {
@@ -2626,7 +2556,8 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 			`
               transaction {
                 prepare(signer: AuthAccount) {
-                  AuthAccount(publicKeys: [], code: %s, payer: signer)
+                  let acct = AuthAccount(payer: signer)
+				  acct.setCode(%s)
                 }
               }
             `,
@@ -2711,7 +2642,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 			return accountCodes[key], nil
 		},
 		storage: newTestStorage(nil, nil),
-		createAccount: func(publicKeys [][]byte, payer Address) (address Address, err error) {
+		createAccount: func(payer Address) (address Address, err error) {
 			result := interpreter.NewAddressValueFromBytes([]byte{nextAccount})
 			nextAccount++
 			return result.ToAddress(), nil
@@ -4000,7 +3931,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	createAccountScript := []byte(`
         transaction {
             prepare(signer: AuthAccount) {
-                AuthAccount(publicKeys: [], code: [], payer: signer)
+                AuthAccount(payer: signer)
             }
         }
     `)
@@ -4028,7 +3959,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	var signerAddresses []Address
 
 	runtimeInterface := &testRuntimeInterface{
-		createAccount: func(publicKeys [][]byte, payer Address) (address Address, err error) {
+		createAccount: func(payer Address) (address Address, err error) {
 			accountCounter++
 			return Address{accountCounter}, nil
 		},

@@ -4184,7 +4184,7 @@ var authAccountSetCodeFunctionType = &FunctionType{
 	),
 	// additional arguments are passed to the contract initializer
 	RequiredArgumentCount: (func() *int {
-		var count = 2
+		var count = 1
 		return &count
 	})(),
 }
