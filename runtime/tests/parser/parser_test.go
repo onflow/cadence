@@ -4330,7 +4330,7 @@ func TestParsePreAndPostConditions(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
         fun test(n: Int) {
             pre {
                 n != 0
@@ -4341,12 +4341,12 @@ func TestParsePreAndPostConditions(t *testing.T) {
             }
             return 0
         }
-	`)
+	`
 
-	require.NoError(t, err)
-
-	expected := &Program{
-		Declarations: []Declaration{
+	testParse(
+		t,
+		code,
+		[]Declaration{
 			&FunctionDeclaration{
 				Access: AccessNotSpecified,
 				Identifier: Identifier{
@@ -4483,9 +4483,7 @@ func TestParsePreAndPostConditions(t *testing.T) {
 				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+	)
 }
 
 func TestParseExpression(t *testing.T) {
@@ -4604,19 +4602,19 @@ func TestParseConditionMessage(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
         fun test(n: Int) {
             pre {
                 n >= 0: "n must be positive"
             }
             return n
         }
-	`)
+	`
 
-	require.NoError(t, err)
-
-	expected := &Program{
-		Declarations: []Declaration{
+	testParse(
+		t,
+		code,
+		[]Declaration{
 			&FunctionDeclaration{
 				Access: AccessNotSpecified,
 				Identifier: Identifier{
@@ -4716,9 +4714,7 @@ func TestParseConditionMessage(t *testing.T) {
 				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+	)
 }
 
 func TestParseOptionalType(t *testing.T) {
@@ -8179,93 +8175,90 @@ func TestParsePreconditionWithUnaryNegation(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
 	  fun test() {
           pre {
               true: "one"
               !false: "two"
           }
       }
-	`)
-
-	require.NoError(t, err)
-
-	a := &FunctionDeclaration{
-		Access: AccessNotSpecified,
-		Identifier: Identifier{
-			Identifier: "test",
-			Pos:        Position{Offset: 8, Line: 2, Column: 7},
-		},
-		ParameterList: &ParameterList{
-			Range: Range{
-				StartPos: Position{Offset: 12, Line: 2, Column: 11},
-				EndPos:   Position{Offset: 13, Line: 2, Column: 12},
-			},
-		},
-		ReturnTypeAnnotation: &TypeAnnotation{
-			Type: &NominalType{
+	`
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&FunctionDeclaration{
+				Access: AccessNotSpecified,
 				Identifier: Identifier{
-					Pos: Position{Offset: 13, Line: 2, Column: 12},
+					Identifier: "test",
+					Pos:        Position{Offset: 8, Line: 2, Column: 7},
 				},
-			},
-			StartPos: Position{Offset: 13, Line: 2, Column: 12},
-		},
-		FunctionBlock: &FunctionBlock{
-			Block: &Block{
-				Range: Range{
-					StartPos: Position{Offset: 15, Line: 2, Column: 14},
-					EndPos:   Position{Offset: 105, Line: 7, Column: 6},
-				},
-			},
-			PreConditions: &Conditions{
-				{
-					Kind: ConditionKindPre,
-					Test: &BoolExpression{
-						Value: true,
-						Range: Range{
-							StartPos: Position{Offset: 47, Line: 4, Column: 14},
-							EndPos:   Position{Offset: 50, Line: 4, Column: 17},
-						},
-					},
-					Message: &StringExpression{
-						Value: "one",
-						Range: Range{
-							StartPos: Position{Offset: 53, Line: 4, Column: 20},
-							EndPos:   Position{Offset: 57, Line: 4, Column: 24},
-						},
+				ParameterList: &ParameterList{
+					Range: Range{
+						StartPos: Position{Offset: 12, Line: 2, Column: 11},
+						EndPos:   Position{Offset: 13, Line: 2, Column: 12},
 					},
 				},
-				{
-					Kind: ConditionKindPre,
-					Test: &UnaryExpression{
-						Operation: OperationNegate,
-						Expression: &BoolExpression{
-							Value: false,
-							Range: Range{
-								StartPos: Position{Offset: 74, Line: 5, Column: 15},
-								EndPos:   Position{Offset: 78, Line: 5, Column: 19},
+				ReturnTypeAnnotation: &TypeAnnotation{
+					Type: &NominalType{
+						Identifier: Identifier{
+							Pos: Position{Offset: 13, Line: 2, Column: 12},
+						},
+					},
+					StartPos: Position{Offset: 13, Line: 2, Column: 12},
+				},
+				FunctionBlock: &FunctionBlock{
+					Block: &Block{
+						Range: Range{
+							StartPos: Position{Offset: 15, Line: 2, Column: 14},
+							EndPos:   Position{Offset: 105, Line: 7, Column: 6},
+						},
+					},
+					PreConditions: &Conditions{
+						{
+							Kind: ConditionKindPre,
+							Test: &BoolExpression{
+								Value: true,
+								Range: Range{
+									StartPos: Position{Offset: 47, Line: 4, Column: 14},
+									EndPos:   Position{Offset: 50, Line: 4, Column: 17},
+								},
+							},
+							Message: &StringExpression{
+								Value: "one",
+								Range: Range{
+									StartPos: Position{Offset: 53, Line: 4, Column: 20},
+									EndPos:   Position{Offset: 57, Line: 4, Column: 24},
+								},
 							},
 						},
-						StartPos: Position{Offset: 73, Line: 5, Column: 14},
-					},
-					Message: &StringExpression{
-						Value: "two",
-						Range: Range{
-							StartPos: Position{Offset: 81, Line: 5, Column: 22},
-							EndPos:   Position{Offset: 85, Line: 5, Column: 26},
+						{
+							Kind: ConditionKindPre,
+							Test: &UnaryExpression{
+								Operation: OperationNegate,
+								Expression: &BoolExpression{
+									Value: false,
+									Range: Range{
+										StartPos: Position{Offset: 74, Line: 5, Column: 15},
+										EndPos:   Position{Offset: 78, Line: 5, Column: 19},
+									},
+								},
+								StartPos: Position{Offset: 73, Line: 5, Column: 14},
+							},
+							Message: &StringExpression{
+								Value: "two",
+								Range: Range{
+									StartPos: Position{Offset: 81, Line: 5, Column: 22},
+									EndPos:   Position{Offset: 85, Line: 5, Column: 26},
+								},
+							},
 						},
 					},
 				},
+				StartPos: Position{Offset: 4, Line: 2, Column: 3},
 			},
 		},
-		StartPos: Position{Offset: 4, Line: 2, Column: 3},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{a},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+	)
 }
 
 func TestParseBitwiseExpression(t *testing.T) {
