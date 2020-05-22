@@ -67,6 +67,11 @@ const simpleDeferralContract = `
               return <-r
           }
 
+          pub fun insert(_ id: String, _ r: @R): @R? {
+              let old <- self.rs.insert(key: id, <-r)
+              return <- old
+          }
+
           destroy() {
               destroy self.rs
           }
@@ -960,7 +965,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesTransfer(t *testing.T) {
 
 func TestRuntimeStorageDeferredResourceDictionaryValuesRemoval(t *testing.T) {
 
-	// Test that `remove` function correctly loads the potentially deferred value
+	// Test that the `remove` function correctly loads the potentially deferred value
 
 	runtime := NewInterpreterRuntime()
 
@@ -1152,4 +1157,118 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesDestruction(t *testing.T)
 		},
 		loggedMessages,
 	)
+}
+
+func TestRuntimeStorageDeferredResourceDictionaryValuesInsertion(t *testing.T) {
+
+	// Test that the `insert` function correctly loads the potentially deferred value
+
+	runtime := NewInterpreterRuntime()
+
+	contract := []byte(simpleDeferralContract)
+
+	deployTx := []byte(fmt.Sprintf(
+		`
+          transaction {
+
+              prepare(signer: AuthAccount) {
+                  signer.setCode(%s)
+              }
+          }
+        `,
+		ArrayValueFromBytes(contract).String(),
+	))
+
+	setupTx := []byte(`
+      import Test from 0x1
+
+      transaction {
+
+          prepare(signer: AuthAccount) {
+              let c <- Test.createC()
+              c.rs["a"] <-! Test.createR(1)
+              c.rs["b"] <-! Test.createR(2)
+              signer.save(<-c, to: /storage/c)
+          }
+      }
+    `)
+
+	borrowTx := []byte(`
+      import Test from 0x1
+
+      transaction {
+
+         prepare(signer: AuthAccount) {
+             let c = signer.borrow<&Test.C>(from: /storage/c)!
+
+             let e1 <- c.insert("c", <-Test.createR(3))
+             assert(e1 == nil)
+             destroy e1
+
+             let e2 <- c.insert("a", <-Test.createR(1))
+             assert(e2 != nil)
+             destroy e2
+         }
+      }
+    `)
+
+	loadTx := []byte(`
+      import Test from 0x1
+
+      transaction {
+
+         prepare(signer: AuthAccount) {
+             let c <- signer.load<@Test.C>(from: /storage/c)!
+             let e1 <- c.insert("d", <-Test.createR(4))
+             assert(e1 == nil)
+             destroy e1
+
+             let e2 <- c.insert("b", <-Test.createR(2))
+             assert(e2 != nil)
+             destroy e2
+
+             destroy c
+         }
+      }
+    `)
+
+	var accountCode []byte
+	var events []cadence.Event
+	var loggedMessages []string
+
+	signer := common.BytesToAddress([]byte{0x1})
+
+	runtimeInterface := &testRuntimeInterface{
+		resolveImport: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		storage: newTestStorage(nil, nil),
+		getSigningAccounts: func() []Address {
+			return []Address{signer}
+		},
+		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+			accountCode = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) {
+			events = append(events, event)
+		},
+		log: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(deployTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	err = runtime.ExecuteTransaction(borrowTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	err = runtime.ExecuteTransaction(loadTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
 }

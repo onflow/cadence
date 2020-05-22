@@ -257,7 +257,7 @@ func TestSetOwnerDictionaryInsert(t *testing.T) {
 	assert.Equal(t, &newOwner, dictionary.GetOwner())
 	assert.Equal(t, &oldOwner, value.GetOwner())
 
-	dictionary.Insert(keyValue, value)
+	dictionary.Insert(nil, LocationRange{}, keyValue, value)
 
 	assert.Equal(t, &newOwner, dictionary.GetOwner())
 	assert.Equal(t, &newOwner, value.GetOwner())

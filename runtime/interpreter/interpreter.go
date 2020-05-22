@@ -1893,7 +1893,8 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 				// NOTE: important to convert in optional, as assignment to dictionary
 				// is always considered as an optional
 
-				newDictionary.Insert(key, value)
+				locationRange := interpreter.locationRange(expression)
+				_ = newDictionary.Insert(interpreter, locationRange, key, value)
 			}
 
 			return Done{Result: newDictionary}
