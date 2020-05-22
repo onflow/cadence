@@ -974,7 +974,7 @@ func TestParseString(t *testing.T) {
 
 func TestInvocation(t *testing.T) {
 
-	// t.Parallel()
+	t.Parallel()
 
 	t.Run("no arguments", func(t *testing.T) {
 
@@ -1059,9 +1059,7 @@ func TestInvocation(t *testing.T) {
 				},
 				Arguments: []*ast.Argument{
 					{
-						Label:         "",
-						LabelStartPos: &ast.Position{},
-						LabelEndPos:   &ast.Position{},
+						Label: "",
 						Expression: &ast.IntegerExpression{
 							Value: big.NewInt(1),
 							Base:  10,
@@ -1131,9 +1129,7 @@ func TestInvocation(t *testing.T) {
 				},
 				Arguments: []*ast.Argument{
 					{
-						Label:         "",
-						LabelStartPos: &ast.Position{},
-						LabelEndPos:   &ast.Position{},
+						Label: "",
 						Expression: &ast.IntegerExpression{
 							Value: big.NewInt(1),
 							Base:  10,
@@ -1144,9 +1140,7 @@ func TestInvocation(t *testing.T) {
 						},
 					},
 					{
-						Label:         "",
-						LabelStartPos: &ast.Position{},
-						LabelEndPos:   &ast.Position{},
+						Label: "",
 						Expression: &ast.IntegerExpression{
 							Value: big.NewInt(2),
 							Base:  10,
@@ -1277,9 +1271,7 @@ func TestInvocation(t *testing.T) {
 				},
 				Arguments: []*ast.Argument{
 					{
-						Label:         "",
-						LabelStartPos: &ast.Position{},
-						LabelEndPos:   &ast.Position{},
+						Label: "",
 						Expression: &ast.IntegerExpression{
 							Value: big.NewInt(1),
 							Base:  10,
@@ -1290,9 +1282,7 @@ func TestInvocation(t *testing.T) {
 						},
 					},
 					{
-						Label:         "",
-						LabelStartPos: &ast.Position{},
-						LabelEndPos:   &ast.Position{},
+						Label: "",
 						Expression: &ast.InvocationExpression{
 							InvokedExpression: &ast.IdentifierExpression{
 								Identifier: ast.Identifier{
@@ -1302,9 +1292,7 @@ func TestInvocation(t *testing.T) {
 							},
 							Arguments: []*ast.Argument{
 								{
-									Label:         "",
-									LabelStartPos: &ast.Position{},
-									LabelEndPos:   &ast.Position{},
+									Label: "",
 									Expression: &ast.IntegerExpression{
 										Value: big.NewInt(2),
 										Base:  10,
@@ -1342,9 +1330,7 @@ func TestInvocation(t *testing.T) {
 				},
 				Arguments: []*ast.Argument{
 					{
-						Label:         "",
-						LabelStartPos: &ast.Position{},
-						LabelEndPos:   &ast.Position{},
+						Label: "",
 						Expression: &ast.IntegerExpression{
 							Value: big.NewInt(1),
 							Base:  10,
@@ -1355,9 +1341,7 @@ func TestInvocation(t *testing.T) {
 						},
 					},
 					{
-						Label:         "",
-						LabelStartPos: &ast.Position{},
-						LabelEndPos:   &ast.Position{},
+						Label: "",
 						Expression: &ast.InvocationExpression{
 							InvokedExpression: &ast.IdentifierExpression{
 								Identifier: ast.Identifier{
@@ -1367,9 +1351,7 @@ func TestInvocation(t *testing.T) {
 							},
 							Arguments: []*ast.Argument{
 								{
-									Label:         "",
-									LabelStartPos: &ast.Position{},
-									LabelEndPos:   &ast.Position{},
+									Label: "",
 									Expression: &ast.StringExpression{
 										Value: "test",
 										Range: ast.Range{
