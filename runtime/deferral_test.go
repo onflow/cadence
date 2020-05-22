@@ -27,7 +27,6 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
@@ -146,8 +145,10 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 		},
 	}
 
+	nextTransactionLocation := newTransactionLocationGenerator()
+
 	clearReadsAndWrites()
-	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, utils.TestLocation)
+	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.NotNil(t, accountCode)
@@ -155,7 +156,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	assert.Len(t, writes, 1)
 
 	clearReadsAndWrites()
-	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Len(t, writes, 1)
@@ -176,7 +177,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
     `)
 
 	clearReadsAndWrites()
-	err = runtime.ExecuteTransaction(insertTx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(insertTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	cStorageKey := []byte("storage\x1fc")
@@ -215,7 +216,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	clearReadsAndWrites()
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(readTx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(readTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"2", "2"}, loggedMessages)
@@ -255,7 +256,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	clearReadsAndWrites()
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(updateTx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(updateTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"3"}, loggedMessages)
@@ -308,7 +309,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	clearReadsAndWrites()
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(replaceTx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(replaceTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"3", "4"}, loggedMessages)
@@ -361,7 +362,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	clearReadsAndWrites()
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(removeTx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(removeTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"4", "nil"}, loggedMessages)
@@ -399,7 +400,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	clearReadsAndWrites()
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(readTx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(readTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"nil", "nil"}, loggedMessages)
@@ -440,7 +441,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	clearReadsAndWrites()
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(destroyTx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(destroyTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"1"}, loggedMessages)
@@ -613,8 +614,10 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesNested(t *testing.T) {
 		},
 	}
 
+	nextTransactionLocation := newTransactionLocationGenerator()
+
 	clearReadsAndWrites()
-	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, utils.TestLocation)
+	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.NotNil(t, accountCode)
@@ -622,7 +625,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesNested(t *testing.T) {
 	assert.Len(t, writes, 1)
 
 	clearReadsAndWrites()
-	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Len(t, writes, 1)
@@ -645,7 +648,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesNested(t *testing.T) {
     `)
 
 	clearReadsAndWrites()
-	err = runtime.ExecuteTransaction(insertTx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(insertTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	cStorageKey := []byte("storage\x1fc")
@@ -687,7 +690,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesNested(t *testing.T) {
 	clearReadsAndWrites()
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(readTx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(readTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"2"}, loggedMessages)
@@ -848,8 +851,10 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesTransfer(t *testing.T) {
 		},
 	}
 
+	nextTransactionLocation := newTransactionLocationGenerator()
+
 	clearReadsAndWrites()
-	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, utils.TestLocation)
+	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.NotNil(t, accountCode)
@@ -857,7 +862,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesTransfer(t *testing.T) {
 	assert.Len(t, writes, 1)
 
 	clearReadsAndWrites()
-	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	cStorageKey := []byte("storage\x1fc")
@@ -896,7 +901,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesTransfer(t *testing.T) {
 	clearReadsAndWrites()
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(transferTx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(transferTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	require.Len(t, writes, 7)
