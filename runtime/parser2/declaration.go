@@ -92,11 +92,10 @@ func parseDeclaration(p *parser) ast.Declaration {
 
 // parseAccess parses an access modifier
 //
-//    access
-//        : 'priv'
-//        | 'pub' ( '(' 'set' ')' )?
-//        | 'access' '(' ( 'self' | 'contract' | 'account' | 'all' ) ')'
-//        ;
+//     access
+//         : 'priv'
+//         | 'pub' ( '(' 'set' ')' )?
+//         | 'access' '(' ( 'self' | 'contract' | 'account' | 'all' ) ')'
 //
 func parseAccess(p *parser) ast.Access {
 
@@ -196,7 +195,7 @@ func parseAccess(p *parser) ast.Access {
 
 // parseVariableDeclaration parses a variable declaration.
 //
-//     variableKind : 'var' | 'let' ;
+//     variableKind : 'var' | 'let'
 //
 //     variableDeclaration :
 //         variableKind identifier ( ':' typeAnnotation )?
@@ -268,7 +267,7 @@ func parseVariableDeclaration(p *parser, access ast.Access, accessPos *ast.Posit
 
 // parseTransfer parses a transfer.
 //
-//    transfer : '=' | '<-' | '<-!'
+//     transfer : '=' | '<-' | '<-!'
 //
 func parseTransfer(p *parser) *ast.Transfer {
 	var operation ast.TransferOperation
@@ -300,10 +299,10 @@ func parseTransfer(p *parser) *ast.Transfer {
 
 // parseImportDeclaration parses an import declaration
 //
-//   importDeclaration :
-//       'import'
-//       ( identifier (',' identifier)* 'from' )?
-//       ( string | hexadecimalLiteral | identifier )
+//     importDeclaration :
+//         'import'
+//         ( identifier (',' identifier)* 'from' )?
+//         ( string | hexadecimalLiteral | identifier )
 //
 func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 
@@ -532,7 +531,7 @@ func parseHexadecimalLocation(literal string) ast.AddressLocation {
 
 // parseEventDeclaration parses an event declaration.
 //
-//    eventDeclaration : 'event' identifier parameterList
+//     eventDeclaration : 'event' identifier parameterList
 //
 func parseEventDeclaration(p *parser, access ast.Access, accessPos *ast.Position) *ast.CompositeDeclaration {
 

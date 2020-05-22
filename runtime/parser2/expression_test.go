@@ -983,7 +983,7 @@ func TestInvocation(t *testing.T) {
 		result, errs := ParseExpression("f()")
 		require.Empty(t, errs)
 
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			&ast.InvocationExpression{
 				InvokedExpression: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
@@ -1005,7 +1005,7 @@ func TestInvocation(t *testing.T) {
 		result, errs := ParseExpression("f ()")
 		require.Empty(t, errs)
 
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			&ast.InvocationExpression{
 				InvokedExpression: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
@@ -1027,7 +1027,7 @@ func TestInvocation(t *testing.T) {
 		result, errs := ParseExpression("f ( )")
 		require.Empty(t, errs)
 
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			&ast.InvocationExpression{
 				InvokedExpression: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
@@ -1049,7 +1049,7 @@ func TestInvocation(t *testing.T) {
 		result, errs := ParseExpression("f(1)")
 		require.Empty(t, errs)
 
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			&ast.InvocationExpression{
 				InvokedExpression: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
@@ -1083,7 +1083,7 @@ func TestInvocation(t *testing.T) {
 		result, errs := ParseExpression("f(1,2)")
 		require.Empty(t, errs)
 
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			&ast.InvocationExpression{
 				InvokedExpression: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
@@ -1176,7 +1176,7 @@ func TestInvocation(t *testing.T) {
 		result, errs := ParseExpression("f(1,g(2))")
 		require.Empty(t, errs)
 
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			&ast.InvocationExpression{
 				InvokedExpression: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
@@ -1235,7 +1235,7 @@ func TestInvocation(t *testing.T) {
 		result, errs := ParseExpression("f(1,g(\"test\"))")
 		require.Empty(t, errs)
 
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			&ast.InvocationExpression{
 				InvokedExpression: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
@@ -1298,7 +1298,7 @@ func TestMemberExpression(t *testing.T) {
 		result, errs := ParseExpression("f.n")
 		require.Empty(t, errs)
 
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			&ast.MemberExpression{
 				Expression: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
@@ -1322,7 +1322,7 @@ func TestMemberExpression(t *testing.T) {
 		result, errs := ParseExpression("f .n")
 		require.Empty(t, errs)
 
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			&ast.MemberExpression{
 				Expression: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
@@ -1346,7 +1346,7 @@ func TestMemberExpression(t *testing.T) {
 		result, errs := ParseExpression("3 * f.n")
 		require.Empty(t, errs)
 
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			&ast.BinaryExpression{
 				Operation: ast.OperationMul,
 				Left: &ast.IntegerExpression{
@@ -1381,7 +1381,7 @@ func TestMemberExpression(t *testing.T) {
 		result, errs := ParseExpression("f?.n")
 		require.Empty(t, errs)
 
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			&ast.MemberExpression{
 				Optional: true,
 				Expression: &ast.IdentifierExpression{
