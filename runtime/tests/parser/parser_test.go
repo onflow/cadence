@@ -4483,6 +4483,7 @@ func TestParsePreAndPostConditions(t *testing.T) {
 				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
+		nil,
 	)
 }
 
@@ -4714,6 +4715,7 @@ func TestParseConditionMessage(t *testing.T) {
 				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
+		nil,
 	)
 }
 
@@ -8258,6 +8260,7 @@ func TestParsePreconditionWithUnaryNegation(t *testing.T) {
 				StartPos: Position{Offset: 4, Line: 2, Column: 3},
 			},
 		},
+		nil,
 	)
 }
 
