@@ -605,7 +605,7 @@ func TestParseIndexExpression(t *testing.T) {
 					},
 				},
 				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 					EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
 				},
 			},
@@ -633,7 +633,7 @@ func TestParseIndexExpression(t *testing.T) {
 					},
 				},
 				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 					EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
 				},
 			},
@@ -659,7 +659,7 @@ func TestParseIndexExpression(t *testing.T) {
 					},
 				},
 				Range: ast.Range{
-					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 					EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
 				},
 			},
