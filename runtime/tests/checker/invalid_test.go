@@ -29,6 +29,8 @@ import (
 
 func TestCheckSpuriousIdentifierAssignmentInvalidValueTypeMismatch(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t,
 		`
           fun test() {
@@ -44,6 +46,8 @@ func TestCheckSpuriousIdentifierAssignmentInvalidValueTypeMismatch(t *testing.T)
 }
 
 func TestCheckSpuriousIdentifierAssignmentInvalidTargetTypeMismatch(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t,
 		`
@@ -61,6 +65,8 @@ func TestCheckSpuriousIdentifierAssignmentInvalidTargetTypeMismatch(t *testing.T
 
 func TestCheckSpuriousIndexAssignmentInvalidValueTypeMismatch(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t,
 		`
           fun test() {
@@ -77,6 +83,8 @@ func TestCheckSpuriousIndexAssignmentInvalidValueTypeMismatch(t *testing.T) {
 
 func TestCheckSpuriousIndexAssignmentInvalidElementTypeMismatch(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t,
 		`
           fun test() {
@@ -92,6 +100,8 @@ func TestCheckSpuriousIndexAssignmentInvalidElementTypeMismatch(t *testing.T) {
 }
 
 func TestCheckSpuriousMemberAssignmentInvalidValueTypeMismatch(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t,
 		`
@@ -111,6 +121,8 @@ func TestCheckSpuriousMemberAssignmentInvalidValueTypeMismatch(t *testing.T) {
 
 func TestCheckSpuriousMemberAssignmentInvalidMemberTypeMismatch(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t,
 		`
          struct X {
@@ -129,6 +141,8 @@ func TestCheckSpuriousMemberAssignmentInvalidMemberTypeMismatch(t *testing.T) {
 
 func TestCheckSpuriousReturnWithInvalidValueTypeMismatch(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t,
 		`
           fun test(): Int {
@@ -143,6 +157,8 @@ func TestCheckSpuriousReturnWithInvalidValueTypeMismatch(t *testing.T) {
 }
 
 func TestCheckSpuriousReturnWithInvalidReturnTypeMismatch(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t,
 		`
@@ -159,6 +175,8 @@ func TestCheckSpuriousReturnWithInvalidReturnTypeMismatch(t *testing.T) {
 
 func TestCheckSpuriousCastWithInvalidTargetTypeMismatch(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t,
 		`
           let y = 1 as X
@@ -171,6 +189,8 @@ func TestCheckSpuriousCastWithInvalidTargetTypeMismatch(t *testing.T) {
 }
 
 func TestCheckSpuriousCastWithInvalidValueTypeMismatch(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t,
 		`

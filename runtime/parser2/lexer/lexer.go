@@ -56,6 +56,8 @@ type lexer struct {
 	startOffset   int
 	endOffset     int
 	prevEndOffset int
+	current       rune
+	prev          rune
 	tokens        chan Token
 	canBackup     bool
 	startPos      position
@@ -67,6 +69,8 @@ func Lex(input string) chan Token {
 		startPos:      position{line: 1},
 		endOffset:     0,
 		prevEndOffset: 0,
+		current:       EOF,
+		prev:          EOF,
 		tokens:        make(chan Token),
 	}
 	go l.run(rootState)
@@ -98,6 +102,7 @@ func (l *lexer) next() rune {
 	endOffset := l.endOffset
 
 	l.prevEndOffset = endOffset
+	l.prev = l.current
 
 	r := EOF
 	w := 1
@@ -106,6 +111,7 @@ func (l *lexer) next() rune {
 	}
 
 	l.endOffset += w
+	l.current = r
 
 	return r
 }
@@ -119,6 +125,7 @@ func (l *lexer) backupOne() {
 	l.canBackup = false
 
 	l.endOffset = l.prevEndOffset
+	l.current = l.prev
 }
 
 func (l *lexer) word() string {
@@ -216,14 +223,6 @@ func (l *lexer) emitError(err error) {
 	l.emit(TokenError, err, rangeStart, false)
 }
 
-func (l *lexer) scanNumber() {
-	// lookahead is already lexed.
-	// parse more, if any
-	l.acceptWhile(func(r rune) bool {
-		return r >= '0' && r <= '9'
-	})
-}
-
 func (l *lexer) scanSpace() (containsNewline bool) {
 	// lookahead is already lexed.
 	// parse more, if any
@@ -249,6 +248,14 @@ func (l *lexer) scanIdentifier() {
 			r >= 'A' && r <= 'Z' ||
 			r >= '0' && r <= '9' ||
 			r == '_'
+	})
+}
+
+func (l *lexer) scanLineComment() {
+	// lookahead is already lexed.
+	// parse more, if any
+	l.acceptWhile(func(r rune) bool {
+		return !(r == '\n' || r == EOF)
 	})
 }
 
@@ -285,4 +292,45 @@ func (l *lexer) scanString(quote rune) {
 		}
 		r = l.next()
 	}
+}
+
+func (l *lexer) scanBinaryRemainder() {
+	l.acceptWhile(func(r rune) bool {
+		return r == '0' || r == '1' || r == '_'
+	})
+}
+
+func (l *lexer) scanOctalRemainder() {
+	l.acceptWhile(func(r rune) bool {
+		return (r >= '0' && r <= '7') || r == '_'
+	})
+}
+
+func (l *lexer) scanHexadecimalRemainder() {
+	l.acceptWhile(func(r rune) bool {
+		return (r >= '0' && r <= '9') ||
+			(r >= 'a' && r <= 'f') ||
+			(r >= 'A' && r <= 'F') ||
+			r == '_'
+	})
+}
+
+func (l *lexer) scanDecimalOrFixedPointRemainder() TokenType {
+	l.acceptWhile(func(r rune) bool {
+		return (r >= '0' && r <= '9') || r == '_'
+	})
+	r := l.next()
+	if r == '.' {
+		l.scanFixedPointRemainder()
+		return TokenFixedPointLiteral
+	} else {
+		l.backupOne()
+		return TokenDecimalLiteral
+	}
+}
+
+func (l *lexer) scanFixedPointRemainder() {
+	l.acceptWhile(func(r rune) bool {
+		return (r >= '0' && r <= '9') || r == '_'
+	})
 }

@@ -31,6 +31,8 @@ import (
 
 func TestCheckCastingIntLiteralToIntegerType(t *testing.T) {
 
+	t.Parallel()
+
 	for _, integerType := range sema.AllIntegerTypes {
 
 		t.Run(integerType.String(), func(t *testing.T) {
@@ -58,6 +60,8 @@ func TestCheckCastingIntLiteralToIntegerType(t *testing.T) {
 
 func TestCheckInvalidCastingIntLiteralToString(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let x = 1 as String
     `)
@@ -68,6 +72,8 @@ func TestCheckInvalidCastingIntLiteralToString(t *testing.T) {
 }
 
 func TestCheckCastingIntLiteralToAnyStruct(t *testing.T) {
+
+	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
       let x = 1 as AnyStruct
@@ -84,6 +90,8 @@ func TestCheckCastingIntLiteralToAnyStruct(t *testing.T) {
 }
 
 func TestCheckCastingResourceToAnyResource(t *testing.T) {
+
+	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
       resource R {}
@@ -102,6 +110,8 @@ func TestCheckCastingResourceToAnyResource(t *testing.T) {
 
 func TestCheckCastingArrayLiteral(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun zipOf3(a: [AnyStruct; 3], b: [Int; 3]): [[AnyStruct; 2]; 3] {
           return [
@@ -116,6 +126,8 @@ func TestCheckCastingArrayLiteral(t *testing.T) {
 }
 
 func TestCheckCastResourceType(t *testing.T) {
+
+	t.Parallel()
 
 	// Supertype: Restricted type
 
@@ -1265,6 +1277,8 @@ func TestCheckCastResourceType(t *testing.T) {
 
 func TestCheckCastStructType(t *testing.T) {
 
+	t.Parallel()
+
 	// Supertype: Restricted type
 
 	t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
@@ -2245,6 +2259,8 @@ func TestCheckCastStructType(t *testing.T) {
 
 func TestCheckReferenceTypeSubTyping(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("resource", func(t *testing.T) {
 
 		for _, ty := range []string{
@@ -2355,6 +2371,8 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
 }
 
 func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
+
+	t.Parallel()
 
 	// Supertype: Restricted type
 
@@ -3442,6 +3460,8 @@ func TestCheckCastAuthorizedResourceReferenceType(t *testing.T) {
 
 func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
+	t.Parallel()
+
 	// Supertype: Restricted type
 
 	t.Run("restricted type -> restricted type: fewer restrictions", func(t *testing.T) {
@@ -4503,6 +4523,8 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 
 func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 
+	t.Parallel()
+
 	for name, op := range map[string]string{
 		"static":  "as",
 		"dynamic": "as?",
@@ -5151,6 +5173,8 @@ func TestCheckCastUnauthorizedResourceReferenceType(t *testing.T) {
 }
 
 func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
+
+	t.Parallel()
 
 	for name, op := range map[string]string{
 		"static":  "as",

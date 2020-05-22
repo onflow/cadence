@@ -19,6 +19,8 @@
 package runtime
 
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"strings"
@@ -88,7 +90,6 @@ type testRuntimeInterface struct {
 	createAccount      func(publicKeys [][]byte) (address Address, err error)
 	addAccountKey      func(address Address, publicKey []byte) error
 	removeAccountKey   func(address Address, index int) (publicKey []byte, err error)
-	checkCode          func(address Address, code []byte) (err error)
 	updateAccountCode  func(address Address, code []byte, checkPermission bool) (err error)
 	getSigningAccounts func() []Address
 	log                func(string)
@@ -143,10 +144,6 @@ func (i *testRuntimeInterface) AddAccountKey(address Address, publicKey []byte) 
 
 func (i *testRuntimeInterface) RemoveAccountKey(address Address, index int) (publicKey []byte, err error) {
 	return i.removeAccountKey(address, index)
-}
-
-func (i *testRuntimeInterface) CheckCode(address Address, code []byte) (err error) {
-	return i.checkCode(address, code)
 }
 
 func (i *testRuntimeInterface) UpdateAccountCode(address Address, code []byte, checkPermission bool) (err error) {
@@ -218,7 +215,26 @@ func (i *testRuntimeInterface) ValueDecoded(duration time.Duration) {
 	i.valueDecoded(duration)
 }
 
+func (i *testRuntimeInterface) GetCurrentBlockHeight() uint64 {
+	return 1
+}
+
+func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (hash BlockHash, timestamp int64, exists bool) {
+	buf := new(bytes.Buffer)
+	err := binary.Write(buf, binary.BigEndian, height)
+	if err != nil {
+		panic(err)
+	}
+
+	encoded := buf.Bytes()
+	copy(hash[stdlib.BlockIDSize-len(encoded):], encoded)
+
+	return hash, time.Unix(int64(height), 0).UnixNano(), true
+}
+
 func TestRuntimeImport(t *testing.T) {
+
+	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
 
@@ -251,13 +267,17 @@ func TestRuntimeImport(t *testing.T) {
 		},
 	}
 
-	value, err := runtime.ExecuteScript(script, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	value, err := runtime.ExecuteScript(script, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t, cadence.NewInt(42), value)
 }
 
 func TestRuntimeProgramCache(t *testing.T) {
+
+	t.Parallel()
 
 	programCache := map[ast.LocationID]*ast.Program{}
 	cacheHits := make(map[ast.LocationID]bool)
@@ -362,7 +382,18 @@ func TestRuntimeProgramCache(t *testing.T) {
 	})
 }
 
+func newTransactionLocationGenerator() func() TransactionLocation {
+	var transactionCount uint8
+	return func() TransactionLocation {
+		defer func() { transactionCount++ }()
+		return TransactionLocation{transactionCount}
+	}
+}
+
 func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -378,11 +409,16 @@ func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 	assert.Error(t, err)
 }
 
 func TestRuntimeTransactionWithAccount(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -406,13 +442,18 @@ func TestRuntimeTransactionWithAccount(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t, "0x2a", loggedMessage)
 }
 
 func TestRuntimeTransactionWithArguments(t *testing.T) {
+
+	t.Parallel()
+
 	var tests = []struct {
 		label        string
 		script       string
@@ -708,6 +749,9 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 }
 
 func TestRuntimeProgramWithNoTransaction(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -716,7 +760,9 @@ func TestRuntimeProgramWithNoTransaction(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{}
 
-	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 
 	require.IsType(t, Error{}, err)
 	err = err.(Error).Unwrap()
@@ -724,6 +770,9 @@ func TestRuntimeProgramWithNoTransaction(t *testing.T) {
 }
 
 func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -737,7 +786,9 @@ func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{}
 
-	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 
 	require.IsType(t, Error{}, err)
 	err = err.(Error).Unwrap()
@@ -745,6 +796,8 @@ func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
 }
 
 func TestRuntimeStorage(t *testing.T) {
+
+	t.Parallel()
 
 	tests := map[string]string{
 		"resource": `
@@ -849,7 +902,9 @@ func TestRuntimeStorage(t *testing.T) {
 				},
 			}
 
-			err := runtime.ExecuteTransaction(script, nil, runtimeInterface, utils.TestLocation)
+			nextTransactionLocation := newTransactionLocationGenerator()
+
+			err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 			require.NoError(t, err)
 
 			assert.Equal(t, []string{"true", "true"}, loggedMessages)
@@ -858,6 +913,9 @@ func TestRuntimeStorage(t *testing.T) {
 }
 
 func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	container := []byte(`
@@ -936,13 +994,15 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(script3, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(script3, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 }
 
@@ -950,6 +1010,9 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 // of a stored resource declared in an imported program
 //
 func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	deepThought := []byte(`
@@ -1007,10 +1070,12 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Contains(t, loggedMessages, "42")
@@ -1020,6 +1085,9 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 // of a stored resource declared in an imported program
 //
 func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
@@ -1078,10 +1146,12 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Contains(t, loggedMessages, "42")
@@ -1092,6 +1162,9 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 // See https://github.com/dapperlabs/flow-go/issues/838
 //
 func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
@@ -1147,14 +1220,19 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 }
 
 func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
@@ -1212,16 +1290,21 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"\"x!\""}, loggedMessages)
 }
 
 func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
@@ -1280,16 +1363,21 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"\"x!\""}, loggedMessages)
 }
 
 func TestRuntimeResourceContractWithInterface(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	imported1 := []byte(`
@@ -1362,23 +1450,30 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"\"x!\""}, loggedMessages)
 }
 
 func TestParseAndCheckProgram(t *testing.T) {
+
+	t.Parallel()
+
 	t.Run("ValidProgram", func(t *testing.T) {
 		runtime := NewInterpreterRuntime()
 
 		script := []byte("pub fun test(): Int { return 42 }")
 		runtimeInterface := &testRuntimeInterface{}
 
-		err := runtime.ParseAndCheckProgram(script, runtimeInterface, utils.TestLocation)
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := runtime.ParseAndCheckProgram(script, runtimeInterface, nextTransactionLocation())
 		assert.NoError(t, err)
 	})
 
@@ -1388,7 +1483,9 @@ func TestParseAndCheckProgram(t *testing.T) {
 		script := []byte("invalid syntax")
 		runtimeInterface := &testRuntimeInterface{}
 
-		err := runtime.ParseAndCheckProgram(script, runtimeInterface, utils.TestLocation)
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := runtime.ParseAndCheckProgram(script, runtimeInterface, nextTransactionLocation())
 		assert.NotNil(t, err)
 	})
 
@@ -1398,12 +1495,17 @@ func TestParseAndCheckProgram(t *testing.T) {
 		script := []byte(`pub let a: Int = "b"`)
 		runtimeInterface := &testRuntimeInterface{}
 
-		err := runtime.ParseAndCheckProgram(script, runtimeInterface, utils.TestLocation)
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := runtime.ParseAndCheckProgram(script, runtimeInterface, nextTransactionLocation())
 		assert.NotNil(t, err)
 	})
 }
 
 func TestRuntimeSyntaxError(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -1418,11 +1520,16 @@ func TestRuntimeSyntaxError(t *testing.T) {
 		},
 	}
 
-	_, err := runtime.ExecuteScript(script, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	_, err := runtime.ExecuteScript(script, runtimeInterface, nextTransactionLocation())
 	assert.Error(t, err)
 }
 
 func TestRuntimeStorageChanges(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
@@ -1483,16 +1590,21 @@ func TestRuntimeStorageChanges(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"1"}, loggedMessages)
 }
 
 func TestRuntimeAccountAddress(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -1516,13 +1628,18 @@ func TestRuntimeAccountAddress(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"0x2a"}, loggedMessages)
 }
 
 func TestRuntimePublicAccountAddress(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -1546,13 +1663,18 @@ func TestRuntimePublicAccountAddress(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{fmt.Sprint(address)}, loggedMessages)
 }
 
 func TestRuntimeAccountPublishAndAccess(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
@@ -1616,16 +1738,21 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script1, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(script2, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"42"}, loggedMessages)
 }
 
 func TestRuntimeTransactionWithUpdateAccountCodeEmpty(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -1654,7 +1781,9 @@ func TestRuntimeTransactionWithUpdateAccountCodeEmpty(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 
 	require.NoError(t, err)
 
@@ -1663,6 +1792,9 @@ func TestRuntimeTransactionWithUpdateAccountCodeEmpty(t *testing.T) {
 }
 
 func TestRuntimeTransactionWithCreateAccountEmpty(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -1691,7 +1823,9 @@ func TestRuntimeTransactionWithCreateAccountEmpty(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 
 	require.NoError(t, err)
 
@@ -1700,6 +1834,9 @@ func TestRuntimeTransactionWithCreateAccountEmpty(t *testing.T) {
 }
 
 func TestRuntimeCyclicImport(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
@@ -1730,7 +1867,9 @@ func TestRuntimeCyclicImport(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 
 	require.Error(t, err)
 	require.IsType(t, Error{}, err)
@@ -1748,6 +1887,8 @@ func ArrayValueFromBytes(bytes []byte) *interpreter.ArrayValue {
 }
 
 func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
+
+	t.Parallel()
 
 	expectSuccess := func(t *testing.T, err error, accountCode []byte, events []cadence.Event, expectedEventType cadence.Type) {
 		require.NoError(t, err)
@@ -1909,7 +2050,9 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 					},
 				}
 
-				err := runtime.ExecuteTransaction(script, nil, runtimeInterface, utils.TestLocation)
+				nextTransactionLocation := newTransactionLocationGenerator()
+
+				err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 
 				test.check(t, err, accountCode, events, exportType(stdlib.AccountCodeUpdatedEventType))
 			})
@@ -1966,7 +2109,9 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 					},
 				}
 
-				err := runtime.ExecuteTransaction(script, nil, runtimeInterface, utils.TestLocation)
+				nextTransactionLocation := newTransactionLocationGenerator()
+
+				err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 
 				test.check(t, err, accountCode, events, exportType(stdlib.AccountCreatedEventType))
 			})
@@ -1976,11 +2121,11 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 func TestRuntimeContractAccount(t *testing.T) {
 
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
-	addressValue := cadence.NewAddress([common.AddressLength]byte{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xCA, 0xDE,
-	})
+	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
 	contract := []byte(`
       pub contract Test {
@@ -2048,20 +2193,22 @@ func TestRuntimeContractAccount(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.NotNil(t, accountCode)
 
 	t.Run("", func(t *testing.T) {
-		value, err := runtime.ExecuteScript(script1, runtimeInterface, utils.TestLocation)
+		value, err := runtime.ExecuteScript(script1, runtimeInterface, nextTransactionLocation())
 		require.NoError(t, err)
 
 		assert.Equal(t, addressValue, value)
 	})
 
 	t.Run("", func(t *testing.T) {
-		value, err := runtime.ExecuteScript(script2, runtimeInterface, utils.TestLocation)
+		value, err := runtime.ExecuteScript(script2, runtimeInterface, nextTransactionLocation())
 		require.NoError(t, err)
 
 		assert.Equal(t, addressValue, value)
@@ -2069,6 +2216,9 @@ func TestRuntimeContractAccount(t *testing.T) {
 }
 
 func TestRuntimeContractNestedResource(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	addressValue := Address{
@@ -2136,12 +2286,14 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.NotNil(t, accountCode)
 
-	err = runtime.ExecuteTransaction(tx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(tx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t, `"Hello World!"`, loggedMessage)
@@ -2244,6 +2396,8 @@ pub contract FungibleToken {
 
 func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	address1Value := Address{
@@ -2334,19 +2488,23 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(setup1Transaction, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(setup1Transaction, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	signerAccount = address2Value
 
-	err = runtime.ExecuteTransaction(setup2Transaction, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(setup2Transaction, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 }
 
 func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
+
+	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
 
@@ -2440,17 +2598,21 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(setup1Transaction, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(setup1Transaction, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(setup2Transaction, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(setup2Transaction, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 }
 
 func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
+
+	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
 
@@ -2562,11 +2724,13 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 		},
 	}
 
+	nextTransactionLocation := newTransactionLocationGenerator()
+
 	err := runtime.ExecuteTransaction(
 		makeDeployTransaction(contractInterfaceCode),
 		nil,
 		runtimeInterface,
-		utils.TestLocation,
+		nextTransactionLocation(),
 	)
 	require.NoError(t, err)
 
@@ -2574,7 +2738,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 		makeDeployTransaction(contractCode),
 		nil,
 		runtimeInterface,
-		utils.TestLocation,
+		nextTransactionLocation(),
 	)
 	require.NoError(t, err)
 
@@ -2582,7 +2746,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 		setupCode,
 		nil,
 		runtimeInterface,
-		utils.TestLocation,
+		nextTransactionLocation(),
 	)
 	require.NoError(t, err)
 
@@ -2595,7 +2759,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 					makeUseCode(a, b),
 					nil,
 					runtimeInterface,
-					utils.TestLocation,
+					nextTransactionLocation(),
 				)
 
 				if a == 2 && b == 2 {
@@ -2611,6 +2775,9 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 }
 
 func TestRuntimeBlock(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	script := []byte(`
@@ -2642,7 +2809,9 @@ func TestRuntimeBlock(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -2662,6 +2831,8 @@ func TestRuntimeBlock(t *testing.T) {
 
 func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("transaction with function", func(t *testing.T) {
 		runtime := NewInterpreterRuntime()
 
@@ -2677,7 +2848,9 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 			},
 		}
 
-		err := runtime.ExecuteTransaction(script, nil, runtimeInterface, TransactionLocation{})
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 		require.NoError(t, err)
 	})
 
@@ -2696,7 +2869,9 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 			},
 		}
 
-		err := runtime.ExecuteTransaction(script, nil, runtimeInterface, TransactionLocation{})
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 		require.Error(t, err)
 
 		require.IsType(t, Error{}, err)
@@ -2709,6 +2884,8 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 }
 
 func TestRuntimeStoreIntegerTypes(t *testing.T) {
+
+	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
 
@@ -2772,7 +2949,9 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 				},
 			}
 
-			err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, utils.TestLocation)
+			nextTransactionLocation := newTransactionLocationGenerator()
+
+			err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, nextTransactionLocation())
 			require.NoError(t, err)
 
 			assert.NotNil(t, accountCode)
@@ -2781,6 +2960,8 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 }
 
 func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
+
+	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
 
@@ -2889,10 +3070,12 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(tx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(tx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -2905,7 +3088,7 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 	)
 
 	loggedMessages = nil
-	err = runtime.ExecuteTransaction(tx2, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(tx2, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -2918,6 +3101,8 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 }
 
 func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
+
+	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
 
@@ -3039,10 +3224,12 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(tx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(tx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -3058,7 +3245,7 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
 	)
 
 	loggedMessages = nil
-	err = runtime.ExecuteTransaction(tx2, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(tx2, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -3073,6 +3260,8 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
 }
 
 func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
+
+	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
 
@@ -3194,10 +3383,12 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(tx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(tx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -3213,7 +3404,7 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
 	)
 
 	loggedMessages = nil
-	err = runtime.ExecuteTransaction(tx2, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(tx2, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -3228,6 +3419,8 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
 }
 
 func TestRuntimeComputationLimit(t *testing.T) {
+
+	t.Parallel()
 
 	const computationLimit = 5
 
@@ -3297,7 +3490,9 @@ func TestRuntimeComputationLimit(t *testing.T) {
 				computationLimit: computationLimit,
 			}
 
-			err := runtime.ExecuteTransaction(script, nil, runtimeInterface, utils.TestLocation)
+			nextTransactionLocation := newTransactionLocationGenerator()
+
+			err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 			if test.ok {
 				require.NoError(t, err)
 			} else {
@@ -3318,6 +3513,9 @@ func TestRuntimeComputationLimit(t *testing.T) {
 }
 
 func TestRuntimeMetrics(t *testing.T) {
+
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
 	imported1Location := StringLocation("imported1")
@@ -3361,9 +3559,9 @@ func TestRuntimeMetrics(t *testing.T) {
 	storage := newTestStorage(nil, nil)
 
 	type reports struct {
-		programParsed      map[ast.Location]int
-		programChecked     map[ast.Location]int
-		programInterpreted map[ast.Location]int
+		programParsed      map[ast.LocationID]int
+		programChecked     map[ast.LocationID]int
+		programInterpreted map[ast.LocationID]int
 		valueEncoded       int
 		valueDecoded       int
 	}
@@ -3371,9 +3569,9 @@ func TestRuntimeMetrics(t *testing.T) {
 	newRuntimeInterface := func() (runtimeInterface Interface, r *reports) {
 
 		r = &reports{
-			programParsed:      map[ast.Location]int{},
-			programChecked:     map[ast.Location]int{},
-			programInterpreted: map[ast.Location]int{},
+			programParsed:      map[ast.LocationID]int{},
+			programChecked:     map[ast.LocationID]int{},
+			programInterpreted: map[ast.LocationID]int{},
 		}
 
 		runtimeInterface = &testRuntimeInterface{
@@ -3392,13 +3590,13 @@ func TestRuntimeMetrics(t *testing.T) {
 				}
 			},
 			programParsed: func(location ast.Location, duration time.Duration) {
-				r.programParsed[location]++
+				r.programParsed[location.ID()]++
 			},
 			programChecked: func(location ast.Location, duration time.Duration) {
-				r.programChecked[location]++
+				r.programChecked[location.ID()]++
 			},
 			programInterpreted: func(location ast.Location, duration time.Duration) {
-				r.programInterpreted[location]++
+				r.programInterpreted[location.ID()]++
 			},
 			valueEncoded: func(duration time.Duration) {
 				r.valueEncoded++
@@ -3413,26 +3611,29 @@ func TestRuntimeMetrics(t *testing.T) {
 
 	i1, r1 := newRuntimeInterface()
 
-	err := runtime.ExecuteTransaction(script1, nil, i1, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	transactionLocation := nextTransactionLocation()
+	err := runtime.ExecuteTransaction(script1, nil, i1, transactionLocation)
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		map[ast.Location]int{
-			utils.TestLocation: 1,
-			imported1Location:  1,
+		map[ast.LocationID]int{
+			transactionLocation.ID(): 1,
+			imported1Location.ID():   1,
 		},
 		r1.programParsed,
 	)
 	assert.Equal(t,
-		map[ast.Location]int{
-			utils.TestLocation: 1,
-			imported1Location:  1,
+		map[ast.LocationID]int{
+			transactionLocation.ID(): 1,
+			imported1Location.ID():   1,
 		},
 		r1.programChecked,
 	)
 	assert.Equal(t,
-		map[ast.Location]int{
-			utils.TestLocation: 1,
+		map[ast.LocationID]int{
+			transactionLocation.ID(): 1,
 		},
 		r1.programInterpreted,
 	)
@@ -3441,26 +3642,28 @@ func TestRuntimeMetrics(t *testing.T) {
 
 	i2, r2 := newRuntimeInterface()
 
-	err = runtime.ExecuteTransaction(script2, nil, i2, utils.TestLocation)
+	transactionLocation = nextTransactionLocation()
+
+	err = runtime.ExecuteTransaction(script2, nil, i2, transactionLocation)
 	require.NoError(t, err)
 
 	assert.Equal(t,
-		map[ast.Location]int{
-			utils.TestLocation: 1,
-			imported2Location:  1,
+		map[ast.LocationID]int{
+			transactionLocation.ID(): 1,
+			imported2Location.ID():   1,
 		},
 		r2.programParsed,
 	)
 	assert.Equal(t,
-		map[ast.Location]int{
-			utils.TestLocation: 1,
-			imported2Location:  1,
+		map[ast.LocationID]int{
+			transactionLocation.ID(): 1,
+			imported2Location.ID():   1,
 		},
 		r2.programChecked,
 	)
 	assert.Equal(t,
-		map[ast.Location]int{
-			utils.TestLocation: 1,
+		map[ast.LocationID]int{
+			transactionLocation.ID(): 1,
 		},
 		r2.programInterpreted,
 	)
@@ -3468,13 +3671,29 @@ func TestRuntimeMetrics(t *testing.T) {
 	assert.Equal(t, 1, r2.valueDecoded)
 }
 
+type testRead struct {
+	controller, owner, key []byte
+}
+
+func (r testRead) String() string {
+	return fmt.Sprintf("%x %s", r.controller, r.key)
+}
+
+type testWrite struct {
+	controller, owner, key, value []byte
+}
+
+func (w testWrite) String() string {
+	return fmt.Sprintf("%x %s", w.controller, w.key)
+}
+
 func TestRuntimeContractWriteback(t *testing.T) {
+
+	t.Parallel()
 
 	runtime := NewInterpreterRuntime()
 
-	addressValue := cadence.NewAddress([common.AddressLength]byte{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xCA, 0xDE,
-	})
+	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
 	contract := []byte(`
       pub contract Test {
@@ -3521,17 +3740,13 @@ func TestRuntimeContractWriteback(t *testing.T) {
        }
     `)
 
-	type write struct {
-		controller, owner, key, value []byte
-	}
-
 	var accountCode []byte
 	var events []cadence.Event
 	var loggedMessages []string
-	var writes []write
+	var writes []testWrite
 
 	onWrite := func(controller, owner, key, value []byte) {
-		writes = append(writes, write{
+		writes = append(writes, testWrite{
 			controller,
 			owner,
 			key,
@@ -3559,19 +3774,21 @@ func TestRuntimeContractWriteback(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.NotNil(t, accountCode)
 
 	assert.Len(t, writes, 1)
 
-	err = runtime.ExecuteTransaction(readTx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(readTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Len(t, writes, 1)
 
-	err = runtime.ExecuteTransaction(writeTx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(writeTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Len(t, writes, 2)
@@ -3579,11 +3796,11 @@ func TestRuntimeContractWriteback(t *testing.T) {
 
 func TestRuntimeStorageWriteback(t *testing.T) {
 
+	t.Parallel()
+
 	runtime := NewInterpreterRuntime()
 
-	addressValue := cadence.NewAddress([common.AddressLength]byte{
-		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xCA, 0xDE,
-	})
+	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
 	contract := []byte(`
       pub contract Test {
@@ -3627,40 +3844,13 @@ func TestRuntimeStorageWriteback(t *testing.T) {
        }
     `)
 
-	readTx := []byte(`
-	 import Test from 0xCADE
-
-	  transaction {
-
-	     prepare(signer: AuthAccount) {
-	         log(signer.borrow<&Test.R>(from: /storage/r)!.test)
-	     }
-	  }
-	`)
-
-	writeTx := []byte(`
-	 import Test from 0xCADE
-
-	  transaction {
-
-	     prepare(signer: AuthAccount) {
-             let r = signer.borrow<&Test.R>(from: /storage/r)!
-	         r.test = 2
-	     }
-	  }
-	`)
-
-	type write struct {
-		controller, owner, key, value []byte
-	}
-
 	var accountCode []byte
 	var events []cadence.Event
 	var loggedMessages []string
-	var writes []write
+	var writes []testWrite
 
 	onWrite := func(controller, owner, key, value []byte) {
-		writes = append(writes, write{
+		writes = append(writes, testWrite{
 			controller,
 			owner,
 			key,
@@ -3688,25 +3878,193 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 		},
 	}
 
-	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, utils.TestLocation)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.NotNil(t, accountCode)
 
 	assert.Len(t, writes, 1)
 
-	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, utils.TestLocation)
+	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Len(t, writes, 2)
 
-	err = runtime.ExecuteTransaction(readTx, nil, runtimeInterface, utils.TestLocation)
+	readTx := []byte(`
+     import Test from 0xCADE
+
+      transaction {
+
+         prepare(signer: AuthAccount) {
+             log(signer.borrow<&Test.R>(from: /storage/r)!.test)
+         }
+      }
+    `)
+
+	err = runtime.ExecuteTransaction(readTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Len(t, writes, 2)
 
-	err = runtime.ExecuteTransaction(writeTx, nil, runtimeInterface, utils.TestLocation)
+	writeTx := []byte(`
+     import Test from 0xCADE
+
+      transaction {
+
+         prepare(signer: AuthAccount) {
+             let r = signer.borrow<&Test.R>(from: /storage/r)!
+             r.test = 2
+         }
+      }
+    `)
+
+	err = runtime.ExecuteTransaction(writeTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Len(t, writes, 3)
+}
+
+func TestRuntimeExternalError(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	script := []byte(`
+      transaction {
+        prepare() {
+          log("ok")
+        }
+      }
+    `)
+
+	type logPanic struct{}
+
+	runtimeInterface := &testRuntimeInterface{
+		getSigningAccounts: func() []Address {
+			return nil
+		},
+		log: func(message string) {
+			panic(logPanic{})
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	assert.PanicsWithValue(t,
+		interpreter.ExternalError{
+			Recovered: logPanic{},
+		},
+		func() {
+			_ = runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
+		},
+	)
+}
+
+func TestRuntimeUpdateCodeCaching(t *testing.T) {
+
+	t.Parallel()
+
+	const helloWorldContract = `
+      pub contract HelloWorld {
+
+          pub let greeting: String
+
+          init() {
+              self.greeting = "Hello, World!"
+          }
+
+          pub fun hello(): String {
+              return self.greeting
+          }
+      }
+    `
+
+	const callHelloTxTemplate = `
+        import HelloWorld from 0x%s
+
+        transaction {
+            prepare(signer: AuthAccount) {
+                assert(HelloWorld.hello() == "Hello, World!")
+            }
+        }
+    `
+
+	createAccountScript := []byte(`
+        transaction {
+            prepare() {
+                AuthAccount(publicKeys: [], code: [])
+            }
+            execute {}
+        }
+    `)
+
+	updateCodeScript := []byte(fmt.Sprintf(
+		`
+		  transaction {
+			  prepare(signer: AuthAccount) {
+				  signer.setCode(%s)
+			  }
+		  }
+		`,
+		ArrayValueFromBytes([]byte(helloWorldContract)).String(),
+	))
+
+	runtime := NewInterpreterRuntime()
+
+	accountCodes := map[string][]byte{}
+	var events []cadence.Event
+
+	cachedPrograms := map[LocationID]*ast.Program{}
+
+	var accountCounter uint8 = 0
+
+	var signerAddresses []Address
+
+	runtimeInterface := &testRuntimeInterface{
+		createAccount: func(publicKeys [][]byte) (address Address, err error) {
+			accountCounter++
+			return Address{accountCounter}, nil
+		},
+		resolveImport: func(location Location) (bytes []byte, err error) {
+			key := string(location.(AddressLocation).ID())
+			return accountCodes[key], nil
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			cachedPrograms[location.ID()] = program
+			return nil
+		},
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			return cachedPrograms[location.ID()], nil
+		},
+		storage: newTestStorage(nil, nil),
+		getSigningAccounts: func() []Address {
+			return signerAddresses
+		},
+		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+			key := string(AddressLocation(address[:]).ID())
+			accountCodes[key] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) {
+			events = append(events, event)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(createAccountScript, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	signerAddresses = []Address{{accountCounter}}
+
+	err = runtime.ExecuteTransaction(updateCodeScript, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	callScript := []byte(fmt.Sprintf(callHelloTxTemplate, Address{accountCounter}))
+
+	err = runtime.ExecuteTransaction(callScript, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
 }

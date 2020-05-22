@@ -27,8 +27,8 @@ import (
 )
 
 type storageKey struct {
-	storageIdentifier string
-	key               string
+	address common.Address
+	key     string
 }
 
 type cacheEntry struct {
@@ -59,13 +59,13 @@ func newInterpreterRuntimeStorage(runtimeInterface Interface) *interpreterRuntim
 // places in the cache, and returned.
 //
 func (s *interpreterRuntimeStorage) valueExists(
-	storageIdentifier string,
+	address common.Address,
 	key string,
 ) bool {
 
 	fullKey := storageKey{
-		storageIdentifier: storageIdentifier,
-		key:               key,
+		address: address,
+		key:     key,
 	}
 
 	// Check cache
@@ -75,8 +75,13 @@ func (s *interpreterRuntimeStorage) valueExists(
 	}
 
 	// Cache miss: Ask interface
-	// TODO: fix controller
-	exists, err := s.runtimeInterface.ValueExists([]byte(storageIdentifier), []byte{}, []byte(key))
+
+	var exists bool
+	var err error
+	wrapPanic(func() {
+		// TODO: fix controller
+		exists, err = s.runtimeInterface.ValueExists(address[:], []byte{}, []byte(key))
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -100,13 +105,14 @@ func (s *interpreterRuntimeStorage) valueExists(
 // places in the cache, and returned.
 //
 func (s *interpreterRuntimeStorage) readValue(
-	storageIdentifier string,
+	address common.Address,
 	key string,
+	deferred bool,
 ) interpreter.OptionalValue {
 
 	fullKey := storageKey{
-		storageIdentifier: storageIdentifier,
-		key:               key,
+		address: address,
+		key:     key,
 	}
 
 	// Check cache. Return cached value, if any
@@ -122,8 +128,12 @@ func (s *interpreterRuntimeStorage) readValue(
 	// Cache miss: Load and deserialize the stored value (if any)
 	// through the runtime interface
 
-	// TODO: fix controller
-	storedData, err := s.runtimeInterface.GetValue([]byte(storageIdentifier), []byte{}, []byte(key))
+	var storedData []byte
+	var err error
+	wrapPanic(func() {
+		// TODO: fix controller
+		storedData, err = s.runtimeInterface.GetValue(address[:], nil, []byte(key))
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -136,13 +146,11 @@ func (s *interpreterRuntimeStorage) readValue(
 		return interpreter.NilValue{}
 	}
 
-	address := common.BytesToAddress([]byte(storageIdentifier))
-
 	var storedValue interpreter.Value
 
 	reportMetric(
 		func() {
-			storedValue, err = interpreter.DecodeValue(storedData, &address)
+			storedValue, err = interpreter.DecodeValue(storedData, &address, []string{key})
 		},
 		s.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
@@ -153,9 +161,11 @@ func (s *interpreterRuntimeStorage) readValue(
 		panic(err)
 	}
 
-	s.cache[fullKey] = cacheEntry{
-		mustWrite: false,
-		value:     storedValue,
+	if !deferred {
+		s.cache[fullKey] = cacheEntry{
+			mustWrite: false,
+			value:     storedValue,
+		}
 	}
 
 	return interpreter.NewSomeValueOwningNonCopying(storedValue)
@@ -169,13 +179,13 @@ func (s *interpreterRuntimeStorage) readValue(
 // (The Cache is finally written back through the runtime interface in `writeCached`.)
 //
 func (s *interpreterRuntimeStorage) writeValue(
-	storageIdentifier string,
+	address common.Address,
 	key string,
 	value interpreter.OptionalValue,
 ) {
 	fullKey := storageKey{
-		storageIdentifier: storageIdentifier,
-		key:               key,
+		address: address,
+		key:     key,
 	}
 
 	// Only write the value to the cache.
@@ -202,38 +212,122 @@ func (s *interpreterRuntimeStorage) writeValue(
 //
 func (s *interpreterRuntimeStorage) writeCached() {
 
+	type writeItem struct {
+		storageKey storageKey
+		value      interpreter.Value
+	}
+
+	var items []writeItem
+
 	for fullKey, entry := range s.cache {
 
 		if !entry.mustWrite && entry.value != nil && !entry.value.Modified() {
 			continue
 		}
 
+		items = append(items, writeItem{
+			storageKey: fullKey,
+			value:      entry.value,
+		})
+	}
+
+	// Don't use a for-range loop, as keys are added while iterating
+	for len(items) > 0 {
+		var item writeItem
+		item, items = items[0], items[1:]
+
 		var newData []byte
-		if entry.value != nil {
+		if item.value != nil {
+			var deferrals *interpreter.EncodingDeferrals
 			var err error
-			reportMetric(
-				func() {
-					newData, err = interpreter.EncodeValue(entry.value)
-				},
-				s.runtimeInterface,
-				func(metrics Metrics, duration time.Duration) {
-					metrics.ValueEncoded(duration)
-				},
-			)
+			newData, deferrals, err = s.encodeValue(item.value, item.storageKey.key)
 			if err != nil {
 				panic(err)
 			}
+
+			for deferredKey, deferredValue := range deferrals.Values {
+
+				deferredStorageKey := storageKey{
+					address: item.storageKey.address,
+					key:     deferredKey,
+				}
+
+				if !deferredValue.Modified() {
+					continue
+				}
+
+				items = append(items, writeItem{
+					storageKey: deferredStorageKey,
+					value:      deferredValue,
+				})
+			}
+
+			for _, deferralMove := range deferrals.Moves {
+
+				s.move(
+					deferralMove.DeferredOwner,
+					deferralMove.DeferredStorageKey,
+					deferralMove.NewOwner,
+					deferralMove.NewStorageKey,
+				)
+			}
 		}
 
-		// TODO: fix controller
-		err := s.runtimeInterface.SetValue(
-			[]byte(fullKey.storageIdentifier),
-			[]byte{},
-			[]byte(fullKey.key),
-			newData,
-		)
+		var err error
+		wrapPanic(func() {
+			// TODO: fix controller
+			err = s.runtimeInterface.SetValue(
+				item.storageKey.address[:],
+				nil,
+				[]byte(item.storageKey.key),
+				newData,
+			)
+		})
 		if err != nil {
 			panic(err)
 		}
+	}
+}
+
+func (s *interpreterRuntimeStorage) encodeValue(
+	value interpreter.Value,
+	path string,
+) (
+	data []byte,
+	deferrals *interpreter.EncodingDeferrals,
+	err error,
+) {
+	reportMetric(
+		func() {
+			data, deferrals, err = interpreter.EncodeValue(value, []string{path}, true)
+		},
+		s.runtimeInterface,
+		func(metrics Metrics, duration time.Duration) {
+			metrics.ValueEncoded(duration)
+		},
+	)
+	return
+}
+
+func (s *interpreterRuntimeStorage) move(
+	oldOwner common.Address, oldKey string,
+	newOwner common.Address, newKey string,
+) {
+	// TODO: fix controller
+	data, err := s.runtimeInterface.GetValue(oldOwner[:], nil, []byte(oldKey))
+	if err != nil {
+		panic(err)
+	}
+
+	// TODO: fix controller
+	err = s.runtimeInterface.SetValue(oldOwner[:], nil, []byte(oldKey), nil)
+	if err != nil {
+		panic(err)
+	}
+
+	// TODO: fix controller
+	err = s.runtimeInterface.SetValue(newOwner[:], nil, []byte(newKey), data)
+	if err != nil {
+		panic(err)
 	}
 }

@@ -30,6 +30,8 @@ import (
 
 func TestCheckIfStatementTest(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           if true {}
@@ -40,6 +42,8 @@ func TestCheckIfStatementTest(t *testing.T) {
 }
 
 func TestCheckIfStatementScoping(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -57,6 +61,8 @@ func TestCheckIfStatementScoping(t *testing.T) {
 
 func TestCheckInvalidIfStatementTest(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           if 1 {}
@@ -69,6 +75,8 @@ func TestCheckInvalidIfStatementTest(t *testing.T) {
 }
 
 func TestCheckInvalidIfStatementElse(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -85,6 +93,8 @@ func TestCheckInvalidIfStatementElse(t *testing.T) {
 
 func TestCheckIfStatementTestWithDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(x: Int?): Int {
           if var y = x {
@@ -99,6 +109,8 @@ func TestCheckIfStatementTestWithDeclaration(t *testing.T) {
 }
 
 func TestCheckInvalidIfStatementTestWithDeclarationReferenceInElse(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(x: Int?) {
@@ -117,6 +129,8 @@ func TestCheckInvalidIfStatementTestWithDeclarationReferenceInElse(t *testing.T)
 
 func TestCheckIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
      fun test(x: Int??): Int? {
          if var y = x {
@@ -132,6 +146,8 @@ func TestCheckIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
 
 func TestCheckIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotation(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
      fun test(x: Int??): Int? {
          if var y: Int? = x {
@@ -146,6 +162,8 @@ func TestCheckIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotation(t 
 }
 
 func TestCheckInvalidIfStatementTestWithDeclarationNonOptional(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
      fun test(x: Int) {
@@ -163,6 +181,8 @@ func TestCheckInvalidIfStatementTestWithDeclarationNonOptional(t *testing.T) {
 }
 
 func TestCheckInvalidIfStatementTestWithDeclarationSameType(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(x: Int?): Int? {

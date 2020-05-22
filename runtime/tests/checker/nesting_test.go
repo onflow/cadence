@@ -31,6 +31,9 @@ import (
 )
 
 func TestCheckCompositeDeclarationNesting(t *testing.T) {
+
+	t.Parallel()
+
 	interfacePossibilities := []bool{true, false}
 
 	for _, outerComposite := range common.CompositeKindsWithBody {
@@ -104,6 +107,8 @@ func TestCheckCompositeDeclarationNesting(t *testing.T) {
 
 func TestCheckCompositeDeclarationNestedStructUse(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       contract Test {
 
@@ -121,6 +126,8 @@ func TestCheckCompositeDeclarationNestedStructUse(t *testing.T) {
 }
 
 func TestCheckCompositeDeclarationNestedStructInterfaceUse(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       contract Test {
@@ -146,6 +153,8 @@ func TestCheckCompositeDeclarationNestedStructInterfaceUse(t *testing.T) {
 
 func TestCheckCompositeDeclarationNestedTypeScopingInsideNestedOuter(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       contract Test {
 
@@ -163,6 +172,8 @@ func TestCheckCompositeDeclarationNestedTypeScopingInsideNestedOuter(t *testing.
 
 func TestCheckCompositeDeclarationNestedTypeScopingOuterInner(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       contract Test {
 
@@ -178,6 +189,8 @@ func TestCheckCompositeDeclarationNestedTypeScopingOuterInner(t *testing.T) {
 }
 
 func TestCheckInvalidCompositeDeclarationNestedTypeScopingAfterInner(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       contract Test {
@@ -196,6 +209,8 @@ func TestCheckInvalidCompositeDeclarationNestedTypeScopingAfterInner(t *testing.
 
 func TestCheckInvalidCompositeDeclarationNestedDuplicateNames(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       contract Test {
 
@@ -212,6 +227,8 @@ func TestCheckInvalidCompositeDeclarationNestedDuplicateNames(t *testing.T) {
 
 func TestCheckCompositeDeclarationNestedConstructorAndType(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       contract Test {
 
@@ -225,6 +242,8 @@ func TestCheckCompositeDeclarationNestedConstructorAndType(t *testing.T) {
 }
 
 func TestCheckInvalidCompositeDeclarationNestedType(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       contract Test {
@@ -241,6 +260,8 @@ func TestCheckInvalidCompositeDeclarationNestedType(t *testing.T) {
 }
 
 func TestCheckInvalidNestedType(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       let x: Int.X = 1

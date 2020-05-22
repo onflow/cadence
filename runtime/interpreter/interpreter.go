@@ -116,6 +116,7 @@ type StorageReadHandlerFunc func(
 	inter *Interpreter,
 	storageAddress common.Address,
 	key string,
+	deferred bool,
 ) OptionalValue
 
 // StorageWriteHandlerFunc is a function that handles storage writes.
@@ -816,16 +817,15 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 
 func recoverErrors(onError func(error)) {
 	if r := recover(); r != nil {
-		var ok bool
-		// don't recover Go errors
-		goErr, ok := r.(goRuntime.Error)
-		if ok {
-			panic(goErr)
-		}
-
-		err, ok := r.(error)
-		if !ok {
-			err = fmt.Errorf("%v", r)
+		var err error
+		switch r := r.(type) {
+		case goRuntime.Error, ExternalError:
+			// Don't recover Go's or external panics
+			panic(r)
+		case error:
+			err = r
+		default:
+			err = fmt.Errorf("%s", r)
 		}
 
 		onError(err)
@@ -2406,8 +2406,8 @@ func (interpreter *Interpreter) declareCompositeValue(
 	// in reverse order: first the conformances, then the type requirements;
 	// each conformances and type requirements in reverse order as well.
 
-	for i := len(compositeType.Conformances) - 1; i >= 0; i-- {
-		conformance := compositeType.Conformances[i]
+	for i := len(compositeType.ExplicitInterfaceConformances) - 1; i >= 0; i-- {
+		conformance := compositeType.ExplicitInterfaceConformances[i]
 
 		wrapFunctions(interpreter.typeCodes.interfaceCodes[conformance.ID()])
 	}
@@ -3354,8 +3354,8 @@ func (interpreter *Interpreter) storedValueExists(storageAddress common.Address,
 	return interpreter.storageExistenceHandler(interpreter, storageAddress, key)
 }
 
-func (interpreter *Interpreter) readStored(storageAddress common.Address, key string) OptionalValue {
-	return interpreter.storageReadHandler(interpreter, storageAddress, key)
+func (interpreter *Interpreter) readStored(storageAddress common.Address, key string, deferred bool) OptionalValue {
+	return interpreter.storageReadHandler(interpreter, storageAddress, key, deferred)
 }
 
 func (interpreter *Interpreter) writeStored(storageAddress common.Address, key string, value OptionalValue) {
@@ -3666,7 +3666,7 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 			common.PathDomainStorage,
 		)
 
-		value := interpreter.readStored(address, key)
+		value := interpreter.readStored(address, key, false)
 
 		switch value := value.(type) {
 		case NilValue:
@@ -3721,7 +3721,7 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 			common.PathDomainStorage,
 		)
 
-		value := interpreter.readStored(address, key)
+		value := interpreter.readStored(address, key, false)
 
 		switch value := value.(type) {
 		case NilValue:
@@ -3841,7 +3841,7 @@ func (interpreter *Interpreter) authAccountGetLinkTargetFunction(addressValue Ad
 			common.PathDomainPublic,
 		)
 
-		value := interpreter.readStored(address, capabilityKey)
+		value := interpreter.readStored(address, capabilityKey, false)
 
 		switch value := value.(type) {
 		case NilValue:
@@ -3977,7 +3977,7 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 			seenKeys[key] = struct{}{}
 		}
 
-		value := interpreter.readStored(address, key)
+		value := interpreter.readStored(address, key, false)
 
 		switch value := value.(type) {
 		case NilValue:

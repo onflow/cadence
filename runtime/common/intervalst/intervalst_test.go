@@ -57,6 +57,8 @@ func (l lineAndColumn) Compare(other Position) int {
 
 func TestIntervalST(t *testing.T) {
 
+	t.Parallel()
+
 	st := &IntervalST{}
 
 	st.Put(
@@ -137,6 +139,8 @@ func TestIntervalST(t *testing.T) {
 }
 
 func TestIntervalST2(t *testing.T) {
+
+	t.Parallel()
 
 	intervals := []Interval{
 		{

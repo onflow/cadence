@@ -51,6 +51,8 @@ func (testIntExtractor) ExtractInteger(
 
 func TestExpressionExtractorBinaryExpressionNothingExtracted(t *testing.T) {
 
+	t.Parallel()
+
 	expression := &BinaryExpression{
 		Operation: OperationEqual,
 		Left: &IdentifierExpression{
@@ -85,6 +87,8 @@ func TestExpressionExtractorBinaryExpressionNothingExtracted(t *testing.T) {
 }
 
 func TestExpressionExtractorBinaryExpressionIntegerExtracted(t *testing.T) {
+
+	t.Parallel()
 
 	expression := &BinaryExpression{
 		Operation: OperationEqual,

@@ -29,6 +29,8 @@ import (
 
 func TestCheckInvalidWhileTest(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           while 1 {}
@@ -42,6 +44,8 @@ func TestCheckInvalidWhileTest(t *testing.T) {
 
 func TestCheckWhileTest(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           while true {}
@@ -52,6 +56,8 @@ func TestCheckWhileTest(t *testing.T) {
 }
 
 func TestCheckInvalidWhileBlock(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -66,6 +72,8 @@ func TestCheckInvalidWhileBlock(t *testing.T) {
 
 func TestCheckWhileBreakStatement(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
        fun test() {
            while true {
@@ -78,6 +86,8 @@ func TestCheckWhileBreakStatement(t *testing.T) {
 }
 
 func TestCheckInvalidWhileBreakStatement(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
        fun test() {
@@ -96,6 +106,8 @@ func TestCheckInvalidWhileBreakStatement(t *testing.T) {
 
 func TestCheckWhileContinueStatement(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
        fun test() {
            while true {
@@ -108,6 +120,8 @@ func TestCheckWhileContinueStatement(t *testing.T) {
 }
 
 func TestCheckInvalidWhileContinueStatement(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
        fun test() {

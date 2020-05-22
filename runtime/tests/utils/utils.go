@@ -119,30 +119,33 @@ func ExpectCheckerErrors(t *testing.T, err error, len int) []error {
 //
 // If the objects are not equal, this function prints a human-readable diff.
 func AssertEqualWithDiff(t *testing.T, expected, actual interface{}) {
-	// the maximum levels of a struct to recurse into
-	// this prevents infinite recursion from circular references
-	deep.MaxDepth = 100
+	if !assert.Equal(t, expected, actual) {
+		// the maximum levels of a struct to recurse into
+		// this prevents infinite recursion from circular references
+		deep.MaxDepth = 100
 
-	diff := deep.Equal(expected, actual)
+		diff := deep.Equal(expected, actual)
 
-	if len(diff) != 0 {
-		s := strings.Builder{}
+		if len(diff) != 0 {
+			s := strings.Builder{}
 
-		for i, d := range diff {
-			if i == 0 {
-				s.WriteString("diff    : ")
-			} else {
-				s.WriteString("          ")
+			for i, d := range diff {
+				if i == 0 {
+					s.WriteString("diff    : ")
+				} else {
+					s.WriteString("          ")
+				}
+
+				s.WriteString(d)
+				s.WriteString("\n")
 			}
 
-			s.WriteString(d)
-			s.WriteString("\n")
+			t.Errorf("Not equal: \n"+
+				"expected: %s\n"+
+				"actual  : %s\n\n"+
+				"%s", expected, actual, s.String(),
+			)
 		}
-
-		assert.Fail(t, fmt.Sprintf("Not equal: \n"+
-			"expected: %s\n"+
-			"actual  : %s\n\n"+
-			"%s", expected, actual, s.String()))
 	}
 }
 

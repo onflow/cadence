@@ -26,6 +26,8 @@ import (
 
 func TestParseIncomplete(t *testing.T) {
 
+	t.Parallel()
+
 	program, inputIsComplete, err := ParseProgram("struct X")
 
 	assert.Nil(t, program)

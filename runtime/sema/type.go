@@ -238,6 +238,38 @@ func NewTypeAnnotation(ty Type) *TypeAnnotation {
 	}
 }
 
+// toString
+
+const ToStringFunctionName = "toString"
+
+var toStringFunctionType = &FunctionType{
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&StringType{},
+	),
+}
+
+var typeBuiltinFunctionTypes = map[TypeID]map[string]*FunctionType{}
+
+func init() {
+	for _, ty := range append(
+		AllNumberTypes[:],
+		&NumberType{},
+		&SignedNumberType{},
+		&FixedPointType{},
+		&SignedFixedPointType{},
+		&IntegerType{},
+		&SignedIntegerType{},
+		&AddressType{},
+	) {
+		functionTypes, ok := typeBuiltinFunctionTypes[ty.ID()]
+		if !ok {
+			functionTypes = map[string]*FunctionType{}
+			typeBuiltinFunctionTypes[ty.ID()] = functionTypes
+		}
+		functionTypes[ToStringFunctionName] = toStringFunctionType
+	}
+}
+
 // AnyType represents the top type of all types.
 // NOTE: This type is only used internally and not available in programs.
 type AnyType struct{}
@@ -955,6 +987,22 @@ func (t *NumberType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*NumberType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *NumberType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
+}
+
 // SignedNumberType represents the super-type of all signed number types
 type SignedNumberType struct{}
 
@@ -1007,6 +1055,22 @@ func (*SignedNumberType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err err
 
 func (t *SignedNumberType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*SignedNumberType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *SignedNumberType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // IntegerRangedType
@@ -1078,6 +1142,22 @@ func (t *IntegerType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*IntegerType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *IntegerType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
+}
+
 // SignedIntegerType represents the super-type of all signed integer types
 type SignedIntegerType struct{}
 
@@ -1132,6 +1212,22 @@ func (t *SignedIntegerType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*SignedIntegerType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *SignedIntegerType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
+}
+
 // IntType represents the arbitrary-precision integer type `Int`
 type IntType struct{}
 
@@ -1184,6 +1280,22 @@ func (*IntType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ as
 
 func (t *IntType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*IntType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *IntType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // Int8Type represents the 8-bit signed integer type `Int8`
@@ -1244,6 +1356,22 @@ func (t *Int8Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*Int8Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Int8Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
+}
+
 // Int16Type represents the 16-bit signed integer type `Int16`
 type Int16Type struct{}
 
@@ -1299,6 +1427,22 @@ func (*Int16Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ 
 
 func (t *Int16Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*Int16Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Int16Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // Int32Type represents the 32-bit signed integer type `Int32`
@@ -1358,6 +1502,22 @@ func (t *Int32Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*Int32Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Int32Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
+}
+
 // Int64Type represents the 64-bit signed integer type `Int64`
 type Int64Type struct{}
 
@@ -1413,6 +1573,22 @@ func (*Int64Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ 
 
 func (t *Int64Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*Int64Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Int64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // Int128Type represents the 128-bit signed integer type `Int128`
@@ -1484,6 +1660,22 @@ func (t *Int128Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*Int128Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Int128Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
+}
+
 // Int256Type represents the 256-bit signed integer type `Int256`
 type Int256Type struct{}
 
@@ -1553,6 +1745,22 @@ func (t *Int256Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*Int256Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Int256Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
+}
+
 // UIntType represents the arbitrary-precision unsigned integer type `UInt`
 type UIntType struct{}
 
@@ -1607,6 +1815,22 @@ func (*UIntType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ a
 
 func (t *UIntType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*UIntType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *UIntType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // UInt8Type represents the 8-bit unsigned integer type `UInt8`
@@ -1667,6 +1891,22 @@ func (t *UInt8Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*UInt8Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *UInt8Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
+}
+
 // UInt16Type represents the 16-bit unsigned integer type `UInt16`
 // which checks for overflow and underflow
 type UInt16Type struct{}
@@ -1723,6 +1963,22 @@ func (*UInt16Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _
 
 func (t *UInt16Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*UInt16Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *UInt16Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // UInt32Type represents the 32-bit unsigned integer type `UInt32`
@@ -1783,6 +2039,22 @@ func (t *UInt32Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*UInt32Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *UInt32Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
+}
+
 // UInt64Type represents the 64-bit unsigned integer type `UInt64`
 // which checks for overflow and underflow
 type UInt64Type struct{}
@@ -1839,6 +2111,22 @@ func (*UInt64Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _
 
 func (t *UInt64Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*UInt64Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *UInt64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // UInt128Type represents the 128-bit unsigned integer type `UInt128`
@@ -1905,6 +2193,22 @@ func (t *UInt128Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*UInt128Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *UInt128Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
+}
+
 // UInt256Type represents the 256-bit unsigned integer type `UInt256`
 // which checks for overflow and underflow
 type UInt256Type struct{}
@@ -1969,6 +2273,22 @@ func (t *UInt256Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*UInt256Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *UInt256Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
+}
+
 // Word8Type represents the 8-bit unsigned integer type `Word8`
 // which does NOT check for overflow and underflow
 type Word8Type struct{}
@@ -2025,6 +2345,22 @@ func (*Word8Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ 
 
 func (t *Word8Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*Word8Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Word8Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // Word16Type represents the 16-bit unsigned integer type `Word16`
@@ -2085,6 +2421,22 @@ func (t *Word16Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*Word16Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Word16Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
+}
+
 // Word32Type represents the 32-bit unsigned integer type `Word32`
 // which does NOT check for overflow and underflow
 type Word32Type struct{}
@@ -2141,6 +2493,22 @@ func (*Word32Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _
 
 func (t *Word32Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*Word32Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Word32Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // Word64Type represents the 64-bit unsigned integer type `Word64`
@@ -2201,6 +2569,22 @@ func (t *Word64Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*Word64Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Word64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
+}
+
 // FixedPointType represents the super-type of all fixed-point types
 type FixedPointType struct{}
 
@@ -2255,6 +2639,22 @@ func (t *FixedPointType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*FixedPointType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *FixedPointType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
+}
+
 // SignedFixedPointType represents the super-type of all signed fixed-point types
 type SignedFixedPointType struct{}
 
@@ -2307,6 +2707,22 @@ func (*SignedFixedPointType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err
 
 func (t *SignedFixedPointType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*SignedFixedPointType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *SignedFixedPointType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 const Fix64Scale uint = 8
@@ -2395,6 +2811,22 @@ func (t *Fix64Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*Fix64Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *Fix64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
+}
+
 // UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
 // which has a scale of 1E9, and checks for overflow and underflow
 type UFix64Type struct{}
@@ -2472,6 +2904,22 @@ func (*UFix64Type) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _
 
 func (t *UFix64Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (*UFix64Type) CanHaveMembers() bool {
+	return true
+}
+
+func (t *UFix64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
 // ArrayType
@@ -3515,27 +3963,37 @@ func numberFunctionArgumentExpressionsChecker(numberType Type) func(*Checker, []
 // CompositeType
 
 type CompositeType struct {
-	Location     ast.Location
-	Identifier   string
-	Kind         common.CompositeKind
-	Conformances []*InterfaceType
-	// an internal set of field `Conformances`
-	conformanceSet InterfaceSet
-	Members        map[string]*Member
+	Location   ast.Location
+	Identifier string
+	Kind       common.CompositeKind
+	// an internal set of field `ExplicitInterfaceConformances`
+	explicitInterfaceConformanceSet     InterfaceSet
+	ExplicitInterfaceConformances       []*InterfaceType
+	ImplicitTypeRequirementConformances []*CompositeType
+	Members                             map[string]*Member
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
 	nestedTypes           map[string]Type
 	ContainerType         Type
 }
 
-func (t *CompositeType) ConformanceSet() InterfaceSet {
-	if t.conformanceSet == nil {
-		t.conformanceSet = make(InterfaceSet, len(t.Conformances))
-		for _, conformance := range t.Conformances {
-			t.conformanceSet[conformance] = struct{}{}
+func (t *CompositeType) ExplicitInterfaceConformanceSet() InterfaceSet {
+	if t.explicitInterfaceConformanceSet == nil {
+		// TODO: also include conformances' conformances recursively
+		//   once interface can have conformances
+
+		t.explicitInterfaceConformanceSet = make(InterfaceSet, len(t.ExplicitInterfaceConformances))
+		for _, conformance := range t.ExplicitInterfaceConformances {
+			t.explicitInterfaceConformanceSet.Add(conformance)
 		}
 	}
-	return t.conformanceSet
+
+	return t.explicitInterfaceConformanceSet
+}
+
+func (t *CompositeType) AddImplicitTypeRequirementConformance(typeRequirement *CompositeType) {
+	t.ImplicitTypeRequirementConformances =
+		append(t.ImplicitTypeRequirementConformances, typeRequirement)
 }
 
 func (*CompositeType) IsType() {}
@@ -3575,15 +4033,33 @@ func (t *CompositeType) Equal(other Type) bool {
 	}
 
 	return otherStructure.Kind == t.Kind &&
-		otherStructure.Identifier == t.Identifier
+		otherStructure.ID() == t.ID()
 }
 
 func (t *CompositeType) CanHaveMembers() bool {
 	return true
 }
 
-func (t *CompositeType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	return t.Members[identifier]
+func (t *CompositeType) GetMember(identifier string, accessRange ast.Range, report func(error)) *Member {
+	member := t.Members[identifier]
+	if member != nil {
+		return member
+	}
+
+	// Check conformances.
+	// If this composite type results from a normal composite declaration,
+	// it must have members declared for all interfaces it conforms to.
+	// However, if this composite type is a type requirement,
+	// it acts like an interface and does not have to declare members.
+
+	for conformance := range t.ExplicitInterfaceConformanceSet() {
+		member = conformance.GetMember(identifier, accessRange, report)
+		if member != nil {
+			return member
+		}
+	}
+
+	return nil
 }
 
 func (t *CompositeType) IsResourceType() bool {
@@ -3619,7 +4095,7 @@ func (t *CompositeType) TypeRequirements() []*CompositeType {
 	var typeRequirements []*CompositeType
 
 	if containerComposite, ok := t.ContainerType.(*CompositeType); ok {
-		for _, conformance := range containerComposite.Conformances {
+		for _, conformance := range containerComposite.ExplicitInterfaceConformances {
 			ty := conformance.nestedTypes[t.Identifier]
 			typeRequirement, ok := ty.(*CompositeType)
 			if !ok {
@@ -3631,12 +4107,6 @@ func (t *CompositeType) TypeRequirements() []*CompositeType {
 	}
 
 	return typeRequirements
-}
-
-func (t *CompositeType) AllConformances() []*InterfaceType {
-	// TODO: also return conformances' conformances recursively
-	//   once interface can have conformances
-	return t.Conformances
 }
 
 func (*CompositeType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -4163,7 +4633,7 @@ func (t *InterfaceType) Equal(other Type) bool {
 	}
 
 	return otherInterface.CompositeKind == t.CompositeKind &&
-		otherInterface.Identifier == t.Identifier
+		otherInterface.ID() == t.ID()
 }
 
 func (t *InterfaceType) CanHaveMembers() bool {
@@ -4596,6 +5066,22 @@ func (t *AddressType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (*AddressType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *AddressType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
+	if !ok {
+		return nil
+	}
+	functionType, ok := builtinFunctionTypes[identifier]
+	if !ok {
+		return nil
+	}
+	return NewPublicFunctionMember(t, identifier, functionType)
+}
+
 // IsSubType determines if the given subtype is a subtype
 // of the given supertype.
 //
@@ -4790,7 +5276,7 @@ func IsSubType(subType Type, superType Type) bool {
 					// TODO: once interfaces can conform to interfaces, include
 					return IsSubType(typedInnerSubType, restrictedSuperType) &&
 						typedInnerSuperType.RestrictionSet().
-							IsSubsetOf(typedInnerSubType.ConformanceSet())
+							IsSubsetOf(typedInnerSubType.ExplicitInterfaceConformanceSet())
 
 				case *AnyResourceType, *AnyStructType, *AnyType:
 					// An unauthorized reference to an unrestricted type `&T`
@@ -4985,7 +5471,7 @@ func IsSubType(subType Type, superType Type) bool {
 					// TODO: once interfaces can conform to interfaces, include
 					return IsSubType(restrictedSubtype, restrictedSuperType) &&
 						typedSuperType.RestrictionSet().
-							IsSubsetOf(restrictedSubtype.ConformanceSet())
+							IsSubsetOf(restrictedSubtype.ExplicitInterfaceConformanceSet())
 				}
 
 			case *AnyResourceType:
@@ -5020,7 +5506,7 @@ func IsSubType(subType Type, superType Type) bool {
 
 				return IsSubType(typedSubType, typedSuperType.Type) &&
 					typedSuperType.RestrictionSet().
-						IsSubsetOf(typedSubType.ConformanceSet())
+						IsSubsetOf(typedSubType.ExplicitInterfaceConformanceSet())
 			}
 
 		default:
@@ -5068,7 +5554,8 @@ func IsSubType(subType Type, superType Type) bool {
 		// NOTE: type equality case (composite type `T` is subtype of composite type `U`)
 		// is already handled at beginning of function
 
-		if typedSubType, ok := subType.(*RestrictedType); ok {
+		switch typedSubType := subType.(type) {
+		case *RestrictedType:
 
 			// A restricted type `T{Us}`
 			// is a subtype of an unrestricted type `V`:
@@ -5084,6 +5571,16 @@ func IsSubType(subType Type, superType Type) bool {
 				// The owner may freely unrestrict.
 
 				return restrictedSubType == typedSuperType
+			}
+
+		case *CompositeType:
+			// The supertype composite type might be a type requirement.
+			// Check if the subtype composite type implicitly conforms to it.
+
+			for _, conformance := range typedSubType.ImplicitTypeRequirementConformances {
+				if conformance == typedSuperType {
+					return true
+				}
 			}
 		}
 
@@ -5109,7 +5606,7 @@ func IsSubType(subType Type, superType Type) bool {
 			}
 
 			// TODO: once interfaces can conform to interfaces, include
-			if _, ok := typedSubType.ConformanceSet()[typedSuperType]; ok {
+			if _, ok := typedSubType.ExplicitInterfaceConformanceSet()[typedSuperType]; ok {
 				return true
 			}
 
@@ -5295,6 +5792,15 @@ func (s InterfaceSet) IsSubsetOf(other InterfaceSet) bool {
 	}
 
 	return true
+}
+
+func (s InterfaceSet) Includes(interfaceType *InterfaceType) bool {
+	_, ok := s[interfaceType]
+	return ok
+}
+
+func (s InterfaceSet) Add(interfaceType *InterfaceType) {
+	s[interfaceType] = struct{}{}
 }
 
 // RestrictedType

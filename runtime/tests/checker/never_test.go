@@ -26,6 +26,8 @@ import (
 
 func TestCheckNever(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheckWithPanic(t,
 		`
             pub fun test(): Int {

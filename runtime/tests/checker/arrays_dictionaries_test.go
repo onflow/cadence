@@ -35,6 +35,8 @@ import (
 
 func TestCheckDictionary(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let z = {"a": 1, "b": 2}
 	`)
@@ -44,6 +46,8 @@ func TestCheckDictionary(t *testing.T) {
 
 func TestCheckDictionaryType(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let z: {String: Int} = {"a": 1, "b": 2}
 	`)
@@ -52,6 +56,8 @@ func TestCheckDictionaryType(t *testing.T) {
 }
 
 func TestCheckInvalidDictionaryTypeKey(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       let z: {Int: Int} = {"a": 1, "b": 2}
@@ -64,6 +70,8 @@ func TestCheckInvalidDictionaryTypeKey(t *testing.T) {
 
 func TestCheckInvalidDictionaryTypeValue(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let z: {String: String} = {"a": 1, "b": 2}
 	`)
@@ -74,6 +82,8 @@ func TestCheckInvalidDictionaryTypeValue(t *testing.T) {
 }
 
 func TestCheckInvalidDictionaryTypeSwapped(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       let z: {Int: String} = {"a": 1, "b": 2}
@@ -86,6 +96,8 @@ func TestCheckInvalidDictionaryTypeSwapped(t *testing.T) {
 
 func TestCheckInvalidDictionaryKeys(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let z = {"a": 1, true: 2}
 	`)
@@ -97,6 +109,8 @@ func TestCheckInvalidDictionaryKeys(t *testing.T) {
 
 func TestCheckInvalidDictionaryValues(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let z = {"a": 1, "b": true}
 	`)
@@ -107,6 +121,8 @@ func TestCheckInvalidDictionaryValues(t *testing.T) {
 }
 
 func TestCheckDictionaryIndexingString(t *testing.T) {
+
+	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
       let x = {"abc": 1, "def": 2}
@@ -123,6 +139,8 @@ func TestCheckDictionaryIndexingString(t *testing.T) {
 
 func TestCheckDictionaryIndexingBool(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let x = {true: 1, false: 2}
       let y = x[true]
@@ -132,6 +150,8 @@ func TestCheckDictionaryIndexingBool(t *testing.T) {
 }
 
 func TestCheckInvalidDictionaryIndexing(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       let x = {"abc": 1, "def": 2}
@@ -145,6 +165,8 @@ func TestCheckInvalidDictionaryIndexing(t *testing.T) {
 
 func TestCheckDictionaryIndexingAssignment(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           let x = {"abc": 1, "def": 2}
@@ -156,6 +178,8 @@ func TestCheckDictionaryIndexingAssignment(t *testing.T) {
 }
 
 func TestCheckInvalidDictionaryIndexingAssignment(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -171,6 +195,8 @@ func TestCheckInvalidDictionaryIndexingAssignment(t *testing.T) {
 
 func TestCheckDictionaryRemove(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           let x = {"abc": 1, "def": 2}
@@ -182,6 +208,8 @@ func TestCheckDictionaryRemove(t *testing.T) {
 }
 
 func TestCheckInvalidDictionaryRemove(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -197,6 +225,8 @@ func TestCheckInvalidDictionaryRemove(t *testing.T) {
 
 func TestCheckDictionaryInsert(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           let x = {"abc": 1, "def": 2}
@@ -208,6 +238,8 @@ func TestCheckDictionaryInsert(t *testing.T) {
 }
 
 func TestCheckInvalidDictionaryInsert(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -223,6 +255,8 @@ func TestCheckInvalidDictionaryInsert(t *testing.T) {
 
 func TestCheckDictionaryKeys(t *testing.T) {
 
+	t.Parallel()
+
 	checker, err := ParseAndCheck(t, `
         let keys = {"abc": 1, "def": 2}.keys
     `)
@@ -236,6 +270,8 @@ func TestCheckDictionaryKeys(t *testing.T) {
 }
 
 func TestCheckDictionaryValues(t *testing.T) {
+
+	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
         let values = {"abc": 1, "def": 2}.values
@@ -251,6 +287,8 @@ func TestCheckDictionaryValues(t *testing.T) {
 
 func TestCheckLength(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let x = "cafe\u{301}".length
       let y = [1, 2, 3].length
@@ -260,6 +298,8 @@ func TestCheckLength(t *testing.T) {
 }
 
 func TestCheckArrayAppend(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(): [Int] {
@@ -273,6 +313,8 @@ func TestCheckArrayAppend(t *testing.T) {
 }
 
 func TestCheckInvalidArrayAppend(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(): [Int] {
@@ -289,6 +331,8 @@ func TestCheckInvalidArrayAppend(t *testing.T) {
 
 func TestCheckArrayAppendBound(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): [Int] {
           let x = [1, 2, 3]
@@ -302,6 +346,8 @@ func TestCheckArrayAppendBound(t *testing.T) {
 }
 
 func TestCheckInvalidArrayAppendToConstantSize(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(): [Int; 3] {
@@ -318,6 +364,8 @@ func TestCheckInvalidArrayAppendToConstantSize(t *testing.T) {
 
 func TestCheckArrayConcat(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
 	  fun test(): [Int] {
 	 	  let a = [1, 2]
@@ -331,6 +379,8 @@ func TestCheckArrayConcat(t *testing.T) {
 }
 
 func TestCheckInvalidArrayConcat(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(): [Int] {
@@ -348,6 +398,8 @@ func TestCheckInvalidArrayConcat(t *testing.T) {
 
 func TestCheckInvalidArrayConcatOfConstantSized(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
 	  fun test(): [Int] {
 	 	  let a: [Int; 2] = [1, 2]
@@ -364,6 +416,8 @@ func TestCheckInvalidArrayConcatOfConstantSized(t *testing.T) {
 
 func TestCheckArrayConcatBound(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): [Int] {
 		  let a = [1, 2]
@@ -378,6 +432,8 @@ func TestCheckArrayConcatBound(t *testing.T) {
 
 func TestCheckArrayInsert(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): [Int] {
           let x = [1, 2, 3]
@@ -390,6 +446,8 @@ func TestCheckArrayInsert(t *testing.T) {
 }
 
 func TestCheckInvalidArrayInsert(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(): [Int] {
@@ -406,6 +464,8 @@ func TestCheckInvalidArrayInsert(t *testing.T) {
 
 func TestCheckInvalidArrayInsertIntoConstantSized(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): [Int; 3] {
           let x: [Int; 3] = [1, 2, 3]
@@ -421,6 +481,8 @@ func TestCheckInvalidArrayInsertIntoConstantSized(t *testing.T) {
 
 func TestCheckArrayRemove(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): [Int] {
           let x = [1, 2, 3]
@@ -433,6 +495,8 @@ func TestCheckArrayRemove(t *testing.T) {
 }
 
 func TestCheckInvalidArrayRemove(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(): [Int] {
@@ -449,6 +513,8 @@ func TestCheckInvalidArrayRemove(t *testing.T) {
 
 func TestCheckInvalidArrayRemoveFromConstantSized(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): [Int; 3] {
           let x: [Int; 3] = [1, 2, 3]
@@ -464,6 +530,8 @@ func TestCheckInvalidArrayRemoveFromConstantSized(t *testing.T) {
 
 func TestCheckArrayRemoveFirst(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): [Int] {
           let x = [1, 2, 3]
@@ -476,6 +544,8 @@ func TestCheckArrayRemoveFirst(t *testing.T) {
 }
 
 func TestCheckInvalidArrayRemoveFirst(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(): [Int] {
@@ -492,6 +562,8 @@ func TestCheckInvalidArrayRemoveFirst(t *testing.T) {
 
 func TestCheckInvalidArrayRemoveFirstFromConstantSized(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): [Int; 3] {
           let x: [Int; 3] = [1, 2, 3]
@@ -507,6 +579,8 @@ func TestCheckInvalidArrayRemoveFirstFromConstantSized(t *testing.T) {
 
 func TestCheckArrayRemoveLast(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): [Int] {
           let x = [1, 2, 3]
@@ -519,6 +593,8 @@ func TestCheckArrayRemoveLast(t *testing.T) {
 }
 
 func TestCheckInvalidArrayRemoveLastFromConstantSized(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(): [Int; 3] {
@@ -535,6 +611,8 @@ func TestCheckInvalidArrayRemoveLastFromConstantSized(t *testing.T) {
 
 func TestCheckArrayContains(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): Bool {
           let x = [1, 2, 3]
@@ -546,6 +624,8 @@ func TestCheckArrayContains(t *testing.T) {
 }
 
 func TestCheckInvalidArrayContains(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(): Bool {
@@ -561,6 +641,8 @@ func TestCheckInvalidArrayContains(t *testing.T) {
 
 func TestCheckInvalidArrayContainsNotEquatable(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): Bool {
           let z = [[1], [2], [3]]
@@ -575,6 +657,8 @@ func TestCheckInvalidArrayContainsNotEquatable(t *testing.T) {
 
 func TestCheckEmptyArray(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let xs: [Int] = []
 	`)
@@ -583,6 +667,8 @@ func TestCheckEmptyArray(t *testing.T) {
 }
 
 func TestCheckEmptyArrayCall(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun foo(xs: [Int]) {
@@ -595,6 +681,8 @@ func TestCheckEmptyArrayCall(t *testing.T) {
 
 func TestCheckEmptyDictionary(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let xs: {String: Int} = {}
 	`)
@@ -603,6 +691,8 @@ func TestCheckEmptyDictionary(t *testing.T) {
 }
 
 func TestCheckEmptyDictionaryCall(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun foo(xs: {String: Int}) {
@@ -614,6 +704,8 @@ func TestCheckEmptyDictionaryCall(t *testing.T) {
 }
 
 func TestCheckArraySubtyping(t *testing.T) {
+
+	t.Parallel()
 
 	for _, kind := range common.AllCompositeKinds {
 
@@ -656,6 +748,8 @@ func TestCheckArraySubtyping(t *testing.T) {
 
 func TestCheckInvalidArraySubtyping(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let xs: [Bool] = []
       let ys: [Int] = xs
@@ -667,6 +761,8 @@ func TestCheckInvalidArraySubtyping(t *testing.T) {
 }
 
 func TestCheckDictionarySubtyping(t *testing.T) {
+
+	t.Parallel()
 
 	for _, kind := range common.AllCompositeKinds {
 
@@ -707,6 +803,8 @@ func TestCheckDictionarySubtyping(t *testing.T) {
 
 func TestCheckInvalidDictionarySubtyping(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let xs: {String: Bool} = {}
       let ys: {String: Int} = xs
@@ -719,6 +817,8 @@ func TestCheckInvalidDictionarySubtyping(t *testing.T) {
 
 func TestCheckInvalidArrayElements(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let z = [0, true]
 	`)
@@ -730,6 +830,8 @@ func TestCheckInvalidArrayElements(t *testing.T) {
 
 func TestCheckConstantSizedArrayDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let x: [Int; 3] = [1, 2, 3]
     `)
@@ -738,6 +840,8 @@ func TestCheckConstantSizedArrayDeclaration(t *testing.T) {
 }
 
 func TestCheckInvalidConstantSizedArrayDeclarationCountMismatchTooMany(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       let x: [Int; 2] = [1, 2, 3]
@@ -750,6 +854,8 @@ func TestCheckInvalidConstantSizedArrayDeclarationCountMismatchTooMany(t *testin
 }
 
 func TestCheckInvalidConstantSizedArrayDeclarationOutOfRangeSize(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("negative", func(t *testing.T) {
 
@@ -786,6 +892,8 @@ func TestCheckInvalidConstantSizedArrayDeclarationOutOfRangeSize(t *testing.T) {
 
 func TestCheckInvalidConstantSizedArrayDeclarationBase(t *testing.T) {
 
+	t.Parallel()
+
 	for _, size := range []string{"0x42", "0b1010", "0o10"} {
 
 		t.Run(size, func(t *testing.T) {
@@ -809,6 +917,8 @@ func TestCheckInvalidConstantSizedArrayDeclarationBase(t *testing.T) {
 }
 
 func TestCheckDictionaryKeyTypesExpressions(t *testing.T) {
+
+	t.Parallel()
 
 	tests := map[string]string{
 		"String":    `"abc"`,

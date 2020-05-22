@@ -32,6 +32,8 @@ import (
 
 func TestAssert(t *testing.T) {
 
+	t.Parallel()
+
 	program := &ast.Program{}
 
 	checker, err := sema.NewChecker(
@@ -80,6 +82,8 @@ func TestAssert(t *testing.T) {
 }
 
 func TestPanic(t *testing.T) {
+
+	t.Parallel()
 
 	checker, err := sema.NewChecker(
 		&ast.Program{},

@@ -349,7 +349,7 @@ variableDeclaration
 //   Being unrestritive here allows us to provide better error messages
 //   in the semantic analysis.
 assignment
-    : identifier expressionAccess* transfer expression
+    : target=expression transfer value=expression
     ;
 
 

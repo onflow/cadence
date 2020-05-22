@@ -31,6 +31,8 @@ import (
 
 func TestInterpretStatementHandler(t *testing.T) {
 
+	t.Parallel()
+
 	checkerImported, err := ParseAndCheck(t, `
       pub fun a() {
           true
@@ -125,6 +127,8 @@ func TestInterpretStatementHandler(t *testing.T) {
 
 func TestInterpretLoopIterationHandler(t *testing.T) {
 
+	t.Parallel()
+
 	checkerImported, err := ParseAndCheck(t, `
       pub fun a() {
           var i = 1
@@ -216,6 +220,8 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 }
 
 func TestInterpretFunctionInvocationHandler(t *testing.T) {
+
+	t.Parallel()
 
 	checkerImported, err := ParseAndCheck(t, `
       pub fun a() {}

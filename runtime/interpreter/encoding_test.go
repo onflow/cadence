@@ -16,20 +16,25 @@ import (
 )
 
 type encodeDecodeTest struct {
-	value   Value
-	encoded []byte
-	invalid bool
+	value        Value
+	encoded      []byte
+	invalid      bool
+	deferred     bool
+	deferrals    *EncodingDeferrals
+	decodedValue Value
 }
 
+var testOwner = common.BytesToAddress([]byte{0x42})
+
 func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
-	owner := common.BytesToAddress([]byte{0x42})
 
 	var encoded []byte
+	var deferrals *EncodingDeferrals
 	if test.value != nil {
-		test.value.SetOwner(&owner)
+		test.value.SetOwner(&testOwner)
 
 		var err error
-		encoded, err = EncodeValue(test.value)
+		encoded, deferrals, err = EncodeValue(test.value, nil, test.deferred)
 		require.NoError(t, err)
 
 		if test.encoded != nil {
@@ -46,17 +51,36 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		encoded = test.encoded
 	}
 
-	decoded, err := DecodeValue(encoded, &owner)
+	decoded, err := DecodeValue(encoded, &testOwner, nil)
 	if test.invalid {
 		require.Error(t, err)
 	} else {
 		require.NoError(t, err)
 
-		require.Equal(t, test.value, decoded)
+		if !test.deferred || (test.deferred && test.decodedValue != nil) {
+			expectedValue := test.value
+			if test.decodedValue != nil {
+				test.decodedValue.SetOwner(&testOwner)
+				expectedValue = test.decodedValue
+			}
+			require.Equal(t, expectedValue, decoded)
+		}
+	}
+
+	if test.value != nil {
+		if test.deferred {
+			require.Equal(t, test.deferrals, deferrals)
+		} else {
+			require.Empty(t, deferrals.Values)
+			require.Empty(t, deferrals.Moves)
+		}
 	}
 }
 
 func TestEncodeDecodeNilValue(t *testing.T) {
+
+	t.Parallel()
+
 	testEncodeDecode(t,
 		encodeDecodeTest{
 			value: NilValue{},
@@ -69,6 +93,9 @@ func TestEncodeDecodeNilValue(t *testing.T) {
 }
 
 func TestEncodeDecodeVoidValue(t *testing.T) {
+
+	t.Parallel()
+
 	testEncodeDecode(t,
 		encodeDecodeTest{
 			value: VoidValue{},
@@ -83,6 +110,8 @@ func TestEncodeDecodeVoidValue(t *testing.T) {
 }
 
 func TestEncodeDecodeBool(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("false", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -110,6 +139,8 @@ func TestEncodeDecodeBool(t *testing.T) {
 }
 
 func TestEncodeDecodeString(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
 		expected := NewStringValue("")
@@ -144,6 +175,8 @@ func TestEncodeDecodeString(t *testing.T) {
 }
 
 func TestEncodeDecodeArray(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
 		expected := NewArrayValueUnownedNonCopying()
@@ -189,6 +222,8 @@ func TestEncodeDecodeArray(t *testing.T) {
 
 func TestEncodeDecodeDictionary(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("empty", func(t *testing.T) {
 		expected := NewDictionaryValueUnownedNonCopying()
 		expected.modified = false
@@ -200,7 +235,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 				encoded: []byte{
 					// tag
 					0xd8, cborTagDictionaryValue,
-					// object, 2 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// key 0
 					0x00,
@@ -208,7 +243,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 					0x80,
 					// key 1
 					0x01,
-					// object, 0 pairs of items follow
+					// map, 0 pairs of items follow
 					0xa0,
 				},
 			},
@@ -243,7 +278,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 				encoded: []byte{
 					// tag
 					0xd8, cborTagDictionaryValue,
-					// object, 2 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// key 0
 					0x0,
@@ -261,7 +296,7 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 					0x66, 0x6f, 0x6f,
 					// key 1
 					0x1,
-					// object, 3 pairs of items follow
+					// map, 3 pairs of items follow
 					0xa3,
 					// UTF-8 string, length 3
 					0x63,
@@ -291,6 +326,8 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 func TestEncodeDecodeComposite(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("empty structure, string location", func(t *testing.T) {
 		expected := NewCompositeValue(
 			utils.TestLocation,
@@ -307,7 +344,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCompositeValue,
-					// object, 4 pairs of items follow
+					// map, 4 pairs of items follow
 					0xa4,
 					// key 0
 					0x0,
@@ -332,7 +369,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					0x1,
 					// key 3
 					0x3,
-					// object, 0 pairs of items follow
+					// map, 0 pairs of items follow
 					0xa0,
 				},
 			},
@@ -361,7 +398,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCompositeValue,
-					// object, 4 pairs of items follow
+					// map, 4 pairs of items follow
 					0xa4,
 					// key 0
 					0x0,
@@ -384,7 +421,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					0x2,
 					// key 3
 					0x3,
-					// object, 2 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// UTF-8 string, length 4
 					0x64,
@@ -421,7 +458,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCompositeValue,
-					// object, 4 pairs of items follow
+					// map, 4 pairs of items follow
 					0xa4,
 					// key 0
 					0x0,
@@ -443,7 +480,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					0x1,
 					// key 3
 					0x3,
-					// object, 0 pairs of items follow
+					// map, 0 pairs of items follow
 					0xa0,
 				},
 			},
@@ -456,7 +493,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCompositeValue,
-					// object, 4 pairs of items follow
+					// map, 4 pairs of items follow
 					0xa4,
 					// key 0
 					0x0,
@@ -480,7 +517,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					0x1,
 					// key 3
 					0x3,
-					// object, 0 pairs of items follow
+					// map, 0 pairs of items follow
 					0xa0,
 				},
 				invalid: true,
@@ -490,6 +527,8 @@ func TestEncodeDecodeComposite(t *testing.T) {
 }
 
 func TestEncodeDecodeIntValue(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -560,6 +599,8 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 }
 
 func TestEncodeDecodeInt8Value(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -668,6 +709,8 @@ func TestEncodeDecodeInt8Value(t *testing.T) {
 
 func TestEncodeDecodeInt16Value(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -774,6 +817,8 @@ func TestEncodeDecodeInt16Value(t *testing.T) {
 }
 
 func TestEncodeDecodeInt32Value(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -882,6 +927,8 @@ func TestEncodeDecodeInt32Value(t *testing.T) {
 
 func TestEncodeDecodeInt64Value(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -988,6 +1035,8 @@ func TestEncodeDecodeInt64Value(t *testing.T) {
 }
 
 func TestEncodeDecodeInt128Value(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -1126,6 +1175,8 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 }
 
 func TestEncodeDecodeInt256Value(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -1274,6 +1325,8 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 
 func TestEncodeDecodeUIntValue(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1344,6 +1397,8 @@ func TestEncodeDecodeUIntValue(t *testing.T) {
 }
 
 func TestEncodeDecodeUInt8Value(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -1422,6 +1477,8 @@ func TestEncodeDecodeUInt8Value(t *testing.T) {
 
 func TestEncodeDecodeUInt16Value(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1498,6 +1555,8 @@ func TestEncodeDecodeUInt16Value(t *testing.T) {
 }
 
 func TestEncodeDecodeUInt32Value(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -1576,6 +1635,8 @@ func TestEncodeDecodeUInt32Value(t *testing.T) {
 
 func TestEncodeDecodeUInt64Value(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1637,6 +1698,8 @@ func TestEncodeDecodeUInt64Value(t *testing.T) {
 }
 
 func TestEncodeDecodeUInt128Value(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -1743,6 +1806,8 @@ func TestEncodeDecodeUInt128Value(t *testing.T) {
 
 func TestEncodeDecodeUInt256Value(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1837,6 +1902,8 @@ func TestEncodeDecodeUInt256Value(t *testing.T) {
 
 func TestEncodeDecodeWord8Value(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1914,6 +1981,8 @@ func TestEncodeDecodeWord8Value(t *testing.T) {
 
 func TestEncodeDecodeWord16Value(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -1975,6 +2044,8 @@ func TestEncodeDecodeWord16Value(t *testing.T) {
 }
 
 func TestEncodeDecodeWord32Value(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -2038,6 +2109,8 @@ func TestEncodeDecodeWord32Value(t *testing.T) {
 
 func TestEncodeDecodeWord64Value(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -2084,6 +2157,8 @@ func TestEncodeDecodeWord64Value(t *testing.T) {
 }
 
 func TestEncodeDecodeSomeValue(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("nil", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -2140,6 +2215,8 @@ func TestEncodeDecodeSomeValue(t *testing.T) {
 }
 
 func TestEncodeDecodeFix64Value(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -2249,6 +2326,8 @@ func TestEncodeDecodeFix64Value(t *testing.T) {
 
 func TestEncodeDecodeUFix64Value(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("zero", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -2311,6 +2390,8 @@ func TestEncodeDecodeUFix64Value(t *testing.T) {
 
 func TestEncodeDecodeStorageReferenceValue(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("not-authorized", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -2322,7 +2403,7 @@ func TestEncodeDecodeStorageReferenceValue(t *testing.T) {
 				encoded: []byte{
 					// tag
 					0xd8, cborTagStorageReferenceValue,
-					// object, 3 pairs of items follow
+					// map, 3 pairs of items follow
 					0xa3,
 					// key 0
 					0x0,
@@ -2356,7 +2437,7 @@ func TestEncodeDecodeStorageReferenceValue(t *testing.T) {
 				encoded: []byte{
 					// tag
 					0xd8, cborTagStorageReferenceValue,
-					// object, 3 pairs of items follow
+					// map, 3 pairs of items follow
 					0xa3,
 					// key 0
 					0x0,
@@ -2381,6 +2462,8 @@ func TestEncodeDecodeStorageReferenceValue(t *testing.T) {
 }
 
 func TestEncodeDecodeAddressValue(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("empty", func(t *testing.T) {
 		testEncodeDecode(t,
@@ -2475,6 +2558,8 @@ var publicPathValue = PathValue{
 
 func TestEncodeDecodePathValue(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("private", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -2482,7 +2567,7 @@ func TestEncodeDecodePathValue(t *testing.T) {
 				encoded: []byte{
 					// tag
 					0xd8, cborTagPathValue,
-					// object, 2 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// key 0
 					0x0,
@@ -2506,7 +2591,7 @@ func TestEncodeDecodePathValue(t *testing.T) {
 				encoded: []byte{
 					// tag
 					0xd8, cborTagPathValue,
-					// object, 2 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// key 0
 					0x0,
@@ -2526,6 +2611,8 @@ func TestEncodeDecodePathValue(t *testing.T) {
 
 func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("private path", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -2536,7 +2623,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCapabilityValue,
-					// object, 2 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// key 0
 					0x0,
@@ -2550,7 +2637,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 					0x1,
 					// tag for address
 					0xd8, cborTagPathValue,
-					// object, 2 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// key 0
 					0x0,
@@ -2577,7 +2664,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCapabilityValue,
-					// object, 2 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// key 0
 					0x0,
@@ -2591,7 +2678,7 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 					0x1,
 					// tag for address
 					0xd8, cborTagPathValue,
-					// object, 2 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// key 0
 					0x0,
@@ -2611,15 +2698,17 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 func TestEncodeDecodeLinkValue(t *testing.T) {
 
+	t.Parallel()
+
 	expectedLinkEncodingPrefix := []byte{
 		// tag
 		0xd8, cborTagLinkValue,
-		// object, 2 pairs of items follow
+		// map, 2 pairs of items follow
 		0xa2,
 		// key 0
 		0x0,
 		0xd8, cborTagPathValue,
-		// object, 2 pairs of items follow
+		// map, 2 pairs of items follow
 		0xa2,
 		// key 0
 		0x0,
@@ -2684,7 +2773,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				encoded: append(expectedLinkEncodingPrefix[:],
 					// tag
 					0xd8, cborTagCompositeStaticType,
-					// object, 2 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// key 0
 					0x0,
@@ -2720,7 +2809,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				encoded: append(expectedLinkEncodingPrefix[:],
 					// tag
 					0xd8, cborTagInterfaceStaticType,
-					// object, 2 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// key 0
 					0x0,
@@ -2776,7 +2865,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				encoded: append(expectedLinkEncodingPrefix[:],
 					// tag
 					0xd8, cborTagConstantSizedStaticType,
-					// object, 2 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// key 0
 					0x0,
@@ -2805,7 +2894,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				encoded: append(expectedLinkEncodingPrefix[:],
 					// tag
 					0xd8, cborTagReferenceStaticType,
-					// object, 2 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// key 0
 					0x0,
@@ -2834,7 +2923,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				encoded: append(expectedLinkEncodingPrefix[:],
 					// tag
 					0xd8, cborTagReferenceStaticType,
-					// object, 2 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// key 0
 					0x0,
@@ -2863,7 +2952,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				encoded: append(expectedLinkEncodingPrefix[:],
 					// tag
 					0xd8, cborTagDictionaryStaticType,
-					// object, 2 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// key 0
 					0x0,
@@ -2905,13 +2994,13 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				encoded: append(expectedLinkEncodingPrefix[:],
 					// tag
 					0xd8, cborTagRestrictedStaticType,
-					// object, 2 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// key 0
 					0x0,
 					// tag
 					0xd8, cborTagCompositeStaticType,
-					// object, 2 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// key 0
 					0x0,
@@ -2933,7 +3022,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					0x82,
 					// tag
 					0xd8, cborTagInterfaceStaticType,
-					// object, 2 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// key 0
 					0x0,
@@ -2951,7 +3040,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x49, 0x31,
 					// tag
 					0xd8, cborTagInterfaceStaticType,
-					// object, 2 pairs of items follow
+					// map, 2 pairs of items follow
 					0xa2,
 					// key 0
 					0x0,
@@ -2968,6 +3057,142 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					// S.test.I2
 					0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x49, 0x32,
 				),
+			},
+		)
+	})
+}
+
+func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
+
+	t.Run("resource values", func(t *testing.T) {
+
+		key1 := NewStringValue("test")
+		key1.modified = false
+		value1 := NewCompositeValue(
+			utils.TestLocation,
+			"S.test.R",
+			common.CompositeKindResource,
+			map[string]Value{},
+			nil,
+		)
+		value1.modified = false
+
+		key2 := BoolValue(true)
+		value2 := NewCompositeValue(
+			utils.TestLocation,
+			"S.test.R2",
+			common.CompositeKindResource,
+			map[string]Value{},
+			nil,
+		)
+		value2.modified = false
+
+		expected := NewDictionaryValueUnownedNonCopying(
+			key1, value1,
+			key2, value2,
+		)
+		expected.modified = false
+		expected.Keys.modified = false
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				deferred: true,
+				value:    expected,
+				encoded: []byte{
+					// tag
+					0xd8, cborTagDictionaryValue,
+					// map, 2 pairs of items follow
+					0xa2,
+					// key 0
+					0x0,
+					// array, 2 items follow
+					0x82,
+					// UTF-8 string, length 4
+					0x64,
+					// t, e, s, t
+					0x74, 0x65, 0x73, 0x74,
+					// true
+					0xf5,
+					// key 1
+					0x1,
+					// map, 0 pairs of items follow
+					0xa0,
+				},
+				deferrals: &EncodingDeferrals{
+					Values: map[string]Value{
+						"v\x1ftest": value1,
+						"v\x1ftrue": value2,
+					},
+				},
+				decodedValue: &DictionaryValue{
+					Keys:          expected.Keys,
+					Entries:       map[string]Value{},
+					DeferredOwner: &testOwner,
+					DeferredKeys: map[string]string{
+						"test": "v\x1ftest",
+						"true": "v\x1ftrue",
+					},
+				},
+			},
+		)
+	})
+
+	t.Run("non-resource values", func(t *testing.T) {
+
+		key1 := NewStringValue("test")
+		key1.modified = false
+		value1 := NewStringValue("xyz")
+		value1.modified = false
+
+		key2 := BoolValue(true)
+		value2 := BoolValue(false)
+
+		expected := NewDictionaryValueUnownedNonCopying(
+			key1, value1,
+			key2, value2,
+		)
+		expected.modified = false
+		expected.Keys.modified = false
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				deferred: true,
+				value:    expected,
+				encoded: []byte{
+					// tag
+					0xd8, cborTagDictionaryValue,
+					// map, 2 pairs of items follow
+					0xa2,
+					// key 0
+					0x0,
+					// array, 2 items follow
+					0x82,
+					// UTF-8 string, length 4
+					0x64,
+					// t, e, s, t
+					0x74, 0x65, 0x73, 0x74,
+					// true
+					0xf5,
+					// key 1
+					0x1,
+					// map, 2 pairs of items follow
+					0xa2,
+					// UTF-8 string, length 4
+					0x64,
+					// t, e, s, t
+					0x74, 0x65, 0x73, 0x74,
+					// UTF-8 string, length 3
+					0x63,
+					// x, y, z
+					0x78, 0x79, 0x7a,
+					// UTF-8 string, length 4
+					0x64,
+					// t, r, u, e
+					0x74, 0x72, 0x75, 0x65,
+					// false
+					0xf4,
+				},
+				deferrals: &EncodingDeferrals{Values: map[string]Value{}},
 			},
 		)
 	})

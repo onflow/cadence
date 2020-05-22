@@ -30,6 +30,8 @@ import (
 
 func TestCheckRestrictedType(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("resource: no restrictions", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
@@ -267,6 +269,8 @@ func TestCheckRestrictedType(t *testing.T) {
 
 func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("no restrictions: resource", func(t *testing.T) {
 
 		_, err := ParseAndCheck(t, `
@@ -485,6 +489,8 @@ func TestCheckRestrictedTypeMemberAccess(t *testing.T) {
 }
 
 func TestCheckRestrictedTypeSubtyping(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("resource type to restricted type with same type, no restriction", func(t *testing.T) {
 
@@ -784,6 +790,8 @@ func TestCheckRestrictedTypeSubtyping(t *testing.T) {
 }
 
 func TestCheckRestrictedTypeNoType(t *testing.T) {
+
+	t.Parallel()
 
 	const resourceTypes = `
       resource interface I1 {}

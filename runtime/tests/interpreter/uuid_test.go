@@ -32,6 +32,8 @@ import (
 
 func TestInterpretResourceUUID(t *testing.T) {
 
+	t.Parallel()
+
 	checkerImported, err := ParseAndCheck(t, `
       pub resource R {}
 

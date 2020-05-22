@@ -33,6 +33,8 @@ import (
 
 func TestCheckInvalidContractAccountField(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       contract Test {
           let account: AuthAccount
@@ -50,6 +52,8 @@ func TestCheckInvalidContractAccountField(t *testing.T) {
 
 func TestCheckInvalidContractInterfaceAccountField(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       contract interface Test {
           let account: AuthAccount
@@ -62,6 +66,8 @@ func TestCheckInvalidContractInterfaceAccountField(t *testing.T) {
 }
 
 func TestCheckInvalidContractAccountFunction(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       contract Test {
@@ -76,6 +82,8 @@ func TestCheckInvalidContractAccountFunction(t *testing.T) {
 
 func TestCheckInvalidContractInterfaceAccountFunction(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       contract interface Test {
           fun account()
@@ -88,6 +96,8 @@ func TestCheckInvalidContractInterfaceAccountFunction(t *testing.T) {
 }
 
 func TestCheckContractAccountFieldUse(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       contract Test {
@@ -103,6 +113,8 @@ func TestCheckContractAccountFieldUse(t *testing.T) {
 
 func TestCheckContractInterfaceAccountFieldUse(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       contract interface Test {
 
@@ -116,6 +128,8 @@ func TestCheckContractInterfaceAccountFieldUse(t *testing.T) {
 }
 
 func TestCheckInvalidContractAccountFieldInitialization(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       contract Test {
@@ -133,6 +147,8 @@ func TestCheckInvalidContractAccountFieldInitialization(t *testing.T) {
 
 func TestCheckInvalidContractAccountFieldAccess(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       contract Test {}
 
@@ -145,6 +161,8 @@ func TestCheckInvalidContractAccountFieldAccess(t *testing.T) {
 }
 
 func TestCheckContractAccountFieldUseInitialized(t *testing.T) {
+
+	t.Parallel()
 
 	code := `
       contract Test {
@@ -169,6 +187,8 @@ func TestCheckContractAccountFieldUseInitialized(t *testing.T) {
 }
 
 func TestCheckInvalidContractMoveToFunction(t *testing.T) {
+
+	t.Parallel()
 
 	for _, name := range []string{"self", "C"} {
 
@@ -199,6 +219,8 @@ func TestCheckInvalidContractMoveToFunction(t *testing.T) {
 
 func TestCheckInvalidContractMoveInVariableDeclaration(t *testing.T) {
 
+	t.Parallel()
+
 	for _, name := range []string{"self", "C"} {
 
 		t.Run(name, func(t *testing.T) {
@@ -225,6 +247,8 @@ func TestCheckInvalidContractMoveInVariableDeclaration(t *testing.T) {
 }
 
 func TestCheckInvalidContractMoveReturnFromFunction(t *testing.T) {
+
+	t.Parallel()
 
 	for _, name := range []string{"self", "C"} {
 
@@ -253,6 +277,8 @@ func TestCheckInvalidContractMoveReturnFromFunction(t *testing.T) {
 
 func TestCheckInvalidContractMoveIntoArrayLiteral(t *testing.T) {
 
+	t.Parallel()
+
 	for _, name := range []string{"self", "C"} {
 
 		t.Run(name, func(t *testing.T) {
@@ -280,6 +306,8 @@ func TestCheckInvalidContractMoveIntoArrayLiteral(t *testing.T) {
 
 func TestCheckInvalidContractMoveIntoDictionaryLiteral(t *testing.T) {
 
+	t.Parallel()
+
 	for _, name := range []string{"self", "C"} {
 
 		t.Run(name, func(t *testing.T) {
@@ -306,6 +334,8 @@ func TestCheckInvalidContractMoveIntoDictionaryLiteral(t *testing.T) {
 }
 
 func TestCheckContractNestedDeclarationOrderOutsideInside(t *testing.T) {
+
+	t.Parallel()
 
 	for _, isInterface := range []bool{true, false} {
 
@@ -367,6 +397,8 @@ func TestCheckContractNestedDeclarationOrderOutsideInside(t *testing.T) {
 
 func TestCheckContractNestedDeclarationOrderInsideOutside(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       contract C {
 
@@ -389,6 +421,8 @@ func TestCheckContractNestedDeclarationOrderInsideOutside(t *testing.T) {
 // - Mutually using sibling types
 //
 func TestCheckContractNestedDeclarationsComplex(t *testing.T) {
+
+	t.Parallel()
 
 	interfacePossibilities := []bool{true, false}
 
@@ -608,6 +642,8 @@ func TestCheckContractNestedDeclarationsComplex(t *testing.T) {
 }
 
 func TestCheckInvalidContractNestedTypeShadowing(t *testing.T) {
+
+	t.Parallel()
 
 	type test struct {
 		name        string

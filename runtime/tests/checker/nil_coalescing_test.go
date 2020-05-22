@@ -30,6 +30,8 @@ import (
 
 func TestCheckNilCoalescingNilIntToOptional(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let one = 1
       let none: Int? = nil
@@ -40,6 +42,8 @@ func TestCheckNilCoalescingNilIntToOptional(t *testing.T) {
 }
 
 func TestCheckNilCoalescingNilIntToOptionals(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       let one = 1
@@ -52,6 +56,8 @@ func TestCheckNilCoalescingNilIntToOptionals(t *testing.T) {
 
 func TestCheckNilCoalescingNilIntToOptionalNilLiteral(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let one = 1
       let x: Int? = nil ?? one
@@ -61,6 +67,8 @@ func TestCheckNilCoalescingNilIntToOptionalNilLiteral(t *testing.T) {
 }
 
 func TestCheckInvalidNilCoalescingMismatch(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       let x: Int? = nil ?? false
@@ -73,6 +81,8 @@ func TestCheckInvalidNilCoalescingMismatch(t *testing.T) {
 
 func TestCheckNilCoalescingRightSubtype(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       let x: Int? = nil ?? nil
     `)
@@ -81,6 +91,8 @@ func TestCheckNilCoalescingRightSubtype(t *testing.T) {
 }
 
 func TestCheckNilCoalescingNilInt(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       let one = 1
@@ -92,6 +104,8 @@ func TestCheckNilCoalescingNilInt(t *testing.T) {
 }
 
 func TestCheckInvalidNilCoalescingOptionalsInt(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       let one = 1
@@ -106,6 +120,8 @@ func TestCheckInvalidNilCoalescingOptionalsInt(t *testing.T) {
 
 func TestCheckNilCoalescingNilLiteralInt(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
      let one = 1
      let x: Int = nil ?? one
@@ -115,6 +131,8 @@ func TestCheckNilCoalescingNilLiteralInt(t *testing.T) {
 }
 
 func TestCheckInvalidNilCoalescingMismatchNonOptional(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
      let x: Int = nil ?? false
@@ -127,6 +145,8 @@ func TestCheckInvalidNilCoalescingMismatchNonOptional(t *testing.T) {
 
 func TestCheckInvalidNilCoalescingRightSubtype(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
      let x: Int = nil ?? nil
    `)
@@ -137,6 +157,8 @@ func TestCheckInvalidNilCoalescingRightSubtype(t *testing.T) {
 }
 
 func TestCheckInvalidNilCoalescingNonMatchingTypes(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       let x: Int? = 1
@@ -150,6 +172,8 @@ func TestCheckInvalidNilCoalescingNonMatchingTypes(t *testing.T) {
 
 func TestCheckNilCoalescingAny(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
      let x: AnyStruct? = 1
      let y = x ?? false
@@ -159,6 +183,8 @@ func TestCheckNilCoalescingAny(t *testing.T) {
 }
 
 func TestCheckNilCoalescingOptionalRightHandSide(t *testing.T) {
+
+	t.Parallel()
 
 	checker, err := ParseAndCheck(t, `
      let x: Int? = 1
@@ -173,6 +199,8 @@ func TestCheckNilCoalescingOptionalRightHandSide(t *testing.T) {
 
 func TestCheckNilCoalescingBothOptional(t *testing.T) {
 
+	t.Parallel()
+
 	checker, err := ParseAndCheck(t, `
      let x: Int?? = 1
      let y: Int? = 2
@@ -185,6 +213,8 @@ func TestCheckNilCoalescingBothOptional(t *testing.T) {
 }
 
 func TestCheckNilCoalescingWithNever(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheckWithPanic(t,
 		`

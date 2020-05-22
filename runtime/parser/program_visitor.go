@@ -206,9 +206,12 @@ func (v *ProgramVisitor) VisitImportDeclaration(ctx *ImportDeclarationContext) i
 	}
 
 	allIdentifierNodes := ctx.AllIdentifier()
-	identifiers := make([]ast.Identifier, len(allIdentifierNodes))
-	for i, identifierNode := range allIdentifierNodes {
-		identifiers[i] = identifierNode.Accept(v).(ast.Identifier)
+	var identifiers []ast.Identifier
+	if len(allIdentifierNodes) > 0 {
+		identifiers = make([]ast.Identifier, len(allIdentifierNodes))
+		for i, identifierNode := range allIdentifierNodes {
+			identifiers[i] = identifierNode.Accept(v).(ast.Identifier)
+		}
 	}
 
 	return &ast.ImportDeclaration{
@@ -610,7 +613,8 @@ func (v *ProgramVisitor) VisitParameter(ctx *ParameterContext) interface{} {
 
 	typeAnnotation := ctx.TypeAnnotation().Accept(v).(*ast.TypeAnnotation)
 
-	startPosition, endPosition := PositionRangeFromContext(ctx)
+	startPosition := PositionFromToken(ctx.GetStart())
+	endPosition := typeAnnotation.EndPosition()
 
 	return &ast.Parameter{
 		Label:          label,
@@ -1158,33 +1162,15 @@ func (v *ProgramVisitor) VisitForStatement(ctx *ForStatementContext) interface{}
 }
 
 func (v *ProgramVisitor) VisitAssignment(ctx *AssignmentContext) interface{} {
-	target := v.targetExpression(ctx.Identifier(), ctx.AllExpressionAccess())
+	target := ctx.target.Accept(v).(ast.Expression)
 	transfer := ctx.Transfer().Accept(v).(*ast.Transfer)
-	value := ctx.Expression().Accept(v).(ast.Expression)
+	value := ctx.value.Accept(v).(ast.Expression)
 
 	return &ast.AssignmentStatement{
 		Target:   target,
 		Transfer: transfer,
 		Value:    value,
 	}
-}
-
-func (v *ProgramVisitor) targetExpression(
-	identifierContext IIdentifierContext,
-	expressionAccessContexts []IExpressionAccessContext,
-) ast.Expression {
-	identifier := identifierContext.Accept(v).(ast.Identifier)
-	var target ast.Expression = &ast.IdentifierExpression{
-		Identifier: identifier,
-	}
-
-	for _, accessExpressionContext := range expressionAccessContexts {
-		expression := accessExpressionContext.Accept(v)
-		accessExpression := expression.(ast.AccessExpression)
-		target = v.wrapPartialAccessExpression(target, accessExpression)
-	}
-
-	return target
 }
 
 func (v *ProgramVisitor) VisitTransfer(ctx *TransferContext) interface{} {
@@ -1698,6 +1684,10 @@ func (v *ProgramVisitor) VisitFixedPointLiteral(ctx *FixedPointLiteralContext) i
 	// NOTE: can't just negate integer, might be 0 and fractional part > 0
 	negative := ctx.Minus() != nil
 
+	if negative {
+		startPosition = PositionFromToken(ctx.Minus().GetSymbol())
+	}
+
 	return &ast.FixedPointExpression{
 		Negative:        negative,
 		UnsignedInteger: integer,
@@ -1712,8 +1702,11 @@ func (v *ProgramVisitor) VisitFixedPointLiteral(ctx *FixedPointLiteralContext) i
 
 func (v *ProgramVisitor) VisitIntegerLiteral(ctx *IntegerLiteralContext) interface{} {
 	intExpression := ctx.PositiveIntegerLiteral().Accept(v).(*ast.IntegerExpression)
-	if ctx.Minus() != nil && intExpression.Value != nil {
-		intExpression.Value.Neg(intExpression.Value)
+	if ctx.Minus() != nil {
+		if intExpression.Value != nil {
+			intExpression.Value.Neg(intExpression.Value)
+		}
+		intExpression.StartPos = PositionFromToken(ctx.GetStart())
 	}
 	return intExpression
 }

@@ -37,6 +37,8 @@ var dynamicCastingOperations = []ast.Operation{
 
 func TestCheckDynamicCastingAnyStruct(t *testing.T) {
 
+	t.Parallel()
+
 	for _, operation := range dynamicCastingOperations {
 
 		t.Run(operation.Symbol(), func(t *testing.T) {
@@ -83,6 +85,8 @@ func TestCheckDynamicCastingAnyStruct(t *testing.T) {
 }
 
 func TestCheckDynamicCastingAnyResource(t *testing.T) {
+
+	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
 
@@ -174,6 +178,8 @@ func TestCheckDynamicCastingAnyResource(t *testing.T) {
 
 func TestCheckDynamicCastingNumber(t *testing.T) {
 
+	t.Parallel()
+
 	type test struct {
 		ty    sema.Type
 		value string
@@ -260,6 +266,8 @@ func TestCheckDynamicCastingNumber(t *testing.T) {
 
 func TestCheckDynamicCastingVoid(t *testing.T) {
 
+	t.Parallel()
+
 	types := []sema.Type{
 		&sema.AnyStructType{},
 		&sema.VoidType{},
@@ -324,6 +332,8 @@ func TestCheckDynamicCastingVoid(t *testing.T) {
 
 func TestCheckDynamicCastingString(t *testing.T) {
 
+	t.Parallel()
+
 	types := []sema.Type{
 		&sema.AnyStructType{},
 		&sema.StringType{},
@@ -384,6 +394,8 @@ func TestCheckDynamicCastingString(t *testing.T) {
 }
 
 func TestCheckDynamicCastingBool(t *testing.T) {
+
+	t.Parallel()
 
 	types := []sema.Type{
 		&sema.AnyStructType{},
@@ -446,6 +458,8 @@ func TestCheckDynamicCastingBool(t *testing.T) {
 
 func TestCheckDynamicCastingAddress(t *testing.T) {
 
+	t.Parallel()
+
 	types := []sema.Type{
 		&sema.AnyStructType{},
 		&sema.AddressType{},
@@ -507,6 +521,8 @@ func TestCheckDynamicCastingAddress(t *testing.T) {
 }
 
 func TestCheckDynamicCastingStruct(t *testing.T) {
+
+	t.Parallel()
 
 	types := []string{
 		"AnyStruct",
@@ -593,6 +609,8 @@ func TestCheckDynamicCastingStruct(t *testing.T) {
 }
 
 func TestCheckDynamicCastingResource(t *testing.T) {
+
+	t.Parallel()
 
 	types := []string{
 		"AnyResource",
@@ -708,6 +726,8 @@ func TestCheckDynamicCastingResource(t *testing.T) {
 
 func TestCheckDynamicCastingStructInterface(t *testing.T) {
 
+	t.Parallel()
+
 	types := []string{
 		"AnyStruct",
 		"S",
@@ -798,6 +818,8 @@ func TestCheckDynamicCastingStructInterface(t *testing.T) {
 }
 
 func TestCheckDynamicCastingResourceInterface(t *testing.T) {
+
+	t.Parallel()
 
 	types := []string{
 		"AnyResource",
@@ -988,6 +1010,8 @@ func TestCheckDynamicCastingResourceInterface(t *testing.T) {
 
 func TestCheckDynamicCastingSome(t *testing.T) {
 
+	t.Parallel()
+
 	types := []sema.Type{
 		&sema.OptionalType{Type: &sema.IntType{}},
 		&sema.OptionalType{Type: &sema.AnyStructType{}},
@@ -1048,6 +1072,8 @@ func TestCheckDynamicCastingSome(t *testing.T) {
 
 func TestCheckDynamicCastingArray(t *testing.T) {
 
+	t.Parallel()
+
 	types := []sema.Type{
 		&sema.VariableSizedType{Type: &sema.IntType{}},
 		&sema.VariableSizedType{Type: &sema.AnyStructType{}},
@@ -1107,6 +1133,8 @@ func TestCheckDynamicCastingArray(t *testing.T) {
 }
 
 func TestCheckDynamicCastingDictionary(t *testing.T) {
+
+	t.Parallel()
 
 	types := []sema.Type{
 		&sema.DictionaryType{

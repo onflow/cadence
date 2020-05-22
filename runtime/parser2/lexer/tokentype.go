@@ -30,7 +30,11 @@ const (
 	TokenError TokenType = iota
 	TokenEOF
 	TokenSpace
-	TokenNumber
+	TokenBinaryLiteral
+	TokenOctalLiteral
+	TokenDecimalLiteral
+	TokenHexadecimalLiteral
+	TokenFixedPointLiteral
 	TokenIdentifier
 	TokenString
 	TokenPlus
@@ -38,7 +42,7 @@ const (
 	TokenStar
 	TokenSlash
 	TokenPercent
-	TokenNilCoalesce
+	TokenDoubleQuestionMark
 	TokenParenOpen
 	TokenParenClose
 	TokenBraceOpen
@@ -46,12 +50,14 @@ const (
 	TokenBracketOpen
 	TokenBracketClose
 	TokenQuestionMark
+	TokenQuestionMarkDot
 	TokenComma
 	TokenColon
 	TokenDot
 	TokenSemicolon
 	TokenLeftArrow
 	TokenLeftArrowExclamation
+	TokenSwap
 	TokenLess
 	TokenLessEqual
 	TokenLessLess
@@ -60,107 +66,138 @@ const (
 	TokenGreaterGreater
 	TokenEqual
 	TokenEqualEqual
-	TokenNot
+	TokenExclamationMark
 	TokenNotEqual
 	TokenBlockCommentStart
-	TokenBlockCommentContent
 	TokenBlockCommentEnd
+	TokenBlockCommentContent
+	TokenLineComment
 	TokenAmpersand
 	TokenAmpersandAmpersand
 	TokenCaret
 	TokenVerticalBar
 	TokenVerticalBarVerticalBar
 	TokenAt
+	TokenAsExclamationMark
+	TokenAsQuestionMark
+	// NOTE: not an actual token, must be last item
+	TokenMax
 )
+
+func init() {
+	for t := TokenType(0); t < TokenMax; t++ {
+		_ = t.String()
+	}
+}
 
 func (t TokenType) String() string {
 	switch t {
+	case TokenError:
+		return "error"
 	case TokenEOF:
 		return "EOF"
 	case TokenSpace:
 		return "space"
-	case TokenNumber:
-		return "number"
+	case TokenBinaryLiteral:
+		return "binary integer"
+	case TokenOctalLiteral:
+		return "octal integer"
+	case TokenDecimalLiteral:
+		return "decimal integer"
+	case TokenHexadecimalLiteral:
+		return "hexadecimal integer"
+	case TokenFixedPointLiteral:
+		return "fixed-point number"
 	case TokenIdentifier:
 		return "identifier"
 	case TokenString:
 		return "string"
 	case TokenPlus:
-		return "+"
+		return `'+'`
 	case TokenMinus:
-		return "-"
+		return `'-'`
 	case TokenStar:
-		return "*"
+		return `'*'`
 	case TokenSlash:
-		return "/"
+		return `'/'`
 	case TokenPercent:
-		return "%"
-	case TokenNilCoalesce:
-		return "??"
+		return `'%'`
+	case TokenDoubleQuestionMark:
+		return `'??'`
 	case TokenParenOpen:
-		return "("
+		return `'('`
 	case TokenParenClose:
-		return ")"
+		return `')'`
 	case TokenBraceOpen:
-		return "{"
+		return `'{'`
 	case TokenBraceClose:
-		return "}"
+		return `'}'`
 	case TokenBracketOpen:
-		return "["
+		return `'['`
 	case TokenBracketClose:
-		return "]"
+		return `']'`
 	case TokenQuestionMark:
-		return "?"
+		return `'?'`
+	case TokenQuestionMarkDot:
+		return `'?.'`
 	case TokenComma:
-		return ","
+		return `','`
 	case TokenColon:
-		return ":"
+		return `':'`
 	case TokenDot:
-		return "."
+		return `'.'`
 	case TokenSemicolon:
-		return ";"
+		return `';'`
 	case TokenLeftArrow:
-		return "<-"
+		return `'<-'`
 	case TokenLeftArrowExclamation:
-		return "<-!"
+		return `'<-!'`
+	case TokenSwap:
+		return `'<->'`
 	case TokenLess:
-		return "<"
+		return `'<'`
 	case TokenLessEqual:
-		return "<="
+		return `'<='`
 	case TokenLessLess:
-		return "<<"
+		return `'<<'`
 	case TokenGreater:
-		return ">"
+		return `'>'`
 	case TokenGreaterEqual:
-		return ">="
+		return `'>='`
 	case TokenGreaterGreater:
-		return ">>"
+		return `'>>'`
 	case TokenEqual:
-		return "="
+		return `'='`
 	case TokenEqualEqual:
-		return "=="
-	case TokenNot:
-		return "!"
+		return `'=='`
+	case TokenExclamationMark:
+		return `'!'`
 	case TokenNotEqual:
-		return "!="
+		return `'!='`
 	case TokenBlockCommentStart:
-		return "/*"
+		return `'/*'`
 	case TokenBlockCommentContent:
-		return "comment"
+		return "block comment"
+	case TokenLineComment:
+		return "line comment"
 	case TokenBlockCommentEnd:
-		return "*/"
+		return `'*/'`
 	case TokenAmpersand:
-		return "&"
+		return `'&'`
 	case TokenAmpersandAmpersand:
-		return "&&"
+		return `'&&'`
 	case TokenCaret:
-		return "^"
+		return `'^'`
 	case TokenVerticalBar:
-		return "|"
+		return `'|'`
 	case TokenVerticalBarVerticalBar:
-		return "||"
+		return `'||'`
 	case TokenAt:
-		return "@"
+		return `'@'`
+	case TokenAsExclamationMark:
+		return `'as!'`
+	case TokenAsQuestionMark:
+		return `'as?'`
 	default:
 		panic(errors.NewUnreachableError())
 	}

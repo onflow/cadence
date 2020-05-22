@@ -32,6 +32,8 @@ import (
 
 func TestCheckInvalidReturnValue(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
        fun test() {
            return 1
@@ -45,6 +47,8 @@ func TestCheckInvalidReturnValue(t *testing.T) {
 
 func TestCheckMissingReturnStatement(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): Int {}
     `)
@@ -55,6 +59,8 @@ func TestCheckMissingReturnStatement(t *testing.T) {
 }
 
 func TestCheckMissingReturnStatementInterfaceFunction(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
         struct interface Test {
@@ -70,6 +76,8 @@ func TestCheckMissingReturnStatementInterfaceFunction(t *testing.T) {
 }
 
 func TestCheckInvalidMissingReturnStatementStructFunction(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
         struct Test {
@@ -124,6 +132,9 @@ func testExits(t *testing.T, tests []exitTest) {
 }
 
 func TestCheckReturnStatementExits(t *testing.T) {
+
+	t.Parallel()
+
 	testExits(
 		t, []exitTest{
 			{
@@ -139,6 +150,9 @@ func TestCheckReturnStatementExits(t *testing.T) {
 }
 
 func TestCheckIfStatementExits(t *testing.T) {
+
+	t.Parallel()
+
 	testExits(
 		t,
 		[]exitTest{
@@ -214,6 +228,9 @@ func TestCheckIfStatementExits(t *testing.T) {
 }
 
 func TestCheckWhileStatementExits(t *testing.T) {
+
+	t.Parallel()
+
 	testExits(
 		t,
 		[]exitTest{
@@ -297,6 +314,9 @@ func TestCheckWhileStatementExits(t *testing.T) {
 }
 
 func TestCheckNeverInvocationExits(t *testing.T) {
+
+	t.Parallel()
+
 	valueDeclarations := stdlib.StandardLibraryFunctions{
 		stdlib.PanicFunction,
 	}.ToValueDeclarations()
@@ -348,6 +368,9 @@ func TestCheckNeverInvocationExits(t *testing.T) {
 // nested inside another function does not influence the containing function
 //
 func TestCheckNestedFunctionExits(t *testing.T) {
+
+	t.Parallel()
+
 	testExits(
 		t,
 		[]exitTest{

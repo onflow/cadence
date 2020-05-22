@@ -26,6 +26,8 @@ import (
 
 func TestMinusUInt8(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  UInt8Value
 		valid bool
@@ -134,6 +136,8 @@ func TestMinusUInt8(t *testing.T) {
 }
 
 func TestMinusUInt16(t *testing.T) {
+
+	t.Parallel()
 
 	tests := []struct {
 		a, b  UInt16Value
@@ -244,6 +248,8 @@ func TestMinusUInt16(t *testing.T) {
 
 func TestMinusUInt32(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  UInt32Value
 		valid bool
@@ -352,6 +358,8 @@ func TestMinusUInt32(t *testing.T) {
 }
 
 func TestMinusUInt64(t *testing.T) {
+
+	t.Parallel()
 
 	tests := []struct {
 		a, b  UInt64Value
@@ -678,6 +686,8 @@ func TestMinusUInt64(t *testing.T) {
 
 func TestMinusUInt128(t *testing.T) {
 
+	t.Parallel()
+
 	// NOTE: hex values are integer values, not bit patterns!
 
 	tests := []struct {
@@ -788,6 +798,8 @@ func TestMinusUInt128(t *testing.T) {
 }
 
 func TestMinusUInt256(t *testing.T) {
+
+	t.Parallel()
 
 	// NOTE: hex values are integer values, not bit patterns!
 
@@ -1242,6 +1254,8 @@ func TestMinusUInt256(t *testing.T) {
 
 func TestMinusInt8(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  Int8Value
 		valid bool
@@ -1352,6 +1366,8 @@ func TestMinusInt8(t *testing.T) {
 
 func TestMinusInt16(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  Int16Value
 		valid bool
@@ -1461,6 +1477,8 @@ func TestMinusInt16(t *testing.T) {
 
 func TestMinusInt32(t *testing.T) {
 
+	t.Parallel()
+
 	tests := []struct {
 		a, b  Int32Value
 		valid bool
@@ -1569,6 +1587,8 @@ func TestMinusInt32(t *testing.T) {
 }
 
 func TestMinusInt64(t *testing.T) {
+
+	t.Parallel()
 
 	tests := []struct {
 		a, b  Int64Value
@@ -1895,6 +1915,8 @@ func TestMinusInt64(t *testing.T) {
 
 func TestMinusInt128(t *testing.T) {
 
+	t.Parallel()
+
 	// NOTE: hex values are integer values, not bit patterns!
 
 	tests := []struct {
@@ -2005,6 +2027,8 @@ func TestMinusInt128(t *testing.T) {
 }
 
 func TestMinusInt256(t *testing.T) {
+
+	t.Parallel()
 
 	// NOTE: hex values are integer values, not bit patterns!
 
@@ -2458,6 +2482,8 @@ func TestMinusInt256(t *testing.T) {
 }
 
 func TestMinusUInt(t *testing.T) {
+
+	t.Parallel()
 
 	tests := []struct {
 		a, b  uint64

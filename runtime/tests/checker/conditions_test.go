@@ -30,6 +30,8 @@ import (
 
 func TestCheckFunctionConditions(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(x: Int) {
           pre {
@@ -45,6 +47,8 @@ func TestCheckFunctionConditions(t *testing.T) {
 }
 
 func TestCheckInvalidFunctionPreConditionReference(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(x: Int) {
@@ -74,6 +78,8 @@ func TestCheckInvalidFunctionPreConditionReference(t *testing.T) {
 
 func TestCheckInvalidFunctionNonBoolCondition(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(x: Int) {
           pre {
@@ -93,6 +99,8 @@ func TestCheckInvalidFunctionNonBoolCondition(t *testing.T) {
 
 func TestCheckFunctionPostConditionWithBefore(t *testing.T) {
 
+	t.Parallel()
+
 	checker, err := ParseAndCheck(t, `
       fun test(x: Int) {
           post {
@@ -109,6 +117,8 @@ func TestCheckFunctionPostConditionWithBefore(t *testing.T) {
 
 func TestCheckFunctionPostConditionWithBeforeNotDeclaredUse(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           post {
@@ -123,6 +133,8 @@ func TestCheckFunctionPostConditionWithBeforeNotDeclaredUse(t *testing.T) {
 }
 
 func TestCheckInvalidFunctionPostConditionWithBeforeAndNoArgument(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(x: Int) {
@@ -139,6 +151,8 @@ func TestCheckInvalidFunctionPostConditionWithBeforeAndNoArgument(t *testing.T) 
 }
 
 func TestCheckInvalidFunctionPreConditionWithBefore(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(x: Int) {
@@ -159,6 +173,8 @@ func TestCheckInvalidFunctionPreConditionWithBefore(t *testing.T) {
 
 func TestCheckInvalidFunctionWithBeforeVariableAndPostConditionWithBefore(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(x: Int) {
           post {
@@ -175,6 +191,8 @@ func TestCheckInvalidFunctionWithBeforeVariableAndPostConditionWithBefore(t *tes
 
 func TestCheckFunctionWithBeforeVariable(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(x: Int) {
           let before = 0
@@ -185,6 +203,8 @@ func TestCheckFunctionWithBeforeVariable(t *testing.T) {
 }
 
 func TestCheckFunctionPostCondition(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(x: Int): Int {
@@ -200,6 +220,8 @@ func TestCheckFunctionPostCondition(t *testing.T) {
 }
 
 func TestCheckInvalidFunctionPreConditionWithResult(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(): Int {
@@ -221,6 +243,8 @@ func TestCheckInvalidFunctionPreConditionWithResult(t *testing.T) {
 
 func TestCheckInvalidFunctionPostConditionWithResultWrongType(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): Int {
           post {
@@ -237,6 +261,8 @@ func TestCheckInvalidFunctionPostConditionWithResultWrongType(t *testing.T) {
 
 func TestCheckFunctionPostConditionWithResult(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): Int {
           post {
@@ -250,6 +276,8 @@ func TestCheckFunctionPostConditionWithResult(t *testing.T) {
 }
 
 func TestCheckInvalidFunctionPostConditionWithResult(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -270,6 +298,8 @@ func TestCheckInvalidFunctionPostConditionWithResult(t *testing.T) {
 
 func TestCheckFunctionWithoutReturnTypeAndLocalResultAndPostConditionWithResult(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           post {
@@ -284,6 +314,8 @@ func TestCheckFunctionWithoutReturnTypeAndLocalResultAndPostConditionWithResult(
 
 func TestCheckFunctionWithoutReturnTypeAndResultParameterAndPostConditionWithResult(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(result: Int) {
           post {
@@ -296,6 +328,8 @@ func TestCheckFunctionWithoutReturnTypeAndResultParameterAndPostConditionWithRes
 }
 
 func TestCheckInvalidFunctionWithReturnTypeAndLocalResultAndPostConditionWithResult(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(): Int {
@@ -314,6 +348,8 @@ func TestCheckInvalidFunctionWithReturnTypeAndLocalResultAndPostConditionWithRes
 
 func TestCheckInvalidFunctionWithReturnTypeAndResultParameterAndPostConditionWithResult(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(result: Int): Int {
           post {
@@ -330,6 +366,8 @@ func TestCheckInvalidFunctionWithReturnTypeAndResultParameterAndPostConditionWit
 
 func TestCheckInvalidFunctionPostConditionWithFunction(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           post {
@@ -345,6 +383,8 @@ func TestCheckInvalidFunctionPostConditionWithFunction(t *testing.T) {
 
 func TestCheckFunctionPostConditionWithMessageUsingStringLiteral(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           post {
@@ -357,6 +397,8 @@ func TestCheckFunctionPostConditionWithMessageUsingStringLiteral(t *testing.T) {
 }
 
 func TestCheckInvalidFunctionPostConditionWithMessageUsingBooleanLiteral(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -373,6 +415,8 @@ func TestCheckInvalidFunctionPostConditionWithMessageUsingBooleanLiteral(t *test
 
 func TestCheckFunctionPostConditionWithMessageUsingResult(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): String {
           post {
@@ -387,6 +431,8 @@ func TestCheckFunctionPostConditionWithMessageUsingResult(t *testing.T) {
 
 func TestCheckFunctionPostConditionWithMessageUsingBefore(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(x: String) {
           post {
@@ -399,6 +445,8 @@ func TestCheckFunctionPostConditionWithMessageUsingBefore(t *testing.T) {
 }
 
 func TestCheckFunctionPostConditionWithMessageUsingParameter(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test(x: String) {

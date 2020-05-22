@@ -30,6 +30,8 @@ import (
 
 func TestCheckArrayIndexingWithInteger(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           let z = [0, 3]
@@ -42,6 +44,8 @@ func TestCheckArrayIndexingWithInteger(t *testing.T) {
 
 func TestCheckNestedArrayIndexingWithInteger(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           let z = [[0, 1], [2, 3]]
@@ -53,6 +57,8 @@ func TestCheckNestedArrayIndexingWithInteger(t *testing.T) {
 }
 
 func TestCheckInvalidArrayIndexingWithBool(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -68,6 +74,8 @@ func TestCheckInvalidArrayIndexingWithBool(t *testing.T) {
 
 func TestCheckInvalidArrayIndexingIntoBool(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): Int {
           return true[0]
@@ -81,6 +89,8 @@ func TestCheckInvalidArrayIndexingIntoBool(t *testing.T) {
 
 func TestCheckInvalidArrayIndexingIntoInteger(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test(): Int {
           return 2[0]
@@ -93,6 +103,8 @@ func TestCheckInvalidArrayIndexingIntoInteger(t *testing.T) {
 }
 
 func TestCheckInvalidArrayIndexingAssignmentWithBool(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -108,6 +120,8 @@ func TestCheckInvalidArrayIndexingAssignmentWithBool(t *testing.T) {
 
 func TestCheckArrayIndexingAssignmentWithInteger(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           let z = [0, 3]
@@ -119,6 +133,8 @@ func TestCheckArrayIndexingAssignmentWithInteger(t *testing.T) {
 }
 
 func TestCheckInvalidArrayIndexingAssignmentWithWrongType(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {
@@ -134,6 +150,8 @@ func TestCheckInvalidArrayIndexingAssignmentWithWrongType(t *testing.T) {
 
 func TestCheckInvalidStringIndexingWithBool(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           let z = "abc"
@@ -148,6 +166,8 @@ func TestCheckInvalidStringIndexingWithBool(t *testing.T) {
 
 func TestCheckInvalidUnknownDeclarationIndexing(t *testing.T) {
 
+	t.Parallel()
+
 	_, err := ParseAndCheck(t, `
       fun test() {
           x[0]
@@ -160,6 +180,8 @@ func TestCheckInvalidUnknownDeclarationIndexing(t *testing.T) {
 }
 
 func TestCheckInvalidUnknownDeclarationIndexingAssignment(t *testing.T) {
+
+	t.Parallel()
 
 	_, err := ParseAndCheck(t, `
       fun test() {

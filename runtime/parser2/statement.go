@@ -19,7 +19,10 @@
 package parser2
 
 import (
+	"fmt"
+
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
@@ -46,6 +49,8 @@ func parseStatements(p *parser, endTokenType lexer.TokenType) (statements []ast.
 func parseStatement(p *parser) ast.Statement {
 	p.skipSpaceAndComments(true)
 
+	// It might start with a keyword for a statement
+
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
 		switch p.current.Value {
@@ -59,8 +64,15 @@ func parseStatement(p *parser) ast.Statement {
 			return parseIfStatement(p)
 		case keywordWhile:
 			return parseWhileStatement(p)
+		case keywordFor:
+			return parseForStatement(p)
+		case keywordEmit:
+			return parseEmitStatement(p)
 		}
 	}
+
+	// If it is not a keyword for a statement,
+	// it might start with a keyword for a declaration
 
 	declaration := parseDeclaration(p)
 	// TODO: allow more
@@ -71,9 +83,42 @@ func parseStatement(p *parser) ast.Statement {
 		return declaration
 	}
 
+	// If it is not a statement or declaration,
+	// it must be an expression
+
 	expression := parseExpression(p, lowestBindingPower)
-	return &ast.ExpressionStatement{
-		Expression: expression,
+
+	// If the expression is followed by a transfer,
+	// it is actually the target of an assignment or swap statement
+
+	p.skipSpaceAndComments(true)
+	switch p.current.Type {
+	case lexer.TokenEqual, lexer.TokenLeftArrow, lexer.TokenLeftArrowExclamation:
+		transfer := parseTransfer(p)
+		p.next()
+
+		value := parseExpression(p, lowestBindingPower)
+
+		return &ast.AssignmentStatement{
+			Target:   expression,
+			Transfer: transfer,
+			Value:    value,
+		}
+
+	case lexer.TokenSwap:
+		p.next()
+
+		right := parseExpression(p, lowestBindingPower)
+
+		return &ast.SwapStatement{
+			Left:  expression,
+			Right: right,
+		}
+
+	default:
+		return &ast.ExpressionStatement{
+			Expression: expression,
+		}
 	}
 }
 
@@ -85,7 +130,7 @@ func parseReturnStatement(p *parser) *ast.ReturnStatement {
 
 	var expression ast.Expression
 	switch p.current.Type {
-	case lexer.TokenEOF, lexer.TokenSemicolon:
+	case lexer.TokenEOF, lexer.TokenSemicolon, lexer.TokenBraceClose:
 		break
 	default:
 		if !sawNewLine {
@@ -129,7 +174,23 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 		startPos := p.current.StartPos
 		p.next()
 
-		expression := parseExpression(p, lowestBindingPower)
+		p.skipSpaceAndComments(true)
+
+		var variableDeclaration *ast.VariableDeclaration
+
+		if p.current.Type == lexer.TokenIdentifier {
+			switch p.current.Value {
+			case keywordLet, keywordVar:
+				variableDeclaration =
+					parseVariableDeclaration(p, ast.AccessNotSpecified, nil)
+			}
+		}
+
+		var expression ast.Expression
+
+		if variableDeclaration == nil {
+			expression = parseExpression(p, lowestBindingPower)
+		}
 
 		thenBlock := parseBlock(p)
 
@@ -149,14 +210,28 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 			}
 		}
 
-		ifStatements = append(ifStatements,
-			&ast.IfStatement{
-				Test:     expression,
-				Then:     thenBlock,
-				Else:     elseBlock,
-				StartPos: startPos,
-			},
-		)
+		var test ast.IfStatementTest
+		switch {
+		case variableDeclaration != nil:
+			test = variableDeclaration
+		case expression != nil:
+			test = expression
+		default:
+			panic(errors.UnreachableError{})
+		}
+
+		ifStatement := &ast.IfStatement{
+			Test:     test,
+			Then:     thenBlock,
+			Else:     elseBlock,
+			StartPos: startPos,
+		}
+
+		if variableDeclaration != nil {
+			variableDeclaration.ParentIfStatement = ifStatement
+		}
+
+		ifStatements = append(ifStatements, ifStatement)
 
 		if !parseNested {
 			break
@@ -195,6 +270,39 @@ func parseWhileStatement(p *parser) *ast.WhileStatement {
 	}
 }
 
+func parseForStatement(p *parser) *ast.ForStatement {
+
+	startPos := p.current.StartPos
+	p.next()
+
+	p.skipSpaceAndComments(true)
+
+	identifier := mustIdentifier(p)
+
+	p.skipSpaceAndComments(true)
+
+	if !p.current.IsString(lexer.TokenIdentifier, keywordIn) {
+		panic(fmt.Errorf(
+			"expected keyword %q, got %q",
+			keywordIn,
+			p.current.Type,
+		))
+	}
+
+	p.next()
+
+	expression := parseExpression(p, lowestBindingPower)
+
+	block := parseBlock(p)
+
+	return &ast.ForStatement{
+		Identifier: identifier,
+		Block:      block,
+		Value:      expression,
+		StartPos:   startPos,
+	}
+}
+
 func parseBlock(p *parser) *ast.Block {
 	startToken := p.mustOne(lexer.TokenBraceOpen)
 	statements := parseStatements(p, lexer.TokenBraceClose)
@@ -206,5 +314,113 @@ func parseBlock(p *parser) *ast.Block {
 			StartPos: startToken.StartPos,
 			EndPos:   endToken.EndPos,
 		},
+	}
+}
+
+func parseFunctionBlock(p *parser) *ast.FunctionBlock {
+	p.skipSpaceAndComments(true)
+
+	startToken := p.mustOne(lexer.TokenBraceOpen)
+
+	p.skipSpaceAndComments(true)
+
+	var preConditions *ast.Conditions
+	if p.current.IsString(lexer.TokenIdentifier, keywordPre) {
+		p.next()
+		conditions := parseConditions(p, ast.ConditionKindPre)
+		preConditions = &conditions
+	}
+
+	p.skipSpaceAndComments(true)
+
+	var postConditions *ast.Conditions
+	if p.current.IsString(lexer.TokenIdentifier, keywordPost) {
+		p.next()
+		conditions := parseConditions(p, ast.ConditionKindPost)
+		postConditions = &conditions
+	}
+
+	statements := parseStatements(p, lexer.TokenBraceClose)
+
+	endToken := p.mustOne(lexer.TokenBraceClose)
+
+	return &ast.FunctionBlock{
+		Block: &ast.Block{
+			Statements: statements,
+			Range: ast.Range{
+				StartPos: startToken.StartPos,
+				EndPos:   endToken.EndPos,
+			},
+		},
+		PreConditions:  preConditions,
+		PostConditions: postConditions,
+	}
+}
+
+// parseConditions parses conditions (pre/post)
+//
+func parseConditions(p *parser, kind ast.ConditionKind) (conditions ast.Conditions) {
+
+	p.skipSpaceAndComments(true)
+	p.mustOne(lexer.TokenBraceOpen)
+
+	defer func() {
+		p.skipSpaceAndComments(true)
+		p.mustOne(lexer.TokenBraceClose)
+	}()
+
+	for {
+		p.skipSpaceAndComments(true)
+		switch p.current.Type {
+		case lexer.TokenSemicolon:
+			p.next()
+			continue
+
+		case lexer.TokenBraceClose, lexer.TokenEOF:
+			return
+
+		default:
+			condition := parseCondition(p, kind)
+			if condition == nil {
+				return
+			}
+
+			conditions = append(conditions, condition)
+		}
+	}
+}
+
+// parseCondition parses a condition (pre/post)
+//
+//    condition : expression (':' expression )?
+//
+func parseCondition(p *parser, kind ast.ConditionKind) *ast.Condition {
+
+	test := parseExpression(p, lowestBindingPower)
+
+	p.skipSpaceAndComments(true)
+
+	var message ast.Expression
+	if p.current.Is(lexer.TokenColon) {
+		p.next()
+
+		message = parseExpression(p, lowestBindingPower)
+	}
+
+	return &ast.Condition{
+		Kind:    kind,
+		Test:    test,
+		Message: message,
+	}
+}
+
+func parseEmitStatement(p *parser) *ast.EmitStatement {
+	startPos := p.current.StartPos
+	p.next()
+
+	invocation := parseNominalTypeInvocationRemainder(p)
+	return &ast.EmitStatement{
+		InvocationExpression: invocation,
+		StartPos:             startPos,
 	}
 }

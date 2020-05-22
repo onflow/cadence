@@ -39,6 +39,24 @@ const keywordVar = "var"
 const keywordFun = "fun"
 const keywordAs = "as"
 const keywordCreate = "create"
+const keywordDestroy = "destroy"
+const keywordFor = "for"
+const keywordIn = "in"
+const keywordEmit = "emit"
+const keywordAuth = "auth"
+const keywordPriv = "priv"
+const keywordPub = "pub"
+const keywordAccess = "access"
+const keywordSet = "set"
+const keywordAll = "all"
+const keywordSelf = "self"
+const keywordContract = "contract"
+const keywordAccount = "account"
+const keywordImport = "import"
+const keywordFrom = "from"
+const keywordPre = "pre"
+const keywordPost = "post"
+const keywordEvent = "event"
 
 const lowestBindingPower = 0
 
@@ -104,36 +122,40 @@ func (p *parser) next() {
 func (p *parser) mustOne(tokenType lexer.TokenType) lexer.Token {
 	t := p.current
 	if !t.Is(tokenType) {
-		panic(fmt.Errorf("expected token type: %s", tokenType))
+		panic(fmt.Errorf("expected token %s", tokenType))
 	}
 	p.next()
 	return t
 }
 
 func (p *parser) skipSpaceAndComments(skipNewlines bool) (containsNewline bool) {
-	for {
-		for {
-			if !p.current.Is(lexer.TokenSpace) {
-				break
-			}
-
+	atEnd := false
+	for !atEnd {
+		switch p.current.Type {
+		case lexer.TokenSpace:
 			space := p.current.Value.(lexer.Space)
+
 			if space.ContainsNewline {
 				containsNewline = true
 			}
 
 			if containsNewline && !skipNewlines {
-				break
+				return
 			}
 
 			p.next()
-		}
 
-		if !p.current.Is(lexer.TokenBlockCommentStart) {
-			break
+		case lexer.TokenBlockCommentStart:
+			// TODO: use comment?
+			p.parseCommentContent()
+
+		case lexer.TokenLineComment:
+			// TODO: use comment?
+			p.next()
+
+		default:
+			atEnd = true
 		}
-		// TODO: use comment?
-		p.parseCommentContent()
 	}
 	return
 }
@@ -186,5 +208,39 @@ func ParseType(input string) (ty ast.Type, errors []error) {
 		return
 	}
 	ty = res.(ast.Type)
+	return
+}
+
+func ParseDeclarations(input string) (declarations []ast.Declaration, errors []error) {
+	var res interface{}
+	res, errors = Parse(input, func(p *parser) interface{} {
+		return parseDeclarations(p, lexer.TokenEOF)
+	})
+	if res == nil {
+		declarations = nil
+		return
+	}
+	declarations = res.([]ast.Declaration)
+	return
+}
+
+func ParseProgram(input string) (program *ast.Program, err error) {
+	var res interface{}
+	var errs []error
+	res, errs = Parse(input, func(p *parser) interface{} {
+		return parseDeclarations(p, lexer.TokenEOF)
+	})
+	if len(errs) > 0 {
+		err = Error{
+			Errors: errs,
+		}
+	}
+	if res == nil {
+		program = nil
+		return
+	}
+	program = &ast.Program{
+		Declarations: res.([]ast.Declaration),
+	}
 	return
 }

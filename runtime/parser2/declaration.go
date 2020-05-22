@@ -19,9 +19,13 @@
 package parser2
 
 import (
+	"encoding/hex"
 	"fmt"
+	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
@@ -49,53 +53,177 @@ func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []
 }
 
 func parseDeclaration(p *parser) ast.Declaration {
-	p.skipSpaceAndComments(true)
 
-	switch p.current.Type {
-	case lexer.TokenIdentifier:
-		switch p.current.Value {
-		case keywordLet, keywordVar:
-			return parseVariableDeclaration(p)
-		case keywordFun:
-			return parseFunctionDeclaration(p)
+	access := ast.AccessNotSpecified
+	var accessPos *ast.Position
+
+	for {
+		p.skipSpaceAndComments(true)
+
+		switch p.current.Type {
+		case lexer.TokenIdentifier:
+			switch p.current.Value {
+			case keywordLet, keywordVar:
+				return parseVariableDeclaration(p, access, accessPos)
+
+			case keywordFun:
+				return parseFunctionDeclaration(p, access, accessPos)
+
+			case keywordImport:
+				return parseImportDeclaration(p)
+
+			case keywordEvent:
+				return parseEventDeclaration(p, access, accessPos)
+
+			case keywordPriv, keywordPub, keywordAccess:
+				if access != ast.AccessNotSpecified {
+					panic(fmt.Errorf("unexpected access modifier"))
+				}
+				pos := p.current.StartPos
+				accessPos = &pos
+				access = parseAccess(p)
+				continue
+			}
 		}
-	}
 
-	return nil
+		return nil
+	}
 }
 
-func parseVariableDeclaration(p *parser) *ast.VariableDeclaration {
+// parseAccess parses an access modifier
+//
+//    access
+//        : 'priv'
+//        | 'pub' ( '(' 'set' ')' )?
+//        | 'access' '(' ( 'self' | 'contract' | 'account' | 'all' ) ')'
+//        ;
+//
+func parseAccess(p *parser) ast.Access {
 
-	// TODO: access
+	switch p.current.Value {
+	case keywordPriv:
+		p.next()
+		return ast.AccessPrivate
+
+	case keywordPub:
+		p.next()
+		p.skipSpaceAndComments(true)
+		if !p.current.Is(lexer.TokenParenOpen) {
+			return ast.AccessPublic
+		}
+
+		p.next()
+		p.skipSpaceAndComments(true)
+
+		if !p.current.Is(lexer.TokenIdentifier) {
+			panic(fmt.Errorf(
+				"expected keyword %q, got %s",
+				keywordSet,
+				p.current.Type,
+			))
+		}
+		if p.current.Value != keywordSet {
+			panic(fmt.Errorf(
+				"expected keyword %q, got %q",
+				keywordSet,
+				p.current.Value,
+			))
+		}
+
+		p.next()
+		p.skipSpaceAndComments(true)
+
+		p.mustOne(lexer.TokenParenClose)
+
+		return ast.AccessPublicSettable
+
+	case keywordAccess:
+		p.next()
+		p.skipSpaceAndComments(true)
+
+		p.mustOne(lexer.TokenParenOpen)
+
+		p.skipSpaceAndComments(true)
+
+		if !p.current.Is(lexer.TokenIdentifier) {
+			panic(fmt.Errorf(
+				"expected keyword %q, %q, %q, or %q, got %s",
+				keywordAll,
+				keywordAccount,
+				keywordContract,
+				keywordSelf,
+				p.current.Type,
+			))
+		}
+
+		var access ast.Access
+
+		switch p.current.Value {
+		case keywordAll:
+			access = ast.AccessPublic
+
+		case keywordAccount:
+			access = ast.AccessAccount
+
+		case keywordContract:
+			access = ast.AccessContract
+
+		case keywordSelf:
+			access = ast.AccessPrivate
+
+		default:
+			panic(fmt.Errorf(
+				"expected keyword %q, %q, %q, or %q, got %q",
+				keywordAll,
+				keywordAccount,
+				keywordContract,
+				keywordSelf,
+				p.current.Value,
+			))
+		}
+
+		p.next()
+		p.skipSpaceAndComments(true)
+
+		p.mustOne(lexer.TokenParenClose)
+
+		return access
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+// parseVariableDeclaration parses a variable declaration.
+//
+//     variableKind : 'var' | 'let' ;
+//
+//     variableDeclaration :
+//         variableKind identifier ( ':' typeAnnotation )?
+//         transfer expression
+//         ( transfer expression )?
+//
+func parseVariableDeclaration(p *parser, access ast.Access, accessPos *ast.Position) *ast.VariableDeclaration {
 
 	startPos := p.current.StartPos
+	if accessPos != nil {
+		startPos = *accessPos
+	}
 
 	isLet := p.current.Value == keywordLet
 
-	if !p.current.Is(lexer.TokenIdentifier) ||
-		!(isLet || p.current.Value == keywordVar) {
-
-		panic(fmt.Errorf("expected kind kind of variable, %q or %q, got %q",
-			keywordLet,
-			keywordVar,
-			p.current.Type,
-		))
-	}
-
+	// Skip the `let` or `var` keyword
 	p.next()
 
 	p.skipSpaceAndComments(true)
 	if !p.current.Is(lexer.TokenIdentifier) {
 		panic(fmt.Errorf(
-			"expected identifier after start of variable declaration, got %q",
+			"expected identifier after start of variable declaration, got %s",
 			p.current.Type,
 		))
 	}
 
-	identifier := ast.Identifier{
-		Identifier: p.current.Value.(string),
-		Pos:        p.current.StartPos,
-	}
+	identifier := tokenToIdentifier(p.current)
 
 	p.next()
 	p.skipSpaceAndComments(true)
@@ -115,31 +243,43 @@ func parseVariableDeclaration(p *parser) *ast.VariableDeclaration {
 		panic(fmt.Errorf("expected transfer"))
 	}
 
-	p.skipSpaceAndComments(true)
-
 	value := parseExpression(p, lowestBindingPower)
 
-	// TODO: second transfer and value
+	p.skipSpaceAndComments(true)
+
+	secondTransfer := parseTransfer(p)
+	var secondValue ast.Expression
+	if secondTransfer != nil {
+		secondValue = parseExpression(p, lowestBindingPower)
+	}
 
 	return &ast.VariableDeclaration{
-		// TODO: Access
+		Access:         access,
 		IsConstant:     isLet,
 		Identifier:     identifier,
 		TypeAnnotation: typeAnnotation,
 		Value:          value,
 		Transfer:       transfer,
 		StartPos:       startPos,
-		// TODO: SecondTransfer, SecondValue
+		SecondTransfer: secondTransfer,
+		SecondValue:    secondValue,
 	}
 }
 
+// parseTransfer parses a transfer.
+//
+//    transfer : '=' | '<-' | '<-!'
+//
 func parseTransfer(p *parser) *ast.Transfer {
 	var operation ast.TransferOperation
+
 	switch p.current.Type {
 	case lexer.TokenEqual:
 		operation = ast.TransferOperationCopy
+
 	case lexer.TokenLeftArrow:
 		operation = ast.TransferOperationMove
+
 	case lexer.TokenLeftArrowExclamation:
 		operation = ast.TransferOperationMoveForced
 	}
@@ -148,168 +288,266 @@ func parseTransfer(p *parser) *ast.Transfer {
 		return nil
 	}
 
-	startPos := p.current.StartPos
+	pos := p.current.StartPos
 
 	p.next()
 
 	return &ast.Transfer{
 		Operation: operation,
-		Pos:       startPos,
+		Pos:       pos,
 	}
 }
 
-func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
-	var parameters []*ast.Parameter
+// parseImportDeclaration parses an import declaration
+//
+//   importDeclaration :
+//       'import'
+//       ( identifier (',' identifier)* 'from' )?
+//       ( string | hexadecimalLiteral | identifier )
+//
+func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 
-	p.skipSpaceAndComments(true)
+	startPosition := p.current.StartPos
 
-	if !p.current.Is(lexer.TokenParenOpen) {
-		panic(fmt.Errorf(
-			"expected %q as start of parameter list, got %q",
-			lexer.TokenParenOpen,
-			p.current.Type,
-		))
-	}
+	var identifiers []ast.Identifier
 
-	startPos := p.current.StartPos
-	p.next()
-
+	var location ast.Location
+	var locationPos ast.Position
 	var endPos ast.Position
 
-	expectParameter := true
+	parseStringOrAddressLocation := func() {
+		locationPos = p.current.StartPos
+		endPos = p.current.EndPos
 
-	atEnd := false
-	for !atEnd {
-		p.skipSpaceAndComments(true)
 		switch p.current.Type {
-		case lexer.TokenIdentifier:
-			parameter := parseParameter(p)
-			parameters = append(parameters, parameter)
-			expectParameter = false
+		case lexer.TokenString:
+			parsedString, errs := parseStringLiteral(p.current.Value.(string))
+			p.report(errs...)
+			location = ast.StringLocation(parsedString)
 
-		case lexer.TokenComma:
-			if expectParameter {
-				panic(fmt.Errorf(
-					"expected parameter or end of parameter list, got %q",
-					p.current.Type,
-				))
-			}
-			p.next()
-			expectParameter = true
-
-		case lexer.TokenParenClose:
-			endPos = p.current.EndPos
-			p.next()
-			atEnd = true
-
-		case lexer.TokenEOF:
-			panic(fmt.Errorf(
-				"missing %q at end of parameter list",
-				lexer.TokenParenClose,
-			))
+		case lexer.TokenHexadecimalLiteral:
+			location = parseHexadecimalLocation(p.current.Value.(string))
 
 		default:
-			if expectParameter {
+			panic(errors.NewUnreachableError())
+		}
+
+		p.next()
+	}
+
+	setIdentifierLocation := func(identifier ast.Identifier) {
+		// TODO: create IdentifierLocation once https://github.com/onflow/cadence/pull/55 is merged
+		//location = ast.IdentifierLocation(identifier.Identifier)
+		locationPos = identifier.Pos
+		endPos = identifier.EndPosition()
+	}
+
+	parseLocation := func() {
+		switch p.current.Type {
+		case lexer.TokenString, lexer.TokenHexadecimalLiteral:
+			parseStringOrAddressLocation()
+
+		// TODO: enable once https://github.com/onflow/cadence/pull/55 is merged
+		//case lexer.TokenIdentifier:
+		//	identifier := tokenToIdentifier(p.current)
+		//	setIdentifierLocation(identifier)
+		//  p.next()
+
+		default:
+			panic(fmt.Errorf(
+				"unexpected token in import declaration: got %s, expected string, address, or identifier",
+				p.current.Type,
+			))
+		}
+	}
+
+	parseMoreIdentifiers := func() {
+		expectCommaOrFrom := false
+
+		atEnd := false
+		for !atEnd {
+			p.next()
+			p.skipSpaceAndComments(true)
+
+			switch p.current.Type {
+			case lexer.TokenComma:
+				if !expectCommaOrFrom {
+					panic(fmt.Errorf(
+						"expected %s or keyword %q, got %s",
+						lexer.TokenIdentifier,
+						keywordFrom,
+						p.current.Type,
+					))
+				}
+				expectCommaOrFrom = false
+
+			case lexer.TokenIdentifier:
+
+				if p.current.Value == keywordFrom {
+
+					if !expectCommaOrFrom {
+						panic(fmt.Errorf(
+							"expected %s, got keyword %q",
+							lexer.TokenIdentifier,
+							p.current.Value,
+						))
+					}
+
+					atEnd = true
+
+					p.next()
+					p.skipSpaceAndComments(true)
+
+					parseLocation()
+				} else {
+					identifier := tokenToIdentifier(p.current)
+					identifiers = append(identifiers, identifier)
+
+					expectCommaOrFrom = true
+				}
+
+			case lexer.TokenEOF:
 				panic(fmt.Errorf(
-					"expected parameter or end of parameter list, got %q",
-					p.current.Type,
+					"unexpected end in import declaration: expected %s or %s",
+					lexer.TokenIdentifier,
+					lexer.TokenComma,
 				))
-			} else {
+
+			default:
 				panic(fmt.Errorf(
-					"expected comma or end of parameter list, got %q",
+					"unexpected token in import declaration: got %s, expected keyword %q or %s",
 					p.current.Type,
+					keywordFrom,
+					lexer.TokenComma,
 				))
 			}
 		}
 	}
 
-	return &ast.ParameterList{
-		Parameters: parameters,
-		Range: ast.Range{
-			StartPos: startPos,
-			EndPos:   endPos,
-		},
+	maybeParseFromIdentifier := func(identifier ast.Identifier) {
+		// The current identifier is maybe the `from` keyword,
+		// in which case the given (previous) identifier was
+		// an imported identifier and not the import location.
+		//
+		// If it is not the `from` keyword,
+		// the given (previous) identifier is the import location.
+
+		if p.current.Value == keywordFrom {
+			identifiers = append(identifiers, identifier)
+
+			p.next()
+			p.skipSpaceAndComments(true)
+
+			parseLocation()
+
+		} else {
+			// TODO: enable once https://github.com/onflow/cadence/pull/55 is merged
+			//setIdentifierLocation(identifier)
+
+			// TODO: remove once https://github.com/onflow/cadence/pull/55 is merged
+			panic(fmt.Errorf(
+				"unexpected identifier in import declaration: got %q, expected %q",
+				p.current.Value,
+				keywordFrom,
+			))
+		}
 	}
-}
 
-func parseParameter(p *parser) *ast.Parameter {
-	p.skipSpaceAndComments(true)
-
-	startPos := p.current.StartPos
-	parameterPos := startPos
-
-	if !p.current.Is(lexer.TokenIdentifier) {
-		panic(fmt.Errorf(
-			"expected argument label or parameter name, got %q",
-			p.current.Type,
-		))
-	}
-	argumentLabel := ""
-	parameterName := p.current.Value.(string)
+	// Skip the `import` keyword
 	p.next()
-
-	// If another identifier is provided, then the previous identifier
-	// is the argument label, and this identifier is the parameter name
-
 	p.skipSpaceAndComments(true)
-	if p.current.Is(lexer.TokenIdentifier) {
-		argumentLabel = parameterName
-		parameterName = p.current.Value.(string)
-		parameterPos = p.current.StartPos
+
+	switch p.current.Type {
+	case lexer.TokenString, lexer.TokenHexadecimalLiteral:
+		parseStringOrAddressLocation()
+
+	case lexer.TokenIdentifier:
+		identifier := tokenToIdentifier(p.current)
 
 		p.next()
 		p.skipSpaceAndComments(true)
-	}
 
-	if !p.current.Is(lexer.TokenColon) {
+		switch p.current.Type {
+		case lexer.TokenComma:
+			// The previous identifier is an imported identifier,
+			// not the import location
+			identifiers = append(identifiers, identifier)
+			parseMoreIdentifiers()
+
+		case lexer.TokenIdentifier:
+			maybeParseFromIdentifier(identifier)
+
+		case lexer.TokenEOF:
+			// The previous identifier is the identifier location
+			setIdentifierLocation(identifier)
+
+		default:
+			panic(fmt.Errorf(
+				"unexpected token in import declaration: got %s, expected keyword %q or %s",
+				p.current.Type,
+				keywordFrom,
+				lexer.TokenComma,
+			))
+		}
+
+	case lexer.TokenEOF:
+		panic(fmt.Errorf("unexpected end in import declaration: expected string, address, or identifier"))
+
+	default:
 		panic(fmt.Errorf(
-			"expected %q after argument label/parameter name, got %q",
-			lexer.TokenColon,
+			"unexpected token in import declaration: got %s, expected string, address, or identifier",
 			p.current.Type,
 		))
 	}
 
-	p.next()
-	p.skipSpaceAndComments(true)
-
-	typeAnnotation := parseTypeAnnotation(p)
-
-	endPos := typeAnnotation.EndPosition()
-
-	return &ast.Parameter{
-		Label: argumentLabel,
-		Identifier: ast.Identifier{
-			Identifier: parameterName,
-			Pos:        parameterPos,
-		},
-		TypeAnnotation: typeAnnotation,
+	return &ast.ImportDeclaration{
+		Identifiers: identifiers,
+		Location:    location,
 		Range: ast.Range{
-			StartPos: startPos,
+			StartPos: startPosition,
 			EndPos:   endPos,
 		},
+		LocationPos: locationPos,
 	}
 }
 
-func parseFunctionDeclaration(p *parser) *ast.FunctionDeclaration {
+func parseHexadecimalLocation(literal string) ast.AddressLocation {
+	bytes := []byte(strings.Replace(literal[2:], "_", "", -1))
 
-	// TODO: access
-
-	startPos := p.current.StartPos
-
-	if !p.current.IsString(lexer.TokenIdentifier, keywordFun) {
-		panic(fmt.Errorf(
-			"expected function keyword %q, got %q",
-			keywordFun,
-			p.current.Type,
-		))
+	length := len(bytes)
+	if length%2 == 1 {
+		bytes = append([]byte{'0'}, bytes...)
+		length++
 	}
 
+	address := make([]byte, hex.DecodedLen(length))
+	_, err := hex.Decode(address, bytes)
+	if err != nil {
+		// unreachable, hex literal should always be valid
+		panic(err)
+	}
+
+	return address
+}
+
+// parseEventDeclaration parses an event declaration.
+//
+//    eventDeclaration : 'event' identifier parameterList
+//
+func parseEventDeclaration(p *parser, access ast.Access, accessPos *ast.Position) *ast.CompositeDeclaration {
+
+	startPos := p.current.StartPos
+	if accessPos != nil {
+		startPos = *accessPos
+	}
+
+	// Skip the `event` keyword
 	p.next()
 
 	p.skipSpaceAndComments(true)
 	if !p.current.Is(lexer.TokenIdentifier) {
 		panic(fmt.Errorf(
-			"expected identifier after start of function declaration, got %q",
+			"expected identifier after start of event declaration, got %s",
 			p.current.Type,
 		))
 	}
@@ -323,28 +561,27 @@ func parseFunctionDeclaration(p *parser) *ast.FunctionDeclaration {
 
 	parameterList := parseParameterList(p)
 
-	var returnTypeAnnotation *ast.TypeAnnotation
+	initializer :=
+		&ast.SpecialFunctionDeclaration{
+			DeclarationKind: common.DeclarationKindInitializer,
+			FunctionDeclaration: &ast.FunctionDeclaration{
+				ParameterList: parameterList,
+				StartPos:      parameterList.StartPos,
+			},
+		}
 
-	p.skipSpaceAndComments(true)
-	if p.current.Is(lexer.TokenColon) {
-		p.next()
-		p.skipSpaceAndComments(true)
-		returnTypeAnnotation = parseTypeAnnotation(p)
-		p.skipSpaceAndComments(true)
-	}
-
-	// TODO: parse function block
-	block := parseBlock(p)
-	functionBlock := &ast.FunctionBlock{
-		Block: block,
-	}
-
-	return &ast.FunctionDeclaration{
-		// TODO: Access
-		Identifier:           identifier,
-		ParameterList:        parameterList,
-		ReturnTypeAnnotation: returnTypeAnnotation,
-		FunctionBlock:        functionBlock,
-		StartPos:             startPos,
+	return &ast.CompositeDeclaration{
+		Access:        access,
+		CompositeKind: common.CompositeKindEvent,
+		Identifier:    identifier,
+		Members: &ast.Members{
+			SpecialFunctions: []*ast.SpecialFunctionDeclaration{
+				initializer,
+			},
+		},
+		Range: ast.Range{
+			StartPos: startPos,
+			EndPos:   parameterList.EndPos,
+		},
 	}
 }

@@ -33,6 +33,8 @@ const crashersDir = "../../../crashers"
 
 func TestCrashers(t *testing.T) {
 
+	t.Parallel()
+
 	f, err := os.Open(crashersDir)
 	if err != nil {
 		t.Skip()

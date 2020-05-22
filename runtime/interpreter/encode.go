@@ -6,10 +6,13 @@ import (
 	"io"
 	"math/big"
 	"reflect"
+	"strconv"
+	"strings"
 
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 // !!! *WARNING* !!!
@@ -191,39 +194,74 @@ func init() {
 	}
 }
 
+type EncodingDeferralMove struct {
+	DeferredOwner      common.Address
+	DeferredStorageKey string
+	NewOwner           common.Address
+	NewStorageKey      string
+}
+
+type EncodingDeferrals struct {
+	Values map[string]Value
+	Moves  []EncodingDeferralMove
+}
+
 // Encoder converts Values into CBOR-encoded bytes.
 //
 type Encoder struct {
-	enc *cbor.Encoder
+	enc      *cbor.Encoder
+	deferred bool
 }
 
 // EncodeValue returns the CBOR-encoded representation of the given value.
 //
-func EncodeValue(value Value) ([]byte, error) {
+// The given path is used to identify values in the object graph.
+// For example, path elements are appended for array elements (the index),
+// dictionary values (the key), and composites (the field name).
+//
+// The deferred flag determines if child values should be deferred,
+// i.e. should not be encoded into the result,
+// but e.g. be eventually written to separate storage keys.
+// If true, the deferrals result will contain the values
+// which have not been encoded, and which values need to be moved
+// from a previous storage key to another storage key.
+//
+func EncodeValue(value Value, path []string, deferred bool) (
+	encoded []byte,
+	deferrals *EncodingDeferrals,
+	err error,
+) {
 	var w bytes.Buffer
-	enc, err := NewEncoder(&w)
+	enc, err := NewEncoder(&w, deferred)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
-	err = enc.Encode(value)
-	if err != nil {
-		return nil, err
+	deferrals = &EncodingDeferrals{
+		Values: map[string]Value{},
 	}
 
-	return w.Bytes(), nil
+	err = enc.Encode(value, path, deferrals)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return w.Bytes(), deferrals, nil
 }
 
 // NewEncoder initializes an Encoder that will write CBOR-encoded bytes
 // to the given io.Writer.
 //
-func NewEncoder(w io.Writer) (*Encoder, error) {
+func NewEncoder(w io.Writer, deferred bool) (*Encoder, error) {
 	encMode, err := cbor.CanonicalEncOptions().EncModeWithTags(cborTagSet)
 	if err != nil {
 		return nil, err
 	}
 	enc := encMode.NewEncoder(w)
-	return &Encoder{enc: enc}, nil
+	return &Encoder{
+		enc:      enc,
+		deferred: deferred,
+	}, nil
 }
 
 // Encode writes the CBOR-encoded representation of the given value to this
@@ -232,8 +270,12 @@ func NewEncoder(w io.Writer) (*Encoder, error) {
 // This function returns an error if the given value's type is not supported
 // by this encoder.
 //
-func (e *Encoder) Encode(v Value) error {
-	prepared, err := e.prepare(v)
+func (e *Encoder) Encode(
+	v Value,
+	path []string,
+	deferrals *EncodingDeferrals,
+) error {
+	prepared, err := e.prepare(v, path, deferrals)
 	if err != nil {
 		return err
 	}
@@ -244,7 +286,14 @@ func (e *Encoder) Encode(v Value) error {
 // prepare traverses the object graph of the provided value and returns
 // the representation for the value that can be marshalled to CBOR.
 //
-func (e *Encoder) prepare(v Value) (interface{}, error) {
+func (e *Encoder) prepare(
+	v Value,
+	path []string,
+	deferrals *EncodingDeferrals,
+) (
+	interface{},
+	error,
+) {
 	switch v := v.(type) {
 
 	case NilValue:
@@ -337,20 +386,20 @@ func (e *Encoder) prepare(v Value) (interface{}, error) {
 	// Collections
 
 	case *ArrayValue:
-		return e.prepareArray(v)
+		return e.prepareArray(v, path, deferrals)
 
 	case *DictionaryValue:
-		return e.prepareDictionaryValue(v)
+		return e.prepareDictionaryValue(v, path, deferrals)
 
 	// Composites
 
 	case *CompositeValue:
-		return e.prepareCompositeValue(v)
+		return e.prepareCompositeValue(v, path, deferrals)
 
 	// Some
 
 	case *SomeValue:
-		return e.prepareSomeValue(v)
+		return e.prepareSomeValue(v, path, deferrals)
 
 	// Storage
 
@@ -543,11 +592,28 @@ func (e *Encoder) prepareString(v *StringValue) string {
 	return v.Str
 }
 
-func (e *Encoder) prepareArray(v *ArrayValue) ([]interface{}, error) {
+// joinPath returns the path for a nested item, for example the index of an array,
+// the key of a dictionary, or the field name of a composite.
+//
+// \x1F = Information Separator One
+//
+func joinPath(elements []string) string {
+	return strings.Join(elements, "\x1F")
+}
+
+func (e *Encoder) prepareArray(
+	v *ArrayValue,
+	path []string,
+	deferrals *EncodingDeferrals,
+) (
+	[]interface{},
+	error,
+) {
 	result := make([]interface{}, len(v.Values))
 
 	for i, value := range v.Values {
-		prepared, err := e.prepare(value)
+		valuePath := append(path[:], strconv.Itoa(i))
+		prepared, err := e.prepare(value, valuePath, deferrals)
 		if err != nil {
 			return nil, err
 		}
@@ -562,22 +628,85 @@ type encodedDictionaryValue struct {
 	Entries map[string]interface{} `cbor:"1,keyasint"`
 }
 
+const dictionaryKeyPathPrefix = "k"
+const dictionaryValuePathPrefix = "v"
+
 // TODO: optimize: use CBOR map, but unclear how to preserve ordering
-func (e *Encoder) prepareDictionaryValue(v *DictionaryValue) (interface{}, error) {
-	keys, err := e.prepareArray(v.Keys)
+func (e *Encoder) prepareDictionaryValue(
+	v *DictionaryValue,
+	path []string,
+	deferrals *EncodingDeferrals,
+) (
+	interface{},
+	error,
+) {
+	keysPath := append(path[:], dictionaryKeyPathPrefix)
+
+	keys, err := e.prepareArray(v.Keys, keysPath, deferrals)
 	if err != nil {
 		return nil, err
 	}
 
 	entries := make(map[string]interface{}, len(v.Entries))
 
+	// Deferring the encoding of values is only supported if all
+	// values are resources: resource typed dictionaries are moved
+
+	deferred := e.deferred
+	if deferred {
+		for _, value := range v.Entries {
+			compositeValue, ok := value.(*CompositeValue)
+			if !ok || compositeValue.Kind != common.CompositeKindResource {
+				deferred = false
+				break
+			}
+		}
+	}
+
 	for _, keyValue := range v.Keys.Values {
 		key := dictionaryKey(keyValue)
-		prepared, err := e.prepare(v.Entries[key])
-		if err != nil {
-			return nil, err
+		entryValue := v.Entries[key]
+		valuePath := append(path[:], dictionaryValuePathPrefix, key)
+
+		if deferred {
+
+			deferredStorageKey, isDeferred := v.DeferredKeys[key]
+
+			// If the value is not deferred, i.e. it is in memory,
+			// then it must be stored under a separate storage key
+			// in the owner's storage.
+
+			if !isDeferred {
+				deferrals.Values[joinPath(valuePath)] = entryValue
+			} else {
+
+				// If the value is deferred, and the deferred value
+				// is stored in another account's storage,
+				// it must be moved.
+
+				deferredOwner := *v.DeferredOwner
+				owner := *v.Owner
+
+				if deferredOwner != owner {
+
+					deferrals.Moves = append(deferrals.Moves,
+						EncodingDeferralMove{
+							DeferredOwner:      deferredOwner,
+							DeferredStorageKey: deferredStorageKey,
+							NewOwner:           owner,
+							NewStorageKey:      joinPath(valuePath),
+						},
+					)
+				}
+			}
+		} else {
+			var prepared interface{}
+			prepared, err = e.prepare(entryValue, valuePath, deferrals)
+			if err != nil {
+				return nil, err
+			}
+			entries[key] = prepared
 		}
-		entries[key] = prepared
 	}
 
 	return encodedDictionaryValue{
@@ -593,12 +722,21 @@ type encodedCompositeValue struct {
 	Fields   map[string]interface{} `cbor:"3,keyasint"`
 }
 
-func (e *Encoder) prepareCompositeValue(v *CompositeValue) (interface{}, error) {
+func (e *Encoder) prepareCompositeValue(
+	v *CompositeValue,
+	path []string,
+	deferrals *EncodingDeferrals,
+) (
+	interface{},
+	error,
+) {
 
 	fields := make(map[string]interface{}, len(v.Fields))
 
 	for name, value := range v.Fields {
-		prepared, err := e.prepare(value)
+		valuePath := append(path[:], name)
+
+		prepared, err := e.prepare(value, valuePath, deferrals)
 		if err != nil {
 			return nil, err
 		}
@@ -618,8 +756,15 @@ func (e *Encoder) prepareCompositeValue(v *CompositeValue) (interface{}, error) 
 	}, nil
 }
 
-func (e *Encoder) prepareSomeValue(v *SomeValue) (interface{}, error) {
-	prepared, err := e.prepare(v.Value)
+func (e *Encoder) prepareSomeValue(
+	v *SomeValue,
+	path []string,
+	deferrals *EncodingDeferrals,
+) (
+	interface{},
+	error,
+) {
+	prepared, err := e.prepare(v.Value, path, deferrals)
 	if err != nil {
 		return nil, err
 	}

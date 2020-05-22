@@ -39,7 +39,7 @@ func setTypeNullDenotation(tokenType lexer.TokenType, nullDenotation typeNullDen
 	current := typeNullDenotations[tokenType]
 	if current != nil {
 		panic(fmt.Errorf(
-			"type null denotation for token %q already exists",
+			"type null denotation for token %s already exists",
 			tokenType,
 		))
 	}
@@ -58,7 +58,7 @@ func setTypeLeftDenotation(tokenType lexer.TokenType, leftDenotation typeLeftDen
 	current := typeLeftDenotations[tokenType]
 	if current != nil {
 		panic(fmt.Errorf(
-			"type left denotation for token %q already exists",
+			"type left denotation for token %s already exists",
 			tokenType,
 		))
 	}
@@ -82,8 +82,10 @@ type prefixType struct {
 type postfixType struct {
 	tokenType      lexer.TokenType
 	bindingPower   int
-	nullDenotation postfixTypeFunc
+	leftDenotation postfixTypeFunc
 }
+
+const referenceTypeBindingPower = 20
 
 func defineType(def interface{}) {
 	switch def := def.(type) {
@@ -102,7 +104,7 @@ func defineType(def interface{}) {
 		setTypeLeftDenotation(
 			tokenType,
 			func(p *parser, token lexer.Token, left ast.Type) ast.Type {
-				return def.nullDenotation(left, token.Range)
+				return def.leftDenotation(left, token.Range)
 			},
 		)
 	case literalType:
@@ -114,20 +116,32 @@ func defineType(def interface{}) {
 }
 
 func init() {
-	defineNominalType()
 	defineArrayType()
 	defineOptionalType()
 	defineReferenceType()
 	defineRestrictedOrDictionaryType()
-}
+	defineFunctionType()
 
-func defineNominalType() {
-	defineType(literalType{
-		tokenType: lexer.TokenIdentifier,
-		nullDenotation: func(p *parser, token lexer.Token) ast.Type {
-			return parseNominalTypeRemainder(p, token)
+	setTypeNullDenotation(
+		lexer.TokenIdentifier,
+		func(p *parser, token lexer.Token) ast.Type {
+
+			switch token.Value {
+			case keywordAuth:
+				p.skipSpaceAndComments(true)
+				p.mustOne(lexer.TokenAmpersand)
+				right := parseType(p, referenceTypeBindingPower)
+				return &ast.ReferenceType{
+					Authorized: true,
+					Type:       right,
+					StartPos:   token.StartPos,
+				}
+
+			default:
+				return parseNominalTypeRemainder(p, token)
+			}
 		},
-	})
+	)
 }
 
 func parseNominalTypeRemainder(p *parser, token lexer.Token) *ast.NominalType {
@@ -141,7 +155,7 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) *ast.NominalType {
 
 		if !nestedToken.Is(lexer.TokenIdentifier) {
 			panic(fmt.Errorf(
-				"expected identifier after %q, got %q",
+				"expected identifier after %s, got %s",
 				lexer.TokenDot,
 				nestedToken.Type,
 			))
@@ -178,20 +192,19 @@ func defineArrayType() {
 
 				p.skipSpaceAndComments(true)
 
-				if !p.current.Is(lexer.TokenNumber) {
+				if !p.current.Is(lexer.TokenDecimalLiteral) {
 					panic(fmt.Errorf(
-						"expected size for constant sized type, got %q",
+						"expected size for constant sized type, got %s",
 						p.current.Type,
 					))
 				}
 
-				numberExpression := parseNumber(p.current)
-				p.next()
+				numberExpression := parseExpression(p, lowestBindingPower)
 
 				integerExpression, ok := numberExpression.(*ast.IntegerExpression)
 				if !ok {
 					p.report(fmt.Errorf(
-						"expected integer size for constant sized type, got %q",
+						"expected integer size for constant sized type, got %s",
 						numberExpression,
 					))
 				} else {
@@ -225,12 +238,28 @@ func defineArrayType() {
 }
 
 func defineOptionalType() {
+	const bindingPower = 10
+
 	defineType(postfixType{
 		tokenType:    lexer.TokenQuestionMark,
-		bindingPower: 10,
-		nullDenotation: func(left ast.Type, tokenRange ast.Range) ast.Type {
+		bindingPower: bindingPower,
+		leftDenotation: func(left ast.Type, tokenRange ast.Range) ast.Type {
 			return &ast.OptionalType{
 				Type:   left,
+				EndPos: tokenRange.EndPos,
+			}
+		},
+	})
+
+	defineType(postfixType{
+		tokenType:    lexer.TokenDoubleQuestionMark,
+		bindingPower: bindingPower,
+		leftDenotation: func(left ast.Type, tokenRange ast.Range) ast.Type {
+			return &ast.OptionalType{
+				Type: &ast.OptionalType{
+					Type:   left,
+					EndPos: tokenRange.StartPos,
+				},
 				EndPos: tokenRange.EndPos,
 			}
 		},
@@ -240,7 +269,7 @@ func defineOptionalType() {
 func defineReferenceType() {
 	defineType(prefixType{
 		tokenType:    lexer.TokenAmpersand,
-		bindingPower: 20,
+		bindingPower: referenceTypeBindingPower,
 		nullDenotation: func(right ast.Type, tokenRange ast.Range) ast.Type {
 			return &ast.ReferenceType{
 				Authorized: false,
@@ -342,7 +371,7 @@ func defineRestrictedOrDictionaryType() {
 					if expectType {
 						panic(fmt.Errorf("invalid end, expected type"))
 					} else {
-						panic(fmt.Errorf("missing end, expected %q", lexer.TokenBraceClose))
+						panic(fmt.Errorf("missing end, expected %s", lexer.TokenBraceClose))
 					}
 
 				default:
@@ -373,10 +402,10 @@ func defineRestrictedOrDictionaryType() {
 
 			switch {
 			case restrictedType != nil:
-				restrictedType.Range.EndPos = endPos
+				restrictedType.EndPos = endPos
 				return restrictedType
 			case dictionaryType != nil:
-				dictionaryType.Range.EndPos = endPos
+				dictionaryType.EndPos = endPos
 				return dictionaryType
 			default:
 				restrictedType = &ast.RestrictedType{
@@ -434,12 +463,17 @@ func defineRestrictedOrDictionaryType() {
 					if expectType {
 						panic(fmt.Errorf("invalid end, expected type"))
 					} else {
-						panic(fmt.Errorf("missing end, expected %q", lexer.TokenBraceClose))
+						panic(fmt.Errorf("missing end, expected %s", lexer.TokenBraceClose))
 					}
 
 				default:
 					if !expectType {
-						panic(fmt.Errorf("unexpected token: got %q, expected \",\"", p.current.Type))
+						panic(fmt.Errorf(
+							"unexpected token: got %s, expected %s or %s",
+							p.current.Type,
+							lexer.TokenComma,
+							lexer.TokenBraceClose,
+						))
 					}
 
 					ty := parseType(p, lowestBindingPower)
@@ -464,6 +498,83 @@ func defineRestrictedOrDictionaryType() {
 			}
 		},
 	)
+}
+
+func defineFunctionType() {
+	setTypeNullDenotation(
+		lexer.TokenParenOpen,
+		func(p *parser, startToken lexer.Token) ast.Type {
+
+			parameterTypeAnnotations := parseParameterTypeAnnotations(p)
+
+			p.skipSpaceAndComments(true)
+			p.mustOne(lexer.TokenColon)
+
+			p.skipSpaceAndComments(true)
+			returnTypeAnnotation := parseTypeAnnotation(p)
+
+			p.skipSpaceAndComments(true)
+			endToken := p.mustOne(lexer.TokenParenClose)
+
+			return &ast.FunctionType{
+				ParameterTypeAnnotations: parameterTypeAnnotations,
+				ReturnTypeAnnotation:     returnTypeAnnotation,
+				Range: ast.Range{
+					StartPos: startToken.StartPos,
+					EndPos:   endToken.EndPos,
+				},
+			}
+		},
+	)
+}
+
+func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnotation) {
+
+	p.skipSpaceAndComments(true)
+	p.mustOne(lexer.TokenParenOpen)
+
+	expectTypeAnnotation := true
+
+	atEnd := false
+	for !atEnd {
+		p.skipSpaceAndComments(true)
+		switch p.current.Type {
+		case lexer.TokenComma:
+			if expectTypeAnnotation {
+				panic(fmt.Errorf(
+					"expected type annotation or end of list, got %q",
+					p.current.Type,
+				))
+			}
+			p.next()
+			expectTypeAnnotation = true
+
+		case lexer.TokenParenClose:
+			p.next()
+			atEnd = true
+
+		case lexer.TokenEOF:
+			panic(fmt.Errorf(
+				"missing %q at end of list",
+				lexer.TokenParenClose,
+			))
+
+		default:
+			if !expectTypeAnnotation {
+				panic(fmt.Errorf(
+					"expected comma or end of list, got %q",
+					p.current.Type,
+				))
+			}
+
+			typeAnnotation := parseTypeAnnotation(p)
+			typeAnnotations = append(typeAnnotations, typeAnnotation)
+
+			expectTypeAnnotation = false
+		}
+	}
+
+	return
 }
 
 func parseType(p *parser, rightBindingPower int) ast.Type {
@@ -505,7 +616,7 @@ func applyTypeNullDenotation(p *parser, token lexer.Token) ast.Type {
 	tokenType := token.Type
 	nullDenotation, ok := typeNullDenotations[tokenType]
 	if !ok {
-		panic(fmt.Errorf("missing type null denotation for token %q", token.Type))
+		panic(fmt.Errorf("missing type null denotation for token %s", token.Type))
 	}
 	return nullDenotation(p, token)
 }
@@ -513,7 +624,34 @@ func applyTypeNullDenotation(p *parser, token lexer.Token) ast.Type {
 func applyTypeLeftDenotation(p *parser, token lexer.Token, left ast.Type) ast.Type {
 	leftDenotation, ok := typeLeftDenotations[token.Type]
 	if !ok {
-		panic(fmt.Errorf("missing type left denotation for token %q", token.Type))
+		panic(fmt.Errorf("missing type left denotation for token %s", token.Type))
 	}
 	return leftDenotation(p, token, left)
+}
+
+func parseNominalTypeInvocationRemainder(p *parser) *ast.InvocationExpression {
+	p.skipSpaceAndComments(true)
+	identifier := p.mustOne(lexer.TokenIdentifier)
+	ty := parseNominalTypeRemainder(p, identifier)
+
+	p.skipSpaceAndComments(true)
+	p.mustOne(lexer.TokenParenOpen)
+	arguments, endPos := parseArgumentListRemainder(p)
+
+	var invokedExpression ast.Expression = &ast.IdentifierExpression{
+		Identifier: ty.Identifier,
+	}
+
+	for _, nestedIdentifier := range ty.NestedIdentifiers {
+		invokedExpression = &ast.MemberExpression{
+			Expression: invokedExpression,
+			Identifier: nestedIdentifier,
+		}
+	}
+
+	return &ast.InvocationExpression{
+		InvokedExpression: invokedExpression,
+		Arguments:         arguments,
+		EndPos:            endPos,
+	}
 }

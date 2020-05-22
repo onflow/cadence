@@ -37,16 +37,6 @@ func (e *astTypeConversionError) Error() string {
 	return fmt.Sprintf("cannot convert unsupported AST type: %#+v", e.invalidASTType)
 }
 
-// unsupportedAssignmentTargetExpression
-
-type unsupportedAssignmentTargetExpression struct {
-	target ast.Expression
-}
-
-func (e *unsupportedAssignmentTargetExpression) Error() string {
-	return fmt.Sprintf("cannot assign to unsupported target expression: %#+v", e.target)
-}
-
 // unsupportedOperation
 
 type unsupportedOperation struct {
