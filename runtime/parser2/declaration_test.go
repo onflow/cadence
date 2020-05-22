@@ -1277,3 +1277,85 @@ func TestParseEvent(t *testing.T) {
 		)
 	})
 }
+
+func TestParseFieldWithVariableKind(t *testing.T) {
+
+	t.Parallel()
+
+	parse := func(input string) (interface{}, []error) {
+		return Parse(
+			input,
+			func(p *parser) interface{} {
+				return parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil)
+			},
+		)
+	}
+
+	t.Run("variable", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("var x : Int")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FieldDeclaration{
+				Access:       ast.AccessNotSpecified,
+				VariableKind: ast.VariableKindVariable,
+				Identifier: ast.Identifier{
+					Identifier: "x",
+					Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+				},
+				TypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Int",
+							Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("constant", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := parse("let x : Int")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FieldDeclaration{
+				Access:       ast.AccessNotSpecified,
+				VariableKind: ast.VariableKindConstant,
+				Identifier: ast.Identifier{
+					Identifier: "x",
+					Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+				},
+				TypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "Int",
+							Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+				},
+			},
+			result,
+		)
+	})
+}
