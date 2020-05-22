@@ -5355,7 +5355,6 @@ func TestParseEvent(t *testing.T) {
 		t,
 		code,
 		[]Declaration{
-
 			&CompositeDeclaration{
 				CompositeKind: common.CompositeKindEvent,
 				Identifier: Identifier{
@@ -5428,6 +5427,7 @@ func TestParseEvent(t *testing.T) {
 				},
 			},
 		},
+		nil,
 	)
 }
 
