@@ -664,12 +664,15 @@ func parseArgument(p *parser) *ast.Argument {
 		expr = parseExpression(p, lowestBindingPower)
 	}
 
-	return &ast.Argument{
-		Label:         label,
-		LabelStartPos: &labelStartPos,
-		LabelEndPos:   &labelEndPos,
-		Expression:    expr,
+	if len(label) > 0 {
+		return &ast.Argument{
+			Label:         label,
+			LabelStartPos: &labelStartPos,
+			LabelEndPos:   &labelEndPos,
+			Expression:    expr,
+		}
 	}
+	return &ast.Argument{Expression: expr}
 }
 
 func defineNestedExpression() {
