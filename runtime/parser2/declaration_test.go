@@ -1359,3 +1359,68 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 		)
 	})
 }
+
+func TestParseCompositeDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("struct, no conformances", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(" pub struct S { }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Access:        ast.AccessPublic,
+					CompositeKind: common.CompositeKindStructure,
+					Identifier: ast.Identifier{
+						Identifier: "S",
+						Pos:        ast.Position{Line: 1, Column: 12, Offset: 12},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 16, Offset: 16},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("resource, one conformance", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(" pub resource R : RI { }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					Access:        ast.AccessPublic,
+					CompositeKind: common.CompositeKindResource,
+					Identifier: ast.Identifier{
+						Identifier: "R",
+						Pos:        ast.Position{Line: 1, Column: 14, Offset: 14},
+					},
+					Conformances: []*ast.NominalType{
+						{
+							Identifier: ast.Identifier{
+								Identifier: "RI",
+								Pos:        ast.Position{Line: 1, Column: 18, Offset: 18},
+							},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 23, Offset: 23},
+					},
+				},
+			},
+			result,
+		)
+	})
+}

@@ -369,9 +369,9 @@ func defineRestrictedOrDictionaryType() {
 
 				case lexer.TokenEOF:
 					if expectType {
-						panic(fmt.Errorf("invalid end, expected type"))
+						panic(fmt.Errorf("invalid end of input, expected type"))
 					} else {
-						panic(fmt.Errorf("missing end, expected %s", lexer.TokenBraceClose))
+						panic(fmt.Errorf("invalid end of input, expected %s", lexer.TokenBraceClose))
 					}
 
 				default:
@@ -433,64 +433,14 @@ func defineRestrictedOrDictionaryType() {
 		lexer.TokenBraceOpen,
 		func(p *parser, token lexer.Token, left ast.Type) ast.Type {
 
-			var restrictions []*ast.NominalType
+			nominalTypes, endPos := parseNominalTypes(p, lexer.TokenBraceClose)
 
-			var endPos ast.Position
-
-			expectType := true
-
-			atEnd := false
-			for !atEnd {
-				p.skipSpaceAndComments(true)
-
-				switch p.current.Type {
-				case lexer.TokenComma:
-					if expectType {
-						panic(fmt.Errorf("unexpected comma in restricted type"))
-					}
-					p.next()
-					expectType = true
-
-				case lexer.TokenBraceClose:
-					if expectType && len(restrictions) > 0 {
-						p.report(fmt.Errorf("missing type after comma"))
-					}
-					endPos = p.current.EndPos
-					p.next()
-					atEnd = true
-
-				case lexer.TokenEOF:
-					if expectType {
-						panic(fmt.Errorf("invalid end, expected type"))
-					} else {
-						panic(fmt.Errorf("missing end, expected %s", lexer.TokenBraceClose))
-					}
-
-				default:
-					if !expectType {
-						panic(fmt.Errorf(
-							"unexpected token: got %s, expected %s or %s",
-							p.current.Type,
-							lexer.TokenComma,
-							lexer.TokenBraceClose,
-						))
-					}
-
-					ty := parseType(p, lowestBindingPower)
-
-					expectType = false
-
-					nominalType, ok := ty.(*ast.NominalType)
-					if !ok {
-						panic(fmt.Errorf("non-nominal type in restriction list: %s", ty))
-					}
-					restrictions = append(restrictions, nominalType)
-				}
-			}
+			// Skip closing brace
+			p.next()
 
 			return &ast.RestrictedType{
 				Type:         left,
-				Restrictions: restrictions,
+				Restrictions: nominalTypes,
 				Range: ast.Range{
 					StartPos: left.StartPosition(),
 					EndPos:   endPos,
@@ -498,6 +448,69 @@ func defineRestrictedOrDictionaryType() {
 			}
 		},
 	)
+}
+
+// parseNominalTypes parses zero or more nominal types separated by comma.
+//
+func parseNominalTypes(
+	p *parser,
+	endTokenType lexer.TokenType,
+) (
+	nominalTypes []*ast.NominalType,
+	endPos ast.Position,
+) {
+	expectType := true
+	atEnd := false
+	for !atEnd {
+		p.skipSpaceAndComments(true)
+
+		fmt.Printf(">>> %s\n", p.current.Type)
+
+		switch p.current.Type {
+		case lexer.TokenComma:
+			if expectType {
+				panic(fmt.Errorf("unexpected comma"))
+			}
+			p.next()
+			expectType = true
+
+		case endTokenType:
+			if expectType && len(nominalTypes) > 0 {
+				p.report(fmt.Errorf("missing type after comma"))
+			}
+			endPos = p.current.EndPos
+			atEnd = true
+
+		case lexer.TokenEOF:
+			if expectType {
+				panic(fmt.Errorf("invalid end of input, expected type"))
+			} else {
+				panic(fmt.Errorf("invalid end of input, expected %s", endTokenType))
+			}
+
+		default:
+			if !expectType {
+				panic(fmt.Errorf(
+					"unexpected token: got %s, expected %s or %s",
+					p.current.Type,
+					lexer.TokenComma,
+					endTokenType,
+				))
+			}
+
+			ty := parseType(p, lowestBindingPower)
+
+			expectType = false
+
+			nominalType, ok := ty.(*ast.NominalType)
+			if !ok {
+				panic(fmt.Errorf("unexpected non-nominal type: %s", ty))
+			}
+			nominalTypes = append(nominalTypes, nominalType)
+		}
+	}
+
+	return
 }
 
 func defineFunctionType() {
