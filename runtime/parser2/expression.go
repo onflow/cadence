@@ -750,7 +750,7 @@ func defineIndexExpression() {
 				TargetExpression:   left,
 				IndexingExpression: firstIndexExpr,
 				Range: ast.Range{
-					StartPos: left.StartPosition(),
+					StartPos: token.StartPos,
 					EndPos:   endToken.EndPos,
 				},
 			}

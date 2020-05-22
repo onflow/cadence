@@ -2035,13 +2035,7 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
-	    fun test() { x.foo.bar[0][1].baz }
-	`)
-
-	require.NoError(t, err)
-
-	test := &FunctionDeclaration{
+	expected := &FunctionDeclaration{
 		Access: AccessNotSpecified,
 		Identifier: Identifier{
 			Identifier: "test",
@@ -2129,11 +2123,10 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 		StartPos: Position{Offset: 6, Line: 2, Column: 5},
 	}
 
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+	testParse(
+		t, `
+	    fun test() { x.foo.bar[0][1].baz }
+	`, []Declaration{expected}, nil)
 }
 
 func TestParseParametersAndArrayTypes(t *testing.T) {
