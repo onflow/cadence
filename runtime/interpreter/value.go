@@ -5160,10 +5160,9 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 	}
 
 	for _, keyValue := range v.Keys.Values {
+		// Don't use `Entries` here: the value might be deferred and needs to be loaded
+		value := v.Get(interpreter, locationRange, keyValue)
 		maybeDestroy(keyValue)
-	}
-
-	for _, value := range v.Entries {
 		maybeDestroy(value)
 	}
 

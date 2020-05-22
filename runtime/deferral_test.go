@@ -43,6 +43,11 @@ const simpleDeferralContract = `
           pub fun increment() {
               self.value = self.value + 1
           }
+
+          destroy() {
+              log("destroying R")
+              log(self.value)
+          }
       }
 
       pub fun createR(_ value: Int): @R {
@@ -1030,4 +1035,98 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesRemoval(t *testing.T) {
 
 	err = runtime.ExecuteTransaction(loadTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
+}
+
+func TestRuntimeStorageDeferredResourceDictionaryValuesDestruction(t *testing.T) {
+
+	// Test that the destructor is called correctly for potentially deferred value
+
+	runtime := NewInterpreterRuntime()
+
+	contract := []byte(simpleDeferralContract)
+
+	deployTx := []byte(fmt.Sprintf(
+		`
+          transaction {
+
+              prepare(signer: AuthAccount) {
+                  signer.setCode(%s)
+              }
+          }
+        `,
+		ArrayValueFromBytes(contract).String(),
+	))
+
+	setupTx := []byte(`
+      import Test from 0x1
+
+      transaction {
+
+          prepare(signer: AuthAccount) {
+              let c <- Test.createC()
+              c.rs["a"] <-! Test.createR(1)
+              c.rs["b"] <-! Test.createR(2)
+              signer.save(<-c, to: /storage/c)
+          }
+      }
+    `)
+
+	testTx := []byte(`
+      import Test from 0x1
+
+      transaction {
+
+         prepare(signer: AuthAccount) {
+             let c <- signer.load<@Test.C>(from: /storage/c)
+             destroy c
+         }
+      }
+    `)
+
+	var accountCode []byte
+	var events []cadence.Event
+	var loggedMessages []string
+
+	signer := common.BytesToAddress([]byte{0x1})
+
+	runtimeInterface := &testRuntimeInterface{
+		resolveImport: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		storage: newTestStorage(nil, nil),
+		getSigningAccounts: func() []Address {
+			return []Address{signer}
+		},
+		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+			accountCode = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) {
+			events = append(events, event)
+		},
+		log: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(deployTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	err = runtime.ExecuteTransaction(testTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]string{
+			`"destroying R"`,
+			"1",
+			`"destroying R"`,
+			"2",
+		},
+		loggedMessages,
+	)
 }
