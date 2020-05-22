@@ -509,7 +509,7 @@ func TestParseRestrictedType(t *testing.T) {
 		_, errs := ParseType("T{[U]}")
 		require.Equal(t,
 			[]error{
-				errors.New("non-nominal type in restriction list: [U]"),
+				errors.New("unexpected non-nominal type: [U]"),
 			},
 			errs,
 		)
@@ -535,7 +535,7 @@ func TestParseRestrictedType(t *testing.T) {
 		_, errs := ParseType("T{U, [V]}")
 		require.Equal(t,
 			[]error{
-				errors.New("non-nominal type in restriction list: [V]"),
+				errors.New("unexpected non-nominal type: [V]"),
 			},
 			errs,
 		)
@@ -548,7 +548,7 @@ func TestParseRestrictedType(t *testing.T) {
 		_, errs := ParseType("{")
 		require.Equal(t,
 			[]error{
-				errors.New("invalid end, expected type"),
+				errors.New("invalid end of input, expected type"),
 			},
 			errs,
 		)
@@ -561,7 +561,7 @@ func TestParseRestrictedType(t *testing.T) {
 		_, errs := ParseType("T{")
 		require.Equal(t,
 			[]error{
-				errors.New("invalid end, expected type"),
+				errors.New("invalid end of input, expected type"),
 			},
 			errs,
 		)
@@ -574,7 +574,7 @@ func TestParseRestrictedType(t *testing.T) {
 		_, errs := ParseType("{U")
 		require.Equal(t,
 			[]error{
-				errors.New("missing end, expected '}'"),
+				errors.New("invalid end of input, expected '}'"),
 			},
 			errs,
 		)
@@ -587,7 +587,7 @@ func TestParseRestrictedType(t *testing.T) {
 		_, errs := ParseType("T{U")
 		require.Equal(t,
 			[]error{
-				errors.New("missing end, expected '}'"),
+				errors.New("invalid end of input, expected '}'"),
 			},
 			errs,
 		)
@@ -600,7 +600,7 @@ func TestParseRestrictedType(t *testing.T) {
 		_, errs := ParseType("{U,")
 		require.Equal(t,
 			[]error{
-				errors.New("invalid end, expected type"),
+				errors.New("invalid end of input, expected type"),
 			},
 			errs,
 		)
@@ -613,7 +613,7 @@ func TestParseRestrictedType(t *testing.T) {
 		_, errs := ParseType("T{U,")
 		require.Equal(t,
 			[]error{
-				errors.New("invalid end, expected type"),
+				errors.New("invalid end of input, expected type"),
 			},
 			errs,
 		)
@@ -639,7 +639,7 @@ func TestParseRestrictedType(t *testing.T) {
 		_, errs := ParseType("T{,}")
 		require.Equal(t,
 			[]error{
-				errors.New("unexpected comma in restricted type"),
+				errors.New("unexpected comma"),
 			},
 			errs,
 		)
@@ -765,7 +765,7 @@ func TestParseDictionaryType(t *testing.T) {
 		_, errs := ParseType("{T:")
 		require.Equal(t,
 			[]error{
-				errors.New("invalid end, expected type"),
+				errors.New("invalid end of input, expected type"),
 			},
 			errs,
 		)
@@ -778,7 +778,7 @@ func TestParseDictionaryType(t *testing.T) {
 		_, errs := ParseType("{T:U")
 		require.Equal(t,
 			[]error{
-				errors.New("missing end, expected '}'"),
+				errors.New("invalid end of input, expected '}'"),
 			},
 			errs,
 		)

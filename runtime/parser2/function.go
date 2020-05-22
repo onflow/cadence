@@ -175,10 +175,7 @@ func parseFunctionDeclaration(p *parser, access ast.Access, accessPos *ast.Posit
 		))
 	}
 
-	identifier := ast.Identifier{
-		Identifier: p.current.Value.(string),
-		Pos:        p.current.StartPos,
-	}
+	identifier := tokenToIdentifier(p.current)
 
 	p.next()
 

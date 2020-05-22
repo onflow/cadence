@@ -58,6 +58,8 @@ const keywordFrom = "from"
 const keywordPre = "pre"
 const keywordPost = "post"
 const keywordEvent = "event"
+const keywordStruct = "struct"
+const keywordResource = "resource"
 
 const lowestBindingPower = 0
 

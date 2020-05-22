@@ -75,6 +75,9 @@ func parseDeclaration(p *parser) ast.Declaration {
 			case keywordEvent:
 				return parseEventDeclaration(p, access, accessPos)
 
+			case keywordStruct, keywordResource, keywordContract:
+				return parseCompositeDeclaration(p, access, accessPos)
+
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
 					panic(fmt.Errorf("unexpected access modifier"))
@@ -551,10 +554,7 @@ func parseEventDeclaration(p *parser, access ast.Access, accessPos *ast.Position
 		))
 	}
 
-	identifier := ast.Identifier{
-		Identifier: p.current.Value.(string),
-		Pos:        p.current.StartPos,
-	}
+	identifier := tokenToIdentifier(p.current)
 
 	p.next()
 
@@ -583,6 +583,28 @@ func parseEventDeclaration(p *parser, access ast.Access, accessPos *ast.Position
 			EndPos:   parameterList.EndPos,
 		},
 	}
+}
+
+// parseCompositeKind parses a composite kind.
+//
+//     compositeKind : 'struct' | 'resource' | 'contract'
+//
+func parseCompositeKind(p *parser) common.CompositeKind {
+
+	if p.current.Is(lexer.TokenIdentifier) {
+		switch p.current.Value {
+		case keywordStruct:
+			return common.CompositeKindStructure
+
+		case keywordResource:
+			return common.CompositeKindResource
+
+		case keywordContract:
+			return common.CompositeKindContract
+		}
+	}
+
+	return common.CompositeKindUnknown
 }
 
 // parseFieldWithVariableKind parses a field which has a variable kind.
@@ -637,6 +659,76 @@ func parseFieldWithVariableKind(p *parser, access ast.Access, accessPos *ast.Pos
 		Range: ast.Range{
 			StartPos: startPos,
 			EndPos:   typeAnnotation.EndPosition(),
+		},
+	}
+}
+
+// parseCompositeDeclaration parses an event declaration.
+//
+//     conformances : ':' nominalType ( ',' nominalType )*
+//
+//     compositeDeclaration : compositeKind identifier conformances? '{' membersAndNestedDeclarations '}'
+//
+func parseCompositeDeclaration(p *parser, access ast.Access, accessPos *ast.Position) *ast.CompositeDeclaration {
+
+	startPos := p.current.StartPos
+	if accessPos != nil {
+		startPos = *accessPos
+	}
+
+	compositeKind := parseCompositeKind(p)
+
+	// Skip the composite kind keyword
+	p.next()
+
+	p.skipSpaceAndComments(true)
+	if !p.current.Is(lexer.TokenIdentifier) {
+		panic(fmt.Errorf(
+			"expected identifier after start of composite declaration, got %s",
+			p.current.Type,
+		))
+	}
+
+	identifier := tokenToIdentifier(p.current)
+
+	p.next()
+
+	p.skipSpaceAndComments(true)
+
+	var conformances []*ast.NominalType
+
+	if p.current.Is(lexer.TokenColon) {
+		p.next()
+
+		conformances, _ = parseNominalTypes(p, lexer.TokenBraceOpen)
+
+		if len(conformances) < 1 {
+			panic(fmt.Errorf(
+				"expected at least one conformance after %s",
+				lexer.TokenColon,
+			))
+		}
+	}
+
+	p.skipSpaceAndComments(true)
+
+	p.mustOne(lexer.TokenBraceOpen)
+
+	p.skipSpaceAndComments(true)
+
+	endToken := p.mustOne(lexer.TokenBraceClose)
+
+	return &ast.CompositeDeclaration{
+		Access:                access,
+		CompositeKind:         compositeKind,
+		Identifier:            identifier,
+		Conformances:          conformances,
+		Members:               nil,
+		CompositeDeclarations: nil,
+		InterfaceDeclarations: nil,
+		Range: ast.Range{
+			StartPos: startPos,
+			EndPos:   endToken.EndPos,
 		},
 	}
 }
