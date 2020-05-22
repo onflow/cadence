@@ -964,16 +964,27 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesRemoval(t *testing.T) {
       }
     `)
 
-	//let c = signer.borrow<&Test.C>(from: /storage/c)!
+	borrowTx := []byte(`
+      import Test from 0x1
 
-	testTx := []byte(`
+      transaction {
+
+         prepare(signer: AuthAccount) {
+             let c = signer.borrow<&Test.C>(from: /storage/c)!
+             let r <- c.remove("a")
+             destroy r
+         }
+      }
+    `)
+
+	loadTx := []byte(`
       import Test from 0x1
 
       transaction {
 
          prepare(signer: AuthAccount) {
              let c <- signer.load<@Test.C>(from: /storage/c)!
-             let r <- c.remove("a")
+             let r <- c.remove("b")
              destroy r
              destroy c
          }
@@ -1014,6 +1025,9 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesRemoval(t *testing.T) {
 	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(testTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(borrowTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	err = runtime.ExecuteTransaction(loadTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 }
