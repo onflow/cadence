@@ -324,7 +324,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	err = runtime.ExecuteTransaction(replaceTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	assert.Equal(t, []string{"3", "4"}, loggedMessages)
+	assert.Equal(t,
+		[]string{
+			"3",
+			`"destroying R"`,
+			"3",
+			"4",
+		},
+		loggedMessages,
+	)
 
 	// TODO: optimize: only value has changed, dictionary itself did not
 
@@ -377,7 +385,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	err = runtime.ExecuteTransaction(removeTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	assert.Equal(t, []string{"4", "nil"}, loggedMessages)
+	assert.Equal(t,
+		[]string{
+			"4",
+			`"destroying R"`,
+			"4",
+			"nil",
+		},
+		loggedMessages,
+	)
 
 	// TODO: optimize: only value has changed, dictionary itself did not
 
@@ -456,7 +472,14 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	err = runtime.ExecuteTransaction(destroyTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	assert.Equal(t, []string{"1"}, loggedMessages)
+	assert.Equal(t,
+		[]string{
+			"1",
+			`"destroying R"`,
+			"1",
+		},
+		loggedMessages,
+	)
 
 	xStorageKey := []byte("storage\x1fc\x1frs\x1fv\x1fx")
 
