@@ -5061,7 +5061,7 @@ func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValu
 	}
 
 	for i := 0; i < keysAndValuesCount; i += 2 {
-		result.Insert(keysAndValues[i], keysAndValues[i+1])
+		_ = result.Insert(nil, LocationRange{}, keysAndValues[i], keysAndValues[i+1])
 	}
 
 	return result
@@ -5225,10 +5225,10 @@ func (v *DictionaryValue) Set(inter *Interpreter, locationRange LocationRange, k
 
 	switch typedValue := value.(type) {
 	case *SomeValue:
-		v.Insert(keyValue, typedValue.Value)
+		_ = v.Insert(inter, locationRange, keyValue, typedValue.Value)
 
 	case NilValue:
-		v.Remove(inter, locationRange, keyValue)
+		_ = v.Remove(inter, locationRange, keyValue)
 		return
 
 	default:
@@ -5281,8 +5281,14 @@ func (v *DictionaryValue) GetMember(_ *Interpreter, _ LocationRange, name string
 		return NewHostFunctionValue(
 			func(invocation Invocation) trampoline.Trampoline {
 				keyValue := invocation.Arguments[0]
-				result := v.Remove(invocation.Interpreter, invocation.LocationRange, keyValue)
-				return trampoline.Done{Result: result}
+
+				existingValue := v.Remove(
+					invocation.Interpreter,
+					invocation.LocationRange,
+					keyValue,
+				)
+
+				return trampoline.Done{Result: existingValue}
 			},
 		)
 
@@ -5292,18 +5298,14 @@ func (v *DictionaryValue) GetMember(_ *Interpreter, _ LocationRange, name string
 				keyValue := invocation.Arguments[0]
 				newValue := invocation.Arguments[1]
 
-				existingValue := v.Insert(keyValue, newValue)
+				existingValue := v.Insert(
+					invocation.Interpreter,
+					invocation.LocationRange,
+					keyValue,
+					newValue,
+				)
 
-				var returnValue Value
-				if existingValue == nil {
-					returnValue = NilValue{}
-				} else {
-					returnValue = NewSomeValueOwningNonCopying(existingValue)
-				}
-
-				return trampoline.Done{
-					Result: returnValue,
-				}
+				return trampoline.Done{Result: existingValue}
 			},
 		)
 
@@ -5364,25 +5366,29 @@ func (v *DictionaryValue) Remove(inter *Interpreter, locationRange LocationRange
 	}
 }
 
-func (v *DictionaryValue) Insert(keyValue Value, value Value) (existingValue Value) {
+func (v *DictionaryValue) Insert(inter *Interpreter, locationRange LocationRange, keyValue, value Value) OptionalValue {
 	v.modified = true
 
-	key := dictionaryKey(keyValue)
-	existingValue, existed := v.Entries[key]
+	// Don't use `Entries` here: the value might be deferred and needs to be loaded
+	existingValue := v.Get(inter, locationRange, keyValue)
 
-	if !existed {
-		v.Keys.Append(keyValue)
-	}
+	key := dictionaryKey(keyValue)
 
 	value.SetOwner(v.Owner)
 
 	v.Entries[key] = value
 
-	if !existed {
-		return nil
-	}
+	switch existingValue := existingValue.(type) {
+	case *SomeValue:
+		return existingValue
 
-	return existingValue
+	case NilValue:
+		v.Keys.Append(keyValue)
+		return existingValue
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (v *DictionaryValue) SetModified(modified bool) {

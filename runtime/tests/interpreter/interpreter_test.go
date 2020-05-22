@@ -5091,6 +5091,8 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 		interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(2),
 	).Copy().(*interpreter.DictionaryValue)
 	expectedDict.Insert(
+		nil,
+		interpreter.LocationRange{},
 		interpreter.NewStringValue("abc"),
 		interpreter.NewIntValueFromInt64(3),
 	)
