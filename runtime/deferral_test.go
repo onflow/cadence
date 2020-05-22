@@ -517,7 +517,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	)
 }
 
-func TestRuntimeStorageDeferredResourceDictionaryValuesNested(t *testing.T) {
+func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
@@ -755,7 +755,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesNested(t *testing.T) {
 	)
 }
 
-func TestRuntimeStorageDeferredResourceDictionaryValuesTransfer(t *testing.T) {
+func TestRuntimeStorageDeferredResourceDictionaryValues_Transfer(t *testing.T) {
 
 	signer1 := common.BytesToAddress([]byte{0x1})
 	signer2 := common.BytesToAddress([]byte{0x2})
@@ -963,7 +963,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesTransfer(t *testing.T) {
 	assert.NotEmpty(t, indexedWrites[string(signer2[:])][string(xStorageKey2)])
 }
 
-func TestRuntimeStorageDeferredResourceDictionaryValuesRemoval(t *testing.T) {
+func TestRuntimeStorageDeferredResourceDictionaryValues_Removal(t *testing.T) {
 
 	// Test that the `remove` function correctly loads the potentially deferred value
 
@@ -1065,7 +1065,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesRemoval(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestRuntimeStorageDeferredResourceDictionaryValuesDestruction(t *testing.T) {
+func TestRuntimeStorageDeferredResourceDictionaryValues_Destruction(t *testing.T) {
 
 	// Test that the destructor is called correctly for potentially deferred value
 
@@ -1159,7 +1159,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesDestruction(t *testing.T)
 	)
 }
 
-func TestRuntimeStorageDeferredResourceDictionaryValuesInsertion(t *testing.T) {
+func TestRuntimeStorageDeferredResourceDictionaryValues_Insertion(t *testing.T) {
 
 	// Test that the `insert` function correctly loads the potentially deferred value
 
@@ -1270,5 +1270,139 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesInsertion(t *testing.T) {
 	require.NoError(t, err)
 
 	err = runtime.ExecuteTransaction(loadTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+}
+
+func TestRuntimeStorageDeferredResourceDictionaryValues_TransferAndDestroy(t *testing.T) {
+
+	runtime := NewInterpreterRuntime()
+
+	contract := []byte(simpleDeferralContract)
+
+	deployTx := []byte(fmt.Sprintf(
+		`
+          transaction {
+
+              prepare(signer: AuthAccount) {
+                  signer.setCode(%s)
+              }
+          }
+        `,
+		ArrayValueFromBytes(contract).String(),
+	))
+
+	setupTx := []byte(`
+      import Test from 0x1
+
+      transaction {
+
+          prepare(signer: AuthAccount) {
+              let c <- Test.createC()
+              signer.save(<-c, to: /storage/c)
+          }
+      }
+    `)
+
+	mintTx := []byte(`
+      import Test from 0x1
+
+      transaction {
+
+         prepare(signer: AuthAccount) {
+             let c = signer.borrow<&Test.C>(from: /storage/c)!
+
+             let existing <- c.insert("1", <-Test.createR(1))
+             assert(existing == nil)
+             destroy existing
+         }
+      }
+    `)
+
+	transferTx := []byte(`
+      import Test from 0x1
+
+      transaction {
+
+         prepare(signer1: AuthAccount, signer2: AuthAccount) {
+             let c1 = signer1.borrow<&Test.C>(from: /storage/c)!
+             let c2 = signer2.borrow<&Test.C>(from: /storage/c)!
+
+             let r <- c1.remove("1")
+
+             let existing <- c2.insert("1", <-r)
+             assert(existing == nil)
+             destroy existing
+         }
+      }
+    `)
+
+	destroyTx := []byte(`
+      import Test from 0x1
+
+      transaction {
+
+         prepare(signer: AuthAccount) {
+             let c = signer.borrow<&Test.C>(from: /storage/c)!
+
+             let r <- c.remove("1")
+             destroy r
+         }
+      }
+    `)
+
+	var accountCode []byte
+	var events []cadence.Event
+	var loggedMessages []string
+
+	signer1 := common.BytesToAddress([]byte{0x1})
+	signer2 := common.BytesToAddress([]byte{0x2})
+	signer3 := common.BytesToAddress([]byte{0x3})
+
+	var signers []Address
+
+	runtimeInterface := &testRuntimeInterface{
+		resolveImport: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		storage: newTestStorage(nil, nil),
+		getSigningAccounts: func() []Address {
+			return signers
+		},
+		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+			accountCode = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) {
+			events = append(events, event)
+		},
+		log: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	signers = []Address{signer1}
+	err := runtime.ExecuteTransaction(deployTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	signers = []Address{signer2}
+	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	signers = []Address{signer3}
+	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	signers = []Address{signer2}
+	err = runtime.ExecuteTransaction(mintTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	signers = []Address{signer2, signer3}
+	err = runtime.ExecuteTransaction(transferTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	signers = []Address{signer3}
+	err = runtime.ExecuteTransaction(destroyTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 }
