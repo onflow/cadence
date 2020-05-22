@@ -5326,6 +5326,7 @@ func (v *DictionaryValue) Count() int {
 func (v *DictionaryValue) Remove(inter *Interpreter, locationRange LocationRange, keyValue Value) OptionalValue {
 	v.modified = true
 
+	// Don't use `Entries` here: the value might be deferred and needs to be loaded
 	value := v.Get(inter, locationRange, keyValue)
 
 	key := dictionaryKey(keyValue)
