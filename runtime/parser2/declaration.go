@@ -584,3 +584,59 @@ func parseEventDeclaration(p *parser, access ast.Access, accessPos *ast.Position
 		},
 	}
 }
+
+// parseFieldWithVariableKind parses a field which has a variable kind.
+//
+//     variableKind : 'var' | 'let'
+//
+//     field : variableKind identifier ':' typeAnnotation
+//
+func parseFieldWithVariableKind(p *parser, access ast.Access, accessPos *ast.Position) *ast.FieldDeclaration {
+
+	startPos := p.current.StartPos
+	if accessPos != nil {
+		startPos = *accessPos
+	}
+
+	var variableKind ast.VariableKind
+	switch p.current.Value {
+	case keywordLet:
+		variableKind = ast.VariableKindConstant
+
+	case keywordVar:
+		variableKind = ast.VariableKindVariable
+	}
+
+	// Skip the `let` or `var` keyword
+	p.next()
+
+	p.skipSpaceAndComments(true)
+	if !p.current.Is(lexer.TokenIdentifier) {
+		panic(fmt.Errorf(
+			"expected identifier after start of field declaration, got %s",
+			p.current.Type,
+		))
+	}
+
+	identifier := tokenToIdentifier(p.current)
+
+	p.next()
+	p.skipSpaceAndComments(true)
+
+	p.mustOne(lexer.TokenColon)
+
+	p.skipSpaceAndComments(true)
+
+	typeAnnotation := parseTypeAnnotation(p)
+
+	return &ast.FieldDeclaration{
+		Access:         access,
+		VariableKind:   variableKind,
+		Identifier:     identifier,
+		TypeAnnotation: typeAnnotation,
+		Range: ast.Range{
+			StartPos: startPos,
+			EndPos:   typeAnnotation.EndPosition(),
+		},
+	}
+}
