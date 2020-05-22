@@ -574,10 +574,7 @@ func parseCreateExpressionRemainder(p *parser, token lexer.Token) *ast.CreateExp
 
 // Invocation Expression Grammar:
 //
-// invocation
-// : ('<' ( typeAnnotation (',' typeAnnotation )* )? '>')?
-// '(' ( argument (',' argument)* )? ')'
-// ;
+//     invocation : '(' ( argument ( ',' argument )* )? ')'
 //
 func defineInvocationExpression() {
 	setExprLeftDenotation(
