@@ -629,11 +629,9 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 	return
 }
 
-// Invocation Expression Argument Grammar
+// parseArgument parses an argument in an invocation.
 //
-// argument
-// : (identifier ':')? expression
-// ;
+//     argument : (identifier ':' )? expression
 //
 func parseArgument(p *parser) *ast.Argument {
 	var label string
