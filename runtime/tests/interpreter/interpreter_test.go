@@ -5044,7 +5044,7 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 		interpreter.NewStringValue("abc"), interpreter.NewIntValueFromInt64(1),
 		interpreter.NewStringValue("def"), interpreter.NewIntValueFromInt64(2),
 	).Copy().(*interpreter.DictionaryValue)
-	expectedDict.Remove(nil, interpreter.NewStringValue("abc"))
+	expectedDict.Remove(nil, interpreter.LocationRange{}, interpreter.NewStringValue("abc"))
 
 	actualDict := inter.Globals["xs"].Value.(*interpreter.DictionaryValue)
 

@@ -5221,7 +5221,7 @@ func dictionaryKey(keyValue Value) string {
 	return hasKeyString.KeyString()
 }
 
-func (v *DictionaryValue) Set(inter *Interpreter, _ LocationRange, keyValue Value, value Value) {
+func (v *DictionaryValue) Set(inter *Interpreter, locationRange LocationRange, keyValue Value, value Value) {
 	v.modified = true
 
 	switch typedValue := value.(type) {
@@ -5229,7 +5229,7 @@ func (v *DictionaryValue) Set(inter *Interpreter, _ LocationRange, keyValue Valu
 		v.Insert(keyValue, typedValue.Value)
 
 	case NilValue:
-		v.Remove(inter, keyValue)
+		v.Remove(inter, locationRange, keyValue)
 		return
 
 	default:
@@ -5282,19 +5282,8 @@ func (v *DictionaryValue) GetMember(_ *Interpreter, _ LocationRange, name string
 		return NewHostFunctionValue(
 			func(invocation Invocation) trampoline.Trampoline {
 				keyValue := invocation.Arguments[0]
-
-				existingValue := v.Remove(invocation.Interpreter, keyValue)
-
-				var returnValue Value
-				if existingValue == nil {
-					returnValue = NilValue{}
-				} else {
-					returnValue = NewSomeValueOwningNonCopying(existingValue)
-				}
-
-				return trampoline.Done{
-					Result: returnValue,
-				}
+				result := v.Remove(invocation.Interpreter, invocation.LocationRange, keyValue)
+				return trampoline.Done{Result: result}
 			},
 		)
 
@@ -5334,11 +5323,12 @@ func (v *DictionaryValue) Count() int {
 }
 
 // TODO: unset owner?
-func (v *DictionaryValue) Remove(inter *Interpreter, keyValue Value) (existingValue Value) {
+func (v *DictionaryValue) Remove(inter *Interpreter, locationRange LocationRange, keyValue Value) OptionalValue {
 	v.modified = true
 
+	value := v.Get(inter, locationRange, keyValue)
+
 	key := dictionaryKey(keyValue)
-	existingValue, exists := v.Entries[key]
 
 	// If a resource that was previously deferred is removed from the dictionary,
 	// we delete its old key in storage, and then rely on resource semantics
@@ -5350,21 +5340,28 @@ func (v *DictionaryValue) Remove(inter *Interpreter, keyValue Value) (existingVa
 		}
 	}
 
-	if !exists {
-		return nil
-	}
+	switch value := value.(type) {
+	case *SomeValue:
 
-	delete(v.Entries, key)
+		delete(v.Entries, key)
 
-	// TODO: optimize linear scan
-	for i, keyValue := range v.Keys.Values {
-		if dictionaryKey(keyValue) == key {
-			v.Keys.Remove(i)
-			return existingValue
+		// TODO: optimize linear scan
+		for i, keyValue := range v.Keys.Values {
+			if dictionaryKey(keyValue) == key {
+				v.Keys.Remove(i)
+				return value
+			}
 		}
-	}
 
-	panic(errors.NewUnreachableError())
+		// Should never occur, the key should have been found
+		panic(errors.NewUnreachableError())
+
+	case NilValue:
+		return value
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (v *DictionaryValue) Insert(keyValue Value, value Value) (existingValue Value) {

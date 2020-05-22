@@ -922,3 +922,151 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesTransfer(t *testing.T) {
 	assert.NotEmpty(t, indexedWrites[string(signer2[:])][string(bStorageKey2)])
 	assert.NotEmpty(t, indexedWrites[string(signer2[:])][string(xStorageKey2)])
 }
+
+func TestRuntimeStorageDeferredResourceDictionaryValuesRemoval(t *testing.T) {
+
+	// Test that `remove` function correctly loads the potentially deferred value
+
+	runtime := NewInterpreterRuntime()
+
+	contract := []byte(`
+      pub contract Test {
+
+          pub resource NFT {}
+
+          pub resource Collection {
+              pub var ownedNFTs: @{UInt64: NFT}
+
+              init () {
+                  self.ownedNFTs <- {UInt64(1): <- create NFT()}
+              }
+
+              pub fun withdraw(withdrawID: UInt64): @NFT {
+                  let token <- self.ownedNFTs.remove(key: withdrawID) ?? panic("missing NFT")
+                  return <-token
+              }
+
+              pub fun deposit(token: @NFT) {
+                  let token <- token as! @NFT
+                  let oldToken <- self.ownedNFTs[UInt64(1)] <- token
+                  destroy oldToken
+              }
+
+              destroy() {
+                  destroy self.ownedNFTs
+              }
+          }
+
+          pub fun createCollection(): @Collection {
+              return <-create Collection()
+          }
+       }
+    `)
+
+	deployTx := []byte(fmt.Sprintf(
+		`
+          transaction {
+
+              prepare(signer: AuthAccount) {
+                  signer.setCode(%s)
+              }
+          }
+        `,
+		ArrayValueFromBytes(contract).String(),
+	))
+
+	setupTx := []byte(`
+      import Test from 0x1
+
+      transaction {
+
+         prepare(signer: AuthAccount) {
+             let collection <- Test.createCollection()
+
+             let token <- collection.withdraw(withdrawID: 1)
+
+             collection.deposit(token: <-token)
+
+             signer.save(<-collection, to: /storage/NFTCollection)
+         }
+      }
+    `)
+
+	testTx := []byte(`
+      import Test from 0x1
+
+      transaction {
+
+         prepare(signer: AuthAccount) {
+             let collection <- signer.load<@Test.Collection>(from:/storage/NFTCollection)!
+             let nft <- collection.withdraw(withdrawID: 1)
+             destroy nft
+             destroy collection
+         }
+      }
+    `)
+
+	var accountCode []byte
+	var events []cadence.Event
+	var loggedMessages []string
+	var reads []testRead
+	var writes []testWrite
+
+	onRead := func(controller, owner, key, value []byte) {
+		reads = append(reads, testRead{
+			controller,
+			owner,
+			key,
+		})
+	}
+
+	onWrite := func(controller, owner, key, value []byte) {
+		writes = append(writes, testWrite{
+			controller,
+			owner,
+			key,
+			value,
+		})
+	}
+
+	clearReadsAndWrites := func() {
+		writes = nil
+		reads = nil
+	}
+
+	signer := common.BytesToAddress([]byte{0x1})
+
+	runtimeInterface := &testRuntimeInterface{
+		resolveImport: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		storage: newTestStorage(onRead, onWrite),
+		getSigningAccounts: func() []Address {
+			return []Address{signer}
+		},
+		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+			accountCode = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) {
+			events = append(events, event)
+		},
+		log: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	clearReadsAndWrites()
+	err := runtime.ExecuteTransaction(deployTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	clearReadsAndWrites()
+	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	clearReadsAndWrites()
+	err = runtime.ExecuteTransaction(testTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+}
