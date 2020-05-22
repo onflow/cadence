@@ -29,50 +29,57 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
+const simpleDeferralContract = `
+  pub contract Test {
+
+      pub resource R {
+
+          pub var value: Int
+
+          init(_ value: Int) {
+              self.value = value
+          }
+
+          pub fun increment() {
+              self.value = self.value + 1
+          }
+      }
+
+      pub fun createR(_ value: Int): @R {
+          return <-create R(value)
+      }
+
+      pub resource C {
+
+          pub let rs: @{String: R}
+
+          init() {
+              self.rs <- {}
+          }
+
+          pub fun remove(_ id: String): @R {
+              let r <- self.rs.remove(key: id) ?? panic("missing")
+              return <-r
+          }
+
+          destroy() {
+              destroy self.rs
+          }
+      }
+
+      pub fun createC(): @C {
+          return <-create C()
+      }
+  }
+`
+
 func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
 
-	contract := []byte(`
-      pub contract Test {
-
-          pub resource R {
-
-              pub var value: Int
-
-              init(_ value: Int) {
-                  self.value = value
-              }
-
-              pub fun increment() {
-                  self.value = self.value + 1
-              }
-          }
-
-          pub fun createR(_ value: Int): @R {
-              return <-create R(value)
-          }
-
-          pub resource C {
-
-              pub let rs: @{String: R}
-
-              init() {
-                  self.rs <- {}
-              }
-
-              destroy() {
-                  destroy self.rs
-              }
-          }
-
-          pub fun createC(): @C {
-              return <-create C()
-          }
-      }
-    `)
+	contract := []byte(simpleDeferralContract)
 
 	deploy := []byte(fmt.Sprintf(
 		`
@@ -89,7 +96,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	setupTx := []byte(`
       import Test from 0xCADE
 
-       transaction {
+      transaction {
 
           prepare(signer: AuthAccount) {
               signer.save(<-Test.createC(), to: /storage/c)
@@ -168,10 +175,10 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 
       transaction {
 
-         prepare(signer: AuthAccount) {
-             let c = signer.borrow<&Test.C>(from: /storage/c)!
-             c.rs["a"] <-! Test.createR(1)
-             c.rs["b"] <-! Test.createR(2)
+          prepare(signer: AuthAccount) {
+              let c = signer.borrow<&Test.C>(from: /storage/c)!
+              c.rs["a"] <-! Test.createR(1)
+              c.rs["b"] <-! Test.createR(2)
          }
       }
     `)
@@ -205,11 +212,11 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 
       transaction {
 
-         prepare(signer: AuthAccount) {
-             let c = signer.borrow<&Test.C>(from: /storage/c)!
-             log(c.rs["b"]?.value)
-             log(c.rs["b"]?.value)
-         }
+          prepare(signer: AuthAccount) {
+              let c = signer.borrow<&Test.C>(from: /storage/c)!
+              log(c.rs["b"]?.value)
+              log(c.rs["b"]?.value)
+          }
       }
     `)
 
@@ -244,12 +251,12 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 
       transaction {
 
-         prepare(signer: AuthAccount) {
-             let c = signer.borrow<&Test.C>(from: /storage/c)!
-             c.rs["b"]?.increment()
+          prepare(signer: AuthAccount) {
+              let c = signer.borrow<&Test.C>(from: /storage/c)!
+              c.rs["b"]?.increment()
 
-             log(c.rs["b"]?.value)
-         }
+              log(c.rs["b"]?.value)
+          }
       }
     `)
 
@@ -296,13 +303,13 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 
       transaction {
 
-         prepare(signer: AuthAccount) {
-             let c = signer.borrow<&Test.C>(from: /storage/c)!
-             log(c.rs["b"]?.value)
-             let existing <- c.rs["b"] <- Test.createR(4)
-             destroy existing
-             log(c.rs["b"]?.value)
-         }
+          prepare(signer: AuthAccount) {
+              let c = signer.borrow<&Test.C>(from: /storage/c)!
+              log(c.rs["b"]?.value)
+              let existing <- c.rs["b"] <- Test.createR(4)
+              destroy existing
+              log(c.rs["b"]?.value)
+          }
       }
     `)
 
@@ -349,13 +356,13 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 
       transaction {
 
-         prepare(signer: AuthAccount) {
-             let c = signer.borrow<&Test.C>(from: /storage/c)!
-             log(c.rs["b"]?.value)
-             let existing <- c.rs["b"] <- nil
-             destroy existing
-             log(c.rs["b"]?.value)
-         }
+          prepare(signer: AuthAccount) {
+              let c = signer.borrow<&Test.C>(from: /storage/c)!
+              log(c.rs["b"]?.value)
+              let existing <- c.rs["b"] <- nil
+              destroy existing
+              log(c.rs["b"]?.value)
+          }
       }
     `)
 
@@ -423,18 +430,18 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 
       transaction {
 
-         prepare(signer: AuthAccount) {
-             if let c <- signer.load<@Test.C>(from: /storage/c) {
-                 // important: read "a", so the value is in the dictionary value,
-                 // but the deferred storage key must still be removed
-                 log(c.rs["a"]?.value)
-                 destroy c
-             }
+          prepare(signer: AuthAccount) {
+              if let c <- signer.load<@Test.C>(from: /storage/c) {
+                  // important: read "a", so the value is in the dictionary value,
+                  // but the deferred storage key must still be removed
+                  log(c.rs["a"]?.value)
+                  destroy c
+              }
 
-             let c2 <- Test.createC()
-             c2.rs["x"] <-! Test.createR(10)
-             signer.save(<-c2, to: /storage/c)
-         }
+              let c2 <- Test.createC()
+              c2.rs["x"] <-! Test.createR(10)
+              signer.save(<-c2, to: /storage/c)
+          }
       }
     `)
 
@@ -560,9 +567,9 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesNested(t *testing.T) {
 
        transaction {
 
-          prepare(signer: AuthAccount) {
-              signer.save(<-Test.createC(), to: /storage/c)
-          }
+           prepare(signer: AuthAccount) {
+               signer.save(<-Test.createC(), to: /storage/c)
+           }
        }
     `)
 
@@ -637,13 +644,13 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesNested(t *testing.T) {
 
       transaction {
 
-         prepare(signer: AuthAccount) {
-             let c = signer.borrow<&Test.C>(from: /storage/c)!
-             let c2 <- Test.createC2()
-             c2.rs["a"] <-! Test.createR(1)
-             c2.rs["b"] <-! Test.createR(2)
-             c.c2s["x"] <-! c2
-         }
+          prepare(signer: AuthAccount) {
+              let c = signer.borrow<&Test.C>(from: /storage/c)!
+              let c2 <- Test.createC2()
+              c2.rs["a"] <-! Test.createR(1)
+              c2.rs["b"] <-! Test.createR(2)
+              c.c2s["x"] <-! c2
+          }
       }
     `)
 
@@ -679,11 +686,11 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesNested(t *testing.T) {
 
       transaction {
 
-         prepare(signer: AuthAccount) {
-             let c = signer.borrow<&Test.C>(from: /storage/c)!
-             // TODO: use nested optional chaining
-             log(c.c2s["x"]?.value(key: "b"))
-         }
+          prepare(signer: AuthAccount) {
+              let c = signer.borrow<&Test.C>(from: /storage/c)!
+              // TODO: use nested optional chaining
+              log(c.c2s["x"]?.value(key: "b"))
+          }
       }
     `)
 
@@ -778,12 +785,12 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesTransfer(t *testing.T) {
 
        transaction {
 
-          prepare(signer1: AuthAccount, signer2: AuthAccount) {
-              let c <- Test.createC()
-              c.rs["a"] <-! Test.createR(1)
-              c.rs["b"] <-! Test.createR(2)
-              signer1.save(<-c, to: /storage/c)
-          }
+           prepare(signer1: AuthAccount, signer2: AuthAccount) {
+               let c <- Test.createC()
+               c.rs["a"] <-! Test.createR(1)
+               c.rs["b"] <-! Test.createR(2)
+               signer1.save(<-c, to: /storage/c)
+           }
        }
     `)
 
@@ -886,16 +893,16 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesTransfer(t *testing.T) {
 	// Transfer
 
 	transferTx := []byte(`
-     import Test from 0x1
+      import Test from 0x1
 
-     transaction {
+      transaction {
 
-        prepare(signer1: AuthAccount, signer2: AuthAccount) {
-            let c <- signer1.load<@Test.C>(from: /storage/c) ?? panic("missing C")
-            c.rs["x"] <-! Test.createR(42)
-            signer2.save(<-c, to: /storage/c2)
-        }
-     }
+          prepare(signer1: AuthAccount, signer2: AuthAccount) {
+              let c <- signer1.load<@Test.C>(from: /storage/c) ?? panic("missing C")
+              c.rs["x"] <-! Test.createR(42)
+              signer2.save(<-c, to: /storage/c2)
+          }
+      }
     `)
 
 	clearReadsAndWrites()
@@ -929,39 +936,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesRemoval(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
-	contract := []byte(`
-      pub contract Test {
-
-          pub resource NFT {}
-
-          pub resource Collection {
-              pub var ownedNFTs: @{UInt64: NFT}
-
-              init () {
-                  self.ownedNFTs <- {UInt64(1): <- create NFT()}
-              }
-
-              pub fun withdraw(withdrawID: UInt64): @NFT {
-                  let token <- self.ownedNFTs.remove(key: withdrawID) ?? panic("missing NFT")
-                  return <-token
-              }
-
-              pub fun deposit(token: @NFT) {
-                  let token <- token as! @NFT
-                  let oldToken <- self.ownedNFTs[UInt64(1)] <- token
-                  destroy oldToken
-              }
-
-              destroy() {
-                  destroy self.ownedNFTs
-              }
-          }
-
-          pub fun createCollection(): @Collection {
-              return <-create Collection()
-          }
-       }
-    `)
+	contract := []byte(simpleDeferralContract)
 
 	deployTx := []byte(fmt.Sprintf(
 		`
@@ -980,17 +955,16 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesRemoval(t *testing.T) {
 
       transaction {
 
-         prepare(signer: AuthAccount) {
-             let collection <- Test.createCollection()
-
-             let token <- collection.withdraw(withdrawID: 1)
-
-             collection.deposit(token: <-token)
-
-             signer.save(<-collection, to: /storage/NFTCollection)
-         }
+          prepare(signer: AuthAccount) {
+              let c <- Test.createC()
+              c.rs["a"] <-! Test.createR(1)
+              c.rs["b"] <-! Test.createR(2)
+              signer.save(<-c, to: /storage/c)
+          }
       }
     `)
+
+	//let c = signer.borrow<&Test.C>(from: /storage/c)!
 
 	testTx := []byte(`
       import Test from 0x1
@@ -998,10 +972,10 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesRemoval(t *testing.T) {
       transaction {
 
          prepare(signer: AuthAccount) {
-             let collection <- signer.load<@Test.Collection>(from:/storage/NFTCollection)!
-             let nft <- collection.withdraw(withdrawID: 1)
-             destroy nft
-             destroy collection
+             let c <- signer.load<@Test.C>(from: /storage/c)!
+             let r <- c.remove("a")
+             destroy r
+             destroy c
          }
       }
     `)
@@ -1009,30 +983,6 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesRemoval(t *testing.T) {
 	var accountCode []byte
 	var events []cadence.Event
 	var loggedMessages []string
-	var reads []testRead
-	var writes []testWrite
-
-	onRead := func(controller, owner, key, value []byte) {
-		reads = append(reads, testRead{
-			controller,
-			owner,
-			key,
-		})
-	}
-
-	onWrite := func(controller, owner, key, value []byte) {
-		writes = append(writes, testWrite{
-			controller,
-			owner,
-			key,
-			value,
-		})
-	}
-
-	clearReadsAndWrites := func() {
-		writes = nil
-		reads = nil
-	}
 
 	signer := common.BytesToAddress([]byte{0x1})
 
@@ -1040,7 +990,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesRemoval(t *testing.T) {
 		resolveImport: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestStorage(onRead, onWrite),
+		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() []Address {
 			return []Address{signer}
 		},
@@ -1058,15 +1008,12 @@ func TestRuntimeStorageDeferredResourceDictionaryValuesRemoval(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	clearReadsAndWrites()
 	err := runtime.ExecuteTransaction(deployTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	clearReadsAndWrites()
 	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	clearReadsAndWrites()
 	err = runtime.ExecuteTransaction(testTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 }
