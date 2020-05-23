@@ -562,7 +562,7 @@ func parseEventDeclaration(p *parser, access ast.Access, accessPos *ast.Position
 
 	initializer :=
 		&ast.SpecialFunctionDeclaration{
-			DeclarationKind: common.DeclarationKindInitializer,
+			Kind: common.DeclarationKindInitializer,
 			FunctionDeclaration: &ast.FunctionDeclaration{
 				ParameterList: parameterList,
 				StartPos:      parameterList.StartPos,

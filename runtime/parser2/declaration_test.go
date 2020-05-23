@@ -1167,7 +1167,7 @@ func TestParseEvent(t *testing.T) {
 					Members: &ast.Members{
 						SpecialFunctions: []*ast.SpecialFunctionDeclaration{
 							{
-								DeclarationKind: common.DeclarationKindInitializer,
+								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
 									ParameterList: &ast.ParameterList{
 										Range: ast.Range{
@@ -1210,7 +1210,7 @@ func TestParseEvent(t *testing.T) {
 					Members: &ast.Members{
 						SpecialFunctions: []*ast.SpecialFunctionDeclaration{
 							{
-								DeclarationKind: common.DeclarationKindInitializer,
+								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
 									ParameterList: &ast.ParameterList{
 										Parameters: []*ast.Parameter{

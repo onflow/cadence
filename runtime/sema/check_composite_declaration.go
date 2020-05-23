@@ -1293,7 +1293,7 @@ func (checker *Checker) checkSpecialFunction(
 			checker.checkInterfaceSpecialFunctionBlock(
 				specialFunction.FunctionBlock,
 				containerDeclarationKind,
-				specialFunction.DeclarationKind,
+				specialFunction.Kind,
 			)
 		}
 
@@ -1462,7 +1462,7 @@ func (checker *Checker) VisitFieldDeclaration(_ *ast.FieldDeclaration) ast.Repr 
 //
 func (checker *Checker) checkUnknownSpecialFunctions(functions []*ast.SpecialFunctionDeclaration) {
 	for _, function := range functions {
-		switch function.DeclarationKind {
+		switch function.Kind {
 		case common.DeclarationKindInitializer, common.DeclarationKindDestructor:
 			continue
 

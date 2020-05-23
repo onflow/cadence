@@ -74,6 +74,10 @@ func (f *FunctionDeclaration) ToExpression() *FunctionExpression {
 // SpecialFunctionDeclaration
 
 type SpecialFunctionDeclaration struct {
-	DeclarationKind common.DeclarationKind
+	Kind common.DeclarationKind
 	*FunctionDeclaration
+}
+
+func (f *SpecialFunctionDeclaration) DeclarationKind() common.DeclarationKind {
+	return f.Kind
 }
