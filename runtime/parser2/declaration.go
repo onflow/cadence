@@ -255,7 +255,7 @@ func parseVariableDeclaration(p *parser, access ast.Access, accessPos *ast.Posit
 		secondValue = parseExpression(p, lowestBindingPower)
 	}
 
-	return &ast.VariableDeclaration{
+	variableDeclaration := &ast.VariableDeclaration{
 		Access:         access,
 		IsConstant:     isLet,
 		Identifier:     identifier,
@@ -266,6 +266,13 @@ func parseVariableDeclaration(p *parser, access ast.Access, accessPos *ast.Posit
 		SecondTransfer: secondTransfer,
 		SecondValue:    secondValue,
 	}
+
+	castingExpression, leftIsCasting := value.(*ast.CastingExpression)
+	if leftIsCasting {
+		castingExpression.ParentVariableDeclaration = variableDeclaration
+	}
+
+	return variableDeclaration
 }
 
 // parseTransfer parses a transfer.
