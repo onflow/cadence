@@ -500,7 +500,7 @@ func TestInterpretArrayIndexingAssignment(t *testing.T) {
 		actualArray,
 	)
 
-	assert.True(t, actualArray.Modified())
+	assert.True(t, actualArray.IsModified())
 
 	assert.Equal(t,
 		[]interpreter.Value{
@@ -596,7 +596,7 @@ func TestInterpretStringIndexingAssignment(t *testing.T) {
 		actualString,
 	)
 
-	assert.True(t, actualString.Modified())
+	assert.True(t, actualString.IsModified())
 
 	assert.Equal(t,
 		"dbc",
@@ -1923,7 +1923,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 
 	test := inter.Globals["test"].Value.(*interpreter.CompositeValue)
 
-	assert.True(t, test.Modified())
+	assert.True(t, test.IsModified())
 
 	assert.Equal(t,
 		interpreter.NewIntValueFromInt64(1),
@@ -1933,7 +1933,7 @@ func TestInterpretStructureFieldAssignment(t *testing.T) {
 	value, err := inter.Invoke("callTest")
 	require.NoError(t, err)
 
-	assert.True(t, test.Modified())
+	assert.True(t, test.IsModified())
 
 	assert.Equal(t,
 		interpreter.VoidValue{},
@@ -4198,7 +4198,7 @@ func TestInterpretDictionary(t *testing.T) {
 		actualDict,
 	)
 
-	assert.True(t, actualDict.Modified())
+	assert.True(t, actualDict.IsModified())
 }
 
 func TestInterpretDictionaryInsertionOrder(t *testing.T) {
@@ -4222,7 +4222,7 @@ func TestInterpretDictionaryInsertionOrder(t *testing.T) {
 		actualDict,
 	)
 
-	assert.True(t, actualDict.Modified())
+	assert.True(t, actualDict.IsModified())
 }
 
 func TestInterpretDictionaryIndexingString(t *testing.T) {
@@ -4372,7 +4372,7 @@ func TestInterpretDictionaryIndexingAssignmentExisting(t *testing.T) {
 		actualDict.Keys.Values,
 	)
 
-	assert.True(t, actualDict.Modified())
+	assert.True(t, actualDict.IsModified())
 }
 
 func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
@@ -4437,7 +4437,7 @@ func TestInterpretDictionaryIndexingAssignmentNew(t *testing.T) {
 		actualDict.Keys.Values,
 	)
 
-	assert.True(t, actualDict.Modified())
+	assert.True(t, actualDict.IsModified())
 }
 
 func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
@@ -4499,7 +4499,7 @@ func TestInterpretDictionaryIndexingAssignmentNil(t *testing.T) {
 		actualDict.Keys.Values,
 	)
 
-	assert.True(t, actualDict.Modified())
+	assert.True(t, actualDict.IsModified())
 }
 
 func TestInterpretOptionalAnyStruct(t *testing.T) {
@@ -4707,7 +4707,7 @@ func TestInterpretArrayAppend(t *testing.T) {
 		actualArray,
 	)
 
-	assert.True(t, actualArray.Modified())
+	assert.True(t, actualArray.IsModified())
 
 	assert.Equal(t,
 		[]interpreter.Value{
@@ -4827,7 +4827,7 @@ func TestInterpretArrayInsert(t *testing.T) {
 		actualArray,
 	)
 
-	assert.True(t, actualArray.Modified())
+	assert.True(t, actualArray.IsModified())
 
 	assert.Equal(t,
 		[]interpreter.Value{
@@ -4863,7 +4863,7 @@ func TestInterpretArrayRemove(t *testing.T) {
 		actualArray,
 	)
 
-	assert.True(t, actualArray.Modified())
+	assert.True(t, actualArray.IsModified())
 
 	assert.Equal(t,
 		[]interpreter.Value{
@@ -4902,7 +4902,7 @@ func TestInterpretArrayRemoveFirst(t *testing.T) {
 		actualArray,
 	)
 
-	assert.True(t, actualArray.Modified())
+	assert.True(t, actualArray.IsModified())
 
 	assert.Equal(t,
 		[]interpreter.Value{
@@ -4941,7 +4941,7 @@ func TestInterpretArrayRemoveLast(t *testing.T) {
 		actualArray,
 	)
 
-	assert.True(t, actualArray.Modified())
+	assert.True(t, actualArray.IsModified())
 
 	assert.Equal(t,
 		[]interpreter.Value{
@@ -5067,7 +5067,7 @@ func TestInterpretDictionaryRemove(t *testing.T) {
 		actualDict.Keys.Values,
 	)
 
-	assert.True(t, actualDict.Modified())
+	assert.True(t, actualDict.IsModified())
 
 	assert.Equal(t,
 		interpreter.NewSomeValueOwningNonCopying(
@@ -5120,7 +5120,7 @@ func TestInterpretDictionaryInsert(t *testing.T) {
 		actualDict.Keys.Values,
 	)
 
-	assert.True(t, actualDict.Modified())
+	assert.True(t, actualDict.IsModified())
 
 	assert.Equal(t,
 		interpreter.NewSomeValueOwningNonCopying(
