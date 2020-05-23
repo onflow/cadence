@@ -1380,6 +1380,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 						Identifier: "S",
 						Pos:        ast.Position{Line: 1, Column: 12, Offset: 12},
 					},
+					Members: &ast.Members{},
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 						EndPos:   ast.Position{Line: 1, Column: 16, Offset: 16},
@@ -1414,9 +1415,203 @@ func TestParseCompositeDeclaration(t *testing.T) {
 							},
 						},
 					},
+					Members: &ast.Members{},
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 						EndPos:   ast.Position{Line: 1, Column: 23, Offset: 23},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("struct, with fields, functions, and special functions", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(`
+          struct Test {
+              pub(set) var foo: Int
+
+              init(foo: Int) {
+                  self.foo = foo
+              }
+
+              pub fun getFoo(): Int {
+                  return self.foo
+              }
+          }
+	    `)
+
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.CompositeDeclaration{
+					CompositeKind: common.CompositeKindStructure,
+					Identifier: ast.Identifier{
+						Identifier: "Test",
+						Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
+					},
+					Members: &ast.Members{
+						Fields: []*ast.FieldDeclaration{
+							{
+								Access:       ast.AccessPublicSettable,
+								VariableKind: ast.VariableKindVariable,
+								Identifier: ast.Identifier{
+									Identifier: "foo",
+									Pos:        ast.Position{Offset: 52, Line: 3, Column: 27},
+								},
+								TypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int",
+											Pos:        ast.Position{Offset: 57, Line: 3, Column: 32},
+										},
+									},
+									StartPos: ast.Position{Offset: 57, Line: 3, Column: 32},
+								},
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 39, Line: 3, Column: 14},
+									EndPos:   ast.Position{Offset: 59, Line: 3, Column: 34},
+								},
+							},
+						},
+						SpecialFunctions: []*ast.SpecialFunctionDeclaration{
+							{
+								Kind: common.DeclarationKindInitializer,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									Identifier: ast.Identifier{
+										Identifier: "init",
+										Pos:        ast.Position{Offset: 76, Line: 5, Column: 14},
+									},
+									ParameterList: &ast.ParameterList{
+										Parameters: []*ast.Parameter{
+											{
+												Label: "",
+												Identifier: ast.Identifier{
+													Identifier: "foo",
+													Pos:        ast.Position{Offset: 81, Line: 5, Column: 19},
+												},
+												TypeAnnotation: &ast.TypeAnnotation{
+													IsResource: false,
+													Type: &ast.NominalType{
+														Identifier: ast.Identifier{
+															Identifier: "Int",
+															Pos:        ast.Position{Offset: 86, Line: 5, Column: 24},
+														},
+													},
+													StartPos: ast.Position{Offset: 86, Line: 5, Column: 24},
+												},
+												Range: ast.Range{
+													StartPos: ast.Position{Offset: 81, Line: 5, Column: 19},
+													EndPos:   ast.Position{Offset: 88, Line: 5, Column: 26},
+												},
+											},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 80, Line: 5, Column: 18},
+											EndPos:   ast.Position{Offset: 89, Line: 5, Column: 27},
+										},
+									},
+									FunctionBlock: &ast.FunctionBlock{
+										Block: &ast.Block{
+											Statements: []ast.Statement{
+												&ast.AssignmentStatement{
+													Target: &ast.MemberExpression{
+														Expression: &ast.IdentifierExpression{
+															Identifier: ast.Identifier{
+																Identifier: "self",
+																Pos:        ast.Position{Offset: 111, Line: 6, Column: 18},
+															},
+														},
+														Identifier: ast.Identifier{
+															Identifier: "foo",
+															Pos:        ast.Position{Offset: 116, Line: 6, Column: 23},
+														},
+													},
+													Transfer: &ast.Transfer{
+														Operation: ast.TransferOperationCopy,
+														Pos:       ast.Position{Offset: 120, Line: 6, Column: 27},
+													},
+													Value: &ast.IdentifierExpression{
+														Identifier: ast.Identifier{
+															Identifier: "foo",
+															Pos:        ast.Position{Offset: 122, Line: 6, Column: 29},
+														},
+													},
+												},
+											},
+											Range: ast.Range{
+												StartPos: ast.Position{Offset: 91, Line: 5, Column: 29},
+												EndPos:   ast.Position{Offset: 140, Line: 7, Column: 14},
+											},
+										},
+									},
+									StartPos: ast.Position{Offset: 76, Line: 5, Column: 14},
+								},
+							},
+						},
+						Functions: []*ast.FunctionDeclaration{
+							{
+								Access: ast.AccessPublic,
+								Identifier: ast.Identifier{
+									Identifier: "getFoo",
+									Pos:        ast.Position{Offset: 165, Line: 9, Column: 22},
+								},
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 171, Line: 9, Column: 28},
+										EndPos:   ast.Position{Offset: 172, Line: 9, Column: 29},
+									},
+								},
+								ReturnTypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int",
+											Pos:        ast.Position{Offset: 175, Line: 9, Column: 32},
+										},
+									},
+									StartPos: ast.Position{Offset: 175, Line: 9, Column: 32},
+								},
+								FunctionBlock: &ast.FunctionBlock{
+									Block: &ast.Block{
+										Statements: []ast.Statement{
+											&ast.ReturnStatement{
+												Expression: &ast.MemberExpression{
+													Expression: &ast.IdentifierExpression{
+														Identifier: ast.Identifier{
+															Identifier: "self",
+															Pos:        ast.Position{Offset: 206, Line: 10, Column: 25},
+														},
+													},
+													Identifier: ast.Identifier{
+														Identifier: "foo",
+														Pos:        ast.Position{Offset: 211, Line: 10, Column: 30},
+													},
+												},
+												Range: ast.Range{
+													StartPos: ast.Position{Offset: 199, Line: 10, Column: 18},
+													EndPos:   ast.Position{Offset: 213, Line: 10, Column: 32},
+												},
+											},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 179, Line: 9, Column: 36},
+											EndPos:   ast.Position{Offset: 229, Line: 11, Column: 14},
+										},
+									},
+								},
+								StartPos: ast.Position{Offset: 157, Line: 9, Column: 14},
+							},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 11, Line: 2, Column: 10},
+						EndPos:   ast.Position{Offset: 241, Line: 12, Column: 10},
 					},
 				},
 			},
