@@ -673,8 +673,7 @@ func (v *ProgramVisitor) VisitFunctionType(ctx *FunctionTypeContext) interface{}
 	}
 	returnTypeAnnotation := ctx.returnType.Accept(v).(*ast.TypeAnnotation)
 
-	startPosition := PositionFromToken(ctx.OpenParen(0).GetSymbol())
-	endPosition := returnTypeAnnotation.EndPosition()
+	startPosition, endPosition := PositionRangeFromContext(ctx)
 
 	return &ast.FunctionType{
 		ParameterTypeAnnotations: parameterTypeAnnotations,
