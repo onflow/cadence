@@ -221,7 +221,7 @@ func (s *interpreterRuntimeStorage) writeCached() {
 
 	for fullKey, entry := range s.cache {
 
-		if !entry.mustWrite && entry.value != nil && !entry.value.Modified() {
+		if !entry.mustWrite && entry.value != nil && !entry.value.IsModified() {
 			continue
 		}
 
@@ -252,7 +252,7 @@ func (s *interpreterRuntimeStorage) writeCached() {
 					key:     deferredKey,
 				}
 
-				if !deferredValue.Modified() {
+				if !deferredValue.IsModified() {
 					continue
 				}
 

@@ -755,7 +755,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
 	)
 }
 
-func TestRuntimeStorageDeferredResourceDictionaryValues_Transfer(t *testing.T) {
+func TestRuntimeStorageDeferredResourceDictionaryValues_DictionaryTransfer(t *testing.T) {
 
 	signer1 := common.BytesToAddress([]byte{0x1})
 	signer2 := common.BytesToAddress([]byte{0x2})
@@ -1273,7 +1273,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Insertion(t *testing.T) 
 	require.NoError(t, err)
 }
 
-func TestRuntimeStorageDeferredResourceDictionaryValues_TransferAndDestroy(t *testing.T) {
+func TestRuntimeStorageDeferredResourceDictionaryValues_ValueTransferAndDestroy(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
@@ -1360,11 +1360,13 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_TransferAndDestroy(t *te
 
 	var signers []Address
 
+	testStorage := newTestStorage(nil, nil)
+
 	runtimeInterface := &testRuntimeInterface{
 		resolveImport: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		storage: newTestStorage(nil, nil),
+		storage: testStorage,
 		getSigningAccounts: func() []Address {
 			return signers
 		},

@@ -1,12 +1,10 @@
 package interpreter
 
 import (
-	"fmt"
 	"math"
 	"math/big"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -38,14 +36,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		require.NoError(t, err)
 
 		if test.encoded != nil {
-			if !assert.Equal(t, test.encoded, encoded) {
-				fmt.Printf(
-					"\nExpected :%x\n"+
-						"Actual   :%x\n\n",
-					test.encoded,
-					encoded,
-				)
-			}
+			utils.AssertEqualWithDiff(t, test.encoded, encoded)
 		}
 	} else {
 		encoded = test.encoded
@@ -63,13 +54,13 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 				test.decodedValue.SetOwner(&testOwner)
 				expectedValue = test.decodedValue
 			}
-			require.Equal(t, expectedValue, decoded)
+			utils.AssertEqualWithDiff(t, expectedValue, decoded)
 		}
 	}
 
 	if test.value != nil {
 		if test.deferred {
-			require.Equal(t, test.deferrals, deferrals)
+			utils.AssertEqualWithDiff(t, test.deferrals, deferrals)
 		} else {
 			require.Empty(t, deferrals.Values)
 			require.Empty(t, deferrals.Moves)
@@ -252,25 +243,28 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 
 	t.Run("non-empty", func(t *testing.T) {
 		key1 := NewStringValue("test")
-		key1.modified = false
 		value1 := NewArrayValueUnownedNonCopying()
-		value1.modified = false
 
 		key2 := BoolValue(true)
 		value2 := BoolValue(false)
 
 		key3 := NewStringValue("foo")
-		key3.modified = false
 		value3 := NewStringValue("bar")
-		value3.modified = false
 
 		expected := NewDictionaryValueUnownedNonCopying(
 			key1, value1,
 			key2, value2,
 			key3, value3,
 		)
+
 		expected.modified = false
 		expected.Keys.modified = false
+
+		key1.modified = false
+		value1.modified = false
+
+		key3.modified = false
+		value3.modified = false
 
 		testEncodeDecode(t,
 			encodeDecodeTest{

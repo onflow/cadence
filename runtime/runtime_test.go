@@ -42,9 +42,10 @@ import (
 )
 
 type testRuntimeInterfaceStorage struct {
-	valueExists func(controller, owner, key []byte) (exists bool, err error)
-	getValue    func(controller, owner, key []byte) (value []byte, err error)
-	setValue    func(controller, owner, key, value []byte) (err error)
+	storedValues map[string][]byte
+	valueExists  func(controller, owner, key []byte) (exists bool, err error)
+	getValue     func(controller, owner, key []byte) (value []byte, err error)
+	setValue     func(controller, owner, key, value []byte) (err error)
 }
 
 func newTestStorage(
@@ -59,6 +60,7 @@ func newTestStorage(
 	storedValues := map[string][]byte{}
 
 	storage := testRuntimeInterfaceStorage{
+		storedValues: storedValues,
 		valueExists: func(controller, owner, key []byte) (bool, error) {
 			_, ok := storedValues[storageKey(string(controller), string(owner), string(key))]
 			return ok, nil
