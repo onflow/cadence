@@ -191,7 +191,9 @@ func parseFunctionDeclaration(p *parser, access ast.Access, accessPos *ast.Posit
 	}
 }
 
-func parseFunctionParameterListAndRest(p *parser) (
+func parseFunctionParameterListAndRest(
+	p *parser,
+) (
 	parameterList *ast.ParameterList,
 	returnTypeAnnotation *ast.TypeAnnotation,
 	functionBlock *ast.FunctionBlock,

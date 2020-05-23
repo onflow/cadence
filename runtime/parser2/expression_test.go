@@ -1252,7 +1252,7 @@ func TestInvocation(t *testing.T) {
 		require.Equal(t,
 			[]error{
 				fmt.Errorf(
-					"unexpected argument in argument list (expecting delimiter of end of argument list), got %s",
+					"unexpected argument in argument list (expecting delimiter or end of argument list), got %s",
 					lexer.TokenDecimalLiteral,
 				),
 			},
