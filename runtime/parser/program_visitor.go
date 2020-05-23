@@ -384,7 +384,12 @@ func (v *ProgramVisitor) VisitCompositeDeclaration(ctx *CompositeDeclarationCont
 
 func (v *ProgramVisitor) VisitConformances(ctx *ConformancesContext) interface{} {
 	typeContexts := ctx.AllNominalType()
-	conformances := make([]*ast.NominalType, len(typeContexts))
+	var conformances []*ast.NominalType
+	if len(typeContexts) == 0 {
+		return conformances
+	}
+
+	conformances = make([]*ast.NominalType, len(typeContexts))
 	for i, typeContext := range typeContexts {
 		conformances[i] = typeContext.Accept(v).(*ast.NominalType)
 	}
