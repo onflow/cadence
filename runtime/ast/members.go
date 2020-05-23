@@ -66,7 +66,7 @@ func (m *Members) Initializers() []*SpecialFunctionDeclaration {
 	if m._initializers == nil {
 		initializers := []*SpecialFunctionDeclaration{}
 		for _, function := range m.SpecialFunctions {
-			if function.DeclarationKind != common.DeclarationKindInitializer {
+			if function.Kind != common.DeclarationKindInitializer {
 				continue
 			}
 			initializers = append(initializers, function)
@@ -80,7 +80,7 @@ func (m *Members) Destructors() []*SpecialFunctionDeclaration {
 	if m._destructors == nil {
 		destructors := []*SpecialFunctionDeclaration{}
 		for _, function := range m.SpecialFunctions {
-			if function.DeclarationKind != common.DeclarationKindDestructor {
+			if function.Kind != common.DeclarationKindDestructor {
 				continue
 			}
 			destructors = append(destructors, function)

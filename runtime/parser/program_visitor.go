@@ -242,7 +242,7 @@ func (v *ProgramVisitor) VisitTransactionDeclaration(ctx *TransactionDeclaration
 	prepareCtx := ctx.Prepare()
 	if prepareCtx != nil {
 		prepareFunction = prepareCtx.Accept(v).(*ast.SpecialFunctionDeclaration)
-		prepareFunction.DeclarationKind = common.DeclarationKindPrepare
+		prepareFunction.Kind = common.DeclarationKindPrepare
 	}
 
 	var executeFunction *ast.SpecialFunctionDeclaration
@@ -292,7 +292,7 @@ func (v *ProgramVisitor) VisitExecute(ctx *ExecuteContext) interface{} {
 	startPosition := PositionFromToken(ctx.GetStart())
 
 	return &ast.SpecialFunctionDeclaration{
-		DeclarationKind: common.DeclarationKindExecute,
+		Kind: common.DeclarationKindExecute,
 		FunctionDeclaration: &ast.FunctionDeclaration{
 			Access:        ast.AccessNotSpecified,
 			Identifier:    identifier,
@@ -317,7 +317,7 @@ func (v *ProgramVisitor) VisitEventDeclaration(ctx *EventDeclarationContext) int
 
 		specialFunctions = append(specialFunctions,
 			&ast.SpecialFunctionDeclaration{
-				DeclarationKind: common.DeclarationKindInitializer,
+				Kind: common.DeclarationKindInitializer,
 				FunctionDeclaration: &ast.FunctionDeclaration{
 					ParameterList: parameterList,
 					StartPos:      parameterList.StartPos,
@@ -512,7 +512,7 @@ func (v *ProgramVisitor) VisitSpecialFunctionDeclaration(ctx *SpecialFunctionDec
 	}
 
 	return &ast.SpecialFunctionDeclaration{
-		DeclarationKind: declarationKind,
+		Kind: declarationKind,
 		FunctionDeclaration: &ast.FunctionDeclaration{
 			Identifier:    identifier,
 			ParameterList: parameterList,
