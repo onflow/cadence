@@ -674,7 +674,8 @@ func parseFieldWithVariableKind(p *parser, access ast.Access, accessPos *ast.Pos
 //
 //     conformances : ':' nominalType ( ',' nominalType )*
 //
-//     compositeDeclaration : compositeKind identifier conformances? '{' membersAndNestedDeclarations '}'
+//     compositeDeclaration : compositeKind identifier conformances?
+//                            '{' membersAndNestedDeclarations '}'
 //
 func parseCompositeDeclaration(p *parser, access ast.Access, accessPos *ast.Position) *ast.CompositeDeclaration {
 
@@ -721,6 +722,9 @@ func parseCompositeDeclaration(p *parser, access ast.Access, accessPos *ast.Posi
 
 	p.mustOne(lexer.TokenBraceOpen)
 
+	members, compositeDeclarations, interfaceDeclarations :=
+		parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
+
 	p.skipSpaceAndComments(true)
 
 	endToken := p.mustOne(lexer.TokenBraceClose)
@@ -730,12 +734,214 @@ func parseCompositeDeclaration(p *parser, access ast.Access, accessPos *ast.Posi
 		CompositeKind:         compositeKind,
 		Identifier:            identifier,
 		Conformances:          conformances,
-		Members:               nil,
-		CompositeDeclarations: nil,
-		InterfaceDeclarations: nil,
+		Members:               members,
+		CompositeDeclarations: compositeDeclarations,
+		InterfaceDeclarations: interfaceDeclarations,
 		Range: ast.Range{
 			StartPos: startPos,
 			EndPos:   endToken.EndPos,
+		},
+	}
+}
+
+// parseMembersAndNestedDeclarations parses composite or interface members,
+// and nested declarations.
+//
+//     membersAndNestedDeclarations : ( memberOrNestedDeclaration ';'* )*
+//
+func parseMembersAndNestedDeclarations(
+	p *parser,
+	endTokenType lexer.TokenType,
+) (
+	members *ast.Members,
+	compositeDeclarations []*ast.CompositeDeclaration,
+	interfaceDeclarations []*ast.InterfaceDeclaration,
+) {
+
+	members = &ast.Members{}
+
+	for {
+		p.skipSpaceAndComments(true)
+
+		switch p.current.Type {
+		case lexer.TokenSemicolon:
+			p.next()
+			continue
+
+		case endTokenType, lexer.TokenEOF:
+			return
+
+		default:
+			memberOrNestedDeclaration := parseMemberOrNestedDeclaration(p)
+			if memberOrNestedDeclaration == nil {
+				return
+			}
+
+			switch memberOrNestedDeclaration := memberOrNestedDeclaration.(type) {
+			case *ast.FieldDeclaration:
+				members.Fields =
+					append(members.Fields, memberOrNestedDeclaration)
+
+			case *ast.SpecialFunctionDeclaration:
+				members.SpecialFunctions =
+					append(members.SpecialFunctions, memberOrNestedDeclaration)
+
+			case *ast.FunctionDeclaration:
+				members.Functions =
+					append(members.Functions, memberOrNestedDeclaration)
+
+			case *ast.CompositeDeclaration:
+				compositeDeclarations =
+					append(compositeDeclarations, memberOrNestedDeclaration)
+
+			case *ast.InterfaceDeclaration:
+				interfaceDeclarations =
+					append(interfaceDeclarations, memberOrNestedDeclaration)
+			}
+		}
+	}
+}
+
+// parseMemberOrNestedDeclaration parses a composite or interface member,
+// or a declaration nested in it.
+//
+//     memberOrNestedDeclaration : field
+//                               | specialFunctionDeclaration
+//                               | functionDeclaration
+//                               | interfaceDeclaration
+//                               | compositeDeclaration
+//                               | eventDeclaration
+//
+func parseMemberOrNestedDeclaration(p *parser) ast.Declaration {
+
+	access := ast.AccessNotSpecified
+	var accessPos *ast.Position
+
+	var previousIdentifierToken *lexer.Token
+
+	for {
+		p.skipSpaceAndComments(true)
+
+		switch p.current.Type {
+		case lexer.TokenIdentifier:
+			switch p.current.Value {
+			case keywordLet, keywordVar:
+				return parseFieldWithVariableKind(p, access, accessPos)
+
+			case keywordFun:
+				return parseFunctionDeclaration(p, access, accessPos)
+
+			case keywordEvent:
+				return parseEventDeclaration(p, access, accessPos)
+
+			case keywordStruct, keywordResource, keywordContract:
+				return parseCompositeDeclaration(p, access, accessPos)
+
+			case keywordPriv, keywordPub, keywordAccess:
+				if access != ast.AccessNotSpecified {
+					panic(fmt.Errorf("unexpected access modifier"))
+				}
+				pos := p.current.StartPos
+				accessPos = &pos
+				access = parseAccess(p)
+				continue
+
+			default:
+				if previousIdentifierToken != nil {
+					panic(fmt.Errorf("unexpected %s", p.current.Type))
+				}
+
+				t := p.current
+				previousIdentifierToken = &t
+				p.next()
+				continue
+			}
+
+		case lexer.TokenColon:
+			if previousIdentifierToken == nil {
+				panic(fmt.Errorf("unexpected %s", p.current.Type))
+			}
+
+			identifier := tokenToIdentifier(*previousIdentifierToken)
+			return parseFieldDeclarationWithoutVariableKind(p, access, accessPos, identifier)
+
+		case lexer.TokenParenOpen:
+			if previousIdentifierToken == nil {
+				panic(fmt.Errorf("unexpected %s", p.current.Type))
+			}
+
+			identifier := tokenToIdentifier(*previousIdentifierToken)
+			return parseSpecialFunctionDeclaration(p, access, accessPos, identifier)
+		}
+
+		return nil
+	}
+}
+
+func parseFieldDeclarationWithoutVariableKind(
+	p *parser,
+	access ast.Access,
+	accessPos *ast.Position,
+	identifier ast.Identifier,
+) *ast.FieldDeclaration {
+
+	startPos := identifier.Pos
+	if accessPos != nil {
+		startPos = *accessPos
+	}
+
+	p.mustOne(lexer.TokenColon)
+
+	p.skipSpaceAndComments(true)
+
+	typeAnnotation := parseTypeAnnotation(p)
+
+	return &ast.FieldDeclaration{
+		Access:         access,
+		VariableKind:   ast.VariableKindNotSpecified,
+		Identifier:     identifier,
+		TypeAnnotation: typeAnnotation,
+		Range: ast.Range{
+			StartPos: startPos,
+			EndPos:   typeAnnotation.EndPosition(),
+		},
+	}
+}
+
+func parseSpecialFunctionDeclaration(
+	p *parser,
+	access ast.Access,
+	accessPos *ast.Position,
+	identifier ast.Identifier,
+) *ast.SpecialFunctionDeclaration {
+
+	startPos := identifier.Pos
+	if accessPos != nil {
+		startPos = *accessPos
+	}
+
+	// TODO: switch to parseFunctionParameterListAndRest once old parser is deprecated:
+	//   allow a return type annotation while parsing, but reject later.
+
+	parameterList := parseParameterList(p)
+	functionBlock := parseFunctionBlock(p)
+
+	declarationKind := common.DeclarationKindUnknown
+	switch identifier.Identifier {
+	case common.DeclarationKindInitializer.Keywords():
+		declarationKind = common.DeclarationKindInitializer
+	case common.DeclarationKindDestructor.Keywords():
+		declarationKind = common.DeclarationKindDestructor
+	}
+
+	return &ast.SpecialFunctionDeclaration{
+		Kind: declarationKind,
+		FunctionDeclaration: &ast.FunctionDeclaration{
+			Access:        access,
+			Identifier:    identifier,
+			ParameterList: parameterList,
+			FunctionBlock: functionBlock,
+			StartPos:      startPos,
 		},
 	}
 }
