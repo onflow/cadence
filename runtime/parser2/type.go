@@ -464,8 +464,6 @@ func parseNominalTypes(
 	for !atEnd {
 		p.skipSpaceAndComments(true)
 
-		fmt.Printf(">>> %s\n", p.current.Type)
-
 		switch p.current.Type {
 		case lexer.TokenComma:
 			if expectType {

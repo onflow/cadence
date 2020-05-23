@@ -619,7 +619,7 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 		default:
 			if !expectArgument {
 				panic(fmt.Errorf(
-					"unexpected argument in argument list (expecting delimiter of end of argument list), got %s",
+					"unexpected argument in argument list (expecting delimiter or end of argument list), got %s",
 					p.current.Type,
 				))
 			}
