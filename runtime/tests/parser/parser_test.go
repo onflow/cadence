@@ -543,72 +543,70 @@ func TestParseInvocationExpressionWithoutLabels(t *testing.T) {
 	)
 }
 
-// TODO: new parser
 func TestParseInvocationExpressionWithLabels(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
 	    let a = b(x: 1, y: 2)
-	`)
+	`
 
-	require.NoError(t, err)
-
-	a := &VariableDeclaration{
-		IsConstant: true,
-		Identifier: Identifier{
-			Identifier: "a",
-			Pos:        Position{Offset: 10, Line: 2, Column: 9},
-		},
-		Transfer: &Transfer{
-			Operation: TransferOperationCopy,
-			Pos:       Position{Offset: 12, Line: 2, Column: 11},
-		},
-		Value: &InvocationExpression{
-			InvokedExpression: &IdentifierExpression{
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&VariableDeclaration{
+				IsConstant: true,
 				Identifier: Identifier{
-					Identifier: "b",
-					Pos:        Position{Offset: 14, Line: 2, Column: 13},
+					Identifier: "a",
+					Pos:        Position{Offset: 10, Line: 2, Column: 9},
 				},
-			},
-			Arguments: []*Argument{
-				{
-					Label:         "x",
-					LabelStartPos: &Position{Offset: 16, Line: 2, Column: 15},
-					LabelEndPos:   &Position{Offset: 16, Line: 2, Column: 15},
-					Expression: &IntegerExpression{
-						Value: big.NewInt(1),
-						Base:  10,
-						Range: Range{
-							StartPos: Position{Offset: 19, Line: 2, Column: 18},
-							EndPos:   Position{Offset: 19, Line: 2, Column: 18},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+					Pos:       Position{Offset: 12, Line: 2, Column: 11},
+				},
+				Value: &InvocationExpression{
+					InvokedExpression: &IdentifierExpression{
+						Identifier: Identifier{
+							Identifier: "b",
+							Pos:        Position{Offset: 14, Line: 2, Column: 13},
 						},
 					},
-				},
-				{
-					Label:         "y",
-					LabelStartPos: &Position{Offset: 22, Line: 2, Column: 21},
-					LabelEndPos:   &Position{Offset: 22, Line: 2, Column: 21},
-					Expression: &IntegerExpression{
-						Value: big.NewInt(2),
-						Base:  10,
-						Range: Range{
-							StartPos: Position{Offset: 25, Line: 2, Column: 24},
-							EndPos:   Position{Offset: 25, Line: 2, Column: 24},
+					Arguments: []*Argument{
+						{
+							Label:         "x",
+							LabelStartPos: &Position{Offset: 16, Line: 2, Column: 15},
+							LabelEndPos:   &Position{Offset: 16, Line: 2, Column: 15},
+							Expression: &IntegerExpression{
+								Value: big.NewInt(1),
+								Base:  10,
+								Range: Range{
+									StartPos: Position{Offset: 19, Line: 2, Column: 18},
+									EndPos:   Position{Offset: 19, Line: 2, Column: 18},
+								},
+							},
+						},
+						{
+							Label:         "y",
+							LabelStartPos: &Position{Offset: 22, Line: 2, Column: 21},
+							LabelEndPos:   &Position{Offset: 22, Line: 2, Column: 21},
+							Expression: &IntegerExpression{
+								Value: big.NewInt(2),
+								Base:  10,
+								Range: Range{
+									StartPos: Position{Offset: 25, Line: 2, Column: 24},
+									EndPos:   Position{Offset: 25, Line: 2, Column: 24},
+								},
+							},
 						},
 					},
+					EndPos: Position{Offset: 26, Line: 2, Column: 25},
 				},
+				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
-			EndPos: Position{Offset: 26, Line: 2, Column: 25},
 		},
-		StartPos: Position{Offset: 6, Line: 2, Column: 5},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{a},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseMemberExpression(t *testing.T) {
@@ -652,48 +650,46 @@ func TestParseMemberExpression(t *testing.T) {
 	)
 }
 
-// TODO: new parser
 func TestParseOptionalMemberExpression(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
 	    let a = b?.c
-	`)
+	`
 
-	require.NoError(t, err)
-
-	a := &VariableDeclaration{
-		IsConstant: true,
-		Identifier: Identifier{
-			Identifier: "a",
-			Pos:        Position{Offset: 10, Line: 2, Column: 9},
-		},
-		Transfer: &Transfer{
-			Operation: TransferOperationCopy,
-			Pos:       Position{Offset: 12, Line: 2, Column: 11},
-		},
-		Value: &MemberExpression{
-			Optional: true,
-			Expression: &IdentifierExpression{
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&VariableDeclaration{
+				IsConstant: true,
 				Identifier: Identifier{
-					Identifier: "b",
-					Pos:        Position{Offset: 14, Line: 2, Column: 13},
+					Identifier: "a",
+					Pos:        Position{Offset: 10, Line: 2, Column: 9},
 				},
-			},
-			Identifier: Identifier{
-				Identifier: "c",
-				Pos:        Position{Offset: 17, Line: 2, Column: 16},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+					Pos:       Position{Offset: 12, Line: 2, Column: 11},
+				},
+				Value: &MemberExpression{
+					Optional: true,
+					Expression: &IdentifierExpression{
+						Identifier: Identifier{
+							Identifier: "b",
+							Pos:        Position{Offset: 14, Line: 2, Column: 13},
+						},
+					},
+					Identifier: Identifier{
+						Identifier: "c",
+						Pos:        Position{Offset: 17, Line: 2, Column: 16},
+					},
+				},
+				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		StartPos: Position{Offset: 6, Line: 2, Column: 5},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{a},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 // TODO: new parser
@@ -2144,214 +2140,212 @@ func TestParseParametersAndArrayTypes(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
 		pub fun test(a: Int32, b: [Int32; 2], c: [[Int32; 3]]): [[Int64]] {}
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &FunctionDeclaration{
-		Access: AccessPublic,
-		Identifier: Identifier{
-			Identifier: "test",
-			Pos:        Position{Offset: 11, Line: 2, Column: 10},
-		},
-		ParameterList: &ParameterList{
-			Parameters: []*Parameter{
-				{
-					Identifier: Identifier{
-						Identifier: "a",
-						Pos:        Position{Offset: 16, Line: 2, Column: 15},
-					},
-					TypeAnnotation: &TypeAnnotation{
-						IsResource: false,
-						Type: &NominalType{
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&FunctionDeclaration{
+				Access: AccessPublic,
+				Identifier: Identifier{
+					Identifier: "test",
+					Pos:        Position{Offset: 11, Line: 2, Column: 10},
+				},
+				ParameterList: &ParameterList{
+					Parameters: []*Parameter{
+						{
 							Identifier: Identifier{
-								Identifier: "Int32",
-								Pos:        Position{Offset: 19, Line: 2, Column: 18},
+								Identifier: "a",
+								Pos:        Position{Offset: 16, Line: 2, Column: 15},
 							},
-						},
-						StartPos: Position{Offset: 19, Line: 2, Column: 18},
-					},
-					Range: Range{
-						StartPos: Position{Offset: 16, Line: 2, Column: 15},
-						EndPos:   Position{Offset: 23, Line: 2, Column: 22},
-					},
-				},
-				{
-					Identifier: Identifier{
-						Identifier: "b",
-						Pos:        Position{Offset: 26, Line: 2, Column: 25},
-					},
-					TypeAnnotation: &TypeAnnotation{
-						IsResource: false,
-						Type: &ConstantSizedType{
-							Type: &NominalType{
-								Identifier: Identifier{
-									Identifier: "Int32",
-									Pos:        Position{Offset: 30, Line: 2, Column: 29},
-								},
-							},
-							Size: &IntegerExpression{
-								Value: big.NewInt(2),
-								Base:  10,
-								Range: Range{
-									StartPos: Position{Offset: 37, Line: 2, Column: 36},
-									EndPos:   Position{Offset: 37, Line: 2, Column: 36},
-								},
-							},
-							Range: Range{
-								StartPos: Position{Offset: 29, Line: 2, Column: 28},
-								EndPos:   Position{Offset: 38, Line: 2, Column: 37},
-							},
-						},
-						StartPos: Position{Offset: 29, Line: 2, Column: 28},
-					},
-					Range: Range{
-						StartPos: Position{Offset: 26, Line: 2, Column: 25},
-						EndPos:   Position{Offset: 38, Line: 2, Column: 37},
-					},
-				},
-				{
-					Identifier: Identifier{
-						Identifier: "c",
-						Pos:        Position{Offset: 41, Line: 2, Column: 40},
-					},
-					TypeAnnotation: &TypeAnnotation{
-						IsResource: false,
-						Type: &VariableSizedType{
-							Type: &ConstantSizedType{
+							TypeAnnotation: &TypeAnnotation{
+								IsResource: false,
 								Type: &NominalType{
 									Identifier: Identifier{
 										Identifier: "Int32",
-										Pos:        Position{Offset: 46, Line: 2, Column: 45},
+										Pos:        Position{Offset: 19, Line: 2, Column: 18},
 									},
 								},
-								Size: &IntegerExpression{
-									Value: big.NewInt(3),
-									Base:  10,
-									Range: Range{
-										StartPos: Position{Offset: 53, Line: 2, Column: 52},
-										EndPos:   Position{Offset: 53, Line: 2, Column: 52},
-									},
-								},
-								Range: Range{
-									StartPos: Position{Offset: 45, Line: 2, Column: 44},
-									EndPos:   Position{Offset: 54, Line: 2, Column: 53},
-								},
+								StartPos: Position{Offset: 19, Line: 2, Column: 18},
 							},
 							Range: Range{
+								StartPos: Position{Offset: 16, Line: 2, Column: 15},
+								EndPos:   Position{Offset: 23, Line: 2, Column: 22},
+							},
+						},
+						{
+							Identifier: Identifier{
+								Identifier: "b",
+								Pos:        Position{Offset: 26, Line: 2, Column: 25},
+							},
+							TypeAnnotation: &TypeAnnotation{
+								IsResource: false,
+								Type: &ConstantSizedType{
+									Type: &NominalType{
+										Identifier: Identifier{
+											Identifier: "Int32",
+											Pos:        Position{Offset: 30, Line: 2, Column: 29},
+										},
+									},
+									Size: &IntegerExpression{
+										Value: big.NewInt(2),
+										Base:  10,
+										Range: Range{
+											StartPos: Position{Offset: 37, Line: 2, Column: 36},
+											EndPos:   Position{Offset: 37, Line: 2, Column: 36},
+										},
+									},
+									Range: Range{
+										StartPos: Position{Offset: 29, Line: 2, Column: 28},
+										EndPos:   Position{Offset: 38, Line: 2, Column: 37},
+									},
+								},
+								StartPos: Position{Offset: 29, Line: 2, Column: 28},
+							},
+							Range: Range{
+								StartPos: Position{Offset: 26, Line: 2, Column: 25},
+								EndPos:   Position{Offset: 38, Line: 2, Column: 37},
+							},
+						},
+						{
+							Identifier: Identifier{
+								Identifier: "c",
+								Pos:        Position{Offset: 41, Line: 2, Column: 40},
+							},
+							TypeAnnotation: &TypeAnnotation{
+								IsResource: false,
+								Type: &VariableSizedType{
+									Type: &ConstantSizedType{
+										Type: &NominalType{
+											Identifier: Identifier{
+												Identifier: "Int32",
+												Pos:        Position{Offset: 46, Line: 2, Column: 45},
+											},
+										},
+										Size: &IntegerExpression{
+											Value: big.NewInt(3),
+											Base:  10,
+											Range: Range{
+												StartPos: Position{Offset: 53, Line: 2, Column: 52},
+												EndPos:   Position{Offset: 53, Line: 2, Column: 52},
+											},
+										},
+										Range: Range{
+											StartPos: Position{Offset: 45, Line: 2, Column: 44},
+											EndPos:   Position{Offset: 54, Line: 2, Column: 53},
+										},
+									},
+									Range: Range{
+										StartPos: Position{Offset: 44, Line: 2, Column: 43},
+										EndPos:   Position{Offset: 55, Line: 2, Column: 54},
+									},
+								},
 								StartPos: Position{Offset: 44, Line: 2, Column: 43},
+							},
+							Range: Range{
+								StartPos: Position{Offset: 41, Line: 2, Column: 40},
 								EndPos:   Position{Offset: 55, Line: 2, Column: 54},
 							},
 						},
-						StartPos: Position{Offset: 44, Line: 2, Column: 43},
 					},
 					Range: Range{
-						StartPos: Position{Offset: 41, Line: 2, Column: 40},
-						EndPos:   Position{Offset: 55, Line: 2, Column: 54},
+						StartPos: Position{Offset: 15, Line: 2, Column: 14},
+						EndPos:   Position{Offset: 56, Line: 2, Column: 55},
 					},
 				},
-			},
-			Range: Range{
-				StartPos: Position{Offset: 15, Line: 2, Column: 14},
-				EndPos:   Position{Offset: 56, Line: 2, Column: 55},
-			},
-		},
-		ReturnTypeAnnotation: &TypeAnnotation{
-			IsResource: false,
-			Type: &VariableSizedType{
-				Type: &VariableSizedType{
-					Type: &NominalType{
-						Identifier: Identifier{Identifier: "Int64",
-							Pos: Position{Offset: 61, Line: 2, Column: 60},
+				ReturnTypeAnnotation: &TypeAnnotation{
+					IsResource: false,
+					Type: &VariableSizedType{
+						Type: &VariableSizedType{
+							Type: &NominalType{
+								Identifier: Identifier{Identifier: "Int64",
+									Pos: Position{Offset: 61, Line: 2, Column: 60},
+								},
+							},
+							Range: Range{
+								StartPos: Position{Offset: 60, Line: 2, Column: 59},
+								EndPos:   Position{Offset: 66, Line: 2, Column: 65},
+							},
+						},
+						Range: Range{
+							StartPos: Position{Offset: 59, Line: 2, Column: 58},
+							EndPos:   Position{Offset: 67, Line: 2, Column: 66},
 						},
 					},
-					Range: Range{
-						StartPos: Position{Offset: 60, Line: 2, Column: 59},
-						EndPos:   Position{Offset: 66, Line: 2, Column: 65},
+					StartPos: Position{Offset: 59, Line: 2, Column: 58},
+				},
+				FunctionBlock: &FunctionBlock{
+					Block: &Block{
+						Range: Range{
+							StartPos: Position{Offset: 69, Line: 2, Column: 68},
+							EndPos:   Position{Offset: 70, Line: 2, Column: 69},
+						},
 					},
 				},
-				Range: Range{
-					StartPos: Position{Offset: 59, Line: 2, Column: 58},
-					EndPos:   Position{Offset: 67, Line: 2, Column: 66},
-				},
-			},
-			StartPos: Position{Offset: 59, Line: 2, Column: 58},
-		},
-		FunctionBlock: &FunctionBlock{
-			Block: &Block{
-				Range: Range{
-					StartPos: Position{Offset: 69, Line: 2, Column: 68},
-					EndPos:   Position{Offset: 70, Line: 2, Column: 69},
-				},
+				StartPos: Position{Offset: 3, Line: 2, Column: 2},
 			},
 		},
-		StartPos: Position{Offset: 3, Line: 2, Column: 2},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseDictionaryType(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
 	    let x: {String: Int} = {}
-	`)
+	`
 
-	require.NoError(t, err)
-
-	x := &VariableDeclaration{
-		IsConstant: true,
-		Identifier: Identifier{Identifier: "x",
-			Pos: Position{Offset: 10, Line: 2, Column: 9},
-		},
-		TypeAnnotation: &TypeAnnotation{
-			IsResource: false,
-			Type: &DictionaryType{
-				KeyType: &NominalType{
-					Identifier: Identifier{
-						Identifier: "String",
-						Pos:        Position{Offset: 14, Line: 2, Column: 13},
-					},
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&VariableDeclaration{
+				IsConstant: true,
+				Identifier: Identifier{Identifier: "x",
+					Pos: Position{Offset: 10, Line: 2, Column: 9},
 				},
-				ValueType: &NominalType{
-					Identifier: Identifier{
-						Identifier: "Int",
-						Pos:        Position{Offset: 22, Line: 2, Column: 21},
+				TypeAnnotation: &TypeAnnotation{
+					IsResource: false,
+					Type: &DictionaryType{
+						KeyType: &NominalType{
+							Identifier: Identifier{
+								Identifier: "String",
+								Pos:        Position{Offset: 14, Line: 2, Column: 13},
+							},
+						},
+						ValueType: &NominalType{
+							Identifier: Identifier{
+								Identifier: "Int",
+								Pos:        Position{Offset: 22, Line: 2, Column: 21},
+							},
+						},
+						Range: Range{
+							StartPos: Position{Offset: 13, Line: 2, Column: 12},
+							EndPos:   Position{Offset: 25, Line: 2, Column: 24},
+						},
 					},
-				},
-				Range: Range{
 					StartPos: Position{Offset: 13, Line: 2, Column: 12},
-					EndPos:   Position{Offset: 25, Line: 2, Column: 24},
 				},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+					Pos:       Position{Offset: 27, Line: 2, Column: 26},
+				},
+				Value: &DictionaryExpression{
+					Range: Range{
+						StartPos: Position{Offset: 29, Line: 2, Column: 28},
+						EndPos:   Position{Offset: 30, Line: 2, Column: 29},
+					},
+				},
+				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
-			StartPos: Position{Offset: 13, Line: 2, Column: 12},
 		},
-		Transfer: &Transfer{
-			Operation: TransferOperationCopy,
-			Pos:       Position{Offset: 27, Line: 2, Column: 26},
-		},
-		Value: &DictionaryExpression{
-			Range: Range{
-				StartPos: Position{Offset: 29, Line: 2, Column: 28},
-				EndPos:   Position{Offset: 30, Line: 2, Column: 29},
-			},
-		},
-		StartPos: Position{Offset: 6, Line: 2, Column: 5},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{x},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 // TODO: remove
@@ -3300,278 +3294,261 @@ func TestParseFunctionType(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
 		let add: ((Int8, Int16): Int32) = nothing
-	`)
+	`
 
-	require.NoError(t, err)
-
-	add := &VariableDeclaration{
-		Identifier: Identifier{
-			Identifier: "add",
-			Pos:        Position{Offset: 7, Line: 2, Column: 6},
-		},
-		IsConstant: true,
-		TypeAnnotation: &TypeAnnotation{
-			IsResource: false,
-			Type: &FunctionType{
-				ParameterTypeAnnotations: []*TypeAnnotation{
-					{
-						IsResource: false,
-						Type: &NominalType{
-							Identifier: Identifier{
-								Identifier: "Int8",
-								Pos:        Position{Offset: 14, Line: 2, Column: 13},
-							},
-						},
-						StartPos: Position{Offset: 14, Line: 2, Column: 13},
-					},
-					{
-						IsResource: false,
-						Type: &NominalType{
-							Identifier: Identifier{
-								Identifier: "Int16",
-								Pos:        Position{Offset: 20, Line: 2, Column: 19},
-							},
-						},
-						StartPos: Position{Offset: 20, Line: 2, Column: 19},
-					},
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&VariableDeclaration{
+				Identifier: Identifier{
+					Identifier: "add",
+					Pos:        Position{Offset: 7, Line: 2, Column: 6},
 				},
-				ReturnTypeAnnotation: &TypeAnnotation{
+				IsConstant: true,
+				TypeAnnotation: &TypeAnnotation{
 					IsResource: false,
-					Type: &NominalType{
-						Identifier: Identifier{
-							Identifier: "Int32",
-							Pos:        Position{Offset: 28, Line: 2, Column: 27},
+					Type: &FunctionType{
+						ParameterTypeAnnotations: []*TypeAnnotation{
+							{
+								IsResource: false,
+								Type: &NominalType{
+									Identifier: Identifier{
+										Identifier: "Int8",
+										Pos:        Position{Offset: 14, Line: 2, Column: 13},
+									},
+								},
+								StartPos: Position{Offset: 14, Line: 2, Column: 13},
+							},
+							{
+								IsResource: false,
+								Type: &NominalType{
+									Identifier: Identifier{
+										Identifier: "Int16",
+										Pos:        Position{Offset: 20, Line: 2, Column: 19},
+									},
+								},
+								StartPos: Position{Offset: 20, Line: 2, Column: 19},
+							},
+						},
+						ReturnTypeAnnotation: &TypeAnnotation{
+							IsResource: false,
+							Type: &NominalType{
+								Identifier: Identifier{
+									Identifier: "Int32",
+									Pos:        Position{Offset: 28, Line: 2, Column: 27},
+								},
+							},
+							StartPos: Position{Offset: 28, Line: 2, Column: 27},
+						},
+						Range: Range{
+							StartPos: Position{Offset: 12, Line: 2, Column: 11},
+							EndPos:   Position{Offset: 33, Line: 2, Column: 32},
 						},
 					},
-					StartPos: Position{Offset: 28, Line: 2, Column: 27},
-				},
-				Range: Range{
 					StartPos: Position{Offset: 12, Line: 2, Column: 11},
-					EndPos:   Position{Offset: 32, Line: 2, Column: 31},
 				},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+					Pos:       Position{Offset: 35, Line: 2, Column: 34},
+				},
+				Value: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "nothing",
+						Pos:        Position{Offset: 37, Line: 2, Column: 36},
+					},
+				},
+				StartPos: Position{Offset: 3, Line: 2, Column: 2},
 			},
-			StartPos: Position{Offset: 12, Line: 2, Column: 11},
 		},
-		Transfer: &Transfer{
-			Operation: TransferOperationCopy,
-			Pos:       Position{Offset: 35, Line: 2, Column: 34},
-		},
-		Value: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "nothing",
-				Pos:        Position{Offset: 37, Line: 2, Column: 36},
-			},
-		},
-		StartPos: Position{Offset: 3, Line: 2, Column: 2},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{add},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseFunctionArrayType(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
 		let test: [((Int8): Int16); 2] = []
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &VariableDeclaration{
-		Identifier: Identifier{
-			Identifier: "test",
-			Pos:        Position{Offset: 7, Line: 2, Column: 6},
-		},
-
-		IsConstant: true,
-		TypeAnnotation: &TypeAnnotation{
-			IsResource: false,
-			Type: &ConstantSizedType{
-				Type: &FunctionType{
-					ParameterTypeAnnotations: []*TypeAnnotation{
-						{
-							IsResource: false,
-							Type: &NominalType{
-								Identifier: Identifier{
-									Identifier: "Int8",
-									Pos:        Position{Offset: 16, Line: 2, Column: 15},
-								},
-							},
-							StartPos: Position{Offset: 16, Line: 2, Column: 15},
-						},
-					},
-					ReturnTypeAnnotation: &TypeAnnotation{
-						IsResource: false,
-						Type: &NominalType{
-							Identifier: Identifier{
-								Identifier: "Int16",
-								Pos:        Position{Offset: 23, Line: 2, Column: 22},
-							},
-						},
-						StartPos: Position{Offset: 23, Line: 2, Column: 22},
-					},
-					Range: Range{
-						StartPos: Position{Offset: 14, Line: 2, Column: 13},
-						EndPos:   Position{Offset: 27, Line: 2, Column: 26},
-					},
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&VariableDeclaration{
+				Identifier: Identifier{
+					Identifier: "test",
+					Pos:        Position{Offset: 7, Line: 2, Column: 6},
 				},
-				Size: &IntegerExpression{
-					Value: big.NewInt(2),
-					Base:  10,
-					Range: Range{
-						StartPos: Position{Offset: 31, Line: 2, Column: 30},
-						EndPos:   Position{Offset: 31, Line: 2, Column: 30},
-					},
-				},
-				Range: Range{
-					StartPos: Position{Offset: 13, Line: 2, Column: 12},
-					EndPos:   Position{Offset: 32, Line: 2, Column: 31},
-				},
-			},
-			StartPos: Position{Offset: 13, Line: 2, Column: 12},
-		},
-		Transfer: &Transfer{
-			Operation: TransferOperationCopy,
-			Pos:       Position{Offset: 34, Line: 2, Column: 33},
-		},
-		Value: &ArrayExpression{
-			Range: Range{
-				StartPos: Position{Offset: 36, Line: 2, Column: 35},
-				EndPos:   Position{Offset: 37, Line: 2, Column: 36},
-			},
-		},
-		StartPos: Position{Offset: 3, Line: 2, Column: 2},
-	}
 
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
-}
-
-func TestParseFunctionTypeWithArrayReturnType(t *testing.T) {
-
-	t.Parallel()
-
-	actual, _, err := parser.ParseProgram(`
-		let test: ((Int8): [Int16; 2]) = nothing
-	`)
-
-	require.NoError(t, err)
-
-	test := &VariableDeclaration{
-		Identifier: Identifier{
-			Identifier: "test",
-			Pos:        Position{Offset: 7, Line: 2, Column: 6},
-		},
-
-		IsConstant: true,
-		TypeAnnotation: &TypeAnnotation{
-			IsResource: false,
-			Type: &FunctionType{
-				ParameterTypeAnnotations: []*TypeAnnotation{
-					{
-						IsResource: false,
-						Type: &NominalType{
-							Identifier: Identifier{
-								Identifier: "Int8",
-								Pos:        Position{Offset: 15, Line: 2, Column: 14},
-							},
-						},
-						StartPos: Position{Offset: 15, Line: 2, Column: 14},
-					},
-				},
-				ReturnTypeAnnotation: &TypeAnnotation{
+				IsConstant: true,
+				TypeAnnotation: &TypeAnnotation{
 					IsResource: false,
 					Type: &ConstantSizedType{
-						Type: &NominalType{
-							Identifier: Identifier{
-								Identifier: "Int16",
-								Pos:        Position{Offset: 23, Line: 2, Column: 22},
+						Type: &FunctionType{
+							ParameterTypeAnnotations: []*TypeAnnotation{
+								{
+									IsResource: false,
+									Type: &NominalType{
+										Identifier: Identifier{
+											Identifier: "Int8",
+											Pos:        Position{Offset: 16, Line: 2, Column: 15},
+										},
+									},
+									StartPos: Position{Offset: 16, Line: 2, Column: 15},
+								},
+							},
+							ReturnTypeAnnotation: &TypeAnnotation{
+								IsResource: false,
+								Type: &NominalType{
+									Identifier: Identifier{
+										Identifier: "Int16",
+										Pos:        Position{Offset: 23, Line: 2, Column: 22},
+									},
+								},
+								StartPos: Position{Offset: 23, Line: 2, Column: 22},
+							},
+							Range: Range{
+								StartPos: Position{Offset: 14, Line: 2, Column: 13},
+								EndPos:   Position{Offset: 28, Line: 2, Column: 27},
 							},
 						},
 						Size: &IntegerExpression{
 							Value: big.NewInt(2),
 							Base:  10,
 							Range: Range{
-								StartPos: Position{Offset: 30, Line: 2, Column: 29},
-								EndPos:   Position{Offset: 30, Line: 2, Column: 29},
+								StartPos: Position{Offset: 31, Line: 2, Column: 30},
+								EndPos:   Position{Offset: 31, Line: 2, Column: 30},
 							},
 						},
 						Range: Range{
-							StartPos: Position{Offset: 22, Line: 2, Column: 21},
-							EndPos:   Position{Offset: 31, Line: 2, Column: 30},
+							StartPos: Position{Offset: 13, Line: 2, Column: 12},
+							EndPos:   Position{Offset: 32, Line: 2, Column: 31},
 						},
 					},
-					StartPos: Position{Offset: 22, Line: 2, Column: 21},
-				},
-				Range: Range{
 					StartPos: Position{Offset: 13, Line: 2, Column: 12},
-					EndPos:   Position{Offset: 31, Line: 2, Column: 30},
 				},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+					Pos:       Position{Offset: 34, Line: 2, Column: 33},
+				},
+				Value: &ArrayExpression{
+					Range: Range{
+						StartPos: Position{Offset: 36, Line: 2, Column: 35},
+						EndPos:   Position{Offset: 37, Line: 2, Column: 36},
+					},
+				},
+				StartPos: Position{Offset: 3, Line: 2, Column: 2},
 			},
-			StartPos: Position{Offset: 13, Line: 2, Column: 12},
 		},
-		Transfer: &Transfer{
-			Operation: TransferOperationCopy,
-			Pos:       Position{Offset: 34, Line: 2, Column: 33},
-		},
-		Value: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "nothing",
-				Pos:        Position{Offset: 36, Line: 2, Column: 35},
+		nil,
+	)
+}
+
+func TestParseFunctionTypeWithArrayReturnType(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+		let test: ((Int8): [Int16; 2]) = nothing
+	`
+
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&VariableDeclaration{
+				Identifier: Identifier{
+					Identifier: "test",
+					Pos:        Position{Offset: 7, Line: 2, Column: 6},
+				},
+				IsConstant: true,
+				TypeAnnotation: &TypeAnnotation{
+					IsResource: false,
+					Type: &FunctionType{
+						ParameterTypeAnnotations: []*TypeAnnotation{
+							{
+								IsResource: false,
+								Type: &NominalType{
+									Identifier: Identifier{
+										Identifier: "Int8",
+										Pos:        Position{Offset: 15, Line: 2, Column: 14},
+									},
+								},
+								StartPos: Position{Offset: 15, Line: 2, Column: 14},
+							},
+						},
+						ReturnTypeAnnotation: &TypeAnnotation{
+							IsResource: false,
+							Type: &ConstantSizedType{
+								Type: &NominalType{
+									Identifier: Identifier{
+										Identifier: "Int16",
+										Pos:        Position{Offset: 23, Line: 2, Column: 22},
+									},
+								},
+								Size: &IntegerExpression{
+									Value: big.NewInt(2),
+									Base:  10,
+									Range: Range{
+										StartPos: Position{Offset: 30, Line: 2, Column: 29},
+										EndPos:   Position{Offset: 30, Line: 2, Column: 29},
+									},
+								},
+								Range: Range{
+									StartPos: Position{Offset: 22, Line: 2, Column: 21},
+									EndPos:   Position{Offset: 31, Line: 2, Column: 30},
+								},
+							},
+							StartPos: Position{Offset: 22, Line: 2, Column: 21},
+						},
+						Range: Range{
+							StartPos: Position{Offset: 13, Line: 2, Column: 12},
+							EndPos:   Position{Offset: 32, Line: 2, Column: 31},
+						},
+					},
+					StartPos: Position{Offset: 13, Line: 2, Column: 12},
+				},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+					Pos:       Position{Offset: 34, Line: 2, Column: 33},
+				},
+				Value: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "nothing",
+						Pos:        Position{Offset: 36, Line: 2, Column: 35},
+					},
+				},
+				StartPos: Position{Offset: 3, Line: 2, Column: 2},
 			},
 		},
-		StartPos: Position{Offset: 3, Line: 2, Column: 2},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseFunctionTypeWithFunctionReturnTypeInParentheses(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
 		let test: ((Int8): ((Int16): Int32)) = nothing
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &VariableDeclaration{
-		Identifier: Identifier{
-			Identifier: "test",
-			Pos:        Position{Offset: 7, Line: 2, Column: 6},
-		},
-		IsConstant: true,
-		TypeAnnotation: &TypeAnnotation{
-			IsResource: false,
-			Type: &FunctionType{
-				ParameterTypeAnnotations: []*TypeAnnotation{
-					{
-						IsResource: false,
-						Type: &NominalType{
-							Identifier: Identifier{
-								Identifier: "Int8",
-								Pos:        Position{Offset: 15, Line: 2, Column: 14},
-							},
-						},
-						StartPos: Position{Offset: 15, Line: 2, Column: 14},
-					},
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&VariableDeclaration{
+				Identifier: Identifier{
+					Identifier: "test",
+					Pos:        Position{Offset: 7, Line: 2, Column: 6},
 				},
-				ReturnTypeAnnotation: &TypeAnnotation{
+				IsConstant: true,
+				TypeAnnotation: &TypeAnnotation{
 					IsResource: false,
 					Type: &FunctionType{
 						ParameterTypeAnnotations: []*TypeAnnotation{
@@ -3579,90 +3556,88 @@ func TestParseFunctionTypeWithFunctionReturnTypeInParentheses(t *testing.T) {
 								IsResource: false,
 								Type: &NominalType{
 									Identifier: Identifier{
-										Identifier: "Int16",
-										Pos:        Position{Offset: 24, Line: 2, Column: 23},
+										Identifier: "Int8",
+										Pos:        Position{Offset: 15, Line: 2, Column: 14},
 									},
 								},
-								StartPos: Position{Offset: 24, Line: 2, Column: 23},
+								StartPos: Position{Offset: 15, Line: 2, Column: 14},
 							},
 						},
 						ReturnTypeAnnotation: &TypeAnnotation{
 							IsResource: false,
-							Type: &NominalType{
-								Identifier: Identifier{
-									Identifier: "Int32",
-									Pos:        Position{Offset: 32, Line: 2, Column: 31},
+							Type: &FunctionType{
+								ParameterTypeAnnotations: []*TypeAnnotation{
+									{
+										IsResource: false,
+										Type: &NominalType{
+											Identifier: Identifier{
+												Identifier: "Int16",
+												Pos:        Position{Offset: 24, Line: 2, Column: 23},
+											},
+										},
+										StartPos: Position{Offset: 24, Line: 2, Column: 23},
+									},
+								},
+								ReturnTypeAnnotation: &TypeAnnotation{
+									IsResource: false,
+									Type: &NominalType{
+										Identifier: Identifier{
+											Identifier: "Int32",
+											Pos:        Position{Offset: 32, Line: 2, Column: 31},
+										},
+									},
+									StartPos: Position{Offset: 32, Line: 2, Column: 31},
+								},
+								Range: Range{
+									StartPos: Position{Offset: 22, Line: 2, Column: 21},
+									EndPos:   Position{Offset: 37, Line: 2, Column: 36},
 								},
 							},
-							StartPos: Position{Offset: 32, Line: 2, Column: 31},
+							StartPos: Position{Offset: 22, Line: 2, Column: 21},
 						},
 						Range: Range{
-							StartPos: Position{Offset: 22, Line: 2, Column: 21},
-							EndPos:   Position{Offset: 36, Line: 2, Column: 35},
+							StartPos: Position{Offset: 13, Line: 2, Column: 12},
+							EndPos:   Position{Offset: 38, Line: 2, Column: 37},
 						},
 					},
-					StartPos: Position{Offset: 22, Line: 2, Column: 21},
-				},
-				Range: Range{
 					StartPos: Position{Offset: 13, Line: 2, Column: 12},
-					EndPos:   Position{Offset: 36, Line: 2, Column: 35},
 				},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+					Pos:       Position{Offset: 40, Line: 2, Column: 39},
+				},
+				Value: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "nothing",
+						Pos:        Position{Offset: 42, Line: 2, Column: 41},
+					},
+				},
+				StartPos: Position{Offset: 3, Line: 2, Column: 2},
 			},
-			StartPos: Position{Offset: 13, Line: 2, Column: 12},
 		},
-		Transfer: &Transfer{
-			Operation: TransferOperationCopy,
-			Pos:       Position{Offset: 40, Line: 2, Column: 39},
-		},
-		Value: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "nothing",
-				Pos:        Position{Offset: 42, Line: 2, Column: 41},
-			},
-		},
-		StartPos: Position{Offset: 3, Line: 2, Column: 2},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseFunctionTypeWithFunctionReturnType(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
 		let test: ((Int8): ((Int16): Int32)) = nothing
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &VariableDeclaration{
-		Identifier: Identifier{
-			Identifier: "test",
-			Pos:        Position{Offset: 7, Line: 2, Column: 6},
-		},
-
-		IsConstant: true,
-		TypeAnnotation: &TypeAnnotation{
-			IsResource: false,
-			Type: &FunctionType{
-				ParameterTypeAnnotations: []*TypeAnnotation{
-					{
-						IsResource: false,
-						Type: &NominalType{
-							Identifier: Identifier{
-								Identifier: "Int8",
-								Pos:        Position{Offset: 15, Line: 2, Column: 14},
-							},
-						},
-						StartPos: Position{Offset: 15, Line: 2, Column: 14},
-					},
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&VariableDeclaration{
+				Identifier: Identifier{
+					Identifier: "test",
+					Pos:        Position{Offset: 7, Line: 2, Column: 6},
 				},
-				ReturnTypeAnnotation: &TypeAnnotation{
+				IsConstant: true,
+				TypeAnnotation: &TypeAnnotation{
 					IsResource: false,
 					Type: &FunctionType{
 						ParameterTypeAnnotations: []*TypeAnnotation{
@@ -3670,141 +3645,152 @@ func TestParseFunctionTypeWithFunctionReturnType(t *testing.T) {
 								IsResource: false,
 								Type: &NominalType{
 									Identifier: Identifier{
-										Identifier: "Int16",
-										Pos:        Position{Offset: 24, Line: 2, Column: 23},
+										Identifier: "Int8",
+										Pos:        Position{Offset: 15, Line: 2, Column: 14},
 									},
 								},
-								StartPos: Position{Offset: 24, Line: 2, Column: 23},
+								StartPos: Position{Offset: 15, Line: 2, Column: 14},
 							},
 						},
 						ReturnTypeAnnotation: &TypeAnnotation{
 							IsResource: false,
-							Type: &NominalType{
-								Identifier: Identifier{
-									Identifier: "Int32",
-									Pos:        Position{Offset: 32, Line: 2, Column: 31},
+							Type: &FunctionType{
+								ParameterTypeAnnotations: []*TypeAnnotation{
+									{
+										IsResource: false,
+										Type: &NominalType{
+											Identifier: Identifier{
+												Identifier: "Int16",
+												Pos:        Position{Offset: 24, Line: 2, Column: 23},
+											},
+										},
+										StartPos: Position{Offset: 24, Line: 2, Column: 23},
+									},
+								},
+								ReturnTypeAnnotation: &TypeAnnotation{
+									IsResource: false,
+									Type: &NominalType{
+										Identifier: Identifier{
+											Identifier: "Int32",
+											Pos:        Position{Offset: 32, Line: 2, Column: 31},
+										},
+									},
+									StartPos: Position{Offset: 32, Line: 2, Column: 31},
+								},
+								Range: Range{
+									StartPos: Position{Offset: 22, Line: 2, Column: 21},
+									EndPos:   Position{Offset: 37, Line: 2, Column: 36},
 								},
 							},
-							StartPos: Position{Offset: 32, Line: 2, Column: 31},
+							StartPos: Position{Offset: 22, Line: 2, Column: 21},
 						},
 						Range: Range{
-							StartPos: Position{Offset: 22, Line: 2, Column: 21},
-							EndPos:   Position{Offset: 36, Line: 2, Column: 35},
+							StartPos: Position{Offset: 13, Line: 2, Column: 12},
+							EndPos:   Position{Offset: 38, Line: 2, Column: 37},
 						},
 					},
-					StartPos: Position{Offset: 22, Line: 2, Column: 21},
-				},
-				Range: Range{
 					StartPos: Position{Offset: 13, Line: 2, Column: 12},
-					EndPos:   Position{Offset: 36, Line: 2, Column: 35},
 				},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+					Pos:       Position{Offset: 40, Line: 2, Column: 39},
+				},
+				Value: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "nothing",
+						Pos:        Position{Offset: 42, Line: 2, Column: 41},
+					},
+				},
+				StartPos: Position{Offset: 3, Line: 2, Column: 2},
 			},
-			StartPos: Position{Offset: 13, Line: 2, Column: 12},
 		},
-		Transfer: &Transfer{
-			Operation: TransferOperationCopy,
-			Pos:       Position{Offset: 40, Line: 2, Column: 39},
-		},
-		Value: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "nothing",
-				Pos:        Position{Offset: 42, Line: 2, Column: 41},
-			},
-		},
-		StartPos: Position{Offset: 3, Line: 2, Column: 2},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseMissingReturnType(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
 		let noop: ((): Void) =
             fun () { return }
-	`)
+	`
 
-	require.NoError(t, err)
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&VariableDeclaration{
+				Identifier: Identifier{
+					Identifier: "noop",
+					Pos:        Position{Offset: 7, Line: 2, Column: 6},
+				},
 
-	noop := &VariableDeclaration{
-		Identifier: Identifier{
-			Identifier: "noop",
-			Pos:        Position{Offset: 7, Line: 2, Column: 6},
-		},
-
-		IsConstant: true,
-		TypeAnnotation: &TypeAnnotation{
-			IsResource: false,
-			Type: &FunctionType{
-				ReturnTypeAnnotation: &TypeAnnotation{
+				IsConstant: true,
+				TypeAnnotation: &TypeAnnotation{
 					IsResource: false,
-					Type: &NominalType{
-						Identifier: Identifier{
-							Identifier: "Void",
-							Pos:        Position{Offset: 18, Line: 2, Column: 17},
+					Type: &FunctionType{
+						ReturnTypeAnnotation: &TypeAnnotation{
+							IsResource: false,
+							Type: &NominalType{
+								Identifier: Identifier{
+									Identifier: "Void",
+									Pos:        Position{Offset: 18, Line: 2, Column: 17},
+								},
+							},
+							StartPos: Position{Offset: 18, Line: 2, Column: 17},
+						},
+						Range: Range{
+							StartPos: Position{Offset: 13, Line: 2, Column: 12},
+							EndPos:   Position{Offset: 22, Line: 2, Column: 21},
 						},
 					},
-					StartPos: Position{Offset: 18, Line: 2, Column: 17},
-				},
-				Range: Range{
 					StartPos: Position{Offset: 13, Line: 2, Column: 12},
-					EndPos:   Position{Offset: 21, Line: 2, Column: 20},
 				},
-			},
-			StartPos: Position{Offset: 13, Line: 2, Column: 12},
-		},
-		Transfer: &Transfer{
-			Operation: TransferOperationCopy,
-			Pos:       Position{Offset: 24, Line: 2, Column: 23},
-		},
-		Value: &FunctionExpression{
-			ParameterList: &ParameterList{
-				Range: Range{
-					StartPos: Position{Offset: 42, Line: 3, Column: 16},
-					EndPos:   Position{Offset: 43, Line: 3, Column: 17},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+					Pos:       Position{Offset: 24, Line: 2, Column: 23},
 				},
-			},
-			ReturnTypeAnnotation: &TypeAnnotation{
-				IsResource: false,
-				Type: &NominalType{
-					Identifier: Identifier{
-						Pos: Position{Offset: 43, Line: 3, Column: 17},
+				Value: &FunctionExpression{
+					ParameterList: &ParameterList{
+						Range: Range{
+							StartPos: Position{Offset: 42, Line: 3, Column: 16},
+							EndPos:   Position{Offset: 43, Line: 3, Column: 17},
+						},
 					},
-				},
-				StartPos: Position{Offset: 43, Line: 3, Column: 17},
-			},
-			FunctionBlock: &FunctionBlock{
-				Block: &Block{
-					Statements: []Statement{
-						&ReturnStatement{
+					ReturnTypeAnnotation: &TypeAnnotation{
+						IsResource: false,
+						Type: &NominalType{
+							Identifier: Identifier{
+								Pos: Position{Offset: 43, Line: 3, Column: 17},
+							},
+						},
+						StartPos: Position{Offset: 43, Line: 3, Column: 17},
+					},
+					FunctionBlock: &FunctionBlock{
+						Block: &Block{
+							Statements: []Statement{
+								&ReturnStatement{
+									Range: Range{
+										StartPos: Position{Offset: 47, Line: 3, Column: 21},
+										EndPos:   Position{Offset: 52, Line: 3, Column: 26},
+									},
+								},
+							},
 							Range: Range{
-								StartPos: Position{Offset: 47, Line: 3, Column: 21},
-								EndPos:   Position{Offset: 52, Line: 3, Column: 26},
+								StartPos: Position{Offset: 45, Line: 3, Column: 19},
+								EndPos:   Position{Offset: 54, Line: 3, Column: 28},
 							},
 						},
 					},
-					Range: Range{
-						StartPos: Position{Offset: 45, Line: 3, Column: 19},
-						EndPos:   Position{Offset: 54, Line: 3, Column: 28},
-					},
+					StartPos: Position{Offset: 38, Line: 3, Column: 12},
 				},
+				StartPos: Position{Offset: 3, Line: 2, Column: 2},
 			},
-			StartPos: Position{Offset: 38, Line: 3, Column: 12},
 		},
-		StartPos: Position{Offset: 3, Line: 2, Column: 2},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{noop},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseLeftAssociativity(t *testing.T) {
@@ -4087,11 +4073,12 @@ func TestParseTernaryRightAssociativity(t *testing.T) {
 	)
 }
 
+// TODO: remove
 func TestParseStructure(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
         struct Test {
             pub(set) var foo: Int
 
@@ -4103,227 +4090,224 @@ func TestParseStructure(t *testing.T) {
                 return self.foo
             }
         }
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &CompositeDeclaration{
-		CompositeKind: common.CompositeKindStructure,
-		Identifier: Identifier{
-			Identifier: "Test",
-			Pos:        Position{Offset: 16, Line: 2, Column: 15},
-		},
-		Conformances: []*NominalType{},
-		Members: &Members{
-			Fields: []*FieldDeclaration{
-				{
-					Access:       AccessPublicSettable,
-					VariableKind: VariableKindVariable,
-					Identifier: Identifier{
-						Identifier: "foo",
-						Pos:        Position{Offset: 48, Line: 3, Column: 25},
-					},
-					TypeAnnotation: &TypeAnnotation{
-						IsResource: false,
-						Type: &NominalType{
-							Identifier: Identifier{
-								Identifier: "Int",
-								Pos:        Position{Offset: 53, Line: 3, Column: 30},
-							},
-						},
-						StartPos: Position{Offset: 53, Line: 3, Column: 30},
-					},
-					Range: Range{
-						StartPos: Position{Offset: 35, Line: 3, Column: 12},
-						EndPos:   Position{Offset: 55, Line: 3, Column: 32},
-					},
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&CompositeDeclaration{
+				CompositeKind: common.CompositeKindStructure,
+				Identifier: Identifier{
+					Identifier: "Test",
+					Pos:        Position{Offset: 16, Line: 2, Column: 15},
 				},
-			},
-			SpecialFunctions: []*SpecialFunctionDeclaration{
-				{
-					DeclarationKind: common.DeclarationKindInitializer,
-					FunctionDeclaration: &FunctionDeclaration{
-						Identifier: Identifier{
-							Identifier: "init",
-							Pos:        Position{Offset: 70, Line: 5, Column: 12},
-						},
-						ParameterList: &ParameterList{
-							Parameters: []*Parameter{
-								{
-									Label: "",
+				Members: &Members{
+					Fields: []*FieldDeclaration{
+						{
+							Access:       AccessPublicSettable,
+							VariableKind: VariableKindVariable,
+							Identifier: Identifier{
+								Identifier: "foo",
+								Pos:        Position{Offset: 48, Line: 3, Column: 25},
+							},
+							TypeAnnotation: &TypeAnnotation{
+								IsResource: false,
+								Type: &NominalType{
 									Identifier: Identifier{
-										Identifier: "foo",
-										Pos:        Position{Offset: 75, Line: 5, Column: 17},
-									},
-									TypeAnnotation: &TypeAnnotation{
-										IsResource: false,
-										Type: &NominalType{
-											Identifier: Identifier{
-												Identifier: "Int",
-												Pos:        Position{Offset: 80, Line: 5, Column: 22},
-											},
-										},
-										StartPos: Position{Offset: 80, Line: 5, Column: 22},
-									},
-									Range: Range{
-										StartPos: Position{Offset: 75, Line: 5, Column: 17},
-										EndPos:   Position{Offset: 82, Line: 5, Column: 24},
+										Identifier: "Int",
+										Pos:        Position{Offset: 53, Line: 3, Column: 30},
 									},
 								},
+								StartPos: Position{Offset: 53, Line: 3, Column: 30},
 							},
 							Range: Range{
-								StartPos: Position{Offset: 74, Line: 5, Column: 16},
-								EndPos:   Position{Offset: 83, Line: 5, Column: 25},
+								StartPos: Position{Offset: 35, Line: 3, Column: 12},
+								EndPos:   Position{Offset: 55, Line: 3, Column: 32},
 							},
 						},
-						FunctionBlock: &FunctionBlock{
-							Block: &Block{
-								Statements: []Statement{
-									&AssignmentStatement{
-										Target: &MemberExpression{
-											Expression: &IdentifierExpression{
-												Identifier: Identifier{
-													Identifier: "self",
-													Pos:        Position{Offset: 103, Line: 6, Column: 16},
+					},
+					SpecialFunctions: []*SpecialFunctionDeclaration{
+						{
+							Kind: common.DeclarationKindInitializer,
+							FunctionDeclaration: &FunctionDeclaration{
+								Identifier: Identifier{
+									Identifier: "init",
+									Pos:        Position{Offset: 70, Line: 5, Column: 12},
+								},
+								ParameterList: &ParameterList{
+									Parameters: []*Parameter{
+										{
+											Label: "",
+											Identifier: Identifier{
+												Identifier: "foo",
+												Pos:        Position{Offset: 75, Line: 5, Column: 17},
+											},
+											TypeAnnotation: &TypeAnnotation{
+												IsResource: false,
+												Type: &NominalType{
+													Identifier: Identifier{
+														Identifier: "Int",
+														Pos:        Position{Offset: 80, Line: 5, Column: 22},
+													},
+												},
+												StartPos: Position{Offset: 80, Line: 5, Column: 22},
+											},
+											Range: Range{
+												StartPos: Position{Offset: 75, Line: 5, Column: 17},
+												EndPos:   Position{Offset: 82, Line: 5, Column: 24},
+											},
+										},
+									},
+									Range: Range{
+										StartPos: Position{Offset: 74, Line: 5, Column: 16},
+										EndPos:   Position{Offset: 83, Line: 5, Column: 25},
+									},
+								},
+								FunctionBlock: &FunctionBlock{
+									Block: &Block{
+										Statements: []Statement{
+											&AssignmentStatement{
+												Target: &MemberExpression{
+													Expression: &IdentifierExpression{
+														Identifier: Identifier{
+															Identifier: "self",
+															Pos:        Position{Offset: 103, Line: 6, Column: 16},
+														},
+													},
+													Identifier: Identifier{
+														Identifier: "foo",
+														Pos:        Position{Offset: 108, Line: 6, Column: 21},
+													},
+												},
+												Transfer: &Transfer{
+													Operation: TransferOperationCopy,
+													Pos:       Position{Offset: 112, Line: 6, Column: 25},
+												},
+												Value: &IdentifierExpression{
+													Identifier: Identifier{
+														Identifier: "foo",
+														Pos:        Position{Offset: 114, Line: 6, Column: 27},
+													},
 												},
 											},
-											Identifier: Identifier{
-												Identifier: "foo",
-												Pos:        Position{Offset: 108, Line: 6, Column: 21},
-											},
 										},
-										Transfer: &Transfer{
-											Operation: TransferOperationCopy,
-											Pos:       Position{Offset: 112, Line: 6, Column: 25},
-										},
-										Value: &IdentifierExpression{
-											Identifier: Identifier{
-												Identifier: "foo",
-												Pos:        Position{Offset: 114, Line: 6, Column: 27},
-											},
+										Range: Range{
+											StartPos: Position{Offset: 85, Line: 5, Column: 27},
+											EndPos:   Position{Offset: 130, Line: 7, Column: 12},
 										},
 									},
 								},
+								StartPos: Position{Offset: 70, Line: 5, Column: 12},
+							},
+						},
+					},
+					Functions: []*FunctionDeclaration{
+						{
+							Access: AccessPublic,
+							Identifier: Identifier{
+								Identifier: "getFoo",
+								Pos:        Position{Offset: 153, Line: 9, Column: 20},
+							},
+							ParameterList: &ParameterList{
 								Range: Range{
-									StartPos: Position{Offset: 85, Line: 5, Column: 27},
-									EndPos:   Position{Offset: 130, Line: 7, Column: 12},
+									StartPos: Position{Offset: 159, Line: 9, Column: 26},
+									EndPos:   Position{Offset: 160, Line: 9, Column: 27},
 								},
 							},
-						},
-						StartPos: Position{Offset: 70, Line: 5, Column: 12},
-					},
-				},
-			},
-			Functions: []*FunctionDeclaration{
-				{
-					Access: AccessPublic,
-					Identifier: Identifier{
-						Identifier: "getFoo",
-						Pos:        Position{Offset: 153, Line: 9, Column: 20},
-					},
-					ParameterList: &ParameterList{
-						Range: Range{
-							StartPos: Position{Offset: 159, Line: 9, Column: 26},
-							EndPos:   Position{Offset: 160, Line: 9, Column: 27},
-						},
-					},
-					ReturnTypeAnnotation: &TypeAnnotation{
-						IsResource: false,
-						Type: &NominalType{
-							Identifier: Identifier{
-								Identifier: "Int",
-								Pos:        Position{Offset: 163, Line: 9, Column: 30},
+							ReturnTypeAnnotation: &TypeAnnotation{
+								IsResource: false,
+								Type: &NominalType{
+									Identifier: Identifier{
+										Identifier: "Int",
+										Pos:        Position{Offset: 163, Line: 9, Column: 30},
+									},
+								},
+								StartPos: Position{Offset: 163, Line: 9, Column: 30},
 							},
-						},
-						StartPos: Position{Offset: 163, Line: 9, Column: 30},
-					},
-					FunctionBlock: &FunctionBlock{
-						Block: &Block{
-							Statements: []Statement{
-								&ReturnStatement{
-									Expression: &MemberExpression{
-										Expression: &IdentifierExpression{
-											Identifier: Identifier{
-												Identifier: "self",
-												Pos:        Position{Offset: 192, Line: 10, Column: 23},
+							FunctionBlock: &FunctionBlock{
+								Block: &Block{
+									Statements: []Statement{
+										&ReturnStatement{
+											Expression: &MemberExpression{
+												Expression: &IdentifierExpression{
+													Identifier: Identifier{
+														Identifier: "self",
+														Pos:        Position{Offset: 192, Line: 10, Column: 23},
+													},
+												},
+												Identifier: Identifier{
+													Identifier: "foo",
+													Pos:        Position{Offset: 197, Line: 10, Column: 28},
+												},
 											},
-										},
-										Identifier: Identifier{
-											Identifier: "foo",
-											Pos:        Position{Offset: 197, Line: 10, Column: 28},
+											Range: Range{
+												StartPos: Position{Offset: 185, Line: 10, Column: 16},
+												EndPos:   Position{Offset: 199, Line: 10, Column: 30},
+											},
 										},
 									},
 									Range: Range{
-										StartPos: Position{Offset: 185, Line: 10, Column: 16},
-										EndPos:   Position{Offset: 199, Line: 10, Column: 30},
+										StartPos: Position{Offset: 167, Line: 9, Column: 34},
+										EndPos:   Position{Offset: 213, Line: 11, Column: 12},
 									},
 								},
 							},
-							Range: Range{
-								StartPos: Position{Offset: 167, Line: 9, Column: 34},
-								EndPos:   Position{Offset: 213, Line: 11, Column: 12},
-							},
+							StartPos: Position{Offset: 145, Line: 9, Column: 12},
 						},
 					},
-					StartPos: Position{Offset: 145, Line: 9, Column: 12},
+				},
+				Range: Range{
+					StartPos: Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   Position{Offset: 223, Line: 12, Column: 8},
 				},
 			},
 		},
-		Range: Range{
-			StartPos: Position{Offset: 9, Line: 2, Column: 8},
-			EndPos:   Position{Offset: 223, Line: 12, Column: 8},
-		},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseStructureWithConformances(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
         struct Test: Foo, Bar {}
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &CompositeDeclaration{
-		CompositeKind: common.CompositeKindStructure,
-		Identifier: Identifier{
-			Identifier: "Test",
-			Pos:        Position{Offset: 16, Line: 2, Column: 15},
-		},
-		Conformances: []*NominalType{
-			{
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&CompositeDeclaration{
+				CompositeKind: common.CompositeKindStructure,
 				Identifier: Identifier{
-					Identifier: "Foo",
-					Pos:        Position{Offset: 22, Line: 2, Column: 21},
+					Identifier: "Test",
+					Pos:        Position{Offset: 16, Line: 2, Column: 15},
+				},
+				Conformances: []*NominalType{
+					{
+						Identifier: Identifier{
+							Identifier: "Foo",
+							Pos:        Position{Offset: 22, Line: 2, Column: 21},
+						},
+					},
+					{
+						Identifier: Identifier{
+							Identifier: "Bar",
+							Pos:        Position{Offset: 27, Line: 2, Column: 26},
+						},
+					},
+				},
+				Members: &Members{},
+				Range: Range{
+					StartPos: Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   Position{Offset: 32, Line: 2, Column: 31},
 				},
 			},
-			{
-				Identifier: Identifier{
-					Identifier: "Bar",
-					Pos:        Position{Offset: 27, Line: 2, Column: 26},
-				},
-			},
 		},
-		Members: &Members{},
-		Range: Range{
-			StartPos: Position{Offset: 9, Line: 2, Column: 8},
-			EndPos:   Position{Offset: 32, Line: 2, Column: 31},
-		},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParsePreAndPostConditions(t *testing.T) {
@@ -4877,11 +4861,9 @@ func TestParseFailableCasting(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
        let x = 0 as? Int
-	`)
-
-	require.NoError(t, err)
+	`
 
 	failableDowncast := &CastingExpression{
 		Expression: &IntegerExpression{
@@ -4921,13 +4903,14 @@ func TestParseFailableCasting(t *testing.T) {
 
 	failableDowncast.ParentVariableDeclaration = variableDeclaration
 
-	expected := &Program{
-		Declarations: []Declaration{
+	testParse(
+		t,
+		code,
+		[]Declaration{
 			variableDeclaration,
 		},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseInterface(t *testing.T) {
@@ -4986,7 +4969,7 @@ func TestParseInterface(t *testing.T) {
 				},
 				SpecialFunctions: []*SpecialFunctionDeclaration{
 					{
-						DeclarationKind: common.DeclarationKindInitializer,
+						Kind: common.DeclarationKindInitializer,
 						FunctionDeclaration: &FunctionDeclaration{
 							Identifier: Identifier{
 								Identifier: "init",
@@ -5197,13 +5180,56 @@ func TestParseFieldWithFromIdentifier(t *testing.T) {
 
 	t.Parallel()
 
-	_, _, err := parser.ParseProgram(`
+	const code = `
       struct S {
           let from: String
       }
-	`)
+	`
 
-	require.NoError(t, err)
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&CompositeDeclaration{
+				Access:        AccessNotSpecified,
+				CompositeKind: common.CompositeKindStructure,
+				Identifier: Identifier{
+					Identifier: "S",
+					Pos:        Position{Offset: 14, Line: 2, Column: 13},
+				},
+				Members: &Members{
+					Fields: []*FieldDeclaration{
+						{
+							Access:       AccessNotSpecified,
+							VariableKind: VariableKindConstant,
+							Identifier: Identifier{
+								Identifier: "from",
+								Pos:        Position{Offset: 32, Line: 3, Column: 14},
+							},
+							TypeAnnotation: &TypeAnnotation{
+								Type: &NominalType{
+									Identifier: Identifier{
+										Identifier: "String",
+										Pos:        Position{Offset: 38, Line: 3, Column: 20},
+									},
+								},
+								StartPos: Position{Offset: 38, Line: 3, Column: 20},
+							},
+							Range: Range{
+								StartPos: Position{Offset: 28, Line: 3, Column: 10},
+								EndPos:   Position{Offset: 43, Line: 3, Column: 25},
+							},
+						},
+					},
+				},
+				Range: Range{
+					StartPos: Position{Offset: 7, Line: 2, Column: 6},
+					EndPos:   Position{Offset: 51, Line: 4, Column: 6},
+				},
+			},
+		},
+		nil,
+	)
 }
 
 func TestParseFunctionWithFromIdentifier(t *testing.T) {
@@ -5251,14 +5277,15 @@ func TestParseSemicolonsBetweenDeclarations(t *testing.T) {
 
 	t.Parallel()
 
-	_, _, err := parser.ParseProgram(`
+	const code = `
         import from from 0x0;
         fun foo() {};
-	`)
+	`
 
-	require.NoError(t, err)
+	testParse(t, code, nil, nil)
 }
 
+// TODO: remove
 func TestParseInvalidMultipleSemicolonsBetweenDeclarations(t *testing.T) {
 
 	t.Parallel()
@@ -5286,6 +5313,7 @@ func TestParseInvalidMultipleSemicolonsBetweenDeclarations(t *testing.T) {
 	assert.Contains(t, syntaxError.Message, "extraneous input ';'")
 }
 
+// TODO: remove
 func TestParseInvalidTypeWithWhitespace(t *testing.T) {
 
 	t.Parallel()
@@ -5317,31 +5345,28 @@ func TestParseResource(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
         resource Test {}
-	`)
-
-	require.NoError(t, err)
-
-	test := &CompositeDeclaration{
-		CompositeKind: common.CompositeKindResource,
-		Identifier: Identifier{
-			Identifier: "Test",
-			Pos:        Position{Offset: 18, Line: 2, Column: 17},
+	`
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&CompositeDeclaration{
+				CompositeKind: common.CompositeKindResource,
+				Identifier: Identifier{
+					Identifier: "Test",
+					Pos:        Position{Offset: 18, Line: 2, Column: 17},
+				},
+				Members: &Members{},
+				Range: Range{
+					StartPos: Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   Position{Offset: 24, Line: 2, Column: 23},
+				},
+			},
 		},
-		Conformances: []*NominalType{},
-		Members:      &Members{},
-		Range: Range{
-			StartPos: Position{Offset: 9, Line: 2, Column: 8},
-			EndPos:   Position{Offset: 24, Line: 2, Column: 23},
-		},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseEvent(t *testing.T) {
@@ -5364,7 +5389,7 @@ func TestParseEvent(t *testing.T) {
 				Members: &Members{
 					SpecialFunctions: []*SpecialFunctionDeclaration{
 						{
-							DeclarationKind: common.DeclarationKindInitializer,
+							Kind: common.DeclarationKindInitializer,
 							FunctionDeclaration: &FunctionDeclaration{
 								ParameterList: &ParameterList{
 									Parameters: []*Parameter{
@@ -5577,71 +5602,70 @@ func TestParseMoveStatement(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
         fun test() {
             x <- y
         }
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &FunctionDeclaration{
-		Identifier: Identifier{
-			Identifier: "test",
-			Pos:        Position{Offset: 13, Line: 2, Column: 12},
-		},
-		ParameterList: &ParameterList{
-			Range: Range{
-				StartPos: Position{Offset: 17, Line: 2, Column: 16},
-				EndPos:   Position{Offset: 18, Line: 2, Column: 17},
-			},
-		},
-		ReturnTypeAnnotation: &TypeAnnotation{
-			IsResource: false,
-			Type: &NominalType{
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&FunctionDeclaration{
 				Identifier: Identifier{
-					Identifier: "",
-					Pos:        Position{Offset: 18, Line: 2, Column: 17},
+					Identifier: "test",
+					Pos:        Position{Offset: 13, Line: 2, Column: 12},
 				},
-			},
-			StartPos: Position{Offset: 18, Line: 2, Column: 17},
-		},
-		FunctionBlock: &FunctionBlock{
-			Block: &Block{
-				Statements: []Statement{
-					&AssignmentStatement{
-						Target: &IdentifierExpression{
-							Identifier: Identifier{
-								Identifier: "x",
-								Pos:        Position{Offset: 34, Line: 3, Column: 12},
+				ParameterList: &ParameterList{
+					Range: Range{
+						StartPos: Position{Offset: 17, Line: 2, Column: 16},
+						EndPos:   Position{Offset: 18, Line: 2, Column: 17},
+					},
+				},
+				ReturnTypeAnnotation: &TypeAnnotation{
+					IsResource: false,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "",
+							Pos:        Position{Offset: 18, Line: 2, Column: 17},
+						},
+					},
+					StartPos: Position{Offset: 18, Line: 2, Column: 17},
+				},
+				FunctionBlock: &FunctionBlock{
+					Block: &Block{
+						Statements: []Statement{
+							&AssignmentStatement{
+								Target: &IdentifierExpression{
+									Identifier: Identifier{
+										Identifier: "x",
+										Pos:        Position{Offset: 34, Line: 3, Column: 12},
+									},
+								},
+								Transfer: &Transfer{
+									Operation: TransferOperationMove,
+									Pos:       Position{Offset: 36, Line: 3, Column: 14},
+								},
+								Value: &IdentifierExpression{
+									Identifier: Identifier{
+										Identifier: "y",
+										Pos:        Position{Offset: 39, Line: 3, Column: 17},
+									},
+								},
 							},
 						},
-						Transfer: &Transfer{
-							Operation: TransferOperationMove,
-							Pos:       Position{Offset: 36, Line: 3, Column: 14},
-						},
-						Value: &IdentifierExpression{
-							Identifier: Identifier{
-								Identifier: "y",
-								Pos:        Position{Offset: 39, Line: 3, Column: 17},
-							},
+						Range: Range{
+							StartPos: Position{Offset: 20, Line: 2, Column: 19},
+							EndPos:   Position{Offset: 49, Line: 4, Column: 8},
 						},
 					},
 				},
-				Range: Range{
-					StartPos: Position{Offset: 20, Line: 2, Column: 19},
-					EndPos:   Position{Offset: 49, Line: 4, Column: 8},
-				},
+				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		StartPos: Position{Offset: 9, Line: 2, Column: 8},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseMoveOperator(t *testing.T) {
@@ -5774,159 +5798,155 @@ func TestParseMovingVariableDeclarationWithTypeAnnotation(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
         let x: @R <- y
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &VariableDeclaration{
-		IsConstant: true,
-		Identifier: Identifier{
-			Identifier: "x",
-			Pos:        Position{Offset: 13, Line: 2, Column: 12},
-		},
-		TypeAnnotation: &TypeAnnotation{
-			IsResource: true,
-			Type: &NominalType{
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&VariableDeclaration{
+				IsConstant: true,
 				Identifier: Identifier{
-					Identifier: "R",
-					Pos:        Position{Offset: 17, Line: 2, Column: 16},
+					Identifier: "x",
+					Pos:        Position{Offset: 13, Line: 2, Column: 12},
 				},
+				TypeAnnotation: &TypeAnnotation{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "R",
+							Pos:        Position{Offset: 17, Line: 2, Column: 16},
+						},
+					},
+					StartPos: Position{Offset: 16, Line: 2, Column: 15},
+				},
+				Value: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "y",
+						Pos:        Position{Offset: 22, Line: 2, Column: 21},
+					},
+				},
+				Transfer: &Transfer{
+					Operation: TransferOperationMove,
+					Pos:       Position{Offset: 19, Line: 2, Column: 18},
+				},
+				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
-			StartPos: Position{Offset: 16, Line: 2, Column: 15},
 		},
-		Value: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "y",
-				Pos:        Position{Offset: 22, Line: 2, Column: 21},
-			},
-		},
-		Transfer: &Transfer{
-			Operation: TransferOperationMove,
-			Pos:       Position{Offset: 19, Line: 2, Column: 18},
-		},
-		StartPos: Position{Offset: 9, Line: 2, Column: 8},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseFieldDeclarationWithMoveTypeAnnotation(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
         struct X { x: @R }
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &CompositeDeclaration{
-		CompositeKind: common.CompositeKindStructure,
-		Identifier: Identifier{
-			Identifier: "X",
-			Pos:        Position{Offset: 16, Line: 2, Column: 15},
-		},
-		Conformances: []*NominalType{},
-		Members: &Members{
-			Fields: []*FieldDeclaration{
-				{
-					Access:       AccessNotSpecified,
-					VariableKind: VariableKindNotSpecified,
-					Identifier: Identifier{
-						Identifier: "x",
-						Pos:        Position{Offset: 20, Line: 2, Column: 19},
-					},
-					TypeAnnotation: &TypeAnnotation{
-						IsResource: true,
-						Type: &NominalType{
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&CompositeDeclaration{
+				CompositeKind: common.CompositeKindStructure,
+				Identifier: Identifier{
+					Identifier: "X",
+					Pos:        Position{Offset: 16, Line: 2, Column: 15},
+				},
+				Members: &Members{
+					Fields: []*FieldDeclaration{
+						{
+							Access:       AccessNotSpecified,
+							VariableKind: VariableKindNotSpecified,
 							Identifier: Identifier{
-								Identifier: "R",
-								Pos:        Position{Offset: 24, Line: 2, Column: 23},
+								Identifier: "x",
+								Pos:        Position{Offset: 20, Line: 2, Column: 19},
+							},
+							TypeAnnotation: &TypeAnnotation{
+								IsResource: true,
+								Type: &NominalType{
+									Identifier: Identifier{
+										Identifier: "R",
+										Pos:        Position{Offset: 24, Line: 2, Column: 23},
+									},
+								},
+								StartPos: Position{Offset: 23, Line: 2, Column: 22},
+							},
+							Range: Range{
+								StartPos: Position{Offset: 20, Line: 2, Column: 19},
+								EndPos:   Position{Offset: 24, Line: 2, Column: 23},
 							},
 						},
-						StartPos: Position{Offset: 23, Line: 2, Column: 22},
 					},
-					Range: Range{
-						StartPos: Position{Offset: 20, Line: 2, Column: 19},
-						EndPos:   Position{Offset: 24, Line: 2, Column: 23},
-					},
+				},
+				Range: Range{
+					StartPos: Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   Position{Offset: 26, Line: 2, Column: 25},
 				},
 			},
 		},
-		Range: Range{
-			StartPos: Position{Offset: 9, Line: 2, Column: 8},
-			EndPos:   Position{Offset: 26, Line: 2, Column: 25},
-		},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseFunctionTypeWithResourceTypeAnnotation(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
         let f: ((): @R) = g
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &VariableDeclaration{
-		IsConstant: true,
-		Identifier: Identifier{
-			Identifier: "f",
-			Pos:        Position{Offset: 13, Line: 2, Column: 12},
-		},
-		TypeAnnotation: &TypeAnnotation{
-			IsResource: false,
-			Type: &FunctionType{
-				ParameterTypeAnnotations: nil,
-				ReturnTypeAnnotation: &TypeAnnotation{
-					IsResource: true,
-					Type: &NominalType{
-						Identifier: Identifier{
-							Identifier: "R",
-							Pos:        Position{Offset: 22, Line: 2, Column: 21},
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&VariableDeclaration{
+				IsConstant: true,
+				Identifier: Identifier{
+					Identifier: "f",
+					Pos:        Position{Offset: 13, Line: 2, Column: 12},
+				},
+				TypeAnnotation: &TypeAnnotation{
+					IsResource: false,
+					Type: &FunctionType{
+						ParameterTypeAnnotations: nil,
+						ReturnTypeAnnotation: &TypeAnnotation{
+							IsResource: true,
+							Type: &NominalType{
+								Identifier: Identifier{
+									Identifier: "R",
+									Pos:        Position{Offset: 22, Line: 2, Column: 21},
+								},
+							},
+							StartPos: Position{Offset: 21, Line: 2, Column: 20},
+						},
+						Range: Range{
+							StartPos: Position{Offset: 16, Line: 2, Column: 15},
+							EndPos:   Position{Offset: 23, Line: 2, Column: 22},
 						},
 					},
-					StartPos: Position{Offset: 21, Line: 2, Column: 20},
-				},
-				Range: Range{
 					StartPos: Position{Offset: 16, Line: 2, Column: 15},
-					EndPos:   Position{Offset: 22, Line: 2, Column: 21},
 				},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+					Pos:       Position{Offset: 25, Line: 2, Column: 24},
+				},
+				Value: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "g",
+						Pos:        Position{Offset: 27, Line: 2, Column: 26},
+					},
+				},
+				StartPos: Position{Offset: 9, Line: 2, Column: 8},
 			},
-			StartPos: Position{Offset: 16, Line: 2, Column: 15},
 		},
-		Transfer: &Transfer{
-			Operation: TransferOperationCopy,
-			Pos:       Position{Offset: 25, Line: 2, Column: 24},
-		},
-		Value: &IdentifierExpression{
-			Identifier: Identifier{
-				Identifier: "g",
-				Pos:        Position{Offset: 27, Line: 2, Column: 26},
-			},
-		},
-		StartPos: Position{Offset: 9, Line: 2, Column: 8},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseFunctionExpressionWithResourceTypeAnnotation(t *testing.T) {
@@ -6004,11 +6024,9 @@ func TestParseFailableCastingResourceTypeAnnotation(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
         let y = x as? @R
-	`)
-
-	require.NoError(t, err)
+	`
 
 	failableDowncast := &CastingExpression{
 		Expression: &IdentifierExpression{
@@ -6046,22 +6064,23 @@ func TestParseFailableCastingResourceTypeAnnotation(t *testing.T) {
 
 	failableDowncast.ParentVariableDeclaration = variableDeclaration
 
-	expected := &Program{
-		Declarations: []Declaration{variableDeclaration},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			variableDeclaration,
+		},
+		nil,
+	)
 }
 
 func TestParseCasting(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
         let y = x as Y
-	`)
-
-	require.NoError(t, err)
+	`
 
 	cast := &CastingExpression{
 		Expression: &IdentifierExpression{
@@ -6098,11 +6117,14 @@ func TestParseCasting(t *testing.T) {
 
 	cast.ParentVariableDeclaration = variableDeclaration
 
-	expected := &Program{
-		Declarations: []Declaration{variableDeclaration},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			variableDeclaration,
+		},
+		nil,
+	)
 }
 
 func TestParseFunctionExpressionStatementAfterVariableDeclarationWithCreateExpression(t *testing.T) {
@@ -6228,11 +6250,10 @@ func TestParseIdentifiers(t *testing.T) {
 	t.Parallel()
 
 	for _, name := range []string{"foo", "from", "create", "destroy"} {
-		_, _, err := parser.ParseProgram(fmt.Sprintf(`
-          let %s = 1
-	    `, name))
-
-		require.NoError(t, err)
+		t.Run(name, func(t *testing.T) {
+			code := fmt.Sprintf(`let %s = 1`, name)
+			testParse(t, code, nil, nil)
+		})
 	}
 }
 
@@ -6243,73 +6264,71 @@ func TestParseExpressionStatementAfterReturnStatement(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
       fun test() {
           return
           destroy x
       }
-	`)
-
-	require.NoError(t, err)
-
-	test := &FunctionDeclaration{
-		Access: AccessNotSpecified,
-		Identifier: Identifier{
-			Identifier: "test",
-			Pos:        Position{Offset: 11, Line: 2, Column: 10},
-		},
-		ParameterList: &ParameterList{
-			Range: Range{
-				StartPos: Position{Offset: 15, Line: 2, Column: 14},
-				EndPos:   Position{Offset: 16, Line: 2, Column: 15},
-			},
-		},
-		ReturnTypeAnnotation: &TypeAnnotation{
-			IsResource: false,
-			Type: &NominalType{
+	`
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&FunctionDeclaration{
+				Access: AccessNotSpecified,
 				Identifier: Identifier{
-					Identifier: "",
-					Pos:        Position{Offset: 16, Line: 2, Column: 15},
+					Identifier: "test",
+					Pos:        Position{Offset: 11, Line: 2, Column: 10},
 				},
-			},
-			StartPos: Position{Offset: 16, Line: 2, Column: 15},
-		},
-		FunctionBlock: &FunctionBlock{
-			Block: &Block{
-				Statements: []Statement{
-					&ReturnStatement{
-						Expression: nil,
-						Range: Range{
-							StartPos: Position{Offset: 30, Line: 3, Column: 10},
-							EndPos:   Position{Offset: 35, Line: 3, Column: 15},
+				ParameterList: &ParameterList{
+					Range: Range{
+						StartPos: Position{Offset: 15, Line: 2, Column: 14},
+						EndPos:   Position{Offset: 16, Line: 2, Column: 15},
+					},
+				},
+				ReturnTypeAnnotation: &TypeAnnotation{
+					IsResource: false,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "",
+							Pos:        Position{Offset: 16, Line: 2, Column: 15},
 						},
 					},
-					&ExpressionStatement{
-						Expression: &DestroyExpression{
-							Expression: &IdentifierExpression{
-								Identifier: Identifier{
-									Identifier: "x",
-									Pos:        Position{Offset: 55, Line: 4, Column: 18},
+					StartPos: Position{Offset: 16, Line: 2, Column: 15},
+				},
+				FunctionBlock: &FunctionBlock{
+					Block: &Block{
+						Statements: []Statement{
+							&ReturnStatement{
+								Expression: nil,
+								Range: Range{
+									StartPos: Position{Offset: 30, Line: 3, Column: 10},
+									EndPos:   Position{Offset: 35, Line: 3, Column: 15},
 								},
 							},
-							StartPos: Position{Offset: 47, Line: 4, Column: 10},
+							&ExpressionStatement{
+								Expression: &DestroyExpression{
+									Expression: &IdentifierExpression{
+										Identifier: Identifier{
+											Identifier: "x",
+											Pos:        Position{Offset: 55, Line: 4, Column: 18},
+										},
+									},
+									StartPos: Position{Offset: 47, Line: 4, Column: 10},
+								},
+							},
+						},
+						Range: Range{
+							StartPos: Position{Offset: 18, Line: 2, Column: 17},
+							EndPos:   Position{Offset: 63, Line: 5, Column: 6},
 						},
 					},
 				},
-				Range: Range{
-					StartPos: Position{Offset: 18, Line: 2, Column: 17},
-					EndPos:   Position{Offset: 63, Line: 5, Column: 6},
-				},
+				StartPos: Position{Offset: 7, Line: 2, Column: 6},
 			},
 		},
-		StartPos: Position{Offset: 7, Line: 2, Column: 6},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseSwapStatement(t *testing.T) {
@@ -6405,60 +6424,58 @@ func TestParseDestructor(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
         resource Test {
             destroy() {}
         }
-	`)
+	`
 
-	require.NoError(t, err)
-
-	test := &CompositeDeclaration{
-		CompositeKind: common.CompositeKindResource,
-		Identifier: Identifier{
-			Identifier: "Test",
-			Pos:        Position{Offset: 18, Line: 2, Column: 17},
-		},
-		Conformances: []*NominalType{},
-		Members: &Members{
-			SpecialFunctions: []*SpecialFunctionDeclaration{
-				{
-					DeclarationKind: common.DeclarationKindDestructor,
-					FunctionDeclaration: &FunctionDeclaration{
-						Identifier: Identifier{
-							Identifier: "destroy",
-							Pos:        Position{Offset: 37, Line: 3, Column: 12},
-						},
-						ParameterList: &ParameterList{
-							Range: Range{
-								StartPos: Position{Offset: 44, Line: 3, Column: 19},
-								EndPos:   Position{Offset: 45, Line: 3, Column: 20},
-							},
-						},
-						FunctionBlock: &FunctionBlock{
-							Block: &Block{
-								Range: Range{
-									StartPos: Position{Offset: 47, Line: 3, Column: 22},
-									EndPos:   Position{Offset: 48, Line: 3, Column: 23},
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&CompositeDeclaration{
+				CompositeKind: common.CompositeKindResource,
+				Identifier: Identifier{
+					Identifier: "Test",
+					Pos:        Position{Offset: 18, Line: 2, Column: 17},
+				},
+				Members: &Members{
+					SpecialFunctions: []*SpecialFunctionDeclaration{
+						{
+							Kind: common.DeclarationKindDestructor,
+							FunctionDeclaration: &FunctionDeclaration{
+								Identifier: Identifier{
+									Identifier: "destroy",
+									Pos:        Position{Offset: 37, Line: 3, Column: 12},
 								},
+								ParameterList: &ParameterList{
+									Range: Range{
+										StartPos: Position{Offset: 44, Line: 3, Column: 19},
+										EndPos:   Position{Offset: 45, Line: 3, Column: 20},
+									},
+								},
+								FunctionBlock: &FunctionBlock{
+									Block: &Block{
+										Range: Range{
+											StartPos: Position{Offset: 47, Line: 3, Column: 22},
+											EndPos:   Position{Offset: 48, Line: 3, Column: 23},
+										},
+									},
+								},
+								StartPos: Position{Offset: 37, Line: 3, Column: 12},
 							},
 						},
-						StartPos: Position{Offset: 37, Line: 3, Column: 12},
 					},
+				},
+				Range: Range{
+					StartPos: Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   Position{Offset: 58, Line: 4, Column: 8},
 				},
 			},
 		},
-		Range: Range{
-			StartPos: Position{Offset: 9, Line: 2, Column: 8},
-			EndPos:   Position{Offset: 58, Line: 4, Column: 8},
-		},
-	}
-
-	expected := &Program{
-		Declarations: []Declaration{test},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseReferenceType(t *testing.T) {
@@ -6576,14 +6593,14 @@ func TestParseRestrictedReferenceTypeWithBaseType(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
        let x: &R{I} = 1
-	`)
+	`
 
-	require.NoError(t, err)
-
-	expected := &Program{
-		Declarations: []Declaration{
+	testParse(
+		t,
+		code,
+		[]Declaration{
 			&VariableDeclaration{
 				IsConstant: true,
 				Identifier: Identifier{
@@ -6632,23 +6649,22 @@ func TestParseRestrictedReferenceTypeWithBaseType(t *testing.T) {
 				StartPos: Position{Offset: 8, Line: 2, Column: 7},
 			},
 		},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseRestrictedReferenceTypeWithoutBaseType(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
        let x: &{I} = 1
-	`)
+	`
 
-	require.NoError(t, err)
-
-	expected := &Program{
-		Declarations: []Declaration{
+	testParse(
+		t,
+		code,
+		[]Declaration{
 			&VariableDeclaration{
 				IsConstant: true,
 				Identifier: Identifier{
@@ -6691,23 +6707,22 @@ func TestParseRestrictedReferenceTypeWithoutBaseType(t *testing.T) {
 				StartPos: Position{Offset: 8, Line: 2, Column: 7},
 			},
 		},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseOptionalRestrictedType(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
        let x: @R{I}? = 1
-	`)
+	`
 
-	require.NoError(t, err)
-
-	expected := &Program{
-		Declarations: []Declaration{
+	testParse(
+		t,
+		code,
+		[]Declaration{
 			&VariableDeclaration{
 				IsConstant: true,
 				Identifier: Identifier{
@@ -6756,23 +6771,22 @@ func TestParseOptionalRestrictedType(t *testing.T) {
 				StartPos: Position{Offset: 8, Line: 2, Column: 7},
 			},
 		},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseOptionalRestrictedTypeOnlyRestrictions(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
        let x: @{I}? = 1
-	`)
+	`
 
-	require.NoError(t, err)
-
-	expected := &Program{
-		Declarations: []Declaration{
+	testParse(
+		t,
+		code,
+		[]Declaration{
 			&VariableDeclaration{
 				IsConstant: true,
 				Identifier: Identifier{
@@ -6815,9 +6829,8 @@ func TestParseOptionalRestrictedTypeOnlyRestrictions(t *testing.T) {
 				StartPos: Position{Offset: 8, Line: 2, Column: 7},
 			},
 		},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseReference(t *testing.T) {
@@ -6890,21 +6903,20 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
         struct Kitty { let id: Int ; init(id: Int) { self.id = id } }
-    `)
+    `
 
-	require.NoError(t, err)
-
-	expected := &Program{
-		Declarations: []Declaration{
+	testParse(
+		t,
+		code,
+		[]Declaration{
 			&CompositeDeclaration{
 				CompositeKind: common.CompositeKindStructure,
 				Identifier: Identifier{
 					Identifier: "Kitty",
 					Pos:        Position{Offset: 16, Line: 2, Column: 15},
 				},
-				Conformances: []*NominalType{},
 				Members: &Members{
 					Fields: []*FieldDeclaration{
 						{
@@ -6930,7 +6942,7 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 					},
 					SpecialFunctions: []*SpecialFunctionDeclaration{
 						{
-							DeclarationKind: common.DeclarationKindInitializer,
+							Kind: common.DeclarationKindInitializer,
 							FunctionDeclaration: &FunctionDeclaration{
 								Identifier: Identifier{
 									Identifier: "init",
@@ -6954,7 +6966,7 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 											},
 											Range: Range{
 												StartPos: Position{Offset: 43, Line: 2, Column: 42},
-												EndPos:   Position{Offset: 47, Line: 2, Column: 46},
+												EndPos:   Position{Offset: 49, Line: 2, Column: 48},
 											},
 										},
 									},
@@ -7008,9 +7020,8 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 				},
 			},
 		},
-	}
-
-	assert.IsType(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseAccessModifiers(t *testing.T) {
@@ -7168,7 +7179,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 						},
 					},
 					Prepare: &SpecialFunctionDeclaration{
-						DeclarationKind: common.DeclarationKindPrepare,
+						Kind: common.DeclarationKindPrepare,
 						FunctionDeclaration: &FunctionDeclaration{
 							Access: AccessNotSpecified,
 							Identifier: Identifier{
@@ -7243,7 +7254,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 					PreConditions:  nil,
 					PostConditions: nil,
 					Execute: &SpecialFunctionDeclaration{
-						DeclarationKind: common.DeclarationKindExecute,
+						Kind: common.DeclarationKindExecute,
 						FunctionDeclaration: &FunctionDeclaration{
 							Access: AccessNotSpecified,
 							Identifier: Identifier{
@@ -7363,7 +7374,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 						},
 					},
 					Prepare: &SpecialFunctionDeclaration{
-						DeclarationKind: common.DeclarationKindPrepare,
+						Kind: common.DeclarationKindPrepare,
 						FunctionDeclaration: &FunctionDeclaration{
 							Access: AccessNotSpecified,
 							Identifier: Identifier{
@@ -7480,7 +7491,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 						},
 					},
 					Execute: &SpecialFunctionDeclaration{
-						DeclarationKind: common.DeclarationKindExecute,
+						Kind: common.DeclarationKindExecute,
 						FunctionDeclaration: &FunctionDeclaration{
 							Access: AccessNotSpecified,
 							Identifier: Identifier{
@@ -7600,7 +7611,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 						},
 					},
 					Prepare: &SpecialFunctionDeclaration{
-						DeclarationKind: common.DeclarationKindPrepare,
+						Kind: common.DeclarationKindPrepare,
 						FunctionDeclaration: &FunctionDeclaration{
 							Access: AccessNotSpecified,
 							Identifier: Identifier{
@@ -7717,7 +7728,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 						},
 					},
 					Execute: &SpecialFunctionDeclaration{
-						DeclarationKind: common.DeclarationKindExecute,
+						Kind: common.DeclarationKindExecute,
 						FunctionDeclaration: &FunctionDeclaration{
 							Access: AccessNotSpecified,
 							Identifier: Identifier{
@@ -7788,14 +7799,14 @@ func TestParseAuthorizedReferenceType(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	const code = `
        let x: auth &R = 1
-	`)
+	`
 
-	assert.NoError(t, err)
-
-	expected := &Program{
-		Declarations: []Declaration{
+	testParse(
+		t,
+		code,
+		[]Declaration{
 			&VariableDeclaration{
 				IsConstant: true,
 				Identifier: Identifier{
@@ -7832,9 +7843,8 @@ func TestParseAuthorizedReferenceType(t *testing.T) {
 				ParentIfStatement: nil,
 			},
 		},
-	}
-
-	utils.AssertEqualWithDiff(t, expected, actual)
+		nil,
+	)
 }
 
 func TestParseFixedPointExpression(t *testing.T) {
