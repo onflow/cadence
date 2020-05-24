@@ -2557,7 +2557,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
           transaction {
             prepare(signer: AuthAccount) {
                 let acct = AuthAccount(payer: signer)
-				acct.setCode(%s)
+                acct.setCode(%s)
             }
           }
         `,
