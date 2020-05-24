@@ -862,6 +862,7 @@ func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 		p.skipSpaceAndComments(true)
 
 		left = applyExprLeftDenotation(p, t, left)
+		p.skipSpaceAndComments(true)
 	}
 
 	return left
