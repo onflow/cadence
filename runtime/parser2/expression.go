@@ -573,6 +573,7 @@ func parseCreateExpressionRemainder(p *parser, token lexer.Token) *ast.CreateExp
 }
 
 func defineInvocationExpression() {
+	setExprLeftBindingPower(lexer.TokenParenOpen, 160)
 	setExprLeftDenotation(
 		lexer.TokenParenOpen,
 		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
@@ -630,7 +631,6 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 }
 
 func defineNestedExpression() {
-	setExprLeftBindingPower(lexer.TokenParenOpen, 160)
 	setExprNullDenotation(
 		lexer.TokenParenOpen,
 		func(p *parser, token lexer.Token) ast.Expression {
