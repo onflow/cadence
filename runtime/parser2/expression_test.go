@@ -1424,7 +1424,42 @@ func TestMemberExpression(t *testing.T) {
 		)
 	})
 
-	t.Run("precedence", func(t *testing.T) {
+	t.Run("precedence, left", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("f.n * 3")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.BinaryExpression{
+				Operation: ast.OperationMul,
+				Left: &ast.MemberExpression{
+					Expression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "f",
+							Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+						},
+					},
+					Identifier: ast.Identifier{
+						Identifier: "n",
+						Pos:        ast.Position{Offset: 2, Line: 1, Column: 2},
+					},
+				},
+				Right: &ast.IntegerExpression{
+					Value: big.NewInt(3),
+					Base:  10,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 6, Line: 1, Column: 6},
+						EndPos:   ast.Position{Offset: 6, Line: 1, Column: 6},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("precedence, right", func(t *testing.T) {
 
 		t.Parallel()
 
