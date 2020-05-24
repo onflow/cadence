@@ -78,6 +78,12 @@ func parseDeclaration(p *parser) ast.Declaration {
 			case keywordStruct, keywordResource, keywordContract:
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos)
 
+			case keywordTransaction:
+				if access != ast.AccessNotSpecified {
+					panic(fmt.Errorf("invalid access modifier for transaction"))
+				}
+				return parseTransactionDeclaration(p)
+
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
 					panic(fmt.Errorf("unexpected access modifier"))
@@ -972,10 +978,14 @@ func parseSpecialFunctionDeclaration(
 
 	declarationKind := common.DeclarationKindUnknown
 	switch identifier.Identifier {
-	case common.DeclarationKindInitializer.Keywords():
+	case keywordInit:
 		declarationKind = common.DeclarationKindInitializer
-	case common.DeclarationKindDestructor.Keywords():
+
+	case keywordDestroy:
 		declarationKind = common.DeclarationKindDestructor
+
+	case keywordPrepare:
+		declarationKind = common.DeclarationKindPrepare
 	}
 
 	return &ast.SpecialFunctionDeclaration{

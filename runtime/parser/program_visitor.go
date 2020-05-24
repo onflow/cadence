@@ -451,7 +451,15 @@ type membersAndNestedDeclarations struct {
 func (v *ProgramVisitor) VisitFields(ctx *FieldsContext) interface{} {
 	fieldsCtx := ctx.AllField()
 
-	fields := make([]*ast.FieldDeclaration, len(fieldsCtx))
+	fieldCount := len(fieldsCtx)
+
+	var fields []*ast.FieldDeclaration
+
+	if fieldCount == 0 {
+		return fields
+	}
+
+	fields = make([]*ast.FieldDeclaration, fieldCount)
 
 	for i, fieldCtx := range ctx.AllField() {
 		fields[i] = fieldCtx.Accept(v).(*ast.FieldDeclaration)

@@ -7108,16 +7108,17 @@ func TestParseTransactionDeclaration(t *testing.T) {
 	t.Parallel()
 
 	t.Run("EmptyTransaction", func(t *testing.T) {
-		actual, _, err := parser.ParseProgram(`
+
+		const code = `
 		  transaction {}
-		`)
+		`
 
-		assert.NoError(t, err)
-
-		expected := &Program{
-			Declarations: []Declaration{
+		testParse(
+			t,
+			code,
+			[]Declaration{
 				&TransactionDeclaration{
-					Fields:         []*FieldDeclaration{},
+					Fields:         nil,
 					Prepare:        nil,
 					PreConditions:  nil,
 					PostConditions: nil,
@@ -7128,13 +7129,12 @@ func TestParseTransactionDeclaration(t *testing.T) {
 					},
 				},
 			},
-		}
-
-		utils.AssertEqualWithDiff(t, expected, actual)
+			nil,
+		)
 	})
 
 	t.Run("SimpleTransaction", func(t *testing.T) {
-		actual, _, err := parser.ParseProgram(`
+		const code = `
 		  transaction {
 	
 		    var x: Int
@@ -7147,12 +7147,12 @@ func TestParseTransactionDeclaration(t *testing.T) {
 	          x = 1 + 1
 			}
 		  }
-		`)
+		`
 
-		assert.NoError(t, err)
-
-		expected := &Program{
-			Declarations: []Declaration{
+		testParse(
+			t,
+			code,
+			[]Declaration{
 				&TransactionDeclaration{
 					Fields: []*FieldDeclaration{
 						{
@@ -7315,13 +7315,12 @@ func TestParseTransactionDeclaration(t *testing.T) {
 					},
 				},
 			},
-		}
-
-		utils.AssertEqualWithDiff(t, expected, actual)
+			nil,
+		)
 	})
 
 	t.Run("PreExecutePost", func(t *testing.T) {
-		actual, _, err := parser.ParseProgram(`
+		const code = `
 		  transaction {
 	
 		    var x: Int
@@ -7342,12 +7341,11 @@ func TestParseTransactionDeclaration(t *testing.T) {
 	          x == 2
 	        }
 		  }
-		`)
-
-		assert.NoError(t, err)
-
-		expected := &Program{
-			Declarations: []Declaration{
+		`
+		testParse(
+			t,
+			code,
+			[]Declaration{
 				&TransactionDeclaration{
 					Fields: []*FieldDeclaration{
 						{
@@ -7552,13 +7550,12 @@ func TestParseTransactionDeclaration(t *testing.T) {
 					},
 				},
 			},
-		}
-
-		utils.AssertEqualWithDiff(t, expected, actual)
+			nil,
+		)
 	})
 
 	t.Run("PrePostExecute", func(t *testing.T) {
-		actual, _, err := parser.ParseProgram(`
+		const code = `
 		  transaction {
 	
 		    var x: Int
@@ -7579,12 +7576,12 @@ func TestParseTransactionDeclaration(t *testing.T) {
 	          x = 1 + 1
 			}
 		  }
-		`)
+		`
 
-		assert.NoError(t, err)
-
-		expected := &Program{
-			Declarations: []Declaration{
+		testParse(
+			t,
+			code,
+			[]Declaration{
 				&TransactionDeclaration{
 					Fields: []*FieldDeclaration{
 						{
@@ -7789,9 +7786,9 @@ func TestParseTransactionDeclaration(t *testing.T) {
 					},
 				},
 			},
-		}
+			nil,
+		)
 
-		utils.AssertEqualWithDiff(t, expected, actual)
 	})
 }
 
