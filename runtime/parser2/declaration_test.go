@@ -1619,3 +1619,56 @@ func TestParseCompositeDeclaration(t *testing.T) {
 		)
 	})
 }
+
+func TestParseInterfaceDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("struct, no conformances", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(" pub struct interface S { }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.InterfaceDeclaration{
+					Access:        ast.AccessPublic,
+					CompositeKind: common.CompositeKindStructure,
+					Identifier: ast.Identifier{
+						Identifier: "S",
+						Pos:        ast.Position{Line: 1, Column: 22, Offset: 22},
+					},
+					Members: &ast.Members{},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 26, Offset: 26},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("struct, interface keyword as name", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(" pub struct interface interface { }")
+		require.Equal(t,
+			[]error{
+				fmt.Errorf("expected interface name, got keyword \"interface\""),
+			},
+			errs,
+		)
+
+		var expected []ast.Declaration
+
+		utils.AssertEqualWithDiff(t,
+			expected,
+			result,
+		)
+	})
+
+}
