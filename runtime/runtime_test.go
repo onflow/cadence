@@ -3999,10 +3999,9 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 
 	createAccountScript := []byte(`
         transaction {
-            prepare() {
-                AuthAccount(publicKeys: [], code: [])
+            prepare(signer: AuthAccount) {
+                AuthAccount(publicKeys: [], code: [], payer: signer)
             }
-            execute {}
         }
     `)
 
@@ -4029,7 +4028,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	var signerAddresses []Address
 
 	runtimeInterface := &testRuntimeInterface{
-		createAccount: func(publicKeys [][]byte) (address Address, err error) {
+		createAccount: func(publicKeys [][]byte, payer Address) (address Address, err error) {
 			accountCounter++
 			return Address{accountCounter}, nil
 		},
@@ -4059,6 +4058,8 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
+
+	signerAddresses = []Address{{accountCounter}}
 
 	err := runtime.ExecuteTransaction(createAccountScript, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
