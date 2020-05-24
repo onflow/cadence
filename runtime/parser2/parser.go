@@ -26,41 +26,6 @@ import (
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
-const keywordIf = "if"
-const keywordElse = "else"
-const keywordWhile = "while"
-const keywordBreak = "break"
-const keywordContinue = "continue"
-const keywordReturn = "return"
-const keywordTrue = "true"
-const keywordFalse = "false"
-const keywordNil = "nil"
-const keywordLet = "let"
-const keywordVar = "var"
-const keywordFun = "fun"
-const keywordAs = "as"
-const keywordCreate = "create"
-const keywordDestroy = "destroy"
-const keywordFor = "for"
-const keywordIn = "in"
-const keywordEmit = "emit"
-const keywordAuth = "auth"
-const keywordPriv = "priv"
-const keywordPub = "pub"
-const keywordAccess = "access"
-const keywordSet = "set"
-const keywordAll = "all"
-const keywordSelf = "self"
-const keywordContract = "contract"
-const keywordAccount = "account"
-const keywordImport = "import"
-const keywordFrom = "from"
-const keywordPre = "pre"
-const keywordPost = "post"
-const keywordEvent = "event"
-const keywordStruct = "struct"
-const keywordResource = "resource"
-
 const lowestBindingPower = 0
 
 type parser struct {
@@ -111,19 +76,21 @@ func (p *parser) report(err ...error) {
 }
 
 func (p *parser) next() {
-	p.pos++
-	token, ok := <-p.tokens
-	if !ok {
-		// Channel closed, return EOF token.
-		token = lexer.Token{Type: lexer.TokenEOF}
-	} else if token.Is(lexer.TokenError) {
-		// Report error token as error, skip.
-		p.report(token.Value.(error))
-		p.next()
+	for {
+		token, ok := <-p.tokens
+		if !ok {
+			// Channel closed, return EOF token.
+			token = lexer.Token{Type: lexer.TokenEOF}
+		} else if token.Is(lexer.TokenError) {
+			// Report error token as error, skip.
+			p.report(token.Value.(error))
+			continue
+		}
+
+		p.pos++
+		p.current = token
 		return
 	}
-
-	p.current = token
 }
 
 func (p *parser) mustOne(tokenType lexer.TokenType) lexer.Token {
