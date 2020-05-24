@@ -791,19 +791,28 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 		for i, pkVal := range pkValues {
 			publicKey, err := interpreter.ByteArrayValueToByteSlice(pkVal)
 			if err != nil {
-				panic(fmt.Sprintf("AuthAccount requires the first parameter to be an array of keys ([[Int]])"))
+				panic(fmt.Sprintf(
+					"%s requires the first parameter to be an array of keys ([[Int]])",
+					&sema.AuthAccountType{},
+				))
 			}
 			publicKeys[i] = publicKey
 		}
 
 		code, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[1])
 		if err != nil {
-			panic(fmt.Sprintf("AuthAccount requires the second parameter to be an array of bytes ([Int])"))
+			panic(fmt.Sprintf(
+				"%s requires the second parameter to be an array of bytes ([[Int]])",
+				&sema.AuthAccountType{},
+			))
 		}
 
-		payer, ok := invocation.Arguments[2].(interpreter.AccountValue)
+		payer, ok := invocation.Arguments[2].(interpreter.AuthAccountValue)
 		if !ok {
-			panic(fmt.Sprintf("AuthAccount requires the third parameter to be an AuthAccount"))
+			panic(fmt.Sprintf(
+				"%[1]s requires the third parameter to be an %[1]s",
+				&sema.AuthAccountType{},
+			))
 		}
 
 		var address Address
