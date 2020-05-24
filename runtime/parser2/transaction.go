@@ -8,6 +8,22 @@ import (
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
+// parseTransactionDeclaration parses a transaction declaration.
+//
+//     transactionDeclaration : 'transaction'
+//         parameterList?
+//         '{'
+//         fields
+//         prepare?
+//         preConditions?
+//         ( execute
+//         | execute postConditions
+//         | postConditions
+//         | postConditions execute
+//         | /* no execute or postConditions */
+//         )
+//         '}'
+//
 func parseTransactionDeclaration(p *parser) *ast.TransactionDeclaration {
 
 	startPos := p.current.StartPos
