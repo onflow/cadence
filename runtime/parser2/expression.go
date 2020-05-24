@@ -849,20 +849,23 @@ func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 
 	left := applyExprNullDenotation(p, t)
 
-	newLineAfterLeft = p.skipSpaceAndComments(true) || newLineAfterLeft
+	for {
+		newLineAfterLeft = p.skipSpaceAndComments(true) || newLineAfterLeft
 
-	if newLineAfterLeft && !exprLeftDenotationAllowsNewline(p.current.Type) {
-		return left
-	}
+		if newLineAfterLeft && !exprLeftDenotationAllowsNewline(p.current.Type) {
+			break
+		}
 
-	for rightBindingPower < exprLeftBindingPower(p.current) {
+		if rightBindingPower >= exprLeftBindingPower(p.current) {
+			break
+		}
+
 		t = p.current
 
 		p.next()
 		p.skipSpaceAndComments(true)
 
 		left = applyExprLeftDenotation(p, t, left)
-		p.skipSpaceAndComments(true)
 	}
 
 	return left
