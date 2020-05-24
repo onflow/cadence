@@ -76,7 +76,7 @@ func parseDeclaration(p *parser) ast.Declaration {
 				return parseEventDeclaration(p, access, accessPos)
 
 			case keywordStruct, keywordResource, keywordContract:
-				return parseCompositeDeclaration(p, access, accessPos)
+				return parseCompositeOrInterfaceDeclaration(p, access, accessPos)
 
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
@@ -670,14 +670,17 @@ func parseFieldWithVariableKind(p *parser, access ast.Access, accessPos *ast.Pos
 	}
 }
 
-// parseCompositeDeclaration parses an event declaration.
+// parseCompositeOrInterfaceDeclaration parses an event declaration.
 //
 //     conformances : ':' nominalType ( ',' nominalType )*
 //
 //     compositeDeclaration : compositeKind identifier conformances?
 //                            '{' membersAndNestedDeclarations '}'
 //
-func parseCompositeDeclaration(p *parser, access ast.Access, accessPos *ast.Position) *ast.CompositeDeclaration {
+//     interfaceDeclaration : compositeKind 'interface' identifier conformances?
+//                            '{' membersAndNestedDeclarations '}'
+//
+func parseCompositeOrInterfaceDeclaration(p *parser, access ast.Access, accessPos *ast.Position) ast.Declaration {
 
 	startPos := p.current.StartPos
 	if accessPos != nil {
@@ -689,17 +692,38 @@ func parseCompositeDeclaration(p *parser, access ast.Access, accessPos *ast.Posi
 	// Skip the composite kind keyword
 	p.next()
 
-	p.skipSpaceAndComments(true)
-	if !p.current.Is(lexer.TokenIdentifier) {
-		panic(fmt.Errorf(
-			"expected identifier after start of composite declaration, got %s",
-			p.current.Type,
-		))
+	var isInterface bool
+	var identifier ast.Identifier
+
+	for {
+		p.skipSpaceAndComments(true)
+		if !p.current.Is(lexer.TokenIdentifier) {
+			panic(fmt.Errorf(
+				"expected %s, got %s",
+				lexer.TokenIdentifier,
+				p.current.Type,
+			))
+		}
+
+		wasInterface := isInterface
+
+		if p.current.Value == keywordInterface {
+			isInterface = true
+			if wasInterface {
+				panic(fmt.Errorf(
+					"expected interface name, got keyword %q",
+					keywordInterface,
+				))
+			}
+
+			p.next()
+			continue
+		} else {
+			identifier = tokenToIdentifier(p.current)
+			p.next()
+			break
+		}
 	}
-
-	identifier := tokenToIdentifier(p.current)
-
-	p.next()
 
 	p.skipSpaceAndComments(true)
 
@@ -729,18 +753,38 @@ func parseCompositeDeclaration(p *parser, access ast.Access, accessPos *ast.Posi
 
 	endToken := p.mustOne(lexer.TokenBraceClose)
 
-	return &ast.CompositeDeclaration{
-		Access:                access,
-		CompositeKind:         compositeKind,
-		Identifier:            identifier,
-		Conformances:          conformances,
-		Members:               members,
-		CompositeDeclarations: compositeDeclarations,
-		InterfaceDeclarations: interfaceDeclarations,
-		Range: ast.Range{
-			StartPos: startPos,
-			EndPos:   endToken.EndPos,
-		},
+	declarationRange := ast.Range{
+		StartPos: startPos,
+		EndPos:   endToken.EndPos,
+	}
+
+	if isInterface {
+		// TODO: remove once interface conformances are supported
+		if len(conformances) > 0 {
+			// TODO: improve
+			panic(fmt.Errorf("unexpected conformances"))
+		}
+
+		return &ast.InterfaceDeclaration{
+			Access:                access,
+			CompositeKind:         compositeKind,
+			Identifier:            identifier,
+			Members:               members,
+			CompositeDeclarations: compositeDeclarations,
+			InterfaceDeclarations: interfaceDeclarations,
+			Range:                 declarationRange,
+		}
+	} else {
+		return &ast.CompositeDeclaration{
+			Access:                access,
+			CompositeKind:         compositeKind,
+			Identifier:            identifier,
+			Conformances:          conformances,
+			Members:               members,
+			CompositeDeclarations: compositeDeclarations,
+			InterfaceDeclarations: interfaceDeclarations,
+			Range:                 declarationRange,
+		}
 	}
 }
 
@@ -835,7 +879,7 @@ func parseMemberOrNestedDeclaration(p *parser) ast.Declaration {
 				return parseEventDeclaration(p, access, accessPos)
 
 			case keywordStruct, keywordResource, keywordContract:
-				return parseCompositeDeclaration(p, access, accessPos)
+				return parseCompositeOrInterfaceDeclaration(p, access, accessPos)
 
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
