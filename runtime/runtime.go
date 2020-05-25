@@ -500,6 +500,11 @@ func (r *interpreterRuntime) newInterpreter(
 			})
 			return
 		}),
+		interpreter.WithStatsReportHandler(func(_ *interpreter.Interpreter, stats *interpreter.Statistics) {
+			runtimeInterface.Statistics(&Statistics{
+				GasConsumed: stats.GasConsumed,
+			})
+		}),
 		interpreter.WithContractValueHandler(
 			func(
 				inter *interpreter.Interpreter,
@@ -627,6 +632,10 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 		})
 	}
 
+	getGasConsumed := func() uint64 {
+		return used
+	}
+
 	return []interpreter.Option{
 		interpreter.WithOnStatementHandler(
 			func(_ *interpreter.Statement) {
@@ -641,6 +650,13 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 		interpreter.WithOnFunctionInvocationHandler(
 			func(_ *interpreter.Interpreter, _ int) {
 				checkLimit()
+			},
+		),
+		interpreter.WithOnCompletionHandler(
+			func(interp *interpreter.Interpreter) {
+				interp.ReportStats(&interpreter.Statistics{
+					GasConsumed: getGasConsumed(),
+				})
 			},
 		),
 	}

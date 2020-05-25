@@ -94,6 +94,7 @@ type testRuntimeInterface struct {
 	removeAccountKey   func(address Address, index int) (publicKey []byte, err error)
 	updateAccountCode  func(address Address, code []byte, checkPermission bool) (err error)
 	getSigningAccounts func() []Address
+	statistics         func(*Statistics)
 	log                func(string)
 	emitEvent          func(cadence.Event)
 	generateUUID       func() uint64
@@ -157,6 +158,12 @@ func (i *testRuntimeInterface) GetSigningAccounts() []Address {
 		return nil
 	}
 	return i.getSigningAccounts()
+}
+
+func (i *testRuntimeInterface) Statistics(stats *Statistics) {
+	if i.statistics != nil {
+		i.statistics(stats)
+	}
 }
 
 func (i *testRuntimeInterface) Log(message string) {

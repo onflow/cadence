@@ -50,6 +50,8 @@ type Interface interface {
 	UpdateAccountCode(address Address, code []byte, checkPermission bool) (err error)
 	// GetSigningAccounts returns the signing accounts.
 	GetSigningAccounts() []Address
+	// Statisicts receives statistics about the runtime of a program.
+	Statistics(stats *Statistics)
 	// Log logs a string.
 	Log(string)
 	// EmitEvent is called when an event is emitted by the runtime.
@@ -120,6 +122,10 @@ func (i *EmptyRuntimeInterface) UpdateAccountCode(_ Address, _ []byte, _ bool) e
 
 func (i *EmptyRuntimeInterface) GetSigningAccounts() []Address {
 	return nil
+}
+
+func (i *EmptyRuntimeInterface) Statistics(_ *Statistics) {
+	return
 }
 
 func (i *EmptyRuntimeInterface) Log(_ string) {}

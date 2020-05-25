@@ -102,6 +102,11 @@ type OnFunctionInvocationFunc func(
 	line int,
 )
 
+// OnCompletionFunc is called at completion of interpretation.
+type OnCompletionFunc func(
+	inter *Interpreter,
+)
+
 // StorageExistenceHandlerFunc is a function that handles storage existence checks.
 //
 type StorageExistenceHandlerFunc func(
@@ -163,6 +168,14 @@ type ImportProgramHandlerFunc func(
 // UUIDHandlerFunc is a function that handles the generation of UUIDs.
 type UUIDHandlerFunc func() uint64
 
+// StatsReportHandlerFunc is a function that receives statistics reports
+// about an interpreter program.
+//
+type StatsReportHandlerFunc func(
+	inter *Interpreter,
+	stats *Statistics,
+)
+
 // compositeTypeCode contains the the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
 // (contract, struct, resource, event).
@@ -211,6 +224,7 @@ type Interpreter struct {
 	onStatement                    OnStatementFunc
 	onLoopIteration                OnLoopIterationFunc
 	onFunctionInvocation           OnFunctionInvocationFunc
+	onCompletion                   OnCompletionFunc
 	storageExistenceHandler        StorageExistenceHandlerFunc
 	storageReadHandler             StorageReadHandlerFunc
 	storageWriteHandler            StorageWriteHandlerFunc
@@ -219,6 +233,7 @@ type Interpreter struct {
 	contractValueHandler           ContractValueHandlerFunc
 	importProgramHandler           ImportProgramHandlerFunc
 	uuidHandler                    UUIDHandlerFunc
+	statsReportHandler             StatsReportHandlerFunc
 }
 
 type Option func(*Interpreter) error
@@ -259,6 +274,16 @@ func WithOnLoopIterationHandler(handler OnLoopIterationFunc) Option {
 func WithOnFunctionInvocationHandler(handler OnFunctionInvocationFunc) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.SetOnFunctionInvocationHandler(handler)
+		return nil
+	}
+}
+
+// WithOnCompletionHandler returns an interpreter option which sets
+// the given function as the on completion handler.
+//
+func WithOnCompletionHandler(handler OnCompletionFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetOnCompletionHandler(handler)
 		return nil
 	}
 }
@@ -361,6 +386,16 @@ func WithUUIDHandler(handler UUIDHandlerFunc) Option {
 	}
 }
 
+// WithStatsReportHandler returns an interpreter option which sets the given
+// function as the function that is used to handle statistics reports.
+//
+func WithStatsReportHandler(handler StatsReportHandlerFunc) Option {
+	return func(interpreter *Interpreter) error {
+		interpreter.SetStatsReportHandler(handler)
+		return nil
+	}
+}
+
 // WithAllInterpreters returns an interpreter option which sets
 // the given map of interpreters as the map of all interpreters.
 //
@@ -443,6 +478,12 @@ func (interpreter *Interpreter) SetOnFunctionInvocationHandler(function OnFuncti
 	interpreter.onFunctionInvocation = function
 }
 
+// SetOnCompletionhandler sets the function that is triggered when interpretion of a program has completed.
+//
+func (interpreter *Interpreter) SetOnCompletionHandler(function OnCompletionFunc) {
+	interpreter.onCompletion = function
+}
+
 // SetStorageExistenceHandler sets the function that is used when a storage key is checked for existence.
 //
 func (interpreter *Interpreter) SetStorageExistenceHandler(function StorageExistenceHandlerFunc) {
@@ -484,6 +525,19 @@ func (interpreter *Interpreter) SetContractValueHandler(function ContractValueHa
 //
 func (interpreter *Interpreter) SetImportProgramHandler(function ImportProgramHandlerFunc) {
 	interpreter.importProgramHandler = function
+}
+
+// SetStatsReportHandler sets the function that is used to handle stats reports.
+//
+func (interpreter *Interpreter) SetStatsReportHandler(function StatsReportHandlerFunc) {
+	interpreter.statsReportHandler = function
+}
+
+// ReportStats calls the statistics reports handler function.
+func (interpreter *Interpreter) ReportStats(stats *Statistics) {
+	if interpreter.statsReportHandler != nil {
+		interpreter.statsReportHandler(interpreter, stats)
+	}
 }
 
 // SetUUIDHandler sets the function that is used to handle the generation of UUIDs.
@@ -554,6 +608,9 @@ func (interpreter *Interpreter) Interpret() (err error) {
 	})
 
 	interpreter.runAllStatements(interpreter.interpret())
+	if interpreter.onCompletion != nil {
+		interpreter.onCompletion(interpreter)
+	}
 
 	return nil
 }
@@ -3060,6 +3117,7 @@ func (interpreter *Interpreter) ensureLoaded(location ast.Location, loadProgram 
 		WithContractValueHandler(interpreter.contractValueHandler),
 		WithImportProgramHandler(interpreter.importProgramHandler),
 		WithUUIDHandler(interpreter.uuidHandler),
+		WithStatsReportHandler(interpreter.statsReportHandler),
 		WithAllInterpreters(interpreter.allInterpreters),
 		WithAllCheckers(interpreter.allCheckers),
 		withTypeCodes(interpreter.typeCodes),
