@@ -478,7 +478,7 @@ func (interpreter *Interpreter) SetOnFunctionInvocationHandler(function OnFuncti
 	interpreter.onFunctionInvocation = function
 }
 
-// SetOnCompletionhandler sets the function that is triggered when interpretion of a program has completed.
+// SetOnCompletionhandler sets the function that is triggered when interpretation of a program has completed.
 //
 func (interpreter *Interpreter) SetOnCompletionHandler(function OnCompletionFunc) {
 	interpreter.onCompletion = function
