@@ -124,9 +124,7 @@ func (i *EmptyRuntimeInterface) GetSigningAccounts() []Address {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) Statistics(_ *Statistics) {
-	return
-}
+func (i *EmptyRuntimeInterface) Statistics(_ *Statistics) {}
 
 func (i *EmptyRuntimeInterface) Log(_ string) {}
 
