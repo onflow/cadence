@@ -2365,7 +2365,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 		)
 	})
 
-	t.Run("octal with leading underscore", func(t *testing.T) {
+	t.Run("octal with trailing underscore", func(t *testing.T) {
 
 		t.Parallel()
 
