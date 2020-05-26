@@ -642,7 +642,7 @@ func TestParseAssignmentStatement(t *testing.T) {
 		)
 	})
 
-	t.Run("move", func(t *testing.T) {
+	t.Run("force move", func(t *testing.T) {
 
 		t.Parallel()
 
