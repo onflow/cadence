@@ -59,10 +59,10 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	invokedExpression := invocationExpression.InvokedExpression
 	expressionType := invokedExpression.Accept(checker).(Type)
 
-	isOptionalResult := false
+	isOptionalChainingResult := false
 	if memberExpression, ok := invokedExpression.(*ast.MemberExpression); ok {
 		var member *Member
-		member, isOptionalResult = checker.visitMember(memberExpression)
+		member, isOptionalChainingResult = checker.visitMember(memberExpression)
 		if member != nil {
 			expressionType = member.TypeAnnotation.Type
 		}
@@ -81,9 +81,31 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 		return &InvalidType{}
 	}
 
-	// invoked expression has function type
+	// The invoked expression has a function type,
+	// check the invocation including all arguments.
+	//
+	// If the invocation is on a member expression which is optional chaining,'
+	// then `isOptionalChainingResult` is true, which means the invocation
+	// is only potential, i.e. the invocation will not always
 
-	argumentTypes, returnType := checker.checkInvocation(invocationExpression, invokableType)
+	var argumentTypes []Type
+	var returnType Type
+
+	checkInvocation := func() {
+		argumentTypes, returnType =
+			checker.checkInvocation(invocationExpression, invokableType)
+	}
+
+	if isOptionalChainingResult {
+		_ = checker.checkPotentiallyUnevaluated(func() Type {
+			checkInvocation()
+			// ignored
+			return nil
+		})
+	} else {
+		checkInvocation()
+	}
+
 	checker.Elaboration.InvocationExpressionArgumentTypes[invocationExpression] = argumentTypes
 
 	// If the invocation refers directly to the name of the function as stated in the declaration,
@@ -118,7 +140,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 		functionActivation.ReturnInfo.DefinitelyHalted = true
 	}
 
-	if isOptionalResult {
+	if isOptionalChainingResult {
 		return &OptionalType{Type: returnType}
 	}
 	return returnType
