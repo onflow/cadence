@@ -35,7 +35,7 @@ type parser struct {
 	errors  []error
 }
 
-func Parse(input string, f func(*parser) interface{}) (result interface{}, errors []error) {
+func Parse(input string, parse func(*parser) interface{}) (result interface{}, errors []error) {
 	ctx, cancelLexer := context.WithCancel(context.Background())
 
 	defer cancelLexer()
@@ -62,13 +62,13 @@ func Parse(input string, f func(*parser) interface{}) (result interface{}, error
 
 	p.next()
 
-	expr := f(p)
+	result = parse(p)
 
 	if !p.current.Is(lexer.TokenEOF) {
 		p.report(fmt.Errorf("unexpected token: %v", p.current))
 	}
 
-	return expr, p.errors
+	return result, p.errors
 }
 
 func (p *parser) report(err ...error) {
