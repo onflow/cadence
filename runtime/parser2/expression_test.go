@@ -2807,3 +2807,210 @@ func TestParseFixedPoint(t *testing.T) {
 		)
 	})
 }
+
+func TestParseLessThanOrTypeArguments(t *testing.T) {
+
+	t.Run("binary expression with less operator", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("1 < 2")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.BinaryExpression{
+				Operation: ast.OperationLess,
+				Left: &ast.IntegerExpression{
+					Value: big.NewInt(1),
+					Base:  10,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				Right: &ast.IntegerExpression{
+					Value: big.NewInt(2),
+					Base:  10,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("invocation, zero type arguments, zero arguments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("a < > ()")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.InvocationExpression{
+				InvokedExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "a",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				TypeArguments: nil,
+				Arguments:     nil,
+				EndPos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+			},
+			result,
+		)
+	})
+
+	t.Run("invocation, one type argument, one argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("a < { K : V } > ( 1 )")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.InvocationExpression{
+				InvokedExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "a",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				TypeArguments: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.DictionaryType{
+							KeyType: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "K",
+									Pos:        ast.Position{Line: 1, Column: 6, Offset: 6},
+								},
+							},
+							ValueType: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "V",
+									Pos:        ast.Position{Line: 1, Column: 10, Offset: 10},
+								},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+								EndPos:   ast.Position{Line: 1, Column: 12, Offset: 12},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+				},
+				Arguments: []*ast.Argument{
+					{
+						Expression: &ast.IntegerExpression{
+							Value: big.NewInt(1),
+							Base:  10,
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 18, Offset: 18},
+								EndPos:   ast.Position{Line: 1, Column: 18, Offset: 18},
+							},
+						},
+					},
+				},
+				EndPos: ast.Position{Line: 1, Column: 20, Offset: 20},
+			},
+			result,
+		)
+	})
+
+	t.Run("invocation, three type arguments, two arguments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("a < { K : V } , @R , [ S ] > ( 1 , 2 )")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.InvocationExpression{
+				InvokedExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "a",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				TypeArguments: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.DictionaryType{
+							KeyType: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "K",
+									Pos:        ast.Position{Line: 1, Column: 6, Offset: 6},
+								},
+							},
+							ValueType: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "V",
+									Pos:        ast.Position{Line: 1, Column: 10, Offset: 10},
+								},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+								EndPos:   ast.Position{Line: 1, Column: 12, Offset: 12},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+					{
+						IsResource: true,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "R",
+								Pos:        ast.Position{Line: 1, Column: 17, Offset: 17},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 16, Offset: 16},
+					},
+					{
+						IsResource: false,
+						Type: &ast.VariableSizedType{
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "S",
+									Pos:        ast.Position{Line: 1, Column: 23, Offset: 23},
+								},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 21, Offset: 21},
+								EndPos:   ast.Position{Line: 1, Column: 25, Offset: 25},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 21, Offset: 21},
+					},
+				},
+				Arguments: []*ast.Argument{
+					{
+						Expression: &ast.IntegerExpression{
+							Value: big.NewInt(1),
+							Base:  10,
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 31, Offset: 31},
+								EndPos:   ast.Position{Line: 1, Column: 31, Offset: 31},
+							},
+						},
+					},
+					{
+						Expression: &ast.IntegerExpression{
+							Value: big.NewInt(2),
+							Base:  10,
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 35, Offset: 35},
+								EndPos:   ast.Position{Line: 1, Column: 35, Offset: 35},
+							},
+						},
+					},
+				},
+				EndPos: ast.Position{Line: 1, Column: 37, Offset: 37},
+			},
+			result,
+		)
+	})
+}

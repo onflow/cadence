@@ -209,11 +209,7 @@ func init() {
 		operation:        ast.OperationAnd,
 	})
 
-	defineExpr(binaryExpr{
-		tokenType:        lexer.TokenLess,
-		leftBindingPower: 50,
-		operation:        ast.OperationLess,
-	})
+	defineLessThanOrTypeArgumentsExpression()
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenLessEqual,
@@ -462,6 +458,60 @@ func init() {
 	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) ast.Expression {
 		panic("expected expression")
 	})
+}
+
+func defineLessThanOrTypeArgumentsExpression() {
+	const bindingPower = 50
+
+	setExprLeftBindingPower(lexer.TokenLess, bindingPower)
+	setExprLeftDenotation(
+		lexer.TokenLess,
+		func(p *parser, _ lexer.Token, left ast.Expression) ast.Expression {
+
+			var isInvocation bool
+			var typeArguments []*ast.TypeAnnotation
+
+			p.startBuffering()
+
+			(func() {
+				defer func() {
+					_ = recover()
+				}()
+
+				typeArguments, _ =
+					parseCommaSeparatedTypeAnnotations(p, lexer.TokenGreater)
+
+				p.skipSpaceAndComments(true)
+				p.mustOne(lexer.TokenGreater)
+				p.skipSpaceAndComments(true)
+				p.mustOne(lexer.TokenParenOpen)
+
+				isInvocation = true
+			})()
+
+			if isInvocation {
+				p.acceptBuffered()
+
+				arguments, endPos := parseArgumentListRemainder(p)
+
+				return &ast.InvocationExpression{
+					InvokedExpression: left,
+					TypeArguments:     typeArguments,
+					Arguments:         arguments,
+					EndPos:            endPos,
+				}
+			}
+
+			p.replayBuffered()
+
+			right := parseExpression(p, bindingPower)
+
+			return &ast.BinaryExpression{
+				Operation: ast.OperationLess,
+				Left:      left,
+				Right:     right,
+			}
+		})
 }
 
 func defineIdentifierExpression() {
