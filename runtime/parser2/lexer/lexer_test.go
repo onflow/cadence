@@ -19,12 +19,19 @@
 package lexer
 
 import (
+	"context"
 	"errors"
 	"testing"
+
+	"go.uber.org/goleak"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
+
+func TestMain(m *testing.M) {
+	goleak.VerifyTestMain(m)
+}
 
 func withTokens(tokenChan chan Token, fn func([]Token)) {
 	tokens := make([]Token, 0)
@@ -42,7 +49,9 @@ func testLex(t *testing.T, input string, expected []Token) {
 
 	t.Parallel()
 
-	withTokens(Lex(input), func(tokens []Token) {
+	ctx := context.Background()
+
+	withTokens(Lex(ctx, input), func(tokens []Token) {
 		utils.AssertEqualWithDiff(t, expected, tokens)
 	})
 }

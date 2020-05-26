@@ -19,6 +19,7 @@
 package lexer
 
 import (
+	"context"
 	"fmt"
 	"unicode/utf8"
 
@@ -52,6 +53,7 @@ type position struct {
 }
 
 type lexer struct {
+	ctx           context.Context
 	input         string
 	startOffset   int
 	endOffset     int
@@ -63,8 +65,9 @@ type lexer struct {
 	startPos      position
 }
 
-func Lex(input string) chan Token {
+func Lex(ctx context.Context, input string) chan Token {
 	l := &lexer{
+		ctx:           ctx,
 		input:         input,
 		startPos:      position{line: 1},
 		endOffset:     0,
@@ -77,18 +80,26 @@ func Lex(input string) chan Token {
 	return l.tokens
 }
 
+type done struct{}
+
 func (l *lexer) run(state stateFn) {
+	// Close token channel, no token remaining
+	defer close(l.tokens)
+
 	defer func() {
 		if r := recover(); r != nil {
-			err, ok := r.(error)
-			if !ok {
+			var err error
+			switch r := r.(type) {
+			case done:
+				return
+			case error:
+				err = r
+			default:
 				err = fmt.Errorf("lexer: %v", r)
 			}
+
 			l.emitError(err)
 		}
-
-		// Close token channel, no token remaining
-		close(l.tokens)
 	}()
 
 	for state != nil {
@@ -158,7 +169,14 @@ func (l *lexer) emit(ty TokenType, val interface{}, rangeStart ast.Position, con
 			},
 		},
 	}
-	l.tokens <- token
+
+	select {
+	case <-l.ctx.Done():
+		panic(done{})
+
+	case l.tokens <- token:
+
+	}
 
 	if consume {
 		l.startOffset = l.endOffset
