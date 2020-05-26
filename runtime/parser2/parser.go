@@ -29,10 +29,13 @@ import (
 const lowestBindingPower = 0
 
 type parser struct {
-	tokens  chan lexer.Token
-	current lexer.Token
-	pos     int
-	errors  []error
+	tokens         chan lexer.Token
+	current        lexer.Token
+	errors         []error
+	buffering      bool
+	bufferedTokens []lexer.Token
+	bufferPos      int
+	bufferedErrors []error
 }
 
 func Parse(input string, parse func(*parser) interface{}) (result interface{}, errors []error) {
@@ -41,10 +44,7 @@ func Parse(input string, parse func(*parser) interface{}) (result interface{}, e
 	defer cancelLexer()
 
 	tokens := lexer.Lex(ctx, input)
-	p := &parser{
-		tokens: tokens,
-		pos:    -1,
-	}
+	p := &parser{tokens: tokens}
 
 	defer func() {
 		if r := recover(); r != nil {
@@ -57,6 +57,10 @@ func Parse(input string, parse func(*parser) interface{}) (result interface{}, e
 
 			result = nil
 			errors = p.errors
+		}
+
+		if p.buffering {
+			errors = append(errors, p.bufferedErrors...)
 		}
 	}()
 
@@ -72,22 +76,50 @@ func Parse(input string, parse func(*parser) interface{}) (result interface{}, e
 }
 
 func (p *parser) report(err ...error) {
-	p.errors = append(p.errors, err...)
+	if p.buffering {
+		p.bufferedErrors = append(p.bufferedErrors, err...)
+	} else {
+		p.errors = append(p.errors, err...)
+	}
+}
+
+const bufferPosTrimThreshold = 128
+
+func (p *parser) maybeTrimBuffer() {
+	if p.bufferPos < bufferPosTrimThreshold {
+		return
+	}
+	p.bufferedTokens = p.bufferedTokens[p.bufferPos:]
+	p.bufferPos = 0
 }
 
 func (p *parser) next() {
 	for {
-		token, ok := <-p.tokens
-		if !ok {
-			// Channel closed, return EOF token.
-			token = lexer.Token{Type: lexer.TokenEOF}
-		} else if token.Is(lexer.TokenError) {
+		var token lexer.Token
+
+		if !p.buffering && p.bufferPos < len(p.bufferedTokens) {
+			token = p.bufferedTokens[p.bufferPos]
+			p.bufferPos++
+			p.maybeTrimBuffer()
+		} else {
+			var ok bool
+			token, ok = <-p.tokens
+			if !ok {
+				// Channel closed, return EOF token.
+				token = lexer.Token{Type: lexer.TokenEOF}
+			}
+		}
+
+		if p.buffering {
+			p.bufferedTokens = append(p.bufferedTokens, token)
+		}
+
+		if token.Is(lexer.TokenError) {
 			// Report error token as error, skip.
 			p.report(token.Value.(error))
 			continue
 		}
 
-		p.pos++
 		p.current = token
 		return
 	}
@@ -100,6 +132,28 @@ func (p *parser) mustOne(tokenType lexer.TokenType) lexer.Token {
 	}
 	p.next()
 	return t
+}
+
+func (p *parser) mustOneString(tokenType lexer.TokenType, string string) lexer.Token {
+	t := p.current
+	if !t.IsString(tokenType, string) {
+		panic(fmt.Errorf("expected token %s with string value %s", tokenType, string))
+	}
+	p.next()
+	return t
+}
+
+func (p *parser) acceptBuffered() {
+	p.buffering = false
+	p.bufferPos = len(p.bufferedTokens)
+	p.report(p.bufferedErrors...)
+	p.maybeTrimBuffer()
+}
+
+func (p *parser) replayBuffered() {
+	p.buffering = false
+	p.bufferedErrors = nil
+	p.next()
 }
 
 func (p *parser) skipSpaceAndComments(skipNewlines bool) (containsNewline bool) {
@@ -132,6 +186,11 @@ func (p *parser) skipSpaceAndComments(skipNewlines bool) (containsNewline bool) 
 		}
 	}
 	return
+}
+
+func (p *parser) startBuffering() {
+	p.buffering = true
+	p.bufferedTokens = append(p.bufferedTokens, p.current)
 }
 
 func mustIdentifier(p *parser) ast.Identifier {
