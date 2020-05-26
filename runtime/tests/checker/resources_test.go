@@ -1375,6 +1375,30 @@ func TestCheckInvalidResourceLoss(t *testing.T) {
 		assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
 		assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 	})
+
+	t.Run("Optional chaining", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+            resource R {}
+
+            struct S {
+                fun use(_ r: @R) {
+                    destroy r
+                }
+            }
+
+            fun test() {
+                let r <- create R()
+                let s: S? = S()
+                s?.use(<-r)
+            }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
+
 }
 
 func TestCheckResourceReturn(t *testing.T) {
