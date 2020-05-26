@@ -19,6 +19,7 @@
 package parser2
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -68,7 +69,11 @@ type parser struct {
 }
 
 func Parse(input string, f func(*parser) interface{}) (result interface{}, errors []error) {
-	tokens := lexer.Lex(input)
+	ctx, cancelLexer := context.WithCancel(context.Background())
+
+	defer cancelLexer()
+
+	tokens := lexer.Lex(ctx, input)
 	p := &parser{
 		tokens: tokens,
 		pos:    -1,
