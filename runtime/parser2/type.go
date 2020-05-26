@@ -666,3 +666,59 @@ func parseNominalTypeInvocationRemainder(p *parser) *ast.InvocationExpression {
 		EndPos:            endPos,
 	}
 }
+
+// parseCommaSeparatedTypeAnnotations parses zero or more type annotations separated by comma.
+//
+func parseCommaSeparatedTypeAnnotations(
+	p *parser,
+	endTokenType lexer.TokenType,
+) (
+	typeAnnotations []*ast.TypeAnnotation,
+	endPos ast.Position,
+) {
+	expectTypeAnnotation := true
+	atEnd := false
+	for !atEnd {
+		p.skipSpaceAndComments(true)
+
+		switch p.current.Type {
+		case lexer.TokenComma:
+			if expectTypeAnnotation {
+				panic(fmt.Errorf("unexpected comma"))
+			}
+			p.next()
+			expectTypeAnnotation = true
+
+		case endTokenType:
+			if expectTypeAnnotation && len(typeAnnotations) > 0 {
+				p.report(fmt.Errorf("missing type annotation after comma"))
+			}
+			endPos = p.current.EndPos
+			atEnd = true
+
+		case lexer.TokenEOF:
+			if expectTypeAnnotation {
+				panic(fmt.Errorf("invalid end of input, expected type"))
+			} else {
+				panic(fmt.Errorf("invalid end of input, expected %s", endTokenType))
+			}
+
+		default:
+			if !expectTypeAnnotation {
+				panic(fmt.Errorf(
+					"unexpected token: got %s, expected %s or %s",
+					p.current.Type,
+					lexer.TokenComma,
+					endTokenType,
+				))
+			}
+
+			typeAnnotation := parseTypeAnnotation(p)
+			typeAnnotations = append(typeAnnotations, typeAnnotation)
+
+			expectTypeAnnotation = false
+		}
+	}
+
+	return
+}
