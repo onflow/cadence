@@ -1064,3 +1064,19 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 		)
 	})
 }
+
+func TestCheckRestrictedTypeConformanceOrder(t *testing.T) {
+
+	// Test that the conformances for a composite are declared
+	// before functions using them are checked
+
+	_, err := ParseAndCheckWithPanic(t, `
+      contract C {
+          resource interface RI {}
+          resource R: RI {}
+          fun foo(): &R{RI} { panic("") }
+      }
+    `)
+
+	require.NoError(t, err)
+}
