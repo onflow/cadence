@@ -833,7 +833,6 @@ func defineNestedExpression() {
 }
 
 func defineArrayExpression() {
-	setExprLeftBindingPower(lexer.TokenBracketOpen, 160)
 	setExprNullDenotation(
 		lexer.TokenBracketOpen,
 		func(p *parser, startToken lexer.Token) ast.Expression {
@@ -889,7 +888,7 @@ func defineDictionaryExpression() {
 }
 
 func defineIndexExpression() {
-	setExprLeftBindingPower(lexer.TokenBracketOpen, 150)
+	setExprLeftBindingPower(lexer.TokenBracketOpen, 160)
 	setExprLeftDenotation(
 		lexer.TokenBracketOpen,
 		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
