@@ -3013,4 +3013,81 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("precedence, invocation in binary expression", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("1 + a<>()")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.BinaryExpression{
+				Operation: ast.OperationPlus,
+				Left: &ast.IntegerExpression{
+					Value: big.NewInt(1),
+					Base:  10,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				Right: &ast.InvocationExpression{
+					InvokedExpression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "a",
+							Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+					TypeArguments: nil,
+					Arguments:     nil,
+					EndPos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("precedence, binary expressions", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("0 + 1 < 2")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.BinaryExpression{
+				Operation: ast.OperationLess,
+				Left: &ast.BinaryExpression{
+					Operation: ast.OperationPlus,
+					Left: &ast.IntegerExpression{
+						Value: big.NewInt(0),
+						Base:  10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					Right: &ast.IntegerExpression{
+						Value: big.NewInt(1),
+						Base:  10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+				},
+				Right: &ast.IntegerExpression{
+					Value: big.NewInt(2),
+					Base:  10,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					},
+				},
+			},
+			result,
+		)
+	})
+
 }

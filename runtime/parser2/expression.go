@@ -33,6 +33,14 @@ type infixExprFunc func(left, right ast.Expression) ast.Expression
 type prefixExprFunc func(right ast.Expression, tokenRange ast.Range) ast.Expression
 type postfixExprFunc func(left ast.Expression, tokenRange ast.Range) ast.Expression
 type exprNullDenotationFunc func(parser *parser, token lexer.Token) ast.Expression
+type exprMetaLeftDenotationFunc func(
+	p *parser,
+	rightBindingPower int,
+	left ast.Expression,
+) (
+	result ast.Expression,
+	done bool,
+)
 
 type literalExpr struct {
 	tokenType      lexer.TokenType
@@ -78,6 +86,7 @@ type exprLeftDenotationFunc func(parser *parser, token lexer.Token, left ast.Exp
 var exprLeftBindingPowers = map[lexer.TokenType]int{}
 var exprIdentifierLeftBindingPowers = map[string]int{}
 var exprLeftDenotations = map[lexer.TokenType]exprLeftDenotationFunc{}
+var exprMetaLeftDenotations = map[lexer.TokenType]exprMetaLeftDenotationFunc{}
 
 func defineExpr(def interface{}) {
 	switch def := def.(type) {
@@ -191,6 +200,17 @@ func setExprLeftDenotation(tokenType lexer.TokenType, leftDenotation exprLeftDen
 		))
 	}
 	exprLeftDenotations[tokenType] = leftDenotation
+}
+
+func setExprMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation exprMetaLeftDenotationFunc) {
+	current := exprMetaLeftDenotations[tokenType]
+	if current != nil {
+		panic(fmt.Errorf(
+			"expression meta left denotation for token %s already exists",
+			tokenType,
+		))
+	}
+	exprMetaLeftDenotations[tokenType] = metaLeftDenotation
 }
 
 func init() {
@@ -461,17 +481,56 @@ func init() {
 }
 
 func defineLessThanOrTypeArgumentsExpression() {
-	const bindingPower = 50
 
-	setExprLeftBindingPower(lexer.TokenLess, bindingPower)
-	setExprLeftDenotation(
+	// The less token `<` does not have a single left binding power,
+	// but one depending on the tokens following it:
+	//
+	// Either an invocation with type arguments (zero or more, comma separated),
+	// followed by a closing greater token `>` and argument list;
+	// or a normal expression.
+	//
+	//     lessThenOrTypeArguments : '<'
+	//         ( ( ( typeAnnotation ( ',' )* )? '>' argumentList )
+	//         | expression
+	//         )
+	//
+	//
+	// Parse this ambiguity by first trying to parse type arguments
+	// and a closing greater token `>` and start of an argument list,
+	// i.e. the open paren token `(`.
+	//
+	// If that parse fails, the result expression must be a binary expression,
+	// and a normal expression must follow.
+	//
+	// In both cases, the right binding power must be checked,
+	// just like it is before a normal left denotation is applied.
+
+	const binaryExpressionLeftBindingPower = 50
+	const invocationExpressionLeftBindingPower = 160
+
+	setExprMetaLeftDenotation(
 		lexer.TokenLess,
-		func(p *parser, _ lexer.Token, left ast.Expression) ast.Expression {
+		func(p *parser, rightBindingPower int, left ast.Expression) (result ast.Expression, done bool) {
 
 			var isInvocation bool
 			var typeArguments []*ast.TypeAnnotation
 
+			// Start buffering before skipping the `<` token,
+			// so it can be replayed in case the right binding power
+			// was higher than the determined left binding power.
+
 			p.startBuffering()
+
+			// Skip the `<` token.
+
+			p.next()
+			p.skipSpaceAndComments(true)
+
+			// First, try to to parse zero or more comma-separated
+			// type arguments (type annotations), a closing greater token `>`,
+			// and start of an argument list, i.e. the open paren token `(`.
+			//
+			// This parse may fail, in which case we just ignore the error.
 
 			(func() {
 				defer func() {
@@ -490,26 +549,66 @@ func defineLessThanOrTypeArgumentsExpression() {
 			})()
 
 			if isInvocation {
+
+				// The expression was determined to be an invocation.
+				// Still, it should have maybe not been parsed if the right binding power
+				// was higher. In that case, replay the buffered tokens and stop.
+
+				if rightBindingPower >= invocationExpressionLeftBindingPower {
+					p.replayBuffered()
+					return left, true
+				}
+
+				// The previous attempt to parse an invocation succeeded,
+				// accept the buffered tokens.
+
 				p.acceptBuffered()
 
 				arguments, endPos := parseArgumentListRemainder(p)
 
-				return &ast.InvocationExpression{
+				invocationExpression := &ast.InvocationExpression{
 					InvokedExpression: left,
 					TypeArguments:     typeArguments,
 					Arguments:         arguments,
 					EndPos:            endPos,
 				}
-			}
 
-			p.replayBuffered()
+				return invocationExpression, false
 
-			right := parseExpression(p, bindingPower)
+			} else {
 
-			return &ast.BinaryExpression{
-				Operation: ast.OperationLess,
-				Left:      left,
-				Right:     right,
+				// The previous attempt to parse an invocation failed,
+				// replay the buffered tokens.
+
+				p.replayBuffered()
+
+				// The expression was determined to *not* be an invocation,
+				// so it must be a binary expression.
+				//
+				// Like for a normal left denotation,
+				// check if this left denotation applies.
+
+				if rightBindingPower >= binaryExpressionLeftBindingPower {
+					return left, true
+				}
+
+				// Skip the `<` token.
+				// The token buffering started before this token,
+				// because it should have maybe not been parsed in the first place
+				// if the right binding power is higher.
+
+				p.next()
+				p.skipSpaceAndComments(true)
+
+				right := parseExpression(p, binaryExpressionLeftBindingPower)
+
+				binaryExpression := &ast.BinaryExpression{
+					Operation: ast.OperationLess,
+					Left:      left,
+					Right:     right,
+				}
+
+				return binaryExpression, false
 			}
 		})
 }
@@ -926,19 +1025,47 @@ func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 			break
 		}
 
-		if rightBindingPower >= exprLeftBindingPower(p.current) {
+		var done bool
+		left, done = applyExprMetaLeftDenotation(p, rightBindingPower, left)
+		if done {
 			break
 		}
-
-		t = p.current
-
-		p.next()
-		p.skipSpaceAndComments(true)
-
-		left = applyExprLeftDenotation(p, t, left)
 	}
 
 	return left
+}
+
+func applyExprMetaLeftDenotation(
+	p *parser,
+	rightBindingPower int,
+	left ast.Expression,
+) (
+	result ast.Expression,
+	done bool,
+) {
+	t := p.current
+
+	// Normal left denotations are applied if the right binding power
+	// is less than the left binding power of the current token.
+	//
+	// Meta-left denotations allow determining the left binding power
+	// based on parsing more tokens.
+
+	if metaLeftDenotation, ok := exprMetaLeftDenotations[t.Type]; ok {
+		return metaLeftDenotation(p, rightBindingPower, left)
+	}
+
+	if rightBindingPower >= exprLeftBindingPower(t) {
+		return left, true
+	}
+
+	t = p.current
+
+	p.next()
+	p.skipSpaceAndComments(true)
+
+	result = applyExprLeftDenotation(p, t, left)
+	return result, false
 }
 
 func exprLeftBindingPower(token lexer.Token) int {
