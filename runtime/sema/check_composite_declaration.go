@@ -472,30 +472,6 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		initializers := declaration.Members.Initializers()
 		compositeType.ConstructorParameters = checker.initializerParameters(initializers)
 
-		// Declare members
-
-		var members map[string]*Member
-		var origins map[string]*Origin
-
-		// Event members are derived from the initializer's parameter list
-
-		if declaration.CompositeKind == common.CompositeKindEvent {
-			members, origins = checker.eventMembersAndOrigins(
-				initializers[0],
-				compositeType,
-			)
-		} else {
-			members, origins = checker.nonEventMembersAndOrigins(
-				compositeType,
-				declaration.Members.Fields,
-				declaration.Members.Functions,
-				kind,
-			)
-		}
-
-		compositeType.Members = members
-		checker.memberOrigins[compositeType] = origins
-
 		// Declare nested declarations' members
 
 		for _, nestedInterfaceDeclaration := range declaration.InterfaceDeclarations {
@@ -545,6 +521,31 @@ func (checker *Checker) declareCompositeMembersAndValue(
 				}
 			}
 		}
+
+		// Declare members
+		// NOTE: *After* declaring nested composite and interface declarations
+
+		var members map[string]*Member
+		var origins map[string]*Origin
+
+		// Event members are derived from the initializer's parameter list
+
+		if declaration.CompositeKind == common.CompositeKindEvent {
+			members, origins = checker.eventMembersAndOrigins(
+				initializers[0],
+				compositeType,
+			)
+		} else {
+			members, origins = checker.nonEventMembersAndOrigins(
+				compositeType,
+				declaration.Members.Fields,
+				declaration.Members.Functions,
+				kind,
+			)
+		}
+
+		compositeType.Members = members
+		checker.memberOrigins[compositeType] = origins
 	})()
 
 	// Always determine composite constructor type
