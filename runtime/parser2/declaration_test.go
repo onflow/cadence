@@ -1671,4 +1671,190 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 		)
 	})
 
+	t.Run("struct, with fields, functions, and special functions; with and without blocks", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(`
+          struct interface Test {
+              pub(set) var foo: Int
+
+              init(foo: Int)
+
+              pub fun getFoo(): Int
+
+              pub fun getBar(): Int {}
+
+              destroy() {}
+          }
+	    `)
+
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.InterfaceDeclaration{
+					CompositeKind: common.CompositeKindStructure,
+					Identifier: ast.Identifier{
+						Identifier: "Test",
+						Pos:        ast.Position{Offset: 28, Line: 2, Column: 27},
+					},
+					Members: &ast.Members{
+						Fields: []*ast.FieldDeclaration{
+							{
+								Access:       ast.AccessPublicSettable,
+								VariableKind: ast.VariableKindVariable,
+								Identifier: ast.Identifier{
+									Identifier: "foo",
+									Pos:        ast.Position{Offset: 62, Line: 3, Column: 27},
+								},
+								TypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int",
+											Pos:        ast.Position{Offset: 67, Line: 3, Column: 32},
+										},
+									},
+									StartPos: ast.Position{Offset: 67, Line: 3, Column: 32},
+								},
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 49, Line: 3, Column: 14},
+									EndPos:   ast.Position{Offset: 69, Line: 3, Column: 34},
+								},
+							},
+						},
+						SpecialFunctions: []*ast.SpecialFunctionDeclaration{
+							{
+								Kind: common.DeclarationKindInitializer,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									Identifier: ast.Identifier{
+										Identifier: "init",
+										Pos:        ast.Position{Offset: 86, Line: 5, Column: 14},
+									},
+									ParameterList: &ast.ParameterList{
+										Parameters: []*ast.Parameter{
+											{
+												Label: "",
+												Identifier: ast.Identifier{
+													Identifier: "foo",
+													Pos:        ast.Position{Offset: 91, Line: 5, Column: 19},
+												},
+												TypeAnnotation: &ast.TypeAnnotation{
+													IsResource: false,
+													Type: &ast.NominalType{
+														Identifier: ast.Identifier{
+															Identifier: "Int",
+															Pos:        ast.Position{Offset: 96, Line: 5, Column: 24},
+														},
+													},
+													StartPos: ast.Position{Offset: 96, Line: 5, Column: 24},
+												},
+												Range: ast.Range{
+													StartPos: ast.Position{Offset: 91, Line: 5, Column: 19},
+													EndPos:   ast.Position{Offset: 98, Line: 5, Column: 26},
+												},
+											},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 90, Line: 5, Column: 18},
+											EndPos:   ast.Position{Offset: 99, Line: 5, Column: 27},
+										},
+									},
+									StartPos: ast.Position{Offset: 86, Line: 5, Column: 14},
+								},
+							},
+							{
+								Kind: common.DeclarationKindDestructor,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									Identifier: ast.Identifier{
+										Identifier: "destroy",
+										Pos:        ast.Position{Offset: 193, Line: 11, Column: 14},
+									},
+									ParameterList: &ast.ParameterList{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 200, Line: 11, Column: 21},
+											EndPos:   ast.Position{Offset: 201, Line: 11, Column: 22},
+										},
+									},
+									FunctionBlock: &ast.FunctionBlock{
+										Block: &ast.Block{
+											Range: ast.Range{
+												StartPos: ast.Position{Offset: 203, Line: 11, Column: 24},
+												EndPos:   ast.Position{Offset: 204, Line: 11, Column: 25},
+											},
+										},
+									},
+									StartPos: ast.Position{Offset: 193, Line: 11, Column: 14},
+								},
+							},
+						},
+						Functions: []*ast.FunctionDeclaration{
+							{
+								Access: ast.AccessPublic,
+								Identifier: ast.Identifier{
+									Identifier: "getFoo",
+									Pos:        ast.Position{Offset: 124, Line: 7, Column: 22},
+								},
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 130, Line: 7, Column: 28},
+										EndPos:   ast.Position{Offset: 131, Line: 7, Column: 29},
+									},
+								},
+								ReturnTypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int",
+											Pos:        ast.Position{Offset: 134, Line: 7, Column: 32},
+										},
+									},
+									StartPos: ast.Position{Offset: 134, Line: 7, Column: 32},
+								},
+								StartPos: ast.Position{Offset: 116, Line: 7, Column: 14},
+							},
+							{
+								Access: ast.AccessPublic,
+								Identifier: ast.Identifier{
+									Identifier: "getBar",
+									Pos:        ast.Position{Offset: 161, Line: 9, Column: 22},
+								},
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 167, Line: 9, Column: 28},
+										EndPos:   ast.Position{Offset: 168, Line: 9, Column: 29},
+									},
+								},
+								ReturnTypeAnnotation: &ast.TypeAnnotation{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "Int",
+											Pos:        ast.Position{Offset: 171, Line: 9, Column: 32},
+										},
+									},
+									StartPos: ast.Position{Offset: 171, Line: 9, Column: 32},
+								},
+								FunctionBlock: &ast.FunctionBlock{
+									Block: &ast.Block{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 175, Line: 9, Column: 36},
+											EndPos:   ast.Position{Offset: 176, Line: 9, Column: 37},
+										},
+									},
+								},
+								StartPos: ast.Position{Offset: 153, Line: 9, Column: 14},
+							},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 11, Line: 2, Column: 10},
+						EndPos:   ast.Position{Offset: 216, Line: 12, Column: 10},
+					},
+				},
+			},
+			result,
+		)
+	})
 }

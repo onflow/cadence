@@ -157,7 +157,12 @@ func parseParameter(p *parser) *ast.Parameter {
 	}
 }
 
-func parseFunctionDeclaration(p *parser, access ast.Access, accessPos *ast.Position) *ast.FunctionDeclaration {
+func parseFunctionDeclaration(
+	p *parser,
+	functionBlockIsOptional bool,
+	access ast.Access,
+	accessPos *ast.Position,
+) *ast.FunctionDeclaration {
 
 	startPos := p.current.StartPos
 	if accessPos != nil {
@@ -179,7 +184,8 @@ func parseFunctionDeclaration(p *parser, access ast.Access, accessPos *ast.Posit
 
 	p.next()
 
-	parameterList, returnTypeAnnotation, functionBlock := parseFunctionParameterListAndRest(p)
+	parameterList, returnTypeAnnotation, functionBlock :=
+		parseFunctionParameterListAndRest(p, functionBlockIsOptional)
 
 	return &ast.FunctionDeclaration{
 		Access:               access,
@@ -193,6 +199,7 @@ func parseFunctionDeclaration(p *parser, access ast.Access, accessPos *ast.Posit
 
 func parseFunctionParameterListAndRest(
 	p *parser,
+	functionBlockIsOptional bool,
 ) (
 	parameterList *ast.ParameterList,
 	returnTypeAnnotation *ast.TypeAnnotation,
@@ -220,6 +227,12 @@ func parseFunctionParameterListAndRest(
 		}
 	}
 
-	functionBlock = parseFunctionBlock(p)
+	p.skipSpaceAndComments(true)
+
+	if !functionBlockIsOptional ||
+		p.current.Is(lexer.TokenBraceOpen) {
+
+		functionBlock = parseFunctionBlock(p)
+	}
 	return
 }

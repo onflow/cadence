@@ -67,7 +67,7 @@ func parseDeclaration(p *parser) ast.Declaration {
 				return parseVariableDeclaration(p, access, accessPos)
 
 			case keywordFun:
-				return parseFunctionDeclaration(p, access, accessPos)
+				return parseFunctionDeclaration(p, false, access, accessPos)
 
 			case keywordImport:
 				return parseImportDeclaration(p)
@@ -753,7 +753,7 @@ func parseCompositeOrInterfaceDeclaration(p *parser, access ast.Access, accessPo
 	p.mustOne(lexer.TokenBraceOpen)
 
 	members, compositeDeclarations, interfaceDeclarations :=
-		parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
+		parseMembersAndNestedDeclarations(p, isInterface, lexer.TokenBraceClose)
 
 	p.skipSpaceAndComments(true)
 
@@ -801,6 +801,7 @@ func parseCompositeOrInterfaceDeclaration(p *parser, access ast.Access, accessPo
 //
 func parseMembersAndNestedDeclarations(
 	p *parser,
+	inInterface bool,
 	endTokenType lexer.TokenType,
 ) (
 	members *ast.Members,
@@ -822,7 +823,7 @@ func parseMembersAndNestedDeclarations(
 			return
 
 		default:
-			memberOrNestedDeclaration := parseMemberOrNestedDeclaration(p)
+			memberOrNestedDeclaration := parseMemberOrNestedDeclaration(p, inInterface)
 			if memberOrNestedDeclaration == nil {
 				return
 			}
@@ -862,7 +863,7 @@ func parseMembersAndNestedDeclarations(
 //                               | compositeDeclaration
 //                               | eventDeclaration
 //
-func parseMemberOrNestedDeclaration(p *parser) ast.Declaration {
+func parseMemberOrNestedDeclaration(p *parser, inInterface bool) ast.Declaration {
 
 	access := ast.AccessNotSpecified
 	var accessPos *ast.Position
@@ -879,7 +880,7 @@ func parseMemberOrNestedDeclaration(p *parser) ast.Declaration {
 				return parseFieldWithVariableKind(p, access, accessPos)
 
 			case keywordFun:
-				return parseFunctionDeclaration(p, access, accessPos)
+				return parseFunctionDeclaration(p, inInterface, access, accessPos)
 
 			case keywordEvent:
 				return parseEventDeclaration(p, access, accessPos)
@@ -921,7 +922,7 @@ func parseMemberOrNestedDeclaration(p *parser) ast.Declaration {
 			}
 
 			identifier := tokenToIdentifier(*previousIdentifierToken)
-			return parseSpecialFunctionDeclaration(p, access, accessPos, identifier)
+			return parseSpecialFunctionDeclaration(p, inInterface, access, accessPos, identifier)
 		}
 
 		return nil
@@ -960,6 +961,7 @@ func parseFieldDeclarationWithoutVariableKind(
 
 func parseSpecialFunctionDeclaration(
 	p *parser,
+	functionBlockIsOptional bool,
 	access ast.Access,
 	accessPos *ast.Position,
 	identifier ast.Identifier,
@@ -974,7 +976,16 @@ func parseSpecialFunctionDeclaration(
 	//   allow a return type annotation while parsing, but reject later.
 
 	parameterList := parseParameterList(p)
-	functionBlock := parseFunctionBlock(p)
+
+	p.skipSpaceAndComments(true)
+
+	var functionBlock *ast.FunctionBlock
+
+	if !functionBlockIsOptional ||
+		p.current.Is(lexer.TokenBraceOpen) {
+
+		functionBlock = parseFunctionBlock(p)
+	}
 
 	declarationKind := common.DeclarationKindUnknown
 	switch identifier.Identifier {
