@@ -62,7 +62,7 @@ func parseTransactionDeclaration(p *parser) *ast.TransactionDeclaration {
 
 		identifier := tokenToIdentifier(p.current)
 		p.next()
-		prepare = parseSpecialFunctionDeclaration(p, ast.AccessNotSpecified, nil, identifier)
+		prepare = parseSpecialFunctionDeclaration(p, false, ast.AccessNotSpecified, nil, identifier)
 	}
 
 	// Pre-conditions (optional)

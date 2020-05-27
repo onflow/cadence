@@ -659,7 +659,8 @@ func defineIdentifierExpression() {
 
 func parseFunctionExpression(p *parser, token lexer.Token) *ast.FunctionExpression {
 
-	parameterList, returnTypeAnnotation, functionBlock := parseFunctionParameterListAndRest(p)
+	parameterList, returnTypeAnnotation, functionBlock :=
+		parseFunctionParameterListAndRest(p, false)
 
 	return &ast.FunctionExpression{
 		ParameterList:        parameterList,
