@@ -70,7 +70,7 @@ func bench(args []string) {
 
 		return
 	} else {
-		for i := 1; i < len(args); i++ {
+		for i := 0; i < len(args); i++ {
 			filename := args[i]
 			data, err := ioutil.ReadFile(filename)
 			if err != nil {
@@ -145,7 +145,7 @@ func compare(args []string) {
 
 		return
 	} else {
-		for i := 1; i < len(args); i++ {
+		for i := 0; i < len(args); i++ {
 			filename := args[i]
 			data, err := ioutil.ReadFile(filename)
 			if err != nil {
