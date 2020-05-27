@@ -997,12 +997,13 @@ func parseMemberAccess(p *parser, left ast.Expression, optional bool) ast.Expres
 
 func exprLeftDenotationAllowsNewline(tokenType lexer.TokenType) bool {
 
-	// The postfix force unwrap and invocation expressions don't support
-	// newlines before them, as this clashes with a unary negations and
-	// nested expressions on a new line / separate statement
+	// The postfix force unwrap, invocation expressions,
+	// and indexing expressions don't support newlines before them,
+	// as this clashes with a unary negations, nested expressions,
+	// and array literals on a new line / separate statement.
 
 	switch tokenType {
-	case lexer.TokenExclamationMark, lexer.TokenParenOpen:
+	case lexer.TokenExclamationMark, lexer.TokenParenOpen, lexer.TokenBracketOpen:
 		return false
 	default:
 		return true
@@ -1014,12 +1015,12 @@ func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 	t := p.current
 	p.next()
 
-	newLineAfterLeft := p.skipSpaceAndComments(true)
+	p.skipSpaceAndComments(true)
 
 	left := applyExprNullDenotation(p, t)
 
 	for {
-		newLineAfterLeft = p.skipSpaceAndComments(true) || newLineAfterLeft
+		newLineAfterLeft := p.skipSpaceAndComments(true)
 
 		if newLineAfterLeft && !exprLeftDenotationAllowsNewline(p.current.Type) {
 			break
