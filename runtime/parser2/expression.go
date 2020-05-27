@@ -29,6 +29,24 @@ import (
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
+const (
+	exprLeftBindingPowerTernary = 10 * (iota + 2)
+	exprLeftBindingPowerLogicalOr
+	exprLeftBindingPowerLogicalAnd
+	exprLeftBindingPowerComparison
+	exprLeftBindingPowerNilCoalescing
+	exprLeftBindingPowerBitwiseOr
+	exprLeftBindingPowerBitwiseXor
+	exprLeftBindingPowerBitwiseAnd
+	exprLeftBindingPowerBitwiseShift
+	exprLeftBindingPowerAddition
+	exprLeftBindingPowerMultiplication
+	exprLeftBindingPowerCasting
+	exprLeftBindingPowerUnaryPrefix
+	exprLeftBindingPowerUnaryPostfix
+	exprLeftBindingPowerAccess
+)
+
 type infixExprFunc func(left, right ast.Expression) ast.Expression
 type prefixExprFunc func(right ast.Expression, tokenRange ast.Range) ast.Expression
 type postfixExprFunc func(left ast.Expression, tokenRange ast.Range) ast.Expression
@@ -217,14 +235,14 @@ func init() {
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenVerticalBarVerticalBar,
-		leftBindingPower: 30,
+		leftBindingPower: exprLeftBindingPowerLogicalOr,
 		rightAssociative: true,
 		operation:        ast.OperationOr,
 	})
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenAmpersandAmpersand,
-		leftBindingPower: 40,
+		leftBindingPower: exprLeftBindingPowerLogicalAnd,
 		rightAssociative: true,
 		operation:        ast.OperationAnd,
 	})
@@ -233,98 +251,98 @@ func init() {
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenLessEqual,
-		leftBindingPower: 50,
+		leftBindingPower: exprLeftBindingPowerComparison,
 		operation:        ast.OperationLessEqual,
 	})
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenGreater,
-		leftBindingPower: 50,
+		leftBindingPower: exprLeftBindingPowerComparison,
 		operation:        ast.OperationGreater,
 	})
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenGreaterEqual,
-		leftBindingPower: 50,
+		leftBindingPower: exprLeftBindingPowerComparison,
 		operation:        ast.OperationGreaterEqual,
 	})
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenEqualEqual,
-		leftBindingPower: 50,
+		leftBindingPower: exprLeftBindingPowerComparison,
 		operation:        ast.OperationEqual,
 	})
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenNotEqual,
-		leftBindingPower: 50,
+		leftBindingPower: exprLeftBindingPowerComparison,
 		operation:        ast.OperationNotEqual,
 	})
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenDoubleQuestionMark,
-		leftBindingPower: 60,
+		leftBindingPower: exprLeftBindingPowerNilCoalescing,
 		operation:        ast.OperationNilCoalesce,
 		rightAssociative: true,
 	})
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenVerticalBar,
-		leftBindingPower: 70,
+		leftBindingPower: exprLeftBindingPowerBitwiseOr,
 		operation:        ast.OperationBitwiseOr,
 	})
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenCaret,
-		leftBindingPower: 80,
+		leftBindingPower: exprLeftBindingPowerBitwiseXor,
 		operation:        ast.OperationBitwiseXor,
 	})
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenAmpersand,
-		leftBindingPower: 90,
+		leftBindingPower: exprLeftBindingPowerBitwiseAnd,
 		operation:        ast.OperationBitwiseAnd,
 	})
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenLessLess,
-		leftBindingPower: 100,
+		leftBindingPower: exprLeftBindingPowerBitwiseShift,
 		operation:        ast.OperationBitwiseLeftShift,
 	})
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenGreaterGreater,
-		leftBindingPower: 100,
+		leftBindingPower: exprLeftBindingPowerBitwiseShift,
 		operation:        ast.OperationBitwiseRightShift,
 	})
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenPlus,
-		leftBindingPower: 110,
+		leftBindingPower: exprLeftBindingPowerAddition,
 		operation:        ast.OperationPlus,
 	})
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenMinus,
-		leftBindingPower: 110,
+		leftBindingPower: exprLeftBindingPowerAddition,
 		operation:        ast.OperationMinus,
 	})
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenStar,
-		leftBindingPower: 120,
+		leftBindingPower: exprLeftBindingPowerMultiplication,
 		operation:        ast.OperationMul,
 	})
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenSlash,
-		leftBindingPower: 120,
+		leftBindingPower: exprLeftBindingPowerMultiplication,
 		operation:        ast.OperationDiv,
 	})
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenPercent,
-		leftBindingPower: 120,
+		leftBindingPower: exprLeftBindingPowerMultiplication,
 		operation:        ast.OperationMod,
 	})
 
@@ -410,7 +428,7 @@ func init() {
 
 	defineExpr(prefixExpr{
 		tokenType:    lexer.TokenMinus,
-		bindingPower: 140,
+		bindingPower: exprLeftBindingPowerUnaryPrefix,
 		nullDenotation: func(right ast.Expression, tokenRange ast.Range) ast.Expression {
 			switch right := right.(type) {
 			case *ast.IntegerExpression:
@@ -437,25 +455,25 @@ func init() {
 
 	defineExpr(unaryExpr{
 		tokenType:    lexer.TokenPlus,
-		bindingPower: 140,
+		bindingPower: exprLeftBindingPowerUnaryPrefix,
 		operation:    ast.OperationPlus,
 	})
 
 	defineExpr(unaryExpr{
 		tokenType:    lexer.TokenExclamationMark,
-		bindingPower: 140,
+		bindingPower: exprLeftBindingPowerUnaryPrefix,
 		operation:    ast.OperationNegate,
 	})
 
 	defineExpr(unaryExpr{
 		tokenType:    lexer.TokenLeftArrow,
-		bindingPower: 140,
+		bindingPower: exprLeftBindingPowerUnaryPrefix,
 		operation:    ast.OperationMove,
 	})
 
 	defineExpr(postfixExpr{
 		tokenType:    lexer.TokenExclamationMark,
-		bindingPower: 150,
+		bindingPower: exprLeftBindingPowerUnaryPostfix,
 		leftDenotation: func(left ast.Expression, tokenRange ast.Range) ast.Expression {
 			return &ast.ForceExpression{
 				Expression: left,
@@ -505,8 +523,8 @@ func defineLessThanOrTypeArgumentsExpression() {
 	// In both cases, the right binding power must be checked,
 	// just like it is before a normal left denotation is applied.
 
-	const binaryExpressionLeftBindingPower = 50
-	const invocationExpressionLeftBindingPower = 160
+	const binaryExpressionLeftBindingPower = exprLeftBindingPowerComparison
+	const invocationExpressionLeftBindingPower = exprLeftBindingPowerAccess
 
 	setExprMetaLeftDenotation(
 		lexer.TokenLess,
@@ -672,9 +690,7 @@ func parseFunctionExpression(p *parser, token lexer.Token) *ast.FunctionExpressi
 
 func defineCastingExpression() {
 
-	const bindingPower = 130
-
-	setExprIdentifierLeftBindingPower(keywordAs, bindingPower)
+	setExprIdentifierLeftBindingPower(keywordAs, exprLeftBindingPowerCasting)
 	setExprLeftDenotation(
 		lexer.TokenIdentifier,
 		func(parser *parser, t lexer.Token, left ast.Expression) ast.Expression {
@@ -710,7 +726,7 @@ func defineCastingExpression() {
 			}
 		})(operation)
 
-		setExprLeftBindingPower(tokenType, bindingPower)
+		setExprLeftBindingPower(tokenType, exprLeftBindingPowerCasting)
 		setExprLeftDenotation(tokenType, leftDenotation)
 	}
 }
@@ -728,7 +744,7 @@ func parseCreateExpressionRemainder(p *parser, token lexer.Token) *ast.CreateExp
 //     invocation : '(' ( argument ( ',' argument )* )? ')'
 //
 func defineInvocationExpression() {
-	setExprLeftBindingPower(lexer.TokenParenOpen, 160)
+	setExprLeftBindingPower(lexer.TokenParenOpen, exprLeftBindingPowerAccess)
 	setExprLeftDenotation(
 		lexer.TokenParenOpen,
 		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
@@ -889,7 +905,7 @@ func defineDictionaryExpression() {
 }
 
 func defineIndexExpression() {
-	setExprLeftBindingPower(lexer.TokenBracketOpen, 160)
+	setExprLeftBindingPower(lexer.TokenBracketOpen, exprLeftBindingPowerAccess)
 	setExprLeftDenotation(
 		lexer.TokenBracketOpen,
 		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
@@ -908,7 +924,7 @@ func defineIndexExpression() {
 }
 
 func defineConditionalExpression() {
-	setExprLeftBindingPower(lexer.TokenQuestionMark, 20)
+	setExprLeftBindingPower(lexer.TokenQuestionMark, exprLeftBindingPowerTernary)
 	setExprLeftDenotation(
 		lexer.TokenQuestionMark,
 		func(p *parser, _ lexer.Token, left ast.Expression) ast.Expression {
@@ -966,9 +982,8 @@ func defineReferenceExpression() {
 }
 
 func defineMemberExpression() {
-	const bindingPower = 160
 
-	setExprLeftBindingPower(lexer.TokenDot, bindingPower)
+	setExprLeftBindingPower(lexer.TokenDot, exprLeftBindingPowerAccess)
 	setExprLeftDenotation(
 		lexer.TokenDot,
 		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
@@ -976,7 +991,7 @@ func defineMemberExpression() {
 		},
 	)
 
-	setExprLeftBindingPower(lexer.TokenQuestionMarkDot, bindingPower)
+	setExprLeftBindingPower(lexer.TokenQuestionMarkDot, exprLeftBindingPowerAccess)
 	setExprLeftDenotation(
 		lexer.TokenQuestionMarkDot,
 		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
