@@ -26,6 +26,12 @@ import (
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
+const (
+	typeLeftBindingPowerOptional = 10 * (iota + 1)
+	typeLeftBindingPowerReference
+	typeLeftBindingPowerRestriction
+)
+
 type typeNullDenotationFunc func(parser *parser, token lexer.Token) ast.Type
 
 var typeNullDenotations = map[lexer.TokenType]typeNullDenotationFunc{}
@@ -85,8 +91,6 @@ type postfixType struct {
 	leftDenotation postfixTypeFunc
 }
 
-const referenceTypeBindingPower = 20
-
 func defineType(def interface{}) {
 	switch def := def.(type) {
 	case prefixType:
@@ -130,7 +134,7 @@ func init() {
 			case keywordAuth:
 				p.skipSpaceAndComments(true)
 				p.mustOne(lexer.TokenAmpersand)
-				right := parseType(p, referenceTypeBindingPower)
+				right := parseType(p, typeLeftBindingPowerReference)
 				return &ast.ReferenceType{
 					Authorized: true,
 					Type:       right,
@@ -238,11 +242,9 @@ func defineArrayType() {
 }
 
 func defineOptionalType() {
-	const bindingPower = 10
-
 	defineType(postfixType{
 		tokenType:    lexer.TokenQuestionMark,
-		bindingPower: bindingPower,
+		bindingPower: typeLeftBindingPowerOptional,
 		leftDenotation: func(left ast.Type, tokenRange ast.Range) ast.Type {
 			return &ast.OptionalType{
 				Type:   left,
@@ -253,7 +255,7 @@ func defineOptionalType() {
 
 	defineType(postfixType{
 		tokenType:    lexer.TokenDoubleQuestionMark,
-		bindingPower: bindingPower,
+		bindingPower: typeLeftBindingPowerOptional,
 		leftDenotation: func(left ast.Type, tokenRange ast.Range) ast.Type {
 			return &ast.OptionalType{
 				Type: &ast.OptionalType{
@@ -269,7 +271,7 @@ func defineOptionalType() {
 func defineReferenceType() {
 	defineType(prefixType{
 		tokenType:    lexer.TokenAmpersand,
-		bindingPower: referenceTypeBindingPower,
+		bindingPower: typeLeftBindingPowerReference,
 		nullDenotation: func(right ast.Type, tokenRange ast.Range) ast.Type {
 			return &ast.ReferenceType{
 				Authorized: false,
@@ -428,7 +430,7 @@ func defineRestrictedOrDictionaryType() {
 
 	// For the left denotation we definitely know it is a restricted type
 
-	setTypeLeftBindingPower(lexer.TokenBraceOpen, 30)
+	setTypeLeftBindingPower(lexer.TokenBraceOpen, typeLeftBindingPowerRestriction)
 	setTypeLeftDenotation(
 		lexer.TokenBraceOpen,
 		func(p *parser, token lexer.Token, left ast.Type) ast.Type {
