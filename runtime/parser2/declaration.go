@@ -753,7 +753,7 @@ func parseCompositeOrInterfaceDeclaration(p *parser, access ast.Access, accessPo
 	p.mustOne(lexer.TokenBraceOpen)
 
 	members, compositeDeclarations, interfaceDeclarations :=
-		parseMembersAndNestedDeclarations(p, isInterface, lexer.TokenBraceClose)
+		parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
 
 	p.skipSpaceAndComments(true)
 
@@ -801,7 +801,6 @@ func parseCompositeOrInterfaceDeclaration(p *parser, access ast.Access, accessPo
 //
 func parseMembersAndNestedDeclarations(
 	p *parser,
-	inInterface bool,
 	endTokenType lexer.TokenType,
 ) (
 	members *ast.Members,
@@ -823,7 +822,7 @@ func parseMembersAndNestedDeclarations(
 			return
 
 		default:
-			memberOrNestedDeclaration := parseMemberOrNestedDeclaration(p, inInterface)
+			memberOrNestedDeclaration := parseMemberOrNestedDeclaration(p)
 			if memberOrNestedDeclaration == nil {
 				return
 			}
@@ -863,7 +862,9 @@ func parseMembersAndNestedDeclarations(
 //                               | compositeDeclaration
 //                               | eventDeclaration
 //
-func parseMemberOrNestedDeclaration(p *parser, inInterface bool) ast.Declaration {
+func parseMemberOrNestedDeclaration(p *parser) ast.Declaration {
+
+	const functionBlockIsOptional = true
 
 	access := ast.AccessNotSpecified
 	var accessPos *ast.Position
@@ -880,7 +881,7 @@ func parseMemberOrNestedDeclaration(p *parser, inInterface bool) ast.Declaration
 				return parseFieldWithVariableKind(p, access, accessPos)
 
 			case keywordFun:
-				return parseFunctionDeclaration(p, inInterface, access, accessPos)
+				return parseFunctionDeclaration(p, functionBlockIsOptional, access, accessPos)
 
 			case keywordEvent:
 				return parseEventDeclaration(p, access, accessPos)
@@ -922,7 +923,7 @@ func parseMemberOrNestedDeclaration(p *parser, inInterface bool) ast.Declaration
 			}
 
 			identifier := tokenToIdentifier(*previousIdentifierToken)
-			return parseSpecialFunctionDeclaration(p, inInterface, access, accessPos, identifier)
+			return parseSpecialFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, identifier)
 		}
 
 		return nil
