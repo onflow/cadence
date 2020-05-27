@@ -1942,6 +1942,71 @@ func TestParseForceExpression(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("newline", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseStatements("x\n!y")
+
+		require.Empty(t, errs)
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ExpressionStatement{
+					Expression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "x",
+							Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+				},
+				&ast.ExpressionStatement{
+					Expression: &ast.UnaryExpression{
+						Operation: ast.OperationNegate,
+						Expression: &ast.IdentifierExpression{
+							Identifier: ast.Identifier{
+								Identifier: "y",
+								Pos:        ast.Position{Line: 2, Column: 1, Offset: 3},
+							},
+						},
+						StartPos: ast.Position{Line: 2, Column: 0, Offset: 2},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("member access, newline", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseStatements("x\n.y!")
+
+		require.Empty(t, errs)
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ExpressionStatement{
+					Expression: &ast.ForceExpression{
+						Expression: &ast.MemberExpression{
+							Expression: &ast.IdentifierExpression{
+								Identifier: ast.Identifier{
+									Identifier: "x",
+									Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+								},
+							},
+							Identifier: ast.Identifier{
+								Identifier: "y",
+								Pos:        ast.Position{Line: 2, Column: 1, Offset: 3},
+							},
+						},
+						EndPos: ast.Position{Line: 2, Column: 2, Offset: 4},
+					},
+				},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseCreate(t *testing.T) {

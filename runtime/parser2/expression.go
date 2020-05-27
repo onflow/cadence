@@ -1015,12 +1015,12 @@ func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 	t := p.current
 	p.next()
 
-	p.skipSpaceAndComments(true)
+	newLineAfterLeft := p.skipSpaceAndComments(true)
 
 	left := applyExprNullDenotation(p, t)
 
 	for {
-		newLineAfterLeft := p.skipSpaceAndComments(true)
+		newLineAfterLeft = p.skipSpaceAndComments(true) || newLineAfterLeft
 
 		if newLineAfterLeft && !exprLeftDenotationAllowsNewline(p.current.Type) {
 			break
@@ -1031,6 +1031,8 @@ func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 		if done {
 			break
 		}
+
+		newLineAfterLeft = false
 	}
 
 	return left
