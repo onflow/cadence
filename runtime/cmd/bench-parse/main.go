@@ -27,31 +27,48 @@ import (
 	"text/tabwriter"
 
 	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/parser2"
 )
 
 func main() {
+	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
+
 	if len(os.Args) <= 1 {
 		data, err := ioutil.ReadAll(bufio.NewReader(os.Stdin))
 		if err != nil {
 			panic(err)
 		}
-		print(bench(data).String())
-		return
-	}
 
-	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
+		oldResult, newResult := benchOldAndNew(string(data))
 
-	for i := 1; i < len(os.Args); i++ {
-		filename := os.Args[i]
-		data, err := ioutil.ReadFile(filename)
+		_, err = fmt.Fprintf(w, "[old]\t%s\n", oldResult)
+		if err != nil {
+			panic(err)
+		}
+		_, err = fmt.Fprintf(w, "[new]\t%s\n", newResult)
 		if err != nil {
 			panic(err)
 		}
 
-		result := bench(data)
-		_, err = fmt.Fprintf(w, "%s:\t%s\n", filename, result)
-		if err != nil {
-			panic(err)
+		return
+	} else {
+		for i := 1; i < len(os.Args); i++ {
+			filename := os.Args[i]
+			data, err := ioutil.ReadFile(filename)
+			if err != nil {
+				panic(err)
+			}
+
+			oldResult, newResult := benchOldAndNew(string(data))
+
+			_, err = fmt.Fprintf(w, "%s:\t[old]\t%s\n", filename, oldResult)
+			if err != nil {
+				panic(err)
+			}
+			_, err = fmt.Fprintf(w, "%s:\t[new]\t%s\n", filename, newResult)
+			if err != nil {
+				panic(err)
+			}
 		}
 	}
 
@@ -61,12 +78,24 @@ func main() {
 	}
 }
 
-func bench(data []byte) testing.BenchmarkResult {
-	code := string(data)
+func benchOldAndNew(code string) (oldResult, newResult testing.BenchmarkResult) {
+	oldResult = bench(code, func(code string) (err error) {
+		_, _, err = parser.ParseProgram(code)
+		return
+	})
 
+	newResult = bench(code, func(code string) (err error) {
+		_, err = parser2.ParseProgram(code)
+		return
+	})
+
+	return
+}
+
+func bench(code string, parse func(string) error) testing.BenchmarkResult {
 	return testing.Benchmark(func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			_, _, err := parser.ParseProgram(code)
+			err := parse(code)
 			if err != nil {
 				panic(err)
 			}
