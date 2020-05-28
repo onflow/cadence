@@ -79,12 +79,8 @@ func parseStatement(p *parser) ast.Statement {
 	// it might start with a keyword for a declaration
 
 	declaration := parseDeclaration(p)
-	// TODO: allow more
-	switch declaration := declaration.(type) {
-	case *ast.VariableDeclaration:
-		return declaration
-	case *ast.FunctionDeclaration:
-		return declaration
+	if statement, ok := declaration.(ast.Statement); ok {
+		return statement
 	}
 
 	// If it is not a statement or declaration,
