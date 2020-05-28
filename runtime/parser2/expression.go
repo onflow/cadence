@@ -457,12 +457,6 @@ func init() {
 	})
 
 	defineExpr(unaryExpr{
-		tokenType:    lexer.TokenPlus,
-		bindingPower: exprLeftBindingPowerUnaryPrefix,
-		operation:    ast.OperationPlus,
-	})
-
-	defineExpr(unaryExpr{
 		tokenType:    lexer.TokenExclamationMark,
 		bindingPower: exprLeftBindingPowerUnaryPrefix,
 		operation:    ast.OperationNegate,
