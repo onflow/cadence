@@ -358,7 +358,17 @@ func TestCheckTransactions(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, err := ParseAndCheck(t, test.code)
+			// TODO: skip new parser for now. it correctly parses,
+			//   but rejects invalid keywords syntactically,
+			//   instead of semantically
+
+			_, err := ParseAndCheckWithOptions(
+				t,
+				test.code,
+				ParseAndCheckOptions{
+					SkipNewParser: true,
+				},
+			)
 
 			errs := ExpectCheckerErrors(t, err, len(test.errors))
 
