@@ -46,38 +46,48 @@ func parseTransactionDeclaration(p *parser) *ast.TransactionDeclaration {
 
 	fields := parseTransactionFields(p)
 
-	// Prepare (optional)
+	// Prepare (optional) or execute (optional)
 
 	var prepare *ast.SpecialFunctionDeclaration
+	var execute *ast.SpecialFunctionDeclaration
 
 	p.skipSpaceAndComments(true)
 	if p.current.Is(lexer.TokenIdentifier) {
-		if p.current.Value != keywordPrepare {
+
+		switch p.current.Value {
+		case keywordPrepare:
+			identifier := tokenToIdentifier(p.current)
+			p.next()
+			prepare = parseSpecialFunctionDeclaration(p, false, ast.AccessNotSpecified, nil, identifier)
+
+		case keywordExecute:
+			execute = parseTransactionExecute(p)
+
+		default:
 			panic(fmt.Errorf(
-				"unexpected identifier, expected keyword %q, got %q",
+				"unexpected identifier, expected keyword %q or %q, got %q",
 				keywordPrepare,
+				keywordExecute,
 				p.current.Value,
 			))
 		}
-
-		identifier := tokenToIdentifier(p.current)
-		p.next()
-		prepare = parseSpecialFunctionDeclaration(p, false, ast.AccessNotSpecified, nil, identifier)
 	}
 
 	// Pre-conditions (optional)
 
 	var preConditions *ast.Conditions
-	p.skipSpaceAndComments(true)
-	if p.current.IsString(lexer.TokenIdentifier, keywordPre) {
-		p.next()
-		conditions := parseConditions(p, ast.ConditionKindPre)
-		preConditions = &conditions
+
+	if execute == nil {
+		p.skipSpaceAndComments(true)
+		if p.current.IsString(lexer.TokenIdentifier, keywordPre) {
+			p.next()
+			conditions := parseConditions(p, ast.ConditionKindPre)
+			preConditions = &conditions
+		}
 	}
 
 	// Execute / post-conditions (both optional, in any order)
 
-	var execute *ast.SpecialFunctionDeclaration
 	var postConditions *ast.Conditions
 
 	var endPos ast.Position
@@ -109,10 +119,10 @@ func parseTransactionDeclaration(p *parser) *ast.TransactionDeclaration {
 
 			default:
 				panic(fmt.Errorf(
-					"unexpected identifier, expected keywords %q or %q, got %s",
+					"unexpected identifier, expected keyword %q or %q, got %q",
 					keywordExecute,
 					keywordPost,
-					p.current.Type,
+					p.current.Value,
 				))
 			}
 
