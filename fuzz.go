@@ -22,7 +22,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -32,7 +32,7 @@ func Fuzz(data []byte) int {
 		return 0
 	}
 
-	program, _, err := parser.ParseProgram(string(data))
+	program, err := parser2.ParseProgram(string(data))
 
 	if err != nil {
 		return 0
