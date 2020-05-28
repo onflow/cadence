@@ -355,6 +355,9 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 		//location = ast.IdentifierLocation(identifier.Identifier)
 		locationPos = identifier.Pos
 		endPos = identifier.EndPosition()
+
+		// TODO: remove
+		panic(fmt.Errorf("identifier imports are not supported yet"))
 	}
 
 	parseLocation := func() {

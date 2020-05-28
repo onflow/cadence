@@ -1141,6 +1141,24 @@ func TestParseImportDeclaration(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("no identifiers, identifier location", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations(` import foo`)
+		require.Equal(t,
+			[]error{errors.New("identifier imports are not supported yet")},
+			errs,
+		)
+
+		var expected []ast.Declaration
+
+		utils.AssertEqualWithDiff(t,
+			expected,
+			result,
+		)
+	})
 }
 
 func TestParseEvent(t *testing.T) {
