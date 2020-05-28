@@ -218,12 +218,12 @@ func TestParseAdvancedExpression(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseExpression("1 +- 2 ++ 3")
+		result, errs := ParseExpression("1 +- 2 -- 3")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
 			&ast.BinaryExpression{
-				Operation: ast.OperationPlus,
+				Operation: ast.OperationMinus,
 				Left: &ast.BinaryExpression{
 					Operation: ast.OperationPlus,
 					Left: &ast.IntegerExpression{
@@ -243,17 +243,13 @@ func TestParseAdvancedExpression(t *testing.T) {
 						},
 					},
 				},
-				Right: &ast.UnaryExpression{
-					Operation: ast.OperationPlus,
-					Expression: &ast.IntegerExpression{
-						Value: big.NewInt(3),
-						Base:  10,
-						Range: ast.Range{
-							StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
-							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
-						},
+				Right: &ast.IntegerExpression{
+					Value: big.NewInt(-3),
+					Base:  10,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+						EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
 					},
-					StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 				},
 			},
 			result,
