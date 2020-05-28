@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/sema"
-	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestCheckOptionalChainingNonOptionalFieldRead(t *testing.T) {

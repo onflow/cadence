@@ -35,6 +35,7 @@ import (
 	"github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/examples"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/onflow/cadence/runtime/trampoline"
@@ -56,9 +57,9 @@ func parseCheckAndInterpretWithOptions(
 	options ParseCheckAndInterpretOptions,
 ) *interpreter.Interpreter {
 
-	checker, err := ParseAndCheckWithOptions(t,
+	checker, err := checker.ParseAndCheckWithOptions(t,
 		code,
-		ParseAndCheckOptions{
+		checker.ParseAndCheckOptions{
 			Options: options.CheckerOptions,
 		},
 	)
@@ -733,7 +734,7 @@ func TestInterpretReturns(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(err error) {
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := checker.ExpectCheckerErrors(t, err, 1)
 
 				assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 			},
@@ -1274,7 +1275,7 @@ func TestInterpretIfStatement(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(err error) {
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := checker.ExpectCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
 				assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
@@ -3899,7 +3900,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 							)
 					}
 
-					checker, err := ParseAndCheck(t,
+					checker, err := checker.ParseAndCheck(t,
 						fmt.Sprintf(
 							`
 					             pub %[1]s interface Test {
@@ -4068,14 +4069,14 @@ func TestInterpretImport(t *testing.T) {
 
 	t.Parallel()
 
-	checkerImported, err := ParseAndCheck(t, `
+	checkerImported, err := checker.ParseAndCheck(t, `
       pub fun answer(): Int {
           return 42
       }
     `)
 	require.NoError(t, err)
 
-	checkerImporting, err := ParseAndCheckWithOptions(t,
+	checkerImporting, err := checker.ParseAndCheckWithOptions(t,
 		`
           import answer from "imported"
 
@@ -4083,7 +4084,7 @@ func TestInterpretImport(t *testing.T) {
               return answer()
           }
         `,
-		ParseAndCheckOptions{
+		checker.ParseAndCheckOptions{
 			ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
 				assert.Equal(t,
 					ImportedLocation,
@@ -4119,13 +4120,13 @@ func TestInterpretImportError(t *testing.T) {
 			stdlib.PanicFunction,
 		}.ToValueDeclarations()
 
-	checkerImported, err := ParseAndCheckWithOptions(t,
+	checkerImported, err := checker.ParseAndCheckWithOptions(t,
 		`
           pub fun answer(): Int {
               return panic("?!")
           }
         `,
-		ParseAndCheckOptions{
+		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),
 			},
@@ -4133,7 +4134,7 @@ func TestInterpretImportError(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	checkerImporting, err := ParseAndCheckWithOptions(t,
+	checkerImporting, err := checker.ParseAndCheckWithOptions(t,
 		`
           import answer from "imported"
 
@@ -4141,7 +4142,7 @@ func TestInterpretImportError(t *testing.T) {
               return answer()
           }
         `,
-		ParseAndCheckOptions{
+		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),
 			},
@@ -5413,7 +5414,7 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
 
 	t.Parallel()
 
-	checkerImported, err := ParseAndCheck(t, `
+	checkerImported, err := checker.ParseAndCheck(t, `
       // function must have arguments
       pub fun x(x: Int) {}
 
@@ -5427,7 +5428,7 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
     `)
 	require.NoError(t, err)
 
-	checkerImporting, err := ParseAndCheckWithOptions(t,
+	checkerImporting, err := checker.ParseAndCheckWithOptions(t,
 		`
           import Y from "imported"
 
@@ -5436,7 +5437,7 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
               Y().x()
           }
         `,
-		ParseAndCheckOptions{
+		checker.ParseAndCheckOptions{
 			ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
 				assert.Equal(t,
 					ImportedLocation,
@@ -6827,7 +6828,7 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 
 	t.Parallel()
 
-	checkerImported, err := ParseAndCheck(t, `
+	checkerImported, err := checker.ParseAndCheck(t, `
       struct interface Foo {
           fun check(answer: Int) {
               pre {
@@ -6838,7 +6839,7 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 	`)
 	require.NoError(t, err)
 
-	checkerImporting, err := ParseAndCheckWithOptions(t,
+	checkerImporting, err := checker.ParseAndCheckWithOptions(t,
 		`
           import Foo from "imported"
 
@@ -6851,7 +6852,7 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
               bar.check(answer: 1)
           }
         `,
-		ParseAndCheckOptions{
+		checker.ParseAndCheckOptions{
 			ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
 				assert.Equal(t,
 					ast.StringLocation("imported"),

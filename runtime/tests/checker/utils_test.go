@@ -24,7 +24,6 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func ParseAndCheckWithPanic(t *testing.T, code string) (*sema.Checker, error) {

@@ -27,7 +27,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestCheckInvalidReturnValue(t *testing.T) {

@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -34,7 +35,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 
 	t.Parallel()
 
-	checkerImported, err := ParseAndCheck(t, `
+	checkerImported, err := checker.ParseAndCheck(t, `
       pub resource R {}
 
       pub fun createR(): @R {
@@ -43,7 +44,7 @@ func TestInterpretResourceUUID(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	checkerImporting, err := ParseAndCheckWithOptions(t,
+	checkerImporting, err := checker.ParseAndCheckWithOptions(t,
 		`
           import createR from "imported"
 
@@ -56,7 +57,7 @@ func TestInterpretResourceUUID(t *testing.T) {
               ]
           }
         `,
-		ParseAndCheckOptions{
+		checker.ParseAndCheckOptions{
 			ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
 				assert.Equal(t,
 					ImportedLocation,
