@@ -1643,6 +1643,37 @@ func TestLexFixedPoint(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("missing fractional digits", func(t *testing.T) {
+		testLex(t,
+			"0.",
+			[]Token{
+				{
+					Type:  TokenError,
+					Value: errors.New("missing fractional digits"),
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+				{
+					Type:  TokenFixedPointLiteral,
+					Value: "0.",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+				{
+					Type: TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					},
+				},
+			},
+		)
+	})
 }
 
 func TestLexLineComment(t *testing.T) {
