@@ -839,7 +839,13 @@ func (v *ProgramVisitor) VisitInnerType(ctx *InnerTypeContext) interface{} {
 
 func (v *ProgramVisitor) VisitTypeRestrictions(ctx *TypeRestrictionsContext) interface{} {
 	nominalTypeContexts := ctx.AllNominalType()
-	nominalTypes := make([]*ast.NominalType, len(nominalTypeContexts))
+
+	var nominalTypes []*ast.NominalType
+	if len(nominalTypeContexts) == 0 {
+		return nominalTypes
+	}
+
+	nominalTypes = make([]*ast.NominalType, len(nominalTypeContexts))
 
 	for i, context := range nominalTypeContexts {
 		nominalTypes[i] = context.Accept(v).(*ast.NominalType)
