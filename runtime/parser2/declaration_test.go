@@ -726,7 +726,6 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			result,
 		)
 	})
-
 }
 
 func TestParseAccess(t *testing.T) {
@@ -1851,6 +1850,51 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 11, Line: 2, Column: 10},
 						EndPos:   ast.Position{Offset: 216, Line: 12, Column: 10},
+					},
+				},
+			},
+			result,
+		)
+	})
+}
+
+func TestParseTransactionDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no prepare, execute", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations("transaction { execute {} }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.TransactionDeclaration{
+					Execute: &ast.SpecialFunctionDeclaration{
+						Kind: common.DeclarationKindExecute,
+						FunctionDeclaration: &ast.FunctionDeclaration{
+							Access: ast.AccessNotSpecified,
+							Identifier: ast.Identifier{
+								Identifier: "execute",
+								Pos:        ast.Position{Offset: 14, Line: 1, Column: 14},
+							},
+							ParameterList: &ast.ParameterList{},
+							FunctionBlock: &ast.FunctionBlock{
+								Block: &ast.Block{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 22, Line: 1, Column: 22},
+										EndPos:   ast.Position{Offset: 23, Line: 1, Column: 23},
+									},
+								},
+							},
+							StartPos: ast.Position{Offset: 14, Line: 1, Column: 14},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 25, Offset: 25},
 					},
 				},
 			},
