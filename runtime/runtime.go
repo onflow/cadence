@@ -1206,28 +1206,36 @@ func (r *interpreterRuntime) getCurrentBlockHeight(runtimeInterface Interface) (
 	return
 }
 
-func (r *interpreterRuntime) getBlockAtHeight(height uint64, runtimeInterface Interface) *BlockValue {
+func (r *interpreterRuntime) getBlockAtHeight(height uint64, runtimeInterface Interface) (*BlockValue, error) {
 
 	var hash BlockHash
 	var timestamp int64
 	var exists bool
+	var err error
 
 	wrapPanic(func() {
-		hash, timestamp, exists = runtimeInterface.GetBlockAtHeight(height)
+		hash, timestamp, exists, err = runtimeInterface.GetBlockAtHeight(height)
 	})
 
+	if err != nil {
+		return nil, err
+	}
+
 	if !exists {
-		return nil
+		return nil, nil
 	}
 
 	block := NewBlockValue(height, hash, time.Unix(0, timestamp))
-	return &block
+	return &block, nil
 }
 
 func (r *interpreterRuntime) newGetCurrentBlockFunction(runtimeInterface Interface) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
 		height := r.getCurrentBlockHeight(runtimeInterface)
-		block := r.getBlockAtHeight(height, runtimeInterface)
+		block, err := r.getBlockAtHeight(height, runtimeInterface)
+		if err != nil {
+			panic(err)
+		}
 		return trampoline.Done{Result: *block}
 	}
 }
@@ -1235,7 +1243,10 @@ func (r *interpreterRuntime) newGetCurrentBlockFunction(runtimeInterface Interfa
 func (r *interpreterRuntime) newGetBlockFunction(runtimeInterface Interface) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
 		height := uint64(invocation.Arguments[0].(interpreter.UInt64Value))
-		block := r.getBlockAtHeight(height, runtimeInterface)
+		block, err := r.getBlockAtHeight(height, runtimeInterface)
+		if err != nil {
+			panic(err)
+		}
 		var result interpreter.Value
 		if block == nil {
 			result = interpreter.NilValue{}

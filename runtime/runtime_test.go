@@ -222,9 +222,10 @@ func (i *testRuntimeInterface) GetCurrentBlockHeight() uint64 {
 	return 1
 }
 
-func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (hash BlockHash, timestamp int64, exists bool) {
+func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (hash BlockHash, timestamp int64, exists bool,
+	err error) {
 	buf := new(bytes.Buffer)
-	err := binary.Write(buf, binary.BigEndian, height)
+	err = binary.Write(buf, binary.BigEndian, height)
 	if err != nil {
 		panic(err)
 	}
@@ -232,7 +233,7 @@ func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (hash BlockHash, 
 	encoded := buf.Bytes()
 	copy(hash[stdlib.BlockIDSize-len(encoded):], encoded)
 
-	return hash, time.Unix(int64(height), 0).UnixNano(), true
+	return hash, time.Unix(int64(height), 0).UnixNano(), true, nil
 }
 
 func TestRuntimeImport(t *testing.T) {

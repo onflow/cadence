@@ -65,7 +65,7 @@ type Interface interface {
 	// GetCurrentBlockHeight returns the current block height.
 	GetCurrentBlockHeight() uint64
 	// GetBlockAtHeight returns the block at the given height.
-	GetBlockAtHeight(height uint64) (hash BlockHash, timestamp int64, exists bool)
+	GetBlockAtHeight(height uint64) (hash BlockHash, timestamp int64, exists bool, err error)
 }
 
 type Metrics interface {
@@ -142,6 +142,6 @@ func (i *EmptyRuntimeInterface) GetCurrentBlockHeight() uint64 {
 	return 0
 }
 
-func (i *EmptyRuntimeInterface) GetBlockAtHeight(_ uint64) (hash BlockHash, timestamp int64, exists bool) {
+func (i *EmptyRuntimeInterface) GetBlockAtHeight(_ uint64) (hash BlockHash, timestamp int64, exists bool, err error) {
 	return
 }
