@@ -68,6 +68,10 @@ func parseStatement(p *parser) ast.Statement {
 			return parseForStatement(p)
 		case keywordEmit:
 			return parseEmitStatement(p)
+		case keywordFun:
+			// The `fun` keyword is ambiguous: it either introduces a function expression
+			// or a function declaration, depending on if an identifier follows, or not.
+			return parseFunctionDeclarationOrFunctionExpressionStatement(p)
 		}
 	}
 
@@ -118,6 +122,46 @@ func parseStatement(p *parser) ast.Statement {
 	default:
 		return &ast.ExpressionStatement{
 			Expression: expression,
+		}
+	}
+}
+
+func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) ast.Statement {
+
+	startPos := p.current.StartPos
+
+	// Skip the `fun` keyword
+	p.next()
+
+	p.skipSpaceAndComments(true)
+
+	if p.current.Is(lexer.TokenIdentifier) {
+		identifier := tokenToIdentifier(p.current)
+
+		p.next()
+
+		parameterList, returnTypeAnnotation, functionBlock :=
+			parseFunctionParameterListAndRest(p, false)
+
+		return &ast.FunctionDeclaration{
+			Access:               ast.AccessNotSpecified,
+			Identifier:           identifier,
+			ParameterList:        parameterList,
+			ReturnTypeAnnotation: returnTypeAnnotation,
+			FunctionBlock:        functionBlock,
+			StartPos:             startPos,
+		}
+	} else {
+		parameterList, returnTypeAnnotation, functionBlock :=
+			parseFunctionParameterListAndRest(p, false)
+
+		return &ast.ExpressionStatement{
+			Expression: &ast.FunctionExpression{
+				ParameterList:        parameterList,
+				ReturnTypeAnnotation: returnTypeAnnotation,
+				FunctionBlock:        functionBlock,
+				StartPos:             startPos,
+			},
 		}
 	}
 }

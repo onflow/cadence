@@ -779,3 +779,97 @@ func TestParseEmit(t *testing.T) {
 		)
 	})
 }
+
+func TestParseFunctionStatementOrExpression(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("function declaration with name", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseStatements("fun foo() {}")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.FunctionDeclaration{
+					Access: ast.AccessNotSpecified,
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+					ParameterList: &ast.ParameterList{
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "",
+								Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
+								EndPos:   ast.Position{Line: 1, Column: 11, Offset: 11},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("function expression without name", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseStatements("fun () {}")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ExpressionStatement{
+					Expression: &ast.FunctionExpression{
+						ParameterList: &ast.ParameterList{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+								EndPos:   ast.Position{Line: 1, Column: 5, Offset: 5},
+							},
+						},
+						ReturnTypeAnnotation: &ast.TypeAnnotation{
+							IsResource: false,
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "",
+									Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+								},
+							},
+							StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
+						FunctionBlock: &ast.FunctionBlock{
+							Block: &ast.Block{
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+									EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+								},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+			},
+			result,
+		)
+	})
+}
