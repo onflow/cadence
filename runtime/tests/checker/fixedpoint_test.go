@@ -29,7 +29,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestCheckFixedPointLiteralTypeConversionInVariableDeclaration(t *testing.T) {

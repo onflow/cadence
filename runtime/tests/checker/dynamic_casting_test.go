@@ -27,7 +27,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
-	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 var dynamicCastingOperations = []ast.Operation{

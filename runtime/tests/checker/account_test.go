@@ -27,7 +27,6 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {

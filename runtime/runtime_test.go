@@ -38,6 +38,7 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -2914,7 +2915,7 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 		require.IsType(t, Error{}, err)
 		err = err.(Error).Unwrap()
 
-		errs := utils.ExpectCheckerErrors(t, err, 1)
+		errs := checker.ExpectCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidTopLevelDeclarationError{}, errs[0])
 	})

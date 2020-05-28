@@ -26,14 +26,14 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/interpreter"
-	. "github.com/onflow/cadence/runtime/tests/utils"
+	"github.com/onflow/cadence/runtime/tests/checker"
 )
 
 func TestInterpretStatementHandler(t *testing.T) {
 
 	t.Parallel()
 
-	checkerImported, err := ParseAndCheck(t, `
+	checkerImported, err := checker.ParseAndCheck(t, `
       pub fun a() {
           true
           true
@@ -41,7 +41,7 @@ func TestInterpretStatementHandler(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	checkerImporting, err := ParseAndCheckWithOptions(t,
+	checkerImporting, err := checker.ParseAndCheckWithOptions(t,
 		`
           import a from "imported"
 
@@ -61,7 +61,7 @@ func TestInterpretStatementHandler(t *testing.T) {
               true
           }
         `,
-		ParseAndCheckOptions{
+		checker.ParseAndCheckOptions{
 			ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
 				return checkerImported.Program, nil
 			},
@@ -129,7 +129,7 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 
 	t.Parallel()
 
-	checkerImported, err := ParseAndCheck(t, `
+	checkerImported, err := checker.ParseAndCheck(t, `
       pub fun a() {
           var i = 1
           while i <= 4 {
@@ -141,7 +141,7 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	checkerImporting, err := ParseAndCheckWithOptions(t,
+	checkerImporting, err := checker.ParseAndCheckWithOptions(t,
 		`
           import a from "imported"
 
@@ -156,7 +156,7 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
               a()
           }
         `,
-		ParseAndCheckOptions{
+		checker.ParseAndCheckOptions{
 			ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
 				return checkerImported.Program, nil
 			},
@@ -223,7 +223,7 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 
 	t.Parallel()
 
-	checkerImported, err := ParseAndCheck(t, `
+	checkerImported, err := checker.ParseAndCheck(t, `
       pub fun a() {}
 
       pub fun b() {
@@ -236,7 +236,7 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
     `)
 	require.NoError(t, err)
 
-	checkerImporting, err := ParseAndCheckWithOptions(t,
+	checkerImporting, err := checker.ParseAndCheckWithOptions(t,
 		`
           import b from "imported"
 
@@ -256,7 +256,7 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
               true
           }
         `,
-		ParseAndCheckOptions{
+		checker.ParseAndCheckOptions{
 			ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
 				return checkerImported.Program, nil
 			},

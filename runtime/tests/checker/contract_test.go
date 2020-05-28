@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
-	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestCheckInvalidContractAccountField(t *testing.T) {

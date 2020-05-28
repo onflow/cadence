@@ -26,7 +26,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	. "github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestCheckInvalidFunctionCallWithTooFewArguments(t *testing.T) {
