@@ -82,6 +82,16 @@ func (Variable) ID() string {
 	panic("not implemented")
 }
 
+// MetaType
+
+type MetaType struct{}
+
+func (MetaType) isType() {}
+
+func (MetaType) ID() string {
+	return "Type"
+}
+
 // VoidType
 
 type VoidType struct{}

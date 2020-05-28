@@ -33,6 +33,12 @@ type ReferenceDynamicType interface {
 	InnerType() DynamicType
 }
 
+// MetaTypeDynamicType
+
+type MetaTypeDynamicType struct{}
+
+func (MetaTypeDynamicType) IsDynamicType() {}
+
 // VoidDynamicType
 
 type VoidDynamicType struct{}
