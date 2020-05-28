@@ -70,6 +70,64 @@ type HasKeyString interface {
 	KeyString() string
 }
 
+// MetaTypeValue
+
+type MetaTypeValue struct {
+	Type sema.Type
+}
+
+func (MetaTypeValue) IsValue() {}
+
+func (MetaTypeValue) DynamicType(_ *Interpreter) DynamicType {
+	return MetaTypeDynamicType{}
+}
+
+func (v MetaTypeValue) Copy() Value {
+	return v
+}
+
+func (MetaTypeValue) GetOwner() *common.Address {
+	// value is never owned
+	return nil
+}
+
+func (MetaTypeValue) SetOwner(_ *common.Address) {
+	// NO-OP: value cannot be owned
+}
+
+func (MetaTypeValue) IsModified() bool {
+	return false
+}
+
+func (MetaTypeValue) SetModified(_ bool) {
+	// NO-OP
+}
+
+func (v MetaTypeValue) String() string {
+	return fmt.Sprintf("Type<%s>", v.Type)
+}
+
+func (v MetaTypeValue) Equal(other Value) BoolValue {
+	otherMetaType, ok := other.(MetaTypeValue)
+	if !ok {
+		return false
+	}
+	return BoolValue(v.Type.Equal(otherMetaType.Type))
+}
+
+func (v MetaTypeValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+	case "identifier":
+		return NewStringValue(v.Type.QualifiedString())
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (v MetaTypeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
 // VoidValue
 
 type VoidValue struct{}

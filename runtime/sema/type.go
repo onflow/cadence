@@ -270,6 +270,67 @@ func init() {
 	}
 }
 
+// MetaType represents the type of a type.
+type MetaType struct{}
+
+func (*MetaType) IsType() {}
+
+func (*MetaType) String() string {
+	return "Type"
+}
+
+func (*MetaType) QualifiedString() string {
+	return "Type"
+}
+
+func (*MetaType) ID() TypeID {
+	return "Type"
+}
+
+func (*MetaType) Equal(other Type) bool {
+	_, ok := other.(*MetaType)
+	return ok
+}
+
+func (*MetaType) IsResourceType() bool {
+	return false
+}
+
+func (*MetaType) IsInvalidType() bool {
+	return false
+}
+
+func (*MetaType) TypeAnnotationState() TypeAnnotationState {
+	return TypeAnnotationStateValid
+}
+
+func (*MetaType) ContainsFirstLevelInterfaceType() bool {
+	return false
+}
+
+func (*MetaType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *MetaType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
+}
+
+func (*MetaType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *MetaType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+
+	switch identifier {
+	case "identifier":
+		return NewPublicConstantFieldMember(t, identifier, &StringType{})
+
+	default:
+		return nil
+	}
+}
+
 // AnyType represents the top type of all types.
 // NOTE: This type is only used internally and not available in programs.
 type AnyType struct{}
@@ -3767,6 +3828,7 @@ func init() {
 	}
 
 	otherTypes := []Type{
+		&MetaType{},
 		&VoidType{},
 		&AnyStructType{},
 		&AnyResourceType{},
@@ -3957,6 +4019,25 @@ func numberFunctionArgumentExpressionsChecker(numberType Type) func(*Checker, []
 		case *ast.FixedPointExpression:
 			checker.checkFixedPointLiteral(numberExpression, numberType)
 		}
+	}
+}
+
+func init() {
+
+	metaType := &MetaType{}
+	typeName := metaType.String()
+
+	// check type is not accidentally redeclared
+	if _, ok := BaseValues[typeName]; ok {
+		panic(errors.NewUnreachableError())
+	}
+
+	BaseValues[typeName] = baseFunction{
+		name: typeName,
+		invokableType: &FunctionType{
+			TypeParameters:       []*TypeParameter{{Name: "T"}},
+			ReturnTypeAnnotation: &TypeAnnotation{Type: metaType},
+		},
 	}
 }
 
@@ -5631,7 +5712,8 @@ func IsEquatableType(ty Type) bool {
 	// TODO: add support for arrays and dictionaries
 	// TODO: add support for composites that are equatable
 
-	if IsSubType(ty, &StringType{}) ||
+	if IsSubType(ty, &MetaType{}) ||
+		IsSubType(ty, &StringType{}) ||
 		IsSubType(ty, &BoolType{}) ||
 		IsSubType(ty, &NumberType{}) ||
 		IsSubType(ty, &ReferenceType{}) ||

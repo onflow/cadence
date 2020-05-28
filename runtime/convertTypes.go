@@ -34,6 +34,8 @@ func exportType(typ sema.Type) cadence.Type {
 		return cadence.AnyStructType{}
 	case *sema.VoidType:
 		return cadence.VoidType{}
+	case *sema.MetaType:
+		return cadence.MetaType{}
 	case *sema.OptionalType:
 		return exportOptionalType(t)
 	case *sema.BoolType:

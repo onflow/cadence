@@ -3409,6 +3409,28 @@ func (interpreter *Interpreter) defineBaseFunctions() {
 			panic(errors.NewUnreachableError())
 		}
 	}
+
+	err := interpreter.ImportValue(
+		"Type",
+		NewHostFunctionValue(
+			func(invocation Invocation) Trampoline {
+				// `Invocation.TypeParameterTypes` is a map, so get the first
+				// element / type by iterating over the values of the map.
+
+				var ty sema.Type
+				for _, ty = range invocation.TypeParameterTypes {
+					break
+				}
+
+				result := MetaTypeValue{Type: ty}
+
+				return Done{Result: result}
+			},
+		),
+	)
+	if err != nil {
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (interpreter *Interpreter) newConverterFunction(converter ValueConverter) FunctionValue {
@@ -3431,6 +3453,15 @@ func (interpreter *Interpreter) newConverterFunction(converter ValueConverter) F
 
 func IsSubType(subType DynamicType, superType sema.Type) bool {
 	switch typedSubType := subType.(type) {
+	case MetaTypeDynamicType:
+		switch superType.(type) {
+		case *sema.MetaType, *sema.AnyStructType:
+			return true
+
+		default:
+			return false
+		}
+
 	case VoidDynamicType:
 		switch superType.(type) {
 		case *sema.VoidType, *sema.AnyStructType:
