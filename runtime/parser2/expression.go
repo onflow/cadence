@@ -432,23 +432,26 @@ func init() {
 		nullDenotation: func(right ast.Expression, tokenRange ast.Range) ast.Expression {
 			switch right := right.(type) {
 			case *ast.IntegerExpression:
-				if right.Value != nil {
-					right.Value.Neg(right.Value)
+				if right.Value.Sign() > 0 {
+					if right.Value != nil {
+						right.Value.Neg(right.Value)
+					}
+					right.StartPos = tokenRange.StartPos
+					return right
 				}
-				right.StartPos = tokenRange.StartPos
-				return right
 
 			case *ast.FixedPointExpression:
-				right.Negative = true
-				right.StartPos = tokenRange.StartPos
-				return right
-
-			default:
-				return &ast.UnaryExpression{
-					Operation:  ast.OperationMinus,
-					Expression: right,
-					StartPos:   tokenRange.StartPos,
+				if !right.Negative {
+					right.Negative = !right.Negative
+					right.StartPos = tokenRange.StartPos
+					return right
 				}
+			}
+
+			return &ast.UnaryExpression{
+				Operation:  ast.OperationMinus,
+				Expression: right,
+				StartPos:   tokenRange.StartPos,
 			}
 		},
 	})
