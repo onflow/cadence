@@ -21,6 +21,7 @@ package parser2
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
@@ -277,4 +278,20 @@ func ParseProgram(input string) (program *ast.Program, err error) {
 		Declarations: res.([]ast.Declaration),
 	}
 	return
+}
+
+func ParseProgramFromFile(filename string) (program *ast.Program, code string, err error) {
+	var data []byte
+	data, err = ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, "", err
+	}
+
+	code = string(data)
+
+	program, err = ParseProgram(code)
+	if err != nil {
+		return nil, code, err
+	}
+	return program, code, nil
 }
