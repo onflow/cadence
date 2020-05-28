@@ -196,13 +196,6 @@ func defineArrayType() {
 
 				p.skipSpaceAndComments(true)
 
-				if !p.current.Is(lexer.TokenDecimalLiteral) {
-					panic(fmt.Errorf(
-						"expected size for constant sized type, got %s",
-						p.current.Type,
-					))
-				}
-
 				numberExpression := parseExpression(p, lowestBindingPower)
 
 				integerExpression, ok := numberExpression.(*ast.IntegerExpression)
