@@ -2867,6 +2867,33 @@ func TestParseFixedPoint(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("missing fractional digits", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("0.")
+		require.Equal(t,
+			[]error{
+				errors.New("missing fractional digits"),
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.FixedPointExpression{
+				Negative:        false,
+				UnsignedInteger: big.NewInt(0),
+				Fractional:      big.NewInt(0),
+				Scale:           1,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+				},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseLessThanOrTypeArguments(t *testing.T) {

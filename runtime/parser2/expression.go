@@ -1334,7 +1334,14 @@ func parseIntegerLiteral(p *parser, literal, text string, kind IntegerLiteralKin
 func parseFixedPointPart(part string) (integer *big.Int, scale uint) {
 	withoutUnderscores := strings.Replace(part, "_", "", -1)
 	integer, _ = new(big.Int).SetString(withoutUnderscores, 10)
-	return integer, uint(len(withoutUnderscores))
+	if integer == nil {
+		integer = new(big.Int)
+	}
+	scale = uint(len(withoutUnderscores))
+	if scale == 0 {
+		scale = 1
+	}
+	return integer, scale
 }
 
 func parseFixedPointLiteral(text string, tokenRange ast.Range) *ast.FixedPointExpression {

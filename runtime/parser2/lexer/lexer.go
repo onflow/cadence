@@ -278,7 +278,6 @@ func (l *lexer) scanLineComment() {
 }
 
 func (l *lexer) acceptWhile(f func(rune) bool) {
-
 	for {
 		r := l.next()
 
@@ -334,9 +333,7 @@ func (l *lexer) scanHexadecimalRemainder() {
 }
 
 func (l *lexer) scanDecimalOrFixedPointRemainder() TokenType {
-	l.acceptWhile(func(r rune) bool {
-		return (r >= '0' && r <= '9') || r == '_'
-	})
+	l.acceptWhile(isDecimalDigitOrUnderscore)
 	r := l.next()
 	if r == '.' {
 		l.scanFixedPointRemainder()
@@ -348,7 +345,15 @@ func (l *lexer) scanDecimalOrFixedPointRemainder() TokenType {
 }
 
 func (l *lexer) scanFixedPointRemainder() {
-	l.acceptWhile(func(r rune) bool {
-		return (r >= '0' && r <= '9') || r == '_'
-	})
+	r := l.next()
+	if !isDecimalDigitOrUnderscore(r) {
+		l.backupOne()
+		l.emitError(fmt.Errorf("missing fractional digits"))
+		return
+	}
+	l.acceptWhile(isDecimalDigitOrUnderscore)
+}
+
+func isDecimalDigitOrUnderscore(r rune) bool {
+	return (r >= '0' && r <= '9') || r == '_'
 }
