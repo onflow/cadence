@@ -488,6 +488,7 @@ func TestCheckAccessModifierLocalVariableDeclaration(t *testing.T) {
 	}
 }
 
+// TODO: remove
 func TestCheckAccessModifierLocalOptionalBinding(t *testing.T) {
 
 	t.Parallel()
@@ -505,7 +506,7 @@ func TestCheckAccessModifierLocalOptionalBinding(t *testing.T) {
 
 		t.Run(access.Keyword(), func(t *testing.T) {
 
-			_, err := ParseAndCheck(t,
+			_, err := ParseAndCheckWithOptions(t,
 				fmt.Sprintf(
 					`
                       fun test() {
@@ -515,6 +516,9 @@ func TestCheckAccessModifierLocalOptionalBinding(t *testing.T) {
 	                `,
 					access.Keyword(),
 				),
+				ParseAndCheckOptions{
+					SkipNewParser: true,
+				},
 			)
 
 			if expectSuccess {
