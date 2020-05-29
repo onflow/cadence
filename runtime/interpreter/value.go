@@ -6016,21 +6016,26 @@ type AccountValue interface {
 // AuthAccountValue
 
 type AuthAccountValue struct {
-	Address                 AddressValue
-	setCodeFunction         FunctionValue
-	addPublicKeyFunction    FunctionValue
-	removePublicKeyFunction FunctionValue
+	Address                              AddressValue
+	setCodeFunction                      FunctionValue
+	unsafeNotInitializingSetCodeFunction FunctionValue
+	addPublicKeyFunction                 FunctionValue
+	removePublicKeyFunction              FunctionValue
 }
 
 func NewAuthAccountValue(
 	address AddressValue,
-	setCodeFunction, addPublicKeyFunction, removePublicKeyFunction FunctionValue,
+	setCodeFunction FunctionValue,
+	unsafeNotInitializingSetCodeFunction FunctionValue,
+	addPublicKeyFunction FunctionValue,
+	removePublicKeyFunction FunctionValue,
 ) AuthAccountValue {
 	return AuthAccountValue{
-		Address:                 address,
-		setCodeFunction:         setCodeFunction,
-		addPublicKeyFunction:    addPublicKeyFunction,
-		removePublicKeyFunction: removePublicKeyFunction,
+		Address:                              address,
+		setCodeFunction:                      setCodeFunction,
+		unsafeNotInitializingSetCodeFunction: unsafeNotInitializingSetCodeFunction,
+		addPublicKeyFunction:                 addPublicKeyFunction,
+		removePublicKeyFunction:              removePublicKeyFunction,
 	}
 }
 
@@ -6126,6 +6131,9 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 
 	case "setCode":
 		return v.setCodeFunction
+
+	case "unsafeNotInitializingSetCode":
+		return v.unsafeNotInitializingSetCodeFunction
 
 	case "addPublicKey":
 		return v.addPublicKeyFunction

@@ -58,6 +58,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 		panicFunction,
 		panicFunction,
 		panicFunction,
+		panicFunction,
 	)
 
 	// `pubAccount`

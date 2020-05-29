@@ -6805,6 +6805,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 								panicFunction,
 								panicFunction,
 								panicFunction,
+								panicFunction,
 							),
 						}
 					},
@@ -7520,6 +7521,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 	values := map[string]interpreter.Value{
 		"account": interpreter.NewAuthAccountValue(
 			addressValue,
+			panicFunction,
 			panicFunction,
 			panicFunction,
 			panicFunction,

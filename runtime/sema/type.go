@@ -4502,7 +4502,7 @@ func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error
 	case "address":
 		return newField(&AddressType{})
 
-	case "setCode":
+	case "setCode", "unsafeNotInitializingSetCode":
 		return newFunction(authAccountSetCodeFunctionType)
 
 	case "addPublicKey":

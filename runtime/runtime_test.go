@@ -4107,3 +4107,154 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	err = runtime.ExecuteTransaction(callScript, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 }
+
+func TestRuntimeTransaction_UpdateAccountCodeUnsafeNotInitializing(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	const contract1 = `
+      pub contract Test {
+
+          pub resource R {
+
+              pub let name: String
+
+              init(name: String) {
+                  self.name = name
+              }
+
+              pub fun hello(): Int {
+                  return 1
+              }
+          }
+
+          pub var rs: @{String: R}
+
+          pub fun hello(): Int {
+              return 1
+          }
+
+          init() {
+              self.rs <- {}
+              self.rs["r1"] <-! create R(name: "1")
+          }
+      }
+    `
+
+	const contract2 = `
+      pub contract Test {
+
+          pub resource R {
+
+              pub let name: String
+
+              init(name: String) {
+                  self.name = name
+              }
+
+              pub fun hello(): Int {
+                  return 2
+              }
+          }
+
+          pub var rs: @{String: R}
+
+          pub fun hello(): Int {
+              return 2
+          }
+
+          init() {
+              self.rs <- {}
+              panic("should never be executed")
+          }
+      }
+    `
+
+	newDeployTransaction := func(code, function string) []byte {
+		return []byte(fmt.Sprintf(
+			`
+              transaction {
+
+                  prepare(signer: AuthAccount) {
+                      signer.%s(%s)
+                  }
+              }
+            `,
+			function,
+			ArrayValueFromBytes([]byte(code)).String(),
+		))
+	}
+
+	var accountCode []byte
+	var events []cadence.Event
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestStorage(nil, nil),
+		getSigningAccounts: func() []Address {
+			return []Address{common.BytesToAddress([]byte{0x42})}
+		},
+		resolveImport: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+			accountCode = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) {
+			events = append(events, event)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	deployTx1 := newDeployTransaction(contract1, "setCode")
+
+	err := runtime.ExecuteTransaction(deployTx1, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	script1 := []byte(`
+      import 0x42
+
+      pub fun main() {
+          // Check stored data
+
+          assert(Test.rs.length == 1)
+          assert(Test.rs["r1"]?.name == "1")
+
+          // Check functions
+
+          assert(Test.rs["r1"]?.hello() == 1)
+          assert(Test.hello() == 1)
+      }
+    `)
+
+	_, err = runtime.ExecuteScript(script1, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	deployTx2 := newDeployTransaction(contract2, "unsafeNotInitializingSetCode")
+
+	err = runtime.ExecuteTransaction(deployTx2, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	script2 := []byte(`
+      import 0x42
+
+      pub fun main() {
+          // Existing data is still available and the same as before
+
+          assert(Test.rs.length == 1)
+          assert(Test.rs["r1"]?.name == "1")
+
+          // New function code is executed.
+          // Compare with script1 above, which checked 1.
+
+          assert(Test.rs["r1"]?.hello() == 2)
+          assert(Test.hello() == 2)
+      }
+    `)
+
+	_, err = runtime.ExecuteScript(script2, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+}
