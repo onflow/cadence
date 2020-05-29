@@ -35,6 +35,7 @@ func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []
 
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
+			// Skip the semicolon
 			p.next()
 			continue
 
@@ -110,16 +111,19 @@ func parseAccess(p *parser) ast.Access {
 
 	switch p.current.Value {
 	case keywordPriv:
+		// Skip the `priv` keyword
 		p.next()
 		return ast.AccessPrivate
 
 	case keywordPub:
+		// Skip the `pub` keyword
 		p.next()
 		p.skipSpaceAndComments(true)
 		if !p.current.Is(lexer.TokenParenOpen) {
 			return ast.AccessPublic
 		}
 
+		// Skip the opening paren
 		p.next()
 		p.skipSpaceAndComments(true)
 
@@ -138,6 +142,7 @@ func parseAccess(p *parser) ast.Access {
 			))
 		}
 
+		// Skip the `set` keyword
 		p.next()
 		p.skipSpaceAndComments(true)
 
@@ -146,6 +151,7 @@ func parseAccess(p *parser) ast.Access {
 		return ast.AccessPublicSettable
 
 	case keywordAccess:
+		// Skip the `access` keyword
 		p.next()
 		p.skipSpaceAndComments(true)
 
@@ -190,6 +196,7 @@ func parseAccess(p *parser) ast.Access {
 			))
 		}
 
+		// Skip the keyword
 		p.next()
 		p.skipSpaceAndComments(true)
 
@@ -233,12 +240,14 @@ func parseVariableDeclaration(p *parser, access ast.Access, accessPos *ast.Posit
 
 	identifier := tokenToIdentifier(p.current)
 
+	// Skip the identifier
 	p.next()
 	p.skipSpaceAndComments(true)
 
 	var typeAnnotation *ast.TypeAnnotation
 
 	if p.current.Is(lexer.TokenColon) {
+		// Skip the colon
 		p.next()
 		p.skipSpaceAndComments(true)
 
@@ -347,6 +356,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			panic(errors.NewUnreachableError())
 		}
 
+		// Skip the location
 		p.next()
 	}
 
@@ -413,6 +423,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 
 					atEnd = true
 
+					// Skip the `from` keyword
 					p.next()
 					p.skipSpaceAndComments(true)
 
@@ -452,7 +463,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 
 		if p.current.Value == keywordFrom {
 			identifiers = append(identifiers, identifier)
-
+			// Skip the `from` keyword
 			p.next()
 			p.skipSpaceAndComments(true)
 
@@ -481,7 +492,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 
 	case lexer.TokenIdentifier:
 		identifier := tokenToIdentifier(p.current)
-
+		// Skip the identifier
 		p.next()
 		p.skipSpaceAndComments(true)
 
@@ -571,7 +582,7 @@ func parseEventDeclaration(p *parser, access ast.Access, accessPos *ast.Position
 	}
 
 	identifier := tokenToIdentifier(p.current)
-
+	// Skip the identifier
 	p.next()
 
 	parameterList := parseParameterList(p)
@@ -657,7 +668,7 @@ func parseFieldWithVariableKind(p *parser, access ast.Access, accessPos *ast.Pos
 	}
 
 	identifier := tokenToIdentifier(p.current)
-
+	// Skip the identifier
 	p.next()
 	p.skipSpaceAndComments(true)
 
@@ -724,11 +735,12 @@ func parseCompositeOrInterfaceDeclaration(p *parser, access ast.Access, accessPo
 					keywordInterface,
 				))
 			}
-
+			// Skip the `interface` keyword
 			p.next()
 			continue
 		} else {
 			identifier = tokenToIdentifier(p.current)
+			// Skip the identifier
 			p.next()
 			break
 		}
@@ -739,6 +751,7 @@ func parseCompositeOrInterfaceDeclaration(p *parser, access ast.Access, accessPo
 	var conformances []*ast.NominalType
 
 	if p.current.Is(lexer.TokenColon) {
+		// Skip the colon
 		p.next()
 
 		conformances, _ = parseNominalTypes(p, lexer.TokenBraceOpen)
@@ -818,6 +831,7 @@ func parseMembersAndNestedDeclarations(
 
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
+			// Skip the semicolon
 			p.next()
 			continue
 
@@ -908,6 +922,7 @@ func parseMemberOrNestedDeclaration(p *parser) ast.Declaration {
 
 				t := p.current
 				previousIdentifierToken = &t
+				// Skip the identifier
 				p.next()
 				continue
 			}

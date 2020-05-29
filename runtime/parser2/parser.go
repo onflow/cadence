@@ -64,6 +64,7 @@ func Parse(input string, parse func(*parser) interface{}) (result interface{}, e
 		}
 	}()
 
+	// Get the initial token
 	p.next()
 
 	result = parse(p)

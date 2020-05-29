@@ -56,6 +56,7 @@ func (p *parser) parseCommentContent() (comment string) {
 
 				case lexer.TokenBlockCommentEnd:
 					builder.WriteString(blockCommentEnd)
+					// Skip the comment end (`*/`)
 					p.next()
 					return nil
 

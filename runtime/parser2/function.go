@@ -39,6 +39,7 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 	}
 
 	startPos := p.current.StartPos
+	// Skip the opening paren
 	p.next()
 
 	var endPos ast.Position
@@ -61,11 +62,13 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 					p.current.Type,
 				))
 			}
+			// Skip the comma
 			p.next()
 			expectParameter = true
 
 		case lexer.TokenParenClose:
 			endPos = p.current.EndPos
+			// Skip the closing paren
 			p.next()
 			atEnd = true
 
@@ -113,6 +116,7 @@ func parseParameter(p *parser) *ast.Parameter {
 	}
 	argumentLabel := ""
 	parameterName := p.current.Value.(string)
+	// Skip the identifier
 	p.next()
 
 	// If another identifier is provided, then the previous identifier
@@ -123,7 +127,7 @@ func parseParameter(p *parser) *ast.Parameter {
 		argumentLabel = parameterName
 		parameterName = p.current.Value.(string)
 		parameterPos = p.current.StartPos
-
+		// Skip the identifier
 		p.next()
 		p.skipSpaceAndComments(true)
 	}
@@ -136,6 +140,7 @@ func parseParameter(p *parser) *ast.Parameter {
 		))
 	}
 
+	// Skip the colon
 	p.next()
 	p.skipSpaceAndComments(true)
 
@@ -182,6 +187,7 @@ func parseFunctionDeclaration(
 
 	identifier := tokenToIdentifier(p.current)
 
+	// Skip the identifier
 	p.next()
 
 	parameterList, returnTypeAnnotation, functionBlock :=
@@ -209,6 +215,7 @@ func parseFunctionParameterListAndRest(
 
 	p.skipSpaceAndComments(true)
 	if p.current.Is(lexer.TokenColon) {
+		// Skip the colon
 		p.next()
 		p.skipSpaceAndComments(true)
 		returnTypeAnnotation = parseTypeAnnotation(p)
