@@ -214,7 +214,22 @@ func (r *interpreterRuntime) newAuthAccountValue(
 ) interpreter.AuthAccountValue {
 	return interpreter.NewAuthAccountValue(
 		addressValue,
-		r.newSetCodeFunction(addressValue, runtimeInterface, runtimeStorage),
+		r.newSetCodeFunction(
+			addressValue,
+			runtimeInterface,
+			runtimeStorage,
+			setCodeOptions{
+				createContract: true,
+			},
+		),
+		r.newSetCodeFunction(
+			addressValue,
+			runtimeInterface,
+			runtimeStorage,
+			setCodeOptions{
+				createContract: false,
+			},
+		),
 		r.newAddPublicKeyFunction(addressValue, runtimeInterface),
 		r.newRemovePublicKeyFunction(addressValue, runtimeInterface),
 	)
@@ -884,10 +899,15 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 	)
 }
 
+type setCodeOptions struct {
+	createContract bool
+}
+
 func (r *interpreterRuntime) newSetCodeFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 	runtimeStorage *interpreterRuntimeStorage,
+	options setCodeOptions,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
@@ -908,8 +928,11 @@ func (r *interpreterRuntime) newSetCodeFunction(
 				addressValue,
 				constructorArguments,
 				constructorArgumentTypes,
-				true,
 				invocation.LocationRange.Range,
+				updateAccountCodeOptions{
+					checkPermission: true,
+					createContract:  options.createContract,
+				},
 			)
 
 			codeHashValue := CodeToHashValue(code)
@@ -932,6 +955,11 @@ func (r *interpreterRuntime) newSetCodeFunction(
 	)
 }
 
+type updateAccountCodeOptions struct {
+	checkPermission bool
+	createContract  bool
+}
+
 func (r *interpreterRuntime) updateAccountCode(
 	runtimeInterface Interface,
 	runtimeStorage *interpreterRuntimeStorage,
@@ -939,8 +967,8 @@ func (r *interpreterRuntime) updateAccountCode(
 	addressValue interpreter.AddressValue,
 	constructorArguments []interpreter.Value,
 	constructorArgumentTypes []sema.Type,
-	checkPermission bool,
 	invocationRange ast.Range,
+	options updateAccountCodeOptions,
 ) (contractTypes []*sema.CompositeType) {
 	location := AddressLocation(addressValue[:])
 
@@ -975,38 +1003,45 @@ func (r *interpreterRuntime) updateAccountCode(
 	if len(contractTypes) > 0 {
 		contractType := contractTypes[0]
 
-		contract, err := r.instantiateContract(
-			location,
-			contractType,
-			constructorArguments,
-			constructorArgumentTypes,
-			runtimeInterface,
-			runtimeStorage,
-			checker,
-			functions,
-			invocationRange,
-		)
+		if options.createContract {
 
-		if err != nil {
-			panic(err)
+			contract, err := r.instantiateContract(
+				location,
+				contractType,
+				constructorArguments,
+				constructorArgumentTypes,
+				runtimeInterface,
+				runtimeStorage,
+				checker,
+				functions,
+				invocationRange,
+			)
+
+			if err != nil {
+				panic(err)
+			}
+
+			contractValue = interpreter.NewSomeValueOwningNonCopying(contract)
 		}
-
-		contractValue = interpreter.NewSomeValueOwningNonCopying(contract)
 	}
 
-	address := common.Address(addressValue)
+	if options.createContract {
+		address := common.Address(addressValue)
 
-	contractValue.SetOwner(&address)
+		contractValue.SetOwner(&address)
+	}
 
 	// NOTE: only update account code if contract instantiation succeeded
 	wrapPanic(func() {
-		err = runtimeInterface.UpdateAccountCode(addressValue.ToAddress(), code, checkPermission)
+		err = runtimeInterface.UpdateAccountCode(addressValue.ToAddress(), code, options.checkPermission)
 	})
 	if err != nil {
 		panic(err)
 	}
 
-	r.writeContract(runtimeStorage, addressValue, contractValue)
+	if options.createContract {
+		r.writeContract(runtimeStorage, addressValue, contractValue)
+	}
 
 	return contractTypes
 }
