@@ -152,10 +152,10 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) *ast.NominalType {
 	var nestedIdentifiers []ast.Identifier
 
 	for p.current.Is(lexer.TokenDot) {
+		// Skip the dot
 		p.next()
 
 		nestedToken := p.current
-		p.next()
 
 		if !nestedToken.Is(lexer.TokenIdentifier) {
 			panic(fmt.Errorf(
@@ -166,6 +166,9 @@ func parseNominalTypeRemainder(p *parser, token lexer.Token) *ast.NominalType {
 		}
 
 		nestedIdentifier := tokenToIdentifier(nestedToken)
+
+		// Skip the identifier
+		p.next()
 
 		nestedIdentifiers = append(
 			nestedIdentifiers,
@@ -192,6 +195,7 @@ func defineArrayType() {
 			var size *ast.IntegerExpression
 
 			if p.current.Is(lexer.TokenSemicolon) {
+				// Skip the semicolon
 				p.next()
 
 				p.skipSpaceAndComments(true)
@@ -323,6 +327,7 @@ func defineRestrictedOrDictionaryType() {
 							},
 						}
 					}
+					// Skip the comma
 					p.next()
 					expectType = true
 
@@ -346,6 +351,7 @@ func defineRestrictedOrDictionaryType() {
 					} else {
 						panic(fmt.Errorf("unexpected colon in dictionary type"))
 					}
+					// Skip the colon
 					p.next()
 					expectType = true
 
@@ -359,6 +365,7 @@ func defineRestrictedOrDictionaryType() {
 						}
 					}
 					endPos = p.current.EndPos
+					// Skip the closing brace
 					p.next()
 					atEnd = true
 
@@ -430,7 +437,7 @@ func defineRestrictedOrDictionaryType() {
 
 			nominalTypes, endPos := parseNominalTypes(p, lexer.TokenBraceClose)
 
-			// Skip closing brace
+			// Skip the closing brace
 			p.next()
 
 			return &ast.RestrictedType{
@@ -464,6 +471,7 @@ func parseNominalTypes(
 			if expectType {
 				panic(fmt.Errorf("unexpected comma"))
 			}
+			// Skip the comma
 			p.next()
 			expectType = true
 
@@ -552,10 +560,12 @@ func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnota
 					p.current.Type,
 				))
 			}
+			// Skip the comma
 			p.next()
 			expectTypeAnnotation = true
 
 		case lexer.TokenParenClose:
+			// Skip the closing paren
 			p.next()
 			atEnd = true
 
@@ -605,6 +615,7 @@ func parseTypeAnnotation(p *parser) *ast.TypeAnnotation {
 
 	isResource := false
 	if p.current.Is(lexer.TokenAt) {
+		// Skip the `@`
 		p.next()
 		isResource = true
 	}
@@ -681,6 +692,7 @@ func parseCommaSeparatedTypeAnnotations(
 			if expectTypeAnnotation {
 				panic(fmt.Errorf("unexpected comma"))
 			}
+			// Skip the comma
 			p.next()
 			expectTypeAnnotation = true
 

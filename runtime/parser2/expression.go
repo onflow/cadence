@@ -537,7 +537,6 @@ func defineLessThanOrTypeArgumentsExpression() {
 			p.startBuffering()
 
 			// Skip the `<` token.
-
 			p.next()
 			p.skipSpaceAndComments(true)
 
@@ -769,11 +768,13 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 					p.current.Type,
 				))
 			}
+			// Skip the comma
 			p.next()
 			expectArgument = true
 
 		case lexer.TokenParenClose:
 			endPos = p.current.EndPos
+			// Skip the closing paren
 			p.next()
 			atEnd = true
 
@@ -818,6 +819,7 @@ func parseArgument(p *parser) *ast.Argument {
 		labelStartPos = expr.StartPosition()
 		labelEndPos = expr.EndPosition()
 
+		// Skip the identifier
 		p.next()
 		p.skipSpaceAndComments(true)
 
