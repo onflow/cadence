@@ -1067,16 +1067,38 @@ func TestCheckRestrictedTypeNoType(t *testing.T) {
 
 func TestCheckRestrictedTypeConformanceOrder(t *testing.T) {
 
-	// Test that the conformances for a composite are declared
-	// before functions using them are checked
+	t.Run("valid", func(t *testing.T) {
 
-	_, err := ParseAndCheckWithPanic(t, `
-      contract C {
-          resource interface RI {}
-          resource R: RI {}
-          fun foo(): &R{RI} { panic("") }
-      }
-    `)
+		// Test that the conformances for a composite are declared
+		// before functions using them are checked
 
-	require.NoError(t, err)
+		_, err := ParseAndCheckWithPanic(t, `
+          contract C {
+              resource interface RI {}
+              resource R: RI {}
+              fun foo(): &R{RI} { panic("") }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+
+		_, err := ParseAndCheckWithPanic(t, `
+          contract C {
+              resource interface RI {}
+              resource R {}
+              fun foo(): &R{RI} { panic("") }
+          }
+        `)
+
+		// TODO: remove duplicate
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[0])
+		assert.IsType(t, &sema.InvalidNonConformanceRestrictionError{}, errs[1])
+	})
+
 }
