@@ -136,7 +136,7 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
               i = i + 1
           }
 
-          for i in [1, 2, 3, 4, 5] {}
+          for n in [1, 2, 3, 4, 5] {}
       }
     `)
 	require.NoError(t, err)
@@ -151,7 +151,7 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
                   i = i + 1
               }
 
-              for i in [1, 2, 3] {}
+              for n in [1, 2, 3] {}
 
               a()
           }
