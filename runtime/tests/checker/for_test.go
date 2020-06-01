@@ -187,3 +187,24 @@ func TestCheckInvalidForContinueStatement(t *testing.T) {
 
 	assert.IsType(t, &sema.ControlStatementError{}, errs[0])
 }
+
+func TestCheckInvalidForShadowing(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+		fun x() {
+			var array = ["Hello", "World", "Foo", "Bar"]
+			var element = "Hi"
+			// Not permitted to use previously declared variable as the
+			// iteration variable.
+			for element in array {
+				element
+			}
+		}
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+}

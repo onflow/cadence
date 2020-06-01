@@ -68,7 +68,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 		pos:                      statement.Identifier.Pos,
 		isConstant:               true,
 		argumentLabels:           nil,
-		allowOuterScopeShadowing: true,
+		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
 	checker.recordVariableDeclarationOccurrence(identifier, variable)
