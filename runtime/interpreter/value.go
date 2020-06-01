@@ -70,52 +70,52 @@ type HasKeyString interface {
 	KeyString() string
 }
 
-// MetaTypeValue
+// TypeValue
 
-type MetaTypeValue struct {
+type TypeValue struct {
 	Type sema.Type
 }
 
-func (MetaTypeValue) IsValue() {}
+func (TypeValue) IsValue() {}
 
-func (MetaTypeValue) DynamicType(_ *Interpreter) DynamicType {
+func (TypeValue) DynamicType(_ *Interpreter) DynamicType {
 	return MetaTypeDynamicType{}
 }
 
-func (v MetaTypeValue) Copy() Value {
+func (v TypeValue) Copy() Value {
 	return v
 }
 
-func (MetaTypeValue) GetOwner() *common.Address {
+func (TypeValue) GetOwner() *common.Address {
 	// value is never owned
 	return nil
 }
 
-func (MetaTypeValue) SetOwner(_ *common.Address) {
+func (TypeValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (MetaTypeValue) IsModified() bool {
+func (TypeValue) IsModified() bool {
 	return false
 }
 
-func (MetaTypeValue) SetModified(_ bool) {
+func (TypeValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v MetaTypeValue) String() string {
+func (v TypeValue) String() string {
 	return fmt.Sprintf("Type<%s>", v.Type)
 }
 
-func (v MetaTypeValue) Equal(other Value) BoolValue {
-	otherMetaType, ok := other.(MetaTypeValue)
+func (v TypeValue) Equal(other Value) BoolValue {
+	otherMetaType, ok := other.(TypeValue)
 	if !ok {
 		return false
 	}
 	return BoolValue(v.Type.Equal(otherMetaType.Type))
 }
 
-func (v MetaTypeValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v TypeValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case "identifier":
 		return NewStringValue(v.Type.QualifiedString())
@@ -124,7 +124,7 @@ func (v MetaTypeValue) GetMember(_ *Interpreter, _ LocationRange, name string) V
 	}
 }
 
-func (v MetaTypeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (v TypeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }
 

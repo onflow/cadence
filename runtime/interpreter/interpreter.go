@@ -3422,7 +3422,7 @@ func (interpreter *Interpreter) defineBaseFunctions() {
 					break
 				}
 
-				result := MetaTypeValue{Type: ty}
+				result := TypeValue{Type: ty}
 
 				return Done{Result: result}
 			},
