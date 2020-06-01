@@ -34,24 +34,36 @@ func TestInterpretMetaType(t *testing.T) {
 		t.Parallel()
 
 		inter := parseCheckAndInterpret(t, `
-           let equal = Type<Int>() == Type<Int>()
-           let unequal = Type<Int>() == Type<String>()
-           let optional = Type<Int>() == Type<Int?>()
+           let intInt = Type<Int>() == Type<Int>()
+           let intString = Type<Int>() == Type<String>()
+           let intOptional = Type<Int>() == Type<Int?>()
+           let intIntRef = Type<&Int>() == Type<&Int>()
+           let intStringRef = Type<&Int>() == Type<&String>()
         `)
 
 		assert.Equal(t,
 			interpreter.BoolValue(true),
-			inter.Globals["equal"].Value,
+			inter.Globals["intInt"].Value,
 		)
 
 		assert.Equal(t,
 			interpreter.BoolValue(false),
-			inter.Globals["unequal"].Value,
+			inter.Globals["intString"].Value,
 		)
 
 		assert.Equal(t,
 			interpreter.BoolValue(false),
-			inter.Globals["optional"].Value,
+			inter.Globals["intOptional"].Value,
+		)
+
+		assert.Equal(t,
+			interpreter.BoolValue(true),
+			inter.Globals["intIntRef"].Value,
+		)
+
+		assert.Equal(t,
+			interpreter.BoolValue(false),
+			inter.Globals["intStringRef"].Value,
 		)
 	})
 
