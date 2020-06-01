@@ -144,6 +144,9 @@ func (r *interpreterRuntime) ExecuteScript(
 		functions,
 		nil,
 		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
+			defer func() {
+				inter.Complete()
+			}()
 			return inter.Invoke("main")
 		},
 	)
@@ -371,6 +374,10 @@ func (r *interpreterRuntime) transactionExecutionFunction(
 		}
 
 		allArguments := append(argumentValues, authorizerValues...)
+
+		defer func() {
+			inter.Complete()
+		}()
 
 		err := inter.InvokeTransaction(0, allArguments...)
 		return nil, err
@@ -610,9 +617,6 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 	wrapPanic(func() {
 		limit = runtimeInterface.GetComputationLimit()
 	})
-	if limit == 0 {
-		return nil
-	}
 
 	if limit == math.MaxUint64 {
 		limit--
@@ -622,6 +626,10 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 
 	checkLimit := func() {
 		used++
+
+		if limit == 0 {
+			return
+		}
 
 		if used <= limit {
 			return

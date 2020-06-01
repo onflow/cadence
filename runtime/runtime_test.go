@@ -284,6 +284,44 @@ func TestRuntimeImport(t *testing.T) {
 	assert.Equal(t, cadence.NewInt(42), value)
 }
 
+func TestRuntimeStatistics(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	script := []byte(`
+		pub fun answer(): Int {
+		return 42
+		}
+
+		pub fun main(): Int {
+			let answer = answer()
+			if answer != 42 {
+			panic("?!")
+			}
+			return answer
+		}
+	`)
+
+	var statsReceived *Statistics
+
+	runtimeInterface := &testRuntimeInterface{
+		statistics: func(stats *Statistics) {
+			statsReceived = stats
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	value, err := runtime.ExecuteScript(script, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	assert.Equal(t, cadence.NewInt(42), value)
+	assert.NotNil(t, statsReceived)
+	assert.Equal(t, statsReceived.GasConsumed, uint64(5))
+}
+
 func TestRuntimeProgramCache(t *testing.T) {
 
 	t.Parallel()

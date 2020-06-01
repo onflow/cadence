@@ -608,9 +608,6 @@ func (interpreter *Interpreter) Interpret() (err error) {
 	})
 
 	interpreter.runAllStatements(interpreter.interpret())
-	if interpreter.onCompletion != nil {
-		interpreter.onCompletion(interpreter)
-	}
 
 	return nil
 }
@@ -870,6 +867,12 @@ func (interpreter *Interpreter) InvokeTransaction(index int, arguments ...Value)
 	_ = interpreter.runAllStatements(trampoline)
 
 	return nil
+}
+
+func (interpreter *Interpreter) Complete() {
+	if interpreter.onCompletion != nil {
+		interpreter.onCompletion(interpreter)
+	}
 }
 
 func recoverErrors(onError func(error)) {
@@ -3109,6 +3112,8 @@ func (interpreter *Interpreter) ensureLoaded(location ast.Location, loadProgram 
 		WithOnStatementHandler(interpreter.onStatement),
 		WithOnLoopIterationHandler(interpreter.onLoopIteration),
 		WithOnFunctionInvocationHandler(interpreter.onFunctionInvocation),
+		WithOnCompletionHandler(interpreter.onCompletion),
+		WithStatsReportHandler(interpreter.statsReportHandler),
 		WithStorageExistenceHandler(interpreter.storageExistenceHandler),
 		WithStorageReadHandler(interpreter.storageReadHandler),
 		WithStorageWriteHandler(interpreter.storageWriteHandler),
