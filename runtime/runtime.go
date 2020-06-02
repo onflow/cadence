@@ -929,9 +929,7 @@ func (r *interpreterRuntime) newSetCodeFunction(
 				constructorArguments,
 				constructorArgumentTypes,
 				invocation.LocationRange.Range,
-				updateAccountCodeOptions{
-					createContract: options.createContract,
-				},
+				updateAccountCodeOptions(options),
 			)
 
 			codeHashValue := CodeToHashValue(code)
