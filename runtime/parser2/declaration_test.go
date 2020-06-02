@@ -1147,15 +1147,20 @@ func TestParseImportDeclaration(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseDeclarations(` import foo`)
-		require.Equal(t,
-			[]error{errors.New("identifier imports are not supported yet")},
-			errs,
-		)
-
-		var expected []ast.Declaration
+		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			expected,
+			[]ast.Declaration{
+				&ast.ImportDeclaration{
+					Identifiers: nil,
+					Location:    ast.IdentifierLocation("foo"),
+					LocationPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+					},
+				},
+			},
 			result,
 		)
 	})
