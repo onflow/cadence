@@ -43,6 +43,7 @@ func Parse(input string, parse func(*parser) interface{}) (result interface{}, e
 
 	defer cancelLexer()
 
+	// turn input string into tokens
 	tokens := lexer.Lex(ctx, input)
 	p := &parser{tokens: tokens}
 
