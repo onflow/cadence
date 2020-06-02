@@ -930,8 +930,7 @@ func (r *interpreterRuntime) newSetCodeFunction(
 				constructorArgumentTypes,
 				invocation.LocationRange.Range,
 				updateAccountCodeOptions{
-					checkPermission: true,
-					createContract:  options.createContract,
+					createContract: options.createContract,
 				},
 			)
 
@@ -956,8 +955,7 @@ func (r *interpreterRuntime) newSetCodeFunction(
 }
 
 type updateAccountCodeOptions struct {
-	checkPermission bool
-	createContract  bool
+	createContract bool
 }
 
 func (r *interpreterRuntime) updateAccountCode(
@@ -1033,7 +1031,7 @@ func (r *interpreterRuntime) updateAccountCode(
 
 	// NOTE: only update account code if contract instantiation succeeded
 	wrapPanic(func() {
-		err = runtimeInterface.UpdateAccountCode(addressValue.ToAddress(), code, options.checkPermission)
+		err = runtimeInterface.UpdateAccountCode(addressValue.ToAddress(), code)
 	})
 	if err != nil {
 		panic(err)
