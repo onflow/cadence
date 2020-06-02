@@ -150,7 +150,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{common.BytesToAddress(addressValue.Bytes())}
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
@@ -642,7 +642,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{common.BytesToAddress(addressValue.Bytes())}
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
@@ -879,7 +879,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_DictionaryTransfer(t *te
 				signer2,
 			}
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
@@ -1038,7 +1038,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Removal(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{signer}
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
@@ -1125,7 +1125,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Destruction(t *testing.T
 		getSigningAccounts: func() []Address {
 			return []Address{signer}
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
@@ -1246,7 +1246,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Insertion(t *testing.T) 
 		getSigningAccounts: func() []Address {
 			return []Address{signer}
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
@@ -1370,7 +1370,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_ValueTransferAndDestroy(
 		getSigningAccounts: func() []Address {
 			return signers
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},

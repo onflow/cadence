@@ -93,7 +93,7 @@ type testRuntimeInterface struct {
 	createAccount      func(payer Address) (address Address, err error)
 	addAccountKey      func(address Address, publicKey []byte) error
 	removeAccountKey   func(address Address, index int) (publicKey []byte, err error)
-	updateAccountCode  func(address Address, code []byte, checkPermission bool) (err error)
+	updateAccountCode  func(address Address, code []byte) (err error)
 	getSigningAccounts func() []Address
 	log                func(string)
 	emitEvent          func(cadence.Event)
@@ -149,8 +149,8 @@ func (i *testRuntimeInterface) RemoveAccountKey(address Address, index int) (pub
 	return i.removeAccountKey(address, index)
 }
 
-func (i *testRuntimeInterface) UpdateAccountCode(address Address, code []byte, checkPermission bool) (err error) {
-	return i.updateAccountCode(address, code, checkPermission)
+func (i *testRuntimeInterface) UpdateAccountCode(address Address, code []byte) (err error) {
+	return i.updateAccountCode(address, code)
 }
 
 func (i *testRuntimeInterface) GetSigningAccounts() []Address {
@@ -1775,7 +1775,7 @@ func TestRuntimeTransaction_UpdateAccountCodeEmpty(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{{42}}
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
@@ -2138,7 +2138,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 				getSigningAccounts: func() []Address {
 					return []Address{{42}}
 				},
-				updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+				updateAccountCode: func(address Address, code []byte) (err error) {
 					accountCode = code
 					return nil
 				},
@@ -2221,7 +2221,7 @@ func TestRuntimeContractAccount(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{common.BytesToAddress(addressValue.Bytes())}
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
@@ -2313,7 +2313,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{addressValue}
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
@@ -2515,7 +2515,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{signerAccount}
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			key := string(AddressLocation(address[:]).ID())
 			accountCodes[key] = code
 			return nil
@@ -2625,7 +2625,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{signerAccount}
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			key := string(AddressLocation(address[:]).ID())
 			accountCodes[key] = code
 			return nil
@@ -2752,7 +2752,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{{0x1}}
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			key := string(AddressLocation(address[:]).ID())
 			accountCodes[key] = code
 			return nil
@@ -2978,7 +2978,7 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 				getSigningAccounts: func() []Address {
 					return []Address{addressValue.ToAddress()}
 				},
-				updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+				updateAccountCode: func(address Address, code []byte) (err error) {
 					accountCode = code
 					return nil
 				},
@@ -3095,7 +3095,7 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{address}
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			key := string(AddressLocation(address[:]).ID())
 			accountCodes[key] = code
 			return nil
@@ -3249,7 +3249,7 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{address}
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			key := string(AddressLocation(address[:]).ID())
 			accountCodes[key] = code
 			return nil
@@ -3408,7 +3408,7 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{address}
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			key := string(AddressLocation(address[:]).ID())
 			accountCodes[key] = code
 			return nil
@@ -3800,7 +3800,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{common.BytesToAddress(addressValue.Bytes())}
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
@@ -3904,7 +3904,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{common.BytesToAddress(addressValue.Bytes())}
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
@@ -4080,7 +4080,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return signerAddresses
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			key := string(AddressLocation(address[:]).ID())
 			accountCodes[key] = code
 			return nil
@@ -4198,7 +4198,7 @@ func TestRuntimeTransaction_UpdateAccountCodeUnsafeNotInitializing(t *testing.T)
 		resolveImport: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountCode: func(address Address, code []byte, checkPermission bool) (err error) {
+		updateAccountCode: func(address Address, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
