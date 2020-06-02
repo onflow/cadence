@@ -139,10 +139,7 @@ func standardLibraryFunctions() stdlib.StandardLibraryFunctions {
 
 func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checker, func(error)) {
 
-	codeBytes, err := ioutil.ReadFile(filename)
-
-	checker, must := PrepareChecker(string(codeBytes), filename)
-	must(err)
+	checker, must := PrepareCheckerFromFile(filename)
 
 	values := standardLibraryFunctions().ToValues()
 
