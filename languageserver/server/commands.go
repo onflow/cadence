@@ -334,7 +334,7 @@ func (s *Server) updateAccountCode(conn protocol.Conn, args ...interface{}) (int
 
 	conn.ShowMessage(&protocol.ShowMessageParams{
 		Type:    protocol.Info,
-		Message: fmt.Sprintf("Deploying %s to account 0x%s", file, s.activeAccount.Short()),
+		Message: fmt.Sprintf("Deploying %s to account 0x%s", file, s.activeAccount.Hex()),
 	})
 
 	accountCode := []byte(doc.text)
@@ -353,7 +353,7 @@ func (s *Server) updateAccountCode(conn protocol.Conn, args ...interface{}) (int
 func (s *Server) sendTransactionHelper(conn protocol.Conn, script []byte, authorize bool) (flow.Identifier, error) {
 	accountKey, signer, err := s.getAccountKey(s.activeAccount)
 	if err != nil {
-		return flow.ZeroID, err
+		return flow.EmptyID, err
 	}
 
 	tx := flow.NewTransaction().
@@ -367,7 +367,7 @@ func (s *Server) sendTransactionHelper(conn protocol.Conn, script []byte, author
 
 	err = tx.SignEnvelope(s.activeAccount, accountKey.ID, signer)
 	if err != nil {
-		return flow.ZeroID, err
+		return flow.EmptyID, err
 	}
 
 	conn.LogMessage(&protocol.LogMessageParams{
@@ -385,7 +385,7 @@ func (s *Server) sendTransactionHelper(conn protocol.Conn, script []byte, author
 					Type:    protocol.Warning,
 					Message: "The emulator server is unavailable. Please start the emulator (`cadence.runEmulator`) first.",
 				})
-				return flow.ZeroID, err
+				return flow.EmptyID, err
 			} else if grpcErr.Code() == codes.InvalidArgument {
 				// The request was invalid
 				conn.ShowMessage(&protocol.ShowMessageParams{
@@ -396,7 +396,7 @@ func (s *Server) sendTransactionHelper(conn protocol.Conn, script []byte, author
 					Type:    protocol.Warning,
 					Message: fmt.Sprintf("Failed to submit transaction: %s", grpcErr.Message()),
 				})
-				return flow.ZeroID, err
+				return flow.EmptyID, err
 			}
 		} else {
 			conn.LogMessage(&protocol.LogMessageParams{
@@ -405,7 +405,7 @@ func (s *Server) sendTransactionHelper(conn protocol.Conn, script []byte, author
 			})
 		}
 
-		return flow.ZeroID, err
+		return flow.EmptyID, err
 	}
 
 	conn.LogMessage(&protocol.LogMessageParams{
@@ -419,9 +419,9 @@ func (s *Server) sendTransactionHelper(conn protocol.Conn, script []byte, author
 // createAccountHelper creates a new account and returns its address.
 func (s *Server) createAccountHelper(conn protocol.Conn) (addr flow.Address, err error) {
 	accountKey := &flow.AccountKey{
-		PublicKey: s.config.RootAccountKey.PrivateKey.PublicKey(),
-		SigAlgo:   s.config.RootAccountKey.SigAlgo,
-		HashAlgo:  s.config.RootAccountKey.HashAlgo,
+		PublicKey: s.config.ServiceAccountKey.PrivateKey.PublicKey(),
+		SigAlgo:   s.config.ServiceAccountKey.SigAlgo,
+		HashAlgo:  s.config.ServiceAccountKey.HashAlgo,
 		Weight:    flow.AccountKeyWeightThreshold,
 	}
 
@@ -430,7 +430,7 @@ func (s *Server) createAccountHelper(conn protocol.Conn) (addr flow.Address, err
 		return addr, fmt.Errorf("failed to generate account creation script: %w", err)
 	}
 
-	txID, err := s.sendTransactionHelper(conn, script, false)
+	txID, err := s.sendTransactionHelper(conn, script, true)
 	if err != nil {
 		return addr, err
 	}
@@ -452,20 +452,19 @@ func (s *Server) createAccountHelper(conn protocol.Conn) (addr flow.Address, err
 		}
 	}
 
-	if len(txResult.Events) != 1 {
+	for _, event := range txResult.Events {
+		if event.Type == flow.EventAccountCreated {
+			accountCreatedEvent := flow.AccountCreatedEvent(event)
+			addr = accountCreatedEvent.Address()
+			break
+		}
+	}
+
+	if addr == flow.EmptyAddress {
 		return addr, fmt.Errorf("failed to get new account address for tx %s", txID.Hex())
 	}
 
-	event := txResult.Events[0]
-
-	if event.Type == flow.EventAccountCreated {
-		accountCreatedEvent := flow.AccountCreatedEvent(event)
-		addr = accountCreatedEvent.Address()
-	} else {
-		return addr, fmt.Errorf("invalid event for tx %s", txID.Hex())
-	}
-
-	s.accounts[addr] = s.config.RootAccountKey
+	s.accounts[addr] = s.config.ServiceAccountKey
 
 	return addr, nil
 }

@@ -30,14 +30,14 @@ type Config struct {
 	// The address where the emulator is running.
 	EmulatorAddr string
 
-	// The root account key information.
-	RootAccountKey AccountPrivateKey
+	// The service account key information.
+	ServiceAccountKey AccountPrivateKey
 }
 
 type AccountPrivateKey struct {
 	PrivateKey crypto.PrivateKey
-	SigAlgo crypto.SignatureAlgorithm
-	HashAlgo crypto.HashAlgorithm
+	SigAlgo    crypto.SignatureAlgorithm
+	HashAlgo   crypto.HashAlgorithm
 }
 
 // FromInitializationOptions creates a new config instance from the
@@ -55,33 +55,33 @@ func FromInitializationOptions(opts interface{}) (conf Config, err error) {
 		return Config{}, errors.New("missing emulatorAddress field")
 	}
 
-	rootPrivateKeyHex, ok := optsMap["rootPrivateKey"].(string)
+	servicePrivateKeyHex, ok := optsMap["servicePrivateKey"].(string)
 	if !ok {
-		return Config{}, errors.New("missing rootPrivateKey field")
+		return Config{}, errors.New("missing servicePrivateKey field")
 	}
 
-	rootKeySigAlgoStr, ok := optsMap["rootKeySignatureAlgorithm"].(string)
+	serviceKeySigAlgoStr, ok := optsMap["serviceKeySignatureAlgorithm"].(string)
 	if !ok {
-		return Config{}, errors.New("missing rootKeySignatureAlgorithm field")
+		return Config{}, errors.New("missing serviceKeySignatureAlgorithm field")
 	}
 
-	rootKeyHashAlgoStr, ok := optsMap["rootKeyHashAlgorithm"].(string)
+	serviceKeyHashAlgoStr, ok := optsMap["serviceKeyHashAlgorithm"].(string)
 	if !ok {
-		return Config{}, errors.New("missing rootKeyHashAlgorithm field")
+		return Config{}, errors.New("missing serviceKeyHashAlgorithm field")
 	}
 
-	rootAccountKey := AccountPrivateKey{
-		SigAlgo:    crypto.StringToSignatureAlgorithm(rootKeySigAlgoStr),
-		HashAlgo:   crypto.StringToHashAlgorithm(rootKeyHashAlgoStr),
+	serviceAccountKey := AccountPrivateKey{
+		SigAlgo:  crypto.StringToSignatureAlgorithm(serviceKeySigAlgoStr),
+		HashAlgo: crypto.StringToHashAlgorithm(serviceKeyHashAlgoStr),
 	}
 
-	rootAccountKey.PrivateKey, err = crypto.DecodePrivateKeyHex(rootAccountKey.SigAlgo, rootPrivateKeyHex)
+	serviceAccountKey.PrivateKey, err = crypto.DecodePrivateKeyHex(serviceAccountKey.SigAlgo, servicePrivateKeyHex)
 	if err != nil {
 		return
 	}
 
 	conf.EmulatorAddr = emulatorAddr
-	conf.RootAccountKey = rootAccountKey
+	conf.ServiceAccountKey = serviceAccountKey
 
 	return
 }
