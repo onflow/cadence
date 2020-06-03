@@ -115,9 +115,11 @@ func (s *Server) Initialize(
 	}
 	s.config = conf
 
-	// add the root account as a usable account
-	s.accounts[flow.RootAddress] = conf.RootAccountKey
-	s.activeAccount = flow.RootAddress
+	serviceAddress := flow.ServiceAddress(flow.Emulator)
+
+	// add the service account as a usable account
+	s.accounts[serviceAddress] = conf.ServiceAccountKey
+	s.activeAccount = serviceAddress
 
 	s.flowClient, err = client.New(
 		s.config.EmulatorAddr,
@@ -296,7 +298,7 @@ func (s *Server) CodeLens(conn protocol.Conn, params *protocol.CodeLensParams) (
 		actions = append(actions, &protocol.CodeLens{
 			Range: astToProtocolRange(txDeclarations[0].StartPosition(), txDeclarations[0].StartPosition()),
 			Command: &protocol.Command{
-				Title:     fmt.Sprintf("submit transaction with account 0x%s", s.activeAccount.Short()),
+				Title:     fmt.Sprintf("submit transaction with account 0x%s", s.activeAccount.Hex()),
 				Command:   CommandSubmitTransaction,
 				Arguments: []interface{}{uri},
 			},
@@ -312,7 +314,7 @@ func (s *Server) CodeLens(conn protocol.Conn, params *protocol.CodeLensParams) (
 		actions = append(actions, &protocol.CodeLens{
 			Range: astToProtocolRange(contractDeclarations[0].StartPosition(), contractDeclarations[0].StartPosition()),
 			Command: &protocol.Command{
-				Title:     fmt.Sprintf("deploy contract to account 0x%s", s.activeAccount.Short()),
+				Title:     fmt.Sprintf("deploy contract to account 0x%s", s.activeAccount.Hex()),
 				Command:   CommandUpdateAccountCode,
 				Arguments: []interface{}{uri},
 			},
@@ -334,7 +336,7 @@ func (s *Server) CodeLens(conn protocol.Conn, params *protocol.CodeLensParams) (
 		actions = append(actions, &protocol.CodeLens{
 			Range: firstLineRange(),
 			Command: &protocol.Command{
-				Title:     fmt.Sprintf("deploy contract %s to account 0x%s", pluralInterface, s.activeAccount.Short()),
+				Title:     fmt.Sprintf("deploy contract %s to account 0x%s", pluralInterface, s.activeAccount.Hex()),
 				Command:   CommandUpdateAccountCode,
 				Arguments: []interface{}{uri},
 			},
