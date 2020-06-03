@@ -2,7 +2,7 @@ import {commands, ExtensionContext, Position, Range, window, workspace} from "vs
 import {Extension, renderExtension} from "./extension";
 import {LanguageServerAPI} from "./language-server";
 import {createTerminal} from "./terminal";
-import {shortAddress, stripAddressPrefix} from "./address";
+import {removeAddressPrefix} from "./address";
 
 // Command identifiers for locally handled commands
 export const RESTART_SERVER = "cadence.restartServer";
@@ -39,22 +39,22 @@ const restartServer = (ext: Extension) => async () => {
 
 // Starts the emulator in a terminal window.
 const startEmulator = (ext: Extension) => async () => {
-    // Start the emulator with the root key we gave to the language server.
+    // Start the emulator with the service key we gave to the language server.
     const {serverConfig} = ext.config
 
     ext.terminal.sendText(
         [
             ext.config.flowCommand,
             `emulator`, `start`, `--init`, `--verbose`,
-            `--root-priv-key`, serverConfig.rootPrivateKey,
-            `--root-sig-algo`, serverConfig.rootKeySignatureAlgorithm,
-            `--root-hash-algo`, serverConfig.rootKeyHashAlgorithm,
+            `--service-priv-key`, serverConfig.servicePrivateKey,
+            `--service-sig-algo`, serverConfig.serviceKeySignatureAlgorithm,
+            `--service-hash-algo`, serverConfig.serviceKeyHashAlgorithm,
         ].join(" ")
     );
     ext.terminal.show();
 
     // create default accounts after the emulator has started
-    // skip root account since it is already created
+    // skip service account since it is already created
     setTimeout(async () => {
         try {
             const accounts = await ext.api.createDefaultAccounts(ext.config.numAccounts - 1);
@@ -98,9 +98,17 @@ const switchActiveAccount = (ext: Extension) => async () => {
     const activeSuffix = "(active)";
     // Create the options (mark the active account with an 'active' prefix)
     const accountOptions = Object
-        .keys(ext.config.accounts)
+        .values(ext.config.accounts)
         // Mark the active account with a `*` in the dialog
-        .map(addr => addr === ext.config.activeAccount ? `${shortAddress(addr)} ${activeSuffix}` : shortAddress(addr));
+        .map((account) => {
+            const suffix: String = account.index === ext.config.activeAccount ? ` ${activeSuffix}` : "";
+            const label = `${account.fullName()}${suffix}`;
+
+            return {
+                label: label, 
+                target: account.index 
+            }
+        })
 
     window.showQuickPick(accountOptions)
         .then(selected => {
@@ -109,17 +117,17 @@ const switchActiveAccount = (ext: Extension) => async () => {
             if (selected === undefined) {
                 return;
             }
-            // If the user selected the active account, remove the `*` prefix
-            if (selected.endsWith(activeSuffix)) {
-                selected = selected.slice(0, -activeSuffix.length).trim();
-            }
-            if (!ext.config.accounts[selected]) {
-                console.error('Switched to invalid account: ', selected);
+
+            const activeIndex = selected.target;
+            const activeAccount = ext.config.getAccount(activeIndex);
+
+            if (!activeAccount) {
+                console.error('Switched to invalid account');
                 return;
             }
 
             try {
-                ext.api.switchActiveAccount(stripAddressPrefix(selected));
+                ext.api.switchActiveAccount(removeAddressPrefix(activeAccount.address));
                 window.visibleTextEditors.forEach(editor => {
                     if (!editor.document.lineCount) {
                         return;
@@ -142,8 +150,12 @@ const switchActiveAccount = (ext: Extension) => async () => {
                 console.error(err);
                 return;
             }
-            ext.config.activeAccount = selected;
-            window.showInformationMessage(`Switched to account ${selected}`);
+
+            ext.config.setActiveAccount(activeIndex)
+
+            window.showInformationMessage(`Switched to account ${activeAccount.fullName()}`);
+
             renderExtension(ext);
         });
 };
+ 

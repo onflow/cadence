@@ -53,5 +53,5 @@ export function activate(ctx: ExtensionContext) {
 export function deactivate() {}
 
 export function renderExtension(ext: Extension) {
-    updateActiveAccountStatusBarItem(ext.activeAccountStatusBarItem, ext.config.activeAccount);
+    updateActiveAccountStatusBarItem(ext.activeAccountStatusBarItem, ext.config.getActiveAccount());
 }
