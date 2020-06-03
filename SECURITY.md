@@ -1,89 +1,93 @@
-# Security Policy
 
-Flow was built from the ground up with security in mind.
-Our code, infrastructure, and development methodology helps us keep our users safe.
+# Responsible Disclosure Policy
 
-We really appreciate the community's help.
-Responsible disclosure of vulnerabilities helps to maintain the security and privacy of everyone.
+Flow was built from the ground up with security in mind. Our code, infrastructure, and development methodology helps us keep our users safe.
+
+We really appreciate the community's help. Responsible disclosure of vulnerabilities helps to maintain the security and privacy of everyone.
 
 If you care about making a difference, please follow the guidelines below.
 
-## Reporting a Vulnerability
+# **Guidelines For Responsible Disclosure**
+
+We ask that all researchers adhere to these guidelines.
+
+## **Rules of Engagement**
+
+- Make every effort to avoid unauthorized access, use, and disclosure of personal information.
+- Avoid actions which could impact user experience, disrupt production systems, change, or destroy data during security testing.
+- Don’t perform any attack that is intended to cause Denial of Service to the network, hosts, or services on any port or using any protocol.
+- Use our provided communication channels to securely report vulnerability information to us.
+- Keep information about any bug or vulnerability you discover confidential between us until we publicly disclose it.
+- Please don’t use scanners to crawl us and hammer endpoints. They’re noisy and we already do this. If you find anything this way, we have likely already identified it.
+- Never attempt non-technical attacks such as social engineering, phishing, or physical attacks against our employees, users, or infrastructure.
+
+## **In Scope URIs**
+
+Be careful that you're looking at domains and systems that belong to us and not someone else. When in doubt, please ask us. Maybe ask us anyway.
+
+Bottom line, we suggest that you limit your testing to infrastructure that is clearly ours.
+
+## **Out of Scope URIs**
+
+The following base URIs are explicitly out of scope:
+
+- None
+
+## **Things Not To Do**
+
+In the interests of your safety, our safety, and for our customers, the following test types are prohibited:
+
+- Physical testing such as office and data-centre access (e.g. open doors, tailgating, card reader attacks, physically destructive testing)
+- Social engineering (e.g. phishing, vishing)
+- Testing of applications or systems NOT covered by the ‘In Scope’ section, or that are explicitly out of scope.
+- Network level Denial of Service (DoS/DDoS) attacks
+
+## **Sensitive Data**
+
+In the interests of protecting privacy, we never want to receive:
+
+- Personally identifiable information (PII)
+- Payment card (e.g. credit card) data
+- Financial information (e.g. bank records)
+- Health or medical information
+- Accessed or cracked credentials in cleartext
+
+## **Our Commitment To You**
+
+If you follow these guidelines when researching and reporting an issue to us, we commit to:
+
+- Not send lawyers after you related to your research under this policy;
+- Work with you to understand and resolve any issues within a reasonable timeframe, including an initial confirmation of your report within 72 hours of submission; and
+- At a minimum, we will recognize your contribution in our Disclosure Acknowledgements if you are the first to report the issue and we make a code or configuration change based on the issue.
+
+## **Disclosure Acknowledgements**
+
+We're happy to acknowledge contributors. Security acknowledgements can be found here.
+
+## Rewards
+
+We run closed bug bounty programs, but beyond that we also pay out rewards, once per eligible bug, to the first responsibly disclosing third party.  Rewards are based on the seriousness of the bug, but the minimum is $100 and we have and are willing to pay $5,000 or more at our sole discretion.
+
+### **Elligibility**
+
+To qualify, the bug must fall within our scope and rules and meet the following criteria:
+
+1. **Previously unknown** - When reported, we must not have already known of the issue, either by internal discovery or separate disclosure.
+2. **Material impact** - Demonstrable exploitability where, if exploited, the bug would materially affect the confidentiality, integrity, or availability of our services.
+3. **Requires action** - The bug requires some mitigation.  It is both valid and actionable.
+
+## **Reporting Security Findings To Us**
 
 Reports are welcome! Please definitely reach out to us if you have a security concern.
 
-If you believe you may have found a security vulnerability in our project,
-to be on the safe side, **do NOT open a public issue**.
+We prefer you to please send us an email: security@onflow.org
 
-Rather, we prefer you to please send us an email: **security@onflow.org**
+Note: If you believe you may have found a security vulnerability in our open source repos, to be on the safe side, do NOT open a public issue.
 
-To encrypt messages to us, we encourage you to use our PGP key:
+We encourage you to encrypt the information you send us using our PGP key at [keys.openpgp.org/security@onflow.org](https://keys.openpgp.org/vks/v1/by-fingerprint/AE3264F330AB51F7DBC52C400BB5D3D7516D168C)
 
-```
------BEGIN PGP PUBLIC KEY BLOCK-----
+Please include the following details with your report:
 
-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
-oipEul4aYF/PTQa4v+424Qaj7htd1u8IOlX53Q==
-=DeX2
------END PGP PUBLIC KEY BLOCK-----
-
-```
+- A description of the location and potential impact of the finding(s);
+- A detailed description of the steps required to reproduce the issue; and
+- Any POC scripts, screenshots, and compressed screen captures, where feasible.
