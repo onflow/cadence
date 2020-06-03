@@ -158,4 +158,3 @@ const switchActiveAccount = (ext: Extension) => async () => {
             renderExtension(ext);
         });
 };
- 
