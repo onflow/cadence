@@ -3,7 +3,7 @@
   "displayName": "Cadence",
   "publisher": "dapperlabs",
   "description": "",
-  "version": "0.1.0",
+  "version": "0.4.0",
   "repository": {
     "type": "git",
     "url": "https://github.com/onflow/cadence.git"
@@ -56,22 +56,22 @@
           "description": "The command to invoke the Flow CLI",
           "scope": "resource"
         },
-        "cadence.rootPrivateKey": {
+        "cadence.servicePrivateKey": {
           "type": "string",
           "default": "bf9db4706c2fdb9011ee7e170ccac492f05427b96ab41d8bf2d8c58443704b76",
-          "description": "The private key of the root account to use when submitting transactions",
+          "description": "The private key of the service account to use when submitting transactions",
           "scope": "resource"
         },
-        "cadence.rootKeySignatureAlgorithm": {
+        "cadence.serviceKeySignatureAlgorithm": {
           "type": "string",
           "default": "ECDSA_P256",
-          "description": "The signature algorithm of the root account to use when submitting transactions",
+          "description": "The signature algorithm of the service account to use when submitting transactions",
           "scope": "resource"
         },
-        "cadence.rootKeyHashAlgorithm": {
+        "cadence.serviceKeyHashAlgorithm": {
           "type": "string",
           "default": "SHA3_256",
-          "description": "The hash algorithm of the root account to use when submitting transactions",
+          "description": "The hash algorithm of the service account to use when submitting transactions",
           "scope": "resource"
         },
         "cadence.emulatorAddress": {
