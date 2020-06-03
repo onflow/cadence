@@ -151,7 +151,7 @@ func (r *interpreterRuntime) ExecuteScript(
 		checker,
 		functions,
 		nil,
-		scriptExecutionFunction(epSignature, len(arguments), arguments, runtimeInterface),
+		scriptExecutionFunction(epSignature.Parameters, len(arguments), arguments, runtimeInterface),
 	)
 	if err != nil {
 		return nil, newError(err)
@@ -167,50 +167,18 @@ func (r *interpreterRuntime) ExecuteScript(
 	return exportValue(value), nil
 }
 
-func scriptExecutionFunction(epSignature *sema.FunctionType, argumentCount int, arguments [][]byte, runtimeInterface Interface) func(inter *interpreter.Interpreter) (interpreter.Value, error) {
+func scriptExecutionFunction(parameters []*sema.Parameter, argumentCount int, arguments [][]byte, runtimeInterface Interface) func(inter *interpreter.Interpreter) (interpreter.Value, error) {
 	return func(inter *interpreter.Interpreter) (interpreter.Value, error) {
-		argumentValues := make([]interpreter.Value, argumentCount)
-
-		// Decode arguments against parameter types
-		for i, parameter := range epSignature.Parameters {
-			parameterType := parameter.TypeAnnotation.Type
-			argument := arguments[i]
-
-			exportedParameterType := exportType(parameterType)
-			var value cadence.Value
-			var err error
-
-			wrapPanic(func() {
-				value, err = runtimeInterface.DecodeArgument(
-					argument,
-					exportedParameterType,
-				)
-			})
-
-			if err != nil {
-				return nil, &InvalidScriptArgumentError{
-					Index: i,
-					Err:   err,
-				}
-			}
-
-			arg := importValue(value)
-
-			// Check that decoded value is a subtype of static parameter type
-			if !interpreter.IsSubType(arg.DynamicType(inter), parameterType) {
-				return nil, &InvalidScriptArgumentError{
-					Index: i,
-					Err: &InvalidTypeAssignmentError{
-						Value: arg,
-						Type:  parameterType,
-					},
-				}
-			}
-
-			argumentValues[i] = arg
+		values, err := validateArgumentParams(
+			inter,
+			runtimeInterface,
+			argumentCount,
+			arguments,
+			parameters)
+		if err != nil {
+			return nil, err
 		}
-
-		return inter.Invoke("main", argumentValues...)
+		return inter.Invoke("main", values...)
 	}
 }
 
@@ -323,7 +291,7 @@ func (r *interpreterRuntime) ExecuteTransaction(
 
 	transactionParameterCount := len(transactionType.Parameters)
 	if argumentCount != transactionParameterCount {
-		return newError(InvalidTransactionParameterCountError{
+		return newError(InvalidEntryPointParameterCountError{
 			Expected: transactionParameterCount,
 			Actual:   argumentCount,
 		})
@@ -356,8 +324,8 @@ func (r *interpreterRuntime) ExecuteTransaction(
 		functions,
 		nil,
 		r.transactionExecutionFunction(
+			transactionType.Parameters,
 			argumentCount,
-			transactionType,
 			arguments,
 			runtimeInterface,
 			authorizerValues,
@@ -392,57 +360,77 @@ func wrapPanic(f func()) {
 }
 
 func (r *interpreterRuntime) transactionExecutionFunction(
+	parameters []*sema.Parameter,
 	argumentCount int,
-	transactionType *sema.TransactionType,
 	arguments [][]byte,
 	runtimeInterface Interface,
 	authorizerValues []interpreter.Value,
 ) interpretFunc {
 	return func(inter *interpreter.Interpreter) (interpreter.Value, error) {
-		argumentValues := make([]interpreter.Value, argumentCount)
-
-		// decode arguments against parameter types
-		for i, parameter := range transactionType.Parameters {
-			parameterType := parameter.TypeAnnotation.Type
-			argument := arguments[i]
-
-			exportedParameterType := exportType(parameterType)
-			var value cadence.Value
-			var err error
-			wrapPanic(func() {
-				value, err = runtimeInterface.DecodeArgument(
-					argument,
-					exportedParameterType,
-				)
-			})
-			if err != nil {
-				return nil, &InvalidTransactionArgumentError{
-					Index: i,
-					Err:   err,
-				}
-			}
-
-			arg := importValue(value)
-
-			// check that decoded value is a subtype of static parameter type
-			if !interpreter.IsSubType(arg.DynamicType(inter), parameterType) {
-				return nil, &InvalidTransactionArgumentError{
-					Index: i,
-					Err: &InvalidTypeAssignmentError{
-						Value: arg,
-						Type:  parameterType,
-					},
-				}
-			}
-
-			argumentValues[i] = arg
+		values, err := validateArgumentParams(
+			inter,
+			runtimeInterface,
+			argumentCount,
+			arguments,
+			parameters)
+		if err != nil {
+			return nil, err
 		}
-
-		allArguments := append(argumentValues, authorizerValues...)
-
-		err := inter.InvokeTransaction(0, allArguments...)
+		allArguments := append(values, authorizerValues...)
+		err = inter.InvokeTransaction(0, allArguments...)
 		return nil, err
 	}
+}
+
+func validateArgumentParams(
+	interp *interpreter.Interpreter,
+	runtimeInterface Interface,
+	argumentCount int,
+	arguments [][]byte,
+	parameters []*sema.Parameter) ([]interpreter.Value, error) {
+
+	argumentValues := make([]interpreter.Value, argumentCount)
+
+	// Decode arguments against parameter types
+	for i, parameter := range parameters {
+		parameterType := parameter.TypeAnnotation.Type
+		argument := arguments[i]
+
+		exportedParameterType := exportType(parameterType)
+		var value cadence.Value
+		var err error
+
+		wrapPanic(func() {
+			value, err = runtimeInterface.DecodeArgument(
+				argument,
+				exportedParameterType,
+			)
+		})
+
+		if err != nil {
+			return nil, &InvalidEntryPointArgumentError{
+				Index: i,
+				Err:   err,
+			}
+		}
+
+		arg := importValue(value)
+
+		// Check that decoded value is a subtype of static parameter type
+		if !interpreter.IsSubType(arg.DynamicType(interp), parameterType) {
+			return nil, &InvalidEntryPointArgumentError{
+				Index: i,
+				Err: &InvalidTypeAssignmentError{
+					Value: arg,
+					Type:  parameterType,
+				},
+			}
+		}
+
+		argumentValues[i] = arg
+	}
+
+	return argumentValues, nil
 }
 
 func (r *interpreterRuntime) ParseAndCheckProgram(script []byte, runtimeInterface Interface, location Location) error {
