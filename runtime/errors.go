@@ -82,11 +82,6 @@ func (e InvalidTransactionCountError) Error() string {
 
 type MissingEntryPointError struct {
 	Expected string
-	Err      error
-}
-
-func (e *MissingEntryPointError) Unwrap() error {
-	return e.Err
 }
 
 func (e *MissingEntryPointError) Error() string {
@@ -97,11 +92,6 @@ func (e *MissingEntryPointError) Error() string {
 
 type InvalidEntryPointTypeError struct {
 	Type sema.Type
-	Err  error
-}
-
-func (e *InvalidEntryPointTypeError) Unwrap() error {
-	return e.Err
 }
 
 func (e *InvalidEntryPointTypeError) Error() string {
@@ -110,12 +100,12 @@ func (e *InvalidEntryPointTypeError) Error() string {
 
 // InvalidTransactionParameterCountError
 
-type InvalidTransactionParameterCountError struct {
+type InvalidEntryPointParameterCountError struct {
 	Expected int
 	Actual   int
 }
 
-func (e InvalidTransactionParameterCountError) Error() string {
+func (e InvalidEntryPointParameterCountError) Error() string {
 	return fmt.Sprintf(
 		"parameter count mismatch for transaction: expected %d, got %d",
 		e.Expected,
@@ -138,33 +128,18 @@ func (e InvalidTransactionAuthorizerCountError) Error() string {
 	)
 }
 
-// InvalidTransactionArgumentError
+// InvalidEntryPointArgumentError
 
-type InvalidTransactionArgumentError struct {
+type InvalidEntryPointArgumentError struct {
 	Index int
 	Err   error
 }
 
-func (e *InvalidTransactionArgumentError) Unwrap() error {
+func (e *InvalidEntryPointArgumentError) Unwrap() error {
 	return e.Err
 }
 
-func (e *InvalidTransactionArgumentError) Error() string {
-	return fmt.Sprintf("invalid argument at index %d", e.Index)
-}
-
-// InvalidScriptArgumentError
-
-type InvalidScriptArgumentError struct {
-	Index int
-	Err   error
-}
-
-func (e *InvalidScriptArgumentError) Unwrap() error {
-	return e.Err
-}
-
-func (e *InvalidScriptArgumentError) Error() string {
+func (e *InvalidEntryPointArgumentError) Error() string {
 	return fmt.Sprintf("invalid argument at index %d", e.Index)
 }
 
