@@ -3,6 +3,7 @@ import {
     StatusBarItem,
     StatusBarAlignment,
 } from "vscode";
+import {Account} from "./config";
 import {SWITCH_ACCOUNT} from "./commands";
 
 export function createActiveAccountStatusBarItem(): StatusBarItem {
@@ -11,7 +12,7 @@ export function createActiveAccountStatusBarItem(): StatusBarItem {
     return statusBarItem
 }
 
-export function updateActiveAccountStatusBarItem(statusBarItem: StatusBarItem, activeAccount: string): void {
-    statusBarItem.text = `$(key) Active account: ${activeAccount}`
+export function updateActiveAccountStatusBarItem(statusBarItem: StatusBarItem, activeAccount: Account): void {
+    statusBarItem.text = `$(key) Active account: ${activeAccount.fullName()}`
     statusBarItem.show()
 }

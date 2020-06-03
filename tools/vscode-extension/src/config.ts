@@ -1,31 +1,43 @@
 import {commands, window, workspace} from "vscode";
-import {shortAddress} from "./address";
+import { addAddressPrefix } from "./address";
 
-export const ROOT_ADDR: string = shortAddress("0000000000000000000000000000000000000001");
+export const SERVICE_ADDR: string = "f8d6e0586b0a20c7";
 
 const CONFIG_FLOW_COMMAND = "flowCommand";
-const CONFIG_ROOT_PRIVATE_KEY = "rootPrivateKey";
-const CONFIG_ROOT_KEY_SIGNATURE_ALGORITHM = "rootKeySignatureAlgorithm";
-const CONFIG_ROOT_KEY_HASH_ALGORITHM = "rootKeyHashAlgorithm";
+const CONFIG_SERVICE_PRIVATE_KEY = "servicePrivateKey";
+const CONFIG_SERVICE_KEY_SIGNATURE_ALGORITHM = "serviceKeySignatureAlgorithm";
+const CONFIG_SERVICE_KEY_HASH_ALGORITHM = "serviceKeyHashAlgorithm";
 const CONFIG_EMULATOR_ADDRESS = "emulatorAddress";
 const CONFIG_NUM_ACCOUNTS = "numAccounts";
 
-// A created account that we can submit transactions for.
-type Account = {
+// An account that can be used to submit transactions.
+export class Account {
+    index: number
     address: string
-};
 
-type AccountSet = {[key: string]: Account};
+    constructor(index: number, address: string) {
+        this.index = index;
+        this.address = address;
+    }
+
+    name(): string {
+        return this.index === 0 ? "Service Account" : `Account ${this.index}`;
+    }
+
+    fullName(): string {
+        return `${this.name()} (${addAddressPrefix(this.address)})`;
+    }
+};
 
 // The subset of extension configuration used by the language server.
 type ServerConfig = {
-    rootPrivateKey: string
-    rootKeySignatureAlgorithm: string
-    rootKeyHashAlgorithm: string
+    servicePrivateKey: string
+    serviceKeySignatureAlgorithm: string
+    serviceKeyHashAlgorithm: string
     emulatorAddress: string
 };
 
-// The config used by the extension
+// The configuration used by the extension.
 export class Config {
     // The name of the flow CLI executable
     flowCommand: string;
@@ -33,27 +45,43 @@ export class Config {
     numAccounts: number;
     // Set of created accounts for which we can submit transactions.
     // Mapping from account address to account object.
-    accounts: AccountSet;
-    // Address of the currently active account.
-    activeAccount: string;
+    accounts: Array<Account>;
+    // Index of the currently active account.
+    activeAccount: number;
 
     constructor(flowCommand: string, numAccounts: number, serverConfig: ServerConfig) {
         this.flowCommand = flowCommand;
         this.numAccounts = numAccounts;
         this.serverConfig = serverConfig;
-        this.accounts = {[ROOT_ADDR]: {address: ROOT_ADDR}};
-        this.activeAccount = ROOT_ADDR;
+        this.accounts = [new Account(0, SERVICE_ADDR)];
+        this.activeAccount = 0;
     }
 
     addAccount(address: string) {
-        address = shortAddress(address);
-        this.accounts[address] = {address: address};
+        const index = this.accounts.length;
+        this.accounts.push(new Account(index, address));
+    }
+
+    setActiveAccount(index: number) {
+        this.activeAccount = index;
+    }
+    
+    getActiveAccount(): Account {
+        return this.accounts[this.activeAccount];
+    }
+
+    getAccount(index: number): Account|null {
+        if (index < 0 || index >= this.accounts.length) {
+            return null;
+        }
+
+        return this.accounts[index]
     }
 
     // Resets account state
     resetAccounts() {
-        this.accounts = {[ROOT_ADDR]: {address: ROOT_ADDR}};
-        this.activeAccount = ROOT_ADDR;
+        this.accounts = [new Account(0, SERVICE_ADDR)];
+        this.activeAccount = 0;
     }
 }
 
@@ -67,19 +95,19 @@ export function getConfig(): Config {
         throw new Error(`Missing ${CONFIG_FLOW_COMMAND} config`);
     }
 
-    const rootPrivateKey: string | undefined = cadenceConfig.get(CONFIG_ROOT_PRIVATE_KEY);
-    if (!rootPrivateKey) {
-        throw new Error(`Missing ${CONFIG_ROOT_PRIVATE_KEY} config`);
+    const servicePrivateKey: string | undefined = cadenceConfig.get(CONFIG_SERVICE_PRIVATE_KEY);
+    if (!servicePrivateKey) {
+        throw new Error(`Missing ${CONFIG_SERVICE_PRIVATE_KEY} config`);
     }
 
-    const rootKeySignatureAlgorithm: string | undefined = cadenceConfig.get(CONFIG_ROOT_KEY_SIGNATURE_ALGORITHM);
-    if (!rootKeySignatureAlgorithm) {
-        throw new Error(`Missing ${CONFIG_ROOT_KEY_SIGNATURE_ALGORITHM} config`);
+    const serviceKeySignatureAlgorithm: string | undefined = cadenceConfig.get(CONFIG_SERVICE_KEY_SIGNATURE_ALGORITHM);
+    if (!serviceKeySignatureAlgorithm) {
+        throw new Error(`Missing ${CONFIG_SERVICE_KEY_SIGNATURE_ALGORITHM} config`);
     }
 
-    const rootKeyHashAlgorithm: string | undefined = cadenceConfig.get(CONFIG_ROOT_KEY_HASH_ALGORITHM);
-    if (!rootKeyHashAlgorithm) {
-        throw new Error(`Missing ${CONFIG_ROOT_KEY_HASH_ALGORITHM} config`);
+    const serviceKeyHashAlgorithm: string | undefined = cadenceConfig.get(CONFIG_SERVICE_KEY_HASH_ALGORITHM);
+    if (!serviceKeyHashAlgorithm) {
+        throw new Error(`Missing ${CONFIG_SERVICE_KEY_HASH_ALGORITHM} config`);
     }
 
     const emulatorAddress: string | undefined = cadenceConfig.get(CONFIG_EMULATOR_ADDRESS);
@@ -93,9 +121,9 @@ export function getConfig(): Config {
     }
 
     const serverConfig: ServerConfig = {
-        rootPrivateKey,
-        rootKeySignatureAlgorithm,
-        rootKeyHashAlgorithm,
+        servicePrivateKey,
+        serviceKeySignatureAlgorithm,
+        serviceKeyHashAlgorithm,
         emulatorAddress
     };
 
