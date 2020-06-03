@@ -78,6 +78,36 @@ func (e InvalidTransactionCountError) Error() string {
 	)
 }
 
+// MissingEntryPointError
+
+type MissingEntryPointError struct {
+	Expected string
+	Err      error
+}
+
+func (e *MissingEntryPointError) Unwrap() error {
+	return e.Err
+}
+
+func (e *MissingEntryPointError) Error() string {
+	return fmt.Sprintf("missing entry point: expected '%s'", e.Expected)
+}
+
+// InvalidEntryPointError
+
+type InvalidEntryPointTypeError struct {
+	Type sema.Type
+	Err  error
+}
+
+func (e *InvalidEntryPointTypeError) Unwrap() error {
+	return e.Err
+}
+
+func (e *InvalidEntryPointTypeError) Error() string {
+	return fmt.Sprintf("invalid entry point type: %s", e.Type.String())
+}
+
 // InvalidTransactionParameterCountError
 
 type InvalidTransactionParameterCountError struct {
@@ -120,6 +150,21 @@ func (e *InvalidTransactionArgumentError) Unwrap() error {
 }
 
 func (e *InvalidTransactionArgumentError) Error() string {
+	return fmt.Sprintf("invalid argument at index %d", e.Index)
+}
+
+// InvalidScriptArgumentError
+
+type InvalidScriptArgumentError struct {
+	Index int
+	Err   error
+}
+
+func (e *InvalidScriptArgumentError) Unwrap() error {
+	return e.Err
+}
+
+func (e *InvalidScriptArgumentError) Error() string {
 	return fmt.Sprintf("invalid argument at index %d", e.Index)
 }
 

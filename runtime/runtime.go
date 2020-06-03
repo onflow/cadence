@@ -43,7 +43,7 @@ type Runtime interface {
 	//
 	// This function returns an error if the program has errors (e.g syntax errors, type errors),
 	// or if the execution fails.
-	ExecuteScript(script []byte, runtimeInterface Interface, location Location) (cadence.Value, error)
+	ExecuteScript(script []byte, arguments [][]byte, runtimeInterface Interface, location Location) (cadence.Value, error)
 
 	// ExecuteTransaction executes the given transaction.
 	//
@@ -117,6 +117,7 @@ func NewInterpreterRuntime() Runtime {
 
 func (r *interpreterRuntime) ExecuteScript(
 	script []byte,
+	arguments [][]byte,
 	runtimeInterface Interface,
 	location Location,
 ) (cadence.Value, error) {
@@ -130,11 +131,18 @@ func (r *interpreterRuntime) ExecuteScript(
 		return nil, newError(err)
 	}
 
-	_, ok := checker.GlobalValues["main"]
+	ep, ok := checker.GlobalValues["main"]
 	if !ok {
-		// TODO: error because no main?
-		return nil, nil
+		return nil, &MissingEntryPointError{Expected: "main"}
 	}
+
+	invokableType, ok := ep.Type.(sema.InvokableType)
+	if !ok {
+		return nil, &InvalidEntryPointTypeError{
+			Type: ep.Type,
+		}
+	}
+	epSignature := invokableType.InvocationFunctionType()
 
 	value, err := r.interpret(
 		location,
@@ -143,9 +151,7 @@ func (r *interpreterRuntime) ExecuteScript(
 		checker,
 		functions,
 		nil,
-		func(inter *interpreter.Interpreter) (interpreter.Value, error) {
-			return inter.Invoke("main")
-		},
+		scriptExecutionFunction(epSignature, len(arguments), arguments, runtimeInterface),
 	)
 	if err != nil {
 		return nil, newError(err)
@@ -159,6 +165,53 @@ func (r *interpreterRuntime) ExecuteScript(
 	runtimeStorage.writeCached()
 
 	return exportValue(value), nil
+}
+
+func scriptExecutionFunction(epSignature *sema.FunctionType, argumentCount int, arguments [][]byte, runtimeInterface Interface) func(inter *interpreter.Interpreter) (interpreter.Value, error) {
+	return func(inter *interpreter.Interpreter) (interpreter.Value, error) {
+		argumentValues := make([]interpreter.Value, argumentCount)
+
+		// Decode arguments against parameter types
+		for i, parameter := range epSignature.Parameters {
+			parameterType := parameter.TypeAnnotation.Type
+			argument := arguments[i]
+
+			exportedParameterType := exportType(parameterType)
+			var value cadence.Value
+			var err error
+
+			wrapPanic(func() {
+				value, err = runtimeInterface.DecodeArgument(
+					argument,
+					exportedParameterType,
+				)
+			})
+
+			if err != nil {
+				return nil, &InvalidScriptArgumentError{
+					Index: i,
+					Err:   err,
+				}
+			}
+
+			arg := importValue(value)
+
+			// Check that decoded value is a subtype of static parameter type
+			if !interpreter.IsSubType(arg.DynamicType(inter), parameterType) {
+				return nil, &InvalidScriptArgumentError{
+					Index: i,
+					Err: &InvalidTypeAssignmentError{
+						Value: arg,
+						Type:  parameterType,
+					},
+				}
+			}
+
+			argumentValues[i] = arg
+		}
+
+		return inter.Invoke("main", argumentValues...)
+	}
 }
 
 type interpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, error)
