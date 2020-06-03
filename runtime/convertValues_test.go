@@ -545,6 +545,7 @@ func exportEventFromScript(t *testing.T, script string) cadence.Event {
 
 	_, err := rt.ExecuteScript(
 		[]byte(script),
+		nil,
 		inter,
 		testLocation,
 	)
@@ -562,6 +563,7 @@ func exportValueFromScript(t *testing.T, script string) cadence.Value {
 
 	value, err := rt.ExecuteScript(
 		[]byte(script),
+		nil,
 		&EmptyRuntimeInterface{},
 		testLocation,
 	)

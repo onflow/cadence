@@ -861,6 +861,7 @@ func convertValueFromScript(t *testing.T, script string) cadence.Value {
 
 	value, err := rt.ExecuteScript(
 		[]byte(script),
+		nil,
 		&runtime.EmptyRuntimeInterface{},
 		runtime.StringLocation("test"),
 	)

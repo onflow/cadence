@@ -273,7 +273,7 @@ func TestRuntimeImport(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	value, err := runtime.ExecuteScript(script, runtimeInterface, nextTransactionLocation())
+	value, err := runtime.ExecuteScript(script, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	assert.Equal(t, cadence.NewInt(42), value)
@@ -746,6 +746,276 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 						t.Log(err)
 					}
 				}
+				assert.ElementsMatch(t, tt.expectedLogs, loggedMessages)
+			}
+		})
+	}
+}
+
+func TestRuntimeScriptArguments(t *testing.T) {
+
+	t.Parallel()
+
+	var tests = []struct {
+		label        string
+		script       string
+		args         [][]byte
+		expectedLogs []string
+		check        func(t *testing.T, err error)
+	}{
+		{
+			label: "No arguments",
+			script: `
+				pub fun main() {
+					log("t")
+				}
+			`,
+			args:         nil,
+			expectedLogs: []string{`"t"`},
+		},
+		{
+			label: "Single argument",
+			script: `
+				pub fun main(x: Int) {
+					log(x)
+				}
+			`,
+			args: [][]byte{
+				jsoncdc.MustEncode(cadence.NewInt(42)),
+			},
+			expectedLogs: []string{"42"},
+		},
+		{
+			label: "Multiple arguments",
+			script: `
+				pub fun main(x: Int, y: String) {
+					log(x)
+					log(y)
+				}
+			`,
+			args: [][]byte{
+				jsoncdc.MustEncode(cadence.NewInt(42)),
+				jsoncdc.MustEncode(cadence.NewString("foo")),
+			},
+			expectedLogs: []string{"42", `"foo"`},
+		},
+		{
+			label: "Invalid bytes",
+			script: `
+				pub fun main(x: Int) { }
+			`,
+			args: [][]byte{
+				{1, 2, 3, 4}, // not valid JSON-CDC
+			},
+			check: func(t *testing.T, err error) {
+				assert.Error(t, err)
+				assert.IsType(t, &InvalidScriptArgumentError{}, errors.Unwrap(err))
+			},
+		},
+		{
+			label: "Type mismatch",
+			script: `
+				pub fun main(x: Int) {
+					log(x)
+				}
+			`,
+			args: [][]byte{
+				jsoncdc.MustEncode(cadence.NewString("foo")),
+			},
+			check: func(t *testing.T, err error) {
+				assert.Error(t, err)
+				assert.IsType(t, &InvalidScriptArgumentError{}, errors.Unwrap(err))
+				assert.IsType(t, &InvalidTypeAssignmentError{}, errors.Unwrap(errors.Unwrap(err)))
+			},
+		},
+		{
+			label: "Address",
+			script: `
+				pub fun main(x: Address) {
+					log(x)
+				}
+			`,
+			args: [][]byte{
+				jsoncdc.MustEncode(
+					cadence.BytesToAddress(
+						[]byte{
+							0x0, 0x0, 0x0, 0x0,
+							0x0, 0x0, 0x0, 0x1,
+						},
+					),
+				),
+			},
+			expectedLogs: []string{"0x1"},
+		},
+		{
+			label: "Array",
+			script: `
+				pub fun main(x: [Int]) {
+					log(x)
+				}
+			`,
+			args: [][]byte{
+				jsoncdc.MustEncode(
+					cadence.NewArray(
+						[]cadence.Value{
+							cadence.NewInt(1),
+							cadence.NewInt(2),
+							cadence.NewInt(3),
+						},
+					),
+				),
+			},
+			expectedLogs: []string{"[1, 2, 3]"},
+		},
+		{
+			label: "Dictionary",
+			script: `
+				pub fun main(x: {String:Int}) {
+					log(x["y"])
+				}
+			`,
+			args: [][]byte{
+				jsoncdc.MustEncode(
+					cadence.NewDictionary(
+						[]cadence.KeyValuePair{
+							{
+								Key:   cadence.NewString("y"),
+								Value: cadence.NewInt(42),
+							},
+						},
+					),
+				),
+			},
+			expectedLogs: []string{"42"},
+		},
+		{
+			label: "Invalid dictionary",
+			script: `
+				pub fun main(x: {String:String}) {
+					log(x["y"])
+				}
+			`,
+			args: [][]byte{
+				jsoncdc.MustEncode(
+					cadence.NewDictionary(
+						[]cadence.KeyValuePair{
+							{
+								Key:   cadence.NewString("y"),
+								Value: cadence.NewInt(42),
+							},
+						},
+					),
+				),
+			},
+			check: func(t *testing.T, err error) {
+				assert.Error(t, err)
+				assert.IsType(t, &InvalidScriptArgumentError{}, errors.Unwrap(err))
+				assert.IsType(t, &InvalidTypeAssignmentError{}, errors.Unwrap(errors.Unwrap(err)))
+			},
+		},
+		{
+			label: "Struct",
+			script: `
+				pub struct Foo {
+					pub var y: String
+
+					init() {
+						self.y = "initial string"
+					}
+				}
+
+				pub fun main(x: Foo) {
+					log(x.y)
+				}
+			`,
+			args: [][]byte{
+				jsoncdc.MustEncode(
+					cadence.
+						NewStruct([]cadence.Value{cadence.NewString("bar")}).
+						WithType(cadence.StructType{
+							TypeID:     "test.Foo",
+							Identifier: "Foo",
+							Fields: []cadence.Field{
+								{
+									Identifier: "y",
+									Type:       cadence.StringType{},
+								},
+							},
+						}),
+				),
+			},
+			expectedLogs: []string{`"bar"`},
+		},
+		{
+			label: "Struct in array",
+			script: `
+				pub struct Foo {
+					pub var y: String
+
+					init() {
+						self.y = "initial string"
+					}
+				}
+
+				pub fun main(f: [Foo]) {
+					let x = f[0]
+					log(x.y)
+				}
+			`,
+			args: [][]byte{
+				jsoncdc.MustEncode(
+					cadence.NewArray([]cadence.Value{
+						cadence.
+							NewStruct([]cadence.Value{cadence.NewString("bar")}).
+							WithType(cadence.StructType{
+								TypeID:     "test.Foo",
+								Identifier: "Foo",
+								Fields: []cadence.Field{
+									{
+										Identifier: "y",
+										Type:       cadence.StringType{},
+									},
+								},
+							}),
+					}),
+				),
+			},
+			expectedLogs: []string{`"bar"`},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.label, func(t *testing.T) {
+			rt := NewInterpreterRuntime()
+
+			var loggedMessages []string
+
+			runtimeInterface := &testRuntimeInterface{
+				// getSigningAccounts: func() []Address { return nil },
+				decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+					return jsoncdc.Decode(b)
+				},
+				log: func(message string) {
+					loggedMessages = append(loggedMessages, message)
+				},
+			}
+
+			_, err := rt.ExecuteScript(
+				[]byte(tt.script),
+				tt.args,
+				runtimeInterface,
+				utils.TestLocation,
+			)
+
+			if tt.check != nil {
+				tt.check(t, err)
+			} else {
+				if !assert.NoError(t, err) {
+					for err := err; err != nil; err = errors.Unwrap(err) {
+						t.Log(err)
+					}
+				}
+				fmt.Println(loggedMessages)
 				assert.ElementsMatch(t, tt.expectedLogs, loggedMessages)
 			}
 		})
@@ -1526,7 +1796,7 @@ func TestRuntimeSyntaxError(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	_, err := runtime.ExecuteScript(script, runtimeInterface, nextTransactionLocation())
+	_, err := runtime.ExecuteScript(script, nil, runtimeInterface, nextTransactionLocation())
 	assert.Error(t, err)
 }
 
@@ -2239,14 +2509,14 @@ func TestRuntimeContractAccount(t *testing.T) {
 	assert.NotNil(t, accountCode)
 
 	t.Run("", func(t *testing.T) {
-		value, err := runtime.ExecuteScript(script1, runtimeInterface, nextTransactionLocation())
+		value, err := runtime.ExecuteScript(script1, nil, runtimeInterface, nextTransactionLocation())
 		require.NoError(t, err)
 
 		assert.Equal(t, addressValue, value)
 	})
 
 	t.Run("", func(t *testing.T) {
-		value, err := runtime.ExecuteScript(script2, runtimeInterface, nextTransactionLocation())
+		value, err := runtime.ExecuteScript(script2, nil, runtimeInterface, nextTransactionLocation())
 		require.NoError(t, err)
 
 		assert.Equal(t, addressValue, value)
@@ -4231,7 +4501,7 @@ func TestRuntimeTransaction_UpdateAccountCodeUnsafeNotInitializing(t *testing.T)
       }
     `)
 
-	_, err = runtime.ExecuteScript(script1, runtimeInterface, nextTransactionLocation())
+	_, err = runtime.ExecuteScript(script1, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	deployTx2 := newDeployTransaction(contract2, "unsafeNotInitializingSetCode")
@@ -4256,6 +4526,6 @@ func TestRuntimeTransaction_UpdateAccountCodeUnsafeNotInitializing(t *testing.T)
       }
     `)
 
-	_, err = runtime.ExecuteScript(script2, runtimeInterface, nextTransactionLocation())
+	_, err = runtime.ExecuteScript(script2, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 }
