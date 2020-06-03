@@ -32,6 +32,7 @@ type Trampoline interface {
 	Then(f func(interface{})) Trampoline
 }
 
+// Run runs one trampoline at a time, until there is no more continuation.
 func Run(t Trampoline) interface{} {
 	for {
 		result := t.Resume()
@@ -108,8 +109,7 @@ func (m More) Continue() Trampoline {
 	return m()
 }
 
-// FlatMap
-
+// FlatMap is a struct that contains the current computation and the continuation computation
 type FlatMap struct {
 	Subroutine   Trampoline
 	Continuation func(interface{}) Trampoline
@@ -130,10 +130,14 @@ func (m FlatMap) Resume() interface{} {
 
 	switch sub := m.Subroutine.(type) {
 	case Done:
+		// if the subroutine is done, then the result is ready to be used as input for the continuation
 		return func() Trampoline {
 			return continuation(sub.Result)
 		}
 	case Continuation:
+		// if the subroutine is a continuation, then the result is not available yet, it has to call
+		// sub.Continue() and use FlatMap to wait until the result is ready and be given the the
+		// current continuation.
 		return func() Trampoline {
 			return sub.Continue().FlatMap(continuation)
 		}
