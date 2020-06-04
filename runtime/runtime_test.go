@@ -990,7 +990,6 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			var loggedMessages []string
 
 			runtimeInterface := &testRuntimeInterface{
-				// getSigningAccounts: func() []Address { return nil },
 				decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
 					return jsoncdc.Decode(b)
 				},
@@ -1014,7 +1013,6 @@ func TestRuntimeScriptArguments(t *testing.T) {
 						t.Log(err)
 					}
 				}
-				fmt.Println(loggedMessages)
 				assert.ElementsMatch(t, tt.expectedLogs, loggedMessages)
 			}
 		})

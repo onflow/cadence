@@ -107,7 +107,7 @@ type InvalidEntryPointParameterCountError struct {
 
 func (e InvalidEntryPointParameterCountError) Error() string {
 	return fmt.Sprintf(
-		"parameter count mismatch for transaction: expected %d, got %d",
+		"entry point parameter count mismatch: expected %d, got %d",
 		e.Expected,
 		e.Actual,
 	)
