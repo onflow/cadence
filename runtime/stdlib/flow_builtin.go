@@ -97,6 +97,12 @@ var getBlockFunctionType = &sema.FunctionType{
 	),
 }
 
+var unsafeRandomFunctionType = &sema.FunctionType{
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		&sema.UInt64Type{},
+	),
+}
+
 // FlowBuiltinImpls defines the set of functions needed to implement the Flow
 // built-in functions.
 type FlowBuiltinImpls struct {
@@ -105,6 +111,7 @@ type FlowBuiltinImpls struct {
 	Log             interpreter.HostFunction
 	GetCurrentBlock interpreter.HostFunction
 	GetBlock        interpreter.HostFunction
+	UnsafeRandom    interpreter.HostFunction
 }
 
 // FlowBuiltInFunctions returns a list of standard library functions, bound to
@@ -139,6 +146,12 @@ func FlowBuiltInFunctions(impls FlowBuiltinImpls) StandardLibraryFunctions {
 			"getBlock",
 			getBlockFunctionType,
 			impls.GetBlock,
+			nil,
+		),
+		NewStandardLibraryFunction(
+			"unsafeRandom",
+			unsafeRandomFunctionType,
+			impls.UnsafeRandom,
 			nil,
 		),
 	}

@@ -66,6 +66,9 @@ type Interface interface {
 	GetCurrentBlockHeight() uint64
 	// GetBlockAtHeight returns the block at the given height.
 	GetBlockAtHeight(height uint64) (hash BlockHash, timestamp int64, exists bool, err error)
+	// UnsafeRandom returns a random uint64, where the process of random number derivation is not cryptographically
+	// secure.
+	UnsafeRandom() uint64
 }
 
 type Metrics interface {
@@ -77,6 +80,8 @@ type Metrics interface {
 }
 
 type EmptyRuntimeInterface struct{}
+
+var _ Interface = &EmptyRuntimeInterface{}
 
 func (i *EmptyRuntimeInterface) ResolveImport(_ Location) ([]byte, error) {
 	return nil, nil
@@ -144,4 +149,8 @@ func (i *EmptyRuntimeInterface) GetCurrentBlockHeight() uint64 {
 
 func (i *EmptyRuntimeInterface) GetBlockAtHeight(_ uint64) (hash BlockHash, timestamp int64, exists bool, err error) {
 	return
+}
+
+func (i *EmptyRuntimeInterface) UnsafeRandom() uint64 {
+	return 0
 }

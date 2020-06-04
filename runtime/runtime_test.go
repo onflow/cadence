@@ -105,7 +105,10 @@ type testRuntimeInterface struct {
 	programInterpreted func(location ast.Location, duration time.Duration)
 	valueEncoded       func(duration time.Duration)
 	valueDecoded       func(duration time.Duration)
+	unsafeRandom       func() uint64
 }
+
+var _ Interface = &testRuntimeInterface{}
 
 func (i *testRuntimeInterface) ResolveImport(location Location) ([]byte, error) {
 	return i.resolveImport(location)
@@ -234,6 +237,13 @@ func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (hash BlockHash, 
 	copy(hash[stdlib.BlockIDSize-len(encoded):], encoded)
 
 	return hash, time.Unix(int64(height), 0).UnixNano(), true, nil
+}
+
+func (i *testRuntimeInterface) UnsafeRandom() uint64 {
+	if i.unsafeRandom == nil {
+		return 0
+	}
+	return i.unsafeRandom()
 }
 
 func TestRuntimeImport(t *testing.T) {
@@ -3131,6 +3141,45 @@ func TestRuntimeBlock(t *testing.T) {
 			"2",
 			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]",
 			"2.00000000",
+		},
+		loggedMessages,
+	)
+}
+
+func TestUnsafeRandom(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	script := []byte(`
+      transaction {
+        prepare() {
+          let rand = unsafeRandom()
+          log(rand)
+        }
+      }
+    `)
+
+	var loggedMessages []string
+
+	runtimeInterface := &testRuntimeInterface{
+		unsafeRandom: func() uint64 {
+			return 7558174677681708339
+		},
+		log: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]string{
+			"7558174677681708339",
 		},
 		loggedMessages,
 	)

@@ -713,6 +713,7 @@ func (r *interpreterRuntime) standardLibraryFunctions(
 			Log:             r.newLogFunction(runtimeInterface),
 			GetCurrentBlock: r.newGetCurrentBlockFunction(runtimeInterface),
 			GetBlock:        r.newGetBlockFunction(runtimeInterface),
+			UnsafeRandom:    r.newUnsafeRandomFunction(runtimeInterface),
 		}),
 		stdlib.BuiltinFunctions...,
 	)
@@ -1295,6 +1296,16 @@ func (r *interpreterRuntime) newGetBlockFunction(runtimeInterface Interface) int
 			result = interpreter.NewSomeValueOwningNonCopying(*block)
 		}
 		return trampoline.Done{Result: result}
+	}
+}
+
+func (r *interpreterRuntime) newUnsafeRandomFunction(runtimeInterface Interface) interpreter.HostFunction {
+	return func(invocation interpreter.Invocation) trampoline.Trampoline {
+		var rand uint64
+		wrapPanic(func() {
+			rand = runtimeInterface.UnsafeRandom()
+		})
+		return trampoline.Done{Result: interpreter.UInt64Value(rand)}
 	}
 }
 
