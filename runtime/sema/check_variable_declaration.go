@@ -124,7 +124,7 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		checker.recordResourceInvalidation(
 			declaration.Value,
 			declarationType,
-			ResourceInvalidationKindMove,
+			ResourceInvalidationKindMoveDefinite,
 		)
 	} else {
 

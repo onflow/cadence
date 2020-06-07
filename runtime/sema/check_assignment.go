@@ -101,7 +101,7 @@ func (checker *Checker) checkAssignment(
 	checker.recordResourceInvalidation(
 		value,
 		valueType,
-		ResourceInvalidationKindMove,
+		ResourceInvalidationKindMoveDefinite,
 	)
 
 	return

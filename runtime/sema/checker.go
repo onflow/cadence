@@ -840,7 +840,7 @@ func (checker *Checker) checkResourceMoveOperation(valueExpression ast.Expressio
 	checker.recordResourceInvalidation(
 		unaryExpression.Expression,
 		valueType,
-		ResourceInvalidationKindMove,
+		ResourceInvalidationKindMoveDefinite,
 	)
 }
 
@@ -1432,13 +1432,19 @@ func (checker *Checker) checkResourceLoss(depth int) {
 	}
 }
 
+type recordedResourceInvalidation struct {
+	resource     interface{}
+	invalidation ResourceInvalidation
+}
+
 func (checker *Checker) recordResourceInvalidation(
 	expression ast.Expression,
 	valueType Type,
 	invalidationKind ResourceInvalidationKind,
-) {
+) *recordedResourceInvalidation {
+
 	if !valueType.IsResourceType() {
-		return
+		return nil
 	}
 
 	reportInvalidNestedMove := func() {
@@ -1454,14 +1460,17 @@ func (checker *Checker) recordResourceInvalidation(
 
 	switch expression.(type) {
 	case *ast.MemberExpression:
-		if accessedSelfMember == nil || !checker.allowSelfResourceFieldInvalidation {
+
+		if accessedSelfMember == nil ||
+			!checker.allowSelfResourceFieldInvalidation {
+
 			reportInvalidNestedMove()
-			return
+			return nil
 		}
 
 	case *ast.IndexExpression:
 		reportInvalidNestedMove()
-		return
+		return nil
 	}
 
 	invalidation := ResourceInvalidation{
@@ -1472,20 +1481,26 @@ func (checker *Checker) recordResourceInvalidation(
 
 	if checker.allowSelfResourceFieldInvalidation && accessedSelfMember != nil {
 		checker.resources.AddInvalidation(accessedSelfMember, invalidation)
-		return
+
+		return &recordedResourceInvalidation{
+			resource:     accessedSelfMember,
+			invalidation: invalidation,
+		}
 	}
 
 	identifierExpression, ok := expression.(*ast.IdentifierExpression)
 	if !ok {
-		return
+		return nil
 	}
 
 	variable := checker.findAndCheckVariable(identifierExpression.Identifier, false)
 	if variable == nil {
-		return
+		return nil
 	}
 
-	if variable.DeclarationKind == common.DeclarationKindSelf {
+	if invalidationKind != ResourceInvalidationKindMoveTemporary &&
+		variable.DeclarationKind == common.DeclarationKindSelf {
+
 		checker.report(
 			&InvalidSelfInvalidationError{
 				InvalidationKind: invalidationKind,
@@ -1496,6 +1511,11 @@ func (checker *Checker) recordResourceInvalidation(
 	}
 
 	checker.resources.AddInvalidation(variable, invalidation)
+
+	return &recordedResourceInvalidation{
+		resource:     variable,
+		invalidation: invalidation,
+	}
 }
 
 func (checker *Checker) checkWithResources(

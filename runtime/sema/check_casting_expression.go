@@ -41,7 +41,7 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 		checker.recordResourceInvalidation(
 			leftHandExpression,
 			leftHandType,
-			ResourceInvalidationKindMove,
+			ResourceInvalidationKindMoveDefinite,
 		)
 
 		// If the failable casted type is a resource, the failable cast expression

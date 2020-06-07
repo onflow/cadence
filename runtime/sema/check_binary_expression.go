@@ -316,7 +316,7 @@ func (checker *Checker) checkBinaryExpressionNilCoalescing(
 		checker.recordResourceInvalidation(
 			expression.Left,
 			leftType,
-			ResourceInvalidationKindMove,
+			ResourceInvalidationKindMoveDefinite,
 		)
 
 		if !leftIsOptional {
