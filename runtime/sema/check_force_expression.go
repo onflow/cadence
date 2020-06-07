@@ -33,7 +33,7 @@ func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) as
 	checker.recordResourceInvalidation(
 		expression.Expression,
 		valueType,
-		ResourceInvalidationKindMove,
+		ResourceInvalidationKindMoveDefinite,
 	)
 
 	optionalType, ok := valueType.(*OptionalType)

@@ -24,12 +24,13 @@ import (
 )
 
 func (checker *Checker) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) ast.Repr {
-	typ := checker.checkInvocationExpression(invocationExpression)
+	ty := checker.checkInvocationExpression(invocationExpression)
 
 	// Events cannot be invoked without an emit statement
 
-	compositeType, isCompositeType := typ.(*CompositeType)
-	if isCompositeType && compositeType.Kind == common.CompositeKindEvent {
+	if compositeType, ok := ty.(*CompositeType); ok &&
+		compositeType.Kind == common.CompositeKindEvent {
+
 		checker.report(
 			&InvalidEventUsageError{
 				Range: ast.NewRangeFromPositioned(invocationExpression),
@@ -38,7 +39,7 @@ func (checker *Checker) VisitInvocationExpression(invocationExpression *ast.Invo
 		return &InvalidType{}
 	}
 
-	return typ
+	return ty
 }
 
 func (checker *Checker) checkInvocationExpression(invocationExpression *ast.InvocationExpression) Type {
@@ -132,6 +133,45 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 		returnType,
 		inCreate,
 	)
+
+	// If the invocation is on a resource, i.e., a member expression where the accessed expression
+	// is an identifier which refers to a resource, then the resource is temporarily "moved into"
+	// the function and back out after the invocation.
+	//
+	// So record a *temporary* invalidation to get the resource that is invalidated,
+	// remove the invalidation because it is temporary, and check if the use is potentially invalid,
+	// because the resource was already invalidated.
+	//
+	// Perform this check *after* the arguments where checked:
+	// Even though a duplicated use of the resource in an argument is invalid, e.g. `foo.bar(<-foo)`,
+	// the arguments might just use to the temporarily moved resource, e.g. `foo.bar(foo.baz)`
+	// and not invalidate it.
+
+	if invokedMemberExpression, ok := invokedExpression.(*ast.MemberExpression); ok {
+		if invocationIdentifierExpression, ok := invokedMemberExpression.Expression.(*ast.IdentifierExpression); ok {
+
+			valueType := checker.Elaboration.IdentifierInInvocationTypes[invocationIdentifierExpression]
+
+			invalidation := checker.recordResourceInvalidation(
+				invocationIdentifierExpression,
+				valueType,
+				ResourceInvalidationKindMoveTemporary,
+			)
+
+			if invalidation != nil {
+
+				checker.resources.RemoveTemporaryInvalidation(
+					invalidation.resource,
+					invalidation.invalidation,
+				)
+
+				checker.checkResourceUseAfterInvalidation(
+					invalidation.resource,
+					invocationIdentifierExpression,
+				)
+			}
+		}
+	}
 
 	// Update the return info for invocations that do not return (i.e. have a `Never` return type)
 

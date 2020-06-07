@@ -1364,7 +1364,8 @@ func (e *ResourceUseAfterInvalidationError) Cause() (wasMoved, wasDestroyed bool
 	// update cache
 	for _, invalidation := range e.Invalidations {
 		switch invalidation.Kind {
-		case ResourceInvalidationKindMove:
+		case ResourceInvalidationKindMoveDefinite,
+			ResourceInvalidationKindMoveTemporary:
 			wasMoved = true
 		case ResourceInvalidationKindDestroy:
 			wasDestroyed = true
@@ -1472,7 +1473,8 @@ type ResourceInvalidationNote struct {
 func (n ResourceInvalidationNote) Message() string {
 	var action string
 	switch n.Kind {
-	case ResourceInvalidationKindMove:
+	case ResourceInvalidationKindMoveDefinite,
+		ResourceInvalidationKindMoveTemporary:
 		action = "moved"
 	case ResourceInvalidationKindDestroy:
 		action = "destroyed"
@@ -2332,7 +2334,8 @@ type InvalidSelfInvalidationError struct {
 func (e *InvalidSelfInvalidationError) Error() string {
 	var action string
 	switch e.InvalidationKind {
-	case ResourceInvalidationKindMove:
+	case ResourceInvalidationKindMoveDefinite,
+		ResourceInvalidationKindMoveTemporary:
 		action = "move"
 	case ResourceInvalidationKindDestroy:
 		action = "destroy"

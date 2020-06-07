@@ -9,13 +9,14 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[ResourceInvalidationKindUnknown-0]
-	_ = x[ResourceInvalidationKindMove-1]
-	_ = x[ResourceInvalidationKindDestroy-2]
+	_ = x[ResourceInvalidationKindMoveDefinite-1]
+	_ = x[ResourceInvalidationKindMoveTemporary-2]
+	_ = x[ResourceInvalidationKindDestroy-3]
 }
 
-const _ResourceInvalidationKind_name = "ResourceInvalidationKindUnknownResourceInvalidationKindMoveResourceInvalidationKindDestroy"
+const _ResourceInvalidationKind_name = "ResourceInvalidationKindUnknownResourceInvalidationKindMoveDefiniteResourceInvalidationKindMoveTemporaryResourceInvalidationKindDestroy"
 
-var _ResourceInvalidationKind_index = [...]uint8{0, 31, 59, 90}
+var _ResourceInvalidationKind_index = [...]uint8{0, 31, 67, 104, 135}
 
 func (i ResourceInvalidationKind) String() string {
 	if i >= ResourceInvalidationKind(len(_ResourceInvalidationKind_index)-1) {

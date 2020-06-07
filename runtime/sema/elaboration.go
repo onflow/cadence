@@ -67,6 +67,7 @@ type Elaboration struct {
 	CompositeTypes                         map[TypeID]*CompositeType
 	InterfaceTypes                         map[TypeID]*InterfaceType
 	InvocationExpressionTypeParameterTypes map[*ast.InvocationExpression]map[*TypeParameter]Type
+	IdentifierInInvocationTypes            map[*ast.IdentifierExpression]Type
 }
 
 func NewElaboration() *Elaboration {
@@ -108,5 +109,6 @@ func NewElaboration() *Elaboration {
 		CompositeTypes:                         map[TypeID]*CompositeType{},
 		InterfaceTypes:                         map[TypeID]*InterfaceType{},
 		InvocationExpressionTypeParameterTypes: map[*ast.InvocationExpression]map[*TypeParameter]Type{},
+		IdentifierInInvocationTypes:            map[*ast.IdentifierExpression]Type{},
 	}
 }

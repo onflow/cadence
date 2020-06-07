@@ -89,12 +89,24 @@ func (ris *Resources) Get(resource interface{}) ResourceInfo {
 }
 
 // AddInvalidation adds the given invalidation to the set of invalidations for the given resource.
-// Marks the resource to be definitely invalidated.
+// If the invalidation is not temporary, marks the resource to be definitely invalidated.
 //
 func (ris *Resources) AddInvalidation(resource interface{}, invalidation ResourceInvalidation) {
 	info := ris.Get(resource)
-	info.DefinitivelyInvalidated = true
 	info.Invalidations = info.Invalidations.Insert(invalidation)
+	if invalidation.Kind.IsDefinite() {
+		info.DefinitivelyInvalidated = true
+	}
+	entry := ris.entry(resource)
+	ris.resources = ris.resources.Insert(entry, info)
+}
+
+// RemoveTemporaryInvalidation removes the given invalidation
+// from the set of invalidations for the given resource.
+//
+func (ris *Resources) RemoveTemporaryInvalidation(resource interface{}, invalidation ResourceInvalidation) {
+	info := ris.Get(resource)
+	info.Invalidations = info.Invalidations.Delete(invalidation)
 	entry := ris.entry(resource)
 	ris.resources = ris.resources.Insert(entry, info)
 }

@@ -28,16 +28,30 @@ type ResourceInvalidationKind uint
 
 const (
 	ResourceInvalidationKindUnknown ResourceInvalidationKind = iota
-	ResourceInvalidationKindMove
+	ResourceInvalidationKindMoveDefinite
+	ResourceInvalidationKindMoveTemporary
 	ResourceInvalidationKindDestroy
 )
 
 func (k ResourceInvalidationKind) Name() string {
 	switch k {
-	case ResourceInvalidationKindMove:
-		return "move"
+	case ResourceInvalidationKindMoveDefinite:
+		return "definite move"
+	case ResourceInvalidationKindMoveTemporary:
+		return "temporary move"
 	case ResourceInvalidationKindDestroy:
 		return "destroy"
+	}
+
+	panic(errors.NewUnreachableError())
+}
+
+func (k ResourceInvalidationKind) IsDefinite() bool {
+	switch k {
+	case ResourceInvalidationKindMoveDefinite, ResourceInvalidationKindDestroy:
+		return true
+	case ResourceInvalidationKindMoveTemporary, ResourceInvalidationKindUnknown:
+		return false
 	}
 
 	panic(errors.NewUnreachableError())
