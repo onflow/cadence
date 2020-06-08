@@ -122,15 +122,16 @@ func (p *parser) next() {
 		// buffering tokens allows us to "replay" the buffered tokens to deal with syntax ambiguity.
 		if p.buffering {
 			// if we need to buffer the next token
+			// then read the token from from the lexer and buffer it.
 			token = p.nextFromLexer()
 			p.bufferedTokens = append(p.bufferedTokens, token)
 		} else if p.bufferPos < len(p.bufferedTokens) {
 			// if we don't need to buffer the next token and there are tokens buffered before,
-			// then read the token from the buffer
+			// then read the token from the buffer.
 			token = p.nextFromBuffer()
 		} else {
 			// else no need to buffer, and there is no buffered token,
-			// then read the next token from the lexer
+			// then read the next token from the lexer.
 			token = p.nextFromLexer()
 		}
 
