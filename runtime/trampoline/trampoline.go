@@ -21,8 +21,9 @@ import (
 /// the next computation, (i.e., calling functions, possibly recursing directly),
 /// they yield the next computation.
 ///
-/// Trampolines can be executed through a control loop using the `Run` method,
-/// and can be chained together using the `FlatMap` method.
+/// A trampoline consists of a current computation and next computation.
+/// trampolines can be chained together using the `FlatMap` method and can be executed
+/// through a control loop using the `Run` method.
 ///
 
 type Trampoline interface {
@@ -32,7 +33,7 @@ type Trampoline interface {
 	Then(f func(interface{})) Trampoline
 }
 
-// Run runs one trampoline at a time, until there is no more continuation.
+// Run runs one Trampoline at a time, until there is no more continuation.
 func Run(t Trampoline) interface{} {
 	for {
 		result := t.Resume()
@@ -59,7 +60,7 @@ func ThenTrampoline(t Trampoline, f func(interface{})) Trampoline {
 	})
 }
 
-// Done
+// Done is a Trampoline, which has an executed result.
 
 type Done struct {
 	Result interface{}
@@ -85,7 +86,7 @@ type Continuation interface {
 	Continue() Trampoline
 }
 
-// More
+// More is a Trampoline that returns a Trampoline as more work.
 
 type More func() Trampoline
 

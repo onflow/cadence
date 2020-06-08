@@ -553,6 +553,7 @@ func (interpreter *Interpreter) Interpret() (err error) {
 		err = internalErr
 	})
 
+	// declare all declarations and then run all statements
 	interpreter.runAllStatements(interpreter.interpret())
 
 	return nil
@@ -626,6 +627,7 @@ func getStatement(t Trampoline) *StatementTrampoline {
 	}
 }
 
+// interpret returns a Trampoline that is done when all declarations have been declared.
 func (interpreter *Interpreter) interpret() Trampoline {
 	return interpreter.Checker.Program.Accept(interpreter).(Trampoline)
 }
@@ -1275,6 +1277,7 @@ func (interpreter *Interpreter) movingStorageIndexExpression(expression ast.Expr
 	return indexExpression
 }
 
+// declareVariable declares a variable in the latest scope
 func (interpreter *Interpreter) declareVariable(identifier string, value Value) *Variable {
 	// NOTE: semantic analysis already checked possible invalid redeclaration
 	variable := &Variable{Value: value}
