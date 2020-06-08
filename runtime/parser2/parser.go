@@ -118,30 +118,18 @@ func (p *parser) next() {
 		// lexer.
 		//
 		// buffering tokens allows us to "replay" the buffered tokens to deal with syntax ambiguity.
-
-		hasBufferedToken := p.bufferPos < len(p.bufferedTokens)
-
-		// if we don't need to buffer the next token, and there are tokens buffered before,
-		// then read the next token from the buffer.
-		shouldReadFromBuffer := !p.buffering && hasBufferedToken
-
-		if shouldReadFromBuffer {
-			token = p.bufferedTokens[p.bufferPos]
-			p.bufferPos++
-			p.maybeTrimBuffer()
-		} else {
-			// otherwise, read the next token from the lexer.
-			var ok bool
-			token, ok = <-p.tokens
-			if !ok {
-				// Channel closed, return EOF token.
-				token = lexer.Token{Type: lexer.TokenEOF}
-			}
-		}
-
-		// buffer tokens if the flag is on
 		if p.buffering {
+			// if we need to buffer the next token
+			token = p.nextFromLexer()
 			p.bufferedTokens = append(p.bufferedTokens, token)
+		} else if p.bufferPos < len(p.bufferedTokens) {
+			// if we don't need to buffer the next token and there are tokens buffered before,
+			// then read the token from the buffer
+			token = p.nextFromBuffer()
+		} else {
+			// else no need to buffer, and there is no buffered token,
+			// then read the next token from the lexer
+			token = p.nextFromLexer()
 		}
 
 		if token.Is(lexer.TokenError) {
@@ -153,6 +141,27 @@ func (p *parser) next() {
 		p.current = token
 		return
 	}
+}
+
+// nextFromLexer reads the next token from the lexer.
+// should only be called by the "next" function
+func (p *parser) nextFromLexer() lexer.Token {
+	var ok bool
+	token, ok := <-p.tokens
+	if !ok {
+		// Channel closed, return EOF token.
+		token = lexer.Token{Type: lexer.TokenEOF}
+	}
+	return token
+}
+
+// nextFromLexer reads the next token from the buffer tokens, assuming there are buffered tokens.
+// should only be called by the "next" function
+func (p *parser) nextFromBuffer() lexer.Token {
+	token := p.bufferedTokens[p.bufferPos]
+	p.bufferPos++
+	p.maybeTrimBuffer()
+	return token
 }
 
 func (p *parser) mustOne(tokenType lexer.TokenType) lexer.Token {
