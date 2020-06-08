@@ -104,9 +104,10 @@ func (p *parser) maybeTrimBuffer() {
 	p.bufferPos = 0
 }
 
-// next reads the next token and saves it to "current".
+// next reads the next token and marks it as the "current" token.
 // The next token could either be read from the lexer or from
-// a buffered tokens.
+// the buffer.
+// Tokens are buffered when syntax ambiguity is involved.
 func (p *parser) next() {
 	for {
 		var token lexer.Token
@@ -116,17 +117,20 @@ func (p *parser) next() {
 		// tokens channel. Therefore, in some circumstances, we need to buffer the tokens from the
 		// lexer.
 		//
-		// buffering allows us to "replay" the tokens to deal with syntax ambiguity.
-		// when we are buffering, we won't replay tokens.
-		// when we are replaying, we won't buffer tokens.
-		canReplay := !p.buffering && p.bufferPos < len(p.bufferedTokens)
+		// buffering tokens allows us to "replay" the buffered tokens to deal with syntax ambiguity.
 
-		if canReplay {
+		hasBufferedToken := p.bufferPos < len(p.bufferedTokens)
+
+		// if we don't need to buffer the next token, and there are tokens buffered before,
+		// then read the next token from the buffer.
+		shouldReadFromBuffer := !p.buffering && hasBufferedToken
+
+		if shouldReadFromBuffer {
 			token = p.bufferedTokens[p.bufferPos]
 			p.bufferPos++
 			p.maybeTrimBuffer()
 		} else {
-			// not replay
+			// otherwise, read the next token from the lexer.
 			var ok bool
 			token, ok = <-p.tokens
 			if !ok {
