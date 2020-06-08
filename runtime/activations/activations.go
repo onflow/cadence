@@ -49,8 +49,7 @@ func (a *Activations) Find(key string) interface{} {
 }
 
 // Set adds the new key value pair to the current scope.
-// The current scope is updated in an immutable way, which
-// builds on top of the old scope.
+// The current scope is updated in an immutable way.
 func (a *Activations) Set(name string, value interface{}) {
 	current := a.current()
 	// create the first scope if there is no scope
@@ -60,6 +59,9 @@ func (a *Activations) Set(name string, value interface{}) {
 	}
 
 	count := len(a.activations)
+	// update the current scope in an immutable way,
+	// which builds on top of the old "current" activation value
+	// without mutating it.
 	a.activations[count-1] = current.
 		Insert(common.StringEntry(name), value)
 }
