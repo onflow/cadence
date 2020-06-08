@@ -565,6 +565,12 @@ type Statement struct {
 	Line        int
 }
 
+// runUntilNextStatement executes the trampline until the next statement.
+// It either returns a result or a statement.
+// The difference between "runUntilNextStatement" and "Run" is that:
+// "Run" executes the Trampoline chain all the way until there is no more trampoline and returns the result,
+// whereas "runUntilNextStatement" executes the Trampoline chain, stops as soon as it meets a statement trampoline,
+// and returns the statement, which can be later resumed by calling "runUntilNextStatement" again.
 func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}, *Statement) {
 	for {
 		statement := getStatement(t)
@@ -591,6 +597,8 @@ func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}
 	}
 }
 
+// runAllStatements runs all the statement until there is no more trampline and returns the result.
+// When there is a statement, it calls the onStatement callback, and then continue the execution.
 func (interpreter *Interpreter) runAllStatements(t Trampoline) interface{} {
 	for {
 		result, statement := interpreter.runUntilNextStatement(t)
@@ -688,11 +696,15 @@ func (interpreter *Interpreter) declareGlobal(declaration ast.Declaration) {
 	interpreter.Globals[name] = interpreter.findVariable(name)
 }
 
+// prepareInvokeVariable looks up the function by the given name from global
+// variables, checks the function type, and returns a trampline which executes
+// the function with the given arguments
 func (interpreter *Interpreter) prepareInvokeVariable(
 	functionName string,
 	arguments []Value,
 ) (trampoline Trampoline, err error) {
 
+	// function must be defined as global variable
 	variable, ok := interpreter.Globals[functionName]
 	if !ok {
 		return nil, &NotDeclaredError{
@@ -703,6 +715,7 @@ func (interpreter *Interpreter) prepareInvokeVariable(
 
 	variableValue := variable.Value
 
+	// the global variable must be declared as a function
 	functionValue, ok := variableValue.(FunctionValue)
 	if !ok {
 		return nil, &NotInvokableError{
@@ -712,6 +725,7 @@ func (interpreter *Interpreter) prepareInvokeVariable(
 
 	ty := interpreter.Checker.GlobalValues[functionName].Type
 
+	// function must be invokable
 	invokableType, ok := ty.(sema.InvokableType)
 
 	if !ok {
@@ -753,8 +767,19 @@ func (interpreter *Interpreter) prepareInvoke(
 	parameterCount := len(parameters)
 	argumentCount := len(arguments)
 
-	if argumentCount != parameterCount {
+	// too many provided arguments
+	if argumentCount > parameterCount {
+		return nil, &ArgumentCountError{
+			ParameterCount: parameterCount,
+			ArgumentCount:  argumentCount,
+		}
+	}
 
+	if argumentCount < parameterCount {
+
+		// if the function has defined optional parameters,
+		// then the provided arguments must be equal to or greater than
+		// the number of required parameters.
 		if functionType.RequiredArgumentCount == nil ||
 			argumentCount < *functionType.RequiredArgumentCount {
 
@@ -776,6 +801,7 @@ func (interpreter *Interpreter) prepareInvoke(
 			}
 		}
 
+		// converts the argument into the parameter type declared by the function
 		preparedArguments[i] = interpreter.convertAndBox(argument, nil, parameterType)
 	}
 
@@ -788,6 +814,7 @@ func (interpreter *Interpreter) prepareInvoke(
 	return trampoline, nil
 }
 
+// Invoke invokes a global function with the given arguments
 func (interpreter *Interpreter) Invoke(functionName string, arguments ...Value) (value Value, err error) {
 	// recover internal panics and return them as an error
 	defer recoverErrors(func(internalErr error) {

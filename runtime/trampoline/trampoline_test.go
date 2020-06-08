@@ -212,7 +212,7 @@ func TestAckermann(t *testing.T) {
 	assert.Equal(t, Run(ackermann(3, 7)), 1021)
 }
 
-func TestResume(t *testing.T) {
+func TestDoneResume(t *testing.T) {
 
 	add1 := func(v interface{}) interface{} {
 		return v.(int) + 1

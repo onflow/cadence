@@ -22,16 +22,21 @@ import (
 	"github.com/onflow/cadence/runtime/trampoline"
 )
 
+// StatementTrampoline is useful for breakpoint debugging, which pauses the
+// `Interpreter`'s interpretation work at the `Line` of the statement, and wraps
+// the paused interpretation into `F`.
 type StatementTrampoline struct {
 	F           func() trampoline.Trampoline
 	Interpreter *Interpreter
 	Line        int
 }
 
+// Resume returns the paused computation
 func (m StatementTrampoline) Resume() interface{} {
 	return m.F
 }
 
+// FlatMap chains the StatementTrampoline with another trampoline
 func (m StatementTrampoline) FlatMap(f func(interface{}) trampoline.Trampoline) trampoline.Trampoline {
 	return trampoline.FlatMap{Subroutine: m, Continuation: f}
 }
@@ -44,6 +49,7 @@ func (m StatementTrampoline) Then(f func(interface{})) trampoline.Trampoline {
 	return trampoline.ThenTrampoline(m, f)
 }
 
+// Continue continues the paused interpretation
 func (m StatementTrampoline) Continue() trampoline.Trampoline {
 	return m.F()
 }
