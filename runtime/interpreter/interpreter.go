@@ -611,12 +611,16 @@ func (interpreter *Interpreter) runAllStatements(t Trampoline) interface{} {
 	}
 }
 
+// getStatement goes through the Trampoline chain and find the first StatementTrampoline
 func getStatement(t Trampoline) *StatementTrampoline {
 	switch t := t.(type) {
-	case FlatMap:
+	case FlatMap: // FlatMap
+		// skip non-statement Trampolines
 		return getStatement(t.Subroutine)
 	case StatementTrampoline:
 		return &t
+	// case Done
+	// case More
 	default:
 		return nil
 	}

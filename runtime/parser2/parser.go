@@ -26,18 +26,25 @@ import (
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
+// lowestBindingPower is the lowest binding power.
+// binding power decides the order of which expression to be parsed first.
+// the lower binding power is, the latter the expression will be parsed.
 const lowestBindingPower = 0
 
 type parser struct {
 	tokens         chan lexer.Token
 	current        lexer.Token
 	errors         []error
-	buffering      bool
-	bufferedTokens []lexer.Token
-	bufferPos      int
+	buffering      bool          // a flag indicating whether the next token will be read from buffered tokens or lexer
+	bufferedTokens []lexer.Token // buffered tokens read from the lexer
+	bufferPos      int           // the index of the next buffered token to read from
 	bufferedErrors []error
 }
 
+// Parse creates a lexer to scan the given input string, and uses the parse function parse function to parse tokens
+// into a result.
+// It can be composed with different parse functions to parse the input string into different results.
+// See "ParseExpression", "ParseStatements" as examples.
 func Parse(input string, parse func(*parser) interface{}) (result interface{}, errors []error) {
 	ctx, cancelLexer := context.WithCancel(context.Background())
 
@@ -86,6 +93,9 @@ func (p *parser) report(err ...error) {
 
 const bufferPosTrimThreshold = 128
 
+// maybeTrimBuffer checks whether the index of token we've read from buffered tokens
+// has readed a threshold, in which case buffered tokens will be trimed and bufferPos
+// will be reset.
 func (p *parser) maybeTrimBuffer() {
 	if p.bufferPos < bufferPosTrimThreshold {
 		return
@@ -94,15 +104,29 @@ func (p *parser) maybeTrimBuffer() {
 	p.bufferPos = 0
 }
 
+// next reads the next token and saves it to "current".
+// The next token could either be read from the lexer or from
+// a buffered tokens.
 func (p *parser) next() {
 	for {
 		var token lexer.Token
 
-		if !p.buffering && p.bufferPos < len(p.bufferedTokens) {
+		// When the syntax has ambiguity, we need to process a series of tokens
+		// multiple times. However, a token can only be consumed once from the lexer's
+		// tokens channel. Therefore, in some circumstances, we need to buffer the tokens from the
+		// lexer.
+		//
+		// buffering allows us to "replay" the tokens to deal with syntax ambiguity.
+		// when we are buffering, we won't replay tokens.
+		// when we are replaying, we won't buffer tokens.
+		canReplay := !p.buffering && p.bufferPos < len(p.bufferedTokens)
+
+		if canReplay {
 			token = p.bufferedTokens[p.bufferPos]
 			p.bufferPos++
 			p.maybeTrimBuffer()
 		} else {
+			// not replay
 			var ok bool
 			token, ok = <-p.tokens
 			if !ok {
@@ -111,6 +135,7 @@ func (p *parser) next() {
 			}
 		}
 
+		// buffer tokens if the flag is on
 		if p.buffering {
 			p.bufferedTokens = append(p.bufferedTokens, token)
 		}
