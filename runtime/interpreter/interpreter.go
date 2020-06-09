@@ -747,8 +747,16 @@ func (interpreter *Interpreter) prepareInvoke(
 	parameterCount := len(parameters)
 	argumentCount := len(arguments)
 
-	if argumentCount != parameterCount {
+	// too many arguments
+	if argumentCount > parameterCount {
+		return nil, &ArgumentCountError{
+			ParameterCount: parameterCount,
+			ArgumentCount:  argumentCount,
+		}
+	}
 
+	if argumentCount < parameterCount {
+		// too few arguments
 		if functionType.RequiredArgumentCount == nil ||
 			argumentCount < *functionType.RequiredArgumentCount {
 
