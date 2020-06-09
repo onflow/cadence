@@ -6390,92 +6390,19 @@ transaction {
 }
 ```
 
-Then follow three optional main phases:
+Then, three optional main phases:
 Preparation, execution, and postconditions, only in that order.
 Each phase is a block of code that executes sequentially.
 
-- The **prepare phase** (declared using the `prepare` keyword)
-  acts like the initializer in a composite type,
-  i.e., it has to initialize the local fields of the transaction
-  that can then be used in the execution phase.
+Here is an empty Cadence transaction which contains no logic but demonstrates the syntax for each type of block, in the order these blocks will be executed:
 
-  The prepare phase also has access to the authorized account objects
-  (`AuthAccount`) of the accounts that signed it.
-  These authorized account objects have to be declared as parameters
-  to the prepare phase, one for each signer of the transaction:
-
-  ```cadence,file=prepare-args.cdc
-  // There needs to be exactly as many `AuthAccount`-typed parameters
-  // as there are signers for the transaction.
-  // In this case, there would be two signers
-
-  prepare(signer1: AuthAccount, signer2: AuthAccount) {
-      // ...
-  }
-  ```
-
-  `AuthAccount` objects have the permissions
-  to read from and write to the private storage
-  of the account, which cannot be directly accessed anywhere else.
-
-- The **execute phase** (declared using the `execute` keyword)
-  is where interaction with other accounts
-  and contracts should usually happen.
-
-  This usually involves interacting with contracts with public types
-  and functions, calling functions using references to other accounts'
-  objects, and performing specific computation on these values.
-
-  This phase does not have access to any signer's authorized account object
-  and can only access public contract fields and functions,
-  public account objects (`PublicAccount`) using the built-in `getAccount`
-  function, and any local transaction variables
-  that were initialized in the `prepare` block.
-
-  ```cadence,file=execute.cdc
-    execute {
-        // Invalid: Cannot access the authorized account object,
-        // as `account1` is not in scope
-
-        let resource <- account1.load<@Resource>(from: /storage/resource)
-        destroy resource
-
-        // Valid: Can access any account's public Account object
-
-        let publicAccount = getAccount(0x03)
-  }
-
-  ```
-
-- The **postcondition phase** (declared using the `post` keyword)
-  is where the transaction can check
-  that its functionality was executed correctly with specific condition checks.
-
-  If any of the condition checks result in `false`, the transaction will fail
-  and be completely reverted.
-
-  Only condition checks are allowed in this section. No actual computation
-  or modification of values is allowed.
-
-  ```cadence,file=post.cdc
-    post {
-        result.balance == 30: "Balance after transaction is incorrect!"
-    }
-
-  ```
-
-```cadence,file=transaction-declaration.cdc
-// Optional: Importing external types from other accounts using `import`.
-import HelloWorld from 0x01
-
+```swift
 transaction {
+    prepare(signer1: AuthAccount, signer2: AuthAccount) {
+        // ...
+    }
 
-    // Optional: type declarations and fields, which must be initialized in `prepare`.
-
-    // The prepare phase needs to have as many account parameters
-    // as there are signers for the transaction.
-    //
-    prepare(signer1: AuthAccount) {
+    pre {
         // ...
     }
 
@@ -6485,6 +6412,121 @@ transaction {
 
     post {
         // ...
+    }
+}
+```
+
+Although optional, each block serves a specific purpose when executing a transaction and it is recommended that developers use these blocks when creating their transactions. The following will detail the purpose of and how to use each block.
+
+## Prepare
+
+The `prepare` ****block is used when access to **signing accounts** is required for your transaction. 
+
+Direct access to signing accounts is **only possible inside the** `prepare` **block.** 
+
+For each signer of the transaction the signing account is passed as an argument to the `prepare` block. For example, if the transaction has three signers, the prepare **must** have three parameters of type `AuthAccount`.
+
+```swift
+ prepare(signer1: AuthAccount) {
+      // ...
+ }
+```
+
+
+As a best practice, only use the `prepare` block to define and execute logic that requires access to signing accounts, and *move all other logic elsewhere*. Modifications to accounts can have significant implications, so keep this block clear of unrelated logic to ensure users of your contract are able to easily read and understand logic related to accounts.
+
+The prepare block serves a similar purpose as the initializer of a contract/resource/structure.
+
+For example, if a transaction performs a token transfer, put the withdrawal in the `prepare` block, as it requires access to the account storage, but perform the deposit in the `execute` block.
+
+`AuthAccount` objects have the permissions
+to read from and write to the private storage
+of the account, which cannot be directly accessed anywhere else.
+
+## Pre
+
+The `pre` block is executed after the `prepare` block, and is used for checking if explicit conditions hold before executing the remainder of the transaction. A common example would be checking requisite balances before transferring tokens between accounts.
+
+```swift
+pre {
+    sendingAccount.balance > 0
+}
+```
+
+If the `pre` block throws an error, or does not return `true` the remainder of the transaction is not executed and it will be completely reverted.
+
+## **Execute**
+
+The `execute` block does exactly what it says, it execute the main logic of the transaction. This block is optional, but it is a best practice to add your main transaction logic in the section, so it is explicit.
+
+```swift
+execute {
+    // Invalid: Cannot access the authorized account object,
+    // as `account1` is not in scope
+    let resource <- account1.load<@Resource>(from: /storage/resource)
+    destroy resource
+
+    // Valid: Can access any account's public Account object
+    let publicAccount = getAccount(0x03)
+}
+```
+
+You **may not** access account objects in the `execute` block, but you may get an account's public information (resources, contract methods, etc.)
+
+## **Post**
+
+Statements inside of the `post` block are used to verify that your transaction logic has been executed properly. It contains zero or more condition checks.
+
+For example, the a transfer transaction might ensure that the final balance has a certain value, or e.g. it was incremented by a specific amount.
+
+```swift
+post {
+    result.balance == 30: "Balance after transaction is incorrect!"
+}
+```
+
+If any of the condition checks result in `false`, the transaction will fail and be completely reverted.
+
+Only condition checks are allowed in this section. No actual computation or modification of values is allowed.
+
+**A Note about `pre` and `post` Blocks**
+
+Another function of the `pre` and `post` blocks is to help provide information about how the effects of a transaction on the accounts and resources involved. This is essential because users may want to verify what a transaction does before submitting it. `pre` and `post` blocks provide a way to introspect transactions before they are executed.
+
+For example, in the future the blocks could be analyzed and interpreted to the user in the software they are using, e.g. " this transaction will transfer 30 tokens from A to B. The balance of A will decrease by 30 tokens and the balance of B will increase by 30 tokens."
+
+## Summary
+
+Cadence transactions use blocks to make the transaction's code/intent more readable and to provide a way for developer to separate potentially 'unsafe' account modifying code from regular transaction logic, as well as provide a way to check for error prior to, as well as after transaction execution, and abort the transaction if any are found.
+
+The following is a brief summary of how to use the `prepare` ,`pre`, `execute` and `post` blocks in a Cadence transaction.
+
+```swift
+transaction {
+    prepare(signer1: AuthAccount) {
+        // Access signing accounts for this transaction. 
+        //
+        // Avoid logic that does not need access to signing accounts.
+        // 
+        // Signing accounts can't be accesed anywhere else in the transaction.
+    }
+
+    pre {
+        // Define conditions that must be true 
+        // for this transaction to execute.
+    }
+
+    execute {
+        // The main transaction logic goes here, but you can access
+        // any public information or resources published by any account.
+    }
+
+    post {
+        // Define the expected state of things 
+        // as they should be after the transaction executed.
+        //
+        // Also used to provide information about what changes 
+        // this transaction will make to accounts in this transaction.
     }
 }
 ```
