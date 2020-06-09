@@ -767,15 +767,7 @@ func (interpreter *Interpreter) prepareInvoke(
 	parameterCount := len(parameters)
 	argumentCount := len(arguments)
 
-	// too many provided arguments
-	if argumentCount > parameterCount {
-		return nil, &ArgumentCountError{
-			ParameterCount: parameterCount,
-			ArgumentCount:  argumentCount,
-		}
-	}
-
-	if argumentCount < parameterCount {
+	if argumentCount != parameterCount {
 
 		// if the function has defined optional parameters,
 		// then the provided arguments must be equal to or greater than
