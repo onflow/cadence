@@ -6420,7 +6420,7 @@ Although optional, each block serves a specific purpose when executing a transac
 
 ## Prepare
 
-The `prepare` ****block is used when access to **signing accounts** is required for your transaction. 
+The `prepare` **block** is used when access to the private `AuthAccount` object of **signing accounts** is required for your transaction. 
 
 Direct access to signing accounts is **only possible inside the** `prepare` **block.** 
 
@@ -6433,15 +6433,17 @@ For each signer of the transaction the signing account is passed as an argument 
 ```
 
 
-As a best practice, only use the `prepare` block to define and execute logic that requires access to signing accounts, and *move all other logic elsewhere*. Modifications to accounts can have significant implications, so keep this block clear of unrelated logic to ensure users of your contract are able to easily read and understand logic related to accounts.
+As a best practice, only use the `prepare` block to define and execute logic that requires access to the `AuthAccount` objects of signing accounts, and *move all other logic elsewhere*. Modifications to accounts can have significant implications, so keep this block clear of unrelated logic to ensure users of your contract are able to easily read and understand logic related to their private account objects.
 
 The prepare block serves a similar purpose as the initializer of a contract/resource/structure.
 
 For example, if a transaction performs a token transfer, put the withdrawal in the `prepare` block, as it requires access to the account storage, but perform the deposit in the `execute` block.
 
 `AuthAccount` objects have the permissions
-to read from and write to the private storage
-of the account, which cannot be directly accessed anywhere else.
+to read from and write to the `/storage/` and `/private/` areas
+of the account, which cannot be directly accessed anywhere else.  
+They also have the permission to create and delete capabilities that
+use these areas.
 
 ## Pre
 
@@ -6457,7 +6459,7 @@ If the `pre` block throws an error, or does not return `true` the remainder of t
 
 ## **Execute**
 
-The `execute` block does exactly what it says, it execute the main logic of the transaction. This block is optional, but it is a best practice to add your main transaction logic in the section, so it is explicit.
+The `execute` block does exactly what it says, it executes the main logic of the transaction. This block is optional, but it is a best practice to add your main transaction logic in the section, so it is explicit.
 
 ```swift
 execute {
@@ -6471,7 +6473,7 @@ execute {
 }
 ```
 
-You **may not** access account objects in the `execute` block, but you may get an account's public information (resources, contract methods, etc.)
+You **may not** access private `AuthAccount` objects in the `execute` block, but you may get an account's `PublicAccount` object, which allows reading and calling methods on objects that an account has published in the /public/ area of its account. (resources, contract methods, etc.)
 
 ## **Post**
 
