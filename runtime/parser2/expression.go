@@ -231,6 +231,7 @@ func setExprMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation exp
 	exprMetaLeftDenotations[tokenType] = metaLeftDenotation
 }
 
+// init defines the binding power for operations.
 func init() {
 
 	defineExpr(binaryExpr{
@@ -1024,6 +1025,8 @@ func exprLeftDenotationAllowsNewline(tokenType lexer.TokenType) bool {
 	}
 }
 
+// parseExpression uses "Top-Down operator precedence parsing" (TDOP) technique to
+// parse expressions.
 func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 	p.skipSpaceAndComments(true)
 	t := p.current
