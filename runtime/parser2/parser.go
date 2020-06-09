@@ -28,7 +28,7 @@ import (
 
 // lowestBindingPower is the lowest binding power.
 // binding power decides the order of which expression to be parsed first.
-// the lower binding power is, the latter the expression will be parsed.
+// the lower the binding power is, the latter the expression will be parsed.
 const lowestBindingPower = 0
 
 type parser struct {

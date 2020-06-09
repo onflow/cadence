@@ -571,6 +571,7 @@ type Statement struct {
 // "Run" executes the Trampoline chain all the way until there is no more trampoline and returns the result,
 // whereas "runUntilNextStatement" executes the Trampoline chain, stops as soon as it meets a statement trampoline,
 // and returns the statement, which can be later resumed by calling "runUntilNextStatement" again.
+// Useful for implementing breakpoint debugging.
 func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}, *Statement) {
 	for {
 		statement := getStatement(t)
@@ -623,13 +624,11 @@ func (interpreter *Interpreter) runAllStatements(t Trampoline) interface{} {
 // getStatement goes through the Trampoline chain and find the first StatementTrampoline
 func getStatement(t Trampoline) *StatementTrampoline {
 	switch t := t.(type) {
-	case FlatMap: // FlatMap
+	case FlatMap:
 		// skip non-statement Trampolines
 		return getStatement(t.Subroutine)
 	case StatementTrampoline:
 		return &t
-	// case Done
-	// case More
 	default:
 		return nil
 	}
