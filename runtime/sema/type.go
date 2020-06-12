@@ -4692,7 +4692,7 @@ func (t *AccountKeyType) GetMember(identifier string, _ ast.Range, _ func(error)
 
 	switch identifier {
 	case "publicKey":
-		return newField(&Int8Type{})
+		return newField(&VariableSizedType{Type: &Int8Type{}})
 
 	case "signingAlgorithm":
 		return newField(&Int8Type{})
