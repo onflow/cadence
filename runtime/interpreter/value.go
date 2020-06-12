@@ -6019,7 +6019,7 @@ func NewAccountKeyValue(publicKey []byte) AccountKeyValue {
 func (AccountKeyValue) IsValue() {}
 
 func (AccountKeyValue) DynamicType(_ *Interpreter) DynamicType {
-	return AddressDynamicType{}
+	return AccountKeyDynamicType{}
 }
 
 func (v AccountKeyValue) Copy() Value {

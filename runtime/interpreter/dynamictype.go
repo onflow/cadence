@@ -147,6 +147,12 @@ type AddressDynamicType struct{}
 
 func (AddressDynamicType) IsDynamicType() {}
 
+// AccountKeyDynamicType
+
+type AccountKeyDynamicType struct{}
+
+func (AccountKeyDynamicType) IsDynamicType() {}
+
 // PublishedDynamicType
 
 type PublishedDynamicType struct{}
