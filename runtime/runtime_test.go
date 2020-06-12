@@ -2211,6 +2211,109 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 	}
 }
 
+func TestRuntimeTransaction_AddAccountKey(t *testing.T) {
+	runtime := NewInterpreterRuntime()
+
+	keyA := cadence.NewArray([]cadence.Value{
+		cadence.NewInt(1),
+		cadence.NewInt(2),
+		cadence.NewInt(3),
+	})
+
+	keyB := cadence.NewArray([]cadence.Value{
+		cadence.NewInt(3),
+		cadence.NewInt(4),
+		cadence.NewInt(5),
+	})
+
+	keys := cadence.NewArray([]cadence.Value{
+		keyA,
+		keyB,
+	})
+
+	var tests = []struct {
+		name     string
+		code     string
+		keyCount int
+		args     []cadence.Value
+	}{
+		{
+			name: "Single key",
+			code: `
+			  transaction(keyA: [Int]) {
+				prepare(signer: AuthAccount) {
+				  let publicKey = AccountKey(publicKey: keyA)
+				  let acct = AuthAccount(payer: signer)
+				  acct.addAccountKey(publicKey)
+				}
+			  }
+			`,
+			keyCount: 1,
+			args:     []cadence.Value{keyA},
+		},
+		{
+			name: "Multiple keys",
+			code: `
+			  transaction(keys: [[Int]]) {
+				prepare(signer: AuthAccount) {
+				  let acct = AuthAccount(payer: signer)
+				  for key in keys {
+					let publicKey = AccountKey(publicKey: key)
+					acct.addAccountKey(publicKey)
+				  }
+				}
+			  }
+			`,
+			keyCount: 2,
+			args:     []cadence.Value{keys},
+		},
+	}
+
+	for _, tt := range tests {
+
+		var events []cadence.Event
+		var keys [][]byte
+
+		runtimeInterface := &testRuntimeInterface{
+			storage: newTestStorage(nil, nil),
+			getSigningAccounts: func() []Address {
+				return []Address{{42}}
+			},
+			createAccount: func(payer Address) (address Address, err error) {
+				return Address{42}, nil
+			},
+			addAccountKey: func(address Address, publicKey []byte) error {
+				keys = append(keys, publicKey)
+				return nil
+			},
+			emitEvent: func(event cadence.Event) {
+				events = append(events, event)
+			},
+			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
+				return jsoncdc.Decode(b)
+			},
+		}
+
+		t.Run(tt.name, func(t *testing.T) {
+			args := make([][]byte, len(tt.args))
+			for i, arg := range tt.args {
+				args[i], _ = jsoncdc.Encode(arg)
+			}
+
+			err := runtime.ExecuteTransaction([]byte(tt.code), args, runtimeInterface, utils.TestLocation)
+			require.NoError(t, err)
+			assert.Len(t, events, tt.keyCount+1)
+			assert.Len(t, keys, tt.keyCount)
+
+			assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type().ID())
+
+			for _, event := range events[1:] {
+				assert.EqualValues(t, stdlib.AccountKeyAddedEventType.ID(), event.Type().ID())
+			}
+		})
+	}
+}
+
 func TestRuntimeCyclicImport(t *testing.T) {
 
 	t.Parallel()

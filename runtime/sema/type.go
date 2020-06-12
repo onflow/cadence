@@ -4289,6 +4289,21 @@ var authAccountAddPublicKeyFunctionType = &FunctionType{
 	),
 }
 
+var authAccountAddAccountKeyFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "accountKey",
+			TypeAnnotation: NewTypeAnnotation(
+				&AccountKeyType{},
+			),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&VoidType{},
+	),
+}
+
 var authAccountRemovePublicKeyFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
@@ -4508,6 +4523,9 @@ func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error
 	case "addPublicKey":
 		return newFunction(authAccountAddPublicKeyFunctionType)
 
+	case "addAccountKey":
+		return newFunction(authAccountAddAccountKeyFunctionType)
+
 	case "removePublicKey":
 		return newFunction(authAccountRemovePublicKeyFunctionType)
 
@@ -4622,6 +4640,82 @@ func (*PublicAccountType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err er
 
 func (t *PublicAccountType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+// AccountKeyType
+
+type AccountKeyType struct{}
+
+func (*AccountKeyType) IsType() {}
+
+func (*AccountKeyType) String() string {
+	return "AccountKey"
+}
+
+func (*AccountKeyType) QualifiedString() string {
+	return "AccountKey"
+}
+
+func (*AccountKeyType) ID() TypeID {
+	return "AccountKey"
+}
+
+func (*AccountKeyType) Equal(other Type) bool {
+	_, ok := other.(*AccountKeyType)
+	return ok
+}
+
+func (*AccountKeyType) IsResourceType() bool {
+	return false
+}
+
+func (*AccountKeyType) TypeAnnotationState() TypeAnnotationState {
+	return TypeAnnotationStateValid
+}
+
+func (*AccountKeyType) IsInvalidType() bool {
+	return false
+}
+
+func (*AccountKeyType) ContainsFirstLevelInterfaceType() bool {
+	return false
+}
+
+func (*AccountKeyType) CanHaveMembers() bool {
+	return true
+}
+
+func (t *AccountKeyType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+	newField := func(fieldType Type) *Member {
+		return NewPublicConstantFieldMember(t, identifier, fieldType)
+	}
+
+	switch identifier {
+	case "publicKey":
+		return newField(&Int8Type{})
+
+	case "signingAlgorithm":
+		return newField(&Int8Type{})
+
+	case "hashingAlgorithm":
+		return newField(&Int8Type{})
+
+	case "weight":
+		return newField(&UInt64Type{})
+
+	default:
+		return nil
+	}
+}
+
+func (t *AccountKeyType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	// return false
+	return false
+}
+
+func (t *AccountKeyType) Resolve(_ map[*TypeParameter]Type) Type {
+	// return t
+	return nil
 }
 
 // Member

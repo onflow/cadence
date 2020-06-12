@@ -252,6 +252,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 			},
 		),
 		r.newAddPublicKeyFunction(addressValue, runtimeInterface),
+		r.newAddAccountKeyFunction(addressValue, runtimeInterface),
 		r.newRemovePublicKeyFunction(addressValue, runtimeInterface),
 	)
 }
@@ -708,12 +709,13 @@ func (r *interpreterRuntime) standardLibraryFunctions(
 ) stdlib.StandardLibraryFunctions {
 	return append(
 		stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{
-			CreateAccount:   r.newCreateAccountFunction(runtimeInterface, runtimeStorage),
-			GetAccount:      r.newGetAccountFunction(runtimeInterface),
-			Log:             r.newLogFunction(runtimeInterface),
-			GetCurrentBlock: r.newGetCurrentBlockFunction(runtimeInterface),
-			GetBlock:        r.newGetBlockFunction(runtimeInterface),
-			UnsafeRandom:    r.newUnsafeRandomFunction(runtimeInterface),
+			CreateAccount:    r.newCreateAccountFunction(runtimeInterface, runtimeStorage),
+			GetAccount:       r.newGetAccountFunction(runtimeInterface),
+			CreateAccountKey: r.newCreateAccountKeyFunction(runtimeInterface, runtimeStorage),
+			Log:              r.newLogFunction(runtimeInterface),
+			GetCurrentBlock:  r.newGetCurrentBlockFunction(runtimeInterface),
+			GetBlock:         r.newGetBlockFunction(runtimeInterface),
+			UnsafeRandom:     r.newUnsafeRandomFunction(runtimeInterface),
 		}),
 		stdlib.BuiltinFunctions...,
 	)
@@ -887,6 +889,42 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 
 			wrapPanic(func() {
 				err = runtimeInterface.AddAccountKey(addressValue.ToAddress(), publicKey)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			r.emitAccountEvent(
+				stdlib.AccountKeyAddedEventType,
+				runtimeInterface,
+				[]exportableValue{
+					newExportableValue(addressValue, nil),
+					newExportableValue(publicKeyValue, nil),
+				},
+			)
+
+			result := interpreter.VoidValue{}
+			return trampoline.Done{Result: result}
+		},
+	)
+}
+
+func (r *interpreterRuntime) newAddAccountKeyFunction(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) trampoline.Trampoline {
+
+			accountKeyValue, ok := invocation.Arguments[0].(interpreter.AccountKeyValue)
+			if !ok {
+				panic(fmt.Sprintf("addAccountKey requires first parameter to be an AccountKey"))
+			}
+			publicKeyValue := interpreter.ByteSliceToByteArrayValue(accountKeyValue.PublicKey())
+
+			var err error
+			wrapPanic(func() {
+				err = runtimeInterface.AddAccountKey(addressValue.ToAddress(), accountKeyValue.PublicKey())
 			})
 			if err != nil {
 				panic(err)
@@ -1227,6 +1265,23 @@ func (r *interpreterRuntime) newGetAccountFunction(_ Interface) interpreter.Host
 		accountAddress := invocation.Arguments[0].(interpreter.AddressValue)
 		publicAccount := interpreter.NewPublicAccountValue(accountAddress)
 		return trampoline.Done{Result: publicAccount}
+	}
+}
+
+func (r *interpreterRuntime) newCreateAccountKeyFunction(
+	runtimeInterface Interface,
+	runtimeStorage *interpreterRuntimeStorage,
+) interpreter.HostFunction {
+	return func(invocation interpreter.Invocation) trampoline.Trampoline {
+		publicKeyValue := invocation.Arguments[0].(*interpreter.ArrayValue)
+
+		publicKey, err := interpreter.ByteArrayValueToByteSlice(publicKeyValue)
+		if err != nil {
+			panic(fmt.Sprintf("addPublicKey requires the first parameter to be an array"))
+		}
+
+		accountKey := interpreter.NewAccountKeyValue(publicKey)
+		return trampoline.Done{Result: accountKey}
 	}
 }
 

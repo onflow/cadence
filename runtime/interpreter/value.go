@@ -6006,6 +6006,90 @@ func (AddressValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value
 	panic(errors.NewUnreachableError())
 }
 
+// AccountKeyValue
+
+type AccountKeyValue struct {
+	publicKey []byte
+}
+
+func NewAccountKeyValue(publicKey []byte) AccountKeyValue {
+	return AccountKeyValue{publicKey: publicKey}
+}
+
+func (AccountKeyValue) IsValue() {}
+
+func (AccountKeyValue) DynamicType(_ *Interpreter) DynamicType {
+	return AddressDynamicType{}
+}
+
+func (v AccountKeyValue) Copy() Value {
+	return v
+}
+
+func (v AccountKeyValue) KeyString() string {
+	return v.String()
+}
+
+func (v AccountKeyValue) String() string {
+	return fmt.Sprintf("AccountKey")
+}
+
+func (AccountKeyValue) GetOwner() *common.Address {
+	// value is never owned
+	return nil
+}
+
+func (AccountKeyValue) SetOwner(_ *common.Address) {
+	// NO-OP: value cannot be owned
+}
+
+func (AccountKeyValue) IsModified() bool {
+	return false
+}
+
+func (AccountKeyValue) SetModified(_ bool) {
+	// NO-OP
+}
+
+func (v AccountKeyValue) Equal(other Value) BoolValue {
+	otherAccountKey, ok := other.(AccountKeyValue)
+	if !ok {
+		return false
+	}
+	return string(v.publicKey) == string(otherAccountKey.publicKey)
+}
+
+func (v AccountKeyValue) Hex() string {
+	return string(v.publicKey)
+}
+
+func (v AccountKeyValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+
+	case sema.ToStringFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := NewStringValue(v.String())
+				return trampoline.Done{Result: result}
+			},
+		)
+
+	case "publicKey":
+		return ByteSliceToByteArrayValue(v.publicKey)
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (AccountKeyValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
+func (v AccountKeyValue) PublicKey() []byte {
+	return v.publicKey
+}
+
 // AccountValue
 
 type AccountValue interface {
@@ -6020,6 +6104,7 @@ type AuthAccountValue struct {
 	setCodeFunction                      FunctionValue
 	unsafeNotInitializingSetCodeFunction FunctionValue
 	addPublicKeyFunction                 FunctionValue
+	addAccountKeyFunction                FunctionValue
 	removePublicKeyFunction              FunctionValue
 }
 
@@ -6028,6 +6113,7 @@ func NewAuthAccountValue(
 	setCodeFunction FunctionValue,
 	unsafeNotInitializingSetCodeFunction FunctionValue,
 	addPublicKeyFunction FunctionValue,
+	addAccountKeyFunction FunctionValue,
 	removePublicKeyFunction FunctionValue,
 ) AuthAccountValue {
 	return AuthAccountValue{
@@ -6035,6 +6121,7 @@ func NewAuthAccountValue(
 		setCodeFunction:                      setCodeFunction,
 		unsafeNotInitializingSetCodeFunction: unsafeNotInitializingSetCodeFunction,
 		addPublicKeyFunction:                 addPublicKeyFunction,
+		addAccountKeyFunction:                addAccountKeyFunction,
 		removePublicKeyFunction:              removePublicKeyFunction,
 	}
 }
@@ -6137,6 +6224,9 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 
 	case "addPublicKey":
 		return v.addPublicKeyFunction
+
+	case "addAccountKey":
+		return v.addAccountKeyFunction
 
 	case "removePublicKey":
 		return v.removePublicKeyFunction

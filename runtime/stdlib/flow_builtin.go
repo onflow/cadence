@@ -46,6 +46,25 @@ var accountFunctionType = &sema.FunctionType{
 	),
 }
 
+var accountKeyFunctionType = &sema.FunctionType{
+	Parameters: []*sema.Parameter{
+		{
+			Label:      sema.ArgumentLabelNotRequired,
+			Identifier: "publicKey",
+			TypeAnnotation: sema.NewTypeAnnotation(
+				&sema.VariableSizedType{
+					// TODO: UInt8. Requires array literals of integer literals
+					//   to be type compatible with with [UInt8]
+					Type: &sema.IntType{},
+				},
+			),
+		},
+	},
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(
+		&sema.AccountKeyType{},
+	),
+}
+
 var getAccountFunctionType = &sema.FunctionType{
 	Parameters: []*sema.Parameter{
 		{
@@ -106,12 +125,13 @@ var unsafeRandomFunctionType = &sema.FunctionType{
 // FlowBuiltinImpls defines the set of functions needed to implement the Flow
 // built-in functions.
 type FlowBuiltinImpls struct {
-	CreateAccount   interpreter.HostFunction
-	GetAccount      interpreter.HostFunction
-	Log             interpreter.HostFunction
-	GetCurrentBlock interpreter.HostFunction
-	GetBlock        interpreter.HostFunction
-	UnsafeRandom    interpreter.HostFunction
+	CreateAccount    interpreter.HostFunction
+	GetAccount       interpreter.HostFunction
+	CreateAccountKey interpreter.HostFunction
+	Log              interpreter.HostFunction
+	GetCurrentBlock  interpreter.HostFunction
+	GetBlock         interpreter.HostFunction
+	UnsafeRandom     interpreter.HostFunction
 }
 
 // FlowBuiltInFunctions returns a list of standard library functions, bound to
@@ -128,6 +148,12 @@ func FlowBuiltInFunctions(impls FlowBuiltinImpls) StandardLibraryFunctions {
 			"getAccount",
 			getAccountFunctionType,
 			impls.GetAccount,
+			nil,
+		),
+		NewStandardLibraryFunction(
+			"AccountKey",
+			accountKeyFunctionType,
+			impls.CreateAccountKey,
 			nil,
 		),
 		NewStandardLibraryFunction(
