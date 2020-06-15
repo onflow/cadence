@@ -27,8 +27,8 @@ import (
 )
 
 // lowestBindingPower is the lowest binding power.
-// binding power decides the order of which expression to be parsed first.
-// the lower the binding power is, the latter the expression will be parsed.
+// The binding power controls operator precedence: 
+// the higher the value, the tighter a token binds to the tokens that follow.
 const lowestBindingPower = 0
 
 type parser struct {
@@ -41,8 +41,9 @@ type parser struct {
 	bufferedErrors []error
 }
 
-// Parse creates a lexer to scan the given input string, and uses the parse function parse function to parse tokens
-// into a result.
+// Parse creates a lexer to scan the given input string, 
+// and uses the given `parse` function to parse tokens into a result.
+//
 // It can be composed with different parse functions to parse the input string into different results.
 // See "ParseExpression", "ParseStatements" as examples.
 func Parse(input string, parse func(*parser) interface{}) (result interface{}, errors []error) {
@@ -50,7 +51,7 @@ func Parse(input string, parse func(*parser) interface{}) (result interface{}, e
 
 	defer cancelLexer()
 
-	// turn input string into tokens
+	// create a lexer, which turns the input string into tokens
 	tokens := lexer.Lex(ctx, input)
 	p := &parser{tokens: tokens}
 
@@ -94,7 +95,7 @@ func (p *parser) report(err ...error) {
 const bufferPosTrimThreshold = 128
 
 // maybeTrimBuffer checks whether the index of token we've read from buffered tokens
-// has readed a threshold, in which case buffered tokens will be trimed and bufferPos
+// has reached a threshold, in which case the buffered tokens will be trimmed and bufferPos
 // will be reset.
 func (p *parser) maybeTrimBuffer() {
 	if p.bufferPos < bufferPosTrimThreshold {
@@ -117,10 +118,11 @@ func (p *parser) next() {
 		// tokens channel. Therefore, in some circumstances, we need to buffer the tokens from the
 		// lexer.
 		//
-		// buffering tokens allows us to "replay" the buffered tokens to deal with syntax ambiguity.
+		// buffering tokens allows us to potentially "replay" the buffered tokens later, 
+		// for example to deal with syntax ambiguity 
 		if p.buffering {
 			// if we need to buffer the next token
-			// then read the token from from the lexer and buffer it.
+			// then read the token from the lexer and buffer it.
 			token = p.nextFromLexer()
 			p.bufferedTokens = append(p.bufferedTokens, token)
 		} else if p.bufferPos < len(p.bufferedTokens) {

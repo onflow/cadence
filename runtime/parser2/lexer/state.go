@@ -24,9 +24,10 @@ import (
 
 const keywordAs = "as"
 
-// stateFn uses the input lexer to read the next input rune, and emits token.
-// It either returns a nil when reaching end of file,
-// or returns another stateFn for the continuous of the scaning work.
+// stateFn uses the input lexer to read runes and emit tokens.
+//
+// It either returns nil when reaching end of file, 
+// or returns another stateFn for more scanning work.
 type stateFn func(*lexer) stateFn
 
 // rootState returns a stateFn that scans the file and emits tokens until
@@ -179,8 +180,8 @@ func (l *lexer) error(err error) stateFn {
 	return nil
 }
 
-// numberState returns a stateFn that scans the following runes as number and
-// emit corresponding tokens
+// numberState returns a stateFn that scans the following runes as a number
+// and emits a corresponding token
 func numberState(l *lexer) stateFn {
 	// lookahead is already lexed.
 	// parse more, if any

@@ -68,8 +68,8 @@ func (a *Activations) Set(name string, value interface{}) {
 
 // PushCurrent makes a copy of the current activation, and pushes it to
 // the top of the activation stack, so that the `Find` method only needs to
-// look up a certain record by name from the current activation records
-// without go through each activation in the stack.
+// look up a certain record by name from the current activation record
+// without having to go through each activation in the stack.
 func (a *Activations) PushCurrent() {
 	current := a.current()
 	if current == nil {
