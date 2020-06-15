@@ -598,8 +598,8 @@ func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}
 	}
 }
 
-// runAllStatements runs all the statement until there is no more trampline and returns the result.
-// When there is a statement, it calls the onStatement callback, and then continue the execution.
+// runAllStatements runs all the statement until there is no more trampoline and returns the result.
+// When there is a statement, it calls the onStatement callback, and then continues the execution.
 func (interpreter *Interpreter) runAllStatements(t Trampoline) interface{} {
 	for {
 		result, statement := interpreter.runUntilNextStatement(t)
@@ -634,7 +634,8 @@ func getStatement(t Trampoline) *StatementTrampoline {
 	}
 }
 
-// interpret returns a Trampoline that is done when all declarations have been declared.
+// interpret returns a Trampoline that is done when all top-level declarations 
+// have been declared and evaluated.
 func (interpreter *Interpreter) interpret() Trampoline {
 	return interpreter.Checker.Program.Accept(interpreter).(Trampoline)
 }
@@ -696,14 +697,14 @@ func (interpreter *Interpreter) declareGlobal(declaration ast.Declaration) {
 }
 
 // prepareInvokeVariable looks up the function by the given name from global
-// variables, checks the function type, and returns a trampline which executes
+// variables, checks the function type, and returns a trampoline which executes
 // the function with the given arguments
 func (interpreter *Interpreter) prepareInvokeVariable(
 	functionName string,
 	arguments []Value,
 ) (trampoline Trampoline, err error) {
 
-	// function must be defined as global variable
+	// function must be defined as a global variable
 	variable, ok := interpreter.Globals[functionName]
 	if !ok {
 		return nil, &NotDeclaredError{

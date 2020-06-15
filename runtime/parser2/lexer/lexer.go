@@ -82,12 +82,15 @@ func Lex(ctx context.Context, input string) chan Token {
 
 type done struct{}
 
-// run executes the stateFn, which will scan following runes and emit tokens to
-// the tokens channel.
-// stateFn might return another stateFn as continuous scanning work, in
-// which case, run will keep running the returned stateFn until no more
-// stateFn is returned, which happens when reaching end of the file.
-// when all stateFn has been executed, the tokens channel will be closed.
+// run executes the stateFn, which will scan the runes in the input 
+// and emit tokens to the tokens channel.
+//
+// stateFn might return another stateFn to indicate further scanning work, 
+// or nil if there is no scanning work left to be done, 
+// i.e. run will keep running the returned stateFn until no more
+// stateFn is returned, which for example happens when reaching the end of the file.
+//
+// When all stateFn have been executed, the tokens channel will be closed.
 func (l *lexer) run(state stateFn) {
 	// Close token channel, no token remaining
 	defer close(l.tokens)
@@ -115,9 +118,10 @@ func (l *lexer) run(state stateFn) {
 	}
 }
 
-// next scans the next rune from the input string, decodes it as utf8 character.
-// it returns EOF if it reaches the end of the file,
-// otherwise returns the next character.
+// next decodes the next rune (UTF8 character) from the input string.
+//
+// It returns EOF if it reaches the end of the file,
+// otherwise returns the scanned rune.
 func (l *lexer) next() rune {
 	l.canBackup = true
 
@@ -157,9 +161,10 @@ func (l *lexer) word() string {
 	return l.input[start:end]
 }
 
-// acceptOne reads one rune ahead, if the next rune matches with the input rune,
-// then return true, otherwise step back one rune and return false.
-// useful for distinguishing similar tokens, for instance, `=` and `==`
+// acceptOne reads one rune ahead.
+// It returns true if the next rune matches with the input rune,
+// otherwise it steps back one rune and returns false.
+//
 func (l *lexer) acceptOne(r rune) bool {
 	if l.next() == r {
 		return true
