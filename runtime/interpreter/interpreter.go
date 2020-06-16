@@ -2306,8 +2306,6 @@ func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.Compo
 	return Done{}
 }
 
-const ResourceUUIDMemberName = "uuid"
-
 // declareCompositeValue creates and declares the value for
 // the composite declaration.
 //
@@ -2486,7 +2484,7 @@ func (interpreter *Interpreter) declareCompositeValue(
 
 			if declaration.CompositeKind == common.CompositeKindResource {
 				uuid := interpreter.uuidHandler()
-				fields[ResourceUUIDMemberName] = UInt64Value(uuid)
+				fields[sema.UUIDFieldName] = UInt64Value(uuid)
 			}
 
 			value := &CompositeValue{

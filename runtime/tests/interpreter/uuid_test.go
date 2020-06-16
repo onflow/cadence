@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -119,7 +120,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 
 		require.Equal(t,
 			interpreter.UInt64Value(i),
-			res.Fields[interpreter.ResourceUUIDMemberName],
+			res.Fields[sema.UUIDFieldName],
 		)
 	}
 }

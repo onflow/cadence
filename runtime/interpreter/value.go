@@ -5060,7 +5060,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	v.checkStatus(locationRange)
 
 	if v.Kind == common.CompositeKindResource &&
-		name == "owner" {
+		name == sema.OwnerFieldName {
 
 		return v.OwnerValue()
 	}
