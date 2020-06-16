@@ -130,6 +130,9 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (member *M
 			targetRange := ast.NewRangeFromPositioned(expression.Expression)
 			member = ty.GetMember(identifier, targetRange, checker.report)
 		}
+		if member == nil {
+			member = getBuiltinMember(identifier, expressionType)
+		}
 	}
 
 	// Get the member from the accessed value based
@@ -231,6 +234,20 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (member *M
 		}
 
 	return member, isOptional
+}
+
+func getBuiltinMember(identifier string, ty Type) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(ty, identifier, functionType)
+	}
+
+	switch identifier {
+	case IsInstanceFunctionName:
+		return newFunction(isInstanceFunctionType)
+
+	default:
+		return nil
+	}
 }
 
 // isReadableMember returns true if the given member can be read from

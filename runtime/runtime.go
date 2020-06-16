@@ -1415,10 +1415,9 @@ func (v BlockValue) GetMember(_ *interpreter.Interpreter, _ interpreter.Location
 
 	case "timestamp":
 		return v.Timestamp
-
-	default:
-		panic(runtimeErrors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (v BlockValue) SetMember(_ *interpreter.Interpreter, _ interpreter.LocationRange, _ string, _ interpreter.Value) {

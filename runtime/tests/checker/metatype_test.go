@@ -32,6 +32,7 @@ func TestCheckMetaType(t *testing.T) {
 	t.Parallel()
 
 	t.Run("constructor", func(t *testing.T) {
+
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
@@ -47,6 +48,7 @@ func TestCheckMetaType(t *testing.T) {
 	})
 
 	t.Run("identifier", func(t *testing.T) {
+
 		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
@@ -59,6 +61,65 @@ func TestCheckMetaType(t *testing.T) {
 		assert.Equal(t,
 			&sema.MetaType{},
 			checker.GlobalValues["type"].Type,
+		)
+	})
+}
+
+func TestCheckIsInstance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("String", func(t *testing.T) {
+
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+          let stringType = Type<String>()
+          let result = "abc".isInstance(stringType)
+        `)
+
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			&sema.BoolType{},
+			checker.GlobalValues["result"].Type,
+		)
+	})
+
+	t.Run("Int", func(t *testing.T) {
+
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+          let intType = Type<Int>()
+          let result = (1).isInstance(intType)
+        `)
+
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			&sema.BoolType{},
+			checker.GlobalValues["result"].Type,
+		)
+	})
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		checker, err := ParseAndCheck(t, `
+          resource R {}
+
+          let r <- create R()
+          let rType = Type<@R>()
+          let result = r.isInstance(rType)
+        `)
+
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			&sema.BoolType{},
+			checker.GlobalValues["result"].Type,
 		)
 	})
 }

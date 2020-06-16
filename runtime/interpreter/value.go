@@ -137,9 +137,9 @@ func (v TypeValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value
 	switch name {
 	case "identifier":
 		return NewStringValue(v.Type.QualifiedString())
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (v TypeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -401,10 +401,9 @@ func (v *StringValue) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (*StringValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -667,9 +666,9 @@ func (v *ArrayValue) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 			},
 		)
 
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (v *ArrayValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -919,10 +918,9 @@ func (v IntValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value 
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (IntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -1138,10 +1136,9 @@ func (v Int8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (Int8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -1357,10 +1354,9 @@ func (v Int16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (Int16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -1576,10 +1572,9 @@ func (v Int32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (Int32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -1794,10 +1789,9 @@ func (v Int64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (Int64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -2072,10 +2066,9 @@ func (v Int128Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (Int128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -2351,10 +2344,9 @@ func (v Int256Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (Int256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -2576,10 +2568,9 @@ func (v UIntValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (UIntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -2763,10 +2754,9 @@ func (v UInt8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (UInt8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -2948,10 +2938,9 @@ func (v UInt16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (UInt16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -3135,10 +3124,9 @@ func (v UInt32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (UInt32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -3325,10 +3313,9 @@ func (v UInt64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (UInt64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -3574,10 +3561,9 @@ func (v UInt128Value) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (UInt128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -3823,10 +3809,9 @@ func (v UInt256Value) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (UInt256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -3971,10 +3956,9 @@ func (v Word8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (Word8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -4117,10 +4101,9 @@ func (v Word16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (Word16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -4265,10 +4248,9 @@ func (v Word32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (Word32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -4413,10 +4395,9 @@ func (v Word64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (Word64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -4662,10 +4643,9 @@ func (v Fix64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (Fix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -4903,10 +4883,9 @@ func (v UFix64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (UFix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -5485,10 +5464,9 @@ func (v *DictionaryValue) GetMember(_ *Interpreter, _ LocationRange, name string
 				return trampoline.Done{Result: existingValue}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (v *DictionaryValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -5757,8 +5735,7 @@ func (v *StorageReferenceValue) GetMember(interpreter *Interpreter, locationRang
 		})
 	}
 
-	return (*referencedValue).(MemberAccessibleValue).
-		GetMember(interpreter, locationRange, name)
+	return interpreter.getMember(*referencedValue, locationRange, name)
 }
 
 func (v *StorageReferenceValue) SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) {
@@ -5769,8 +5746,7 @@ func (v *StorageReferenceValue) SetMember(interpreter *Interpreter, locationRang
 		})
 	}
 
-	(*referencedValue).(MemberAccessibleValue).
-		SetMember(interpreter, locationRange, name, value)
+	interpreter.setMember(*referencedValue, locationRange, name, value)
 }
 
 func (v *StorageReferenceValue) Get(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
@@ -5874,8 +5850,7 @@ func (v *EphemeralReferenceValue) GetMember(interpreter *Interpreter, locationRa
 		})
 	}
 
-	return (*referencedValue).(MemberAccessibleValue).
-		GetMember(interpreter, locationRange, name)
+	return interpreter.getMember(*referencedValue, locationRange, name)
 }
 
 func (v *EphemeralReferenceValue) SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) {
@@ -5886,8 +5861,7 @@ func (v *EphemeralReferenceValue) SetMember(interpreter *Interpreter, locationRa
 		})
 	}
 
-	(*referencedValue).(MemberAccessibleValue).
-		SetMember(interpreter, locationRange, name, value)
+	interpreter.setMember(*referencedValue, locationRange, name, value)
 }
 
 func (v *EphemeralReferenceValue) Get(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
@@ -6018,10 +5992,9 @@ func (v AddressValue) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 				return trampoline.Done{Result: result}
 			},
 		)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (AddressValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -6187,9 +6160,9 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 	case "getCapability":
 		return accountGetCapabilityFunction(v.Address, true)
 
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (AuthAccountValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -6260,10 +6233,9 @@ func (v PublicAccountValue) GetMember(inter *Interpreter, _ LocationRange, name 
 
 	case "getLinkTarget":
 		return inter.authAccountGetLinkTargetFunction(v.Address)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (PublicAccountValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
@@ -6369,10 +6341,9 @@ func (v CapabilityValue) GetMember(inter *Interpreter, _ LocationRange, name str
 
 	case "check":
 		return inter.capabilityCheckFunction(v.Address, v.Path)
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (CapabilityValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {

@@ -82,3 +82,56 @@ func TestInterpretMetaType(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretIsInstance(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("String", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let stringType = Type<String>()
+          let result = "abc".isInstance(stringType)
+        `)
+
+		assert.Equal(t,
+			interpreter.BoolValue(true),
+			inter.Globals["result"].Value,
+		)
+	})
+
+	t.Run("Int", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          let intType = Type<Int>()
+          let result = (1).isInstance(intType)
+        `)
+
+		assert.Equal(t,
+			interpreter.BoolValue(true),
+			inter.Globals["result"].Value,
+		)
+	})
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		inter := parseCheckAndInterpret(t, `
+          resource R {}
+
+          let r <- create R()
+          let rType = Type<@R>()
+          let result = r.isInstance(rType)
+        `)
+
+		assert.Equal(t,
+			interpreter.BoolValue(true),
+			inter.Globals["result"].Value,
+		)
+	})
+}

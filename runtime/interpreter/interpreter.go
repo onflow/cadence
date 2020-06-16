@@ -1474,16 +1474,16 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *ast.MemberExpression) Trampoline {
 	return memberExpression.Expression.Accept(interpreter).(Trampoline).
 		FlatMap(func(result interface{}) Trampoline {
-			structure := result.(MemberAccessibleValue)
+			value := result.(Value)
 			locationRange := interpreter.locationRange(memberExpression)
 			identifier := memberExpression.Identifier.Identifier
 			return Done{
 				Result: getterSetter{
 					get: func() Value {
-						return structure.GetMember(interpreter, locationRange, identifier)
+						return interpreter.getMember(value, locationRange, identifier)
 					},
 					set: func(value Value) {
-						structure.SetMember(interpreter, locationRange, identifier, value)
+						interpreter.setMember(value, locationRange, identifier, value)
 					},
 				},
 			}
@@ -1957,9 +1957,9 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 				}
 			}
 
-			value := result.(MemberAccessibleValue)
+			value := result.(Value)
 			locationRange := interpreter.locationRange(expression)
-			resultValue := value.GetMember(interpreter, locationRange, expression.Identifier.Identifier)
+			resultValue := interpreter.getMember(value, locationRange, expression.Identifier.Identifier)
 
 			// If the member access is optional chaining, only wrap the result value
 			// in an optional, if it is not already an optional value
@@ -4182,4 +4182,30 @@ func (interpreter *Interpreter) reportFunctionInvocation(pos ast.HasPosition) {
 
 	line := pos.StartPosition().Line
 	interpreter.onFunctionInvocation(interpreter, line)
+}
+
+func (interpreter *Interpreter) getMember(self Value, locationRange LocationRange, identifier string) Value {
+	var result Value
+	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
+		result = memberAccessibleValue.GetMember(interpreter, locationRange, identifier)
+	}
+	if result == nil {
+		switch identifier {
+		case sema.IsInstanceFunctionName:
+			return NewHostFunctionValue(
+				func(invocation Invocation) Trampoline {
+					// NOTE: not invocation.Self, as that is only set for composite values
+					dynamicType := self.DynamicType(interpreter)
+					ty := invocation.Arguments[0].(TypeValue)
+					result := IsSubType(dynamicType, ty.Type)
+					return Done{Result: BoolValue(result)}
+				},
+			)
+		}
+	}
+	return result
+}
+
+func (interpreter *Interpreter) setMember(self Value, locationRange LocationRange, identifier string, value Value) {
+	self.(MemberAccessibleValue).SetMember(interpreter, locationRange, identifier, value)
 }
