@@ -1474,16 +1474,16 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *ast.MemberExpression) Trampoline {
 	return memberExpression.Expression.Accept(interpreter).(Trampoline).
 		FlatMap(func(result interface{}) Trampoline {
-			value := result.(Value)
+			target := result.(Value)
 			locationRange := interpreter.locationRange(memberExpression)
 			identifier := memberExpression.Identifier.Identifier
 			return Done{
 				Result: getterSetter{
 					get: func() Value {
-						return interpreter.getMember(value, locationRange, identifier)
+						return interpreter.getMember(target, locationRange, identifier)
 					},
 					set: func(value Value) {
-						interpreter.setMember(value, locationRange, identifier, value)
+						interpreter.setMember(target, locationRange, identifier, value)
 					},
 				},
 			}
@@ -4200,6 +4200,9 @@ func (interpreter *Interpreter) getMember(self Value, locationRange LocationRang
 				},
 			)
 		}
+	}
+	if result == nil {
+		panic(errors.NewUnreachableError())
 	}
 	return result
 }
