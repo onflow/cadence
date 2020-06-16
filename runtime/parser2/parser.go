@@ -117,6 +117,25 @@ func (p *parser) maybeTrimBuffer() {
 // the buffer.
 // Tokens are buffered when syntax ambiguity is involved.
 func (p *parser) next() {
+	// nextFromLexer reads the next token from the lexer.
+	nextFromLexer := func(p *parser) lexer.Token {
+		var ok bool
+		token, ok := <-p.tokens
+		if !ok {
+			// Channel closed, return EOF token.
+			token = lexer.Token{Type: lexer.TokenEOF}
+		}
+		return token
+	}
+
+	// nextFromLexer reads the next token from the buffer tokens, assuming there are buffered tokens.
+	nextFromBuffer := func(p *parser) lexer.Token {
+		token := p.bufferedTokens[p.bufferPos]
+		p.bufferPos++
+		p.maybeTrimBuffer()
+		return token
+	}
+
 	for {
 		var token lexer.Token
 
@@ -130,16 +149,16 @@ func (p *parser) next() {
 		if p.buffering {
 			// if we need to buffer the next token
 			// then read the token from the lexer and buffer it.
-			token = p.nextFromLexer()
+			token = nextFromLexer(p)
 			p.bufferedTokens = append(p.bufferedTokens, token)
 		} else if p.bufferPos < len(p.bufferedTokens) {
 			// if we don't need to buffer the next token and there are tokens buffered before,
 			// then read the token from the buffer.
-			token = p.nextFromBuffer()
+			token = nextFromBuffer(p)
 		} else {
 			// else no need to buffer, and there is no buffered token,
 			// then read the next token from the lexer.
-			token = p.nextFromLexer()
+			token = nextFromLexer(p)
 		}
 
 		if token.Is(lexer.TokenError) {
@@ -151,27 +170,6 @@ func (p *parser) next() {
 		p.current = token
 		return
 	}
-}
-
-// nextFromLexer reads the next token from the lexer.
-// should only be called by the "next" function
-func (p *parser) nextFromLexer() lexer.Token {
-	var ok bool
-	token, ok := <-p.tokens
-	if !ok {
-		// Channel closed, return EOF token.
-		token = lexer.Token{Type: lexer.TokenEOF}
-	}
-	return token
-}
-
-// nextFromLexer reads the next token from the buffer tokens, assuming there are buffered tokens.
-// should only be called by the "next" function
-func (p *parser) nextFromBuffer() lexer.Token {
-	token := p.bufferedTokens[p.bufferPos]
-	p.bufferPos++
-	p.maybeTrimBuffer()
-	return token
 }
 
 func (p *parser) mustOne(tokenType lexer.TokenType) lexer.Token {
