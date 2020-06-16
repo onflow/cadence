@@ -53,16 +53,25 @@ type position struct {
 }
 
 type lexer struct {
-	ctx           context.Context
-	input         string     // the entire input string
-	startOffset   int        // the start offset of the current word in the current line
-	endOffset     int        // the end offset of the current word in the current line
-	prevEndOffset int        // the previous end offset, used for stepping back
-	current       rune       // the current rune is scanned
-	prev          rune       // the previous rune was scanned, used for stepping back
-	tokens        chan Token // the channel of tokens that has been scanned.
-	canBackup     bool       // signal whether stepping back is allowed
-	startPos      position   // the start position of the current word
+	ctx context.Context
+	// the entire input string
+	input string
+	// the start offset of the current word in the current line
+	startOffset int
+	// the end offset of the current word in the current line
+	endOffset int
+	// the previous end offset, used for stepping back
+	prevEndOffset int
+	// the current rune is scanned
+	current rune
+	// the previous rune was scanned, used for stepping back
+	prev rune
+	// the channel of tokens that has been scanned.
+	tokens chan Token
+	// signal whether stepping back is allowed
+	canBackup bool
+	// the start position of the current word
+	startPos position
 }
 
 func Lex(ctx context.Context, input string) chan Token {
