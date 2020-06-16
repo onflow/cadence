@@ -943,7 +943,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 					cadence.
 						NewStruct([]cadence.Value{cadence.NewString("bar")}).
 						WithType(cadence.StructType{
-							TypeID:     "test.Foo",
+							TypeID:     "S.test.Foo",
 							Identifier: "Foo",
 							Fields: []cadence.Field{
 								{
@@ -978,7 +978,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 						cadence.
 							NewStruct([]cadence.Value{cadence.NewString("bar")}).
 							WithType(cadence.StructType{
-								TypeID:     "test.Foo",
+								TypeID:     "S.test.Foo",
 								Identifier: "Foo",
 								Fields: []cadence.Field{
 									{
