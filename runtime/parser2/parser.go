@@ -27,21 +27,28 @@ import (
 )
 
 // lowestBindingPower is the lowest binding power.
-// The binding power controls operator precedence: 
+// The binding power controls operator precedence:
 // the higher the value, the tighter a token binds to the tokens that follow.
 const lowestBindingPower = 0
 
 type parser struct {
-	tokens         chan lexer.Token
-	current        lexer.Token
-	errors         []error
-	buffering      bool          // a flag indicating whether the next token will be read from buffered tokens or lexer
-	bufferedTokens []lexer.Token // buffered tokens read from the lexer
-	bufferPos      int           // the index of the next buffered token to read from
+	// a stream of tokens from the lexer
+	tokens chan lexer.Token
+	// the current token being parsed.
+	current lexer.Token
+	// the parsing errors encountered during parsing
+	errors []error
+	// a flag indicating whether the next token will be read from buffered tokens or lexer
+	buffering bool
+	// buffered tokens read from the lexer
+	bufferedTokens []lexer.Token
+	// the index of the next buffered token to read from
+	bufferPos int
+	// the parsing errors encountered during buffering
 	bufferedErrors []error
 }
 
-// Parse creates a lexer to scan the given input string, 
+// Parse creates a lexer to scan the given input string,
 // and uses the given `parse` function to parse tokens into a result.
 //
 // It can be composed with different parse functions to parse the input string into different results.
@@ -118,8 +125,8 @@ func (p *parser) next() {
 		// tokens channel. Therefore, in some circumstances, we need to buffer the tokens from the
 		// lexer.
 		//
-		// buffering tokens allows us to potentially "replay" the buffered tokens later, 
-		// for example to deal with syntax ambiguity 
+		// buffering tokens allows us to potentially "replay" the buffered tokens later,
+		// for example to deal with syntax ambiguity
 		if p.buffering {
 			// if we need to buffer the next token
 			// then read the token from the lexer and buffer it.
