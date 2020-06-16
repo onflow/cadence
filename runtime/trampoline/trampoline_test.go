@@ -228,11 +228,24 @@ func TestDoneResume(t *testing.T) {
 	assert.Equal(t, 4, Run(Done{3}.Map(add1)))
 
 	// Resume twices to get the result from a trampline that maps a function over a Done value
-	assert.Equal(t, 4, Done{3}.Map(add1).Resume().(func() Trampoline)().Resume())
+	assert.Equal(t, 4, Done{3}.
+		Map(add1).
+		Resume().(func() Trampoline)().
+		Resume())
 
 	// Resume one more time if mapped over a function one more time
-	assert.Equal(t, 5, Done{3}.Map(add1).Map(add1).Resume().(func() Trampoline)().Resume().(func() Trampoline)().Resume())
+	assert.Equal(t, 5, Done{3}.
+		Map(add1).
+		Map(add1).
+		Resume().(func() Trampoline)().
+		Resume().(func() Trampoline)().
+		Resume())
 
 	// Map-Resume-Map-Resume returns the same result as Map-Map-Resume-Resume
-	assert.Equal(t, 5, Done{3}.Map(add1).Resume().(func() Trampoline)().Map(add1).Resume().(func() Trampoline)().Resume())
+	assert.Equal(t, 5, Done{3}.
+		Map(add1).
+		Resume().(func() Trampoline)().
+		Map(add1).
+		Resume().(func() Trampoline)().
+		Resume())
 }
