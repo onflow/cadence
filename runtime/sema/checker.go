@@ -1882,12 +1882,16 @@ func (checker *Checker) withSelfResourceInvalidationAllowed(f func()) {
 	f()
 }
 
+const OwnerFieldName = "owner"
+const UUIDFieldName = "uuid"
+
 func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 	var predeclaredMembers []*Member
 
 	addPredeclaredMember := func(
 		identifier string,
 		fieldType Type,
+		declarationKind common.DeclarationKind,
 		access ast.Access,
 		ignoreInSerialization bool,
 	) {
@@ -1895,7 +1899,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 			ContainerType:         containerType,
 			Access:                access,
 			Identifier:            ast.Identifier{Identifier: identifier},
-			DeclarationKind:       common.DeclarationKindField,
+			DeclarationKind:       declarationKind,
 			VariableKind:          ast.VariableKindConstant,
 			TypeAnnotation:        NewTypeAnnotation(fieldType),
 			Predeclared:           true,
@@ -1904,6 +1908,14 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 	}
 
 	if compositeKindedType, ok := containerType.(CompositeKindedType); ok {
+
+		addPredeclaredMember(
+			IsInstanceFunctionName,
+			isInstanceFunctionType,
+			common.DeclarationKindFunction,
+			ast.AccessPublic,
+			true,
+		)
 
 		switch compositeKindedType.GetCompositeKind() {
 		case common.CompositeKindContract:
@@ -1914,6 +1926,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 			addPredeclaredMember(
 				"account",
 				&AuthAccountType{},
+				common.DeclarationKindField,
 				ast.AccessPrivate,
 				true,
 			)
@@ -1925,10 +1938,11 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 			// ignored in serialization
 
 			addPredeclaredMember(
-				"owner",
+				OwnerFieldName,
 				&OptionalType{
 					Type: &PublicAccountType{},
 				},
+				common.DeclarationKindField,
 				ast.AccessPublic,
 				true,
 			)
@@ -1937,8 +1951,9 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 			// included in serialization
 
 			addPredeclaredMember(
-				"uuid",
+				UUIDFieldName,
 				&UInt64Type{},
+				common.DeclarationKindField,
 				ast.AccessPublic,
 				false,
 			)

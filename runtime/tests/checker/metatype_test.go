@@ -65,7 +65,7 @@ func TestCheckMetaType(t *testing.T) {
 	})
 }
 
-func TestCheckIsInstance(t *testing.T) {
+func TestCheckIsInstance_Use(t *testing.T) {
 
 	t.Parallel()
 
@@ -122,4 +122,19 @@ func TestCheckIsInstance(t *testing.T) {
 			checker.GlobalValues["result"].Type,
 		)
 	})
+}
+
+func TestCheckIsInstance_Redeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      struct R {
+          fun isInstance() {}
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
 }
