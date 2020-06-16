@@ -238,6 +238,25 @@ func NewTypeAnnotation(ty Type) *TypeAnnotation {
 	}
 }
 
+// isInstance
+
+const IsInstanceFunctionName = "isInstance"
+
+var isInstanceFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Label:      ArgumentLabelNotRequired,
+			Identifier: "type",
+			TypeAnnotation: NewTypeAnnotation(
+				&MetaType{},
+			),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&BoolType{},
+	),
+}
+
 // toString
 
 const ToStringFunctionName = "toString"
