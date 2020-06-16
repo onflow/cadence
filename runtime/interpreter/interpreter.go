@@ -625,7 +625,7 @@ func (interpreter *Interpreter) runAllStatements(t Trampoline) interface{} {
 func getStatement(t Trampoline) *StatementTrampoline {
 	switch t := t.(type) {
 	case FlatMap:
-		// skip non-statement Trampolines
+		// Recurse into the nested trampoline
 		return getStatement(t.Subroutine)
 	case StatementTrampoline:
 		return &t
