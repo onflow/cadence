@@ -236,6 +236,8 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (member *M
 	return member, isOptional
 }
 
+// getBuiltinMember tries to get the built-in member with the given identifier.
+// For example, the function `isInstance` is a built-in which is defined for all types
 func getBuiltinMember(identifier string, ty Type) *Member {
 	newFunction := func(functionType *FunctionType) *Member {
 		return NewPublicFunctionMember(ty, identifier, functionType)
