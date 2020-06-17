@@ -67,7 +67,7 @@ func Parse(input string, parse func(*parser) interface{}) (result interface{}, e
 		if r := recover(); r != nil {
 			err, ok := r.(error)
 			if !ok {
-				err = fmt.Errorf("lexer: %v", r)
+				err = fmt.Errorf("parser: %v", r)
 			}
 
 			p.report(err)
@@ -87,17 +87,33 @@ func Parse(input string, parse func(*parser) interface{}) (result interface{}, e
 	result = parse(p)
 
 	if !p.current.Is(lexer.TokenEOF) {
-		p.report(fmt.Errorf("unexpected token: %v", p.current))
+		p.report(fmt.Errorf("unexpected token: %s", p.current.Type))
 	}
 
 	return result, p.errors
 }
 
-func (p *parser) report(err ...error) {
-	if p.buffering {
-		p.bufferedErrors = append(p.bufferedErrors, err...)
-	} else {
-		p.errors = append(p.errors, err...)
+func (p *parser) report(errs ...error) {
+	for _, err := range errs {
+
+		// If the reported error is not yet a parse error,
+		// create a `SyntaxError` at the current position
+
+		var parseError ParseError
+		var ok bool
+		parseError, ok = err.(ParseError)
+		if !ok {
+			parseError = &SyntaxError{
+				Pos:     p.current.StartPos,
+				Message: err.Error(),
+			}
+		}
+
+		if p.buffering {
+			p.bufferedErrors = append(p.bufferedErrors, parseError)
+		} else {
+			p.errors = append(p.errors, parseError)
+		}
 	}
 }
 
