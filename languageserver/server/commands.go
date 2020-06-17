@@ -159,7 +159,7 @@ func (s *Server) executeScript(conn protocol.Conn, args ...interface{}) (interfa
 	}
 
 	script := []byte(doc.text)
-	res, err := s.flowClient.ExecuteScriptAtLatestBlock(context.Background(), script)
+	res, err := s.flowClient.ExecuteScriptAtLatestBlock(context.Background(), script, nil)
 	if err != nil {
 
 		grpcErr, ok := status.FromError(err)
