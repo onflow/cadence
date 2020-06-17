@@ -3056,14 +3056,15 @@ func (interpreter *Interpreter) ensureLoaded(
 
 	var importedChecker *sema.Checker
 
-	var imported Import
+	var virtualImport *VirtualImport
 
 	var checkerErr *sema.CheckerError
 	importedChecker, checkerErr = interpreter.Checker.EnsureLoaded(location, func() *ast.Program {
-		imported = loadLocation()
+		imported := loadLocation()
 
 		switch imported := imported.(type) {
 		case VirtualImport:
+			virtualImport = &imported
 			return nil
 
 		case ProgramImport:
@@ -3078,10 +3079,6 @@ func (interpreter *Interpreter) ensureLoaded(
 	}
 	if checkerErr != nil {
 		panic(checkerErr)
-	}
-
-	if imported == nil {
-		imported = loadLocation()
 	}
 
 	var err error
@@ -3108,28 +3105,24 @@ func (interpreter *Interpreter) ensureLoaded(
 		panic(err)
 	}
 
-	switch imported := imported.(type) {
-	case VirtualImport:
+	if virtualImport != nil {
 		// If the imported location is a virtual import,
 		// prepare the interpreter
 
-		for name, value := range imported.Globals {
+		for name, value := range virtualImport.Globals {
 			variable := &Variable{Value: value}
 			subInterpreter.setVariable(name, variable)
 			subInterpreter.Globals[name] = variable
 		}
 
 		subInterpreter.typeCodes.
-			Merge(imported.TypeCodes)
+			Merge(virtualImport.TypeCodes)
 
-	case ProgramImport:
+	} else {
 		// If the imported location is an interpreted program,
 		// evaluate its top-level declarations
 
 		subInterpreter.runAllStatements(subInterpreter.interpret())
-
-	default:
-		panic(errors.NewUnreachableError())
 	}
 
 	return subInterpreter
