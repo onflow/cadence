@@ -87,25 +87,25 @@ func TestInterpretIsInstance(t *testing.T) {
 
 	t.Parallel()
 
-	cases := []struct {
+	cases := map[string]struct {
 		code   string
 		result bool
 	}{
-		{ // string is an instance of string
+		"string is an instance of string": {
 			`
           let stringType = Type<String>()
           let result = "abc".isInstance(stringType)
 			`,
 			true,
 		},
-		{ // int is an instance of int
+		"int is an instance of int": {
 			`
           let intType = Type<Int>()
           let result = (1).isInstance(intType)
 			`,
 			true,
 		},
-		{ // resource is an instance of resource
+		"resource is an instance of resource": {
 			`
           resource R {}
 
@@ -115,14 +115,14 @@ func TestInterpretIsInstance(t *testing.T) {
 			`,
 			true,
 		},
-		{ // int is not an instance of string
+		"int is not an instance of string": {
 			`
           let stringType = Type<String>()
           let result = (1).isInstance(stringType)
 			`,
 			false,
 		},
-		{ // int is not an instance of resource
+		"int is not an instance of resource": {
 			`
           resource R {}
 
@@ -131,7 +131,7 @@ func TestInterpretIsInstance(t *testing.T) {
 			`,
 			false,
 		},
-		{ // resource is not an instance of string
+		"resource is not an instance of string": {
 			`
           resource R {}
 
@@ -141,7 +141,7 @@ func TestInterpretIsInstance(t *testing.T) {
 			`,
 			false,
 		},
-		{ // resource R is not an instance of resource S
+		"resource R is not an instance of resource S": {
 			`
           resource R {}
           resource S {}
@@ -154,12 +154,14 @@ func TestInterpretIsInstance(t *testing.T) {
 		},
 	}
 
-	for _, cases := range cases {
-		inter := parseCheckAndInterpret(t, cases.code)
+	for name, cases := range cases {
+		t.Run(name, func(t *testing.T) {
+			inter := parseCheckAndInterpret(t, cases.code)
 
-		assert.Equal(t,
-			interpreter.BoolValue(cases.result),
-			inter.Globals["result"].Value,
-		)
+			assert.Equal(t,
+				interpreter.BoolValue(cases.result),
+				inter.Globals["result"].Value,
+			)
+		})
 	}
 }

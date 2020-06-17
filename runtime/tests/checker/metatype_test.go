@@ -68,25 +68,26 @@ func TestCheckMetaType(t *testing.T) {
 func TestCheckIsInstance(t *testing.T) {
 	t.Parallel()
 
-	cases := []struct {
+	cases := map[string]struct {
 		code  string
 		valid bool
 	}{
-		{ // string is an instance of string
+		"string is an instance of string": {
 			`
           let stringType = Type<String>()
           let result = "abc".isInstance(stringType)
 			`,
 			true,
 		},
-		{ // int is an instance of int
+		"int is an instance of int": {
+
 			`
           let intType = Type<Int>()
           let result = (1).isInstance(intType)
 			`,
 			true,
 		},
-		{ // resource is an instance of resource
+		"resource is an instance of resource": {
 			`
           resource R {}
 
@@ -96,19 +97,19 @@ func TestCheckIsInstance(t *testing.T) {
 			`,
 			true,
 		},
-		{ // 1 is an instance of Int?
+		"1 is an instance of Int?": {
 			`
 				let result = (1).isInstance(Type<Int?>())
 			`,
 			true,
 		},
-		{ // isInstance must take a type
+		"isInstance must take a type": {
 			`
 				let result = (1).isInstance(3)
 			`,
 			false,
 		},
-		{ // nil is not a type
+		"nil is not a type": {
 			`
 				let result = (1).isInstance(nil)
 			`,
@@ -116,17 +117,19 @@ func TestCheckIsInstance(t *testing.T) {
 		},
 	}
 
-	for _, cases := range cases {
-		checker, err := ParseAndCheck(t, cases.code)
-		if cases.valid {
-			require.NoError(t, err)
-			assert.Equal(t,
-				&sema.BoolType{},
-				checker.GlobalValues["result"].Type,
-			)
-		} else {
-			require.Error(t, err)
-		}
+	for name, cases := range cases {
+		t.Run(name, func(t *testing.T) {
+			checker, err := ParseAndCheck(t, cases.code)
+			if cases.valid {
+				require.NoError(t, err)
+				assert.Equal(t,
+					&sema.BoolType{},
+					checker.GlobalValues["result"].Type,
+				)
+			} else {
+				require.Error(t, err)
+			}
+		})
 	}
 
 }
