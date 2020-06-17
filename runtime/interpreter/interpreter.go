@@ -4182,6 +4182,7 @@ func (interpreter *Interpreter) reportFunctionInvocation(pos ast.HasPosition) {
 	interpreter.onFunctionInvocation(interpreter, line)
 }
 
+// getMember gets the member value by the given identifier from the given Value depending on its type.
 func (interpreter *Interpreter) getMember(self Value, locationRange LocationRange, identifier string) Value {
 	var result Value
 	// When the accessed value has a type that supports the declaration of members or is a built-in type that has members (`MemberAccessibleValue`), 
