@@ -28,7 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -159,7 +159,7 @@ func TestCheckInvalidImportedError(t *testing.T) {
 	// NOTE: only parse, don't check imported program.
 	// will be checked by checker checking importing program
 
-	imported, _, err := parser.ParseProgram(`
+	imported, err := parser2.ParseProgram(`
        let x: Bool = 1
     `)
 
@@ -266,7 +266,7 @@ func TestCheckInvalidImportCycle(t *testing.T) {
 	// will be checked by checker checking importing program
 
 	const code = `import 0x1`
-	imported, _, err := parser.ParseProgram(code)
+	imported, err := parser2.ParseProgram(code)
 
 	require.NoError(t, err)
 

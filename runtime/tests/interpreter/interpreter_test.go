@@ -32,7 +32,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
@@ -1493,7 +1493,7 @@ func TestInterpretHostFunction(t *testing.T) {
 
 	t.Parallel()
 
-	program, _, err := parser.ParseProgram(`
+	program, err := parser2.ParseProgram(`
       pub let a = test(1, 2)
     `)
 
@@ -1565,7 +1565,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 
 	t.Parallel()
 
-	program, _, err := parser.ParseProgram(`
+	program, err := parser2.ParseProgram(`
       pub let nothing = test(1, true, "test")
     `)
 

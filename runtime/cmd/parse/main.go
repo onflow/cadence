@@ -30,7 +30,7 @@ import (
 
 	"github.com/go-test/deep"
 
-	"github.com/onflow/cadence/runtime/parser"
+	parser1 "github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/parser2"
 )
 
@@ -98,7 +98,7 @@ func bench(args []string) {
 
 func benchOldAndNew(code string) (oldResult, newResult testing.BenchmarkResult) {
 	oldResult = benchParse(code, func(code string) (err error) {
-		_, _, err = parser.ParseProgram(code)
+		_, _, err = parser1.ParseProgram(code)
 		return
 	})
 
@@ -170,7 +170,7 @@ func compare(args []string) {
 }
 
 func compareOldAndNew(code string) string {
-	oldResult, _, err := parser.ParseProgram(code)
+	oldResult, _, err := parser1.ParseProgram(code)
 	if err != nil {
 		return fmt.Sprintf("old parser failed: %s", err)
 	}

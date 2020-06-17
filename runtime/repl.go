@@ -24,7 +24,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser"
+	parser1 "github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/trampoline"
@@ -110,7 +110,7 @@ func (r *REPL) check(element ast.Element, code string) bool {
 func (r *REPL) Accept(code string) (inputIsComplete bool) {
 	var result []interface{}
 	var err error
-	result, inputIsComplete, err = parser.ParseReplInput(code)
+	result, inputIsComplete, err = parser1.ParseReplInput(code)
 
 	if !inputIsComplete {
 		return
