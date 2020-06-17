@@ -27,7 +27,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -749,7 +749,7 @@ func TestCheckAccessImportGlobalValue(t *testing.T) {
 				// NOTE: only parse, don't check imported program.
 				// will be checked by checker checking importing program
 
-				imported, _, err := parser.ParseProgram(test)
+				imported, err := parser2.ParseProgram(test)
 
 				require.NoError(t, err)
 
@@ -1849,7 +1849,7 @@ func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
 				lastAccessModifier = "priv"
 			}
 
-			imported, _, err := parser.ParseProgram(
+			imported, err := parser2.ParseProgram(
 				fmt.Sprintf(
 					`
                        priv var a = 1
@@ -1903,7 +1903,7 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 	// NOTE: only parse, don't check imported program.
 	// will be checked by checker checking importing program
 
-	imported, _, err := parser.ParseProgram(`
+	imported, err := parser2.ParseProgram(`
        pub resource R {}
 
        pub fun createR(): @R {

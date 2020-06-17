@@ -32,7 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
-	oldParser "github.com/onflow/cadence/runtime/parser"
+	parser1 "github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -1685,7 +1685,7 @@ func BenchmarkParseInfix(b *testing.B) {
 
 	b.Run("old", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			_, _, _ = oldParser.ParseExpression("(8 - 1 + 3) * 6 - ((3 + 7) * 2)")
+			_, _, _ = parser1.ParseExpression("(8 - 1 + 3) * 6 - ((3 + 7) * 2)")
 		}
 	})
 }
@@ -1712,7 +1712,7 @@ func BenchmarkParseArray(b *testing.B) {
 
 	b.Run("old", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			_, _, _ = oldParser.ParseExpression(lit)
+			_, _, _ = parser1.ParseExpression(lit)
 		}
 	})
 }

@@ -8,7 +8,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/parser"
+	parser1 "github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -31,7 +31,7 @@ func ParseAndCheckWithOptions(
 	options ParseAndCheckOptions,
 ) (*sema.Checker, error) {
 
-	program, _, err := parser.ParseProgram(code)
+	program, _, err := parser1.ParseProgram(code)
 	if !assert.NoError(t, err) {
 		assert.FailNow(t, errors.UnrollChildErrors(err))
 		return nil, err
