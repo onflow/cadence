@@ -4184,6 +4184,10 @@ func (interpreter *Interpreter) reportFunctionInvocation(pos ast.HasPosition) {
 
 func (interpreter *Interpreter) getMember(self Value, locationRange LocationRange, identifier string) Value {
 	var result Value
+	// When the accessed value has a type that supports the declaration of members or is a built-in type that has members (`MemberAccessibleValue`), 
+	// then try to get the member for the given identifier.
+	// For example, the built-in type `String` has a member "length",
+	// and composite declarations may contain member declarations
 	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
 		result = memberAccessibleValue.GetMember(interpreter, locationRange, identifier)
 	}
