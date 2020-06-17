@@ -65,63 +65,70 @@ func TestCheckMetaType(t *testing.T) {
 	})
 }
 
-func TestCheckIsInstance_Use(t *testing.T) {
-
+func TestCheckIsInstance(t *testing.T) {
 	t.Parallel()
 
-	t.Run("String", func(t *testing.T) {
-
-		t.Parallel()
-
-		checker, err := ParseAndCheck(t, `
+	cases := []struct {
+		code  string
+		valid bool
+	}{
+		{ // string is an instance of string
+			`
           let stringType = Type<String>()
           let result = "abc".isInstance(stringType)
-        `)
-
-		require.NoError(t, err)
-
-		assert.Equal(t,
-			&sema.BoolType{},
-			checker.GlobalValues["result"].Type,
-		)
-	})
-
-	t.Run("Int", func(t *testing.T) {
-
-		t.Parallel()
-
-		checker, err := ParseAndCheck(t, `
+			`,
+			true,
+		},
+		{ // int is an instance of int
+			`
           let intType = Type<Int>()
           let result = (1).isInstance(intType)
-        `)
-
-		require.NoError(t, err)
-
-		assert.Equal(t,
-			&sema.BoolType{},
-			checker.GlobalValues["result"].Type,
-		)
-	})
-
-	t.Run("resource", func(t *testing.T) {
-
-		t.Parallel()
-
-		checker, err := ParseAndCheck(t, `
+			`,
+			true,
+		},
+		{ // resource is an instance of resource
+			`
           resource R {}
 
           let r <- create R()
           let rType = Type<@R>()
           let result = r.isInstance(rType)
-        `)
+			`,
+			true,
+		},
+		{ // 1 is an instance of Int?
+			`
+				let result = (1).isInstance(Type<Int?>())
+			`,
+			true,
+		},
+		{ // isInstance must take a type
+			`
+				let result = (1).isInstance(3)
+			`,
+			false,
+		},
+		{ // nil is not a type
+			`
+				let result = (1).isInstance(nil)
+			`,
+			false,
+		},
+	}
 
-		require.NoError(t, err)
+	for _, cases := range cases {
+		checker, err := ParseAndCheck(t, cases.code)
+		if cases.valid {
+			require.NoError(t, err)
+			assert.Equal(t,
+				&sema.BoolType{},
+				checker.GlobalValues["result"].Type,
+			)
+		} else {
+			require.Error(t, err)
+		}
+	}
 
-		assert.Equal(t,
-			&sema.BoolType{},
-			checker.GlobalValues["result"].Type,
-		)
-	})
 }
 
 func TestCheckIsInstance_Redeclaration(t *testing.T) {
