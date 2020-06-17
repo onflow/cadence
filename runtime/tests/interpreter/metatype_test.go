@@ -87,51 +87,79 @@ func TestInterpretIsInstance(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("String", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
+	cases := []struct {
+		code   string
+		result bool
+	}{
+		{ // string is an instance of string
+			`
           let stringType = Type<String>()
           let result = "abc".isInstance(stringType)
-        `)
-
-		assert.Equal(t,
-			interpreter.BoolValue(true),
-			inter.Globals["result"].Value,
-		)
-	})
-
-	t.Run("Int", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
+			`,
+			true,
+		},
+		{ // int is an instance of int
+			`
           let intType = Type<Int>()
           let result = (1).isInstance(intType)
-        `)
-
-		assert.Equal(t,
-			interpreter.BoolValue(true),
-			inter.Globals["result"].Value,
-		)
-	})
-
-	t.Run("resource", func(t *testing.T) {
-
-		t.Parallel()
-
-		inter := parseCheckAndInterpret(t, `
+			`,
+			true,
+		},
+		{ // resource is an instance of resource
+			`
           resource R {}
 
           let r <- create R()
           let rType = Type<@R>()
           let result = r.isInstance(rType)
-        `)
+			`,
+			true,
+		},
+		{ // int is not an instance of string
+			`
+          let stringType = Type<String>()
+          let result = (1).isInstance(stringType)
+			`,
+			false,
+		},
+		{ // int is not an instance of resource
+			`
+          resource R {}
+
+          let rType = Type<@R>()
+          let result = (1).isInstance(rType)
+			`,
+			false,
+		},
+		{ // resource is not an instance of string
+			`
+          resource R {}
+
+          let r <- create R()
+          let stringType = Type<String>()
+          let result = (r).isInstance(stringType)
+			`,
+			false,
+		},
+		{ // resource R is not an instance of resource S
+			`
+          resource R {}
+          resource S {}
+
+          let r <- create R()
+          let sType = Type<@S>()
+          let result = (r).isInstance(sType)
+			`,
+			false,
+		},
+	}
+
+	for _, cases := range cases {
+		inter := parseCheckAndInterpret(t, cases.code)
 
 		assert.Equal(t,
-			interpreter.BoolValue(true),
+			interpreter.BoolValue(cases.result),
 			inter.Globals["result"].Value,
 		)
-	})
+	}
 }
