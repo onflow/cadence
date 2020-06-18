@@ -26,7 +26,7 @@ const keywordAs = "as"
 
 // stateFn uses the input lexer to read runes and emit tokens.
 //
-// It either returns nil when reaching end of file, 
+// It either returns nil when reaching end of file,
 // or returns another stateFn for more scanning work.
 type stateFn func(*lexer) stateFn
 

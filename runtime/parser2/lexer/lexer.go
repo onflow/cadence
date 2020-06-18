@@ -91,11 +91,11 @@ func Lex(ctx context.Context, input string) chan Token {
 
 type done struct{}
 
-// run executes the stateFn, which will scan the runes in the input 
+// run executes the stateFn, which will scan the runes in the input
 // and emit tokens to the tokens channel.
 //
-// stateFn might return another stateFn to indicate further scanning work, 
-// or nil if there is no scanning work left to be done, 
+// stateFn might return another stateFn to indicate further scanning work,
+// or nil if there is no scanning work left to be done,
 // i.e. run will keep running the returned stateFn until no more
 // stateFn is returned, which for example happens when reaching the end of the file.
 //
