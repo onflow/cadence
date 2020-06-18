@@ -153,7 +153,7 @@ func parseTransactionDeclaration(p *parser) *ast.TransactionDeclaration {
 			atEnd = true
 
 		default:
-			panic(fmt.Errorf("unexpected token %s", p.current.Type))
+			panic(fmt.Errorf("unexpected token: %s", p.current.Type))
 		}
 	}
 

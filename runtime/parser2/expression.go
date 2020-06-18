@@ -492,7 +492,7 @@ func init() {
 	defineIdentifierExpression()
 
 	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) ast.Expression {
-		panic("expected expression")
+		panic(fmt.Errorf("expected expression"))
 	})
 }
 

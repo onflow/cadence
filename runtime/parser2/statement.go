@@ -95,7 +95,6 @@ func parseStatement(p *parser) ast.Statement {
 	switch p.current.Type {
 	case lexer.TokenEqual, lexer.TokenLeftArrow, lexer.TokenLeftArrowExclamation:
 		transfer := parseTransfer(p)
-		p.next()
 
 		value := parseExpression(p, lowestBindingPower)
 
