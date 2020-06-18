@@ -19,14 +19,15 @@
 package parser2
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestMain(m *testing.M) {
@@ -92,9 +93,12 @@ func TestParseBuffering(t *testing.T) {
 			return nil
 		})
 
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("expected token identifier with string value c"),
+				&SyntaxError{
+					Message: "expected token identifier with string value c",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
 			},
 			errs,
 		)
@@ -213,9 +217,12 @@ func TestParseBuffering(t *testing.T) {
 			return nil
 		})
 
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("expected token identifier with string value d"),
+				&SyntaxError{
+					Message: "expected token identifier with string value d",
+					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
 			},
 			errs,
 		)
