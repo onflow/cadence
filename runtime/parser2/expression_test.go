@@ -19,7 +19,6 @@
 package parser2
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -33,7 +32,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	parser1 "github.com/onflow/cadence/runtime/parser"
-	"github.com/onflow/cadence/runtime/parser2/lexer"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -749,9 +747,12 @@ func TestParseString(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression("\"")
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("invalid end of string literal: missing '\"'"),
+				&SyntaxError{
+					Message: "invalid end of string literal: missing '\"'",
+					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				},
 			},
 			errs,
 		)
@@ -773,9 +774,12 @@ func TestParseString(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression("\"\n")
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("invalid end of string literal: missing '\"'"),
+				&SyntaxError{
+					Message: "invalid end of string literal: missing '\"'",
+					Pos:     ast.Position{Offset: 2, Line: 2, Column: 0},
+				},
 			},
 			errs,
 		)
@@ -796,9 +800,12 @@ func TestParseString(t *testing.T) {
 
 		t.Parallel()
 		result, errs := ParseExpression("\"t")
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("invalid end of string literal: missing '\"'"),
+				&SyntaxError{
+					Message: "invalid end of string literal: missing '\"'",
+					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				},
 			},
 			errs,
 		)
@@ -820,9 +827,12 @@ func TestParseString(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression("\"t\n")
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("invalid end of string literal: missing '\"'"),
+				&SyntaxError{
+					Message: "invalid end of string literal: missing '\"'",
+					Pos:     ast.Position{Offset: 3, Line: 2, Column: 0},
+				},
 			},
 			errs,
 		)
@@ -844,10 +854,16 @@ func TestParseString(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression("\"\\")
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("incomplete escape sequence: missing character after escape character"),
-				errors.New("invalid end of string literal: missing '\"'"),
+				&SyntaxError{
+					Message: "incomplete escape sequence: missing character after escape character",
+					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				},
+				&SyntaxError{
+					Message: "invalid end of string literal: missing '\"'",
+					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				},
 			},
 			errs,
 		)
@@ -888,9 +904,12 @@ func TestParseString(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression(`"te\Xst"`)
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("invalid escape character: 'X'"),
+				&SyntaxError{
+					Message: "invalid escape character: 'X'",
+					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+				},
 			},
 			errs,
 		)
@@ -912,10 +931,16 @@ func TestParseString(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression(`"te\u`)
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("incomplete Unicode escape sequence: missing character '{' after escape character"),
-				errors.New("invalid end of string literal: missing '\"'"),
+				&SyntaxError{
+					Message: "incomplete Unicode escape sequence: missing character '{' after escape character",
+					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				},
+				&SyntaxError{
+					Message: "invalid end of string literal: missing '\"'",
+					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				},
 			},
 			errs,
 		)
@@ -937,10 +962,16 @@ func TestParseString(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression(`"te\us`)
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("invalid Unicode escape sequence: expected '{', got 's'"),
-				errors.New("invalid end of string literal: missing '\"'"),
+				&SyntaxError{
+					Message: "invalid Unicode escape sequence: expected '{', got 's'",
+					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
+				&SyntaxError{
+					Message: "invalid end of string literal: missing '\"'",
+					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
 			},
 			errs,
 		)
@@ -962,10 +993,16 @@ func TestParseString(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression(`"te\u{`)
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("incomplete Unicode escape sequence: missing character '}' after escape character"),
-				errors.New("invalid end of string literal: missing '\"'"),
+				&SyntaxError{
+					Message: "incomplete Unicode escape sequence: missing character '}' after escape character",
+					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
+				&SyntaxError{
+					Message: "invalid end of string literal: missing '\"'",
+					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
 			},
 			errs,
 		)
@@ -1033,9 +1070,12 @@ func TestParseString(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression(`"te\u{X}st"`)
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("invalid Unicode escape sequence: expected hex digit, got 'X'"),
+				&SyntaxError{
+					Message: "invalid Unicode escape sequence: expected hex digit, got 'X'",
+					Pos:     ast.Position{Offset: 11, Line: 1, Column: 11},
+				},
 			},
 			errs,
 		)
@@ -1245,7 +1285,7 @@ func TestInvocation(t *testing.T) {
 		result, errs := ParseExpression("f(a:1,b:2)")
 		require.Empty(t, errs)
 
-		assert.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			&ast.InvocationExpression{
 				InvokedExpression: &ast.IdentifierExpression{
 					Identifier: ast.Identifier{
@@ -1292,12 +1332,12 @@ func TestInvocation(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseExpression("f(,,)")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				fmt.Errorf(
-					"expected argument or end of argument list, got %s",
-					lexer.TokenComma,
-				),
+				&SyntaxError{
+					Message: "expected argument or end of argument list, got ','",
+					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				},
 			},
 			errs,
 		)
@@ -1308,12 +1348,12 @@ func TestInvocation(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseExpression("f(1,,)")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				fmt.Errorf(
-					"expected argument or end of argument list, got %s",
-					lexer.TokenComma,
-				),
+				&SyntaxError{
+					Message: "expected argument or end of argument list, got ','",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
 			},
 			errs,
 		)
@@ -1324,12 +1364,13 @@ func TestInvocation(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseExpression("f(1 2)")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				fmt.Errorf(
-					"unexpected argument in argument list (expecting delimiter or end of argument list), got %s",
-					lexer.TokenDecimalLiteral,
-				),
+				&SyntaxError{
+					Message: "unexpected argument in argument list (expecting delimiter or end of argument list)," +
+						" got decimal integer",
+					Pos: ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
 			},
 			errs,
 		)
@@ -2199,9 +2240,12 @@ func TestParseIntegerLiterals(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression(`0b`)
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("missing digits"),
+				&SyntaxError{
+					Message: "missing digits",
+					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				},
 				&InvalidIntegerLiteralError{
 					Literal:                   "0b",
 					IntegerLiteralKind:        IntegerLiteralKindBinary,
@@ -2291,7 +2335,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression(`0b_101010_101010`)
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   "0b_101010_101010",
@@ -2324,7 +2368,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression(`0b101010_101010_`)
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   "0b101010_101010_",
@@ -2357,9 +2401,12 @@ func TestParseIntegerLiterals(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression(`0o`)
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("missing digits"),
+				&SyntaxError{
+					Message: "missing digits",
+					Pos:     ast.Position{Line: 1, Column: 1, Offset: 1},
+				},
 				&InvalidIntegerLiteralError{
 					Literal:                   `0o`,
 					IntegerLiteralKind:        IntegerLiteralKindOctal,
@@ -2431,7 +2478,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression(`0o_32_45`)
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   "0o_32_45",
@@ -2464,7 +2511,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression(`0o32_45_`)
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   "0o32_45_",
@@ -2537,7 +2584,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression(`1_234_567_890_`)
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   "1_234_567_890_",
@@ -2570,9 +2617,12 @@ func TestParseIntegerLiterals(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression(`0x`)
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("missing digits"),
+				&SyntaxError{
+					Message: "missing digits",
+					Pos:     ast.Position{Line: 1, Column: 1, Offset: 1},
+				},
 				&InvalidIntegerLiteralError{
 					Literal:                   `0x`,
 					IntegerLiteralKind:        IntegerLiteralKindHexadecimal,
@@ -2644,7 +2694,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression(`0x_f2_09`)
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   "0x_f2_09",
@@ -2677,7 +2727,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression(`0xf2_09_`)
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
 				&InvalidIntegerLiteralError{
 					Literal:                   `0xf2_09_`,
@@ -2790,9 +2840,12 @@ func TestParseIntegerLiterals(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression(`0z123`)
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("invalid number literal prefix: 'z'"),
+				&SyntaxError{
+					Message: "invalid number literal prefix: 'z'",
+					Pos:     ast.Position{Line: 1, Column: 1, Offset: 1},
+				},
 				&InvalidIntegerLiteralError{
 					Literal:                   `0z123`,
 					IntegerLiteralKind:        IntegerLiteralKindDecimal,
@@ -2873,9 +2926,12 @@ func TestParseFixedPoint(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseExpression("0.")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("missing fractional digits"),
+				&SyntaxError{
+					Message: "missing fractional digits",
+					Pos:     ast.Position{Line: 1, Column: 1, Offset: 1},
+				},
 			},
 			errs,
 		)
