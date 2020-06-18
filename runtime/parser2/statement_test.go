@@ -574,7 +574,41 @@ func TestParseAssignmentStatement(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("copy", func(t *testing.T) {
+	t.Run("copy, no space", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseStatements("x=1")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.AssignmentStatement{
+					Target: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "x",
+							Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					Transfer: &ast.Transfer{
+						Operation: ast.TransferOperationCopy,
+						Pos:       ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+					Value: &ast.IntegerExpression{
+						Value: big.NewInt(1),
+						Base:  10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("copy, spaces", func(t *testing.T) {
 
 		t.Parallel()
 
