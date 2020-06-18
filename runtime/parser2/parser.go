@@ -181,11 +181,20 @@ func (p *parser) next() {
 
 		if token.Is(lexer.TokenError) {
 			// Report error token as error, skip.
-			p.report(token.Value.(error))
+			err := token.Value.(error)
+			parseError, ok := err.(ParseError)
+			if !ok {
+				parseError = &SyntaxError{
+					Pos:     token.StartPos,
+					Message: err.Error(),
+				}
+			}
+			p.report(parseError)
 			continue
 		}
 
 		p.current = token
+
 		return
 	}
 }
