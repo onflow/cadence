@@ -20,6 +20,27 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "flow-explorer",
+          "title": "Flow Explorer",
+          "icon": "images/flow.svg"
+        }
+      ]
+    },
+    "views": {
+      "flow-explorer": [
+        {
+          "id": "flowAccounts",
+          "name": "Flow Accounts"
+        },
+        {
+          "id": "flowContracts",
+          "name": "Deployed Contract"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "cadence.restartServer",
@@ -47,6 +68,14 @@
         "title": "Switch account"
       }
     ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "cadence.createAccount",
+          "when": "view == flowAccounts"
+        }
+      ]
+    },
     "configuration": {
       "title": "Cadence",
       "properties": {

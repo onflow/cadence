@@ -1,57 +1,68 @@
+import { ExtensionContext, window, Terminal, StatusBarItem } from "vscode";
+import { getConfig, handleConfigChanges, Config } from "./config";
+import { LanguageServerAPI } from "./language-server";
+import { registerCommands } from "./commands";
+import { createTerminal } from "./terminal";
+
+import { createAccountsTreeView, AccountsTreeView } from "./explorer";
+
 import {
-    ExtensionContext,
-    window,
-    Terminal,
-    StatusBarItem,
-} from "vscode";
-import {getConfig, handleConfigChanges, Config} from "./config";
-import {LanguageServerAPI} from "./language-server";
-import {registerCommands} from "./commands";
-import {createTerminal} from "./terminal";
-import {createActiveAccountStatusBarItem, updateActiveAccountStatusBarItem} from "./status-bar";
+  createActiveAccountStatusBarItem,
+  updateActiveAccountStatusBarItem,
+} from "./status-bar";
+import { AccountsService } from "./accounts";
 
 // The container for all data relevant to the extension.
 export type Extension = {
-    config: Config
-    ctx: ExtensionContext
-    api: LanguageServerAPI
-    terminal: Terminal
-    activeAccountStatusBarItem: StatusBarItem
+  config: Config;
+  ctx: ExtensionContext;
+  api: LanguageServerAPI;
+  terminal: Terminal;
+  activeAccountStatusBarItem: StatusBarItem;
+  accountsTreeView: AccountsTreeView;
 };
 
 // Called when the extension starts up. Reads config, starts the language
 // server, and registers command handlers.
 export function activate(ctx: ExtensionContext) {
-    let config: Config;
-    let terminal: Terminal;
-    let activeAccountStatusBarItem: StatusBarItem;
-    let api: LanguageServerAPI;
+  let config: Config;
+  let terminal: Terminal;
+  let activeAccountStatusBarItem: StatusBarItem;
+  let api: LanguageServerAPI;
+  let accountsTreeView: AccountsTreeView;
 
-    try {
-        config = getConfig();
-        terminal = createTerminal(ctx);
-        api = new LanguageServerAPI(ctx, config);
-        activeAccountStatusBarItem = createActiveAccountStatusBarItem();
-    } catch (err) {
-        window.showErrorMessage("Failed to activate extension: ", err);
-        return;
-    }
-    handleConfigChanges();
+  try {
+    config = getConfig();
+    terminal = createTerminal(ctx);
+    api = new LanguageServerAPI(ctx, config);
 
-    const ext: Extension = {
-        config: config,
-        ctx: ctx,
-        api: api,
-        terminal: terminal,
-        activeAccountStatusBarItem: activeAccountStatusBarItem,
-    };
+    activeAccountStatusBarItem = createActiveAccountStatusBarItem();
+    accountsTreeView = createAccountsTreeView(ctx, config);
+  } catch (err) {
+    window.showErrorMessage("Failed to activate extension: ", err);
+    return;
+  }
+  handleConfigChanges();
 
-    registerCommands(ext);
-    renderExtension(ext);
+  const ext: Extension = {
+    config: config,
+    ctx: ctx,
+    api: api,
+    terminal: terminal,
+    activeAccountStatusBarItem: activeAccountStatusBarItem,
+    accountsTreeView: accountsTreeView,
+  };
+
+  config.accounts.init(ext);
+  registerCommands(ext);
+  renderExtension(ext);
 }
 
 export function deactivate() {}
 
 export function renderExtension(ext: Extension) {
-    updateActiveAccountStatusBarItem(ext.activeAccountStatusBarItem, ext.config.getActiveAccount());
+  updateActiveAccountStatusBarItem(
+    ext.activeAccountStatusBarItem,
+    ext.config.accounts.getActiveAccount()
+  );
 }
