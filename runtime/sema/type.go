@@ -6109,41 +6109,75 @@ func (t *PathType) Resolve(_ map[*TypeParameter]Type) Type {
 
 // CapabilityType
 
-type CapabilityType struct{}
+type CapabilityType struct {
+	BorrowType Type
+}
 
 func (*CapabilityType) IsType() {}
 
-func (*CapabilityType) String() string {
-	return "Capability"
+func (t *CapabilityType) string(typeFormatter func(Type) string) string {
+	var builder strings.Builder
+	builder.WriteString("Capability")
+	if t.BorrowType != nil {
+		builder.WriteRune('<')
+		builder.WriteString(typeFormatter(t.BorrowType))
+		builder.WriteRune('>')
+	}
+	return builder.String()
 }
 
-func (*CapabilityType) QualifiedString() string {
-	return "Capability"
+func (t *CapabilityType) String() string {
+	return t.string(func(t Type) string {
+		return t.String()
+	})
 }
 
-func (*CapabilityType) ID() TypeID {
-	return "Capability"
+func (t *CapabilityType) QualifiedString() string {
+	return t.string(func(t Type) string {
+		return t.QualifiedString()
+	})
 }
 
-func (*CapabilityType) Equal(other Type) bool {
-	_, ok := other.(*CapabilityType)
-	return ok
+func (t *CapabilityType) ID() TypeID {
+	return TypeID(t.string(func(t Type) string {
+		return string(t.ID())
+	}))
+}
+
+func (t *CapabilityType) Equal(other Type) bool {
+	otherCapability, ok := other.(*CapabilityType)
+	if !ok {
+		return false
+	}
+	if otherCapability.BorrowType == nil {
+		return t.BorrowType == nil
+	}
+	return otherCapability.BorrowType.Equal(t.BorrowType)
 }
 
 func (*CapabilityType) IsResourceType() bool {
 	return false
 }
 
-func (*CapabilityType) IsInvalidType() bool {
-	return false
+func (t *CapabilityType) IsInvalidType() bool {
+	if t.BorrowType == nil {
+		return false
+	}
+	return t.BorrowType.IsInvalidType()
 }
 
-func (*CapabilityType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
+func (t *CapabilityType) TypeAnnotationState() TypeAnnotationState {
+	if t.BorrowType == nil {
+		return TypeAnnotationStateValid
+	}
+	return t.BorrowType.TypeAnnotationState()
 }
 
-func (*CapabilityType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *CapabilityType) ContainsFirstLevelInterfaceType() bool {
+	if t.BorrowType == nil {
+		return false
+	}
+	return t.BorrowType.ContainsFirstLevelInterfaceType()
 }
 
 func (*CapabilityType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
