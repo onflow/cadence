@@ -907,3 +907,54 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 		)
 	})
 }
+
+func TestParseStatements(t *testing.T) {
+
+	t.Run("binary expression with less operator", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseStatements("a + b < c\nd")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ExpressionStatement{
+					Expression: &ast.BinaryExpression{
+						Operation: ast.OperationLess,
+						Left: &ast.BinaryExpression{
+							Operation: ast.OperationPlus,
+							Left: &ast.IdentifierExpression{
+								Identifier: ast.Identifier{
+									Identifier: "a",
+									Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+								},
+							},
+							Right: &ast.IdentifierExpression{
+								Identifier: ast.Identifier{
+									Identifier: "b",
+									Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+								},
+							},
+						},
+						Right: &ast.IdentifierExpression{
+							Identifier: ast.Identifier{
+								Identifier: "c",
+								Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+							},
+						},
+					},
+				},
+				&ast.ExpressionStatement{
+					Expression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "d",
+							Pos:        ast.Position{Line: 2, Column: 0, Offset: 10},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+}
