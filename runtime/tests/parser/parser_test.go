@@ -8399,3 +8399,79 @@ func TestParseBitwiseExpression(t *testing.T) {
 		nil,
 	)
 }
+
+func TestParseInstantiationType(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+      let a: Foo.Bar<Int, @R > = b
+	`
+
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&VariableDeclaration{
+				IsConstant: true,
+				Identifier: Identifier{
+					Identifier: "a",
+					Pos:        Position{Offset: 11, Line: 2, Column: 10},
+				},
+				TypeAnnotation: &TypeAnnotation{
+					IsResource: false,
+					Type: &InstantiationType{
+						Type: &NominalType{
+							Identifier: Identifier{
+								Identifier: "Foo",
+								Pos:        Position{Offset: 14, Line: 2, Column: 13},
+							},
+							NestedIdentifiers: []Identifier{
+								{
+									Identifier: "Bar",
+									Pos:        Position{Offset: 18, Line: 2, Column: 17},
+								},
+							},
+						},
+						TypeArguments: []*TypeAnnotation{
+							{
+								IsResource: false,
+								Type: &NominalType{
+									Identifier: Identifier{
+										Identifier: "Int",
+										Pos:        Position{Offset: 22, Line: 2, Column: 21},
+									},
+								},
+								StartPos: Position{Offset: 22, Line: 2, Column: 21},
+							},
+							{
+								IsResource: true,
+								Type: &NominalType{
+									Identifier: Identifier{
+										Identifier: "R",
+										Pos:        Position{Offset: 28, Line: 2, Column: 27},
+									},
+								},
+								StartPos: Position{Offset: 27, Line: 2, Column: 26},
+							},
+						},
+						EndPos: Position{Offset: 30, Line: 2, Column: 29},
+					},
+					StartPos: Position{Offset: 14, Line: 2, Column: 13},
+				},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+					Pos:       Position{Offset: 32, Line: 2, Column: 31},
+				},
+				Value: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "b",
+						Pos:        Position{Offset: 34, Line: 2, Column: 33},
+					},
+				},
+				StartPos: Position{Offset: 7, Line: 2, Column: 6},
+			},
+		},
+		nil,
+	)
+}
