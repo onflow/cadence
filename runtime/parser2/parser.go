@@ -264,7 +264,9 @@ func (p *parser) skipSpaceAndComments(skipNewlines bool) (containsNewline bool) 
 
 func (p *parser) startBuffering() {
 	p.buffering = true
-	p.bufferedTokens = append(p.bufferedTokens, p.current)
+	if p.bufferPos >= len(p.bufferedTokens) {
+		p.bufferedTokens = append(p.bufferedTokens, p.current)
+	}
 }
 
 func mustIdentifier(p *parser) ast.Identifier {
