@@ -552,11 +552,9 @@ func defineLessThanOrTypeArgumentsExpression() {
 					_ = recover()
 				}()
 
-				typeArguments, _ =
-					parseCommaSeparatedTypeAnnotations(p, lexer.TokenGreater)
-
-				p.skipSpaceAndComments(true)
+				typeArguments = parseCommaSeparatedTypeAnnotations(p, lexer.TokenGreater)
 				p.mustOne(lexer.TokenGreater)
+
 				p.skipSpaceAndComments(true)
 				p.mustOne(lexer.TokenParenOpen)
 
