@@ -233,6 +233,7 @@ typeRestrictions
 
 nominalType
     : identifier ('.' identifier)*
+      ('<' ( typeAnnotation (',' typeAnnotation )* )? '>')?
     ;
 
 functionType

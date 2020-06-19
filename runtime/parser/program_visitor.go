@@ -673,10 +673,29 @@ func (v *ProgramVisitor) VisitNominalType(ctx *NominalTypeContext) interface{} {
 		nestedIdentifiers = identifiers[1:]
 	}
 
-	return &ast.NominalType{
+	var result ast.Type = &ast.NominalType{
 		Identifier:        identifiers[0],
 		NestedIdentifiers: nestedIdentifiers,
 	}
+
+	var typeArguments []*ast.TypeAnnotation
+	for _, typeAnnotationContext := range ctx.AllTypeAnnotation() {
+		typeAnnotation := typeAnnotationContext.Accept(v).(*ast.TypeAnnotation)
+		typeArguments = append(typeArguments, typeAnnotation)
+	}
+
+	if len(typeArguments) > 0 {
+
+		endPos := PositionFromToken(ctx.Greater().GetSymbol())
+
+		result = &ast.InstantiationType{
+			Type:          result,
+			TypeArguments: typeArguments,
+			EndPos:        endPos,
+		}
+	}
+
+	return result
 }
 
 func (v *ProgramVisitor) VisitFunctionType(ctx *FunctionTypeContext) interface{} {
