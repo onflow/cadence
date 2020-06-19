@@ -136,7 +136,7 @@ func (p *parser) maybeTrimBuffer() {
 // Tokens are buffered when syntax ambiguity is involved.
 func (p *parser) next() {
 	// nextFromLexer reads the next token from the lexer.
-	nextFromLexer := func(p *parser) lexer.Token {
+	nextFromLexer := func() lexer.Token {
 		var ok bool
 		token, ok := <-p.tokens
 		if !ok {
@@ -147,7 +147,7 @@ func (p *parser) next() {
 	}
 
 	// nextFromLexer reads the next token from the buffer tokens, assuming there are buffered tokens.
-	nextFromBuffer := func(p *parser) lexer.Token {
+	nextFromBuffer := func() lexer.Token {
 		token := p.bufferedTokens[p.bufferPos]
 		p.bufferPos++
 		p.maybeTrimBuffer()
@@ -159,24 +159,24 @@ func (p *parser) next() {
 
 		// When the syntax has ambiguity, we need to process a series of tokens
 		// multiple times. However, a token can only be consumed once from the lexer's
-		// tokens channel. Therefore, in some circumstances, we need to buffer the tokens from the
-		// lexer.
+		// tokens channel. Therefore, in some circumstances, we need to buffer the tokens
+		// from the lexer.
 		//
-		// buffering tokens allows us to potentially "replay" the buffered tokens later,
+		// Buffering tokens allows us to potentially "replay" the buffered tokens later,
 		// for example to deal with syntax ambiguity
 		if p.buffering {
 			// if we need to buffer the next token
 			// then read the token from the lexer and buffer it.
-			token = nextFromLexer(p)
+			token = nextFromLexer()
 			p.bufferedTokens = append(p.bufferedTokens, token)
 		} else if p.bufferPos < len(p.bufferedTokens) {
 			// if we don't need to buffer the next token and there are tokens buffered before,
 			// then read the token from the buffer.
-			token = nextFromBuffer(p)
+			token = nextFromBuffer()
 		} else {
 			// else no need to buffer, and there is no buffered token,
 			// then read the next token from the lexer.
-			token = nextFromLexer(p)
+			token = nextFromLexer()
 		}
 
 		if token.Is(lexer.TokenError) {
