@@ -264,6 +264,10 @@ func (p *parser) skipSpaceAndComments(skipNewlines bool) (containsNewline bool) 
 
 func (p *parser) startBuffering() {
 	p.buffering = true
+ 
+ 	// starting buffering should only buffer the current token if there’s nothing 
+ 	// to be read from the buffer, otherwise, the current token would be
+ 	// buffered twice
 	if p.bufferPos >= len(p.bufferedTokens) {
 		p.bufferedTokens = append(p.bufferedTokens, p.current)
 	}
