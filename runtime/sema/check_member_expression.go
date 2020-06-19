@@ -56,8 +56,8 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 
 				checker.report(
 					&UninitializedFieldAccessError{
-						Name: field.Identifier.Identifier,
-						Pos:  field.Identifier.Pos,
+						Name: expression.Identifier.Identifier,
+						Pos:  expression.Identifier.Pos,
 					},
 				)
 			}
