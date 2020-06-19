@@ -221,3 +221,35 @@ func (t *RestrictedType) String() string {
 	builder.WriteRune('}')
 	return builder.String()
 }
+
+// InstantiationType represents an instantiation of a generic (nominal) type
+
+type InstantiationType struct {
+	Type          Type
+	TypeArguments []*TypeAnnotation
+	EndPos        Position
+}
+
+func (*InstantiationType) isType() {}
+
+func (t *InstantiationType) String() string {
+	var sb strings.Builder
+	sb.WriteString(t.Type.String())
+	sb.WriteRune('<')
+	for i, typeArgument := range t.TypeArguments {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+		sb.WriteString(typeArgument.String())
+	}
+	sb.WriteRune('>')
+	return sb.String()
+}
+
+func (t *InstantiationType) StartPosition() Position {
+	return t.Type.StartPosition()
+}
+
+func (t *InstantiationType) EndPosition() Position {
+	return t.EndPos
+}
