@@ -19,6 +19,7 @@ jobs:
     - run: |
         make test
         make tidy
+        make check-headers
   lint:
     runs-on: ubuntu-latest
     steps:
