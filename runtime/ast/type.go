@@ -225,9 +225,10 @@ func (t *RestrictedType) String() string {
 // InstantiationType represents an instantiation of a generic (nominal) type
 
 type InstantiationType struct {
-	Type          Type
-	TypeArguments []*TypeAnnotation
-	EndPos        Position
+	Type                  Type
+	TypeArguments         []*TypeAnnotation
+	TypeArgumentsStartPos Position
+	EndPos                Position
 }
 
 func (*InstantiationType) isType() {}
