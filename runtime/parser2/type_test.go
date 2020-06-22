@@ -970,7 +970,8 @@ func TestParseInstantiationType(t *testing.T) {
 						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
 					},
 				},
-				EndPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+				TypeArgumentsStartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+				EndPos:                ast.Position{Line: 1, Column: 2, Offset: 2},
 			},
 			result,
 		)
@@ -1003,7 +1004,8 @@ func TestParseInstantiationType(t *testing.T) {
 						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
 					},
 				},
-				EndPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+				TypeArgumentsStartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+				EndPos:                ast.Position{Line: 1, Column: 3, Offset: 3},
 			},
 			result,
 		)
@@ -1036,7 +1038,8 @@ func TestParseInstantiationType(t *testing.T) {
 						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
 					},
 				},
-				EndPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+				TypeArgumentsStartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+				EndPos:                ast.Position{Line: 1, Column: 5, Offset: 5},
 			},
 			result,
 		)
@@ -1079,7 +1082,8 @@ func TestParseInstantiationType(t *testing.T) {
 						StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
 					},
 				},
-				EndPos: ast.Position{Line: 1, Column: 10, Offset: 10},
+				TypeArgumentsStartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+				EndPos:                ast.Position{Line: 1, Column: 10, Offset: 10},
 			},
 			result,
 		)
