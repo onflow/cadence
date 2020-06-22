@@ -735,14 +735,17 @@ func defineInstantiationType() {
 	setTypeLeftDenotation(
 		lexer.TokenLess,
 		func(p *parser, token lexer.Token, left ast.Type) ast.Type {
+			typeArgumentsStartPos := token.StartPos
+
 			typeArguments := parseCommaSeparatedTypeAnnotations(p, lexer.TokenGreater)
 
 			endToken := p.mustOne(lexer.TokenGreater)
 
 			return &ast.InstantiationType{
-				Type:          left,
-				TypeArguments: typeArguments,
-				EndPos:        endToken.EndPos,
+				Type:                  left,
+				TypeArguments:         typeArguments,
+				TypeArgumentsStartPos: typeArgumentsStartPos,
+				EndPos:                endToken.EndPos,
 			}
 		},
 	)
