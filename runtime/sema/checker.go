@@ -913,6 +913,9 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 
 	case *ast.RestrictedType:
 		return checker.convertRestrictedType(t)
+
+	case *ast.InstantiationType:
+		return checker.convertInstantiationType(t)
 	}
 
 	panic(&astTypeConversionError{invalidASTType: t})
@@ -2148,4 +2151,73 @@ func (checker *Checker) effectiveCompositeMemberAccess(access ast.Access) ast.Ac
 	default:
 		panic(errors.NewUnreachableError())
 	}
+}
+
+func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type {
+
+	ty := checker.ConvertType(t.Type)
+
+	// Always convert (check) the type arguments,
+	// even if the instantiated type
+
+	typeArgumentCount := len(t.TypeArguments)
+	typeArgumentAnnotations := make([]*TypeAnnotation, typeArgumentCount)
+
+	for i, rawTypeArgument := range t.TypeArguments {
+		typeArgument := checker.ConvertTypeAnnotation(rawTypeArgument)
+		checker.checkTypeAnnotation(typeArgument, rawTypeArgument)
+		typeArgumentAnnotations[i] = typeArgument
+	}
+
+	parameterizedType, ok := ty.(ParameterizedType)
+	if !ok {
+
+		// The type is not parameterized,
+		// report an error for all type arguments
+
+		checker.report(
+			&UnparameterizedTypeInstantiationError{
+				Range: ast.Range{
+					StartPos: t.TypeArgumentsStartPos,
+					EndPos:   t.EndPosition(),
+				},
+			},
+		)
+
+		// Just return the converted instantiated type as-is
+
+		return ty
+	}
+
+	typeParameters := parameterizedType.TypeParameters()
+
+	typeParameterCount := len(typeParameters)
+
+	if typeArgumentCount != typeParameterCount {
+
+		// The instantiation  missing some type arguments
+
+		checker.report(
+			&InvalidTypeArgumentCountError{
+				TypeParameterCount: typeParameterCount,
+				TypeArgumentCount:  typeArgumentCount,
+				Range: ast.Range{
+					StartPos: t.TypeArgumentsStartPos,
+					EndPos:   t.EndPos,
+				},
+			},
+		)
+
+		// Just return the converted instantiated type as-is
+
+		return ty
+	}
+
+	typeArguments := make([]Type, len(typeArgumentAnnotations))
+
+	for i, typeAnnotation := range typeArgumentAnnotations {
+		typeArguments[i] = typeAnnotation.Type
+	}
+
+	return parameterizedType.Instantiate(typeArguments, checker.report)
 }

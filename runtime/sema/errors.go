@@ -2719,3 +2719,23 @@ func (e *TypeParameterTypeMismatchError) SecondaryError() string {
 		e.ActualType.QualifiedString(),
 	)
 }
+
+// TypeMismatchWithDescriptionError
+
+type UnparameterizedTypeInstantiationError struct {
+	ActualTypeArgumentCount int
+	ast.Range
+}
+
+func (e *UnparameterizedTypeInstantiationError) Error() string {
+	return "cannot instantiate non-parameterized type"
+}
+
+func (*UnparameterizedTypeInstantiationError) isSemanticError() {}
+
+func (e *UnparameterizedTypeInstantiationError) SecondaryError() string {
+	return fmt.Sprintf(
+		"expected no type arguments, got %d",
+		e.ActualTypeArgumentCount,
+	)
+}
