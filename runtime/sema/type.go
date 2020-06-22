@@ -142,7 +142,7 @@ type ContainedType interface {
 }
 
 // ContainerType is a type which might have nested types
-
+//
 type ContainerType interface {
 	Type
 	NestedTypes() map[string]Type
@@ -168,9 +168,18 @@ type CompositeKindedType interface {
 }
 
 // LocatedType is a type which has a location
+//
 type LocatedType interface {
 	Type
 	GetLocation() ast.Location
+}
+
+// ParameterizedType is a type which might have type parameters
+//
+type ParameterizedType interface {
+	Type
+	TypeParameters() []*TypeParameter
+	Instantiate(typeArguments []Type, report func(err error)) Type
 }
 
 // TypeAnnotation
@@ -6186,6 +6195,21 @@ func (*CapabilityType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error
 
 func (t *CapabilityType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+var capabilityTypeParameter = &TypeParameter{Name: "T"}
+
+func (t *CapabilityType) TypeParameters() []*TypeParameter {
+	return []*TypeParameter{
+		capabilityTypeParameter,
+	}
+}
+
+func (t *CapabilityType) Instantiate(typeArguments []Type, _ func(err error)) Type {
+	borrowType := typeArguments[0]
+	return &CapabilityType{
+		BorrowType: borrowType,
+	}
 }
 
 var capabilityBorrowFunctionType = func() *FunctionType {
