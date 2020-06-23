@@ -1541,7 +1541,7 @@ func TestInterpretAccountGetLinkTarget(t *testing.T) {
 	}
 }
 
-func TestInterpretAccountGetCapability(t *testing.T) {
+func TestInterpretAccount_getCapability(t *testing.T) {
 
 	t.Parallel()
 
@@ -1559,43 +1559,75 @@ func TestInterpretAccountGetCapability(t *testing.T) {
 
 		for _, domain := range common.AllPathDomainsByIdentifier {
 
-			t.Run(fmt.Sprintf("auth: %v, domain: %s", auth, domain), func(t *testing.T) {
+			for _, typed := range []bool{false, true} {
 
-				inter, _ := testAccount(
-					t,
-					auth,
-					fmt.Sprintf(
-						`
-	                      fun test(): Capability? {
-	                          return account.getCapability(/%[1]s/r)
-	                      }
-	                    `,
-						domain.Identifier(),
-					),
+				var typeArguments string
+				if typed {
+					typeArguments = "<&Int>"
+				}
+
+				testName := fmt.Sprintf(
+					"auth: %v, domain: %s, typed: %v",
+					auth, domain, typed,
 				)
 
-				value, err := inter.Invoke("test")
+				t.Run(testName, func(t *testing.T) {
 
-				require.NoError(t, err)
+					inter, _ := testAccount(
+						t,
+						auth,
+						fmt.Sprintf(
+							`
+	                          fun test(): Capability%[1]s? {
+	                              return account.getCapability%[1]s(/%[2]s/r)
+	                          }
+	                        `,
+							typeArguments,
+							domain.Identifier(),
+						),
+					)
 
-				isValid := false
+					value, err := inter.Invoke("test")
 
-				for _, validDomain := range validDomains {
+					require.NoError(t, err)
 
-					if domain == validDomain {
+					isValid := false
 
-						isValid = true
+					for _, validDomain := range validDomains {
 
-						require.IsType(t, &interpreter.SomeValue{}, value)
+						if domain == validDomain {
 
-						break
+							isValid = true
+
+							require.IsType(t, &interpreter.SomeValue{}, value)
+
+							capability := value.(*interpreter.SomeValue).Value
+							require.IsType(t, interpreter.CapabilityValue{}, capability)
+
+							borrowType := capability.(interpreter.CapabilityValue).BorrowType
+
+							if typed {
+								require.Equal(t,
+									&sema.ReferenceType{
+										Authorized: false,
+										Type:       &sema.IntType{},
+									},
+									borrowType,
+								)
+
+							} else {
+								require.Nil(t, borrowType)
+							}
+
+							break
+						}
 					}
-				}
 
-				if !isValid {
-					require.IsType(t, interpreter.NilValue{}, value)
-				}
-			})
+					if !isValid {
+						require.IsType(t, interpreter.NilValue{}, value)
+					}
+				})
+			}
 		}
 	}
 }
