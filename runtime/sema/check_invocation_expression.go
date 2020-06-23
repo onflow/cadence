@@ -399,6 +399,11 @@ func (checker *Checker) checkTypeParameterInference(
 		if typeArguments[typeParameter] != nil {
 			continue
 		}
+
+		// If the type parameter has a default then use it
+
+		if typeParameter.Default != nil {
+			typeArguments[typeParameter] = typeParameter.Default
 			continue
 		}
 
