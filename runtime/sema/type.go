@@ -6346,45 +6346,58 @@ func (t *CapabilityType) TypeArguments() []Type {
 	}
 }
 
-var capabilityBorrowFunctionType = func() *FunctionType {
+func capabilityBorrowFunctionType(borrowType Type) *FunctionType {
 
-	typeParameter := &TypeParameter{
-		TypeBound: &ReferenceType{
-			Type: &AnyType{},
-		},
-		Name: "T",
+	var typeParameters []*TypeParameter
+
+	if borrowType == nil {
+
+		typeParameter := &TypeParameter{
+			TypeBound: &ReferenceType{
+				Type: &AnyType{},
+			},
+			Name: "T",
+		}
+
+		typeParameters = []*TypeParameter{
+			typeParameter,
+		}
+
+		borrowType = &GenericType{
+			TypeParameter: typeParameter,
+		}
 	}
 
 	return &FunctionType{
-		TypeParameters: []*TypeParameter{
-			typeParameter,
-		},
+		TypeParameters: typeParameters,
 		ReturnTypeAnnotation: NewTypeAnnotation(
 			&OptionalType{
-				Type: &GenericType{
-					TypeParameter: typeParameter,
-				},
+				Type: borrowType,
 			},
 		),
 	}
-}()
+}
 
-var capabilityCheckFunctionType = func() *FunctionType {
+func capabilityCheckFunctionType(borrowType Type) *FunctionType {
 
-	typeParameter := &TypeParameter{
-		TypeBound: &ReferenceType{
-			Type: &AnyType{},
-		},
-		Name: "T",
+	var typeParameters []*TypeParameter
+
+	if borrowType == nil {
+		typeParameters = []*TypeParameter{
+			{
+				TypeBound: &ReferenceType{
+					Type: &AnyType{},
+				},
+				Name: "T",
+			},
+		}
 	}
 
 	return &FunctionType{
-		TypeParameters: []*TypeParameter{
-			typeParameter,
-		},
+		TypeParameters:       typeParameters,
 		ReturnTypeAnnotation: NewTypeAnnotation(&BoolType{}),
 	}
-}()
+}
 
 func (t *CapabilityType) CanHaveMembers() bool {
 	return true
@@ -6398,10 +6411,10 @@ func (t *CapabilityType) GetMember(identifier string, _ ast.Range, _ func(error)
 
 	switch identifier {
 	case "borrow":
-		return newFunction(capabilityBorrowFunctionType)
+		return newFunction(capabilityBorrowFunctionType(t.BorrowType))
 
 	case "check":
-		return newFunction(capabilityCheckFunctionType)
+		return newFunction(capabilityCheckFunctionType(t.BorrowType))
 
 	default:
 		return nil
