@@ -4694,7 +4694,11 @@ var authAccountLinkFunctionType = func() *FunctionType {
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
 			&OptionalType{
-				Type: &CapabilityType{},
+				Type: &CapabilityType{
+					BorrowType: &GenericType{
+						TypeParameter: typeParameter,
+					},
+				},
 			},
 		),
 	}
@@ -4711,20 +4715,38 @@ var authAccountUnlinkFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
 }
 
-var accountGetCapabilityFunctionType = &FunctionType{
-	Parameters: []*Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "capabilityPath",
-			TypeAnnotation: NewTypeAnnotation(&PathType{}),
+var accountGetCapabilityFunctionType = func() *FunctionType {
+
+	typeParameter := &TypeParameter{
+		TypeBound: &ReferenceType{
+			Type: &AnyType{},
 		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&OptionalType{
-			Type: &CapabilityType{},
+		Name:    "T",
+		Default: &AnyType{},
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
 		},
-	),
-}
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "capabilityPath",
+				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: &CapabilityType{
+					BorrowType: &GenericType{
+						TypeParameter: typeParameter,
+					},
+				},
+			},
+		),
+	}
+}()
 
 var accountGetLinkTargetFunctionType = &FunctionType{
 	Parameters: []*Parameter{
@@ -6548,15 +6570,38 @@ func (t *CapabilityType) ContainsFirstLevelInterfaceType() bool {
 	return t.BorrowType.ContainsFirstLevelInterfaceType()
 }
 
-func (*CapabilityType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
-	return false
+func (t *CapabilityType) Unify(
+	other Type,
+	typeParameters map[*TypeParameter]Type,
+	report func(err error),
+	outerRange ast.Range,
+) bool {
+	otherOptional, ok := other.(*CapabilityType)
+	if !ok {
+		return false
+	}
+
+	return t.BorrowType.Unify(otherOptional.BorrowType, typeParameters, report, outerRange)
 }
 
-func (t *CapabilityType) Resolve(_ map[*TypeParameter]Type) Type {
-	return t
+func (t *CapabilityType) Resolve(typeParameters map[*TypeParameter]Type) Type {
+	var resolvedBorrowType Type
+	if t.BorrowType != nil {
+
+		resolvedBorrowType = t.BorrowType.Resolve(typeParameters)
+	}
+
+	return &CapabilityType{
+		BorrowType: resolvedBorrowType,
+	}
 }
 
-var capabilityTypeParameter = &TypeParameter{Name: "T"}
+var capabilityTypeParameter = &TypeParameter{
+	Name: "T",
+	TypeBound: &ReferenceType{
+		Type: &AnyType{},
+	},
+}
 
 func (t *CapabilityType) TypeParameters() []*TypeParameter {
 	return []*TypeParameter{
