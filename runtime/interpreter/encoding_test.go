@@ -3072,6 +3072,43 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("capability, none", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: LinkValue{
+					TargetPath: publicPathValue,
+					Type:       CapabilityStaticType{},
+				},
+				encoded: append(expectedLinkEncodingPrefix[:],
+					// tag
+					0xd8, cborTagCapabilityStaticType,
+					// null
+					0xf6,
+				),
+			},
+		)
+	})
+
+	t.Run("capability, primitive, bool", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: LinkValue{
+					TargetPath: publicPathValue,
+					Type: CapabilityStaticType{
+						BorrowType: PrimitiveStaticTypeBool,
+					},
+				},
+				encoded: append(expectedLinkEncodingPrefix[:],
+					// tag
+					0xd8, cborTagCapabilityStaticType,
+					// tag
+					0xd8, cborTagPrimitiveStaticType,
+					0x6,
+				),
+			},
+		)
+	})
 }
 
 func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
