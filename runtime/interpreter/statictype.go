@@ -160,10 +160,25 @@ func (t ReferenceStaticType) String() string {
 	return fmt.Sprintf("%s&%s", auth, t.Type)
 }
 
+// CapabilityStaticType
+
+type CapabilityStaticType struct {
+	BorrowType StaticType
+}
+
+func (CapabilityStaticType) isStaticType() {}
+
+func (t CapabilityStaticType) String() string {
+	if t.BorrowType != nil {
+		return fmt.Sprintf("Capability<%s>", t.BorrowType)
+	}
+	return "Capability"
+}
+
 // Conversion
 
-func ConvertSemaToStaticType(typ sema.Type) StaticType {
-	switch t := typ.(type) {
+func ConvertSemaToStaticType(t sema.Type) StaticType {
+	switch t := t.(type) {
 	case *sema.CompositeType:
 		return CompositeStaticType{
 			Location: t.Location,
@@ -210,13 +225,19 @@ func ConvertSemaToStaticType(typ sema.Type) StaticType {
 	case *sema.ReferenceType:
 		return convertSemaReferenceToStaticReferenceType(t)
 
-	default:
-		primitiveStaticType := ConvertSemaToPrimitiveStaticType(t)
-		if primitiveStaticType == PrimitiveStaticTypeUnknown {
-			return nil
+	case *sema.CapabilityType:
+		result := CapabilityStaticType{}
+		if t.BorrowType != nil {
+			result.BorrowType = ConvertSemaToStaticType(t.BorrowType)
 		}
-		return primitiveStaticType
+		return result
 	}
+
+	primitiveStaticType := ConvertSemaToPrimitiveStaticType(t)
+	if primitiveStaticType == PrimitiveStaticTypeUnknown {
+		return nil
+	}
+	return primitiveStaticType
 }
 
 func convertSemaReferenceToStaticReferenceType(t *sema.ReferenceType) ReferenceStaticType {
