@@ -180,6 +180,8 @@ type ParameterizedType interface {
 	Type
 	TypeParameters() []*TypeParameter
 	Instantiate(typeArguments []Type, report func(err error)) Type
+	BaseType() Type
+	TypeArguments() []Type
 }
 
 // TypeAnnotation
@@ -5706,6 +5708,47 @@ func IsSubType(subType Type, superType Type) bool {
 			// TODO: Once interfaces can conform to interfaces, check conformances here
 			return false
 		}
+
+	case ParameterizedType:
+		superTypeBaseType := typedSuperType.BaseType()
+
+		// T<Us> <: V<Ws>
+		// if T <: V  && |Us| == |Ws| && U_i <: W_i
+
+		if typedSubType, ok := subType.(ParameterizedType); ok {
+			subTypeBaseType := typedSubType.BaseType()
+
+			if !IsSubType(subTypeBaseType, superTypeBaseType) {
+				return false
+			}
+
+			subTypeTypeArguments := typedSubType.TypeArguments()
+			superTypeTypeArguments := typedSuperType.TypeArguments()
+
+			if len(subTypeTypeArguments) != len(superTypeTypeArguments) {
+				return false
+			}
+
+			for i, superTypeTypeArgument := range superTypeTypeArguments {
+				subTypeTypeArgument := subTypeTypeArguments[i]
+				if !IsSubType(subTypeTypeArgument, superTypeTypeArgument) {
+					return false
+				}
+			}
+
+			return true
+		}
+
+	default:
+
+		// TODO: enforce type arguments, remove this rule
+
+		// T<Us> <: V
+		// if T <: V
+
+		if typedSubType, ok := subType.(ParameterizedType); ok {
+			return IsSubType(typedSubType.BaseType(), superType)
+		}
 	}
 
 	return false
@@ -6209,6 +6252,20 @@ func (t *CapabilityType) Instantiate(typeArguments []Type, _ func(err error)) Ty
 	borrowType := typeArguments[0]
 	return &CapabilityType{
 		BorrowType: borrowType,
+	}
+}
+
+func (t *CapabilityType) BaseType() Type {
+	return &CapabilityType{}
+}
+
+func (t *CapabilityType) TypeArguments() []Type {
+	borrowType := t.BorrowType
+	if borrowType == nil {
+		borrowType = &AnyType{}
+	}
+	return []Type{
+		borrowType,
 	}
 }
 
