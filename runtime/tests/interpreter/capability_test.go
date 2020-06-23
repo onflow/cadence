@@ -333,7 +333,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 	})
 }
 
-func TestInterpretCapabilityCheck(t *testing.T) {
+func TestInterpretCapability_check(t *testing.T) {
 
 	t.Parallel()
 
@@ -406,6 +406,10 @@ func TestInterpretCapabilityCheck(t *testing.T) {
               fun loop(): Bool {
                   return check(/public/loop1)
               }
+
+              fun singleTyped(): Bool {
+                  return account.getCapability<&R>(/public/single)!.check()
+              }
             `,
 		)
 
@@ -473,6 +477,14 @@ func TestInterpretCapabilityCheck(t *testing.T) {
 				err.Error(),
 				"cyclic link in account 0x2a: /public/loop1 -> /public/loop2 -> /public/loop1",
 			)
+		})
+
+		t.Run("singleTyped", func(t *testing.T) {
+
+			value, err := inter.Invoke("singleTyped")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.BoolValue(true), value)
 		})
 	})
 
@@ -545,6 +557,10 @@ func TestInterpretCapabilityCheck(t *testing.T) {
               fun loop(): Bool {
                   return check(/public/loop1)
               }
+
+              fun singleTyped(): Bool {
+                  return account.getCapability<&S>(/public/single)!.check()
+              }
             `,
 		)
 
@@ -612,6 +628,14 @@ func TestInterpretCapabilityCheck(t *testing.T) {
 				err.Error(),
 				"cyclic link in account 0x2a: /public/loop1 -> /public/loop2 -> /public/loop1",
 			)
+		})
+
+		t.Run("singleTyped", func(t *testing.T) {
+
+			value, err := inter.Invoke("singleTyped")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.BoolValue(true), value)
 		})
 	})
 
