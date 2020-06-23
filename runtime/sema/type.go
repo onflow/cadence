@@ -3661,6 +3661,7 @@ func (p *Parameter) EffectiveArgumentLabel() string {
 type TypeParameter struct {
 	Name      string
 	TypeBound Type
+	Default   Type
 }
 
 func (p TypeParameter) string(typeFormatter func(Type) string) string {
@@ -3669,6 +3670,10 @@ func (p TypeParameter) string(typeFormatter func(Type) string) string {
 	if p.TypeBound != nil {
 		builder.WriteString(": ")
 		builder.WriteString(typeFormatter(p.TypeBound))
+	}
+	if p.Default != nil {
+		builder.WriteString(" = ")
+		builder.WriteString(typeFormatter(p.Default))
 	}
 	return builder.String()
 }
@@ -3686,8 +3691,35 @@ func (p TypeParameter) QualifiedString() string {
 }
 
 func (p TypeParameter) Equal(other *TypeParameter) bool {
-	return p.Name == other.Name &&
-		(p.TypeBound == nil || !p.TypeBound.Equal(other.TypeBound))
+	if p.Name != other.Name {
+		return false
+	}
+
+	if p.TypeBound == nil {
+		if other.TypeBound != nil {
+			return false
+		}
+	} else {
+		if other.TypeBound == nil ||
+			!p.TypeBound.Equal(other.TypeBound) {
+
+			return false
+		}
+	}
+
+	if p.Default == nil {
+		if other.Default != nil {
+			return false
+		}
+	} else {
+		if other.Default == nil ||
+			!p.Default.Equal(other.Default) {
+
+			return false
+		}
+	}
+
+	return true
 }
 
 func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
