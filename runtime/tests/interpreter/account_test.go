@@ -126,7 +126,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 	return inter, storedValues
 }
 
-func TestInterpretAuthAccountSave(t *testing.T) {
+func TestInterpretAuthAccount_save(t *testing.T) {
 
 	t.Parallel()
 
@@ -295,7 +295,7 @@ func TestInterpretAuthAccountSave(t *testing.T) {
 	})
 }
 
-func TestInterpretAuthAccountLoad(t *testing.T) {
+func TestInterpretAuthAccount_load(t *testing.T) {
 
 	t.Parallel()
 
@@ -522,7 +522,7 @@ func TestInterpretAuthAccountLoad(t *testing.T) {
 	})
 }
 
-func TestInterpretAuthAccountCopy(t *testing.T) {
+func TestInterpretAuthAccount_copy(t *testing.T) {
 
 	t.Parallel()
 
@@ -642,7 +642,7 @@ func TestInterpretAuthAccountCopy(t *testing.T) {
 
 }
 
-func TestInterpretAuthAccountBorrow(t *testing.T) {
+func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 	t.Parallel()
 
@@ -909,7 +909,7 @@ func TestInterpretAuthAccountBorrow(t *testing.T) {
 	})
 }
 
-func TestInterpretAuthAccountLink(t *testing.T) {
+func TestInterpretAuthAccount_link(t *testing.T) {
 
 	t.Parallel()
 
@@ -1177,7 +1177,7 @@ func TestInterpretAuthAccountLink(t *testing.T) {
 
 }
 
-func TestInterpretAuthAccountUnlink(t *testing.T) {
+func TestInterpretAuthAccount_unlink(t *testing.T) {
 
 	t.Parallel()
 
@@ -1346,7 +1346,7 @@ func TestInterpretAuthAccountUnlink(t *testing.T) {
 	})
 }
 
-func TestInterpretAccountGetLinkTarget(t *testing.T) {
+func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 	t.Parallel()
 
