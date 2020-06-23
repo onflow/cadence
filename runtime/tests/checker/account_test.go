@@ -53,7 +53,7 @@ func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
 	)
 }
 
-func TestCheckAccount(t *testing.T) {
+func TestCheckAccount_save(t *testing.T) {
 
 	t.Parallel()
 
@@ -219,6 +219,11 @@ func TestCheckAccount(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestCheckAccount_load(t *testing.T) {
+
+	t.Parallel()
 
 	for _, domain := range common.AllPathDomainsByIdentifier {
 
@@ -335,6 +340,11 @@ func TestCheckAccount(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestCheckAccount_copy(t *testing.T) {
+
+	t.Parallel()
 
 	for _, domain := range common.AllPathDomainsByIdentifier {
 
@@ -421,6 +431,11 @@ func TestCheckAccount(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestCheckAccount_borrow(t *testing.T) {
+
+	t.Parallel()
 
 	for _, domain := range common.AllPathDomainsByIdentifier {
 
@@ -600,6 +615,11 @@ func TestCheckAccount(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestCheckAccount_link(t *testing.T) {
+
+	t.Parallel()
 
 	for _, domain := range common.AllPathDomainsByIdentifier {
 
@@ -826,6 +846,11 @@ func TestCheckAccount(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestCheckAccount_getCapability(t *testing.T) {
+
+	t.Parallel()
 
 	for _, domain := range common.AllPathDomainsByIdentifier {
 
