@@ -400,10 +400,9 @@ func (checker *Checker) checkTypeParameterInference(
 			continue
 		}
 
-		// If the type parameter has a default then use it
+		// If the type parameter is not required, continue
 
-		if typeParameter.Default != nil {
-			typeArguments[typeParameter] = typeParameter.Default
+		if typeParameter.Optional {
 			continue
 		}
 
