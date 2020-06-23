@@ -6115,6 +6115,8 @@ func accountGetCapabilityFunction(
 			// `Invocation.TypeParameterTypes` is a map, so get the first
 			// element / type by iterating over the values of the map.
 
+			// NOTE: the type parameter is optional, for backwards compatibility
+
 			var borrowType *sema.ReferenceType
 			for _, ty := range invocation.TypeParameterTypes {
 				borrowType = ty.(*sema.ReferenceType)
@@ -6146,10 +6148,15 @@ func accountGetCapabilityFunction(
 				}
 			}
 
+			var borrowStaticType StaticType
+			if borrowType != nil {
+				borrowStaticType = ConvertSemaToStaticType(borrowType)
+			}
+
 			capability := CapabilityValue{
 				Address:    addressValue,
 				Path:       path,
-				BorrowType: borrowType,
+				BorrowType: borrowStaticType,
 			}
 
 			result := NewSomeValueOwningNonCopying(capability)
@@ -6334,7 +6341,7 @@ func (v PathValue) String() string {
 type CapabilityValue struct {
 	Address    AddressValue
 	Path       PathValue
-	BorrowType *sema.ReferenceType
+	BorrowType StaticType
 }
 
 func (CapabilityValue) IsValue() {}
@@ -6389,10 +6396,18 @@ func (v CapabilityValue) String() string {
 func (v CapabilityValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case "borrow":
-		return inter.capabilityBorrowFunction(v.Address, v.Path, v.BorrowType)
+		var borrowType *sema.ReferenceType
+		if v.BorrowType != nil {
+			borrowType = inter.convertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		}
+		return inter.capabilityBorrowFunction(v.Address, v.Path, borrowType)
 
 	case "check":
-		return inter.capabilityCheckFunction(v.Address, v.Path, v.BorrowType)
+		var borrowType *sema.ReferenceType
+		if v.BorrowType != nil {
+			borrowType = inter.convertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		}
+		return inter.capabilityCheckFunction(v.Address, v.Path, borrowType)
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -6413,7 +6428,7 @@ type LinkValue struct {
 func (LinkValue) IsValue() {}
 
 func (LinkValue) DynamicType(_ *Interpreter) DynamicType {
-	return CapabilityDynamicType{}
+	panic(errors.NewUnreachableError())
 }
 
 func (v LinkValue) Copy() Value {
