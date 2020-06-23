@@ -3661,7 +3661,7 @@ func (p *Parameter) EffectiveArgumentLabel() string {
 type TypeParameter struct {
 	Name      string
 	TypeBound Type
-	Default   Type
+	Optional  bool
 }
 
 func (p TypeParameter) string(typeFormatter func(Type) string) string {
@@ -3670,10 +3670,6 @@ func (p TypeParameter) string(typeFormatter func(Type) string) string {
 	if p.TypeBound != nil {
 		builder.WriteString(": ")
 		builder.WriteString(typeFormatter(p.TypeBound))
-	}
-	if p.Default != nil {
-		builder.WriteString(" = ")
-		builder.WriteString(typeFormatter(p.Default))
 	}
 	return builder.String()
 }
@@ -3707,19 +3703,7 @@ func (p TypeParameter) Equal(other *TypeParameter) bool {
 		}
 	}
 
-	if p.Default == nil {
-		if other.Default != nil {
-			return false
-		}
-	} else {
-		if other.Default == nil ||
-			!p.Default.Equal(other.Default) {
-
-			return false
-		}
-	}
-
-	return true
+	return p.Optional == other.Optional
 }
 
 func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
@@ -4721,8 +4705,8 @@ var accountGetCapabilityFunctionType = func() *FunctionType {
 		TypeBound: &ReferenceType{
 			Type: &AnyType{},
 		},
-		Name:    "T",
-		Default: &AnyType{},
+		Name:     "T",
+		Optional: true,
 	}
 
 	return &FunctionType{
