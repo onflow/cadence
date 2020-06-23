@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-func TestInterpretCapabilityBorrowResource(t *testing.T) {
+func TestInterpretCapability_borrow(t *testing.T) {
 
 	t.Parallel()
 
@@ -99,6 +99,10 @@ func TestInterpretCapabilityBorrowResource(t *testing.T) {
               fun loop(): Int {
                   return foo(/public/loop1)
               }
+
+              fun singleTyped(): Int {
+                  return account.getCapability<&R>(/public/single)!.borrow()!.foo
+              }
             `,
 		)
 
@@ -166,6 +170,14 @@ func TestInterpretCapabilityBorrowResource(t *testing.T) {
 				err.Error(),
 				"cyclic link in account 0x2a: /public/loop1 -> /public/loop2 -> /public/loop1",
 			)
+		})
+
+		t.Run("singleTyped", func(t *testing.T) {
+
+			value, err := inter.Invoke("singleTyped")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NewIntValueFromInt64(42), value)
 		})
 	})
 
@@ -238,6 +250,10 @@ func TestInterpretCapabilityBorrowResource(t *testing.T) {
               fun loop(): Int {
                   return foo(/public/loop1)
               }
+
+              fun singleTyped(): Int {
+                  return account.getCapability<&S>(/public/single)!.borrow()!.foo
+              }
             `,
 		)
 
@@ -305,6 +321,14 @@ func TestInterpretCapabilityBorrowResource(t *testing.T) {
 				err.Error(),
 				"cyclic link in account 0x2a: /public/loop1 -> /public/loop2 -> /public/loop1",
 			)
+		})
+
+		t.Run("singleTyped", func(t *testing.T) {
+
+			value, err := inter.Invoke("singleTyped")
+			require.NoError(t, err)
+
+			require.Equal(t, interpreter.NewIntValueFromInt64(42), value)
 		})
 	})
 }
