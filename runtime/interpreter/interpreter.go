@@ -3913,10 +3913,12 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 		// Write new value
 
+		borrowStaticType := ConvertSemaToStaticType
+
 		storedValue := NewSomeValueOwningNonCopying(
 			LinkValue{
 				TargetPath: targetPath,
-				Type:       ConvertSemaToStaticType(borrowType),
+				Type:       borrowStaticType(borrowType),
 			},
 		)
 
@@ -3930,7 +3932,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 			CapabilityValue{
 				Address:    addressValue,
 				Path:       targetPath,
-				BorrowType: borrowType,
+				BorrowType: borrowStaticType(borrowType),
 			},
 		)
 
@@ -4109,6 +4111,8 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 
 	key := storageKey(path)
 
+	wantedReferenceType := wantedBorrowType
+
 	seenKeys := map[string]struct{}{}
 	paths := []PathValue{path}
 
@@ -4146,7 +4150,7 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 				key = storageKey(targetPath)
 
 			} else {
-				return key, wantedBorrowType.Authorized
+				return key, wantedReferenceType.Authorized
 			}
 
 		default:
