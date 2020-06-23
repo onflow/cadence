@@ -170,6 +170,7 @@ const (
 	cborTagOptionalStaticType
 	cborTagReferenceStaticType
 	cborTagRestrictedStaticType
+	cborTagCapabilityStaticType
 )
 
 func init() {
@@ -944,6 +945,9 @@ func (e *Encoder) prepareStaticType(t StaticType) (interface{}, error) {
 	case RestrictedStaticType:
 		return e.prepareRestrictedStaticType(v)
 
+	case CapabilityStaticType:
+		return e.prepareCapabilityStaticType(v)
+
 	default:
 		return nil, fmt.Errorf("unsupported static type: %T", t)
 	}
@@ -1064,5 +1068,21 @@ func (e *Encoder) prepareRestrictedStaticType(v RestrictedStaticType) (interface
 	return encodedRestrictedStaticType{
 		Type:         restrictedType,
 		Restrictions: encodedRestrictions,
+	}, nil
+}
+
+func (e *Encoder) prepareCapabilityStaticType(v CapabilityStaticType) (interface{}, error) {
+	var borrowStaticType interface{}
+	if v.BorrowType != nil {
+		var err error
+		borrowStaticType, err = e.prepareStaticType(v.BorrowType)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return cbor.Tag{
+		Number:  cborTagCapabilityStaticType,
+		Content: borrowStaticType,
 	}, nil
 }

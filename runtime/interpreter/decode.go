@@ -970,6 +970,9 @@ func (d *Decoder) decodeStaticType(v interface{}) (StaticType, error) {
 	case cborTagRestrictedStaticType:
 		return d.decodeRestrictedStaticType(content)
 
+	case cborTagCapabilityStaticType:
+		return d.decodeCapabilityStaticType(content)
+
 	default:
 		return nil, fmt.Errorf("invalid static type encoding tag: %d", tag.Number)
 	}
@@ -1159,5 +1162,19 @@ func (d *Decoder) decodeRestrictedStaticType(v interface{}) (StaticType, error) 
 	return RestrictedStaticType{
 		Type:         restrictedType,
 		Restrictions: restrictions,
+	}, nil
+}
+
+func (d *Decoder) decodeCapabilityStaticType(v interface{}) (StaticType, error) {
+	var borrowStaticType StaticType
+	if v != nil {
+		var err error
+		borrowStaticType, err = d.decodeStaticType(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid capability static type borrow type encoding: %w", err)
+		}
+	}
+	return CapabilityStaticType{
+		BorrowType: borrowStaticType,
 	}, nil
 }
