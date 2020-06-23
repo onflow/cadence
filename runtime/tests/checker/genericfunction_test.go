@@ -158,7 +158,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		invocationExpression :=
 			checker.Program.Declarations[0].(*ast.VariableDeclaration).Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression]
+		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
 		assert.IsType(t,
 			&sema.IntType{},
@@ -204,7 +204,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		invocationExpression :=
 			checker.Program.Declarations[0].(*ast.VariableDeclaration).Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression]
+		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
 		assert.IsType(t,
 			&sema.IntType{},
@@ -373,7 +373,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		invocationExpression :=
 			checker.Program.Declarations[0].(*ast.VariableDeclaration).Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression]
+		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
 		assert.IsType(t,
 			&sema.IntType{},
@@ -493,7 +493,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		invocationExpression :=
 			checker.Program.Declarations[0].(*ast.VariableDeclaration).Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression]
+		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
 		assert.IsType(t,
 			&sema.IntType{},
@@ -548,7 +548,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		invocationExpression :=
 			checker.Program.Declarations[0].(*ast.VariableDeclaration).Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression]
+		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
 		assert.IsType(t,
 			&sema.IntType{},
@@ -589,7 +589,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		invocationExpression :=
 			checker.Program.Declarations[0].(*ast.VariableDeclaration).Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression]
+		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
 		assert.IsType(t,
 			&sema.IntType{},

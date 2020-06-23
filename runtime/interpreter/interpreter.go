@@ -2039,7 +2039,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 					arguments := result.(*ArrayValue).Values
 
 					typeParameterTypes :=
-						interpreter.Checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression]
+						interpreter.Checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 					argumentTypes :=
 						interpreter.Checker.Elaboration.InvocationExpressionArgumentTypes[invocationExpression]
 					parameterTypes :=

@@ -320,7 +320,7 @@ func (checker *Checker) checkInvocation(
 
 	typeArgumentCount := len(invocationExpression.TypeArguments)
 
-	typeParameters := make(map[*TypeParameter]Type, typeParameterCount)
+	typeArguments := make(map[*TypeParameter]Type, typeParameterCount)
 
 	// If the function type is generic, the invocation might provide
 	// explicit type arguments for the type parameters.
@@ -349,7 +349,7 @@ func (checker *Checker) checkInvocation(
 	checker.checkAndBindGenericTypeParameterTypeArguments(
 		validTypeArguments,
 		functionType.TypeParameters,
-		typeParameters,
+		typeArguments,
 	)
 
 	// Check that the invocation's argument count matches the function's parameter count
@@ -382,7 +382,7 @@ func (checker *Checker) checkInvocation(
 				argumentIndex,
 				functionType,
 				argumentTypes,
-				typeParameters,
+				typeArguments,
 			)
 	}
 
@@ -403,7 +403,7 @@ func (checker *Checker) checkInvocation(
 
 	invokableType.CheckArgumentExpressions(checker, argumentExpressions)
 
-	returnType = functionType.ReturnTypeAnnotation.Type.Resolve(typeParameters)
+	returnType = functionType.ReturnTypeAnnotation.Type.Resolve(typeArguments)
 	if returnType == nil {
 		// TODO: report error? does `checkTypeParameterInference` below already do that?
 		returnType = &InvalidType{}
@@ -413,13 +413,13 @@ func (checker *Checker) checkInvocation(
 
 	checker.checkTypeParameterInference(
 		functionType,
-		typeParameters,
+		typeArguments,
 		invocationExpression,
 	)
 
 	// Save types in the elaboration
 
-	checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression] = typeParameters
+	checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression] = typeArguments
 	checker.Elaboration.InvocationExpressionParameterTypes[invocationExpression] = parameterTypes
 	checker.Elaboration.InvocationExpressionReturnTypes[invocationExpression] = returnType
 
@@ -431,11 +431,12 @@ func (checker *Checker) checkInvocation(
 //
 func (checker *Checker) checkTypeParameterInference(
 	functionType *FunctionType,
-	typeParameters map[*TypeParameter]Type,
+	typeArguments map[*TypeParameter]Type,
 	invocationExpression *ast.InvocationExpression,
 ) {
 	for _, typeParameter := range functionType.TypeParameters {
-		if typeParameters[typeParameter] != nil {
+
+		if typeArguments[typeParameter] != nil {
 			continue
 		}
 
