@@ -964,9 +964,20 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
-					innerValue := value.(*interpreter.SomeValue).Value
+					capability := value.(*interpreter.SomeValue).Value
+					require.IsType(t, interpreter.CapabilityValue{}, capability)
 
-					assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
+					borrowType := capability.(interpreter.CapabilityValue).BorrowType
+
+					rType := inter.Checker.GlobalTypes["R"].Type
+
+					require.Equal(t,
+						&sema.ReferenceType{
+							Authorized: false,
+							Type:       rType,
+						},
+						borrowType,
+					)
 
 					// stored value + link
 					require.Len(t, storedValues, 2)
@@ -991,9 +1002,20 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
-					innerValue := value.(*interpreter.SomeValue).Value
+					capability := value.(*interpreter.SomeValue).Value
+					require.IsType(t, interpreter.CapabilityValue{}, capability)
 
-					assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
+					borrowType := capability.(interpreter.CapabilityValue).BorrowType
+
+					r2Type := inter.Checker.GlobalTypes["R2"].Type
+
+					require.Equal(t,
+						&sema.ReferenceType{
+							Authorized: false,
+							Type:       r2Type,
+						},
+						borrowType,
+					)
 
 					// stored value + link
 					require.Len(t, storedValues, 3)
@@ -1095,9 +1117,20 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
-					innerValue := value.(*interpreter.SomeValue).Value
+					capability := value.(*interpreter.SomeValue).Value
+					require.IsType(t, interpreter.CapabilityValue{}, capability)
 
-					assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
+					borrowType := capability.(interpreter.CapabilityValue).BorrowType
+
+					sType := inter.Checker.GlobalTypes["S"].Type
+
+					require.Equal(t,
+						&sema.ReferenceType{
+							Authorized: false,
+							Type:       sType,
+						},
+						borrowType,
+					)
 
 					// stored value + link
 					require.Len(t, storedValues, 2)
@@ -1122,9 +1155,20 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
-					innerValue := value.(*interpreter.SomeValue).Value
+					capability := value.(*interpreter.SomeValue).Value
+					require.IsType(t, interpreter.CapabilityValue{}, capability)
 
-					assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
+					borrowType := capability.(interpreter.CapabilityValue).BorrowType
+
+					s2Type := inter.Checker.GlobalTypes["S2"].Type
+
+					require.Equal(t,
+						&sema.ReferenceType{
+							Authorized: false,
+							Type:       s2Type,
+						},
+						borrowType,
+					)
 
 					// stored value + link
 					require.Len(t, storedValues, 3)
