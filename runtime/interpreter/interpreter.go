@@ -3885,13 +3885,13 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 		// `Invocation.TypeParameterTypes` is a map, so get the first
 		// element / type by iterating over the values of the map.
 
-		var referenceType *sema.ReferenceType
+		var borrowType *sema.ReferenceType
 		for _, ty := range invocation.TypeParameterTypes {
-			referenceType = ty.(*sema.ReferenceType)
+			borrowType = ty.(*sema.ReferenceType)
 			break
 		}
 
-		if referenceType == nil {
+		if borrowType == nil {
 			panic(errors.NewUnreachableError())
 		}
 
@@ -3918,7 +3918,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 		storedValue := NewSomeValueOwningNonCopying(
 			LinkValue{
 				TargetPath: targetPath,
-				Type:       ConvertSemaToStaticType(referenceType),
+				Type:       ConvertSemaToStaticType(borrowType),
 			},
 		)
 
@@ -3930,8 +3930,9 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 		returnValue := NewSomeValueOwningNonCopying(
 			CapabilityValue{
-				Address: addressValue,
-				Path:    targetPath,
+				Address:    addressValue,
+				Path:       targetPath,
+				BorrowType: borrowType,
 			},
 		)
 
@@ -4009,52 +4010,99 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 	})
 }
 
-func (interpreter *Interpreter) capabilityBorrowFunction(addressValue AddressValue, pathValue PathValue) HostFunctionValue {
-	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+func (interpreter *Interpreter) capabilityBorrowFunction(
+	addressValue AddressValue,
+	pathValue PathValue,
+	borrowType *sema.ReferenceType,
+) HostFunctionValue {
 
-		targetStorageKey, authorized :=
-			interpreter.getCapabilityFinalTargetStorageKey(
-				addressValue,
-				pathValue,
-				invocation,
-			)
+	return NewHostFunctionValue(
+		func(invocation Invocation) Trampoline {
 
-		if targetStorageKey == "" {
-			return Done{Result: NilValue{}}
-		}
+			if borrowType == nil {
 
-		address := addressValue.ToAddress()
+				// `Invocation.TypeParameterTypes` is a map, so get the first
+				// element / type by iterating over the values of the map.
 
-		reference := &StorageReferenceValue{
-			Authorized:           authorized,
-			TargetStorageAddress: address,
-			TargetKey:            targetStorageKey,
-		}
+				for _, ty := range invocation.TypeParameterTypes {
+					borrowType = ty.(*sema.ReferenceType)
+					break
+				}
+			}
 
-		return Done{Result: NewSomeValueOwningNonCopying(reference)}
-	})
+			if borrowType == nil {
+				panic(errors.NewUnreachableError())
+			}
+
+			targetStorageKey, authorized :=
+				interpreter.getCapabilityFinalTargetStorageKey(
+					addressValue,
+					pathValue,
+					borrowType,
+					invocation.LocationRange,
+				)
+
+			if targetStorageKey == "" {
+				return Done{Result: NilValue{}}
+			}
+
+			address := addressValue.ToAddress()
+
+			reference := &StorageReferenceValue{
+				Authorized:           authorized,
+				TargetStorageAddress: address,
+				TargetKey:            targetStorageKey,
+			}
+
+			return Done{Result: NewSomeValueOwningNonCopying(reference)}
+		},
+	)
 }
 
-func (interpreter *Interpreter) capabilityCheckFunction(addressValue AddressValue, pathValue PathValue) HostFunctionValue {
-	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+func (interpreter *Interpreter) capabilityCheckFunction(
+	addressValue AddressValue,
+	pathValue PathValue,
+	borrowType *sema.ReferenceType,
+) HostFunctionValue {
 
-		targetStorageKey, _ :=
-			interpreter.getCapabilityFinalTargetStorageKey(
-				addressValue,
-				pathValue,
-				invocation,
-			)
+	return NewHostFunctionValue(
+		func(invocation Invocation) Trampoline {
 
-		isValid := targetStorageKey != ""
+			if borrowType == nil {
 
-		return Done{Result: BoolValue(isValid)}
-	})
+				// `Invocation.TypeParameterTypes` is a map, so get the first
+				// element / type by iterating over the values of the map.
+
+				for _, ty := range invocation.TypeParameterTypes {
+					borrowType = ty.(*sema.ReferenceType)
+					break
+				}
+			}
+
+			if borrowType == nil {
+				panic(errors.NewUnreachableError())
+			}
+
+			targetStorageKey, _ :=
+				interpreter.getCapabilityFinalTargetStorageKey(
+					addressValue,
+					pathValue,
+					borrowType,
+					invocation.LocationRange,
+				)
+
+			isValid := targetStorageKey != ""
+
+			return Done{Result: BoolValue(isValid)}
+		},
+	)
 }
 
 func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 	addressValue AddressValue,
 	path PathValue,
-	invocation Invocation,
+	wantedBorrowType *sema.ReferenceType,
+	locationRange LocationRange,
 ) (
 	finalStorageKey string,
 	authorized bool,
@@ -4062,20 +4110,6 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 	address := addressValue.ToAddress()
 
 	key := storageKey(path)
-
-	// `Invocation.TypeParameterTypes` is a map, so get the first
-	// element / type by iterating over the values of the map.
-
-	var wantedType sema.Type
-	for _, wantedType = range invocation.TypeParameterTypes {
-		break
-	}
-
-	if wantedType == nil {
-		panic(errors.NewUnreachableError())
-	}
-
-	wantedReferenceType := wantedType.(*sema.ReferenceType)
 
 	seenKeys := map[string]struct{}{}
 	paths := []PathValue{path}
@@ -4087,7 +4121,7 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 			panic(&CyclicLinkError{
 				Address:       addressValue,
 				Paths:         paths,
-				LocationRange: invocation.LocationRange,
+				LocationRange: locationRange,
 			})
 		} else {
 			seenKeys[key] = struct{}{}
@@ -4105,7 +4139,7 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 
 				allowedType := interpreter.convertStaticToSemaType(link.Type)
 
-				if !sema.IsSubType(allowedType, wantedType) {
+				if !sema.IsSubType(allowedType, wantedBorrowType) {
 					return "", false
 				}
 
@@ -4114,7 +4148,7 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 				key = storageKey(targetPath)
 
 			} else {
-				return key, wantedReferenceType.Authorized
+				return key, wantedBorrowType.Authorized
 			}
 
 		default:

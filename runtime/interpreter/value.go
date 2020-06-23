@@ -6106,44 +6106,57 @@ func accountGetCapabilityFunction(
 	addressValue AddressValue,
 	authorized bool,
 ) HostFunctionValue {
-	return NewHostFunctionValue(func(invocation Invocation) trampoline.Trampoline {
 
-		path := invocation.Arguments[0].(PathValue)
+	return NewHostFunctionValue(
+		func(invocation Invocation) trampoline.Trampoline {
 
-		if authorized {
+			path := invocation.Arguments[0].(PathValue)
 
-			// If the account is an authorized account (`AuthAccount`),
-			// ensure the path has a `private` or `public` domain.
+			// `Invocation.TypeParameterTypes` is a map, so get the first
+			// element / type by iterating over the values of the map.
 
-			if !checkPathDomain(
-				path,
-				common.PathDomainPrivate,
-				common.PathDomainPublic,
-			) {
-				return trampoline.Done{Result: NilValue{}}
+			var borrowType *sema.ReferenceType
+			for _, ty := range invocation.TypeParameterTypes {
+				borrowType = ty.(*sema.ReferenceType)
+				break
 			}
-		} else {
 
-			// If the account is a public account (`PublicAccount`),
-			// ensure the path has a `public` domain.
+			if authorized {
 
-			if !checkPathDomain(
-				path,
-				common.PathDomainPublic,
-			) {
-				return trampoline.Done{Result: NilValue{}}
+				// If the account is an authorized account (`AuthAccount`),
+				// ensure the path has a `private` or `public` domain.
+
+				if !checkPathDomain(
+					path,
+					common.PathDomainPrivate,
+					common.PathDomainPublic,
+				) {
+					return trampoline.Done{Result: NilValue{}}
+				}
+			} else {
+
+				// If the account is a public account (`PublicAccount`),
+				// ensure the path has a `public` domain.
+
+				if !checkPathDomain(
+					path,
+					common.PathDomainPublic,
+				) {
+					return trampoline.Done{Result: NilValue{}}
+				}
 			}
-		}
 
-		capability := CapabilityValue{
-			Address: addressValue,
-			Path:    path,
-		}
+			capability := CapabilityValue{
+				Address:    addressValue,
+				Path:       path,
+				BorrowType: borrowType,
+			}
 
-		result := NewSomeValueOwningNonCopying(capability)
+			result := NewSomeValueOwningNonCopying(capability)
 
-		return trampoline.Done{Result: result}
-	})
+			return trampoline.Done{Result: result}
+		},
+	)
 }
 
 func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
@@ -6319,8 +6332,9 @@ func (v PathValue) String() string {
 // CapabilityValue
 
 type CapabilityValue struct {
-	Address AddressValue
-	Path    PathValue
+	Address    AddressValue
+	Path       PathValue
+	BorrowType *sema.ReferenceType
 }
 
 func (CapabilityValue) IsValue() {}
@@ -6355,20 +6369,30 @@ func (v CapabilityValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Tra
 }
 
 func (v CapabilityValue) String() string {
-	return fmt.Sprintf(
-		"/%s%s",
-		v.Address,
-		v.Path,
-	)
+	var sb strings.Builder
+
+	sb.WriteString("Capability")
+
+	if v.BorrowType != nil {
+		sb.WriteRune('<')
+		sb.WriteString(v.BorrowType.String())
+		sb.WriteRune('>')
+	}
+	sb.WriteString("(/")
+	sb.WriteString(v.Address.String())
+	sb.WriteString(v.Path.String())
+	sb.WriteRune(')')
+
+	return sb.String()
 }
 
 func (v CapabilityValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case "borrow":
-		return inter.capabilityBorrowFunction(v.Address, v.Path)
+		return inter.capabilityBorrowFunction(v.Address, v.Path, v.BorrowType)
 
 	case "check":
-		return inter.capabilityCheckFunction(v.Address, v.Path)
+		return inter.capabilityCheckFunction(v.Address, v.Path, v.BorrowType)
 
 	default:
 		panic(errors.NewUnreachableError())
