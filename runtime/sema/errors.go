@@ -2578,7 +2578,7 @@ type TypeParameterTypeInferenceError struct {
 
 func (e *TypeParameterTypeInferenceError) Error() string {
 	return fmt.Sprintf(
-		"type parameter could not be inferred: `%s`",
+		"cannot infer type parameter: `%s`",
 		e.Name,
 	)
 }
