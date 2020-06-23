@@ -64,9 +64,9 @@ type Elaboration struct {
 	PostConditionsRewrite                  map[*ast.Conditions]PostConditionsRewrite
 	EmitStatementEventTypes                map[*ast.EmitStatement]*CompositeType
 	// Keyed by qualified identifier
-	CompositeTypes                         map[TypeID]*CompositeType
-	InterfaceTypes                         map[TypeID]*InterfaceType
-	InvocationExpressionTypeParameterTypes map[*ast.InvocationExpression]map[*TypeParameter]Type
+	CompositeTypes                    map[TypeID]*CompositeType
+	InterfaceTypes                    map[TypeID]*InterfaceType
+	InvocationExpressionTypeArguments map[*ast.InvocationExpression]map[*TypeParameter]Type
 }
 
 func NewElaboration() *Elaboration {
@@ -107,6 +107,6 @@ func NewElaboration() *Elaboration {
 		EmitStatementEventTypes:                map[*ast.EmitStatement]*CompositeType{},
 		CompositeTypes:                         map[TypeID]*CompositeType{},
 		InterfaceTypes:                         map[TypeID]*InterfaceType{},
-		InvocationExpressionTypeParameterTypes: map[*ast.InvocationExpression]map[*TypeParameter]Type{},
+		InvocationExpressionTypeArguments:      map[*ast.InvocationExpression]map[*TypeParameter]Type{},
 	}
 }

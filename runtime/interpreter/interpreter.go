@@ -648,7 +648,7 @@ func getStatement(t Trampoline) *StatementTrampoline {
 	}
 }
 
-// interpret returns a Trampoline that is done when all top-level declarations 
+// interpret returns a Trampoline that is done when all top-level declarations
 // have been declared and evaluated.
 func (interpreter *Interpreter) interpret() Trampoline {
 	return interpreter.Checker.Program.Accept(interpreter).(Trampoline)
@@ -2041,7 +2041,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 					arguments := result.(*ArrayValue).Values
 
 					typeParameterTypes :=
-						interpreter.Checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression]
+						interpreter.Checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 					argumentTypes :=
 						interpreter.Checker.Elaboration.InvocationExpressionArgumentTypes[invocationExpression]
 					parameterTypes :=

@@ -114,7 +114,7 @@ type Type interface {
 	//
 	// If resolution fails, it returns `nil`.
 	//
-	Resolve(typeParameters map[*TypeParameter]Type) Type
+	Resolve(typeArguments map[*TypeParameter]Type) Type
 }
 
 // ValueIndexableType is a type which can be indexed into using a value
