@@ -306,6 +306,16 @@ func ConvertStaticToSemaType(
 			Type:       ConvertStaticToSemaType(t.Type, getInterface, getComposite),
 		}
 
+	case CapabilityStaticType:
+		var borrowType sema.Type
+		if t.BorrowType != nil {
+			borrowType = ConvertStaticToSemaType(t.BorrowType, getInterface, getComposite)
+		}
+
+		return &sema.CapabilityType{
+			BorrowType: borrowType,
+		}
+
 	case PrimitiveStaticType:
 		return t.SemaType()
 

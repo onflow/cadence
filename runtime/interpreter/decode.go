@@ -896,9 +896,27 @@ func (d *Decoder) decodeCapability(v interface{}) (CapabilityValue, error) {
 		return CapabilityValue{}, fmt.Errorf("invalid capability path: %T", path)
 	}
 
+	// borrow type (optional, for backwards compatibility)
+
+	var borrowType StaticType
+
+	if field3, ok := encoded[uint64(2)]; ok && field3 != nil {
+
+		decodedStaticType, err := d.decodeStaticType(field3)
+		if err != nil {
+			return CapabilityValue{}, fmt.Errorf("invalid capability borrow type encoding: %w", err)
+		}
+
+		borrowType, ok = decodedStaticType.(StaticType)
+		if !ok {
+			return CapabilityValue{}, fmt.Errorf("invalid capability borrow encoding: %T", decodedStaticType)
+		}
+	}
+
 	return CapabilityValue{
-		Address: address,
-		Path:    path,
+		Address:    address,
+		Path:       path,
+		BorrowType: borrowType,
 	}, nil
 }
 
