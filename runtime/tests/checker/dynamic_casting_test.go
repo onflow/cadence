@@ -26,7 +26,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 var dynamicCastingOperations = []ast.Operation{
@@ -1190,6 +1193,108 @@ func TestCheckDynamicCastingDictionary(t *testing.T) {
 								otherType,
 								operation.Symbol(),
 							),
+						)
+
+						require.NoError(t, err)
+					})
+				}
+			}
+		})
+	}
+}
+
+func TestCheckDynamicCastingCapability(t *testing.T) {
+
+	t.Parallel()
+
+	structType := &sema.CompositeType{
+		Location:   utils.TestLocation,
+		Identifier: "S",
+		Kind:       common.CompositeKindStructure,
+	}
+
+	types := []sema.Type{
+		&sema.CapabilityType{
+			BorrowType: &sema.ReferenceType{
+				Type: structType,
+			},
+		},
+		&sema.CapabilityType{
+			BorrowType: &sema.ReferenceType{
+				Type: &sema.AnyStructType{},
+			},
+		},
+		&sema.CapabilityType{},
+		&sema.AnyStructType{},
+	}
+
+	options := ParseAndCheckOptions{
+		Options: []sema.Option{
+			sema.WithPredeclaredValues(map[string]sema.ValueDeclaration{
+				"cap": stdlib.StandardLibraryValue{
+					Name: "cap",
+					Type: &sema.CapabilityType{
+						BorrowType: &sema.ReferenceType{
+							Type: structType,
+						},
+					},
+					Kind:       common.DeclarationKindConstant,
+					IsConstant: true,
+				},
+			}),
+		},
+	}
+
+	for _, operation := range dynamicCastingOperations {
+
+		t.Run(operation.Symbol(), func(t *testing.T) {
+
+			for _, fromType := range types {
+				for _, targetType := range types {
+
+					t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
+
+						code := fmt.Sprintf(
+							`
+                              struct S {}
+                              let x: %[1]s = cap
+                              let y: %[2]s? = x %[3]s %[2]s
+                            `,
+							fromType,
+							targetType,
+							operation.Symbol(),
+						)
+						_, err := ParseAndCheckWithOptions(t,
+							code,
+							options,
+						)
+
+						require.NoError(t, err)
+					})
+				}
+
+				for _, otherType := range []sema.Type{
+					&sema.StringType{},
+					&sema.VoidType{},
+					&sema.BoolType{},
+				} {
+
+					t.Run(fmt.Sprintf("invalid: from %s to Capability<&%s>", fromType, otherType), func(t *testing.T) {
+
+						code := fmt.Sprintf(
+							`
+                              struct S {}
+		                      let x: %[1]s = cap
+		                      let y: Capability<&%[2]s>? = x %[3]s Capability<&%[2]s>
+		                    `,
+							fromType,
+							otherType,
+							operation.Symbol(),
+						)
+
+						_, err := ParseAndCheckWithOptions(t,
+							code,
+							options,
 						)
 
 						require.NoError(t, err)
