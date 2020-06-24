@@ -2078,8 +2078,8 @@ func (e *InvalidAssignmentAccessError) Error() string {
 
 func (e *InvalidAssignmentAccessError) SecondaryError() string {
 	return fmt.Sprintf(
-		"has %s access. Consider making it publicly settable",
-		e.RestrictingAccess.Description(),
+		"consider making it publicly settable with `%s`",
+		ast.AccessPublicSettable.Keyword(),
 	)
 }
 
