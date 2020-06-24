@@ -4426,6 +4426,122 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	require.NoError(t, err)
 }
 
+func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
+
+	// We do not want to hit the cache for toplevel programs (scripts and
+	// transactions) until we have moved the caching layer to Cadence.
+
+	t.Parallel()
+
+	const helloWorldContract = `
+      pub contract HelloWorld {
+
+          pub let greeting: String
+
+          init() {
+              self.greeting = "Hello, World!"
+          }
+
+          pub fun hello(): String {
+              return self.greeting
+          }
+      }
+    `
+
+	const callHelloTxTemplate = `
+        import HelloWorld from 0x%s
+
+        transaction {
+            prepare(signer: AuthAccount) {
+                assert(HelloWorld.hello() == "Hello, World!")
+            }
+        }
+    `
+
+	createAccountScript := []byte(`
+        transaction {
+            prepare(signer: AuthAccount) {
+                AuthAccount(payer: signer)
+            }
+        }
+    `)
+
+	updateCodeScript := []byte(fmt.Sprintf(
+		`
+		  transaction {
+			  prepare(signer: AuthAccount) {
+				  signer.setCode(%s)
+			  }
+		  }
+		`,
+		ArrayValueFromBytes([]byte(helloWorldContract)).String(),
+	))
+
+	runtime := NewInterpreterRuntime()
+
+	accountCodes := map[string][]byte{}
+	var events []cadence.Event
+
+	cachedPrograms := map[LocationID]*ast.Program{}
+
+	var accountCounter uint8 = 0
+
+	var signerAddresses []Address
+
+	var cacheHits []string
+
+	runtimeInterface := &testRuntimeInterface{
+		createAccount: func(payer Address) (address Address, err error) {
+			accountCounter++
+			return Address{accountCounter}, nil
+		},
+		resolveImport: func(location Location) (bytes []byte, err error) {
+			key := string(location.(AddressLocation).ID())
+			return accountCodes[key], nil
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			cachedPrograms[location.ID()] = program
+			return nil
+		},
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			cacheHits = append(cacheHits, string(location.ID()))
+			return cachedPrograms[location.ID()], nil
+		},
+		storage: newTestStorage(nil, nil),
+		getSigningAccounts: func() []Address {
+			return signerAddresses
+		},
+		updateAccountCode: func(address Address, code []byte) (err error) {
+			key := string(AddressLocation(address[:]).ID())
+			accountCodes[key] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) {
+			events = append(events, event)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	signerAddresses = []Address{{accountCounter}}
+
+	err := runtime.ExecuteTransaction(createAccountScript, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	signerAddresses = []Address{{accountCounter}}
+
+	err = runtime.ExecuteTransaction(updateCodeScript, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	callScript := []byte(fmt.Sprintf(callHelloTxTemplate, Address{accountCounter}))
+
+	err = runtime.ExecuteTransaction(callScript, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	// We should only receive a cache hit for the imported program, not the transactions/scripts.
+	require.Equal(t, cacheHits, []string{"A.0100000000000000"})
+}
+
 func TestRuntimeTransaction_UpdateAccountCodeUnsafeNotInitializing(t *testing.T) {
 
 	t.Parallel()
