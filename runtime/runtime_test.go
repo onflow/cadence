@@ -2312,7 +2312,6 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 	}
 
 	type argument interface {
-		fmt.Stringer
 		interpreter.Value
 	}
 
