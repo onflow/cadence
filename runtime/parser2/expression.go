@@ -1101,7 +1101,7 @@ func applyExprNullDenotation(p *parser, token lexer.Token) ast.Expression {
 	tokenType := token.Type
 	nullDenotation, ok := exprNullDenotations[tokenType]
 	if !ok {
-		panic(fmt.Errorf("missing expression null denotation for token %s", token.Type))
+		panic(fmt.Errorf("unexpected token in expression: %s", token.Type))
 	}
 	return nullDenotation(p, token)
 }
@@ -1109,7 +1109,7 @@ func applyExprNullDenotation(p *parser, token lexer.Token) ast.Expression {
 func applyExprLeftDenotation(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
 	leftDenotation, ok := exprLeftDenotations[token.Type]
 	if !ok {
-		panic(fmt.Errorf("missing expression left denotation for token %s", token.Type))
+		panic(fmt.Errorf("unexpected token in expression: %s", token.Type))
 	}
 	return leftDenotation(p, token, left)
 }
