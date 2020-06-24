@@ -3526,10 +3526,9 @@ func (interpreter *Interpreter) newConverterFunction(converter ValueConverter) F
 
 // TODO:
 // - FunctionType
-// - PublishedType
 //
 // - Character
-// - Account
+// - AuthAccount
 // - PublicAccount
 // - Block
 
