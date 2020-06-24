@@ -3669,6 +3669,38 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		default:
 			return false
 		}
+
+	case CapabilityDynamicType:
+		switch typedSuperType := superType.(type) {
+		case *sema.AnyStructType:
+			return true
+
+		case *sema.CapabilityType:
+
+			if typedSuperType.BorrowType != nil {
+
+				// Capability <: Capability<T>:
+				// never
+
+				if typedSubType.BorrowType == nil {
+					return false
+				}
+
+				// Capability<T> <: Capability<U>:
+				// if T <: U
+
+				return sema.IsSubType(
+					typedSubType.BorrowType,
+					typedSuperType.BorrowType,
+				)
+			}
+
+			// Capability<T> <: Capability || Capability <: Capability:
+			// always
+
+			return true
+
+		}
 	}
 
 	return false

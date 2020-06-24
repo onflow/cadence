@@ -40,6 +40,7 @@ import (
 // Value
 
 type Value interface {
+	fmt.Stringer
 	IsValue()
 	DynamicType(interpreter *Interpreter) DynamicType
 	Copy() Value
@@ -5677,6 +5678,10 @@ type StorageReferenceValue struct {
 
 func (*StorageReferenceValue) IsValue() {}
 
+func (v *StorageReferenceValue) String() string {
+	return "StorageReference()"
+}
+
 func (v *StorageReferenceValue) DynamicType(interpreter *Interpreter) DynamicType {
 	referencedValue := v.referencedValue(interpreter)
 	if referencedValue == nil {
@@ -5792,6 +5797,10 @@ type EphemeralReferenceValue struct {
 }
 
 func (*EphemeralReferenceValue) IsValue() {}
+
+func (v *EphemeralReferenceValue) String() string {
+	return v.Value.String()
+}
 
 func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter) DynamicType {
 	referencedValue := v.referencedValue()
@@ -6318,8 +6327,15 @@ type CapabilityValue struct {
 
 func (CapabilityValue) IsValue() {}
 
-func (CapabilityValue) DynamicType(_ *Interpreter) DynamicType {
-	return CapabilityDynamicType{}
+func (v CapabilityValue) DynamicType(inter *Interpreter) DynamicType {
+	var borrowType *sema.ReferenceType
+	if v.BorrowType != nil {
+		borrowType = inter.convertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+	}
+
+	return CapabilityDynamicType{
+		BorrowType: borrowType,
+	}
 }
 
 func (v CapabilityValue) Copy() Value {
