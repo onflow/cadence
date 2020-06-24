@@ -147,12 +147,6 @@ type AddressDynamicType struct{}
 
 func (AddressDynamicType) IsDynamicType() {}
 
-// PublishedDynamicType
-
-type PublishedDynamicType struct{}
-
-func (PublishedDynamicType) IsDynamicType() {}
-
 // FunctionDynamicType
 
 type FunctionDynamicType struct{}
