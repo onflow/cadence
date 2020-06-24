@@ -146,7 +146,7 @@ func (r *interpreterRuntime) ExecuteScript(
 
 	functions := r.standardLibraryFunctions(runtimeInterface, runtimeStorage)
 
-	checker, err := r.parseAndCheckProgram(script, runtimeInterface, location, functions, nil, true)
+	checker, err := r.parseAndCheckProgram(script, runtimeInterface, location, functions, nil, false)
 	if err != nil {
 		return nil, newError(err)
 	}
@@ -286,7 +286,7 @@ func (r *interpreterRuntime) ExecuteTransaction(
 
 	functions := r.standardLibraryFunctions(runtimeInterface, runtimeStorage)
 
-	checker, err := r.parseAndCheckProgram(script, runtimeInterface, location, functions, nil, true)
+	checker, err := r.parseAndCheckProgram(script, runtimeInterface, location, functions, nil, false)
 	if err != nil {
 		return newError(err)
 	}
