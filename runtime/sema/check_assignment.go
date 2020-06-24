@@ -291,7 +291,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 				Name:              member.Identifier.Identifier,
 				RestrictingAccess: member.Access,
 				DeclarationKind:   member.DeclarationKind,
-				Range:             ast.NewRangeFromPositioned(member.Identifier),
+				Range:             ast.NewRangeFromPositioned(target.Identifier),
 			},
 		)
 	}
