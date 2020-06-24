@@ -33,16 +33,16 @@ import (
 
 func TestInterpretVirtualImport(t *testing.T) {
 
-	cryptoType := &sema.CompositeType{
-		Location:   ast.IdentifierLocation("Crypto"),
-		Identifier: "Crypto",
+	fooType := &sema.CompositeType{
+		Location:   ast.IdentifierLocation("Foo"),
+		Identifier: "Foo",
 		Kind:       common.CompositeKindContract,
 	}
 
-	cryptoType.Members = map[string]*sema.Member{
-		"unsafeRandom": sema.NewPublicFunctionMember(
-			cryptoType,
-			"unsafeRandom",
+	fooType.Members = map[string]*sema.Member{
+		"bar": sema.NewPublicFunctionMember(
+			fooType,
+			"bar",
 			&sema.FunctionType{
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.UInt64Type{}),
 			},
@@ -50,10 +50,10 @@ func TestInterpretVirtualImport(t *testing.T) {
 	}
 
 	const code = `
-       import Crypto
+       import Foo
 
        fun test(): UInt64 {
-           return Crypto.unsafeRandom()
+           return Foo.bar()
        }
     `
 
@@ -65,18 +65,18 @@ func TestInterpretVirtualImport(t *testing.T) {
 					func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
 
 						assert.Equal(t,
-							ast.IdentifierLocation("Crypto"),
+							ast.IdentifierLocation("Foo"),
 							location,
 						)
 
 						return interpreter.VirtualImport{
 							Globals: map[string]interpreter.Value{
-								"Crypto": &interpreter.CompositeValue{
+								"Foo": &interpreter.CompositeValue{
 									Location: location,
-									TypeID:   "I.Crypto.Crypto",
+									TypeID:   "I.Foo.Foo",
 									Kind:     common.CompositeKindContract,
 									Functions: map[string]interpreter.FunctionValue{
-										"unsafeRandom": interpreter.NewHostFunctionValue(
+										"bar": interpreter.NewHostFunctionValue(
 											func(invocation interpreter.Invocation) trampoline.Trampoline {
 												return trampoline.Done{
 													Result: interpreter.NewIntValueFromInt64(42),
@@ -94,10 +94,10 @@ func TestInterpretVirtualImport(t *testing.T) {
 				sema.WithImportHandler(func(location ast.Location) sema.Import {
 					return sema.VirtualImport{
 						ValueElements: map[string]sema.ImportElement{
-							"Crypto": {
+							"Foo": {
 								DeclarationKind: common.DeclarationKindStructure,
 								Access:          ast.AccessPublic,
-								Type:            cryptoType,
+								Type:            fooType,
 							},
 						},
 					}
