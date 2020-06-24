@@ -228,3 +228,44 @@ func TestParseBuffering(t *testing.T) {
 		)
 	})
 }
+
+func TestParseEOF(t *testing.T) {
+
+	t.Parallel()
+
+	_, errs := Parse("a b", func(p *parser) interface{} {
+		p.mustOneString(lexer.TokenIdentifier, "a")
+		p.skipSpaceAndComments(true)
+		p.mustOneString(lexer.TokenIdentifier, "b")
+
+		p.next()
+
+		assert.Equal(t,
+			lexer.Token{
+				Type: lexer.TokenEOF,
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+					EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+				},
+			},
+			p.current,
+		)
+
+		p.next()
+
+		assert.Equal(t,
+			lexer.Token{
+				Type: lexer.TokenEOF,
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 3, Line: 1, Column: 3},
+					EndPos:   ast.Position{Offset: 3, Line: 1, Column: 3},
+				},
+			},
+			p.current,
+		)
+
+		return nil
+	})
+
+	assert.Empty(t, errs)
+}
