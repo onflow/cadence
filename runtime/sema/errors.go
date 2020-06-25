@@ -707,6 +707,23 @@ func (e *FieldUninitializedError) EndPosition() ast.Position {
 	return e.Pos.Shifted(length - 1)
 }
 
+// FieldTypeNotAllowedError
+
+type FieldTypeNotAllowedError struct {
+	// Field's name
+	Name string
+	// Field's type
+	Type Type
+	Pos  ast.Position
+}
+
+func (e *FieldTypeNotAllowedError) Error() string {
+	return fmt.Sprintf(
+		"field `%s` has type that is not allowed as a field to be stored: %v",
+		e.Name,
+		e.Type)
+}
+
 // FunctionExpressionInConditionError
 
 type FunctionExpressionInConditionError struct {

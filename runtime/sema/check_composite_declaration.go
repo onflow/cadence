@@ -24,6 +24,22 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+// a white list of all types that are allowed to be  a field of a contract to be stored.
+var typeFieldsAllowedTypes = map[TypeID]struct{}{}
+
+func init() {
+	fieldsAllowedTypes := append(
+		[]Type{
+			&AuthAccountType{},
+		},
+		AllNumberTypes...,
+	)
+
+	for _, ty := range fieldsAllowedTypes {
+		typeFieldsAllowedTypes[ty.ID()] = struct{}{}
+	}
+}
+
 func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) ast.Repr {
 	checker.visitCompositeDeclaration(declaration, ContainerKindComposite)
 
@@ -560,6 +576,20 @@ func (checker *Checker) declareCompositeMembersAndValue(
 				declaration.Members.Functions,
 				kind,
 			)
+		}
+
+		// check if all members' type are allowed to be the fields
+		for _, member := range members {
+			tid := member.TypeAnnotation.Type.ID()
+			_, allowed := typeFieldsAllowedTypes[tid]
+			if !allowed {
+				err := &FieldTypeNotAllowedError{
+					Name: member.Identifier.Identifier,
+					Type: member.TypeAnnotation.Type,
+					Pos:  member.Identifier.Pos,
+				}
+				checker.report(err)
+			}
 		}
 
 		compositeType.Members = members
@@ -1272,6 +1302,7 @@ func (checker *Checker) checkNoInitializerNoFields(
 	)
 }
 
+// checkSpecialFunction checks specifal functions, like init() and destroy()
 func (checker *Checker) checkSpecialFunction(
 	specialFunction *ast.SpecialFunctionDeclaration,
 	containerType Type,
