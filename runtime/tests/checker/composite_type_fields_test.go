@@ -31,7 +31,7 @@ func TestCompositeTypeFields(t *testing.T) {
 		result bool
 	}{
 
-		"int is a valid field to be stored": {`
+		"int is a storable field": {`
 		contract Controller {
 
 			var n: Int
@@ -44,7 +44,7 @@ func TestCompositeTypeFields(t *testing.T) {
 			true,
 		},
 
-		"function is not a valid field to be stored": {`
+		"function is not a storable field": {`
 		contract Controller {
 
 			var fn: (():Int)
@@ -59,7 +59,20 @@ func TestCompositeTypeFields(t *testing.T) {
 			false,
 		},
 
-		"[function] is not a valid field to be stored": {`
+		"[int] is a storable field": {`
+		contract Controller {
+
+			var xs: [Int]
+
+			init(){
+				self.xs = [1, 2, 3];
+			}
+		}
+			`,
+			true,
+		},
+
+		"[function] is not a storable field": {`
 		contract Controller {
 
 			var operators: [(():Int)]
@@ -70,6 +83,20 @@ func TestCompositeTypeFields(t *testing.T) {
 		}
 			`,
 			false,
+		},
+
+		"storable field is only for contract": {`
+		struct MyStruct {
+			pub var fn: (():Int)
+
+			init() {
+				self.fn = fun(): Int {
+					return 1;
+				};
+			};
+		}
+			`,
+			true,
 		},
 	}
 
@@ -87,13 +114,4 @@ func TestCompositeTypeFields(t *testing.T) {
 			}
 		})
 	}
-
-	// Int is a valid field
-	t.Run("int is a valid field", func(t *testing.T) {})
-
-	// Resource is a valid field
-
-	// [Int] is a valid field
-	// [fun] is a invalid field
-	// [[fun]] is a invalid field
 }

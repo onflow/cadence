@@ -24,22 +24,6 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-// a white list of all types that are allowed to be  a field of a contract to be stored.
-var typeFieldsAllowedTypes = map[TypeID]struct{}{}
-
-func init() {
-	fieldsAllowedTypes := append(
-		[]Type{
-			&AuthAccountType{},
-		},
-		AllNumberTypes...,
-	)
-
-	for _, ty := range fieldsAllowedTypes {
-		typeFieldsAllowedTypes[ty.ID()] = struct{}{}
-	}
-}
-
 func (checker *Checker) VisitCompositeDeclaration(declaration *ast.CompositeDeclaration) ast.Repr {
 	checker.visitCompositeDeclaration(declaration, ContainerKindComposite)
 
@@ -512,6 +496,18 @@ func (checker *Checker) declareCompositeMembersAndValue(
 			checker.declareInterfaceMembers(nestedInterfaceDeclaration)
 		}
 
+		// if the declaration has composite declaration, then recursively check the members and
+		// values of them.
+		//
+		// for instance, the struct S defined within `MyContract` as below is a
+		// nestedCompositeDeclaration which has its own members and values need to be check:
+		// ```
+		// contract MyContract {
+		//   struct S {
+		//     var v: Int
+		//   }
+		// }
+		// ```
 		for _, nestedCompositeDeclaration := range declaration.CompositeDeclarations {
 			checker.declareCompositeMembersAndValue(nestedCompositeDeclaration, kind)
 
@@ -580,16 +576,22 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 		// check if all members' type are allowed to be the fields
 		for _, member := range members {
-			tid := member.TypeAnnotation.Type.ID()
-			_, allowed := typeFieldsAllowedTypes[tid]
-			if !allowed {
-				err := &FieldTypeNotAllowedError{
-					Name: member.Identifier.Identifier,
-					Type: member.TypeAnnotation.Type,
-					Pos:  member.Identifier.Pos,
-				}
-				checker.report(err)
+			storable := member.TypeAnnotation.Type.IsStorable()
+
+			// if the type is allowed to be stored, then continue checking
+			// other fields
+			if !storable {
+				continue
 			}
+
+			// if the type is a nested type, then check recursively
+
+			err := &FieldTypeNotAllowedError{
+				Name: member.Identifier.Identifier,
+				Type: member.TypeAnnotation.Type,
+				Pos:  member.Identifier.Pos,
+			}
+			checker.report(err)
 		}
 
 		compositeType.Members = members
