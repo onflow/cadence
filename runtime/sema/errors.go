@@ -773,7 +773,7 @@ func (e *MissingReturnValueError) Error() string {
 	if e.ExpectedValueType.IsInvalidType() {
 		typeDescription = "non-void"
 	} else {
-		typeDescription = fmt.Sprintf(`%s`, e.ExpectedValueType)
+		typeDescription = fmt.Sprintf("`%s`", e.ExpectedValueType)
 	}
 
 	return fmt.Sprintf(
