@@ -8405,7 +8405,7 @@ func TestParseInstantiationType(t *testing.T) {
 	t.Parallel()
 
 	const code = `
-      let a: Foo.Bar<Int, @R > = b
+      let a: MyContract.MyStruct<Int, @R > = b
 	`
 
 	testParse(
