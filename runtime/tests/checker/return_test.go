@@ -61,15 +61,86 @@ func TestCheckReturnStatementMissingValue(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-      fun test(): Int {
-          return
-      }
-    `)
+	t.Run("valid return type", func(t *testing.T) {
 
-	errs := ExpectCheckerErrors(t, err, 1)
+		t.Parallel()
 
-	assert.IsType(t, &sema.MissingReturnValueError{}, errs[0])
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              return
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.MissingReturnValueError{}, errs[0])
+	})
+
+	t.Run("invalid return type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(): X {
+              return
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+		assert.IsType(t, &sema.MissingReturnValueError{}, errs[1])
+	})
+}
+
+func TestCheckReturnStatementTypeMismatch(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("invalid return type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(): X {
+              return 1
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+
+	t.Run("invalid value type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              return x
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+
+	t.Run("invalid value type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(): Int {
+              return true
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
 }
 
 func TestCheckMissingReturnStatementInterfaceFunction(t *testing.T) {
