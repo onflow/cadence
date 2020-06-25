@@ -719,7 +719,7 @@ func (e *FunctionExpressionInConditionError) Error() string {
 
 func (*FunctionExpressionInConditionError) isSemanticError() {}
 
-// UnexpectedReturnValueError
+// InvalidReturnValueError
 
 type InvalidReturnValueError struct {
 	ast.Range
@@ -733,6 +733,22 @@ func (e *InvalidReturnValueError) Error() string {
 }
 
 func (*InvalidReturnValueError) isSemanticError() {}
+
+// MissingReturnValueError
+
+type MissingReturnValueError struct {
+	ExpectedValueType Type
+	ast.Range
+}
+
+func (e *MissingReturnValueError) Error() string {
+	return fmt.Sprintf(
+		"missing value in return from function with `%s` return type",
+		e.ExpectedValueType,
+	)
+}
+
+func (*MissingReturnValueError) isSemanticError() {}
 
 // InvalidImplementationError
 
