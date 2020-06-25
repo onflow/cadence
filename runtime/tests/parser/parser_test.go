@@ -8423,13 +8423,13 @@ func TestParseInstantiationType(t *testing.T) {
 					Type: &InstantiationType{
 						Type: &NominalType{
 							Identifier: Identifier{
-								Identifier: "Foo",
+								Identifier: "MyContract",
 								Pos:        Position{Offset: 14, Line: 2, Column: 13},
 							},
 							NestedIdentifiers: []Identifier{
 								{
-									Identifier: "Bar",
-									Pos:        Position{Offset: 18, Line: 2, Column: 17},
+									Identifier: "MyStruct",
+									Pos:        Position{Offset: 25, Line: 2, Column: 24},
 								},
 							},
 						},
@@ -8439,34 +8439,34 @@ func TestParseInstantiationType(t *testing.T) {
 								Type: &NominalType{
 									Identifier: Identifier{
 										Identifier: "Int",
-										Pos:        Position{Offset: 22, Line: 2, Column: 21},
+										Pos:        Position{Offset: 34, Line: 2, Column: 33},
 									},
 								},
-								StartPos: Position{Offset: 22, Line: 2, Column: 21},
+								StartPos: Position{Offset: 34, Line: 2, Column: 33},
 							},
 							{
 								IsResource: true,
 								Type: &NominalType{
 									Identifier: Identifier{
 										Identifier: "R",
-										Pos:        Position{Offset: 28, Line: 2, Column: 27},
+										Pos:        Position{Offset: 40, Line: 2, Column: 39},
 									},
 								},
-								StartPos: Position{Offset: 27, Line: 2, Column: 26},
+								StartPos: Position{Offset: 39, Line: 2, Column: 38},
 							},
 						},
-						EndPos: Position{Offset: 30, Line: 2, Column: 29},
+						EndPos: Position{Offset: 42, Line: 2, Column: 41},
 					},
 					StartPos: Position{Offset: 14, Line: 2, Column: 13},
 				},
 				Transfer: &Transfer{
 					Operation: TransferOperationCopy,
-					Pos:       Position{Offset: 32, Line: 2, Column: 31},
+					Pos:       Position{Offset: 44, Line: 2, Column: 43},
 				},
 				Value: &IdentifierExpression{
 					Identifier: Identifier{
 						Identifier: "b",
-						Pos:        Position{Offset: 34, Line: 2, Column: 33},
+						Pos:        Position{Offset: 46, Line: 2, Column: 45},
 					},
 				},
 				StartPos: Position{Offset: 7, Line: 2, Column: 6},
