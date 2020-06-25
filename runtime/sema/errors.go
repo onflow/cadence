@@ -769,9 +769,16 @@ type MissingReturnValueError struct {
 }
 
 func (e *MissingReturnValueError) Error() string {
+	var typeDescription string
+	if e.ExpectedValueType.IsInvalidType() {
+		typeDescription = "non-void"
+	} else {
+		typeDescription = fmt.Sprintf(`%s`, e.ExpectedValueType)
+	}
+
 	return fmt.Sprintf(
-		"missing value in return from function with `%s` return type",
-		e.ExpectedValueType,
+		"missing value in return from function with %s return type",
+		typeDescription,
 	)
 }
 
