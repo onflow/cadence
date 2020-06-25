@@ -950,3 +950,138 @@ func TestParseFunctionType(t *testing.T) {
 		)
 	})
 }
+
+func TestParseInstantiationType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no type arguments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("T<>")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.InstantiationType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				EndPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+			},
+			result,
+		)
+	})
+
+	t.Run("one type argument, no spaces", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("T<U>")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.InstantiationType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				TypeArguments: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "U",
+								Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+					},
+				},
+				EndPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+			},
+			result,
+		)
+	})
+
+	t.Run("one type argument, with spaces", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("T< U >")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.InstantiationType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				TypeArguments: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "U",
+								Pos:        ast.Position{Line: 1, Column: 3, Offset: 3},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+					},
+				},
+				EndPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+			},
+			result,
+		)
+	})
+
+	t.Run("two type arguments, with spaces", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("T< U , @V >")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.InstantiationType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				TypeArguments: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "U",
+								Pos:        ast.Position{Line: 1, Column: 3, Offset: 3},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+					},
+					{
+						IsResource: true,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "V",
+								Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+				},
+				EndPos: ast.Position{Line: 1, Column: 10, Offset: 10},
+			},
+			result,
+		)
+	})
+}
