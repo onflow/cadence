@@ -57,6 +57,21 @@ func TestCheckMissingReturnStatement(t *testing.T) {
 	assert.IsType(t, &sema.MissingReturnStatementError{}, errs[0])
 }
 
+func TestCheckReturnStatementMissingValue(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      fun test(): Int {
+          return
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.MissingReturnValueError{}, errs[0])
+}
+
 func TestCheckMissingReturnStatementInterfaceFunction(t *testing.T) {
 
 	t.Parallel()
@@ -103,12 +118,13 @@ type exitTest struct {
 	body              string
 	exits             bool
 	valueDeclarations map[string]sema.ValueDeclaration
+	errors            []error
 }
 
 func testExits(t *testing.T, tests []exitTest) {
 	for _, test := range tests {
 		t.Run("", func(t *testing.T) {
-			code := fmt.Sprintf("fun test(): AnyStruct {%s}", test.body)
+			code := fmt.Sprintf("fun test(): AnyStruct {\n%s\n}", test.body)
 			_, err := ParseAndCheckWithOptions(
 				t,
 				code,
@@ -119,7 +135,12 @@ func testExits(t *testing.T, tests []exitTest) {
 				},
 			)
 
-			if test.exits {
+			if test.errors != nil {
+				errs := ExpectCheckerErrors(t, err, len(test.errors))
+				for i, err := range errs {
+					assert.IsType(t, test.errors[i], err)
+				}
+			} else if test.exits {
 				require.NoError(t, err)
 			} else {
 				errs := ExpectCheckerErrors(t, err, 1)
@@ -143,6 +164,9 @@ func TestCheckReturnStatementExits(t *testing.T) {
 			{
 				body:  "return",
 				exits: true,
+				errors: []error{
+					&sema.MissingReturnValueError{},
+				},
 			},
 		},
 	)
@@ -282,6 +306,10 @@ func TestCheckWhileStatementExits(t *testing.T) {
                   }
                 `,
 				exits: false,
+				errors: []error{
+					&sema.MissingReturnValueError{},
+					&sema.MissingReturnStatementError{},
+				},
 			},
 			{
 				body: `
@@ -299,6 +327,10 @@ func TestCheckWhileStatementExits(t *testing.T) {
                   }
                 `,
 				exits: false,
+				errors: []error{
+					&sema.MissingReturnValueError{},
+					&sema.MissingReturnStatementError{},
+				},
 			},
 			{
 				body: `
