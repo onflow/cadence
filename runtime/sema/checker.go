@@ -1907,21 +1907,24 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 		})
 	}
 
-	if compositeKindedType, ok := containerType.(CompositeKindedType); ok {
+	// All types have a predeclared member `fun isInstance(_ type: Type)`
 
-		addPredeclaredMember(
-			IsInstanceFunctionName,
-			isInstanceFunctionType,
-			common.DeclarationKindFunction,
-			ast.AccessPublic,
-			true,
-		)
+	addPredeclaredMember(
+		IsInstanceFunctionName,
+		isInstanceFunctionType,
+		common.DeclarationKindFunction,
+		ast.AccessPublic,
+		true,
+	)
+
+	if compositeKindedType, ok := containerType.(CompositeKindedType); ok {
 
 		switch compositeKindedType.GetCompositeKind() {
 		case common.CompositeKindContract:
 
+			// All contracts have a predeclared member
 			// `priv let account: AuthAccount`,
-			// ignored in serialization
+			// which is ignored in serialization
 
 			addPredeclaredMember(
 				"account",
@@ -1932,7 +1935,8 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 			)
 
 		case common.CompositeKindResource:
-			// Resources have two predeclared fields:
+
+			// All resources have two predeclared fields:
 
 			// `pub let owner: PublicAccount?`,
 			// ignored in serialization
