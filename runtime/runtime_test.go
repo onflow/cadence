@@ -106,6 +106,14 @@ type testRuntimeInterface struct {
 	valueEncoded       func(duration time.Duration)
 	valueDecoded       func(duration time.Duration)
 	unsafeRandom       func() uint64
+	verifySignature    func(
+		signature []byte,
+		tag []byte,
+		signedData []byte,
+		publicKey []byte,
+		signatureAlgorithm string,
+		hashAlgorithm string,
+	) bool
 }
 
 var _ Interface = &testRuntimeInterface{}
@@ -247,6 +255,27 @@ func (i *testRuntimeInterface) UnsafeRandom() uint64 {
 		return 0
 	}
 	return i.unsafeRandom()
+}
+
+func (i *testRuntimeInterface) VerifySignature(
+	signature []byte,
+	tag []byte,
+	signedData []byte,
+	publicKey []byte,
+	signatureAlgorithm string,
+	hashAlgorithm string,
+) bool {
+	if i.verifySignature == nil {
+		return false
+	}
+	return i.verifySignature(
+		signature,
+		tag,
+		signedData,
+		publicKey,
+		signatureAlgorithm,
+		hashAlgorithm,
+	)
 }
 
 func TestRuntimeImport(t *testing.T) {

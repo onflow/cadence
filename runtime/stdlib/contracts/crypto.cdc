@@ -2,10 +2,10 @@
 pub struct interface SignatureVerifier  {
 
     pub fun verify(
-        signature: [UInt8],
+        signature: [Int],
         tag: String,
-        signedData: [UInt8],
-        publicKey: [UInt8],
+        signedData: [Int],
+        publicKey: [Int],
         signatureAlgorithm: String,
         hashAlgorithm: String
     ): Bool
@@ -42,10 +42,10 @@ pub contract Crypto {
     pub let SHA3_256: HashAlgorithm
 
     pub struct PublicKey {
-        pub let publicKey: [UInt8]
+        pub let publicKey: [Int]
         pub let signatureAlgorithm: SignatureAlgorithm
 
-        init(publicKey: [UInt8], signatureAlgorithm: SignatureAlgorithm) {
+        init(publicKey: [Int], signatureAlgorithm: SignatureAlgorithm) {
             self.publicKey = publicKey
             self.signatureAlgorithm = signatureAlgorithm
         }
@@ -127,7 +127,7 @@ pub contract Crypto {
 
         pub fun isValid(
             signatureSet: [KeyListSignature],
-            signedData: [UInt8]
+            signedData: [Int]
         ): Bool {
 
             var validWeights: UFix64 = 0.0
@@ -184,9 +184,9 @@ pub contract Crypto {
 
     pub struct KeyListSignature {
         pub let keyIndex: Int
-        pub let signature: [UInt8]
+        pub let signature: [Int]
 
-        pub init(keyIndex: Int, signature: [UInt8]) {
+        pub init(keyIndex: Int, signature: [Int]) {
             self.keyIndex = keyIndex
             self.signature = signature
         }
