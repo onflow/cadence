@@ -151,6 +151,7 @@ type ContractValueHandlerFunc func(
 	inter *Interpreter,
 	compositeType *sema.CompositeType,
 	constructor FunctionValue,
+	invocationRange ast.Range,
 ) *CompositeValue
 
 // ImportLocationFunc is a function that handles imports of locations.
@@ -2525,7 +2526,13 @@ func (interpreter *Interpreter) declareCompositeValue(
 	// for all other composite kinds, the constructor is declared
 
 	if declaration.CompositeKind == common.CompositeKindContract {
-		contract := interpreter.contractValueHandler(interpreter, compositeType, constructor)
+		positioned := ast.NewRangeFromPositioned(declaration.Identifier)
+		contract := interpreter.contractValueHandler(
+			interpreter,
+			compositeType,
+			constructor,
+			positioned,
+		)
 		contract.NestedValues = members
 		value = contract
 		// NOTE: variable value is also set in the constructor function: it needs to be available
