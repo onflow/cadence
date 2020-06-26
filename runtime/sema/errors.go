@@ -719,12 +719,13 @@ type FieldTypeNotStorableError struct {
 	Name string
 	// Field's type
 	Type Type
-	Pos  ast.Position
+	// StartPosition of the error
+	Pos ast.Position
 }
 
 func (e *FieldTypeNotStorableError) Error() string {
 	return fmt.Sprintf(
-		"field `%s` has a not storable type: %v",
+		"field %s is not storable, type: %s",
 		e.Name,
 		e.Type)
 }

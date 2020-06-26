@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/onflow/cadence/runtime/cmd"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/stretchr/testify/require"
 )
 
@@ -177,4 +178,12 @@ func TestCompositeTypeFields(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("check error message", func(t *testing.T) {
+		testcase := cases["function is not a storable field"]
+		_, err := ParseAndCheck(t, testcase.code)
+		checkerError, _ := err.(*sema.CheckerError)
+		require.Equal(t, "field fn is not storable, type: ((): Int)",
+			checkerError.ChildErrors()[0].Error())
+	})
 }
