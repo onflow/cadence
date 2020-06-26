@@ -4422,7 +4422,7 @@ func (*AuthAccountType) IsInvalidType() bool {
 }
 
 func (*AuthAccountType) IsStorable() bool {
-	return true
+	return false
 }
 
 func (*AuthAccountType) TypeAnnotationState() TypeAnnotationState {
@@ -4771,7 +4771,7 @@ func (*PublicAccountType) IsInvalidType() bool {
 }
 
 func (*PublicAccountType) IsStorable() bool {
-	return true
+	return false
 }
 
 func (*PublicAccountType) TypeAnnotationState() TypeAnnotationState {
