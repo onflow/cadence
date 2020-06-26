@@ -119,6 +119,7 @@ func makeContractValueHandler(
 			inter *interpreter.Interpreter,
 			compositeType *sema.CompositeType,
 			constructor interpreter.FunctionValue,
+			invocationRange ast.Range,
 		) *interpreter.CompositeValue {
 			value, err := inter.InvokeFunctionValue(
 				constructor,
