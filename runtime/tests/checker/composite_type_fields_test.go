@@ -37,7 +37,7 @@ func TestCompositeTypeFields(t *testing.T) {
 			var n: Int
 
 			init(){
-				self.n = 1;
+				self.n = 1
 			}
 		}
 			`,
@@ -51,7 +51,7 @@ func TestCompositeTypeFields(t *testing.T) {
 
 			init(){
 				self.fn = fun(): Int {
-					return 1;
+					return 1
 				};
 			}
 		}
@@ -59,17 +59,47 @@ func TestCompositeTypeFields(t *testing.T) {
 			false,
 		},
 
-		"[int] is a storable field": {`
+		"[Int] is a storable field": {`
 		contract Controller {
 
 			var xs: [Int]
 
 			init(){
-				self.xs = [1, 2, 3];
+				self.xs = [1, 2, 3]
 			}
 		}
 			`,
 			true,
+		},
+
+		"{Int: String} is a storable field": {`
+		contract Controller {
+
+			var m: {Int: String}
+
+			init(){
+				self.m = {}
+			}
+		}
+			`,
+			true,
+		},
+
+		"{Int: function} is a storable field": {`
+		contract Controller {
+
+			var m: {Int: ((): Int)}
+
+			init(){
+				self.m = {
+					1: fun(): Int {
+						return 1
+					}
+				}
+			}
+		}
+			`,
+			false,
 		},
 
 		"[function] is not a storable field": {`
@@ -78,7 +108,7 @@ func TestCompositeTypeFields(t *testing.T) {
 			var operators: [(():Int)]
 
 			init(){
-				self.operators = [];
+				self.operators = []
 			}
 		}
 			`,
@@ -91,7 +121,7 @@ func TestCompositeTypeFields(t *testing.T) {
 
 			init() {
 				self.fn = fun(): Int {
-					return 1;
+					return 1
 				};
 			};
 		}
@@ -99,22 +129,38 @@ func TestCompositeTypeFields(t *testing.T) {
 			false,
 		},
 
-		// "nested field for resource is not storable": {`
-		// contract S {
-		// 	Resource R {
-		// 		pub var fn: (():Int)
-		//
-		// 		init() {
-		// 			self.fn = fun(): Int {
-		// 				return 1;
-		// 			};
-		// 		};
-		// 	}
-		// }
-		// 	`,
-		// 	false,
-		// },
+		"path field is not storable": {`
+		struct MyStruct {
+			pub var fn: (():Int)
 
+			init() {
+				self.fn = fun(): Int {
+					return 1
+				}
+			}
+		}
+			`,
+			false,
+		},
+
+		"nested field for resource is not storable": {`
+		contract S {
+			let r : @R
+
+			resource R {
+				// function field in nested composite type is not allowed
+				pub var fn: (():Int)
+
+				init() {
+					self.fn = fun(): Int {
+						return 1
+					}
+				}
+			}
+		}
+			`,
+			false,
+		},
 	}
 
 	for caseName, testcase := range cases {

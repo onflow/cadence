@@ -4388,7 +4388,9 @@ func (t *CompositeType) NestedTypes() map[string]Type {
 	return t.nestedTypes
 }
 
-// AuthAccountType
+// AuthAccountType represents the authorized portion of an account.
+// Access to an AuthAccount means having full access to its storage, public keys, and code.
+// Only signed transactions can get the AuthAccount for an account.
 
 type AuthAccountType struct{}
 
@@ -4737,7 +4739,7 @@ func (t *AuthAccountType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-// PublicAccountType
+// PublicAccountType represents the publicly available portion of an account.
 
 type PublicAccountType struct{}
 
@@ -4952,7 +4954,9 @@ func (t *InterfaceType) NestedTypes() map[string]Type {
 	return t.nestedTypes
 }
 
-// DictionaryType
+// DictionaryType represents the types of the key and value for all key-value pairs in
+// the dictionary.
+// As a Dictionary value, all keys have to conform the same type, same as all values.
 
 type DictionaryType struct {
 	KeyType   Type
