@@ -85,7 +85,7 @@ func TestCompositeTypeFields(t *testing.T) {
 			false,
 		},
 
-		"storable field is only for contract": {`
+		"function field for struct is not storable": {`
 		struct MyStruct {
 			pub var fn: (():Int)
 
@@ -96,8 +96,25 @@ func TestCompositeTypeFields(t *testing.T) {
 			};
 		}
 			`,
-			true,
+			false,
 		},
+
+		// "nested field for resource is not storable": {`
+		// contract S {
+		// 	Resource R {
+		// 		pub var fn: (():Int)
+		//
+		// 		init() {
+		// 			self.fn = fun(): Int {
+		// 				return 1;
+		// 			};
+		// 		};
+		// 	}
+		// }
+		// 	`,
+		// 	false,
+		// },
+
 	}
 
 	for caseName, testcase := range cases {

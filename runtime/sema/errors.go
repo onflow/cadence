@@ -707,9 +707,9 @@ func (e *FieldUninitializedError) EndPosition() ast.Position {
 	return e.Pos.Shifted(length - 1)
 }
 
-// FieldTypeNotAllowedError
+// FieldTypeNotStorableError
 
-type FieldTypeNotAllowedError struct {
+type FieldTypeNotStorableError struct {
 	// Field's name
 	Name string
 	// Field's type
@@ -717,9 +717,9 @@ type FieldTypeNotAllowedError struct {
 	Pos  ast.Position
 }
 
-func (e *FieldTypeNotAllowedError) Error() string {
+func (e *FieldTypeNotStorableError) Error() string {
 	return fmt.Sprintf(
-		"field `%s` has type that is not allowed as a field to be stored: %v",
+		"field `%s` has a not storable type: %v",
 		e.Name,
 		e.Type)
 }

@@ -579,12 +579,12 @@ func (checker *Checker) declareCompositeMembersAndValue(
 			storable := member.TypeAnnotation.Type.IsStorable()
 
 			// if the type is allowed to be stored, then continue checking
-			// other fields
-			if !storable {
+			// other fields.
+			if storable {
 				continue
 			}
 
-			err := &FieldTypeNotAllowedError{
+			err := &FieldTypeNotStorableError{
 				Name: member.Identifier.Identifier,
 				Type: member.TypeAnnotation.Type,
 				Pos:  member.Identifier.Pos,
