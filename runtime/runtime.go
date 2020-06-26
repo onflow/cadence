@@ -598,6 +598,7 @@ func (r *interpreterRuntime) newInterpreter(
 					compositeType,
 					constructor,
 					invocationRange,
+					runtimeInterface,
 					runtimeStorage,
 				)
 			},
@@ -1165,12 +1166,18 @@ func (r *interpreterRuntime) loadContract(
 	compositeType *sema.CompositeType,
 	constructor interpreter.FunctionValue,
 	invocationRange ast.Range,
+	runtimeInterface Interface,
 	runtimeStorage *interpreterRuntimeStorage,
 ) *interpreter.CompositeValue {
 
 	switch compositeType.Location {
 	case stdlib.CryptoChecker.Location:
-		contract, err := stdlib.NewCryptoContract(inter, constructor, invocationRange)
+		contract, err := stdlib.NewCryptoContract(
+			inter,
+			constructor,
+			runtimeInterface,
+			invocationRange,
+		)
 		if err != nil {
 			panic(err)
 		}
@@ -1284,6 +1291,7 @@ func (r *interpreterRuntime) instantiateContract(
 					compositeType,
 					constructor,
 					invocationRange,
+					runtimeInterface,
 					runtimeStorage,
 				)
 			},

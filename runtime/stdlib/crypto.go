@@ -1,6 +1,9 @@
 package stdlib
 
 import (
+	"errors"
+	"fmt"
+
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -9,6 +12,17 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib/internal"
 	"github.com/onflow/cadence/runtime/trampoline"
 )
+
+type CryptoSignatureVerifier interface {
+	VerifySignature(
+		signature []byte,
+		tag []byte,
+		signedData []byte,
+		publicKey []byte,
+		signatureAlgorithm string,
+		hashAlgorithm string,
+	) bool
+}
 
 var CryptoChecker = func() *sema.Checker {
 
@@ -53,18 +67,60 @@ var cryptoContractInitializerTypes = []sema.Type{
 	cryptoSignatureVerifierRestrictedType,
 }
 
-var cryptoContractVerifySignatureFunction = interpreter.NewHostFunctionValue(
-	func(invocation interpreter.Invocation) trampoline.Trampoline {
-		// TODO:
-		panic("TODO")
-	},
-)
+func newCryptoContractVerifySignatureFunction(signatureVerifier CryptoSignatureVerifier) interpreter.FunctionValue {
+	return interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) trampoline.Trampoline {
+			signature, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[0])
+			if err != nil {
+				panic(fmt.Errorf("verifySignature: invalid signature argument: %w", err))
+			}
 
-var cryptoContractSignatureVerifier = func() *interpreter.CompositeValue {
+			tagStringValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.New("verifySignature: invalid tag argument: not a string"))
+			}
+			tag := []byte(tagStringValue.Str)
+
+			signedData, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[2])
+			if err != nil {
+				panic(fmt.Errorf("verifySignature: invalid signed data argument: %w", err))
+			}
+
+			publicKey, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[3])
+			if err != nil {
+				panic(fmt.Errorf("verifySignature: invalid public key argument: %w", err))
+			}
+
+			signatureAlgorithmStringValue, ok := invocation.Arguments[4].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.New("verifySignature: invalid signature algorithm argument: not a string"))
+			}
+			signatureAlgorithm := signatureAlgorithmStringValue.Str
+
+			hashAlgorithmStringValue, ok := invocation.Arguments[5].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.New("verifySignature: invalid hash algorithm argument: not a string"))
+			}
+			hashAlgorithm := hashAlgorithmStringValue.Str
+
+			isValid := signatureVerifier.VerifySignature(signature,
+				tag,
+				signedData,
+				publicKey,
+				signatureAlgorithm,
+				hashAlgorithm,
+			)
+
+			return trampoline.Done{Result: interpreter.BoolValue(isValid)}
+		},
+	)
+}
+
+func newCryptoContractSignatureVerifier(signatureVerifier CryptoSignatureVerifier) *interpreter.CompositeValue {
 	implementationTypeID :=
 		sema.TypeID(string(cryptoSignatureVerifierInterfaceType.ID()) + "Impl")
 
-	signatureVerifier := interpreter.NewCompositeValue(
+	result := interpreter.NewCompositeValue(
 		CryptoChecker.Location,
 		implementationTypeID,
 		common.CompositeKindStructure,
@@ -72,25 +128,26 @@ var cryptoContractSignatureVerifier = func() *interpreter.CompositeValue {
 		nil,
 	)
 
-	signatureVerifier.Functions = map[string]interpreter.FunctionValue{
-		"verify": cryptoContractVerifySignatureFunction,
+	result.Functions = map[string]interpreter.FunctionValue{
+		"verify": newCryptoContractVerifySignatureFunction(signatureVerifier),
 	}
 
-	return signatureVerifier
-}()
-
-var cryptoContractInitializerArguments = []interpreter.Value{
-	cryptoContractSignatureVerifier,
+	return result
 }
 
 func NewCryptoContract(
 	inter *interpreter.Interpreter,
 	constructor interpreter.FunctionValue,
+	signatureVerifier CryptoSignatureVerifier,
 	invocationRange ast.Range,
 ) (
 	*interpreter.CompositeValue,
 	error,
 ) {
+
+	var cryptoContractInitializerArguments = []interpreter.Value{
+		newCryptoContractSignatureVerifier(signatureVerifier),
+	}
 
 	value, err := inter.InvokeFunctionValue(
 		constructor,
