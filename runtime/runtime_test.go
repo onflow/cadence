@@ -111,6 +111,9 @@ type testRuntimeInterface struct {
 var _ Interface = &testRuntimeInterface{}
 
 func (i *testRuntimeInterface) ResolveImport(location Location) ([]byte, error) {
+	if i.resolveImport == nil {
+		return nil, nil
+	}
 	return i.resolveImport(location)
 }
 
