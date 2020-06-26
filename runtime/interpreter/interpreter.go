@@ -648,7 +648,7 @@ func getStatement(t Trampoline) *StatementTrampoline {
 	}
 }
 
-// interpret returns a Trampoline that is done when all top-level declarations 
+// interpret returns a Trampoline that is done when all top-level declarations
 // have been declared and evaluated.
 func (interpreter *Interpreter) interpret() Trampoline {
 	return interpreter.Checker.Program.Accept(interpreter).(Trampoline)
@@ -1060,10 +1060,7 @@ func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) Tra
 						panic(&ConditionError{
 							ConditionKind: condition.Kind,
 							Message:       message,
-							LocationRange: LocationRange{
-								Location: interpreter.Checker.Location,
-								Range:    ast.NewRangeFromPositioned(condition.Test),
-							},
+							LocationRange: interpreter.locationRange(condition.Test),
 						})
 					})
 			}
@@ -3380,11 +3377,7 @@ func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyEx
 
 			// TODO: optimize: only potentially used by host-functions
 
-			locationRange := LocationRange{
-				Location: interpreter.Checker.Location,
-				Range:    ast.NewRangeFromPositioned(expression),
-			}
-
+			locationRange := interpreter.locationRange(expression)
 			return value.(DestroyableValue).Destroy(interpreter, locationRange)
 		})
 }
