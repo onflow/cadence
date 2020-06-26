@@ -584,8 +584,6 @@ func (checker *Checker) declareCompositeMembersAndValue(
 				continue
 			}
 
-			// if the type is a nested type, then check recursively
-
 			err := &FieldTypeNotAllowedError{
 				Name: member.Identifier.Identifier,
 				Type: member.TypeAnnotation.Type,

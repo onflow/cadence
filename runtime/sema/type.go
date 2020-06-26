@@ -79,6 +79,10 @@ type Type interface {
 	// or it contains an invalid type (e.g. for optionals, arrays, dictionaries, etc.)
 	IsInvalidType() bool
 
+	// IsStorable returns whether the type is allowed to be a storable field of a composite type.
+	// e.g. a function is not storable field for a contract type.
+	IsStorable() bool
+
 	TypeAnnotationState() TypeAnnotationState
 	ContainsFirstLevelInterfaceType() bool
 
@@ -300,6 +304,10 @@ func (*MetaType) IsInvalidType() bool {
 	return false
 }
 
+func (*MetaType) IsStorable() bool {
+	return false
+}
+
 func (*MetaType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -362,6 +370,10 @@ func (*AnyType) IsInvalidType() bool {
 	return false
 }
 
+func (*AnyType) IsStorable() bool {
+	return false
+}
+
 func (*AnyType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -406,6 +418,11 @@ func (*AnyStructType) IsResourceType() bool {
 
 func (*AnyStructType) IsInvalidType() bool {
 	return false
+}
+
+func (*AnyStructType) IsStorable() bool {
+	// The actual storability is check at runtime by the interpreter
+	return true
 }
 
 func (*AnyStructType) TypeAnnotationState() TypeAnnotationState {
@@ -454,6 +471,11 @@ func (*AnyResourceType) IsInvalidType() bool {
 	return false
 }
 
+func (*AnyResourceType) IsStorable() bool {
+	// The actual storability is check at runtime by the interpreter
+	return true
+}
+
 func (*AnyResourceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -500,6 +522,10 @@ func (*NeverType) IsInvalidType() bool {
 	return false
 }
 
+func (*NeverType) IsStorable() bool {
+	return false
+}
+
 func (*NeverType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -543,6 +569,10 @@ func (*VoidType) IsResourceType() bool {
 }
 
 func (*VoidType) IsInvalidType() bool {
+	return false
+}
+
+func (*VoidType) IsStorable() bool {
 	return false
 }
 
@@ -593,6 +623,10 @@ func (*InvalidType) IsResourceType() bool {
 
 func (*InvalidType) IsInvalidType() bool {
 	return true
+}
+
+func (*InvalidType) IsStorable() bool {
+	return false
 }
 
 func (*InvalidType) TypeAnnotationState() TypeAnnotationState {
@@ -654,6 +688,10 @@ func (t *OptionalType) IsResourceType() bool {
 
 func (t *OptionalType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
+}
+
+func (t *OptionalType) IsStorable() bool {
+	return t.Type.IsStorable()
 }
 
 func (t *OptionalType) TypeAnnotationState() TypeAnnotationState {
@@ -718,6 +756,10 @@ func (t *GenericType) IsResourceType() bool {
 }
 
 func (t *GenericType) IsInvalidType() bool {
+	return false
+}
+
+func (t *GenericType) IsStorable() bool {
 	return false
 }
 
@@ -808,6 +850,10 @@ func (*BoolType) IsInvalidType() bool {
 	return false
 }
 
+func (*BoolType) IsStorable() bool {
+	return true
+}
+
 func (*BoolType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -855,6 +901,10 @@ func (*CharacterType) IsInvalidType() bool {
 	return false
 }
 
+func (*CharacterType) IsStorable() bool {
+	return true
+}
+
 func (*CharacterType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -899,6 +949,10 @@ func (*StringType) IsResourceType() bool {
 
 func (*StringType) IsInvalidType() bool {
 	return false
+}
+
+func (*StringType) IsStorable() bool {
+	return true
 }
 
 func (*StringType) TypeAnnotationState() TypeAnnotationState {
@@ -1024,6 +1078,10 @@ func (*NumberType) IsInvalidType() bool {
 	return false
 }
 
+func (*NumberType) IsStorable() bool {
+	return true
+}
+
 func (*NumberType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -1092,6 +1150,10 @@ func (*SignedNumberType) IsResourceType() bool {
 
 func (*SignedNumberType) IsInvalidType() bool {
 	return false
+}
+
+func (*SignedNumberType) IsStorable() bool {
+	return true
 }
 
 func (*SignedNumberType) TypeAnnotationState() TypeAnnotationState {
@@ -1179,6 +1241,10 @@ func (*IntegerType) IsInvalidType() bool {
 	return false
 }
 
+func (*IntegerType) IsStorable() bool {
+	return true
+}
+
 func (*IntegerType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -1247,6 +1313,10 @@ func (*SignedIntegerType) IsResourceType() bool {
 
 func (*SignedIntegerType) IsInvalidType() bool {
 	return false
+}
+
+func (*SignedIntegerType) IsStorable() bool {
+	return true
 }
 
 func (*SignedIntegerType) TypeAnnotationState() TypeAnnotationState {
@@ -1319,6 +1389,10 @@ func (*IntType) IsInvalidType() bool {
 	return false
 }
 
+func (*IntType) IsStorable() bool {
+	return true
+}
+
 func (*IntType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -1388,6 +1462,10 @@ func (*Int8Type) IsResourceType() bool {
 
 func (*Int8Type) IsInvalidType() bool {
 	return false
+}
+
+func (*Int8Type) IsStorable() bool {
+	return true
 }
 
 func (*Int8Type) TypeAnnotationState() TypeAnnotationState {
@@ -1463,6 +1541,10 @@ func (*Int16Type) IsInvalidType() bool {
 	return false
 }
 
+func (*Int16Type) IsStorable() bool {
+	return true
+}
+
 func (*Int16Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -1534,6 +1616,10 @@ func (*Int32Type) IsResourceType() bool {
 
 func (*Int32Type) IsInvalidType() bool {
 	return false
+}
+
+func (*Int32Type) IsStorable() bool {
+	return true
 }
 
 func (*Int32Type) TypeAnnotationState() TypeAnnotationState {
@@ -1609,6 +1695,10 @@ func (*Int64Type) IsInvalidType() bool {
 	return false
 }
 
+func (*Int64Type) IsStorable() bool {
+	return true
+}
+
 func (*Int64Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -1680,6 +1770,10 @@ func (*Int128Type) IsResourceType() bool {
 
 func (*Int128Type) IsInvalidType() bool {
 	return false
+}
+
+func (*Int128Type) IsStorable() bool {
+	return true
 }
 
 func (*Int128Type) TypeAnnotationState() TypeAnnotationState {
@@ -1767,6 +1861,10 @@ func (*Int256Type) IsInvalidType() bool {
 	return false
 }
 
+func (*Int256Type) IsStorable() bool {
+	return true
+}
+
 func (*Int256Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -1852,6 +1950,10 @@ func (*UIntType) IsInvalidType() bool {
 	return false
 }
 
+func (*UIntType) IsStorable() bool {
+	return true
+}
+
 func (*UIntType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -1923,6 +2025,10 @@ func (*UInt8Type) IsResourceType() bool {
 
 func (*UInt8Type) IsInvalidType() bool {
 	return false
+}
+
+func (*UInt8Type) IsStorable() bool {
+	return true
 }
 
 func (*UInt8Type) TypeAnnotationState() TypeAnnotationState {
@@ -1999,6 +2105,10 @@ func (*UInt16Type) IsInvalidType() bool {
 	return false
 }
 
+func (*UInt16Type) IsStorable() bool {
+	return true
+}
+
 func (*UInt16Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -2071,6 +2181,10 @@ func (*UInt32Type) IsResourceType() bool {
 
 func (*UInt32Type) IsInvalidType() bool {
 	return false
+}
+
+func (*UInt32Type) IsStorable() bool {
+	return true
 }
 
 func (*UInt32Type) TypeAnnotationState() TypeAnnotationState {
@@ -2147,6 +2261,10 @@ func (*UInt64Type) IsInvalidType() bool {
 	return false
 }
 
+func (*UInt64Type) IsStorable() bool {
+	return true
+}
+
 func (*UInt64Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -2219,6 +2337,10 @@ func (*UInt128Type) IsResourceType() bool {
 
 func (*UInt128Type) IsInvalidType() bool {
 	return false
+}
+
+func (*UInt128Type) IsStorable() bool {
+	return true
 }
 
 func (*UInt128Type) TypeAnnotationState() TypeAnnotationState {
@@ -2301,6 +2423,10 @@ func (*UInt256Type) IsInvalidType() bool {
 	return false
 }
 
+func (*UInt256Type) IsStorable() bool {
+	return true
+}
+
 func (*UInt256Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -2381,6 +2507,10 @@ func (*Word8Type) IsInvalidType() bool {
 	return false
 }
 
+func (*Word8Type) IsStorable() bool {
+	return true
+}
+
 func (*Word8Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -2453,6 +2583,10 @@ func (*Word16Type) IsResourceType() bool {
 
 func (*Word16Type) IsInvalidType() bool {
 	return false
+}
+
+func (*Word16Type) IsStorable() bool {
+	return true
 }
 
 func (*Word16Type) TypeAnnotationState() TypeAnnotationState {
@@ -2529,6 +2663,10 @@ func (*Word32Type) IsInvalidType() bool {
 	return false
 }
 
+func (*Word32Type) IsStorable() bool {
+	return true
+}
+
 func (*Word32Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -2601,6 +2739,10 @@ func (*Word64Type) IsResourceType() bool {
 
 func (*Word64Type) IsInvalidType() bool {
 	return false
+}
+
+func (*Word64Type) IsStorable() bool {
+	return true
 }
 
 func (*Word64Type) TypeAnnotationState() TypeAnnotationState {
@@ -2676,6 +2818,10 @@ func (*FixedPointType) IsInvalidType() bool {
 	return false
 }
 
+func (*FixedPointType) IsStorable() bool {
+	return true
+}
+
 func (*FixedPointType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -2744,6 +2890,10 @@ func (*SignedFixedPointType) IsResourceType() bool {
 
 func (*SignedFixedPointType) IsInvalidType() bool {
 	return false
+}
+
+func (*SignedFixedPointType) IsStorable() bool {
+	return true
 }
 
 func (*SignedFixedPointType) TypeAnnotationState() TypeAnnotationState {
@@ -2818,6 +2968,10 @@ func (*Fix64Type) IsResourceType() bool {
 
 func (*Fix64Type) IsInvalidType() bool {
 	return false
+}
+
+func (*Fix64Type) IsStorable() bool {
+	return true
 }
 
 func (*Fix64Type) TypeAnnotationState() TypeAnnotationState {
@@ -2917,6 +3071,10 @@ func (*UFix64Type) IsResourceType() bool {
 
 func (*UFix64Type) IsInvalidType() bool {
 	return false
+}
+
+func (*UFix64Type) IsStorable() bool {
+	return true
 }
 
 func (*UFix64Type) TypeAnnotationState() TypeAnnotationState {
@@ -3247,6 +3405,10 @@ func (t *VariableSizedType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
 }
 
+func (t *VariableSizedType) IsStorable() bool {
+	return t.Type.IsStorable()
+}
+
 func (t *VariableSizedType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
@@ -3338,6 +3500,10 @@ func (t *ConstantSizedType) IsResourceType() bool {
 
 func (t *ConstantSizedType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
+}
+
+func (t *ConstantSizedType) IsStorable() bool {
+	return t.Type.IsStorable()
 }
 
 func (t *ConstantSizedType) TypeAnnotationState() TypeAnnotationState {
@@ -3726,6 +3892,11 @@ func (t *FunctionType) IsInvalidType() bool {
 	}
 
 	return t.ReturnTypeAnnotation.Type.IsInvalidType()
+}
+
+func (t *FunctionType) IsStorable() bool {
+	// Function is not allowed to be a field of a contract to be stored.
+	return false
 }
 
 func (t *FunctionType) TypeAnnotationState() TypeAnnotationState {
@@ -4151,6 +4322,20 @@ func (*CompositeType) IsInvalidType() bool {
 	return false
 }
 
+func (t *CompositeType) IsStorable() bool {
+	// if there is unstorable field in the nested types,
+	// then the composite type is not storable.
+	for _, ty := range t.nestedTypes {
+		if !ty.IsStorable() {
+			return false
+		}
+	}
+
+	// all fields in the nested types are storable, so
+	// this composite type is storable
+	return true
+}
+
 func (*CompositeType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -4232,6 +4417,10 @@ func (*AuthAccountType) IsResourceType() bool {
 
 func (*AuthAccountType) IsInvalidType() bool {
 	return false
+}
+
+func (*AuthAccountType) IsStorable() bool {
+	return true
 }
 
 func (*AuthAccountType) TypeAnnotationState() TypeAnnotationState {
@@ -4579,6 +4768,10 @@ func (*PublicAccountType) IsInvalidType() bool {
 	return false
 }
 
+func (*PublicAccountType) IsStorable() bool {
+	return true
+}
+
 func (*PublicAccountType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -4733,6 +4926,10 @@ func (t *InterfaceType) IsInvalidType() bool {
 	return false
 }
 
+func (t *InterfaceType) IsStorable() bool {
+	return false
+}
+
 func (*InterfaceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -4806,6 +5003,11 @@ func (t *DictionaryType) IsResourceType() bool {
 func (t *DictionaryType) IsInvalidType() bool {
 	return t.KeyType.IsInvalidType() ||
 		t.ValueType.IsInvalidType()
+}
+
+func (t *DictionaryType) IsStorable() bool {
+	return t.KeyType.IsStorable() &&
+		t.ValueType.IsStorable()
 }
 
 func (t *DictionaryType) TypeAnnotationState() TypeAnnotationState {
@@ -5031,6 +5233,10 @@ func (t *ReferenceType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
 }
 
+func (t *ReferenceType) IsStorable() bool {
+	return false
+}
+
 func (*ReferenceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -5118,6 +5324,10 @@ func (*AddressType) IsResourceType() bool {
 
 func (*AddressType) IsInvalidType() bool {
 	return false
+}
+
+func (*AddressType) IsStorable() bool {
+	return true
 }
 
 func (*AddressType) TypeAnnotationState() TypeAnnotationState {
@@ -5838,6 +6048,10 @@ func (*TransactionType) IsInvalidType() bool {
 	return false
 }
 
+func (*TransactionType) IsStorable() bool {
+	return false
+}
+
 func (*TransactionType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -5995,6 +6209,10 @@ func (t *RestrictedType) IsInvalidType() bool {
 	return false
 }
 
+func (t *RestrictedType) IsStorable() bool {
+	return false
+}
+
 func (*RestrictedType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -6091,6 +6309,10 @@ func (*PathType) IsInvalidType() bool {
 	return false
 }
 
+func (*PathType) IsStorable() bool {
+	return false
+}
+
 func (*PathType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -6135,6 +6357,10 @@ func (*CapabilityType) IsResourceType() bool {
 }
 
 func (*CapabilityType) IsInvalidType() bool {
+	return false
+}
+
+func (*CapabilityType) IsStorable() bool {
 	return false
 }
 

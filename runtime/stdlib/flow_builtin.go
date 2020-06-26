@@ -280,6 +280,10 @@ func (*BlockType) IsInvalidType() bool {
 	return false
 }
 
+func (*BlockType) IsStorable() bool {
+	return false
+}
+
 func (*BlockType) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
