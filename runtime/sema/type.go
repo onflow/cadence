@@ -4929,7 +4929,19 @@ func (t *InterfaceType) IsInvalidType() bool {
 }
 
 func (t *InterfaceType) IsStorable() bool {
-	return false
+	// all nested types has to be storable
+	for _, member := range t.Members {
+		if member.DeclarationKind != common.DeclarationKindField {
+			continue
+		}
+
+		// if interface has field, and field is not storable then
+		// the interface is not storable
+		if !member.TypeAnnotation.Type.IsStorable() {
+			return false
+		}
+	}
+	return true
 }
 
 func (*InterfaceType) TypeAnnotationState() TypeAnnotationState {
@@ -6214,7 +6226,13 @@ func (t *RestrictedType) IsInvalidType() bool {
 }
 
 func (t *RestrictedType) IsStorable() bool {
-	return false
+	for _, restriction := range t.Restrictions {
+		if !restriction.IsStorable() {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (*RestrictedType) TypeAnnotationState() TypeAnnotationState {

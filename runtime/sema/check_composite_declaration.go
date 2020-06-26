@@ -576,6 +576,17 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 		// check if all members' type are allowed to be the fields
 		for _, member := range members {
+			// only check fields
+			if member.DeclarationKind != common.DeclarationKindField {
+				continue
+			}
+
+			// if this field's type has failed previous check, then
+			// skip the check on this field.
+			if member.TypeAnnotation.Type.IsInvalidType() {
+				continue
+			}
+
 			storable := member.TypeAnnotation.Type.IsStorable()
 
 			// if the type is allowed to be stored, then continue checking

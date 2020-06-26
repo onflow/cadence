@@ -27,6 +27,8 @@ import (
 )
 
 func TestCompositeTypeFields(t *testing.T) {
+	t.Parallel()
+
 	cases := map[string]struct {
 		code   string
 		result bool
@@ -54,6 +56,10 @@ func TestCompositeTypeFields(t *testing.T) {
 				self.fn = fun(): Int {
 					return 1
 				};
+			}
+
+			pub fun test(): Int {
+					return 2
 			}
 		}
 			`,
@@ -146,6 +152,25 @@ func TestCompositeTypeFields(t *testing.T) {
 
 		"nested field for resource is not storable": {`
 		contract S {
+			let r : @R
+
+			resource R {
+				// function field in nested composite type is not allowed
+				pub var fn: (():Int)
+
+				init() {
+					self.fn = fun(): Int {
+						return 1
+					}
+				}
+			}
+		}
+			`,
+			false,
+		},
+
+		"resource interface field is storable": {`
+		resource S {
 			let r : @R
 
 			resource R {
