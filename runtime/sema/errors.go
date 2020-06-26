@@ -707,7 +707,12 @@ func (e *FieldUninitializedError) EndPosition() ast.Position {
 	return e.Pos.Shifted(length - 1)
 }
 
-// FieldTypeNotStorableError
+// FieldTypeNotStorableError represents errors that tries to define
+// a field on a composite type (e.g. Contract) that is not storable.
+// A field has to be of a type that is storable so that the storage
+// layer knows how to store the field.
+// e.g. Int is a storable field for Contract, whereas function is not a
+// storable field.
 
 type FieldTypeNotStorableError struct {
 	// Field's name
