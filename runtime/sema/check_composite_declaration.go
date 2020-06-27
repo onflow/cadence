@@ -576,7 +576,13 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 		// check if all members' type are allowed to be the fields
 		for _, member := range members {
-			// only check fields
+			// skip checking predeclared fields, such as `account` for Contract,
+			// and `owner` for Resource
+			if member.Predeclared {
+				continue
+			}
+
+			// only check fields. method functions is allowed
 			if member.DeclarationKind != common.DeclarationKindField {
 				continue
 			}
@@ -595,6 +601,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 				continue
 			}
 
+			// otherwise report error
 			err := &FieldTypeNotStorableError{
 				Name: member.Identifier.Identifier,
 				Type: member.TypeAnnotation.Type,

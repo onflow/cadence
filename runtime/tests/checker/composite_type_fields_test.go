@@ -19,6 +19,7 @@
 package checker
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/onflow/cadence/runtime/cmd"
@@ -90,6 +91,15 @@ func TestCompositeTypeFields(t *testing.T) {
 		}
 			`,
 			true,
+		},
+
+		"PublicAccount is a not storable field": {`
+		struct S {
+			var p: PublicAccount
+
+		}
+			`,
+			false,
 		},
 
 		"{Int: function} is a storable field": {`
@@ -169,20 +179,23 @@ func TestCompositeTypeFields(t *testing.T) {
 			false,
 		},
 
-		"resource interface field is storable": {`
-		resource S {
-			let r : @R
+		"resource interface is storable if all fields are storable": {`
+		resource interface RI {
+			var r: Int
+			var s: String
+		}
+			`,
+			true,
+		},
 
-			resource R {
-				// function field in nested composite type is not allowed
-				pub var fn: (():Int)
+		"resource interface is not storable if one field is not storable": {`
+		resource interface RI {
+			var r: Int
+			var p: PublicAccount // PublicAccount is not a storable field
+		}
 
-				init() {
-					self.fn = fun(): Int {
-						return 1
-					}
-				}
-			}
+		resource R {
+			var m : @{String: {RI}}
 		}
 			`,
 			false,
@@ -193,13 +206,15 @@ func TestCompositeTypeFields(t *testing.T) {
 		t.Run(caseName, func(t *testing.T) {
 			_, err := ParseAndCheck(t, testcase.code)
 
+			errmsg := fmt.Sprintf("failed test case: %v\n", testcase.code)
 			if testcase.result {
 				if err != nil {
 					cmd.PrettyPrintError(err, "", map[string]string{"": testcase.code})
 				}
-				require.NoError(t, err)
+				// print the failed the cadence code if test case was broken
+				require.NoError(t, err, errmsg)
 			} else {
-				require.Error(t, err)
+				require.Error(t, err, errmsg)
 			}
 		})
 	}
@@ -207,6 +222,8 @@ func TestCompositeTypeFields(t *testing.T) {
 	t.Run("check error message", func(t *testing.T) {
 		testcase := cases["function is not a storable field"]
 		_, err := ParseAndCheck(t, testcase.code)
+		require.Error(t, err)
+
 		checkerError, _ := err.(*sema.CheckerError)
 		require.Equal(t, "field fn is not storable, type: ((): Int)",
 			checkerError.ChildErrors()[0].Error())
