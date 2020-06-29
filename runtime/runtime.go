@@ -31,7 +31,8 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	runtimeErrors "github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser"
+	parser1 "github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/trampoline"
@@ -55,6 +56,7 @@ type Runtime interface {
 	//
 	// This function returns an error if the program contains any syntax or semantic errors.
 	ParseAndCheckProgram(code []byte, runtimeInterface Interface, location Location) error
+	SetUseOldParser(useOldParser bool)
 }
 
 var typeDeclarations = append(
@@ -108,11 +110,29 @@ func reportMetric(
 const contractKey = "contract"
 
 // interpreterRuntime is a interpreter-based version of the Flow runtime.
-type interpreterRuntime struct{}
+type interpreterRuntime struct {
+	useOldParser bool
+}
+
+type Option func(Runtime)
 
 // NewInterpreterRuntime returns a interpreter-based version of the Flow runtime.
-func NewInterpreterRuntime() Runtime {
-	return &interpreterRuntime{}
+func NewInterpreterRuntime(options ...Option) Runtime {
+	runtime := &interpreterRuntime{}
+	for _, option := range options {
+		option(runtime)
+	}
+	return runtime
+}
+
+func WithUseOldParser(useOldParser bool) Option {
+	return func(runtime Runtime) {
+		runtime.SetUseOldParser(useOldParser)
+	}
+}
+
+func (r *interpreterRuntime) SetUseOldParser(useOldParser bool) {
+	r.useOldParser = useOldParser
 }
 
 func (r *interpreterRuntime) ExecuteScript(
@@ -566,8 +586,8 @@ func (r *interpreterRuntime) newInterpreter(
 				return r.loadContract(compositeType, runtimeStorage)
 			},
 		),
-		interpreter.WithImportProgramHandler(
-			r.importProgramHandler(runtimeInterface),
+		interpreter.WithImportLocationHandler(
+			r.importLocationHandler(runtimeInterface),
 		),
 	}
 
@@ -585,10 +605,10 @@ func (r *interpreterRuntime) newInterpreter(
 	)
 }
 
-func (r *interpreterRuntime) importProgramHandler(runtimeInterface Interface) interpreter.ImportProgramHandlerFunc {
+func (r *interpreterRuntime) importLocationHandler(runtimeInterface Interface) interpreter.ImportLocationHandlerFunc {
 	importResolver := r.importResolver(runtimeInterface)
 
-	return func(inter *interpreter.Interpreter, location ast.Location) *ast.Program {
+	return func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
 		program, err := importResolver(location)
 		if err != nil {
 			panic(err)
@@ -599,7 +619,7 @@ func (r *interpreterRuntime) importProgramHandler(runtimeInterface Interface) in
 			panic(err)
 		}
 
-		return program
+		return interpreter.ProgramImport{Program: program}
 	}
 }
 
@@ -764,10 +784,19 @@ func (r *interpreterRuntime) parse(
 	program *ast.Program,
 	err error,
 ) {
+
+	parse := func() {
+		program, err = parser2.ParseProgram(string(script))
+	}
+
+	if r.useOldParser {
+		parse = func() {
+			program, _, err = parser1.ParseProgram(string(script))
+		}
+	}
+
 	reportMetric(
-		func() {
-			program, _, err = parser.ParseProgram(string(script))
-		},
+		parse,
 		runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
 			metrics.ProgramParsed(location, duration)
@@ -1386,10 +1415,9 @@ func (v BlockValue) GetMember(_ *interpreter.Interpreter, _ interpreter.Location
 
 	case "timestamp":
 		return v.Timestamp
-
-	default:
-		panic(runtimeErrors.NewUnreachableError())
 	}
+
+	return nil
 }
 
 func (v BlockValue) SetMember(_ *interpreter.Interpreter, _ interpreter.LocationRange, _ string, _ interpreter.Value) {

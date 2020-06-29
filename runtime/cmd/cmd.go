@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
@@ -41,7 +41,7 @@ func PrettyPrintError(err error, filename string, codes map[string]string) {
 		i++
 	}
 
-	if parserError, ok := err.(parser.Error); ok {
+	if parserError, ok := err.(parser2.Error); ok {
 		for _, err := range parserError.Errors {
 			printErr(err, filename)
 		}
@@ -96,7 +96,7 @@ func PrepareChecker(code string, dummyFilename string) (*sema.Checker, func(erro
 
 	must := mustClosure(dummyFilename, codes)
 
-	program, _, err := parser.ParseProgram(code)
+	program, err := parser2.ParseProgram(code)
 	codes[dummyFilename] = code
 	must(err)
 
@@ -104,7 +104,7 @@ func PrepareChecker(code string, dummyFilename string) (*sema.Checker, func(erro
 		switch location := location.(type) {
 		case ast.StringLocation:
 			filename := string(location)
-			imported, _, code, err := parser.ParseProgramFromFile(filename)
+			imported, code, err := parser2.ParseProgramFromFile(filename)
 			codes[filename] = code
 			must(err)
 			return imported, nil
@@ -139,10 +139,7 @@ func standardLibraryFunctions() stdlib.StandardLibraryFunctions {
 
 func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checker, func(error)) {
 
-	codeBytes, err := ioutil.ReadFile(filename)
-
-	checker, must := PrepareChecker(string(codeBytes), filename)
-	must(err)
+	checker, must := PrepareCheckerFromFile(filename)
 
 	values := standardLibraryFunctions().ToValues()
 

@@ -20,7 +20,6 @@ package ast
 
 import (
 	"encoding/hex"
-	"fmt"
 	"strings"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -98,20 +97,25 @@ func LocationsMatch(first, second Location) bool {
 func LocationFromTypeID(typeID string) Location {
 	pieces := strings.Split(typeID, ".")
 
-	switch len(pieces) {
-	case 3:
-		if pieces[0] == AddressPrefix {
-			address, err := hex.DecodeString(pieces[1])
-			if err != nil {
-				return nil
-			}
+	if len(pieces) < 3 {
+		return nil
+	}
 
-			return AddressLocation(address)
+	switch pieces[0] {
+	case IdentifierLocationPrefix:
+		return IdentifierLocation(pieces[1])
+
+	case StringLocationPrefix:
+		return StringLocation(pieces[1])
+
+	case AddressLocationPrefix:
+		address, err := hex.DecodeString(pieces[1])
+		if err != nil {
+			return nil
 		}
 
-		return nil
-	case 2:
-		return StringLocation(pieces[0])
+		return AddressLocation(address)
+
 	default:
 		return nil
 	}
@@ -121,17 +125,33 @@ func LocationFromTypeID(typeID string) Location {
 
 type LocationID string
 
+func NewLocationID(parts ...string) LocationID {
+	return LocationID(strings.Join(parts, "."))
+}
+
+// IdentifierLocation
+
+const IdentifierLocationPrefix = "I"
+
+type IdentifierLocation string
+
+func (l IdentifierLocation) ID() LocationID {
+	return NewLocationID(IdentifierLocationPrefix, string(l))
+}
+
 // StringLocation
+
+const StringLocationPrefix = "S"
 
 type StringLocation string
 
 func (l StringLocation) ID() LocationID {
-	return LocationID(l)
+	return NewLocationID(StringLocationPrefix, string(l))
 }
 
 // AddressLocation
 
-const AddressPrefix = "A"
+const AddressLocationPrefix = "A"
 
 type AddressLocation []byte
 
@@ -140,11 +160,7 @@ func (l AddressLocation) String() string {
 }
 
 func (l AddressLocation) ID() LocationID {
-	return LocationID(fmt.Sprintf(
-		"%s.%s",
-		AddressPrefix,
-		l.ToAddress().Hex(),
-	))
+	return NewLocationID(AddressLocationPrefix, l.ToAddress().Hex())
 }
 
 func (l AddressLocation) ToAddress() common.Address {

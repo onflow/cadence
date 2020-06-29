@@ -21,28 +21,45 @@ package parser2
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
+// lowestBindingPower is the lowest binding power.
+// The binding power controls operator precedence:
+// the higher the value, the tighter a token binds to the tokens that follow.
 const lowestBindingPower = 0
 
 type parser struct {
-	tokens         chan lexer.Token
-	current        lexer.Token
-	errors         []error
-	buffering      bool
+	// a stream of tokens from the lexer
+	tokens chan lexer.Token
+	// the current token being parsed.
+	current lexer.Token
+	// the parsing errors encountered during parsing
+	errors []error
+	// a flag indicating whether the next token will be read from buffered tokens or lexer
+	buffering bool
+	// buffered tokens read from the lexer
 	bufferedTokens []lexer.Token
-	bufferPos      int
+	// the index of the next buffered token to read from
+	bufferPos int
+	// the parsing errors encountered during buffering
 	bufferedErrors []error
 }
 
+// Parse creates a lexer to scan the given input string,
+// and uses the given `parse` function to parse tokens into a result.
+//
+// It can be composed with different parse functions to parse the input string into different results.
+// See "ParseExpression", "ParseStatements" as examples.
 func Parse(input string, parse func(*parser) interface{}) (result interface{}, errors []error) {
 	ctx, cancelLexer := context.WithCancel(context.Background())
 
 	defer cancelLexer()
 
+	// create a lexer, which turns the input string into tokens
 	tokens := lexer.Lex(ctx, input)
 	p := &parser{tokens: tokens}
 
@@ -50,7 +67,7 @@ func Parse(input string, parse func(*parser) interface{}) (result interface{}, e
 		if r := recover(); r != nil {
 			err, ok := r.(error)
 			if !ok {
-				err = fmt.Errorf("lexer: %v", r)
+				err = fmt.Errorf("parser: %v", r)
 			}
 
 			p.report(err)
@@ -70,22 +87,41 @@ func Parse(input string, parse func(*parser) interface{}) (result interface{}, e
 	result = parse(p)
 
 	if !p.current.Is(lexer.TokenEOF) {
-		p.report(fmt.Errorf("unexpected token: %v", p.current))
+		p.report(fmt.Errorf("unexpected token: %s", p.current.Type))
 	}
 
 	return result, p.errors
 }
 
-func (p *parser) report(err ...error) {
-	if p.buffering {
-		p.bufferedErrors = append(p.bufferedErrors, err...)
-	} else {
-		p.errors = append(p.errors, err...)
+func (p *parser) report(errs ...error) {
+	for _, err := range errs {
+
+		// If the reported error is not yet a parse error,
+		// create a `SyntaxError` at the current position
+
+		var parseError ParseError
+		var ok bool
+		parseError, ok = err.(ParseError)
+		if !ok {
+			parseError = &SyntaxError{
+				Pos:     p.current.StartPos,
+				Message: err.Error(),
+			}
+		}
+
+		if p.buffering {
+			p.bufferedErrors = append(p.bufferedErrors, parseError)
+		} else {
+			p.errors = append(p.errors, parseError)
+		}
 	}
 }
 
 const bufferPosTrimThreshold = 128
 
+// maybeTrimBuffer checks whether the index of token we've read from buffered tokens
+// has reached a threshold, in which case the buffered tokens will be trimmed and bufferPos
+// will be reset.
 func (p *parser) maybeTrimBuffer() {
 	if p.bufferPos < bufferPosTrimThreshold {
 		return
@@ -94,34 +130,71 @@ func (p *parser) maybeTrimBuffer() {
 	p.bufferPos = 0
 }
 
+// next reads the next token and marks it as the "current" token.
+// The next token could either be read from the lexer or from
+// the buffer.
+// Tokens are buffered when syntax ambiguity is involved.
 func (p *parser) next() {
+	// nextFromLexer reads the next token from the lexer.
+	nextFromLexer := func() lexer.Token {
+		var ok bool
+		token, ok := <-p.tokens
+		if !ok {
+			// Channel closed, return EOF token.
+			token = lexer.Token{Type: lexer.TokenEOF}
+		}
+		return token
+	}
+
+	// nextFromLexer reads the next token from the buffer tokens, assuming there are buffered tokens.
+	nextFromBuffer := func() lexer.Token {
+		token := p.bufferedTokens[p.bufferPos]
+		p.bufferPos++
+		p.maybeTrimBuffer()
+		return token
+	}
+
 	for {
 		var token lexer.Token
 
-		if !p.buffering && p.bufferPos < len(p.bufferedTokens) {
-			token = p.bufferedTokens[p.bufferPos]
-			p.bufferPos++
-			p.maybeTrimBuffer()
-		} else {
-			var ok bool
-			token, ok = <-p.tokens
-			if !ok {
-				// Channel closed, return EOF token.
-				token = lexer.Token{Type: lexer.TokenEOF}
-			}
-		}
-
+		// When the syntax has ambiguity, we need to process a series of tokens
+		// multiple times. However, a token can only be consumed once from the lexer's
+		// tokens channel. Therefore, in some circumstances, we need to buffer the tokens
+		// from the lexer.
+		//
+		// Buffering tokens allows us to potentially "replay" the buffered tokens later,
+		// for example to deal with syntax ambiguity
 		if p.buffering {
+			// if we need to buffer the next token
+			// then read the token from the lexer and buffer it.
+			token = nextFromLexer()
 			p.bufferedTokens = append(p.bufferedTokens, token)
+		} else if p.bufferPos < len(p.bufferedTokens) {
+			// if we don't need to buffer the next token and there are tokens buffered before,
+			// then read the token from the buffer.
+			token = nextFromBuffer()
+		} else {
+			// else no need to buffer, and there is no buffered token,
+			// then read the next token from the lexer.
+			token = nextFromLexer()
 		}
 
 		if token.Is(lexer.TokenError) {
 			// Report error token as error, skip.
-			p.report(token.Value.(error))
+			err := token.Value.(error)
+			parseError, ok := err.(ParseError)
+			if !ok {
+				parseError = &SyntaxError{
+					Pos:     token.StartPos,
+					Message: err.Error(),
+				}
+			}
+			p.report(parseError)
 			continue
 		}
 
 		p.current = token
+
 		return
 	}
 }
@@ -191,7 +264,13 @@ func (p *parser) skipSpaceAndComments(skipNewlines bool) (containsNewline bool) 
 
 func (p *parser) startBuffering() {
 	p.buffering = true
-	p.bufferedTokens = append(p.bufferedTokens, p.current)
+ 
+ 	// starting buffering should only buffer the current token if there’s nothing 
+ 	// to be read from the buffer, otherwise, the current token would be
+ 	// buffered twice
+	if p.bufferPos >= len(p.bufferedTokens) {
+		p.bufferedTokens = append(p.bufferedTokens, p.current)
+	}
 }
 
 func mustIdentifier(p *parser) ast.Identifier {
@@ -277,4 +356,20 @@ func ParseProgram(input string) (program *ast.Program, err error) {
 		Declarations: res.([]ast.Declaration),
 	}
 	return
+}
+
+func ParseProgramFromFile(filename string) (program *ast.Program, code string, err error) {
+	var data []byte
+	data, err = ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, "", err
+	}
+
+	code = string(data)
+
+	program, err = ParseProgram(code)
+	if err != nil {
+		return nil, code, err
+	}
+	return program, code, nil
 }

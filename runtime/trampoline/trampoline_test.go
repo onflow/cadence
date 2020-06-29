@@ -211,3 +211,41 @@ func TestAckermann(t *testing.T) {
 
 	assert.Equal(t, Run(ackermann(3, 7)), 1021)
 }
+
+func TestDoneResume(t *testing.T) {
+
+	add1 := func(v interface{}) interface{} {
+		return v.(int) + 1
+	}
+
+	// Resume a Done trampline will return the result immediately
+	assert.Equal(t, 3, Done{3}.Resume())
+
+	// getting result by running a trampline
+	assert.Equal(t, 3, Run(Done{3}))
+
+	// Run a trampline that starts from a Done and maps over a function
+	assert.Equal(t, 4, Run(Done{3}.Map(add1)))
+
+	// Resume twices to get the result from a trampline that maps a function over a Done value
+	assert.Equal(t, 4, Done{3}.
+		Map(add1).
+		Resume().(func() Trampoline)().
+		Resume())
+
+	// Resume one more time if mapped over a function one more time
+	assert.Equal(t, 5, Done{3}.
+		Map(add1).
+		Map(add1).
+		Resume().(func() Trampoline)().
+		Resume().(func() Trampoline)().
+		Resume())
+
+	// Map-Resume-Map-Resume returns the same result as Map-Map-Resume-Resume
+	assert.Equal(t, 5, Done{3}.
+		Map(add1).
+		Resume().(func() Trampoline)().
+		Map(add1).
+		Resume().(func() Trampoline)().
+		Resume())
+}

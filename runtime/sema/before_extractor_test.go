@@ -25,19 +25,18 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/parser2"
 )
 
 func TestBeforeExtractor(t *testing.T) {
 
 	t.Parallel()
 
-	expression, inputIsComplete, err := parser.ParseExpression(`
+	expression, errs := parser2.ParseExpression(`
         before(x + before(y)) + z
     `)
 
-	require.True(t, inputIsComplete)
-	require.NoError(t, err)
+	require.Empty(t, errs)
 
 	extractor := NewBeforeExtractor(nil)
 

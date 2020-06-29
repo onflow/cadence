@@ -361,13 +361,9 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 	}
 
 	setIdentifierLocation := func(identifier ast.Identifier) {
-		// TODO: create IdentifierLocation once https://github.com/onflow/cadence/pull/55 is merged
-		//location = ast.IdentifierLocation(identifier.Identifier)
+		location = ast.IdentifierLocation(identifier.Identifier)
 		locationPos = identifier.Pos
 		endPos = identifier.EndPosition()
-
-		// TODO: remove
-		panic(fmt.Errorf("identifier imports are not supported yet"))
 	}
 
 	parseLocation := func() {
@@ -375,11 +371,10 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 		case lexer.TokenString, lexer.TokenHexadecimalLiteral:
 			parseStringOrAddressLocation()
 
-		// TODO: enable once https://github.com/onflow/cadence/pull/55 is merged
-		//case lexer.TokenIdentifier:
-		//	identifier := tokenToIdentifier(p.current)
-		//	setIdentifierLocation(identifier)
-		//  p.next()
+		case lexer.TokenIdentifier:
+			identifier := tokenToIdentifier(p.current)
+			setIdentifierLocation(identifier)
+			p.next()
 
 		default:
 			panic(fmt.Errorf(
@@ -470,15 +465,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			parseLocation()
 
 		} else {
-			// TODO: enable once https://github.com/onflow/cadence/pull/55 is merged
-			//setIdentifierLocation(identifier)
-
-			// TODO: remove once https://github.com/onflow/cadence/pull/55 is merged
-			panic(fmt.Errorf(
-				"unexpected identifier in import declaration: got %q, expected %q",
-				p.current.Value,
-				keywordFrom,
-			))
+			setIdentifierLocation(identifier)
 		}
 	}
 

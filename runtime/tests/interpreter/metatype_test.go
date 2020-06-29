@@ -82,3 +82,86 @@ func TestInterpretMetaType(t *testing.T) {
 		)
 	})
 }
+
+func TestInterpretIsInstance(t *testing.T) {
+
+	t.Parallel()
+
+	cases := map[string]struct {
+		code   string
+		result bool
+	}{
+		"string is an instance of string": {
+			`
+          let stringType = Type<String>()
+          let result = "abc".isInstance(stringType)
+			`,
+			true,
+		},
+		"int is an instance of int": {
+			`
+          let intType = Type<Int>()
+          let result = (1).isInstance(intType)
+			`,
+			true,
+		},
+		"resource is an instance of resource": {
+			`
+          resource R {}
+
+          let r <- create R()
+          let rType = Type<@R>()
+          let result = r.isInstance(rType)
+			`,
+			true,
+		},
+		"int is not an instance of string": {
+			`
+          let stringType = Type<String>()
+          let result = (1).isInstance(stringType)
+			`,
+			false,
+		},
+		"int is not an instance of resource": {
+			`
+          resource R {}
+
+          let rType = Type<@R>()
+          let result = (1).isInstance(rType)
+			`,
+			false,
+		},
+		"resource is not an instance of string": {
+			`
+          resource R {}
+
+          let r <- create R()
+          let stringType = Type<String>()
+          let result = (r).isInstance(stringType)
+			`,
+			false,
+		},
+		"resource R is not an instance of resource S": {
+			`
+          resource R {}
+          resource S {}
+
+          let r <- create R()
+          let sType = Type<@S>()
+          let result = (r).isInstance(sType)
+			`,
+			false,
+		},
+	}
+
+	for name, cases := range cases {
+		t.Run(name, func(t *testing.T) {
+			inter := parseCheckAndInterpret(t, cases.code)
+
+			assert.Equal(t,
+				interpreter.BoolValue(cases.result),
+				inter.Globals["result"].Value,
+			)
+		})
+	}
+}

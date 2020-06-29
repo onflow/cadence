@@ -574,7 +574,41 @@ func TestParseAssignmentStatement(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("copy", func(t *testing.T) {
+	t.Run("copy, no space", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseStatements("x=1")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.AssignmentStatement{
+					Target: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "x",
+							Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					Transfer: &ast.Transfer{
+						Operation: ast.TransferOperationCopy,
+						Pos:       ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+					Value: &ast.IntegerExpression{
+						Value: big.NewInt(1),
+						Base:  10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+							EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("copy, spaces", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -866,6 +900,57 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 							},
 						},
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+			},
+			result,
+		)
+	})
+}
+
+func TestParseStatements(t *testing.T) {
+
+	t.Run("binary expression with less operator", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseStatements("a + b < c\nd")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ExpressionStatement{
+					Expression: &ast.BinaryExpression{
+						Operation: ast.OperationLess,
+						Left: &ast.BinaryExpression{
+							Operation: ast.OperationPlus,
+							Left: &ast.IdentifierExpression{
+								Identifier: ast.Identifier{
+									Identifier: "a",
+									Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+								},
+							},
+							Right: &ast.IdentifierExpression{
+								Identifier: ast.Identifier{
+									Identifier: "b",
+									Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+								},
+							},
+						},
+						Right: &ast.IdentifierExpression{
+							Identifier: ast.Identifier{
+								Identifier: "c",
+								Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+							},
+						},
+					},
+				},
+				&ast.ExpressionStatement{
+					Expression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "d",
+							Pos:        ast.Position{Line: 2, Column: 0, Offset: 10},
+						},
 					},
 				},
 			},

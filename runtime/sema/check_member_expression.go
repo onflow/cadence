@@ -56,8 +56,8 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 
 				checker.report(
 					&UninitializedFieldAccessError{
-						Name: field.Identifier.Identifier,
-						Pos:  field.Identifier.Pos,
+						Name: expression.Identifier.Identifier,
+						Pos:  expression.Identifier.Pos,
 					},
 				)
 			}
@@ -129,6 +129,9 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (member *M
 		if ty, ok := expressionType.(MemberAccessibleType); ok && ty.CanHaveMembers() {
 			targetRange := ast.NewRangeFromPositioned(expression.Expression)
 			member = ty.GetMember(identifier, targetRange, checker.report)
+		}
+		if member == nil {
+			member = getBuiltinMember(identifier, expressionType)
 		}
 	}
 
@@ -231,6 +234,22 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (member *M
 		}
 
 	return member, isOptional
+}
+
+// getBuiltinMember tries to get the built-in member with the given identifier.
+// For example, the function `isInstance` is a built-in which is defined for all types
+func getBuiltinMember(identifier string, ty Type) *Member {
+	newFunction := func(functionType *FunctionType) *Member {
+		return NewPublicFunctionMember(ty, identifier, functionType)
+	}
+
+	switch identifier {
+	case IsInstanceFunctionName:
+		return newFunction(isInstanceFunctionType)
+
+	default:
+		return nil
+	}
 }
 
 // isReadableMember returns true if the given member can be read from

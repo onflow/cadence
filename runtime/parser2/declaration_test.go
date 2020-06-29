@@ -19,8 +19,6 @@
 package parser2
 
 import (
-	"errors"
-	"fmt"
 	"math/big"
 	"testing"
 
@@ -772,9 +770,12 @@ func TestParseAccess(t *testing.T) {
 		t.Parallel()
 
 		result, errs := parse("pub ( ")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				fmt.Errorf("expected keyword \"set\", got EOF"),
+				&SyntaxError{
+					Message: "expected keyword \"set\", got EOF",
+					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
 			},
 			errs,
 		)
@@ -790,9 +791,12 @@ func TestParseAccess(t *testing.T) {
 		t.Parallel()
 
 		result, errs := parse("pub ( set ")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				fmt.Errorf("expected token ')'"),
+				&SyntaxError{
+					Message: "expected token ')'",
+					Pos:     ast.Position{Offset: 10, Line: 1, Column: 10},
+				},
 			},
 			errs,
 		)
@@ -808,9 +812,12 @@ func TestParseAccess(t *testing.T) {
 		t.Parallel()
 
 		result, errs := parse("pub ( foo )")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				fmt.Errorf("expected keyword \"set\", got \"foo\""),
+				&SyntaxError{
+					Message: "expected keyword \"set\", got \"foo\"",
+					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
 			},
 			errs,
 		)
@@ -891,9 +898,12 @@ func TestParseAccess(t *testing.T) {
 		t.Parallel()
 
 		result, errs := parse("access ( ")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				fmt.Errorf("expected keyword \"all\", \"account\", \"contract\", or \"self\", got EOF"),
+				&SyntaxError{
+					Message: "expected keyword \"all\", \"account\", \"contract\", or \"self\", got EOF",
+					Pos:     ast.Position{Offset: 9, Line: 1, Column: 9},
+				},
 			},
 			errs,
 		)
@@ -909,9 +919,12 @@ func TestParseAccess(t *testing.T) {
 		t.Parallel()
 
 		result, errs := parse("access ( self ")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				fmt.Errorf("expected token ')'"),
+				&SyntaxError{
+					Message: "expected token ')'",
+					Pos:     ast.Position{Offset: 14, Line: 1, Column: 14},
+				},
 			},
 			errs,
 		)
@@ -927,9 +940,12 @@ func TestParseAccess(t *testing.T) {
 		t.Parallel()
 
 		result, errs := parse("access ( foo )")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				fmt.Errorf("expected keyword \"all\", \"account\", \"contract\", or \"self\", got \"foo\""),
+				&SyntaxError{
+					Message: "expected keyword \"all\", \"account\", \"contract\", or \"self\", got \"foo\"",
+					Pos:     ast.Position{Offset: 9, Line: 1, Column: 9},
+				},
 			},
 			errs,
 		)
@@ -950,9 +966,12 @@ func TestParseImportDeclaration(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseDeclarations(` import`)
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("unexpected end in import declaration: expected string, address, or identifier"),
+				&SyntaxError{
+					Message: "unexpected end in import declaration: expected string, address, or identifier",
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
 			},
 			errs,
 		)
@@ -1016,12 +1035,13 @@ func TestParseImportDeclaration(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseDeclarations(` import 1`)
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New(
-					"unexpected token in import declaration: " +
+				&SyntaxError{
+					Message: "unexpected token in import declaration: " +
 						"got decimal integer, expected string, address, or identifier",
-				),
+					Pos: ast.Position{Offset: 8, Line: 1, Column: 8},
+				},
 			},
 			errs,
 		)
@@ -1068,12 +1088,13 @@ func TestParseImportDeclaration(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseDeclarations(` import foo "bar"`)
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New(
-					"unexpected token in import declaration: " +
+				&SyntaxError{
+					Message: "unexpected token in import declaration: " +
 						"got string, expected keyword \"from\" or ','",
-				),
+					Pos: ast.Position{Offset: 12, Line: 1, Column: 12},
+				},
 			},
 			errs,
 		)
@@ -1127,9 +1148,12 @@ func TestParseImportDeclaration(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseDeclarations(` import foo , bar , from 0x42`)
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New(`expected identifier, got keyword "from"`),
+				&SyntaxError{
+					Message: `expected identifier, got keyword "from"`,
+					Pos:     ast.Position{Offset: 20, Line: 1, Column: 20},
+				},
 			},
 			errs,
 		)
@@ -1147,15 +1171,20 @@ func TestParseImportDeclaration(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseDeclarations(` import foo`)
-		require.Equal(t,
-			[]error{errors.New("identifier imports are not supported yet")},
-			errs,
-		)
-
-		var expected []ast.Declaration
+		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
-			expected,
+			[]ast.Declaration{
+				&ast.ImportDeclaration{
+					Identifiers: nil,
+					Location:    ast.IdentifierLocation("foo"),
+					LocationPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+					},
+				},
+			},
 			result,
 		)
 	})
@@ -1673,9 +1702,12 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseDeclarations(" pub struct interface interface { }")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				fmt.Errorf("expected interface name, got keyword \"interface\""),
+				&SyntaxError{
+					Message: "expected interface name, got keyword \"interface\"",
+					Pos:     ast.Position{Offset: 22, Line: 1, Column: 22},
+				},
 			},
 			errs,
 		)

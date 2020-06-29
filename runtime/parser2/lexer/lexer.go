@@ -53,16 +53,25 @@ type position struct {
 }
 
 type lexer struct {
-	ctx           context.Context
-	input         string
-	startOffset   int
-	endOffset     int
+	ctx context.Context
+	// the entire input string
+	input string
+	// the start offset of the current word in the current line
+	startOffset int
+	// the end offset of the current word in the current line
+	endOffset int
+	// the previous end offset, used for stepping back
 	prevEndOffset int
-	current       rune
-	prev          rune
-	tokens        chan Token
-	canBackup     bool
-	startPos      position
+	// the current rune is scanned
+	current rune
+	// the previous rune was scanned, used for stepping back
+	prev rune
+	// the channel of tokens that has been scanned.
+	tokens chan Token
+	// signal whether stepping back is allowed
+	canBackup bool
+	// the start position of the current word
+	startPos position
 }
 
 func Lex(ctx context.Context, input string) chan Token {
@@ -82,10 +91,21 @@ func Lex(ctx context.Context, input string) chan Token {
 
 type done struct{}
 
+// run executes the stateFn, which will scan the runes in the input
+// and emit tokens to the tokens channel.
+//
+// stateFn might return another stateFn to indicate further scanning work,
+// or nil if there is no scanning work left to be done,
+// i.e. run will keep running the returned stateFn until no more
+// stateFn is returned, which for example happens when reaching the end of the file.
+//
+// When all stateFn have been executed, the tokens channel will be closed.
 func (l *lexer) run(state stateFn) {
 	// Close token channel, no token remaining
 	defer close(l.tokens)
 
+	// catch panic exceptions, emit it to the tokens channel before
+	// closing it
 	defer func() {
 		if r := recover(); r != nil {
 			var err error
@@ -107,11 +127,16 @@ func (l *lexer) run(state stateFn) {
 	}
 }
 
+// next decodes the next rune (UTF8 character) from the input string.
+//
+// It returns EOF if it reaches the end of the file,
+// otherwise returns the scanned rune.
 func (l *lexer) next() rune {
 	l.canBackup = true
 
 	endOffset := l.endOffset
 
+	// update prevEndOffset and prev so that we can step back one rune.
 	l.prevEndOffset = endOffset
 	l.prev = l.current
 
@@ -145,6 +170,10 @@ func (l *lexer) word() string {
 	return l.input[start:end]
 }
 
+// acceptOne reads one rune ahead.
+// It returns true if the next rune matches with the input rune,
+// otherwise it steps back one rune and returns false.
+//
 func (l *lexer) acceptOne(r rune) bool {
 	if l.next() == r {
 		return true

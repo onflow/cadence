@@ -62,6 +62,10 @@ var beforeType = func() *FunctionType {
 	}
 }()
 
+type ValidTopLevelDeclarationsHandlerFunc = func(ast.Location) []common.DeclarationKind
+
+type ImportHandlerFunc = func(location ast.Location) Import
+
 // Checker
 
 type Checker struct {
@@ -92,7 +96,8 @@ type Checker struct {
 	allowSelfResourceFieldInvalidation bool
 	Elaboration                        *Elaboration
 	currentMemberExpression            *ast.MemberExpression
-	validTopLevelDeclarationsHandler   func(ast.Location) []common.DeclarationKind
+	validTopLevelDeclarationsHandler   ValidTopLevelDeclarationsHandlerFunc
+	importHandler                      ImportHandlerFunc
 	beforeExtractor                    *BeforeExtractor
 	checkHandler                       CheckHandlerFunc
 }
@@ -139,7 +144,7 @@ func WithAccessCheckMode(mode AccessCheckMode) Option {
 // the slice of declaration kinds which are valid at the top-level
 // for a given location.
 //
-func WithValidTopLevelDeclarationsHandler(handler func(location ast.Location) []common.DeclarationKind) Option {
+func WithValidTopLevelDeclarationsHandler(handler ValidTopLevelDeclarationsHandlerFunc) Option {
 	return func(checker *Checker) error {
 		checker.validTopLevelDeclarationsHandler = handler
 		return nil
@@ -164,6 +169,16 @@ type CheckHandlerFunc func(location ast.Location, check func())
 func WithCheckHandler(handler CheckHandlerFunc) Option {
 	return func(checker *Checker) error {
 		checker.checkHandler = handler
+		return nil
+	}
+}
+
+// WithImportHandler returns a checker option which sets
+// the given handler as function which is used to resolve unresolved imports.
+//
+func WithImportHandler(handler ImportHandlerFunc) Option {
+	return func(checker *Checker) error {
+		checker.importHandler = handler
 		return nil
 	}
 }
@@ -1867,12 +1882,16 @@ func (checker *Checker) withSelfResourceInvalidationAllowed(f func()) {
 	f()
 }
 
+const OwnerFieldName = "owner"
+const UUIDFieldName = "uuid"
+
 func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 	var predeclaredMembers []*Member
 
 	addPredeclaredMember := func(
 		identifier string,
 		fieldType Type,
+		declarationKind common.DeclarationKind,
 		access ast.Access,
 		ignoreInSerialization bool,
 	) {
@@ -1880,7 +1899,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 			ContainerType:         containerType,
 			Access:                access,
 			Identifier:            ast.Identifier{Identifier: identifier},
-			DeclarationKind:       common.DeclarationKindField,
+			DeclarationKind:       declarationKind,
 			VariableKind:          ast.VariableKindConstant,
 			TypeAnnotation:        NewTypeAnnotation(fieldType),
 			Predeclared:           true,
@@ -1888,32 +1907,46 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 		})
 	}
 
+	// All types have a predeclared member `fun isInstance(_ type: Type)`
+
+	addPredeclaredMember(
+		IsInstanceFunctionName,
+		isInstanceFunctionType,
+		common.DeclarationKindFunction,
+		ast.AccessPublic,
+		true,
+	)
+
 	if compositeKindedType, ok := containerType.(CompositeKindedType); ok {
 
 		switch compositeKindedType.GetCompositeKind() {
 		case common.CompositeKindContract:
 
+			// All contracts have a predeclared member
 			// `priv let account: AuthAccount`,
-			// ignored in serialization
+			// which is ignored in serialization
 
 			addPredeclaredMember(
 				"account",
 				&AuthAccountType{},
+				common.DeclarationKindField,
 				ast.AccessPrivate,
 				true,
 			)
 
 		case common.CompositeKindResource:
-			// Resources have two predeclared fields:
+
+			// All resources have two predeclared fields:
 
 			// `pub let owner: PublicAccount?`,
 			// ignored in serialization
 
 			addPredeclaredMember(
-				"owner",
+				OwnerFieldName,
 				&OptionalType{
 					Type: &PublicAccountType{},
 				},
+				common.DeclarationKindField,
 				ast.AccessPublic,
 				true,
 			)
@@ -1922,8 +1955,9 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 			// included in serialization
 
 			addPredeclaredMember(
-				"uuid",
+				UUIDFieldName,
 				&UInt64Type{},
+				common.DeclarationKindField,
 				ast.AccessPublic,
 				false,
 			)

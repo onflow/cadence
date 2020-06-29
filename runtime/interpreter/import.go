@@ -16,41 +16,31 @@
  * limitations under the License.
  */
 
-package cadence
+package interpreter
 
 import (
-	"unicode/utf8"
-
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/parser2"
-	"github.com/onflow/cadence/runtime/sema"
 )
 
-func Fuzz(data []byte) int {
+// Import
 
-	if !utf8.Valid(data) {
-		return 0
-	}
-
-	program, err := parser2.ParseProgram(string(data))
-
-	if err != nil {
-		return 0
-	}
-
-	checker, err := sema.NewChecker(
-		program,
-		ast.StringLocation("test"),
-		sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
-	)
-	if err != nil {
-		return 0
-	}
-
-	err = checker.Check()
-	if err != nil {
-		return 0
-	}
-
-	return 1
+type Import interface {
+	isImport()
 }
+
+// VirtualImport
+
+type VirtualImport struct {
+	Globals   map[string]Value
+	TypeCodes TypeCodes
+}
+
+func (VirtualImport) isImport() {}
+
+// ProgramImport
+
+type ProgramImport struct {
+	Program *ast.Program
+}
+
+func (ProgramImport) isImport() {}

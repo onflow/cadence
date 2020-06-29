@@ -1,3 +1,21 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright 2019-2020 Dapper Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package trampoline
 
 import (
@@ -21,8 +39,9 @@ import (
 /// the next computation, (i.e., calling functions, possibly recursing directly),
 /// they yield the next computation.
 ///
-/// Trampolines can be executed through a control loop using the `Run` method,
-/// and can be chained together using the `FlatMap` method.
+/// A trampoline consists of a current computation and next computation.
+/// trampolines can be chained together using the `FlatMap` method and can be executed
+/// through a control loop using the `Run` method.
 ///
 
 type Trampoline interface {
@@ -32,6 +51,7 @@ type Trampoline interface {
 	Then(f func(interface{})) Trampoline
 }
 
+// Run runs one Trampoline at a time, until there is no more continuation.
 func Run(t Trampoline) interface{} {
 	for {
 		result := t.Resume()
@@ -58,7 +78,7 @@ func ThenTrampoline(t Trampoline, f func(interface{})) Trampoline {
 	})
 }
 
-// Done
+// Done is a Trampoline, which has an executed result.
 
 type Done struct {
 	Result interface{}
@@ -84,7 +104,7 @@ type Continuation interface {
 	Continue() Trampoline
 }
 
-// More
+// More is a Trampoline that returns a Trampoline as more work.
 
 type More func() Trampoline
 
@@ -108,8 +128,7 @@ func (m More) Continue() Trampoline {
 	return m()
 }
 
-// FlatMap
-
+// FlatMap is a struct that contains the current computation and the continuation computation
 type FlatMap struct {
 	Subroutine   Trampoline
 	Continuation func(interface{}) Trampoline
@@ -130,10 +149,14 @@ func (m FlatMap) Resume() interface{} {
 
 	switch sub := m.Subroutine.(type) {
 	case Done:
+		// if the subroutine is done, then the result is ready to be used as input for the continuation
 		return func() Trampoline {
 			return continuation(sub.Result)
 		}
 	case Continuation:
+		// if the subroutine is a continuation, then the result is not available yet, it has to call
+		// sub.Continue() and use FlatMap to wait until the result is ready and be given the the
+		// current continuation.
 		return func() Trampoline {
 			return sub.Continue().FlatMap(continuation)
 		}

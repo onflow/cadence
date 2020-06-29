@@ -21,6 +21,7 @@ package server
 import (
 	"context"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"strings"
@@ -35,7 +36,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
-	"github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 
@@ -453,7 +454,7 @@ func (s *Server) getDiagnostics(conn protocol.Conn, uri protocol.DocumentUri, te
 
 	checker, err := sema.NewChecker(
 		program,
-		runtime.FileLocation(string(uri)),
+		runtime.FileLocation(uri),
 		sema.WithPredeclaredValues(valueDeclarations),
 		sema.WithPredeclaredTypes(typeDeclarations),
 	)
@@ -544,8 +545,8 @@ func getDiagnosticsForParentError(conn protocol.Conn, err errors.ParentError) (d
 		convertibleErr, ok := childErr.(convertibleError)
 		if !ok {
 			conn.LogMessage(&protocol.LogMessageParams{
-				Type:    protocol.Warning,
-				Message: fmt.Sprintf("Unable to convert non-convertable error: %s", err.Error()),
+				Type:    protocol.Error,
+				Message: fmt.Sprintf("Unable to convert non-convertable error to disgnostic: %s", err.Error()),
 			})
 			continue
 		}
@@ -559,7 +560,7 @@ func getDiagnosticsForParentError(conn protocol.Conn, err errors.ParentError) (d
 // parse parses the given code and returns the resultant program.
 func parse(conn protocol.Conn, code, location string) (*ast.Program, error) {
 	start := time.Now()
-	program, _, err := parser.ParseProgram(code)
+	program, err := parser2.ParseProgram(code)
 	elapsed := time.Since(start)
 
 	conn.LogMessage(&protocol.LogMessageParams{
@@ -592,7 +593,12 @@ func (s *Server) resolveFileImport(mainPath string, location ast.StringLocation)
 		return nil, fmt.Errorf("cannot import current file: %s", filename)
 	}
 
-	program, _, _, err := parser.ParseProgramFromFile(filename)
+	data, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	program, err := parser2.ParseProgram(string(data))
 	if err != nil {
 		return nil, fmt.Errorf("cannot find imported file: %s", filename)
 	}
@@ -608,7 +614,7 @@ func (s *Server) resolveAccountImport(location ast.AddressLocation) (*ast.Progra
 		return nil, fmt.Errorf("cannot get account with address 0x%s. err: %w", accountAddr, err)
 	}
 
-	program, _, err := parser.ParseProgram(string(acct.Code))
+	program, err := parser2.ParseProgram(string(acct.Code))
 	if err != nil {
 		return nil, fmt.Errorf("cannot parse code at adddress 0x%s. err: %w", accountAddr, err)
 	}

@@ -153,49 +153,63 @@ type ContractValueHandlerFunc func(
 	constructor FunctionValue,
 ) *CompositeValue
 
-// ImportProgramHandlerFunc is a function that handles imports of programs.
+// ImportLocationFunc is a function that handles imports of locations.
 //
-type ImportProgramHandlerFunc func(
+type ImportLocationHandlerFunc func(
 	inter *Interpreter,
 	location ast.Location,
-) *ast.Program
+) Import
 
 // UUIDHandlerFunc is a function that handles the generation of UUIDs.
 type UUIDHandlerFunc func() uint64
 
-// compositeTypeCode contains the the "prepared" / "callable" "code"
+// CompositeTypeCode contains the the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
 // (contract, struct, resource, event).
 //
 // As there is no support for inheritance of concrete types,
 // these are the "leaf" nodes in the call chain, and are functions.
 //
-type compositeTypeCode struct {
-	compositeFunctions map[string]FunctionValue
-	destructorFunction FunctionValue
+type CompositeTypeCode struct {
+	CompositeFunctions map[string]FunctionValue
+	DestructorFunction FunctionValue
 }
 
 type FunctionWrapper = func(inner FunctionValue) FunctionValue
 
-// wrapperCode contains the "prepared" / "callable" "code"
+// WrapperCode contains the "prepared" / "callable" "code"
 // for inherited types (interfaces and type requirements).
 //
 // These are "branch" nodes in the call chain, and are function wrappers,
 // i.e. they wrap the functions / function wrappers that inherit them.
 //
-type wrapperCode struct {
-	initializerFunctionWrapper FunctionWrapper
-	destructorFunctionWrapper  FunctionWrapper
-	functionWrappers           map[string]FunctionWrapper
+type WrapperCode struct {
+	InitializerFunctionWrapper FunctionWrapper
+	DestructorFunctionWrapper  FunctionWrapper
+	FunctionWrappers           map[string]FunctionWrapper
 }
 
-// typeCodes is the value which stores the "prepared" / "callable" "code"
+// TypeCodes is the value which stores the "prepared" / "callable" "code"
 // of all composite types, interface types, and type requirements.
 //
-type typeCodes struct {
-	compositeCodes       map[sema.TypeID]compositeTypeCode
-	interfaceCodes       map[sema.TypeID]wrapperCode
-	typeRequirementCodes map[sema.TypeID]wrapperCode
+type TypeCodes struct {
+	CompositeCodes       map[sema.TypeID]CompositeTypeCode
+	InterfaceCodes       map[sema.TypeID]WrapperCode
+	TypeRequirementCodes map[sema.TypeID]WrapperCode
+}
+
+func (c TypeCodes) Merge(codes TypeCodes) {
+	for typeID, code := range codes.CompositeCodes {
+		c.CompositeCodes[typeID] = code
+	}
+
+	for typeID, code := range codes.InterfaceCodes {
+		c.InterfaceCodes[typeID] = code
+	}
+
+	for typeID, code := range codes.TypeRequirementCodes {
+		c.TypeRequirementCodes[typeID] = code
+	}
 }
 
 type Interpreter struct {
@@ -205,7 +219,7 @@ type Interpreter struct {
 	Globals                        map[string]*Variable
 	allInterpreters                map[ast.LocationID]*Interpreter
 	allCheckers                    map[ast.LocationID]*sema.Checker
-	typeCodes                      typeCodes
+	typeCodes                      TypeCodes
 	Transactions                   []*HostFunctionValue
 	onEventEmitted                 OnEventEmittedFunc
 	onStatement                    OnStatementFunc
@@ -217,7 +231,7 @@ type Interpreter struct {
 	storageKeyHandler              StorageKeyHandlerFunc
 	injectedCompositeFieldsHandler InjectedCompositeFieldsHandlerFunc
 	contractValueHandler           ContractValueHandlerFunc
-	importProgramHandler           ImportProgramHandlerFunc
+	importLocationHandler          ImportLocationHandlerFunc
 	uuidHandler                    UUIDHandlerFunc
 }
 
@@ -341,12 +355,12 @@ func WithContractValueHandler(handler ContractValueHandlerFunc) Option {
 	}
 }
 
-// WithImportProgramHandler returns an interpreter option which sets the given function
-// as the function that is used to handle the imports of programs.
+// WithImportLocationHandler returns an interpreter option which sets the given function
+// as the function that is used to handle the imports of locations.
 //
-func WithImportProgramHandler(handler ImportProgramHandlerFunc) Option {
+func WithImportLocationHandler(handler ImportLocationHandlerFunc) Option {
 	return func(interpreter *Interpreter) error {
-		interpreter.SetImportProgramHandler(handler)
+		interpreter.SetImportLocationHandler(handler)
 		return nil
 	}
 }
@@ -383,7 +397,7 @@ func WithAllCheckers(allCheckers map[ast.LocationID]*sema.Checker) Option {
 
 // withTypeCodes returns an interpreter option which sets the type codes.
 //
-func withTypeCodes(typeCodes typeCodes) Option {
+func withTypeCodes(typeCodes TypeCodes) Option {
 	return func(interpreter *Interpreter) error {
 		interpreter.setTypeCodes(typeCodes)
 		return nil
@@ -400,10 +414,10 @@ func NewInterpreter(checker *sema.Checker, options ...Option) (*Interpreter, err
 	defaultOptions := []Option{
 		WithAllInterpreters(map[ast.LocationID]*Interpreter{}),
 		WithAllCheckers(map[ast.LocationID]*sema.Checker{}),
-		withTypeCodes(typeCodes{
-			compositeCodes:       map[sema.TypeID]compositeTypeCode{},
-			interfaceCodes:       map[sema.TypeID]wrapperCode{},
-			typeRequirementCodes: map[sema.TypeID]wrapperCode{},
+		withTypeCodes(TypeCodes{
+			CompositeCodes:       map[sema.TypeID]CompositeTypeCode{},
+			InterfaceCodes:       map[sema.TypeID]WrapperCode{},
+			TypeRequirementCodes: map[sema.TypeID]WrapperCode{},
 		}),
 	}
 
@@ -480,10 +494,10 @@ func (interpreter *Interpreter) SetContractValueHandler(function ContractValueHa
 	interpreter.contractValueHandler = function
 }
 
-// SetImportProgramHandler sets the function that is used to handle imports of programs.
+// SetImportLocationHandler sets the function that is used to handle imports of locations.
 //
-func (interpreter *Interpreter) SetImportProgramHandler(function ImportProgramHandlerFunc) {
-	interpreter.importProgramHandler = function
+func (interpreter *Interpreter) SetImportLocationHandler(function ImportLocationHandlerFunc) {
+	interpreter.importLocationHandler = function
 }
 
 // SetUUIDHandler sets the function that is used to handle the generation of UUIDs.
@@ -513,7 +527,7 @@ func (interpreter *Interpreter) SetAllCheckers(allCheckers map[ast.LocationID]*s
 
 // setTypeCodes sets the type codes.
 //
-func (interpreter *Interpreter) setTypeCodes(typeCodes typeCodes) {
+func (interpreter *Interpreter) setTypeCodes(typeCodes TypeCodes) {
 	interpreter.typeCodes = typeCodes
 }
 
@@ -553,6 +567,7 @@ func (interpreter *Interpreter) Interpret() (err error) {
 		err = internalErr
 	})
 
+	// declare all declarations and then run all statements
 	interpreter.runAllStatements(interpreter.interpret())
 
 	return nil
@@ -564,6 +579,13 @@ type Statement struct {
 	Line        int
 }
 
+// runUntilNextStatement executes the trampline until the next statement.
+// It either returns a result or a statement.
+// The difference between "runUntilNextStatement" and "Run" is that:
+// "Run" executes the Trampoline chain all the way until there is no more trampoline and returns the result,
+// whereas "runUntilNextStatement" executes the Trampoline chain, stops as soon as it meets a statement trampoline,
+// and returns the statement, which can be later resumed by calling "runUntilNextStatement" again.
+// Useful for implementing breakpoint debugging.
 func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}, *Statement) {
 	for {
 		statement := getStatement(t)
@@ -590,6 +612,8 @@ func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}
 	}
 }
 
+// runAllStatements runs all the statement until there is no more trampoline and returns the result.
+// When there is a statement, it calls the onStatement callback, and then continues the execution.
 func (interpreter *Interpreter) runAllStatements(t Trampoline) interface{} {
 	for {
 		result, statement := interpreter.runUntilNextStatement(t)
@@ -611,9 +635,11 @@ func (interpreter *Interpreter) runAllStatements(t Trampoline) interface{} {
 	}
 }
 
+// getStatement goes through the Trampoline chain and find the first StatementTrampoline
 func getStatement(t Trampoline) *StatementTrampoline {
 	switch t := t.(type) {
 	case FlatMap:
+		// Recurse into the nested trampoline
 		return getStatement(t.Subroutine)
 	case StatementTrampoline:
 		return &t
@@ -622,6 +648,8 @@ func getStatement(t Trampoline) *StatementTrampoline {
 	}
 }
 
+// interpret returns a Trampoline that is done when all top-level declarations 
+// have been declared and evaluated.
 func (interpreter *Interpreter) interpret() Trampoline {
 	return interpreter.Checker.Program.Accept(interpreter).(Trampoline)
 }
@@ -682,11 +710,15 @@ func (interpreter *Interpreter) declareGlobal(declaration ast.Declaration) {
 	interpreter.Globals[name] = interpreter.findVariable(name)
 }
 
+// prepareInvokeVariable looks up the function by the given name from global
+// variables, checks the function type, and returns a trampoline which executes
+// the function with the given arguments
 func (interpreter *Interpreter) prepareInvokeVariable(
 	functionName string,
 	arguments []Value,
 ) (trampoline Trampoline, err error) {
 
+	// function must be defined as a global variable
 	variable, ok := interpreter.Globals[functionName]
 	if !ok {
 		return nil, &NotDeclaredError{
@@ -697,6 +729,7 @@ func (interpreter *Interpreter) prepareInvokeVariable(
 
 	variableValue := variable.Value
 
+	// the global variable must be declared as a function
 	functionValue, ok := variableValue.(FunctionValue)
 	if !ok {
 		return nil, &NotInvokableError{
@@ -706,6 +739,7 @@ func (interpreter *Interpreter) prepareInvokeVariable(
 
 	ty := interpreter.Checker.GlobalValues[functionName].Type
 
+	// function must be invokable
 	invokableType, ok := ty.(sema.InvokableType)
 
 	if !ok {
@@ -749,6 +783,9 @@ func (interpreter *Interpreter) prepareInvoke(
 
 	if argumentCount != parameterCount {
 
+		// if the function has defined optional parameters,
+		// then the provided arguments must be equal to or greater than
+		// the number of required parameters.
 		if functionType.RequiredArgumentCount == nil ||
 			argumentCount < *functionType.RequiredArgumentCount {
 
@@ -770,6 +807,7 @@ func (interpreter *Interpreter) prepareInvoke(
 			}
 		}
 
+		// converts the argument into the parameter type declared by the function
 		preparedArguments[i] = interpreter.convertAndBox(argument, nil, parameterType)
 	}
 
@@ -782,6 +820,7 @@ func (interpreter *Interpreter) prepareInvoke(
 	return trampoline, nil
 }
 
+// Invoke invokes a global function with the given arguments
 func (interpreter *Interpreter) Invoke(functionName string, arguments ...Value) (value Value, err error) {
 	// recover internal panics and return them as an error
 	defer recoverErrors(func(internalErr error) {
@@ -1271,6 +1310,7 @@ func (interpreter *Interpreter) movingStorageIndexExpression(expression ast.Expr
 	return indexExpression
 }
 
+// declareVariable declares a variable in the latest scope
 func (interpreter *Interpreter) declareVariable(identifier string, value Value) *Variable {
 	// NOTE: semantic analysis already checked possible invalid redeclaration
 	variable := &Variable{Value: value}
@@ -1434,16 +1474,16 @@ func (interpreter *Interpreter) indexExpressionGetterSetter(indexExpression *ast
 func (interpreter *Interpreter) memberExpressionGetterSetter(memberExpression *ast.MemberExpression) Trampoline {
 	return memberExpression.Expression.Accept(interpreter).(Trampoline).
 		FlatMap(func(result interface{}) Trampoline {
-			structure := result.(MemberAccessibleValue)
+			target := result.(Value)
 			locationRange := interpreter.locationRange(memberExpression)
 			identifier := memberExpression.Identifier.Identifier
 			return Done{
 				Result: getterSetter{
 					get: func() Value {
-						return structure.GetMember(interpreter, locationRange, identifier)
+						return interpreter.getMember(target, locationRange, identifier)
 					},
 					set: func(value Value) {
-						structure.SetMember(interpreter, locationRange, identifier, value)
+						interpreter.setMember(target, locationRange, identifier, value)
 					},
 				},
 			}
@@ -1917,9 +1957,9 @@ func (interpreter *Interpreter) VisitMemberExpression(expression *ast.MemberExpr
 				}
 			}
 
-			value := result.(MemberAccessibleValue)
+			value := result.(Value)
 			locationRange := interpreter.locationRange(expression)
-			resultValue := value.GetMember(interpreter, locationRange, expression.Identifier.Identifier)
+			resultValue := interpreter.getMember(value, locationRange, expression.Identifier.Identifier)
 
 			// If the member access is optional chaining, only wrap the result value
 			// in an optional, if it is not already an optional value
@@ -2266,8 +2306,6 @@ func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.Compo
 	return Done{}
 }
 
-const ResourceUUIDMemberName = "uuid"
-
 // declareCompositeValue creates and declares the value for
 // the composite declaration.
 //
@@ -2373,12 +2411,12 @@ func (interpreter *Interpreter) declareCompositeValue(
 
 	functions := interpreter.compositeFunctions(declaration, lexicalScope)
 
-	wrapFunctions := func(code wrapperCode) {
+	wrapFunctions := func(code WrapperCode) {
 
 		// Wrap initializer
 
 		initializerFunctionWrapper :=
-			code.initializerFunctionWrapper
+			code.InitializerFunctionWrapper
 
 		if initializerFunctionWrapper != nil {
 			initializerFunction = initializerFunctionWrapper(initializerFunction)
@@ -2387,7 +2425,7 @@ func (interpreter *Interpreter) declareCompositeValue(
 		// Wrap destructor
 
 		destructorFunctionWrapper :=
-			code.destructorFunctionWrapper
+			code.DestructorFunctionWrapper
 
 		if destructorFunctionWrapper != nil {
 			destructorFunction = destructorFunctionWrapper(destructorFunction)
@@ -2395,7 +2433,7 @@ func (interpreter *Interpreter) declareCompositeValue(
 
 		// Wrap functions
 
-		for name, functionWrapper := range code.functionWrappers {
+		for name, functionWrapper := range code.FunctionWrappers {
 			functions[name] = functionWrapper(functions[name])
 		}
 	}
@@ -2410,7 +2448,7 @@ func (interpreter *Interpreter) declareCompositeValue(
 	for i := len(compositeType.ExplicitInterfaceConformances) - 1; i >= 0; i-- {
 		conformance := compositeType.ExplicitInterfaceConformances[i]
 
-		wrapFunctions(interpreter.typeCodes.interfaceCodes[conformance.ID()])
+		wrapFunctions(interpreter.typeCodes.InterfaceCodes[conformance.ID()])
 	}
 
 	typeRequirements := compositeType.TypeRequirements()
@@ -2418,12 +2456,12 @@ func (interpreter *Interpreter) declareCompositeValue(
 	for i := len(typeRequirements) - 1; i >= 0; i-- {
 		typeRequirement := typeRequirements[i]
 
-		wrapFunctions(interpreter.typeCodes.typeRequirementCodes[typeRequirement.ID()])
+		wrapFunctions(interpreter.typeCodes.TypeRequirementCodes[typeRequirement.ID()])
 	}
 
-	interpreter.typeCodes.compositeCodes[compositeType.ID()] = compositeTypeCode{
-		destructorFunction: destructorFunction,
-		compositeFunctions: functions,
+	interpreter.typeCodes.CompositeCodes[compositeType.ID()] = CompositeTypeCode{
+		DestructorFunction: destructorFunction,
+		CompositeFunctions: functions,
 	}
 
 	location := interpreter.Checker.Location
@@ -2446,7 +2484,7 @@ func (interpreter *Interpreter) declareCompositeValue(
 
 			if declaration.CompositeKind == common.CompositeKindResource {
 				uuid := interpreter.uuidHandler()
-				fields[ResourceUUIDMemberName] = UInt64Value(uuid)
+				fields[sema.UUIDFieldName] = UInt64Value(uuid)
 			}
 
 			value := &CompositeValue{
@@ -2861,10 +2899,10 @@ func (interpreter *Interpreter) declareInterface(
 	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
 
-	interpreter.typeCodes.interfaceCodes[typeID] = wrapperCode{
-		initializerFunctionWrapper: initializerFunctionWrapper,
-		destructorFunctionWrapper:  destructorFunctionWrapper,
-		functionWrappers:           functionWrappers,
+	interpreter.typeCodes.InterfaceCodes[typeID] = WrapperCode{
+		InitializerFunctionWrapper: initializerFunctionWrapper,
+		DestructorFunctionWrapper:  destructorFunctionWrapper,
+		FunctionWrappers:           functionWrappers,
 	}
 }
 
@@ -2895,10 +2933,10 @@ func (interpreter *Interpreter) declareTypeRequirement(
 	destructorFunctionWrapper := interpreter.destructorFunctionWrapper(declaration.Members, lexicalScope)
 	functionWrappers := interpreter.functionWrappers(declaration.Members, lexicalScope)
 
-	interpreter.typeCodes.typeRequirementCodes[typeID] = wrapperCode{
-		initializerFunctionWrapper: initializerFunctionWrapper,
-		destructorFunctionWrapper:  destructorFunctionWrapper,
-		functionWrappers:           functionWrappers,
+	interpreter.typeCodes.TypeRequirementCodes[typeID] = WrapperCode{
+		InitializerFunctionWrapper: initializerFunctionWrapper,
+		DestructorFunctionWrapper:  destructorFunctionWrapper,
+		FunctionWrappers:           functionWrappers,
 	}
 }
 
@@ -3024,19 +3062,42 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	}
 }
 
-func (interpreter *Interpreter) ensureLoaded(location ast.Location, loadProgram func() *ast.Program) (subInterpreter *Interpreter) {
+func (interpreter *Interpreter) ensureLoaded(
+	location ast.Location,
+	loadLocation func() Import,
+) (subInterpreter *Interpreter) {
+
 	locationID := location.ID()
 
-	// If sub-interpreter already exists, return it
+	// If a sub-interpreter already exists, return it
+
 	subInterpreter = interpreter.allInterpreters[locationID]
 	if subInterpreter != nil {
 		return subInterpreter
 	}
 
-	// Create a new sub-interpreter and interpret the top-level declarations
-	var checkerErr *sema.CheckerError
+	// Create a sub-checker and sub-interpreter
+
 	var importedChecker *sema.Checker
-	importedChecker, checkerErr = interpreter.Checker.EnsureLoaded(location, loadProgram)
+
+	var virtualImport *VirtualImport
+
+	var checkerErr *sema.CheckerError
+	importedChecker, checkerErr = interpreter.Checker.EnsureLoaded(location, func() *ast.Program {
+		imported := loadLocation()
+
+		switch imported := imported.(type) {
+		case VirtualImport:
+			virtualImport = &imported
+			return nil
+
+		case ProgramImport:
+			return imported.Program
+
+		default:
+			panic(errors.NewUnreachableError())
+		}
+	})
 	if importedChecker == nil {
 		panic("missing checker")
 	}
@@ -3058,7 +3119,7 @@ func (interpreter *Interpreter) ensureLoaded(location ast.Location, loadProgram 
 		WithStorageKeyHandler(interpreter.storageKeyHandler),
 		WithInjectedCompositeFieldsHandler(interpreter.injectedCompositeFieldsHandler),
 		WithContractValueHandler(interpreter.contractValueHandler),
-		WithImportProgramHandler(interpreter.importProgramHandler),
+		WithImportLocationHandler(interpreter.importLocationHandler),
 		WithUUIDHandler(interpreter.uuidHandler),
 		WithAllInterpreters(interpreter.allInterpreters),
 		WithAllCheckers(interpreter.allCheckers),
@@ -3068,7 +3129,25 @@ func (interpreter *Interpreter) ensureLoaded(location ast.Location, loadProgram 
 		panic(err)
 	}
 
-	subInterpreter.runAllStatements(subInterpreter.interpret())
+	if virtualImport != nil {
+		// If the imported location is a virtual import,
+		// prepare the interpreter
+
+		for name, value := range virtualImport.Globals {
+			variable := &Variable{Value: value}
+			subInterpreter.setVariable(name, variable)
+			subInterpreter.Globals[name] = variable
+		}
+
+		subInterpreter.typeCodes.
+			Merge(virtualImport.TypeCodes)
+
+	} else {
+		// If the imported location is an interpreted program,
+		// evaluate its top-level declarations
+
+		subInterpreter.runAllStatements(subInterpreter.interpret())
+	}
 
 	return subInterpreter
 }
@@ -3079,8 +3158,8 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 
 	subInterpreter := interpreter.ensureLoaded(
 		location,
-		func() *ast.Program {
-			return interpreter.importProgramHandler(interpreter, location)
+		func() Import {
+			return interpreter.importLocationHandler(interpreter, location)
 		},
 	)
 
@@ -3103,8 +3182,10 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 	for name, variable := range variables {
 
 		// don't import predeclared values
-		if _, ok := subInterpreter.Checker.PredeclaredValues[name]; ok {
-			continue
+		if subInterpreter.Checker != nil {
+			if _, ok := subInterpreter.Checker.PredeclaredValues[name]; ok {
+				continue
+			}
 		}
 
 		// don't import base values
@@ -3113,6 +3194,7 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 		}
 
 		interpreter.setVariable(name, variable)
+		interpreter.Globals[name] = variable
 	}
 
 	return Done{}
@@ -4056,13 +4138,20 @@ func (interpreter *Interpreter) getElaboration(location ast.Location) *sema.Elab
 	// Ensure the program for this location is loaded,
 	// so its checker is available
 
-	inter := interpreter.ensureLoaded(location, func() *ast.Program {
-		return interpreter.importProgramHandler(interpreter, location)
-	})
+	inter := interpreter.ensureLoaded(
+		location,
+		func() Import {
+			return interpreter.importLocationHandler(interpreter, location)
+		},
+	)
 
 	locationID := location.ID()
 
-	return inter.allCheckers[locationID].Elaboration
+	checker := inter.allCheckers[locationID]
+	if checker == nil {
+		return nil
+	}
+	return checker.Elaboration
 }
 
 func (interpreter *Interpreter) getCompositeType(location ast.Location, typeID sema.TypeID) *sema.CompositeType {
@@ -4091,4 +4180,38 @@ func (interpreter *Interpreter) reportFunctionInvocation(pos ast.HasPosition) {
 
 	line := pos.StartPosition().Line
 	interpreter.onFunctionInvocation(interpreter, line)
+}
+
+// getMember gets the member value by the given identifier from the given Value depending on its type.
+func (interpreter *Interpreter) getMember(self Value, locationRange LocationRange, identifier string) Value {
+	var result Value
+	// When the accessed value has a type that supports the declaration of members or is a built-in type that has members (`MemberAccessibleValue`), 
+	// then try to get the member for the given identifier.
+	// For example, the built-in type `String` has a member "length",
+	// and composite declarations may contain member declarations
+	if memberAccessibleValue, ok := self.(MemberAccessibleValue); ok {
+		result = memberAccessibleValue.GetMember(interpreter, locationRange, identifier)
+	}
+	if result == nil {
+		switch identifier {
+		case sema.IsInstanceFunctionName:
+			return NewHostFunctionValue(
+				func(invocation Invocation) Trampoline {
+					// NOTE: not invocation.Self, as that is only set for composite values
+					dynamicType := self.DynamicType(interpreter)
+					ty := invocation.Arguments[0].(TypeValue)
+					result := IsSubType(dynamicType, ty.Type)
+					return Done{Result: BoolValue(result)}
+				},
+			)
+		}
+	}
+	if result == nil {
+		panic(errors.NewUnreachableError())
+	}
+	return result
+}
+
+func (interpreter *Interpreter) setMember(self Value, locationRange LocationRange, identifier string, value Value) {
+	self.(MemberAccessibleValue).SetMember(interpreter, locationRange, identifier, value)
 }

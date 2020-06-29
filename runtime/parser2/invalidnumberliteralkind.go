@@ -41,6 +41,8 @@ func (k InvalidNumberLiteralKind) Description() string {
 		return "trailing underscore"
 	case InvalidNumberLiteralKindUnknownPrefix:
 		return "unknown prefix"
+	case InvalidNumberLiteralKindUnknown:
+		return "unknown"
 	}
 
 	panic(errors.NewUnreachableError())

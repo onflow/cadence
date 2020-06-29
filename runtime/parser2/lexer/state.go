@@ -24,8 +24,14 @@ import (
 
 const keywordAs = "as"
 
+// stateFn uses the input lexer to read runes and emit tokens.
+//
+// It either returns nil when reaching end of file,
+// or returns another stateFn for more scanning work.
 type stateFn func(*lexer) stateFn
 
+// rootState returns a stateFn that scans the file and emits tokens until
+// reaching the end of the file.
 func rootState(l *lexer) stateFn {
 	for {
 		r := l.next()
@@ -174,6 +180,8 @@ func (l *lexer) error(err error) stateFn {
 	return nil
 }
 
+// numberState returns a stateFn that scans the following runes as a number
+// and emits a corresponding token
 func numberState(l *lexer) stateFn {
 	// lookahead is already lexed.
 	// parse more, if any

@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -76,11 +77,25 @@ func TestInterpretResourceUUID(t *testing.T) {
 
 	var uuid uint64
 
-	inter, err := interpreter.NewInterpreter(checkerImporting,
-		interpreter.WithUUIDHandler(func() uint64 {
-			defer func() { uuid++ }()
-			return uuid
-		}),
+	inter, err := interpreter.NewInterpreter(
+		checkerImporting,
+		interpreter.WithUUIDHandler(
+			func() uint64 {
+				defer func() { uuid++ }()
+				return uuid
+			},
+		),
+		interpreter.WithImportLocationHandler(
+			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
+				assert.Equal(t,
+					ImportedLocation,
+					location,
+				)
+				return interpreter.ProgramImport{
+					Program: checkerImported.Program,
+				}
+			},
+		),
 	)
 	require.NoError(t, err)
 
@@ -105,7 +120,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 
 		require.Equal(t,
 			interpreter.UInt64Value(i),
-			res.Fields[interpreter.ResourceUUIDMemberName],
+			res.Fields[sema.UUIDFieldName],
 		)
 	}
 }

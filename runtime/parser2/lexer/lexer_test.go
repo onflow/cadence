@@ -108,6 +108,44 @@ func TestLexBasic(t *testing.T) {
 		)
 	})
 
+	t.Run("assignment", func(t *testing.T) {
+		testLex(t,
+			"x=1",
+			[]Token{
+				{
+					Type:  TokenIdentifier,
+					Value: "x",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				{
+					Type: TokenEqual,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+				{
+					Type:  TokenDecimalLiteral,
+					Value: "1",
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+						EndPos:   ast.Position{Line: 1, Column: 2, Offset: 2},
+					},
+				},
+				{
+					Type: TokenEOF,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+						EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+					},
+				},
+			},
+		)
+	})
+
 	t.Run("simple arithmetic: plus and times", func(t *testing.T) {
 		testLex(t,
 			"(2 + 3) * 4",

@@ -30,6 +30,7 @@ const (
 	typeLeftBindingPowerOptional = 10 * (iota + 1)
 	typeLeftBindingPowerReference
 	typeLeftBindingPowerRestriction
+	typeLeftBindingPowerInstantiation
 )
 
 type typeNullDenotationFunc func(parser *parser, token lexer.Token) ast.Type
@@ -125,6 +126,7 @@ func init() {
 	defineReferenceType()
 	defineRestrictedOrDictionaryType()
 	defineFunctionType()
+	defineInstantiationType()
 
 	setTypeNullDenotation(
 		lexer.TokenIdentifier,
@@ -680,7 +682,6 @@ func parseCommaSeparatedTypeAnnotations(
 	endTokenType lexer.TokenType,
 ) (
 	typeAnnotations []*ast.TypeAnnotation,
-	endPos ast.Position,
 ) {
 	expectTypeAnnotation := true
 	atEnd := false
@@ -700,7 +701,6 @@ func parseCommaSeparatedTypeAnnotations(
 			if expectTypeAnnotation && len(typeAnnotations) > 0 {
 				p.report(fmt.Errorf("missing type annotation after comma"))
 			}
-			endPos = p.current.EndPos
 			atEnd = true
 
 		case lexer.TokenEOF:
@@ -728,4 +728,22 @@ func parseCommaSeparatedTypeAnnotations(
 	}
 
 	return
+}
+
+func defineInstantiationType() {
+	setTypeLeftBindingPower(lexer.TokenLess, typeLeftBindingPowerInstantiation)
+	setTypeLeftDenotation(
+		lexer.TokenLess,
+		func(p *parser, token lexer.Token, left ast.Type) ast.Type {
+			typeArguments := parseCommaSeparatedTypeAnnotations(p, lexer.TokenGreater)
+
+			endToken := p.mustOne(lexer.TokenGreater)
+
+			return &ast.InstantiationType{
+				Type:          left,
+				TypeArguments: typeArguments,
+				EndPos:        endToken.EndPos,
+			}
+		},
+	)
 }

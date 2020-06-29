@@ -32,7 +32,7 @@ import (
 
 	. "github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/parser"
+	parser1 "github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -41,7 +41,7 @@ func TestParseReplInput(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseReplInput(`
+	actual, _, err := parser1.ParseReplInput(`
         struct X {}; let x = X(); x
     `)
 
@@ -58,19 +58,19 @@ func TestParseInvalidProgramWithRest(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	actual, _, err := parser1.ParseProgram(`
 	    .asd
 	`)
 
 	assert.Nil(t, actual)
-	assert.IsType(t, parser.Error{}, err)
+	assert.IsType(t, parser1.Error{}, err)
 }
 
 func TestParseInvalidIncompleteConstKeyword(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	actual, _, err := parser1.ParseProgram(`
 	    le
 	`)
 
@@ -78,12 +78,12 @@ func TestParseInvalidIncompleteConstKeyword(t *testing.T) {
 
 	require.Error(t, err)
 
-	require.IsType(t, parser.Error{}, err)
+	require.IsType(t, parser1.Error{}, err)
 
-	errors := err.(parser.Error).Errors
+	errors := err.(parser1.Error).Errors
 	assert.Len(t, errors, 1)
 
-	syntaxError := errors[0].(*parser.SyntaxError)
+	syntaxError := errors[0].(*parser1.SyntaxError)
 
 	assert.Equal(t,
 		Position{Offset: 6, Line: 2, Column: 5},
@@ -97,7 +97,7 @@ func TestParseInvalidIncompleteStringLiteral(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	actual, _, err := parser1.ParseProgram(`
 	    let = "Hello, World!
 	`)
 
@@ -105,12 +105,12 @@ func TestParseInvalidIncompleteStringLiteral(t *testing.T) {
 
 	require.Error(t, err)
 
-	require.IsType(t, parser.Error{}, err)
+	require.IsType(t, parser1.Error{}, err)
 
-	errors := err.(parser.Error).Errors
+	errors := err.(parser1.Error).Errors
 	assert.Len(t, errors, 3)
 
-	syntaxError := errors[0].(*parser.SyntaxError)
+	syntaxError := errors[0].(*parser1.SyntaxError)
 
 	assert.Equal(t,
 		Position{Offset: 26, Line: 2, Column: 11},
@@ -162,7 +162,7 @@ func TestParseNames(t *testing.T) {
 
 		t.Run("old", func(t *testing.T) {
 
-			actual, _, err := parser.ParseProgram(code)
+			actual, _, err := parser1.ParseProgram(code)
 
 			if validExpected {
 				assert.NotNil(t, actual)
@@ -170,7 +170,7 @@ func TestParseNames(t *testing.T) {
 
 			} else {
 				assert.Nil(t, actual)
-				assert.IsType(t, parser.Error{}, err)
+				assert.IsType(t, parser1.Error{}, err)
 			}
 		})
 
@@ -194,7 +194,7 @@ func TestParseInvalidIncompleteConstantDeclaration1(t *testing.T) {
 
 	t.Parallel()
 
-	actual, inputIsComplete, err := parser.ParseProgram(`
+	actual, inputIsComplete, err := parser1.ParseProgram(`
 	    let
 	`)
 
@@ -204,12 +204,12 @@ func TestParseInvalidIncompleteConstantDeclaration1(t *testing.T) {
 
 	require.Error(t, err)
 
-	require.IsType(t, parser.Error{}, err)
+	require.IsType(t, parser1.Error{}, err)
 
-	errors := err.(parser.Error).Errors
+	errors := err.(parser1.Error).Errors
 	assert.Len(t, errors, 1)
 
-	syntaxError1 := errors[0].(*parser.SyntaxError)
+	syntaxError1 := errors[0].(*parser1.SyntaxError)
 
 	assert.Equal(t,
 		Position{Offset: 11, Line: 3, Column: 1},
@@ -223,7 +223,7 @@ func TestParseInvalidIncompleteConstantDeclaration2(t *testing.T) {
 
 	t.Parallel()
 
-	actual, inputIsComplete, err := parser.ParseProgram(`
+	actual, inputIsComplete, err := parser1.ParseProgram(`
 	    let =
 	`)
 
@@ -233,12 +233,12 @@ func TestParseInvalidIncompleteConstantDeclaration2(t *testing.T) {
 
 	require.Error(t, err)
 
-	require.IsType(t, parser.Error{}, err)
+	require.IsType(t, parser1.Error{}, err)
 
-	errors := err.(parser.Error).Errors
+	errors := err.(parser1.Error).Errors
 	assert.Len(t, errors, 2)
 
-	syntaxError1 := errors[0].(*parser.SyntaxError)
+	syntaxError1 := errors[0].(*parser1.SyntaxError)
 
 	assert.Equal(t,
 		Position{Offset: 10, Line: 2, Column: 9},
@@ -247,7 +247,7 @@ func TestParseInvalidIncompleteConstantDeclaration2(t *testing.T) {
 
 	assert.Contains(t, syntaxError1.Message, "missing")
 
-	syntaxError2 := errors[1].(*parser.SyntaxError)
+	syntaxError2 := errors[1].(*parser1.SyntaxError)
 
 	assert.Equal(t,
 		Position{Offset: 13, Line: 3, Column: 1},
@@ -264,7 +264,7 @@ func testParse(t *testing.T, code string, expected []Declaration, use func(actua
 	}
 
 	t.Run("old", func(t *testing.T) {
-		actual, _, err := parser.ParseProgram(code)
+		actual, _, err := parser1.ParseProgram(code)
 		require.NoError(t, err)
 		if expected != nil {
 			utils.AssertEqualWithDiff(t, expectedProgram, actual)
@@ -2349,7 +2349,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	actual, _, err := parser1.ParseProgram(`
 		let octal = 0o32
         let hex = 0xf2
         let binary = 0b101010
@@ -2454,7 +2454,7 @@ func TestParseIntegerLiteralsWithUnderscores(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	actual, _, err := parser1.ParseProgram(`
 		let octal = 0o32_45
         let hex = 0xf2_09
         let binary = 0b101010_101010
@@ -2561,16 +2561,16 @@ func TestParseInvalidIntegerLiteralPrefixWithout(t *testing.T) {
 
 	for _, prefix := range []string{"o", "b", "x"} {
 
-		_, _, err := parser.ParseProgram(fmt.Sprintf(`let x = 0%s`, prefix))
+		_, _, err := parser1.ParseProgram(fmt.Sprintf(`let x = 0%s`, prefix))
 
 		require.Error(t, err)
 
-		require.IsType(t, parser.Error{}, err)
+		require.IsType(t, parser1.Error{}, err)
 
-		errors := err.(parser.Error).Errors
+		errors := err.(parser1.Error).Errors
 		assert.Len(t, errors, 1)
 
-		syntaxError := errors[0].(*parser.InvalidIntegerLiteralError)
+		syntaxError := errors[0].(*parser1.InvalidIntegerLiteralError)
 		assert.Equal(t,
 			Position{Offset: 8, Line: 1, Column: 8},
 			syntaxError.StartPos,
@@ -2583,7 +2583,7 @@ func TestParseInvalidOctalIntegerLiteralWithLeadingUnderscore(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	actual, _, err := parser1.ParseProgram(`
 		let octal = 0o_32_45
 	`)
 
@@ -2591,14 +2591,14 @@ func TestParseInvalidOctalIntegerLiteralWithLeadingUnderscore(t *testing.T) {
 
 	require.Error(t, err)
 
-	require.IsType(t, parser.Error{}, err)
+	require.IsType(t, parser1.Error{}, err)
 
-	errors := err.(parser.Error).Errors
+	errors := err.(parser1.Error).Errors
 	assert.Len(t, errors, 1)
 
-	require.IsType(t, &parser.InvalidIntegerLiteralError{}, errors[0])
+	require.IsType(t, &parser1.InvalidIntegerLiteralError{}, errors[0])
 
-	syntaxError := errors[0].(*parser.InvalidIntegerLiteralError)
+	syntaxError := errors[0].(*parser1.InvalidIntegerLiteralError)
 
 	assert.Equal(t,
 		Position{Offset: 15, Line: 2, Column: 14},
@@ -2611,12 +2611,12 @@ func TestParseInvalidOctalIntegerLiteralWithLeadingUnderscore(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		parser.IntegerLiteralKindOctal,
+		parser1.IntegerLiteralKindOctal,
 		syntaxError.IntegerLiteralKind,
 	)
 
 	assert.Equal(t,
-		parser.InvalidNumberLiteralKindLeadingUnderscore,
+		parser1.InvalidNumberLiteralKindLeadingUnderscore,
 		syntaxError.InvalidIntegerLiteralKind,
 	)
 }
@@ -2626,7 +2626,7 @@ func TestParseIntegerLiteralWithLeadingZeros(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	actual, _, err := parser1.ParseProgram(`
         let decimal = 0123
 	`)
 
@@ -2665,7 +2665,7 @@ func TestParseInvalidOctalIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	actual, _, err := parser1.ParseProgram(`
 		let octal = 0o32_45_
 	`)
 
@@ -2673,12 +2673,12 @@ func TestParseInvalidOctalIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 
 	require.Error(t, err)
 
-	require.IsType(t, parser.Error{}, err)
+	require.IsType(t, parser1.Error{}, err)
 
-	errors := err.(parser.Error).Errors
+	errors := err.(parser1.Error).Errors
 	assert.Len(t, errors, 1)
 
-	syntaxError := errors[0].(*parser.InvalidIntegerLiteralError)
+	syntaxError := errors[0].(*parser1.InvalidIntegerLiteralError)
 
 	assert.Equal(t,
 		Position{Offset: 15, Line: 2, Column: 14},
@@ -2691,12 +2691,12 @@ func TestParseInvalidOctalIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		parser.IntegerLiteralKindOctal,
+		parser1.IntegerLiteralKindOctal,
 		syntaxError.IntegerLiteralKind,
 	)
 
 	assert.Equal(t,
-		parser.InvalidNumberLiteralKindTrailingUnderscore,
+		parser1.InvalidNumberLiteralKindTrailingUnderscore,
 		syntaxError.InvalidIntegerLiteralKind,
 	)
 }
@@ -2706,7 +2706,7 @@ func TestParseInvalidBinaryIntegerLiteralWithLeadingUnderscore(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	actual, _, err := parser1.ParseProgram(`
 		let binary = 0b_101010_101010
 	`)
 
@@ -2714,12 +2714,12 @@ func TestParseInvalidBinaryIntegerLiteralWithLeadingUnderscore(t *testing.T) {
 
 	require.Error(t, err)
 
-	require.IsType(t, parser.Error{}, err)
+	require.IsType(t, parser1.Error{}, err)
 
-	errors := err.(parser.Error).Errors
+	errors := err.(parser1.Error).Errors
 	assert.Len(t, errors, 1)
 
-	syntaxError := errors[0].(*parser.InvalidIntegerLiteralError)
+	syntaxError := errors[0].(*parser1.InvalidIntegerLiteralError)
 
 	assert.Equal(t,
 		Position{Offset: 16, Line: 2, Column: 15},
@@ -2732,12 +2732,12 @@ func TestParseInvalidBinaryIntegerLiteralWithLeadingUnderscore(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		parser.IntegerLiteralKindBinary,
+		parser1.IntegerLiteralKindBinary,
 		syntaxError.IntegerLiteralKind,
 	)
 
 	assert.Equal(t,
-		parser.InvalidNumberLiteralKindLeadingUnderscore,
+		parser1.InvalidNumberLiteralKindLeadingUnderscore,
 		syntaxError.InvalidIntegerLiteralKind,
 	)
 }
@@ -2747,7 +2747,7 @@ func TestParseInvalidBinaryIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	actual, _, err := parser1.ParseProgram(`
 		let binary = 0b101010_101010_
 	`)
 
@@ -2755,12 +2755,12 @@ func TestParseInvalidBinaryIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 
 	require.Error(t, err)
 
-	require.IsType(t, parser.Error{}, err)
+	require.IsType(t, parser1.Error{}, err)
 
-	errors := err.(parser.Error).Errors
+	errors := err.(parser1.Error).Errors
 	assert.Len(t, errors, 1)
 
-	syntaxError := errors[0].(*parser.InvalidIntegerLiteralError)
+	syntaxError := errors[0].(*parser1.InvalidIntegerLiteralError)
 
 	assert.Equal(t,
 		Position{Offset: 16, Line: 2, Column: 15},
@@ -2773,12 +2773,12 @@ func TestParseInvalidBinaryIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		parser.IntegerLiteralKindBinary,
+		parser1.IntegerLiteralKindBinary,
 		syntaxError.IntegerLiteralKind,
 	)
 
 	assert.Equal(t,
-		parser.InvalidNumberLiteralKindTrailingUnderscore,
+		parser1.InvalidNumberLiteralKindTrailingUnderscore,
 		syntaxError.InvalidIntegerLiteralKind,
 	)
 }
@@ -2788,7 +2788,7 @@ func TestParseInvalidDecimalIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	actual, _, err := parser1.ParseProgram(`
 		let decimal = 1_234_567_890_
 	`)
 
@@ -2796,12 +2796,12 @@ func TestParseInvalidDecimalIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 
 	require.Error(t, err)
 
-	require.IsType(t, parser.Error{}, err)
+	require.IsType(t, parser1.Error{}, err)
 
-	errors := err.(parser.Error).Errors
+	errors := err.(parser1.Error).Errors
 	assert.Len(t, errors, 1)
 
-	syntaxError := errors[0].(*parser.InvalidIntegerLiteralError)
+	syntaxError := errors[0].(*parser1.InvalidIntegerLiteralError)
 
 	assert.Equal(t,
 		Position{Offset: 17, Line: 2, Column: 16},
@@ -2814,12 +2814,12 @@ func TestParseInvalidDecimalIntegerLiteralWithTrailingUnderscore(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		parser.IntegerLiteralKindDecimal,
+		parser1.IntegerLiteralKindDecimal,
 		syntaxError.IntegerLiteralKind,
 	)
 
 	assert.Equal(t,
-		parser.InvalidNumberLiteralKindTrailingUnderscore,
+		parser1.InvalidNumberLiteralKindTrailingUnderscore,
 		syntaxError.InvalidIntegerLiteralKind,
 	)
 }
@@ -2829,7 +2829,7 @@ func TestParseInvalidHexadecimalIntegerLiteralWithLeadingUnderscore(t *testing.T
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	actual, _, err := parser1.ParseProgram(`
 		let hex = 0x_f2_09
 	`)
 
@@ -2837,12 +2837,12 @@ func TestParseInvalidHexadecimalIntegerLiteralWithLeadingUnderscore(t *testing.T
 
 	require.Error(t, err)
 
-	require.IsType(t, parser.Error{}, err)
+	require.IsType(t, parser1.Error{}, err)
 
-	errors := err.(parser.Error).Errors
+	errors := err.(parser1.Error).Errors
 	assert.Len(t, errors, 1)
 
-	syntaxError := errors[0].(*parser.InvalidIntegerLiteralError)
+	syntaxError := errors[0].(*parser1.InvalidIntegerLiteralError)
 
 	assert.Equal(t,
 		Position{Offset: 13, Line: 2, Column: 12},
@@ -2855,12 +2855,12 @@ func TestParseInvalidHexadecimalIntegerLiteralWithLeadingUnderscore(t *testing.T
 	)
 
 	assert.Equal(t,
-		parser.IntegerLiteralKindHexadecimal,
+		parser1.IntegerLiteralKindHexadecimal,
 		syntaxError.IntegerLiteralKind,
 	)
 
 	assert.Equal(t,
-		parser.InvalidNumberLiteralKindLeadingUnderscore,
+		parser1.InvalidNumberLiteralKindLeadingUnderscore,
 		syntaxError.InvalidIntegerLiteralKind,
 	)
 }
@@ -2870,7 +2870,7 @@ func TestParseInvalidHexadecimalIntegerLiteralWithTrailingUnderscore(t *testing.
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	actual, _, err := parser1.ParseProgram(`
 		let hex = 0xf2_09_
 	`)
 
@@ -2878,12 +2878,12 @@ func TestParseInvalidHexadecimalIntegerLiteralWithTrailingUnderscore(t *testing.
 
 	require.Error(t, err)
 
-	require.IsType(t, parser.Error{}, err)
+	require.IsType(t, parser1.Error{}, err)
 
-	errors := err.(parser.Error).Errors
+	errors := err.(parser1.Error).Errors
 	assert.Len(t, errors, 1)
 
-	syntaxError := errors[0].(*parser.InvalidIntegerLiteralError)
+	syntaxError := errors[0].(*parser1.InvalidIntegerLiteralError)
 
 	assert.Equal(t,
 		Position{Offset: 13, Line: 2, Column: 12},
@@ -2896,12 +2896,12 @@ func TestParseInvalidHexadecimalIntegerLiteralWithTrailingUnderscore(t *testing.
 	)
 
 	assert.Equal(t,
-		parser.IntegerLiteralKindHexadecimal,
+		parser1.IntegerLiteralKindHexadecimal,
 		syntaxError.IntegerLiteralKind,
 	)
 
 	assert.Equal(t,
-		parser.InvalidNumberLiteralKindTrailingUnderscore,
+		parser1.InvalidNumberLiteralKindTrailingUnderscore,
 		syntaxError.InvalidIntegerLiteralKind,
 	)
 
@@ -2912,7 +2912,7 @@ func TestParseInvalidIntegerLiteral(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	actual, _, err := parser1.ParseProgram(`
 		let hex = 0z123
 	`)
 
@@ -2920,12 +2920,12 @@ func TestParseInvalidIntegerLiteral(t *testing.T) {
 
 	require.Error(t, err)
 
-	require.IsType(t, parser.Error{}, err)
+	require.IsType(t, parser1.Error{}, err)
 
-	errors := err.(parser.Error).Errors
+	errors := err.(parser1.Error).Errors
 	assert.Len(t, errors, 1)
 
-	syntaxError := errors[0].(*parser.InvalidIntegerLiteralError)
+	syntaxError := errors[0].(*parser1.InvalidIntegerLiteralError)
 
 	assert.Equal(t,
 		Position{Offset: 13, Line: 2, Column: 12},
@@ -2938,12 +2938,12 @@ func TestParseInvalidIntegerLiteral(t *testing.T) {
 	)
 
 	assert.Equal(t,
-		parser.IntegerLiteralKindUnknown,
+		parser1.IntegerLiteralKindUnknown,
 		syntaxError.IntegerLiteralKind,
 	)
 
 	assert.Equal(t,
-		parser.InvalidNumberLiteralKindUnknownPrefix,
+		parser1.InvalidNumberLiteralKindUnknownPrefix,
 		syntaxError.InvalidIntegerLiteralKind,
 	)
 }
@@ -2953,7 +2953,7 @@ func TestParseDecimalIntegerLiteralWithLeadingZeros(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	actual, _, err := parser1.ParseProgram(`
 		let decimal = 00123
 	`)
 
@@ -2992,7 +2992,7 @@ func TestParseBinaryIntegerLiteralWithLeadingZeros(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	actual, _, err := parser1.ParseProgram(`
 		let binary = 0b001000
 	`)
 
@@ -3927,7 +3927,7 @@ func TestParseInvalidDoubleIntegerUnary(t *testing.T) {
 
 	t.Parallel()
 
-	program, _, err := parser.ParseProgram(`
+	program, _, err := parser1.ParseProgram(`
 	   var a = 1
 	   let b = --a
 	`)
@@ -3936,15 +3936,15 @@ func TestParseInvalidDoubleIntegerUnary(t *testing.T) {
 
 	require.Error(t, err)
 
-	require.IsType(t, parser.Error{}, err)
+	require.IsType(t, parser1.Error{}, err)
 
 	assert.Equal(t,
 		[]error{
-			&parser.JuxtaposedUnaryOperatorsError{
+			&parser1.JuxtaposedUnaryOperatorsError{
 				Pos: Position{Offset: 27, Line: 3, Column: 12},
 			},
 		},
-		err.(parser.Error).Errors,
+		err.(parser1.Error).Errors,
 	)
 }
 
@@ -3952,7 +3952,7 @@ func TestParseInvalidDoubleBooleanUnary(t *testing.T) {
 
 	t.Parallel()
 
-	program, _, err := parser.ParseProgram(`
+	program, _, err := parser1.ParseProgram(`
 	   let b = !!true
 	`)
 
@@ -3960,15 +3960,15 @@ func TestParseInvalidDoubleBooleanUnary(t *testing.T) {
 
 	require.Error(t, err)
 
-	require.IsType(t, parser.Error{}, err)
+	require.IsType(t, parser1.Error{}, err)
 
 	assert.Equal(t,
 		[]error{
-			&parser.JuxtaposedUnaryOperatorsError{
+			&parser1.JuxtaposedUnaryOperatorsError{
 				Pos: Position{Offset: 13, Line: 2, Column: 12},
 			},
 		},
-		err.(parser.Error).Errors,
+		err.(parser1.Error).Errors,
 	)
 }
 
@@ -4471,7 +4471,7 @@ func TestParseExpression(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseExpression(`
+	actual, _, err := parser1.ParseExpression(`
         before(x + before(y)) + z
 	`)
 
@@ -4541,7 +4541,7 @@ func TestParseString(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseExpression(`
+	actual, _, err := parser1.ParseExpression(`
        "test \0\n\r\t\"\'\\ xyz"
 	`)
 
@@ -4562,7 +4562,7 @@ func TestParseStringWithUnicode(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseExpression(`
+	actual, _, err := parser1.ParseExpression(`
       "this is a test \t\\new line and race car:\n\u{1F3CE}\u{FE0F}"
 	`)
 
@@ -4914,7 +4914,7 @@ func TestParseInterface(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithBody {
-		actual, _, err := parser.ParseProgram(fmt.Sprintf(`
+		actual, _, err := parser1.ParseProgram(fmt.Sprintf(`
             %s interface Test {
                 foo: Int
 
@@ -5286,7 +5286,7 @@ func TestParseInvalidMultipleSemicolonsBetweenDeclarations(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	actual, _, err := parser1.ParseProgram(`
         let x = 1;;let y = 2
 	`)
 
@@ -5294,12 +5294,12 @@ func TestParseInvalidMultipleSemicolonsBetweenDeclarations(t *testing.T) {
 
 	require.Error(t, err)
 
-	require.IsType(t, parser.Error{}, err)
+	require.IsType(t, parser1.Error{}, err)
 
-	errors := err.(parser.Error).Errors
+	errors := err.(parser1.Error).Errors
 	assert.Len(t, errors, 1)
 
-	syntaxError := errors[0].(*parser.SyntaxError)
+	syntaxError := errors[0].(*parser1.SyntaxError)
 
 	assert.Equal(t,
 		Position{Offset: 19, Line: 2, Column: 18},
@@ -5314,7 +5314,7 @@ func TestParseInvalidTypeWithWhitespace(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	actual, _, err := parser1.ParseProgram(`
 	    let x: Int ? = 1
 	`)
 
@@ -5322,12 +5322,12 @@ func TestParseInvalidTypeWithWhitespace(t *testing.T) {
 
 	require.Error(t, err)
 
-	require.IsType(t, parser.Error{}, err)
+	require.IsType(t, parser1.Error{}, err)
 
-	errors := err.(parser.Error).Errors
+	errors := err.(parser1.Error).Errors
 	assert.Len(t, errors, 1)
 
-	syntaxError := errors[0].(*parser.SyntaxError)
+	syntaxError := errors[0].(*parser1.SyntaxError)
 
 	assert.Equal(t,
 		Position{Offset: 17, Line: 2, Column: 16},
@@ -7971,7 +7971,7 @@ func BenchmarkParseDeploy(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			_, _, err := parser.ParseProgram(transaction)
+			_, _, err := parser1.ParseProgram(transaction)
 			if err != nil {
 				b.FailNow()
 			}
@@ -7998,7 +7998,7 @@ func BenchmarkParseDeploy(b *testing.B) {
 		b.ResetTimer()
 
 		for i := 0; i < b.N; i++ {
-			_, _, err := parser.ParseProgram(transaction)
+			_, _, err := parser1.ParseProgram(transaction)
 			if err != nil {
 				b.FailNow()
 			}
@@ -8109,7 +8109,7 @@ func BenchmarkParseFungibleToken(b *testing.B) {
 	b.Run("old", func(b *testing.B) {
 
 		for i := 0; i < b.N; i++ {
-			_, _, err := parser.ParseProgram(fungibleTokenContract)
+			_, _, err := parser1.ParseProgram(fungibleTokenContract)
 			if err != nil {
 				b.FailNow()
 			}
@@ -8169,16 +8169,16 @@ func TestParseInvalidForceCast(t *testing.T) {
 
 	t.Parallel()
 
-	_, _, err := parser.ParseReplInput("1 as!! Int\n")
+	_, _, err := parser1.ParseReplInput("1 as!! Int\n")
 
 	require.Error(t, err)
 
-	require.IsType(t, parser.Error{}, err)
+	require.IsType(t, parser1.Error{}, err)
 
-	errors := err.(parser.Error).Errors
+	errors := err.(parser1.Error).Errors
 	assert.Len(t, errors, 1)
 
-	syntaxError := errors[0].(*parser.SyntaxError)
+	syntaxError := errors[0].(*parser1.SyntaxError)
 
 	assert.Equal(t,
 		Position{Offset: 5, Line: 1, Column: 5},
@@ -8190,7 +8190,7 @@ func TestParseInvalidNegativeIntegerLiteralWithIncorrectPrefix(t *testing.T) {
 
 	t.Parallel()
 
-	_, _, err := parser.ParseProgram(`
+	_, _, err := parser1.ParseProgram(`
 	    let e = -0K0
 	`)
 
@@ -8201,7 +8201,7 @@ func TestParseConstantSizedSizedArrayWithTrailingUnderscoreSize(t *testing.T) {
 
 	t.Parallel()
 
-	actual, _, err := parser.ParseProgram(`
+	actual, _, err := parser1.ParseProgram(`
 	  let T:[d;0_]=0
 	`)
 
@@ -8209,12 +8209,12 @@ func TestParseConstantSizedSizedArrayWithTrailingUnderscoreSize(t *testing.T) {
 
 	require.Error(t, err)
 
-	require.IsType(t, parser.Error{}, err)
+	require.IsType(t, parser1.Error{}, err)
 
-	errors := err.(parser.Error).Errors
+	errors := err.(parser1.Error).Errors
 	assert.Len(t, errors, 1)
 
-	require.IsType(t, &parser.InvalidIntegerLiteralError{}, errors[0])
+	require.IsType(t, &parser1.InvalidIntegerLiteralError{}, errors[0])
 }
 
 func TestParsePreconditionWithUnaryNegation(t *testing.T) {
@@ -8391,6 +8391,82 @@ func TestParseBitwiseExpression(t *testing.T) {
 								},
 							},
 						},
+					},
+				},
+				StartPos: Position{Offset: 7, Line: 2, Column: 6},
+			},
+		},
+		nil,
+	)
+}
+
+func TestParseInstantiationType(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+      let a: MyContract.MyStruct<Int, @R > = b
+	`
+
+	testParse(
+		t,
+		code,
+		[]Declaration{
+			&VariableDeclaration{
+				IsConstant: true,
+				Identifier: Identifier{
+					Identifier: "a",
+					Pos:        Position{Offset: 11, Line: 2, Column: 10},
+				},
+				TypeAnnotation: &TypeAnnotation{
+					IsResource: false,
+					Type: &InstantiationType{
+						Type: &NominalType{
+							Identifier: Identifier{
+								Identifier: "MyContract",
+								Pos:        Position{Offset: 14, Line: 2, Column: 13},
+							},
+							NestedIdentifiers: []Identifier{
+								{
+									Identifier: "MyStruct",
+									Pos:        Position{Offset: 25, Line: 2, Column: 24},
+								},
+							},
+						},
+						TypeArguments: []*TypeAnnotation{
+							{
+								IsResource: false,
+								Type: &NominalType{
+									Identifier: Identifier{
+										Identifier: "Int",
+										Pos:        Position{Offset: 34, Line: 2, Column: 33},
+									},
+								},
+								StartPos: Position{Offset: 34, Line: 2, Column: 33},
+							},
+							{
+								IsResource: true,
+								Type: &NominalType{
+									Identifier: Identifier{
+										Identifier: "R",
+										Pos:        Position{Offset: 40, Line: 2, Column: 39},
+									},
+								},
+								StartPos: Position{Offset: 39, Line: 2, Column: 38},
+							},
+						},
+						EndPos: Position{Offset: 42, Line: 2, Column: 41},
+					},
+					StartPos: Position{Offset: 14, Line: 2, Column: 13},
+				},
+				Transfer: &Transfer{
+					Operation: TransferOperationCopy,
+					Pos:       Position{Offset: 44, Line: 2, Column: 43},
+				},
+				Value: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "b",
+						Pos:        Position{Offset: 46, Line: 2, Column: 45},
 					},
 				},
 				StartPos: Position{Offset: 7, Line: 2, Column: 6},

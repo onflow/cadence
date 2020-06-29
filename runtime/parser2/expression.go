@@ -231,6 +231,7 @@ func setExprMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation exp
 	exprMetaLeftDenotations[tokenType] = metaLeftDenotation
 }
 
+// init defines the binding power for operations.
 func init() {
 
 	defineExpr(binaryExpr{
@@ -491,7 +492,7 @@ func init() {
 	defineIdentifierExpression()
 
 	setExprNullDenotation(lexer.TokenEOF, func(parser *parser, token lexer.Token) ast.Expression {
-		panic("expected expression")
+		panic(fmt.Errorf("expected expression"))
 	})
 }
 
@@ -551,11 +552,9 @@ func defineLessThanOrTypeArgumentsExpression() {
 					_ = recover()
 				}()
 
-				typeArguments, _ =
-					parseCommaSeparatedTypeAnnotations(p, lexer.TokenGreater)
-
-				p.skipSpaceAndComments(true)
+				typeArguments = parseCommaSeparatedTypeAnnotations(p, lexer.TokenGreater)
 				p.mustOne(lexer.TokenGreater)
+
 				p.skipSpaceAndComments(true)
 				p.mustOne(lexer.TokenParenOpen)
 
@@ -1024,6 +1023,8 @@ func exprLeftDenotationAllowsNewline(tokenType lexer.TokenType) bool {
 	}
 }
 
+// parseExpression uses "Top-Down operator precedence parsing" (TDOP) technique to
+// parse expressions.
 func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 	p.skipSpaceAndComments(true)
 	t := p.current

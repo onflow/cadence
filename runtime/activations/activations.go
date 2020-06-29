@@ -48,18 +48,28 @@ func (a *Activations) Find(key string) interface{} {
 	return current.Find(common.StringEntry(key))
 }
 
+// Set adds the new key value pair to the current scope.
+// The current scope is updated in an immutable way.
 func (a *Activations) Set(name string, value interface{}) {
 	current := a.current()
+	// create the first scope if there is no scope
 	if current == nil {
 		a.PushCurrent()
 		current = &a.activations[0]
 	}
 
 	count := len(a.activations)
+	// update the current scope in an immutable way,
+	// which builds on top of the old "current" activation value
+	// without mutating it.
 	a.activations[count-1] = current.
 		Insert(common.StringEntry(name), value)
 }
 
+// PushCurrent makes a copy of the current activation, and pushes it to
+// the top of the activation stack, so that the `Find` method only needs to
+// look up a certain record by name from the current activation record
+// without having to go through each activation in the stack.
 func (a *Activations) PushCurrent() {
 	current := a.current()
 	if current == nil {

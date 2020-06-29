@@ -19,7 +19,6 @@
 package parser2
 
 import (
-	"errors"
 	"math/big"
 	"testing"
 
@@ -442,9 +441,12 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("{ T , }")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("missing type after comma"),
+				&SyntaxError{
+					Message: "missing type after comma",
+					Pos:     ast.Position{Offset: 6, Line: 1, Column: 6},
+				},
 			},
 			errs,
 		)
@@ -455,9 +457,12 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("{ T U }")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("unexpected type"),
+				&SyntaxError{
+					Message: "unexpected type",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
 			},
 			errs,
 		)
@@ -468,9 +473,12 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("{ T , U : V }")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("unexpected colon in restricted type"),
+				&SyntaxError{
+					Message: "unexpected colon in restricted type",
+					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+				},
 			},
 			errs,
 		)
@@ -481,9 +489,12 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("T{ T , U : V }")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New(`unexpected token: got ':', expected ',' or '}'`),
+				&SyntaxError{
+					Message: `unexpected token: got ':', expected ',' or '}'`,
+					Pos:     ast.Position{Offset: 9, Line: 1, Column: 9},
+				},
 			},
 			errs,
 		)
@@ -494,9 +505,12 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("{[T]}")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("non-nominal type in restriction list: [T]"),
+				&SyntaxError{
+					Message: "non-nominal type in restriction list: [T]",
+					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				},
 			},
 			errs,
 		)
@@ -507,9 +521,12 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("T{[U]}")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("unexpected non-nominal type: [U]"),
+				&SyntaxError{
+					Message: "unexpected non-nominal type: [U]",
+					Pos:     ast.Position{Offset: 5, Line: 1, Column: 5},
+				},
 			},
 			errs,
 		)
@@ -520,9 +537,12 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("{T, [U]}")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("non-nominal type in restriction list: [U]"),
+				&SyntaxError{
+					Message: "non-nominal type in restriction list: [U]",
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
 			},
 			errs,
 		)
@@ -533,9 +553,12 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("T{U, [V]}")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("unexpected non-nominal type: [V]"),
+				&SyntaxError{
+					Message: "unexpected non-nominal type: [V]",
+					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
+				},
 			},
 			errs,
 		)
@@ -546,9 +569,12 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("{")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("invalid end of input, expected type"),
+				&SyntaxError{
+					Message: "invalid end of input, expected type",
+					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				},
 			},
 			errs,
 		)
@@ -559,9 +585,12 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("T{")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("invalid end of input, expected type"),
+				&SyntaxError{
+					Message: "invalid end of input, expected type",
+					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				},
 			},
 			errs,
 		)
@@ -572,9 +601,12 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("{U")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("invalid end of input, expected '}'"),
+				&SyntaxError{
+					Message: "invalid end of input, expected '}'",
+					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				},
 			},
 			errs,
 		)
@@ -585,9 +617,12 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("T{U")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("invalid end of input, expected '}'"),
+				&SyntaxError{
+					Message: "invalid end of input, expected '}'",
+					Pos:     ast.Position{Offset: 3, Line: 1, Column: 3},
+				},
 			},
 			errs,
 		)
@@ -598,9 +633,12 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("{U,")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("invalid end of input, expected type"),
+				&SyntaxError{
+					Message: "invalid end of input, expected type",
+					Pos:     ast.Position{Offset: 3, Line: 1, Column: 3},
+				},
 			},
 			errs,
 		)
@@ -611,9 +649,12 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("T{U,")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("invalid end of input, expected type"),
+				&SyntaxError{
+					Message: "invalid end of input, expected type",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
 			},
 			errs,
 		)
@@ -624,9 +665,12 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("{,}")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("unexpected comma in restricted type"),
+				&SyntaxError{
+					Message: "unexpected comma in restricted type",
+					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				},
 			},
 			errs,
 		)
@@ -637,9 +681,12 @@ func TestParseRestrictedType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("T{,}")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("unexpected comma"),
+				&SyntaxError{
+					Message: "unexpected comma",
+					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				},
 			},
 			errs,
 		)
@@ -685,9 +732,12 @@ func TestParseDictionaryType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("{T:}")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("missing dictionary value type"),
+				&SyntaxError{
+					Message: "missing dictionary value type",
+					Pos:     ast.Position{Offset: 3, Line: 1, Column: 3},
+				},
 			},
 			errs,
 		)
@@ -698,9 +748,12 @@ func TestParseDictionaryType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("{:}")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("unexpected colon in dictionary type"),
+				&SyntaxError{
+					Message: "unexpected colon in dictionary type",
+					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				},
 			},
 			errs,
 		)
@@ -711,9 +764,12 @@ func TestParseDictionaryType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("{:U}")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("unexpected colon in dictionary type"),
+				&SyntaxError{
+					Message: "unexpected colon in dictionary type",
+					Pos:     ast.Position{Offset: 1, Line: 1, Column: 1},
+				},
 			},
 			errs,
 		)
@@ -724,9 +780,12 @@ func TestParseDictionaryType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("{T:U,}")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("unexpected comma in dictionary type"),
+				&SyntaxError{
+					Message: "unexpected comma in dictionary type",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
 			},
 			errs,
 		)
@@ -737,9 +796,12 @@ func TestParseDictionaryType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("{T:U:}")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("unexpected colon in dictionary type"),
+				&SyntaxError{
+					Message: "unexpected colon in dictionary type",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
 			},
 			errs,
 		)
@@ -750,9 +812,12 @@ func TestParseDictionaryType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("{T::U}")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("unexpected colon in dictionary type"),
+				&SyntaxError{
+					Message: "unexpected colon in dictionary type",
+					Pos:     ast.Position{Offset: 3, Line: 1, Column: 3},
+				},
 			},
 			errs,
 		)
@@ -763,9 +828,12 @@ func TestParseDictionaryType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("{T:")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("invalid end of input, expected type"),
+				&SyntaxError{
+					Message: "invalid end of input, expected type",
+					Pos:     ast.Position{Offset: 3, Line: 1, Column: 3},
+				},
 			},
 			errs,
 		)
@@ -776,9 +844,12 @@ func TestParseDictionaryType(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseType("{T:U")
-		require.Equal(t,
+		utils.AssertEqualWithDiff(t,
 			[]error{
-				errors.New("invalid end of input, expected '}'"),
+				&SyntaxError{
+					Message: "invalid end of input, expected '}'",
+					Pos:     ast.Position{Offset: 4, Line: 1, Column: 4},
+				},
 			},
 			errs,
 		)
@@ -874,6 +945,141 @@ func TestParseFunctionType(t *testing.T) {
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 30, Offset: 30},
 				},
+			},
+			result,
+		)
+	})
+}
+
+func TestParseInstantiationType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("no type arguments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("T<>")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.InstantiationType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				EndPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+			},
+			result,
+		)
+	})
+
+	t.Run("one type argument, no spaces", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("T<U>")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.InstantiationType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				TypeArguments: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "U",
+								Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+					},
+				},
+				EndPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+			},
+			result,
+		)
+	})
+
+	t.Run("one type argument, with spaces", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("T< U >")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.InstantiationType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				TypeArguments: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "U",
+								Pos:        ast.Position{Line: 1, Column: 3, Offset: 3},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+					},
+				},
+				EndPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+			},
+			result,
+		)
+	})
+
+	t.Run("two type arguments, with spaces", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("T< U , @V >")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.InstantiationType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				TypeArguments: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "U",
+								Pos:        ast.Position{Line: 1, Column: 3, Offset: 3},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+					},
+					{
+						IsResource: true,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "V",
+								Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+					},
+				},
+				EndPos: ast.Position{Line: 1, Column: 10, Offset: 10},
 			},
 			result,
 		)
