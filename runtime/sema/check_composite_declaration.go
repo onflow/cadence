@@ -576,38 +576,15 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 		// check if all members' type are allowed to be the fields
 		for _, member := range members {
-			// skip checking predeclared fields, such as `account` for Contract,
-			// and `owner` for Resource
-			if member.Predeclared {
-				continue
+			// if a member is a non-storable field, then report error
+			if !member.IsStorable() {
+				err := &FieldTypeNotStorableError{
+					Name: member.Identifier.Identifier,
+					Type: member.TypeAnnotation.Type,
+					Pos:  member.Identifier.Pos,
+				}
+				checker.report(err)
 			}
-
-			// only check fields. method functions is allowed
-			if member.DeclarationKind != common.DeclarationKindField {
-				continue
-			}
-
-			// if this field's type has failed previous check, then
-			// skip the check on this field.
-			if member.TypeAnnotation.Type.IsInvalidType() {
-				continue
-			}
-
-			storable := member.TypeAnnotation.Type.IsStorable()
-
-			// if the type is allowed to be stored, then continue checking
-			// other fields.
-			if storable {
-				continue
-			}
-
-			// otherwise report error
-			err := &FieldTypeNotStorableError{
-				Name: member.Identifier.Identifier,
-				Type: member.TypeAnnotation.Type,
-				Pos:  member.Identifier.Pos,
-			}
-			checker.report(err)
 		}
 
 		compositeType.Members = members

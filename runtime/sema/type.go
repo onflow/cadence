@@ -4859,6 +4859,29 @@ func NewPublicConstantFieldMember(containerType Type, identifier string, fieldTy
 	}
 }
 
+// IsStorable returns whether a member is a storable field
+func (m *Member) IsStorable() bool {
+	// skip checking predeclared fields, such as `account` for Contract,
+	// and `owner` for Resource
+	if m.Predeclared {
+		return true
+	}
+
+	// only check fields. method functions is allowed
+	if m.DeclarationKind != common.DeclarationKindField {
+		return true
+	}
+
+	// if this field's type has failed previous check, then
+	// skip the check on this field.
+	if m.TypeAnnotation.Type.IsInvalidType() {
+		return true
+	}
+
+	storable := m.TypeAnnotation.Type.IsStorable()
+	return storable
+}
+
 // InterfaceType
 
 type InterfaceType struct {
@@ -4931,13 +4954,7 @@ func (t *InterfaceType) IsInvalidType() bool {
 func (t *InterfaceType) IsStorable() bool {
 	// all nested types has to be storable
 	for _, member := range t.Members {
-		if member.DeclarationKind != common.DeclarationKindField {
-			continue
-		}
-
-		// if interface has field, and field is not storable then
-		// the interface is not storable
-		if !member.TypeAnnotation.Type.IsStorable() {
+		if !member.IsStorable() {
 			return false
 		}
 	}
