@@ -6396,7 +6396,7 @@ Each phase is a block of code that executes sequentially.
 
 Here is an empty Cadence transaction which contains no logic but demonstrates the syntax for each type of block, in the order these blocks will be executed:
 
-```swift
+```cadence,file=transaction-blocks.cdc
 transaction {
     prepare(signer1: AuthAccount, signer2: AuthAccount) {
         // ...
@@ -6416,48 +6416,48 @@ transaction {
 }
 ```
 
-Although optional, each block serves a specific purpose when executing a transaction 
+Although optional, each block serves a specific purpose when executing a transaction
 and it is recommended that developers use these blocks when creating their transactions.
 The following will detail the purpose of and how to use each block.
 
 ## Prepare
 
-The `prepare` **block** is used when access to the private `AuthAccount` object of **signing accounts** is required for your transaction. 
+The `prepare` **block** is used when access to the private `AuthAccount` object of **signing accounts** is required for your transaction.
 
-Direct access to signing accounts is **only possible inside the** `prepare` **block.** 
+Direct access to signing accounts is **only possible inside the** `prepare` **block.**
 
-For each signer of the transaction the signing account is passed as an argument to the `prepare` block. 
+For each signer of the transaction the signing account is passed as an argument to the `prepare` block.
 For example, if the transaction has three signers, the prepare **must** have three parameters of type `AuthAccount`.
 
-```swift
+```cadence
  prepare(signer1: AuthAccount) {
       // ...
  }
 ```
 
 
-As a best practice, only use the `prepare` block to define and execute logic that requires access to the `AuthAccount` objects of signing accounts, 
-and *move all other logic elsewhere*. 
-Modifications to accounts can have significant implications, 
+As a best practice, only use the `prepare` block to define and execute logic that requires access to the `AuthAccount` objects of signing accounts,
+and *move all other logic elsewhere*.
+Modifications to accounts can have significant implications,
 so keep this block clear of unrelated logic to ensure users of your contract are able to easily read and understand logic related to their private account objects.
 
 The prepare block serves a similar purpose as the initializer of a contract/resource/structure.
 
-For example, if a transaction performs a token transfer, put the withdrawal in the `prepare` block, 
+For example, if a transaction performs a token transfer, put the withdrawal in the `prepare` block,
 as it requires access to the account storage, but perform the deposit in the `execute` block.
 
 `AuthAccount` objects have the permissions
 to read from and write to the `/storage/` and `/private/` areas
-of the account, which cannot be directly accessed anywhere else.  
+of the account, which cannot be directly accessed anywhere else.
 They also have the permission to create and delete capabilities that
 use these areas.
 
 ## Pre
 
-The `pre` block is executed after the `prepare` block, and is used for checking if explicit conditions hold before executing the remainder of the transaction. 
+The `pre` block is executed after the `prepare` block, and is used for checking if explicit conditions hold before executing the remainder of the transaction.
 A common example would be checking requisite balances before transferring tokens between accounts.
 
-```swift
+```cadence
 pre {
     sendingAccount.balance > 0
 }
@@ -6467,10 +6467,10 @@ If the `pre` block throws an error, or does not return `true` the remainder of t
 
 ## **Execute**
 
-The `execute` block does exactly what it says, it executes the main logic of the transaction. 
+The `execute` block does exactly what it says, it executes the main logic of the transaction.
 This block is optional, but it is a best practice to add your main transaction logic in the section, so it is explicit.
 
-```swift
+```cadence
 execute {
     // Invalid: Cannot access the authorized account object,
     // as `account1` is not in scope
@@ -6482,7 +6482,7 @@ execute {
 }
 ```
 
-You **may not** access private `AuthAccount` objects in the `execute` block, but you may get an account's `PublicAccount` object, 
+You **may not** access private `AuthAccount` objects in the `execute` block, but you may get an account's `PublicAccount` object,
 which allows reading and calling methods on objects that an account has published in the public domain of its account. (resources, contract methods, etc.)
 
 ## **Post**
@@ -6491,7 +6491,7 @@ Statements inside of the `post` block are used to verify that your transaction l
 
 For example, the a transfer transaction might ensure that the final balance has a certain value, or e.g. it was incremented by a specific amount.
 
-```swift
+```cadence
 post {
     result.balance == 30: "Balance after transaction is incorrect!"
 }
@@ -6503,33 +6503,33 @@ Only condition checks are allowed in this section. No actual computation or modi
 
 **A Note about `pre` and `post` Blocks**
 
-Another function of the `pre` and `post` blocks is to help provide information about how the effects of a transaction on the accounts and resources involved. 
-This is essential because users may want to verify what a transaction does before submitting it. 
+Another function of the `pre` and `post` blocks is to help provide information about how the effects of a transaction on the accounts and resources involved.
+This is essential because users may want to verify what a transaction does before submitting it.
 `pre` and `post` blocks provide a way to introspect transactions before they are executed.
 
-For example, in the future the blocks could be analyzed and interpreted to the user in the software they are using, 
+For example, in the future the blocks could be analyzed and interpreted to the user in the software they are using,
 e.g. "this transaction will transfer 30 tokens from A to B. The balance of A will decrease by 30 tokens and the balance of B will increase by 30 tokens."
 
 ## Summary
 
 Cadence transactions use blocks to make the transaction's code/intent more readable and to provide a way for developer to separate potentially 'unsafe' account modifying code from regular transaction logic,
-as well as provide a way to check for error prior / after transaction execution, 
+as well as provide a way to check for error prior / after transaction execution,
 and abort the transaction if any are found.
 
 The following is a brief summary of how to use the `prepare`, `pre`, `execute`, and `post` blocks in a Cadence transaction.
 
-```swift
+```cadence
 transaction {
     prepare(signer1: AuthAccount) {
-        // Access signing accounts for this transaction. 
+        // Access signing accounts for this transaction.
         //
         // Avoid logic that does not need access to signing accounts.
-        // 
+        //
         // Signing accounts can't be accesed anywhere else in the transaction.
     }
 
     pre {
-        // Define conditions that must be true 
+        // Define conditions that must be true
         // for this transaction to execute.
     }
 
@@ -6539,10 +6539,10 @@ transaction {
     }
 
     post {
-        // Define the expected state of things 
+        // Define the expected state of things
         // as they should be after the transaction executed.
         //
-        // Also used to provide information about what changes 
+        // Also used to provide information about what changes
         // this transaction will make to accounts in this transaction.
     }
 }
