@@ -496,11 +496,12 @@ func (checker *Checker) declareCompositeMembersAndValue(
 			checker.declareInterfaceMembers(nestedInterfaceDeclaration)
 		}
 
-		// if the declaration has composite declaration, then recursively check the members and
-		// values of them.
+		// If this composite declaration has nested composite declaration, 
+		// then recursively declare the members and values of them.
 		//
-		// for instance, the struct S defined within `MyContract` as below is a
-		// nestedCompositeDeclaration which has its own members and values need to be check:
+		// For instance, a structure `S`, defined within a contract `MyContract`,
+		// as shown in the example code below, is a nested composite declaration
+		// which has its own members:
 		// ```
 		// contract MyContract {
 		//   struct S {
@@ -574,16 +575,20 @@ func (checker *Checker) declareCompositeMembersAndValue(
 			)
 		}
 
-		// check if all members' type are allowed to be the fields
+		// Check if all members' types are allowed. 
+		// A member's type is allowed if it is storable
+		
 		for _, member := range members {
-			// if a member is a non-storable field, then report error
+			// If a member has a non-storable type, then report an error
+			
 			if !member.IsStorable() {
-				err := &FieldTypeNotStorableError{
-					Name: member.Identifier.Identifier,
-					Type: member.TypeAnnotation.Type,
-					Pos:  member.Identifier.Pos,
-				}
-				checker.report(err)
+				checker.report(
+					&FieldTypeNotStorableError{
+						Name: member.Identifier.Identifier,
+						Type: member.TypeAnnotation.Type,
+						Pos:  member.Identifier.Pos,
+					},
+				)
 			}
 		}
 
@@ -1297,7 +1302,7 @@ func (checker *Checker) checkNoInitializerNoFields(
 	)
 }
 
-// checkSpecialFunction checks specifal functions, like init() and destroy()
+// checkSpecialFunction checks special functions, like initializers and destructors
 func (checker *Checker) checkSpecialFunction(
 	specialFunction *ast.SpecialFunctionDeclaration,
 	containerType Type,
