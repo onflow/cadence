@@ -5926,13 +5926,14 @@ func (t *RestrictedType) RestrictionSet() InterfaceSet {
 
 func (*RestrictedType) IsType() {}
 
-func (t *RestrictedType) string(typeFormatter func(Type) string) string {
+func (t *RestrictedType) string(separator string, typeFormatter func(Type) string) string {
 	var result strings.Builder
 	result.WriteString(typeFormatter(t.Type))
 	result.WriteRune('{')
 	for i, restriction := range t.Restrictions {
 		if i > 0 {
-			result.WriteString(", ")
+			result.WriteRune(',')
+			result.WriteString(separator)
 		}
 		result.WriteString(typeFormatter(restriction))
 	}
@@ -5941,20 +5942,20 @@ func (t *RestrictedType) string(typeFormatter func(Type) string) string {
 }
 
 func (t *RestrictedType) String() string {
-	return t.string(func(ty Type) string {
+	return t.string(" ", func(ty Type) string {
 		return ty.String()
 	})
 }
 
 func (t *RestrictedType) QualifiedString() string {
-	return t.string(func(ty Type) string {
+	return t.string(" ", func(ty Type) string {
 		return ty.QualifiedString()
 	})
 }
 
 func (t *RestrictedType) ID() TypeID {
 	return TypeID(
-		t.string(func(ty Type) string {
+		t.string("", func(ty Type) string {
 			return string(ty.ID())
 		}),
 	)
