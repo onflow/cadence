@@ -177,6 +177,16 @@ _Bastian Müller, Dieter Shirley, Joshua Hannan_
 
 -   [Transactions](#transactions)
 
+-   [Prepare](#prepare)
+
+-   [Pre](#pre)
+
+-   [**Execute**](#execute)
+
+-   [**Post**](#post)
+
+-   [Summary](#summary)
+
     -   [Importing and using Deployed Contract Code](#importing-and-using-deployed-contract-code)
 
 -   [Built-in Functions](#built-in-functions)
@@ -260,7 +270,7 @@ Comments may be nested.
 <code><pre><span style="color: #008000">/* /* this */ is a valid comment */</span><span>
 </span></pre></code>
 
-Mutli-line comments are balanced.
+Multi-line comments are balanced.
 
 <code><pre><span style="color: #008000">/* this is a // comment up to here */</span><span style="color: #000000"> this is not part of the comment </span><span style="color: #CD3131">*/</span><span>
 </span></pre></code>
@@ -575,7 +585,7 @@ and can represent values in the following ranges:
 
 The types are independent types, i.e. not subtypes of each other.
 
-See the section about [artihmetic operators](#arithmetic) for further
+See the section about [arithmetic operators](#arithmetic) for further
 information about the behavior of the different integer types.
 
 <code><pre><span style="color: #008000">// Declare a constant that has type `UInt8` and the value 10.</span><span>
@@ -697,7 +707,7 @@ i.e., all non-resource types are a subtype of it.
 
 <code><pre><span style="color: #008000">// Declare a variable that has the type `AnyStruct`.</span><span>
 </span><span style="color: #008000">// Any non-resource typed value can be assigned to it, for example an integer,</span><span>
-</span><span style="color: #008000">// but not resoure-typed values.</span><span>
+</span><span style="color: #008000">// but not resource-typed values.</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">var</span><span style="color: #000000"> someStruct: </span><span style="color: #0000FF">AnyStruct</span><span style="color: #000000"> = </span><span style="color: #09885A">1</span><span>
 </span><span>
@@ -777,7 +787,7 @@ and `AnyResource` is the super-type of all resource optional types.
 </span></pre></code>
 
 [Conditional downcasting](#conditional-downcasting-operator) allows coercing
-a value which has the type `AnyStruct` or `AnyResource` back to its orignal type.
+a value which has the type `AnyStruct` or `AnyResource` back to its original type.
 
 ### [](#optionals)Optionals
 
@@ -1141,7 +1151,7 @@ Strings have multiple built-in functions you can use.
     Returns a string slice of the characters
     in the given string from start index `from` up to,
     but not including, the end index `upTo`.
-    This function creates a new string whose length is `upto - from`.
+    This function creates a new string whose length is `upTo - from`.
     It does not modify the original string.
     If either of the parameters are out of
     the bounds of the string, the function will fail.
@@ -2979,7 +2989,7 @@ In these cases explicit type annotations are required.
 </span><span>
 </span><span style="color: #008000">// Instead, specify the array type and the concrete element type, e.g. `Int`.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> arrary: [</span><span style="color: #0000FF">Int</span><span style="color: #000000">] = []</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> array: [</span><span style="color: #0000FF">Int</span><span style="color: #000000">] = []</span><span>
 </span></pre></code>
 
 <code><pre><span style="color: #008000">// Invalid: not possible to infer type based on dictionary literal's keys and values.</span><span>
@@ -4303,13 +4313,14 @@ a declaration can be accessed or called.
     on an instance of the type in an outer scope.
     This does not allow the declaration to be publicly writable though.
 
-    An element is made public by using the `pub` or `access(all)` keywords.
+    An element is made publicly accessible / by any code
+    by using the `pub` or `access(all)` keywords.
 
 -   **access(account)** means the declaration is only accessible/visible in the
     scope of the entire account where it is defined. This means that
     other contracts in the account are able to access it,
 
-    An element is specified with account access
+    An element is made accessible by code in the same account (e.g. other contracts)
     by using the `access(account)` keyword.
 
 -   **access(contract)** means the declaration is only accessible/visible in the
@@ -4317,7 +4328,7 @@ a declaration can be accessed or called.
     and functions that are defined in the same contract can access it,
     but not other contracts in the same account.
 
-    An element is specified with contract access
+    An element is made accessible by code in the same contract
     by using the `access(contract)` keyword.
 
 -   Private or **access(self)** means the declaration is only accessible/visible
@@ -4327,7 +4338,8 @@ a declaration can be accessed or called.
     accessed by functions of the type is part of,
     not by code in an outer scope.
 
-    This level is specified by using the `access(self)` keyword.
+    An element is made accessible by code in the same containing type
+    by using the `access(self)` keyword.
 
 **Access level must be specified for each declaration**
 
@@ -4335,31 +4347,30 @@ The `(set)` suffix can be used to make variables also publicly writable.
 
 To summarize the behavior for variable declarations, constant declarations, and fields:
 
-| Declaration kind | Access modifier     | Read scope                            | Write scope       |
-| :--------------- | :------------------ | :------------------------------------ | :---------------- |
-| `let`            | `access(self)`      | Current and inner                     | _None_            |
-| `let`            | `access(contract)`  | Current, inner, and its contract      | _None_            |
-| `let`            | `access(account)`   | Current, inner, and account contracts | _None_            |
-| `let`            | `pub`,`access(all)` | **All**                               | _None_            |
-| `var`            | `access(self)`      | Current and inner                     | Current and inner |
-| `var`            | `access(contract)`  | Current, inner, and its contract      | Current and inner |
-| `var`            | `access(account)`   | Current, inner, and account contracts | Current and inner |
-| `var`            | `pub`,`access(all)` | **All**                               | Current and inner |
-| `var`            | `pub(set)`          | **All**                               | **All**           |
+| Declaration kind | Access modifier         | Read scope                                          | Write scope       |
+| :--------------- | :---------------------- | :-------------------------------------------------- | :---------------- |
+| `let`            | `priv` / `access(self)` | Current and inner                                   | _None_            |
+| `let`            | `access(contract)`      | Current, inner, and containing contract             | _None_            |
+| `let`            | `access(account)`       | Current, inner, and other contracts in same account | _None_            |
+| `let`            | `pub`,`access(all)`     | **All**                                             | _None_            |
+| `var`            | `access(self)`          | Current and inner                                   | Current and inner |
+| `var`            | `access(contract)`      | Current, inner, and containing contract             | Current and inner |
+| `var`            | `access(account)`       | Current, inner, and other contracts in same account | Current and inner |
+| `var`            | `pub` / `access(all)`   | **All**                                             | Current and inner |
+| `var`            | `pub(set)`              | **All**                                             | **All**           |
 
-To summarize the behavior for functions, structures, resources, and interfaces:
+To summarize the for functions:
 
-| Declaration kind                                                  | Access modifier     | Access scope                          |
-| :---------------------------------------------------------------- | :------------------ | :------------------------------------ |
-| `fun`,`struct`,`resource`,`struct interface`,`resource interface` | `access(self)`      | Current and inner                     |
-| `fun`,`struct`,`resource`,`struct interface`,`resource interface` | `access(contract)`  | Current, inner, and its contract      |
-| `fun`,`struct`,`resource`,`struct interface`,`resource interface` | `access(account)`   | Current, inner, and account contracts |
-| `fun`,`struct`,`resource`,`struct interface`,`resource interface` | `pub`,`access(all)` | **All**                               |
+| Access modifier         | Access scope                                        |
+| :---------------------- | :-------------------------------------------------- |
+| `priv` / `access(self)` | Current and inner                                   |
+| `access(contract)`      | Current, inner, and containing contract             |
+| `access(account)`       | Current, inner, and other contracts in same account |
+| `pub` / `access(all)`   | **All**                                             |
 
-Currently, all contract defined types must have an access declaration, but
-only code within the [contract](#contracts) in which the type is declared
-is allowed to create instances of the type.
-See the linked contracts section for more information.
+Declarations of structures, resources, events, and [contracts](#contracts) can only be public.
+However, even though the declarations/types are publicly visible,
+resources can only be created from inside the contract they are declared in.
 
 <code><pre><span style="color: #008000">// Declare a private constant, inaccessible/invisible in outer scope.</span><span>
 </span><span style="color: #008000">//</span><span>
@@ -4783,7 +4794,7 @@ but also publicly settable (the `pub(set)` keyword is specified).
 ### [](#interfaces-in-types)Interfaces in Types
 
 Interfaces can be used in types: The type `{I}` is the type of all objects
-that implement the interfaace `I`.
+that implement the interface `I`.
 
 This is called a [restricted type](#restricted-types):
 Only the functionality (members and functions) of the interface can be used
@@ -5134,14 +5145,14 @@ Structure and resource types can be **restricted**. Restrictions are interfaces.
 Restricted types only allow access to a subset of the members and functions
 of the type that is restricted, indicated by the restrictions.
 
-The syntax of a restriced type is `T{U1, U2, ... Un}`,
-where `T` is the restricted type, a concrete resource or strucure type,
+The syntax of a restricted type is `T{U1, U2, ... Un}`,
+where `T` is the restricted type, a concrete resource or structure type,
 and the types `U1` to `Un` are the restrictions, interfaces that `T` conforms to.
 
 Only the members and functions of the union of the set of restrictions are available.
 
 Restricted types are useful for increasing the safety in functions
-that are suposed to only work on a subset of the type.
+that are supposed to only work on a subset of the type.
 For example, by using a restricted type for a parameter&#x27;s type,
 the function may only access the functionality of the restriction:
 If the function accidentally attempts to access other functionality,
@@ -5232,7 +5243,7 @@ and `AnyResource`, the supertype of all resources.
 For example, restricted type `AnyResource{HasCount}` is any resource type
 for which only the functionality of the `HasCount` resource interface can be used.
 
-The restricted types `AnyStruct` and `AnyResource` can be ommited.
+The restricted types `AnyStruct` and `AnyResource` can be omitted.
 For example, the type `{HasCount}` is any resource that implements
 the resource interface `HasCount`.
 
@@ -5279,7 +5290,7 @@ the resource interface `HasCount`.
 </span><span style="color: #008000">// `id2` is "2"</span><span>
 </span></pre></code>
 
-Only concrete types may be restriced, e.g., the restricted type may not be an array,
+Only concrete types may be restricted, e.g., the restricted type may not be an array,
 the type `[T]{U}` is invalid.
 
 Restricted types are also useful when giving access to resources and structures
@@ -5376,7 +5387,7 @@ Also, authorized references are subtypes of unauthorized references.
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #000000">countRef.increment()</span><span>
 </span><span>
-</span><span style="color: #008000">// Invalid: Cannot failably downcast to reference type `&#x26;Counter`,</span><span>
+</span><span style="color: #008000">// Invalid: Cannot conditionally downcast to reference type `&#x26;Counter`,</span><span>
 </span><span style="color: #008000">// as the reference `countRef` is unauthorized.</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #008000">// The counter value has type `Counter`, which is a subtype of `{HasCount}`,</span><span>
@@ -5391,7 +5402,7 @@ Also, authorized references are subtypes of unauthorized references.
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> authCountRef: </span><span style="color: #0000FF">auth</span><span style="color: #000000"> &#x26;{</span><span style="color: #0000FF">HasCount</span><span style="color: #000000">} = &#x26;counter as auth &#x26;{HasCount}</span><span>
 </span><span>
-</span><span style="color: #008000">// Failably downcast to reference type `&#x26;Counter`.</span><span>
+</span><span style="color: #008000">// Conditionally downcast to reference type `&#x26;Counter`.</span><span>
 </span><span style="color: #008000">// This is valid, because the reference `authCountRef` is authorized</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> counterRef3: &#x26;</span><span style="color: #0000FF">Counter</span><span style="color: #000000"> = authCountRef as? &#x26;Counter</span><span>
@@ -5548,7 +5559,7 @@ to all its stored objects.
 
        Returns a copy of a structure stored in account storage, without removing it from storage.
 
-       If no strucure is stored under the given path, the function returns `nil`.
+       If no structure is stored under the given path, the function returns `nil`.
        If there is a structure stored, it is copied.
        The structure stays stored in storage after the function returns.
 
@@ -5763,7 +5774,7 @@ Capabilities are created using the `link` function of an authorized account (`Au
 
 -   `fun link<T: &Any>(_ newCapabilityPath: Path, target: Path): Capability?`
 
-    `newCapabilityPath` is the public or private path identifiying the new capability.
+    `newCapabilityPath` is the public or private path identifying the new capability.
 
     `target` is any public, private, or storage path that leads to the object
     that will provide the functionality defined by this capability.
@@ -6235,7 +6246,7 @@ interface by saying `{ContractInterfaceName}.{NestedInterfaceName}`
 </span><span style="color: #000000">    </span><span style="color: #008000">// The contract doesn't need to redeclare the `NestedInterface` interface</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// because it is already declared in the contract interface</span><span>
 </span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// The resource has to refer to the resrouce interface using the name</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// The resource has to refer to the resource interface using the name</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// of the contract interface to access it</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">resource</span><span style="color: #000000"> Composite: InterfaceExample.NestedInterface {</span><span>
@@ -6339,89 +6350,18 @@ throughout the whole of the transaction.
 </span><span style="color: #000000">}</span><span>
 </span></pre></code>
 
-then three optional main phases:
+Then, three optional main phases:
 Preparation, execution, and postconditions, only in that order.
 Each phase is a block of code that executes sequentially.
 
--   The **prepare phase** (declared using the `prepare` keyword)
-    acts like the initializer in a composite type,
-    i.e., it has to initialize the local fields of the transaction
-    that can then be used in the execution phase.
+Here is an empty Cadence transaction which contains no logic but demonstrates the syntax for each type of block, in the order these blocks will be executed:
 
-    The prepare phase also has access to the authorized account objects
-    (`AuthAccount`) of the accounts that signed it.
-    These authorized account objects have to be declared as parameters
-    to the prepare phase, one for each signer of the transaction:
-
-    <code><pre><span style="color: #008000">// There needs to be exactly as many `AuthAccount`-typed parameters</span><span>
-    </span><span style="color: #008000">// as there are signers for the transaction.</span><span>
-    </span><span style="color: #008000">// In this case, there would be two signers</span><span>
-    </span><span>
-    </span><span style="color: #000000">prepare(signer1: AuthAccount, signer2: AuthAccount) {</span><span>
-    </span><span style="color: #000000">    </span><span style="color: #008000">// ...</span><span>
-    </span><span style="color: #000000">}</span><span>
-    </span></pre></code>
-
-    `AuthAccount` objects have the permissions
-    to read from and write to the private storage
-    of the account, which cannot be directly accessed anywhere else.
-
--   The **execute phase** (declared using the `execute` keyword)
-    is where interaction with other accounts
-    and contracts should usually happen.
-
-    This usually involves interacting with contracts with public types
-    and functions, calling functions using references to other accounts&#x27;
-    objects, and performing specific computation on these values.
-
-    This phase does not have access to any signer&#x27;s authorized account object
-    and can only access public contract fields and functions,
-    public account objects (`PublicAccount`) using the built-in `getAccount`
-    function, and any local transaction variables
-    that were initialized in the `prepare` block.
-
-    <code><pre><span style="color: #000000">  </span><span style="color: #0000FF">execute</span><span style="color: #000000"> {</span><span>
-    </span><span style="color: #000000">      </span><span style="color: #008000">// Invalid: Cannot access the authorized account object,</span><span>
-    </span><span style="color: #000000">      </span><span style="color: #008000">// as `account1` is not in scope</span><span>
-    </span><span>
-    </span><span style="color: #000000">      </span><span style="color: #0000FF">let</span><span style="color: #000000"> resource &#x3C;- account1.load&#x3C;@Resource>(</span><span style="color: #0000FF">from</span><span style="color: #000000">: /storage/resource)</span><span>
-    </span><span style="color: #000000">      </span><span style="color: #0000FF">destroy</span><span style="color: #000000"> resource</span><span>
-    </span><span>
-    </span><span style="color: #000000">      </span><span style="color: #008000">// Valid: Can access any account's public Account object</span><span>
-    </span><span>
-    </span><span style="color: #000000">      </span><span style="color: #0000FF">let</span><span style="color: #000000"> publicAccount = getAccount(</span><span style="color: #09885A">0x03</span><span style="color: #000000">)</span><span>
-    </span><span style="color: #000000">}</span><span>
-    </span><span>
-    </span></pre></code>
-
-
--   The **postcondition phase** (declared using the `post` keyword)
-    is where the transaction can check
-    that its functionality was executed correctly with specific condition checks.
-
-    If any of the condition checks result in `false`, the transaction will fail
-    and be completely reverted.
-
-    Only condition checks are allowed in this section. No actual computation
-    or modification of values is allowed.
-
-    <code><pre><span style="color: #000000">  </span><span style="color: #0000FF">post</span><span style="color: #000000"> {</span><span>
-    </span><span style="color: #000000">      result.balance == </span><span style="color: #09885A">30</span><span style="color: #000000">: </span><span style="color: #A31515">"Balance after transaction is incorrect!"</span><span>
-    </span><span style="color: #000000">  }</span><span>
-    </span><span>
-    </span></pre></code>
-
-<code><pre><span style="color: #008000">// Optional: Importing external types from other accounts using `import`.</span><span>
-</span><span style="color: #0000FF">import</span><span style="color: #000000"> HelloWorld </span><span style="color: #0000FF">from</span><span style="color: #000000"> </span><span style="color: #09885A">0x01</span><span>
+<code><pre><span style="color: #000000">transaction {</span><span>
+</span><span style="color: #000000">    prepare(signer1: AuthAccount, signer2: AuthAccount) {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// ...</span><span>
+</span><span style="color: #000000">    }</span><span>
 </span><span>
-</span><span style="color: #000000">transaction {</span><span>
-</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// Optional: type declarations and fields, which must be initialized in `prepare`.</span><span>
-</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// The prepare phase needs to have as many account parameters</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// as there are signers for the transaction.</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">    prepare(signer1: AuthAccount) {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pre</span><span style="color: #000000"> {</span><span>
 </span><span style="color: #000000">        </span><span style="color: #008000">// ...</span><span>
 </span><span style="color: #000000">    }</span><span>
 </span><span>
@@ -6431,6 +6371,132 @@ Each phase is a block of code that executes sequentially.
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">post</span><span style="color: #000000"> {</span><span>
 </span><span style="color: #000000">        </span><span style="color: #008000">// ...</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span style="color: #000000">}</span><span>
+</span></pre></code>
+
+Although optional, each block serves a specific purpose when executing a transaction
+and it is recommended that developers use these blocks when creating their transactions.
+The following will detail the purpose of and how to use each block.
+
+## [](#prepare)Prepare
+
+The `prepare` **block** is used when access to the private `AuthAccount` object of **signing accounts** is required for your transaction.
+
+Direct access to signing accounts is **only possible inside the** `prepare` **block.**
+
+For each signer of the transaction the signing account is passed as an argument to the `prepare` block.
+For example, if the transaction has three signers, the prepare **must** have three parameters of type `AuthAccount`.
+
+<code><pre><span style="color: #000000"> prepare(signer1: AuthAccount) {</span><span>
+</span><span style="color: #000000">      </span><span style="color: #008000">// ...</span><span>
+</span><span style="color: #000000"> }</span><span>
+</span></pre></code>
+
+As a best practice, only use the `prepare` block to define and execute logic that requires access to the `AuthAccount` objects of signing accounts,
+and _move all other logic elsewhere_.
+Modifications to accounts can have significant implications,
+so keep this block clear of unrelated logic to ensure users of your contract are able to easily read and understand logic related to their private account objects.
+
+The prepare block serves a similar purpose as the initializer of a contract/resource/structure.
+
+For example, if a transaction performs a token transfer, put the withdrawal in the `prepare` block,
+as it requires access to the account storage, but perform the deposit in the `execute` block.
+
+`AuthAccount` objects have the permissions
+to read from and write to the `/storage/` and `/private/` areas
+of the account, which cannot be directly accessed anywhere else.
+They also have the permission to create and delete capabilities that
+use these areas.
+
+## [](#pre)Pre
+
+The `pre` block is executed after the `prepare` block, and is used for checking if explicit conditions hold before executing the remainder of the transaction.
+A common example would be checking requisite balances before transferring tokens between accounts.
+
+<code><pre><span style="color: #0000FF">pre</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">    sendingAccount.balance > </span><span style="color: #09885A">0</span><span>
+</span><span style="color: #000000">}</span><span>
+</span></pre></code>
+
+If the `pre` block throws an error, or does not return `true` the remainder of the transaction is not executed and it will be completely reverted.
+
+## [](#execute)**Execute**
+
+The `execute` block does exactly what it says, it executes the main logic of the transaction.
+This block is optional, but it is a best practice to add your main transaction logic in the section, so it is explicit.
+
+<code><pre><span style="color: #0000FF">execute</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// Invalid: Cannot access the authorized account object,</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// as `account1` is not in scope</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> resource &#x3C;- account1.load&#x3C;@Resource>(</span><span style="color: #0000FF">from</span><span style="color: #000000">: /storage/resource)</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">destroy</span><span style="color: #000000"> resource</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// Valid: Can access any account's public Account object</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> publicAccount = getAccount(</span><span style="color: #09885A">0x03</span><span style="color: #000000">)</span><span>
+</span><span style="color: #000000">}</span><span>
+</span></pre></code>
+
+You **may not** access private `AuthAccount` objects in the `execute` block, but you may get an account&#x27;s `PublicAccount` object,
+which allows reading and calling methods on objects that an account has published in the public domain of its account. (resources, contract methods, etc.)
+
+## [](#post)**Post**
+
+Statements inside of the `post` block are used to verify that your transaction logic has been executed properly. It contains zero or more condition checks.
+
+For example, the a transfer transaction might ensure that the final balance has a certain value, or e.g. it was incremented by a specific amount.
+
+<code><pre><span style="color: #0000FF">post</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">    result.balance == </span><span style="color: #09885A">30</span><span style="color: #000000">: </span><span style="color: #A31515">"Balance after transaction is incorrect!"</span><span>
+</span><span style="color: #000000">}</span><span>
+</span></pre></code>
+
+If any of the condition checks result in `false`, the transaction will fail and be completely reverted.
+
+Only condition checks are allowed in this section. No actual computation or modification of values is allowed.
+
+**A Note about `pre` and `post` Blocks**
+
+Another function of the `pre` and `post` blocks is to help provide information about how the effects of a transaction on the accounts and resources involved.
+This is essential because users may want to verify what a transaction does before submitting it.
+`pre` and `post` blocks provide a way to introspect transactions before they are executed.
+
+For example, in the future the blocks could be analyzed and interpreted to the user in the software they are using,
+e.g. &quot;this transaction will transfer 30 tokens from A to B. The balance of A will decrease by 30 tokens and the balance of B will increase by 30 tokens.&quot;
+
+## [](#summary)Summary
+
+Cadence transactions use blocks to make the transaction&#x27;s code/intent more readable and to provide a way for developer to separate potentially &#x27;unsafe&#x27; account modifying code from regular transaction logic,
+as well as provide a way to check for error prior / after transaction execution,
+and abort the transaction if any are found.
+
+The following is a brief summary of how to use the `prepare`, `pre`, `execute`, and `post` blocks in a Cadence transaction.
+
+<code><pre><span style="color: #000000">transaction {</span><span>
+</span><span style="color: #000000">    prepare(signer1: AuthAccount) {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// Access signing accounts for this transaction.</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// Avoid logic that does not need access to signing accounts.</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// Signing accounts can't be accesed anywhere else in the transaction.</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pre</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// Define conditions that must be true</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// for this transaction to execute.</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">execute</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// The main transaction logic goes here, but you can access</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// any public information or resources published by any account.</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">post</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// Define the expected state of things</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// as they should be after the transaction executed.</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// Also used to provide information about what changes</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// this transaction will make to accounts in this transaction.</span><span>
 </span><span style="color: #000000">    }</span><span>
 </span><span style="color: #000000">}</span><span>
 </span></pre></code>

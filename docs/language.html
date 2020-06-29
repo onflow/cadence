@@ -262,6 +262,21 @@
           </li>
           <li>
             <p><a href="#transactions">Transactions</a></p>
+          </li>
+          <li>
+            <p><a href="#prepare">Prepare</a></p>
+          </li>
+          <li>
+            <p><a href="#pre">Pre</a></p>
+          </li>
+          <li>
+            <p><a href="#execute"><strong>Execute</strong></a></p>
+          </li>
+          <li>
+            <p><a href="#post"><strong>Post</strong></a></p>
+          </li>
+          <li>
+            <p><a href="#summary">Summary</a></p>
             <ul>
               <li><a href="#importing-and-using-deployed-contract-code">Importing and using Deployed Contract Code</a></li>
             </ul>
@@ -377,7 +392,7 @@
         <p>Comments may be nested.</p>
         <pre><code class="language-cadence,file=nested-comment.cdc"><span style="color: #008000">/* /* this */ is a valid comment */</span><span>
 </span></code></pre>
-        <p>Mutli-line comments are balanced.</p>
+        <p>Multi-line comments are balanced.</p>
         <pre><code class="language-cadence,file=invalid-nested-comment.cdc"><span style="color: #008000">/* this is a // comment up to here */</span><span style="color: #000000"> this is not part of the comment </span><span style="color: #CD3131">*/</span><span>
 </span></code></pre>
       </section>
@@ -723,7 +738,7 @@
           </ul>
           <p>The types are independent types, i.e. not subtypes of each other.</p>
           <p>
-            See the section about <a href="#arithmetic">artihmetic operators</a> for further
+            See the section about <a href="#arithmetic">arithmetic operators</a> for further
             information about the behavior of the different integer types.
           </p>
           <pre><code class="language-cadence"><span style="color: #008000">// Declare a constant that has type `UInt8` and the value 10.</span><span>
@@ -851,7 +866,7 @@
           <p><code>AnyResource</code> is the top type of all resource types.</p>
           <pre><code class="language-cadence"><span style="color: #008000">// Declare a variable that has the type `AnyStruct`.</span><span>
 </span><span style="color: #008000">// Any non-resource typed value can be assigned to it, for example an integer,</span><span>
-</span><span style="color: #008000">// but not resoure-typed values.</span><span>
+</span><span style="color: #008000">// but not resource-typed values.</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">var</span><span style="color: #000000"> someStruct: </span><span style="color: #0000FF">AnyStruct</span><span style="color: #000000"> = </span><span style="color: #09885A">1</span><span>
 </span><span>
@@ -931,7 +946,7 @@
 </span></code></pre>
           <p>
             <a href="#conditional-downcasting-operator">Conditional downcasting</a> allows coercing
-            a value which has the type <code>AnyStruct</code> or <code>AnyResource</code> back to its orignal type.
+            a value which has the type <code>AnyStruct</code> or <code>AnyResource</code> back to its original type.
           </p>
         </section>
         <section>
@@ -1303,7 +1318,7 @@
                   Returns a string slice of the characters
                   in the given string from start index <code>from</code> up to,
                   but not including, the end index <code>upTo</code>.
-                  This function creates a new string whose length is <code>upto - from</code>.
+                  This function creates a new string whose length is <code>upTo - from</code>.
                   It does not modify the original string.
                   If either of the parameters are out of
                   the bounds of the string, the function will fail.
@@ -3141,7 +3156,7 @@
 </span><span style="color: #008000">// `a` has type `Int`</span><span>
 </span></code></pre>
         <p>Array literals are inferred based on the elements of the literal, and to be variable-size.</p>
-        <pre><code class="language-cadence,file=type-inference-intergers.cdc"><span style="color: #0000FF">let</span><span style="color: #000000"> integers = [</span><span style="color: #09885A">1</span><span style="color: #000000">, </span><span style="color: #09885A">2</span><span style="color: #000000">]</span><span>
+        <pre><code class="language-cadence,file=type-inference-integers.cdc"><span style="color: #0000FF">let</span><span style="color: #000000"> integers = [</span><span style="color: #09885A">1</span><span style="color: #000000">, </span><span style="color: #09885A">2</span><span style="color: #000000">]</span><span>
 </span><span style="color: #008000">// `integers` has type `[Int]`</span><span>
 </span><span>
 </span><span style="color: #008000">// Invalid: mixed types</span><span>
@@ -3180,7 +3195,7 @@
 </span><span>
 </span><span style="color: #008000">// Instead, specify the array type and the concrete element type, e.g. `Int`.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> arrary: [</span><span style="color: #0000FF">Int</span><span style="color: #000000">] = []</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> array: [</span><span style="color: #0000FF">Int</span><span style="color: #000000">] = []</span><span>
 </span></code></pre>
         <pre><code class="language-cadence"><span style="color: #008000">// Invalid: not possible to infer type based on dictionary literal's keys and values.</span><span>
 </span><span style="color: #008000">//</span><span>
@@ -4565,7 +4580,10 @@
               on an instance of the type in an outer scope.
               This does not allow the declaration to be publicly writable though.
             </p>
-            <p>An element is made public by using the <code>pub</code> or <code>access(all)</code> keywords.</p>
+            <p>
+              An element is made publicly accessible / by any code
+              by using the <code>pub</code> or <code>access(all)</code> keywords.
+            </p>
           </li>
           <li>
             <p>
@@ -4574,7 +4592,7 @@
               other contracts in the account are able to access it,
             </p>
             <p>
-              An element is specified with account access
+              An element is made accessible by code in the same account (e.g. other contracts)
               by using the <code>access(account)</code> keyword.
             </p>
           </li>
@@ -4586,7 +4604,7 @@
               but not other contracts in the same account.
             </p>
             <p>
-              An element is specified with contract access
+              An element is made accessible by code in the same contract
               by using the <code>access(contract)</code> keyword.
             </p>
           </li>
@@ -4600,7 +4618,10 @@
               accessed by functions of the type is part of,
               not by code in an outer scope.
             </p>
-            <p>This level is specified by using the <code>access(self)</code> keyword.</p>
+            <p>
+              An element is made accessible by code in the same containing type
+              by using the <code>access(self)</code> keyword.
+            </p>
           </li>
         </ul>
         <p><strong>Access level must be specified for each declaration</strong></p>
@@ -4618,20 +4639,20 @@
           <tbody>
             <tr>
               <td align="left"><code>let</code></td>
-              <td align="left"><code>access(self)</code></td>
+              <td align="left"><code>priv</code> / <code>access(self)</code></td>
               <td align="left">Current and inner</td>
               <td align="left"><em>None</em></td>
             </tr>
             <tr>
               <td align="left"><code>let</code></td>
               <td align="left"><code>access(contract)</code></td>
-              <td align="left">Current, inner, and its contract</td>
+              <td align="left">Current, inner, and containing contract</td>
               <td align="left"><em>None</em></td>
             </tr>
             <tr>
               <td align="left"><code>let</code></td>
               <td align="left"><code>access(account)</code></td>
-              <td align="left">Current, inner, and account contracts</td>
+              <td align="left">Current, inner, and other contracts in same account</td>
               <td align="left"><em>None</em></td>
             </tr>
             <tr>
@@ -4649,18 +4670,18 @@
             <tr>
               <td align="left"><code>var</code></td>
               <td align="left"><code>access(contract)</code></td>
-              <td align="left">Current, inner, and its contract</td>
+              <td align="left">Current, inner, and containing contract</td>
               <td align="left">Current and inner</td>
             </tr>
             <tr>
               <td align="left"><code>var</code></td>
               <td align="left"><code>access(account)</code></td>
-              <td align="left">Current, inner, and account contracts</td>
+              <td align="left">Current, inner, and other contracts in same account</td>
               <td align="left">Current and inner</td>
             </tr>
             <tr>
               <td align="left"><code>var</code></td>
-              <td align="left"><code>pub</code>,<code>access(all)</code></td>
+              <td align="left"><code>pub</code> / <code>access(all)</code></td>
               <td align="left"><strong>All</strong></td>
               <td align="left">Current and inner</td>
             </tr>
@@ -4672,43 +4693,37 @@
             </tr>
           </tbody>
         </table>
-        <p>To summarize the behavior for functions, structures, resources, and interfaces:</p>
+        <p>To summarize the for functions:</p>
         <table>
           <thead>
             <tr>
-              <th align="left">Declaration kind</th>
               <th align="left">Access modifier</th>
               <th align="left">Access scope</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <td align="left"><code>fun</code>,<code>struct</code>,<code>resource</code>,<code>struct interface</code>,<code>resource interface</code></td>
-              <td align="left"><code>access(self)</code></td>
+              <td align="left"><code>priv</code> / <code>access(self)</code></td>
               <td align="left">Current and inner</td>
             </tr>
             <tr>
-              <td align="left"><code>fun</code>,<code>struct</code>,<code>resource</code>,<code>struct interface</code>,<code>resource interface</code></td>
               <td align="left"><code>access(contract)</code></td>
-              <td align="left">Current, inner, and its contract</td>
+              <td align="left">Current, inner, and containing contract</td>
             </tr>
             <tr>
-              <td align="left"><code>fun</code>,<code>struct</code>,<code>resource</code>,<code>struct interface</code>,<code>resource interface</code></td>
               <td align="left"><code>access(account)</code></td>
-              <td align="left">Current, inner, and account contracts</td>
+              <td align="left">Current, inner, and other contracts in same account</td>
             </tr>
             <tr>
-              <td align="left"><code>fun</code>,<code>struct</code>,<code>resource</code>,<code>struct interface</code>,<code>resource interface</code></td>
-              <td align="left"><code>pub</code>,<code>access(all)</code></td>
+              <td align="left"><code>pub</code> / <code>access(all)</code></td>
               <td align="left"><strong>All</strong></td>
             </tr>
           </tbody>
         </table>
         <p>
-          Currently, all contract defined types must have an access declaration, but
-          only code within the <a href="#contracts">contract</a> in which the type is declared
-          is allowed to create instances of the type.
-          See the linked contracts section for more information.
+          Declarations of structures, resources, events, and <a href="#contracts">contracts</a> can only be public.
+          However, even though the declarations/types are publicly visible,
+          resources can only be created from inside the contract they are declared in.
         </p>
         <pre><code class="language-cadence,file=access-control-globals.cdc"><span style="color: #008000">// Declare a private constant, inaccessible/invisible in outer scope.</span><span>
 </span><span style="color: #008000">//</span><span>
@@ -4718,7 +4733,7 @@
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> b = </span><span style="color: #09885A">2</span><span>
 </span></code></pre>
-        <pre><code class="language-cadence,file=acess-control-struct.cdc"><span style="color: #008000">// Declare a public struct, accessible/visible in all scopes.</span><span>
+        <pre><code class="language-cadence,file=access-control-struct.cdc"><span style="color: #008000">// Declare a public struct, accessible/visible in all scopes.</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> SomeStruct {</span><span>
 </span><span>
@@ -5147,7 +5162,7 @@
           <h3 id="interfaces-in-types"><a href="#interfaces-in-types" aria-hidden="true"><span class="icon icon-link"></span></a>Interfaces in Types</h3>
           <p>
             Interfaces can be used in types: The type <code>{I}</code> is the type of all objects
-            that implement the interfaace <code>I</code>.
+            that implement the interface <code>I</code>.
           </p>
           <p>
             This is called a <a href="#restricted-types">restricted type</a>:
@@ -5514,14 +5529,14 @@
           of the type that is restricted, indicated by the restrictions.
         </p>
         <p>
-          The syntax of a restriced type is <code>T{U1, U2, ... Un}</code>,
-          where <code>T</code> is the restricted type, a concrete resource or strucure type,
+          The syntax of a restricted type is <code>T{U1, U2, ... Un}</code>,
+          where <code>T</code> is the restricted type, a concrete resource or structure type,
           and the types <code>U1</code> to <code>Un</code> are the restrictions, interfaces that <code>T</code> conforms to.
         </p>
         <p>Only the members and functions of the union of the set of restrictions are available.</p>
         <p>
           Restricted types are useful for increasing the safety in functions
-          that are suposed to only work on a subset of the type.
+          that are supposed to only work on a subset of the type.
           For example, by using a restricted type for a parameter's type,
           the function may only access the functionality of the restriction:
           If the function accidentally attempts to access other functionality,
@@ -5613,7 +5628,7 @@
           for which only the functionality of the <code>HasCount</code> resource interface can be used.
         </p>
         <p>
-          The restricted types <code>AnyStruct</code> and <code>AnyResource</code> can be ommited.
+          The restricted types <code>AnyStruct</code> and <code>AnyResource</code> can be omitted.
           For example, the type <code>{HasCount}</code> is any resource that implements
           the resource interface <code>HasCount</code>.
         </p>
@@ -5660,7 +5675,7 @@
 </span><span style="color: #008000">// `id2` is "2"</span><span>
 </span></code></pre>
         <p>
-          Only concrete types may be restriced, e.g., the restricted type may not be an array,
+          Only concrete types may be restricted, e.g., the restricted type may not be an array,
           the type <code>[T]{U}</code> is invalid.
         </p>
         <p>
@@ -5759,7 +5774,7 @@
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #000000">countRef.increment()</span><span>
 </span><span>
-</span><span style="color: #008000">// Invalid: Cannot failably downcast to reference type `&#x26;Counter`,</span><span>
+</span><span style="color: #008000">// Invalid: Cannot conditionally downcast to reference type `&#x26;Counter`,</span><span>
 </span><span style="color: #008000">// as the reference `countRef` is unauthorized.</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #008000">// The counter value has type `Counter`, which is a subtype of `{HasCount}`,</span><span>
@@ -5774,7 +5789,7 @@
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> authCountRef: </span><span style="color: #0000FF">auth</span><span style="color: #000000"> &#x26;{</span><span style="color: #0000FF">HasCount</span><span style="color: #000000">} = &#x26;counter as auth &#x26;{HasCount}</span><span>
 </span><span>
-</span><span style="color: #008000">// Failably downcast to reference type `&#x26;Counter`.</span><span>
+</span><span style="color: #008000">// Conditionally downcast to reference type `&#x26;Counter`.</span><span>
 </span><span style="color: #008000">// This is valid, because the reference `authCountRef` is authorized</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> counterRef3: &#x26;</span><span style="color: #0000FF">Counter</span><span style="color: #000000"> = authCountRef as? &#x26;Counter</span><span>
@@ -5943,7 +5958,7 @@
             <p><code>fun copy&#x3C;T>(from: Path): T?</code>, where <code>T</code> is the type parameter for the value type:</p>
             <p>Returns a copy of a structure stored in account storage, without removing it from storage.</p>
             <p>
-              If no strucure is stored under the given path, the function returns <code>nil</code>.
+              If no structure is stored under the given path, the function returns <code>nil</code>.
               If there is a structure stored, it is copied.
               The structure stays stored in storage after the function returns.
             </p>
@@ -6171,7 +6186,7 @@
         <ul>
           <li>
             <p><code>fun link&#x3C;T: &#x26;Any>(_ newCapabilityPath: Path, target: Path): Capability?</code></p>
-            <p><code>newCapabilityPath</code> is the public or private path identifiying the new capability.</p>
+            <p><code>newCapabilityPath</code> is the public or private path identifying the new capability.</p>
             <p>
               <code>target</code> is any public, private, or storage path that leads to the object
               that will provide the functionality defined by this capability.
@@ -6414,7 +6429,7 @@
 </span><span style="color: #000000">}</span><span>
 </span></code></pre>
         <p>Contracts cannot be nested in each other.</p>
-        <pre><code class="language-cadence,file=contract-invalidnesting.cdc"><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">contract</span><span style="color: #000000"> Invalid {</span><span>
+        <pre><code class="language-cadence,file=contract-invalid-nesting.cdc"><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">contract</span><span style="color: #000000"> Invalid {</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// Invalid: Contracts cannot be nested in any other type.</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
@@ -6677,7 +6692,7 @@
 </span><span style="color: #000000">    </span><span style="color: #008000">// The contract doesn't need to redeclare the `NestedInterface` interface</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// because it is already declared in the contract interface</span><span>
 </span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// The resource has to refer to the resrouce interface using the name</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// The resource has to refer to the resource interface using the name</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// of the contract interface to access it</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">resource</span><span style="color: #000000"> Composite: InterfaceExample.NestedInterface {</span><span>
@@ -6785,104 +6800,17 @@
 </span><span style="color: #000000">}</span><span>
 </span></code></pre>
         <p>
-          then three optional main phases:
+          Then, three optional main phases:
           Preparation, execution, and postconditions, only in that order.
           Each phase is a block of code that executes sequentially.
         </p>
-        <ul>
-          <li>
-            <p>
-              The <strong>prepare phase</strong> (declared using the <code>prepare</code> keyword)
-              acts like the initializer in a composite type,
-              i.e., it has to initialize the local fields of the transaction
-              that can then be used in the execution phase.
-            </p>
-            <p>
-              The prepare phase also has access to the authorized account objects
-              (<code>AuthAccount</code>) of the accounts that signed it.
-              These authorized account objects have to be declared as parameters
-              to the prepare phase, one for each signer of the transaction:
-            </p>
-            <pre><code class="language-cadence,file=prepare-args.cdc"><span style="color: #008000">// There needs to be exactly as many `AuthAccount`-typed parameters</span><span>
-</span><span style="color: #008000">// as there are signers for the transaction.</span><span>
-</span><span style="color: #008000">// In this case, there would be two signers</span><span>
+        <p>Here is an empty Cadence transaction which contains no logic but demonstrates the syntax for each type of block, in the order these blocks will be executed:</p>
+        <pre><code class="language-cadence,file=transaction-blocks.cdc"><span style="color: #000000">transaction {</span><span>
+</span><span style="color: #000000">    prepare(signer1: AuthAccount, signer2: AuthAccount) {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// ...</span><span>
+</span><span style="color: #000000">    }</span><span>
 </span><span>
-</span><span style="color: #000000">prepare(signer1: AuthAccount, signer2: AuthAccount) {</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// ...</span><span>
-</span><span style="color: #000000">}</span><span>
-</span></code></pre>
-            <p>
-              <code>AuthAccount</code> objects have the permissions
-              to read from and write to the private storage
-              of the account, which cannot be directly accessed anywhere else.
-            </p>
-          </li>
-          <li>
-            <p>
-              The <strong>execute phase</strong> (declared using the <code>execute</code> keyword)
-              is where interaction with other accounts
-              and contracts should usually happen.
-            </p>
-            <p>
-              This usually involves interacting with contracts with public types
-              and functions, calling functions using references to other accounts'
-              objects, and performing specific computation on these values.
-            </p>
-            <p>
-              This phase does not have access to any signer's authorized account object
-              and can only access public contract fields and functions,
-              public account objects (<code>PublicAccount</code>) using the built-in <code>getAccount</code>
-              function, and any local transaction variables
-              that were initialized in the <code>prepare</code> block.
-            </p>
-            <pre><code class="language-cadence,file=execute.cdc"><span style="color: #000000">  </span><span style="color: #0000FF">execute</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">      </span><span style="color: #008000">// Invalid: Cannot access the authorized account object,</span><span>
-</span><span style="color: #000000">      </span><span style="color: #008000">// as `account1` is not in scope</span><span>
-</span><span>
-</span><span style="color: #000000">      </span><span style="color: #0000FF">let</span><span style="color: #000000"> resource &#x3C;- account1.load&#x3C;@Resource>(</span><span style="color: #0000FF">from</span><span style="color: #000000">: /storage/resource)</span><span>
-</span><span style="color: #000000">      </span><span style="color: #0000FF">destroy</span><span style="color: #000000"> resource</span><span>
-</span><span>
-</span><span style="color: #000000">      </span><span style="color: #008000">// Valid: Can access any account's public Account object</span><span>
-</span><span>
-</span><span style="color: #000000">      </span><span style="color: #0000FF">let</span><span style="color: #000000"> publicAccount = getAccount(</span><span style="color: #09885A">0x03</span><span style="color: #000000">)</span><span>
-</span><span style="color: #000000">}</span><span>
-</span><span>
-</span></code></pre>
-          </li>
-        </ul>
-        <ul>
-          <li>
-            <p>
-              The <strong>postcondition phase</strong> (declared using the <code>post</code> keyword)
-              is where the transaction can check
-              that its functionality was executed correctly with specific condition checks.
-            </p>
-            <p>
-              If any of the condition checks result in <code>false</code>, the transaction will fail
-              and be completely reverted.
-            </p>
-            <p>
-              Only condition checks are allowed in this section. No actual computation
-              or modification of values is allowed.
-            </p>
-            <pre><code class="language-cadence,file=post.cdc"><span style="color: #000000">  </span><span style="color: #0000FF">post</span><span style="color: #000000"> {</span><span>
-</span><span style="color: #000000">      result.balance == </span><span style="color: #09885A">30</span><span style="color: #000000">: </span><span style="color: #A31515">"Balance after transaction is incorrect!"</span><span>
-</span><span style="color: #000000">  }</span><span>
-</span><span>
-</span></code></pre>
-          </li>
-        </ul>
-        <pre><code class="language-cadence,file=transaction-declaration.cdc"><span style="color: #008000">// Optional: Importing external types from other accounts using `import`.</span><span>
-</span><span style="color: #0000FF">import</span><span style="color: #000000"> HelloWorld </span><span style="color: #0000FF">from</span><span style="color: #000000"> </span><span style="color: #09885A">0x01</span><span>
-</span><span>
-</span><span style="color: #000000">transaction {</span><span>
-</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// Optional: type declarations and fields, which must be initialized in `prepare`.</span><span>
-</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// The prepare phase needs to have as many account parameters</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">// as there are signers for the transaction.</span><span>
-</span><span style="color: #000000">    </span><span style="color: #008000">//</span><span>
-</span><span style="color: #000000">    prepare(signer1: AuthAccount) {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pre</span><span style="color: #000000"> {</span><span>
 </span><span style="color: #000000">        </span><span style="color: #008000">// ...</span><span>
 </span><span style="color: #000000">    }</span><span>
 </span><span>
@@ -6892,6 +6820,133 @@
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">post</span><span style="color: #000000"> {</span><span>
 </span><span style="color: #000000">        </span><span style="color: #008000">// ...</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span style="color: #000000">}</span><span>
+</span></code></pre>
+        <p>
+          Although optional, each block serves a specific purpose when executing a transaction
+          and it is recommended that developers use these blocks when creating their transactions.
+          The following will detail the purpose of and how to use each block.
+        </p>
+      </section>
+      <section>
+        <h2 id="prepare"><a href="#prepare" aria-hidden="true"><span class="icon icon-link"></span></a>Prepare</h2>
+        <p>The <code>prepare</code> <strong>block</strong> is used when access to the private <code>AuthAccount</code> object of <strong>signing accounts</strong> is required for your transaction.</p>
+        <p>Direct access to signing accounts is <strong>only possible inside the</strong> <code>prepare</code> <strong>block.</strong></p>
+        <p>
+          For each signer of the transaction the signing account is passed as an argument to the <code>prepare</code> block.
+          For example, if the transaction has three signers, the prepare <strong>must</strong> have three parameters of type <code>AuthAccount</code>.
+        </p>
+        <pre><code class="language-cadence"><span style="color: #000000"> prepare(signer1: AuthAccount) {</span><span>
+</span><span style="color: #000000">      </span><span style="color: #008000">// ...</span><span>
+</span><span style="color: #000000"> }</span><span>
+</span></code></pre>
+        <p>
+          As a best practice, only use the <code>prepare</code> block to define and execute logic that requires access to the <code>AuthAccount</code> objects of signing accounts,
+          and <em>move all other logic elsewhere</em>.
+          Modifications to accounts can have significant implications,
+          so keep this block clear of unrelated logic to ensure users of your contract are able to easily read and understand logic related to their private account objects.
+        </p>
+        <p>The prepare block serves a similar purpose as the initializer of a contract/resource/structure.</p>
+        <p>
+          For example, if a transaction performs a token transfer, put the withdrawal in the <code>prepare</code> block,
+          as it requires access to the account storage, but perform the deposit in the <code>execute</code> block.
+        </p>
+        <p>
+          <code>AuthAccount</code> objects have the permissions
+          to read from and write to the <code>/storage/</code> and <code>/private/</code> areas
+          of the account, which cannot be directly accessed anywhere else.
+          They also have the permission to create and delete capabilities that
+          use these areas.
+        </p>
+      </section>
+      <section>
+        <h2 id="pre"><a href="#pre" aria-hidden="true"><span class="icon icon-link"></span></a>Pre</h2>
+        <p>
+          The <code>pre</code> block is executed after the <code>prepare</code> block, and is used for checking if explicit conditions hold before executing the remainder of the transaction.
+          A common example would be checking requisite balances before transferring tokens between accounts.
+        </p>
+        <pre><code class="language-cadence"><span style="color: #0000FF">pre</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">    sendingAccount.balance > </span><span style="color: #09885A">0</span><span>
+</span><span style="color: #000000">}</span><span>
+</span></code></pre>
+        <p>If the <code>pre</code> block throws an error, or does not return <code>true</code> the remainder of the transaction is not executed and it will be completely reverted.</p>
+      </section>
+      <section>
+        <h2 id="execute"><a href="#execute" aria-hidden="true"><span class="icon icon-link"></span></a><strong>Execute</strong></h2>
+        <p>
+          The <code>execute</code> block does exactly what it says, it executes the main logic of the transaction.
+          This block is optional, but it is a best practice to add your main transaction logic in the section, so it is explicit.
+        </p>
+        <pre><code class="language-cadence"><span style="color: #0000FF">execute</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// Invalid: Cannot access the authorized account object,</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// as `account1` is not in scope</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> resource &#x3C;- account1.load&#x3C;@Resource>(</span><span style="color: #0000FF">from</span><span style="color: #000000">: /storage/resource)</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">destroy</span><span style="color: #000000"> resource</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// Valid: Can access any account's public Account object</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> publicAccount = getAccount(</span><span style="color: #09885A">0x03</span><span style="color: #000000">)</span><span>
+</span><span style="color: #000000">}</span><span>
+</span></code></pre>
+        <p>
+          You <strong>may not</strong> access private <code>AuthAccount</code> objects in the <code>execute</code> block, but you may get an account's <code>PublicAccount</code> object,
+          which allows reading and calling methods on objects that an account has published in the public domain of its account. (resources, contract methods, etc.)
+        </p>
+      </section>
+      <section>
+        <h2 id="post"><a href="#post" aria-hidden="true"><span class="icon icon-link"></span></a><strong>Post</strong></h2>
+        <p>Statements inside of the <code>post</code> block are used to verify that your transaction logic has been executed properly. It contains zero or more condition checks.</p>
+        <p>For example, the a transfer transaction might ensure that the final balance has a certain value, or e.g. it was incremented by a specific amount.</p>
+        <pre><code class="language-cadence"><span style="color: #0000FF">post</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">    result.balance == </span><span style="color: #09885A">30</span><span style="color: #000000">: </span><span style="color: #A31515">"Balance after transaction is incorrect!"</span><span>
+</span><span style="color: #000000">}</span><span>
+</span></code></pre>
+        <p>If any of the condition checks result in <code>false</code>, the transaction will fail and be completely reverted.</p>
+        <p>Only condition checks are allowed in this section. No actual computation or modification of values is allowed.</p>
+        <p><strong>A Note about <code>pre</code> and <code>post</code> Blocks</strong></p>
+        <p>
+          Another function of the <code>pre</code> and <code>post</code> blocks is to help provide information about how the effects of a transaction on the accounts and resources involved.
+          This is essential because users may want to verify what a transaction does before submitting it.
+          <code>pre</code> and <code>post</code> blocks provide a way to introspect transactions before they are executed.
+        </p>
+        <p>
+          For example, in the future the blocks could be analyzed and interpreted to the user in the software they are using,
+          e.g. "this transaction will transfer 30 tokens from A to B. The balance of A will decrease by 30 tokens and the balance of B will increase by 30 tokens."
+        </p>
+      </section>
+      <section>
+        <h2 id="summary"><a href="#summary" aria-hidden="true"><span class="icon icon-link"></span></a>Summary</h2>
+        <p>
+          Cadence transactions use blocks to make the transaction's code/intent more readable and to provide a way for developer to separate potentially 'unsafe' account modifying code from regular transaction logic,
+          as well as provide a way to check for error prior / after transaction execution,
+          and abort the transaction if any are found.
+        </p>
+        <p>The following is a brief summary of how to use the <code>prepare</code>, <code>pre</code>, <code>execute</code>, and <code>post</code> blocks in a Cadence transaction.</p>
+        <pre><code class="language-cadence"><span style="color: #000000">transaction {</span><span>
+</span><span style="color: #000000">    prepare(signer1: AuthAccount) {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// Access signing accounts for this transaction.</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// Avoid logic that does not need access to signing accounts.</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// Signing accounts can't be accesed anywhere else in the transaction.</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pre</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// Define conditions that must be true</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// for this transaction to execute.</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">execute</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// The main transaction logic goes here, but you can access</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// any public information or resources published by any account.</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">post</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// Define the expected state of things</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// as they should be after the transaction executed.</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// Also used to provide information about what changes</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// this transaction will make to accounts in this transaction.</span><span>
 </span><span style="color: #000000">    }</span><span>
 </span><span style="color: #000000">}</span><span>
 </span></code></pre>
