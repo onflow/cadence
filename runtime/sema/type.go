@@ -4994,7 +4994,7 @@ type ReferenceType struct {
 
 func (*ReferenceType) IsType() {}
 
-func (t *ReferenceType) String() string {
+func (t *ReferenceType) string(typeFormatter func(Type) string) string {
 	if t.Type == nil {
 		return "reference"
 	}
@@ -5003,33 +5003,28 @@ func (t *ReferenceType) String() string {
 		builder.WriteString("auth ")
 	}
 	builder.WriteRune('&')
-	builder.WriteString(t.Type.String())
+	builder.WriteString(typeFormatter(t.Type))
 	return builder.String()
+}
+
+func (t *ReferenceType) String() string {
+	return t.string(func(ty Type) string {
+		return ty.String()
+	})
 }
 
 func (t *ReferenceType) QualifiedString() string {
-	if t.Type == nil {
-		return "reference"
-	}
-	var builder strings.Builder
-	if t.Authorized {
-		builder.WriteString("auth ")
-	}
-	builder.WriteRune('&')
-	builder.WriteString(t.Type.QualifiedString())
-	return builder.String()
+	return t.string(func(ty Type) string {
+		return ty.QualifiedString()
+	})
 }
 
 func (t *ReferenceType) ID() TypeID {
-	var builder strings.Builder
-	if t.Authorized {
-		builder.WriteString("auth ")
-	}
-	builder.WriteRune('&')
-	if t.Type != nil {
-		builder.WriteString(string(t.Type.ID()))
-	}
-	return TypeID(builder.String())
+	return TypeID(
+		t.string(func(ty Type) string {
+			return string(ty.ID())
+		}),
+	)
 }
 
 func (t *ReferenceType) Equal(other Type) bool {
@@ -5038,8 +5033,11 @@ func (t *ReferenceType) Equal(other Type) bool {
 		return false
 	}
 
-	return t.Authorized == otherReference.Authorized &&
-		t.Type.Equal(otherReference.Type)
+	if t.Authorized != otherReference.Authorized {
+		return false
+	}
+
+	return t.Type.Equal(otherReference.Type)
 }
 
 func (t *ReferenceType) IsResourceType() bool {
@@ -5928,46 +5926,38 @@ func (t *RestrictedType) RestrictionSet() InterfaceSet {
 
 func (*RestrictedType) IsType() {}
 
-func (t *RestrictedType) String() string {
+func (t *RestrictedType) string(typeFormatter func(Type) string) string {
 	var result strings.Builder
-	result.WriteString(t.Type.String())
+	result.WriteString(typeFormatter(t.Type))
 	result.WriteRune('{')
 	for i, restriction := range t.Restrictions {
 		if i > 0 {
 			result.WriteString(", ")
 		}
-		result.WriteString(restriction.String())
+		result.WriteString(typeFormatter(restriction))
 	}
 	result.WriteRune('}')
 	return result.String()
+}
+
+func (t *RestrictedType) String() string {
+	return t.string(func(ty Type) string {
+		return ty.String()
+	})
 }
 
 func (t *RestrictedType) QualifiedString() string {
-	var result strings.Builder
-	result.WriteString(t.Type.QualifiedString())
-	result.WriteRune('{')
-	for i, restriction := range t.Restrictions {
-		if i > 0 {
-			result.WriteString(", ")
-		}
-		result.WriteString(restriction.QualifiedString())
-	}
-	result.WriteRune('}')
-	return result.String()
+	return t.string(func(ty Type) string {
+		return ty.QualifiedString()
+	})
 }
 
 func (t *RestrictedType) ID() TypeID {
-	var result strings.Builder
-	result.WriteString(string(t.Type.ID()))
-	result.WriteRune('{')
-	for i, restriction := range t.Restrictions {
-		if i > 0 {
-			result.WriteString(",")
-		}
-		result.WriteString(string(restriction.ID()))
-	}
-	result.WriteRune('}')
-	return TypeID(result.String())
+	return TypeID(
+		t.string(func(ty Type) string {
+			return string(ty.ID())
+		}),
+	)
 }
 
 func (t *RestrictedType) Equal(other Type) bool {
