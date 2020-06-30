@@ -31,8 +31,8 @@ func TestCompositeTypeFields(t *testing.T) {
 	t.Parallel()
 
 	cases := map[string]struct {
-		code   string
-		result bool
+		code       string
+		errorTypes []error
 	}{
 
 		"int is a storable field": {`
@@ -45,7 +45,7 @@ func TestCompositeTypeFields(t *testing.T) {
 			}
 		}
 			`,
-			true,
+			nil,
 		},
 
 		"function is not a storable field": {`
@@ -64,7 +64,9 @@ func TestCompositeTypeFields(t *testing.T) {
 			}
 		}
 			`,
-			false,
+			[]error{
+				&sema.FieldTypeNotStorableError{},
+			},
 		},
 
 		"[Int] is a storable field": {`
@@ -77,7 +79,7 @@ func TestCompositeTypeFields(t *testing.T) {
 			}
 		}
 			`,
-			true,
+			nil,
 		},
 
 		"{Int: String} is a storable field": {`
@@ -90,19 +92,26 @@ func TestCompositeTypeFields(t *testing.T) {
 			}
 		}
 			`,
-			true,
+			nil,
 		},
 
+		// owner is a predeclare member with PublicAccount? type,
+		// can't assign it to a non-storable field
 		"PublicAccount is a not storable field": {`
-		struct S {
-			var p: PublicAccount
+		resource R {
+			var p: PublicAccount?
 
+			init(){
+				self.p = self.owner
+			}
 		}
 			`,
-			false,
+			[]error{
+				&sema.FieldTypeNotStorableError{},
+			},
 		},
 
-		"{Int: function} is a storable field": {`
+		"{Int: function} is not a storable field": {`
 		contract Controller {
 
 			var m: {Int: ((): Int)}
@@ -116,7 +125,9 @@ func TestCompositeTypeFields(t *testing.T) {
 			}
 		}
 			`,
-			false,
+			[]error{
+				&sema.FieldTypeNotStorableError{},
+			},
 		},
 
 		"[function] is not a storable field": {`
@@ -129,7 +140,9 @@ func TestCompositeTypeFields(t *testing.T) {
 			}
 		}
 			`,
-			false,
+			[]error{
+				&sema.FieldTypeNotStorableError{},
+			},
 		},
 
 		"function field for struct is not storable": {`
@@ -143,7 +156,9 @@ func TestCompositeTypeFields(t *testing.T) {
 			};
 		}
 			`,
-			false,
+			[]error{
+				&sema.FieldTypeNotStorableError{},
+			},
 		},
 
 		"path field is not storable": {`
@@ -157,7 +172,9 @@ func TestCompositeTypeFields(t *testing.T) {
 			}
 		}
 			`,
-			false,
+			[]error{
+				&sema.FieldTypeNotStorableError{},
+			},
 		},
 
 		"nested field for resource is not storable": {`
@@ -176,7 +193,10 @@ func TestCompositeTypeFields(t *testing.T) {
 			}
 		}
 			`,
-			false,
+			[]error{
+				&sema.FieldTypeNotStorableError{},
+				&sema.MissingInitializerError{},
+			},
 		},
 
 		"resource interface is storable if all fields are storable": {`
@@ -185,7 +205,7 @@ func TestCompositeTypeFields(t *testing.T) {
 			var s: String
 		}
 			`,
-			true,
+			nil,
 		},
 
 		"resource interface is not storable if one field is not storable": {`
@@ -198,7 +218,11 @@ func TestCompositeTypeFields(t *testing.T) {
 			var m : @{String: {RI}}
 		}
 			`,
-			false,
+			[]error{
+				&sema.FieldTypeNotStorableError{},
+				&sema.MissingInitializerError{},
+				&sema.MissingDestructorError{},
+			},
 		},
 	}
 
@@ -207,14 +231,18 @@ func TestCompositeTypeFields(t *testing.T) {
 			_, err := ParseAndCheck(t, testcase.code)
 
 			errmsg := fmt.Sprintf("failed test case: %v\n", testcase.code)
-			if testcase.result {
+
+			if testcase.errorTypes == nil {
 				if err != nil {
 					cmd.PrettyPrintError(err, "", map[string]string{"": testcase.code})
 				}
 				// print the failed the cadence code if test case was broken
 				require.NoError(t, err, errmsg)
 			} else {
-				require.Error(t, err, errmsg)
+				errs := ExpectCheckerErrors(t, err, len(testcase.errorTypes))
+				for i, errType := range testcase.errorTypes {
+					require.IsType(t, errType, errs[i])
+				}
 			}
 		})
 	}
