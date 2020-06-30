@@ -496,6 +496,19 @@ func (checker *Checker) declareCompositeMembersAndValue(
 			checker.declareInterfaceMembers(nestedInterfaceDeclaration)
 		}
 
+		// If this composite declaration has nested composite declaration, 
+		// then recursively declare the members and values of them.
+		//
+		// For instance, a structure `S`, defined within a contract `MyContract`,
+		// as shown in the example code below, is a nested composite declaration
+		// which has its own members:
+		// ```
+		// contract MyContract {
+		//   struct S {
+		//     var v: Int
+		//   }
+		// }
+		// ```
 		for _, nestedCompositeDeclaration := range declaration.CompositeDeclarations {
 			checker.declareCompositeMembersAndValue(nestedCompositeDeclaration, kind)
 
@@ -560,6 +573,23 @@ func (checker *Checker) declareCompositeMembersAndValue(
 				declaration.Members.Functions,
 				kind,
 			)
+		}
+
+		// Check if all members' types are allowed. 
+		// A member's type is allowed if it is storable
+		
+		for _, member := range members {
+			// If a member has a non-storable type, then report an error
+			
+			if !member.IsStorable() {
+				checker.report(
+					&FieldTypeNotStorableError{
+						Name: member.Identifier.Identifier,
+						Type: member.TypeAnnotation.Type,
+						Pos:  member.Identifier.Pos,
+					},
+				)
+			}
 		}
 
 		compositeType.Members = members
@@ -1272,6 +1302,7 @@ func (checker *Checker) checkNoInitializerNoFields(
 	)
 }
 
+// checkSpecialFunction checks special functions, like initializers and destructors
 func (checker *Checker) checkSpecialFunction(
 	specialFunction *ast.SpecialFunctionDeclaration,
 	containerType Type,

@@ -707,6 +707,33 @@ func (e *FieldUninitializedError) EndPosition() ast.Position {
 	return e.Pos.Shifted(length - 1)
 }
 
+// FieldTypeNotStorableError is an error that is reported for 
+// field of composite types that are not storable.
+//
+// Field types have to be storable because the storage
+// layer needs to know how to store the field, which is not 
+// possible for all types.
+//
+// For example, the type `Int` is a storable type, 
+// whereas a function type is not.
+
+type FieldTypeNotStorableError struct {
+	// Field's name
+	Name string
+	// Field's type
+	Type Type
+	// StartPosition of the error
+	Pos ast.Position
+}
+
+func (e *FieldTypeNotStorableError) Error() string {
+	return fmt.Sprintf(
+		"field %s has non-storable type: %s",
+		e.Name,
+		e.Type,
+	)
+}
+
 // FunctionExpressionInConditionError
 
 type FunctionExpressionInConditionError struct {

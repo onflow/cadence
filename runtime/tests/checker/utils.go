@@ -96,8 +96,8 @@ func ParseAndCheckWithOptions(
 	return checker, err
 }
 
-func ExpectCheckerErrors(t *testing.T, err error, len int) []error {
-	if len <= 0 && err == nil {
+func ExpectCheckerErrors(t *testing.T, err error, count int) []error {
+	if count <= 0 && err == nil {
 		return nil
 	}
 
@@ -107,7 +107,7 @@ func ExpectCheckerErrors(t *testing.T, err error, len int) []error {
 
 	errs := err.(*sema.CheckerError).Errors
 
-	require.Len(t, errs, len)
+	require.Len(t, errs, count)
 
 	// Get the error message, to check that it can be successfully generated
 

@@ -453,6 +453,7 @@ func validateArgumentParams(
 	return argumentValues, nil
 }
 
+// ParseAndCheckProgram parses the given script and runs type check.
 func (r *interpreterRuntime) ParseAndCheckProgram(script []byte, runtimeInterface Interface, location Location) error {
 	runtimeStorage := newInterpreterRuntimeStorage(runtimeInterface)
 	functions := r.standardLibraryFunctions(runtimeInterface, runtimeStorage)
