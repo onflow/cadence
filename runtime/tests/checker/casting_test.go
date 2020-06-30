@@ -4302,7 +4302,7 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 					)
 
 					if _, ok := ty.(*sema.AnyType); ok {
-						if _, ok := otherType.(*sema.AnyStructType); ok {
+						if _, ok = otherType.(*sema.AnyStructType); ok {
 
 							errs := ExpectCheckerErrors(t, err, 1)
 
@@ -5726,7 +5726,7 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 						)
 
 						if _, ok := ty.(*sema.AnyType); ok {
-							if _, ok := otherType.(*sema.AnyStructType); ok {
+							if _, ok = otherType.(*sema.AnyStructType); ok {
 
 								errs := ExpectCheckerErrors(t, err, 1)
 

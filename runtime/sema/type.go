@@ -6341,12 +6341,19 @@ func IsSubType(subType Type, superType Type) bool {
 		return true
 	}
 
-	if _, ok := subType.(*NeverType); ok {
+	switch subType.(type) {
+	case *AnyType:
+		// `Any` is only a subtype of `Any`
+		_, ok := superType.(*AnyType)
+		return ok
+	case *NeverType:
+		// `Never` is a subtype of all types
 		return true
 	}
 
 	switch typedSuperType := superType.(type) {
 	case *AnyType:
+		// Every type is a subtype of `Any`
 		return true
 
 	case *AnyStructType:
