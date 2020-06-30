@@ -255,7 +255,7 @@ func TestCompositeTypeFields(t *testing.T) {
 		require.Error(t, err)
 
 		checkerError, _ := err.(*sema.CheckerError)
-		require.Equal(t, "field fn is not storable, type: ((): Int)",
+		require.Equal(t, "field fn has non-storable, type: ((): Int)",
 			checkerError.ChildErrors()[0].Error())
 	})
 }
