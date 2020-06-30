@@ -235,9 +235,6 @@ func TestCompositeTypeFields(t *testing.T) {
 			errmsg := fmt.Sprintf("failed test case: %v\n", testcase.code)
 
 			if testcase.errorTypes == nil {
-				if err != nil {
-					cmd.PrettyPrintError(err, "", map[string]string{"": testcase.code})
-				}
 				// print the failed the cadence code if test case was broken
 				require.NoError(t, err, errmsg)
 			} else {

@@ -3601,9 +3601,6 @@ func TestCheckResourceFieldUseAndDestruction(t *testing.T) {
      }
    `)
 
-	if err != nil {
-		cmd.PrettyPrintError(err, "", map[string]string{"": ""})
-	}
 	require.NoError(t, err)
 }
 
