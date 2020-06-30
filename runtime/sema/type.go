@@ -305,7 +305,7 @@ func (*MetaType) IsInvalidType() bool {
 }
 
 func (*MetaType) IsStorable() bool {
-	return false
+	return true
 }
 
 func (*MetaType) TypeAnnotationState() TypeAnnotationState {
