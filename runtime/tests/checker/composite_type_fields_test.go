@@ -252,10 +252,8 @@ func TestCompositeTypeFields(t *testing.T) {
 	t.Run("check error message", func(t *testing.T) {
 		testcase := cases["function is not a storable field"]
 		_, err := ParseAndCheck(t, testcase.code)
-		require.Error(t, err)
 
-		checkerError, _ := err.(*sema.CheckerError)
-		require.Equal(t, "field fn has non-storable, type: ((): Int)",
-			checkerError.ChildErrors()[0].Error())
+		errs := ExpectCheckerErrors(t, err, 1)
+		require.Equal(t, "field fn has non-storable type: ((): Int)", errs[0].Error())
 	})
 }
