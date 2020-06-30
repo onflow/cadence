@@ -34,7 +34,7 @@ func (checker *Checker) checkEventParameters(
 		parameterType := parameters[i].TypeAnnotation.Type
 
 		if !parameterType.IsInvalidType() &&
-			!isValidEventParameterType(parameterType) {
+			!IsValidEventParameterType(parameterType) {
 
 			checker.report(
 				&InvalidEventParameterTypeError{
@@ -53,23 +53,23 @@ func (checker *Checker) checkEventParameters(
 //
 // Events currently only support a few simple Cadence types.
 //
-func isValidEventParameterType(t Type) bool {
+func IsValidEventParameterType(t Type) bool {
 	switch t := t.(type) {
 	case *BoolType, *StringType, *CharacterType, *AddressType:
 		return true
 
 	case *OptionalType:
-		return isValidEventParameterType(t.Type)
+		return IsValidEventParameterType(t.Type)
 
 	case *VariableSizedType:
-		return isValidEventParameterType(t.ElementType(false))
+		return IsValidEventParameterType(t.ElementType(false))
 
 	case *ConstantSizedType:
-		return isValidEventParameterType(t.ElementType(false))
+		return IsValidEventParameterType(t.ElementType(false))
 
 	case *DictionaryType:
-		return isValidEventParameterType(t.KeyType) &&
-			isValidEventParameterType(t.ValueType)
+		return IsValidEventParameterType(t.KeyType) &&
+			IsValidEventParameterType(t.ValueType)
 
 	default:
 		return IsSubType(t, &NumberType{})
