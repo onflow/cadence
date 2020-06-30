@@ -496,7 +496,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 			checker.declareInterfaceMembers(nestedInterfaceDeclaration)
 		}
 
-		// If this composite declaration has nested composite declaration, 
+		// If this composite declaration has nested composite declaration,
 		// then recursively declare the members and values of them.
 		//
 		// For instance, a structure `S`, defined within a contract `MyContract`,
@@ -575,22 +575,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 			)
 		}
 
-		// Check if all members' types are allowed. 
-		// A member's type is allowed if it is storable
-		
-		for _, member := range members {
-			// If a member has a non-storable type, then report an error
-			
-			if !member.IsStorable() {
-				checker.report(
-					&FieldTypeNotStorableError{
-						Name: member.Identifier.Identifier,
-						Type: member.TypeAnnotation.Type,
-						Pos:  member.Identifier.Pos,
-					},
-				)
-			}
-		}
+		checker.checkMemberStorability(members)
 
 		compositeType.Members = members
 		checker.memberOrigins[compositeType] = origins
@@ -651,6 +636,26 @@ func (checker *Checker) declareCompositeMembersAndValue(
 			allowOuterScopeShadowing: false,
 		})
 		checker.report(err)
+	}
+}
+
+// checkMemberStorability check that all fields have a type that is storable.
+//
+func (checker *Checker) checkMemberStorability(members map[string]*Member) {
+
+	for _, member := range members {
+
+		if member.IsStorable() {
+			continue
+		}
+
+		checker.report(
+			&FieldTypeNotStorableError{
+				Name: member.Identifier.Identifier,
+				Type: member.TypeAnnotation.Type,
+				Pos:  member.Identifier.Pos,
+			},
+		)
 	}
 }
 
