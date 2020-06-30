@@ -4438,6 +4438,29 @@ func TestCheckResourceMoveMemberInvocation(t *testing.T) {
 		require.NoError(t, err)
 	})
 
+	t.Run("valid use, with argument of same type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          resource Test {
+              fun use(_ test: @Test) {
+                  destroy test
+              }
+          }
+
+          fun test() {
+              let test1 <- create Test()
+              let test2 <- create Test()
+              test1.use(<-test2)
+              destroy test1
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("valid use, in argument", func(t *testing.T) {
 
 		t.Parallel()
