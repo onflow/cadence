@@ -79,8 +79,8 @@ type Type interface {
 	// or it contains an invalid type (e.g. for optionals, arrays, dictionaries, etc.)
 	IsInvalidType() bool
 
-	// IsStorable returns whether the type is allowed to be a storable field of a composite type.
-	// e.g. a function is not storable field for a contract type.
+	// IsStorable returns true if the type is allowed to be a stored,
+	// e.g. in a field of a composite type.
 	IsStorable() bool
 
 	TypeAnnotationState() TypeAnnotationState
@@ -390,6 +390,7 @@ func (*AnyType) IsInvalidType() bool {
 }
 
 func (*AnyType) IsStorable() bool {
+	// The actual storability of a value is checked at run-time
 	return false
 }
 
@@ -440,7 +441,7 @@ func (*AnyStructType) IsInvalidType() bool {
 }
 
 func (*AnyStructType) IsStorable() bool {
-	// The actual storability is check at runtime by the interpreter
+	// The actual storability of a value is checked at run-time
 	return true
 }
 
@@ -491,7 +492,7 @@ func (*AnyResourceType) IsInvalidType() bool {
 }
 
 func (*AnyResourceType) IsStorable() bool {
-	// The actual storability is check at runtime by the interpreter
+	// The actual storability of a value is checked at run-time
 	return true
 }
 
@@ -3914,7 +3915,7 @@ func (t *FunctionType) IsInvalidType() bool {
 }
 
 func (t *FunctionType) IsStorable() bool {
-	// Function is not allowed to be a field of a contract to be stored.
+	// Functions cannot be stored, as they cannot be serialized
 	return false
 }
 
@@ -4342,16 +4343,16 @@ func (*CompositeType) IsInvalidType() bool {
 }
 
 func (t *CompositeType) IsStorable() bool {
-	// if there is unstorable field in the nested types,
+
+	// If this composite type has a member which is non-storable,
 	// then the composite type is not storable.
-	for _, ty := range t.nestedTypes {
-		if !ty.IsStorable() {
+
+	for _, member := range t.Members {
+		if !member.IsStorable() {
 			return false
 		}
 	}
 
-	// all fields in the nested types are storable, so
-	// this composite type is storable
 	return true
 }
 
@@ -4407,7 +4408,7 @@ func (t *CompositeType) NestedTypes() map[string]Type {
 	return t.nestedTypes
 }
 
-// AuthAccountType represents the authorized portion of an account.
+// AuthAccountType represents the authorized access to an account.
 // Access to an AuthAccount means having full access to its storage, public keys, and code.
 // Only signed transactions can get the AuthAccount for an account.
 
@@ -4758,7 +4759,7 @@ func (t *AuthAccountType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-// PublicAccountType represents the publicly available portion of an account.
+// PublicAccountType represents the publicly accessible portion of an account.
 
 type PublicAccountType struct{}
 
@@ -4880,25 +4881,28 @@ func NewPublicConstantFieldMember(containerType Type, identifier string, fieldTy
 
 // IsStorable returns whether a member is a storable field
 func (m *Member) IsStorable() bool {
-	// skip checking predeclared fields, such as `account` for Contract,
-	// and `owner` for Resource
+
+	// Skip checking predeclared members
+
 	if m.Predeclared {
 		return true
 	}
 
-	// only check fields. method functions is allowed
-	if m.DeclarationKind != common.DeclarationKindField {
-		return true
+	if m.DeclarationKind == common.DeclarationKindField {
+
+		// Fields are not storable
+		// if their type is non-storable
+
+		fieldType := m.TypeAnnotation.Type
+
+		if !fieldType.IsInvalidType() &&
+			!fieldType.IsStorable() {
+
+			return false
+		}
 	}
 
-	// if this field's type has failed previous check, then
-	// skip the check on this field.
-	if m.TypeAnnotation.Type.IsInvalidType() {
-		return true
-	}
-
-	storable := m.TypeAnnotation.Type.IsStorable()
-	return storable
+	return true
 }
 
 // InterfaceType
@@ -4971,12 +4975,16 @@ func (t *InterfaceType) IsInvalidType() bool {
 }
 
 func (t *InterfaceType) IsStorable() bool {
-	// all nested types has to be storable
+
+	// If this interface type has a member which is non-storable,
+	// then the interface type is not storable.
+
 	for _, member := range t.Members {
 		if !member.IsStorable() {
 			return false
 		}
 	}
+
 	return true
 }
 
@@ -5002,9 +5010,10 @@ func (t *InterfaceType) NestedTypes() map[string]Type {
 	return t.nestedTypes
 }
 
-// DictionaryType represents the types of the key and value for all key-value pairs in
-// the dictionary.
-// As a Dictionary value, all keys have to conform the same type, same as all values.
+// DictionaryType consists of the key and value type
+// for all key-value pairs in the dictionary:
+// All keys have to be a subtype of the key type,
+// and all values have to be a subtype of the value type.
 
 type DictionaryType struct {
 	KeyType   Type
@@ -5286,7 +5295,8 @@ func (t *ReferenceType) IsInvalidType() bool {
 }
 
 func (t *ReferenceType) IsStorable() bool {
-	return false
+	// TODO: https://github.com/onflow/cadence/issues/189
+	return true
 }
 
 func (*ReferenceType) TypeAnnotationState() TypeAnnotationState {
@@ -6262,6 +6272,10 @@ func (t *RestrictedType) IsInvalidType() bool {
 }
 
 func (t *RestrictedType) IsStorable() bool {
+	if t.Type != nil && !t.Type.IsStorable() {
+		return false
+	}
+
 	for _, restriction := range t.Restrictions {
 		if !restriction.IsStorable() {
 			return false
@@ -6368,7 +6382,7 @@ func (*PathType) IsInvalidType() bool {
 }
 
 func (*PathType) IsStorable() bool {
-	return false
+	return true
 }
 
 func (*PathType) TypeAnnotationState() TypeAnnotationState {
@@ -6419,7 +6433,7 @@ func (*CapabilityType) IsInvalidType() bool {
 }
 
 func (*CapabilityType) IsStorable() bool {
-	return false
+	return true
 }
 
 func (*CapabilityType) TypeAnnotationState() TypeAnnotationState {
