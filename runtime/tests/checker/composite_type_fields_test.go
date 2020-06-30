@@ -228,6 +228,8 @@ func TestCompositeTypeFields(t *testing.T) {
 
 	for caseName, testcase := range cases {
 		t.Run(caseName, func(t *testing.T) {
+			t.Parallel()
+
 			_, err := ParseAndCheck(t, testcase.code)
 
 			errmsg := fmt.Sprintf("failed test case: %v\n", testcase.code)
