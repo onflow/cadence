@@ -35,7 +35,7 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) ast
 	if statement.Expression == nil {
 
 		// If the return statement has no expression,
-		// and the enclosing function's return type is Void,
+		// and the enclosing function's return type is non-Void,
 		// then the return statement is missing an expression
 
 		if _, ok := returnType.(*VoidType); !ok {
