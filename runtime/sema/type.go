@@ -6010,44 +6010,46 @@ func IsSubType(subType Type, superType Type) bool {
 		}
 
 	case ParameterizedType:
-		superTypeBaseType := typedSuperType.BaseType()
+		if superTypeBaseType := typedSuperType.BaseType(); superTypeBaseType != nil {
 
-		// T<Us> <: V<Ws>
-		// if T <: V  && |Us| == |Ws| && U_i <: W_i
+			// T<Us> <: V<Ws>
+			// if T <: V  && |Us| == |Ws| && U_i <: W_i
 
-		if typedSubType, ok := subType.(ParameterizedType); ok {
-			subTypeBaseType := typedSubType.BaseType()
+			if typedSubType, ok := subType.(ParameterizedType); ok {
+				if subTypeBaseType := typedSubType.BaseType(); subTypeBaseType != nil {
 
-			if !IsSubType(subTypeBaseType, superTypeBaseType) {
-				return false
-			}
+					if !IsSubType(subTypeBaseType, superTypeBaseType) {
+						return false
+					}
 
-			subTypeTypeArguments := typedSubType.TypeArguments()
-			superTypeTypeArguments := typedSuperType.TypeArguments()
+					subTypeTypeArguments := typedSubType.TypeArguments()
+					superTypeTypeArguments := typedSuperType.TypeArguments()
 
-			if len(subTypeTypeArguments) != len(superTypeTypeArguments) {
-				return false
-			}
+					if len(subTypeTypeArguments) != len(superTypeTypeArguments) {
+						return false
+					}
 
-			for i, superTypeTypeArgument := range superTypeTypeArguments {
-				subTypeTypeArgument := subTypeTypeArguments[i]
-				if !IsSubType(subTypeTypeArgument, superTypeTypeArgument) {
-					return false
+					for i, superTypeTypeArgument := range superTypeTypeArguments {
+						subTypeTypeArgument := subTypeTypeArguments[i]
+						if !IsSubType(subTypeTypeArgument, superTypeTypeArgument) {
+							return false
+						}
+					}
+
+					return true
 				}
 			}
-
-			return true
 		}
+	}
 
-	default:
+	// TODO: enforce type arguments, remove this rule
 
-		// TODO: enforce type arguments, remove this rule
+	// T<Us> <: V
+	// if T <: V
 
-		// T<Us> <: V
-		// if T <: V
-
-		if typedSubType, ok := subType.(ParameterizedType); ok {
-			return IsSubType(typedSubType.BaseType(), superType)
+	if typedSubType, ok := subType.(ParameterizedType); ok {
+		if baseType := typedSubType.BaseType(); baseType != nil {
+			return IsSubType(baseType, superType)
 		}
 	}
 
@@ -6601,6 +6603,9 @@ func (t *CapabilityType) Instantiate(typeArguments []Type, _ func(err error)) Ty
 }
 
 func (t *CapabilityType) BaseType() Type {
+	if t.BorrowType == nil {
+		return nil
+	}
 	return &CapabilityType{}
 }
 
