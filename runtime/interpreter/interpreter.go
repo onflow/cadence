@@ -1743,6 +1743,10 @@ func (interpreter *Interpreter) testEqual(left, right Value) BoolValue {
 	// TODO: add support for arrays and dictionaries
 
 	switch left := left.(type) {
+	case NilValue:
+		_, ok := right.(NilValue)
+		return BoolValue(ok)
+
 	case EquatableValue:
 		// NOTE: might be NilValue
 		right, ok := right.(EquatableValue)
@@ -1750,10 +1754,6 @@ func (interpreter *Interpreter) testEqual(left, right Value) BoolValue {
 			return false
 		}
 		return left.Equal(right)
-
-	case NilValue:
-		_, ok := right.(NilValue)
-		return BoolValue(ok)
 
 	case *CompositeValue:
 		// TODO: call `equals` if RHS is composite
@@ -1763,9 +1763,10 @@ func (interpreter *Interpreter) testEqual(left, right Value) BoolValue {
 		*DictionaryValue:
 		// TODO:
 		return false
-	}
 
-	panic(errors.NewUnreachableError())
+	default:
+		return false
+	}
 }
 
 func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) ast.Repr {
