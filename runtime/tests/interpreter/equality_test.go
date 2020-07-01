@@ -41,8 +41,8 @@ func TestInterpretEquality(t *testing.T) {
 			`
               let maybeCapNonNil: Capability? = cap
               let maybeCapNil: Capability? = nil
-		      let res1 = maybeCapNonNil != nil
-		      let res2 = maybeCapNil == nil
+              let res1 = maybeCapNonNil != nil
+              let res2 = maybeCapNil == nil
 		    `,
 			ParseCheckAndInterpretOptions{
 				Options: []interpreter.Option{
@@ -89,8 +89,8 @@ func TestInterpretEquality(t *testing.T) {
 
           let maybeFuncNonNil: ((): Void)? = func
           let maybeFuncNil: ((): Void)? = nil
-		  let res1 = maybeFuncNonNil != nil
-		  let res2 = maybeFuncNil == nil
+          let res1 = maybeFuncNonNil != nil
+          let res2 = maybeFuncNil == nil
 		`)
 
 		assert.Equal(t,
