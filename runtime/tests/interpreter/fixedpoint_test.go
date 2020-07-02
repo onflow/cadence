@@ -56,6 +56,11 @@ func TestInterpretFixedPointConversionAndAddition(t *testing.T) {
 	}
 
 	for _, fixedPointType := range sema.AllFixedPointTypes {
+		switch fixedPointType.(type) {
+		case *sema.FixedPointType, *sema.SignedFixedPointType:
+			continue
+		}
+
 		if _, ok := tests[fixedPointType.String()]; !ok {
 			panic(fmt.Sprintf("broken test: missing %s", fixedPointType))
 		}
@@ -102,6 +107,11 @@ var testFixedPointValues = map[string]interpreter.Value{
 
 func init() {
 	for _, fixedPointType := range sema.AllFixedPointTypes {
+		switch fixedPointType.(type) {
+		case *sema.FixedPointType, *sema.SignedFixedPointType:
+			continue
+		}
+
 		if _, ok := testFixedPointValues[fixedPointType.String()]; !ok {
 			panic(fmt.Sprintf("broken test: missing fixed-point type: %s", fixedPointType))
 		}

@@ -3443,6 +3443,17 @@ var converters = map[string]ValueConverter{
 
 func init() {
 	for _, numberType := range sema.AllNumberTypes {
+
+		// Only leaf number types require a converter,
+		// "hierarchy" number types don't need one
+
+		switch numberType.(type) {
+		case *sema.NumberType, *sema.SignedNumberType,
+			*sema.IntegerType, *sema.SignedIntegerType,
+			*sema.FixedPointType, *sema.SignedFixedPointType:
+			continue
+		}
+
 		if _, ok := converters[numberType.String()]; !ok {
 			panic(fmt.Sprintf("missing converter for number type: %s", numberType))
 		}
