@@ -440,6 +440,11 @@ func TestCheckInvalidIntegerConversionFunctionWithoutArgs(t *testing.T) {
 
 	for _, ty := range allIntegerTypesAndAddressType {
 
+		switch ty.(type) {
+		case *sema.IntegerType, *sema.SignedIntegerType:
+			continue
+		}
+
 		t.Run(ty.String(), func(t *testing.T) {
 
 			_, err := ParseAndCheck(t,
@@ -464,6 +469,11 @@ func TestCheckFixedPointToIntegerConversion(t *testing.T) {
 	t.Parallel()
 
 	for _, ty := range sema.AllIntegerTypes {
+
+		switch ty.(type) {
+		case *sema.IntegerType, *sema.SignedIntegerType:
+			continue
+		}
 
 		t.Run(ty.String(), func(t *testing.T) {
 

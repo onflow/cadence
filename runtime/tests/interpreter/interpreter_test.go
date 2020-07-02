@@ -5973,12 +5973,24 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 	}
 
 	for _, integerType := range sema.AllIntegerTypes {
+
+		switch integerType.(type) {
+		case *sema.IntegerType, *sema.SignedIntegerType:
+			continue
+		}
+
 		if _, ok := validTypes[integerType.String()]; !ok {
 			panic(fmt.Sprintf("broken test: missing %s", integerType))
 		}
 	}
 
 	for _, fixedPointType := range sema.AllFixedPointTypes {
+
+		switch fixedPointType.(type) {
+		case *sema.FixedPointType, *sema.SignedFixedPointType:
+			continue
+		}
+
 		if _, ok := validTypes[fixedPointType.String()]; !ok {
 			panic(fmt.Sprintf("broken test: missing %s", fixedPointType))
 		}

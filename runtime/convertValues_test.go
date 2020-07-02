@@ -235,17 +235,21 @@ func TestExportFixedPointValuesFromScript(t *testing.T) {
 	t.Parallel()
 
 	for _, fixedPointType := range sema.AllFixedPointTypes {
-		script := fmt.Sprintf(
-			`
-              pub fun main(): %s {
-                  return 1.23
-              }
-            `,
-			fixedPointType,
-		)
 
-		assert.NotPanics(t, func() {
-			exportValueFromScript(t, script)
+		t.Run(fixedPointType.String(), func(t *testing.T) {
+
+			script := fmt.Sprintf(
+				`
+                  pub fun main(): %s {
+                      return 1.23
+                  }
+                `,
+				fixedPointType,
+			)
+
+			assert.NotPanics(t, func() {
+				exportValueFromScript(t, script)
+			})
 		})
 	}
 }

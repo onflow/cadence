@@ -123,6 +123,11 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 	}
 
 	for _, ty := range sema.AllFixedPointTypes {
+		switch ty.(type) {
+		case *sema.FixedPointType, *sema.SignedFixedPointType:
+			continue
+		}
+
 		t.Run(ty.String(), func(t *testing.T) {
 
 			ranged := ty.(sema.FractionalRangedType)
@@ -619,6 +624,12 @@ func TestCheckFixedPointLiteralScales(t *testing.T) {
 	t.Parallel()
 
 	for _, ty := range sema.AllFixedPointTypes {
+
+		switch ty.(type) {
+		case *sema.FixedPointType, *sema.SignedFixedPointType:
+			continue
+		}
+
 		t.Run(ty.String(), func(t *testing.T) {
 
 			scale := ty.(sema.FractionalRangedType).Scale()

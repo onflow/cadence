@@ -1405,15 +1405,15 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
-      pub resource Number {
+      pub resource SomeNumber {
         pub(set) var n: Int
         init(_ n: Int) {
           self.n = n
         }
       }
 
-      pub fun createNumber(_ n: Int): @Number {
-        return <-create Number(n)
+      pub fun createNumber(_ n: Int): @SomeNumber {
+        return <-create SomeNumber(n)
       }
     `)
 
@@ -1432,7 +1432,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
       transaction {
         prepare(signer: AuthAccount) {
-          if let number <- signer.load<@Number>(from: /storage/number) {
+          if let number <- signer.load<@SomeNumber>(from: /storage/number) {
             log(number.n)
             destroy number
           }

@@ -285,14 +285,13 @@ var toStringFunctionType = &FunctionType{
 var typeBuiltinFunctionTypes = map[TypeID]map[string]*FunctionType{}
 
 func init() {
+
+	// Declare the built-in functions
+
+	// All number types and addresses have a `toString` function
+
 	for _, ty := range append(
 		AllNumberTypes[:],
-		&NumberType{},
-		&SignedNumberType{},
-		&FixedPointType{},
-		&SignedFixedPointType{},
-		&IntegerType{},
-		&SignedIntegerType{},
 		&AddressType{},
 	) {
 		functionTypes, ok := typeBuiltinFunctionTypes[ty.ID()]
@@ -4116,8 +4115,11 @@ var AllUnsignedFixedPointTypes = []Type{
 }
 
 var AllFixedPointTypes = append(
-	AllUnsignedFixedPointTypes,
-	AllSignedFixedPointTypes...,
+	append(AllUnsignedFixedPointTypes,
+		AllSignedFixedPointTypes...,
+	),
+	&FixedPointType{},
+	&SignedFixedPointType{},
 )
 
 var AllSignedIntegerTypes = []Type{
@@ -4147,40 +4149,60 @@ var AllUnsignedIntegerTypes = []Type{
 }
 
 var AllIntegerTypes = append(
-	AllUnsignedIntegerTypes,
-	AllSignedIntegerTypes...,
+	append(
+		AllUnsignedIntegerTypes,
+		AllSignedIntegerTypes...,
+	),
+	&IntegerType{},
+	&SignedIntegerType{},
 )
 
 var AllNumberTypes = append(
-	AllIntegerTypes,
-	AllFixedPointTypes...,
+	append(
+		AllIntegerTypes,
+		AllFixedPointTypes...,
+	),
+	&NumberType{},
+	&SignedNumberType{},
 )
 
 func init() {
 
+	// Declare a conversion function for all (leaf) number types
+
 	for _, numberType := range AllNumberTypes {
-		typeName := numberType.String()
 
-		// check type is not accidentally redeclared
-		if _, ok := BaseValues[typeName]; ok {
-			panic(errors.NewUnreachableError())
-		}
+		switch numberType.(type) {
+		case *NumberType, *SignedNumberType,
+			*IntegerType, *SignedIntegerType,
+			*FixedPointType, *SignedFixedPointType:
+			continue
 
-		BaseValues[typeName] = baseFunction{
-			name: typeName,
-			invokableType: &CheckedFunctionType{
-				FunctionType: &FunctionType{
-					Parameters: []*Parameter{
-						{
-							Label:          ArgumentLabelNotRequired,
-							Identifier:     "value",
-							TypeAnnotation: NewTypeAnnotation(&NumberType{}),
+		default:
+			typeName := numberType.String()
+
+			// Check that the type is not accidentally redeclared
+
+			if _, ok := BaseValues[typeName]; ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			BaseValues[typeName] = baseFunction{
+				name: typeName,
+				invokableType: &CheckedFunctionType{
+					FunctionType: &FunctionType{
+						Parameters: []*Parameter{
+							{
+								Label:          ArgumentLabelNotRequired,
+								Identifier:     "value",
+								TypeAnnotation: NewTypeAnnotation(&NumberType{}),
+							},
 						},
+						ReturnTypeAnnotation: &TypeAnnotation{Type: numberType},
 					},
-					ReturnTypeAnnotation: &TypeAnnotation{Type: numberType},
+					ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
 				},
-				ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
-			},
+			}
 		}
 	}
 }
@@ -5503,7 +5525,8 @@ func IsSubType(subType Type, superType Type) bool {
 	switch typedSuperType := superType.(type) {
 
 	case *NumberType:
-		if _, ok := subType.(*NumberType); ok {
+		switch subType.(type) {
+		case *NumberType, *SignedNumberType:
 			return true
 		}
 

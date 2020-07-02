@@ -3475,6 +3475,17 @@ var converters = map[string]ValueConverter{
 
 func init() {
 	for _, numberType := range sema.AllNumberTypes {
+
+		// Only leaf number types require a converter,
+		// "hierarchy" number types don't need one
+
+		switch numberType.(type) {
+		case *sema.NumberType, *sema.SignedNumberType,
+			*sema.IntegerType, *sema.SignedIntegerType,
+			*sema.FixedPointType, *sema.SignedFixedPointType:
+			continue
+		}
+
 		if _, ok := converters[numberType.String()]; !ok {
 			panic(fmt.Sprintf("missing converter for number type: %s", numberType))
 		}
@@ -4254,7 +4265,7 @@ func (interpreter *Interpreter) reportFunctionInvocation(pos ast.HasPosition) {
 // getMember gets the member value by the given identifier from the given Value depending on its type.
 func (interpreter *Interpreter) getMember(self Value, locationRange LocationRange, identifier string) Value {
 	var result Value
-	// When the accessed value has a type that supports the declaration of members or is a built-in type that has members (`MemberAccessibleValue`), 
+	// When the accessed value has a type that supports the declaration of members or is a built-in type that has members (`MemberAccessibleValue`),
 	// then try to get the member for the given identifier.
 	// For example, the built-in type `String` has a member "length",
 	// and composite declarations may contain member declarations
