@@ -27,10 +27,12 @@ import (
 )
 
 func parseStatements(p *parser, endTokenType lexer.TokenType) (statements []ast.Statement) {
+	sawSemicolon := false
 	for {
 		p.skipSpaceAndComments(true)
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
+			sawSemicolon = true
 			p.next()
 			continue
 		case endTokenType, lexer.TokenEOF:
@@ -42,6 +44,25 @@ func parseStatements(p *parser, endTokenType lexer.TokenType) (statements []ast.
 			}
 
 			statements = append(statements, statement)
+
+			// Check that the previous statement (if any) followed a semicolon
+
+			if !sawSemicolon {
+				statementCount := len(statements)
+				if statementCount > 1 {
+					previousStatement := statements[statementCount-2]
+					previousLine := previousStatement.EndPosition().Line
+					currentStartPos := statement.StartPosition()
+					if previousLine == currentStartPos.Line {
+						p.report(&SyntaxError{
+							Message: "statements on the same line must be separated with a semicolon",
+							Pos:     currentStartPos,
+						})
+					}
+				}
+			}
+
+			sawSemicolon = false
 		}
 	}
 }

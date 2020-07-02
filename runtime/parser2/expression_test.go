@@ -1985,8 +1985,8 @@ func TestParseForceExpression(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseStatements("x\n!y")
-
 		require.Empty(t, errs)
+
 		utils.AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.ExpressionStatement{
@@ -2019,8 +2019,8 @@ func TestParseForceExpression(t *testing.T) {
 		t.Parallel()
 
 		result, errs := ParseStatements("x\n.y!")
-
 		require.Empty(t, errs)
+
 		utils.AssertEqualWithDiff(t,
 			[]ast.Statement{
 				&ast.ExpressionStatement{
