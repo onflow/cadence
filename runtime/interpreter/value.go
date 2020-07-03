@@ -37,6 +37,56 @@ import (
 	"github.com/onflow/cadence/runtime/trampoline"
 )
 
+func SignedBigIntToBigEndianBytes(bigInt *big.Int) []byte {
+
+	switch bigInt.Sign() {
+	case -1:
+		// Encode as two's complement
+		twosComplement := new(big.Int).Neg(bigInt)
+		twosComplement.Sub(twosComplement, big.NewInt(1))
+		bytes := twosComplement.Bytes()
+		for i := range bytes {
+			bytes[i] ^= 0xff
+		}
+		// Pad with 0xFF to prevent misinterpretation as positive
+		if len(bytes) == 0 || bytes[0]&0x80 == 0 {
+			return append([]byte{0xff}, bytes...)
+		}
+		return bytes
+
+	case 0:
+		return []byte{0}
+
+	case 1:
+		bytes := bigInt.Bytes()
+		// Pad with 0x0 to prevent misinterpretation as negative
+		if len(bytes) > 0 && bytes[0]&0x80 != 0 {
+			return append([]byte{0x0}, bytes...)
+		}
+		return bytes
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func UnsignedBigIntToBigEndianBytes(bigInt *big.Int) []byte {
+
+	switch bigInt.Sign() {
+	case -1:
+		panic(errors.NewUnreachableError())
+
+	case 0:
+		return []byte{0}
+
+	case 1:
+		return bigInt.Bytes()
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
 // Value
 
 type Value interface {
@@ -695,6 +745,7 @@ type NumberValue interface {
 	LessEqual(other NumberValue) BoolValue
 	Greater(other NumberValue) BoolValue
 	GreaterEqual(other NumberValue) BoolValue
+	ToBigEndianBytes() []byte
 }
 
 type IntegerValue interface {
@@ -919,6 +970,14 @@ func (v IntValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value 
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -926,6 +985,10 @@ func (v IntValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value 
 
 func (IntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v IntValue) ToBigEndianBytes() []byte {
+	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
 // Int8Value
@@ -1137,6 +1200,14 @@ func (v Int8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -1144,6 +1215,10 @@ func (v Int8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Value
 
 func (Int8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v Int8Value) ToBigEndianBytes() []byte {
+	return []byte{byte(v)}
 }
 
 // Int16Value
@@ -1355,6 +1430,14 @@ func (v Int16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -1362,6 +1445,12 @@ func (v Int16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 
 func (Int16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v Int16Value) ToBigEndianBytes() []byte {
+	b := make([]byte, 2)
+	binary.BigEndian.PutUint16(b, uint16(v))
+	return b
 }
 
 // Int32Value
@@ -1573,6 +1662,14 @@ func (v Int32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -1580,6 +1677,12 @@ func (v Int32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 
 func (Int32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v Int32Value) ToBigEndianBytes() []byte {
+	b := make([]byte, 4)
+	binary.BigEndian.PutUint32(b, uint32(v))
+	return b
 }
 
 // Int64Value
@@ -1790,6 +1893,14 @@ func (v Int64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -1797,6 +1908,12 @@ func (v Int64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 
 func (Int64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v Int64Value) ToBigEndianBytes() []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(v))
+	return b
 }
 
 // Int128Value
@@ -2067,6 +2184,14 @@ func (v Int128Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -2074,6 +2199,10 @@ func (v Int128Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 
 func (Int128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v Int128Value) ToBigEndianBytes() []byte {
+	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
 // Int256Value
@@ -2345,6 +2474,14 @@ func (v Int256Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -2352,6 +2489,10 @@ func (v Int256Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 
 func (Int256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v Int256Value) ToBigEndianBytes() []byte {
+	return SignedBigIntToBigEndianBytes(v.BigInt)
 }
 
 // UIntValue
@@ -2569,6 +2710,14 @@ func (v UIntValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -2576,6 +2725,10 @@ func (v UIntValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value
 
 func (UIntValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v UIntValue) ToBigEndianBytes() []byte {
+	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
 // UInt8Value
@@ -2755,6 +2908,14 @@ func (v UInt8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -2762,6 +2923,10 @@ func (v UInt8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 
 func (UInt8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v UInt8Value) ToBigEndianBytes() []byte {
+	return []byte{byte(v)}
 }
 
 // UInt16Value
@@ -2939,6 +3104,14 @@ func (v UInt16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -2946,6 +3119,12 @@ func (v UInt16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 
 func (UInt16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v UInt16Value) ToBigEndianBytes() []byte {
+	b := make([]byte, 2)
+	binary.BigEndian.PutUint16(b, uint16(v))
+	return b
 }
 
 // UInt32Value
@@ -3125,6 +3304,14 @@ func (v UInt32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -3132,6 +3319,12 @@ func (v UInt32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 
 func (UInt32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v UInt32Value) ToBigEndianBytes() []byte {
+	b := make([]byte, 4)
+	binary.BigEndian.PutUint32(b, uint32(v))
+	return b
 }
 
 // UInt64Value
@@ -3314,6 +3507,14 @@ func (v UInt64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -3321,6 +3522,12 @@ func (v UInt64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 
 func (UInt64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v UInt64Value) ToBigEndianBytes() []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(v))
+	return b
 }
 
 // UInt128Value
@@ -3562,6 +3769,13 @@ func (v UInt128Value) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 				return trampoline.Done{Result: result}
 			},
 		)
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -3569,6 +3783,10 @@ func (v UInt128Value) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 
 func (UInt128Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v UInt128Value) ToBigEndianBytes() []byte {
+	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
 // UInt256Value
@@ -3810,6 +4028,14 @@ func (v UInt256Value) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -3817,6 +4043,10 @@ func (v UInt256Value) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 
 func (UInt256Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v UInt256Value) ToBigEndianBytes() []byte {
+	return UnsignedBigIntToBigEndianBytes(v.BigInt)
 }
 
 // Word8Value
@@ -3957,6 +4187,14 @@ func (v Word8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -3964,6 +4202,10 @@ func (v Word8Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 
 func (Word8Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v Word8Value) ToBigEndianBytes() []byte {
+	return []byte{byte(v)}
 }
 
 // Word16Value
@@ -4102,6 +4344,14 @@ func (v Word16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -4109,6 +4359,12 @@ func (v Word16Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 
 func (Word16Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v Word16Value) ToBigEndianBytes() []byte {
+	b := make([]byte, 2)
+	binary.BigEndian.PutUint16(b, uint16(v))
+	return b
 }
 
 // Word32Value
@@ -4249,6 +4505,14 @@ func (v Word32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -4256,6 +4520,12 @@ func (v Word32Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 
 func (Word32Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v Word32Value) ToBigEndianBytes() []byte {
+	b := make([]byte, 4)
+	binary.BigEndian.PutUint32(b, uint32(v))
+	return b
 }
 
 // Word64Value
@@ -4396,6 +4666,14 @@ func (v Word64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -4403,6 +4681,12 @@ func (v Word64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 
 func (Word64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v Word64Value) ToBigEndianBytes() []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(v))
+	return b
 }
 
 // Fix64Value
@@ -4644,6 +4928,14 @@ func (v Fix64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -4651,6 +4943,12 @@ func (v Fix64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Valu
 
 func (Fix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v Fix64Value) ToBigEndianBytes() []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(v))
+	return b
 }
 
 // UFix64Value
@@ -4884,6 +5182,14 @@ func (v UFix64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBigEndianBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				result := ByteSliceToByteArrayValue(v.ToBigEndianBytes())
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
@@ -4891,6 +5197,12 @@ func (v UFix64Value) GetMember(_ *Interpreter, _ LocationRange, name string) Val
 
 func (UFix64Value) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
+}
+
+func (v UFix64Value) ToBigEndianBytes() []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(v))
+	return b
 }
 
 // CompositeValue
