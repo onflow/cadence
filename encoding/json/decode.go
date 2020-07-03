@@ -463,8 +463,25 @@ func parseFixedPoint(
 
 	negative = false
 
-	integer, _ := new(big.Int).SetString(integerStr, 10)
-	fractional, _ = new(big.Int).SetString(fractionalStr, 10)
+	integer, ok := new(big.Int).SetString(integerStr, 10)
+	if !ok {
+		// TODO: improve error message
+		panic(ErrInvalidJSONCadence)
+	}
+
+	if len(fractionalStr) > 0 {
+		switch fractionalStr[0] {
+		case '+', '-':
+			// TODO: improve error message
+			panic(ErrInvalidJSONCadence)
+		}
+	}
+
+	fractional, ok = new(big.Int).SetString(fractionalStr, 10)
+	if !ok {
+		// TODO: improve error message
+		panic(ErrInvalidJSONCadence)
+	}
 
 	if integer.Sign() < 0 {
 		negative = true

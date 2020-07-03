@@ -1042,6 +1042,30 @@ func TestDecodeFixedPoints(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("minus sign in fractional", func(t *testing.T) {
+
+		_, err := json.Decode([]byte(`{"type": "Fix64", "value": "1.-1"}`))
+		assert.Error(t, err)
+	})
+
+	t.Run("plus sign in fractional", func(t *testing.T) {
+
+		_, err := json.Decode([]byte(`{"type": "Fix64", "value": "1.+1"}`))
+		assert.Error(t, err)
+	})
+
+	t.Run("missing integer", func(t *testing.T) {
+
+		_, err := json.Decode([]byte(`{"type": "Fix64", "value": ".1"}`))
+		assert.Error(t, err)
+	})
+
+	t.Run("missing fractional", func(t *testing.T) {
+
+		_, err := json.Decode([]byte(`{"type": "Fix64", "value": "1."}`))
+		assert.Error(t, err)
+	})
 }
 
 func convertValueFromScript(t *testing.T, script string) cadence.Value {
