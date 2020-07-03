@@ -30,6 +30,7 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -414,9 +415,9 @@ func decodeFix64(valueJSON interface{}) cadence.Fix64 {
 		unsignedInteger,
 		fractional,
 		parsedScale,
-		int(sema.Fix64Scale),
-		sema.Fix64TypeMaxIntBig, sema.Fix64TypeMinIntBig,
-		sema.Fix64TypeMaxFractionalBig, sema.Fix64TypeMinFractionalBig,
+		sema.Fix64Scale,
+		sema.Fix64TypeMinIntBig, sema.Fix64TypeMinFractionalBig,
+		sema.Fix64TypeMaxIntBig, sema.Fix64TypeMaxFractionalBig,
 	)
 
 	return cadence.NewFix64(v.Int64())
@@ -430,9 +431,9 @@ func decodeUFix64(valueJSON interface{}) cadence.UFix64 {
 		unsignedInteger,
 		fractional,
 		parsedScale,
-		int(sema.Fix64Scale),
-		sema.UFix64TypeMaxIntBig, sema.UFix64TypeMinIntBig,
-		sema.UFix64TypeMaxFractionalBig, sema.UFix64TypeMinFractionalBig,
+		sema.Fix64Scale,
+		sema.UFix64TypeMinIntBig, sema.UFix64TypeMinFractionalBig,
+		sema.UFix64TypeMaxIntBig, sema.UFix64TypeMaxFractionalBig,
 	)
 
 	return cadence.NewUFix64(v.Uint64())
@@ -444,7 +445,7 @@ func parseFixedPoint(
 	negative bool,
 	unsignedInteger,
 	fractional *big.Int,
-	scale int,
+	scale uint,
 ) {
 	v := toString(valueJSON)
 
@@ -458,7 +459,7 @@ func parseFixedPoint(
 	integerStr := parts[0]
 	fractionalStr := parts[1]
 
-	scale = len(fractionalStr)
+	scale = uint(len(fractionalStr))
 
 	negative = false
 
@@ -472,29 +473,31 @@ func parseFixedPoint(
 		unsignedInteger = integer
 	}
 
-	return negative, unsignedInteger, fractional, scale
+	return
 }
 
 func checkAndConvertFixedPoint(
 	negative bool,
 	unsignedInteger,
 	fractional *big.Int,
-	parsedScale,
-	targetScale int,
-	maxInteger, minInteger,
-	maxFractional, minFractional *big.Int,
+	parsedScale uint,
+	targetScale uint,
+	minInteger, minFractional,
+	maxInteger, maxFractional *big.Int,
 ) *big.Int {
+
+	// TODO: remove?
 	if parsedScale > targetScale {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)
 	}
 
-	inRange := checkFixedPointRange(
+	inRange := fixedpoint.CheckRange(
 		negative,
 		unsignedInteger,
 		fractional,
-		maxInteger, minInteger,
-		maxFractional, minFractional,
+		minInteger, minFractional,
+		maxInteger, maxFractional,
 	)
 
 	if !inRange {
@@ -502,91 +505,13 @@ func checkAndConvertFixedPoint(
 		panic(ErrInvalidJSONCadence)
 	}
 
-	ten := big.NewInt(10)
-
-	// unsignedInteger = unsignedInteger * 10 ^ targetScale
-
-	unsignedInteger = new(big.Int).Mul(
+	return fixedpoint.ConvertToFixedPointBigInt(
+		negative,
 		unsignedInteger,
-		new(big.Int).Exp(ten, new(big.Int).SetUint64(uint64(targetScale)), nil),
+		fractional,
+		parsedScale,
+		targetScale,
 	)
-
-	// fractional = fractional * 10 ^ (targetScale - parsedScale)
-
-	if parsedScale < targetScale {
-		scaleDiff := new(big.Int).SetUint64(uint64(targetScale - parsedScale))
-		fractional = new(big.Int).Mul(
-			fractional,
-			new(big.Int).Exp(ten, scaleDiff, nil),
-		)
-	}
-
-	var integer *big.Int
-
-	if negative {
-		integer = unsignedInteger.Neg(unsignedInteger)
-		fractional.Neg(fractional)
-	} else {
-		integer = unsignedInteger
-	}
-
-	// value = integer + fractional
-
-	return integer.Add(integer, fractional)
-}
-
-func checkFixedPointRange(
-	negative bool,
-	unsignedIntegerValue, fractionalValue,
-	maxInteger, minInteger,
-	maxFractional, minFractional *big.Int,
-) bool {
-	minIntSign := minInteger.Sign()
-
-	integerValue := new(big.Int).Set(unsignedIntegerValue)
-	if negative {
-		if minIntSign == 0 && negative {
-			return false
-		}
-
-		integerValue.Neg(integerValue)
-	}
-
-	switch integerValue.Cmp(minInteger) {
-	case -1:
-		return false
-	case 0:
-		if minIntSign < 0 {
-			if fractionalValue.Cmp(minFractional) > 0 {
-				return false
-			}
-		} else {
-			if fractionalValue.Cmp(minFractional) < 0 {
-				return false
-			}
-		}
-	case 1:
-		break
-	}
-
-	switch integerValue.Cmp(maxInteger) {
-	case -1:
-		break
-	case 0:
-		if maxInteger.Sign() >= 0 {
-			if fractionalValue.Cmp(maxFractional) > 0 {
-				return false
-			}
-		} else {
-			if fractionalValue.Cmp(maxFractional) < 0 {
-				return false
-			}
-		}
-	case 1:
-		return false
-	}
-
-	return true
 }
 
 func decodeValues(valueJSON interface{}) []cadence.Value {
