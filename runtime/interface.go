@@ -73,7 +73,7 @@ type Interface interface {
 	// using the given public key, signature algorithm, and hash algorithm.
 	VerifySignature(
 		signature []byte,
-		tag []byte,
+		tag string,
 		signedData []byte,
 		publicKey []byte,
 		signatureAlgorithm string,
@@ -166,12 +166,12 @@ func (i *EmptyRuntimeInterface) UnsafeRandom() uint64 {
 }
 
 func (i *EmptyRuntimeInterface) VerifySignature(
-	signature []byte,
-	tag []byte,
-	signedData []byte,
-	publicKey []byte,
-	signatureAlgorithm string,
-	hashAlgorithm string,
+	_ []byte,
+	_ string,
+	_ []byte,
+	_ []byte,
+	_ string,
+	_ string,
 ) bool {
 	return false
 }
