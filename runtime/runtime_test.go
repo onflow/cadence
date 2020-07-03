@@ -2105,7 +2105,7 @@ func TestRuntimeTransaction_UpdateAccountCodeEmpty(t *testing.T) {
 	assert.Len(t, events, 1)
 }
 
-func TestRuntimeTransaction_CreateAccountEmpty(t *testing.T) {
+func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 
 	t.Parallel()
 
@@ -2139,7 +2139,8 @@ func TestRuntimeTransaction_CreateAccountEmpty(t *testing.T) {
 	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	assert.Len(t, events, 1)
+	require.Len(t, events, 1)
+	assert.Equal(t, stdlib.AccountCreatedEventType.ID(), events[0].Type().ID())
 }
 
 func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
