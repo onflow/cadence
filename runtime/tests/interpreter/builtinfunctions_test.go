@@ -113,8 +113,6 @@ func TestInterpretToBytes(t *testing.T) {
 
 func TestInterpretToBigEndianBytes(t *testing.T) {
 
-	// TODO: fixed point
-
 	typeTests := map[string]map[string][]byte{
 		// Int*
 		"Int": {
