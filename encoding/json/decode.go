@@ -405,8 +405,11 @@ func decodeWord64(valueJSON interface{}) cadence.Word64 {
 	return cadence.NewWord64(i)
 }
 
+const fix64Scale = 8
+const uFix64Scale = 8
+
 func decodeFix64(valueJSON interface{}) cadence.Fix64 {
-	v := decodeFixString(valueJSON)
+	v := parseFixString(valueJSON, fix64Scale)
 
 	i, err := strconv.ParseInt(v, 10, 64)
 	if err != nil {
@@ -418,7 +421,7 @@ func decodeFix64(valueJSON interface{}) cadence.Fix64 {
 }
 
 func decodeUFix64(valueJSON interface{}) cadence.UFix64 {
-	v := decodeFixString(valueJSON)
+	v := parseFixString(valueJSON, uFix64Scale)
 
 	i, err := strconv.ParseUint(v, 10, 64)
 	if err != nil {
@@ -429,17 +432,33 @@ func decodeUFix64(valueJSON interface{}) cadence.UFix64 {
 	return cadence.NewUFix64(i)
 }
 
-func decodeFixString(valueJSON interface{}) string {
+func parseFixString(valueJSON interface{}, scale int) string {
 	v := toString(valueJSON)
 
-	// must contain single decimal point
+	// must contain single radix point
 	parts := strings.Split(v, ".")
 	if len(parts) != 2 {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)
 	}
 
-	return parts[0] + parts[1]
+	integer := parts[0]
+	fractional := parts[1]
+
+	if len(fractional) > scale {
+		panic(ErrInvalidJSONCadence)
+	}
+
+	fractional = padRight(fractional, "0", scale)
+
+	return integer + fractional
+}
+
+func padRight(s, pad string, length int) string {
+	for len(s) < length {
+		s += pad
+	}
+	return s
 }
 
 func decodeValues(valueJSON interface{}) []cadence.Value {
