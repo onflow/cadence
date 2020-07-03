@@ -166,7 +166,7 @@ pub contract Crypto {
 
                 if !Crypto.signatureVerifier.verify(
                     signature: signature.signature,
-                    tag: Crypto.domainSeparationTagFlowUser,
+                    tag: Crypto.domainSeparationTagUser,
                     signedData: signedData,
                     publicKey: key.publicKey.publicKey,
                     signatureAlgorithm: key.publicKey.signatureAlgorithm.name,
@@ -192,7 +192,7 @@ pub contract Crypto {
         }
     }
 
-    priv let domainSeparationTagFlowUser: String
+    priv let domainSeparationTagUser: String
 
     priv let signatureVerifier: {SignatureVerifier}
 
@@ -208,6 +208,6 @@ pub contract Crypto {
         self.SHA2_256 = HashAlgorithm(name: "SHA2_256")
         self.SHA3_256 = HashAlgorithm(name: "SHA3_256")
 
-        self.domainSeparationTagFlowUser = "FLOW-V0.0-user"
+        self.domainSeparationTagUser = "user-V0.0"
     }
 }
