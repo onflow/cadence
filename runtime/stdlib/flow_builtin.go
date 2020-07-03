@@ -27,8 +27,6 @@ import (
 
 // This file defines functions built in to the Flow runtime.
 
-var flowLocation = ast.StringLocation("flow")
-
 // built-in function types
 
 var accountFunctionType = &sema.FunctionType{
@@ -163,7 +161,7 @@ func newFlowEventType(identifier string, parameters ...*sema.Parameter) *sema.Co
 
 	eventType := &sema.CompositeType{
 		Kind:       common.CompositeKindEvent,
-		Location:   flowLocation,
+		Location:   ast.FlowLocation{},
 		Identifier: identifier,
 		Members:    map[string]*sema.Member{},
 	}

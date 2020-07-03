@@ -97,28 +97,30 @@ func LocationsMatch(first, second Location) bool {
 func LocationFromTypeID(typeID string) Location {
 	pieces := strings.Split(typeID, ".")
 
-	if len(pieces) < 3 {
-		return nil
-	}
-
-	switch pieces[0] {
-	case IdentifierLocationPrefix:
-		return IdentifierLocation(pieces[1])
-
-	case StringLocationPrefix:
-		return StringLocation(pieces[1])
-
-	case AddressLocationPrefix:
-		address, err := hex.DecodeString(pieces[1])
-		if err != nil {
-			return nil
+	switch len(pieces) {
+	case 2:
+		if pieces[0] == flowLocationID {
+			return FlowLocation{}
 		}
+	case 3:
+		switch pieces[0] {
+		case IdentifierLocationPrefix:
+			return IdentifierLocation(pieces[1])
 
-		return AddressLocation(address)
+		case StringLocationPrefix:
+			return StringLocation(pieces[1])
 
-	default:
-		return nil
+		case AddressLocationPrefix:
+			address, err := hex.DecodeString(pieces[1])
+			if err != nil {
+				return nil
+			}
+
+			return AddressLocation(address)
+		}
 	}
+
+	return nil
 }
 
 // LocationID
@@ -127,6 +129,14 @@ type LocationID string
 
 func NewLocationID(parts ...string) LocationID {
 	return LocationID(strings.Join(parts, "."))
+}
+
+type FlowLocation struct{}
+
+const flowLocationID = "flow"
+
+func (l FlowLocation) ID() LocationID {
+	return NewLocationID(flowLocationID)
 }
 
 // IdentifierLocation
