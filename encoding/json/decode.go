@@ -78,12 +78,10 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 		if r := recover(); r != nil {
 			panicErr, isError := r.(error)
 			if !isError {
-				err = fmt.Errorf("%s", r)
-				// panic(r)
-			} else {
-				err = fmt.Errorf("failed to decode value: %w", panicErr)
+				panic(r)
 			}
 
+			err = fmt.Errorf("failed to decode value: %w", panicErr)
 		}
 	}()
 
