@@ -2140,7 +2140,7 @@ func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, events, 1)
-	assert.Equal(t, stdlib.AccountCreatedEventType.ID(), events[0].Type().ID())
+	assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type().ID())
 }
 
 func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
