@@ -53,12 +53,10 @@ func TestInterpretToString(t *testing.T) {
 
 	t.Run("Address", func(t *testing.T) {
 
-		inter := parseCheckAndInterpret(t,
-			`
-              let x: Address = 0x42
-              let y = x.toString()
-            `,
-		)
+		inter := parseCheckAndInterpret(t, `
+          let x: Address = 0x42
+          let y = x.toString()
+        `)
 
 		assert.Equal(t,
 			interpreter.NewStringValue("0x42"),
@@ -86,4 +84,29 @@ func TestInterpretToString(t *testing.T) {
 			)
 		})
 	}
+}
+
+func TestInterpretToBytes(t *testing.T) {
+
+	t.Run("Address", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t, `
+          let x: Address = 0x123456
+          let y = x.toBytes()
+        `)
+
+		assert.Equal(t,
+			interpreter.NewArrayValueUnownedNonCopying(
+				interpreter.UInt8Value(0x0),
+				interpreter.UInt8Value(0x0),
+				interpreter.UInt8Value(0x0),
+				interpreter.UInt8Value(0x0),
+				interpreter.UInt8Value(0x0),
+				interpreter.UInt8Value(0x12),
+				interpreter.UInt8Value(0x34),
+				interpreter.UInt8Value(0x56),
+			),
+			inter.Globals["y"].Value,
+		)
+	})
 }

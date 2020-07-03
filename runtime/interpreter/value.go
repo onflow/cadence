@@ -6001,6 +6001,15 @@ func (v AddressValue) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 				return trampoline.Done{Result: result}
 			},
 		)
+
+	case sema.ToBytesFunctionName:
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+				bytes := common.Address(v)
+				result := ByteSliceToByteArrayValue(bytes[:])
+				return trampoline.Done{Result: result}
+			},
+		)
 	}
 
 	return nil
