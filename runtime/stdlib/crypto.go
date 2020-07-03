@@ -16,7 +16,7 @@ import (
 type CryptoSignatureVerifier interface {
 	VerifySignature(
 		signature []byte,
-		tag []byte,
+		tag string,
 		signedData []byte,
 		publicKey []byte,
 		signatureAlgorithm string,
@@ -79,7 +79,7 @@ func newCryptoContractVerifySignatureFunction(signatureVerifier CryptoSignatureV
 			if !ok {
 				panic(errors.New("verifySignature: invalid tag argument: not a string"))
 			}
-			tag := []byte(tagStringValue.Str)
+			tag := tagStringValue.Str
 
 			signedData, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[2])
 			if err != nil {

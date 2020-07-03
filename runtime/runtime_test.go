@@ -108,7 +108,7 @@ type testRuntimeInterface struct {
 	unsafeRandom       func() uint64
 	verifySignature    func(
 		signature []byte,
-		tag []byte,
+		tag string,
 		signedData []byte,
 		publicKey []byte,
 		signatureAlgorithm string,
@@ -259,7 +259,7 @@ func (i *testRuntimeInterface) UnsafeRandom() uint64 {
 
 func (i *testRuntimeInterface) VerifySignature(
 	signature []byte,
-	tag []byte,
+	tag string,
 	signedData []byte,
 	publicKey []byte,
 	signatureAlgorithm string,
