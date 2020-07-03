@@ -282,7 +282,50 @@ var toStringFunctionType = &FunctionType{
 	),
 }
 
+// toBytes
+
+const ToBytesFunctionName = "toBytes"
+
+var toBytesFunctionType = &FunctionType{
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&VariableSizedType{
+			Type: &UInt8Type{},
+		},
+	),
+}
+
+// toBigEndianBytes
+
+const ToBigEndianBytesFunctionName = "toBigEndianBytes"
+
+var toBigEndianBytesFunctionType = &FunctionType{
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&VariableSizedType{
+			Type: &UInt8Type{},
+		},
+	),
+}
+
+// typeBuiltinFunctionTypes
+
 var typeBuiltinFunctionTypes = map[TypeID]map[string]*FunctionType{}
+
+func addTypeBuiltinFunctionType(ty Type, name string, functionType *FunctionType) {
+	functionTypes, ok := typeBuiltinFunctionTypes[ty.ID()]
+	if !ok {
+		functionTypes = map[string]*FunctionType{}
+		typeBuiltinFunctionTypes[ty.ID()] = functionTypes
+	}
+
+	if _, ok = functionTypes[name]; ok {
+		panic(fmt.Errorf(
+			"invalid redeclaration of built-in function %s for type %s: %s",
+			ty, name, functionType,
+		))
+	}
+
+	functionTypes[name] = functionType
+}
 
 func init() {
 
@@ -294,13 +337,31 @@ func init() {
 		AllNumberTypes[:],
 		&AddressType{},
 	) {
-		functionTypes, ok := typeBuiltinFunctionTypes[ty.ID()]
-		if !ok {
-			functionTypes = map[string]*FunctionType{}
-			typeBuiltinFunctionTypes[ty.ID()] = functionTypes
-		}
-		functionTypes[ToStringFunctionName] = toStringFunctionType
+		addTypeBuiltinFunctionType(
+			ty,
+			ToStringFunctionName,
+			toStringFunctionType,
+		)
 	}
+
+	// All number types have a `toBigEndianBytes` function
+
+	for _, ty := range AllNumberTypes[:] {
+		addTypeBuiltinFunctionType(
+			ty,
+			ToBigEndianBytesFunctionName,
+			toBigEndianBytesFunctionType,
+		)
+	}
+
+	// `Address` has a `toBytes` function
+
+	addTypeBuiltinFunctionType(
+		&AddressType{},
+		ToBytesFunctionName,
+		toBytesFunctionType,
+	)
+
 }
 
 // MetaType represents the type of a type.
@@ -4115,7 +4176,8 @@ var AllUnsignedFixedPointTypes = []Type{
 }
 
 var AllFixedPointTypes = append(
-	append(AllUnsignedFixedPointTypes,
+	append(
+		AllUnsignedFixedPointTypes[:],
 		AllSignedFixedPointTypes...,
 	),
 	&FixedPointType{},
@@ -4150,7 +4212,7 @@ var AllUnsignedIntegerTypes = []Type{
 
 var AllIntegerTypes = append(
 	append(
-		AllUnsignedIntegerTypes,
+		AllUnsignedIntegerTypes[:],
 		AllSignedIntegerTypes...,
 	),
 	&IntegerType{},
@@ -4159,7 +4221,7 @@ var AllIntegerTypes = append(
 
 var AllNumberTypes = append(
 	append(
-		AllIntegerTypes,
+		AllIntegerTypes[:],
 		AllFixedPointTypes...,
 	),
 	&NumberType{},

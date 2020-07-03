@@ -30,7 +30,7 @@ import (
 )
 
 var allIntegerTypesAndAddressType = append(
-	sema.AllIntegerTypes,
+	sema.AllIntegerTypes[:],
 	&sema.AddressType{},
 )
 
