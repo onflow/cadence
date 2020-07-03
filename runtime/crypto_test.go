@@ -101,7 +101,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 		) bool {
 			called = true
 			assert.Equal(t, []byte{3, 4}, signature)
-			assert.Equal(t, "user-V0.0", tag)
+			assert.Equal(t, "user", tag)
 			assert.Equal(t, []byte{5, 6}, signedData)
 			assert.Equal(t, []byte{1, 2}, publicKey)
 			assert.Equal(t, "ECDSA_P256", signatureAlgorithm)
