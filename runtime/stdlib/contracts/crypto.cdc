@@ -208,6 +208,6 @@ pub contract Crypto {
         self.SHA2_256 = HashAlgorithm(name: "SHA2_256")
         self.SHA3_256 = HashAlgorithm(name: "SHA3_256")
 
-        self.domainSeparationTagUser = "user-V0.0"
+        self.domainSeparationTagUser = "user"
     }
 }
