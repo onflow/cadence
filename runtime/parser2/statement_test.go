@@ -910,6 +910,8 @@ func TestParseFunctionStatementOrExpression(t *testing.T) {
 
 func TestParseStatements(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("binary expression with less operator", func(t *testing.T) {
 
 		t.Parallel()
@@ -950,6 +952,45 @@ func TestParseStatements(t *testing.T) {
 						Identifier: ast.Identifier{
 							Identifier: "d",
 							Pos:        ast.Position{Line: 2, Column: 0, Offset: 10},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("multiple statements on same line without semicolon", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseStatements(`assert true`)
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "statements on the same line must be separated with a semicolon",
+					Pos:     ast.Position{Offset: 7, Line: 1, Column: 7},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ExpressionStatement{
+					Expression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "assert",
+							Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+				},
+				&ast.ExpressionStatement{
+					Expression: &ast.BoolExpression{
+						Value: true,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
 						},
 					},
 				},

@@ -24,6 +24,7 @@ import (
 
 	"github.com/rivo/uniseg"
 
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -670,7 +671,7 @@ func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpress
 			return false
 		}
 
-		if !checker.checkFixedPointRange(
+		if !fixedpoint.CheckRange(
 			expression.Negative,
 			expression.UnsignedInteger,
 			expression.Fractional,
@@ -749,60 +750,6 @@ func (checker *Checker) checkAddressLiteral(expression *ast.IntegerExpression) {
 func (checker *Checker) checkIntegerRange(value, min, max *big.Int) bool {
 	return (min == nil || value.Cmp(min) >= 0) &&
 		(max == nil || value.Cmp(max) <= 0)
-}
-
-func (checker *Checker) checkFixedPointRange(
-	negative bool,
-	unsignedIntegerValue, fractionalValue,
-	minInt, minFractional,
-	maxInt, maxFractional *big.Int,
-) bool {
-	minIntSign := minInt.Sign()
-
-	integerValue := new(big.Int).Set(unsignedIntegerValue)
-	if negative {
-		if minIntSign == 0 && negative {
-			return false
-		}
-
-		integerValue.Neg(integerValue)
-	}
-
-	switch integerValue.Cmp(minInt) {
-	case -1:
-		return false
-	case 0:
-		if minIntSign < 0 {
-			if fractionalValue.Cmp(minFractional) > 0 {
-				return false
-			}
-		} else {
-			if fractionalValue.Cmp(minFractional) < 0 {
-				return false
-			}
-		}
-	case 1:
-		break
-	}
-
-	switch integerValue.Cmp(maxInt) {
-	case -1:
-		break
-	case 0:
-		if maxInt.Sign() >= 0 {
-			if fractionalValue.Cmp(maxFractional) > 0 {
-				return false
-			}
-		} else {
-			if fractionalValue.Cmp(maxFractional) < 0 {
-				return false
-			}
-		}
-	case 1:
-		return false
-	}
-
-	return true
 }
 
 func (checker *Checker) declareGlobalDeclaration(declaration ast.Declaration) {
