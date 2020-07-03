@@ -486,7 +486,6 @@ func checkAndConvertFixedPoint(
 	maxInteger, maxFractional *big.Int,
 ) *big.Int {
 
-	// TODO: remove?
 	if parsedScale > targetScale {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)
