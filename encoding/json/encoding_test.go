@@ -1028,8 +1028,6 @@ func TestDecodeFixedPoints(t *testing.T) {
 			for _, tt := range tests {
 				t.Run(tt.input, func(t *testing.T) {
 
-					t.Parallel()
-
 					enc := fmt.Sprintf(`{ "type": "%s", "value": "%s"}`, ty.ID(), tt.input)
 
 					actual, err := json.Decode([]byte(enc))
