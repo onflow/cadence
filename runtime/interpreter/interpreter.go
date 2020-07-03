@@ -20,11 +20,11 @@ package interpreter
 
 import (
 	"fmt"
-	"math/big"
 	goRuntime "runtime"
 
 	"github.com/raviqqe/hamt"
 
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -1827,7 +1827,14 @@ func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerEx
 
 func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedPointExpression) ast.Repr {
 	// TODO: adjust once/if we support more fixed point types
-	value := interpreter.convertToFixedPointBigInt(expression, sema.Fix64Scale)
+
+	value := fixedpoint.ConvertToFixedPointBigInt(
+		expression.Negative,
+		expression.UnsignedInteger,
+		expression.Fractional,
+		expression.Scale,
+		sema.Fix64Scale,
+	)
 
 	var result Value
 
@@ -1838,46 +1845,6 @@ func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedP
 	}
 
 	return Done{Result: result}
-}
-
-func (interpreter *Interpreter) convertToFixedPointBigInt(expression *ast.FixedPointExpression, scale uint) *big.Int {
-	ten := big.NewInt(10)
-
-	// integer = expression.UnsignedInteger * 10 ^ scale
-
-	targetScale := new(big.Int).SetUint64(uint64(scale))
-
-	integer := new(big.Int).Mul(
-		expression.UnsignedInteger,
-		new(big.Int).Exp(ten, targetScale, nil),
-	)
-
-	// fractional = expression.Fractional * 10 ^ (scale - expression.Scale)
-
-	var fractional *big.Int
-	if expression.Scale == scale {
-		fractional = expression.Fractional
-	} else if expression.Scale < scale {
-		scaleDiff := new(big.Int).SetUint64(uint64(scale - expression.Scale))
-		fractional = new(big.Int).Mul(
-			expression.Fractional,
-			new(big.Int).Exp(ten, scaleDiff, nil),
-		)
-	} else {
-		scaleDiff := new(big.Int).SetUint64(uint64(expression.Scale - scale))
-		fractional = new(big.Int).Div(expression.Fractional,
-			new(big.Int).Exp(ten, scaleDiff, nil),
-		)
-	}
-
-	// value = integer + fractional
-
-	if expression.Negative {
-		integer.Neg(integer)
-		fractional.Neg(fractional)
-	}
-
-	return integer.Add(integer, fractional)
 }
 
 func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpression) ast.Repr {
@@ -4255,7 +4222,7 @@ func (interpreter *Interpreter) reportFunctionInvocation(pos ast.HasPosition) {
 // getMember gets the member value by the given identifier from the given Value depending on its type.
 func (interpreter *Interpreter) getMember(self Value, locationRange LocationRange, identifier string) Value {
 	var result Value
-	// When the accessed value has a type that supports the declaration of members or is a built-in type that has members (`MemberAccessibleValue`), 
+	// When the accessed value has a type that supports the declaration of members or is a built-in type that has members (`MemberAccessibleValue`),
 	// then try to get the member for the given identifier.
 	// For example, the built-in type `String` has a member "length",
 	// and composite declarations may contain member declarations
