@@ -19,6 +19,7 @@
 package json_test
 
 import (
+	"fmt"
 	"math"
 	"math/big"
 	"strings"
@@ -854,6 +855,121 @@ func TestEncodeEvent(t *testing.T) {
 	}
 
 	testAllEncode(t, simpleEvent, resourceEvent)
+}
+
+func TestDecodeFixedPoints(t *testing.T) {
+
+	allFixedPointTypes := map[cadence.Type]func(int) cadence.Value{
+		cadence.Fix64Type{}:  func(i int) cadence.Value { return cadence.NewFix64(int64(i)) },
+		cadence.UFix64Type{}: func(i int) cadence.Value { return cadence.NewUFix64(uint64(i)) },
+	}
+
+	for ty, constructor := range allFixedPointTypes {
+		t.Run(ty.ID(), func(t *testing.T) {
+
+			var tests = []struct {
+				input    string
+				expected int
+				check    func(t *testing.T, actual cadence.Value, err error)
+			}{
+				{
+					input: "12.300000000",
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.Error(t, err)
+					},
+				},
+				{
+					input:    "12.30000000",
+					expected: 12_30000000,
+				},
+				{
+					input:    "12.3000000",
+					expected: 12_30000000,
+				},
+				{
+					input:    "12.300000",
+					expected: 12_30000000,
+				},
+				{
+					input:    "12.30000",
+					expected: 12_30000000,
+				},
+				{
+					input:    "12.3000",
+					expected: 12_30000000,
+				},
+				{
+					input:    "12.300",
+					expected: 12_30000000,
+				},
+				{
+					input:    "12.30",
+					expected: 12_30000000,
+				},
+				{
+					input:    "12.3",
+					expected: 12_30000000,
+				},
+				{
+					input:    "12.03",
+					expected: 12_03000000,
+				},
+				{
+					input:    "12.003",
+					expected: 12_00300000,
+				},
+				{
+					input:    "12.0003",
+					expected: 12_00030000,
+				},
+				{
+					input:    "12.00003",
+					expected: 12_00003000,
+				},
+				{
+					input:    "12.000003",
+					expected: 12_00000300,
+				},
+				{
+					input:    "12.0000003",
+					expected: 12_00000030,
+				},
+				{
+					input:    "12.00000003",
+					expected: 12_00000003,
+				},
+				{
+					input: "12.000000003",
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.Error(t, err)
+					},
+				},
+				{
+					input:    "120.3",
+					expected: 120_30000000,
+				},
+				{
+					input:    "012.3",
+					expected: 12_30000000,
+				},
+			}
+
+			for _, tt := range tests {
+				t.Run(tt.input, func(t *testing.T) {
+					enc := fmt.Sprintf(`{ "type": "%s", "value": "%s"}`, ty.ID(), tt.input)
+
+					actual, err := json.Decode([]byte(enc))
+
+					if tt.check != nil {
+						tt.check(t, actual, err)
+					} else {
+						require.NoError(t, err)
+						assert.Equal(t, constructor(tt.expected), actual)
+					}
+				})
+			}
+		})
+	}
 }
 
 func convertValueFromScript(t *testing.T, script string) cadence.Value {
