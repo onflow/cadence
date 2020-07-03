@@ -859,19 +859,39 @@ func TestEncodeEvent(t *testing.T) {
 
 func TestDecodeFixedPoints(t *testing.T) {
 
-	allFixedPointTypes := map[cadence.Type]func(int) cadence.Value{
-		cadence.Fix64Type{}:  func(i int) cadence.Value { return cadence.NewFix64(int64(i)) },
-		cadence.UFix64Type{}: func(i int) cadence.Value { return cadence.NewUFix64(uint64(i)) },
+	allFixedPointTypes := map[cadence.Type]struct {
+		constructor func(int) cadence.Value
+		maxInt      int64
+		minInt      int64
+		maxFrac     int64
+		minFrac     int64
+	}{
+		cadence.Fix64Type{}: {
+			constructor: func(i int) cadence.Value { return cadence.NewFix64(int64(i)) },
+			maxInt:      sema.Fix64TypeMaxInt,
+			minInt:      sema.Fix64TypeMinInt,
+			maxFrac:     sema.Fix64TypeMaxFractional,
+			minFrac:     sema.Fix64TypeMinFractional,
+		},
+		cadence.UFix64Type{}: {
+			constructor: func(i int) cadence.Value { return cadence.NewUFix64(uint64(i)) },
+			maxInt:      int64(sema.UFix64TypeMaxInt),
+			minInt:      sema.UFix64TypeMinInt,
+			maxFrac:     int64(sema.UFix64TypeMaxFractional),
+			minFrac:     sema.UFix64TypeMinFractional,
+		},
 	}
 
-	for ty, constructor := range allFixedPointTypes {
+	type test struct {
+		input    string
+		expected int
+		check    func(t *testing.T, actual cadence.Value, err error)
+	}
+
+	for ty, params := range allFixedPointTypes {
 		t.Run(ty.ID(), func(t *testing.T) {
 
-			var tests = []struct {
-				input    string
-				expected int
-				check    func(t *testing.T, actual cadence.Value, err error)
-			}{
+			var tests = []test{
 				{
 					input: "12.300000000",
 					check: func(t *testing.T, actual cadence.Value, err error) {
@@ -952,10 +972,64 @@ func TestDecodeFixedPoints(t *testing.T) {
 					input:    "012.3",
 					expected: 12_30000000,
 				},
+				{
+					input: fmt.Sprintf("%d.1", params.maxInt),
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.NoError(t, err)
+					},
+				},
+				{
+					input: fmt.Sprintf("%d.1", params.maxInt+1),
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.Error(t, err)
+					},
+				},
+				{
+					input: fmt.Sprintf("%d.1", params.minInt),
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.NoError(t, err)
+					},
+				},
+				{
+					input: fmt.Sprintf("%d.1", params.minInt-1),
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.Error(t, err)
+					},
+				},
+				{
+					input: fmt.Sprintf("%d.%d", params.maxInt, params.maxFrac),
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.NoError(t, err)
+					},
+				},
+				{
+					input: fmt.Sprintf("%d.%d", params.maxInt, params.maxFrac+1),
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.Error(t, err)
+					},
+				},
+				{
+					input: fmt.Sprintf("%d.%d", params.minInt, -(params.minFrac)),
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.NoError(t, err)
+					},
+				},
+			}
+
+			if params.minFrac != 0 {
+				tests = append(tests, test{
+					input: fmt.Sprintf("%d.%d", params.minInt, -(params.minFrac - 1)),
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.Error(t, err)
+					},
+				})
 			}
 
 			for _, tt := range tests {
 				t.Run(tt.input, func(t *testing.T) {
+
+					t.Parallel()
+
 					enc := fmt.Sprintf(`{ "type": "%s", "value": "%s"}`, ty.ID(), tt.input)
 
 					actual, err := json.Decode([]byte(enc))
@@ -964,7 +1038,7 @@ func TestDecodeFixedPoints(t *testing.T) {
 						tt.check(t, actual, err)
 					} else {
 						require.NoError(t, err)
-						assert.Equal(t, constructor(tt.expected), actual)
+						assert.Equal(t, params.constructor(tt.expected), actual)
 					}
 				})
 			}
