@@ -28,7 +28,6 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -1228,20 +1227,9 @@ func TestCheckDynamicCastingCapability(t *testing.T) {
 		&sema.AnyStructType{},
 	}
 
-	options := ParseAndCheckOptions{
-		Options: []sema.Option{
-			sema.WithPredeclaredValues(map[string]sema.ValueDeclaration{
-				"cap": stdlib.StandardLibraryValue{
-					Name: "cap",
-					Type: &sema.CapabilityType{
-						BorrowType: &sema.ReferenceType{
-							Type: structType,
-						},
-					},
-					Kind:       common.DeclarationKindConstant,
-					IsConstant: true,
-				},
-			}),
+	capabilityType := &sema.CapabilityType{
+		BorrowType: &sema.ReferenceType{
+			Type: structType,
 		},
 	}
 
@@ -1257,16 +1245,16 @@ func TestCheckDynamicCastingCapability(t *testing.T) {
 						code := fmt.Sprintf(
 							`
                               struct S {}
-                              let x: %[1]s = cap
+                              let x: %[1]s = test
                               let y: %[2]s? = x %[3]s %[2]s
                             `,
 							fromType,
 							targetType,
 							operation.Symbol(),
 						)
-						_, err := ParseAndCheckWithOptions(t,
+						_, err := parseAndCheckWithTestValue(t,
 							code,
-							options,
+							capabilityType,
 						)
 
 						require.NoError(t, err)
@@ -1284,7 +1272,7 @@ func TestCheckDynamicCastingCapability(t *testing.T) {
 						code := fmt.Sprintf(
 							`
                               struct S {}
-		                      let x: %[1]s = cap
+		                      let x: %[1]s = test
 		                      let y: Capability<&%[2]s>? = x %[3]s Capability<&%[2]s>
 		                    `,
 							fromType,
@@ -1292,9 +1280,9 @@ func TestCheckDynamicCastingCapability(t *testing.T) {
 							operation.Symbol(),
 						)
 
-						_, err := ParseAndCheckWithOptions(t,
+						_, err := parseAndCheckWithTestValue(t,
 							code,
-							options,
+							capabilityType,
 						)
 
 						require.NoError(t, err)
