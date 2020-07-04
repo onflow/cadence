@@ -540,7 +540,7 @@ func (d *Decoder) DecodeFix64() (v cadence.Fix64, err error) {
 		return v, err
 	}
 
-	return cadence.NewFix64(i), nil
+	return cadence.Fix64(i), nil
 }
 
 // DecodeUFix64 reads the XDR-encoded representation of a uint-64 value.
@@ -554,7 +554,7 @@ func (d *Decoder) DecodeUFix64() (v cadence.UFix64, err error) {
 		return v, err
 	}
 
-	return cadence.NewUFix64(i), nil
+	return cadence.UFix64(i), nil
 }
 
 // DecodeArray reads the XDR-encoded representation of an array.

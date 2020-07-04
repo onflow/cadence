@@ -96,9 +96,9 @@ func exportValueWithInterpreter(value interpreter.Value, inter *interpreter.Inte
 	case interpreter.Word64Value:
 		return cadence.NewWord64(uint64(v))
 	case interpreter.Fix64Value:
-		return cadence.NewFix64(int64(v))
+		return cadence.Fix64(v)
 	case interpreter.UFix64Value:
-		return cadence.NewUFix64(uint64(v))
+		return cadence.UFix64(v)
 	case *interpreter.CompositeValue:
 		return exportCompositeValue(v, inter)
 	case *interpreter.DictionaryValue:

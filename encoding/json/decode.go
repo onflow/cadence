@@ -30,7 +30,6 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/fixedpoint"
 )
 
 // A Decoder decodes JSON-encoded representations of Cadence values.
@@ -407,21 +406,21 @@ func decodeWord64(valueJSON interface{}) cadence.Word64 {
 }
 
 func decodeFix64(valueJSON interface{}) cadence.Fix64 {
-	v, err := fixedpoint.ParseFix64(toString(valueJSON))
+	v, err := cadence.NewFix64(toString(valueJSON))
 	if err != nil {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)
 	}
-	return cadence.NewFix64(v.Int64())
+	return v
 }
 
 func decodeUFix64(valueJSON interface{}) cadence.UFix64 {
-	v, err := fixedpoint.ParseUFix64(toString(valueJSON))
+	v, err := cadence.NewUFix64(toString(valueJSON))
 	if err != nil {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)
 	}
-	return cadence.NewUFix64(v.Uint64())
+	return v
 }
 
 func decodeValues(valueJSON interface{}) []cadence.Value {

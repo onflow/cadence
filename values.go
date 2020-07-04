@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
@@ -692,8 +693,12 @@ func (v Word64) ToBigEndianBytes() []byte {
 
 type Fix64 int64
 
-func NewFix64(i int64) Fix64 {
-	return Fix64(i)
+func NewFix64(s string) (Fix64, error) {
+	v, err := fixedpoint.ParseFix64(s)
+	if err != nil {
+		return 0, err
+	}
+	return Fix64(v.Int64()), nil
 }
 
 func (Fix64) isValue() {}
@@ -716,8 +721,12 @@ func (v Fix64) ToBigEndianBytes() []byte {
 
 type UFix64 uint64
 
-func NewUFix64(i uint64) UFix64 {
-	return UFix64(i)
+func NewUFix64(s string) (UFix64, error) {
+	v, err := fixedpoint.ParseUFix64(s)
+	if err != nil {
+		return 0, err
+	}
+	return UFix64(v.Uint64()), nil
 }
 
 func (UFix64) isValue() {}
