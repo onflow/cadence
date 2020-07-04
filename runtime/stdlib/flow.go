@@ -155,13 +155,23 @@ func FlowBuiltInFunctions(impls FlowBuiltinImpls) StandardLibraryFunctions {
 	}
 }
 
+// Flow location
+
+type FlowLocation struct{}
+
+const flowLocationID = "flow"
+
+func (l FlowLocation) ID() ast.LocationID {
+	return ast.NewLocationID(flowLocationID)
+}
+
 // built-in event types
 
 func newFlowEventType(identifier string, parameters ...*sema.Parameter) *sema.CompositeType {
 
 	eventType := &sema.CompositeType{
 		Kind:       common.CompositeKindEvent,
-		Location:   ast.FlowLocation{},
+		Location:   FlowLocation{},
 		Identifier: identifier,
 		Members:    map[string]*sema.Member{},
 	}

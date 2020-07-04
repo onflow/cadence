@@ -128,14 +128,6 @@ func NewLocationID(parts ...string) LocationID {
 	return LocationID(strings.Join(parts, "."))
 }
 
-type FlowLocation struct{}
-
-const flowLocationID = "flow"
-
-func (l FlowLocation) ID() LocationID {
-	return NewLocationID(flowLocationID)
-}
-
 // IdentifierLocation
 
 const IdentifierLocationPrefix = "I"
