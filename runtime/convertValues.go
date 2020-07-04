@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 
@@ -296,8 +297,13 @@ func importCompositeValue(
 		fields[fieldType.Identifier] = importValue(fieldValue)
 	}
 
+	location := ast.LocationFromTypeID(typeID)
+	if location == nil {
+		panic(errors.New("invalid type ID"))
+	}
+
 	return interpreter.NewCompositeValue(
-		ast.LocationFromTypeID(typeID),
+		location,
 		sema.TypeID(typeID),
 		kind,
 		fields,
