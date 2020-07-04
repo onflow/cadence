@@ -5,6 +5,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 func TestInterpretToBigEndianBytes(t *testing.T) {
@@ -152,35 +154,35 @@ func TestInterpretToBigEndianBytes(t *testing.T) {
 			NewWord64(9223372036854775808):  {128, 0, 0, 0, 0, 0, 0, 0},
 			NewWord64(18446744073709551615): {255, 255, 255, 255, 255, 255, 255, 255},
 		},
-		//// Fix*
-		//"Fix64": {
-		//	NewFix64("0.0"):   {0, 0, 0, 0, 0, 0, 0, 0},
-		//	NewFix64("42.0"):  {0, 0, 0, 0, 250, 86, 234, 0},
-		//	NewFix64("42.24"): {0, 0, 0, 0, 251, 197, 32, 0},
-		//	NewFix64("-1.0"):  {255, 255, 255, 255, 250, 10, 31, 0},
-		//},
-		//// UFix*
-		//"UFix64": {
-		//	NewFix64("0.0"):   {0, 0, 0, 0, 0, 0, 0, 0},
-		//	NewFix64("42.0"):  {0, 0, 0, 0, 250, 86, 234, 0},
-		//	NewFix64("42.24"): {0, 0, 0, 0, 251, 197, 32, 0},
-		//},
+		// Fix*
+		"Fix64": {
+			Fix64(0):           {0, 0, 0, 0, 0, 0, 0, 0},
+			Fix64(42_00000000): {0, 0, 0, 0, 250, 86, 234, 0},
+			Fix64(42_24000000): {0, 0, 0, 0, 251, 197, 32, 0},
+			Fix64(-1_00000000): {255, 255, 255, 255, 250, 10, 31, 0},
+		},
+		// UFix*
+		"UFix64": {
+			Fix64(0):           {0, 0, 0, 0, 0, 0, 0, 0},
+			Fix64(42_00000000): {0, 0, 0, 0, 250, 86, 234, 0},
+			Fix64(42_24000000): {0, 0, 0, 0, 251, 197, 32, 0},
+		},
 	}
-	//
-	//// Ensure the test cases are complete
-	//
-	//for _, integerType := range sema.AllNumberTypes {
-	//	switch integerType.(type) {
-	//	case *sema.NumberType, *sema.SignedNumberType,
-	//		*sema.IntegerType, *sema.SignedIntegerType,
-	//		*sema.FixedPointType, *sema.SignedFixedPointType:
-	//		continue
-	//	}
-	//
-	//	if _, ok := typeTests[integerType.String()]; !ok {
-	//		panic(fmt.Sprintf("broken test: missing %s", integerType))
-	//	}
-	//}
+
+	// Ensure the test cases are complete
+
+	for _, integerType := range sema.AllNumberTypes {
+		switch integerType.(type) {
+		case *sema.NumberType, *sema.SignedNumberType,
+			*sema.IntegerType, *sema.SignedIntegerType,
+			*sema.FixedPointType, *sema.SignedFixedPointType:
+			continue
+		}
+
+		if _, ok := typeTests[integerType.String()]; !ok {
+			panic(fmt.Sprintf("broken test: missing %s", integerType))
+		}
+	}
 
 	for ty, tests := range typeTests {
 
