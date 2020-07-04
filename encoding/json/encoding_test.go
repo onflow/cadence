@@ -493,22 +493,22 @@ func TestEncodeFix64(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Zero",
-			cadence.NewFix64(0),
+			cadence.Fix64(0),
 			`{"type":"Fix64","value":"0.00000000"}`,
 		},
 		{
 			"789.00123010",
-			cadence.NewFix64(78_900_123_010),
+			cadence.Fix64(78_900_123_010),
 			`{"type":"Fix64","value":"789.00123010"}`,
 		},
 		{
 			"1234.056",
-			cadence.NewFix64(123_405_600_000),
+			cadence.Fix64(123_405_600_000),
 			`{"type":"Fix64","value":"1234.05600000"}`,
 		},
 		{
 			"-12345.006789",
-			cadence.NewFix64(-1_234_500_678_900),
+			cadence.Fix64(-1_234_500_678_900),
 			`{"type":"Fix64","value":"-12345.00678900"}`,
 		},
 	}...)
@@ -521,17 +521,17 @@ func TestEncodeUFix64(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Zero",
-			cadence.NewUFix64(0),
+			cadence.UFix64(0),
 			`{"type":"UFix64","value":"0.00000000"}`,
 		},
 		{
 			"789.00123010",
-			cadence.NewUFix64(78_900_123_010),
+			cadence.UFix64(78_900_123_010),
 			`{"type":"UFix64","value":"789.00123010"}`,
 		},
 		{
 			"1234.056",
-			cadence.NewUFix64(123_405_600_000),
+			cadence.UFix64(123_405_600_000),
 			`{"type":"UFix64","value":"1234.05600000"}`,
 		},
 	}...)
@@ -867,14 +867,14 @@ func TestDecodeFixedPoints(t *testing.T) {
 		minFrac     int64
 	}{
 		cadence.Fix64Type{}: {
-			constructor: func(i int) cadence.Value { return cadence.NewFix64(int64(i)) },
+			constructor: func(i int) cadence.Value { return cadence.Fix64(int64(i)) },
 			maxInt:      sema.Fix64TypeMaxInt,
 			minInt:      sema.Fix64TypeMinInt,
 			maxFrac:     sema.Fix64TypeMaxFractional,
 			minFrac:     sema.Fix64TypeMinFractional,
 		},
 		cadence.UFix64Type{}: {
-			constructor: func(i int) cadence.Value { return cadence.NewUFix64(uint64(i)) },
+			constructor: func(i int) cadence.Value { return cadence.UFix64(uint64(i)) },
 			maxInt:      int64(sema.UFix64TypeMaxInt),
 			minInt:      sema.UFix64TypeMinInt,
 			maxFrac:     int64(sema.UFix64TypeMaxFractional),

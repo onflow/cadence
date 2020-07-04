@@ -12,6 +12,18 @@ func ParseFix64(s string) (*big.Int, error) {
 		return nil, err
 	}
 
+	return NewFix64(negative, unsignedInteger, fractional, parsedScale)
+}
+
+func NewFix64(
+	negative bool,
+	unsignedInteger *big.Int,
+	fractional *big.Int,
+	parsedScale uint,
+) (
+	*big.Int,
+	error,
+) {
 	return checkAndConvertFixedPoint(
 		negative,
 		unsignedInteger,
@@ -29,6 +41,18 @@ func ParseUFix64(s string) (*big.Int, error) {
 		return nil, err
 	}
 
+	return NewUFix64(negative, unsignedInteger, fractional, parsedScale)
+}
+
+func NewUFix64(
+	negative bool,
+	unsignedInteger *big.Int,
+	fractional *big.Int,
+	parsedScale uint,
+) (
+	*big.Int,
+	error,
+) {
 	return checkAndConvertFixedPoint(
 		negative,
 		unsignedInteger,

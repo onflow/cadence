@@ -183,12 +183,12 @@ var exportTests = []struct {
 	{
 		label:    "Fix64",
 		value:    interpreter.Fix64Value(-123000000),
-		expected: cadence.NewFix64(-123000000),
+		expected: cadence.Fix64(-123000000),
 	},
 	{
 		label:    "UFix64",
 		value:    interpreter.UFix64Value(123000000),
-		expected: cadence.NewUFix64(123000000),
+		expected: cadence.UFix64(123000000),
 	},
 }
 
