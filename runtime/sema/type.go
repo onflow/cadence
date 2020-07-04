@@ -24,6 +24,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -3027,8 +3028,8 @@ func (t *SignedFixedPointType) GetMember(identifier string, _ ast.Range, _ func(
 	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
-const Fix64Scale uint = 8
-const Fix64Factor = 100_000_000
+const Fix64Scale = fixedpoint.Fix64Scale
+const Fix64Factor = fixedpoint.Fix64Factor
 
 // Fix64Type represents the 64-bit signed decimal fixed-point type `Fix64`
 // which has a scale of Fix64Scale, and checks for overflow and underflow
@@ -3073,21 +3074,17 @@ func (*Fix64Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-const Fix64TypeMinInt = math.MinInt64 / Fix64Factor
-const Fix64TypeMaxInt = math.MaxInt64 / Fix64Factor
+const Fix64TypeMinInt = fixedpoint.Fix64TypeMinInt
+const Fix64TypeMaxInt = fixedpoint.Fix64TypeMaxInt
 
-var Fix64TypeMinIntBig = new(big.Int).SetInt64(Fix64TypeMinInt)
-var Fix64TypeMaxIntBig = new(big.Int).SetInt64(Fix64TypeMaxInt)
+var Fix64TypeMinIntBig = fixedpoint.Fix64TypeMinIntBig
+var Fix64TypeMaxIntBig = fixedpoint.Fix64TypeMaxIntBig
 
-const Fix64TypeMinFractional = math.MinInt64 % Fix64Factor
-const Fix64TypeMaxFractional = math.MaxInt64 % Fix64Factor
+const Fix64TypeMinFractional = fixedpoint.Fix64TypeMinFractional
+const Fix64TypeMaxFractional = fixedpoint.Fix64TypeMaxFractional
 
-var Fix64TypeMinFractionalBig = new(big.Int).SetInt64(Fix64TypeMinFractional)
-var Fix64TypeMaxFractionalBig = new(big.Int).SetInt64(Fix64TypeMaxFractional)
-
-func init() {
-	Fix64TypeMinFractionalBig.Abs(Fix64TypeMinFractionalBig)
-}
+var Fix64TypeMinFractionalBig = fixedpoint.Fix64TypeMinFractionalBig
+var Fix64TypeMaxFractionalBig = fixedpoint.Fix64TypeMaxFractionalBig
 
 func (*Fix64Type) MinInt() *big.Int {
 	return Fix64TypeMinIntBig
@@ -3176,17 +3173,17 @@ func (*UFix64Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-const UFix64TypeMinInt = 0
-const UFix64TypeMaxInt = math.MaxUint64 / uint64(Fix64Factor)
+const UFix64TypeMinInt = fixedpoint.UFix64TypeMinInt
+const UFix64TypeMaxInt = fixedpoint.UFix64TypeMaxInt
 
-var UFix64TypeMinIntBig = new(big.Int).SetUint64(UFix64TypeMinInt)
-var UFix64TypeMaxIntBig = new(big.Int).SetUint64(UFix64TypeMaxInt)
+var UFix64TypeMinIntBig = fixedpoint.UFix64TypeMinIntBig
+var UFix64TypeMaxIntBig = fixedpoint.UFix64TypeMaxIntBig
 
-const UFix64TypeMinFractional = 0
-const UFix64TypeMaxFractional = math.MaxUint64 % uint64(Fix64Factor)
+const UFix64TypeMinFractional = fixedpoint.UFix64TypeMinFractional
+const UFix64TypeMaxFractional = fixedpoint.UFix64TypeMaxFractional
 
-var UFix64TypeMinFractionalBig = new(big.Int).SetUint64(UFix64TypeMinFractional)
-var UFix64TypeMaxFractionalBig = new(big.Int).SetUint64(UFix64TypeMaxFractional)
+var UFix64TypeMinFractionalBig = fixedpoint.UFix64TypeMinFractionalBig
+var UFix64TypeMaxFractionalBig = fixedpoint.UFix64TypeMaxFractionalBig
 
 func (*UFix64Type) MinInt() *big.Int {
 	return UFix64TypeMinIntBig
