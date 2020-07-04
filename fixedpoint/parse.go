@@ -41,11 +41,14 @@ func ParseUFix64(s string) (*big.Int, error) {
 		return nil, err
 	}
 
-	return NewUFix64(negative, unsignedInteger, fractional, parsedScale)
+	if negative {
+		return nil, errors.New("invalid negative integer part")
+	}
+
+	return NewUFix64(unsignedInteger, fractional, parsedScale)
 }
 
 func NewUFix64(
-	negative bool,
 	unsignedInteger *big.Int,
 	fractional *big.Int,
 	parsedScale uint,
@@ -54,7 +57,7 @@ func NewUFix64(
 	error,
 ) {
 	return checkAndConvertFixedPoint(
-		negative,
+		false,
 		unsignedInteger,
 		fractional,
 		parsedScale,
