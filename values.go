@@ -701,6 +701,19 @@ func NewFix64(s string) (Fix64, error) {
 	return Fix64(v.Int64()), nil
 }
 
+func NewFix64FromParts(negative bool, integer int, fraction uint) (Fix64, error) {
+	v, err := fixedpoint.NewFix64(
+		negative,
+		new(big.Int).SetInt64(int64(integer)),
+		new(big.Int).SetInt64(int64(fraction)),
+		fixedpoint.Fix64Scale,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return Fix64(v.Int64()), nil
+}
+
 func (Fix64) isValue() {}
 
 func (Fix64) Type() Type {
@@ -723,6 +736,18 @@ type UFix64 uint64
 
 func NewUFix64(s string) (UFix64, error) {
 	v, err := fixedpoint.ParseUFix64(s)
+	if err != nil {
+		return 0, err
+	}
+	return UFix64(v.Uint64()), nil
+}
+
+func NewUFix64FromParts(integer int, fraction uint) (UFix64, error) {
+	v, err := fixedpoint.NewUFix64(
+		new(big.Int).SetInt64(int64(integer)),
+		new(big.Int).SetInt64(int64(fraction)),
+		fixedpoint.Fix64Scale,
+	)
 	if err != nil {
 		return 0, err
 	}
