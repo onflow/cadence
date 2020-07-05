@@ -18,13 +18,27 @@
 
 package ast
 
-import "strings"
+import (
+	"encoding/json"
+	"strings"
+)
 
 type Argument struct {
-	Label         string
-	LabelStartPos *Position
-	LabelEndPos   *Position
+	Label         string    `json:",omitempty"`
+	LabelStartPos *Position `json:",omitempty"`
+	LabelEndPos   *Position `json:",omitempty"`
 	Expression    Expression
+}
+
+func (a Argument) StartPosition() Position {
+	if a.LabelStartPos != nil {
+		return *a.LabelStartPos
+	}
+	return a.Expression.StartPosition()
+}
+
+func (a Argument) EndPosition() Position {
+	return a.Expression.EndPosition()
 }
 
 func (a Argument) String() string {
@@ -35,4 +49,15 @@ func (a Argument) String() string {
 	}
 	builder.WriteString(a.Expression.String())
 	return builder.String()
+}
+
+func (a Argument) MarshalJSON() ([]byte, error) {
+	type Alias Argument
+	return json.Marshal(&struct {
+		Range
+		Alias
+	}{
+		Range: NewRangeFromPositioned(a),
+		Alias: Alias(a),
+	})
 }

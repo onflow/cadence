@@ -20,35 +20,19 @@ package ast
 
 import (
 	"encoding/json"
+	"fmt"
+	"testing"
 
-	"github.com/onflow/cadence/runtime/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-//go:generate stringer -type=ConditionKind
+func TestAccess_MarshalJSON(t *testing.T) {
 
-type ConditionKind uint
+	for access := Access(0); access < Access(AccessCount()); access++ {
+		actual, err := json.Marshal(access)
+		require.NoError(t, err)
 
-const (
-	ConditionKindUnknown ConditionKind = iota
-	ConditionKindPre
-	ConditionKindPost
-)
-
-func ConditionKindCount() int {
-	return len(_ConditionKind_index) - 1
-}
-
-func (k ConditionKind) Name() string {
-	switch k {
-	case ConditionKindPre:
-		return "pre-condition"
-	case ConditionKindPost:
-		return "post-condition"
+		assert.JSONEq(t, fmt.Sprintf(`"%s"`, access), string(actual))
 	}
-
-	panic(errors.NewUnreachableError())
-}
-
-func (k ConditionKind) MarshalJSON() ([]byte, error) {
-	return json.Marshal(k.String())
 }
