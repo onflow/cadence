@@ -19,6 +19,7 @@
 package ast
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"strings"
@@ -66,10 +67,21 @@ func (e *BoolExpression) String() string {
 	return "false"
 }
 
+func (e *BoolExpression) MarshalJSON() ([]byte, error) {
+	type Alias BoolExpression
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+	}{
+		Type:  "BoolExpression",
+		Alias: (*Alias)(e),
+	})
+}
+
 // NilExpression
 
 type NilExpression struct {
-	Pos Position
+	Pos Position `json:"-"`
 }
 
 func (*NilExpression) isExpression() {}
@@ -94,6 +106,19 @@ func (e *NilExpression) StartPosition() Position {
 
 func (e *NilExpression) EndPosition() Position {
 	return e.Pos.Shifted(len(NilConstant) - 1)
+}
+
+func (e *NilExpression) MarshalJSON() ([]byte, error) {
+	type Alias NilExpression
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "NilExpression",
+		Range: NewRangeFromPositioned(e),
+		Alias: (*Alias)(e),
+	})
 }
 
 // StringExpression

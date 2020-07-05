@@ -19,6 +19,8 @@
 package ast
 
 import (
+	"encoding/json"
+
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -36,6 +38,10 @@ const (
 	AccessPublic
 	AccessPublicSettable
 )
+
+func AccessCount() int {
+	return len(_Access_index) - 1
+}
 
 func (a Access) IsLessPermissiveThan(otherAccess Access) bool {
 	return a < otherAccess
@@ -93,4 +99,8 @@ func (a Access) Description() string {
 	}
 
 	panic(errors.NewUnreachableError())
+}
+
+func (a Access) MarshalJSON() ([]byte, error) {
+	return json.Marshal(a.String())
 }
