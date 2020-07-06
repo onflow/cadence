@@ -24,12 +24,13 @@ import (
 )
 
 func (checker *Checker) VisitInvocationExpression(invocationExpression *ast.InvocationExpression) ast.Repr {
-	typ := checker.checkInvocationExpression(invocationExpression)
+	ty := checker.checkInvocationExpression(invocationExpression)
 
 	// Events cannot be invoked without an emit statement
 
-	compositeType, isCompositeType := typ.(*CompositeType)
-	if isCompositeType && compositeType.Kind == common.CompositeKindEvent {
+	if compositeType, ok := ty.(*CompositeType); ok &&
+		compositeType.Kind == common.CompositeKindEvent {
+
 		checker.report(
 			&InvalidEventUsageError{
 				Range: ast.NewRangeFromPositioned(invocationExpression),
@@ -38,7 +39,7 @@ func (checker *Checker) VisitInvocationExpression(invocationExpression *ast.Invo
 		return &InvalidType{}
 	}
 
-	return typ
+	return ty
 }
 
 func (checker *Checker) checkInvocationExpression(invocationExpression *ast.InvocationExpression) Type {
@@ -132,6 +133,45 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 		returnType,
 		inCreate,
 	)
+
+	// If the invocation is on a resource, i.e., a member expression where the accessed expression
+	// is an identifier which refers to a resource, then the resource is temporarily "moved into"
+	// the function and back out after the invocation.
+	//
+	// So record a *temporary* invalidation to get the resource that is invalidated,
+	// remove the invalidation because it is temporary, and check if the use is potentially invalid,
+	// because the resource was already invalidated.
+	//
+	// Perform this check *after* the arguments where checked:
+	// Even though a duplicated use of the resource in an argument is invalid, e.g. `foo.bar(<-foo)`,
+	// the arguments might just use to the temporarily moved resource, e.g. `foo.bar(foo.baz)`
+	// and not invalidate it.
+
+	if invokedMemberExpression, ok := invokedExpression.(*ast.MemberExpression); ok {
+		if invocationIdentifierExpression, ok := invokedMemberExpression.Expression.(*ast.IdentifierExpression); ok {
+
+			valueType := checker.Elaboration.IdentifierInInvocationTypes[invocationIdentifierExpression]
+
+			invalidation := checker.recordResourceInvalidation(
+				invocationIdentifierExpression,
+				valueType,
+				ResourceInvalidationKindMoveTemporary,
+			)
+
+			if invalidation != nil {
+
+				checker.resources.RemoveTemporaryInvalidation(
+					invalidation.resource,
+					invalidation.invalidation,
+				)
+
+				checker.checkResourceUseAfterInvalidation(
+					invalidation.resource,
+					invocationIdentifierExpression,
+				)
+			}
+		}
+	}
 
 	// Update the return info for invocations that do not return (i.e. have a `Never` return type)
 
@@ -280,7 +320,7 @@ func (checker *Checker) checkInvocation(
 
 	typeArgumentCount := len(invocationExpression.TypeArguments)
 
-	typeParameters := make(map[*TypeParameter]Type, typeParameterCount)
+	typeArguments := make(map[*TypeParameter]Type, typeParameterCount)
 
 	// If the function type is generic, the invocation might provide
 	// explicit type arguments for the type parameters.
@@ -309,7 +349,7 @@ func (checker *Checker) checkInvocation(
 	checker.checkAndBindGenericTypeParameterTypeArguments(
 		validTypeArguments,
 		functionType.TypeParameters,
-		typeParameters,
+		typeArguments,
 	)
 
 	// Check that the invocation's argument count matches the function's parameter count
@@ -342,7 +382,7 @@ func (checker *Checker) checkInvocation(
 				argumentIndex,
 				functionType,
 				argumentTypes,
-				typeParameters,
+				typeArguments,
 			)
 	}
 
@@ -363,7 +403,7 @@ func (checker *Checker) checkInvocation(
 
 	invokableType.CheckArgumentExpressions(checker, argumentExpressions)
 
-	returnType = functionType.ReturnTypeAnnotation.Type.Resolve(typeParameters)
+	returnType = functionType.ReturnTypeAnnotation.Type.Resolve(typeArguments)
 	if returnType == nil {
 		// TODO: report error? does `checkTypeParameterInference` below already do that?
 		returnType = &InvalidType{}
@@ -373,13 +413,13 @@ func (checker *Checker) checkInvocation(
 
 	checker.checkTypeParameterInference(
 		functionType,
-		typeParameters,
+		typeArguments,
 		invocationExpression,
 	)
 
 	// Save types in the elaboration
 
-	checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression] = typeParameters
+	checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression] = typeArguments
 	checker.Elaboration.InvocationExpressionParameterTypes[invocationExpression] = parameterTypes
 	checker.Elaboration.InvocationExpressionReturnTypes[invocationExpression] = returnType
 
@@ -391,11 +431,18 @@ func (checker *Checker) checkInvocation(
 //
 func (checker *Checker) checkTypeParameterInference(
 	functionType *FunctionType,
-	typeParameters map[*TypeParameter]Type,
+	typeArguments map[*TypeParameter]Type,
 	invocationExpression *ast.InvocationExpression,
 ) {
 	for _, typeParameter := range functionType.TypeParameters {
-		if typeParameters[typeParameter] != nil {
+
+		if typeArguments[typeParameter] != nil {
+			continue
+		}
+
+		// If the type parameter is not required, continue
+
+		if typeParameter.Optional {
 			continue
 		}
 

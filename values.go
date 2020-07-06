@@ -19,8 +19,12 @@
 package cadence
 
 import (
+	"encoding/binary"
 	"fmt"
 	"math/big"
+
+	"github.com/onflow/cadence/fixedpoint"
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 // Value
@@ -29,6 +33,13 @@ type Value interface {
 	isValue()
 	Type() Type
 	ToGoValue() interface{}
+}
+
+// NumberValue
+
+type NumberValue interface {
+	Value
+	ToBigEndianBytes() []byte
 }
 
 // Void
@@ -199,6 +210,10 @@ func (v Int) Big() *big.Int {
 	return v.Value
 }
 
+func (v Int) ToBigEndianBytes() []byte {
+	return interpreter.SignedBigIntToBigEndianBytes(v.Value)
+}
+
 // Int8
 
 type Int8 int8
@@ -215,6 +230,10 @@ func (v Int8) ToGoValue() interface{} {
 
 func (Int8) Type() Type {
 	return Int8Type{}
+}
+
+func (v Int8) ToBigEndianBytes() []byte {
+	return []byte{byte(v)}
 }
 
 // Int16
@@ -235,6 +254,12 @@ func (v Int16) ToGoValue() interface{} {
 	return int16(v)
 }
 
+func (v Int16) ToBigEndianBytes() []byte {
+	b := make([]byte, 2)
+	binary.BigEndian.PutUint16(b, uint16(v))
+	return b
+}
+
 // Int32
 
 type Int32 int32
@@ -253,6 +278,12 @@ func (v Int32) ToGoValue() interface{} {
 	return int32(v)
 }
 
+func (v Int32) ToBigEndianBytes() []byte {
+	b := make([]byte, 4)
+	binary.BigEndian.PutUint32(b, uint32(v))
+	return b
+}
+
 // Int64
 
 type Int64 int64
@@ -269,6 +300,12 @@ func (Int64) Type() Type {
 
 func (v Int64) ToGoValue() interface{} {
 	return int64(v)
+}
+
+func (v Int64) ToBigEndianBytes() []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(v))
+	return b
 }
 
 // Int128
@@ -304,6 +341,10 @@ func (v Int128) Big() *big.Int {
 	return v.Value
 }
 
+func (v Int128) ToBigEndianBytes() []byte {
+	return interpreter.SignedBigIntToBigEndianBytes(v.Value)
+}
+
 // Int256
 
 type Int256 struct {
@@ -335,6 +376,10 @@ func (v Int256) Int() int {
 
 func (v Int256) Big() *big.Int {
 	return v.Value
+}
+
+func (v Int256) ToBigEndianBytes() []byte {
+	return interpreter.SignedBigIntToBigEndianBytes(v.Value)
 }
 
 // UInt
@@ -372,6 +417,10 @@ func (v UInt) Big() *big.Int {
 	return v.Value
 }
 
+func (v UInt) ToBigEndianBytes() []byte {
+	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
+}
+
 // UInt8
 
 type UInt8 uint8
@@ -388,6 +437,10 @@ func (UInt8) Type() Type {
 
 func (v UInt8) ToGoValue() interface{} {
 	return uint8(v)
+}
+
+func (v UInt8) ToBigEndianBytes() []byte {
+	return []byte{byte(v)}
 }
 
 // UInt16
@@ -408,6 +461,12 @@ func (v UInt16) ToGoValue() interface{} {
 	return uint16(v)
 }
 
+func (v UInt16) ToBigEndianBytes() []byte {
+	b := make([]byte, 2)
+	binary.BigEndian.PutUint16(b, uint16(v))
+	return b
+}
+
 // UInt32
 
 type UInt32 uint32
@@ -426,6 +485,12 @@ func (v UInt32) ToGoValue() interface{} {
 	return uint32(v)
 }
 
+func (v UInt32) ToBigEndianBytes() []byte {
+	b := make([]byte, 4)
+	binary.BigEndian.PutUint32(b, uint32(v))
+	return b
+}
+
 // UInt64
 
 type UInt64 uint64
@@ -442,6 +507,12 @@ func (UInt64) Type() Type {
 
 func (v UInt64) ToGoValue() interface{} {
 	return uint64(v)
+}
+
+func (v UInt64) ToBigEndianBytes() []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(v))
+	return b
 }
 
 // UInt128
@@ -480,6 +551,10 @@ func (v UInt128) Big() *big.Int {
 	return v.Value
 }
 
+func (v UInt128) ToBigEndianBytes() []byte {
+	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
+}
+
 // UInt256
 
 type UInt256 struct {
@@ -516,6 +591,10 @@ func (v UInt256) Big() *big.Int {
 	return v.Value
 }
 
+func (v UInt256) ToBigEndianBytes() []byte {
+	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
+}
+
 // Word8
 
 type Word8 uint8
@@ -532,6 +611,10 @@ func (Word8) Type() Type {
 
 func (v Word8) ToGoValue() interface{} {
 	return uint8(v)
+}
+
+func (v Word8) ToBigEndianBytes() []byte {
+	return []byte{byte(v)}
 }
 
 // Word16
@@ -552,6 +635,12 @@ func (v Word16) ToGoValue() interface{} {
 	return uint16(v)
 }
 
+func (v Word16) ToBigEndianBytes() []byte {
+	b := make([]byte, 2)
+	binary.BigEndian.PutUint16(b, uint16(v))
+	return b
+}
+
 // Word32
 
 type Word32 uint32
@@ -568,6 +657,12 @@ func (Word32) Type() Type {
 
 func (v Word32) ToGoValue() interface{} {
 	return uint32(v)
+}
+
+func (v Word32) ToBigEndianBytes() []byte {
+	b := make([]byte, 4)
+	binary.BigEndian.PutUint32(b, uint32(v))
+	return b
 }
 
 // Word64
@@ -588,12 +683,35 @@ func (v Word64) ToGoValue() interface{} {
 	return uint64(v)
 }
 
+func (v Word64) ToBigEndianBytes() []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(v))
+	return b
+}
+
 // Fix64
 
 type Fix64 int64
 
-func NewFix64(i int64) Fix64 {
-	return Fix64(i)
+func NewFix64(s string) (Fix64, error) {
+	v, err := fixedpoint.ParseFix64(s)
+	if err != nil {
+		return 0, err
+	}
+	return Fix64(v.Int64()), nil
+}
+
+func NewFix64FromParts(negative bool, integer int, fraction uint) (Fix64, error) {
+	v, err := fixedpoint.NewFix64(
+		negative,
+		new(big.Int).SetInt64(int64(integer)),
+		new(big.Int).SetInt64(int64(fraction)),
+		fixedpoint.Fix64Scale,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return Fix64(v.Int64()), nil
 }
 
 func (Fix64) isValue() {}
@@ -606,12 +724,34 @@ func (v Fix64) ToGoValue() interface{} {
 	return int64(v)
 }
 
+func (v Fix64) ToBigEndianBytes() []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(v))
+	return b
+}
+
 // UFix64
 
 type UFix64 uint64
 
-func NewUFix64(i uint64) UFix64 {
-	return UFix64(i)
+func NewUFix64(s string) (UFix64, error) {
+	v, err := fixedpoint.ParseUFix64(s)
+	if err != nil {
+		return 0, err
+	}
+	return UFix64(v.Uint64()), nil
+}
+
+func NewUFix64FromParts(integer int, fraction uint) (UFix64, error) {
+	v, err := fixedpoint.NewUFix64(
+		new(big.Int).SetInt64(int64(integer)),
+		new(big.Int).SetInt64(int64(fraction)),
+		fixedpoint.Fix64Scale,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return UFix64(v.Uint64()), nil
 }
 
 func (UFix64) isValue() {}
@@ -622,6 +762,12 @@ func (UFix64) Type() Type {
 
 func (v UFix64) ToGoValue() interface{} {
 	return uint64(v)
+}
+
+func (v UFix64) ToBigEndianBytes() []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(v))
+	return b
 }
 
 // Array

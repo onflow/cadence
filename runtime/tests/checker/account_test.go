@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -53,7 +54,7 @@ func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
 	)
 }
 
-func TestCheckAccount(t *testing.T) {
+func TestCheckAccount_save(t *testing.T) {
 
 	t.Parallel()
 
@@ -219,6 +220,11 @@ func TestCheckAccount(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestCheckAccount_load(t *testing.T) {
+
+	t.Parallel()
 
 	for _, domain := range common.AllPathDomainsByIdentifier {
 
@@ -335,6 +341,11 @@ func TestCheckAccount(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestCheckAccount_copy(t *testing.T) {
+
+	t.Parallel()
 
 	for _, domain := range common.AllPathDomainsByIdentifier {
 
@@ -421,6 +432,11 @@ func TestCheckAccount(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestCheckAccount_borrow(t *testing.T) {
+
+	t.Parallel()
 
 	for _, domain := range common.AllPathDomainsByIdentifier {
 
@@ -600,6 +616,11 @@ func TestCheckAccount(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestCheckAccount_link(t *testing.T) {
+
+	t.Parallel()
 
 	for _, domain := range common.AllPathDomainsByIdentifier {
 
@@ -671,16 +692,18 @@ func TestCheckAccount(t *testing.T) {
 
 				t.Run("resource", func(t *testing.T) {
 
+					typeArguments := fmt.Sprintf("<%s &R>", authKeyword)
+
 					_, err := ParseAndCheckAccount(t,
 						fmt.Sprintf(
 							`
                               resource R {}
 
-                              fun test(): Capability? {
-                                  return authAccount.link<%s &R>(/%s/r, target: /storage/r)
+                              fun test(): Capability%[1]s? {
+                                  return authAccount.link%[1]s(/%[2]s/r, target: /storage/r)
                               }
                             `,
-							authKeyword,
+							typeArguments,
 							domain.Identifier(),
 						),
 					)
@@ -690,16 +713,18 @@ func TestCheckAccount(t *testing.T) {
 
 				t.Run("struct", func(t *testing.T) {
 
+					typeArguments := fmt.Sprintf("<%s &S>", authKeyword)
+
 					_, err := ParseAndCheckAccount(t,
 						fmt.Sprintf(
 							`
                               struct S {}
 
-                              fun test(): Capability? {
-                                  return authAccount.link<%s &S>(/%s/s, target: /storage/s)
+                              fun test(): Capability%[1]s? {
+                                  return authAccount.link%[1]s(/%[2]s/s, target: /storage/s)
                               }
                             `,
-							authKeyword,
+							typeArguments,
 							domain.Identifier(),
 						),
 					)
@@ -826,6 +851,11 @@ func TestCheckAccount(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestCheckAccount_getCapability(t *testing.T) {
+
+	t.Parallel()
 
 	for _, domain := range common.AllPathDomainsByIdentifier {
 
@@ -834,29 +864,64 @@ func TestCheckAccount(t *testing.T) {
 			"PublicAccount": "publicAccount",
 		} {
 
-			testName := fmt.Sprintf(
-				"%s.getCapability: %s",
-				accountType,
-				domain,
-			)
+			for _, typed := range []bool{true, false} {
 
-			t.Run(testName, func(t *testing.T) {
+				typedPrefix := ""
+				if !typed {
+					typedPrefix = "un"
+				}
 
-				_, err := ParseAndCheckAccount(
-					t,
-					fmt.Sprintf(
+				testName := fmt.Sprintf(
+					"%s.getCapability: %s, %styped",
+					accountType,
+					domain,
+					typedPrefix,
+				)
+
+				t.Run(testName, func(t *testing.T) {
+
+					capabilitySuffix := ""
+					if typed {
+						capabilitySuffix = "<&Int>"
+					}
+
+					code := fmt.Sprintf(
 						`
-	                      fun test(): Capability? {
-	                          return %[1]s.getCapability(/%[2]s/r)
+	                      fun test(): Capability%[3]s? {
+	                          return %[1]s.getCapability%[3]s(/%[2]s/r)
 	                      }
+
+                          let cap = test()
 	                    `,
 						accountVariable,
 						domain.Identifier(),
-					),
-				)
+						capabilitySuffix,
+					)
+					checker, err := ParseAndCheckAccount(
+						t,
+						code,
+					)
 
-				require.NoError(t, err)
-			})
+					require.NoError(t, err)
+
+					var expectedBorrowType sema.Type
+					if typed {
+						expectedBorrowType = &sema.ReferenceType{
+							Type: &sema.IntType{},
+						}
+					}
+
+					capType := checker.GlobalValues["cap"].Type
+					assert.Equal(t,
+						&sema.OptionalType{
+							Type: &sema.CapabilityType{
+								BorrowType: expectedBorrowType,
+							},
+						},
+						capType,
+					)
+				})
+			}
 		}
 	}
 }

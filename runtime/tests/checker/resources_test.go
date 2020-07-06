@@ -2013,12 +2013,12 @@ func TestCheckInvalidResourceUseAfterIfStatement(t *testing.T) {
 		errs[0].(*sema.ResourceUseAfterInvalidationError).Invalidations,
 		[]sema.ResourceInvalidation{
 			{
-				Kind:     sema.ResourceInvalidationKindMove,
+				Kind:     sema.ResourceInvalidationKindMoveDefinite,
 				StartPos: ast.Position{Offset: 164, Line: 9, Column: 23},
 				EndPos:   ast.Position{Offset: 164, Line: 9, Column: 23},
 			},
 			{
-				Kind:     sema.ResourceInvalidationKindMove,
+				Kind:     sema.ResourceInvalidationKindMoveDefinite,
 				StartPos: ast.Position{Offset: 119, Line: 7, Column: 23},
 				EndPos:   ast.Position{Offset: 119, Line: 7, Column: 23},
 			},
@@ -4338,7 +4338,7 @@ func TestCheckInvalidOptionalResourceCoalescingRightSide(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheckWithPanic(t, `
+	_, err := ParseAndCheck(t, `
 
       resource R {}
 
@@ -4365,7 +4365,7 @@ func TestCheckInvalidResourceLossInNestedContractResource(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheckWithPanic(t, `
+	_, err := ParseAndCheck(t, `
 
       pub contract C {
 
@@ -4387,5 +4387,119 @@ func TestCheckInvalidResourceLossInNestedContractResource(t *testing.T) {
 	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+}
 
+// https://github.com/onflow/cadence/issues/73
+//
+func TestCheckResourceMoveMemberInvocation(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("invalid use as argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          resource Test {
+              fun use(_ test: @Test) {
+                  destroy test
+              }
+          }
+
+          fun test() {
+              let test <- create Test()
+              test.use(<-test)
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceUseAfterInvalidationError{}, errs[0])
+	})
+
+	t.Run("valid use", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          resource Test {
+              fun use() {}
+          }
+
+          fun test() {
+              let test <- create Test()
+              test.use()
+              destroy test
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("valid use, with argument of same type", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          resource Test {
+              fun use(_ test: @Test) {
+                  destroy test
+              }
+          }
+
+          fun test() {
+              let test1 <- create Test()
+              let test2 <- create Test()
+              test1.use(<-test2)
+              destroy test1
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("valid use, in argument", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          resource Test {
+              fun use1(_ x: Int) {}
+              fun use2(): Int { return 1 }
+          }
+
+          fun test() {
+              let test <- create Test()
+              test.use1(test.use2())
+              destroy test
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid loss, invalidation is temporary", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          resource Test {
+              fun use() {}
+          }
+
+          fun test() {
+              let test <- create Test()
+              test.use()
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
+	})
 }

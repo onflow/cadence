@@ -19,6 +19,8 @@
 package ast
 
 import (
+	"encoding/json"
+
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -32,6 +34,10 @@ const (
 	ConditionKindPost
 )
 
+func ConditionKindCount() int {
+	return len(_ConditionKind_index) - 1
+}
+
 func (k ConditionKind) Name() string {
 	switch k {
 	case ConditionKindPre:
@@ -41,4 +47,8 @@ func (k ConditionKind) Name() string {
 	}
 
 	panic(errors.NewUnreachableError())
+}
+
+func (k ConditionKind) MarshalJSON() ([]byte, error) {
+	return json.Marshal(k.String())
 }

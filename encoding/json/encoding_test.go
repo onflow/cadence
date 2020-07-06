@@ -19,6 +19,7 @@
 package json_test
 
 import (
+	"fmt"
 	"math"
 	"math/big"
 	"strings"
@@ -492,22 +493,22 @@ func TestEncodeFix64(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Zero",
-			cadence.NewFix64(0),
+			cadence.Fix64(0),
 			`{"type":"Fix64","value":"0.00000000"}`,
 		},
 		{
 			"789.00123010",
-			cadence.NewFix64(78_900_123_010),
+			cadence.Fix64(78_900_123_010),
 			`{"type":"Fix64","value":"789.00123010"}`,
 		},
 		{
 			"1234.056",
-			cadence.NewFix64(123_405_600_000),
+			cadence.Fix64(123_405_600_000),
 			`{"type":"Fix64","value":"1234.05600000"}`,
 		},
 		{
 			"-12345.006789",
-			cadence.NewFix64(-1_234_500_678_900),
+			cadence.Fix64(-1_234_500_678_900),
 			`{"type":"Fix64","value":"-12345.00678900"}`,
 		},
 	}...)
@@ -520,17 +521,17 @@ func TestEncodeUFix64(t *testing.T) {
 	testAllEncode(t, []encodeTest{
 		{
 			"Zero",
-			cadence.NewUFix64(0),
+			cadence.UFix64(0),
 			`{"type":"UFix64","value":"0.00000000"}`,
 		},
 		{
 			"789.00123010",
-			cadence.NewUFix64(78_900_123_010),
+			cadence.UFix64(78_900_123_010),
 			`{"type":"UFix64","value":"789.00123010"}`,
 		},
 		{
 			"1234.056",
-			cadence.NewUFix64(123_405_600_000),
+			cadence.UFix64(123_405_600_000),
 			`{"type":"UFix64","value":"1234.05600000"}`,
 		},
 	}...)
@@ -854,6 +855,217 @@ func TestEncodeEvent(t *testing.T) {
 	}
 
 	testAllEncode(t, simpleEvent, resourceEvent)
+}
+
+func TestDecodeFixedPoints(t *testing.T) {
+
+	allFixedPointTypes := map[cadence.Type]struct {
+		constructor func(int) cadence.Value
+		maxInt      int64
+		minInt      int64
+		maxFrac     int64
+		minFrac     int64
+	}{
+		cadence.Fix64Type{}: {
+			constructor: func(i int) cadence.Value { return cadence.Fix64(int64(i)) },
+			maxInt:      sema.Fix64TypeMaxInt,
+			minInt:      sema.Fix64TypeMinInt,
+			maxFrac:     sema.Fix64TypeMaxFractional,
+			minFrac:     sema.Fix64TypeMinFractional,
+		},
+		cadence.UFix64Type{}: {
+			constructor: func(i int) cadence.Value { return cadence.UFix64(uint64(i)) },
+			maxInt:      int64(sema.UFix64TypeMaxInt),
+			minInt:      sema.UFix64TypeMinInt,
+			maxFrac:     int64(sema.UFix64TypeMaxFractional),
+			minFrac:     sema.UFix64TypeMinFractional,
+		},
+	}
+
+	type test struct {
+		input    string
+		expected int
+		check    func(t *testing.T, actual cadence.Value, err error)
+	}
+
+	for ty, params := range allFixedPointTypes {
+		t.Run(ty.ID(), func(t *testing.T) {
+
+			var tests = []test{
+				{
+					input: "12.300000000",
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.Error(t, err)
+					},
+				},
+				{
+					input:    "12.30000000",
+					expected: 12_30000000,
+				},
+				{
+					input:    "12.3000000",
+					expected: 12_30000000,
+				},
+				{
+					input:    "12.300000",
+					expected: 12_30000000,
+				},
+				{
+					input:    "12.30000",
+					expected: 12_30000000,
+				},
+				{
+					input:    "12.3000",
+					expected: 12_30000000,
+				},
+				{
+					input:    "12.300",
+					expected: 12_30000000,
+				},
+				{
+					input:    "12.30",
+					expected: 12_30000000,
+				},
+				{
+					input:    "12.3",
+					expected: 12_30000000,
+				},
+				{
+					input:    "12.03",
+					expected: 12_03000000,
+				},
+				{
+					input:    "12.003",
+					expected: 12_00300000,
+				},
+				{
+					input:    "12.0003",
+					expected: 12_00030000,
+				},
+				{
+					input:    "12.00003",
+					expected: 12_00003000,
+				},
+				{
+					input:    "12.000003",
+					expected: 12_00000300,
+				},
+				{
+					input:    "12.0000003",
+					expected: 12_00000030,
+				},
+				{
+					input:    "12.00000003",
+					expected: 12_00000003,
+				},
+				{
+					input: "12.000000003",
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.Error(t, err)
+					},
+				},
+				{
+					input:    "120.3",
+					expected: 120_30000000,
+				},
+				{
+					input:    "012.3",
+					expected: 12_30000000,
+				},
+				{
+					input: fmt.Sprintf("%d.1", params.maxInt),
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.NoError(t, err)
+					},
+				},
+				{
+					input: fmt.Sprintf("%d.1", params.maxInt+1),
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.Error(t, err)
+					},
+				},
+				{
+					input: fmt.Sprintf("%d.1", params.minInt),
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.NoError(t, err)
+					},
+				},
+				{
+					input: fmt.Sprintf("%d.1", params.minInt-1),
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.Error(t, err)
+					},
+				},
+				{
+					input: fmt.Sprintf("%d.%d", params.maxInt, params.maxFrac),
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.NoError(t, err)
+					},
+				},
+				{
+					input: fmt.Sprintf("%d.%d", params.maxInt, params.maxFrac+1),
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.Error(t, err)
+					},
+				},
+				{
+					input: fmt.Sprintf("%d.%d", params.minInt, -(params.minFrac)),
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.NoError(t, err)
+					},
+				},
+			}
+
+			if params.minFrac != 0 {
+				tests = append(tests, test{
+					input: fmt.Sprintf("%d.%d", params.minInt, -(params.minFrac - 1)),
+					check: func(t *testing.T, actual cadence.Value, err error) {
+						assert.Error(t, err)
+					},
+				})
+			}
+
+			for _, tt := range tests {
+				t.Run(tt.input, func(t *testing.T) {
+
+					enc := fmt.Sprintf(`{ "type": "%s", "value": "%s"}`, ty.ID(), tt.input)
+
+					actual, err := json.Decode([]byte(enc))
+
+					if tt.check != nil {
+						tt.check(t, actual, err)
+					} else {
+						require.NoError(t, err)
+						assert.Equal(t, params.constructor(tt.expected), actual)
+					}
+				})
+			}
+		})
+	}
+
+	t.Run("minus sign in fractional", func(t *testing.T) {
+
+		_, err := json.Decode([]byte(`{"type": "Fix64", "value": "1.-1"}`))
+		assert.Error(t, err)
+	})
+
+	t.Run("plus sign in fractional", func(t *testing.T) {
+
+		_, err := json.Decode([]byte(`{"type": "Fix64", "value": "1.+1"}`))
+		assert.Error(t, err)
+	})
+
+	t.Run("missing integer", func(t *testing.T) {
+
+		_, err := json.Decode([]byte(`{"type": "Fix64", "value": ".1"}`))
+		assert.Error(t, err)
+	})
+
+	t.Run("missing fractional", func(t *testing.T) {
+
+		_, err := json.Decode([]byte(`{"type": "Fix64", "value": "1."}`))
+		assert.Error(t, err)
+	})
 }
 
 func convertValueFromScript(t *testing.T, script string) cadence.Value {

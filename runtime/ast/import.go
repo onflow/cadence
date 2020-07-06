@@ -115,10 +115,9 @@ func LocationFromTypeID(typeID string) Location {
 		}
 
 		return AddressLocation(address)
-
-	default:
-		return nil
 	}
+
+	return nil
 }
 
 // LocationID

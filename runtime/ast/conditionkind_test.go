@@ -16,33 +16,23 @@
  * limitations under the License.
  */
 
-package checker
+package ast
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestCheckToString(t *testing.T) {
+func TestConditionKind_MarshalJSON(t *testing.T) {
 
-	for _, ty := range allIntegerTypesAndAddressType {
-		// Test non-optional and optional type
+	for conditionKind := ConditionKind(0); conditionKind < ConditionKind(ConditionKindCount()); conditionKind++ {
+		actual, err := json.Marshal(conditionKind)
+		require.NoError(t, err)
 
-		t.Run(ty.String(), func(t *testing.T) {
-
-			_, err := ParseAndCheck(t,
-				fmt.Sprintf(
-					`
-                      let x: %s = 0x1
-                      let y = x.toString()
-                    `,
-					ty,
-				),
-			)
-
-			require.NoError(t, err)
-		})
+		assert.JSONEq(t, fmt.Sprintf(`"%s"`, conditionKind), string(actual))
 	}
 }

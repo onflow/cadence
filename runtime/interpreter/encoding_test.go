@@ -38,15 +38,18 @@ type encodeDecodeTest struct {
 	deferred     bool
 	deferrals    *EncodingDeferrals
 	decodedValue Value
+	decodeOnly   bool
 }
 
 var testOwner = common.BytesToAddress([]byte{0x42})
 
 func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 
+	t.Parallel()
+
 	var encoded []byte
 	var deferrals *EncodingDeferrals
-	if test.value != nil {
+	if test.value != nil && !test.decodeOnly {
 		test.value.SetOwner(&testOwner)
 
 		var err error
@@ -76,7 +79,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		}
 	}
 
-	if test.value != nil {
+	if test.value != nil && !test.decodeOnly {
 		if test.deferred {
 			utils.AssertEqualWithDiff(t, test.deferrals, deferrals)
 		} else {
@@ -87,8 +90,6 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 }
 
 func TestEncodeDecodeNilValue(t *testing.T) {
-
-	t.Parallel()
 
 	testEncodeDecode(t,
 		encodeDecodeTest{
@@ -102,8 +103,6 @@ func TestEncodeDecodeNilValue(t *testing.T) {
 }
 
 func TestEncodeDecodeVoidValue(t *testing.T) {
-
-	t.Parallel()
 
 	testEncodeDecode(t,
 		encodeDecodeTest{
@@ -2625,9 +2624,57 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("private path", func(t *testing.T) {
+	t.Run("private path, untyped capability, new format", func(t *testing.T) {
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
+				value: CapabilityValue{
+					Address: NewAddressValueFromBytes([]byte{0x2}),
+					Path:    privatePathValue,
+				},
+				encoded: []byte{
+					// tag
+					0xd8, cborTagCapabilityValue,
+					// map, 3 pairs of items follow
+					0xa3,
+					// key 0
+					0x0,
+					// tag for address
+					0xd8, cborTagAddressValue,
+					// byte sequence, length 1
+					0x41,
+					// address
+					0x02,
+					// key 1
+					0x1,
+					// tag for address
+					0xd8, cborTagPathValue,
+					// map, 2 pairs of items follow
+					0xa2,
+					// key 0
+					0x0,
+					// positive integer 2
+					0x2,
+					// key 1
+					0x1,
+					// UTF-8 string, length 3
+					0x63,
+					// f, o, o
+					0x66, 0x6f, 0x6f,
+					// key 2
+					0x2,
+					// nil
+					0xf6,
+				},
+			},
+		)
+	})
+
+	t.Run("private path, untyped capability, old format", func(t *testing.T) {
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				decodeOnly: true,
 				value: CapabilityValue{
 					Address: NewAddressValueFromBytes([]byte{0x2}),
 					Path:    privatePathValue,
@@ -2666,9 +2713,155 @@ func TestEncodeDecodeCapabilityValue(t *testing.T) {
 		)
 	})
 
-	t.Run("public path", func(t *testing.T) {
+	t.Run("private path, typed capability", func(t *testing.T) {
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
+				value: CapabilityValue{
+					Address:    NewAddressValueFromBytes([]byte{0x2}),
+					Path:       privatePathValue,
+					BorrowType: PrimitiveStaticTypeBool,
+				},
+				encoded: []byte{
+					// tag
+					0xd8, cborTagCapabilityValue,
+					// map, 3 pairs of items follow
+					0xa3,
+					// key 0
+					0x0,
+					// tag for address
+					0xd8, cborTagAddressValue,
+					// byte sequence, length 1
+					0x41,
+					// address
+					0x02,
+					// key 1
+					0x1,
+					// tag for address
+					0xd8, cborTagPathValue,
+					// map, 2 pairs of items follow
+					0xa2,
+					// key 0
+					0x0,
+					// positive integer 2
+					0x2,
+					// key 1
+					0x1,
+					// UTF-8 string, length 3
+					0x63,
+					// f, o, o
+					0x66, 0x6f, 0x6f,
+					// key 2
+					0x2,
+					// tag
+					0xd8, cborTagPrimitiveStaticType,
+					// bool
+					0x6,
+				},
+			},
+		)
+	})
+
+	t.Run("public path, untyped capability, new format", func(t *testing.T) {
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: CapabilityValue{
+					Address: NewAddressValueFromBytes([]byte{0x3}),
+					Path:    publicPathValue,
+				},
+				encoded: []byte{
+					// tag
+					0xd8, cborTagCapabilityValue,
+					// map, 3 pairs of items follow
+					0xa3,
+					// key 0
+					0x0,
+					// tag for address
+					0xd8, cborTagAddressValue,
+					// byte sequence, length 1
+					0x41,
+					// address
+					0x03,
+					// key 1
+					0x1,
+					// tag for address
+					0xd8, cborTagPathValue,
+					// map, 2 pairs of items follow
+					0xa2,
+					// key 0
+					0x0,
+					// positive integer 3
+					0x3,
+					// key 1
+					0x1,
+					// UTF-8 string, length 3
+					0x63,
+					// b, a, r
+					0x62, 0x61, 0x72,
+					// key 2
+					0x2,
+					// nil
+					0xf6,
+				},
+			},
+		)
+	})
+
+	t.Run("public path, typed capability", func(t *testing.T) {
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: CapabilityValue{
+					Address:    NewAddressValueFromBytes([]byte{0x3}),
+					Path:       publicPathValue,
+					BorrowType: PrimitiveStaticTypeBool,
+				},
+				encoded: []byte{
+					// tag
+					0xd8, cborTagCapabilityValue,
+					// map, 3 pairs of items follow
+					0xa3,
+					// key 0
+					0x0,
+					// tag for address
+					0xd8, cborTagAddressValue,
+					// byte sequence, length 1
+					0x41,
+					// address
+					0x03,
+					// key 1
+					0x1,
+					// tag for address
+					0xd8, cborTagPathValue,
+					// map, 2 pairs of items follow
+					0xa2,
+					// key 0
+					0x0,
+					// positive integer 3
+					0x3,
+					// key 1
+					0x1,
+					// UTF-8 string, length 3
+					0x63,
+					// b, a, r
+					0x62, 0x61, 0x72,
+					// key 2
+					0x2,
+					// tag
+					0xd8, cborTagPrimitiveStaticType,
+					// bool
+					0x6,
+				},
+			},
+		)
+	})
+
+	t.Run("public path, untyped capability, old format", func(t *testing.T) {
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				decodeOnly: true,
 				value: CapabilityValue{
 					Address: NewAddressValueFromBytes([]byte{0x3}),
 					Path:    publicPathValue,
@@ -3068,6 +3261,43 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					0x69,
 					// S.test.I2
 					0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x49, 0x32,
+				),
+			},
+		)
+	})
+
+	t.Run("capability, none", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: LinkValue{
+					TargetPath: publicPathValue,
+					Type:       CapabilityStaticType{},
+				},
+				encoded: append(expectedLinkEncodingPrefix[:],
+					// tag
+					0xd8, cborTagCapabilityStaticType,
+					// null
+					0xf6,
+				),
+			},
+		)
+	})
+
+	t.Run("capability, primitive, bool", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: LinkValue{
+					TargetPath: publicPathValue,
+					Type: CapabilityStaticType{
+						BorrowType: PrimitiveStaticTypeBool,
+					},
+				},
+				encoded: append(expectedLinkEncodingPrefix[:],
+					// tag
+					0xd8, cborTagCapabilityStaticType,
+					// tag
+					0xd8, cborTagPrimitiveStaticType,
+					0x6,
 				),
 			},
 		)

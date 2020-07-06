@@ -707,6 +707,33 @@ func (e *FieldUninitializedError) EndPosition() ast.Position {
 	return e.Pos.Shifted(length - 1)
 }
 
+// FieldTypeNotStorableError is an error that is reported for 
+// field of composite types that are not storable.
+//
+// Field types have to be storable because the storage
+// layer needs to know how to store the field, which is not 
+// possible for all types.
+//
+// For example, the type `Int` is a storable type, 
+// whereas a function type is not.
+
+type FieldTypeNotStorableError struct {
+	// Field's name
+	Name string
+	// Field's type
+	Type Type
+	// StartPosition of the error
+	Pos ast.Position
+}
+
+func (e *FieldTypeNotStorableError) Error() string {
+	return fmt.Sprintf(
+		"field %s has non-storable type: %s",
+		e.Name,
+		e.Type,
+	)
+}
+
 // FunctionExpressionInConditionError
 
 type FunctionExpressionInConditionError struct {
@@ -719,7 +746,7 @@ func (e *FunctionExpressionInConditionError) Error() string {
 
 func (*FunctionExpressionInConditionError) isSemanticError() {}
 
-// UnexpectedReturnValueError
+// InvalidReturnValueError
 
 type InvalidReturnValueError struct {
 	ast.Range
@@ -733,6 +760,29 @@ func (e *InvalidReturnValueError) Error() string {
 }
 
 func (*InvalidReturnValueError) isSemanticError() {}
+
+// MissingReturnValueError
+
+type MissingReturnValueError struct {
+	ExpectedValueType Type
+	ast.Range
+}
+
+func (e *MissingReturnValueError) Error() string {
+	var typeDescription string
+	if e.ExpectedValueType.IsInvalidType() {
+		typeDescription = "non-void"
+	} else {
+		typeDescription = fmt.Sprintf("`%s`", e.ExpectedValueType)
+	}
+
+	return fmt.Sprintf(
+		"missing value in return from function with %s return type",
+		typeDescription,
+	)
+}
+
+func (*MissingReturnValueError) isSemanticError() {}
 
 // InvalidImplementationError
 
@@ -1337,7 +1387,8 @@ func (e *ResourceUseAfterInvalidationError) Cause() (wasMoved, wasDestroyed bool
 	// update cache
 	for _, invalidation := range e.Invalidations {
 		switch invalidation.Kind {
-		case ResourceInvalidationKindMove:
+		case ResourceInvalidationKindMoveDefinite,
+			ResourceInvalidationKindMoveTemporary:
 			wasMoved = true
 		case ResourceInvalidationKindDestroy:
 			wasDestroyed = true
@@ -1445,7 +1496,8 @@ type ResourceInvalidationNote struct {
 func (n ResourceInvalidationNote) Message() string {
 	var action string
 	switch n.Kind {
-	case ResourceInvalidationKindMove:
+	case ResourceInvalidationKindMoveDefinite,
+		ResourceInvalidationKindMoveTemporary:
 		action = "moved"
 	case ResourceInvalidationKindDestroy:
 		action = "destroyed"
@@ -2051,8 +2103,8 @@ func (e *InvalidAssignmentAccessError) Error() string {
 
 func (e *InvalidAssignmentAccessError) SecondaryError() string {
 	return fmt.Sprintf(
-		"has %s access. Consider making it publicly settable",
-		e.RestrictingAccess.Description(),
+		"consider making it publicly settable with `%s`",
+		ast.AccessPublicSettable.Keyword(),
 	)
 }
 
@@ -2305,7 +2357,8 @@ type InvalidSelfInvalidationError struct {
 func (e *InvalidSelfInvalidationError) Error() string {
 	var action string
 	switch e.InvalidationKind {
-	case ResourceInvalidationKindMove:
+	case ResourceInvalidationKindMoveDefinite,
+		ResourceInvalidationKindMoveTemporary:
 		action = "move"
 	case ResourceInvalidationKindDestroy:
 		action = "destroy"
@@ -2578,7 +2631,7 @@ type TypeParameterTypeInferenceError struct {
 
 func (e *TypeParameterTypeInferenceError) Error() string {
 	return fmt.Sprintf(
-		"type parameter could not be inferred: `%s`",
+		"cannot infer type parameter: `%s`",
 		e.Name,
 	)
 }
@@ -2664,5 +2717,25 @@ func (e *TypeParameterTypeMismatchError) SecondaryError() string {
 		e.TypeParameter.Name,
 		e.ExpectedType.QualifiedString(),
 		e.ActualType.QualifiedString(),
+	)
+}
+
+// TypeMismatchWithDescriptionError
+
+type UnparameterizedTypeInstantiationError struct {
+	ActualTypeArgumentCount int
+	ast.Range
+}
+
+func (e *UnparameterizedTypeInstantiationError) Error() string {
+	return "cannot instantiate non-parameterized type"
+}
+
+func (*UnparameterizedTypeInstantiationError) isSemanticError() {}
+
+func (e *UnparameterizedTypeInstantiationError) SecondaryError() string {
+	return fmt.Sprintf(
+		"expected no type arguments, got %d",
+		e.ActualTypeArgumentCount,
 	)
 }

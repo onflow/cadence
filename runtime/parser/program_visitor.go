@@ -684,14 +684,15 @@ func (v *ProgramVisitor) VisitNominalType(ctx *NominalTypeContext) interface{} {
 		typeArguments = append(typeArguments, typeAnnotation)
 	}
 
-	if len(typeArguments) > 0 {
-
+	if ctx.Less() != nil {
+		typeArgumentsStartPos := PositionFromToken(ctx.Less().GetSymbol())
 		endPos := PositionFromToken(ctx.Greater().GetSymbol())
 
 		result = &ast.InstantiationType{
-			Type:          result,
-			TypeArguments: typeArguments,
-			EndPos:        endPos,
+			Type:                  result,
+			TypeArguments:         typeArguments,
+			TypeArgumentsStartPos: typeArgumentsStartPos,
+			EndPos:                endPos,
 		}
 	}
 

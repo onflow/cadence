@@ -30,7 +30,9 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 		return &InvalidType{}
 	}
 
-	if variable.Type.IsResourceType() {
+	valueType := variable.Type
+
+	if valueType.IsResourceType() {
 		checker.checkResourceVariableCapturingInFunction(variable, expression.Identifier)
 		checker.checkResourceUseAfterInvalidation(variable, expression.Identifier)
 		checker.resources.AddUse(variable, expression.Pos)
@@ -38,7 +40,11 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 
 	checker.checkSelfVariableUseInInitializer(variable, expression.Pos)
 
-	return variable.Type
+	if checker.inInvocation {
+		checker.Elaboration.IdentifierInInvocationTypes[expression] = valueType
+	}
+
+	return valueType
 }
 
 // checkSelfVariableUseInInitializer checks uses of `self` in the initializer

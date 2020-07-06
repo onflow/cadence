@@ -300,6 +300,8 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 		ContainerKindInterface,
 	)
 
+	checker.checkMemberStorability(members)
+
 	interfaceType.Members = members
 	checker.memberOrigins[interfaceType] = origins
 

@@ -47,6 +47,12 @@ func (ris ResourceInvalidations) Insert(invalidation ResourceInvalidation) Resou
 	return ResourceInvalidations{newInvalidations}
 }
 
+func (ris ResourceInvalidations) Delete(invalidation ResourceInvalidation) ResourceInvalidations {
+	entry := ResourceInvalidationEntry{invalidation}
+	newInvalidations := ris.invalidations.Delete(entry)
+	return ResourceInvalidations{newInvalidations}
+}
+
 func (ris ResourceInvalidations) Merge(other ResourceInvalidations) ResourceInvalidations {
 	newInvalidations := ris.invalidations.Merge(other.invalidations)
 	return ResourceInvalidations{newInvalidations}

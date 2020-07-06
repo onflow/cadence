@@ -170,6 +170,7 @@ const (
 	cborTagOptionalStaticType
 	cborTagReferenceStaticType
 	cborTagRestrictedStaticType
+	cborTagCapabilityStaticType
 )
 
 func init() {
@@ -429,7 +430,7 @@ func (e *Encoder) prepare(
 		return e.preparePathValue(v), nil
 
 	case CapabilityValue:
-		return e.prepareCapabilityValue(v), nil
+		return e.prepareCapabilityValue(v)
 
 	case LinkValue:
 		return e.prepareLinkValue(v)
@@ -833,15 +834,28 @@ func (e *Encoder) preparePathValue(v PathValue) encodedPathValue {
 }
 
 type encodedCapabilityValue struct {
-	Address cbor.Tag         `cbor:"0,keyasint"`
-	Path    encodedPathValue `cbor:"1,keyasint"`
+	Address    cbor.Tag         `cbor:"0,keyasint"`
+	Path       encodedPathValue `cbor:"1,keyasint"`
+	BorrowType interface{}      `cbor:"2,keyasint"`
 }
 
-func (e *Encoder) prepareCapabilityValue(v CapabilityValue) interface{} {
-	return encodedCapabilityValue{
-		Address: e.prepareAddressValue(v.Address),
-		Path:    e.preparePathValue(v.Path),
+func (e *Encoder) prepareCapabilityValue(v CapabilityValue) (interface{}, error) {
+
+	var preparedBorrowType interface{}
+
+	if v.BorrowType != nil {
+		var err error
+		preparedBorrowType, err = e.prepareStaticType(v.BorrowType)
+		if err != nil {
+			return nil, err
+		}
 	}
+
+	return encodedCapabilityValue{
+		Address:    e.prepareAddressValue(v.Address),
+		Path:       e.preparePathValue(v.Path),
+		BorrowType: preparedBorrowType,
+	}, nil
 }
 
 func (e *Encoder) prepareLocation(l ast.Location) (interface{}, error) {
@@ -949,6 +963,9 @@ func (e *Encoder) prepareStaticType(t StaticType) (interface{}, error) {
 
 	case RestrictedStaticType:
 		return e.prepareRestrictedStaticType(v)
+
+	case CapabilityStaticType:
+		return e.prepareCapabilityStaticType(v)
 
 	default:
 		return nil, fmt.Errorf("unsupported static type: %T", t)
@@ -1084,5 +1101,21 @@ func (e *Encoder) prepareTypeValue(v TypeValue) (interface{}, error) {
 	}
 	return encodedTypeValue{
 		Type: staticType,
+	}, nil
+}
+
+func (e *Encoder) prepareCapabilityStaticType(v CapabilityStaticType) (interface{}, error) {
+	var borrowStaticType interface{}
+	if v.BorrowType != nil {
+		var err error
+		borrowStaticType, err = e.prepareStaticType(v.BorrowType)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return cbor.Tag{
+		Number:  cborTagCapabilityStaticType,
+		Content: borrowStaticType,
 	}, nil
 }

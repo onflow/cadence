@@ -899,9 +899,27 @@ func (d *Decoder) decodeCapability(v interface{}) (CapabilityValue, error) {
 		return CapabilityValue{}, fmt.Errorf("invalid capability path: %T", path)
 	}
 
+	// borrow type (optional, for backwards compatibility)
+
+	var borrowType StaticType
+
+	if field3, ok := encoded[uint64(2)]; ok && field3 != nil {
+
+		decodedStaticType, err := d.decodeStaticType(field3)
+		if err != nil {
+			return CapabilityValue{}, fmt.Errorf("invalid capability borrow type encoding: %w", err)
+		}
+
+		borrowType, ok = decodedStaticType.(StaticType)
+		if !ok {
+			return CapabilityValue{}, fmt.Errorf("invalid capability borrow encoding: %T", decodedStaticType)
+		}
+	}
+
 	return CapabilityValue{
-		Address: address,
-		Path:    path,
+		Address:    address,
+		Path:       path,
+		BorrowType: borrowType,
 	}, nil
 }
 
@@ -972,6 +990,9 @@ func (d *Decoder) decodeStaticType(v interface{}) (StaticType, error) {
 
 	case cborTagRestrictedStaticType:
 		return d.decodeRestrictedStaticType(content)
+
+	case cborTagCapabilityStaticType:
+		return d.decodeCapabilityStaticType(content)
 
 	default:
 		return nil, fmt.Errorf("invalid static type encoding tag: %d", tag.Number)
@@ -1183,5 +1204,19 @@ func (d *Decoder) decodeType(v interface{}) (TypeValue, error) {
 
 	return TypeValue{
 		Type: staticType,
+	}, nil
+}
+
+func (d *Decoder) decodeCapabilityStaticType(v interface{}) (StaticType, error) {
+	var borrowStaticType StaticType
+	if v != nil {
+		var err error
+		borrowStaticType, err = d.decodeStaticType(v)
+		if err != nil {
+			return nil, fmt.Errorf("invalid capability static type borrow type encoding: %w", err)
+		}
+	}
+	return CapabilityStaticType{
+		BorrowType: borrowStaticType,
 	}, nil
 }

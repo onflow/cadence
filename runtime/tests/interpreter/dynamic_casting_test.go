@@ -26,9 +26,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 // dynamic casting operation -> returns optional
@@ -149,6 +152,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 								result, err := inter.Invoke("test")
 
 								if returnsOptional {
+									require.NoError(t, err)
 									assert.Equal(t,
 										interpreter.NilValue{},
 										result,
@@ -241,6 +245,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 						result, err := inter.Invoke("test")
 
 						if returnsOptional {
+							require.NoError(t, err)
 							assert.Equal(t,
 								interpreter.NilValue{},
 								result,
@@ -328,6 +333,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 						result, err := inter.Invoke("test")
 
 						if returnsOptional {
+							require.NoError(t, err)
 							assert.Equal(t,
 								interpreter.NilValue{},
 								result,
@@ -415,6 +421,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 						result, err := inter.Invoke("test")
 
 						if returnsOptional {
+							require.NoError(t, err)
 							assert.Equal(t,
 								interpreter.NilValue{},
 								result,
@@ -507,6 +514,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 						result, err := inter.Invoke("test")
 
 						if returnsOptional {
+							require.NoError(t, err)
 							assert.Equal(t,
 								interpreter.NilValue{},
 								result,
@@ -596,6 +604,7 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 					result, err := inter.Invoke("test")
 
 					if returnsOptional {
+						require.NoError(t, err)
 						assert.Equal(t,
 							interpreter.NilValue{},
 							result,
@@ -637,6 +646,7 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 						result, err := inter.Invoke("test")
 
 						if returnsOptional {
+							require.NoError(t, err)
 							assert.Equal(t,
 								interpreter.NilValue{},
 								result,
@@ -1105,6 +1115,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 						result, err := inter.Invoke("test")
 
 						if returnsOptional {
+							require.NoError(t, err)
 							assert.Equal(t,
 								interpreter.NilValue{},
 								result,
@@ -1196,6 +1207,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 						result, err := inter.Invoke("test")
 
 						if returnsOptional {
+							require.NoError(t, err)
 							assert.Equal(t,
 								interpreter.NilValue{},
 								result,
@@ -1294,6 +1306,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 						result, err := inter.Invoke("test")
 
 						if returnsOptional {
+							require.NoError(t, err)
 							assert.Equal(t,
 								interpreter.NilValue{},
 								result,
@@ -3327,6 +3340,146 @@ func TestInterpretDynamicCastingUnauthorizedStructReferenceType(t *testing.T) {
 					false,
 				)
 			})
+		})
+	}
+}
+
+func TestInterpretDynamicCastingCapability(t *testing.T) {
+
+	t.Parallel()
+
+	structType := &sema.CompositeType{
+		Location:   utils.TestLocation,
+		Identifier: "S",
+		Kind:       common.CompositeKindStructure,
+	}
+
+	types := []sema.Type{
+		&sema.CapabilityType{
+			BorrowType: &sema.ReferenceType{
+				Type: structType,
+			},
+		},
+		&sema.CapabilityType{
+			BorrowType: &sema.ReferenceType{
+				Type: &sema.AnyStructType{},
+			},
+		},
+		&sema.CapabilityType{},
+		&sema.AnyStructType{},
+	}
+
+	capabilityValue := interpreter.CapabilityValue{
+		Address: interpreter.AddressValue{},
+		Path:    interpreter.PathValue{},
+		BorrowType: interpreter.ConvertSemaToStaticType(
+			&sema.ReferenceType{
+				Type: structType,
+			},
+		),
+	}
+
+	options := ParseCheckAndInterpretOptions{
+		CheckerOptions: []sema.Option{
+			sema.WithPredeclaredValues(map[string]sema.ValueDeclaration{
+				"cap": stdlib.StandardLibraryValue{
+					Name: "cap",
+					Type: &sema.CapabilityType{
+						BorrowType: &sema.ReferenceType{
+							Type: structType,
+						},
+					},
+					Kind:       common.DeclarationKindConstant,
+					IsConstant: true,
+				},
+			}),
+		},
+		Options: []interpreter.Option{
+			interpreter.WithPredefinedValues(map[string]interpreter.Value{
+				"cap": capabilityValue,
+			}),
+		},
+	}
+
+	for operation, returnsOptional := range dynamicCastingOperations {
+
+		t.Run(operation.Symbol(), func(t *testing.T) {
+
+			for _, fromType := range types {
+				for _, targetType := range types {
+
+					t.Run(fmt.Sprintf("valid: from %s to %s", fromType, targetType), func(t *testing.T) {
+
+						inter := parseCheckAndInterpretWithOptions(t,
+							fmt.Sprintf(
+								`
+                                  struct S {}
+                                  let x: %[1]s = cap
+                                  let y: %[2]s? = x %[3]s %[2]s
+                                `,
+								fromType,
+								targetType,
+								operation.Symbol(),
+							),
+							options,
+						)
+
+						assert.Equal(t,
+							capabilityValue,
+							inter.Globals["x"].Value,
+						)
+
+						assert.Equal(t,
+							interpreter.NewSomeValueOwningNonCopying(
+								capabilityValue,
+							),
+							inter.Globals["y"].Value,
+						)
+					})
+				}
+
+				for _, otherType := range []sema.Type{
+					&sema.StringType{},
+					&sema.VoidType{},
+					&sema.BoolType{},
+				} {
+
+					t.Run(fmt.Sprintf("invalid: from %s to Capability<&%s>", fromType, otherType), func(t *testing.T) {
+
+						inter := parseCheckAndInterpretWithOptions(t,
+							fmt.Sprintf(
+								`
+                                  struct S {}
+
+		                          fun test(): Capability<&%[2]s>? {
+		                              let x: %[1]s = cap
+		                              return x %[3]s Capability<&%[2]s>
+		                          }
+		                        `,
+								fromType,
+								otherType,
+								operation.Symbol(),
+							),
+							options,
+						)
+
+						result, err := inter.Invoke("test")
+
+						if returnsOptional {
+							require.NoError(t, err)
+							assert.Equal(t,
+								interpreter.NilValue{},
+								result,
+							)
+						} else {
+							assert.IsType(t,
+								&interpreter.TypeMismatchError{},
+								err,
+							)
+						}
+					})
+				}
+			}
 		})
 	}
 }

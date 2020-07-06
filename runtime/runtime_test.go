@@ -21,6 +21,7 @@ package runtime
 import (
 	"bytes"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strings"
@@ -106,11 +107,22 @@ type testRuntimeInterface struct {
 	valueEncoded       func(duration time.Duration)
 	valueDecoded       func(duration time.Duration)
 	unsafeRandom       func() uint64
+	verifySignature    func(
+		signature []byte,
+		tag string,
+		signedData []byte,
+		publicKey []byte,
+		signatureAlgorithm string,
+		hashAlgorithm string,
+	) bool
 }
 
 var _ Interface = &testRuntimeInterface{}
 
 func (i *testRuntimeInterface) ResolveImport(location Location) ([]byte, error) {
+	if i.resolveImport == nil {
+		return nil, nil
+	}
 	return i.resolveImport(location)
 }
 
@@ -244,6 +256,27 @@ func (i *testRuntimeInterface) UnsafeRandom() uint64 {
 		return 0
 	}
 	return i.unsafeRandom()
+}
+
+func (i *testRuntimeInterface) VerifySignature(
+	signature []byte,
+	tag string,
+	signedData []byte,
+	publicKey []byte,
+	signatureAlgorithm string,
+	hashAlgorithm string,
+) bool {
+	if i.verifySignature == nil {
+		return false
+	}
+	return i.verifySignature(
+		signature,
+		tag,
+		signedData,
+		publicKey,
+		signatureAlgorithm,
+		hashAlgorithm,
+	)
 }
 
 func TestRuntimeImport(t *testing.T) {
@@ -1373,15 +1406,15 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	imported := []byte(`
-      pub resource Number {
+      pub resource SomeNumber {
         pub(set) var n: Int
         init(_ n: Int) {
           self.n = n
         }
       }
 
-      pub fun createNumber(_ n: Int): @Number {
-        return <-create Number(n)
+      pub fun createNumber(_ n: Int): @SomeNumber {
+        return <-create SomeNumber(n)
       }
     `)
 
@@ -1400,7 +1433,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
       transaction {
         prepare(signer: AuthAccount) {
-          if let number <- signer.load<@Number>(from: /storage/number) {
+          if let number <- signer.load<@SomeNumber>(from: /storage/number) {
             log(number.n)
             destroy number
           }
@@ -2073,7 +2106,7 @@ func TestRuntimeTransaction_UpdateAccountCodeEmpty(t *testing.T) {
 	assert.Len(t, events, 1)
 }
 
-func TestRuntimeTransaction_CreateAccountEmpty(t *testing.T) {
+func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 
 	t.Parallel()
 
@@ -2107,22 +2140,23 @@ func TestRuntimeTransaction_CreateAccountEmpty(t *testing.T) {
 	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	assert.Len(t, events, 1)
+	require.Len(t, events, 1)
+	assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type().ID())
 }
 
 func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 	runtime := NewInterpreterRuntime()
 
 	keyA := cadence.NewArray([]cadence.Value{
-		cadence.NewInt(1),
-		cadence.NewInt(2),
-		cadence.NewInt(3),
+		cadence.NewUInt8(1),
+		cadence.NewUInt8(2),
+		cadence.NewUInt8(3),
 	})
 
 	keyB := cadence.NewArray([]cadence.Value{
-		cadence.NewInt(3),
-		cadence.NewInt(4),
-		cadence.NewInt(5),
+		cadence.NewUInt8(4),
+		cadence.NewUInt8(5),
+		cadence.NewUInt8(6),
 	})
 
 	keys := cadence.NewArray([]cadence.Value{
@@ -2135,11 +2169,12 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 		code     string
 		keyCount int
 		args     []cadence.Value
+		expected [][]byte
 	}{
 		{
 			name: "Single key",
 			code: `
-			  transaction(keyA: [Int]) {
+			  transaction(keyA: [UInt8]) {
 				prepare(signer: AuthAccount) {
 				  let acct = AuthAccount(payer: signer)
 				  acct.addPublicKey(keyA)
@@ -2148,11 +2183,12 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 			`,
 			keyCount: 1,
 			args:     []cadence.Value{keyA},
+			expected: [][]byte{{1, 2, 3}},
 		},
 		{
 			name: "Multiple keys",
 			code: `
-			  transaction(keys: [[Int]]) {
+			  transaction(keys: [[UInt8]]) {
 				prepare(signer: AuthAccount) {
 				  let acct = AuthAccount(payer: signer)
 				  for key in keys {
@@ -2163,6 +2199,7 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 			`,
 			keyCount: 2,
 			args:     []cadence.Value{keys},
+			expected: [][]byte{{1, 2, 3}, {4, 5, 6}},
 		},
 	}
 
@@ -2194,13 +2231,18 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			args := make([][]byte, len(tt.args))
 			for i, arg := range tt.args {
-				args[i], _ = jsoncdc.Encode(arg)
+				var err error
+				args[i], err = jsoncdc.Encode(arg)
+				if err != nil {
+					panic(fmt.Errorf("broken test: invalid argument: %w", err))
+				}
 			}
 
 			err := runtime.ExecuteTransaction([]byte(tt.code), args, runtimeInterface, utils.TestLocation)
 			require.NoError(t, err)
 			assert.Len(t, events, tt.keyCount+1)
 			assert.Len(t, keys, tt.keyCount)
+			assert.Equal(t, tt.expected, keys)
 
 			assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type().ID())
 
@@ -2312,7 +2354,6 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 	}
 
 	type argument interface {
-		fmt.Stringer
 		interpreter.Value
 	}
 
@@ -2381,7 +2422,10 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 
-			contractArrayCode := ArrayValueFromBytes([]byte(test.contract)).String()
+			contractArrayCode := fmt.Sprintf(
+				`"%s".decodeHex()`,
+				hex.EncodeToString([]byte(test.contract)),
+			)
 
 			argumentCodes := make([]string, len(test.arguments))
 
@@ -2477,17 +2521,7 @@ func TestRuntimeContractAccount(t *testing.T) {
       }
     `)
 
-	deploy := []byte(fmt.Sprintf(
-		`
-          transaction {
-
-              prepare(signer: AuthAccount) {
-                  signer.setCode(%s)
-              }
-          }
-        `,
-		ArrayValueFromBytes(contract).String(),
-	))
+	deploy := utils.DeploymentTransaction(contract)
 
 	var accountCode []byte
 	var events []cadence.Event
@@ -2569,17 +2603,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 		}
 	`)
 
-	deploy := []byte(fmt.Sprintf(
-		`
-        transaction {
-
-            prepare(signer: AuthAccount) {
-                signer.setCode(%s)
-            }
-        }
-        `,
-		ArrayValueFromBytes(contract).String(),
-	))
+	deploy := utils.DeploymentTransaction(contract)
 
 	var accountCode []byte
 	var loggedMessage string
@@ -2724,17 +2748,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
 	}
 
-	deploy := []byte(fmt.Sprintf(
-		`
-          transaction {
-
-              prepare(signer: AuthAccount) {
-                  signer.setCode(%s)
-              }
-          }
-        `,
-		ArrayValueFromBytes([]byte(fungibleTokenContract)).String(),
-	))
+	deploy := utils.DeploymentTransaction([]byte(fungibleTokenContract))
 
 	setup1Transaction := []byte(`
       import FungibleToken from 0x01
@@ -2837,11 +2851,11 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
           transaction {
             prepare(signer: AuthAccount) {
                 let acct = AuthAccount(payer: signer)
-                acct.setCode(%s)
+                acct.setCode("%s".decodeHex())
             }
           }
         `,
-		ArrayValueFromBytes([]byte(fungibleTokenContract)).String(),
+		hex.EncodeToString([]byte(fungibleTokenContract)),
 	))
 
 	setup1Transaction := []byte(`
@@ -2938,11 +2952,11 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
               transaction {
                 prepare(signer: AuthAccount) {
                   let acct = AuthAccount(payer: signer)
-                  acct.setCode(%s)
+                  acct.setCode("%s".decodeHex())
                 }
               }
             `,
-			ArrayValueFromBytes([]byte(code)).String(),
+			hex.EncodeToString([]byte(code)),
 		))
 	}
 
@@ -3271,19 +3285,7 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 				),
 			)
 
-			deploy := []byte(
-				fmt.Sprintf(
-					`
-                      transaction {
-
-                          prepare(signer: AuthAccount) {
-                              signer.setCode(%s)
-                          }
-                      }
-                    `,
-					ArrayValueFromBytes(contract).String(),
-				),
-			)
+			deploy := utils.DeploymentTransaction(contract)
 
 			var accountCode []byte
 			var events []cadence.Event
@@ -3341,19 +3343,7 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
       }
     `)
 
-	deploy := []byte(
-		fmt.Sprintf(
-			`
-              transaction {
-
-                  prepare(signer: AuthAccount) {
-                      signer.setCode(%s)
-                  }
-              }
-            `,
-			ArrayValueFromBytes(contract).String(),
-		),
-	)
+	deploy := utils.DeploymentTransaction(contract)
 
 	tx := []byte(`
       import Test from 0x1
@@ -3482,19 +3472,7 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
       }
     `)
 
-	deploy := []byte(
-		fmt.Sprintf(
-			`
-              transaction {
-
-                  prepare(signer: AuthAccount) {
-                      signer.setCode(%s)
-                  }
-              }
-            `,
-			ArrayValueFromBytes(contract).String(),
-		),
-	)
+	deploy := utils.DeploymentTransaction(contract)
 
 	tx := []byte(`
       import Test from 0x1
@@ -3641,19 +3619,7 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
       }
     `)
 
-	deploy := []byte(
-		fmt.Sprintf(
-			`
-              transaction {
-
-                  prepare(signer: AuthAccount) {
-                      signer.setCode(%s)
-                  }
-              }
-            `,
-			ArrayValueFromBytes(contract).String(),
-		),
-	)
+	deploy := utils.DeploymentTransaction(contract)
 
 	tx := []byte(`
       import Test from 0x1
@@ -4062,17 +4028,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
       }
     `)
 
-	deploy := []byte(fmt.Sprintf(
-		`
-          transaction {
-
-              prepare(signer: AuthAccount) {
-                  signer.setCode(%s)
-              }
-          }
-        `,
-		ArrayValueFromBytes(contract).String(),
-	))
+	deploy := utils.DeploymentTransaction(contract)
 
 	readTx := []byte(`
       import Test from 0xCADE
@@ -4177,17 +4133,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
       }
     `)
 
-	deploy := []byte(fmt.Sprintf(
-		`
-          transaction {
-
-              prepare(signer: AuthAccount) {
-                  signer.setCode(%s)
-              }
-          }
-        `,
-		ArrayValueFromBytes(contract).String(),
-	))
+	deploy := utils.DeploymentTransaction(contract)
 
 	setupTx := []byte(`
       import Test from 0xCADE
@@ -4356,16 +4302,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
         }
     `)
 
-	updateCodeScript := []byte(fmt.Sprintf(
-		`
-		  transaction {
-			  prepare(signer: AuthAccount) {
-				  signer.setCode(%s)
-			  }
-		  }
-		`,
-		ArrayValueFromBytes([]byte(helloWorldContract)).String(),
-	))
+	updateCodeScript := utils.DeploymentTransaction([]byte(helloWorldContract))
 
 	runtime := NewInterpreterRuntime()
 
@@ -4466,16 +4403,7 @@ func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
         }
     `)
 
-	updateCodeScript := []byte(fmt.Sprintf(
-		`
-		  transaction {
-			  prepare(signer: AuthAccount) {
-				  signer.setCode(%s)
-			  }
-		  }
-		`,
-		ArrayValueFromBytes([]byte(helloWorldContract)).String(),
-	))
+	updateCodeScript := utils.DeploymentTransaction([]byte(helloWorldContract))
 
 	runtime := NewInterpreterRuntime()
 
@@ -4612,12 +4540,12 @@ func TestRuntimeTransaction_UpdateAccountCodeUnsafeNotInitializing(t *testing.T)
               transaction {
 
                   prepare(signer: AuthAccount) {
-                      signer.%s(%s)
+                      signer.%s("%s".decodeHex())
                   }
               }
             `,
 			function,
-			ArrayValueFromBytes([]byte(code)).String(),
+			hex.EncodeToString([]byte(code)),
 		))
 	}
 

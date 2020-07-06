@@ -147,12 +147,6 @@ type AddressDynamicType struct{}
 
 func (AddressDynamicType) IsDynamicType() {}
 
-// PublishedDynamicType
-
-type PublishedDynamicType struct{}
-
-func (PublishedDynamicType) IsDynamicType() {}
-
 // FunctionDynamicType
 
 type FunctionDynamicType struct{}
@@ -167,7 +161,9 @@ func (PathDynamicType) IsDynamicType() {}
 
 // CapabilityDynamicType
 
-type CapabilityDynamicType struct{}
+type CapabilityDynamicType struct {
+	BorrowType *sema.ReferenceType
+}
 
 func (CapabilityDynamicType) IsDynamicType() {}
 

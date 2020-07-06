@@ -635,7 +635,7 @@ func applyTypeNullDenotation(p *parser, token lexer.Token) ast.Type {
 	tokenType := token.Type
 	nullDenotation, ok := typeNullDenotations[tokenType]
 	if !ok {
-		panic(fmt.Errorf("missing type null denotation for token %s", token.Type))
+		panic(fmt.Errorf("unexpected token in type: %s", token.Type))
 	}
 	return nullDenotation(p, token)
 }
@@ -643,7 +643,7 @@ func applyTypeNullDenotation(p *parser, token lexer.Token) ast.Type {
 func applyTypeLeftDenotation(p *parser, token lexer.Token, left ast.Type) ast.Type {
 	leftDenotation, ok := typeLeftDenotations[token.Type]
 	if !ok {
-		panic(fmt.Errorf("missing type left denotation for token %s", token.Type))
+		panic(fmt.Errorf("unexpected token in type: %s", token.Type))
 	}
 	return leftDenotation(p, token, left)
 }
@@ -735,14 +735,17 @@ func defineInstantiationType() {
 	setTypeLeftDenotation(
 		lexer.TokenLess,
 		func(p *parser, token lexer.Token, left ast.Type) ast.Type {
+			typeArgumentsStartPos := token.StartPos
+
 			typeArguments := parseCommaSeparatedTypeAnnotations(p, lexer.TokenGreater)
 
 			endToken := p.mustOne(lexer.TokenGreater)
 
 			return &ast.InstantiationType{
-				Type:          left,
-				TypeArguments: typeArguments,
-				EndPos:        endToken.EndPos,
+				Type:                  left,
+				TypeArguments:         typeArguments,
+				TypeArgumentsStartPos: typeArgumentsStartPos,
+				EndPos:                endToken.EndPos,
 			}
 		},
 	)

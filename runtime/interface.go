@@ -69,6 +69,16 @@ type Interface interface {
 	// UnsafeRandom returns a random uint64, where the process of random number derivation is not cryptographically
 	// secure.
 	UnsafeRandom() uint64
+	// VerifySignature returns true if the given signature was produced by signing the given tag + data
+	// using the given public key, signature algorithm, and hash algorithm.
+	VerifySignature(
+		signature []byte,
+		tag string,
+		signedData []byte,
+		publicKey []byte,
+		signatureAlgorithm string,
+		hashAlgorithm string,
+	) bool
 }
 
 type Metrics interface {
@@ -153,4 +163,15 @@ func (i *EmptyRuntimeInterface) GetBlockAtHeight(_ uint64) (hash BlockHash, time
 
 func (i *EmptyRuntimeInterface) UnsafeRandom() uint64 {
 	return 0
+}
+
+func (i *EmptyRuntimeInterface) VerifySignature(
+	_ []byte,
+	_ string,
+	_ []byte,
+	_ []byte,
+	_ string,
+	_ string,
+) bool {
+	return false
 }

@@ -19,6 +19,7 @@
 package utils
 
 import (
+	"encoding/hex"
 	"fmt"
 	"strings"
 	"testing"
@@ -77,4 +78,18 @@ func AsInterfaceType(name string, kind common.CompositeKind) string {
 	default:
 		return name
 	}
+}
+
+func DeploymentTransaction(contract []byte) []byte {
+	return []byte(fmt.Sprintf(
+		`
+          transaction {
+
+              prepare(signer: AuthAccount) {
+                  signer.setCode("%s".decodeHex())
+              }
+          }
+        `,
+		hex.EncodeToString(contract),
+	))
 }

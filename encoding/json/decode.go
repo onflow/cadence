@@ -406,40 +406,21 @@ func decodeWord64(valueJSON interface{}) cadence.Word64 {
 }
 
 func decodeFix64(valueJSON interface{}) cadence.Fix64 {
-	v := decodeFixString(valueJSON)
-
-	i, err := strconv.ParseInt(v, 10, 64)
+	v, err := cadence.NewFix64(toString(valueJSON))
 	if err != nil {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)
 	}
-
-	return cadence.NewFix64(i)
+	return v
 }
 
 func decodeUFix64(valueJSON interface{}) cadence.UFix64 {
-	v := decodeFixString(valueJSON)
-
-	i, err := strconv.ParseUint(v, 10, 64)
+	v, err := cadence.NewUFix64(toString(valueJSON))
 	if err != nil {
 		// TODO: improve error message
 		panic(ErrInvalidJSONCadence)
 	}
-
-	return cadence.NewUFix64(i)
-}
-
-func decodeFixString(valueJSON interface{}) string {
-	v := toString(valueJSON)
-
-	// must contain single decimal point
-	parts := strings.Split(v, ".")
-	if len(parts) != 2 {
-		// TODO: improve error message
-		panic(ErrInvalidJSONCadence)
-	}
-
-	return parts[0] + parts[1]
+	return v
 }
 
 func decodeValues(valueJSON interface{}) []cadence.Value {

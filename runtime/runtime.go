@@ -453,6 +453,7 @@ func validateArgumentParams(
 	return argumentValues, nil
 }
 
+// ParseAndCheckProgram parses the given script and runs type check.
 func (r *interpreterRuntime) ParseAndCheckProgram(script []byte, runtimeInterface Interface, location Location) error {
 	runtimeStorage := newInterpreterRuntimeStorage(runtimeInterface)
 	functions := r.standardLibraryFunctions(runtimeInterface, runtimeStorage)
@@ -508,6 +509,15 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 				sema.WithPredeclaredValues(valueDeclarations),
 				sema.WithPredeclaredTypes(typeDeclarations),
 				sema.WithValidTopLevelDeclarationsHandler(validTopLevelDeclarations),
+				sema.WithImportHandler(func(location ast.Location) sema.Import {
+					switch location {
+					case stdlib.CryptoChecker.Location:
+						return sema.CheckerImport{
+							Checker: stdlib.CryptoChecker,
+						}
+					}
+					return nil
+				}),
 				sema.WithCheckHandler(func(location ast.Location, check func()) {
 					reportMetric(
 						func() {
@@ -580,10 +590,18 @@ func (r *interpreterRuntime) newInterpreter(
 			func(
 				inter *interpreter.Interpreter,
 				compositeType *sema.CompositeType,
-				_ interpreter.FunctionValue,
+				constructor interpreter.FunctionValue,
+				invocationRange ast.Range,
 			) *interpreter.CompositeValue {
-				// Load the contract from storage
-				return r.loadContract(compositeType, runtimeStorage)
+
+				return r.loadContract(
+					inter,
+					compositeType,
+					constructor,
+					invocationRange,
+					runtimeInterface,
+					runtimeStorage,
+				)
 			},
 		),
 		interpreter.WithImportLocationHandler(
@@ -609,17 +627,28 @@ func (r *interpreterRuntime) importLocationHandler(runtimeInterface Interface) i
 	importResolver := r.importResolver(runtimeInterface)
 
 	return func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
-		program, err := importResolver(location)
-		if err != nil {
-			panic(err)
-		}
 
-		err = program.ResolveImports(importResolver)
-		if err != nil {
-			panic(err)
-		}
+		switch location {
+		case stdlib.CryptoChecker.Location:
+			return interpreter.ProgramImport{
+				Program: stdlib.CryptoChecker.Program,
+			}
 
-		return interpreter.ProgramImport{Program: program}
+		default:
+			program, err := importResolver(location)
+			if err != nil {
+				panic(err)
+			}
+
+			err = program.ResolveImports(importResolver)
+			if err != nil {
+				panic(err)
+			}
+
+			return interpreter.ProgramImport{
+				Program: program,
+			}
+		}
 	}
 }
 
@@ -634,21 +663,27 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 		compositeKind common.CompositeKind,
 	) map[string]interpreter.Value {
 
-		switch compositeKind {
-		case common.CompositeKindContract:
-			var address []byte
+		switch location {
+		case stdlib.CryptoChecker.Location:
+			return nil
 
-			switch location := location.(type) {
-			case AddressLocation:
-				address = location
-			default:
-				panic(runtimeErrors.NewUnreachableError())
-			}
+		default:
+			switch compositeKind {
+			case common.CompositeKindContract:
+				var address []byte
 
-			addressValue := interpreter.NewAddressValueFromBytes(address)
+				switch location := location.(type) {
+				case AddressLocation:
+					address = location
+				default:
+					panic(runtimeErrors.NewUnreachableError())
+				}
 
-			return map[string]interpreter.Value{
-				"account": r.newAuthAccountValue(addressValue, runtimeInterface, runtimeStorage),
+				addressValue := interpreter.NewAddressValueFromBytes(address)
+
+				return map[string]interpreter.Value{
+					"account": r.newAuthAccountValue(addressValue, runtimeInterface, runtimeStorage),
+				}
 			}
 		}
 
@@ -755,9 +790,11 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 		wrapPanic(func() {
 			script, err = runtimeInterface.ResolveImport(location)
 		})
-
 		if err != nil {
 			return nil, err
+		}
+		if script == nil {
+			return nil, nil
 		}
 
 		program, err = r.parse(location, script, runtimeInterface)
@@ -1126,22 +1163,42 @@ func (r *interpreterRuntime) writeContract(
 }
 
 func (r *interpreterRuntime) loadContract(
+	inter *interpreter.Interpreter,
 	compositeType *sema.CompositeType,
+	constructor interpreter.FunctionValue,
+	invocationRange ast.Range,
+	runtimeInterface Interface,
 	runtimeStorage *interpreterRuntimeStorage,
 ) *interpreter.CompositeValue {
-	address := compositeType.Location.(AddressLocation).ToAddress()
-	storedValue := runtimeStorage.readValue(
-		address,
-		contractKey,
-		false,
-	)
-	switch typedValue := storedValue.(type) {
-	case *interpreter.SomeValue:
-		return typedValue.Value.(*interpreter.CompositeValue)
-	case interpreter.NilValue:
-		panic("failed to load contract")
+
+	switch compositeType.Location {
+	case stdlib.CryptoChecker.Location:
+		contract, err := stdlib.NewCryptoContract(
+			inter,
+			constructor,
+			runtimeInterface,
+			invocationRange,
+		)
+		if err != nil {
+			panic(err)
+		}
+		return contract
+
 	default:
-		panic(runtimeErrors.NewUnreachableError())
+		address := compositeType.Location.(AddressLocation).ToAddress()
+		storedValue := runtimeStorage.readValue(
+			address,
+			contractKey,
+			false,
+		)
+		switch typedValue := storedValue.(type) {
+		case *interpreter.SomeValue:
+			return typedValue.Value.(*interpreter.CompositeValue)
+		case interpreter.NilValue:
+			panic("failed to load contract")
+		default:
+			panic(runtimeErrors.NewUnreachableError())
+		}
 	}
 }
 
@@ -1205,6 +1262,7 @@ func (r *interpreterRuntime) instantiateContract(
 				inter *interpreter.Interpreter,
 				compositeType *sema.CompositeType,
 				constructor interpreter.FunctionValue,
+				invocationRange ast.Range,
 			) *interpreter.CompositeValue {
 
 				// If the contract is the deployed contract, instantiate it using
@@ -1227,9 +1285,16 @@ func (r *interpreterRuntime) instantiateContract(
 
 					return contract
 				}
-				// The contract is not the deployed contract, load it from storage
 
-				return r.loadContract(compositeType, runtimeStorage)
+				// The contract is not the deployed contract, load it from storage
+				return r.loadContract(
+					inter,
+					compositeType,
+					constructor,
+					invocationRange,
+					runtimeInterface,
+					runtimeStorage,
+				)
 			},
 		),
 	}

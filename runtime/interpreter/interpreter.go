@@ -20,11 +20,11 @@ package interpreter
 
 import (
 	"fmt"
-	"math/big"
 	goRuntime "runtime"
 
 	"github.com/raviqqe/hamt"
 
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -151,6 +151,7 @@ type ContractValueHandlerFunc func(
 	inter *Interpreter,
 	compositeType *sema.CompositeType,
 	constructor FunctionValue,
+	invocationRange ast.Range,
 ) *CompositeValue
 
 // ImportLocationFunc is a function that handles imports of locations.
@@ -1060,10 +1061,7 @@ func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) Tra
 						panic(&ConditionError{
 							ConditionKind: condition.Kind,
 							Message:       message,
-							LocationRange: LocationRange{
-								Location: interpreter.Checker.Location,
-								Range:    ast.NewRangeFromPositioned(condition.Test),
-							},
+							LocationRange: interpreter.locationRange(condition.Test),
 						})
 					})
 			}
@@ -1745,6 +1743,10 @@ func (interpreter *Interpreter) testEqual(left, right Value) BoolValue {
 	// TODO: add support for arrays and dictionaries
 
 	switch left := left.(type) {
+	case NilValue:
+		_, ok := right.(NilValue)
+		return BoolValue(ok)
+
 	case EquatableValue:
 		// NOTE: might be NilValue
 		right, ok := right.(EquatableValue)
@@ -1752,10 +1754,6 @@ func (interpreter *Interpreter) testEqual(left, right Value) BoolValue {
 			return false
 		}
 		return left.Equal(interpreter, right)
-
-	case NilValue:
-		_, ok := right.(NilValue)
-		return BoolValue(ok)
 
 	case *CompositeValue:
 		// TODO: call `equals` if RHS is composite
@@ -1765,9 +1763,10 @@ func (interpreter *Interpreter) testEqual(left, right Value) BoolValue {
 		*DictionaryValue:
 		// TODO:
 		return false
-	}
 
-	panic(errors.NewUnreachableError())
+	default:
+		return false
+	}
 }
 
 func (interpreter *Interpreter) VisitUnaryExpression(expression *ast.UnaryExpression) ast.Repr {
@@ -1828,7 +1827,14 @@ func (interpreter *Interpreter) VisitIntegerExpression(expression *ast.IntegerEx
 
 func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedPointExpression) ast.Repr {
 	// TODO: adjust once/if we support more fixed point types
-	value := interpreter.convertToFixedPointBigInt(expression, sema.Fix64Scale)
+
+	value := fixedpoint.ConvertToFixedPointBigInt(
+		expression.Negative,
+		expression.UnsignedInteger,
+		expression.Fractional,
+		expression.Scale,
+		sema.Fix64Scale,
+	)
 
 	var result Value
 
@@ -1839,46 +1845,6 @@ func (interpreter *Interpreter) VisitFixedPointExpression(expression *ast.FixedP
 	}
 
 	return Done{Result: result}
-}
-
-func (interpreter *Interpreter) convertToFixedPointBigInt(expression *ast.FixedPointExpression, scale uint) *big.Int {
-	ten := big.NewInt(10)
-
-	// integer = expression.UnsignedInteger * 10 ^ scale
-
-	targetScale := new(big.Int).SetUint64(uint64(scale))
-
-	integer := new(big.Int).Mul(
-		expression.UnsignedInteger,
-		new(big.Int).Exp(ten, targetScale, nil),
-	)
-
-	// fractional = expression.Fractional * 10 ^ (scale - expression.Scale)
-
-	var fractional *big.Int
-	if expression.Scale == scale {
-		fractional = expression.Fractional
-	} else if expression.Scale < scale {
-		scaleDiff := new(big.Int).SetUint64(uint64(scale - expression.Scale))
-		fractional = new(big.Int).Mul(
-			expression.Fractional,
-			new(big.Int).Exp(ten, scaleDiff, nil),
-		)
-	} else {
-		scaleDiff := new(big.Int).SetUint64(uint64(expression.Scale - scale))
-		fractional = new(big.Int).Div(expression.Fractional,
-			new(big.Int).Exp(ten, scaleDiff, nil),
-		)
-	}
-
-	// value = integer + fractional
-
-	if expression.Negative {
-		integer.Neg(integer)
-		fractional.Neg(fractional)
-	}
-
-	return integer.Add(integer, fractional)
 }
 
 func (interpreter *Interpreter) VisitStringExpression(expression *ast.StringExpression) ast.Repr {
@@ -2041,7 +2007,7 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 					arguments := result.(*ArrayValue).Values
 
 					typeParameterTypes :=
-						interpreter.Checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression]
+						interpreter.Checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 					argumentTypes :=
 						interpreter.Checker.Elaboration.InvocationExpressionArgumentTypes[invocationExpression]
 					parameterTypes :=
@@ -2528,7 +2494,13 @@ func (interpreter *Interpreter) declareCompositeValue(
 	// for all other composite kinds, the constructor is declared
 
 	if declaration.CompositeKind == common.CompositeKindContract {
-		contract := interpreter.contractValueHandler(interpreter, compositeType, constructor)
+		positioned := ast.NewRangeFromPositioned(declaration.Identifier)
+		contract := interpreter.contractValueHandler(
+			interpreter,
+			compositeType,
+			constructor,
+			positioned,
+		)
 		contract.NestedValues = members
 		value = contract
 		// NOTE: variable value is also set in the constructor function: it needs to be available
@@ -3380,11 +3352,7 @@ func (interpreter *Interpreter) VisitDestroyExpression(expression *ast.DestroyEx
 
 			// TODO: optimize: only potentially used by host-functions
 
-			locationRange := LocationRange{
-				Location: interpreter.Checker.Location,
-				Range:    ast.NewRangeFromPositioned(expression),
-			}
-
+			locationRange := interpreter.locationRange(expression)
 			return value.(DestroyableValue).Destroy(interpreter, locationRange)
 		})
 }
@@ -3475,6 +3443,17 @@ var converters = map[string]ValueConverter{
 
 func init() {
 	for _, numberType := range sema.AllNumberTypes {
+
+		// Only leaf number types require a converter,
+		// "hierarchy" number types don't need one
+
+		switch numberType.(type) {
+		case *sema.NumberType, *sema.SignedNumberType,
+			*sema.IntegerType, *sema.SignedIntegerType,
+			*sema.FixedPointType, *sema.SignedFixedPointType:
+			continue
+		}
+
 		if _, ok := converters[numberType.String()]; !ok {
 			panic(fmt.Sprintf("missing converter for number type: %s", numberType))
 		}
@@ -3528,10 +3507,9 @@ func (interpreter *Interpreter) newConverterFunction(converter ValueConverter) F
 
 // TODO:
 // - FunctionType
-// - PublishedType
 //
 // - Character
-// - Account
+// - AuthAccount
 // - PublicAccount
 // - Block
 
@@ -3671,6 +3649,38 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 
 		default:
 			return false
+		}
+
+	case CapabilityDynamicType:
+		switch typedSuperType := superType.(type) {
+		case *sema.AnyStructType:
+			return true
+
+		case *sema.CapabilityType:
+
+			if typedSuperType.BorrowType != nil {
+
+				// Capability <: Capability<T>:
+				// never
+
+				if typedSubType.BorrowType == nil {
+					return false
+				}
+
+				// Capability<T> <: Capability<U>:
+				// if T <: U
+
+				return sema.IsSubType(
+					typedSubType.BorrowType,
+					typedSuperType.BorrowType,
+				)
+			}
+
+			// Capability<T> <: Capability || Capability <: Capability:
+			// always
+
+			return true
+
 		}
 	}
 
@@ -3885,13 +3895,13 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 		// `Invocation.TypeParameterTypes` is a map, so get the first
 		// element / type by iterating over the values of the map.
 
-		var referenceType *sema.ReferenceType
+		var borrowType *sema.ReferenceType
 		for _, ty := range invocation.TypeParameterTypes {
-			referenceType = ty.(*sema.ReferenceType)
+			borrowType = ty.(*sema.ReferenceType)
 			break
 		}
 
-		if referenceType == nil {
+		if borrowType == nil {
 			panic(errors.NewUnreachableError())
 		}
 
@@ -3915,10 +3925,12 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 		// Write new value
 
+		borrowStaticType := ConvertSemaToStaticType
+
 		storedValue := NewSomeValueOwningNonCopying(
 			LinkValue{
 				TargetPath: targetPath,
-				Type:       ConvertSemaToStaticType(referenceType),
+				Type:       borrowStaticType(borrowType),
 			},
 		)
 
@@ -3930,8 +3942,9 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 		returnValue := NewSomeValueOwningNonCopying(
 			CapabilityValue{
-				Address: addressValue,
-				Path:    targetPath,
+				Address:    addressValue,
+				Path:       targetPath,
+				BorrowType: borrowStaticType(borrowType),
 			},
 		)
 
@@ -4009,52 +4022,99 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 	})
 }
 
-func (interpreter *Interpreter) capabilityBorrowFunction(addressValue AddressValue, pathValue PathValue) HostFunctionValue {
-	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+func (interpreter *Interpreter) capabilityBorrowFunction(
+	addressValue AddressValue,
+	pathValue PathValue,
+	borrowType *sema.ReferenceType,
+) HostFunctionValue {
 
-		targetStorageKey, authorized :=
-			interpreter.getCapabilityFinalTargetStorageKey(
-				addressValue,
-				pathValue,
-				invocation,
-			)
+	return NewHostFunctionValue(
+		func(invocation Invocation) Trampoline {
 
-		if targetStorageKey == "" {
-			return Done{Result: NilValue{}}
-		}
+			if borrowType == nil {
 
-		address := addressValue.ToAddress()
+				// `Invocation.TypeParameterTypes` is a map, so get the first
+				// element / type by iterating over the values of the map.
 
-		reference := &StorageReferenceValue{
-			Authorized:           authorized,
-			TargetStorageAddress: address,
-			TargetKey:            targetStorageKey,
-		}
+				for _, ty := range invocation.TypeParameterTypes {
+					borrowType = ty.(*sema.ReferenceType)
+					break
+				}
+			}
 
-		return Done{Result: NewSomeValueOwningNonCopying(reference)}
-	})
+			if borrowType == nil {
+				panic(errors.NewUnreachableError())
+			}
+
+			targetStorageKey, authorized :=
+				interpreter.getCapabilityFinalTargetStorageKey(
+					addressValue,
+					pathValue,
+					borrowType,
+					invocation.LocationRange,
+				)
+
+			if targetStorageKey == "" {
+				return Done{Result: NilValue{}}
+			}
+
+			address := addressValue.ToAddress()
+
+			reference := &StorageReferenceValue{
+				Authorized:           authorized,
+				TargetStorageAddress: address,
+				TargetKey:            targetStorageKey,
+			}
+
+			return Done{Result: NewSomeValueOwningNonCopying(reference)}
+		},
+	)
 }
 
-func (interpreter *Interpreter) capabilityCheckFunction(addressValue AddressValue, pathValue PathValue) HostFunctionValue {
-	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
+func (interpreter *Interpreter) capabilityCheckFunction(
+	addressValue AddressValue,
+	pathValue PathValue,
+	borrowType *sema.ReferenceType,
+) HostFunctionValue {
 
-		targetStorageKey, _ :=
-			interpreter.getCapabilityFinalTargetStorageKey(
-				addressValue,
-				pathValue,
-				invocation,
-			)
+	return NewHostFunctionValue(
+		func(invocation Invocation) Trampoline {
 
-		isValid := targetStorageKey != ""
+			if borrowType == nil {
 
-		return Done{Result: BoolValue(isValid)}
-	})
+				// `Invocation.TypeParameterTypes` is a map, so get the first
+				// element / type by iterating over the values of the map.
+
+				for _, ty := range invocation.TypeParameterTypes {
+					borrowType = ty.(*sema.ReferenceType)
+					break
+				}
+			}
+
+			if borrowType == nil {
+				panic(errors.NewUnreachableError())
+			}
+
+			targetStorageKey, _ :=
+				interpreter.getCapabilityFinalTargetStorageKey(
+					addressValue,
+					pathValue,
+					borrowType,
+					invocation.LocationRange,
+				)
+
+			isValid := targetStorageKey != ""
+
+			return Done{Result: BoolValue(isValid)}
+		},
+	)
 }
 
 func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 	addressValue AddressValue,
 	path PathValue,
-	invocation Invocation,
+	wantedBorrowType *sema.ReferenceType,
+	locationRange LocationRange,
 ) (
 	finalStorageKey string,
 	authorized bool,
@@ -4063,19 +4123,7 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 
 	key := storageKey(path)
 
-	// `Invocation.TypeParameterTypes` is a map, so get the first
-	// element / type by iterating over the values of the map.
-
-	var wantedType sema.Type
-	for _, wantedType = range invocation.TypeParameterTypes {
-		break
-	}
-
-	if wantedType == nil {
-		panic(errors.NewUnreachableError())
-	}
-
-	wantedReferenceType := wantedType.(*sema.ReferenceType)
+	wantedReferenceType := wantedBorrowType
 
 	seenKeys := map[string]struct{}{}
 	paths := []PathValue{path}
@@ -4087,7 +4135,7 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 			panic(&CyclicLinkError{
 				Address:       addressValue,
 				Paths:         paths,
-				LocationRange: invocation.LocationRange,
+				LocationRange: locationRange,
 			})
 		} else {
 			seenKeys[key] = struct{}{}
@@ -4105,7 +4153,7 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 
 				allowedType := interpreter.convertStaticToSemaType(link.Type)
 
-				if !sema.IsSubType(allowedType, wantedType) {
+				if !sema.IsSubType(allowedType, wantedBorrowType) {
 					return "", false
 				}
 

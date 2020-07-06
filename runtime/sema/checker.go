@@ -24,6 +24,7 @@ import (
 
 	"github.com/rivo/uniseg"
 
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -670,7 +671,7 @@ func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpress
 			return false
 		}
 
-		if !checker.checkFixedPointRange(
+		if !fixedpoint.CheckRange(
 			expression.Negative,
 			expression.UnsignedInteger,
 			expression.Fractional,
@@ -751,60 +752,6 @@ func (checker *Checker) checkIntegerRange(value, min, max *big.Int) bool {
 		(max == nil || value.Cmp(max) <= 0)
 }
 
-func (checker *Checker) checkFixedPointRange(
-	negative bool,
-	unsignedIntegerValue, fractionalValue,
-	minInt, minFractional,
-	maxInt, maxFractional *big.Int,
-) bool {
-	minIntSign := minInt.Sign()
-
-	integerValue := new(big.Int).Set(unsignedIntegerValue)
-	if negative {
-		if minIntSign == 0 && negative {
-			return false
-		}
-
-		integerValue.Neg(integerValue)
-	}
-
-	switch integerValue.Cmp(minInt) {
-	case -1:
-		return false
-	case 0:
-		if minIntSign < 0 {
-			if fractionalValue.Cmp(minFractional) > 0 {
-				return false
-			}
-		} else {
-			if fractionalValue.Cmp(minFractional) < 0 {
-				return false
-			}
-		}
-	case 1:
-		break
-	}
-
-	switch integerValue.Cmp(maxInt) {
-	case -1:
-		break
-	case 0:
-		if maxInt.Sign() >= 0 {
-			if fractionalValue.Cmp(maxFractional) > 0 {
-				return false
-			}
-		} else {
-			if fractionalValue.Cmp(maxFractional) < 0 {
-				return false
-			}
-		}
-	case 1:
-		return false
-	}
-
-	return true
-}
-
 func (checker *Checker) declareGlobalDeclaration(declaration ast.Declaration) {
 	identifier := declaration.DeclarationIdentifier()
 	if identifier == nil {
@@ -855,7 +802,7 @@ func (checker *Checker) checkResourceMoveOperation(valueExpression ast.Expressio
 	checker.recordResourceInvalidation(
 		unaryExpression.Expression,
 		valueType,
-		ResourceInvalidationKindMove,
+		ResourceInvalidationKindMoveDefinite,
 	)
 }
 
@@ -913,6 +860,9 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 
 	case *ast.RestrictedType:
 		return checker.convertRestrictedType(t)
+
+	case *ast.InstantiationType:
+		return checker.convertInstantiationType(t)
 	}
 
 	panic(&astTypeConversionError{invalidASTType: t})
@@ -1447,13 +1397,19 @@ func (checker *Checker) checkResourceLoss(depth int) {
 	}
 }
 
+type recordedResourceInvalidation struct {
+	resource     interface{}
+	invalidation ResourceInvalidation
+}
+
 func (checker *Checker) recordResourceInvalidation(
 	expression ast.Expression,
 	valueType Type,
 	invalidationKind ResourceInvalidationKind,
-) {
+) *recordedResourceInvalidation {
+
 	if !valueType.IsResourceType() {
-		return
+		return nil
 	}
 
 	reportInvalidNestedMove := func() {
@@ -1469,14 +1425,17 @@ func (checker *Checker) recordResourceInvalidation(
 
 	switch expression.(type) {
 	case *ast.MemberExpression:
-		if accessedSelfMember == nil || !checker.allowSelfResourceFieldInvalidation {
+
+		if accessedSelfMember == nil ||
+			!checker.allowSelfResourceFieldInvalidation {
+
 			reportInvalidNestedMove()
-			return
+			return nil
 		}
 
 	case *ast.IndexExpression:
 		reportInvalidNestedMove()
-		return
+		return nil
 	}
 
 	invalidation := ResourceInvalidation{
@@ -1487,20 +1446,26 @@ func (checker *Checker) recordResourceInvalidation(
 
 	if checker.allowSelfResourceFieldInvalidation && accessedSelfMember != nil {
 		checker.resources.AddInvalidation(accessedSelfMember, invalidation)
-		return
+
+		return &recordedResourceInvalidation{
+			resource:     accessedSelfMember,
+			invalidation: invalidation,
+		}
 	}
 
 	identifierExpression, ok := expression.(*ast.IdentifierExpression)
 	if !ok {
-		return
+		return nil
 	}
 
 	variable := checker.findAndCheckVariable(identifierExpression.Identifier, false)
 	if variable == nil {
-		return
+		return nil
 	}
 
-	if variable.DeclarationKind == common.DeclarationKindSelf {
+	if invalidationKind != ResourceInvalidationKindMoveTemporary &&
+		variable.DeclarationKind == common.DeclarationKindSelf {
+
 		checker.report(
 			&InvalidSelfInvalidationError{
 				InvalidationKind: invalidationKind,
@@ -1511,6 +1476,11 @@ func (checker *Checker) recordResourceInvalidation(
 	}
 
 	checker.resources.AddInvalidation(variable, invalidation)
+
+	return &recordedResourceInvalidation{
+		resource:     variable,
+		invalidation: invalidation,
+	}
 }
 
 func (checker *Checker) checkWithResources(
@@ -2128,4 +2098,73 @@ func (checker *Checker) effectiveCompositeMemberAccess(access ast.Access) ast.Ac
 	default:
 		panic(errors.NewUnreachableError())
 	}
+}
+
+func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type {
+
+	ty := checker.ConvertType(t.Type)
+
+	// Always convert (check) the type arguments,
+	// even if the instantiated type
+
+	typeArgumentCount := len(t.TypeArguments)
+	typeArgumentAnnotations := make([]*TypeAnnotation, typeArgumentCount)
+
+	for i, rawTypeArgument := range t.TypeArguments {
+		typeArgument := checker.ConvertTypeAnnotation(rawTypeArgument)
+		checker.checkTypeAnnotation(typeArgument, rawTypeArgument)
+		typeArgumentAnnotations[i] = typeArgument
+	}
+
+	parameterizedType, ok := ty.(ParameterizedType)
+	if !ok {
+
+		// The type is not parameterized,
+		// report an error for all type arguments
+
+		checker.report(
+			&UnparameterizedTypeInstantiationError{
+				Range: ast.Range{
+					StartPos: t.TypeArgumentsStartPos,
+					EndPos:   t.EndPosition(),
+				},
+			},
+		)
+
+		// Just return the converted instantiated type as-is
+
+		return ty
+	}
+
+	typeParameters := parameterizedType.TypeParameters()
+
+	typeParameterCount := len(typeParameters)
+
+	if typeArgumentCount != typeParameterCount {
+
+		// The instantiation  missing some type arguments
+
+		checker.report(
+			&InvalidTypeArgumentCountError{
+				TypeParameterCount: typeParameterCount,
+				TypeArgumentCount:  typeArgumentCount,
+				Range: ast.Range{
+					StartPos: t.TypeArgumentsStartPos,
+					EndPos:   t.EndPos,
+				},
+			},
+		)
+
+		// Just return the converted instantiated type as-is
+
+		return ty
+	}
+
+	typeArguments := make([]Type, len(typeArgumentAnnotations))
+
+	for i, typeAnnotation := range typeArgumentAnnotations {
+		typeArguments[i] = typeAnnotation.Type
+	}
+
+	return parameterizedType.Instantiate(typeArguments, checker.report)
 }

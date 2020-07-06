@@ -81,6 +81,14 @@ func Parse(input string, parse func(*parser) interface{}) (result interface{}, e
 		}
 	}()
 
+	p.current = lexer.Token{
+		Type: lexer.TokenEOF,
+		Range: ast.Range{
+			StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+			EndPos:   ast.Position{Offset: 0, Line: 1, Column: 0},
+		},
+	}
+
 	// Get the initial token
 	p.next()
 
@@ -141,7 +149,13 @@ func (p *parser) next() {
 		token, ok := <-p.tokens
 		if !ok {
 			// Channel closed, return EOF token.
-			token = lexer.Token{Type: lexer.TokenEOF}
+			token = lexer.Token{
+				Type: lexer.TokenEOF,
+				Range: ast.Range{
+					StartPos: p.current.EndPos,
+					EndPos:   p.current.EndPos,
+				},
+			}
 		}
 		return token
 	}

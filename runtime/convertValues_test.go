@@ -183,12 +183,12 @@ var exportTests = []struct {
 	{
 		label:    "Fix64",
 		value:    interpreter.Fix64Value(-123000000),
-		expected: cadence.NewFix64(-123000000),
+		expected: cadence.Fix64(-123000000),
 	},
 	{
 		label:    "UFix64",
 		value:    interpreter.UFix64Value(123000000),
-		expected: cadence.NewUFix64(123000000),
+		expected: cadence.UFix64(123000000),
 	},
 }
 
@@ -235,17 +235,21 @@ func TestExportFixedPointValuesFromScript(t *testing.T) {
 	t.Parallel()
 
 	for _, fixedPointType := range sema.AllFixedPointTypes {
-		script := fmt.Sprintf(
-			`
-              pub fun main(): %s {
-                  return 1.23
-              }
-            `,
-			fixedPointType,
-		)
 
-		assert.NotPanics(t, func() {
-			exportValueFromScript(t, script)
+		t.Run(fixedPointType.String(), func(t *testing.T) {
+
+			script := fmt.Sprintf(
+				`
+                  pub fun main(): %s {
+                      return 1.23
+                  }
+                `,
+				fixedPointType,
+			)
+
+			assert.NotPanics(t, func() {
+				exportValueFromScript(t, script)
+			})
 		})
 	}
 }

@@ -30,47 +30,66 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) ast
 		functionActivation.ReturnInfo.DefinitelyReturned = true
 	}()
 
-	// check value type matches enclosing function's return type
+	returnType := functionActivation.ReturnType
 
 	if statement.Expression == nil {
+
+		// If the return statement has no expression,
+		// and the enclosing function's return type is non-Void,
+		// then the return statement is missing an expression
+
+		if _, ok := returnType.(*VoidType); !ok {
+			checker.report(
+				&MissingReturnValueError{
+					ExpectedValueType: returnType,
+					Range:             ast.NewRangeFromPositioned(statement),
+				},
+			)
+		}
+
 		return nil
 	}
 
+	// If the return statement has a return value,
+	// check that the value's type matches the enclosing function's return type
+
 	valueType := statement.Expression.Accept(checker).(Type)
-	returnType := functionActivation.ReturnType
 
 	checker.Elaboration.ReturnStatementValueTypes[statement] = valueType
 	checker.Elaboration.ReturnStatementReturnTypes[statement] = returnType
 
-	if valueType == nil {
-		return nil
-	}
+	// If the enclosing function's return type is Void,
+	// then the return statement should not have a return value
 
-	// return statement has expression, but function has Void return type?
 	if _, ok := returnType.(*VoidType); ok {
 		checker.report(
 			&InvalidReturnValueError{
 				Range: ast.NewRangeFromPositioned(statement.Expression),
 			},
 		)
-	} else {
 
-		if !valueType.IsInvalidType() &&
-			!returnType.IsInvalidType() &&
-			!checker.checkTypeCompatibility(statement.Expression, valueType, returnType) {
-
-			checker.report(
-				&TypeMismatchError{
-					ExpectedType: returnType,
-					ActualType:   valueType,
-					Range:        ast.NewRangeFromPositioned(statement.Expression),
-				},
-			)
-		}
-
-		checker.checkVariableMove(statement.Expression)
-		checker.checkResourceMoveOperation(statement.Expression, valueType)
+		return nil
 	}
+
+	// The return statement has a return value,
+	// and the enclosing function has a non-Void return type.
+	// Check that the types are compatible
+
+	if !valueType.IsInvalidType() &&
+		!returnType.IsInvalidType() &&
+		!checker.checkTypeCompatibility(statement.Expression, valueType, returnType) {
+
+		checker.report(
+			&TypeMismatchError{
+				ExpectedType: returnType,
+				ActualType:   valueType,
+				Range:        ast.NewRangeFromPositioned(statement.Expression),
+			},
+		)
+	}
+
+	checker.checkVariableMove(statement.Expression)
+	checker.checkResourceMoveOperation(statement.Expression, valueType)
 
 	return nil
 }

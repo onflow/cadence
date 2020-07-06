@@ -27,8 +27,6 @@ import (
 
 // This file defines functions built in to the Flow runtime.
 
-var flowLocation = ast.StringLocation("flow")
-
 // built-in function types
 
 var accountFunctionType = &sema.FunctionType{
@@ -157,13 +155,23 @@ func FlowBuiltInFunctions(impls FlowBuiltinImpls) StandardLibraryFunctions {
 	}
 }
 
+// Flow location
+
+type FlowLocation struct{}
+
+const flowLocationID = "flow"
+
+func (l FlowLocation) ID() ast.LocationID {
+	return ast.NewLocationID(flowLocationID)
+}
+
 // built-in event types
 
 func newFlowEventType(identifier string, parameters ...*sema.Parameter) *sema.CompositeType {
 
 	eventType := &sema.CompositeType{
 		Kind:       common.CompositeKindEvent,
-		Location:   flowLocation,
+		Location:   FlowLocation{},
 		Identifier: identifier,
 		Members:    map[string]*sema.Member{},
 	}
@@ -277,6 +285,10 @@ func (*BlockType) TypeAnnotationState() sema.TypeAnnotationState {
 }
 
 func (*BlockType) IsInvalidType() bool {
+	return false
+}
+
+func (*BlockType) IsStorable() bool {
 	return false
 }
 

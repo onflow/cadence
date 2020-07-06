@@ -54,6 +54,7 @@ func TestResources_Add(t *testing.T) {
 	// add invalidation for X
 
 	resources.AddInvalidation(varX, ResourceInvalidation{
+		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 1, Column: 1},
 		EndPos:   ast.Position{Line: 1, Column: 1},
 	})
@@ -62,6 +63,7 @@ func TestResources_Add(t *testing.T) {
 		resources.Get(varX).Invalidations.All(),
 		[]ResourceInvalidation{
 			{
+				Kind:     ResourceInvalidationKindMoveDefinite,
 				StartPos: ast.Position{Line: 1, Column: 1},
 				EndPos:   ast.Position{Line: 1, Column: 1},
 			},
@@ -73,6 +75,7 @@ func TestResources_Add(t *testing.T) {
 	// add invalidation for X
 
 	resources.AddInvalidation(varX, ResourceInvalidation{
+		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 2, Column: 2},
 		EndPos:   ast.Position{Line: 2, Column: 2},
 	})
@@ -81,12 +84,12 @@ func TestResources_Add(t *testing.T) {
 		resources.Get(varX).Invalidations.All(),
 		[]ResourceInvalidation{
 			{
-
+				Kind:     ResourceInvalidationKindMoveDefinite,
 				StartPos: ast.Position{Line: 1, Column: 1},
 				EndPos:   ast.Position{Line: 1, Column: 1},
 			},
 			{
-
+				Kind:     ResourceInvalidationKindMoveDefinite,
 				StartPos: ast.Position{Line: 2, Column: 2},
 				EndPos:   ast.Position{Line: 2, Column: 2},
 			},
@@ -98,6 +101,7 @@ func TestResources_Add(t *testing.T) {
 	// add invalidation for Y
 
 	resources.AddInvalidation(varY, ResourceInvalidation{
+		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 3, Column: 3},
 		EndPos:   ast.Position{Line: 3, Column: 3},
 	})
@@ -106,11 +110,12 @@ func TestResources_Add(t *testing.T) {
 		resources.Get(varX).Invalidations.All(),
 		[]ResourceInvalidation{
 			{
+				Kind:     ResourceInvalidationKindMoveDefinite,
 				StartPos: ast.Position{Line: 1, Column: 1},
 				EndPos:   ast.Position{Line: 1, Column: 1},
 			},
-
 			{
+				Kind:     ResourceInvalidationKindMoveDefinite,
 				StartPos: ast.Position{Line: 2, Column: 2},
 				EndPos:   ast.Position{Line: 2, Column: 2},
 			},
@@ -120,6 +125,7 @@ func TestResources_Add(t *testing.T) {
 		resources.Get(varY).Invalidations.All(),
 		[]ResourceInvalidation{
 			{
+				Kind:     ResourceInvalidationKindMoveDefinite,
 				StartPos: ast.Position{Line: 3, Column: 3},
 				EndPos:   ast.Position{Line: 3, Column: 3},
 			},
@@ -147,16 +153,19 @@ func TestResourceResources_FirstRest(t *testing.T) {
 	// add resources for X and Y
 
 	resources.AddInvalidation(varX, ResourceInvalidation{
+		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 1, Column: 1},
 		EndPos:   ast.Position{Line: 1, Column: 1},
 	})
 
 	resources.AddInvalidation(varX, ResourceInvalidation{
+		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 2, Column: 2},
 		EndPos:   ast.Position{Line: 2, Column: 2},
 	})
 
 	resources.AddInvalidation(varY, ResourceInvalidation{
+		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 3, Column: 3},
 		EndPos:   ast.Position{Line: 3, Column: 3},
 	})
@@ -177,10 +186,12 @@ func TestResourceResources_FirstRest(t *testing.T) {
 		result[varX],
 		[]ResourceInvalidation{
 			{
+				Kind:     ResourceInvalidationKindMoveDefinite,
 				StartPos: ast.Position{Line: 1, Column: 1},
 				EndPos:   ast.Position{Line: 1, Column: 1},
 			},
 			{
+				Kind:     ResourceInvalidationKindMoveDefinite,
 				StartPos: ast.Position{Line: 2, Column: 2},
 				EndPos:   ast.Position{Line: 2, Column: 2},
 			},
@@ -191,6 +202,7 @@ func TestResourceResources_FirstRest(t *testing.T) {
 		result[varY],
 		[]ResourceInvalidation{
 			{
+				Kind:     ResourceInvalidationKindMoveDefinite,
 				StartPos: ast.Position{Line: 3, Column: 3},
 				EndPos:   ast.Position{Line: 3, Column: 3},
 			},
@@ -223,10 +235,12 @@ func TestResources_MergeBranches(t *testing.T) {
 	// invalidate X and Y in then branch
 
 	resourcesThen.AddInvalidation(varX, ResourceInvalidation{
+		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 1, Column: 1},
 		EndPos:   ast.Position{Line: 1, Column: 1},
 	})
 	resourcesThen.AddInvalidation(varY, ResourceInvalidation{
+		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 2, Column: 2},
 		EndPos:   ast.Position{Line: 2, Column: 2},
 	})
@@ -234,10 +248,12 @@ func TestResources_MergeBranches(t *testing.T) {
 	// invalidate Y and Z in else branch
 
 	resourcesElse.AddInvalidation(varX, ResourceInvalidation{
+		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 3, Column: 3},
 		EndPos:   ast.Position{Line: 3, Column: 3},
 	})
 	resourcesElse.AddInvalidation(varZ, ResourceInvalidation{
+		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 4, Column: 4},
 		EndPos:   ast.Position{Line: 4, Column: 4},
 	})
@@ -245,6 +261,7 @@ func TestResources_MergeBranches(t *testing.T) {
 	// treat var Y already invalidated in main
 	resources := &Resources{}
 	resources.AddInvalidation(varY, ResourceInvalidation{
+		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 0, Column: 0},
 		EndPos:   ast.Position{Line: 0, Column: 0},
 	})
@@ -260,10 +277,12 @@ func TestResources_MergeBranches(t *testing.T) {
 		varXInfo.Invalidations.All(),
 		[]ResourceInvalidation{
 			{
+				Kind:     ResourceInvalidationKindMoveDefinite,
 				StartPos: ast.Position{Line: 1, Column: 1},
 				EndPos:   ast.Position{Line: 1, Column: 1},
 			},
 			{
+				Kind:     ResourceInvalidationKindMoveDefinite,
 				StartPos: ast.Position{Line: 3, Column: 3},
 				EndPos:   ast.Position{Line: 3, Column: 3},
 			},
@@ -276,10 +295,12 @@ func TestResources_MergeBranches(t *testing.T) {
 		varYInfo.Invalidations.All(),
 		[]ResourceInvalidation{
 			{
+				Kind:     ResourceInvalidationKindMoveDefinite,
 				StartPos: ast.Position{Line: 0, Column: 0},
 				EndPos:   ast.Position{Line: 0, Column: 0},
 			},
 			{
+				Kind:     ResourceInvalidationKindMoveDefinite,
 				StartPos: ast.Position{Line: 2, Column: 2},
 				EndPos:   ast.Position{Line: 2, Column: 2},
 			},
@@ -292,6 +313,7 @@ func TestResources_MergeBranches(t *testing.T) {
 		varZInfo.Invalidations.All(),
 		[]ResourceInvalidation{
 			{
+				Kind:     ResourceInvalidationKindMoveDefinite,
 				StartPos: ast.Position{Line: 4, Column: 4},
 				EndPos:   ast.Position{Line: 4, Column: 4},
 			},

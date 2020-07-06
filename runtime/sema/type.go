@@ -24,6 +24,7 @@ import (
 	"math/big"
 	"strings"
 
+	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
@@ -79,6 +80,10 @@ type Type interface {
 	// or it contains an invalid type (e.g. for optionals, arrays, dictionaries, etc.)
 	IsInvalidType() bool
 
+	// IsStorable returns true if the type is allowed to be a stored,
+	// e.g. in a field of a composite type.
+	IsStorable() bool
+
 	TypeAnnotationState() TypeAnnotationState
 	ContainsFirstLevelInterfaceType() bool
 
@@ -114,7 +119,7 @@ type Type interface {
 	//
 	// If resolution fails, it returns `nil`.
 	//
-	Resolve(typeParameters map[*TypeParameter]Type) Type
+	Resolve(typeArguments map[*TypeParameter]Type) Type
 }
 
 // ValueIndexableType is a type which can be indexed into using a value
@@ -142,7 +147,7 @@ type ContainedType interface {
 }
 
 // ContainerType is a type which might have nested types
-
+//
 type ContainerType interface {
 	Type
 	NestedTypes() map[string]Type
@@ -168,9 +173,20 @@ type CompositeKindedType interface {
 }
 
 // LocatedType is a type which has a location
+//
 type LocatedType interface {
 	Type
 	GetLocation() ast.Location
+}
+
+// ParameterizedType is a type which might have type parameters
+//
+type ParameterizedType interface {
+	Type
+	TypeParameters() []*TypeParameter
+	Instantiate(typeArguments []Type, report func(err error)) Type
+	BaseType() Type
+	TypeArguments() []Type
 }
 
 // TypeAnnotation
@@ -267,26 +283,86 @@ var toStringFunctionType = &FunctionType{
 	),
 }
 
+// toBytes
+
+const ToBytesFunctionName = "toBytes"
+
+var toBytesFunctionType = &FunctionType{
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&VariableSizedType{
+			Type: &UInt8Type{},
+		},
+	),
+}
+
+// toBigEndianBytes
+
+const ToBigEndianBytesFunctionName = "toBigEndianBytes"
+
+var toBigEndianBytesFunctionType = &FunctionType{
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&VariableSizedType{
+			Type: &UInt8Type{},
+		},
+	),
+}
+
+// typeBuiltinFunctionTypes
+
 var typeBuiltinFunctionTypes = map[TypeID]map[string]*FunctionType{}
 
+func addTypeBuiltinFunctionType(ty Type, name string, functionType *FunctionType) {
+	functionTypes, ok := typeBuiltinFunctionTypes[ty.ID()]
+	if !ok {
+		functionTypes = map[string]*FunctionType{}
+		typeBuiltinFunctionTypes[ty.ID()] = functionTypes
+	}
+
+	if _, ok = functionTypes[name]; ok {
+		panic(fmt.Errorf(
+			"invalid redeclaration of built-in function %s for type %s: %s",
+			ty, name, functionType,
+		))
+	}
+
+	functionTypes[name] = functionType
+}
+
 func init() {
+
+	// Declare the built-in functions
+
+	// All number types and addresses have a `toString` function
+
 	for _, ty := range append(
 		AllNumberTypes[:],
-		&NumberType{},
-		&SignedNumberType{},
-		&FixedPointType{},
-		&SignedFixedPointType{},
-		&IntegerType{},
-		&SignedIntegerType{},
 		&AddressType{},
 	) {
-		functionTypes, ok := typeBuiltinFunctionTypes[ty.ID()]
-		if !ok {
-			functionTypes = map[string]*FunctionType{}
-			typeBuiltinFunctionTypes[ty.ID()] = functionTypes
-		}
-		functionTypes[ToStringFunctionName] = toStringFunctionType
+		addTypeBuiltinFunctionType(
+			ty,
+			ToStringFunctionName,
+			toStringFunctionType,
+		)
 	}
+
+	// All number types have a `toBigEndianBytes` function
+
+	for _, ty := range AllNumberTypes[:] {
+		addTypeBuiltinFunctionType(
+			ty,
+			ToBigEndianBytesFunctionName,
+			toBigEndianBytesFunctionType,
+		)
+	}
+
+	// `Address` has a `toBytes` function
+
+	addTypeBuiltinFunctionType(
+		&AddressType{},
+		ToBytesFunctionName,
+		toBytesFunctionType,
+	)
+
 }
 
 // MetaType represents the type of a type.
@@ -317,6 +393,10 @@ func (*MetaType) IsResourceType() bool {
 
 func (*MetaType) IsInvalidType() bool {
 	return false
+}
+
+func (*MetaType) IsStorable() bool {
+	return true
 }
 
 func (*MetaType) TypeAnnotationState() TypeAnnotationState {
@@ -381,6 +461,11 @@ func (*AnyType) IsInvalidType() bool {
 	return false
 }
 
+func (*AnyType) IsStorable() bool {
+	// The actual storability of a value is checked at run-time
+	return false
+}
+
 func (*AnyType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -425,6 +510,11 @@ func (*AnyStructType) IsResourceType() bool {
 
 func (*AnyStructType) IsInvalidType() bool {
 	return false
+}
+
+func (*AnyStructType) IsStorable() bool {
+	// The actual storability of a value is checked at run-time
+	return true
 }
 
 func (*AnyStructType) TypeAnnotationState() TypeAnnotationState {
@@ -473,6 +563,11 @@ func (*AnyResourceType) IsInvalidType() bool {
 	return false
 }
 
+func (*AnyResourceType) IsStorable() bool {
+	// The actual storability of a value is checked at run-time
+	return true
+}
+
 func (*AnyResourceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -519,6 +614,10 @@ func (*NeverType) IsInvalidType() bool {
 	return false
 }
 
+func (*NeverType) IsStorable() bool {
+	return false
+}
+
 func (*NeverType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -562,6 +661,10 @@ func (*VoidType) IsResourceType() bool {
 }
 
 func (*VoidType) IsInvalidType() bool {
+	return false
+}
+
+func (*VoidType) IsStorable() bool {
 	return false
 }
 
@@ -612,6 +715,10 @@ func (*InvalidType) IsResourceType() bool {
 
 func (*InvalidType) IsInvalidType() bool {
 	return true
+}
+
+func (*InvalidType) IsStorable() bool {
+	return false
 }
 
 func (*InvalidType) TypeAnnotationState() TypeAnnotationState {
@@ -673,6 +780,10 @@ func (t *OptionalType) IsResourceType() bool {
 
 func (t *OptionalType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
+}
+
+func (t *OptionalType) IsStorable() bool {
+	return t.Type.IsStorable()
 }
 
 func (t *OptionalType) TypeAnnotationState() TypeAnnotationState {
@@ -737,6 +848,10 @@ func (t *GenericType) IsResourceType() bool {
 }
 
 func (t *GenericType) IsInvalidType() bool {
+	return false
+}
+
+func (t *GenericType) IsStorable() bool {
 	return false
 }
 
@@ -827,6 +942,10 @@ func (*BoolType) IsInvalidType() bool {
 	return false
 }
 
+func (*BoolType) IsStorable() bool {
+	return true
+}
+
 func (*BoolType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -872,6 +991,10 @@ func (*CharacterType) IsResourceType() bool {
 
 func (*CharacterType) IsInvalidType() bool {
 	return false
+}
+
+func (*CharacterType) IsStorable() bool {
+	return true
 }
 
 func (*CharacterType) TypeAnnotationState() TypeAnnotationState {
@@ -920,6 +1043,10 @@ func (*StringType) IsInvalidType() bool {
 	return false
 }
 
+func (*StringType) IsStorable() bool {
+	return true
+}
+
 func (*StringType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -964,8 +1091,7 @@ var stringTypeSliceFunctionType = &FunctionType{
 var stringTypeDecodeHexFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&VariableSizedType{
-			// TODO: change to UInt8
-			Type: &IntType{},
+			Type: &UInt8Type{},
 		},
 	),
 }
@@ -1043,6 +1169,10 @@ func (*NumberType) IsInvalidType() bool {
 	return false
 }
 
+func (*NumberType) IsStorable() bool {
+	return true
+}
+
 func (*NumberType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -1111,6 +1241,10 @@ func (*SignedNumberType) IsResourceType() bool {
 
 func (*SignedNumberType) IsInvalidType() bool {
 	return false
+}
+
+func (*SignedNumberType) IsStorable() bool {
+	return true
 }
 
 func (*SignedNumberType) TypeAnnotationState() TypeAnnotationState {
@@ -1198,6 +1332,10 @@ func (*IntegerType) IsInvalidType() bool {
 	return false
 }
 
+func (*IntegerType) IsStorable() bool {
+	return true
+}
+
 func (*IntegerType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -1266,6 +1404,10 @@ func (*SignedIntegerType) IsResourceType() bool {
 
 func (*SignedIntegerType) IsInvalidType() bool {
 	return false
+}
+
+func (*SignedIntegerType) IsStorable() bool {
+	return true
 }
 
 func (*SignedIntegerType) TypeAnnotationState() TypeAnnotationState {
@@ -1338,6 +1480,10 @@ func (*IntType) IsInvalidType() bool {
 	return false
 }
 
+func (*IntType) IsStorable() bool {
+	return true
+}
+
 func (*IntType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -1407,6 +1553,10 @@ func (*Int8Type) IsResourceType() bool {
 
 func (*Int8Type) IsInvalidType() bool {
 	return false
+}
+
+func (*Int8Type) IsStorable() bool {
+	return true
 }
 
 func (*Int8Type) TypeAnnotationState() TypeAnnotationState {
@@ -1482,6 +1632,10 @@ func (*Int16Type) IsInvalidType() bool {
 	return false
 }
 
+func (*Int16Type) IsStorable() bool {
+	return true
+}
+
 func (*Int16Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -1553,6 +1707,10 @@ func (*Int32Type) IsResourceType() bool {
 
 func (*Int32Type) IsInvalidType() bool {
 	return false
+}
+
+func (*Int32Type) IsStorable() bool {
+	return true
 }
 
 func (*Int32Type) TypeAnnotationState() TypeAnnotationState {
@@ -1628,6 +1786,10 @@ func (*Int64Type) IsInvalidType() bool {
 	return false
 }
 
+func (*Int64Type) IsStorable() bool {
+	return true
+}
+
 func (*Int64Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -1699,6 +1861,10 @@ func (*Int128Type) IsResourceType() bool {
 
 func (*Int128Type) IsInvalidType() bool {
 	return false
+}
+
+func (*Int128Type) IsStorable() bool {
+	return true
 }
 
 func (*Int128Type) TypeAnnotationState() TypeAnnotationState {
@@ -1786,6 +1952,10 @@ func (*Int256Type) IsInvalidType() bool {
 	return false
 }
 
+func (*Int256Type) IsStorable() bool {
+	return true
+}
+
 func (*Int256Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -1871,6 +2041,10 @@ func (*UIntType) IsInvalidType() bool {
 	return false
 }
 
+func (*UIntType) IsStorable() bool {
+	return true
+}
+
 func (*UIntType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -1942,6 +2116,10 @@ func (*UInt8Type) IsResourceType() bool {
 
 func (*UInt8Type) IsInvalidType() bool {
 	return false
+}
+
+func (*UInt8Type) IsStorable() bool {
+	return true
 }
 
 func (*UInt8Type) TypeAnnotationState() TypeAnnotationState {
@@ -2018,6 +2196,10 @@ func (*UInt16Type) IsInvalidType() bool {
 	return false
 }
 
+func (*UInt16Type) IsStorable() bool {
+	return true
+}
+
 func (*UInt16Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -2090,6 +2272,10 @@ func (*UInt32Type) IsResourceType() bool {
 
 func (*UInt32Type) IsInvalidType() bool {
 	return false
+}
+
+func (*UInt32Type) IsStorable() bool {
+	return true
 }
 
 func (*UInt32Type) TypeAnnotationState() TypeAnnotationState {
@@ -2166,6 +2352,10 @@ func (*UInt64Type) IsInvalidType() bool {
 	return false
 }
 
+func (*UInt64Type) IsStorable() bool {
+	return true
+}
+
 func (*UInt64Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -2238,6 +2428,10 @@ func (*UInt128Type) IsResourceType() bool {
 
 func (*UInt128Type) IsInvalidType() bool {
 	return false
+}
+
+func (*UInt128Type) IsStorable() bool {
+	return true
 }
 
 func (*UInt128Type) TypeAnnotationState() TypeAnnotationState {
@@ -2320,6 +2514,10 @@ func (*UInt256Type) IsInvalidType() bool {
 	return false
 }
 
+func (*UInt256Type) IsStorable() bool {
+	return true
+}
+
 func (*UInt256Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -2400,6 +2598,10 @@ func (*Word8Type) IsInvalidType() bool {
 	return false
 }
 
+func (*Word8Type) IsStorable() bool {
+	return true
+}
+
 func (*Word8Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -2472,6 +2674,10 @@ func (*Word16Type) IsResourceType() bool {
 
 func (*Word16Type) IsInvalidType() bool {
 	return false
+}
+
+func (*Word16Type) IsStorable() bool {
+	return true
 }
 
 func (*Word16Type) TypeAnnotationState() TypeAnnotationState {
@@ -2548,6 +2754,10 @@ func (*Word32Type) IsInvalidType() bool {
 	return false
 }
 
+func (*Word32Type) IsStorable() bool {
+	return true
+}
+
 func (*Word32Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -2620,6 +2830,10 @@ func (*Word64Type) IsResourceType() bool {
 
 func (*Word64Type) IsInvalidType() bool {
 	return false
+}
+
+func (*Word64Type) IsStorable() bool {
+	return true
 }
 
 func (*Word64Type) TypeAnnotationState() TypeAnnotationState {
@@ -2695,6 +2909,10 @@ func (*FixedPointType) IsInvalidType() bool {
 	return false
 }
 
+func (*FixedPointType) IsStorable() bool {
+	return true
+}
+
 func (*FixedPointType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -2765,6 +2983,10 @@ func (*SignedFixedPointType) IsInvalidType() bool {
 	return false
 }
 
+func (*SignedFixedPointType) IsStorable() bool {
+	return true
+}
+
 func (*SignedFixedPointType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -2805,8 +3027,8 @@ func (t *SignedFixedPointType) GetMember(identifier string, _ ast.Range, _ func(
 	return NewPublicFunctionMember(t, identifier, functionType)
 }
 
-const Fix64Scale uint = 8
-const Fix64Factor = 100_000_000
+const Fix64Scale = fixedpoint.Fix64Scale
+const Fix64Factor = fixedpoint.Fix64Factor
 
 // Fix64Type represents the 64-bit signed decimal fixed-point type `Fix64`
 // which has a scale of Fix64Scale, and checks for overflow and underflow
@@ -2839,6 +3061,10 @@ func (*Fix64Type) IsInvalidType() bool {
 	return false
 }
 
+func (*Fix64Type) IsStorable() bool {
+	return true
+}
+
 func (*Fix64Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -2847,21 +3073,17 @@ func (*Fix64Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-const Fix64TypeMinInt = math.MinInt64 / Fix64Factor
-const Fix64TypeMaxInt = math.MaxInt64 / Fix64Factor
+const Fix64TypeMinInt = fixedpoint.Fix64TypeMinInt
+const Fix64TypeMaxInt = fixedpoint.Fix64TypeMaxInt
 
-var Fix64TypeMinIntBig = new(big.Int).SetInt64(Fix64TypeMinInt)
-var Fix64TypeMaxIntBig = new(big.Int).SetInt64(Fix64TypeMaxInt)
+var Fix64TypeMinIntBig = fixedpoint.Fix64TypeMinIntBig
+var Fix64TypeMaxIntBig = fixedpoint.Fix64TypeMaxIntBig
 
-const Fix64TypeMinFractional = math.MinInt64 % Fix64Factor
-const Fix64TypeMaxFractional = math.MaxInt64 % Fix64Factor
+const Fix64TypeMinFractional = fixedpoint.Fix64TypeMinFractional
+const Fix64TypeMaxFractional = fixedpoint.Fix64TypeMaxFractional
 
-var Fix64TypeMinFractionalBig = new(big.Int).SetInt64(Fix64TypeMinFractional)
-var Fix64TypeMaxFractionalBig = new(big.Int).SetInt64(Fix64TypeMaxFractional)
-
-func init() {
-	Fix64TypeMinFractionalBig.Abs(Fix64TypeMinFractionalBig)
-}
+var Fix64TypeMinFractionalBig = fixedpoint.Fix64TypeMinFractionalBig
+var Fix64TypeMaxFractionalBig = fixedpoint.Fix64TypeMaxFractionalBig
 
 func (*Fix64Type) MinInt() *big.Int {
 	return Fix64TypeMinIntBig
@@ -2938,6 +3160,10 @@ func (*UFix64Type) IsInvalidType() bool {
 	return false
 }
 
+func (*UFix64Type) IsStorable() bool {
+	return true
+}
+
 func (*UFix64Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -2946,17 +3172,17 @@ func (*UFix64Type) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-const UFix64TypeMinInt = 0
-const UFix64TypeMaxInt = math.MaxUint64 / uint64(Fix64Factor)
+const UFix64TypeMinInt = fixedpoint.UFix64TypeMinInt
+const UFix64TypeMaxInt = fixedpoint.UFix64TypeMaxInt
 
-var UFix64TypeMinIntBig = new(big.Int).SetUint64(UFix64TypeMinInt)
-var UFix64TypeMaxIntBig = new(big.Int).SetUint64(UFix64TypeMaxInt)
+var UFix64TypeMinIntBig = fixedpoint.UFix64TypeMinIntBig
+var UFix64TypeMaxIntBig = fixedpoint.UFix64TypeMaxIntBig
 
-const UFix64TypeMinFractional = 0
-const UFix64TypeMaxFractional = math.MaxUint64 % uint64(Fix64Factor)
+const UFix64TypeMinFractional = fixedpoint.UFix64TypeMinFractional
+const UFix64TypeMaxFractional = fixedpoint.UFix64TypeMaxFractional
 
-var UFix64TypeMinFractionalBig = new(big.Int).SetUint64(UFix64TypeMinFractional)
-var UFix64TypeMaxFractionalBig = new(big.Int).SetUint64(UFix64TypeMaxFractional)
+var UFix64TypeMinFractionalBig = fixedpoint.UFix64TypeMinFractionalBig
+var UFix64TypeMaxFractionalBig = fixedpoint.UFix64TypeMaxFractionalBig
 
 func (*UFix64Type) MinInt() *big.Int {
 	return UFix64TypeMinIntBig
@@ -3266,6 +3492,10 @@ func (t *VariableSizedType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
 }
 
+func (t *VariableSizedType) IsStorable() bool {
+	return t.Type.IsStorable()
+}
+
 func (t *VariableSizedType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
@@ -3357,6 +3587,10 @@ func (t *ConstantSizedType) IsResourceType() bool {
 
 func (t *ConstantSizedType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
+}
+
+func (t *ConstantSizedType) IsStorable() bool {
+	return t.Type.IsStorable()
 }
 
 func (t *ConstantSizedType) TypeAnnotationState() TypeAnnotationState {
@@ -3484,6 +3718,7 @@ func (p *Parameter) EffectiveArgumentLabel() string {
 type TypeParameter struct {
 	Name      string
 	TypeBound Type
+	Optional  bool
 }
 
 func (p TypeParameter) string(typeFormatter func(Type) string) string {
@@ -3509,8 +3744,23 @@ func (p TypeParameter) QualifiedString() string {
 }
 
 func (p TypeParameter) Equal(other *TypeParameter) bool {
-	return p.Name == other.Name &&
-		(p.TypeBound == nil || !p.TypeBound.Equal(other.TypeBound))
+	if p.Name != other.Name {
+		return false
+	}
+
+	if p.TypeBound == nil {
+		if other.TypeBound != nil {
+			return false
+		}
+	} else {
+		if other.TypeBound == nil ||
+			!p.TypeBound.Equal(other.TypeBound) {
+
+			return false
+		}
+	}
+
+	return p.Optional == other.Optional
 }
 
 func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
@@ -3747,6 +3997,11 @@ func (t *FunctionType) IsInvalidType() bool {
 	return t.ReturnTypeAnnotation.Type.IsInvalidType()
 }
 
+func (t *FunctionType) IsStorable() bool {
+	// Functions cannot be stored, as they cannot be serialized
+	return false
+}
+
 func (t *FunctionType) TypeAnnotationState() TypeAnnotationState {
 
 	for _, typeParameter := range t.TypeParameters {
@@ -3918,8 +4173,12 @@ var AllUnsignedFixedPointTypes = []Type{
 }
 
 var AllFixedPointTypes = append(
-	AllUnsignedFixedPointTypes,
-	AllSignedFixedPointTypes...,
+	append(
+		AllUnsignedFixedPointTypes[:],
+		AllSignedFixedPointTypes...,
+	),
+	&FixedPointType{},
+	&SignedFixedPointType{},
 )
 
 var AllSignedIntegerTypes = []Type{
@@ -3949,40 +4208,60 @@ var AllUnsignedIntegerTypes = []Type{
 }
 
 var AllIntegerTypes = append(
-	AllUnsignedIntegerTypes,
-	AllSignedIntegerTypes...,
+	append(
+		AllUnsignedIntegerTypes[:],
+		AllSignedIntegerTypes...,
+	),
+	&IntegerType{},
+	&SignedIntegerType{},
 )
 
 var AllNumberTypes = append(
-	AllIntegerTypes,
-	AllFixedPointTypes...,
+	append(
+		AllIntegerTypes[:],
+		AllFixedPointTypes...,
+	),
+	&NumberType{},
+	&SignedNumberType{},
 )
 
 func init() {
 
+	// Declare a conversion function for all (leaf) number types
+
 	for _, numberType := range AllNumberTypes {
-		typeName := numberType.String()
 
-		// check type is not accidentally redeclared
-		if _, ok := BaseValues[typeName]; ok {
-			panic(errors.NewUnreachableError())
-		}
+		switch numberType.(type) {
+		case *NumberType, *SignedNumberType,
+			*IntegerType, *SignedIntegerType,
+			*FixedPointType, *SignedFixedPointType:
+			continue
 
-		BaseValues[typeName] = baseFunction{
-			name: typeName,
-			invokableType: &CheckedFunctionType{
-				FunctionType: &FunctionType{
-					Parameters: []*Parameter{
-						{
-							Label:          ArgumentLabelNotRequired,
-							Identifier:     "value",
-							TypeAnnotation: NewTypeAnnotation(&NumberType{}),
+		default:
+			typeName := numberType.String()
+
+			// Check that the type is not accidentally redeclared
+
+			if _, ok := BaseValues[typeName]; ok {
+				panic(errors.NewUnreachableError())
+			}
+
+			BaseValues[typeName] = baseFunction{
+				name: typeName,
+				invokableType: &CheckedFunctionType{
+					FunctionType: &FunctionType{
+						Parameters: []*Parameter{
+							{
+								Label:          ArgumentLabelNotRequired,
+								Identifier:     "value",
+								TypeAnnotation: NewTypeAnnotation(&NumberType{}),
+							},
 						},
+						ReturnTypeAnnotation: &TypeAnnotation{Type: numberType},
 					},
-					ReturnTypeAnnotation: &TypeAnnotation{Type: numberType},
+					ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
 				},
-				ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
-			},
+			}
 		}
 	}
 }
@@ -4170,6 +4449,20 @@ func (*CompositeType) IsInvalidType() bool {
 	return false
 }
 
+func (t *CompositeType) IsStorable() bool {
+
+	// If this composite type has a member which is non-storable,
+	// then the composite type is not storable.
+
+	for _, member := range t.Members {
+		if !member.IsStorable() {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (*CompositeType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -4222,7 +4515,9 @@ func (t *CompositeType) NestedTypes() map[string]Type {
 	return t.nestedTypes
 }
 
-// AuthAccountType
+// AuthAccountType represents the authorized access to an account.
+// Access to an AuthAccount means having full access to its storage, public keys, and code.
+// Only signed transactions can get the AuthAccount for an account.
 
 type AuthAccountType struct{}
 
@@ -4253,6 +4548,10 @@ func (*AuthAccountType) IsInvalidType() bool {
 	return false
 }
 
+func (*AuthAccountType) IsStorable() bool {
+	return false
+}
+
 func (*AuthAccountType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -4272,9 +4571,7 @@ var authAccountSetCodeFunctionType = &FunctionType{
 			Identifier: "code",
 			TypeAnnotation: NewTypeAnnotation(
 				&VariableSizedType{
-					// TODO: UInt8. Requires array literals of integer literals
-					//   to be type compatible with with [UInt8]
-					Type: &IntType{},
+					Type: &UInt8Type{},
 				},
 			),
 		},
@@ -4296,9 +4593,7 @@ var authAccountAddPublicKeyFunctionType = &FunctionType{
 			Identifier: "key",
 			TypeAnnotation: NewTypeAnnotation(
 				&VariableSizedType{
-					// TODO: UInt8. Requires array literals of integer literals
-					//   to be type compatible with with [UInt8]
-					Type: &IntType{},
+					Type: &UInt8Type{},
 				},
 			),
 		},
@@ -4460,7 +4755,11 @@ var authAccountLinkFunctionType = func() *FunctionType {
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
 			&OptionalType{
-				Type: &CapabilityType{},
+				Type: &CapabilityType{
+					BorrowType: &GenericType{
+						TypeParameter: typeParameter,
+					},
+				},
 			},
 		),
 	}
@@ -4477,20 +4776,38 @@ var authAccountUnlinkFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
 }
 
-var accountGetCapabilityFunctionType = &FunctionType{
-	Parameters: []*Parameter{
-		{
-			Label:          ArgumentLabelNotRequired,
-			Identifier:     "capabilityPath",
-			TypeAnnotation: NewTypeAnnotation(&PathType{}),
+var accountGetCapabilityFunctionType = func() *FunctionType {
+
+	typeParameter := &TypeParameter{
+		TypeBound: &ReferenceType{
+			Type: &AnyType{},
 		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&OptionalType{
-			Type: &CapabilityType{},
+		Name:     "T",
+		Optional: true,
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
 		},
-	),
-}
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "capabilityPath",
+				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&OptionalType{
+				Type: &CapabilityType{
+					BorrowType: &GenericType{
+						TypeParameter: typeParameter,
+					},
+				},
+			},
+		),
+	}
+}()
 
 var accountGetLinkTargetFunctionType = &FunctionType{
 	Parameters: []*Parameter{
@@ -4567,7 +4884,7 @@ func (t *AuthAccountType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-// PublicAccountType
+// PublicAccountType represents the publicly accessible portion of an account.
 
 type PublicAccountType struct{}
 
@@ -4595,6 +4912,10 @@ func (*PublicAccountType) IsResourceType() bool {
 }
 
 func (*PublicAccountType) IsInvalidType() bool {
+	return false
+}
+
+func (*PublicAccountType) IsStorable() bool {
 	return false
 }
 
@@ -4683,6 +5004,32 @@ func NewPublicConstantFieldMember(containerType Type, identifier string, fieldTy
 	}
 }
 
+// IsStorable returns whether a member is a storable field
+func (m *Member) IsStorable() bool {
+
+	// Skip checking predeclared members
+
+	if m.Predeclared {
+		return true
+	}
+
+	if m.DeclarationKind == common.DeclarationKindField {
+
+		// Fields are not storable
+		// if their type is non-storable
+
+		fieldType := m.TypeAnnotation.Type
+
+		if !fieldType.IsInvalidType() &&
+			!fieldType.IsStorable() {
+
+			return false
+		}
+	}
+
+	return true
+}
+
 // InterfaceType
 
 type InterfaceType struct {
@@ -4752,6 +5099,20 @@ func (t *InterfaceType) IsInvalidType() bool {
 	return false
 }
 
+func (t *InterfaceType) IsStorable() bool {
+
+	// If this interface type has a member which is non-storable,
+	// then the interface type is not storable.
+
+	for _, member := range t.Members {
+		if !member.IsStorable() {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (*InterfaceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -4774,7 +5135,10 @@ func (t *InterfaceType) NestedTypes() map[string]Type {
 	return t.nestedTypes
 }
 
-// DictionaryType
+// DictionaryType consists of the key and value type
+// for all key-value pairs in the dictionary:
+// All keys have to be a subtype of the key type,
+// and all values have to be a subtype of the value type.
 
 type DictionaryType struct {
 	KeyType   Type
@@ -4825,6 +5189,11 @@ func (t *DictionaryType) IsResourceType() bool {
 func (t *DictionaryType) IsInvalidType() bool {
 	return t.KeyType.IsInvalidType() ||
 		t.ValueType.IsInvalidType()
+}
+
+func (t *DictionaryType) IsStorable() bool {
+	return t.KeyType.IsStorable() &&
+		t.ValueType.IsStorable()
 }
 
 func (t *DictionaryType) TypeAnnotationState() TypeAnnotationState {
@@ -5048,6 +5417,11 @@ func (t *ReferenceType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
 }
 
+func (t *ReferenceType) IsStorable() bool {
+	// TODO: https://github.com/onflow/cadence/issues/189
+	return true
+}
+
 func (*ReferenceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -5137,6 +5511,10 @@ func (*AddressType) IsInvalidType() bool {
 	return false
 }
 
+func (*AddressType) IsStorable() bool {
+	return true
+}
+
 func (*AddressType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -5209,7 +5587,8 @@ func IsSubType(subType Type, superType Type) bool {
 	switch typedSuperType := superType.(type) {
 
 	case *NumberType:
-		if _, ok := subType.(*NumberType); ok {
+		switch subType.(type) {
+		case *NumberType, *SignedNumberType:
 			return true
 		}
 
@@ -5714,6 +6093,49 @@ func IsSubType(subType Type, superType Type) bool {
 			// TODO: Once interfaces can conform to interfaces, check conformances here
 			return false
 		}
+
+	case ParameterizedType:
+		if superTypeBaseType := typedSuperType.BaseType(); superTypeBaseType != nil {
+
+			// T<Us> <: V<Ws>
+			// if T <: V  && |Us| == |Ws| && U_i <: W_i
+
+			if typedSubType, ok := subType.(ParameterizedType); ok {
+				if subTypeBaseType := typedSubType.BaseType(); subTypeBaseType != nil {
+
+					if !IsSubType(subTypeBaseType, superTypeBaseType) {
+						return false
+					}
+
+					subTypeTypeArguments := typedSubType.TypeArguments()
+					superTypeTypeArguments := typedSuperType.TypeArguments()
+
+					if len(subTypeTypeArguments) != len(superTypeTypeArguments) {
+						return false
+					}
+
+					for i, superTypeTypeArgument := range superTypeTypeArguments {
+						subTypeTypeArgument := subTypeTypeArguments[i]
+						if !IsSubType(subTypeTypeArgument, superTypeTypeArgument) {
+							return false
+						}
+					}
+
+					return true
+				}
+			}
+		}
+	}
+
+	// TODO: enforce type arguments, remove this rule
+
+	// T<Us> <: V
+	// if T <: V
+
+	if typedSubType, ok := subType.(ParameterizedType); ok {
+		if baseType := typedSubType.BaseType(); baseType != nil {
+			return IsSubType(baseType, superType)
+		}
 	}
 
 	return false
@@ -5852,6 +6274,10 @@ func (*TransactionType) IsResourceType() bool {
 }
 
 func (*TransactionType) IsInvalidType() bool {
+	return false
+}
+
+func (*TransactionType) IsStorable() bool {
 	return false
 }
 
@@ -6005,6 +6431,20 @@ func (t *RestrictedType) IsInvalidType() bool {
 	return false
 }
 
+func (t *RestrictedType) IsStorable() bool {
+	if t.Type != nil && !t.Type.IsStorable() {
+		return false
+	}
+
+	for _, restriction := range t.Restrictions {
+		if !restriction.IsStorable() {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (*RestrictedType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -6101,6 +6541,10 @@ func (*PathType) IsInvalidType() bool {
 	return false
 }
 
+func (*PathType) IsStorable() bool {
+	return true
+}
+
 func (*PathType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -6119,90 +6563,196 @@ func (t *PathType) Resolve(_ map[*TypeParameter]Type) Type {
 
 // CapabilityType
 
-type CapabilityType struct{}
+type CapabilityType struct {
+	BorrowType Type
+}
 
 func (*CapabilityType) IsType() {}
 
-func (*CapabilityType) String() string {
-	return "Capability"
+func (t *CapabilityType) string(typeFormatter func(Type) string) string {
+	var builder strings.Builder
+	builder.WriteString("Capability")
+	if t.BorrowType != nil {
+		builder.WriteRune('<')
+		builder.WriteString(typeFormatter(t.BorrowType))
+		builder.WriteRune('>')
+	}
+	return builder.String()
 }
 
-func (*CapabilityType) QualifiedString() string {
-	return "Capability"
+func (t *CapabilityType) String() string {
+	return t.string(func(t Type) string {
+		return t.String()
+	})
 }
 
-func (*CapabilityType) ID() TypeID {
-	return "Capability"
+func (t *CapabilityType) QualifiedString() string {
+	return t.string(func(t Type) string {
+		return t.QualifiedString()
+	})
 }
 
-func (*CapabilityType) Equal(other Type) bool {
-	_, ok := other.(*CapabilityType)
-	return ok
+func (t *CapabilityType) ID() TypeID {
+	return TypeID(t.string(func(t Type) string {
+		return string(t.ID())
+	}))
+}
+
+func (t *CapabilityType) Equal(other Type) bool {
+	otherCapability, ok := other.(*CapabilityType)
+	if !ok {
+		return false
+	}
+	if otherCapability.BorrowType == nil {
+		return t.BorrowType == nil
+	}
+	return otherCapability.BorrowType.Equal(t.BorrowType)
 }
 
 func (*CapabilityType) IsResourceType() bool {
 	return false
 }
 
-func (*CapabilityType) IsInvalidType() bool {
-	return false
+func (t *CapabilityType) IsInvalidType() bool {
+	if t.BorrowType == nil {
+		return false
+	}
+	return t.BorrowType.IsInvalidType()
 }
 
-func (*CapabilityType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
+func (t *CapabilityType) TypeAnnotationState() TypeAnnotationState {
+	if t.BorrowType == nil {
+		return TypeAnnotationStateValid
+	}
+	return t.BorrowType.TypeAnnotationState()
 }
 
-func (*CapabilityType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (*CapabilityType) IsStorable() bool {
+	return true
 }
 
-func (*CapabilityType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
-	return false
+func (t *CapabilityType) ContainsFirstLevelInterfaceType() bool {
+	if t.BorrowType == nil {
+		return false
+	}
+	return t.BorrowType.ContainsFirstLevelInterfaceType()
 }
 
-func (t *CapabilityType) Resolve(_ map[*TypeParameter]Type) Type {
-	return t
+func (t *CapabilityType) Unify(
+	other Type,
+	typeParameters map[*TypeParameter]Type,
+	report func(err error),
+	outerRange ast.Range,
+) bool {
+	otherOptional, ok := other.(*CapabilityType)
+	if !ok {
+		return false
+	}
+
+	return t.BorrowType.Unify(otherOptional.BorrowType, typeParameters, report, outerRange)
 }
 
-var capabilityBorrowFunctionType = func() *FunctionType {
+func (t *CapabilityType) Resolve(typeParameters map[*TypeParameter]Type) Type {
+	var resolvedBorrowType Type
+	if t.BorrowType != nil {
 
-	typeParameter := &TypeParameter{
-		TypeBound: &ReferenceType{
-			Type: &AnyType{},
-		},
-		Name: "T",
+		resolvedBorrowType = t.BorrowType.Resolve(typeParameters)
+	}
+
+	return &CapabilityType{
+		BorrowType: resolvedBorrowType,
+	}
+}
+
+var capabilityTypeParameter = &TypeParameter{
+	Name: "T",
+	TypeBound: &ReferenceType{
+		Type: &AnyType{},
+	},
+}
+
+func (t *CapabilityType) TypeParameters() []*TypeParameter {
+	return []*TypeParameter{
+		capabilityTypeParameter,
+	}
+}
+
+func (t *CapabilityType) Instantiate(typeArguments []Type, _ func(err error)) Type {
+	borrowType := typeArguments[0]
+	return &CapabilityType{
+		BorrowType: borrowType,
+	}
+}
+
+func (t *CapabilityType) BaseType() Type {
+	if t.BorrowType == nil {
+		return nil
+	}
+	return &CapabilityType{}
+}
+
+func (t *CapabilityType) TypeArguments() []Type {
+	borrowType := t.BorrowType
+	if borrowType == nil {
+		borrowType = &AnyType{}
+	}
+	return []Type{
+		borrowType,
+	}
+}
+
+func capabilityBorrowFunctionType(borrowType Type) *FunctionType {
+
+	var typeParameters []*TypeParameter
+
+	if borrowType == nil {
+
+		typeParameter := &TypeParameter{
+			TypeBound: &ReferenceType{
+				Type: &AnyType{},
+			},
+			Name: "T",
+		}
+
+		typeParameters = []*TypeParameter{
+			typeParameter,
+		}
+
+		borrowType = &GenericType{
+			TypeParameter: typeParameter,
+		}
 	}
 
 	return &FunctionType{
-		TypeParameters: []*TypeParameter{
-			typeParameter,
-		},
+		TypeParameters: typeParameters,
 		ReturnTypeAnnotation: NewTypeAnnotation(
 			&OptionalType{
-				Type: &GenericType{
-					TypeParameter: typeParameter,
-				},
+				Type: borrowType,
 			},
 		),
 	}
-}()
+}
 
-var capabilityCheckFunctionType = func() *FunctionType {
+func capabilityCheckFunctionType(borrowType Type) *FunctionType {
 
-	typeParameter := &TypeParameter{
-		TypeBound: &ReferenceType{
-			Type: &AnyType{},
-		},
-		Name: "T",
+	var typeParameters []*TypeParameter
+
+	if borrowType == nil {
+		typeParameters = []*TypeParameter{
+			{
+				TypeBound: &ReferenceType{
+					Type: &AnyType{},
+				},
+				Name: "T",
+			},
+		}
 	}
 
 	return &FunctionType{
-		TypeParameters: []*TypeParameter{
-			typeParameter,
-		},
+		TypeParameters:       typeParameters,
 		ReturnTypeAnnotation: NewTypeAnnotation(&BoolType{}),
 	}
-}()
+}
 
 func (t *CapabilityType) CanHaveMembers() bool {
 	return true
@@ -6216,10 +6766,10 @@ func (t *CapabilityType) GetMember(identifier string, _ ast.Range, _ func(error)
 
 	switch identifier {
 	case "borrow":
-		return newFunction(capabilityBorrowFunctionType)
+		return newFunction(capabilityBorrowFunctionType(t.BorrowType))
 
 	case "check":
-		return newFunction(capabilityCheckFunctionType)
+		return newFunction(capabilityCheckFunctionType(t.BorrowType))
 
 	default:
 		return nil

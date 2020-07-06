@@ -126,7 +126,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 	return inter, storedValues
 }
 
-func TestInterpretAuthAccountSave(t *testing.T) {
+func TestInterpretAuthAccount_save(t *testing.T) {
 
 	t.Parallel()
 
@@ -295,7 +295,7 @@ func TestInterpretAuthAccountSave(t *testing.T) {
 	})
 }
 
-func TestInterpretAuthAccountLoad(t *testing.T) {
+func TestInterpretAuthAccount_load(t *testing.T) {
 
 	t.Parallel()
 
@@ -522,7 +522,7 @@ func TestInterpretAuthAccountLoad(t *testing.T) {
 	})
 }
 
-func TestInterpretAuthAccountCopy(t *testing.T) {
+func TestInterpretAuthAccount_copy(t *testing.T) {
 
 	t.Parallel()
 
@@ -642,7 +642,7 @@ func TestInterpretAuthAccountCopy(t *testing.T) {
 
 }
 
-func TestInterpretAuthAccountBorrow(t *testing.T) {
+func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 	t.Parallel()
 
@@ -909,7 +909,7 @@ func TestInterpretAuthAccountBorrow(t *testing.T) {
 	})
 }
 
-func TestInterpretAuthAccountLink(t *testing.T) {
+func TestInterpretAuthAccount_link(t *testing.T) {
 
 	t.Parallel()
 
@@ -964,9 +964,24 @@ func TestInterpretAuthAccountLink(t *testing.T) {
 
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
-					innerValue := value.(*interpreter.SomeValue).Value
+					capability := value.(*interpreter.SomeValue).Value
+					require.IsType(t, interpreter.CapabilityValue{}, capability)
 
-					assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
+					actualBorrowType := capability.(interpreter.CapabilityValue).BorrowType
+
+					rType := inter.Checker.GlobalTypes["R"].Type
+
+					expectedBorrowType := interpreter.ConvertSemaToStaticType(
+						&sema.ReferenceType{
+							Authorized: false,
+							Type:       rType,
+						},
+					)
+
+					require.Equal(t,
+						expectedBorrowType,
+						actualBorrowType,
+					)
 
 					// stored value + link
 					require.Len(t, storedValues, 2)
@@ -991,9 +1006,24 @@ func TestInterpretAuthAccountLink(t *testing.T) {
 
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
-					innerValue := value.(*interpreter.SomeValue).Value
+					capability := value.(*interpreter.SomeValue).Value
+					require.IsType(t, interpreter.CapabilityValue{}, capability)
 
-					assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
+					actualBorrowType := capability.(interpreter.CapabilityValue).BorrowType
+
+					r2Type := inter.Checker.GlobalTypes["R2"].Type
+
+					expectedBorrowType := interpreter.ConvertSemaToStaticType(
+						&sema.ReferenceType{
+							Authorized: false,
+							Type:       r2Type,
+						},
+					)
+
+					require.Equal(t,
+						expectedBorrowType,
+						actualBorrowType,
+					)
 
 					// stored value + link
 					require.Len(t, storedValues, 3)
@@ -1095,9 +1125,24 @@ func TestInterpretAuthAccountLink(t *testing.T) {
 
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
-					innerValue := value.(*interpreter.SomeValue).Value
+					capability := value.(*interpreter.SomeValue).Value
+					require.IsType(t, interpreter.CapabilityValue{}, capability)
 
-					assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
+					actualBorrowType := capability.(interpreter.CapabilityValue).BorrowType
+
+					sType := inter.Checker.GlobalTypes["S"].Type
+
+					expectedBorrowType := interpreter.ConvertSemaToStaticType(
+						&sema.ReferenceType{
+							Authorized: false,
+							Type:       sType,
+						},
+					)
+
+					require.Equal(t,
+						expectedBorrowType,
+						actualBorrowType,
+					)
 
 					// stored value + link
 					require.Len(t, storedValues, 2)
@@ -1122,9 +1167,24 @@ func TestInterpretAuthAccountLink(t *testing.T) {
 
 					require.IsType(t, &interpreter.SomeValue{}, value)
 
-					innerValue := value.(*interpreter.SomeValue).Value
+					capability := value.(*interpreter.SomeValue).Value
+					require.IsType(t, interpreter.CapabilityValue{}, capability)
 
-					assert.IsType(t, interpreter.CapabilityValue{}, innerValue)
+					actualBorrowType := capability.(interpreter.CapabilityValue).BorrowType
+
+					s2Type := inter.Checker.GlobalTypes["S2"].Type
+
+					expectedBorrowType := interpreter.ConvertSemaToStaticType(
+						&sema.ReferenceType{
+							Authorized: false,
+							Type:       s2Type,
+						},
+					)
+
+					require.Equal(t,
+						expectedBorrowType,
+						actualBorrowType,
+					)
 
 					// stored value + link
 					require.Len(t, storedValues, 3)
@@ -1177,7 +1237,7 @@ func TestInterpretAuthAccountLink(t *testing.T) {
 
 }
 
-func TestInterpretAuthAccountUnlink(t *testing.T) {
+func TestInterpretAuthAccount_unlink(t *testing.T) {
 
 	t.Parallel()
 
@@ -1346,7 +1406,7 @@ func TestInterpretAuthAccountUnlink(t *testing.T) {
 	})
 }
 
-func TestInterpretAccountGetLinkTarget(t *testing.T) {
+func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 	t.Parallel()
 
@@ -1541,7 +1601,7 @@ func TestInterpretAccountGetLinkTarget(t *testing.T) {
 	}
 }
 
-func TestInterpretAccountGetCapability(t *testing.T) {
+func TestInterpretAccount_getCapability(t *testing.T) {
 
 	t.Parallel()
 
@@ -1559,43 +1619,78 @@ func TestInterpretAccountGetCapability(t *testing.T) {
 
 		for _, domain := range common.AllPathDomainsByIdentifier {
 
-			t.Run(fmt.Sprintf("auth: %v, domain: %s", auth, domain), func(t *testing.T) {
+			for _, typed := range []bool{false, true} {
 
-				inter, _ := testAccount(
-					t,
-					auth,
-					fmt.Sprintf(
-						`
-	                      fun test(): Capability? {
-	                          return account.getCapability(/%[1]s/r)
-	                      }
-	                    `,
-						domain.Identifier(),
-					),
+				var typeArguments string
+				if typed {
+					typeArguments = "<&Int>"
+				}
+
+				testName := fmt.Sprintf(
+					"auth: %v, domain: %s, typed: %v",
+					auth, domain, typed,
 				)
 
-				value, err := inter.Invoke("test")
+				t.Run(testName, func(t *testing.T) {
 
-				require.NoError(t, err)
+					inter, _ := testAccount(
+						t,
+						auth,
+						fmt.Sprintf(
+							`
+	                          fun test(): Capability%[1]s? {
+	                              return account.getCapability%[1]s(/%[2]s/r)
+	                          }
+	                        `,
+							typeArguments,
+							domain.Identifier(),
+						),
+					)
 
-				isValid := false
+					value, err := inter.Invoke("test")
 
-				for _, validDomain := range validDomains {
+					require.NoError(t, err)
 
-					if domain == validDomain {
+					isValid := false
 
-						isValid = true
+					for _, validDomain := range validDomains {
 
-						require.IsType(t, &interpreter.SomeValue{}, value)
+						if domain == validDomain {
 
-						break
+							isValid = true
+
+							require.IsType(t, &interpreter.SomeValue{}, value)
+
+							capability := value.(*interpreter.SomeValue).Value
+							require.IsType(t, interpreter.CapabilityValue{}, capability)
+
+							actualBorrowType := capability.(interpreter.CapabilityValue).BorrowType
+
+							if typed {
+								expectedBorrowType := interpreter.ConvertSemaToStaticType(
+									&sema.ReferenceType{
+										Authorized: false,
+										Type:       &sema.IntType{},
+									},
+								)
+								require.Equal(t,
+									expectedBorrowType,
+									actualBorrowType,
+								)
+
+							} else {
+								require.Nil(t, actualBorrowType)
+							}
+
+							break
+						}
 					}
-				}
 
-				if !isValid {
-					require.IsType(t, interpreter.NilValue{}, value)
-				}
-			})
+					if !isValid {
+						require.IsType(t, interpreter.NilValue{}, value)
+					}
+				})
+			}
 		}
 	}
 }

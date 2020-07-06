@@ -83,6 +83,8 @@ func TestCheckGenericFunction(t *testing.T) {
 
 	t.Run("invalid: no type parameters, one type argument, no parameters, no arguments, no return type: too many type arguments", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := parseAndCheckWithTestValue(t,
 			`
               let res = test<X>()
@@ -101,6 +103,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	})
 
 	t.Run("invalid: one type parameter, no type argument, no parameters, no arguments: missing explicit type argument", func(t *testing.T) {
+
+		t.Parallel()
 
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
@@ -128,6 +132,8 @@ func TestCheckGenericFunction(t *testing.T) {
 
 	t.Run("valid: one type parameter, one type argument, no parameters, no arguments", func(t *testing.T) {
 
+		t.Parallel()
+
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
 			TypeBound: nil,
@@ -152,7 +158,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		invocationExpression :=
 			checker.Program.Declarations[0].(*ast.VariableDeclaration).Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression]
+		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
 		assert.IsType(t,
 			&sema.IntType{},
@@ -161,6 +167,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	})
 
 	t.Run("valid: one type parameter, no type argument, one parameter, one arguments", func(t *testing.T) {
+
+		t.Parallel()
 
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
@@ -196,7 +204,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		invocationExpression :=
 			checker.Program.Declarations[0].(*ast.VariableDeclaration).Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression]
+		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
 		assert.IsType(t,
 			&sema.IntType{},
@@ -205,6 +213,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	})
 
 	t.Run("invalid: one type parameter, no type argument, one parameter, no argument", func(t *testing.T) {
+
+		t.Parallel()
 
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
@@ -243,6 +253,8 @@ func TestCheckGenericFunction(t *testing.T) {
 
 	t.Run("invalid: one type parameter, one type argument, one parameter, one arguments: type mismatch", func(t *testing.T) {
 
+		t.Parallel()
+
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
 			TypeBound: nil,
@@ -280,6 +292,8 @@ func TestCheckGenericFunction(t *testing.T) {
 
 	t.Run("valid: one type parameter, one type argument, one parameter, one arguments", func(t *testing.T) {
 
+		t.Parallel()
+
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
 			TypeBound: nil,
@@ -313,6 +327,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	})
 
 	t.Run("valid: one type parameter, no type argument, two parameters, two argument: matching argument types", func(t *testing.T) {
+
+		t.Parallel()
 
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
@@ -357,7 +373,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		invocationExpression :=
 			checker.Program.Declarations[0].(*ast.VariableDeclaration).Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression]
+		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
 		assert.IsType(t,
 			&sema.IntType{},
@@ -366,6 +382,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	})
 
 	t.Run("invalid: one type parameter, no type argument, two parameters, two argument: not matching argument types", func(t *testing.T) {
+
+		t.Parallel()
 
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
@@ -413,6 +431,8 @@ func TestCheckGenericFunction(t *testing.T) {
 
 	t.Run("invalid: one type parameter, no type argument, no parameters, no arguments, return type", func(t *testing.T) {
 
+		t.Parallel()
+
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
 			TypeBound: nil,
@@ -443,6 +463,8 @@ func TestCheckGenericFunction(t *testing.T) {
 
 	t.Run("valid: one type parameter, one type argument, no parameters, no arguments, return type", func(t *testing.T) {
 
+		t.Parallel()
+
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
 			TypeBound: nil,
@@ -471,7 +493,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		invocationExpression :=
 			checker.Program.Declarations[0].(*ast.VariableDeclaration).Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression]
+		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
 		assert.IsType(t,
 			&sema.IntType{},
@@ -485,6 +507,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	})
 
 	t.Run("valid: one type parameter, one type argument, one parameter, one argument, return type", func(t *testing.T) {
+
+		t.Parallel()
 
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
@@ -524,7 +548,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		invocationExpression :=
 			checker.Program.Declarations[0].(*ast.VariableDeclaration).Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression]
+		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
 		assert.IsType(t,
 			&sema.IntType{},
@@ -538,6 +562,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	})
 
 	t.Run("valid: one type parameter with type bound, one type argument, no parameters, no arguments", func(t *testing.T) {
+
+		t.Parallel()
 
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
@@ -563,7 +589,7 @@ func TestCheckGenericFunction(t *testing.T) {
 		invocationExpression :=
 			checker.Program.Declarations[0].(*ast.VariableDeclaration).Value.(*ast.InvocationExpression)
 
-		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeParameterTypes[invocationExpression]
+		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
 		assert.IsType(t,
 			&sema.IntType{},
@@ -572,6 +598,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	})
 
 	t.Run("invalid: one type parameter with type bound, one type argument, no parameters, no arguments: bound not satisfied", func(t *testing.T) {
+
+		t.Parallel()
 
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
@@ -598,6 +626,8 @@ func TestCheckGenericFunction(t *testing.T) {
 	})
 
 	t.Run("invalid: one type parameter with type bound, no type argument, one parameter, one argument: bound not satisfied", func(t *testing.T) {
+
+		t.Parallel()
 
 		typeParameter := &sema.TypeParameter{
 			Name:      "T",
