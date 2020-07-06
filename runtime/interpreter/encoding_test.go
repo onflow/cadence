@@ -3439,3 +3439,52 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		)
 	})
 }
+
+func TestEncodeDecodeTypeValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("primitive, Bool", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: TypeValue{
+					Type: ConvertSemaToPrimitiveStaticType(&sema.BoolType{}),
+				},
+				encoded: []byte{
+					// tag
+					0xd8, cborTagTypeValue,
+					// map, 1 pair of items follow
+					0xa1,
+					// key 0
+					0x0,
+					// tag
+					0xd8, cborTagPrimitiveStaticType,
+					// positive integer 0
+					0x6,
+				},
+			},
+		)
+	})
+
+	t.Run("primitive, Int", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: TypeValue{
+					Type: ConvertSemaToPrimitiveStaticType(&sema.IntType{}),
+				},
+				encoded: []byte{
+					// tag
+					0xd8, cborTagTypeValue,
+					// map, 1 pair of items follow
+					0xa1,
+					// key 0
+					0x0,
+					// tag
+					0xd8, cborTagPrimitiveStaticType,
+					// positive integer 36
+					0x18, 0x24,
+				},
+			},
+		)
+	})
+}

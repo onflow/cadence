@@ -211,6 +211,9 @@ func (d *Decoder) decodeValue(v interface{}, path []string) (Value, error) {
 		case cborTagLinkValue:
 			return d.decodeLink(v.Content)
 
+		case cborTagTypeValue:
+			return d.decodeType(v.Content)
+
 		default:
 			return nil, fmt.Errorf("unsupported decoded tag: %d, %v", v.Number, v.Content)
 		}
@@ -1180,6 +1183,27 @@ func (d *Decoder) decodeRestrictedStaticType(v interface{}) (StaticType, error) 
 	return RestrictedStaticType{
 		Type:         restrictedType,
 		Restrictions: restrictions,
+	}, nil
+}
+
+func (d *Decoder) decodeType(v interface{}) (TypeValue, error) {
+	encoded, ok := v.(map[interface{}]interface{})
+	if !ok {
+		return TypeValue{}, fmt.Errorf("invalid type encoding")
+	}
+
+	decodedStaticType, err := d.decodeStaticType(encoded[uint64(0)])
+	if err != nil {
+		return TypeValue{}, fmt.Errorf("invalid type encoding: %w", err)
+	}
+
+	staticType, ok := decodedStaticType.(StaticType)
+	if !ok {
+		return TypeValue{}, fmt.Errorf("invalid type encoding: %T", decodedStaticType)
+	}
+
+	return TypeValue{
+		Type: staticType,
 	}, nil
 }
 

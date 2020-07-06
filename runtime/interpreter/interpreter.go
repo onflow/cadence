@@ -1753,7 +1753,7 @@ func (interpreter *Interpreter) testEqual(left, right Value) BoolValue {
 		if !ok {
 			return false
 		}
-		return left.Equal(right)
+		return left.Equal(interpreter, right)
 
 	case *CompositeValue:
 		// TODO: call `equals` if RHS is composite
@@ -3483,7 +3483,9 @@ func (interpreter *Interpreter) defineBaseFunctions() {
 					break
 				}
 
-				result := TypeValue{Type: ty}
+				result := TypeValue{
+					Type: ConvertSemaToStaticType(ty),
+				}
 
 				return Done{Result: result}
 			},
@@ -4233,7 +4235,8 @@ func (interpreter *Interpreter) reportFunctionInvocation(pos ast.HasPosition) {
 // getMember gets the member value by the given identifier from the given Value depending on its type.
 func (interpreter *Interpreter) getMember(self Value, locationRange LocationRange, identifier string) Value {
 	var result Value
-	// When the accessed value has a type that supports the declaration of members or is a built-in type that has members (`MemberAccessibleValue`),
+	// When the accessed value has a type that supports the declaration of members
+	// or is a built-in type that has members (`MemberAccessibleValue`),
 	// then try to get the member for the given identifier.
 	// For example, the built-in type `String` has a member "length",
 	// and composite declarations may contain member declarations
@@ -4245,10 +4248,14 @@ func (interpreter *Interpreter) getMember(self Value, locationRange LocationRang
 		case sema.IsInstanceFunctionName:
 			return NewHostFunctionValue(
 				func(invocation Invocation) Trampoline {
+					firstArgument := invocation.Arguments[0]
+
 					// NOTE: not invocation.Self, as that is only set for composite values
 					dynamicType := self.DynamicType(interpreter)
-					ty := invocation.Arguments[0].(TypeValue)
-					result := IsSubType(dynamicType, ty.Type)
+					ty := interpreter.convertStaticToSemaType(
+						firstArgument.(TypeValue).Type,
+					)
+					result := IsSubType(dynamicType, ty)
 					return Done{Result: BoolValue(result)}
 				},
 			)

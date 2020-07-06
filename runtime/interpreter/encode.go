@@ -65,7 +65,7 @@ const (
 	cborTagSomeValue
 	cborTagAddressValue
 	cborTagCompositeValue
-	_
+	cborTagTypeValue
 	_
 	_
 	_
@@ -196,6 +196,7 @@ func init() {
 		cborTagCompositeValue:          encodedCompositeValue{},
 		cborTagPathValue:               encodedPathValue{},
 		cborTagCapabilityValue:         encodedCapabilityValue{},
+		cborTagTypeValue:               encodedTypeValue{},
 		cborTagStorageReferenceValue:   encodedStorageReferenceValue{},
 		cborTagLinkValue:               encodedLinkValue{},
 		cborTagCompositeStaticType:     encodedCompositeStaticType{},
@@ -433,6 +434,11 @@ func (e *Encoder) prepare(
 
 	case LinkValue:
 		return e.prepareLinkValue(v)
+
+	// Type
+
+	case TypeValue:
+		return e.prepareTypeValue(v)
 
 	default:
 		return nil, fmt.Errorf("unsupported value: %[1]T, %[1]v", v)
@@ -1081,6 +1087,20 @@ func (e *Encoder) prepareRestrictedStaticType(v RestrictedStaticType) (interface
 	return encodedRestrictedStaticType{
 		Type:         restrictedType,
 		Restrictions: encodedRestrictions,
+	}, nil
+}
+
+type encodedTypeValue struct {
+	Type interface{} `cbor:"0,keyasint"`
+}
+
+func (e *Encoder) prepareTypeValue(v TypeValue) (interface{}, error) {
+	staticType, err := e.prepareStaticType(v.Type)
+	if err != nil {
+		return nil, err
+	}
+	return encodedTypeValue{
+		Type: staticType,
 	}, nil
 }
 

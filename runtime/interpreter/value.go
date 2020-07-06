@@ -74,7 +74,7 @@ type ConcatenatableValue interface {
 
 type EquatableValue interface {
 	Value
-	Equal(other Value) BoolValue
+	Equal(interpreter *Interpreter, other Value) BoolValue
 }
 
 // DestroyableValue
@@ -92,7 +92,7 @@ type HasKeyString interface {
 // TypeValue
 
 type TypeValue struct {
-	Type sema.Type
+	Type StaticType
 }
 
 func (TypeValue) IsValue() {}
@@ -126,18 +126,23 @@ func (v TypeValue) String() string {
 	return fmt.Sprintf("Type<%s>", v.Type)
 }
 
-func (v TypeValue) Equal(other Value) BoolValue {
+func (v TypeValue) Equal(inter *Interpreter, other Value) BoolValue {
 	otherMetaType, ok := other.(TypeValue)
 	if !ok {
 		return false
 	}
-	return BoolValue(v.Type.Equal(otherMetaType.Type))
+
+	ty := inter.convertStaticToSemaType(v.Type)
+	otherTy := inter.convertStaticToSemaType(otherMetaType.Type)
+
+	return BoolValue(ty.Equal(otherTy))
 }
 
-func (v TypeValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v TypeValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case "identifier":
-		return NewStringValue(v.Type.QualifiedString())
+		ty := inter.convertStaticToSemaType(v.Type)
+		return NewStringValue(ty.QualifiedString())
 	}
 
 	return nil
@@ -217,7 +222,7 @@ func (v BoolValue) Negate() BoolValue {
 	return !v
 }
 
-func (v BoolValue) Equal(other Value) BoolValue {
+func (v BoolValue) Equal(_ *Interpreter, other Value) BoolValue {
 	otherBool, ok := other.(BoolValue)
 	if !ok {
 		return false
@@ -283,7 +288,7 @@ func (v *StringValue) KeyString() string {
 	return v.Str
 }
 
-func (v *StringValue) Equal(other Value) BoolValue {
+func (v *StringValue) Equal(_ *Interpreter, other Value) BoolValue {
 	otherString, ok := other.(*StringValue)
 	if !ok {
 		return false
@@ -606,7 +611,7 @@ func (v *ArrayValue) Contains(needleValue Value) BoolValue {
 	needleEquatable := needleValue.(EquatableValue)
 
 	for _, arrayValue := range v.Values {
-		if needleEquatable.Equal(arrayValue) {
+		if needleEquatable.Equal(nil, arrayValue) {
 			return true
 		}
 	}
@@ -866,7 +871,7 @@ func (v IntValue) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v IntValue) Equal(other Value) BoolValue {
+func (v IntValue) Equal(_ *Interpreter, other Value) BoolValue {
 	otherInt, ok := other.(IntValue)
 	if !ok {
 		return false
@@ -1090,7 +1095,7 @@ func (v Int8Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Int8Value)
 }
 
-func (v Int8Value) Equal(other Value) BoolValue {
+func (v Int8Value) Equal(_ *Interpreter, other Value) BoolValue {
 	otherInt8, ok := other.(Int8Value)
 	if !ok {
 		return false
@@ -1320,7 +1325,7 @@ func (v Int16Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Int16Value)
 }
 
-func (v Int16Value) Equal(other Value) BoolValue {
+func (v Int16Value) Equal(_ *Interpreter, other Value) BoolValue {
 	otherInt16, ok := other.(Int16Value)
 	if !ok {
 		return false
@@ -1552,7 +1557,7 @@ func (v Int32Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Int32Value)
 }
 
-func (v Int32Value) Equal(other Value) BoolValue {
+func (v Int32Value) Equal(_ *Interpreter, other Value) BoolValue {
 	otherInt32, ok := other.(Int32Value)
 	if !ok {
 		return false
@@ -1788,7 +1793,7 @@ func (v Int64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Int64Value)
 }
 
-func (v Int64Value) Equal(other Value) BoolValue {
+func (v Int64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	otherInt64, ok := other.(Int64Value)
 	if !ok {
 		return false
@@ -2057,7 +2062,7 @@ func (v Int128Value) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v Int128Value) Equal(other Value) BoolValue {
+func (v Int128Value) Equal(_ *Interpreter, other Value) BoolValue {
 	otherInt, ok := other.(Int128Value)
 	if !ok {
 		return false
@@ -2347,7 +2352,7 @@ func (v Int256Value) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v Int256Value) Equal(other Value) BoolValue {
+func (v Int256Value) Equal(_ *Interpreter, other Value) BoolValue {
 	otherInt, ok := other.(Int256Value)
 	if !ok {
 		return false
@@ -2606,7 +2611,7 @@ func (v UIntValue) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v UIntValue) Equal(other Value) BoolValue {
+func (v UIntValue) Equal(_ *Interpreter, other Value) BoolValue {
 	otherUInt, ok := other.(UIntValue)
 	if !ok {
 		return false
@@ -2798,7 +2803,7 @@ func (v UInt8Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UInt8Value)
 }
 
-func (v UInt8Value) Equal(other Value) BoolValue {
+func (v UInt8Value) Equal(_ *Interpreter, other Value) BoolValue {
 	otherUInt8, ok := other.(UInt8Value)
 	if !ok {
 		return false
@@ -2994,7 +2999,7 @@ func (v UInt16Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UInt16Value)
 }
 
-func (v UInt16Value) Equal(other Value) BoolValue {
+func (v UInt16Value) Equal(_ *Interpreter, other Value) BoolValue {
 	otherUInt16, ok := other.(UInt16Value)
 	if !ok {
 		return false
@@ -3194,7 +3199,7 @@ func (v UInt32Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UInt32Value)
 }
 
-func (v UInt32Value) Equal(other Value) BoolValue {
+func (v UInt32Value) Equal(_ *Interpreter, other Value) BoolValue {
 	otherUInt32, ok := other.(UInt32Value)
 	if !ok {
 		return false
@@ -3399,7 +3404,7 @@ func (v UInt64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UInt64Value)
 }
 
-func (v UInt64Value) Equal(other Value) BoolValue {
+func (v UInt64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	otherUInt64, ok := other.(UInt64Value)
 	if !ok {
 		return false
@@ -3642,7 +3647,7 @@ func (v UInt128Value) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v UInt128Value) Equal(other Value) BoolValue {
+func (v UInt128Value) Equal(_ *Interpreter, other Value) BoolValue {
 	otherInt, ok := other.(UInt128Value)
 	if !ok {
 		return false
@@ -3901,7 +3906,7 @@ func (v UInt256Value) GreaterEqual(other NumberValue) BoolValue {
 	return cmp >= 0
 }
 
-func (v UInt256Value) Equal(other Value) BoolValue {
+func (v UInt256Value) Equal(_ *Interpreter, other Value) BoolValue {
 	otherInt, ok := other.(UInt256Value)
 	if !ok {
 		return false
@@ -4102,7 +4107,7 @@ func (v Word8Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Word8Value)
 }
 
-func (v Word8Value) Equal(other Value) BoolValue {
+func (v Word8Value) Equal(_ *Interpreter, other Value) BoolValue {
 	otherWord8, ok := other.(Word8Value)
 	if !ok {
 		return false
@@ -4259,7 +4264,7 @@ func (v Word16Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Word16Value)
 }
 
-func (v Word16Value) Equal(other Value) BoolValue {
+func (v Word16Value) Equal(_ *Interpreter, other Value) BoolValue {
 	otherWord16, ok := other.(Word16Value)
 	if !ok {
 		return false
@@ -4420,7 +4425,7 @@ func (v Word32Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Word32Value)
 }
 
-func (v Word32Value) Equal(other Value) BoolValue {
+func (v Word32Value) Equal(_ *Interpreter, other Value) BoolValue {
 	otherWord32, ok := other.(Word32Value)
 	if !ok {
 		return false
@@ -4581,7 +4586,7 @@ func (v Word64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Word64Value)
 }
 
-func (v Word64Value) Equal(other Value) BoolValue {
+func (v Word64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	otherWord64, ok := other.(Word64Value)
 	if !ok {
 		return false
@@ -4833,7 +4838,7 @@ func (v Fix64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(Fix64Value)
 }
 
-func (v Fix64Value) Equal(other Value) BoolValue {
+func (v Fix64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	otherFix64, ok := other.(Fix64Value)
 	if !ok {
 		return false
@@ -5080,7 +5085,7 @@ func (v UFix64Value) GreaterEqual(other NumberValue) BoolValue {
 	return v >= other.(UFix64Value)
 }
 
-func (v UFix64Value) Equal(other Value) BoolValue {
+func (v UFix64Value) Equal(_ *Interpreter, other Value) BoolValue {
 	otherUFix64, ok := other.(UFix64Value)
 	if !ok {
 		return false
@@ -6052,7 +6057,7 @@ func (v *StorageReferenceValue) Set(interpreter *Interpreter, locationRange Loca
 		Set(interpreter, locationRange, key, value)
 }
 
-func (v *StorageReferenceValue) Equal(other Value) BoolValue {
+func (v *StorageReferenceValue) Equal(_ *Interpreter, other Value) BoolValue {
 	otherReference, ok := other.(*StorageReferenceValue)
 	if !ok {
 		return false
@@ -6171,7 +6176,7 @@ func (v *EphemeralReferenceValue) Set(interpreter *Interpreter, locationRange Lo
 		Set(interpreter, locationRange, key, value)
 }
 
-func (v *EphemeralReferenceValue) Equal(other Value) BoolValue {
+func (v *EphemeralReferenceValue) Equal(_ *Interpreter, other Value) BoolValue {
 	otherReference, ok := other.(*EphemeralReferenceValue)
 	if !ok {
 		return false
@@ -6249,7 +6254,7 @@ func (AddressValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v AddressValue) Equal(other Value) BoolValue {
+func (v AddressValue) Equal(_ *Interpreter, other Value) BoolValue {
 	otherAddress, ok := other.(AddressValue)
 	if !ok {
 		return false
