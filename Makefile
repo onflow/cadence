@@ -29,6 +29,10 @@ test:
 	# test all packages
 	GO111MODULE=on go test $(if $(JSON_OUTPUT),-json,) -parallel 8 ./...
 
+.PHONY: build
+build:
+	go build ./runtime/cmd/main
+
 .PHONY: install-tools
 install-tools:
 	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ${GOPATH}/bin v1.26.0
@@ -42,5 +46,6 @@ lint:
 tidy:
 	go mod tidy; git diff --exit-code
 
+.PHONY: check-headers
 check-headers:
 	@./check-headers.sh
