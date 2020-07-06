@@ -1091,8 +1091,7 @@ var stringTypeSliceFunctionType = &FunctionType{
 var stringTypeDecodeHexFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&VariableSizedType{
-			// TODO: change to UInt8
-			Type: &IntType{},
+			Type: &UInt8Type{},
 		},
 	),
 }
@@ -4572,9 +4571,7 @@ var authAccountSetCodeFunctionType = &FunctionType{
 			Identifier: "code",
 			TypeAnnotation: NewTypeAnnotation(
 				&VariableSizedType{
-					// TODO: UInt8. Requires array literals of integer literals
-					//   to be type compatible with with [UInt8]
-					Type: &IntType{},
+					Type: &UInt8Type{},
 				},
 			),
 		},
@@ -4596,9 +4593,7 @@ var authAccountAddPublicKeyFunctionType = &FunctionType{
 			Identifier: "key",
 			TypeAnnotation: NewTypeAnnotation(
 				&VariableSizedType{
-					// TODO: UInt8. Requires array literals of integer literals
-					//   to be type compatible with with [UInt8]
-					Type: &IntType{},
+					Type: &UInt8Type{},
 				},
 			),
 		},

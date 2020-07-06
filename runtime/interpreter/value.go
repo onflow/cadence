@@ -361,7 +361,7 @@ func (v *StringValue) SetIndex(index int, char *StringValue) {
 func (v *StringValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case "length":
-		count := uniseg.GraphemeClusterCount(v.Str)
+		count := v.Length()
 		return NewIntValueFromInt64(int64(count))
 
 	case "concat":
@@ -386,25 +386,37 @@ func (v *StringValue) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 	case "decodeHex":
 		return NewHostFunctionValue(
 			func(invocation Invocation) trampoline.Trampoline {
-				str := v.Str
-
-				bs, err := hex.DecodeString(str)
-				if err != nil {
-					panic(err)
-				}
-
-				values := make([]Value, len(str)/2)
-				for i, b := range bs {
-					values[i] = NewIntValueFromInt64(int64(b))
-				}
-				result := NewArrayValueUnownedNonCopying(values...)
-
+				result := v.DecodeHex()
 				return trampoline.Done{Result: result}
 			},
 		)
 	}
 
 	return nil
+}
+
+// Length returns the number of characters (grapheme clusters)
+//
+func (v *StringValue) Length() int {
+	return uniseg.GraphemeClusterCount(v.Str)
+}
+
+// DecodeHex hex-decodes this string and returns an array of UInt8 values
+//
+func (v *StringValue) DecodeHex() *ArrayValue {
+	str := v.Str
+
+	bs, err := hex.DecodeString(str)
+	if err != nil {
+		panic(err)
+	}
+
+	values := make([]Value, len(str)/2)
+	for i, b := range bs {
+		values[i] = UInt8Value(b)
+	}
+	result := NewArrayValueUnownedNonCopying(values...)
+	return result
 }
 
 func (*StringValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {

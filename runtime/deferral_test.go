@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"encoding/hex"
 	"fmt"
 	"testing"
 
@@ -27,6 +28,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 const simpleDeferralContract = `
@@ -91,17 +93,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 
 	contract := []byte(simpleDeferralContract)
 
-	deploy := []byte(fmt.Sprintf(
-		`
-          transaction {
-
-              prepare(signer: AuthAccount) {
-                  signer.setCode(%s)
-              }
-          }
-        `,
-		ArrayValueFromBytes(contract).String(),
-	))
+	deploy := utils.DeploymentTransaction(contract)
 
 	setupTx := []byte(`
       import Test from 0xCADE
@@ -583,17 +575,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
       }
     `)
 
-	deploy := []byte(fmt.Sprintf(
-		`
-          transaction {
-
-              prepare(signer: AuthAccount) {
-                  signer.setCode(%s)
-              }
-          }
-        `,
-		ArrayValueFromBytes(contract).String(),
-	))
+	deploy := utils.DeploymentTransaction(contract)
 
 	setupTx := []byte(`
       import Test from 0xCADE
@@ -806,11 +788,11 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_DictionaryTransfer(t *te
           transaction {
 
               prepare(signer1: AuthAccount, signer2: AuthAccount) {
-                  signer1.setCode(%s)
+                  signer1.setCode("%s".decodeHex())
               }
           }
         `,
-		ArrayValueFromBytes(contract).String(),
+		hex.EncodeToString(contract),
 	))
 
 	setupTx := []byte(`
@@ -971,17 +953,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Removal(t *testing.T) {
 
 	contract := []byte(simpleDeferralContract)
 
-	deployTx := []byte(fmt.Sprintf(
-		`
-          transaction {
-
-              prepare(signer: AuthAccount) {
-                  signer.setCode(%s)
-              }
-          }
-        `,
-		ArrayValueFromBytes(contract).String(),
-	))
+	deployTx := utils.DeploymentTransaction(contract)
 
 	setupTx := []byte(`
       import Test from 0x1
@@ -1073,17 +1045,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Destruction(t *testing.T
 
 	contract := []byte(simpleDeferralContract)
 
-	deployTx := []byte(fmt.Sprintf(
-		`
-          transaction {
-
-              prepare(signer: AuthAccount) {
-                  signer.setCode(%s)
-              }
-          }
-        `,
-		ArrayValueFromBytes(contract).String(),
-	))
+	deployTx := utils.DeploymentTransaction(contract)
 
 	setupTx := []byte(`
       import Test from 0x1
@@ -1167,17 +1129,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Insertion(t *testing.T) 
 
 	contract := []byte(simpleDeferralContract)
 
-	deployTx := []byte(fmt.Sprintf(
-		`
-          transaction {
-
-              prepare(signer: AuthAccount) {
-                  signer.setCode(%s)
-              }
-          }
-        `,
-		ArrayValueFromBytes(contract).String(),
-	))
+	deployTx := utils.DeploymentTransaction(contract)
 
 	setupTx := []byte(`
       import Test from 0x1
@@ -1279,17 +1231,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_ValueTransferAndDestroy(
 
 	contract := []byte(simpleDeferralContract)
 
-	deployTx := []byte(fmt.Sprintf(
-		`
-          transaction {
-
-              prepare(signer: AuthAccount) {
-                  signer.setCode(%s)
-              }
-          }
-        `,
-		ArrayValueFromBytes(contract).String(),
-	))
+	deployTx := utils.DeploymentTransaction(contract)
 
 	setupTx := []byte(`
       import Test from 0x1
