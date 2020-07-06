@@ -112,17 +112,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	var reads []testRead
 	var writes []testWrite
 
-	onRead := func(controller, owner, key, value []byte) {
+	onRead := func(owner, key, value []byte) {
 		reads = append(reads, testRead{
-			controller,
 			owner,
 			key,
 		})
 	}
 
-	onWrite := func(controller, owner, key, value []byte) {
+	onWrite := func(owner, key, value []byte) {
 		writes = append(writes, testWrite{
-			controller,
 			owner,
 			key,
 			value,
@@ -594,17 +592,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
 	var reads []testRead
 	var writes []testWrite
 
-	onRead := func(controller, owner, key, value []byte) {
+	onRead := func(owner, key, value []byte) {
 		reads = append(reads, testRead{
-			controller,
 			owner,
 			key,
 		})
 	}
 
-	onWrite := func(controller, owner, key, value []byte) {
+	onWrite := func(owner, key, value []byte) {
 		writes = append(writes, testWrite{
-			controller,
 			owner,
 			key,
 			value,
@@ -815,17 +811,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_DictionaryTransfer(t *te
 	var reads []testRead
 	var writes []testWrite
 
-	onRead := func(controller, owner, key, value []byte) {
+	onRead := func(owner, key, value []byte) {
 		reads = append(reads, testRead{
-			controller,
 			owner,
 			key,
 		})
 	}
 
-	onWrite := func(controller, owner, key, value []byte) {
+	onWrite := func(owner, key, value []byte) {
 		writes = append(writes, testWrite{
-			controller,
 			owner,
 			key,
 			value,
@@ -840,10 +834,10 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_DictionaryTransfer(t *te
 	indexWrites := func() (indexedWrites map[string]map[string][]byte) {
 		indexedWrites = map[string]map[string][]byte{}
 		for _, write := range writes {
-			values, ok := indexedWrites[string(write.controller)]
+			values, ok := indexedWrites[string(write.owner)]
 			if !ok {
 				values = map[string][]byte{}
-				indexedWrites[string(write.controller)] = values
+				indexedWrites[string(write.owner)] = values
 			}
 			values[string(write.key)] = write.value
 		}
