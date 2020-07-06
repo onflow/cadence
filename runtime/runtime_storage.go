@@ -79,8 +79,7 @@ func (s *interpreterRuntimeStorage) valueExists(
 	var exists bool
 	var err error
 	wrapPanic(func() {
-		// TODO: fix controller
-		exists, err = s.runtimeInterface.ValueExists(address[:], []byte{}, []byte(key))
+		exists, err = s.runtimeInterface.ValueExists(address[:], []byte(key))
 	})
 	if err != nil {
 		panic(err)
@@ -131,8 +130,7 @@ func (s *interpreterRuntimeStorage) readValue(
 	var storedData []byte
 	var err error
 	wrapPanic(func() {
-		// TODO: fix controller
-		storedData, err = s.runtimeInterface.GetValue(address[:], nil, []byte(key))
+		storedData, err = s.runtimeInterface.GetValue(address[:], []byte(key))
 	})
 	if err != nil {
 		panic(err)
@@ -275,10 +273,8 @@ func (s *interpreterRuntimeStorage) writeCached() {
 
 		var err error
 		wrapPanic(func() {
-			// TODO: fix controller
 			err = s.runtimeInterface.SetValue(
 				item.storageKey.address[:],
-				nil,
 				[]byte(item.storageKey.key),
 				newData,
 			)
@@ -313,20 +309,17 @@ func (s *interpreterRuntimeStorage) move(
 	oldOwner common.Address, oldKey string,
 	newOwner common.Address, newKey string,
 ) {
-	// TODO: fix controller
-	data, err := s.runtimeInterface.GetValue(oldOwner[:], nil, []byte(oldKey))
+	data, err := s.runtimeInterface.GetValue(oldOwner[:], []byte(oldKey))
 	if err != nil {
 		panic(err)
 	}
 
-	// TODO: fix controller
-	err = s.runtimeInterface.SetValue(oldOwner[:], nil, []byte(oldKey), nil)
+	err = s.runtimeInterface.SetValue(oldOwner[:], []byte(oldKey), nil)
 	if err != nil {
 		panic(err)
 	}
 
-	// TODO: fix controller
-	err = s.runtimeInterface.SetValue(newOwner[:], nil, []byte(newKey), data)
+	err = s.runtimeInterface.SetValue(newOwner[:], []byte(newKey), data)
 	if err != nil {
 		panic(err)
 	}
