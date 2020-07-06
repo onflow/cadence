@@ -891,12 +891,14 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 		if !ok || (restrictionCompositeKind != common.CompositeKindResource &&
 			restrictionCompositeKind != common.CompositeKindStructure) {
 
-			checker.report(
-				&InvalidRestrictionTypeError{
-					Type:  restrictionResult,
-					Range: ast.NewRangeFromPositioned(restriction),
-				},
-			)
+			if !restrictionResult.IsInvalidType() {
+				checker.report(
+					&InvalidRestrictionTypeError{
+						Type:  restrictionResult,
+						Range: ast.NewRangeFromPositioned(restriction),
+					},
+				)
+			}
 			continue
 		}
 
