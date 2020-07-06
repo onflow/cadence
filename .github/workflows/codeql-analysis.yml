@@ -33,7 +33,7 @@ jobs:
       with:
         languages: go
 
-    - run: make
+    - run: make build
      
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v1
