@@ -66,11 +66,37 @@ func TestCheckTypeArguments(t *testing.T) {
 		assert.IsType(t, &sema.InvalidTypeArgumentCountError{}, errs[0])
 	})
 
-	t.Run("capability, instantiation with one argument", func(t *testing.T) {
+	t.Run("capability, instantiation with one argument, reference", func(t *testing.T) {
 
 		t.Parallel()
 
 		checker, err := parseAndCheckWithTestValue(t,
+			`
+              let cap: Capability<&Int> = test
+            `,
+			&sema.CapabilityType{
+				BorrowType: &sema.ReferenceType{
+					Type: &sema.IntType{},
+				},
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			&sema.CapabilityType{
+				BorrowType: &sema.ReferenceType{
+					Type: &sema.IntType{},
+				},
+			},
+			checker.GlobalValues["cap"].Type,
+		)
+	})
+
+	t.Run("capability, instantiation with one argument, non-reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := parseAndCheckWithTestValue(t,
 			`
               let cap: Capability<Int> = test
             `,
@@ -79,14 +105,9 @@ func TestCheckTypeArguments(t *testing.T) {
 			},
 		)
 
-		require.NoError(t, err)
+		errs := ExpectCheckerErrors(t, err, 1)
 
-		assert.Equal(t,
-			&sema.CapabilityType{
-				BorrowType: &sema.IntType{},
-			},
-			checker.GlobalValues["cap"].Type,
-		)
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
 	t.Run("capability, instantiation with two arguments", func(t *testing.T) {
@@ -95,7 +116,7 @@ func TestCheckTypeArguments(t *testing.T) {
 
 		_, err := parseAndCheckWithTestValue(t,
 			`
-              let cap: Capability<Int, String> = test
+              let cap: Capability<&Int, &String> = test
             `,
 			&sema.CapabilityType{},
 		)
@@ -110,25 +131,28 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("Capability<Int> is a subtype of Capability", func(t *testing.T) {
+	t.Run("Capability<&Int> is a subtype of Capability", func(t *testing.T) {
 
 		t.Parallel()
 
 		checker, err := parseAndCheckWithTestValue(t,
 			`
-              let cap: Capability<Int> = test
+              let cap: Capability<&Int> = test
               let cap2: Capability = cap
             `,
 			&sema.CapabilityType{
-				BorrowType: &sema.IntType{},
+				BorrowType: &sema.ReferenceType{
+					Type: &sema.IntType{},
+				},
 			},
 		)
-
 		require.NoError(t, err)
 
 		assert.Equal(t,
 			&sema.CapabilityType{
-				BorrowType: &sema.IntType{},
+				BorrowType: &sema.ReferenceType{
+					Type: &sema.IntType{},
+				},
 			},
 			checker.GlobalValues["cap"].Type,
 		)
@@ -139,17 +163,19 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 		)
 	})
 
-	t.Run("Capability<Int> is a subtype of Capability<Int>", func(t *testing.T) {
+	t.Run("Capability<&Int> is a subtype of Capability<&Int>", func(t *testing.T) {
 
 		t.Parallel()
 
 		checker, err := parseAndCheckWithTestValue(t,
 			`
-              let cap: Capability<Int> = test
-              let cap2: Capability<Int> = cap
+              let cap: Capability<&Int> = test
+              let cap2: Capability<&Int> = cap
             `,
 			&sema.CapabilityType{
-				BorrowType: &sema.IntType{},
+				BorrowType: &sema.ReferenceType{
+					Type: &sema.IntType{},
+				},
 			},
 		)
 
@@ -157,32 +183,34 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 
 		assert.Equal(t,
 			&sema.CapabilityType{
-				BorrowType: &sema.IntType{},
+				BorrowType: &sema.ReferenceType{
+					Type: &sema.IntType{},
+				},
 			},
 			checker.GlobalValues["cap"].Type,
 		)
 
 		assert.Equal(t,
 			&sema.CapabilityType{
-				BorrowType: &sema.IntType{},
+				BorrowType: &sema.ReferenceType{
+					Type: &sema.IntType{},
+				},
 			},
 			checker.GlobalValues["cap2"].Type,
 		)
 	})
 
-	t.Run("Capability is not a subtype of Capability<Int>", func(t *testing.T) {
+	t.Run("Capability is not a subtype of Capability<&Int>", func(t *testing.T) {
 
 		t.Parallel()
 
 		checker, err := parseAndCheckWithTestValue(t,
 			`
               let cap: Capability = test
-              let cap2: Capability<Int> = cap
+              let cap2: Capability<&Int> = cap
             `,
 			&sema.CapabilityType{},
 		)
-
-		require.NotNil(t, checker)
 
 		assert.Equal(t,
 			&sema.CapabilityType{},
@@ -191,7 +219,9 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 
 		assert.Equal(t,
 			&sema.CapabilityType{
-				BorrowType: &sema.IntType{},
+				BorrowType: &sema.ReferenceType{
+					Type: &sema.IntType{},
+				},
 			},
 			checker.GlobalValues["cap2"].Type,
 		)
@@ -201,17 +231,19 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 	})
 
-	t.Run("Capability<String> is not a subtype of Capability<Int>", func(t *testing.T) {
+	t.Run("Capability<&String> is not a subtype of Capability<&Int>", func(t *testing.T) {
 
 		t.Parallel()
 
 		checker, err := parseAndCheckWithTestValue(t,
 			`
-              let cap: Capability<String> = test
-              let cap2: Capability<Int> = cap
+              let cap: Capability<&String> = test
+              let cap2: Capability<&Int> = cap
             `,
 			&sema.CapabilityType{
-				BorrowType: &sema.StringType{},
+				BorrowType: &sema.ReferenceType{
+					Type: &sema.StringType{},
+				},
 			},
 		)
 
@@ -219,14 +251,18 @@ func TestCheckTypeArgumentSubtyping(t *testing.T) {
 
 		assert.Equal(t,
 			&sema.CapabilityType{
-				BorrowType: &sema.StringType{},
+				BorrowType: &sema.ReferenceType{
+					Type: &sema.StringType{},
+				},
 			},
 			checker.GlobalValues["cap"].Type,
 		)
 
 		assert.Equal(t,
 			&sema.CapabilityType{
-				BorrowType: &sema.IntType{},
+				BorrowType: &sema.ReferenceType{
+					Type: &sema.IntType{},
+				},
 			},
 			checker.GlobalValues["cap2"].Type,
 		)
