@@ -6706,13 +6706,7 @@ func capabilityBorrowFunctionType(borrowType Type) *FunctionType {
 	var typeParameters []*TypeParameter
 
 	if borrowType == nil {
-
-		typeParameter := &TypeParameter{
-			TypeBound: &ReferenceType{
-				Type: &AnyType{},
-			},
-			Name: "T",
-		}
+		typeParameter := capabilityTypeParameter
 
 		typeParameters = []*TypeParameter{
 			typeParameter,
@@ -6739,12 +6733,7 @@ func capabilityCheckFunctionType(borrowType Type) *FunctionType {
 
 	if borrowType == nil {
 		typeParameters = []*TypeParameter{
-			{
-				TypeBound: &ReferenceType{
-					Type: &AnyType{},
-				},
-				Name: "T",
-			},
+			capabilityTypeParameter,
 		}
 	}
 

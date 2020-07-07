@@ -2137,12 +2137,32 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 	}
 
 	typeParameters := parameterizedType.TypeParameters()
-
 	typeParameterCount := len(typeParameters)
+
+	typeArguments := make([]Type, len(typeArgumentAnnotations))
+
+	for i, typeAnnotation := range typeArgumentAnnotations {
+		typeArgument := typeAnnotation.Type
+		typeArguments[i] = typeArgument
+
+		// If the type parameter corresponding to the type argument (if any) has a type bound,
+		// then check that the argument is a subtype of the type bound.
+
+		if i < typeParameterCount {
+			typeParameter := typeParameters[i]
+			rawTypeArgument := t.TypeArguments[i]
+
+			err := typeParameter.checkTypeBound(
+				typeArgument,
+				ast.NewRangeFromPositioned(rawTypeArgument),
+			)
+			checker.report(err)
+		}
+	}
 
 	if typeArgumentCount != typeParameterCount {
 
-		// The instantiation  missing some type arguments
+		// The instantiation has an incorrect number of type arguments
 
 		checker.report(
 			&InvalidTypeArgumentCountError{
@@ -2158,12 +2178,6 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 		// Just return the converted instantiated type as-is
 
 		return ty
-	}
-
-	typeArguments := make([]Type, len(typeArgumentAnnotations))
-
-	for i, typeAnnotation := range typeArgumentAnnotations {
-		typeArguments[i] = typeAnnotation.Type
 	}
 
 	return parameterizedType.Instantiate(typeArguments, checker.report)
