@@ -19,8 +19,6 @@
 package sema
 
 import (
-	"github.com/raviqqe/hamt"
-
 	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -32,7 +30,7 @@ type VariableActivations struct {
 
 func NewValueActivations() *VariableActivations {
 	valueActivations := &activations.Activations{}
-	valueActivations.Push(hamt.NewMap())
+	valueActivations.Push(activations.NewActivation())
 	return &VariableActivations{
 		activations: valueActivations,
 	}
@@ -161,14 +159,14 @@ func (a *VariableActivations) DeclareImplicitConstant(
 func (a *VariableActivations) VariablesDeclaredInAndBelow(depth int) map[string]*Variable {
 	variables := map[string]*Variable{}
 
-	values := a.activations.CurrentOrNew()
+	activation := a.activations.CurrentOrNew()
 
-	var entry hamt.Entry
+	var name string
 	var value interface{}
 
 	for {
-		entry, value, values = values.FirstRest()
-		if entry == nil {
+		name, value, activation = activation.FirstRest()
+		if name == "" {
 			break
 		}
 
@@ -177,8 +175,6 @@ func (a *VariableActivations) VariablesDeclaredInAndBelow(depth int) map[string]
 		if variable.Depth < depth {
 			continue
 		}
-
-		name := string(entry.(common.StringEntry))
 
 		variables[name] = variable
 	}
