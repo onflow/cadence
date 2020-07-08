@@ -22,8 +22,6 @@ import (
 	"fmt"
 	goRuntime "runtime"
 
-	"github.com/raviqqe/hamt"
-
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
@@ -890,9 +888,13 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 	lexicalScope := interpreter.activations.CurrentOrNew()
 
 	// make the function itself available inside the function
-	lexicalScope = lexicalScope.Insert(common.StringEntry(identifier), variable)
+	lexicalScope = lexicalScope.Insert(identifier, variable)
 
-	variable.Value = interpreter.functionDeclarationValue(declaration, functionType, lexicalScope)
+	variable.Value = interpreter.functionDeclarationValue(
+		declaration,
+		functionType,
+		lexicalScope,
+	)
 
 	// NOTE: no result, so it does *not* act like a return-statement
 	return Done{}
@@ -901,7 +903,7 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 func (interpreter *Interpreter) functionDeclarationValue(
 	declaration *ast.FunctionDeclaration,
 	functionType *sema.FunctionType,
-	lexicalScope hamt.Map,
+	lexicalScope activations.Activation,
 ) InterpretedFunctionValue {
 
 	var preConditions ast.Conditions
@@ -2291,17 +2293,16 @@ func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.Compo
 //
 func (interpreter *Interpreter) declareCompositeValue(
 	declaration *ast.CompositeDeclaration,
-	lexicalScope hamt.Map,
+	lexicalScope activations.Activation,
 ) (
-	scope hamt.Map,
+	scope activations.Activation,
 	value Value,
 ) {
 	identifier := declaration.Identifier.Identifier
 	variable := interpreter.findOrDeclareVariable(identifier)
 
 	// Make the value available in the initializer
-	lexicalScope = lexicalScope.
-		Insert(common.StringEntry(identifier), variable)
+	lexicalScope = lexicalScope.Insert(identifier, variable)
 
 	// Evaluate nested declarations in a new scope, so values
 	// of nested declarations won't be visible after the containing declaration
@@ -2316,7 +2317,7 @@ func (interpreter *Interpreter) declareCompositeValue(
 		predeclare := func(identifier ast.Identifier) {
 			name := identifier.Identifier
 			lexicalScope = lexicalScope.Insert(
-				common.StringEntry(name),
+				name,
 				interpreter.declareVariable(name, nil),
 			)
 		}
@@ -2517,7 +2518,7 @@ func (interpreter *Interpreter) declareCompositeValue(
 
 func (interpreter *Interpreter) compositeInitializerFunction(
 	compositeDeclaration *ast.CompositeDeclaration,
-	lexicalScope hamt.Map,
+	lexicalScope activations.Activation,
 ) *InterpretedFunctionValue {
 
 	// TODO: support multiple overloaded initializers
@@ -2565,7 +2566,7 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 
 func (interpreter *Interpreter) compositeDestructorFunction(
 	compositeDeclaration *ast.CompositeDeclaration,
-	lexicalScope hamt.Map,
+	lexicalScope activations.Activation,
 ) *InterpretedFunctionValue {
 
 	destructor := compositeDeclaration.Members.Destructor()
@@ -2605,7 +2606,7 @@ func (interpreter *Interpreter) compositeDestructorFunction(
 
 func (interpreter *Interpreter) compositeFunctions(
 	compositeDeclaration *ast.CompositeDeclaration,
-	lexicalScope hamt.Map,
+	lexicalScope activations.Activation,
 ) map[string]FunctionValue {
 
 	functions := map[string]FunctionValue{}
@@ -2624,7 +2625,7 @@ func (interpreter *Interpreter) compositeFunctions(
 
 func (interpreter *Interpreter) functionWrappers(
 	members *ast.Members,
-	lexicalScope hamt.Map,
+	lexicalScope activations.Activation,
 ) map[string]FunctionWrapper {
 
 	functionWrappers := map[string]FunctionWrapper{}
@@ -2650,7 +2651,7 @@ func (interpreter *Interpreter) functionWrappers(
 
 func (interpreter *Interpreter) compositeFunction(
 	functionDeclaration *ast.FunctionDeclaration,
-	lexicalScope hamt.Map,
+	lexicalScope activations.Activation,
 ) InterpretedFunctionValue {
 
 	functionType := interpreter.Checker.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
@@ -2846,7 +2847,7 @@ func (interpreter *Interpreter) VisitInterfaceDeclaration(declaration *ast.Inter
 
 func (interpreter *Interpreter) declareInterface(
 	declaration *ast.InterfaceDeclaration,
-	lexicalScope hamt.Map,
+	lexicalScope activations.Activation,
 ) {
 	// Evaluate nested declarations in a new scope, so values
 	// of nested declarations won't be visible after the containing declaration
@@ -2880,7 +2881,7 @@ func (interpreter *Interpreter) declareInterface(
 
 func (interpreter *Interpreter) declareTypeRequirement(
 	declaration *ast.CompositeDeclaration,
-	lexicalScope hamt.Map,
+	lexicalScope activations.Activation,
 ) {
 	// Evaluate nested declarations in a new scope, so values
 	// of nested declarations won't be visible after the containing declaration
@@ -2914,7 +2915,7 @@ func (interpreter *Interpreter) declareTypeRequirement(
 
 func (interpreter *Interpreter) initializerFunctionWrapper(
 	members *ast.Members,
-	lexicalScope hamt.Map,
+	lexicalScope activations.Activation,
 ) FunctionWrapper {
 
 	// TODO: support multiple overloaded initializers
@@ -2938,7 +2939,7 @@ func (interpreter *Interpreter) initializerFunctionWrapper(
 
 func (interpreter *Interpreter) destructorFunctionWrapper(
 	members *ast.Members,
-	lexicalScope hamt.Map,
+	lexicalScope activations.Activation,
 ) FunctionWrapper {
 
 	destructor := members.Destructor()
@@ -2956,7 +2957,7 @@ func (interpreter *Interpreter) destructorFunctionWrapper(
 func (interpreter *Interpreter) functionConditionsWrapper(
 	declaration *ast.FunctionDeclaration,
 	returnType sema.Type,
-	lexicalScope hamt.Map,
+	lexicalScope activations.Activation,
 ) FunctionWrapper {
 
 	if declaration.FunctionBlock == nil {
