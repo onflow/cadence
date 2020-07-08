@@ -130,7 +130,11 @@ func (s *Server) submitTransaction(conn protocol.Conn, args ...interface{}) (int
 
 	script := []byte(doc.text)
 
-	_, err := s.sendTransactionHelper(conn, script, true)
+	tx := flow.NewTransaction().
+		SetScript(script).
+		AddAuthorizer(s.activeAccount)
+
+	_, err := s.sendTransactionHelper(conn, tx)
 	return nil, err
 }
 
@@ -338,9 +342,9 @@ func (s *Server) updateAccountCode(conn protocol.Conn, args ...interface{}) (int
 	})
 
 	accountCode := []byte(doc.text)
-	script := templates.UpdateAccountCode(accountCode)
+	tx := templates.UpdateAccountCode(s.activeAccount, accountCode)
 
-	_, err := s.sendTransactionHelper(conn, script, true)
+	_, err := s.sendTransactionHelper(conn, tx)
 	return nil, err
 }
 
@@ -350,20 +354,14 @@ func (s *Server) updateAccountCode(conn protocol.Conn, args ...interface{}) (int
 //
 // If an error occurs, attempts to show an appropriate message (either via logs
 // or UI popups in the client).
-func (s *Server) sendTransactionHelper(conn protocol.Conn, script []byte, authorize bool) (flow.Identifier, error) {
+func (s *Server) sendTransactionHelper(conn protocol.Conn, tx *flow.Transaction) (flow.Identifier, error) {
 	accountKey, signer, err := s.getAccountKey(s.activeAccount)
 	if err != nil {
 		return flow.EmptyID, err
 	}
 
-	tx := flow.NewTransaction().
-		SetScript(script).
-		SetProposalKey(s.activeAccount, accountKey.ID, accountKey.SequenceNumber).
-		SetPayer(s.activeAccount)
-
-	if authorize {
-		tx.AddAuthorizer(s.activeAccount)
-	}
+	tx.SetProposalKey(s.activeAccount, accountKey.ID, accountKey.SequenceNumber)
+	tx.SetPayer(s.activeAccount)
 
 	err = tx.SignEnvelope(s.activeAccount, accountKey.ID, signer)
 	if err != nil {
@@ -425,12 +423,9 @@ func (s *Server) createAccountHelper(conn protocol.Conn) (addr flow.Address, err
 		Weight:    flow.AccountKeyWeightThreshold,
 	}
 
-	script, err := templates.CreateAccount([]*flow.AccountKey{accountKey}, nil)
-	if err != nil {
-		return addr, fmt.Errorf("failed to generate account creation script: %w", err)
-	}
+	tx := templates.CreateAccount([]*flow.AccountKey{accountKey}, nil, s.activeAccount)
 
-	txID, err := s.sendTransactionHelper(conn, script, true)
+	txID, err := s.sendTransactionHelper(conn, tx)
 	if err != nil {
 		return addr, err
 	}
