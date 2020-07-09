@@ -89,15 +89,24 @@ func PrepareCheckerFromFile(filename string) (*sema.Checker, func(error)) {
 	return checker, must
 }
 
-//PrepareChecker prepares and initializes a Checker with a given code as a string
-//and dummyFilename which is used for pretty-printing errors, if any
-func PrepareChecker(code string, dummyFilename string) (*sema.Checker, func(error)) {
+var valueDeclarations = append(
+	stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{}),
+	stdlib.BuiltinFunctions...,
+)
+var typeDeclarations = append(
+	stdlib.FlowBuiltInTypes,
+	stdlib.BuiltinTypes...,
+).ToTypeDeclarations()
+
+// PrepareChecker prepares and initializes a checker with a given code as a string,
+// and a filename which is used for pretty-printing errors, if any
+func PrepareChecker(code string, filename string) (*sema.Checker, func(error)) {
 	codes := map[string]string{}
 
-	must := mustClosure(dummyFilename, codes)
+	must := mustClosure(filename, codes)
 
 	program, err := parser2.ParseProgram(code)
-	codes[dummyFilename] = code
+	codes[filename] = code
 	must(err)
 
 	err = program.ResolveImports(func(location ast.Location) (program *ast.Program, err error) {
@@ -115,15 +124,11 @@ func PrepareChecker(code string, dummyFilename string) (*sema.Checker, func(erro
 	})
 	must(err)
 
-	standardLibraryFunctions := standardLibraryFunctions()
-	valueDeclarations := standardLibraryFunctions.ToValueDeclarations()
-	typeDeclarations := stdlib.BuiltinTypes.ToTypeDeclarations()
-
-	location := runtime.FileLocation(dummyFilename)
+	location := runtime.FileLocation(filename)
 	checker, err := sema.NewChecker(
 		program,
 		location,
-		sema.WithPredeclaredValues(valueDeclarations),
+		sema.WithPredeclaredValues(valueDeclarations.ToValueDeclarations()),
 		sema.WithPredeclaredTypes(typeDeclarations),
 	)
 	must(err)
@@ -133,21 +138,15 @@ func PrepareChecker(code string, dummyFilename string) (*sema.Checker, func(erro
 	return checker, must
 }
 
-func standardLibraryFunctions() stdlib.StandardLibraryFunctions {
-	return append(stdlib.BuiltinFunctions, stdlib.HelperFunctions...)
-}
-
 func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checker, func(error)) {
 
 	checker, must := PrepareCheckerFromFile(filename)
-
-	values := standardLibraryFunctions().ToValues()
 
 	var uuid uint64
 
 	inter, err := interpreter.NewInterpreter(
 		checker,
-		interpreter.WithPredefinedValues(values),
+		interpreter.WithPredefinedValues(valueDeclarations.ToValues()),
 		interpreter.WithUUIDHandler(func() uint64 {
 			defer func() { uuid++ }()
 			return uuid

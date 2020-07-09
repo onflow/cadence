@@ -19,6 +19,8 @@
 package runtime
 
 import (
+	"fmt"
+	"math/rand"
 	"sort"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -39,14 +41,32 @@ type REPL struct {
 
 func NewREPL(onError func(error), onResult func(interpreter.Value)) (*REPL, error) {
 
-	standardLibraryFunctions := append(stdlib.BuiltinFunctions, stdlib.HelperFunctions...)
-	valueDeclarations := standardLibraryFunctions.ToValueDeclarations()
-	typeDeclarations := stdlib.BuiltinTypes.ToTypeDeclarations()
+	valueDeclarations := append(
+		stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{
+			CreateAccount: func(invocation interpreter.Invocation) trampoline.Trampoline {
+				panic(fmt.Errorf("cannot create accounts in the REPL"))
+			},
+			GetAccount: func(invocation interpreter.Invocation) trampoline.Trampoline {
+				panic(fmt.Errorf("cannot get accounts in the REPL"))
+			},
+			Log: stdlib.LogFunction.Function.Function,
+			GetCurrentBlock: func(invocation interpreter.Invocation) trampoline.Trampoline {
+				panic(fmt.Errorf("cannot get blocks in the REPL"))
+			},
+			GetBlock: func(invocation interpreter.Invocation) trampoline.Trampoline {
+				panic(fmt.Errorf("cannot get blocks in the REPL"))
+			},
+			UnsafeRandom: func(invocation interpreter.Invocation) trampoline.Trampoline {
+				return trampoline.Done{Result: interpreter.UInt64Value(rand.Uint64())}
+			},
+		}),
+		stdlib.BuiltinFunctions...,
+	)
 
 	checker, err := sema.NewChecker(
 		nil,
 		REPLLocation{},
-		sema.WithPredeclaredValues(valueDeclarations),
+		sema.WithPredeclaredValues(valueDeclarations.ToValueDeclarations()),
 		sema.WithPredeclaredTypes(typeDeclarations),
 		sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
 	)
@@ -54,7 +74,7 @@ func NewREPL(onError func(error), onResult func(interpreter.Value)) (*REPL, erro
 		return nil, err
 	}
 
-	values := standardLibraryFunctions.ToValues()
+	values := valueDeclarations.ToValues()
 
 	var uuid uint64
 
