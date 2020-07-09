@@ -550,8 +550,7 @@ func (interpreter *Interpreter) findVariable(name string) *Variable {
 func (interpreter *Interpreter) findOrDeclareVariable(name string) *Variable {
 	variable := interpreter.findVariable(name)
 	if variable == nil {
-		variable = &Variable{}
-		interpreter.setVariable(name, variable)
+		variable = interpreter.declareVariable(name, nil)
 	}
 	return variable
 }
@@ -1313,7 +1312,8 @@ func (interpreter *Interpreter) movingStorageIndexExpression(expression ast.Expr
 // declareVariable declares a variable in the latest scope
 func (interpreter *Interpreter) declareVariable(identifier string, value Value) *Variable {
 	// NOTE: semantic analysis already checked possible invalid redeclaration
-	variable := &Variable{Value: value}
+	depth := interpreter.activations.Depth()
+	variable := NewVariable(value, depth)
 	interpreter.setVariable(identifier, variable)
 	return variable
 }
@@ -3107,7 +3107,7 @@ func (interpreter *Interpreter) ensureLoaded(
 		// prepare the interpreter
 
 		for name, value := range virtualImport.Globals {
-			variable := &Variable{Value: value}
+			variable := NewVariable(value, 0)
 			subInterpreter.setVariable(name, variable)
 			subInterpreter.Globals[name] = variable
 		}

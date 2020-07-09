@@ -20,4 +20,12 @@ package interpreter
 
 type Variable struct {
 	Value Value
+	Depth int
+}
+
+func NewVariable(value Value, depth int) *Variable {
+	return &Variable{
+		Value: value,
+		Depth: depth,
+	}
 }
