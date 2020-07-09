@@ -6644,18 +6644,21 @@ func (t *CapabilityType) Unify(
 	report func(err error),
 	outerRange ast.Range,
 ) bool {
-	otherOptional, ok := other.(*CapabilityType)
+	otherCap, ok := other.(*CapabilityType)
 	if !ok {
 		return false
 	}
 
-	return t.BorrowType.Unify(otherOptional.BorrowType, typeParameters, report, outerRange)
+	if t.BorrowType == nil {
+		return false
+	}
+
+	return t.BorrowType.Unify(otherCap.BorrowType, typeParameters, report, outerRange)
 }
 
 func (t *CapabilityType) Resolve(typeParameters map[*TypeParameter]Type) Type {
 	var resolvedBorrowType Type
 	if t.BorrowType != nil {
-
 		resolvedBorrowType = t.BorrowType.Resolve(typeParameters)
 	}
 
@@ -6694,7 +6697,9 @@ func (t *CapabilityType) BaseType() Type {
 func (t *CapabilityType) TypeArguments() []Type {
 	borrowType := t.BorrowType
 	if borrowType == nil {
-		borrowType = &AnyType{}
+		borrowType = &ReferenceType{
+			Type: &AnyType{},
+		}
 	}
 	return []Type{
 		borrowType,
