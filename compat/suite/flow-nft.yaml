@@ -1,0 +1,71 @@
+description: Flow Non-Fungible Token
+maintainers:
+- bastian@dapperlabs.com
+- joshua.hannan@dapperlabs.com
+url: https://github.com/onflow/flow-nft.git
+branch: master
+files:
+- path: contracts/NonFungibleToken.cdc
+- path: contracts/ExampleNFT.cdc
+  # language=Python prefix=source=''\n
+  prepare: |
+      import re
+      from pathlib import Path
+
+      source = re.sub(
+        'import NonFungibleToken from 0x02',
+        f'import NonFungibleToken from "{Path("NonFungibleToken.cdc").resolve()}"',
+        source,
+      )
+
+
+- path: transactions/mint_nft.cdc
+  # language=Python prefix=source=''\n
+  prepare: |
+      import re
+      from pathlib import Path
+
+      source = re.sub(
+        'import NonFungibleToken from 0xNFTADDRESS',
+        f'import NonFungibleToken from "{Path("../contracts/NonFungibleToken.cdc").resolve()}"',
+        source,
+      )
+      source = re.sub(
+        'import ExampleNFT from 0xNFTCONTRACTADDRESS',
+        f'import ExampleNFT from "{Path("../contracts/ExampleNFT.cdc").resolve()}"',
+        source,
+      )
+
+- path: transactions/setup_account.cdc
+  # language=Python prefix=source=''\n
+  prepare: |
+      import re
+      from pathlib import Path
+
+      source = re.sub(
+        'import NonFungibleToken from 0xNFTADDRESS',
+        f'import NonFungibleToken from "{Path("../contracts/NonFungibleToken.cdc").resolve()}"',
+        source,
+      )
+      source = re.sub(
+        'import ExampleNFT from 0xNFTCONTRACTADDRESS',
+        f'import ExampleNFT from "{Path("../contracts/ExampleNFT.cdc").resolve()}"',
+        source,
+      )
+
+- path: transactions/transfer_nft.cdc
+  # language=Python prefix=source=''\n
+  prepare: |
+      import re
+      from pathlib import Path
+
+      source = re.sub(
+        'import NonFungibleToken from 0xNFTADDRESS',
+        f'import NonFungibleToken from "{Path("../contracts/NonFungibleToken.cdc").resolve()}"',
+        source,
+      )
+      source = re.sub(
+        'import ExampleNFT from 0xNFTCONTRACTADDRESS',
+        f'import ExampleNFT from "{Path("../contracts/ExampleNFT.cdc").resolve()}"',
+        source,
+      )
