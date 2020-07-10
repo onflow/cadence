@@ -288,7 +288,7 @@ func (*BlockType) IsInvalidType() bool {
 	return false
 }
 
-func (*BlockType) IsStorable() bool {
+func (*BlockType) IsStorable(results map[*sema.Member]bool) bool {
 	return false
 }
 

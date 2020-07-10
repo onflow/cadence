@@ -82,7 +82,7 @@ type Type interface {
 
 	// IsStorable returns true if the type is allowed to be a stored,
 	// e.g. in a field of a composite type.
-	IsStorable() bool
+	IsStorable(results map[*Member]bool) bool
 
 	TypeAnnotationState() TypeAnnotationState
 	ContainsFirstLevelInterfaceType() bool
@@ -395,7 +395,7 @@ func (*MetaType) IsInvalidType() bool {
 	return false
 }
 
-func (*MetaType) IsStorable() bool {
+func (*MetaType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -461,7 +461,7 @@ func (*AnyType) IsInvalidType() bool {
 	return false
 }
 
-func (*AnyType) IsStorable() bool {
+func (*AnyType) IsStorable(results map[*Member]bool) bool {
 	// The actual storability of a value is checked at run-time
 	return false
 }
@@ -512,7 +512,7 @@ func (*AnyStructType) IsInvalidType() bool {
 	return false
 }
 
-func (*AnyStructType) IsStorable() bool {
+func (*AnyStructType) IsStorable(results map[*Member]bool) bool {
 	// The actual storability of a value is checked at run-time
 	return true
 }
@@ -563,7 +563,7 @@ func (*AnyResourceType) IsInvalidType() bool {
 	return false
 }
 
-func (*AnyResourceType) IsStorable() bool {
+func (*AnyResourceType) IsStorable(results map[*Member]bool) bool {
 	// The actual storability of a value is checked at run-time
 	return true
 }
@@ -614,7 +614,7 @@ func (*NeverType) IsInvalidType() bool {
 	return false
 }
 
-func (*NeverType) IsStorable() bool {
+func (*NeverType) IsStorable(results map[*Member]bool) bool {
 	return false
 }
 
@@ -664,7 +664,7 @@ func (*VoidType) IsInvalidType() bool {
 	return false
 }
 
-func (*VoidType) IsStorable() bool {
+func (*VoidType) IsStorable(results map[*Member]bool) bool {
 	return false
 }
 
@@ -717,7 +717,7 @@ func (*InvalidType) IsInvalidType() bool {
 	return true
 }
 
-func (*InvalidType) IsStorable() bool {
+func (*InvalidType) IsStorable(results map[*Member]bool) bool {
 	return false
 }
 
@@ -782,8 +782,8 @@ func (t *OptionalType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
 }
 
-func (t *OptionalType) IsStorable() bool {
-	return t.Type.IsStorable()
+func (t *OptionalType) IsStorable(results map[*Member]bool) bool {
+	return t.Type.IsStorable(results)
 }
 
 func (t *OptionalType) TypeAnnotationState() TypeAnnotationState {
@@ -851,7 +851,7 @@ func (t *GenericType) IsInvalidType() bool {
 	return false
 }
 
-func (t *GenericType) IsStorable() bool {
+func (t *GenericType) IsStorable(results map[*Member]bool) bool {
 	return false
 }
 
@@ -942,7 +942,7 @@ func (*BoolType) IsInvalidType() bool {
 	return false
 }
 
-func (*BoolType) IsStorable() bool {
+func (*BoolType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -993,7 +993,7 @@ func (*CharacterType) IsInvalidType() bool {
 	return false
 }
 
-func (*CharacterType) IsStorable() bool {
+func (*CharacterType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -1043,7 +1043,7 @@ func (*StringType) IsInvalidType() bool {
 	return false
 }
 
-func (*StringType) IsStorable() bool {
+func (*StringType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -1169,7 +1169,7 @@ func (*NumberType) IsInvalidType() bool {
 	return false
 }
 
-func (*NumberType) IsStorable() bool {
+func (*NumberType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -1243,7 +1243,7 @@ func (*SignedNumberType) IsInvalidType() bool {
 	return false
 }
 
-func (*SignedNumberType) IsStorable() bool {
+func (*SignedNumberType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -1332,7 +1332,7 @@ func (*IntegerType) IsInvalidType() bool {
 	return false
 }
 
-func (*IntegerType) IsStorable() bool {
+func (*IntegerType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -1406,7 +1406,7 @@ func (*SignedIntegerType) IsInvalidType() bool {
 	return false
 }
 
-func (*SignedIntegerType) IsStorable() bool {
+func (*SignedIntegerType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -1480,7 +1480,7 @@ func (*IntType) IsInvalidType() bool {
 	return false
 }
 
-func (*IntType) IsStorable() bool {
+func (*IntType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -1555,7 +1555,7 @@ func (*Int8Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Int8Type) IsStorable() bool {
+func (*Int8Type) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -1632,7 +1632,7 @@ func (*Int16Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Int16Type) IsStorable() bool {
+func (*Int16Type) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -1709,7 +1709,7 @@ func (*Int32Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Int32Type) IsStorable() bool {
+func (*Int32Type) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -1786,7 +1786,7 @@ func (*Int64Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Int64Type) IsStorable() bool {
+func (*Int64Type) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -1863,7 +1863,7 @@ func (*Int128Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Int128Type) IsStorable() bool {
+func (*Int128Type) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -1952,7 +1952,7 @@ func (*Int256Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Int256Type) IsStorable() bool {
+func (*Int256Type) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -2041,7 +2041,7 @@ func (*UIntType) IsInvalidType() bool {
 	return false
 }
 
-func (*UIntType) IsStorable() bool {
+func (*UIntType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -2118,7 +2118,7 @@ func (*UInt8Type) IsInvalidType() bool {
 	return false
 }
 
-func (*UInt8Type) IsStorable() bool {
+func (*UInt8Type) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -2196,7 +2196,7 @@ func (*UInt16Type) IsInvalidType() bool {
 	return false
 }
 
-func (*UInt16Type) IsStorable() bool {
+func (*UInt16Type) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -2274,7 +2274,7 @@ func (*UInt32Type) IsInvalidType() bool {
 	return false
 }
 
-func (*UInt32Type) IsStorable() bool {
+func (*UInt32Type) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -2352,7 +2352,7 @@ func (*UInt64Type) IsInvalidType() bool {
 	return false
 }
 
-func (*UInt64Type) IsStorable() bool {
+func (*UInt64Type) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -2430,7 +2430,7 @@ func (*UInt128Type) IsInvalidType() bool {
 	return false
 }
 
-func (*UInt128Type) IsStorable() bool {
+func (*UInt128Type) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -2514,7 +2514,7 @@ func (*UInt256Type) IsInvalidType() bool {
 	return false
 }
 
-func (*UInt256Type) IsStorable() bool {
+func (*UInt256Type) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -2598,7 +2598,7 @@ func (*Word8Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Word8Type) IsStorable() bool {
+func (*Word8Type) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -2676,7 +2676,7 @@ func (*Word16Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Word16Type) IsStorable() bool {
+func (*Word16Type) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -2754,7 +2754,7 @@ func (*Word32Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Word32Type) IsStorable() bool {
+func (*Word32Type) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -2832,7 +2832,7 @@ func (*Word64Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Word64Type) IsStorable() bool {
+func (*Word64Type) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -2909,7 +2909,7 @@ func (*FixedPointType) IsInvalidType() bool {
 	return false
 }
 
-func (*FixedPointType) IsStorable() bool {
+func (*FixedPointType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -2983,7 +2983,7 @@ func (*SignedFixedPointType) IsInvalidType() bool {
 	return false
 }
 
-func (*SignedFixedPointType) IsStorable() bool {
+func (*SignedFixedPointType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -3061,7 +3061,7 @@ func (*Fix64Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Fix64Type) IsStorable() bool {
+func (*Fix64Type) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -3160,7 +3160,7 @@ func (*UFix64Type) IsInvalidType() bool {
 	return false
 }
 
-func (*UFix64Type) IsStorable() bool {
+func (*UFix64Type) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -3492,8 +3492,8 @@ func (t *VariableSizedType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
 }
 
-func (t *VariableSizedType) IsStorable() bool {
-	return t.Type.IsStorable()
+func (t *VariableSizedType) IsStorable(results map[*Member]bool) bool {
+	return t.Type.IsStorable(results)
 }
 
 func (t *VariableSizedType) TypeAnnotationState() TypeAnnotationState {
@@ -3589,8 +3589,8 @@ func (t *ConstantSizedType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
 }
 
-func (t *ConstantSizedType) IsStorable() bool {
-	return t.Type.IsStorable()
+func (t *ConstantSizedType) IsStorable(results map[*Member]bool) bool {
+	return t.Type.IsStorable(results)
 }
 
 func (t *ConstantSizedType) TypeAnnotationState() TypeAnnotationState {
@@ -3997,7 +3997,7 @@ func (t *FunctionType) IsInvalidType() bool {
 	return t.ReturnTypeAnnotation.Type.IsInvalidType()
 }
 
-func (t *FunctionType) IsStorable() bool {
+func (t *FunctionType) IsStorable(results map[*Member]bool) bool {
 	// Functions cannot be stored, as they cannot be serialized
 	return false
 }
@@ -4449,13 +4449,13 @@ func (*CompositeType) IsInvalidType() bool {
 	return false
 }
 
-func (t *CompositeType) IsStorable() bool {
+func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
 
 	// If this composite type has a member which is non-storable,
 	// then the composite type is not storable.
 
 	for _, member := range t.Members {
-		if !member.IsStorable() {
+		if !member.IsStorable(results) {
 			return false
 		}
 	}
@@ -4548,7 +4548,7 @@ func (*AuthAccountType) IsInvalidType() bool {
 	return false
 }
 
-func (*AuthAccountType) IsStorable() bool {
+func (*AuthAccountType) IsStorable(results map[*Member]bool) bool {
 	return false
 }
 
@@ -4915,7 +4915,7 @@ func (*PublicAccountType) IsInvalidType() bool {
 	return false
 }
 
-func (*PublicAccountType) IsStorable() bool {
+func (*PublicAccountType) IsStorable(results map[*Member]bool) bool {
 	return false
 }
 
@@ -5005,7 +5005,30 @@ func NewPublicConstantFieldMember(containerType Type, identifier string, fieldTy
 }
 
 // IsStorable returns whether a member is a storable field
-func (m *Member) IsStorable() bool {
+func (m *Member) IsStorable(results map[*Member]bool) (result bool) {
+
+	// Prevent a potential stack overflow due to cyclic declarations
+	// by keeping track of the result for each member
+
+	// At the end of the function, store the final result
+	defer func() {
+		results[m] = result
+	}()
+
+	// If a result for the member is available, return it,
+	// instead of checking the type
+
+	var ok bool
+	if result, ok = results[m]; ok {
+		return result
+	}
+
+	// Temporarily assume the member is non-storable while it's type
+	// is checked for storability. If a recursive call occurs,
+	// the check for an existing result will prevent infinite recursion
+	// and the result will be correctly false
+
+	results[m] = false
 
 	// Skip checking predeclared members
 
@@ -5021,7 +5044,7 @@ func (m *Member) IsStorable() bool {
 		fieldType := m.TypeAnnotation.Type
 
 		if !fieldType.IsInvalidType() &&
-			!fieldType.IsStorable() {
+			!fieldType.IsStorable(results) {
 
 			return false
 		}
@@ -5099,13 +5122,13 @@ func (t *InterfaceType) IsInvalidType() bool {
 	return false
 }
 
-func (t *InterfaceType) IsStorable() bool {
+func (t *InterfaceType) IsStorable(results map[*Member]bool) bool {
 
 	// If this interface type has a member which is non-storable,
 	// then the interface type is not storable.
 
 	for _, member := range t.Members {
-		if !member.IsStorable() {
+		if !member.IsStorable(results) {
 			return false
 		}
 	}
@@ -5191,9 +5214,9 @@ func (t *DictionaryType) IsInvalidType() bool {
 		t.ValueType.IsInvalidType()
 }
 
-func (t *DictionaryType) IsStorable() bool {
-	return t.KeyType.IsStorable() &&
-		t.ValueType.IsStorable()
+func (t *DictionaryType) IsStorable(results map[*Member]bool) bool {
+	return t.KeyType.IsStorable(results) &&
+		t.ValueType.IsStorable(results)
 }
 
 func (t *DictionaryType) TypeAnnotationState() TypeAnnotationState {
@@ -5417,7 +5440,7 @@ func (t *ReferenceType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
 }
 
-func (t *ReferenceType) IsStorable() bool {
+func (t *ReferenceType) IsStorable(results map[*Member]bool) bool {
 	// TODO: https://github.com/onflow/cadence/issues/189
 	return true
 }
@@ -5511,7 +5534,7 @@ func (*AddressType) IsInvalidType() bool {
 	return false
 }
 
-func (*AddressType) IsStorable() bool {
+func (*AddressType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -6277,7 +6300,7 @@ func (*TransactionType) IsInvalidType() bool {
 	return false
 }
 
-func (*TransactionType) IsStorable() bool {
+func (*TransactionType) IsStorable(results map[*Member]bool) bool {
 	return false
 }
 
@@ -6431,13 +6454,13 @@ func (t *RestrictedType) IsInvalidType() bool {
 	return false
 }
 
-func (t *RestrictedType) IsStorable() bool {
-	if t.Type != nil && !t.Type.IsStorable() {
+func (t *RestrictedType) IsStorable(results map[*Member]bool) bool {
+	if t.Type != nil && !t.Type.IsStorable(results) {
 		return false
 	}
 
 	for _, restriction := range t.Restrictions {
-		if !restriction.IsStorable() {
+		if !restriction.IsStorable(results) {
 			return false
 		}
 	}
@@ -6541,7 +6564,7 @@ func (*PathType) IsInvalidType() bool {
 	return false
 }
 
-func (*PathType) IsStorable() bool {
+func (*PathType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
@@ -6627,7 +6650,7 @@ func (t *CapabilityType) TypeAnnotationState() TypeAnnotationState {
 	return t.BorrowType.TypeAnnotationState()
 }
 
-func (*CapabilityType) IsStorable() bool {
+func (*CapabilityType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
