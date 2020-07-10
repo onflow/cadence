@@ -53,6 +53,14 @@ func (e *unsupportedOperation) Error() string {
 	)
 }
 
+// InvalidPragmaError
+
+type InvalidPragmaError struct{}
+
+func (e *InvalidPragmaError) Error() string {
+	return "invalid pragma"
+}
+
 // MissingLocationError
 
 type MissingLocationError struct{}
@@ -707,14 +715,14 @@ func (e *FieldUninitializedError) EndPosition() ast.Position {
 	return e.Pos.Shifted(length - 1)
 }
 
-// FieldTypeNotStorableError is an error that is reported for 
+// FieldTypeNotStorableError is an error that is reported for
 // field of composite types that are not storable.
 //
 // Field types have to be storable because the storage
-// layer needs to know how to store the field, which is not 
+// layer needs to know how to store the field, which is not
 // possible for all types.
 //
-// For example, the type `Int` is a storable type, 
+// For example, the type `Int` is a storable type,
 // whereas a function type is not.
 
 type FieldTypeNotStorableError struct {

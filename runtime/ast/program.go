@@ -23,6 +23,7 @@ import "fmt"
 type Program struct {
 	// all declarations, in the order they are defined
 	Declarations            []Declaration
+	pragmaDeclarations      []*PragmaDeclaration
 	importDeclarations      []*ImportDeclaration
 	interfaceDeclarations   []*InterfaceDeclaration
 	compositeDeclarations   []*CompositeDeclaration
@@ -51,6 +52,18 @@ func (p *Program) EndPosition() Position {
 
 func (p *Program) Accept(visitor Visitor) Repr {
 	return visitor.VisitProgram(p)
+}
+
+func (p *Program) PragmaDeclarations() []*PragmaDeclaration {
+	if p.pragmaDeclarations == nil {
+		p.pragmaDeclarations = make([]*PragmaDeclaration, 0)
+		for _, declaration := range p.Declarations {
+			if pragmaDeclaration, ok := declaration.(*PragmaDeclaration); ok {
+				p.pragmaDeclarations = append(p.pragmaDeclarations, pragmaDeclaration)
+			}
+		}
+	}
+	return p.pragmaDeclarations
 }
 
 func (p *Program) ImportDeclarations() []*ImportDeclaration {

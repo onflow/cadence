@@ -5047,6 +5047,20 @@ func TestParseInterface(t *testing.T) {
 	}
 }
 
+func TestPragmaVersionString(t *testing.T) {
+
+	t.Parallel()
+
+	const code = `
+		#version("1.0")
+	`
+
+	program, err := parser2.ParseProgram(code)
+	require.NotNil(t, program.PragmaDeclarations)
+	fmt.Println(program.PragmaDeclarations())
+	require.NoError(t, err)
+}
+
 func TestParseImportWithString(t *testing.T) {
 
 	t.Parallel()
@@ -7162,13 +7176,13 @@ func TestParseTransactionDeclaration(t *testing.T) {
 	t.Run("SimpleTransaction", func(t *testing.T) {
 		const code = `
 		  transaction {
-	
+
 		    var x: Int
-	
+
 		    prepare(signer: AuthAccount) {
 	          x = 0
 			}
-	
+
 		    execute {
 	          x = 1 + 1
 			}
@@ -7348,21 +7362,21 @@ func TestParseTransactionDeclaration(t *testing.T) {
 	t.Run("PreExecutePost", func(t *testing.T) {
 		const code = `
 		  transaction {
-	
+
 		    var x: Int
-	
+
 		    prepare(signer: AuthAccount) {
 	          x = 0
 			}
-	
+
 			pre {
 	      	  x == 0
 			}
-	
+
 		    execute {
 	          x = 1 + 1
 			}
-	
+
 		    post {
 	          x == 2
 	        }
@@ -7583,13 +7597,13 @@ func TestParseTransactionDeclaration(t *testing.T) {
 	t.Run("PrePostExecute", func(t *testing.T) {
 		const code = `
 		  transaction {
-	
+
 		    var x: Int
-	
+
 		    prepare(signer: AuthAccount) {
 	          x = 0
 			}
-	
+
 			pre {
 	      	  x == 0
 			}
@@ -7597,7 +7611,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 		    post {
 	          x == 2
 	        }
-	
+
 		    execute {
 	          x = 1 + 1
 			}
