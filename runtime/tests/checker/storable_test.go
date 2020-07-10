@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -309,4 +310,29 @@ func TestCheckStorable(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestCheckStorableCycle(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      struct S {
+
+          struct S {
+              let s: S
+          }
+
+          let s: S
+      }
+   `)
+
+	errs := ExpectCheckerErrors(t, err, 6)
+
+	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[1])
+	assert.IsType(t, &sema.FieldTypeNotStorableError{}, errs[2])
+	assert.IsType(t, &sema.RedeclarationError{}, errs[3])
+	assert.IsType(t, &sema.MissingInitializerError{}, errs[4])
+	assert.IsType(t, &sema.MissingInitializerError{}, errs[5])
 }
