@@ -36,9 +36,9 @@ type Interface interface {
 	GetCachedProgram(Location) (*ast.Program, error)
 	// CacheProgram adds a parsed program to a cache.
 	CacheProgram(Location, *ast.Program) error
-	// GetValue gets a value for the given key in the storage, owned by the given accounts.
+	// GetValue gets a value for the given key in the storage, owned by the given account.
 	GetValue(owner, key []byte) (value []byte, err error)
-	// SetValue sets a value for the given key in the storage, owned by the given accounts.
+	// SetValue sets a value for the given key in the storage, owned by the given account.
 	SetValue(owner, key, value []byte) (err error)
 	// CreateAccount creates a new account.
 	CreateAccount(payer Address) (address Address, err error)
