@@ -54,7 +54,7 @@ type Interface interface {
 	Log(string)
 	// EmitEvent is called when an event is emitted by the runtime.
 	EmitEvent(cadence.Event)
-	// ValueExists returns true if the given key exists in the storage, owned by the given accounts.
+	// ValueExists returns true if the given key exists in the storage, owned by the given account.
 	ValueExists(owner, key []byte) (exists bool, err error)
 	// GenerateUUID is called to generate a UUID.
 	GenerateUUID() uint64
