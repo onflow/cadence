@@ -150,25 +150,29 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	if invokedMemberExpression, ok := invokedExpression.(*ast.MemberExpression); ok {
 		if invocationIdentifierExpression, ok := invokedMemberExpression.Expression.(*ast.IdentifierExpression); ok {
 
-			valueType := checker.Elaboration.IdentifierInInvocationTypes[invocationIdentifierExpression]
+			// Check that an entry for `IdentifierInInvocationTypes` exists,
+			// because the entry might be missing if the invocation was on a non-existent variable
 
-			invalidation := checker.recordResourceInvalidation(
-				invocationIdentifierExpression,
-				valueType,
-				ResourceInvalidationKindMoveTemporary,
-			)
+			if valueType, ok := checker.Elaboration.IdentifierInInvocationTypes[invocationIdentifierExpression]; ok {
 
-			if invalidation != nil {
-
-				checker.resources.RemoveTemporaryInvalidation(
-					invalidation.resource,
-					invalidation.invalidation,
-				)
-
-				checker.checkResourceUseAfterInvalidation(
-					invalidation.resource,
+				invalidation := checker.recordResourceInvalidation(
 					invocationIdentifierExpression,
+					valueType,
+					ResourceInvalidationKindMoveTemporary,
 				)
+
+				if invalidation != nil {
+
+					checker.resources.RemoveTemporaryInvalidation(
+						invalidation.resource,
+						invalidation.invalidation,
+					)
+
+					checker.checkResourceUseAfterInvalidation(
+						invalidation.resource,
+						invocationIdentifierExpression,
+					)
+				}
 			}
 		}
 	}
