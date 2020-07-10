@@ -36,10 +36,10 @@ type Interface interface {
 	GetCachedProgram(Location) (*ast.Program, error)
 	// CacheProgram adds a parsed program to a cache.
 	CacheProgram(Location, *ast.Program) error
-	// GetValue gets a value for the given key in the storage, controlled and owned by the given accounts.
-	GetValue(owner, controller, key []byte) (value []byte, err error)
-	// SetValue sets a value for the given key in the storage, controlled and owned by the given accounts.
-	SetValue(owner, controller, key, value []byte) (err error)
+	// GetValue gets a value for the given key in the storage, owned by the given account.
+	GetValue(owner, key []byte) (value []byte, err error)
+	// SetValue sets a value for the given key in the storage, owned by the given account.
+	SetValue(owner, key, value []byte) (err error)
 	// CreateAccount creates a new account.
 	CreateAccount(payer Address) (address Address, err error)
 	// AddAccountKey appends a key to an account.
@@ -54,8 +54,8 @@ type Interface interface {
 	Log(string)
 	// EmitEvent is called when an event is emitted by the runtime.
 	EmitEvent(cadence.Event)
-	// ValueExists returns true if the given key exists in the storage, controlled and owned by the given accounts.
-	ValueExists(owner, controller, key []byte) (exists bool, err error)
+	// ValueExists returns true if the given key exists in the storage, owned by the given account.
+	ValueExists(owner, key []byte) (exists bool, err error)
 	// GenerateUUID is called to generate a UUID.
 	GenerateUUID() uint64
 	// GetComputationLimit returns the computation limit. A value <= 0 means there is no limit
@@ -105,15 +105,15 @@ func (i *EmptyRuntimeInterface) CacheProgram(_ Location, _ *ast.Program) error {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) ValueExists(_, _, _ []byte) (exists bool, err error) {
+func (i *EmptyRuntimeInterface) ValueExists(_, _ []byte) (exists bool, err error) {
 	return false, nil
 }
 
-func (i *EmptyRuntimeInterface) GetValue(_, _, _ []byte) (value []byte, err error) {
+func (i *EmptyRuntimeInterface) GetValue(_, _ []byte) (value []byte, err error) {
 	return nil, nil
 }
 
-func (i *EmptyRuntimeInterface) SetValue(_, _, _, _ []byte) error {
+func (i *EmptyRuntimeInterface) SetValue(_, _, _ []byte) error {
 	return nil
 }
 
