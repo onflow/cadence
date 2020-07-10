@@ -36,9 +36,9 @@ type Interface interface {
 	GetCachedProgram(Location) (*ast.Program, error)
 	// CacheProgram adds a parsed program to a cache.
 	CacheProgram(Location, *ast.Program) error
-	// GetValue gets a value for the given key in the storage, owned by the given accounts.
+	// GetValue gets a value for the given key in the storage, owned by the given account.
 	GetValue(owner, key []byte) (value []byte, err error)
-	// SetValue sets a value for the given key in the storage, owned by the given accounts.
+	// SetValue sets a value for the given key in the storage, owned by the given account.
 	SetValue(owner, key, value []byte) (err error)
 	// CreateAccount creates a new account.
 	CreateAccount(payer Address) (address Address, err error)
@@ -54,7 +54,7 @@ type Interface interface {
 	Log(string)
 	// EmitEvent is called when an event is emitted by the runtime.
 	EmitEvent(cadence.Event)
-	// ValueExists returns true if the given key exists in the storage, owned by the given accounts.
+	// ValueExists returns true if the given key exists in the storage, owned by the given account.
 	ValueExists(owner, key []byte) (exists bool, err error)
 	// GenerateUUID is called to generate a UUID.
 	GenerateUUID() uint64
