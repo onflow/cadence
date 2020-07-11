@@ -20,6 +20,7 @@ package checker
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -1812,7 +1813,7 @@ func TestCheckContractInterfaceFungibleToken(t *testing.T) {
 	_, err := ParseAndCheck(t, code)
 
 	if !assert.NoError(t, err) {
-		cmd.PrettyPrintError(err, "", map[string]string{"": code})
+		cmd.PrettyPrintError(os.Stdout, err, "", map[string]string{"": code})
 	}
 }
 
@@ -1825,7 +1826,7 @@ func TestCheckContractInterfaceFungibleTokenConformance(t *testing.T) {
 	_, err := ParseAndCheckWithPanic(t, code)
 
 	if !assert.NoError(t, err) {
-		cmd.PrettyPrintError(err, "", map[string]string{"": code})
+		cmd.PrettyPrintError(os.Stdout, err, "", map[string]string{"": code})
 	}
 }
 
@@ -1856,6 +1857,6 @@ func TestCheckContractInterfaceFungibleTokenUse(t *testing.T) {
 	_, err := ParseAndCheckWithPanic(t, code)
 
 	if !assert.NoError(t, err) {
-		cmd.PrettyPrintError(err, "", map[string]string{"": code})
+		cmd.PrettyPrintError(os.Stdout, err, "", map[string]string{"": code})
 	}
 }

@@ -43,7 +43,7 @@ func RunREPL() {
 	repl, err := runtime.NewREPL(
 		func(err error) {
 			// TODO: handle imports
-			cmd.PrettyPrintError(err, replFilename, map[string]string{replFilename: code})
+			cmd.PrettyPrintError(os.Stderr, err, replFilename, map[string]string{replFilename: code})
 		},
 		func(value interpreter.Value) {
 			if _, isVoid := value.(*interpreter.VoidValue); isVoid || value == nil {

@@ -161,6 +161,8 @@ func run(paths []string, bench bool, old bool, compare bool, json bool) {
 		out = newStdoutOutput()
 	}
 
+	failed := false
+
 	for _, path := range paths {
 		res := result{
 			Path: path,
@@ -178,8 +180,16 @@ func run(paths []string, bench bool, old bool, compare bool, json bool) {
 			res.ParseErrorOld = oldErr
 		}
 
+		if newErr != nil || oldErr != nil {
+			failed = true
+		}
+
 		if compare && newErr == nil && oldErr == nil {
-			res.Diff = compareOldAndNew(oldResult, newResult)
+			diff := compareOldAndNew(oldResult, newResult)
+			if len(diff) > 0 {
+				failed = true
+			}
+			res.Diff = diff
 		}
 
 		if bench {
@@ -202,6 +212,10 @@ func run(paths []string, bench bool, old bool, compare bool, json bool) {
 	}
 
 	out.End()
+
+	if failed {
+		os.Exit(1)
+	}
 }
 
 func read(path string) string {
