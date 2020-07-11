@@ -83,6 +83,21 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (member *M
 		return memberInfo.Member, memberInfo.IsOptional
 	}
 
+	defer func() {
+		checker.Elaboration.MemberExpressionMemberInfos[expression] =
+			MemberInfo{
+				Member:     member,
+				IsOptional: isOptional,
+			}
+	}()
+
+	// The access expression might have no name,
+	// as the parser accepts invalid programs
+
+	if expression.Identifier.Identifier == "" {
+		return member, isOptional
+	}
+
 	accessedExpression := expression.Expression
 
 	var expressionType Type
@@ -226,12 +241,6 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (member *M
 			)
 		}
 	}
-
-	checker.Elaboration.MemberExpressionMemberInfos[expression] =
-		MemberInfo{
-			Member:     member,
-			IsOptional: isOptional,
-		}
 
 	return member, isOptional
 }

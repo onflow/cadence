@@ -707,14 +707,14 @@ func (e *FieldUninitializedError) EndPosition() ast.Position {
 	return e.Pos.Shifted(length - 1)
 }
 
-// FieldTypeNotStorableError is an error that is reported for 
-// field of composite types that are not storable.
+// FieldTypeNotStorableError is an error that is reported for
+// fields of composite types that are not storable.
 //
-// Field types have to be storable because the storage
-// layer needs to know how to store the field, which is not 
-// possible for all types.
+// Field types have to be storable because the storage layer
+// needs to know how to store the field, which is not possible
+// for all types.
 //
-// For example, the type `Int` is a storable type, 
+// For example, the type `Int` is a storable type,
 // whereas a function type is not.
 
 type FieldTypeNotStorableError struct {
@@ -2056,7 +2056,7 @@ type InvalidOptionalChainingError struct {
 
 func (e *InvalidOptionalChainingError) Error() string {
 	return fmt.Sprintf(
-		"cannot use optional chaining: type '%s' is not optional",
+		"cannot use optional chaining: type `%s` is not optional",
 		e.Type.QualifiedString(),
 	)
 }
