@@ -220,7 +220,7 @@ func (checker *Checker) checkIdentifierInvocationArgumentLabels(
 	invocationExpression *ast.InvocationExpression,
 	identifierExpression *ast.IdentifierExpression,
 ) {
-	variable := checker.findAndCheckVariable(identifierExpression.Identifier, false)
+	variable := checker.findAndCheckValueVariable(identifierExpression.Identifier, false)
 
 	if variable == nil || len(variable.ArgumentLabels) == 0 {
 		return

@@ -42,20 +42,20 @@ func (pos Position) Compare(other intervalst.Position) int {
 		return 1
 	}
 
-	otherL, ok := other.(Position)
+	otherPos, ok := other.(Position)
 	if !ok {
 		panic(fmt.Sprintf("not a sema.Position: %#+v", other))
 	}
-	if pos.Line < otherL.Line {
+	if pos.Line < otherPos.Line {
 		return -1
 	}
-	if pos.Line > otherL.Line {
+	if pos.Line > otherPos.Line {
 		return 1
 	}
-	if pos.Column < otherL.Column {
+	if pos.Column < otherPos.Column {
 		return -1
 	}
-	if pos.Column > otherL.Column {
+	if pos.Column > otherPos.Column {
 		return 1
 	}
 	return 0
@@ -69,12 +69,12 @@ type Origin struct {
 }
 
 type Occurrences struct {
-	T *intervalst.IntervalST
+	tree *intervalst.IntervalST
 }
 
 func NewOccurrences() *Occurrences {
 	return &Occurrences{
-		T: &intervalst.IntervalST{},
+		tree: &intervalst.IntervalST{},
 	}
 }
 
@@ -95,7 +95,7 @@ func (o *Occurrences) Put(startPos, endPos ast.Position, origin *Origin) {
 		occurrence.StartPos,
 		occurrence.EndPos,
 	)
-	o.T.Put(interval, occurrence)
+	o.tree.Put(interval, occurrence)
 }
 
 type Occurrence struct {
@@ -105,7 +105,7 @@ type Occurrence struct {
 }
 
 func (o *Occurrences) All() []Occurrence {
-	values := o.T.Values()
+	values := o.tree.Values()
 	occurrences := make([]Occurrence, len(values))
 	for i, value := range values {
 		occurrences[i] = value.(Occurrence)
@@ -114,7 +114,7 @@ func (o *Occurrences) All() []Occurrence {
 }
 
 func (o *Occurrences) Find(pos Position) *Occurrence {
-	interval, value := o.T.Search(pos)
+	interval, value := o.tree.Search(pos)
 	if interval == nil {
 		return nil
 	}
