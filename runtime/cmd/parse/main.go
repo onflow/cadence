@@ -20,6 +20,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -30,84 +31,191 @@ import (
 
 	"github.com/go-test/deep"
 
+	"github.com/onflow/cadence/runtime/ast"
 	parser1 "github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/parser2"
 )
 
-var benchFlag = flag.Bool("bench", false, "benchmark the new and the old parser")
+var benchFlag = flag.Bool("bench", false, "benchmark the new parser")
+var oldFlag = flag.Bool("old", false, "also run old parser")
 var compareFlag = flag.Bool("compare", false, "compare the results of the new and old parser")
+var jsonFlag = flag.Bool("json", false, "print the result formatted as JSON")
 
 func main() {
 	flag.Parse()
 	args := flag.Args()
-	if *benchFlag {
-		bench(args)
-	}
-	if *compareFlag {
-		compare(args)
+	run(args, *benchFlag, *oldFlag, *compareFlag, *jsonFlag)
+}
+
+type result struct {
+	Path          string                  `json:",omitempty"`
+	BenchOld      testing.BenchmarkResult `json:",omitempty"`
+	Bench         testing.BenchmarkResult `json:",omitempty"`
+	Diff          string                  `json:",omitempty"`
+	ParseError    error                   `json:",omitempty"`
+	ParseErrorOld error                   `json:",omitempty"`
+}
+
+type output interface {
+	Append(result)
+	End()
+}
+
+type jsonOutput struct {
+	results []result
+}
+
+func newJSONOutput(count int) *jsonOutput {
+	return &jsonOutput{
+		results: make([]result, 0, count),
 	}
 }
 
-func bench(args []string) {
-	w := newTabWriter()
+func (j *jsonOutput) Append(r result) {
+	j.results = append(j.results, r)
+}
 
-	if len(args) == 0 {
-		data, err := ioutil.ReadAll(bufio.NewReader(os.Stdin))
-		if err != nil {
-			panic(err)
-		}
-
-		oldResult, newResult := benchOldAndNew(string(data))
-
-		_, err = fmt.Fprintf(w, "[old]\t%s\n", oldResult)
-		if err != nil {
-			panic(err)
-		}
-		_, err = fmt.Fprintf(w, "[new]\t%s\n", newResult)
-		if err != nil {
-			panic(err)
-		}
-
-		return
-	} else {
-		for i := 0; i < len(args); i++ {
-			filename := args[i]
-			data, err := ioutil.ReadFile(filename)
-			if err != nil {
-				panic(err)
-			}
-
-			oldResult, newResult := benchOldAndNew(string(data))
-
-			_, err = fmt.Fprintf(w, "%s:\t[old]\t%s\n", filename, oldResult)
-			if err != nil {
-				panic(err)
-			}
-			_, err = fmt.Fprintf(w, "%s:\t[new]\t%s\n", filename, newResult)
-			if err != nil {
-				panic(err)
-			}
-		}
-	}
-
-	err := w.Flush()
+func (j *jsonOutput) End() {
+	encoder := json.NewEncoder(os.Stdout)
+	encoder.SetIndent("", "  ")
+	err := encoder.Encode(j.results)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func benchOldAndNew(code string) (oldResult, newResult testing.BenchmarkResult) {
-	oldResult = benchParse(code, func(code string) (err error) {
-		_, _, err = parser1.ParseProgram(code)
-		return
-	})
+type stdoutOutput struct {
+	writer *tabwriter.Writer
+}
 
-	newResult = benchParse(code, func(code string) (err error) {
-		_, err = parser2.ParseProgram(code)
-		return
-	})
+func (s stdoutOutput) Append(r result) {
+	var err error
 
-	return
+	if len(r.Path) > 0 {
+		_, err = fmt.Fprintf(s.writer, "%s\n", r.Path)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if r.ParseErrorOld != nil {
+		_, err = fmt.Fprintf(s.writer, "old error:\t%s\n", r.ParseErrorOld)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if r.ParseError != nil {
+		_, err = fmt.Fprintf(s.writer, "new error:\t%s\n", r.ParseError)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if r.BenchOld.N > 0 {
+		_, err = fmt.Fprintf(s.writer, "old bench:\t%s\n", r.BenchOld)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if r.Bench.N > 0 {
+		_, err = fmt.Fprintf(s.writer, "new bench:\t%s\n", r.Bench)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	if len(r.Diff) > 0 {
+		_, err = fmt.Fprintf(s.writer, "mismatch:\n%s", r.Diff)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	err = s.writer.Flush()
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (s stdoutOutput) End() {
+	// no-op
+}
+
+func newStdoutOutput() stdoutOutput {
+	return stdoutOutput{
+		writer: tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0),
+	}
+}
+
+func run(paths []string, bench bool, old bool, compare bool, json bool) {
+	if len(paths) == 0 {
+		paths = []string{""}
+	}
+
+	var out output
+	if json {
+		out = newJSONOutput(len(paths))
+	} else {
+		out = newStdoutOutput()
+	}
+
+	for _, path := range paths {
+		res := result{
+			Path: path,
+		}
+
+		code := read(path)
+
+		newResult, newErr := parser2.ParseProgram(code)
+		res.ParseError = newErr
+
+		var oldResult *ast.Program
+		var oldErr error
+		if old || compare {
+			oldResult, _, oldErr = parser1.ParseProgram(code)
+			res.ParseErrorOld = oldErr
+		}
+
+		if compare && newErr == nil && oldErr == nil {
+			res.Diff = compareOldAndNew(oldResult, newResult)
+		}
+
+		if bench {
+			if newErr == nil {
+				res.Bench = benchParse(code, func(code string) (err error) {
+					_, err = parser2.ParseProgram(code)
+					return
+				})
+			}
+
+			if old && oldErr == nil {
+				res.BenchOld = benchParse(code, func(code string) (err error) {
+					_, _, err = parser1.ParseProgram(code)
+					return
+				})
+			}
+		}
+
+		out.Append(res)
+	}
+
+	out.End()
+}
+
+func read(path string) string {
+	var data []byte
+	var err error
+	if len(path) == 0 {
+		data, err = ioutil.ReadAll(bufio.NewReader(os.Stdin))
+	} else {
+		data, err = ioutil.ReadFile(path)
+	}
+	if err != nil {
+		panic(err)
+	}
+	return string(data)
 }
 
 func benchParse(code string, parse func(string) error) testing.BenchmarkResult {
@@ -121,65 +229,7 @@ func benchParse(code string, parse func(string) error) testing.BenchmarkResult {
 	})
 }
 
-func compare(args []string) {
-
-	if len(args) == 0 {
-		data, err := ioutil.ReadAll(bufio.NewReader(os.Stdin))
-		if err != nil {
-			panic(err)
-		}
-
-		diff := compareOldAndNew(string(data))
-
-		if len(diff) == 0 {
-			_, err = fmt.Printf("OK\n\n")
-			if err != nil {
-				panic(err)
-			}
-		} else {
-			_, err = fmt.Printf("MISMATCH:\n%s\n", diff)
-			if err != nil {
-				panic(err)
-			}
-		}
-
-		return
-	} else {
-		for i := 0; i < len(args); i++ {
-			filename := args[i]
-			data, err := ioutil.ReadFile(filename)
-			if err != nil {
-				panic(err)
-			}
-
-			diff := compareOldAndNew(string(data))
-
-			if len(diff) == 0 {
-				_, err = fmt.Printf("%s:\tOK\n\n", filename)
-				if err != nil {
-					panic(err)
-				}
-			} else {
-				_, err = fmt.Printf("%s:\tMISMATCH:\n%s\n", filename, diff)
-				if err != nil {
-					panic(err)
-				}
-			}
-		}
-	}
-}
-
-func compareOldAndNew(code string) string {
-	oldResult, _, err := parser1.ParseProgram(code)
-	if err != nil {
-		return fmt.Sprintf("old parser failed: %s", err)
-	}
-
-	newResult, err := parser2.ParseProgram(code)
-	if err != nil {
-		return fmt.Sprintf("new parser failed: %s", err)
-	}
-
+func compareOldAndNew(oldResult, newResult *ast.Program) string {
 	// the maximum levels of a struct to recurse into
 	// this prevents infinite recursion from circular references
 	deep.MaxDepth = 100
@@ -194,8 +244,4 @@ func compareOldAndNew(code string) string {
 	}
 
 	return s.String()
-}
-
-func newTabWriter() *tabwriter.Writer {
-	return tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
 }
