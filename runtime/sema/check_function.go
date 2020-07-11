@@ -93,7 +93,7 @@ func (checker *Checker) declareFunctionDeclaration(
 ) {
 	argumentLabels := declaration.ParameterList.EffectiveArgumentLabels()
 
-	variable, err := checker.valueActivations.Declare(variableDeclaration{
+	_, err := checker.valueActivations.Declare(variableDeclaration{
 		identifier:               declaration.Identifier.Identifier,
 		ty:                       functionType,
 		access:                   declaration.Access,
@@ -105,7 +105,7 @@ func (checker *Checker) declareFunctionDeclaration(
 	})
 	checker.report(err)
 
-	checker.recordVariableDeclarationOccurrence(declaration.Identifier.Identifier, variable)
+	checker.recordFunctionDeclarationOrigin(declaration, functionType)
 }
 
 func (checker *Checker) checkFunction(
