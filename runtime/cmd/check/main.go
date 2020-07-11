@@ -124,6 +124,8 @@ func run(paths []string, bench bool, json bool) {
 		paths = []string{""}
 	}
 
+	failed := false
+
 	var out output
 	if json {
 		out = newJSONOutput(len(paths))
@@ -147,6 +149,7 @@ func run(paths []string, bench bool, json bool) {
 			var builder strings.Builder
 			cmd.PrettyPrintError(&builder, err, path, codes)
 			res.CheckError = builder.String()
+			failed = true
 		}
 
 		if bench && err == nil {
@@ -165,6 +168,10 @@ func run(paths []string, bench bool, json bool) {
 	}
 
 	out.End()
+
+	if failed {
+		os.Exit(1)
+	}
 }
 
 func read(path string) string {
