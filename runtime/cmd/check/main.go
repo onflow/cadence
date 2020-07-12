@@ -25,11 +25,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"runtime/debug"
 	"strings"
 	"testing"
 	"text/tabwriter"
+	"time"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/cmd"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 var benchFlag = flag.Bool("bench", false, "benchmark the checker")
@@ -41,10 +45,18 @@ func main() {
 	run(args, *benchFlag, *jsonFlag)
 }
 
+type benchResult struct {
+	// N is the the number of iterations
+	Iterations int `json:"iterations"`
+	// T is the total time taken
+	Time time.Duration `json:"time"`
+}
+
 type result struct {
-	Path       string                  `json:",omitempty"`
-	Bench      testing.BenchmarkResult `json:",omitempty"`
-	CheckError string                  `json:",omitempty"`
+	Path     string       `json:"path"`
+	Bench    *benchResult `json:"bench,omitempty"`
+	BenchStr string       `json:"-"`
+	Error    string       `json:"error,omitempty"`
 }
 
 type output interface {
@@ -89,15 +101,15 @@ func (s stdoutOutput) Append(r result) {
 		}
 	}
 
-	if r.Bench.N > 0 {
-		_, err = fmt.Fprintf(s.writer, "bench:\t%s\n", r.Bench)
+	if len(r.BenchStr) > 0 {
+		_, err = fmt.Fprintf(s.writer, "bench:\t%s\n", r.BenchStr)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	if r.CheckError != "" {
-		_, err = fmt.Fprintf(s.writer, "error:\t%s\n", r.CheckError)
+	if len(r.Error) > 0 {
+		_, err = fmt.Fprintf(s.writer, "error:\t%s\n", r.Error)
 		if err != nil {
 			panic(err)
 		}
@@ -124,7 +136,7 @@ func run(paths []string, bench bool, json bool) {
 		paths = []string{""}
 	}
 
-	failed := false
+	allSucceeded := true
 
 	var out output
 	if json {
@@ -134,34 +146,9 @@ func run(paths []string, bench bool, json bool) {
 	}
 
 	for _, path := range paths {
-		res := result{
-			Path: path,
-		}
-
-		code := read(path)
-
-		program, codes, must := cmd.PrepareProgram(code, path)
-
-		checker, _ := cmd.PrepareChecker(program, path, must)
-
-		err := checker.Check()
-		if err != nil {
-			var builder strings.Builder
-			cmd.PrettyPrintError(&builder, err, path, codes)
-			res.CheckError = builder.String()
-			failed = true
-		}
-
-		if bench && err == nil {
-			res.Bench = testing.Benchmark(func(b *testing.B) {
-				for i := 0; i < b.N; i++ {
-					checker, must = cmd.PrepareChecker(program, path, must)
-					must(checker.Check())
-					if err != nil {
-						panic(err)
-					}
-				}
-			})
+		res, runSucceeded := runPath(path, bench)
+		if !runSucceeded {
+			allSucceeded = false
 		}
 
 		out.Append(res)
@@ -169,9 +156,67 @@ func run(paths []string, bench bool, json bool) {
 
 	out.End()
 
-	if failed {
+	if !allSucceeded {
 		os.Exit(1)
 	}
+}
+
+func runPath(path string, bench bool) (res result, succeeded bool) {
+	res = result{
+		Path: path,
+	}
+	succeeded = true
+
+	code := read(path)
+
+	var err error
+	var checker *sema.Checker
+	var program *ast.Program
+	var codes map[string]string
+	var must func(error)
+
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				err = fmt.Errorf("%s", debug.Stack())
+				res.Error = err.Error()
+			}
+		}()
+
+		program, codes, must = cmd.PrepareProgram(code, path)
+
+		checker, _ = cmd.PrepareChecker(program, path, must)
+
+		err = checker.Check()
+		if err != nil {
+			var builder strings.Builder
+			cmd.PrettyPrintError(&builder, err, path, codes)
+			res.Error = builder.String()
+		}
+	}()
+
+	if err != nil {
+		succeeded = false
+	}
+
+	if bench && err == nil {
+		benchRes := testing.Benchmark(func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				checker, must = cmd.PrepareChecker(program, path, must)
+				must(checker.Check())
+				if err != nil {
+					panic(err)
+				}
+			}
+		})
+		res.Bench = &benchResult{
+			Iterations: benchRes.N,
+			Time:       benchRes.T,
+		}
+		res.BenchStr = benchRes.String()
+	}
+
+	return res, succeeded
 }
 
 func read(path string) string {
