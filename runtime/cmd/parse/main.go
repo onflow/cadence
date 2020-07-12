@@ -25,9 +25,11 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"runtime/debug"
 	"strings"
 	"testing"
 	"text/tabwriter"
+	"time"
 
 	"github.com/go-test/deep"
 
@@ -47,13 +49,22 @@ func main() {
 	run(args, *benchFlag, *oldFlag, *compareFlag, *jsonFlag)
 }
 
+type benchResult struct {
+	// N is the the number of iterations
+	Iterations int `json:"iterations"`
+	// T is the total time taken
+	Time time.Duration `json:"time"`
+}
+
 type result struct {
-	Path          string                  `json:",omitempty"`
-	BenchOld      testing.BenchmarkResult `json:",omitempty"`
-	Bench         testing.BenchmarkResult `json:",omitempty"`
-	Diff          string                  `json:",omitempty"`
-	ParseError    error                   `json:",omitempty"`
-	ParseErrorOld error                   `json:",omitempty"`
+	Path        string       `json:"path,omitempty"`
+	BenchOld    *benchResult `json:"bench_old,omitempty"`
+	BenchOldStr string       `json:"-"`
+	Bench       *benchResult `json:"bench,omitempty"`
+	BenchStr    string       `json:"-"`
+	Diff        string       `json:"diff,omitempty"`
+	Error       error        `json:"error,omitempty"`
+	ErrorOld    error        `json:"error_old,omitempty"`
 }
 
 type output interface {
@@ -98,29 +109,29 @@ func (s stdoutOutput) Append(r result) {
 		}
 	}
 
-	if r.ParseErrorOld != nil {
-		_, err = fmt.Fprintf(s.writer, "old error:\t%s\n", r.ParseErrorOld)
+	if r.ErrorOld != nil {
+		_, err = fmt.Fprintf(s.writer, "old error:\t%s\n", r.ErrorOld)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	if r.ParseError != nil {
-		_, err = fmt.Fprintf(s.writer, "new error:\t%s\n", r.ParseError)
+	if r.Error != nil {
+		_, err = fmt.Fprintf(s.writer, "new error:\t%s\n", r.Error)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	if r.BenchOld.N > 0 {
-		_, err = fmt.Fprintf(s.writer, "old bench:\t%s\n", r.BenchOld)
+	if len(r.BenchOldStr) > 0 {
+		_, err = fmt.Fprintf(s.writer, "old bench:\t%s\n", r.BenchOldStr)
 		if err != nil {
 			panic(err)
 		}
 	}
 
-	if r.Bench.N > 0 {
-		_, err = fmt.Fprintf(s.writer, "new bench:\t%s\n", r.Bench)
+	if len(r.BenchStr) > 0 {
+		_, err = fmt.Fprintf(s.writer, "new bench:\t%s\n", r.BenchStr)
 		if err != nil {
 			panic(err)
 		}
@@ -161,61 +172,100 @@ func run(paths []string, bench bool, old bool, compare bool, json bool) {
 		out = newStdoutOutput()
 	}
 
-	failed := false
+	allSucceeded := true
 
 	for _, path := range paths {
-		res := result{
-			Path: path,
+		res, runSucceeded := runPath(path, old, compare, bench)
+		if !runSucceeded {
+			allSucceeded = false
 		}
-
-		code := read(path)
-
-		newResult, newErr := parser2.ParseProgram(code)
-		res.ParseError = newErr
-
-		var oldResult *ast.Program
-		var oldErr error
-		if old || compare {
-			oldResult, _, oldErr = parser1.ParseProgram(code)
-			res.ParseErrorOld = oldErr
-		}
-
-		if newErr != nil || oldErr != nil {
-			failed = true
-		}
-
-		if compare && newErr == nil && oldErr == nil {
-			diff := compareOldAndNew(oldResult, newResult)
-			if len(diff) > 0 {
-				failed = true
-			}
-			res.Diff = diff
-		}
-
-		if bench {
-			if newErr == nil {
-				res.Bench = benchParse(code, func(code string) (err error) {
-					_, err = parser2.ParseProgram(code)
-					return
-				})
-			}
-
-			if old && oldErr == nil {
-				res.BenchOld = benchParse(code, func(code string) (err error) {
-					_, _, err = parser1.ParseProgram(code)
-					return
-				})
-			}
-		}
-
 		out.Append(res)
 	}
 
 	out.End()
 
-	if failed {
+	if !allSucceeded {
 		os.Exit(1)
 	}
+}
+
+func runPath(path string, old bool, compare bool, bench bool) (res result, succeeded bool) {
+	res = result{
+		Path: path,
+	}
+	succeeded = true
+
+	code := read(path)
+
+	var newResult *ast.Program
+	var newErr error
+
+	func() {
+		defer func() {
+			if r := recover(); r != nil {
+				newErr = fmt.Errorf("%s", debug.Stack())
+				res.Error = newErr
+			}
+		}()
+
+		newResult, newErr = parser2.ParseProgram(code)
+		res.Error = newErr
+	}()
+
+	var oldResult *ast.Program
+	var oldErr error
+	if old || compare {
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					oldErr = fmt.Errorf("%s", debug.Stack())
+					res.ErrorOld = oldErr
+				}
+			}()
+
+			oldResult, _, oldErr = parser1.ParseProgram(code)
+			res.ErrorOld = oldErr
+		}()
+	}
+
+	if newErr != nil || oldErr != nil {
+		succeeded = false
+	}
+
+	if compare && newErr == nil && oldErr == nil {
+		diff := compareOldAndNew(oldResult, newResult)
+		if len(diff) > 0 {
+			succeeded = false
+		}
+		res.Diff = diff
+	}
+
+	if bench {
+		if newErr == nil {
+			benchRes := benchParse(code, func(code string) (err error) {
+				_, err = parser2.ParseProgram(code)
+				return
+			})
+			res.Bench = &benchResult{
+				Iterations: benchRes.N,
+				Time:       benchRes.T,
+			}
+			res.BenchStr = benchRes.String()
+		}
+
+		if old && oldErr == nil {
+			benchRes := benchParse(code, func(code string) (err error) {
+				_, _, err = parser1.ParseProgram(code)
+				return
+			})
+			res.BenchOld = &benchResult{
+				Iterations: benchRes.N,
+				Time:       benchRes.T,
+			}
+			res.BenchOldStr = benchRes.String()
+		}
+	}
+	return res, succeeded
 }
 
 func read(path string) string {
