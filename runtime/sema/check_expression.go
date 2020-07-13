@@ -122,7 +122,7 @@ func (checker *Checker) checkResourceVariableCapturingInFunction(variable *Varia
 	}
 
 	if currentFunctionDepth == -1 ||
-		variable.Depth > currentFunctionDepth {
+		variable.ActivationDepth > currentFunctionDepth {
 
 		return
 	}

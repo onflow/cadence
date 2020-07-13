@@ -86,7 +86,7 @@ func (a *VariableActivations) Declare(declaration variableDeclaration) (variable
 	existingVariable := a.Find(declaration.identifier)
 	if existingVariable != nil &&
 		(!declaration.allowOuterScopeShadowing ||
-			existingVariable.Depth == depth) {
+			existingVariable.ActivationDepth == depth) {
 
 		err = &RedeclarationError{
 			Kind:        declaration.kind,
@@ -107,7 +107,7 @@ func (a *VariableActivations) Declare(declaration variableDeclaration) (variable
 		Access:          declaration.access,
 		DeclarationKind: declaration.kind,
 		IsConstant:      declaration.isConstant,
-		Depth:           depth,
+		ActivationDepth: depth,
 		Type:            declaration.ty,
 		Pos:             &declaration.pos,
 		ArgumentLabels:  declaration.argumentLabels,
@@ -172,7 +172,7 @@ func (a *VariableActivations) VariablesDeclaredInAndBelow(depth int) map[string]
 
 		variable := value.(*Variable)
 
-		if variable.Depth < depth {
+		if variable.ActivationDepth < depth {
 			continue
 		}
 

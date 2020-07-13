@@ -19,13 +19,13 @@
 package interpreter
 
 type Variable struct {
-	Value Value
-	Depth int
+	Value           Value
+	ActivationDepth int
 }
 
 func NewVariable(value Value, depth int) *Variable {
 	return &Variable{
-		Value: value,
-		Depth: depth,
+		Value:           value,
+		ActivationDepth: depth,
 	}
 }
