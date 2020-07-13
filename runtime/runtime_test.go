@@ -115,6 +115,7 @@ type testRuntimeInterface struct {
 		signatureAlgorithm string,
 		hashAlgorithm string,
 	) bool
+	setCadenceValue func(owner common.Address, key string, value cadence.Value) (err error)
 }
 
 var _ Interface = &testRuntimeInterface{}
@@ -277,6 +278,14 @@ func (i *testRuntimeInterface) VerifySignature(
 		signatureAlgorithm,
 		hashAlgorithm,
 	)
+}
+
+func (i *testRuntimeInterface) HighLevelStorageEnabled() bool {
+	return i.setCadenceValue != nil
+}
+
+func (i *testRuntimeInterface) SetCadenceValue(owner common.Address, key string, value cadence.Value) (err error) {
+	return i.setCadenceValue(owner, key, value)
 }
 
 func TestRuntimeImport(t *testing.T) {

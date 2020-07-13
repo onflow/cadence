@@ -164,7 +164,7 @@ func (r *interpreterRuntime) ExecuteScript(
 	}
 	epSignature := invokableType.InvocationFunctionType()
 
-	value, err := r.interpret(
+	value, inter, err := r.interpret(
 		location,
 		runtimeInterface,
 		runtimeStorage,
@@ -182,7 +182,7 @@ func (r *interpreterRuntime) ExecuteScript(
 	// Even though this function is `ExecuteScript`, that doesn't imply the changes
 	// to storage will be actually persisted
 
-	runtimeStorage.writeCached()
+	runtimeStorage.writeCached(inter)
 
 	return exportValue(value), nil
 }
@@ -214,11 +214,12 @@ func (r *interpreterRuntime) interpret(
 	f interpretFunc,
 ) (
 	exportableValue,
+	*interpreter.Interpreter,
 	error,
 ) {
 	inter, err := r.newInterpreter(checker, functions, runtimeInterface, runtimeStorage, options)
 	if err != nil {
-		return exportableValue{}, err
+		return exportableValue{}, nil, err
 	}
 
 	var result interpreter.Value
@@ -238,14 +239,15 @@ func (r *interpreterRuntime) interpret(
 	)
 
 	if err != nil {
-		return exportableValue{}, err
+		return exportableValue{}, nil, err
 	}
 
-	if f == nil {
-		return exportableValue{}, nil
+	var exportedValue exportableValue
+	if f != nil {
+		exportedValue = newExportableValue(result, inter)
 	}
 
-	return newExportableValue(result, inter), nil
+	return exportedValue, inter, nil
 }
 
 func (r *interpreterRuntime) newAuthAccountValue(
@@ -336,7 +338,7 @@ func (r *interpreterRuntime) ExecuteTransaction(
 		)
 	}
 
-	_, err = r.interpret(
+	_, inter, err := r.interpret(
 		location,
 		runtimeInterface,
 		runtimeStorage,
@@ -356,7 +358,7 @@ func (r *interpreterRuntime) ExecuteTransaction(
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
-	runtimeStorage.writeCached()
+	runtimeStorage.writeCached(inter)
 
 	return nil
 }
@@ -1299,7 +1301,7 @@ func (r *interpreterRuntime) instantiateContract(
 		),
 	}
 
-	_, err := r.interpret(
+	_, _, err := r.interpret(
 		location,
 		runtimeInterface,
 		runtimeStorage,
