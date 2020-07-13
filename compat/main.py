@@ -301,6 +301,7 @@ class Comparisons:
         )
 
     def write(self, output: IO, format: Format):
+
         result: Optional[str] = None
         if format in ("pretty", "markdown"):
 
@@ -559,9 +560,9 @@ class BenchComparison:
     def _category(self) -> BenchCategory:
         if abs(self.delta) > self.delta_threshold:
             if self.delta > 0:
-                return BenchCategory.REGRESSION
-            if self.delta < 0:
                 return BenchCategory.IMPROVEMENT
+            if self.delta < 0:
+                return BenchCategory.REGRESSION
 
         return BenchCategory.SAME
 
