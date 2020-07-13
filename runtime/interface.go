@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 const BlockHashLength = 32
@@ -79,6 +80,18 @@ type Interface interface {
 		signatureAlgorithm string,
 		hashAlgorithm string,
 	) bool
+}
+
+type HighLevelStorage interface {
+	Interface
+
+	// HighLevelStorageEnabled should return true
+	// if the functions of HighLevelStorage should be called,
+	// e.g. SetCadenceValue
+	HighLevelStorageEnabled() bool
+
+	// SetCadenceValue sets a value for the given key in the storage, owned by the given account.
+	SetCadenceValue(owner common.Address, key string, value cadence.Value) (err error)
 }
 
 type Metrics interface {

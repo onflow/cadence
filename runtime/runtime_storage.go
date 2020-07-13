@@ -21,6 +21,7 @@ package runtime
 import (
 	"time"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -39,14 +40,24 @@ type cacheEntry struct {
 }
 
 type interpreterRuntimeStorage struct {
-	runtimeInterface Interface
-	cache            map[storageKey]cacheEntry
+	runtimeInterface        Interface
+	highLevelStorageEnabled bool
+	highLevelStorage        HighLevelStorage
+	cache                   map[storageKey]cacheEntry
 }
 
 func newInterpreterRuntimeStorage(runtimeInterface Interface) *interpreterRuntimeStorage {
+	highLevelStorageEnabled := false
+	highLevelStorage, ok := runtimeInterface.(HighLevelStorage)
+	if ok {
+		highLevelStorageEnabled = highLevelStorage.HighLevelStorageEnabled()
+	}
+
 	return &interpreterRuntimeStorage{
-		runtimeInterface: runtimeInterface,
-		cache:            map[storageKey]cacheEntry{},
+		runtimeInterface:        runtimeInterface,
+		cache:                   map[storageKey]cacheEntry{},
+		highLevelStorage:        highLevelStorage,
+		highLevelStorageEnabled: highLevelStorageEnabled,
 	}
 }
 
@@ -208,7 +219,7 @@ func (s *interpreterRuntimeStorage) writeValue(
 
 // writeCached serializes/saves all values in the cache in storage (through the runtime interface).
 //
-func (s *interpreterRuntimeStorage) writeCached() {
+func (s *interpreterRuntimeStorage) writeCached(inter *interpreter.Interpreter) {
 
 	type writeItem struct {
 		storageKey storageKey
@@ -227,6 +238,22 @@ func (s *interpreterRuntimeStorage) writeCached() {
 			storageKey: fullKey,
 			value:      entry.value,
 		})
+
+		if s.highLevelStorageEnabled {
+			var err error
+
+			var value cadence.Value
+			if entry.value != nil {
+				value = exportValueWithInterpreter(entry.value, inter)
+			}
+
+			wrapPanic(func() {
+				err = s.highLevelStorage.SetCadenceValue(fullKey.address, fullKey.key, value)
+			})
+			if err != nil {
+				panic(err)
+			}
+		}
 	}
 
 	// Don't use a for-range loop, as keys are added while iterating
@@ -282,6 +309,10 @@ func (s *interpreterRuntimeStorage) writeCached() {
 		if err != nil {
 			panic(err)
 		}
+	}
+
+	if s.highLevelStorageEnabled {
+
 	}
 }
 
