@@ -254,7 +254,7 @@ func (checker *Checker) declareParameters(
 
 		// check if variable with this identifier is already declared in the current scope
 		existingVariable := checker.valueActivations.Find(identifier.Identifier)
-		if existingVariable != nil && existingVariable.Depth == depth {
+		if existingVariable != nil && existingVariable.ActivationDepth == depth {
 			checker.report(
 				&RedeclarationError{
 					Kind:        common.DeclarationKindParameter,
@@ -275,7 +275,7 @@ func (checker *Checker) declareParameters(
 			DeclarationKind: common.DeclarationKindParameter,
 			IsConstant:      true,
 			Type:            parameterType,
-			Depth:           depth,
+			ActivationDepth: depth,
 			Pos:             &identifier.Pos,
 		}
 		checker.valueActivations.Set(identifier.Identifier, variable)

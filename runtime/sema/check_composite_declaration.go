@@ -1418,7 +1418,7 @@ func (checker *Checker) declareSelfValue(selfType Type) {
 		DeclarationKind: common.DeclarationKindSelf,
 		Type:            selfType,
 		IsConstant:      true,
-		Depth:           depth,
+		ActivationDepth: depth,
 		Pos:             nil,
 	}
 	checker.valueActivations.Set(SelfIdentifier, self)
