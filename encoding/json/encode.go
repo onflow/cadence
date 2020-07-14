@@ -449,7 +449,12 @@ func (e *Encoder) prepareComposite(kind, id string, fieldTypes []cadence.Field, 
 	}
 
 	if len(nonFunctionFieldTypes) != len(fields) {
-		panic(fmt.Errorf("%s value does not contain fields compatible with declared type", kind))
+		panic(fmt.Errorf(
+			"%s field count (%d) does not match declared type (%d)",
+			kind,
+			len(fields),
+			len(nonFunctionFieldTypes),
+		))
 	}
 
 	compositeFields := make([]jsonCompositeField, len(fields))
