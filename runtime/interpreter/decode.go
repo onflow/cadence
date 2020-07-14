@@ -48,6 +48,7 @@ type Decoder struct {
 // dictionary values (the key), and composites (the field name).
 //
 func DecodeValue(b []byte, owner *common.Address, path []string) (Value, error) {
+
 	reader := bytes.NewReader(b)
 
 	decoder, err := NewDecoder(reader, owner)
