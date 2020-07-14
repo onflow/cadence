@@ -21,6 +21,7 @@ package parser2
 import (
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -161,11 +162,16 @@ func parseAccess(p *parser) ast.Access {
 
 		if !p.current.Is(lexer.TokenIdentifier) {
 			panic(fmt.Errorf(
-				"expected keyword %q, %q, %q, or %q, got %s",
-				keywordAll,
-				keywordAccount,
-				keywordContract,
-				keywordSelf,
+				"expected keyword %s, got %s",
+				common.EnumerateWords(
+					[]string{
+						strconv.Quote(keywordAll),
+						strconv.Quote(keywordAccount),
+						strconv.Quote(keywordContract),
+						strconv.Quote(keywordSelf),
+					},
+					"or",
+				),
 				p.current.Type,
 			))
 		}
@@ -187,11 +193,16 @@ func parseAccess(p *parser) ast.Access {
 
 		default:
 			panic(fmt.Errorf(
-				"expected keyword %q, %q, %q, or %q, got %q",
-				keywordAll,
-				keywordAccount,
-				keywordContract,
-				keywordSelf,
+				"expected keyword %s, got %q",
+				common.EnumerateWords(
+					[]string{
+						strconv.Quote(keywordAll),
+						strconv.Quote(keywordAccount),
+						strconv.Quote(keywordContract),
+						strconv.Quote(keywordSelf),
+					},
+					"or",
+				),
 				p.current.Value,
 			))
 		}
