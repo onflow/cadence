@@ -168,10 +168,10 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 		staticType.Kind,
 		common.EnumerateWords(
 			[]string{
-				common.CompositeKindStructure.String(),
-				common.CompositeKindResource.String(),
-				common.CompositeKindEvent.String(),
-				common.CompositeKindContract.String(),
+				common.CompositeKindStructure.Name(),
+				common.CompositeKindResource.Name(),
+				common.CompositeKindEvent.Name(),
+				common.CompositeKindContract.Name(),
 			},
 			"or",
 		),
