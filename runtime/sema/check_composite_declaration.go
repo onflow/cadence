@@ -521,12 +521,13 @@ func (checker *Checker) declareCompositeMembersAndValue(
 				checker.valueActivations.Find(identifier.Identifier)
 
 			declarationMembers[nestedCompositeDeclarationVariable.Identifier] = &Member{
-				Identifier:      identifier,
-				Access:          nestedCompositeDeclaration.Access,
-				ContainerType:   compositeType,
-				TypeAnnotation:  NewTypeAnnotation(nestedCompositeDeclarationVariable.Type),
-				DeclarationKind: nestedCompositeDeclarationVariable.DeclarationKind,
-				VariableKind:    ast.VariableKindConstant,
+				Identifier:            identifier,
+				Access:                nestedCompositeDeclaration.Access,
+				ContainerType:         compositeType,
+				TypeAnnotation:        NewTypeAnnotation(nestedCompositeDeclarationVariable.Type),
+				DeclarationKind:       nestedCompositeDeclarationVariable.DeclarationKind,
+				VariableKind:          ast.VariableKindConstant,
+				IgnoreInSerialization: true,
 			}
 		}
 
