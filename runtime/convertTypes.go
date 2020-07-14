@@ -138,6 +138,10 @@ func exportCompositeType(t *sema.CompositeType) cadence.Type {
 	for _, identifier := range fieldNames {
 		field := t.Members[identifier]
 
+		if field.IgnoreInSerialization {
+			continue
+		}
+
 		convertedFieldType := exportType(field.TypeAnnotation.Type)
 
 		fields = append(fields, cadence.Field{
@@ -163,6 +167,12 @@ func exportCompositeType(t *sema.CompositeType) cadence.Type {
 		}
 	case common.CompositeKindEvent:
 		return cadence.EventType{
+			TypeID:     id,
+			Identifier: t.Identifier,
+			Fields:     fields,
+		}
+	case common.CompositeKindContract:
+		return cadence.ContractType{
 			TypeID:     id,
 			Identifier: t.Identifier,
 			Fields:     fields,

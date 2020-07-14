@@ -159,9 +159,23 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 		return cadence.NewResource(fields).WithType(t.(cadence.ResourceType))
 	case common.CompositeKindEvent:
 		return cadence.NewEvent(fields).WithType(t.(cadence.EventType))
+	case common.CompositeKindContract:
+		return cadence.NewContract(fields).WithType(t.(cadence.ContractType))
 	}
 
-	panic(fmt.Errorf("invalid composite kind `%s`, must be Struct, Resource or Event", staticType.Kind))
+	panic(fmt.Errorf(
+		"invalid composite kind `%s`, must be %s",
+		staticType.Kind,
+		common.EnumerateWords(
+			[]string{
+				common.CompositeKindStructure.String(),
+				common.CompositeKindResource.String(),
+				common.CompositeKindEvent.String(),
+				common.CompositeKindContract.String(),
+			},
+			"or",
+		),
+	))
 }
 
 func exportDictionaryValue(v *interpreter.DictionaryValue, inter *interpreter.Interpreter) cadence.Value {

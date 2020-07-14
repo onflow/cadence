@@ -926,3 +926,35 @@ func (v Event) ToGoValue() interface{} {
 
 	return ret
 }
+
+// Contract
+
+type Contract struct {
+	ContractType ContractType
+	Fields       []Value
+}
+
+func NewContract(fields []Value) Contract {
+	return Contract{Fields: fields}
+}
+
+func (Contract) isValue() {}
+
+func (v Contract) Type() Type {
+	return v.ContractType
+}
+
+func (v Contract) WithType(typ ContractType) Contract {
+	v.ContractType = typ
+	return v
+}
+
+func (v Contract) ToGoValue() interface{} {
+	ret := make([]interface{}, len(v.Fields))
+
+	for i, field := range v.Fields {
+		ret[i] = field.ToGoValue()
+	}
+
+	return ret
+}
