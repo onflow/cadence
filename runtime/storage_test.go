@@ -251,3 +251,65 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
 		writes,
 	)
 }
+
+func TestRuntimeMagic(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	address := common.BytesToAddress([]byte{0x1})
+
+	tx := []byte(`
+	  transaction {
+	      prepare(signer: AuthAccount) {
+	          signer.save(1, to: /storage/one)
+	      }
+	   }
+	`)
+
+	var writes []testWrite
+
+	onWrite := func(owner, key, value []byte) {
+		writes = append(writes, testWrite{
+			owner,
+			key,
+			value,
+		})
+	}
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestStorage(nil, onWrite),
+		getSigningAccounts: func() []Address {
+			return []Address{address}
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(tx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]testWrite{
+			{
+				[]byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+				[]byte("storage\x1fone"),
+				[]byte{
+					// magic
+					0x0, 0xCA, 0xDE, 0x0, 0x1,
+					// CBOR
+					// - tag
+					0xd8, 0x98,
+					// - positive bignum
+					0xc2,
+					// - byte string, length 1
+					0x41,
+					0x1,
+				},
+			},
+		},
+		writes,
+	)
+
+}

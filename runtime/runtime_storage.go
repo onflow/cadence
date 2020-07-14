@@ -147,6 +147,8 @@ func (s *interpreterRuntimeStorage) readValue(
 		panic(err)
 	}
 
+	storedData = interpreter.StripMagic(storedData)
+
 	if len(storedData) == 0 {
 		s.cache[fullKey] = cacheEntry{
 			mustWrite: false,
@@ -298,6 +300,10 @@ func (s *interpreterRuntimeStorage) writeCached(inter *interpreter.Interpreter) 
 			}
 		}
 
+		if len(newData) > 0 {
+			newData = interpreter.PrependMagic(newData)
+		}
+
 		var err error
 		wrapPanic(func() {
 			err = s.runtimeInterface.SetValue(
@@ -346,6 +352,7 @@ func (s *interpreterRuntimeStorage) move(
 		panic(err)
 	}
 
+	// NOTE: not prefix with magic, as data is moved, so might already have it
 	err = s.runtimeInterface.SetValue(newOwner[:], []byte(newKey), data)
 	if err != nil {
 		panic(err)
