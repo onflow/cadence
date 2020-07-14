@@ -115,7 +115,7 @@ type testRuntimeInterface struct {
 		signatureAlgorithm string,
 		hashAlgorithm string,
 	) bool
-	setCadenceValue func(owner common.Address, key string, value cadence.Value) (err error)
+	setCadenceValue func(owner Address, key string, value cadence.Value) (err error)
 }
 
 var _ Interface = &testRuntimeInterface{}
