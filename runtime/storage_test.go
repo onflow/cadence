@@ -112,7 +112,7 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
 		emitEvent: func(event cadence.Event) {
 			events = append(events, event)
 		},
-		setCadenceValue: func(owner common.Address, key string, value cadence.Value) (err error) {
+		setCadenceValue: func(owner Address, key string, value cadence.Value) (err error) {
 			writes = append(writes, write{
 				owner: owner,
 				key:   key,
