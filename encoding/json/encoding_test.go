@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -673,62 +672,92 @@ func TestEncodeResource(t *testing.T) {
 
 	t.Parallel()
 
-	script := `
-        access(all) resource Foo {
-            access(all) let bar: Int
+	t.Run("Simple", func(t *testing.T) {
+		script := `
+			access(all) resource Foo {
+				access(all) let bar: Int
+	
+				init(bar: Int) {
+					self.bar = bar
+				}
+			}
+	
+			access(all) fun main(): @Foo {
+				return <- create Foo(bar: 42)
+			}
+		`
 
-            init(bar: Int) {
-                self.bar = bar
-            }
-        }
+		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}},{"name":"uuid","value":{"type":"UInt64","value":"0"}}]}}`
 
-        access(all) fun main(): @Foo {
-            return <- create Foo(bar: 42)
-        }
-    `
+		v := convertValueFromScript(t, script)
 
-	expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}},{"name":"uuid","value":{"type":"UInt64","value":"0"}}]}}`
+		testEncode(t, v, expectedJSON)
+	})
 
-	v := convertValueFromScript(t, script)
+	t.Run("With function member", func(t *testing.T) {
+		script := `
+			access(all) resource Foo {
+				access(all) let bar: Int
+	
+				pub fun foo(): String {
+					return "foo"
+				}
+	
+				init(bar: Int) {
+					self.bar = bar
+				}
+			}
+	
+			access(all) fun main(): @Foo {
+				return <- create Foo(bar: 42)
+			}
+		`
 
-	testEncode(t, v, expectedJSON)
-}
+		// function "foo" should be omitted from resulting JSON
+		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}},{"name":"uuid","value":{"type":"UInt64","value":"0"}}]}}`
 
-func TestEncodeNestedResource(t *testing.T) {
+		v := convertValueFromScript(t, script)
 
-	t.Parallel()
+		actualJSON, err := json.Encode(v)
+		require.NoError(t, err)
 
-	script := `
-        access(all) resource Bar {
-            access(all) let x: Int
+		assert.JSONEq(t, expectedJSON, string(actualJSON))
+	})
 
-            init(x: Int) {
-                self.x = x
-            }
-        }
+	t.Run("Nested resource", func(t *testing.T) {
 
-        access(all) resource Foo {
-            access(all) let bar: @Bar
+		script := `
+			access(all) resource Bar {
+				access(all) let x: Int
+	
+				init(x: Int) {
+					self.x = x
+				}
+			}
+	
+			access(all) resource Foo {
+				access(all) let bar: @Bar
+	
+				init(bar: @Bar) {
+					self.bar <- bar
+				}
+	
+				destroy() {
+					destroy self.bar
+				}
+			}
+	
+			access(all) fun main(): @Foo {
+				return <- create Foo(bar: <- create Bar(x: 42))
+			}
+		`
 
-            init(bar: @Bar) {
-                self.bar <- bar
-            }
+		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Resource","value":{"id":"S.test.Bar","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"x","value":{"type":"Int","value":"42"}}]}}},{"name":"uuid","value":{"type":"UInt64","value":"0"}}]}}`
 
-            destroy() {
-                destroy self.bar
-            }
-        }
+		v := convertValueFromScript(t, script)
 
-        access(all) fun main(): @Foo {
-            return <- create Foo(bar: <- create Bar(x: 42))
-        }
-    `
-
-	expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Resource","value":{"id":"S.test.Bar","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"x","value":{"type":"Int","value":"42"}}]}}},{"name":"uuid","value":{"type":"UInt64","value":"0"}}]}}`
-
-	v := convertValueFromScript(t, script)
-
-	testEncode(t, v, expectedJSON)
+		testEncode(t, v, expectedJSON)
+	})
 }
 
 func TestEncodeStruct(t *testing.T) {
@@ -858,6 +887,8 @@ func TestEncodeEvent(t *testing.T) {
 }
 
 func TestDecodeFixedPoints(t *testing.T) {
+
+	t.Parallel()
 
 	allFixedPointTypes := map[cadence.Type]struct {
 		constructor func(int) cadence.Value
@@ -1091,15 +1122,11 @@ func testAllEncode(t *testing.T, tests ...encodeTest) {
 	}
 }
 
-func trimJSON(b []byte) string {
-	return strings.TrimSuffix(string(b), "\n")
-}
-
 func testEncode(t *testing.T, val cadence.Value, expectedJSON string) {
 	actualJSON, err := json.Encode(val)
 	require.NoError(t, err)
 
-	assert.Equal(t, expectedJSON, trimJSON(actualJSON))
+	assert.JSONEq(t, expectedJSON, string(actualJSON))
 
 	// JSON should decode to original value
 	decodedVal, err := json.Decode(actualJSON)
