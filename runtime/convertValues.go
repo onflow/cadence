@@ -182,8 +182,11 @@ func exportDictionaryValue(v *interpreter.DictionaryValue, inter *interpreter.In
 	pairs := make([]cadence.KeyValuePair, v.Count())
 
 	for i, keyValue := range v.Keys.Values {
-		key := keyValue.(interpreter.HasKeyString).KeyString()
-		value := v.Entries[key]
+
+		// NOTE: use `Get` instead of accessing `Entries`,
+		// so that the potentially deferred values are loaded from storage
+
+		value := v.Get(inter, interpreter.LocationRange{}, keyValue).(*interpreter.SomeValue).Value
 
 		convertedKey := exportValueWithInterpreter(keyValue, inter)
 		convertedValue := exportValueWithInterpreter(value, inter)
