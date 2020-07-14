@@ -310,10 +310,6 @@ func (s *interpreterRuntimeStorage) writeCached(inter *interpreter.Interpreter) 
 			panic(err)
 		}
 	}
-
-	if s.highLevelStorageEnabled {
-
-	}
 }
 
 func (s *interpreterRuntimeStorage) encodeValue(
