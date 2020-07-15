@@ -123,6 +123,8 @@ func (k DeclarationKind) Name() string {
 		return "execute"
 	case DeclarationKindTypeParameter:
 		return "type parameter"
+	case DeclarationKindPragma:
+		return "#pragma"
 	case DeclarationKindUnknown:
 		return "unknown"
 	}

@@ -21,11 +21,29 @@ package sema
 import "github.com/onflow/cadence/runtime/ast"
 
 func (checker *Checker) VisitPragmaDeclaration(p *ast.PragmaDeclaration) ast.Repr {
+
+	invocPragma, isInvocPragma := p.Expression.(*ast.InvocationExpression)
+	_, isIdentPragma := p.Expression.(*ast.IdentifierExpression)
+
 	// Pragma can be either an invocation expression or an identfier expression
-	_, isInvocation := p.Expression.(*ast.InvocationExpression)
-	_, isIdent := p.Expression.(*ast.IdentifierExpression)
-	if !(isInvocation || isIdent) {
-		checker.report(&InvalidPragmaError{})
+	if !(isInvocPragma || isIdentPragma) {
+		checker.report(&InvalidPragmaError{Message: "must be identifier or invocation expression"})
 	}
+
+	if isInvocPragma {
+		// Type arguments are not supported for pragmas
+		if invocPragma.TypeArguments != nil {
+			checker.report(&InvalidPragmaError{Message: "type arguments not supported"})
+		}
+		// Ensure arguments are string expressions
+		for _, arg := range invocPragma.Arguments {
+			_, ok := arg.Expression.(*ast.StringExpression)
+			if !ok {
+				checker.report(&InvalidPragmaError{Message: "invalid arguments"})
+				return nil
+			}
+		}
+	}
+
 	return nil
 }

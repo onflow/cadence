@@ -64,16 +64,16 @@ func TestCheckPragmaInvalidLocation(t *testing.T) {
 	t.Parallel()
 
 	_, err := ParseAndCheckWithOptions(t, `
-	  fun main() {
-		  #version("1.0")
+	  fun test() {
+		  #version
 	  }
 	`, ParseAndCheckOptions{OnlyNewParser: true})
 
 	errs := ExpectCheckerErrors(t, err, 1)
-	assert.IsType(t, &sema.InvalidPragmaError{}, errs[0])
+	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
 }
 
-func TestCheckPragmaValidInvocationExprNonConstArgument(t *testing.T) {
+func TestCheckPragmaInvalidInvocationExprNonStringExprArgument(t *testing.T) {
 
 	t.Parallel()
 	_, err := ParseAndCheckWithOptions(t, `
@@ -81,5 +81,16 @@ func TestCheckPragmaValidInvocationExprNonConstArgument(t *testing.T) {
 	`, ParseAndCheckOptions{OnlyNewParser: true})
 
 	errs := ExpectCheckerErrors(t, err, 1)
-	assert.IsType(t, &sema.InvalidPragmaError{}, errs[0])
+	assert.IsType(t, &sema.InvalidPragmaError{"invalid arguments"}, errs[0])
+}
+
+func TestCheckPragmaInvalidInvocationExprTypeArgs(t *testing.T) {
+
+	t.Parallel()
+	_, err := ParseAndCheckWithOptions(t, `
+		#version<X>()
+	`, ParseAndCheckOptions{OnlyNewParser: true})
+
+	errs := ExpectCheckerErrors(t, err, 1)
+	assert.IsType(t, &sema.InvalidPragmaError{"type arguments not supported"}, errs[0])
 }
