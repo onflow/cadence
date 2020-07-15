@@ -81,7 +81,7 @@ func TestCheckPragmaInvalidInvocationExprNonStringExprArgument(t *testing.T) {
 	`, ParseAndCheckOptions{OnlyNewParser: true})
 
 	errs := ExpectCheckerErrors(t, err, 1)
-	assert.IsType(t, &sema.InvalidPragmaError{"invalid arguments"}, errs[0])
+	assert.IsType(t, &sema.InvalidPragmaError{Message: "invalid arguments"}, errs[0])
 }
 
 func TestCheckPragmaInvalidInvocationExprTypeArgs(t *testing.T) {
@@ -92,5 +92,5 @@ func TestCheckPragmaInvalidInvocationExprTypeArgs(t *testing.T) {
 	`, ParseAndCheckOptions{OnlyNewParser: true})
 
 	errs := ExpectCheckerErrors(t, err, 1)
-	assert.IsType(t, &sema.InvalidPragmaError{"type arguments not supported"}, errs[0])
+	assert.IsType(t, &sema.InvalidPragmaError{Message: "type arguments not supported"}, errs[0])
 }
