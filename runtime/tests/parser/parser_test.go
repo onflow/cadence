@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence/runtime/ast"
 	. "github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	parser1 "github.com/onflow/cadence/runtime/parser"
@@ -5047,18 +5048,68 @@ func TestParseInterface(t *testing.T) {
 	}
 }
 
-func TestPragmaVersionString(t *testing.T) {
+func TestPragmaNoArguments(t *testing.T) {
 
 	t.Parallel()
 
-	const code = `
-		#version("1.0")
-	`
+	testParse(
+		t,
+		`#pedantic`,
+		[]Declaration{
+			&ast.PragmaDeclaration{
+				Expression: &IdentifierExpression{
+					Identifier: Identifier{
+						Identifier: "pedantic",
+						Pos:        Position{Offset: 1, Line: 1, Column: 1},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+					EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+				},
+			},
+		},
+		nil,
+	)
+}
 
-	program, err := parser2.ParseProgram(code)
-	require.NotNil(t, program.PragmaDeclarations)
-	fmt.Println(program.PragmaDeclarations())
-	require.NoError(t, err)
+func TestPragmaArguments(t *testing.T) {
+
+	t.Parallel()
+
+	testParse(
+		t,
+		`#version("1.0")`,
+		[]Declaration{
+			&ast.PragmaDeclaration{
+				Expression: &InvocationExpression{
+					InvokedExpression: &IdentifierExpression{
+						Identifier: Identifier{
+							Identifier: "version",
+							Pos:        Position{Offset: 1, Line: 1, Column: 1},
+						},
+					},
+					Arguments: Arguments{
+						{
+							Expression: &StringExpression{
+								Value: "1.0",
+								Range: Range{
+									StartPos: Position{Offset: 9, Line: 1, Column: 9},
+									EndPos:   Position{Offset: 13, Line: 1, Column: 13},
+								},
+							},
+						},
+					},
+					EndPos: ast.Position{Offset: 14, Line: 1, Column: 14},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+					EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+				},
+			},
+		},
+		nil,
+	)
 }
 
 func TestParseImportWithString(t *testing.T) {

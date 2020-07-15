@@ -40,7 +40,7 @@ func (p *PragmaDeclaration) DeclarationIdentifier() *Identifier {
 }
 
 func (p *PragmaDeclaration) DeclarationKind() common.DeclarationKind {
-	return common.DeclarationKindImport
+	return common.DeclarationKindPragma
 }
 
 func (p *PragmaDeclaration) DeclarationAccess() Access {

@@ -21,9 +21,11 @@ package sema
 import "github.com/onflow/cadence/runtime/ast"
 
 func (checker *Checker) VisitPragmaDeclaration(p *ast.PragmaDeclaration) ast.Repr {
-	invocation, ok := p.Expression.(*ast.InvocationExpression)
-	if !ok {
+	// Pragma can be either an invocation expression or an identfier expression
+	_, isInvocation := p.Expression.(*ast.InvocationExpression)
+	_, isIdent := p.Expression.(*ast.IdentifierExpression)
+	if !(isInvocation || isIdent) {
 		checker.report(&InvalidPragmaError{})
 	}
-	return checker.checkInvocationExpression(invocation)
+	return nil
 }

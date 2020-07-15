@@ -325,9 +325,15 @@ func parseTransfer(p *parser) *ast.Transfer {
 }
 
 func parsePragmaDeclaration(p *parser) *ast.PragmaDeclaration {
+	startPos := p.current.StartPosition()
 	p.next()
+	expr := parseExpression(p, lowestBindingPower)
 	return &ast.PragmaDeclaration{
-		Expression: parseExpression(p, lowestBindingPower),
+		Range: ast.Range{
+			StartPos: startPos,
+			EndPos:   expr.EndPosition(),
+		},
+		Expression: expr,
 	}
 }
 

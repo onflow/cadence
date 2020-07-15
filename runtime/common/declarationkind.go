@@ -52,6 +52,7 @@ const (
 	DeclarationKindPrepare
 	DeclarationKindExecute
 	DeclarationKindTypeParameter
+	DeclarationKindPragma
 )
 
 func (k DeclarationKind) IsTypeDeclaration() bool {

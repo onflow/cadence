@@ -58,7 +58,15 @@ func (e *unsupportedOperation) Error() string {
 type InvalidPragmaError struct{}
 
 func (e *InvalidPragmaError) Error() string {
-	return "invalid pragma"
+	return "invalid pragma must be identifier or invocation expression"
+}
+
+// InvalidPragmaLocationError
+
+type InvalidPragmaLocationError struct{}
+
+func (e *InvalidPragmaLocationError) Error() string {
+	return "invalid pragma location, must be a top-level declaration"
 }
 
 // MissingLocationError
