@@ -41,7 +41,7 @@ func (checker *Checker) VisitPragmaDeclaration(p *ast.PragmaDeclaration) ast.Rep
 
 	if isInvocPragma {
 		// Type arguments are not supported for pragmas
-		if invocPragma.TypeArguments != nil {
+		if len(invocPragma.TypeArguments) > 0 {
 			checker.report(&InvalidPragmaError{
 				Message: "type arguments not supported",
 				Range: ast.Range{
