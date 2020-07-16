@@ -1,4 +1,14 @@
 {
+  "name": "monaco-cadence",
+  "version": "1.0.0",
+  "description": "An example client for the Cadence Language Server, based on Monaco",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch": "webpack --watch",
+    "start": "webpack-dev-server --open",
+    "build": "webpack"
+  },
   "devDependencies": {
     "css-loader": "^3.6.0",
     "file-loader": "^6.0.0",
@@ -7,7 +17,8 @@
     "ts-loader": "^8.0.1",
     "typescript": "^3.9.6",
     "webpack": "^4.43.0",
-    "webpack-cli": "^3.3.12"
+    "webpack-cli": "^3.3.12",
+    "webpack-dev-server": "^3.11.0"
   },
   "dependencies": {
     "monaco-editor": "^0.20.0",

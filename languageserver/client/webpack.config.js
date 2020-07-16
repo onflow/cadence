@@ -1,4 +1,5 @@
-const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin');
+const MonacoWebpackPlugin = require('monaco-editor-webpack-plugin')
+const path = require('path')
 
 module.exports = {
     mode: 'development',
@@ -32,5 +33,10 @@ module.exports = {
     ],
     node: {
         net: 'empty'
+    },
+    devServer: {
+        contentBase: path.join(__dirname, 'dist'),
+        compress: true,
+        port: 8000
     }
 }
