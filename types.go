@@ -508,11 +508,39 @@ func (t EventType) CompositeInitializers() [][]Parameter {
 	return [][]Parameter{t.Initializer}
 }
 
+// ContractType
+
+type ContractType struct {
+	TypeID       string
+	Identifier   string
+	Fields       []Field
+	Initializers [][]Parameter
+}
+
+func (ContractType) isType() {}
+
+func (t ContractType) ID() string {
+	return t.TypeID
+}
+
+func (ContractType) isCompositeType() {}
+
+func (t ContractType) CompositeIdentifier() string {
+	return t.Identifier
+}
+
+func (t ContractType) CompositeFields() []Field {
+	return t.Fields
+}
+
+func (t ContractType) CompositeInitializers() [][]Parameter {
+	return t.Initializers
+}
+
 // Function
 
 type Function struct {
 	typeID     string
-	Identifier string
 	Parameters []Parameter
 	ReturnType Type
 }

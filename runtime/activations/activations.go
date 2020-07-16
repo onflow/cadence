@@ -24,14 +24,38 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
+type Activation hamt.Map
+
+func NewActivation() Activation {
+	return Activation(hamt.NewMap())
+}
+
+func (a Activation) FirstRest() (string, interface{}, Activation) {
+	entry, value, rest := hamt.Map(a).FirstRest()
+	if entry == nil {
+		return "", nil, Activation{}
+	}
+
+	name := string(entry.(common.StringEntry))
+	return name, value, Activation(rest)
+}
+
+func (a Activation) Find(name string) interface{} {
+	return hamt.Map(a).Find(common.StringEntry(name))
+}
+
+func (a Activation) Insert(name string, value interface{}) Activation {
+	return Activation(hamt.Map(a).Insert(common.StringEntry(name), value))
+}
+
 // Activations is a stack of activation records.
 // Each entry represents a new scope.
 //
 type Activations struct {
-	activations []hamt.Map
+	activations []Activation
 }
 
-func (a *Activations) current() *hamt.Map {
+func (a *Activations) current() *Activation {
 	count := len(a.activations)
 	if count < 1 {
 		return nil
@@ -45,7 +69,7 @@ func (a *Activations) Find(key string) interface{} {
 	if current == nil {
 		return nil
 	}
-	return current.Find(common.StringEntry(key))
+	return current.Find(key)
 }
 
 // Set adds the new key value pair to the current scope.
@@ -62,8 +86,7 @@ func (a *Activations) Set(name string, value interface{}) {
 	// update the current scope in an immutable way,
 	// which builds on top of the old "current" activation value
 	// without mutating it.
-	a.activations[count-1] = current.
-		Insert(common.StringEntry(name), value)
+	a.activations[count-1] = current.Insert(name, value)
 }
 
 // PushCurrent makes a copy of the current activation, and pushes it to
@@ -73,13 +96,13 @@ func (a *Activations) Set(name string, value interface{}) {
 func (a *Activations) PushCurrent() {
 	current := a.current()
 	if current == nil {
-		first := hamt.NewMap()
+		first := NewActivation()
 		current = &first
 	}
 	a.Push(*current)
 }
 
-func (a *Activations) Push(activation hamt.Map) {
+func (a *Activations) Push(activation Activation) {
 	a.activations = append(
 		a.activations,
 		activation,
@@ -94,10 +117,10 @@ func (a *Activations) Pop() {
 	a.activations = a.activations[:count-1]
 }
 
-func (a *Activations) CurrentOrNew() hamt.Map {
+func (a *Activations) CurrentOrNew() Activation {
 	current := a.current()
 	if current == nil {
-		return hamt.NewMap()
+		return NewActivation()
 	}
 
 	return *current

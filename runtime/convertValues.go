@@ -159,17 +159,34 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 		return cadence.NewResource(fields).WithType(t.(cadence.ResourceType))
 	case common.CompositeKindEvent:
 		return cadence.NewEvent(fields).WithType(t.(cadence.EventType))
+	case common.CompositeKindContract:
+		return cadence.NewContract(fields).WithType(t.(cadence.ContractType))
 	}
 
-	panic(fmt.Errorf("invalid composite kind `%s`, must be Struct, Resource or Event", staticType.Kind))
+	panic(fmt.Errorf(
+		"invalid composite kind `%s`, must be %s",
+		staticType.Kind,
+		common.EnumerateWords(
+			[]string{
+				common.CompositeKindStructure.Name(),
+				common.CompositeKindResource.Name(),
+				common.CompositeKindEvent.Name(),
+				common.CompositeKindContract.Name(),
+			},
+			"or",
+		),
+	))
 }
 
 func exportDictionaryValue(v *interpreter.DictionaryValue, inter *interpreter.Interpreter) cadence.Value {
 	pairs := make([]cadence.KeyValuePair, v.Count())
 
 	for i, keyValue := range v.Keys.Values {
-		key := keyValue.(interpreter.HasKeyString).KeyString()
-		value := v.Entries[key]
+
+		// NOTE: use `Get` instead of accessing `Entries`,
+		// so that the potentially deferred values are loaded from storage
+
+		value := v.Get(inter, interpreter.LocationRange{}, keyValue).(*interpreter.SomeValue).Value
 
 		convertedKey := exportValueWithInterpreter(keyValue, inter)
 		convertedValue := exportValueWithInterpreter(value, inter)

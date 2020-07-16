@@ -45,39 +45,39 @@ import (
 
 type testRuntimeInterfaceStorage struct {
 	storedValues map[string][]byte
-	valueExists  func(controller, owner, key []byte) (exists bool, err error)
-	getValue     func(controller, owner, key []byte) (value []byte, err error)
-	setValue     func(controller, owner, key, value []byte) (err error)
+	valueExists  func(owner, key []byte) (exists bool, err error)
+	getValue     func(owner, key []byte) (value []byte, err error)
+	setValue     func(owner, key, value []byte) (err error)
 }
 
 func newTestStorage(
-	onRead func(controller, owner, key, value []byte),
-	onWrite func(controller, owner, key, value []byte),
+	onRead func(owner, key, value []byte),
+	onWrite func(owner, key, value []byte),
 ) testRuntimeInterfaceStorage {
 
-	storageKey := func(owner, controller, key string) string {
-		return strings.Join([]string{owner, controller, key}, "|")
+	storageKey := func(owner, key string) string {
+		return strings.Join([]string{owner, key}, "|")
 	}
 
 	storedValues := map[string][]byte{}
 
 	storage := testRuntimeInterfaceStorage{
 		storedValues: storedValues,
-		valueExists: func(controller, owner, key []byte) (bool, error) {
-			_, ok := storedValues[storageKey(string(controller), string(owner), string(key))]
+		valueExists: func(owner, key []byte) (bool, error) {
+			_, ok := storedValues[storageKey(string(owner), string(key))]
 			return ok, nil
 		},
-		getValue: func(controller, owner, key []byte) (value []byte, err error) {
-			value = storedValues[storageKey(string(controller), string(owner), string(key))]
+		getValue: func(owner, key []byte) (value []byte, err error) {
+			value = storedValues[storageKey(string(owner), string(key))]
 			if onRead != nil {
-				onRead(controller, owner, key, value)
+				onRead(owner, key, value)
 			}
 			return value, nil
 		},
-		setValue: func(controller, owner, key, value []byte) (err error) {
-			storedValues[storageKey(string(controller), string(owner), string(key))] = value
+		setValue: func(owner, key, value []byte) (err error) {
+			storedValues[storageKey(string(owner), string(key))] = value
 			if onWrite != nil {
-				onWrite(controller, owner, key, value)
+				onWrite(owner, key, value)
 			}
 			return nil
 		},
@@ -115,6 +115,7 @@ type testRuntimeInterface struct {
 		signatureAlgorithm string,
 		hashAlgorithm string,
 	) bool
+	setCadenceValue func(owner Address, key string, value cadence.Value) (err error)
 }
 
 var _ Interface = &testRuntimeInterface{}
@@ -140,16 +141,16 @@ func (i *testRuntimeInterface) CacheProgram(location Location, program *ast.Prog
 	return i.cacheProgram(location, program)
 }
 
-func (i *testRuntimeInterface) ValueExists(controller, owner, key []byte) (exists bool, err error) {
-	return i.storage.valueExists(controller, owner, key)
+func (i *testRuntimeInterface) ValueExists(owner, key []byte) (exists bool, err error) {
+	return i.storage.valueExists(owner, key)
 }
 
-func (i *testRuntimeInterface) GetValue(controller, owner, key []byte) (value []byte, err error) {
-	return i.storage.getValue(controller, owner, key)
+func (i *testRuntimeInterface) GetValue(owner, key []byte) (value []byte, err error) {
+	return i.storage.getValue(owner, key)
 }
 
-func (i *testRuntimeInterface) SetValue(controller, owner, key, value []byte) (err error) {
-	return i.storage.setValue(controller, owner, key, value)
+func (i *testRuntimeInterface) SetValue(owner, key, value []byte) (err error) {
+	return i.storage.setValue(owner, key, value)
 }
 
 func (i *testRuntimeInterface) CreateAccount(payer Address) (address Address, err error) {
@@ -277,6 +278,14 @@ func (i *testRuntimeInterface) VerifySignature(
 		signatureAlgorithm,
 		hashAlgorithm,
 	)
+}
+
+func (i *testRuntimeInterface) HighLevelStorageEnabled() bool {
+	return i.setCadenceValue != nil
+}
+
+func (i *testRuntimeInterface) SetCadenceValue(owner common.Address, key string, value cadence.Value) (err error) {
+	return i.setCadenceValue(owner, key, value)
 }
 
 func TestRuntimeImport(t *testing.T) {
@@ -3994,19 +4003,19 @@ func TestRuntimeMetrics(t *testing.T) {
 }
 
 type testRead struct {
-	controller, owner, key []byte
+	owner, key []byte
 }
 
 func (r testRead) String() string {
-	return fmt.Sprintf("%x %s", r.controller, r.key)
+	return string(r.key)
 }
 
 type testWrite struct {
-	controller, owner, key, value []byte
+	owner, key, value []byte
 }
 
 func (w testWrite) String() string {
-	return fmt.Sprintf("%x %s", w.controller, w.key)
+	return string(w.key)
 }
 
 func TestRuntimeContractWriteback(t *testing.T) {
@@ -4057,9 +4066,8 @@ func TestRuntimeContractWriteback(t *testing.T) {
 	var loggedMessages []string
 	var writes []testWrite
 
-	onWrite := func(controller, owner, key, value []byte) {
+	onWrite := func(owner, key, value []byte) {
 		writes = append(writes, testWrite{
-			controller,
 			owner,
 			key,
 			value,
@@ -4151,9 +4159,8 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	var loggedMessages []string
 	var writes []testWrite
 
-	onWrite := func(controller, owner, key, value []byte) {
+	onWrite := func(owner, key, value []byte) {
 		writes = append(writes, testWrite{
-			controller,
 			owner,
 			key,
 			value,

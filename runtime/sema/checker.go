@@ -307,14 +307,6 @@ func (checker *Checker) declareTypeDeclaration(name string, declaration TypeDecl
 	checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
 }
 
-func (checker *Checker) FindType(name string) Type {
-	variable := checker.typeActivations.Find(name)
-	if variable == nil {
-		return nil
-	}
-	return variable.Type
-}
-
 func (checker *Checker) IsChecked() bool {
 	return checker.isChecked
 }
@@ -810,7 +802,7 @@ func (checker *Checker) inLoop() bool {
 	return checker.functionActivations.Current().InLoop()
 }
 
-func (checker *Checker) findAndCheckVariable(identifier ast.Identifier, recordOccurrence bool) *Variable {
+func (checker *Checker) findAndCheckValueVariable(identifier ast.Identifier, recordOccurrence bool) *Variable {
 	variable := checker.valueActivations.Find(identifier.Identifier)
 	if variable == nil {
 		checker.report(
@@ -823,7 +815,7 @@ func (checker *Checker) findAndCheckVariable(identifier ast.Identifier, recordOc
 		return nil
 	}
 
-	if recordOccurrence {
+	if recordOccurrence && identifier.Identifier != "" {
 		checker.recordVariableReferenceOccurrence(
 			identifier.StartPosition(),
 			identifier.EndPosition(),
@@ -899,12 +891,14 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 		if !ok || (restrictionCompositeKind != common.CompositeKindResource &&
 			restrictionCompositeKind != common.CompositeKindStructure) {
 
-			checker.report(
-				&InvalidRestrictionTypeError{
-					Type:  restrictionResult,
-					Range: ast.NewRangeFromPositioned(restriction),
-				},
-			)
+			if !restrictionResult.IsInvalidType() {
+				checker.report(
+					&InvalidRestrictionTypeError{
+						Type:  restrictionResult,
+						Range: ast.NewRangeFromPositioned(restriction),
+					},
+				)
+			}
 			continue
 		}
 
@@ -1177,26 +1171,45 @@ func (checker *Checker) convertVariableSizedType(t *ast.VariableSizedType) Type 
 	}
 }
 
-func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
-	identifier := t.Identifier.Identifier
-	result := checker.FindType(identifier)
-	if result == nil {
+func (checker *Checker) findAndCheckTypeVariable(identifier ast.Identifier, recordOccurrence bool) *Variable {
+	variable := checker.typeActivations.Find(identifier.Identifier)
+	if variable == nil {
 		checker.report(
 			&NotDeclaredError{
 				ExpectedKind: common.DeclarationKindType,
-				Name:         identifier,
-				Pos:          t.StartPosition(),
+				Name:         identifier.Identifier,
+				Pos:          identifier.StartPosition(),
 			},
 		)
+
+		return nil
+	}
+
+	if recordOccurrence && identifier.Identifier != "" {
+		checker.recordVariableReferenceOccurrence(
+			identifier.StartPosition(),
+			identifier.EndPosition(),
+			variable,
+		)
+	}
+
+	return variable
+}
+
+func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
+	variable := checker.findAndCheckTypeVariable(t.Identifier, true)
+	if variable == nil {
 		return &InvalidType{}
 	}
+
+	ty := variable.Type
 
 	var resolvedIdentifiers []ast.Identifier
 
 	for _, identifier := range t.NestedIdentifiers {
-		switch typedResult := result.(type) {
+		switch typedResult := ty.(type) {
 		case ContainerType:
-			result = typedResult.NestedTypes()[identifier.Identifier]
+			ty = typedResult.NestedTypes()[identifier.Identifier]
 
 		default:
 			if !typedResult.IsInvalidType() {
@@ -1215,7 +1228,7 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 
 		resolvedIdentifiers = append(resolvedIdentifiers, identifier)
 
-		if result == nil {
+		if ty == nil {
 			nonExistentType := &ast.NominalType{
 				Identifier:        t.Identifier,
 				NestedIdentifiers: resolvedIdentifiers,
@@ -1231,7 +1244,7 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 		}
 	}
 
-	return result
+	return ty
 }
 
 // ConvertTypeAnnotation converts an AST type annotation representation
@@ -1288,12 +1301,17 @@ func (checker *Checker) parameters(parameterList *ast.ParameterList) []*Paramete
 func (checker *Checker) recordVariableReferenceOccurrence(startPos, endPos ast.Position, variable *Variable) {
 	origin, ok := checker.variableOrigins[variable]
 	if !ok {
+		startPos2 := variable.Pos
+		var endPos2 *ast.Position
+		if startPos2 != nil {
+			pos := startPos2.Shifted(len(variable.Identifier) - 1)
+			endPos2 = &pos
+		}
 		origin = &Origin{
 			Type:            variable.Type,
 			DeclarationKind: variable.DeclarationKind,
-			StartPos:        variable.Pos,
-			// TODO:
-			EndPos: variable.Pos,
+			StartPos:        startPos2,
+			EndPos:          endPos2,
 		}
 		checker.variableOrigins[variable] = origin
 	}
@@ -1458,7 +1476,7 @@ func (checker *Checker) recordResourceInvalidation(
 		return nil
 	}
 
-	variable := checker.findAndCheckVariable(identifierExpression.Identifier, false)
+	variable := checker.findAndCheckValueVariable(identifierExpression.Identifier, false)
 	if variable == nil {
 		return nil
 	}

@@ -521,12 +521,13 @@ func (checker *Checker) declareCompositeMembersAndValue(
 				checker.valueActivations.Find(identifier.Identifier)
 
 			declarationMembers[nestedCompositeDeclarationVariable.Identifier] = &Member{
-				Identifier:      identifier,
-				Access:          nestedCompositeDeclaration.Access,
-				ContainerType:   compositeType,
-				TypeAnnotation:  NewTypeAnnotation(nestedCompositeDeclarationVariable.Type),
-				DeclarationKind: nestedCompositeDeclarationVariable.DeclarationKind,
-				VariableKind:    ast.VariableKindConstant,
+				Identifier:            identifier,
+				Access:                nestedCompositeDeclaration.Access,
+				ContainerType:         compositeType,
+				TypeAnnotation:        NewTypeAnnotation(nestedCompositeDeclarationVariable.Type),
+				DeclarationKind:       nestedCompositeDeclarationVariable.DeclarationKind,
+				VariableKind:          ast.VariableKindConstant,
+				IgnoreInSerialization: true,
 			}
 		}
 
@@ -643,9 +644,11 @@ func (checker *Checker) declareCompositeMembersAndValue(
 //
 func (checker *Checker) checkMemberStorability(members map[string]*Member) {
 
+	seenMembers := map[*Member]bool{}
+
 	for _, member := range members {
 
-		if member.IsStorable() {
+		if member.IsStorable(seenMembers) {
 			continue
 		}
 
@@ -1416,7 +1419,7 @@ func (checker *Checker) declareSelfValue(selfType Type) {
 		DeclarationKind: common.DeclarationKindSelf,
 		Type:            selfType,
 		IsConstant:      true,
-		Depth:           depth,
+		ActivationDepth: depth,
 		Pos:             nil,
 	}
 	checker.valueActivations.Set(SelfIdentifier, self)

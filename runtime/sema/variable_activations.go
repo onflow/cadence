@@ -19,8 +19,6 @@
 package sema
 
 import (
-	"github.com/raviqqe/hamt"
-
 	"github.com/onflow/cadence/runtime/activations"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -32,7 +30,7 @@ type VariableActivations struct {
 
 func NewValueActivations() *VariableActivations {
 	valueActivations := &activations.Activations{}
-	valueActivations.Push(hamt.NewMap())
+	valueActivations.Push(activations.NewActivation())
 	return &VariableActivations{
 		activations: valueActivations,
 	}
@@ -88,7 +86,7 @@ func (a *VariableActivations) Declare(declaration variableDeclaration) (variable
 	existingVariable := a.Find(declaration.identifier)
 	if existingVariable != nil &&
 		(!declaration.allowOuterScopeShadowing ||
-			existingVariable.Depth == depth) {
+			existingVariable.ActivationDepth == depth) {
 
 		err = &RedeclarationError{
 			Kind:        declaration.kind,
@@ -109,7 +107,7 @@ func (a *VariableActivations) Declare(declaration variableDeclaration) (variable
 		Access:          declaration.access,
 		DeclarationKind: declaration.kind,
 		IsConstant:      declaration.isConstant,
-		Depth:           depth,
+		ActivationDepth: depth,
 		Type:            declaration.ty,
 		Pos:             &declaration.pos,
 		ArgumentLabels:  declaration.argumentLabels,
@@ -161,24 +159,22 @@ func (a *VariableActivations) DeclareImplicitConstant(
 func (a *VariableActivations) VariablesDeclaredInAndBelow(depth int) map[string]*Variable {
 	variables := map[string]*Variable{}
 
-	values := a.activations.CurrentOrNew()
+	activation := a.activations.CurrentOrNew()
 
-	var entry hamt.Entry
+	var name string
 	var value interface{}
 
 	for {
-		entry, value, values = values.FirstRest()
-		if entry == nil {
+		name, value, activation = activation.FirstRest()
+		if name == "" {
 			break
 		}
 
 		variable := value.(*Variable)
 
-		if variable.Depth < depth {
+		if variable.ActivationDepth < depth {
 			continue
 		}
-
-		name := string(entry.(common.StringEntry))
 
 		variables[name] = variable
 	}

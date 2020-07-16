@@ -23,7 +23,10 @@ import "github.com/onflow/cadence/runtime/ast"
 func (checker *Checker) VisitPragmaDeclaration(p *ast.PragmaDeclaration) ast.Repr {
 
 	invocPragma, isInvocPragma := p.Expression.(*ast.InvocationExpression)
-	_, isIdentPragma := p.Expression.(*ast.IdentifierExpression)
+	var isIdentPragma bool
+	if !isInvocPragma {
+		_, isIdentPragma = p.Expression.(*ast.IdentifierExpression)
+	}
 
 	// Pragma can be either an invocation expression or an identfier expression
 	if !(isInvocPragma || isIdentPragma) {
