@@ -134,6 +134,22 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 		inCreate,
 	)
 
+	checker.checkMemberInvocationResourceInvalidation(invokedExpression)
+
+	// Update the return info for invocations that do not return (i.e. have a `Never` return type)
+
+	if _, ok = returnType.(*NeverType); ok {
+		functionActivation := checker.functionActivations.Current()
+		functionActivation.ReturnInfo.DefinitelyHalted = true
+	}
+
+	if isOptionalChainingResult {
+		return &OptionalType{Type: returnType}
+	}
+	return returnType
+}
+
+func (checker *Checker) checkMemberInvocationResourceInvalidation(invokedExpression ast.Expression) {
 	// If the invocation is on a resource, i.e., a member expression where the accessed expression
 	// is an identifier which refers to a resource, then the resource is temporarily "moved into"
 	// the function and back out after the invocation.
@@ -147,43 +163,42 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	// the arguments might just use to the temporarily moved resource, e.g. `foo.bar(foo.baz)`
 	// and not invalidate it.
 
-	if invokedMemberExpression, ok := invokedExpression.(*ast.MemberExpression); ok {
-		if invocationIdentifierExpression, ok := invokedMemberExpression.Expression.(*ast.IdentifierExpression); ok {
-
-			valueType := checker.Elaboration.IdentifierInInvocationTypes[invocationIdentifierExpression]
-
-			invalidation := checker.recordResourceInvalidation(
-				invocationIdentifierExpression,
-				valueType,
-				ResourceInvalidationKindMoveTemporary,
-			)
-
-			if invalidation != nil {
-
-				checker.resources.RemoveTemporaryInvalidation(
-					invalidation.resource,
-					invalidation.invalidation,
-				)
-
-				checker.checkResourceUseAfterInvalidation(
-					invalidation.resource,
-					invocationIdentifierExpression,
-				)
-			}
-		}
+	invokedMemberExpression, ok := invokedExpression.(*ast.MemberExpression)
+	if !ok {
+		return
+	}
+	invocationIdentifierExpression, ok := invokedMemberExpression.Expression.(*ast.IdentifierExpression)
+	if !ok {
+		return
 	}
 
-	// Update the return info for invocations that do not return (i.e. have a `Never` return type)
+	// Check that an entry for `IdentifierInInvocationTypes` exists,
+	// because the entry might be missing if the invocation was on a non-existent variable
 
-	if _, ok = returnType.(*NeverType); ok {
-		functionActivation := checker.functionActivations.Current()
-		functionActivation.ReturnInfo.DefinitelyHalted = true
+	valueType, ok := checker.Elaboration.IdentifierInInvocationTypes[invocationIdentifierExpression]
+	if !ok {
+		return
 	}
 
-	if isOptionalChainingResult {
-		return &OptionalType{Type: returnType}
+	invalidation := checker.recordResourceInvalidation(
+		invocationIdentifierExpression,
+		valueType,
+		ResourceInvalidationKindMoveTemporary,
+	)
+
+	if invalidation == nil {
+		return
 	}
-	return returnType
+
+	checker.resources.RemoveTemporaryInvalidation(
+		invalidation.resource,
+		invalidation.invalidation,
+	)
+
+	checker.checkResourceUseAfterInvalidation(
+		invalidation.resource,
+		invocationIdentifierExpression,
+	)
 }
 
 func (checker *Checker) checkConstructorInvocationWithResourceResult(
@@ -220,7 +235,7 @@ func (checker *Checker) checkIdentifierInvocationArgumentLabels(
 	invocationExpression *ast.InvocationExpression,
 	identifierExpression *ast.IdentifierExpression,
 ) {
-	variable := checker.findAndCheckVariable(identifierExpression.Identifier, false)
+	variable := checker.findAndCheckValueVariable(identifierExpression.Identifier, false)
 
 	if variable == nil || len(variable.ArgumentLabels) == 0 {
 		return

@@ -4502,4 +4502,17 @@ func TestCheckResourceMoveMemberInvocation(t *testing.T) {
 
 		assert.IsType(t, &sema.ResourceLossError{}, errs[0])
 	})
+
+	t.Run("invocation on undeclared variable", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let x = y.isInstance(Type<Int>())
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
 }

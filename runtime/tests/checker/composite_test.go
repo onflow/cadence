@@ -1676,7 +1676,7 @@ func TestCheckCompositeConstructorUseInInitializerAndFunction(t *testing.T) {
 
 			require.NoError(t, err)
 
-			testType := checker.FindType("Test")
+			testType := checker.GlobalTypes["Test"].Type
 
 			assert.IsType(t, &sema.CompositeType{}, testType)
 

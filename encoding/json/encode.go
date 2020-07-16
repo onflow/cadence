@@ -440,14 +440,27 @@ func (e *Encoder) prepareEvent(v cadence.Event) jsonValue {
 }
 
 func (e *Encoder) prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cadence.Value) jsonValue {
-	if len(fieldTypes) != len(fields) {
-		panic(fmt.Errorf("%s value does not contain fields compatible with declared type", kind))
+	nonFunctionFieldTypes := make([]cadence.Field, 0)
+
+	for _, field := range fieldTypes {
+		if _, ok := field.Type.(cadence.Function); !ok {
+			nonFunctionFieldTypes = append(nonFunctionFieldTypes, field)
+		}
+	}
+
+	if len(nonFunctionFieldTypes) != len(fields) {
+		panic(fmt.Errorf(
+			"%s field count (%d) does not match declared type (%d)",
+			kind,
+			len(fields),
+			len(nonFunctionFieldTypes),
+		))
 	}
 
 	compositeFields := make([]jsonCompositeField, len(fields))
 
 	for i, value := range fields {
-		fieldType := fieldTypes[i]
+		fieldType := nonFunctionFieldTypes[i]
 
 		compositeFields[i] = jsonCompositeField{
 			Name:  fieldType.Identifier,

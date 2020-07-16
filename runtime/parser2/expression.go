@@ -1000,7 +1000,21 @@ func defineMemberExpression() {
 
 func parseMemberAccess(p *parser, left ast.Expression, optional bool) ast.Expression {
 	p.skipSpaceAndComments(true)
-	identifier := mustIdentifier(p)
+
+	// If there is an identifier, use it.
+	// If not, report an error
+
+	var identifier ast.Identifier
+	if p.current.Is(lexer.TokenIdentifier) {
+		identifier = tokenToIdentifier(p.current)
+		p.next()
+	} else {
+		p.report(fmt.Errorf(
+			"expected member name, got %s",
+			p.current.Type,
+		))
+	}
+
 	return &ast.MemberExpression{
 		Optional:   optional,
 		Expression: left,

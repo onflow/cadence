@@ -21,6 +21,7 @@ package runtime
 import (
 	"time"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -39,14 +40,24 @@ type cacheEntry struct {
 }
 
 type interpreterRuntimeStorage struct {
-	runtimeInterface Interface
-	cache            map[storageKey]cacheEntry
+	runtimeInterface        Interface
+	highLevelStorageEnabled bool
+	highLevelStorage        HighLevelStorage
+	cache                   map[storageKey]cacheEntry
 }
 
 func newInterpreterRuntimeStorage(runtimeInterface Interface) *interpreterRuntimeStorage {
+	highLevelStorageEnabled := false
+	highLevelStorage, ok := runtimeInterface.(HighLevelStorage)
+	if ok {
+		highLevelStorageEnabled = highLevelStorage.HighLevelStorageEnabled()
+	}
+
 	return &interpreterRuntimeStorage{
-		runtimeInterface: runtimeInterface,
-		cache:            map[storageKey]cacheEntry{},
+		runtimeInterface:        runtimeInterface,
+		cache:                   map[storageKey]cacheEntry{},
+		highLevelStorage:        highLevelStorage,
+		highLevelStorageEnabled: highLevelStorageEnabled,
 	}
 }
 
@@ -79,8 +90,7 @@ func (s *interpreterRuntimeStorage) valueExists(
 	var exists bool
 	var err error
 	wrapPanic(func() {
-		// TODO: fix controller
-		exists, err = s.runtimeInterface.ValueExists(address[:], []byte{}, []byte(key))
+		exists, err = s.runtimeInterface.ValueExists(address[:], []byte(key))
 	})
 	if err != nil {
 		panic(err)
@@ -131,8 +141,7 @@ func (s *interpreterRuntimeStorage) readValue(
 	var storedData []byte
 	var err error
 	wrapPanic(func() {
-		// TODO: fix controller
-		storedData, err = s.runtimeInterface.GetValue(address[:], nil, []byte(key))
+		storedData, err = s.runtimeInterface.GetValue(address[:], []byte(key))
 	})
 	if err != nil {
 		panic(err)
@@ -210,7 +219,7 @@ func (s *interpreterRuntimeStorage) writeValue(
 
 // writeCached serializes/saves all values in the cache in storage (through the runtime interface).
 //
-func (s *interpreterRuntimeStorage) writeCached() {
+func (s *interpreterRuntimeStorage) writeCached(inter *interpreter.Interpreter) {
 
 	type writeItem struct {
 		storageKey storageKey
@@ -229,6 +238,22 @@ func (s *interpreterRuntimeStorage) writeCached() {
 			storageKey: fullKey,
 			value:      entry.value,
 		})
+
+		if s.highLevelStorageEnabled {
+			var err error
+
+			var value cadence.Value
+			if entry.value != nil {
+				value = exportValueWithInterpreter(entry.value, inter)
+			}
+
+			wrapPanic(func() {
+				err = s.highLevelStorage.SetCadenceValue(fullKey.address, fullKey.key, value)
+			})
+			if err != nil {
+				panic(err)
+			}
+		}
 	}
 
 	// Don't use a for-range loop, as keys are added while iterating
@@ -275,10 +300,8 @@ func (s *interpreterRuntimeStorage) writeCached() {
 
 		var err error
 		wrapPanic(func() {
-			// TODO: fix controller
 			err = s.runtimeInterface.SetValue(
 				item.storageKey.address[:],
-				nil,
 				[]byte(item.storageKey.key),
 				newData,
 			)
@@ -313,20 +336,17 @@ func (s *interpreterRuntimeStorage) move(
 	oldOwner common.Address, oldKey string,
 	newOwner common.Address, newKey string,
 ) {
-	// TODO: fix controller
-	data, err := s.runtimeInterface.GetValue(oldOwner[:], nil, []byte(oldKey))
+	data, err := s.runtimeInterface.GetValue(oldOwner[:], []byte(oldKey))
 	if err != nil {
 		panic(err)
 	}
 
-	// TODO: fix controller
-	err = s.runtimeInterface.SetValue(oldOwner[:], nil, []byte(oldKey), nil)
+	err = s.runtimeInterface.SetValue(oldOwner[:], []byte(oldKey), nil)
 	if err != nil {
 		panic(err)
 	}
 
-	// TODO: fix controller
-	err = s.runtimeInterface.SetValue(newOwner[:], nil, []byte(newKey), data)
+	err = s.runtimeInterface.SetValue(newOwner[:], []byte(newKey), data)
 	if err != nil {
 		panic(err)
 	}
