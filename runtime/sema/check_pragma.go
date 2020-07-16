@@ -27,19 +27,37 @@ func (checker *Checker) VisitPragmaDeclaration(p *ast.PragmaDeclaration) ast.Rep
 
 	// Pragma can be either an invocation expression or an identfier expression
 	if !(isInvocPragma || isIdentPragma) {
-		checker.report(&InvalidPragmaError{Message: "must be identifier or invocation expression"})
+		checker.report(&InvalidPragmaError{
+			Message: "must be identifier or invocation expression",
+			Range: ast.Range{
+				StartPos: p.Expression.StartPosition(),
+				EndPos:   p.Expression.EndPosition(),
+			},
+		})
 	}
 
 	if isInvocPragma {
 		// Type arguments are not supported for pragmas
 		if invocPragma.TypeArguments != nil {
-			checker.report(&InvalidPragmaError{Message: "type arguments not supported"})
+			checker.report(&InvalidPragmaError{
+				Message: "type arguments not supported",
+				Range: ast.Range{
+					StartPos: invocPragma.StartPosition(),
+					EndPos:   invocPragma.EndPosition(),
+				},
+			})
 		}
 		// Ensure arguments are string expressions
 		for _, arg := range invocPragma.Arguments {
 			_, ok := arg.Expression.(*ast.StringExpression)
 			if !ok {
-				checker.report(&InvalidPragmaError{Message: "invalid arguments"})
+				checker.report(&InvalidPragmaError{
+					Message: "invalid argument",
+					Range: ast.Range{
+						StartPos: arg.Expression.StartPosition(),
+						EndPos:   arg.Expression.EndPosition(),
+					},
+				})
 				return nil
 			}
 		}

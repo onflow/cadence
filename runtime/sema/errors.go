@@ -57,6 +57,17 @@ func (e *unsupportedOperation) Error() string {
 
 type InvalidPragmaError struct {
 	Message string
+	ast.Range
+}
+
+func (e *InvalidPragmaError) isSemanticError() {}
+
+func (e *InvalidPragmaError) StartPosition() ast.Position {
+	return e.Range.StartPos
+}
+
+func (e *InvalidPragmaError) EndPosition() ast.Position {
+	return e.Range.EndPos
 }
 
 func (e *InvalidPragmaError) Error() string {
