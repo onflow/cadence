@@ -62,14 +62,6 @@ type InvalidPragmaError struct {
 
 func (e *InvalidPragmaError) isSemanticError() {}
 
-func (e *InvalidPragmaError) StartPosition() ast.Position {
-	return e.Range.StartPos
-}
-
-func (e *InvalidPragmaError) EndPosition() ast.Position {
-	return e.Range.EndPos
-}
-
 func (e *InvalidPragmaError) Error() string {
 	return fmt.Sprintf("invalid pragma %s", e.Message)
 }
