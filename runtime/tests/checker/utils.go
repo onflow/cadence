@@ -79,9 +79,7 @@ func ParseAndCheckWithOptions(
 	// If using both parsers, verify programs are equivalent
 	if !options.OnlyOldParser && !options.OnlyNewParser {
 		utils.AssertEqualWithDiff(t, program, program2)
-	}
-
-	if options.OnlyNewParser {
+	} else if options.OnlyNewParser {
 		program = program2
 	}
 
