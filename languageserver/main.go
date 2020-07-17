@@ -53,6 +53,5 @@ func main() {
 		jsonrpc2.VSCodeObjectCodec{},
 	)
 
-	// blocks
-	languageServer.Start(stream)
+	<-languageServer.Start(stream)
 }

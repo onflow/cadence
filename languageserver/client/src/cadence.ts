@@ -5,7 +5,7 @@ export const CADENCE_LANGUAGE_ID = "cadence"
 interface CadenceMonarchLanguage extends monaco.languages.IMonarchLanguage {
 }
 
-export function configureCadence() {
+export default function configureCadence() {
 
   monaco.languages.register({
     id: CADENCE_LANGUAGE_ID,
@@ -106,7 +106,7 @@ export function configureCadence() {
 
     // we include these common regular expressions
     symbols: /[=><!~?:&|+\-*\/\^%]+/,
-    escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
+    escapes: /\\(?:[abfnrtv\\"]|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
     digits: /\d+(_+\d+)*/,
     octaldigits: /[0-7]+(_+[0-7]+)*/,
     binarydigits: /[0-1]+(_+[0-1]+)*/,
@@ -126,8 +126,7 @@ export function configureCadence() {
             }
           }
         ],
-        [/[A-Z][\w\$]*/, "type.identifier"], // to show class names nicely
-        // [/[A-Z][\w\$]*/, 'identifier'],
+        [/[A-Z][\w]*/, "type.identifier"], // to show class names nicely
 
         // whitespace
         {include: "@whitespace"},
@@ -158,9 +157,7 @@ export function configureCadence() {
 
         // strings
         [/"([^"\\]|\\.)*$/, "string.invalid"], // non-teminated string
-        [/'([^'\\]|\\.)*$/, "string.invalid"], // non-teminated string
         [/"/, "string", "@string_double"],
-        [/'/, "string", "@string_single"]
       ],
 
       whitespace: [
@@ -174,18 +171,14 @@ export function configureCadence() {
         [/\*\//, "comment", "@pop"],
         [/[\/*]/, "comment"]
       ],
+
       string_double: [
         [/[^\\"]+/, "string"],
         [/@escapes/, "string.escape"],
         [/\\./, "string.escape.invalid"],
         [/"/, "string", "@pop"]
       ],
-      string_single: [
-        [/[^\\']+/, "string"],
-        [/@escapes/, "string.escape"],
-        [/\\./, "string.escape.invalid"],
-        [/'/, "string", "@pop"]
-      ]
+
     }
   } as CadenceMonarchLanguage);
 }

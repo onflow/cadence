@@ -185,8 +185,8 @@ func (s *Server) SetOptions(options ...Option) error {
 	return nil
 }
 
-func (s *Server) Start(stream jsonrpc2.ObjectStream) {
-	<-protocol.NewServer(s).Start(stream)
+func (s *Server) Start(stream jsonrpc2.ObjectStream) <-chan struct{} {
+	return protocol.NewServer(s).Start(stream)
 }
 
 func (s *Server) Initialize(
