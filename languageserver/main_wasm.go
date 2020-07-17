@@ -178,6 +178,11 @@ func start(id int) {
 	case <-languageServer.Start(stream):
 		logger.Println("Disconnected")
 	case <-ctx.Done():
-		logger.Println("Cancelled")
+		err = languageServer.Stop()
+		if err != nil {
+			logger.Printf("Cancellation failed: %s", err)
+			return
+		}
+		logger.Println("Cancelled successfully")
 	}
 }

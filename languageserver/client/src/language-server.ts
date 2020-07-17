@@ -105,6 +105,7 @@ export class CadenceLanguageServer {
   }
 
   public readonly id: number
+  private isClientClosed: boolean
 
   private constructor(callbacks: Callbacks) {
 
@@ -138,6 +139,10 @@ export class CadenceLanguageServer {
     }
 
     callbacks.onClientClose = () => {
+      if (this.isClientClosed) {
+        return
+      }
+      this.isClientClosed = true
       window[this.functionName('onClientClose')]()
     }
   }
