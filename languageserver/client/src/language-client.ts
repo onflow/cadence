@@ -41,6 +41,7 @@ export function createCadenceLanguageClient(callbacks: Callbacks) {
       callbacks.toServer(null, msg)
     },
     dispose() {
+      callbacks.onClientClose()
     }
   }
 
@@ -61,6 +62,7 @@ export function createCadenceLanguageClient(callbacks: Callbacks) {
       callbacks.toClient = (message) => dataCallback(message)
     },
     dispose() {
+      callbacks.onClientClose()
     }
   }
 

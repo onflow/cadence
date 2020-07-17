@@ -20,86 +20,86 @@ package protocol
 
 import "encoding/json"
 
-func (server *Server) handleInitialize(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleInitialize(req *json.RawMessage) (interface{}, error) {
 	var params InitializeParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
 	}
 
-	return server.Handler.Initialize(server.conn, &params)
+	return s.Handler.Initialize(s.conn, &params)
 }
 
-func (server *Server) handleDidOpenTextDocument(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleDidOpenTextDocument(req *json.RawMessage) (interface{}, error) {
 	var params DidOpenTextDocumentParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
 	}
 
-	err := server.Handler.DidOpenTextDocument(server.conn, &params)
+	err := s.Handler.DidOpenTextDocument(s.conn, &params)
 	return nil, err
 }
 
-func (server *Server) handleDidChangeTextDocument(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleDidChangeTextDocument(req *json.RawMessage) (interface{}, error) {
 	var params DidChangeTextDocumentParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
 	}
 
-	err := server.Handler.DidChangeTextDocument(server.conn, &params)
+	err := s.Handler.DidChangeTextDocument(s.conn, &params)
 	return nil, err
 }
 
-func (server *Server) handleHover(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleHover(req *json.RawMessage) (interface{}, error) {
 	var params TextDocumentPositionParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
 	}
 
-	return server.Handler.Hover(server.conn, &params)
+	return s.Handler.Hover(s.conn, &params)
 }
 
-func (server *Server) handleDefinition(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleDefinition(req *json.RawMessage) (interface{}, error) {
 	var params TextDocumentPositionParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
 	}
 
-	return server.Handler.Definition(server.conn, &params)
+	return s.Handler.Definition(s.conn, &params)
 }
 
-func (server *Server) handleSignatureHelp(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleSignatureHelp(req *json.RawMessage) (interface{}, error) {
 	var params TextDocumentPositionParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
 	}
 
-	return server.Handler.SignatureHelp(server.conn, &params)
+	return s.Handler.SignatureHelp(s.conn, &params)
 }
 
-func (server *Server) handleCodeLens(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleCodeLens(req *json.RawMessage) (interface{}, error) {
 	var params CodeLensParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
 	}
 
-	return server.Handler.CodeLens(server.conn, &params)
+	return s.Handler.CodeLens(s.conn, &params)
 }
 
-func (server *Server) handleExecuteCommand(req *json.RawMessage) (interface{}, error) {
+func (s *Server) handleExecuteCommand(req *json.RawMessage) (interface{}, error) {
 	var params ExecuteCommandParams
 	if err := json.Unmarshal(*req, &params); err != nil {
 		return nil, err
 	}
 
-	return server.Handler.ExecuteCommand(server.conn, &params)
+	return s.Handler.ExecuteCommand(s.conn, &params)
 }
 
-func (server *Server) handleShutdown(_ *json.RawMessage) (interface{}, error) {
-	err := server.Handler.Shutdown(server.conn)
+func (s *Server) handleShutdown(_ *json.RawMessage) (interface{}, error) {
+	err := s.Handler.Shutdown(s.conn)
 	return nil, err
 }
 
-func (server *Server) handleExit(_ *json.RawMessage) (interface{}, error) {
-	err := server.Handler.Exit(server.conn)
+func (s *Server) handleExit(_ *json.RawMessage) (interface{}, error) {
+	err := s.Handler.Exit(s.conn)
 	return nil, err
 }

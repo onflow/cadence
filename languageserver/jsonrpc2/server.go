@@ -101,3 +101,7 @@ func (server *Server) Notify(method string, params interface{}) {
 func (server *Server) Call(method string, params interface{}) error {
 	return server.conn.Call(context.Background(), method, params, nil)
 }
+
+func (server *Server) Stop() error {
+	return server.conn.Close()
+}

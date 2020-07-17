@@ -130,6 +130,10 @@ func NewServer(handler Handler) *Server {
 	return server
 }
 
-func (server *Server) Start(stream jsonrpc2.ObjectStream) <-chan struct{} {
-	return server.jsonrpc2Server.Start(stream)
+func (s *Server) Start(stream jsonrpc2.ObjectStream) <-chan struct{} {
+	return s.jsonrpc2Server.Start(stream)
+}
+
+func (s *Server) Stop() error {
+	return s.jsonrpc2Server.Stop()
 }

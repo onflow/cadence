@@ -79,8 +79,9 @@ type DiagnosticProvider func(uri protocol.DocumentUri, checker *sema.Checker) ([
 type InitializationOptionsHandler func(initializationOptions interface{}) error
 
 type Server struct {
-	checkers  map[protocol.DocumentUri]*sema.Checker
-	documents map[protocol.DocumentUri]Document
+	protocolServer *protocol.Server
+	checkers       map[protocol.DocumentUri]*sema.Checker
+	documents      map[protocol.DocumentUri]Document
 	// commands is the registry of custom commands we support
 	commands map[string]CommandHandler
 	// resolveAddressImport is the optional function that is used to resolve address imports
@@ -168,11 +169,13 @@ func WithInitializationOptionsHandler(handler InitializationOptionsHandler) Opti
 }
 
 func NewServer() *Server {
-	return &Server{
+	server := &Server{
 		checkers:  make(map[protocol.DocumentUri]*sema.Checker),
 		documents: make(map[protocol.DocumentUri]Document),
 		commands:  make(map[string]CommandHandler),
 	}
+	server.protocolServer = protocol.NewServer(server)
+	return server
 }
 
 func (s *Server) SetOptions(options ...Option) error {
@@ -186,7 +189,11 @@ func (s *Server) SetOptions(options ...Option) error {
 }
 
 func (s *Server) Start(stream jsonrpc2.ObjectStream) <-chan struct{} {
-	return protocol.NewServer(s).Start(stream)
+	return s.protocolServer.Start(stream)
+}
+
+func (s *Server) Stop() error {
+	return s.protocolServer.Stop()
 }
 
 func (s *Server) Initialize(

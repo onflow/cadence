@@ -36,9 +36,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   for (let id = 1; id <= codes.length; id++) {
     const editorElement = document.getElementById(`editor${id}`);
+    const buttonElement = document.getElementById(`button${id}`);
 
     const model = monaco.editor.createModel(
-      codes[id-1],
+      codes[id - 1],
       CADENCE_LANGUAGE_ID,
       monaco.Uri.parse(`inmemory://${id}.cdc`)
     )
@@ -46,15 +47,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     models.push(model)
 
     const editor = monaco.editor.create(
-        editorElement,
-        {
-            theme: 'vs-light',
-            language: CADENCE_LANGUAGE_ID,
-            model: model,
-            minimap: {
-                enabled: false
-            },
-        }
+      editorElement,
+      {
+        theme: 'vs-light',
+        language: CADENCE_LANGUAGE_ID,
+        model: model,
+        minimap: {
+          enabled: false
+        },
+      }
     );
 
     // The Monaco Language Client services have to be installed globally, once.
@@ -84,6 +85,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
       },
     }
+
+    // The stop button demonstrates how to dispose the editor
+    // and stop the language server
+
+    buttonElement.addEventListener('click', () => {
+      editor.dispose()
+      callbacks.onClientClose()
+    })
 
     // Start one language server per editor.
     // Even though one language server can handle multiple documents,
