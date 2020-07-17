@@ -641,8 +641,8 @@ func convertError(err convertibleError) protocol.Diagnostic {
 	}
 
 	return protocol.Diagnostic{
-		Message: message.String(),
-		Code:    protocol.SeverityError,
+		Message:  message.String(),
+		Severity: protocol.SeverityError,
 		Range: protocol.Range{
 			Start: protocol.Position{
 				Line:      float64(startPosition.Line - 1),
