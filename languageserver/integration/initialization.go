@@ -16,27 +16,35 @@
  * limitations under the License.
  */
 
-package jsonrpc2
+package integration
 
-import "os"
+import (
+	"github.com/onflow/flow-go-sdk"
+	"github.com/onflow/flow-go-sdk/client"
+	"google.golang.org/grpc"
+)
 
-// stdrwc implements an io.ReadWriter and io.Closer around STDIN and STDOUT.
-type stdrwc struct{}
+func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 
-// Read reads from STDIN.
-func (stdrwc) Read(p []byte) (int, error) {
-	return os.Stdin.Read(p)
-}
-
-// Write writes to STDOUT.
-func (stdrwc) Write(p []byte) (int, error) {
-	return os.Stdout.Write(p)
-}
-
-// Close closes STDIN and STDOUT.
-func (stdrwc) Close() error {
-	if err := os.Stdin.Close(); err != nil {
+	// Parse the configuration options sent from the client
+	conf, err := configFromInitializationOptions(initializationOptions)
+	if err != nil {
 		return err
 	}
-	return os.Stdout.Close()
+	i.config = conf
+
+	serviceAddress := flow.ServiceAddress(flow.Emulator)
+
+	// add the service account as a usable account
+	i.accounts[serviceAddress] = conf.ServiceAccountKey
+	i.activeAccount = serviceAddress
+
+	i.flowClient, err = client.New(
+		i.config.EmulatorAddr,
+		grpc.WithInsecure(),
+	)
+	if err != nil {
+		return err
+	}
+	return nil
 }

@@ -19,28 +19,20 @@
 package server
 
 import (
-	"context"
 	"fmt"
-	"io/ioutil"
 	"os"
-	"path"
 	"strings"
 	"time"
 
-	"github.com/onflow/flow-go-sdk"
-	"github.com/onflow/flow-go-sdk/client"
-	"github.com/onflow/flow-go-sdk/crypto"
-	"google.golang.org/grpc"
-
+	"github.com/onflow/cadence/languageserver/conversion"
+	"github.com/onflow/cadence/languageserver/jsonrpc2"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 
-	"github.com/onflow/cadence/languageserver/config"
 	"github.com/onflow/cadence/languageserver/protocol"
 )
 
@@ -56,35 +48,145 @@ var typeDeclarations = append(
 // document represents an open document on the client. It contains all cached
 // information about each document that is used to support CodeLens,
 // transaction submission, and script execution.
-type document struct {
-	text          string
+type Document struct {
+	Text          string
 	latestVersion float64
 	hasErrors     bool
 }
 
+// CommandHandler represents the form of functions that handle commands
+// submitted from the client using workspace/executeCommand.
+type CommandHandler func(conn protocol.Conn, args ...interface{}) (interface{}, error)
+
+// AddressImportResolver is a function that is used to resolve address imports
+//
+type AddressImportResolver func(location ast.AddressLocation) (string, error)
+
+// StringImportResolver is a function that is used to resolve string imports
+//
+type StringImportResolver func(mainPath string, location ast.StringLocation) (string, error)
+
+// CodeLensProvider is a function that is used to provide code lenses for the given checker
+//
+type CodeLensProvider func(uri protocol.DocumentUri, checker *sema.Checker) ([]*protocol.CodeLens, error)
+
+// DiagnosticProvider is a function that is used to provide diagnostics for the given checker
+//
+type DiagnosticProvider func(uri protocol.DocumentUri, checker *sema.Checker) ([]protocol.Diagnostic, error)
+
+// InitializationOptionsHandler is a function that is used to handle initialization options sent by the client
+//
+type InitializationOptionsHandler func(initializationOptions interface{}) error
+
 type Server struct {
-	config    config.Config
 	checkers  map[protocol.DocumentUri]*sema.Checker
-	documents map[protocol.DocumentUri]document
-	// registry of custom commands we support
-	commands   map[string]CommandHandler
-	flowClient *client.Client
-	// set of created accounts we can submit transactions for
-	accounts      map[flow.Address]config.AccountPrivateKey
-	activeAccount flow.Address
+	documents map[protocol.DocumentUri]Document
+	// commands is the registry of custom commands we support
+	commands map[string]CommandHandler
+	// resolveAddressImport is the optional function that is used to resolve address imports
+	resolveAddressImport AddressImportResolver
+	// resolveStringImport is the optional function that is used to resolve string imports
+	resolveStringImport StringImportResolver
+	// codeLensProviders are the functions that are used to provide code lenses for a checker
+	codeLensProviders []CodeLensProvider
+	// diagnosticProviders are the functions that are used to provide diagnostics for a checker
+	diagnosticProviders []DiagnosticProvider
+	// initializationOptionsHandlers are the functions that are used to handle initialization options sent by the client
+	initializationOptionsHandlers []InitializationOptionsHandler
+}
+
+type Option func(*Server) error
+
+type Command struct {
+	Name    string
+	Handler CommandHandler
+}
+
+// WithCommand returns a server options that adds the given command
+// to the set of commands provided by the server to the client.
+//
+// If a command with the given name already exists, the option fails.
+//
+func WithCommand(command Command) Option {
+	return func(s *Server) error {
+		if _, ok := s.commands[command.Name]; ok {
+			return fmt.Errorf("cannot register command with existing name: %s", command.Name)
+		}
+		s.commands[command.Name] = command.Handler
+		return nil
+	}
+}
+
+// WithAddressImportResolver returns a server option that sets the given function
+// as the function that is used to resolve address imports
+//
+func WithAddressImportResolver(resolver AddressImportResolver) Option {
+	return func(s *Server) error {
+		s.resolveAddressImport = resolver
+		return nil
+	}
+}
+
+// WithStringImportResolver returns a server option that sets the given function
+// as the function that is used to resolve string imports
+//
+func WithStringImportResolver(resolver StringImportResolver) Option {
+	return func(s *Server) error {
+		s.resolveStringImport = resolver
+		return nil
+	}
+}
+
+// WithCodeLensProvider returns a server option that adds the given function
+// as a function that is used to generate code lenses
+//
+func WithCodeLensProvider(provider CodeLensProvider) Option {
+	return func(s *Server) error {
+		s.codeLensProviders = append(s.codeLensProviders, provider)
+		return nil
+	}
+}
+
+// WithDiagnosticProvider returns a server option that adds the given function
+// as a function that is used to generate diagnostics
+//
+func WithDiagnosticProvider(provider DiagnosticProvider) Option {
+	return func(s *Server) error {
+		s.diagnosticProviders = append(s.diagnosticProviders, provider)
+		return nil
+	}
+}
+
+// WithInitializationOptionsHandler returns a server option that adds the given function
+// as a function that is used to handle initialization options sent by the client
+//
+func WithInitializationOptionsHandler(handler InitializationOptionsHandler) Option {
+	return func(s *Server) error {
+		s.initializationOptionsHandlers = append(s.initializationOptionsHandlers, handler)
+		return nil
+	}
 }
 
 func NewServer() *Server {
 	return &Server{
 		checkers:  make(map[protocol.DocumentUri]*sema.Checker),
-		documents: make(map[protocol.DocumentUri]document),
+		documents: make(map[protocol.DocumentUri]Document),
 		commands:  make(map[string]CommandHandler),
-		accounts:  make(map[flow.Address]config.AccountPrivateKey),
 	}
 }
 
-func (s *Server) Start() {
-	<-protocol.NewServer(s).Start()
+func (s *Server) SetOptions(options ...Option) error {
+	for _, option := range options {
+		err := option(s)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (s *Server) Start(stream jsonrpc2.ObjectStream) {
+	<-protocol.NewServer(s).Start(stream)
 }
 
 func (s *Server) Initialize(
@@ -109,37 +211,76 @@ func (s *Server) Initialize(
 		},
 	}
 
-	// load the config options sent from the client
-	conf, err := config.FromInitializationOptions(params.InitializationOptions)
-	if err != nil {
-		return nil, err
+	for _, handler := range s.initializationOptionsHandlers {
+		err := handler(params.InitializationOptions)
+		if err != nil {
+			return nil, err
+		}
 	}
-	s.config = conf
-
-	serviceAddress := flow.ServiceAddress(flow.Emulator)
-
-	// add the service account as a usable account
-	s.accounts[serviceAddress] = conf.ServiceAccountKey
-	s.activeAccount = serviceAddress
-
-	s.flowClient, err = client.New(
-		s.config.EmulatorAddr,
-		grpc.WithInsecure(),
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	// TODO remove
-	conn.LogMessage(&protocol.LogMessageParams{
-		Type:    protocol.Info,
-		Message: fmt.Sprintf("Successfully loaded config emu_addr: %s", conf.EmulatorAddr),
-	})
 
 	// after initialization, indicate to the client which commands we support
 	go s.registerCommands(conn)
 
 	return result, nil
+}
+
+// Registers the commands that the server is able to handle.
+//
+// The best reference I've found for how this works is:
+// https://stackoverflow.com/questions/43328582/how-to-implement-quickfix-via-a-language-server
+func (s *Server) registerCommands(conn protocol.Conn) {
+
+	commandCount := len(s.commands)
+	if commandCount <= 0 {
+		return
+	}
+
+	commands := make([]string, commandCount)
+	i := 0
+	for name := range s.commands {
+		commands[i] = name
+		i++
+	}
+
+	// Send a message to the client indicating which commands we support
+	registration := protocol.RegistrationParams{
+		Registrations: []protocol.Registration{
+			{
+				ID:     "registerCommand",
+				Method: "workspace/executeCommand",
+				RegisterOptions: protocol.ExecuteCommandRegistrationOptions{
+					ExecuteCommandOptions: protocol.ExecuteCommandOptions{
+						Commands: commands,
+					},
+				},
+			},
+		},
+	}
+
+	// We have occasionally observed the client failing to recognize this
+	// method if the request is sent too soon after the extension loads.
+	// Retrying with a backoff avoids this problem.
+	retryAfter := time.Millisecond * 100
+	nRetries := 10
+	for i = 0; i < nRetries; i++ {
+		err := conn.RegisterCapability(&registration)
+		if err == nil {
+			break
+		}
+		remainingRetries := nRetries - 1 - i
+
+		conn.LogMessage(&protocol.LogMessageParams{
+			Type: protocol.Warning,
+			Message: fmt.Sprintf(
+				"Failed to register command. Will retry %d more times... err: %s",
+				remainingRetries, err.Error(),
+			),
+		})
+
+		time.Sleep(retryAfter)
+
+		retryAfter *= 2
+	}
 }
 
 // DidOpenTextDocument is called whenever a new file is opened.
@@ -162,8 +303,8 @@ func (s *Server) DidOpenTextDocument(conn protocol.Conn, params *protocol.DidOpe
 		Diagnostics: diagnostics,
 	})
 
-	s.documents[uri] = document{
-		text:          text,
+	s.documents[uri] = Document{
+		Text:          text,
 		latestVersion: params.TextDocument.Version,
 		hasErrors:     len(diagnostics) > 0,
 	}
@@ -193,8 +334,8 @@ func (s *Server) DidChangeTextDocument(
 		Diagnostics: diagnostics,
 	})
 
-	s.documents[uri] = document{
-		text:          text,
+	s.documents[uri] = Document{
+		Text:          text,
 		latestVersion: params.TextDocument.Version,
 		hasErrors:     len(diagnostics) > 0,
 	}
@@ -215,7 +356,8 @@ func (s *Server) Hover(
 		return nil, nil
 	}
 
-	occurrence := checker.Occurrences.Find(protocolToSemaPosition(params.Position))
+	position := conversion.ProtocolToSemaPosition(params.Position)
+	occurrence := checker.Occurrences.Find(position)
 
 	if occurrence == nil || occurrence.Origin == nil {
 		return nil, nil
@@ -223,7 +365,7 @@ func (s *Server) Hover(
 
 	contents := protocol.MarkupContent{
 		Kind:  protocol.Markdown,
-		Value: fmt.Sprintf("* Type: `%s`", occurrence.Origin.Type.String()),
+		Value: fmt.Sprintf("* Type: `%s`", occurrence.Origin.Type.QualifiedString()),
 	}
 	return &protocol.Hover{Contents: contents}, nil
 }
@@ -240,7 +382,8 @@ func (s *Server) Definition(
 		return nil, nil
 	}
 
-	occurrence := checker.Occurrences.Find(protocolToSemaPosition(params.Position))
+	position := conversion.ProtocolToSemaPosition(params.Position)
+	occurrence := checker.Occurrences.Find(position)
 
 	if occurrence == nil {
 		return nil, nil
@@ -252,8 +395,11 @@ func (s *Server) Definition(
 	}
 
 	return &protocol.Location{
-		URI:   uri,
-		Range: astToProtocolRange(*origin.StartPos, *origin.EndPos),
+		URI: uri,
+		Range: conversion.ASTToProtocolRange(
+			*origin.StartPos,
+			*origin.EndPos,
+		),
 	}, nil
 }
 
@@ -267,11 +413,7 @@ func (s *Server) SignatureHelp(
 
 // CodeLens is called every time the document contents change and returns a
 // list of actions to be injected into the source as inline buttons.
-func (s *Server) CodeLens(conn protocol.Conn, params *protocol.CodeLensParams) ([]*protocol.CodeLens, error) {
-	conn.LogMessage(&protocol.LogMessageParams{
-		Type:    protocol.Info,
-		Message: "code lens called uri:" + string(params.TextDocument.URI) + " acct:" + s.activeAccount.String(),
-	})
+func (s *Server) CodeLens(_ protocol.Conn, params *protocol.CodeLensParams) ([]*protocol.CodeLens, error) {
 
 	uri := params.TextDocument.URI
 	checker, ok := s.checkers[uri]
@@ -280,87 +422,18 @@ func (s *Server) CodeLens(conn protocol.Conn, params *protocol.CodeLensParams) (
 		return []*protocol.CodeLens{}, nil
 	}
 
-	elaboration := checker.Elaboration
-	var (
-		scriptFuncDeclarations        = getScriptDeclarations(elaboration.FunctionDeclarationFunctionTypes)
-		txDeclarations                = getTransactionDeclarations(elaboration.TransactionDeclarationTypes)
-		contractDeclarations          = getContractDeclarations(elaboration.CompositeDeclarationTypes)
-		contractInterfaceDeclarations = getContractInterfaceDeclarations(elaboration.InterfaceDeclarationTypes)
+	var allCodeLenses []*protocol.CodeLens
 
-		actions []*protocol.CodeLens
-	)
-
-	// Show submit button when there is exactly one transaction declaration and no
-	// other actionable declarations.
-	if len(txDeclarations) == 1 &&
-		len(contractDeclarations) == 0 &&
-		len(contractInterfaceDeclarations) == 0 &&
-		len(scriptFuncDeclarations) == 0 {
-		actions = append(actions, &protocol.CodeLens{
-			Range: astToProtocolRange(txDeclarations[0].StartPosition(), txDeclarations[0].StartPosition()),
-			Command: &protocol.Command{
-				Title:     fmt.Sprintf("submit transaction with account 0x%s", s.activeAccount.Hex()),
-				Command:   CommandSubmitTransaction,
-				Arguments: []interface{}{uri},
-			},
-		})
-	}
-
-	// Show deploy button when there is exactly one contract declaration,
-	// any number of contract interface declarations, and no other actionable
-	// declarations.
-	if len(contractDeclarations) == 1 &&
-		len(txDeclarations) == 0 &&
-		len(scriptFuncDeclarations) == 0 {
-		actions = append(actions, &protocol.CodeLens{
-			Range: astToProtocolRange(contractDeclarations[0].StartPosition(), contractDeclarations[0].StartPosition()),
-			Command: &protocol.Command{
-				Title:     fmt.Sprintf("deploy contract to account 0x%s", s.activeAccount.Hex()),
-				Command:   CommandUpdateAccountCode,
-				Arguments: []interface{}{uri},
-			},
-		})
-	}
-
-	// Show deploy interface button when there are 1 or more contract interface
-	// declarations, but no other actionable declarations.
-	if len(contractInterfaceDeclarations) > 0 &&
-		len(txDeclarations) == 0 &&
-		len(scriptFuncDeclarations) == 0 &&
-		len(contractDeclarations) == 0 {
-		// decide whether to pluralize
-		pluralInterface := "interface"
-		if len(contractInterfaceDeclarations) > 1 {
-			pluralInterface = "interfaces"
+	for _, provider := range s.codeLensProviders {
+		moreCodeLenses, err := provider(uri, checker)
+		if err != nil {
+			return nil, err
 		}
 
-		actions = append(actions, &protocol.CodeLens{
-			Range: firstLineRange(),
-			Command: &protocol.Command{
-				Title:     fmt.Sprintf("deploy contract %s to account 0x%s", pluralInterface, s.activeAccount.Hex()),
-				Command:   CommandUpdateAccountCode,
-				Arguments: []interface{}{uri},
-			},
-		})
+		allCodeLenses = append(allCodeLenses, moreCodeLenses...)
 	}
 
-	// Show execute script button when there is exactly one valid script
-	// function and no other actionable declarations.
-	if len(scriptFuncDeclarations) == 1 &&
-		len(contractDeclarations) == 0 &&
-		len(contractInterfaceDeclarations) == 0 &&
-		len(txDeclarations) == 0 {
-		actions = append(actions, &protocol.CodeLens{
-			Range: astToProtocolRange(scriptFuncDeclarations[0].StartPosition(), scriptFuncDeclarations[0].StartPosition()),
-			Command: &protocol.Command{
-				Title:     "execute script",
-				Command:   CommandExecuteScript,
-				Arguments: []interface{}{uri},
-			},
-		})
-	}
-
-	return actions, nil
+	return allCodeLenses, nil
 }
 
 // ExecuteCommand is called to execute a custom, server-defined command.
@@ -396,33 +469,8 @@ func (*Server) Exit(_ protocol.Conn) error {
 	return nil
 }
 
-// getAccountKey returns the first account key and signer for the given address.
-func (s *Server) getAccountKey(address flow.Address) (*flow.AccountKey, crypto.Signer, error) {
-	privateKey, ok := s.accounts[address]
-	if !ok {
-		return nil, nil, fmt.Errorf(
-			"cannot sign transaction: unknown account %s",
-			address,
-		)
-	}
-
-	account, err := s.flowClient.GetAccount(context.Background(), address)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if len(account.Keys) == 0 {
-		return nil, nil, fmt.Errorf(
-			"cannot sign transaction: account %s has no keys",
-			address.Hex(),
-		)
-	}
-
-	accountKey := account.Keys[0]
-	signer := crypto.NewNaiveSigner(privateKey.PrivateKey, privateKey.HashAlgo)
-
-	return accountKey, signer, nil
-}
+const filePrefix = "file://"
+const inMemoryPrefix = "inmemory:/"
 
 // getDiagnostics parses and checks the given file and generates diagnostics
 // indicating each syntax or semantic error. Returns a list of diagnostics
@@ -446,7 +494,14 @@ func (s *Server) getDiagnostics(conn protocol.Conn, uri protocol.DocumentUri, te
 
 	// There were no parser errors. Proceed to resolving imports and
 	// checking the parsed program.
-	mainPath := strings.TrimPrefix(string(uri), "file://")
+
+	mainPath := string(uri)
+
+	if strings.HasPrefix(mainPath, filePrefix) {
+		mainPath = mainPath[len(filePrefix):]
+	} else if strings.HasPrefix(mainPath, inMemoryPrefix) {
+		mainPath = mainPath[len(inMemoryPrefix):]
+	}
 
 	_ = program.ResolveImports(func(location ast.Location) (program *ast.Program, err error) {
 		return s.resolveImport(conn, mainPath, location)
@@ -483,57 +538,16 @@ func (s *Server) getDiagnostics(conn protocol.Conn, uri protocol.DocumentUri, te
 		}
 	}
 
-	extraDiagnostics := getExtraDiagnostics(conn, checker)
-	diagnostics = append(diagnostics, extraDiagnostics...)
+	for _, provider := range s.diagnosticProviders {
+		var extraDiagnostics []protocol.Diagnostic
+		extraDiagnostics, err = provider(uri, checker)
+		if err != nil {
+			return nil, err
+		}
+		diagnostics = append(diagnostics, extraDiagnostics...)
+	}
 
 	return diagnostics, nil
-}
-
-// getExtraDiagnostics gets extra non-error diagnostics based on a checker.
-//
-// For example, this function will return diagnostics for declarations that are
-// syntactically and semantically valid, but unsupported by the extension.
-func getExtraDiagnostics(_ protocol.Conn, checker *sema.Checker) (diagnostics []protocol.Diagnostic) {
-	elaboration := checker.Elaboration
-
-	// Warn if there are more than 1 transaction declarations as deployment will fail
-	if len(elaboration.TransactionDeclarationTypes) > 1 {
-		isFirst := true
-		for decl := range elaboration.TransactionDeclarationTypes {
-			// Skip the first declaration
-			if isFirst {
-				isFirst = false
-				continue
-			}
-
-			diagnostics = append(diagnostics, protocol.Diagnostic{
-				Range:    astToProtocolRange(decl.StartPosition(), decl.StartPosition().Shifted(len("transaction"))),
-				Severity: protocol.SeverityWarning,
-				Message:  "Cannot declare more than one transaction per file",
-			})
-		}
-	}
-
-	// Warn if there are more than 1 contract declarations as deployment will fail
-	contractDeclarations := getContractDeclarations(checker.Elaboration.CompositeDeclarationTypes)
-	if len(contractDeclarations) > 1 {
-		isFirst := true
-		for _, decl := range contractDeclarations {
-			// Skip the first declaration
-			if isFirst {
-				isFirst = false
-				continue
-			}
-
-			diagnostics = append(diagnostics, protocol.Diagnostic{
-				Range:    astToProtocolRange(decl.Identifier.StartPosition(), decl.Identifier.EndPosition()),
-				Severity: protocol.SeverityWarning,
-				Message:  "Cannot declare more than one contract per file",
-			})
-		}
-	}
-
-	return
 }
 
 // getDiagnosticsForParentError unpacks all child errors and converts each to
@@ -575,51 +589,36 @@ func (s *Server) resolveImport(
 	_ protocol.Conn,
 	mainPath string,
 	location ast.Location,
-) (*ast.Program, error) {
+) (
+	program *ast.Program,
+	err error,
+) {
+	var code string
 	switch loc := location.(type) {
 	case ast.StringLocation:
-		return s.resolveFileImport(mainPath, loc)
+		if s.resolveStringImport == nil {
+			return nil, fmt.Errorf("unable to resolve string location %s", loc)
+		}
+		code, err = s.resolveStringImport(mainPath, loc)
 	case ast.AddressLocation:
-		return s.resolveAccountImport(loc)
+		if s.resolveAddressImport == nil {
+			return nil, fmt.Errorf("unable to resolve string location %s", loc)
+		}
+		code, err = s.resolveAddressImport(loc)
 	default:
-		return nil, fmt.Errorf("unresolvable import location %s", loc.ID())
-	}
-}
-
-func (s *Server) resolveFileImport(mainPath string, location ast.StringLocation) (*ast.Program, error) {
-	filename := path.Join(path.Dir(mainPath), string(location))
-
-	if filename == mainPath {
-		return nil, fmt.Errorf("cannot import current file: %s", filename)
+		return nil, fmt.Errorf("unable to resolve address location %s", loc)
 	}
 
-	data, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return nil, err
 	}
 
-	program, err := parser2.ParseProgram(string(data))
-	if err != nil {
-		return nil, fmt.Errorf("cannot find imported file: %s", filename)
-	}
-
-	return program, nil
+	return parser2.ParseProgram(code)
 }
 
-func (s *Server) resolveAccountImport(location ast.AddressLocation) (*ast.Program, error) {
-	accountAddr := location.ToAddress()
-
-	acct, err := s.flowClient.GetAccount(context.Background(), flow.BytesToAddress(accountAddr[:]))
-	if err != nil {
-		return nil, fmt.Errorf("cannot get account with address 0x%s. err: %w", accountAddr, err)
-	}
-
-	program, err := parser2.ParseProgram(string(acct.Code))
-	if err != nil {
-		return nil, fmt.Errorf("cannot parse code at adddress 0x%s. err: %w", accountAddr, err)
-	}
-
-	return program, nil
+func (s *Server) GetDocument(uri protocol.DocumentUri) (doc Document, ok bool) {
+	doc, ok = s.documents[uri]
+	return
 }
 
 // convertibleError is an error that can be converted to LSP diagnostic.
@@ -653,83 +652,6 @@ func convertError(err convertibleError) protocol.Diagnostic {
 				Line:      float64(endPosition.Line - 1),
 				Character: float64(endPosition.Column + 1),
 			},
-		},
-	}
-}
-
-// getScriptDeclarations finds function declarations that are interpreted as scripts.
-func getScriptDeclarations(funcDeclarationMap map[*ast.FunctionDeclaration]*sema.FunctionType) (scriptDeclarations []*ast.FunctionDeclaration) {
-	for decl := range funcDeclarationMap {
-		if decl.Identifier.String() == "main" && len(decl.ParameterList.Parameters) == 0 {
-			scriptDeclarations = append(scriptDeclarations, decl)
-		}
-	}
-	return
-}
-
-// getTranscactionDeclarations finds all transaction declarations.
-func getTransactionDeclarations(txDeclarationMap map[*ast.TransactionDeclaration]*sema.TransactionType) (txDeclarations []*ast.TransactionDeclaration) {
-	for decl := range txDeclarationMap {
-		txDeclarations = append(txDeclarations, decl)
-	}
-	return
-}
-
-// getContractInterfaceDeclarations finds all interface declarations for contracts.
-func getContractInterfaceDeclarations(interfaceDeclarationMap map[*ast.InterfaceDeclaration]*sema.InterfaceType) (contractInterfaceDeclarations []*ast.InterfaceDeclaration) {
-	for decl := range interfaceDeclarationMap {
-		if decl.CompositeKind == common.CompositeKindContract {
-			contractInterfaceDeclarations = append(contractInterfaceDeclarations, decl)
-		}
-	}
-	return
-}
-
-// getContractDeclarations returns a list of contract declarations based on
-// the keys of the input map.
-// Usage: `getContractDeclarations(checker.Elaboration.CompositeDeclarations)`
-func getContractDeclarations(compositeDeclarations map[*ast.CompositeDeclaration]*sema.CompositeType) []*ast.CompositeDeclaration {
-	contractDeclarations := make([]*ast.CompositeDeclaration, 0)
-	for decl := range compositeDeclarations {
-		if decl.CompositeKind == common.CompositeKindContract {
-			contractDeclarations = append(contractDeclarations, decl)
-		}
-	}
-	return contractDeclarations
-}
-
-func protocolToSemaPosition(pos protocol.Position) sema.Position {
-	return sema.Position{
-		Line:   int(pos.Line + 1),
-		Column: int(pos.Character),
-	}
-}
-
-func astToProtocolPosition(pos ast.Position) protocol.Position {
-	return protocol.Position{
-		Line:      float64(pos.Line - 1),
-		Character: float64(pos.Column),
-	}
-}
-
-func astToProtocolRange(startPos, endPos ast.Position) protocol.Range {
-	return protocol.Range{
-		Start: astToProtocolPosition(startPos),
-		End:   astToProtocolPosition(endPos.Shifted(1)),
-	}
-}
-
-// firstLine returns a range mapping to the first character of the first
-// line of the document.
-func firstLineRange() protocol.Range {
-	return protocol.Range{
-		Start: protocol.Position{
-			Line:      0,
-			Character: 0,
-		},
-		End: protocol.Position{
-			Line:      0,
-			Character: 0,
 		},
 	}
 }

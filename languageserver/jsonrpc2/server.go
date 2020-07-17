@@ -84,8 +84,9 @@ func NewServer() *Server {
 	}
 }
 
-func (server *Server) Start() <-chan struct{} {
-	stream := jsonrpc2.NewBufferedStream(stdrwc{}, jsonrpc2.VSCodeObjectCodec{})
+type ObjectStream = jsonrpc2.ObjectStream
+
+func (server *Server) Start(stream ObjectStream) <-chan struct{} {
 	server.conn = jsonrpc2.NewConn(context.Background(), stream, &handler{server})
 	return server.conn.DisconnectNotify()
 }
