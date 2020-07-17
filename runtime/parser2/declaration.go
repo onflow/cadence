@@ -63,6 +63,8 @@ func parseDeclaration(p *parser) ast.Declaration {
 		p.skipSpaceAndComments(true)
 
 		switch p.current.Type {
+		case lexer.TokenPragma:
+			return parsePragmaDeclaration(p)
 		case lexer.TokenIdentifier:
 			switch p.current.Value {
 			case keywordLet, keywordVar:
@@ -330,6 +332,19 @@ func parseTransfer(p *parser) *ast.Transfer {
 	return &ast.Transfer{
 		Operation: operation,
 		Pos:       pos,
+	}
+}
+
+func parsePragmaDeclaration(p *parser) *ast.PragmaDeclaration {
+	startPos := p.current.StartPosition()
+	p.next()
+	expr := parseExpression(p, lowestBindingPower)
+	return &ast.PragmaDeclaration{
+		Range: ast.Range{
+			StartPos: startPos,
+			EndPos:   expr.EndPosition(),
+		},
+		Expression: expr,
 	}
 }
 

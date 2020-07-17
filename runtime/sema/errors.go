@@ -53,6 +53,19 @@ func (e *unsupportedOperation) Error() string {
 	)
 }
 
+// InvalidPragmaError
+
+type InvalidPragmaError struct {
+	Message string
+	ast.Range
+}
+
+func (e *InvalidPragmaError) isSemanticError() {}
+
+func (e *InvalidPragmaError) Error() string {
+	return fmt.Sprintf("invalid pragma %s", e.Message)
+}
+
 // MissingLocationError
 
 type MissingLocationError struct{}

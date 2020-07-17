@@ -3125,6 +3125,10 @@ func (interpreter *Interpreter) ensureLoaded(
 	return subInterpreter
 }
 
+func (interpreter *Interpreter) VisitPragmaDeclaration(declaration *ast.PragmaDeclaration) ast.Repr {
+	return Done{}
+}
+
 func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDeclaration) ast.Repr {
 
 	location := declaration.Location

@@ -366,7 +366,7 @@ func TestCheckTransactions(t *testing.T) {
 				t,
 				test.code,
 				ParseAndCheckOptions{
-					SkipNewParser: true,
+					OnlyOldParser: true,
 				},
 			)
 

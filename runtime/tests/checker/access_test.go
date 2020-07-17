@@ -517,7 +517,7 @@ func TestCheckAccessModifierLocalOptionalBinding(t *testing.T) {
 					access.Keyword(),
 				),
 				ParseAndCheckOptions{
-					SkipNewParser: true,
+					OnlyOldParser: true,
 				},
 			)
 
