@@ -16,14 +16,13 @@
  * limitations under the License.
  */
 
-
 import {Message} from "vscode-jsonrpc/lib/messages";
 
 // The global `Go` is declared by `wasm_exec.js`.
 // Instead of improving the that file, we use it as-is,
 // because it is maintained by the Go team and
 
-declare var Go
+declare var Go: any
 
 // Callbacks defines the functions that the language server calls
 // and that need to be implemented by the client.
@@ -36,7 +35,7 @@ export interface Callbacks {
 
   // The function that the language server calls
   // to get the code for an imported address, if any
-  getAddressCode(string): string | undefined
+  getAddressCode(address: string): string | undefined
 
   // The function that the language client calls
   // to write a message object to the server.
@@ -50,6 +49,12 @@ export interface Callbacks {
   // The function that the language server can call
   // to notify the client that the server is closing
   onServerClose(): void
+}
+
+declare global {
+  interface Window {
+    [index: string]: any;
+  }
 }
 
 export class CadenceLanguageServer {

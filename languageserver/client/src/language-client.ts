@@ -48,11 +48,11 @@ export function createCadenceLanguageClient(callbacks: Callbacks) {
   }
 
   const writer: MessageWriter = {
-    onClose(handler: (_: void) => void): Disposable {
+    onClose(_: (_: void) => void): Disposable {
       return Disposable.create(() => {
       })
     },
-    onError(handler: (error: [Error, Message, number]) => void): Disposable {
+    onError(_: (error: [Error, Message, number]) => void): Disposable {
       return Disposable.create(() => {
       })
     },
@@ -65,15 +65,15 @@ export function createCadenceLanguageClient(callbacks: Callbacks) {
   }
 
   const reader: MessageReader = {
-    onError(handler: (error: Error) => void): Disposable {
+    onError(_: (error: Error) => void): Disposable {
       return Disposable.create(() => {
       })
     },
-    onClose(handler: (_: void) => void): Disposable {
+    onClose(_: (_: void) => void): Disposable {
       return Disposable.create(() => {
       })
     },
-    onPartialMessage(handler: (m: PartialMessageInfo) => void): Disposable {
+    onPartialMessage(_: (m: PartialMessageInfo) => void): Disposable {
       return Disposable.create(() => {
       })
     },
