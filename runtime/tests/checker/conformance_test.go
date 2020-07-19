@@ -52,24 +52,52 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
 
 	t.Parallel()
 
-	type test struct {
-		name            string
-		preparationCode string
-		interfaceCode   string
-		conformanceCode string
-		valid           bool
+	test := func(preparationCode string, interfaceCode string, conformanceCode string, valid bool) {
+		_, err := ParseAndCheck(t,
+			fmt.Sprintf(
+				`
+                  %s
+
+                  pub contract interface CI {
+                      %s
+                  }
+
+                  pub contract C: CI {
+                      %s
+                  }
+                `,
+				preparationCode,
+				interfaceCode,
+				conformanceCode,
+			),
+		)
+
+		if valid {
+			require.NoError(t, err)
+		} else {
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.ConformanceError{}, errs[0])
+		}
 	}
 
-	tests := []test{
-		{
-			"Both empty",
+	t.Run("Both empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
 			``,
 			`pub struct S {}`,
 			`pub struct S {}`,
 			true,
-		},
-		{
-			"Conformance with additional function",
+		)
+	})
+
+	t.Run("Conformance with additional function", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
 			``,
 			`
               pub struct S {}
@@ -80,9 +108,14 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
               }
             `,
 			true,
-		},
-		{
-			"Conformance with missing function",
+		)
+	})
+
+	t.Run("Conformance with missing function", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
 			``,
 			`
               pub struct S {
@@ -93,9 +126,14 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
               pub struct S {}
             `,
 			false,
-		},
-		{
-			"Conformance with same name, same parameter type, but different argument label",
+		)
+	})
+
+	t.Run("Conformance with same name, same parameter type, but different argument label", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
 			``,
 			`
               pub struct S {
@@ -108,9 +146,14 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
               }
             `,
 			false,
-		},
-		{
-			"Conformance with same name, same argument label, but different parameter type",
+		)
+	})
+
+	t.Run("Conformance with same name, same argument label, but different parameter type", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
 			``,
 			`
               pub struct S {
@@ -123,9 +166,14 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
               }
             `,
 			false,
-		},
-		{
-			"Conformance with same name, same argument label, same parameter type, different parameter name",
+		)
+	})
+
+	t.Run("Conformance with same name, same argument label, same parameter type, different parameter name", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
 			``,
 			`
               pub struct S {
@@ -138,9 +186,14 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
               }
             `,
 			true,
-		},
-		{
-			"Conformance with more specific parameter type",
+		)
+	})
+
+	t.Run("Conformance with more specific parameter type", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
 			`
                 pub struct interface I {}
                 pub struct T: I {}
@@ -156,9 +209,14 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
               }
             `,
 			false,
-		},
-		{
-			"Conformance with same nested parameter type",
+		)
+	})
+
+	t.Run("Conformance with same nested parameter type", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
 			`
                 pub contract X {
                     struct Bar {}
@@ -175,17 +233,22 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
               }
             `,
 			true,
-		},
-		{
-			"Conformance with different nested parameter type",
-			`
-                pub contract X {
-                    struct Bar {}
-                }
+		)
+	})
 
-                pub contract Y {
-                    struct Bar {}
-                }
+	t.Run("Conformance with different nested parameter type", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			`
+              pub contract X {
+                  struct Bar {}
+              }
+
+              pub contract Y {
+                  struct Bar {}
+              }
             `,
 			`
               pub struct S {
@@ -198,38 +261,100 @@ func TestCheckTypeRequirementConformance(t *testing.T) {
               }
             `,
 			false,
-		},
-	}
+		)
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
+	})
+}
 
-			_, err := ParseAndCheck(t,
-				fmt.Sprintf(
-					`
-                      %s
+func TestCheckConformanceWithFunctionSubtype(t *testing.T) {
 
-                      pub contract interface CI {
-                          %s
-                      }
+	t.Parallel()
 
-                      pub contract C: CI {
-                          %s
-                      }
-                    `,
-					test.preparationCode,
-					test.interfaceCode,
-					test.conformanceCode,
-				),
-			)
+	t.Run("valid, return type is subtype", func(t *testing.T) {
 
-			if test.valid {
-				require.NoError(t, err)
-			} else {
-				errs := ExpectCheckerErrors(t, err, 1)
+		_, err := ParseAndCheck(t, `
+          resource interface RI {}
 
-				require.IsType(t, &sema.ConformanceError{}, errs[0])
-			}
-		})
-	}
+          resource R: RI {}
+
+          struct interface SI {
+              fun get(): @{RI}
+          }
+
+          struct S: SI {
+              fun get(): @R {
+                  return <- create R()
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("valid, parameter type is supertype", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+          resource interface RI {}
+
+          resource R: RI {}
+
+          struct interface SI {
+              fun set(r: @R) 
+          }
+
+          struct S: SI {
+              fun set(r: @{RI}) {
+                  destroy r
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid, return type is supertype", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+          resource interface RI {}
+
+          resource R: RI {}
+
+          struct interface SI {
+              fun get(): @R
+          }
+
+          struct S: SI {
+              fun get(): @{RI} {
+                  return <- create R()
+              }
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("invalid, parameter type is subtype", func(t *testing.T) {
+
+		_, err := ParseAndCheck(t, `
+          resource interface RI {}
+
+          resource R: RI {}
+
+          struct interface SI {
+              fun set(r: @{RI})
+          }
+
+          struct S: SI {
+              fun set(r: @R) {
+                  destroy r
+              }
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
 }

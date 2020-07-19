@@ -3955,16 +3955,13 @@ func (t *FunctionType) Equal(other Type) bool {
 	return t.ReturnTypeAnnotation.Equal(otherFunction.ReturnTypeAnnotation)
 }
 
-// NOTE: argument labels *are* considered! parameter names are intentionally *not* considered!
-func (t *FunctionType) EqualIncludingArgumentLabels(other Type) bool {
-	if !t.Equal(other) {
+func (t *FunctionType) HasSameArgumentLabels(other *FunctionType) bool {
+	if len(t.Parameters) != len(other.Parameters) {
 		return false
 	}
 
-	otherFunction := other.(*FunctionType)
-
 	for i, parameter := range t.Parameters {
-		otherParameter := otherFunction.Parameters[i]
+		otherParameter := other.Parameters[i]
 		if parameter.EffectiveArgumentLabel() != otherParameter.EffectiveArgumentLabel() {
 			return false
 		}

@@ -876,14 +876,17 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 			}
 
 		case common.DeclarationKindFunction:
-			// If the member is a function, check the types are equal,
-			// but also check that the argument labels match
+			// If the member is a function, check the types are subtypes.
+
+			// NOTE: Subtype checking for function types does *not* consider argument labels,
+			// so also check that the argument labels match
 
 			interfaceMemberFunctionType := interfaceMemberType.(*FunctionType)
 			compositeMemberFunctionType := compositeMemberType.(*FunctionType)
 
-			// TODO: parameters may be supertype, return type may be subtype
-			if !compositeMemberFunctionType.EqualIncludingArgumentLabels(interfaceMemberFunctionType) {
+			if !IsSubType(compositeMemberFunctionType, interfaceMemberFunctionType) ||
+				!interfaceMemberFunctionType.HasSameArgumentLabels(compositeMemberFunctionType) {
+
 				return false
 			}
 
