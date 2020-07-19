@@ -876,22 +876,52 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 			}
 
 		case common.DeclarationKindFunction:
-			// If the member is a function, check the types are subtypes.
-
-			// NOTE: Subtype checking for function types does *not* consider argument labels,
-			// so also check that the argument labels match
+			// If the member is a function, check that the argument labels are equal,
+			// the parameter types are equal (they are invariant),
+			// and that the return types are subtypes (the return type is covariant).
+			//
+			// This is different from subtyping for functions,
+			// where argument labels are not considered,
+			// and parameters are contravariant.
 
 			interfaceMemberFunctionType := interfaceMemberType.(*FunctionType)
 			compositeMemberFunctionType := compositeMemberType.(*FunctionType)
 
-			if !IsSubType(compositeMemberFunctionType, interfaceMemberFunctionType) ||
-				!interfaceMemberFunctionType.HasSameArgumentLabels(compositeMemberFunctionType) {
-
+			if !interfaceMemberFunctionType.HasSameArgumentLabels(compositeMemberFunctionType) {
 				return false
 			}
 
-		default:
-			panic(errors.NewUnreachableError())
+			// Functions are invariant in their parameter types
+
+			for i, subParameter := range compositeMemberFunctionType.Parameters {
+				superParameter := interfaceMemberFunctionType.Parameters[i]
+				if !subParameter.TypeAnnotation.Type.
+					Equal(superParameter.TypeAnnotation.Type) {
+
+					return false
+				}
+			}
+
+			// Functions are covariant in their return type
+
+			if compositeMemberFunctionType.ReturnTypeAnnotation != nil &&
+				interfaceMemberFunctionType.ReturnTypeAnnotation != nil {
+
+				if !IsSubType(
+					compositeMemberFunctionType.ReturnTypeAnnotation.Type,
+					interfaceMemberFunctionType.ReturnTypeAnnotation.Type,
+				) {
+					return false
+				}
+			}
+
+			if (compositeMemberFunctionType.ReturnTypeAnnotation != nil &&
+				interfaceMemberFunctionType.ReturnTypeAnnotation == nil) ||
+				(compositeMemberFunctionType.ReturnTypeAnnotation == nil &&
+					interfaceMemberFunctionType.ReturnTypeAnnotation != nil) {
+
+				return false
+			}
 		}
 	}
 
