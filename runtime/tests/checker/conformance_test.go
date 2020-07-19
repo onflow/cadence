@@ -272,6 +272,8 @@ func TestCheckConformanceWithFunctionSubtype(t *testing.T) {
 
 	t.Run("valid, return type is subtype", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
           resource interface RI {}
 
@@ -291,28 +293,9 @@ func TestCheckConformanceWithFunctionSubtype(t *testing.T) {
 		require.NoError(t, err)
 	})
 
-	t.Run("valid, parameter type is supertype", func(t *testing.T) {
-
-		_, err := ParseAndCheck(t, `
-          resource interface RI {}
-
-          resource R: RI {}
-
-          struct interface SI {
-              fun set(r: @R) 
-          }
-
-          struct S: SI {
-              fun set(r: @{RI}) {
-                  destroy r
-              }
-          }
-        `)
-
-		require.NoError(t, err)
-	})
-
 	t.Run("invalid, return type is supertype", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
           resource interface RI {}
@@ -335,7 +318,55 @@ func TestCheckConformanceWithFunctionSubtype(t *testing.T) {
 		require.IsType(t, &sema.ConformanceError{}, errs[0])
 	})
 
+	t.Run("valid, return type is the same", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource interface RI {}
+
+          resource R: RI {}
+
+          struct interface SI {
+              fun get(): @R
+          }
+
+          struct S: SI {
+              fun get(): @R {
+                  return <- create R()
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("valid, parameter type is the same", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource interface RI {}
+
+          resource R: RI {}
+
+          struct interface SI {
+              fun set(r: @{RI})
+          }
+
+          struct S: SI {
+              fun set(r: @{RI}) {
+                  destroy r
+              }
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
 	t.Run("invalid, parameter type is subtype", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
           resource interface RI {}
@@ -348,6 +379,31 @@ func TestCheckConformanceWithFunctionSubtype(t *testing.T) {
 
           struct S: SI {
               fun set(r: @R) {
+                  destroy r
+              }
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		require.IsType(t, &sema.ConformanceError{}, errs[0])
+	})
+
+	t.Run("invalid, parameter type is supertype", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource interface RI {}
+
+          resource R: RI {}
+
+          struct interface SI {
+              fun set(r: @R)
+          }
+
+          struct S: SI {
+              fun set(r: @{RI}) {
                   destroy r
               }
           }
