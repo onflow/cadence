@@ -700,6 +700,7 @@ identifier
     | Self
     | Auth
     | In
+    | Set
     ;
 
 Identifier
