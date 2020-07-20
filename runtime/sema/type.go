@@ -6145,6 +6145,10 @@ func IsSubType(subType Type, superType Type) bool {
 				}
 			}
 		}
+
+	case *StorableType:
+		storableResults := map[*Member]bool{}
+		return subType.IsStorable(storableResults)
 	}
 
 	// TODO: enforce type arguments, remove this rule
@@ -6788,4 +6792,71 @@ func (t *CapabilityType) GetMember(identifier string, _ ast.Range, _ func(error)
 	default:
 		return nil
 	}
+}
+
+// StorableType is the supertype of all types which are storable.
+//
+// It is only used as e.g. a type bound, but is not accessible
+// to user programs, i.e. can't be used in type annotations
+// for e.g. parameters, return types, fields, etc.
+//
+type StorableType struct{}
+
+func (*StorableType) IsType() {}
+
+func (*StorableType) String() string {
+	return "Storable"
+}
+
+func (*StorableType) QualifiedString() string {
+	return "Storable"
+}
+
+func (*StorableType) ID() TypeID {
+	return "Storable"
+}
+
+func (*StorableType) Equal(other Type) bool {
+	_, ok := other.(*StorableType)
+	return ok
+}
+
+func (*StorableType) IsResourceType() bool {
+
+	// NOTE: Subtypes may be either resource types or not.
+	//
+	// Returning false here is safe, because this type is
+	// only used as e.g. a type bound, but is not accessible
+	// to user programs, i.e. can't be used in type annotations
+	// for e.g. parameters, return types, fields, etc.
+
+	return false
+}
+
+func (*StorableType) IsInvalidType() bool {
+	return false
+}
+
+func (*StorableType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*StorableType) IsEquatable() bool {
+	return false
+}
+
+func (*StorableType) TypeAnnotationState() TypeAnnotationState {
+	return TypeAnnotationStateValid
+}
+
+func (*StorableType) ContainsFirstLevelInterfaceType() bool {
+	return false
+}
+
+func (*StorableType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
+	return false
+}
+
+func (t *StorableType) Resolve(_ map[*TypeParameter]Type) Type {
+	return t
 }
