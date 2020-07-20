@@ -260,6 +260,13 @@ type triviaOptions struct {
 	parseDocStrings bool
 }
 
+func (p *parser) skipSpaceAndComments(skipNewlines bool) (containsNewline bool) {
+	containsNewline, _ = p.parseTrivia(triviaOptions{
+		skipNewlines: skipNewlines,
+	})
+	return containsNewline
+}
+
 func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docString string) {
 	var docStringBuilder strings.Builder
 	defer func() {

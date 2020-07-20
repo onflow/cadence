@@ -48,9 +48,7 @@ func parseTransactionDeclaration(p *parser) *ast.TransactionDeclaration {
 
 	// Skip the `transaction` keyword
 	p.next()
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 
 	// Parameter list (optional)
 
@@ -59,9 +57,7 @@ func parseTransactionDeclaration(p *parser) *ast.TransactionDeclaration {
 		parameterList = parseParameterList(p)
 	}
 
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 	p.mustOne(lexer.TokenBraceOpen)
 
 	// Fields
@@ -73,9 +69,7 @@ func parseTransactionDeclaration(p *parser) *ast.TransactionDeclaration {
 	var prepare *ast.SpecialFunctionDeclaration
 	var execute *ast.SpecialFunctionDeclaration
 
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 	if p.current.Is(lexer.TokenIdentifier) {
 
 		switch p.current.Value {
@@ -103,9 +97,7 @@ func parseTransactionDeclaration(p *parser) *ast.TransactionDeclaration {
 	var preConditions *ast.Conditions
 
 	if execute == nil {
-		p.parseTrivia(triviaOptions{
-			skipNewlines: true,
-		})
+		p.skipSpaceAndComments(true)
 		if p.current.IsString(lexer.TokenIdentifier, keywordPre) {
 			// Skip the `pre` keyword
 			p.next()
@@ -123,9 +115,7 @@ func parseTransactionDeclaration(p *parser) *ast.TransactionDeclaration {
 	sawPost := false
 	atEnd := false
 	for !atEnd {
-		p.parseTrivia(triviaOptions{
-			skipNewlines: true,
-		})
+		p.skipSpaceAndComments(true)
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
@@ -183,9 +173,7 @@ func parseTransactionDeclaration(p *parser) *ast.TransactionDeclaration {
 
 func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration) {
 	for {
-		p.parseTrivia(triviaOptions{
-			skipNewlines: true,
-		})
+		p.skipSpaceAndComments(true)
 
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
@@ -219,9 +207,7 @@ func parseTransactionExecute(p *parser) *ast.SpecialFunctionDeclaration {
 
 	// Skip the `execute` keyword
 	p.next()
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 
 	block := parseBlock(p)
 
