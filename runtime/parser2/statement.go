@@ -29,9 +29,7 @@ import (
 func parseStatements(p *parser, endTokenType lexer.TokenType) (statements []ast.Statement) {
 	sawSemicolon := false
 	for {
-		p.parseTrivia(triviaOptions{
-			skipNewlines: true,
-		})
+		p.skipSpaceAndComments(true)
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
 			sawSemicolon = true
@@ -70,9 +68,7 @@ func parseStatements(p *parser, endTokenType lexer.TokenType) (statements []ast.
 }
 
 func parseStatement(p *parser) ast.Statement {
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 
 	// It might start with a keyword for a statement
 
@@ -116,9 +112,7 @@ func parseStatement(p *parser) ast.Statement {
 	// If the expression is followed by a transfer,
 	// it is actually the target of an assignment or swap statement
 
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 	switch p.current.Type {
 	case lexer.TokenEqual, lexer.TokenLeftArrow, lexer.TokenLeftArrowExclamation:
 		transfer := parseTransfer(p)
@@ -155,9 +149,7 @@ func parseFunctionDeclarationOrFunctionExpressionStatement(p *parser) ast.Statem
 	// Skip the `fun` keyword
 	p.next()
 
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 
 	if p.current.Is(lexer.TokenIdentifier) {
 		identifier := tokenToIdentifier(p.current)
@@ -194,9 +186,8 @@ func parseReturnStatement(p *parser) *ast.ReturnStatement {
 	tokenRange := p.current.Range
 	endPosition := tokenRange.EndPos
 	p.next()
-	sawNewLine, _ := p.parseTrivia(triviaOptions{
-		skipNewlines: false,
-	})
+
+	sawNewLine := p.skipSpaceAndComments(false)
 
 	var expression ast.Expression
 	switch p.current.Type {
@@ -244,9 +235,7 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 		startPos := p.current.StartPos
 		p.next()
 
-		p.parseTrivia(triviaOptions{
-			skipNewlines: true,
-		})
+		p.skipSpaceAndComments(true)
 
 		var variableDeclaration *ast.VariableDeclaration
 
@@ -270,15 +259,11 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 
 		parseNested := false
 
-		p.parseTrivia(triviaOptions{
-			skipNewlines: true,
-		})
+		p.skipSpaceAndComments(true)
 		if p.current.IsString(lexer.TokenIdentifier, keywordElse) {
 			p.next()
 
-			p.parseTrivia(triviaOptions{
-				skipNewlines: true,
-			})
+			p.skipSpaceAndComments(true)
 			if p.current.IsString(lexer.TokenIdentifier, keywordIf) {
 				parseNested = true
 			} else {
@@ -351,15 +336,11 @@ func parseForStatement(p *parser) *ast.ForStatement {
 	startPos := p.current.StartPos
 	p.next()
 
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 
 	identifier := mustIdentifier(p)
 
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 
 	if !p.current.IsString(lexer.TokenIdentifier, keywordIn) {
 		panic(fmt.Errorf(
@@ -398,15 +379,11 @@ func parseBlock(p *parser) *ast.Block {
 }
 
 func parseFunctionBlock(p *parser) *ast.FunctionBlock {
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 
 	startToken := p.mustOne(lexer.TokenBraceOpen)
 
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 
 	var preConditions *ast.Conditions
 	if p.current.IsString(lexer.TokenIdentifier, keywordPre) {
@@ -415,9 +392,7 @@ func parseFunctionBlock(p *parser) *ast.FunctionBlock {
 		preConditions = &conditions
 	}
 
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 
 	var postConditions *ast.Conditions
 	if p.current.IsString(lexer.TokenIdentifier, keywordPost) {
@@ -447,22 +422,16 @@ func parseFunctionBlock(p *parser) *ast.FunctionBlock {
 //
 func parseConditions(p *parser, kind ast.ConditionKind) (conditions ast.Conditions) {
 
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 	p.mustOne(lexer.TokenBraceOpen)
 
 	defer func() {
-		p.parseTrivia(triviaOptions{
-			skipNewlines: true,
-		})
+		p.skipSpaceAndComments(true)
 		p.mustOne(lexer.TokenBraceClose)
 	}()
 
 	for {
-		p.parseTrivia(triviaOptions{
-			skipNewlines: true,
-		})
+		p.skipSpaceAndComments(true)
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
 			p.next()
@@ -490,9 +459,7 @@ func parseCondition(p *parser, kind ast.ConditionKind) *ast.Condition {
 
 	test := parseExpression(p, lowestBindingPower)
 
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 
 	var message ast.Expression
 	if p.current.Is(lexer.TokenColon) {

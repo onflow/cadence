@@ -28,9 +28,7 @@ import (
 func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 	var parameters []*ast.Parameter
 
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 
 	if !p.current.Is(lexer.TokenParenOpen) {
 		panic(fmt.Errorf(
@@ -50,9 +48,7 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 
 	atEnd := false
 	for !atEnd {
-		p.parseTrivia(triviaOptions{
-			skipNewlines: true,
-		})
+		p.skipSpaceAndComments(true)
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
 			parameter := parseParameter(p)
@@ -107,9 +103,7 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 }
 
 func parseParameter(p *parser) *ast.Parameter {
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 
 	startPos := p.current.StartPos
 	parameterPos := startPos
@@ -128,18 +122,14 @@ func parseParameter(p *parser) *ast.Parameter {
 	// If another identifier is provided, then the previous identifier
 	// is the argument label, and this identifier is the parameter name
 
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 	if p.current.Is(lexer.TokenIdentifier) {
 		argumentLabel = parameterName
 		parameterName = p.current.Value.(string)
 		parameterPos = p.current.StartPos
 		// Skip the identifier
 		p.next()
-		p.parseTrivia(triviaOptions{
-			skipNewlines: true,
-		})
+		p.skipSpaceAndComments(true)
 	}
 
 	if !p.current.Is(lexer.TokenColon) {
@@ -152,9 +142,7 @@ func parseParameter(p *parser) *ast.Parameter {
 
 	// Skip the colon
 	p.next()
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 
 	typeAnnotation := parseTypeAnnotation(p)
 
@@ -190,9 +178,7 @@ func parseFunctionDeclaration(
 	// Skip the `fun` keyword
 	p.next()
 
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 	if !p.current.Is(lexer.TokenIdentifier) {
 		panic(fmt.Errorf(
 			"expected identifier after start of function declaration, got %s",
@@ -229,19 +215,13 @@ func parseFunctionParameterListAndRest(
 ) {
 	parameterList = parseParameterList(p)
 
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 	if p.current.Is(lexer.TokenColon) {
 		// Skip the colon
 		p.next()
-		p.parseTrivia(triviaOptions{
-			skipNewlines: true,
-		})
+		p.skipSpaceAndComments(true)
 		returnTypeAnnotation = parseTypeAnnotation(p)
-		p.parseTrivia(triviaOptions{
-			skipNewlines: true,
-		})
+		p.skipSpaceAndComments(true)
 	} else {
 		positionBeforeMissingReturnType := parameterList.EndPos
 		returnType := &ast.NominalType{
@@ -256,9 +236,7 @@ func parseFunctionParameterListAndRest(
 		}
 	}
 
-	p.parseTrivia(triviaOptions{
-		skipNewlines: true,
-	})
+	p.skipSpaceAndComments(true)
 
 	if !functionBlockIsOptional ||
 		p.current.Is(lexer.TokenBraceOpen) {
