@@ -32,7 +32,10 @@ import (
 
 func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []ast.Declaration) {
 	for {
-		p.skipSpaceAndComments(true)
+		_, docString := p.parseTrivia(triviaOptions{
+			skipNewlines:    true,
+			parseDocStrings: true,
+		})
 
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
@@ -44,7 +47,7 @@ func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []
 			return
 
 		default:
-			declaration := parseDeclaration(p)
+			declaration := parseDeclaration(p, docString)
 			if declaration == nil {
 				return
 			}
@@ -54,13 +57,15 @@ func parseDeclarations(p *parser, endTokenType lexer.TokenType) (declarations []
 	}
 }
 
-func parseDeclaration(p *parser) ast.Declaration {
+func parseDeclaration(p *parser, docString string) ast.Declaration {
 
 	access := ast.AccessNotSpecified
 	var accessPos *ast.Position
 
 	for {
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 
 		switch p.current.Type {
 		case lexer.TokenPragma:
@@ -71,7 +76,7 @@ func parseDeclaration(p *parser) ast.Declaration {
 				return parseVariableDeclaration(p, access, accessPos)
 
 			case keywordFun:
-				return parseFunctionDeclaration(p, false, access, accessPos)
+				return parseFunctionDeclaration(p, false, access, accessPos, docString)
 
 			case keywordImport:
 				return parseImportDeclaration(p)
@@ -121,14 +126,18 @@ func parseAccess(p *parser) ast.Access {
 	case keywordPub:
 		// Skip the `pub` keyword
 		p.next()
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 		if !p.current.Is(lexer.TokenParenOpen) {
 			return ast.AccessPublic
 		}
 
 		// Skip the opening paren
 		p.next()
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 
 		if !p.current.Is(lexer.TokenIdentifier) {
 			panic(fmt.Errorf(
@@ -147,7 +156,9 @@ func parseAccess(p *parser) ast.Access {
 
 		// Skip the `set` keyword
 		p.next()
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 
 		p.mustOne(lexer.TokenParenClose)
 
@@ -156,11 +167,15 @@ func parseAccess(p *parser) ast.Access {
 	case keywordAccess:
 		// Skip the `access` keyword
 		p.next()
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 
 		p.mustOne(lexer.TokenParenOpen)
 
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 
 		if !p.current.Is(lexer.TokenIdentifier) {
 			panic(fmt.Errorf(
@@ -211,7 +226,9 @@ func parseAccess(p *parser) ast.Access {
 
 		// Skip the keyword
 		p.next()
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 
 		p.mustOne(lexer.TokenParenClose)
 
@@ -243,7 +260,9 @@ func parseVariableDeclaration(p *parser, access ast.Access, accessPos *ast.Posit
 	// Skip the `let` or `var` keyword
 	p.next()
 
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 	if !p.current.Is(lexer.TokenIdentifier) {
 		panic(fmt.Errorf(
 			"expected identifier after start of variable declaration, got %s",
@@ -255,19 +274,25 @@ func parseVariableDeclaration(p *parser, access ast.Access, accessPos *ast.Posit
 
 	// Skip the identifier
 	p.next()
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 
 	var typeAnnotation *ast.TypeAnnotation
 
 	if p.current.Is(lexer.TokenColon) {
 		// Skip the colon
 		p.next()
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 
 		typeAnnotation = parseTypeAnnotation(p)
 	}
 
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 	transfer := parseTransfer(p)
 	if transfer == nil {
 		panic(fmt.Errorf("expected transfer"))
@@ -275,7 +300,9 @@ func parseVariableDeclaration(p *parser, access ast.Access, accessPos *ast.Posit
 
 	value := parseExpression(p, lowestBindingPower)
 
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 
 	secondTransfer := parseTransfer(p)
 	var secondValue ast.Expression
@@ -416,7 +443,9 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 		atEnd := false
 		for !atEnd {
 			p.next()
-			p.skipSpaceAndComments(true)
+			p.parseTrivia(triviaOptions{
+				skipNewlines: true,
+			})
 
 			switch p.current.Type {
 			case lexer.TokenComma:
@@ -446,7 +475,9 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 
 					// Skip the `from` keyword
 					p.next()
-					p.skipSpaceAndComments(true)
+					p.parseTrivia(triviaOptions{
+						skipNewlines: true,
+					})
 
 					parseLocation()
 				} else {
@@ -486,7 +517,9 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			identifiers = append(identifiers, identifier)
 			// Skip the `from` keyword
 			p.next()
-			p.skipSpaceAndComments(true)
+			p.parseTrivia(triviaOptions{
+				skipNewlines: true,
+			})
 
 			parseLocation()
 
@@ -497,7 +530,9 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 
 	// Skip the `import` keyword
 	p.next()
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 
 	switch p.current.Type {
 	case lexer.TokenString, lexer.TokenHexadecimalLiteral:
@@ -507,7 +542,9 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 		identifier := tokenToIdentifier(p.current)
 		// Skip the identifier
 		p.next()
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 
 		switch p.current.Type {
 		case lexer.TokenComma:
@@ -586,7 +623,9 @@ func parseEventDeclaration(p *parser, access ast.Access, accessPos *ast.Position
 	// Skip the `event` keyword
 	p.next()
 
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 	if !p.current.Is(lexer.TokenIdentifier) {
 		panic(fmt.Errorf(
 			"expected identifier after start of event declaration, got %s",
@@ -672,7 +711,9 @@ func parseFieldWithVariableKind(p *parser, access ast.Access, accessPos *ast.Pos
 	// Skip the `let` or `var` keyword
 	p.next()
 
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 	if !p.current.Is(lexer.TokenIdentifier) {
 		panic(fmt.Errorf(
 			"expected identifier after start of field declaration, got %s",
@@ -683,11 +724,15 @@ func parseFieldWithVariableKind(p *parser, access ast.Access, accessPos *ast.Pos
 	identifier := tokenToIdentifier(p.current)
 	// Skip the identifier
 	p.next()
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 
 	p.mustOne(lexer.TokenColon)
 
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 
 	typeAnnotation := parseTypeAnnotation(p)
 
@@ -729,7 +774,9 @@ func parseCompositeOrInterfaceDeclaration(p *parser, access ast.Access, accessPo
 	var identifier ast.Identifier
 
 	for {
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 		if !p.current.Is(lexer.TokenIdentifier) {
 			panic(fmt.Errorf(
 				"expected %s, got %s",
@@ -759,7 +806,9 @@ func parseCompositeOrInterfaceDeclaration(p *parser, access ast.Access, accessPo
 		}
 	}
 
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 
 	var conformances []*ast.NominalType
 
@@ -777,14 +826,18 @@ func parseCompositeOrInterfaceDeclaration(p *parser, access ast.Access, accessPo
 		}
 	}
 
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 
 	p.mustOne(lexer.TokenBraceOpen)
 
 	members, compositeDeclarations, interfaceDeclarations :=
 		parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
 
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 
 	endToken := p.mustOne(lexer.TokenBraceClose)
 
@@ -840,7 +893,10 @@ func parseMembersAndNestedDeclarations(
 	members = &ast.Members{}
 
 	for {
-		p.skipSpaceAndComments(true)
+		_, docString := p.parseTrivia(triviaOptions{
+			skipNewlines:    true,
+			parseDocStrings: true,
+		})
 
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
@@ -852,7 +908,7 @@ func parseMembersAndNestedDeclarations(
 			return
 
 		default:
-			memberOrNestedDeclaration := parseMemberOrNestedDeclaration(p)
+			memberOrNestedDeclaration := parseMemberOrNestedDeclaration(p, docString)
 			if memberOrNestedDeclaration == nil {
 				return
 			}
@@ -892,7 +948,7 @@ func parseMembersAndNestedDeclarations(
 //                               | compositeDeclaration
 //                               | eventDeclaration
 //
-func parseMemberOrNestedDeclaration(p *parser) ast.Declaration {
+func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration {
 
 	const functionBlockIsOptional = true
 
@@ -902,7 +958,9 @@ func parseMemberOrNestedDeclaration(p *parser) ast.Declaration {
 	var previousIdentifierToken *lexer.Token
 
 	for {
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
@@ -911,7 +969,7 @@ func parseMemberOrNestedDeclaration(p *parser) ast.Declaration {
 				return parseFieldWithVariableKind(p, access, accessPos)
 
 			case keywordFun:
-				return parseFunctionDeclaration(p, functionBlockIsOptional, access, accessPos)
+				return parseFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, docString)
 
 			case keywordEvent:
 				return parseEventDeclaration(p, access, accessPos)
@@ -975,7 +1033,9 @@ func parseFieldDeclarationWithoutVariableKind(
 
 	p.mustOne(lexer.TokenColon)
 
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 
 	typeAnnotation := parseTypeAnnotation(p)
 
@@ -1009,7 +1069,9 @@ func parseSpecialFunctionDeclaration(
 
 	parameterList := parseParameterList(p)
 
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 
 	var functionBlock *ast.FunctionBlock
 

@@ -134,7 +134,9 @@ func init() {
 
 			switch token.Value {
 			case keywordAuth:
-				p.skipSpaceAndComments(true)
+				p.parseTrivia(triviaOptions{
+					skipNewlines: true,
+				})
 				p.mustOne(lexer.TokenAmpersand)
 				right := parseType(p, typeLeftBindingPowerReference)
 				return &ast.ReferenceType{
@@ -192,7 +194,9 @@ func defineArrayType() {
 
 			elementType := parseType(p, lowestBindingPower)
 
-			p.skipSpaceAndComments(true)
+			p.parseTrivia(triviaOptions{
+				skipNewlines: true,
+			})
 
 			var size *ast.IntegerExpression
 
@@ -200,7 +204,9 @@ func defineArrayType() {
 				// Skip the semicolon
 				p.next()
 
-				p.skipSpaceAndComments(true)
+				p.parseTrivia(triviaOptions{
+					skipNewlines: true,
+				})
 
 				numberExpression := parseExpression(p, lowestBindingPower)
 
@@ -215,7 +221,9 @@ func defineArrayType() {
 				}
 			}
 
-			p.skipSpaceAndComments(true)
+			p.parseTrivia(triviaOptions{
+				skipNewlines: true,
+			})
 
 			endToken := p.mustOne(lexer.TokenBracketClose)
 
@@ -305,7 +313,9 @@ func defineRestrictedOrDictionaryType() {
 			expectType := true
 
 			for !atEnd {
-				p.skipSpaceAndComments(true)
+				p.parseTrivia(triviaOptions{
+					skipNewlines: true,
+				})
 
 				switch p.current.Type {
 				case lexer.TokenComma:
@@ -466,7 +476,9 @@ func parseNominalTypes(
 	expectType := true
 	atEnd := false
 	for !atEnd {
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 
 		switch p.current.Type {
 		case lexer.TokenComma:
@@ -523,13 +535,19 @@ func defineFunctionType() {
 
 			parameterTypeAnnotations := parseParameterTypeAnnotations(p)
 
-			p.skipSpaceAndComments(true)
+			p.parseTrivia(triviaOptions{
+				skipNewlines: true,
+			})
 			p.mustOne(lexer.TokenColon)
 
-			p.skipSpaceAndComments(true)
+			p.parseTrivia(triviaOptions{
+				skipNewlines: true,
+			})
 			returnTypeAnnotation := parseTypeAnnotation(p)
 
-			p.skipSpaceAndComments(true)
+			p.parseTrivia(triviaOptions{
+				skipNewlines: true,
+			})
 			endToken := p.mustOne(lexer.TokenParenClose)
 
 			return &ast.FunctionType{
@@ -546,14 +564,18 @@ func defineFunctionType() {
 
 func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnotation) {
 
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 	p.mustOne(lexer.TokenParenOpen)
 
 	expectTypeAnnotation := true
 
 	atEnd := false
 	for !atEnd {
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 		switch p.current.Type {
 		case lexer.TokenComma:
 			if expectTypeAnnotation {
@@ -596,7 +618,9 @@ func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnota
 }
 
 func parseType(p *parser, rightBindingPower int) ast.Type {
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 	t := p.current
 	p.next()
 
@@ -649,11 +673,15 @@ func applyTypeLeftDenotation(p *parser, token lexer.Token, left ast.Type) ast.Ty
 }
 
 func parseNominalTypeInvocationRemainder(p *parser) *ast.InvocationExpression {
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 	identifier := p.mustOne(lexer.TokenIdentifier)
 	ty := parseNominalTypeRemainder(p, identifier)
 
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 	p.mustOne(lexer.TokenParenOpen)
 	arguments, endPos := parseArgumentListRemainder(p)
 
@@ -686,7 +714,9 @@ func parseCommaSeparatedTypeAnnotations(
 	expectTypeAnnotation := true
 	atEnd := false
 	for !atEnd {
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 
 		switch p.current.Type {
 		case lexer.TokenComma:

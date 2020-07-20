@@ -235,7 +235,9 @@ func TestParseEOF(t *testing.T) {
 
 	_, errs := Parse("a b", func(p *parser) interface{} {
 		p.mustOneString(lexer.TokenIdentifier, "a")
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 		p.mustOneString(lexer.TokenIdentifier, "b")
 
 		p.next()

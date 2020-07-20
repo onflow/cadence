@@ -26,6 +26,7 @@ type FunctionDeclaration struct {
 	ParameterList        *ParameterList
 	ReturnTypeAnnotation *TypeAnnotation
 	FunctionBlock        *FunctionBlock
+	DocString            string
 	StartPos             Position
 }
 

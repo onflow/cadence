@@ -28,7 +28,9 @@ import (
 func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 	var parameters []*ast.Parameter
 
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 
 	if !p.current.Is(lexer.TokenParenOpen) {
 		panic(fmt.Errorf(
@@ -48,7 +50,9 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 
 	atEnd := false
 	for !atEnd {
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 		switch p.current.Type {
 		case lexer.TokenIdentifier:
 			parameter := parseParameter(p)
@@ -103,7 +107,9 @@ func parseParameterList(p *parser) (parameterList *ast.ParameterList) {
 }
 
 func parseParameter(p *parser) *ast.Parameter {
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 
 	startPos := p.current.StartPos
 	parameterPos := startPos
@@ -122,14 +128,18 @@ func parseParameter(p *parser) *ast.Parameter {
 	// If another identifier is provided, then the previous identifier
 	// is the argument label, and this identifier is the parameter name
 
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 	if p.current.Is(lexer.TokenIdentifier) {
 		argumentLabel = parameterName
 		parameterName = p.current.Value.(string)
 		parameterPos = p.current.StartPos
 		// Skip the identifier
 		p.next()
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 	}
 
 	if !p.current.Is(lexer.TokenColon) {
@@ -142,7 +152,9 @@ func parseParameter(p *parser) *ast.Parameter {
 
 	// Skip the colon
 	p.next()
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 
 	typeAnnotation := parseTypeAnnotation(p)
 
@@ -167,6 +179,7 @@ func parseFunctionDeclaration(
 	functionBlockIsOptional bool,
 	access ast.Access,
 	accessPos *ast.Position,
+	docString string,
 ) *ast.FunctionDeclaration {
 
 	startPos := p.current.StartPos
@@ -177,7 +190,9 @@ func parseFunctionDeclaration(
 	// Skip the `fun` keyword
 	p.next()
 
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 	if !p.current.Is(lexer.TokenIdentifier) {
 		panic(fmt.Errorf(
 			"expected identifier after start of function declaration, got %s",
@@ -200,6 +215,7 @@ func parseFunctionDeclaration(
 		ReturnTypeAnnotation: returnTypeAnnotation,
 		FunctionBlock:        functionBlock,
 		StartPos:             startPos,
+		DocString:            docString,
 	}
 }
 
@@ -213,13 +229,19 @@ func parseFunctionParameterListAndRest(
 ) {
 	parameterList = parseParameterList(p)
 
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 	if p.current.Is(lexer.TokenColon) {
 		// Skip the colon
 		p.next()
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 		returnTypeAnnotation = parseTypeAnnotation(p)
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 	} else {
 		positionBeforeMissingReturnType := parameterList.EndPos
 		returnType := &ast.NominalType{
@@ -234,7 +256,9 @@ func parseFunctionParameterListAndRest(
 		}
 	}
 
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 
 	if !functionBlockIsOptional ||
 		p.current.Is(lexer.TokenBraceOpen) {
