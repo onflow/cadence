@@ -62,50 +62,57 @@ func TestCheckAccount_save(t *testing.T) {
 
 		// NOTE: all domains are statically valid at the moment
 
-		testName := fmt.Sprintf(
-			"AuthAccount.save: implicit type argument, %s",
-			domain.Name(),
-		)
-		t.Run(testName, func(t *testing.T) {
+		domainName := domain.Name()
+		domainIdentifier := domain.Identifier()
 
-			t.Run("resource", func(t *testing.T) {
+		testName := func(kind string) string {
+			return fmt.Sprintf(
+				"implicit type argument, %s, %s",
+				domainName,
+				kind,
+			)
+		}
 
-				_, err := ParseAndCheckAccount(t,
-					fmt.Sprintf(
-						`
-                          resource R {}
+		t.Run(testName("resource"), func(t *testing.T) {
 
-                          fun test() {
-                              let r <- create R()
-                              authAccount.save(<-r, to: /%s/r)
-                          }
-                        `,
-						domain.Identifier(),
-					),
-				)
+			t.Parallel()
 
-				require.NoError(t, err)
-			})
+			_, err := ParseAndCheckAccount(t,
+				fmt.Sprintf(
+					`
+                      resource R {}
 
-			t.Run("struct", func(t *testing.T) {
+                      fun test() {
+                          let r <- create R()
+                          authAccount.save(<-r, to: /%s/r)
+                      }
+                    `,
+					domainIdentifier,
+				),
+			)
 
-				_, err := ParseAndCheckAccount(t,
-					fmt.Sprintf(
-						`
-                          struct S {}
+			require.NoError(t, err)
+		})
 
-                          fun test() {
-                              let s = S()
-                              authAccount.save(s, to: /%s/s)
-                          }
-                        `,
-						domain.Identifier(),
-					),
-				)
+		t.Run(testName("struct"), func(t *testing.T) {
 
-				require.NoError(t, err)
+			t.Parallel()
 
-			})
+			_, err := ParseAndCheckAccount(t,
+				fmt.Sprintf(
+					`
+                      struct S {}
+
+                      fun test() {
+                          let s = S()
+                          authAccount.save(s, to: /%s/s)
+                      }
+                    `,
+					domainIdentifier,
+				),
+			)
+
+			require.NoError(t, err)
 
 		})
 	}
@@ -114,18 +121,24 @@ func TestCheckAccount_save(t *testing.T) {
 
 		// NOTE: all domains are statically valid at the moment
 
-		testName := fmt.Sprintf(
-			"AuthAccount.save: explicit type argument, %s",
-			domain.Name(),
-		)
+		domainName := domain.Name()
+		domainIdentifier := domain.Identifier()
 
-		t.Run(testName, func(t *testing.T) {
+		testName := func(kind string) string {
+			return fmt.Sprintf(
+				"explicit type argument, %s, %s",
+				domainName,
+				kind,
+			)
+		}
 
-			t.Run("resource", func(t *testing.T) {
+		t.Run(testName("resource"), func(t *testing.T) {
 
-				_, err := ParseAndCheckAccount(t,
-					fmt.Sprintf(
-						`
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t,
+				fmt.Sprintf(
+					`
                       resource R {}
 
                       fun test() {
@@ -133,31 +146,32 @@ func TestCheckAccount_save(t *testing.T) {
                           authAccount.save<@R>(<-r, to: /%s/r)
                       }
                     `,
-						domain.Identifier(),
-					),
-				)
+					domainIdentifier,
+				),
+			)
 
-				require.NoError(t, err)
-			})
+			require.NoError(t, err)
+		})
 
-			t.Run("struct", func(t *testing.T) {
+		t.Run(testName("struct"), func(t *testing.T) {
 
-				_, err := ParseAndCheckAccount(t,
-					fmt.Sprintf(
-						`
-                          struct S {}
+			t.Parallel()
 
-                          fun test() {
-                              let s = S()
-                              authAccount.save<S>(s, to: /%s/s)
-                          }
-                        `,
-						domain.Identifier(),
-					),
-				)
+			_, err := ParseAndCheckAccount(t,
+				fmt.Sprintf(
+					`
+                      struct S {}
 
-				require.NoError(t, err)
-			})
+                      fun test() {
+                          let s = S()
+                          authAccount.save<S>(s, to: /%s/s)
+                      }
+                    `,
+					domainIdentifier,
+				),
+			)
+
+			require.NoError(t, err)
 		})
 	}
 
@@ -165,17 +179,24 @@ func TestCheckAccount_save(t *testing.T) {
 
 		// NOTE: all domains are statically valid at the moment
 
-		testName := fmt.Sprintf(
-			"AuthAccount.save: explicit type argument, incorrect, %s",
-			domain.Name(),
-		)
-		t.Run(testName, func(t *testing.T) {
+		domainName := domain.Name()
+		domainIdentifier := domain.Identifier()
 
-			t.Run("resource", func(t *testing.T) {
+		testName := func(kind string) string {
+			return fmt.Sprintf(
+				"explicit type argument, incorrect, %s, %s",
+				domainName,
+				kind,
+			)
+		}
 
-				_, err := ParseAndCheckAccount(t,
-					fmt.Sprintf(
-						`
+		t.Run(testName("resource"), func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t,
+				fmt.Sprintf(
+					`
                       resource R {}
 
                       resource T {}
@@ -185,41 +206,107 @@ func TestCheckAccount_save(t *testing.T) {
                           authAccount.save<@T>(<-r, to: /%s/r)
                       }
                     `,
-						domain.Identifier(),
-					),
-				)
+					domainIdentifier,
+				),
+			)
 
-				errs := ExpectCheckerErrors(t, err, 2)
+			errs := ExpectCheckerErrors(t, err, 2)
 
-				require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-			})
+			require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+			require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+		})
 
-			t.Run("struct", func(t *testing.T) {
+		t.Run(testName("struct"), func(t *testing.T) {
 
-				_, err := ParseAndCheckAccount(t,
-					fmt.Sprintf(
-						`
-                          struct S {}
+			t.Parallel()
 
-                          struct T {}
+			_, err := ParseAndCheckAccount(t,
+				fmt.Sprintf(
+					`
+                      struct S {}
 
-                          fun test() {
-                              let s = S()
-                              authAccount.save<T>(s, to: /%s/s)
-                          }
-                        `,
-						domain.Identifier(),
-					),
-				)
+                      struct T {}
 
-				errs := ExpectCheckerErrors(t, err, 2)
+                      fun test() {
+                          let s = S()
+                          authAccount.save<T>(s, to: /%s/s)
+                      }
+                    `,
+					domainIdentifier,
+				),
+			)
 
-				require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
-			})
+			errs := ExpectCheckerErrors(t, err, 2)
+
+			require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+			require.IsType(t, &sema.TypeMismatchError{}, errs[1])
 		})
 	}
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+
+		// NOTE: all domains are statically valid at the moment
+
+		domainName := domain.Name()
+		domainIdentifier := domain.Identifier()
+
+		testName := func(kind string) string {
+			return fmt.Sprintf(
+				"invalid non-storable, %s, %s",
+				domainName,
+				kind,
+			)
+		}
+
+		t.Run(testName("explicit type argument"), func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t,
+				fmt.Sprintf(
+					`
+                      fun one(): Int {
+                          return 1
+                      }
+
+                      fun test() {
+                          authAccount.save<((): Int)>(one, to: /%s/one)
+                      }
+                    `,
+					domainIdentifier,
+				),
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+
+		t.Run(testName("implicit type argument"), func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t,
+				fmt.Sprintf(
+					`
+                      fun one(): Int {
+                          return 1
+                      }
+
+                      fun test() {
+                          authAccount.save(one, to: /%s/one)
+                      }
+                    `,
+					domainIdentifier,
+				),
+			)
+
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+		})
+	}
+
 }
 
 func TestCheckAccount_load(t *testing.T) {

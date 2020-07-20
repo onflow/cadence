@@ -4617,7 +4617,10 @@ var authAccountRemovePublicKeyFunctionType = &FunctionType{
 
 var authAccountSaveFunctionType = func() *FunctionType {
 
-	typeParameter := &TypeParameter{Name: "T"}
+	typeParameter := &TypeParameter{
+		Name:      "T",
+		TypeBound: &StorableType{},
+	}
 
 	return &FunctionType{
 		TypeParameters: []*TypeParameter{
@@ -4645,7 +4648,10 @@ var authAccountSaveFunctionType = func() *FunctionType {
 
 var authAccountLoadFunctionType = func() *FunctionType {
 
-	typeParameter := &TypeParameter{Name: "T"}
+	typeParameter := &TypeParameter{
+		Name:      "T",
+		TypeBound: &StorableType{},
+	}
 
 	return &FunctionType{
 		TypeParameters: []*TypeParameter{
