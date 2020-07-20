@@ -20,36 +20,27 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 	"testing"
 	"text/tabwriter"
 
-	"github.com/go-test/deep"
-
-	parser1 "github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/parser2"
 )
 
-var benchFlag = flag.Bool("bench", false, "benchmark the new and the old parser")
-var compareFlag = flag.Bool("compare", false, "compare the results of the new and old parser")
+var benchFlag = flag.Bool("bench", false, "benchmark")
 
 func main() {
 	flag.Parse()
 	args := flag.Args()
-	if *benchFlag {
-		bench(args)
-	}
-	if *compareFlag {
-		compare(args)
-	}
+	run(args, *benchFlag)
 }
 
-func bench(args []string) {
-	w := newTabWriter()
+func run(args []string, bench bool) {
 
 	if len(args) == 0 {
 		data, err := ioutil.ReadAll(bufio.NewReader(os.Stdin))
@@ -57,143 +48,85 @@ func bench(args []string) {
 			panic(err)
 		}
 
-		oldResult, newResult := benchOldAndNew(string(data))
+		code := string(data)
 
-		_, err = fmt.Fprintf(w, "[old]\t%s\n", oldResult)
-		if err != nil {
-			panic(err)
-		}
-		_, err = fmt.Fprintf(w, "[new]\t%s\n", newResult)
-		if err != nil {
-			panic(err)
+		parse := func() (program *ast.Program, err error) {
+			program, err = parser2.ParseProgram(code)
+			return
 		}
 
-		return
-	} else {
-		for i := 0; i < len(args); i++ {
-			filename := args[i]
-			data, err := ioutil.ReadFile(filename)
-			if err != nil {
-				panic(err)
-			}
+		if bench {
+			result := benchParse(parse)
 
-			oldResult, newResult := benchOldAndNew(string(data))
-
-			_, err = fmt.Fprintf(w, "%s:\t[old]\t%s\n", filename, oldResult)
-			if err != nil {
-				panic(err)
-			}
-			_, err = fmt.Fprintf(w, "%s:\t[new]\t%s\n", filename, newResult)
-			if err != nil {
-				panic(err)
-			}
-		}
-	}
-
-	err := w.Flush()
-	if err != nil {
-		panic(err)
-	}
-}
-
-func benchOldAndNew(code string) (oldResult, newResult testing.BenchmarkResult) {
-	oldResult = benchParse(code, func(code string) (err error) {
-		_, _, err = parser1.ParseProgram(code)
-		return
-	})
-
-	newResult = benchParse(code, func(code string) (err error) {
-		_, err = parser2.ParseProgram(code)
-		return
-	})
-
-	return
-}
-
-func benchParse(code string, parse func(string) error) testing.BenchmarkResult {
-	return testing.Benchmark(func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			err := parse(code)
-			if err != nil {
-				panic(err)
-			}
-		}
-	})
-}
-
-func compare(args []string) {
-
-	if len(args) == 0 {
-		data, err := ioutil.ReadAll(bufio.NewReader(os.Stdin))
-		if err != nil {
-			panic(err)
-		}
-
-		diff := compareOldAndNew(string(data))
-
-		if len(diff) == 0 {
-			_, err = fmt.Printf("OK\n\n")
+			_, err = fmt.Printf("%s\n", result)
 			if err != nil {
 				panic(err)
 			}
 		} else {
-			_, err = fmt.Printf("MISMATCH:\n%s\n", diff)
+			result, err := parse()
 			if err != nil {
 				panic(err)
 			}
+			j, err := json.MarshalIndent(result, "", "    ")
+			if err != nil {
+				panic(err)
+			}
+			println(string(j))
 		}
 
-		return
 	} else {
+		w := newTabWriter()
+
 		for i := 0; i < len(args); i++ {
 			filename := args[i]
 			data, err := ioutil.ReadFile(filename)
 			if err != nil {
 				panic(err)
 			}
+			code := string(data)
 
-			diff := compareOldAndNew(string(data))
+			parse := func() (program *ast.Program, err error) {
+				program, err = parser2.ParseProgram(code)
+				return
+			}
 
-			if len(diff) == 0 {
-				_, err = fmt.Printf("%s:\tOK\n\n", filename)
+			if bench {
+				result := benchParse(parse)
+
+				_, err = fmt.Fprintf(w, "%s:\t%s\n", filename, result)
 				if err != nil {
 					panic(err)
 				}
 			} else {
-				_, err = fmt.Printf("%s:\tMISMATCH:\n%s\n", filename, diff)
+				result, err := parse()
 				if err != nil {
 					panic(err)
 				}
+				j, err := json.MarshalIndent(result, "", "    ")
+				if err != nil {
+					panic(err)
+				}
+				println(string(j))
 			}
 		}
+
+		err := w.Flush()
+		if err != nil {
+			panic(err)
+		}
 	}
+
 }
 
-func compareOldAndNew(code string) string {
-	oldResult, _, err := parser1.ParseProgram(code)
-	if err != nil {
-		return fmt.Sprintf("old parser failed: %s", err)
-	}
-
-	newResult, err := parser2.ParseProgram(code)
-	if err != nil {
-		return fmt.Sprintf("new parser failed: %s", err)
-	}
-
-	// the maximum levels of a struct to recurse into
-	// this prevents infinite recursion from circular references
-	deep.MaxDepth = 100
-
-	diff := deep.Equal(oldResult, newResult)
-
-	s := strings.Builder{}
-
-	for _, d := range diff {
-		s.WriteString(d)
-		s.WriteRune('\n')
-	}
-
-	return s.String()
+func benchParse(parse func() (program *ast.Program, err error)) testing.BenchmarkResult {
+	return testing.Benchmark(func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			_, err := parse()
+			if err != nil {
+				panic(err)
+			}
+		}
+	})
 }
 
 func newTabWriter() *tabwriter.Writer {

@@ -95,23 +95,27 @@ func TestCheckAccessModifierCompositeFunctionDeclaration(t *testing.T) {
 
 	t.Parallel()
 
+	tests := map[ast.Access]bool{
+		ast.AccessNotSpecified:   true,
+		ast.AccessPrivate:        true,
+		ast.AccessPublic:         true,
+		ast.AccessPublicSettable: false,
+	}
+
+	require.Len(t, tests, len(ast.BasicAccesses))
+
 	for _, compositeKind := range common.CompositeKindsWithBody {
 
-		tests := map[ast.Access]bool{
-			ast.AccessNotSpecified:   true,
-			ast.AccessPrivate:        true,
-			ast.AccessPublic:         true,
-			ast.AccessPublicSettable: false,
-		}
-
-		require.Len(t, tests, len(ast.BasicAccesses))
+		compositeKindKeyword := compositeKind.Keyword()
 
 		for access, expectSuccess := range tests {
 
+			accessKeyword := access.Keyword()
+
 			testName := fmt.Sprintf(
 				"%s/%s",
-				compositeKind.Keyword(),
-				access.Keyword(),
+				compositeKindKeyword,
+				accessKeyword,
 			)
 
 			t.Run(testName, func(t *testing.T) {
@@ -123,8 +127,8 @@ func TestCheckAccessModifierCompositeFunctionDeclaration(t *testing.T) {
                               %[2]s fun test() {}
                           }
 	                    `,
-						compositeKind.Keyword(),
-						access.Keyword(),
+						compositeKindKeyword,
+						accessKeyword,
 					),
 				)
 
@@ -485,48 +489,6 @@ func TestCheckAccessModifierLocalVariableDeclaration(t *testing.T) {
 				}
 			})
 		}
-	}
-}
-
-// TODO: remove
-func TestCheckAccessModifierLocalOptionalBinding(t *testing.T) {
-
-	t.Parallel()
-
-	tests := map[ast.Access]bool{
-		ast.AccessNotSpecified:   true,
-		ast.AccessPrivate:        false,
-		ast.AccessPublic:         false,
-		ast.AccessPublicSettable: false,
-	}
-
-	require.Len(t, tests, len(ast.BasicAccesses))
-
-	for access, expectSuccess := range tests {
-
-		t.Run(access.Keyword(), func(t *testing.T) {
-
-			_, err := ParseAndCheckWithOptions(t,
-				fmt.Sprintf(
-					`
-                      fun test() {
-                          let opt: Int? = 1
-                          if %s let value = opt { }
-                      }
-	                `,
-					access.Keyword(),
-				),
-				ParseAndCheckOptions{
-					OnlyOldParser: true,
-				},
-			)
-
-			if expectSuccess {
-				assert.NoError(t, err)
-			} else {
-				expectInvalidAccessModifierError(t, err)
-			}
-		})
 	}
 }
 

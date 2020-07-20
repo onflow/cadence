@@ -30,29 +30,43 @@ func TestCheckTransactions(t *testing.T) {
 
 	t.Parallel()
 
-	type test struct {
-		name   string
-		code   string
-		errors []error
+	test := func(t *testing.T, code string, expectedErrors []error) {
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, code)
+
+		errs := ExpectCheckerErrors(t, err, len(expectedErrors))
+
+		for i, err := range errs {
+			if !assert.IsType(t, expectedErrors[i], err) {
+				t.Log(err)
+			}
+		}
 	}
 
-	tests := []test{
-		{
-			"Empty",
+	t.Run("Empty", func(t *testing.T) {
+		test(
+			t,
 			`
               transaction {}
             `,
 			nil,
-		},
-		{
-			"No-op",
+		)
+	})
+
+	t.Run("No-op", func(t *testing.T) {
+		test(
+			t,
 			`
               transaction {}
             `,
 			nil,
-		},
-		{
-			"Simple",
+		)
+	})
+
+	t.Run("Simple", func(t *testing.T) {
+		test(
+			t,
 			`
               transaction {
 
@@ -62,37 +76,12 @@ func TestCheckTransactions(t *testing.T) {
               }
             `,
 			nil,
-		},
-		{
-			"InvalidPrepareIdentifier",
-			`
-              transaction {
+		)
+	})
 
-                notPrepare() {}
-
-                execute {}
-              }
-            `,
-			[]error{
-				&sema.InvalidTransactionBlockError{},
-			},
-		},
-		{
-			"InvalidExecuteIdentifier",
-			`
-              transaction {
-
-                prepare() {}
-
-                notExecute {}
-              }
-            `,
-			[]error{
-				&sema.InvalidTransactionBlockError{},
-			},
-		},
-		{
-			"ValidPrepareParameters",
+	t.Run("ValidPrepareParameters", func(t *testing.T) {
+		test(
+			t,
 			`
               transaction {
 
@@ -100,9 +89,12 @@ func TestCheckTransactions(t *testing.T) {
               }
             `,
 			nil,
-		},
-		{
-			"InvalidPrepareParameters",
+		)
+	})
+
+	t.Run("InvalidPrepareParameters", func(t *testing.T) {
+		test(
+			t,
 			`
               transaction {
 
@@ -113,27 +105,12 @@ func TestCheckTransactions(t *testing.T) {
 				&sema.InvalidTransactionPrepareParameterTypeError{},
 				&sema.InvalidTransactionPrepareParameterTypeError{},
 			},
-		},
-		{
-			"InvalidFieldAccessSpecified",
-			`
-              transaction {
+		)
+	})
 
-                  pub(set) var x: Int
-
-                  prepare() {
-                      self.x = 1
-                  }
-
-                  execute {}
-              }
-            `,
-			[]error{
-				&sema.InvalidTransactionFieldAccessModifierError{},
-			},
-		},
-		{
-			"InvalidFieldUninitialized",
+	t.Run("InvalidFieldUninitialized", func(t *testing.T) {
+		test(
+			t,
 			`
               transaction {
 
@@ -147,9 +124,11 @@ func TestCheckTransactions(t *testing.T) {
 			[]error{
 				&sema.TransactionMissingPrepareError{},
 			},
-		},
-		{
-			"FieldInitialized",
+		)
+	})
+
+	t.Run("FieldInitialized", func(t *testing.T) {
+		test(t,
 			`
               transaction {
 
@@ -165,9 +144,11 @@ func TestCheckTransactions(t *testing.T) {
               }
             `,
 			nil,
-		},
-		{
-			"PreConditions",
+		)
+	})
+
+	t.Run("PreConditions", func(t *testing.T) {
+		test(t,
 			`
               transaction {
 
@@ -190,27 +171,11 @@ func TestCheckTransactions(t *testing.T) {
               }
             `,
 			nil,
-		},
-		{
-			"InvalidPreConditionsWithUndeclaredFields",
-			`
-              transaction {
+		)
+	})
 
-                  pre {
-                      self.x > 2
-                  }
-
-                  execute {
-                      let y = 1 + 1
-                  }
-                }
-            `,
-			[]error{
-				&sema.NotDeclaredMemberError{},
-			},
-		},
-		{
-			"PostConditions",
+	t.Run("PostConditions", func(t *testing.T) {
+		test(t,
 			`
               transaction {
 
@@ -230,9 +195,12 @@ func TestCheckTransactions(t *testing.T) {
               }
             `,
 			nil,
-		},
-		{
-			"InvalidPostConditionsAccessExecuteScope",
+		)
+	})
+
+	t.Run("InvalidPostConditionsAccessExecuteScope", func(t *testing.T) {
+
+		test(t,
 			`
               transaction {
 
@@ -248,27 +216,28 @@ func TestCheckTransactions(t *testing.T) {
 			[]error{
 				&sema.NotDeclaredError{},
 			},
-		},
+		)
+	})
 
-		// TODO: prevent self from being used in function
-		// {
-		// 	"IllegalSelfUsage",
-		// 	`
-		//  	  fun foo(x: AnyStruct) {}
-		//
-		// 	  transaction {
-		// 	    execute {
-		// 		  foo(x: self)
-		// 		}
-		// 	  }
-		// 	`,
-		// 	[]error{
-		// 		&sema.CheckerError{},
-		// 	},
-		// },
+	// TODO: prevent self from being used in function
+	// {
+	// 	"IllegalSelfUsage",
+	// 	`
+	//  	  fun foo(x: AnyStruct) {}
+	//
+	// 	  transaction {
+	// 	    execute {
+	// 		  foo(x: self)
+	// 		}
+	// 	  }
+	// 	`,
+	// 	[]error{
+	// 		&sema.CheckerError{},
+	// 	},
+	// },
 
-		{
-			"ResourceField",
+	t.Run("ResourceField", func(t *testing.T) {
+		test(t,
 			`
               resource R {}
 
@@ -286,9 +255,11 @@ func TestCheckTransactions(t *testing.T) {
               }
             `,
 			nil,
-		},
-		{
-			"InvalidResourceFieldLoss",
+		)
+	})
+
+	t.Run("InvalidResourceFieldLoss", func(t *testing.T) {
+		test(t,
 			`
               resource R {}
 
@@ -306,9 +277,11 @@ func TestCheckTransactions(t *testing.T) {
 			[]error{
 				&sema.ResourceFieldNotInvalidatedError{},
 			},
-		},
-		{
-			"ParameterUse",
+		)
+	})
+
+	t.Run("ParameterUse", func(t *testing.T) {
+		test(t,
 			`
               transaction(x: Bool) {
 
@@ -330,9 +303,11 @@ func TestCheckTransactions(t *testing.T) {
               }
             `,
 			nil,
-		},
-		{
-			"InvalidParameterUseAfterDeclaration",
+		)
+	})
+
+	t.Run("InvalidParameterUseAfterDeclaration", func(t *testing.T) {
+		test(t,
 			`
 		      transaction(x: Bool) {}
 
@@ -341,9 +316,11 @@ func TestCheckTransactions(t *testing.T) {
 			[]error{
 				&sema.NotDeclaredError{},
 			},
-		},
-		{
-			"InvalidResourceParameter",
+		)
+	})
+
+	t.Run("InvalidResourceParameter", func(t *testing.T) {
+		test(t,
 			`
 		      resource R {}
 
@@ -353,32 +330,8 @@ func TestCheckTransactions(t *testing.T) {
 				&sema.InvalidResourceTransactionParameterError{},
 				&sema.ResourceLossError{},
 			},
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			// TODO: skip new parser for now. it correctly parses,
-			//   but rejects invalid keywords syntactically,
-			//   instead of semantically
-
-			_, err := ParseAndCheckWithOptions(
-				t,
-				test.code,
-				ParseAndCheckOptions{
-					OnlyOldParser: true,
-				},
-			)
-
-			errs := ExpectCheckerErrors(t, err, len(test.errors))
-
-			for i, err := range errs {
-				if !assert.IsType(t, test.errors[i], err) {
-					t.Log(err)
-				}
-			}
-		})
-	}
+		)
+	})
 }
 
 func TestCheckTransactionExecuteScope(t *testing.T) {

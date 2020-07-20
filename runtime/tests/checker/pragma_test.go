@@ -31,9 +31,9 @@ func TestCheckPragmaInvalidExpr(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheckWithOptions(t, `
+	_, err := ParseAndCheck(t, `
 	  #"string"
-	`, ParseAndCheckOptions{OnlyNewParser: true})
+	`)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 	assert.IsType(t, &sema.InvalidPragmaError{}, errs[0])
@@ -42,9 +42,9 @@ func TestCheckPragmaInvalidExpr(t *testing.T) {
 func TestCheckPragmaValidIdentifierExpr(t *testing.T) {
 
 	t.Parallel()
-	_, err := ParseAndCheckWithOptions(t, `
+	_, err := ParseAndCheck(t, `
 		#pedantic
-	`, ParseAndCheckOptions{OnlyNewParser: true})
+	`)
 
 	require.NoError(t, err)
 }
@@ -52,9 +52,10 @@ func TestCheckPragmaValidIdentifierExpr(t *testing.T) {
 func TestCheckPragmaValidInvocationExpr(t *testing.T) {
 
 	t.Parallel()
-	_, err := ParseAndCheckWithOptions(t, `
+
+	_, err := ParseAndCheck(t, `
 		#version("1.0")
-	`, ParseAndCheckOptions{OnlyNewParser: true})
+	`)
 
 	require.NoError(t, err)
 }
@@ -63,11 +64,11 @@ func TestCheckPragmaInvalidLocation(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheckWithOptions(t, `
+	_, err := ParseAndCheck(t, `
 	  fun test() {
 		  #version
 	  }
-	`, ParseAndCheckOptions{OnlyNewParser: true})
+	`)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 	assert.IsType(t, &sema.InvalidDeclarationError{}, errs[0])
@@ -76,9 +77,10 @@ func TestCheckPragmaInvalidLocation(t *testing.T) {
 func TestCheckPragmaInvalidInvocationExprNonStringExprArgument(t *testing.T) {
 
 	t.Parallel()
-	_, err := ParseAndCheckWithOptions(t, `
+
+	_, err := ParseAndCheck(t, `
 		#version(y)
-	`, ParseAndCheckOptions{OnlyNewParser: true})
+	`)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 	assert.IsType(t, &sema.InvalidPragmaError{Message: "invalid arguments"}, errs[0])
@@ -87,9 +89,10 @@ func TestCheckPragmaInvalidInvocationExprNonStringExprArgument(t *testing.T) {
 func TestCheckPragmaInvalidInvocationExprTypeArgs(t *testing.T) {
 
 	t.Parallel()
-	_, err := ParseAndCheckWithOptions(t, `
+
+	_, err := ParseAndCheck(t, `
 		#version<X>()
-	`, ParseAndCheckOptions{OnlyNewParser: true})
+	`)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 	assert.IsType(t, &sema.InvalidPragmaError{Message: "type arguments not supported"}, errs[0])
