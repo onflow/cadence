@@ -84,6 +84,9 @@ type Type interface {
 	// e.g. in a field of a composite type.
 	IsStorable(results map[*Member]bool) bool
 
+	// IsEquatable returns true if values of the type can be equated
+	IsEquatable() bool
+
 	TypeAnnotationState() TypeAnnotationState
 	ContainsFirstLevelInterfaceType() bool
 
@@ -395,7 +398,11 @@ func (*MetaType) IsInvalidType() bool {
 	return false
 }
 
-func (*MetaType) IsStorable(results map[*Member]bool) bool {
+func (*MetaType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*MetaType) IsEquatable() bool {
 	return true
 }
 
@@ -461,8 +468,12 @@ func (*AnyType) IsInvalidType() bool {
 	return false
 }
 
-func (*AnyType) IsStorable(results map[*Member]bool) bool {
+func (*AnyType) IsStorable(_ map[*Member]bool) bool {
 	// The actual storability of a value is checked at run-time
+	return false
+}
+
+func (*AnyType) IsEquatable() bool {
 	return false
 }
 
@@ -512,9 +523,13 @@ func (*AnyStructType) IsInvalidType() bool {
 	return false
 }
 
-func (*AnyStructType) IsStorable(results map[*Member]bool) bool {
+func (*AnyStructType) IsStorable(_ map[*Member]bool) bool {
 	// The actual storability of a value is checked at run-time
 	return true
+}
+
+func (*AnyStructType) IsEquatable() bool {
+	return false
 }
 
 func (*AnyStructType) TypeAnnotationState() TypeAnnotationState {
@@ -563,9 +578,13 @@ func (*AnyResourceType) IsInvalidType() bool {
 	return false
 }
 
-func (*AnyResourceType) IsStorable(results map[*Member]bool) bool {
+func (*AnyResourceType) IsStorable(_ map[*Member]bool) bool {
 	// The actual storability of a value is checked at run-time
 	return true
+}
+
+func (*AnyResourceType) IsEquatable() bool {
+	return false
 }
 
 func (*AnyResourceType) TypeAnnotationState() TypeAnnotationState {
@@ -614,7 +633,11 @@ func (*NeverType) IsInvalidType() bool {
 	return false
 }
 
-func (*NeverType) IsStorable(results map[*Member]bool) bool {
+func (*NeverType) IsStorable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (*NeverType) IsEquatable() bool {
 	return false
 }
 
@@ -664,7 +687,11 @@ func (*VoidType) IsInvalidType() bool {
 	return false
 }
 
-func (*VoidType) IsStorable(results map[*Member]bool) bool {
+func (*VoidType) IsStorable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (*VoidType) IsEquatable() bool {
 	return false
 }
 
@@ -717,7 +744,11 @@ func (*InvalidType) IsInvalidType() bool {
 	return true
 }
 
-func (*InvalidType) IsStorable(results map[*Member]bool) bool {
+func (*InvalidType) IsStorable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (*InvalidType) IsEquatable() bool {
 	return false
 }
 
@@ -786,6 +817,10 @@ func (t *OptionalType) IsStorable(results map[*Member]bool) bool {
 	return t.Type.IsStorable(results)
 }
 
+func (t *OptionalType) IsEquatable() bool {
+	return t.Type.IsEquatable()
+}
+
 func (t *OptionalType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
@@ -851,7 +886,11 @@ func (t *GenericType) IsInvalidType() bool {
 	return false
 }
 
-func (t *GenericType) IsStorable(results map[*Member]bool) bool {
+func (t *GenericType) IsStorable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (*GenericType) IsEquatable() bool {
 	return false
 }
 
@@ -942,7 +981,11 @@ func (*BoolType) IsInvalidType() bool {
 	return false
 }
 
-func (*BoolType) IsStorable(results map[*Member]bool) bool {
+func (*BoolType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*BoolType) IsEquatable() bool {
 	return true
 }
 
@@ -993,7 +1036,11 @@ func (*CharacterType) IsInvalidType() bool {
 	return false
 }
 
-func (*CharacterType) IsStorable(results map[*Member]bool) bool {
+func (*CharacterType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*CharacterType) IsEquatable() bool {
 	return true
 }
 
@@ -1043,7 +1090,11 @@ func (*StringType) IsInvalidType() bool {
 	return false
 }
 
-func (*StringType) IsStorable(results map[*Member]bool) bool {
+func (*StringType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*StringType) IsEquatable() bool {
 	return true
 }
 
@@ -1169,7 +1220,11 @@ func (*NumberType) IsInvalidType() bool {
 	return false
 }
 
-func (*NumberType) IsStorable(results map[*Member]bool) bool {
+func (*NumberType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*NumberType) IsEquatable() bool {
 	return true
 }
 
@@ -1243,7 +1298,11 @@ func (*SignedNumberType) IsInvalidType() bool {
 	return false
 }
 
-func (*SignedNumberType) IsStorable(results map[*Member]bool) bool {
+func (*SignedNumberType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*SignedNumberType) IsEquatable() bool {
 	return true
 }
 
@@ -1332,7 +1391,11 @@ func (*IntegerType) IsInvalidType() bool {
 	return false
 }
 
-func (*IntegerType) IsStorable(results map[*Member]bool) bool {
+func (*IntegerType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*IntegerType) IsEquatable() bool {
 	return true
 }
 
@@ -1406,7 +1469,11 @@ func (*SignedIntegerType) IsInvalidType() bool {
 	return false
 }
 
-func (*SignedIntegerType) IsStorable(results map[*Member]bool) bool {
+func (*SignedIntegerType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*SignedIntegerType) IsEquatable() bool {
 	return true
 }
 
@@ -1480,7 +1547,11 @@ func (*IntType) IsInvalidType() bool {
 	return false
 }
 
-func (*IntType) IsStorable(results map[*Member]bool) bool {
+func (*IntType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*IntType) IsEquatable() bool {
 	return true
 }
 
@@ -1555,7 +1626,11 @@ func (*Int8Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Int8Type) IsStorable(results map[*Member]bool) bool {
+func (*Int8Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*Int8Type) IsEquatable() bool {
 	return true
 }
 
@@ -1632,7 +1707,11 @@ func (*Int16Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Int16Type) IsStorable(results map[*Member]bool) bool {
+func (*Int16Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*Int16Type) IsEquatable() bool {
 	return true
 }
 
@@ -1709,7 +1788,11 @@ func (*Int32Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Int32Type) IsStorable(results map[*Member]bool) bool {
+func (*Int32Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*Int32Type) IsEquatable() bool {
 	return true
 }
 
@@ -1786,7 +1869,11 @@ func (*Int64Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Int64Type) IsStorable(results map[*Member]bool) bool {
+func (*Int64Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*Int64Type) IsEquatable() bool {
 	return true
 }
 
@@ -1863,7 +1950,11 @@ func (*Int128Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Int128Type) IsStorable(results map[*Member]bool) bool {
+func (*Int128Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*Int128Type) IsEquatable() bool {
 	return true
 }
 
@@ -1952,7 +2043,11 @@ func (*Int256Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Int256Type) IsStorable(results map[*Member]bool) bool {
+func (*Int256Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*Int256Type) IsEquatable() bool {
 	return true
 }
 
@@ -2041,7 +2136,11 @@ func (*UIntType) IsInvalidType() bool {
 	return false
 }
 
-func (*UIntType) IsStorable(results map[*Member]bool) bool {
+func (*UIntType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*UIntType) IsEquatable() bool {
 	return true
 }
 
@@ -2118,7 +2217,11 @@ func (*UInt8Type) IsInvalidType() bool {
 	return false
 }
 
-func (*UInt8Type) IsStorable(results map[*Member]bool) bool {
+func (*UInt8Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*UInt8Type) IsEquatable() bool {
 	return true
 }
 
@@ -2196,7 +2299,11 @@ func (*UInt16Type) IsInvalidType() bool {
 	return false
 }
 
-func (*UInt16Type) IsStorable(results map[*Member]bool) bool {
+func (*UInt16Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*UInt16Type) IsEquatable() bool {
 	return true
 }
 
@@ -2274,7 +2381,11 @@ func (*UInt32Type) IsInvalidType() bool {
 	return false
 }
 
-func (*UInt32Type) IsStorable(results map[*Member]bool) bool {
+func (*UInt32Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*UInt32Type) IsEquatable() bool {
 	return true
 }
 
@@ -2352,7 +2463,11 @@ func (*UInt64Type) IsInvalidType() bool {
 	return false
 }
 
-func (*UInt64Type) IsStorable(results map[*Member]bool) bool {
+func (*UInt64Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*UInt64Type) IsEquatable() bool {
 	return true
 }
 
@@ -2430,7 +2545,11 @@ func (*UInt128Type) IsInvalidType() bool {
 	return false
 }
 
-func (*UInt128Type) IsStorable(results map[*Member]bool) bool {
+func (*UInt128Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*UInt128Type) IsEquatable() bool {
 	return true
 }
 
@@ -2514,7 +2633,11 @@ func (*UInt256Type) IsInvalidType() bool {
 	return false
 }
 
-func (*UInt256Type) IsStorable(results map[*Member]bool) bool {
+func (*UInt256Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*UInt256Type) IsEquatable() bool {
 	return true
 }
 
@@ -2598,7 +2721,11 @@ func (*Word8Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Word8Type) IsStorable(results map[*Member]bool) bool {
+func (*Word8Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*Word8Type) IsEquatable() bool {
 	return true
 }
 
@@ -2676,7 +2803,11 @@ func (*Word16Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Word16Type) IsStorable(results map[*Member]bool) bool {
+func (*Word16Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*Word16Type) IsEquatable() bool {
 	return true
 }
 
@@ -2754,7 +2885,11 @@ func (*Word32Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Word32Type) IsStorable(results map[*Member]bool) bool {
+func (*Word32Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*Word32Type) IsEquatable() bool {
 	return true
 }
 
@@ -2832,7 +2967,11 @@ func (*Word64Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Word64Type) IsStorable(results map[*Member]bool) bool {
+func (*Word64Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*Word64Type) IsEquatable() bool {
 	return true
 }
 
@@ -2909,7 +3048,11 @@ func (*FixedPointType) IsInvalidType() bool {
 	return false
 }
 
-func (*FixedPointType) IsStorable(results map[*Member]bool) bool {
+func (*FixedPointType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*FixedPointType) IsEquatable() bool {
 	return true
 }
 
@@ -2983,7 +3126,11 @@ func (*SignedFixedPointType) IsInvalidType() bool {
 	return false
 }
 
-func (*SignedFixedPointType) IsStorable(results map[*Member]bool) bool {
+func (*SignedFixedPointType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*SignedFixedPointType) IsEquatable() bool {
 	return true
 }
 
@@ -3061,7 +3208,11 @@ func (*Fix64Type) IsInvalidType() bool {
 	return false
 }
 
-func (*Fix64Type) IsStorable(results map[*Member]bool) bool {
+func (*Fix64Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*Fix64Type) IsEquatable() bool {
 	return true
 }
 
@@ -3160,7 +3311,11 @@ func (*UFix64Type) IsInvalidType() bool {
 	return false
 }
 
-func (*UFix64Type) IsStorable(results map[*Member]bool) bool {
+func (*UFix64Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*UFix64Type) IsEquatable() bool {
 	return true
 }
 
@@ -3410,7 +3565,7 @@ func getArrayMember(arrayType ArrayType, field string, targetRange ast.Range, re
 
 		// TODO: implement Equatable interface: https://github.com/dapperlabs/bamboo-node/issues/78
 
-		if !IsEquatableType(elementType) {
+		if !elementType.IsEquatable() {
 			report(
 				&NotEquatableTypeError{
 					Type:  elementType,
@@ -3494,6 +3649,11 @@ func (t *VariableSizedType) IsInvalidType() bool {
 
 func (t *VariableSizedType) IsStorable(results map[*Member]bool) bool {
 	return t.Type.IsStorable(results)
+}
+
+func (*VariableSizedType) IsEquatable() bool {
+	// TODO:
+	return false
 }
 
 func (t *VariableSizedType) TypeAnnotationState() TypeAnnotationState {
@@ -3591,6 +3751,11 @@ func (t *ConstantSizedType) IsInvalidType() bool {
 
 func (t *ConstantSizedType) IsStorable(results map[*Member]bool) bool {
 	return t.Type.IsStorable(results)
+}
+
+func (*ConstantSizedType) IsEquatable() bool {
+	// TODO:
+	return false
 }
 
 func (t *ConstantSizedType) TypeAnnotationState() TypeAnnotationState {
@@ -3994,8 +4159,12 @@ func (t *FunctionType) IsInvalidType() bool {
 	return t.ReturnTypeAnnotation.Type.IsInvalidType()
 }
 
-func (t *FunctionType) IsStorable(results map[*Member]bool) bool {
+func (t *FunctionType) IsStorable(_ map[*Member]bool) bool {
 	// Functions cannot be stored, as they cannot be serialized
+	return false
+}
+
+func (*FunctionType) IsEquatable() bool {
 	return false
 }
 
@@ -4460,6 +4629,11 @@ func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
+func (*CompositeType) IsEquatable() bool {
+	// TODO:
+	return false
+}
+
 func (*CompositeType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -4545,7 +4719,11 @@ func (*AuthAccountType) IsInvalidType() bool {
 	return false
 }
 
-func (*AuthAccountType) IsStorable(results map[*Member]bool) bool {
+func (*AuthAccountType) IsStorable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (*AuthAccountType) IsEquatable() bool {
 	return false
 }
 
@@ -4912,7 +5090,11 @@ func (*PublicAccountType) IsInvalidType() bool {
 	return false
 }
 
-func (*PublicAccountType) IsStorable(results map[*Member]bool) bool {
+func (*PublicAccountType) IsStorable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (*PublicAccountType) IsEquatable() bool {
 	return false
 }
 
@@ -5133,6 +5315,11 @@ func (t *InterfaceType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
+func (*InterfaceType) IsEquatable() bool {
+	// TODO:
+	return false
+}
+
 func (*InterfaceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -5214,6 +5401,11 @@ func (t *DictionaryType) IsInvalidType() bool {
 func (t *DictionaryType) IsStorable(results map[*Member]bool) bool {
 	return t.KeyType.IsStorable(results) &&
 		t.ValueType.IsStorable(results)
+}
+
+func (*DictionaryType) IsEquatable() bool {
+	// TODO:
+	return false
 }
 
 func (t *DictionaryType) TypeAnnotationState() TypeAnnotationState {
@@ -5437,8 +5629,12 @@ func (t *ReferenceType) IsInvalidType() bool {
 	return t.Type.IsInvalidType()
 }
 
-func (t *ReferenceType) IsStorable(results map[*Member]bool) bool {
+func (t *ReferenceType) IsStorable(_ map[*Member]bool) bool {
 	// TODO: https://github.com/onflow/cadence/issues/189
+	return true
+}
+
+func (*ReferenceType) IsEquatable() bool {
 	return true
 }
 
@@ -5531,7 +5727,11 @@ func (*AddressType) IsInvalidType() bool {
 	return false
 }
 
-func (*AddressType) IsStorable(results map[*Member]bool) bool {
+func (*AddressType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*AddressType) IsEquatable() bool {
 	return true
 }
 
@@ -6161,33 +6361,6 @@ func IsSubType(subType Type, superType Type) bool {
 	return false
 }
 
-func IsConcatenatableType(ty Type) bool {
-	_, isArrayType := ty.(ArrayType)
-	return IsSubType(ty, &StringType{}) || isArrayType
-}
-
-func IsEquatableType(ty Type) bool {
-
-	// TODO: add support for arrays and dictionaries
-	// TODO: add support for composites that are equatable
-
-	if IsSubType(ty, &MetaType{}) ||
-		IsSubType(ty, &StringType{}) ||
-		IsSubType(ty, &BoolType{}) ||
-		IsSubType(ty, &NumberType{}) ||
-		IsSubType(ty, &ReferenceType{}) ||
-		IsSubType(ty, &AddressType{}) {
-
-		return true
-	}
-
-	if optionalType, ok := ty.(*OptionalType); ok {
-		return IsEquatableType(optionalType.Type)
-	}
-
-	return false
-}
-
 // UnwrapOptionalType returns the type if it is not an optional type,
 // or the inner-most type if it is (optional types are repeatedly unwrapped)
 //
@@ -6205,8 +6378,8 @@ func AreCompatibleEquatableTypes(leftType, rightType Type) bool {
 	unwrappedLeftType := UnwrapOptionalType(leftType)
 	unwrappedRightType := UnwrapOptionalType(rightType)
 
-	leftIsEquatable := IsEquatableType(unwrappedLeftType)
-	rightIsEquatable := IsEquatableType(unwrappedRightType)
+	leftIsEquatable := unwrappedLeftType.IsEquatable()
+	rightIsEquatable := unwrappedRightType.IsEquatable()
 
 	if unwrappedLeftType.Equal(unwrappedRightType) &&
 		leftIsEquatable && rightIsEquatable {
@@ -6297,7 +6470,11 @@ func (*TransactionType) IsInvalidType() bool {
 	return false
 }
 
-func (*TransactionType) IsStorable(results map[*Member]bool) bool {
+func (*TransactionType) IsStorable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (*TransactionType) IsEquatable() bool {
 	return false
 }
 
@@ -6465,6 +6642,11 @@ func (t *RestrictedType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
+func (*RestrictedType) IsEquatable() bool {
+	// TODO:
+	return false
+}
+
 func (*RestrictedType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
@@ -6561,8 +6743,13 @@ func (*PathType) IsInvalidType() bool {
 	return false
 }
 
-func (*PathType) IsStorable(results map[*Member]bool) bool {
+func (*PathType) IsStorable(_ map[*Member]bool) bool {
 	return true
+}
+
+func (*PathType) IsEquatable() bool {
+	// TODO:
+	return false
 }
 
 func (*PathType) TypeAnnotationState() TypeAnnotationState {
@@ -6647,8 +6834,13 @@ func (t *CapabilityType) TypeAnnotationState() TypeAnnotationState {
 	return t.BorrowType.TypeAnnotationState()
 }
 
-func (*CapabilityType) IsStorable(results map[*Member]bool) bool {
+func (*CapabilityType) IsStorable(_ map[*Member]bool) bool {
 	return true
+}
+
+func (*CapabilityType) IsEquatable() bool {
+	// TODO:
+	return false
 }
 
 func (t *CapabilityType) ContainsFirstLevelInterfaceType() bool {
