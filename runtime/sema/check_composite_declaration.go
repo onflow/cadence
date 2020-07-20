@@ -647,11 +647,11 @@ func (checker *Checker) declareCompositeMembersAndValue(
 //
 func (checker *Checker) checkMemberStorability(members map[string]*Member) {
 
-	seenMembers := map[*Member]bool{}
+	storableResults := map[*Member]bool{}
 
 	for _, member := range members {
 
-		if member.IsStorable(seenMembers) {
+		if member.IsStorable(storableResults) {
 			continue
 		}
 

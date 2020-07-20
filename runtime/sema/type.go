@@ -4673,7 +4673,10 @@ Removes the public key at the given index from the account's keys
 
 var authAccountTypeSaveFunctionType = func() *FunctionType {
 
-	typeParameter := &TypeParameter{Name: "T"}
+	typeParameter := &TypeParameter{
+		Name:      "T",
+		TypeBound: &StorableType{},
+	}
 
 	return &FunctionType{
 		TypeParameters: []*TypeParameter{
@@ -4710,7 +4713,10 @@ The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is al
 
 var authAccountTypeLoadFunctionType = func() *FunctionType {
 
-	typeParameter := &TypeParameter{Name: "T"}
+	typeParameter := &TypeParameter{
+		Name:      "T",
+		TypeBound: &StorableType{},
+	}
 
 	return &FunctionType{
 		TypeParameters: []*TypeParameter{
