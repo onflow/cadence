@@ -26,7 +26,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
-	parser1 "github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -40,8 +39,6 @@ type ParseAndCheckOptions struct {
 	ImportResolver ast.ImportResolver
 	Location       ast.Location
 	Options        []sema.Option
-	OnlyOldParser  bool
-	OnlyNewParser  bool
 }
 
 func ParseAndCheckWithOptions(
@@ -50,37 +47,10 @@ func ParseAndCheckWithOptions(
 	options ParseAndCheckOptions,
 ) (*sema.Checker, error) {
 
-	var program, program2 *ast.Program
-	var err error
-
-	if options.OnlyNewParser && options.OnlyOldParser {
-		assert.FailNow(t, "mutually exclusive ParseAndCheckWithOptions options")
-		return nil, nil
-	}
-
-	useBothParsers := !options.OnlyOldParser && !options.OnlyNewParser
-
-	if options.OnlyNewParser || useBothParsers {
-		program2, err = parser2.ParseProgram(code)
-		if !assert.NoError(t, err) {
-			assert.FailNow(t, errors.UnrollChildErrors(err))
-			return nil, err
-		}
-	}
-
-	if options.OnlyOldParser || useBothParsers {
-		program, _, err = parser1.ParseProgram(code)
-		if !assert.NoError(t, err) {
-			assert.FailNow(t, errors.UnrollChildErrors(err))
-			return nil, err
-		}
-	}
-
-	// If using both parsers, verify programs are equivalent
-	if !options.OnlyOldParser && !options.OnlyNewParser {
-		utils.AssertEqualWithDiff(t, program, program2)
-	} else if options.OnlyNewParser {
-		program = program2
+	program, err := parser2.ParseProgram(code)
+	if !assert.NoError(t, err) {
+		assert.FailNow(t, errors.UnrollChildErrors(err))
+		return nil, err
 	}
 
 	if options.ImportResolver != nil {

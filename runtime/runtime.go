@@ -31,7 +31,6 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	runtimeErrors "github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
-	parser1 "github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -56,7 +55,6 @@ type Runtime interface {
 	//
 	// This function returns an error if the program contains any syntax or semantic errors.
 	ParseAndCheckProgram(code []byte, runtimeInterface Interface, location Location) error
-	SetUseOldParser(useOldParser bool)
 }
 
 var typeDeclarations = append(
@@ -110,9 +108,7 @@ func reportMetric(
 const contractKey = "contract"
 
 // interpreterRuntime is a interpreter-based version of the Flow runtime.
-type interpreterRuntime struct {
-	useOldParser bool
-}
+type interpreterRuntime struct{}
 
 type Option func(Runtime)
 
@@ -123,16 +119,6 @@ func NewInterpreterRuntime(options ...Option) Runtime {
 		option(runtime)
 	}
 	return runtime
-}
-
-func WithUseOldParser(useOldParser bool) Option {
-	return func(runtime Runtime) {
-		runtime.SetUseOldParser(useOldParser)
-	}
-}
-
-func (r *interpreterRuntime) SetUseOldParser(useOldParser bool) {
-	r.useOldParser = useOldParser
 }
 
 func (r *interpreterRuntime) ExecuteScript(
@@ -826,12 +812,6 @@ func (r *interpreterRuntime) parse(
 
 	parse := func() {
 		program, err = parser2.ParseProgram(string(script))
-	}
-
-	if r.useOldParser {
-		parse = func() {
-			program, _, err = parser1.ParseProgram(string(script))
-		}
 	}
 
 	reportMetric(
