@@ -539,7 +539,9 @@ func defineLessThanOrTypeArgumentsExpression() {
 
 			// Skip the `<` token.
 			p.next()
-			p.skipSpaceAndComments(true)
+			p.parseTrivia(triviaOptions{
+				skipNewlines: true,
+			})
 
 			// First, try to to parse zero or more comma-separated
 			// type arguments (type annotations), a closing greater token `>`,
@@ -555,7 +557,9 @@ func defineLessThanOrTypeArgumentsExpression() {
 				typeArguments = parseCommaSeparatedTypeAnnotations(p, lexer.TokenGreater)
 				p.mustOne(lexer.TokenGreater)
 
-				p.skipSpaceAndComments(true)
+				p.parseTrivia(triviaOptions{
+					skipNewlines: true,
+				})
 				p.mustOne(lexer.TokenParenOpen)
 
 				isInvocation = true
@@ -611,7 +615,9 @@ func defineLessThanOrTypeArgumentsExpression() {
 				// if the right binding power is higher.
 
 				p.next()
-				p.skipSpaceAndComments(true)
+				p.parseTrivia(triviaOptions{
+					skipNewlines: true,
+				})
 
 				right := parseExpression(p, binaryExpressionLeftBindingPower)
 
@@ -757,7 +763,9 @@ func parseArgumentListRemainder(p *parser) (arguments []*ast.Argument, endPos as
 	atEnd := false
 	expectArgument := true
 	for !atEnd {
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 
 		switch p.current.Type {
 		case lexer.TokenComma:
@@ -803,7 +811,9 @@ func parseArgument(p *parser) *ast.Argument {
 	var labelStartPos, labelEndPos ast.Position
 
 	expr := parseExpression(p, lowestBindingPower)
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 
 	// If a colon follows the expression, the expression was our label.
 	if p.current.Is(lexer.TokenColon) {
@@ -820,7 +830,9 @@ func parseArgument(p *parser) *ast.Argument {
 
 		// Skip the identifier
 		p.next()
-		p.skipSpaceAndComments(true)
+		p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
 
 		expr = parseExpression(p, lowestBindingPower)
 	}
@@ -959,11 +971,15 @@ func defineReferenceExpression() {
 	setExprNullDenotation(
 		lexer.TokenAmpersand,
 		func(p *parser, token lexer.Token) ast.Expression {
-			p.skipSpaceAndComments(true)
+			p.parseTrivia(triviaOptions{
+				skipNewlines: true,
+			})
 			// TODO: maybe require above unary
 			expression := parseExpression(p, lowestBindingPower)
 
-			p.skipSpaceAndComments(true)
+			p.parseTrivia(triviaOptions{
+				skipNewlines: true,
+			})
 
 			castingExpression, ok := expression.(*ast.CastingExpression)
 			if !ok {
@@ -999,7 +1015,10 @@ func defineMemberExpression() {
 }
 
 func parseMemberAccess(p *parser, left ast.Expression, optional bool) ast.Expression {
-	p.skipSpaceAndComments(true)
+
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 
 	// If there is an identifier, use it.
 	// If not, report an error
@@ -1040,16 +1059,23 @@ func exprLeftDenotationAllowsNewline(tokenType lexer.TokenType) bool {
 // parseExpression uses "Top-Down operator precedence parsing" (TDOP) technique to
 // parse expressions.
 func parseExpression(p *parser, rightBindingPower int) ast.Expression {
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 	t := p.current
 	p.next()
 
-	newLineAfterLeft := p.skipSpaceAndComments(true)
+	newLineAfterLeft, _ := p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 
 	left := applyExprNullDenotation(p, t)
 
 	for {
-		newLineAfterLeft = p.skipSpaceAndComments(true) || newLineAfterLeft
+		newLineAfterLeft2, _ := p.parseTrivia(triviaOptions{
+			skipNewlines: true,
+		})
+		newLineAfterLeft = newLineAfterLeft2 || newLineAfterLeft
 
 		if newLineAfterLeft && !exprLeftDenotationAllowsNewline(p.current.Type) {
 			break
@@ -1094,7 +1120,9 @@ func applyExprMetaLeftDenotation(
 	t = p.current
 
 	p.next()
-	p.skipSpaceAndComments(true)
+	p.parseTrivia(triviaOptions{
+		skipNewlines: true,
+	})
 
 	result = applyExprLeftDenotation(p, t, left)
 	return result, false

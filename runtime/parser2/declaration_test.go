@@ -724,6 +724,147 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("with docstring, single line comment", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations("/// Test\nfun foo() {}")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 2, Column: 4, Offset: 13},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 2, Column: 7, Offset: 16},
+							EndPos:   ast.Position{Line: 2, Column: 8, Offset: 17},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "",
+								Pos:        ast.Position{Line: 2, Column: 8, Offset: 17},
+							},
+						},
+						StartPos: ast.Position{Line: 2, Column: 8, Offset: 17},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 2, Column: 10, Offset: 19},
+								EndPos:   ast.Position{Line: 2, Column: 11, Offset: 20},
+							},
+						},
+					},
+					DocString: " Test",
+					StartPos:  ast.Position{Line: 2, Column: 0, Offset: 9},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("with docstring, two line comments", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations("\n  /// First line\n  \n/// Second line\n\n\nfun foo() {}")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 7, Column: 4, Offset: 43},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 7, Column: 7, Offset: 46},
+							EndPos:   ast.Position{Line: 7, Column: 8, Offset: 47},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "",
+								Pos:        ast.Position{Line: 7, Column: 8, Offset: 47},
+							},
+						},
+						StartPos: ast.Position{Line: 7, Column: 8, Offset: 47},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 7, Column: 10, Offset: 49},
+								EndPos:   ast.Position{Line: 7, Column: 11, Offset: 50},
+							},
+						},
+					},
+					DocString: " First line\n Second line",
+					StartPos:  ast.Position{Line: 7, Column: 0, Offset: 39},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("with docstring, block comment", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations("\n    /** Cool dogs.\n\n Cool cats!! */\n\n\nfun foo() {}")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Identifier: ast.Identifier{
+						Identifier: "foo",
+						Pos:        ast.Position{Line: 7, Column: 4, Offset: 43},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 7, Column: 7, Offset: 46},
+							EndPos:   ast.Position{Line: 7, Column: 8, Offset: 47},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "",
+								Pos:        ast.Position{Line: 7, Column: 8, Offset: 47},
+							},
+						},
+						StartPos: ast.Position{Line: 7, Column: 8, Offset: 47},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 7, Column: 10, Offset: 49},
+								EndPos:   ast.Position{Line: 7, Column: 11, Offset: 50},
+							},
+						},
+					},
+					DocString: " Cool dogs.\n\n Cool cats!! ",
+					StartPos:  ast.Position{Line: 7, Column: 0, Offset: 39},
+				},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseAccess(t *testing.T) {
