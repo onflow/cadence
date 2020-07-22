@@ -5793,18 +5793,21 @@ func IsSubType(subType Type, superType Type) bool {
 		return true
 	}
 
-	switch superType.(type) {
+	switch typedSuperType := superType.(type) {
 	case *AnyType:
 		return true
 
 	case *AnyStructType:
-		return !subType.IsResourceType()
+		if subType.IsResourceType() {
+			return false
+		}
+		if _, ok := subType.(*AnyType); ok {
+			return false
+		}
+		return true
 
 	case *AnyResourceType:
 		return subType.IsResourceType()
-	}
-
-	switch typedSuperType := superType.(type) {
 
 	case *NumberType:
 		switch subType.(type) {
