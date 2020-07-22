@@ -35,6 +35,8 @@ func TestCheckReferenceTypeOuter(t *testing.T) {
 
 	t.Run("resource", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
           resource R {}
 
@@ -46,10 +48,23 @@ func TestCheckReferenceTypeOuter(t *testing.T) {
 
 	t.Run("struct", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
           struct S {}
 
           fun test(s: &[S]) {}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("non-composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(i: &[Int]) {}
         `)
 
 		require.NoError(t, err)
@@ -62,6 +77,8 @@ func TestCheckReferenceTypeInner(t *testing.T) {
 
 	t.Run("resource", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
           resource R {}
 
@@ -73,10 +90,23 @@ func TestCheckReferenceTypeInner(t *testing.T) {
 
 	t.Run("struct", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
           struct S {}
 
           fun test(s: [&S]) {}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("non-composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(i: [&Int]) {}
         `)
 
 		require.NoError(t, err)
@@ -90,6 +120,8 @@ func TestCheckNestedReferenceType(t *testing.T) {
 
 	t.Run("resource", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
           resource R {}
 
@@ -101,10 +133,23 @@ func TestCheckNestedReferenceType(t *testing.T) {
 
 	t.Run("struct", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
           struct S {}
 
           fun test(s: &[&S]) {}
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("non-composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test(s: &[&Int]) {}
         `)
 
 		require.NoError(t, err)
@@ -125,11 +170,35 @@ func TestCheckInvalidReferenceType(t *testing.T) {
 
 }
 
+func TestCheckReferenceExpressionWithNonCompositeResultType(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheck(t, `
+
+      let i = 1
+      let ref = &i as &Int
+    `)
+
+	require.NoError(t, err)
+
+	refValueType := checker.GlobalValues["ref"].Type
+
+	assert.Equal(t,
+		&sema.ReferenceType{
+			Type: &sema.IntType{},
+		},
+		refValueType,
+	)
+}
+
 func TestCheckReferenceExpressionWithCompositeResultType(t *testing.T) {
 
 	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
           resource R {}
@@ -140,20 +209,21 @@ func TestCheckReferenceExpressionWithCompositeResultType(t *testing.T) {
 
 		require.NoError(t, err)
 
+		rType := checker.GlobalTypes["R"].Type
+
 		refValueType := checker.GlobalValues["ref"].Type
 
-		assert.IsType(t,
-			&sema.ReferenceType{},
+		assert.Equal(t,
+			&sema.ReferenceType{
+				Type: rType,
+			},
 			refValueType,
-		)
-
-		assert.IsType(t,
-			&sema.CompositeType{},
-			refValueType.(*sema.ReferenceType).Type,
 		)
 	})
 
 	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
 
 		checker, err := ParseAndCheck(t, `
           struct S {}
@@ -164,16 +234,15 @@ func TestCheckReferenceExpressionWithCompositeResultType(t *testing.T) {
 
 		require.NoError(t, err)
 
+		sType := checker.GlobalTypes["S"].Type
+
 		refValueType := checker.GlobalValues["ref"].Type
 
-		assert.IsType(t,
-			&sema.ReferenceType{},
+		assert.Equal(t,
+			&sema.ReferenceType{
+				Type: sType,
+			},
 			refValueType,
-		)
-
-		assert.IsType(t,
-			&sema.CompositeType{},
-			refValueType.(*sema.ReferenceType).Type,
 		)
 	})
 }
@@ -183,6 +252,8 @@ func TestCheckReferenceExpressionWithInterfaceResultType(t *testing.T) {
 	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
           resource interface I {}
@@ -199,6 +270,8 @@ func TestCheckReferenceExpressionWithInterfaceResultType(t *testing.T) {
 
 	t.Run("struct", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
           struct interface I {}
           struct S: I {}
@@ -213,11 +286,58 @@ func TestCheckReferenceExpressionWithInterfaceResultType(t *testing.T) {
 	})
 }
 
+func TestCheckReferenceExpressionWithRdAnyResultType(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          resource R {}
+
+          let r <- create R()
+          let ref = &r as &AnyResource
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          struct S {}
+
+          let s = S()
+          let ref = &s as &AnyStruct
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("non-composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let i = 1
+          let ref = &i as &AnyStruct
+        `)
+
+		require.NoError(t, err)
+	})
+}
+
 func TestCheckReferenceExpressionWithRestrictedAnyResultType(t *testing.T) {
 
 	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
           resource interface I {}
@@ -231,6 +351,8 @@ func TestCheckReferenceExpressionWithRestrictedAnyResultType(t *testing.T) {
 	})
 
 	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
           struct interface I {}
@@ -250,6 +372,8 @@ func TestCheckInvalidReferenceExpressionType(t *testing.T) {
 
 	t.Run("resource", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
           resource R {}
 
@@ -264,11 +388,27 @@ func TestCheckInvalidReferenceExpressionType(t *testing.T) {
 
 	t.Run("struct", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
           struct S {}
 
           let s = S()
           let ref = &s as &X
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+	})
+
+	t.Run("non-composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let i = 1
+          let ref = &i as &X
         `)
 
 		errs := ExpectCheckerErrors(t, err, 1)
@@ -282,6 +422,8 @@ func TestCheckInvalidReferenceExpressionTypeMismatchStructResource(t *testing.T)
 	t.Parallel()
 
 	t.Run("struct / resource", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
           struct S {}
@@ -297,6 +439,8 @@ func TestCheckInvalidReferenceExpressionTypeMismatchStructResource(t *testing.T)
 	})
 
 	t.Run("resource / struct", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
           struct S {}
@@ -346,45 +490,18 @@ func TestCheckInvalidReferenceExpressionTypeMismatchDifferentResources(t *testin
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
 
-func TestCheckReference(t *testing.T) {
+func TestCheckReferenceResourceArrayIndexing(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("struct variable", func(t *testing.T) {
+	_, err := ParseAndCheck(t, `
+      resource R {}
 
-		_, err := ParseAndCheck(t, `
-          struct S {}
+      let rs <- [<-create R()]
+      let ref = &rs[0] as &R
+    `)
 
-          let s = S()
-          let ref = &s as &S
-        `)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("resource variable", func(t *testing.T) {
-
-		_, err := ParseAndCheck(t, `
-          resource R {}
-
-          let r <- create R()
-          let ref = &r as &R
-        `)
-
-		require.NoError(t, err)
-	})
-
-	t.Run("resource array indexing", func(t *testing.T) {
-
-		_, err := ParseAndCheck(t, `
-          resource R {}
-
-          let rs <- [<-create R()]
-          let ref = &rs[0] as &R
-        `)
-
-		require.NoError(t, err)
-	})
+	require.NoError(t, err)
 }
 
 func TestCheckReferenceUse(t *testing.T) {
@@ -392,6 +509,8 @@ func TestCheckReferenceUse(t *testing.T) {
 	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
           resource R {
@@ -423,6 +542,8 @@ func TestCheckReferenceUse(t *testing.T) {
 
 	t.Run("struct", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
           struct S {
               var x: Int
@@ -449,6 +570,22 @@ func TestCheckReferenceUse(t *testing.T) {
 
 		require.NoError(t, err)
 	})
+
+	t.Run("non-composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+
+          fun test(): String {
+              let i = 1
+              let ref = &i as &Int
+              return ref.toString()
+          }
+        `)
+
+		require.NoError(t, err)
+	})
 }
 
 func TestCheckReferenceUseArray(t *testing.T) {
@@ -456,6 +593,8 @@ func TestCheckReferenceUseArray(t *testing.T) {
 	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
           resource R {
@@ -486,6 +625,8 @@ func TestCheckReferenceUseArray(t *testing.T) {
 	})
 
 	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
           struct S {
@@ -521,6 +662,8 @@ func TestCheckReferenceIndexingIfReferencedIndexable(t *testing.T) {
 
 	t.Run("resource", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
 
           resource R {}
@@ -539,6 +682,8 @@ func TestCheckReferenceIndexingIfReferencedIndexable(t *testing.T) {
 	})
 
 	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
 
@@ -582,6 +727,8 @@ func TestCheckInvalidReferenceIndexingIfReferencedNotIndexable(t *testing.T) {
 
 	t.Run("resource", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
 
           resource R {}
@@ -601,6 +748,8 @@ func TestCheckInvalidReferenceIndexingIfReferencedNotIndexable(t *testing.T) {
 
 	t.Run("struct", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
 
           struct S {}
@@ -616,6 +765,23 @@ func TestCheckInvalidReferenceIndexingIfReferencedNotIndexable(t *testing.T) {
 
 		assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
 	})
+
+	t.Run("non-composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          fun test() {
+              let i = 1
+              let ref = &i as &Int
+              ref[0]
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.NotIndexableTypeError{}, errs[0])
+	})
 }
 
 func TestCheckResourceInterfaceReferenceFunctionCall(t *testing.T) {
@@ -623,6 +789,8 @@ func TestCheckResourceInterfaceReferenceFunctionCall(t *testing.T) {
 	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
 
@@ -646,6 +814,8 @@ func TestCheckResourceInterfaceReferenceFunctionCall(t *testing.T) {
 	})
 
 	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
 
@@ -674,6 +844,8 @@ func TestCheckInvalidResourceInterfaceReferenceFunctionCall(t *testing.T) {
 
 	t.Run("resource", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
 
           resource interface I {}
@@ -696,6 +868,8 @@ func TestCheckInvalidResourceInterfaceReferenceFunctionCall(t *testing.T) {
 	})
 
 	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
 
@@ -722,53 +896,56 @@ func TestCheckReferenceExpressionReferenceType(t *testing.T) {
 
 	t.Parallel()
 
+	test := func(t *testing.T, auth bool, kind common.CompositeKind) {
+
+		authKeyword := ""
+		if auth {
+			authKeyword = "auth"
+		}
+
+		testName := fmt.Sprintf("%s, auth: %v", kind.Name(), auth)
+
+		t.Run(testName, func(t *testing.T) {
+
+			t.Parallel()
+
+			checker, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      %[1]s T {}
+
+                      let t %[2]s %[3]s T()
+                      let ref = &t as %[4]s &T
+                    `,
+					kind.Keyword(),
+					kind.TransferOperator(),
+					kind.ConstructionKeyword(),
+					authKeyword,
+				),
+			)
+
+			require.NoError(t, err)
+
+			tType := checker.GlobalTypes["T"].Type
+
+			refValueType := checker.GlobalValues["ref"].Type
+
+			require.Equal(t,
+				&sema.ReferenceType{
+					Authorized: auth,
+					Type:       tType,
+				},
+				refValueType,
+			)
+		})
+	}
+
 	for _, kind := range []common.CompositeKind{
 		common.CompositeKindResource,
 		common.CompositeKindStructure,
 	} {
-
 		for _, auth := range []bool{true, false} {
-
-			authKeyword := ""
-			if auth {
-				authKeyword = "auth"
-			}
-
-			t.Run(fmt.Sprintf("%s, auth: %v", kind.Name(), auth), func(t *testing.T) {
-
-				checker, err := ParseAndCheck(t,
-					fmt.Sprintf(
-						`
-                          %[1]s T {}
-
-                          let t %[2]s %[3]s T()
-                          let ref = &t as %[4]s &T
-                        `,
-						kind.Keyword(),
-						kind.TransferOperator(),
-						kind.ConstructionKeyword(),
-						authKeyword,
-					),
-				)
-
-				require.NoError(t, err)
-
-				refValueType := checker.GlobalValues["ref"].Type
-
-				require.IsType(t,
-					&sema.ReferenceType{},
-					refValueType,
-				)
-
-				referenceType := refValueType.(*sema.ReferenceType)
-
-				assert.IsType(t,
-					&sema.CompositeType{},
-					referenceType.Type,
-				)
-
-				assert.Equal(t, referenceType.Authorized, auth)
-			})
+			test(t, auth, kind)
 		}
 	}
 }
@@ -778,6 +955,8 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := ParseAndCheck(t, `
           resource R {}
@@ -794,11 +973,28 @@ func TestCheckReferenceExpressionOfOptional(t *testing.T) {
 
 	t.Run("struct", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := ParseAndCheck(t, `
           struct S {}
 
           let s: S? = S()
           let ref = &s as &S
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 2)
+
+		assert.IsType(t, &sema.OptionalTypeReferenceError{}, errs[0])
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[1])
+	})
+
+	t.Run("non-composite", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let i: Int? = 1
+          let ref = &i as &Int
         `)
 
 		errs := ExpectCheckerErrors(t, err, 2)
