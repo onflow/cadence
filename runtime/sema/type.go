@@ -6076,28 +6076,8 @@ func IsSubType(subType Type, superType Type) bool {
 			}
 
 		case *AnyStructType:
-
-			// An unauthorized reference to a restricted type `&T{Us}`
-			// or to a unrestricted type `&T`
-			// is a subtype of the type `&AnyStruct`:
-			// if `T == AnyStruct` or `T` is a struct-kinded composite.
-
-			switch typedInnerSubType := typedSubType.Type.(type) {
-			case *RestrictedType:
-				switch typedInnerInnerSubType := typedInnerSubType.Type.(type) {
-				case *AnyStructType:
-					return true
-
-				case *CompositeType:
-					return typedInnerInnerSubType.Kind == common.CompositeKindStructure
-
-				default:
-					return false
-				}
-
-			case *CompositeType:
-				return typedInnerSubType.Kind == common.CompositeKindStructure
-			}
+			// `&T <: &AnyStruct` iff `T <: AnyStruct`
+			return IsSubType(typedSubType.Type, typedSuperType.Type)
 		}
 
 	case *FunctionType:
