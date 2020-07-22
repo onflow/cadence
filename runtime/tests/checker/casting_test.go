@@ -5891,3 +5891,16 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckCastAuthorizedNonCompositeReferenceType(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithAny(t, `
+      let x = 1
+      let xRef = &x as &Int
+      let anyRef: &AnyStruct = xRef
+    `)
+
+	require.NoError(t, err)
+}
