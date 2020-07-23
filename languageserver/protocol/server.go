@@ -79,6 +79,8 @@ type Handler interface {
 	Definition(conn Conn, params *TextDocumentPositionParams) (*Location, error)
 	SignatureHelp(conn Conn, params *TextDocumentPositionParams) (*SignatureHelp, error)
 	CodeLens(conn Conn, params *CodeLensParams) ([]*CodeLens, error)
+	Completion(conn Conn, params *CompletionParams) ([]*CompletionItem, error)
+	ResolveCompletionItem(conn Conn, item *CompletionItem) (*CompletionItem, error)
 	ExecuteCommand(conn Conn, params *ExecuteCommandParams) (interface{}, error)
 	Shutdown(conn Conn) error
 	Exit(conn Conn) error
@@ -117,6 +119,12 @@ func NewServer(handler Handler) *Server {
 
 	jsonrpc2Server.Methods["textDocument/codeLens"] =
 		server.handleCodeLens
+
+	jsonrpc2Server.Methods["textDocument/completion"] =
+		server.handleCompletion
+
+	jsonrpc2Server.Methods["completionItem/resolve"] =
+		server.handleCompletionItemResolve
 
 	jsonrpc2Server.Methods["workspace/executeCommand"] =
 		server.handleExecuteCommand
