@@ -43,14 +43,14 @@ func TestEncodeVoid(t *testing.T) {
 
 	t.Parallel()
 
-	testEncode(t, cadence.NewVoid(), `{"type":"Void"}`)
+	testEncodeAndDecode(t, cadence.NewVoid(), `{"type":"Void"}`)
 }
 
 func TestEncodeOptional(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Nil",
 			cadence.NewOptional(nil),
@@ -68,7 +68,7 @@ func TestEncodeBool(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"True",
 			cadence.NewBool(true),
@@ -86,7 +86,7 @@ func TestEncodeString(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Empty",
 			cadence.NewString(""),
@@ -104,7 +104,7 @@ func TestEncodeAddress(t *testing.T) {
 
 	t.Parallel()
 
-	testEncode(
+	testEncodeAndDecode(
 		t,
 		cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 		`{"type":"Address","value":"0x0000000102030405"}`,
@@ -115,7 +115,7 @@ func TestEncodeInt(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Negative",
 			cadence.NewInt(-42),
@@ -148,7 +148,7 @@ func TestEncodeInt8(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Min",
 			cadence.NewInt8(math.MinInt8),
@@ -171,7 +171,7 @@ func TestEncodeInt16(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Min",
 			cadence.NewInt16(math.MinInt16),
@@ -194,7 +194,7 @@ func TestEncodeInt32(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Min",
 			cadence.NewInt32(math.MinInt32),
@@ -217,7 +217,7 @@ func TestEncodeInt64(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Min",
 			cadence.NewInt64(math.MinInt64),
@@ -240,7 +240,7 @@ func TestEncodeInt128(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Min",
 			cadence.NewInt128FromBig(sema.Int128TypeMinIntBig),
@@ -263,7 +263,7 @@ func TestEncodeInt256(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Min",
 			cadence.NewInt256FromBig(sema.Int256TypeMinIntBig),
@@ -286,7 +286,7 @@ func TestEncodeUInt(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewUInt(0),
@@ -309,7 +309,7 @@ func TestEncodeUInt8(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewUInt8(0),
@@ -327,7 +327,7 @@ func TestEncodeUInt16(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewUInt16(0),
@@ -345,7 +345,7 @@ func TestEncodeUInt32(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewUInt32(0),
@@ -363,7 +363,7 @@ func TestEncodeUInt64(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewUInt64(0),
@@ -381,7 +381,7 @@ func TestEncodeUInt128(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewUInt128(0),
@@ -399,7 +399,7 @@ func TestEncodeUInt256(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewUInt256(0),
@@ -417,7 +417,7 @@ func TestEncodeWord8(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewWord8(0),
@@ -435,7 +435,7 @@ func TestEncodeWord16(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewWord16(0),
@@ -453,7 +453,7 @@ func TestEncodeWord32(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewWord32(0),
@@ -471,7 +471,7 @@ func TestEncodeWord64(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewWord64(0),
@@ -489,7 +489,7 @@ func TestEncodeFix64(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.Fix64(0),
@@ -517,7 +517,7 @@ func TestEncodeUFix64(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.UFix64(0),
@@ -572,7 +572,7 @@ func TestEncodeArray(t *testing.T) {
 		`{"type":"Array","value":[{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"1"}}]}},{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"2"}}]}},{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"3"}}]}}]}`,
 	}
 
-	testAllEncode(t,
+	testAllEncodeAndDecode(t,
 		emptyArray,
 		intArray,
 		resourceArray,
@@ -661,7 +661,7 @@ func TestEncodeDictionary(t *testing.T) {
 		`{"type":"Dictionary","value":[{"key":{"type":"String","value":"a"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"1"}}]}}},{"key":{"type":"String","value":"b"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"2"}}]}}},{"key":{"type":"String","value":"c"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"3"}}]}}}]}`,
 	}
 
-	testAllEncode(t,
+	testAllEncodeAndDecode(t,
 		simpleDict,
 		nestedDict,
 		resourceDict,
@@ -691,7 +691,7 @@ func TestEncodeResource(t *testing.T) {
 
 		v := convertValueFromScript(t, script)
 
-		testEncode(t, v, expectedJSON)
+		testEncodeAndDecode(t, v, expectedJSON)
 	})
 
 	t.Run("With function member", func(t *testing.T) {
@@ -756,7 +756,7 @@ func TestEncodeResource(t *testing.T) {
 
 		v := convertValueFromScript(t, script)
 
-		testEncode(t, v, expectedJSON)
+		testEncodeAndDecode(t, v, expectedJSON)
 	})
 }
 
@@ -820,7 +820,7 @@ func TestEncodeStruct(t *testing.T) {
 		`{"type":"Struct","value":{"id":"S.test.FooStruct","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
 	}
 
-	testAllEncode(t, simpleStruct, resourceStruct)
+	testAllEncodeAndDecode(t, simpleStruct, resourceStruct)
 }
 
 func TestEncodeEvent(t *testing.T) {
@@ -883,7 +883,7 @@ func TestEncodeEvent(t *testing.T) {
 		`{"type":"Event","value":{"id":"S.test.FooEvent","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
 	}
 
-	testAllEncode(t, simpleEvent, resourceEvent)
+	testAllEncodeAndDecode(t, simpleEvent, resourceEvent)
 }
 
 func TestDecodeFixedPoints(t *testing.T) {
@@ -1099,6 +1099,17 @@ func TestDecodeFixedPoints(t *testing.T) {
 	})
 }
 
+func TestEncodeLink(t *testing.T) {
+
+	t.Parallel()
+
+	testEncode(
+		t,
+		cadence.NewLink("/storage/foo", "Bar"),
+		`{"type":"Link","value":{"target":"/storage/foo","borrowType":"Bar"}}`,
+	)
+}
+
 func convertValueFromScript(t *testing.T, script string) cadence.Value {
 	rt := runtime.NewInterpreterRuntime()
 
@@ -1114,25 +1125,35 @@ func convertValueFromScript(t *testing.T, script string) cadence.Value {
 	return value
 }
 
-func testAllEncode(t *testing.T, tests ...encodeTest) {
+func testAllEncodeAndDecode(t *testing.T, tests ...encodeTest) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testEncode(t, test.val, test.expected)
+			testEncodeAndDecode(t, test.val, test.expected)
 		})
 	}
 }
 
-func testEncode(t *testing.T, val cadence.Value, expectedJSON string) {
-	actualJSON, err := json.Encode(val)
+func testEncodeAndDecode(t *testing.T, val cadence.Value, expectedJSON string) {
+	actualJSON := testEncode(t, val, expectedJSON)
+	testDecode(t, actualJSON, val)
+}
+
+func testEncode(t *testing.T, val cadence.Value, expectedJSON string) (actualJSON string) {
+	actualJSONBytes, err := json.Encode(val)
 	require.NoError(t, err)
 
-	assert.JSONEq(t, expectedJSON, string(actualJSON))
+	actualJSON = string(actualJSONBytes)
 
-	// JSON should decode to original value
-	decodedVal, err := json.Decode(actualJSON)
+	assert.JSONEq(t, expectedJSON, actualJSON)
+
+	return actualJSON
+}
+
+func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value) {
+	decodedVal, err := json.Decode([]byte(actualJSON))
 	require.NoError(t, err)
 
-	assert.Equal(t, val, decodedVal)
+	assert.Equal(t, expectedVal, decodedVal)
 }
 
 var fooResourceType = cadence.ResourceType{

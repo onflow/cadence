@@ -132,8 +132,8 @@ func (v TypeValue) Equal(inter *Interpreter, other Value) BoolValue {
 		return false
 	}
 
-	ty := inter.convertStaticToSemaType(v.Type)
-	otherTy := inter.convertStaticToSemaType(otherMetaType.Type)
+	ty := inter.ConvertStaticToSemaType(v.Type)
+	otherTy := inter.ConvertStaticToSemaType(otherMetaType.Type)
 
 	return BoolValue(ty.Equal(otherTy))
 }
@@ -141,7 +141,7 @@ func (v TypeValue) Equal(inter *Interpreter, other Value) BoolValue {
 func (v TypeValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case "identifier":
-		ty := inter.convertStaticToSemaType(v.Type)
+		ty := inter.ConvertStaticToSemaType(v.Type)
 		return NewStringValue(ty.QualifiedString())
 	}
 
@@ -6618,7 +6618,7 @@ func (CapabilityValue) IsValue() {}
 func (v CapabilityValue) DynamicType(inter *Interpreter) DynamicType {
 	var borrowType *sema.ReferenceType
 	if v.BorrowType != nil {
-		borrowType = inter.convertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+		borrowType = inter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 	}
 
 	return CapabilityDynamicType{
@@ -6674,14 +6674,14 @@ func (v CapabilityValue) GetMember(inter *Interpreter, _ LocationRange, name str
 	case "borrow":
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
-			borrowType = inter.convertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+			borrowType = inter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
 		return inter.capabilityBorrowFunction(v.Address, v.Path, borrowType)
 
 	case "check":
 		var borrowType *sema.ReferenceType
 		if v.BorrowType != nil {
-			borrowType = inter.convertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
+			borrowType = inter.ConvertStaticToSemaType(v.BorrowType).(*sema.ReferenceType)
 		}
 		return inter.capabilityCheckFunction(v.Address, v.Path, borrowType)
 
