@@ -85,6 +85,24 @@ func (s *Server) handleCodeLens(req *json.RawMessage) (interface{}, error) {
 	return s.Handler.CodeLens(s.conn, &params)
 }
 
+func (s *Server) handleCompletion(req *json.RawMessage) (interface{}, error) {
+	var params CompletionParams
+	if err := json.Unmarshal(*req, &params); err != nil {
+		return nil, err
+	}
+
+	return s.Handler.Completion(s.conn, &params)
+}
+
+func (s *Server) handleCompletionItemResolve(req *json.RawMessage) (interface{}, error) {
+	var completionItem CompletionItem
+	if err := json.Unmarshal(*req, &completionItem); err != nil {
+		return nil, err
+	}
+
+	return s.Handler.ResolveCompletionItem(s.conn, &completionItem)
+}
+
 func (s *Server) handleExecuteCommand(req *json.RawMessage) (interface{}, error) {
 	var params ExecuteCommandParams
 	if err := json.Unmarshal(*req, &params); err != nil {
