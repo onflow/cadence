@@ -982,3 +982,29 @@ func (v Link) Type() Type {
 func (v Link) ToGoValue() interface{} {
 	return nil
 }
+
+// StorageReference
+
+type StorageReference struct {
+	Authorized           bool
+	TargetStorageAddress Address
+	TargetKey            string
+}
+
+func NewStorageReference(authorized bool, targetStorageAddress Address, targetKey string) StorageReference {
+	return StorageReference{
+		Authorized:           authorized,
+		TargetStorageAddress: targetStorageAddress,
+		TargetKey:            targetKey,
+	}
+}
+
+func (StorageReference) isValue() {}
+
+func (v StorageReference) Type() Type {
+	return nil
+}
+
+func (v StorageReference) ToGoValue() interface{} {
+	return nil
+}

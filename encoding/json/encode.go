@@ -118,6 +118,12 @@ type jsonCompositeField struct {
 	Value jsonValue `json:"value"`
 }
 
+type jsonStorageReferenceValue struct {
+	Authorized           bool   `json:"authorized"`
+	TargetStorageAddress string `json:"targetStorageAddress"`
+	TargetKey            string `json:"targetKey"`
+}
+
 type jsonLinkValue struct {
 	Target     string `json:"target"`
 	BorrowType string `json:"borrowType"`
@@ -154,6 +160,7 @@ const (
 	structTypeStr           = "Struct"
 	resourceTypeStr         = "Resource"
 	eventTypeStr            = "Event"
+	storageReferenceTypeStr = "StorageReference"
 	linkTypeStr             = "Link"
 )
 
@@ -221,6 +228,8 @@ func (e *Encoder) prepare(v cadence.Value) jsonValue {
 		return e.prepareResource(x)
 	case cadence.Event:
 		return e.prepareEvent(x)
+	case cadence.StorageReference:
+		return e.prepareStorageReference(x)
 	case cadence.Link:
 		return e.prepareLink(x)
 	default:
@@ -481,6 +490,17 @@ func (e *Encoder) prepareComposite(kind, id string, fieldTypes []cadence.Field, 
 		Value: jsonCompositeValue{
 			ID:     id,
 			Fields: compositeFields,
+		},
+	}
+}
+
+func (e *Encoder) prepareStorageReference(x cadence.StorageReference) jsonValue {
+	return jsonValueObject{
+		Type: storageReferenceTypeStr,
+		Value: jsonStorageReferenceValue{
+			Authorized:           x.Authorized,
+			TargetStorageAddress: encodeBytes(x.TargetStorageAddress.Bytes()),
+			TargetKey:            x.TargetKey,
 		},
 	}
 }
