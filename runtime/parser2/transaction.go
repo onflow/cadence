@@ -173,7 +173,10 @@ func parseTransactionDeclaration(p *parser) *ast.TransactionDeclaration {
 
 func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration) {
 	for {
-		p.skipSpaceAndComments(true)
+		_, docString := p.parseTrivia(triviaOptions{
+			skipNewlines:    true,
+			parseDocStrings: true,
+		})
 
 		switch p.current.Type {
 		case lexer.TokenSemicolon:
@@ -187,7 +190,7 @@ func parseTransactionFields(p *parser) (fields []*ast.FieldDeclaration) {
 		case lexer.TokenIdentifier:
 			switch p.current.Value {
 			case keywordLet, keywordVar:
-				field := parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil)
+				field := parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil, docString)
 
 				fields = append(fields, field)
 				continue

@@ -243,7 +243,7 @@ func parseIfStatement(p *parser) *ast.IfStatement {
 			switch p.current.Value {
 			case keywordLet, keywordVar:
 				variableDeclaration =
-					parseVariableDeclaration(p, ast.AccessNotSpecified, nil)
+					parseVariableDeclaration(p, ast.AccessNotSpecified, nil, "")
 			}
 		}
 

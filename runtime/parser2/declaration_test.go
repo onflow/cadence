@@ -1473,7 +1473,7 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 		return Parse(
 			input,
 			func(p *parser) interface{} {
-				return parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil)
+				return parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil, "")
 			},
 		)
 	}
