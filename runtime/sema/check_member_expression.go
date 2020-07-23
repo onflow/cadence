@@ -26,7 +26,23 @@ import (
 // NOTE: only called if the member expression is *not* an assignment
 //
 func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) ast.Repr {
-	member, isOptional := checker.visitMember(expression)
+	accessedType, member, isOptional := checker.visitMember(expression)
+
+	if !accessedType.IsInvalidType() {
+		memberAccessType := accessedType
+
+		if expression.Optional {
+			if memberAccessOptionalType, ok := memberAccessType.(*OptionalType); ok {
+				memberAccessType = memberAccessOptionalType.Type
+			}
+		}
+
+		checker.MemberAccesses.Put(
+			expression.AccessPos,
+			expression.EndPosition(),
+			memberAccessType,
+		)
+	}
 
 	if member == nil {
 		return &InvalidType{}
@@ -77,30 +93,22 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 	return memberType
 }
 
-func (checker *Checker) visitMember(expression *ast.MemberExpression) (member *Member, isOptional bool) {
+func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedType Type, member *Member, isOptional bool) {
 	memberInfo, ok := checker.Elaboration.MemberExpressionMemberInfos[expression]
 	if ok {
-		return memberInfo.Member, memberInfo.IsOptional
+		return memberInfo.AccessedType, memberInfo.Member, memberInfo.IsOptional
 	}
 
 	defer func() {
 		checker.Elaboration.MemberExpressionMemberInfos[expression] =
 			MemberInfo{
-				Member:     member,
-				IsOptional: isOptional,
+				AccessedType: accessedType,
+				Member:       member,
+				IsOptional:   isOptional,
 			}
 	}()
 
-	// The access expression might have no name,
-	// as the parser accepts invalid programs
-
-	if expression.Identifier.Identifier == "" {
-		return member, isOptional
-	}
-
 	accessedExpression := expression.Expression
-
-	var expressionType Type
 
 	func() {
 		previousMemberExpression := checker.currentMemberExpression
@@ -109,10 +117,17 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (member *M
 			checker.currentMemberExpression = previousMemberExpression
 		}()
 
-		expressionType = accessedExpression.Accept(checker).(Type)
+		accessedType = accessedExpression.Accept(checker).(Type)
 	}()
 
-	checker.checkUnusedExpressionResourceLoss(expressionType, accessedExpression)
+	checker.checkUnusedExpressionResourceLoss(accessedType, accessedExpression)
+
+	// The access expression might have no name,
+	// as the parser accepts invalid programs
+
+	if expression.Identifier.Identifier == "" {
+		return accessedType, member, isOptional
+	}
 
 	// If the the access is to a member of `self` and a resource,
 	// its use must be recorded/checked, so that it isn't used after it was invalidated
@@ -129,7 +144,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (member *M
 		checker.resources.AddUse(accessedSelfMember, expression.Identifier.Pos)
 	}
 
-	origins := checker.memberOrigins[expressionType]
+	origins := checker.memberOrigins[accessedType]
 
 	identifier := expression.Identifier.Identifier
 	identifierStartPosition := expression.Identifier.StartPosition()
@@ -141,13 +156,12 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (member *M
 	// However, for some types (e.g. reference types) this depends on what type is referenced
 
 	getMemberForType := func(expressionType Type) {
-		if ty, ok := expressionType.(MemberAccessibleType); ok && ty.CanHaveMembers() {
-			targetRange := ast.NewRangeFromPositioned(expression.Expression)
-			member = ty.GetMember(identifier, targetRange, checker.report)
+		resolver, ok := expressionType.GetMembers()[identifier]
+		if !ok {
+			return
 		}
-		if member == nil {
-			member = getBuiltinMember(identifier, expressionType)
-		}
+		targetRange := ast.NewRangeFromPositioned(expression.Expression)
+		member = resolver.Resolve(identifier, targetRange, checker.report)
 	}
 
 	// Get the member from the accessed value based
@@ -158,7 +172,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (member *M
 		// If the member expression is using optional chaining,
 		// check if the accessed type is optional
 
-		if optionalExpressionType, ok := expressionType.(*OptionalType); ok {
+		if optionalExpressionType, ok := accessedType.(*OptionalType); ok {
 			// The accessed type is optional, get the member from the wrapped type
 
 			getMemberForType(optionalExpressionType.Type)
@@ -166,10 +180,10 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (member *M
 		} else {
 			// Optional chaining was used on a non-optional type, report an error
 
-			if !expressionType.IsInvalidType() {
+			if !accessedType.IsInvalidType() {
 				checker.report(
 					&InvalidOptionalChainingError{
-						Type:  expressionType,
+						Type:  accessedType,
 						Range: ast.NewRangeFromPositioned(expression),
 					},
 				)
@@ -179,21 +193,21 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (member *M
 			// to avoid spurious error that member does not exist,
 			// even if the non-optional accessed type has the member
 
-			getMemberForType(expressionType)
+			getMemberForType(accessedType)
 		}
 	} else {
 		// The member is accessed directly without optional chaining.
 		// Get the member directly from the accessed type
 
-		getMemberForType(expressionType)
+		getMemberForType(accessedType)
 		isOptional = false
 	}
 
 	if member == nil {
-		if !expressionType.IsInvalidType() {
+		if !accessedType.IsInvalidType() {
 			checker.report(
 				&NotDeclaredMemberError{
-					Type: expressionType,
+					Type: accessedType,
 					Name: identifier,
 					Range: ast.Range{
 						StartPos: identifierStartPosition,
@@ -231,8 +245,8 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (member *M
 		if !checker.inAssignment &&
 			!checker.inInvocation &&
 			member.DeclarationKind == common.DeclarationKindFunction &&
-			!expressionType.IsInvalidType() &&
-			expressionType.IsResourceType() {
+			!accessedType.IsInvalidType() &&
+			accessedType.IsResourceType() {
 
 			checker.report(
 				&ResourceMethodBindingError{
@@ -241,24 +255,7 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (member *M
 			)
 		}
 	}
-
-	return member, isOptional
-}
-
-// getBuiltinMember tries to get the built-in member with the given identifier.
-// For example, the function `isInstance` is a built-in which is defined for all types
-func getBuiltinMember(identifier string, ty Type) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(ty, identifier, functionType)
-	}
-
-	switch identifier {
-	case IsInstanceFunctionName:
-		return newFunction(isInstanceFunctionType)
-
-	default:
-		return nil
-	}
+	return accessedType, member, isOptional
 }
 
 // isReadableMember returns true if the given member can be read from

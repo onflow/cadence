@@ -121,7 +121,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 
 		require.Equal(t,
 			interpreter.UInt64Value(i),
-			res.Fields[sema.UUIDFieldName],
+			res.Fields[sema.ResourceUUIDFieldName],
 		)
 	}
 }

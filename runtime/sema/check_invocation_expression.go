@@ -63,7 +63,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 	isOptionalChainingResult := false
 	if memberExpression, ok := invokedExpression.(*ast.MemberExpression); ok {
 		var member *Member
-		member, isOptionalChainingResult = checker.visitMember(memberExpression)
+		_, member, isOptionalChainingResult = checker.visitMember(memberExpression)
 		if member != nil {
 			expressionType = member.TypeAnnotation.Type
 		}
@@ -251,7 +251,7 @@ func (checker *Checker) checkMemberInvocationArgumentLabels(
 	invocationExpression *ast.InvocationExpression,
 	memberExpression *ast.MemberExpression,
 ) {
-	member, _ := checker.visitMember(memberExpression)
+	_, member, _ := checker.visitMember(memberExpression)
 
 	if member == nil || len(member.ArgumentLabels) == 0 {
 		return

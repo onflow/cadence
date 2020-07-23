@@ -46,6 +46,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 			&sema.FunctionType{
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.UInt64Type{}),
 			},
+			"",
 		),
 	}
 

@@ -5340,7 +5340,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	v.checkStatus(locationRange)
 
 	if v.Kind == common.CompositeKindResource &&
-		name == sema.OwnerFieldName {
+		name == sema.ResourceOwnerFieldName {
 
 		return v.OwnerValue()
 	}
@@ -6281,7 +6281,7 @@ func (v AddressValue) GetMember(_ *Interpreter, _ LocationRange, name string) Va
 			},
 		)
 
-	case sema.ToBytesFunctionName:
+	case sema.AddressTypeToBytesFunctionName:
 		return NewHostFunctionValue(
 			func(invocation Invocation) trampoline.Trampoline {
 				bytes := common.Address(v)
@@ -6472,7 +6472,7 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 		return inter.authAccountUnlinkFunction(v.Address)
 
 	case "getLinkTarget":
-		return inter.authAccountGetLinkTargetFunction(v.Address)
+		return inter.accountGetLinkTargetFunction(v.Address)
 
 	case "getCapability":
 		return accountGetCapabilityFunction(v.Address, true)
@@ -6549,7 +6549,7 @@ func (v PublicAccountValue) GetMember(inter *Interpreter, _ LocationRange, name 
 		return accountGetCapabilityFunction(v.Address, false)
 
 	case "getLinkTarget":
-		return inter.authAccountGetLinkTargetFunction(v.Address)
+		return inter.accountGetLinkTargetFunction(v.Address)
 	}
 
 	return nil

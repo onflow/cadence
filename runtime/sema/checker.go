@@ -87,6 +87,7 @@ type Checker struct {
 	TransactionTypes                   []*TransactionType
 	inCondition                        bool
 	Occurrences                        *Occurrences
+	MemberAccesses                     *MemberAccesses
 	variableOrigins                    map[*Variable]*Origin
 	memberOrigins                      map[Type]map[string]*Origin
 	seenImports                        map[ast.LocationID]bool
@@ -220,6 +221,7 @@ func NewChecker(program *ast.Program, location ast.Location, options ...Option) 
 		GlobalValues:        map[string]*Variable{},
 		GlobalTypes:         map[string]*Variable{},
 		Occurrences:         NewOccurrences(),
+		MemberAccesses:      NewMemberAccesses(),
 		containerTypes:      map[Type]bool{},
 		variableOrigins:     map[*Variable]*Origin{},
 		memberOrigins:       map[Type]map[string]*Origin{},
@@ -1870,8 +1872,20 @@ func (checker *Checker) withSelfResourceInvalidationAllowed(f func()) {
 	f()
 }
 
-const OwnerFieldName = "owner"
-const UUIDFieldName = "uuid"
+const ResourceOwnerFieldName = "owner"
+const ResourceUUIDFieldName = "uuid"
+
+const contractAccountFieldDocString = `
+The account where the contract is deployed in
+`
+
+const resourceOwnerFieldDocString = `
+The account owning the resource, i.e. the account that stores the account, or nil if the resource is not currently in storage
+`
+
+const resourceUUIDFieldDocString = `
+The automatically generated, unique ID of the resource
+`
 
 func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 	var predeclaredMembers []*Member
@@ -1882,6 +1896,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 		declarationKind common.DeclarationKind,
 		access ast.Access,
 		ignoreInSerialization bool,
+		docString string,
 	) {
 		predeclaredMembers = append(predeclaredMembers, &Member{
 			ContainerType:         containerType,
@@ -1892,10 +1907,11 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 			TypeAnnotation:        NewTypeAnnotation(fieldType),
 			Predeclared:           true,
 			IgnoreInSerialization: ignoreInSerialization,
+			DocString:             docString,
 		})
 	}
 
-	// All types have a predeclared member `fun isInstance(_ type: Type)`
+	// All types have a predeclared member `fun isInstance(_ type: Type): Bool`
 
 	addPredeclaredMember(
 		IsInstanceFunctionName,
@@ -1903,6 +1919,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 		common.DeclarationKindFunction,
 		ast.AccessPublic,
 		true,
+		isInstanceFunctionDocString,
 	)
 
 	if compositeKindedType, ok := containerType.(CompositeKindedType); ok {
@@ -1920,6 +1937,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 				common.DeclarationKindField,
 				ast.AccessPrivate,
 				true,
+				contractAccountFieldDocString,
 			)
 
 		case common.CompositeKindResource:
@@ -1930,24 +1948,26 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 			// ignored in serialization
 
 			addPredeclaredMember(
-				OwnerFieldName,
+				ResourceOwnerFieldName,
 				&OptionalType{
 					Type: &PublicAccountType{},
 				},
 				common.DeclarationKindField,
 				ast.AccessPublic,
 				true,
+				resourceOwnerFieldDocString,
 			)
 
 			// `pub let uuid: UInt64`,
 			// included in serialization
 
 			addPredeclaredMember(
-				UUIDFieldName,
+				ResourceUUIDFieldName,
 				&UInt64Type{},
 				common.DeclarationKindField,
 				ast.AccessPublic,
 				false,
+				resourceUUIDFieldDocString,
 			)
 		}
 	}

@@ -256,7 +256,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 	valueType Type,
 ) (memberType Type) {
 
-	member, isOptional := checker.visitMember(target)
+	_, member, isOptional := checker.visitMember(target)
 
 	if member == nil {
 		return &InvalidType{}

@@ -183,6 +183,8 @@ func newFlowEventType(identifier string, parameters ...*sema.Parameter) *sema.Co
 				eventType,
 				parameter.Identifier,
 				parameter.TypeAnnotation.Type,
+				// TODO: add docstring support for parameters
+				"",
 			)
 
 		eventType.ConstructorParameters = append(
@@ -301,34 +303,66 @@ func (*BlockType) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-func (*BlockType) CanHaveMembers() bool {
-	return true
-}
-
 const BlockIDSize = 32
 
-func (t *BlockType) GetMember(identifier string, _ ast.Range, _ func(error)) *sema.Member {
-	newField := func(fieldType sema.Type) *sema.Member {
-		return sema.NewPublicConstantFieldMember(t, identifier, fieldType)
-	}
+var blockIDFieldType = &sema.ConstantSizedType{
+	Type: &sema.UInt8Type{},
+	Size: BlockIDSize,
+}
 
-	switch identifier {
-	case "height":
-		return newField(&sema.UInt64Type{})
+const blockTypeHeightFieldDocString = `
+The height of the block.
 
-	case "timestamp":
-		return newField(&sema.UFix64Type{})
+If the blockchain is viewed as a tree with the genesis block at the root, the height of a node is the number of edges between the node and the genesis block
+`
 
-	case "id":
-		return newField(
-			&sema.ConstantSizedType{
-				Type: &sema.UInt8Type{},
-				Size: BlockIDSize,
+const blockTypeTimestampFieldDocString = `
+The ID of the block.
+
+It is essentially the hash of the block
+`
+
+const blockTypeIdFieldDocString = `
+The timestamp of the block.
+
+It is the local clock time of the block proposer when it generates the block
+`
+
+func (t *BlockType) GetMembers() map[string]sema.MemberResolver {
+	return map[string]sema.MemberResolver{
+		"height": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *sema.Member {
+				return sema.NewPublicConstantFieldMember(
+					t,
+					identifier,
+					&sema.UInt64Type{},
+					blockTypeHeightFieldDocString,
+				)
 			},
-		)
-
-	default:
-		return nil
+		},
+		"timestamp": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *sema.Member {
+				return sema.NewPublicConstantFieldMember(
+					t,
+					identifier,
+					&sema.UFix64Type{},
+					blockTypeTimestampFieldDocString,
+				)
+			},
+		},
+		"id": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *sema.Member {
+				return sema.NewPublicConstantFieldMember(
+					t,
+					identifier,
+					blockIDFieldType,
+					blockTypeIdFieldDocString,
+				)
+			},
+		},
 	}
 }
 

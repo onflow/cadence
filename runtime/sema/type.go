@@ -123,6 +123,8 @@ type Type interface {
 	// If resolution fails, it returns `nil`.
 	//
 	Resolve(typeArguments map[*TypeParameter]Type) Type
+
+	GetMembers() map[string]MemberResolver
 }
 
 // ValueIndexableType is a type which can be indexed into using a value
@@ -134,12 +136,9 @@ type ValueIndexableType interface {
 	IndexingType() Type
 }
 
-// MemberAccessibleType is a type which might have members
-//
-type MemberAccessibleType interface {
-	Type
-	CanHaveMembers() bool
-	GetMember(identifier string, targetRange ast.Range, report func(error)) *Member
+type MemberResolver struct {
+	Kind    common.DeclarationKind
+	Resolve func(identifier string, targetRange ast.Range, report func(error)) *Member
 }
 
 // ContainedType is a type which might have a container type
@@ -276,6 +275,10 @@ var isInstanceFunctionType = &FunctionType{
 	),
 }
 
+const isInstanceFunctionDocString = `
+Returns true if the object conforms to the given type at runtime
+`
+
 // toString
 
 const ToStringFunctionName = "toString"
@@ -286,17 +289,9 @@ var toStringFunctionType = &FunctionType{
 	),
 }
 
-// toBytes
-
-const ToBytesFunctionName = "toBytes"
-
-var toBytesFunctionType = &FunctionType{
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&VariableSizedType{
-			Type: &UInt8Type{},
-		},
-	),
-}
+const toStringFunctionDocString = `
+A textual representation of this object
+`
 
 // toBigEndianBytes
 
@@ -310,62 +305,64 @@ var toBigEndianBytesFunctionType = &FunctionType{
 	),
 }
 
-// typeBuiltinFunctionTypes
+const toBigEndianBytesFunctionDocString = `
+Returns an array containing the big-endian byte representation of the number
+`
 
-var typeBuiltinFunctionTypes = map[TypeID]map[string]*FunctionType{}
-
-func addTypeBuiltinFunctionType(ty Type, name string, functionType *FunctionType) {
-	functionTypes, ok := typeBuiltinFunctionTypes[ty.ID()]
-	if !ok {
-		functionTypes = map[string]*FunctionType{}
-		typeBuiltinFunctionTypes[ty.ID()] = functionTypes
+func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]MemberResolver {
+	if members == nil {
+		members = map[string]MemberResolver{}
 	}
 
-	if _, ok = functionTypes[name]; ok {
-		panic(fmt.Errorf(
-			"invalid redeclaration of built-in function %s for type %s: %s",
-			ty, name, functionType,
-		))
+	// All types have a predeclared member `fun isInstance(_ type: Type): Bool`
+
+	members[IsInstanceFunctionName] = MemberResolver{
+		Kind: common.DeclarationKindFunction,
+		Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+			return NewPublicFunctionMember(
+				ty,
+				identifier,
+				isInstanceFunctionType,
+				isInstanceFunctionDocString,
+			)
+		},
 	}
-
-	functionTypes[name] = functionType
-}
-
-func init() {
-
-	// Declare the built-in functions
 
 	// All number types and addresses have a `toString` function
 
-	for _, ty := range append(
-		AllNumberTypes[:],
-		&AddressType{},
-	) {
-		addTypeBuiltinFunctionType(
-			ty,
-			ToStringFunctionName,
-			toStringFunctionType,
-		)
+	if IsSubType(ty, &NumberType{}) || IsSubType(ty, &AddressType{}) {
+
+		members[ToStringFunctionName] = MemberResolver{
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					ty,
+					identifier,
+					toStringFunctionType,
+					toStringFunctionDocString,
+				)
+			},
+		}
 	}
 
 	// All number types have a `toBigEndianBytes` function
 
-	for _, ty := range AllNumberTypes[:] {
-		addTypeBuiltinFunctionType(
-			ty,
-			ToBigEndianBytesFunctionName,
-			toBigEndianBytesFunctionType,
-		)
+	if IsSubType(ty, &NumberType{}) {
+
+		members[ToBigEndianBytesFunctionName] = MemberResolver{
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					ty,
+					identifier,
+					toBigEndianBytesFunctionType,
+					toBigEndianBytesFunctionDocString,
+				)
+			},
+		}
 	}
 
-	// `Address` has a `toBytes` function
-
-	addTypeBuiltinFunctionType(
-		&AddressType{},
-		ToBytesFunctionName,
-		toBytesFunctionType,
-	)
-
+	return members
 }
 
 // MetaType represents the type of a type.
@@ -422,19 +419,24 @@ func (t *MetaType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*MetaType) CanHaveMembers() bool {
-	return true
-}
+const typeIdentifierDocString = `
+The fully-qualified identifier of the type
+`
 
-func (t *MetaType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-
-	switch identifier {
-	case "identifier":
-		return NewPublicConstantFieldMember(t, identifier, &StringType{})
-
-	default:
-		return nil
-	}
+func (t *MetaType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, map[string]MemberResolver{
+		"identifier": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicConstantFieldMember(
+					t,
+					identifier,
+					&StringType{},
+					typeIdentifierDocString,
+				)
+			},
+		},
+	})
 }
 
 // AnyType represents the top type of all types.
@@ -493,6 +495,10 @@ func (t *AnyType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (t *AnyType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
+}
+
 // AnyStructType represents the top type of all non-resource types
 type AnyStructType struct{}
 
@@ -546,6 +552,10 @@ func (*AnyStructType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error)
 
 func (t *AnyStructType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (t *AnyStructType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // AnyResourceType represents the top type of all resource types
@@ -603,6 +613,10 @@ func (t *AnyResourceType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (t *AnyResourceType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
+}
+
 // NeverType represents the bottom type
 type NeverType struct{}
 
@@ -657,6 +671,10 @@ func (t *NeverType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (t *NeverType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
+}
+
 // VoidType represents the void type
 type VoidType struct{}
 
@@ -709,6 +727,10 @@ func (*VoidType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ a
 
 func (t *VoidType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (t *VoidType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // InvalidType represents a type that is invalid.
@@ -766,6 +788,10 @@ func (*InvalidType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), 
 
 func (t *InvalidType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (t *InvalidType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // OptionalType represents the optional variant of another type
@@ -848,6 +874,10 @@ func (t *OptionalType) Resolve(typeParameters map[*TypeParameter]Type) Type {
 	return &OptionalType{
 		Type: newInnerType,
 	}
+}
+
+func (t *OptionalType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // GenericType
@@ -951,6 +981,10 @@ func (t *GenericType) Resolve(typeParameters map[*TypeParameter]Type) Type {
 	return ty
 }
 
+func (t *GenericType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
+}
+
 // BoolType represents the boolean type
 type BoolType struct{}
 
@@ -1003,6 +1037,10 @@ func (*BoolType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ a
 
 func (t *BoolType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (t *BoolType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // CharacterType represents the character type
@@ -1060,6 +1098,10 @@ func (t *CharacterType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (t *CharacterType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
+}
+
 // StringType represents the string type
 type StringType struct{}
 
@@ -1106,10 +1148,6 @@ func (*StringType) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-func (*StringType) CanHaveMembers() bool {
-	return true
-}
-
 var stringTypeConcatFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
@@ -1122,6 +1160,10 @@ var stringTypeConcatFunctionType = &FunctionType{
 		&StringType{},
 	),
 }
+
+const stringTypeConcatFunctionDocString = `
+Returns a new string which contains the given string concatenated to the end of the original string, but does not modify the original string
+`
 
 var stringTypeSliceFunctionType = &FunctionType{
 	Parameters: []*Parameter{
@@ -1139,6 +1181,14 @@ var stringTypeSliceFunctionType = &FunctionType{
 	),
 }
 
+const stringTypeSliceFunctionDocString = `
+Returns a new string containing the slice of the characters in the given string from start index ` + "`from`" + ` up to, but not including, the end index ` + "`upTo`" + `.
+
+This function creates a new string whose length is ` + "`upTo - from`" + `.
+It does not modify the original string.
+If either of the parameters are out of the bounds of the string, the function will fail
+`
+
 var stringTypeDecodeHexFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&VariableSizedType{
@@ -1147,27 +1197,64 @@ var stringTypeDecodeHexFunctionType = &FunctionType{
 	),
 }
 
-func (t *StringType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
+const stringTypeDecodeHexFunctionDocString = `
+Returns an array containing the byte represented by the given hexadecimal string.
 
-	switch identifier {
-	case "concat":
-		return newFunction(stringTypeConcatFunctionType)
+The given string must only contain hexadecimal characters and must have an even length.
+If the string is malformed, the program aborts
+`
 
-	case "slice":
-		return newFunction(stringTypeSliceFunctionType)
+const stringTypeLengthFieldDocString = `
+The number of characters in the string
+`
 
-	case "decodeHex":
-		return newFunction(stringTypeDecodeHexFunctionType)
-
-	case "length":
-		return NewPublicConstantFieldMember(t, identifier, &IntType{})
-
-	default:
-		return nil
-	}
+func (t *StringType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, map[string]MemberResolver{
+		"concat": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					stringTypeConcatFunctionType,
+					stringTypeConcatFunctionDocString,
+				)
+			},
+		},
+		"slice": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					stringTypeSliceFunctionType,
+					stringTypeSliceFunctionDocString,
+				)
+			},
+		},
+		"decodeHex": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					stringTypeDecodeHexFunctionType,
+					stringTypeDecodeHexFunctionDocString,
+				)
+			},
+		},
+		"length": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicConstantFieldMember(
+					t,
+					identifier,
+					&IntType{},
+					stringTypeLengthFieldDocString,
+				)
+			},
+		},
+	})
 }
 
 func (t *StringType) isValueIndexableType() bool {
@@ -1252,20 +1339,8 @@ func (t *NumberType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*NumberType) CanHaveMembers() bool {
-	return true
-}
-
-func (t *NumberType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *NumberType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // SignedNumberType represents the super-type of all signed number types
@@ -1330,20 +1405,8 @@ func (t *SignedNumberType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*SignedNumberType) CanHaveMembers() bool {
-	return true
-}
-
-func (t *SignedNumberType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *SignedNumberType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // IntegerRangedType
@@ -1423,20 +1486,8 @@ func (t *IntegerType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*IntegerType) CanHaveMembers() bool {
-	return true
-}
-
-func (t *IntegerType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *IntegerType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // SignedIntegerType represents the super-type of all signed integer types
@@ -1501,20 +1552,8 @@ func (t *SignedIntegerType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*SignedIntegerType) CanHaveMembers() bool {
-	return true
-}
-
-func (t *SignedIntegerType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *SignedIntegerType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // IntType represents the arbitrary-precision integer type `Int`
@@ -1579,20 +1618,8 @@ func (t *IntType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*IntType) CanHaveMembers() bool {
-	return true
-}
-
-func (t *IntType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *IntType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // Int8Type represents the 8-bit signed integer type `Int8`
@@ -1661,20 +1688,8 @@ func (t *Int8Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*Int8Type) CanHaveMembers() bool {
-	return true
-}
-
-func (t *Int8Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *Int8Type) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // Int16Type represents the 16-bit signed integer type `Int16`
@@ -1742,20 +1757,8 @@ func (t *Int16Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*Int16Type) CanHaveMembers() bool {
-	return true
-}
-
-func (t *Int16Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *Int16Type) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // Int32Type represents the 32-bit signed integer type `Int32`
@@ -1823,20 +1826,8 @@ func (t *Int32Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*Int32Type) CanHaveMembers() bool {
-	return true
-}
-
-func (t *Int32Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *Int32Type) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // Int64Type represents the 64-bit signed integer type `Int64`
@@ -1904,20 +1895,8 @@ func (t *Int64Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*Int64Type) CanHaveMembers() bool {
-	return true
-}
-
-func (t *Int64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *Int64Type) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // Int128Type represents the 128-bit signed integer type `Int128`
@@ -1997,20 +1976,8 @@ func (t *Int128Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*Int128Type) CanHaveMembers() bool {
-	return true
-}
-
-func (t *Int128Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *Int128Type) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // Int256Type represents the 256-bit signed integer type `Int256`
@@ -2090,20 +2057,8 @@ func (t *Int256Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*Int256Type) CanHaveMembers() bool {
-	return true
-}
-
-func (t *Int256Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *Int256Type) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // UIntType represents the arbitrary-precision unsigned integer type `UInt`
@@ -2170,20 +2125,8 @@ func (t *UIntType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*UIntType) CanHaveMembers() bool {
-	return true
-}
-
-func (t *UIntType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *UIntType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // UInt8Type represents the 8-bit unsigned integer type `UInt8`
@@ -2252,20 +2195,8 @@ func (t *UInt8Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*UInt8Type) CanHaveMembers() bool {
-	return true
-}
-
-func (t *UInt8Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *UInt8Type) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // UInt16Type represents the 16-bit unsigned integer type `UInt16`
@@ -2334,20 +2265,8 @@ func (t *UInt16Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*UInt16Type) CanHaveMembers() bool {
-	return true
-}
-
-func (t *UInt16Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *UInt16Type) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // UInt32Type represents the 32-bit unsigned integer type `UInt32`
@@ -2416,20 +2335,8 @@ func (t *UInt32Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*UInt32Type) CanHaveMembers() bool {
-	return true
-}
-
-func (t *UInt32Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *UInt32Type) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // UInt64Type represents the 64-bit unsigned integer type `UInt64`
@@ -2498,20 +2405,8 @@ func (t *UInt64Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*UInt64Type) CanHaveMembers() bool {
-	return true
-}
-
-func (t *UInt64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *UInt64Type) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // UInt128Type represents the 128-bit unsigned integer type `UInt128`
@@ -2586,20 +2481,8 @@ func (t *UInt128Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*UInt128Type) CanHaveMembers() bool {
-	return true
-}
-
-func (t *UInt128Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *UInt128Type) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // UInt256Type represents the 256-bit unsigned integer type `UInt256`
@@ -2674,20 +2557,8 @@ func (t *UInt256Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*UInt256Type) CanHaveMembers() bool {
-	return true
-}
-
-func (t *UInt256Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *UInt256Type) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // Word8Type represents the 8-bit unsigned integer type `Word8`
@@ -2756,20 +2627,8 @@ func (t *Word8Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*Word8Type) CanHaveMembers() bool {
-	return true
-}
-
-func (t *Word8Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *Word8Type) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // Word16Type represents the 16-bit unsigned integer type `Word16`
@@ -2838,20 +2697,8 @@ func (t *Word16Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*Word16Type) CanHaveMembers() bool {
-	return true
-}
-
-func (t *Word16Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *Word16Type) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // Word32Type represents the 32-bit unsigned integer type `Word32`
@@ -2920,20 +2767,8 @@ func (t *Word32Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*Word32Type) CanHaveMembers() bool {
-	return true
-}
-
-func (t *Word32Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *Word32Type) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // Word64Type represents the 64-bit unsigned integer type `Word64`
@@ -3002,20 +2837,8 @@ func (t *Word64Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*Word64Type) CanHaveMembers() bool {
-	return true
-}
-
-func (t *Word64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *Word64Type) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // FixedPointType represents the super-type of all fixed-point types
@@ -3080,20 +2903,8 @@ func (t *FixedPointType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*FixedPointType) CanHaveMembers() bool {
-	return true
-}
-
-func (t *FixedPointType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *FixedPointType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // SignedFixedPointType represents the super-type of all signed fixed-point types
@@ -3158,20 +2969,8 @@ func (t *SignedFixedPointType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*SignedFixedPointType) CanHaveMembers() bool {
-	return true
-}
-
-func (t *SignedFixedPointType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *SignedFixedPointType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 const Fix64Scale = fixedpoint.Fix64Scale
@@ -3264,20 +3063,8 @@ func (t *Fix64Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*Fix64Type) CanHaveMembers() bool {
-	return true
-}
-
-func (t *Fix64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *Fix64Type) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // UFix64Type represents the 64-bit unsigned decimal fixed-point type `UFix64`
@@ -3367,20 +3154,8 @@ func (t *UFix64Type) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*UFix64Type) CanHaveMembers() bool {
-	return true
-}
-
-func (t *UFix64Type) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+func (t *UFix64Type) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // ArrayType
@@ -3390,215 +3165,278 @@ type ArrayType interface {
 	isArrayType()
 }
 
-func getArrayMember(arrayType ArrayType, field string, targetRange ast.Range, report func(error)) *Member {
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(arrayType, field, functionType)
+const arrayTypeContainsFunctionDocString = `
+Returns true if the given object is in the array
+`
+
+const arrayTypeLengthFieldDocString = `
+Returns the number of elements in the array
+`
+
+const arrayTypeAppendFunctionDocString = `
+Adds the given element to the end of the array
+`
+
+const arrayTypeConcatFunctionDocString = `
+Returns a new array which contains the given array concatenated to the end of the original array, but does not modify the original array
+`
+
+const arrayTypeInsertFunctionDocString = `
+Inserts the given element at the given index of the array.
+
+The index must be within the bounds of the array.
+If the index is outside the bounds, the program aborts.
+
+The existing element at the supplied index is not overwritten.
+
+All the elements after the new inserted element are shifted to the right by one
+`
+
+const arrayTypeRemoveFunctionDocString = `
+Removes the element at the given index from the array and returns it.
+
+The index must be within the bounds of the array.
+If the index is outside the bounds, the program aborts
+`
+
+const arrayTypeRemoveFirstFunctionDocString = `
+Removes the first element from the array and returns it.
+
+The array must not be empty. If the array is empty, the program aborts
+`
+
+const arrayTypeRemoveLastFunctionDocString = `
+Removes the last element from the array and returns it.
+
+The array must not be empty. If the array is empty, the program aborts
+`
+
+func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
+
+	members := map[string]MemberResolver{
+		"contains": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+
+				elementType := arrayType.ElementType(false)
+
+				// It impossible for an array of resources to have a `contains` function:
+				// if the resource is passed as an argument, it cannot be inside the array
+
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				// TODO: implement Equatable interface: https://github.com/dapperlabs/bamboo-node/issues/78
+
+				if !elementType.IsEquatable() {
+					report(
+						&NotEquatableTypeError{
+							Type:  elementType,
+							Range: targetRange,
+						},
+					)
+				}
+
+				return NewPublicFunctionMember(
+					arrayType,
+					identifier,
+					&FunctionType{
+						Parameters: []*Parameter{
+							{
+								Label:          ArgumentLabelNotRequired,
+								Identifier:     "element",
+								TypeAnnotation: NewTypeAnnotation(elementType),
+							},
+						},
+						ReturnTypeAnnotation: NewTypeAnnotation(
+							&BoolType{},
+						),
+					},
+					arrayTypeContainsFunctionDocString,
+				)
+			},
+		},
+		"length": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicConstantFieldMember(
+					arrayType,
+					identifier,
+					&IntType{},
+					arrayTypeLengthFieldDocString,
+				)
+			},
+		},
 	}
 
-	switch field {
-	case "append":
-		// Appending elements to a constant sized array is not allowed
+	// TODO: maybe still return members but report a helpful error?
 
-		if _, isConstantSized := arrayType.(*ConstantSizedType); isConstantSized {
-			// TODO: maybe return member but report helpful error?
-			return nil
-		}
+	if _, ok := arrayType.(*VariableSizedType); ok {
 
-		elementType := arrayType.ElementType(false)
-		return newFunction(
-			&FunctionType{
-				Parameters: []*Parameter{
-					{
-						Label:          ArgumentLabelNotRequired,
-						Identifier:     "element",
-						TypeAnnotation: NewTypeAnnotation(elementType),
+		members["append"] = MemberResolver{
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+				elementType := arrayType.ElementType(false)
+				return NewPublicFunctionMember(
+					arrayType,
+					identifier,
+					&FunctionType{
+						Parameters: []*Parameter{
+							{
+								Label:          ArgumentLabelNotRequired,
+								Identifier:     "element",
+								TypeAnnotation: NewTypeAnnotation(elementType),
+							},
+						},
+						ReturnTypeAnnotation: NewTypeAnnotation(
+							&VoidType{},
+						),
 					},
-				},
-				ReturnTypeAnnotation: NewTypeAnnotation(
-					&VoidType{},
-				),
+					arrayTypeAppendFunctionDocString,
+				)
 			},
-		)
-
-	case "concat":
-		// TODO: maybe allow constant sized:
-		//    concatenate with variable sized and return variable sized
-
-		if _, isConstantSized := arrayType.(*ConstantSizedType); isConstantSized {
-			// TODO: maybe return member but report helpful error?
-			return nil
 		}
 
-		// TODO: maybe allow for resource element type
+		members["concat"] = MemberResolver{
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
 
-		elementType := arrayType.ElementType(false)
+				// TODO: maybe allow for resource element type
 
-		if elementType.IsResourceType() {
-			report(
-				&InvalidResourceArrayMemberError{
-					Name:            field,
-					DeclarationKind: common.DeclarationKindFunction,
-					Range:           targetRange,
-				},
-			)
-		}
+				elementType := arrayType.ElementType(false)
 
-		typeAnnotation := NewTypeAnnotation(arrayType)
+				if elementType.IsResourceType() {
+					report(
+						&InvalidResourceArrayMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
 
-		return newFunction(
-			&FunctionType{
-				Parameters: []*Parameter{
-					{
-						Label:          ArgumentLabelNotRequired,
-						Identifier:     "other",
-						TypeAnnotation: typeAnnotation,
+				typeAnnotation := NewTypeAnnotation(arrayType)
+
+				return NewPublicFunctionMember(
+					arrayType,
+					identifier,
+					&FunctionType{
+						Parameters: []*Parameter{
+							{
+								Label:          ArgumentLabelNotRequired,
+								Identifier:     "other",
+								TypeAnnotation: typeAnnotation,
+							},
+						},
+						ReturnTypeAnnotation: typeAnnotation,
 					},
-				},
-				ReturnTypeAnnotation: typeAnnotation,
+					arrayTypeConcatFunctionDocString,
+				)
 			},
-		)
-
-	case "insert":
-		// Inserting elements into to a constant sized array is not allowed
-
-		if _, isConstantSized := arrayType.(*ConstantSizedType); isConstantSized {
-			// TODO: maybe return member but report helpful error?
-			return nil
 		}
 
-		elementType := arrayType.ElementType(false)
+		members["insert"] = MemberResolver{
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 
-		return newFunction(
-			&FunctionType{
-				Parameters: []*Parameter{
-					{
-						Identifier:     "at",
-						TypeAnnotation: NewTypeAnnotation(&IntegerType{}),
+				elementType := arrayType.ElementType(false)
+
+				return NewPublicFunctionMember(
+					arrayType,
+					identifier,
+					&FunctionType{
+						Parameters: []*Parameter{
+							{
+								Identifier:     "at",
+								TypeAnnotation: NewTypeAnnotation(&IntegerType{}),
+							},
+							{
+								Label:          ArgumentLabelNotRequired,
+								Identifier:     "element",
+								TypeAnnotation: NewTypeAnnotation(elementType),
+							},
+						},
+						ReturnTypeAnnotation: NewTypeAnnotation(
+							&VoidType{},
+						),
 					},
-					{
-						Label:          ArgumentLabelNotRequired,
-						Identifier:     "element",
-						TypeAnnotation: NewTypeAnnotation(elementType),
+					arrayTypeInsertFunctionDocString,
+				)
+			},
+		}
+
+		members["remove"] = MemberResolver{
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+
+				elementType := arrayType.ElementType(false)
+
+				return NewPublicFunctionMember(
+					arrayType,
+					identifier,
+					&FunctionType{
+						Parameters: []*Parameter{
+							{
+								Identifier:     "at",
+								TypeAnnotation: NewTypeAnnotation(&IntegerType{}),
+							},
+						},
+						ReturnTypeAnnotation: NewTypeAnnotation(
+							elementType,
+						),
 					},
-				},
-				ReturnTypeAnnotation: NewTypeAnnotation(
-					&VoidType{},
-				),
+					arrayTypeRemoveFunctionDocString,
+				)
 			},
-		)
-
-	case "remove":
-		// Removing elements from a constant sized array is not allowed
-
-		if _, isConstantSized := arrayType.(*ConstantSizedType); isConstantSized {
-			// TODO: maybe return member but report helpful error?
-			return nil
 		}
 
-		elementType := arrayType.ElementType(false)
+		members["removeFirst"] = MemberResolver{
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 
-		return newFunction(
-			&FunctionType{
-				Parameters: []*Parameter{
-					{
-						Identifier:     "at",
-						TypeAnnotation: NewTypeAnnotation(&IntegerType{}),
+				elementType := arrayType.ElementType(false)
+
+				return NewPublicFunctionMember(
+					arrayType,
+					identifier,
+					&FunctionType{
+						ReturnTypeAnnotation: NewTypeAnnotation(
+							elementType,
+						),
 					},
-				},
-				ReturnTypeAnnotation: NewTypeAnnotation(
-					elementType,
-				),
+					arrayTypeRemoveFirstFunctionDocString,
+				)
 			},
-		)
-
-	case "removeFirst":
-		// Removing elements from a constant sized array is not allowed
-
-		if _, isConstantSized := arrayType.(*ConstantSizedType); isConstantSized {
-			// TODO: maybe return member but report helpful error?
-			return nil
 		}
 
-		elementType := arrayType.ElementType(false)
+		members["removeLast"] = MemberResolver{
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 
-		return newFunction(
-			&FunctionType{
-				ReturnTypeAnnotation: NewTypeAnnotation(
-					elementType,
-				),
-			},
-		)
+				elementType := arrayType.ElementType(false)
 
-	case "removeLast":
-		// Removing elements from a constant sized array is not allowed
-
-		if _, isConstantSized := arrayType.(*ConstantSizedType); isConstantSized {
-			// TODO: maybe return member but report helpful error?
-			return nil
-		}
-
-		elementType := arrayType.ElementType(false)
-
-		return newFunction(
-			&FunctionType{
-				ReturnTypeAnnotation: NewTypeAnnotation(
-					elementType,
-				),
-			},
-		)
-
-	case "contains":
-		elementType := arrayType.ElementType(false)
-
-		// It impossible for an array of resources to have a `contains` function:
-		// if the resource is passed as an argument, it cannot be inside the array
-
-		if elementType.IsResourceType() {
-			report(
-				&InvalidResourceArrayMemberError{
-					Name:            field,
-					DeclarationKind: common.DeclarationKindFunction,
-					Range:           targetRange,
-				},
-			)
-		}
-
-		// TODO: implement Equatable interface: https://github.com/dapperlabs/bamboo-node/issues/78
-
-		if !elementType.IsEquatable() {
-			report(
-				&NotEquatableTypeError{
-					Type:  elementType,
-					Range: targetRange,
-				},
-			)
-		}
-
-		return newFunction(
-			&FunctionType{
-				Parameters: []*Parameter{
-					{
-						Label:          ArgumentLabelNotRequired,
-						Identifier:     "element",
-						TypeAnnotation: NewTypeAnnotation(elementType),
+				return NewPublicFunctionMember(
+					arrayType,
+					identifier,
+					&FunctionType{
+						ReturnTypeAnnotation: NewTypeAnnotation(
+							elementType,
+						),
 					},
-				},
-				ReturnTypeAnnotation: NewTypeAnnotation(
-					&BoolType{},
-				),
+					arrayTypeRemoveLastFunctionDocString,
+				)
 			},
-		)
-
-	case "length":
-		return NewPublicConstantFieldMember(
-			arrayType,
-			field,
-			&IntType{},
-		)
-
-	default:
-		return nil
+		}
 	}
+
+	return withBuiltinMembers(arrayType, members)
 }
 
 // VariableSizedType is a variable sized array type
@@ -3631,12 +3469,8 @@ func (t *VariableSizedType) Equal(other Type) bool {
 	return t.Type.Equal(otherArray.Type)
 }
 
-func (t *VariableSizedType) CanHaveMembers() bool {
-	return true
-}
-
-func (t *VariableSizedType) GetMember(identifier string, targetRange ast.Range, report func(error)) *Member {
-	return getArrayMember(t, identifier, targetRange, report)
+func (t *VariableSizedType) GetMembers() map[string]MemberResolver {
+	return getArrayMembers(t)
 }
 
 func (t *VariableSizedType) IsResourceType() bool {
@@ -3733,12 +3567,8 @@ func (t *ConstantSizedType) Equal(other Type) bool {
 		t.Size == otherArray.Size
 }
 
-func (t *ConstantSizedType) CanHaveMembers() bool {
-	return true
-}
-
-func (t *ConstantSizedType) GetMember(identifier string, targetRange ast.Range, report func(error)) *Member {
-	return getArrayMember(t, identifier, targetRange, report)
+func (t *ConstantSizedType) GetMembers() map[string]MemberResolver {
+	return getArrayMembers(t)
 }
 
 func (t *ConstantSizedType) IsResourceType() bool {
@@ -4229,6 +4059,10 @@ func (t *FunctionType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+func (t *FunctionType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
+}
+
 // SpecialFunctionType is the the type representing a special function,
 // i.e., a constructor or destructor
 
@@ -4237,12 +4071,21 @@ type SpecialFunctionType struct {
 	Members map[string]*Member
 }
 
-func (t *SpecialFunctionType) CanHaveMembers() bool {
-	return true
-}
+func (t *SpecialFunctionType) GetMembers() map[string]MemberResolver {
+	// TODO: optimize
+	members := make(map[string]MemberResolver, len(t.Members))
+	for name, loopMember := range t.Members {
+		// NOTE: don't capture loop variable
+		member := loopMember
+		members[name] = MemberResolver{
+			Kind: member.DeclarationKind,
+			Resolve: func(_ string, _ ast.Range, _ func(error)) *Member {
+				return member
+			},
+		}
+	}
 
-func (t *SpecialFunctionType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	return t.Members[identifier]
+	return withBuiltinMembers(t, members)
 }
 
 // CheckedFunctionType is the the type representing a function that checks the arguments,
@@ -4581,14 +4424,18 @@ func (t *CompositeType) Equal(other Type) bool {
 		otherStructure.ID() == t.ID()
 }
 
-func (t *CompositeType) CanHaveMembers() bool {
-	return true
-}
-
-func (t *CompositeType) GetMember(identifier string, accessRange ast.Range, report func(error)) *Member {
-	member := t.Members[identifier]
-	if member != nil {
-		return member
+func (t *CompositeType) GetMembers() map[string]MemberResolver {
+	// TODO: optimize
+	members := make(map[string]MemberResolver, len(t.Members))
+	for name, loopMember := range t.Members {
+		// NOTE: don't capture loop variable
+		member := loopMember
+		members[name] = MemberResolver{
+			Kind: member.DeclarationKind,
+			Resolve: func(_ string, _ ast.Range, _ func(error)) *Member {
+				return member
+			},
+		}
 	}
 
 	// Check conformances.
@@ -4598,13 +4445,14 @@ func (t *CompositeType) GetMember(identifier string, accessRange ast.Range, repo
 	// it acts like an interface and does not have to declare members.
 
 	for conformance := range t.ExplicitInterfaceConformanceSet() {
-		member = conformance.GetMember(identifier, accessRange, report)
-		if member != nil {
-			return member
+		for name, resolver := range conformance.GetMembers() {
+			if _, ok := members[name]; !ok {
+				members[name] = resolver
+			}
 		}
 	}
 
-	return nil
+	return withBuiltinMembers(t, members)
 }
 
 func (t *CompositeType) IsResourceType() bool {
@@ -4735,11 +4583,7 @@ func (*AuthAccountType) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-func (*AuthAccountType) CanHaveMembers() bool {
-	return true
-}
-
-var authAccountSetCodeFunctionType = &FunctionType{
+var authAccountTypeSetCodeFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
@@ -4761,7 +4605,17 @@ var authAccountSetCodeFunctionType = &FunctionType{
 	})(),
 }
 
-var authAccountAddPublicKeyFunctionType = &FunctionType{
+const authAccountTypeSetCodeFieldDocString = `
+Updates the code in the account with the given code
+`
+
+const authAccountTypeUnsafeNotInitializingSetCodeFieldDocString = `
+**UNSAFE**
+
+Updates the code in the  account with the given code without constructing and initializing the contract
+`
+
+var authAccountTypeAddPublicKeyFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
@@ -4778,7 +4632,11 @@ var authAccountAddPublicKeyFunctionType = &FunctionType{
 	),
 }
 
-var authAccountRemovePublicKeyFunctionType = &FunctionType{
+const authAccountTypeAddPublicKeyFunctionDocString = `
+Adds the given byte representation of a public key to the account's keys
+`
+
+var authAccountTypeRemovePublicKeyFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Label:      ArgumentLabelNotRequired,
@@ -4793,7 +4651,11 @@ var authAccountRemovePublicKeyFunctionType = &FunctionType{
 	),
 }
 
-var authAccountSaveFunctionType = func() *FunctionType {
+const authAccountTypeRemovePublicKeyFunctionDocString = `
+Removes the public key at the given index from the account's keys
+`
+
+var authAccountTypeSaveFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{Name: "T"}
 
@@ -4821,7 +4683,16 @@ var authAccountSaveFunctionType = func() *FunctionType {
 	}
 }()
 
-var authAccountLoadFunctionType = func() *FunctionType {
+const authAccountTypeSaveFunctionDocString = `
+Saves the given object into the account's storage at the given path.
+Resources are moved into storage, and structures are copied.
+
+If there is already an object stored under the given path, the program aborts.
+
+The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed
+`
+
+var authAccountTypeLoadFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{Name: "T"}
 
@@ -4846,7 +4717,21 @@ var authAccountLoadFunctionType = func() *FunctionType {
 	}
 }()
 
-var authAccountCopyFunctionType = func() *FunctionType {
+const authAccountTypeLoadFunctionDocString = `
+Loads an object from the account's storage which is stored under the given path, or nil if no object is stored under the given path.
+
+If there is an object stored, the stored resource or structure is moved out of storage and returned as an optional.
+
+When the function returns, the storage no longer contains an object under the given path.
+
+The given type must be a supertype of the type of the loaded object.
+If it is not, the function returns nil.
+The given type must not necessarily be exactly the same as the type of the loaded object.
+
+The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed
+`
+
+var authAccountTypeCopyFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		Name:      "T",
@@ -4874,7 +4759,20 @@ var authAccountCopyFunctionType = func() *FunctionType {
 	}
 }()
 
-var authAccountBorrowFunctionType = func() *FunctionType {
+const authAccountTypeCopyFunctionDocString = `
+Returns a copy of a structure stored in account storage under the given path, without removing it from storage, or nil if no object is stored under the given path.
+
+If there is a structure stored, it is copied.
+The structure stays stored in storage after the function returns.
+
+The given type must be a supertype of the type of the copied structure.
+If it is not, the function returns nil.
+The given type must not necessarily be exactly the same as the type of the copied structure.
+
+The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed
+`
+
+var authAccountTypeBorrowFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		TypeBound: &ReferenceType{
@@ -4904,7 +4802,22 @@ var authAccountBorrowFunctionType = func() *FunctionType {
 	}
 }()
 
-var authAccountLinkFunctionType = func() *FunctionType {
+const authAccountTypeBorrowFunctionDocString = `
+Returns a reference to an object in storage without removing it from storage.
+
+If no object is stored under the given path, the function returns nil.
+If there is an object stored, a reference is returned as an optional.
+
+The given type must be a reference type.
+It must be possible to create the given reference type for the borrowed object.
+If it is not, the function returns nil.
+
+The given type must not necessarily be exactly the same as the type of the borrowed object.
+
+The path must be a storage path, i.e., only the domain ` + "`storage`" + ` is allowed
+`
+
+var authAccountTypeLinkFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		TypeBound: &ReferenceType{
@@ -4940,7 +4853,20 @@ var authAccountLinkFunctionType = func() *FunctionType {
 	}
 }()
 
-var authAccountUnlinkFunctionType = &FunctionType{
+const authAccountTypeLinkFunctionDocString = `
+Creates a capability at the given public or private path which targets the given public, private, or storage path.
+The target path leads to the object that will provide the functionality defined by this capability.
+
+The given type defines how the capability can be borrowed, i.e., how the stored value can be accessed.
+
+Returns nil if a link for the given capability path already exists, or the newly created capability if not.
+
+It is not necessary for the target path to lead to a valid object; the target path could be empty, or could lead to an object which does not provide the necessary type interface:
+The link function does **not** check if the target path is valid/exists at the time the capability is created and does **not** check if the target value conforms to the given type.
+The link is latent. The target value might be stored after the link is created, and the target value might be moved out after the link has been created.
+`
+
+var authAccountTypeUnlinkFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -4951,7 +4877,11 @@ var authAccountUnlinkFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
 }
 
-var accountGetCapabilityFunctionType = func() *FunctionType {
+const authAccountTypeUnlinkFunctionDocString = `
+Removes the capability at the given public or private path
+`
+
+var accountTypeGetCapabilityFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		TypeBound: &ReferenceType{
@@ -4984,7 +4914,11 @@ var accountGetCapabilityFunctionType = func() *FunctionType {
 	}
 }()
 
-var accountGetLinkTargetFunctionType = &FunctionType{
+const authAccountTypeGetCapabilityFunctionDocString = `
+Returns the capability at the given private or public path, or nil if it does not exist
+`
+
+var accountTypeGetLinkTargetFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Label:          ArgumentLabelNotRequired,
@@ -4999,56 +4933,160 @@ var accountGetLinkTargetFunctionType = &FunctionType{
 	),
 }
 
-func (t *AuthAccountType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+const accountTypeGetLinkTargetFunctionDocString = `
+Returns the target path of the capability at the given public or private path, or nil if there exists no capability at the given path.
+`
 
-	newField := func(fieldType Type) *Member {
-		return NewPublicConstantFieldMember(t, identifier, fieldType)
-	}
+const accountTypeAddressFieldDocString = `
+The address of the account
+`
 
-	newFunction := func(functionType InvokableType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case "address":
-		return newField(&AddressType{})
-
-	case "setCode", "unsafeNotInitializingSetCode":
-		return newFunction(authAccountSetCodeFunctionType)
-
-	case "addPublicKey":
-		return newFunction(authAccountAddPublicKeyFunctionType)
-
-	case "removePublicKey":
-		return newFunction(authAccountRemovePublicKeyFunctionType)
-
-	case "save":
-		return newFunction(authAccountSaveFunctionType)
-
-	case "load":
-		return newFunction(authAccountLoadFunctionType)
-
-	case "copy":
-		return newFunction(authAccountCopyFunctionType)
-
-	case "borrow":
-		return newFunction(authAccountBorrowFunctionType)
-
-	case "link":
-		return newFunction(authAccountLinkFunctionType)
-
-	case "unlink":
-		return newFunction(authAccountUnlinkFunctionType)
-
-	case "getCapability":
-		return newFunction(accountGetCapabilityFunctionType)
-
-	case "getLinkTarget":
-		return newFunction(accountGetLinkTargetFunctionType)
-
-	default:
-		return nil
-	}
+func (t *AuthAccountType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, map[string]MemberResolver{
+		"address": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicConstantFieldMember(
+					t,
+					identifier,
+					&AddressType{},
+					accountTypeAddressFieldDocString,
+				)
+			},
+		},
+		"setCode": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					authAccountTypeSetCodeFunctionType,
+					authAccountTypeSetCodeFieldDocString,
+				)
+			},
+		},
+		"unsafeNotInitializingSetCode": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					authAccountTypeSetCodeFunctionType,
+					authAccountTypeUnsafeNotInitializingSetCodeFieldDocString,
+				)
+			},
+		},
+		"addPublicKey": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					authAccountTypeAddPublicKeyFunctionType,
+					authAccountTypeAddPublicKeyFunctionDocString,
+				)
+			},
+		},
+		"removePublicKey": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					authAccountTypeRemovePublicKeyFunctionType,
+					authAccountTypeRemovePublicKeyFunctionDocString,
+				)
+			},
+		},
+		"save": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					authAccountTypeSaveFunctionType,
+					authAccountTypeSaveFunctionDocString,
+				)
+			},
+		},
+		"load": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					authAccountTypeLoadFunctionType,
+					authAccountTypeLoadFunctionDocString,
+				)
+			},
+		},
+		"copy": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					authAccountTypeCopyFunctionType,
+					authAccountTypeCopyFunctionDocString,
+				)
+			},
+		},
+		"borrow": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					authAccountTypeBorrowFunctionType,
+					authAccountTypeBorrowFunctionDocString,
+				)
+			},
+		},
+		"link": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					authAccountTypeLinkFunctionType,
+					authAccountTypeLinkFunctionDocString,
+				)
+			},
+		},
+		"unlink": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					authAccountTypeUnlinkFunctionType,
+					authAccountTypeUnlinkFunctionDocString,
+				)
+			},
+		},
+		"getCapability": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					accountTypeGetCapabilityFunctionType,
+					authAccountTypeGetCapabilityFunctionDocString,
+				)
+			},
+		},
+		"getLinkTarget": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					accountTypeGetLinkTargetFunctionType,
+					accountTypeGetLinkTargetFunctionDocString,
+				)
+			},
+		},
+	})
 }
 
 func (*AuthAccountType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -5106,33 +5144,46 @@ func (*PublicAccountType) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-func (*PublicAccountType) CanHaveMembers() bool {
-	return true
-}
+const publicAccountTypeGetLinkTargetFunctionDocString = `
+Returns the capability at the given public path, or nil if it does not exist
+`
 
-func (t *PublicAccountType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-
-	newField := func(fieldType Type) *Member {
-		return NewPublicConstantFieldMember(t, identifier, fieldType)
-	}
-
-	newFunction := func(functionType InvokableType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case "address":
-		return newField(&AddressType{})
-
-	case "getCapability":
-		return newFunction(accountGetCapabilityFunctionType)
-
-	case "getLinkTarget":
-		return newFunction(accountGetLinkTargetFunctionType)
-
-	default:
-		return nil
-	}
+func (t *PublicAccountType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, map[string]MemberResolver{
+		"address": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicConstantFieldMember(
+					t,
+					identifier,
+					&AddressType{},
+					accountTypeAddressFieldDocString,
+				)
+			},
+		},
+		"getCapability": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					accountTypeGetCapabilityFunctionType,
+					publicAccountTypeGetLinkTargetFunctionDocString,
+				)
+			},
+		},
+		"getLinkTarget": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					accountTypeGetLinkTargetFunctionType,
+					accountTypeGetLinkTargetFunctionDocString,
+				)
+			},
+		},
+	})
 }
 
 func (*PublicAccountType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -5160,7 +5211,12 @@ type Member struct {
 	DocString             string
 }
 
-func NewPublicFunctionMember(containerType Type, identifier string, invokableType InvokableType) *Member {
+func NewPublicFunctionMember(
+	containerType Type,
+	identifier string,
+	invokableType InvokableType,
+	docString string,
+) *Member {
 
 	return &Member{
 		ContainerType:   containerType,
@@ -5170,10 +5226,16 @@ func NewPublicFunctionMember(containerType Type, identifier string, invokableTyp
 		VariableKind:    ast.VariableKindConstant,
 		TypeAnnotation:  &TypeAnnotation{Type: invokableType},
 		ArgumentLabels:  invokableType.ArgumentLabels(),
+		DocString:       docString,
 	}
 }
 
-func NewPublicConstantFieldMember(containerType Type, identifier string, fieldType Type) *Member {
+func NewPublicConstantFieldMember(
+	containerType Type,
+	identifier string,
+	fieldType Type,
+	docString string,
+) *Member {
 	return &Member{
 		ContainerType:   containerType,
 		Access:          ast.AccessPublic,
@@ -5181,6 +5243,7 @@ func NewPublicConstantFieldMember(containerType Type, identifier string, fieldTy
 		DeclarationKind: common.DeclarationKindField,
 		VariableKind:    ast.VariableKindConstant,
 		TypeAnnotation:  NewTypeAnnotation(fieldType),
+		DocString:       docString,
 	}
 }
 
@@ -5286,12 +5349,20 @@ func (t *InterfaceType) Equal(other Type) bool {
 		otherInterface.ID() == t.ID()
 }
 
-func (t *InterfaceType) CanHaveMembers() bool {
-	return true
-}
-
-func (t *InterfaceType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	return t.Members[identifier]
+func (t *InterfaceType) GetMembers() map[string]MemberResolver {
+	// TODO: optimize
+	members := make(map[string]MemberResolver, len(t.Members))
+	for name, loopMember := range t.Members {
+		// NOTE: don't capture loop variable
+		member := loopMember
+		members[name] = MemberResolver{
+			Kind: member.DeclarationKind,
+			Resolve: func(_ string, _ ast.Range, _ func(error)) *Member {
+				return member
+			},
+		}
+	}
+	return withBuiltinMembers(t, members)
 }
 
 func (t *InterfaceType) IsResourceType() bool {
@@ -5428,95 +5499,139 @@ func (t *DictionaryType) ContainsFirstLevelInterfaceType() bool {
 		t.ValueType.ContainsFirstLevelInterfaceType()
 }
 
-func (t *DictionaryType) CanHaveMembers() bool {
-	return true
-}
+const dictionaryTypeLengthFieldDocString = `
+The number of entries in the dictionary
+`
 
-func (t *DictionaryType) GetMember(identifier string, targetRange ast.Range, report func(error)) *Member {
-	newField := func(fieldType Type) *Member {
-		return NewPublicConstantFieldMember(t, identifier, fieldType)
-	}
+const dictionaryTypeKeysFieldDocString = `
+An array containing all keys of the dictionary
+`
 
-	newFunction := func(functionType *FunctionType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
+const dictionaryTypeValuesFieldDocString = `
+An array containing all values of the dictionary
+`
 
-	switch identifier {
-	case "length":
-		return newField(&IntType{})
+const dictionaryTypeInsertFunctionDocString = `
+Inserts the given value into the dictionary under the given key.
 
-	case "keys":
-		// TODO: maybe allow for resource key type
+Returns the previous value as an optional if the dictionary contained the key, or nil if the dictionary did not contain the key
+`
 
-		if t.KeyType.IsResourceType() {
-			report(
-				&InvalidResourceDictionaryMemberError{
-					Name:            identifier,
-					DeclarationKind: common.DeclarationKindField,
-					Range:           targetRange,
-				},
-			)
-		}
+const dictionaryTypeRemoveFunctionDocString = `
+Removes the value for the given key from the dictionary.
 
-		return newField(&VariableSizedType{Type: t.KeyType})
+Returns the value as an optional if the dictionary contained the key, or nil if the dictionary did not contain the key
+`
 
-	case "values":
-		// TODO: maybe allow for resource value type
-
-		if t.ValueType.IsResourceType() {
-			report(
-				&InvalidResourceDictionaryMemberError{
-					Name:            identifier,
-					DeclarationKind: common.DeclarationKindField,
-					Range:           targetRange,
-				},
-			)
-		}
-
-		return newField(&VariableSizedType{Type: t.ValueType})
-
-	case "insert":
-		return newFunction(
-			&FunctionType{
-				Parameters: []*Parameter{
-					{
-						Identifier:     "key",
-						TypeAnnotation: NewTypeAnnotation(t.KeyType),
-					},
-					{
-						Label:          ArgumentLabelNotRequired,
-						Identifier:     "value",
-						TypeAnnotation: NewTypeAnnotation(t.ValueType),
-					},
-				},
-				ReturnTypeAnnotation: NewTypeAnnotation(
-					&OptionalType{
-						Type: t.ValueType,
-					},
-				),
+func (t *DictionaryType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, map[string]MemberResolver{
+		"length": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicConstantFieldMember(
+					t,
+					identifier,
+					&IntType{},
+					dictionaryTypeLengthFieldDocString,
+				)
 			},
-		)
+		},
+		"keys": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+				// TODO: maybe allow for resource key type
 
-	case "remove":
-		return newFunction(
-			&FunctionType{
-				Parameters: []*Parameter{
-					{
-						Identifier:     "key",
-						TypeAnnotation: NewTypeAnnotation(t.KeyType),
-					},
-				},
-				ReturnTypeAnnotation: NewTypeAnnotation(
-					&OptionalType{
-						Type: t.ValueType,
-					},
-				),
+				if t.KeyType.IsResourceType() {
+					report(
+						&InvalidResourceDictionaryMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindField,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				return NewPublicConstantFieldMember(
+					t,
+					identifier,
+					&VariableSizedType{Type: t.KeyType},
+					dictionaryTypeKeysFieldDocString,
+				)
 			},
-		)
+		},
+		"values": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+				// TODO: maybe allow for resource value type
 
-	default:
-		return nil
-	}
+				if t.ValueType.IsResourceType() {
+					report(
+						&InvalidResourceDictionaryMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindField,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				return NewPublicConstantFieldMember(
+					t,
+					identifier,
+					&VariableSizedType{Type: t.ValueType},
+					dictionaryTypeValuesFieldDocString,
+				)
+			},
+		},
+		"insert": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(t,
+					identifier,
+					&FunctionType{
+						Parameters: []*Parameter{
+							{
+								Identifier:     "key",
+								TypeAnnotation: NewTypeAnnotation(t.KeyType),
+							},
+							{
+								Label:          ArgumentLabelNotRequired,
+								Identifier:     "value",
+								TypeAnnotation: NewTypeAnnotation(t.ValueType),
+							},
+						},
+						ReturnTypeAnnotation: NewTypeAnnotation(
+							&OptionalType{
+								Type: t.ValueType,
+							},
+						),
+					},
+					dictionaryTypeInsertFunctionDocString,
+				)
+			},
+		},
+		"remove": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(t,
+					identifier,
+					&FunctionType{
+						Parameters: []*Parameter{
+							{
+								Identifier:     "key",
+								TypeAnnotation: NewTypeAnnotation(t.KeyType),
+							},
+						},
+						ReturnTypeAnnotation: NewTypeAnnotation(
+							&OptionalType{
+								Type: t.ValueType,
+							},
+						),
+					},
+					dictionaryTypeRemoveFunctionDocString,
+				)
+			},
+		},
+	})
 }
 
 func (t *DictionaryType) isValueIndexableType() bool {
@@ -5647,21 +5762,8 @@ func (t *ReferenceType) ContainsFirstLevelInterfaceType() bool {
 	return t.Type.ContainsFirstLevelInterfaceType()
 }
 
-func (t *ReferenceType) CanHaveMembers() bool {
-	referencedType, ok := t.Type.(MemberAccessibleType)
-	if !ok {
-		return false
-	}
-	return referencedType.CanHaveMembers()
-}
-
-func (t *ReferenceType) GetMember(identifier string, targetRange ast.Range, report func(error)) *Member {
-	// forward to referenced type, if it has members
-	referencedTypeWithMember, ok := t.Type.(MemberAccessibleType)
-	if !ok {
-		return nil
-	}
-	return referencedTypeWithMember.GetMember(identifier, targetRange, report)
+func (t *ReferenceType) GetMembers() map[string]MemberResolver {
+	return t.Type.GetMembers()
 }
 
 func (t *ReferenceType) isValueIndexableType() bool {
@@ -5763,20 +5865,33 @@ func (t *AddressType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-func (*AddressType) CanHaveMembers() bool {
-	return true
+const AddressTypeToBytesFunctionName = `toBytes`
+
+var arrayTypeToBytesFunctionType = &FunctionType{
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&VariableSizedType{
+			Type: &UInt8Type{},
+		},
+	),
 }
 
-func (t *AddressType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	builtinFunctionTypes, ok := typeBuiltinFunctionTypes[t.ID()]
-	if !ok {
-		return nil
-	}
-	functionType, ok := builtinFunctionTypes[identifier]
-	if !ok {
-		return nil
-	}
-	return NewPublicFunctionMember(t, identifier, functionType)
+const arrayTypeToBytesFunctionDocString = `
+Returns an array containing the byte representation of the address
+`
+
+func (t *AddressType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, map[string]MemberResolver{
+		AddressTypeToBytesFunctionName: {
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					arrayTypeToBytesFunctionType,
+					arrayTypeToBytesFunctionDocString,
+				)
+			},
+		},
+	})
 }
 
 // IsSubType determines if the given subtype is a subtype
@@ -6470,12 +6585,20 @@ func (*TransactionType) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-func (t *TransactionType) CanHaveMembers() bool {
-	return true
-}
-
-func (t *TransactionType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
-	return t.Members[identifier]
+func (t *TransactionType) GetMembers() map[string]MemberResolver {
+	// TODO: optimize
+	members := make(map[string]MemberResolver, len(t.Members))
+	for name, loopMember := range t.Members {
+		// NOTE: don't capture loop variable
+		member := loopMember
+		members[name] = MemberResolver{
+			Kind: member.DeclarationKind,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return member
+			},
+		}
+	}
+	return withBuiltinMembers(t, members)
 }
 
 func (*TransactionType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -6641,49 +6764,55 @@ func (*RestrictedType) ContainsFirstLevelInterfaceType() bool {
 	return false
 }
 
-func (t *RestrictedType) CanHaveMembers() bool {
-	return true
-}
+func (t *RestrictedType) GetMembers() map[string]MemberResolver {
 
-func (t *RestrictedType) GetMember(identifier string, targetRange ast.Range, reportError func(error)) *Member {
+	members := map[string]MemberResolver{}
 
-	// Return the first member of any restriction.
+	// Return the members of all restrictions.
 	// The invariant that restrictions may not have overlapping members is not checked here,
 	// but implicitly when the resource declaration's conformances are checked.
 
 	for _, restriction := range t.Restrictions {
-		member := restriction.GetMember(identifier, targetRange, reportError)
-		if member != nil {
-			return member
+		for name, resolver := range restriction.GetMembers() {
+			if _, ok := members[name]; !ok {
+				members[name] = resolver
+			}
 		}
 	}
 
-	// If none of the restrictions had a member, see if
-	// the restricted type has a member with the identifier.
+	// Also include members of the restricted type for convenience,
+	// to help check the rest of the program and improve the developer experience,
+	// *but* also report an error that this access is invalid when the entry is resolved.
 	//
-	// Still return it for convenience to help check the rest
-	// of the program and improve the developer experience,
-	// *but* also report an error that this access is invalid
-	//
-	// The restricted type may be `AnyResource`,
-	// in which case there are no members.
+	// The restricted type may be `AnyResource`, in which case there are no members.
 
-	if memberAccessibleType, ok := t.Type.(MemberAccessibleType); ok {
-		member := memberAccessibleType.GetMember(identifier, targetRange, reportError)
+	for name, loopResolver := range t.Type.GetMembers() {
 
-		if member != nil {
-			reportError(
-				&InvalidRestrictedTypeMemberAccessError{
-					Name:  identifier,
-					Range: targetRange,
-				},
-			)
+		if _, ok := members[name]; ok {
+			continue
 		}
 
-		return member
+		// NOTE: don't capture loop variable
+		resolver := loopResolver
+
+		members[name] = MemberResolver{
+			Kind: resolver.Kind,
+			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+				member := resolver.Resolve(identifier, targetRange, report)
+
+				report(
+					&InvalidRestrictedTypeMemberAccessError{
+						Name:  identifier,
+						Range: targetRange,
+					},
+				)
+
+				return member
+			},
+		}
 	}
 
-	return nil
+	return members
 }
 
 func (*RestrictedType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -6750,6 +6879,10 @@ func (*PathType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ a
 
 func (t *PathType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
+}
+
+func (t *PathType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, nil)
 }
 
 // CapabilityType
@@ -6902,7 +7035,7 @@ func (t *CapabilityType) TypeArguments() []Type {
 	}
 }
 
-func capabilityBorrowFunctionType(borrowType Type) *FunctionType {
+func capabilityTypeBorrowFunctionType(borrowType Type) *FunctionType {
 
 	var typeParameters []*TypeParameter
 
@@ -6928,7 +7061,7 @@ func capabilityBorrowFunctionType(borrowType Type) *FunctionType {
 	}
 }
 
-func capabilityCheckFunctionType(borrowType Type) *FunctionType {
+func capabilityTypeCheckFunctionType(borrowType Type) *FunctionType {
 
 	var typeParameters []*TypeParameter
 
@@ -6944,24 +7077,37 @@ func capabilityCheckFunctionType(borrowType Type) *FunctionType {
 	}
 }
 
-func (t *CapabilityType) CanHaveMembers() bool {
-	return true
-}
+const capabilityTypeBorrowFunctionDocString = `
+Returns a reference to the object targeted by the capability, provided it can be borrowed using the given type
+`
 
-func (t *CapabilityType) GetMember(identifier string, _ ast.Range, _ func(error)) *Member {
+const capabilityTypeCheckFunctionDocString = `
+Returns true if the capability currently targets an object that satisfies the given type, i.e. could be borrowed using the given type
+`
 
-	newFunction := func(functionType InvokableType) *Member {
-		return NewPublicFunctionMember(t, identifier, functionType)
-	}
-
-	switch identifier {
-	case "borrow":
-		return newFunction(capabilityBorrowFunctionType(t.BorrowType))
-
-	case "check":
-		return newFunction(capabilityCheckFunctionType(t.BorrowType))
-
-	default:
-		return nil
-	}
+func (t *CapabilityType) GetMembers() map[string]MemberResolver {
+	return withBuiltinMembers(t, map[string]MemberResolver{
+		"borrow": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					capabilityTypeBorrowFunctionType(t.BorrowType),
+					capabilityTypeBorrowFunctionDocString,
+				)
+			},
+		},
+		"check": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					capabilityTypeCheckFunctionType(t.BorrowType),
+					capabilityTypeCheckFunctionDocString,
+				)
+			},
+		},
+	})
 }

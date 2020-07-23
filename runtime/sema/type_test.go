@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -178,6 +179,9 @@ func TestRestrictedType_StringAndID(t *testing.T) {
 	t.Parallel()
 
 	t.Run("base type and restriction", func(t *testing.T) {
+
+		t.Parallel()
+
 		interfaceType := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I",
@@ -205,6 +209,9 @@ func TestRestrictedType_StringAndID(t *testing.T) {
 	})
 
 	t.Run("base type and restrictions", func(t *testing.T) {
+
+		t.Parallel()
+
 		i1 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I1",
@@ -238,6 +245,9 @@ func TestRestrictedType_StringAndID(t *testing.T) {
 	})
 
 	t.Run("no restrictions", func(t *testing.T) {
+
+		t.Parallel()
+
 		ty := &RestrictedType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
@@ -263,6 +273,8 @@ func TestRestrictedType_Equals(t *testing.T) {
 	t.Parallel()
 
 	t.Run("same base type and more restrictions", func(t *testing.T) {
+
+		t.Parallel()
 
 		i1 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
@@ -299,6 +311,8 @@ func TestRestrictedType_Equals(t *testing.T) {
 
 	t.Run("same base type and fewer restrictions", func(t *testing.T) {
 
+		t.Parallel()
+
 		i1 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I1",
@@ -333,6 +347,9 @@ func TestRestrictedType_Equals(t *testing.T) {
 	})
 
 	t.Run("same base type and same restrictions", func(t *testing.T) {
+
+		t.Parallel()
+
 		i1 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I1",
@@ -367,6 +384,8 @@ func TestRestrictedType_Equals(t *testing.T) {
 	})
 
 	t.Run("different base type and same restrictions", func(t *testing.T) {
+
+		t.Parallel()
 
 		i1 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
@@ -407,6 +426,9 @@ func TestRestrictedType_GetMember(t *testing.T) {
 	t.Parallel()
 
 	t.Run("forbid undeclared members", func(t *testing.T) {
+
+		t.Parallel()
+
 		resourceType := &CompositeType{
 			Kind:       common.CompositeKindResource,
 			Identifier: "R",
@@ -419,18 +441,30 @@ func TestRestrictedType_GetMember(t *testing.T) {
 		}
 
 		fieldName := "s"
-		resourceType.Members[fieldName] = NewPublicConstantFieldMember(ty.Type, fieldName, &IntType{})
+		resourceType.Members[fieldName] = NewPublicConstantFieldMember(
+			ty.Type,
+			fieldName,
+			&IntType{},
+			"",
+		)
+
+		actualMembers := ty.GetMembers()
+
+		require.Contains(t, actualMembers, fieldName)
 
 		var reportedError error
-		member := ty.GetMember(fieldName, ast.Range{}, func(err error) {
+		actualMember := actualMembers[fieldName].Resolve(fieldName, ast.Range{}, func(err error) {
 			reportedError = err
 		})
 
 		assert.IsType(t, &InvalidRestrictedTypeMemberAccessError{}, reportedError)
-		assert.NotNil(t, member)
+		assert.NotNil(t, actualMember)
 	})
 
 	t.Run("allow declared members", func(t *testing.T) {
+
+		t.Parallel()
+
 		interfaceType := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I",
@@ -452,13 +486,26 @@ func TestRestrictedType_GetMember(t *testing.T) {
 
 		fieldName := "s"
 
-		resourceMember := NewPublicConstantFieldMember(restrictedType.Type, fieldName, &IntType{})
-		resourceType.Members[fieldName] = resourceMember
+		resourceType.Members[fieldName] = NewPublicConstantFieldMember(
+			restrictedType.Type,
+			fieldName,
+			&IntType{},
+			"",
+		)
 
-		interfaceMember := NewPublicConstantFieldMember(restrictedType.Type, fieldName, &IntType{})
+		interfaceMember := NewPublicConstantFieldMember(
+			restrictedType.Type,
+			fieldName,
+			&IntType{},
+			"",
+		)
 		interfaceType.Members[fieldName] = interfaceMember
 
-		actualMember := restrictedType.GetMember(fieldName, ast.Range{}, nil)
+		actualMembers := restrictedType.GetMembers()
+
+		require.Contains(t, actualMembers, fieldName)
+
+		actualMember := actualMembers[fieldName].Resolve(fieldName, ast.Range{}, nil)
 
 		assert.Same(t, interfaceMember, actualMember)
 	})
