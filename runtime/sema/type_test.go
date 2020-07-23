@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -441,15 +442,24 @@ func TestRestrictedType_GetMember(t *testing.T) {
 		}
 
 		fieldName := "s"
-		resourceType.Members[fieldName] = NewPublicConstantFieldMember(ty.Type, fieldName, &IntType{})
+		resourceType.Members[fieldName] = NewPublicConstantFieldMember(
+			ty.Type,
+			fieldName,
+			&IntType{},
+			"",
+		)
+
+		actualMembers := ty.GetMembers()
+
+		require.Contains(t, actualMembers, fieldName)
 
 		var reportedError error
-		member := ty.GetMember(fieldName, ast.Range{}, func(err error) {
+		actualMember := actualMembers[fieldName].Resolve(fieldName, ast.Range{}, func(err error) {
 			reportedError = err
 		})
 
 		assert.IsType(t, &InvalidRestrictedTypeMemberAccessError{}, reportedError)
-		assert.NotNil(t, member)
+		assert.NotNil(t, actualMember)
 	})
 
 	t.Run("allow declared members", func(t *testing.T) {
@@ -478,13 +488,26 @@ func TestRestrictedType_GetMember(t *testing.T) {
 
 		fieldName := "s"
 
-		resourceMember := NewPublicConstantFieldMember(restrictedType.Type, fieldName, &IntType{})
-		resourceType.Members[fieldName] = resourceMember
+		resourceType.Members[fieldName] = NewPublicConstantFieldMember(
+			restrictedType.Type,
+			fieldName,
+			&IntType{},
+			"",
+		)
 
-		interfaceMember := NewPublicConstantFieldMember(restrictedType.Type, fieldName, &IntType{})
+		interfaceMember := NewPublicConstantFieldMember(
+			restrictedType.Type,
+			fieldName,
+			&IntType{},
+			"",
+		)
 		interfaceType.Members[fieldName] = interfaceMember
 
-		actualMember := restrictedType.GetMember(fieldName, ast.Range{}, nil)
+		actualMembers := restrictedType.GetMembers()
+
+		require.Contains(t, actualMembers, fieldName)
+
+		actualMember := actualMembers[fieldName].Resolve(fieldName, ast.Range{}, nil)
 
 		assert.Same(t, interfaceMember, actualMember)
 	})

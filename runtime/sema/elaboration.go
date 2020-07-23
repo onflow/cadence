@@ -21,8 +21,9 @@ package sema
 import "github.com/onflow/cadence/runtime/ast"
 
 type MemberInfo struct {
-	Member     *Member
-	IsOptional bool
+	Member       *Member
+	IsOptional   bool
+	AccessedType Type
 }
 
 type Elaboration struct {

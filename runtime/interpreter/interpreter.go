@@ -2451,7 +2451,7 @@ func (interpreter *Interpreter) declareCompositeValue(
 
 			if declaration.CompositeKind == common.CompositeKindResource {
 				uuid := interpreter.uuidHandler()
-				fields[sema.UUIDFieldName] = UInt64Value(uuid)
+				fields[sema.ResourceUUIDFieldName] = UInt64Value(uuid)
 			}
 
 			value := &CompositeValue{
@@ -3957,7 +3957,7 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 	})
 }
 
-func (interpreter *Interpreter) authAccountGetLinkTargetFunction(addressValue AddressValue) HostFunctionValue {
+func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue AddressValue) HostFunctionValue {
 	return NewHostFunctionValue(func(invocation Invocation) Trampoline {
 
 		address := addressValue.ToAddress()

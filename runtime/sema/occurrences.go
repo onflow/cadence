@@ -78,7 +78,7 @@ func NewOccurrences() *Occurrences {
 	}
 }
 
-func ToPosition(position ast.Position) Position {
+func ASTToSemaPosition(position ast.Position) Position {
 	return Position{
 		Line:   position.Line,
 		Column: position.Column,
@@ -87,8 +87,8 @@ func ToPosition(position ast.Position) Position {
 
 func (o *Occurrences) Put(startPos, endPos ast.Position, origin *Origin) {
 	occurrence := Occurrence{
-		StartPos: ToPosition(startPos),
-		EndPos:   ToPosition(endPos),
+		StartPos: ASTToSemaPosition(startPos),
+		EndPos:   ASTToSemaPosition(endPos),
 		Origin:   origin,
 	}
 	interval := intervalst.NewInterval(
