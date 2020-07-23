@@ -377,6 +377,7 @@ type AccessExpression interface {
 type MemberExpression struct {
 	Expression Expression
 	Optional   bool
+	AccessPos  Position
 	Identifier Identifier
 }
 
@@ -416,7 +417,11 @@ func (e *MemberExpression) StartPosition() Position {
 }
 
 func (e *MemberExpression) EndPosition() Position {
-	return e.Identifier.EndPosition()
+	if e.Identifier.Identifier == "" {
+		return e.AccessPos
+	} else {
+		return e.Identifier.EndPosition()
+	}
 }
 
 // IndexExpression
