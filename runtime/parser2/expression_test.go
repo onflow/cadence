@@ -1512,6 +1512,7 @@ func TestMemberExpression(t *testing.T) {
 						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
 					},
 				},
+				AccessPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 				Identifier: ast.Identifier{
 					Identifier: "n",
 					Pos:        ast.Position{Offset: 2, Line: 1, Column: 2},
@@ -1536,6 +1537,7 @@ func TestMemberExpression(t *testing.T) {
 						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
 					},
 				},
+				AccessPos: ast.Position{Offset: 2, Line: 1, Column: 2},
 				Identifier: ast.Identifier{
 					Identifier: "n",
 					Pos:        ast.Position{Offset: 3, Line: 1, Column: 3},
@@ -1568,9 +1570,7 @@ func TestMemberExpression(t *testing.T) {
 						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
 					},
 				},
-				Identifier: ast.Identifier{
-					Identifier: "",
-				},
+				AccessPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 			},
 			result,
 		)
@@ -1593,6 +1593,7 @@ func TestMemberExpression(t *testing.T) {
 							Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
 						},
 					},
+					AccessPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 					Identifier: ast.Identifier{
 						Identifier: "n",
 						Pos:        ast.Position{Offset: 2, Line: 1, Column: 2},
@@ -1636,6 +1637,7 @@ func TestMemberExpression(t *testing.T) {
 							Pos:        ast.Position{Offset: 4, Line: 1, Column: 4},
 						},
 					},
+					AccessPos: ast.Position{Offset: 5, Line: 1, Column: 5},
 					Identifier: ast.Identifier{
 						Identifier: "n",
 						Pos:        ast.Position{Offset: 6, Line: 1, Column: 6},
@@ -1662,6 +1664,7 @@ func TestMemberExpression(t *testing.T) {
 						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
 					},
 				},
+				AccessPos: ast.Position{Offset: 2, Line: 1, Column: 2},
 				Identifier: ast.Identifier{
 					Identifier: "n",
 					Pos:        ast.Position{Offset: 3, Line: 1, Column: 3},
@@ -1912,6 +1915,7 @@ func TestParseForceExpression(t *testing.T) {
 
 		result, errs := ParseExpression("t!")
 		require.Empty(t, errs)
+
 		utils.AssertEqualWithDiff(t,
 			&ast.ForceExpression{
 				Expression: &ast.IdentifierExpression{
@@ -1932,6 +1936,7 @@ func TestParseForceExpression(t *testing.T) {
 
 		result, errs := ParseExpression(" t ! ")
 		require.Empty(t, errs)
+
 		utils.AssertEqualWithDiff(t,
 			&ast.ForceExpression{
 				Expression: &ast.IdentifierExpression{
@@ -1952,6 +1957,7 @@ func TestParseForceExpression(t *testing.T) {
 
 		result, errs := ParseExpression("<-t!")
 		require.Empty(t, errs)
+
 		utils.AssertEqualWithDiff(t,
 			&ast.UnaryExpression{
 				Operation: ast.OperationMove,
@@ -1976,6 +1982,7 @@ func TestParseForceExpression(t *testing.T) {
 
 		result, errs := ParseExpression("10 *  t!")
 		require.Empty(t, errs)
+
 		utils.AssertEqualWithDiff(t,
 			&ast.BinaryExpression{
 				Operation: ast.OperationMul,
@@ -2052,12 +2059,50 @@ func TestParseForceExpression(t *testing.T) {
 									Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
 								},
 							},
+							AccessPos: ast.Position{Line: 2, Column: 0, Offset: 2},
 							Identifier: ast.Identifier{
 								Identifier: "y",
 								Pos:        ast.Position{Line: 2, Column: 1, Offset: 3},
 							},
 						},
 						EndPos: ast.Position{Line: 2, Column: 2, Offset: 4},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("member access, whitespace", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseStatements("x. y")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "invalid whitespace after '.'",
+					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.ExpressionStatement{
+					Expression: &ast.MemberExpression{
+						Expression: &ast.IdentifierExpression{
+							Identifier: ast.Identifier{
+								Identifier: "x",
+								Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+							},
+						},
+						AccessPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+						Identifier: ast.Identifier{
+							Identifier: "y",
+							Pos:        ast.Position{Line: 1, Column: 3, Offset: 3},
+						},
 					},
 				},
 			},

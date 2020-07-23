@@ -985,7 +985,7 @@ func defineMemberExpression() {
 	setExprLeftDenotation(
 		lexer.TokenDot,
 		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
-			return parseMemberAccess(p, left, false)
+			return parseMemberAccess(p, token, left, false)
 		},
 	)
 
@@ -993,14 +993,27 @@ func defineMemberExpression() {
 	setExprLeftDenotation(
 		lexer.TokenQuestionMarkDot,
 		func(p *parser, token lexer.Token, left ast.Expression) ast.Expression {
-			return parseMemberAccess(p, left, true)
+			return parseMemberAccess(p, token, left, true)
 		},
 	)
 }
 
-func parseMemberAccess(p *parser, left ast.Expression, optional bool) ast.Expression {
+func parseMemberAccess(p *parser, token lexer.Token, left ast.Expression, optional bool) ast.Expression {
 
-	p.skipSpaceAndComments(true)
+	// Whitespace after the '.' (dot token) is not allowed.
+	// We parse it anyways and report an error
+
+	if p.current.Is(lexer.TokenSpace) {
+		errorPos := p.current.StartPos
+		p.skipSpaceAndComments(true)
+		p.report(&SyntaxError{
+			Message: fmt.Sprintf(
+				"invalid whitespace after %s",
+				lexer.TokenDot,
+			),
+			Pos: errorPos,
+		})
+	}
 
 	// If there is an identifier, use it.
 	// If not, report an error
@@ -1017,13 +1030,16 @@ func parseMemberAccess(p *parser, left ast.Expression, optional bool) ast.Expres
 	}
 
 	return &ast.MemberExpression{
-		Optional:   optional,
 		Expression: left,
+		Optional:   optional,
+		// NOTE: use the end position, because the token
+		// can be an optional access token `?.`
+		AccessPos:  token.EndPos,
 		Identifier: identifier,
 	}
 }
 
-func exprLeftDenotationAllowsNewline(tokenType lexer.TokenType) bool {
+func exprLeftDenotationAllowsNewlineAfterNullDenotation(tokenType lexer.TokenType) bool {
 
 	// The postfix force unwrap, invocation expressions,
 	// and indexing expressions don't support newlines before them,
@@ -1032,6 +1048,20 @@ func exprLeftDenotationAllowsNewline(tokenType lexer.TokenType) bool {
 
 	switch tokenType {
 	case lexer.TokenExclamationMark, lexer.TokenParenOpen, lexer.TokenBracketOpen:
+		return false
+	default:
+		return true
+	}
+}
+
+func exprLeftDenotationAllowsWhitespaceAfterToken(tokenType lexer.TokenType) bool {
+
+	// The member access expressions, which starts with a '.' (dot token)
+	// or `?.` (question mark dot token), do not allow whitespace
+	// after the token (before the identifier)
+
+	switch tokenType {
+	case lexer.TokenDot, lexer.TokenQuestionMarkDot:
 		return false
 	default:
 		return true
@@ -1054,7 +1084,7 @@ func parseExpression(p *parser, rightBindingPower int) ast.Expression {
 	for {
 		newLineAfterLeft = p.skipSpaceAndComments(true) || newLineAfterLeft
 
-		if newLineAfterLeft && !exprLeftDenotationAllowsNewline(p.current.Type) {
+		if newLineAfterLeft && !exprLeftDenotationAllowsNewlineAfterNullDenotation(p.current.Type) {
 			break
 		}
 
@@ -1094,10 +1124,15 @@ func applyExprMetaLeftDenotation(
 		return left, true
 	}
 
+	skipWhitespace := exprLeftDenotationAllowsWhitespaceAfterToken(p.current.Type)
+
 	t = p.current
 
 	p.next()
-	p.skipSpaceAndComments(true)
+	if skipWhitespace {
+		p.skipSpaceAndComments(true)
+
+	}
 
 	result = applyExprLeftDenotation(p, t, left)
 	return result, false
