@@ -583,6 +583,7 @@ func TestParseMemberExpression(t *testing.T) {
 						Identifier: "c",
 						Pos:        Position{Offset: 16, Line: 2, Column: 15},
 					},
+					AccessPos: Position{Offset: 15, Line: 2, Column: 14},
 				},
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
@@ -625,6 +626,7 @@ func TestParseOptionalMemberExpression(t *testing.T) {
 						Identifier: "c",
 						Pos:        Position{Offset: 17, Line: 2, Column: 16},
 					},
+					AccessPos: Position{Offset: 16, Line: 2, Column: 15},
 				},
 				StartPos: Position{Offset: 6, Line: 2, Column: 5},
 			},
@@ -1901,11 +1903,13 @@ func TestParseAccessAssignment(t *testing.T) {
 															Pos:        Position{Offset: 31, Line: 3, Column: 12},
 														},
 													},
+													AccessPos: Position{Offset: 32, Line: 3, Column: 13},
 													Identifier: Identifier{
 														Identifier: "foo",
 														Pos:        Position{Offset: 33, Line: 3, Column: 14},
 													},
 												},
+												AccessPos: Position{Offset: 36, Line: 3, Column: 17},
 												Identifier: Identifier{
 													Identifier: "bar",
 													Pos:        Position{Offset: 37, Line: 3, Column: 18},
@@ -1937,6 +1941,7 @@ func TestParseAccessAssignment(t *testing.T) {
 											EndPos:   Position{Offset: 45, Line: 3, Column: 26},
 										},
 									},
+									AccessPos: Position{Offset: 46, Line: 3, Column: 27},
 									Identifier: Identifier{
 										Identifier: "baz",
 										Pos:        Position{Offset: 47, Line: 3, Column: 28},
@@ -2017,11 +2022,13 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 															Pos:        Position{Offset: 19, Line: 2, Column: 18},
 														},
 													},
+													AccessPos: Position{Offset: 20, Line: 2, Column: 19},
 													Identifier: Identifier{
 														Identifier: "foo",
 														Pos:        Position{Offset: 21, Line: 2, Column: 20},
 													},
 												},
+												AccessPos: Position{Offset: 24, Line: 2, Column: 23},
 												Identifier: Identifier{
 													Identifier: "bar",
 													Pos:        Position{Offset: 25, Line: 2, Column: 24},
@@ -2053,6 +2060,7 @@ func TestParseExpressionStatementWithAccess(t *testing.T) {
 											EndPos:   Position{Offset: 33, Line: 2, Column: 32},
 										},
 									},
+									AccessPos: Position{Offset: 34, Line: 2, Column: 33},
 									Identifier: Identifier{
 										Identifier: "baz",
 										Pos:        Position{Offset: 35, Line: 2, Column: 34},
@@ -3381,6 +3389,7 @@ func TestParseStructure(t *testing.T) {
 															Pos:        Position{Offset: 103, Line: 6, Column: 16},
 														},
 													},
+													AccessPos: Position{Offset: 107, Line: 6, Column: 20},
 													Identifier: Identifier{
 														Identifier: "foo",
 														Pos:        Position{Offset: 108, Line: 6, Column: 21},
@@ -3442,6 +3451,7 @@ func TestParseStructure(t *testing.T) {
 														Pos:        Position{Offset: 192, Line: 10, Column: 23},
 													},
 												},
+												AccessPos: Position{Offset: 196, Line: 10, Column: 27},
 												Identifier: Identifier{
 													Identifier: "foo",
 													Pos:        Position{Offset: 197, Line: 10, Column: 28},
@@ -5665,6 +5675,7 @@ func TestParseSwapStatement(t *testing.T) {
 											Pos:        Position{Offset: 41, Line: 3, Column: 21},
 										},
 									},
+									AccessPos: Position{Offset: 44, Line: 3, Column: 24},
 									Identifier: Identifier{
 										Identifier: "baz",
 										Pos:        Position{Offset: 45, Line: 3, Column: 25},
@@ -6127,6 +6138,7 @@ func TestParseReference(t *testing.T) {
 									Pos:        Position{Offset: 17, Line: 2, Column: 16},
 								},
 							},
+							AccessPos: Position{Offset: 24, Line: 2, Column: 23},
 							Identifier: Identifier{
 								Identifier: "storage",
 								Pos:        Position{Offset: 25, Line: 2, Column: 24},
@@ -6252,6 +6264,7 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 															Pos:        Position{Offset: 54, Line: 2, Column: 53},
 														},
 													},
+													AccessPos: Position{Offset: 58, Line: 2, Column: 57},
 													Identifier: Identifier{
 														Identifier: "id",
 														Pos:        Position{Offset: 59, Line: 2, Column: 58},
