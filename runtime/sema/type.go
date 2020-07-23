@@ -3411,6 +3411,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 							elementType,
 						),
 					},
+
 					arrayTypeRemoveFirstFunctionDocString,
 				)
 			},
