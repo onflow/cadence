@@ -34,6 +34,7 @@ type CompositeDeclaration struct {
 	Members               *Members
 	CompositeDeclarations []*CompositeDeclaration
 	InterfaceDeclarations []*InterfaceDeclaration
+	DocString             string
 	Range
 }
 
@@ -67,6 +68,7 @@ type FieldDeclaration struct {
 	VariableKind   VariableKind
 	Identifier     Identifier
 	TypeAnnotation *TypeAnnotation
+	DocString      string
 	Range
 }
 
