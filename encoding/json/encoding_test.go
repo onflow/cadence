@@ -1110,6 +1110,21 @@ func TestEncodeLink(t *testing.T) {
 	)
 }
 
+func TestStorageReference(t *testing.T) {
+
+	t.Parallel()
+
+	testEncode(
+		t,
+		cadence.NewStorageReference(
+			false,
+			cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+			"foo",
+		),
+		`{"type":"StorageReference","value":{"authorized":false,"targetStorageAddress":"0x0000000102030405","targetKey":"foo"}}`,
+	)
+}
+
 func convertValueFromScript(t *testing.T, script string) cadence.Value {
 	rt := runtime.NewInterpreterRuntime()
 

@@ -106,6 +106,8 @@ func exportValueWithInterpreter(value interpreter.Value, inter *interpreter.Inte
 		return exportDictionaryValue(v, inter)
 	case interpreter.AddressValue:
 		return cadence.NewAddress(v)
+	case *interpreter.StorageReferenceValue:
+		return exportStorageReferenceValue(v)
 	case interpreter.LinkValue:
 		return exportLinkValue(v, inter)
 	}
@@ -200,6 +202,14 @@ func exportDictionaryValue(v *interpreter.DictionaryValue, inter *interpreter.In
 	}
 
 	return cadence.NewDictionary(pairs)
+}
+
+func exportStorageReferenceValue(v *interpreter.StorageReferenceValue) cadence.Value {
+	return cadence.NewStorageReference(
+		v.Authorized,
+		cadence.NewAddress(v.TargetStorageAddress),
+		v.TargetKey,
+	)
 }
 
 func exportLinkValue(v interpreter.LinkValue, inter *interpreter.Interpreter) cadence.Value {
