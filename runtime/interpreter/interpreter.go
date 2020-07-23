@@ -4156,7 +4156,7 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 
 			if link, ok := value.Value.(LinkValue); ok {
 
-				allowedType := interpreter.convertStaticToSemaType(link.Type)
+				allowedType := interpreter.ConvertStaticToSemaType(link.Type)
 
 				if !sema.IsSubType(allowedType, wantedBorrowType) {
 					return "", false
@@ -4176,7 +4176,7 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 	}
 }
 
-func (interpreter *Interpreter) convertStaticToSemaType(staticType StaticType) sema.Type {
+func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) sema.Type {
 	return ConvertStaticToSemaType(
 		staticType,
 		func(location ast.Location, typeID sema.TypeID) *sema.InterfaceType {
@@ -4257,7 +4257,7 @@ func (interpreter *Interpreter) getMember(self Value, locationRange LocationRang
 
 					// NOTE: not invocation.Self, as that is only set for composite values
 					dynamicType := self.DynamicType(interpreter)
-					ty := interpreter.convertStaticToSemaType(
+					ty := interpreter.ConvertStaticToSemaType(
 						firstArgument.(TypeValue).Type,
 					)
 					result := IsSubType(dynamicType, ty)

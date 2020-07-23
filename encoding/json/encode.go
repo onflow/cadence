@@ -118,37 +118,43 @@ type jsonCompositeField struct {
 	Value jsonValue `json:"value"`
 }
 
+type jsonLinkValue struct {
+	Target     string `json:"target"`
+	BorrowType string `json:"borrowType"`
+}
+
 const (
-	voidTypeStr       = "Void"
-	optionalTypeStr   = "Optional"
-	boolTypeStr       = "Bool"
-	stringTypeStr     = "String"
-	addressTypeStr    = "Address"
-	intTypeStr        = "Int"
-	int8TypeStr       = "Int8"
-	int16TypeStr      = "Int16"
-	int32TypeStr      = "Int32"
-	int64TypeStr      = "Int64"
-	int128TypeStr     = "Int128"
-	int256TypeStr     = "Int256"
-	uintTypeStr       = "UInt"
-	uint8TypeStr      = "UInt8"
-	uint16TypeStr     = "UInt16"
-	uint32TypeStr     = "UInt32"
-	uint64TypeStr     = "UInt64"
-	uint128TypeStr    = "UInt128"
-	uint256TypeStr    = "UInt256"
-	word8TypeStr      = "Word8"
-	word16TypeStr     = "Word16"
-	word32TypeStr     = "Word32"
-	word64TypeStr     = "Word64"
-	fix64TypeStr      = "Fix64"
-	ufix64TypeStr     = "UFix64"
-	arrayTypeStr      = "Array"
-	dictionaryTypeStr = "Dictionary"
-	structTypeStr     = "Struct"
-	resourceTypeStr   = "Resource"
-	eventTypeStr      = "Event"
+	voidTypeStr             = "Void"
+	optionalTypeStr         = "Optional"
+	boolTypeStr             = "Bool"
+	stringTypeStr           = "String"
+	addressTypeStr          = "Address"
+	intTypeStr              = "Int"
+	int8TypeStr             = "Int8"
+	int16TypeStr            = "Int16"
+	int32TypeStr            = "Int32"
+	int64TypeStr            = "Int64"
+	int128TypeStr           = "Int128"
+	int256TypeStr           = "Int256"
+	uintTypeStr             = "UInt"
+	uint8TypeStr            = "UInt8"
+	uint16TypeStr           = "UInt16"
+	uint32TypeStr           = "UInt32"
+	uint64TypeStr           = "UInt64"
+	uint128TypeStr          = "UInt128"
+	uint256TypeStr          = "UInt256"
+	word8TypeStr            = "Word8"
+	word16TypeStr           = "Word16"
+	word32TypeStr           = "Word32"
+	word64TypeStr           = "Word64"
+	fix64TypeStr            = "Fix64"
+	ufix64TypeStr           = "UFix64"
+	arrayTypeStr            = "Array"
+	dictionaryTypeStr       = "Dictionary"
+	structTypeStr           = "Struct"
+	resourceTypeStr         = "Resource"
+	eventTypeStr            = "Event"
+	linkTypeStr             = "Link"
 )
 
 // prepare traverses the object graph of the provided value and constructs
@@ -215,8 +221,10 @@ func (e *Encoder) prepare(v cadence.Value) jsonValue {
 		return e.prepareResource(x)
 	case cadence.Event:
 		return e.prepareEvent(x)
+	case cadence.Link:
+		return e.prepareLink(x)
 	default:
-		return fmt.Errorf("unsupported value: %T, %v", v, v)
+		panic(fmt.Errorf("unsupported value: %T, %v", v, v))
 	}
 }
 
@@ -473,6 +481,16 @@ func (e *Encoder) prepareComposite(kind, id string, fieldTypes []cadence.Field, 
 		Value: jsonCompositeValue{
 			ID:     id,
 			Fields: compositeFields,
+		},
+	}
+}
+
+func (e *Encoder) prepareLink(x cadence.Link) jsonValue {
+	return jsonValueObject{
+		Type: linkTypeStr,
+		Value: jsonLinkValue{
+			Target:     x.Target,
+			BorrowType: x.BorrowType,
 		},
 	}
 }

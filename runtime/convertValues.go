@@ -106,9 +106,11 @@ func exportValueWithInterpreter(value interpreter.Value, inter *interpreter.Inte
 		return exportDictionaryValue(v, inter)
 	case interpreter.AddressValue:
 		return cadence.NewAddress(v)
+	case interpreter.LinkValue:
+		return exportLinkValue(v, inter)
 	}
 
-	panic(fmt.Sprintf("cannot convert value of type %T", value))
+	panic(fmt.Sprintf("cannot export value of type %T", value))
 }
 
 func exportSomeValue(v *interpreter.SomeValue, inter *interpreter.Interpreter) cadence.Value {
@@ -200,6 +202,13 @@ func exportDictionaryValue(v *interpreter.DictionaryValue, inter *interpreter.In
 	return cadence.NewDictionary(pairs)
 }
 
+func exportLinkValue(v interpreter.LinkValue, inter *interpreter.Interpreter) cadence.Value {
+	return cadence.NewLink(
+		v.TargetPath.String(),
+		inter.ConvertStaticToSemaType(v.Type).QualifiedString(),
+	)
+}
+
 // importValue converts a Cadence value to a runtime value.
 func importValue(value cadence.Value) interpreter.Value {
 	switch v := value.(type) {
@@ -267,7 +276,7 @@ func importValue(value cadence.Value) interpreter.Value {
 		return importCompositeValue(common.CompositeKindEvent, v.EventType.ID(), v.EventType.Fields, v.Fields)
 	}
 
-	panic(fmt.Sprintf("cannot convert value of type %T", value))
+	panic(fmt.Sprintf("cannot import value of type %T", value))
 }
 
 func importOptionalValue(v cadence.Optional) interpreter.Value {

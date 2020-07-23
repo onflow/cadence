@@ -958,3 +958,27 @@ func (v Contract) ToGoValue() interface{} {
 
 	return ret
 }
+
+// Link
+
+type Link struct {
+	Target     string
+	BorrowType string
+}
+
+func NewLink(target string, borrowType string) Link {
+	return Link{
+		Target:     target,
+		BorrowType: borrowType,
+	}
+}
+
+func (Link) isValue() {}
+
+func (v Link) Type() Type {
+	return nil
+}
+
+func (v Link) ToGoValue() interface{} {
+	return nil
+}
