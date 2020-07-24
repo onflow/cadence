@@ -180,6 +180,8 @@ func decodeJSON(v interface{}) cadence.Value {
 		return decodeStruct(valueJSON)
 	case eventTypeStr:
 		return decodeEvent(valueJSON)
+	case contractTypeStr:
+		return decodeContract(valueJSON)
 	case storageReferenceTypeStr:
 		return decodeStorageReference(valueJSON)
 	case linkTypeStr:
@@ -544,6 +546,16 @@ func decodeEvent(valueJSON interface{}) cadence.Event {
 	comp := decodeComposite(valueJSON)
 
 	return cadence.NewEvent(comp.fieldValues).WithType(cadence.EventType{
+		TypeID:     comp.typeID,
+		Identifier: comp.identifier,
+		Fields:     comp.fieldTypes,
+	})
+}
+
+func decodeContract(valueJSON interface{}) cadence.Contract {
+	comp := decodeComposite(valueJSON)
+
+	return cadence.NewContract(comp.fieldValues).WithType(cadence.ContractType{
 		TypeID:     comp.typeID,
 		Identifier: comp.identifier,
 		Fields:     comp.fieldTypes,
