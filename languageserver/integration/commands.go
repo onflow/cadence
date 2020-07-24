@@ -105,7 +105,7 @@ func (i *FlowIntegration) submitTransaction(conn protocol.Conn, args ...interfac
 		SetScript(script).
 		AddAuthorizer(i.activeAccount)
 
-	_, err := i.sendTransactionHelper(conn, tx)
+	_, err := i.sendTransactionHelper(conn, i.activeAccount, tx)
 	return nil, err
 }
 
@@ -315,7 +315,7 @@ func (i *FlowIntegration) updateAccountCode(conn protocol.Conn, args ...interfac
 	accountCode := []byte(doc.Text)
 	tx := templates.UpdateAccountCode(i.activeAccount, accountCode)
 
-	_, err := i.sendTransactionHelper(conn, tx)
+	_, err := i.sendTransactionHelper(conn, i.activeAccount, tx)
 	return nil, err
 }
 
@@ -353,16 +353,20 @@ func (i *FlowIntegration) getAccountKey(address flow.Address) (*flow.AccountKey,
 //
 // If an error occurs, attempts to show an appropriate message (either via logs
 // or UI popups in the client).
-func (i *FlowIntegration) sendTransactionHelper(conn protocol.Conn, tx *flow.Transaction) (flow.Identifier, error) {
-	accountKey, signer, err := i.getAccountKey(i.activeAccount)
+func (i *FlowIntegration) sendTransactionHelper(
+	conn protocol.Conn,
+	address flow.Address,
+	tx *flow.Transaction,
+) (flow.Identifier, error) {
+	accountKey, signer, err := i.getAccountKey(address)
 	if err != nil {
 		return flow.EmptyID, err
 	}
 
-	tx.SetProposalKey(i.activeAccount, accountKey.ID, accountKey.SequenceNumber)
-	tx.SetPayer(i.activeAccount)
+	tx.SetProposalKey(address, accountKey.ID, accountKey.SequenceNumber)
+	tx.SetPayer(address)
 
-	err = tx.SignEnvelope(i.activeAccount, accountKey.ID, signer)
+	err = tx.SignEnvelope(address, accountKey.ID, signer)
 	if err != nil {
 		return flow.EmptyID, err
 	}
@@ -422,9 +426,9 @@ func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (addr flow.Add
 		Weight:    flow.AccountKeyWeightThreshold,
 	}
 
-	tx := templates.CreateAccount([]*flow.AccountKey{accountKey}, nil, i.activeAccount)
+	tx := templates.CreateAccount([]*flow.AccountKey{accountKey}, nil, i.serviceAddress)
 
-	txID, err := i.sendTransactionHelper(conn, tx)
+	txID, err := i.sendTransactionHelper(conn, i.serviceAddress, tx)
 	if err != nil {
 		return addr, err
 	}
