@@ -54,7 +54,7 @@ func (i *FlowIntegration) showSubmitTransactionAction(
 	declarations *declarations,
 ) *protocol.CodeLens {
 	// Do not show submit button when no active account exists
-	if i.activeAccount == flow.EmptyAddress {
+	if i.activeAddress == flow.EmptyAddress {
 		return nil
 	}
 
@@ -70,7 +70,7 @@ func (i *FlowIntegration) showSubmitTransactionAction(
 				declarations.transactions[0].StartPosition(),
 			),
 			Command: &protocol.Command{
-				Title:     fmt.Sprintf("submit transaction with account 0x%s", i.activeAccount.Hex()),
+				Title:     fmt.Sprintf("submit transaction with account 0x%s", i.activeAddress.Hex()),
 				Command:   CommandSubmitTransaction,
 				Arguments: []interface{}{uri},
 			},
@@ -85,7 +85,7 @@ func (i *FlowIntegration) showDeployContractAction(
 	declarations *declarations,
 ) *protocol.CodeLens {
 	// Do not show deploy button when no active account exists
-	if i.activeAccount == flow.EmptyAddress {
+	if i.activeAddress == flow.EmptyAddress {
 		return nil
 	}
 
@@ -101,7 +101,7 @@ func (i *FlowIntegration) showDeployContractAction(
 				declarations.contracts[0].StartPosition(),
 			),
 			Command: &protocol.Command{
-				Title:     fmt.Sprintf("deploy contract to account 0x%s", i.activeAccount.Hex()),
+				Title:     fmt.Sprintf("deploy contract to account 0x%s", i.activeAddress.Hex()),
 				Command:   CommandUpdateAccountCode,
 				Arguments: []interface{}{uri},
 			},
@@ -116,7 +116,7 @@ func (i *FlowIntegration) showDeployContractInterfaceAction(
 	declarations *declarations,
 ) *protocol.CodeLens {
 	// Do not show deploy button when no active account exists
-	if i.activeAccount == flow.EmptyAddress {
+	if i.activeAddress == flow.EmptyAddress {
 		return nil
 	}
 
@@ -137,7 +137,7 @@ func (i *FlowIntegration) showDeployContractInterfaceAction(
 				Title: fmt.Sprintf(
 					"deploy contract %s to account 0x%s",
 					pluralInterface,
-					i.activeAccount.Hex(),
+					i.activeAddress.Hex(),
 				),
 				Command:   CommandUpdateAccountCode,
 				Arguments: []interface{}{uri},

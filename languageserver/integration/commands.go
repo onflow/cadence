@@ -103,9 +103,9 @@ func (i *FlowIntegration) submitTransaction(conn protocol.Conn, args ...interfac
 
 	tx := flow.NewTransaction().
 		SetScript(script).
-		AddAuthorizer(i.activeAccount)
+		AddAuthorizer(i.activeAddress)
 
-	_, err := i.sendTransactionHelper(conn, i.activeAccount, tx)
+	_, err := i.sendTransactionHelper(conn, i.activeAddress, tx)
 	return nil, err
 }
 
@@ -202,7 +202,7 @@ func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...interf
 		return nil, errors.New("cannot set active account that does not exist")
 	}
 
-	i.activeAccount = addr
+	i.activeAddress = addr
 	return nil, nil
 }
 
@@ -309,13 +309,13 @@ func (i *FlowIntegration) updateAccountCode(conn protocol.Conn, args ...interfac
 
 	conn.ShowMessage(&protocol.ShowMessageParams{
 		Type:    protocol.Info,
-		Message: fmt.Sprintf("Deploying %s to account 0x%s", file, i.activeAccount.Hex()),
+		Message: fmt.Sprintf("Deploying %s to account 0x%s", file, i.activeAddress.Hex()),
 	})
 
 	accountCode := []byte(doc.Text)
-	tx := templates.UpdateAccountCode(i.activeAccount, accountCode)
+	tx := templates.UpdateAccountCode(i.activeAddress, accountCode)
 
-	_, err := i.sendTransactionHelper(conn, i.activeAccount, tx)
+	_, err := i.sendTransactionHelper(conn, i.activeAddress, tx)
 	return nil, err
 }
 
