@@ -24,6 +24,24 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+type declarations struct {
+	transactions       []*ast.TransactionDeclaration
+	scripts            []*ast.FunctionDeclaration
+	contracts          []*ast.CompositeDeclaration
+	contractInterfaces []*ast.InterfaceDeclaration
+}
+
+// getTransactionDeclarations finds all declarations relevant to the language server.
+//
+func getAllDeclarations(elaboration *sema.Elaboration) *declarations {
+	return &declarations{
+		transactions:       getTransactionDeclarations(elaboration.TransactionDeclarationTypes),
+		scripts:            getScriptDeclarations(elaboration.FunctionDeclarationFunctionTypes),
+		contracts:          getContractDeclarations(elaboration.CompositeDeclarationTypes),
+		contractInterfaces: getContractInterfaceDeclarations(elaboration.InterfaceDeclarationTypes),
+	}
+}
+
 // getTransactionDeclarations finds all transaction declarations.
 //
 func getTransactionDeclarations(
