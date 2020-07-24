@@ -98,6 +98,8 @@ const (
 	authorizedKey           = "authorized"
 	targetStorageAddressKey = "targetStorageAddress"
 	targetKeyKey            = "targetKey"
+	targetPathKey           = "targetPath"
+	borrowTypeKey           = "borrowType"
 )
 
 var ErrInvalidJSONCadence = errors.New("invalid JSON Cadence structure")
@@ -180,6 +182,8 @@ func decodeJSON(v interface{}) cadence.Value {
 		return decodeEvent(valueJSON)
 	case storageReferenceTypeStr:
 		return decodeStorageReference(valueJSON)
+	case linkTypeStr:
+		return decodeLink(valueJSON)
 	}
 
 	panic(ErrInvalidJSONCadence)
@@ -553,6 +557,15 @@ func decodeStorageReference(valueJSON interface{}) cadence.StorageReference {
 		obj.GetBool(authorizedKey),
 		decodeAddress(obj.Get(targetStorageAddressKey)),
 		obj.GetString(targetKeyKey),
+	)
+}
+
+func decodeLink(valueJSON interface{}) cadence.Link {
+	obj := toObject(valueJSON)
+
+	return cadence.NewLink(
+		obj.GetString(targetPathKey),
+		obj.GetString(borrowTypeKey),
 	)
 }
 
