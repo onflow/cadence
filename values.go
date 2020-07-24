@@ -962,13 +962,13 @@ func (v Contract) ToGoValue() interface{} {
 // Link
 
 type Link struct {
-	Target     string
+	TargetPath string
 	BorrowType string
 }
 
-func NewLink(target string, borrowType string) Link {
+func NewLink(targetPath string, borrowType string) Link {
 	return Link{
-		Target:     target,
+		TargetPath: targetPath,
 		BorrowType: borrowType,
 	}
 }
