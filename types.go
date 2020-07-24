@@ -591,3 +591,22 @@ func (EventPointer) isType() {}
 func (t EventPointer) ID() string {
 	return t.TypeName
 }
+
+// ReferenceType
+
+type ReferenceType struct {
+	typeID     string
+	Authorized bool
+	Type       Type
+}
+
+func (ReferenceType) isType() {}
+
+func (t ReferenceType) ID() string {
+	return t.typeID
+}
+
+func (t ReferenceType) WithID(id string) ReferenceType {
+	t.typeID = id
+	return t
+}
