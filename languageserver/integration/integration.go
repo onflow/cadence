@@ -30,7 +30,7 @@ type FlowIntegration struct {
 	config         Config
 	flowClient     *client.Client
 	accounts       map[flow.Address]AccountPrivateKey
-	activeAccount  flow.Address
+	activeAddress  flow.Address
 	serviceAddress flow.Address
 }
 
