@@ -33,11 +33,9 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 	}
 	i.config = conf
 
-	serviceAddress := flow.ServiceAddress(flow.Emulator)
-
 	// add the service account as a usable account
-	i.accounts[serviceAddress] = conf.ServiceAccountKey
-	i.activeAccount = serviceAddress
+	i.serviceAddress = flow.ServiceAddress(flow.Emulator)
+	i.accounts[i.serviceAddress] = conf.ServiceAccountKey
 
 	i.flowClient, err = client.New(
 		i.config.EmulatorAddr,
@@ -46,5 +44,6 @@ func (i *FlowIntegration) initialize(initializationOptions interface{}) error {
 	if err != nil {
 		return err
 	}
+
 	return nil
 }

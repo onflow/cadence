@@ -26,11 +26,12 @@ import (
 )
 
 type FlowIntegration struct {
-	server        *server.Server
-	config        Config
-	flowClient    *client.Client
-	accounts      map[flow.Address]AccountPrivateKey
-	activeAccount flow.Address
+	server         *server.Server
+	config         Config
+	flowClient     *client.Client
+	accounts       map[flow.Address]AccountPrivateKey
+	activeAccount  flow.Address
+	serviceAddress flow.Address
 }
 
 func NewFlowIntegration(s *server.Server) (*FlowIntegration, error) {

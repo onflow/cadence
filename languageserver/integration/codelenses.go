@@ -21,6 +21,8 @@ package integration
 import (
 	"fmt"
 
+	"github.com/onflow/flow-go-sdk"
+
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/runtime/sema"
@@ -51,6 +53,11 @@ func (i *FlowIntegration) showSubmitTransactionAction(
 	uri protocol.DocumentUri,
 	declarations *declarations,
 ) *protocol.CodeLens {
+	// Do not show submit button when no active account exists
+	if i.activeAccount == flow.EmptyAddress {
+		return nil
+	}
+
 	// Show submit button when there is exactly one transaction declaration and no
 	// other actionable declarations.
 	if len(declarations.transactions) == 1 &&
@@ -77,6 +84,11 @@ func (i *FlowIntegration) showDeployContractAction(
 	uri protocol.DocumentUri,
 	declarations *declarations,
 ) *protocol.CodeLens {
+	// Do not show deploy button when no active account exists
+	if i.activeAccount == flow.EmptyAddress {
+		return nil
+	}
+
 	// Show deploy button when there is exactly one contract declaration,
 	// any number of contract interface declarations, and no other actionable
 	// declarations.
@@ -103,6 +115,11 @@ func (i *FlowIntegration) showDeployContractInterfaceAction(
 	uri protocol.DocumentUri,
 	declarations *declarations,
 ) *protocol.CodeLens {
+	// Do not show deploy button when no active account exists
+	if i.activeAccount == flow.EmptyAddress {
+		return nil
+	}
+
 	// Show deploy interface button when there are 1 or more contract interface
 	// declarations, but no other actionable declarations.
 	if len(declarations.contractInterfaces) > 0 &&
