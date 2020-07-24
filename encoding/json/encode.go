@@ -125,7 +125,7 @@ type jsonStorageReferenceValue struct {
 }
 
 type jsonLinkValue struct {
-	Target     string `json:"target"`
+	TargetPath string `json:"targetPath"`
 	BorrowType string `json:"borrowType"`
 }
 
@@ -509,7 +509,7 @@ func (e *Encoder) prepareLink(x cadence.Link) jsonValue {
 	return jsonValueObject{
 		Type: linkTypeStr,
 		Value: jsonLinkValue{
-			Target:     x.Target,
+			TargetPath: x.TargetPath,
 			BorrowType: x.BorrowType,
 		},
 	}

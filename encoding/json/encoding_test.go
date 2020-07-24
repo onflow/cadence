@@ -1106,7 +1106,7 @@ func TestEncodeLink(t *testing.T) {
 	testEncode(
 		t,
 		cadence.NewLink("/storage/foo", "Bar"),
-		`{"type":"Link","value":{"target":"/storage/foo","borrowType":"Bar"}}`,
+		`{"type":"Link","value":{"targetPath":"/storage/foo","borrowType":"Bar"}}`,
 	)
 }
 
