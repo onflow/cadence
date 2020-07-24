@@ -28,90 +28,131 @@ import (
 
 func (i *FlowIntegration) codeLenses(uri protocol.DocumentUri, checker *sema.Checker) ([]*protocol.CodeLens, error) {
 
-	elaboration := checker.Elaboration
 	var (
-		scriptFuncDeclarations        = getScriptDeclarations(elaboration.FunctionDeclarationFunctionTypes)
-		txDeclarations                = getTransactionDeclarations(elaboration.TransactionDeclarationTypes)
-		contractDeclarations          = getContractDeclarations(elaboration.CompositeDeclarationTypes)
-		contractInterfaceDeclarations = getContractInterfaceDeclarations(elaboration.InterfaceDeclarationTypes)
-
-		actions []*protocol.CodeLens
+		declarations = getAllDeclarations(checker.Elaboration)
+		actions      []*protocol.CodeLens
 	)
 
+	addAction := func(lens *protocol.CodeLens) {
+		if lens != nil {
+			actions = append(actions, lens)
+		}
+	}
+
+	addAction(i.showSubmitTransactionAction(uri, declarations))
+	addAction(i.showDeployContractAction(uri, declarations))
+	addAction(i.showDeployContractInterfaceAction(uri, declarations))
+	addAction(i.showExecuteScriptAction(uri, declarations))
+
+	return actions, nil
+}
+
+func (i *FlowIntegration) showSubmitTransactionAction(
+	uri protocol.DocumentUri,
+	declarations *declarations,
+) *protocol.CodeLens {
 	// Show submit button when there is exactly one transaction declaration and no
 	// other actionable declarations.
-	if len(txDeclarations) == 1 &&
-		len(contractDeclarations) == 0 &&
-		len(contractInterfaceDeclarations) == 0 &&
-		len(scriptFuncDeclarations) == 0 {
-		actions = append(actions, &protocol.CodeLens{
-			Range: conversion.ASTToProtocolRange(txDeclarations[0].StartPosition(), txDeclarations[0].StartPosition()),
+	if len(declarations.transactions) == 1 &&
+		len(declarations.contracts) == 0 &&
+		len(declarations.contractInterfaces) == 0 &&
+		len(declarations.scripts) == 0 {
+		return &protocol.CodeLens{
+			Range: conversion.ASTToProtocolRange(
+				declarations.transactions[0].StartPosition(),
+				declarations.transactions[0].StartPosition(),
+			),
 			Command: &protocol.Command{
 				Title:     fmt.Sprintf("submit transaction with account 0x%s", i.activeAccount.Hex()),
 				Command:   CommandSubmitTransaction,
 				Arguments: []interface{}{uri},
 			},
-		})
+		}
 	}
 
+	return nil
+}
+
+func (i *FlowIntegration) showDeployContractAction(
+	uri protocol.DocumentUri,
+	declarations *declarations,
+) *protocol.CodeLens {
 	// Show deploy button when there is exactly one contract declaration,
 	// any number of contract interface declarations, and no other actionable
 	// declarations.
-	if len(contractDeclarations) == 1 &&
-		len(txDeclarations) == 0 &&
-		len(scriptFuncDeclarations) == 0 {
-		actions = append(actions, &protocol.CodeLens{
+	if len(declarations.contracts) == 1 &&
+		len(declarations.transactions) == 0 &&
+		len(declarations.scripts) == 0 {
+		return &protocol.CodeLens{
 			Range: conversion.ASTToProtocolRange(
-				contractDeclarations[0].StartPosition(),
-				contractDeclarations[0].StartPosition(),
+				declarations.contracts[0].StartPosition(),
+				declarations.contracts[0].StartPosition(),
 			),
 			Command: &protocol.Command{
 				Title:     fmt.Sprintf("deploy contract to account 0x%s", i.activeAccount.Hex()),
 				Command:   CommandUpdateAccountCode,
 				Arguments: []interface{}{uri},
 			},
-		})
+		}
 	}
 
+	return nil
+}
+
+func (i *FlowIntegration) showDeployContractInterfaceAction(
+	uri protocol.DocumentUri,
+	declarations *declarations,
+) *protocol.CodeLens {
 	// Show deploy interface button when there are 1 or more contract interface
 	// declarations, but no other actionable declarations.
-	if len(contractInterfaceDeclarations) > 0 &&
-		len(txDeclarations) == 0 &&
-		len(scriptFuncDeclarations) == 0 &&
-		len(contractDeclarations) == 0 {
+	if len(declarations.contractInterfaces) > 0 &&
+		len(declarations.transactions) == 0 &&
+		len(declarations.scripts) == 0 &&
+		len(declarations.contracts) == 0 {
 		// decide whether to pluralize
 		pluralInterface := "interface"
-		if len(contractInterfaceDeclarations) > 1 {
+		if len(declarations.contractInterfaces) > 1 {
 			pluralInterface = "interfaces"
 		}
 
-		actions = append(actions, &protocol.CodeLens{
+		return &protocol.CodeLens{
 			Command: &protocol.Command{
-				Title:     fmt.Sprintf("deploy contract %s to account 0x%s", pluralInterface, i.activeAccount.Hex()),
+				Title: fmt.Sprintf(
+					"deploy contract %s to account 0x%s",
+					pluralInterface,
+					i.activeAccount.Hex(),
+				),
 				Command:   CommandUpdateAccountCode,
 				Arguments: []interface{}{uri},
 			},
-		})
+		}
 	}
 
+	return nil
+}
+
+func (i *FlowIntegration) showExecuteScriptAction(
+	uri protocol.DocumentUri,
+	declarations *declarations,
+) *protocol.CodeLens {
 	// Show execute script button when there is exactly one valid script
 	// function and no other actionable declarations.
-	if len(scriptFuncDeclarations) == 1 &&
-		len(contractDeclarations) == 0 &&
-		len(contractInterfaceDeclarations) == 0 &&
-		len(txDeclarations) == 0 {
-		actions = append(actions, &protocol.CodeLens{
+	if len(declarations.scripts) == 1 &&
+		len(declarations.contracts) == 0 &&
+		len(declarations.contractInterfaces) == 0 &&
+		len(declarations.transactions) == 0 {
+		return &protocol.CodeLens{
 			Range: conversion.ASTToProtocolRange(
-				scriptFuncDeclarations[0].StartPosition(),
-				scriptFuncDeclarations[0].StartPosition(),
+				declarations.scripts[0].StartPosition(),
+				declarations.scripts[0].StartPosition(),
 			),
 			Command: &protocol.Command{
 				Title:     "execute script",
 				Command:   CommandExecuteScript,
 				Arguments: []interface{}{uri},
 			},
-		})
+		}
 	}
 
-	return actions, nil
+	return nil
 }
