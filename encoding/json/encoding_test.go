@@ -1114,7 +1114,7 @@ func TestStorageReference(t *testing.T) {
 
 	t.Parallel()
 
-	testEncode(
+	testEncodeAndDecode(
 		t,
 		cadence.NewStorageReference(
 			false,

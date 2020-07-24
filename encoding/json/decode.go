@@ -89,12 +89,15 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 }
 
 const (
-	typeKey   = "type"
-	valueKey  = "value"
-	keyKey    = "key"
-	nameKey   = "name"
-	fieldsKey = "fields"
-	idKey     = "id"
+	typeKey                 = "type"
+	valueKey                = "value"
+	keyKey                  = "key"
+	nameKey                 = "name"
+	fieldsKey               = "fields"
+	idKey                   = "id"
+	authorizedKey           = "authorized"
+	targetStorageAddressKey = "targetStorageAddress"
+	targetKeyKey            = "targetKey"
 )
 
 var ErrInvalidJSONCadence = errors.New("invalid JSON Cadence structure")
@@ -175,6 +178,8 @@ func decodeJSON(v interface{}) cadence.Value {
 		return decodeStruct(valueJSON)
 	case eventTypeStr:
 		return decodeEvent(valueJSON)
+	case storageReferenceTypeStr:
+		return decodeStorageReference(valueJSON)
 	}
 
 	panic(ErrInvalidJSONCadence)
@@ -541,6 +546,16 @@ func decodeEvent(valueJSON interface{}) cadence.Event {
 	})
 }
 
+func decodeStorageReference(valueJSON interface{}) cadence.StorageReference {
+	obj := toObject(valueJSON)
+
+	return cadence.NewStorageReference(
+		obj.GetBool(authorizedKey),
+		decodeAddress(obj.Get(targetStorageAddressKey)),
+		obj.GetString(targetKeyKey),
+	)
+}
+
 // JSON types
 
 type jsonObject map[string]interface{}
@@ -553,6 +568,11 @@ func (obj jsonObject) Get(key string) interface{} {
 	}
 
 	return v
+}
+
+func (obj jsonObject) GetBool(key string) bool {
+	v := obj.Get(key)
+	return toBool(v)
 }
 
 func (obj jsonObject) GetString(key string) string {
