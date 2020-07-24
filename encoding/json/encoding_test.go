@@ -886,6 +886,95 @@ func TestEncodeEvent(t *testing.T) {
 	testAllEncodeAndDecode(t, simpleEvent, resourceEvent)
 }
 
+func TestEncodeContract(t *testing.T) {
+
+	t.Parallel()
+
+	simpleContractType := cadence.ContractType{
+		TypeID:     "S.test.FooContract",
+		Identifier: "FooContract",
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.IntType{},
+			},
+			{
+				Identifier: "b",
+				Type:       cadence.StringType{},
+			},
+		},
+	}
+
+	simpleContract := encodeTest{
+		"Simple",
+		cadence.NewContract(
+			[]cadence.Value{
+				cadence.NewInt(1),
+				cadence.NewString("foo"),
+			},
+		).WithType(simpleContractType),
+		`{"type":"Contract","value":{"id":"S.test.FooContract","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
+	}
+
+	resourceContractType := cadence.ContractType{
+		TypeID:     "S.test.FooContract",
+		Identifier: "FooContract",
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.StringType{},
+			},
+			{
+				Identifier: "b",
+				Type:       fooResourceType,
+			},
+		},
+	}
+
+	resourceContract := encodeTest{
+		"Resources",
+		cadence.NewContract(
+			[]cadence.Value{
+				cadence.NewString("foo"),
+				cadence.NewResource(
+					[]cadence.Value{
+						cadence.NewInt(42),
+					},
+				).WithType(fooResourceType),
+			},
+		).WithType(resourceContractType),
+		`{"type":"Contract","value":{"id":"S.test.FooContract","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
+	}
+
+	testAllEncodeAndDecode(t, simpleContract, resourceContract)
+}
+
+func TestEncodeStorageReference(t *testing.T) {
+
+	t.Parallel()
+
+	testEncodeAndDecode(
+		t,
+		cadence.NewStorageReference(
+			false,
+			cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+			"foo",
+		),
+		`{"type":"StorageReference","value":{"authorized":false,"targetStorageAddress":"0x0000000102030405","targetKey":"foo"}}`,
+	)
+}
+
+func TestEncodeLink(t *testing.T) {
+
+	t.Parallel()
+
+	testEncodeAndDecode(
+		t,
+		cadence.NewLink("/storage/foo", "Bar"),
+		`{"type":"Link","value":{"targetPath":"/storage/foo","borrowType":"Bar"}}`,
+	)
+}
+
 func TestDecodeFixedPoints(t *testing.T) {
 
 	t.Parallel()
@@ -1097,32 +1186,6 @@ func TestDecodeFixedPoints(t *testing.T) {
 		_, err := json.Decode([]byte(`{"type": "Fix64", "value": "1."}`))
 		assert.Error(t, err)
 	})
-}
-
-func TestEncodeLink(t *testing.T) {
-
-	t.Parallel()
-
-	testEncodeAndDecode(
-		t,
-		cadence.NewLink("/storage/foo", "Bar"),
-		`{"type":"Link","value":{"targetPath":"/storage/foo","borrowType":"Bar"}}`,
-	)
-}
-
-func TestStorageReference(t *testing.T) {
-
-	t.Parallel()
-
-	testEncodeAndDecode(
-		t,
-		cadence.NewStorageReference(
-			false,
-			cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
-			"foo",
-		),
-		`{"type":"StorageReference","value":{"authorized":false,"targetStorageAddress":"0x0000000102030405","targetKey":"foo"}}`,
-	)
 }
 
 func convertValueFromScript(t *testing.T, script string) cadence.Value {

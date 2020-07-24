@@ -160,6 +160,7 @@ const (
 	structTypeStr           = "Struct"
 	resourceTypeStr         = "Resource"
 	eventTypeStr            = "Event"
+	contractTypeStr         = "Contract"
 	storageReferenceTypeStr = "StorageReference"
 	linkTypeStr             = "Link"
 )
@@ -228,6 +229,8 @@ func (e *Encoder) prepare(v cadence.Value) jsonValue {
 		return e.prepareResource(x)
 	case cadence.Event:
 		return e.prepareEvent(x)
+	case cadence.Contract:
+		return e.prepareContract(x)
 	case cadence.StorageReference:
 		return e.prepareStorageReference(x)
 	case cadence.Link:
@@ -454,6 +457,10 @@ func (e *Encoder) prepareResource(v cadence.Resource) jsonValue {
 
 func (e *Encoder) prepareEvent(v cadence.Event) jsonValue {
 	return e.prepareComposite(eventTypeStr, v.EventType.ID(), v.EventType.Fields, v.Fields)
+}
+
+func (e *Encoder) prepareContract(v cadence.Contract) jsonValue {
+	return e.prepareComposite(contractTypeStr, v.ContractType.ID(), v.ContractType.Fields, v.Fields)
 }
 
 func (e *Encoder) prepareComposite(kind, id string, fieldTypes []cadence.Field, fields []cadence.Value) jsonValue {
