@@ -1108,30 +1108,43 @@ func applyExprMetaLeftDenotation(
 	result ast.Expression,
 	done bool,
 ) {
-	t := p.current
-
-	// Normal left denotations are applied if the right binding power
+	// By default, left denotations are applied if the right binding power
 	// is less than the left binding power of the current token.
 	//
-	// Meta-left denotations allow determining the left binding power
-	// based on parsing more tokens.
+	// Token-specific meta-left denotations allow customizing this,
+	// e.g. determining the left binding power based on parsing more tokens
+	// or performing look-ahead
 
-	if metaLeftDenotation, ok := exprMetaLeftDenotations[t.Type]; ok {
-		return metaLeftDenotation(p, rightBindingPower, left)
+	metaLeftDenotation, ok := exprMetaLeftDenotations[p.current.Type]
+	if !ok {
+		metaLeftDenotation = defaultExprMetaLeftDenotation
 	}
 
-	if rightBindingPower >= exprLeftBindingPower(t) {
+	return metaLeftDenotation(p, rightBindingPower, left)
+}
+
+// defaultExprMetaLeftDenotation is the default expression left denotation, which applies
+// if the right binding power is less than the left binding power of the current token
+//
+func defaultExprMetaLeftDenotation(
+	p *parser,
+	rightBindingPower int,
+	left ast.Expression,
+) (
+	result ast.Expression,
+	done bool,
+) {
+	if rightBindingPower >= exprLeftBindingPower(p.current) {
 		return left, true
 	}
 
 	allowWhitespace := exprLeftDenotationAllowsWhitespaceAfterToken(p.current.Type)
 
-	t = p.current
+	t := p.current
 
 	p.next()
 	if allowWhitespace {
 		p.skipSpaceAndComments(true)
-
 	}
 
 	result = applyExprLeftDenotation(p, t, left)

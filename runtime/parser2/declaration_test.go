@@ -865,6 +865,72 @@ func TestParseFunctionDeclaration(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("without space after return type", func(t *testing.T) {
+
+		// A brace after the return type is ambiguous:
+		// It could be the start of a restricted type.
+		// However, if there is space after the brace, which is most common
+		// in function declarations, we consider it not a restricted type
+
+		t.Parallel()
+
+		result, errs := ParseDeclarations("fun main(): Int{ return 1 }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.FunctionDeclaration{
+					Identifier: ast.Identifier{
+						Identifier: "main",
+						Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+					},
+					ParameterList: &ast.ParameterList{
+						Parameters: nil,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+							EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+						},
+					},
+					ReturnTypeAnnotation: &ast.TypeAnnotation{
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "Int",
+								Pos:        ast.Position{Line: 1, Column: 12, Offset: 12},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 12, Offset: 12},
+					},
+					FunctionBlock: &ast.FunctionBlock{
+						Block: &ast.Block{
+							Statements: []ast.Statement{
+								&ast.ReturnStatement{
+									Expression: &ast.IntegerExpression{
+										Value: big.NewInt(1),
+										Base:  10,
+										Range: ast.Range{
+											StartPos: ast.Position{Line: 1, Column: 24, Offset: 24},
+											EndPos:   ast.Position{Line: 1, Column: 24, Offset: 24},
+										},
+									},
+									Range: ast.Range{
+										StartPos: ast.Position{Line: 1, Column: 17, Offset: 17},
+										EndPos:   ast.Position{Line: 1, Column: 24, Offset: 24},
+									},
+								},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 15, Offset: 15},
+								EndPos:   ast.Position{Line: 1, Column: 26, Offset: 26},
+							},
+						},
+					},
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+				},
+			},
+			result,
+		)
+	})
 }
 
 func TestParseAccess(t *testing.T) {

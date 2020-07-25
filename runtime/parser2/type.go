@@ -38,9 +38,18 @@ type typeNullDenotationFunc func(parser *parser, token lexer.Token) ast.Type
 var typeNullDenotations = map[lexer.TokenType]typeNullDenotationFunc{}
 
 type typeLeftDenotationFunc func(parser *parser, token lexer.Token, left ast.Type) ast.Type
+type typeMetaLeftDenotationFunc func(
+	p *parser,
+	rightBindingPower int,
+	left ast.Type,
+) (
+	result ast.Type,
+	done bool,
+)
 
 var typeLeftBindingPowers = map[lexer.TokenType]int{}
 var typeLeftDenotations = map[lexer.TokenType]typeLeftDenotationFunc{}
+var typeMetaLeftDenotations = map[lexer.TokenType]typeMetaLeftDenotationFunc{}
 
 func setTypeNullDenotation(tokenType lexer.TokenType, nullDenotation typeNullDenotationFunc) {
 	current := typeNullDenotations[tokenType]
@@ -70,6 +79,17 @@ func setTypeLeftDenotation(tokenType lexer.TokenType, leftDenotation typeLeftDen
 		))
 	}
 	typeLeftDenotations[tokenType] = leftDenotation
+}
+
+func setTypeMetaLeftDenotation(tokenType lexer.TokenType, metaLeftDenotation typeMetaLeftDenotationFunc) {
+	current := typeMetaLeftDenotations[tokenType]
+	if current != nil {
+		panic(fmt.Errorf(
+			"type meta left denotation for token %s already exists",
+			tokenType,
+		))
+	}
+	typeMetaLeftDenotations[tokenType] = metaLeftDenotation
 }
 
 type prefixTypeFunc func(right ast.Type, tokenRange ast.Range) ast.Type
@@ -430,19 +450,53 @@ func defineRestrictedOrDictionaryType() {
 		},
 	)
 
-	// For the left denotation we definitely know it is a restricted type
+	// For the left denotation we need a meta left denotation:
+	// We need to look ahead and check if the brace is followed by whitespace or not.
+	// In case there is a space, the type is *not* considered a restricted type.
+	// This handles the ambiguous case where a function return type's open brace
+	// may either be a restricted type (if there is no whitespace)
+	// or the start of the function body (if there is whitespace).
+	//
+	// In the fu
 
-	setTypeLeftBindingPower(lexer.TokenBraceOpen, typeLeftBindingPowerRestriction)
-	setTypeLeftDenotation(
+	//setTypeLeftBindingPower(lexer.TokenBraceOpen, typeLeftBindingPowerRestriction)
+	setTypeMetaLeftDenotation(
 		lexer.TokenBraceOpen,
-		func(p *parser, token lexer.Token, left ast.Type) ast.Type {
+		func(p *parser, rightBindingPower int, left ast.Type) (result ast.Type, done bool) {
+
+			// Start buffering before skipping the `{` token,
+			// so it can be replayed in case the
+
+			p.startBuffering()
+
+			// Skip the `{` token.
+			p.next()
+
+			// In case there is a space, the type is *not* considered a restricted type.
+			// The buffered tokens are replayed to allow them to be re-parsed.
+
+			if p.current.Is(lexer.TokenSpace) {
+				p.replayBuffered()
+				return left, true
+			}
+
+			// It was determined that a restricted type is parsed.
+			// Still, it should have maybe not been parsed if the right binding power
+			// was higher. In that case, replay the buffered tokens and stop.
+
+			if rightBindingPower >= typeLeftBindingPowerRestriction {
+				p.replayBuffered()
+				return left, true
+			}
+
+			p.acceptBuffered()
 
 			nominalTypes, endPos := parseNominalTypes(p, lexer.TokenBraceClose)
 
 			// Skip the closing brace
 			p.next()
 
-			return &ast.RestrictedType{
+			result = &ast.RestrictedType{
 				Type:         left,
 				Restrictions: nominalTypes,
 				Range: ast.Range{
@@ -450,6 +504,8 @@ func defineRestrictedOrDictionaryType() {
 					EndPos:   endPos,
 				},
 			}
+
+			return result, false
 		},
 	)
 }
@@ -596,20 +652,68 @@ func parseParameterTypeAnnotations(p *parser) (typeAnnotations []*ast.TypeAnnota
 }
 
 func parseType(p *parser, rightBindingPower int) ast.Type {
+
 	p.skipSpaceAndComments(true)
 	t := p.current
 	p.next()
 
 	left := applyTypeNullDenotation(p, t)
 
-	for rightBindingPower < typeLeftBindingPowers[p.current.Type] {
-		t = p.current
-		p.next()
-
-		left = applyTypeLeftDenotation(p, t, left)
+	for {
+		var done bool
+		left, done = applyTypeMetaLeftDenotation(p, rightBindingPower, left)
+		if done {
+			break
+		}
 	}
 
 	return left
+}
+
+func applyTypeMetaLeftDenotation(
+	p *parser,
+	rightBindingPower int,
+	left ast.Type,
+) (
+	result ast.Type,
+	done bool,
+) {
+	// By default, left denotations are applied if the right binding power
+	// is less than the left binding power of the current token.
+	//
+	// Token-specific meta-left denotations allow customizing this,
+	// e.g. determining the left binding power based on parsing more tokens,
+	// or performing look-ahead
+
+	metaLeftDenotation, ok := typeMetaLeftDenotations[p.current.Type]
+	if !ok {
+		metaLeftDenotation = defaultTypeMetaLeftDenotation
+	}
+
+	return metaLeftDenotation(p, rightBindingPower, left)
+}
+
+// defaultTypeMetaLeftDenotation is the default type left denotation, which applies
+// if the right binding power is less than the left binding power of the current token
+//
+func defaultTypeMetaLeftDenotation(
+	p *parser,
+	rightBindingPower int,
+	left ast.Type,
+) (
+	result ast.Type,
+	done bool,
+) {
+	if rightBindingPower >= typeLeftBindingPowers[p.current.Type] {
+		return left, true
+	}
+
+	t := p.current
+
+	p.next()
+
+	result = applyTypeLeftDenotation(p, t, left)
+	return result, false
 }
 
 func parseTypeAnnotation(p *parser) *ast.TypeAnnotation {
