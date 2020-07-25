@@ -21,6 +21,7 @@ package server
 import (
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -479,6 +480,25 @@ func (s *Server) Completion(
 
 	position := conversion.ProtocolToSemaPosition(params.Position)
 
+	memberCompletions := s.memberCompletions(position, checker, uri)
+
+	// prioritize member completion items over other items
+	for _, item := range memberCompletions {
+		item.SortText = fmt.Sprintf("1" + item.Label)
+	}
+
+	items = append(items, memberCompletions...)
+
+
+	return
+}
+
+func (s *Server) memberCompletions(
+	position sema.Position,
+	checker *sema.Checker,
+	uri protocol.DocumentUri,
+) (items []*protocol.CompletionItem) {
+
 	// The client asks for the column after the identifier,
 	// query the member accesses for the preceding position
 
@@ -489,24 +509,73 @@ func (s *Server) Completion(
 
 	delete(s.memberResolvers, uri)
 
-	if memberAccess != nil {
-		memberResolvers := memberAccess.AccessedType.GetMembers()
-		s.memberResolvers[uri] = memberResolvers
-
-		for name, resolver := range memberResolvers {
-			kind := convertDeclarationKindToCompletionItemType(resolver.Kind)
-
-			items = append(items, &protocol.CompletionItem{
-				Label: name,
-				Kind:  kind,
-				Data: CompletionItemData{
-					URI: uri,
-				},
-			})
-		}
+	if memberAccess == nil {
+		return
 	}
 
-	return
+	memberResolvers := memberAccess.AccessedType.GetMembers()
+	s.memberResolvers[uri] = memberResolvers
+
+	for name, resolver := range memberResolvers {
+		kind := convertDeclarationKindToCompletionItemType(resolver.Kind)
+		commitCharacters := declarationKindCommitCharacters(resolver.Kind)
+
+		item := &protocol.CompletionItem{
+			Label:            name,
+			Kind:             kind,
+			CommitCharacters: commitCharacters,
+			Data: CompletionItemData{
+				URI: uri,
+			},
+		}
+
+		// If the member is a function, also prepare the argument list
+		// with placeholders and suggest it
+
+		if resolver.Kind == common.DeclarationKindFunction {
+			s.prepareFunctionMemberCompletionItem(item, resolver, name)
+		}
+
+		items = append(items, item)
+	}
+
+	return items
+}
+
+func (s *Server) prepareFunctionMemberCompletionItem(
+	item *protocol.CompletionItem,
+	resolver sema.MemberResolver,
+	name string,
+) {
+	member := resolver.Resolve(item.Label, ast.Range{}, func(err error) { /* NO-OP */ })
+	functionType, ok := member.TypeAnnotation.Type.(*sema.FunctionType)
+	if !ok {
+		return
+	}
+
+	item.InsertTextFormat = protocol.SnippetTextFormat
+
+	var builder strings.Builder
+	builder.WriteString(name)
+	builder.WriteRune('(')
+
+	for i, parameter := range functionType.Parameters {
+		if i > 0 {
+			builder.WriteString(", ")
+		}
+		if parameter.Label != sema.ArgumentLabelNotRequired {
+			builder.WriteString(parameter.Label)
+			builder.WriteString(": ")
+		}
+		builder.WriteString("${")
+		builder.WriteString(strconv.Itoa(i + 1))
+		builder.WriteRune(':')
+		builder.WriteString(parameter.Identifier)
+		builder.WriteRune('}')
+	}
+
+	builder.WriteRune(')')
+	item.InsertText = builder.String()
 }
 
 func convertDeclarationKindToCompletionItemType(kind common.DeclarationKind) protocol.CompletionItemKind {
@@ -533,10 +602,20 @@ func convertDeclarationKindToCompletionItemType(kind common.DeclarationKind) pro
 	}
 }
 
+func declarationKindCommitCharacters(kind common.DeclarationKind) []string {
+	switch kind {
+	case common.DeclarationKindField:
+		return []string{"."}
+
+	default:
+		return nil
+	}
+}
+
 // Completion is called to compute completion items at a given cursor position.
 //
 func (s *Server) ResolveCompletionItem(
-	conn protocol.Conn,
+	_ protocol.Conn,
 	item *protocol.CompletionItem,
 ) (
 	result *protocol.CompletionItem,
