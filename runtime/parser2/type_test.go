@@ -358,7 +358,7 @@ func TestParseRestrictedType(t *testing.T) {
 
 		t.Parallel()
 
-		result, errs := ParseType("T{ U , V }")
+		result, errs := ParseType("T{U , V }")
 		require.Empty(t, errs)
 
 		utils.AssertEqualWithDiff(t,
@@ -373,19 +373,19 @@ func TestParseRestrictedType(t *testing.T) {
 					{
 						Identifier: ast.Identifier{
 							Identifier: "U",
-							Pos:        ast.Position{Line: 1, Column: 3, Offset: 3},
+							Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
 						},
 					},
 					{
 						Identifier: ast.Identifier{
 							Identifier: "V",
-							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+							Pos:        ast.Position{Line: 1, Column: 6, Offset: 6},
 						},
 					},
 				},
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
-					EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+					EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
 				},
 			},
 			result,
@@ -488,12 +488,12 @@ func TestParseRestrictedType(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("T{ T , U : V }")
+		_, errs := ParseType("T{U , V : W }")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
 					Message: `unexpected token: got ':', expected ',' or '}'`,
-					Pos:     ast.Position{Offset: 9, Line: 1, Column: 9},
+					Pos:     ast.Position{Offset: 8, Line: 1, Column: 8},
 				},
 			},
 			errs,
