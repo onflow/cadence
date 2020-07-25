@@ -459,10 +459,217 @@ type CompletionItemData struct {
 	URI protocol.DocumentUri `json:"uri"`
 }
 
+var statementCompletionItems = []*protocol.CompletionItem{
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "for",
+		Detail:           "for-in loop",
+		InsertText:       "for $1 in $2 {\n\t$0\n}",
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "while",
+		Detail:           "while loop",
+		InsertText:       "while $1 {\n\t$0\n}",
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "if",
+		Detail:           "if statement",
+		InsertText:       "if $1 {\n\t$0\n}",
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "if else",
+		Detail:           "if-else statement",
+		InsertText:       "if $1 {\n\t$2\n} else {\n\t$0\n}",
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "else",
+		Detail:           "else block",
+		InsertText:       "else {\n\t$0\n}",
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "if let",
+		Detail:           "if-let statement",
+		InsertText:       "if let $1 = $2 {\n\t$0\n}",
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "return",
+		Detail:           "return statement",
+		InsertText:       "return $0",
+	},
+	{
+		Kind:   protocol.KeywordCompletion,
+		Label:  "break",
+		Detail: "break statement",
+	},
+	{
+		Kind:   protocol.KeywordCompletion,
+		Label:  "continue",
+		Detail: "continue statement",
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "emit",
+		Detail:           "emit statement",
+		InsertText:       "emit $0",
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "destroy",
+		Detail:           "destroy expression",
+		InsertText:       "destroy $0",
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "pre",
+		Detail:           "pre conditions",
+		InsertText:       "pre {\n\t$0\n}",
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "post",
+		Detail:           "post conditions",
+		InsertText:       "post {\n\t$0\n}",
+	},
+}
+
+var expressionCompletionItems = []*protocol.CompletionItem{
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "create",
+		Detail:           "create statement",
+		InsertText:       "create $0",
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "create",
+		Detail:           "create statement",
+		InsertText:       "create $0",
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "let",
+		Detail:           "constant declaration",
+		InsertText:       "let $1 = $0",
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "var",
+		Detail:           "variable declaration",
+		InsertText:       "var $1 = $0",
+	},
+}
+
+const accessOptions = "pub,priv,pub(set),access(contract),access(account)"
+
+var declarationCompletionItems = []*protocol.CompletionItem{
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "struct",
+		Detail:           "struct declaration",
+		InsertText:       fmt.Sprintf("${1|%s|} struct $2 {\n\t$0\n}", accessOptions),
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "resource",
+		Detail:           "resource declaration",
+		InsertText:       fmt.Sprintf("${1|%s|} resource $2 {\n\t$0\n}", accessOptions),
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "contract",
+		Detail:           "contract declaration",
+		InsertText:       fmt.Sprintf("${1|%s|} contract $2 {\n\t$0\n}", accessOptions),
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "struct interface",
+		Detail:           "struct interface declaration",
+		InsertText:       fmt.Sprintf("${1|%s|} struct interface $2 {\n\t$0\n}", accessOptions),
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "resource interface",
+		Detail:           "resource interface declaration",
+		InsertText:       fmt.Sprintf("${1|%s|} resource interface $2 {\n\t$0\n}", accessOptions),
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "contract interface",
+		Detail:           "contract interface declaration",
+		InsertText:       fmt.Sprintf("${1|%s|} contract interface $2 {\n\t$0\n}", accessOptions),
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "event",
+		Detail:           "event declaration",
+		InsertText:       fmt.Sprintf("${1|%s|} event $2($0)", accessOptions),
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "fun",
+		Detail:           "function declaration",
+		InsertText:       fmt.Sprintf("${1|%s|} fun $2($3)${4:: $5} {\n\t$0\n}", accessOptions),
+	},
+}
+
+var containerCompletionItems = []*protocol.CompletionItem{
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "var",
+		Detail:           "variable field",
+		InsertText:       fmt.Sprintf("${1|%s|} var $2: $0", accessOptions),
+	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "let",
+		Detail:           "constant field",
+		InsertText:       fmt.Sprintf("${1|%s|} let $2: $0", accessOptions),
+	},
+	// alias for the above
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "const",
+		Detail:           "constant field",
+		InsertText:       fmt.Sprintf("${1|%s|} let $2: $0", accessOptions),
+	},
+}
+
 // Completion is called to compute completion items at a given cursor position.
 //
 func (s *Server) Completion(
-	conn protocol.Conn,
+	_ protocol.Conn,
 	params *protocol.CompletionParams,
 ) (
 	items []*protocol.CompletionItem,
@@ -489,6 +696,17 @@ func (s *Server) Completion(
 
 	items = append(items, memberCompletions...)
 
+	// TODO: make conditional on position being inside a function declaration
+	items = append(items, statementCompletionItems...)
+
+	// TODO: make conditional on position being inside a function declaration
+	items = append(items, expressionCompletionItems...)
+
+	// TODO: make conditional on position being outside a function declaration
+	items = append(items, declarationCompletionItems...)
+
+	// TODO: make conditional on position being inside a container, but not a function declaration
+	items = append(items, containerCompletionItems...)
 
 	return
 }
