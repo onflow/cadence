@@ -1,6 +1,6 @@
 # Cadence
 
-<img src="https://raw.githubusercontent.com/onflow/cadence/master/cadence_furever.png" width="500" />
+<img src="https://raw.githubusercontent.com/onflow/cadence/master/cadence_furever.png" width="300" />
 
 ## Introduction
 
