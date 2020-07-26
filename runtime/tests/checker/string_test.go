@@ -240,7 +240,7 @@ func TestCheckStringIndexing(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func TestCheckStringIndexingAssignment(t *testing.T) {
+func TestCheckInvalidStringIndexingAssignment(t *testing.T) {
 
 	t.Parallel()
 
@@ -252,10 +252,12 @@ func TestCheckStringIndexingAssignment(t *testing.T) {
       }
 	`)
 
-	require.NoError(t, err)
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.NotIndexingAssignableTypeError{}, errs[0])
 }
 
-func TestCheckStringIndexingAssignmentWithCharacterLiteral(t *testing.T) {
+func TestCheckInvalidStringIndexingAssignmentWithCharacterLiteral(t *testing.T) {
 
 	t.Parallel()
 
@@ -266,5 +268,7 @@ func TestCheckStringIndexingAssignmentWithCharacterLiteral(t *testing.T) {
       }
 	`)
 
-	require.NoError(t, err)
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.NotIndexingAssignableTypeError{}, errs[0])
 }

@@ -244,6 +244,15 @@ func (checker *Checker) visitIndexExpression(
 		isAssignment,
 	)
 
+	if isAssignment && !indexedType.AllowsValueIndexingAssignment() {
+		checker.report(
+			&NotIndexingAssignableTypeError{
+				Type:  indexedType,
+				Range: ast.NewRangeFromPositioned(targetExpression),
+			},
+		)
+	}
+
 	checker.checkUnusedExpressionResourceLoss(elementType, targetExpression)
 
 	return elementType

@@ -132,6 +132,7 @@ type Type interface {
 type ValueIndexableType interface {
 	Type
 	isValueIndexableType() bool
+	AllowsValueIndexingAssignment() bool
 	ElementType(isAssignment bool) Type
 	IndexingType() Type
 }
@@ -1257,8 +1258,12 @@ func (t *StringType) GetMembers() map[string]MemberResolver {
 	})
 }
 
-func (t *StringType) isValueIndexableType() bool {
+func (*StringType) isValueIndexableType() bool {
 	return true
+}
+
+func (*StringType) AllowsValueIndexingAssignment() bool {
+	return false
 }
 
 func (t *StringType) ElementType(_ bool) Type {
@@ -3499,7 +3504,11 @@ func (t *VariableSizedType) ContainsFirstLevelInterfaceType() bool {
 	return t.Type.ContainsFirstLevelInterfaceType()
 }
 
-func (t *VariableSizedType) isValueIndexableType() bool {
+func (*VariableSizedType) isValueIndexableType() bool {
+	return true
+}
+
+func (*VariableSizedType) AllowsValueIndexingAssignment() bool {
 	return true
 }
 
@@ -3597,7 +3606,11 @@ func (t *ConstantSizedType) ContainsFirstLevelInterfaceType() bool {
 	return t.Type.ContainsFirstLevelInterfaceType()
 }
 
-func (t *ConstantSizedType) isValueIndexableType() bool {
+func (*ConstantSizedType) isValueIndexableType() bool {
+	return true
+}
+
+func (*ConstantSizedType) AllowsValueIndexingAssignment() bool {
 	return true
 }
 
@@ -5638,12 +5651,16 @@ func (t *DictionaryType) GetMembers() map[string]MemberResolver {
 	})
 }
 
-func (t *DictionaryType) isValueIndexableType() bool {
+func (*DictionaryType) isValueIndexableType() bool {
 	return true
 }
 
 func (t *DictionaryType) ElementType(_ bool) Type {
 	return &OptionalType{Type: t.ValueType}
+}
+
+func (*DictionaryType) AllowsValueIndexingAssignment() bool {
+	return true
 }
 
 func (t *DictionaryType) IndexingType() Type {
@@ -5776,6 +5793,14 @@ func (t *ReferenceType) isValueIndexableType() bool {
 		return false
 	}
 	return referencedType.isValueIndexableType()
+}
+
+func (t *ReferenceType) AllowsValueIndexingAssignment() bool {
+	referencedType, ok := t.Type.(ValueIndexableType)
+	if !ok {
+		return false
+	}
+	return referencedType.AllowsValueIndexingAssignment()
 }
 
 func (t *ReferenceType) ElementType(isAssignment bool) Type {
