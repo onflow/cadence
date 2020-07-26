@@ -257,6 +257,22 @@ func (e *NotIndexableTypeError) Error() string {
 
 func (*NotIndexableTypeError) isSemanticError() {}
 
+// NotIndexingAssignableTypeError
+
+type NotIndexingAssignableTypeError struct {
+	Type Type
+	ast.Range
+}
+
+func (e *NotIndexingAssignableTypeError) Error() string {
+	return fmt.Sprintf(
+		"cannot assign into value which has type: `%s`",
+		e.Type.QualifiedString(),
+	)
+}
+
+func (*NotIndexingAssignableTypeError) isSemanticError() {}
+
 // NotIndexingTypeError
 
 type NotIndexingTypeError struct {
