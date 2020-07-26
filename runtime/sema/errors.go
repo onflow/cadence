@@ -1637,22 +1637,6 @@ func (e *InvalidResourceFieldError) EndPosition() ast.Position {
 	return e.Pos.Shifted(length - 1)
 }
 
-// InvalidTypeIndexingError
-
-type InvalidTypeIndexingError struct {
-	ast.Range
-}
-
-func (e *InvalidTypeIndexingError) Error() string {
-	return "invalid index"
-}
-
-func (e *InvalidTypeIndexingError) SecondaryError() string {
-	return "expected type"
-}
-
-func (*InvalidTypeIndexingError) isSemanticError() {}
-
 // InvalidIndexingError
 
 type InvalidIndexingError struct {
