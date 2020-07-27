@@ -1124,12 +1124,12 @@ func applyExprMetaLeftDenotation(
 		return left, true
 	}
 
-	skipWhitespace := exprLeftDenotationAllowsWhitespaceAfterToken(p.current.Type)
+	allowWhitespace := exprLeftDenotationAllowsWhitespaceAfterToken(p.current.Type)
 
 	t = p.current
 
 	p.next()
-	if skipWhitespace {
+	if allowWhitespace {
 		p.skipSpaceAndComments(true)
 
 	}
