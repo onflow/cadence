@@ -13,7 +13,8 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from enum import Enum, unique
 from pathlib import Path
-from typing import List, Optional, Collection, Dict, IO, Protocol, Literal
+from typing import List, Optional, Collection, Dict, IO, Any
+from typing_extensions import Protocol, Literal
 
 import click as click
 import coloredlogs
@@ -96,7 +97,7 @@ class BenchmarkResult:
 
 @dataclass
 class ParseResult:
-    error: Optional[str] = field(default=None)
+    error: Optional[Any] = field(default=None)
     bench: Optional[BenchmarkResult] = field(default=None)
 
     @classmethod
@@ -106,7 +107,7 @@ class ParseResult:
 
 @dataclass
 class CheckResult:
-    error: Optional[str] = field(default=None)
+    error: Optional[Any] = field(default=None)
     bench: Optional[BenchmarkResult] = field(default=None)
 
     @classmethod
