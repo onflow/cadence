@@ -25,7 +25,7 @@ import (
 
 func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpression) ast.Repr {
 	identifier := expression.Identifier
-	variable := checker.findAndCheckVariable(identifier, true)
+	variable := checker.findAndCheckValueVariable(identifier, true)
 	if variable == nil {
 		return &InvalidType{}
 	}
@@ -122,7 +122,7 @@ func (checker *Checker) checkResourceVariableCapturingInFunction(variable *Varia
 	}
 
 	if currentFunctionDepth == -1 ||
-		variable.Depth > currentFunctionDepth {
+		variable.ActivationDepth > currentFunctionDepth {
 
 		return
 	}

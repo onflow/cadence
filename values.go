@@ -926,3 +926,85 @@ func (v Event) ToGoValue() interface{} {
 
 	return ret
 }
+
+// Contract
+
+type Contract struct {
+	ContractType ContractType
+	Fields       []Value
+}
+
+func NewContract(fields []Value) Contract {
+	return Contract{Fields: fields}
+}
+
+func (Contract) isValue() {}
+
+func (v Contract) Type() Type {
+	return v.ContractType
+}
+
+func (v Contract) WithType(typ ContractType) Contract {
+	v.ContractType = typ
+	return v
+}
+
+func (v Contract) ToGoValue() interface{} {
+	ret := make([]interface{}, len(v.Fields))
+
+	for i, field := range v.Fields {
+		ret[i] = field.ToGoValue()
+	}
+
+	return ret
+}
+
+// Link
+
+type Link struct {
+	TargetPath string
+	BorrowType string
+}
+
+func NewLink(targetPath string, borrowType string) Link {
+	return Link{
+		TargetPath: targetPath,
+		BorrowType: borrowType,
+	}
+}
+
+func (Link) isValue() {}
+
+func (v Link) Type() Type {
+	return nil
+}
+
+func (v Link) ToGoValue() interface{} {
+	return nil
+}
+
+// StorageReference
+
+type StorageReference struct {
+	Authorized           bool
+	TargetStorageAddress Address
+	TargetKey            string
+}
+
+func NewStorageReference(authorized bool, targetStorageAddress Address, targetKey string) StorageReference {
+	return StorageReference{
+		Authorized:           authorized,
+		TargetStorageAddress: targetStorageAddress,
+		TargetKey:            targetKey,
+	}
+}
+
+func (StorageReference) isValue() {}
+
+func (v StorageReference) Type() Type {
+	return nil
+}
+
+func (v StorageReference) ToGoValue() interface{} {
+	return nil
+}

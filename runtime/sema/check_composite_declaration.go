@@ -521,12 +521,13 @@ func (checker *Checker) declareCompositeMembersAndValue(
 				checker.valueActivations.Find(identifier.Identifier)
 
 			declarationMembers[nestedCompositeDeclarationVariable.Identifier] = &Member{
-				Identifier:      identifier,
-				Access:          nestedCompositeDeclaration.Access,
-				ContainerType:   compositeType,
-				TypeAnnotation:  NewTypeAnnotation(nestedCompositeDeclarationVariable.Type),
-				DeclarationKind: nestedCompositeDeclarationVariable.DeclarationKind,
-				VariableKind:    ast.VariableKindConstant,
+				Identifier:            identifier,
+				Access:                nestedCompositeDeclaration.Access,
+				ContainerType:         compositeType,
+				TypeAnnotation:        NewTypeAnnotation(nestedCompositeDeclarationVariable.Type),
+				DeclarationKind:       nestedCompositeDeclarationVariable.DeclarationKind,
+				VariableKind:          ast.VariableKindConstant,
+				IgnoreInSerialization: true,
 			}
 		}
 
@@ -643,9 +644,11 @@ func (checker *Checker) declareCompositeMembersAndValue(
 //
 func (checker *Checker) checkMemberStorability(members map[string]*Member) {
 
+	seenMembers := map[*Member]bool{}
+
 	for _, member := range members {
 
-		if member.IsStorable() {
+		if member.IsStorable(seenMembers) {
 			continue
 		}
 
@@ -873,19 +876,52 @@ func (checker *Checker) memberSatisfied(compositeMember, interfaceMember *Member
 			}
 
 		case common.DeclarationKindFunction:
-			// If the member is a function, check the types are equal,
-			// but also check that the argument labels match
+			// If the member is a function, check that the argument labels are equal,
+			// the parameter types are equal (they are invariant),
+			// and that the return types are subtypes (the return type is covariant).
+			//
+			// This is different from subtyping for functions,
+			// where argument labels are not considered,
+			// and parameters are contravariant.
 
 			interfaceMemberFunctionType := interfaceMemberType.(*FunctionType)
 			compositeMemberFunctionType := compositeMemberType.(*FunctionType)
 
-			// TODO: parameters may be supertype, return type may be subtype
-			if !compositeMemberFunctionType.EqualIncludingArgumentLabels(interfaceMemberFunctionType) {
+			if !interfaceMemberFunctionType.HasSameArgumentLabels(compositeMemberFunctionType) {
 				return false
 			}
 
-		default:
-			panic(errors.NewUnreachableError())
+			// Functions are invariant in their parameter types
+
+			for i, subParameter := range compositeMemberFunctionType.Parameters {
+				superParameter := interfaceMemberFunctionType.Parameters[i]
+				if !subParameter.TypeAnnotation.Type.
+					Equal(superParameter.TypeAnnotation.Type) {
+
+					return false
+				}
+			}
+
+			// Functions are covariant in their return type
+
+			if compositeMemberFunctionType.ReturnTypeAnnotation != nil &&
+				interfaceMemberFunctionType.ReturnTypeAnnotation != nil {
+
+				if !IsSubType(
+					compositeMemberFunctionType.ReturnTypeAnnotation.Type,
+					interfaceMemberFunctionType.ReturnTypeAnnotation.Type,
+				) {
+					return false
+				}
+			}
+
+			if (compositeMemberFunctionType.ReturnTypeAnnotation != nil &&
+				interfaceMemberFunctionType.ReturnTypeAnnotation == nil) ||
+				(compositeMemberFunctionType.ReturnTypeAnnotation == nil &&
+					interfaceMemberFunctionType.ReturnTypeAnnotation != nil) {
+
+				return false
+			}
 		}
 	}
 
@@ -1416,7 +1452,7 @@ func (checker *Checker) declareSelfValue(selfType Type) {
 		DeclarationKind: common.DeclarationKindSelf,
 		Type:            selfType,
 		IsConstant:      true,
-		Depth:           depth,
+		ActivationDepth: depth,
 		Pos:             nil,
 	}
 	checker.valueActivations.Set(SelfIdentifier, self)

@@ -22,6 +22,7 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
+	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/parser2/lexer"
@@ -30,22 +31,24 @@ import (
 // lowestBindingPower is the lowest binding power.
 // The binding power controls operator precedence:
 // the higher the value, the tighter a token binds to the tokens that follow.
+
 const lowestBindingPower = 0
 
 type parser struct {
-	// a stream of tokens from the lexer
+	// tokens is a stream of tokens from the lexer
 	tokens chan lexer.Token
-	// the current token being parsed.
+	// current is the current token being parsed.
 	current lexer.Token
-	// the parsing errors encountered during parsing
+	// errors are the parsing errors encountered during parsing
 	errors []error
-	// a flag indicating whether the next token will be read from buffered tokens or lexer
+	// buffering is a flag that indicates whether the next token
+	// will be read from buffered tokens or lexer
 	buffering bool
-	// buffered tokens read from the lexer
+	// bufferedTokens are the buffered tokens read from the lexer
 	bufferedTokens []lexer.Token
-	// the index of the next buffered token to read from
+	// bufferPos is the index of the next buffered token to read from (`bufferedTokens`)
 	bufferPos int
-	// the parsing errors encountered during buffering
+	// bufferedErrors are the parsing errors encountered during buffering
 	bufferedErrors []error
 }
 
@@ -54,6 +57,7 @@ type parser struct {
 //
 // It can be composed with different parse functions to parse the input string into different results.
 // See "ParseExpression", "ParseStatements" as examples.
+//
 func Parse(input string, parse func(*parser) interface{}) (result interface{}, errors []error) {
 	ctx, cancelLexer := context.WithCancel(context.Background())
 
@@ -178,17 +182,24 @@ func (p *parser) next() {
 		//
 		// Buffering tokens allows us to potentially "replay" the buffered tokens later,
 		// for example to deal with syntax ambiguity
+
 		if p.buffering {
-			// if we need to buffer the next token
+
+			// If we need to buffer the next token
 			// then read the token from the lexer and buffer it.
+
 			token = nextFromLexer()
 			p.bufferedTokens = append(p.bufferedTokens, token)
+
 		} else if p.bufferPos < len(p.bufferedTokens) {
-			// if we don't need to buffer the next token and there are tokens buffered before,
+
+			// If we don't need to buffer the next token and there are tokens buffered before,
 			// then read the token from the buffer.
+
 			token = nextFromBuffer()
+
 		} else {
-			// else no need to buffer, and there is no buffered token,
+			// Otherwise no need to buffer, and there is no buffered token,
 			// then read the next token from the lexer.
 			token = nextFromLexer()
 		}
@@ -244,8 +255,29 @@ func (p *parser) replayBuffered() {
 	p.next()
 }
 
+type triviaOptions struct {
+	skipNewlines    bool
+	parseDocStrings bool
+}
+
 func (p *parser) skipSpaceAndComments(skipNewlines bool) (containsNewline bool) {
+	containsNewline, _ = p.parseTrivia(triviaOptions{
+		skipNewlines: skipNewlines,
+	})
+	return containsNewline
+}
+
+func (p *parser) parseTrivia(options triviaOptions) (containsNewline bool, docString string) {
+	var docStringBuilder strings.Builder
+	defer func() {
+		if options.parseDocStrings {
+			docString = docStringBuilder.String()
+		}
+	}()
+
 	atEnd := false
+	inLineDocString := false
+
 	for !atEnd {
 		switch p.current.Type {
 		case lexer.TokenSpace:
@@ -255,18 +287,41 @@ func (p *parser) skipSpaceAndComments(skipNewlines bool) (containsNewline bool) 
 				containsNewline = true
 			}
 
-			if containsNewline && !skipNewlines {
+			if containsNewline && !options.skipNewlines {
 				return
 			}
 
 			p.next()
 
 		case lexer.TokenBlockCommentStart:
-			// TODO: use comment?
-			p.parseCommentContent()
+			comment := p.parseCommentContent()
+			if options.parseDocStrings {
+				inLineDocString = false
+				docStringBuilder.Reset()
+				if strings.HasPrefix(comment, "/**") {
+					// Strip prefix and suffix (`*/`)
+					docStringBuilder.WriteString(comment[3 : len(comment)-2])
+				}
+			}
 
 		case lexer.TokenLineComment:
-			// TODO: use comment?
+			if options.parseDocStrings {
+				comment := p.current.Value.(string)
+				if strings.HasPrefix(comment, "///") {
+					if inLineDocString {
+						docStringBuilder.WriteRune('\n')
+					} else {
+						inLineDocString = true
+						docStringBuilder.Reset()
+					}
+					// Strip prefix
+					docStringBuilder.WriteString(comment[3:])
+				} else {
+					inLineDocString = false
+					docStringBuilder.Reset()
+				}
+			}
+
 			p.next()
 
 		default:
@@ -278,10 +333,11 @@ func (p *parser) skipSpaceAndComments(skipNewlines bool) (containsNewline bool) 
 
 func (p *parser) startBuffering() {
 	p.buffering = true
- 
- 	// starting buffering should only buffer the current token if there’s nothing 
- 	// to be read from the buffer, otherwise, the current token would be
- 	// buffered twice
+
+	// Starting buffering should only buffer the current token
+	// if there's nothing to be read from the buffer.
+	// Otherwise, the current token would be buffered twice
+
 	if p.bufferPos >= len(p.bufferedTokens) {
 		p.bufferedTokens = append(p.bufferedTokens, p.current)
 	}

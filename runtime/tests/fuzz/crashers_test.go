@@ -37,7 +37,7 @@ func TestCrashers(t *testing.T) {
 
 	f, err := os.Open(crashersDir)
 	if err != nil {
-		t.Skip()
+		return
 	}
 
 	files, err := f.Readdir(-1)
@@ -51,6 +51,8 @@ func TestCrashers(t *testing.T) {
 		}
 
 		t.Run(name, func(t *testing.T) {
+
+			t.Parallel()
 
 			var data []byte
 			data, err = ioutil.ReadFile(path.Join(crashersDir, name))

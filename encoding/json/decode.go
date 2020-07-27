@@ -89,12 +89,17 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 }
 
 const (
-	typeKey   = "type"
-	valueKey  = "value"
-	keyKey    = "key"
-	nameKey   = "name"
-	fieldsKey = "fields"
-	idKey     = "id"
+	typeKey                 = "type"
+	valueKey                = "value"
+	keyKey                  = "key"
+	nameKey                 = "name"
+	fieldsKey               = "fields"
+	idKey                   = "id"
+	authorizedKey           = "authorized"
+	targetStorageAddressKey = "targetStorageAddress"
+	targetKeyKey            = "targetKey"
+	targetPathKey           = "targetPath"
+	borrowTypeKey           = "borrowType"
 )
 
 var ErrInvalidJSONCadence = errors.New("invalid JSON Cadence structure")
@@ -175,6 +180,12 @@ func decodeJSON(v interface{}) cadence.Value {
 		return decodeStruct(valueJSON)
 	case eventTypeStr:
 		return decodeEvent(valueJSON)
+	case contractTypeStr:
+		return decodeContract(valueJSON)
+	case storageReferenceTypeStr:
+		return decodeStorageReference(valueJSON)
+	case linkTypeStr:
+		return decodeLink(valueJSON)
 	}
 
 	panic(ErrInvalidJSONCadence)
@@ -541,6 +552,35 @@ func decodeEvent(valueJSON interface{}) cadence.Event {
 	})
 }
 
+func decodeContract(valueJSON interface{}) cadence.Contract {
+	comp := decodeComposite(valueJSON)
+
+	return cadence.NewContract(comp.fieldValues).WithType(cadence.ContractType{
+		TypeID:     comp.typeID,
+		Identifier: comp.identifier,
+		Fields:     comp.fieldTypes,
+	})
+}
+
+func decodeStorageReference(valueJSON interface{}) cadence.StorageReference {
+	obj := toObject(valueJSON)
+
+	return cadence.NewStorageReference(
+		obj.GetBool(authorizedKey),
+		decodeAddress(obj.Get(targetStorageAddressKey)),
+		obj.GetString(targetKeyKey),
+	)
+}
+
+func decodeLink(valueJSON interface{}) cadence.Link {
+	obj := toObject(valueJSON)
+
+	return cadence.NewLink(
+		obj.GetString(targetPathKey),
+		obj.GetString(borrowTypeKey),
+	)
+}
+
 // JSON types
 
 type jsonObject map[string]interface{}
@@ -553,6 +593,11 @@ func (obj jsonObject) Get(key string) interface{} {
 	}
 
 	return v
+}
+
+func (obj jsonObject) GetBool(key string) bool {
+	v := obj.Get(key)
+	return toBool(v)
 }
 
 func (obj jsonObject) GetString(key string) string {

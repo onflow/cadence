@@ -9,7 +9,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-func TestInterpretToBigEndianBytes(t *testing.T) {
+func TestToBigEndianBytes(t *testing.T) {
 
 	typeTests := map[string]map[NumberValue][]byte{
 		// Int*

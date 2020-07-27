@@ -99,7 +99,7 @@ func parseStatement(p *parser) ast.Statement {
 	// If it is not a keyword for a statement,
 	// it might start with a keyword for a declaration
 
-	declaration := parseDeclaration(p)
+	declaration := parseDeclaration(p, "")
 	if statement, ok := declaration.(ast.Statement); ok {
 		return statement
 	}
@@ -186,6 +186,7 @@ func parseReturnStatement(p *parser) *ast.ReturnStatement {
 	tokenRange := p.current.Range
 	endPosition := tokenRange.EndPos
 	p.next()
+
 	sawNewLine := p.skipSpaceAndComments(false)
 
 	var expression ast.Expression

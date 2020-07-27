@@ -263,13 +263,20 @@ A future version will also make references non-storable. Instead of storing a re
 
 ### Byte Arrays
 
-The parameter types and return types for functions which accept or return byte arrays have been changed from `[Int]` to `[UInt8]`.
+Cadence now represents all byte arrays as `[UInt8]` rather than `[Int]`. This affects the following functions:
 
-The affected functions are:
+- `String.decodeHex(): [Int]` => `String.decodeHex(): [UInt8]`
+- `AuthAccount.addPublicKey(publicKey: [Int])` => `AuthAccount.addPublicKey(publicKey: [UInt8])`
+- `AuthAccount.setCode(code: [Int])` => `AuthAccount.setCode(code: [UInt8])`
 
-- `fun String.decodeHex(): [UInt8]`
-- `fun AuthAccount.setCode(_ code: [UInt8])`
-- `fun AuthAccount.addPublicKey(_ publicKey: [UInt8])`
+However, array literals such as the following will still be inferred as `[Int]`, meaning that they can't be used directly:
+
+```swift
+myAccount.addPublicKey([1, 2, 3])
+```
+
+Consider using `String.decodeHex()` for now until type inference has been improved.
+
 
 # v0.4.0
 

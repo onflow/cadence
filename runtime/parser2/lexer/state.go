@@ -75,6 +75,8 @@ func rootState(l *lexer) stateFn {
 			}
 		case '@':
 			l.emitType(TokenAt)
+		case '#':
+			l.emitType(TokenPragma)
 		case '&':
 			if l.acceptOne('&') {
 				l.emitType(TokenAmpersandAmpersand)

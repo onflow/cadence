@@ -167,6 +167,7 @@ func parseFunctionDeclaration(
 	functionBlockIsOptional bool,
 	access ast.Access,
 	accessPos *ast.Position,
+	docString string,
 ) *ast.FunctionDeclaration {
 
 	startPos := p.current.StartPos
@@ -200,6 +201,7 @@ func parseFunctionDeclaration(
 		ReturnTypeAnnotation: returnTypeAnnotation,
 		FunctionBlock:        functionBlock,
 		StartPos:             startPos,
+		DocString:            docString,
 	}
 }
 

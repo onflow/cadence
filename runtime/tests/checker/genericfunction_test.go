@@ -886,3 +886,16 @@ func TestCheckGenericFunctionIsInvalid(t *testing.T) {
 
 	assert.False(t, genericFunctionType.IsInvalidType())
 }
+
+// https://github.com/onflow/cadence/issues/225
+func TestCheckBorrowOfCapabilityWithoutTypeArgument(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithPanic(t, `
+      let cap: Capability = panic("")
+      let ref = cap.borrow<&Int>()!
+    `)
+
+	require.NoError(t, err)
+}

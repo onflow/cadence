@@ -89,6 +89,7 @@ type Visitor interface {
 	VisitInterfaceDeclaration(*InterfaceDeclaration) Repr
 	VisitFieldDeclaration(*FieldDeclaration) Repr
 	VisitCondition(*Condition) Repr
+	VisitPragmaDeclaration(*PragmaDeclaration) Repr
 	VisitImportDeclaration(*ImportDeclaration) Repr
 	VisitTransactionDeclaration(*TransactionDeclaration) Repr
 }

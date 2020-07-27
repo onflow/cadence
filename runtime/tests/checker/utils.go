@@ -26,7 +26,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
-	parser1 "github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -40,7 +39,6 @@ type ParseAndCheckOptions struct {
 	ImportResolver ast.ImportResolver
 	Location       ast.Location
 	Options        []sema.Option
-	SkipNewParser  bool
 }
 
 func ParseAndCheckWithOptions(
@@ -49,20 +47,10 @@ func ParseAndCheckWithOptions(
 	options ParseAndCheckOptions,
 ) (*sema.Checker, error) {
 
-	program, _, err := parser1.ParseProgram(code)
+	program, err := parser2.ParseProgram(code)
 	if !assert.NoError(t, err) {
 		assert.FailNow(t, errors.UnrollChildErrors(err))
 		return nil, err
-	}
-
-	if !options.SkipNewParser {
-		program2, err := parser2.ParseProgram(code)
-		if !assert.NoError(t, err) {
-			assert.FailNow(t, errors.UnrollChildErrors(err))
-			return nil, err
-		}
-
-		utils.AssertEqualWithDiff(t, program, program2)
 	}
 
 	if options.ImportResolver != nil {

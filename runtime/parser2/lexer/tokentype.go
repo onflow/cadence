@@ -80,6 +80,7 @@ const (
 	TokenAt
 	TokenAsExclamationMark
 	TokenAsQuestionMark
+	TokenPragma
 	// NOTE: not an actual token, must be last item
 	TokenMax
 )
@@ -199,6 +200,8 @@ func (t TokenType) String() string {
 		return `'as!'`
 	case TokenAsQuestionMark:
 		return `'as?'`
+	case TokenPragma:
+		return `'#'`
 	default:
 		panic(errors.NewUnreachableError())
 	}

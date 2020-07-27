@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -44,14 +43,14 @@ func TestEncodeVoid(t *testing.T) {
 
 	t.Parallel()
 
-	testEncode(t, cadence.NewVoid(), `{"type":"Void"}`)
+	testEncodeAndDecode(t, cadence.NewVoid(), `{"type":"Void"}`)
 }
 
 func TestEncodeOptional(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Nil",
 			cadence.NewOptional(nil),
@@ -69,7 +68,7 @@ func TestEncodeBool(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"True",
 			cadence.NewBool(true),
@@ -87,7 +86,7 @@ func TestEncodeString(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Empty",
 			cadence.NewString(""),
@@ -105,7 +104,7 @@ func TestEncodeAddress(t *testing.T) {
 
 	t.Parallel()
 
-	testEncode(
+	testEncodeAndDecode(
 		t,
 		cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
 		`{"type":"Address","value":"0x0000000102030405"}`,
@@ -116,7 +115,7 @@ func TestEncodeInt(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Negative",
 			cadence.NewInt(-42),
@@ -149,7 +148,7 @@ func TestEncodeInt8(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Min",
 			cadence.NewInt8(math.MinInt8),
@@ -172,7 +171,7 @@ func TestEncodeInt16(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Min",
 			cadence.NewInt16(math.MinInt16),
@@ -195,7 +194,7 @@ func TestEncodeInt32(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Min",
 			cadence.NewInt32(math.MinInt32),
@@ -218,7 +217,7 @@ func TestEncodeInt64(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Min",
 			cadence.NewInt64(math.MinInt64),
@@ -241,7 +240,7 @@ func TestEncodeInt128(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Min",
 			cadence.NewInt128FromBig(sema.Int128TypeMinIntBig),
@@ -264,7 +263,7 @@ func TestEncodeInt256(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Min",
 			cadence.NewInt256FromBig(sema.Int256TypeMinIntBig),
@@ -287,7 +286,7 @@ func TestEncodeUInt(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewUInt(0),
@@ -310,7 +309,7 @@ func TestEncodeUInt8(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewUInt8(0),
@@ -328,7 +327,7 @@ func TestEncodeUInt16(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewUInt16(0),
@@ -346,7 +345,7 @@ func TestEncodeUInt32(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewUInt32(0),
@@ -364,7 +363,7 @@ func TestEncodeUInt64(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewUInt64(0),
@@ -382,7 +381,7 @@ func TestEncodeUInt128(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewUInt128(0),
@@ -400,7 +399,7 @@ func TestEncodeUInt256(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewUInt256(0),
@@ -418,7 +417,7 @@ func TestEncodeWord8(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewWord8(0),
@@ -436,7 +435,7 @@ func TestEncodeWord16(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewWord16(0),
@@ -454,7 +453,7 @@ func TestEncodeWord32(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewWord32(0),
@@ -472,7 +471,7 @@ func TestEncodeWord64(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.NewWord64(0),
@@ -490,7 +489,7 @@ func TestEncodeFix64(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.Fix64(0),
@@ -518,7 +517,7 @@ func TestEncodeUFix64(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncode(t, []encodeTest{
+	testAllEncodeAndDecode(t, []encodeTest{
 		{
 			"Zero",
 			cadence.UFix64(0),
@@ -573,7 +572,7 @@ func TestEncodeArray(t *testing.T) {
 		`{"type":"Array","value":[{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"1"}}]}},{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"2"}}]}},{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"3"}}]}}]}`,
 	}
 
-	testAllEncode(t,
+	testAllEncodeAndDecode(t,
 		emptyArray,
 		intArray,
 		resourceArray,
@@ -662,7 +661,7 @@ func TestEncodeDictionary(t *testing.T) {
 		`{"type":"Dictionary","value":[{"key":{"type":"String","value":"a"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"1"}}]}}},{"key":{"type":"String","value":"b"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"2"}}]}}},{"key":{"type":"String","value":"c"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"3"}}]}}}]}`,
 	}
 
-	testAllEncode(t,
+	testAllEncodeAndDecode(t,
 		simpleDict,
 		nestedDict,
 		resourceDict,
@@ -673,62 +672,92 @@ func TestEncodeResource(t *testing.T) {
 
 	t.Parallel()
 
-	script := `
-        access(all) resource Foo {
-            access(all) let bar: Int
+	t.Run("Simple", func(t *testing.T) {
+		script := `
+			access(all) resource Foo {
+				access(all) let bar: Int
+	
+				init(bar: Int) {
+					self.bar = bar
+				}
+			}
+	
+			access(all) fun main(): @Foo {
+				return <- create Foo(bar: 42)
+			}
+		`
 
-            init(bar: Int) {
-                self.bar = bar
-            }
-        }
+		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}},{"name":"uuid","value":{"type":"UInt64","value":"0"}}]}}`
 
-        access(all) fun main(): @Foo {
-            return <- create Foo(bar: 42)
-        }
-    `
+		v := convertValueFromScript(t, script)
 
-	expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}},{"name":"uuid","value":{"type":"UInt64","value":"0"}}]}}`
+		testEncodeAndDecode(t, v, expectedJSON)
+	})
 
-	v := convertValueFromScript(t, script)
+	t.Run("With function member", func(t *testing.T) {
+		script := `
+			access(all) resource Foo {
+				access(all) let bar: Int
+	
+				pub fun foo(): String {
+					return "foo"
+				}
+	
+				init(bar: Int) {
+					self.bar = bar
+				}
+			}
+	
+			access(all) fun main(): @Foo {
+				return <- create Foo(bar: 42)
+			}
+		`
 
-	testEncode(t, v, expectedJSON)
-}
+		// function "foo" should be omitted from resulting JSON
+		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}},{"name":"uuid","value":{"type":"UInt64","value":"0"}}]}}`
 
-func TestEncodeNestedResource(t *testing.T) {
+		v := convertValueFromScript(t, script)
 
-	t.Parallel()
+		actualJSON, err := json.Encode(v)
+		require.NoError(t, err)
 
-	script := `
-        access(all) resource Bar {
-            access(all) let x: Int
+		assert.JSONEq(t, expectedJSON, string(actualJSON))
+	})
 
-            init(x: Int) {
-                self.x = x
-            }
-        }
+	t.Run("Nested resource", func(t *testing.T) {
 
-        access(all) resource Foo {
-            access(all) let bar: @Bar
+		script := `
+			access(all) resource Bar {
+				access(all) let x: Int
+	
+				init(x: Int) {
+					self.x = x
+				}
+			}
+	
+			access(all) resource Foo {
+				access(all) let bar: @Bar
+	
+				init(bar: @Bar) {
+					self.bar <- bar
+				}
+	
+				destroy() {
+					destroy self.bar
+				}
+			}
+	
+			access(all) fun main(): @Foo {
+				return <- create Foo(bar: <- create Bar(x: 42))
+			}
+		`
 
-            init(bar: @Bar) {
-                self.bar <- bar
-            }
+		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Resource","value":{"id":"S.test.Bar","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"x","value":{"type":"Int","value":"42"}}]}}},{"name":"uuid","value":{"type":"UInt64","value":"0"}}]}}`
 
-            destroy() {
-                destroy self.bar
-            }
-        }
+		v := convertValueFromScript(t, script)
 
-        access(all) fun main(): @Foo {
-            return <- create Foo(bar: <- create Bar(x: 42))
-        }
-    `
-
-	expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Resource","value":{"id":"S.test.Bar","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"x","value":{"type":"Int","value":"42"}}]}}},{"name":"uuid","value":{"type":"UInt64","value":"0"}}]}}`
-
-	v := convertValueFromScript(t, script)
-
-	testEncode(t, v, expectedJSON)
+		testEncodeAndDecode(t, v, expectedJSON)
+	})
 }
 
 func TestEncodeStruct(t *testing.T) {
@@ -791,7 +820,7 @@ func TestEncodeStruct(t *testing.T) {
 		`{"type":"Struct","value":{"id":"S.test.FooStruct","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
 	}
 
-	testAllEncode(t, simpleStruct, resourceStruct)
+	testAllEncodeAndDecode(t, simpleStruct, resourceStruct)
 }
 
 func TestEncodeEvent(t *testing.T) {
@@ -854,10 +883,101 @@ func TestEncodeEvent(t *testing.T) {
 		`{"type":"Event","value":{"id":"S.test.FooEvent","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
 	}
 
-	testAllEncode(t, simpleEvent, resourceEvent)
+	testAllEncodeAndDecode(t, simpleEvent, resourceEvent)
+}
+
+func TestEncodeContract(t *testing.T) {
+
+	t.Parallel()
+
+	simpleContractType := cadence.ContractType{
+		TypeID:     "S.test.FooContract",
+		Identifier: "FooContract",
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.IntType{},
+			},
+			{
+				Identifier: "b",
+				Type:       cadence.StringType{},
+			},
+		},
+	}
+
+	simpleContract := encodeTest{
+		"Simple",
+		cadence.NewContract(
+			[]cadence.Value{
+				cadence.NewInt(1),
+				cadence.NewString("foo"),
+			},
+		).WithType(simpleContractType),
+		`{"type":"Contract","value":{"id":"S.test.FooContract","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
+	}
+
+	resourceContractType := cadence.ContractType{
+		TypeID:     "S.test.FooContract",
+		Identifier: "FooContract",
+		Fields: []cadence.Field{
+			{
+				Identifier: "a",
+				Type:       cadence.StringType{},
+			},
+			{
+				Identifier: "b",
+				Type:       fooResourceType,
+			},
+		},
+	}
+
+	resourceContract := encodeTest{
+		"Resources",
+		cadence.NewContract(
+			[]cadence.Value{
+				cadence.NewString("foo"),
+				cadence.NewResource(
+					[]cadence.Value{
+						cadence.NewInt(42),
+					},
+				).WithType(fooResourceType),
+			},
+		).WithType(resourceContractType),
+		`{"type":"Contract","value":{"id":"S.test.FooContract","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
+	}
+
+	testAllEncodeAndDecode(t, simpleContract, resourceContract)
+}
+
+func TestEncodeStorageReference(t *testing.T) {
+
+	t.Parallel()
+
+	testEncodeAndDecode(
+		t,
+		cadence.NewStorageReference(
+			false,
+			cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+			"foo",
+		),
+		`{"type":"StorageReference","value":{"authorized":false,"targetStorageAddress":"0x0000000102030405","targetKey":"foo"}}`,
+	)
+}
+
+func TestEncodeLink(t *testing.T) {
+
+	t.Parallel()
+
+	testEncodeAndDecode(
+		t,
+		cadence.NewLink("/storage/foo", "Bar"),
+		`{"type":"Link","value":{"targetPath":"/storage/foo","borrowType":"Bar"}}`,
+	)
 }
 
 func TestDecodeFixedPoints(t *testing.T) {
+
+	t.Parallel()
 
 	allFixedPointTypes := map[cadence.Type]struct {
 		constructor func(int) cadence.Value
@@ -1083,29 +1203,35 @@ func convertValueFromScript(t *testing.T, script string) cadence.Value {
 	return value
 }
 
-func testAllEncode(t *testing.T, tests ...encodeTest) {
+func testAllEncodeAndDecode(t *testing.T, tests ...encodeTest) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testEncode(t, test.val, test.expected)
+			testEncodeAndDecode(t, test.val, test.expected)
 		})
 	}
 }
 
-func trimJSON(b []byte) string {
-	return strings.TrimSuffix(string(b), "\n")
+func testEncodeAndDecode(t *testing.T, val cadence.Value, expectedJSON string) {
+	actualJSON := testEncode(t, val, expectedJSON)
+	testDecode(t, actualJSON, val)
 }
 
-func testEncode(t *testing.T, val cadence.Value, expectedJSON string) {
-	actualJSON, err := json.Encode(val)
+func testEncode(t *testing.T, val cadence.Value, expectedJSON string) (actualJSON string) {
+	actualJSONBytes, err := json.Encode(val)
 	require.NoError(t, err)
 
-	assert.Equal(t, expectedJSON, trimJSON(actualJSON))
+	actualJSON = string(actualJSONBytes)
 
-	// JSON should decode to original value
-	decodedVal, err := json.Decode(actualJSON)
+	assert.JSONEq(t, expectedJSON, actualJSON)
+
+	return actualJSON
+}
+
+func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value) {
+	decodedVal, err := json.Decode([]byte(actualJSON))
 	require.NoError(t, err)
 
-	assert.Equal(t, val, decodedVal)
+	assert.Equal(t, expectedVal, decodedVal)
 }
 
 var fooResourceType = cadence.ResourceType{

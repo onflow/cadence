@@ -32,9 +32,11 @@ func TestCheckCastingIntLiteralToIntegerType(t *testing.T) {
 
 	t.Parallel()
 
-	for _, integerType := range sema.AllIntegerTypes {
+	test := func(t *testing.T, integerType sema.Type) {
 
 		t.Run(integerType.String(), func(t *testing.T) {
+
+			t.Parallel()
 
 			checker, err := ParseAndCheck(t,
 				fmt.Sprintf(
@@ -54,6 +56,10 @@ func TestCheckCastingIntLiteralToIntegerType(t *testing.T) {
 
 			assert.NotEmpty(t, checker.Elaboration.CastingTargetTypes)
 		})
+	}
+
+	for _, integerType := range sema.AllIntegerTypes {
+		test(t, integerType)
 	}
 }
 
@@ -2262,16 +2268,11 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
 
 	t.Run("resource", func(t *testing.T) {
 
-		for _, ty := range []string{
-			"R",
-			"R{I}",
-			"AnyResource",
-			"AnyResource{I}",
-			"Any",
-			"Any{I}",
-		} {
+		test := func(ty string) {
 
 			t.Run(fmt.Sprintf("auth to non-auth: %s", ty), func(t *testing.T) {
+
+				t.Parallel()
 
 				_, err := ParseAndCheckWithAny(t,
 					fmt.Sprintf(`
@@ -2291,6 +2292,8 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
 			})
 
 			t.Run(fmt.Sprintf("non-auth to auth: %s", ty), func(t *testing.T) {
+
+				t.Parallel()
 
 				_, err := ParseAndCheckWithAny(t,
 					fmt.Sprintf(`
@@ -2312,19 +2315,25 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
 			})
 		}
 
+		for _, ty := range []string{
+			"R",
+			"R{I}",
+			"AnyResource",
+			"AnyResource{I}",
+			"Any",
+			"Any{I}",
+		} {
+			test(ty)
+		}
 	})
 
 	t.Run("struct", func(t *testing.T) {
 
-		for _, ty := range []string{
-			"S",
-			"S{I}",
-			"AnyStruct",
-			"AnyStruct{I}",
-			"Any",
-			"Any{I}",
-		} {
+		test := func(ty string) {
+
 			t.Run(fmt.Sprintf("auth to non-auth: %s", ty), func(t *testing.T) {
+
+				t.Parallel()
 
 				_, err := ParseAndCheckWithAny(t,
 					fmt.Sprintf(`
@@ -2344,6 +2353,8 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
 			})
 
 			t.Run(fmt.Sprintf("non-auth to auth: %s", ty), func(t *testing.T) {
+
+				t.Parallel()
 
 				_, err := ParseAndCheckWithAny(t,
 					fmt.Sprintf(
@@ -2366,6 +2377,67 @@ func TestCheckReferenceTypeSubTyping(t *testing.T) {
 			})
 		}
 
+		for _, ty := range []string{
+			"S",
+			"S{I}",
+			"AnyStruct",
+			"AnyStruct{I}",
+			"Any",
+			"Any{I}",
+		} {
+			test(ty)
+		}
+	})
+
+	t.Run("non-composite", func(t *testing.T) {
+
+		test := func(ty string) {
+
+			t.Run(fmt.Sprintf("auth to non-auth: %s", ty), func(t *testing.T) {
+
+				t.Parallel()
+
+				_, err := ParseAndCheckWithAny(t,
+					fmt.Sprintf(`
+                          let i = 1
+                          let ref = &i as auth &%[1]s
+                          let ref2 = ref as &%[1]s
+                        `,
+						ty,
+					),
+				)
+
+				require.NoError(t, err)
+			})
+
+			t.Run(fmt.Sprintf("non-auth to auth: %s", ty), func(t *testing.T) {
+
+				t.Parallel()
+
+				_, err := ParseAndCheckWithAny(t,
+					fmt.Sprintf(
+						`
+                          let i = 1
+                          let ref = &i as &%[1]s
+                          let ref2 = ref as auth &%[1]s
+                        `,
+						ty,
+					),
+				)
+
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			})
+		}
+
+		for _, ty := range []string{
+			"Int",
+			"AnyStruct",
+			"Any",
+		} {
+			test(ty)
+		}
 	})
 }
 
@@ -4229,6 +4301,17 @@ func TestCheckCastAuthorizedStructReferenceType(t *testing.T) {
 						),
 					)
 
+					if _, ok := ty.(*sema.AnyType); ok {
+						if _, ok := otherType.(*sema.AnyStructType); ok {
+
+							errs := ExpectCheckerErrors(t, err, 1)
+
+							assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+							return
+						}
+					}
+
 					require.NoError(t, err)
 				})
 
@@ -5642,6 +5725,17 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 							),
 						)
 
+						if _, ok := ty.(*sema.AnyType); ok {
+							if _, ok := otherType.(*sema.AnyStructType); ok {
+
+								errs := ExpectCheckerErrors(t, err, 1)
+
+								assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+								return
+							}
+						}
+
 						require.NoError(t, err)
 					})
 
@@ -5744,17 +5838,6 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 							),
 						)
 
-						if _, ok := ty.(*sema.AnyType); ok {
-							if _, ok := otherType.(*sema.AnyStructType); ok {
-
-								errs := ExpectCheckerErrors(t, err, 1)
-
-								assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
-
-								return
-							}
-						}
-
 						require.NoError(t, err)
 					})
 				}
@@ -5807,4 +5890,17 @@ func TestCheckCastUnauthorizedStructReferenceType(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCheckCastAuthorizedNonCompositeReferenceType(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheckWithAny(t, `
+      let x = 1
+      let xRef = &x as &Int
+      let anyRef: &AnyStruct = xRef
+    `)
+
+	require.NoError(t, err)
 }

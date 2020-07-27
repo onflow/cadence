@@ -26,27 +26,23 @@ import (
 	"io/ioutil"
 	"os"
 	"runtime/debug"
-	"strings"
 	"testing"
-	"text/tabwriter"
 	"time"
 
-	"github.com/go-test/deep"
-
 	"github.com/onflow/cadence/runtime/ast"
-	parser1 "github.com/onflow/cadence/runtime/parser"
+	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/parser2"
 )
 
-var benchFlag = flag.Bool("bench", false, "benchmark the new parser")
-var oldFlag = flag.Bool("old", false, "also run old parser")
-var compareFlag = flag.Bool("compare", false, "compare the results of the new and old parser")
+var benchFlag = flag.Bool("bench", false, "benchmark the parser")
 var jsonFlag = flag.Bool("json", false, "print the result formatted as JSON")
 
 func main() {
+	testing.Init()
 	flag.Parse()
+
 	args := flag.Args()
-	run(args, *benchFlag, *oldFlag, *compareFlag, *jsonFlag)
+	run(args, *benchFlag, *jsonFlag)
 }
 
 type benchResult struct {
@@ -57,14 +53,11 @@ type benchResult struct {
 }
 
 type result struct {
-	Path        string       `json:"path,omitempty"`
-	BenchOld    *benchResult `json:"bench_old,omitempty"`
-	BenchOldStr string       `json:"-"`
-	Bench       *benchResult `json:"bench,omitempty"`
-	BenchStr    string       `json:"-"`
-	Diff        string       `json:"diff,omitempty"`
-	Error       error        `json:"error,omitempty"`
-	ErrorOld    error        `json:"error_old,omitempty"`
+	Path     string       `json:"path,omitempty"`
+	Code     string       `json:"-"`
+	Bench    *benchResult `json:"bench,omitempty"`
+	BenchStr string       `json:"-"`
+	Error    error        `json:"error,omitempty"`
 }
 
 type output interface {
@@ -95,58 +88,27 @@ func (j *jsonOutput) End() {
 	}
 }
 
-type stdoutOutput struct {
-	writer *tabwriter.Writer
-}
+type stdoutOutput struct{}
 
 func (s stdoutOutput) Append(r result) {
 	var err error
 
 	if len(r.Path) > 0 {
-		_, err = fmt.Fprintf(s.writer, "%s\n", r.Path)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	if r.ErrorOld != nil {
-		_, err = fmt.Fprintf(s.writer, "old error:\t%s\n", r.ErrorOld)
+		_, err = fmt.Printf("%s\n", r.Path)
 		if err != nil {
 			panic(err)
 		}
 	}
 
 	if r.Error != nil {
-		_, err = fmt.Fprintf(s.writer, "new error:\t%s\n", r.Error)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	if len(r.BenchOldStr) > 0 {
-		_, err = fmt.Fprintf(s.writer, "old bench:\t%s\n", r.BenchOldStr)
-		if err != nil {
-			panic(err)
-		}
+		cmd.PrettyPrintError(os.Stdout, r.Error, r.Path, map[string]string{r.Path: r.Code})
 	}
 
 	if len(r.BenchStr) > 0 {
-		_, err = fmt.Fprintf(s.writer, "new bench:\t%s\n", r.BenchStr)
+		_, err = fmt.Printf("bench:\t%s\n", r.BenchStr)
 		if err != nil {
 			panic(err)
 		}
-	}
-
-	if len(r.Diff) > 0 {
-		_, err = fmt.Fprintf(s.writer, "mismatch:\n%s", r.Diff)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	err = s.writer.Flush()
-	if err != nil {
-		panic(err)
 	}
 }
 
@@ -154,13 +116,7 @@ func (s stdoutOutput) End() {
 	// no-op
 }
 
-func newStdoutOutput() stdoutOutput {
-	return stdoutOutput{
-		writer: tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0),
-	}
-}
-
-func run(paths []string, bench bool, old bool, compare bool, json bool) {
+func run(paths []string, bench bool, json bool) {
 	if len(paths) == 0 {
 		paths = []string{""}
 	}
@@ -169,13 +125,13 @@ func run(paths []string, bench bool, old bool, compare bool, json bool) {
 	if json {
 		out = newJSONOutput(len(paths))
 	} else {
-		out = newStdoutOutput()
+		out = stdoutOutput{}
 	}
 
 	allSucceeded := true
 
 	for _, path := range paths {
-		res, runSucceeded := runPath(path, old, compare, bench)
+		res, runSucceeded := runPath(path, bench)
 		if !runSucceeded {
 			allSucceeded = false
 		}
@@ -189,13 +145,14 @@ func run(paths []string, bench bool, old bool, compare bool, json bool) {
 	}
 }
 
-func runPath(path string, old bool, compare bool, bench bool) (res result, succeeded bool) {
+func runPath(path string, bench bool) (res result, succeeded bool) {
 	res = result{
 		Path: path,
 	}
 	succeeded = true
 
 	code := read(path)
+	res.Code = code
 
 	var newResult *ast.Program
 	var newErr error
@@ -212,37 +169,13 @@ func runPath(path string, old bool, compare bool, bench bool) (res result, succe
 		res.Error = newErr
 	}()
 
-	var oldResult *ast.Program
-	var oldErr error
-	if old || compare {
-		func() {
-			defer func() {
-				if r := recover(); r != nil {
-					oldErr = fmt.Errorf("%s", debug.Stack())
-					res.ErrorOld = oldErr
-				}
-			}()
-
-			oldResult, _, oldErr = parser1.ParseProgram(code)
-			res.ErrorOld = oldErr
-		}()
-	}
-
-	if newErr != nil || oldErr != nil {
+	if newErr != nil {
 		succeeded = false
-	}
-
-	if compare && newErr == nil && oldErr == nil {
-		diff := compareOldAndNew(oldResult, newResult)
-		if len(diff) > 0 {
-			succeeded = false
-		}
-		res.Diff = diff
 	}
 
 	if bench {
 		if newErr == nil {
-			benchRes := benchParse(code, func(code string) (err error) {
+			benchRes := benchParse(func() (err error) {
 				_, err = parser2.ParseProgram(code)
 				return
 			})
@@ -252,19 +185,8 @@ func runPath(path string, old bool, compare bool, bench bool) (res result, succe
 			}
 			res.BenchStr = benchRes.String()
 		}
-
-		if old && oldErr == nil {
-			benchRes := benchParse(code, func(code string) (err error) {
-				_, _, err = parser1.ParseProgram(code)
-				return
-			})
-			res.BenchOld = &benchResult{
-				Iterations: benchRes.N,
-				Time:       benchRes.T,
-			}
-			res.BenchOldStr = benchRes.String()
-		}
 	}
+
 	return res, succeeded
 }
 
@@ -282,30 +204,13 @@ func read(path string) string {
 	return string(data)
 }
 
-func benchParse(code string, parse func(string) error) testing.BenchmarkResult {
+func benchParse(parse func() (err error)) testing.BenchmarkResult {
 	return testing.Benchmark(func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			err := parse(code)
+			err := parse()
 			if err != nil {
 				panic(err)
 			}
 		}
 	})
-}
-
-func compareOldAndNew(oldResult, newResult *ast.Program) string {
-	// the maximum levels of a struct to recurse into
-	// this prevents infinite recursion from circular references
-	deep.MaxDepth = 100
-
-	diff := deep.Equal(oldResult, newResult)
-
-	s := strings.Builder{}
-
-	for _, d := range diff {
-		s.WriteString(d)
-		s.WriteRune('\n')
-	}
-
-	return s.String()
 }

@@ -31,7 +31,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
-	parser1 "github.com/onflow/cadence/runtime/parser"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -1522,7 +1521,7 @@ func TestMemberExpression(t *testing.T) {
 		)
 	})
 
-	t.Run("whitespace between", func(t *testing.T) {
+	t.Run("whitespace before", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -1540,6 +1539,37 @@ func TestMemberExpression(t *testing.T) {
 				Identifier: ast.Identifier{
 					Identifier: "n",
 					Pos:        ast.Position{Offset: 3, Line: 1, Column: 3},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("missing name", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("f.")
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected member name, got EOF",
+					Pos:     ast.Position{Offset: 2, Line: 1, Column: 2},
+				},
+			},
+			errs,
+		)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.MemberExpression{
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "f",
+						Pos:        ast.Position{Offset: 0, Line: 1, Column: 0},
+					},
+				},
+				Identifier: ast.Identifier{
+					Identifier: "",
 				},
 			},
 			result,
@@ -1718,17 +1748,12 @@ func TestParseBlockComment(t *testing.T) {
 
 func BenchmarkParseInfix(b *testing.B) {
 
-	b.Run("new", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			ParseExpression("(8 - 1 + 3) * 6 - ((3 + 7) * 2)")
+	for i := 0; i < b.N; i++ {
+		_, errs := ParseExpression("(8 - 1 + 3) * 6 - ((3 + 7) * 2)")
+		if len(errs) > 0 {
+			b.Fatalf("parsing expression failed: %s", errs)
 		}
-	})
-
-	b.Run("old", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			_, _, _ = parser1.ParseExpression("(8 - 1 + 3) * 6 - ((3 + 7) * 2)")
-		}
-	})
+	}
 }
 
 func BenchmarkParseArray(b *testing.B) {
@@ -1745,17 +1770,12 @@ func BenchmarkParseArray(b *testing.B) {
 
 	b.ResetTimer()
 
-	b.Run("new", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			ParseExpression(lit)
+	for i := 0; i < b.N; i++ {
+		_, errs := ParseExpression(lit)
+		if len(errs) > 0 {
+			b.Fatalf("parsing expression failed: %s", errs)
 		}
-	})
-
-	b.Run("old", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			_, _, _ = parser1.ParseExpression(lit)
-		}
-	})
+	}
 }
 
 func TestParseReference(t *testing.T) {

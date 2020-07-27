@@ -31,12 +31,16 @@ func TestCheckToString(t *testing.T) {
 
 	t.Parallel()
 
-	for _, ty := range append(
+	for _, numberOrAddressType := range append(
 		sema.AllNumberTypes[:],
 		&sema.AddressType{},
 	) {
 
+		ty := numberOrAddressType
+
 		t.Run(ty.String(), func(t *testing.T) {
+
+			t.Parallel()
 
 			checker, err := parseAndCheckWithTestValue(t,
 				`

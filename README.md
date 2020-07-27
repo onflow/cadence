@@ -1,5 +1,7 @@
 # Cadence
 
+<img src="https://raw.githubusercontent.com/onflow/cadence/master/cadence_furever.png" width="300" />
+
 ## Introduction
 
 Cadence is a resource-oriented programming language that introduces new features

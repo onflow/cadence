@@ -94,9 +94,11 @@ func exportType(typ sema.Type) cadence.Type {
 		return exportFunctionType(t)
 	case *sema.AddressType:
 		return cadence.AddressType{}
+	case *sema.ReferenceType:
+		return exportReferenceType(t)
 	}
 
-	panic(fmt.Sprintf("cannot convert type of type %T", typ))
+	panic(fmt.Sprintf("cannot export type of type %T", typ))
 }
 
 func exportOptionalType(t *sema.OptionalType) cadence.Type {
@@ -138,6 +140,10 @@ func exportCompositeType(t *sema.CompositeType) cadence.Type {
 	for _, identifier := range fieldNames {
 		field := t.Members[identifier]
 
+		if field.IgnoreInSerialization {
+			continue
+		}
+
 		convertedFieldType := exportType(field.TypeAnnotation.Type)
 
 		fields = append(fields, cadence.Field{
@@ -167,9 +173,15 @@ func exportCompositeType(t *sema.CompositeType) cadence.Type {
 			Identifier: t.Identifier,
 			Fields:     fields,
 		}
+	case common.CompositeKindContract:
+		return cadence.ContractType{
+			TypeID:     id,
+			Identifier: t.Identifier,
+			Fields:     fields,
+		}
 	}
 
-	panic(fmt.Sprintf("cannot convert type %v of unknown kind %v", t, t.Kind))
+	panic(fmt.Sprintf("cannot export type %v of unknown kind %v", t, t.Kind))
 }
 
 func exportDictionaryType(t *sema.DictionaryType) cadence.Type {
@@ -200,5 +212,12 @@ func exportFunctionType(t *sema.FunctionType) cadence.Type {
 	return cadence.Function{
 		Parameters: parameters,
 		ReturnType: convertedReturnType,
+	}.WithID(string(t.ID()))
+}
+
+func exportReferenceType(t *sema.ReferenceType) cadence.ReferenceType {
+	return cadence.ReferenceType{
+		Authorized: t.Authorized,
+		Type:       exportType(t.Type),
 	}.WithID(string(t.ID()))
 }
