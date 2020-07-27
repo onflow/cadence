@@ -58,6 +58,7 @@ type result struct {
 	Bench    *benchResult `json:"bench,omitempty"`
 	BenchStr string       `json:"-"`
 	Error    error        `json:"error,omitempty"`
+	Program  *ast.Program
 }
 
 type output interface {
@@ -154,40 +155,40 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 	code := read(path)
 	res.Code = code
 
-	var newResult *ast.Program
-	var newErr error
+	var program *ast.Program
+	var err error
 
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
-				newErr = fmt.Errorf("%s", debug.Stack())
-				res.Error = newErr
+				err = fmt.Errorf("%s", debug.Stack())
+				res.Error = err
 			}
 		}()
 
-		newResult, newErr = parser2.ParseProgram(code)
-		res.Error = newErr
+		program, err = parser2.ParseProgram(code)
+		res.Program = program
+		res.Error = err
 	}()
 
-	if newErr != nil {
+	if err != nil {
 		succeeded = false
+		return
 	}
 
 	if bench {
-		if newErr == nil {
-			benchRes := benchParse(func() (err error) {
-				_, err = parser2.ParseProgram(code)
-				return
-			})
-			res.Bench = &benchResult{
-				Iterations: benchRes.N,
-				Time:       benchRes.T,
-			}
-			res.BenchStr = benchRes.String()
+		benchRes := benchParse(func() (err error) {
+			_, err = parser2.ParseProgram(code)
+			return
+		})
+		res.Bench = &benchResult{
+			Iterations: benchRes.N,
+			Time:       benchRes.T,
 		}
+		res.BenchStr = benchRes.String()
 	}
 
-	return res, succeeded
+	return
 }
 
 func read(path string) string {
