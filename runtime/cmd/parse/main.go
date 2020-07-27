@@ -167,7 +167,9 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 		}()
 
 		program, err = parser2.ParseProgram(code)
-		res.Program = program
+		if !bench {
+			res.Program = program
+		}
 		res.Error = err
 	}()
 
