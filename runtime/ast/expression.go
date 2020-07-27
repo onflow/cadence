@@ -377,6 +377,8 @@ type AccessExpression interface {
 type MemberExpression struct {
 	Expression Expression
 	Optional   bool
+	// The position of the token (`.`, `?.`) that separates the accessed expression
+	// and the identifier of the member
 	AccessPos  Position
 	Identifier Identifier
 }
