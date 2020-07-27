@@ -1,0 +1,101 @@
+description: Flow Fungible Token
+maintainers:
+- bastian@dapperlabs.com
+- joshua.hannan@dapperlabs.com
+url: https://github.com/onflow/flow-ft.git
+branch: master
+files:
+- path: contracts/FungibleToken.cdc
+- path: contracts/TokenForwarding.cdc
+  # language=Python prefix=source=''\n
+  prepare: |
+      import re
+      from pathlib import Path
+
+      source = re.sub(
+        'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+        f'import FungibleToken from "{Path("FungibleToken.cdc").resolve()}"',
+        source,
+      )
+
+- path: contracts/ExampleToken.cdc
+  # language=Python prefix=source=''\n
+  prepare: |
+      import re
+      from pathlib import Path
+
+      source = re.sub(
+        'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+        f'import FungibleToken from "{Path("FungibleToken.cdc").resolve()}"',
+        source,
+      )
+
+- path: transactions/transfer_tokens.cdc
+  # language=Python prefix=source=''\n
+  prepare: |
+      import re
+      from pathlib import Path
+
+      source = re.sub(
+        'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+        f'import FungibleToken from "{Path("../contracts/FungibleToken.cdc").resolve()}"',
+        source,
+      )
+      source = re.sub(
+        'import ExampleToken from 0xTOKENADDRESS',
+        f'import ExampleToken from "{Path("../contracts/ExampleToken.cdc").resolve()}"',
+        source,
+      )
+
+- path: transactions/setup_account.cdc
+  # language=Python prefix=source=''\n
+  prepare: |
+      import re
+      from pathlib import Path
+
+      source = re.sub(
+        'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+        f'import FungibleToken from "{Path("../contracts/FungibleToken.cdc").resolve()}"',
+        source,
+      )
+      source = re.sub(
+        'import ExampleToken from 0xTOKENADDRESS',
+        f'import ExampleToken from "{Path("../contracts/ExampleToken.cdc").resolve()}"',
+        source,
+      )
+
+- path: transactions/mint_tokens.cdc
+  # language=Python prefix=source=''\n
+  prepare: |
+      import re
+      from pathlib import Path
+
+      source = re.sub(
+        'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+        f'import FungibleToken from "{Path("../contracts/FungibleToken.cdc").resolve()}"',
+        source,
+      )
+      source = re.sub(
+        'import ExampleToken from 0xTOKENADDRESS',
+        f'import ExampleToken from "{Path("../contracts/ExampleToken.cdc").resolve()}"',
+        source,
+      )
+
+
+- path: transactions/burn_tokens.cdc
+  # language=Python prefix=source=''\n
+  prepare: |
+      import re
+      from pathlib import Path
+
+      source = re.sub(
+        'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
+        f'import FungibleToken from "{Path("../contracts/FungibleToken.cdc").resolve()}"',
+        source,
+      )
+      source = re.sub(
+        'import ExampleToken from 0xTOKENADDRESS',
+        f'import ExampleToken from "{Path("../contracts/ExampleToken.cdc").resolve()}"',
+        source,
+      )
+

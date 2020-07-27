@@ -20,6 +20,7 @@ package checker
 
 import (
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -2138,7 +2139,7 @@ func TestCheckMutualTypeUseTopLevel(t *testing.T) {
 						_, err := ParseAndCheck(t, code)
 
 						if !assert.NoError(t, err) {
-							cmd.PrettyPrintError(err, "", map[string]string{"": code})
+							cmd.PrettyPrintError(os.Stdout, err, "", map[string]string{"": code})
 						}
 					})
 				}

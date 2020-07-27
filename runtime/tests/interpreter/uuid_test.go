@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -70,7 +71,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 	)
 
 	if err != nil {
-		cmd.PrettyPrintError(err, "", map[string]string{"": ""})
+		cmd.PrettyPrintError(os.Stdout, err, "", map[string]string{"": ""})
 	}
 
 	require.NoError(t, err)

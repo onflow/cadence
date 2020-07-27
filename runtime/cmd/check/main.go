@@ -26,21 +26,21 @@ import (
 	"io/ioutil"
 	"os"
 	"runtime/debug"
+	"strings"
 	"testing"
+	"text/tabwriter"
 	"time"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/cmd"
-	"github.com/onflow/cadence/runtime/parser2"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
-var benchFlag = flag.Bool("bench", false, "benchmark the parser")
+var benchFlag = flag.Bool("bench", false, "benchmark the checker")
 var jsonFlag = flag.Bool("json", false, "print the result formatted as JSON")
 
 func main() {
-	testing.Init()
 	flag.Parse()
-
 	args := flag.Args()
 	run(args, *benchFlag, *jsonFlag)
 }
@@ -53,12 +53,10 @@ type benchResult struct {
 }
 
 type result struct {
-	Path     string       `json:"path,omitempty"`
-	Code     string       `json:"-"`
+	Path     string       `json:"path"`
 	Bench    *benchResult `json:"bench,omitempty"`
 	BenchStr string       `json:"-"`
-	Error    error        `json:"error,omitempty"`
-	Program  *ast.Program
+	Error    string       `json:"error,omitempty"`
 }
 
 type output interface {
@@ -89,27 +87,37 @@ func (j *jsonOutput) End() {
 	}
 }
 
-type stdoutOutput struct{}
+type stdoutOutput struct {
+	writer *tabwriter.Writer
+}
 
 func (s stdoutOutput) Append(r result) {
 	var err error
 
 	if len(r.Path) > 0 {
-		_, err = fmt.Printf("%s\n", r.Path)
+		_, err = fmt.Fprintf(s.writer, "%s\n", r.Path)
 		if err != nil {
 			panic(err)
 		}
-	}
-
-	if r.Error != nil {
-		cmd.PrettyPrintError(os.Stdout, r.Error, r.Path, map[string]string{r.Path: r.Code})
 	}
 
 	if len(r.BenchStr) > 0 {
-		_, err = fmt.Printf("bench:\t%s\n", r.BenchStr)
+		_, err = fmt.Fprintf(s.writer, "bench:\t%s\n", r.BenchStr)
 		if err != nil {
 			panic(err)
 		}
+	}
+
+	if len(r.Error) > 0 {
+		_, err = fmt.Fprintf(s.writer, "error:\t%s\n", r.Error)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	err = s.writer.Flush()
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -117,25 +125,32 @@ func (s stdoutOutput) End() {
 	// no-op
 }
 
+func newStdoutOutput() stdoutOutput {
+	return stdoutOutput{
+		writer: tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0),
+	}
+}
+
 func run(paths []string, bench bool, json bool) {
 	if len(paths) == 0 {
 		paths = []string{""}
 	}
 
+	allSucceeded := true
+
 	var out output
 	if json {
 		out = newJSONOutput(len(paths))
 	} else {
-		out = stdoutOutput{}
+		out = newStdoutOutput()
 	}
-
-	allSucceeded := true
 
 	for _, path := range paths {
 		res, runSucceeded := runPath(path, bench)
 		if !runSucceeded {
 			allSucceeded = false
 		}
+
 		out.Append(res)
 	}
 
@@ -153,35 +168,46 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 	succeeded = true
 
 	code := read(path)
-	res.Code = code
 
-	var program *ast.Program
 	var err error
+	var checker *sema.Checker
+	var program *ast.Program
+	var codes map[string]string
+	var must func(error)
 
 	func() {
 		defer func() {
 			if r := recover(); r != nil {
 				err = fmt.Errorf("%s", debug.Stack())
-				res.Error = err
+				res.Error = err.Error()
 			}
 		}()
 
-		program, err = parser2.ParseProgram(code)
-		if !bench {
-			res.Program = program
+		program, codes, must = cmd.PrepareProgram(code, path)
+
+		checker, _ = cmd.PrepareChecker(program, path, must)
+
+		err = checker.Check()
+		if err != nil {
+			var builder strings.Builder
+			cmd.PrettyPrintError(&builder, err, path, codes)
+			res.Error = builder.String()
 		}
-		res.Error = err
 	}()
 
 	if err != nil {
 		succeeded = false
-		return
 	}
 
-	if bench {
-		benchRes := benchParse(func() (err error) {
-			_, err = parser2.ParseProgram(code)
-			return
+	if bench && err == nil {
+		benchRes := testing.Benchmark(func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				checker, must = cmd.PrepareChecker(program, path, must)
+				must(checker.Check())
+				if err != nil {
+					panic(err)
+				}
+			}
 		})
 		res.Bench = &benchResult{
 			Iterations: benchRes.N,
@@ -190,7 +216,7 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 		res.BenchStr = benchRes.String()
 	}
 
-	return
+	return res, succeeded
 }
 
 func read(path string) string {
@@ -205,15 +231,4 @@ func read(path string) string {
 		panic(err)
 	}
 	return string(data)
-}
-
-func benchParse(parse func() (err error)) testing.BenchmarkResult {
-	return testing.Benchmark(func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
-			err := parse()
-			if err != nil {
-				panic(err)
-			}
-		}
-	})
 }

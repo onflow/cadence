@@ -20,6 +20,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"io/ioutil"
 	"os"
 
@@ -31,13 +32,16 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
-func PrettyPrintError(err error, filename string, codes map[string]string) {
+func PrettyPrintError(writer io.Writer, err error, filename string, codes map[string]string) {
 	i := 0
 	printErr := func(err error, filename string) {
 		if i > 0 {
 			println()
 		}
-		print(runtime.PrettyPrintError(err, filename, codes[filename], true))
+		_, writeErr := writer.Write([]byte(runtime.PrettyPrintError(err, filename, codes[filename], true)))
+		if writeErr != nil {
+			panic(writeErr)
+		}
 		i++
 	}
 
@@ -51,7 +55,7 @@ func PrettyPrintError(err error, filename string, codes map[string]string) {
 			if err, ok := err.(*sema.ImportedProgramError); ok {
 				filename := string(err.ImportLocation.(ast.StringLocation))
 				for _, err := range err.CheckerError.Errors {
-					PrettyPrintError(err, filename, codes)
+					PrettyPrintError(writer, err, filename, codes)
 				}
 			}
 		}
@@ -70,7 +74,7 @@ func must(err error, filename string, codes map[string]string) {
 	if err == nil {
 		return
 	}
-	PrettyPrintError(err, filename, codes)
+	PrettyPrintError(os.Stderr, err, filename, codes)
 	os.Exit(1)
 }
 
@@ -80,24 +84,22 @@ func mustClosure(filename string, codes map[string]string) func(error) {
 	}
 }
 
-func PrepareCheckerFromFile(filename string) (*sema.Checker, func(error)) {
+func PrepareProgramFromFile(filename string) (*ast.Program, func(error)) {
 	codeBytes, err := ioutil.ReadFile(filename)
 
-	checker, must := PrepareChecker(string(codeBytes), filename)
+	program, _, must := PrepareProgram(string(codeBytes), filename)
 	must(err)
 
-	return checker, must
+	return program, must
 }
 
-//PrepareChecker prepares and initializes a Checker with a given code as a string
-//and dummyFilename which is used for pretty-printing errors, if any
-func PrepareChecker(code string, dummyFilename string) (*sema.Checker, func(error)) {
+func PrepareProgram(code string, filename string) (*ast.Program, map[string]string, func(error)) {
 	codes := map[string]string{}
 
-	must := mustClosure(dummyFilename, codes)
+	must := mustClosure(filename, codes)
 
 	program, err := parser2.ParseProgram(code)
-	codes[dummyFilename] = code
+	codes[filename] = code
 	must(err)
 
 	err = program.ResolveImports(func(location ast.Location) (program *ast.Program, err error) {
@@ -114,40 +116,47 @@ func PrepareChecker(code string, dummyFilename string) (*sema.Checker, func(erro
 		}
 	})
 	must(err)
+	return program, codes, must
+}
 
-	standardLibraryFunctions := standardLibraryFunctions()
-	valueDeclarations := standardLibraryFunctions.ToValueDeclarations()
-	typeDeclarations := stdlib.BuiltinTypes.ToTypeDeclarations()
+var valueDeclarations = append(
+	stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{}),
+	stdlib.BuiltinFunctions...,
+)
 
-	location := runtime.FileLocation(dummyFilename)
+var typeDeclarations = append(
+	stdlib.FlowBuiltInTypes,
+	stdlib.BuiltinTypes...,
+).ToTypeDeclarations()
+
+// PrepareChecker prepares and initializes a checker with a given code as a string,
+// and a filename which is used for pretty-printing errors, if any
+func PrepareChecker(program *ast.Program, filename string, must func(error)) (*sema.Checker, func(error)) {
+	location := runtime.FileLocation(filename)
 	checker, err := sema.NewChecker(
 		program,
 		location,
-		sema.WithPredeclaredValues(valueDeclarations),
+		sema.WithPredeclaredValues(valueDeclarations.ToValueDeclarations()),
 		sema.WithPredeclaredTypes(typeDeclarations),
 	)
 	must(err)
 
-	must(checker.Check())
-
 	return checker, must
-}
-
-func standardLibraryFunctions() stdlib.StandardLibraryFunctions {
-	return append(stdlib.BuiltinFunctions, stdlib.HelperFunctions...)
 }
 
 func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checker, func(error)) {
 
-	checker, must := PrepareCheckerFromFile(filename)
+	program, must := PrepareProgramFromFile(filename)
 
-	values := standardLibraryFunctions().ToValues()
+	checker, must := PrepareChecker(program, filename, must)
+
+	must(checker.Check())
 
 	var uuid uint64
 
 	inter, err := interpreter.NewInterpreter(
 		checker,
-		interpreter.WithPredefinedValues(values),
+		interpreter.WithPredefinedValues(valueDeclarations.ToValues()),
 		interpreter.WithUUIDHandler(func() uint64 {
 			defer func() { uuid++ }()
 			return uuid
@@ -157,9 +166,7 @@ func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checke
 
 	must(inter.Interpret())
 
-	return inter, checker, func(err error) {
-		must(err)
-	}
+	return inter, checker, must
 }
 
 func ExitWithError(message string) {

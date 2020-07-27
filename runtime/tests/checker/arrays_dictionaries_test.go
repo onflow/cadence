@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -740,7 +741,7 @@ func TestCheckArraySubtyping(t *testing.T) {
 			)
 
 			if !assert.NoError(t, err) {
-				cmd.PrettyPrintError(err, "", map[string]string{"": ""})
+				cmd.PrettyPrintError(os.Stdout, err, "", map[string]string{"": ""})
 			}
 		})
 	}
