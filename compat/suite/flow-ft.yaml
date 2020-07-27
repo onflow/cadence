@@ -37,7 +37,7 @@ files:
       from pathlib import Path
 
       source = re.sub(
-        'import FungibleToken from 0xee82856bf20e2aa6',
+        'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
         f'import FungibleToken from "{Path("../contracts/FungibleToken.cdc").resolve()}"',
         source,
       )
@@ -54,12 +54,12 @@ files:
       from pathlib import Path
 
       source = re.sub(
-        'import FungibleToken from 0x02',
+        'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
         f'import FungibleToken from "{Path("../contracts/FungibleToken.cdc").resolve()}"',
         source,
       )
       source = re.sub(
-        'import ExampleToken from 0x03',
+        'import ExampleToken from 0xTOKENADDRESS',
         f'import ExampleToken from "{Path("../contracts/ExampleToken.cdc").resolve()}"',
         source,
       )
@@ -71,12 +71,12 @@ files:
       from pathlib import Path
 
       source = re.sub(
-        'import FungibleToken from 0x02',
+        'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
         f'import FungibleToken from "{Path("../contracts/FungibleToken.cdc").resolve()}"',
         source,
       )
       source = re.sub(
-        'import ExampleToken from 0x03',
+        'import ExampleToken from 0xTOKENADDRESS',
         f'import ExampleToken from "{Path("../contracts/ExampleToken.cdc").resolve()}"',
         source,
       )
@@ -89,12 +89,12 @@ files:
       from pathlib import Path
 
       source = re.sub(
-        'import FungibleToken from 0xee82856bf20e2aa6',
+        'import FungibleToken from 0xFUNGIBLETOKENADDRESS',
         f'import FungibleToken from "{Path("../contracts/FungibleToken.cdc").resolve()}"',
         source,
       )
       source = re.sub(
-        'import ExampleToken from 0x03',
+        'import ExampleToken from 0xTOKENADDRESS',
         f'import ExampleToken from "{Path("../contracts/ExampleToken.cdc").resolve()}"',
         source,
       )
