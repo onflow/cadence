@@ -102,6 +102,16 @@ func (VoidType) ID() string {
 	return "Void"
 }
 
+// NeverType
+
+type NeverType struct{}
+
+func (NeverType) isType() {}
+
+func (NeverType) ID() string {
+	return "Never"
+}
+
 // BoolType
 
 type BoolType struct{}
@@ -122,6 +132,16 @@ func (StringType) ID() string {
 	return "String"
 }
 
+// CharacterType
+
+type CharacterType struct{}
+
+func (CharacterType) isType() {}
+
+func (CharacterType) ID() string {
+	return "Character"
+}
+
 // BytesType
 
 type BytesType struct{}
@@ -140,6 +160,66 @@ func (AddressType) isType() {}
 
 func (AddressType) ID() string {
 	return "Address"
+}
+
+// NumberType
+
+type NumberType struct{}
+
+func (NumberType) isType() {}
+
+func (NumberType) ID() string {
+	return "Number"
+}
+
+// SignedNumberType
+
+type SignedNumberType struct{}
+
+func (SignedNumberType) isType() {}
+
+func (SignedNumberType) ID() string {
+	return "SignedNumber"
+}
+
+// IntegerType
+
+type IntegerType struct{}
+
+func (IntegerType) isType() {}
+
+func (IntegerType) ID() string {
+	return "Integer"
+}
+
+// SignedIntegerType
+
+type SignedIntegerType struct{}
+
+func (SignedIntegerType) isType() {}
+
+func (SignedIntegerType) ID() string {
+	return "SignedInteger"
+}
+
+// FixedPointType
+
+type FixedPointType struct{}
+
+func (FixedPointType) isType() {}
+
+func (FixedPointType) ID() string {
+	return "FixedPoint"
+}
+
+// SignedFixedPointType
+
+type SignedFixedPointType struct{}
+
+func (SignedFixedPointType) isType() {}
+
+func (SignedFixedPointType) ID() string {
+	return "SignedFixedPoint"
 }
 
 // IntType
@@ -537,6 +617,103 @@ func (t ContractType) CompositeInitializers() [][]Parameter {
 	return t.Initializers
 }
 
+// InterfaceType
+
+type InterfaceType interface {
+	Type
+	isInterfaceType()
+	InterfaceIdentifier() string
+	InterfaceFields() []Field
+	InterfaceInitializers() [][]Parameter
+}
+
+// StructInterfaceType
+
+type StructInterfaceType struct {
+	TypeID       string
+	Identifier   string
+	Fields       []Field
+	Initializers [][]Parameter
+}
+
+func (StructInterfaceType) isType() {}
+
+func (t StructInterfaceType) ID() string {
+	return t.TypeID
+}
+
+func (StructInterfaceType) isInterfaceType() {}
+
+func (t StructInterfaceType) InterfaceIdentifier() string {
+	return t.Identifier
+}
+
+func (t StructInterfaceType) InterfaceFields() []Field {
+	return t.Fields
+}
+
+func (t StructInterfaceType) InterfaceInitializers() [][]Parameter {
+	return t.Initializers
+}
+
+// ResourceInterfaceType
+
+type ResourceInterfaceType struct {
+	TypeID       string
+	Identifier   string
+	Fields       []Field
+	Initializers [][]Parameter
+}
+
+func (ResourceInterfaceType) isType() {}
+
+func (t ResourceInterfaceType) ID() string {
+	return t.TypeID
+}
+
+func (ResourceInterfaceType) isInterfaceType() {}
+
+func (t ResourceInterfaceType) InterfaceIdentifier() string {
+	return t.Identifier
+}
+
+func (t ResourceInterfaceType) InterfaceFields() []Field {
+	return t.Fields
+}
+
+func (t ResourceInterfaceType) InterfaceInitializers() [][]Parameter {
+	return t.Initializers
+}
+
+// ContractInterfaceType
+
+type ContractInterfaceType struct {
+	TypeID       string
+	Identifier   string
+	Fields       []Field
+	Initializers [][]Parameter
+}
+
+func (ContractInterfaceType) isType() {}
+
+func (t ContractInterfaceType) ID() string {
+	return t.TypeID
+}
+
+func (ContractInterfaceType) isInterfaceType() {}
+
+func (t ContractInterfaceType) InterfaceIdentifier() string {
+	return t.Identifier
+}
+
+func (t ContractInterfaceType) InterfaceFields() []Field {
+	return t.Fields
+}
+
+func (t ContractInterfaceType) InterfaceInitializers() [][]Parameter {
+	return t.Initializers
+}
+
 // Function
 
 type Function struct {
@@ -609,4 +786,81 @@ func (t ReferenceType) ID() string {
 func (t ReferenceType) WithID(id string) ReferenceType {
 	t.typeID = id
 	return t
+}
+
+// RestrictedType
+
+type RestrictedType struct {
+	typeID       string
+	Type         Type
+	Restrictions []Type
+}
+
+func (RestrictedType) isType() {}
+
+func (t RestrictedType) ID() string {
+	return t.typeID
+}
+
+func (t RestrictedType) WithID(id string) RestrictedType {
+	t.typeID = id
+	return t
+}
+
+// BlockType
+
+type BlockType struct{}
+
+func (BlockType) isType() {}
+
+func (BlockType) ID() string {
+	return "Block"
+}
+
+// PathType
+
+type PathType struct{}
+
+func (PathType) isType() {}
+
+func (PathType) ID() string {
+	return "Path"
+}
+
+// CapabilityType
+
+type CapabilityType struct {
+	typeID     string
+	BorrowType Type
+}
+
+func (CapabilityType) isType() {}
+
+func (t CapabilityType) ID() string {
+	return t.typeID
+}
+
+func (t CapabilityType) WithID(id string) CapabilityType {
+	t.typeID = id
+	return t
+}
+
+// AuthAccountType
+
+type AuthAccountType struct{}
+
+func (AuthAccountType) isType() {}
+
+func (AuthAccountType) ID() string {
+	return "AuthAccount"
+}
+
+// PublicAccountType
+
+type PublicAccountType struct{}
+
+func (PublicAccountType) isType() {}
+
+func (PublicAccountType) ID() string {
+	return "PublicAccount"
 }
