@@ -6606,16 +6606,6 @@ TODO
 
 ## Built-in Functions
 
-### Block and Transaction Information
-
-To get the addresses of the signers of a transaction,
-use the `address` field of each signing `AuthAccount`
-that is passed to the transaction's `prepare` block.
-
-There is currently no built-in function that allows getting the current block number,
-or timestamp.
-These are being worked on.
-
 ### `panic`
 
 ```cadence
@@ -6643,3 +6633,54 @@ and reports a message which explains how the condition is false.
 Use this function for internal sanity checks.
 
 The message argument is optional.
+
+### Transaction Information
+
+To get the addresses of the signers of a transaction,
+use the `address` field of each signing `AuthAccount`
+that is passed to the transaction's `prepare` block.
+
+There is currently no API that allows getting other transaction information.
+Please let us know if your use-case demands it by request this feature in an issue.
+
+### Block Information
+
+To get information about a block, the functions `getCurrentBlock` and `getBlock` can be used:
+
+- ```cadence
+  fun getCurrentBlock(): Block
+  ```
+
+  Returns the the current block, i.e. the block which contains the currently executed transaction.
+
+- ```cadence
+  fun getBlock(at height: UInt64): Block?
+  ```
+
+  Returns the block at the given height.
+  If the given block does not exist the function returns `nil`.
+
+The `Block` type contains the identifier, height, and timestamp:
+
+```cadence
+pub struct Block {
+    /// The ID of the block.
+    ///
+    /// It is essentially the hash of the block.
+    ///
+    pub let id: [UInt8; 32]
+
+    /// The height of the block.
+    ///
+    /// If the blockchain is viewed as a tree with the genesis block at the root,
+    // the height of a node is the number of edges between the node and the genesis block
+    ///
+    pub let height: UInt64
+
+    /// The timestamp of the block.
+    ///
+    /// It is the local clock time of the block proposer when it generates the block
+    ///
+    pub let timestamp: UFix64
+}
+```
