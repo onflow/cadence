@@ -1197,7 +1197,7 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
     ```
 
 - `fun contains(_ element: T): Bool`:
-  Indicates whether the given element of type `T` is in the array.
+  Returns true if the given element of type `T` is in the array.
 
     ```cadence,file=array-contains.cdc
     // Declare an array of integers.
@@ -1483,6 +1483,27 @@ booleans[0] = true
     let length = numbers.length
 
     // `length` is `2`
+    ```
+
+- `fun insert(key: K, _ value: V): V?`:
+  Inserts the given value of type `V` into the dictionary under the given `key` of type `K`.
+
+  Returns the previous value as an optional
+  if the dictionary contained the key,
+  otherwise `nil`.
+
+    ```cadence,file=dictionary-remove.cdc
+    // Declare a dictionary mapping strings to integers.
+    let numbers = {"twentyThree": 23}
+
+    // Insert the key `"fortyTwo"` with the value `42` into the dictionary.
+    // The key did not previously exist in the dictionary,
+    // so the result is `nil`
+    //
+    let old = numbers.insert(key: "fortyTwo", 42)
+
+    // `old` is `nil`
+    // `numbers` is `{"twentyThree": 23, "fortyTwo": 42}`
     ```
 
 - `fun remove(key: K): V?`:
