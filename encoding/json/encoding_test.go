@@ -772,7 +772,7 @@ func TestEncodeStruct(t *testing.T) {
 
 	t.Parallel()
 
-	simpleStructType := cadence.StructType{
+	simpleStructType := &cadence.StructType{
 		TypeID:     "S.test.FooStruct",
 		Identifier: "FooStruct",
 		Fields: []cadence.Field{
@@ -798,7 +798,7 @@ func TestEncodeStruct(t *testing.T) {
 		`{"type":"Struct","value":{"id":"S.test.FooStruct","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
 	}
 
-	resourceStructType := cadence.StructType{
+	resourceStructType := &cadence.StructType{
 		TypeID:     "S.test.FooStruct",
 		Identifier: "FooStruct",
 		Fields: []cadence.Field{
@@ -835,7 +835,7 @@ func TestEncodeEvent(t *testing.T) {
 
 	t.Parallel()
 
-	simpleEventType := cadence.EventType{
+	simpleEventType := &cadence.EventType{
 		TypeID:     "S.test.FooEvent",
 		Identifier: "FooEvent",
 		Fields: []cadence.Field{
@@ -861,7 +861,7 @@ func TestEncodeEvent(t *testing.T) {
 		`{"type":"Event","value":{"id":"S.test.FooEvent","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
 	}
 
-	resourceEventType := cadence.EventType{
+	resourceEventType := &cadence.EventType{
 		TypeID:     "S.test.FooEvent",
 		Identifier: "FooEvent",
 		Fields: []cadence.Field{
@@ -898,7 +898,7 @@ func TestEncodeContract(t *testing.T) {
 
 	t.Parallel()
 
-	simpleContractType := cadence.ContractType{
+	simpleContractType := &cadence.ContractType{
 		TypeID:     "S.test.FooContract",
 		Identifier: "FooContract",
 		Fields: []cadence.Field{
@@ -924,7 +924,7 @@ func TestEncodeContract(t *testing.T) {
 		`{"type":"Contract","value":{"id":"S.test.FooContract","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
 	}
 
-	resourceContractType := cadence.ContractType{
+	resourceContractType := &cadence.ContractType{
 		TypeID:     "S.test.FooContract",
 		Identifier: "FooContract",
 		Fields: []cadence.Field{
@@ -1250,7 +1250,7 @@ func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value) {
 	assert.Equal(t, expectedVal, decodedVal)
 }
 
-var fooResourceType = cadence.ResourceType{
+var fooResourceType = &cadence.ResourceType{
 	TypeID:     "S.test.Foo",
 	Identifier: "Foo",
 	Fields: []cadence.Field{

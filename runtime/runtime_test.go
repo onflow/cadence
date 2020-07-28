@@ -713,7 +713,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				jsoncdc.MustEncode(
 					cadence.
 						NewStruct([]cadence.Value{cadence.NewString("bar")}).
-						WithType(cadence.StructType{
+						WithType(&cadence.StructType{
 							TypeID:     "S.test.Foo",
 							Identifier: "Foo",
 							Fields: []cadence.Field{
@@ -750,7 +750,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 					cadence.NewArray([]cadence.Value{
 						cadence.
 							NewStruct([]cadence.Value{cadence.NewString("bar")}).
-							WithType(cadence.StructType{
+							WithType(&cadence.StructType{
 								TypeID:     "S.test.Foo",
 								Identifier: "Foo",
 								Fields: []cadence.Field{
@@ -984,7 +984,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				jsoncdc.MustEncode(
 					cadence.
 						NewStruct([]cadence.Value{cadence.NewString("bar")}).
-						WithType(cadence.StructType{
+						WithType(&cadence.StructType{
 							TypeID:     "S.test.Foo",
 							Identifier: "Foo",
 							Fields: []cadence.Field{
@@ -1019,7 +1019,7 @@ func TestRuntimeScriptArguments(t *testing.T) {
 					cadence.NewArray([]cadence.Value{
 						cadence.
 							NewStruct([]cadence.Value{cadence.NewString("bar")}).
-							WithType(cadence.StructType{
+							WithType(&cadence.StructType{
 								TypeID:     "S.test.Foo",
 								Identifier: "Foo",
 								Fields: []cadence.Field{
@@ -2330,7 +2330,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		require.Equal(t, event.Type(), expectedEventType)
 
-		expectedEventCompositeType := expectedEventType.(cadence.EventType)
+		expectedEventCompositeType := expectedEventType.(*cadence.EventType)
 
 		codeHashParameterIndex := -1
 
@@ -2482,8 +2482,11 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			nextTransactionLocation := newTransactionLocationGenerator()
 
 			err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
-
-			test.check(t, err, accountCode, events, exportType(stdlib.AccountCodeUpdatedEventType))
+			accountCodeUpdatedEventType := exportType(
+				stdlib.AccountCodeUpdatedEventType,
+				map[sema.TypeID]cadence.Type{},
+			)
+			test.check(t, err, accountCode, events, accountCodeUpdatedEventType)
 		})
 	}
 }

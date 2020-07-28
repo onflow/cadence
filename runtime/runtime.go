@@ -391,7 +391,7 @@ func (r *interpreterRuntime) transactionExecutionFunction(
 }
 
 func validateArgumentParams(
-	interp *interpreter.Interpreter,
+	inter *interpreter.Interpreter,
 	runtimeInterface Interface,
 	argumentCount int,
 	arguments [][]byte,
@@ -404,7 +404,7 @@ func validateArgumentParams(
 		parameterType := parameter.TypeAnnotation.Type
 		argument := arguments[i]
 
-		exportedParameterType := exportType(parameterType)
+		exportedParameterType := exportType(parameterType, map[sema.TypeID]cadence.Type{})
 		var value cadence.Value
 		var err error
 
@@ -425,7 +425,7 @@ func validateArgumentParams(
 		arg := importValue(value)
 
 		// Check that decoded value is a subtype of static parameter type
-		if !interpreter.IsSubType(arg.DynamicType(interp), parameterType) {
+		if !interpreter.IsSubType(arg.DynamicType(inter), parameterType) {
 			return nil, &InvalidEntryPointArgumentError{
 				Index: i,
 				Err: &InvalidTypeAssignmentError{

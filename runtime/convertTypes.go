@@ -28,129 +28,145 @@ import (
 )
 
 // exportType converts a runtime type to its corresponding Go representation.
-func exportType(typ sema.Type) cadence.Type {
-	switch t := typ.(type) {
-	case *sema.AnyType:
-		return cadence.AnyType{}
-	case *sema.AnyStructType:
-		return cadence.AnyStructType{}
-	case *sema.AnyResourceType:
-		return cadence.AnyResourceType{}
-	case *sema.VoidType:
-		return cadence.VoidType{}
-	case *sema.NeverType:
-		return cadence.NeverType{}
-	case *sema.MetaType:
-		return cadence.MetaType{}
-	case *sema.OptionalType:
-		return exportOptionalType(t)
-	case *sema.BoolType:
-		return cadence.BoolType{}
-	case *sema.StringType:
-		return cadence.StringType{}
-	case *sema.CharacterType:
-		return cadence.CharacterType{}
-	case *sema.NumberType:
-		return cadence.NumberType{}
-	case *sema.SignedNumberType:
-		return cadence.SignedNumberType{}
-	case *sema.IntegerType:
-		return cadence.IntegerType{}
-	case *sema.SignedIntegerType:
-		return cadence.SignedIntegerType{}
-	case *sema.FixedPointType:
-		return cadence.FixedPointType{}
-	case *sema.SignedFixedPointType:
-		return cadence.SignedFixedPointType{}
-	case *sema.IntType:
-		return cadence.IntType{}
-	case *sema.Int8Type:
-		return cadence.Int8Type{}
-	case *sema.Int16Type:
-		return cadence.Int16Type{}
-	case *sema.Int32Type:
-		return cadence.Int32Type{}
-	case *sema.Int64Type:
-		return cadence.Int64Type{}
-	case *sema.Int128Type:
-		return cadence.Int128Type{}
-	case *sema.Int256Type:
-		return cadence.Int256Type{}
-	case *sema.UIntType:
-		return cadence.UIntType{}
-	case *sema.UInt8Type:
-		return cadence.UInt8Type{}
-	case *sema.UInt16Type:
-		return cadence.UInt16Type{}
-	case *sema.UInt32Type:
-		return cadence.UInt32Type{}
-	case *sema.UInt64Type:
-		return cadence.UInt64Type{}
-	case *sema.UInt128Type:
-		return cadence.UInt128Type{}
-	case *sema.UInt256Type:
-		return cadence.UInt256Type{}
-	case *sema.Word8Type:
-		return cadence.Word8Type{}
-	case *sema.Word16Type:
-		return cadence.Word16Type{}
-	case *sema.Word32Type:
-		return cadence.Word32Type{}
-	case *sema.Word64Type:
-		return cadence.Word64Type{}
-	case *sema.Fix64Type:
-		return cadence.Fix64Type{}
-	case *sema.UFix64Type:
-		return cadence.UFix64Type{}
-	case *sema.VariableSizedType:
-		return exportVariableSizedType(t)
-	case *sema.ConstantSizedType:
-		return exportConstantSizedType(t)
-	case *sema.CompositeType:
-		return exportCompositeType(t)
-	case *sema.InterfaceType:
-		return exportInterfaceType(t)
-	case *sema.DictionaryType:
-		return exportDictionaryType(t)
-	case *sema.FunctionType:
-		return exportFunctionType(t)
-	case *sema.AddressType:
-		return cadence.AddressType{}
-	case *sema.ReferenceType:
-		return exportReferenceType(t)
-	case *sema.RestrictedType:
-		return exportRestrictedType(t)
-	case *stdlib.BlockType:
-		return cadence.BlockType{}
-	case *sema.PathType:
-		return cadence.PathType{}
-	case *sema.CheckedFunctionType:
-		return exportFunctionType(t.FunctionType)
-	case *sema.CapabilityType:
-		return exportCapabilityType(t)
-	case *sema.AuthAccountType:
-		return cadence.AuthAccountType{}
-	case *sema.PublicAccountType:
-		return cadence.PublicAccountType{}
+func exportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type {
+
+	typeID := t.ID()
+	if result, ok := results[typeID]; ok {
+		return result
 	}
 
-	panic(fmt.Sprintf("cannot export type of type %T", typ))
+	result := func() cadence.Type {
+		switch t := t.(type) {
+		case *sema.AnyType:
+			return cadence.AnyType{}
+		case *sema.AnyStructType:
+			return cadence.AnyStructType{}
+		case *sema.AnyResourceType:
+			return cadence.AnyResourceType{}
+		case *sema.VoidType:
+			return cadence.VoidType{}
+		case *sema.NeverType:
+			return cadence.NeverType{}
+		case *sema.MetaType:
+			return cadence.MetaType{}
+		case *sema.OptionalType:
+			return exportOptionalType(t, results)
+		case *sema.BoolType:
+			return cadence.BoolType{}
+		case *sema.StringType:
+			return cadence.StringType{}
+		case *sema.CharacterType:
+			return cadence.CharacterType{}
+		case *sema.NumberType:
+			return cadence.NumberType{}
+		case *sema.SignedNumberType:
+			return cadence.SignedNumberType{}
+		case *sema.IntegerType:
+			return cadence.IntegerType{}
+		case *sema.SignedIntegerType:
+			return cadence.SignedIntegerType{}
+		case *sema.FixedPointType:
+			return cadence.FixedPointType{}
+		case *sema.SignedFixedPointType:
+			return cadence.SignedFixedPointType{}
+		case *sema.IntType:
+			return cadence.IntType{}
+		case *sema.Int8Type:
+			return cadence.Int8Type{}
+		case *sema.Int16Type:
+			return cadence.Int16Type{}
+		case *sema.Int32Type:
+			return cadence.Int32Type{}
+		case *sema.Int64Type:
+			return cadence.Int64Type{}
+		case *sema.Int128Type:
+			return cadence.Int128Type{}
+		case *sema.Int256Type:
+			return cadence.Int256Type{}
+		case *sema.UIntType:
+			return cadence.UIntType{}
+		case *sema.UInt8Type:
+			return cadence.UInt8Type{}
+		case *sema.UInt16Type:
+			return cadence.UInt16Type{}
+		case *sema.UInt32Type:
+			return cadence.UInt32Type{}
+		case *sema.UInt64Type:
+			return cadence.UInt64Type{}
+		case *sema.UInt128Type:
+			return cadence.UInt128Type{}
+		case *sema.UInt256Type:
+			return cadence.UInt256Type{}
+		case *sema.Word8Type:
+			return cadence.Word8Type{}
+		case *sema.Word16Type:
+			return cadence.Word16Type{}
+		case *sema.Word32Type:
+			return cadence.Word32Type{}
+		case *sema.Word64Type:
+			return cadence.Word64Type{}
+		case *sema.Fix64Type:
+			return cadence.Fix64Type{}
+		case *sema.UFix64Type:
+			return cadence.UFix64Type{}
+		case *sema.VariableSizedType:
+			return exportVariableSizedType(t, results)
+		case *sema.ConstantSizedType:
+			return exportConstantSizedType(t, results)
+		case *sema.CompositeType:
+			return exportCompositeType(t, results)
+		case *sema.InterfaceType:
+			return exportInterfaceType(t, results)
+		case *sema.DictionaryType:
+			return exportDictionaryType(t, results)
+		case *sema.FunctionType:
+			return exportFunctionType(t, results)
+		case *sema.AddressType:
+			return cadence.AddressType{}
+		case *sema.ReferenceType:
+			return exportReferenceType(t, results)
+		case *sema.RestrictedType:
+			return exportRestrictedType(t, results)
+		case *stdlib.BlockType:
+			return cadence.BlockType{}
+		case *sema.PathType:
+			return cadence.PathType{}
+		case *sema.CheckedFunctionType:
+			return exportFunctionType(t.FunctionType, results)
+		case *sema.CapabilityType:
+			return exportCapabilityType(t, results)
+		case *sema.AuthAccountType:
+			return cadence.AuthAccountType{}
+		case *sema.PublicAccountType:
+			return cadence.PublicAccountType{}
+		}
+
+		panic(fmt.Sprintf("cannot export type of type %T", t))
+	}()
+
+	results[typeID] = result
+
+	return result
 }
 
-func exportOptionalType(t *sema.OptionalType) cadence.Type {
-	convertedType := exportType(t.Type)
+func exportOptionalType(t *sema.OptionalType, results map[sema.TypeID]cadence.Type) cadence.Type {
+	convertedType := exportType(t.Type, results)
 
-	return cadence.OptionalType{Type: convertedType}
+	return cadence.OptionalType{
+		Type: convertedType,
+	}
 }
 
-func exportVariableSizedType(t *sema.VariableSizedType) cadence.Type {
-	convertedElement := exportType(t.Type)
+func exportVariableSizedType(t *sema.VariableSizedType, results map[sema.TypeID]cadence.Type) cadence.Type {
+	convertedElement := exportType(t.Type, results)
 
-	return cadence.VariableSizedArrayType{ElementType: convertedElement}
+	return cadence.VariableSizedArrayType{
+		ElementType: convertedElement,
+	}
 }
 
-func exportConstantSizedType(t *sema.ConstantSizedType) cadence.Type {
-	convertedElement := exportType(t.Type)
+func exportConstantSizedType(t *sema.ConstantSizedType, results map[sema.TypeID]cadence.Type) cadence.Type {
+	convertedElement := exportType(t.Type, results)
 
 	return cadence.ConstantSizedArrayType{
 		Size:        uint(t.Size),
@@ -158,9 +174,11 @@ func exportConstantSizedType(t *sema.ConstantSizedType) cadence.Type {
 	}
 }
 
-func exportCompositeType(t *sema.CompositeType) cadence.CompositeType {
+func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.Type) (result cadence.CompositeType) {
 
-	fields := make([]cadence.Field, 0, len(t.Fields))
+	id := string(t.ID())
+
+	fieldMembers := make([]*sema.Member, 0, len(t.Fields))
 
 	for _, identifier := range t.Fields {
 		member := t.Members[identifier]
@@ -169,49 +187,65 @@ func exportCompositeType(t *sema.CompositeType) cadence.CompositeType {
 			continue
 		}
 
-		convertedFieldType := exportType(member.TypeAnnotation.Type)
-
-		fields = append(fields, cadence.Field{
-			Identifier: identifier,
-			Type:       convertedFieldType,
-		})
+		fieldMembers = append(fieldMembers, member)
 	}
 
-	id := string(t.ID())
+	fields := make([]cadence.Field, len(fieldMembers))
 
 	switch t.Kind {
 	case common.CompositeKindStructure:
-		return cadence.StructType{
+		result = &cadence.StructType{
 			TypeID:     id,
 			Identifier: t.Identifier,
 			Fields:     fields,
 		}
+
 	case common.CompositeKindResource:
-		return cadence.ResourceType{
+		result = &cadence.ResourceType{
 			TypeID:     id,
 			Identifier: t.Identifier,
 			Fields:     fields,
 		}
+
 	case common.CompositeKindEvent:
-		return cadence.EventType{
+		result = &cadence.EventType{
 			TypeID:     id,
 			Identifier: t.Identifier,
 			Fields:     fields,
 		}
+
 	case common.CompositeKindContract:
-		return cadence.ContractType{
+		result = &cadence.ContractType{
 			TypeID:     id,
 			Identifier: t.Identifier,
 			Fields:     fields,
+		}
+
+	default:
+		panic(fmt.Sprintf("cannot export composite type %v of unknown kind %v", t, t.Kind))
+	}
+
+	// NOTE: ensure to set the result before recursively export field types
+
+	results[t.ID()] = result
+
+	for i, member := range fieldMembers {
+		convertedFieldType := exportType(member.TypeAnnotation.Type, results)
+
+		fields[i] = cadence.Field{
+			Identifier: member.Identifier.Identifier,
+			Type:       convertedFieldType,
 		}
 	}
 
-	panic(fmt.Sprintf("cannot export composite type %v of unknown kind %v", t, t.Kind))
+	return
 }
 
-func exportInterfaceType(t *sema.InterfaceType) cadence.InterfaceType {
+func exportInterfaceType(t *sema.InterfaceType, results map[sema.TypeID]cadence.Type) (result cadence.InterfaceType) {
 
-	fields := make([]cadence.Field, 0, len(t.Fields))
+	id := string(t.ID())
+
+	fieldMembers := make([]*sema.Member, 0, len(t.Fields))
 
 	for _, identifier := range t.Fields {
 		member := t.Members[identifier]
@@ -220,43 +254,56 @@ func exportInterfaceType(t *sema.InterfaceType) cadence.InterfaceType {
 			continue
 		}
 
-		convertedFieldType := exportType(member.TypeAnnotation.Type)
-
-		fields = append(fields, cadence.Field{
-			Identifier: identifier,
-			Type:       convertedFieldType,
-		})
+		fieldMembers = append(fieldMembers, member)
 	}
 
-	id := string(t.ID())
+	fields := make([]cadence.Field, len(fieldMembers))
 
 	switch t.CompositeKind {
 	case common.CompositeKindStructure:
-		return cadence.StructInterfaceType{
+		result = &cadence.StructInterfaceType{
 			TypeID:     id,
 			Identifier: t.Identifier,
 			Fields:     fields,
 		}
+
 	case common.CompositeKindResource:
-		return cadence.ResourceInterfaceType{
+		result = &cadence.ResourceInterfaceType{
 			TypeID:     id,
 			Identifier: t.Identifier,
 			Fields:     fields,
 		}
+
 	case common.CompositeKindContract:
-		return cadence.ContractInterfaceType{
+		result = &cadence.ContractInterfaceType{
 			TypeID:     id,
 			Identifier: t.Identifier,
 			Fields:     fields,
+		}
+
+	default:
+		panic(fmt.Sprintf("cannot export interface type %v of unknown kind %v", t, t.CompositeKind))
+	}
+
+	// NOTE: ensure to set the result before recursively export field types
+
+	results[t.ID()] = result
+
+	for i, member := range fieldMembers {
+		convertedFieldType := exportType(member.TypeAnnotation.Type, results)
+
+		fields[i] = cadence.Field{
+			Identifier: member.Identifier.Identifier,
+			Type:       convertedFieldType,
 		}
 	}
 
-	panic(fmt.Sprintf("cannot export interface type %v of unknown kind %v", t, t.CompositeKind))
+	return
 }
 
-func exportDictionaryType(t *sema.DictionaryType) cadence.Type {
-	convertedKeyType := exportType(t.KeyType)
-	convertedElementType := exportType(t.ValueType)
+func exportDictionaryType(t *sema.DictionaryType, results map[sema.TypeID]cadence.Type) cadence.Type {
+	convertedKeyType := exportType(t.KeyType, results)
+	convertedElementType := exportType(t.ValueType, results)
 
 	return cadence.DictionaryType{
 		KeyType:     convertedKeyType,
@@ -264,53 +311,58 @@ func exportDictionaryType(t *sema.DictionaryType) cadence.Type {
 	}
 }
 
-func exportFunctionType(t *sema.FunctionType) cadence.Type {
-	convertedReturnType := exportType(t.ReturnTypeAnnotation.Type)
+func exportFunctionType(t *sema.FunctionType, results map[sema.TypeID]cadence.Type) cadence.Type {
 
-	parameters := make([]cadence.Parameter, len(t.Parameters))
+	convertedParameters := make([]cadence.Parameter, len(t.Parameters))
 
 	for i, parameter := range t.Parameters {
-		convertedParameterType := exportType(parameter.TypeAnnotation.Type)
+		convertedParameterType := exportType(parameter.TypeAnnotation.Type, results)
 
-		parameters[i] = cadence.Parameter{
+		convertedParameters[i] = cadence.Parameter{
 			Label:      parameter.Label,
 			Identifier: parameter.Identifier,
 			Type:       convertedParameterType,
 		}
 	}
 
+	convertedReturnType := exportType(t.ReturnTypeAnnotation.Type, results)
+
 	return cadence.Function{
-		Parameters: parameters,
+		Parameters: convertedParameters,
 		ReturnType: convertedReturnType,
 	}.WithID(string(t.ID()))
 }
 
-func exportReferenceType(t *sema.ReferenceType) cadence.ReferenceType {
+func exportReferenceType(t *sema.ReferenceType, results map[sema.TypeID]cadence.Type) cadence.ReferenceType {
+	convertedType := exportType(t.Type, results)
+
 	return cadence.ReferenceType{
 		Authorized: t.Authorized,
-		Type:       exportType(t.Type),
+		Type:       convertedType,
 	}.WithID(string(t.ID()))
 }
 
-func exportRestrictedType(t *sema.RestrictedType) cadence.RestrictedType {
+func exportRestrictedType(t *sema.RestrictedType, results map[sema.TypeID]cadence.Type) cadence.RestrictedType {
+
+	convertedType := exportType(t.Type, results)
 
 	restrictions := make([]cadence.Type, len(t.Restrictions))
 
 	for i, restriction := range t.Restrictions {
-		restrictions[i] = exportType(restriction)
+		restrictions[i] = exportType(restriction, results)
 	}
 
 	return cadence.RestrictedType{
-		Type:         exportType(t.Type),
+		Type:         convertedType,
 		Restrictions: restrictions,
 	}.WithID(string(t.ID()))
 }
 
-func exportCapabilityType(t *sema.CapabilityType) cadence.CapabilityType {
+func exportCapabilityType(t *sema.CapabilityType, results map[sema.TypeID]cadence.Type) cadence.CapabilityType {
 
 	var borrowType cadence.Type
 	if t.BorrowType != nil {
-		borrowType = exportType(t.BorrowType)
+		borrowType = exportType(t.BorrowType, results)
 	}
 
 	return cadence.CapabilityType{

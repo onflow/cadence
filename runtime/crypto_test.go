@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestRuntimeCrypto_import(t *testing.T) {
@@ -43,7 +44,7 @@ func TestRuntimeCrypto_import(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{}
 
-	result, err := runtime.ExecuteScript(script, nil, runtimeInterface, testLocation)
+	result, err := runtime.ExecuteScript(script, nil, runtimeInterface, utils.TestLocation)
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -110,7 +111,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 		},
 	}
 
-	result, err := runtime.ExecuteScript(script, nil, runtimeInterface, testLocation)
+	result, err := runtime.ExecuteScript(script, nil, runtimeInterface, utils.TestLocation)
 	require.NoError(t, err)
 
 	assert.Equal(t,

@@ -510,23 +510,23 @@ type StructType struct {
 	Initializers [][]Parameter
 }
 
-func (StructType) isType() {}
+func (*StructType) isType() {}
 
-func (t StructType) ID() string {
+func (t *StructType) ID() string {
 	return t.TypeID
 }
 
-func (StructType) isCompositeType() {}
+func (*StructType) isCompositeType() {}
 
-func (t StructType) CompositeIdentifier() string {
+func (t *StructType) CompositeIdentifier() string {
 	return t.Identifier
 }
 
-func (t StructType) CompositeFields() []Field {
+func (t *StructType) CompositeFields() []Field {
 	return t.Fields
 }
 
-func (t StructType) CompositeInitializers() [][]Parameter {
+func (t *StructType) CompositeInitializers() [][]Parameter {
 	return t.Initializers
 }
 
@@ -539,23 +539,23 @@ type ResourceType struct {
 	Initializers [][]Parameter
 }
 
-func (ResourceType) isType() {}
+func (*ResourceType) isType() {}
 
-func (t ResourceType) ID() string {
+func (t *ResourceType) ID() string {
 	return t.TypeID
 }
 
-func (ResourceType) isCompositeType() {}
+func (*ResourceType) isCompositeType() {}
 
-func (t ResourceType) CompositeIdentifier() string {
+func (t *ResourceType) CompositeIdentifier() string {
 	return t.Identifier
 }
 
-func (t ResourceType) CompositeFields() []Field {
+func (t *ResourceType) CompositeFields() []Field {
 	return t.Fields
 }
 
-func (t ResourceType) CompositeInitializers() [][]Parameter {
+func (t *ResourceType) CompositeInitializers() [][]Parameter {
 	return t.Initializers
 }
 
@@ -568,23 +568,23 @@ type EventType struct {
 	Initializer []Parameter
 }
 
-func (EventType) isType() {}
+func (*EventType) isType() {}
 
-func (t EventType) ID() string {
+func (t *EventType) ID() string {
 	return t.TypeID
 }
 
 func (EventType) isCompositeType() {}
 
-func (t EventType) CompositeIdentifier() string {
+func (t *EventType) CompositeIdentifier() string {
 	return t.Identifier
 }
 
-func (t EventType) CompositeFields() []Field {
+func (t *EventType) CompositeFields() []Field {
 	return t.Fields
 }
 
-func (t EventType) CompositeInitializers() [][]Parameter {
+func (t *EventType) CompositeInitializers() [][]Parameter {
 	return [][]Parameter{t.Initializer}
 }
 
@@ -597,23 +597,23 @@ type ContractType struct {
 	Initializers [][]Parameter
 }
 
-func (ContractType) isType() {}
+func (*ContractType) isType() {}
 
-func (t ContractType) ID() string {
+func (t *ContractType) ID() string {
 	return t.TypeID
 }
 
-func (ContractType) isCompositeType() {}
+func (*ContractType) isCompositeType() {}
 
-func (t ContractType) CompositeIdentifier() string {
+func (t *ContractType) CompositeIdentifier() string {
 	return t.Identifier
 }
 
-func (t ContractType) CompositeFields() []Field {
+func (t *ContractType) CompositeFields() []Field {
 	return t.Fields
 }
 
-func (t ContractType) CompositeInitializers() [][]Parameter {
+func (t *ContractType) CompositeInitializers() [][]Parameter {
 	return t.Initializers
 }
 
@@ -636,23 +636,23 @@ type StructInterfaceType struct {
 	Initializers [][]Parameter
 }
 
-func (StructInterfaceType) isType() {}
+func (*StructInterfaceType) isType() {}
 
-func (t StructInterfaceType) ID() string {
+func (t *StructInterfaceType) ID() string {
 	return t.TypeID
 }
 
-func (StructInterfaceType) isInterfaceType() {}
+func (*StructInterfaceType) isInterfaceType() {}
 
-func (t StructInterfaceType) InterfaceIdentifier() string {
+func (t *StructInterfaceType) InterfaceIdentifier() string {
 	return t.Identifier
 }
 
-func (t StructInterfaceType) InterfaceFields() []Field {
+func (t *StructInterfaceType) InterfaceFields() []Field {
 	return t.Fields
 }
 
-func (t StructInterfaceType) InterfaceInitializers() [][]Parameter {
+func (t *StructInterfaceType) InterfaceInitializers() [][]Parameter {
 	return t.Initializers
 }
 
@@ -665,23 +665,23 @@ type ResourceInterfaceType struct {
 	Initializers [][]Parameter
 }
 
-func (ResourceInterfaceType) isType() {}
+func (*ResourceInterfaceType) isType() {}
 
-func (t ResourceInterfaceType) ID() string {
+func (t *ResourceInterfaceType) ID() string {
 	return t.TypeID
 }
 
-func (ResourceInterfaceType) isInterfaceType() {}
+func (*ResourceInterfaceType) isInterfaceType() {}
 
-func (t ResourceInterfaceType) InterfaceIdentifier() string {
+func (t *ResourceInterfaceType) InterfaceIdentifier() string {
 	return t.Identifier
 }
 
-func (t ResourceInterfaceType) InterfaceFields() []Field {
+func (t *ResourceInterfaceType) InterfaceFields() []Field {
 	return t.Fields
 }
 
-func (t ResourceInterfaceType) InterfaceInitializers() [][]Parameter {
+func (t *ResourceInterfaceType) InterfaceInitializers() [][]Parameter {
 	return t.Initializers
 }
 
@@ -694,23 +694,23 @@ type ContractInterfaceType struct {
 	Initializers [][]Parameter
 }
 
-func (ContractInterfaceType) isType() {}
+func (*ContractInterfaceType) isType() {}
 
-func (t ContractInterfaceType) ID() string {
+func (t *ContractInterfaceType) ID() string {
 	return t.TypeID
 }
 
-func (ContractInterfaceType) isInterfaceType() {}
+func (*ContractInterfaceType) isInterfaceType() {}
 
-func (t ContractInterfaceType) InterfaceIdentifier() string {
+func (t *ContractInterfaceType) InterfaceIdentifier() string {
 	return t.Identifier
 }
 
-func (t ContractInterfaceType) InterfaceFields() []Field {
+func (t *ContractInterfaceType) InterfaceFields() []Field {
 	return t.Fields
 }
 
-func (t ContractInterfaceType) InterfaceInitializers() [][]Parameter {
+func (t *ContractInterfaceType) InterfaceInitializers() [][]Parameter {
 	return t.Initializers
 }
 

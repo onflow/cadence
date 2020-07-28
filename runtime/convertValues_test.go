@@ -28,14 +28,17 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
-var exportTests = []struct {
+type exportTest struct {
 	label       string
 	value       interpreter.Value
 	expected    cadence.Value
 	skipReverse bool
-}{
+}
+
+var exportTests = []exportTest{
 	{
 		label:    "Void",
 		value:    interpreter.VoidValue{},
@@ -196,8 +199,12 @@ func TestExportValue(t *testing.T) {
 
 	t.Parallel()
 
-	for _, tt := range exportTests {
+	test := func(tt exportTest) {
+
 		t.Run(tt.label, func(t *testing.T) {
+
+			t.Parallel()
+
 			actual := exportValueWithInterpreter(tt.value, nil)
 			assert.Equal(t, tt.expected, actual)
 
@@ -207,26 +214,39 @@ func TestExportValue(t *testing.T) {
 			}
 		})
 	}
+
+	for _, tt := range exportTests {
+		test(tt)
+	}
 }
 
 func TestExportIntegerValuesFromScript(t *testing.T) {
 
 	t.Parallel()
 
-	for _, integerType := range sema.AllIntegerTypes {
+	test := func(integerType sema.Type) {
 
-		script := fmt.Sprintf(
-			`
-              pub fun main(): %s {
-                  return 42
-              }
-            `,
-			integerType,
-		)
+		t.Run(integerType.String(), func(t *testing.T) {
 
-		assert.NotPanics(t, func() {
-			exportValueFromScript(t, script)
+			t.Parallel()
+
+			script := fmt.Sprintf(
+				`
+                  pub fun main(): %s {
+                      return 42
+                  }
+                `,
+				integerType,
+			)
+
+			assert.NotPanics(t, func() {
+				exportValueFromScript(t, script)
+			})
 		})
+	}
+
+	for _, integerType := range sema.AllIntegerTypes {
+		test(integerType)
 	}
 }
 
@@ -234,9 +254,11 @@ func TestExportFixedPointValuesFromScript(t *testing.T) {
 
 	t.Parallel()
 
-	for _, fixedPointType := range sema.AllFixedPointTypes {
+	test := func(fixedPointType sema.Type) {
 
 		t.Run(fixedPointType.String(), func(t *testing.T) {
+
+			t.Parallel()
 
 			script := fmt.Sprintf(
 				`
@@ -252,6 +274,10 @@ func TestExportFixedPointValuesFromScript(t *testing.T) {
 			})
 		})
 	}
+
+	for _, fixedPointType := range sema.AllFixedPointTypes {
+		test(fixedPointType)
+	}
 }
 
 func TestExportDictionaryValue(t *testing.T) {
@@ -259,6 +285,9 @@ func TestExportDictionaryValue(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Empty", func(t *testing.T) {
+
+		t.Parallel()
+
 		script := `
             access(all) fun main(): {String: Int} {
                 return {}
@@ -272,6 +301,9 @@ func TestExportDictionaryValue(t *testing.T) {
 	})
 
 	t.Run("Non-empty", func(t *testing.T) {
+
+		t.Parallel()
+
 		script := `
             access(all) fun main(): {String: Int} {
                 return {
@@ -446,7 +478,7 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 
 	t.Parallel()
 
-	barResourceType := cadence.ResourceType{
+	barResourceType := &cadence.ResourceType{
 		TypeID:     "S.test.Bar",
 		Identifier: "Bar",
 		Fields: []cadence.Field{
@@ -461,7 +493,7 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 		},
 	}
 
-	fooResourceType := cadence.ResourceType{
+	fooResourceType := &cadence.ResourceType{
 		TypeID:     "S.test.Foo",
 		Identifier: "Foo",
 		Fields: []cadence.Field{
@@ -551,7 +583,7 @@ func exportEventFromScript(t *testing.T, script string) cadence.Event {
 		[]byte(script),
 		nil,
 		inter,
-		testLocation,
+		utils.TestLocation,
 	)
 
 	require.NoError(t, err)
@@ -569,7 +601,7 @@ func exportValueFromScript(t *testing.T, script string) cadence.Value {
 		[]byte(script),
 		nil,
 		&EmptyRuntimeInterface{},
-		testLocation,
+		utils.TestLocation,
 	)
 
 	require.NoError(t, err)
@@ -577,11 +609,9 @@ func exportValueFromScript(t *testing.T, script string) cadence.Value {
 	return value
 }
 
-const testLocation = StringLocation("test")
-
 const fooID = "Foo"
 
-var fooTypeID = fmt.Sprintf("S.%s.%s", testLocation, fooID)
+var fooTypeID = fmt.Sprintf("S.%s.%s", utils.TestLocation, fooID)
 var fooFields = []cadence.Field{
 	{
 		Identifier: "bar",
@@ -599,19 +629,19 @@ var fooResourceFields = []cadence.Field{
 	},
 }
 
-var fooStructType = cadence.StructType{
+var fooStructType = &cadence.StructType{
 	TypeID:     fooTypeID,
 	Identifier: fooID,
 	Fields:     fooFields,
 }
 
-var fooResourceType = cadence.ResourceType{
+var fooResourceType = &cadence.ResourceType{
 	TypeID:     fooTypeID,
 	Identifier: fooID,
 	Fields:     fooResourceFields,
 }
 
-var fooEventType = cadence.EventType{
+var fooEventType = &cadence.EventType{
 	TypeID:     fooTypeID,
 	Identifier: fooID,
 	Fields:     fooFields,
