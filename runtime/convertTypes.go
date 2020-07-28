@@ -211,7 +211,7 @@ func exportCompositeType(t *sema.CompositeType) cadence.CompositeType {
 
 func exportInterfaceType(t *sema.InterfaceType) cadence.InterfaceType {
 
-	fields := make([]cadence.Field, 0, len(t.Members))
+	fields := make([]cadence.Field, 0, len(t.Fields))
 
 	for _, identifier := range t.Fields {
 		member := t.Members[identifier]
