@@ -5491,7 +5491,7 @@ Every account can be accessed through two types:
 
       // Storage operations
 
-      fun getCapability(at: Path): Capability?
+      fun getCapability<T>(_ path: Path): Capability<T>?
       fun getLinkTarget(_ path: Path): Path?
   }
   ```
@@ -5535,11 +5535,11 @@ Every account can be accessed through two types:
 
       fun borrow<T: &Any>(from: Path): T?
 
-      fun link<T: &Any>(_ newCapabilityPath: Path, target: Path): Capability?
+      fun link<T: &Any>(_ newCapabilityPath: Path, target: Path): Capability<T>?
       fun getLinkTarget(_ path: Path): Path?
       fun unlink(_ path: Path)
 
-      fun getCapability(at: Path): Capability?
+      fun getCapability<T: &Any>(_ path Path): Capability<T>?
     }
     ```
 
@@ -5607,8 +5607,7 @@ to all its stored objects.
 
    The type `T` must be a supertype of the type of the copied structure.
    If it is not, the function returns `nil`.
-   The given type must not necessarily be exactly the same as the type of the copied structure
-structure.
+   The given type must not necessarily be exactly the same as the type of the copied structure.
 
    The path must be a storage path, i.e., only the domain `storage` is allowed.
 
@@ -5710,7 +5709,7 @@ This is possible using the `borrow` function of an `AuthAccount`:
    `T` is the type parameter for the object type.
    A type argument for the parameter must be provided explicitly.
    The type argument must be a reference to any type (`&Any`; `Any` is the supertype of all types).
-   It must be possible top create the given reference type `T` for the stored /  borrowed object.
+   It must be possible to create the given reference type `T` for the stored /  borrowed object.
    If it is not, the function returns `nil`.
    The given type must not necessarily be exactly the same as the type of the borrowed object.
 
@@ -5813,7 +5812,7 @@ This allows exposing and hiding certain functionality of a stored object.
 
 Capabilities are created using the `link` function of an authorized account (`AuthAccount`):
 
-- `fun link<T: &Any>(_ newCapabilityPath: Path, target: Path): Capability?`
+- `fun link<T: &Any>(_ newCapabilityPath: Path, target: Path): Capability<T>?`
 
   `newCapabilityPath` is the public or private path identifying the new capability.
 
@@ -5847,7 +5846,7 @@ Capabilities can be removed using the `unlink` function of an authorized account
   `path` is the public or private path identifying the capability that should be removed.
 
 To get the target path for a capability, the `getLinkTarget` function
-of an authorized account (`AuthAccount`) can be used:
+of an authorized account (`AuthAccount`) or public account (`PublicAccount`) can be used:
 
 - `fun getLinkTarget(_ path: Path): Path?`
 
@@ -5859,7 +5858,7 @@ of an authorized account (`AuthAccount`) can be used:
 Existing capabilities can be obtained by using the `getCapability` function
 of authorized accounts (`AuthAccount`) and public accounts (`PublicAccount`):
 
-- `fun getCapability(_ at: Path): Capability?`
+- `fun getCapability<T>(_ at: Path): Capability<T>?`
 
   For public accounts, the function returns a capability
   if the given path is public.
@@ -5870,18 +5869,20 @@ of authorized accounts (`AuthAccount`) and public accounts (`PublicAccount`):
   if the given path is public or private.
   If the path is a storage path, the function returns `nil`.
 
+  `T` is the type parameter that specifies how the capability can be borrowed.
+  The type argument is optional, i.e. it must not be provided.
+
 The `getCapability` function does **not** check if the target exists.
 The link is latent.
-To check if the target exists currently and could be borrowed,
-the `check` function of the capability can be used:
+The `check` function of the capability can be used to check if the target currently exists and could be borrowed,
 
 - `fun check<T: &Any>(): Bool`
 
   `T` is the type parameter for the reference type.
-   A type argument for the parameter must be provided explicitly.
+  A type argument for the parameter must be provided explicitly.
 
-   The function returns true if the capability currently targets an object
-   that satisfies the given type, i.e. could be borrowed using the given type.
+  The function returns true if the capability currently targets an object
+  that satisfies the given type, i.e. could be borrowed using the given type.
 
 Finally, the capability can be borrowed to get a reference to the stored object.
 This can be done using the `borrow` function of the capability:
@@ -5892,10 +5893,11 @@ This can be done using the `borrow` function of the capability:
   provided it can be borrowed using the given type.
 
   `T` is the type parameter for the reference type.
-   A type argument for the parameter must be provided explicitly.
+  If the function is called on a typed capability, the capability's type is used when borrowing.
+  If the capability is untyped, a type argument must be provided explicitly in the call to `borrow`.
 
-  The function returns `nil` if the targeted path is empty, i.e. nothing is stored under it,
-  if  the requested type exceeds what is allowed by the capability (or any interim capabilities)
+  The function returns `nil` when the targeted path is empty, i.e. nothing is stored under it,
+  and when the requested type exceeds what is allowed by the capability (or any interim capabilities).
 
 ```cadence,file=capabilities.cdc
 // Declare a resource interface named `HasCount`, that has a field `count`
@@ -5941,13 +5943,19 @@ Imagine that the next example is from a different account as before.
 let publicAccount = getAccount(0x42)
 
 // Get a capability for the counter that is made publicly accessible
-// through the path `/public/hasCount`
+// through the path `/public/hasCount`.
 //
-let countCap = publicAccount.getCapability(/public/hasCount)!
+// Use the type `&{HasCount}`, a reference to some object that provides the functionality
+// of interface `HasCount`. This is the type that the capability can be borrowed as
+// (it was specified in the call to `link` above).
+// See the example below for borrowing using the type `&Counter`.
+//
+// After the call, the declared constant `countCap` has type `Capability<&{HasCount}>`,
+// a capability that results in a reference that has type `&{HasCount}` when borrowed.
+//
+let countCap = publicAccount.getCapability<&{HasCount}>(/public/hasCount)!
 
 // Borrow the capability to get a reference to the stored counter.
-// Use the type `&{HasCount}`, as this is the type that the capability can be borrowed as.
-// See the example below for borrowing using the type `&Counter`
 //
 // This borrow succeeds, i.e. the result is not `nil`,
 // it is a valid reference, because:
@@ -5959,7 +5967,7 @@ let countCap = publicAccount.getCapability(/public/hasCount)!
 // 2. The stored value is a subtype of the requested type `{HasCount}`
 //    (the stored object has type `Counter` which conforms to interface `HasCount`)
 //
-let countRef = countCap.borrow<&{HasCount}>()!
+let countRef = countCap.borrow()!
 
 countRef.count  // is `43`
 
@@ -5968,9 +5976,10 @@ countRef.count  // is `43`
 //
 countRef.increment()
 
-// Attempt to borrow the capability with the type `&Counter`.
-// This results in `nil`, i.e. the borrow fails,
-// because the capability was created/linked using the type `&{HasCount}`.
+// Again, attempt to get a get a capability for the counter, but use the type `&Counter`.
+//
+// Getting the capability succeeds, because it is latent, but borrowing fails
+// (the result s `nil`), because the capability was created/linked using the type `&{HasCount}`:
 //
 // The resource type `Counter` implements the resource interface `HasCount`,
 // so `Counter` is a subtype of `{HasCount}`, but the capability only allows
@@ -5982,7 +5991,7 @@ countRef.increment()
 // This shows how parts of the functionality of stored objects
 // can be safely exposed to other code
 //
-let counterRef = countCap.borrow<&Counter>()
+let counterRef = countCap.borrow()
 
 // `counterRef` is `nil`
 
