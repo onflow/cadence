@@ -131,7 +131,7 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
 
 	assert.NotNil(t, accountCode)
 
-	rType := cadence.ResourceType{
+	rType := &cadence.ResourceType{
 		TypeID:     "A.000000000000cade.Test.R",
 		Identifier: "R",
 		Fields: []cadence.Field{
@@ -151,7 +151,7 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
 			{
 				address,
 				"contract",
-				cadence.NewContract([]cadence.Value{}).WithType(cadence.ContractType{
+				cadence.NewContract([]cadence.Value{}).WithType(&cadence.ContractType{
 					TypeID:       "A.000000000000cade.Test",
 					Identifier:   "Test",
 					Fields:       []cadence.Field{},

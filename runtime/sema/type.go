@@ -5192,11 +5192,6 @@ func (m *Member) IsStorable(results map[*Member]bool) (result bool) {
 	// Prevent a potential stack overflow due to cyclic declarations
 	// by keeping track of the result for each member
 
-	// At the end of the function, store the final result
-	defer func() {
-		results[m] = result
-	}()
-
 	// If a result for the member is available, return it,
 	// instead of checking the type
 
@@ -5212,27 +5207,32 @@ func (m *Member) IsStorable(results map[*Member]bool) (result bool) {
 
 	results[m] = false
 
-	// Skip checking predeclared members
+	result = func() bool {
+		// Skip checking predeclared members
 
-	if m.Predeclared {
-		return true
-	}
-
-	if m.DeclarationKind == common.DeclarationKindField {
-
-		// Fields are not storable
-		// if their type is non-storable
-
-		fieldType := m.TypeAnnotation.Type
-
-		if !fieldType.IsInvalidType() &&
-			!fieldType.IsStorable(results) {
-
-			return false
+		if m.Predeclared {
+			return true
 		}
-	}
 
-	return true
+		if m.DeclarationKind == common.DeclarationKindField {
+
+			// Fields are not storable
+			// if their type is non-storable
+
+			fieldType := m.TypeAnnotation.Type
+
+			if !fieldType.IsInvalidType() &&
+				!fieldType.IsStorable(results) {
+
+				return false
+			}
+		}
+
+		return true
+	}()
+
+	results[m] = result
+	return result
 }
 
 // InterfaceType

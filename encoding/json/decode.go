@@ -525,7 +525,7 @@ func decodeCompositeField(valueJSON interface{}) (cadence.Value, cadence.Field) 
 func decodeStruct(valueJSON interface{}) cadence.Struct {
 	comp := decodeComposite(valueJSON)
 
-	return cadence.NewStruct(comp.fieldValues).WithType(cadence.StructType{
+	return cadence.NewStruct(comp.fieldValues).WithType(&cadence.StructType{
 		TypeID:     comp.typeID,
 		Identifier: comp.identifier,
 		Fields:     comp.fieldTypes,
@@ -535,7 +535,7 @@ func decodeStruct(valueJSON interface{}) cadence.Struct {
 func decodeResource(valueJSON interface{}) cadence.Resource {
 	comp := decodeComposite(valueJSON)
 
-	return cadence.NewResource(comp.fieldValues).WithType(cadence.ResourceType{
+	return cadence.NewResource(comp.fieldValues).WithType(&cadence.ResourceType{
 		TypeID:     comp.typeID,
 		Identifier: comp.identifier,
 		Fields:     comp.fieldTypes,
@@ -545,7 +545,7 @@ func decodeResource(valueJSON interface{}) cadence.Resource {
 func decodeEvent(valueJSON interface{}) cadence.Event {
 	comp := decodeComposite(valueJSON)
 
-	return cadence.NewEvent(comp.fieldValues).WithType(cadence.EventType{
+	return cadence.NewEvent(comp.fieldValues).WithType(&cadence.EventType{
 		TypeID:     comp.typeID,
 		Identifier: comp.identifier,
 		Fields:     comp.fieldTypes,
@@ -555,7 +555,7 @@ func decodeEvent(valueJSON interface{}) cadence.Event {
 func decodeContract(valueJSON interface{}) cadence.Contract {
 	comp := decodeComposite(valueJSON)
 
-	return cadence.NewContract(comp.fieldValues).WithType(cadence.ContractType{
+	return cadence.NewContract(comp.fieldValues).WithType(&cadence.ContractType{
 		TypeID:     comp.typeID,
 		Identifier: comp.identifier,
 		Fields:     comp.fieldTypes,

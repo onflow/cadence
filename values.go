@@ -834,7 +834,7 @@ type KeyValuePair struct {
 // Struct
 
 type Struct struct {
-	StructType StructType
+	StructType *StructType
 	Fields     []Value
 }
 
@@ -848,7 +848,7 @@ func (v Struct) Type() Type {
 	return v.StructType
 }
 
-func (v Struct) WithType(typ StructType) Struct {
+func (v Struct) WithType(typ *StructType) Struct {
 	v.StructType = typ
 	return v
 }
@@ -866,7 +866,7 @@ func (v Struct) ToGoValue() interface{} {
 // Resource
 
 type Resource struct {
-	ResourceType ResourceType
+	ResourceType *ResourceType
 	Fields       []Value
 }
 
@@ -880,7 +880,7 @@ func (v Resource) Type() Type {
 	return v.ResourceType
 }
 
-func (v Resource) WithType(typ ResourceType) Resource {
+func (v Resource) WithType(typ *ResourceType) Resource {
 	v.ResourceType = typ
 	return v
 }
@@ -898,7 +898,7 @@ func (v Resource) ToGoValue() interface{} {
 // Event
 
 type Event struct {
-	EventType EventType
+	EventType *EventType
 	Fields    []Value
 }
 
@@ -912,7 +912,7 @@ func (v Event) Type() Type {
 	return v.EventType
 }
 
-func (v Event) WithType(typ EventType) Event {
+func (v Event) WithType(typ *EventType) Event {
 	v.EventType = typ
 	return v
 }
@@ -930,7 +930,7 @@ func (v Event) ToGoValue() interface{} {
 // Contract
 
 type Contract struct {
-	ContractType ContractType
+	ContractType *ContractType
 	Fields       []Value
 }
 
@@ -944,7 +944,7 @@ func (v Contract) Type() Type {
 	return v.ContractType
 }
 
-func (v Contract) WithType(typ ContractType) Contract {
+func (v Contract) WithType(typ *ContractType) Contract {
 	v.ContractType = typ
 	return v
 }
@@ -963,6 +963,7 @@ func (v Contract) ToGoValue() interface{} {
 
 type Link struct {
 	TargetPath string
+	// TODO: a future version might want to export the whole type
 	BorrowType string
 }
 
