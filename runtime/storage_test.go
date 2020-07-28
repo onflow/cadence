@@ -136,25 +136,12 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
 		Identifier: "R",
 		Fields: []cadence.Field{
 			{
-				Identifier: "i",
-				Type:       cadence.IntType{},
-			},
-			{
-				Identifier: "update",
-				Type: cadence.Function{
-					Parameters: []cadence.Parameter{
-						{
-							Label:      "_",
-							Identifier: "i",
-							Type:       cadence.IntType{},
-						},
-					},
-					ReturnType: cadence.VoidType{},
-				}.WithID("((Int):Void)"),
-			},
-			{
 				Identifier: "uuid",
 				Type:       cadence.UInt64Type{},
+			},
+			{
+				Identifier: "i",
+				Type:       cadence.IntType{},
 			},
 		},
 	}
@@ -165,23 +152,9 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
 				address,
 				"contract",
 				cadence.NewContract([]cadence.Value{}).WithType(cadence.ContractType{
-					TypeID:     "A.000000000000cade.Test",
-					Identifier: "Test",
-					Fields: []cadence.Field{
-						{
-							Identifier: "createR",
-							Type: cadence.Function{
-								Parameters: []cadence.Parameter{
-									{
-										Label:      "_",
-										Identifier: "i",
-										Type:       cadence.IntType{},
-									},
-								},
-								ReturnType: rType,
-							}.WithID("((Int):A.000000000000cade.Test.R)"),
-						},
-					},
+					TypeID:       "A.000000000000cade.Test",
+					Identifier:   "Test",
+					Fields:       []cadence.Field{},
 					Initializers: nil,
 				}),
 			},
@@ -203,15 +176,15 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
 					{
 						Key: cadence.NewString("r1"),
 						Value: cadence.NewResource([]cadence.Value{
-							cadence.NewInt(3),
 							cadence.NewUInt64(0),
+							cadence.NewInt(3),
 						}).WithType(rType),
 					},
 					{
 						Key: cadence.NewString("r2"),
 						Value: cadence.NewResource([]cadence.Value{
-							cadence.NewInt(4),
 							cadence.NewUInt64(0),
+							cadence.NewInt(4),
 						}).WithType(rType),
 					},
 				}),
@@ -234,15 +207,15 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
 					{
 						Key: cadence.NewString("r1"),
 						Value: cadence.NewResource([]cadence.Value{
-							cadence.NewInt(5),
 							cadence.NewUInt64(0),
+							cadence.NewInt(5),
 						}).WithType(rType),
 					},
 					{
 						Key: cadence.NewString("r2"),
 						Value: cadence.NewResource([]cadence.Value{
-							cadence.NewInt(4),
 							cadence.NewUInt64(0),
+							cadence.NewInt(4),
 						}).WithType(rType),
 					},
 				}),

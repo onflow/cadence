@@ -360,8 +360,8 @@ func TestExportResourceValue(t *testing.T) {
 	actual := exportValueFromScript(t, script)
 	expected :=
 		cadence.NewResource([]cadence.Value{
-			cadence.NewInt(42),
 			cadence.NewUInt64(0),
+			cadence.NewInt(42),
 		}).WithType(fooResourceType)
 
 	assert.Equal(t, expected, actual)
@@ -388,12 +388,12 @@ func TestExportResourceArrayValue(t *testing.T) {
 	actual := exportValueFromScript(t, script)
 	expected := cadence.NewArray([]cadence.Value{
 		cadence.NewResource([]cadence.Value{
-			cadence.NewInt(1),
 			cadence.NewUInt64(0),
+			cadence.NewInt(1),
 		}).WithType(fooResourceType),
 		cadence.NewResource([]cadence.Value{
-			cadence.NewInt(2),
 			cadence.NewUInt64(0),
+			cadence.NewInt(2),
 		}).WithType(fooResourceType),
 	})
 
@@ -426,15 +426,15 @@ func TestExportResourceDictionaryValue(t *testing.T) {
 		{
 			Key: cadence.NewString("a"),
 			Value: cadence.NewResource([]cadence.Value{
-				cadence.NewInt(1),
 				cadence.NewUInt64(0),
+				cadence.NewInt(1),
 			}).WithType(fooResourceType),
 		},
 		{
 			Key: cadence.NewString("b"),
 			Value: cadence.NewResource([]cadence.Value{
-				cadence.NewInt(2),
 				cadence.NewUInt64(0),
+				cadence.NewInt(2),
 			}).WithType(fooResourceType),
 		},
 	})
@@ -466,12 +466,12 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 		Identifier: "Foo",
 		Fields: []cadence.Field{
 			{
-				Identifier: "bar",
-				Type:       barResourceType,
-			},
-			{
 				Identifier: "uuid",
 				Type:       cadence.UInt64Type{},
+			},
+			{
+				Identifier: "bar",
+				Type:       barResourceType,
 			},
 		},
 	}
@@ -504,11 +504,11 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 
 	actual := exportValueFromScript(t, script)
 	expected := cadence.NewResource([]cadence.Value{
+		cadence.NewUInt64(0),
 		cadence.NewResource([]cadence.Value{
 			cadence.NewUInt64(0),
 			cadence.NewInt(42),
 		}).WithType(barResourceType),
-		cadence.NewUInt64(0),
 	}).WithType(fooResourceType)
 
 	assert.Equal(t, expected, actual)
@@ -590,12 +590,12 @@ var fooFields = []cadence.Field{
 }
 var fooResourceFields = []cadence.Field{
 	{
-		Identifier: "bar",
-		Type:       cadence.IntType{},
-	},
-	{
 		Identifier: "uuid",
 		Type:       cadence.UInt64Type{},
+	},
+	{
+		Identifier: "bar",
+		Type:       cadence.IntType{},
 	},
 }
 

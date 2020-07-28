@@ -673,6 +673,9 @@ func TestEncodeResource(t *testing.T) {
 	t.Parallel()
 
 	t.Run("Simple", func(t *testing.T) {
+
+		t.Parallel()
+
 		script := `
 			access(all) resource Foo {
 				access(all) let bar: Int
@@ -687,7 +690,7 @@ func TestEncodeResource(t *testing.T) {
 			}
 		`
 
-		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}},{"name":"uuid","value":{"type":"UInt64","value":"0"}}]}}`
+		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"bar","value":{"type":"Int","value":"42"}}]}}`
 
 		v := convertValueFromScript(t, script)
 
@@ -695,6 +698,9 @@ func TestEncodeResource(t *testing.T) {
 	})
 
 	t.Run("With function member", func(t *testing.T) {
+
+		t.Parallel()
+
 		script := `
 			access(all) resource Foo {
 				access(all) let bar: Int
@@ -714,7 +720,7 @@ func TestEncodeResource(t *testing.T) {
 		`
 
 		// function "foo" should be omitted from resulting JSON
-		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}},{"name":"uuid","value":{"type":"UInt64","value":"0"}}]}}`
+		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"bar","value":{"type":"Int","value":"42"}}]}}`
 
 		v := convertValueFromScript(t, script)
 
@@ -725,6 +731,8 @@ func TestEncodeResource(t *testing.T) {
 	})
 
 	t.Run("Nested resource", func(t *testing.T) {
+
+		t.Parallel()
 
 		script := `
 			access(all) resource Bar {
@@ -752,7 +760,7 @@ func TestEncodeResource(t *testing.T) {
 			}
 		`
 
-		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Resource","value":{"id":"S.test.Bar","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"x","value":{"type":"Int","value":"42"}}]}}},{"name":"uuid","value":{"type":"UInt64","value":"0"}}]}}`
+		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"bar","value":{"type":"Resource","value":{"id":"S.test.Bar","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"x","value":{"type":"Int","value":"42"}}]}}}]}}`
 
 		v := convertValueFromScript(t, script)
 
@@ -1165,11 +1173,15 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 	t.Run("minus sign in fractional", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := json.Decode([]byte(`{"type": "Fix64", "value": "1.-1"}`))
 		assert.Error(t, err)
 	})
 
 	t.Run("plus sign in fractional", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := json.Decode([]byte(`{"type": "Fix64", "value": "1.+1"}`))
 		assert.Error(t, err)
@@ -1177,11 +1189,15 @@ func TestDecodeFixedPoints(t *testing.T) {
 
 	t.Run("missing integer", func(t *testing.T) {
 
+		t.Parallel()
+
 		_, err := json.Decode([]byte(`{"type": "Fix64", "value": ".1"}`))
 		assert.Error(t, err)
 	})
 
 	t.Run("missing fractional", func(t *testing.T) {
+
+		t.Parallel()
 
 		_, err := json.Decode([]byte(`{"type": "Fix64", "value": "1."}`))
 		assert.Error(t, err)

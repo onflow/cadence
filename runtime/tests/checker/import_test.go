@@ -298,6 +298,8 @@ func TestCheckImportVirtual(t *testing.T) {
 		Kind:       common.CompositeKindStructure,
 	}
 
+	fooType.Fields = []string{"bar"}
+
 	fooType.Members = map[string]*sema.Member{
 		"bar": sema.NewPublicFunctionMember(
 			fooType,

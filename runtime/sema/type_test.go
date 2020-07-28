@@ -178,6 +178,9 @@ func TestRestrictedType_StringAndID(t *testing.T) {
 	t.Parallel()
 
 	t.Run("base type and restriction", func(t *testing.T) {
+
+		t.Parallel()
+
 		interfaceType := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I",
@@ -205,6 +208,9 @@ func TestRestrictedType_StringAndID(t *testing.T) {
 	})
 
 	t.Run("base type and restrictions", func(t *testing.T) {
+
+		t.Parallel()
+
 		i1 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I1",
@@ -238,6 +244,9 @@ func TestRestrictedType_StringAndID(t *testing.T) {
 	})
 
 	t.Run("no restrictions", func(t *testing.T) {
+
+		t.Parallel()
+
 		ty := &RestrictedType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
@@ -263,6 +272,8 @@ func TestRestrictedType_Equals(t *testing.T) {
 	t.Parallel()
 
 	t.Run("same base type and more restrictions", func(t *testing.T) {
+
+		t.Parallel()
 
 		i1 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
@@ -299,6 +310,8 @@ func TestRestrictedType_Equals(t *testing.T) {
 
 	t.Run("same base type and fewer restrictions", func(t *testing.T) {
 
+		t.Parallel()
+
 		i1 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I1",
@@ -333,6 +346,9 @@ func TestRestrictedType_Equals(t *testing.T) {
 	})
 
 	t.Run("same base type and same restrictions", func(t *testing.T) {
+
+		t.Parallel()
+
 		i1 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I1",
@@ -367,6 +383,8 @@ func TestRestrictedType_Equals(t *testing.T) {
 	})
 
 	t.Run("different base type and same restrictions", func(t *testing.T) {
+
+		t.Parallel()
 
 		i1 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
@@ -407,10 +425,14 @@ func TestRestrictedType_GetMember(t *testing.T) {
 	t.Parallel()
 
 	t.Run("forbid undeclared members", func(t *testing.T) {
+
+		t.Parallel()
+
 		resourceType := &CompositeType{
 			Kind:       common.CompositeKindResource,
 			Identifier: "R",
 			Location:   ast.StringLocation("a"),
+			Fields:     []string{},
 			Members:    map[string]*Member{},
 		}
 		ty := &RestrictedType{
@@ -431,6 +453,9 @@ func TestRestrictedType_GetMember(t *testing.T) {
 	})
 
 	t.Run("allow declared members", func(t *testing.T) {
+
+		t.Parallel()
+
 		interfaceType := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I",
@@ -441,6 +466,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 			Kind:       common.CompositeKindResource,
 			Identifier: "R",
 			Location:   ast.StringLocation("a"),
+			Fields:     []string{},
 			Members:    map[string]*Member{},
 		}
 		restrictedType := &RestrictedType{

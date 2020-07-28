@@ -245,16 +245,16 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		transactionType.Parameters = checker.parameters(declaration.ParameterList)
 	}
 
-	members, origins := checker.nonEventMembersAndOrigins(
+	members, fields, origins := checker.nonEventMembersAndOrigins(
 		transactionType,
 		declaration.Fields,
 		nil,
 		ContainerKindComposite,
 	)
 
-	checker.memberOrigins[transactionType] = origins
-
 	transactionType.Members = members
+	transactionType.Fields = fields
+	checker.memberOrigins[transactionType] = origins
 
 	if declaration.Prepare != nil {
 		transactionType.PrepareParameters = checker.parameters(declaration.Prepare.ParameterList)

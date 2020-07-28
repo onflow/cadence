@@ -44,14 +44,18 @@ func TestCheckInvalidCompositeRedeclaringType(t *testing.T) {
 			body = "()"
 		}
 
-		t.Run(kind.Keyword(), func(t *testing.T) {
+		kindKeyword := kind.Keyword()
+
+		t.Run(kindKeyword, func(t *testing.T) {
+
+			t.Parallel()
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
                       %[1]s Int %[2]s
                     `,
-					kind.Keyword(),
+					kindKeyword,
 					body,
 				),
 			)
@@ -72,7 +76,11 @@ func TestCheckComposite(t *testing.T) {
 
 	for _, kind := range common.CompositeKindsWithBody {
 
-		t.Run(kind.Keyword(), func(t *testing.T) {
+		kindKeyword := kind.Keyword()
+
+		t.Run(kindKeyword, func(t *testing.T) {
+
+			t.Parallel()
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
@@ -89,7 +97,7 @@ func TestCheckComposite(t *testing.T) {
                           }
                       }
                     `,
-					kind.Keyword(),
+					kindKeyword,
 				),
 			)
 
@@ -103,7 +111,12 @@ func TestCheckInitializerName(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.CompositeKindsWithBody {
-		t.Run(kind.Keyword(), func(t *testing.T) {
+
+		kindKeyword := kind.Keyword()
+
+		t.Run(kindKeyword, func(t *testing.T) {
+
+			t.Parallel()
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
@@ -112,7 +125,7 @@ func TestCheckInitializerName(t *testing.T) {
                           init() {}
                       }
                     `,
-					kind.Keyword(),
+					kindKeyword,
 				),
 			)
 
@@ -2145,5 +2158,65 @@ func TestCheckMutualTypeUseTopLevel(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func TestCheckCompositeFieldOrder(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(t *testing.T, kind common.CompositeKind) {
+		kindKeyword := kind.Keyword()
+
+		t.Run(kindKeyword, func(t *testing.T) {
+
+			t.Parallel()
+
+			checker, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
+                      %s Test {
+                          let b: Int
+                          let a: Int
+
+                          init() {
+                              self.b = 1
+                              self.a = 2
+                          }
+                      }
+                    `,
+					kindKeyword,
+				),
+			)
+
+			require.NoError(t, err)
+
+			testType := checker.GlobalTypes["Test"].Type.(*sema.CompositeType)
+
+			switch kind {
+			case common.CompositeKindContract:
+				assert.Equal(t,
+					[]string{"account", "b", "a"},
+					testType.Fields,
+				)
+
+			case common.CompositeKindResource:
+				assert.Equal(t,
+					[]string{"owner", "uuid", "b", "a"},
+					testType.Fields,
+				)
+
+			default:
+				assert.Equal(t,
+					[]string{"b", "a"},
+					testType.Fields,
+				)
+			}
+		})
+	}
+
+	for _, kind := range common.CompositeKindsWithBody {
+
+		test(t, kind)
 	}
 }

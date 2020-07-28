@@ -21,7 +21,6 @@ package runtime
 import (
 	"errors"
 	"fmt"
-	"sort"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/ast"
@@ -136,25 +135,21 @@ func exportArrayValue(v *interpreter.ArrayValue, inter *interpreter.Interpreter)
 }
 
 func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Interpreter) cadence.Value {
-	fields := make([]cadence.Value, len(v.Fields))
-
-	keys := make([]string, 0, len(v.Fields))
-	for key := range v.Fields {
-		keys = append(keys, key)
-	}
-
-	// sort keys in lexicographical order
-	sort.Strings(keys)
-
-	for i, key := range keys {
-		field := v.Fields[key]
-		fields[i] = exportValueWithInterpreter(field, inter)
-	}
 
 	dynamicType := v.DynamicType(inter).(interpreter.CompositeDynamicType)
 	staticType := dynamicType.StaticType.(*sema.CompositeType)
+	t := exportCompositeType(staticType)
 
-	t := exportType(staticType)
+	// NOTE: use the exported type's fields to ensure fields in type
+	// and value are in sync
+
+	fieldNames := t.CompositeFields()
+	fields := make([]cadence.Value, len(fieldNames))
+
+	for i, field := range fieldNames {
+		fieldValue := v.Fields[field.Identifier]
+		fields[i] = exportValueWithInterpreter(fieldValue, inter)
+	}
 
 	switch staticType.Kind {
 	case common.CompositeKindStructure:
