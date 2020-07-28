@@ -5159,6 +5159,7 @@ type Member struct {
 	Predeclared bool
 	// IgnoreInSerialization fields are ignored in serialization
 	IgnoreInSerialization bool
+	DocString             string
 }
 
 func NewPublicFunctionMember(containerType Type, identifier string, invokableType InvokableType) *Member {

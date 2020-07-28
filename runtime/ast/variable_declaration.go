@@ -31,6 +31,7 @@ type VariableDeclaration struct {
 	SecondTransfer    *Transfer
 	SecondValue       Expression
 	ParentIfStatement *IfStatement
+	DocString         string
 }
 
 func (d *VariableDeclaration) StartPosition() Position {

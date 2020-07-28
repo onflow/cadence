@@ -71,7 +71,7 @@ func parseDeclaration(p *parser, docString string) ast.Declaration {
 		case lexer.TokenIdentifier:
 			switch p.current.Value {
 			case keywordLet, keywordVar:
-				return parseVariableDeclaration(p, access, accessPos)
+				return parseVariableDeclaration(p, access, accessPos, docString)
 
 			case keywordFun:
 				return parseFunctionDeclaration(p, false, access, accessPos, docString)
@@ -80,10 +80,10 @@ func parseDeclaration(p *parser, docString string) ast.Declaration {
 				return parseImportDeclaration(p)
 
 			case keywordEvent:
-				return parseEventDeclaration(p, access, accessPos)
+				return parseEventDeclaration(p, access, accessPos, docString)
 
 			case keywordStruct, keywordResource, keywordContract:
-				return parseCompositeOrInterfaceDeclaration(p, access, accessPos)
+				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
 			case keywordTransaction:
 				if access != ast.AccessNotSpecified {
@@ -234,7 +234,12 @@ func parseAccess(p *parser) ast.Access {
 //         transfer expression
 //         ( transfer expression )?
 //
-func parseVariableDeclaration(p *parser, access ast.Access, accessPos *ast.Position) *ast.VariableDeclaration {
+func parseVariableDeclaration(
+	p *parser,
+	access ast.Access,
+	accessPos *ast.Position,
+	docString string,
+) *ast.VariableDeclaration {
 
 	startPos := p.current.StartPos
 	if accessPos != nil {
@@ -296,6 +301,7 @@ func parseVariableDeclaration(p *parser, access ast.Access, accessPos *ast.Posit
 		StartPos:       startPos,
 		SecondTransfer: secondTransfer,
 		SecondValue:    secondValue,
+		DocString:      docString,
 	}
 
 	castingExpression, leftIsCasting := value.(*ast.CastingExpression)
@@ -579,7 +585,12 @@ func parseHexadecimalLocation(literal string) ast.AddressLocation {
 //
 //     eventDeclaration : 'event' identifier parameterList
 //
-func parseEventDeclaration(p *parser, access ast.Access, accessPos *ast.Position) *ast.CompositeDeclaration {
+func parseEventDeclaration(
+	p *parser,
+	access ast.Access,
+	accessPos *ast.Position,
+	docString string,
+) *ast.CompositeDeclaration {
 
 	startPos := p.current.StartPos
 	if accessPos != nil {
@@ -621,6 +632,7 @@ func parseEventDeclaration(p *parser, access ast.Access, accessPos *ast.Position
 				initializer,
 			},
 		},
+		DocString: docString,
 		Range: ast.Range{
 			StartPos: startPos,
 			EndPos:   parameterList.EndPos,
@@ -656,7 +668,12 @@ func parseCompositeKind(p *parser) common.CompositeKind {
 //
 //     field : variableKind identifier ':' typeAnnotation
 //
-func parseFieldWithVariableKind(p *parser, access ast.Access, accessPos *ast.Position) *ast.FieldDeclaration {
+func parseFieldWithVariableKind(
+	p *parser,
+	access ast.Access,
+	accessPos *ast.Position,
+	docString string,
+) *ast.FieldDeclaration {
 
 	startPos := p.current.StartPos
 	if accessPos != nil {
@@ -699,6 +716,7 @@ func parseFieldWithVariableKind(p *parser, access ast.Access, accessPos *ast.Pos
 		VariableKind:   variableKind,
 		Identifier:     identifier,
 		TypeAnnotation: typeAnnotation,
+		DocString:      docString,
 		Range: ast.Range{
 			StartPos: startPos,
 			EndPos:   typeAnnotation.EndPosition(),
@@ -716,7 +734,12 @@ func parseFieldWithVariableKind(p *parser, access ast.Access, accessPos *ast.Pos
 //     interfaceDeclaration : compositeKind 'interface' identifier conformances?
 //                            '{' membersAndNestedDeclarations '}'
 //
-func parseCompositeOrInterfaceDeclaration(p *parser, access ast.Access, accessPos *ast.Position) ast.Declaration {
+func parseCompositeOrInterfaceDeclaration(
+	p *parser,
+	access ast.Access,
+	accessPos *ast.Position,
+	docString string,
+) ast.Declaration {
 
 	startPos := p.current.StartPos
 	if accessPos != nil {
@@ -810,6 +833,7 @@ func parseCompositeOrInterfaceDeclaration(p *parser, access ast.Access, accessPo
 			Members:               members,
 			CompositeDeclarations: compositeDeclarations,
 			InterfaceDeclarations: interfaceDeclarations,
+			DocString:             docString,
 			Range:                 declarationRange,
 		}
 	} else {
@@ -821,6 +845,7 @@ func parseCompositeOrInterfaceDeclaration(p *parser, access ast.Access, accessPo
 			Members:               members,
 			CompositeDeclarations: compositeDeclarations,
 			InterfaceDeclarations: interfaceDeclarations,
+			DocString:             docString,
 			Range:                 declarationRange,
 		}
 	}
@@ -914,16 +939,16 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration
 		case lexer.TokenIdentifier:
 			switch p.current.Value {
 			case keywordLet, keywordVar:
-				return parseFieldWithVariableKind(p, access, accessPos)
+				return parseFieldWithVariableKind(p, access, accessPos, docString)
 
 			case keywordFun:
 				return parseFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, docString)
 
 			case keywordEvent:
-				return parseEventDeclaration(p, access, accessPos)
+				return parseEventDeclaration(p, access, accessPos, docString)
 
 			case keywordStruct, keywordResource, keywordContract:
-				return parseCompositeOrInterfaceDeclaration(p, access, accessPos)
+				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
@@ -952,7 +977,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration
 			}
 
 			identifier := tokenToIdentifier(*previousIdentifierToken)
-			return parseFieldDeclarationWithoutVariableKind(p, access, accessPos, identifier)
+			return parseFieldDeclarationWithoutVariableKind(p, access, accessPos, identifier, docString)
 
 		case lexer.TokenParenOpen:
 			if previousIdentifierToken == nil {
@@ -972,6 +997,7 @@ func parseFieldDeclarationWithoutVariableKind(
 	access ast.Access,
 	accessPos *ast.Position,
 	identifier ast.Identifier,
+	docString string,
 ) *ast.FieldDeclaration {
 
 	startPos := identifier.Pos
@@ -990,6 +1016,7 @@ func parseFieldDeclarationWithoutVariableKind(
 		VariableKind:   ast.VariableKindNotSpecified,
 		Identifier:     identifier,
 		TypeAnnotation: typeAnnotation,
+		DocString:      docString,
 		Range: ast.Range{
 			StartPos: startPos,
 			EndPos:   typeAnnotation.EndPosition(),

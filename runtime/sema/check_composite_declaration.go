@@ -528,6 +528,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 				DeclarationKind:       nestedCompositeDeclarationVariable.DeclarationKind,
 				VariableKind:          ast.VariableKindConstant,
 				IgnoreInSerialization: true,
+				DocString:             nestedCompositeDeclaration.DocString,
 			}
 		}
 
@@ -1173,6 +1174,7 @@ func (checker *Checker) nonEventMembersAndOrigins(
 			DeclarationKind: declarationKind,
 			TypeAnnotation:  fieldTypeAnnotation,
 			VariableKind:    field.VariableKind,
+			DocString:       field.DocString,
 		}
 
 		origins[identifier] =
@@ -1234,6 +1236,7 @@ func (checker *Checker) nonEventMembersAndOrigins(
 			TypeAnnotation:  fieldTypeAnnotation,
 			VariableKind:    ast.VariableKindConstant,
 			ArgumentLabels:  argumentLabels,
+			DocString:       function.DocString,
 		}
 
 		origins[identifier] =

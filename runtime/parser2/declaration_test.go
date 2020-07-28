@@ -1473,7 +1473,7 @@ func TestParseFieldWithVariableKind(t *testing.T) {
 		return Parse(
 			input,
 			func(p *parser) interface{} {
-				return parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil)
+				return parseFieldWithVariableKind(p, ast.AccessNotSpecified, nil, "")
 			},
 		)
 	}
@@ -1714,6 +1714,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 																Pos:        ast.Position{Offset: 111, Line: 6, Column: 18},
 															},
 														},
+														AccessPos: ast.Position{Offset: 115, Line: 6, Column: 22},
 														Identifier: ast.Identifier{
 															Identifier: "foo",
 															Pos:        ast.Position{Offset: 116, Line: 6, Column: 23},
@@ -1775,6 +1776,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 															Pos:        ast.Position{Offset: 206, Line: 10, Column: 25},
 														},
 													},
+													AccessPos: ast.Position{Offset: 210, Line: 10, Column: 29},
 													Identifier: ast.Identifier{
 														Identifier: "foo",
 														Pos:        ast.Position{Offset: 211, Line: 10, Column: 30},

@@ -31,6 +31,7 @@ type InterfaceDeclaration struct {
 	Members               *Members
 	CompositeDeclarations []*CompositeDeclaration
 	InterfaceDeclarations []*InterfaceDeclaration
+	DocString             string
 	Range
 }
 
