@@ -5,7 +5,6 @@ go 1.13
 require (
 	github.com/c-bata/go-prompt v0.2.3
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/davecgh/go-xdr v0.0.0-20161123171359-e6a2ba005892
 	github.com/fxamacker/cbor/v2 v2.2.0
 	github.com/go-test/deep v1.0.5
 	github.com/logrusorgru/aurora v0.0.0-20200102142835-e9ef32dff381
