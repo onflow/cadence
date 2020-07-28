@@ -4516,6 +4516,7 @@ type CompositeType struct {
 	ExplicitInterfaceConformances       []*InterfaceType
 	ImplicitTypeRequirementConformances []*CompositeType
 	Members                             map[string]*Member
+	Fields                              []string
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
 	nestedTypes           map[string]Type
@@ -4648,6 +4649,7 @@ func (t *CompositeType) InterfaceType() *InterfaceType {
 		Identifier:            t.Identifier,
 		CompositeKind:         t.Kind,
 		Members:               t.Members,
+		Fields:                t.Fields,
 		InitializerParameters: t.ConstructorParameters,
 		ContainerType:         t.ContainerType,
 		nestedTypes:           t.nestedTypes,
@@ -5240,6 +5242,7 @@ type InterfaceType struct {
 	Identifier    string
 	CompositeKind common.CompositeKind
 	Members       map[string]*Member
+	Fields        []string
 	// TODO: add support for overloaded initializers
 	InitializerParameters []*Parameter
 	ContainerType         Type
@@ -6398,6 +6401,7 @@ func IsNilType(ty Type) bool {
 
 type TransactionType struct {
 	Members           map[string]*Member
+	Fields            []string
 	PrepareParameters []*Parameter
 	Parameters        []*Parameter
 }

@@ -293,7 +293,7 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 
 	// Declare members
 
-	members, origins := checker.nonEventMembersAndOrigins(
+	members, fields, origins := checker.nonEventMembersAndOrigins(
 		interfaceType,
 		declaration.Members.Fields,
 		declaration.Members.Functions,
@@ -303,6 +303,7 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 	checker.checkMemberStorability(members)
 
 	interfaceType.Members = members
+	interfaceType.Fields = fields
 	checker.memberOrigins[interfaceType] = origins
 
 	// NOTE: determine initializer parameter types while nested types are in scope,

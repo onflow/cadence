@@ -20,7 +20,6 @@ package runtime
 
 import (
 	"fmt"
-	"sort"
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
@@ -159,29 +158,18 @@ func exportConstantSizedType(t *sema.ConstantSizedType) cadence.Type {
 	}
 }
 
-func exportCompositeType(t *sema.CompositeType) cadence.Type {
-	fields := make([]cadence.Field, 0, len(t.Members))
+func exportCompositeType(t *sema.CompositeType) cadence.CompositeType {
 
-	// TODO: do not sort fields before export, store in order declared
-	fieldNames := make([]string, 0, len(t.Members))
-	for identifier, member := range t.Members {
+	fields := make([]cadence.Field, 0, len(t.Fields))
+
+	for _, identifier := range t.Fields {
+		member := t.Members[identifier]
+
 		if member.IgnoreInSerialization {
 			continue
 		}
-		fieldNames = append(fieldNames, identifier)
-	}
 
-	// sort field names in lexicographical order
-	sort.Strings(fieldNames)
-
-	for _, identifier := range fieldNames {
-		field := t.Members[identifier]
-
-		if field.IgnoreInSerialization {
-			continue
-		}
-
-		convertedFieldType := exportType(field.TypeAnnotation.Type)
+		convertedFieldType := exportType(member.TypeAnnotation.Type)
 
 		fields = append(fields, cadence.Field{
 			Identifier: identifier,
@@ -221,29 +209,18 @@ func exportCompositeType(t *sema.CompositeType) cadence.Type {
 	panic(fmt.Sprintf("cannot export composite type %v of unknown kind %v", t, t.Kind))
 }
 
-func exportInterfaceType(t *sema.InterfaceType) cadence.Type {
+func exportInterfaceType(t *sema.InterfaceType) cadence.InterfaceType {
+
 	fields := make([]cadence.Field, 0, len(t.Members))
 
-	// TODO: do not sort fields before export, store in order declared
-	fieldNames := make([]string, 0, len(t.Members))
-	for identifier, member := range t.Members {
+	for _, identifier := range t.Fields {
+		member := t.Members[identifier]
+
 		if member.IgnoreInSerialization {
 			continue
 		}
-		fieldNames = append(fieldNames, identifier)
-	}
 
-	// sort field names in lexicographical order
-	sort.Strings(fieldNames)
-
-	for _, identifier := range fieldNames {
-		field := t.Members[identifier]
-
-		if field.IgnoreInSerialization {
-			continue
-		}
-
-		convertedFieldType := exportType(field.TypeAnnotation.Type)
+		convertedFieldType := exportType(member.TypeAnnotation.Type)
 
 		fields = append(fields, cadence.Field{
 			Identifier: identifier,
