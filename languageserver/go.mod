@@ -6,7 +6,7 @@ require (
 	github.com/mattn/go-isatty v0.0.12
 	github.com/onflow/cadence v0.6.0
 	github.com/onflow/flow-go-sdk v0.8.0
-	github.com/sourcegraph/jsonrpc2 v0.0.0-20191222043438-96c4efab7ee2
+	github.com/sourcegraph/jsonrpc2 v0.0.0-20200429184054-15c2290dcb37
 	google.golang.org/grpc v1.30.0
 )
 
