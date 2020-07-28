@@ -5520,11 +5520,11 @@ Every account can be accessed through two types:
 
       // Contract code
 
-      fun setCode(_ code: [Int])
+      fun setCode(_ code: [UInt8], ... contractInitializerArguments)
 
       // Key management
 
-      fun addPublicKey(_ publicKey: [Int])
+      fun addPublicKey(_ publicKey: [UInt8])
       fun removePublicKey(_ index: Int)
 
       // Storage operations
@@ -6013,8 +6013,6 @@ without having been defined in a deployed Cadence contract.
 
 Contracts can be created, updated, and deleted using the `setCode`
 function of [accounts](#accounts).
-Contract creation is also possible when creating accounts,
-i.e. when using the `Account` constructor.
 This functionality is covered in the [next section](#deploying-and-updating-contracts)
 
 Contracts are types.
@@ -6229,25 +6227,22 @@ Contracts have the implicit field `let account: Account`,
 which is the account in which the contract is deployed too.
 This gives the contract the ability to e.g. read and write to the account's storage.
 
-```cadence,file=contract-account.cdc
-
-```
-
 ### Deploying and Updating Contracts
 
-In order for a contract to be used in Cadence, it needs
-to be deployed to an account.
+In order for a contract to be used in Cadence, it needs to be deployed to an account.
+A contract can be deployed to an account using the `setCode` function of the `AuthAccount` type:
 
-Contract can be deployed to an account using the `setCode` function of the `Account` type:
-`setCode(_ code: [UInt8], ...)`.
-The function's `code` parameter is the byte representation of the source code.
-Additional arguments are passed to the initializer of the contract.
+- `fun AuthAccount.setCode(_ code: [UInt8], ... contractInitializerArguments)`
+
+  The `code` parameter is the byte representation of the source code.
+  All additional arguments that are given are passed further to the initializer
+  of the contract that is being deployed.
 
 For example, assuming the following contract code should be deployed:
 
 ```cadence,file=test-contract.cdc
-contract Test {
-    let message: String
+pub contract Test {
+    pub let message: String
 
     init(message: String) {
         self.message = message
@@ -6258,20 +6253,19 @@ contract Test {
 The contract can be deployed as follows:
 
 ```cadence,file=deploy-setCode.cdc
+// Decode the hex-encoded source code into a byte array
+// using the built-in function `decodeHex`.
+//
+// (The ellipsis ... indicates the remainder of the string)
+//
+let code = "70756220636f6e...".decodeHex()
+
+// `code` has type `[UInt8]`
+
 let signer: Account = ...
 signer.setCode(
-    [0x63, 0x6f, 0x6e, 0x74, 0x72, 0x61/*, ... */],
+    code,
     message: "I'm a new contract in an existing account"
-)
-```
-
-The contract can also be deployed when creating an account by using the `Account` constructor.
-
-```cadence,file=deploy-setCode.cdc
-let newAccount = Account(
-    publicKeys: [],
-    code: [0x63, 0x6f, 0x6e, 0x74, 0x72, 0x61/*, ... */],
-    message: "I'm a new contract in a new account"
 )
 ```
 
