@@ -459,22 +459,35 @@ let a = Int16(x) + y
 let b = x + 1000000000000000000000000
 ```
 
-Integers can be converted to strings through the `toString` function:
+#### Integer Functions
 
-```cadence,file=integer-tostring.cdc
-let answer = 42
+Integers have multiple built-in functions you can use.
 
-answer.toString()  // is "42"
-```
+-
+  ```cadence
+  fun toString(): String
+  ```
 
-Integers can be converted to byte arrays (`[UInt8]`) in big-endian order
-by using the `toBigEndianBytes` function:
+  Returns the string representation of the integer.
 
-```cadence,file=integer-tobigendianbytes.cdc
-let largeNumber = 1234567890
+    ```cadence,file=integer-tostring.cdc
+    let answer = 42
 
-largeNumber.toBigEndianBytes()  // is `[73, 150, 2, 210]`
-```
+    answer.toString()  // is "42"
+    ```
+
+-
+  ```cadence
+  fun toBigEndianBytes(): [UInt8]
+  ```
+
+  Returns the byte array representation (`[UInt8]`) in big-endian order of the integer.
+
+    ```cadence,file=integer-tobigendianbytes.cdc
+    let largeNumber = 1234567890
+
+    largeNumber.toBigEndianBytes()  // is `[73, 150, 2, 210]`
+    ```
 
 ### Fixed-Point Numbers
 
@@ -502,22 +515,35 @@ have the following factors, and can represent values in the following ranges:
 
 - **`UFix64`**: Factor 1/100,000,000; 0.0 through 184467440737.09551615
 
-Fixed-point numbers can be converted to strings through the `toString` function:
+#### Fixed-Point Number Functions
 
-```cadence,file=fixed-point-tostring.cdc
-let fix = 1.23
+Fixed-Point numbers have multiple built-in functions you can use.
 
-fix.toString()  // is "1.23000000"
-```
+-
+  ```cadence
+  fun toString(): String
+  ```
 
-Fixed-point numbers can be converted to byte arrays (`[UInt8]`) in big-endian order
-by using the `toBigEndianBytes` function:
+  Returns the string representation of the fixed-point number.
 
-```cadence,file=fixed-point-tobigendianbytes.cdc
-let fix = 1.23
+    ```cadence,file=fixed-point-tostring.cdc
+    let fix = 1.23
 
-fix.toBigEndianBytes()  // is `[0, 0, 0, 0, 7, 84, 212, 192]`
-```
+    fix.toString()  // is "1.23000000"
+    ```
+
+-
+  ```cadence
+  fun toBigEndianBytes(): [UInt8]
+  ```
+
+  Returns the byte array representation (`[UInt8]`) in big-endian order of the fixed-point number.
+
+    ```cadence,file=fixed-point-tobigendianbytes.cdc
+    let fix = 1.23
+
+    fix.toBigEndianBytes()  // is `[0, 0, 0, 0, 7, 84, 212, 192]`
+    ```
 
 ### Floating-Point Numbers
 
@@ -561,21 +587,35 @@ let aNumber = 0x436164656E636521
 // `aNumber` has type `Int`
 ```
 
-Addresses can be converted to strings through the `toString` function:
+#### Address Functions
 
-```cadence,file=address-tostring.cdc
-let someAddress: Address = 0x436164656E636521
+Addresses have multiple built-in functions you can use.
 
-someAddress.toString()  // is "0x436164656E636521"
-```
+-
+  ```cadence
+  fun toString(): String
+  ```
 
-Addresses can be converted to byte arrays (`[UInt8]`) by using the `toBytes` function:
+  Returns the string representation of the address.
 
-```cadence,file=address-tobytes.cdc
-let someAddress: Address = 0x436164656E636521
+    ```cadence,file=address-tostring.cdc
+    let someAddress: Address = 0x436164656E636521
 
-someAddress.toString()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
-```
+    someAddress.toString()  // is "0x436164656E636521"
+    ```
+
+-
+  ```cadence
+  fun toBigEndianBytes(): [UInt8]
+  ```
+
+  Returns the byte array representation (`[UInt8]`) of the address.
+
+    ```cadence,file=address-tobytes.cdc
+    let someAddress: Address = 0x436164656E636521
+
+    someAddress.toString()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
+    ```
 
 ### AnyStruct and AnyResource
 
@@ -1025,7 +1065,12 @@ let canadianFlag: Character = "\u{1F1E8}\u{1F1E6}"
 
 Strings have multiple built-in functions you can use.
 
-- `let length: Int`: Returns the number of characters in the string as an integer.
+-
+  ```cadence
+  let length: Int
+  ```
+
+  Returns the number of characters in the string as an integer.
 
     ```cadence,file=string-length-field.cdc
     let example = "hello"
@@ -1035,7 +1080,11 @@ Strings have multiple built-in functions you can use.
     // `length` is `5`
     ```
 
-- `fun concat(_ other: String): String`:
+-
+  ```cadence
+  fun concat(_ other: String): String
+  ```
+
   Concatenates the string `other` to the end of the original string,
   but does not modify the original string.
   This function creates a new string whose length is the sum of the lengths
@@ -1050,7 +1099,11 @@ Strings have multiple built-in functions you can use.
     // `helloWorld` is now `"helloworld"`
     ```
 
-- `fun slice(from: Int, upTo: Int): String`:
+-
+  ```cadence
+  fun slice(from: Int, upTo: Int): String
+  ```
+
   Returns a string slice of the characters
   in the given string from start index `from` up to,
   but not including, the end index `upTo`.
@@ -1214,8 +1267,12 @@ that can be used to get information about and manipulate the contents of the arr
 The field `length`, and the functions `concat`, and `contains`
 are available for both variable-sized and fixed-sized or variable-sized arrays.
 
-- `let length: Int`:
-  Returns the number of elements in the array.
+-
+  ```cadence
+  let length: Int
+  ```
+
+  The number of elements in the array.
 
     ```cadence,file=array-length-field.cdc
     // Declare an array of integers.
@@ -1227,15 +1284,18 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
     // `length` is `4`
     ```
 
-- `fun concat(_ array: T): T`:
+-
+  ```cadence
+  fun concat(_ array: T): T
+  ```
+
   Concatenates the parameter `array` to the end
   of the array the function is called on,
   but does not modify that array.
 
   Both arrays must be the same type `T`.
 
-  This function creates a new array whose length is
-  the sum of the length of the array
+  This function creates a new array whose length is the sum of the length of the array
   the function is called on and the length of the array given as the parameter.
 
     ```cadence,file=array-concat.cdc
@@ -1253,7 +1313,11 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
     // `moreNumbers` is still `[11, 27]`
     ```
 
-- `fun contains(_ element: T): Bool`:
+-
+  ```cadence
+  fun contains(_ element: T): Bool
+  ```
+
   Returns true if the given element of type `T` is in the array.
 
     ```cadence,file=array-contains.cdc
@@ -1279,7 +1343,11 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
 The following functions can only be used on variable-sized arrays.
 It is invalid to use one of these functions on a fixed-sized array.
 
-- `fun append(_ element: T): Void`:
+-
+  ```cadence
+  fun append(_ element: T): Void
+  ```
+
   Adds the new element `element` of type `T` to the end of the array.
 
   The new element must be the same type as all the other elements in the array.
@@ -1296,7 +1364,11 @@ It is invalid to use one of these functions on a fixed-sized array.
     numbers.append("SneakyString")
     ```
 
-- `fun insert(at index: Int, _ element: T): Void`:
+-
+  ```cadence
+  fun insert(at index: Int, _ element: T): Void
+  ```
+
   Inserts the new element `element` of type `T`
   at the given `index` of the array.
 
@@ -1322,7 +1394,11 @@ It is invalid to use one of these functions on a fixed-sized array.
     numbers.insert(at: 12, 39)
     ```
 
-- `fun remove(at index: Int): T`:
+-
+  ```cadence
+  fun remove(at index: Int): T
+  ```
+
   Removes the element at the given `index` from the array and returns it.
 
   The `index` must be within the bounds of the array.
@@ -1341,7 +1417,11 @@ It is invalid to use one of these functions on a fixed-sized array.
     numbers.remove(at: 19)
     ```
 
-- `fun removeFirst(): T`:
+-
+  ```cadence
+  fun removeFirst(): T
+  ```
+
   Removes the first element from the array and returns it.
 
   The array must not be empty.
@@ -1365,7 +1445,11 @@ It is invalid to use one of these functions on a fixed-sized array.
     numbers.removeFirst()
     ```
 
-- `fun removeLast(): T`:
+-
+  ```cadence
+  fun removeLast(): T
+  ```
+
   Removes the last element from the array and returns it.
 
   The array must not be empty.
@@ -1388,15 +1472,6 @@ It is invalid to use one of these functions on a fixed-sized array.
     // Run-time error: The array is empty, the program aborts.
     numbers.removeLast()
     ```
-
-<!--
-
-TODO
-
-- filter, etc. for all array types
-- Document and link to array concatenation operator `&` in operators section
-
--->
 
 ### Dictionaries
 
@@ -1529,8 +1604,12 @@ booleans[0] = true
 
 #### Dictionary Fields and Functions
 
-- `fun length: Int`:
-  Returns the number of entries in the dictionary.
+-
+  ```cadence
+  let length: Int
+  ```
+
+  The number of entries in the dictionary.
 
     ```cadence,file=dictionary-length-field.cdc
     // Declare a dictionary mapping strings to integers.
@@ -1542,7 +1621,11 @@ booleans[0] = true
     // `length` is `2`
     ```
 
-- `fun insert(key: K, _ value: V): V?`:
+-
+  ```cadence
+  fun insert(key: K, _ value: V): V?
+  ```
+
   Inserts the given value of type `V` into the dictionary under the given `key` of type `K`.
 
   Returns the previous value as an optional
@@ -1563,7 +1646,11 @@ booleans[0] = true
     // `numbers` is `{"twentyThree": 23, "fortyTwo": 42}`
     ```
 
-- `fun remove(key: K): V?`:
+-
+  ```cadence
+  fun remove(key: K): V?
+  ```
+
   Removes the value for the given `key` of type `K` from the dictionary.
 
   Returns the value of type `V` as an optional
@@ -1592,7 +1679,11 @@ booleans[0] = true
     // `numbers` is `{"twentyThree": 23}`
     ```
 
-- `let keys: [K]`:
+-
+  ```cadence
+  let keys: [K]
+  ```
+
   Returns an array of the keys of type `K` in the dictionary.  This does not
   modify the dictionary, just returns a copy of the keys as an array.
   If the dictionary is empty, this returns an empty array.
@@ -1607,7 +1698,11 @@ booleans[0] = true
     // `keys` has type `[String]` and is `["fortyTwo","twentyThree"]`
     ```
 
-- `let values: [V]`:
+-
+  ```cadence
+  let values: [V]
+  ```
+
   Returns an array of the values of type `V` in the dictionary.  This does not
   modify the dictionary, just returns a copy of the values as an array.
   If the dictionary is empty, this returns an empty array.
@@ -5621,7 +5716,10 @@ Account storage is accessed through the following functions of `AuthAccount`.
 This means that any code that has access to the authorized account has access
 to all its stored objects.
 
-- `fun save<T>(_ value: T, to: Path)`:
+-
+  ```cadence
+  fun save<T>(_ value: T, to: Path)
+  ```
 
   Saves an object to account storage.
   Resources are moved into storage, and structures are copied.
@@ -5633,40 +5731,47 @@ to all its stored objects.
 
   The path must be a storage path, i.e., only the domain `storage` is allowed.
 
-- `fun load<T>(from: Path): T?`:
+-
+  ```cadence
+  fun load<T>(from: Path): T?
+  ```
 
-   Loads an object from account storage.
-   If no object is stored under the given path, the function returns `nil`.
-   If there is an object stored, the stored resource or structure is moved
-   out of storage and returned as an optional.
-   When the function returns, the storage no longer contains an object
-   under the given path.
+  Loads an object from account storage.
+  If no object is stored under the given path, the function returns `nil`.
+  If there is an object stored, the stored resource or structure is moved
+  out of storage and returned as an optional.
+  When the function returns, the storage no longer contains an object
+  under the given path.
 
-   `T` is the type parameter for the object type.
-   A type argument for the parameter must be provided explicitly.
+  `T` is the type parameter for the object type.
+  A type argument for the parameter must be provided explicitly.
 
-   The type `T` must be a supertype of the type of the loaded object.
-   If it is not, the function returns `nil`.
-   The given type does not necessarily need to be exactly the same as the type of the loaded object.
+  The type `T` must be a supertype of the type of the loaded object.
+  If it is not, the function returns `nil`.
+  The given type does not necessarily need to be exactly the same as the type of the loaded object.
 
-   The path must be a storage path, i.e., only the domain `storage` is allowed.
+  The path must be a storage path, i.e., only the domain `storage` is allowed.
 
-- `fun copy<T>(from: Path): T?`, where `T` is the type parameter for the value type:
+-
+  ```cadence
+  fun copy<T: AnyStruct>(from: Path): T?
+  ```
 
-   Returns a copy of a structure stored in account storage, without removing it from storage.
+  Returns a copy of a structure stored in account storage, without removing it from storage.
 
-   If no structure is stored under the given path, the function returns `nil`.
-   If there is a structure stored, it is copied.
-   The structure stays stored in storage after the function returns.
+  If no structure is stored under the given path, the function returns `nil`.
+  If there is a structure stored, it is copied.
+  The structure stays stored in storage after the function returns.
 
-   `T` is the type parameter for the structure type.
-   A type argument for the parameter must be provided explicitly.
+  `T` is the type parameter for the structure type.
+  A type argument for the parameter must be provided explicitly.
 
-   The type `T` must be a supertype of the type of the copied structure.
-   If it is not, the function returns `nil`.
-   The given type does not necessarily need to be exactly the same as the type of the copied structure.
+  The type `T` must be a supertype of the type of the copied structure.
+  If it is not, the function returns `nil`.
+  The given type does not necessarily need to be exactly the same as
+  the type of the copied structure.
 
-   The path must be a storage path, i.e., only the domain `storage` is allowed.
+  The path must be a storage path, i.e., only the domain `storage` is allowed.
 
 ```cadence,file=account-storage-save-load-copy.cdc
 // Declare a resource named `Counter`.
@@ -5757,20 +5862,23 @@ as it is necessary for resources,
 it is also possible to create references to objects in storage:
 This is possible using the `borrow` function of an `AuthAccount`:
 
-- `fun borrow<T: &Any>(from: Path): T?`
+-
+  ```cadence
+  fun borrow<T: &Any>(from: Path): T?`
+  ```
 
-   Returns a reference to an object in storage without removing it from storage.
-   If no object is stored under the given path, the function returns `nil`.
-   If there is an object stored, a reference is returned as an optional.
+  Returns a reference to an object in storage without removing it from storage.
+  If no object is stored under the given path, the function returns `nil`.
+  If there is an object stored, a reference is returned as an optional.
 
-   `T` is the type parameter for the object type.
-   A type argument for the parameter must be provided explicitly.
-   The type argument must be a reference to any type (`&Any`; `Any` is the supertype of all types).
-   It must be possible to create the given reference type `T` for the stored /  borrowed object.
-   If it is not, the function returns `nil`.
-   The given type does not necessarily need to be exactly the same as the type of the borrowed object.
+  `T` is the type parameter for the object type.
+  A type argument for the parameter must be provided explicitly.
+  The type argument must be a reference to any type (`&Any`; `Any` is the supertype of all types).
+  It must be possible to create the given reference type `T` for the stored /  borrowed object.
+  If it is not, the function returns `nil`.
+  The given type does not necessarily need to be exactly the same as the type of the borrowed object.
 
-   The path must be a storage path, i.e., only the domain `storage` is allowed.
+  The path must be a storage path, i.e., only the domain `storage` is allowed.
 
 ```cadence,file=account-storage-borrow.cdc
 // Declare a resource interface named `HasCount`, that has a field `count`
@@ -5869,7 +5977,10 @@ This allows exposing and hiding certain functionality of a stored object.
 
 Capabilities are created using the `link` function of an authorized account (`AuthAccount`):
 
-- `fun link<T: &Any>(_ newCapabilityPath: Path, target: Path): Capability<T>?`
+-
+  ```cadence
+  fun link<T: &Any>(_ newCapabilityPath: Path, target: Path): Capability<T>?
+  ```
 
   `newCapabilityPath` is the public or private path identifying the new capability.
 
@@ -5898,14 +6009,20 @@ Capabilities are created using the `link` function of an authorized account (`Au
 
 Capabilities can be removed using the `unlink` function of an authorized account (`AuthAccount`):
 
-- `fun unlink(_ path: Path)`:
+-
+  ```cadence
+  fun unlink(_ path: Path)
+  ```
 
   `path` is the public or private path identifying the capability that should be removed.
 
 To get the target path for a capability, the `getLinkTarget` function
 of an authorized account (`AuthAccount`) or public account (`PublicAccount`) can be used:
 
-- `fun getLinkTarget(_ path: Path): Path?`
+-
+  ```cadence
+  fun getLinkTarget(_ path: Path): Path?
+  ```
 
   `path` is the public or private path identifying the capability.
   The function returns the link target path,
@@ -5915,7 +6032,10 @@ of an authorized account (`AuthAccount`) or public account (`PublicAccount`) can
 Existing capabilities can be obtained by using the `getCapability` function
 of authorized accounts (`AuthAccount`) and public accounts (`PublicAccount`):
 
-- `fun getCapability<T>(_ at: Path): Capability<T>?`
+-
+  ```cadence
+  fun getCapability<T>(_ at: Path): Capability<T>?
+  ```
 
   For public accounts, the function returns a capability
   if the given path is public.
@@ -5933,7 +6053,10 @@ The `getCapability` function does **not** check if the target exists.
 The link is latent.
 The `check` function of the capability can be used to check if the target currently exists and could be borrowed,
 
-- `fun check<T: &Any>(): Bool`
+-
+  ```cadence
+  fun check<T: &Any>(): Bool
+  ```
 
   `T` is the type parameter for the reference type.
   A type argument for the parameter must be provided explicitly.
@@ -5944,7 +6067,10 @@ The `check` function of the capability can be used to check if the target curren
 Finally, the capability can be borrowed to get a reference to the stored object.
 This can be done using the `borrow` function of the capability:
 
-- `fun borrow<T: &Any>(): T?`
+-
+  ```cadence
+  fun borrow<T: &Any>(): T?
+  ```
 
   The function returns a reference to the object targeted by the capability,
   provided it can be borrowed using the given type.
@@ -6289,7 +6415,10 @@ This gives the contract the ability to e.g. read and write to the account's stor
 In order for a contract to be used in Cadence, it needs to be deployed to an account.
 A contract can be deployed to an account using the `setCode` function of the `AuthAccount` type:
 
-- `fun AuthAccount.setCode(_ code: [UInt8], ... contractInitializerArguments)`
+-
+  ```cadence
+  fun AuthAccount.setCode(_ code: [UInt8], ... contractInitializerArguments)
+  ```
 
   The `code` parameter is the byte representation of the source code.
   All additional arguments that are given are passed further to the initializer
@@ -6787,13 +6916,15 @@ Please let us know if your use-case demands it by request this feature in an iss
 
 To get information about a block, the functions `getCurrentBlock` and `getBlock` can be used:
 
-- ```cadence
+-
+  ```cadence
   fun getCurrentBlock(): Block
   ```
 
   Returns the the current block, i.e. the block which contains the currently executed transaction.
 
-- ```cadence
+-
+  ```cadence
   fun getBlock(at height: UInt64): Block?
   ```
 
