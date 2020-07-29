@@ -467,6 +467,15 @@ let answer = 42
 answer.toString()  // is "42"
 ```
 
+Integers can be converted to byte arrays (`[UInt8]`) in big-endian order
+by using the `toBigEndianBytes` function:
+
+```cadence,file=integer-tobigendianbytes.cdc
+let largeNumber = 1234567890
+
+largeNumber.toBigEndianBytes()  // is `[73, 150, 2, 210]`
+```
+
 ### Fixed-Point Numbers
 
 > 🚧 Status: Currently only the 64-bit wide `Fix64` and `UFix64` types are available.
@@ -499,6 +508,15 @@ Fixed-point numbers can be converted to strings through the `toString` function:
 let fix = 1.23
 
 fix.toString()  // is "1.23000000"
+```
+
+Fixed-point numbers can be converted to byte arrays (`[UInt8]`) in big-endian order
+by using the `toBigEndianBytes` function:
+
+```cadence,file=fixed-point-tobigendianbytes.cdc
+let fix = 1.23
+
+fix.toBigEndianBytes()  // is `[0, 0, 0, 0, 7, 84, 212, 192]`
 ```
 
 ### Floating-Point Numbers
@@ -549,6 +567,14 @@ Addresses can be converted to strings through the `toString` function:
 let someAddress: Address = 0x436164656E636521
 
 someAddress.toString()  // is "0x436164656E636521"
+```
+
+Addresses can be converted to byte arrays (`[UInt8]`) by using the `toBytes` function:
+
+```cadence,file=address-tobytes.cdc
+let someAddress: Address = 0x436164656E636521
+
+someAddress.toString()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
 ```
 
 ### AnyStruct and AnyResource
