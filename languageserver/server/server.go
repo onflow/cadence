@@ -781,8 +781,9 @@ func (s *Server) prepareFunctionMemberCompletionItem(
 		if i > 0 {
 			builder.WriteString(", ")
 		}
-		if parameter.Label != sema.ArgumentLabelNotRequired {
-			builder.WriteString(parameter.Label)
+		label := parameter.EffectiveArgumentLabel()
+		if label != sema.ArgumentLabelNotRequired {
+			builder.WriteString(label)
 			builder.WriteString(": ")
 		}
 		builder.WriteString("${")
