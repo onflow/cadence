@@ -6604,6 +6604,89 @@ TODO
 
 -->
 
+## Run-time Types
+
+Types can be represented at run-time.
+To create a type value, use the constructor function `Type<T>()`, which accepts the static type as a type argument.
+
+This is similar to e.g. `T.self` in Swift, `T::class` in Kotlin, and `T.class` in Java.
+
+For example, to represent the type `Int` at run-time:
+
+```cadence
+let intType: Type = Type<Int>()
+```
+
+This works for both built-in and user-defined types. For example, to get the type value for a resource:
+
+```cadence,file=runtime-type-collectible.cdc
+resource Collectible {}
+
+let collectibleType = Type<@Collectible>()
+
+// `collectibleType` has type `Type`
+```
+
+Type values are comparable.
+
+```cadence,file=runtime-type-comparison.cdc
+
+Type<Int>() == Type<Int>()
+
+Type<Int>() != Type<String>()
+```
+
+The function `fun isInstance(_ type: Type): Bool` can be used to check if a value has a certain type.
+
+```cadence
+let collectible <- create Collectible()
+let collectibleType = Type<@Collectible>()
+let result = collectible.isInstance(collectibleType)
+```
+
+For example, this allows implementing a marketplace sale resource:
+
+```cadence,file=runtime-type-simple-sale.cdc
+pub resource SimpleSale {
+
+    pub var objectForSale: @AnyResource?
+    pub let priceForObject: UFix64
+    pub let requiredCurrency: Type
+    pub let paymentReceiver: Capability<&{FungibleToken.Receiver}>
+
+    init(
+        objectForSale: @AnyResource,
+        priceForObject: UFix64,
+        requiredCurrency: Type,
+        paymentReceiver: Capability<&{FungibleToken.Receiver}>
+    ) {
+        self.objectForSale <- objectForSale
+        self.priceForObject = priceForObject
+        self.requiredCurrency = requiredCurrency
+        self.paymentReceiver = paymentReceiver
+    }
+
+    destroy() {
+        destroy self.objectForSale
+    }
+
+    pub fun buyObject(purchaseAmount: @FungibleToken.Vault): @AnyResource {
+        pre {
+            self.objectForSale != nil
+            purchaseAmount.balance >= self.priceForObject
+            purchaseAmount.isInstance(self.requiredCurrency)
+        }
+
+        let receiver = self.paymentReceiver.borrow()
+            ?? panic("failed to borrow payment receiver capability")
+
+        receiver.deposit(from: <-purchaseAmount)
+        let objectForSale <- self.objectForSale <- nil
+        return <-objectForSale
+    }
+}
+```
+
 ## Built-in Functions
 
 ### `panic`
