@@ -459,6 +459,14 @@ let a = Int16(x) + y
 let b = x + 1000000000000000000000000
 ```
 
+Integers can be converted to strings through the `toString` function:
+
+```cadence,file=integer-tostring.cdc
+let answer = 42
+
+answer.toString()  // is "42"
+```
+
 ### Fixed-Point Numbers
 
 > 🚧 Status: Currently only the 64-bit wide `Fix64` and `UFix64` types are available.
@@ -484,6 +492,14 @@ Unsigned fixed-point number types have the prefix `UFix`,
 have the following factors, and can represent values in the following ranges:
 
 - **`UFix64`**: Factor 1/100,000,000; 0.0 through 184467440737.09551615
+
+Fixed-point numbers can be converted to strings through the `toString` function:
+
+```cadence,file=fixed-point-tostring.cdc
+let fix = 1.23
+
+fix.toString()  // is "1.23000000"
+```
 
 ### Floating-Point Numbers
 
@@ -525,6 +541,14 @@ Integer literals are not inferred to be an address.
 let aNumber = 0x436164656E636521
 
 // `aNumber` has type `Int`
+```
+
+Addresses can be converted to strings through the `toString` function:
+
+```cadence,file=address-tostring.cdc
+let someAddress: Address = 0x436164656E636521
+
+someAddress.toString()  // is "0x436164656E636521"
 ```
 
 ### AnyStruct and AnyResource
