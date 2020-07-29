@@ -6907,3 +6907,7 @@ pub contract Crypto {
     }
 }
 ```
+
+## Type Hierarchy
+
+![Cadence type hierarchy](type-hierarchy.png)
