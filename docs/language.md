@@ -5590,7 +5590,7 @@ to all its stored objects.
 
    The type `T` must be a supertype of the type of the loaded object.
    If it is not, the function returns `nil`.
-   The given type must not necessarily be exactly the same as the type of the loaded object.
+   The given type does not necessarily need to be exactly the same as the type of the loaded object.
 
    The path must be a storage path, i.e., only the domain `storage` is allowed.
 
@@ -5711,7 +5711,7 @@ This is possible using the `borrow` function of an `AuthAccount`:
    The type argument must be a reference to any type (`&Any`; `Any` is the supertype of all types).
    It must be possible to create the given reference type `T` for the stored /  borrowed object.
    If it is not, the function returns `nil`.
-   The given type must not necessarily be exactly the same as the type of the borrowed object.
+   The given type does not necessarily need to be exactly the same as the type of the borrowed object.
 
    The path must be a storage path, i.e., only the domain `storage` is allowed.
 
