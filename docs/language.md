@@ -1070,15 +1070,21 @@ Strings have multiple built-in functions you can use.
     let outOfBounds = example.slice(from: 2, upTo: 10)
     ```
 
-<!--
+-
+  ```cadence
+  fun decodeHex(): [UInt8]
+  ```
 
-TODO
+  Returns an array containing the bytes represented by the given hexadecimal string.
 
-#### String Functions
+  The given string must only contain hexadecimal characters and must have an even length.
+  If the string is malformed, the program aborts
 
-- Document and link to string concatenation operator `&` in operators section
+    ```cadence,file=string-decodehex.cdc
+    let example = "436164656e636521"
 
--->
+    example.decodeHex()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
+    ```
 
 ### Arrays
 
