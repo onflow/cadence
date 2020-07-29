@@ -21,10 +21,10 @@ pub contract Crypto {
         }
     }
 
-    // ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve
+    /// ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve
     pub let ECDSA_P256: SignatureAlgorithm
 
-    // ECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve
+    /// ECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve
     pub let ECDSA_Secp256k1: SignatureAlgorithm
 
     pub struct HashAlgorithm {
@@ -35,10 +35,10 @@ pub contract Crypto {
         }
     }
 
-    // SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest
+    /// SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest
     pub let SHA2_256: HashAlgorithm
 
-    // SHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest
+    /// SHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest
     pub let SHA3_256: HashAlgorithm
 
     pub struct PublicKey {
@@ -81,7 +81,7 @@ pub contract Crypto {
             self.entries = []
         }
 
-        // Adds a new key with the given weight
+        /// Adds a new key with the given weight
         pub fun add(
             _ publicKey: PublicKey,
             hashAlgorithm: HashAlgorithm,
@@ -100,8 +100,8 @@ pub contract Crypto {
             return entry
         }
 
-        // Returns the key at the given index, if it exists.
-        // Revoked keys are always returned, but they have `isRevoked` field set to true
+        /// Returns the key at the given index, if it exists.
+        /// Revoked keys are always returned, but they have `isRevoked` field set to true
         pub fun get(keyIndex: Int): KeyListEntry? {
             if keyIndex >= self.entries.length {
                 return nil
@@ -110,7 +110,7 @@ pub contract Crypto {
             return self.entries[keyIndex]
         }
 
-        // Marks the key at the given index revoked, but does not delete it
+        /// Marks the key at the given index revoked, but does not delete it
         pub fun revoke(keyIndex: Int) {
             if keyIndex >= self.entries.length {
                 return
@@ -125,6 +125,7 @@ pub contract Crypto {
             )
         }
 
+        /// Returns true if the given signatures are valid for the given signed data
         pub fun isValid(
             signatureSet: [KeyListSignature],
             signedData: [UInt8]
