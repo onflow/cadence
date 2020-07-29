@@ -5607,7 +5607,7 @@ to all its stored objects.
 
    The type `T` must be a supertype of the type of the copied structure.
    If it is not, the function returns `nil`.
-   The given type must not necessarily be exactly the same as the type of the copied structure.
+   The given type does not necessarily need to be exactly the same as the type of the copied structure.
 
    The path must be a storage path, i.e., only the domain `storage` is allowed.
 
