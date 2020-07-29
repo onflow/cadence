@@ -497,13 +497,13 @@ Instead, consider using [fixed point numbers](#fixed-point-numbers).
 ### Addresses
 
 The type `Address` represents an address.
-Addresses are unsigned integers with a size of 160 bits (20 bytes).
+Addresses are unsigned integers with a size of 64 bits (8 bytes).
 Hexadecimal integer literals can be used to create address values.
 
 ```cadence
 // Declare a constant that has type `Address`.
 //
-let someAddress: Address = 0x06012c8cf97bead5deae237070f9587f8e7a266d
+let someAddress: Address = 0x436164656E636521
 
 // Invalid: Initial value is not compatible with type `Address`,
 // it is not a number.
@@ -511,9 +511,9 @@ let someAddress: Address = 0x06012c8cf97bead5deae237070f9587f8e7a266d
 let notAnAddress: Address = ""
 
 // Invalid: Initial value is not compatible with type `Address`.
-// The integer literal is valid, however, it is larger than 160 bits.
+// The integer literal is valid, however, it is larger than 64 bits.
 //
-let alsoNotAnAddress: Address = 0x06012c8cf97bead5deae237070f9587f8e7a266d123456789
+let alsoNotAnAddress: Address = 0x436164656E63652146757265766572
 ```
 
 Integer literals are not inferred to be an address.
@@ -522,7 +522,8 @@ Integer literals are not inferred to be an address.
 // Declare a number. Even though it happens to be a valid address,
 // it is not inferred as it.
 //
-let aNumber = 0x06012c8cf97bead5deae237070f9587f8e7a266d
+let aNumber = 0x436164656E636521
+
 // `aNumber` has type `Int`
 ```
 
