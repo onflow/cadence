@@ -972,7 +972,7 @@ func (s *Server) getDiagnostics(
 
 	if parseError != nil {
 		if parentErr, ok := parseError.(errors.ParentError); ok {
-			parserDiagnostics := getDiagnosticsForParentError(conn, parentErr)
+			parserDiagnostics := getDiagnosticsForParentError(conn, uri, parentErr)
 			diagnostics = append(diagnostics, parserDiagnostics...)
 		}
 	}
@@ -1031,7 +1031,7 @@ func (s *Server) getDiagnostics(
 
 	if checkError != nil {
 		if parentErr, ok := checkError.(errors.ParentError); ok {
-			checkerDiagnostics := getDiagnosticsForParentError(conn, parentErr)
+			checkerDiagnostics := getDiagnosticsForParentError(conn, uri, parentErr)
 			diagnostics = append(diagnostics, checkerDiagnostics...)
 		}
 	}
@@ -1052,7 +1052,13 @@ func (s *Server) getDiagnostics(
 // a diagnostic. Both parser and checker errors can be unpacked.
 //
 // Logs any conversion failures to the client.
-func getDiagnosticsForParentError(conn protocol.Conn, err errors.ParentError) (diagnostics []protocol.Diagnostic) {
+func getDiagnosticsForParentError(
+	conn protocol.Conn,
+	uri protocol.DocumentUri,
+	err errors.ParentError,
+) (
+	diagnostics []protocol.Diagnostic,
+) {
 	for _, childErr := range err.ChildErrors() {
 		convertibleErr, ok := childErr.(convertibleError)
 		if !ok {
@@ -1063,6 +1069,27 @@ func getDiagnosticsForParentError(conn protocol.Conn, err errors.ParentError) (d
 			continue
 		}
 		diagnostic := convertError(convertibleErr)
+
+		if errorNotes, ok := convertibleErr.(errors.ErrorNotes); ok {
+			for _, errorNote := range errorNotes.ErrorNotes() {
+				if positioned, hasPosition := errorNote.(ast.HasPosition); hasPosition {
+					startPos := positioned.StartPosition()
+					endPos := positioned.EndPosition()
+					message := errorNote.Message()
+
+					diagnostic.RelatedInformation = append(diagnostic.RelatedInformation,
+						protocol.DiagnosticRelatedInformation{
+							Location: protocol.Location{
+								URI:   uri,
+								Range: conversion.ASTToProtocolRange(startPos, endPos),
+							},
+							Message: message,
+						},
+					)
+				}
+			}
+		}
+
 		diagnostics = append(diagnostics, diagnostic)
 	}
 
