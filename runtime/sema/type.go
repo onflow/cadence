@@ -1199,7 +1199,7 @@ var stringTypeDecodeHexFunctionType = &FunctionType{
 }
 
 const stringTypeDecodeHexFunctionDocString = `
-Returns an array containing the byte represented by the given hexadecimal string.
+Returns an array containing the bytes represented by the given hexadecimal string.
 
 The given string must only contain hexadecimal characters and must have an even length.
 If the string is malformed, the program aborts
