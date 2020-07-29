@@ -456,10 +456,7 @@ func defineRestrictedOrDictionaryType() {
 	// This handles the ambiguous case where a function return type's open brace
 	// may either be a restricted type (if there is no whitespace)
 	// or the start of the function body (if there is whitespace).
-	//
-	// In the fu
 
-	//setTypeLeftBindingPower(lexer.TokenBraceOpen, typeLeftBindingPowerRestriction)
 	setTypeMetaLeftDenotation(
 		lexer.TokenBraceOpen,
 		func(p *parser, rightBindingPower int, left ast.Type) (result ast.Type, done bool) {
