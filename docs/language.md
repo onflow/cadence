@@ -3285,6 +3285,12 @@ There are three kinds of fields:
 In initializers, the special constant `self` refers to the composite value
 that is to be initialized.
 
+Field types must be storable. Non-storable types are:
+
+- Functions
+- Accounts (AuthAccount / PublicAccount)
+- Transactions
+
 Fields can be read (if they are constant or variable) and set (if they are variable),
 using the access syntax: the composite value is followed by a dot (`.`)
 and the name of the field.
