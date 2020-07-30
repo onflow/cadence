@@ -6642,8 +6642,22 @@ Although optional, each block serves a specific purpose when executing a transac
 and it is recommended that developers use these blocks when creating their transactions.
 The following will detail the purpose of and how to use each block.
 
+### Transaction Parameters
 
+Transactions may declare parameters.
+Transaction parameters are declared like function parameters.
+The arguments for the transaction are passed in the sent transaction.
 
+Transaction parameters are accessible in all blocks.
+
+```cadence,file=transaction-parameters.cdc
+// Declare a transaction which has one parameter named `amount`
+// that has the type `UFix64`
+//
+transaction(amount: UFix64) {
+
+}
+```
 
 ### Prepare Block
 
