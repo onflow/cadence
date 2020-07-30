@@ -6893,16 +6893,52 @@ Type<Int>() != Type<String>()
 ```
 
 The function `fun isInstance(_ type: Type): Bool` can be used to check if a value has a certain type,
-considering subtyping rules.
+using the concrete run-time type,  and considering subtyping rules,
 
-```cadence
-let collectible <- create Collectible()
+```cadence,file=isinstance1.cdc
+// Declare a variable named `collectible` that has the *static* type `Collectible`
+// and has a resource of type `Collectible`
+//
+let collectible: @Collectible <- create Collectible()
 
+// The resource is an instance of type `Collectible`,
+// because the concrete run-time type is `Collectible`
+//
 collectible.isInstance(Type<@Collectible>())  // is `true`
 
+// The resource is an instance of type `AnyResource`,
+// because the concrete run-time type `Collectible` is a subtype of `AnyResource`
+//
 collectible.isInstance(Type<@AnyResource>())  // is `true`
 
+// The resource is *not* an instance of type `String`,
+// because the concrete run-time type `Collectible` is *not* a subtype of `String`
+//
 collectible.isInstance(Type<String>())  // is `false`
+```
+
+Note that the **concrete run-time type** of the object is used, **not** the static type.
+
+```cadence,file=isinstance2.cdc
+// Declare a variable named `something` that has the *static* type `AnyResource`
+// and has a resource of type `Collectible`
+//
+let something: @AnyResource <- create Collectible()
+
+// The resource is an instance of type `Collectible`,
+// because the concrete run-time type is `Collectible`
+//
+something.isInstance(Type<@Collectible>())  // is `true`
+
+// The resource is an instance of type `AnyResource`,
+// because the concrete run-time type `Collectible` is a subtype of `AnyResource`
+//
+something.isInstance(Type<@AnyResource>())  // is `true`
+
+// The resource is *not* an instance of type `String`,
+// because the concrete run-time type `Collectible` is *not* a subtype of `String`
+//
+something.isInstance(Type<String>())  // is `false`
 ```
 
 For example, this allows implementing a marketplace sale resource:
