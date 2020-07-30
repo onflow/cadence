@@ -6892,12 +6892,17 @@ Type<Int>() == Type<Int>()
 Type<Int>() != Type<String>()
 ```
 
-The function `fun isInstance(_ type: Type): Bool` can be used to check if a value has a certain type.
+The function `fun isInstance(_ type: Type): Bool` can be used to check if a value has a certain type,
+considering subtyping rules.
 
 ```cadence
 let collectible <- create Collectible()
-let collectibleType = Type<@Collectible>()
-let result = collectible.isInstance(collectibleType)
+
+collectible.isInstance(Type<@Collectible>())  // is `true`
+
+collectible.isInstance(Type<@AnyResource>())  // is `true`
+
+collectible.isInstance(Type<String>())  // is `false`
 ```
 
 For example, this allows implementing a marketplace sale resource:
