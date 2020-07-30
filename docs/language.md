@@ -5674,7 +5674,7 @@ Every account can be accessed through two types:
 
   Only [signed transactions](#transactions) can get the `AuthAccount` for an account.
   For each script signer of the transaction, the corresponding `AuthAccount` is passed
-  to the `prepare` phase of the transaction.
+  to the `prepare` block of the transaction.
 
   ```cadence
   struct AuthAccount {
@@ -5703,8 +5703,31 @@ Every account can be accessed through two types:
       fun unlink(_ path: Path)
 
       fun getCapability<T: &Any>(_ path Path): Capability<T>?
+  }
+  ```
+
+## Account Creation
+
+Accounts can be created by calling the `AuthAccount` constructor
+and passing the account that should pay for the account creation for the `payer` parameter.
+
+The `payer` must have enough funds to be able to create an account.
+If the account does not have the required funds, the program aborts.
+
+To authorize access to the account, keys can be added using the `addPublicKey` function.
+Keys can also later be removed using the `removePublicKey` function.
+
+For example, to create an account and have the signer of the transaction pay for the account creation,
+and authorize one key to access the account:
+
+```cadence,file=account-creation.cdc
+transaction(key: [UInt8]) {
+    prepare(signer: AuthAccount) {
+        let account = AuthAccount(payer: signer)
+        account.addPublicKey(key)
     }
-    ```
+}
+```
 
 ## Account Storage
 
@@ -6193,21 +6216,6 @@ let counterRef = countCap.borrow()
 // the `borrow` function is not available for public accounts
 //
 let counterRef2 = publicAccount.borrow<&Counter>(/storage/counter)
-```
-
-### Account Creation
-
-Accounts can be created by calling the `AuthAccount` constructor
-and passing the account that should pay for the account creation for the `payer` parameter.
-
-For example, to create an account and have the signer of the transaction pay for the account creation:
-
-```cadence,file=account-creation.cdc
-transaction {
-    prepare(signer: AuthAccount) {
-        let account = AuthAccount(payer: signer)
-    }
-}
 ```
 
 ## Contracts
