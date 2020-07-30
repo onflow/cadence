@@ -3591,7 +3591,8 @@ It is invalid to declare a synthetic field with only a setter.
 > 🚧 Status: Function overloading is not implemented yet.
 
 Composite types may contain functions.
-Just like in the initializer, the special constant `self` refers to the composite value that the function is called on.
+Just like in the initializer, the special constant `self` refers to the composite value
+that the function is called on.
 
 ```cadence,file=composite-type-function.cdc
 // Declare a structure named "Rectangle", which represents a rectangle
@@ -6614,7 +6615,8 @@ Then, three optional main phases:
 Preparation, execution, and postconditions, only in that order.
 Each phase is a block of code that executes sequentially.
 
-Here is an empty Cadence transaction which contains no logic but demonstrates the syntax for each type of block, in the order these blocks will be executed:
+Here is an empty Cadence transaction which contains no logic
+but demonstrates the syntax for each type of block, in the order these blocks will be executed:
 
 ```cadence,file=transaction-blocks.cdc
 transaction {
@@ -6640,14 +6642,19 @@ Although optional, each block serves a specific purpose when executing a transac
 and it is recommended that developers use these blocks when creating their transactions.
 The following will detail the purpose of and how to use each block.
 
-## Prepare
 
-The `prepare` **block** is used when access to the private `AuthAccount` object of **signing accounts** is required for your transaction.
 
-Direct access to signing accounts is **only possible inside the** `prepare` **block.**
+
+### Prepare Block
+
+The `prepare` **block** is used when access to the private `AuthAccount` object
+of **signing accounts** is required for your transaction.
+
+Direct access to signing accounts is **only possible inside the `prepare` block**.
 
 For each signer of the transaction the signing account is passed as an argument to the `prepare` block.
-For example, if the transaction has three signers, the prepare **must** have three parameters of type `AuthAccount`.
+For example, if the transaction has three signers,
+the prepare **must** have three parameters of type `AuthAccount`.
 
 ```cadence
  prepare(signer1: AuthAccount) {
@@ -6655,11 +6662,12 @@ For example, if the transaction has three signers, the prepare **must** have thr
  }
 ```
 
-
-As a best practice, only use the `prepare` block to define and execute logic that requires access to the `AuthAccount` objects of signing accounts,
+As a best practice, only use the `prepare` block to define and execute logic that requires access
+to the `AuthAccount` objects of signing accounts,
 and *move all other logic elsewhere*.
 Modifications to accounts can have significant implications,
-so keep this block clear of unrelated logic to ensure users of your contract are able to easily read and understand logic related to their private account objects.
+so keep this block clear of unrelated logic to ensure users of your contract are able to easily read
+and understand logic related to their private account objects.
 
 The prepare block serves a similar purpose as the initializer of a contract/resource/structure.
 
@@ -6672,9 +6680,10 @@ of the account, which cannot be directly accessed anywhere else.
 They also have the permission to create and delete capabilities that
 use these areas.
 
-## Pre
+### Pre Block
 
-The `pre` block is executed after the `prepare` block, and is used for checking if explicit conditions hold before executing the remainder of the transaction.
+The `pre` block is executed after the `prepare` block, and is used for checking
+if explicit conditions hold before executing the remainder of the transaction.
 A common example would be checking requisite balances before transferring tokens between accounts.
 
 ```cadence
@@ -6683,12 +6692,14 @@ pre {
 }
 ```
 
-If the `pre` block throws an error, or does not return `true` the remainder of the transaction is not executed and it will be completely reverted.
+If the `pre` block throws an error, or does not return `true` the remainder of the transaction
+is not executed and it will be completely reverted.
 
-## **Execute**
+### Execute Block
 
 The `execute` block does exactly what it says, it executes the main logic of the transaction.
-This block is optional, but it is a best practice to add your main transaction logic in the section, so it is explicit.
+This block is optional, but it is a best practice to add your main transaction logic in the section,
+so it is explicit.
 
 ```cadence
 execute {
@@ -6702,14 +6713,19 @@ execute {
 }
 ```
 
-You **may not** access private `AuthAccount` objects in the `execute` block, but you may get an account's `PublicAccount` object,
-which allows reading and calling methods on objects that an account has published in the public domain of its account. (resources, contract methods, etc.)
+You **may not** access private `AuthAccount` objects in the `execute` block,
+but you may get an account's `PublicAccount` object,
+which allows reading and calling methods on objects
+that an account has published in the public domain of its account (resources, contract methods, etc.).
 
-## **Post**
+### Post Block
 
-Statements inside of the `post` block are used to verify that your transaction logic has been executed properly. It contains zero or more condition checks.
+Statements inside of the `post` block are used
+to verify that your transaction logic has been executed properly.
+It contains zero or more condition checks.
 
-For example, the a transfer transaction might ensure that the final balance has a certain value, or e.g. it was incremented by a specific amount.
+For example, the a transfer transaction might ensure that the final balance has a certain value,
+or e.g. it was incremented by a specific amount.
 
 ```cadence
 post {
@@ -6719,24 +6735,31 @@ post {
 
 If any of the condition checks result in `false`, the transaction will fail and be completely reverted.
 
-Only condition checks are allowed in this section. No actual computation or modification of values is allowed.
+Only condition checks are allowed in this section.
+No actual computation or modification of values is allowed.
 
 **A Note about `pre` and `post` Blocks**
 
-Another function of the `pre` and `post` blocks is to help provide information about how the effects of a transaction on the accounts and resources involved.
+Another function of the `pre` and `post` blocks is to help provide information
+about how the effects of a transaction on the accounts and resources involved.
 This is essential because users may want to verify what a transaction does before submitting it.
 `pre` and `post` blocks provide a way to introspect transactions before they are executed.
 
-For example, in the future the blocks could be analyzed and interpreted to the user in the software they are using,
-e.g. "this transaction will transfer 30 tokens from A to B. The balance of A will decrease by 30 tokens and the balance of B will increase by 30 tokens."
+For example, in the future the blocks could be analyzed and interpreted to the user
+in the software they are using,
+e.g. "this transaction will transfer 30 tokens from A to B.
+The balance of A will decrease by 30 tokens and the balance of B will increase by 30 tokens."
 
-## Summary
+### Summary
 
-Cadence transactions use blocks to make the transaction's code/intent more readable and to provide a way for developer to separate potentially 'unsafe' account modifying code from regular transaction logic,
+Cadence transactions use blocks to make the transaction's code / intent more readable
+and to provide a way for developer to separate potentially 'unsafe' account
+modifying code from regular transaction logic,
 as well as provide a way to check for error prior / after transaction execution,
 and abort the transaction if any are found.
 
-The following is a brief summary of how to use the `prepare`, `pre`, `execute`, and `post` blocks in a Cadence transaction.
+The following is a brief summary of how to use the `prepare`, `pre`, `execute`,
+and `post` blocks in a Cadence transaction.
 
 ```cadence
 transaction {
