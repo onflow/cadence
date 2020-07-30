@@ -3288,8 +3288,8 @@ that is to be initialized.
 Field types must be storable. Non-storable types are:
 
 - Functions
-- Accounts (AuthAccount / PublicAccount)
-- Transactions
+- [Accounts (`AuthAccount` / `PublicAccount`)](#accounts)
+- [Transactions](#transactions)
 
 Fields can be read (if they are constant or variable) and set (if they are variable),
 using the access syntax: the composite value is followed by a dot (`.`)
@@ -6193,6 +6193,21 @@ let counterRef = countCap.borrow()
 // the `borrow` function is not available for public accounts
 //
 let counterRef2 = publicAccount.borrow<&Counter>(/storage/counter)
+```
+
+### Account Creation
+
+Accounts can be created by calling the `AuthAccount` constructor
+and passing the account that should pay for the account creation for the `payer` parameter.
+
+For example, to create an account and have the signer of the transaction pay for the account creation:
+
+```cadence,file=account-creation.cdc
+transaction {
+    prepare(signer: AuthAccount) {
+        let account = AuthAccount(payer: signer)
+    }
+}
 ```
 
 ## Contracts
