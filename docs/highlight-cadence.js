@@ -22,7 +22,7 @@ const toHtml = require('hast-util-to-html')
 
 const makeHighlightOptions = (target) => ({
     languageScopes: {'cadence': 'source.cadence'},
-    grammarPaths: ['../tools/vscode-extension/syntaxes/cadence.tmGrammar.json'],
+    grammarPaths: ['../../vscode-flow/syntaxes/cadence.tmGrammar.json'],
     themePath: './light_vs.json',
     target: target,
 })
