@@ -6905,40 +6905,69 @@ For example, this allows implementing a marketplace sale resource:
 ```cadence,file=runtime-type-simple-sale.cdc
 pub resource SimpleSale {
 
-    pub var objectForSale: @AnyResource?
-    pub let priceForObject: UFix64
+    /// The resource for sale.
+    /// Once the resource is sold, the field becomes `nil`.
+    ///
+    pub var resourceForSale: @AnyResource?
+
+    /// The price that is wanted for the purchase of the resource.
+    ///
+    pub let priceForResource: UFix64
+
+    /// The type of currency that is required for the purchase.
+    ///
     pub let requiredCurrency: Type
     pub let paymentReceiver: Capability<&{FungibleToken.Receiver}>
 
+    /// `paymentReceiver` is the capability that will be borrowed
+    /// once a valid purchase is made.
+    /// It is expected to target a resource that allows depositing the paid amount
+    /// (a vault which has the type in `requiredCurrency`).
+    ///
     init(
-        objectForSale: @AnyResource,
-        priceForObject: UFix64,
+        resourceForSale: @AnyResource,
+        priceForResource: UFix64,
         requiredCurrency: Type,
         paymentReceiver: Capability<&{FungibleToken.Receiver}>
     ) {
-        self.objectForSale <- objectForSale
-        self.priceForObject = priceForObject
+        self.resourceForSale <- resourceForSale
+        self.priceForResource = priceForResource
         self.requiredCurrency = requiredCurrency
         self.paymentReceiver = paymentReceiver
     }
 
     destroy() {
-        destroy self.objectForSale
+        // When this sale resource is destroyed,
+        // also destroy the resource for sale.
+        // Another option could be to transfer it back to the seller.
+        destroy self.resourceForSale
     }
 
-    pub fun buyObject(purchaseAmount: @FungibleToken.Vault): @AnyResource {
+    /// buyObject allows purchasing the resource for sale by providing
+    /// the required funds.
+    /// If the purchase succeeds, the resource for sale is returned.
+    /// If the purchase fails, the program aborts.
+    ///
+    pub fun buyObject(with funds: @FungibleToken.Vault): @AnyResource {
         pre {
-            self.objectForSale != nil
-            purchaseAmount.balance >= self.priceForObject
-            purchaseAmount.isInstance(self.requiredCurrency)
+            // Ensure the resource is still up for sale
+            self.resourceForSale != nil: "The resource has already been sold"
+            // Ensure the paid funds have the right amount
+            funds.balance >= self.priceForResource: "Payment has insufficient amount"
+            // Ensure the paid currency is correct
+            funds.isInstance(self.requiredCurrency): "Incorrect payment currency"
         }
+
+        // Transfer the paid funds to the payment receiver
+        // by borrowing the payment receiver capability of this sale resource
+        // and depositing the payment into it
 
         let receiver = self.paymentReceiver.borrow()
             ?? panic("failed to borrow payment receiver capability")
 
-        receiver.deposit(from: <-purchaseAmount)
-        let objectForSale <- self.objectForSale <- nil
-        return <-objectForSale
+        receiver.deposit(from: <-funds)
+        let resourceForSale <- self.resourceForSale <- nil
+        return <-resourceForSale
     }
 }
 ```
