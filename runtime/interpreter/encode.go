@@ -214,7 +214,7 @@ func init() {
 	}
 }
 
-func fieldKey(t interface{}, name string) uint64 {
+func cborFieldKey(t interface{}, name string) uint64 {
 	rt := reflect.TypeOf(t)
 
 	field, ok := rt.FieldByName(name)
@@ -675,11 +675,11 @@ type encodedDictionaryValue struct {
 	Entries map[string]interface{} `cbor:"1,keyasint"`
 }
 
-var encodedDictionaryValueKeysFieldKey = fieldKey(
+var encodedDictionaryValueKeysFieldKey = cborFieldKey(
 	encodedDictionaryValue{},
 	"Keys",
 )
-var encodedDictionaryValueEntriesFieldKey = fieldKey(
+var encodedDictionaryValueEntriesFieldKey = cborFieldKey(
 	encodedDictionaryValue{},
 	"Entries",
 )
@@ -778,19 +778,19 @@ type encodedCompositeValue struct {
 	Fields   map[string]interface{} `cbor:"3,keyasint"`
 }
 
-var encodedCompositeValueLocationFieldKey = fieldKey(
+var encodedCompositeValueLocationFieldKey = cborFieldKey(
 	encodedCompositeValue{},
 	"Location",
 )
-var encodedCompositeValueTypeIDFieldKey = fieldKey(
+var encodedCompositeValueTypeIDFieldKey = cborFieldKey(
 	encodedCompositeValue{},
 	"TypeID",
 )
-var encodedCompositeValueKindFieldKey = fieldKey(
+var encodedCompositeValueKindFieldKey = cborFieldKey(
 	encodedCompositeValue{},
 	"Kind",
 )
-var encodedCompositeValueFieldsFieldKey = fieldKey(
+var encodedCompositeValueFieldsFieldKey = cborFieldKey(
 	encodedCompositeValue{},
 	"Fields",
 )
@@ -853,15 +853,15 @@ type encodedStorageReferenceValue struct {
 	TargetKey            string `cbor:"2,keyasint"`
 }
 
-var encodedStorageReferenceValueAuthorizedFieldKey = fieldKey(
+var encodedStorageReferenceValueAuthorizedFieldKey = cborFieldKey(
 	encodedStorageReferenceValue{},
 	"Authorized",
 )
-var encodedStorageReferenceValueTargetStorageAddressFieldKey = fieldKey(
+var encodedStorageReferenceValueTargetStorageAddressFieldKey = cborFieldKey(
 	encodedStorageReferenceValue{},
 	"TargetStorageAddress",
 )
-var encodedStorageReferenceValueTargetKeyFieldKey = fieldKey(
+var encodedStorageReferenceValueTargetKeyFieldKey = cborFieldKey(
 	encodedStorageReferenceValue{},
 	"TargetKey",
 )
@@ -886,11 +886,11 @@ type encodedPathValue struct {
 	Identifier string `cbor:"1,keyasint"`
 }
 
-var encodedPathValueDomainFieldKey = fieldKey(
+var encodedPathValueDomainFieldKey = cborFieldKey(
 	encodedPathValue{},
 	"Domain",
 )
-var encodedPathValueIdentifierFieldKey = fieldKey(
+var encodedPathValueIdentifierFieldKey = cborFieldKey(
 	encodedPathValue{},
 	"Identifier",
 )
@@ -908,15 +908,15 @@ type encodedCapabilityValue struct {
 	BorrowType interface{}      `cbor:"2,keyasint"`
 }
 
-var encodedCapabilityValueAddressFieldKey = fieldKey(
+var encodedCapabilityValueAddressFieldKey = cborFieldKey(
 	encodedCapabilityValue{},
 	"Address",
 )
-var encodedCapabilityValuePathFieldKey = fieldKey(
+var encodedCapabilityValuePathFieldKey = cborFieldKey(
 	encodedCapabilityValue{},
 	"Path",
 )
-var encodedCapabilityValueBorrowTypeFieldKey = fieldKey(
+var encodedCapabilityValueBorrowTypeFieldKey = cborFieldKey(
 	encodedCapabilityValue{},
 	"BorrowType",
 )
@@ -970,11 +970,11 @@ type encodedLinkValue struct {
 	Type       interface{}      `cbor:"1,keyasint"`
 }
 
-var encodedLinkValueTargetPathFieldKey = fieldKey(
+var encodedLinkValueTargetPathFieldKey = cborFieldKey(
 	encodedLinkValue{},
 	"TargetPath",
 )
-var encodedLinkValueTypeFieldKey = fieldKey(
+var encodedLinkValueTypeFieldKey = cborFieldKey(
 	encodedLinkValue{},
 	"Type",
 )
@@ -996,11 +996,11 @@ type encodedCompositeStaticType struct {
 	TypeID   string      `cbor:"1,keyasint"`
 }
 
-var encodedCompositeStaticTypeLocationFieldKey = fieldKey(
+var encodedCompositeStaticTypeLocationFieldKey = cborFieldKey(
 	encodedCompositeStaticType{},
 	"Location",
 )
-var encodedCompositeStaticTypeTypeIDFieldKey = fieldKey(
+var encodedCompositeStaticTypeTypeIDFieldKey = cborFieldKey(
 	encodedCompositeStaticType{},
 	"TypeID",
 )
@@ -1011,11 +1011,11 @@ type encodedInterfaceStaticType struct {
 	TypeID   string      `cbor:"1,keyasint"`
 }
 
-var encodedInterfaceStaticTypeLocationFieldKey = fieldKey(
+var encodedInterfaceStaticTypeLocationFieldKey = cborFieldKey(
 	encodedInterfaceStaticType{},
 	"Location",
 )
-var encodedInterfaceStaticTypeTypeIDFieldKey = fieldKey(
+var encodedInterfaceStaticTypeTypeIDFieldKey = cborFieldKey(
 	encodedInterfaceStaticType{},
 	"TypeID",
 )
@@ -1025,11 +1025,11 @@ type encodedConstantSizedStaticType struct {
 	Type interface{} `cbor:"1,keyasint"`
 }
 
-var encodedConstantSizedStaticTypeSizeFieldKey = fieldKey(
+var encodedConstantSizedStaticTypeSizeFieldKey = cborFieldKey(
 	encodedConstantSizedStaticType{},
 	"Size",
 )
-var encodedConstantSizedStaticTypeTypeFieldKey = fieldKey(
+var encodedConstantSizedStaticTypeTypeFieldKey = cborFieldKey(
 	encodedConstantSizedStaticType{},
 	"Type",
 )
@@ -1039,11 +1039,11 @@ type encodedDictionaryStaticType struct {
 	ValueType interface{} `cbor:"1,keyasint"`
 }
 
-var encodedDictionaryStaticTypeKeyTypeFieldKey = fieldKey(
+var encodedDictionaryStaticTypeKeyTypeFieldKey = cborFieldKey(
 	encodedDictionaryStaticType{},
 	"KeyType",
 )
-var encodedDictionaryStaticTypeValueTypeFieldKey = fieldKey(
+var encodedDictionaryStaticTypeValueTypeFieldKey = cborFieldKey(
 	encodedDictionaryStaticType{},
 	"ValueType",
 )
@@ -1053,11 +1053,11 @@ type encodedRestrictedStaticType struct {
 	Restrictions []interface{} `cbor:"1,keyasint"`
 }
 
-var encodedRestrictedStaticTypeTypeFieldKey = fieldKey(
+var encodedRestrictedStaticTypeTypeFieldKey = cborFieldKey(
 	encodedRestrictedStaticType{},
 	"Type",
 )
-var encodedRestrictedStaticTypeRestrictionsFieldKey = fieldKey(
+var encodedRestrictedStaticTypeRestrictionsFieldKey = cborFieldKey(
 	encodedRestrictedStaticType{},
 	"Restrictions",
 )
@@ -1067,11 +1067,11 @@ type encodedReferenceStaticType struct {
 	Type       interface{} `cbor:"1,keyasint"`
 }
 
-var encodedReferenceStaticTypeAuthorizedFieldKey = fieldKey(
+var encodedReferenceStaticTypeAuthorizedFieldKey = cborFieldKey(
 	encodedReferenceStaticType{},
 	"Authorized",
 )
-var encodedReferenceStaticTypeTypeFieldKey = fieldKey(
+var encodedReferenceStaticTypeTypeFieldKey = cborFieldKey(
 	encodedReferenceStaticType{},
 	"Type",
 )
@@ -1235,7 +1235,7 @@ type encodedTypeValue struct {
 	Type interface{} `cbor:"0,keyasint"`
 }
 
-var encodedTypeValueTypeFieldKey = fieldKey(encodedTypeValue{}, "Type")
+var encodedTypeValueTypeFieldKey = cborFieldKey(encodedTypeValue{}, "Type")
 
 func (e *Encoder) prepareTypeValue(v TypeValue) (interface{}, error) {
 	staticType, err := e.prepareStaticType(v.Type)
