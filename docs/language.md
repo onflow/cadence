@@ -3372,6 +3372,8 @@ token.balance = 1
 token.id = 23
 ```
 
+### Resource Owner
+
 Resources have the implicit field `let owner: PublicAccount?`.
 If the resource is currently [stored in an account](#account-storage),
 then the field contains the publicly accessible portion of the account.
@@ -3414,6 +3416,8 @@ pub struct Token {
 ```
 
 ### Composite Type Field Getters and Setters
+
+> 🚧 Status: Field getters and setters are not implemented yet.
 
 Fields may have an optional getter and an optional setter.
 Getters are functions that are called when a field is read,
