@@ -30,11 +30,17 @@ _Bastian Müller, Dieter Shirley, Joshua Hannan_
 
     -   [Integers](#integers)
 
+        -   [Integer Functions](#integer-functions)
+
     -   [Fixed-Point Numbers](#fixed-point-numbers)
+
+        -   [Fixed-Point Number Functions](#fixed-point-number-functions)
 
     -   [Floating-Point Numbers](#floating-point-numbers)
 
     -   [Addresses](#addresses)
+
+        -   [Address Functions](#address-functions)
 
     -   [AnyStruct and AnyResource](#anystruct-and-anyresource)
 
@@ -116,6 +122,8 @@ _Bastian Müller, Dieter Shirley, Joshua Hannan_
 
     -   [Composite Type Fields](#composite-type-fields)
 
+    -   [Resource Owner](#resource-owner)
+
     -   [Composite Data Initializer Overloading](#composite-data-initializer-overloading)
 
     -   [Composite Type Field Getters and Setters](#composite-type-field-getters-and-setters)
@@ -162,6 +170,8 @@ _Bastian Müller, Dieter Shirley, Joshua Hannan_
 
 -   [Accounts](#accounts)
 
+-   [Account Creation](#account-creation)
+
 -   [Account Storage](#account-storage)
 
 -   [Capability-based Access Control](#capability-based-access-control)
@@ -177,27 +187,25 @@ _Bastian Müller, Dieter Shirley, Joshua Hannan_
 
 -   [Transactions](#transactions)
 
--   [Prepare](#prepare)
-
--   [Pre](#pre)
-
--   [**Execute**](#execute)
-
--   [**Post**](#post)
-
--   [Summary](#summary)
-
+    -   [Transaction Parameters](#transaction-parameters)
+    -   [Prepare phase](#prepare-phase)
+    -   [Pre Phase](#pre-phase)
+    -   [Execute Phase](#execute-phase)
+    -   [Post Phase](#post-phase)
+    -   [Summary](#summary)
     -   [Importing and using Deployed Contract Code](#importing-and-using-deployed-contract-code)
+
+-   [Run-time Types](#run-time-types)
 
 -   [Built-in Functions](#built-in-functions)
 
-    -   [Block and Transaction Information](#block-and-transaction-information)
+-   [Transaction Information](#transaction-information)
 
-    -   [`panic`](#panic)
+-   [Block Information](#block-information)
 
-        -   [Example](#example)
+-   [Crypto](#crypto)
 
-    -   [`assert`](#assert)
+-   [Type Hierarchy](#type-hierarchy)
 
 ## [](#introduction)Introduction
 
@@ -633,6 +641,30 @@ which can be done by calling the constructor of the type with the integer type.
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> b = x + </span><span style="color: #09885A">1000000000000000000000000</span><span>
 </span></pre></code>
 
+#### [](#integer-functions)Integer Functions
+
+Integers have multiple built-in functions you can use.
+
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> toString(): </span><span style="color: #0000FF">String</span><span>
+    </span></pre></code>
+
+     Returns the string representation of the integer.
+
+    <code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> answer = </span><span style="color: #09885A">42</span><span>
+    </span><span>
+    </span><span style="color: #000000">answer.toString()  </span><span style="color: #008000">// is "42"</span><span>
+    </span></pre></code>
+
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> toBigEndianBytes(): [</span><span style="color: #0000FF">UInt8</span><span style="color: #000000">]</span><span>
+    </span></pre></code>
+
+     Returns the byte array representation (`[UInt8]`) in big-endian order of the integer.
+
+    <code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> largeNumber = </span><span style="color: #09885A">1234567890</span><span>
+    </span><span>
+    </span><span style="color: #000000">largeNumber.toBigEndianBytes()  </span><span style="color: #008000">// is `[73, 150, 2, 210]`</span><span>
+    </span></pre></code>
+
 ### [](#fixed-point-numbers)Fixed-Point Numbers
 
 > 🚧 Status: Currently only the 64-bit wide `Fix64` and `UFix64` types are available.
@@ -659,6 +691,30 @@ have the following factors, and can represent values in the following ranges:
 
 -   **`UFix64`**: Factor 1/100,000,000; 0.0 through 184467440737.09551615
 
+#### [](#fixed-point-number-functions)Fixed-Point Number Functions
+
+Fixed-Point numbers have multiple built-in functions you can use.
+
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> toString(): </span><span style="color: #0000FF">String</span><span>
+    </span></pre></code>
+
+     Returns the string representation of the fixed-point number.
+
+    <code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> fix = </span><span style="color: #09885A">1</span><span style="color: #000000">.</span><span style="color: #09885A">23</span><span>
+    </span><span>
+    </span><span style="color: #000000">fix.toString()  </span><span style="color: #008000">// is "1.23000000"</span><span>
+    </span></pre></code>
+
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> toBigEndianBytes(): [</span><span style="color: #0000FF">UInt8</span><span style="color: #000000">]</span><span>
+    </span></pre></code>
+
+     Returns the byte array representation (`[UInt8]`) in big-endian order of the fixed-point number.
+
+    <code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> fix = </span><span style="color: #09885A">1</span><span style="color: #000000">.</span><span style="color: #09885A">23</span><span>
+    </span><span>
+    </span><span style="color: #000000">fix.toBigEndianBytes()  </span><span style="color: #008000">// is `[0, 0, 0, 0, 7, 84, 212, 192]`</span><span>
+    </span></pre></code>
+
 ### [](#floating-point-numbers)Floating-Point Numbers
 
 There is **no** support for floating point numbers.
@@ -671,12 +727,12 @@ Instead, consider using [fixed point numbers](#fixed-point-numbers).
 ### [](#addresses)Addresses
 
 The type `Address` represents an address.
-Addresses are unsigned integers with a size of 160 bits (20 bytes).
+Addresses are unsigned integers with a size of 64 bits (8 bytes).
 Hexadecimal integer literals can be used to create address values.
 
 <code><pre><span style="color: #008000">// Declare a constant that has type `Address`.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> someAddress: </span><span style="color: #0000FF">Address</span><span style="color: #000000"> = </span><span style="color: #09885A">0x06012c8cf97bead5deae237070f9587f8e7a266d</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> someAddress: </span><span style="color: #0000FF">Address</span><span style="color: #000000"> = </span><span style="color: #09885A">0x436164656E636521</span><span>
 </span><span>
 </span><span style="color: #008000">// Invalid: Initial value is not compatible with type `Address`,</span><span>
 </span><span style="color: #008000">// it is not a number.</span><span>
@@ -684,9 +740,9 @@ Hexadecimal integer literals can be used to create address values.
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> notAnAddress: </span><span style="color: #0000FF">Address</span><span style="color: #000000"> = </span><span style="color: #A31515">""</span><span>
 </span><span>
 </span><span style="color: #008000">// Invalid: Initial value is not compatible with type `Address`.</span><span>
-</span><span style="color: #008000">// The integer literal is valid, however, it is larger than 160 bits.</span><span>
+</span><span style="color: #008000">// The integer literal is valid, however, it is larger than 64 bits.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> alsoNotAnAddress: </span><span style="color: #0000FF">Address</span><span style="color: #000000"> = </span><span style="color: #09885A">0x06012c8cf97bead5deae237070f9587f8e7a266d123456789</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> alsoNotAnAddress: </span><span style="color: #0000FF">Address</span><span style="color: #000000"> = </span><span style="color: #09885A">0x436164656E63652146757265766572</span><span>
 </span></pre></code>
 
 Integer literals are not inferred to be an address.
@@ -694,9 +750,34 @@ Integer literals are not inferred to be an address.
 <code><pre><span style="color: #008000">// Declare a number. Even though it happens to be a valid address,</span><span>
 </span><span style="color: #008000">// it is not inferred as it.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> aNumber = </span><span style="color: #09885A">0x06012c8cf97bead5deae237070f9587f8e7a266d</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> aNumber = </span><span style="color: #09885A">0x436164656E636521</span><span>
+</span><span>
 </span><span style="color: #008000">// `aNumber` has type `Int`</span><span>
 </span></pre></code>
+
+#### [](#address-functions)Address Functions
+
+Addresses have multiple built-in functions you can use.
+
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> toString(): </span><span style="color: #0000FF">String</span><span>
+    </span></pre></code>
+
+     Returns the string representation of the address.
+
+    <code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> someAddress: </span><span style="color: #0000FF">Address</span><span style="color: #000000"> = </span><span style="color: #09885A">0x436164656E636521</span><span>
+    </span><span>
+    </span><span style="color: #000000">someAddress.toString()  </span><span style="color: #008000">// is "0x436164656E636521"</span><span>
+    </span></pre></code>
+
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> toBigEndianBytes(): [</span><span style="color: #0000FF">UInt8</span><span style="color: #000000">]</span><span>
+    </span></pre></code>
+
+     Returns the byte array representation (`[UInt8]`) of the address.
+
+    <code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> someAddress: </span><span style="color: #0000FF">Address</span><span style="color: #000000"> = </span><span style="color: #09885A">0x436164656E636521</span><span>
+    </span><span>
+    </span><span style="color: #000000">someAddress.toString()  </span><span style="color: #008000">// is `[67, 97, 100, 101, 110, 99, 101, 33]`</span><span>
+    </span></pre></code>
 
 ### [](#anystruct-and-anyresource)AnyStruct and AnyResource
 
@@ -1029,7 +1110,7 @@ and optionals.
 `Never` is the bottom type, i.e., it is a subtype of all types.
 There is no value that has type `Never`.
 `Never` can be used as the return type for functions that never return normally.
-For example, it is the return type of the function [`panic`](#panic).
+For example, it is the return type of the function [`panic`](#built-in-functions).
 
 <code><pre><span style="color: #008000">// Declare a function named `crashAndBurn` which will never return,</span><span>
 </span><span style="color: #008000">// because it calls the function named `panic`, which never returns.</span><span>
@@ -1124,7 +1205,10 @@ These emojis consist of two &quot;REGIONAL INDICATOR SYMBOL LETTER&quot; Unicode
 
 Strings have multiple built-in functions you can use.
 
--   `let length: Int`: Returns the number of characters in the string as an integer.
+-   <code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> length: </span><span style="color: #0000FF">Int</span><span>
+    </span></pre></code>
+
+     Returns the number of characters in the string as an integer.
 
     <code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> example = </span><span style="color: #A31515">"hello"</span><span>
     </span><span>
@@ -1133,11 +1217,13 @@ Strings have multiple built-in functions you can use.
     </span><span style="color: #008000">// `length` is `5`</span><span>
     </span></pre></code>
 
--   `fun concat(_ other: String): String`:
-    Concatenates the string `other` to the end of the original string,
-    but does not modify the original string.
-    This function creates a new string whose length is the sum of the lengths
-    of the string the function is called on and the string given as a parameter.
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> concat(_ other: </span><span style="color: #0000FF">String</span><span style="color: #000000">): </span><span style="color: #0000FF">String</span><span>
+    </span></pre></code>
+
+     Concatenates the string `other` to the end of the original string,
+     but does not modify the original string.
+     This function creates a new string whose length is the sum of the lengths
+     of the string the function is called on and the string given as a parameter.
 
     <code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> example = </span><span style="color: #A31515">"hello"</span><span>
     </span><span style="color: #0000FF">let</span><span style="color: #000000"> new = </span><span style="color: #A31515">"world"</span><span>
@@ -1147,14 +1233,16 @@ Strings have multiple built-in functions you can use.
     </span><span style="color: #008000">// `helloWorld` is now `"helloworld"`</span><span>
     </span></pre></code>
 
--   `fun slice(from: Int, upTo: Int): String`:
-    Returns a string slice of the characters
-    in the given string from start index `from` up to,
-    but not including, the end index `upTo`.
-    This function creates a new string whose length is `upTo - from`.
-    It does not modify the original string.
-    If either of the parameters are out of
-    the bounds of the string, the function will fail.
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> slice(from: </span><span style="color: #0000FF">Int</span><span style="color: #000000">, upTo: </span><span style="color: #0000FF">Int</span><span style="color: #000000">): </span><span style="color: #0000FF">String</span><span>
+    </span></pre></code>
+
+     Returns a string slice of the characters
+     in the given string from start index `from` up to,
+     but not including, the end index `upTo`.
+     This function creates a new string whose length is `upTo - from`.
+     It does not modify the original string.
+     If either of the parameters are out of
+     the bounds of the string, the function will fail.
 
     <code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> example = </span><span style="color: #A31515">"helloworld"</span><span>
     </span><span>
@@ -1166,15 +1254,18 @@ Strings have multiple built-in functions you can use.
     </span><span style="color: #0000FF">let</span><span style="color: #000000"> outOfBounds = example.slice(from: </span><span style="color: #09885A">2</span><span style="color: #000000">, upTo: </span><span style="color: #09885A">10</span><span style="color: #000000">)</span><span>
     </span></pre></code>
 
-<!--
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> decodeHex(): [</span><span style="color: #0000FF">UInt8</span><span style="color: #000000">]</span><span>
+    </span></pre></code>
 
-TODO
+     Returns an array containing the bytes represented by the given hexadecimal string.
 
-#### String Functions
+     The given string must only contain hexadecimal characters and must have an even length.
+     If the string is malformed, the program aborts
 
-- Document and link to string concatenation operator `&` in operators section
-
--->
+    <code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> example = </span><span style="color: #A31515">"436164656e636521"</span><span>
+    </span><span>
+    </span><span style="color: #000000">example.decodeHex()  </span><span style="color: #008000">// is `[67, 97, 100, 101, 110, 99, 101, 33]`</span><span>
+    </span></pre></code>
 
 ### [](#arrays)Arrays
 
@@ -1299,8 +1390,10 @@ that can be used to get information about and manipulate the contents of the arr
 The field `length`, and the functions `concat`, and `contains`
 are available for both variable-sized and fixed-sized or variable-sized arrays.
 
--   `let length: Int`:
-    Returns the number of elements in the array.
+-   <code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> length: </span><span style="color: #0000FF">Int</span><span>
+    </span></pre></code>
+
+     The number of elements in the array.
 
     <code><pre><span style="color: #008000">// Declare an array of integers.</span><span>
     </span><span style="color: #0000FF">let</span><span style="color: #000000"> numbers = [</span><span style="color: #09885A">42</span><span style="color: #000000">, </span><span style="color: #09885A">23</span><span style="color: #000000">, </span><span style="color: #09885A">31</span><span style="color: #000000">, </span><span style="color: #09885A">12</span><span style="color: #000000">]</span><span>
@@ -1311,16 +1404,17 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
     </span><span style="color: #008000">// `length` is `4`</span><span>
     </span></pre></code>
 
--   `fun concat(_ array: T): T`:
-    Concatenates the parameter `array` to the end
-    of the array the function is called on,
-    but does not modify that array.
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> concat(_ array: </span><span style="color: #0000FF">T</span><span style="color: #000000">): </span><span style="color: #0000FF">T</span><span>
+    </span></pre></code>
 
-    Both arrays must be the same type `T`.
+     Concatenates the parameter `array` to the end
+     of the array the function is called on,
+     but does not modify that array.
 
-    This function creates a new array whose length is
-    the sum of the length of the array
-    the function is called on and the length of the array given as the parameter.
+     Both arrays must be the same type `T`.
+
+     This function creates a new array whose length is the sum of the length of the array
+     the function is called on and the length of the array given as the parameter.
 
     <code><pre><span style="color: #008000">// Declare two arrays of integers.</span><span>
     </span><span style="color: #0000FF">let</span><span style="color: #000000"> numbers = [</span><span style="color: #09885A">42</span><span style="color: #000000">, </span><span style="color: #09885A">23</span><span style="color: #000000">, </span><span style="color: #09885A">31</span><span style="color: #000000">, </span><span style="color: #09885A">12</span><span style="color: #000000">]</span><span>
@@ -1336,8 +1430,10 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
     </span><span style="color: #008000">// `moreNumbers` is still `[11, 27]`</span><span>
     </span></pre></code>
 
--   `fun contains(_ element: T): Bool`:
-    Indicates whether the given element of type `T` is in the array.
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> contains(_ element: </span><span style="color: #0000FF">T</span><span style="color: #000000">): </span><span style="color: #0000FF">Bool</span><span>
+    </span></pre></code>
+
+     Returns true if the given element of type `T` is in the array.
 
     <code><pre><span style="color: #008000">// Declare an array of integers.</span><span>
     </span><span style="color: #0000FF">let</span><span style="color: #000000"> numbers = [</span><span style="color: #09885A">42</span><span style="color: #000000">, </span><span style="color: #09885A">23</span><span style="color: #000000">, </span><span style="color: #09885A">31</span><span style="color: #000000">, </span><span style="color: #09885A">12</span><span style="color: #000000">]</span><span>
@@ -1361,10 +1457,12 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
 The following functions can only be used on variable-sized arrays.
 It is invalid to use one of these functions on a fixed-sized array.
 
--   `fun append(_ element: T): Void`:
-    Adds the new element `element` of type `T` to the end of the array.
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> append(_ element: </span><span style="color: #0000FF">T</span><span style="color: #000000">): </span><span style="color: #0000FF">Void</span><span>
+    </span></pre></code>
 
-    The new element must be the same type as all the other elements in the array.
+     Adds the new element `element` of type `T` to the end of the array.
+
+     The new element must be the same type as all the other elements in the array.
 
     <code><pre><span style="color: #008000">// Declare an array of integers.</span><span>
     </span><span style="color: #0000FF">let</span><span style="color: #000000"> numbers = [</span><span style="color: #09885A">42</span><span style="color: #000000">, </span><span style="color: #09885A">23</span><span style="color: #000000">, </span><span style="color: #09885A">31</span><span style="color: #000000">, </span><span style="color: #09885A">12</span><span style="color: #000000">]</span><span>
@@ -1377,19 +1475,21 @@ It is invalid to use one of these functions on a fixed-sized array.
     </span><span style="color: #000000">numbers.append(</span><span style="color: #A31515">"SneakyString"</span><span style="color: #000000">)</span><span>
     </span></pre></code>
 
--   `fun insert(at index: Int, _ element: T): Void`:
-    Inserts the new element `element` of type `T`
-    at the given `index` of the array.
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> insert(at index: </span><span style="color: #0000FF">Int</span><span style="color: #000000">, _ element: </span><span style="color: #0000FF">T</span><span style="color: #000000">): </span><span style="color: #0000FF">Void</span><span>
+    </span></pre></code>
 
-    The new element must be of the same type as the other elements in the array.
+     Inserts the new element `element` of type `T`
+     at the given `index` of the array.
 
-    The `index` must be within the bounds of the array.
-    If the index is outside the bounds, the program aborts.
+     The new element must be of the same type as the other elements in the array.
 
-    The existing element at the supplied index is not overwritten.
+     The `index` must be within the bounds of the array.
+     If the index is outside the bounds, the program aborts.
 
-    All the elements after the new inserted element
-    are shifted to the right by one.
+     The existing element at the supplied index is not overwritten.
+
+     All the elements after the new inserted element
+     are shifted to the right by one.
 
     <code><pre><span style="color: #008000">// Declare an array of integers.</span><span>
     </span><span style="color: #0000FF">let</span><span style="color: #000000"> numbers = [</span><span style="color: #09885A">42</span><span style="color: #000000">, </span><span style="color: #09885A">23</span><span style="color: #000000">, </span><span style="color: #09885A">31</span><span style="color: #000000">, </span><span style="color: #09885A">12</span><span style="color: #000000">]</span><span>
@@ -1402,11 +1502,13 @@ It is invalid to use one of these functions on a fixed-sized array.
     </span><span style="color: #000000">numbers.insert(at: </span><span style="color: #09885A">12</span><span style="color: #000000">, </span><span style="color: #09885A">39</span><span style="color: #000000">)</span><span>
     </span></pre></code>
 
--   `fun remove(at index: Int): T`:
-    Removes the element at the given `index` from the array and returns it.
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> remove(at index: </span><span style="color: #0000FF">Int</span><span style="color: #000000">): </span><span style="color: #0000FF">T</span><span>
+    </span></pre></code>
 
-    The `index` must be within the bounds of the array.
-    If the index is outside the bounds, the program aborts.
+     Removes the element at the given `index` from the array and returns it.
+
+     The `index` must be within the bounds of the array.
+     If the index is outside the bounds, the program aborts.
 
     <code><pre><span style="color: #008000">// Declare an array of integers.</span><span>
     </span><span style="color: #0000FF">let</span><span style="color: #000000"> numbers = [</span><span style="color: #09885A">42</span><span style="color: #000000">, </span><span style="color: #09885A">23</span><span style="color: #000000">, </span><span style="color: #09885A">31</span><span style="color: #000000">]</span><span>
@@ -1420,11 +1522,13 @@ It is invalid to use one of these functions on a fixed-sized array.
     </span><span style="color: #000000">numbers.remove(at: </span><span style="color: #09885A">19</span><span style="color: #000000">)</span><span>
     </span></pre></code>
 
--   `fun removeFirst(): T`:
-    Removes the first element from the array and returns it.
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> removeFirst(): </span><span style="color: #0000FF">T</span><span>
+    </span></pre></code>
 
-    The array must not be empty.
-    If the array is empty, the program aborts.
+     Removes the first element from the array and returns it.
+
+     The array must not be empty.
+     If the array is empty, the program aborts.
 
     <code><pre><span style="color: #008000">// Declare an array of integers.</span><span>
     </span><span style="color: #0000FF">let</span><span style="color: #000000"> numbers = [</span><span style="color: #09885A">42</span><span style="color: #000000">, </span><span style="color: #09885A">23</span><span style="color: #000000">]</span><span>
@@ -1443,11 +1547,13 @@ It is invalid to use one of these functions on a fixed-sized array.
     </span><span style="color: #000000">numbers.removeFirst()</span><span>
     </span></pre></code>
 
--   `fun removeLast(): T`:
-    Removes the last element from the array and returns it.
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> removeLast(): </span><span style="color: #0000FF">T</span><span>
+    </span></pre></code>
 
-    The array must not be empty.
-    If the array is empty, the program aborts.
+     Removes the last element from the array and returns it.
+
+     The array must not be empty.
+     If the array is empty, the program aborts.
 
     <code><pre><span style="color: #008000">// Declare an array of integers.</span><span>
     </span><span style="color: #0000FF">let</span><span style="color: #000000"> numbers = [</span><span style="color: #09885A">42</span><span style="color: #000000">, </span><span style="color: #09885A">23</span><span style="color: #000000">]</span><span>
@@ -1465,15 +1571,6 @@ It is invalid to use one of these functions on a fixed-sized array.
     </span><span style="color: #008000">// Run-time error: The array is empty, the program aborts.</span><span>
     </span><span style="color: #000000">numbers.removeLast()</span><span>
     </span></pre></code>
-
-<!--
-
-TODO
-
-- filter, etc. for all array types
-- Document and link to array concatenation operator `&` in operators section
-
--->
 
 ### [](#dictionaries)Dictionaries
 
@@ -1601,8 +1698,10 @@ the access syntax can be used as well.
 
 #### [](#dictionary-fields-and-functions)Dictionary Fields and Functions
 
--   `fun length: Int`:
-    Returns the number of entries in the dictionary.
+-   <code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> length: </span><span style="color: #0000FF">Int</span><span>
+    </span></pre></code>
+
+     The number of entries in the dictionary.
 
     <code><pre><span style="color: #008000">// Declare a dictionary mapping strings to integers.</span><span>
     </span><span style="color: #0000FF">let</span><span style="color: #000000"> numbers = {</span><span style="color: #A31515">"fortyTwo"</span><span style="color: #000000">: </span><span style="color: #09885A">42</span><span style="color: #000000">, </span><span style="color: #A31515">"twentyThree"</span><span style="color: #000000">: </span><span style="color: #09885A">23</span><span style="color: #000000">}</span><span>
@@ -1613,12 +1712,36 @@ the access syntax can be used as well.
     </span><span style="color: #008000">// `length` is `2`</span><span>
     </span></pre></code>
 
--   `fun remove(key: K): V?`:
-    Removes the value for the given `key` of type `K` from the dictionary.
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> insert(key: </span><span style="color: #0000FF">K</span><span style="color: #000000">, _ value: </span><span style="color: #0000FF">V</span><span style="color: #000000">): </span><span style="color: #0000FF">V</span><span style="color: #000000">?</span><span>
+    </span></pre></code>
 
-    Returns the value of type `V` as an optional
-    if the dictionary contained the key,
-    otherwise `nil`.
+     Inserts the given value of type `V` into the dictionary under the given `key` of type `K`.
+
+     Returns the previous value as an optional
+     if the dictionary contained the key,
+     otherwise `nil`.
+
+    <code><pre><span style="color: #008000">// Declare a dictionary mapping strings to integers.</span><span>
+    </span><span style="color: #0000FF">let</span><span style="color: #000000"> numbers = {</span><span style="color: #A31515">"twentyThree"</span><span style="color: #000000">: </span><span style="color: #09885A">23</span><span style="color: #000000">}</span><span>
+    </span><span>
+    </span><span style="color: #008000">// Insert the key `"fortyTwo"` with the value `42` into the dictionary.</span><span>
+    </span><span style="color: #008000">// The key did not previously exist in the dictionary,</span><span>
+    </span><span style="color: #008000">// so the result is `nil`</span><span>
+    </span><span style="color: #008000">//</span><span>
+    </span><span style="color: #0000FF">let</span><span style="color: #000000"> old = numbers.insert(key: </span><span style="color: #A31515">"fortyTwo"</span><span style="color: #000000">, </span><span style="color: #09885A">42</span><span style="color: #000000">)</span><span>
+    </span><span>
+    </span><span style="color: #008000">// `old` is `nil`</span><span>
+    </span><span style="color: #008000">// `numbers` is `{"twentyThree": 23, "fortyTwo": 42}`</span><span>
+    </span></pre></code>
+
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> remove(key: </span><span style="color: #0000FF">K</span><span style="color: #000000">): </span><span style="color: #0000FF">V</span><span style="color: #000000">?</span><span>
+    </span></pre></code>
+
+     Removes the value for the given `key` of type `K` from the dictionary.
+
+     Returns the value of type `V` as an optional
+     if the dictionary contained the key,
+     otherwise `nil`.
 
     <code><pre><span style="color: #008000">// Declare a dictionary mapping strings to integers.</span><span>
     </span><span style="color: #0000FF">let</span><span style="color: #000000"> numbers = {</span><span style="color: #A31515">"fortyTwo"</span><span style="color: #000000">: </span><span style="color: #09885A">42</span><span style="color: #000000">, </span><span style="color: #A31515">"twentyThree"</span><span style="color: #000000">: </span><span style="color: #09885A">23</span><span style="color: #000000">}</span><span>
@@ -1641,10 +1764,12 @@ the access syntax can be used as well.
     </span><span style="color: #008000">// `numbers` is `{"twentyThree": 23}`</span><span>
     </span></pre></code>
 
--   `let keys: [K]`:
-    Returns an array of the keys of type `K` in the dictionary.  This does not
-    modify the dictionary, just returns a copy of the keys as an array.
-    If the dictionary is empty, this returns an empty array.
+-   <code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> keys: [</span><span style="color: #0000FF">K</span><span style="color: #000000">]</span><span>
+    </span></pre></code>
+
+     Returns an array of the keys of type `K` in the dictionary.  This does not
+     modify the dictionary, just returns a copy of the keys as an array.
+     If the dictionary is empty, this returns an empty array.
 
     <code><pre><span style="color: #008000">// Declare a dictionary mapping strings to integers.</span><span>
     </span><span style="color: #0000FF">let</span><span style="color: #000000"> numbers = {</span><span style="color: #A31515">"fortyTwo"</span><span style="color: #000000">: </span><span style="color: #09885A">42</span><span style="color: #000000">, </span><span style="color: #A31515">"twentyThree"</span><span style="color: #000000">: </span><span style="color: #09885A">23</span><span style="color: #000000">}</span><span>
@@ -1655,12 +1780,14 @@ the access syntax can be used as well.
     </span><span style="color: #008000">// `keys` has type `[String]` and is `["fortyTwo","twentyThree"]`</span><span>
     </span></pre></code>
 
--   `let values: [V]`:
-    Returns an array of the values of type `V` in the dictionary.  This does not
-    modify the dictionary, just returns a copy of the values as an array.
-    If the dictionary is empty, this returns an empty array.
+-   <code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> values: [</span><span style="color: #0000FF">V</span><span style="color: #000000">]</span><span>
+    </span></pre></code>
 
-    This field is not available if `V` is a resource type.
+     Returns an array of the values of type `V` in the dictionary.  This does not
+     modify the dictionary, just returns a copy of the values as an array.
+     If the dictionary is empty, this returns an empty array.
+
+     This field is not available if `V` is a resource type.
 
     <code><pre><span style="color: #008000">// Declare a dictionary mapping strings to integers.</span><span>
     </span><span style="color: #0000FF">let</span><span style="color: #000000"> numbers = {</span><span style="color: #A31515">"fortyTwo"</span><span style="color: #000000">: </span><span style="color: #09885A">42</span><span style="color: #000000">, </span><span style="color: #A31515">"twentyThree"</span><span style="color: #000000">: </span><span style="color: #09885A">23</span><span style="color: #000000">}</span><span>
@@ -3157,6 +3284,12 @@ There are three kinds of fields:
 In initializers, the special constant `self` refers to the composite value
 that is to be initialized.
 
+Field types must be storable. Non-storable types are:
+
+-   Functions
+-   [Accounts (`AuthAccount` / `PublicAccount`)](#accounts)
+-   [Transactions](#transactions)
+
 Fields can be read (if they are constant or variable) and set (if they are variable),
 using the access syntax: the composite value is followed by a dot (`.`)
 and the name of the field.
@@ -3233,6 +3366,8 @@ The value&#x27;s fields can be accessed on the object after it is created.
 </span><span style="color: #000000">token.id = </span><span style="color: #09885A">23</span><span>
 </span></pre></code>
 
+### [](#resource-owner)Resource Owner
+
 Resources have the implicit field `let owner: PublicAccount?`.
 If the resource is currently [stored in an account](#account-storage),
 then the field contains the publicly accessible portion of the account.
@@ -3274,6 +3409,8 @@ This allows for example providing default values for certain parameters.
 </span></pre></code>
 
 ### [](#composite-type-field-getters-and-setters)Composite Type Field Getters and Setters
+
+> 🚧 Status: Field getters and setters are not implemented yet.
 
 Fields may have an optional getter and an optional setter.
 Getters are functions that are called when a field is read,
@@ -3443,7 +3580,8 @@ It is invalid to declare a synthetic field with only a setter.
 > 🚧 Status: Function overloading is not implemented yet.
 
 Composite types may contain functions.
-Just like in the initializer, the special constant `self` refers to the composite value that the function is called on.
+Just like in the initializer, the special constant `self` refers to the composite value
+that the function is called on.
 
 <code><pre><span style="color: #008000">// Declare a structure named "Rectangle", which represents a rectangle</span><span>
 </span><span style="color: #008000">// and has variable fields for the width and height.</span><span>
@@ -5454,7 +5592,7 @@ Every account can be accessed through two types:
     </span><span>
     </span><span style="color: #000000">    </span><span style="color: #008000">// Storage operations</span><span>
     </span><span>
-    </span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> getCapability(at: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">Capability</span><span style="color: #000000">?</span><span>
+    </span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> getCapability&#x3C;T>(_ path: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">Capability</span><span style="color: #000000">&#x3C;</span><span style="color: #0000FF">T</span><span style="color: #000000">>?</span><span>
     </span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> getLinkTarget(_ path: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">Path</span><span style="color: #000000">?</span><span>
     </span><span style="color: #000000">}</span><span>
     </span></pre></code>
@@ -5481,11 +5619,11 @@ Every account can be accessed through two types:
     </span><span>
     </span><span style="color: #000000">    </span><span style="color: #008000">// Contract code</span><span>
     </span><span>
-    </span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> setCode(_ code: [</span><span style="color: #0000FF">Int</span><span style="color: #000000">])</span><span>
+    </span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> setCode(_ code: [</span><span style="color: #0000FF">UInt8</span><span style="color: #000000">], ... contractInitializerArguments)</span><span>
     </span><span>
     </span><span style="color: #000000">    </span><span style="color: #008000">// Key management</span><span>
     </span><span>
-    </span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> addPublicKey(_ publicKey: [</span><span style="color: #0000FF">Int</span><span style="color: #000000">])</span><span>
+    </span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> addPublicKey(_ publicKey: [</span><span style="color: #0000FF">UInt8</span><span style="color: #000000">])</span><span>
     </span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> removePublicKey(_ index: </span><span style="color: #0000FF">Int</span><span style="color: #000000">)</span><span>
     </span><span>
     </span><span style="color: #000000">    </span><span style="color: #008000">// Storage operations</span><span>
@@ -5496,13 +5634,35 @@ Every account can be accessed through two types:
     </span><span>
     </span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> borrow&#x3C;T: &#x26;</span><span style="color: #0000FF">Any</span><span style="color: #000000">>(</span><span style="color: #0000FF">from</span><span style="color: #000000">: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">T</span><span style="color: #000000">?</span><span>
     </span><span>
-    </span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> link&#x3C;T: &#x26;</span><span style="color: #0000FF">Any</span><span style="color: #000000">>(</span><span style="color: #0000FF">_</span><span style="color: #000000"> </span><span style="color: #0000FF">newCapabilityPath</span><span style="color: #000000">: </span><span style="color: #0000FF">Path</span><span style="color: #000000">, </span><span style="color: #0000FF">target</span><span style="color: #000000">: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">Capability</span><span style="color: #000000">?</span><span>
+    </span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> link&#x3C;T: &#x26;</span><span style="color: #0000FF">Any</span><span style="color: #000000">>(</span><span style="color: #0000FF">_</span><span style="color: #000000"> </span><span style="color: #0000FF">newCapabilityPath</span><span style="color: #000000">: </span><span style="color: #0000FF">Path</span><span style="color: #000000">, </span><span style="color: #0000FF">target</span><span style="color: #000000">: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">Capability</span><span style="color: #000000">&#x3C;</span><span style="color: #0000FF">T</span><span style="color: #000000">>?</span><span>
     </span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> getLinkTarget(_ path: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">Path</span><span style="color: #000000">?</span><span>
     </span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> unlink(_ path: </span><span style="color: #0000FF">Path</span><span style="color: #000000">)</span><span>
     </span><span>
-    </span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> getCapability(at: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">Capability</span><span style="color: #000000">?</span><span>
-    </span><span style="color: #000000">  }</span><span>
+    </span><span style="color: #000000">    </span><span style="color: #0000FF">fun</span><span style="color: #000000"> getCapability&#x3C;T: &#x26;</span><span style="color: #0000FF">Any</span><span style="color: #000000">>(</span><span style="color: #0000FF">_</span><span style="color: #000000"> </span><span style="color: #0000FF">path</span><span style="color: #000000"> </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">Capability</span><span style="color: #000000">&#x3C;</span><span style="color: #0000FF">T</span><span style="color: #000000">>?</span><span>
+    </span><span style="color: #000000">}</span><span>
     </span></pre></code>
+
+## [](#account-creation)Account Creation
+
+Accounts can be created by calling the `AuthAccount` constructor
+and passing the account that should pay for the account creation for the `payer` parameter.
+
+The `payer` must have enough funds to be able to create an account.
+If the account does not have the required funds, the program aborts.
+
+To authorize access to the account, keys can be added using the `addPublicKey` function.
+Keys can also later be removed using the `removePublicKey` function.
+
+For example, to create an account and have the signer of the transaction pay for the account creation,
+and authorize one key to access the account:
+
+<code><pre><span style="color: #000000">transaction(key: [UInt8]) {</span><span>
+</span><span style="color: #000000">    prepare(signer: AuthAccount) {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">let</span><span style="color: #000000"> account = AuthAccount(payer: signer)</span><span>
+</span><span style="color: #000000">        account.addPublicKey(key)</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span style="color: #000000">}</span><span>
+</span></pre></code>
 
 ## [](#account-storage)Account Storage
 
@@ -5525,19 +5685,21 @@ Account storage is accessed through the following functions of `AuthAccount`.
 This means that any code that has access to the authorized account has access
 to all its stored objects.
 
--   `fun save<T>(_ value: T, to: Path)`:
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> save&#x3C;T>(_ value: </span><span style="color: #0000FF">T</span><span style="color: #000000">, to: </span><span style="color: #0000FF">Path</span><span style="color: #000000">)</span><span>
+    </span></pre></code>
 
-    Saves an object to account storage.
-    Resources are moved into storage, and structures are copied.
+     Saves an object to account storage.
+     Resources are moved into storage, and structures are copied.
 
-    `T` is the type parameter for the object type.
-    It can be inferred from the argument&#x27;s type.
+     `T` is the type parameter for the object type.
+     It can be inferred from the argument&#x27;s type.
 
-    If there is already an object stored under the given path, the program aborts.
+     If there is already an object stored under the given path, the program aborts.
 
-    The path must be a storage path, i.e., only the domain `storage` is allowed.
+     The path must be a storage path, i.e., only the domain `storage` is allowed.
 
--   `fun load<T>(from: Path): T?`:
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> load&#x3C;T>(from: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">T</span><span style="color: #000000">?</span><span>
+    </span></pre></code>
 
      Loads an object from account storage.
      If no object is stored under the given path, the function returns `nil`.
@@ -5551,27 +5713,28 @@ to all its stored objects.
 
      The type `T` must be a supertype of the type of the loaded object.
      If it is not, the function returns `nil`.
-     The given type must not necessarily be exactly the same as the type of the loaded object.
+     The given type does not necessarily need to be exactly the same as the type of the loaded object.
 
      The path must be a storage path, i.e., only the domain `storage` is allowed.
 
--   `fun copy<T>(from: Path): T?`, where `T` is the type parameter for the value type:
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> copy&#x3C;T: </span><span style="color: #0000FF">AnyStruct</span><span style="color: #000000">>(</span><span style="color: #0000FF">from</span><span style="color: #000000">: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">T</span><span style="color: #000000">?</span><span>
+    </span></pre></code>
 
-       Returns a copy of a structure stored in account storage, without removing it from storage.
+     Returns a copy of a structure stored in account storage, without removing it from storage.
 
-       If no structure is stored under the given path, the function returns `nil`.
-       If there is a structure stored, it is copied.
-       The structure stays stored in storage after the function returns.
+     If no structure is stored under the given path, the function returns `nil`.
+     If there is a structure stored, it is copied.
+     The structure stays stored in storage after the function returns.
 
-       `T` is the type parameter for the structure type.
-       A type argument for the parameter must be provided explicitly.
+     `T` is the type parameter for the structure type.
+     A type argument for the parameter must be provided explicitly.
 
-       The type `T` must be a supertype of the type of the copied structure.
-       If it is not, the function returns `nil`.
-       The given type must not necessarily be exactly the same as the type of the copied structure
-    structure.
+     The type `T` must be a supertype of the type of the copied structure.
+     If it is not, the function returns `nil`.
+     The given type does not necessarily need to be exactly the same as
+     the type of the copied structure.
 
-       The path must be a storage path, i.e., only the domain `storage` is allowed.
+     The path must be a storage path, i.e., only the domain `storage` is allowed.
 
 <code><pre><span style="color: #008000">// Declare a resource named `Counter`.</span><span>
 </span><span style="color: #008000">//</span><span>
@@ -5661,7 +5824,8 @@ as it is necessary for resources,
 it is also possible to create references to objects in storage:
 This is possible using the `borrow` function of an `AuthAccount`:
 
--   `fun borrow<T: &Any>(from: Path): T?`
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> borrow&#x3C;T: &#x26;</span><span style="color: #0000FF">Any</span><span style="color: #000000">>(</span><span style="color: #0000FF">from</span><span style="color: #000000">: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">T</span><span style="color: #000000">?`</span><span>
+    </span></pre></code>
 
      Returns a reference to an object in storage without removing it from storage.
      If no object is stored under the given path, the function returns `nil`.
@@ -5670,9 +5834,9 @@ This is possible using the `borrow` function of an `AuthAccount`:
      `T` is the type parameter for the object type.
      A type argument for the parameter must be provided explicitly.
      The type argument must be a reference to any type (`&Any`; `Any` is the supertype of all types).
-     It must be possible top create the given reference type `T` for the stored /  borrowed object.
+     It must be possible to create the given reference type `T` for the stored /  borrowed object.
      If it is not, the function returns `nil`.
-     The given type must not necessarily be exactly the same as the type of the borrowed object.
+     The given type does not necessarily need to be exactly the same as the type of the borrowed object.
 
      The path must be a storage path, i.e., only the domain `storage` is allowed.
 
@@ -5772,71 +5936,78 @@ This allows exposing and hiding certain functionality of a stored object.
 
 Capabilities are created using the `link` function of an authorized account (`AuthAccount`):
 
--   `fun link<T: &Any>(_ newCapabilityPath: Path, target: Path): Capability?`
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> link&#x3C;T: &#x26;</span><span style="color: #0000FF">Any</span><span style="color: #000000">>(</span><span style="color: #0000FF">_</span><span style="color: #000000"> </span><span style="color: #0000FF">newCapabilityPath</span><span style="color: #000000">: </span><span style="color: #0000FF">Path</span><span style="color: #000000">, </span><span style="color: #0000FF">target</span><span style="color: #000000">: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">Capability</span><span style="color: #000000">&#x3C;</span><span style="color: #0000FF">T</span><span style="color: #000000">>?</span><span>
+    </span></pre></code>
 
-    `newCapabilityPath` is the public or private path identifying the new capability.
+     `newCapabilityPath` is the public or private path identifying the new capability.
 
-    `target` is any public, private, or storage path that leads to the object
-    that will provide the functionality defined by this capability.
+     `target` is any public, private, or storage path that leads to the object
+     that will provide the functionality defined by this capability.
 
-    `T` is the type parameter for the capability type.
-    A type argument for the parameter must be provided explicitly.
+     `T` is the type parameter for the capability type.
+     A type argument for the parameter must be provided explicitly.
 
-    The type parameter defines how the capability can be borrowed,
-    i.e., how the stored value can be accessed.
+     The type parameter defines how the capability can be borrowed,
+     i.e., how the stored value can be accessed.
 
-    The link function returns `nil` if a link for the given capability path already exists,
-    or the newly created capability if not.
+     The link function returns `nil` if a link for the given capability path already exists,
+     or the newly created capability if not.
 
-    It is not necessary for the target path to lead to a valid object;
-    the target path could be empty, or could lead to an object
-    which does not provide the necessary type interface:
+     It is not necessary for the target path to lead to a valid object;
+     the target path could be empty, or could lead to an object
+     which does not provide the necessary type interface:
 
-    The link function does **not** check if the target path is valid/exists at the time
-    the capability is created and does **not** check if the target value conforms to the given type.
+     The link function does **not** check if the target path is valid/exists at the time
+     the capability is created and does **not** check if the target value conforms to the given type.
 
-    The link is latent.
-    The target value might be stored after the link is created,
-    and the target value might be moved out after the link has been created.
+     The link is latent.
+     The target value might be stored after the link is created,
+     and the target value might be moved out after the link has been created.
 
 Capabilities can be removed using the `unlink` function of an authorized account (`AuthAccount`):
 
--   `fun unlink(_ path: Path)`:
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> unlink(_ path: </span><span style="color: #0000FF">Path</span><span style="color: #000000">)</span><span>
+    </span></pre></code>
 
-    `path` is the public or private path identifying the capability that should be removed.
+     `path` is the public or private path identifying the capability that should be removed.
 
 To get the target path for a capability, the `getLinkTarget` function
-of an authorized account (`AuthAccount`) can be used:
+of an authorized account (`AuthAccount`) or public account (`PublicAccount`) can be used:
 
--   `fun getLinkTarget(_ path: Path): Path?`
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> getLinkTarget(_ path: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">Path</span><span style="color: #000000">?</span><span>
+    </span></pre></code>
 
-    `path` is the public or private path identifying the capability.
-    The function returns the link target path,
-    if a capability exists at the given path,
-    or `nil` if it does not.
+     `path` is the public or private path identifying the capability.
+     The function returns the link target path,
+     if a capability exists at the given path,
+     or `nil` if it does not.
 
 Existing capabilities can be obtained by using the `getCapability` function
 of authorized accounts (`AuthAccount`) and public accounts (`PublicAccount`):
 
--   `fun getCapability(_ at: Path): Capability?`
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> getCapability&#x3C;T>(_ at: </span><span style="color: #0000FF">Path</span><span style="color: #000000">): </span><span style="color: #0000FF">Capability</span><span style="color: #000000">&#x3C;</span><span style="color: #0000FF">T</span><span style="color: #000000">>?</span><span>
+    </span></pre></code>
 
-    For public accounts, the function returns a capability
-    if the given path is public.
-    It is not possible to obtain private capabilities from public accounts.
-    If the path is private or a storage path, the function returns `nil`.
+     For public accounts, the function returns a capability
+     if the given path is public.
+     It is not possible to obtain private capabilities from public accounts.
+     If the path is private or a storage path, the function returns `nil`.
 
-    For authorized accounts, the function returns a capability
-    if the given path is public or private.
-    If the path is a storage path, the function returns `nil`.
+     For authorized accounts, the function returns a capability
+     if the given path is public or private.
+     If the path is a storage path, the function returns `nil`.
+
+     `T` is the type parameter that specifies how the capability can be borrowed.
+     The type argument is optional, i.e. it must not be provided.
 
 The `getCapability` function does **not** check if the target exists.
 The link is latent.
-To check if the target exists currently and could be borrowed,
-the `check` function of the capability can be used:
+The `check` function of the capability can be used to check if the target currently exists and could be borrowed,
 
--   `fun check<T: &Any>(): Bool`
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> check&#x3C;T: &#x26;</span><span style="color: #0000FF">Any</span><span style="color: #000000">>(): </span><span style="color: #0000FF">Bool</span><span>
+    </span></pre></code>
 
-    `T` is the type parameter for the reference type.
+     `T` is the type parameter for the reference type.
      A type argument for the parameter must be provided explicitly.
 
      The function returns true if the capability currently targets an object
@@ -5845,16 +6016,18 @@ the `check` function of the capability can be used:
 Finally, the capability can be borrowed to get a reference to the stored object.
 This can be done using the `borrow` function of the capability:
 
--   `fun borrow<T: &Any>(): T?`
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> borrow&#x3C;T: &#x26;</span><span style="color: #0000FF">Any</span><span style="color: #000000">>(): </span><span style="color: #0000FF">T</span><span style="color: #000000">?</span><span>
+    </span></pre></code>
 
-    The function returns a reference to the object targeted by the capability,
-    provided it can be borrowed using the given type.
+     The function returns a reference to the object targeted by the capability,
+     provided it can be borrowed using the given type.
 
-    `T` is the type parameter for the reference type.
-     A type argument for the parameter must be provided explicitly.
+     `T` is the type parameter for the reference type.
+     If the function is called on a typed capability, the capability&#x27;s type is used when borrowing.
+     If the capability is untyped, a type argument must be provided explicitly in the call to `borrow`.
 
-    The function returns `nil` if the targeted path is empty, i.e. nothing is stored under it,
-    if  the requested type exceeds what is allowed by the capability (or any interim capabilities)
+     The function returns `nil` when the targeted path is empty, i.e. nothing is stored under it,
+     and when the requested type exceeds what is allowed by the capability (or any interim capabilities).
 
 <code><pre><span style="color: #008000">// Declare a resource interface named `HasCount`, that has a field `count`</span><span>
 </span><span style="color: #008000">//</span><span>
@@ -5898,13 +6071,19 @@ Imagine that the next example is from a different account as before.
 </span><span style="color: #0000FF">let</span><span style="color: #000000"> publicAccount = getAccount(</span><span style="color: #09885A">0x42</span><span style="color: #000000">)</span><span>
 </span><span>
 </span><span style="color: #008000">// Get a capability for the counter that is made publicly accessible</span><span>
-</span><span style="color: #008000">// through the path `/public/hasCount`</span><span>
+</span><span style="color: #008000">// through the path `/public/hasCount`.</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> countCap = publicAccount.getCapability(/public/hasCount)!</span><span>
+</span><span style="color: #008000">// Use the type `&#x26;{HasCount}`, a reference to some object that provides the functionality</span><span>
+</span><span style="color: #008000">// of interface `HasCount`. This is the type that the capability can be borrowed as</span><span>
+</span><span style="color: #008000">// (it was specified in the call to `link` above).</span><span>
+</span><span style="color: #008000">// See the example below for borrowing using the type `&#x26;Counter`.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #008000">// After the call, the declared constant `countCap` has type `Capability&#x3C;&#x26;{HasCount}>`,</span><span>
+</span><span style="color: #008000">// a capability that results in a reference that has type `&#x26;{HasCount}` when borrowed.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> countCap = publicAccount.getCapability&#x3C;&#x26;{HasCount}>(/public/hasCount)!</span><span>
 </span><span>
 </span><span style="color: #008000">// Borrow the capability to get a reference to the stored counter.</span><span>
-</span><span style="color: #008000">// Use the type `&#x26;{HasCount}`, as this is the type that the capability can be borrowed as.</span><span>
-</span><span style="color: #008000">// See the example below for borrowing using the type `&#x26;Counter`</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #008000">// This borrow succeeds, i.e. the result is not `nil`,</span><span>
 </span><span style="color: #008000">// it is a valid reference, because:</span><span>
@@ -5916,7 +6095,7 @@ Imagine that the next example is from a different account as before.
 </span><span style="color: #008000">// 2. The stored value is a subtype of the requested type `{HasCount}`</span><span>
 </span><span style="color: #008000">//    (the stored object has type `Counter` which conforms to interface `HasCount`)</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> countRef = countCap.borrow&#x3C;&#x26;{HasCount}>()!</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> countRef = countCap.borrow()!</span><span>
 </span><span>
 </span><span style="color: #000000">countRef.count  </span><span style="color: #008000">// is `43`</span><span>
 </span><span>
@@ -5925,9 +6104,10 @@ Imagine that the next example is from a different account as before.
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #000000">countRef.increment()</span><span>
 </span><span>
-</span><span style="color: #008000">// Attempt to borrow the capability with the type `&#x26;Counter`.</span><span>
-</span><span style="color: #008000">// This results in `nil`, i.e. the borrow fails,</span><span>
-</span><span style="color: #008000">// because the capability was created/linked using the type `&#x26;{HasCount}`.</span><span>
+</span><span style="color: #008000">// Again, attempt to get a get a capability for the counter, but use the type `&#x26;Counter`.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #008000">// Getting the capability succeeds, because it is latent, but borrowing fails</span><span>
+</span><span style="color: #008000">// (the result s `nil`), because the capability was created/linked using the type `&#x26;{HasCount}`:</span><span>
 </span><span style="color: #008000">//</span><span>
 </span><span style="color: #008000">// The resource type `Counter` implements the resource interface `HasCount`,</span><span>
 </span><span style="color: #008000">// so `Counter` is a subtype of `{HasCount}`, but the capability only allows</span><span>
@@ -5939,7 +6119,7 @@ Imagine that the next example is from a different account as before.
 </span><span style="color: #008000">// This shows how parts of the functionality of stored objects</span><span>
 </span><span style="color: #008000">// can be safely exposed to other code</span><span>
 </span><span style="color: #008000">//</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> counterRef = countCap.borrow&#x3C;&#x26;Counter>()</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> counterRef = countCap.borrow()</span><span>
 </span><span>
 </span><span style="color: #008000">// `counterRef` is `nil`</span><span>
 </span><span>
@@ -5961,8 +6141,6 @@ without having been defined in a deployed Cadence contract.
 
 Contracts can be created, updated, and deleted using the `setCode`
 function of [accounts](#accounts).
-Contract creation is also possible when creating accounts,
-i.e. when using the `Account` constructor.
 This functionality is covered in the [next section](#deploying-and-updating-contracts)
 
 Contracts are types.
@@ -6169,23 +6347,22 @@ Contracts have the implicit field `let account: Account`,
 which is the account in which the contract is deployed too.
 This gives the contract the ability to e.g. read and write to the account&#x27;s storage.
 
-<code><pre><span>
-</span></pre></code>
-
 ### [](#deploying-and-updating-contracts)Deploying and Updating Contracts
 
-In order for a contract to be used in Cadence, it needs
-to be deployed to an account.
+In order for a contract to be used in Cadence, it needs to be deployed to an account.
+A contract can be deployed to an account using the `setCode` function of the `AuthAccount` type:
 
-Contract can be deployed to an account using the `setCode` function of the `Account` type:
-`setCode(_ code: [UInt8], ...)`.
-The function&#x27;s `code` parameter is the byte representation of the source code.
-Additional arguments are passed to the initializer of the contract.
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> AuthAccount.setCode(_ code: [</span><span style="color: #0000FF">UInt8</span><span style="color: #000000">], ... contractInitializerArguments)</span><span>
+    </span></pre></code>
+
+     The `code` parameter is the byte representation of the source code.
+     All additional arguments that are given are passed further to the initializer
+     of the contract that is being deployed.
 
 For example, assuming the following contract code should be deployed:
 
-<code><pre><span style="color: #0000FF">contract</span><span style="color: #000000"> Test {</span><span>
-</span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> message: </span><span style="color: #0000FF">String</span><span>
+<code><pre><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">contract</span><span style="color: #000000"> Test {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> message: </span><span style="color: #0000FF">String</span><span>
 </span><span>
 </span><span style="color: #000000">    </span><span style="color: #0000FF">init</span><span style="color: #000000">(message: </span><span style="color: #0000FF">String</span><span style="color: #000000">) {</span><span>
 </span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.message = message</span><span>
@@ -6195,19 +6372,19 @@ For example, assuming the following contract code should be deployed:
 
 The contract can be deployed as follows:
 
-<code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> signer: </span><span style="color: #0000FF">Account</span><span style="color: #000000"> = ...</span><span>
+<code><pre><span style="color: #008000">// Decode the hex-encoded source code into a byte array</span><span>
+</span><span style="color: #008000">// using the built-in function `decodeHex`.</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #008000">// (The ellipsis ... indicates the remainder of the string)</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> code = </span><span style="color: #A31515">"70756220636f6e..."</span><span style="color: #000000">.decodeHex()</span><span>
+</span><span>
+</span><span style="color: #008000">// `code` has type `[UInt8]`</span><span>
+</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> signer: </span><span style="color: #0000FF">Account</span><span style="color: #000000"> = ...</span><span>
 </span><span style="color: #000000">signer.setCode(</span><span>
-</span><span style="color: #000000">    [</span><span style="color: #09885A">0x63</span><span style="color: #000000">, </span><span style="color: #09885A">0x6f</span><span style="color: #000000">, </span><span style="color: #09885A">0x6e</span><span style="color: #000000">, </span><span style="color: #09885A">0x74</span><span style="color: #000000">, </span><span style="color: #09885A">0x72</span><span style="color: #000000">, </span><span style="color: #09885A">0x61</span><span style="color: #008000">/*, ... */</span><span style="color: #000000">],</span><span>
+</span><span style="color: #000000">    code,</span><span>
 </span><span style="color: #000000">    message: </span><span style="color: #A31515">"I'm a new contract in an existing account"</span><span>
-</span><span style="color: #000000">)</span><span>
-</span></pre></code>
-
-The contract can also be deployed when creating an account by using the `Account` constructor.
-
-<code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> newAccount = Account(</span><span>
-</span><span style="color: #000000">    publicKeys: [],</span><span>
-</span><span style="color: #000000">    code: [</span><span style="color: #09885A">0x63</span><span style="color: #000000">, </span><span style="color: #09885A">0x6f</span><span style="color: #000000">, </span><span style="color: #09885A">0x6e</span><span style="color: #000000">, </span><span style="color: #09885A">0x74</span><span style="color: #000000">, </span><span style="color: #09885A">0x72</span><span style="color: #000000">, </span><span style="color: #09885A">0x61</span><span style="color: #008000">/*, ... */</span><span style="color: #000000">],</span><span>
-</span><span style="color: #000000">    message: </span><span style="color: #A31515">"I'm a new contract in a new account"</span><span>
 </span><span style="color: #000000">)</span><span>
 </span></pre></code>
 
@@ -6350,11 +6527,12 @@ throughout the whole of the transaction.
 </span><span style="color: #000000">}</span><span>
 </span></pre></code>
 
-Then, three optional main phases:
-Preparation, execution, and postconditions, only in that order.
-Each phase is a block of code that executes sequentially.
+Then, four optional main phases:
+Preparation, preconditions, execution, and postconditions, in that order.
+The preparation and execution phases are blocks of code that execute sequentially.
 
-Here is an empty Cadence transaction which contains no logic but demonstrates the syntax for each type of block, in the order these blocks will be executed:
+The following empty Cadence transaction contains no logic,
+but demonstrates the syntax for each phase, in the order these phases will be executed:
 
 <code><pre><span style="color: #000000">transaction {</span><span>
 </span><span style="color: #000000">    prepare(signer1: AuthAccount, signer2: AuthAccount) {</span><span>
@@ -6375,33 +6553,53 @@ Here is an empty Cadence transaction which contains no logic but demonstrates th
 </span><span style="color: #000000">}</span><span>
 </span></pre></code>
 
-Although optional, each block serves a specific purpose when executing a transaction
-and it is recommended that developers use these blocks when creating their transactions.
-The following will detail the purpose of and how to use each block.
+Although optional, each phase serves a specific purpose when executing a transaction
+and it is recommended that developers use these phases when creating their transactions.
+The following will detail the purpose of and how to use each phase.
 
-## [](#prepare)Prepare
+### [](#transaction-parameters)Transaction Parameters
 
-The `prepare` **block** is used when access to the private `AuthAccount` object of **signing accounts** is required for your transaction.
+Transactions may declare parameters.
+Transaction parameters are declared like function parameters.
+The arguments for the transaction are passed in the sent transaction.
 
-Direct access to signing accounts is **only possible inside the** `prepare` **block.**
+Transaction parameters are accessible in all phases.
 
-For each signer of the transaction the signing account is passed as an argument to the `prepare` block.
-For example, if the transaction has three signers, the prepare **must** have three parameters of type `AuthAccount`.
+<code><pre><span style="color: #008000">// Declare a transaction which has one parameter named `amount`</span><span>
+</span><span style="color: #008000">// that has the type `UFix64`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">transaction(amount: UFix64) {</span><span>
+</span><span>
+</span><span style="color: #000000">}</span><span>
+</span></pre></code>
+
+### [](#prepare-phase)Prepare phase
+
+The `prepare` phase is used when access to the private `AuthAccount` object
+of **signing accounts** is required for your transaction.
+
+Direct access to signing accounts is **only possible inside the `prepare` phase**.
+
+For each signer of the transaction the signing account is passed as an argument to the `prepare` phase.
+For example, if the transaction has three signers,
+the prepare **must** have three parameters of type `AuthAccount`.
 
 <code><pre><span style="color: #000000"> prepare(signer1: AuthAccount) {</span><span>
 </span><span style="color: #000000">      </span><span style="color: #008000">// ...</span><span>
 </span><span style="color: #000000"> }</span><span>
 </span></pre></code>
 
-As a best practice, only use the `prepare` block to define and execute logic that requires access to the `AuthAccount` objects of signing accounts,
+As a best practice, only use the `prepare` phase to define and execute logic that requires access
+to the `AuthAccount` objects of signing accounts,
 and _move all other logic elsewhere_.
 Modifications to accounts can have significant implications,
-so keep this block clear of unrelated logic to ensure users of your contract are able to easily read and understand logic related to their private account objects.
+so keep this phase clear of unrelated logic to ensure users of your contract are able to easily read
+and understand logic related to their private account objects.
 
-The prepare block serves a similar purpose as the initializer of a contract/resource/structure.
+The prepare phase serves a similar purpose as the initializer of a contract/resource/structure.
 
-For example, if a transaction performs a token transfer, put the withdrawal in the `prepare` block,
-as it requires access to the account storage, but perform the deposit in the `execute` block.
+For example, if a transaction performs a token transfer, put the withdrawal in the `prepare` phase,
+as it requires access to the account storage, but perform the deposit in the `execute` phase.
 
 `AuthAccount` objects have the permissions
 to read from and write to the `/storage/` and `/private/` areas
@@ -6409,9 +6607,10 @@ of the account, which cannot be directly accessed anywhere else.
 They also have the permission to create and delete capabilities that
 use these areas.
 
-## [](#pre)Pre
+### [](#pre-phase)Pre Phase
 
-The `pre` block is executed after the `prepare` block, and is used for checking if explicit conditions hold before executing the remainder of the transaction.
+The `pre` phase is executed after the `prepare` phase, and is used for checking
+if explicit conditions hold before executing the remainder of the transaction.
 A common example would be checking requisite balances before transferring tokens between accounts.
 
 <code><pre><span style="color: #0000FF">pre</span><span style="color: #000000"> {</span><span>
@@ -6419,12 +6618,14 @@ A common example would be checking requisite balances before transferring tokens
 </span><span style="color: #000000">}</span><span>
 </span></pre></code>
 
-If the `pre` block throws an error, or does not return `true` the remainder of the transaction is not executed and it will be completely reverted.
+If the `pre` phase throws an error, or does not return `true` the remainder of the transaction
+is not executed and it will be completely reverted.
 
-## [](#execute)**Execute**
+### [](#execute-phase)Execute Phase
 
-The `execute` block does exactly what it says, it executes the main logic of the transaction.
-This block is optional, but it is a best practice to add your main transaction logic in the section, so it is explicit.
+The `execute` phase does exactly what it says, it executes the main logic of the transaction.
+This phase is optional, but it is a best practice to add your main transaction logic in the section,
+so it is explicit.
 
 <code><pre><span style="color: #0000FF">execute</span><span style="color: #000000"> {</span><span>
 </span><span style="color: #000000">    </span><span style="color: #008000">// Invalid: Cannot access the authorized account object,</span><span>
@@ -6437,14 +6638,19 @@ This block is optional, but it is a best practice to add your main transaction l
 </span><span style="color: #000000">}</span><span>
 </span></pre></code>
 
-You **may not** access private `AuthAccount` objects in the `execute` block, but you may get an account&#x27;s `PublicAccount` object,
-which allows reading and calling methods on objects that an account has published in the public domain of its account. (resources, contract methods, etc.)
+You **may not** access private `AuthAccount` objects in the `execute` phase,
+but you may get an account&#x27;s `PublicAccount` object,
+which allows reading and calling methods on objects
+that an account has published in the public domain of its account (resources, contract methods, etc.).
 
-## [](#post)**Post**
+### [](#post-phase)Post Phase
 
-Statements inside of the `post` block are used to verify that your transaction logic has been executed properly. It contains zero or more condition checks.
+Statements inside of the `post` phase are used
+to verify that your transaction logic has been executed properly.
+It contains zero or more condition checks.
 
-For example, the a transfer transaction might ensure that the final balance has a certain value, or e.g. it was incremented by a specific amount.
+For example, the a transfer transaction might ensure that the final balance has a certain value,
+or e.g. it was incremented by a specific amount.
 
 <code><pre><span style="color: #0000FF">post</span><span style="color: #000000"> {</span><span>
 </span><span style="color: #000000">    result.balance == </span><span style="color: #09885A">30</span><span style="color: #000000">: </span><span style="color: #A31515">"Balance after transaction is incorrect!"</span><span>
@@ -6453,24 +6659,31 @@ For example, the a transfer transaction might ensure that the final balance has 
 
 If any of the condition checks result in `false`, the transaction will fail and be completely reverted.
 
-Only condition checks are allowed in this section. No actual computation or modification of values is allowed.
+Only condition checks are allowed in this section.
+No actual computation or modification of values is allowed.
 
-**A Note about `pre` and `post` Blocks**
+**A Note about `pre` and `post` Phases**
 
-Another function of the `pre` and `post` blocks is to help provide information about how the effects of a transaction on the accounts and resources involved.
+Another function of the `pre` and `post` phases is to help provide information
+about how the effects of a transaction on the accounts and resources involved.
 This is essential because users may want to verify what a transaction does before submitting it.
-`pre` and `post` blocks provide a way to introspect transactions before they are executed.
+`pre` and `post` phases provide a way to introspect transactions before they are executed.
 
-For example, in the future the blocks could be analyzed and interpreted to the user in the software they are using,
-e.g. &quot;this transaction will transfer 30 tokens from A to B. The balance of A will decrease by 30 tokens and the balance of B will increase by 30 tokens.&quot;
+For example, in the future the phases could be analyzed and interpreted to the user
+in the software they are using,
+e.g. &quot;this transaction will transfer 30 tokens from A to B.
+The balance of A will decrease by 30 tokens and the balance of B will increase by 30 tokens.&quot;
 
-## [](#summary)Summary
+### [](#summary)Summary
 
-Cadence transactions use blocks to make the transaction&#x27;s code/intent more readable and to provide a way for developer to separate potentially &#x27;unsafe&#x27; account modifying code from regular transaction logic,
+Cadence transactions use phases to make the transaction&#x27;s code / intent more readable
+and to provide a way for developer to separate potentially &#x27;unsafe&#x27; account
+modifying code from regular transaction logic,
 as well as provide a way to check for error prior / after transaction execution,
 and abort the transaction if any are found.
 
-The following is a brief summary of how to use the `prepare`, `pre`, `execute`, and `post` blocks in a Cadence transaction.
+The following is a brief summary of how to use the `prepare`, `pre`, `execute`,
+and `post` phases in a Cadence transaction.
 
 <code><pre><span style="color: #000000">transaction {</span><span>
 </span><span style="color: #000000">    prepare(signer1: AuthAccount) {</span><span>
@@ -6533,39 +6746,370 @@ TODO
 
 -->
 
+## [](#run-time-types)Run-time Types
+
+Types can be represented at run-time.
+To create a type value, use the constructor function `Type<T>()`, which accepts the static type as a type argument.
+
+This is similar to e.g. `T.self` in Swift, `T::class` in Kotlin, and `T.class` in Java.
+
+For example, to represent the type `Int` at run-time:
+
+<code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> intType: </span><span style="color: #0000FF">Type</span><span style="color: #000000"> = Type&#x3C;Int>()</span><span>
+</span></pre></code>
+
+This works for both built-in and user-defined types. For example, to get the type value for a resource:
+
+<code><pre><span style="color: #0000FF">resource</span><span style="color: #000000"> Collectible {}</span><span>
+</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> collectibleType = Type&#x3C;@Collectible>()</span><span>
+</span><span>
+</span><span style="color: #008000">// `collectibleType` has type `Type`</span><span>
+</span></pre></code>
+
+Type values are comparable.
+
+<code><pre><span>
+</span><span style="color: #000000">Type&#x3C;Int>() == Type&#x3C;Int>()</span><span>
+</span><span>
+</span><span style="color: #000000">Type&#x3C;Int>() != Type&#x3C;String>()</span><span>
+</span></pre></code>
+
+The function `fun isInstance(_ type: Type): Bool` can be used to check if a value has a certain type,
+using the concrete run-time type,  and considering subtyping rules,
+
+<code><pre><span style="color: #008000">// Declare a variable named `collectible` that has the *static* type `Collectible`</span><span>
+</span><span style="color: #008000">// and has a resource of type `Collectible`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> collectible: @</span><span style="color: #0000FF">Collectible</span><span style="color: #000000"> &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> Collectible()</span><span>
+</span><span>
+</span><span style="color: #008000">// The resource is an instance of type `Collectible`,</span><span>
+</span><span style="color: #008000">// because the concrete run-time type is `Collectible`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">collectible.isInstance(Type&#x3C;@Collectible>())  </span><span style="color: #008000">// is `true`</span><span>
+</span><span>
+</span><span style="color: #008000">// The resource is an instance of type `AnyResource`,</span><span>
+</span><span style="color: #008000">// because the concrete run-time type `Collectible` is a subtype of `AnyResource`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">collectible.isInstance(Type&#x3C;@AnyResource>())  </span><span style="color: #008000">// is `true`</span><span>
+</span><span>
+</span><span style="color: #008000">// The resource is *not* an instance of type `String`,</span><span>
+</span><span style="color: #008000">// because the concrete run-time type `Collectible` is *not* a subtype of `String`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">collectible.isInstance(Type&#x3C;String>())  </span><span style="color: #008000">// is `false`</span><span>
+</span></pre></code>
+
+Note that the **concrete run-time type** of the object is used, **not** the static type.
+
+<code><pre><span style="color: #008000">// Declare a variable named `something` that has the *static* type `AnyResource`</span><span>
+</span><span style="color: #008000">// and has a resource of type `Collectible`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #0000FF">let</span><span style="color: #000000"> something: @</span><span style="color: #0000FF">AnyResource</span><span style="color: #000000"> &#x3C;- </span><span style="color: #0000FF">create</span><span style="color: #000000"> Collectible()</span><span>
+</span><span>
+</span><span style="color: #008000">// The resource is an instance of type `Collectible`,</span><span>
+</span><span style="color: #008000">// because the concrete run-time type is `Collectible`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">something.isInstance(Type&#x3C;@Collectible>())  </span><span style="color: #008000">// is `true`</span><span>
+</span><span>
+</span><span style="color: #008000">// The resource is an instance of type `AnyResource`,</span><span>
+</span><span style="color: #008000">// because the concrete run-time type `Collectible` is a subtype of `AnyResource`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">something.isInstance(Type&#x3C;@AnyResource>())  </span><span style="color: #008000">// is `true`</span><span>
+</span><span>
+</span><span style="color: #008000">// The resource is *not* an instance of type `String`,</span><span>
+</span><span style="color: #008000">// because the concrete run-time type `Collectible` is *not* a subtype of `String`</span><span>
+</span><span style="color: #008000">//</span><span>
+</span><span style="color: #000000">something.isInstance(Type&#x3C;String>())  </span><span style="color: #008000">// is `false`</span><span>
+</span></pre></code>
+
+For example, this allows implementing a marketplace sale resource:
+
+<code><pre><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">resource</span><span style="color: #000000"> SimpleSale {</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// The resource for sale.</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// Once the resource is sold, the field becomes `nil`.</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">///</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">var</span><span style="color: #000000"> resourceForSale: @</span><span style="color: #0000FF">AnyResource</span><span style="color: #000000">?</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// The price that is wanted for the purchase of the resource.</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">///</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> priceForResource: </span><span style="color: #0000FF">UFix64</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// The type of currency that is required for the purchase.</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">///</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> requiredCurrency: </span><span style="color: #0000FF">Type</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> paymentReceiver: </span><span style="color: #0000FF">Capability</span><span style="color: #000000">&#x3C;&#x26;{</span><span style="color: #0000FF">FungibleToken</span><span style="color: #000000">.</span><span style="color: #0000FF">Receiver</span><span style="color: #000000">}></span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// `paymentReceiver` is the capability that will be borrowed</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// once a valid purchase is made.</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// It is expected to target a resource that allows depositing the paid amount</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// (a vault which has the type in `requiredCurrency`).</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">///</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">init</span><span style="color: #000000">(</span><span>
+</span><span style="color: #000000">        resourceForSale: @</span><span style="color: #0000FF">AnyResource</span><span style="color: #000000">,</span><span>
+</span><span style="color: #000000">        priceForResource: </span><span style="color: #0000FF">UFix64</span><span style="color: #000000">,</span><span>
+</span><span style="color: #000000">        requiredCurrency: </span><span style="color: #0000FF">Type</span><span style="color: #000000">,</span><span>
+</span><span style="color: #000000">        paymentReceiver: </span><span style="color: #0000FF">Capability</span><span style="color: #000000">&#x3C;&#x26;{</span><span style="color: #0000FF">FungibleToken</span><span style="color: #000000">.</span><span style="color: #0000FF">Receiver</span><span style="color: #000000">}></span><span>
+</span><span style="color: #000000">    ) {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.resourceForSale &#x3C;- resourceForSale</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.priceForResource = priceForResource</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.requiredCurrency = requiredCurrency</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">self</span><span style="color: #000000">.paymentReceiver = paymentReceiver</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span>
+</span><span style="color: #000000">    destroy() {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// When this sale resource is destroyed,</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// also destroy the resource for sale.</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// Another option could be to transfer it back to the seller.</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">destroy</span><span style="color: #000000"> </span><span style="color: #0000FF">self</span><span style="color: #000000">.resourceForSale</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// buyObject allows purchasing the resource for sale by providing</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// the required funds.</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// If the purchase succeeds, the resource for sale is returned.</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// If the purchase fails, the program aborts.</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">///</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> buyObject(with funds: @</span><span style="color: #0000FF">FungibleToken</span><span style="color: #000000">.</span><span style="color: #0000FF">Vault</span><span style="color: #000000">): @</span><span style="color: #0000FF">AnyResource</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">pre</span><span style="color: #000000"> {</span><span>
+</span><span style="color: #000000">            </span><span style="color: #008000">// Ensure the resource is still up for sale</span><span>
+</span><span style="color: #000000">            </span><span style="color: #0000FF">self</span><span style="color: #000000">.resourceForSale != </span><span style="color: #0000FF">nil</span><span style="color: #000000">: </span><span style="color: #A31515">"The resource has already been sold"</span><span>
+</span><span style="color: #000000">            </span><span style="color: #008000">// Ensure the paid funds have the right amount</span><span>
+</span><span style="color: #000000">            funds.balance >= </span><span style="color: #0000FF">self</span><span style="color: #000000">.priceForResource: </span><span style="color: #A31515">"Payment has insufficient amount"</span><span>
+</span><span style="color: #000000">            </span><span style="color: #008000">// Ensure the paid currency is correct</span><span>
+</span><span style="color: #000000">            funds.isInstance(</span><span style="color: #0000FF">self</span><span style="color: #000000">.requiredCurrency): </span><span style="color: #A31515">"Incorrect payment currency"</span><span>
+</span><span style="color: #000000">        }</span><span>
+</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// Transfer the paid funds to the payment receiver</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// by borrowing the payment receiver capability of this sale resource</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">// and depositing the payment into it</span><span>
+</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">let</span><span style="color: #000000"> receiver = </span><span style="color: #0000FF">self</span><span style="color: #000000">.paymentReceiver.borrow()</span><span>
+</span><span style="color: #000000">            ?? panic(</span><span style="color: #A31515">"failed to borrow payment receiver capability"</span><span style="color: #000000">)</span><span>
+</span><span>
+</span><span style="color: #000000">        receiver.deposit(from: &#x3C;-funds)</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">let</span><span style="color: #000000"> resourceForSale &#x3C;- </span><span style="color: #0000FF">self</span><span style="color: #000000">.resourceForSale &#x3C;- </span><span style="color: #0000FF">nil</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">return</span><span style="color: #000000"> &#x3C;-resourceForSale</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span style="color: #000000">}</span><span>
+</span></pre></code>
+
 ## [](#built-in-functions)Built-in Functions
 
-### [](#block-and-transaction-information)Block and Transaction Information
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> panic(_ message: </span><span style="color: #0000FF">String</span><span style="color: #000000">): </span><span style="color: #0000FF">Never</span><span>
+    </span></pre></code>
+
+     Terminates the program unconditionally
+     and reports a message which explains why the unrecoverable error occurred.
+
+    <code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> optionalAccount: </span><span style="color: #0000FF">Account</span><span style="color: #000000">? = </span><span style="color: #008000">// ...</span><span>
+    </span><span style="color: #0000FF">let</span><span style="color: #000000"> account = optionalAccount ?? panic(</span><span style="color: #A31515">"missing account"</span><span style="color: #000000">)</span><span>
+    </span></pre></code>
+
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> assert(_ condition: </span><span style="color: #0000FF">Bool</span><span style="color: #000000">, message: </span><span style="color: #0000FF">String</span><span style="color: #000000">)</span><span>
+    </span></pre></code>
+
+     Terminates the program if the given condition is false,
+     and reports a message which explains how the condition is false.
+     Use this function for internal sanity checks.
+
+     The message argument is optional.
+
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> unsafeRandom(): </span><span style="color: #0000FF">UInt64</span><span>
+    </span></pre></code>
+
+     Returns a pseudo-random number.
+
+     NOTE: The use of this function is unsafe if not used correctly.
+
+     Follow [best practices](https://github.com/ConsenSys/smart-contract-best-practices/blob/051ec2e42a66f4641d5216063430f177f018826e/docs/recommendations.md#remember-that-on-chain-data-is-public)
+     to prevent security issues when using this function.
+
+## [](#transaction-information)Transaction Information
 
 To get the addresses of the signers of a transaction,
 use the `address` field of each signing `AuthAccount`
-that is passed to the transaction&#x27;s `prepare` block.
+that is passed to the transaction&#x27;s `prepare` phase.
 
-There is currently no built-in function that allows getting the current block number,
-or timestamp.
-These are being worked on.
+There is currently no API that allows getting other transaction information.
+Please let us know if your use-case demands it by request this feature in an issue.
 
-### [](#panic)`panic`
+## [](#block-information)Block Information
 
-<code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> panic(_ message: </span><span style="color: #0000FF">String</span><span style="color: #000000">): </span><span style="color: #0000FF">Never</span><span>
+To get information about a block, the functions `getCurrentBlock` and `getBlock` can be used:
+
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> getCurrentBlock(): </span><span style="color: #0000FF">Block</span><span>
+    </span></pre></code>
+
+     Returns the current block, i.e. the block which contains the currently executed transaction.
+
+-   <code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> getBlock(at height: </span><span style="color: #0000FF">UInt64</span><span style="color: #000000">): </span><span style="color: #0000FF">Block</span><span style="color: #000000">?</span><span>
+    </span></pre></code>
+
+     Returns the block at the given height.
+     If the given block does not exist the function returns `nil`.
+
+The `Block` type contains the identifier, height, and timestamp:
+
+<code><pre><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> Block {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// The ID of the block.</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">///</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// It is essentially the hash of the block.</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">///</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> id: [</span><span style="color: #0000FF">UInt8</span><span style="color: #000000">; 32]</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// The height of the block.</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">///</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// If the blockchain is viewed as a tree with the genesis block at the root,</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// the height of a node is the number of edges between the node and the genesis block</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">///</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> height: </span><span style="color: #0000FF">UInt64</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// The timestamp of the block.</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">///</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// It is the local clock time of the block proposer when it generates the block</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">///</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> timestamp: </span><span style="color: #0000FF">UFix64</span><span>
+</span><span style="color: #000000">}</span><span>
 </span></pre></code>
 
-Terminates the program unconditionally
-and reports a message which explains why the unrecoverable error occurred.
+## [](#crypto)Crypto
 
-#### [](#example)Example
+The built-in contract `Crypto` can be used to perform cryptographic operations.
+The contract can be imported using `import Crypto`.
 
-<code><pre><span style="color: #0000FF">let</span><span style="color: #000000"> optionalAccount: </span><span style="color: #0000FF">Account</span><span style="color: #000000">? = </span><span style="color: #008000">// ...</span><span>
-</span><span style="color: #0000FF">let</span><span style="color: #000000"> account = optionalAccount ?? panic(</span><span style="color: #A31515">"missing account"</span><span style="color: #000000">)</span><span>
+For example, to verify two signatures with equal weights for some signed data:
+
+<code><pre><span style="color: #0000FF">import</span><span style="color: #000000"> Crypto</span><span>
+</span><span>
+</span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> test main() {</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> keyList = Crypto.KeyList()</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> publicKeyA = Crypto.PublicKey(</span><span>
+</span><span style="color: #000000">        publicKey:</span><span>
+</span><span style="color: #000000">            </span><span style="color: #A31515">"db04940e18ec414664ccfd31d5d2d4ece3985acb8cb17a2025b2f1673427267968e52e2bbf3599059649d4b2cce98fdb8a3048e68abf5abe3e710129e90696ca"</span><span style="color: #000000">.decodeHex(),</span><span>
+</span><span style="color: #000000">        signatureAlgorithm: Crypto.ECDSA_P256</span><span>
+</span><span style="color: #000000">    )</span><span>
+</span><span style="color: #000000">    keyList.add(</span><span>
+</span><span style="color: #000000">        publicKeyA,</span><span>
+</span><span style="color: #000000">        hashAlgorithm: Crypto.SHA3_256,</span><span>
+</span><span style="color: #000000">        weight: </span><span style="color: #09885A">0</span><span style="color: #000000">.</span><span style="color: #09885A">5</span><span>
+</span><span style="color: #000000">    )</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> publicKeyB = Crypto.PublicKey(</span><span>
+</span><span style="color: #000000">        publicKey:</span><span>
+</span><span style="color: #000000">            </span><span style="color: #A31515">"df9609ee588dd4a6f7789df8d56f03f545d4516f0c99b200d73b9a3afafc14de5d21a4fc7a2a2015719dc95c9e756cfa44f2a445151aaf42479e7120d83df956"</span><span style="color: #000000">.decodeHex(),</span><span>
+</span><span style="color: #000000">        signatureAlgorithm: Crypto.ECDSA_P256</span><span>
+</span><span style="color: #000000">    )</span><span>
+</span><span style="color: #000000">    keyList.add(</span><span>
+</span><span style="color: #000000">        publicKeyB,</span><span>
+</span><span style="color: #000000">        hashAlgorithm: Crypto.SHA3_256,</span><span>
+</span><span style="color: #000000">        weight: </span><span style="color: #09885A">0</span><span style="color: #000000">.</span><span style="color: #09885A">5</span><span>
+</span><span style="color: #000000">    )</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> signatureSet = [</span><span>
+</span><span style="color: #000000">        Crypto.KeyListSignature(</span><span>
+</span><span style="color: #000000">            keyIndex: </span><span style="color: #09885A">0</span><span style="color: #000000">,</span><span>
+</span><span style="color: #000000">            signature:</span><span>
+</span><span style="color: #000000">                </span><span style="color: #A31515">"8870a8cbe6f44932ba59e0d15a706214cc4ad2538deb12c0cf718d86f32c47765462a92ce2da15d4a29eb4e2b6fa05d08c7db5d5b2a2cd8c2cb98ded73da31f6"</span><span style="color: #000000">.decodeHex()</span><span>
+</span><span style="color: #000000">        ),</span><span>
+</span><span style="color: #000000">        Crypto.KeyListSignature(</span><span>
+</span><span style="color: #000000">            keyIndex: </span><span style="color: #09885A">1</span><span style="color: #000000">,</span><span>
+</span><span style="color: #000000">            signature:</span><span>
+</span><span style="color: #000000">                </span><span style="color: #A31515">"bbdc5591c3f937a730d4f6c0a6fde61a0a6ceaa531ccb367c3559335ab9734f4f2b9da8adbe371f1f7da913b5a3fdd96a871e04f078928ca89a83d841c72fadf"</span><span style="color: #000000">.decodeHex()</span><span>
+</span><span style="color: #000000">        )</span><span>
+</span><span style="color: #000000">    ]</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">// "foo", encoded as UTF-8, in hex representation</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> signedData = </span><span style="color: #A31515">"666f6f"</span><span style="color: #000000">.decodeHex()</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">let</span><span style="color: #000000"> isValid = keyList.isValid(</span><span>
+</span><span style="color: #000000">        signatureSet: signatureSet,</span><span>
+</span><span style="color: #000000">        signedData: signedData</span><span>
+</span><span style="color: #000000">    )</span><span>
+</span><span style="color: #000000">}</span><span>
 </span></pre></code>
 
-### [](#assert)`assert`
+The API of the Crypto contract is:
 
-<code><pre><span style="color: #0000FF">fun</span><span style="color: #000000"> assert(_ condition: </span><span style="color: #0000FF">Bool</span><span style="color: #000000">, message: </span><span style="color: #0000FF">String</span><span style="color: #000000">)</span><span>
+<code><pre><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">contract</span><span style="color: #000000"> Crypto {</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> SignatureAlgorithm {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> name: </span><span style="color: #0000FF">String</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// ECDSA_P256 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the NIST P-256 curve</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> ECDSA_P256: </span><span style="color: #0000FF">SignatureAlgorithm</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// ECDSA_Secp256k1 is Elliptic Curve Digital Signature Algorithm (ECDSA) on the secp256k1 curve</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> ECDSA_Secp256k1: </span><span style="color: #0000FF">SignatureAlgorithm</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> HashAlgorithm {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> name: </span><span style="color: #0000FF">String</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> SHA2_256: </span><span style="color: #0000FF">HashAlgorithm</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #008000">/// SHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> SHA3_256: </span><span style="color: #0000FF">HashAlgorithm</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> PublicKey {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> publicKey: [</span><span style="color: #0000FF">UInt8</span><span style="color: #000000">]</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> signatureAlgorithm: </span><span style="color: #0000FF">SignatureAlgorithm</span><span>
+</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">init</span><span style="color: #000000">(publicKey: [</span><span style="color: #0000FF">UInt8</span><span style="color: #000000">], signatureAlgorithm: </span><span style="color: #0000FF">SignatureAlgorithm</span><span style="color: #000000">)</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> KeyListEntry {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> keyIndex: </span><span style="color: #0000FF">Int</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> publicKey: </span><span style="color: #0000FF">PublicKey</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> hashAlgorithm: </span><span style="color: #0000FF">HashAlgorithm</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> weight: </span><span style="color: #0000FF">UFix64</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> isRevoked: </span><span style="color: #0000FF">Bool</span><span>
+</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">init</span><span style="color: #000000">(</span><span>
+</span><span style="color: #000000">            keyIndex: </span><span style="color: #0000FF">Int</span><span style="color: #000000">,</span><span>
+</span><span style="color: #000000">            publicKey: </span><span style="color: #0000FF">PublicKey</span><span style="color: #000000">,</span><span>
+</span><span style="color: #000000">            hashAlgorithm: </span><span style="color: #0000FF">HashAlgorithm</span><span style="color: #000000">,</span><span>
+</span><span style="color: #000000">            weight: </span><span style="color: #0000FF">UFix64</span><span style="color: #000000">,</span><span>
+</span><span style="color: #000000">            isRevoked: </span><span style="color: #0000FF">Bool</span><span>
+</span><span style="color: #000000">        )</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> KeyList {</span><span>
+</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">init</span><span style="color: #000000">()</span><span>
+</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">/// Adds a new key with the given weight</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> add(</span><span>
+</span><span style="color: #000000">            _ publicKey: </span><span style="color: #0000FF">PublicKey</span><span style="color: #000000">,</span><span>
+</span><span style="color: #000000">            hashAlgorithm: </span><span style="color: #0000FF">HashAlgorithm</span><span style="color: #000000">,</span><span>
+</span><span style="color: #000000">            weight: </span><span style="color: #0000FF">UFix64</span><span>
+</span><span style="color: #000000">        )</span><span>
+</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">/// Returns the key at the given index, if it exists.</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">/// Revoked keys are always returned, but they have `isRevoked` field set to true</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> get(keyIndex: </span><span style="color: #0000FF">Int</span><span style="color: #000000">): </span><span style="color: #0000FF">KeyListEntry</span><span style="color: #000000">?</span><span>
+</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">/// Marks the key at the given index revoked, but does not delete it</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> revoke(keyIndex: </span><span style="color: #0000FF">Int</span><span style="color: #000000">)</span><span>
+</span><span>
+</span><span style="color: #000000">        </span><span style="color: #008000">/// Returns true if the given signatures are valid for the given signed data</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">fun</span><span style="color: #000000"> isValid(</span><span>
+</span><span style="color: #000000">            signatureSet: [</span><span style="color: #0000FF">KeyListSignature</span><span style="color: #000000">],</span><span>
+</span><span style="color: #000000">            signedData: [</span><span style="color: #0000FF">UInt8</span><span style="color: #000000">]</span><span>
+</span><span style="color: #000000">        ): </span><span style="color: #0000FF">Bool</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span>
+</span><span style="color: #000000">    </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">struct</span><span style="color: #000000"> KeyListSignature {</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> keyIndex: </span><span style="color: #0000FF">Int</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">let</span><span style="color: #000000"> signature: [</span><span style="color: #0000FF">UInt8</span><span style="color: #000000">]</span><span>
+</span><span>
+</span><span style="color: #000000">        </span><span style="color: #0000FF">pub</span><span style="color: #000000"> </span><span style="color: #0000FF">init</span><span style="color: #000000">(keyIndex: </span><span style="color: #0000FF">Int</span><span style="color: #000000">, signature: [</span><span style="color: #0000FF">UInt8</span><span style="color: #000000">])</span><span>
+</span><span style="color: #000000">    }</span><span>
+</span><span style="color: #000000">}</span><span>
 </span></pre></code>
 
-Terminates the program if the given condition is false,
-and reports a message which explains how the condition is false.
-Use this function for internal sanity checks.
+## [](#type-hierarchy)Type Hierarchy
 
-The message argument is optional.
+![Cadence type hierarchy](type-hierarchy.png)

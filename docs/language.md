@@ -965,7 +965,7 @@ let second = values[1] as? Bool
 `Never` is the bottom type, i.e., it is a subtype of all types.
 There is no value that has type `Never`.
 `Never` can be used as the return type for functions that never return normally.
-For example, it is the return type of the function [`panic`](#panic).
+For example, it is the return type of the function [`panic`](#built-in-functions).
 
 ```cadence
 // Declare a function named `crashAndBurn` which will never return,
@@ -7069,7 +7069,7 @@ To get information about a block, the functions `getCurrentBlock` and `getBlock`
   fun getCurrentBlock(): Block
   ```
 
-  Returns the the current block, i.e. the block which contains the currently executed transaction.
+  Returns the current block, i.e. the block which contains the currently executed transaction.
 
 -
   ```cadence
