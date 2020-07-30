@@ -7218,3 +7218,7 @@ func (*StorableType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error),
 func (t *StorableType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
+
+func (t *StorableType) GetMembers() map[string]MemberResolver {
+	return nil
+}
