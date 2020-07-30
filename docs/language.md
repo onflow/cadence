@@ -5674,7 +5674,7 @@ Every account can be accessed through two types:
 
   Only [signed transactions](#transactions) can get the `AuthAccount` for an account.
   For each script signer of the transaction, the corresponding `AuthAccount` is passed
-  to the `prepare` block of the transaction.
+  to the `prepare` phase of the transaction.
 
   ```cadence
   struct AuthAccount {
@@ -6634,14 +6634,14 @@ transaction {
 }
 ```
 
-Then, three optional main phases:
-Preparation, execution, and postconditions, only in that order.
-Each phase is a block of code that executes sequentially.
+Then, four optional main phases:
+Preparation, preconditions, execution, and postconditions, in that order.
+The preparation and execution phases are blocks of code that execute sequentially.
 
-Here is an empty Cadence transaction which contains no logic
-but demonstrates the syntax for each type of block, in the order these blocks will be executed:
+The following empty Cadence transaction contains no logic,
+but demonstrates the syntax for each phase, in the order these phases will be executed:
 
-```cadence,file=transaction-blocks.cdc
+```cadence,file=transaction-phases.cdc
 transaction {
     prepare(signer1: AuthAccount, signer2: AuthAccount) {
         // ...
@@ -6661,9 +6661,9 @@ transaction {
 }
 ```
 
-Although optional, each block serves a specific purpose when executing a transaction
-and it is recommended that developers use these blocks when creating their transactions.
-The following will detail the purpose of and how to use each block.
+Although optional, each phase serves a specific purpose when executing a transaction
+and it is recommended that developers use these phases when creating their transactions.
+The following will detail the purpose of and how to use each phase.
 
 ### Transaction Parameters
 
@@ -6671,7 +6671,7 @@ Transactions may declare parameters.
 Transaction parameters are declared like function parameters.
 The arguments for the transaction are passed in the sent transaction.
 
-Transaction parameters are accessible in all blocks.
+Transaction parameters are accessible in all phases.
 
 ```cadence,file=transaction-parameters.cdc
 // Declare a transaction which has one parameter named `amount`
@@ -6682,14 +6682,14 @@ transaction(amount: UFix64) {
 }
 ```
 
-### Prepare Block
+### Prepare phase
 
-The `prepare` **block** is used when access to the private `AuthAccount` object
+The `prepare` phase is used when access to the private `AuthAccount` object
 of **signing accounts** is required for your transaction.
 
-Direct access to signing accounts is **only possible inside the `prepare` block**.
+Direct access to signing accounts is **only possible inside the `prepare` phase**.
 
-For each signer of the transaction the signing account is passed as an argument to the `prepare` block.
+For each signer of the transaction the signing account is passed as an argument to the `prepare` phase.
 For example, if the transaction has three signers,
 the prepare **must** have three parameters of type `AuthAccount`.
 
@@ -6699,17 +6699,17 @@ the prepare **must** have three parameters of type `AuthAccount`.
  }
 ```
 
-As a best practice, only use the `prepare` block to define and execute logic that requires access
+As a best practice, only use the `prepare` phase to define and execute logic that requires access
 to the `AuthAccount` objects of signing accounts,
 and *move all other logic elsewhere*.
 Modifications to accounts can have significant implications,
-so keep this block clear of unrelated logic to ensure users of your contract are able to easily read
+so keep this phase clear of unrelated logic to ensure users of your contract are able to easily read
 and understand logic related to their private account objects.
 
-The prepare block serves a similar purpose as the initializer of a contract/resource/structure.
+The prepare phase serves a similar purpose as the initializer of a contract/resource/structure.
 
-For example, if a transaction performs a token transfer, put the withdrawal in the `prepare` block,
-as it requires access to the account storage, but perform the deposit in the `execute` block.
+For example, if a transaction performs a token transfer, put the withdrawal in the `prepare` phase,
+as it requires access to the account storage, but perform the deposit in the `execute` phase.
 
 `AuthAccount` objects have the permissions
 to read from and write to the `/storage/` and `/private/` areas
@@ -6717,9 +6717,9 @@ of the account, which cannot be directly accessed anywhere else.
 They also have the permission to create and delete capabilities that
 use these areas.
 
-### Pre Block
+### Pre Phase
 
-The `pre` block is executed after the `prepare` block, and is used for checking
+The `pre` phase is executed after the `prepare` phase, and is used for checking
 if explicit conditions hold before executing the remainder of the transaction.
 A common example would be checking requisite balances before transferring tokens between accounts.
 
@@ -6729,13 +6729,13 @@ pre {
 }
 ```
 
-If the `pre` block throws an error, or does not return `true` the remainder of the transaction
+If the `pre` phase throws an error, or does not return `true` the remainder of the transaction
 is not executed and it will be completely reverted.
 
-### Execute Block
+### Execute Phase
 
-The `execute` block does exactly what it says, it executes the main logic of the transaction.
-This block is optional, but it is a best practice to add your main transaction logic in the section,
+The `execute` phase does exactly what it says, it executes the main logic of the transaction.
+This phase is optional, but it is a best practice to add your main transaction logic in the section,
 so it is explicit.
 
 ```cadence
@@ -6750,14 +6750,14 @@ execute {
 }
 ```
 
-You **may not** access private `AuthAccount` objects in the `execute` block,
+You **may not** access private `AuthAccount` objects in the `execute` phase,
 but you may get an account's `PublicAccount` object,
 which allows reading and calling methods on objects
 that an account has published in the public domain of its account (resources, contract methods, etc.).
 
-### Post Block
+### Post Phase
 
-Statements inside of the `post` block are used
+Statements inside of the `post` phase are used
 to verify that your transaction logic has been executed properly.
 It contains zero or more condition checks.
 
@@ -6775,28 +6775,28 @@ If any of the condition checks result in `false`, the transaction will fail and 
 Only condition checks are allowed in this section.
 No actual computation or modification of values is allowed.
 
-**A Note about `pre` and `post` Blocks**
+**A Note about `pre` and `post` Phases**
 
-Another function of the `pre` and `post` blocks is to help provide information
+Another function of the `pre` and `post` phases is to help provide information
 about how the effects of a transaction on the accounts and resources involved.
 This is essential because users may want to verify what a transaction does before submitting it.
-`pre` and `post` blocks provide a way to introspect transactions before they are executed.
+`pre` and `post` phases provide a way to introspect transactions before they are executed.
 
-For example, in the future the blocks could be analyzed and interpreted to the user
+For example, in the future the phases could be analyzed and interpreted to the user
 in the software they are using,
 e.g. "this transaction will transfer 30 tokens from A to B.
 The balance of A will decrease by 30 tokens and the balance of B will increase by 30 tokens."
 
 ### Summary
 
-Cadence transactions use blocks to make the transaction's code / intent more readable
+Cadence transactions use phases to make the transaction's code / intent more readable
 and to provide a way for developer to separate potentially 'unsafe' account
 modifying code from regular transaction logic,
 as well as provide a way to check for error prior / after transaction execution,
 and abort the transaction if any are found.
 
 The following is a brief summary of how to use the `prepare`, `pre`, `execute`,
-and `post` blocks in a Cadence transaction.
+and `post` phases in a Cadence transaction.
 
 ```cadence
 transaction {
@@ -7055,7 +7055,7 @@ pub resource SimpleSale {
 
 To get the addresses of the signers of a transaction,
 use the `address` field of each signing `AuthAccount`
-that is passed to the transaction's `prepare` block.
+that is passed to the transaction's `prepare` phase.
 
 There is currently no API that allows getting other transaction information.
 Please let us know if your use-case demands it by request this feature in an issue.
