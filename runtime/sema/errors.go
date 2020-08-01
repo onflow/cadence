@@ -21,6 +21,7 @@ package sema
 import (
 	"fmt"
 	"math/big"
+	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -1024,6 +1025,7 @@ func (*RepeatedImportError) isSemanticError() {}
 type NotExportedError struct {
 	Name           string
 	ImportLocation ast.Location
+	Available      []string
 	Pos            ast.Position
 }
 
@@ -1033,6 +1035,17 @@ func (e *NotExportedError) Error() string {
 		e.Name,
 		e.ImportLocation,
 	)
+}
+
+func (e *NotExportedError) SecondaryError() string {
+	var builder strings.Builder
+	builder.WriteString("available exported declarations are:\n")
+
+	for _, available := range e.Available {
+		builder.WriteString(fmt.Sprintf(" - `%s`\n", available))
+	}
+
+	return builder.String()
 }
 
 func (*NotExportedError) isSemanticError() {}

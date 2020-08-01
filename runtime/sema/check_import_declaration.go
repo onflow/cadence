@@ -100,19 +100,21 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 
 	// Attempt to import the requested value declarations
 
+	allValueElements := imp.AllValueElements()
 	foundValues, invalidAccessedValues := checker.importElements(
 		checker.valueActivations,
 		declaration.Identifiers,
-		imp.AllValueElements(),
+		allValueElements,
 		imp.IsImportableValue,
 	)
 
 	// Attempt to import the requested type declarations
 
+	allTypeElements := imp.AllTypeElements()
 	foundTypes, invalidAccessedTypes := checker.importElements(
 		checker.typeActivations,
 		declaration.Identifiers,
-		imp.AllTypeElements(),
+		allTypeElements,
 		imp.IsImportableType,
 	)
 
@@ -141,22 +143,55 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 		)
 	}
 
+	identifierCount := len(declaration.Identifiers)
+
 	// Determine which requested declarations could neither be found
 	// in the value nor in the type declarations of the imported program.
 	// For each missing import, report an error and declare both a value
 	// with an invalid type and an invalid type to avoid spurious errors
-	// due to uses of the inaccessible value or type
+	// due to uses of the inaccessible value or type.
+	//
+	// Also show which declarations are available, to help with debugging.
 
-	missing := make(map[ast.Identifier]bool, len(declaration.Identifiers))
+	missing := make([]ast.Identifier, 0, identifierCount)
+
 	for _, identifier := range declaration.Identifiers {
 		if foundValues[identifier] || foundTypes[identifier] {
 			continue
 		}
 
-		missing[identifier] = true
+		missing = append(missing, identifier)
 	}
 
-	checker.handleMissingImports(missing, location)
+	if len(missing) > 0 {
+		capacity := len(allValueElements) + len(allTypeElements)
+		available := make([]string, 0, capacity)
+		availableSet := make(map[string]struct{}, capacity)
+
+		for identifier := range allValueElements {
+			if _, ok := availableSet[identifier]; ok {
+				continue
+			}
+			if !imp.IsImportableValue(identifier) {
+				continue
+			}
+			availableSet[identifier] = struct{}{}
+			available = append(available, identifier)
+		}
+
+		for identifier := range allTypeElements {
+			if _, ok := availableSet[identifier]; ok {
+				continue
+			}
+			if !imp.IsImportableType(identifier) {
+				continue
+			}
+			availableSet[identifier] = struct{}{}
+			available = append(available, identifier)
+		}
+
+		checker.handleMissingImports(missing, available, location)
+	}
 
 	return nil
 }
@@ -202,12 +237,13 @@ func (checker *Checker) EnsureLoaded(location ast.Location, loadProgram func() *
 	return subChecker, checkerErr
 }
 
-func (checker *Checker) handleMissingImports(missing map[ast.Identifier]bool, importLocation ast.Location) {
-	for identifier := range missing {
+func (checker *Checker) handleMissingImports(missing []ast.Identifier, available []string, importLocation ast.Location) {
+	for _, identifier := range missing {
 		checker.report(
 			&NotExportedError{
 				Name:           identifier.Identifier,
 				ImportLocation: importLocation,
+				Available:      available,
 				Pos:            identifier.Pos,
 			},
 		)
