@@ -1860,3 +1860,52 @@ func TestCheckContractInterfaceFungibleTokenUse(t *testing.T) {
 		cmd.PrettyPrintError(os.Stdout, err, "", map[string]string{"": code})
 	}
 }
+
+// TestCheckInvalidInterfaceUseAsTypeSuggestion tests that an interface
+// can not be used as a type, and the suggestion to fix it is correct
+//
+func TestCheckInvalidInterfaceUseAsTypeSuggestion(t *testing.T) {
+
+	t.Parallel()
+
+	checker, err := ParseAndCheckWithPanic(t, `
+      struct interface I {}
+
+      let s: ((I): {Int: I}) = panic("")
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	require.IsType(t, &sema.InvalidInterfaceTypeError{}, errs[0])
+
+	iType := checker.GlobalTypes["I"].Type.(*sema.InterfaceType)
+
+	assert.Equal(t,
+		&sema.FunctionType{
+			Parameters: []*sema.Parameter{
+				{
+					TypeAnnotation: sema.NewTypeAnnotation(
+						&sema.RestrictedType{
+							Type: &sema.AnyStructType{},
+							Restrictions: []*sema.InterfaceType{
+								iType,
+							},
+						},
+					),
+				},
+			},
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(
+				&sema.DictionaryType{
+					KeyType: &sema.IntType{},
+					ValueType: &sema.RestrictedType{
+						Type: &sema.AnyStructType{},
+						Restrictions: []*sema.InterfaceType{
+							iType,
+						},
+					},
+				},
+			),
+		},
+		errs[0].(*sema.InvalidInterfaceTypeError).ExpectedType,
+	)
+}

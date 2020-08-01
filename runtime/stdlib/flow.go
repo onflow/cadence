@@ -304,8 +304,8 @@ func (*BlockType) IsEquatable() bool {
 	return false
 }
 
-func (*BlockType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *BlockType) RewriteWithRestrictedTypes() (sema.Type, bool) {
+	return t, false
 }
 
 const BlockIDSize = 32
