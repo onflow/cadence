@@ -88,7 +88,7 @@ type Type interface {
 	IsEquatable() bool
 
 	TypeAnnotationState() TypeAnnotationState
-	ContainsFirstLevelInterfaceType() bool
+	RewriteWithRestrictedTypes() (result Type, rewritten bool)
 
 	// Unify attempts to unify the given type with this type, i.e., resolve type parameters
 	// in generic types (see `GenericType`) using the given type parameters.
@@ -408,8 +408,8 @@ func (*MetaType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*MetaType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *MetaType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 func (*MetaType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -484,8 +484,8 @@ func (*AnyType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*AnyType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *AnyType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 func (*AnyType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -543,8 +543,8 @@ func (*AnyStructType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*AnyStructType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *AnyStructType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 func (*AnyStructType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -602,8 +602,8 @@ func (*AnyResourceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*AnyResourceType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *AnyResourceType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 func (*AnyResourceType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -660,8 +660,8 @@ func (*NeverType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*NeverType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *NeverType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 func (*NeverType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -718,8 +718,8 @@ func (*VoidType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*VoidType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *VoidType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 func (*VoidType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -779,8 +779,8 @@ func (*InvalidType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*InvalidType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *InvalidType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 func (*InvalidType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -852,8 +852,15 @@ func (t *OptionalType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
 
-func (t *OptionalType) ContainsFirstLevelInterfaceType() bool {
-	return t.Type.ContainsFirstLevelInterfaceType()
+func (t *OptionalType) RewriteWithRestrictedTypes() (Type, bool) {
+	rewrittenType, rewritten := t.Type.RewriteWithRestrictedTypes()
+	if rewritten {
+		return &OptionalType{
+			Type: rewrittenType,
+		}, true
+	} else {
+		return t, false
+	}
 }
 
 func (t *OptionalType) Unify(other Type, typeParameters map[*TypeParameter]Type, report func(err error), outerRange ast.Range) bool {
@@ -929,8 +936,8 @@ func (t *GenericType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *GenericType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *GenericType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 func (t *GenericType) Unify(
@@ -1028,8 +1035,8 @@ func (*BoolType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*BoolType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *BoolType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 func (*BoolType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -1087,8 +1094,8 @@ func (*CharacterType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*CharacterType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *CharacterType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 func (*CharacterType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -1145,8 +1152,8 @@ func (*StringType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*StringType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *StringType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 var stringTypeConcatFunctionType = &FunctionType{
@@ -1324,8 +1331,8 @@ func (*NumberType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*NumberType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *NumberType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 func (*NumberType) MinInt() *big.Int {
@@ -1390,8 +1397,8 @@ func (*SignedNumberType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*SignedNumberType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *SignedNumberType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 func (*SignedNumberType) MinInt() *big.Int {
@@ -1471,8 +1478,8 @@ func (*IntegerType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*IntegerType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *IntegerType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 func (*IntegerType) MinInt() *big.Int {
@@ -1537,8 +1544,8 @@ func (*SignedIntegerType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*SignedIntegerType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *SignedIntegerType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 func (*SignedIntegerType) MinInt() *big.Int {
@@ -1603,8 +1610,8 @@ func (*IntType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*IntType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *IntType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 func (*IntType) MinInt() *big.Int {
@@ -1670,8 +1677,8 @@ func (*Int8Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*Int8Type) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *Int8Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 var Int8TypeMinInt = new(big.Int).SetInt64(math.MinInt8)
@@ -1739,8 +1746,8 @@ func (*Int16Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*Int16Type) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *Int16Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 var Int16TypeMinInt = new(big.Int).SetInt64(math.MinInt16)
@@ -1808,8 +1815,8 @@ func (*Int32Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*Int32Type) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *Int32Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 var Int32TypeMinInt = new(big.Int).SetInt64(math.MinInt32)
@@ -1877,8 +1884,8 @@ func (*Int64Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*Int64Type) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *Int64Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 var Int64TypeMinInt = new(big.Int).SetInt64(math.MinInt64)
@@ -1946,8 +1953,8 @@ func (*Int128Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*Int128Type) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *Int128Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 var Int128TypeMinIntBig *big.Int
@@ -2027,8 +2034,8 @@ func (*Int256Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*Int256Type) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *Int256Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 var Int256TypeMinIntBig *big.Int
@@ -2108,8 +2115,8 @@ func (*UIntType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*UIntType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *UIntType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 var UIntTypeMin = new(big.Int)
@@ -2177,8 +2184,8 @@ func (*UInt8Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*UInt8Type) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *UInt8Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 var UInt8TypeMinInt = new(big.Int)
@@ -2247,8 +2254,8 @@ func (*UInt16Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*UInt16Type) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *UInt16Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 var UInt16TypeMinInt = new(big.Int)
@@ -2317,8 +2324,8 @@ func (*UInt32Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*UInt32Type) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *UInt32Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 var UInt32TypeMinInt = new(big.Int)
@@ -2387,8 +2394,8 @@ func (*UInt64Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*UInt64Type) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *UInt64Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 var UInt64TypeMinInt = new(big.Int)
@@ -2457,8 +2464,8 @@ func (*UInt128Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*UInt128Type) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *UInt128Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 var UInt128TypeMinIntBig = new(big.Int)
@@ -2533,8 +2540,8 @@ func (*UInt256Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*UInt256Type) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *UInt256Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 var UInt256TypeMinIntBig = new(big.Int)
@@ -2609,8 +2616,8 @@ func (*Word8Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*Word8Type) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *Word8Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 var Word8TypeMinInt = new(big.Int)
@@ -2679,8 +2686,8 @@ func (*Word16Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*Word16Type) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *Word16Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 var Word16TypeMinInt = new(big.Int)
@@ -2749,8 +2756,8 @@ func (*Word32Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*Word32Type) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *Word32Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 var Word32TypeMinInt = new(big.Int)
@@ -2819,8 +2826,8 @@ func (*Word64Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*Word64Type) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *Word64Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 var Word64TypeMinInt = new(big.Int)
@@ -2888,8 +2895,8 @@ func (*FixedPointType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*FixedPointType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *FixedPointType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 func (*FixedPointType) MinInt() *big.Int {
@@ -2954,8 +2961,8 @@ func (*SignedFixedPointType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*SignedFixedPointType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *SignedFixedPointType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 func (*SignedFixedPointType) MinInt() *big.Int {
@@ -3024,8 +3031,8 @@ func (*Fix64Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*Fix64Type) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *Fix64Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 const Fix64TypeMinInt = fixedpoint.Fix64TypeMinInt
@@ -3115,8 +3122,8 @@ func (*UFix64Type) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*UFix64Type) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *UFix64Type) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 const UFix64TypeMinInt = fixedpoint.UFix64TypeMinInt
@@ -3500,8 +3507,15 @@ func (t *VariableSizedType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
 
-func (t *VariableSizedType) ContainsFirstLevelInterfaceType() bool {
-	return t.Type.ContainsFirstLevelInterfaceType()
+func (t *VariableSizedType) RewriteWithRestrictedTypes() (Type, bool) {
+	rewrittenType, rewritten := t.Type.RewriteWithRestrictedTypes()
+	if rewritten {
+		return &VariableSizedType{
+			Type: rewrittenType,
+		}, true
+	} else {
+		return t, false
+	}
 }
 
 func (*VariableSizedType) isValueIndexableType() bool {
@@ -3602,8 +3616,16 @@ func (t *ConstantSizedType) TypeAnnotationState() TypeAnnotationState {
 	return t.Type.TypeAnnotationState()
 }
 
-func (t *ConstantSizedType) ContainsFirstLevelInterfaceType() bool {
-	return t.Type.ContainsFirstLevelInterfaceType()
+func (t *ConstantSizedType) RewriteWithRestrictedTypes() (Type, bool) {
+	rewrittenType, rewritten := t.Type.RewriteWithRestrictedTypes()
+	if rewritten {
+		return &ConstantSizedType{
+			Type: rewrittenType,
+			Size: t.Size,
+		}, true
+	} else {
+		return t, false
+	}
 }
 
 func (*ConstantSizedType) isValueIndexableType() bool {
@@ -3833,7 +3855,7 @@ func formatFunctionType(
 	return builder.String()
 }
 
-// FunctionType is a monomorphic function type.
+// FunctionType
 //
 type FunctionType struct {
 	TypeParameters        []*TypeParameter
@@ -4036,15 +4058,82 @@ func (t *FunctionType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *FunctionType) ContainsFirstLevelInterfaceType() bool {
+func (t *FunctionType) RewriteWithRestrictedTypes() (Type, bool) {
+	anyRewritten := false
 
-	for _, parameter := range t.Parameters {
-		if parameter.TypeAnnotation.Type.ContainsFirstLevelInterfaceType() {
-			return true
+	rewrittenTypeParameterTypeBounds := map[*TypeParameter]Type{}
+
+	for _, typeParameter := range t.TypeParameters {
+		if typeParameter.TypeBound == nil {
+			continue
+		}
+
+		rewrittenType, rewritten := typeParameter.TypeBound.RewriteWithRestrictedTypes()
+		if rewritten {
+			anyRewritten = true
+			rewrittenTypeParameterTypeBounds[typeParameter] = rewrittenType
 		}
 	}
 
-	return t.ReturnTypeAnnotation.Type.ContainsFirstLevelInterfaceType()
+	rewrittenParameterTypes := map[*Parameter]Type{}
+
+	for _, parameter := range t.Parameters {
+		rewrittenType, rewritten := parameter.TypeAnnotation.Type.RewriteWithRestrictedTypes()
+		if rewritten {
+			anyRewritten = true
+			rewrittenParameterTypes[parameter] = rewrittenType
+		}
+	}
+
+	rewrittenReturnType, rewritten := t.ReturnTypeAnnotation.Type.RewriteWithRestrictedTypes()
+	if rewritten {
+		anyRewritten = true
+	}
+
+	if anyRewritten {
+		var rewrittenTypeParameters []*TypeParameter
+		if len(t.TypeParameters) > 0 {
+			rewrittenTypeParameters = make([]*TypeParameter, len(t.TypeParameters))
+			for i, typeParameter := range t.TypeParameters {
+				rewrittenTypeBound, ok := rewrittenTypeParameterTypeBounds[typeParameter]
+				if ok {
+					rewrittenTypeParameters[i] = &TypeParameter{
+						Name:      typeParameter.Name,
+						TypeBound: rewrittenTypeBound,
+						Optional:  typeParameter.Optional,
+					}
+				} else {
+					rewrittenTypeParameters[i] = typeParameter
+				}
+			}
+		}
+
+		var rewrittenParameters []*Parameter
+		if len(t.Parameters) > 0 {
+			rewrittenParameters = make([]*Parameter, len(t.Parameters))
+			for i, parameter := range t.Parameters {
+				rewrittenParameterType, ok := rewrittenParameterTypes[parameter]
+				if ok {
+					rewrittenParameters[i] = &Parameter{
+						Label:          parameter.Label,
+						Identifier:     parameter.Identifier,
+						TypeAnnotation: NewTypeAnnotation(rewrittenParameterType),
+					}
+				} else {
+					rewrittenParameters[i] = parameter
+				}
+			}
+		}
+
+		return &FunctionType{
+			TypeParameters:        rewrittenTypeParameters,
+			Parameters:            rewrittenParameters,
+			ReturnTypeAnnotation:  NewTypeAnnotation(rewrittenReturnType),
+			RequiredArgumentCount: t.RequiredArgumentCount,
+		}, true
+	} else {
+		return t, false
+	}
 }
 
 func (t *FunctionType) ArgumentLabels() (argumentLabels []string) {
@@ -4501,8 +4590,8 @@ func (*CompositeType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*CompositeType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *CompositeType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 func (t *CompositeType) InterfaceType() *InterfaceType {
@@ -4595,8 +4684,8 @@ func (*AuthAccountType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*AuthAccountType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *AuthAccountType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 var authAccountTypeSetCodeFunctionType = &FunctionType{
@@ -5162,8 +5251,8 @@ func (*PublicAccountType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*PublicAccountType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *PublicAccountType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
+	return t, false
 }
 
 const publicAccountTypeGetLinkTargetFunctionDocString = `
@@ -5419,9 +5508,23 @@ func (*InterfaceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *InterfaceType) ContainsFirstLevelInterfaceType() bool {
-	return t.CompositeKind == common.CompositeKindResource ||
-		t.CompositeKind == common.CompositeKindStructure
+func (t *InterfaceType) RewriteWithRestrictedTypes() (Type, bool) {
+	switch t.CompositeKind {
+	case common.CompositeKindResource:
+		return &RestrictedType{
+			Type:         &AnyResourceType{},
+			Restrictions: []*InterfaceType{t},
+		}, true
+
+	case common.CompositeKindStructure:
+		return &RestrictedType{
+			Type:         &AnyStructType{},
+			Restrictions: []*InterfaceType{t},
+		}, true
+
+	default:
+		return t, false
+	}
 }
 
 func (*InterfaceType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -5517,9 +5620,18 @@ func (t *DictionaryType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *DictionaryType) ContainsFirstLevelInterfaceType() bool {
-	return t.KeyType.ContainsFirstLevelInterfaceType() ||
-		t.ValueType.ContainsFirstLevelInterfaceType()
+func (t *DictionaryType) RewriteWithRestrictedTypes() (Type, bool) {
+	rewrittenKeyType, keyTypeRewritten := t.KeyType.RewriteWithRestrictedTypes()
+	rewrittenValueType, valueTypeRewritten := t.ValueType.RewriteWithRestrictedTypes()
+	rewritten := keyTypeRewritten || valueTypeRewritten
+	if rewritten {
+		return &DictionaryType{
+			KeyType:   rewrittenKeyType,
+			ValueType: rewrittenValueType,
+		}, true
+	} else {
+		return t, false
+	}
 }
 
 const dictionaryTypeLengthFieldDocString = `
@@ -5785,8 +5897,16 @@ func (*ReferenceType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (t *ReferenceType) ContainsFirstLevelInterfaceType() bool {
-	return t.Type.ContainsFirstLevelInterfaceType()
+func (t *ReferenceType) RewriteWithRestrictedTypes() (Type, bool) {
+	rewrittenType, rewritten := t.Type.RewriteWithRestrictedTypes()
+	if rewritten {
+		return &ReferenceType{
+			Authorized: t.Authorized,
+			Type:       rewrittenType,
+		}, true
+	} else {
+		return t, false
+	}
 }
 
 func (t *ReferenceType) GetMembers() map[string]MemberResolver {
@@ -5877,8 +5997,8 @@ func (*AddressType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*AddressType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *AddressType) RewriteWithRestrictedTypes() (Type, bool) {
+	return t, false
 }
 
 var AddressTypeMinIntBig = new(big.Int)
@@ -6621,8 +6741,8 @@ func (*TransactionType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*TransactionType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *TransactionType) RewriteWithRestrictedTypes() (Type, bool) {
+	return t, false
 }
 
 func (t *TransactionType) GetMembers() map[string]MemberResolver {
@@ -6798,10 +6918,10 @@ func (*RestrictedType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*RestrictedType) ContainsFirstLevelInterfaceType() bool {
+func (t *RestrictedType) RewriteWithRestrictedTypes() (Type, bool) {
 	// Even though the restrictions should be resource interfaces,
 	// they are not on the "first level", i.e. not the restricted type
-	return false
+	return t, false
 }
 
 func (t *RestrictedType) GetMembers() map[string]MemberResolver {
@@ -6909,8 +7029,8 @@ func (*PathType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*PathType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *PathType) RewriteWithRestrictedTypes() (Type, bool) {
+	return t, false
 }
 
 func (*PathType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
@@ -7000,11 +7120,18 @@ func (*CapabilityType) IsEquatable() bool {
 	return false
 }
 
-func (t *CapabilityType) ContainsFirstLevelInterfaceType() bool {
+func (t *CapabilityType) RewriteWithRestrictedTypes() (Type, bool) {
 	if t.BorrowType == nil {
-		return false
+		return t, false
 	}
-	return t.BorrowType.ContainsFirstLevelInterfaceType()
+	rewrittenType, rewritten := t.BorrowType.RewriteWithRestrictedTypes()
+	if rewritten {
+		return &CapabilityType{
+			BorrowType: rewrittenType,
+		}, true
+	} else {
+		return t, false
+	}
 }
 
 func (t *CapabilityType) Unify(
@@ -7207,8 +7334,8 @@ func (*StorableType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
-func (*StorableType) ContainsFirstLevelInterfaceType() bool {
-	return false
+func (t *StorableType) RewriteWithRestrictedTypes() (Type, bool) {
+	return t, false
 }
 
 func (*StorableType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {

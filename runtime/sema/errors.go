@@ -1313,24 +1313,20 @@ func (*InvalidResourceAnnotationError) isSemanticError() {}
 // InvalidInterfaceTypeError
 
 type InvalidInterfaceTypeError struct {
-	Type Type
+	ActualType   Type
+	ExpectedType Type
 	ast.Range
 }
 
 func (e *InvalidInterfaceTypeError) Error() string {
-	return "invalid interface type"
+	return "invalid use of interface as type"
 }
 
 func (e *InvalidInterfaceTypeError) SecondaryError() string {
-	var restrictedAny Type = &AnyStructType{}
-	if e.Type.IsResourceType() {
-		restrictedAny = &AnyResourceType{}
-	}
-
 	return fmt.Sprintf(
-		"got `%[1]s`; consider using `%[2]s{%[1]s}`",
-		e.Type.QualifiedString(),
-		restrictedAny,
+		"got `%s`; consider using `%s`",
+		e.ActualType.QualifiedString(),
+		e.ExpectedType.QualifiedString(),
 	)
 }
 
