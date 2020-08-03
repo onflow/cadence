@@ -19,7 +19,9 @@
 package server
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -49,13 +51,83 @@ var typeDeclarations = append(
 	stdlib.BuiltinTypes...,
 ).ToTypeDeclarations()
 
-// document represents an open document on the client. It contains all cached
+// Document represents an open document on the client. It contains all cached
 // information about each document that is used to support CodeLens,
 // transaction submission, and script execution.
 type Document struct {
-	Text          string
-	latestVersion float64
-	hasErrors     bool
+	Text string
+}
+
+func (d Document) Offset(line, column int) (offset int) {
+	reader := bufio.NewReader(strings.NewReader(d.Text))
+	for i := 1; i < line; i++ {
+		l, err := reader.ReadString('\n')
+		if err != nil && err != io.EOF {
+			return -1
+		}
+		offset += len(l)
+	}
+	return offset + column
+}
+
+func (d Document) HasAnyPrecedingStringsAtPosition(options []string, line, column int) bool {
+	endOffset := d.Offset(line, column)
+	if endOffset >= len(d.Text) {
+		endOffset = len(d.Text) - 1
+	}
+	if endOffset < 0 {
+		return false
+	}
+
+	isWhitespace := func(c byte) bool {
+		return c == ' ' || c == '\t' || c == '\n'
+	}
+
+	skip := func(predicate func(byte) bool) (done bool) {
+		for {
+			c := d.Text[endOffset]
+			if !predicate(c) {
+				break
+			}
+			endOffset--
+			if endOffset < 0 {
+				return true
+			}
+		}
+
+		return false
+	}
+
+	// Skip preceding non-whitespace
+	done := skip(func(c byte) bool {
+		return !isWhitespace(c)
+	})
+	if done {
+		return false
+	}
+
+	// Skip preceding whitespace
+	done = skip(isWhitespace)
+	if done {
+		return false
+	}
+
+	// Check if any of the options matches
+
+	for _, option := range options {
+		optLen := len(option)
+		startOffset := endOffset - optLen + 1
+		if startOffset < 0 {
+			continue
+		}
+
+		subStr := d.Text[startOffset : endOffset+1]
+		if subStr == option {
+			return true
+		}
+	}
+
+	return false
 }
 
 // CommandHandler represents the form of functions that handle commands
@@ -313,9 +385,7 @@ func (s *Server) DidOpenTextDocument(conn protocol.Conn, params *protocol.DidOpe
 	})
 
 	s.documents[uri] = Document{
-		Text:          text,
-		latestVersion: params.TextDocument.Version,
-		hasErrors:     len(diagnostics) > 0,
+		Text: text,
 	}
 
 	return nil
@@ -342,9 +412,7 @@ func (s *Server) DidChangeTextDocument(
 	}
 
 	s.documents[uri] = Document{
-		Text:          text,
-		latestVersion: params.TextDocument.Version,
-		hasErrors:     len(diagnostics) > 0,
+		Text: text,
 	}
 
 	return nil
@@ -580,81 +648,97 @@ var expressionCompletionItems = []*protocol.CompletionItem{
 	},
 }
 
-const accessOptions = "pub,priv,pub(set),access(contract),access(account)"
+var allAccessOptions = []string{"pub", "priv", "pub(set)", "access(contract)", "access(account)", "access(self)"}
+var allAccessOptionsCommaSeparated = strings.Join(allAccessOptions, ",")
 
+var readAccessOptions = []string{"pub", "priv", "access(contract)", "access(account)", "access(self)"}
+var readAccessOptionsCommaSeparated = strings.Join(readAccessOptions, ",")
+
+// NOTE: if the document doesn't specify an access modifier yet,
+// the completion item's InsertText will  get prefixed with a placeholder
+// for the access modifier.
+//
+// Start placeholders at index 2!
+//
 var declarationCompletionItems = []*protocol.CompletionItem{
 	{
 		Kind:             protocol.KeywordCompletion,
 		InsertTextFormat: protocol.SnippetTextFormat,
 		Label:            "struct",
 		Detail:           "struct declaration",
-		InsertText:       fmt.Sprintf("${1|%s|} struct $2 {\n\t$0\n}", accessOptions),
+		InsertText:       "struct $2 {\n\t$0\n}",
 	},
 	{
 		Kind:             protocol.KeywordCompletion,
 		InsertTextFormat: protocol.SnippetTextFormat,
 		Label:            "resource",
 		Detail:           "resource declaration",
-		InsertText:       fmt.Sprintf("${1|%s|} resource $2 {\n\t$0\n}", accessOptions),
+		InsertText:       "resource $2 {\n\t$0\n}",
 	},
 	{
 		Kind:             protocol.KeywordCompletion,
 		InsertTextFormat: protocol.SnippetTextFormat,
 		Label:            "contract",
 		Detail:           "contract declaration",
-		InsertText:       fmt.Sprintf("${1|%s|} contract $2 {\n\t$0\n}", accessOptions),
+		InsertText:       "contract $2 {\n\t$0\n}",
 	},
 	{
 		Kind:             protocol.KeywordCompletion,
 		InsertTextFormat: protocol.SnippetTextFormat,
 		Label:            "struct interface",
 		Detail:           "struct interface declaration",
-		InsertText:       fmt.Sprintf("${1|%s|} struct interface $2 {\n\t$0\n}", accessOptions),
+		InsertText:       "struct interface $2 {\n\t$0\n}",
 	},
 	{
 		Kind:             protocol.KeywordCompletion,
 		InsertTextFormat: protocol.SnippetTextFormat,
 		Label:            "resource interface",
 		Detail:           "resource interface declaration",
-		InsertText:       fmt.Sprintf("${1|%s|} resource interface $2 {\n\t$0\n}", accessOptions),
+		InsertText:       "resource interface $2 {\n\t$0\n}",
 	},
 	{
 		Kind:             protocol.KeywordCompletion,
 		InsertTextFormat: protocol.SnippetTextFormat,
 		Label:            "contract interface",
 		Detail:           "contract interface declaration",
-		InsertText:       fmt.Sprintf("${1|%s|} contract interface $2 {\n\t$0\n}", accessOptions),
+		InsertText:       "contract interface $2 {\n\t$0\n}",
 	},
 	{
 		Kind:             protocol.KeywordCompletion,
 		InsertTextFormat: protocol.SnippetTextFormat,
 		Label:            "event",
 		Detail:           "event declaration",
-		InsertText:       fmt.Sprintf("${1|%s|} event $2($0)", accessOptions),
+		InsertText:       "event $2($0)",
 	},
 	{
 		Kind:             protocol.KeywordCompletion,
 		InsertTextFormat: protocol.SnippetTextFormat,
 		Label:            "fun",
 		Detail:           "function declaration",
-		InsertText:       fmt.Sprintf("${1|%s|} fun $2($3)${4:: $5} {\n\t$0\n}", accessOptions),
+		InsertText:       "fun $2($3)${4:: $5} {\n\t$0\n}",
 	},
 }
 
+// NOTE: if the document doesn't specify an access modifier yet,
+// the completion item's InsertText will  get prefixed with a placeholder
+// for the access modifier.
+//
+// Start placeholders at index 2!
+//
 var containerCompletionItems = []*protocol.CompletionItem{
 	{
 		Kind:             protocol.KeywordCompletion,
 		InsertTextFormat: protocol.SnippetTextFormat,
 		Label:            "var",
 		Detail:           "variable field",
-		InsertText:       fmt.Sprintf("${1|%s|} var $2: $0", accessOptions),
+		InsertText:       "var $2: $0",
 	},
 	{
 		Kind:             protocol.KeywordCompletion,
 		InsertTextFormat: protocol.SnippetTextFormat,
 		Label:            "let",
 		Detail:           "constant field",
-		InsertText:       fmt.Sprintf("${1|%s|} let $2: $0", accessOptions),
+		InsertText:       "let $2: $0",
 	},
 	// alias for the above
 	{
@@ -662,14 +746,14 @@ var containerCompletionItems = []*protocol.CompletionItem{
 		InsertTextFormat: protocol.SnippetTextFormat,
 		Label:            "const",
 		Detail:           "constant field",
-		InsertText:       fmt.Sprintf("${1|%s|} let $2: $0", accessOptions),
+		InsertText:       "let $2: $0",
 	},
 }
 
 // Completion is called to compute completion items at a given cursor position.
 //
 func (s *Server) Completion(
-	_ protocol.Conn,
+	conn protocol.Conn,
 	params *protocol.CompletionParams,
 ) (
 	items []*protocol.CompletionItem,
@@ -681,6 +765,11 @@ func (s *Server) Completion(
 
 	uri := params.TextDocument.URI
 	checker, ok := s.checkers[uri]
+	if !ok {
+		return
+	}
+
+	document, ok := s.documents[uri]
 	if !ok {
 		return
 	}
@@ -702,13 +791,38 @@ func (s *Server) Completion(
 	// TODO: make conditional on position being inside a function declaration
 	items = append(items, expressionCompletionItems...)
 
+	requiresAccessModifierPlaceholder :=
+		!document.HasAnyPrecedingStringsAtPosition(allAccessOptions, position.Line, position.Column)
+
 	// TODO: make conditional on position being outside a function declaration
-	items = append(items, declarationCompletionItems...)
+	for _, item := range declarationCompletionItems {
+		if requiresAccessModifierPlaceholder {
+			item = withCompletionItemInsertText(
+				item,
+				fmt.Sprintf("${1|%s|} %s", readAccessOptionsCommaSeparated, item.InsertText),
+			)
+		}
+		items = append(items, item)
+	}
 
 	// TODO: make conditional on position being inside a container, but not a function declaration
-	items = append(items, containerCompletionItems...)
+	for _, item := range containerCompletionItems {
+		if requiresAccessModifierPlaceholder {
+			item = withCompletionItemInsertText(
+				item,
+				fmt.Sprintf("${1|%s|} %s", allAccessOptionsCommaSeparated, item.InsertText),
+			)
+		}
+		items = append(items, item)
+	}
 
 	return
+}
+
+func withCompletionItemInsertText(item *protocol.CompletionItem, insertText string) *protocol.CompletionItem {
+	itemCopy := *item
+	itemCopy.InsertText = insertText
+	return &itemCopy
 }
 
 func (s *Server) memberCompletions(
