@@ -857,6 +857,10 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 
 	case *ast.InstantiationType:
 		return checker.convertInstantiationType(t)
+
+	case nil:
+		// The AST might contain "holes" if parsing failed
+		return &InvalidType{}
 	}
 
 	panic(&astTypeConversionError{invalidASTType: t})

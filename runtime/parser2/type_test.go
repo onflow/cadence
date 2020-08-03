@@ -22,6 +22,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -440,7 +441,7 @@ func TestParseRestrictedType(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("{ T , }")
+		result, errs := ParseType("{ T , }")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -450,13 +451,31 @@ func TestParseRestrictedType(t *testing.T) {
 			},
 			errs,
 		)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.RestrictedType{
+				Restrictions: []*ast.NominalType{
+					{
+						Identifier: ast.Identifier{
+							Identifier: "T",
+							Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 6, Offset: 6},
+				},
+			},
+			result,
+		)
 	})
 
 	t.Run("invalid: without restricted type, type without comma", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("{ T U }")
+		result, errs := ParseType("{ T U }")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -466,13 +485,16 @@ func TestParseRestrictedType(t *testing.T) {
 			},
 			errs,
 		)
+
+		// TODO: return type
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid: without restricted type, colon", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("{ T , U : V }")
+		result, errs := ParseType("{ T , U : V }")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -482,13 +504,16 @@ func TestParseRestrictedType(t *testing.T) {
 			},
 			errs,
 		)
+
+		// TODO: return type
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid: with restricted type, colon", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("T{U , V : W }")
+		result, errs := ParseType("T{U , V : W }")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -498,13 +523,16 @@ func TestParseRestrictedType(t *testing.T) {
 			},
 			errs,
 		)
+
+		// TODO: return type
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid: without restricted type, first is non-nominal", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("{[T]}")
+		result, errs := ParseType("{[T]}")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -514,13 +542,16 @@ func TestParseRestrictedType(t *testing.T) {
 			},
 			errs,
 		)
+
+		// TODO: return type with non-nominal restrictions
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid: with restricted type, first is non-nominal", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("T{[U]}")
+		result, errs := ParseType("T{[U]}")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -530,13 +561,16 @@ func TestParseRestrictedType(t *testing.T) {
 			},
 			errs,
 		)
+
+		// TODO: return type
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid: without restricted type, second is non-nominal", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("{T, [U]}")
+		result, errs := ParseType("{T, [U]}")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -546,13 +580,16 @@ func TestParseRestrictedType(t *testing.T) {
 			},
 			errs,
 		)
+
+		// TODO: return type
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid: with restricted type, second is non-nominal", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("T{U, [V]}")
+		result, errs := ParseType("T{U, [V]}")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -562,13 +599,16 @@ func TestParseRestrictedType(t *testing.T) {
 			},
 			errs,
 		)
+
+		// TODO: return type
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid: without restricted type, missing end", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("{")
+		result, errs := ParseType("{")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -578,13 +618,15 @@ func TestParseRestrictedType(t *testing.T) {
 			},
 			errs,
 		)
+
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid: with restricted type, missing end", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("T{")
+		result, errs := ParseType("T{")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -594,13 +636,15 @@ func TestParseRestrictedType(t *testing.T) {
 			},
 			errs,
 		)
+
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid: without restricted type, missing end after type", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("{U")
+		result, errs := ParseType("{U")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -610,13 +654,15 @@ func TestParseRestrictedType(t *testing.T) {
 			},
 			errs,
 		)
+
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid: with restricted type, missing end after type", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("T{U")
+		result, errs := ParseType("T{U")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -626,13 +672,15 @@ func TestParseRestrictedType(t *testing.T) {
 			},
 			errs,
 		)
+
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid: without restricted type, missing end after comma", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("{U,")
+		result, errs := ParseType("{U,")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -642,13 +690,15 @@ func TestParseRestrictedType(t *testing.T) {
 			},
 			errs,
 		)
+
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid: with restricted type, missing end after comma", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("T{U,")
+		result, errs := ParseType("T{U,")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -658,13 +708,15 @@ func TestParseRestrictedType(t *testing.T) {
 			},
 			errs,
 		)
+
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid: without restricted type, just comma", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("{,}")
+		result, errs := ParseType("{,}")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -674,13 +726,15 @@ func TestParseRestrictedType(t *testing.T) {
 			},
 			errs,
 		)
+
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid: with restricted type, just comma", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("T{,}")
+		result, errs := ParseType("T{,}")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -690,6 +744,8 @@ func TestParseRestrictedType(t *testing.T) {
 			},
 			errs,
 		)
+
+		assert.Nil(t, result)
 	})
 }
 
@@ -731,7 +787,7 @@ func TestParseDictionaryType(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("{T:}")
+		result, errs := ParseType("{T:}")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -741,13 +797,30 @@ func TestParseDictionaryType(t *testing.T) {
 			},
 			errs,
 		)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.DictionaryType{
+				KeyType: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
+					},
+				},
+				ValueType: nil,
+				Range: ast.Range{
+					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+					EndPos:   ast.Position{Line: 1, Column: 3, Offset: 3},
+				},
+			},
+			result,
+		)
 	})
 
 	t.Run("invalid, missing key and value type", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("{:}")
+		result, errs := ParseType("{:}")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -757,13 +830,15 @@ func TestParseDictionaryType(t *testing.T) {
 			},
 			errs,
 		)
+
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid, missing key type", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("{:U}")
+		result, errs := ParseType("{:U}")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -773,13 +848,16 @@ func TestParseDictionaryType(t *testing.T) {
 			},
 			errs,
 		)
+
+		// TODO: return type
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid, unexpected comma after value type", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("{T:U,}")
+		result, errs := ParseType("{T:U,}")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -789,13 +867,16 @@ func TestParseDictionaryType(t *testing.T) {
 			},
 			errs,
 		)
+
+		// TODO: return type
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid, unexpected colon after value type", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("{T:U:}")
+		result, errs := ParseType("{T:U:}")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -805,13 +886,16 @@ func TestParseDictionaryType(t *testing.T) {
 			},
 			errs,
 		)
+
+		// TODO: return type
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid, unexpected colon after colon", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("{T::U}")
+		result, errs := ParseType("{T::U}")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -821,13 +905,16 @@ func TestParseDictionaryType(t *testing.T) {
 			},
 			errs,
 		)
+
+		// TODO: return type
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid, missing value type after colon", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("{T:")
+		result, errs := ParseType("{T:")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -837,13 +924,15 @@ func TestParseDictionaryType(t *testing.T) {
 			},
 			errs,
 		)
+
+		assert.Nil(t, result)
 	})
 
 	t.Run("invalid, missing end after key type  and value type", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, errs := ParseType("{T:U")
+		result, errs := ParseType("{T:U")
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
@@ -853,8 +942,9 @@ func TestParseDictionaryType(t *testing.T) {
 			},
 			errs,
 		)
-	})
 
+		assert.Nil(t, result)
+	})
 }
 
 func TestParseFunctionType(t *testing.T) {
