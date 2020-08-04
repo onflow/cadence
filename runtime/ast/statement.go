@@ -18,6 +18,10 @@
 
 package ast
 
+import (
+	"encoding/json"
+)
+
 type Statement interface {
 	Element
 	isStatement()
@@ -219,4 +223,17 @@ func (*ExpressionStatement) isStatement() {}
 
 func (s *ExpressionStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitExpressionStatement(s)
+}
+
+func (s *ExpressionStatement) MarshalJSON() ([]byte, error) {
+	type Alias ExpressionStatement
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "ExpressionStatement",
+		Range: NewRangeFromPositioned(s),
+		Alias: (*Alias)(s),
+	})
 }

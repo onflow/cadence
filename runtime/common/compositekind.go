@@ -19,6 +19,8 @@
 package common
 
 import (
+	"encoding/json"
+
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -33,6 +35,10 @@ const (
 	CompositeKindContract
 	CompositeKindEvent
 )
+
+func CompositeKindCount() int {
+	return len(_CompositeKind_index) - 1
+}
 
 var AllCompositeKinds = []CompositeKind{
 	CompositeKindStructure,
@@ -155,4 +161,8 @@ func (k CompositeKind) SupportsInterfaces() bool {
 	}
 
 	panic(errors.NewUnreachableError())
+}
+
+func (k CompositeKind) MarshalJSON() ([]byte, error) {
+	return json.Marshal(k.String())
 }

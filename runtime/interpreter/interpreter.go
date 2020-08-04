@@ -928,7 +928,7 @@ func (interpreter *Interpreter) functionDeclarationValue(
 		Activation:       lexicalScope,
 		BeforeStatements: beforeStatements,
 		PreConditions:    preConditions,
-		Statements:       declaration.FunctionBlock.Statements,
+		Statements:       declaration.FunctionBlock.Block.Statements,
 		PostConditions:   rewrittenPostConditions,
 	}
 }
@@ -2188,12 +2188,12 @@ func (interpreter *Interpreter) visitExpressionsNonCopying(expressions []ast.Exp
 	return trampoline
 }
 
-func (interpreter *Interpreter) visitEntries(entries []ast.Entry) Trampoline {
+func (interpreter *Interpreter) visitEntries(entries []ast.DictionaryEntry) Trampoline {
 	var trampoline Trampoline = Done{Result: []DictionaryEntryValues{}}
 
 	for _, entry := range entries {
 		// NOTE: important: rebind entry, because it is captured in the closure below
-		func(entry ast.Entry) {
+		func(entry ast.DictionaryEntry) {
 			// append the evaluation of this entry
 			trampoline = trampoline.FlatMap(func(result interface{}) Trampoline {
 				resultEntries := result.([]DictionaryEntryValues)
@@ -2248,6 +2248,8 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 		beforeStatements = postConditionsRewrite.BeforeStatements
 	}
 
+	statements := expression.FunctionBlock.Block.Statements
+
 	function := InterpretedFunctionValue{
 		Interpreter:      interpreter,
 		ParameterList:    expression.ParameterList,
@@ -2255,7 +2257,7 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 		Activation:       lexicalScope,
 		BeforeStatements: beforeStatements,
 		PreConditions:    preConditions,
-		Statements:       expression.FunctionBlock.Statements,
+		Statements:       statements,
 		PostConditions:   rewrittenPostConditions,
 	}
 
@@ -2539,7 +2541,7 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 		preConditions = *initializer.FunctionBlock.PreConditions
 	}
 
-	statements := initializer.FunctionBlock.Statements
+	statements := initializer.FunctionBlock.Block.Statements
 
 	var beforeStatements []ast.Statement
 	var rewrittenPostConditions ast.Conditions
@@ -2574,7 +2576,7 @@ func (interpreter *Interpreter) compositeDestructorFunction(
 		return nil
 	}
 
-	statements := destructor.FunctionBlock.Statements
+	statements := destructor.FunctionBlock.Block.Statements
 
 	var preConditions ast.Conditions
 
@@ -2675,7 +2677,7 @@ func (interpreter *Interpreter) compositeFunction(
 	}
 
 	parameterList := functionDeclaration.ParameterList
-	statements := functionDeclaration.FunctionBlock.Statements
+	statements := functionDeclaration.FunctionBlock.Block.Statements
 
 	return InterpretedFunctionValue{
 		Interpreter:      interpreter,

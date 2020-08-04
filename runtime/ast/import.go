@@ -20,6 +20,7 @@ package ast
 
 import (
 	"encoding/hex"
+	"encoding/json"
 	"strings"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -43,6 +44,16 @@ func (i Identifier) StartPosition() Position {
 func (i Identifier) EndPosition() Position {
 	length := len(i.Identifier)
 	return i.Pos.Shifted(length - 1)
+}
+
+func (i Identifier) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		Identifier string
+		Range
+	}{
+		Identifier: i.Identifier,
+		Range:      NewRangeFromPositioned(i),
+	})
 }
 
 // ImportDeclaration

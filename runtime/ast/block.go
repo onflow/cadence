@@ -18,6 +18,10 @@
 
 package ast
 
+import (
+	"encoding/json"
+)
+
 type Block struct {
 	Statements []Statement
 	Range
@@ -27,16 +31,48 @@ func (b *Block) Accept(visitor Visitor) Repr {
 	return visitor.VisitBlock(b)
 }
 
+func (b *Block) MarshalJSON() ([]byte, error) {
+	type Alias Block
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+	}{
+		Type:  "Block",
+		Alias: (*Alias)(b),
+	})
+}
+
 // FunctionBlock
 
 type FunctionBlock struct {
-	*Block
-	PreConditions  *Conditions
-	PostConditions *Conditions
+	Block          *Block
+	PreConditions  *Conditions `json:",omitempty"`
+	PostConditions *Conditions `json:",omitempty"`
 }
 
 func (b *FunctionBlock) Accept(visitor Visitor) Repr {
 	return visitor.VisitFunctionBlock(b)
+}
+
+func (b *FunctionBlock) MarshalJSON() ([]byte, error) {
+	type Alias FunctionBlock
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "FunctionBlock",
+		Range: b.Block.Range,
+		Alias: (*Alias)(b),
+	})
+}
+
+func (b *FunctionBlock) StartPosition() Position {
+	return b.Block.StartPos
+}
+
+func (b *FunctionBlock) EndPosition() Position {
+	return b.Block.EndPos
 }
 
 // Condition
@@ -50,6 +86,8 @@ type Condition struct {
 func (c *Condition) Accept(visitor Visitor) Repr {
 	return visitor.VisitCondition(c)
 }
+
+// Conditions
 
 type Conditions []*Condition
 

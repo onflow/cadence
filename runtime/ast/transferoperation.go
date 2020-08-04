@@ -19,6 +19,8 @@
 package ast
 
 import (
+	"encoding/json"
+
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -32,6 +34,10 @@ const (
 	TransferOperationMove
 	TransferOperationMoveForced
 )
+
+func TransferOperationCount() int {
+	return len(_TransferOperation_index) - 1
+}
 
 func (k TransferOperation) Operator() string {
 	switch k {
@@ -53,4 +59,8 @@ func (k TransferOperation) IsMove() bool {
 	}
 
 	return false
+}
+
+func (k TransferOperation) MarshalJSON() ([]byte, error) {
+	return json.Marshal(k.String())
 }

@@ -19,6 +19,8 @@
 package common
 
 import (
+	"encoding/json"
+
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -54,6 +56,10 @@ const (
 	DeclarationKindTypeParameter
 	DeclarationKindPragma
 )
+
+func DeclarationKindCount() int {
+	return len(_DeclarationKind_index) - 1
+}
 
 func (k DeclarationKind) IsTypeDeclaration() bool {
 	switch k {
@@ -173,4 +179,8 @@ func (k DeclarationKind) Keywords() string {
 	default:
 		return ""
 	}
+}
+
+func (k DeclarationKind) MarshalJSON() ([]byte, error) {
+	return json.Marshal(k.String())
 }

@@ -33,12 +33,12 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 	valueType := variable.Type
 
 	if valueType.IsResourceType() {
-		checker.checkResourceVariableCapturingInFunction(variable, expression.Identifier)
-		checker.checkResourceUseAfterInvalidation(variable, expression.Identifier)
-		checker.resources.AddUse(variable, expression.Pos)
+		checker.checkResourceVariableCapturingInFunction(variable, identifier)
+		checker.checkResourceUseAfterInvalidation(variable, identifier)
+		checker.resources.AddUse(variable, identifier.Pos)
 	}
 
-	checker.checkSelfVariableUseInInitializer(variable, expression.Pos)
+	checker.checkSelfVariableUseInInitializer(variable, identifier.Pos)
 
 	if checker.inInvocation {
 		checker.Elaboration.IdentifierInInvocationTypes[expression] = valueType
