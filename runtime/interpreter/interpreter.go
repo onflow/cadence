@@ -1089,7 +1089,7 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 			valueType := interpreter.Checker.Elaboration.ReturnStatementValueTypes[statement]
 			returnType := interpreter.Checker.Elaboration.ReturnStatementReturnTypes[statement]
 
-			value = interpreter.copyAndConvert(value, valueType, returnType)
+			value = interpreter.convertAndBox(value, valueType, returnType)
 
 			return functionReturn{value}
 		})

@@ -2007,7 +2007,7 @@ type InvalidAssignmentTargetError struct {
 }
 
 func (e *InvalidAssignmentTargetError) Error() string {
-	return "cannot assign to expression"
+	return "cannot assign to unsassignable expression"
 }
 
 func (*InvalidAssignmentTargetError) isSemanticError() {}

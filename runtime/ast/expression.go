@@ -35,12 +35,6 @@ type Expression interface {
 	AcceptExp(ExpressionVisitor) Repr
 }
 
-// TargetExpression
-
-type TargetExpression interface {
-	isTargetExpression()
-}
-
 // BoolExpression
 
 type BoolExpression struct {
@@ -285,8 +279,6 @@ type IdentifierExpression struct {
 
 func (*IdentifierExpression) isExpression() {}
 
-func (*IdentifierExpression) isTargetExpression() {}
-
 func (*IdentifierExpression) isIfStatementTest() {}
 
 func (e *IdentifierExpression) Accept(visitor Visitor) Repr {
@@ -385,8 +377,6 @@ type MemberExpression struct {
 
 func (*MemberExpression) isExpression() {}
 
-func (*MemberExpression) isTargetExpression() {}
-
 func (*MemberExpression) isIfStatementTest() {}
 
 func (*MemberExpression) isAccessExpression() {}
@@ -435,8 +425,6 @@ type IndexExpression struct {
 }
 
 func (*IndexExpression) isExpression() {}
-
-func (*IndexExpression) isTargetExpression() {}
 
 func (*IndexExpression) isIfStatementTest() {}
 

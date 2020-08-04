@@ -149,7 +149,7 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		// The first expression must be a target expression (e.g. identifier expression,
 		// indexing expression, or member access expression)
 
-		if _, firstIsTarget := declaration.Value.(ast.TargetExpression); !firstIsTarget {
+		if !IsValidAssignmentTargetExpression(declaration.Value) {
 			checker.report(
 				&InvalidAssignmentTargetError{
 					Range: ast.NewRangeFromPositioned(declaration.Value),
