@@ -876,12 +876,12 @@ func defineDictionaryExpression() {
 	setExprNullDenotation(
 		lexer.TokenBraceOpen,
 		func(p *parser, startToken lexer.Token) ast.Expression {
-			var entries []ast.Entry
+			var entries []ast.DictionaryEntry
 			for !p.current.Is(lexer.TokenBraceClose) {
 				key := parseExpression(p, lowestBindingPower)
 				p.mustOne(lexer.TokenColon)
 				value := parseExpression(p, lowestBindingPower)
-				entries = append(entries, ast.Entry{
+				entries = append(entries, ast.DictionaryEntry{
 					Key:   key,
 					Value: value,
 				})

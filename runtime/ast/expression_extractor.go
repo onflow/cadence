@@ -342,7 +342,7 @@ func (extractor *ExpressionExtractor) ExtractDictionary(expression *DictionaryEx
 
 	// rewrite all value expressions
 
-	rewrittenEntries := make([]Entry, len(expression.Entries))
+	rewrittenEntries := make([]DictionaryEntry, len(expression.Entries))
 
 	for i, entry := range expression.Entries {
 		keyResult := extractor.Extract(entry.Key)
@@ -351,7 +351,7 @@ func (extractor *ExpressionExtractor) ExtractDictionary(expression *DictionaryEx
 		valueResult := extractor.Extract(entry.Value)
 		extractedExpressions = append(extractedExpressions, valueResult.ExtractedExpressions...)
 
-		rewrittenEntries[i] = Entry{
+		rewrittenEntries[i] = DictionaryEntry{
 			Key:   keyResult.RewrittenExpression,
 			Value: valueResult.RewrittenExpression,
 		}

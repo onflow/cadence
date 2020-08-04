@@ -517,7 +517,7 @@ func TestParseDictionaryExpression(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.DictionaryExpression{
-				Entries: []ast.Entry{
+				Entries: []ast.DictionaryEntry{
 					{
 						Key: &ast.IntegerExpression{
 							Value: big.NewInt(1),

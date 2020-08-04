@@ -374,7 +374,7 @@ func TestParseDictionaryExpression(t *testing.T) {
 					Pos:       Position{Offset: 12, Line: 2, Column: 11},
 				},
 				Value: &DictionaryExpression{
-					Entries: []Entry{
+					Entries: []DictionaryEntry{
 						{
 							Key: &StringExpression{
 								Value: "a",

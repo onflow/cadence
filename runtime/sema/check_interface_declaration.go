@@ -324,25 +324,26 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 }
 
 func (checker *Checker) checkInterfaceSpecialFunctionBlock(
-	block *ast.FunctionBlock,
+	functionBlock *ast.FunctionBlock,
 	containerKind common.DeclarationKind,
 	implementedKind common.DeclarationKind,
 ) {
 
-	if len(block.Statements) > 0 {
+	statements := functionBlock.Block.Statements
+	if len(statements) > 0 {
 		checker.report(
 			&InvalidImplementationError{
-				Pos:             block.Statements[0].StartPosition(),
+				Pos:             statements[0].StartPosition(),
 				ContainerKind:   containerKind,
 				ImplementedKind: implementedKind,
 			},
 		)
-	} else if (block.PreConditions == nil || len(*block.PreConditions) == 0) &&
-		(block.PostConditions == nil || len(*block.PostConditions) == 0) {
+	} else if (functionBlock.PreConditions == nil || len(*functionBlock.PreConditions) == 0) &&
+		(functionBlock.PostConditions == nil || len(*functionBlock.PostConditions) == 0) {
 
 		checker.report(
 			&InvalidImplementationError{
-				Pos:             block.StartPos,
+				Pos:             functionBlock.StartPosition(),
 				ContainerKind:   containerKind,
 				ImplementedKind: implementedKind,
 			},

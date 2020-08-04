@@ -19,6 +19,8 @@
 package ast
 
 import (
+	"encoding/json"
+
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -31,6 +33,10 @@ const (
 	VariableKindVariable
 	VariableKindConstant
 )
+
+func VariableKindCount() int {
+	return len(_VariableKind_index) - 1
+}
 
 var VariableKinds = []VariableKind{
 	VariableKindConstant,
@@ -57,4 +63,8 @@ func (k VariableKind) Keyword() string {
 	}
 
 	panic(errors.NewUnreachableError())
+}
+
+func (k VariableKind) MarshalJSON() ([]byte, error) {
+	return json.Marshal(k.String())
 }
