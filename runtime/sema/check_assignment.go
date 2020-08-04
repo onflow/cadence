@@ -157,7 +157,7 @@ func (checker *Checker) visitAssignmentValueType(
 	// Check the target is valid (e.g. identifier expression,
 	// indexing expression, or member access expression)
 
-	if _, ok := targetExpression.(ast.TargetExpression); !ok {
+	if !IsValidAssignmentTargetExpression(targetExpression) {
 		checker.report(
 			&InvalidAssignmentTargetError{
 				Range: ast.NewRangeFromPositioned(targetExpression),
@@ -369,4 +369,20 @@ func (checker *Checker) visitMemberExpressionAssignment(
 	}
 
 	return member.TypeAnnotation.Type
+}
+
+func IsValidAssignmentTargetExpression(expression ast.Expression) bool {
+	switch expression := expression.(type) {
+	case *ast.IdentifierExpression:
+		return true
+
+	case *ast.IndexExpression:
+		return IsValidAssignmentTargetExpression(expression.TargetExpression)
+
+	case *ast.MemberExpression:
+		return IsValidAssignmentTargetExpression(expression.Expression)
+
+	default:
+		return false
+	}
 }

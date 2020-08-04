@@ -41,7 +41,7 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) ast.Repr {
 
 	checkRight := true
 
-	if _, leftIsTarget := swap.Left.(ast.TargetExpression); !leftIsTarget {
+	if !IsValidAssignmentTargetExpression(swap.Left) {
 		checker.report(
 			&InvalidSwapExpressionError{
 				Side:  common.OperandSideLeft,
@@ -63,7 +63,7 @@ func (checker *Checker) VisitSwapStatement(swap *ast.SwapStatement) ast.Repr {
 		}
 	}
 
-	if _, rightIsTarget := swap.Right.(ast.TargetExpression); !rightIsTarget {
+	if !IsValidAssignmentTargetExpression(swap.Right) {
 		checker.report(
 			&InvalidSwapExpressionError{
 				Side:  common.OperandSideRight,
