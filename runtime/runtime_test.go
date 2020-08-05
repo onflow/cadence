@@ -1826,6 +1826,32 @@ func TestParseAndCheckProgram(t *testing.T) {
 	})
 }
 
+func TestScriptReturnTypeNotStorableError(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	script := []byte(`
+      pub fun main(): ((): Int) {
+		return fun (): Int {
+			return 0
+		}
+      }
+    `)
+
+	runtimeInterface := &testRuntimeInterface{
+		getSigningAccounts: func() []Address {
+			return []Address{{42}}
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	_, err := runtime.ExecuteScript(script, nil, runtimeInterface, nextTransactionLocation())
+	assert.IsType(t, &ScriptReturnTypeNotStorableError{}, err)
+}
+
 func TestRuntimeSyntaxError(t *testing.T) {
 
 	t.Parallel()
