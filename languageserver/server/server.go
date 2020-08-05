@@ -1232,22 +1232,31 @@ func (s *Server) resolveImport(
 	program *ast.Program,
 	err error,
 ) {
+	// NOTE: important, *DON'T* return an error when a location type
+	// is not supported: the import location can simply not be resolved,
+	// no error occurred while resolving it.
+	//
+	// For example, the Crypto contract has an IdentifierLocation,
+	// and we simply return no code for it, so that the checker's
+	// import handler is called which resolves the location
+
 	var code string
 	switch loc := location.(type) {
 	case ast.StringLocation:
 		if s.resolveStringImport == nil {
-			return nil, fmt.Errorf("unable to resolve string location %s", loc)
+			return nil, nil
 		}
 		code, err = s.resolveStringImport(mainPath, loc)
+
 	case ast.AddressLocation:
 		if s.resolveAddressImport == nil {
-			return nil, fmt.Errorf("unable to resolve string location %s", loc)
+			return nil, nil
 		}
 		code, err = s.resolveAddressImport(loc)
-	default:
-		return nil, fmt.Errorf("unable to resolve address location %s", loc)
-	}
 
+	default:
+		return nil, nil
+	}
 	if err != nil {
 		return nil, err
 	}
