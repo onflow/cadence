@@ -8127,3 +8127,51 @@ func TestInterpretNestedDestroy(t *testing.T) {
 		logs,
 	)
 }
+
+// TestInterpretInternalAssignment ensures that a modification of an "internal" value
+// is not possible, because the value that is assigned into is a copy
+//
+func TestInterpretInternalAssignment(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+       struct S {
+           priv let xs: {String: Int}
+
+           init() {
+               self.xs = {"a": 1}
+           }
+
+           fun getXS(): {String: Int} {
+               return self.xs
+           }
+       }
+
+       fun test(): [{String: Int}] {
+           let s = S()
+           let xs = s.getXS()
+           xs["b"] = 2
+           return [xs, s.getXS()]
+       }
+    `)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewArrayValueUnownedNonCopying(
+			interpreter.NewDictionaryValueUnownedNonCopying(
+				interpreter.NewStringValue("a"),
+				interpreter.NewIntValueFromInt64(1),
+				interpreter.NewStringValue("b"),
+				interpreter.NewIntValueFromInt64(2),
+			),
+			interpreter.NewDictionaryValueUnownedNonCopying(
+				interpreter.NewStringValue("a"),
+				interpreter.NewIntValueFromInt64(1),
+			),
+		),
+		value,
+	)
+}
