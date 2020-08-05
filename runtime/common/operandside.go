@@ -22,7 +22,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-//go:generate stringer -type=OperandSide
+//go:generate go run golang.org/x/tools/cmd/stringer -type=OperandSide
 
 type OperandSide uint
 

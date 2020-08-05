@@ -18,7 +18,7 @@
 
 package sema
 
-//go:generate stringer -type=ContainerKind
+//go:generate go run golang.org/x/tools/cmd/stringer -type=ContainerKind
 
 type ContainerKind uint
 

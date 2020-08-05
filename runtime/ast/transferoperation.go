@@ -22,7 +22,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-//go:generate stringer -type=TransferOperation
+//go:generate go run golang.org/x/tools/cmd/stringer -type=TransferOperation
 
 type TransferOperation uint
 

@@ -24,7 +24,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-//go:generate stringer -type=ConditionKind
+//go:generate go run golang.org/x/tools/cmd/stringer -type=ConditionKind
 
 type ConditionKind uint
 

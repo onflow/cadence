@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-//go:generate stringer -type=PrimitiveStaticType -trimprefix=PrimitiveStaticType
+//go:generate go run golang.org/x/tools/cmd/stringer -type=PrimitiveStaticType -trimprefix=PrimitiveStaticType
 
 // PrimitiveStaticType
 
