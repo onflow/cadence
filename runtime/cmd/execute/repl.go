@@ -26,6 +26,7 @@ import (
 	"github.com/c-bata/go-prompt"
 	"github.com/logrusorgru/aurora"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -144,7 +145,7 @@ func handleCommand(command string) {
 }
 
 func printWelcome() {
-	fmt.Printf("Welcome to Cadence!\n%s\n\n", assistanceMessage)
+	fmt.Printf("Welcome to Cadence %s!\n%s\n\n", cadence.Version, assistanceMessage)
 }
 
 func colorizeResult(value interpreter.Value) string {
