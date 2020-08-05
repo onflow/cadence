@@ -23,7 +23,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-//go:generate stringer -type=BinaryOperationKind
+//go:generate go run golang.org/x/tools/cmd/stringer -type=BinaryOperationKind
 
 type BinaryOperationKind uint
 

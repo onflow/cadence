@@ -24,7 +24,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-//go:generate stringer -type=CompositeKind
+//go:generate go run golang.org/x/tools/cmd/stringer -type=CompositeKind
 
 type CompositeKind uint
 

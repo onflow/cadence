@@ -22,7 +22,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
-//go:generate stringer -type=IntegerLiteralKind
+//go:generate go run golang.org/x/tools/cmd/stringer -type=IntegerLiteralKind
 
 type IntegerLiteralKind uint
 
