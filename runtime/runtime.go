@@ -150,9 +150,12 @@ func (r *interpreterRuntime) ExecuteScript(
 	}
 	epSignature := invokableType.InvocationFunctionType()
 
-	if !epSignature.ReturnTypeAnnotation.Type.IsStorable(nil) {
-		return nil, &ScriptReturnTypeNotStorableError{
-			Type: epSignature.ReturnTypeAnnotation.Type,
+	storableResults := map[*sema.Member]bool{}
+	if !epSignature.ReturnTypeAnnotation.Type.Equal(&sema.VoidType{}) {
+		if !epSignature.ReturnTypeAnnotation.Type.IsStorable(storableResults) {
+			return nil, &ScriptReturnTypeNotStorableError{
+				Type: epSignature.ReturnTypeAnnotation.Type,
+			}
 		}
 	}
 
