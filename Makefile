@@ -41,11 +41,13 @@ install-tools:
 lint:
 	golangci-lint run -v ./...
 
-# this ensures there is no unused dependency being added by accident
-.PHONY: tidy
-tidy:
-	go mod tidy; git diff --exit-code
-
 .PHONY: check-headers
 check-headers:
 	@./check-headers.sh
+
+.PHONY: check-tidy
+check-tidy:
+	go generate -v ./...
+	go mod tidy
+	cd languageserver; go mod tidy
+	git diff --exit-code

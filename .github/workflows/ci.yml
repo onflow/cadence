@@ -18,7 +18,7 @@ jobs:
           ${{ runner.os }}-go-
     - run: |
         make test
-        make tidy
+        make check-tidy
         make check-headers
   lint:
     runs-on: ubuntu-latest
