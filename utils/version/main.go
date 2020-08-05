@@ -73,11 +73,6 @@ func main() {
 }
 
 func getLastTag() string {
-	_, err := exec.Command("git", "fetch", "--tags").Output()
-	if err != nil {
-		panic(fmt.Errorf("could not fetch tags: %w", err))
-	}
-
 	gitOutput, err := exec.Command("git", "describe", "--tags", "--match", `v*`, "--abbrev=0").Output()
 	if err != nil {
 		panic(fmt.Errorf("could not get last tag: %w", err))
