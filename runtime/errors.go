@@ -95,7 +95,10 @@ type InvalidEntryPointTypeError struct {
 }
 
 func (e *InvalidEntryPointTypeError) Error() string {
-	return fmt.Sprintf("invalid entry point type: %s", e.Type.String())
+	return fmt.Sprintf(
+		"invalid entry point type: `%s`",
+		e.Type.QualifiedString(),
+	)
 }
 
 // InvalidTransactionParameterCountError
@@ -156,5 +159,26 @@ func (e *InvalidTypeAssignmentError) Unwrap() error {
 }
 
 func (e *InvalidTypeAssignmentError) Error() string {
-	return fmt.Sprintf("cannot assign type %s to %s", e.Type, e.Value)
+	return fmt.Sprintf(
+		"cannot assign type `%s` to %s",
+		e.Type.QualifiedString(),
+		e.Value,
+	)
+}
+
+// ScriptReturnTypeNotStorableError is an error that is reported for
+// script return types that are not storable.
+//
+// For example, the type `Int` is a storable type,
+// whereas a function type is not.
+
+type ScriptReturnTypeNotStorableError struct {
+	Type sema.Type
+}
+
+func (e *ScriptReturnTypeNotStorableError) Error() string {
+	return fmt.Sprintf(
+		"return type is non-storable type: `%s`",
+		e.Type.QualifiedString(),
+	)
 }
