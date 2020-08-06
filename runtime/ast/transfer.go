@@ -18,12 +18,16 @@
 
 package ast
 
+import (
+	"encoding/json"
+)
+
 // Transfer represents the operation in variable declarations
 // and assignments
 //
 type Transfer struct {
 	Operation TransferOperation
-	Pos       Position
+	Pos       Position `json:"-"`
 }
 
 func (f Transfer) StartPosition() Position {
@@ -33,4 +37,17 @@ func (f Transfer) StartPosition() Position {
 func (f Transfer) EndPosition() Position {
 	length := len(f.Operation.Operator())
 	return f.Pos.Shifted(length - 1)
+}
+
+func (f Transfer) MarshalJSON() ([]byte, error) {
+	type Alias Transfer
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "Transfer",
+		Range: NewRangeFromPositioned(f),
+		Alias: (*Alias)(&f),
+	})
 }
