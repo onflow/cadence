@@ -95,7 +95,10 @@ type InvalidEntryPointTypeError struct {
 }
 
 func (e *InvalidEntryPointTypeError) Error() string {
-	return fmt.Sprintf("invalid entry point type: %s", e.Type.QualifiedString())
+	return fmt.Sprintf(
+		"invalid entry point type: `%s`",
+		e.Type.QualifiedString(),
+	)
 }
 
 // InvalidTransactionParameterCountError
@@ -156,7 +159,11 @@ func (e *InvalidTypeAssignmentError) Unwrap() error {
 }
 
 func (e *InvalidTypeAssignmentError) Error() string {
-	return fmt.Sprintf("cannot assign type %s to %s", e.Type.QualifiedString(), e.Value)
+	return fmt.Sprintf(
+		"cannot assign type `%s` to %s",
+		e.Type.QualifiedString(),
+		e.Value,
+	)
 }
 
 // ScriptReturnTypeNotStorableError is an error that is reported for
@@ -171,7 +178,7 @@ type ScriptReturnTypeNotStorableError struct {
 
 func (e *ScriptReturnTypeNotStorableError) Error() string {
 	return fmt.Sprintf(
-		"return type is non-storable type: %s",
+		"return type is non-storable type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
