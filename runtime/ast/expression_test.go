@@ -330,3 +330,94 @@ func TestPathExpression_MarshalJSON(t *testing.T) {
 		string(actual),
 	)
 }
+
+func TestMemberExpression_MarshalJSON(t *testing.T) {
+
+	expr := &MemberExpression{
+		Expression: &BoolExpression{
+			Value: true,
+			Range: Range{
+				StartPos: Position{Offset: 1, Line: 2, Column: 3},
+				EndPos:   Position{Offset: 4, Line: 5, Column: 6},
+			},
+		},
+		Optional:  true,
+		AccessPos: Position{Offset: 7, Line: 8, Column: 9},
+		Identifier: Identifier{
+			Identifier: "foobar",
+			Pos:        Position{Offset: 10, Line: 11, Column: 12},
+		},
+	}
+
+	actual, err := json.Marshal(expr)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "MemberExpression",
+            "Expression": {
+				"Type": "BoolExpression",
+				"Value": true,
+				"StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+				"EndPos": {"Offset": 4, "Line": 5, "Column": 6}
+			},
+		    "Optional": true,
+            "AccessPos": {"Offset": 7, "Line": 8, "Column": 9},
+            "Identifier": {
+                "Identifier": "foobar",
+                "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
+                "EndPos": {"Offset": 15, "Line": 11, "Column": 17}
+            },
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+            "EndPos": {"Offset": 15, "Line": 11, "Column": 17}
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestIndexExpression_MarshalJSON(t *testing.T) {
+
+	expr := &IndexExpression{
+		TargetExpression: &BoolExpression{
+			Value: true,
+			Range: Range{
+				StartPos: Position{Offset: 1, Line: 2, Column: 3},
+				EndPos:   Position{Offset: 4, Line: 5, Column: 6},
+			},
+		},
+		IndexingExpression: &NilExpression{
+			Pos: Position{Offset: 7, Line: 8, Column: 9},
+		},
+		Range: Range{
+			StartPos: Position{Offset: 10, Line: 11, Column: 12},
+			EndPos:   Position{Offset: 13, Line: 14, Column: 15},
+		},
+	}
+
+	actual, err := json.Marshal(expr)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "IndexExpression",
+            "TargetExpression": {
+				"Type": "BoolExpression",
+				"Value": true,
+				"StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+				"EndPos": {"Offset": 4, "Line": 5, "Column": 6}
+			},
+		    "IndexingExpression": {
+				"Type": "NilExpression",
+				"StartPos": {"Offset": 7, "Line": 8, "Column": 9}, 
+				"EndPos": {"Offset": 9, "Line": 8, "Column": 11}
+			},
+            "StartPos": {"Offset": 10, "Line": 11, "Column": 12}, 
+            "EndPos": {"Offset": 13, "Line": 14, "Column": 15}
+        }
+        `,
+		string(actual),
+	)
+}
