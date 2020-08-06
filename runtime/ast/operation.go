@@ -19,6 +19,8 @@
 package ast
 
 import (
+	"encoding/json"
+
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -53,6 +55,10 @@ const (
 	OperationBitwiseLeftShift
 	OperationBitwiseRightShift
 )
+
+func OperationCount() int {
+	return len(_Operation_index) - 1
+}
 
 func (s Operation) Symbol() string {
 	switch s {
@@ -107,4 +113,8 @@ func (s Operation) Symbol() string {
 	}
 
 	panic(errors.NewUnreachableError())
+}
+
+func (s Operation) MarshalJSON() ([]byte, error) {
+	return json.Marshal(s.String())
 }

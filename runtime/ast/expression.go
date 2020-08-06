@@ -509,6 +509,19 @@ func (e *MemberExpression) EndPosition() Position {
 	}
 }
 
+func (e *MemberExpression) MarshalJSON() ([]byte, error) {
+	type Alias MemberExpression
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "MemberExpression",
+		Range: NewRangeFromPositioned(e),
+		Alias: (*Alias)(e),
+	})
+}
+
 // IndexExpression
 
 type IndexExpression struct {
@@ -539,6 +552,17 @@ func (e *IndexExpression) String() string {
 		"%s[%s]",
 		e.TargetExpression, e.IndexingExpression,
 	)
+}
+
+func (e *IndexExpression) MarshalJSON() ([]byte, error) {
+	type Alias IndexExpression
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+	}{
+		Type:  "IndexExpression",
+		Alias: (*Alias)(e),
+	})
 }
 
 // ConditionalExpression

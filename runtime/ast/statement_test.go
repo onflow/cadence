@@ -58,3 +58,251 @@ func TestExpressionStatement_MarshalJSON(t *testing.T) {
 		string(actual),
 	)
 }
+
+func TestReturnStatement_MarshalJSON(t *testing.T) {
+
+	stmt := &ReturnStatement{
+		Expression: &BoolExpression{
+			Value: false,
+			Range: Range{
+				StartPos: Position{Offset: 1, Line: 2, Column: 3},
+				EndPos:   Position{Offset: 4, Line: 5, Column: 6},
+			},
+		},
+		Range: Range{
+			StartPos: Position{Offset: 7, Line: 8, Column: 9},
+			EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+		},
+	}
+
+	actual, err := json.Marshal(stmt)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "ReturnStatement",
+            "Expression": {
+                "Type": "BoolExpression",
+                "Value": false,
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
+            },
+            "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
+            "EndPos": {"Offset": 10, "Line": 11, "Column": 12}
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestBreakStatement_MarshalJSON(t *testing.T) {
+
+	stmt := &BreakStatement{
+		Range: Range{
+			StartPos: Position{Offset: 1, Line: 2, Column: 3},
+			EndPos:   Position{Offset: 4, Line: 5, Column: 6},
+		},
+	}
+
+	actual, err := json.Marshal(stmt)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "BreakStatement",
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+            "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestContinueStatement_MarshalJSON(t *testing.T) {
+
+	stmt := &ContinueStatement{
+		Range: Range{
+			StartPos: Position{Offset: 1, Line: 2, Column: 3},
+			EndPos:   Position{Offset: 4, Line: 5, Column: 6},
+		},
+	}
+
+	actual, err := json.Marshal(stmt)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "ContinueStatement",
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+            "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestIfStatement_MarshalJSON(t *testing.T) {
+
+	stmt := &IfStatement{
+		Test: &BoolExpression{
+			Value: false,
+			Range: Range{
+				StartPos: Position{Offset: 1, Line: 2, Column: 3},
+				EndPos:   Position{Offset: 4, Line: 5, Column: 6},
+			},
+		},
+		Then: &Block{
+			Statements: []Statement{},
+			Range: Range{
+				StartPos: Position{Offset: 7, Line: 8, Column: 9},
+				EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+			},
+		},
+		Else: &Block{
+			Statements: []Statement{},
+			Range: Range{
+				StartPos: Position{Offset: 13, Line: 14, Column: 15},
+				EndPos:   Position{Offset: 16, Line: 17, Column: 18},
+			},
+		},
+		StartPos: Position{Offset: 19, Line: 20, Column: 21},
+	}
+
+	actual, err := json.Marshal(stmt)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "IfStatement",
+            "Test": {
+                "Type": "BoolExpression",
+                "Value": false,
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
+            },
+            "Then": {
+                "Type": "Block",
+                "Statements": [],
+                "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
+                "EndPos": {"Offset": 10, "Line": 11, "Column": 12}
+            },
+            "Else": {
+                "Type": "Block",
+                "Statements": [],
+                "StartPos": {"Offset": 13, "Line": 14, "Column": 15},
+                "EndPos": {"Offset": 16, "Line": 17, "Column": 18}
+            },
+            "StartPos": {"Offset": 19, "Line": 20, "Column": 21},
+            "EndPos":   {"Offset": 16, "Line": 17, "Column": 18}
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestWhileStatement_MarshalJSON(t *testing.T) {
+
+	stmt := &WhileStatement{
+		Test: &BoolExpression{
+			Value: false,
+			Range: Range{
+				StartPos: Position{Offset: 1, Line: 2, Column: 3},
+				EndPos:   Position{Offset: 4, Line: 5, Column: 6},
+			},
+		},
+		Block: &Block{
+			Statements: []Statement{},
+			Range: Range{
+				StartPos: Position{Offset: 7, Line: 8, Column: 9},
+				EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+			},
+		},
+		StartPos: Position{Offset: 13, Line: 14, Column: 15},
+	}
+
+	actual, err := json.Marshal(stmt)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "WhileStatement",
+            "Test": {
+                "Type": "BoolExpression",
+                "Value": false,
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
+            },
+            "Block": {
+                "Type": "Block",
+                "Statements": [],
+                "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
+                "EndPos": {"Offset": 10, "Line": 11, "Column": 12}
+            },
+            "StartPos": {"Offset": 13, "Line": 14, "Column": 15},
+            "EndPos":   {"Offset": 10, "Line": 11, "Column": 12}
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestForStatement_MarshalJSON(t *testing.T) {
+
+	stmt := &ForStatement{
+		Identifier: Identifier{
+			Identifier: "foobar",
+			Pos:        Position{Offset: 1, Line: 2, Column: 3},
+		},
+		Value: &BoolExpression{
+			Value: false,
+			Range: Range{
+				StartPos: Position{Offset: 4, Line: 5, Column: 6},
+				EndPos:   Position{Offset: 7, Line: 8, Column: 9},
+			},
+		},
+		Block: &Block{
+			Statements: []Statement{},
+			Range: Range{
+				StartPos: Position{Offset: 10, Line: 11, Column: 12},
+				EndPos:   Position{Offset: 13, Line: 14, Column: 15},
+			},
+		},
+		StartPos: Position{Offset: 16, Line: 17, Column: 18},
+	}
+
+	actual, err := json.Marshal(stmt)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "ForStatement",
+            "Identifier": {
+                "Identifier": "foobar",
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
+            },
+            "Value": {
+                "Type": "BoolExpression",
+                "Value": false,
+                "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
+                "EndPos": {"Offset": 7, "Line": 8, "Column": 9}
+            },
+            "Block": {
+                "Type": "Block",
+                "Statements": [],
+                "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
+                "EndPos": {"Offset": 13, "Line": 14, "Column": 15}
+            },
+            "StartPos": {"Offset": 16, "Line": 17, "Column": 18},
+            "EndPos":  {"Offset": 13, "Line": 14, "Column": 15}
+        }
+        `,
+		string(actual),
+	)
+}

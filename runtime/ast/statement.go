@@ -40,6 +40,17 @@ func (s *ReturnStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitReturnStatement(s)
 }
 
+func (s *ReturnStatement) MarshalJSON() ([]byte, error) {
+	type Alias ReturnStatement
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+	}{
+		Type:  "ReturnStatement",
+		Alias: (*Alias)(s),
+	})
+}
+
 // BreakStatement
 
 type BreakStatement struct {
@@ -50,6 +61,17 @@ func (*BreakStatement) isStatement() {}
 
 func (s *BreakStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitBreakStatement(s)
+}
+
+func (s *BreakStatement) MarshalJSON() ([]byte, error) {
+	type Alias BreakStatement
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+	}{
+		Type:  "BreakStatement",
+		Alias: (*Alias)(s),
+	})
 }
 
 // ContinueStatement
@@ -64,6 +86,17 @@ func (s *ContinueStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitContinueStatement(s)
 }
 
+func (s *ContinueStatement) MarshalJSON() ([]byte, error) {
+	type Alias ContinueStatement
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+	}{
+		Type:  "ContinueStatement",
+		Alias: (*Alias)(s),
+	})
+}
+
 // IfStatementTest
 
 type IfStatementTest interface {
@@ -76,7 +109,7 @@ type IfStatement struct {
 	Test     IfStatementTest
 	Then     *Block
 	Else     *Block
-	StartPos Position
+	StartPos Position `json:"-"`
 }
 
 func (s *IfStatement) StartPosition() Position {
@@ -96,12 +129,25 @@ func (s *IfStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitIfStatement(s)
 }
 
+func (s *IfStatement) MarshalJSON() ([]byte, error) {
+	type Alias IfStatement
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "IfStatement",
+		Range: NewRangeFromPositioned(s),
+		Alias: (*Alias)(s),
+	})
+}
+
 // WhileStatement
 
 type WhileStatement struct {
 	Test     Expression
 	Block    *Block
-	StartPos Position
+	StartPos Position `json:"-"`
 }
 
 func (*WhileStatement) isStatement() {}
@@ -118,13 +164,26 @@ func (s *WhileStatement) EndPosition() Position {
 	return s.Block.EndPosition()
 }
 
+func (s *WhileStatement) MarshalJSON() ([]byte, error) {
+	type Alias WhileStatement
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "WhileStatement",
+		Range: NewRangeFromPositioned(s),
+		Alias: (*Alias)(s),
+	})
+}
+
 // ForStatement
 
 type ForStatement struct {
 	Identifier Identifier
 	Value      Expression
 	Block      *Block
-	StartPos   Position
+	StartPos   Position `json:"-"`
 }
 
 func (*ForStatement) isStatement() {}
@@ -139,6 +198,19 @@ func (s *ForStatement) StartPosition() Position {
 
 func (s *ForStatement) EndPosition() Position {
 	return s.Block.EndPosition()
+}
+
+func (s *ForStatement) MarshalJSON() ([]byte, error) {
+	type Alias ForStatement
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "ForStatement",
+		Range: NewRangeFromPositioned(s),
+		Alias: (*Alias)(s),
+	})
 }
 
 // EmitStatement
