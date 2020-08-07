@@ -3233,6 +3233,43 @@ func TestInterpretOptionalNilValueComparison(t *testing.T) {
 	)
 }
 
+func TestInterpretOptionalMap(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("some", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t, `
+          let one: Int? = 42
+          let result = one.map(fun (v: Int): String {
+              return v.toString()
+          })
+        `)
+
+		assert.Equal(t,
+			interpreter.NewSomeValueOwningNonCopying(
+				interpreter.NewStringValue("42"),
+			),
+			inter.Globals["result"].Value,
+		)
+	})
+
+	t.Run("nil", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t, `
+          let none: Int? = nil
+          let result = none.map(fun (v: Int): String {
+              return v.toString()
+          })
+        `)
+
+		assert.Equal(t,
+			interpreter.NilValue{},
+			inter.Globals["result"].Value,
+		)
+	})
+}
+
 func TestInterpretCompositeNilEquality(t *testing.T) {
 
 	t.Parallel()

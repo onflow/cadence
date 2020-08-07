@@ -5886,6 +5886,25 @@ func (NilValue) String() string {
 	return "nil"
 }
 
+var nilValueMapFunction = NewHostFunctionValue(
+	func(invocation Invocation) trampoline.Trampoline {
+		return trampoline.Done{Result: NilValue{}}
+	},
+)
+
+func (v NilValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+	case "map":
+		return nilValueMapFunction
+	}
+
+	return nil
+}
+
+func (NilValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
+}
+
 // SomeValue
 
 type SomeValue struct {
@@ -5945,6 +5964,38 @@ func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRang
 
 func (v *SomeValue) String() string {
 	return fmt.Sprint(v.Value)
+}
+
+func (v *SomeValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+	switch name {
+	case "map":
+		return NewHostFunctionValue(
+			func(invocation Invocation) trampoline.Trampoline {
+
+				transformFunction := invocation.Arguments[0].(FunctionValue)
+				transformFunctionType := invocation.ArgumentTypes[0].(*sema.FunctionType)
+				valueType := transformFunctionType.Parameters[0].TypeAnnotation.Type
+
+				return transformFunction.
+					Invoke(Invocation{
+						Arguments:     []Value{v.Value},
+						ArgumentTypes: []sema.Type{valueType},
+						LocationRange: invocation.LocationRange,
+						Interpreter:   invocation.Interpreter,
+					}).
+					Map(func(result interface{}) interface{} {
+						newValue := result.(Value)
+						return NewSomeValueOwningNonCopying(newValue)
+					})
+			},
+		)
+	}
+
+	return nil
+}
+
+func (*SomeValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+	panic(errors.NewUnreachableError())
 }
 
 // StorageReferenceValue
