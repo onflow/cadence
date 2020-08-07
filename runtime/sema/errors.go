@@ -1911,7 +1911,7 @@ type InvalidResourceArrayMemberError struct {
 
 func (e *InvalidResourceArrayMemberError) Error() string {
 	return fmt.Sprintf(
-		"array %s `%s` is not available for resource arrays",
+		"%s `%s` is not available for resource arrays",
 		e.DeclarationKind.Name(),
 		e.Name,
 	)
@@ -1929,7 +1929,23 @@ type InvalidResourceDictionaryMemberError struct {
 
 func (e *InvalidResourceDictionaryMemberError) Error() string {
 	return fmt.Sprintf(
-		"dictionary %s `%s` is not available for resource dictionaries",
+		"%s `%s` is not available for resource dictionaries",
+		e.DeclarationKind.Name(),
+		e.Name,
+	)
+}
+
+// InvalidResourceOptionalMemberError
+
+type InvalidResourceOptionalMemberError struct {
+	Name            string
+	DeclarationKind common.DeclarationKind
+	ast.Range
+}
+
+func (e *InvalidResourceOptionalMemberError) Error() string {
+	return fmt.Sprintf(
+		"%s `%s` is not available for resource optionals",
 		e.DeclarationKind.Name(),
 		e.Name,
 	)
