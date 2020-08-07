@@ -5883,8 +5883,9 @@ func (t *DictionaryType) Unify(
 		return false
 	}
 
-	return t.KeyType.Unify(otherDictionary.KeyType, typeParameters, report, outerRange) &&
-		t.ValueType.Unify(otherDictionary.ValueType, typeParameters, report, outerRange)
+	keyUnified := t.KeyType.Unify(otherDictionary.KeyType, typeParameters, report, outerRange)
+	valueUnified := t.ValueType.Unify(otherDictionary.ValueType, typeParameters, report, outerRange)
+	return keyUnified || valueUnified
 }
 
 func (t *DictionaryType) Resolve(typeParameters map[*TypeParameter]Type) Type {
