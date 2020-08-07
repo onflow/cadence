@@ -4153,13 +4153,95 @@ func (t *FunctionType) ArgumentLabels() (argumentLabels []string) {
 	return
 }
 
-func (*FunctionType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
-	// TODO:
-	return false
+func (t *FunctionType) Unify(
+	other Type,
+	typeParameters map[*TypeParameter]Type,
+	report func(err error),
+	outerRange ast.Range,
+) (
+	result bool,
+) {
+
+	otherFunction, ok := other.(*FunctionType)
+	if !ok {
+		return false
+	}
+
+	// TODO: type parameters ?
+
+	if len(t.TypeParameters) > 0 ||
+		len(otherFunction.TypeParameters) > 0 {
+
+		return false
+	}
+
+	// parameters
+
+	if len(t.Parameters) != len(otherFunction.Parameters) {
+		return false
+	}
+
+	for i, parameter := range t.Parameters {
+		otherParameter := otherFunction.Parameters[i]
+		parameterUnified := parameter.TypeAnnotation.Type.Unify(
+			otherParameter.TypeAnnotation.Type,
+			typeParameters,
+			report,
+			outerRange,
+		)
+		result = result || parameterUnified
+	}
+
+	// return type
+
+	returnTypeUnified := t.ReturnTypeAnnotation.Type.Unify(
+		otherFunction.ReturnTypeAnnotation.Type,
+		typeParameters,
+		report,
+		outerRange,
+	)
+
+	result = result || returnTypeUnified
+
+	return
 }
 
-func (t *FunctionType) Resolve(_ map[*TypeParameter]Type) Type {
-	return t
+func (t *FunctionType) Resolve(typeParameters map[*TypeParameter]Type) Type {
+
+	// TODO: type parameters ?
+
+	// parameters
+
+	var newParameters []*Parameter
+
+	for _, parameter := range t.Parameters {
+		newParameterType := parameter.TypeAnnotation.Type.Resolve(typeParameters)
+		if newParameterType == nil {
+			return nil
+		}
+
+		newParameters = append(newParameters,
+			&Parameter{
+				Label:          parameter.Label,
+				Identifier:     parameter.Identifier,
+				TypeAnnotation: NewTypeAnnotation(newParameterType),
+			},
+		)
+	}
+
+	// return type
+
+	newReturnType := t.ReturnTypeAnnotation.Type.Resolve(typeParameters)
+	if newReturnType == nil {
+		return nil
+	}
+
+	return &FunctionType{
+		Parameters:            newParameters,
+		ReturnTypeAnnotation:  NewTypeAnnotation(newReturnType),
+		RequiredArgumentCount: t.RequiredArgumentCount,
+	}
+
 }
 
 func (t *FunctionType) GetMembers() map[string]MemberResolver {
