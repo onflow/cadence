@@ -884,8 +884,80 @@ func (t *OptionalType) Resolve(typeParameters map[*TypeParameter]Type) Type {
 	}
 }
 
+const optionalTypeMapFunctionDocString = `
+Returns an optional of the result of calling the given function
+with the value of this optional when it is not nil.
+
+Returns nil if this optional is nil
+`
+
 func (t *OptionalType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
+
+	members := map[string]MemberResolver{
+		"map": {
+			Kind: common.DeclarationKindFunction,
+			Resolve: func(identifier string, targetRange ast.Range, report func(error)) *Member {
+
+				// It invalid for an optional of a resource to have a `map` function
+
+				if t.Type.IsResourceType() {
+					report(
+						&InvalidResourceOptionalMemberError{
+							Name:            identifier,
+							DeclarationKind: common.DeclarationKindFunction,
+							Range:           targetRange,
+						},
+					)
+				}
+
+				typeParameter := &TypeParameter{
+					Name: "T",
+				}
+
+				resultType := &GenericType{
+					TypeParameter: typeParameter,
+				}
+
+				return NewPublicFunctionMember(
+					t,
+					identifier,
+					&FunctionType{
+						TypeParameters: []*TypeParameter{
+							typeParameter,
+						},
+						Parameters: []*Parameter{
+							{
+								Label:      ArgumentLabelNotRequired,
+								Identifier: "transform",
+								TypeAnnotation: NewTypeAnnotation(
+									&FunctionType{
+										Parameters: []*Parameter{
+											{
+												Label:          ArgumentLabelNotRequired,
+												Identifier:     "value",
+												TypeAnnotation: NewTypeAnnotation(t.Type),
+											},
+										},
+										ReturnTypeAnnotation: NewTypeAnnotation(
+											resultType,
+										),
+									},
+								),
+							},
+						},
+						ReturnTypeAnnotation: NewTypeAnnotation(
+							&OptionalType{
+								Type: resultType,
+							},
+						),
+					},
+					optionalTypeMapFunctionDocString,
+				)
+			},
+		},
+	}
+
+	return withBuiltinMembers(t, members)
 }
 
 // GenericType

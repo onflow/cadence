@@ -346,3 +346,68 @@ func TestCheckInvalidOptionalIntegerConversion(t *testing.T) {
 
 	assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
 }
+
+func TestCheckOptionalMap(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid element parameter type", func(t *testing.T) {
+
+		_, err := ParseAndCheckWithPanic(t, `
+          fun test(): String? {
+              let x: Int? = 1
+              return x.map(fun (_ value: Int): String {
+                  return value.toString()
+              })
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("element parameter supertype", func(t *testing.T) {
+
+		_, err := ParseAndCheckWithPanic(t, `
+          fun test(): AnyStruct? {
+              let x: Int? = 1
+              return x.map(fun (_ value: AnyStruct): AnyStruct {
+                  return value
+              })
+          }
+        `)
+
+		require.NoError(t, err)
+	})
+
+	t.Run("invalid element parameter type", func(t *testing.T) {
+
+		_, err := ParseAndCheckWithPanic(t, `
+          fun test(): String? {
+              let x: Int? = 1
+              return x.map(fun (_ value: String): String {
+                  return value
+              })
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+
+	t.Run("invalid return type", func(t *testing.T) {
+
+		_, err := ParseAndCheckWithPanic(t, `
+          fun test(): String? {
+              let x: Int? = 1
+              return x.map(fun (_ value: Int): Int {
+                  return value
+              })
+          }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeMismatchError{}, errs[0])
+	})
+}
