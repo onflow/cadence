@@ -45,7 +45,7 @@ func TestBoolExpression_MarshalJSON(t *testing.T) {
         {
             "Type": "BoolExpression",
             "Value": false,
-            "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
         }
         `,
@@ -66,7 +66,7 @@ func TestNilExpression_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "NilExpression",
-            "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 3, "Line": 2, "Column": 5}
         }
         `,
@@ -92,7 +92,7 @@ func TestStringExpression_MarshalJSON(t *testing.T) {
         {
             "Type": "StringExpression",
             "Value": "Hello, World!",
-            "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
         }
         `,
@@ -120,7 +120,7 @@ func TestIntegerExpression_MarshalJSON(t *testing.T) {
             "Type": "IntegerExpression",
             "Value": "42",
             "Base": 10,
-            "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
         }
         `,
@@ -152,7 +152,7 @@ func TestFixedPointExpression_MarshalJSON(t *testing.T) {
             "UnsignedInteger": "42",
             "Fractional": "24",
             "Scale": 10,
-            "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
         }
         `,
@@ -192,16 +192,16 @@ func TestArrayExpression_MarshalJSON(t *testing.T) {
                 {
                     "Type": "BoolExpression",
                     "Value": true,
-                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                     "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
                 },
                 {
                     "Type": "NilExpression",
-                    "StartPos": {"Offset": 7, "Line": 8, "Column": 9}, 
+                    "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
                     "EndPos": {"Offset": 9, "Line": 8, "Column": 11}
                 }
             ],
-            "StartPos": {"Offset": 10, "Line": 11, "Column": 12}, 
+            "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
             "EndPos": {"Offset": 13, "Line": 14, "Column": 15}
         }
         `,
@@ -245,17 +245,17 @@ func TestDictionaryExpression_MarshalJSON(t *testing.T) {
                     "Key": {
                         "Type": "BoolExpression",
                         "Value": true,
-                        "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+                        "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                         "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
                     },
                     "Value": {
                         "Type": "NilExpression",
-                        "StartPos": {"Offset": 7, "Line": 8, "Column": 9}, 
+                        "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
                         "EndPos": {"Offset": 9, "Line": 8, "Column": 11}
                     }
                 }
             ],
-            "StartPos": {"Offset": 10, "Line": 11, "Column": 12}, 
+            "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
             "EndPos": {"Offset": 13, "Line": 14, "Column": 15}
         }
         `,
@@ -281,10 +281,10 @@ func TestIdentifierExpression_MarshalJSON(t *testing.T) {
             "Type": "IdentifierExpression",
             "Identifier": {
                 "Identifier": "foobar",
-                "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                 "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
             },
-            "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
         }
         `,
@@ -323,7 +323,7 @@ func TestPathExpression_MarshalJSON(t *testing.T) {
                 "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
                 "EndPos": {"Offset": 12, "Line": 8, "Column": 14}
             },
-            "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 12, "Line": 8, "Column": 14}
         }
         `,
@@ -359,7 +359,7 @@ func TestMemberExpression_MarshalJSON(t *testing.T) {
             "Expression": {
 				"Type": "BoolExpression",
 				"Value": true,
-				"StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 				"EndPos": {"Offset": 4, "Line": 5, "Column": 6}
 			},
 		    "Optional": true,
@@ -369,7 +369,7 @@ func TestMemberExpression_MarshalJSON(t *testing.T) {
                 "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
                 "EndPos": {"Offset": 15, "Line": 11, "Column": 17}
             },
-            "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 15, "Line": 11, "Column": 17}
         }
         `,
@@ -406,16 +406,243 @@ func TestIndexExpression_MarshalJSON(t *testing.T) {
             "TargetExpression": {
 				"Type": "BoolExpression",
 				"Value": true,
-				"StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
 				"EndPos": {"Offset": 4, "Line": 5, "Column": 6}
 			},
 		    "IndexingExpression": {
 				"Type": "NilExpression",
-				"StartPos": {"Offset": 7, "Line": 8, "Column": 9}, 
+				"StartPos": {"Offset": 7, "Line": 8, "Column": 9},
 				"EndPos": {"Offset": 9, "Line": 8, "Column": 11}
 			},
-            "StartPos": {"Offset": 10, "Line": 11, "Column": 12}, 
+            "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
             "EndPos": {"Offset": 13, "Line": 14, "Column": 15}
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestUnaryExpression_MarshalJSON(t *testing.T) {
+
+	expr := &UnaryExpression{
+		Operation: OperationNegate,
+		Expression: &IntegerExpression{
+			Value: big.NewInt(42),
+			Base:  10,
+			Range: Range{
+				StartPos: Position{Offset: 1, Line: 2, Column: 3},
+				EndPos:   Position{Offset: 4, Line: 5, Column: 6},
+			},
+		},
+		StartPos: Position{Offset: 7, Line: 8, Column: 9},
+	}
+
+	actual, err := json.Marshal(expr)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "UnaryExpression",
+            "Operation": "OperationNegate",
+            "Expression": {
+                "Type": "IntegerExpression",
+                "Value": "42",
+                "Base": 10,
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
+            },
+            "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
+            "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestBinaryExpression_MarshalJSON(t *testing.T) {
+
+	expr := &BinaryExpression{
+		Operation: OperationPlus,
+		Left: &IntegerExpression{
+			Value: big.NewInt(42),
+			Base:  10,
+			Range: Range{
+				StartPos: Position{Offset: 1, Line: 2, Column: 3},
+				EndPos:   Position{Offset: 4, Line: 5, Column: 6},
+			},
+		},
+		Right: &IntegerExpression{
+			Value: big.NewInt(99),
+			Base:  10,
+			Range: Range{
+				StartPos: Position{Offset: 7, Line: 8, Column: 9},
+				EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+			},
+		},
+	}
+
+	actual, err := json.Marshal(expr)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "BinaryExpression",
+            "Operation": "OperationPlus",
+            "Left": {
+                "Type": "IntegerExpression",
+                "Value": "42",
+                "Base": 10,
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
+            },
+            "Right": {
+                "Type": "IntegerExpression",
+                "Value": "99",
+                "Base": 10,
+                "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
+                "EndPos": {"Offset": 10, "Line": 11, "Column": 12}
+            },
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+            "EndPos": {"Offset": 10, "Line": 11, "Column": 12}
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestDestroyExpression_MarshalJSON(t *testing.T) {
+
+	expr := &DestroyExpression{
+		Expression: &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "foobar",
+				Pos:        Position{Offset: 1, Line: 2, Column: 3},
+			},
+		},
+		StartPos: Position{Offset: 4, Line: 5, Column: 6},
+	}
+
+	actual, err := json.Marshal(expr)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "DestroyExpression",
+            "Expression": {
+                "Type": "IdentifierExpression",
+                "Identifier": {
+                    "Identifier": "foobar",
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                    "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
+                },
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
+            },
+            "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
+            "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestForceExpression_MarshalJSON(t *testing.T) {
+
+	expr := &ForceExpression{
+		Expression: &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "foobar",
+				Pos:        Position{Offset: 1, Line: 2, Column: 3},
+			},
+		},
+		EndPos: Position{Offset: 4, Line: 5, Column: 6},
+	}
+
+	actual, err := json.Marshal(expr)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "ForceExpression",
+            "Expression": {
+                "Type": "IdentifierExpression",
+                "Identifier": {
+                    "Identifier": "foobar",
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                    "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
+                },
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
+            },
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+            "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestConditionalExpression_MarshalJSON(t *testing.T) {
+
+	expr := &ConditionalExpression{
+		Test: &BoolExpression{
+			Value: false,
+			Range: Range{
+				StartPos: Position{Offset: 1, Line: 2, Column: 3},
+				EndPos:   Position{Offset: 4, Line: 5, Column: 6},
+			},
+		},
+		Then: &IntegerExpression{
+			Value: big.NewInt(42),
+			Base:  10,
+			Range: Range{
+				StartPos: Position{Offset: 7, Line: 8, Column: 9},
+				EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+			},
+		},
+		Else: &IntegerExpression{
+			Value: big.NewInt(99),
+			Base:  10,
+			Range: Range{
+				StartPos: Position{Offset: 13, Line: 14, Column: 15},
+				EndPos:   Position{Offset: 16, Line: 17, Column: 18},
+			},
+		},
+	}
+
+	actual, err := json.Marshal(expr)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "ConditionalExpression",
+            "Test": {
+                "Type": "BoolExpression",
+                "Value": false,
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
+            },
+            "Then": {
+                "Type": "IntegerExpression",
+                "Value": "42",
+                "Base": 10,
+                "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
+                "EndPos": {"Offset": 10, "Line": 11, "Column": 12}
+            },
+            "Else": {
+                "Type": "IntegerExpression",
+                "Value": "99",
+                "Base": 10,
+                "StartPos": {"Offset": 13, "Line": 14, "Column": 15},
+                "EndPos": {"Offset": 16, "Line": 17, "Column": 18}
+            },
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+            "EndPos": {"Offset": 16, "Line": 17, "Column": 18}
         }
         `,
 		string(actual),
