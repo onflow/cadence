@@ -104,7 +104,7 @@ func rootState(l *lexer) stateFn {
 			}
 		case '_':
 			return identifierState
-		case ' ', '\t':
+		case ' ', '\t', '\r':
 			return spaceState(false)
 		case '\n':
 			return spaceState(true)
