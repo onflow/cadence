@@ -6233,8 +6233,7 @@ func (v AddressValue) KeyString() string {
 }
 
 func (v AddressValue) String() string {
-	hexString := fmt.Sprintf("%x", [common.AddressLength]byte(v))
-	return fmt.Sprintf("0x%s", strings.TrimLeft(hexString, "0"))
+	return common.Address(v).ShortHexWithPrefix()
 }
 
 func (AddressValue) GetOwner() *common.Address {

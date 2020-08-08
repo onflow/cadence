@@ -149,6 +149,16 @@ func (l IdentifierLocation) ID() LocationID {
 	return NewLocationID(IdentifierLocationPrefix, string(l))
 }
 
+func (l IdentifierLocation) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		Type       string
+		Identifier string
+	}{
+		Type:       "IdentifierLocation",
+		Identifier: string(l),
+	})
+}
+
 // StringLocation
 
 const StringLocationPrefix = "S"
@@ -157,6 +167,16 @@ type StringLocation string
 
 func (l StringLocation) ID() LocationID {
 	return NewLocationID(StringLocationPrefix, string(l))
+}
+
+func (l StringLocation) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		Type   string
+		String string
+	}{
+		Type:   "StringLocation",
+		String: string(l),
+	})
 }
 
 // AddressLocation
@@ -175,6 +195,16 @@ func (l AddressLocation) ID() LocationID {
 
 func (l AddressLocation) ToAddress() common.Address {
 	return common.BytesToAddress(l)
+}
+
+func (l AddressLocation) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		Type    string
+		Address string
+	}{
+		Type:    "AddressLocation",
+		Address: l.ToAddress().ShortHexWithPrefix(),
+	})
 }
 
 // HasImportLocation

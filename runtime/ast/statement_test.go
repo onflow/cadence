@@ -306,3 +306,111 @@ func TestForStatement_MarshalJSON(t *testing.T) {
 		string(actual),
 	)
 }
+
+func TestAssignmentStatement_MarshalJSON(t *testing.T) {
+
+	stmt := &AssignmentStatement{
+		Target: &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "foobar",
+				Pos:        Position{Offset: 1, Line: 2, Column: 3},
+			},
+		},
+		Transfer: &Transfer{
+			Operation: TransferOperationCopy,
+			Pos:       Position{Offset: 4, Line: 5, Column: 6},
+		},
+		Value: &BoolExpression{
+			Value: false,
+			Range: Range{
+				StartPos: Position{Offset: 7, Line: 8, Column: 9},
+				EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+			},
+		},
+	}
+
+	actual, err := json.Marshal(stmt)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "AssignmentStatement",
+            "Target": {
+			    "Type": "IdentifierExpression",
+				"Identifier": {
+					"Identifier": "foobar",
+					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+					"EndPos": {"Offset": 6, "Line": 2, "Column": 8}
+				},
+				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+				"EndPos": {"Offset": 6, "Line": 2, "Column": 8}
+			},
+            "Transfer": {
+                "Type": "Transfer",
+                "Operation": "TransferOperationCopy",
+                "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
+                "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
+            },
+            "Value": {
+                "Type": "BoolExpression",
+                "Value": false,
+                "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
+                "EndPos": {"Offset": 10, "Line": 11, "Column": 12}
+            }, 
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+            "EndPos":  {"Offset": 10, "Line": 11, "Column": 12}
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestSwapStatement_MarshalJSON(t *testing.T) {
+
+	stmt := &SwapStatement{
+		Left: &IdentifierExpression{
+			Identifier: Identifier{
+				Identifier: "foobar",
+				Pos:        Position{Offset: 1, Line: 2, Column: 3},
+			},
+		},
+		Right: &BoolExpression{
+			Value: false,
+			Range: Range{
+				StartPos: Position{Offset: 4, Line: 5, Column: 6},
+				EndPos:   Position{Offset: 7, Line: 8, Column: 9},
+			},
+		},
+	}
+
+	actual, err := json.Marshal(stmt)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "SwapStatement",
+            "Left": {
+			    "Type": "IdentifierExpression",
+				"Identifier": {
+					"Identifier": "foobar",
+					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+					"EndPos": {"Offset": 6, "Line": 2, "Column": 8}
+				},
+				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+				"EndPos": {"Offset": 6, "Line": 2, "Column": 8}
+			},
+            "Right": {
+                "Type": "BoolExpression",
+                "Value": false,
+                "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
+                "EndPos": {"Offset": 7, "Line": 8, "Column": 9}
+            }, 
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+            "EndPos":   {"Offset": 7, "Line": 8, "Column": 9}
+        }
+        `,
+		string(actual),
+	)
+}

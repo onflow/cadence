@@ -20,6 +20,7 @@ package common
 
 import (
 	"fmt"
+	"strings"
 )
 
 const AddressLength = 8
@@ -66,4 +67,9 @@ func (a Address) Bytes() []byte {
 	}
 
 	return a[leadingZeros:]
+}
+
+func (a Address) ShortHexWithPrefix() string {
+	hexString := fmt.Sprintf("%x", [AddressLength]byte(a))
+	return fmt.Sprintf("0x%s", strings.TrimLeft(hexString, "0"))
 }

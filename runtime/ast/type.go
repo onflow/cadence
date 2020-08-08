@@ -19,6 +19,7 @@
 package ast
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -27,24 +28,39 @@ import (
 
 type TypeAnnotation struct {
 	IsResource bool
-	Type       Type
-	StartPos   Position
+	Type       Type     `json:"AnnotatedType"`
+	StartPos   Position `json:"-"`
 }
 
-func (e *TypeAnnotation) String() string {
-	if e.IsResource {
-		return fmt.Sprintf("@%s", e.Type)
+func (t *TypeAnnotation) String() string {
+	if t.IsResource {
+		return fmt.Sprintf("@%s", t.Type)
 	}
-	return fmt.Sprint(e.Type)
+	return fmt.Sprint(t.Type)
 }
 
-func (e *TypeAnnotation) StartPosition() Position {
-	return e.StartPos
+func (t *TypeAnnotation) StartPosition() Position {
+	return t.StartPos
 }
 
-func (e *TypeAnnotation) EndPosition() Position {
-	return e.Type.EndPosition()
+func (t *TypeAnnotation) EndPosition() Position {
+	return t.Type.EndPosition()
 }
+
+func (t *TypeAnnotation) MarshalJSON() ([]byte, error) {
+	type Alias TypeAnnotation
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "TypeAnnotation",
+		Range: NewRangeFromPositioned(t),
+		Alias: (*Alias)(t),
+	})
+}
+
+// Type
 
 type Type interface {
 	HasPosition
@@ -56,7 +72,7 @@ type Type interface {
 
 type NominalType struct {
 	Identifier        Identifier
-	NestedIdentifiers []Identifier
+	NestedIdentifiers []Identifier `json:",omitempty"`
 }
 
 func (*NominalType) isType() {}
@@ -84,11 +100,24 @@ func (t *NominalType) EndPosition() Position {
 	return lastIdentifier.EndPosition()
 }
 
+func (t *NominalType) MarshalJSON() ([]byte, error) {
+	type Alias NominalType
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "NominalType",
+		Range: NewRangeFromPositioned(t),
+		Alias: (*Alias)(t),
+	})
+}
+
 // OptionalType represents am optional variant of another type
 
 type OptionalType struct {
-	Type   Type
-	EndPos Position
+	Type   Type     `json:"ElementType"`
+	EndPos Position `json:"-"`
 }
 
 func (*OptionalType) isType() {}
@@ -105,10 +134,23 @@ func (t *OptionalType) EndPosition() Position {
 	return t.EndPos
 }
 
+func (t *OptionalType) MarshalJSON() ([]byte, error) {
+	type Alias OptionalType
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "OptionalType",
+		Range: NewRangeFromPositioned(t),
+		Alias: (*Alias)(t),
+	})
+}
+
 // VariableSizedType is a variable sized array type
 
 type VariableSizedType struct {
-	Type Type
+	Type Type `json:"ElementType"`
 	Range
 }
 
@@ -118,10 +160,21 @@ func (t *VariableSizedType) String() string {
 	return fmt.Sprintf("[%s]", t.Type)
 }
 
+func (t *VariableSizedType) MarshalJSON() ([]byte, error) {
+	type Alias VariableSizedType
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+	}{
+		Type:  "VariableSizedType",
+		Alias: (*Alias)(t),
+	})
+}
+
 // ConstantSizedType is a constant sized array type
 
 type ConstantSizedType struct {
-	Type Type
+	Type Type `json:"ElementType"`
 	Size *IntegerExpression
 	Range
 }
@@ -130,6 +183,17 @@ func (*ConstantSizedType) isType() {}
 
 func (t *ConstantSizedType) String() string {
 	return fmt.Sprintf("[%s; %s]", t.Type, t.Size)
+}
+
+func (t *ConstantSizedType) MarshalJSON() ([]byte, error) {
+	type Alias ConstantSizedType
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+	}{
+		Type:  "ConstantSizedType",
+		Alias: (*Alias)(t),
+	})
 }
 
 // DictionaryType
@@ -146,10 +210,21 @@ func (t *DictionaryType) String() string {
 	return fmt.Sprintf("{%s: %s}", t.KeyType, t.ValueType)
 }
 
+func (t *DictionaryType) MarshalJSON() ([]byte, error) {
+	type Alias DictionaryType
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+	}{
+		Type:  "DictionaryType",
+		Alias: (*Alias)(t),
+	})
+}
+
 // FunctionType
 
 type FunctionType struct {
-	ParameterTypeAnnotations []*TypeAnnotation
+	ParameterTypeAnnotations []*TypeAnnotation `json:",omitempty"`
 	ReturnTypeAnnotation     *TypeAnnotation
 	Range
 }
@@ -168,12 +243,23 @@ func (t *FunctionType) String() string {
 	return fmt.Sprintf("((%s): %s)", parameters.String(), t.ReturnTypeAnnotation.String())
 }
 
+func (t *FunctionType) MarshalJSON() ([]byte, error) {
+	type Alias FunctionType
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+	}{
+		Type:  "FunctionType",
+		Alias: (*Alias)(t),
+	})
+}
+
 // ReferenceType
 
 type ReferenceType struct {
 	Authorized bool
-	Type       Type
-	StartPos   Position
+	Type       Type     `json:"ReferencedType"`
+	StartPos   Position `json:"-"`
 }
 
 func (*ReferenceType) isType() {}
@@ -194,6 +280,19 @@ func (t *ReferenceType) StartPosition() Position {
 
 func (t *ReferenceType) EndPosition() Position {
 	return t.Type.EndPosition()
+}
+
+func (t *ReferenceType) MarshalJSON() ([]byte, error) {
+	type Alias ReferenceType
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "ReferenceType",
+		Range: NewRangeFromPositioned(t),
+		Alias: (*Alias)(t),
+	})
 }
 
 // RestrictedType
