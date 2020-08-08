@@ -34,28 +34,30 @@ type FlowIntegration struct {
 	serviceAddress flow.Address
 }
 
-func NewFlowIntegration(s *server.Server) (*FlowIntegration, error) {
+func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegration, error) {
 	integration := &FlowIntegration{
 		server:   s,
 		accounts: make(map[flow.Address]AccountPrivateKey),
 	}
 
 	options := []server.Option{
-		server.WithInitializationOptionsHandler(integration.initialize),
 		server.WithDiagnosticProvider(integration.diagnostics),
-		server.WithCodeLensProvider(integration.codeLenses),
-		server.WithAddressImportResolver(integration.resolveAccountImport),
 		server.WithStringImportResolver(resolveFileImport),
 	}
 
-	var commandOptions []server.Option
-	for _, command := range integration.commands() {
-		commandOptions = append(commandOptions, server.WithCommand(command))
+	if enableFlowClient {
+		options = append(options,
+			server.WithInitializationOptionsHandler(integration.initialize),
+			server.WithCodeLensProvider(integration.codeLenses),
+			server.WithAddressImportResolver(integration.resolveAccountImport),
+		)
+
+		for _, command := range integration.commands() {
+			options = append(options, server.WithCommand(command))
+		}
 	}
 
-	err := s.SetOptions(
-		append(options, commandOptions...)...,
-	)
+	err := s.SetOptions(options...)
 	if err != nil {
 		return nil, err
 	}
