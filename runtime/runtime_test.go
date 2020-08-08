@@ -567,6 +567,24 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			},
 			expectedLogs: []string{"42", `"foo"`},
 		},
+
+		{
+			label: "Invalid non-storable argument type",
+			script: `
+			  transaction(x: ((Int): Int)) {
+				execute {
+				  x(0)
+				}
+			  }
+			`,
+			args: [][]byte{
+				jsoncdc.MustEncode(cadence.NewInt(42)),
+			},
+			check: func(t *testing.T, err error) {
+				assert.Error(t, err)
+				assert.IsType(t, &TransactionParameterTypeNotStorableError{}, errors.Unwrap(err))
+			},
+		},
 		{
 			label: "Invalid bytes",
 			script: `
@@ -1850,6 +1868,30 @@ func TestScriptReturnTypeNotStorableError(t *testing.T) {
 
 	_, err := runtime.ExecuteScript(script, nil, runtimeInterface, nextTransactionLocation())
 	assert.IsType(t, &ScriptReturnTypeNotStorableError{}, err)
+}
+
+func TestScriptParameterTypeNotStorableError(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	script := []byte(`
+      pub fun main(x: ((): Int)) {
+		return
+      }
+    `)
+
+	runtimeInterface := &testRuntimeInterface{
+		getSigningAccounts: func() []Address {
+			return []Address{{42}}
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	_, err := runtime.ExecuteScript(script, nil, runtimeInterface, nextTransactionLocation())
+	assert.IsType(t, &ScriptParameterTypeNotStorableError{}, err)
 }
 
 func TestRuntimeSyntaxError(t *testing.T) {
