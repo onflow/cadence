@@ -150,11 +150,25 @@ func (r *interpreterRuntime) ExecuteScript(
 	}
 	epSignature := invokableType.InvocationFunctionType()
 
+	// Ensure entrypoint return type is storable
 	storableResults := map[*sema.Member]bool{}
 	if _, isVoid := epSignature.ReturnTypeAnnotation.Type.(*sema.VoidType); !isVoid {
 		if !epSignature.ReturnTypeAnnotation.Type.IsStorable(storableResults) {
 			return nil, &ScriptReturnTypeNotStorableError{
 				Type: epSignature.ReturnTypeAnnotation.Type,
+			}
+		}
+	}
+
+	// Ensure entrypoint parameters type is storable
+	if len(epSignature.Parameters) > 0 {
+		for _, param := range epSignature.Parameters {
+			if _, isVoid := param.TypeAnnotation.Type.(*sema.VoidType); !isVoid {
+				if !param.TypeAnnotation.Type.IsStorable(storableResults) {
+					return nil, &ScriptParameterTypeNotStorableError{
+						Type: param.TypeAnnotation.Type,
+					}
+				}
 			}
 		}
 	}
@@ -312,6 +326,20 @@ func (r *interpreterRuntime) ExecuteTransaction(
 			Expected: transactionParameterCount,
 			Actual:   argumentCount,
 		})
+	}
+
+	// Ensure parameter types are storable
+	storableResults := map[*sema.Member]bool{}
+	if len(transactionType.Parameters) > 0 {
+		for _, param := range transactionType.Parameters {
+			if _, isVoid := param.TypeAnnotation.Type.(*sema.VoidType); !isVoid {
+				if !param.TypeAnnotation.Type.IsStorable(storableResults) {
+					return newError(&TransactionParameterTypeNotStorableError{
+						Type: param.TypeAnnotation.Type,
+					})
+				}
+			}
+		}
 	}
 
 	transactionAuthorizerCount := len(transactionType.PrepareParameters)

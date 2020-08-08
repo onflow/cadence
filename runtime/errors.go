@@ -182,3 +182,37 @@ func (e *ScriptReturnTypeNotStorableError) Error() string {
 		e.Type.QualifiedString(),
 	)
 }
+
+// ScriptParamterTypeNotStorableError is an error that is reported for
+// script parameter types that are not storable.
+//
+// For example, the type `Int` is a storable type,
+// whereas a function type is not.
+
+type ScriptParameterTypeNotStorableError struct {
+	Type sema.Type
+}
+
+func (e *ScriptParameterTypeNotStorableError) Error() string {
+	return fmt.Sprintf(
+		"parameter type is non-storable type: `%s`",
+		e.Type.QualifiedString(),
+	)
+}
+
+// TransactionParamterTypeNotStorableError is an error that is reported for
+// transaction parameter types that are not storable.
+//
+// For example, the type `Int` is a storable type,
+// whereas a function type is not.
+
+type TransactionParameterTypeNotStorableError struct {
+	Type sema.Type
+}
+
+func (e *TransactionParameterTypeNotStorableError) Error() string {
+	return fmt.Sprintf(
+		"parameter type is non-storable type: `%s`",
+		e.Type.QualifiedString(),
+	)
+}
