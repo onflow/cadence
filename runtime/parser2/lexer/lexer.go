@@ -275,7 +275,7 @@ func (l *lexer) scanSpace() (containsNewline bool) {
 	// parse more, if any
 	l.acceptWhile(func(r rune) bool {
 		switch r {
-		case ' ', '\t':
+		case ' ', '\t', '\r':
 			return true
 		case '\n':
 			containsNewline = true
