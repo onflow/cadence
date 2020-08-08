@@ -256,6 +256,19 @@ func (s *AssignmentStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitAssignmentStatement(s)
 }
 
+func (s *AssignmentStatement) MarshalJSON() ([]byte, error) {
+	type Alias AssignmentStatement
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "AssignmentStatement",
+		Range: NewRangeFromPositioned(s),
+		Alias: (*Alias)(s),
+	})
+}
+
 // SwapStatement
 
 type SwapStatement struct {
@@ -275,6 +288,19 @@ func (*SwapStatement) isStatement() {}
 
 func (s *SwapStatement) Accept(visitor Visitor) Repr {
 	return visitor.VisitSwapStatement(s)
+}
+
+func (s *SwapStatement) MarshalJSON() ([]byte, error) {
+	type Alias SwapStatement
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "SwapStatement",
+		Range: NewRangeFromPositioned(s),
+		Alias: (*Alias)(s),
+	})
 }
 
 // ExpressionStatement
