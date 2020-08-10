@@ -29,6 +29,13 @@ const BlockHashLength = 32
 
 type BlockHash [BlockHashLength]byte
 
+type Block struct {
+	Height    uint64
+	View      uint64
+	Hash      BlockHash
+	Timestamp int64
+}
+
 type Interface interface {
 	// ResolveImport resolves an import of a program.
 	ResolveImport(Location) ([]byte, error)
@@ -65,7 +72,7 @@ type Interface interface {
 	// GetCurrentBlockHeight returns the current block height.
 	GetCurrentBlockHeight() uint64
 	// GetBlockAtHeight returns the block at the given height.
-	GetBlockAtHeight(height uint64) (hash BlockHash, timestamp int64, exists bool, err error)
+	GetBlockAtHeight(height uint64) (block Block, exists bool, err error)
 	// UnsafeRandom returns a random uint64, where the process of random number derivation is not cryptographically
 	// secure.
 	UnsafeRandom() uint64
@@ -169,7 +176,7 @@ func (i *EmptyRuntimeInterface) GetCurrentBlockHeight() uint64 {
 	return 0
 }
 
-func (i *EmptyRuntimeInterface) GetBlockAtHeight(_ uint64) (hash BlockHash, timestamp int64, exists bool, err error) {
+func (i *EmptyRuntimeInterface) GetBlockAtHeight(_ uint64) (block Block, exists bool, err error) {
 	return
 }
 

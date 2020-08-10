@@ -238,8 +238,8 @@ func (i *testRuntimeInterface) GetCurrentBlockHeight() uint64 {
 	return 1
 }
 
-func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (hash BlockHash, timestamp int64, exists bool,
-	err error) {
+func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (block Block, exists bool, err error) {
+
 	buf := new(bytes.Buffer)
 	err = binary.Write(buf, binary.BigEndian, height)
 	if err != nil {
@@ -247,9 +247,16 @@ func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (hash BlockHash, 
 	}
 
 	encoded := buf.Bytes()
+	var hash BlockHash
 	copy(hash[stdlib.BlockIDSize-len(encoded):], encoded)
 
-	return hash, time.Unix(int64(height), 0).UnixNano(), true, nil
+	block = Block{
+		Height:    height,
+		View:      height,
+		Hash:      hash,
+		Timestamp: time.Unix(int64(height), 0).UnixNano(),
+	}
+	return block, true, nil
 }
 
 func (i *testRuntimeInterface) UnsafeRandom() uint64 {
@@ -3197,12 +3204,14 @@ func TestRuntimeBlock(t *testing.T) {
           let block = getCurrentBlock()
           log(block)
           log(block.height)
+          log(block.view)
           log(block.id)
           log(block.timestamp)
 
           let nextBlock = getBlock(at: block.height + UInt64(1))
           log(nextBlock)
           log(nextBlock?.height)
+          log(nextBlock?.view)
           log(nextBlock?.id)
           log(nextBlock?.timestamp)
         }
@@ -3227,11 +3236,13 @@ func TestRuntimeBlock(t *testing.T) {
 
 	assert.Equal(t,
 		[]string{
-			"Block(height: 1, id: 0x0000000000000000000000000000000000000000000000000000000000000001, timestamp: 1.00000000)",
+			"Block(height: 1, view: 1, id: 0x0000000000000000000000000000000000000000000000000000000000000001, timestamp: 1.00000000)",
+			"1",
 			"1",
 			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]",
 			"1.00000000",
-			"Block(height: 2, id: 0x0000000000000000000000000000000000000000000000000000000000000002, timestamp: 2.00000000)",
+			"Block(height: 2, view: 2, id: 0x0000000000000000000000000000000000000000000000000000000000000002, timestamp: 2.00000000)",
+			"2",
 			"2",
 			"[0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]",
 			"2.00000000",
