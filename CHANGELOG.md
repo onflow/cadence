@@ -1,4 +1,130 @@
 
+# v0.8.0
+
+This release focuses on improvements, bug fixes, and bringing the documentation up-to-date.
+
+## 🛠 Improvements
+
+- Improved support on Windows: Treat carriage returns as space (#304)
+- Improved JSON marshalling for more AST elements (#292, #286)
+- Recursively check if assignment target expression is valid, don't copy returned values (#288)
+- Consider existing prefix when suggesting completion items (#285)
+- Include available declarations in "not declared" error (#280)
+- Enforce the requirement for types to be storable in more places:
+  - Transaction/script parameter types (#305)
+  - Script return type (#291)
+  - Arguments passed to the account `load` and `store` functions (#251)
+
+  Previously, using non-storable failed at run-time, now the programs are rejected statically.
+
+## ⭐ Features
+
+- Add a version constant (#289)
+- Language Server: Include error notes as related information in diagnostic (#276)
+
+## 🐞 Bug Fixes
+
+- Don't return an error when a location type is not supported (#290)
+- Handle incomplete types in checker (#284)
+- Fix the suggestion in the error when an interface is used as a type (#281)
+
+## 📖 Documentation
+
+- Brought the documentation up-to-date, include all new language features and API changes (#275, #277, #279)
+
+# v0.7.0
+
+This release contains a lot of improvements to the language server, which improve the development experience in the Visual Studio Code extension, and will also soon be integrated into the Flow Playground.
+
+## ⭐ Features
+
+- Added member completion to the language server (#257)
+  - Insert the argument list when completing functions (#268)
+  - Offer keyword snippets (#268)
+- Enabled running the language server in the browser by compiling it to WebAssembly (#242)
+- Added support for docstrings to the parser (#246, #255)
+- Added support for pragmas to the parser (#239)
+- Started a source compatibility suite (#226, #270).
+
+  Cadence will be regularly checked for compatibility with existing code to ensure it does not regress in source compatibility and performance. As a start, the [Fungible Token standard](https://github.com/onflow/flow-ft) and [Non-Fungible Token standard](https://github.com/onflow/flow-ft) repositories are checked.
+
+  Consider requesting your repository to be included in the compatibility suite!
+- Added a simple minifier (#252)
+
+## 🛠 Improvements
+
+- Made embedding the language server easier (#274, #262)
+- Extended the JSON serialization for Cadence values and types (#260, #264, #265, #266, #271, #273)
+- Improved conformance checking (#245). Made return types covariant, i.e. allow subtypes for return types of functions to satisfy interface conformance.
+
+## 💥 Breaking Changes
+
+- Made strings immutable (#269)
+- Moved the Visual Studio Code extension to a new repository: <https://github.com/onflow/vscode-flow> (#244)
+- Added a magic prefix to stored data (#236).
+  This allows versioning the data. Existing data without a prefix is migrated automatically
+- Changed the order in which fields in values and types are exported to declaration order (#272)
+
+## 🐞 Bug Fixes
+
+- Removed the service account from the list of usable accounts in the language server (#261)
+- Fixed a parsing ambiguity for return types (#267)
+- Fixed non-composite reference subtyping (#253)
+
+## 🧰 Maintenance
+
+- Removed the old parser (#249)
+
+# v0.6.0
+
+This is a small release with some bug fixes, internal improvements, and one breaking change for code that embeds Cadence.
+
+## 💥 Breaking Changes
+
+- Removed the unused `controller` parameter from the storage interface methods:
+
+  - `func GetValue(owner, controller, key []byte) (value []byte, err error)`
+    → `func GetValue(owner, key []byte) (value []byte, err error)`
+
+  - `SetValue(owner, controller, key, value []byte) (err error)`
+    → `SetValue(owner, key, value []byte) (err error)`
+
+  - `ValueExists(owner, controller, key []byte) (exists bool, err error)`
+    → `ValueExists(owner, key []byte) (exists bool, err error)`
+
+  This is only a breaking change in the implementation of Cadence, i.e for code that embeds Cadence, not in the Cadence language, i.e. for users of Cadence.
+
+## ⭐ Features
+
+- Added an optional callback for writes with high-level values to the interface:
+
+  ```go
+  type HighLevelStorage interface {
+
+	  // HighLevelStorageEnabled should return true
+	  // if the functions of HighLevelStorage should be called,
+	  // e.g. SetCadenceValue
+	  HighLevelStorageEnabled() bool
+
+	  // SetCadenceValue sets a value for the given key in the storage, owned by the given account.
+	  SetCadenceValue(owner Address, key string, value cadence.Value) (err error)
+  }
+  ```
+
+  This is a feature in the implementation of Cadence, i.e for code that embeds Cadence, not in the Cadence language, i.e. for users of Cadence.
+
+## 🛠 Improvements
+
+- Don't report an error for a restriction with an invalid type
+- Record the occurrences of types. This enables the "Go to definition" feature for types in the language server
+- Parse member expressions without a name. This allows the checker to run. This will enable adding code completion support or members in the future.
+
+## 🐞 Bug Fixes
+
+- Fixed a crash when checking the invocation of a function on an undeclared variable
+- Fixed handling of functions in composite values in the JSON-CDC encoding
+- Fixed a potential stack overflow when checking member storability
+
 # v0.5.0
 
 ## ⭐ Features and Improvements
