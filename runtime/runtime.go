@@ -1363,13 +1363,12 @@ func (r *interpreterRuntime) getCurrentBlockHeight(runtimeInterface Interface) (
 
 func (r *interpreterRuntime) getBlockAtHeight(height uint64, runtimeInterface Interface) (*BlockValue, error) {
 
-	var hash BlockHash
-	var timestamp int64
+	var block Block
 	var exists bool
 	var err error
 
 	wrapPanic(func() {
-		hash, timestamp, exists, err = runtimeInterface.GetBlockAtHeight(height)
+		block, exists, err = runtimeInterface.GetBlockAtHeight(height)
 	})
 
 	if err != nil {
@@ -1380,8 +1379,8 @@ func (r *interpreterRuntime) getBlockAtHeight(height uint64, runtimeInterface In
 		return nil, nil
 	}
 
-	block := NewBlockValue(height, hash, time.Unix(0, timestamp))
-	return &block, nil
+	blockValue := NewBlockValue(block)
+	return &blockValue, nil
 }
 
 func (r *interpreterRuntime) newGetCurrentBlockFunction(runtimeInterface Interface) interpreter.HostFunction {
@@ -1436,27 +1435,33 @@ func compositeTypesToIDValues(types []*sema.CompositeType) *interpreter.ArrayVal
 
 type BlockValue struct {
 	Height    interpreter.UInt64Value
+	View      interpreter.UInt64Value
 	ID        *interpreter.ArrayValue
 	Timestamp interpreter.Fix64Value
 }
 
-func NewBlockValue(height uint64, id [stdlib.BlockIDSize]byte, timestamp time.Time) BlockValue {
+func NewBlockValue(block Block) BlockValue {
+
 	// height
-	heightValue := interpreter.UInt64Value(height)
+	heightValue := interpreter.UInt64Value(block.Height)
+
+	// view
+	viewValue := interpreter.UInt64Value(block.View)
 
 	// ID
 	var values = make([]interpreter.Value, stdlib.BlockIDSize)
-	for i, b := range id {
+	for i, b := range block.Hash {
 		values[i] = interpreter.UInt8Value(b)
 	}
 	idValue := &interpreter.ArrayValue{Values: values}
 
 	// timestamp
 	// TODO: verify
-	timestampValue := interpreter.NewFix64ValueWithInteger(timestamp.Unix())
+	timestampValue := interpreter.NewFix64ValueWithInteger(time.Unix(0, block.Timestamp).Unix())
 
 	return BlockValue{
 		Height:    heightValue,
+		View:      viewValue,
 		ID:        idValue,
 		Timestamp: timestampValue,
 	}
@@ -1494,6 +1499,9 @@ func (v BlockValue) GetMember(_ *interpreter.Interpreter, _ interpreter.Location
 	case "height":
 		return v.Height
 
+	case "view":
+		return v.View
+
 	case "id":
 		return v.ID
 
@@ -1518,8 +1526,9 @@ func (v BlockValue) IDAsByteArray() [stdlib.BlockIDSize]byte {
 
 func (v BlockValue) String() string {
 	return fmt.Sprintf(
-		"Block(height: %s, id: 0x%x, timestamp: %s)",
+		"Block(height: %s, view: %s, id: 0x%x, timestamp: %s)",
 		v.Height,
+		v.View,
 		v.IDAsByteArray(),
 		v.Timestamp,
 	)

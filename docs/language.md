@@ -7096,6 +7096,14 @@ pub struct Block {
     ///
     pub let height: UInt64
 
+    /// The view of the block.
+    ///
+    /// It is a detail of the consensus algorithm. It is a monotonically increasing integer
+    /// and counts rounds in the consensus algorithm. Since not all rounds result in a finalized block,
+    /// the view number is strictly greater than or equal to the block height
+    ///
+    pub let view: UInt64
+
     /// The timestamp of the block.
     ///
     /// It is the local clock time of the block proposer when it generates the block

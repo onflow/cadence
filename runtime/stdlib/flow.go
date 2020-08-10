@@ -321,6 +321,12 @@ The height of the block.
 If the blockchain is viewed as a tree with the genesis block at the root, the height of a node is the number of edges between the node and the genesis block
 `
 
+const blockTypeViewFieldDocString = `
+The view of the block.
+
+It is a detail of the consensus algorithm. It is a monotonically increasing integer and counts rounds in the consensus algorithm. Since not all rounds result in a finalized block, the view number is strictly greater than or equal to the block height
+`
+
 const blockTypeTimestampFieldDocString = `
 The ID of the block.
 
@@ -343,6 +349,17 @@ func (t *BlockType) GetMembers() map[string]sema.MemberResolver {
 					identifier,
 					&sema.UInt64Type{},
 					blockTypeHeightFieldDocString,
+				)
+			},
+		},
+		"view": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *sema.Member {
+				return sema.NewPublicConstantFieldMember(
+					t,
+					identifier,
+					&sema.UInt64Type{},
+					blockTypeViewFieldDocString,
 				)
 			},
 		},
