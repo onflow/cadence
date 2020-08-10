@@ -29,6 +29,8 @@ import (
 
 func TestTypeAnnotation_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	ty := &TypeAnnotation{
 		IsResource: true,
 		Type: &NominalType{
@@ -46,7 +48,6 @@ func TestTypeAnnotation_MarshalJSON(t *testing.T) {
 	assert.JSONEq(t,
 		`
         {
-            "Type": "TypeAnnotation",
             "IsResource": true,
             "AnnotatedType": {
                 "Type": "NominalType",
@@ -67,6 +68,8 @@ func TestTypeAnnotation_MarshalJSON(t *testing.T) {
 }
 
 func TestNominalType_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
 
 	ty := &NominalType{
 		Identifier: Identifier{
@@ -110,6 +113,8 @@ func TestNominalType_MarshalJSON(t *testing.T) {
 
 func TestOptionalType_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	ty := &OptionalType{
 		Type: &NominalType{
 			Identifier: Identifier{
@@ -146,6 +151,8 @@ func TestOptionalType_MarshalJSON(t *testing.T) {
 }
 
 func TestVariableSizedType_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
 
 	ty := &VariableSizedType{
 		Type: &NominalType{
@@ -186,6 +193,8 @@ func TestVariableSizedType_MarshalJSON(t *testing.T) {
 }
 
 func TestConstantSizedType_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
 
 	ty := &ConstantSizedType{
 		Type: &NominalType{
@@ -241,6 +250,8 @@ func TestConstantSizedType_MarshalJSON(t *testing.T) {
 }
 
 func TestDictionaryType_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
 
 	ty := &DictionaryType{
 		KeyType: &NominalType{
@@ -298,6 +309,8 @@ func TestDictionaryType_MarshalJSON(t *testing.T) {
 
 func TestFunctionType_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	ty := &FunctionType{
 		ParameterTypeAnnotations: []*TypeAnnotation{
 			{
@@ -336,7 +349,6 @@ func TestFunctionType_MarshalJSON(t *testing.T) {
             "Type": "FunctionType",
             "ParameterTypeAnnotations": [
                 {
-                    "Type": "TypeAnnotation",
                     "IsResource": true,
                     "AnnotatedType": {
                         "Type": "NominalType",
@@ -353,7 +365,6 @@ func TestFunctionType_MarshalJSON(t *testing.T) {
                 }
            ],
            "ReturnTypeAnnotation": {
-               "Type": "TypeAnnotation",
                "IsResource": true,
                "AnnotatedType": {
                    "Type": "NominalType",
@@ -377,6 +388,8 @@ func TestFunctionType_MarshalJSON(t *testing.T) {
 }
 
 func TestReferenceType_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
 
 	ty := &ReferenceType{
 		Authorized: true,
@@ -409,6 +422,179 @@ func TestReferenceType_MarshalJSON(t *testing.T) {
             },
             "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
             "EndPos": {"Offset": 2, "Line": 2, "Column": 4}
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestRestrictedType_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &RestrictedType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "AB",
+				Pos:        Position{Offset: 1, Line: 2, Column: 3},
+			},
+		},
+		Restrictions: []*NominalType{
+			{
+				Identifier: Identifier{
+					Identifier: "CD",
+					Pos:        Position{Offset: 4, Line: 5, Column: 6},
+				},
+			},
+			{
+				Identifier: Identifier{
+					Identifier: "EF",
+					Pos:        Position{Offset: 7, Line: 8, Column: 9},
+				},
+			},
+		},
+		Range: Range{
+			StartPos: Position{Offset: 10, Line: 11, Column: 12},
+			EndPos:   Position{Offset: 13, Line: 14, Column: 15},
+		},
+	}
+
+	actual, err := json.Marshal(ty)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "RestrictedType",
+            "RestrictedType": {
+                "Type": "NominalType",
+                "Identifier": {
+                    "Identifier": "AB",
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                    "EndPos": {"Offset": 2, "Line": 2, "Column": 4}
+                },
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 2, "Line": 2, "Column": 4}
+            },
+            "Restrictions": [
+                {
+                    "Type": "NominalType",
+                    "Identifier": {
+                        "Identifier": "CD",
+                        "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
+                        "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
+                    },
+                    "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
+                    "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
+                },
+                {
+                    "Type": "NominalType",
+                    "Identifier": {
+                        "Identifier": "EF",
+                        "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
+                        "EndPos": {"Offset": 8, "Line": 8, "Column": 10}
+                    },
+                    "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
+                    "EndPos": {"Offset": 8, "Line": 8, "Column": 10}
+                }
+            ],
+            "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
+            "EndPos": {"Offset": 13, "Line": 14, "Column": 15}
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestInstantiationType_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &InstantiationType{
+		Type: &NominalType{
+			Identifier: Identifier{
+				Identifier: "AB",
+				Pos:        Position{Offset: 1, Line: 2, Column: 3},
+			},
+		},
+		TypeArguments: []*TypeAnnotation{
+			{
+				IsResource: false,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "CD",
+						Pos:        Position{Offset: 4, Line: 5, Column: 6},
+					},
+				},
+				StartPos: Position{Offset: 7, Line: 8, Column: 9},
+			},
+			{
+				IsResource: false,
+				Type: &NominalType{
+					Identifier: Identifier{
+						Identifier: "EF",
+						Pos:        Position{Offset: 10, Line: 11, Column: 12},
+					},
+				},
+				StartPos: Position{Offset: 13, Line: 14, Column: 15},
+			},
+		},
+		TypeArgumentsStartPos: Position{Offset: 16, Line: 17, Column: 18},
+		EndPos:                Position{Offset: 19, Line: 20, Column: 21},
+	}
+
+	actual, err := json.Marshal(ty)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "InstantiationType",
+            "InstantiatedType": {
+                "Type": "NominalType",
+                "Identifier": {
+                    "Identifier": "AB",
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                    "EndPos": {"Offset": 2, "Line": 2, "Column": 4}
+                },
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 2, "Line": 2, "Column": 4}
+            },
+            "TypeArguments": [
+                {
+                    "IsResource": false,
+                    "AnnotatedType": {
+                        "Type": "NominalType",
+                        "Identifier": {
+                            "Identifier": "CD",
+                            "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
+                            "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
+                        },
+                        "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
+                        "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
+                    },
+                    "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
+                    "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
+                },
+                {
+                    "IsResource": false,
+                    "AnnotatedType": {
+                        "Type": "NominalType",
+                        "Identifier": {
+                            "Identifier": "EF",
+                            "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
+                            "EndPos": {"Offset": 11, "Line": 11, "Column": 13}
+                        },
+                        "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
+                        "EndPos": {"Offset": 11, "Line": 11, "Column": 13}
+                    },
+                    "StartPos": {"Offset": 13, "Line": 14, "Column": 15},
+                    "EndPos": {"Offset": 11, "Line": 11, "Column": 13}
+               }
+            ],
+            "TypeArgumentsStartPos": {"Offset": 16, "Line": 17, "Column": 18},
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+            "EndPos": {"Offset": 19, "Line": 20, "Column": 21}
         }
         `,
 		string(actual),

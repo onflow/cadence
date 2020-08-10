@@ -19,6 +19,8 @@
 package ast
 
 import (
+	"encoding/json"
+
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -27,14 +29,12 @@ import (
 // NOTE: For events, only an empty initializer is declared
 
 type CompositeDeclaration struct {
-	Access                Access
-	CompositeKind         common.CompositeKind
-	Identifier            Identifier
-	Conformances          []*NominalType
-	Members               *Members
-	CompositeDeclarations []*CompositeDeclaration
-	InterfaceDeclarations []*InterfaceDeclaration
-	DocString             string
+	Access        Access
+	CompositeKind common.CompositeKind
+	Identifier    Identifier
+	Conformances  []*NominalType
+	Members       *Members
+	DocString     string
 	Range
 }
 
@@ -72,20 +72,31 @@ type FieldDeclaration struct {
 	Range
 }
 
-func (f *FieldDeclaration) Accept(visitor Visitor) Repr {
-	return visitor.VisitFieldDeclaration(f)
+func (d *FieldDeclaration) Accept(visitor Visitor) Repr {
+	return visitor.VisitFieldDeclaration(d)
 }
 
 func (*FieldDeclaration) isDeclaration() {}
 
-func (f *FieldDeclaration) DeclarationIdentifier() *Identifier {
-	return &f.Identifier
+func (d *FieldDeclaration) DeclarationIdentifier() *Identifier {
+	return &d.Identifier
 }
 
-func (f *FieldDeclaration) DeclarationKind() common.DeclarationKind {
+func (d *FieldDeclaration) DeclarationKind() common.DeclarationKind {
 	return common.DeclarationKindField
 }
 
-func (f *FieldDeclaration) DeclarationAccess() Access {
-	return f.Access
+func (d *FieldDeclaration) DeclarationAccess() Access {
+	return d.Access
+}
+
+func (d *FieldDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias FieldDeclaration
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+	}{
+		Type:  "FieldDeclaration",
+		Alias: (*Alias)(d),
+	})
 }

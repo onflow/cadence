@@ -628,7 +628,7 @@ func parseEventDeclaration(
 		CompositeKind: common.CompositeKindEvent,
 		Identifier:    identifier,
 		Members: &ast.Members{
-			SpecialFunctions: []*ast.SpecialFunctionDeclaration{
+			Declarations: []ast.Declaration{
 				initializer,
 			},
 		},
@@ -807,8 +807,7 @@ func parseCompositeOrInterfaceDeclaration(
 
 	p.mustOne(lexer.TokenBraceOpen)
 
-	members, compositeDeclarations, interfaceDeclarations :=
-		parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
+	members := parseMembersAndNestedDeclarations(p, lexer.TokenBraceClose)
 
 	p.skipSpaceAndComments(true)
 
@@ -827,26 +826,22 @@ func parseCompositeOrInterfaceDeclaration(
 		}
 
 		return &ast.InterfaceDeclaration{
-			Access:                access,
-			CompositeKind:         compositeKind,
-			Identifier:            identifier,
-			Members:               members,
-			CompositeDeclarations: compositeDeclarations,
-			InterfaceDeclarations: interfaceDeclarations,
-			DocString:             docString,
-			Range:                 declarationRange,
+			Access:        access,
+			CompositeKind: compositeKind,
+			Identifier:    identifier,
+			Members:       members,
+			DocString:     docString,
+			Range:         declarationRange,
 		}
 	} else {
 		return &ast.CompositeDeclaration{
-			Access:                access,
-			CompositeKind:         compositeKind,
-			Identifier:            identifier,
-			Conformances:          conformances,
-			Members:               members,
-			CompositeDeclarations: compositeDeclarations,
-			InterfaceDeclarations: interfaceDeclarations,
-			DocString:             docString,
-			Range:                 declarationRange,
+			Access:        access,
+			CompositeKind: compositeKind,
+			Identifier:    identifier,
+			Conformances:  conformances,
+			Members:       members,
+			DocString:     docString,
+			Range:         declarationRange,
 		}
 	}
 }
@@ -861,8 +856,6 @@ func parseMembersAndNestedDeclarations(
 	endTokenType lexer.TokenType,
 ) (
 	members *ast.Members,
-	compositeDeclarations []*ast.CompositeDeclaration,
-	interfaceDeclarations []*ast.InterfaceDeclaration,
 ) {
 
 	members = &ast.Members{}
@@ -888,27 +881,7 @@ func parseMembersAndNestedDeclarations(
 				return
 			}
 
-			switch memberOrNestedDeclaration := memberOrNestedDeclaration.(type) {
-			case *ast.FieldDeclaration:
-				members.Fields =
-					append(members.Fields, memberOrNestedDeclaration)
-
-			case *ast.SpecialFunctionDeclaration:
-				members.SpecialFunctions =
-					append(members.SpecialFunctions, memberOrNestedDeclaration)
-
-			case *ast.FunctionDeclaration:
-				members.Functions =
-					append(members.Functions, memberOrNestedDeclaration)
-
-			case *ast.CompositeDeclaration:
-				compositeDeclarations =
-					append(compositeDeclarations, memberOrNestedDeclaration)
-
-			case *ast.InterfaceDeclaration:
-				interfaceDeclarations =
-					append(interfaceDeclarations, memberOrNestedDeclaration)
-			}
+			members.Declarations = append(members.Declarations, memberOrNestedDeclaration)
 		}
 	}
 }

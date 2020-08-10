@@ -373,7 +373,7 @@ func (e *IdentifierExpression) MarshalJSON() ([]byte, error) {
 		Range
 	}{
 		Type:  "IdentifierExpression",
-		Range: NewRangeFromPositioned(e.Identifier),
+		Range: NewRangeFromPositioned(e),
 		Alias: (*Alias)(e),
 	})
 }
@@ -409,7 +409,7 @@ type InvocationExpression struct {
 	InvokedExpression Expression
 	TypeArguments     []*TypeAnnotation
 	Arguments         Arguments
-	EndPos            Position
+	EndPos            Position `json:"-"`
 }
 
 func (*InvocationExpression) isExpression() {}
@@ -447,6 +447,19 @@ func (e *InvocationExpression) StartPosition() Position {
 
 func (e *InvocationExpression) EndPosition() Position {
 	return e.EndPos
+}
+
+func (e *InvocationExpression) MarshalJSON() ([]byte, error) {
+	type Alias InvocationExpression
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+		Range
+	}{
+		Type:  "InvocationExpression",
+		Range: NewRangeFromPositioned(e),
+		Alias: (*Alias)(e),
+	})
 }
 
 // AccessExpression
@@ -714,7 +727,7 @@ type FunctionExpression struct {
 	ParameterList        *ParameterList
 	ReturnTypeAnnotation *TypeAnnotation
 	FunctionBlock        *FunctionBlock
-	StartPos             Position
+	StartPos             Position `json:"-"`
 }
 
 func (*FunctionExpression) isExpression() {}
@@ -742,13 +755,26 @@ func (e *FunctionExpression) EndPosition() Position {
 	return e.FunctionBlock.EndPosition()
 }
 
+func (e *FunctionExpression) MarshalJSON() ([]byte, error) {
+	type Alias FunctionExpression
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "FunctionExpression",
+		Range: NewRangeFromPositioned(e),
+		Alias: (*Alias)(e),
+	})
+}
+
 // CastingExpression
 
 type CastingExpression struct {
 	Expression                Expression
 	Operation                 Operation
 	TypeAnnotation            *TypeAnnotation
-	ParentVariableDeclaration *VariableDeclaration
+	ParentVariableDeclaration *VariableDeclaration `json:"-"`
 }
 
 func (*CastingExpression) isExpression() {}
@@ -778,11 +804,24 @@ func (e *CastingExpression) EndPosition() Position {
 	return e.TypeAnnotation.EndPosition()
 }
 
+func (e *CastingExpression) MarshalJSON() ([]byte, error) {
+	type Alias CastingExpression
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "CastingExpression",
+		Range: NewRangeFromPositioned(e),
+		Alias: (*Alias)(e),
+	})
+}
+
 // CreateExpression
 
 type CreateExpression struct {
 	InvocationExpression *InvocationExpression
-	StartPos             Position
+	StartPos             Position `json:"-"`
 }
 
 func (*CreateExpression) isExpression() {}
@@ -810,6 +849,19 @@ func (e *CreateExpression) StartPosition() Position {
 
 func (e *CreateExpression) EndPosition() Position {
 	return e.InvocationExpression.EndPos
+}
+
+func (e *CreateExpression) MarshalJSON() ([]byte, error) {
+	type Alias CreateExpression
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "CreateExpression",
+		Range: NewRangeFromPositioned(e),
+		Alias: (*Alias)(e),
+	})
 }
 
 // DestroyExpression
@@ -863,8 +915,8 @@ func (e *DestroyExpression) MarshalJSON() ([]byte, error) {
 
 type ReferenceExpression struct {
 	Expression Expression
-	Type       Type
-	StartPos   Position
+	Type       Type     `json:"TargetType"`
+	StartPos   Position `json:"-"`
 }
 
 func (*ReferenceExpression) isExpression() {}
@@ -893,6 +945,19 @@ func (e *ReferenceExpression) StartPosition() Position {
 
 func (e *ReferenceExpression) EndPosition() Position {
 	return e.Type.EndPosition()
+}
+
+func (e *ReferenceExpression) MarshalJSON() ([]byte, error) {
+	type Alias ReferenceExpression
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "ReferenceExpression",
+		Range: NewRangeFromPositioned(e),
+		Alias: (*Alias)(e),
+	})
 }
 
 // ForceExpression

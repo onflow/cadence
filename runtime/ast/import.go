@@ -69,20 +69,31 @@ func (*ImportDeclaration) isDeclaration() {}
 
 func (*ImportDeclaration) isStatement() {}
 
-func (v *ImportDeclaration) Accept(visitor Visitor) Repr {
-	return visitor.VisitImportDeclaration(v)
+func (d *ImportDeclaration) Accept(visitor Visitor) Repr {
+	return visitor.VisitImportDeclaration(d)
 }
 
-func (v *ImportDeclaration) DeclarationIdentifier() *Identifier {
+func (d *ImportDeclaration) DeclarationIdentifier() *Identifier {
 	return nil
 }
 
-func (v *ImportDeclaration) DeclarationKind() common.DeclarationKind {
+func (d *ImportDeclaration) DeclarationKind() common.DeclarationKind {
 	return common.DeclarationKindImport
 }
 
-func (v *ImportDeclaration) DeclarationAccess() Access {
+func (d *ImportDeclaration) DeclarationAccess() Access {
 	return AccessNotSpecified
+}
+
+func (d *ImportDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias ImportDeclaration
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+	}{
+		Type:  "ImportDeclaration",
+		Alias: (*Alias)(d),
+	})
 }
 
 // Location describes the origin of a Cadence script.

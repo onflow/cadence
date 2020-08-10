@@ -28,6 +28,8 @@ import (
 
 func TestTransfer_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	expr := Transfer{
 		Operation: TransferOperationMove,
 		Pos:       Position{Offset: 1, Line: 2, Column: 3},
@@ -41,7 +43,7 @@ func TestTransfer_MarshalJSON(t *testing.T) {
         {
             "Type": "Transfer",
             "Operation": "TransferOperationMove",
-            "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 2, "Line": 2, "Column": 4}
         }
         `,

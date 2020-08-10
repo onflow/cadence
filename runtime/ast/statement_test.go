@@ -28,6 +28,8 @@ import (
 
 func TestExpressionStatement_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	stmt := &ExpressionStatement{
 		Expression: &BoolExpression{
 			Value: false,
@@ -60,6 +62,8 @@ func TestExpressionStatement_MarshalJSON(t *testing.T) {
 }
 
 func TestReturnStatement_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
 
 	stmt := &ReturnStatement{
 		Expression: &BoolExpression{
@@ -98,6 +102,8 @@ func TestReturnStatement_MarshalJSON(t *testing.T) {
 
 func TestBreakStatement_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	stmt := &BreakStatement{
 		Range: Range{
 			StartPos: Position{Offset: 1, Line: 2, Column: 3},
@@ -122,6 +128,8 @@ func TestBreakStatement_MarshalJSON(t *testing.T) {
 
 func TestContinueStatement_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	stmt := &ContinueStatement{
 		Range: Range{
 			StartPos: Position{Offset: 1, Line: 2, Column: 3},
@@ -145,6 +153,8 @@ func TestContinueStatement_MarshalJSON(t *testing.T) {
 }
 
 func TestIfStatement_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
 
 	stmt := &IfStatement{
 		Test: &BoolExpression{
@@ -206,6 +216,8 @@ func TestIfStatement_MarshalJSON(t *testing.T) {
 
 func TestWhileStatement_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	stmt := &WhileStatement{
 		Test: &BoolExpression{
 			Value: false,
@@ -252,6 +264,8 @@ func TestWhileStatement_MarshalJSON(t *testing.T) {
 }
 
 func TestForStatement_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
 
 	stmt := &ForStatement{
 		Identifier: Identifier{
@@ -309,6 +323,8 @@ func TestForStatement_MarshalJSON(t *testing.T) {
 
 func TestAssignmentStatement_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	stmt := &AssignmentStatement{
 		Target: &IdentifierExpression{
 			Identifier: Identifier{
@@ -337,15 +353,15 @@ func TestAssignmentStatement_MarshalJSON(t *testing.T) {
         {
             "Type": "AssignmentStatement",
             "Target": {
-			    "Type": "IdentifierExpression",
-				"Identifier": {
-					"Identifier": "foobar",
-					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-					"EndPos": {"Offset": 6, "Line": 2, "Column": 8}
-				},
-				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-				"EndPos": {"Offset": 6, "Line": 2, "Column": 8}
-			},
+                "Type": "IdentifierExpression",
+                "Identifier": {
+                    "Identifier": "foobar",
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                    "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
+                },
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
+            },
             "Transfer": {
                 "Type": "Transfer",
                 "Operation": "TransferOperationCopy",
@@ -357,7 +373,7 @@ func TestAssignmentStatement_MarshalJSON(t *testing.T) {
                 "Value": false,
                 "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
                 "EndPos": {"Offset": 10, "Line": 11, "Column": 12}
-            }, 
+            },
             "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos":  {"Offset": 10, "Line": 11, "Column": 12}
         }
@@ -367,6 +383,8 @@ func TestAssignmentStatement_MarshalJSON(t *testing.T) {
 }
 
 func TestSwapStatement_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
 
 	stmt := &SwapStatement{
 		Left: &IdentifierExpression{
@@ -392,23 +410,128 @@ func TestSwapStatement_MarshalJSON(t *testing.T) {
         {
             "Type": "SwapStatement",
             "Left": {
-			    "Type": "IdentifierExpression",
-				"Identifier": {
-					"Identifier": "foobar",
-					"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-					"EndPos": {"Offset": 6, "Line": 2, "Column": 8}
-				},
-				"StartPos": {"Offset": 1, "Line": 2, "Column": 3},
-				"EndPos": {"Offset": 6, "Line": 2, "Column": 8}
-			},
+                "Type": "IdentifierExpression",
+                "Identifier": {
+                    "Identifier": "foobar",
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                    "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
+                },
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
+            },
             "Right": {
                 "Type": "BoolExpression",
                 "Value": false,
                 "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
                 "EndPos": {"Offset": 7, "Line": 8, "Column": 9}
-            }, 
+            },
             "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos":   {"Offset": 7, "Line": 8, "Column": 9}
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestEmitStatement_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
+
+	stmt := &EmitStatement{
+		InvocationExpression: &InvocationExpression{
+			InvokedExpression: &IdentifierExpression{
+				Identifier: Identifier{
+					Identifier: "foobar",
+					Pos:        Position{Offset: 1, Line: 2, Column: 3},
+				},
+			},
+			TypeArguments: []*TypeAnnotation{
+				{
+					IsResource: true,
+					Type: &NominalType{
+						Identifier: Identifier{
+							Identifier: "AB",
+							Pos:        Position{Offset: 4, Line: 5, Column: 6},
+						},
+					},
+					StartPos: Position{Offset: 7, Line: 8, Column: 9},
+				},
+			},
+			Arguments: []*Argument{
+				{
+					Label:         "ok",
+					LabelStartPos: &Position{Offset: 10, Line: 11, Column: 12},
+					LabelEndPos:   &Position{Offset: 13, Line: 14, Column: 15},
+					Expression: &BoolExpression{
+						Value: false,
+						Range: Range{
+							StartPos: Position{Offset: 16, Line: 17, Column: 18},
+							EndPos:   Position{Offset: 19, Line: 20, Column: 21},
+						},
+					},
+				},
+			},
+			EndPos: Position{Offset: 22, Line: 23, Column: 24},
+		},
+		StartPos: Position{Offset: 25, Line: 26, Column: 27},
+	}
+
+	actual, err := json.Marshal(stmt)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "EmitStatement",
+            "InvocationExpression": {
+                "Type": "InvocationExpression",
+                "InvokedExpression": {
+                   "Type": "IdentifierExpression",
+                   "Identifier": {
+                       "Identifier": "foobar",
+                       "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                       "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
+                   },
+                   "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                   "EndPos": {"Offset": 6, "Line": 2, "Column": 8}
+                },
+                "TypeArguments": [
+                    {
+                       "IsResource": true,
+                       "AnnotatedType": {
+                           "Type": "NominalType",
+                           "Identifier": {
+                               "Identifier": "AB",
+                               "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
+                               "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
+                           },
+                           "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
+                           "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
+                       },
+                       "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
+                       "EndPos": {"Offset": 5, "Line": 5, "Column": 7}
+                    }
+                ],
+                "Arguments": [
+                    {
+                        "Label": "ok",
+                        "LabelStartPos": {"Offset": 10, "Line": 11, "Column": 12},
+                        "LabelEndPos": {"Offset": 13, "Line": 14, "Column": 15},
+                        "Expression": {
+                            "Type": "BoolExpression",
+                            "Value": false,
+                            "StartPos": {"Offset": 16, "Line": 17, "Column": 18},
+                            "EndPos": {"Offset": 19, "Line": 20, "Column": 21}
+                        },
+                        "StartPos": {"Offset": 10, "Line": 11, "Column": 12},
+                        "EndPos": {"Offset": 19, "Line": 20, "Column": 21}
+                    }
+                ],
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                "EndPos": {"Offset": 22, "Line": 23, "Column": 24}
+            },
+            "StartPos": {"Offset": 25, "Line": 26, "Column": 27},
+            "EndPos": {"Offset": 22, "Line": 23, "Column": 24}
         }
         `,
 		string(actual),

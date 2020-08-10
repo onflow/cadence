@@ -29,6 +29,8 @@ import (
 
 func TestOperation_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	for operation := Operation(0); operation < Operation(OperationCount()); operation++ {
 		actual, err := json.Marshal(operation)
 		require.NoError(t, err)

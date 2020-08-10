@@ -29,6 +29,8 @@ import (
 
 func TestTransferOperation_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	for transferOperation := TransferOperation(0); transferOperation < TransferOperation(TransferOperationCount()); transferOperation++ {
 		actual, err := json.Marshal(transferOperation)
 		require.NoError(t, err)

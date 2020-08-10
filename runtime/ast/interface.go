@@ -25,13 +25,11 @@ import (
 // InterfaceDeclaration
 
 type InterfaceDeclaration struct {
-	Access                Access
-	CompositeKind         common.CompositeKind
-	Identifier            Identifier
-	Members               *Members
-	CompositeDeclarations []*CompositeDeclaration
-	InterfaceDeclarations []*InterfaceDeclaration
-	DocString             string
+	Access        Access
+	CompositeKind common.CompositeKind
+	Identifier    Identifier
+	Members       *Members
+	DocString     string
 	Range
 }
 
