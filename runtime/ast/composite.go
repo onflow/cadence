@@ -61,6 +61,17 @@ func (d *CompositeDeclaration) DeclarationAccess() Access {
 	return d.Access
 }
 
+func (d *CompositeDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias CompositeDeclaration
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+	}{
+		Type:  "CompositeDeclaration",
+		Alias: (*Alias)(d),
+	})
+}
+
 // FieldDeclaration
 
 type FieldDeclaration struct {

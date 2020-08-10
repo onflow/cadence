@@ -19,6 +19,8 @@
 package ast
 
 import (
+	"encoding/json"
+
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -54,4 +56,15 @@ func (d *InterfaceDeclaration) DeclarationAccess() Access {
 
 func (d *InterfaceDeclaration) DeclarationKind() common.DeclarationKind {
 	return d.CompositeKind.DeclarationKind(true)
+}
+
+func (d *InterfaceDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias InterfaceDeclaration
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+	}{
+		Type:  "InterfaceDeclaration",
+		Alias: (*Alias)(d),
+	})
 }

@@ -19,6 +19,7 @@
 package ast
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -108,5 +109,26 @@ func TestProgram_ResolveImportsCycle(t *testing.T) {
 		CyclicImportsError{
 			Location: StringLocation("b"),
 		},
+	)
+}
+
+func TestProgram_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
+
+	members := &Program{
+		Declarations: []Declaration{},
+	}
+
+	actual, err := json.Marshal(members)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Declarations": []
+        }
+        `,
+		string(actual),
 	)
 }
