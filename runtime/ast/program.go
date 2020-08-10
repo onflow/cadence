@@ -22,15 +22,23 @@ import "fmt"
 
 type Program struct {
 	// all declarations, in the order they are defined
-	Declarations            []Declaration
-	pragmaDeclarations      []*PragmaDeclaration
-	importDeclarations      []*ImportDeclaration
-	interfaceDeclarations   []*InterfaceDeclaration
-	compositeDeclarations   []*CompositeDeclaration
-	functionDeclarations    []*FunctionDeclaration
-	transactionDeclarations []*TransactionDeclaration
-	importedPrograms        map[LocationID]*Program
-	importLocations         []Location
+	Declarations []Declaration
+	// Use `PragmaDeclarations()` instead
+	_pragmaDeclarations []*PragmaDeclaration
+	// Use `ImportDeclarations()` instead
+	_importDeclarations []*ImportDeclaration
+	// Use `InterfaceDeclarations()` instead
+	_interfaceDeclarations []*InterfaceDeclaration
+	// Use `CompositeDeclarations()` instead
+	_compositeDeclarations []*CompositeDeclaration
+	// Use `FunctionDeclarations()` instead
+	_functionDeclarations []*FunctionDeclaration
+	// Use `TransactionDeclarations()` instead
+	_transactionDeclarations []*TransactionDeclaration
+	// Use `ImportedPrograms()` instead
+	_importedPrograms map[LocationID]*Program
+	// Use `ImportedLocations()` instead
+	_importLocations []Location
 }
 
 func (p *Program) StartPosition() Position {
@@ -55,99 +63,63 @@ func (p *Program) Accept(visitor Visitor) Repr {
 }
 
 func (p *Program) PragmaDeclarations() []*PragmaDeclaration {
-	if p.pragmaDeclarations == nil {
-		p.pragmaDeclarations = make([]*PragmaDeclaration, 0)
-		for _, declaration := range p.Declarations {
-			if pragmaDeclaration, ok := declaration.(*PragmaDeclaration); ok {
-				p.pragmaDeclarations = append(p.pragmaDeclarations, pragmaDeclaration)
-			}
-		}
+	if p._pragmaDeclarations == nil {
+		p.updateDeclarations()
 	}
-	return p.pragmaDeclarations
+	return p._pragmaDeclarations
 }
 
 func (p *Program) ImportDeclarations() []*ImportDeclaration {
-	if p.importDeclarations == nil {
-		p.importDeclarations = make([]*ImportDeclaration, 0)
-		for _, declaration := range p.Declarations {
-			if importDeclaration, ok := declaration.(*ImportDeclaration); ok {
-				p.importDeclarations = append(p.importDeclarations, importDeclaration)
-			}
-		}
+	if p._importDeclarations == nil {
+		p.updateDeclarations()
 	}
-	return p.importDeclarations
+	return p._importDeclarations
 }
 
 func (p *Program) InterfaceDeclarations() []*InterfaceDeclaration {
-	if p.interfaceDeclarations == nil {
-		p.interfaceDeclarations = make([]*InterfaceDeclaration, 0)
-		for _, declaration := range p.Declarations {
-			if interfaceDeclaration, ok := declaration.(*InterfaceDeclaration); ok {
-				p.interfaceDeclarations = append(p.interfaceDeclarations, interfaceDeclaration)
-			}
-		}
+	if p._interfaceDeclarations == nil {
+		p.updateDeclarations()
 	}
-	return p.interfaceDeclarations
+	return p._interfaceDeclarations
 }
 
 func (p *Program) CompositeDeclarations() []*CompositeDeclaration {
-	if p.compositeDeclarations == nil {
-		p.compositeDeclarations = make([]*CompositeDeclaration, 0)
-		for _, declaration := range p.Declarations {
-			if compositeDeclaration, ok := declaration.(*CompositeDeclaration); ok {
-				p.compositeDeclarations = append(p.compositeDeclarations, compositeDeclaration)
-			}
-		}
+	if p._compositeDeclarations == nil {
+		p.updateDeclarations()
 	}
-	return p.compositeDeclarations
+	return p._compositeDeclarations
 }
 
 func (p *Program) FunctionDeclarations() []*FunctionDeclaration {
-	if p.functionDeclarations == nil {
-		p.functionDeclarations = make([]*FunctionDeclaration, 0)
-		for _, declaration := range p.Declarations {
-			if functionDeclaration, ok := declaration.(*FunctionDeclaration); ok {
-				p.functionDeclarations = append(p.functionDeclarations, functionDeclaration)
-			}
-		}
+	if p._functionDeclarations == nil {
+		p.updateDeclarations()
 	}
-	return p.functionDeclarations
+	return p._functionDeclarations
 }
 
 func (p *Program) TransactionDeclarations() []*TransactionDeclaration {
-	if p.transactionDeclarations == nil {
-		p.transactionDeclarations = make([]*TransactionDeclaration, 0)
-		for _, declaration := range p.Declarations {
-			if transactionDeclaration, ok := declaration.(*TransactionDeclaration); ok {
-				p.transactionDeclarations = append(p.transactionDeclarations, transactionDeclaration)
-			}
-		}
+	if p._transactionDeclarations == nil {
+		p.updateDeclarations()
 	}
-	return p.transactionDeclarations
+	return p._transactionDeclarations
 }
 
 // ImportedPrograms returns the sub-programs imported by this program, indexed by location ID.
 func (p *Program) ImportedPrograms() map[LocationID]*Program {
-	if p.importedPrograms == nil {
-		p.importedPrograms = make(map[LocationID]*Program)
+	if p._importedPrograms == nil {
+		p._importedPrograms = make(map[LocationID]*Program)
 	}
 
-	return p.importedPrograms
+	return p._importedPrograms
 }
 
 // ImportLocations returns the import locations declared by this program.
 func (p *Program) ImportLocations() []Location {
-	if p.importLocations == nil {
-		p.importLocations = make([]Location, 0)
-
-		for _, declaration := range p.Declarations {
-			if importDeclaration, ok := declaration.(*ImportDeclaration); ok {
-				p.importLocations = append(p.importLocations, importDeclaration.Location)
-			}
-		}
+	if p._importLocations == nil {
+		p.updateDeclarations()
 	}
 
-	return p.importLocations
+	return p._importLocations
 }
 
 type ImportResolver func(location Location) (*Program, error)
@@ -214,9 +186,48 @@ func (p *Program) resolveImports(
 
 // setImportedProgram adds an imported program to the set of imports, indexed by location ID.
 func (p *Program) setImportedProgram(locationID LocationID, program *Program) {
-	if p.importedPrograms == nil {
-		p.importedPrograms = make(map[LocationID]*Program)
+	if p._importedPrograms == nil {
+		p._importedPrograms = make(map[LocationID]*Program)
 	}
 
-	p.importedPrograms[locationID] = program
+	p._importedPrograms[locationID] = program
+}
+
+func (p *Program) updateDeclarations() {
+	// Important: allocate instead of nil
+
+	p._pragmaDeclarations = make([]*PragmaDeclaration, 0)
+	p._importDeclarations = make([]*ImportDeclaration, 0)
+	p._compositeDeclarations = make([]*CompositeDeclaration, 0)
+	p._interfaceDeclarations = make([]*InterfaceDeclaration, 0)
+	p._functionDeclarations = make([]*FunctionDeclaration, 0)
+	p._transactionDeclarations = make([]*TransactionDeclaration, 0)
+	p._importLocations = make([]Location, 0)
+
+	for _, declaration := range p.Declarations {
+
+		switch declaration := declaration.(type) {
+		case *PragmaDeclaration:
+			p._pragmaDeclarations = append(p._pragmaDeclarations, declaration)
+
+		case *ImportDeclaration:
+			p._importDeclarations = append(p._importDeclarations, declaration)
+
+		case *CompositeDeclaration:
+			p._compositeDeclarations = append(p._compositeDeclarations, declaration)
+
+		case *InterfaceDeclaration:
+			p._interfaceDeclarations = append(p._interfaceDeclarations, declaration)
+
+		case *FunctionDeclaration:
+			p._functionDeclarations = append(p._functionDeclarations, declaration)
+
+		case *TransactionDeclaration:
+			p._transactionDeclarations = append(p._transactionDeclarations, declaration)
+		}
+	}
+
+	for _, importDeclaration := range p.ImportDeclarations() {
+		p._importLocations = append(p._importLocations, importDeclaration.Location)
+	}
 }

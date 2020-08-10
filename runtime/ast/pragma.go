@@ -18,7 +18,11 @@
 
 package ast
 
-import "github.com/onflow/cadence/runtime/common"
+import (
+	"encoding/json"
+
+	"github.com/onflow/cadence/runtime/common"
+)
 
 // Pragma
 
@@ -31,18 +35,29 @@ func (*PragmaDeclaration) isDeclaration() {}
 
 func (*PragmaDeclaration) isStatement() {}
 
-func (p *PragmaDeclaration) Accept(visitor Visitor) Repr {
-	return visitor.VisitPragmaDeclaration(p)
+func (d *PragmaDeclaration) Accept(visitor Visitor) Repr {
+	return visitor.VisitPragmaDeclaration(d)
 }
 
-func (p *PragmaDeclaration) DeclarationIdentifier() *Identifier {
+func (d *PragmaDeclaration) DeclarationIdentifier() *Identifier {
 	return nil
 }
 
-func (p *PragmaDeclaration) DeclarationKind() common.DeclarationKind {
+func (d *PragmaDeclaration) DeclarationKind() common.DeclarationKind {
 	return common.DeclarationKindPragma
 }
 
-func (p *PragmaDeclaration) DeclarationAccess() Access {
+func (d *PragmaDeclaration) DeclarationAccess() Access {
 	return AccessNotSpecified
+}
+
+func (d *PragmaDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias PragmaDeclaration
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+	}{
+		Type:  "PragmaDeclaration",
+		Alias: (*Alias)(d),
+	})
 }
