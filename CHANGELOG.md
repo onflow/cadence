@@ -32,6 +32,22 @@ This release focuses on improvements, bug fixes, and bringing the documentation 
 
 - Brought the documentation up-to-date, include all new language features and API changes (#275, #277, #279)
 
+## 💥 Breaking Changes
+
+- Arguments passed to `cadence.Value#WithType` are now typed as pointers (`*cadence.Type`) rather than values (`cadence.Type`)
+
+  Example:
+
+  ```go
+  myEventType := cadence.EventType{...})
+
+  // this 👇 
+  myEvent := cadence.NewEvent(...).WithType(myEventType)
+
+  // changes to this 👇 
+  myEvent := cadence.NewEvent(...).WithType(&myEventType)
+  ```
+
 # v0.7.0
 
 This release contains a lot of improvements to the language server, which improve the development experience in the Visual Studio Code extension, and will also soon be integrated into the Flow Playground.
