@@ -2324,19 +2324,19 @@ func (interpreter *Interpreter) declareCompositeValue(
 			)
 		}
 
-		for _, nestedInterfaceDeclaration := range declaration.InterfaceDeclarations {
+		for _, nestedInterfaceDeclaration := range declaration.Members.InterfaceDeclarations() {
 			predeclare(nestedInterfaceDeclaration.Identifier)
 		}
 
-		for _, nestedCompositeDeclaration := range declaration.CompositeDeclarations {
+		for _, nestedCompositeDeclaration := range declaration.Members.CompositeDeclarations() {
 			predeclare(nestedCompositeDeclaration.Identifier)
 		}
 
-		for _, nestedInterfaceDeclaration := range declaration.InterfaceDeclarations {
+		for _, nestedInterfaceDeclaration := range declaration.Members.InterfaceDeclarations() {
 			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
 		}
 
-		for _, nestedCompositeDeclaration := range declaration.CompositeDeclarations {
+		for _, nestedCompositeDeclaration := range declaration.Members.CompositeDeclarations() {
 
 			// Pass the lexical scope, which has the containing composite's value declared,
 			// to the nested declarations so they can refer to it, and update the lexical scope
@@ -2534,21 +2534,22 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 	initializer = initializers[0]
 	functionType := interpreter.Checker.Elaboration.SpecialFunctionTypes[initializer].FunctionType
 
-	parameterList := initializer.ParameterList
+	parameterList := initializer.FunctionDeclaration.ParameterList
 
 	var preConditions ast.Conditions
-	if initializer.FunctionBlock.PreConditions != nil {
-		preConditions = *initializer.FunctionBlock.PreConditions
+	if initializer.FunctionDeclaration.FunctionBlock.PreConditions != nil {
+		preConditions = *initializer.FunctionDeclaration.FunctionBlock.PreConditions
 	}
 
-	statements := initializer.FunctionBlock.Block.Statements
+	statements := initializer.FunctionDeclaration.FunctionBlock.Block.Statements
 
 	var beforeStatements []ast.Statement
 	var rewrittenPostConditions ast.Conditions
 
-	if initializer.FunctionBlock.PostConditions != nil {
+	postConditions := initializer.FunctionDeclaration.FunctionBlock.PostConditions
+	if postConditions != nil {
 		postConditionsRewrite :=
-			interpreter.Checker.Elaboration.PostConditionsRewrite[initializer.FunctionBlock.PostConditions]
+			interpreter.Checker.Elaboration.PostConditionsRewrite[postConditions]
 
 		beforeStatements = postConditionsRewrite.BeforeStatements
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
@@ -2576,20 +2577,22 @@ func (interpreter *Interpreter) compositeDestructorFunction(
 		return nil
 	}
 
-	statements := destructor.FunctionBlock.Block.Statements
+	statements := destructor.FunctionDeclaration.FunctionBlock.Block.Statements
 
 	var preConditions ast.Conditions
 
-	if destructor.FunctionBlock.PreConditions != nil {
-		preConditions = *destructor.FunctionBlock.PreConditions
+	conditions := destructor.FunctionDeclaration.FunctionBlock.PreConditions
+	if conditions != nil {
+		preConditions = *conditions
 	}
 
 	var beforeStatements []ast.Statement
 	var rewrittenPostConditions ast.Conditions
 
-	if destructor.FunctionBlock.PostConditions != nil {
+	postConditions := destructor.FunctionDeclaration.FunctionBlock.PostConditions
+	if postConditions != nil {
 		postConditionsRewrite :=
-			interpreter.Checker.Elaboration.PostConditionsRewrite[destructor.FunctionBlock.PostConditions]
+			interpreter.Checker.Elaboration.PostConditionsRewrite[postConditions]
 
 		beforeStatements = postConditionsRewrite.BeforeStatements
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
@@ -2613,7 +2616,7 @@ func (interpreter *Interpreter) compositeFunctions(
 
 	functions := map[string]FunctionValue{}
 
-	for _, functionDeclaration := range compositeDeclaration.Members.Functions {
+	for _, functionDeclaration := range compositeDeclaration.Members.Functions() {
 		name := functionDeclaration.Identifier.Identifier
 		functions[name] =
 			interpreter.compositeFunction(
@@ -2632,7 +2635,7 @@ func (interpreter *Interpreter) functionWrappers(
 
 	functionWrappers := map[string]FunctionWrapper{}
 
-	for _, functionDeclaration := range members.Functions {
+	for _, functionDeclaration := range members.Functions() {
 
 		functionType := interpreter.Checker.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
 
@@ -2858,11 +2861,11 @@ func (interpreter *Interpreter) declareInterface(
 		interpreter.activations.PushCurrent()
 		defer interpreter.activations.Pop()
 
-		for _, nestedInterfaceDeclaration := range declaration.InterfaceDeclarations {
+		for _, nestedInterfaceDeclaration := range declaration.Members.InterfaceDeclarations() {
 			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
 		}
 
-		for _, nestedCompositeDeclaration := range declaration.CompositeDeclarations {
+		for _, nestedCompositeDeclaration := range declaration.Members.CompositeDeclarations() {
 			interpreter.declareTypeRequirement(nestedCompositeDeclaration, lexicalScope)
 		}
 	})()
@@ -2892,11 +2895,11 @@ func (interpreter *Interpreter) declareTypeRequirement(
 		interpreter.activations.PushCurrent()
 		defer interpreter.activations.Pop()
 
-		for _, nestedInterfaceDeclaration := range declaration.InterfaceDeclarations {
+		for _, nestedInterfaceDeclaration := range declaration.Members.InterfaceDeclarations() {
 			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
 		}
 
-		for _, nestedCompositeDeclaration := range declaration.CompositeDeclarations {
+		for _, nestedCompositeDeclaration := range declaration.Members.CompositeDeclarations() {
 			interpreter.declareTypeRequirement(nestedCompositeDeclaration, lexicalScope)
 		}
 	})()
@@ -2928,7 +2931,7 @@ func (interpreter *Interpreter) initializerFunctionWrapper(
 	}
 
 	firstInitializer := initializers[0]
-	if firstInitializer.FunctionBlock == nil {
+	if firstInitializer.FunctionDeclaration.FunctionBlock == nil {
 		return nil
 	}
 
@@ -3127,7 +3130,7 @@ func (interpreter *Interpreter) ensureLoaded(
 	return subInterpreter
 }
 
-func (interpreter *Interpreter) VisitPragmaDeclaration(declaration *ast.PragmaDeclaration) ast.Repr {
+func (interpreter *Interpreter) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) ast.Repr {
 	return Done{}
 }
 

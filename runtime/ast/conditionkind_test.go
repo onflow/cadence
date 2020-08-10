@@ -29,6 +29,8 @@ import (
 
 func TestConditionKind_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	for conditionKind := ConditionKind(0); conditionKind < ConditionKind(ConditionKindCount()); conditionKind++ {
 		actual, err := json.Marshal(conditionKind)
 		require.NoError(t, err)

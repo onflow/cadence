@@ -18,7 +18,11 @@
 
 package ast
 
-import "github.com/onflow/cadence/runtime/common"
+import (
+	"encoding/json"
+
+	"github.com/onflow/cadence/runtime/common"
+)
 
 type VariableDeclaration struct {
 	Access            Access
@@ -27,10 +31,10 @@ type VariableDeclaration struct {
 	TypeAnnotation    *TypeAnnotation
 	Value             Expression
 	Transfer          *Transfer
-	StartPos          Position
+	StartPos          Position `json:"-"`
 	SecondTransfer    *Transfer
 	SecondValue       Expression
-	ParentIfStatement *IfStatement
+	ParentIfStatement *IfStatement `json:"-"`
 	DocString         string
 }
 
@@ -39,6 +43,9 @@ func (d *VariableDeclaration) StartPosition() Position {
 }
 
 func (d *VariableDeclaration) EndPosition() Position {
+	if d.SecondValue != nil {
+		return d.SecondValue.EndPosition()
+	}
 	return d.Value.EndPosition()
 }
 
@@ -65,4 +72,17 @@ func (d *VariableDeclaration) DeclarationKind() common.DeclarationKind {
 
 func (d *VariableDeclaration) DeclarationAccess() Access {
 	return d.Access
+}
+
+func (d *VariableDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias VariableDeclaration
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "VariableDeclaration",
+		Range: NewRangeFromPositioned(d),
+		Alias: (*Alias)(d),
+	})
 }

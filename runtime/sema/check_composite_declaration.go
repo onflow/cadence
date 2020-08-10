@@ -60,14 +60,9 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 	)
 
 	// NOTE: functions are checked separately
-	checker.checkFieldsAccessModifier(declaration.Members.Fields)
+	checker.checkFieldsAccessModifier(declaration.Members.Fields())
 
-	checker.checkNestedIdentifiers(
-		declaration.Members.Fields,
-		declaration.Members.Functions,
-		declaration.InterfaceDeclarations,
-		declaration.CompositeDeclarations,
-	)
+	checker.checkNestedIdentifiers(declaration.Members)
 
 	// Activate new scopes for nested types
 
@@ -89,7 +84,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 
 		fieldMembers := map[*Member]*ast.FieldDeclaration{}
 
-		for _, field := range declaration.Members.Fields {
+		for _, field := range declaration.Members.Fields() {
 			fieldName := field.Identifier.Identifier
 			member := compositeType.Members[fieldName]
 			fieldMembers[member] = field
@@ -100,7 +95,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 
 	checker.checkInitializers(
 		declaration.Members.Initializers(),
-		declaration.Members.Fields,
+		declaration.Members.Fields(),
 		compositeType,
 		declaration.DeclarationKind(),
 		compositeType.ConstructorParameters,
@@ -108,15 +103,18 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 		initializationInfo,
 	)
 
-	checker.checkUnknownSpecialFunctions(declaration.Members.SpecialFunctions)
+	checker.checkUnknownSpecialFunctions(declaration.Members.SpecialFunctions())
 
 	switch kind {
 	case ContainerKindComposite:
-		checker.checkCompositeFunctions(declaration.Members.Functions, compositeType)
+		checker.checkCompositeFunctions(
+			declaration.Members.Functions(),
+			compositeType,
+		)
 
 	case ContainerKindInterface:
 		checker.checkInterfaceFunctions(
-			declaration.Members.Functions,
+			declaration.Members.Functions(),
 			compositeType,
 			declaration.DeclarationKind(),
 		)
@@ -184,11 +182,11 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 	// NOTE: visit interfaces first
 	// DON'T use `nestedDeclarations`, because of non-deterministic order
 
-	for _, nestedInterface := range declaration.InterfaceDeclarations {
+	for _, nestedInterface := range declaration.Members.InterfaceDeclarations() {
 		nestedInterface.Accept(checker)
 	}
 
-	for _, nestedComposite := range declaration.CompositeDeclarations {
+	for _, nestedComposite := range declaration.Members.CompositeDeclarations() {
 		nestedComposite.Accept(checker)
 	}
 }
@@ -431,8 +429,8 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 		checker.declareNestedDeclarations(
 			declaration.CompositeKind,
 			declaration.DeclarationKind(),
-			declaration.CompositeDeclarations,
-			declaration.InterfaceDeclarations,
+			declaration.Members.CompositeDeclarations(),
+			declaration.Members.InterfaceDeclarations(),
 		)
 
 	checker.Elaboration.CompositeNestedDeclarations[declaration] = nestedDeclarations
@@ -492,7 +490,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 		// Declare nested declarations' members
 
-		for _, nestedInterfaceDeclaration := range declaration.InterfaceDeclarations {
+		for _, nestedInterfaceDeclaration := range declaration.Members.InterfaceDeclarations() {
 			checker.declareInterfaceMembers(nestedInterfaceDeclaration)
 		}
 
@@ -509,7 +507,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		//   }
 		// }
 		// ```
-		for _, nestedCompositeDeclaration := range declaration.CompositeDeclarations {
+		for _, nestedCompositeDeclaration := range declaration.Members.CompositeDeclarations() {
 			checker.declareCompositeMembersAndValue(nestedCompositeDeclaration, kind)
 
 			// Declare nested composites' values (constructor/instance) as members of the containing composite
@@ -572,8 +570,8 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		} else {
 			members, fields, origins = checker.nonEventMembersAndOrigins(
 				compositeType,
-				declaration.Members.Fields,
-				declaration.Members.Functions,
+				declaration.Members.Fields(),
+				declaration.Members.Functions(),
 				kind,
 			)
 		}
@@ -672,7 +670,7 @@ func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctio
 	initializerCount := len(initializers)
 	if initializerCount > 0 {
 		firstInitializer := initializers[0]
-		parameters = checker.parameters(firstInitializer.ParameterList)
+		parameters = checker.parameters(firstInitializer.FunctionDeclaration.ParameterList)
 
 		if initializerCount > 1 {
 			secondInitializer := initializers[1]
@@ -963,7 +961,7 @@ func (checker *Checker) checkTypeRequirement(
 		var errorRange ast.Range
 		var foundInterfaceDeclaration bool
 
-		for _, nestedInterfaceDeclaration := range containerDeclaration.InterfaceDeclarations {
+		for _, nestedInterfaceDeclaration := range containerDeclaration.Members.InterfaceDeclarations() {
 			nestedInterfaceIdentifier := nestedInterfaceDeclaration.Identifier.Identifier
 			if nestedInterfaceIdentifier == declaredInterfaceType.Identifier {
 				foundInterfaceDeclaration = true
@@ -999,7 +997,7 @@ func (checker *Checker) checkTypeRequirement(
 
 	var compositeDeclaration *ast.CompositeDeclaration
 
-	for _, nestedCompositeDeclaration := range containerDeclaration.CompositeDeclarations {
+	for _, nestedCompositeDeclaration := range containerDeclaration.Members.CompositeDeclarations() {
 		nestedCompositeIdentifier := nestedCompositeDeclaration.Identifier.Identifier
 		if nestedCompositeIdentifier == declaredCompositeType.Identifier {
 			compositeDeclaration = nestedCompositeDeclaration
@@ -1070,7 +1068,10 @@ func (checker *Checker) compositeConstructorType(
 	if len(initializers) > 0 {
 		firstInitializer := initializers[0]
 
-		argumentLabels = firstInitializer.ParameterList.EffectiveArgumentLabels()
+		argumentLabels = firstInitializer.
+			FunctionDeclaration.
+			ParameterList.
+			EffectiveArgumentLabels()
 
 		constructorFunctionType.Parameters = compositeType.ConstructorParameters
 
@@ -1254,7 +1255,7 @@ func (checker *Checker) eventMembersAndOrigins(
 	fieldNames []string,
 	origins map[string]*Origin,
 ) {
-	parameters := initializer.ParameterList.Parameters
+	parameters := initializer.FunctionDeclaration.ParameterList.Parameters
 
 	members = make(map[string]*Member, len(parameters))
 	origins = make(map[string]*Origin, len(parameters))
@@ -1323,7 +1324,7 @@ func (checker *Checker) checkInitializers(
 		compositeType.Kind == common.CompositeKindEvent {
 
 		checker.checkEventParameters(
-			initializer.ParameterList,
+			initializer.FunctionDeclaration.ParameterList,
 			initializerParameters,
 		)
 	}
@@ -1384,10 +1385,10 @@ func (checker *Checker) checkSpecialFunction(
 	}
 
 	checker.checkFunction(
-		specialFunction.ParameterList,
+		specialFunction.FunctionDeclaration.ParameterList,
 		nil,
 		functionType,
-		specialFunction.FunctionBlock,
+		specialFunction.FunctionDeclaration.FunctionBlock,
 		true,
 		initializationInfo,
 		checkResourceLoss,
@@ -1395,10 +1396,10 @@ func (checker *Checker) checkSpecialFunction(
 
 	switch containerKind {
 	case ContainerKindInterface:
-		if specialFunction.FunctionBlock != nil {
+		if specialFunction.FunctionDeclaration.FunctionBlock != nil {
 
 			checker.checkInterfaceSpecialFunctionBlock(
-				specialFunction.FunctionBlock,
+				specialFunction.FunctionDeclaration.FunctionBlock,
 				containerDeclarationKind,
 				specialFunction.Kind,
 			)
@@ -1409,7 +1410,7 @@ func (checker *Checker) checkSpecialFunction(
 
 		compositeType := containerType.(*CompositeType)
 		if compositeType.Kind != common.CompositeKindEvent &&
-			specialFunction.FunctionBlock == nil {
+			specialFunction.FunctionDeclaration.FunctionBlock == nil {
 
 			checker.report(
 				&MissingFunctionBodyError{
@@ -1478,15 +1479,10 @@ func (checker *Checker) declareSelfValue(selfType Type) {
 // checkNestedIdentifiers checks that nested identifiers, i.e. fields, functions,
 // and nested interfaces and composites, are unique and aren't named `init` or `destroy`
 //
-func (checker *Checker) checkNestedIdentifiers(
-	fields []*ast.FieldDeclaration,
-	functions []*ast.FunctionDeclaration,
-	nestedInterfaceDeclarations []*ast.InterfaceDeclaration,
-	nestedCompositeDeclarations []*ast.CompositeDeclaration,
-) {
+func (checker *Checker) checkNestedIdentifiers(members *ast.Members) {
 	positions := map[string]ast.Position{}
 
-	for _, field := range fields {
+	for _, field := range members.Fields() {
 		checker.checkNestedIdentifier(
 			field.Identifier,
 			common.DeclarationKindField,
@@ -1494,7 +1490,7 @@ func (checker *Checker) checkNestedIdentifiers(
 		)
 	}
 
-	for _, function := range functions {
+	for _, function := range members.Functions() {
 		checker.checkNestedIdentifier(
 			function.Identifier,
 			common.DeclarationKindFunction,
@@ -1502,7 +1498,7 @@ func (checker *Checker) checkNestedIdentifiers(
 		)
 	}
 
-	for _, interfaceDeclaration := range nestedInterfaceDeclarations {
+	for _, interfaceDeclaration := range members.InterfaceDeclarations() {
 		checker.checkNestedIdentifier(
 			interfaceDeclaration.Identifier,
 			interfaceDeclaration.DeclarationKind(),
@@ -1510,7 +1506,7 @@ func (checker *Checker) checkNestedIdentifiers(
 		)
 	}
 
-	for _, compositeDeclaration := range nestedCompositeDeclarations {
+	for _, compositeDeclaration := range members.CompositeDeclarations() {
 		checker.checkNestedIdentifier(
 			compositeDeclaration.Identifier,
 			compositeDeclaration.DeclarationKind(),
@@ -1576,7 +1572,7 @@ func (checker *Checker) checkUnknownSpecialFunctions(functions []*ast.SpecialFun
 		default:
 			checker.report(
 				&UnknownSpecialFunctionError{
-					Pos: function.Identifier.Pos,
+					Pos: function.FunctionDeclaration.Identifier.Pos,
 				},
 			)
 		}
@@ -1602,7 +1598,7 @@ func (checker *Checker) checkDestructors(
 
 			checker.report(
 				&InvalidDestructorError{
-					Range: ast.NewRangeFromPositioned(firstDestructor.Identifier),
+					Range: ast.NewRangeFromPositioned(firstDestructor.FunctionDeclaration.Identifier),
 				},
 			)
 		}
@@ -1678,15 +1674,15 @@ func (checker *Checker) checkDestructor(
 	containerKind ContainerKind,
 ) {
 
-	if len(destructor.ParameterList.Parameters) != 0 {
+	if len(destructor.FunctionDeclaration.ParameterList.Parameters) != 0 {
 		checker.report(
 			&InvalidDestructorParametersError{
-				Range: ast.NewRangeFromPositioned(destructor.ParameterList),
+				Range: ast.NewRangeFromPositioned(destructor.FunctionDeclaration.ParameterList),
 			},
 		)
 	}
 
-	parameters := checker.parameters(destructor.ParameterList)
+	parameters := checker.parameters(destructor.FunctionDeclaration.ParameterList)
 
 	checker.checkSpecialFunction(
 		destructor,

@@ -128,7 +128,7 @@ func (checker *Checker) checkTransactionFields(declaration *ast.TransactionDecla
 func (checker *Checker) checkTransactionBlocks(declaration *ast.TransactionDeclaration) {
 	if declaration.Prepare != nil {
 		// parser allows any identifier so it must be checked here
-		prepareIdentifier := declaration.Prepare.Identifier
+		prepareIdentifier := declaration.Prepare.FunctionDeclaration.Identifier
 		if prepareIdentifier.Identifier != common.DeclarationKindPrepare.Keywords() {
 			checker.report(&InvalidTransactionBlockError{
 				Name: prepareIdentifier.Identifier,
@@ -152,7 +152,7 @@ func (checker *Checker) checkTransactionBlocks(declaration *ast.TransactionDecla
 
 	if declaration.Execute != nil {
 		// parser allows any identifier so it must be checked here
-		executeIdentifier := declaration.Execute.Identifier
+		executeIdentifier := declaration.Execute.FunctionDeclaration.Identifier
 		if executeIdentifier.Identifier != common.DeclarationKindExecute.Keywords() {
 			checker.report(&InvalidTransactionBlockError{
 				Name: executeIdentifier.Identifier,
@@ -178,17 +178,17 @@ func (checker *Checker) visitTransactionPrepareFunction(
 	prepareFunctionType := transactionType.PrepareFunctionType().InvocationFunctionType()
 
 	checker.checkFunction(
-		prepareFunction.ParameterList,
+		prepareFunction.FunctionDeclaration.ParameterList,
 		nil,
 		prepareFunctionType,
-		prepareFunction.FunctionBlock,
+		prepareFunction.FunctionDeclaration.FunctionBlock,
 		true,
 		initializationInfo,
 		true,
 	)
 
 	checker.checkTransactionPrepareFunctionParameters(
-		prepareFunction.ParameterList,
+		prepareFunction.FunctionDeclaration.ParameterList,
 		prepareFunctionType.Parameters,
 	)
 }
@@ -231,7 +231,7 @@ func (checker *Checker) visitTransactionExecuteFunction(
 		&ast.ParameterList{},
 		nil,
 		executeFunctionType,
-		executeFunction.FunctionBlock,
+		executeFunction.FunctionDeclaration.FunctionBlock,
 		true,
 		nil,
 		true,
@@ -257,7 +257,8 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 	checker.memberOrigins[transactionType] = origins
 
 	if declaration.Prepare != nil {
-		transactionType.PrepareParameters = checker.parameters(declaration.Prepare.ParameterList)
+		parameterList := declaration.Prepare.FunctionDeclaration.ParameterList
+		transactionType.PrepareParameters = checker.parameters(parameterList)
 	}
 
 	checker.Elaboration.TransactionDeclarationTypes[declaration] = transactionType

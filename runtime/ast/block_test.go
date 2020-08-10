@@ -28,6 +28,8 @@ import (
 
 func TestBlock_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	block := &Block{
 		Statements: []Statement{
 			&ExpressionStatement{
@@ -59,10 +61,10 @@ func TestBlock_MarshalJSON(t *testing.T) {
                     "Expression": {
                         "Type": "BoolExpression",
                         "Value": false,
-                        "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+                        "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                         "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
                     },
-                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                     "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
                 }
             ],
@@ -76,7 +78,11 @@ func TestBlock_MarshalJSON(t *testing.T) {
 
 func TestFunctionBlock_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("with statements", func(t *testing.T) {
+
+		t.Parallel()
 
 		block := &FunctionBlock{
 			Block: &Block{
@@ -113,10 +119,10 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
                             "Expression": {
                                 "Type": "BoolExpression",
                                 "Value": false,
-                                "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+                                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                                 "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
                             },
-                            "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+                            "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                             "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
                         }
                     ],
@@ -132,6 +138,8 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
 	})
 
 	t.Run("with preconditions and postconditions", func(t *testing.T) {
+
+		t.Parallel()
 
 		block := &FunctionBlock{
 			Block: &Block{
@@ -191,7 +199,7 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
                 "Block": {
                     "Type": "Block",
                     "Statements": [],
-                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                     "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
                 },
                 "PreConditions": [
@@ -206,7 +214,7 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
                         "Message": {
                             "Type": "StringExpression",
                             "Value": "Pre failed",
-                            "StartPos": {"Offset": 13, "Line": 14, "Column": 15}, 
+                            "StartPos": {"Offset": 13, "Line": 14, "Column": 15},
                             "EndPos": {"Offset": 16, "Line": 17, "Column": 18}
                         }
                     }
@@ -217,18 +225,18 @@ func TestFunctionBlock_MarshalJSON(t *testing.T) {
                         "Test": {
                             "Type": "BoolExpression",
                             "Value": true,
-                            "StartPos": {"Offset": 19, "Line": 20, "Column": 21}, 
+                            "StartPos": {"Offset": 19, "Line": 20, "Column": 21},
                             "EndPos": {"Offset": 22, "Line": 23, "Column": 24}
                         },
                         "Message": {
                             "Type": "StringExpression",
                             "Value": "Post failed",
-                            "StartPos": {"Offset": 25, "Line": 26, "Column": 27}, 
+                            "StartPos": {"Offset": 25, "Line": 26, "Column": 27},
                             "EndPos": {"Offset": 28, "Line": 29, "Column": 30}
                         }
                     }
                 ],
-                "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                 "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
             }
             `,

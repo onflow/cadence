@@ -18,7 +18,11 @@
 
 package ast
 
-import "github.com/onflow/cadence/runtime/common"
+import (
+	"encoding/json"
+
+	"github.com/onflow/cadence/runtime/common"
+)
 
 type FunctionDeclaration struct {
 	Access               Access
@@ -27,58 +31,107 @@ type FunctionDeclaration struct {
 	ReturnTypeAnnotation *TypeAnnotation
 	FunctionBlock        *FunctionBlock
 	DocString            string
-	StartPos             Position
+	StartPos             Position `json:"-"`
 }
 
-func (f *FunctionDeclaration) StartPosition() Position {
-	return f.StartPos
+func (d *FunctionDeclaration) StartPosition() Position {
+	return d.StartPos
 }
 
-func (f *FunctionDeclaration) EndPosition() Position {
-	if f.FunctionBlock != nil {
-		return f.FunctionBlock.EndPosition()
+func (d *FunctionDeclaration) EndPosition() Position {
+	if d.FunctionBlock != nil {
+		return d.FunctionBlock.EndPosition()
 	}
-	if f.ReturnTypeAnnotation != nil {
-		return f.ReturnTypeAnnotation.EndPosition()
+	if d.ReturnTypeAnnotation != nil {
+		return d.ReturnTypeAnnotation.EndPosition()
 	}
-	return f.ParameterList.EndPosition()
+	return d.ParameterList.EndPosition()
 }
 
-func (f *FunctionDeclaration) Accept(visitor Visitor) Repr {
-	return visitor.VisitFunctionDeclaration(f)
+func (d *FunctionDeclaration) Accept(visitor Visitor) Repr {
+	return visitor.VisitFunctionDeclaration(d)
 }
 
 func (*FunctionDeclaration) isDeclaration() {}
 func (*FunctionDeclaration) isStatement()   {}
 
-func (f *FunctionDeclaration) DeclarationIdentifier() *Identifier {
-	return &f.Identifier
+func (d *FunctionDeclaration) DeclarationIdentifier() *Identifier {
+	return &d.Identifier
 }
 
-func (f *FunctionDeclaration) DeclarationKind() common.DeclarationKind {
+func (d *FunctionDeclaration) DeclarationKind() common.DeclarationKind {
 	return common.DeclarationKindFunction
 }
 
-func (f *FunctionDeclaration) DeclarationAccess() Access {
-	return f.Access
+func (d *FunctionDeclaration) DeclarationAccess() Access {
+	return d.Access
 }
 
-func (f *FunctionDeclaration) ToExpression() *FunctionExpression {
+func (d *FunctionDeclaration) ToExpression() *FunctionExpression {
 	return &FunctionExpression{
-		ParameterList:        f.ParameterList,
-		ReturnTypeAnnotation: f.ReturnTypeAnnotation,
-		FunctionBlock:        f.FunctionBlock,
-		StartPos:             f.StartPos,
+		ParameterList:        d.ParameterList,
+		ReturnTypeAnnotation: d.ReturnTypeAnnotation,
+		FunctionBlock:        d.FunctionBlock,
+		StartPos:             d.StartPos,
 	}
+}
+
+func (d *FunctionDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias FunctionDeclaration
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "FunctionDeclaration",
+		Range: NewRangeFromPositioned(d),
+		Alias: (*Alias)(d),
+	})
 }
 
 // SpecialFunctionDeclaration
 
 type SpecialFunctionDeclaration struct {
-	Kind common.DeclarationKind
-	*FunctionDeclaration
+	Kind                common.DeclarationKind
+	FunctionDeclaration *FunctionDeclaration
 }
 
-func (f *SpecialFunctionDeclaration) DeclarationKind() common.DeclarationKind {
-	return f.Kind
+func (d *SpecialFunctionDeclaration) StartPosition() Position {
+	return d.FunctionDeclaration.StartPosition()
+}
+
+func (d *SpecialFunctionDeclaration) EndPosition() Position {
+	return d.FunctionDeclaration.EndPosition()
+}
+
+func (d *SpecialFunctionDeclaration) Accept(visitor Visitor) Repr {
+	return d.FunctionDeclaration.Accept(visitor)
+}
+
+func (*SpecialFunctionDeclaration) isDeclaration() {}
+func (*SpecialFunctionDeclaration) isStatement()   {}
+
+func (d *SpecialFunctionDeclaration) DeclarationIdentifier() *Identifier {
+	return d.FunctionDeclaration.DeclarationIdentifier()
+}
+
+func (d *SpecialFunctionDeclaration) DeclarationKind() common.DeclarationKind {
+	return d.Kind
+}
+
+func (d *SpecialFunctionDeclaration) DeclarationAccess() Access {
+	return d.FunctionDeclaration.DeclarationAccess()
+}
+
+func (d *SpecialFunctionDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias SpecialFunctionDeclaration
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "SpecialFunctionDeclaration",
+		Range: NewRangeFromPositioned(d),
+		Alias: (*Alias)(d),
+	})
 }

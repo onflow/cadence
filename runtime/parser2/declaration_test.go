@@ -1418,8 +1418,8 @@ func TestParseEvent(t *testing.T) {
 						Pos:        ast.Position{Offset: 6, Line: 1, Column: 6},
 					},
 					Members: &ast.Members{
-						SpecialFunctions: []*ast.SpecialFunctionDeclaration{
-							{
+						Declarations: []ast.Declaration{
+							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
 									ParameterList: &ast.ParameterList{
@@ -1461,8 +1461,8 @@ func TestParseEvent(t *testing.T) {
 						Pos:        ast.Position{Offset: 12, Line: 1, Column: 12},
 					},
 					Members: &ast.Members{
-						SpecialFunctions: []*ast.SpecialFunctionDeclaration{
-							{
+						Declarations: []ast.Declaration{
+							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
 									ParameterList: &ast.ParameterList{
@@ -1708,8 +1708,8 @@ func TestParseCompositeDeclaration(t *testing.T) {
 						Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
 					},
 					Members: &ast.Members{
-						Fields: []*ast.FieldDeclaration{
-							{
+						Declarations: []ast.Declaration{
+							&ast.FieldDeclaration{
 								Access:       ast.AccessPublicSettable,
 								VariableKind: ast.VariableKindVariable,
 								Identifier: ast.Identifier{
@@ -1731,9 +1731,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 									EndPos:   ast.Position{Offset: 59, Line: 3, Column: 34},
 								},
 							},
-						},
-						SpecialFunctions: []*ast.SpecialFunctionDeclaration{
-							{
+							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
 									Identifier: ast.Identifier{
@@ -1807,9 +1805,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 									StartPos: ast.Position{Offset: 76, Line: 5, Column: 14},
 								},
 							},
-						},
-						Functions: []*ast.FunctionDeclaration{
-							{
+							&ast.FunctionDeclaration{
 								Access: ast.AccessPublic,
 								Identifier: ast.Identifier{
 									Identifier: "getFoo",
@@ -1958,8 +1954,8 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 						Pos:        ast.Position{Offset: 28, Line: 2, Column: 27},
 					},
 					Members: &ast.Members{
-						Fields: []*ast.FieldDeclaration{
-							{
+						Declarations: []ast.Declaration{
+							&ast.FieldDeclaration{
 								Access:       ast.AccessPublicSettable,
 								VariableKind: ast.VariableKindVariable,
 								Identifier: ast.Identifier{
@@ -1981,9 +1977,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 									EndPos:   ast.Position{Offset: 69, Line: 3, Column: 34},
 								},
 							},
-						},
-						SpecialFunctions: []*ast.SpecialFunctionDeclaration{
-							{
+							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
 									Identifier: ast.Identifier{
@@ -2022,33 +2016,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 									StartPos: ast.Position{Offset: 86, Line: 5, Column: 14},
 								},
 							},
-							{
-								Kind: common.DeclarationKindDestructor,
-								FunctionDeclaration: &ast.FunctionDeclaration{
-									Identifier: ast.Identifier{
-										Identifier: "destroy",
-										Pos:        ast.Position{Offset: 193, Line: 11, Column: 14},
-									},
-									ParameterList: &ast.ParameterList{
-										Range: ast.Range{
-											StartPos: ast.Position{Offset: 200, Line: 11, Column: 21},
-											EndPos:   ast.Position{Offset: 201, Line: 11, Column: 22},
-										},
-									},
-									FunctionBlock: &ast.FunctionBlock{
-										Block: &ast.Block{
-											Range: ast.Range{
-												StartPos: ast.Position{Offset: 203, Line: 11, Column: 24},
-												EndPos:   ast.Position{Offset: 204, Line: 11, Column: 25},
-											},
-										},
-									},
-									StartPos: ast.Position{Offset: 193, Line: 11, Column: 14},
-								},
-							},
-						},
-						Functions: []*ast.FunctionDeclaration{
-							{
+							&ast.FunctionDeclaration{
 								Access: ast.AccessPublic,
 								Identifier: ast.Identifier{
 									Identifier: "getFoo",
@@ -2072,7 +2040,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 								},
 								StartPos: ast.Position{Offset: 116, Line: 7, Column: 14},
 							},
-							{
+							&ast.FunctionDeclaration{
 								Access: ast.AccessPublic,
 								Identifier: ast.Identifier{
 									Identifier: "getBar",
@@ -2103,6 +2071,30 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 									},
 								},
 								StartPos: ast.Position{Offset: 153, Line: 9, Column: 14},
+							},
+							&ast.SpecialFunctionDeclaration{
+								Kind: common.DeclarationKindDestructor,
+								FunctionDeclaration: &ast.FunctionDeclaration{
+									Identifier: ast.Identifier{
+										Identifier: "destroy",
+										Pos:        ast.Position{Offset: 193, Line: 11, Column: 14},
+									},
+									ParameterList: &ast.ParameterList{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 200, Line: 11, Column: 21},
+											EndPos:   ast.Position{Offset: 201, Line: 11, Column: 22},
+										},
+									},
+									FunctionBlock: &ast.FunctionBlock{
+										Block: &ast.Block{
+											Range: ast.Range{
+												StartPos: ast.Position{Offset: 203, Line: 11, Column: 24},
+												EndPos:   ast.Position{Offset: 204, Line: 11, Column: 25},
+											},
+										},
+									},
+									StartPos: ast.Position{Offset: 193, Line: 11, Column: 14},
+								},
 							},
 						},
 					},

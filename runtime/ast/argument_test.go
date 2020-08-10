@@ -28,7 +28,11 @@ import (
 
 func TestArgument_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("without label", func(t *testing.T) {
+
+		t.Parallel()
 
 		argument := Argument{
 			Expression: &BoolExpression{
@@ -49,10 +53,10 @@ func TestArgument_MarshalJSON(t *testing.T) {
                 "Expression": {
                     "Type": "BoolExpression",
                     "Value": false,
-                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                     "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
                 },
-                "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+                "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                 "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
             }
             `,
@@ -61,6 +65,8 @@ func TestArgument_MarshalJSON(t *testing.T) {
 	})
 
 	t.Run("with label", func(t *testing.T) {
+
+		t.Parallel()
 
 		argument := Argument{
 			Label:         "ok",
@@ -87,10 +93,10 @@ func TestArgument_MarshalJSON(t *testing.T) {
                 "Expression": {
                     "Type": "BoolExpression",
                     "Value": false,
-                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3}, 
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
                     "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
                 },
-                "StartPos": {"Offset": 7, "Line": 8, "Column": 9}, 
+                "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
                 "EndPos": {"Offset": 4, "Line": 5, "Column": 6}
             }
             `,

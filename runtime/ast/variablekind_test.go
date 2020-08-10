@@ -29,6 +29,8 @@ import (
 
 func TestVariableKind_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	for variableKind := VariableKind(0); variableKind < VariableKind(VariableKindCount()); variableKind++ {
 		actual, err := json.Marshal(variableKind)
 		require.NoError(t, err)

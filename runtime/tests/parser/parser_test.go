@@ -3317,8 +3317,8 @@ func TestParseStructure(t *testing.T) {
 					Pos:        Position{Offset: 16, Line: 2, Column: 15},
 				},
 				Members: &Members{
-					Fields: []*FieldDeclaration{
-						{
+					Declarations: []Declaration{
+						&FieldDeclaration{
 							Access:       AccessPublicSettable,
 							VariableKind: VariableKindVariable,
 							Identifier: Identifier{
@@ -3340,9 +3340,7 @@ func TestParseStructure(t *testing.T) {
 								EndPos:   Position{Offset: 55, Line: 3, Column: 32},
 							},
 						},
-					},
-					SpecialFunctions: []*SpecialFunctionDeclaration{
-						{
+						&SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindInitializer,
 							FunctionDeclaration: &FunctionDeclaration{
 								Identifier: Identifier{
@@ -3416,9 +3414,7 @@ func TestParseStructure(t *testing.T) {
 								StartPos: Position{Offset: 70, Line: 5, Column: 12},
 							},
 						},
-					},
-					Functions: []*FunctionDeclaration{
-						{
+						&FunctionDeclaration{
 							Access: AccessPublic,
 							Identifier: Identifier{
 								Identifier: "getFoo",
@@ -4179,8 +4175,8 @@ func TestParseInterface(t *testing.T) {
 				Pos:        Position{Offset: 30, Line: 2, Column: 29},
 			},
 			Members: &Members{
-				Fields: []*FieldDeclaration{
-					{
+				Declarations: []Declaration{
+					&FieldDeclaration{
 						Access:       AccessNotSpecified,
 						VariableKind: VariableKindNotSpecified,
 						Identifier: Identifier{
@@ -4202,9 +4198,7 @@ func TestParseInterface(t *testing.T) {
 							EndPos:   Position{Offset: 60, Line: 3, Column: 23},
 						},
 					},
-				},
-				SpecialFunctions: []*SpecialFunctionDeclaration{
-					{
+					&SpecialFunctionDeclaration{
 						Kind: common.DeclarationKindInitializer,
 						FunctionDeclaration: &FunctionDeclaration{
 							Identifier: Identifier{
@@ -4244,9 +4238,7 @@ func TestParseInterface(t *testing.T) {
 							StartPos:      Position{Offset: 79, Line: 5, Column: 16},
 						},
 					},
-				},
-				Functions: []*FunctionDeclaration{
-					{
+					&FunctionDeclaration{
 						Access: AccessNotSpecified,
 						Identifier: Identifier{
 							Identifier: "getFoo",
@@ -4498,8 +4490,8 @@ func TestParseFieldWithFromIdentifier(t *testing.T) {
 					Pos:        Position{Offset: 14, Line: 2, Column: 13},
 				},
 				Members: &Members{
-					Fields: []*FieldDeclaration{
-						{
+					Declarations: []Declaration{
+						&FieldDeclaration{
 							Access:       AccessNotSpecified,
 							VariableKind: VariableKindConstant,
 							Identifier: Identifier{
@@ -4631,8 +4623,8 @@ func TestParseEvent(t *testing.T) {
 					Pos:        Position{Offset: 15, Line: 2, Column: 14},
 				},
 				Members: &Members{
-					SpecialFunctions: []*SpecialFunctionDeclaration{
-						{
+					Declarations: []Declaration{
+						&SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindInitializer,
 							FunctionDeclaration: &FunctionDeclaration{
 								ParameterList: &ParameterList{
@@ -5136,8 +5128,8 @@ func TestParseFieldDeclarationWithMoveTypeAnnotation(t *testing.T) {
 					Pos:        Position{Offset: 16, Line: 2, Column: 15},
 				},
 				Members: &Members{
-					Fields: []*FieldDeclaration{
-						{
+					Declarations: []Declaration{
+						&FieldDeclaration{
 							Access:       AccessNotSpecified,
 							VariableKind: VariableKindNotSpecified,
 							Identifier: Identifier{
@@ -5719,8 +5711,8 @@ func TestParseDestructor(t *testing.T) {
 					Pos:        Position{Offset: 18, Line: 2, Column: 17},
 				},
 				Members: &Members{
-					SpecialFunctions: []*SpecialFunctionDeclaration{
-						{
+					Declarations: []Declaration{
+						&SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindDestructor,
 							FunctionDeclaration: &FunctionDeclaration{
 								Identifier: Identifier{
@@ -6196,8 +6188,8 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 					Pos:        Position{Offset: 16, Line: 2, Column: 15},
 				},
 				Members: &Members{
-					Fields: []*FieldDeclaration{
-						{
+					Declarations: []Declaration{
+						&FieldDeclaration{
 							VariableKind: VariableKindConstant,
 							Identifier: Identifier{
 								Identifier: "id",
@@ -6217,9 +6209,7 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 								EndPos:   Position{Offset: 34, Line: 2, Column: 33},
 							},
 						},
-					},
-					SpecialFunctions: []*SpecialFunctionDeclaration{
-						{
+						&SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindInitializer,
 							FunctionDeclaration: &FunctionDeclaration{
 								Identifier: Identifier{

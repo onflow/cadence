@@ -50,11 +50,9 @@ func (t *TypeAnnotation) EndPosition() Position {
 func (t *TypeAnnotation) MarshalJSON() ([]byte, error) {
 	type Alias TypeAnnotation
 	return json.Marshal(&struct {
-		Type string
 		Range
 		*Alias
 	}{
-		Type:  "TypeAnnotation",
 		Range: NewRangeFromPositioned(t),
 		Alias: (*Alias)(t),
 	})
@@ -298,7 +296,7 @@ func (t *ReferenceType) MarshalJSON() ([]byte, error) {
 // RestrictedType
 
 type RestrictedType struct {
-	Type         Type
+	Type         Type `json:"RestrictedType"`
 	Restrictions []*NominalType
 	Range
 }
@@ -321,13 +319,24 @@ func (t *RestrictedType) String() string {
 	return builder.String()
 }
 
+func (t *RestrictedType) MarshalJSON() ([]byte, error) {
+	type Alias RestrictedType
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+	}{
+		Type:  "RestrictedType",
+		Alias: (*Alias)(t),
+	})
+}
+
 // InstantiationType represents an instantiation of a generic (nominal) type
 
 type InstantiationType struct {
-	Type                  Type
+	Type                  Type `json:"InstantiatedType"`
 	TypeArguments         []*TypeAnnotation
 	TypeArgumentsStartPos Position
-	EndPos                Position
+	EndPos                Position `json:"-"`
 }
 
 func (*InstantiationType) isType() {}
@@ -352,4 +361,17 @@ func (t *InstantiationType) StartPosition() Position {
 
 func (t *InstantiationType) EndPosition() Position {
 	return t.EndPos
+}
+
+func (t *InstantiationType) MarshalJSON() ([]byte, error) {
+	type Alias InstantiationType
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "InstantiationType",
+		Range: NewRangeFromPositioned(t),
+		Alias: (*Alias)(t),
+	})
 }

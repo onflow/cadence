@@ -28,6 +28,8 @@ import (
 
 func TestIdentifierLocation_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	loc := IdentifierLocation("test")
 
 	actual, err := json.Marshal(loc)
@@ -45,6 +47,8 @@ func TestIdentifierLocation_MarshalJSON(t *testing.T) {
 }
 
 func TestStringLocation_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
 
 	loc := StringLocation("test")
 
@@ -64,6 +68,8 @@ func TestStringLocation_MarshalJSON(t *testing.T) {
 
 func TestAddressLocation_MarshalJSON(t *testing.T) {
 
+	t.Parallel()
+
 	loc := AddressLocation([]byte{1})
 
 	actual, err := json.Marshal(loc)
@@ -74,6 +80,52 @@ func TestAddressLocation_MarshalJSON(t *testing.T) {
         {
             "Type": "AddressLocation",
             "Address": "0x1"
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestImportDeclaration_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &ImportDeclaration{
+		Identifiers: []Identifier{
+			{
+				Identifier: "foo",
+				Pos:        Position{Offset: 1, Line: 2, Column: 3},
+			},
+		},
+		Location:    StringLocation("test"),
+		LocationPos: Position{Offset: 4, Line: 5, Column: 6},
+		Range: Range{
+			StartPos: Position{Offset: 7, Line: 8, Column: 9},
+			EndPos:   Position{Offset: 10, Line: 11, Column: 12},
+		},
+	}
+
+	actual, err := json.Marshal(ty)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "ImportDeclaration", 
+            "Identifiers": [
+                {
+                    "Identifier": "foo",
+                    "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
+                    "EndPos": {"Offset": 3, "Line": 2, "Column": 5}
+                }
+            ],
+            "Location": {
+                "Type": "StringLocation",
+                "String": "test"
+            },
+            "LocationPos": {"Offset": 4, "Line": 5, "Column": 6},
+            "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
+            "EndPos": {"Offset": 10, "Line": 11, "Column": 12}
         }
         `,
 		string(actual),
