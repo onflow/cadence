@@ -118,8 +118,6 @@ github.com/naoina/toml v0.1.2-0.20170918210437-9fafd6967416/go.mod h1:NBIhNtsFMo
 github.com/oklog/ulid v1.3.1/go.mod h1:CirwcVhetQ6Lv90oh/F+FBtV6XMibvdAFo93nm5qn4U=
 github.com/olekukonko/tablewriter v0.0.1/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXWMclvtLoiIKAKIo=
 github.com/olekukonko/tablewriter v0.0.2-0.20190409134802-7e037d187b0c/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXWMclvtLoiIKAKIo=
-github.com/onflow/cadence/languageserver v0.7.0/go.mod h1:PiIhuw6B7C4d4PoT0GgOCTCwbiQDzKtf4L9g7DRiBgI=
-github.com/onflow/flow-go-sdk v0.8.0/go.mod h1:9I3N0v59yuOQqlGej5AgZ20Q9UbMaJWrGqM9B0HUVrE=
 github.com/onflow/flow-go-sdk v0.9.0 h1:eK40f6RU+cjh9ASGOPzsE38gO8VQhy3x52rnUGEWY6k=
 github.com/onflow/flow-go-sdk v0.9.0/go.mod h1:FVVYKmWmUjfa1A4eIeZfBC+vFg0VmCf1TUaBowx+3AM=
 github.com/onflow/flow/protobuf/go/flow v0.1.5-0.20200619174948-a3a856d16a27 h1:ZZ8njaFTOz7JyBpQwXGfFUUOc9l2urVAxQ7FpMUpfnc=
