@@ -98,9 +98,6 @@ func TestCheckStorable(t *testing.T) {
 		&sema.AnyStructType{},
 		&sema.AnyResourceType{},
 		&sema.CapabilityType{},
-		// TODO: move to non-storable
-		//   see https://github.com/onflow/cadence/issues/189
-		&sema.ReferenceType{Type: &sema.BoolType{}},
 	)
 
 	for _, storableType := range storableTypes {
@@ -149,6 +146,7 @@ func TestCheckStorable(t *testing.T) {
 		&sema.VoidType{},
 		&sema.AuthAccountType{},
 		&sema.PublicAccountType{},
+		&sema.ReferenceType{Type: &sema.BoolType{}},
 	}
 
 	for _, nonStorableType := range nonStorableTypes[:] {
@@ -242,7 +240,7 @@ func TestCheckStorable(t *testing.T) {
 					// If the tested type is a resource, it also needs a destructor.
 
 					initializer = fmt.Sprintf(
-						` 
+						`
                               init(value: %[1]s%[2]s) {
                                   self.value %[3]s value
                               }
@@ -253,7 +251,7 @@ func TestCheckStorable(t *testing.T) {
 					)
 
 					if isResource {
-						destructor = ` 
+						destructor = `
                               destroy() {
                                   destroy self.value
                               }

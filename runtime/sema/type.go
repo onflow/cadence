@@ -5885,8 +5885,7 @@ func (t *ReferenceType) IsInvalidType() bool {
 }
 
 func (t *ReferenceType) IsStorable(_ map[*Member]bool) bool {
-	// TODO: https://github.com/onflow/cadence/issues/189
-	return true
+	return false
 }
 
 func (*ReferenceType) IsEquatable() bool {
