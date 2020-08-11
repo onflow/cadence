@@ -31,7 +31,11 @@ test:
 
 .PHONY: build
 build:
-	go build ./runtime/cmd/main
+	go build -o ./runtime/cmd/parse/parse ./runtime/cmd/parse
+	go build -o ./runtime/cmd/check/check ./runtime/cmd/check
+	go build -o ./runtime/cmd/main/main ./runtime/cmd/main
+	(cd languageserver && go build -o ./cmd/languageserver/languageserver ./cmd/languageserver)
+	(cd languageserver && GOARCH=wasm GOOS=js go build -o ./cmd/languageserver/languageserver.wasm ./cmd/languageserver)
 
 .PHONY: install-tools
 install-tools:

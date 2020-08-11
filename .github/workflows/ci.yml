@@ -19,6 +19,7 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-go-
     - run: |
+        make build
         make test
         make check-tidy
         make check-headers
