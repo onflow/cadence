@@ -4698,3 +4698,68 @@ func TestRuntimeTransaction_UpdateAccountCodeUnsafeNotInitializing(t *testing.T)
 	_, err = runtime.ExecuteScript(script2, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 }
+
+func TestRuntime(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	runtimeInterface := &testRuntimeInterface{
+		decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
+			return jsoncdc.Decode(b)
+		},
+	}
+
+	script := []byte(`
+      pub fun main(num: Int) {}
+    `)
+
+	type testCase struct {
+		name      string
+		arguments [][]byte
+		valid     bool
+	}
+
+	test := func(tc testCase) {
+		t.Run(tc.name, func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := runtime.ExecuteScript(script, tc.arguments, runtimeInterface, ScriptLocation{0x1})
+
+			if tc.valid {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				require.IsType(t, Error{}, err)
+				assert.IsType(t, InvalidEntryPointParameterCountError{}, err.(Error).Unwrap())
+			}
+		})
+	}
+
+	for _, testCase := range []testCase{
+		{
+			name:      "too few arguments",
+			arguments: [][]byte{},
+			valid:     false,
+		},
+		{
+			name: "correct number of arguments",
+			arguments: [][]byte{
+				jsoncdc.MustEncode(cadence.NewInt(1)),
+			},
+			valid: true,
+		},
+		{
+			name: "too many arguments",
+			arguments: [][]byte{
+				jsoncdc.MustEncode(cadence.NewInt(1)),
+				jsoncdc.MustEncode(cadence.NewInt(2)),
+			},
+			valid: false,
+		},
+	} {
+		test(testCase)
+	}
+}
