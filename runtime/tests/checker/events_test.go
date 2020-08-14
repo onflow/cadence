@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/tests/utils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -257,9 +258,15 @@ func TestCheckEmitEvent(t *testing.T) {
 	})
 
 	t.Run("EmitImported", func(t *testing.T) {
-		checker, err := ParseAndCheck(t, `
-            pub event Transfer(to: Int, from: Int)
-        `)
+
+		importedChecker, err := ParseAndCheckWithOptions(t,
+			`
+              pub event Transfer(to: Int, from: Int)
+            `,
+			ParseAndCheckOptions{
+				Location: utils.ImportedLocation,
+			},
+		)
 		require.NoError(t, err)
 
 		_, err = ParseAndCheckWithOptions(t, `
@@ -270,8 +277,14 @@ func TestCheckEmitEvent(t *testing.T) {
               }
             `,
 			ParseAndCheckOptions{
-				ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
-					return checker.Program, nil
+				Options: []sema.Option{
+					sema.WithImportHandler(
+						func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+							return sema.CheckerImport{
+								Checker: importedChecker,
+							}, nil
+						},
+					),
 				},
 			},
 		)

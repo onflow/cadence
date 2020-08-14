@@ -65,7 +65,16 @@ var beforeType = func() *FunctionType {
 
 type ValidTopLevelDeclarationsHandlerFunc = func(ast.Location) []common.DeclarationKind
 
-type ImportHandlerFunc = func(location ast.Location) Import
+type CheckHandlerFunc func(location ast.Location, check func())
+
+type ResolvedLocation struct {
+	Location    ast.Location
+	Identifiers []ast.Identifier
+}
+
+type LocationHandlerFunc func(identifiers []ast.Identifier, location ast.Location) []ResolvedLocation
+
+type ImportHandlerFunc func(checker *Checker, location ast.Location) (Import, *CheckerError)
 
 // Checker
 
@@ -91,7 +100,6 @@ type Checker struct {
 	MemberAccesses                     *MemberAccesses
 	variableOrigins                    map[*Variable]*Origin
 	memberOrigins                      map[Type]map[string]*Origin
-	seenImports                        map[ast.LocationID]bool
 	isChecked                          bool
 	inCreate                           bool
 	inInvocation                       bool
@@ -100,9 +108,11 @@ type Checker struct {
 	Elaboration                        *Elaboration
 	currentMemberExpression            *ast.MemberExpression
 	validTopLevelDeclarationsHandler   ValidTopLevelDeclarationsHandlerFunc
-	importHandler                      ImportHandlerFunc
 	beforeExtractor                    *BeforeExtractor
+	locationHandler                    LocationHandlerFunc
+	importHandler                      ImportHandlerFunc
 	checkHandler                       CheckHandlerFunc
+	isImporting                        bool
 }
 
 type Option func(*Checker) error
@@ -164,14 +174,22 @@ func WithAllCheckers(allCheckers map[ast.LocationID]*Checker) Option {
 	}
 }
 
-type CheckHandlerFunc func(location ast.Location, check func())
-
 // WithCheckHandler returns a checker option which sets
 // the given function as the handler for the checking of the program.
 //
 func WithCheckHandler(handler CheckHandlerFunc) Option {
 	return func(checker *Checker) error {
 		checker.checkHandler = handler
+		return nil
+	}
+}
+
+// WithLocationHandler returns a checker option which sets
+// the given handler as function which is used to resolve locations.
+//
+func WithLocationHandler(handler LocationHandlerFunc) Option {
+	return func(checker *Checker) error {
+		checker.locationHandler = handler
 		return nil
 	}
 }
@@ -226,7 +244,6 @@ func NewChecker(program *ast.Program, location ast.Location, options ...Option) 
 		containerTypes:      map[Type]bool{},
 		variableOrigins:     map[*Variable]*Origin{},
 		memberOrigins:       map[Type]map[string]*Origin{},
-		seenImports:         map[ast.LocationID]bool{},
 		Elaboration:         NewElaboration(),
 	}
 

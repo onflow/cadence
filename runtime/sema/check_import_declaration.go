@@ -29,73 +29,72 @@ func (checker *Checker) VisitImportDeclaration(_ *ast.ImportDeclaration) ast.Rep
 }
 
 func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclaration) ast.Repr {
-
-	location := declaration.Location
-	locationID := location.ID()
-
-	// TODO: allow repeated imports of different sets
-
-	// Ensure the program is only imported once.
-	// If it was imported before, report an error and return
-
-	if checker.seenImports[locationID] {
-		checker.report(
-			&RepeatedImportError{
-				ImportLocation: location,
-				Range: ast.Range{
-					StartPos: declaration.LocationPos,
-					EndPos:   declaration.LocationPos,
-				},
-			},
-		)
-		return nil
+	locationRange := ast.Range{
+		StartPos: declaration.LocationPos,
+		// TODO: improve
+		EndPos: declaration.LocationPos,
 	}
-	checker.seenImports[locationID] = true
 
-	// Find the imported program.
-	// If it is not available, ask the import handler, if any.
-	// If no handler is available or the location can also not be resolved using the handler,
-	// report an error and return.
+	resolvedLocations := checker.resolveLocation(declaration.Identifiers, declaration.Location)
 
-	imports := checker.Program.ImportedPrograms()
+	checker.Elaboration.ImportDeclarationsResolvedLocations[declaration] = resolvedLocations
+
+	for _, resolvedLocation := range resolvedLocations {
+		checker.importResolvedLocation(resolvedLocation, locationRange)
+	}
+
+	return nil
+}
+
+func (checker *Checker) resolveLocation(identifiers []ast.Identifier, location ast.Location) []ResolvedLocation {
+
+	// If no location handler is available,
+	// default to resolving to a single location that declares all identifiers
+
+	if checker.locationHandler == nil {
+		return []ResolvedLocation{
+			{
+				Location:    location,
+				Identifiers: identifiers,
+			},
+		}
+	}
+
+	// A location handler is available,
+	// use it to resolve the location / identifiers
+
+	return checker.locationHandler(identifiers, location)
+}
+
+func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation, locationRange ast.Range) {
+
+	// First, get the Import for the resolved location
 
 	var imp Import
 
-	importedProgram := imports[locationID]
-
-	if importedProgram != nil {
-
-		importChecker, err := checker.EnsureLoaded(
-			location,
-			func() *ast.Program {
-				return importedProgram
-			},
-		)
+	if checker.importHandler != nil {
+		var err *CheckerError
+		imp, err = checker.importHandler(checker, resolvedLocation.Location)
 		if err != nil {
 			checker.report(
 				&ImportedProgramError{
 					CheckerError:   err,
-					ImportLocation: location,
-					Pos:            declaration.LocationPos,
+					ImportLocation: resolvedLocation.Location,
+					Range:          locationRange,
 				},
 			)
-			return nil
+			return
 		}
-
-		imp = CheckerImport{importChecker}
-
-	} else if checker.importHandler != nil {
-		imp = checker.importHandler(location)
 	}
 
 	if imp == nil {
 		checker.report(
 			&UnresolvedImportError{
-				ImportLocation: location,
-				Range:          ast.NewRangeFromPositioned(declaration),
+				ImportLocation: resolvedLocation.Location,
+				Range:          locationRange,
 			},
 		)
-		return nil
+		return
 	}
 
 	// Attempt to import the requested value declarations
@@ -103,7 +102,7 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 	allValueElements := imp.AllValueElements()
 	foundValues, invalidAccessedValues := checker.importElements(
 		checker.valueActivations,
-		declaration.Identifiers,
+		resolvedLocation.Identifiers,
 		allValueElements,
 		imp.IsImportableValue,
 	)
@@ -113,7 +112,7 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 	allTypeElements := imp.AllTypeElements()
 	foundTypes, invalidAccessedTypes := checker.importElements(
 		checker.typeActivations,
-		declaration.Identifiers,
+		resolvedLocation.Identifiers,
 		allTypeElements,
 		imp.IsImportableType,
 	)
@@ -122,7 +121,7 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 	// restricted access and report an error (i.e. if there is
 	// both a value and type with the same name, only report a single error)
 
-	for _, identifier := range declaration.Identifiers {
+	for _, identifier := range resolvedLocation.Identifiers {
 
 		invalidAccessedElement, isInvalidAccess := invalidAccessedValues[identifier]
 		if !isInvalidAccess {
@@ -143,7 +142,7 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 		)
 	}
 
-	identifierCount := len(declaration.Identifiers)
+	identifierCount := len(resolvedLocation.Identifiers)
 
 	// Determine which requested declarations could neither be found
 	// in the value nor in the type declarations of the imported program.
@@ -155,7 +154,7 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 
 	missing := make([]ast.Identifier, 0, identifierCount)
 
-	for _, identifier := range declaration.Identifiers {
+	for _, identifier := range resolvedLocation.Identifiers {
 		if foundValues[identifier] || foundTypes[identifier] {
 			continue
 		}
@@ -190,15 +189,14 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 			available = append(available, identifier)
 		}
 
-		checker.handleMissingImports(missing, available, location)
+		checker.handleMissingImports(missing, available, resolvedLocation.Location)
 	}
-
-	return nil
 }
 
 // EnsureLoaded finds or create a checker for the imported program and checks it.
 //
 func (checker *Checker) EnsureLoaded(location ast.Location, loadProgram func() *ast.Program) (*Checker, *CheckerError) {
+
 	locationID := location.ID()
 
 	subChecker, ok := checker.allCheckers[locationID]

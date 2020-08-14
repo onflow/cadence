@@ -21,6 +21,7 @@ package ast
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -137,6 +138,17 @@ func LocationFromTypeID(typeID string) Location {
 		}
 
 		return AddressLocation(address)
+
+	case AddressContractLocationPrefix:
+		address, err := hex.DecodeString(pieces[1])
+		if err != nil {
+			return nil
+		}
+
+		return AddressContractLocation{
+			AddressLocation: address,
+			Name:            pieces[2],
+		}
 	}
 
 	return nil
@@ -215,6 +227,42 @@ func (l AddressLocation) MarshalJSON() ([]byte, error) {
 	}{
 		Type:    "AddressLocation",
 		Address: l.ToAddress().ShortHexWithPrefix(),
+	})
+}
+
+const AddressContractLocationPrefix = "AC"
+
+// AddressContractLocation is the location of a contract/contract interface at an address
+
+type AddressContractLocation struct {
+	AddressLocation AddressLocation
+	Name            string
+}
+
+func (l AddressContractLocation) String() string {
+	return fmt.Sprintf("%s.%s",
+		l.AddressLocation.String(),
+		l.Name,
+	)
+}
+
+func (l AddressContractLocation) ID() LocationID {
+	return NewLocationID(
+		AddressContractLocationPrefix,
+		l.AddressLocation.ToAddress().Hex(),
+		l.Name,
+	)
+}
+
+func (l AddressContractLocation) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		Type    string
+		Address string
+		Name    string
+	}{
+		Type:    "AddressContractLocation",
+		Address: l.AddressLocation.ToAddress().ShortHexWithPrefix(),
+		Name:    l.Name,
 	})
 }
 

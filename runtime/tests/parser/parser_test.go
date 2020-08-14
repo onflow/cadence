@@ -4348,7 +4348,7 @@ func TestParseImportWithString(t *testing.T) {
 	t.Parallel()
 
 	const code = `
-        import "test.bpl"
+        import "test.cdc"
 	`
 
 	testParse(
@@ -4357,7 +4357,7 @@ func TestParseImportWithString(t *testing.T) {
 		[]Declaration{
 			&ImportDeclaration{
 				Identifiers: nil,
-				Location:    StringLocation("test.bpl"),
+				Location:    StringLocation("test.cdc"),
 				Range: Range{
 					StartPos: Position{Offset: 9, Line: 2, Column: 8},
 					EndPos:   Position{Offset: 25, Line: 2, Column: 24},
@@ -4365,26 +4365,7 @@ func TestParseImportWithString(t *testing.T) {
 				LocationPos: Position{Offset: 16, Line: 2, Column: 15},
 			},
 		},
-		func(actual *Program) {
-
-			importLocation := StringLocation("test.bpl")
-
-			actualImports := actual.ImportedPrograms()
-
-			assert.Equal(t,
-				map[LocationID]*Program{},
-				actualImports,
-			)
-
-			actualImports[importLocation.ID()] = &Program{}
-
-			assert.Equal(t,
-				map[LocationID]*Program{
-					importLocation.ID(): {},
-				},
-				actualImports,
-			)
-		},
+		nil,
 	)
 }
 
@@ -4410,26 +4391,7 @@ func TestParseImportWithAddress(t *testing.T) {
 				LocationPos: Position{Offset: 16, Line: 2, Column: 15},
 			},
 		},
-		func(actual *Program) {
-
-			importLocation := AddressLocation{18, 52}
-
-			actualImports := actual.ImportedPrograms()
-
-			assert.Equal(t,
-				map[LocationID]*Program{},
-				actualImports,
-			)
-
-			actualImports[importLocation.ID()] = &Program{}
-
-			assert.Equal(t,
-				map[LocationID]*Program{
-					importLocation.ID(): {},
-				},
-				actualImports,
-			)
-		},
+		nil,
 	)
 }
 

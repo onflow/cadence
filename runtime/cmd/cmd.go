@@ -53,9 +53,18 @@ func PrettyPrintError(writer io.Writer, err error, filename string, codes map[st
 		for _, err := range checkerError.Errors {
 			printErr(err, filename)
 			if err, ok := err.(*sema.ImportedProgramError); ok {
-				filename := string(err.ImportLocation.(ast.StringLocation))
-				for _, err := range err.CheckerError.Errors {
-					PrettyPrintError(writer, err, filename, codes)
+				var filename string
+				switch importLocation := err.ImportLocation.(type) {
+				case ast.StringLocation:
+					filename = string(importLocation)
+				case ast.AddressLocation:
+					filename = importLocation.ToAddress().ShortHexWithPrefix()
+				case ast.IdentifierLocation:
+					filename = string(importLocation)
+				}
+
+				for _, nestedErr := range err.CheckerError.Errors {
+					PrettyPrintError(writer, nestedErr, filename, codes)
 				}
 			}
 		}
@@ -84,39 +93,23 @@ func mustClosure(filename string, codes map[string]string) func(error) {
 	}
 }
 
-func PrepareProgramFromFile(filename string) (*ast.Program, func(error)) {
+func PrepareProgramFromFile(filename string, codes map[string]string) (*ast.Program, func(error)) {
 	codeBytes, err := ioutil.ReadFile(filename)
 
-	program, _, must := PrepareProgram(string(codeBytes), filename)
+	program, must := PrepareProgram(string(codeBytes), filename, codes)
 	must(err)
 
 	return program, must
 }
 
-func PrepareProgram(code string, filename string) (*ast.Program, map[string]string, func(error)) {
-	codes := map[string]string{}
-
+func PrepareProgram(code string, filename string, codes map[string]string) (*ast.Program, func(error)) {
 	must := mustClosure(filename, codes)
 
 	program, err := parser2.ParseProgram(code)
 	codes[filename] = code
 	must(err)
 
-	err = program.ResolveImports(func(location ast.Location) (program *ast.Program, err error) {
-		switch location := location.(type) {
-		case ast.StringLocation:
-			filename := string(location)
-			imported, code, err := parser2.ParseProgramFromFile(filename)
-			codes[filename] = code
-			must(err)
-			return imported, nil
-
-		default:
-			return nil, fmt.Errorf("cannot import `%s`. only files are supported", location)
-		}
-	})
-	must(err)
-	return program, codes, must
+	return program, must
 }
 
 var valueDeclarations = append(
@@ -131,13 +124,42 @@ var typeDeclarations = append(
 
 // PrepareChecker prepares and initializes a checker with a given code as a string,
 // and a filename which is used for pretty-printing errors, if any
-func PrepareChecker(program *ast.Program, filename string, must func(error)) (*sema.Checker, func(error)) {
+func PrepareChecker(program *ast.Program, filename string, codes map[string]string, must func(error)) (*sema.Checker, func(error)) {
 	location := runtime.FileLocation(filename)
 	checker, err := sema.NewChecker(
 		program,
 		location,
 		sema.WithPredeclaredValues(valueDeclarations.ToValueDeclarations()),
 		sema.WithPredeclaredTypes(typeDeclarations),
+		sema.WithImportHandler(
+			func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+				stringLocation, ok := location.(ast.StringLocation)
+
+				if !ok {
+					return nil, &sema.CheckerError{
+						Errors: []error{
+							fmt.Errorf("cannot import `%s`. only files are supported", location),
+						},
+					}
+				}
+
+				importChecker, err := checker.EnsureLoaded(
+					location,
+					func() *ast.Program {
+						filename := string(stringLocation)
+						imported, _ := PrepareProgramFromFile(filename, codes)
+						return imported
+					},
+				)
+				if err != nil {
+					return nil, err
+				}
+
+				return sema.CheckerImport{
+					Checker: importChecker,
+				}, nil
+			},
+		),
 	)
 	must(err)
 
@@ -146,9 +168,11 @@ func PrepareChecker(program *ast.Program, filename string, must func(error)) (*s
 
 func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checker, func(error)) {
 
-	program, must := PrepareProgramFromFile(filename)
+	codes := map[string]string{}
 
-	checker, must := PrepareChecker(program, filename, must)
+	program, must := PrepareProgramFromFile(filename, codes)
+
+	checker, must := PrepareChecker(program, filename, codes, must)
 
 	must(checker.Check())
 

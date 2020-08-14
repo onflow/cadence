@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/trampoline"
 )
 
@@ -92,17 +93,19 @@ func TestInterpretVirtualImport(t *testing.T) {
 				),
 			},
 			CheckerOptions: []sema.Option{
-				sema.WithImportHandler(func(location ast.Location) sema.Import {
-					return sema.VirtualImport{
-						ValueElements: map[string]sema.ImportElement{
-							"Foo": {
-								DeclarationKind: common.DeclarationKindStructure,
-								Access:          ast.AccessPublic,
-								Type:            fooType,
+				sema.WithImportHandler(
+					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+						return sema.VirtualImport{
+							ValueElements: map[string]sema.ImportElement{
+								"Foo": {
+									DeclarationKind: common.DeclarationKindStructure,
+									Access:          ast.AccessPublic,
+									Type:            fooType,
+								},
 							},
-						},
-					}
-				}),
+						}, nil
+					},
+				),
 			},
 		},
 	)
@@ -112,6 +115,147 @@ func TestInterpretVirtualImport(t *testing.T) {
 
 	assert.Equal(t,
 		interpreter.NewIntValueFromInt64(42),
+		value,
+	)
+}
+
+func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
+
+	t.Parallel()
+
+	addressLocation := ast.AddressLocation{0x1}
+
+	importedCheckerA, err := checker.ParseAndCheckWithOptions(t,
+		`
+          pub fun a(): Int {
+              return 1
+          }
+
+          pub fun b(): Int {
+              return 11
+          }
+        `,
+		checker.ParseAndCheckOptions{
+			Location: ast.AddressContractLocation{
+				AddressLocation: addressLocation,
+				Name:            "a",
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	importedCheckerB, err := checker.ParseAndCheckWithOptions(t,
+		`
+          pub fun b(): Int {
+              return 2
+          }
+
+          pub fun a(): Int {
+              return 22
+          }
+        `,
+		checker.ParseAndCheckOptions{
+			Location: ast.AddressContractLocation{
+				AddressLocation: addressLocation,
+				Name:            "b",
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	importingChecker, err := checker.ParseAndCheckWithOptions(t,
+		`
+          import a, b from 0x1
+
+          pub fun test(): Int {
+              return a() + b()
+          }
+        `,
+		checker.ParseAndCheckOptions{
+			Options: []sema.Option{
+				sema.WithLocationHandler(
+					func(identifiers []ast.Identifier, location ast.Location) (result []sema.ResolvedLocation) {
+						require.Equal(t,
+							addressLocation,
+							location,
+						)
+
+						for _, identifier := range identifiers {
+							result = append(result, sema.ResolvedLocation{
+								Location: ast.AddressContractLocation{
+									AddressLocation: location.(ast.AddressLocation),
+									Name:            identifier.Identifier,
+								},
+								Identifiers: []ast.Identifier{
+									identifier,
+								},
+							})
+						}
+						return
+					},
+				),
+				sema.WithImportHandler(
+					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+						require.IsType(t, ast.AddressContractLocation{}, location)
+						addressContractLocation := location.(ast.AddressContractLocation)
+
+						assert.Equal(t, addressLocation, addressContractLocation.AddressLocation)
+
+						var importedChecker *sema.Checker
+
+						switch addressContractLocation.Name {
+						case "a":
+							importedChecker = importedCheckerA
+						case "b":
+							importedChecker = importedCheckerB
+						}
+
+						return sema.CheckerImport{
+							Checker: importedChecker,
+						}, nil
+					},
+				),
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	inter, err := interpreter.NewInterpreter(
+		importingChecker,
+		interpreter.WithImportLocationHandler(
+			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
+				require.IsType(t, ast.AddressContractLocation{}, location)
+				addressContractLocation := location.(ast.AddressContractLocation)
+
+				assert.Equal(t, addressLocation, addressContractLocation.AddressLocation)
+
+				var importedChecker *sema.Checker
+
+				switch addressContractLocation.Name {
+				case "a":
+					importedChecker = importedCheckerA
+				case "b":
+					importedChecker = importedCheckerB
+				default:
+					return nil
+				}
+
+				return interpreter.ProgramImport{
+					Program: importedChecker.Program,
+				}
+			},
+		),
+	)
+	require.NoError(t, err)
+
+	err = inter.Interpret()
+	require.NoError(t, err)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewIntValueFromInt64(3),
 		value,
 	)
 }

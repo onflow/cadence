@@ -98,7 +98,7 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
 	var writes []write
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(_ Location) (bytes []byte, err error) {
+		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(nil, nil),

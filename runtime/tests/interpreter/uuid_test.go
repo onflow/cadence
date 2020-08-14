@@ -37,16 +37,21 @@ func TestInterpretResourceUUID(t *testing.T) {
 
 	t.Parallel()
 
-	checkerImported, err := checker.ParseAndCheck(t, `
-      pub resource R {}
+	importedChecker, err := checker.ParseAndCheckWithOptions(t,
+		`
+          pub resource R {}
 
-      pub fun createR(): @R {
-          return <- create R()
-      }
-    `)
+          pub fun createR(): @R {
+              return <- create R()
+          }
+        `,
+		checker.ParseAndCheckOptions{
+			Location: ImportedLocation,
+		},
+	)
 	require.NoError(t, err)
 
-	checkerImporting, err := checker.ParseAndCheckWithOptions(t,
+	importingChecker, err := checker.ParseAndCheckWithOptions(t,
 		`
           import createR from "imported"
 
@@ -60,12 +65,19 @@ func TestInterpretResourceUUID(t *testing.T) {
           }
         `,
 		checker.ParseAndCheckOptions{
-			ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
-				assert.Equal(t,
-					ImportedLocation,
-					location,
-				)
-				return checkerImported.Program, nil
+			Options: []sema.Option{
+				sema.WithImportHandler(
+					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+						assert.Equal(t,
+							ImportedLocation,
+							location,
+						)
+
+						return sema.CheckerImport{
+							Checker: importedChecker,
+						}, nil
+					},
+				),
 			},
 		},
 	)
@@ -79,7 +91,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 	var uuid uint64
 
 	inter, err := interpreter.NewInterpreter(
-		checkerImporting,
+		importingChecker,
 		interpreter.WithUUIDHandler(
 			func() uint64 {
 				defer func() { uuid++ }()
@@ -93,7 +105,7 @@ func TestInterpretResourceUUID(t *testing.T) {
 					location,
 				)
 				return interpreter.ProgramImport{
-					Program: checkerImported.Program,
+					Program: importedChecker.Program,
 				}
 			},
 		),

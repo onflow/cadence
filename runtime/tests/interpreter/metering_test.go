@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -34,15 +35,20 @@ func TestInterpretStatementHandler(t *testing.T) {
 
 	t.Parallel()
 
-	checkerImported, err := checker.ParseAndCheck(t, `
-      pub fun a() {
-          true
-          true
-      }
-    `)
+	importedChecker, err := checker.ParseAndCheckWithOptions(t,
+		`
+          pub fun a() {
+              true
+              true
+          }
+        `,
+		checker.ParseAndCheckOptions{
+			Location: utils.ImportedLocation,
+		},
+	)
 	require.NoError(t, err)
 
-	checkerImporting, err := checker.ParseAndCheckWithOptions(t,
+	importingChecker, err := checker.ParseAndCheckWithOptions(t,
 		`
           import a from "imported"
 
@@ -63,8 +69,19 @@ func TestInterpretStatementHandler(t *testing.T) {
           }
         `,
 		checker.ParseAndCheckOptions{
-			ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
-				return checkerImported.Program, nil
+			Options: []sema.Option{
+				sema.WithImportHandler(
+					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+						assert.Equal(t,
+							utils.ImportedLocation,
+							location,
+						)
+
+						return sema.CheckerImport{
+							Checker: importedChecker,
+						}, nil
+					},
+				),
 			},
 		},
 	)
@@ -80,7 +97,7 @@ func TestInterpretStatementHandler(t *testing.T) {
 	interpreterIDs := map[*interpreter.Interpreter]int{}
 
 	inter, err := interpreter.NewInterpreter(
-		checkerImporting,
+		importingChecker,
 		interpreter.WithOnStatementHandler(
 			func(statement *interpreter.Statement) {
 				inter := statement.Interpreter
@@ -105,7 +122,7 @@ func TestInterpretStatementHandler(t *testing.T) {
 					location,
 				)
 				return interpreter.ProgramImport{
-					Program: checkerImported.Program,
+					Program: importedChecker.Program,
 				}
 			},
 		),
@@ -141,19 +158,22 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 
 	t.Parallel()
 
-	checkerImported, err := checker.ParseAndCheck(t, `
-      pub fun a() {
-          var i = 1
-          while i <= 4 {
-              i = i + 1
-          }
+	importedChecker, err := checker.ParseAndCheckWithOptions(t,
+		`
+          pub fun a() {
+              var i = 1
+              while i <= 4 {
+                  i = i + 1
+              }
 
-          for n in [1, 2, 3, 4, 5] {}
-      }
-    `)
+              for n in [1, 2, 3, 4, 5] {}
+          }
+        `,
+		checker.ParseAndCheckOptions{},
+	)
 	require.NoError(t, err)
 
-	checkerImporting, err := checker.ParseAndCheckWithOptions(t,
+	importingChecker, err := checker.ParseAndCheckWithOptions(t,
 		`
           import a from "imported"
 
@@ -169,8 +189,19 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
           }
         `,
 		checker.ParseAndCheckOptions{
-			ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
-				return checkerImported.Program, nil
+			Options: []sema.Option{
+				sema.WithImportHandler(
+					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+						assert.Equal(t,
+							utils.ImportedLocation,
+							location,
+						)
+
+						return sema.CheckerImport{
+							Checker: importedChecker,
+						}, nil
+					},
+				),
 			},
 		},
 	)
@@ -186,7 +217,7 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 	interpreterIDs := map[*interpreter.Interpreter]int{}
 
 	inter, err := interpreter.NewInterpreter(
-		checkerImporting,
+		importingChecker,
 		interpreter.WithOnLoopIterationHandler(func(inter *interpreter.Interpreter, line int) {
 
 			id, ok := interpreterIDs[inter]
@@ -208,7 +239,7 @@ func TestInterpretLoopIterationHandler(t *testing.T) {
 					location,
 				)
 				return interpreter.ProgramImport{
-					Program: checkerImported.Program,
+					Program: importedChecker.Program,
 				}
 			},
 		),
@@ -246,20 +277,25 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 
 	t.Parallel()
 
-	checkerImported, err := checker.ParseAndCheck(t, `
-      pub fun a() {}
+	importedChecker, err := checker.ParseAndCheckWithOptions(t,
+		`
+          pub fun a() {}
 
-      pub fun b() {
-          true
-          true
-          a()
-          true
-          true
-      }
-    `)
+          pub fun b() {
+              true
+              true
+              a()
+              true
+              true
+          }
+        `,
+		checker.ParseAndCheckOptions{
+			Location: utils.ImportedLocation,
+		},
+	)
 	require.NoError(t, err)
 
-	checkerImporting, err := checker.ParseAndCheckWithOptions(t,
+	importingChecker, err := checker.ParseAndCheckWithOptions(t,
 		`
           import b from "imported"
 
@@ -280,8 +316,19 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
           }
         `,
 		checker.ParseAndCheckOptions{
-			ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
-				return checkerImported.Program, nil
+			Options: []sema.Option{
+				sema.WithImportHandler(
+					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+						assert.Equal(t,
+							utils.ImportedLocation,
+							location,
+						)
+
+						return sema.CheckerImport{
+							Checker: importedChecker,
+						}, nil
+					},
+				),
 			},
 		},
 	)
@@ -297,7 +344,7 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 	interpreterIDs := map[*interpreter.Interpreter]int{}
 
 	inter, err := interpreter.NewInterpreter(
-		checkerImporting,
+		importingChecker,
 		interpreter.WithOnFunctionInvocationHandler(
 			func(inter *interpreter.Interpreter, line int) {
 
@@ -321,7 +368,7 @@ func TestInterpretFunctionInvocationHandler(t *testing.T) {
 					location,
 				)
 				return interpreter.ProgramImport{
-					Program: checkerImported.Program,
+					Program: importedChecker.Program,
 				}
 			},
 		),

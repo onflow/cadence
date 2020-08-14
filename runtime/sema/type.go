@@ -3868,7 +3868,8 @@ func (p TypeParameter) Equal(other *TypeParameter) bool {
 
 func (p TypeParameter) checkTypeBound(ty Type, typeRange ast.Range) error {
 	if p.TypeBound == nil ||
-		p.TypeBound.IsInvalidType() {
+		p.TypeBound.IsInvalidType() ||
+		ty.IsInvalidType() {
 
 		return nil
 	}
