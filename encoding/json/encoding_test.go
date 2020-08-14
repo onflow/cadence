@@ -1231,6 +1231,20 @@ func TestExportRecursiveType(t *testing.T) {
 		}.WithType(ty),
 		`{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"foo","value":{"type": "Optional","value":null}}]}}`,
 	)
+
+}
+
+func TestEncodePath(t *testing.T) {
+
+	t.Parallel()
+
+	testAllEncodeAndDecode(t, []encodeTest{
+		{
+			"Simple",
+			cadence.Path{Domain: "storage", Identifier: "foo"},
+			`{"type":"Path","value":{"domain":"storage","identifier":"foo"}}`,
+		},
+	}...)
 }
 
 func convertValueFromScript(t *testing.T, script string) cadence.Value {
@@ -1249,10 +1263,19 @@ func convertValueFromScript(t *testing.T, script string) cadence.Value {
 }
 
 func testAllEncodeAndDecode(t *testing.T, tests ...encodeTest) {
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			testEncodeAndDecode(t, test.val, test.expected)
+
+	test := func(testCase encodeTest) {
+
+		t.Run(testCase.name, func(t *testing.T) {
+
+			t.Parallel()
+
+			testEncodeAndDecode(t, testCase.val, testCase.expected)
 		})
+	}
+
+	for _, testCase := range tests {
+		test(testCase)
 	}
 }
 

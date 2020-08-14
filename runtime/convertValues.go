@@ -110,6 +110,8 @@ func exportValueWithInterpreter(value interpreter.Value, inter *interpreter.Inte
 		return exportStorageReferenceValue(v)
 	case interpreter.LinkValue:
 		return exportLinkValue(v, inter)
+	case interpreter.PathValue:
+		return exportPathValue(v)
 	}
 
 	panic(fmt.Sprintf("cannot export value of type %T", value))
@@ -281,6 +283,11 @@ func importValue(value cadence.Value) interpreter.Value {
 		return importCompositeValue(common.CompositeKindResource, v.ResourceType.ID(), v.ResourceType.Fields, v.Fields)
 	case cadence.Event:
 		return importCompositeValue(common.CompositeKindEvent, v.EventType.ID(), v.EventType.Fields, v.Fields)
+	case cadence.Path:
+		return interpreter.PathValue{
+			Domain:     common.PathDomainFromName(v.Domain),
+			Identifier: v.Identifier,
+		}
 	}
 
 	panic(fmt.Sprintf("cannot import value of type %T", value))
@@ -342,4 +349,11 @@ func importCompositeValue(
 		fields,
 		nil,
 	)
+}
+
+func exportPathValue(v interpreter.PathValue) cadence.Value {
+	return cadence.Path{
+		Domain:     v.Domain.Name(),
+		Identifier: v.Identifier,
+	}
 }

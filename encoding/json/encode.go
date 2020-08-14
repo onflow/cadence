@@ -136,6 +136,11 @@ type jsonLinkValue struct {
 	BorrowType string `json:"borrowType"`
 }
 
+type jsonPathValue struct {
+	Domain     string `json:"domain"`
+	Identifier string `json:"identifier"`
+}
+
 const (
 	voidTypeStr             = "Void"
 	optionalTypeStr         = "Optional"
@@ -170,6 +175,7 @@ const (
 	contractTypeStr         = "Contract"
 	storageReferenceTypeStr = "StorageReference"
 	linkTypeStr             = "Link"
+	pathTypeStr             = "Path"
 )
 
 // prepare traverses the object graph of the provided value and constructs
@@ -242,6 +248,8 @@ func (e *Encoder) prepare(v cadence.Value) jsonValue {
 		return e.prepareStorageReference(x)
 	case cadence.Link:
 		return e.prepareLink(x)
+	case cadence.Path:
+		return e.preparePath(x)
 	default:
 		panic(fmt.Errorf("unsupported value: %T, %v", v, v))
 	}
@@ -525,6 +533,16 @@ func (e *Encoder) prepareLink(x cadence.Link) jsonValue {
 		Value: jsonLinkValue{
 			TargetPath: x.TargetPath,
 			BorrowType: x.BorrowType,
+		},
+	}
+}
+
+func (e *Encoder) preparePath(x cadence.Path) jsonValue {
+	return jsonValueObject{
+		Type: pathTypeStr,
+		Value: jsonPathValue{
+			Domain:     x.Domain,
+			Identifier: x.Identifier,
 		},
 	}
 }
