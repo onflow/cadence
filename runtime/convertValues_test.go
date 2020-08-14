@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -192,6 +193,17 @@ var exportTests = []exportTest{
 		label:    "UFix64",
 		value:    interpreter.UFix64Value(123000000),
 		expected: cadence.UFix64(123000000),
+	},
+	{
+		label: "Path",
+		value: interpreter.PathValue{
+			Domain:     common.PathDomainStorage,
+			Identifier: "foo",
+		},
+		expected: cadence.Path{
+			Domain:     "storage",
+			Identifier: "foo",
+		},
 	},
 }
 

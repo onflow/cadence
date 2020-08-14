@@ -83,3 +83,18 @@ func (i PathDomain) Name() string {
 
 	panic(errors.NewUnreachableError())
 }
+
+func PathDomainFromName(name string) PathDomain {
+	switch name {
+	case "storage":
+		return PathDomainStorage
+
+	case "private":
+		return PathDomainPrivate
+
+	case "public":
+		return PathDomainPublic
+	}
+
+	panic(errors.NewUnreachableError())
+}

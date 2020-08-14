@@ -1009,3 +1009,20 @@ func (v StorageReference) Type() Type {
 func (v StorageReference) ToGoValue() interface{} {
 	return nil
 }
+
+// Path
+
+type Path struct {
+	Domain     string
+	Identifier string
+}
+
+func (Path) isValue() {}
+
+func (Path) Type() Type {
+	return PathType{}
+}
+
+func (Path) ToGoValue() interface{} {
+	return nil
+}
