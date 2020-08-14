@@ -28,8 +28,10 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime"
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 const replFilename = "REPL"
@@ -40,6 +42,8 @@ func RunREPL() {
 	lineNumber := 1
 	lineIsContinuation := false
 	code := ""
+
+	codes := map[string]string{}
 
 	repl, err := runtime.NewREPL(
 		func(err error) {
@@ -52,6 +56,37 @@ func RunREPL() {
 			}
 
 			println(colorizeResult(value))
+		},
+		[]sema.Option{
+			sema.WithImportHandler(
+				func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+					stringLocation, ok := location.(ast.StringLocation)
+
+					if !ok {
+						return nil, &sema.CheckerError{
+							Errors: []error{
+								fmt.Errorf("cannot import `%s`. only files are supported", location),
+							},
+						}
+					}
+
+					importChecker, err := checker.EnsureLoaded(
+						location,
+						func() *ast.Program {
+							filename := string(stringLocation)
+							imported, _ := cmd.PrepareProgramFromFile(filename, codes)
+							return imported
+						},
+					)
+					if err != nil {
+						return nil, err
+					}
+
+					return sema.CheckerImport{
+						Checker: importChecker,
+					}, nil
+				},
+			),
 		},
 	)
 

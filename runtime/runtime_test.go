@@ -87,7 +87,8 @@ func newTestStorage(
 }
 
 type testRuntimeInterface struct {
-	resolveImport      func(Location) ([]byte, error)
+	resolveLocation    func(identifiers []Identifier, location Location) []ResolvedLocation
+	getCode            func(_ Location) ([]byte, error)
 	getCachedProgram   func(Location) (*ast.Program, error)
 	cacheProgram       func(Location, *ast.Program) error
 	storage            testRuntimeInterfaceStorage
@@ -121,11 +122,23 @@ type testRuntimeInterface struct {
 
 var _ Interface = &testRuntimeInterface{}
 
-func (i *testRuntimeInterface) ResolveImport(location Location) ([]byte, error) {
-	if i.resolveImport == nil {
+func (i *testRuntimeInterface) ResolveLocation(identifiers []Identifier, location Location) []ResolvedLocation {
+	if i.resolveLocation == nil {
+		return []ResolvedLocation{
+			{
+				Location:    location,
+				Identifiers: identifiers,
+			},
+		}
+	}
+	return i.resolveLocation(identifiers, location)
+}
+
+func (i *testRuntimeInterface) GetCode(location Location) ([]byte, error) {
+	if i.getCode == nil {
 		return nil, nil
 	}
-	return i.resolveImport(location)
+	return i.getCode(location)
 }
 
 func (i *testRuntimeInterface) GetCachedProgram(location Location) (*ast.Program, error) {
@@ -328,7 +341,7 @@ func TestRuntimeImport(t *testing.T) {
     `)
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(location Location) (bytes []byte, err error) {
+		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case StringLocation("imported"):
 				return importedScript, nil
@@ -375,7 +388,7 @@ func TestRuntimeProgramCache(t *testing.T) {
 			programCache[location.ID()] = program
 			return nil
 		},
-		resolveImport: func(location Location) ([]byte, error) {
+		getCode: func(location Location) ([]byte, error) {
 			switch location {
 			case importedScriptLocation:
 				return importedScript, nil
@@ -1242,7 +1255,7 @@ func TestRuntimeStorage(t *testing.T) {
 			var loggedMessages []string
 
 			runtimeInterface := &testRuntimeInterface{
-				resolveImport: func(location Location) ([]byte, error) {
+				getCode: func(location Location) ([]byte, error) {
 					switch location {
 					case StringLocation("imported"):
 						return imported, nil
@@ -1334,7 +1347,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(location Location) (bytes []byte, err error) {
+		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case StringLocation("container"):
 				return container, nil
@@ -1410,7 +1423,7 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(location Location) (bytes []byte, err error) {
+		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case StringLocation("deep-thought"):
 				return deepThought, nil
@@ -1486,7 +1499,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(location Location) (bytes []byte, err error) {
+		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case StringLocation("imported"):
 				return imported, nil
@@ -1563,7 +1576,7 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
     `)
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(location Location) (bytes []byte, err error) {
+		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case StringLocation("imported"):
 				return imported, nil
@@ -1630,7 +1643,7 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(location Location) (bytes []byte, err error) {
+		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case StringLocation("imported"):
 				return imported, nil
@@ -1703,7 +1716,7 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(location Location) (bytes []byte, err error) {
+		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case StringLocation("imported"):
 				return imported, nil
@@ -1788,7 +1801,7 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(location Location) (bytes []byte, err error) {
+		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case StringLocation("imported1"):
 				return imported1, nil
@@ -1980,7 +1993,7 @@ func TestRuntimeStorageChanges(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(location Location) (bytes []byte, err error) {
+		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case StringLocation("imported"):
 				return imported, nil
@@ -2128,7 +2141,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(location Location) ([]byte, error) {
+		getCode: func(location Location) ([]byte, error) {
 			switch location {
 			case StringLocation("imported"):
 				return imported, nil
@@ -2345,48 +2358,6 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 	}
 }
 
-func TestRuntimeCyclicImport(t *testing.T) {
-
-	t.Parallel()
-
-	runtime := NewInterpreterRuntime()
-
-	imported := []byte(`
-      import "imported"
-    `)
-
-	script := []byte(
-		`
-          import "imported"
-
-          transaction {
-            execute {}
-          }
-        `,
-	)
-
-	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(location Location) (bytes []byte, err error) {
-			switch location {
-			case StringLocation("imported"):
-				return imported, nil
-			default:
-				return nil, fmt.Errorf("unknown import location: %s", location)
-			}
-		},
-		getSigningAccounts: func() []Address {
-			return nil
-		},
-	}
-
-	nextTransactionLocation := newTransactionLocationGenerator()
-
-	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
-
-	require.Error(t, err)
-	require.IsType(t, Error{}, err)
-	assert.IsType(t, ast.CyclicImportsError{}, err.(Error).Unwrap())
-}
 
 func ArrayValueFromBytes(bytes []byte) *interpreter.ArrayValue {
 	byteValues := make([]interpreter.Value, len(bytes))
@@ -2622,7 +2593,7 @@ func TestRuntimeContractAccount(t *testing.T) {
 	var events []cadence.Event
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(_ Location) (bytes []byte, err error) {
+		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(nil, nil),
@@ -2704,7 +2675,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 	var loggedMessage string
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(_ Location) (bytes []byte, err error) {
+		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(nil, nil),
@@ -2895,7 +2866,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 	signerAccount := address1Value
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(location Location) (bytes []byte, err error) {
+		getCode: func(location Location) (bytes []byte, err error) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
 		},
@@ -3002,7 +2973,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 	signerAccount := address1Value
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(location Location) (bytes []byte, err error) {
+		getCode: func(location Location) (bytes []byte, err error) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
 		},
@@ -3127,7 +3098,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 	var nextAccount byte = 0x2
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(location Location) (bytes []byte, err error) {
+		getCode: func(location Location) (bytes []byte, err error) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
 		},
@@ -3390,7 +3361,7 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 			var events []cadence.Event
 
 			runtimeInterface := &testRuntimeInterface{
-				resolveImport: func(_ Location) (bytes []byte, err error) {
+				getCode: func(_ Location) (bytes []byte, err error) {
 					return accountCode, nil
 				},
 				storage: newTestStorage(nil, nil),
@@ -3494,7 +3465,7 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(location Location) (bytes []byte, err error) {
+		getCode: func(location Location) (bytes []byte, err error) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
 		},
@@ -3636,7 +3607,7 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(location Location) (bytes []byte, err error) {
+		getCode: func(location Location) (bytes []byte, err error) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
 		},
@@ -3783,7 +3754,7 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(location Location) (bytes []byte, err error) {
+		getCode: func(location Location) (bytes []byte, err error) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
 		},
@@ -4000,7 +3971,7 @@ func TestRuntimeMetrics(t *testing.T) {
 			getSigningAccounts: func() []Address {
 				return []Address{{42}}
 			},
-			resolveImport: func(location Location) (bytes []byte, err error) {
+			getCode: func(location Location) (bytes []byte, err error) {
 				switch location {
 				case imported1Location:
 					return importedScript1, nil
@@ -4165,7 +4136,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 	}
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(_ Location) (bytes []byte, err error) {
+		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(nil, onWrite),
@@ -4258,7 +4229,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	}
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(_ Location) (bytes []byte, err error) {
+		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(nil, onWrite),
@@ -4417,7 +4388,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 			accountCounter++
 			return Address{accountCounter}, nil
 		},
-		resolveImport: func(location Location) (bytes []byte, err error) {
+		getCode: func(location Location) (bytes []byte, err error) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
 		},
@@ -4520,7 +4491,7 @@ func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
 			accountCounter++
 			return Address{accountCounter}, nil
 		},
-		resolveImport: func(location Location) (bytes []byte, err error) {
+		getCode: func(location Location) (bytes []byte, err error) {
 			key := string(location.(AddressLocation).ID())
 			return accountCodes[key], nil
 		},
@@ -4654,7 +4625,7 @@ func TestRuntimeTransaction_UpdateAccountCodeUnsafeNotInitializing(t *testing.T)
 		getSigningAccounts: func() []Address {
 			return []Address{common.BytesToAddress([]byte{0x42})}
 		},
-		resolveImport: func(_ Location) (bytes []byte, err error) {
+		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
 		updateAccountCode: func(address Address, code []byte) (err error) {

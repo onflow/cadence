@@ -133,7 +133,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	}
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(_ Location) (bytes []byte, err error) {
+		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(onRead, onWrite),
@@ -613,7 +613,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
 	}
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(_ Location) (bytes []byte, err error) {
+		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(onRead, onWrite),
@@ -845,7 +845,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_DictionaryTransfer(t *te
 	}
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(_ Location) (bytes []byte, err error) {
+		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(onRead, onWrite),
@@ -997,7 +997,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Removal(t *testing.T) {
 	signer := common.BytesToAddress([]byte{0x1})
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(_ Location) (bytes []byte, err error) {
+		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(nil, nil),
@@ -1074,7 +1074,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Destruction(t *testing.T
 	signer := common.BytesToAddress([]byte{0x1})
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(_ Location) (bytes []byte, err error) {
+		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(nil, nil),
@@ -1185,7 +1185,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Insertion(t *testing.T) 
 	signer := common.BytesToAddress([]byte{0x1})
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(_ Location) (bytes []byte, err error) {
+		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(nil, nil),
@@ -1299,7 +1299,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_ValueTransferAndDestroy(
 	testStorage := newTestStorage(nil, nil)
 
 	runtimeInterface := &testRuntimeInterface{
-		resolveImport: func(_ Location) (bytes []byte, err error) {
+		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
 		storage: testStorage,

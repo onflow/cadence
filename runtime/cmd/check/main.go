@@ -172,8 +172,9 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 	var err error
 	var checker *sema.Checker
 	var program *ast.Program
-	var codes map[string]string
 	var must func(error)
+
+	codes := map[string]string{}
 
 	func() {
 		defer func() {
@@ -183,9 +184,9 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 			}
 		}()
 
-		program, codes, must = cmd.PrepareProgram(code, path)
+		program, must = cmd.PrepareProgram(code, path, codes)
 
-		checker, _ = cmd.PrepareChecker(program, path, must)
+		checker, _ = cmd.PrepareChecker(program, path, codes, must)
 
 		err = checker.Check()
 		if err != nil {
@@ -202,7 +203,7 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 	if bench && err == nil {
 		benchRes := testing.Benchmark(func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				checker, must = cmd.PrepareChecker(program, path, must)
+				checker, must = cmd.PrepareChecker(program, path, codes, must)
 				must(checker.Check())
 				if err != nil {
 					panic(err)

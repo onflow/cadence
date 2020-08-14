@@ -44,7 +44,7 @@ type ImportElement struct {
 // CheckerImport
 
 type CheckerImport struct {
-	*Checker
+	Checker *Checker
 }
 
 func variablesToImportElements(variables map[string]*Variable) map[string]ImportElement {
@@ -70,7 +70,7 @@ func (i CheckerImport) IsImportableValue(name string) bool {
 		return false
 	}
 
-	_, isPredeclaredValue := i.PredeclaredValues[name]
+	_, isPredeclaredValue := i.Checker.PredeclaredValues[name]
 	return !isPredeclaredValue
 }
 
@@ -79,7 +79,7 @@ func (i CheckerImport) AllTypeElements() map[string]ImportElement {
 }
 
 func (i CheckerImport) IsImportableType(name string) bool {
-	_, isPredeclaredType := i.PredeclaredTypes[name]
+	_, isPredeclaredType := i.Checker.PredeclaredTypes[name]
 	return !isPredeclaredType
 }
 

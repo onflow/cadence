@@ -528,11 +528,6 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	}
 
 	importResolver := r.importResolver(runtimeInterface)
-	err = program.ResolveImports(importResolver)
-	if err != nil {
-		return nil, err
-	}
-
 	valueDeclarations := functions.ToValueDeclarations()
 
 	checker, err := sema.NewChecker(
@@ -543,14 +538,34 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 				sema.WithPredeclaredValues(valueDeclarations),
 				sema.WithPredeclaredTypes(typeDeclarations),
 				sema.WithValidTopLevelDeclarationsHandler(validTopLevelDeclarations),
-				sema.WithImportHandler(func(location ast.Location) sema.Import {
+				sema.WithLocationHandler(runtimeInterface.ResolveLocation),
+				sema.WithImportHandler(func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
 					switch location {
 					case stdlib.CryptoChecker.Location:
 						return sema.CheckerImport{
 							Checker: stdlib.CryptoChecker,
+						}, nil
+
+					default:
+						var program *ast.Program
+						var err error
+						checker, checkerErr := checker.EnsureLoaded(location, func() *ast.Program {
+							program, err = importResolver(location)
+							return program
+						})
+						// TODO: improve
+						if err != nil {
+							return nil, &sema.CheckerError{
+								Errors: []error{err},
+							}
 						}
+						if checkerErr != nil {
+							return nil, checkerErr
+						}
+						return sema.CheckerImport{
+							Checker: checker,
+						}, nil
 					}
-					return nil
 				}),
 				sema.WithCheckHandler(func(location ast.Location, check func()) {
 					reportMetric(
@@ -661,7 +676,6 @@ func (r *interpreterRuntime) importLocationHandler(runtimeInterface Interface) i
 	importResolver := r.importResolver(runtimeInterface)
 
 	return func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
-
 		switch location {
 		case stdlib.CryptoChecker.Location:
 			return interpreter.ProgramImport{
@@ -670,11 +684,6 @@ func (r *interpreterRuntime) importLocationHandler(runtimeInterface Interface) i
 
 		default:
 			program, err := importResolver(location)
-			if err != nil {
-				panic(err)
-			}
-
-			err = program.ResolveImports(importResolver)
 			if err != nil {
 				panic(err)
 			}
@@ -822,7 +831,7 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 
 		var script []byte
 		wrapPanic(func() {
-			script, err = runtimeInterface.ResolveImport(location)
+			script, err = runtimeInterface.GetCode(location)
 		})
 		if err != nil {
 			return nil, err

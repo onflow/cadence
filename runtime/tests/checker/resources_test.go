@@ -1172,9 +1172,14 @@ func TestCheckInvalidCreateImportedResource(t *testing.T) {
 
 	t.Parallel()
 
-	checker, err := ParseAndCheck(t, `
-      pub resource R {}
-	`)
+	importedChecker, err := ParseAndCheckWithOptions(t,
+		`
+          pub resource R {}
+	    `,
+		ParseAndCheckOptions{
+			Location: ImportedLocation,
+		},
+	)
 
 	require.NoError(t, err)
 
@@ -1187,8 +1192,14 @@ func TestCheckInvalidCreateImportedResource(t *testing.T) {
           }
         `,
 		ParseAndCheckOptions{
-			ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
-				return checker.Program, nil
+			Options: []sema.Option{
+				sema.WithImportHandler(
+					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+						return sema.CheckerImport{
+							Checker: importedChecker,
+						}, nil
+					},
+				),
 			},
 		},
 	)

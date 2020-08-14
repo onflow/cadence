@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 const BlockHashLength = 32
@@ -36,9 +37,13 @@ type Block struct {
 	Timestamp int64
 }
 
+type ResolvedLocation = sema.ResolvedLocation
+
 type Interface interface {
-	// ResolveImport resolves an import of a program.
-	ResolveImport(Location) ([]byte, error)
+	// ResolveLocation resolves an import location.
+	ResolveLocation(identifiers []Identifier, location Location) []ResolvedLocation
+	// GetCode returns the code at a given location
+	GetCode(location Location) ([]byte, error)
 	// GetCachedProgram attempts to get a parsed program from a cache.
 	GetCachedProgram(Location) (*ast.Program, error)
 	// CacheProgram adds a parsed program to a cache.
@@ -115,7 +120,16 @@ type EmptyRuntimeInterface struct{}
 
 var _ Interface = &EmptyRuntimeInterface{}
 
-func (i *EmptyRuntimeInterface) ResolveImport(_ Location) ([]byte, error) {
+func (i *EmptyRuntimeInterface) ResolveLocation(identifiers []Identifier, location Location) []ResolvedLocation {
+	return []ResolvedLocation{
+		{
+			Location:    location,
+			Identifiers: identifiers,
+		},
+	}
+}
+
+func (i *EmptyRuntimeInterface) GetCode(_ Location) ([]byte, error) {
 	return nil, nil
 }
 
