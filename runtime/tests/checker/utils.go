@@ -36,7 +36,6 @@ func ParseAndCheck(t *testing.T, code string) (*sema.Checker, error) {
 }
 
 type ParseAndCheckOptions struct {
-	ImportResolver   ast.ImportResolver
 	Location         ast.Location
 	IgnoreParseError bool
 	Options          []sema.Option
@@ -52,13 +51,6 @@ func ParseAndCheckWithOptions(
 	if !options.IgnoreParseError && !assert.NoError(t, err) {
 		assert.FailNow(t, errors.UnrollChildErrors(err))
 		return nil, err
-	}
-
-	if options.ImportResolver != nil {
-		err := program.ResolveImports(options.ImportResolver)
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	if options.Location == nil {

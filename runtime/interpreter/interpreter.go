@@ -3136,12 +3136,21 @@ func (interpreter *Interpreter) VisitPragmaDeclaration(_ *ast.PragmaDeclaration)
 
 func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDeclaration) ast.Repr {
 
-	location := declaration.Location
+	resolvedLocations := interpreter.Checker.Elaboration.ImportDeclarationsResolvedLocations[declaration]
+
+	for _, resolvedLocation := range resolvedLocations {
+		interpreter.importResolvedLocation(resolvedLocation)
+	}
+
+	return Done{}
+}
+
+func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.ResolvedLocation) {
 
 	subInterpreter := interpreter.ensureLoaded(
-		location,
+		resolvedLocation.Location,
 		func() Import {
-			return interpreter.importLocationHandler(interpreter, location)
+			return interpreter.importLocationHandler(interpreter, resolvedLocation.Location)
 		},
 	)
 
@@ -3149,10 +3158,10 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 	// which variables need to be declared
 
 	var variables map[string]*Variable
-	identifierLength := len(declaration.Identifiers)
+	identifierLength := len(resolvedLocation.Identifiers)
 	if identifierLength > 0 {
 		variables = make(map[string]*Variable, identifierLength)
-		for _, identifier := range declaration.Identifiers {
+		for _, identifier := range resolvedLocation.Identifiers {
 			variables[identifier.Identifier] =
 				subInterpreter.Globals[identifier.Identifier]
 		}
@@ -3178,8 +3187,6 @@ func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDe
 		interpreter.setVariable(name, variable)
 		interpreter.Globals[name] = variable
 	}
-
-	return Done{}
 }
 
 func (interpreter *Interpreter) VisitTransactionDeclaration(declaration *ast.TransactionDeclaration) ast.Repr {

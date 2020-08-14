@@ -720,11 +720,25 @@ func TestCheckAccessImportGlobalValue(t *testing.T) {
                        import a, b, c from "imported"
                     `,
 					ParseAndCheckOptions{
-						ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
-							return imported, nil
-						},
 						Options: []sema.Option{
 							sema.WithAccessCheckMode(checkMode),
+							sema.WithImportHandler(
+								func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+									importChecker, err := checker.EnsureLoaded(
+										location,
+										func() *ast.Program {
+											return imported
+										},
+									)
+									if err != nil {
+										return nil, err
+									}
+
+									return sema.CheckerImport{
+										Checker: importChecker,
+									}, nil
+								},
+							),
 						},
 					},
 				)
@@ -1844,11 +1858,25 @@ func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
                   }
                 `,
 				ParseAndCheckOptions{
-					ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
-						return imported, nil
-					},
 					Options: []sema.Option{
 						sema.WithAccessCheckMode(checkMode),
+						sema.WithImportHandler(
+							func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+								importChecker, err := checker.EnsureLoaded(
+									location,
+									func() *ast.Program {
+										return imported
+									},
+								)
+								if err != nil {
+									return nil, err
+								}
+
+								return sema.CheckerImport{
+									Checker: importChecker,
+								}, nil
+							},
+						),
 					},
 				},
 			)
@@ -1891,8 +1919,24 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
            }
         `,
 		ParseAndCheckOptions{
-			ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
-				return imported, nil
+			Options: []sema.Option{
+				sema.WithImportHandler(
+					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+						importChecker, err := checker.EnsureLoaded(
+							location,
+							func() *ast.Program {
+								return imported
+							},
+						)
+						if err != nil {
+							return nil, err
+						}
+
+						return sema.CheckerImport{
+							Checker: importChecker,
+						}, nil
+					},
+				),
 			},
 		},
 	)

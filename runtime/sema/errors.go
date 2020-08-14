@@ -994,31 +994,10 @@ type UnresolvedImportError struct {
 }
 
 func (e *UnresolvedImportError) Error() string {
-	return fmt.Sprintf(
-		"import of location `%s` could not be resolved",
-		e.ImportLocation,
-	)
+	return "import could not be resolved"
 }
 
 func (*UnresolvedImportError) isSemanticError() {}
-
-// RepeatedImportError
-
-// TODO: make warning?
-
-type RepeatedImportError struct {
-	ImportLocation ast.Location
-	ast.Range
-}
-
-func (e *RepeatedImportError) Error() string {
-	return fmt.Sprintf(
-		"repeated import of location `%s`",
-		e.ImportLocation,
-	)
-}
-
-func (*RepeatedImportError) isSemanticError() {}
 
 // NotExportedError
 
@@ -1064,7 +1043,7 @@ func (e *NotExportedError) EndPosition() ast.Position {
 type ImportedProgramError struct {
 	CheckerError   *CheckerError
 	ImportLocation ast.Location
-	Pos            ast.Position
+	ast.Range
 }
 
 func (e *ImportedProgramError) Error() string {
@@ -1079,14 +1058,6 @@ func (e *ImportedProgramError) ChildErrors() []error {
 }
 
 func (*ImportedProgramError) isSemanticError() {}
-
-func (e *ImportedProgramError) StartPosition() ast.Position {
-	return e.Pos
-}
-
-func (e *ImportedProgramError) EndPosition() ast.Position {
-	return e.Pos
-}
 
 // AlwaysFailingNonResourceCastingTypeError
 

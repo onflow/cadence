@@ -4027,14 +4027,19 @@ func TestInterpretImport(t *testing.T) {
 
 	t.Parallel()
 
-	checkerImported, err := checker.ParseAndCheck(t, `
-      pub fun answer(): Int {
-          return 42
-      }
-    `)
+	importedChecker, err := checker.ParseAndCheckWithOptions(t,
+		`
+          pub fun answer(): Int {
+              return 42
+          }
+        `,
+		checker.ParseAndCheckOptions{
+			Location: ImportedLocation,
+		},
+	)
 	require.NoError(t, err)
 
-	checkerImporting, err := checker.ParseAndCheckWithOptions(t,
+	importingChecker, err := checker.ParseAndCheckWithOptions(t,
 		`
           import answer from "imported"
 
@@ -4043,19 +4048,26 @@ func TestInterpretImport(t *testing.T) {
           }
         `,
 		checker.ParseAndCheckOptions{
-			ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
-				assert.Equal(t,
-					ImportedLocation,
-					location,
-				)
-				return checkerImported.Program, nil
+			Options: []sema.Option{
+				sema.WithImportHandler(
+					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+						assert.Equal(t,
+							ImportedLocation,
+							location,
+						)
+
+						return sema.CheckerImport{
+							Checker: importedChecker,
+						}, nil
+					},
+				),
 			},
 		},
 	)
 	require.NoError(t, err)
 
 	inter, err := interpreter.NewInterpreter(
-		checkerImporting,
+		importingChecker,
 		interpreter.WithImportLocationHandler(
 			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
 				assert.Equal(t,
@@ -4063,7 +4075,7 @@ func TestInterpretImport(t *testing.T) {
 					location,
 				)
 				return interpreter.ProgramImport{
-					Program: checkerImported.Program,
+					Program: importedChecker.Program,
 				}
 			},
 		),
@@ -4091,7 +4103,7 @@ func TestInterpretImportError(t *testing.T) {
 			stdlib.PanicFunction,
 		}.ToValueDeclarations()
 
-	checkerImported, err := checker.ParseAndCheckWithOptions(t,
+	importedChecker, err := checker.ParseAndCheckWithOptions(t,
 		`
           pub fun answer(): Int {
               return panic("?!")
@@ -4105,7 +4117,7 @@ func TestInterpretImportError(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	checkerImporting, err := checker.ParseAndCheckWithOptions(t,
+	importingChecker, err := checker.ParseAndCheckWithOptions(t,
 		`
           import answer from "imported"
 
@@ -4116,13 +4128,18 @@ func TestInterpretImportError(t *testing.T) {
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),
-			},
-			ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
-				assert.Equal(t,
-					ImportedLocation,
-					location,
-				)
-				return checkerImported.Program, nil
+				sema.WithImportHandler(
+					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+						assert.Equal(t,
+							ImportedLocation,
+							location,
+						)
+
+						return sema.CheckerImport{
+							Checker: importedChecker,
+						}, nil
+					},
+				),
 			},
 		},
 	)
@@ -4133,7 +4150,7 @@ func TestInterpretImportError(t *testing.T) {
 	}.ToValues()
 
 	inter, err := interpreter.NewInterpreter(
-		checkerImporting,
+		importingChecker,
 		interpreter.WithPredefinedValues(values),
 		interpreter.WithImportLocationHandler(
 			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
@@ -4142,7 +4159,7 @@ func TestInterpretImportError(t *testing.T) {
 					location,
 				)
 				return interpreter.ProgramImport{
-					Program: checkerImported.Program,
+					Program: importedChecker.Program,
 				}
 			},
 		),
@@ -5396,21 +5413,26 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
 
 	t.Parallel()
 
-	checkerImported, err := checker.ParseAndCheck(t, `
-      // function must have arguments
-      pub fun x(x: Int) {}
+	importedChecker, err := checker.ParseAndCheckWithOptions(t,
+		`
+          // function must have arguments
+          pub fun x(x: Int) {}
 
-      // invocation must be in composite
-      pub struct Y {
+          // invocation must be in composite
+          pub struct Y {
 
-          pub fun x() {
-              x(x: 1)
+              pub fun x() {
+                  x(x: 1)
+              }
           }
-      }
-    `)
+        `,
+		checker.ParseAndCheckOptions{
+			Location: ImportedLocation,
+		},
+	)
 	require.NoError(t, err)
 
-	checkerImporting, err := checker.ParseAndCheckWithOptions(t,
+	importingChecker, err := checker.ParseAndCheckWithOptions(t,
 		`
           import Y from "imported"
 
@@ -5420,19 +5442,26 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
           }
         `,
 		checker.ParseAndCheckOptions{
-			ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
-				assert.Equal(t,
-					ImportedLocation,
-					location,
-				)
-				return checkerImported.Program, nil
+			Options: []sema.Option{
+				sema.WithImportHandler(
+					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+						assert.Equal(t,
+							ImportedLocation,
+							location,
+						)
+
+						return sema.CheckerImport{
+							Checker: importedChecker,
+						}, nil
+					},
+				),
 			},
 		},
 	)
 	require.NoError(t, err)
 
 	inter, err := interpreter.NewInterpreter(
-		checkerImporting,
+		importingChecker,
 		interpreter.WithImportLocationHandler(
 			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
 				assert.Equal(t,
@@ -5440,7 +5469,7 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
 					location,
 				)
 				return interpreter.ProgramImport{
-					Program: checkerImported.Program,
+					Program: importedChecker.Program,
 				}
 			},
 		),
@@ -6836,18 +6865,23 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 
 	t.Parallel()
 
-	checkerImported, err := checker.ParseAndCheck(t, `
-      struct interface Foo {
-          fun check(answer: Int) {
-              pre {
-                  answer == 42
+	importedChecker, err := checker.ParseAndCheckWithOptions(t,
+		`
+          struct interface Foo {
+              fun check(answer: Int) {
+                  pre {
+                      answer == 42
+                  }
               }
           }
-      }
-	`)
+	    `,
+		checker.ParseAndCheckOptions{
+			Location: ImportedLocation,
+		},
+	)
 	require.NoError(t, err)
 
-	checkerImporting, err := checker.ParseAndCheckWithOptions(t,
+	importingChecker, err := checker.ParseAndCheckWithOptions(t,
 		`
           import Foo from "imported"
 
@@ -6861,19 +6895,26 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
           }
         `,
 		checker.ParseAndCheckOptions{
-			ImportResolver: func(location ast.Location) (program *ast.Program, e error) {
-				assert.Equal(t,
-					ast.StringLocation("imported"),
-					location,
-				)
-				return checkerImported.Program, nil
+			Options: []sema.Option{
+				sema.WithImportHandler(
+					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+						assert.Equal(t,
+							ImportedLocation,
+							location,
+						)
+
+						return sema.CheckerImport{
+							Checker: importedChecker,
+						}, nil
+					},
+				),
 			},
 		},
 	)
 	require.NoError(t, err)
 
 	inter, err := interpreter.NewInterpreter(
-		checkerImporting,
+		importingChecker,
 		interpreter.WithImportLocationHandler(
 			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
 				assert.Equal(t,
@@ -6881,7 +6922,7 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 					location,
 				)
 				return interpreter.ProgramImport{
-					Program: checkerImported.Program,
+					Program: importedChecker.Program,
 				}
 			},
 		),

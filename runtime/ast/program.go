@@ -18,7 +18,9 @@
 
 package ast
 
-import "fmt"
+import (
+	"encoding/json"
+)
 
 type Program struct {
 	// all declarations, in the order they are defined
@@ -35,10 +37,6 @@ type Program struct {
 	_functionDeclarations []*FunctionDeclaration
 	// Use `TransactionDeclarations()` instead
 	_transactionDeclarations []*TransactionDeclaration
-	// Use `ImportedPrograms()` instead
-	_importedPrograms map[LocationID]*Program
-	// Use `ImportedLocations()` instead
-	_importLocations []Location
 }
 
 func (p *Program) StartPosition() Position {
@@ -104,95 +102,6 @@ func (p *Program) TransactionDeclarations() []*TransactionDeclaration {
 	return p._transactionDeclarations
 }
 
-// ImportedPrograms returns the sub-programs imported by this program, indexed by location ID.
-func (p *Program) ImportedPrograms() map[LocationID]*Program {
-	if p._importedPrograms == nil {
-		p._importedPrograms = make(map[LocationID]*Program)
-	}
-
-	return p._importedPrograms
-}
-
-// ImportLocations returns the import locations declared by this program.
-func (p *Program) ImportLocations() []Location {
-	if p._importLocations == nil {
-		p.updateDeclarations()
-	}
-
-	return p._importLocations
-}
-
-type ImportResolver func(location Location) (*Program, error)
-
-func (p *Program) ResolveImports(resolver ImportResolver) error {
-	return p.resolveImports(
-		resolver,
-		map[LocationID]bool{},
-		map[LocationID]*Program{},
-	)
-}
-
-type CyclicImportsError struct {
-	Location Location
-}
-
-func (e CyclicImportsError) Error() string {
-	return fmt.Sprintf("cyclic import of `%s`", e.Location)
-}
-
-func (p *Program) resolveImports(
-	resolver ImportResolver,
-	resolving map[LocationID]bool,
-	resolved map[LocationID]*Program,
-) error {
-	locations := p.ImportLocations()
-
-	for _, location := range locations {
-
-		imported, ok := resolved[location.ID()]
-		if !ok {
-			var err error
-			imported, err = resolver(location)
-			if err != nil {
-				return err
-			}
-			if imported != nil {
-				resolved[location.ID()] = imported
-			}
-		}
-
-		if imported == nil {
-			continue
-		}
-
-		p.setImportedProgram(location.ID(), imported)
-
-		if resolving[location.ID()] {
-			return CyclicImportsError{Location: location}
-		}
-
-		resolving[location.ID()] = true
-
-		err := imported.resolveImports(resolver, resolving, resolved)
-		if err != nil {
-			return err
-		}
-
-		delete(resolving, location.ID())
-	}
-
-	return nil
-}
-
-// setImportedProgram adds an imported program to the set of imports, indexed by location ID.
-func (p *Program) setImportedProgram(locationID LocationID, program *Program) {
-	if p._importedPrograms == nil {
-		p._importedPrograms = make(map[LocationID]*Program)
-	}
-
-	p._importedPrograms[locationID] = program
-}
-
 func (p *Program) updateDeclarations() {
 	// Important: allocate instead of nil
 
@@ -202,7 +111,6 @@ func (p *Program) updateDeclarations() {
 	p._interfaceDeclarations = make([]*InterfaceDeclaration, 0)
 	p._functionDeclarations = make([]*FunctionDeclaration, 0)
 	p._transactionDeclarations = make([]*TransactionDeclaration, 0)
-	p._importLocations = make([]Location, 0)
 
 	for _, declaration := range p.Declarations {
 
@@ -226,8 +134,15 @@ func (p *Program) updateDeclarations() {
 			p._transactionDeclarations = append(p._transactionDeclarations, declaration)
 		}
 	}
+}
 
-	for _, importDeclaration := range p.ImportDeclarations() {
-		p._importLocations = append(p._importLocations, importDeclaration.Location)
-	}
+func (p *Program) MarshalJSON() ([]byte, error) {
+	type Alias Program
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+	}{
+		Type:  "Program",
+		Alias: (*Alias)(p),
+	})
 }

@@ -25,18 +25,21 @@ import (
 )
 
 type (
-	Location        = ast.Location
-	LocationID      = ast.LocationID
-	StringLocation  = ast.StringLocation
-	AddressLocation = ast.AddressLocation
+	Location                = ast.Location
+	LocationID              = ast.LocationID
+	StringLocation          = ast.StringLocation
+	AddressLocation         = ast.AddressLocation
+	AddressContractLocation = ast.AddressContractLocation
+	Identifier              = ast.Identifier
 )
 
 const (
-	IdentifierLocationPrefix  = ast.IdentifierLocationPrefix
-	StringLocationPrefix      = ast.StringLocationPrefix
-	AddressLocationPrefix     = ast.AddressLocationPrefix
-	TransactionLocationPrefix = "t"
-	ScriptLocationPrefix      = "s"
+	IdentifierLocationPrefix      = ast.IdentifierLocationPrefix
+	StringLocationPrefix          = ast.StringLocationPrefix
+	AddressLocationPrefix         = ast.AddressLocationPrefix
+	AddressContractLocationPrefix = ast.AddressContractLocationPrefix
+	TransactionLocationPrefix     = "t"
+	ScriptLocationPrefix          = "s"
 )
 
 // TransactionLocation

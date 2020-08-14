@@ -39,7 +39,7 @@ type REPL struct {
 	onResult func(interpreter.Value)
 }
 
-func NewREPL(onError func(error), onResult func(interpreter.Value)) (*REPL, error) {
+func NewREPL(onError func(error), onResult func(interpreter.Value), checkerOptions []sema.Option) (*REPL, error) {
 
 	valueDeclarations := append(
 		stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{
@@ -63,12 +63,19 @@ func NewREPL(onError func(error), onResult func(interpreter.Value)) (*REPL, erro
 		stdlib.BuiltinFunctions...,
 	)
 
+	checkerOptions = append(
+		[]sema.Option{
+			sema.WithPredeclaredValues(valueDeclarations.ToValueDeclarations()),
+			sema.WithPredeclaredTypes(typeDeclarations),
+			sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
+		},
+		checkerOptions...,
+	)
+
 	checker, err := sema.NewChecker(
 		nil,
 		REPLLocation{},
-		sema.WithPredeclaredValues(valueDeclarations.ToValueDeclarations()),
-		sema.WithPredeclaredTypes(typeDeclarations),
-		sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
+		checkerOptions...,
 	)
 	if err != nil {
 		return nil, err
