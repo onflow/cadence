@@ -180,7 +180,7 @@ func (r *interpreterRuntime) ExecuteScript(
 		checker,
 		functions,
 		nil,
-		scriptExecutionFunction(epSignature.Parameters, len(arguments), arguments, runtimeInterface),
+		scriptExecutionFunction(epSignature.Parameters, arguments, runtimeInterface),
 	)
 	if err != nil {
 		return nil, newError(err)
@@ -196,12 +196,11 @@ func (r *interpreterRuntime) ExecuteScript(
 	return exportValue(value), nil
 }
 
-func scriptExecutionFunction(parameters []*sema.Parameter, argumentCount int, arguments [][]byte, runtimeInterface Interface) func(inter *interpreter.Interpreter) (interpreter.Value, error) {
+func scriptExecutionFunction(parameters []*sema.Parameter, arguments [][]byte, runtimeInterface Interface) func(inter *interpreter.Interpreter) (interpreter.Value, error) {
 	return func(inter *interpreter.Interpreter) (interpreter.Value, error) {
 		values, err := validateArgumentParams(
 			inter,
 			runtimeInterface,
-			argumentCount,
 			arguments,
 			parameters)
 		if err != nil {
@@ -370,7 +369,6 @@ func (r *interpreterRuntime) ExecuteTransaction(
 		nil,
 		r.transactionExecutionFunction(
 			transactionType.Parameters,
-			argumentCount,
 			arguments,
 			runtimeInterface,
 			authorizerValues,
@@ -406,7 +404,6 @@ func wrapPanic(f func()) {
 
 func (r *interpreterRuntime) transactionExecutionFunction(
 	parameters []*sema.Parameter,
-	argumentCount int,
 	arguments [][]byte,
 	runtimeInterface Interface,
 	authorizerValues []interpreter.Value,
@@ -415,9 +412,9 @@ func (r *interpreterRuntime) transactionExecutionFunction(
 		values, err := validateArgumentParams(
 			inter,
 			runtimeInterface,
-			argumentCount,
 			arguments,
-			parameters)
+			parameters,
+		)
 		if err != nil {
 			return nil, err
 		}
@@ -430,11 +427,23 @@ func (r *interpreterRuntime) transactionExecutionFunction(
 func validateArgumentParams(
 	inter *interpreter.Interpreter,
 	runtimeInterface Interface,
-	argumentCount int,
 	arguments [][]byte,
-	parameters []*sema.Parameter) ([]interpreter.Value, error) {
+	parameters []*sema.Parameter,
+) (
+	[]interpreter.Value,
+	error,
+) {
+	argumentCount := len(arguments)
+	parameterCount := len(parameters)
 
-	argumentValues := make([]interpreter.Value, argumentCount)
+	if argumentCount != parameterCount {
+		return nil, InvalidEntryPointParameterCountError{
+			Expected: parameterCount,
+			Actual:   argumentCount,
+		}
+	}
+
+	argumentValues := make([]interpreter.Value, len(arguments))
 
 	// Decode arguments against parameter types
 	for i, parameter := range parameters {
