@@ -1107,24 +1107,39 @@ func (s *Server) getDiagnostics(
 		mainPath = mainPath[len(inMemoryPrefix):]
 	}
 
-	_ = program.ResolveImports(func(location ast.Location) (program *ast.Program, err error) {
-		return s.resolveImport(conn, mainPath, location)
-	})
-
 	var checker *sema.Checker
 	checker, diagnosticsErr = sema.NewChecker(
 		program,
 		runtime.FileLocation(uri),
 		sema.WithPredeclaredValues(valueDeclarations),
 		sema.WithPredeclaredTypes(typeDeclarations),
-		sema.WithImportHandler(func(location ast.Location) sema.Import {
+		sema.WithImportHandler(func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
 			switch location {
 			case stdlib.CryptoChecker.Location:
 				return sema.CheckerImport{
 					Checker: stdlib.CryptoChecker,
+				}, nil
+
+			default:
+				var program *ast.Program
+				var err error
+				checker, checkerErr := checker.EnsureLoaded(location, func() *ast.Program {
+					program, err = s.resolveImport(mainPath, location)
+					return program
+				})
+				// TODO: improve
+				if err != nil {
+					return nil, &sema.CheckerError{
+						Errors: []error{err},
+					}
 				}
+				if checkerErr != nil {
+					return nil, checkerErr
+				}
+				return sema.CheckerImport{
+					Checker: checker,
+				}, nil
 			}
-			return nil
 		}),
 	)
 	if diagnosticsErr != nil {
@@ -1230,7 +1245,6 @@ func parse(conn protocol.Conn, code, location string) (*ast.Program, error) {
 }
 
 func (s *Server) resolveImport(
-	_ protocol.Conn,
 	mainPath string,
 	location ast.Location,
 ) (
