@@ -119,6 +119,12 @@ func TestInterpretVirtualImport(t *testing.T) {
 	)
 }
 
+// TestInterpretImportMultipleProgramsFromLocation demonstrates how two declarations (`a` and `b`)
+// can be imported from the same location (address location `0x1`).
+// The single location (address location `0x1`) is resolved to two locations
+// (address contract locations `0x1.a` and `0x1.b`).
+// Each requested declaration is so imported from a a separate program.
+//
 func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 
 	t.Parallel()
