@@ -314,23 +314,45 @@ func TestCheckStorableCycle(t *testing.T) {
 
 	t.Parallel()
 
-	_, err := ParseAndCheck(t, `
-      struct S {
+	t.Run("simple", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
 
           struct S {
               let s: S
+
+              init() {
+                  self.s = S()
+              }
           }
+        `)
 
-          let s: S
-      }
-   `)
+		require.NoError(t, err)
+	})
 
-	errs := ExpectCheckerErrors(t, err, 6)
+	t.Run("nested with same name", func(t *testing.T) {
 
-	assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
-	assert.IsType(t, &sema.RedeclarationError{}, errs[1])
-	assert.IsType(t, &sema.FieldTypeNotStorableError{}, errs[2])
-	assert.IsType(t, &sema.RedeclarationError{}, errs[3])
-	assert.IsType(t, &sema.MissingInitializerError{}, errs[4])
-	assert.IsType(t, &sema.MissingInitializerError{}, errs[5])
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+           struct S {
+
+               struct S {
+                   let s: S
+               }
+
+               let s: S
+           }
+        `)
+
+		errs := ExpectCheckerErrors(t, err, 5)
+
+		assert.IsType(t, &sema.InvalidNestedDeclarationError{}, errs[0])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[1])
+		assert.IsType(t, &sema.RedeclarationError{}, errs[2])
+		assert.IsType(t, &sema.MissingInitializerError{}, errs[3])
+		assert.IsType(t, &sema.MissingInitializerError{}, errs[4])
+	})
 }

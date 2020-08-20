@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	goRuntime "runtime"
 	"strconv"
 	"strings"
 
@@ -76,6 +77,12 @@ func (e *Encoder) Encode(value cadence.Value) (err error) {
 	// capture panics that occur during struct preparation
 	defer func() {
 		if r := recover(); r != nil {
+			// don't recover Go errors
+			goErr, ok := r.(goRuntime.Error)
+			if ok {
+				panic(goErr)
+			}
+
 			panicErr, isError := r.(error)
 			if !isError {
 				panic(r)

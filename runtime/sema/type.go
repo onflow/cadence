@@ -5526,12 +5526,12 @@ func (m *Member) IsStorable(results map[*Member]bool) (result bool) {
 		return result
 	}
 
-	// Temporarily assume the member is non-storable while it's type
+	// Temporarily assume the member is storable while it's type
 	// is checked for storability. If a recursive call occurs,
 	// the check for an existing result will prevent infinite recursion
 	// and the result will be correctly false
 
-	results[m] = false
+	results[m] = true
 
 	result = func() bool {
 		// Skip checking predeclared members
