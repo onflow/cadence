@@ -112,7 +112,6 @@ type Checker struct {
 	locationHandler                    LocationHandlerFunc
 	importHandler                      ImportHandlerFunc
 	checkHandler                       CheckHandlerFunc
-	isImporting                        bool
 }
 
 type Option func(*Checker) error
