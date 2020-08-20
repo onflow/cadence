@@ -104,6 +104,7 @@ func TestCheckRepeatedImportResolution(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	importedCheckerY, err := ParseAndCheckWithOptions(t,
 		`
@@ -120,7 +121,6 @@ func TestCheckRepeatedImportResolution(t *testing.T) {
 			},
 		},
 	)
-
 	require.NoError(t, err)
 
 	_, err = ParseAndCheckWithOptions(t,
@@ -227,6 +227,7 @@ func TestCheckImportResolutionSplit(t *testing.T) {
 			},
 		},
 	)
+	require.NoError(t, err)
 
 	importedCheckerY, err := ParseAndCheckWithOptions(t,
 		`
@@ -243,7 +244,6 @@ func TestCheckImportResolutionSplit(t *testing.T) {
 			},
 		},
 	)
-
 	require.NoError(t, err)
 
 	_, err = ParseAndCheckWithOptions(t,
