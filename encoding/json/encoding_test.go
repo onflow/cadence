@@ -1204,6 +1204,35 @@ func TestDecodeFixedPoints(t *testing.T) {
 	})
 }
 
+func TestExportRecursiveType(t *testing.T) {
+
+	t.Parallel()
+
+	ty := &cadence.ResourceType{
+		TypeID:     "S.test.Foo",
+		Identifier: "Foo",
+		Fields: []cadence.Field{
+			{
+				Identifier: "foo",
+			},
+		},
+	}
+
+	ty.Fields[0].Type = cadence.OptionalType{
+		Type: ty,
+	}
+
+	testEncode(
+		t,
+		cadence.Resource{
+			Fields: []cadence.Value{
+				cadence.Optional{},
+			},
+		}.WithType(ty),
+		`{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"foo","value":{"type": "Optional","value":null}}]}}`,
+	)
+}
+
 func convertValueFromScript(t *testing.T, script string) cadence.Value {
 	rt := runtime.NewInterpreterRuntime()
 
