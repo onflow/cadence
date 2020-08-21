@@ -168,7 +168,9 @@ func (k CompositeKind) SupportsInterfaces() bool {
 
 		return true
 
-	case CompositeKindEvent, CompositeKindEnum:
+	case CompositeKindEvent,
+		CompositeKindEnum:
+
 		return false
 	}
 
