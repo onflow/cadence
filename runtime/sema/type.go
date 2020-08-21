@@ -3937,6 +3937,10 @@ type FunctionType struct {
 	RequiredArgumentCount *int
 }
 
+func RequiredArgumentCount(count int) *int {
+	return &count
+}
+
 func (*FunctionType) IsType() {}
 
 func (t *FunctionType) InvocationFunctionType() *FunctionType {
@@ -5337,6 +5341,10 @@ const accountTypeAddressFieldDocString = `
 The address of the account
 `
 
+const accountTypeContractsFieldDocString = `
+The contracts of the account
+`
+
 func (t *AuthAccountType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, map[string]MemberResolver{
 		"address": {
@@ -5482,7 +5490,26 @@ func (t *AuthAccountType) GetMembers() map[string]MemberResolver {
 				)
 			},
 		},
+		"contracts": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicConstantFieldMember(
+					t,
+					identifier,
+					&AuthAccountContractsType{},
+					accountTypeContractsFieldDocString,
+				)
+			},
+		},
 	})
+}
+
+var authAccountTypeNestedTypes = map[string]Type{
+	"Contracts": &AuthAccountContractsType{},
+}
+
+func (*AuthAccountType) NestedTypes() map[string]Type {
+	return authAccountTypeNestedTypes
 }
 
 func (*AuthAccountType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
