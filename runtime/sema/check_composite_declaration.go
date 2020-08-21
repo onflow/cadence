@@ -1210,7 +1210,7 @@ func (checker *Checker) nonEventMembersAndOrigins(
 
 		argumentLabels := function.ParameterList.EffectiveArgumentLabels()
 
-		fieldTypeAnnotation := &TypeAnnotation{Type: functionType}
+		fieldTypeAnnotation := NewTypeAnnotation(functionType)
 
 		const declarationKind = common.DeclarationKindFunction
 

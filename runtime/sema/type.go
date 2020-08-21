@@ -4530,7 +4530,7 @@ func init() {
 								TypeAnnotation: NewTypeAnnotation(&NumberType{}),
 							},
 						},
-						ReturnTypeAnnotation: &TypeAnnotation{Type: numberType},
+						ReturnTypeAnnotation: NewTypeAnnotation(numberType),
 					},
 					ArgumentExpressionsCheck: numberFunctionArgumentExpressionsChecker(numberType),
 				},
@@ -4559,7 +4559,7 @@ func init() {
 						TypeAnnotation: NewTypeAnnotation(&IntegerType{}),
 					},
 				},
-				ReturnTypeAnnotation: &TypeAnnotation{Type: addressType},
+				ReturnTypeAnnotation: NewTypeAnnotation(addressType),
 			},
 			ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression) {
 				if len(argumentExpressions) < 1 {
@@ -4607,7 +4607,7 @@ func init() {
 		name: typeName,
 		invokableType: &FunctionType{
 			TypeParameters:       []*TypeParameter{{Name: "T"}},
-			ReturnTypeAnnotation: &TypeAnnotation{Type: metaType},
+			ReturnTypeAnnotation: NewTypeAnnotation(metaType),
 		},
 	}
 }
@@ -5516,7 +5516,7 @@ func NewPublicFunctionMember(
 		Identifier:      ast.Identifier{Identifier: identifier},
 		DeclarationKind: common.DeclarationKindFunction,
 		VariableKind:    ast.VariableKindConstant,
-		TypeAnnotation:  &TypeAnnotation{Type: invokableType},
+		TypeAnnotation:  NewTypeAnnotation(invokableType),
 		ArgumentLabels:  invokableType.ArgumentLabels(),
 		DocString:       docString,
 	}
