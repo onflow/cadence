@@ -20,7 +20,7 @@
     "retext-english": "^3.0.3",
     "retext-indefinite-article": "^1.1.7",
     "retext-repeated-words": "^2.0.0",
-    "to-vfile": "^6.0.0",
+    "to-vfile": "^6.1.0",
     "unified": "^8.4.2",
     "unist-util-visit": "^1.4.1",
     "vfile-reporter": "^6.0.0",
