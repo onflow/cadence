@@ -4865,10 +4865,7 @@ var authAccountTypeSetCodeFunctionType = &FunctionType{
 		&VoidType{},
 	),
 	// additional arguments are passed to the contract initializer
-	RequiredArgumentCount: (func() *int {
-		var count = 1
-		return &count
-	})(),
+	RequiredArgumentCount: RequiredArgumentCount(1),
 }
 
 const authAccountTypeSetCodeFieldDocString = `

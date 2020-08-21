@@ -1507,10 +1507,7 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(
 				&sema.IntType{},
 			),
-			RequiredArgumentCount: (func() *int {
-				var count = 1
-				return &count
-			})(),
+			RequiredArgumentCount: sema.RequiredArgumentCount(1),
 		},
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
 			called = true
