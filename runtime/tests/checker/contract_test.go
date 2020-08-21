@@ -655,7 +655,7 @@ func TestCheckInvalidContractNestedTypeShadowing(t *testing.T) {
 		{name: "event", code: `event Test()`, isInterface: false},
 	}
 
-	for _, kind := range common.CompositeKindsWithBody {
+	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
 
 		// Contracts can not be nested
 		if kind == common.CompositeKindContract {

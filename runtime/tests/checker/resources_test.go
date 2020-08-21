@@ -407,7 +407,7 @@ func TestCheckFieldDeclarationWithResourceAnnotation(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithBody {
+	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
 
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -472,7 +472,7 @@ func TestCheckFieldDeclarationWithoutResourceAnnotation(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithBody {
+	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			destructor := ""
@@ -2548,7 +2548,7 @@ func TestCheckResourceNesting(t *testing.T) {
 				continue
 			}
 
-			for _, outerCompositeKind := range common.CompositeKindsWithBody {
+			for _, outerCompositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 				for _, outerIsInterface := range interfacePossibilities {
 
 					if !outerCompositeKind.SupportsInterfaces() && outerIsInterface {
@@ -3533,7 +3533,7 @@ func TestCheckResourceParameterInInterfaceNoResourceLossError(t *testing.T) {
 		common.DeclarationKindFunction,
 	}
 
-	for _, compositeKind := range common.CompositeKindsWithBody {
+	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 		for _, declarationKind := range declarationKinds {
 			for _, hasCondition := range []bool{true, false} {
 

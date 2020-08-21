@@ -35,7 +35,7 @@ func TestCheckCompositeDeclarationNesting(t *testing.T) {
 
 	interfacePossibilities := []bool{true, false}
 
-	for _, outerComposite := range common.CompositeKindsWithBody {
+	for _, outerComposite := range common.CompositeKindsWithFieldsAndFunctions {
 		for _, outerIsInterface := range interfacePossibilities {
 			for _, innerComposite := range common.AllCompositeKinds {
 				for _, innerIsInterface := range interfacePossibilities {
