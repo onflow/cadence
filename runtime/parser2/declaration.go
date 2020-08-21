@@ -927,7 +927,7 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration
 			case keywordEvent:
 				return parseEventDeclaration(p, access, accessPos, docString)
 
-			case keywordStruct, keywordResource, keywordContract:
+			case keywordStruct, keywordResource, keywordContract, keywordEnum:
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
 			case keywordPriv, keywordPub, keywordAccess:
