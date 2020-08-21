@@ -24,6 +24,6 @@
     "unified": "^8.4.2",
     "unist-util-visit": "^1.4.1",
     "vfile-reporter": "^6.0.0",
-    "vscode-textmate": "^4.2.2"
+    "vscode-textmate": "^4.4.0"
   }
 }
