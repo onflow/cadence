@@ -3315,7 +3315,7 @@ func TestInterpretInterfaceFieldUse(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithBody {
+	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 
 		if !compositeKind.SupportsInterfaces() {
 			continue
@@ -3392,7 +3392,7 @@ func TestInterpretInterfaceFunctionUse(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithBody {
+	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 
 		if !compositeKind.SupportsInterfaces() {
 			continue
@@ -3457,7 +3457,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithBody {
+	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 
 		if !compositeKind.SupportsInterfaces() {
 			continue
@@ -3556,7 +3556,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 		2: &interpreter.ConditionError{},
 	}
 
-	for _, compositeKind := range common.CompositeKindsWithBody {
+	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 
 		if !compositeKind.SupportsInterfaces() {
 			continue
