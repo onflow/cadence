@@ -1327,6 +1327,22 @@ func (e *InvalidInterfaceTypeError) SecondaryError() string {
 
 func (*InvalidInterfaceTypeError) isSemanticError() {}
 
+// InvalidInterfaceDeclarationError
+
+type InvalidInterfaceDeclarationError struct {
+	CompositeKind common.CompositeKind
+	ast.Range
+}
+
+func (e *InvalidInterfaceDeclarationError) Error() string {
+	return fmt.Sprintf(
+		"%s interfaces are not supported",
+		e.CompositeKind.Name(),
+	)
+}
+
+func (*InvalidInterfaceDeclarationError) isSemanticError() {}
+
 // IncorrectTransferOperationError
 
 type IncorrectTransferOperationError struct {
