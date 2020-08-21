@@ -111,3 +111,51 @@ func (d *FieldDeclaration) MarshalJSON() ([]byte, error) {
 		Alias: (*Alias)(d),
 	})
 }
+
+// EnumCaseDeclaration
+
+type EnumCaseDeclaration struct {
+	Access     Access
+	Identifier Identifier
+	DocString  string
+	StartPos   Position `json:"-"`
+}
+
+func (d *EnumCaseDeclaration) Accept(visitor Visitor) Repr {
+	return visitor.VisitEnumCaseDeclaration(d)
+}
+
+func (*EnumCaseDeclaration) isDeclaration() {}
+
+func (d *EnumCaseDeclaration) DeclarationIdentifier() *Identifier {
+	return &d.Identifier
+}
+
+func (d *EnumCaseDeclaration) DeclarationKind() common.DeclarationKind {
+	return common.DeclarationKindEnumCase
+}
+
+func (d *EnumCaseDeclaration) DeclarationAccess() Access {
+	return d.Access
+}
+
+func (d *EnumCaseDeclaration) StartPosition() Position {
+	return d.StartPos
+}
+
+func (d *EnumCaseDeclaration) EndPosition() Position {
+	return d.Identifier.EndPosition()
+}
+
+func (d *EnumCaseDeclaration) MarshalJSON() ([]byte, error) {
+	type Alias EnumCaseDeclaration
+	return json.Marshal(&struct {
+		Type string
+		Range
+		*Alias
+	}{
+		Type:  "EnumCaseDeclaration",
+		Range: NewRangeFromPositioned(d),
+		Alias: (*Alias)(d),
+	})
+}

@@ -82,7 +82,7 @@ func parseDeclaration(p *parser, docString string) ast.Declaration {
 			case keywordEvent:
 				return parseEventDeclaration(p, access, accessPos, docString)
 
-			case keywordStruct, keywordResource, keywordContract:
+			case keywordStruct, keywordResource, keywordContract, keywordEnum:
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
 			case keywordTransaction:
@@ -642,7 +642,7 @@ func parseEventDeclaration(
 
 // parseCompositeKind parses a composite kind.
 //
-//     compositeKind : 'struct' | 'resource' | 'contract'
+//     compositeKind : 'struct' | 'resource' | 'contract' | 'enum'
 //
 func parseCompositeKind(p *parser) common.CompositeKind {
 
@@ -656,6 +656,9 @@ func parseCompositeKind(p *parser) common.CompositeKind {
 
 		case keywordContract:
 			return common.CompositeKindContract
+
+		case keywordEnum:
+			return common.CompositeKindEnum
 		}
 	}
 
@@ -895,6 +898,7 @@ func parseMembersAndNestedDeclarations(
 //                               | interfaceDeclaration
 //                               | compositeDeclaration
 //                               | eventDeclaration
+//                               | enumCase
 //
 func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration {
 
@@ -913,6 +917,9 @@ func parseMemberOrNestedDeclaration(p *parser, docString string) ast.Declaration
 			switch p.current.Value {
 			case keywordLet, keywordVar:
 				return parseFieldWithVariableKind(p, access, accessPos, docString)
+
+			case keywordCase:
+				return parseEnumCase(p, access, accessPos, docString)
 
 			case keywordFun:
 				return parseFunctionDeclaration(p, functionBlockIsOptional, access, accessPos, docString)
@@ -1046,5 +1053,44 @@ func parseSpecialFunctionDeclaration(
 			FunctionBlock: functionBlock,
 			StartPos:      startPos,
 		},
+	}
+}
+
+// parseEnumCase parses a field which has a variable kind.
+//
+//     enumCase : 'case' identifier
+//
+func parseEnumCase(
+	p *parser,
+	access ast.Access,
+	accessPos *ast.Position,
+	docString string,
+) *ast.EnumCaseDeclaration {
+
+	startPos := p.current.StartPos
+	if accessPos != nil {
+		startPos = *accessPos
+	}
+
+	// Skip the `enum` keyword
+	p.next()
+
+	p.skipSpaceAndComments(true)
+	if !p.current.Is(lexer.TokenIdentifier) {
+		panic(fmt.Errorf(
+			"expected identifier after start of enum case declaration, got %s",
+			p.current.Type,
+		))
+	}
+
+	identifier := tokenToIdentifier(p.current)
+	// Skip the identifier
+	p.next()
+
+	return &ast.EnumCaseDeclaration{
+		Access:     access,
+		Identifier: identifier,
+		DocString:  docString,
+		StartPos:   startPos,
 	}
 }

@@ -1562,6 +1562,12 @@ func (checker *Checker) VisitFieldDeclaration(_ *ast.FieldDeclaration) ast.Repr 
 	panic(errors.NewUnreachableError())
 }
 
+func (checker *Checker) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) ast.Repr {
+	// NOTE: already checked when checking the composite
+
+	panic(errors.NewUnreachableError())
+}
+
 // checkUnknownSpecialFunctions checks that the special function declarations
 // are supported, i.e., they are either initializers or destructors
 //

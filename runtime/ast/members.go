@@ -46,6 +46,8 @@ type Members struct {
 	_interfaceDeclarations []*InterfaceDeclaration
 	// Use `CompositeDeclarations()` instead
 	_compositeDeclarations []*CompositeDeclaration
+	// Use `EnumCaseDeclarations()` instead
+	_enumCaseDeclarations []*EnumCaseDeclaration
 }
 
 func (m *Members) FieldsByIdentifier() map[string]*FieldDeclaration {
@@ -158,6 +160,13 @@ func (m *Members) CompositeDeclarations() []*CompositeDeclaration {
 	return m._compositeDeclarations
 }
 
+func (m *Members) EnumCaseDeclarations() []*EnumCaseDeclaration {
+	if m._enumCaseDeclarations == nil {
+		m.updateDeclarations()
+	}
+	return m._enumCaseDeclarations
+}
+
 func (m *Members) updateDeclarations() {
 	// Important: allocate instead of nil
 
@@ -166,6 +175,7 @@ func (m *Members) updateDeclarations() {
 	m._specialFunctions = make([]*SpecialFunctionDeclaration, 0)
 	m._interfaceDeclarations = make([]*InterfaceDeclaration, 0)
 	m._compositeDeclarations = make([]*CompositeDeclaration, 0)
+	m._enumCaseDeclarations = make([]*EnumCaseDeclaration, 0)
 
 	for _, declaration := range m.Declarations {
 		switch declaration := declaration.(type) {
@@ -183,6 +193,9 @@ func (m *Members) updateDeclarations() {
 
 		case *CompositeDeclaration:
 			m._compositeDeclarations = append(m._compositeDeclarations, declaration)
+
+		case *EnumCaseDeclaration:
+			m._enumCaseDeclarations = append(m._enumCaseDeclarations, declaration)
 		}
 	}
 }

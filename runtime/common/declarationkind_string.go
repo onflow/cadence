@@ -34,11 +34,13 @@ func _() {
 	_ = x[DeclarationKindExecute-23]
 	_ = x[DeclarationKindTypeParameter-24]
 	_ = x[DeclarationKindPragma-25]
+	_ = x[DeclarationKindEnum-26]
+	_ = x[DeclarationKindEnumCase-27]
 }
 
-const _DeclarationKind_name = "DeclarationKindUnknownDeclarationKindValueDeclarationKindFunctionDeclarationKindVariableDeclarationKindConstantDeclarationKindTypeDeclarationKindParameterDeclarationKindArgumentLabelDeclarationKindStructureDeclarationKindResourceDeclarationKindContractDeclarationKindEventDeclarationKindFieldDeclarationKindInitializerDeclarationKindDestructorDeclarationKindStructureInterfaceDeclarationKindResourceInterfaceDeclarationKindContractInterfaceDeclarationKindImportDeclarationKindSelfDeclarationKindResultDeclarationKindTransactionDeclarationKindPrepareDeclarationKindExecuteDeclarationKindTypeParameterDeclarationKindPragma"
+const _DeclarationKind_name = "DeclarationKindUnknownDeclarationKindValueDeclarationKindFunctionDeclarationKindVariableDeclarationKindConstantDeclarationKindTypeDeclarationKindParameterDeclarationKindArgumentLabelDeclarationKindStructureDeclarationKindResourceDeclarationKindContractDeclarationKindEventDeclarationKindFieldDeclarationKindInitializerDeclarationKindDestructorDeclarationKindStructureInterfaceDeclarationKindResourceInterfaceDeclarationKindContractInterfaceDeclarationKindImportDeclarationKindSelfDeclarationKindResultDeclarationKindTransactionDeclarationKindPrepareDeclarationKindExecuteDeclarationKindTypeParameterDeclarationKindPragmaDeclarationKindEnumDeclarationKindEnumCase"
 
-var _DeclarationKind_index = [...]uint16{0, 22, 42, 65, 88, 111, 130, 154, 182, 206, 229, 252, 272, 292, 318, 343, 376, 408, 440, 461, 480, 501, 527, 549, 571, 599, 620}
+var _DeclarationKind_index = [...]uint16{0, 22, 42, 65, 88, 111, 130, 154, 182, 206, 229, 252, 272, 292, 318, 343, 376, 408, 440, 461, 480, 501, 527, 549, 571, 599, 620, 639, 662}
 
 func (i DeclarationKind) String() string {
 	if i >= DeclarationKind(len(_DeclarationKind_index)-1) {

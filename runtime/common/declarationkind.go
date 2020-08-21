@@ -55,6 +55,8 @@ const (
 	DeclarationKindExecute
 	DeclarationKindTypeParameter
 	DeclarationKindPragma
+	DeclarationKindEnum
+	DeclarationKindEnumCase
 )
 
 func DeclarationKindCount() int {
@@ -70,7 +72,8 @@ func (k DeclarationKind) IsTypeDeclaration() bool {
 		DeclarationKindStructureInterface,
 		DeclarationKindResourceInterface,
 		DeclarationKindContractInterface,
-		DeclarationKindTypeParameter:
+		DeclarationKindTypeParameter,
+		DeclarationKindEnum:
 
 		return true
 
@@ -131,6 +134,10 @@ func (k DeclarationKind) Name() string {
 		return "type parameter"
 	case DeclarationKindPragma:
 		return "#pragma"
+	case DeclarationKindEnum:
+		return "enum"
+	case DeclarationKindEnumCase:
+		return "enum case"
 	case DeclarationKindUnknown:
 		return "unknown"
 	}
@@ -176,6 +183,10 @@ func (k DeclarationKind) Keywords() string {
 		return "prepare"
 	case DeclarationKindExecute:
 		return "execute"
+	case DeclarationKindEnum:
+		return "enum"
+	case DeclarationKindEnumCase:
+		return "case"
 	default:
 		return ""
 	}
