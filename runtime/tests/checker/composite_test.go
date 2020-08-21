@@ -304,7 +304,7 @@ func TestCheckInvalidCompositeRedeclaringFields(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.AllCompositeKinds {
+	test := func(kind common.CompositeKind) {
 
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
@@ -346,6 +346,15 @@ func TestCheckInvalidCompositeRedeclaringFields(t *testing.T) {
 				assert.IsType(t, &sema.MissingInitializerError{}, errs[1])
 			}
 		})
+	}
+
+	for _, kind := range common.AllCompositeKinds {
+
+		if kind == common.CompositeKindEnum {
+			continue
+		}
+
+		test(kind)
 	}
 }
 
@@ -436,6 +445,11 @@ func TestCheckInvalidCompositeFieldType(t *testing.T) {
 	t.Parallel()
 
 	for _, kind := range common.AllCompositeKinds {
+
+		if kind == common.CompositeKindEnum {
+			continue
+		}
+
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			if kind == common.CompositeKindEvent {

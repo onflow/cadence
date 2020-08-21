@@ -288,11 +288,11 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 
 	// Declare members
 
-	members, fields, origins := checker.nonEventMembersAndOrigins(
+	members, fields, origins := checker.defaultMembersAndOrigins(
+		declaration.Members,
 		interfaceType,
-		declaration.Members.Fields(),
-		declaration.Members.Functions(),
 		ContainerKindInterface,
+		declaration.DeclarationKind(),
 	)
 
 	checker.checkMemberStorability(members)

@@ -322,7 +322,8 @@ func (checker *Checker) declareNestedDeclarations(
 			switch nestedCompositeKind {
 			case common.CompositeKindResource,
 				common.CompositeKindStructure,
-				common.CompositeKindEvent:
+				common.CompositeKindEvent,
+				common.CompositeKindEnum:
 				break
 
 			default:
@@ -562,19 +563,28 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		var fields []string
 		var origins map[string]*Origin
 
-		// Event members are derived from the initializer's parameter list
-
-		if declaration.CompositeKind == common.CompositeKindEvent {
+		switch declaration.CompositeKind {
+		case common.CompositeKindEvent:
+			// Event members are derived from the initializer's parameter list
 			members, fields, origins = checker.eventMembersAndOrigins(
 				initializers[0],
 				compositeType,
 			)
-		} else {
-			members, fields, origins = checker.nonEventMembersAndOrigins(
+
+		case common.CompositeKindEnum:
+			// Enum members are derived from the cases
+			members, fields, origins = checker.enumMembersAndOrigins(
+				declaration.Members,
 				compositeType,
-				declaration.Members.Fields(),
-				declaration.Members.Functions(),
+				declaration.DeclarationKind(),
+			)
+
+		default:
+			members, fields, origins = checker.defaultMembersAndOrigins(
+				declaration.Members,
+				compositeType,
 				kind,
+				declaration.DeclarationKind(),
 			)
 		}
 
@@ -620,7 +630,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		// Resource and event constructors are effectively always private,
 		// i.e. they should be only constructable by the locations that declare them.
 		//
-		// Instead of enforcing this be declaring the access as private here,
+		// Instead of enforcing this by declaring the access as private here,
 		// we allow the declared access level and check the construction in the respective
 		// construction expressions, i.e. create expressions for resources
 		// and emit statements for events.
@@ -1092,16 +1102,30 @@ func (checker *Checker) compositeConstructorType(
 	return constructorFunctionType, argumentLabels
 }
 
-func (checker *Checker) nonEventMembersAndOrigins(
+func (checker *Checker) defaultMembersAndOrigins(
+	allMembers *ast.Members,
 	containerType Type,
-	fields []*ast.FieldDeclaration,
-	functions []*ast.FunctionDeclaration,
 	containerKind ContainerKind,
+	containerDeclarationKind common.DeclarationKind,
 ) (
 	members map[string]*Member,
 	fieldNames []string,
 	origins map[string]*Origin,
 ) {
+	fields := allMembers.Fields()
+	functions := allMembers.Functions()
+
+	// Enum cases are invalid
+	enumCases := allMembers.EnumCases()
+	if len(enumCases) > 0 {
+		checker.report(
+			&InvalidEnumCaseError{
+				ContainerDeclarationKind: containerDeclarationKind,
+				Range:                    ast.NewRangeFromPositioned(enumCases[0]),
+			},
+		)
+	}
+
 	requireVariableKind := containerKind != ContainerKindInterface
 	requireNonPrivateMemberAccess := containerKind == ContainerKindInterface
 
@@ -1284,6 +1308,60 @@ func (checker *Checker) eventMembersAndOrigins(
 				parameter.StartPos,
 				parameter.EndPos,
 				typeAnnotation.Type,
+			)
+	}
+
+	return
+}
+
+func (checker *Checker) enumMembersAndOrigins(
+	allMembers *ast.Members,
+	containerType *CompositeType,
+	containerDeclarationKind common.DeclarationKind,
+) (
+	members map[string]*Member,
+	fieldNames []string,
+	origins map[string]*Origin,
+) {
+	caseCount := len(allMembers.EnumCases())
+
+	members = make(map[string]*Member, caseCount)
+	origins = make(map[string]*Origin, caseCount)
+
+	typeAnnotation := NewTypeAnnotation(containerType)
+
+	for _, declaration := range allMembers.Declarations {
+		enumCase, ok := declaration.(*ast.EnumCaseDeclaration)
+		if !ok {
+			checker.report(
+				&InvalidNonEnumCaseError{
+					ContainerDeclarationKind: containerDeclarationKind,
+					Range:                    ast.NewRangeFromPositioned(declaration),
+				},
+			)
+			continue
+		}
+
+		identifier := enumCase.Identifier
+
+		fieldNames = append(fieldNames, identifier.Identifier)
+
+		members[identifier.Identifier] = &Member{
+			ContainerType:   containerType,
+			Access:          ast.AccessPublic,
+			Identifier:      identifier,
+			DeclarationKind: common.DeclarationKindField,
+			TypeAnnotation:  typeAnnotation,
+			VariableKind:    ast.VariableKindConstant,
+			DocString:       enumCase.DocString,
+		}
+
+		origins[identifier.Identifier] =
+			checker.recordFieldDeclarationOrigin(
+				identifier,
+				enumCase.StartPosition(),
+				enumCase.EndPosition(),
+				containerType,
 			)
 	}
 
