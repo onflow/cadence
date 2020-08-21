@@ -29,9 +29,9 @@ type Program struct {
 	_pragmaDeclarations []*PragmaDeclaration
 	// Use `ImportDeclarations()` instead
 	_importDeclarations []*ImportDeclaration
-	// Use `InterfaceDeclarations()` instead
+	// Use `Interfaces()` instead
 	_interfaceDeclarations []*InterfaceDeclaration
-	// Use `CompositeDeclarations()` instead
+	// Use `Composites()` instead
 	_compositeDeclarations []*CompositeDeclaration
 	// Use `FunctionDeclarations()` instead
 	_functionDeclarations []*FunctionDeclaration

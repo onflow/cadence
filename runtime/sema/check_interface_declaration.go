@@ -106,11 +106,11 @@ func (checker *Checker) VisitInterfaceDeclaration(declaration *ast.InterfaceDecl
 	// NOTE: visit interfaces first
 	// DON'T use `nestedDeclarations`, because of non-deterministic order
 
-	for _, nestedInterface := range declaration.Members.InterfaceDeclarations() {
+	for _, nestedInterface := range declaration.Members.Interfaces() {
 		nestedInterface.Accept(checker)
 	}
 
-	for _, nestedComposite := range declaration.Members.CompositeDeclarations() {
+	for _, nestedComposite := range declaration.Members.Composites() {
 		// Composite declarations nested in interface declarations are type requirements,
 		// i.e. they should be checked like interfaces
 
@@ -241,8 +241,8 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		checker.declareNestedDeclarations(
 			declaration.CompositeKind,
 			declaration.DeclarationKind(),
-			declaration.Members.CompositeDeclarations(),
-			declaration.Members.InterfaceDeclarations(),
+			declaration.Members.Composites(),
+			declaration.Members.Interfaces(),
 		)
 
 	checker.Elaboration.InterfaceNestedDeclarations[declaration] = nestedDeclarations
@@ -309,11 +309,11 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 
 	// Declare nested declarations' members
 
-	for _, nestedInterfaceDeclaration := range declaration.Members.InterfaceDeclarations() {
+	for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
 		checker.declareInterfaceMembers(nestedInterfaceDeclaration)
 	}
 
-	for _, nestedCompositeDeclaration := range declaration.Members.CompositeDeclarations() {
+	for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
 		checker.declareCompositeMembersAndValue(nestedCompositeDeclaration, ContainerKindInterface)
 	}
 }
