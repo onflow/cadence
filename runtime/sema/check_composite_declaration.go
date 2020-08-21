@@ -1391,7 +1391,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 		argumentLabels := function.ParameterList.EffectiveArgumentLabels()
 
-		fieldTypeAnnotation := &TypeAnnotation{Type: functionType}
+		fieldTypeAnnotation := NewTypeAnnotation(functionType)
 
 		const declarationKind = common.DeclarationKindFunction
 
