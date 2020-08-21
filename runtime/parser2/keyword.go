@@ -61,4 +61,5 @@ const (
 	keywordCase        = "case"
 	keywordSwitch      = "switch"
 	keywordDefault     = "default"
+	keywordEnum        = "enum"
 )

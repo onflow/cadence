@@ -13,11 +13,12 @@ func _() {
 	_ = x[CompositeKindResource-2]
 	_ = x[CompositeKindContract-3]
 	_ = x[CompositeKindEvent-4]
+	_ = x[CompositeKindEnum-5]
 }
 
-const _CompositeKind_name = "CompositeKindUnknownCompositeKindStructureCompositeKindResourceCompositeKindContractCompositeKindEvent"
+const _CompositeKind_name = "CompositeKindUnknownCompositeKindStructureCompositeKindResourceCompositeKindContractCompositeKindEventCompositeKindEnum"
 
-var _CompositeKind_index = [...]uint8{0, 20, 42, 63, 84, 102}
+var _CompositeKind_index = [...]uint8{0, 20, 42, 63, 84, 102, 119}
 
 func (i CompositeKind) String() string {
 	if i >= CompositeKind(len(_CompositeKind_index)-1) {

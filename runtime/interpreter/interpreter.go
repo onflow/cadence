@@ -2755,7 +2755,12 @@ func (interpreter *Interpreter) compositeFunction(
 }
 
 func (interpreter *Interpreter) VisitFieldDeclaration(_ *ast.FieldDeclaration) ast.Repr {
-	// fields can't be interpreted
+	// fields aren't interpreted
+	panic(errors.NewUnreachableError())
+}
+
+func (interpreter *Interpreter) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) ast.Repr {
+	// enum cases aren't interpreted
 	panic(errors.NewUnreachableError())
 }
 
