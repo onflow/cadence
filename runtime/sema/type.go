@@ -4382,6 +4382,7 @@ func init() {
 		&PublicAccountType{},
 		&PathType{},
 		&CapabilityType{},
+		&ContractType{},
 	}
 
 	types := append(
