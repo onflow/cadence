@@ -227,6 +227,15 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 
 	checker.Elaboration.InterfaceDeclarationTypes[declaration] = interfaceType
 
+	if !declaration.CompositeKind.SupportsInterfaces() {
+		checker.report(
+			&InvalidInterfaceDeclarationError{
+				CompositeKind: declaration.CompositeKind,
+				Range:         ast.NewRangeFromPositioned(declaration.Identifier),
+			},
+		)
+	}
+
 	// Activate new scope for nested declarations
 
 	checker.typeActivations.Enter()

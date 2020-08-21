@@ -1117,7 +1117,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 	// Enum cases are invalid
 	enumCases := allMembers.EnumCases()
-	if len(enumCases) > 0 {
+	if len(enumCases) > 0 && containerDeclarationKind != common.DeclarationKindUnknown {
 		checker.report(
 			&InvalidEnumCaseError{
 				ContainerDeclarationKind: containerDeclarationKind,
