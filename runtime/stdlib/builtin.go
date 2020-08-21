@@ -47,10 +47,7 @@ var AssertFunction = NewStandardLibraryFunction(
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(
 			&sema.VoidType{},
 		),
-		RequiredArgumentCount: (func() *int {
-			var count = 1
-			return &count
-		})(),
+		RequiredArgumentCount: sema.RequiredArgumentCount(1),
 	},
 	func(invocation interpreter.Invocation) trampoline.Trampoline {
 		result := invocation.Arguments[0].(interpreter.BoolValue)
