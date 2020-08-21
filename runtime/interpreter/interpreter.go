@@ -2384,19 +2384,19 @@ func (interpreter *Interpreter) declareCompositeValue(
 			)
 		}
 
-		for _, nestedInterfaceDeclaration := range declaration.Members.InterfaceDeclarations() {
+		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
 			predeclare(nestedInterfaceDeclaration.Identifier)
 		}
 
-		for _, nestedCompositeDeclaration := range declaration.Members.CompositeDeclarations() {
+		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
 			predeclare(nestedCompositeDeclaration.Identifier)
 		}
 
-		for _, nestedInterfaceDeclaration := range declaration.Members.InterfaceDeclarations() {
+		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
 			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
 		}
 
-		for _, nestedCompositeDeclaration := range declaration.Members.CompositeDeclarations() {
+		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
 
 			// Pass the lexical scope, which has the containing composite's value declared,
 			// to the nested declarations so they can refer to it, and update the lexical scope
@@ -2926,11 +2926,11 @@ func (interpreter *Interpreter) declareInterface(
 		interpreter.activations.PushCurrent()
 		defer interpreter.activations.Pop()
 
-		for _, nestedInterfaceDeclaration := range declaration.Members.InterfaceDeclarations() {
+		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
 			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
 		}
 
-		for _, nestedCompositeDeclaration := range declaration.Members.CompositeDeclarations() {
+		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
 			interpreter.declareTypeRequirement(nestedCompositeDeclaration, lexicalScope)
 		}
 	})()
@@ -2960,11 +2960,11 @@ func (interpreter *Interpreter) declareTypeRequirement(
 		interpreter.activations.PushCurrent()
 		defer interpreter.activations.Pop()
 
-		for _, nestedInterfaceDeclaration := range declaration.Members.InterfaceDeclarations() {
+		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
 			interpreter.declareInterface(nestedInterfaceDeclaration, lexicalScope)
 		}
 
-		for _, nestedCompositeDeclaration := range declaration.Members.CompositeDeclarations() {
+		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
 			interpreter.declareTypeRequirement(nestedCompositeDeclaration, lexicalScope)
 		}
 	})()

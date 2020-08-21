@@ -42,12 +42,12 @@ type Members struct {
 	_functions []*FunctionDeclaration
 	// Use `FunctionsByIdentifier()` instead
 	_functionsByIdentifier map[string]*FunctionDeclaration
-	// Use `InterfaceDeclarations()` instead
-	_interfaceDeclarations []*InterfaceDeclaration
-	// Use `CompositeDeclarations()` instead
-	_compositeDeclarations []*CompositeDeclaration
-	// Use `EnumCaseDeclarations()` instead
-	_enumCaseDeclarations []*EnumCaseDeclaration
+	// Use `Interfaces()` instead
+	_interfaces []*InterfaceDeclaration
+	// Use `Composites()` instead
+	_composites []*CompositeDeclaration
+	// Use `EnumCases()` instead
+	_enumCases []*EnumCaseDeclaration
 }
 
 func (m *Members) FieldsByIdentifier() map[string]*FieldDeclaration {
@@ -127,55 +127,57 @@ func (m *Members) FieldPosition(name string, compositeKind common.CompositeKind)
 
 func (m *Members) Fields() []*FieldDeclaration {
 	if m._fields == nil {
-		m.updateDeclarations()
+		m.updateIndices()
 	}
 	return m._fields
 }
 
 func (m *Members) Functions() []*FunctionDeclaration {
 	if m._functions == nil {
-		m.updateDeclarations()
+		m.updateIndices()
 	}
 	return m._functions
 }
 
 func (m *Members) SpecialFunctions() []*SpecialFunctionDeclaration {
 	if m._specialFunctions == nil {
-		m.updateDeclarations()
+		m.updateIndices()
 	}
 	return m._specialFunctions
 }
 
-func (m *Members) InterfaceDeclarations() []*InterfaceDeclaration {
-	if m._interfaceDeclarations == nil {
-		m.updateDeclarations()
+func (m *Members) Interfaces() []*InterfaceDeclaration {
+	if m._interfaces == nil {
+		m.updateIndices()
 	}
-	return m._interfaceDeclarations
+	return m._interfaces
 }
 
-func (m *Members) CompositeDeclarations() []*CompositeDeclaration {
-	if m._compositeDeclarations == nil {
-		m.updateDeclarations()
+func (m *Members) Composites() []*CompositeDeclaration {
+	if m._composites == nil {
+		m.updateIndices()
 	}
-	return m._compositeDeclarations
+	return m._composites
 }
 
-func (m *Members) EnumCaseDeclarations() []*EnumCaseDeclaration {
-	if m._enumCaseDeclarations == nil {
-		m.updateDeclarations()
+func (m *Members) EnumCases() []*EnumCaseDeclaration {
+	if m._enumCases == nil {
+		m.updateIndices()
 	}
-	return m._enumCaseDeclarations
+	return m._enumCases
 }
 
-func (m *Members) updateDeclarations() {
+// updateIndices updates the indices of all declarations
+//
+func (m *Members) updateIndices() {
 	// Important: allocate instead of nil
 
 	m._fields = make([]*FieldDeclaration, 0)
 	m._functions = make([]*FunctionDeclaration, 0)
 	m._specialFunctions = make([]*SpecialFunctionDeclaration, 0)
-	m._interfaceDeclarations = make([]*InterfaceDeclaration, 0)
-	m._compositeDeclarations = make([]*CompositeDeclaration, 0)
-	m._enumCaseDeclarations = make([]*EnumCaseDeclaration, 0)
+	m._interfaces = make([]*InterfaceDeclaration, 0)
+	m._composites = make([]*CompositeDeclaration, 0)
+	m._enumCases = make([]*EnumCaseDeclaration, 0)
 
 	for _, declaration := range m.Declarations {
 		switch declaration := declaration.(type) {
@@ -189,13 +191,13 @@ func (m *Members) updateDeclarations() {
 			m._specialFunctions = append(m._specialFunctions, declaration)
 
 		case *InterfaceDeclaration:
-			m._interfaceDeclarations = append(m._interfaceDeclarations, declaration)
+			m._interfaces = append(m._interfaces, declaration)
 
 		case *CompositeDeclaration:
-			m._compositeDeclarations = append(m._compositeDeclarations, declaration)
+			m._composites = append(m._composites, declaration)
 
 		case *EnumCaseDeclaration:
-			m._enumCaseDeclarations = append(m._enumCaseDeclarations, declaration)
+			m._enumCases = append(m._enumCases, declaration)
 		}
 	}
 }
