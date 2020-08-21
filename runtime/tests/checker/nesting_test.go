@@ -39,14 +39,15 @@ func TestCheckCompositeDeclarationNesting(t *testing.T) {
 		for _, outerIsInterface := range interfacePossibilities {
 			for _, innerComposite := range common.AllCompositeKinds {
 				for _, innerIsInterface := range interfacePossibilities {
-					if innerIsInterface && innerComposite == common.CompositeKindEvent {
+
+					if innerIsInterface && !innerComposite.SupportsInterfaces() {
 						continue
 					}
 
 					outer := outerComposite.DeclarationKind(outerIsInterface)
 					inner := innerComposite.DeclarationKind(innerIsInterface)
 
-					testName := fmt.Sprintf("%s/%s", outer, inner)
+					testName := fmt.Sprintf("%s / %s", outer.Name(), inner.Name())
 
 					t.Run(testName, func(t *testing.T) {
 
@@ -55,17 +56,18 @@ func TestCheckCompositeDeclarationNesting(t *testing.T) {
 							innerBody = "()"
 						}
 
-						_, err := ParseAndCheck(t,
-							fmt.Sprintf(
-								`
+						code := fmt.Sprintf(
+							`
                                   %[1]s Outer {
                                       %[2]s Inner %[3]s
                                   }
                                 `,
-								outer.Keywords(),
-								inner.Keywords(),
-								innerBody,
-							),
+							outer.Keywords(),
+							inner.Keywords(),
+							innerBody,
+						)
+						_, err := ParseAndCheck(t,
+							code,
 						)
 
 						switch outerComposite {
@@ -79,7 +81,8 @@ func TestCheckCompositeDeclarationNesting(t *testing.T) {
 
 							case common.CompositeKindResource,
 								common.CompositeKindStructure,
-								common.CompositeKindEvent:
+								common.CompositeKindEvent,
+								common.CompositeKindEnum:
 
 								require.NoError(t, err)
 

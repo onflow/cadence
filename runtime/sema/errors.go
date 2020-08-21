@@ -2328,6 +2328,38 @@ func (e *InvalidNestedTypeError) EndPosition() ast.Position {
 	return e.Type.EndPosition()
 }
 
+// InvalidEnumCaseError
+
+type InvalidEnumCaseError struct {
+	ContainerDeclarationKind common.DeclarationKind
+	ast.Range
+}
+
+func (e *InvalidEnumCaseError) Error() string {
+	return fmt.Sprintf(
+		"%s does not allow enum cases",
+		e.ContainerDeclarationKind.Name(),
+	)
+}
+
+func (*InvalidEnumCaseError) isSemanticError() {}
+
+// InvalidNonEnumCaseError
+
+type InvalidNonEnumCaseError struct {
+	ContainerDeclarationKind common.DeclarationKind
+	ast.Range
+}
+
+func (e *InvalidNonEnumCaseError) Error() string {
+	return fmt.Sprintf(
+		"%s only allows enum cases",
+		e.ContainerDeclarationKind.Name(),
+	)
+}
+
+func (*InvalidNonEnumCaseError) isSemanticError() {}
+
 // DeclarationKindMismatchError
 
 type DeclarationKindMismatchError struct {
