@@ -183,3 +183,21 @@ func TestCheckInvalidNonPublicEnumCase(t *testing.T) {
 
 	assert.IsType(t, &sema.InvalidAccessModifierError{}, errs[0])
 }
+
+func TestCheckEnumCaseRawValueField(t *testing.T) {
+
+	t.Parallel()
+
+	// TODO: replace panic with `E.a`
+
+	_, err := ParseAndCheckWithPanic(t, `
+      enum E: Int {
+        case a
+      }
+
+      let e: E = panic("")
+      let rawValue: Int = e.rawValue
+    `)
+
+	require.NoError(t, err)
+}
