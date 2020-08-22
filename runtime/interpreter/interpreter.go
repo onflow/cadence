@@ -3479,6 +3479,11 @@ func init() {
 }
 
 func (interpreter *Interpreter) defineBaseFunctions() {
+	interpreter.defineConverterFunctions()
+	interpreter.defineTypeFunction()
+}
+
+func (interpreter *Interpreter) defineConverterFunctions() {
 	for name, converter := range converters {
 		err := interpreter.ImportValue(
 			name,
@@ -3488,7 +3493,9 @@ func (interpreter *Interpreter) defineBaseFunctions() {
 			panic(errors.NewUnreachableError())
 		}
 	}
+}
 
+func (interpreter *Interpreter) defineTypeFunction() {
 	err := interpreter.ImportValue(
 		"Type",
 		NewHostFunctionValue(
@@ -3699,6 +3706,14 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 
 			return true
 
+		}
+	case ContractDynamicType:
+		switch superType.(type) {
+		case *sema.ContractType, *sema.AnyStructType:
+			return true
+
+		default:
+			return false
 		}
 	}
 

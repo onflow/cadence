@@ -178,3 +178,9 @@ func (AuthAccountDynamicType) IsDynamicType() {}
 type PublicAccountDynamicType struct{}
 
 func (PublicAccountDynamicType) IsDynamicType() {}
+
+// ContractDynamicType
+
+type ContractDynamicType struct{}
+
+func (ContractDynamicType) IsDynamicType() {}
