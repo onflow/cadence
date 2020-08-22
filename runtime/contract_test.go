@@ -42,20 +42,28 @@ func TestRuntimeContract(t *testing.T) {
 
 		runtime := NewInterpreterRuntime()
 
+		var loggedMessages []string
+
 		testTx := []byte(
 			fmt.Sprintf(
 				`
-	                  transaction {
-	                      prepare() {
-	                          Contract(name: %q, code: "%s".decodeHex())
-	                      }
-	                   }
-	                `,
+	              transaction {
+	                  prepare() {
+	                      let contract = Contract(name: %q, code: "%s".decodeHex())
+                          log(contract.name)
+                          log(contract.code)
+	                  }
+	               }
+	            `,
 				tc.name,
 				hex.EncodeToString([]byte(tc.code)),
 			))
 
-		runtimeInterface := &testRuntimeInterface{}
+		runtimeInterface := &testRuntimeInterface{
+			log: func(message string) {
+				loggedMessages = append(loggedMessages, message)
+			},
+		}
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
@@ -63,6 +71,14 @@ func TestRuntimeContract(t *testing.T) {
 
 		if tc.valid {
 			require.NoError(t, err)
+
+			require.Equal(t,
+				[]string{
+					`"Test"`,
+					`[112, 117, 98, 32, 99, 111, 110, 116, 114, 97, 99, 116, 32, 84, 101, 115, 116, 32, 123, 125]`,
+				},
+				loggedMessages,
+			)
 		} else {
 			require.Error(t, err)
 		}
