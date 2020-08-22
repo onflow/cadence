@@ -411,7 +411,7 @@ func TestRuntimeProgramCache(t *testing.T) {
 		scriptLocation := ast.StringLocation("placeholder")
 
 		// Initial call, should parse script, store result in cache.
-		err := runtime.ParseAndCheckProgram(script, runtimeInterface, scriptLocation)
+		_, err := runtime.ParseAndCheckProgram(script, runtimeInterface, scriptLocation)
 		assert.NoError(t, err)
 
 		// Program was added to cache.
@@ -436,7 +436,7 @@ func TestRuntimeProgramCache(t *testing.T) {
 		scriptLocation := ast.StringLocation("placeholder")
 
 		// Call a second time to hit the cache
-		err := runtime.ParseAndCheckProgram(script, runtimeInterface, scriptLocation)
+		_, err := runtime.ParseAndCheckProgram(script, runtimeInterface, scriptLocation)
 		assert.NoError(t, err)
 
 		// Script was in cache.
@@ -456,7 +456,7 @@ func TestRuntimeProgramCache(t *testing.T) {
 		scriptLocation := ast.StringLocation("placeholder")
 
 		// Call a second time to hit the cache
-		err := runtime.ParseAndCheckProgram(script, runtimeInterface, scriptLocation)
+		_, err := runtime.ParseAndCheckProgram(script, runtimeInterface, scriptLocation)
 		assert.NoError(t, err)
 
 		// Script was in cache.
@@ -1843,7 +1843,7 @@ func TestParseAndCheckProgram(t *testing.T) {
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
-		err := runtime.ParseAndCheckProgram(script, runtimeInterface, nextTransactionLocation())
+		_, err := runtime.ParseAndCheckProgram(script, runtimeInterface, nextTransactionLocation())
 		assert.NoError(t, err)
 	})
 
@@ -1855,7 +1855,7 @@ func TestParseAndCheckProgram(t *testing.T) {
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
-		err := runtime.ParseAndCheckProgram(script, runtimeInterface, nextTransactionLocation())
+		_, err := runtime.ParseAndCheckProgram(script, runtimeInterface, nextTransactionLocation())
 		assert.NotNil(t, err)
 	})
 
@@ -1867,7 +1867,7 @@ func TestParseAndCheckProgram(t *testing.T) {
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
-		err := runtime.ParseAndCheckProgram(script, runtimeInterface, nextTransactionLocation())
+		_, err := runtime.ParseAndCheckProgram(script, runtimeInterface, nextTransactionLocation())
 		assert.NotNil(t, err)
 	})
 }
