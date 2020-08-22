@@ -855,7 +855,7 @@ func (e *InvalidImplementationError) EndPosition() ast.Position {
 
 type InvalidConformanceError struct {
 	Type Type
-	Pos  ast.Position
+	ast.Range
 }
 
 func (e *InvalidConformanceError) Error() string {
@@ -867,13 +867,53 @@ func (e *InvalidConformanceError) Error() string {
 
 func (*InvalidConformanceError) isSemanticError() {}
 
-func (e *InvalidConformanceError) StartPosition() ast.Position {
+// InvalidEnumRawTypeError
+
+type InvalidEnumRawTypeError struct {
+	Type Type
+	ast.Range
+}
+
+func (e *InvalidEnumRawTypeError) Error() string {
+	return fmt.Sprintf(
+		"invalid enum raw type: `%s`",
+		e.Type.QualifiedString(),
+	)
+}
+
+func (*InvalidEnumRawTypeError) isSemanticError() {}
+
+// MissingEnumRawTypeError
+
+type MissingEnumRawTypeError struct {
+	Pos ast.Position
+}
+
+func (e *MissingEnumRawTypeError) Error() string {
+	return "missing enum raw type"
+}
+
+func (*MissingEnumRawTypeError) isSemanticError() {}
+
+func (e *MissingEnumRawTypeError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *InvalidConformanceError) EndPosition() ast.Position {
+func (e *MissingEnumRawTypeError) EndPosition() ast.Position {
 	return e.Pos
 }
+
+// InvalidEnumConformancesError
+
+type InvalidEnumConformancesError struct {
+	ast.Range
+}
+
+func (e *InvalidEnumConformancesError) Error() string {
+	return "enums cannot conform to interfaces"
+}
+
+func (*InvalidEnumConformancesError) isSemanticError() {}
 
 // ConformanceError
 
@@ -2353,7 +2393,7 @@ type InvalidEnumCaseError struct {
 
 func (e *InvalidEnumCaseError) Error() string {
 	return fmt.Sprintf(
-		"%s does not allow enum cases",
+		"%s declaration does not allow enum cases",
 		e.ContainerDeclarationKind.Name(),
 	)
 }
@@ -2369,7 +2409,7 @@ type InvalidNonEnumCaseError struct {
 
 func (e *InvalidNonEnumCaseError) Error() string {
 	return fmt.Sprintf(
-		"%s only allows enum cases",
+		"%s declaration only allows enum cases",
 		e.ContainerDeclarationKind.Name(),
 	)
 }

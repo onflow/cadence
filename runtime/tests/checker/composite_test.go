@@ -44,6 +44,11 @@ func TestCheckInvalidCompositeRedeclaringType(t *testing.T) {
 			body = "()"
 		}
 
+		conformances := ""
+		if kind == common.CompositeKindEnum {
+			conformances = ": Int"
+		}
+
 		kindKeyword := kind.Keyword()
 
 		t.Run(kindKeyword, func(t *testing.T) {
@@ -53,9 +58,10 @@ func TestCheckInvalidCompositeRedeclaringType(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s Int %[2]s
+                      %[1]s String%[2]s %[3]s
                     `,
 					kindKeyword,
+					conformances,
 					body,
 				),
 			)
@@ -1248,22 +1254,31 @@ func TestCheckInvalidSameCompositeRedeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.AllCompositeKinds {
+	test := func(kind common.CompositeKind) {
+
+		body := "{}"
+		if kind == common.CompositeKindEvent {
+			body = "()"
+		}
+
+		conformances := ""
+		if kind == common.CompositeKindEnum {
+			conformances = ": Int"
+		}
+
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
-			body := "{}"
-			if kind == common.CompositeKindEvent {
-				body = "()"
-			}
+			t.Parallel()
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
                       let x = 1
-                      %[1]s Foo %[2]s
-                      %[1]s Foo %[2]s
+                      %[1]s Foo%[2]s %[3]s
+                      %[1]s Foo%[2]s %[3]s
                     `,
 					kind.Keyword(),
+					conformances,
 					body,
 				),
 			)
@@ -1276,6 +1291,10 @@ func TestCheckInvalidSameCompositeRedeclaration(t *testing.T) {
 			assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 			assert.IsType(t, &sema.RedeclarationError{}, errs[1])
 		})
+	}
+
+	for _, kind := range common.AllCompositeKinds {
+		test(kind)
 	}
 }
 
@@ -1296,9 +1315,19 @@ func TestCheckInvalidDifferentCompositeRedeclaration(t *testing.T) {
 				firstBody = "()"
 			}
 
+			firstConformances := ""
+			if firstKind == common.CompositeKindEnum {
+				firstConformances = ": Int"
+			}
+
 			secondBody := "{}"
 			if secondKind == common.CompositeKindEvent {
 				secondBody = "()"
+			}
+
+			secondConformances := ""
+			if secondKind == common.CompositeKindEnum {
+				secondConformances = ": Int"
 			}
 
 			testName := fmt.Sprintf(
@@ -1313,12 +1342,14 @@ func TestCheckInvalidDifferentCompositeRedeclaration(t *testing.T) {
 					fmt.Sprintf(
 						`
                           let x = 1
-                          %[1]s Foo %[2]s
-                          %[3]s Foo %[4]s
+                          %[1]s Foo%[2]s %[3]s
+                          %[4]s Foo%[5]s %[6]s
                         `,
 						firstKind.Keyword(),
+						firstConformances,
 						firstBody,
 						secondKind.Keyword(),
+						secondConformances,
 						secondBody,
 					),
 				)

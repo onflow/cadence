@@ -56,14 +56,20 @@ func TestCheckCompositeDeclarationNesting(t *testing.T) {
 							innerBody = "()"
 						}
 
+						innerConformances := ""
+						if innerComposite == common.CompositeKindEnum {
+							innerConformances = ": Int"
+						}
+
 						code := fmt.Sprintf(
 							`
-                                  %[1]s Outer {
-                                      %[2]s Inner %[3]s
-                                  }
-                                `,
+                              %[1]s Outer {
+                                  %[2]s Inner%[3]s %[4]s
+                              }
+                            `,
 							outer.Keywords(),
 							inner.Keywords(),
+							innerConformances,
 							innerBody,
 						)
 						_, err := ParseAndCheck(t,

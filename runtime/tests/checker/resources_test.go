@@ -37,9 +37,15 @@ func TestCheckFailableCastingWithResourceAnnotation(t *testing.T) {
 	t.Parallel()
 
 	test := func(compositeKind common.CompositeKind) {
+
 		body := "{}"
 		if compositeKind == common.CompositeKindEvent {
 			body = "()"
+		}
+
+		conformances := ""
+		if compositeKind == common.CompositeKindEnum {
+			conformances = ": Int"
 		}
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
@@ -49,11 +55,12 @@ func TestCheckFailableCastingWithResourceAnnotation(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s T %[2]s
+                      %[1]s T%[2]s %[3]s
 
-                      let test %[3]s %[4]s T%[5]s as? @T
+                      let test %[4]s %[5]s T%[6]s as? @T
                     `,
 					compositeKind.Keyword(),
+					conformances,
 					body,
 					compositeKind.TransferOperator(),
 					compositeKind.ConstructionKeyword(),
@@ -106,6 +113,11 @@ func TestCheckFunctionDeclarationParameterWithResourceAnnotation(t *testing.T) {
 			body = "()"
 		}
 
+		conformances := ""
+		if kind == common.CompositeKindEnum {
+			conformances = ": Int"
+		}
+
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			t.Parallel()
@@ -113,13 +125,14 @@ func TestCheckFunctionDeclarationParameterWithResourceAnnotation(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s T %[2]s
+                      %[1]s T%[2]s %[3]s
 
                       fun test(r: @T) {
-                          %[3]s r
+                          %[4]s r
                       }
                     `,
 					kind.Keyword(),
+					conformances,
 					body,
 					kind.DestructionKeyword(),
 				),
@@ -155,9 +168,15 @@ func TestCheckFunctionDeclarationParameterWithoutResourceAnnotation(t *testing.T
 	t.Parallel()
 
 	test := func(kind common.CompositeKind) {
+
 		body := "{}"
 		if kind == common.CompositeKindEvent {
 			body = "()"
+		}
+
+		conformances := ""
+		if kind == common.CompositeKindEnum {
+			conformances = ": Int"
 		}
 
 		t.Run(kind.Keyword(), func(t *testing.T) {
@@ -167,13 +186,14 @@ func TestCheckFunctionDeclarationParameterWithoutResourceAnnotation(t *testing.T
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s T %[2]s
+                      %[1]s T%[2]s %[3]s
 
                       fun test(r: T) {
-                          %[3]s r
+                          %[4]s r
                       }
                     `,
 					kind.Keyword(),
+					conformances,
 					body,
 					kind.DestructionKeyword(),
 				),
@@ -215,6 +235,11 @@ func TestCheckFunctionDeclarationReturnTypeWithResourceAnnotation(t *testing.T) 
 			body = "()"
 		}
 
+		conformances := ""
+		if compositeKind == common.CompositeKindEnum {
+			conformances = ": Int"
+		}
+
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
 			t.Parallel()
@@ -222,13 +247,14 @@ func TestCheckFunctionDeclarationReturnTypeWithResourceAnnotation(t *testing.T) 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s T %[2]s
+                      %[1]s T%[2]s %[3]s
 
                       fun test(): @T {
-                          return %[3]s %[4]s T%[5]s
+                          return %[4]s %[5]s T%[6]s
                       }
                     `,
 					compositeKind.Keyword(),
+					conformances,
 					body,
 					compositeKind.MoveOperator(),
 					compositeKind.ConstructionKeyword(),
@@ -285,6 +311,11 @@ func TestCheckFunctionDeclarationReturnTypeWithoutResourceAnnotation(t *testing.
 			body = "()"
 		}
 
+		conformances := ""
+		if compositeKind == common.CompositeKindEnum {
+			conformances = ": Int"
+		}
+
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
 			t.Parallel()
@@ -292,13 +323,14 @@ func TestCheckFunctionDeclarationReturnTypeWithoutResourceAnnotation(t *testing.
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s T %[2]s
+                      %[1]s T%[2]s %[3]s
 
                       fun test(): T {
-                          return %[3]s %[4]s T%[5]s
+                          return %[4]s %[5]s T%[6]s
                       }
                     `,
 					compositeKind.Keyword(),
+					conformances,
 					body,
 					compositeKind.MoveOperator(),
 					compositeKind.ConstructionKeyword(),
@@ -350,6 +382,11 @@ func TestCheckVariableDeclarationWithResourceAnnotation(t *testing.T) {
 			body = "()"
 		}
 
+		conformances := ""
+		if compositeKind == common.CompositeKindEnum {
+			conformances = ": Int"
+		}
+
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
 			t.Parallel()
@@ -357,11 +394,12 @@ func TestCheckVariableDeclarationWithResourceAnnotation(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s T %[2]s
+                      %[1]s T%[2]s %[3]s
 
-                      let test: @T %[3]s %[4]s T%[5]s
+                      let test: @T %[4]s %[5]s T%[6]s
                     `,
 					compositeKind.Keyword(),
+					conformances,
 					body,
 					compositeKind.TransferOperator(),
 					compositeKind.ConstructionKeyword(),
@@ -415,6 +453,11 @@ func TestCheckVariableDeclarationWithoutResourceAnnotation(t *testing.T) {
 			body = "()"
 		}
 
+		conformances := ""
+		if compositeKind == common.CompositeKindEnum {
+			conformances = ": Int"
+		}
+
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
 			t.Parallel()
@@ -422,11 +465,12 @@ func TestCheckVariableDeclarationWithoutResourceAnnotation(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s T %[2]s
+                      %[1]s T%[2]s %[3]s
 
-                      let test: T %[3]s %[4]s T%[5]s
+                      let test: T %[4]s %[5]s T%[6]s
                     `,
 					compositeKind.Keyword(),
+					conformances,
 					body,
 					compositeKind.TransferOperator(),
 					compositeKind.ConstructionKeyword(),
@@ -603,6 +647,11 @@ func TestCheckFunctionExpressionParameterWithResourceAnnotation(t *testing.T) {
 			body = "()"
 		}
 
+		conformances := ""
+		if kind == common.CompositeKindEnum {
+			conformances = ": Int"
+		}
+
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			t.Parallel()
@@ -610,13 +659,14 @@ func TestCheckFunctionExpressionParameterWithResourceAnnotation(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s T %[2]s
+                      %[1]s T%[2]s %[3]s
 
                       let test = fun (r: @T) {
-                          %[3]s r
+                          %[4]s r
                       }
                     `,
 					kind.Keyword(),
+					conformances,
 					body,
 					kind.DestructionKeyword(),
 				),
@@ -658,6 +708,11 @@ func TestCheckFunctionExpressionParameterWithoutResourceAnnotation(t *testing.T)
 			body = "()"
 		}
 
+		conformances := ""
+		if kind == common.CompositeKindEnum {
+			conformances = ": Int"
+		}
+
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			t.Parallel()
@@ -665,13 +720,14 @@ func TestCheckFunctionExpressionParameterWithoutResourceAnnotation(t *testing.T)
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s T %[2]s
+                      %[1]s T%[2]s %[3]s
 
                       let test = fun (r: T) {
-                          %[3]s r
+                          %[4]s r
                       }
                     `,
 					kind.Keyword(),
+					conformances,
 					body,
 					kind.DestructionKeyword(),
 				),
@@ -714,6 +770,11 @@ func TestCheckFunctionExpressionReturnTypeWithResourceAnnotation(t *testing.T) {
 			body = "()"
 		}
 
+		conformances := ""
+		if compositeKind == common.CompositeKindEnum {
+			conformances = ": Int"
+		}
+
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
 			t.Parallel()
@@ -721,13 +782,14 @@ func TestCheckFunctionExpressionReturnTypeWithResourceAnnotation(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s T %[2]s
+                      %[1]s T%[2]s %[3]s
 
                       let test = fun (): @T {
-                          return %[3]s %[4]s T%[5]s
+                          return %[4]s %[5]s T%[6]s
                       }
                     `,
 					compositeKind.Keyword(),
+					conformances,
 					body,
 					compositeKind.MoveOperator(),
 					compositeKind.ConstructionKeyword(),
@@ -774,29 +836,33 @@ func TestCheckFunctionExpressionReturnTypeWithoutResourceAnnotation(t *testing.T
 
 	t.Parallel()
 
-	for _, compositeKind := range common.AllCompositeKinds {
-
-		if compositeKind == common.CompositeKindContract {
-			continue
-		}
+	test := func(compositeKind common.CompositeKind) {
 
 		body := "{}"
 		if compositeKind == common.CompositeKindEvent {
 			body = "()"
 		}
 
+		conformances := ""
+		if compositeKind == common.CompositeKindEnum {
+			conformances = ": Int"
+		}
+
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
+
+			t.Parallel()
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s T %[2]s
+                      %[1]s T%[2]s %[3]s
 
                       let test = fun (): T {
-                          return %[3]s %[4]s T%[5]s
+                          return %[4]s %[5]s T%[6]s
                       }
                     `,
 					compositeKind.Keyword(),
+					conformances,
 					body,
 					compositeKind.MoveOperator(),
 					compositeKind.ConstructionKeyword(),
@@ -826,6 +892,15 @@ func TestCheckFunctionExpressionReturnTypeWithoutResourceAnnotation(t *testing.T
 			}
 		})
 	}
+
+	for _, compositeKind := range common.AllCompositeKinds {
+
+		if compositeKind == common.CompositeKindContract {
+			continue
+		}
+
+		test(compositeKind)
+	}
 }
 
 func TestCheckFunctionTypeParameterWithResourceAnnotation(t *testing.T) {
@@ -839,6 +914,11 @@ func TestCheckFunctionTypeParameterWithResourceAnnotation(t *testing.T) {
 			body = "()"
 		}
 
+		conformances := ""
+		if kind == common.CompositeKindEnum {
+			conformances = ": Int"
+		}
+
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			t.Parallel()
@@ -846,13 +926,14 @@ func TestCheckFunctionTypeParameterWithResourceAnnotation(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s T %[2]s
+                      %[1]s T%[2]s %[3]s
 
                       let test: ((@T): Void) = fun (r: @T) {
-                          %[3]s r
+                          %[4]s r
                       }
                     `,
 					kind.Keyword(),
+					conformances,
 					body,
 					kind.DestructionKeyword(),
 				),
@@ -896,6 +977,11 @@ func TestCheckFunctionTypeParameterWithoutResourceAnnotation(t *testing.T) {
 			body = "()"
 		}
 
+		conformances := ""
+		if kind == common.CompositeKindEnum {
+			conformances = ": Int"
+		}
+
 		t.Run(kind.Keyword(), func(t *testing.T) {
 
 			t.Parallel()
@@ -903,13 +989,14 @@ func TestCheckFunctionTypeParameterWithoutResourceAnnotation(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s T %[2]s
+                      %[1]s T%[2]s %[3]s
 
-                      let test: ((T): Void) = fun (r: %[3]sT) {
-                          %[4]s r
+                      let test: ((T): Void) = fun (r: %[4]sT) {
+                          %[5]s r
                       }
                     `,
 					kind.Keyword(),
+					conformances,
 					body,
 					kind.Annotation(),
 					kind.DestructionKeyword(),
@@ -946,9 +1033,15 @@ func TestCheckFunctionTypeReturnTypeWithResourceAnnotation(t *testing.T) {
 	t.Parallel()
 
 	test := func(compositeKind common.CompositeKind) {
+
 		body := "{}"
 		if compositeKind == common.CompositeKindEvent {
 			body = "()"
+		}
+
+		conformances := ""
+		if compositeKind == common.CompositeKindEnum {
+			conformances = ": Int"
 		}
 
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
@@ -958,13 +1051,14 @@ func TestCheckFunctionTypeReturnTypeWithResourceAnnotation(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s T %[2]s
+                      %[1]s T%[2]s %[3]s
 
                       let test: ((): @T) = fun (): @T {
-                          return %[3]s %[4]s T%[5]s
+                          return %[4]s %[5]s T%[6]s
                       }
                     `,
 					compositeKind.Keyword(),
+					conformances,
 					body,
 					compositeKind.MoveOperator(),
 					compositeKind.ConstructionKeyword(),
@@ -1019,6 +1113,11 @@ func TestCheckFunctionTypeReturnTypeWithoutResourceAnnotation(t *testing.T) {
 			body = "()"
 		}
 
+		conformances := ""
+		if compositeKind == common.CompositeKindEnum {
+			conformances = ": Int"
+		}
+
 		t.Run(compositeKind.Keyword(), func(t *testing.T) {
 
 			t.Parallel()
@@ -1026,13 +1125,14 @@ func TestCheckFunctionTypeReturnTypeWithoutResourceAnnotation(t *testing.T) {
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s T %[2]s
+                      %[1]s T%[2]s %[3]s
 
                       let test: ((): T) = fun (): T {
-                          return %[3]s %[4]s T%[5]s
+                          return %[4]s %[5]s T%[6]s
                       }
                     `,
 					compositeKind.Keyword(),
+					conformances,
 					body,
 					compositeKind.MoveOperator(),
 					compositeKind.ConstructionKeyword(),
@@ -2766,12 +2866,17 @@ func testResourceNesting(
 			innerBody = "()"
 		}
 
+		innerConformances := ""
+		if innerCompositeKind == common.CompositeKindEnum {
+			innerConformances = ": Int"
+		}
+
 		// Prepare the full program defining an empty composite,
 		// and a second composite which contains the first
 
 		program := fmt.Sprintf(
 			`
-              %[1]s %[2]s T %[3]s
+              %[1]s %[2]s T%[10]s %[3]s
 
               %[4]s %[5]s U {
                   let t: %[6]s%[7]s
@@ -2788,6 +2893,7 @@ func testResourceNesting(
 			innerTypeAnnotation,
 			initializer,
 			destructor,
+			innerConformances,
 		)
 
 		_, err := ParseAndCheck(t, program)
