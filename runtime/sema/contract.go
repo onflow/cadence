@@ -21,7 +21,6 @@ package sema
 import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 )
 
 // ContractType represents the type `Contract`
@@ -115,35 +114,4 @@ func (t *ContractType) GetMembers() map[string]MemberResolver {
 			},
 		},
 	})
-}
-
-func init() {
-	addressType := &ContractType{}
-	typeName := addressType.String()
-
-	// check type is not accidentally redeclared
-	if _, ok := BaseValues[typeName]; ok {
-		panic(errors.NewUnreachableError())
-	}
-
-	BaseValues[typeName] = baseFunction{
-		name: typeName,
-		invokableType: &FunctionType{
-			Parameters: []*Parameter{
-				{
-					Identifier:     "name",
-					TypeAnnotation: NewTypeAnnotation(&StringType{}),
-				},
-				{
-					Identifier: "code",
-					TypeAnnotation: NewTypeAnnotation(
-						&VariableSizedType{
-							Type: &UInt8Type{},
-						},
-					),
-				},
-			},
-			ReturnTypeAnnotation: NewTypeAnnotation(addressType),
-		},
-	}
 }
