@@ -71,6 +71,7 @@ var validTopLevelDeclarationsInTransaction = []common.DeclarationKind{
 }
 
 var validTopLevelDeclarationsInAccountCode = []common.DeclarationKind{
+	common.DeclarationKindPragma,
 	common.DeclarationKindImport,
 	common.DeclarationKindContract,
 	common.DeclarationKindContractInterface,
