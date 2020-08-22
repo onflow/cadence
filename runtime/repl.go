@@ -49,6 +49,9 @@ func NewREPL(onError func(error), onResult func(interpreter.Value), checkerOptio
 			GetAccount: func(invocation interpreter.Invocation) trampoline.Trampoline {
 				panic(fmt.Errorf("cannot get accounts in the REPL"))
 			},
+			CreateContract: func(invocation interpreter.Invocation) trampoline.Trampoline {
+				panic(fmt.Errorf("cannot create contracts in the REPL"))
+			},
 			Log: stdlib.LogFunction.Function.Function,
 			GetCurrentBlock: func(invocation interpreter.Invocation) trampoline.Trampoline {
 				panic(fmt.Errorf("cannot get blocks in the REPL"))

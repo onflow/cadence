@@ -58,6 +58,24 @@ var getAccountFunctionType = &sema.FunctionType{
 	),
 }
 
+var contractFunctionType = &sema.FunctionType{
+	Parameters: []*sema.Parameter{
+		{
+			Identifier:     "name",
+			TypeAnnotation: sema.NewTypeAnnotation(&sema.StringType{}),
+		},
+		{
+			Identifier: "code",
+			TypeAnnotation: sema.NewTypeAnnotation(
+				&sema.VariableSizedType{
+					Type: &sema.UInt8Type{},
+				},
+			),
+		},
+	},
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.DeployedContractType{}),
+}
+
 var logFunctionType = &sema.FunctionType{
 	Parameters: []*sema.Parameter{
 		{
@@ -105,6 +123,7 @@ var unsafeRandomFunctionType = &sema.FunctionType{
 type FlowBuiltinImpls struct {
 	CreateAccount   interpreter.HostFunction
 	GetAccount      interpreter.HostFunction
+	CreateContract  interpreter.HostFunction
 	Log             interpreter.HostFunction
 	GetCurrentBlock interpreter.HostFunction
 	GetBlock        interpreter.HostFunction
@@ -124,6 +143,11 @@ func FlowBuiltInFunctions(impls FlowBuiltinImpls) StandardLibraryFunctions {
 			"getAccount",
 			getAccountFunctionType,
 			impls.GetAccount,
+		),
+		NewStandardLibraryFunction(
+			"Contract",
+			contractFunctionType,
+			impls.CreateContract,
 		),
 		NewStandardLibraryFunction(
 			"log",
