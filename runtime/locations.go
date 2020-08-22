@@ -89,3 +89,15 @@ func (l REPLLocation) ID() LocationID {
 func (l REPLLocation) String() string {
 	return "REPL"
 }
+
+// UndeployedContractLocation
+
+type UndeployedContractLocation struct{}
+
+func (l UndeployedContractLocation) ID() LocationID {
+	return LocationID(l.String())
+}
+
+func (l UndeployedContractLocation) String() string {
+	return "UndeployedContract"
+}
