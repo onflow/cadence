@@ -417,8 +417,7 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 	// Resolve conformances
 
 	if declaration.CompositeKind == common.CompositeKindEnum {
-		compositeType.RawType =
-			checker.enumRawType(declaration)
+		compositeType.EnumInfo.RawType = checker.enumRawType(declaration)
 	} else {
 		compositeType.ExplicitInterfaceConformances =
 			checker.explicitInterfaceConformances(declaration, compositeType)
@@ -578,11 +577,12 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 		case common.CompositeKindEnum:
 			// Enum members are derived from the cases
-			members, fields, origins = checker.enumMembersAndOrigins(
+			members, fields = checker.enumMembersAndOrigins(
 				declaration.Members,
 				compositeType,
 				declaration.DeclarationKind(),
 			)
+			origins = map[string]*Origin{}
 
 		default:
 			members, fields, origins = checker.defaultMembersAndOrigins(
@@ -1375,6 +1375,11 @@ func (checker *Checker) eventMembersAndOrigins(
 	return
 }
 
+const enumRawValueFieldName = "rawValue"
+const enumRawValueFieldDocString = `
+The raw value of the enum case
+`
+
 func (checker *Checker) enumMembersAndOrigins(
 	allMembers *ast.Members,
 	containerType *CompositeType,
@@ -1382,15 +1387,7 @@ func (checker *Checker) enumMembersAndOrigins(
 ) (
 	members map[string]*Member,
 	fieldNames []string,
-	origins map[string]*Origin,
 ) {
-	caseCount := len(allMembers.EnumCases())
-
-	members = make(map[string]*Member, caseCount)
-	origins = make(map[string]*Origin, caseCount)
-
-	typeAnnotation := NewTypeAnnotation(containerType)
-
 	for _, declaration := range allMembers.Declarations {
 
 		// Enum declarations may only contain enum cases
@@ -1406,7 +1403,12 @@ func (checker *Checker) enumMembersAndOrigins(
 			continue
 		}
 
-		identifier := enumCase.Identifier
+		// Record the case in the composite type's enum info
+
+		containerType.EnumInfo.Cases = append(
+			containerType.EnumInfo.Cases,
+			enumCase.Identifier.Identifier,
+		)
 
 		// Enum cases must be effectively public
 
@@ -1420,28 +1422,32 @@ func (checker *Checker) enumMembersAndOrigins(
 				},
 			)
 		}
+	}
 
-		// Declare member and record origin
+	// Members of the enum type are *not* the enum cases!
+	// Each individual enum case is an instance of the enum type,
+	// so only has a single member, the raw value field
 
-		fieldNames = append(fieldNames, identifier.Identifier)
-
-		members[identifier.Identifier] = &Member{
-			ContainerType:   containerType,
-			Access:          ast.AccessPublic,
-			Identifier:      identifier,
+	members = map[string]*Member{
+		enumRawValueFieldName: {
+			ContainerType: containerType,
+			Access:        ast.AccessPublic,
+			Identifier: ast.Identifier{
+				Identifier: enumRawValueFieldName,
+			},
 			DeclarationKind: common.DeclarationKindField,
-			TypeAnnotation:  typeAnnotation,
+			TypeAnnotation:  NewTypeAnnotation(containerType.EnumInfo.RawType),
 			VariableKind:    ast.VariableKindConstant,
-			DocString:       enumCase.DocString,
-		}
+			DocString:       enumRawValueFieldDocString,
+		},
+	}
 
-		origins[identifier.Identifier] =
-			checker.recordFieldDeclarationOrigin(
-				identifier,
-				identifier.StartPosition(),
-				identifier.EndPosition(),
-				containerType,
-			)
+	// Gather the field names from the members declared above
+
+	for name, member := range members {
+		if member.DeclarationKind == common.DeclarationKindField {
+			fieldNames = append(fieldNames, name)
+		}
 	}
 
 	return

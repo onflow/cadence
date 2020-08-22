@@ -4736,6 +4736,11 @@ func init() {
 
 // CompositeType
 
+type EnumInfo struct {
+	RawType Type
+	Cases   []string
+}
+
 type CompositeType struct {
 	Location   ast.Location
 	Identifier string
@@ -4750,7 +4755,7 @@ type CompositeType struct {
 	ConstructorParameters []*Parameter
 	nestedTypes           map[string]Type
 	ContainerType         Type
-	RawType               Type
+	EnumInfo              EnumInfo
 }
 
 func (t *CompositeType) ExplicitInterfaceConformanceSet() InterfaceSet {
