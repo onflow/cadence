@@ -589,6 +589,11 @@ func TestCheckAccessModifierGlobalCompositeDeclaration(t *testing.T) {
 						body = "()"
 					}
 
+					conformances := ""
+					if compositeKind == common.CompositeKindEnum {
+						conformances = ": Int"
+					}
+
 					testName := fmt.Sprintf("%s %s/%s/%s",
 						compositeKind.Keyword(),
 						interfaceKeyword,
@@ -601,11 +606,12 @@ func TestCheckAccessModifierGlobalCompositeDeclaration(t *testing.T) {
 						_, err := ParseAndCheckWithOptions(t,
 							fmt.Sprintf(
 								`
-                                  %[1]s %[2]s %[3]s Test %[4]s
+                                  %[1]s %[2]s %[3]s Test%[4]s %[5]s
 	                            `,
 								access.Keyword(),
 								compositeKind.Keyword(),
 								interfaceKeyword,
+								conformances,
 								body,
 							),
 							ParseAndCheckOptions{
