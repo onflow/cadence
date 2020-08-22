@@ -23,7 +23,7 @@
     "to-vfile": "^6.1.0",
     "unified": "^8.4.2",
     "unist-util-visit": "^1.4.1",
-    "vfile-reporter": "^6.0.0",
+    "vfile-reporter": "^6.0.1",
     "vscode-textmate": "^4.4.0"
   }
 }
