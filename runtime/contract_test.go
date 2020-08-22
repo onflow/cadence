@@ -24,6 +24,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 func TestRuntimeContract(t *testing.T) {
@@ -75,7 +77,7 @@ func TestRuntimeContract(t *testing.T) {
 			require.Equal(t,
 				[]string{
 					`"Test"`,
-					`[112, 117, 98, 32, 99, 111, 110, 116, 114, 97, 99, 116, 32, 84, 101, 115, 116, 32, 123, 125]`,
+					interpreter.ByteSliceToByteArrayValue([]byte(tc.code)).String(),
 				},
 				loggedMessages,
 			)
