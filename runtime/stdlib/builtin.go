@@ -63,10 +63,6 @@ var AssertFunction = NewStandardLibraryFunction(
 		}
 		return trampoline.Done{}
 	},
-	[]string{
-		sema.ArgumentLabelNotRequired,
-		"message",
-	},
 )
 
 // PanicError
@@ -103,7 +99,6 @@ var PanicFunction = NewStandardLibraryFunction(
 			LocationRange: invocation.LocationRange,
 		})
 	},
-	nil,
 )
 
 // BuiltinFunctions
@@ -134,7 +129,6 @@ var LogFunction = NewStandardLibraryFunction(
 		result := interpreter.VoidValue{}
 		return trampoline.Done{Result: result}
 	},
-	nil,
 )
 
 // HelperFunctions
