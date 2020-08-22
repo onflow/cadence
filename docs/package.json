@@ -17,7 +17,7 @@
     "remark-stringify": "^7.0.4",
     "remark-toc": "^6.0.0",
     "remark-validate-links": "^9.2.0",
-    "retext-english": "^3.0.3",
+    "retext-english": "^3.0.4",
     "retext-indefinite-article": "^1.1.7",
     "retext-repeated-words": "^2.0.0",
     "to-vfile": "^6.1.0",
