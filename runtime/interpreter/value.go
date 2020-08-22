@@ -6526,7 +6526,6 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 
 	case "getCapability":
 		return accountGetCapabilityFunction(v.Address, true)
-
 	}
 
 	return nil
@@ -6558,7 +6557,7 @@ func (v PublicAccountValue) AddressValue() AddressValue {
 }
 
 func (PublicAccountValue) DynamicType(_ *Interpreter) DynamicType {
-	return AuthAccountDynamicType{}
+	return PublicAccountDynamicType{}
 }
 
 func (v PublicAccountValue) Copy() Value {
