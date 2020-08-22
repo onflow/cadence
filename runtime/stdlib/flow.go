@@ -73,7 +73,7 @@ var contractFunctionType = &sema.FunctionType{
 			),
 		},
 	},
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.DeployedContractType{}),
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.ContractType{}),
 }
 
 var logFunctionType = &sema.FunctionType{
