@@ -3533,8 +3533,6 @@ func (interpreter *Interpreter) newConverterFunction(converter ValueConverter) F
 // - FunctionType
 //
 // - Character
-// - AuthAccount
-// - PublicAccount
 // - Block
 
 func IsSubType(subType DynamicType, superType sema.Type) bool {
@@ -3706,6 +3704,34 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 			return true
 
 		}
+
+	case PathDynamicType:
+		switch superType.(type) {
+		case *sema.PathType, *sema.AnyStructType:
+			return true
+
+		default:
+			return false
+		}
+
+	case PublicAccountDynamicType:
+		switch superType.(type) {
+		case *sema.PublicAccountType, *sema.AnyStructType:
+			return true
+
+		default:
+			return false
+		}
+
+	case AuthAccountDynamicType:
+		switch superType.(type) {
+		case *sema.AuthAccountType, *sema.AnyStructType:
+			return true
+
+		default:
+			return false
+		}
+
 	case ContractDynamicType:
 		switch superType.(type) {
 		case *sema.ContractType, *sema.AnyStructType:
