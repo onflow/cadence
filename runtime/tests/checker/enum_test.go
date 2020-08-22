@@ -159,8 +159,8 @@ func TestCheckInvalidEnumCaseDuplicate(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       enum E: Int {
-        case a
-        case a
+          case a
+          case a
       }
     `)
 
@@ -175,7 +175,7 @@ func TestCheckInvalidNonPublicEnumCase(t *testing.T) {
 
 	_, err := ParseAndCheck(t, `
       enum E: Int {
-        priv case a
+          priv case a
       }
     `)
 
@@ -188,15 +188,32 @@ func TestCheckEnumCaseRawValueField(t *testing.T) {
 
 	t.Parallel()
 
-	// TODO: replace panic with `E.a`
-
-	_, err := ParseAndCheckWithPanic(t, `
+	_, err := ParseAndCheck(t, `
       enum E: Int {
-        case a
+          case a
       }
 
-      let e: E = panic("")
+      let e: E = E.a
       let rawValue: Int = e.rawValue
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckEnumConstructor(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      enum E: Int {
+          case a
+          case b
+          case unknown
+      }
+
+      fun test(): E {
+          return E(rawValue: 0) ?? E.unknown
+      }
     `)
 
 	require.NoError(t, err)

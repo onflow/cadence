@@ -417,7 +417,7 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 	// Resolve conformances
 
 	if declaration.CompositeKind == common.CompositeKindEnum {
-		compositeType.EnumInfo.RawType = checker.enumRawType(declaration)
+		compositeType.EnumRawType = checker.enumRawType(declaration)
 	} else {
 		compositeType.ExplicitInterfaceConformances =
 			checker.explicitInterfaceConformances(declaration, compositeType)
@@ -477,6 +477,8 @@ func (checker *Checker) declareCompositeMembersAndValue(
 	}
 
 	declarationMembers := map[string]*Member{}
+
+	var enumCases []*ast.EnumCaseDeclaration
 
 	(func() {
 		// Activate new scopes for nested types
@@ -577,7 +579,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 		case common.CompositeKindEnum:
 			// Enum members are derived from the cases
-			members, fields = checker.enumMembersAndOrigins(
+			members, fields, enumCases = checker.enumMembersAndOrigins(
 				declaration.Members,
 				compositeType,
 				declaration.DeclarationKind(),
@@ -605,57 +607,139 @@ func (checker *Checker) declareCompositeMembersAndValue(
 	constructorType, constructorArgumentLabels := checker.compositeConstructorType(declaration, compositeType)
 	constructorType.Members = declarationMembers
 
-	// If the composite is a contract, declare a value – the contract is a singleton.
+	// If the composite is a contract,
+	// declare a value – the contract is a singleton.
+	//
+	// If the composite is an enum,
+	// declare a special constructor which accepts the raw value,
+	// and declare the enum cases as members on the constructor.
+	//
 	// For all other kinds, declare constructor.
 
 	// NOTE: perform declarations after the nested scope, so they are visible after the declaration
 
-	if compositeType.Kind == common.CompositeKindContract {
-		_, err := checker.valueActivations.Declare(variableDeclaration{
-			identifier: declaration.Identifier.Identifier,
-			ty:         compositeType,
-			// NOTE: contracts are always public
-			access:                   ast.AccessPublic,
-			kind:                     common.DeclarationKindContract,
-			pos:                      declaration.Identifier.Pos,
-			isConstant:               true,
-			argumentLabels:           nil,
-			allowOuterScopeShadowing: false,
-		})
-		checker.report(err)
+	switch compositeType.Kind {
+	case common.CompositeKindContract:
+		checker.declareContractValue(declaration, compositeType, declarationMembers)
 
-		for name, declarationMember := range declarationMembers {
-			if compositeType.Members[name] != nil {
-				continue
-			}
-			compositeType.Members[name] = declarationMember
-		}
-	} else {
+	case common.CompositeKindEnum:
+		checker.declareEnumConstructor(declaration, compositeType, enumCases)
 
-		// Resource and event constructors are effectively always private,
-		// i.e. they should be only constructable by the locations that declare them.
-		//
-		// Instead of enforcing this by declaring the access as private here,
-		// we allow the declared access level and check the construction in the respective
-		// construction expressions, i.e. create expressions for resources
-		// and emit statements for events.
-		//
-		// This improves the user experience for the developer:
-		// If the access would be enforced as private, an import of the composite
-		// would fail with an "not declared" error.
-
-		_, err := checker.valueActivations.Declare(variableDeclaration{
-			identifier:               declaration.Identifier.Identifier,
-			ty:                       constructorType,
-			access:                   declaration.Access,
-			kind:                     declaration.DeclarationKind(),
-			pos:                      declaration.Identifier.Pos,
-			isConstant:               true,
-			argumentLabels:           constructorArgumentLabels,
-			allowOuterScopeShadowing: false,
-		})
-		checker.report(err)
+	default:
+		checker.declareCompositeConstructor(declaration, constructorType, constructorArgumentLabels)
 	}
+}
+
+func (checker *Checker) declareCompositeConstructor(
+	declaration *ast.CompositeDeclaration,
+	constructorType *SpecialFunctionType,
+	constructorArgumentLabels []string,
+) {
+	// Resource and event constructors are effectively always private,
+	// i.e. they should be only constructable by the locations that declare them.
+	//
+	// Instead of enforcing this by declaring the access as private here,
+	// we allow the declared access level and check the construction in the respective
+	// construction expressions, i.e. create expressions for resources
+	// and emit statements for events.
+	//
+	// This improves the user experience for the developer:
+	// If the access would be enforced as private, an import of the composite
+	// would fail with an "not declared" error.
+
+	_, err := checker.valueActivations.Declare(variableDeclaration{
+		identifier:     declaration.Identifier.Identifier,
+		ty:             constructorType,
+		access:         declaration.Access,
+		kind:           declaration.DeclarationKind(),
+		pos:            declaration.Identifier.Pos,
+		isConstant:     true,
+		argumentLabels: constructorArgumentLabels,
+	})
+	checker.report(err)
+}
+
+func (checker *Checker) declareContractValue(
+	declaration *ast.CompositeDeclaration,
+	compositeType *CompositeType,
+	declarationMembers map[string]*Member,
+) {
+	_, err := checker.valueActivations.Declare(variableDeclaration{
+		identifier: declaration.Identifier.Identifier,
+		ty:         compositeType,
+		// NOTE: contracts are always public
+		access:     ast.AccessPublic,
+		kind:       common.DeclarationKindContract,
+		pos:        declaration.Identifier.Pos,
+		isConstant: true,
+	})
+	checker.report(err)
+
+	for name, declarationMember := range declarationMembers {
+		if compositeType.Members[name] != nil {
+			continue
+		}
+		compositeType.Members[name] = declarationMember
+	}
+}
+
+func (checker *Checker) declareEnumConstructor(
+	declaration *ast.CompositeDeclaration,
+	compositeType *CompositeType,
+	enumCases []*ast.EnumCaseDeclaration,
+) {
+
+	constructorMembers := make(map[string]*Member, len(enumCases))
+
+	constructorType := &SpecialFunctionType{
+		FunctionType: &FunctionType{
+			Parameters: []*Parameter{
+				{
+					Identifier:     enumRawValueFieldName,
+					TypeAnnotation: NewTypeAnnotation(compositeType.EnumRawType),
+				},
+			},
+			ReturnTypeAnnotation: NewTypeAnnotation(
+				&OptionalType{
+					Type: compositeType,
+				},
+			),
+		},
+		Members: constructorMembers,
+	}
+
+	memberCaseTypeAnnotation := NewTypeAnnotation(compositeType)
+
+	for _, enumCase := range enumCases {
+		caseName := enumCase.Identifier.Identifier
+
+		if constructorMembers[caseName] != nil {
+			continue
+		}
+		constructorMembers[caseName] = &Member{
+			ContainerType:   constructorType,
+			Access:          ast.AccessPublic,
+			Identifier:      enumCase.Identifier,
+			TypeAnnotation:  memberCaseTypeAnnotation,
+			DeclarationKind: common.DeclarationKindField,
+			VariableKind:    ast.VariableKindConstant,
+			DocString:       enumCase.DocString,
+		}
+
+		// TODO: origin
+	}
+
+	_, err := checker.valueActivations.Declare(variableDeclaration{
+		identifier: declaration.Identifier.Identifier,
+		ty:         constructorType,
+		// NOTE: enums are always public
+		access:         ast.AccessPublic,
+		kind:           common.DeclarationKindEnum,
+		pos:            declaration.Identifier.Pos,
+		isConstant:     true,
+		argumentLabels: []string{enumRawValueFieldName},
+	})
+	checker.report(err)
 }
 
 // checkMemberStorability check that all fields have a type that is storable.
@@ -1387,6 +1471,7 @@ func (checker *Checker) enumMembersAndOrigins(
 ) (
 	members map[string]*Member,
 	fieldNames []string,
+	enumCases []*ast.EnumCaseDeclaration,
 ) {
 	for _, declaration := range allMembers.Declarations {
 
@@ -1403,12 +1488,7 @@ func (checker *Checker) enumMembersAndOrigins(
 			continue
 		}
 
-		// Record the case in the composite type's enum info
-
-		containerType.EnumInfo.Cases = append(
-			containerType.EnumInfo.Cases,
-			enumCase.Identifier.Identifier,
-		)
+		enumCases = append(enumCases, enumCase)
 
 		// Enum cases must be effectively public
 
@@ -1436,7 +1516,7 @@ func (checker *Checker) enumMembersAndOrigins(
 				Identifier: enumRawValueFieldName,
 			},
 			DeclarationKind: common.DeclarationKindField,
-			TypeAnnotation:  NewTypeAnnotation(containerType.EnumInfo.RawType),
+			TypeAnnotation:  NewTypeAnnotation(containerType.EnumRawType),
 			VariableKind:    ast.VariableKindConstant,
 			DocString:       enumRawValueFieldDocString,
 		},

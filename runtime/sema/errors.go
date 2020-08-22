@@ -525,6 +525,10 @@ func (e *InvalidAccessModifierError) StartPosition() ast.Position {
 }
 
 func (e *InvalidAccessModifierError) EndPosition() ast.Position {
+	if e.Access == ast.AccessNotSpecified {
+		return e.Pos
+	}
+
 	length := len(e.Access.Keyword())
 	return e.Pos.Shifted(length - 1)
 }
