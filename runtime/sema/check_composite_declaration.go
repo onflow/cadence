@@ -690,6 +690,7 @@ func (checker *Checker) declareEnumConstructor(
 ) {
 
 	constructorMembers := make(map[string]*Member, len(enumCases))
+	constructorOrigins := make(map[string]*Origin, len(enumCases))
 
 	constructorType := &SpecialFunctionType{
 		FunctionType: &FunctionType{
@@ -726,8 +727,16 @@ func (checker *Checker) declareEnumConstructor(
 			DocString:       enumCase.DocString,
 		}
 
-		// TODO: origin
+		constructorOrigins[caseName] =
+			checker.recordFieldDeclarationOrigin(
+				enumCase.Identifier,
+				enumCase.Identifier.StartPosition(),
+				enumCase.Identifier.EndPosition(),
+				compositeType,
+			)
 	}
+
+	checker.memberOrigins[constructorType] = constructorOrigins
 
 	_, err := checker.valueActivations.Declare(variableDeclaration{
 		identifier: declaration.Identifier.Identifier,
