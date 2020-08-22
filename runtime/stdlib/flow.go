@@ -32,7 +32,6 @@ import (
 var accountFunctionType = &sema.FunctionType{
 	Parameters: []*sema.Parameter{
 		{
-			Label:      sema.ArgumentLabelNotRequired,
 			Identifier: "payer",
 			TypeAnnotation: sema.NewTypeAnnotation(
 				&sema.AuthAccountType{},
@@ -120,37 +119,31 @@ func FlowBuiltInFunctions(impls FlowBuiltinImpls) StandardLibraryFunctions {
 			"AuthAccount",
 			accountFunctionType,
 			impls.CreateAccount,
-			nil,
 		),
 		NewStandardLibraryFunction(
 			"getAccount",
 			getAccountFunctionType,
 			impls.GetAccount,
-			nil,
 		),
 		NewStandardLibraryFunction(
 			"log",
 			logFunctionType,
 			impls.Log,
-			nil,
 		),
 		NewStandardLibraryFunction(
 			"getCurrentBlock",
 			getCurrentBlockFunctionType,
 			impls.GetCurrentBlock,
-			nil,
 		),
 		NewStandardLibraryFunction(
 			"getBlock",
 			getBlockFunctionType,
 			impls.GetBlock,
-			nil,
 		),
 		NewStandardLibraryFunction(
 			"unsafeRandom",
 			unsafeRandomFunctionType,
 			impls.UnsafeRandom,
-			nil,
 		),
 	}
 }

@@ -60,8 +60,16 @@ func NewStandardLibraryFunction(
 	name string,
 	functionType sema.InvokableType,
 	function interpreter.HostFunction,
-	argumentLabels []string,
 ) StandardLibraryFunction {
+
+	parameters := functionType.InvocationFunctionType().Parameters
+
+	argumentLabels := make([]string, len(parameters))
+
+	for i, parameter := range parameters {
+		argumentLabels[i] = parameter.EffectiveArgumentLabel()
+	}
+
 	functionValue := interpreter.NewHostFunctionValue(function)
 	return StandardLibraryFunction{
 		Name:           name,
