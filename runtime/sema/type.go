@@ -4870,9 +4870,9 @@ func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
-func (*CompositeType) IsEquatable() bool {
-	// TODO:
-	return false
+func (t *CompositeType) IsEquatable() bool {
+	// TODO: add support for more composite kinds
+	return t.Kind == common.CompositeKindEnum
 }
 
 func (*CompositeType) TypeAnnotationState() TypeAnnotationState {

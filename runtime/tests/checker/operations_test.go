@@ -293,13 +293,11 @@ func TestCheckInvalidCompositeEquality(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.AllCompositeKinds {
-
-		if compositeKind == common.CompositeKindEvent {
-			continue
-		}
+	test := func(compositeKind common.CompositeKind) {
 
 		t.Run(compositeKind.Name(), func(t *testing.T) {
+
+			t.Parallel()
 
 			var preparationCode, firstIdentifier, secondIdentifier string
 			if compositeKind == common.CompositeKindContract {
@@ -319,25 +317,53 @@ func TestCheckInvalidCompositeEquality(t *testing.T) {
 				secondIdentifier = "x2"
 			}
 
+			body := "{}"
+			switch compositeKind {
+			case common.CompositeKindEvent:
+				body = "()"
+			case common.CompositeKindEnum:
+				body = "{ case a }"
+			}
+
+			conformances := ""
+			if compositeKind == common.CompositeKindEnum {
+				conformances = ": Int"
+			}
+
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s X {}
+                      %[1]s X%[2]s %[3]s
 
-                      %[2]s
+                      %[4]s
 
-                      let a = %[3]s == %[4]s
+                      let a = %[5]s == %[6]s
                     `,
 					compositeKind.Keyword(),
+					conformances,
+					body,
 					preparationCode,
 					firstIdentifier,
 					secondIdentifier,
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			if compositeKind == common.CompositeKindEnum {
+				require.NoError(t, err)
+			} else {
+				errs := ExpectCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+				assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+			}
 		})
+	}
+
+	for _, compositeKind := range common.AllCompositeKinds {
+
+		if compositeKind == common.CompositeKindEvent {
+			continue
+		}
+
+		test(compositeKind)
 	}
 }
