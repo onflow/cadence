@@ -39,8 +39,11 @@ func TestCheckFailableCastingWithResourceAnnotation(t *testing.T) {
 	test := func(compositeKind common.CompositeKind) {
 
 		body := "{}"
-		if compositeKind == common.CompositeKindEvent {
+		switch compositeKind {
+		case common.CompositeKindEvent:
 			body = "()"
+		case common.CompositeKindEnum:
+			body = "{ case a }"
 		}
 
 		conformances := ""
@@ -231,10 +234,12 @@ func TestCheckFunctionDeclarationReturnTypeWithResourceAnnotation(t *testing.T) 
 	test := func(compositeKind common.CompositeKind) {
 
 		body := "{}"
-		if compositeKind == common.CompositeKindEvent {
+		switch compositeKind {
+		case common.CompositeKindEvent:
 			body = "()"
+		case common.CompositeKindEnum:
+			body = "{ case a }"
 		}
-
 		conformances := ""
 		if compositeKind == common.CompositeKindEnum {
 			conformances = ": Int"
@@ -307,8 +312,11 @@ func TestCheckFunctionDeclarationReturnTypeWithoutResourceAnnotation(t *testing.
 	test := func(compositeKind common.CompositeKind) {
 
 		body := "{}"
-		if compositeKind == common.CompositeKindEvent {
+		switch compositeKind {
+		case common.CompositeKindEvent:
 			body = "()"
+		case common.CompositeKindEnum:
+			body = "{ case a }"
 		}
 
 		conformances := ""
@@ -378,8 +386,11 @@ func TestCheckVariableDeclarationWithResourceAnnotation(t *testing.T) {
 	test := func(compositeKind common.CompositeKind) {
 
 		body := "{}"
-		if compositeKind == common.CompositeKindEvent {
+		switch compositeKind {
+		case common.CompositeKindEvent:
 			body = "()"
+		case common.CompositeKindEnum:
+			body = "{ case a }"
 		}
 
 		conformances := ""
@@ -449,8 +460,11 @@ func TestCheckVariableDeclarationWithoutResourceAnnotation(t *testing.T) {
 	test := func(compositeKind common.CompositeKind) {
 
 		body := "{}"
-		if compositeKind == common.CompositeKindEvent {
+		switch compositeKind {
+		case common.CompositeKindEvent:
 			body = "()"
+		case common.CompositeKindEnum:
+			body = "{ case a }"
 		}
 
 		conformances := ""
@@ -766,8 +780,11 @@ func TestCheckFunctionExpressionReturnTypeWithResourceAnnotation(t *testing.T) {
 	test := func(compositeKind common.CompositeKind) {
 
 		body := "{}"
-		if compositeKind == common.CompositeKindEvent {
+		switch compositeKind {
+		case common.CompositeKindEvent:
 			body = "()"
+		case common.CompositeKindEnum:
+			body = "{ case a }"
 		}
 
 		conformances := ""
@@ -839,8 +856,11 @@ func TestCheckFunctionExpressionReturnTypeWithoutResourceAnnotation(t *testing.T
 	test := func(compositeKind common.CompositeKind) {
 
 		body := "{}"
-		if compositeKind == common.CompositeKindEvent {
+		switch compositeKind {
+		case common.CompositeKindEvent:
 			body = "()"
+		case common.CompositeKindEnum:
+			body = "{ case a }"
 		}
 
 		conformances := ""
@@ -1035,8 +1055,11 @@ func TestCheckFunctionTypeReturnTypeWithResourceAnnotation(t *testing.T) {
 	test := func(compositeKind common.CompositeKind) {
 
 		body := "{}"
-		if compositeKind == common.CompositeKindEvent {
+		switch compositeKind {
+		case common.CompositeKindEvent:
 			body = "()"
+		case common.CompositeKindEnum:
+			body = "{ case a }"
 		}
 
 		conformances := ""
@@ -1109,8 +1132,11 @@ func TestCheckFunctionTypeReturnTypeWithoutResourceAnnotation(t *testing.T) {
 	test := func(compositeKind common.CompositeKind) {
 
 		body := "{}"
-		if compositeKind == common.CompositeKindEvent {
+		switch compositeKind {
+		case common.CompositeKindEvent:
 			body = "()"
+		case common.CompositeKindEnum:
+			body = "{ case a }"
 		}
 
 		conformances := ""

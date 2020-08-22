@@ -35,10 +35,14 @@ import (
 )
 
 func constructorArguments(compositeKind common.CompositeKind) string {
-	if compositeKind == common.CompositeKindContract {
+	switch compositeKind {
+	case common.CompositeKindContract:
 		return ""
+	case common.CompositeKindEnum:
+		return ".a"
+	default:
+		return "()"
 	}
-	return "()"
 }
 
 func TestCheckInvalidLocalInterface(t *testing.T) {
