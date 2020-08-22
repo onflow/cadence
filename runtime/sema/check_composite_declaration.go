@@ -416,8 +416,13 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 
 	// Resolve conformances
 
-	conformances := checker.explicitInterfaceConformances(declaration, compositeType)
-	compositeType.ExplicitInterfaceConformances = conformances
+	if declaration.CompositeKind == common.CompositeKindEnum {
+		compositeType.RawType =
+			checker.enumRawType(declaration)
+	} else {
+		compositeType.ExplicitInterfaceConformances =
+			checker.explicitInterfaceConformances(declaration, compositeType)
+	}
 
 	// Register in elaboration
 
@@ -704,7 +709,7 @@ func (checker *Checker) explicitInterfaceConformances(
 ) []*InterfaceType {
 
 	var interfaceTypes []*InterfaceType
-	seenConformances := map[string]bool{}
+	seenConformances := map[TypeID]bool{}
 
 	for _, conformance := range declaration.Conformances {
 		convertedType := checker.ConvertType(conformance)
@@ -712,9 +717,9 @@ func (checker *Checker) explicitInterfaceConformances(
 		if interfaceType, ok := convertedType.(*InterfaceType); ok {
 			interfaceTypes = append(interfaceTypes, interfaceType)
 
-			conformanceIdentifier := conformance.String()
+			typeID := interfaceType.ID()
 
-			if seenConformances[conformanceIdentifier] {
+			if seenConformances[typeID] {
 				checker.report(
 					&DuplicateConformanceError{
 						CompositeType: compositeType,
@@ -724,19 +729,75 @@ func (checker *Checker) explicitInterfaceConformances(
 				)
 			}
 
-			seenConformances[conformanceIdentifier] = true
+			seenConformances[typeID] = true
 
 		} else if !convertedType.IsInvalidType() {
 			checker.report(
 				&InvalidConformanceError{
-					Type: convertedType,
-					Pos:  conformance.StartPosition(),
+					Type:  convertedType,
+					Range: ast.NewRangeFromPositioned(conformance),
 				},
 			)
 		}
 	}
 
 	return interfaceTypes
+}
+
+func (checker *Checker) enumRawType(declaration *ast.CompositeDeclaration) Type {
+
+	conformanceCount := len(declaration.Conformances)
+
+	// Enums must have exactly one conformance, the raw type
+
+	if conformanceCount == 0 {
+		checker.report(
+			&MissingEnumRawTypeError{
+				Pos: declaration.Identifier.EndPosition().Shifted(1),
+			},
+		)
+
+		return &InvalidType{}
+	}
+
+	// Enums may not conform to interfaces,
+	// i.e. only have one conformance, the raw type
+
+	if conformanceCount > 1 {
+		secondConformance := declaration.Conformances[1]
+		lastConformance := declaration.Conformances[conformanceCount-1]
+
+		checker.report(
+			&InvalidEnumConformancesError{
+				Range: ast.Range{
+					StartPos: secondConformance.StartPosition(),
+					EndPos:   lastConformance.EndPosition(),
+				},
+			},
+		)
+
+		// NOTE: do not return, the first conformance should
+		// still be considered as a raw type
+	}
+
+	// The single conformance is considered the raw type.
+	// It must be an `Integer`-subtype for now.
+
+	conformance := declaration.Conformances[0]
+	rawType := checker.ConvertType(conformance)
+
+	if !rawType.IsInvalidType() &&
+		!IsSubType(rawType, &IntegerType{}) {
+
+		checker.report(
+			&InvalidEnumRawTypeError{
+				Type:  rawType,
+				Range: ast.NewRangeFromPositioned(conformance),
+			},
+		)
+	}
+
+	return rawType
 }
 
 type compositeConformanceCheckOptions struct {
@@ -1331,6 +1392,9 @@ func (checker *Checker) enumMembersAndOrigins(
 	typeAnnotation := NewTypeAnnotation(containerType)
 
 	for _, declaration := range allMembers.Declarations {
+
+		// Enum declarations may only contain enum cases
+
 		enumCase, ok := declaration.(*ast.EnumCaseDeclaration)
 		if !ok {
 			checker.report(
@@ -1343,6 +1407,21 @@ func (checker *Checker) enumMembersAndOrigins(
 		}
 
 		identifier := enumCase.Identifier
+
+		// Enum cases must be effectively public
+
+		if checker.effectiveCompositeMemberAccess(enumCase.Access) != ast.AccessPublic {
+			checker.report(
+				&InvalidAccessModifierError{
+					DeclarationKind: enumCase.DeclarationKind(),
+					Access:          enumCase.Access,
+					Explanation:     "enum cases must be public",
+					Pos:             enumCase.StartPos,
+				},
+			)
+		}
+
+		// Declare member and record origin
 
 		fieldNames = append(fieldNames, identifier.Identifier)
 
@@ -1359,8 +1438,8 @@ func (checker *Checker) enumMembersAndOrigins(
 		origins[identifier.Identifier] =
 			checker.recordFieldDeclarationOrigin(
 				identifier,
-				enumCase.StartPosition(),
-				enumCase.EndPosition(),
+				identifier.StartPosition(),
+				identifier.EndPosition(),
 				containerType,
 			)
 	}
@@ -1562,34 +1641,20 @@ func (checker *Checker) declareSelfValue(selfType Type) {
 func (checker *Checker) checkNestedIdentifiers(members *ast.Members) {
 	positions := map[string]ast.Position{}
 
-	for _, field := range members.Fields() {
-		checker.checkNestedIdentifier(
-			field.Identifier,
-			common.DeclarationKindField,
-			positions,
-		)
-	}
+	for _, declaration := range members.Declarations {
 
-	for _, function := range members.Functions() {
-		checker.checkNestedIdentifier(
-			function.Identifier,
-			common.DeclarationKindFunction,
-			positions,
-		)
-	}
+		if _, ok := declaration.(*ast.SpecialFunctionDeclaration); ok {
+			continue
+		}
 
-	for _, interfaceDeclaration := range members.Interfaces() {
-		checker.checkNestedIdentifier(
-			interfaceDeclaration.Identifier,
-			interfaceDeclaration.DeclarationKind(),
-			positions,
-		)
-	}
+		identifier := declaration.DeclarationIdentifier()
+		if identifier == nil {
+			continue
+		}
 
-	for _, compositeDeclaration := range members.Composites() {
 		checker.checkNestedIdentifier(
-			compositeDeclaration.Identifier,
-			compositeDeclaration.DeclarationKind(),
+			*identifier,
+			declaration.DeclarationKind(),
 			positions,
 		)
 	}
