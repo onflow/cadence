@@ -40,8 +40,11 @@ func TestCheckInvalidCompositeRedeclaringType(t *testing.T) {
 	for _, kind := range common.AllCompositeKinds {
 
 		body := "{}"
-		if kind == common.CompositeKindEvent {
+		switch kind {
+		case common.CompositeKindEvent:
 			body = "()"
+		case common.CompositeKindEnum:
+			body = "{ case a }"
 		}
 
 		conformances := ""
