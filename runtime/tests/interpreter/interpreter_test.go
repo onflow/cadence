@@ -1446,7 +1446,6 @@ func TestInterpretHostFunction(t *testing.T) {
 			result := interpreter.NewIntValueFromBigInt(value)
 			return trampoline.Done{Result: result}
 		},
-		nil,
 	)
 
 	checker, err := sema.NewChecker(
@@ -1524,7 +1523,6 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 
 			return trampoline.Done{Result: interpreter.VoidValue{}}
 		},
-		nil,
 	)
 
 	checker, err := sema.NewChecker(
@@ -8134,7 +8132,6 @@ func TestInterpretNestedDestroy(t *testing.T) {
 			result := interpreter.VoidValue{}
 			return trampoline.Done{Result: result}
 		},
-		nil,
 	)
 
 	valueDeclarations :=
