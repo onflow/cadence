@@ -236,11 +236,22 @@ func (checker *Checker) checkVariableDeclarationUsability(declaration *ast.Varia
 	// Require an explicit type annotation
 
 	if declaration.TypeAnnotation == nil {
-		if arrayExpression, ok := declaration.Value.(*ast.ArrayExpression); ok {
-			if len(arrayExpression.Values) == 0 {
+		switch value := declaration.Value.(type) {
+		case *ast.ArrayExpression:
+			if len(value.Values) == 0 {
 				checker.report(
 					&TypeAnnotationRequiredError{
 						Cause: "empty array literal",
+						Pos:   declaration.Identifier.EndPosition().Shifted(1),
+					},
+				)
+			}
+
+		case *ast.DictionaryExpression:
+			if len(value.Entries) == 0 {
+				checker.report(
+					&TypeAnnotationRequiredError{
+						Cause: "empty dictionary literal",
 						Pos:   declaration.Identifier.EndPosition().Shifted(1),
 					},
 				)
