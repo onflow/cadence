@@ -119,6 +119,8 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		)
 	}
 
+	checker.checkVariableDeclarationUsability(declaration)
+
 	checker.checkTransfer(declaration.Transfer, declarationType)
 
 	// The variable declaration might have a second transfer and second expression.
@@ -221,6 +223,30 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 	})
 	checker.report(err)
 	checker.recordVariableDeclarationOccurrence(identifier, variable)
+}
+
+func (checker *Checker) checkVariableDeclarationUsability(declaration *ast.VariableDeclaration) {
+
+	// If the variable declaration has no type annotation
+	// and the value is an empty array literal,
+	// then the type is inferred to `[Never]`,
+	// which is effectively useless
+	// (it is an empty array to which no values can be added).
+	//
+	// Require an explicit type annotation
+
+	if declaration.TypeAnnotation == nil {
+		if arrayExpression, ok := declaration.Value.(*ast.ArrayExpression); ok {
+			if len(arrayExpression.Values) == 0 {
+				checker.report(
+					&TypeAnnotationRequiredError{
+						Cause: "empty array literal",
+						Pos:   declaration.Identifier.EndPosition().Shifted(1),
+					},
+				)
+			}
+		}
+	}
 }
 
 func (checker *Checker) elaboratePotentialResourceStorageMove(expression ast.Expression) {
