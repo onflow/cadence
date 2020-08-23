@@ -2777,3 +2777,30 @@ func (e *UnparameterizedTypeInstantiationError) SecondaryError() string {
 		e.ActualTypeArgumentCount,
 	)
 }
+
+// TypeAnnotationRequiredError
+
+type TypeAnnotationRequiredError struct {
+	Cause string
+	Pos   ast.Position
+}
+
+func (e *TypeAnnotationRequiredError) Error() string {
+	if e.Cause != "" {
+		return fmt.Sprintf(
+			"%s requires an explicit type annotation",
+			e.Cause,
+		)
+	}
+	return "explicit type annotation required"
+}
+
+func (*TypeAnnotationRequiredError) isSemanticError() {}
+
+func (e *TypeAnnotationRequiredError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *TypeAnnotationRequiredError) EndPosition() ast.Position {
+	return e.Pos
+}
