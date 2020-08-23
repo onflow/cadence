@@ -16,9 +16,13 @@ There are three kinds of interfaces:
 
 Structure, resource, and contract types may implement multiple interfaces.
 
+There is no support for event and enum interfaces.
+
 Nominal typing applies to composite types that implement interfaces.
 This means that a type only implements an interface
-if it has explicitly declared it.
+if it has explicitly declared the conformance,
+the composite type does not implicitly conform to an interface,
+even if it satisfies all requirements of the interface.
 
 Interfaces consist of the function and field requirements
 that a type implementing the interface must provide implementations for.
