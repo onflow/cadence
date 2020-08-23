@@ -5451,6 +5451,22 @@ func (v *CompositeValue) GetField(name string) Value {
 	return v.Fields[name]
 }
 
+func (v *CompositeValue) Equal(interpreter *Interpreter, other Value) BoolValue {
+	// TODO: add support for other composite kinds
+
+	if v.Kind != common.CompositeKindEnum {
+		return false
+	}
+
+	otherComposite, ok := other.(*CompositeValue)
+	if !ok {
+		return false
+	}
+
+	return v.Fields[sema.EnumRawValueFieldName].(NumberValue).
+		Equal(interpreter, otherComposite.Fields[sema.EnumRawValueFieldName])
+}
+
 // DictionaryValue
 
 type DictionaryValue struct {
