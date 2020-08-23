@@ -599,3 +599,32 @@ func TestCheckInvalidLocalDeclarations(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckVariableDeclarationTypeAnnotationRequired(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty array", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let a = []
+	    `)
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
+	})
+
+	t.Run("empty dictionary", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, err := ParseAndCheck(t, `
+          let d = {}
+	    `)
+		errs := ExpectCheckerErrors(t, err, 1)
+
+		assert.IsType(t, &sema.TypeAnnotationRequiredError{}, errs[0])
+	})
+}
