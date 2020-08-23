@@ -19,8 +19,6 @@
 package runtime
 
 import (
-	"fmt"
-	"math/rand"
 	"sort"
 
 	"github.com/onflow/cadence/runtime/ast"
@@ -42,24 +40,7 @@ type REPL struct {
 func NewREPL(onError func(error), onResult func(interpreter.Value), checkerOptions []sema.Option) (*REPL, error) {
 
 	valueDeclarations := append(
-		stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{
-			CreateAccount: func(invocation interpreter.Invocation) trampoline.Trampoline {
-				panic(fmt.Errorf("cannot create accounts in the REPL"))
-			},
-			GetAccount: func(invocation interpreter.Invocation) trampoline.Trampoline {
-				panic(fmt.Errorf("cannot get accounts in the REPL"))
-			},
-			Log: stdlib.LogFunction.Function.Function,
-			GetCurrentBlock: func(invocation interpreter.Invocation) trampoline.Trampoline {
-				panic(fmt.Errorf("cannot get blocks in the REPL"))
-			},
-			GetBlock: func(invocation interpreter.Invocation) trampoline.Trampoline {
-				panic(fmt.Errorf("cannot get blocks in the REPL"))
-			},
-			UnsafeRandom: func(invocation interpreter.Invocation) trampoline.Trampoline {
-				return trampoline.Done{Result: interpreter.UInt64Value(rand.Uint64())}
-			},
-		}),
+		stdlib.FlowBuiltInFunctions(stdlib.DefaultFlowBuiltinImpls()),
 		stdlib.BuiltinFunctions...,
 	)
 
