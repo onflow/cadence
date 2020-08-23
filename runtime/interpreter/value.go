@@ -5467,6 +5467,14 @@ func (v *CompositeValue) Equal(interpreter *Interpreter, other Value) BoolValue 
 		Equal(interpreter, otherComposite.Fields[sema.EnumRawValueFieldName])
 }
 
+func (v *CompositeValue) KeyString() string {
+	if v.Kind == common.CompositeKindEnum {
+		return v.Fields[sema.EnumRawValueFieldName].String()
+	}
+
+	panic(errors.NewUnreachableError())
+}
+
 // DictionaryValue
 
 type DictionaryValue struct {
