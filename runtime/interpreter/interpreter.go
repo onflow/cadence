@@ -2360,6 +2360,20 @@ func (interpreter *Interpreter) declareCompositeValue(
 	scope activations.Activation,
 	value Value,
 ) {
+	if declaration.CompositeKind == common.CompositeKindEnum {
+		return interpreter.declareEnumConstructor(declaration, lexicalScope)
+	} else {
+		return interpreter.declareNonEnumCompositeValue(declaration, lexicalScope)
+	}
+}
+
+func (interpreter *Interpreter) declareNonEnumCompositeValue(
+	declaration *ast.CompositeDeclaration,
+	lexicalScope activations.Activation,
+) (
+	scope activations.Activation,
+	value Value,
+) {
 	identifier := declaration.Identifier.Identifier
 	variable := interpreter.findOrDeclareVariable(identifier)
 
@@ -2574,6 +2588,80 @@ func (interpreter *Interpreter) declareCompositeValue(
 		value = constructor
 		variable.Value = value
 	}
+
+	return lexicalScope, value
+}
+
+func (interpreter *Interpreter) declareEnumConstructor(
+	declaration *ast.CompositeDeclaration,
+	lexicalScope activations.Activation,
+) (
+	scope activations.Activation,
+	value Value,
+) {
+	identifier := declaration.Identifier.Identifier
+	variable := interpreter.findOrDeclareVariable(identifier)
+
+	lexicalScope = lexicalScope.Insert(identifier, variable)
+
+	compositeType := interpreter.Checker.Elaboration.CompositeDeclarationTypes[declaration]
+	typeID := compositeType.ID()
+
+	location := interpreter.Checker.Location
+
+	intType := &sema.IntType{}
+
+	enumCases := declaration.Members.EnumCases()
+	caseCount := len(enumCases)
+	caseValues := make([]*CompositeValue, caseCount)
+
+	constructorMembers := make(map[string]Value, caseCount)
+
+	for i, enumCase := range enumCases {
+
+		rawValue := interpreter.convert(
+			NewIntValueFromInt64(int64(i)),
+			intType,
+			compositeType.EnumRawType,
+		)
+
+		caseValueFields := map[string]Value{
+			sema.EnumRawValueFieldName: rawValue,
+		}
+
+		caseValue := &CompositeValue{
+			Location: location,
+			TypeID:   typeID,
+			Kind:     declaration.CompositeKind,
+			Fields:   caseValueFields,
+			// NOTE: new value has no owner
+			Owner:    nil,
+			modified: true,
+		}
+		caseValues[i] = caseValue
+		constructorMembers[enumCase.Identifier.Identifier] = caseValue
+	}
+
+	constructor := NewHostFunctionValue(
+		func(invocation Invocation) Trampoline {
+
+			rawValueArgument := invocation.Arguments[0].(IntegerValue).ToInt()
+
+			var result Value = NilValue{}
+
+			if rawValueArgument >= 0 && rawValueArgument < caseCount {
+				caseValue := caseValues[rawValueArgument]
+				result = NewSomeValueOwningNonCopying(caseValue)
+			}
+
+			return Done{Result: result}
+		},
+	)
+
+	constructor.Members = constructorMembers
+
+	value = constructor
+	variable.Value = value
 
 	return lexicalScope, value
 }
