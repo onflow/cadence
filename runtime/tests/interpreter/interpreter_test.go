@@ -99,10 +99,14 @@ func parseCheckAndInterpretWithOptions(
 }
 
 func constructorArguments(compositeKind common.CompositeKind, arguments string) string {
-	if compositeKind == common.CompositeKindContract {
+	switch compositeKind {
+	case common.CompositeKindContract:
 		return ""
+	case common.CompositeKindEnum:
+		return ".a"
+	default:
+		return fmt.Sprintf("(%s)", arguments)
 	}
-	return fmt.Sprintf("(%s)", arguments)
 }
 
 // makeContractValueHandler creates an interpreter option which
@@ -1496,16 +1500,11 @@ func TestInterpretCompositeDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.AllCompositeKinds {
-
-		switch compositeKind {
-		case common.CompositeKindContract,
-			common.CompositeKindEvent:
-
-			continue
-		}
+	test := func(compositeKind common.CompositeKind) {
 
 		t.Run(compositeKind.Name(), func(t *testing.T) {
+
+			t.Parallel()
 
 			inter := parseCheckAndInterpretWithOptions(t,
 				fmt.Sprintf(
@@ -1537,6 +1536,19 @@ func TestInterpretCompositeDeclaration(t *testing.T) {
 				value,
 			)
 		})
+	}
+
+	for _, compositeKind := range common.AllCompositeKinds {
+
+		switch compositeKind {
+		case common.CompositeKindContract,
+			common.CompositeKindEvent,
+			common.CompositeKindEnum:
+
+			continue
+		}
+
+		test(compositeKind)
 	}
 }
 
@@ -3206,39 +3218,49 @@ func TestInterpretCompositeNilEquality(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.AllCompositeKinds {
-
-		if compositeKind == common.CompositeKindEvent {
-			continue
-		}
-
-		var setupCode, identifier string
-		if compositeKind == common.CompositeKindContract {
-			identifier = "X"
-		} else {
-			setupCode = fmt.Sprintf(
-				`pub let x: %[1]sX? %[2]s %[3]s X%[4]s`,
-				compositeKind.Annotation(),
-				compositeKind.TransferOperator(),
-				compositeKind.ConstructionKeyword(),
-				constructorArguments(compositeKind, ""),
-			)
-			identifier = "x"
-		}
+	test := func(compositeKind common.CompositeKind) {
 
 		t.Run(compositeKind.Name(), func(t *testing.T) {
+
+			t.Parallel()
+
+			var setupCode, identifier string
+			if compositeKind == common.CompositeKindContract {
+				identifier = "X"
+			} else {
+				setupCode = fmt.Sprintf(
+					`pub let x: %[1]sX? %[2]s %[3]s X%[4]s`,
+					compositeKind.Annotation(),
+					compositeKind.TransferOperator(),
+					compositeKind.ConstructionKeyword(),
+					constructorArguments(compositeKind, ""),
+				)
+				identifier = "x"
+			}
+
+			body := "{}"
+			if compositeKind == common.CompositeKindEnum {
+				body = "{ case a }"
+			}
+
+			conformances := ""
+			if compositeKind == common.CompositeKindEnum {
+				conformances = ": Int"
+			}
 
 			inter := parseCheckAndInterpretWithOptions(t,
 				fmt.Sprintf(
 					`
-                      pub %[1]s X {}
+                      pub %[1]s X%[2]s %[3]s
 
-                      %[2]s
+                      %[4]s
 
-                      pub let y = %[3]s == nil
-                      pub let z = nil == %[3]s
+                      pub let y = %[5]s == nil
+                      pub let z = nil == %[5]s
                     `,
 					compositeKind.Keyword(),
+					conformances,
+					body,
 					setupCode,
 					identifier,
 				),
@@ -3259,6 +3281,15 @@ func TestInterpretCompositeNilEquality(t *testing.T) {
 				inter.Globals["z"].Value,
 			)
 		})
+	}
+
+	for _, compositeKind := range common.AllCompositeKinds {
+
+		if compositeKind == common.CompositeKindEvent {
+			continue
+		}
+
+		test(compositeKind)
 	}
 }
 
