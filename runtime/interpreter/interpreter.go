@@ -3395,7 +3395,7 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 				)
 
 			default:
-				panic(errors.NewUnreachableError())
+				return result
 			}
 		})
 }

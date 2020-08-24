@@ -45,3 +45,20 @@ func (h *ReplacementHint) Hint() string {
 }
 
 func (*ReplacementHint) isHint() {}
+
+// RemovalHint
+
+type RemovalHint struct {
+	Description string
+	ast.Range
+}
+
+func (h *RemovalHint) Hint() string {
+	description := h.Description
+	if description == "" {
+		description = "code"
+	}
+	return fmt.Sprintf("consider removing this %s", description)
+}
+
+func (*RemovalHint) isHint() {}

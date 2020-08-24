@@ -38,10 +38,16 @@ func (checker *Checker) VisitForceExpression(expression *ast.ForceExpression) as
 
 	optionalType, ok := valueType.(*OptionalType)
 	if !ok {
-		checker.report(
-			&NonOptionalForceError{
-				Type:  valueType,
-				Range: ast.NewRangeFromPositioned(expression.Expression),
+
+		// A non-optional type is forced. Suggest removing it
+
+		checker.hint(
+			&RemovalHint{
+				Description: "unnecessary force operator",
+				Range: ast.Range{
+					StartPos: expression.EndPos,
+					EndPos:   expression.EndPos,
+				},
 			},
 		)
 

@@ -2591,22 +2591,6 @@ func (e *AmbiguousRestrictedTypeError) Error() string {
 
 func (*AmbiguousRestrictedTypeError) isSemanticError() {}
 
-// NonOptionalForceError
-
-type NonOptionalForceError struct {
-	Type Type
-	ast.Range
-}
-
-func (e *NonOptionalForceError) Error() string {
-	return fmt.Sprintf(
-		"cannot force non-optional type: `%s`",
-		e.Type.QualifiedString(),
-	)
-}
-
-func (*NonOptionalForceError) isSemanticError() {}
-
 // InvalidPathDomainError
 
 type InvalidPathDomainError struct {
