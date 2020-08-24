@@ -77,6 +77,7 @@ type Checker struct {
 	allCheckers                        map[ast.LocationID]*Checker
 	accessCheckMode                    AccessCheckMode
 	errors                             []error
+	hints                              []Hint
 	valueActivations                   *VariableActivations
 	resources                          *Resources
 	typeActivations                    *VariableActivations
@@ -349,6 +350,10 @@ func (checker *Checker) report(err error) {
 	checker.errors = append(checker.errors, err)
 }
 
+func (checker *Checker) hint(hint Hint) {
+	checker.hints = append(checker.hints, hint)
+}
+
 func (checker *Checker) UserDefinedValues() map[string]*Variable {
 	variables := map[string]*Variable{}
 
@@ -618,23 +623,25 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 // checkIntegerLiteral checks that the value of the integer literal
 // fits into range of the target integer type
 //
-func (checker *Checker) checkIntegerLiteral(expression *ast.IntegerExpression, targetType Type) {
+func (checker *Checker) checkIntegerLiteral(expression *ast.IntegerExpression, targetType Type) bool {
 	ranged := targetType.(IntegerRangedType)
 	minInt := ranged.MinInt()
 	maxInt := ranged.MaxInt()
 
-	if checker.checkIntegerRange(expression.Value, minInt, maxInt) {
-		return
+	if !checker.checkIntegerRange(expression.Value, minInt, maxInt) {
+		checker.report(
+			&InvalidIntegerLiteralRangeError{
+				ExpectedType:   targetType,
+				ExpectedMinInt: minInt,
+				ExpectedMaxInt: maxInt,
+				Range:          ast.NewRangeFromPositioned(expression),
+			},
+		)
+
+		return false
 	}
 
-	checker.report(
-		&InvalidIntegerLiteralRangeError{
-			ExpectedType:   targetType,
-			ExpectedMinInt: minInt,
-			ExpectedMaxInt: maxInt,
-			Range:          ast.NewRangeFromPositioned(expression),
-		},
-	)
+	return true
 }
 
 // checkFixedPointLiteral checks that the value of the fixed-point literal
@@ -719,10 +726,12 @@ func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpress
 // checkAddressLiteral checks that the value of the integer literal
 // fits into the range of an address (64 bits), and is hexadecimal
 //
-func (checker *Checker) checkAddressLiteral(expression *ast.IntegerExpression) {
+func (checker *Checker) checkAddressLiteral(expression *ast.IntegerExpression) bool {
 	ranged := &AddressType{}
 	rangeMin := ranged.MinInt()
 	rangeMax := ranged.MaxInt()
+
+	valid := true
 
 	if expression.Base != 16 {
 		checker.report(
@@ -730,6 +739,8 @@ func (checker *Checker) checkAddressLiteral(expression *ast.IntegerExpression) {
 				Range: ast.NewRangeFromPositioned(expression),
 			},
 		)
+
+		valid = false
 	}
 
 	if !checker.checkIntegerRange(expression.Value, rangeMin, rangeMax) {
@@ -738,7 +749,11 @@ func (checker *Checker) checkAddressLiteral(expression *ast.IntegerExpression) {
 				Range: ast.NewRangeFromPositioned(expression),
 			},
 		)
+
+		valid = false
 	}
+
+	return valid
 }
 
 func (checker *Checker) checkIntegerRange(value, min, max *big.Int) bool {
@@ -1684,6 +1699,10 @@ func (checker *Checker) ResetErrors() {
 	checker.errors = nil
 }
 
+func (checker *Checker) ResetHints() {
+	checker.hints = nil
+}
+
 const invalidTypeDeclarationAccessModifierExplanation = "type declarations must be public"
 
 func (checker *Checker) checkDeclarationAccessModifier(
@@ -2225,4 +2244,8 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 	}
 
 	return parameterizedType.Instantiate(typeArguments, checker.report)
+}
+
+func (checker *Checker) Hints() []Hint {
+	return checker.hints
 }

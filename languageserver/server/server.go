@@ -753,7 +753,7 @@ var containerCompletionItems = []*protocol.CompletionItem{
 // Completion is called to compute completion items at a given cursor position.
 //
 func (s *Server) Completion(
-	conn protocol.Conn,
+	_ protocol.Conn,
 	params *protocol.CompletionParams,
 ) (
 	items []*protocol.CompletionItem,
@@ -1159,6 +1159,11 @@ func (s *Server) getDiagnostics(
 		diagnostics = append(diagnostics, extraDiagnostics...)
 	}
 
+	for _, hint := range checker.Hints() {
+		diagnostic := convertHint(hint)
+		diagnostics = append(diagnostics, diagnostic)
+	}
+
 	return
 }
 
@@ -1291,6 +1296,29 @@ func convertError(err convertibleError) protocol.Diagnostic {
 	return protocol.Diagnostic{
 		Message:  message.String(),
 		Severity: protocol.SeverityError,
+		Range: protocol.Range{
+			Start: protocol.Position{
+				Line:      float64(startPosition.Line - 1),
+				Character: float64(startPosition.Column),
+			},
+			End: protocol.Position{
+				Line:      float64(endPosition.Line - 1),
+				Character: float64(endPosition.Column + 1),
+			},
+		},
+	}
+}
+
+// convertHint converts a checker error to a diagnostic.
+func convertHint(hint sema.Hint) protocol.Diagnostic {
+	startPosition := hint.StartPosition()
+	endPosition := hint.EndPosition()
+
+	return protocol.Diagnostic{
+		Message: hint.Hint(),
+		// protocol.SeverityHint doesn't look prominent enough in VS Code,
+		// only the first character of the range is highlighted.
+		Severity: protocol.SeverityInformation,
 		Range: protocol.Range{
 			Start: protocol.Position{
 				Line:      float64(startPosition.Line - 1),
