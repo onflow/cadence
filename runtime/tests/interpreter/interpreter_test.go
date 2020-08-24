@@ -7756,6 +7756,19 @@ func TestInterpretForce(t *testing.T) {
 
 		assert.IsType(t, &interpreter.ForceNilError{}, err)
 	})
+
+	t.Run("non-optional", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t, `
+          let x: Int = 1
+          let y = x!
+        `)
+
+		assert.Equal(t,
+			interpreter.NewIntValueFromInt64(1),
+			inter.Globals["y"].Value,
+		)
+	})
 }
 
 func permutations(xs []string) (res [][]string) {
