@@ -3751,7 +3751,7 @@ func (t *ConstantSizedType) Resolve(typeParameters map[*TypeParameter]Type) Type
 type InvokableType interface {
 	Type
 	InvocationFunctionType() *FunctionType
-	CheckArgumentExpressions(checker *Checker, argumentExpressions []ast.Expression)
+	CheckArgumentExpressions(checker *Checker, argumentExpressions []ast.Expression, invocationRange ast.Range)
 	ArgumentLabels() []string
 }
 
@@ -3942,7 +3942,7 @@ func (t *FunctionType) InvocationFunctionType() *FunctionType {
 	return t
 }
 
-func (*FunctionType) CheckArgumentExpressions(_ *Checker, _ []ast.Expression) {
+func (*FunctionType) CheckArgumentExpressions(checker *Checker, argumentExpressions []ast.Expression, invocationRange ast.Range) {
 	// NO-OP: no checks for normal functions
 }
 
@@ -4348,13 +4348,23 @@ func (t *SpecialFunctionType) GetMembers() map[string]MemberResolver {
 // CheckedFunctionType is the the type representing a function that checks the arguments,
 // e.g., integer functions
 
+type ArgumentExpressionsCheck func(
+	checker *Checker,
+	argumentExpressions []ast.Expression,
+	invocationRange ast.Range,
+)
+
 type CheckedFunctionType struct {
 	*FunctionType
-	ArgumentExpressionsCheck func(checker *Checker, argumentExpressions []ast.Expression)
+	ArgumentExpressionsCheck ArgumentExpressionsCheck
 }
 
-func (t *CheckedFunctionType) CheckArgumentExpressions(checker *Checker, argumentExpressions []ast.Expression) {
-	t.ArgumentExpressionsCheck(checker, argumentExpressions)
+func (t *CheckedFunctionType) CheckArgumentExpressions(
+	checker *Checker,
+	argumentExpressions []ast.Expression,
+	invocationRange ast.Range,
+) {
+	t.ArgumentExpressionsCheck(checker, argumentExpressions, invocationRange)
 }
 
 // baseTypes are the nominal types available in programs
@@ -4554,7 +4564,7 @@ func init() {
 				},
 				ReturnTypeAnnotation: &TypeAnnotation{Type: addressType},
 			},
-			ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression) {
+			ArgumentExpressionsCheck: func(checker *Checker, argumentExpressions []ast.Expression, _ ast.Range) {
 				if len(argumentExpressions) < 1 {
 					return
 				}
@@ -4570,19 +4580,137 @@ func init() {
 	}
 }
 
-func numberFunctionArgumentExpressionsChecker(numberType Type) func(*Checker, []ast.Expression) {
-	return func(checker *Checker, argumentExpressions []ast.Expression) {
-		if len(argumentExpressions) < 1 {
+func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressionsCheck {
+	return func(checker *Checker, arguments []ast.Expression, invocationRange ast.Range) {
+		if len(arguments) < 1 {
 			return
 		}
 
-		switch numberExpression := argumentExpressions[0].(type) {
+		argument := arguments[0]
+
+		switch argument := argument.(type) {
 		case *ast.IntegerExpression:
-			checker.checkIntegerLiteral(numberExpression, numberType)
+			if checker.checkIntegerLiteral(argument, targetType) {
+
+				suggestIntegerLiteralConversionReplacement(checker, argument, targetType, invocationRange)
+			}
 
 		case *ast.FixedPointExpression:
-			checker.checkFixedPointLiteral(numberExpression, numberType)
+			if checker.checkFixedPointLiteral(argument, targetType) {
+
+				suggestFixedPointLiteralConversionReplacement(checker, targetType, argument, invocationRange)
+			}
 		}
+	}
+}
+
+func suggestIntegerLiteralConversionReplacement(
+	checker *Checker,
+	argument *ast.IntegerExpression,
+	targetType Type,
+	invocationRange ast.Range,
+) {
+	negative := argument.Value.Sign() < 0
+
+	if IsSubType(targetType, &FixedPointType{}) {
+
+		// If the integer literal is converted to a fixed-point type,
+		// suggest replacing it with a fixed-point literal
+
+		signed := IsSubType(targetType, &SignedFixedPointType{})
+
+		var hintExpression ast.Expression = &ast.FixedPointExpression{
+			Negative:        negative,
+			UnsignedInteger: new(big.Int).Abs(argument.Value),
+			Fractional:      new(big.Int),
+			Scale:           1,
+		}
+
+		// If the fixed-point literal is positive
+		// and the the target fixed-point type is signed,
+		// then a static cast is required
+
+		if !negative && signed {
+			hintExpression = &ast.CastingExpression{
+				Expression: hintExpression,
+				Operation:  ast.OperationCast,
+				TypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: targetType.String(),
+						},
+					},
+				},
+			}
+		}
+
+		checker.hint(
+			&ReplacementHint{
+				Expression: hintExpression,
+				Range:      invocationRange,
+			},
+		)
+
+	} else if IsSubType(targetType, &IntegerType{}) {
+
+		// If the integer literal is converted to an integer type,
+		// suggest replacing it with a fixed-point literal
+
+		var hintExpression ast.Expression = argument
+
+		// If the target type is not `Int`,
+		// then a static cast is required,
+		// as all integer literals (positive and negative)
+		// are inferred to be of type `Int`
+
+		if !IsSubType(targetType, &IntType{}) {
+			hintExpression = &ast.CastingExpression{
+				Expression: hintExpression,
+				Operation:  ast.OperationCast,
+				TypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: targetType.String(),
+						},
+					},
+				},
+			}
+		}
+
+		checker.hint(
+			&ReplacementHint{
+				Expression: hintExpression,
+				Range:      invocationRange,
+			},
+		)
+	}
+}
+
+func suggestFixedPointLiteralConversionReplacement(
+	checker *Checker,
+	targetType Type,
+	argument *ast.FixedPointExpression,
+	invocationRange ast.Range,
+) {
+	// If the fixed-point literal is converted to a fixed-point type,
+	// suggest replacing it with a fixed-point literal
+
+	if !IsSubType(targetType, &FixedPointType{}) {
+		return
+	}
+
+	negative := argument.Negative
+	signed := IsSubType(targetType, &SignedFixedPointType{})
+
+	if (!negative && !signed) || (negative && signed) {
+		checker.hint(
+			&ReplacementHint{
+				Expression: argument,
+				Range:      invocationRange,
+			},
+		)
 	}
 }
 

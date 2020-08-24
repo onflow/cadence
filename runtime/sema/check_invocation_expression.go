@@ -416,7 +416,11 @@ func (checker *Checker) checkInvocation(
 		argumentExpressions[i] = argument.Expression
 	}
 
-	invokableType.CheckArgumentExpressions(checker, argumentExpressions)
+	invokableType.CheckArgumentExpressions(
+		checker,
+		argumentExpressions,
+		ast.NewRangeFromPositioned(invocationExpression),
+	)
 
 	returnType = functionType.ReturnTypeAnnotation.Type.Resolve(typeArguments)
 	if returnType == nil {
