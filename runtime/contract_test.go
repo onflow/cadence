@@ -52,6 +52,8 @@ func TestRuntimeContract(t *testing.T) {
 
 		signerAddress := Address{0x1}
 
+		var deployedCode []byte
+
 		testTx := []byte(
 			fmt.Sprintf(
 				`
@@ -67,8 +69,6 @@ func TestRuntimeContract(t *testing.T) {
 				hex.EncodeToString([]byte(tc.code)),
 			))
 
-		codeUpdated := false
-
 		var events []cadence.Event
 
 		storage := newTestStorage(nil, nil)
@@ -82,13 +82,20 @@ func TestRuntimeContract(t *testing.T) {
 				loggedMessages = append(loggedMessages, message)
 			},
 			updateAccountContractCode: func(address Address, name string, code []byte) error {
-				codeUpdated = true
 
-				assert.Equal(t, tc.name, name)
+				require.Equal(t, tc.name, name)
 				assert.Equal(t, signerAddress, address)
 				assert.Equal(t, tc.code, string(code))
 
+				deployedCode = code
+
 				return nil
+			},
+			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+				require.Equal(t, tc.name, name)
+				assert.Equal(t, signerAddress, address)
+
+				return deployedCode, nil
 			},
 			emitEvent: func(event cadence.Event) {
 				events = append(events, event)
@@ -101,7 +108,7 @@ func TestRuntimeContract(t *testing.T) {
 
 		if tc.valid {
 			require.NoError(t, err)
-			require.True(t, codeUpdated)
+			require.NotEmpty(t, deployedCode)
 			require.Equal(t,
 				[]string{
 					`"Test"`,
@@ -111,9 +118,15 @@ func TestRuntimeContract(t *testing.T) {
 			)
 			require.Len(t, events, 1)
 			assert.EqualValues(t, stdlib.AccountContractAddedEventType.ID(), events[0].Type().ID())
+
+			// Re-run transaction, ensure that overwriting is not possible
+
+			err = runtime.ExecuteTransaction(testTx, nil, runtimeInterface, nextTransactionLocation())
+			require.Error(t, err)
+
 		} else {
 			require.Error(t, err)
-			require.False(t, codeUpdated)
+			require.Empty(t, deployedCode)
 			require.Empty(t, events)
 			require.Empty(t, loggedMessages)
 		}
