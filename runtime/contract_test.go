@@ -50,8 +50,8 @@ func TestRuntimeContract(t *testing.T) {
 			fmt.Sprintf(
 				`
 	              transaction {
-	                  prepare() {
-	                      let contract = Contract(name: %q, code: "%s".decodeHex())
+	                  prepare(signer: AuthAccount) {
+                          let contract = signer.contracts.add(name: %q, code: "%s".decodeHex())
                           log(contract.name)
                           log(contract.code)
 	                  }
@@ -62,6 +62,9 @@ func TestRuntimeContract(t *testing.T) {
 			))
 
 		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() []Address {
+				return []Address{{0x1}}
+			},
 			log: func(message string) {
 				loggedMessages = append(loggedMessages, message)
 			},

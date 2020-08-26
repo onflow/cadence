@@ -225,6 +225,7 @@ func TestInterpretTransactions(t *testing.T) {
 			panicFunction,
 			panicFunction,
 			panicFunction,
+			interpreter.AuthAccountContractsValue{},
 		)
 		signer2 := interpreter.NewAuthAccountValue(
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 2},
@@ -232,6 +233,7 @@ func TestInterpretTransactions(t *testing.T) {
 			panicFunction,
 			panicFunction,
 			panicFunction,
+			interpreter.AuthAccountContractsValue{},
 		)
 
 		// first transaction
@@ -270,6 +272,7 @@ func TestInterpretTransactions(t *testing.T) {
 				panicFunction,
 				panicFunction,
 				panicFunction,
+				interpreter.AuthAccountContractsValue{},
 			),
 		}
 

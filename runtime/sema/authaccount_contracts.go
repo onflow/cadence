@@ -82,9 +82,11 @@ func (t *AuthAccountContractsType) Resolve(_ map[*TypeParameter]Type) Type {
 const authAccountContractsTypeAddFunctionDocString = `
 Adds the given contract to the account.
 
-The initializer arguments are passed to the initializer of the contract.
+Additional arguments arguments are passed to the initializer of the contract.
 
-Fails if a contract/contract interface with the name of the contract/contract interface given in the contract argument already exists in the account.
+Fails if a contract/contract interface with the given name already exists in the account,
+if the given code does not declare exactly one contract or contract interface,
+or if the given name does not match the name of the contract/contract interface declaration in the code.
 
 Returns the deployed contract.
 `
@@ -92,13 +94,21 @@ Returns the deployed contract.
 var authAccountContractsTypeAddFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Identifier:     "contract",
-			TypeAnnotation: NewTypeAnnotation(&ContractType{}),
+			Identifier:     "name",
+			TypeAnnotation: NewTypeAnnotation(&StringType{}),
+		},
+		{
+			Identifier: "code",
+			TypeAnnotation: NewTypeAnnotation(
+				&VariableSizedType{
+					Type: &UInt8Type{},
+				},
+			),
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(&DeployedContractType{}),
 	// additional arguments are passed to the contract initializer
-	RequiredArgumentCount: RequiredArgumentCount(1),
+	RequiredArgumentCount: RequiredArgumentCount(2),
 }
 
 const authAccountContractsTypeUpdateExperimentalFunctionDocString = `
@@ -106,9 +116,12 @@ const authAccountContractsTypeUpdateExperimentalFunctionDocString = `
 
 Updates the code for the contract/contract interface  in the account.
 
-Does **not** run the initializer of the contract/contract interface again. The contract instance in the world state stays as is.
+Does **not** run the initializer of the contract/contract interface again. 
+The contract instance in the world state stays as is.
 
-Fails if no contract/contract interface with the name of the contract/contract interface given in the contract argument exists in the account.
+Fails if no contract/contract interface with the given name exists in the account,
+if the given code does not declare exactly one contract or contract interface,
+or if the given name does not match the name of the contract/contract interface declaration in the code.
 
 Returns the deployed contract for the updated contract.
 `
@@ -158,8 +171,16 @@ var authAccountContractsTypeDeleteFunctionType = &FunctionType{
 var authAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
-			Identifier:     "contract",
-			TypeAnnotation: NewTypeAnnotation(&ContractType{}),
+			Identifier:     "name",
+			TypeAnnotation: NewTypeAnnotation(&StringType{}),
+		},
+		{
+			Identifier: "code",
+			TypeAnnotation: NewTypeAnnotation(
+				&VariableSizedType{
+					Type: &UInt8Type{},
+				},
+			),
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(&DeployedContractType{}),
