@@ -59,9 +59,13 @@ func TestRuntimeContract(t *testing.T) {
 				`
 	              transaction {
 	                  prepare(signer: AuthAccount) {
-                          let contract = signer.contracts.add(name: %q, code: "%s".decodeHex())
+                          let contract = signer.contracts.add(name: %[1]q, code: "%[2]s".decodeHex())
                           log(contract.name)
                           log(contract.code)
+
+                          let contract2 = signer.contracts.get(name: %[1]q)
+                          log(contract2?.name)
+                          log(contract2?.code)
 	                  }
 	               }
 	            `,
@@ -109,13 +113,18 @@ func TestRuntimeContract(t *testing.T) {
 		if tc.valid {
 			require.NoError(t, err)
 			require.NotEmpty(t, deployedCode)
+
+			codeArrayString := interpreter.ByteSliceToByteArrayValue([]byte(tc.code)).String()
 			require.Equal(t,
 				[]string{
 					`"Test"`,
-					interpreter.ByteSliceToByteArrayValue([]byte(tc.code)).String(),
+					codeArrayString,
+					`"Test"`,
+					codeArrayString,
 				},
 				loggedMessages,
 			)
+
 			require.Len(t, events, 1)
 			assert.EqualValues(t, stdlib.AccountContractAddedEventType.ID(), events[0].Type().ID())
 
