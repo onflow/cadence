@@ -3732,9 +3732,9 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 			return false
 		}
 
-	case ContractDynamicType:
+	case DeployedContractDynamicType:
 		switch superType.(type) {
-		case *sema.ContractType, *sema.AnyStructType:
+		case *sema.DeployedContractType, *sema.AnyStructType:
 			return true
 
 		default:

@@ -4386,7 +4386,6 @@ func init() {
 		&PublicAccountType{},
 		&PathType{},
 		&CapabilityType{},
-		&ContractType{},
 		&DeployedContractType{},
 	}
 

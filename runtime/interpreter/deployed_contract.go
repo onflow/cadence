@@ -26,54 +26,59 @@ import (
 	"github.com/onflow/cadence/runtime/trampoline"
 )
 
-// ContractValue
+// DeployedContractValue
 
-type ContractValue struct {
-	Name *StringValue
-	Code *ArrayValue
+type DeployedContractValue struct {
+	Address AddressValue
+	Name    *StringValue
+	Code    *ArrayValue
 }
 
-func (ContractValue) IsValue() {}
+func (DeployedContractValue) IsValue() {}
 
-func (ContractValue) DynamicType(_ *Interpreter) DynamicType {
-	return ContractDynamicType{}
+func (DeployedContractValue) DynamicType(_ *Interpreter) DynamicType {
+	return DeployedContractDynamicType{}
 }
 
-func (v ContractValue) Copy() Value {
+func (v DeployedContractValue) Copy() Value {
 	return v
 }
 
-func (ContractValue) GetOwner() *common.Address {
+func (DeployedContractValue) GetOwner() *common.Address {
 	// value is never owned
 	return nil
 }
 
-func (ContractValue) SetOwner(_ *common.Address) {
+func (DeployedContractValue) SetOwner(_ *common.Address) {
 	// NO-OP: value cannot be owned
 }
 
-func (ContractValue) IsModified() bool {
+func (DeployedContractValue) IsModified() bool {
 	return false
 }
 
-func (ContractValue) SetModified(_ bool) {
+func (DeployedContractValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v ContractValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
+func (v DeployedContractValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline {
 	return trampoline.Done{}
 }
 
-func (v ContractValue) String() string {
+func (v DeployedContractValue) String() string {
 	return fmt.Sprintf(
-		"Contract(name: %s, code: %s)",
+		"DeployedContract(address: %s, name: %s, code: %s)",
+		v.Address.String(),
 		v.Name,
 		v.Code,
 	)
 }
 
-func (v ContractValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
+func (v DeployedContractValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
 	switch name {
+	case "address":
+		return v.Address
+
 	case "name":
 		return v.Name
 
@@ -84,6 +89,6 @@ func (v ContractValue) GetMember(_ *Interpreter, _ LocationRange, name string) V
 	return nil
 }
 
-func (ContractValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
+func (DeployedContractValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ Value) {
 	panic(errors.NewUnreachableError())
 }

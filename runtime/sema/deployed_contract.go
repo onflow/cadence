@@ -55,6 +55,7 @@ func (*DeployedContractType) IsInvalidType() bool {
 }
 
 func (*DeployedContractType) IsStorable(_ map[*Member]bool) bool {
+	// `interpreter.ContractValue` has a field of type `sema.Checker`, which is not storable.
 	return false
 }
 
@@ -79,12 +80,16 @@ func (t *DeployedContractType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-const deployedContractTypeContractFieldDocString = `
-The deployed contract
-`
-
 const deployedContractTypeAddressFieldDocString = `
 The address of the account where the contract is deployed at
+`
+
+const deployedContractTypeNameFieldDocString = `
+The name of the contract
+`
+
+const deployedContractTypeCodeFieldDocString = `
+The code of the contract
 `
 
 func (t *DeployedContractType) GetMembers() map[string]MemberResolver {
@@ -100,14 +105,27 @@ func (t *DeployedContractType) GetMembers() map[string]MemberResolver {
 				)
 			},
 		},
-		"contract": {
+		"name": {
 			Kind: common.DeclarationKindField,
 			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 				return NewPublicConstantFieldMember(
 					t,
 					identifier,
-					&ContractType{},
-					deployedContractTypeContractFieldDocString,
+					&StringType{},
+					deployedContractTypeNameFieldDocString,
+				)
+			},
+		},
+		"code": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicConstantFieldMember(
+					t,
+					identifier,
+					&VariableSizedType{
+						Type: &UInt8Type{},
+					},
+					deployedContractTypeCodeFieldDocString,
 				)
 			},
 		},

@@ -82,7 +82,7 @@ func validTopLevelDeclarations(location ast.Location) []common.DeclarationKind {
 	switch location.(type) {
 	case TransactionLocation:
 		return validTopLevelDeclarationsInTransaction
-	case AddressLocation, UndeployedContractLocation:
+	case AddressLocation:
 		return validTopLevelDeclarationsInAccountCode
 	}
 
@@ -285,6 +285,11 @@ func (r *interpreterRuntime) newAuthAccountValue(
 		),
 		r.newAddPublicKeyFunction(addressValue, runtimeInterface),
 		r.newRemovePublicKeyFunction(addressValue, runtimeInterface),
+		r.newAuthAccountContracts(
+			addressValue,
+			runtimeInterface,
+			runtimeStorage,
+		),
 	)
 }
 
@@ -810,7 +815,6 @@ func (r *interpreterRuntime) standardLibraryFunctions(
 		stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{
 			CreateAccount:   r.newCreateAccountFunction(runtimeInterface, runtimeStorage),
 			GetAccount:      r.newGetAccountFunction(runtimeInterface),
-			CreateContract:  r.newCreateContractFunction(runtimeInterface),
 			Log:             r.newLogFunction(runtimeInterface),
 			GetCurrentBlock: r.newGetCurrentBlockFunction(runtimeInterface),
 			GetBlock:        r.newGetBlockFunction(runtimeInterface),
@@ -988,7 +992,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 
 			publicKey, err := interpreter.ByteArrayValueToByteSlice(publicKeyValue)
 			if err != nil {
-				panic(fmt.Sprintf("addPublicKey requires the first argument to be a byte array"))
+				panic("addPublicKey requires the first argument to be a byte array")
 			}
 
 			wrapPanic(func() {
@@ -1051,6 +1055,9 @@ type setCodeOptions struct {
 	createContract bool
 }
 
+// newSetCodeFunction returns the implementation for an account's `setCode` function.
+// This function is only used for the old account code/contract API.
+//
 func (r *interpreterRuntime) newSetCodeFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
@@ -1063,7 +1070,7 @@ func (r *interpreterRuntime) newSetCodeFunction(
 
 			code, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[0])
 			if err != nil {
-				panic(fmt.Sprintf("setCode requires the first argument to be a byte array"))
+				panic("setCode requires the first argument to be a byte array")
 			}
 
 			constructorArguments := invocation.Arguments[requiredArgumentCount:]
@@ -1104,6 +1111,9 @@ type updateAccountCodeOptions struct {
 	createContract bool
 }
 
+// updateAccountCode updates the account's code.
+// This function is only used for the old account code/contract API.
+//
 func (r *interpreterRuntime) updateAccountCode(
 	runtimeInterface Interface,
 	runtimeStorage *interpreterRuntimeStorage,
@@ -1364,56 +1374,6 @@ func (r *interpreterRuntime) newGetAccountFunction(_ Interface) interpreter.Host
 	}
 }
 
-func (r *interpreterRuntime) newCreateContractFunction(runtimeInterface Interface) interpreter.HostFunction {
-	return func(invocation interpreter.Invocation) trampoline.Trampoline {
-		nameValue := invocation.Arguments[0].(*interpreter.StringValue)
-		codeValue := invocation.Arguments[1].(*interpreter.ArrayValue)
-
-		code, err := interpreter.ByteArrayValueToByteSlice(codeValue)
-		if err != nil {
-			panic(fmt.Sprintf("the Contract constructor requires the second argument to be an array"))
-		}
-
-		checker, err := r.ParseAndCheckProgram(code, runtimeInterface, UndeployedContractLocation{})
-		if err != nil {
-			panic(fmt.Errorf("invalid contract: %w", err))
-		}
-
-		// The code may declare exactly one contract or one contract interface.
-
-		compositeDeclarationCount := len(checker.Program.CompositeDeclarations())
-		interfaceDeclarationCount := len(checker.Program.InterfaceDeclarations())
-
-		var declaredName string
-		switch {
-		case compositeDeclarationCount == 1 && interfaceDeclarationCount == 0:
-			declaredName = checker.Program.CompositeDeclarations()[0].Identifier.Identifier
-		case interfaceDeclarationCount == 1 && compositeDeclarationCount == 0:
-			declaredName = checker.Program.InterfaceDeclarations()[0].Identifier.Identifier
-		default:
-			panic(errors.New("invalid contract: the code must declare exactly one contract or contract interface"))
-		}
-
-		// The declared contract or contract interface must have the name
-		// passed to the constructor as the first argument
-
-		if declaredName != nameValue.Str {
-			panic(fmt.Errorf(
-				"invalid contract: the declaration must have the same name as the given name argument. epected %q, got %q",
-				nameValue.Str,
-				declaredName,
-			))
-		}
-
-		contractValue := interpreter.ContractValue{
-			Name: nameValue,
-			Code: codeValue,
-		}
-
-		return trampoline.Done{Result: contractValue}
-	}
-}
-
 func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
 		message := fmt.Sprint(invocation.Arguments[0])
@@ -1490,6 +1450,110 @@ func (r *interpreterRuntime) newUnsafeRandomFunction(runtimeInterface Interface)
 		})
 		return trampoline.Done{Result: interpreter.UInt64Value(rand)}
 	}
+}
+
+func (r *interpreterRuntime) newAuthAccountContracts(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+	runtimeStorage *interpreterRuntimeStorage,
+) interpreter.AuthAccountContractsValue {
+	return interpreter.NewAuthAccountContractsValue(
+		addressValue,
+		r.newAuthAccountContractsAddFunction(addressValue, runtimeInterface, runtimeStorage),
+	)
+}
+
+func (r *interpreterRuntime) newAuthAccountContractsAddFunction(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+	runtimeStorage *interpreterRuntimeStorage,
+) interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) trampoline.Trampoline {
+
+			const requiredArgumentCount = 2
+
+			nameValue := invocation.Arguments[0].(*interpreter.StringValue)
+			codeValue := invocation.Arguments[1].(*interpreter.ArrayValue)
+
+			//constructorArguments := invocation.Arguments[requiredArgumentCount:]
+			//constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
+
+			code, err := interpreter.ByteArrayValueToByteSlice(codeValue)
+			if err != nil {
+				panic("add requires the second argument to be an array")
+			}
+
+			location := AddressLocation(addressValue[:])
+
+			checker, err := r.ParseAndCheckProgram(code, runtimeInterface, location)
+			if err != nil {
+				panic(fmt.Errorf("invalid contract: %w", err))
+			}
+
+			// The code may declare exactly one contract or one contract interface.
+
+			compositeDeclarationCount := len(checker.Program.CompositeDeclarations())
+			interfaceDeclarationCount := len(checker.Program.InterfaceDeclarations())
+
+			var declaredName string
+			switch {
+			case compositeDeclarationCount == 1 && interfaceDeclarationCount == 0:
+				declaredName = checker.Program.CompositeDeclarations()[0].Identifier.Identifier
+			case interfaceDeclarationCount == 1 && compositeDeclarationCount == 0:
+				declaredName = checker.Program.InterfaceDeclarations()[0].Identifier.Identifier
+			default:
+				panic(errors.New("invalid contract: the code must declare exactly one contract or contract interface"))
+			}
+
+			// The declared contract or contract interface must have the name
+			// passed to the constructor as the first argument
+
+			if declaredName != nameValue.Str {
+				panic(fmt.Errorf(
+					"invalid contract: the declaration must have the same name as the given name argument. epected %q, got %q",
+					nameValue.Str,
+					declaredName,
+				))
+			}
+
+			// TODO:
+
+			//contractTypes := r.updateAccountCode(
+			//	runtimeInterface,
+			//	runtimeStorage,
+			//	code,
+			//	addressValue,
+			//	constructorArguments,
+			//	constructorArgumentTypes,
+			//	invocation.LocationRange.Range,
+			//)
+			//
+			//codeHashValue := CodeToHashValue(code)
+			//
+			//contractTypeID := compositeTypesToIDValues(contractTypes)
+			//
+			//r.emitAccountEvent(
+			//	stdlib.AccountContractAddedEventType,
+			//	runtimeInterface,
+			//	[]exportableValue{
+			//		newExportableValue(addressValue, nil),
+			//		newExportableValue(codeHashValue, nil),
+			//		newExportableValue(contractTypeID, nil),
+			//	},
+			//)
+			//
+			//// TODO: return DeployedContract
+
+			result := interpreter.DeployedContractValue{
+				Address: addressValue,
+				Name:    nameValue,
+				Code:    codeValue,
+			}
+
+			return trampoline.Done{Result: result}
+		},
+	)
 }
 
 func compositeTypesToIDValues(types []*sema.CompositeType) *interpreter.ArrayValue {

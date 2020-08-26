@@ -6837,6 +6837,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 								panicFunction,
 								panicFunction,
 								panicFunction,
+								interpreter.AuthAccountContractsValue{},
 							),
 						}
 					},
@@ -7581,6 +7582,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			panicFunction,
 			panicFunction,
 			panicFunction,
+			interpreter.AuthAccountContractsValue{},
 		),
 	}
 
