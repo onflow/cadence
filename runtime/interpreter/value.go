@@ -6387,6 +6387,7 @@ type AuthAccountValue struct {
 	unsafeNotInitializingSetCodeFunction FunctionValue
 	addPublicKeyFunction                 FunctionValue
 	removePublicKeyFunction              FunctionValue
+	contracts                            AuthAccountContractsValue
 }
 
 func NewAuthAccountValue(
@@ -6395,6 +6396,7 @@ func NewAuthAccountValue(
 	unsafeNotInitializingSetCodeFunction FunctionValue,
 	addPublicKeyFunction FunctionValue,
 	removePublicKeyFunction FunctionValue,
+	contracts AuthAccountContractsValue,
 ) AuthAccountValue {
 	return AuthAccountValue{
 		Address:                              address,
@@ -6402,6 +6404,7 @@ func NewAuthAccountValue(
 		unsafeNotInitializingSetCodeFunction: unsafeNotInitializingSetCodeFunction,
 		addPublicKeyFunction:                 addPublicKeyFunction,
 		removePublicKeyFunction:              removePublicKeyFunction,
+		contracts:                            contracts,
 	}
 }
 
@@ -6550,6 +6553,9 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 
 	case "getCapability":
 		return accountGetCapabilityFunction(v.Address, true)
+
+	case "contracts":
+		return v.contracts
 	}
 
 	return nil
