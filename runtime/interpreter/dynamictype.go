@@ -179,8 +179,8 @@ type PublicAccountDynamicType struct{}
 
 func (PublicAccountDynamicType) IsDynamicType() {}
 
-// ContractDynamicType
+// DeployedContractDynamicType
 
-type ContractDynamicType struct{}
+type DeployedContractDynamicType struct{}
 
-func (ContractDynamicType) IsDynamicType() {}
+func (DeployedContractDynamicType) IsDynamicType() {}
