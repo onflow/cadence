@@ -1468,6 +1468,7 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 	return interpreter.NewAuthAccountContractsValue(
 		addressValue,
 		r.newAuthAccountContractsAddFunction(addressValue, runtimeInterface, runtimeStorage),
+		r.newAuthAccountContractsGetFunction(addressValue, runtimeInterface),
 	)
 }
 
@@ -1677,6 +1678,43 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	if createContract {
 		r.writeContract(runtimeStorage, addressValue, name, contractValue)
 	}
+}
+
+func (r *interpreterRuntime) newAuthAccountContractsGetFunction(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+) interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) trampoline.Trampoline {
+
+			nameValue := invocation.Arguments[0].(*interpreter.StringValue)
+
+			address := addressValue.ToAddress()
+			nameArgument := nameValue.Str
+			var code []byte
+			var err error
+			wrapPanic(func() {
+				code, err = runtimeInterface.GetAccountContractCode(address, nameArgument)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			var result interpreter.OptionalValue = interpreter.NilValue{}
+
+			if len(code) > 0 {
+				result = interpreter.NewSomeValueOwningNonCopying(
+					interpreter.DeployedContractValue{
+						Address: addressValue,
+						Name:    nameValue,
+						Code:    interpreter.ByteSliceToByteArrayValue(code),
+					},
+				)
+			}
+
+			return trampoline.Done{Result: result}
+		},
+	)
 }
 
 func compositeTypesToIDValues(types []*sema.CompositeType) *interpreter.ArrayValue {
