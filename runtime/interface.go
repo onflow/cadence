@@ -60,6 +60,8 @@ type Interface interface {
 	RemoveAccountKey(address Address, index int) (publicKey []byte, err error)
 	// UpdateAccountCode updates the code associated with an account.
 	UpdateAccountCode(address Address, code []byte) (err error)
+	// UpdateAccountContractCode updates the code associated with an account contract.
+	UpdateAccountContractCode(address Address, name string, code []byte) (err error)
 	// GetSigningAccounts returns the signing accounts.
 	GetSigningAccounts() []Address
 	// Log logs a string.
@@ -163,6 +165,10 @@ func (i *EmptyRuntimeInterface) RemoveAccountKey(_ Address, _ int) (publicKey []
 }
 
 func (i *EmptyRuntimeInterface) UpdateAccountCode(_ Address, _ []byte) error {
+	return nil
+}
+
+func (i *EmptyRuntimeInterface) UpdateAccountContractCode(_ Address, _ string, _ []byte) (err error) {
 	return nil
 }
 
