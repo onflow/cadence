@@ -97,6 +97,7 @@ type testRuntimeInterface struct {
 	removeAccountKey          func(address Address, index int) (publicKey []byte, err error)
 	updateAccountCode         func(address Address, code []byte) (err error)
 	updateAccountContractCode func(address Address, name string, code []byte) error
+	getAccountContractCode    func(address Address, name string) (code []byte, err error)
 	getSigningAccounts        func() []Address
 	log                       func(string)
 	emitEvent                 func(cadence.Event)
@@ -185,6 +186,10 @@ func (i *testRuntimeInterface) UpdateAccountCode(address Address, code []byte) (
 
 func (i *testRuntimeInterface) UpdateAccountContractCode(address Address, name string, code []byte) (err error) {
 	return i.updateAccountContractCode(address, name, code)
+}
+
+func (i *testRuntimeInterface) GetAccountContractCode(address Address, name string) (code []byte, err error) {
+	return i.getAccountContractCode(address, name)
 }
 
 func (i *testRuntimeInterface) GetSigningAccounts() []Address {

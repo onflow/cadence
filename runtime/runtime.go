@@ -1482,19 +1482,36 @@ func (r *interpreterRuntime) newAuthAccountContractsAddFunction(
 			const requiredArgumentCount = 2
 
 			nameValue := invocation.Arguments[0].(*interpreter.StringValue)
-			codeValue := invocation.Arguments[1].(*interpreter.ArrayValue)
+			newCodeValue := invocation.Arguments[1].(*interpreter.ArrayValue)
 
 			constructorArguments := invocation.Arguments[requiredArgumentCount:]
 			constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
 
-			code, err := interpreter.ByteArrayValueToByteSlice(codeValue)
+			code, err := interpreter.ByteArrayValueToByteSlice(newCodeValue)
 			if err != nil {
 				panic("add requires the second argument to be an array")
 			}
 
 			location := AddressLocation(addressValue[:])
 
-			// TODO: check if account already has
+			// Ensure that no contract/contract interface with the given name exists already
+
+			nameArgument := nameValue.Str
+
+			address := addressValue.ToAddress()
+			existingCode, err := runtimeInterface.GetAccountContractCode(address, nameArgument)
+			if err != nil {
+				panic(err)
+			}
+			if len(existingCode) > 0 {
+				panic(fmt.Errorf(
+					"cannot ovewrite existing contract code with name %q in %s",
+					nameArgument,
+					address.ShortHexWithPrefix(),
+				))
+			}
+
+			// Check the code
 
 			checker, err := r.ParseAndCheckProgram(code, runtimeInterface, location)
 			if err != nil {
@@ -1543,7 +1560,7 @@ func (r *interpreterRuntime) newAuthAccountContractsAddFunction(
 			// The declared contract or contract interface must have the name
 			// passed to the constructor as the first argument
 
-			if declaredName != nameValue.Str {
+			if declaredName != nameArgument {
 				panic(fmt.Errorf(
 					"invalid contract: the declaration must have the same name as the given name argument. epected %q, got %q",
 					nameValue.Str,
@@ -1585,7 +1602,7 @@ func (r *interpreterRuntime) newAuthAccountContractsAddFunction(
 			result := interpreter.DeployedContractValue{
 				Address: addressValue,
 				Name:    nameValue,
-				Code:    codeValue,
+				Code:    newCodeValue,
 			}
 
 			return trampoline.Done{Result: result}
