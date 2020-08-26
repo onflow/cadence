@@ -66,6 +66,9 @@ func TestRuntimeContract(t *testing.T) {
                           let contract2 = signer.contracts.get(name: %[1]q)
                           log(contract2?.name)
                           log(contract2?.code)
+
+                          let contract3 = signer.contracts.get(name: "Unknown")
+                          log(contract3)
 	                  }
 	               }
 	            `,
@@ -96,10 +99,11 @@ func TestRuntimeContract(t *testing.T) {
 				return nil
 			},
 			getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-				require.Equal(t, tc.name, name)
-				assert.Equal(t, signerAddress, address)
+				if name == tc.name {
+					return deployedCode, nil
+				}
 
-				return deployedCode, nil
+				return nil, nil
 			},
 			emitEvent: func(event cadence.Event) {
 				events = append(events, event)
@@ -121,6 +125,7 @@ func TestRuntimeContract(t *testing.T) {
 					codeArrayString,
 					`"Test"`,
 					codeArrayString,
+					`nil`,
 				},
 				loggedMessages,
 			)
