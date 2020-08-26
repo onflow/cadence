@@ -87,28 +87,29 @@ func newTestStorage(
 }
 
 type testRuntimeInterface struct {
-	resolveLocation    func(identifiers []Identifier, location Location) []ResolvedLocation
-	getCode            func(_ Location) ([]byte, error)
-	getCachedProgram   func(Location) (*ast.Program, error)
-	cacheProgram       func(Location, *ast.Program) error
-	storage            testRuntimeInterfaceStorage
-	createAccount      func(payer Address) (address Address, err error)
-	addAccountKey      func(address Address, publicKey []byte) error
-	removeAccountKey   func(address Address, index int) (publicKey []byte, err error)
-	updateAccountCode  func(address Address, code []byte) (err error)
-	getSigningAccounts func() []Address
-	log                func(string)
-	emitEvent          func(cadence.Event)
-	generateUUID       func() uint64
-	computationLimit   uint64
-	decodeArgument     func(b []byte, t cadence.Type) (cadence.Value, error)
-	programParsed      func(location ast.Location, duration time.Duration)
-	programChecked     func(location ast.Location, duration time.Duration)
-	programInterpreted func(location ast.Location, duration time.Duration)
-	valueEncoded       func(duration time.Duration)
-	valueDecoded       func(duration time.Duration)
-	unsafeRandom       func() uint64
-	verifySignature    func(
+	resolveLocation           func(identifiers []Identifier, location Location) []ResolvedLocation
+	getCode                   func(_ Location) ([]byte, error)
+	getCachedProgram          func(Location) (*ast.Program, error)
+	cacheProgram              func(Location, *ast.Program) error
+	storage                   testRuntimeInterfaceStorage
+	createAccount             func(payer Address) (address Address, err error)
+	addAccountKey             func(address Address, publicKey []byte) error
+	removeAccountKey          func(address Address, index int) (publicKey []byte, err error)
+	updateAccountCode         func(address Address, code []byte) (err error)
+	updateAccountContractCode func(address Address, name string, code []byte) error
+	getSigningAccounts        func() []Address
+	log                       func(string)
+	emitEvent                 func(cadence.Event)
+	generateUUID              func() uint64
+	computationLimit          uint64
+	decodeArgument            func(b []byte, t cadence.Type) (cadence.Value, error)
+	programParsed             func(location ast.Location, duration time.Duration)
+	programChecked            func(location ast.Location, duration time.Duration)
+	programInterpreted        func(location ast.Location, duration time.Duration)
+	valueEncoded              func(duration time.Duration)
+	valueDecoded              func(duration time.Duration)
+	unsafeRandom              func() uint64
+	verifySignature           func(
 		signature []byte,
 		tag string,
 		signedData []byte,
@@ -181,6 +182,10 @@ func (i *testRuntimeInterface) RemoveAccountKey(address Address, index int) (pub
 
 func (i *testRuntimeInterface) UpdateAccountCode(address Address, code []byte) (err error) {
 	return i.updateAccountCode(address, code)
+}
+
+func (i *testRuntimeInterface) UpdateAccountContractCode(address Address, name string, code []byte) (err error) {
+	return i.updateAccountContractCode(address, name, code)
 }
 
 func (i *testRuntimeInterface) GetSigningAccounts() []Address {

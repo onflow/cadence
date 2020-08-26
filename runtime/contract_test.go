@@ -23,9 +23,12 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestRuntimeContract(t *testing.T) {
@@ -33,9 +36,10 @@ func TestRuntimeContract(t *testing.T) {
 	t.Parallel()
 
 	type testCase struct {
-		name  string
-		code  string
-		valid bool
+		name        string
+		code        string
+		valid       bool
+		isInterface bool
 	}
 
 	test := func(t *testing.T, tc testCase) {
@@ -45,6 +49,8 @@ func TestRuntimeContract(t *testing.T) {
 		runtime := NewInterpreterRuntime()
 
 		var loggedMessages []string
+
+		signerAddress := Address{0x1}
 
 		testTx := []byte(
 			fmt.Sprintf(
@@ -61,12 +67,31 @@ func TestRuntimeContract(t *testing.T) {
 				hex.EncodeToString([]byte(tc.code)),
 			))
 
+		codeUpdated := false
+
+		var events []cadence.Event
+
+		storage := newTestStorage(nil, nil)
+
 		runtimeInterface := &testRuntimeInterface{
+			storage: storage,
 			getSigningAccounts: func() []Address {
-				return []Address{{0x1}}
+				return []Address{signerAddress}
 			},
 			log: func(message string) {
 				loggedMessages = append(loggedMessages, message)
+			},
+			updateAccountContractCode: func(address Address, name string, code []byte) error {
+				codeUpdated = true
+
+				assert.Equal(t, tc.name, name)
+				assert.Equal(t, signerAddress, address)
+				assert.Equal(t, tc.code, string(code))
+
+				return nil
+			},
+			emitEvent: func(event cadence.Event) {
+				events = append(events, event)
 			},
 		}
 
@@ -76,7 +101,7 @@ func TestRuntimeContract(t *testing.T) {
 
 		if tc.valid {
 			require.NoError(t, err)
-
+			require.True(t, codeUpdated)
 			require.Equal(t,
 				[]string{
 					`"Test"`,
@@ -84,56 +109,78 @@ func TestRuntimeContract(t *testing.T) {
 				},
 				loggedMessages,
 			)
+			require.Len(t, events, 1)
+			assert.EqualValues(t, stdlib.AccountContractAddedEventType.ID(), events[0].Type().ID())
 		} else {
 			require.Error(t, err)
+			require.False(t, codeUpdated)
+			require.Empty(t, events)
+			require.Empty(t, loggedMessages)
+		}
+
+		contractKey := []byte("contract\x1fTest")
+
+		exists, err := storage.valueExists(signerAddress[:], contractKey)
+		require.NoError(t, err)
+
+		if tc.valid && !tc.isInterface {
+			require.True(t, exists)
+		} else {
+			require.False(t, exists)
 		}
 	}
 
 	t.Run("valid contract, correct name", func(t *testing.T) {
 		test(t, testCase{
-			name:  "Test",
-			code:  `pub contract Test {}`,
-			valid: true,
+			name:        "Test",
+			code:        `pub contract Test {}`,
+			valid:       true,
+			isInterface: false,
 		})
 	})
 
 	t.Run("valid contract interface, correct name", func(t *testing.T) {
 		test(t, testCase{
-			name:  "Test",
-			code:  `pub contract interface Test {}`,
-			valid: true,
+			name:        "Test",
+			code:        `pub contract interface Test {}`,
+			valid:       true,
+			isInterface: true,
 		})
 	})
 
 	t.Run("valid contract, wrong name", func(t *testing.T) {
 		test(t, testCase{
-			name:  "XYZ",
-			code:  `pub contract Test {}`,
-			valid: false,
+			name:        "XYZ",
+			code:        `pub contract Test {}`,
+			valid:       false,
+			isInterface: false,
 		})
 	})
 
 	t.Run("valid contract interface, wrong name", func(t *testing.T) {
 		test(t, testCase{
-			name:  "XYZ",
-			code:  `pub contract interface Test {}`,
-			valid: false,
+			name:        "XYZ",
+			code:        `pub contract interface Test {}`,
+			valid:       false,
+			isInterface: true,
 		})
 	})
 
 	t.Run("invalid code", func(t *testing.T) {
 		test(t, testCase{
-			name:  "Test",
-			code:  `foo`,
-			valid: false,
+			name:        "Test",
+			code:        `foo`,
+			valid:       false,
+			isInterface: false,
 		})
 	})
 
 	t.Run("missing contract or contract interface", func(t *testing.T) {
 		test(t, testCase{
-			name:  "Test",
-			code:  ``,
-			valid: false,
+			name:        "Test",
+			code:        ``,
+			valid:       false,
+			isInterface: false,
 		})
 	})
 
@@ -145,7 +192,8 @@ func TestRuntimeContract(t *testing.T) {
 
               pub contract Test2 {}
             `,
-			valid: false,
+			valid:       false,
+			isInterface: false,
 		})
 	})
 
@@ -157,7 +205,8 @@ func TestRuntimeContract(t *testing.T) {
 
               pub contract interface Test2 {}
             `,
-			valid: false,
+			valid:       false,
+			isInterface: true,
 		})
 	})
 
@@ -169,7 +218,8 @@ func TestRuntimeContract(t *testing.T) {
 
               pub contract interface Test2 {}
             `,
-			valid: false,
+			valid:       false,
+			isInterface: false,
 		})
 	})
 }

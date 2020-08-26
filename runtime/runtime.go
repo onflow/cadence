@@ -1194,7 +1194,7 @@ func (r *interpreterRuntime) updateAccountCode(
 	}
 
 	if options.createContract {
-		r.writeContract(runtimeStorage, addressValue, contractValue)
+		r.writeContract(runtimeStorage, addressValue, "", contractValue)
 	}
 
 	return contractTypes
@@ -1203,11 +1203,19 @@ func (r *interpreterRuntime) updateAccountCode(
 func (r *interpreterRuntime) writeContract(
 	runtimeStorage *interpreterRuntimeStorage,
 	addressValue interpreter.AddressValue,
+	name string,
 	contractValue interpreter.OptionalValue,
 ) {
+	key := contractKey
+	// \x1F = Information Separator One
+
+	if name != "" {
+		key = fmt.Sprintf("%s\x1F%s", key, name)
+	}
+
 	runtimeStorage.writeValue(
 		addressValue.ToAddress(),
-		contractKey,
+		key,
 		contractValue,
 	)
 }
@@ -1477,8 +1485,8 @@ func (r *interpreterRuntime) newAuthAccountContractsAddFunction(
 			nameValue := invocation.Arguments[0].(*interpreter.StringValue)
 			codeValue := invocation.Arguments[1].(*interpreter.ArrayValue)
 
-			//constructorArguments := invocation.Arguments[requiredArgumentCount:]
-			//constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
+			constructorArguments := invocation.Arguments[requiredArgumentCount:]
+			constructorArgumentTypes := invocation.ArgumentTypes[requiredArgumentCount:]
 
 			code, err := interpreter.ByteArrayValueToByteSlice(codeValue)
 			if err != nil {
@@ -1487,6 +1495,8 @@ func (r *interpreterRuntime) newAuthAccountContractsAddFunction(
 
 			location := AddressLocation(addressValue[:])
 
+			// TODO: check if account already has
+
 			checker, err := r.ParseAndCheckProgram(code, runtimeInterface, location)
 			if err != nil {
 				panic(fmt.Errorf("invalid contract: %w", err))
@@ -1494,16 +1504,40 @@ func (r *interpreterRuntime) newAuthAccountContractsAddFunction(
 
 			// The code may declare exactly one contract or one contract interface.
 
-			compositeDeclarationCount := len(checker.Program.CompositeDeclarations())
-			interfaceDeclarationCount := len(checker.Program.InterfaceDeclarations())
+			var contractTypes []*sema.CompositeType
+			var contractInterfaceTypes []*sema.InterfaceType
 
+			for _, variable := range checker.GlobalTypes {
+				switch ty := variable.Type.(type) {
+				case *sema.CompositeType:
+					if ty.Kind == common.CompositeKindContract {
+						contractTypes = append(contractTypes, ty)
+					}
+
+				case *sema.InterfaceType:
+					if ty.CompositeKind == common.CompositeKindContract {
+						contractInterfaceTypes = append(contractInterfaceTypes, ty)
+					}
+				}
+			}
+
+			var deployedType sema.Type
+			var contractType *sema.CompositeType
+			var contractInterfaceType *sema.InterfaceType
 			var declaredName string
+
 			switch {
-			case compositeDeclarationCount == 1 && interfaceDeclarationCount == 0:
-				declaredName = checker.Program.CompositeDeclarations()[0].Identifier.Identifier
-			case interfaceDeclarationCount == 1 && compositeDeclarationCount == 0:
-				declaredName = checker.Program.InterfaceDeclarations()[0].Identifier.Identifier
-			default:
+			case len(contractTypes) == 1 && len(contractInterfaceTypes) == 0:
+				contractType = contractTypes[0]
+				declaredName = contractType.Identifier
+				deployedType = contractType
+			case len(contractInterfaceTypes) == 1 && len(contractTypes) == 0:
+				contractInterfaceType = contractInterfaceTypes[0]
+				declaredName = contractInterfaceType.Identifier
+				deployedType = contractInterfaceType
+			}
+
+			if deployedType == nil {
 				panic(errors.New("invalid contract: the code must declare exactly one contract or contract interface"))
 			}
 
@@ -1518,33 +1552,36 @@ func (r *interpreterRuntime) newAuthAccountContractsAddFunction(
 				))
 			}
 
-			// TODO:
+			r.updateAccountContractCode(
+				runtimeInterface,
+				runtimeStorage,
+				declaredName,
+				code,
+				addressValue,
+				location,
+				checker,
+				contractType,
+				constructorArguments,
+				constructorArgumentTypes,
+				invocation.LocationRange.Range,
+				updateAccountContractCodeOptions{
+					createContract: true,
+				},
+			)
 
-			//contractTypes := r.updateAccountCode(
-			//	runtimeInterface,
-			//	runtimeStorage,
-			//	code,
-			//	addressValue,
-			//	constructorArguments,
-			//	constructorArgumentTypes,
-			//	invocation.LocationRange.Range,
-			//)
-			//
-			//codeHashValue := CodeToHashValue(code)
-			//
-			//contractTypeID := compositeTypesToIDValues(contractTypes)
-			//
-			//r.emitAccountEvent(
-			//	stdlib.AccountContractAddedEventType,
-			//	runtimeInterface,
-			//	[]exportableValue{
-			//		newExportableValue(addressValue, nil),
-			//		newExportableValue(codeHashValue, nil),
-			//		newExportableValue(contractTypeID, nil),
-			//	},
-			//)
-			//
-			//// TODO: return DeployedContract
+			codeHashValue := CodeToHashValue(code)
+
+			contractTypeID := interpreter.NewStringValue(string(deployedType.ID()))
+
+			r.emitAccountEvent(
+				stdlib.AccountContractAddedEventType,
+				runtimeInterface,
+				[]exportableValue{
+					newExportableValue(addressValue, nil),
+					newExportableValue(codeHashValue, nil),
+					newExportableValue(contractTypeID, nil),
+				},
+			)
 
 			result := interpreter.DeployedContractValue{
 				Address: addressValue,
@@ -1555,6 +1592,75 @@ func (r *interpreterRuntime) newAuthAccountContractsAddFunction(
 			return trampoline.Done{Result: result}
 		},
 	)
+}
+
+type updateAccountContractCodeOptions struct {
+	createContract bool
+}
+
+// updateAccountContractCode updates an account contract's code.
+// This function is only used for the new account code/contract API.
+//
+func (r *interpreterRuntime) updateAccountContractCode(
+	runtimeInterface Interface,
+	runtimeStorage *interpreterRuntimeStorage,
+	name string,
+	code []byte,
+	addressValue interpreter.AddressValue,
+	location AddressLocation,
+	checker *sema.Checker,
+	contractType *sema.CompositeType,
+	constructorArguments []interpreter.Value,
+	constructorArgumentTypes []sema.Type,
+	invocationRange ast.Range,
+	options updateAccountContractCodeOptions,
+) {
+	// If the code declares a contract, instantiate it and store it
+
+	var contractValue interpreter.OptionalValue = interpreter.NilValue{}
+
+	createContract := contractType != nil && options.createContract
+
+	address := addressValue.ToAddress()
+
+	if createContract {
+
+		functions := r.standardLibraryFunctions(runtimeInterface, runtimeStorage)
+
+		contract, err := r.instantiateContract(
+			location,
+			contractType,
+			constructorArguments,
+			constructorArgumentTypes,
+			runtimeInterface,
+			runtimeStorage,
+			checker,
+			functions,
+			invocationRange,
+		)
+
+		if err != nil {
+			panic(err)
+		}
+
+		contractValue = interpreter.NewSomeValueOwningNonCopying(contract)
+
+		contractValue.SetOwner(&address)
+	}
+
+	var err error
+
+	// NOTE: only update account code if contract instantiation succeeded
+	wrapPanic(func() {
+		err = runtimeInterface.UpdateAccountContractCode(address, name, code)
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	if createContract {
+		r.writeContract(runtimeStorage, addressValue, name, contractValue)
+	}
 }
 
 func compositeTypesToIDValues(types []*sema.CompositeType) *interpreter.ArrayValue {
