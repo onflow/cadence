@@ -64,6 +64,8 @@ type Interface interface {
 	UpdateAccountContractCode(address Address, name string, code []byte) (err error)
 	// GetAccountContractCode returns the code associated with an account contract.
 	GetAccountContractCode(address Address, name string) (code []byte, err error)
+	// RemoveAccountContractCode removes the code associated with an account contract.
+	RemoveAccountContractCode(address Address, name string) (err error)
 	// GetSigningAccounts returns the signing accounts.
 	GetSigningAccounts() []Address
 	// Log logs a string.
@@ -179,6 +181,10 @@ func (i *EmptyRuntimeInterface) UpdateAccountContractCode(_ Address, _ string, _
 
 func (i *EmptyRuntimeInterface) GetAccountContractCode(_ Address, _ string) (code []byte, err error) {
 	return nil, nil
+}
+
+func (i *EmptyRuntimeInterface) RemoveAccountContractCode(_ Address, _ string) (err error) {
+	return nil
 }
 
 func (i *EmptyRuntimeInterface) GetSigningAccounts() []Address {
