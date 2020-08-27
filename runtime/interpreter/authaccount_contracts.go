@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/trampoline"
 )
 
@@ -30,23 +31,10 @@ import (
 
 type AuthAccountContractsValue struct {
 	Address        AddressValue
-	addFunction    FunctionValue
-	getFunction    FunctionValue
-	removeFunction FunctionValue
-}
-
-func NewAuthAccountContractsValue(
-	address AddressValue,
-	addFunction FunctionValue,
-	getFunction FunctionValue,
-	removeFunction FunctionValue,
-) AuthAccountContractsValue {
-	return AuthAccountContractsValue{
-		Address:        address,
-		addFunction:    addFunction,
-		getFunction:    getFunction,
-		removeFunction: removeFunction,
-	}
+	AddFunction    FunctionValue
+	UpdateFunction FunctionValue
+	GetFunction    FunctionValue
+	RemoveFunction FunctionValue
 }
 
 func (AuthAccountContractsValue) IsValue() {}
@@ -86,12 +74,14 @@ func (v AuthAccountContractsValue) String() string {
 
 func (v AuthAccountContractsValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
 	switch name {
-	case "add":
-		return v.addFunction
-	case "get":
-		return v.getFunction
-	case "remove":
-		return v.removeFunction
+	case sema.AuthAccountContractsTypeAddFunctionName:
+		return v.AddFunction
+	case sema.AuthAccountContractsTypeGetFunctionName:
+		return v.GetFunction
+	case sema.AuthAccountContractsTypeRemoveFunctionName:
+		return v.RemoveFunction
+	case sema.AuthAccountContractsTypeUpdateExperimentalFunctionName:
+		return v.UpdateFunction
 	}
 
 	return nil

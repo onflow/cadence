@@ -1465,18 +1465,20 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 	runtimeInterface Interface,
 	runtimeStorage *interpreterRuntimeStorage,
 ) interpreter.AuthAccountContractsValue {
-	return interpreter.NewAuthAccountContractsValue(
-		addressValue,
-		r.newAuthAccountContractsAddFunction(addressValue, runtimeInterface, runtimeStorage),
-		r.newAuthAccountContractsGetFunction(addressValue, runtimeInterface),
-		r.newAuthAccountContractsRemoveFunction(addressValue, runtimeInterface, runtimeStorage),
-	)
+	return interpreter.AuthAccountContractsValue{
+		Address:        addressValue,
+		AddFunction:    r.newAuthAccountContractsChangeFunction(addressValue, runtimeInterface, runtimeStorage, false),
+		UpdateFunction: r.newAuthAccountContractsChangeFunction(addressValue, runtimeInterface, runtimeStorage, true),
+		GetFunction:    r.newAuthAccountContractsGetFunction(addressValue, runtimeInterface),
+		RemoveFunction: r.newAuthAccountContractsRemoveFunction(addressValue, runtimeInterface, runtimeStorage),
+	}
 }
 
-func (r *interpreterRuntime) newAuthAccountContractsAddFunction(
+func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 	addressValue interpreter.AddressValue,
 	runtimeInterface Interface,
 	runtimeStorage *interpreterRuntimeStorage,
+	isUpdate bool,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
@@ -1496,7 +1498,7 @@ func (r *interpreterRuntime) newAuthAccountContractsAddFunction(
 
 			location := AddressLocation(addressValue[:])
 
-			// Ensure that no contract/contract interface with the given name exists already
+			// Get the existing code
 
 			nameArgument := nameValue.Str
 
@@ -1505,12 +1507,28 @@ func (r *interpreterRuntime) newAuthAccountContractsAddFunction(
 			if err != nil {
 				panic(err)
 			}
-			if len(existingCode) > 0 {
-				panic(fmt.Errorf(
-					"cannot ovewrite existing contract code with name %q in %s",
-					nameArgument,
-					address.ShortHexWithPrefix(),
-				))
+
+			if isUpdate {
+				// Ensure that no contract/contract interface with the given name exists already
+
+				if len(existingCode) == 0 {
+					panic(fmt.Errorf(
+						"cannot update non-existing contract with name %q in account %s",
+						nameArgument,
+						address.ShortHexWithPrefix(),
+					))
+				}
+
+			} else {
+				// Ensure that no contract/contract interface with the given name exists already
+
+				if len(existingCode) > 0 {
+					panic(fmt.Errorf(
+						"cannot overwrite existing contract with name %q in account %s",
+						nameArgument,
+						address.ShortHexWithPrefix(),
+					))
+				}
 			}
 
 			// Check the code
@@ -1583,21 +1601,31 @@ func (r *interpreterRuntime) newAuthAccountContractsAddFunction(
 				constructorArgumentTypes,
 				invocation.LocationRange.Range,
 				updateAccountContractCodeOptions{
-					createContract: true,
+					createContract: !isUpdate,
 				},
 			)
 
 			codeHashValue := CodeToHashValue(code)
 
-			r.emitAccountEvent(
-				stdlib.AccountContractAddedEventType,
-				runtimeInterface,
-				[]exportableValue{
-					newExportableValue(addressValue, nil),
-					newExportableValue(codeHashValue, nil),
-					newExportableValue(nameValue, nil),
-				},
-			)
+			eventArguments := []exportableValue{
+				newExportableValue(addressValue, nil),
+				newExportableValue(codeHashValue, nil),
+				newExportableValue(nameValue, nil),
+			}
+
+			if isUpdate {
+				r.emitAccountEvent(
+					stdlib.AccountContractUpdatedEventType,
+					runtimeInterface,
+					eventArguments,
+				)
+			} else {
+				r.emitAccountEvent(
+					stdlib.AccountContractAddedEventType,
+					runtimeInterface,
+					eventArguments,
+				)
+			}
 
 			result := interpreter.DeployedContractValue{
 				Address: addressValue,

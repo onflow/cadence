@@ -91,6 +91,8 @@ or if the given name does not match the name of the contract/contract interface 
 Returns the deployed contract.
 `
 
+const AuthAccountContractsTypeAddFunctionName = "add"
+
 var authAccountContractsTypeAddFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
@@ -132,6 +134,8 @@ Returns the deployed contract for the contract/contract interface with the given
 Returns nil if no contract/contract interface with the given name exists in the account.
 `
 
+const AuthAccountContractsTypeGetFunctionName = "get"
+
 var authAccountContractsTypeGetFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
@@ -154,6 +158,8 @@ Returns the deleted deployed contract, if any.
 Returns nil if no contract/contract interface with the given name exist in the account.
 `
 
+const AuthAccountContractsTypeRemoveFunctionName = "remove"
+
 var authAccountContractsTypeRemoveFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
@@ -167,6 +173,8 @@ var authAccountContractsTypeRemoveFunctionType = &FunctionType{
 		},
 	),
 }
+
+const AuthAccountContractsTypeUpdateExperimentalFunctionName = "update__experimental"
 
 var authAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
 	Parameters: []*Parameter{
@@ -188,7 +196,7 @@ var authAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
 
 func (t *AuthAccountContractsType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, map[string]MemberResolver{
-		"add": {
+		AuthAccountContractsTypeAddFunctionName: {
 			Kind: common.DeclarationKindField,
 			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 				return NewPublicFunctionMember(
@@ -199,7 +207,7 @@ func (t *AuthAccountContractsType) GetMembers() map[string]MemberResolver {
 				)
 			},
 		},
-		"update__experimental": {
+		AuthAccountContractsTypeUpdateExperimentalFunctionName: {
 			Kind: common.DeclarationKindField,
 			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 				return NewPublicFunctionMember(
@@ -210,7 +218,7 @@ func (t *AuthAccountContractsType) GetMembers() map[string]MemberResolver {
 				)
 			},
 		},
-		"get": {
+		AuthAccountContractsTypeGetFunctionName: {
 			Kind: common.DeclarationKindField,
 			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 				return NewPublicFunctionMember(
@@ -221,7 +229,7 @@ func (t *AuthAccountContractsType) GetMembers() map[string]MemberResolver {
 				)
 			},
 		},
-		"remove": {
+		AuthAccountContractsTypeRemoveFunctionName: {
 			Kind: common.DeclarationKindField,
 			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 				return NewPublicFunctionMember(
