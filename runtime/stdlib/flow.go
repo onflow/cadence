@@ -265,6 +265,13 @@ var AccountContractAddedEventType = newFlowEventType(
 	AccountEventContractParameter,
 )
 
+var AccountContractUpdatedEventType = newFlowEventType(
+	"AccountContractUpdated",
+	AccountEventAddressParameter,
+	AccountEventCodeHashParameter,
+	AccountEventContractParameter,
+)
+
 var AccountContractRemovedEventType = newFlowEventType(
 	"AccountContractRemoved",
 	AccountEventAddressParameter,
