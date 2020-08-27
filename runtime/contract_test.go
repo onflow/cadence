@@ -54,7 +54,7 @@ func TestRuntimeContract(t *testing.T) {
 
 		var deployedCode []byte
 
-		testTx := []byte(
+		addTx := []byte(
 			fmt.Sprintf(
 				`
 	              transaction {
@@ -74,7 +74,30 @@ func TestRuntimeContract(t *testing.T) {
 	            `,
 				tc.name,
 				hex.EncodeToString([]byte(tc.code)),
-			))
+			),
+		)
+
+		removeTx := []byte(
+			fmt.Sprintf(
+				`
+	              transaction {
+	                  prepare(signer: AuthAccount) {
+                          let contract1 = signer.contracts.get(name: %[1]q)
+                          log(contract1?.name)
+                          log(contract1?.code)
+
+                          let contract2 = signer.contracts.remove(name: %[1]q)
+                          log(contract2?.name)
+                          log(contract2?.code)
+
+                          let contract3 = signer.contracts.get(name: %[1]q)
+                          log(contract3)
+	                  }
+	               }
+	            `,
+				tc.name,
+			),
+		)
 
 		var events []cadence.Event
 
@@ -89,7 +112,6 @@ func TestRuntimeContract(t *testing.T) {
 				loggedMessages = append(loggedMessages, message)
 			},
 			updateAccountContractCode: func(address Address, name string, code []byte) error {
-
 				require.Equal(t, tc.name, name)
 				assert.Equal(t, signerAddress, address)
 				assert.Equal(t, tc.code, string(code))
@@ -105,6 +127,14 @@ func TestRuntimeContract(t *testing.T) {
 
 				return nil, nil
 			},
+			removeAccountContractCode: func(address Address, name string) error {
+				require.Equal(t, tc.name, name)
+				assert.Equal(t, signerAddress, address)
+
+				deployedCode = nil
+
+				return nil
+			},
 			emitEvent: func(event cadence.Event) {
 				events = append(events, event)
 			},
@@ -112,11 +142,22 @@ func TestRuntimeContract(t *testing.T) {
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
-		err := runtime.ExecuteTransaction(testTx, nil, runtimeInterface, nextTransactionLocation())
+		err := runtime.ExecuteTransaction(addTx, nil, runtimeInterface, nextTransactionLocation())
+
+		contractKey := []byte("contract\x1fTest")
 
 		if tc.valid {
 			require.NoError(t, err)
 			require.NotEmpty(t, deployedCode)
+
+			contractValueExists, err := storage.valueExists(signerAddress[:], contractKey)
+			require.NoError(t, err)
+
+			if tc.isInterface {
+				require.False(t, contractValueExists)
+			} else {
+				require.True(t, contractValueExists)
+			}
 
 			codeArrayString := interpreter.ByteSliceToByteArrayValue([]byte(tc.code)).String()
 			require.Equal(t,
@@ -133,27 +174,56 @@ func TestRuntimeContract(t *testing.T) {
 			require.Len(t, events, 1)
 			assert.EqualValues(t, stdlib.AccountContractAddedEventType.ID(), events[0].Type().ID())
 
-			// Re-run transaction, ensure that overwriting is not possible
+			// Re-run the addition transaction, ensure that overwriting is not possible
 
-			err = runtime.ExecuteTransaction(testTx, nil, runtimeInterface, nextTransactionLocation())
+			loggedMessages = nil
+			events = nil
+
+			err = runtime.ExecuteTransaction(addTx, nil, runtimeInterface, nextTransactionLocation())
 			require.Error(t, err)
+
+			require.NotEmpty(t, deployedCode)
+			require.Empty(t, events)
+
+			// Run the removal transaction
+
+			loggedMessages = nil
+			events = nil
+
+			err = runtime.ExecuteTransaction(removeTx, nil, runtimeInterface, nextTransactionLocation())
+			require.NoError(t, err)
+
+			require.Empty(t, deployedCode)
+
+			require.Equal(t,
+				[]string{
+					`"Test"`,
+					codeArrayString,
+					`"Test"`,
+					codeArrayString,
+					`nil`,
+				},
+				loggedMessages,
+			)
+
+			require.Len(t, events, 1)
+			assert.EqualValues(t, stdlib.AccountContractRemovedEventType.ID(), events[0].Type().ID())
+
+			contractValueExists, err = storage.valueExists(signerAddress[:], contractKey)
+			require.NoError(t, err)
+
+			require.False(t, contractValueExists)
 
 		} else {
 			require.Error(t, err)
 			require.Empty(t, deployedCode)
 			require.Empty(t, events)
 			require.Empty(t, loggedMessages)
-		}
 
-		contractKey := []byte("contract\x1fTest")
+			contractValueExists, err := storage.valueExists(signerAddress[:], contractKey)
+			require.NoError(t, err)
 
-		exists, err := storage.valueExists(signerAddress[:], contractKey)
-		require.NoError(t, err)
-
-		if tc.valid && !tc.isInterface {
-			require.True(t, exists)
-		} else {
-			require.False(t, exists)
+			require.False(t, contractValueExists)
 		}
 	}
 

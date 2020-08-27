@@ -64,8 +64,8 @@ func newTestStorage(
 	storage := testRuntimeInterfaceStorage{
 		storedValues: storedValues,
 		valueExists: func(owner, key []byte) (bool, error) {
-			_, ok := storedValues[storageKey(string(owner), string(key))]
-			return ok, nil
+			value, _ := storedValues[storageKey(string(owner), string(key))]
+			return len(value) > 0, nil
 		},
 		getValue: func(owner, key []byte) (value []byte, err error) {
 			value = storedValues[storageKey(string(owner), string(key))]
@@ -98,6 +98,7 @@ type testRuntimeInterface struct {
 	updateAccountCode         func(address Address, code []byte) (err error)
 	updateAccountContractCode func(address Address, name string, code []byte) error
 	getAccountContractCode    func(address Address, name string) (code []byte, err error)
+	removeAccountContractCode func(address Address, name string) (err error)
 	getSigningAccounts        func() []Address
 	log                       func(string)
 	emitEvent                 func(cadence.Event)
@@ -191,6 +192,10 @@ func (i *testRuntimeInterface) UpdateAccountContractCode(address Address, name s
 
 func (i *testRuntimeInterface) GetAccountContractCode(address Address, name string) (code []byte, err error) {
 	return i.getAccountContractCode(address, name)
+}
+
+func (i *testRuntimeInterface) RemoveAccountContractCode(address Address, name string) (err error) {
+	return i.removeAccountContractCode(address, name)
 }
 
 func (i *testRuntimeInterface) GetSigningAccounts() []Address {
