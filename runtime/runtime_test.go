@@ -64,7 +64,7 @@ func newTestStorage(
 	storage := testRuntimeInterfaceStorage{
 		storedValues: storedValues,
 		valueExists: func(owner, key []byte) (bool, error) {
-			value, _ := storedValues[storageKey(string(owner), string(key))]
+			value := storedValues[storageKey(string(owner), string(key))]
 			return len(value) > 0, nil
 		},
 		getValue: func(owner, key []byte) (value []byte, err error) {
