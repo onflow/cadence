@@ -752,7 +752,7 @@ type FieldTypeNotStorableError struct {
 	Name string
 	// Field's type
 	Type Type
-	// StartPosition of the error
+	// Start position of the error
 	Pos ast.Position
 }
 
@@ -762,6 +762,17 @@ func (e *FieldTypeNotStorableError) Error() string {
 		e.Name,
 		e.Type,
 	)
+}
+
+func (*FieldTypeNotStorableError) isSemanticError() {}
+
+func (e *FieldTypeNotStorableError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *FieldTypeNotStorableError) EndPosition() ast.Position {
+	length := len(e.Name)
+	return e.Pos.Shifted(length - 1)
 }
 
 // FunctionExpressionInConditionError
