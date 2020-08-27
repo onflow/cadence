@@ -1469,6 +1469,7 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 		addressValue,
 		r.newAuthAccountContractsAddFunction(addressValue, runtimeInterface, runtimeStorage),
 		r.newAuthAccountContractsGetFunction(addressValue, runtimeInterface),
+		r.newAuthAccountContractsRemoveFunction(addressValue, runtimeInterface, runtimeStorage),
 	)
 }
 
@@ -1588,15 +1589,13 @@ func (r *interpreterRuntime) newAuthAccountContractsAddFunction(
 
 			codeHashValue := CodeToHashValue(code)
 
-			contractTypeID := interpreter.NewStringValue(string(deployedType.ID()))
-
 			r.emitAccountEvent(
 				stdlib.AccountContractAddedEventType,
 				runtimeInterface,
 				[]exportableValue{
 					newExportableValue(addressValue, nil),
 					newExportableValue(codeHashValue, nil),
-					newExportableValue(contractTypeID, nil),
+					newExportableValue(nameValue, nil),
 				},
 			)
 
@@ -1703,6 +1702,70 @@ func (r *interpreterRuntime) newAuthAccountContractsGetFunction(
 			var result interpreter.OptionalValue = interpreter.NilValue{}
 
 			if len(code) > 0 {
+				result = interpreter.NewSomeValueOwningNonCopying(
+					interpreter.DeployedContractValue{
+						Address: addressValue,
+						Name:    nameValue,
+						Code:    interpreter.ByteSliceToByteArrayValue(code),
+					},
+				)
+			}
+
+			return trampoline.Done{Result: result}
+		},
+	)
+}
+
+func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
+	addressValue interpreter.AddressValue,
+	runtimeInterface Interface,
+	runtimeStorage *interpreterRuntimeStorage,
+) interpreter.HostFunctionValue {
+	return interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) trampoline.Trampoline {
+
+			nameValue := invocation.Arguments[0].(*interpreter.StringValue)
+
+			address := addressValue.ToAddress()
+			nameArgument := nameValue.Str
+			var code []byte
+			var err error
+			wrapPanic(func() {
+				code, err = runtimeInterface.GetAccountContractCode(address, nameArgument)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			var result interpreter.OptionalValue = interpreter.NilValue{}
+
+			if len(code) > 0 {
+				wrapPanic(func() {
+					err = runtimeInterface.RemoveAccountContractCode(address, nameArgument)
+				})
+				if err != nil {
+					panic(err)
+				}
+
+				r.writeContract(
+					runtimeStorage,
+					addressValue,
+					nameArgument,
+					interpreter.NilValue{},
+				)
+
+				codeHashValue := CodeToHashValue(code)
+
+				r.emitAccountEvent(
+					stdlib.AccountContractRemovedEventType,
+					runtimeInterface,
+					[]exportableValue{
+						newExportableValue(addressValue, nil),
+						newExportableValue(codeHashValue, nil),
+						newExportableValue(nameValue, nil),
+					},
+				)
+
 				result = interpreter.NewSomeValueOwningNonCopying(
 					interpreter.DeployedContractValue{
 						Address: addressValue,

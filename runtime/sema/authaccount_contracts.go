@@ -146,15 +146,15 @@ var authAccountContractsTypeGetFunctionType = &FunctionType{
 	),
 }
 
-const authAccountContractsTypeDeleteFunctionDocString = `
-Deletes the contract/contract interface from the account which has the given name, if any.
+const authAccountContractsTypeRemoveFunctionDocString = `
+Removes the contract/contract interface from the account which has the given name, if any.
 
 Returns the deleted deployed contract, if any.
 
 Returns nil if no contract/contract interface with the given name exist in the account.
 `
 
-var authAccountContractsTypeDeleteFunctionType = &FunctionType{
+var authAccountContractsTypeRemoveFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
 			Identifier:     "name",
@@ -221,14 +221,14 @@ func (t *AuthAccountContractsType) GetMembers() map[string]MemberResolver {
 				)
 			},
 		},
-		"delete": {
+		"remove": {
 			Kind: common.DeclarationKindField,
 			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 				return NewPublicFunctionMember(
 					t,
 					identifier,
-					authAccountContractsTypeDeleteFunctionType,
-					authAccountContractsTypeDeleteFunctionDocString,
+					authAccountContractsTypeRemoveFunctionType,
+					authAccountContractsTypeRemoveFunctionDocString,
 				)
 			},
 		},

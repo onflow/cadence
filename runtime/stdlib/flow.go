@@ -265,6 +265,13 @@ var AccountContractAddedEventType = newFlowEventType(
 	AccountEventContractParameter,
 )
 
+var AccountContractRemovedEventType = newFlowEventType(
+	"AccountContractRemoved",
+	AccountEventAddressParameter,
+	AccountEventCodeHashParameter,
+	AccountEventContractParameter,
+)
+
 // BlockType
 
 type BlockType struct{}
