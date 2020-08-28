@@ -8212,3 +8212,31 @@ func TestInterpretInternalAssignment(t *testing.T) {
 		value,
 	)
 }
+
+func TestInterpretCopyOnReturn(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t,
+		`
+          let xs: {String: String} = {}
+
+          fun returnXS(): {String: String} {
+              return xs
+          }
+
+          fun test(): {String: String} {
+              returnXS().insert(key: "foo", "bar")
+              return xs
+          }
+        `,
+	)
+
+	value, err := inter.Invoke("test")
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		interpreter.NewDictionaryValueUnownedNonCopying(),
+		value,
+	)
+}
