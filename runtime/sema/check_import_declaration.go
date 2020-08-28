@@ -246,6 +246,7 @@ func (checker *Checker) EnsureLoaded(location ast.Location, loadProgram func() *
 			WithAllCheckers(checker.allCheckers),
 			WithCheckHandler(checker.checkHandler),
 			WithImportHandler(checker.importHandler),
+			WithLocationHandler(checker.locationHandler),
 		)
 		if err == nil {
 			checker.allCheckers[locationID] = subChecker
