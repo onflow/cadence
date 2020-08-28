@@ -1496,8 +1496,6 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				panic("add requires the second argument to be an array")
 			}
 
-			location := AddressLocation(addressValue[:])
-
 			// Get the existing code
 
 			nameArgument := nameValue.Str
@@ -1533,6 +1531,10 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			// Check the code
 
+			location := AddressContractLocation{
+				AddressLocation: addressValue[:],
+				Name:            nameArgument,
+			}
 			checker, err := r.ParseAndCheckProgram(code, runtimeInterface, location)
 			if err != nil {
 				panic(fmt.Errorf("invalid contract: %w", err))
@@ -1651,7 +1653,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	name string,
 	code []byte,
 	addressValue interpreter.AddressValue,
-	location AddressLocation,
+	location AddressContractLocation,
 	checker *sema.Checker,
 	contractType *sema.CompositeType,
 	constructorArguments []interpreter.Value,
