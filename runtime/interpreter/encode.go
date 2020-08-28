@@ -139,7 +139,7 @@ const (
 	cborTagAddressLocation
 	cborTagStringLocation
 	cborTagIdentifierLocation
-	_
+	cborTagAddressContractLocation
 	_
 	_
 	_
@@ -206,6 +206,7 @@ func init() {
 		cborTagDictionaryStaticType:    encodedDictionaryStaticType{},
 		cborTagRestrictedStaticType:    encodedRestrictedStaticType{},
 		cborTagReferenceStaticType:     encodedReferenceStaticType{},
+		cborTagAddressContractLocation: encodedAddressContractLocation{},
 	}
 
 	// Register types
@@ -858,6 +859,11 @@ func (e *Encoder) prepareCapabilityValue(v CapabilityValue) (interface{}, error)
 	}, nil
 }
 
+type encodedAddressContractLocation struct {
+	Address []byte `cbor:"0,keyasint"`
+	Name    string `cbor:"1,keyasint"`
+}
+
 func (e *Encoder) prepareLocation(l ast.Location) (interface{}, error) {
 	switch l := l.(type) {
 	case ast.AddressLocation:
@@ -876,6 +882,12 @@ func (e *Encoder) prepareLocation(l ast.Location) (interface{}, error) {
 		return cbor.Tag{
 			Number:  cborTagIdentifierLocation,
 			Content: string(l),
+		}, nil
+
+	case ast.AddressContractLocation:
+		return encodedAddressContractLocation{
+			Address: l.AddressLocation.ToAddress().Bytes(),
+			Name:    l.Name,
 		}, nil
 
 	default:

@@ -535,6 +535,112 @@ func TestEncodeDecodeComposite(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("empty, address location", func(t *testing.T) {
+		expected := NewCompositeValue(
+			ast.AddressContractLocation{
+				AddressLocation: ast.AddressLocation{0x1},
+				Name:            "TestStruct",
+			},
+			"AC.0x1.TestStruct",
+			common.CompositeKindStructure,
+			map[string]Value{},
+			nil,
+		)
+		expected.modified = false
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: expected,
+				encoded: []byte{
+					// tag
+					0xd8, cborTagCompositeValue,
+					// map, 4 pairs of items follow
+					0xa4,
+					// key 0
+					0x0,
+					// tag
+					0xd8, cborTagAddressContractLocation,
+					// map, 4 pairs of items follow
+					0xa2,
+					// key 0
+					0x0,
+					// byte sequence, length 1
+					0x41,
+					// positive integer 1
+					0x1,
+					// key 1
+					0x1,
+					// UTF-8 string, length 10
+					0x6a,
+					0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75,
+					0x63, 0x74,
+					// key 1
+					0x1,
+					// UTF-8 string, length 17
+					0x71,
+					0x41, 0x43, 0x2e, 0x30, 0x78, 0x31, 0x2e, 0x54,
+					0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+					// key 2
+					0x2,
+					// positive integer 1
+					0x1,
+					// key 3
+					0x3,
+					// map, 0 pairs of items follow
+					0xa0,
+				},
+			},
+		)
+	})
+
+	t.Run("empty, address contract location, address too long", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				encoded: []byte{
+					// tag
+					0xd8, cborTagCompositeValue,
+					// map, 4 pairs of items follow
+					0xa4,
+					// key 0
+					0x0,
+					// tag
+					0xd8, cborTagAddressContractLocation,
+					// map, 4 pairs of items follow
+					0xa2,
+					// key 0
+					0x0,
+					// byte sequence, length 22
+					0x56,
+					// address
+					0x1, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0,
+					0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+					// key 1
+					0x1,
+					// UTF-8 string, length 10
+					0x6a,
+					0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75,
+					0x63, 0x74,
+					// key 1
+					0x1,
+					// UTF-8 string, length 17
+					0x71,
+					0x41, 0x43, 0x2e, 0x30, 0x78, 0x31, 0x2e, 0x54,
+					0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+					// key 2
+					0x2,
+					// positive integer 1
+					0x1,
+					// key 3
+					0x3,
+					// map, 0 pairs of items follow
+					0xa0,
+				},
+				invalid: true,
+			},
+		)
+	})
 }
 
 func TestEncodeDecodeIntValue(t *testing.T) {
