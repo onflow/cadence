@@ -1101,3 +1101,26 @@ func TestCheckRestrictedTypeConformanceOrder(t *testing.T) {
 	})
 
 }
+
+// https://github.com/onflow/cadence/issues/326
+func TestCheckRestrictedConformance(t *testing.T) {
+
+	_, err := ParseAndCheck(t, `
+
+      contract C {
+
+          resource interface RI {
+              fun get(): &R{RI}
+          }
+
+          resource R: RI {
+
+              fun get(): &R{RI} {
+                  return &self as &R{RI}
+              }
+          }
+      }
+    `)
+
+	require.NoError(t, err)
+}

@@ -413,6 +413,13 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 		variable,
 	)
 
+	// Resolve conformances
+
+	conformances := checker.explicitInterfaceConformances(declaration, compositeType)
+	compositeType.ExplicitInterfaceConformances = conformances
+
+	// Register in elaboration
+
 	checker.Elaboration.CompositeDeclarationTypes[declaration] = compositeType
 
 	// Activate new scope for nested declarations
@@ -476,11 +483,6 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		defer checker.valueActivations.Leave()
 
 		checker.declareCompositeNestedTypes(declaration, kind, false)
-
-		// Resolve conformances
-
-		conformances := checker.explicitInterfaceConformances(declaration, compositeType)
-		compositeType.ExplicitInterfaceConformances = conformances
 
 		// NOTE: determine initializer parameter types while nested types are in scope,
 		// and after declaring nested types as the initializer may use nested type in parameters
