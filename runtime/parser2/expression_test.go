@@ -2314,7 +2314,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 				&InvalidIntegerLiteralError{
 					Literal:                   "0b",
 					IntegerLiteralKind:        IntegerLiteralKindBinary,
-					InvalidIntegerLiteralKind: InvalidNumberLiteralKindUnknown,
+					InvalidIntegerLiteralKind: InvalidNumberLiteralKindMissingDigits,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -2326,7 +2326,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: nil,
+				Value: new(big.Int),
 				Base:  2,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -2475,7 +2475,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 				&InvalidIntegerLiteralError{
 					Literal:                   `0o`,
 					IntegerLiteralKind:        IntegerLiteralKindOctal,
-					InvalidIntegerLiteralKind: InvalidNumberLiteralKindUnknown,
+					InvalidIntegerLiteralKind: InvalidNumberLiteralKindMissingDigits,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -2487,7 +2487,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: nil,
+				Value: new(big.Int),
 				Base:  8,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -2691,7 +2691,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 				&InvalidIntegerLiteralError{
 					Literal:                   `0x`,
 					IntegerLiteralKind:        IntegerLiteralKindHexadecimal,
-					InvalidIntegerLiteralKind: InvalidNumberLiteralKindUnknown,
+					InvalidIntegerLiteralKind: InvalidNumberLiteralKindMissingDigits,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 						EndPos:   ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -2703,7 +2703,7 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: nil,
+				Value: new(big.Int),
 				Base:  16,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -2913,8 +2913,8 @@ func TestParseIntegerLiterals(t *testing.T) {
 				},
 				&InvalidIntegerLiteralError{
 					Literal:                   `0z123`,
-					IntegerLiteralKind:        IntegerLiteralKindDecimal,
-					InvalidIntegerLiteralKind: InvalidNumberLiteralKindUnknown,
+					IntegerLiteralKind:        IntegerLiteralKindUnknown,
+					InvalidIntegerLiteralKind: InvalidNumberLiteralKindUnknownPrefix,
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 						EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
@@ -2926,8 +2926,8 @@ func TestParseIntegerLiterals(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			&ast.IntegerExpression{
-				Value: nil,
-				Base:  10,
+				Value: new(big.Int),
+				Base:  1,
 				Range: ast.Range{
 					StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 					EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},

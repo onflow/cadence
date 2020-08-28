@@ -31,6 +31,7 @@ const (
 	InvalidNumberLiteralKindLeadingUnderscore
 	InvalidNumberLiteralKindTrailingUnderscore
 	InvalidNumberLiteralKindUnknownPrefix
+	InvalidNumberLiteralKindMissingDigits
 )
 
 func (k InvalidNumberLiteralKind) Description() string {
@@ -41,6 +42,8 @@ func (k InvalidNumberLiteralKind) Description() string {
 		return "trailing underscore"
 	case InvalidNumberLiteralKindUnknownPrefix:
 		return "unknown prefix"
+	case InvalidNumberLiteralKindMissingDigits:
+		return "missing digits"
 	case InvalidNumberLiteralKindUnknown:
 		return "unknown"
 	}

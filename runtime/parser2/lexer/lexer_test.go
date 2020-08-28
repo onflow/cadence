@@ -74,7 +74,7 @@ func TestLexBasic(t *testing.T) {
 					},
 				},
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "01",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -90,7 +90,7 @@ func TestLexBasic(t *testing.T) {
 					},
 				},
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "10",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
@@ -128,7 +128,7 @@ func TestLexBasic(t *testing.T) {
 					},
 				},
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "1",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
@@ -158,7 +158,7 @@ func TestLexBasic(t *testing.T) {
 					},
 				},
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "2",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -189,7 +189,7 @@ func TestLexBasic(t *testing.T) {
 					},
 				},
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "3",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
@@ -227,7 +227,7 @@ func TestLexBasic(t *testing.T) {
 					},
 				},
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "4",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
@@ -257,7 +257,7 @@ func TestLexBasic(t *testing.T) {
 					},
 				},
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "2",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -288,7 +288,7 @@ func TestLexBasic(t *testing.T) {
 					},
 				},
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "3",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
@@ -326,7 +326,7 @@ func TestLexBasic(t *testing.T) {
 					},
 				},
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "4",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 10, Offset: 10},
@@ -349,7 +349,7 @@ func TestLexBasic(t *testing.T) {
 			"1 \n  2\n",
 			[]Token{
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "1",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -365,7 +365,7 @@ func TestLexBasic(t *testing.T) {
 					},
 				},
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "2",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 2, Column: 2, Offset: 5},
@@ -396,7 +396,7 @@ func TestLexBasic(t *testing.T) {
 			"1 ?? 2",
 			[]Token{
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "1",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -427,7 +427,7 @@ func TestLexBasic(t *testing.T) {
 					},
 				},
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "2",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
@@ -1052,7 +1052,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 					},
 				},
 				{
-					Type:  TokenBinaryLiteral,
+					Type:  TokenBinaryIntegerLiteral,
 					Value: "0b",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1075,7 +1075,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			`0b101010`,
 			[]Token{
 				{
-					Type:  TokenBinaryLiteral,
+					Type:  TokenBinaryIntegerLiteral,
 					Value: "0b101010",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1098,7 +1098,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			`0b001000`,
 			[]Token{
 				{
-					Type:  TokenBinaryLiteral,
+					Type:  TokenBinaryIntegerLiteral,
 					Value: "0b001000",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1121,7 +1121,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			`0b101010_101010`,
 			[]Token{
 				{
-					Type:  TokenBinaryLiteral,
+					Type:  TokenBinaryIntegerLiteral,
 					Value: "0b101010_101010",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1144,7 +1144,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			`0b_101010_101010`,
 			[]Token{
 				{
-					Type:  TokenBinaryLiteral,
+					Type:  TokenBinaryIntegerLiteral,
 					Value: "0b_101010_101010",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1167,7 +1167,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			`0b101010_101010_`,
 			[]Token{
 				{
-					Type:  TokenBinaryLiteral,
+					Type:  TokenBinaryIntegerLiteral,
 					Value: "0b101010_101010_",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1198,7 +1198,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 					},
 				},
 				{
-					Type:  TokenOctalLiteral,
+					Type:  TokenOctalIntegerLiteral,
 					Value: "0o",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1221,7 +1221,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			`0o32`,
 			[]Token{
 				{
-					Type:  TokenOctalLiteral,
+					Type:  TokenOctalIntegerLiteral,
 					Value: "0o32",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1244,7 +1244,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			`0o32_45`,
 			[]Token{
 				{
-					Type:  TokenOctalLiteral,
+					Type:  TokenOctalIntegerLiteral,
 					Value: "0o32_45",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1267,7 +1267,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			`0o_32_45`,
 			[]Token{
 				{
-					Type:  TokenOctalLiteral,
+					Type:  TokenOctalIntegerLiteral,
 					Value: "0o_32_45",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1290,7 +1290,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			`0o32_45_`,
 			[]Token{
 				{
-					Type:  TokenOctalLiteral,
+					Type:  TokenOctalIntegerLiteral,
 					Value: "0o32_45_",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1313,7 +1313,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			`1234567890`,
 			[]Token{
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "1234567890",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1336,7 +1336,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			`1_234_567_890`,
 			[]Token{
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "1_234_567_890",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1359,7 +1359,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			`1_234_567_890_`,
 			[]Token{
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "1_234_567_890_",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1390,7 +1390,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 					},
 				},
 				{
-					Type:  TokenHexadecimalLiteral,
+					Type:  TokenHexadecimalIntegerLiteral,
 					Value: "0x",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1413,7 +1413,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			`0xf2`,
 			[]Token{
 				{
-					Type:  TokenHexadecimalLiteral,
+					Type:  TokenHexadecimalIntegerLiteral,
 					Value: "0xf2",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1436,7 +1436,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			`0xf2_09`,
 			[]Token{
 				{
-					Type:  TokenHexadecimalLiteral,
+					Type:  TokenHexadecimalIntegerLiteral,
 					Value: "0xf2_09",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1459,7 +1459,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			`0x_f2_09`,
 			[]Token{
 				{
-					Type:  TokenHexadecimalLiteral,
+					Type:  TokenHexadecimalIntegerLiteral,
 					Value: "0x_f2_09",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1482,7 +1482,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			`0xf2_09_`,
 			[]Token{
 				{
-					Type:  TokenHexadecimalLiteral,
+					Type:  TokenHexadecimalIntegerLiteral,
 					Value: "0xf2_09_",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1505,7 +1505,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			"0",
 			[]Token{
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "0",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1528,7 +1528,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			"01",
 			[]Token{
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "01",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1551,7 +1551,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			"0\n",
 			[]Token{
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "0",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1582,7 +1582,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 			"00123",
 			[]Token{
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenDecimalIntegerLiteral,
 					Value: "00123",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1613,7 +1613,7 @@ func TestLexIntegerLiterals(t *testing.T) {
 					},
 				},
 				{
-					Type:  TokenDecimalLiteral,
+					Type:  TokenUnknownBaseIntegerLiteral,
 					Value: "0z123",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1641,7 +1641,7 @@ func TestLexFixedPoint(t *testing.T) {
 			"1234_5678_90.0009_8765_4321",
 			[]Token{
 				{
-					Type:  TokenFixedPointLiteral,
+					Type:  TokenFixedPointNumberLiteral,
 					Value: "1234_5678_90.0009_8765_4321",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1664,7 +1664,7 @@ func TestLexFixedPoint(t *testing.T) {
 			"0.1",
 			[]Token{
 				{
-					Type:  TokenFixedPointLiteral,
+					Type:  TokenFixedPointNumberLiteral,
 					Value: "0.1",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
@@ -1695,7 +1695,7 @@ func TestLexFixedPoint(t *testing.T) {
 					},
 				},
 				{
-					Type:  TokenFixedPointLiteral,
+					Type:  TokenFixedPointNumberLiteral,
 					Value: "0.",
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
