@@ -41,9 +41,9 @@ Every account can be accessed through two types:
 
       let address: Address
 
-      // Contract code
+      // Contracts
 
-      fun setCode(_ code: [UInt8], ... contractInitializerArguments)
+      let contracts: AuthAccount.Contracts
 
       // Key management
 
@@ -62,7 +62,24 @@ Every account can be accessed through two types:
       fun getLinkTarget(_ path: Path): Path?
       fun unlink(_ path: Path)
 
-      fun getCapability<T: &Any>(_ path Path): Capability<T>?
+      struct Contracts {
+          fun add(
+              name: String,
+              code: [UInt8],
+              ... contractInitializerArguments
+          ): DeployedContract
+
+          fun update__experimental(name: String, code: [UInt8]): DeployedContract
+
+          fun get(name: String): DeployedContract?
+
+          fun remove(name: String): DeployedContract?
+      }
+  }
+
+  struct DeployedCode {
+      let name: String
+      let code: [UInt8]
   }
   ```
 
