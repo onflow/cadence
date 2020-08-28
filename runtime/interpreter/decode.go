@@ -363,15 +363,18 @@ func (d *Decoder) decodeLocation(l interface{}) (ast.Location, error) {
 	case cborTagIdentifierLocation:
 		return d.decodeIdentifierLocation(content)
 
+	case cborTagAddressContractLocation:
+		return d.decodeAddressContractLocation(content)
+
 	default:
 		return nil, fmt.Errorf("invalid location encoding tag: %d", tag.Number)
 	}
 }
 
-func (d *Decoder) decodeAddressLocation(content interface{}) (ast.Location, error) {
-	b, ok := content.([]byte)
+func (d *Decoder) decodeAddressLocation(v interface{}) (ast.Location, error) {
+	b, ok := v.([]byte)
 	if !ok {
-		return nil, fmt.Errorf("invalid address location encoding: %T", content)
+		return nil, fmt.Errorf("invalid address location encoding: %T", v)
 	}
 
 	err := d.checkAddressLength(b)
@@ -382,20 +385,53 @@ func (d *Decoder) decodeAddressLocation(content interface{}) (ast.Location, erro
 	return ast.AddressLocation(b), nil
 }
 
-func (d *Decoder) decodeStringLocation(content interface{}) (ast.Location, error) {
-	s, ok := content.(string)
+func (d *Decoder) decodeStringLocation(v interface{}) (ast.Location, error) {
+	s, ok := v.(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid string location encoding: %T", content)
+		return nil, fmt.Errorf("invalid string location encoding: %T", v)
 	}
 	return ast.StringLocation(s), nil
 }
 
-func (d *Decoder) decodeIdentifierLocation(content interface{}) (ast.Location, error) {
-	s, ok := content.(string)
+func (d *Decoder) decodeIdentifierLocation(v interface{}) (ast.Location, error) {
+	s, ok := v.(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid identifier location encoding: %T", content)
+		return nil, fmt.Errorf("invalid identifier location encoding: %T", v)
 	}
 	return ast.IdentifierLocation(s), nil
+}
+
+func (d *Decoder) decodeAddressContractLocation(v interface{}) (ast.Location, error) {
+	encoded, ok := v.(map[interface{}]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid address contract location encoding: %T", v)
+	}
+
+	// Address
+
+	field1 := encoded[encodedAddressContractLocationAddressFieldKey]
+	encodedAddress, ok := field1.([]byte)
+	if !ok {
+		return nil, fmt.Errorf("invalid address contract location address encoding: %T", field1)
+	}
+
+	err := d.checkAddressLength(encodedAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	// Name
+
+	field2 := encoded[encodedAddressContractLocationNameFieldKey]
+	name, ok := field2.(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid address contract location name encoding: %T", field2)
+	}
+
+	return ast.AddressContractLocation{
+		AddressLocation: encodedAddress,
+		Name:            name,
+	}, nil
 }
 
 func (d *Decoder) decodeComposite(v interface{}, path []string) (*CompositeValue, error) {

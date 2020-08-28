@@ -33,14 +33,13 @@ import (
 
 type cborMap = map[uint64]interface{}
 
-
 // Cadence needs to encode different kinds of objects in CBOR, for instance,
 // dictionaries, structs, resources, etc.
 //
-// However, CBOR only provides one native map type, and no support 
+// However, CBOR only provides one native map type, and no support
 // for directly representing e.g. structs or resources.
 //
-// To be able to encode/decode such semantically different values, 
+// To be able to encode/decode such semantically different values,
 // we define custom CBOR tags.
 
 // !!! *WARNING* !!!
@@ -144,7 +143,7 @@ const (
 	cborTagAddressLocation
 	cborTagStringLocation
 	cborTagIdentifierLocation
-	_
+	cborTagAddressContractLocation
 	_
 	_
 	_
@@ -843,6 +842,12 @@ func (e *Encoder) prepareCapabilityValue(v CapabilityValue) (interface{}, error)
 	}, nil
 }
 
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	encodedAddressContractLocationAddressFieldKey uint64 = 0
+	encodedAddressContractLocationNameFieldKey    uint64 = 1
+)
+
 func (e *Encoder) prepareLocation(l ast.Location) (interface{}, error) {
 	switch l := l.(type) {
 	case ast.AddressLocation:
@@ -861,6 +866,15 @@ func (e *Encoder) prepareLocation(l ast.Location) (interface{}, error) {
 		return cbor.Tag{
 			Number:  cborTagIdentifierLocation,
 			Content: string(l),
+		}, nil
+
+	case ast.AddressContractLocation:
+		return cbor.Tag{
+			Number: cborTagAddressContractLocation,
+			Content: cborMap{
+				encodedAddressContractLocationAddressFieldKey: l.AddressLocation.ToAddress().Bytes(),
+				encodedAddressContractLocationNameFieldKey:    l.Name,
+			},
 		}, nil
 
 	default:
