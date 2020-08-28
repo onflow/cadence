@@ -27,7 +27,10 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
@@ -400,4 +403,185 @@ func TestRuntimeContract(t *testing.T) {
 			isInterface: false,
 		})
 	})
+}
+
+func TestRuntimeImportMultipleContracts(t *testing.T) {
+
+	t.Parallel()
+
+	contractA := `
+      pub contract A {
+
+          pub fun a(): Int {
+              return 1
+          }
+      }
+    `
+
+	contractB := `
+      pub contract B {
+
+          pub fun b(): Int {
+              return 2
+          }
+      }
+    `
+
+	contractC := `
+	  import A, B from 0x1
+
+	  pub contract C {
+
+	      pub fun c(): Int {
+	          return A.a() + B.b()
+	      }
+	  }
+	`
+
+	addTx := func(name, code string) []byte {
+		return []byte(
+			fmt.Sprintf(
+				`
+	              transaction {
+	                  prepare(signer: AuthAccount) {
+                          signer.contracts.add(name: %[1]q, code: "%[2]s".decodeHex())
+	                  }
+	               }
+	            `,
+				name,
+				hex.EncodeToString([]byte(code)),
+			),
+		)
+	}
+
+	type contractKey struct {
+		address [common.AddressLength]byte
+		name    string
+	}
+
+	deployedContracts := map[contractKey][]byte{}
+
+	var events []cadence.Event
+	var loggedMessages []string
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: newTestStorage(nil, nil),
+		getSigningAccounts: func() []Address {
+			return []Address{common.BytesToAddress([]byte{0x1})}
+		},
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			key := contractKey{
+				address: address,
+				name:    name,
+			}
+			deployedContracts[key] = code
+			return nil
+		},
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			key := contractKey{
+				address: address,
+				name:    name,
+			}
+			code = deployedContracts[key]
+			return code, nil
+		},
+		removeAccountContractCode: func(address Address, name string) error {
+			key := contractKey{
+				address: address,
+				name:    name,
+			}
+			delete(deployedContracts, key)
+			return nil
+		},
+		resolveLocation: func(identifiers []ast.Identifier, location ast.Location) (result []sema.ResolvedLocation) {
+
+			// Resolve each identifier as an address contract location
+
+			for _, identifier := range identifiers {
+				result = append(result, sema.ResolvedLocation{
+					Location: ast.AddressContractLocation{
+						AddressLocation: location.(ast.AddressLocation),
+						Name:            identifier.Identifier,
+					},
+					Identifiers: []ast.Identifier{
+						identifier,
+					},
+				})
+			}
+
+			return
+		},
+		log: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+		emitEvent: func(event cadence.Event) {
+			events = append(events, event)
+		},
+	}
+
+	runtime := NewInterpreterRuntime()
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	for _, contract := range []struct{ name, code string }{
+		{"A", contractA},
+		{"B", contractB},
+		{"C", contractC},
+	} {
+		tx := addTx(contract.name, contract.code)
+		err := runtime.ExecuteTransaction(tx, nil, runtimeInterface, nextTransactionLocation())
+		require.NoError(t, err)
+	}
+
+	t.Run("use A", func(t *testing.T) {
+		tx := []byte(`
+          import A from 0x1
+
+          transaction {
+              prepare(signer: AuthAccount) {
+                  log(A.a())
+              }
+          }
+        `)
+
+		loggedMessages = nil
+
+		err := runtime.ExecuteTransaction(tx, nil, runtimeInterface, nextTransactionLocation())
+		require.NoError(t, err)
+	})
+
+	t.Run("use B", func(t *testing.T) {
+		tx := []byte(`
+	     import B from 0x1
+
+	     transaction {
+	         prepare(signer: AuthAccount) {
+	             log(B.b())
+	         }
+	     }
+	   `)
+
+		loggedMessages = nil
+
+		err := runtime.ExecuteTransaction(tx, nil, runtimeInterface, nextTransactionLocation())
+		require.NoError(t, err)
+	})
+
+	t.Run("use C", func(t *testing.T) {
+		tx := []byte(`
+	      import C from 0x1
+
+	      transaction {
+	          prepare(signer: AuthAccount) {
+	              log(C.c())
+	          }
+	      }
+	    `)
+
+		loggedMessages = nil
+
+		err := runtime.ExecuteTransaction(tx, nil, runtimeInterface, nextTransactionLocation())
+		require.NoError(t, err)
+	})
+
 }
