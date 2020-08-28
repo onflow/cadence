@@ -384,7 +384,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			p.report(errs...)
 			location = ast.StringLocation(parsedString)
 
-		case lexer.TokenHexadecimalLiteral:
+		case lexer.TokenHexadecimalIntegerLiteral:
 			location = parseHexadecimalLocation(p.current.Value.(string))
 
 		default:
@@ -403,7 +403,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 
 	parseLocation := func() {
 		switch p.current.Type {
-		case lexer.TokenString, lexer.TokenHexadecimalLiteral:
+		case lexer.TokenString, lexer.TokenHexadecimalIntegerLiteral:
 			parseStringOrAddressLocation()
 
 		case lexer.TokenIdentifier:
@@ -509,7 +509,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 	p.skipSpaceAndComments(true)
 
 	switch p.current.Type {
-	case lexer.TokenString, lexer.TokenHexadecimalLiteral:
+	case lexer.TokenString, lexer.TokenHexadecimalIntegerLiteral:
 		parseStringOrAddressLocation()
 
 	case lexer.TokenIdentifier:

@@ -12,11 +12,12 @@ func _() {
 	_ = x[InvalidNumberLiteralKindLeadingUnderscore-1]
 	_ = x[InvalidNumberLiteralKindTrailingUnderscore-2]
 	_ = x[InvalidNumberLiteralKindUnknownPrefix-3]
+	_ = x[InvalidNumberLiteralKindMissingDigits-4]
 }
 
-const _InvalidNumberLiteralKind_name = "InvalidNumberLiteralKindUnknownInvalidNumberLiteralKindLeadingUnderscoreInvalidNumberLiteralKindTrailingUnderscoreInvalidNumberLiteralKindUnknownPrefix"
+const _InvalidNumberLiteralKind_name = "InvalidNumberLiteralKindUnknownInvalidNumberLiteralKindLeadingUnderscoreInvalidNumberLiteralKindTrailingUnderscoreInvalidNumberLiteralKindUnknownPrefixInvalidNumberLiteralKindMissingDigits"
 
-var _InvalidNumberLiteralKind_index = [...]uint8{0, 31, 72, 114, 151}
+var _InvalidNumberLiteralKind_index = [...]uint8{0, 31, 72, 114, 151, 188}
 
 func (i InvalidNumberLiteralKind) String() string {
 	if i >= InvalidNumberLiteralKind(len(_InvalidNumberLiteralKind_index)-1) {

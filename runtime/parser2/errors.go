@@ -137,6 +137,8 @@ func (e *InvalidIntegerLiteralError) SecondaryError() string {
 		return "remove the trailing underscore"
 	case InvalidNumberLiteralKindUnknownPrefix:
 		return "did you mean `0x` (hexadecimal), `0b` (binary), or `0o` (octal)?"
+	case InvalidNumberLiteralKindMissingDigits:
+		return "consider adding a 0"
 	}
 
 	panic(errors.NewUnreachableError())
