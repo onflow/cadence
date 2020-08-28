@@ -82,7 +82,12 @@ func (t *AuthAccountContractsType) Resolve(_ map[*TypeParameter]Type) Type {
 const authAccountContractsTypeAddFunctionDocString = `
 Adds the given contract to the account.
 
-Additional arguments arguments are passed to the initializer of the contract.
+The ` + "`code`" + ` parameter is the UTF-8 encoded representation of the source code.
+The code must contain exactly one contract or contract interface,
+which must have the same name as the ` + "`name`" + ` parameter.
+
+All additional arguments that are given are passed further to the initializer
+of the contract that is being deployed.
 
 Fails if a contract/contract interface with the given name already exists in the account,
 if the given code does not declare exactly one contract or contract interface,
@@ -116,7 +121,11 @@ var authAccountContractsTypeAddFunctionType = &FunctionType{
 const authAccountContractsTypeUpdateExperimentalFunctionDocString = `
 **Experimental**
 
-Updates the code for the contract/contract interface  in the account.
+Updates the code for the contract/contract interface in the account.
+
+The ` + "`code`" + ` parameter is the UTF-8 encoded representation of the source code.
+The code must contain exactly one contract or contract interface,
+which must have the same name as the ` + "`name`" + ` parameter.
 
 Does **not** run the initializer of the contract/contract interface again. 
 The contract instance in the world state stays as is.
@@ -127,6 +136,26 @@ or if the given name does not match the name of the contract/contract interface 
 
 Returns the deployed contract for the updated contract.
 `
+
+const AuthAccountContractsTypeUpdateExperimentalFunctionName = "update__experimental"
+
+var authAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
+	Parameters: []*Parameter{
+		{
+			Identifier:     "name",
+			TypeAnnotation: NewTypeAnnotation(&StringType{}),
+		},
+		{
+			Identifier: "code",
+			TypeAnnotation: NewTypeAnnotation(
+				&VariableSizedType{
+					Type: &UInt8Type{},
+				},
+			),
+		},
+	},
+	ReturnTypeAnnotation: NewTypeAnnotation(&DeployedContractType{}),
+}
 
 const authAccountContractsTypeGetFunctionDocString = `
 Returns the deployed contract for the contract/contract interface with the given name in the account, if any.
@@ -153,7 +182,7 @@ var authAccountContractsTypeGetFunctionType = &FunctionType{
 const authAccountContractsTypeRemoveFunctionDocString = `
 Removes the contract/contract interface from the account which has the given name, if any.
 
-Returns the deleted deployed contract, if any.
+Returns the removed deployed contract, if any.
 
 Returns nil if no contract/contract interface with the given name exist in the account.
 `
@@ -172,26 +201,6 @@ var authAccountContractsTypeRemoveFunctionType = &FunctionType{
 			Type: &DeployedContractType{},
 		},
 	),
-}
-
-const AuthAccountContractsTypeUpdateExperimentalFunctionName = "update__experimental"
-
-var authAccountContractsTypeUpdateExperimentalFunctionType = &FunctionType{
-	Parameters: []*Parameter{
-		{
-			Identifier:     "name",
-			TypeAnnotation: NewTypeAnnotation(&StringType{}),
-		},
-		{
-			Identifier: "code",
-			TypeAnnotation: NewTypeAnnotation(
-				&VariableSizedType{
-					Type: &UInt8Type{},
-				},
-			),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&DeployedContractType{}),
 }
 
 func (t *AuthAccountContractsType) GetMembers() map[string]MemberResolver {
