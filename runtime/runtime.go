@@ -82,7 +82,7 @@ func validTopLevelDeclarations(location ast.Location) []common.DeclarationKind {
 	switch location.(type) {
 	case TransactionLocation:
 		return validTopLevelDeclarationsInTransaction
-	case AddressLocation:
+	case AddressLocation, AddressContractLocation:
 		return validTopLevelDeclarationsInAccountCode
 	}
 
@@ -720,16 +720,18 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 		default:
 			switch compositeKind {
 			case common.CompositeKindContract:
-				var address []byte
+				var address Address
 
 				switch location := location.(type) {
 				case AddressLocation:
-					address = location
+					address = location.ToAddress()
+				case AddressContractLocation:
+					address = location.AddressLocation.ToAddress()
 				default:
 					panic(runtimeErrors.NewUnreachableError())
 				}
 
-				addressValue := interpreter.NewAddressValueFromBytes(address)
+				addressValue := interpreter.NewAddressValue(address)
 
 				return map[string]interpreter.Value{
 					"account": r.newAuthAccountValue(addressValue, runtimeInterface, runtimeStorage),
@@ -826,6 +828,7 @@ func (r *interpreterRuntime) standardLibraryFunctions(
 
 func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportResolver {
 	return func(location Location) (program *ast.Program, err error) {
+
 		wrapPanic(func() {
 			program, err = runtimeInterface.GetCachedProgram(location)
 		})
@@ -836,18 +839,27 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 			return program, nil
 		}
 
-		var script []byte
-		wrapPanic(func() {
-			script, err = runtimeInterface.GetCode(location)
-		})
+		var code []byte
+		if addressContractLocation, ok := location.(AddressContractLocation); ok {
+			wrapPanic(func() {
+				code, err = runtimeInterface.GetAccountContractCode(
+					addressContractLocation.AddressLocation.ToAddress(),
+					addressContractLocation.Name,
+				)
+			})
+		} else {
+			wrapPanic(func() {
+				code, err = runtimeInterface.GetCode(location)
+			})
+		}
 		if err != nil {
 			return nil, err
 		}
-		if script == nil {
+		if code == nil {
 			return nil, nil
 		}
 
-		program, err = r.parse(location, script, runtimeInterface)
+		program, err = r.parse(location, code, runtimeInterface)
 		if err != nil {
 			return nil, err
 		}
@@ -1206,18 +1218,22 @@ func (r *interpreterRuntime) writeContract(
 	name string,
 	contractValue interpreter.OptionalValue,
 ) {
-	key := contractKey
-	// \x1F = Information Separator One
-
-	if name != "" {
-		key = fmt.Sprintf("%s\x1F%s", key, name)
-	}
 
 	runtimeStorage.writeValue(
 		addressValue.ToAddress(),
-		key,
+		formatContractKey(name),
 		contractValue,
 	)
+}
+
+func formatContractKey(name string) string {
+	if name == "" {
+		return contractKey
+	}
+
+	// \x1F = Information Separator One
+
+	return fmt.Sprintf("%s\x1F%s", contractKey, name)
 }
 
 func (r *interpreterRuntime) loadContract(
@@ -1243,12 +1259,27 @@ func (r *interpreterRuntime) loadContract(
 		return contract
 
 	default:
-		address := compositeType.Location.(AddressLocation).ToAddress()
-		storedValue := runtimeStorage.readValue(
-			address,
-			contractKey,
-			false,
-		)
+
+		var storedValue interpreter.OptionalValue = interpreter.NilValue{}
+
+		switch location := compositeType.Location.(type) {
+		case AddressLocation:
+			address := location.ToAddress()
+			storedValue = runtimeStorage.readValue(
+				address,
+				contractKey,
+				false,
+			)
+
+		case AddressContractLocation:
+			address := location.AddressLocation.ToAddress()
+			storedValue = runtimeStorage.readValue(
+				address,
+				formatContractKey(location.Name),
+				false,
+			)
+		}
+
 		switch typedValue := storedValue.(type) {
 		case *interpreter.SomeValue:
 			return typedValue.Value.(*interpreter.CompositeValue)
