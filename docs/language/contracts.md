@@ -5,23 +5,23 @@ title: Contracts
 A contract in Cadence is a collection of type definitions
 of interfaces, structs, resources, data (its state), and code (its functions)
 that lives in the contract storage area of an account in Flow.
+
 Contracts are where all composite types like structs, resources,
 events, and interfaces for these types in Cadence have to be defined.
 Therefore, an object of one of these types cannot exist
 without having been defined in a deployed Cadence contract.
 
-Contracts can be created, updated, and deleted using the `setCode`
-function of [accounts]../accounts).
-This functionality is covered in the [next section](#deploying-and-updating-contracts)
+Contracts can be created, updated, and removed using the `contracts`
+object of [authorized accounts](../accounts).
+This functionality is covered in the [next section](#deploying,-updating,-and-removing-contracts)
 
 Contracts are types.
 They are similar to composite types, but are stored differently than
 structs or resources and cannot be used as values, copied, or moved
 like resources or structs.
 
-Contract stay in an account's contract storage
-area and can only be updated or deleted by the account owner
-with special commands.
+Contracts stay in an account's contract storage area
+and can only be added, updated, or removed by the account owner with special commands.
 
 Contracts are declared using the `contract` keyword. The keyword is followed
 by the name of the contract.
@@ -225,20 +225,41 @@ Contracts have the implicit field `let account: Account`,
 which is the account in which the contract is deployed too.
 This gives the contract the ability to e.g. read and write to the account's storage.
 
-## Deploying and Updating Contracts
+## Deploying, Updating, and Removing Contracts
 
 In order for a contract to be used in Cadence, it needs to be deployed to an account.
-A contract can be deployed to an account using the `setCode` function of the `AuthAccount` type:
+The contracts of an account can be accessed through the `contracts` object.
 
-- `cadence•fun AuthAccount.setCode(_ code: [UInt8], ... contractInitializerArguments)`
+### Deploying a New Contract
 
-  The `code` parameter is the byte representation of the source code.
+A new contract can be deployed to an account using the `add` function:
+
+  ```cadence
+  fun add(
+      name: String,
+      code: [UInt8],
+      ... contractInitializerArguments
+  ): DeployedContract
+  ```
+
+  Adds the given contract to the account.
+
+  The `code` parameter is the UTF-8 encoded representation of the source code.
+  The code must contain exactly one contract or contract interface,
+  which must have the same name as the `name` parameter.
+
   All additional arguments that are given are passed further to the initializer
   of the contract that is being deployed.
 
+  Fails if a contract/contract interface with the given name already exists in the account,
+  if the given code does not declare exactly one contract or contract interface,
+  or if the given name does not match the name of the contract/contract interface declaration in the code.
+
+  Returns the deployed contract.
+
 For example, assuming the following contract code should be deployed:
 
-```cadence
+```cadence,file=test-contract.cdc
 pub contract Test {
     pub let message: String
 
@@ -250,7 +271,7 @@ pub contract Test {
 
 The contract can be deployed as follows:
 
-```cadence
+```cadence,file=account-contracts-add.cdc
 // Decode the hex-encoded source code into a byte array
 // using the built-in function `decodeHex`.
 //
@@ -261,10 +282,105 @@ let code = "70756220636f6e...".decodeHex()
 // `code` has type `[UInt8]`
 
 let signer: Account = ...
-signer.setCode(
-    code,
+signer.contracts.add(
+    name: "Test"
+    code: code,
     message: "I'm a new contract in an existing account"
 )
+```
+
+### Updating a Deployed Contract
+
+> 🚧 Status: Updating contracts is **experimental**.
+
+A deployed contract can be updated using the `update__experimental` function:
+
+  ```cadence
+  fun update__experimental(name: String, code: [UInt8]): DeployedContract
+  ```
+
+  Updates the code for the contract/contract interface in the account.
+
+  The `code` parameter is the UTF-8 encoded representation of the source code.
+  The code must contain exactly one contract or contract interface,
+  which must have the same name as the `name` parameter.
+
+  Does **not** run the initializer of the contract/contract interface again.
+  The contract instance in the world state stays as is.
+
+  Fails if no contract/contract interface with the given name exists in the account,
+  if the given code does not declare exactly one contract or contract interface,
+  or if the given name does not match the name of the contract/contract interface declaration in the code.
+
+  Returns the deployed contract for the updated contract.
+
+For example, assuming that a contract named `Test` is already deployed to the account
+and it should be updated with the following contract code:
+
+```cadence,file=test-contract.cdc
+pub contract Test {
+    pub let message: String
+
+    init(message: String) {
+        self.message = message
+    }
+}
+```
+
+The contract can be updated as follows:
+
+```cadence,file=account-contracts-update.cdc
+// Decode the hex-encoded source code into a byte array
+// using the built-in function `decodeHex`.
+//
+// (The ellipsis ... indicates the remainder of the string)
+//
+let code = "70756220636f6e...".decodeHex()
+
+// `code` has type `[UInt8]`
+
+let signer: Account = ...
+signer.contracts.update__experimental(name: "Test", code: code)
+```
+
+### Getting a Deployed Contract
+
+A deployed contract can be get from an account using the `get` function:
+
+  ```cadence
+  fun get(name: String): DeployedContract?
+  ```
+
+  Returns the deployed contract for the contract/contract interface with the given name in the account, if any.
+
+  Returns `nil` if no contract/contract interface with the given name exists in the account.
+
+For example, assuming that a contract named `Test` is deployed to an account, the contract can be get as follows:
+
+```cadence,file=account-contracts-get.cdc
+let signer: Account = ...
+let contract = signer.contracts.get(name: "Test")
+```
+
+### Removing a Deployed Contract
+
+A deployed contract can be removed from an account using the `remove` function:
+
+  ```cadence
+  fun remove(name: String): DeployedContract?
+  ```
+
+  Removes the contract/contract interface from the account which has the given name, if any.
+
+  Returns the removed deployed contract, if any.
+
+  Returns `nil` if no contract/contract interface with the given name exist in the account.
+
+For example, assuming that a contract named `Test` is deployed to an account, the contract can be removed as follows:
+
+```cadence,file=account-contracts-remove.cdc
+let signer: Account = ...
+let contract = signer.contracts.remove(name: "Test")
 ```
 
 ## Contract Interfaces
