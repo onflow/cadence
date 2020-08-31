@@ -40,7 +40,7 @@ This ensures that there is little noise and variance in the results.
 - Disable using:
 
   ```sh
-  /bin/echo 1 > /sys/devices/system/cpu/intel_pstate/no_turbo
+  echo 1|sudo tee /sys/devices/system/cpu/intel_pstate/no_turbo
   ```
 
   (If it has no effect, disable via BIOS)
@@ -75,9 +75,20 @@ This ensures that there is little noise and variance in the results.
 
   should show `off`, `forceoff` (if disabled in BIOS), or `notsupported`
 
-## Stop Systemd services
+## Stop and disable systemd services
 
-- `systemctl stop`
+
+```
+systemctl disable exim4
+systemctl disable unattended-upgrades.service
+systemctl disable packagekit.service
+systemctl disable polkit.service
+
+systemctl stop exim4
+systemctl stop unattended-upgrades.service
+systemctl stop packagekit.service
+systemctl stop polkit.service
+```
 
 ## Disable Address Space Randomization
 
@@ -117,6 +128,31 @@ This ensures that there is little noise and variance in the results.
   ```
 
 - Run commands with: `cset shield --exec <command> -- <args>`
+
+## Debian
+
+### Install dependencies
+
+
+- Install Go 1.14
+
+  1. Enable Buster backports
+
+    ```
+    echo "deb http://deb.debian.org/debian buster-backports main" >> /etc/apt/sources.list
+    ```
+    
+  2. `apt-get update`
+  3. `apt-get -t buster-backports install golang`
+
+
+- Install tools for configuring and running the suite
+
+  ```
+  apt install linux-cpupower cpuset git python3-pip msr-tools
+  ```
+
+
 
 ## Verifying
 
