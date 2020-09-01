@@ -1198,7 +1198,7 @@ func getDiagnosticsForParentError(
 		if !ok {
 			conn.LogMessage(&protocol.LogMessageParams{
 				Type:    protocol.Error,
-				Message: fmt.Sprintf("Unable to convert non-convertable error to disgnostic: %T", childErr),
+				Message: fmt.Sprintf("Unable to convert non-convertable error to diagnostic: %T", childErr),
 			})
 			continue
 		}
