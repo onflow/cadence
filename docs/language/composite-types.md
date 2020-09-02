@@ -1,0 +1,1311 @@
+## Composite Types
+
+Composite types allow composing simpler types into more complex types,
+i.e., they allow the composition of multiple values into one.
+Composite types have a name and consist of zero or more named fields,
+and zero or more functions that operate on the data.
+Each field may have a different type.
+
+Composite types can only be declared within a [contract](#contracts) and nowhere else.
+
+There are two kinds of composite types.
+The kinds differ in their usage and the behaviour
+when a value is used as the initial value for a constant or variable,
+when the value is assigned to a variable,
+when the value is passed as an argument to a function,
+and when the value is returned from a function:
+
+- [**Structures**](#structures) are **copied**, they are value types.
+
+    Structures are useful when copies with independent state are desired.
+
+- [**Resources**](#resources) are **moved**, they are linear types and **must** be used **exactly once**.
+
+    Resources are useful when it is desired to model ownership
+    (a value exists exactly in one location and it should not be lost).
+
+    Certain constructs in a blockchain represent assets of real, tangible value,
+    as much as a house or car or bank account.
+    We have to worry about literal loss and theft,
+    perhaps even on the scale of millions of dollars.
+
+    Structures are not an ideal way to represent this ownership because they are copied.
+    This would mean that there could be a risk of having multiple copies
+    of certain assets floating around,
+    which breaks the scarcity requirements needed for these assets to have real value.
+
+    A structure is much more useful for representing information
+    that can be grouped together in a logical way,
+    but doesn't have value or a need to be able to be owned or transferred.
+
+    A structure could for example be used to contain the information associated
+    with a division of a company,
+    but a resource would be used to represent the assets that have been allocated
+    to that organization for spending.
+
+Nesting of resources is only allowed within other resource types,
+or in data structures like arrays and dictionaries,
+but not in structures, as that would allow resources to be copied.
+
+### Composite Type Declaration and Creation
+
+Structures are declared using the `struct` keyword
+and resources are declared using the `resource` keyword.
+The keyword is followed by the name.
+
+```cadence
+pub struct SomeStruct {
+    // ...
+}
+
+pub resource SomeResource {
+    // ...
+}
+```
+
+Structures and resources are types.
+
+Structures are created (instantiated) by calling the type like a function.
+
+```cadence
+// instantiate a new struct object and assign it to a constant
+let a = SomeStruct()
+```
+
+The constructor function may require parameters if the [initializer](#composite-type-fields)
+of the composite type requires them.
+
+Composite types can only be declared within [contracts](#contracts)
+and not locally in functions.
+They can also not be nested.
+
+Resource must be created (instantiated) by using the `create` keyword
+and calling the type like a function.
+
+Resources can only be created in functions and types
+that are declared in the same contract in which the resource is declared.
+
+```cadence
+// instantiate a new resource object and assign it to a constant
+let b <- create SomeResource()
+```
+
+### Composite Type Fields
+
+Fields are declared like variables and constants.
+However, the initial values for fields are set in the initializer,
+**not** in the field declaration.
+All fields **must** be initialized in the initializer, exactly once.
+
+Having to provide initial values in the initializer might seem restrictive,
+but this ensures that all fields are always initialized in one location, the initializer,
+and the initialization order is clear.
+
+The initialization of all fields is checked statically
+and it is invalid to not initialize all fields in the initializer.
+Also, it is statically checked that a field is definitely initialized before it is used.
+
+The initializer's main purpose is to initialize fields, though it may also contain other code.
+Just like a function, it may declare parameters and may contain arbitrary code.
+However, it has no return type, i.e., it is always `Void`.
+
+The initializer is declared using the `init` keyword.
+
+The initializer always follows any fields.
+
+There are three kinds of fields:
+
+- **Constant fields** are also stored in the composite value,
+    but after they have been initialized with a value
+    they **cannot** have new values assigned to them afterwards.
+    A constant field must be initialized exactly once.
+
+    Constant fields are declared using the `let` keyword.
+
+- **Variable fields** are stored in the composite value
+    and can have new values assigned to them.
+
+    Variable fields are declared using the `var` keyword.
+
+- **Synthetic fields** are **not stored** in the composite value,
+    i.e. they are derived/computed from other values.
+    They can have new values assigned to them.
+
+    Synthetic fields are declared using the `synthetic` keyword.
+
+    Synthetic fields must have a getter and a setter.
+    Getters and setters are explained in the
+    [next section](#composite-type-field-getters-and-setters).
+    Synthetic fields are explained in a [separate section](#synthetic-composite-type-fields).
+
+| Field Kind           | Stored in memory | Assignable         | Keyword     |
+|----------------------|------------------|--------------------|-------------|
+| **Variable field**   | Yes              | Yes                | `var`       |
+| **Constant field**   | Yes              | **No**             | `let`       |
+| **Synthetic field**  | **No**           | Yes                | `synthetic` |
+
+In initializers, the special constant `self` refers to the composite value
+that is to be initialized.
+
+Field types must be storable. Non-storable types are:
+
+- Functions
+- [Accounts (`AuthAccount` / `PublicAccount`)](#accounts)
+- [Transactions](#transactions)
+
+Fields can be read (if they are constant or variable) and set (if they are variable),
+using the access syntax: the composite value is followed by a dot (`.`)
+and the name of the field.
+
+```cadence
+// Declare a structure named `Token`, which has a constant field
+// named `id` and a variable field named `balance`.
+//
+// Both fields are initialized through the initializer.
+//
+// The public access modifier `pub` is used in this example to allow
+// the fields to be read in outer scopes. Fields can also be declared
+// private so they cannot be accessed in outer scopes.
+// Access control will be explained in a later section.
+//
+pub struct Token {
+    pub let id: Int
+    pub var balance: Int
+
+    init(id: Int, balance: Int) {
+        self.id = id
+        self.balance = balance
+    }
+}
+```
+
+Note that it is invalid to provide the initial value for a field in the field declaration.
+
+```cadence
+pub struct StructureWithConstantField {
+    // Invalid: It is invalid to provide an initial value in the field declaration.
+    // The field must be initialized by setting the initial value in the initializer.
+    //
+    pub let id: Int = 1
+}
+```
+
+The field access syntax must be used to access fields –  fields are not available as variables.
+
+```cadence
+pub struct Token {
+    pub let id: Int
+
+    init(initialID: Int) {
+        // Invalid: There is no variable with the name `id` available.
+        // The field `id` must be initialized by setting `self.id`.
+        //
+        id = initialID
+    }
+}
+```
+
+The initializer is **not** automatically derived from the fields, it must be explicitly declared.
+
+```cadence
+pub struct Token {
+    pub let id: Int
+
+    // Invalid: Missing initializer initializing field `id`.
+}
+```
+
+A composite value can be created by calling the constructor and providing
+the field values as arguments.
+
+The value's fields can be accessed on the object after it is created.
+
+```cadence
+let token = Token(id: 42, balance: 1_000_00)
+
+token.id  // is `42`
+token.balance  // is `1_000_000`
+
+token.balance = 1
+// `token.balance` is `1`
+
+// Invalid: assignment to constant field
+//
+token.id = 23
+```
+
+### Resource Owner
+
+Resources have the implicit field `let owner: PublicAccount?`.
+If the resource is currently [stored in an account](#account-storage),
+then the field contains the publicly accessible portion of the account.
+Otherwise the field is `nil`.
+
+The field's value changes when the resource is moved from outside account storage
+into account storage, when it is moved from the storage of one account
+to the storage of another account, and when it is moved out of account storage.
+
+### Composite Data Initializer Overloading
+
+> 🚧 Status: Initializer overloading is not implemented yet.
+
+Initializers support overloading.
+This allows for example providing default values for certain parameters.
+
+```cadence
+// Declare a structure named `Token`, which has a constant field
+// named `id` and a variable field named `balance`.
+//
+// The first initializer allows initializing both fields with a given value.
+//
+// A second initializer is provided for convenience to initialize the `id` field
+// with a given value, and the `balance` field with the default value `0`.
+//
+pub struct Token {
+    let id: Int
+    var balance: Int
+
+    init(id: Int, balance: Int) {
+        self.id = id
+        self.balance = balance
+    }
+
+    init(id: Int) {
+        self.id = id
+        self.balance = 0
+    }
+}
+```
+
+### Composite Type Field Getters and Setters
+
+> 🚧 Status: Field getters and setters are not implemented yet.
+
+Fields may have an optional getter and an optional setter.
+Getters are functions that are called when a field is read,
+and setters are functions that are called when a field is written.
+Only certain assignments are allowed in getters and setters.
+
+Getters and setters are enclosed in opening and closing braces, after the field's type.
+
+Getters are declared using the `get` keyword.
+Getters have no parameters and their return type is implicitly the type of the field.
+
+```cadence
+pub struct GetterExample {
+
+    // Declare a variable field named `balance` with a getter
+    // which ensures the read value is always non-negative.
+    //
+    pub var balance: Int {
+        get {
+           if self.balance < 0 {
+               return 0
+           }
+
+           return self.balance
+        }
+    }
+
+    init(balance: Int) {
+        self.balance = balance
+    }
+}
+
+let example = GetterExample(balance: 10)
+// `example.balance` is `10`
+
+example.balance = -50
+// The stored value of the field `example` is `-50` internally,
+// though `example.balance` is `0` because the getter for `balance` returns `0` instead.
+```
+
+Setters are declared using the `set` keyword,
+followed by the name for the new value enclosed in parentheses.
+The parameter has implicitly the type of the field.
+Another type cannot be specified. Setters have no return type.
+
+The types of values assigned to setters must always match the field's type.
+
+```cadence
+pub struct SetterExample {
+
+    // Declare a variable field named `balance` with a setter
+    // which requires written values to be positive.
+    //
+    pub var balance: Int {
+        set(newBalance) {
+            pre {
+                newBalance >= 0
+            }
+            self.balance = newBalance
+        }
+    }
+
+    init(balance: Int) {
+        self.balance = balance
+    }
+}
+
+let example = SetterExample(balance: 10)
+// `example.balance` is `10`
+
+// Run-time error: The precondition of the setter for the field `balance` fails,
+// the program aborts.
+//
+example.balance = -50
+```
+
+### Synthetic Composite Type Fields
+
+> 🚧 Status: Synthetic fields are not implemented yet.
+
+Fields which are not stored in the composite value are *synthetic*,
+i.e., the field value is computed.
+Synthetic can be either read-only, or readable and writable.
+
+Synthetic fields are declared using the `synthetic` keyword.
+
+Synthetic fields are read-only when only a getter is provided.
+
+```cadence
+struct Rectangle {
+    pub var width: Int
+    pub var height: Int
+
+    // Declare a synthetic field named `area`,
+    // which computes the area based on the `width` and `height` fields.
+    //
+    pub synthetic area: Int {
+        get {
+            return width * height
+        }
+    }
+
+    // Declare an initializer which accepts width and height.
+    // As `area` is synthetic and there is only a getter provided for it,
+    // the `area` field cannot be assigned a value.
+    //
+    init(width: Int, height: Int) {
+        self.width = width
+        self.height = height
+    }
+}
+```
+
+Synthetic fields are readable and writable when both a getter and a setter is declared.
+
+```cadence
+// Declare a struct named `GoalTracker` which stores a number
+// of target goals, a number of completed goals,
+// and has a synthetic field to provide the left number of goals.
+//
+// NOTE: the tracker only implements some functionality to demonstrate
+// synthetic fields, it is incomplete (e.g. assignments to `goal` are not handled properly).
+//
+pub struct GoalTracker {
+
+    pub var goal: Int
+    pub var completed: Int
+
+    // Declare a synthetic field which is both readable and writable.
+    //
+    // When the field is read from (in the getter), the number
+    // of left goals is computed from the target number of goals
+    // and the completed number of goals.
+    //
+    // When the field is written to (in the setter), the number
+    // of completed goals is updated, based on the number
+    // of target goals and the new remaining number of goals.
+    //
+    pub synthetic left: Int {
+        get {
+            return self.goal - self.completed
+        }
+
+        set(newLeft) {
+            self.completed = self.goal - newLeft
+        }
+    }
+
+    init(goal: Int, completed: Int) {
+        self.goal = goal
+        self.completed = completed
+    }
+}
+
+let tracker = GoalTracker(goal: 10, completed: 0)
+// `tracker.goal` is `10`
+// `tracker.completed` is `0`
+// `tracker.left` is `10`
+
+tracker.completed = 1
+// `tracker.left` is `9`
+
+tracker.left = 8
+// `tracker.completed` is `2`
+```
+
+It is invalid to declare a synthetic field with only a setter.
+
+### Composite Type Functions
+
+> 🚧 Status: Function overloading is not implemented yet.
+
+Composite types may contain functions.
+Just like in the initializer, the special constant `self` refers to the composite value
+that the function is called on.
+
+```cadence
+// Declare a structure named "Rectangle", which represents a rectangle
+// and has variable fields for the width and height.
+//
+pub struct Rectangle {
+    pub var width: Int
+    pub var height: Int
+
+    init(width: Int, height: Int) {
+        self.width = width
+        self.height = height
+    }
+
+    // Declare a function named "scale", which scales
+    // the rectangle by the given factor.
+    //
+    pub fun scale(factor: Int) {
+        self.width = self.width * factor
+        self.height = self.height * factor
+    }
+}
+
+let rectangle = Rectangle(width: 2, height: 3)
+rectangle.scale(factor: 4)
+// `rectangle.width` is `8`
+// `rectangle.height` is `12`
+```
+
+Functions support overloading.
+
+```cadence
+// Declare a structure named "Rectangle", which represents a rectangle
+// and has variable fields for the width and height.
+//
+pub struct Rectangle {
+    pub var width: Int
+    pub var height: Int
+
+    init(width: Int, height: Int) {
+        self.width = width
+        self.height = height
+    }
+
+    // Declare a function named "scale", which independently scales
+    // the width by a given factor and the height by a given factor.
+    //
+    pub fun scale(widthFactor: Int, heightFactor: Int) {
+        self.width = self.width * widthFactor
+        self.height = self.height * heightFactor
+    }
+
+    // Declare a another function also named "scale", which scales
+    // both width and height by a given factor.
+    // The function calls the `scale` function declared above.
+    //
+    pub fun scale(factor: Int) {
+        self.scale(
+            widthFactor: factor,
+            heightFactor: factor
+        )
+    }
+}
+```
+
+### Composite Type Subtyping
+
+Two composite types are compatible if and only if they refer to the same declaration by name,
+i.e., nominal typing applies instead of structural typing.
+
+Even if two composite types declare the same fields and functions,
+the types are only compatible if their names match.
+
+```cadence
+// Declare a structure named `A` which has a function `test`
+// which has type `((): Void)`.
+//
+struct A {
+    fun test() {}
+}
+
+// Declare a structure named `B` which has a function `test`
+// which has type `((): Void)`.
+//
+struct B {
+    fun test() {}
+}
+
+// Declare a variable named which accepts values of type `A`.
+//
+var something: A = A()
+
+// Invalid: Assign a value of type `B` to the variable.
+// Even though types `A` and `B` have the same declarations,
+// a function with the same name and type, the types' names differ,
+// so they are not compatible.
+//
+something = B()
+
+// Valid: Reassign a new value of type `A`.
+//
+something = A()
+```
+
+### Composite Type Behaviour
+
+#### Structures
+
+Structures are **copied** when
+used as an initial value for constant or variable,
+when assigned to a different variable,
+when passed as an argument to a function,
+and when returned from a function.
+
+Accessing a field or calling a function of a structure does not copy it.
+
+```cadence
+// Declare a structure named `SomeStruct`, with a variable integer field.
+//
+pub struct SomeStruct {
+    pub var value: Int
+
+    init(value: Int) {
+        self.value = value
+    }
+
+    fun increment() {
+        self.value = self.value + 1
+    }
+}
+
+// Declare a constant with value of structure type `SomeStruct`.
+//
+let a = SomeStruct(value: 0)
+
+// *Copy* the structure value into a new constant.
+//
+let b = a
+
+b.value = 1
+// NOTE: `b.value` is 1, `a.value` is *`0`*
+
+b.increment()
+// `b.value` is 2, `a.value` is `0`
+```
+
+#### Accessing Fields and Functions of Composite Types Using Optional Chaining
+
+If a composite type with fields and functions is wrapped in an optional,
+optional chaining can be used to get those values or call the function without
+having to get the value of the optional first.
+
+Optional chaining is used by adding a `?`
+before the `.` access operator for fields or
+functions of an optional composite type.
+
+When getting a field value or
+calling a function with a return value, the access returns
+the value as an optional.
+If the object doesn't exist, the value will always be `nil`
+
+When calling a function on an optional like this, if the object doesn't exist,
+nothing will happen and the execution will continue.
+
+It is still invalid to access an undeclared field
+of an optional composite type.
+
+```cadence
+// Declare a struct with a field and method.
+pub struct Value {
+    pub var number: Int
+
+    init() {
+        self.number = 2
+    }
+
+    pub fun set(new: Int) {
+        self.number = new
+    }
+
+    pub fun setAndReturn(new: Int): Int {
+        self.number = new
+        return new
+    }
+}
+
+// Create a new instance of the struct as an optional
+let value: Value? = Value()
+// Create another optional with the same type, but nil
+let noValue: Value? = nil
+
+// Access the `number` field using optional chaining
+let twoOpt = value?.number
+// Because `value` is an optional, `twoOpt` has type `Int?`
+let two = zeroOpt ?? 0
+// `two` is `2`
+
+// Try to access the `number` field of `noValue`, which has type `Value?`
+// This still returns an `Int?`
+let nilValue = noValue?.number
+// This time, since `noValue` is `nil`, `nilValue` will also be `nil`
+
+// Call the `set` function of the struct
+// whether or not the object exists, this will not fail
+value?.set(new: 4)
+noValue?.set(new: 4)
+
+// Call the `setAndReturn` function, which returns an `Int`
+// Because `value` is an optional, the return value is type `Int?`
+let sixOpt = value?.setAndReturn(new: 6)
+let six = sixOpt ?? 0
+// `six` is `6`
+```
+
+This is also possible by using the force-unwrap operator (`!`).
+
+Forced-Optional chaining is used by adding a `!`
+before the `.` access operator for fields or
+functions of an optional composite type.
+
+When getting a field value or calling a function with a return value,
+the access returns the value.
+If the object doesn't exist, the execution will panic and revert.
+
+It is still invalid to access an undeclared field
+of an optional composite type.
+
+```cadence
+// Declare a struct with a field and method.
+pub struct Value {
+    pub var number: Int
+
+    init() {
+        self.number = 2
+    }
+
+    pub fun set(new: Int) {
+        self.number = new
+    }
+
+    pub fun setAndReturn(new: Int): Int {
+        self.number = new
+        return new
+    }
+}
+
+// Create a new instance of the struct as an optional
+let value: Value? = Value()
+// Create another optional with the same type, but nil
+let noValue: Value? = nil
+
+// Access the `number` field using force-optional chaining
+let two = value!.number
+// `two` is `2`
+
+// Try to access the `number` field of `noValue`, which has type `Value?`
+// Run-time error: This time, since `noValue` is `nil`,
+// the program execution will revert
+let number = noValue!.number
+
+// Call the `set` function of the struct
+
+// This succeeds and sets the value to 4
+value!.set(new: 4)
+
+// Run-time error: Since `noValue` is nil, the value is not set
+// and the program execution reverts.
+noValue!.set(new: 4)
+
+// Call the `setAndReturn` function, which returns an `Int`
+// Because we use force-unwrap before calling the function,
+// the return value is type `Int`
+let six = value!.setAndReturn(new: 6)
+// `six` is `6`
+```
+
+#### Resources
+
+Resources are types that can only exist in **one** location at a time
+and **must** be used **exactly once**.
+
+Resources **must** be created (instantiated) by using the `create` keyword.
+
+At the end of a function which has resources (variables, constants, parameters) in scope,
+the resources **must** be either **moved** or **destroyed**.
+
+They are **moved** when used as an initial value for a constant or variable,
+when assigned to a different variable,
+when passed as an argument to a function,
+and when returned from a function.
+
+Resources can be explicitly **destroyed** using the `destroy` keyword.
+
+Accessing a field or calling a function of a resource does not move or destroy it.
+
+When the resource is moved, the constant or variable
+that referred to the resource before the move becomes **invalid**.
+An **invalid** resource cannot be used again.
+
+To make the usage and behaviour of resource types explicit,
+the prefix `@` must be used in type annotations
+of variable or constant declarations, parameters, and return types.
+
+To make moves of resources explicit, the move operator `<-` must be used
+when the resource is the initial value of a constant or variable,
+when it is moved to a different variable,
+when it is moved to a function as an argument,
+and when it is returned from a function.
+
+```cadence
+// Declare a resource named `SomeResource`, with a variable integer field.
+//
+pub resource SomeResource {
+    pub var value: Int
+
+    init(value: Int) {
+        self.value = value
+    }
+}
+
+// Declare a constant with value of resource type `SomeResource`.
+//
+let a: @SomeResource <- create SomeResource(value: 0)
+
+// *Move* the resource value to a new constant.
+//
+let b <- a
+
+// Invalid: Cannot use constant `a` anymore as the resource that it referred to
+// was moved to constant `b`.
+//
+a.value
+
+// Constant `b` owns the resource.
+//
+b.value // equals 0
+
+// Declare a function which accepts a resource.
+//
+// The parameter has a resource type, so the type annotation must be prefixed with `@`.
+//
+pub fun use(resource: @SomeResource) {
+    // ...
+}
+
+// Call function `use` and move the resource into it.
+//
+use(resource: <-b)
+
+// Invalid: Cannot use constant `b` anymore as the resource
+// it referred to was moved into function `use`.
+//
+b.value
+```
+
+A resource object cannot go out of scope and be dynamically lost.
+The program must either explicitly destroy it or move it to another context.
+
+```cadence
+{
+    // Declare another, unrelated value of resource type `SomeResource`.
+    //
+    let c <- create SomeResource(value: 10)
+
+    // Invalid: `c` is not used before the end of the scope, but must be.
+    // It cannot be lost.
+}
+```
+
+```cadence
+// Declare another, unrelated value of resource type `SomeResource`.
+//
+let d <- create SomeResource(value: 20)
+
+// Destroy the resource referred to by constant `d`.
+//
+destroy d
+
+// Invalid: Cannot use constant `d` anymore as the resource
+// it referred to was destroyed.
+//
+d.value
+```
+
+To make it explicit that the type is a resource type
+and must follow the rules associated with resources,
+it must be prefixed with `@` in all type annotations,
+e.g. for variable declarations, parameters, or return types.
+
+```cadence
+// Declare a constant with an explicit type annotation.
+//
+// The constant has a resource type, so the type annotation must be prefixed with `@`.
+//
+let someResource: @SomeResource <- create SomeResource(value: 5)
+
+// Declare a function which consumes a resource and destroys it.
+//
+// The parameter has a resource type, so the type annotation must be prefixed with `@`.
+//
+pub fun use(resource: @SomeResource) {
+    destroy resource
+}
+
+// Declare a function which returns a resource.
+//
+// The return type is a resource type, so the type annotation must be prefixed with `@`.
+// The return statement must also use the `<-` operator to make it explicit the resource is moved.
+//
+pub fun get(): @SomeResource {
+    let newResource <- create SomeResource()
+    return <-newResource
+}
+```
+
+Resources **must** be used exactly once.
+
+```cadence
+// Declare a function which consumes a resource but does not use it.
+// This function is invalid, because it would cause a loss of the resource.
+//
+pub fun forgetToUse(resource: @SomeResource) {
+    // Invalid: The resource parameter `resource` is not used, but must be.
+}
+```
+
+```cadence
+// Declare a constant named `res` which has the resource type `SomeResource`.
+let res <- create SomeResource()
+
+// Call the function `use` and move the resource `res` into it.
+use(resource: <-res)
+
+// Invalid: The resource constant `res` cannot be used again,
+// as it was moved in the previous function call.
+//
+use(resource: <-res)
+
+// Invalid: The resource constant `res` cannot be used again,
+// as it was moved in the previous function call.
+//
+res.value
+```
+
+```cadence
+// Declare a function which has a resource parameter but does not use it.
+// This function is invalid, because it would cause a loss of the resource.
+//
+pub fun forgetToUse(resource: @SomeResource) {
+    // Invalid: The resource parameter `resource` is not used, but must be.
+}
+```
+
+```cadence
+// Declare a function which has a resource parameter.
+// This function is invalid, because it does not always use the resource parameter,
+// which would cause a loss of the resource.
+//
+pub fun sometimesDestroy(resource: @SomeResource, destroy: Bool) {
+    if destroyResource {
+        destroy resource
+    }
+    // Invalid: The resource parameter `resource` is not always used, but must be.
+    // The destroy statement is not always executed, so at the end of this function
+    // it might have been destroyed or not.
+}
+```
+
+```cadence
+// Declare a function which has a resource parameter.
+// This function is valid, as it always uses the resource parameter,
+// and does not cause a loss of the resource.
+//
+pub fun alwaysUse(resource: @SomeResource, destroyResource: Bool) {
+    if destroyResource {
+        destroy resource
+    } else {
+        use(resource: <-resource)
+    }
+    // At the end of the function the resource parameter was definitely used:
+    // It was either destroyed or moved in the call of function `use`.
+}
+```
+
+```cadence
+// Declare a function which has a resource parameter.
+// This function is invalid, because it does not always use the resource parameter,
+// which would cause a loss of the resource.
+//
+pub fun returnBeforeDestroy(: Bool) {
+    let res <- create SomeResource(value: 1)
+    if move {
+        use(resource: <-res)
+        return
+    } else {
+        // Invalid: When this function returns here, the resource variable
+        // `res` was not used, but must be.
+        return
+    }
+    // Invalid: the resource variable `res` was potentially moved in the
+    // previous if-statement, and both branches definitely return,
+    // so this statement is unreachable.
+    destroy res
+}
+```
+
+#### Resource Variables
+
+Resource variables cannot be assigned to,
+as that would lead to the loss of the variable's current resource value.
+
+Instead, use a swap statement (`<->`) or shift statement (`<- target <-`)
+to replace the resource variable with another resource.
+
+```cadence
+pub resource R {}
+
+var x <- create R()
+var y <- create R()
+
+// Invalid: Cannot assign to resource variable `x`,
+// as its current resource would be lost
+//
+x <- y
+
+// Instead, use a swap statement.
+//
+var replacement <- create R()
+x <-> replacement
+// `x` is the new resource.
+// `replacement` is the old resource.
+
+// Or use the shift statement (`<- target <-`)
+// This statement moves the resource out of `x` and into `oldX`,
+// and at the same time assigns `x` with the new value on the right-hand side.
+let oldX <- x <- create R()
+// oldX still needs to be explicitly handled after this statement
+destroy oldX
+```
+
+#### Resource Destructors
+
+Resource may have a destructor, which is executed when the resource is destroyed.
+Destructors have no parameters and no return value and are declared using the `destroy` name.
+A resource may have only one destructor.
+
+```cadence
+var destructorCalled = false
+
+pub resource Resource {
+
+    // Declare a destructor for the resource, which is executed
+    // when the resource is destroyed.
+    //
+    destroy() {
+        destructorCalled = true
+    }
+}
+
+let res <- create Resource()
+destroy res
+// `destructorCalled` is `true`
+```
+
+#### Nested Resources
+
+Fields in composite types behave differently when they have a resource type.
+
+If a resource type has fields that have a resource type,
+it **must** declare a destructor,
+which **must** invalidate all resource fields, i.e. move or destroy them.
+
+```cadence
+pub resource Child {
+    let name: String
+
+    init(name: String)
+        self.name = name
+    }
+}
+
+// Declare a resource with a resource field named `child`.
+// The resource *must* declare a destructor
+// and the destructor *must* invalidate the resource field.
+//
+pub resource Parent {
+    let name: String
+    var child: @Child
+
+    init(name: String, child: @Child) {
+        self.name = name
+        self.child <- child
+    }
+
+    // Declare a destructor which invalidates the resource field
+    // `child` by destroying it.
+    //
+    destroy() {
+        destroy self.child
+    }
+}
+```
+
+Accessing a field or calling function on a resource field is valid,
+however moving a resource out of a variable resource field is **not** allowed.
+Instead, use a swap statement to replace the resource with another resource.
+
+```cadence
+let child <- create Child(name: "Child 1")
+let parent <- create Parent(name: "Parent", child: <-child)
+
+child.name  // is "Child"
+parent.child.name  // is "Child"
+
+// Invalid: Cannot move resource out of variable resource field.
+let childAgain <- parent.child
+
+// Instead, use a swap statement.
+//
+var otherChild <- create Child(name: "Child 2")
+parent.child <-> otherChild
+// `parent.child` is the second child, Child 2.
+// `otherChild` is the first child, Child 1.
+```
+
+#### Resources in Closures
+
+Resources can not be captured in closures, as that could potentially result in duplications.
+
+```cadence
+resource R {}
+
+// Invalid: Declare a function which returns a closure which refers to
+// the resource parameter `resource`. Each call to the returned function
+// would return the resource, which should not be possible.
+//
+fun makeCloner(resource: @R): ((): @R) {
+    return fun (): @R {
+        return <-resource
+    }
+}
+
+let test = makeCloner(resource: <-create R())
+```
+
+#### Resources in Arrays and Dictionaries
+
+Arrays and dictionaries behave differently when they contain resources:
+It is **not** allowed to index into an array to read an element at a certain index or assign to it,
+or index into a dictionary to read a value for a certain key or set a value for the key.
+
+Instead, use a swap statement (`<->`) or shift statement (`<- target <-`)
+to replace the accessed resource with another resource.
+
+```cadence
+resource R {}
+
+// Declare a constant for an array of resources.
+// Create two resources and move them into the array.
+//
+let resources <- [
+    <-create R(),
+    <-create R()
+]
+
+// Invalid: Reading an element from a resource array is not allowed.
+//
+let firstResource <- resources[0]
+
+// Invalid: Setting an element in a resource array is not allowed,
+// as it would result in the loss of the current value.
+//
+resources[0] <- create R()
+
+// Instead, when attempting to either read an element or update an element
+// in a resource array, use a swap statement with a variable to replace
+// the accessed element.
+//
+var res <- create R()
+resources[0] <-> res
+// `resources[0]` now contains the new resource.
+// `res` now contains the old resource.
+
+// Use the shift statement to move the new resource into
+// the array at the same time that the old resource is being moved out
+let oldRes <- resources[0] <- create R()
+// The old object still needs to be handled
+destroy oldRes
+```
+
+The same applies to dictionaries.
+
+```cadence
+// Declare a constant for a dictionary of resources.
+// Create two resources and move them into the dictionary.
+//
+let resources <- {
+    "r1": <-create R(),
+    "r2": <-create R()
+}
+
+// Invalid: Reading an element from a resource dictionary is not allowed.
+// It's not obvious that an access like this would have to remove
+// the key from the dictionary.
+//
+let firstResource <- resources["r1"]
+
+// Instead, make the removal explicit by using the `remove` function.
+let firstResource <- resources.remove(key: "r1")
+
+// Invalid: Setting an element in a resource dictionary is not allowed,
+// as it would result in the loss of the current value.
+//
+resources["r1"] <- create R()
+
+// Instead, when attempting to either read an element or update an element
+// in a resource dictionary, use a swap statement with a variable to replace
+// the accessed element.
+//
+var res <- create R()
+resources["r1"] <-> res
+// `resources["r1"]` now contains the new resource.
+// `res` now contains the old resource.
+
+// Use the shift statement to move the new resource into
+// the dictionary at the same time that the old resource is being moved out
+let oldRes <- resources["r2"] <- create R()
+// The old object still needs to be handled
+destroy oldRes
+```
+
+Resources cannot be moved into arrays and dictionaries multiple times,
+as that would cause a duplication.
+
+```cadence
+let resource <- create R()
+
+// Invalid: The resource variable `resource` can only be moved into the array once.
+//
+let resources <- [
+    <-resource,
+    <-resource
+]
+```
+
+```cadence
+let resource <- create R()
+
+// Invalid: The resource variable `resource` can only be moved into the dictionary once.
+let resources <- {
+    "res1": <-resource,
+    "res2": <-resource
+}
+```
+
+Resource arrays and dictionaries can be destroyed.
+
+```cadence
+let resources <- [
+    <-create R(),
+    <-create R()
+]
+destroy resources
+```
+
+```cadence
+let resources <- {
+    "r1": <-create R(),
+    "r2": <-create R()
+}
+destroy resources
+```
+
+The variable array functions like `append`, `insert`, and `remove`
+behave like for non-resource arrays.
+Note however, that the result of the `remove` functions must be used.
+
+```cadence
+let resources <- [<-create R()]
+// `resources.length` is `1`
+
+resources.append(<-create R())
+// `resources.length` is `2`
+
+let first <- resource.remove(at: 0)
+// `resources.length` is `1`
+destroy first
+
+resources.insert(at: 0, <-create R())
+// `resources.length` is `2`
+
+// Invalid: The statement ignores the result of the call to `remove`,
+// which would result in a loss.
+resource.remove(at: 0)
+
+destroy resources
+```
+
+The variable array function `contains` is not available, as it is impossible:
+If the resource can be passed to the `contains` function,
+it is by definition not in the array.
+
+The variable array function `concat` is not available,
+as it would result in the duplication of resources.
+
+The dictionary functions like `insert` and `remove`
+behave like for non-resource dictionaries.
+Note however, that the result of these functions must be used.
+
+```cadence
+let resources <- {"r1": <-create R()}
+// `resources.length` is `1`
+
+let first <- resource.remove(key: "r1")
+// `resources.length` is `0`
+destroy first
+
+let old <- resources.insert(key: "r1", <-create R())
+// `old` is nil, as there was no value for the key "r1"
+// `resources.length` is `1`
+
+let old2 <- resources.insert(key: "r1", <-create R())
+// `old2` is the old value for the key "r1"
+// `resources.length` is `2`
+
+destroy old
+destroy old2
+destroy resources
+```
+
+### Unbound References / Nulls
+
+There is **no** support for `null`.
+
+### Inheritance and Abstract Types
+
+There is **no** support for inheritance.
+Inheritance is a feature common in other programming languages,
+that allows including the fields and functions of one type in another type.
+
+Instead, follow the "composition over inheritance" principle,
+the idea of composing functionality from multiple individual parts,
+rather than building an inheritance tree.
+
+Furthermore, there is also **no** support for abstract types.
+An abstract type is a feature common in other programming languages,
+that prevents creating values of the type and only
+allows the creation of values of a subtype.
+In addition, abstract types may declare functions,
+but omit the implementation of them
+and instead require subtypes to implement them.
+
+Instead, consider using [interfaces](#interfaces).
+
