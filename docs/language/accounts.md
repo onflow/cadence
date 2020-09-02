@@ -110,10 +110,7 @@ Account storage is accessed through the following functions of `AuthAccount`.
 This means that any code that has access to the authorized account has access
 to all its stored objects.
 
--
-  ```cadence
-  fun save<T>(_ value: T, to: Path)
-  ```
+- `cadence•fun save<T>(_ value: T, to: Path)`
 
   Saves an object to account storage.
   Resources are moved into storage, and structures are copied.
@@ -125,10 +122,7 @@ to all its stored objects.
 
   The path must be a storage path, i.e., only the domain `storage` is allowed.
 
--
-  ```cadence
-  fun load<T>(from: Path): T?
-  ```
+- `cadence•fun load<T>(from: Path): T?`
 
   Loads an object from account storage.
   If no object is stored under the given path, the function returns `nil`.
@@ -146,10 +140,7 @@ to all its stored objects.
 
   The path must be a storage path, i.e., only the domain `storage` is allowed.
 
--
-  ```cadence
-  fun copy<T: AnyStruct>(from: Path): T?
-  ```
+- `cadence•fun copy<T: AnyStruct>(from: Path): T?`
 
   Returns a copy of a structure stored in account storage, without removing it from storage.
 
@@ -256,10 +247,7 @@ as it is necessary for resources,
 it is also possible to create references to objects in storage:
 This is possible using the `borrow` function of an `AuthAccount`:
 
--
-  ```cadence
-  fun borrow<T: &Any>(from: Path): T?`
-  ```
+- `cadence•fun borrow<T: &Any>(from: Path): T?`
 
   Returns a reference to an object in storage without removing it from storage.
   If no object is stored under the given path, the function returns `nil`.
