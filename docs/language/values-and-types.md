@@ -1499,6 +1499,7 @@ let numbers = [1, 2]
 numbers[0] = 3
 
 // `numbers` is `[3, 2]`
+
 ```
 
 ```cadence
@@ -1510,6 +1511,7 @@ let arrays = [[1, 2], [3, 4]]
 arrays[1][0] = 5
 
 // `arrays` is `[[1, 2], [5, 4]]`
+
 ```
 
 ```cadence
@@ -1523,7 +1525,8 @@ dictionaries[false][3] = 0
 // `dictionaries` is `{
 //   true: {1: 2},
 //   false: {3: 0}
-//}`
+// }`
+
 ```
 
 ## Swapping
