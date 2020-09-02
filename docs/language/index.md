@@ -1,4 +1,6 @@
-# The Cadence Programming Language
+---
+title: The Cadence Programming Language
+---
 
 ## Introduction
 

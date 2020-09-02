@@ -1,4 +1,6 @@
-# Syntax
+---
+title: Syntax
+---
 
 ## Comments
 

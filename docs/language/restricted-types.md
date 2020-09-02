@@ -1,4 +1,6 @@
-## Restricted Types
+---
+title: Restricted Types
+---
 
 Structure and resource types can be **restricted**. Restrictions are interfaces.
 Restricted types only allow access to a subset of the members and functions

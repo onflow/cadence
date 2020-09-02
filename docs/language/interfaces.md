@@ -1,4 +1,6 @@
-## Interfaces
+---
+title: Interfaces
+---
 
 An interface is an abstract type that specifies the behavior of types
 that *implement* the interface.

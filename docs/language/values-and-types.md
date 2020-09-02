@@ -1,5 +1,6 @@
-
-# Values and Types
+---
+title: Values and Types
+---
 
 Values are objects, like for example booleans, integers, or arrays.
 Values are typed.

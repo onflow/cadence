@@ -1,4 +1,6 @@
-## Built-in Functions
+---
+title: Built-in Functions
+---
 
 -
   ```cadence

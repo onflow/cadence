@@ -1,4 +1,6 @@
-## Composite Types
+---
+title: Composite Types
+---
 
 Composite types allow composing simpler types into more complex types,
 i.e., they allow the composition of multiple values into one.
@@ -6,7 +8,7 @@ Composite types have a name and consist of zero or more named fields,
 and zero or more functions that operate on the data.
 Each field may have a different type.
 
-Composite types can only be declared within a [contract](#contracts) and nowhere else.
+Composite types can only be declared within a [contract](contracts) and nowhere else.
 
 There are two kinds of composite types.
 The kinds differ in their usage and the behaviour
@@ -47,7 +49,7 @@ Nesting of resources is only allowed within other resource types,
 or in data structures like arrays and dictionaries,
 but not in structures, as that would allow resources to be copied.
 
-### Composite Type Declaration and Creation
+## Composite Type Declaration and Creation
 
 Structures are declared using the `struct` keyword
 and resources are declared using the `resource` keyword.
@@ -75,7 +77,7 @@ let a = SomeStruct()
 The constructor function may require parameters if the [initializer](#composite-type-fields)
 of the composite type requires them.
 
-Composite types can only be declared within [contracts](#contracts)
+Composite types can only be declared within [contracts](contracts)
 and not locally in functions.
 They can also not be nested.
 
@@ -90,7 +92,7 @@ that are declared in the same contract in which the resource is declared.
 let b <- create SomeResource()
 ```
 
-### Composite Type Fields
+## Composite Type Fields
 
 Fields are declared like variables and constants.
 However, the initial values for fields are set in the initializer,
@@ -150,8 +152,8 @@ that is to be initialized.
 Field types must be storable. Non-storable types are:
 
 - Functions
-- [Accounts (`AuthAccount` / `PublicAccount`)](#accounts)
-- [Transactions](#transactions)
+- [Accounts (`AuthAccount` / `PublicAccount`)](accounts)
+- [Transactions](transactions)
 
 Fields can be read (if they are constant or variable) and set (if they are variable),
 using the access syntax: the composite value is followed by a dot (`.`)
@@ -234,10 +236,10 @@ token.balance = 1
 token.id = 23
 ```
 
-### Resource Owner
+## Resource Owner
 
 Resources have the implicit field `let owner: PublicAccount?`.
-If the resource is currently [stored in an account](#account-storage),
+If the resource is currently [stored in an account](accounts#account-storage),
 then the field contains the publicly accessible portion of the account.
 Otherwise the field is `nil`.
 
@@ -245,7 +247,7 @@ The field's value changes when the resource is moved from outside account storag
 into account storage, when it is moved from the storage of one account
 to the storage of another account, and when it is moved out of account storage.
 
-### Composite Data Initializer Overloading
+## Composite Data Initializer Overloading
 
 > 🚧 Status: Initializer overloading is not implemented yet.
 
@@ -277,7 +279,7 @@ pub struct Token {
 }
 ```
 
-### Composite Type Field Getters and Setters
+## Composite Type Field Getters and Setters
 
 > 🚧 Status: Field getters and setters are not implemented yet.
 
@@ -356,7 +358,7 @@ let example = SetterExample(balance: 10)
 example.balance = -50
 ```
 
-### Synthetic Composite Type Fields
+## Synthetic Composite Type Fields
 
 > 🚧 Status: Synthetic fields are not implemented yet.
 
@@ -448,7 +450,7 @@ tracker.left = 8
 
 It is invalid to declare a synthetic field with only a setter.
 
-### Composite Type Functions
+## Composite Type Functions
 
 > 🚧 Status: Function overloading is not implemented yet.
 
@@ -520,7 +522,7 @@ pub struct Rectangle {
 }
 ```
 
-### Composite Type Subtyping
+## Composite Type Subtyping
 
 Two composite types are compatible if and only if they refer to the same declaration by name,
 i.e., nominal typing applies instead of structural typing.
@@ -559,9 +561,9 @@ something = B()
 something = A()
 ```
 
-### Composite Type Behaviour
+## Composite Type Behaviour
 
-#### Structures
+### Structures
 
 Structures are **copied** when
 used as an initial value for constant or variable,
@@ -601,7 +603,7 @@ b.increment()
 // `b.value` is 2, `a.value` is `0`
 ```
 
-#### Accessing Fields and Functions of Composite Types Using Optional Chaining
+### Accessing Fields and Functions of Composite Types Using Optional Chaining
 
 If a composite type with fields and functions is wrapped in an optional,
 optional chaining can be used to get those values or call the function without
@@ -731,7 +733,7 @@ let six = value!.setAndReturn(new: 6)
 // `six` is `6`
 ```
 
-#### Resources
+### Resources
 
 Resources are types that can only exist in **one** location at a time
 and **must** be used **exactly once**.
@@ -961,7 +963,7 @@ pub fun returnBeforeDestroy(: Bool) {
 }
 ```
 
-#### Resource Variables
+### Resource Variables
 
 Resource variables cannot be assigned to,
 as that would lead to the loss of the variable's current resource value.
@@ -995,7 +997,7 @@ let oldX <- x <- create R()
 destroy oldX
 ```
 
-#### Resource Destructors
+### Resource Destructors
 
 Resource may have a destructor, which is executed when the resource is destroyed.
 Destructors have no parameters and no return value and are declared using the `destroy` name.
@@ -1019,7 +1021,7 @@ destroy res
 // `destructorCalled` is `true`
 ```
 
-#### Nested Resources
+### Nested Resources
 
 Fields in composite types behave differently when they have a resource type.
 
@@ -1080,7 +1082,7 @@ parent.child <-> otherChild
 // `otherChild` is the first child, Child 1.
 ```
 
-#### Resources in Closures
+### Resources in Closures
 
 Resources can not be captured in closures, as that could potentially result in duplications.
 
@@ -1100,7 +1102,7 @@ fun makeCloner(resource: @R): ((): @R) {
 let test = makeCloner(resource: <-create R())
 ```
 
-#### Resources in Arrays and Dictionaries
+### Resources in Arrays and Dictionaries
 
 Arrays and dictionaries behave differently when they contain resources:
 It is **not** allowed to index into an array to read an element at a certain index or assign to it,
@@ -1285,11 +1287,11 @@ destroy old2
 destroy resources
 ```
 
-### Unbound References / Nulls
+## Unbound References / Nulls
 
 There is **no** support for `null`.
 
-### Inheritance and Abstract Types
+## Inheritance and Abstract Types
 
 There is **no** support for inheritance.
 Inheritance is a feature common in other programming languages,
@@ -1307,5 +1309,4 @@ In addition, abstract types may declare functions,
 but omit the implementation of them
 and instead require subtypes to implement them.
 
-Instead, consider using [interfaces](#interfaces).
-
+Instead, consider using [interfaces](interfaces).

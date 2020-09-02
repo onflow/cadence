@@ -1,5 +1,6 @@
-
-## Run-time Types
+---
+title: Run-time Types
+---
 
 Types can be represented at run-time.
 To create a type value, use the constructor function `Type<T>()`, which accepts the static type as a type argument.

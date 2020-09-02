@@ -1,4 +1,6 @@
-# Crypto
+---
+title: Crypto
+---
 
 The built-in contract `Crypto` can be used to perform cryptographic operations.
 The contract can be imported using `import Crypto`.

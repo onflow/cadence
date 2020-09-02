@@ -1,4 +1,6 @@
-## Accounts
+---
+title: Accounts
+---
 
 Every account can be accessed through two types:
 

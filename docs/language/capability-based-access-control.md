@@ -1,5 +1,6 @@
-
-## Capability-based Access Control
+---
+title: Capability-based Access Control
+---
 
 Users will often want to make it so that specific other users or even anyone else
 can access certain fields and functions of a stored object.
