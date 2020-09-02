@@ -4370,7 +4370,7 @@ The variable array functions like `append`, `insert`, and `remove`
 behave like for non-resource arrays.
 Note however, that the result of the `remove` functions must be used.
 
-```cadence,file-resource-array-mutating-functions.cdc
+```cadence
 let resources <- [<-create R()]
 // `resources.length` is `1`
 
@@ -4402,7 +4402,7 @@ The dictionary functions like `insert` and `remove`
 behave like for non-resource dictionaries.
 Note however, that the result of these functions must be used.
 
-```cadence,file-resource-dictionary-mutating-functions.cdc
+```cadence
 let resources <- {"r1": <-create R()}
 // `resources.length` is `1`
 
