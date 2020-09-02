@@ -158,31 +158,25 @@ let b = x + 1000000000000000000000000
 
 Integers have multiple built-in functions you can use.
 
--
-  ```cadence
-  fun toString(): String
-  ```
+- `cadence•fun toString(): String`
 
   Returns the string representation of the integer.
 
-    ```cadence
-    let answer = 42
-
-    answer.toString()  // is "42"
-    ```
-
--
   ```cadence
-  fun toBigEndianBytes(): [UInt8]
+  let answer = 42
+
+  answer.toString()  // is "42"
   ```
+
+- `cadence•fun toBigEndianBytes(): [UInt8]`
 
   Returns the byte array representation (`[UInt8]`) in big-endian order of the integer.
 
-    ```cadence
-    let largeNumber = 1234567890
+  ```cadence
+  let largeNumber = 1234567890
 
-    largeNumber.toBigEndianBytes()  // is `[73, 150, 2, 210]`
-    ```
+  largeNumber.toBigEndianBytes()  // is `[73, 150, 2, 210]`
+  ```
 
 ## Fixed-Point Numbers
 
@@ -214,31 +208,25 @@ have the following factors, and can represent values in the following ranges:
 
 Fixed-Point numbers have multiple built-in functions you can use.
 
--
-  ```cadence
-  fun toString(): String
-  ```
+- `cadence•fun toString(): String`
 
   Returns the string representation of the fixed-point number.
 
-    ```cadence
-    let fix = 1.23
-
-    fix.toString()  // is "1.23000000"
-    ```
-
--
   ```cadence
-  fun toBigEndianBytes(): [UInt8]
+  let fix = 1.23
+
+  fix.toString()  // is "1.23000000"
   ```
+
+- `cadence•fun toBigEndianBytes(): [UInt8]`
 
   Returns the byte array representation (`[UInt8]`) in big-endian order of the fixed-point number.
 
-    ```cadence
-    let fix = 1.23
+  ```cadence
+  let fix = 1.23
 
-    fix.toBigEndianBytes()  // is `[0, 0, 0, 0, 7, 84, 212, 192]`
-    ```
+  fix.toBigEndianBytes()  // is `[0, 0, 0, 0, 7, 84, 212, 192]`
+  ```
 
 ## Floating-Point Numbers
 
@@ -286,31 +274,25 @@ let aNumber = 0x436164656E636521
 
 Addresses have multiple built-in functions you can use.
 
--
-  ```cadence
-  fun toString(): String
-  ```
+- `cadence•fun toString(): String`
 
   Returns the string representation of the address.
 
-    ```cadence
-    let someAddress: Address = 0x436164656E636521
-
-    someAddress.toString()  // is "0x436164656E636521"
-    ```
-
--
   ```cadence
-  fun toBigEndianBytes(): [UInt8]
+  let someAddress: Address = 0x436164656E636521
+
+  someAddress.toString()  // is "0x436164656E636521"
   ```
+
+- `cadence•fun toBigEndianBytes(): [UInt8]`
 
   Returns the byte array representation (`[UInt8]`) of the address.
 
-    ```cadence
-    let someAddress: Address = 0x436164656E636521
+  ```cadence
+  let someAddress: Address = 0x436164656E636521
 
-    someAddress.toString()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
-    ```
+  someAddress.toString()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
+  ```
 
 ## AnyStruct and AnyResource
 
@@ -760,44 +742,35 @@ let canadianFlag: Character = "\u{1F1E8}\u{1F1E6}"
 
 Strings have multiple built-in functions you can use.
 
--
-  ```cadence
-  let length: Int
-  ```
+- `cadence•let length: Int`
 
   Returns the number of characters in the string as an integer.
 
-    ```cadence
-    let example = "hello"
-
-    // Find the number of elements of the string.
-    let length = example.length
-    // `length` is `5`
-    ```
-
--
   ```cadence
-  fun concat(_ other: String): String
+  let example = "hello"
+
+  // Find the number of elements of the string.
+  let length = example.length
+  // `length` is `5`
   ```
+
+- `cadence•fun concat(_ other: String): String`
 
   Concatenates the string `other` to the end of the original string,
   but does not modify the original string.
   This function creates a new string whose length is the sum of the lengths
   of the string the function is called on and the string given as a parameter.
 
-    ```cadence
-    let example = "hello"
-    let new = "world"
-
-    // Concatenate the new string onto the example string and return the new string.
-    let helloWorld = example.concat(new)
-    // `helloWorld` is now `"helloworld"`
-    ```
-
--
   ```cadence
-  fun slice(from: Int, upTo: Int): String
+  let example = "hello"
+  let new = "world"
+
+  // Concatenate the new string onto the example string and return thenew string.
+  let helloWorld = example.concat(new)
+  // `helloWorld` is now `"helloworld"`
   ```
+
+- `cadence•fun slice(from: Int, upTo: Int): String`
 
   Returns a string slice of the characters
   in the given string from start index `from` up to,
@@ -807,32 +780,29 @@ Strings have multiple built-in functions you can use.
   If either of the parameters are out of
   the bounds of the string, the function will fail.
 
-    ```cadence
-    let example = "helloworld"
-
-    // Create a new slice of part of the original string.
-    let slice = example.slice(from: 3, upTo: 6)
-    // `slice` is now `"lowo"`
-
-    // Run-time error: Out of bounds index, the program aborts.
-    let outOfBounds = example.slice(from: 2, upTo: 10)
-    ```
-
--
   ```cadence
-  fun decodeHex(): [UInt8]
+  let example = "helloworld"
+
+  // Create a new slice of part of the original string.
+  let slice = example.slice(from: 3, upTo: 6)
+  // `slice` is now `"lowo"`
+
+  // Run-time error: Out of bounds index, the program aborts.
+  let outOfBounds = example.slice(from: 2, upTo: 10)
   ```
+
+- `cadence•fun decodeHex(): [UInt8]`
 
   Returns an array containing the bytes represented by the given hexadecimal string.
 
   The given string must only contain hexadecimal characters and must have an even length.
   If the string is malformed, the program aborts
 
-    ```cadence
-    let example = "436164656e636521"
+  ```cadence
+  let example = "436164656e636521"
 
-    example.decodeHex()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
-    ```
+  example.decodeHex()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
+  ```
 
 ## Arrays
 
@@ -962,27 +932,21 @@ that can be used to get information about and manipulate the contents of the arr
 The field `length`, and the functions `concat`, and `contains`
 are available for both variable-sized and fixed-sized or variable-sized arrays.
 
--
-  ```cadence
-  let length: Int
-  ```
+- `cadence•let length: Int`
 
   The number of elements in the array.
 
-    ```cadence
-    // Declare an array of integers.
-    let numbers = [42, 23, 31, 12]
-
-    // Find the number of elements of the array.
-    let length = numbers.length
-
-    // `length` is `4`
-    ```
-
--
   ```cadence
-  fun concat(_ array: T): T
+  // Declare an array of integers.
+  let numbers = [42, 23, 31, 12]
+
+  // Find the number of elements of the array.
+  let length = numbers.length
+
+  // `length` is `4`
   ```
+
+- `cadence•fun concat(_ array: T): T`
 
   Concatenates the parameter `array` to the end
   of the array the function is called on,
@@ -993,76 +957,67 @@ are available for both variable-sized and fixed-sized or variable-sized arrays.
   This function creates a new array whose length is the sum of the length of the array
   the function is called on and the length of the array given as the parameter.
 
-    ```cadence
-    // Declare two arrays of integers.
-    let numbers = [42, 23, 31, 12]
-    let moreNumbers = [11, 27]
-
-    // Concatenate the array `moreNumbers` to the array `numbers`
-    // and declare a new variable for the result.
-    //
-    let allNumbers = numbers.concat(moreNumbers)
-
-    // `allNumbers` is `[42, 23, 31, 12, 11, 27]`
-    // `numbers` is still `[42, 23, 31, 12]`
-    // `moreNumbers` is still `[11, 27]`
-    ```
-
--
   ```cadence
-  fun contains(_ element: T): Bool
+  // Declare two arrays of integers.
+  let numbers = [42, 23, 31, 12]
+  let moreNumbers = [11, 27]
+
+  // Concatenate the array `moreNumbers` to the array `numbers`
+  // and declare a new variable for the result.
+  //
+  let allNumbers = numbers.concat(moreNumbers)
+
+  // `allNumbers` is `[42, 23, 31, 12, 11, 27]`
+  // `numbers` is still `[42, 23, 31, 12]`
+  // `moreNumbers` is still `[11, 27]`
   ```
+
+- `cadence•fun contains(_ element: T): Bool`
 
   Returns true if the given element of type `T` is in the array.
 
-    ```cadence
-    // Declare an array of integers.
-    let numbers = [42, 23, 31, 12]
+  ```cadence
+  // Declare an array of integers.
+  let numbers = [42, 23, 31, 12]
 
-    // Check if the array contains 11.
-    let containsEleven = numbers.contains(11)
-    // `containsEleven` is `false`
+  // Check if the array contains 11.
+  let containsEleven = numbers.contains(11)
+  // `containsEleven` is `false`
 
-    // Check if the array contains 12.
-    let containsTwelve = numbers.contains(12)
-    // `containsTwelve` is `true`
+  // Check if the array contains 12.
+  let containsTwelve = numbers.contains(12)
+  // `containsTwelve` is `true`
 
-    // Invalid: Check if the array contains the string "Kitty".
-    // This results in a type error, as the array only contains integers.
-    //
-    let containsKitty = numbers.contains("Kitty")
-    ```
+  // Invalid: Check if the array contains the string "Kitty".
+  // This results in a type error, as the array only contains integers.
+  //
+  let containsKitty = numbers.contains("Kitty")
+  ```
 
 #### Variable-size Array Functions
 
 The following functions can only be used on variable-sized arrays.
 It is invalid to use one of these functions on a fixed-sized array.
 
--
-  ```cadence
-  fun append(_ element: T): Void
-  ```
+- `cadence•fun append(_ element: T): Void`
 
   Adds the new element `element` of type `T` to the end of the array.
 
   The new element must be the same type as all the other elements in the array.
 
-    ```cadence
-    // Declare an array of integers.
-    let numbers = [42, 23, 31, 12]
-
-    // Add a new element to the array.
-    numbers.append(20)
-    // `numbers` is now `[42, 23, 31, 12, 20]`
-
-    // Invalid: The parameter has the wrong type `String`.
-    numbers.append("SneakyString")
-    ```
-
--
   ```cadence
-  fun insert(at index: Int, _ element: T): Void
+  // Declare an array of integers.
+  let numbers = [42, 23, 31, 12]
+
+  // Add a new element to the array.
+  numbers.append(20)
+  // `numbers` is now `[42, 23, 31, 12, 20]`
+
+  // Invalid: The parameter has the wrong type `String`.
+  numbers.append("SneakyString")
   ```
+
+- `cadence•fun insert(at index: Int, _ element: T): Void`
 
   Inserts the new element `element` of type `T`
   at the given `index` of the array.
@@ -1077,96 +1032,87 @@ It is invalid to use one of these functions on a fixed-sized array.
   All the elements after the new inserted element
   are shifted to the right by one.
 
-    ```cadence
-    // Declare an array of integers.
-    let numbers = [42, 23, 31, 12]
-
-    // Insert a new element at position 1 of the array.
-    numbers.insert(at: 1, 20)
-    // `numbers` is now `[42, 20, 23, 31, 12]`
-
-    // Run-time error: Out of bounds index, the program aborts.
-    numbers.insert(at: 12, 39)
-    ```
-
--
   ```cadence
-  fun remove(at index: Int): T
+  // Declare an array of integers.
+  let numbers = [42, 23, 31, 12]
+
+  // Insert a new element at position 1 of the array.
+  numbers.insert(at: 1, 20)
+  // `numbers` is now `[42, 20, 23, 31, 12]`
+
+  // Run-time error: Out of bounds index, the program aborts.
+  numbers.insert(at: 12, 39)
   ```
+
+- `cadence•fun remove(at index: Int): T`
 
   Removes the element at the given `index` from the array and returns it.
 
   The `index` must be within the bounds of the array.
   If the index is outside the bounds, the program aborts.
 
-    ```cadence
-    // Declare an array of integers.
-    let numbers = [42, 23, 31]
-
-    // Remove element at position 1 of the array.
-    let twentyThree = numbers.remove(at: 1)
-    // `numbers` is now `[42, 31]`
-    // `twentyThree` is `23`
-
-    // Run-time error: Out of bounds index, the program aborts.
-    numbers.remove(at: 19)
-    ```
-
--
   ```cadence
-  fun removeFirst(): T
+  // Declare an array of integers.
+  let numbers = [42, 23, 31]
+
+  // Remove element at position 1 of the array.
+  let twentyThree = numbers.remove(at: 1)
+  // `numbers` is now `[42, 31]`
+  // `twentyThree` is `23`
+
+  // Run-time error: Out of bounds index, the program aborts.
+  numbers.remove(at: 19)
   ```
+
+- `cadence•fun removeFirst(): T`
 
   Removes the first element from the array and returns it.
 
   The array must not be empty.
   If the array is empty, the program aborts.
 
-    ```cadence
-    // Declare an array of integers.
-    let numbers = [42, 23]
-
-    // Remove the first element of the array.
-    let fortytwo = numbers.removeFirst()
-    // `numbers` is now `[23]`
-    // `fortywo` is `42`
-
-    // Remove the first element of the array.
-    let twentyThree = numbers.removeFirst()
-    // `numbers` is now `[]`
-    // `twentyThree` is `23`
-
-    // Run-time error: The array is empty, the program aborts.
-    numbers.removeFirst()
-    ```
-
--
   ```cadence
-  fun removeLast(): T
+  // Declare an array of integers.
+  let numbers = [42, 23]
+
+  // Remove the first element of the array.
+  let fortytwo = numbers.removeFirst()
+  // `numbers` is now `[23]`
+  // `fortywo` is `42`
+
+  // Remove the first element of the array.
+  let twentyThree = numbers.removeFirst()
+  // `numbers` is now `[]`
+  // `twentyThree` is `23`
+
+  // Run-time error: The array is empty, the program aborts.
+  numbers.removeFirst()
   ```
+
+- `cadence•fun removeLast(): T`
 
   Removes the last element from the array and returns it.
 
   The array must not be empty.
   If the array is empty, the program aborts.
 
-    ```cadence
-    // Declare an array of integers.
-    let numbers = [42, 23]
+  ```cadence
+  // Declare an array of integers.
+  let numbers = [42, 23]
 
-    // Remove the last element of the array.
-    let twentyThree = numbers.removeLast()
-    // `numbers` is now `[42]`
-    // `twentyThree` is `23`
+  // Remove the last element of the array.
+  let twentyThree = numbers.removeLast()
+  // `numbers` is now `[42]`
+  // `twentyThree` is `23`
 
-    // Remove the last element of the array.
-    let fortyTwo = numbers.removeLast()
-    // `numbers` is now `[]`
-    // `fortyTwo` is `42`
+  // Remove the last element of the array.
+  let fortyTwo = numbers.removeLast()
+  // `numbers` is now `[]`
+  // `fortyTwo` is `42`
 
-    // Run-time error: The array is empty, the program aborts.
-    numbers.removeLast()
-    ```
+  // Run-time error: The array is empty, the program aborts.
+  numbers.removeLast()
+  ```
 
 ## Dictionaries
 
@@ -1299,27 +1245,21 @@ booleans[0] = true
 
 ### Dictionary Fields and Functions
 
--
-  ```cadence
-  let length: Int
-  ```
+- `cadence•let length: Int`
 
   The number of entries in the dictionary.
 
-    ```cadence
-    // Declare a dictionary mapping strings to integers.
-    let numbers = {"fortyTwo": 42, "twentyThree": 23}
-
-    // Find the number of entries of the dictionary.
-    let length = numbers.length
-
-    // `length` is `2`
-    ```
-
--
   ```cadence
-  fun insert(key: K, _ value: V): V?
+  // Declare a dictionary mapping strings to integers.
+  let numbers = {"fortyTwo": 42, "twentyThree": 23}
+
+  // Find the number of entries of the dictionary.
+  let length = numbers.length
+
+  // `length` is `2`
   ```
+
+- `cadence•fun insert(key: K, _ value: V): V?`
 
   Inserts the given value of type `V` into the dictionary under the given `key` of type `K`.
 
@@ -1327,24 +1267,21 @@ booleans[0] = true
   if the dictionary contained the key,
   otherwise `nil`.
 
-    ```cadence
-    // Declare a dictionary mapping strings to integers.
-    let numbers = {"twentyThree": 23}
-
-    // Insert the key `"fortyTwo"` with the value `42` into the dictionary.
-    // The key did not previously exist in the dictionary,
-    // so the result is `nil`
-    //
-    let old = numbers.insert(key: "fortyTwo", 42)
-
-    // `old` is `nil`
-    // `numbers` is `{"twentyThree": 23, "fortyTwo": 42}`
-    ```
-
--
   ```cadence
-  fun remove(key: K): V?
+  // Declare a dictionary mapping strings to integers.
+  let numbers = {"twentyThree": 23}
+
+  // Insert the key `"fortyTwo"` with the value `42` into the dictionary.
+  // The key did not previously exist in the dictionary,
+  // so the result is `nil`
+  //
+  let old = numbers.insert(key: "fortyTwo", 42)
+
+  // `old` is `nil`
+  // `numbers` is `{"twentyThree": 23, "fortyTwo": 42}`
   ```
+
+- `cadence•fun remove(key: K): V?`
 
   Removes the value for the given `key` of type `K` from the dictionary.
 
@@ -1352,51 +1289,45 @@ booleans[0] = true
   if the dictionary contained the key,
   otherwise `nil`.
 
-    ```cadence
-    // Declare a dictionary mapping strings to integers.
-    let numbers = {"fortyTwo": 42, "twentyThree": 23}
-
-    // Remove the key `"fortyTwo"` from the dictionary.
-    // The key exists in the dictionary,
-    // so the value associated with the key is returned.
-    //
-    let fortyTwo = numbers.remove(key: "fortyTwo")
-
-    // `fortyTwo` is `42`
-    // `numbers` is `{"twentyThree": 23}`
-
-    // Remove the key `"oneHundred"` from the dictionary.
-    // The key does not exist in the dictionary, so `nil` is returned.
-    //
-    let oneHundred = numbers.remove(key: "oneHundred")
-
-    // `oneHundred` is `nil`
-    // `numbers` is `{"twentyThree": 23}`
-    ```
-
--
   ```cadence
-  let keys: [K]
+  // Declare a dictionary mapping strings to integers.
+  let numbers = {"fortyTwo": 42, "twentyThree": 23}
+
+  // Remove the key `"fortyTwo"` from the dictionary.
+  // The key exists in the dictionary,
+  // so the value associated with the key is returned.
+  //
+  let fortyTwo = numbers.remove(key: "fortyTwo")
+
+  // `fortyTwo` is `42`
+  // `numbers` is `{"twentyThree": 23}`
+
+  // Remove the key `"oneHundred"` from the dictionary.
+  // The key does not exist in the dictionary, so `nil` is returned.
+  //
+  let oneHundred = numbers.remove(key: "oneHundred")
+
+  // `oneHundred` is `nil`
+  // `numbers` is `{"twentyThree": 23}`
   ```
+
+- `cadence•let keys: [K]`
 
   Returns an array of the keys of type `K` in the dictionary.  This does not
   modify the dictionary, just returns a copy of the keys as an array.
   If the dictionary is empty, this returns an empty array.
 
-    ```cadence
-    // Declare a dictionary mapping strings to integers.
-    let numbers = {"fortyTwo": 42, "twentyThree": 23}
-
-    // Find the keys of the dictionary.
-    let keys = numbers.keys
-
-    // `keys` has type `[String]` and is `["fortyTwo","twentyThree"]`
-    ```
-
--
   ```cadence
-  let values: [V]
+  // Declare a dictionary mapping strings to integers.
+  let numbers = {"fortyTwo": 42, "twentyThree": 23}
+
+  // Find the keys of the dictionary.
+  let keys = numbers.keys
+
+  // `keys` has type `[String]` and is `["fortyTwo","twentyThree"]`
   ```
+
+- `cadence•let values: [V]`
 
   Returns an array of the values of type `V` in the dictionary.  This does not
   modify the dictionary, just returns a copy of the values as an array.
@@ -1404,15 +1335,15 @@ booleans[0] = true
 
   This field is not available if `V` is a resource type.
 
-    ```cadence
-    // Declare a dictionary mapping strings to integers.
-    let numbers = {"fortyTwo": 42, "twentyThree": 23}
+  ```cadence
+  // Declare a dictionary mapping strings to integers.
+  let numbers = {"fortyTwo": 42, "twentyThree": 23}
 
-    // Find the values of the dictionary.
-    let values = numbers.values
+  // Find the values of the dictionary.
+  let values = numbers.values
 
-    // `values` has type [Int] and is `[42, 23]`
-    ```
+  // `values` has type [Int] and is `[42, 23]`
+  ```
 
 ### Dictionary Keys
 
@@ -1422,427 +1353,3 @@ and [`Equatable`](#equatable-interface) [interfaces](#interfaces).
 
 Most of the built-in types, like booleans and integers,
 are hashable and equatable, so can be used as keys in dictionaries.
-
-# Operators
-
-Operators are special symbols that perform a computation
-for one or more values.
-They are either unary, binary, or ternary.
-
-- Unary operators perform an operation for a single value.
-  The unary operator symbol appears before the value.
-
-- Binary operators operate on two values.
-    The binary operator symbol appears between the two values (infix).
-
-- Ternary operators operate on three values.
-  The first operator symbol appears between the first and second value,
-  the second operator symbol appears between the second and third value (infix).
-
-## Negation
-
-The `-` unary operator negates an integer:
-
-```cadence
-let a = 1
--a  // is `-1`
-```
-
-The `!` unary operator logically negates a boolean:
-
-```cadence
-let a = true
-!a  // is `false`
-```
-
-## Assignment
-
-The binary assignment operator `=` can be used
-to assign a new value to a variable.
-It is only allowed in a statement and is not allowed in expressions.
-
-```cadence
-var a = 1
-a = 2
-// `a` is `2`
-
-
-var b = 3
-var c = 4
-
-// Invalid: The assignment operation cannot be used in an expression.
-a = b = c
-
-// Instead, the intended assignment must be written in multiple statements.
-b = c
-a = b
-```
-
-Assignments to constants are invalid.
-
-```cadence
-let a = 1
-// Invalid: Assignments are only for variables, not constants.
-a = 2
-```
-
-The left-hand side of the assignment operand must be an identifier.
-For arrays and dictionaries, this identifier can be followed
-by one or more index or access expressions.
-
-```cadence
-// Declare an array of integers.
-let numbers = [1, 2]
-
-// Change the first element of the array.
-//
-numbers[0] = 3
-
-// `numbers` is `[3, 2]`
-```
-
-```cadence
-// Declare an array of arrays of integers.
-let arrays = [[1, 2], [3, 4]]
-
-// Change the first element in the second array
-//
-arrays[1][0] = 5
-
-// `arrays` is `[[1, 2], [5, 4]]`
-```
-
-```cadence
-let dictionaries = {
-  true: {1: 2},
-  false: {3: 4}
-}
-
-dictionaries[false][3] = 0
-
-// `dictionaries` is `{
-//   true: {1: 2},
-//   false: {3: 0}
-//}`
-```
-
-## Swapping
-
-The binary swap operator `<->` can be used
-to exchange the values of two variables.
-It is only allowed in a statement and is not allowed in expressions.
-
-```cadence
-var a = 1
-var b = 2
-a <-> b
-// `a` is `2`
-// `b` is `1`
-
-var c = 3
-
-// Invalid: The swap operation cannot be used in an expression.
-a <-> b <-> c
-
-// Instead, the intended swap must be written in multiple statements.
-b <-> c
-a <-> b
-```
-
-Both sides of the swap operation must be variable,
-assignment to constants is invalid.
-
-```cadence
-var a = 1
-let b = 2
-
-// Invalid: Swapping is only possible for variables, not constants.
-a <-> b
-```
-
-Both sides of the swap operation must be an identifier,
-followed by one or more index or access expressions.
-
-## Arithmetic
-
-There are four arithmetic operators:
-
-- Addition: `+`
-- Subtraction: `-`
-- Multiplication: `*`
-- Division: `/`
-- Remainder: `%`
-
-```cadence
-let a = 1 + 2
-// `a` is `3`
-```
-
-The arguments for the operators need to be of the same type.
-The result is always the same type as the arguments.
-
-The division and remainder operators abort the program when the divisor is zero.
-
-Arithmetic operations on the signed integer types
-`Int8`, `Int16`, `Int32`, `Int64`, `Int128`, `Int256`,
-and on the unsigned integer types
-`UInt8`, `UInt16`, `UInt32`, `UInt64`, `UInt128`, `UInt256`,
-do not cause values to overflow or underflow.
-
-```cadence
-let a: UInt8 = 255
-
-// Run-time error: The result `256` does not fit in the range of `UInt8`,
-// thus a fatal overflow error is raised and the program aborts
-//
-let b = a + 1
-```
-
-```cadence
-let a: Int8 = 100
-let b: Int8 = 100
-
-// Run-time error: The result `10000` does not fit in the range of `Int8`,
-// thus a fatal overflow error is raised and the program aborts
-//
-let c = a * b
-```
-
-```cadence
-let a: Int8 = -128
-
-// Run-time error: The result `128` does not fit in the range of `Int8`,
-// thus a fatal overflow error is raised and the program aborts
-//
-let b = -a
-```
-
-Arithmetic operations on the unsigned integer types
-`Word8`, `Word16`, `Word32`, `Word64`
-may cause values to overflow or underflow.
-
-For example, the maximum value of an unsigned 8-bit integer is 255 (binary 11111111).
-Adding 1 results in an overflow, truncation to 8 bits, and the value 0.
-
-```cadence
-//    11111111 = 255
-// +         1
-// = 100000000 = 0
-```
-
-```cadence
-let a: Word8 = 255
-a + 1 // is `0`
-```
-
-Similarly, for the minimum value 0,
-subtracting 1 wraps around and results in the maximum value 255.
-
-```cadence
-//    00000000
-// -         1
-// =  11111111 = 255
-```
-
-```cadence
-let b: Word8 = 0
-b - 1  // is `255`
-```
-
-## Logical Operators
-
-Logical operators work with the boolean values `true` and `false`.
-
-- Logical AND: `a && b`
-
-    ```cadence
-    true && true  // is `true`
-
-    true && false  // is `false`
-
-    false && true  // is `false`
-
-    false && false  // is `false`
-    ```
-
-    If the left-hand side is false, the right-hand side is not evaluated.
-
-- Logical OR: `a || b`
-
-    ```cadence
-    true || true  // is `true`
-
-    true || false  // is `true`
-
-    false || true  // is `true`
-
-    false || false // is `false`
-    ```
-
-    If the left-hand side is true, the right-hand side is not evaluated.
-
-## Comparison operators
-
-Comparison operators work with boolean and integer values.
-
-- Equality: `==`, for booleans and integers
-
-    Both sides of the equality operator may be optional, even of different levels,
-    so it is for example possible to compare a non-optional with a double-optional (`??`).
-
-    ```cadence
-    1 == 1  // is `true`
-
-    1 == 2  // is `false`
-    ```
-
-    ```cadence
-    true == true  // is `true`
-
-    true == false  // is `false`
-    ```
-
-    ```cadence
-    let x: Int? = 1
-    x == nil  // is `false`
-    ```
-
-    ```cadence
-    let x: Int = 1
-    x == nil  // is `false`
-    ```
-
-    ```cadence
-    // Comparisons of different levels of optionals are possible.
-    let x: Int? = 2
-    let y: Int?? = nil
-    x == y  // is `false`
-    ```
-
-    ```cadence
-    // Comparisons of different levels of optionals are possible.
-    let x: Int? = 2
-    let y: Int?? = 2
-    x == y  // is `true`
-    ```
-
-- Inequality: `!=`, for booleans and integers (possibly optional)
-
-    Both sides of the inequality operator may be optional, even of different levels,
-    so it is for example possible to compare a non-optional with a double-optional (`??`).
-
-    ```cadence
-    1 != 1  // is `false`
-
-    1 != 2  // is `true`
-    ```
-
-    ```cadence
-    true != true  // is `false`
-
-    true != false  // is `true`
-    ```
-
-    ```cadence
-    let x: Int? = 1
-    x != nil  // is `true`
-    ```
-
-    ```cadence
-    let x: Int = 1
-    x != nil  // is `true`
-    ```
-
-    ```cadence
-    // Comparisons of different levels of optionals are possible.
-    let x: Int? = 2
-    let y: Int?? = nil
-    x != y  // is `true`
-    ```
-
-    ```cadence
-    // Comparisons of different levels of optionals are possible.
-    let x: Int? = 2
-    let y: Int?? = 2
-    x != y  // is `false`
-    ```
-
-- Less than: `<`, for integers
-
-    ```cadence
-    1 < 1  // is `false`
-
-    1 < 2  // is `true`
-
-    2 < 1  // is `false`
-    ```
-
-- Less or equal than: `<=`, for integers
-
-    ```cadence
-    1 <= 1  // is `true`
-
-    1 <= 2  // is `true`
-
-    2 <= 1  // is `false`
-    ```
-
-- Greater than: `>`, for integers
-
-    ```cadence
-    1 > 1  // is `false`
-
-    1 > 2  // is `false`
-
-    2 > 1  // is `true`
-    ```
-
-- Greater or equal than: `>=`, for integers
-
-    ```cadence
-    1 >= 1  // is `true`
-
-    1 >= 2  // is `false`
-
-    2 >= 1  // is `true`
-    ```
-
-## Ternary Conditional Operator
-
-There is only one ternary conditional operator, the ternary conditional operator (`a ? b : c`).
-
-It behaves like an if-statement, but is an expression:
-If the first operator value is true, the second operator value is returned.
-If the first operator value is false, the third value is returned.
-
-The first value must be a boolean (must have the type `Bool`).
-The second value and third value can be of any type.
-The result type is the least common supertype of the second and third value.
-
-```cadence
-let x = 1 > 2 ? 3 : 4
-// `x` is `4` and has type `Int`
-
-let y = 1 > 2 ? nil : 3
-// `y` is `3` and has type `Int?`
-```
-
-## Precedence and Associativity
-
-Operators have the following precedences, highest to lowest:
-
-- Multiplication precedence: `*`, `&*`, `/`, `%`
-- Addition precedence: `+`, `&+`, `-`, `&-`
-- Relational precedence: `<`, `<=`, `>`, `>=`
-- Equality precedence: `==`, `!=`
-- Logical conjunction precedence: `&&`
-- Logical disjunction precedence: `||`
-- Ternary precedence: `? :`
-
-All operators are left-associative, except for the ternary operator, which is right-associative.
-
-Expressions can be wrapped in parentheses to override precedence conventions,
-i.e. an alternate order should be indicated, or when the default order should be emphasized
-e.g. to avoid confusion.
-For example, `(2 + 3) * 4` forces addition to precede multiplication,
-and `5 + (6 * 7)` reinforces the default order.

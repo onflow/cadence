@@ -1,5 +1,6 @@
-
-# Type Annotations
+---
+title: Type Annotations
+---
 
 When declaring a constant or variable,
 an optional *type annotation* can be provided,
