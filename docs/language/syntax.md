@@ -82,11 +82,11 @@ and types have title-case names.
 
 ## Semicolons
 
-Semicolons (;) are used as statement separators.
-A semicolon can be placed after any statement,
-but can be omitted if only one statement appears on the line.
-Semicolons must be used to separate multiple statements if they appear on the same line –
-exactly one semicolon between each pair of statements.
+Semicolons (;) are used as separators between declarations and statements.
+A semicolon can be placed after any declaration and statement,
+but can be omitted between declarations and if only one statement appears on the line.
+
+Semicolons must be used to separate multiple statements if they appear on the same line.
 
 ```cadence
 // Declare a constant, without a semicolon.
@@ -100,7 +100,4 @@ var b = 2;
 // Declare a constant and a variable on a single line, separated by semicolons.
 //
 let d = 1; var e = 2
-
-// Invalid: Multiple semicolons between statements.
-let f = 1;; let g = 2
 ```
