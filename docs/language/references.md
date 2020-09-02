@@ -1,4 +1,6 @@
-## References
+---
+title: References
+---
 
 It is possible to create references to objects, i.e. resources or structures.
 A reference can be used to access fields and call functions on the referenced object.

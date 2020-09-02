@@ -1,4 +1,6 @@
-# Constants and Variable Declarations
+---
+title: Constants and Variable Declarations
+---
 
 Constants and variables are declarations that bind
 a value and [type](type-safety) to an identifier.

@@ -1,4 +1,6 @@
-# Contracts
+---
+title: Contracts
+---
 
 A contract in Cadence is a collection of type definitions
 of interfaces, structs, resources, data (its state), and code (its functions)

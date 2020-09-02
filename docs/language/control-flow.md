@@ -1,4 +1,6 @@
-# Control flow
+---
+title: Control Flow
+---
 
 Control flow statements control the flow of execution in a function.
 

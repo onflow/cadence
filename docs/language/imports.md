@@ -1,4 +1,6 @@
-## Imports
+---
+title: Imports
+---
 
 Programs can import declarations (types, functions, variables, etc.) from other programs.
 

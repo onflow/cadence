@@ -1,5 +1,6 @@
-
-# Scope
+---
+title: Scope
+---
 
 Every function and block (`{` ... `}`) introduces a new scope for declarations.
 Each function and block can refer to declarations in its scope or any of the outer scopes.

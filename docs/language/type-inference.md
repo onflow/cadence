@@ -1,4 +1,6 @@
-## Type Inference
+---
+title: Type Inference
+---
 
 > 🚧 Status: Only basic type inference is implemented.
 

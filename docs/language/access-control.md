@@ -1,4 +1,6 @@
-# Access control
+---
+title: Access control
+---
 
 Access control allows making certain parts of the program accessible/visible
 and making other parts inaccessible/invisible.

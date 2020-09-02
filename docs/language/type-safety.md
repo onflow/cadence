@@ -1,4 +1,6 @@
-## Type Safety
+---
+title: Type Safety
+---
 
 The Cadence programming language is a *type-safe* language.
 

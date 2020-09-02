@@ -1,5 +1,6 @@
-
-## Functions
+---
+title: Functions
+---
 
 Functions are sequences of statements that perform a specific task.
 Functions have parameters (inputs) and an optional return value (output).
