@@ -1,4 +1,4 @@
-## Contracts
+# Contracts
 
 A contract in Cadence is a collection of type definitions
 of interfaces, structs, resources, data (its state), and code (its functions)
@@ -9,7 +9,7 @@ Therefore, an object of one of these types cannot exist
 without having been defined in a deployed Cadence contract.
 
 Contracts can be created, updated, and deleted using the `setCode`
-function of [accounts](#accounts).
+function of [accounts](accounts).
 This functionality is covered in the [next section](#deploying-and-updating-contracts)
 
 Contracts are types.
@@ -41,6 +41,7 @@ pub contract Invalid {
         // ...
     }
 }
+```
 
 One of the simplest forms of a contract would just be one with a state field,
 a function, and an `init` function that initializes the field:
@@ -222,15 +223,12 @@ Contracts have the implicit field `let account: Account`,
 which is the account in which the contract is deployed too.
 This gives the contract the ability to e.g. read and write to the account's storage.
 
-### Deploying and Updating Contracts
+## Deploying and Updating Contracts
 
 In order for a contract to be used in Cadence, it needs to be deployed to an account.
 A contract can be deployed to an account using the `setCode` function of the `AuthAccount` type:
 
--
-  ```cadence
-  fun AuthAccount.setCode(_ code: [UInt8], ... contractInitializerArguments)
-  ```
+- `fun AuthAccount.setCode(_ code: [UInt8], ... contractInitializerArguments)`
 
   The `code` parameter is the byte representation of the source code.
   All additional arguments that are given are passed further to the initializer
@@ -267,7 +265,7 @@ signer.setCode(
 )
 ```
 
-### Contract Interfaces
+## Contract Interfaces
 
 Like composite types, contracts can have interfaces that specify rules
 about their behavior, their types, and the behavior of their types.
@@ -310,4 +308,3 @@ pub contract ExampleContract: InterfaceExample {
     }
 }
 ```
-
