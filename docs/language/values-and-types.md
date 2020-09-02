@@ -1500,9 +1500,7 @@ numbers[0] = 3
 
 // `numbers` is `[3, 2]`
 
-```
 
-```cadence
 // Declare an array of arrays of integers.
 let arrays = [[1, 2], [3, 4]]
 
@@ -1512,9 +1510,6 @@ arrays[1][0] = 5
 
 // `arrays` is `[[1, 2], [5, 4]]`
 
-```
-
-```cadence
 let dictionaries = {
   true: {1: 2},
   false: {3: 4}
