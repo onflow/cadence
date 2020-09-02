@@ -1,8 +1,6 @@
-# Cadence Programming Language
+# The Cadence Programming Language
 
 *Bastian Müller, Dieter Shirley, Joshua Hannan*
-
-## Table of Contents
 
 ## Introduction
 
@@ -46,5 +44,6 @@ Resources are based on liner types which were popularized by Rust.
 Events are inspired by Solidity.
 
 **Disclaimer:** In real Cadence code, all type definitions and code
-must be declared and contained in [contracts](#contracts) or [transactions](#transactions),
+must be declared and contained in [contracts](language/contracts)
+or [transactions](language/transactions),
 but we omit these containers in examples for simplicity.

@@ -1,0 +1,1847 @@
+
+# Values and Types
+
+Values are objects, like for example booleans, integers, or arrays.
+Values are typed.
+
+## Booleans
+
+The two boolean values `true` and `false` have the type `Bool`.
+
+## Numeric Literals
+
+Numbers can be written in various bases. Numbers are assumed to be decimal by default.
+Non-decimal literals have a specific prefix.
+
+| Numeral system  | Prefix | Characters                                                            |
+|:----------------|:-------|:----------------------------------------------------------------------|
+| **Decimal**     | *None* | one or more numbers (`0` to `9`)                                      |
+| **Binary**      | `0b`   | one or more zeros or ones (`0` or `1`)                                |
+| **Octal**       | `0o`   | one or more numbers in the range `0` to `7`                           |
+| **Hexadecimal** | `0x`   | one or more numbers, or characters `a` to `f`, lowercase or uppercase |
+
+```cadence
+// A decimal number
+//
+1234567890  // is `1234567890`
+
+// A binary number
+//
+0b101010  // is `42`
+
+// An octal number
+//
+0o12345670  // is `2739128`
+
+// A hexadecimal number
+//
+0x1234567890ABCabc  // is `1311768467294898876`
+
+// Invalid: unsupported prefix 0z
+//
+0z0
+
+// A decimal number with leading zeros. Not an octal number!
+00123 // is `123`
+
+// A binary number with several trailing zeros.
+0b001000  // is `8`
+```
+
+Decimal numbers may contain underscores (`_`) to logically separate components.
+
+```cadence
+let largeNumber = 1_000_000
+
+// Invalid: Value is not a number literal, but a variable.
+let notNumber = _123
+```
+
+Underscores are allowed for all numeral systems.
+
+```cadence
+let binaryNumber = 0b10_11_01
+```
+
+## Integers
+
+Integers are numbers without a fractional part.
+They are either *signed* (positive, zero, or negative)
+or *unsigned* (positive or zero).
+
+Signed integer types which check for overflow and underflow have an `Int` prefix
+and can represent values in the following ranges:
+
+- **`Int8`**: −2^7 through 2^7 − 1 (-128 through 127)
+- **`Int16`**: −2^15 through 2^15 − 1 (-32768 through 32767)
+- **`Int32`**: −2^31 through 2^31 − 1 (-2147483648 through 2147483647)
+- **`Int64`**: −2^63 through 2^63 − 1 (-9223372036854775808 through 9223372036854775807)
+- **`Int128`**: −2^127 through 2^127 − 1
+- **`Int256`**: −2^255 through 2^255 − 1
+
+Unsigned integer types which check for overflow and underflow have a `UInt` prefix
+and can represent values in the following ranges:
+
+- **`UInt8`**: 0 through 2^8 − 1 (255)
+- **`UInt16`**: 0 through 2^16 − 1 (65535)
+- **`UInt32`**: 0 through 2^32 − 1 (4294967295)
+- **`UInt64`**: 0 through 2^64 − 1 (18446744073709551615)
+- **`UInt128`**: 0 through 2^128 − 1
+- **`UInt256`**: 0 through 2^256 − 1
+
+Unsigned integer types which do **not** check for overflow and underflow,
+i.e. wrap around, have the `Word` prefix
+and can represent values in the following ranges:
+
+- **`Word8`**: 0 through 2^8 − 1 (255)
+- **`Word16`**: 0 through 2^16 − 1 (65535)
+- **`Word32`**: 0 through 2^32 − 1 (4294967295)
+- **`Word64`**: 0 through 2^64 − 1 (18446744073709551615)
+
+The types are independent types, i.e. not subtypes of each other.
+
+See the section about [arithmetic operators](#arithmetic) for further
+information about the behavior of the different integer types.
+
+```cadence
+// Declare a constant that has type `UInt8` and the value 10.
+let smallNumber: UInt8 = 10
+```
+
+```cadence
+// Invalid: negative literal cannot be used as an unsigned integer
+//
+let invalidNumber: UInt8 = -10
+```
+
+In addition, the arbitrary precision integer type `Int` is provided.
+
+```cadence
+let veryLargeNumber: Int = 10000000000000000000000000000000
+```
+
+Integer literals are [inferred](#type-inference) to have type `Int`,
+or if the literal occurs in a position that expects an explicit type,
+e.g. in a variable declaration with an explicit type annotation.
+
+```cadence
+let someNumber = 123
+
+// `someNumber` has type `Int`
+```
+
+Negative integers are encoded in two's complement representation.
+
+Integer types are not converted automatically. Types must be explicitly converted,
+which can be done by calling the constructor of the type with the integer type.
+
+```cadence
+let x: Int8 = 1
+let y: Int16 = 2
+
+// Invalid: the types of the operands, `Int8` and `Int16` are incompatible.
+let z = x + y
+
+// Explicitly convert `x` from `Int8` to `Int16`.
+let a = Int16(x) + y
+
+// `a` has type `Int16`
+
+// Invalid: The integer literal is expected to be of type `UInt8`,
+// but the large integer literal does not fit in the range of `UInt8`.
+//
+let b = x + 1000000000000000000000000
+```
+
+### Integer Functions
+
+Integers have multiple built-in functions you can use.
+
+-
+  ```cadence
+  fun toString(): String
+  ```
+
+  Returns the string representation of the integer.
+
+    ```cadence
+    let answer = 42
+
+    answer.toString()  // is "42"
+    ```
+
+-
+  ```cadence
+  fun toBigEndianBytes(): [UInt8]
+  ```
+
+  Returns the byte array representation (`[UInt8]`) in big-endian order of the integer.
+
+    ```cadence
+    let largeNumber = 1234567890
+
+    largeNumber.toBigEndianBytes()  // is `[73, 150, 2, 210]`
+    ```
+
+## Fixed-Point Numbers
+
+> 🚧 Status: Currently only the 64-bit wide `Fix64` and `UFix64` types are available.
+> More fixed-point number types will be added in a future release.
+
+Fixed-point numbers are useful for representing fractional values.
+They have a fixed number of digits after decimal point.
+
+They are essentially integers which are scaled by a factor.
+For example, the value 1.23 can be represented as 1230 with a scaling factor of 1/1000.
+The scaling factor is the same for all values of the same type
+and stays the same during calculations.
+
+Fixed-point numbers in Cadence have a scaling factor with a power of 10, instead of a power of 2,
+i.e. they are decimal, not binary.
+
+Signed fixed-point number types have the prefix `Fix`,
+have the following factors, and can represent values in the following ranges:
+
+- **`Fix64`**: Factor 1/100,000,000; -92233720368.54775808 through 92233720368.54775807
+
+Unsigned fixed-point number types have the prefix `UFix`,
+have the following factors, and can represent values in the following ranges:
+
+- **`UFix64`**: Factor 1/100,000,000; 0.0 through 184467440737.09551615
+
+### Fixed-Point Number Functions
+
+Fixed-Point numbers have multiple built-in functions you can use.
+
+-
+  ```cadence
+  fun toString(): String
+  ```
+
+  Returns the string representation of the fixed-point number.
+
+    ```cadence
+    let fix = 1.23
+
+    fix.toString()  // is "1.23000000"
+    ```
+
+-
+  ```cadence
+  fun toBigEndianBytes(): [UInt8]
+  ```
+
+  Returns the byte array representation (`[UInt8]`) in big-endian order of the fixed-point number.
+
+    ```cadence
+    let fix = 1.23
+
+    fix.toBigEndianBytes()  // is `[0, 0, 0, 0, 7, 84, 212, 192]`
+    ```
+
+## Floating-Point Numbers
+
+There is **no** support for floating point numbers.
+
+Smart Contracts are not intended to work with values with error margins
+and therefore floating point arithmetic is not appropriate here.
+
+Instead, consider using [fixed point numbers](#fixed-point-numbers).
+
+## Addresses
+
+The type `Address` represents an address.
+Addresses are unsigned integers with a size of 64 bits (8 bytes).
+Hexadecimal integer literals can be used to create address values.
+
+```cadence
+// Declare a constant that has type `Address`.
+//
+let someAddress: Address = 0x436164656E636521
+
+// Invalid: Initial value is not compatible with type `Address`,
+// it is not a number.
+//
+let notAnAddress: Address = ""
+
+// Invalid: Initial value is not compatible with type `Address`.
+// The integer literal is valid, however, it is larger than 64 bits.
+//
+let alsoNotAnAddress: Address = 0x436164656E63652146757265766572
+```
+
+Integer literals are not inferred to be an address.
+
+```cadence
+// Declare a number. Even though it happens to be a valid address,
+// it is not inferred as it.
+//
+let aNumber = 0x436164656E636521
+
+// `aNumber` has type `Int`
+```
+
+### Address Functions
+
+Addresses have multiple built-in functions you can use.
+
+-
+  ```cadence
+  fun toString(): String
+  ```
+
+  Returns the string representation of the address.
+
+    ```cadence
+    let someAddress: Address = 0x436164656E636521
+
+    someAddress.toString()  // is "0x436164656E636521"
+    ```
+
+-
+  ```cadence
+  fun toBigEndianBytes(): [UInt8]
+  ```
+
+  Returns the byte array representation (`[UInt8]`) of the address.
+
+    ```cadence
+    let someAddress: Address = 0x436164656E636521
+
+    someAddress.toString()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
+    ```
+
+## AnyStruct and AnyResource
+
+`AnyStruct` is the top type of all non-resource types,
+i.e., all non-resource types are a subtype of it.
+
+`AnyResource` is the top type of all resource types.
+
+```cadence
+// Declare a variable that has the type `AnyStruct`.
+// Any non-resource typed value can be assigned to it, for example an integer,
+// but not resource-typed values.
+//
+var someStruct: AnyStruct = 1
+
+// Assign a value with a different non-resource type, `Bool`.
+someStruct = true
+
+// Declare a structure named `TestStruct`, create an instance of it,
+// and assign it to the `AnyStruct`-typed variable
+//
+struct TestStruct {}
+
+let testStruct = TestStruct()
+
+someStruct = testStruct
+
+// Declare a resource named `TestResource`
+
+resource Test {}
+
+// Declare a variable that has the type `AnyResource`.
+// Any resource-typed value can be assigned to it,
+// but not non-resource typed values.
+//
+var someResource: @AnyResource <- create Test()
+
+// Invalid: Resource-typed values can not be assigned
+// to `AnyStruct`-typed variables
+//
+someStruct <- create Test()
+
+// Invalid: Non-resource typed values can not be assigned
+// to `AnyResource`-typed variables
+//
+someResource = 1
+```
+
+However, using `AnyStruct` and `AnyResource` does not opt-out of type checking.
+It is invalid to access fields and call functions on these types,
+as they have no fields and functions.
+
+```cadence
+// Declare a variable that has the type `AnyStruct`.
+// The initial value is an integer,
+// but the variable still has the explicit type `AnyStruct`.
+//
+let a: AnyStruct = 1
+
+// Invalid: Operator cannot be used for an `AnyStruct` value (`a`, left-hand side)
+// and an `Int` value (`2`, right-hand side).
+//
+a + 2
+```
+
+`AnyStruct` and `AnyResource` may be used like other types,
+for example, they may be the element type of [arrays](#arrays)
+or be the element type of an [optional type](#optionals).
+
+```cadence
+// Declare a variable that has the type `[AnyStruct]`,
+// i.e. an array of elements of any non-resource type.
+//
+let anyValues: [AnyStruct] = [1, "2", true]
+
+// Declare a variable that has the type `AnyStruct?`,
+// i.e. an optional type of any non-resource type.
+//
+var maybeSomething: AnyStruct? = 42
+
+maybeSomething = "twenty-four"
+
+maybeSomething = nil
+```
+
+`AnyStruct` is also the super-type of all non-resource optional types,
+and `AnyResource` is the super-type of all resource optional types.
+
+```cadence
+let maybeInt: Int? = 1
+let anything: AnyStruct = maybeInt
+```
+
+[Conditional downcasting](#conditional-downcasting-operator) allows coercing
+a value which has the type `AnyStruct` or `AnyResource` back to its original type.
+
+## Optionals
+
+Optionals are values which can represent the absence of a value. Optionals have two cases:
+either there is a value, or there is nothing.
+
+An optional type is declared using the `?` suffix for another type.
+For example, `Int` is a non-optional integer, and `Int?` is an optional integer,
+i.e. either nothing, or an integer.
+
+The value representing nothing is `nil`.
+
+```cadence
+// Declare a constant which has an optional integer type,
+// with nil as its initial value.
+//
+let a: Int? = nil
+
+// Declare a constant which has an optional integer type,
+// with 42 as its initial value.
+//
+let b: Int? = 42
+
+// Invalid: `b` has type `Int?`, which does not support arithmetic.
+b + 23
+
+// Invalid: Declare a constant with a non-optional integer type `Int`,
+// but the initial value is `nil`, which in this context has type `Int?`.
+//
+let x: Int = nil
+```
+
+Optionals can be created for any value, not just for literals.
+
+```cadence
+// Declare a constant which has a non-optional integer type,
+// with 1 as its initial value.
+//
+let x = 1
+
+// Declare a constant which has an optional integer type.
+// An optional with the value of `x` is created.
+//
+let y: Int? = x
+
+// Declare a variable which has an optional any type, i.e. the variable
+// may be `nil`, or any other value.
+// An optional with the value of `x` is created.
+//
+var z: AnyStruct? = x
+```
+
+A non-optional type is a subtype of its optional type.
+
+```cadence
+var a: Int? = nil
+let b = 2
+a = b
+
+// `a` is `2`
+```
+
+Optional types may be contained in other types, for example [arrays](#arrays) or even optionals.
+
+```cadence
+// Declare a constant which has an array type of optional integers.
+let xs: [Int?] = [1, nil, 2, nil]
+
+// Declare a constant which has a double optional type.
+//
+let doubleOptional: Int?? = nil
+```
+
+### Nil-Coalescing Operator
+
+The nil-coalescing operator `??` returns
+the value inside an optional if it contains a value,
+or returns an alternative value if the optional has no value,
+i.e., the optional value is `nil`.
+
+If the left-hand side is non-nil, the right-hand side is not evaluated.
+
+```cadence
+// Declare a constant which has an optional integer type
+//
+let a: Int? = nil
+
+// Declare a constant with a non-optional integer type,
+// which is initialized to `a` if it is non-nil, or 42 otherwise.
+//
+let b: Int = a ?? 42
+// `b` is 42, as `a` is nil
+```
+
+The nil-coalescing operator can only be applied
+to values which have an optional type.
+
+```cadence
+// Declare a constant with a non-optional integer type.
+//
+let a = 1
+
+// Invalid: nil-coalescing operator is applied to a value which has a non-optional type
+// (a has the non-optional type `Int`).
+//
+let b = a ?? 2
+```
+
+```cadence
+// Invalid: nil-coalescing operator is applied to a value which has a non-optional type
+// (the integer literal is of type `Int`).
+//
+let c = 1 ?? 2
+```
+
+The type of the right-hand side of the operator (the alternative value) must be a subtype
+of the type of left-hand side, i.e. the right-hand side of the operator must
+be the non-optional or optional type matching the type of the left-hand side.
+
+```cadence
+// Declare a constant with an optional integer type.
+//
+let a: Int? = nil
+let b: Int? = 1
+let c = a ?? b
+// `c` is `1` and has type `Int?`
+
+// Invalid: nil-coalescing operator is applied to a value of type `Int?`,
+// but the alternative has type `Bool`.
+//
+let d = a ?? false
+```
+
+### Force Unwrap (`!`)
+
+The force-unwrap operator (`!`) returns
+the value inside an optional if it contains a value,
+or panics and aborts the execution if the optional has no value,
+i.e., the optional value is `nil`.
+
+```cadence
+// Declare a constant which has an optional integer type
+//
+let a: Int? = nil
+
+// Declare a constant with a non-optional integer type,
+// which is initialized to `a` if `a` is non-nil.
+// If `a` is nil, the program aborts.
+//
+let b: Int = a!
+// The program aborts because `a` is nil.
+
+// Declare another optional integer constant
+let c: Int? = 3
+
+// Declare a non-optional integer
+// which is initialized to `c` if `a` is non-nil.
+// If `c` is nil, the program aborts.
+let d: Int = c!
+// `d` is initialized to 3 because c isn't nil.
+
+```
+
+The force-unwrap operator can only be applied
+to values which have an optional type.
+
+```cadence
+// Declare a constant with a non-optional integer type.
+//
+let a = 1
+
+// Invalid: force-unwrap operator is applied to a value which has a
+// non-optional type (`a` has the non-optional type `Int`).
+//
+let b = a!
+```
+
+```cadence
+// Invalid: The force-unwrap operator is applied
+// to a value which has a non-optional type
+// (the integer literal is of type `Int`).
+//
+let c = 1!
+```
+
+### Force-assignment operator (`<-!`)
+
+The force-assignment operator (`<-!`) assigns a resource-typed value to an
+optional-typed variable if the variable is nil.
+If the variable being assigned to is non-nil,
+the execution of the program aborts.
+
+The force-assignment operator is only used for
+[resource types](#resources) and the move operator (`<-`),
+which are covered the resources section of this document.
+
+### Conditional Downcasting Operator
+
+> 🚧 Status: The conditional downcasting operator `as?` is implemented,
+> but it only supports values that have the type `AnyStruct` and `AnyResource`.
+
+The conditional downcasting operator `as?`
+can be used to type cast a value to a type.
+The operator returns an optional.
+If the value has a type that is a subtype
+of the given type that should be casted to,
+the operator returns the value as the given type,
+otherwise the result is `nil`.
+
+The cast and check is performed at run-time, i.e. when the program is executed,
+not statically, i.e. when the program is checked.
+
+```cadence
+// Declare a constant named `something` which has type `AnyStruct`,
+// with an initial value which has type `Int`.
+//
+let something: AnyStruct = 1
+
+// Conditionally downcast the value of `something` to `Int`.
+// The cast succeeds, because the value has type `Int`.
+//
+let number = something as? Int
+// `number` is `1` and has type `Int?`
+
+// Conditionally downcast the value of `something` to `Bool`.
+// The cast fails, because the value has type `Int`,
+// and `Bool` is not a subtype of `Int`.
+//
+let boolean = something as? Bool
+// `boolean` is `nil` and has type `Bool?`
+```
+
+Downcasting works for nested types (e.g. arrays),
+interfaces (if a [resource](#resources) interface not to a concrete resource),
+and optionals.
+
+```cadence
+// Declare a constant named `values` which has type `[AnyStruct]`,
+// i.e. an array of arbitrarily typed values.
+//
+let values: [AnyStruct] = [1, true]
+
+let first = values[0] as? Int
+// `first` is `1` and has type `Int?`
+
+let second = values[1] as? Bool
+// `second` is `true` and has type `Bool?`
+```
+
+## Never
+
+`Never` is the bottom type, i.e., it is a subtype of all types.
+There is no value that has type `Never`.
+`Never` can be used as the return type for functions that never return normally.
+For example, it is the return type of the function [`panic`](#built-in-functions).
+
+```cadence
+// Declare a function named `crashAndBurn` which will never return,
+// because it calls the function named `panic`, which never returns.
+//
+fun crashAndBurn(): Never {
+    panic("An unrecoverable error occurred")
+}
+
+// Invalid: Declare a constant with a `Never` type, but the initial value is an integer.
+//
+let x: Never = 1
+
+// Invalid: Declare a function which returns an invalid return value `nil`,
+// which is not a value of type `Never`.
+//
+fun returnNever(): Never {
+    return nil
+}
+```
+
+## Strings and Characters
+
+Strings are collections of characters.
+Strings have the type `String`, and characters have the type `Character`.
+Strings can be used to work with text in a Unicode-compliant way.
+Strings are immutable.
+
+String and character literals are enclosed in double quotation marks (`"`).
+
+```cadence
+let someString = "Hello, world!"
+```
+
+String literals may contain escape sequences. An escape sequence starts with a backslash (`\`):
+
+- `\0`: Null character
+- `\\`: Backslash
+- `\t`: Horizontal tab
+- `\n`: Line feed
+- `\r`: Carriage return
+- `\"`: Double quotation mark
+- `\'`: Single quotation mark
+- `\u`: A Unicode scalar value, written as `\u{x}`,
+  where `x` is a 1–8 digit hexadecimal number
+  which needs to be a valid Unicode scalar value,
+  i.e., in the range 0 to 0xD7FF and 0xE000 to 0x10FFFF inclusive
+
+```cadence
+// Declare a constant which contains two lines of text
+// (separated by the line feed character `\n`), and ends
+// with a thumbs up emoji, which has code point U+1F44D (0x1F44D).
+//
+let thumbsUpText =
+    "This is the first line.\nThis is the second line with an emoji: \u{1F44D}"
+```
+
+The type `Character` represents a single, human-readable character.
+Characters are extended grapheme clusters,
+which consist of one or more Unicode scalars.
+
+For example, the single character `ü` can be represented
+in several ways in Unicode.
+First, it can be represented by a single Unicode scalar value `ü`
+("LATIN SMALL LETTER U WITH DIAERESIS", code point U+00FC).
+Second, the same single character can be represented
+by two Unicode scalar values:
+`u` ("LATIN SMALL LETTER U", code point U+0075),
+and "COMBINING DIAERESIS" (code point U+0308).
+The combining Unicode scalar value is applied to the scalar before it,
+which turns a `u` into a `ü`.
+
+Still, both variants represent the same human-readable character `ü`.
+
+```cadence
+let singleScalar: Character = "\u{FC}"
+// `singleScalar` is `ü`
+let twoScalars: Character = "\u{75}\u{308}"
+// `twoScalars` is `ü`
+```
+
+Another example where multiple Unicode scalar values are rendered as a single,
+human-readable character is a flag emoji.
+These emojis consist of two "REGIONAL INDICATOR SYMBOL LETTER" Unicode scalar values.
+
+```cadence
+// Declare a constant for a string with a single character, the emoji
+// for the Canadian flag, which consists of two Unicode scalar values:
+// - REGIONAL INDICATOR SYMBOL LETTER C (U+1F1E8)
+// - REGIONAL INDICATOR SYMBOL LETTER A (U+1F1E6)
+//
+let canadianFlag: Character = "\u{1F1E8}\u{1F1E6}"
+// `canadianFlag` is `🇨🇦`
+```
+
+### String Fields and Functions
+
+Strings have multiple built-in functions you can use.
+
+-
+  ```cadence
+  let length: Int
+  ```
+
+  Returns the number of characters in the string as an integer.
+
+    ```cadence
+    let example = "hello"
+
+    // Find the number of elements of the string.
+    let length = example.length
+    // `length` is `5`
+    ```
+
+-
+  ```cadence
+  fun concat(_ other: String): String
+  ```
+
+  Concatenates the string `other` to the end of the original string,
+  but does not modify the original string.
+  This function creates a new string whose length is the sum of the lengths
+  of the string the function is called on and the string given as a parameter.
+
+    ```cadence
+    let example = "hello"
+    let new = "world"
+
+    // Concatenate the new string onto the example string and return the new string.
+    let helloWorld = example.concat(new)
+    // `helloWorld` is now `"helloworld"`
+    ```
+
+-
+  ```cadence
+  fun slice(from: Int, upTo: Int): String
+  ```
+
+  Returns a string slice of the characters
+  in the given string from start index `from` up to,
+  but not including, the end index `upTo`.
+  This function creates a new string whose length is `upTo - from`.
+  It does not modify the original string.
+  If either of the parameters are out of
+  the bounds of the string, the function will fail.
+
+    ```cadence
+    let example = "helloworld"
+
+    // Create a new slice of part of the original string.
+    let slice = example.slice(from: 3, upTo: 6)
+    // `slice` is now `"lowo"`
+
+    // Run-time error: Out of bounds index, the program aborts.
+    let outOfBounds = example.slice(from: 2, upTo: 10)
+    ```
+
+-
+  ```cadence
+  fun decodeHex(): [UInt8]
+  ```
+
+  Returns an array containing the bytes represented by the given hexadecimal string.
+
+  The given string must only contain hexadecimal characters and must have an even length.
+  If the string is malformed, the program aborts
+
+    ```cadence
+    let example = "436164656e636521"
+
+    example.decodeHex()  // is `[67, 97, 100, 101, 110, 99, 101, 33]`
+    ```
+
+## Arrays
+
+Arrays are mutable, ordered collections of values.
+All values in an array must have the same type.
+Arrays may contain a value multiple times.
+Array literals start with an opening square bracket `[` and end with a closing square bracket `]`.
+
+```cadence
+// An empty array
+//
+[]
+
+// An array with integers
+//
+[1, 2, 3]
+
+// Invalid: mixed types
+//
+[1, true, 2, false]
+```
+
+### Array Types
+
+Arrays either have a fixed size or are variably sized, i.e., elements can be added and removed.
+
+Fixed-size arrays have the form `[T; N]`, where `T` is the element type,
+and `N` is the size of the array.  `N` has to be statically known, meaning
+that it needs to be an integer literal.
+For example, a fixed-size array of 3 `Int8` elements has the type `[Int8; 3]`.
+
+Variable-size arrays have the form `[T]`, where `T` is the element type.
+For example, the type `[Int16]` specifies a variable-size array of elements that have type `Int16`.
+
+It is important to understand that arrays are value types and are only ever copied
+when used as an initial value for a constant or variable,
+when assigning to a variable,
+when used as function argument,
+or when returned from a function call.
+
+```cadence
+let size = 2
+// Invalid: Array-size must be an integer literal
+let numbers: [Int; size] = []
+
+// Declare a fixed-sized array of integers
+// which always contains exactly two elements.
+//
+let array: [Int8; 2] = [1, 2]
+
+// Declare a fixed-sized array of fixed-sized arrays of integers.
+// The inner arrays always contain exactly three elements,
+// the outer array always contains two elements.
+//
+let arrays: [[Int16; 3]; 2] = [
+    [1, 2, 3],
+    [4, 5, 6]
+]
+
+// Declare a variable length array of integers
+var variableLengthArray: [Int] = []
+```
+
+Array types are covariant in their element types.
+For example, `[Int]` is a subtype of `[AnyStruct]`.
+This is safe because arrays are value types and not reference types.
+
+### Array Indexing
+
+To get the element of an array at a specific index, the indexing syntax can be used:
+The array is followed by an opening square bracket `[`, the indexing value,
+and ends with a closing square bracket `]`.
+
+Indexes start at 0 for the first element in the array.
+
+Accessing an element which is out of bounds results in a fatal error at run-time
+and aborts the program.
+
+```cadence
+// Declare an array of integers.
+let numbers = [42, 23]
+
+// Get the first number of the array.
+//
+numbers[0] // is `42`
+
+// Get the second number of the array.
+//
+numbers[1] // is `23`
+
+// Run-time error: Index 2 is out of bounds, the program aborts.
+//
+numbers[2]
+```
+
+```cadence
+// Declare an array of arrays of integers, i.e. the type is `[[Int]]`.
+let arrays = [[1, 2], [3, 4]]
+
+// Get the first number of the second array.
+//
+arrays[1][0] // is `3`
+```
+
+To set an element of an array at a specific index, the indexing syntax can be used as well.
+
+```cadence
+// Declare an array of integers.
+let numbers = [42, 23]
+
+// Change the second number in the array.
+//
+// NOTE: The declaration `numbers` is constant, which means that
+// the *name* is constant, not the *value* – the value, i.e. the array,
+// is mutable and can be changed.
+//
+numbers[1] = 2
+
+// `numbers` is `[42, 2]`
+```
+
+### Array Fields and Functions
+
+Arrays have multiple built-in fields and functions
+that can be used to get information about and manipulate the contents of the array.
+
+The field `length`, and the functions `concat`, and `contains`
+are available for both variable-sized and fixed-sized or variable-sized arrays.
+
+-
+  ```cadence
+  let length: Int
+  ```
+
+  The number of elements in the array.
+
+    ```cadence
+    // Declare an array of integers.
+    let numbers = [42, 23, 31, 12]
+
+    // Find the number of elements of the array.
+    let length = numbers.length
+
+    // `length` is `4`
+    ```
+
+-
+  ```cadence
+  fun concat(_ array: T): T
+  ```
+
+  Concatenates the parameter `array` to the end
+  of the array the function is called on,
+  but does not modify that array.
+
+  Both arrays must be the same type `T`.
+
+  This function creates a new array whose length is the sum of the length of the array
+  the function is called on and the length of the array given as the parameter.
+
+    ```cadence
+    // Declare two arrays of integers.
+    let numbers = [42, 23, 31, 12]
+    let moreNumbers = [11, 27]
+
+    // Concatenate the array `moreNumbers` to the array `numbers`
+    // and declare a new variable for the result.
+    //
+    let allNumbers = numbers.concat(moreNumbers)
+
+    // `allNumbers` is `[42, 23, 31, 12, 11, 27]`
+    // `numbers` is still `[42, 23, 31, 12]`
+    // `moreNumbers` is still `[11, 27]`
+    ```
+
+-
+  ```cadence
+  fun contains(_ element: T): Bool
+  ```
+
+  Returns true if the given element of type `T` is in the array.
+
+    ```cadence
+    // Declare an array of integers.
+    let numbers = [42, 23, 31, 12]
+
+    // Check if the array contains 11.
+    let containsEleven = numbers.contains(11)
+    // `containsEleven` is `false`
+
+    // Check if the array contains 12.
+    let containsTwelve = numbers.contains(12)
+    // `containsTwelve` is `true`
+
+    // Invalid: Check if the array contains the string "Kitty".
+    // This results in a type error, as the array only contains integers.
+    //
+    let containsKitty = numbers.contains("Kitty")
+    ```
+
+#### Variable-size Array Functions
+
+The following functions can only be used on variable-sized arrays.
+It is invalid to use one of these functions on a fixed-sized array.
+
+-
+  ```cadence
+  fun append(_ element: T): Void
+  ```
+
+  Adds the new element `element` of type `T` to the end of the array.
+
+  The new element must be the same type as all the other elements in the array.
+
+    ```cadence
+    // Declare an array of integers.
+    let numbers = [42, 23, 31, 12]
+
+    // Add a new element to the array.
+    numbers.append(20)
+    // `numbers` is now `[42, 23, 31, 12, 20]`
+
+    // Invalid: The parameter has the wrong type `String`.
+    numbers.append("SneakyString")
+    ```
+
+-
+  ```cadence
+  fun insert(at index: Int, _ element: T): Void
+  ```
+
+  Inserts the new element `element` of type `T`
+  at the given `index` of the array.
+
+  The new element must be of the same type as the other elements in the array.
+
+  The `index` must be within the bounds of the array.
+  If the index is outside the bounds, the program aborts.
+
+  The existing element at the supplied index is not overwritten.
+
+  All the elements after the new inserted element
+  are shifted to the right by one.
+
+    ```cadence
+    // Declare an array of integers.
+    let numbers = [42, 23, 31, 12]
+
+    // Insert a new element at position 1 of the array.
+    numbers.insert(at: 1, 20)
+    // `numbers` is now `[42, 20, 23, 31, 12]`
+
+    // Run-time error: Out of bounds index, the program aborts.
+    numbers.insert(at: 12, 39)
+    ```
+
+-
+  ```cadence
+  fun remove(at index: Int): T
+  ```
+
+  Removes the element at the given `index` from the array and returns it.
+
+  The `index` must be within the bounds of the array.
+  If the index is outside the bounds, the program aborts.
+
+    ```cadence
+    // Declare an array of integers.
+    let numbers = [42, 23, 31]
+
+    // Remove element at position 1 of the array.
+    let twentyThree = numbers.remove(at: 1)
+    // `numbers` is now `[42, 31]`
+    // `twentyThree` is `23`
+
+    // Run-time error: Out of bounds index, the program aborts.
+    numbers.remove(at: 19)
+    ```
+
+-
+  ```cadence
+  fun removeFirst(): T
+  ```
+
+  Removes the first element from the array and returns it.
+
+  The array must not be empty.
+  If the array is empty, the program aborts.
+
+    ```cadence
+    // Declare an array of integers.
+    let numbers = [42, 23]
+
+    // Remove the first element of the array.
+    let fortytwo = numbers.removeFirst()
+    // `numbers` is now `[23]`
+    // `fortywo` is `42`
+
+    // Remove the first element of the array.
+    let twentyThree = numbers.removeFirst()
+    // `numbers` is now `[]`
+    // `twentyThree` is `23`
+
+    // Run-time error: The array is empty, the program aborts.
+    numbers.removeFirst()
+    ```
+
+-
+  ```cadence
+  fun removeLast(): T
+  ```
+
+  Removes the last element from the array and returns it.
+
+  The array must not be empty.
+  If the array is empty, the program aborts.
+
+    ```cadence
+    // Declare an array of integers.
+    let numbers = [42, 23]
+
+    // Remove the last element of the array.
+    let twentyThree = numbers.removeLast()
+    // `numbers` is now `[42]`
+    // `twentyThree` is `23`
+
+    // Remove the last element of the array.
+    let fortyTwo = numbers.removeLast()
+    // `numbers` is now `[]`
+    // `fortyTwo` is `42`
+
+    // Run-time error: The array is empty, the program aborts.
+    numbers.removeLast()
+    ```
+
+## Dictionaries
+
+Dictionaries are mutable, unordered collections of key-value associations.
+In a dictionary, all keys must have the same type,
+and all values must have the same type.
+Dictionaries may contain a key only once and
+may contain a value multiple times.
+
+Dictionary literals start with an opening brace `{`
+and end with a closing brace `}`.
+Keys are separated from values by a colon,
+and key-value associations are separated by commas.
+
+```cadence
+// An empty dictionary
+//
+{}
+
+// A dictionary which associates integers with booleans
+//
+{
+    1: true,
+    2: false
+}
+
+// Invalid: mixed types
+//
+{
+    1: true,
+    false: 2
+}
+```
+
+### Dictionary Types
+
+Dictionaries have the form `{K: V}`,
+where `K` is the type of the key,
+and `V` is the type of the value.
+For example, a dictionary with `Int` keys and `Bool`
+values has type `{Int: Bool}`.
+
+```cadence
+// Declare a constant that has type `{Int: Bool}`,
+// a dictionary mapping integers to booleans.
+//
+let booleans = {
+    1: true,
+    0: false
+}
+
+// Declare a constant that has type `{Bool: Int}`,
+// a dictionary mapping booleans to integers.
+//
+let integers = {
+    true: 1,
+    false: 0
+}
+```
+
+Dictionary types are covariant in their key and value types.
+For example, `[Int: String]` is a subtype of `[AnyStruct: String]`
+and also a subtype of `[Int: AnyStruct]`.
+This is safe because dictionaries are value types and not reference types.
+
+### Dictionary Access
+
+To get the value for a specific key from a dictionary,
+the access syntax can be used:
+The dictionary is followed by an opening square bracket `[`, the key,
+and ends with a closing square bracket `]`.
+
+Accessing a key returns an [optional](#optionals):
+If the key is found in the dictionary, the value for the given key is returned,
+and if the key is not found, `nil` is returned.
+
+```cadence
+// Declare a constant that has type `{Bool: Int}`,
+// a dictionary mapping integers to booleans.
+//
+let booleans = {
+    1: true,
+    0: false
+}
+
+// The result of accessing a key has type `Bool?`.
+//
+booleans[1]  // is `true`
+booleans[0]  // is `false`
+booleans[2]  // is `nil`
+
+// Invalid: Accessing a key which does not have type `Int`.
+//
+booleans["1"]
+```
+
+```cadence
+// Declare a constant that has type `{Bool: Int}`,
+// a dictionary mapping booleans to integers.
+//
+let integers = {
+    true: 1,
+    false: 0
+}
+
+// The result of accessing a key has type `Int?`
+//
+integers[true] // is `1`
+integers[false] // is `0`
+```
+
+To set the value for a key of a dictionary,
+the access syntax can be used as well.
+
+```cadence
+// Declare a constant that has type `{Int: Bool}`,
+// a dictionary mapping booleans to integers.
+//
+let booleans = {
+    1: true,
+    0: false
+}
+
+// Assign new values for the keys `1` and `0`.
+//
+booleans[1] = false
+booleans[0] = true
+// `booleans` is `{1: false, 0: true}`
+```
+
+### Dictionary Fields and Functions
+
+-
+  ```cadence
+  let length: Int
+  ```
+
+  The number of entries in the dictionary.
+
+    ```cadence
+    // Declare a dictionary mapping strings to integers.
+    let numbers = {"fortyTwo": 42, "twentyThree": 23}
+
+    // Find the number of entries of the dictionary.
+    let length = numbers.length
+
+    // `length` is `2`
+    ```
+
+-
+  ```cadence
+  fun insert(key: K, _ value: V): V?
+  ```
+
+  Inserts the given value of type `V` into the dictionary under the given `key` of type `K`.
+
+  Returns the previous value as an optional
+  if the dictionary contained the key,
+  otherwise `nil`.
+
+    ```cadence
+    // Declare a dictionary mapping strings to integers.
+    let numbers = {"twentyThree": 23}
+
+    // Insert the key `"fortyTwo"` with the value `42` into the dictionary.
+    // The key did not previously exist in the dictionary,
+    // so the result is `nil`
+    //
+    let old = numbers.insert(key: "fortyTwo", 42)
+
+    // `old` is `nil`
+    // `numbers` is `{"twentyThree": 23, "fortyTwo": 42}`
+    ```
+
+-
+  ```cadence
+  fun remove(key: K): V?
+  ```
+
+  Removes the value for the given `key` of type `K` from the dictionary.
+
+  Returns the value of type `V` as an optional
+  if the dictionary contained the key,
+  otherwise `nil`.
+
+    ```cadence
+    // Declare a dictionary mapping strings to integers.
+    let numbers = {"fortyTwo": 42, "twentyThree": 23}
+
+    // Remove the key `"fortyTwo"` from the dictionary.
+    // The key exists in the dictionary,
+    // so the value associated with the key is returned.
+    //
+    let fortyTwo = numbers.remove(key: "fortyTwo")
+
+    // `fortyTwo` is `42`
+    // `numbers` is `{"twentyThree": 23}`
+
+    // Remove the key `"oneHundred"` from the dictionary.
+    // The key does not exist in the dictionary, so `nil` is returned.
+    //
+    let oneHundred = numbers.remove(key: "oneHundred")
+
+    // `oneHundred` is `nil`
+    // `numbers` is `{"twentyThree": 23}`
+    ```
+
+-
+  ```cadence
+  let keys: [K]
+  ```
+
+  Returns an array of the keys of type `K` in the dictionary.  This does not
+  modify the dictionary, just returns a copy of the keys as an array.
+  If the dictionary is empty, this returns an empty array.
+
+    ```cadence
+    // Declare a dictionary mapping strings to integers.
+    let numbers = {"fortyTwo": 42, "twentyThree": 23}
+
+    // Find the keys of the dictionary.
+    let keys = numbers.keys
+
+    // `keys` has type `[String]` and is `["fortyTwo","twentyThree"]`
+    ```
+
+-
+  ```cadence
+  let values: [V]
+  ```
+
+  Returns an array of the values of type `V` in the dictionary.  This does not
+  modify the dictionary, just returns a copy of the values as an array.
+  If the dictionary is empty, this returns an empty array.
+
+  This field is not available if `V` is a resource type.
+
+    ```cadence
+    // Declare a dictionary mapping strings to integers.
+    let numbers = {"fortyTwo": 42, "twentyThree": 23}
+
+    // Find the values of the dictionary.
+    let values = numbers.values
+
+    // `values` has type [Int] and is `[42, 23]`
+    ```
+
+### Dictionary Keys
+
+Dictionary keys must be hashable and equatable,
+i.e., must implement the [`Hashable`](#hashable-interface)
+and [`Equatable`](#equatable-interface) [interfaces](#interfaces).
+
+Most of the built-in types, like booleans and integers,
+are hashable and equatable, so can be used as keys in dictionaries.
+
+# Operators
+
+Operators are special symbols that perform a computation
+for one or more values.
+They are either unary, binary, or ternary.
+
+- Unary operators perform an operation for a single value.
+  The unary operator symbol appears before the value.
+
+- Binary operators operate on two values.
+    The binary operator symbol appears between the two values (infix).
+
+- Ternary operators operate on three values.
+  The first operator symbol appears between the first and second value,
+  the second operator symbol appears between the second and third value (infix).
+
+## Negation
+
+The `-` unary operator negates an integer:
+
+```cadence
+let a = 1
+-a  // is `-1`
+```
+
+The `!` unary operator logically negates a boolean:
+
+```cadence
+let a = true
+!a  // is `false`
+```
+
+## Assignment
+
+The binary assignment operator `=` can be used
+to assign a new value to a variable.
+It is only allowed in a statement and is not allowed in expressions.
+
+```cadence
+var a = 1
+a = 2
+// `a` is `2`
+
+
+var b = 3
+var c = 4
+
+// Invalid: The assignment operation cannot be used in an expression.
+a = b = c
+
+// Instead, the intended assignment must be written in multiple statements.
+b = c
+a = b
+```
+
+Assignments to constants are invalid.
+
+```cadence
+let a = 1
+// Invalid: Assignments are only for variables, not constants.
+a = 2
+```
+
+The left-hand side of the assignment operand must be an identifier.
+For arrays and dictionaries, this identifier can be followed
+by one or more index or access expressions.
+
+```cadence
+// Declare an array of integers.
+let numbers = [1, 2]
+
+// Change the first element of the array.
+//
+numbers[0] = 3
+
+// `numbers` is `[3, 2]`
+```
+
+```cadence
+// Declare an array of arrays of integers.
+let arrays = [[1, 2], [3, 4]]
+
+// Change the first element in the second array
+//
+arrays[1][0] = 5
+
+// `arrays` is `[[1, 2], [5, 4]]`
+```
+
+```cadence
+let dictionaries = {
+  true: {1: 2},
+  false: {3: 4}
+}
+
+dictionaries[false][3] = 0
+
+// `dictionaries` is `{
+//   true: {1: 2},
+//   false: {3: 0}
+//}`
+```
+
+## Swapping
+
+The binary swap operator `<->` can be used
+to exchange the values of two variables.
+It is only allowed in a statement and is not allowed in expressions.
+
+```cadence
+var a = 1
+var b = 2
+a <-> b
+// `a` is `2`
+// `b` is `1`
+
+var c = 3
+
+// Invalid: The swap operation cannot be used in an expression.
+a <-> b <-> c
+
+// Instead, the intended swap must be written in multiple statements.
+b <-> c
+a <-> b
+```
+
+Both sides of the swap operation must be variable,
+assignment to constants is invalid.
+
+```cadence
+var a = 1
+let b = 2
+
+// Invalid: Swapping is only possible for variables, not constants.
+a <-> b
+```
+
+Both sides of the swap operation must be an identifier,
+followed by one or more index or access expressions.
+
+## Arithmetic
+
+There are four arithmetic operators:
+
+- Addition: `+`
+- Subtraction: `-`
+- Multiplication: `*`
+- Division: `/`
+- Remainder: `%`
+
+```cadence
+let a = 1 + 2
+// `a` is `3`
+```
+
+The arguments for the operators need to be of the same type.
+The result is always the same type as the arguments.
+
+The division and remainder operators abort the program when the divisor is zero.
+
+Arithmetic operations on the signed integer types
+`Int8`, `Int16`, `Int32`, `Int64`, `Int128`, `Int256`,
+and on the unsigned integer types
+`UInt8`, `UInt16`, `UInt32`, `UInt64`, `UInt128`, `UInt256`,
+do not cause values to overflow or underflow.
+
+```cadence
+let a: UInt8 = 255
+
+// Run-time error: The result `256` does not fit in the range of `UInt8`,
+// thus a fatal overflow error is raised and the program aborts
+//
+let b = a + 1
+```
+
+```cadence
+let a: Int8 = 100
+let b: Int8 = 100
+
+// Run-time error: The result `10000` does not fit in the range of `Int8`,
+// thus a fatal overflow error is raised and the program aborts
+//
+let c = a * b
+```
+
+```cadence
+let a: Int8 = -128
+
+// Run-time error: The result `128` does not fit in the range of `Int8`,
+// thus a fatal overflow error is raised and the program aborts
+//
+let b = -a
+```
+
+Arithmetic operations on the unsigned integer types
+`Word8`, `Word16`, `Word32`, `Word64`
+may cause values to overflow or underflow.
+
+For example, the maximum value of an unsigned 8-bit integer is 255 (binary 11111111).
+Adding 1 results in an overflow, truncation to 8 bits, and the value 0.
+
+```cadence
+//    11111111 = 255
+// +         1
+// = 100000000 = 0
+```
+
+```cadence
+let a: Word8 = 255
+a + 1 // is `0`
+```
+
+Similarly, for the minimum value 0,
+subtracting 1 wraps around and results in the maximum value 255.
+
+```cadence
+//    00000000
+// -         1
+// =  11111111 = 255
+```
+
+```cadence
+let b: Word8 = 0
+b - 1  // is `255`
+```
+
+## Logical Operators
+
+Logical operators work with the boolean values `true` and `false`.
+
+- Logical AND: `a && b`
+
+    ```cadence
+    true && true  // is `true`
+
+    true && false  // is `false`
+
+    false && true  // is `false`
+
+    false && false  // is `false`
+    ```
+
+    If the left-hand side is false, the right-hand side is not evaluated.
+
+- Logical OR: `a || b`
+
+    ```cadence
+    true || true  // is `true`
+
+    true || false  // is `true`
+
+    false || true  // is `true`
+
+    false || false // is `false`
+    ```
+
+    If the left-hand side is true, the right-hand side is not evaluated.
+
+## Comparison operators
+
+Comparison operators work with boolean and integer values.
+
+- Equality: `==`, for booleans and integers
+
+    Both sides of the equality operator may be optional, even of different levels,
+    so it is for example possible to compare a non-optional with a double-optional (`??`).
+
+    ```cadence
+    1 == 1  // is `true`
+
+    1 == 2  // is `false`
+    ```
+
+    ```cadence
+    true == true  // is `true`
+
+    true == false  // is `false`
+    ```
+
+    ```cadence
+    let x: Int? = 1
+    x == nil  // is `false`
+    ```
+
+    ```cadence
+    let x: Int = 1
+    x == nil  // is `false`
+    ```
+
+    ```cadence
+    // Comparisons of different levels of optionals are possible.
+    let x: Int? = 2
+    let y: Int?? = nil
+    x == y  // is `false`
+    ```
+
+    ```cadence
+    // Comparisons of different levels of optionals are possible.
+    let x: Int? = 2
+    let y: Int?? = 2
+    x == y  // is `true`
+    ```
+
+- Inequality: `!=`, for booleans and integers (possibly optional)
+
+    Both sides of the inequality operator may be optional, even of different levels,
+    so it is for example possible to compare a non-optional with a double-optional (`??`).
+
+    ```cadence
+    1 != 1  // is `false`
+
+    1 != 2  // is `true`
+    ```
+
+    ```cadence
+    true != true  // is `false`
+
+    true != false  // is `true`
+    ```
+
+    ```cadence
+    let x: Int? = 1
+    x != nil  // is `true`
+    ```
+
+    ```cadence
+    let x: Int = 1
+    x != nil  // is `true`
+    ```
+
+    ```cadence
+    // Comparisons of different levels of optionals are possible.
+    let x: Int? = 2
+    let y: Int?? = nil
+    x != y  // is `true`
+    ```
+
+    ```cadence
+    // Comparisons of different levels of optionals are possible.
+    let x: Int? = 2
+    let y: Int?? = 2
+    x != y  // is `false`
+    ```
+
+- Less than: `<`, for integers
+
+    ```cadence
+    1 < 1  // is `false`
+
+    1 < 2  // is `true`
+
+    2 < 1  // is `false`
+    ```
+
+- Less or equal than: `<=`, for integers
+
+    ```cadence
+    1 <= 1  // is `true`
+
+    1 <= 2  // is `true`
+
+    2 <= 1  // is `false`
+    ```
+
+- Greater than: `>`, for integers
+
+    ```cadence
+    1 > 1  // is `false`
+
+    1 > 2  // is `false`
+
+    2 > 1  // is `true`
+    ```
+
+- Greater or equal than: `>=`, for integers
+
+    ```cadence
+    1 >= 1  // is `true`
+
+    1 >= 2  // is `false`
+
+    2 >= 1  // is `true`
+    ```
+
+## Ternary Conditional Operator
+
+There is only one ternary conditional operator, the ternary conditional operator (`a ? b : c`).
+
+It behaves like an if-statement, but is an expression:
+If the first operator value is true, the second operator value is returned.
+If the first operator value is false, the third value is returned.
+
+The first value must be a boolean (must have the type `Bool`).
+The second value and third value can be of any type.
+The result type is the least common supertype of the second and third value.
+
+```cadence
+let x = 1 > 2 ? 3 : 4
+// `x` is `4` and has type `Int`
+
+let y = 1 > 2 ? nil : 3
+// `y` is `3` and has type `Int?`
+```
+
+## Precedence and Associativity
+
+Operators have the following precedences, highest to lowest:
+
+- Multiplication precedence: `*`, `&*`, `/`, `%`
+- Addition precedence: `+`, `&+`, `-`, `&-`
+- Relational precedence: `<`, `<=`, `>`, `>=`
+- Equality precedence: `==`, `!=`
+- Logical conjunction precedence: `&&`
+- Logical disjunction precedence: `||`
+- Ternary precedence: `? :`
+
+All operators are left-associative, except for the ternary operator, which is right-associative.
+
+Expressions can be wrapped in parentheses to override precedence conventions,
+i.e. an alternate order should be indicated, or when the default order should be emphasized
+e.g. to avoid confusion.
+For example, `(2 + 3) * 4` forces addition to precede multiplication,
+and `5 + (6 * 7)` reinforces the default order.

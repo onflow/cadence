@@ -1,0 +1,680 @@
+## Interfaces
+
+An interface is an abstract type that specifies the behavior of types
+that *implement* the interface.
+Interfaces declare the required functions and fields,
+the access control for those declarations,
+and preconditions and postconditions that implementing types need to provide.
+
+There are three kinds of interfaces:
+
+- **Structure interfaces**: implemented by [structures](#structures)
+- **Resource interfaces**: implemented by [resources](#resources)
+- **Contract interfaces**: implemented by [contracts](#contracts)
+
+Structure, resource, and contract types may implement multiple interfaces.
+
+Nominal typing applies to composite types that implement interfaces.
+This means that a type only implements an interface
+if it has explicitly declared it.
+
+Interfaces consist of the function and field requirements
+that a type implementing the interface must provide implementations for.
+Interface requirements, and therefore also their implementations,
+must always be at least public.
+
+Variable field requirements may be annotated
+to require them to be publicly settable.
+
+Function requirements consist of the name of the function,
+parameter types, an optional return type,
+and optional preconditions and postconditions.
+
+Field requirements consist of the name and the type of the field.
+Field requirements may optionally declare a getter requirement and a setter requirement,
+each with preconditions and postconditions.
+
+Calling functions with preconditions and postconditions on interfaces
+instead of concrete implementations can improve the security of a program,
+as it ensures that even if implementations change,
+some aspects of them will always hold.
+
+### Interface Declaration
+
+Interfaces are declared using the `struct`, `resource`, or `contract` keyword,
+followed by the `interface` keyword,
+the name of the interface,
+and the requirements, which must be enclosed in opening and closing braces.
+
+Field requirements can be annotated to
+require the implementation to be a variable field, by using the `var` keyword;
+require the implementation to be a constant field, by using the `let` keyword;
+or the field requirement may specify nothing,
+in which case the implementation may either be
+a variable field, a constant field, or a synthetic field.
+
+Field requirements and function requirements must specify the required level of access.
+The access must be at least be public, so the `pub` keyword must be provided.
+Variable field requirements can be specified to also be publicly settable
+by using the `pub(set)` keyword.
+
+Interfaces can be used in types.
+This is explained in detail in the section [Interfaces in Types](#interfaces-in-types).
+For now, the syntax `{I}` can be read as the type of any value that implements the interface `I`.
+
+```cadence
+// Declare a resource interface for a fungible token.
+// Only resources can implement this resource interface.
+//
+pub resource interface FungibleToken {
+
+    // Require the implementing type to provide a field for the balance
+    // that is readable in all scopes (`pub`).
+    //
+    // Neither the `var` keyword, nor the `let` keyword is used,
+    // so the field may be implemented as either a variable field,
+    // a constant field, or a synthetic field.
+    //
+    // The read balance must always be positive.
+    //
+    // NOTE: no requirement is made for the kind of field,
+    // it can be either variable or constant in the implementation.
+    //
+    pub balance: Int {
+        set(newBalance) {
+            pre {
+                newBalance >= 0:
+                    "Balances are always set as non-negative numbers"
+            }
+        }
+    }
+
+    // Require the implementing type to provide an initializer that
+    // given the initial balance, must initialize the balance field.
+    //
+    init(balance: Int) {
+        pre {
+            balance >= 0:
+                "Balances are always non-negative"
+        }
+        post {
+            self.balance == balance:
+                "the balance must be initialized to the initial balance"
+        }
+
+        // NOTE: The declaration contains no implementation code.
+    }
+
+    // Require the implementing type to provide a function that is
+    // callable in all scopes, which withdraws an amount from
+    // this fungible token and returns the withdrawn amount as
+    // a new fungible token.
+    //
+    // The given amount must be positive and the function implementation
+    // must add the amount to the balance.
+    //
+    // The function must return a new fungible token.
+    // The type `{FungibleToken}` is the type of any resource
+    // that implements the resource interface `FungibleToken`.
+    //
+    pub fun withdraw(amount: Int): @{FungibleToken} {
+        pre {
+            amount > 0:
+                "the amount must be positive"
+            amount <= self.balance:
+                "insufficient funds: the amount must be smaller or equal to the balance"
+        }
+        post {
+            self.balance == before(self.balance) - amount:
+                "the amount must be deducted from the balance"
+        }
+
+        // NOTE: The declaration contains no implementation code.
+    }
+
+    // Require the implementing type to provide a function that is
+    // callable in all scopes, which deposits a fungible token
+    // into this fungible token.
+    //
+    // No precondition is required to check the given token's balance
+    // is positive, as this condition is already ensured by
+    // the field requirement.
+    //
+    // The parameter type `{FungibleToken}` is the type of any resource
+    // that implements the resource interface `FungibleToken`.
+    //
+    pub fun deposit(_ token: @{FungibleToken}) {
+        post {
+            self.balance == before(self.balance) + token.balance:
+                "the amount must be added to the balance"
+        }
+
+        // NOTE: The declaration contains no implementation code.
+    }
+}
+```
+
+Note that the required initializer and functions do not have any executable code.
+
+Struct and resource Interfaces can only be declared directly inside contracts,
+i.e. not inside of functions.
+Contract interfaces can only be declared globally and not inside contracts.
+
+### Interface Implementation
+
+Declaring that a type implements (conforms) to an interface
+is done in the type declaration of the composite type (e.g., structure, resource):
+The kind and the name of the composite type is followed by a colon (`:`)
+and the name of one or more interfaces that the composite type implements.
+
+This will tell the checker to enforce any requirements from the specified interfaces
+onto the declared type.
+
+A type implements (conforms to) an interface if it declares
+the implementation in its signature, provides field declarations
+for all fields required by the interface,
+and provides implementations for all functions required by the interface.
+
+The field declarations in the implementing type must match the field requirements
+in the interface in terms of name, type, and declaration kind (e.g. constant, variable)
+if given. For example, an interface may require a field with a certain name and type,
+but leaves it to the implementation what kind the field is.
+
+The function implementations must match the function requirements in the interface
+in terms of name, parameter argument labels, parameter types, and the return type.
+
+```cadence
+// Declare a resource named `ExampleToken` that has to implement
+// the `FungibleToken` interface.
+//
+// It has a variable field named `balance`, that can be written
+// by functions of the type, but outer scopes can only read it.
+//
+pub resource ExampleToken: FungibleToken {
+
+    // Implement the required field `balance` for the `FungibleToken` interface.
+    // The interface does not specify if the field must be variable, constant,
+    // so in order for this type (`ExampleToken`) to be able to write to the field,
+    // but limit outer scopes to only read from the field, it is declared variable,
+    // and only has public access (non-settable).
+    //
+    pub var balance: Int
+
+    // Implement the required initializer for the `FungibleToken` interface:
+    // accept an initial balance and initialize the `balance` field.
+    //
+    // This implementation satisfies the required postcondition.
+    //
+    // NOTE: the postcondition declared in the interface
+    // does not have to be repeated here in the implementation.
+    //
+    init(balance: Int) {
+        self.balance = balance
+    }
+
+    // Implement the required function named `withdraw` of the interface
+    // `FungibleToken`, that withdraws an amount from the token's balance.
+    //
+    // The function must be public.
+    //
+    // This implementation satisfies the required postcondition.
+    //
+    // NOTE: neither the precondition nor the postcondition declared
+    // in the interface have to be repeated here in the implementation.
+    //
+    pub fun withdraw(amount: Int): @ExampleToken {
+        self.balance = self.balance - amount
+        return create ExampleToken(balance: amount)
+    }
+
+    // Implement the required function named `deposit` of the interface
+    // `FungibleToken`, that deposits the amount from the given token
+    // to this token.
+    //
+    // The function must be public.
+    //
+    // NOTE: the type of the parameter is `{FungibleToken}`,
+    // i.e., any resource that implements the resource interface `FungibleToken`,
+    // so any other token – however, we want to ensure that only tokens
+    // of the same type can be deposited.
+    //
+    // This implementation satisfies the required postconditions.
+    //
+    // NOTE: neither the precondition nor the postcondition declared
+    // in the interface have to be repeated here in the implementation.
+    //
+    pub fun deposit(_ token: @{FungibleToken}) {
+        if let exampleToken = token as? ExampleToken {
+            self.balance = self.balance + exampleToken.balance
+            destroy exampleToken
+        } else {
+            panic("cannot deposit token which is not an example token")
+        }
+    }
+}
+
+// Declare a constant which has type `ExampleToken`,
+// and is initialized with such an example token.
+//
+let token <- create ExampleToken(balance: 100)
+
+// Withdraw 10 units from the token.
+//
+// The amount satisfies the precondition of the `withdraw` function
+// in the `FungibleToken` interface.
+//
+// Invoking a function of a resource does not destroy the resource,
+// so the resource `token` is still valid after the call of `withdraw`.
+//
+let withdrawn <- token.withdraw(amount: 10)
+
+// The postcondition of the `withdraw` function in the `FungibleToken`
+// interface ensured the balance field of the token was updated properly.
+//
+// `token.balance` is `90`
+// `withdrawn.balance` is `10`
+
+// Deposit the withdrawn token into another one.
+let receiver: @ExampleToken <- // ...
+receiver.deposit(<-withdrawn)
+
+// Run-time error: The precondition of function `withdraw` in interface
+// `FungibleToken` fails, the program aborts: the parameter `amount`
+// is larger than the field `balance` (100 > 90).
+//
+token.withdraw(amount: 100)
+
+// Withdrawing tokens so that the balance is zero does not destroy the resource.
+// The resource has to be destroyed explicitly.
+//
+token.withdraw(amount: 90)
+```
+
+The access level for variable fields in an implementation
+may be less restrictive than the interface requires.
+For example, an interface may require a field to be
+at least public (i.e. the `pub` keyword is specified),
+and an implementation may provide a variable field which is public,
+but also publicly settable (the `pub(set)` keyword is specified).
+
+```cadence
+pub struct interface AnInterface {
+    // Require the implementing type to provide a publicly readable
+    // field named `a` that has type `Int`. It may be a constant field,
+    // a variable field, or a synthetic field.
+    //
+    pub a: Int
+}
+
+pub struct AnImplementation: AnInterface {
+    // Declare a publicly settable variable field named `a` that has type `Int`.
+    // This implementation satisfies the requirement for interface `AnInterface`:
+    // The field is at least publicly readable, but this implementation also
+    // allows the field to be written to in all scopes.
+    //
+    pub(set) var a: Int
+
+    init(a: Int) {
+        self.a = a
+    }
+}
+```
+
+### Interfaces in Types
+
+Interfaces can be used in types: The type `{I}` is the type of all objects
+that implement the interface `I`.
+
+This is called a [restricted type](#restricted-types):
+Only the functionality (members and functions) of the interface can be used
+when accessing a value of such a type.
+
+```cadence
+// Declare an interface named `Shape`.
+//
+// Require implementing types to provide a field which returns the area,
+// and a function which scales the shape by a given factor.
+//
+pub struct interface Shape {
+    pub fun getArea(): Int
+    pub fun scale(factor: Int)
+}
+
+// Declare a structure named `Square` the implements the `Shape` interface.
+//
+pub struct Square: Shape {
+    // In addition to the required fields from the interface,
+    // the type can also declare additional fields.
+    //
+    pub var length: Int
+
+    // Provided the field `area`  which is required to conform
+    // to the interface `Shape`.
+    //
+    // Since `area` was not declared as a constant, variable,
+    // field in the interface, it can be declared.
+    //
+    pub fun getArea(): Int {
+        return self.length * self.length
+    }
+
+    pub init(length: Int) {
+        self.length = length
+    }
+
+    // Provided the implementation of the function `scale`
+    // which is required to conform to the interface `Shape`.
+    //
+    pub fun scale(factor: Int) {
+        self.length = self.length * factor
+    }
+}
+
+// Declare a structure named `Rectangle` that also implements the `Shape` interface.
+//
+pub struct Rectangle: Shape {
+    pub var width: Int
+    pub var height: Int
+
+    // Provided the field `area  which is required to conform
+    // to the interface `Shape`.
+    //
+    pub fun getArea(): Int {
+        return self.width * self.height
+    }
+
+    pub init(width: Int, height: Int) {
+        self.width = width
+        self.height = height
+    }
+
+    // Provided the implementation of the function `scale`
+    // which is required to conform to the interface `Shape`.
+    //
+    pub fun scale(factor: Int) {
+        self.width = self.width * factor
+        self.height = self.height * factor
+    }
+}
+
+// Declare a constant that has type `Shape`, which has a value that has type `Rectangle`.
+//
+var shape: {Shape} = Rectangle(width: 10, height: 20)
+```
+
+Values implementing an interface are assignable to variables that have the interface as their type.
+
+```cadence
+// Assign a value of type `Square` to the variable `shape` that has type `Shape`.
+//
+shape = Square(length: 30)
+
+// Invalid: cannot initialize a constant that has type `Rectangle`.
+// with a value that has type `Square`.
+//
+let rectangle: Rectangle = Square(length: 10)
+```
+
+Fields declared in an interface can be accessed
+and functions declared in an interface
+can be called on values of a type that implements the interface.
+
+```cadence
+// Declare a constant which has the type `Shape`.
+// and is initialized with a value that has type `Rectangle`.
+//
+let shape: {Shape} = Rectangle(width: 2, height: 3)
+
+// Access the field `area` declared in the interface `Shape`.
+//
+shape.area  // is `6`
+
+// Call the function `scale` declared in the interface `Shape`.
+//
+shape.scale(factor: 3)
+
+shape.area  // is `54`
+```
+
+### Interface Implementation Requirements
+
+Interfaces can require implementing types
+to also implement other interfaces of the same kind.
+Interface implementation requirements can be declared
+by following the interface name with a colon (`:`)
+and one or more names of interfaces of the same kind, separated by commas.
+
+```cadence
+// Declare a structure interface named `Shape`.
+//
+pub struct interface Shape {}
+
+// Declare a structure interface named `Polygon`.
+// Require implementing types to also implement the structure interface `Shape`.
+//
+pub struct interface Polygon: Shape {}
+
+// Declare a structure named `Hexagon` that implements the `Polygon` interface.
+// This also is required to implement the `Shape` interface,
+// because the `Polygon` interface requires it.
+//
+pub struct Hexagon: Polygon {}
+```
+
+### Interface Nesting
+
+> 🚧 Status: Currently only contracts and contract interfaces support nested interfaces.
+
+Interfaces can be arbitrarily nested.
+Declaring an interface inside another does not require implementing types
+of the outer interface to provide an implementation of the inner interfaces.
+
+```cadence
+// Declare a resource interface `OuterInterface`, which declares
+// a nested structure interface named `InnerInterface`.
+//
+// Resources implementing `OuterInterface` do not need to provide
+// an implementation of `InnerInterface`.
+//
+// Structures may just implement `InnerInterface`.
+//
+resource interface OuterInterface {
+
+    struct interface InnerInterface {}
+}
+
+// Declare a resource named `SomeOuter` that implements the interface `OuterInterface`
+//
+// The resource is not required to implement `OuterInterface.InnerInterface`.
+//
+resource SomeOuter: OuterInterface {}
+
+// Declare a structure named `SomeInner` that implements `InnerInterface`,
+// which is nested in interface `OuterInterface`.
+//
+struct SomeInner: OuterInterface.InnerInterface {}
+
+```
+
+### Nested Type Requirements
+
+> 🚧 Status: Currently only contracts and contract interfaces support nested type requirements.
+
+Interfaces can require implementing types to provide concrete nested types.
+For example, a resource interface may require an implementing type to provide a resource type.
+
+```cadence
+// Declare a resource interface named `FungibleToken`.
+//
+// Require implementing types to provide a resource type named `Vault`
+// which must have a field named `balance`.
+//
+resource interface FungibleToken {
+
+    pub resource Vault {
+        pub balance: Int
+    }
+}
+
+// Declare a resource named `ExampleToken` that implements the `FungibleToken` interface.
+//
+// The nested type `Vault` must be provided to conform to the interface.
+//
+resource ExampleToken: FungibleToken {
+
+    pub resource Vault {
+        pub var balance: Int
+
+        init(balance: Int) {
+            self.balance = balance
+        }
+    }
+}
+```
+
+### `Equatable` Interface
+
+> 🚧 Status: The `Equatable` interface is not implemented yet.
+
+An equatable type is a type that can be compared for equality.
+Types are equatable when they  implement the `Equatable` interface.
+
+Equatable types can be compared for equality using the equals operator (`==`)
+or inequality using the unequals operator (`!=`).
+
+Most of the built-in types are equatable, like booleans and integers.
+Arrays are equatable when their elements are equatable.
+Dictionaries are equatable when their values are equatable.
+
+To make a type equatable the `Equatable` interface must be implemented,
+which requires the implementation of the function `equals`,
+which accepts another value that the given value should be compared for equality.
+
+```cadence
+struct interface Equatable {
+    pub fun equals(_ other: {Equatable}): Bool
+}
+```
+
+```cadence
+// Declare a struct named `Cat`, which has one field named `id`
+// that has type `Int`, i.e., the identifier of the cat.
+//
+// `Cat` also will implement the interface `Equatable`
+// to allow cats to be compared for equality.
+//
+struct Cat: Equatable {
+    pub let id: Int
+
+    init(id: Int) {
+        self.id = id
+    }
+
+    pub fun equals(_ other: {Equatable}): Bool {
+        if let otherCat = other as? Cat {
+            // Cats are equal if their identifier matches.
+            //
+            return otherCat.id == self.id
+        } else {
+            return false
+        }
+    }
+}
+
+Cat(1) == Cat(2)  // is `false`
+Cat(3) == Cat(3)  // is `true`
+```
+
+### `Hashable` Interface
+
+> 🚧 Status: The `Hashable` interface is not implemented yet.
+
+A hashable type is a type that can be hashed to an integer hash value,
+i.e., it is distilled into a value that is used as evidence of inequality.
+Types are hashable when they implement the `Hashable` interface.
+
+Hashable types can be used as keys in dictionaries.
+
+Hashable types must also be equatable,
+i.e., they must also implement the `Equatable` interface.
+This is because the hash value is only evidence for inequality:
+two values that have different hash values are guaranteed to be unequal.
+However, if the hash values of two values are the same,
+then the two values could still be unequal
+and just happen to hash to the same hash value.
+In that case equality still needs to be determined through an equality check.
+Without `Equatable`, values could be added to a dictionary,
+but it would not be possible to retrieve them.
+
+Most of the built-in types are hashable, like booleans and integers.
+Arrays are hashable when their elements are hashable.
+Dictionaries are hashable when their values are equatable.
+
+Hashing a value means passing its essential components into a hash function.
+Essential components are those that are used in the type's implementation of `Equatable`.
+
+If two values are equal because their `equals` function returns true,
+then the implementation must return the same integer hash value for each of the two values.
+
+The implementation must also consistently return the same integer hash value during the execution
+of the program when the essential components have not changed.
+The integer hash value must not necessarily be the same across multiple executions.
+
+```cadence
+struct interface Hashable: Equatable {
+    pub hashValue: Int
+}
+```
+
+```cadence
+// Declare a structure named `Point` with two fields
+// named `x` and `y` that have type `Int`.
+//
+// `Point` is declared to implement the `Hashable` interface,
+// which also means it needs to implement the `Equatable` interface.
+//
+struct Point: Hashable {
+
+    pub(set) var x: Int
+    pub(set) var y: Int
+
+    init(x: Int, y: Int) {
+        self.x = x
+        self.y = y
+    }
+
+    // Implementing the function `equals` will allow points to be compared
+    // for equality and satisfies the `Equatable` interface.
+    //
+    pub fun equals(_ other: {Equatable}): Bool {
+        if let otherPoint = other as? Point {
+            // Points are equal if their coordinates match.
+            //
+            // The essential components are therefore the fields `x` and `y`,
+            // which must be used in the implementation of the field requirement
+            // `hashValue` of the `Hashable` interface.
+            //
+            return otherPoint.x == self.x
+                && otherPoint.y == self.y
+        } else {
+            return false
+        }
+    }
+
+    // Providing an implementation for the hash value field
+    // satisfies the `Hashable` interface.
+    //
+    pub synthetic hashValue: Int {
+        get {
+            // Calculate a hash value based on the essential components,
+            // the fields `x` and `y`.
+            //
+            var hash = 7
+            hash = 31 * hash + self.x
+            hash = 31 * hash + self.y
+            return hash
+        }
+    }
+}
+```
+
