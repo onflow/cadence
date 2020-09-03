@@ -1349,7 +1349,7 @@ booleans[0] = true
 
 Dictionary keys must be hashable and equatable,
 i.e., must implement the [`Hashable`](#hashable-interface)
-and [`Equatable`](#equatable-interface) [interfaces](interfaces).
+and [`Equatable`](#equatable-interface) [interfaces](../interfaces).
 
 Most of the built-in types, like booleans and integers,
 are hashable and equatable, so can be used as keys in dictionaries.

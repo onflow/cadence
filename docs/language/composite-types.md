@@ -8,7 +8,7 @@ Composite types have a name and consist of zero or more named fields,
 and zero or more functions that operate on the data.
 Each field may have a different type.
 
-Composite types can only be declared within a [contract](contracts) and nowhere else.
+Composite types can only be declared within a [contract](../contracts) and nowhere else.
 
 There are two kinds of composite types.
 The kinds differ in their usage and the behaviour
@@ -77,7 +77,7 @@ let a = SomeStruct()
 The constructor function may require parameters if the [initializer](#composite-type-fields)
 of the composite type requires them.
 
-Composite types can only be declared within [contracts](contracts)
+Composite types can only be declared within [contracts](../contracts)
 and not locally in functions.
 They can also not be nested.
 
@@ -152,8 +152,8 @@ that is to be initialized.
 Field types must be storable. Non-storable types are:
 
 - Functions
-- [Accounts (`AuthAccount` / `PublicAccount`)](accounts)
-- [Transactions](transactions)
+- [Accounts (`AuthAccount` / `PublicAccount`)(../accounts)
+- [Transactions](../transactions)
 
 Fields can be read (if they are constant or variable) and set (if they are variable),
 using the access syntax: the composite value is followed by a dot (`.`)
@@ -239,7 +239,7 @@ token.id = 23
 ## Resource Owner
 
 Resources have the implicit field `let owner: PublicAccount?`.
-If the resource is currently [stored in an account](accounts#account-storage),
+If the resource is currently [stored in an account](../accounts#account-storage),
 then the field contains the publicly accessible portion of the account.
 Otherwise the field is `nil`.
 
@@ -1309,4 +1309,4 @@ In addition, abstract types may declare functions,
 but omit the implementation of them
 and instead require subtypes to implement them.
 
-Instead, consider using [interfaces](interfaces).
+Instead, consider using [interfaces](../interfaces).
