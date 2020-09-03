@@ -946,7 +946,7 @@ pub fun alwaysUse(resource: @SomeResource, destroyResource: Bool) {
 // This function is invalid, because it does not always use the resource parameter,
 // which would cause a loss of the resource.
 //
-pub fun returnBeforeDestroy(: Bool) {
+pub fun returnBeforeDestroy(move: Bool) {
     let res <- create SomeResource(value: 1)
     if move {
         use(resource: <-res)
