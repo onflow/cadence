@@ -88,4 +88,3 @@ let maybeSomething = nil
 //
 let maybeSomething: Int? = nil
 ```
-

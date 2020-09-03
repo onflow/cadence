@@ -36,7 +36,7 @@ let smallIntegerWithAnnotation: Int8 = 1
 
 If a type annotation is provided, the initial value must be of this type.
 All new values assigned to variables must match its type.
-This type safety is explained in more detail in a [separate section](language/type-safety).
+This type safety is explained in more detail in a [separate section](type-safety).
 
 ```cadence
 // Invalid: declare a variable with an explicit type `Bool`,

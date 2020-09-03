@@ -2,7 +2,7 @@
 title: Transactions
 ---
 
-Transactions are objects that are signed by one or more [accounts](#accounts)
+Transactions are objects that are signed by one or more [accounts](accounts)
 and are sent to the chain to interact with it.
 
 Transactions are structured as such:
@@ -61,7 +61,7 @@ Although optional, each phase serves a specific purpose when executing a transac
 and it is recommended that developers use these phases when creating their transactions.
 The following will detail the purpose of and how to use each phase.
 
-### Transaction Parameters
+## Transaction Parameters
 
 Transactions may declare parameters.
 Transaction parameters are declared like function parameters.
@@ -78,7 +78,7 @@ transaction(amount: UFix64) {
 }
 ```
 
-### Prepare phase
+## Prepare phase
 
 The `prepare` phase is used when access to the private `AuthAccount` object
 of **signing accounts** is required for your transaction.
@@ -113,7 +113,7 @@ of the account, which cannot be directly accessed anywhere else.
 They also have the permission to create and delete capabilities that
 use these areas.
 
-### Pre Phase
+## Pre Phase
 
 The `pre` phase is executed after the `prepare` phase, and is used for checking
 if explicit conditions hold before executing the remainder of the transaction.
@@ -128,7 +128,7 @@ pre {
 If the `pre` phase throws an error, or does not return `true` the remainder of the transaction
 is not executed and it will be completely reverted.
 
-### Execute Phase
+## Execute Phase
 
 The `execute` phase does exactly what it says, it executes the main logic of the transaction.
 This phase is optional, but it is a best practice to add your main transaction logic in the section,
@@ -151,7 +151,7 @@ but you may get an account's `PublicAccount` object,
 which allows reading and calling methods on objects
 that an account has published in the public domain of its account (resources, contract methods, etc.).
 
-### Post Phase
+## Post Phase
 
 Statements inside of the `post` phase are used
 to verify that your transaction logic has been executed properly.
@@ -183,7 +183,7 @@ in the software they are using,
 e.g. "this transaction will transfer 30 tokens from A to B.
 The balance of A will decrease by 30 tokens and the balance of B will increase by 30 tokens."
 
-### Summary
+## Summary
 
 Cadence transactions use phases to make the transaction's code / intent more readable
 and to provide a way for developer to separate potentially 'unsafe' account

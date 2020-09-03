@@ -119,4 +119,3 @@ counterRef3.increment()
 
 counterRef3.count  // is `44`
 ```
-

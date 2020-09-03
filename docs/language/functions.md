@@ -10,7 +10,7 @@ Functions are values, i.e., they can be assigned to constants and variables,
 and can be passed as arguments to other functions.
 This behavior is often called "first-class functions".
 
-### Function Declarations
+## Function Declarations
 
 Functions can be declared by using the `fun` keyword, followed by the name of the declaration,
  the parameters, the optional return type,
@@ -202,7 +202,7 @@ fun doubleAndAddOne(_ x: Int): Int {
 doubleAndAddOne(2)  // is `5`
 ```
 
-### Function overloading
+## Function overloading
 
 > 🚧 Status: Function overloading is not implemented.
 
@@ -226,7 +226,7 @@ fun assert(_ test: Bool) {
 }
 ```
 
-### Function Expressions
+## Function Expressions
 
 Functions can be also used as expressions.
 The syntax is the same as for function declarations,
@@ -245,7 +245,7 @@ let double =
     }
 ```
 
-### Function Calls
+## Function Calls
 
 Functions can be called (invoked). Function calls
 need to provide exactly as many argument values as the function has parameters.
@@ -268,7 +268,7 @@ double(2, 3)
 double()
 ```
 
-### Function Types
+## Function Types
 
 Function types consist of the function's parameter types
 and the function's return type.
@@ -359,7 +359,7 @@ someFoo = foo2
 someFoo(4)
 ```
 
-### Closures
+## Closures
 
 A function may refer to variables and constants of its outer scopes
 in which it is defined.
@@ -388,7 +388,7 @@ test()  // is `1`
 test()  // is `2`
 ```
 
-### Argument Passing Behavior
+## Argument Passing Behavior
 
 When arguments are passed to a function, they are copied.
 Therefore, values that are passed into a function
@@ -425,7 +425,7 @@ fun test(x: Int) {
 }
 ```
 
-### Function Preconditions and Postconditions
+## Function Preconditions and Postconditions
 
 Functions may have preconditions and may have postconditions.
 Preconditions and postconditions can be used to restrict the inputs (values for parameters)
@@ -457,7 +457,7 @@ See https://github.com/dapperlabs/flow-go/issues/70
 Conditions may be written on separate lines,
 or multiple conditions can be written on the same line,
 separated by a semicolon.
-This syntax follows the syntax for [statements](#semicolons).
+This syntax follows the syntax for [statements](syntax#semicolons).
 
 Following each condition, an optional description can be provided after a colon.
 The condition description is used as an error message when the condition fails.

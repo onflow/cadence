@@ -10,9 +10,9 @@ and preconditions and postconditions that implementing types need to provide.
 
 There are three kinds of interfaces:
 
-- **Structure interfaces**: implemented by [structures](#structures)
-- **Resource interfaces**: implemented by [resources](#resources)
-- **Contract interfaces**: implemented by [contracts](#contracts)
+- **Structure interfaces**: implemented by [structures](composite-types#structures)
+- **Resource interfaces**: implemented by [resources](composite-types#resources)
+- **Contract interfaces**: implemented by [contracts](contracts)
 
 Structure, resource, and contract types may implement multiple interfaces.
 
@@ -41,7 +41,7 @@ instead of concrete implementations can improve the security of a program,
 as it ensures that even if implementations change,
 some aspects of them will always hold.
 
-### Interface Declaration
+## Interface Declaration
 
 Interfaces are declared using the `struct`, `resource`, or `contract` keyword,
 followed by the `interface` keyword,
@@ -162,7 +162,7 @@ Struct and resource Interfaces can only be declared directly inside contracts,
 i.e. not inside of functions.
 Contract interfaces can only be declared globally and not inside contracts.
 
-### Interface Implementation
+## Interface Implementation
 
 Declaring that a type implements (conforms) to an interface
 is done in the type declaration of the composite type (e.g., structure, resource):
@@ -322,12 +322,12 @@ pub struct AnImplementation: AnInterface {
 }
 ```
 
-### Interfaces in Types
+## Interfaces in Types
 
 Interfaces can be used in types: The type `{I}` is the type of all objects
 that implement the interface `I`.
 
-This is called a [restricted type](#restricted-types):
+This is called a [restricted type](restricted-types):
 Only the functionality (members and functions) of the interface can be used
 when accessing a value of such a type.
 
@@ -438,7 +438,7 @@ shape.scale(factor: 3)
 shape.area  // is `54`
 ```
 
-### Interface Implementation Requirements
+## Interface Implementation Requirements
 
 Interfaces can require implementing types
 to also implement other interfaces of the same kind.
@@ -463,7 +463,7 @@ pub struct interface Polygon: Shape {}
 pub struct Hexagon: Polygon {}
 ```
 
-### Interface Nesting
+## Interface Nesting
 
 > 🚧 Status: Currently only contracts and contract interfaces support nested interfaces.
 
@@ -498,7 +498,7 @@ struct SomeInner: OuterInterface.InnerInterface {}
 
 ```
 
-### Nested Type Requirements
+## Nested Type Requirements
 
 > 🚧 Status: Currently only contracts and contract interfaces support nested type requirements.
 
@@ -534,7 +534,7 @@ resource ExampleToken: FungibleToken {
 }
 ```
 
-### `Equatable` Interface
+## `Equatable` Interface
 
 > 🚧 Status: The `Equatable` interface is not implemented yet.
 
@@ -587,7 +587,7 @@ Cat(1) == Cat(2)  // is `false`
 Cat(3) == Cat(3)  // is `true`
 ```
 
-### `Hashable` Interface
+## `Hashable` Interface
 
 > 🚧 Status: The `Hashable` interface is not implemented yet.
 
@@ -679,4 +679,3 @@ struct Point: Hashable {
     }
 }
 ```
-
