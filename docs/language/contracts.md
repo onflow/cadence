@@ -11,7 +11,7 @@ Therefore, an object of one of these types cannot exist
 without having been defined in a deployed Cadence contract.
 
 Contracts can be created, updated, and deleted using the `setCode`
-function of [accounts](accounts).
+function of [accounts]../accounts).
 This functionality is covered in the [next section](#deploying-and-updating-contracts)
 
 Contracts are types.

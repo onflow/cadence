@@ -11,12 +11,12 @@ event FooEvent(x: Int, y: Int)
 ```
 
 The syntax of an event declaration is similar to that of
-a [function declaration](functions#function-declarations);
+a [function declaration](../functions#function-declarations);
 events contain named parameters, each of which has an optional argument label.
 Types that can be in event definitions are restricted
 to booleans, strings, integer, and arrays or dictionaries of these types.
 
-Events can only be declared within a [contract](contracts) body.
+Events can only be declared within a [contract](../contracts) body.
 Events cannot be declared globally or within resource or struct types.
 
 Resource argument types are not allowed because when a resource is used as
