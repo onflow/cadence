@@ -27,4 +27,3 @@ import Counter from "examples/counter.cdc"
 //
 import Counter from 0x299F20A29311B9248F12
 ```
-
