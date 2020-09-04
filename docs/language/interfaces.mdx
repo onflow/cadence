@@ -465,7 +465,11 @@ pub struct Hexagon: Polygon {}
 
 ## Interface Nesting
 
-> 🚧 Status: Currently only contracts and contract interfaces support nested interfaces.
+<Callout type="info">
+
+🚧 Status: Currently only contracts and contract interfaces support nested interfaces.
+
+</Callout>
 
 Interfaces can be arbitrarily nested.
 Declaring an interface inside another does not require implementing types
@@ -500,7 +504,11 @@ struct SomeInner: OuterInterface.InnerInterface {}
 
 ## Nested Type Requirements
 
-> 🚧 Status: Currently only contracts and contract interfaces support nested type requirements.
+<Callout type="info">
+
+🚧 Status: Currently only contracts and contract interfaces support nested type requirements.
+
+</Callout>
 
 Interfaces can require implementing types to provide concrete nested types.
 For example, a resource interface may require an implementing type to provide a resource type.
@@ -536,7 +544,11 @@ resource ExampleToken: FungibleToken {
 
 ## `Equatable` Interface
 
-> 🚧 Status: The `Equatable` interface is not implemented yet.
+<Callout type="info">
+
+🚧 Status: The `Equatable` interface is not implemented yet.
+
+</Callout>
 
 An equatable type is a type that can be compared for equality.
 Types are equatable when they  implement the `Equatable` interface.
@@ -589,7 +601,11 @@ Cat(3) == Cat(3)  // is `true`
 
 ## `Hashable` Interface
 
-> 🚧 Status: The `Hashable` interface is not implemented yet.
+<Callout type="info">
+
+🚧 Status: The `Hashable` interface is not implemented yet.
+
+</Callout>
 
 A hashable type is a type that can be hashed to an integer hash value,
 i.e., it is distilled into a value that is used as evidence of inequality.
