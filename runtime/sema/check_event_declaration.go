@@ -20,6 +20,7 @@ package sema
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 // checkEventParameters checks that the event initializer's parameters are valid,
@@ -70,6 +71,19 @@ func IsValidEventParameterType(t Type) bool {
 	case *DictionaryType:
 		return IsValidEventParameterType(t.KeyType) &&
 			IsValidEventParameterType(t.ValueType)
+
+	case *CompositeType:
+		if t.Kind != common.CompositeKindStructure {
+			return false
+		}
+		for _, member := range t.Members {
+			if member.DeclarationKind == common.DeclarationKindField {
+				if !IsValidEventParameterType(member.TypeAnnotation.Type) {
+					return false
+				}
+			}
+		}
+		return true
 
 	default:
 		return IsSubType(t, &NumberType{})
