@@ -202,7 +202,7 @@ fun doubleAndAddOne(_ x: Int): Int {
 doubleAndAddOne(2)  // is `5`
 ```
 
-## Function overloading
+## Function Overloading
 
 > 🚧 Status: Function overloading is not implemented.
 
