@@ -13,15 +13,14 @@ event FooEvent(x: Int, y: Int)
 The syntax of an event declaration is similar to that of
 a [function declaration](../functions#function-declarations);
 events contain named parameters, each of which has an optional argument label.
-Types that can be in event definitions are restricted
-to booleans, strings, integer, and arrays or dictionaries of these types.
+
+Event parameters may only have a valid event parameter type.
+Valid types are boolean, string, integer, arrays and dictionaries of these types,
+and structures where all fields have a valid event parameter type.
+Resource types are not allowed, because when a resource is used as an argument, it is moved.
 
 Events can only be declared within a [contract](../contracts) body.
 Events cannot be declared globally or within resource or struct types.
-
-Resource argument types are not allowed because when a resource is used as
-an argument, it is moved.  A piece of code would not want to move a resource
-to emit an event, so it is not allowed as a parameter.
 
 ```cadence
 // Invalid: An event cannot be declared globally
