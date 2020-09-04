@@ -5879,8 +5879,9 @@ func TestInterpretEmitEvent(t *testing.T) {
 }
 
 type testValue struct {
-	value   interpreter.Value
-	literal string
+	value              interpreter.Value
+	literal            string
+	notAsDictionaryKey bool
 }
 
 func (v testValue) String() string {
@@ -5899,8 +5900,8 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		"Character": {value: interpreter.NewStringValue("X")},
 		"Bool":      {value: interpreter.BoolValue(true)},
 		"Address": {
-			value:   interpreter.NewAddressValueFromBytes([]byte{0x1}),
 			literal: `0x1`,
+			value:   interpreter.NewAddressValueFromBytes([]byte{0x1}),
 		},
 		// Int*
 		"Int":    {value: interpreter.NewIntValueFromInt64(42)},
@@ -5927,6 +5928,22 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 		"Fix64": {value: interpreter.Fix64Value(123000000)},
 		// UFix*
 		"UFix64": {value: interpreter.UFix64Value(123000000)},
+		// Struct
+		"S": {
+			literal: `S()`,
+			value: func() interpreter.Value {
+				v := interpreter.NewCompositeValue(
+					TestLocation,
+					"S.test.S",
+					common.CompositeKindStructure,
+					map[string]interpreter.Value{},
+					nil,
+				)
+				v.Functions = map[string]interpreter.FunctionValue{}
+				return v
+			}(),
+			notAsDictionaryKey: true,
+		},
 	}
 
 	for _, integerType := range sema.AllIntegerTypes {
@@ -5955,32 +5972,35 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 	tests := map[string]testValue{}
 
-	for validType, value := range validTypes {
-		tests[validType] = value
+	for validType, testCase := range validTypes {
+		tests[validType] = testCase
 
 		tests[fmt.Sprintf("%s?", validType)] =
 			testValue{
-				value:   interpreter.NewSomeValueOwningNonCopying(value.value),
-				literal: value.literal,
+				value:   interpreter.NewSomeValueOwningNonCopying(testCase.value),
+				literal: testCase.literal,
 			}
 
 		tests[fmt.Sprintf("[%s]", validType)] =
 			testValue{
-				value:   interpreter.NewArrayValueUnownedNonCopying(value.value),
-				literal: fmt.Sprintf("[%s as %s]", value, validType),
+				value:   interpreter.NewArrayValueUnownedNonCopying(testCase.value),
+				literal: fmt.Sprintf("[%s as %s]", testCase, validType),
 			}
 
 		tests[fmt.Sprintf("[%s; 1]", validType)] =
 			testValue{
-				value:   interpreter.NewArrayValueUnownedNonCopying(value.value),
-				literal: fmt.Sprintf("[%s as %s]", value, validType),
+				value:   interpreter.NewArrayValueUnownedNonCopying(testCase.value),
+				literal: fmt.Sprintf("[%s as %s]", testCase, validType),
 			}
 
-		tests[fmt.Sprintf("{%[1]s: %[1]s}", validType)] =
-			testValue{
-				value:   interpreter.NewDictionaryValueUnownedNonCopying(value.value, value.value).Copy(),
-				literal: fmt.Sprintf("{%[1]s as %[2]s: %[1]s as %[2]s}", value, validType),
-			}
+		if !testCase.notAsDictionaryKey {
+
+			tests[fmt.Sprintf("{%[1]s: %[1]s}", validType)] =
+				testValue{
+					value:   interpreter.NewDictionaryValueUnownedNonCopying(testCase.value, testCase.value).Copy(),
+					literal: fmt.Sprintf("{%[1]s as %[2]s: %[1]s as %[2]s}", testCase, validType),
+				}
+		}
 	}
 
 	for ty, value := range tests {
@@ -5989,6 +6009,8 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 
 			code := fmt.Sprintf(
 				`
+                  struct S {}
+
                   event Test(_ value: %[1]s)
 
                   fun test() {
@@ -6028,11 +6050,10 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 				event.InitializeFunctions(inter)
 			}
 
-			assert.Equal(t,
+			AssertEqualWithDiff(t,
 				expectedEvents,
 				actualEvents,
 			)
-
 		})
 	}
 }
