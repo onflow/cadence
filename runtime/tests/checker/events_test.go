@@ -180,6 +180,7 @@ func TestCheckEventDeclaration(t *testing.T) {
 		assert.IsType(t, &sema.RedeclarationError{}, errs[0])
 		assert.IsType(t, &sema.RedeclarationError{}, errs[1])
 	})
+
 }
 
 func TestCheckEmitEvent(t *testing.T) {
@@ -261,5 +262,24 @@ func TestCheckEmitEvent(t *testing.T) {
 		errs := ExpectCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.EmitImportedEventError{}, errs[0])
+	})
+}
+
+func TestCheckCompositEvent(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("ValidEvent", func(t *testing.T) {
+		_, err := ParseAndCheck(t, `
+			pub struct S {}
+
+            event Transfer(param: S)
+
+            fun test() {
+                emit Transfer(param: S())
+            }
+        `)
+
+		require.NoError(t, err)
 	})
 }
