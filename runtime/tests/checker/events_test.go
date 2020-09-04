@@ -265,7 +265,7 @@ func TestCheckEmitEvent(t *testing.T) {
 	})
 }
 
-func TestCheckCompositEvent(t *testing.T) {
+func TestCheckCompositeEvent(t *testing.T) {
 
 	t.Parallel()
 
