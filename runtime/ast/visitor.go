@@ -45,6 +45,7 @@ type StatementVisitor interface {
 	VisitBreakStatement(*BreakStatement) Repr
 	VisitContinueStatement(*ContinueStatement) Repr
 	VisitIfStatement(*IfStatement) Repr
+	VisitSwitchStatement(*SwitchStatement) Repr
 	VisitWhileStatement(*WhileStatement) Repr
 	VisitForStatement(*ForStatement) Repr
 	VisitEmitStatement(*EmitStatement) Repr

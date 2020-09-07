@@ -26,7 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/parser2/lexer"
 )
 
-func parseStatements(p *parser, endTokenType lexer.TokenType) (statements []ast.Statement) {
+func parseStatements(p *parser, isEndToken func(token lexer.Token) bool) (statements []ast.Statement) {
 	sawSemicolon := false
 	for {
 		p.skipSpaceAndComments(true)
@@ -35,9 +35,13 @@ func parseStatements(p *parser, endTokenType lexer.TokenType) (statements []ast.
 			sawSemicolon = true
 			p.next()
 			continue
-		case endTokenType, lexer.TokenEOF:
+		case lexer.TokenEOF:
 			return
 		default:
+			if isEndToken != nil && isEndToken(p.current) {
+				return
+			}
+
 			statement := parseStatement(p)
 			if statement == nil {
 				return
@@ -83,6 +87,8 @@ func parseStatement(p *parser) ast.Statement {
 			return parseContinueStatement(p)
 		case keywordIf:
 			return parseIfStatement(p)
+		case keywordSwitch:
+			return parseSwitchStatement(p)
 		case keywordWhile:
 			return parseWhileStatement(p)
 		case keywordFor:
@@ -343,8 +349,8 @@ func parseForStatement(p *parser) *ast.ForStatement {
 	p.skipSpaceAndComments(true)
 
 	if !p.current.IsString(lexer.TokenIdentifier, keywordIn) {
-		panic(fmt.Errorf(
-			"expected keyword %q, got %q",
+		p.report(fmt.Errorf(
+			"expected keyword %q, got %s",
 			keywordIn,
 			p.current.Type,
 		))
@@ -366,7 +372,9 @@ func parseForStatement(p *parser) *ast.ForStatement {
 
 func parseBlock(p *parser) *ast.Block {
 	startToken := p.mustOne(lexer.TokenBraceOpen)
-	statements := parseStatements(p, lexer.TokenBraceClose)
+	statements := parseStatements(p, func(token lexer.Token) bool {
+		return token.Type == lexer.TokenBraceClose
+	})
 	endToken := p.mustOne(lexer.TokenBraceClose)
 
 	return &ast.Block{
@@ -401,7 +409,9 @@ func parseFunctionBlock(p *parser) *ast.FunctionBlock {
 		postConditions = &conditions
 	}
 
-	statements := parseStatements(p, lexer.TokenBraceClose)
+	statements := parseStatements(p, func(token lexer.Token) bool {
+		return token.Type == lexer.TokenBraceClose
+	})
 
 	endToken := p.mustOne(lexer.TokenBraceClose)
 
@@ -483,5 +493,144 @@ func parseEmitStatement(p *parser) *ast.EmitStatement {
 	return &ast.EmitStatement{
 		InvocationExpression: invocation,
 		StartPos:             startPos,
+	}
+}
+
+func parseSwitchStatement(p *parser) *ast.SwitchStatement {
+
+	startPos := p.current.StartPos
+
+	// Skip the `switch` keyword
+	p.next()
+
+	expression := parseExpression(p, lowestBindingPower)
+
+	p.mustOne(lexer.TokenBraceOpen)
+
+	cases := parseSwitchCases(p)
+
+	endToken := p.mustOne(lexer.TokenBraceClose)
+
+	return &ast.SwitchStatement{
+		Expression: expression,
+		Cases:      cases,
+		Range: ast.Range{
+			StartPos: startPos,
+			EndPos:   endToken.EndPos,
+		},
+	}
+}
+
+// parseSwitchCases parses cases of a switch statement.
+//
+//     switchCases : switchCase*
+//
+func parseSwitchCases(p *parser) (cases []*ast.SwitchCase) {
+
+	reportUnexpected := func() {
+		p.report(fmt.Errorf(
+			"unexpected token: got %s, expected %q or %q",
+			p.current.Type,
+			keywordCase,
+			keywordDefault,
+		))
+		p.next()
+	}
+
+	for {
+		p.skipSpaceAndComments(true)
+
+		switch p.current.Type {
+		case lexer.TokenIdentifier:
+
+			var switchCase *ast.SwitchCase
+
+			switch p.current.Value {
+			case keywordCase:
+				switchCase = parseSwitchCase(p, true)
+
+			case keywordDefault:
+				switchCase = parseSwitchCase(p, false)
+
+			default:
+				reportUnexpected()
+				continue
+			}
+
+			cases = append(cases, switchCase)
+
+		case lexer.TokenBraceClose, lexer.TokenEOF:
+			return
+
+		default:
+			reportUnexpected()
+		}
+	}
+}
+
+// parseSwitchCase parses a switch case (hasExpression == true)
+// or default case (hasExpression == false)
+//
+//     switchCase : `case` expression `:` statements
+//                | `default` `:` statements
+//
+func parseSwitchCase(p *parser, hasExpression bool) *ast.SwitchCase {
+
+	startPos := p.current.StartPos
+
+	// Skip the keyword
+	p.next()
+
+	var expression ast.Expression
+	if hasExpression {
+		expression = parseExpression(p, lowestBindingPower)
+	} else {
+		p.skipSpaceAndComments(true)
+	}
+
+	colonPos := p.current.StartPos
+
+	if !p.current.Is(lexer.TokenColon) {
+		p.report(fmt.Errorf(
+			"expected %s, got %s",
+			lexer.TokenColon,
+			p.current.Type,
+		))
+	}
+
+	p.next()
+
+	statements := parseStatements(p, func(token lexer.Token) bool {
+		switch token.Type {
+		case lexer.TokenBraceClose:
+			return true
+
+		case lexer.TokenIdentifier:
+			switch p.current.Value {
+			case keywordCase, keywordDefault:
+				return true
+			default:
+				return false
+			}
+
+		default:
+			return false
+		}
+	})
+
+	endPos := colonPos
+
+	if len(statements) > 0 {
+		lastStatementIndex := len(statements) - 1
+		endPos = statements[lastStatementIndex].EndPosition()
+	}
+
+	return &ast.SwitchCase{
+		Expression: expression,
+		Statements: statements,
+		Range: ast.Range{
+			StartPos: startPos,
+			EndPos:   endPos,
+		},
 	}
 }

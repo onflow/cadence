@@ -58,4 +58,7 @@ const (
 	keywordTransaction = "transaction"
 	keywordPrepare     = "prepare"
 	keywordExecute     = "execute"
+	keywordCase        = "case"
+	keywordSwitch      = "switch"
+	keywordDefault     = "default"
 )

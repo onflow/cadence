@@ -348,3 +348,47 @@ func (s *ExpressionStatement) MarshalJSON() ([]byte, error) {
 		Alias: (*Alias)(s),
 	})
 }
+
+// SwitchStatement
+
+type SwitchStatement struct {
+	Expression Expression
+	Cases      []*SwitchCase
+	Range
+}
+
+func (*SwitchStatement) isStatement() {}
+
+func (s *SwitchStatement) Accept(visitor Visitor) Repr {
+	return visitor.VisitSwitchStatement(s)
+}
+
+func (s *SwitchStatement) MarshalJSON() ([]byte, error) {
+	type Alias SwitchStatement
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+	}{
+		Type:  "SwitchStatement",
+		Alias: (*Alias)(s),
+	})
+}
+
+// SwitchCase
+
+type SwitchCase struct {
+	Expression Expression
+	Statements []Statement
+	Range
+}
+
+func (s *SwitchCase) MarshalJSON() ([]byte, error) {
+	type Alias SwitchCase
+	return json.Marshal(&struct {
+		Type string
+		*Alias
+	}{
+		Type:  "SwitchCase",
+		Alias: (*Alias)(s),
+	})
+}
