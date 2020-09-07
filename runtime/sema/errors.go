@@ -2783,3 +2783,15 @@ func (e *CyclicImportsError) Error() string {
 }
 
 func (*CyclicImportsError) isSemanticError() {}
+
+// SwitchDefaultPositionError
+
+type SwitchDefaultPositionError struct {
+	ast.Range
+}
+
+func (e *SwitchDefaultPositionError) Error() string {
+	return "the 'default' case must appear at the end of a 'switch' statement"
+}
+
+func (*SwitchDefaultPositionError) isSemanticError() {}
