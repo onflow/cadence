@@ -999,3 +999,120 @@ func TestParseStatements(t *testing.T) {
 		)
 	})
 }
+
+func TestParseSwitchStatement(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("empty", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseStatements("switch true { }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.SwitchStatement{
+					Expression: &ast.BoolExpression{
+						Value: true,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 7, Offset: 7},
+							EndPos:   ast.Position{Line: 1, Column: 10, Offset: 10},
+						},
+					},
+					Cases: nil,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 1, Column: 14, Offset: 14},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("two cases", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseStatements("switch x { case 1 :\n a\nb default : c\nd  }")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Statement{
+				&ast.SwitchStatement{
+					Expression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "x",
+							Pos:        ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+					},
+					Cases: []*ast.SwitchCase{
+						{
+							Expression: &ast.IntegerExpression{
+								Value: big.NewInt(1),
+								Base:  10,
+								Range: ast.Range{
+									StartPos: ast.Position{Line: 1, Column: 16, Offset: 16},
+									EndPos:   ast.Position{Line: 1, Column: 16, Offset: 16},
+								},
+							},
+							Statements: []ast.Statement{
+								&ast.ExpressionStatement{
+									Expression: &ast.IdentifierExpression{
+										Identifier: ast.Identifier{
+											Identifier: "a",
+											Pos:        ast.Position{Line: 2, Column: 1, Offset: 21},
+										},
+									},
+								},
+								&ast.ExpressionStatement{
+									Expression: &ast.IdentifierExpression{
+										Identifier: ast.Identifier{
+											Identifier: "b",
+											Pos:        ast.Position{Line: 3, Column: 0, Offset: 23},
+										},
+									},
+								},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 1, Column: 11, Offset: 11},
+								EndPos:   ast.Position{Line: 3, Column: 0, Offset: 23},
+							},
+						},
+						{
+							Statements: []ast.Statement{
+								&ast.ExpressionStatement{
+									Expression: &ast.IdentifierExpression{
+										Identifier: ast.Identifier{
+											Identifier: "c",
+											Pos:        ast.Position{Line: 3, Column: 12, Offset: 35},
+										},
+									},
+								},
+								&ast.ExpressionStatement{
+									Expression: &ast.IdentifierExpression{
+										Identifier: ast.Identifier{
+											Identifier: "d",
+											Pos:        ast.Position{Line: 4, Column: 0, Offset: 37},
+										},
+									},
+								},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Line: 3, Column: 2, Offset: 25},
+								EndPos:   ast.Position{Line: 4, Column: 0, Offset: 37},
+							},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+						EndPos:   ast.Position{Line: 4, Column: 3, Offset: 40},
+					},
+				},
+			},
+			result,
+		)
+	})
+}
