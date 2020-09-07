@@ -1167,6 +1167,65 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 		})
 }
 
+func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.SwitchStatement) ast.Repr {
+
+	var visitCase func(i int, testValue EquatableValue) Trampoline
+	visitCase = func(i int, testValue EquatableValue) Trampoline {
+
+		// If no cases are left to evaluate, return (base case)
+
+		if i >= len(switchStatement.Cases) {
+			// NOTE: no result, so it does *not* act like a return-statement
+			return Done{}
+		}
+
+		switchCase := switchStatement.Cases[i]
+
+		runStatements := func() Trampoline {
+			// NOTE: the new block ensures that a new block is introduced
+
+			block := &ast.Block{
+				Statements: switchCase.Statements,
+			}
+
+			return block.Accept(interpreter).(Trampoline)
+		}
+
+		// If the case has no expression it is the default case.
+		// Evaluate it, i.e. all statements
+
+		if switchCase.Expression == nil {
+			return runStatements()
+		}
+
+		// The case has an expression.
+		// Evaluate it and compare it to the test value
+
+		return switchCase.Expression.Accept(interpreter).(Trampoline).
+			FlatMap(func(result interface{}) Trampoline {
+				caseValue := result.(EquatableValue)
+
+				// If the test value and case values are equal,
+				// evaluate the case's statements
+
+				if testValue.Equal(interpreter, caseValue) {
+					return runStatements()
+				}
+
+				// If the test value and the case values are unequal,
+				// try the next case (recurse)
+
+				return visitCase(i+1, testValue)
+			})
+	}
+
+	return switchStatement.Expression.Accept(interpreter).(Trampoline).
+		FlatMap(func(result interface{}) Trampoline {
+			testValue := result.(EquatableValue)
+			return visitCase(0, testValue)
+		})
+}
+
 func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatement) ast.Repr {
 
 	return statement.Test.Accept(interpreter).(Trampoline).
