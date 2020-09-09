@@ -14,8 +14,6 @@ jobs:
     steps:
     - name: Install dependencies
       run: sudo apt-get update && sudo apt-get install wabt
-    - name: Setup tmate session
-      uses: mxschmitt/action-tmate@v2
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
