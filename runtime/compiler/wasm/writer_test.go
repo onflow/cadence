@@ -19,7 +19,8 @@
 package wasm
 
 import (
-	"io"
+	"io/ioutil"
+	"os"
 	"os/exec"
 	"testing"
 
@@ -27,23 +28,24 @@ import (
 )
 
 func wasm2wat(binary []byte) string {
-	cmd := exec.Command("wasm2wat", "-")
-
-	stdin, err := cmd.StdinPipe()
+	f, err := ioutil.TempFile("", "wasm")
 	if err != nil {
 		panic(err)
 	}
 
-	_, err = io.WriteString(stdin, string(binary))
+	defer os.Remove(f.Name())
+
+	_, err = f.Write(binary)
 	if err != nil {
 		panic(err)
 	}
 
-	err = stdin.Close()
+	err = f.Close()
 	if err != nil {
 		panic(err)
 	}
 
+	cmd := exec.Command("wasm2wat", f.Name())
 	out, err := cmd.Output()
 	if err != nil {
 		panic(err)
