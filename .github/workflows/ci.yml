@@ -6,6 +6,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+    - name: Install dependencies
+      run: sudo apt-get install wabt
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
@@ -18,11 +20,15 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
-    - run: |
-        make build
-        make test
-        make check-tidy
-        make check-headers
+    - name: build
+      run: make build
+    - name: test
+      run: make test
+    - name: check tidy
+      run: make check-tidy
+    - name: check headers
+      run: make check-headers
+
   lint:
     runs-on: ubuntu-latest
     steps:
