@@ -10,10 +10,10 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
     - name: Install dependencies
-      run: sudo apt-get install wabt
+      run: sudo apt-get update && sudo apt-get install wabt
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
