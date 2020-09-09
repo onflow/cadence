@@ -23,16 +23,7 @@ package wasm
 type sectionID byte
 
 const (
-	sectionIDCustom   sectionID = 0
 	sectionIDType     sectionID = 1
-	sectionIDImport   sectionID = 2
 	sectionIDFunction sectionID = 3
-	sectionIDTable    sectionID = 4
-	sectionIDMemory   sectionID = 5
-	sectionIDGlobal   sectionID = 6
-	sectionIDExport   sectionID = 7
-	sectionIDStart    sectionID = 8
-	sectionIDElement  sectionID = 9
 	sectionIDCode     sectionID = 10
-	sectionIDData     sectionID = 11
 )
