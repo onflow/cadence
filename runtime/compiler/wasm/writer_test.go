@@ -31,22 +31,22 @@ func wasm2wat(binary []byte) string {
 
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		return ""
+		panic(err)
 	}
 
 	_, err = io.WriteString(stdin, string(binary))
 	if err != nil {
-		return ""
+		panic(err)
 	}
 
 	err = stdin.Close()
 	if err != nil {
-		return ""
+		panic(err)
 	}
 
 	out, err := cmd.Output()
 	if err != nil {
-		return ""
+		panic(err)
 	}
 
 	return string(out)
