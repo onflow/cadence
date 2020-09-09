@@ -26,13 +26,13 @@ jobs:
         key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
         restore-keys: |
           ${{ runner.os }}-go-
-    - name: build
+    - name: Build
       run: make build
-    - name: test
+    - name: Test
       run: make test
-    - name: check tidy
+    - name: Check tidy
       run: make check-tidy
-    - name: check headers
+    - name: Check headers
       run: make check-headers
 
   lint:
