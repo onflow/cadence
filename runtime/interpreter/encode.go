@@ -20,11 +20,9 @@ package interpreter
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"math/big"
-	"reflect"
 	"strconv"
 	"strings"
 
@@ -34,14 +32,14 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 )
 
+type cborMap = map[uint64]interface{}
+
 // !!! *WARNING* !!!
 //
 // Only add new fields to encoded structs by
 // appending new fields with the next highest key.
 //
 // DO *NOT* REPLACE EXISTING FIELDS!
-
-var cborTagSet cbor.TagSet
 
 const cborTagPositiveBignum = 0x2
 const cborTagNegativeBignum = 0x3
@@ -174,68 +172,6 @@ const (
 	cborTagCapabilityStaticType
 )
 
-func init() {
-	cborTagSet = cbor.NewTagSet()
-	tagOptions := cbor.TagOptions{
-		EncTag: cbor.EncTagRequired,
-		DecTag: cbor.DecTagRequired,
-	}
-
-	register := func(tag uint64, encodingType interface{}) {
-		err := cborTagSet.Add(
-			tagOptions,
-			reflect.TypeOf(encodingType),
-			tag,
-		)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	types := map[uint64]interface{}{
-		cborTagDictionaryValue:         encodedDictionaryValue{},
-		cborTagCompositeValue:          encodedCompositeValue{},
-		cborTagPathValue:               encodedPathValue{},
-		cborTagCapabilityValue:         encodedCapabilityValue{},
-		cborTagTypeValue:               encodedTypeValue{},
-		cborTagStorageReferenceValue:   encodedStorageReferenceValue{},
-		cborTagLinkValue:               encodedLinkValue{},
-		cborTagCompositeStaticType:     encodedCompositeStaticType{},
-		cborTagInterfaceStaticType:     encodedInterfaceStaticType{},
-		cborTagConstantSizedStaticType: encodedConstantSizedStaticType{},
-		cborTagDictionaryStaticType:    encodedDictionaryStaticType{},
-		cborTagRestrictedStaticType:    encodedRestrictedStaticType{},
-		cborTagReferenceStaticType:     encodedReferenceStaticType{},
-	}
-
-	// Register types
-	for tag, encodedType := range types {
-		register(tag, encodedType)
-	}
-}
-
-func cborFieldKey(t interface{}, name string) uint64 {
-	rt := reflect.TypeOf(t)
-
-	field, ok := rt.FieldByName(name)
-	if !ok {
-		panic(fmt.Errorf("missing field %s", name))
-	}
-	tag, ok := field.Tag.Lookup("cbor")
-	if !ok {
-		panic(errors.New("missing cbor tag"))
-	}
-	var index uint64
-	n, err := fmt.Sscanf(tag, "%d,keyasint", &index)
-	if n != 1 {
-		panic(fmt.Errorf("invalid cbor tag in field %s of type %T", name, t))
-	}
-	if err != nil {
-		panic(err)
-	}
-	return index
-}
-
 type EncodingDeferralMove struct {
 	DeferredOwner      common.Address
 	DeferredStorageKey string
@@ -295,7 +231,7 @@ func EncodeValue(value Value, path []string, deferred bool) (
 // to the given io.Writer.
 //
 func NewEncoder(w io.Writer, deferred bool) (*Encoder, error) {
-	encMode, err := cbor.CanonicalEncOptions().EncModeWithTags(cborTagSet)
+	encMode, err := cbor.CanonicalEncOptions().EncMode()
 	if err != nil {
 		return nil, err
 	}
@@ -670,18 +606,10 @@ func (e *Encoder) prepareArray(
 	return result, nil
 }
 
-type encodedDictionaryValue struct {
-	Keys    []interface{}          `cbor:"0,keyasint"`
-	Entries map[string]interface{} `cbor:"1,keyasint"`
-}
-
-var encodedDictionaryValueKeysFieldKey = cborFieldKey(
-	encodedDictionaryValue{},
-	"Keys",
-)
-var encodedDictionaryValueEntriesFieldKey = cborFieldKey(
-	encodedDictionaryValue{},
-	"Entries",
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	encodedDictionaryValueKeysFieldKey    uint64 = 0
+	encodedDictionaryValueEntriesFieldKey uint64 = 1
 )
 
 const dictionaryKeyPathPrefix = "k"
@@ -765,34 +693,21 @@ func (e *Encoder) prepareDictionaryValue(
 		}
 	}
 
-	return encodedDictionaryValue{
-		Keys:    keys,
-		Entries: entries,
+	return cbor.Tag{
+		Number: cborTagDictionaryValue,
+		Content: cborMap{
+			encodedDictionaryValueKeysFieldKey:    keys,
+			encodedDictionaryValueEntriesFieldKey: entries,
+		},
 	}, nil
 }
 
-type encodedCompositeValue struct {
-	Location interface{}            `cbor:"0,keyasint"`
-	TypeID   string                 `cbor:"1,keyasint"`
-	Kind     uint                   `cbor:"2,keyasint"`
-	Fields   map[string]interface{} `cbor:"3,keyasint"`
-}
-
-var encodedCompositeValueLocationFieldKey = cborFieldKey(
-	encodedCompositeValue{},
-	"Location",
-)
-var encodedCompositeValueTypeIDFieldKey = cborFieldKey(
-	encodedCompositeValue{},
-	"TypeID",
-)
-var encodedCompositeValueKindFieldKey = cborFieldKey(
-	encodedCompositeValue{},
-	"Kind",
-)
-var encodedCompositeValueFieldsFieldKey = cborFieldKey(
-	encodedCompositeValue{},
-	"Fields",
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	encodedCompositeValueLocationFieldKey uint64 = 0
+	encodedCompositeValueTypeIDFieldKey   uint64 = 1
+	encodedCompositeValueKindFieldKey     uint64 = 2
+	encodedCompositeValueFieldsFieldKey   uint64 = 3
 )
 
 func (e *Encoder) prepareCompositeValue(
@@ -820,11 +735,14 @@ func (e *Encoder) prepareCompositeValue(
 		return nil, err
 	}
 
-	return encodedCompositeValue{
-		Location: location,
-		TypeID:   string(v.TypeID),
-		Kind:     uint(v.Kind),
-		Fields:   fields,
+	return cbor.Tag{
+		Number: cborTagCompositeValue,
+		Content: cborMap{
+			encodedCompositeValueLocationFieldKey: location,
+			encodedCompositeValueTypeIDFieldKey:   string(v.TypeID),
+			encodedCompositeValueKindFieldKey:     uint(v.Kind),
+			encodedCompositeValueFieldsFieldKey:   fields,
+		},
 	}, nil
 }
 
@@ -847,30 +765,21 @@ func (e *Encoder) prepareSomeValue(
 	}, nil
 }
 
-type encodedStorageReferenceValue struct {
-	Authorized           bool   `cbor:"0,keyasint"`
-	TargetStorageAddress []byte `cbor:"1,keyasint"`
-	TargetKey            string `cbor:"2,keyasint"`
-}
-
-var encodedStorageReferenceValueAuthorizedFieldKey = cborFieldKey(
-	encodedStorageReferenceValue{},
-	"Authorized",
-)
-var encodedStorageReferenceValueTargetStorageAddressFieldKey = cborFieldKey(
-	encodedStorageReferenceValue{},
-	"TargetStorageAddress",
-)
-var encodedStorageReferenceValueTargetKeyFieldKey = cborFieldKey(
-	encodedStorageReferenceValue{},
-	"TargetKey",
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	encodedStorageReferenceValueAuthorizedFieldKey           uint64 = 0
+	encodedStorageReferenceValueTargetStorageAddressFieldKey uint64 = 1
+	encodedStorageReferenceValueTargetKeyFieldKey            uint64 = 2
 )
 
 func (e *Encoder) prepareStorageReferenceValue(v *StorageReferenceValue) interface{} {
-	return encodedStorageReferenceValue{
-		Authorized:           v.Authorized,
-		TargetStorageAddress: v.TargetStorageAddress.Bytes(),
-		TargetKey:            v.TargetKey,
+	return cbor.Tag{
+		Number: cborTagStorageReferenceValue,
+		Content: cborMap{
+			encodedStorageReferenceValueAuthorizedFieldKey:           v.Authorized,
+			encodedStorageReferenceValueTargetStorageAddressFieldKey: v.TargetStorageAddress.Bytes(),
+			encodedStorageReferenceValueTargetKeyFieldKey:            v.TargetKey,
+		},
 	}
 }
 
@@ -881,44 +790,27 @@ func (e *Encoder) prepareAddressValue(v AddressValue) cbor.Tag {
 	}
 }
 
-type encodedPathValue struct {
-	Domain     uint   `cbor:"0,keyasint"`
-	Identifier string `cbor:"1,keyasint"`
-}
-
-var encodedPathValueDomainFieldKey = cborFieldKey(
-	encodedPathValue{},
-	"Domain",
-)
-var encodedPathValueIdentifierFieldKey = cborFieldKey(
-	encodedPathValue{},
-	"Identifier",
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	encodedPathValueDomainFieldKey     uint64 = 0
+	encodedPathValueIdentifierFieldKey uint64 = 1
 )
 
-func (e *Encoder) preparePathValue(v PathValue) encodedPathValue {
-	return encodedPathValue{
-		Domain:     uint(v.Domain),
-		Identifier: v.Identifier,
+func (e *Encoder) preparePathValue(v PathValue) cbor.Tag {
+	return cbor.Tag{
+		Number: cborTagPathValue,
+		Content: cborMap{
+			encodedPathValueDomainFieldKey:     uint(v.Domain),
+			encodedPathValueIdentifierFieldKey: v.Identifier,
+		},
 	}
 }
 
-type encodedCapabilityValue struct {
-	Address    cbor.Tag         `cbor:"0,keyasint"`
-	Path       encodedPathValue `cbor:"1,keyasint"`
-	BorrowType interface{}      `cbor:"2,keyasint"`
-}
-
-var encodedCapabilityValueAddressFieldKey = cborFieldKey(
-	encodedCapabilityValue{},
-	"Address",
-)
-var encodedCapabilityValuePathFieldKey = cborFieldKey(
-	encodedCapabilityValue{},
-	"Path",
-)
-var encodedCapabilityValueBorrowTypeFieldKey = cborFieldKey(
-	encodedCapabilityValue{},
-	"BorrowType",
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	encodedCapabilityValueAddressFieldKey    uint64 = 0
+	encodedCapabilityValuePathFieldKey       uint64 = 1
+	encodedCapabilityValueBorrowTypeFieldKey uint64 = 2
 )
 
 func (e *Encoder) prepareCapabilityValue(v CapabilityValue) (interface{}, error) {
@@ -933,10 +825,13 @@ func (e *Encoder) prepareCapabilityValue(v CapabilityValue) (interface{}, error)
 		}
 	}
 
-	return encodedCapabilityValue{
-		Address:    e.prepareAddressValue(v.Address),
-		Path:       e.preparePathValue(v.Path),
-		BorrowType: preparedBorrowType,
+	return cbor.Tag{
+		Number: cborTagCapabilityValue,
+		Content: cborMap{
+			encodedCapabilityValueAddressFieldKey:    e.prepareAddressValue(v.Address),
+			encodedCapabilityValuePathFieldKey:       e.preparePathValue(v.Path),
+			encodedCapabilityValueBorrowTypeFieldKey: preparedBorrowType,
+		},
 	}, nil
 }
 
@@ -965,18 +860,10 @@ func (e *Encoder) prepareLocation(l ast.Location) (interface{}, error) {
 	}
 }
 
-type encodedLinkValue struct {
-	TargetPath encodedPathValue `cbor:"0,keyasint"`
-	Type       interface{}      `cbor:"1,keyasint"`
-}
-
-var encodedLinkValueTargetPathFieldKey = cborFieldKey(
-	encodedLinkValue{},
-	"TargetPath",
-)
-var encodedLinkValueTypeFieldKey = cborFieldKey(
-	encodedLinkValue{},
-	"Type",
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	encodedLinkValueTargetPathFieldKey uint64 = 0
+	encodedLinkValueTypeFieldKey       uint64 = 1
 )
 
 func (e *Encoder) prepareLinkValue(v LinkValue) (interface{}, error) {
@@ -984,97 +871,14 @@ func (e *Encoder) prepareLinkValue(v LinkValue) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return encodedLinkValue{
-		TargetPath: e.preparePathValue(v.TargetPath),
-		Type:       staticType,
+	return cbor.Tag{
+		Number: cborTagLinkValue,
+		Content: cborMap{
+			encodedLinkValueTargetPathFieldKey: e.preparePathValue(v.TargetPath),
+			encodedLinkValueTypeFieldKey:       staticType,
+		},
 	}, nil
 }
-
-// TODO: optimize, decode location from type ID
-type encodedCompositeStaticType struct {
-	Location interface{} `cbor:"0,keyasint"`
-	TypeID   string      `cbor:"1,keyasint"`
-}
-
-var encodedCompositeStaticTypeLocationFieldKey = cborFieldKey(
-	encodedCompositeStaticType{},
-	"Location",
-)
-var encodedCompositeStaticTypeTypeIDFieldKey = cborFieldKey(
-	encodedCompositeStaticType{},
-	"TypeID",
-)
-
-// TODO: optimize, decode location from type ID
-type encodedInterfaceStaticType struct {
-	Location interface{} `cbor:"0,keyasint"`
-	TypeID   string      `cbor:"1,keyasint"`
-}
-
-var encodedInterfaceStaticTypeLocationFieldKey = cborFieldKey(
-	encodedInterfaceStaticType{},
-	"Location",
-)
-var encodedInterfaceStaticTypeTypeIDFieldKey = cborFieldKey(
-	encodedInterfaceStaticType{},
-	"TypeID",
-)
-
-type encodedConstantSizedStaticType struct {
-	Size int64       `cbor:"0,keyasint"`
-	Type interface{} `cbor:"1,keyasint"`
-}
-
-var encodedConstantSizedStaticTypeSizeFieldKey = cborFieldKey(
-	encodedConstantSizedStaticType{},
-	"Size",
-)
-var encodedConstantSizedStaticTypeTypeFieldKey = cborFieldKey(
-	encodedConstantSizedStaticType{},
-	"Type",
-)
-
-type encodedDictionaryStaticType struct {
-	KeyType   interface{} `cbor:"0,keyasint"`
-	ValueType interface{} `cbor:"1,keyasint"`
-}
-
-var encodedDictionaryStaticTypeKeyTypeFieldKey = cborFieldKey(
-	encodedDictionaryStaticType{},
-	"KeyType",
-)
-var encodedDictionaryStaticTypeValueTypeFieldKey = cborFieldKey(
-	encodedDictionaryStaticType{},
-	"ValueType",
-)
-
-type encodedRestrictedStaticType struct {
-	Type         interface{}   `cbor:"0,keyasint"`
-	Restrictions []interface{} `cbor:"1,keyasint"`
-}
-
-var encodedRestrictedStaticTypeTypeFieldKey = cborFieldKey(
-	encodedRestrictedStaticType{},
-	"Type",
-)
-var encodedRestrictedStaticTypeRestrictionsFieldKey = cborFieldKey(
-	encodedRestrictedStaticType{},
-	"Restrictions",
-)
-
-type encodedReferenceStaticType struct {
-	Authorized bool        `cbor:"0,keyasint"`
-	Type       interface{} `cbor:"1,keyasint"`
-}
-
-var encodedReferenceStaticTypeAuthorizedFieldKey = cborFieldKey(
-	encodedReferenceStaticType{},
-	"Authorized",
-)
-var encodedReferenceStaticTypeTypeFieldKey = cborFieldKey(
-	encodedReferenceStaticType{},
-	"Type",
-)
 
 func (e *Encoder) prepareStaticType(t StaticType) (interface{}, error) {
 	switch v := t.(type) {
@@ -1132,17 +936,33 @@ func (e *Encoder) prepareOptionalStaticType(v OptionalStaticType) (interface{}, 
 	}, nil
 }
 
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	encodedCompositeStaticTypeLocationFieldKey uint64 = 0
+	encodedCompositeStaticTypeTypeIDFieldKey   uint64 = 1
+)
+
 func (e *Encoder) prepareCompositeStaticType(v CompositeStaticType) (interface{}, error) {
 	location, err := e.prepareLocation(v.Location)
 	if err != nil {
 		return nil, err
 	}
 
-	return encodedCompositeStaticType{
-		Location: location,
-		TypeID:   string(v.TypeID),
+	// TODO: optimize, decode location from type ID
+	return cbor.Tag{
+		Number: cborTagCompositeStaticType,
+		Content: cborMap{
+			encodedCompositeStaticTypeLocationFieldKey: location,
+			encodedCompositeStaticTypeTypeIDFieldKey:   string(v.TypeID),
+		},
 	}, nil
 }
+
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	encodedInterfaceStaticTypeLocationFieldKey uint64 = 0
+	encodedInterfaceStaticTypeTypeIDFieldKey   uint64 = 1
+)
 
 func (e *Encoder) prepareInterfaceStaticType(v InterfaceStaticType) (interface{}, error) {
 	location, err := e.prepareLocation(v.Location)
@@ -1150,9 +970,13 @@ func (e *Encoder) prepareInterfaceStaticType(v InterfaceStaticType) (interface{}
 		return nil, err
 	}
 
-	return encodedInterfaceStaticType{
-		Location: location,
-		TypeID:   string(v.TypeID),
+	// TODO: optimize, decode location from type ID
+	return cbor.Tag{
+		Number: cborTagInterfaceStaticType,
+		Content: cborMap{
+			encodedInterfaceStaticTypeLocationFieldKey: location,
+			encodedInterfaceStaticTypeTypeIDFieldKey:   string(v.TypeID),
+		},
 	}, nil
 }
 
@@ -1168,17 +992,32 @@ func (e *Encoder) prepareVariableSizedStaticType(v VariableSizedStaticType) (int
 	}, nil
 }
 
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	encodedConstantSizedStaticTypeSizeFieldKey uint64 = 0
+	encodedConstantSizedStaticTypeTypeFieldKey uint64 = 1
+)
+
 func (e *Encoder) prepareConstantSizedStaticType(v ConstantSizedStaticType) (interface{}, error) {
 	staticType, err := e.prepareStaticType(v.Type)
 	if err != nil {
 		return nil, err
 	}
 
-	return encodedConstantSizedStaticType{
-		Type: staticType,
-		Size: v.Size,
+	return cbor.Tag{
+		Number: cborTagConstantSizedStaticType,
+		Content: cborMap{
+			encodedConstantSizedStaticTypeSizeFieldKey: v.Size,
+			encodedConstantSizedStaticTypeTypeFieldKey: staticType,
+		},
 	}, nil
 }
+
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	encodedReferenceStaticTypeAuthorizedFieldKey uint64 = 0
+	encodedReferenceStaticTypeTypeFieldKey       uint64 = 1
+)
 
 func (e *Encoder) prepareReferenceStaticType(v ReferenceStaticType) (interface{}, error) {
 	staticType, err := e.prepareStaticType(v.Type)
@@ -1186,11 +1025,20 @@ func (e *Encoder) prepareReferenceStaticType(v ReferenceStaticType) (interface{}
 		return nil, err
 	}
 
-	return encodedReferenceStaticType{
-		Authorized: v.Authorized,
-		Type:       staticType,
+	return cbor.Tag{
+		Number: cborTagReferenceStaticType,
+		Content: cborMap{
+			encodedReferenceStaticTypeAuthorizedFieldKey: v.Authorized,
+			encodedReferenceStaticTypeTypeFieldKey:       staticType,
+		},
 	}, nil
 }
+
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	encodedDictionaryStaticTypeKeyTypeFieldKey   uint64 = 0
+	encodedDictionaryStaticTypeValueTypeFieldKey uint64 = 1
+)
 
 func (e *Encoder) prepareDictionaryStaticType(v DictionaryStaticType) (interface{}, error) {
 	keyType, err := e.prepareStaticType(v.KeyType)
@@ -1203,11 +1051,20 @@ func (e *Encoder) prepareDictionaryStaticType(v DictionaryStaticType) (interface
 		return nil, err
 	}
 
-	return encodedDictionaryStaticType{
-		KeyType:   keyType,
-		ValueType: valueType,
+	return cbor.Tag{
+		Number: cborTagDictionaryStaticType,
+		Content: cborMap{
+			encodedDictionaryStaticTypeKeyTypeFieldKey:   keyType,
+			encodedDictionaryStaticTypeValueTypeFieldKey: valueType,
+		},
 	}, nil
 }
+
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	encodedRestrictedStaticTypeTypeFieldKey         uint64 = 0
+	encodedRestrictedStaticTypeRestrictionsFieldKey uint64 = 1
+)
 
 func (e *Encoder) prepareRestrictedStaticType(v RestrictedStaticType) (interface{}, error) {
 	restrictedType, err := e.prepareStaticType(v.Type)
@@ -1225,19 +1082,18 @@ func (e *Encoder) prepareRestrictedStaticType(v RestrictedStaticType) (interface
 		encodedRestrictions[i] = encodedRestriction
 	}
 
-	return encodedRestrictedStaticType{
-		Type:         restrictedType,
-		Restrictions: encodedRestrictions,
+	return cbor.Tag{
+		Number: cborTagRestrictedStaticType,
+		Content: cborMap{
+			encodedRestrictedStaticTypeTypeFieldKey:         restrictedType,
+			encodedRestrictedStaticTypeRestrictionsFieldKey: encodedRestrictions,
+		},
 	}, nil
 }
 
-type encodedTypeValue struct {
-	Type interface{} `cbor:"0,keyasint"`
-}
-
-var encodedTypeValueTypeFieldKey = cborFieldKey(
-	encodedTypeValue{},
-	"Type",
+// NOTE: NEVER change, only add/increment; ensure uint64
+const (
+	encodedTypeValueTypeFieldKey uint64 = 0
 )
 
 func (e *Encoder) prepareTypeValue(v TypeValue) (interface{}, error) {
@@ -1245,8 +1101,11 @@ func (e *Encoder) prepareTypeValue(v TypeValue) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return encodedTypeValue{
-		Type: staticType,
+	return cbor.Tag{
+		Number: cborTagTypeValue,
+		Content: cborMap{
+			encodedTypeValueTypeFieldKey: staticType,
+		},
 	}, nil
 }
 
