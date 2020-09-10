@@ -70,7 +70,7 @@ func DecodeValue(b []byte, owner *common.Address, path []string) (Value, error) 
 // It sets the given address as the owner (can be `nil`).
 //
 func NewDecoder(r io.Reader, owner *common.Address) (*Decoder, error) {
-	decMode, err := cbor.DecOptions{}.DecModeWithTags(cborTagSet)
+	decMode, err := cbor.DecOptions{}.DecMode()
 	if err != nil {
 		return nil, err
 	}
