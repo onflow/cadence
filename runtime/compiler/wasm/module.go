@@ -26,4 +26,5 @@ type Module struct {
 	functionTypeIDs []uint32
 	// The bodies of all functions
 	functionBodies []*Code
+	Imports        []*Import
 }

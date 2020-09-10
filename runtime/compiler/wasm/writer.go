@@ -95,7 +95,6 @@ func (w *WASMWriter) writeTypeSection(funcTypes []*FunctionType) error {
 
 		return nil
 	})
-
 }
 
 // writeFuncType writes the function type
@@ -136,6 +135,56 @@ func (w *WASMWriter) writeFuncType(funcType *FunctionType) error {
 	}
 
 	return nil
+}
+
+// writeImportSection writes the section that declares all imports
+//
+func (w *WASMWriter) writeImportSection(imports []*Import) error {
+	return w.writeSection(sectionIDImport, func() error {
+
+		// write the number of imports
+		err := w.buf.writeULEB128(uint32(len(imports)))
+		if err != nil {
+			return err
+		}
+
+		// write each import
+		for _, im := range imports {
+			err = w.writeImport(im)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+// writeImport writes the import
+//
+func (w *WASMWriter) writeImport(im *Import) error {
+	// write the module
+	err := w.writeName(im.Module)
+	if err != nil {
+		return err
+	}
+
+	// write the name
+	err = w.writeName(im.Name)
+	if err != nil {
+		return err
+	}
+
+	// TODO: add support for tables, memories, and globals
+
+	// write the type indicator
+	err = w.buf.WriteByte(byte(importTypeIndicatorFunction))
+	if err != nil {
+		return err
+	}
+
+	// write the function type index
+	return w.buf.writeULEB128(im.TypeID)
 }
 
 // writeFunctionSection writes the section that declares the types of functions.

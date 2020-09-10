@@ -18,13 +18,19 @@
 
 package wasm
 
-// sectionID is the ID of a section in the WASM binary
+// Import represents an import
 //
-type sectionID byte
+type Import struct {
+	Module string
+	Name   string
+	// TODO: add support for tables, memories, and globals
+	TypeID uint32
+}
+
+// importTypeIndicator is the byte used to indicate the import type in the WASM binary
+type importTypeIndicator byte
 
 const (
-	sectionIDType     sectionID = 1
-	sectionIDImport   sectionID = 2
-	sectionIDFunction sectionID = 3
-	sectionIDCode     sectionID = 10
+	// importTypeIndicatorFunction is the byte used to indicate the import of a function in the WASM binary
+	importTypeIndicatorFunction importTypeIndicator = 0x0
 )

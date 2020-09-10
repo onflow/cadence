@@ -451,6 +451,246 @@ func TestWASMReader_readTypeSection(t *testing.T) {
 	})
 }
 
+func TestWASMReader_readImportSection(t *testing.T) {
+
+	t.Parallel()
+
+	read := func(data []byte) ([]*Import, error) {
+		b := buf{data: data}
+		r := WASMReader{buf: &b}
+		err := r.readImportSection()
+		if err != nil {
+			return nil, err
+		}
+		return r.Module.Imports, nil
+	}
+
+	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		typeIDs, err := read([]byte{
+			// section size: 11 (LEB128)
+			0x8b, 0x80, 0x80, 0x80, 0x0,
+			// import count: 1
+			0x1,
+			// module length
+			0x3,
+			// module = "foo"
+			0x66, 0x6f, 0x6f,
+			// name length
+			0x3,
+			// name = "bar"
+			0x62, 0x61, 0x72,
+			// type indicator: function = 0
+			0x0,
+			// type ID of function: 0
+			0x1,
+		})
+		require.NoError(t, err)
+		assert.Equal(t,
+			[]*Import{
+				{
+					Module: "foo",
+					Name:   "bar",
+					TypeID: 1,
+				},
+			},
+			typeIDs,
+		)
+	})
+
+	t.Run("invalid size", func(t *testing.T) {
+
+		t.Parallel()
+
+		funcTypes, err := read([]byte{
+			0x87, 0x80, 0x80,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidSectionSizeError{
+				Offset:    0,
+				ReadError: io.EOF,
+			},
+			err,
+		)
+		assert.Nil(t, funcTypes)
+	})
+
+	t.Run("invalid count", func(t *testing.T) {
+
+		t.Parallel()
+
+		funcTypes, err := read([]byte{
+			// section size: 7 (LEB128)
+			0x80, 0x80, 0x80, 0x80, 0x0,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidImportSectionImportCountError{
+				Offset:    5,
+				ReadError: io.EOF,
+			},
+			err,
+		)
+		assert.Nil(t, funcTypes)
+	})
+
+	t.Run("invalid module", func(t *testing.T) {
+
+		t.Parallel()
+
+		funcTypes, err := read([]byte{
+			// section size: 7 (LEB128)
+			0x81, 0x80, 0x80, 0x80, 0x0,
+			// import count
+			0x1,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidImportError{
+				Index: 0,
+				ReadError: InvalidNameLengthError{
+					Offset:    6,
+					ReadError: io.EOF,
+				},
+			},
+			err,
+		)
+		assert.Nil(t, funcTypes)
+	})
+
+	t.Run("invalid name", func(t *testing.T) {
+
+		t.Parallel()
+
+		funcTypes, err := read([]byte{
+			// section size: 7 (LEB128)
+			0x81, 0x80, 0x80, 0x80, 0x0,
+			// import count
+			0x1,
+			// module length
+			0x3,
+			// module = "foo"
+			0x66, 0x6f, 0x6f,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidImportError{
+				Index: 0,
+				ReadError: InvalidNameLengthError{
+					Offset:    10,
+					ReadError: io.EOF,
+				},
+			},
+			err,
+		)
+		assert.Nil(t, funcTypes)
+	})
+
+	t.Run("missing type indicator", func(t *testing.T) {
+
+		t.Parallel()
+
+		funcTypes, err := read([]byte{
+			// section size: 7 (LEB128)
+			0x81, 0x80, 0x80, 0x80, 0x0,
+			// import count
+			0x1,
+			// module length
+			0x3,
+			// module = "foo"
+			0x66, 0x6f, 0x6f,
+			// name length
+			0x3,
+			// name = "bar"
+			0x62, 0x61, 0x72,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidImportError{
+				Index: 0,
+				ReadError: InvalidImportTypeIndicatorError{
+					Offset:    14,
+					ReadError: io.EOF,
+				},
+			},
+			err,
+		)
+		assert.Nil(t, funcTypes)
+	})
+
+	t.Run("invalid type indicator", func(t *testing.T) {
+
+		t.Parallel()
+
+		funcTypes, err := read([]byte{
+			// section size: 7 (LEB128)
+			0x81, 0x80, 0x80, 0x80, 0x0,
+			// import count
+			0x1,
+			// module length
+			0x3,
+			// module = "foo"
+			0x66, 0x6f, 0x6f,
+			// name length
+			0x3,
+			// name = "bar"
+			0x62, 0x61, 0x72,
+			// type indicator
+			0x1,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidImportError{
+				Index: 0,
+				ReadError: InvalidImportTypeIndicatorError{
+					Offset:        14,
+					TypeIndicator: 0x1,
+					ReadError:     nil,
+				},
+			},
+			err,
+		)
+		assert.Nil(t, funcTypes)
+	})
+
+	t.Run("invalid function type index", func(t *testing.T) {
+
+		t.Parallel()
+
+		funcTypes, err := read([]byte{
+			// section size: 7 (LEB128)
+			0x81, 0x80, 0x80, 0x80, 0x0,
+			// import count
+			0x1,
+			// module length
+			0x3,
+			// module = "foo"
+			0x66, 0x6f, 0x6f,
+			// name length
+			0x3,
+			// name = "bar"
+			0x62, 0x61, 0x72,
+			// type indicator: function = 0
+			0x0,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidImportError{
+				Index: 0,
+				ReadError: InvalidImportSectionFunctionTypeIDError{
+					Offset:    15,
+					ReadError: io.EOF,
+				},
+			},
+			err,
+		)
+		assert.Nil(t, funcTypes)
+	})
+}
+
 func TestWASMReader_readFunctionSection(t *testing.T) {
 
 	t.Parallel()

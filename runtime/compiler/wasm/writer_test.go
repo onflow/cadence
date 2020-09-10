@@ -116,6 +116,49 @@ func TestWASMWriter_writeTypeSection(t *testing.T) {
 	)
 }
 
+func TestWASMWriter_writeImportSection(t *testing.T) {
+
+	t.Parallel()
+
+	var b buf
+	w := WASMWriter{&b}
+
+	imports := []*Import{
+		{
+			Module: "foo",
+			Name:   "bar",
+			TypeID: 1,
+		},
+	}
+
+	err := w.writeImportSection(imports)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		[]byte{
+			// section ID: Import = 2
+			0x2,
+			// section size: 11 (LEB128)
+			0x8b, 0x80, 0x80, 0x80, 0x0,
+			// import count: 1
+			0x1,
+			// module length
+			0x3,
+			// module = "foo"
+			0x66, 0x6f, 0x6f,
+			// name length
+			0x3,
+			// name = "bar"
+			0x62, 0x61, 0x72,
+			// type indicator: function = 0
+			0x0,
+			// type ID of function: 0
+			0x1,
+		},
+		b.data,
+	)
+}
+
 func TestWASMWriter_writeFunctionSection(t *testing.T) {
 
 	t.Parallel()
@@ -277,12 +320,23 @@ func TestWASMWriter(t *testing.T) {
 	err := w.writeMagicAndVersion()
 	require.NoError(t, err)
 
-	err = w.writeTypeSection([]*FunctionType{
+	types := []*FunctionType{
 		{
 			Params:  []ValueType{ValueTypeI32, ValueTypeI32},
 			Results: []ValueType{ValueTypeI32},
 		},
-	})
+	}
+	err = w.writeTypeSection(types)
+	require.NoError(t, err)
+
+	imports := []*Import{
+		{
+			Module: "env",
+			Name:   "add",
+			TypeID: 0,
+		},
+	}
+	err = w.writeImportSection(imports)
 	require.NoError(t, err)
 
 	functions := []*Function{
@@ -312,13 +366,27 @@ func TestWASMWriter(t *testing.T) {
 
 	require.Equal(t,
 		[]byte{
-			0x0, 0x61, 0x73, 0x6d, 0x1, 0x0, 0x0, 0x0,
-			0x1, 0x87, 0x80, 0x80, 0x80, 0x0, 0x1, 0x60,
-			0x2, 0x7f, 0x7f, 0x1, 0x7f, 0x3, 0x82, 0x80,
-			0x80, 0x80, 0x0, 0x1, 0x0, 0xa, 0x8f, 0x80,
-			0x80, 0x80, 0x0, 0x1, 0x89, 0x80, 0x80, 0x80,
-			0x0, 0x1, 0x1, 0x7f, 0x20, 0x0, 0x20, 0x1,
-			0x6a, 0xb,
+			// magic
+			0x0, 0x61, 0x73, 0x6d,
+			// version
+			0x1, 0x0, 0x0, 0x0,
+			// type section
+			0x1,
+			0x87, 0x80, 0x80, 0x80, 0x0,
+			0x1, 0x60, 0x2, 0x7f, 0x7f, 0x1, 0x7f,
+			// import section
+			0x02,
+			0x8b, 0x80, 0x80, 0x80, 0x00,
+			0x01, 0x03, 0x65, 0x6e, 0x76, 0x03, 0x61, 0x64,
+			0x64, 0x00, 0x00,
+			// function section
+			0x3,
+			0x82, 0x80, 0x80, 0x80, 0x0,
+			0x1, 0x0,
+			// code section
+			0xa, 0x8f, 0x80, 0x80, 0x80, 0x0,
+			0x1, 0x89, 0x80, 0x80, 0x80, 0x0, 0x1, 0x1,
+			0x7f, 0x20, 0x0, 0x20, 0x1, 0x6a, 0xb,
 		},
 		b.data,
 	)
@@ -326,7 +394,8 @@ func TestWASMWriter(t *testing.T) {
 	require.Equal(t,
 		`(module
   (type (;0;) (func (param i32 i32) (result i32)))
-  (func (;0;) (type 0) (param i32 i32) (result i32)
+  (import "env" "add" (func (;0;) (type 0)))
+  (func (;1;) (type 0) (param i32 i32) (result i32)
     (local i32)
     local.get 0
     local.get 1
