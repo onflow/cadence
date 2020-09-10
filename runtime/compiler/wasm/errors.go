@@ -255,6 +255,84 @@ func (e InvalidTypeSectionTypeCountError) Unwrap() error {
 	return e.ReadError
 }
 
+// InvalidImportSectionImportCountError is returned when the WASM binary specifies
+// an invalid count in the import section
+//
+type InvalidImportSectionImportCountError struct {
+	Offset    int
+	ReadError error
+}
+
+func (e InvalidImportSectionImportCountError) Error() string {
+	return fmt.Sprintf(
+		"invalid import count in import section at offset %d",
+		e.Offset,
+	)
+}
+
+func (e InvalidImportSectionImportCountError) Unwrap() error {
+	return e.ReadError
+}
+
+// InvalidImportError is returned when the WASM binary specifies
+// invalid import in the import section
+//
+type InvalidImportError struct {
+	Index     int
+	ReadError error
+}
+
+func (e InvalidImportError) Error() string {
+	return fmt.Sprintf(
+		"invalid import at index %d",
+		e.Index,
+	)
+}
+
+func (e InvalidImportError) Unwrap() error {
+	return e.ReadError
+}
+
+// InvalidImportTypeIndicatorError is returned when the WASM binary specifies
+// an invalid type indicator in the import section
+//
+type InvalidImportTypeIndicatorError struct {
+	Offset        int
+	TypeIndicator importTypeIndicator
+	ReadError     error
+}
+
+func (e InvalidImportTypeIndicatorError) Error() string {
+	return fmt.Sprintf(
+		"invalid import type indicator %d at offset %d",
+		e.TypeIndicator,
+		e.Offset,
+	)
+}
+
+func (e InvalidImportTypeIndicatorError) Unwrap() error {
+	return e.ReadError
+}
+
+// InvalidImportSectionFunctionTypeIDError is returned when the WASM binary specifies
+// an invalid function type ID in the import section
+//
+type InvalidImportSectionFunctionTypeIDError struct {
+	Offset    int
+	ReadError error
+}
+
+func (e InvalidImportSectionFunctionTypeIDError) Error() string {
+	return fmt.Sprintf(
+		"invalid function type ID in import section at offset %d",
+		e.Offset,
+	)
+}
+
+func (e InvalidImportSectionFunctionTypeIDError) Unwrap() error {
+	return e.ReadError
+}
+
 // InvalidFunctionSectionFunctionCountError is returned when the WASM binary specifies
 // an invalid count in the function section
 //
@@ -285,7 +363,7 @@ type InvalidFunctionSectionFunctionTypeIDError struct {
 
 func (e InvalidFunctionSectionFunctionTypeIDError) Error() string {
 	return fmt.Sprintf(
-		"invalid function type ID at index %d at offset %d",
+		"invalid function type ID in function section at index %d at offset %d",
 		e.Index,
 		e.Offset,
 	)
