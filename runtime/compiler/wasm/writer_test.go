@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -54,7 +55,7 @@ func wasm2wat(binary []byte) string {
 	return string(out)
 }
 
-func TestWasmWriter_writeMagicAndVersion(t *testing.T) {
+func TestWASMWriter_writeMagicAndVersion(t *testing.T) {
 
 	t.Parallel()
 
@@ -75,7 +76,7 @@ func TestWasmWriter_writeMagicAndVersion(t *testing.T) {
 	)
 }
 
-func TestWasmWriter_writeTypeSection(t *testing.T) {
+func TestWASMWriter_writeTypeSection(t *testing.T) {
 
 	t.Parallel()
 
@@ -115,7 +116,7 @@ func TestWasmWriter_writeTypeSection(t *testing.T) {
 	)
 }
 
-func TestWasmWriter_writeFunctionSection(t *testing.T) {
+func TestWASMWriter_writeFunctionSection(t *testing.T) {
 
 	t.Parallel()
 
@@ -159,7 +160,7 @@ func TestWasmWriter_writeFunctionSection(t *testing.T) {
 	)
 }
 
-func TestWasmWriter_writeCodeSection(t *testing.T) {
+func TestWASMWriter_writeCodeSection(t *testing.T) {
 
 	t.Parallel()
 
@@ -217,7 +218,55 @@ func TestWasmWriter_writeCodeSection(t *testing.T) {
 	)
 }
 
-func TestWasmWriter(t *testing.T) {
+func TestWASMWriter_writeName(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		var b buf
+		w := WASMWriter{&b}
+
+		err := w.writeName("hello")
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]byte{
+				// length
+				0x5,
+				// "hello"
+				0x68, 0x65, 0x6c, 0x6c, 0x6f,
+			},
+			b.data,
+		)
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+
+		t.Parallel()
+
+		var b buf
+		w := WASMWriter{&b}
+
+		name := string([]byte{0xff, 0xfe, 0xfd})
+		err := w.writeName(name)
+		require.Error(t, err)
+
+		assert.Equal(t,
+			InvalidNonUTF8NameError{
+				Name:   name,
+				Offset: 0,
+			},
+			err,
+		)
+
+		assert.Empty(t, b.data)
+	})
+}
+
+func TestWASMWriter(t *testing.T) {
 
 	t.Parallel()
 
