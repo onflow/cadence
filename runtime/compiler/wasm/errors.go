@@ -479,3 +479,75 @@ func (e MissingEndInstructionError) Error() string {
 		e.Offset,
 	)
 }
+
+// InvalidNonUTF8NameError is returned when the WASM binary specifies
+// or the writer is given a name which is not properly UTF-8 encoded
+//
+type InvalidNonUTF8NameError struct {
+	Name   string
+	Offset int
+}
+
+func (e InvalidNonUTF8NameError) Error() string {
+	return fmt.Sprintf(
+		"invalid non UTF-8 string at offset %d: %s",
+		e.Offset,
+		e.Name,
+	)
+}
+
+// InvalidNameLengthError is returned the WASM binary specifies
+// an invalid name length
+//
+type InvalidNameLengthError struct {
+	Offset    int
+	ReadError error
+}
+
+func (e InvalidNameLengthError) Error() string {
+	return fmt.Sprintf(
+		"invalid name length at offset %d",
+		e.Offset,
+	)
+}
+
+func (e InvalidNameLengthError) Unwrap() error {
+	return e.ReadError
+}
+
+// InvalidNameError is returned the WASM binary specifies
+// an invalid name
+//
+type InvalidNameError struct {
+	Offset    int
+	ReadError error
+}
+
+func (e InvalidNameError) Error() string {
+	return fmt.Sprintf(
+		"invalid name at offset %d",
+		e.Offset,
+	)
+}
+
+func (e InvalidNameError) Unwrap() error {
+	return e.ReadError
+}
+
+// IncompleteNameError is returned the WASM binary specifies
+// an incomplete name
+//
+type IncompleteNameError struct {
+	Offset   int
+	Expected uint32
+	Actual   uint32
+}
+
+func (e IncompleteNameError) Error() string {
+	return fmt.Sprintf(
+		"incomplete name at offset %d. expected %d bytes, got %d",
+		e.Offset,
+		e.Expected,
+		e.Actual,
+	)
+}

@@ -20,6 +20,7 @@ package wasm
 
 import (
 	"io"
+	"unicode/utf8"
 )
 
 // WASMReader allows reading WASM binaries
@@ -489,4 +490,51 @@ func (r *WASMReader) readInstructions() (instructions []Instruction, err error) 
 			}
 		}
 	}
+}
+
+// readName reads a name
+//
+func (r *WASMReader) readName() (string, error) {
+
+	// read the length
+	lengthOffset := r.buf.offset
+	length, err := r.buf.readULEB128()
+	if err != nil {
+		return "", InvalidNameLengthError{
+			Offset:    int(lengthOffset),
+			ReadError: err,
+		}
+	}
+
+	// read the name
+	nameOffset := r.buf.offset
+	name := make([]byte, length)
+	n, err := r.buf.Read(name)
+	if err != nil {
+		return "", InvalidNameError{
+			Offset:    int(nameOffset),
+			ReadError: err,
+		}
+	}
+
+	readCount := uint32(n)
+
+	// ensure the full name was read
+	if readCount != length {
+		return "", IncompleteNameError{
+			Offset:   int(nameOffset),
+			Expected: length,
+			Actual:   readCount,
+		}
+	}
+
+	// ensure the name is valid UTF-8
+	if !utf8.Valid(name) {
+		return "", InvalidNonUTF8NameError{
+			Offset: int(nameOffset),
+			Name:   string(name),
+		}
+	}
+
+	return string(name), nil
 }

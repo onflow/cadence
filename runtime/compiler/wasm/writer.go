@@ -18,6 +18,10 @@
 
 package wasm
 
+import (
+	"unicode/utf8"
+)
+
 // WASMWriter allows writing WASM binaries
 //
 type WASMWriter struct {
@@ -217,6 +221,30 @@ func (w *WASMWriter) writeFunctionBody(code *Code) error {
 	})
 }
 
+// writeOpcode writes the opcode of an instruction
+//
 func (w *WASMWriter) writeOpcode(opcode opcode) error {
 	return w.buf.WriteByte(byte(opcode))
+}
+
+// writeName writes a name, a UTF-8 byte sequence
+//
+func (w *WASMWriter) writeName(name string) error {
+
+	// ensure the name is valid UTF-8
+	if !utf8.ValidString(name) {
+		return InvalidNonUTF8NameError{
+			Name:   name,
+			Offset: int(w.buf.offset),
+		}
+	}
+
+	// write the length
+	err := w.buf.writeULEB128(uint32(len(name)))
+	if err != nil {
+		return err
+	}
+
+	// write the name
+	return w.buf.WriteBytes([]byte(name))
 }

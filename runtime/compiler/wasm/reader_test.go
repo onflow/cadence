@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestWasmReader_readMagicAndVersion(t *testing.T) {
+func TestWASMReader_readMagicAndVersion(t *testing.T) {
 
 	t.Parallel()
 
@@ -105,7 +105,7 @@ func TestWasmReader_readMagicAndVersion(t *testing.T) {
 	})
 }
 
-func TestWasmReader_readValType(t *testing.T) {
+func TestWASMReader_readValType(t *testing.T) {
 
 	t.Parallel()
 
@@ -168,7 +168,7 @@ func TestWasmReader_readValType(t *testing.T) {
 	})
 }
 
-func TestWasmReader_readTypeSection(t *testing.T) {
+func TestWASMReader_readTypeSection(t *testing.T) {
 
 	t.Parallel()
 
@@ -451,7 +451,7 @@ func TestWasmReader_readTypeSection(t *testing.T) {
 	})
 }
 
-func TestWasmReader_readFunctionSection(t *testing.T) {
+func TestWASMReader_readFunctionSection(t *testing.T) {
 
 	t.Parallel()
 
@@ -544,7 +544,7 @@ func TestWasmReader_readFunctionSection(t *testing.T) {
 	})
 }
 
-func TestWasmReader_readCodeSection(t *testing.T) {
+func TestWASMReader_readCodeSection(t *testing.T) {
 
 	t.Parallel()
 
@@ -821,5 +821,93 @@ func TestWasmReader_readCodeSection(t *testing.T) {
 			err,
 		)
 		assert.Nil(t, funcTypes)
+	})
+}
+
+func TestWASMReader_readName(t *testing.T) {
+
+	t.Parallel()
+
+	read := func(data []byte) (string, error) {
+		b := buf{data: data}
+		r := WASMReader{buf: &b}
+		return r.readName()
+	}
+
+	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		name, err := read([]byte{
+			// length
+			0x5,
+			// "hello"
+			0x68, 0x65, 0x6c, 0x6c, 0x6f,
+		})
+		require.NoError(t, err)
+
+		require.Equal(t, "hello", name)
+	})
+
+	t.Run("invalid length", func(t *testing.T) {
+
+		t.Parallel()
+
+		name, err := read(nil)
+		require.Error(t, err)
+
+		assert.Equal(t,
+			InvalidNameLengthError{
+				Offset:    0,
+				ReadError: io.EOF,
+			},
+			err,
+		)
+		assert.Empty(t, name)
+	})
+
+	t.Run("invalid name", func(t *testing.T) {
+
+		t.Parallel()
+
+		name, err := read([]byte{
+			// length
+			0x5,
+			// "he"
+			0x68, 0x65,
+		})
+		require.Error(t, err)
+
+		assert.Equal(t,
+			IncompleteNameError{
+				Offset:   1,
+				Expected: 5,
+				Actual:   2,
+			},
+			err,
+		)
+		assert.Empty(t, name)
+	})
+
+	t.Run("invalid non UTF-8", func(t *testing.T) {
+
+		t.Parallel()
+
+		name, err := read([]byte{
+			// length
+			0x3,
+			// name
+			0xff, 0xfe, 0xfd,
+		})
+		require.Error(t, err)
+
+		assert.Equal(t,
+			InvalidNonUTF8NameError{
+				Name:   "\xff\xfe\xfd",
+				Offset: 1,
+			},
+			err,
+		)
+		assert.Empty(t, name)
 	})
 }
