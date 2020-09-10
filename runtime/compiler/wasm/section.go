@@ -41,6 +41,7 @@ type sectionID byte
 
 const (
 	sectionIDType     sectionID = 1
+	sectionIDImport   sectionID = 2
 	sectionIDFunction sectionID = 3
 	sectionIDCode     sectionID = 10
 )

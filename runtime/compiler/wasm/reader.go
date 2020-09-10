@@ -271,6 +271,93 @@ func (r *WASMReader) readValType() (ValueType, error) {
 	}
 }
 
+// readImportSection reads the section that declares the imports
+//
+func (r *WASMReader) readImportSection() error {
+
+	err := r.readSectionSize()
+	if err != nil {
+		return err
+	}
+
+	// read the number of imports
+	countOffset := r.buf.offset
+	count, err := r.buf.readULEB128()
+	if err != nil {
+		return InvalidImportSectionImportCountError{
+			Offset:    int(countOffset),
+			ReadError: err,
+		}
+	}
+
+	imports := make([]*Import, count)
+
+	// read the function type ID for each function
+	for i := uint32(0); i < count; i++ {
+		im, err := r.readImport()
+		if err != nil {
+			return InvalidImportError{
+				Index:     int(i),
+				ReadError: err,
+			}
+		}
+		imports[i] = im
+	}
+
+	r.Module.Imports = imports
+
+	return nil
+}
+
+// readImport reads an import in the import section
+//
+func (r *WASMReader) readImport() (*Import, error) {
+
+	// read the module
+	module, err := r.readName()
+	if err != nil {
+		return nil, err
+	}
+
+	// read the name
+	name, err := r.readName()
+	if err != nil {
+		return nil, err
+	}
+
+	// read the type indicator
+	indicatorOffset := r.buf.offset
+	b, err := r.buf.ReadByte()
+
+	typeIndicator := importTypeIndicator(b)
+
+	// TODO: add support for tables, memories, and globals
+
+	if err != nil || typeIndicator != importTypeIndicatorFunction {
+		return nil, InvalidImportTypeIndicatorError{
+			TypeIndicator: typeIndicator,
+			Offset:        int(indicatorOffset),
+			ReadError:     err,
+		}
+	}
+
+	// read the function type ID
+	functionTypeIDOffset := r.buf.offset
+	functionTypeID, err := r.buf.readULEB128()
+	if err != nil {
+		return nil, InvalidImportSectionFunctionTypeIDError{
+			Offset:    int(functionTypeIDOffset),
+			ReadError: err,
+		}
+	}
+
+	return &Import{
+		Module: module,
+		Name:   name,
+		TypeID: functionTypeID,
+	}, nil
+}
+
 // readFunctionSection reads the section that declares the types of functions.
 // The bodies of these functions will later be provided in the code section
 //
@@ -291,23 +378,23 @@ func (r *WASMReader) readFunctionSection() error {
 		}
 	}
 
-	typeIDs := make([]uint32, count)
+	functionTypeIDs := make([]uint32, count)
 
 	// read the function type ID for each function
 	for i := uint32(0); i < count; i++ {
-		typeIDOffset := r.buf.offset
-		typeID, err := r.buf.readULEB128()
+		functionTypeIDOffset := r.buf.offset
+		functionTypeID, err := r.buf.readULEB128()
 		if err != nil {
 			return InvalidFunctionSectionFunctionTypeIDError{
 				Index:     int(i),
-				Offset:    int(typeIDOffset),
+				Offset:    int(functionTypeIDOffset),
 				ReadError: err,
 			}
 		}
-		typeIDs[i] = typeID
+		functionTypeIDs[i] = functionTypeID
 	}
 
-	r.Module.functionTypeIDs = typeIDs
+	r.Module.functionTypeIDs = functionTypeIDs
 
 	return nil
 }

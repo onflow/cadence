@@ -18,13 +18,19 @@
 
 package wasm
 
-// Module represents a module
+// Import represents an import
 //
-type Module struct {
-	Types []*FunctionType
-	// The type IDs of all functions
-	functionTypeIDs []uint32
-	// The bodies of all functions
-	functionBodies []*Code
-	Imports        []*Import
+type Import struct {
+	Module string
+	Name   string
+	// TODO: add support for tables, memories, and globals
+	TypeID uint32
 }
+
+// importTypeIndicator is the byte used to indicate the import type in the WASM binary
+type importTypeIndicator byte
+
+const (
+	// importTypeIndicatorFunction is the byte used to indicate the import of a function in the WASM binary
+	importTypeIndicatorFunction importTypeIndicator = 0x0
+)
