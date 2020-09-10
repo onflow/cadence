@@ -1235,7 +1235,10 @@ type encodedTypeValue struct {
 	Type interface{} `cbor:"0,keyasint"`
 }
 
-var encodedTypeValueTypeFieldKey = cborFieldKey(encodedTypeValue{}, "Type")
+var encodedTypeValueTypeFieldKey = cborFieldKey(
+	encodedTypeValue{},
+	"Type",
+)
 
 func (e *Encoder) prepareTypeValue(v TypeValue) (interface{}, error) {
 	staticType, err := e.prepareStaticType(v.Type)
