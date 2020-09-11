@@ -11,14 +11,14 @@ func TestPrependMagic(t *testing.T) {
 	t.Run("empty", func(t *testing.T) {
 		assert.Equal(t,
 			[]byte{0x0, 0xCA, 0xDE, 0x0, 0x1},
-			PrependMagic([]byte{}),
+			PrependMagic([]byte{}, 1),
 		)
 	})
 
 	t.Run("1, 2, 3", func(t *testing.T) {
 		assert.Equal(t,
-			[]byte{0x0, 0xCA, 0xDE, 0x0, 0x1, 1, 2, 3},
-			PrependMagic([]byte{1, 2, 3}),
+			[]byte{0x0, 0xCA, 0xDE, 0x0, 0x4, 1, 2, 3},
+			PrependMagic([]byte{1, 2, 3}, 4),
 		)
 	})
 }

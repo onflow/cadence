@@ -38,6 +38,7 @@ import (
 type Decoder struct {
 	decoder *cbor.Decoder
 	owner   *common.Address
+	version uint16
 }
 
 // Decode returns a value decoded from its CBOR-encoded representation,
@@ -47,11 +48,11 @@ type Decoder struct {
 // For example, path elements are appended for array elements (the index),
 // dictionary values (the key), and composites (the field name).
 //
-func DecodeValue(b []byte, owner *common.Address, path []string) (Value, error) {
+func DecodeValue(b []byte, owner *common.Address, path []string, version uint16) (Value, error) {
 
 	reader := bytes.NewReader(b)
 
-	decoder, err := NewDecoder(reader, owner)
+	decoder, err := NewDecoder(reader, owner, version)
 	if err != nil {
 		return nil, err
 	}
@@ -69,7 +70,7 @@ func DecodeValue(b []byte, owner *common.Address, path []string) (Value, error) 
 //
 // It sets the given address as the owner (can be `nil`).
 //
-func NewDecoder(r io.Reader, owner *common.Address) (*Decoder, error) {
+func NewDecoder(r io.Reader, owner *common.Address, version uint16) (*Decoder, error) {
 	dm, err := decMode()
 	if err != nil {
 		return nil, err
@@ -458,29 +459,28 @@ func (d *Decoder) decodeComposite(v interface{}, path []string) (*CompositeValue
 	return compositeValue, nil
 }
 
+var bigOne = big.NewInt(1)
+
 func (d *Decoder) decodeBig(v interface{}) (*big.Int, error) {
-	tag, ok := v.(cbor.Tag)
+	bigInt, ok := v.(big.Int)
 	if !ok {
 		return nil, fmt.Errorf("invalid bignum encoding: %T", v)
 	}
 
-	b, ok := tag.Content.([]byte)
-	if !ok {
-		return nil, fmt.Errorf("invalid bignum content encoding: %T", v)
+	// The encoding of negative bignums is specified in
+	// https://tools.ietf.org/html/rfc7049#section-2.4.2:
+	// "For tag value 3, the value of the bignum is -1 - n."
+	//
+	// Negative bignums were encoded incorrectly in version < 2,
+	// as just -n.
+	//
+	// Fix this by adjusting by one.
+
+	if bigInt.Sign() < 0 && d.version < 2 {
+		bigInt.Add(&bigInt, bigOne)
 	}
 
-	bigInt := new(big.Int).SetBytes(b)
-
-	switch tag.Number {
-	case cborTagPositiveBignum:
-		break
-	case cborTagNegativeBignum:
-		bigInt.Neg(bigInt)
-	default:
-		return nil, fmt.Errorf("invalid Int content tag: %v", tag.Number)
-	}
-
-	return bigInt, nil
+	return &bigInt, nil
 }
 
 func (d *Decoder) decodeInt(v interface{}) (IntValue, error) {
