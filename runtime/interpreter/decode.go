@@ -70,15 +70,25 @@ func DecodeValue(b []byte, owner *common.Address, path []string) (Value, error) 
 // It sets the given address as the owner (can be `nil`).
 //
 func NewDecoder(r io.Reader, owner *common.Address) (*Decoder, error) {
-	decMode, err := cbor.DecOptions{}.DecMode()
+	dm, err := decMode()
 	if err != nil {
 		return nil, err
 	}
 
 	return &Decoder{
-		decoder: decMode.NewDecoder(r),
+		decoder: dm.NewDecoder(r),
 		owner:   owner,
+		version: version,
 	}, nil
+}
+
+func decMode() (cbor.DecMode, error) {
+	return cbor.DecOptions{
+		IntDec:           cbor.IntDecConvertNone,
+		MaxArrayElements: 512 * 1024,
+		MaxMapPairs:      512 * 1024,
+		MaxNestedLevels:  256,
+	}.DecMode()
 }
 
 // Decode reads CBOR-encoded bytes from the io.Reader and decodes them to a value.

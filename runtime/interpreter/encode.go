@@ -224,7 +224,18 @@ func EncodeValue(value Value, path []string, deferred bool) (
 		return nil, nil, err
 	}
 
-	return w.Bytes(), deferrals, nil
+	dm, err := decMode()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	data := w.Bytes()
+	err = dm.Valid(data)
+	if err != nil {
+		return nil, nil, fmt.Errorf("encoder produced invalid data: %w", err)
+	}
+
+	return data, deferrals, nil
 }
 
 // NewEncoder initializes an Encoder that will write CBOR-encoded bytes
