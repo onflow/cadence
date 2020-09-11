@@ -13,3 +13,5 @@ require (
 )
 
 replace github.com/onflow/cadence => ../
+replace github.com/fxamacker/cbor/v2 => github.com/turbolent/cbor/v2 v2.2.1-0.20200911003300-cac23af49154
+
