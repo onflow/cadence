@@ -10,9 +10,19 @@ listed in no particular order.
 
   Cadence should provide means to test code.
 
-- [Storage querying API](https://github.com/onflow/cadence/issues/208):
+- [Account key API](https://github.com/onflow/cadence/issues/371)
 
-  Cadence should provide an API to query/iterate over account storage.
+  Cadence should provide a more user-friendly API for managing keys.
+
+- Storage API
+
+  - [Typed Paths](https://github.com/onflow/cadence/issues/369)
+
+    Cadence should provide a simpler API to acquire capabilities.
+
+  - [Storage querying API](https://github.com/onflow/cadence/issues/208)
+
+    Cadence should provide an API to query/iterate over account storage.
 
 - Compilation
 
