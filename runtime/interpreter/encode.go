@@ -40,9 +40,6 @@ type cborMap = map[uint64]interface{}
 //
 // DO *NOT* REPLACE EXISTING FIELDS!
 
-const cborTagPositiveBignum = 0x2
-const cborTagNegativeBignum = 0x3
-
 const cborTagBase = 128
 
 // !!! *WARNING* !!!
