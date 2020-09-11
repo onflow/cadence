@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"math/big"
 	"strconv"
 	"strings"
 
@@ -242,7 +241,9 @@ func EncodeValue(value Value, path []string, deferred bool) (
 // to the given io.Writer.
 //
 func NewEncoder(w io.Writer, deferred bool) (*Encoder, error) {
-	encMode, err := cbor.CanonicalEncOptions().EncMode()
+	options := cbor.CanonicalEncOptions()
+	options.BigIntConvert = cbor.BigIntConvertNone
+	encMode, err := options.EncMode()
 	if err != nil {
 		return nil, err
 	}
@@ -432,21 +433,10 @@ func (e *Encoder) prepareBool(v BoolValue) bool {
 	return bool(v)
 }
 
-func (e *Encoder) prepareBig(bigInt *big.Int) cbor.Tag {
-	b := bigInt.Bytes()
-	// positive bignum
-	var tag uint64 = cborTagPositiveBignum
-	if bigInt.Sign() < 0 {
-		// negative bignum
-		tag = cborTagNegativeBignum
-	}
-	return cbor.Tag{Number: tag, Content: b}
-}
-
 func (e *Encoder) prepareInt(v IntValue) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagIntValue,
-		Content: e.prepareBig(v.BigInt),
+		Content: v.BigInt,
 	}
 }
 
@@ -480,21 +470,21 @@ func (e *Encoder) prepareInt64(v Int64Value) cbor.Tag {
 func (e *Encoder) prepareInt128(v Int128Value) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagInt128Value,
-		Content: e.prepareBig(v.BigInt),
+		Content: v.BigInt,
 	}
 }
 
 func (e *Encoder) prepareInt256(v Int256Value) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagInt256Value,
-		Content: e.prepareBig(v.BigInt),
+		Content: v.BigInt,
 	}
 }
 
 func (e *Encoder) prepareUInt(v UIntValue) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagUIntValue,
-		Content: e.prepareBig(v.BigInt),
+		Content: v.BigInt,
 	}
 }
 
@@ -529,14 +519,14 @@ func (e *Encoder) prepareUInt64(v UInt64Value) cbor.Tag {
 func (e *Encoder) prepareUInt128(v UInt128Value) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagUInt128Value,
-		Content: e.prepareBig(v.BigInt),
+		Content: v.BigInt,
 	}
 }
 
 func (e *Encoder) prepareUInt256(v UInt256Value) cbor.Tag {
 	return cbor.Tag{
 		Number:  cborTagUInt256Value,
-		Content: e.prepareBig(v.BigInt),
+		Content: v.BigInt,
 	}
 }
 

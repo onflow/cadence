@@ -7658,7 +7658,11 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 		encoded, _, err := interpreter.EncodeValue(test, path, false)
 		require.NoError(t, err)
 
-		decoder, err := interpreter.NewDecoder(bytes.NewReader(encoded), owner)
+		decoder, err := interpreter.NewDecoder(
+			bytes.NewReader(encoded),
+			owner,
+			interpreter.CurrentEncodingVersion,
+		)
 		require.NoError(t, err)
 
 		decoded, err := decoder.Decode(path)
