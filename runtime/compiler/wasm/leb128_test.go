@@ -88,7 +88,11 @@ func TestBuf_writeUint32LEB128(t *testing.T) {
 
 func TestBuf_writeUint64LEB128(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("DWARF spec", func(t *testing.T) {
+
+		t.Parallel()
 
 		// DWARF Debugging Information Format, Version 3, page 140
 
@@ -114,6 +118,9 @@ func TestBuf_writeUint64LEB128(t *testing.T) {
 	})
 
 	t.Run("write: max byte count", func(t *testing.T) {
+
+		t.Parallel()
+
 		var b buf
 		err := b.writeUint64LEB128(math.MaxUint64)
 		require.NoError(t, err)
@@ -121,6 +128,9 @@ func TestBuf_writeUint64LEB128(t *testing.T) {
 	})
 
 	t.Run("read: max byte count", func(t *testing.T) {
+
+		t.Parallel()
+
 		b := buf{data: []byte{
 			0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88,
 			0x89, 0x8a, 0x8b, 0x8c, 0x8d, 0x8e, 0x8f, 0x90,
