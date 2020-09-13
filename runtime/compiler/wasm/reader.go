@@ -19,7 +19,6 @@
 package wasm
 
 import (
-	"io"
 	"unicode/utf8"
 )
 
@@ -123,7 +122,7 @@ func (r *WASMReader) readSectionSize() error {
 	// read the size
 	sizeOffset := r.buf.offset
 	// TODO: use size
-	_, err := r.buf.readULEB128()
+	_, err := r.buf.readUint32LEB128()
 	if err != nil {
 		return InvalidSectionSizeError{
 			Offset:    int(sizeOffset),
@@ -146,7 +145,7 @@ func (r *WASMReader) readTypeSection() error {
 
 	// read the number of types
 	countOffset := r.buf.offset
-	count, err := r.buf.readULEB128()
+	count, err := r.buf.readUint32LEB128()
 	if err != nil {
 		return InvalidTypeSectionTypeCountError{
 			Offset:    int(countOffset),
@@ -186,7 +185,7 @@ func (r *WASMReader) readFuncType() (*FunctionType, error) {
 
 	// read the number of parameters
 	parameterCountOffset := r.buf.offset
-	parameterCount, err := r.buf.readULEB128()
+	parameterCount, err := r.buf.readUint32LEB128()
 	if err != nil {
 		return nil, InvalidFuncTypeParameterCountError{
 			Offset:    int(parameterCountOffset),
@@ -211,7 +210,7 @@ func (r *WASMReader) readFuncType() (*FunctionType, error) {
 
 	// read the number of results
 	resultCountOffset := r.buf.offset
-	resultCount, err := r.buf.readULEB128()
+	resultCount, err := r.buf.readUint32LEB128()
 	if err != nil {
 		return nil, InvalidFuncTypeResultCountError{
 			Offset:    int(resultCountOffset),
@@ -278,7 +277,7 @@ func (r *WASMReader) readImportSection() error {
 
 	// read the number of imports
 	countOffset := r.buf.offset
-	count, err := r.buf.readULEB128()
+	count, err := r.buf.readUint32LEB128()
 	if err != nil {
 		return InvalidImportSectionImportCountError{
 			Offset:    int(countOffset),
@@ -339,7 +338,7 @@ func (r *WASMReader) readImport() (*Import, error) {
 
 	// read the function type ID
 	functionTypeIDOffset := r.buf.offset
-	functionTypeID, err := r.buf.readULEB128()
+	functionTypeID, err := r.buf.readUint32LEB128()
 	if err != nil {
 		return nil, InvalidImportSectionFunctionTypeIDError{
 			Offset:    int(functionTypeIDOffset),
@@ -366,7 +365,7 @@ func (r *WASMReader) readFunctionSection() error {
 
 	// read the number of functions
 	countOffset := r.buf.offset
-	count, err := r.buf.readULEB128()
+	count, err := r.buf.readUint32LEB128()
 	if err != nil {
 		return InvalidFunctionSectionFunctionCountError{
 			Offset:    int(countOffset),
@@ -379,7 +378,7 @@ func (r *WASMReader) readFunctionSection() error {
 	// read the function type ID for each function
 	for i := uint32(0); i < count; i++ {
 		functionTypeIDOffset := r.buf.offset
-		functionTypeID, err := r.buf.readULEB128()
+		functionTypeID, err := r.buf.readUint32LEB128()
 		if err != nil {
 			return InvalidFunctionSectionFunctionTypeIDError{
 				Index:     int(i),
@@ -407,7 +406,7 @@ func (r *WASMReader) readCodeSection() error {
 
 	// read the number of functions
 	countOffset := r.buf.offset
-	count, err := r.buf.readULEB128()
+	count, err := r.buf.readUint32LEB128()
 	if err != nil {
 		return InvalidCodeSectionFunctionCountError{
 			Offset:    int(countOffset),
@@ -442,7 +441,7 @@ func (r *WASMReader) readFunctionBody() (*Code, error) {
 	// read the size
 	sizeOffset := r.buf.offset
 	// TODO: use size
-	_, err := r.buf.readULEB128()
+	_, err := r.buf.readUint32LEB128()
 	if err != nil {
 		return nil, InvalidCodeSizeError{
 			Offset:    int(sizeOffset),
@@ -473,7 +472,7 @@ func (r *WASMReader) readFunctionBody() (*Code, error) {
 func (r *WASMReader) readLocals() ([]ValueType, error) {
 	// read the number of locals
 	localsCountOffset := r.buf.offset
-	localsCount, err := r.buf.readULEB128()
+	localsCount, err := r.buf.readUint32LEB128()
 	if err != nil {
 		return nil, InvalidCodeSectionLocalsCountError{
 			Offset:    int(localsCountOffset),
@@ -486,7 +485,7 @@ func (r *WASMReader) readLocals() ([]ValueType, error) {
 	// read each local
 	for i := uint32(0); i < localsCount; {
 		compressedLocalsCountOffset := r.buf.offset
-		compressedLocalsCount, err := r.buf.readULEB128()
+		compressedLocalsCount, err := r.buf.readUint32LEB128()
 		if err != nil {
 			return nil, InvalidCodeSectionCompressedLocalsCountError{
 				Offset:    int(compressedLocalsCountOffset),
@@ -581,7 +580,7 @@ func (r *WASMReader) readName() (string, error) {
 
 	// read the length
 	lengthOffset := r.buf.offset
-	length, err := r.buf.readULEB128()
+	length, err := r.buf.readUint32LEB128()
 	if err != nil {
 		return "", InvalidNameLengthError{
 			Offset:    int(lengthOffset),
