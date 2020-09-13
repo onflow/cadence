@@ -22,24 +22,6 @@ type Instruction interface {
 	write(*WASMWriter) error
 }
 
-// InstructionLocalGet is the 'local.get' instruction
+// opcode is the byte used to indicate a certain instruction in the WASM binary
 //
-type InstructionLocalGet struct {
-	Index uint32
-}
-
-func (i InstructionLocalGet) write(wasm *WASMWriter) error {
-	err := wasm.writeOpcode(opcodeLocalGet)
-	if err != nil {
-		return err
-	}
-	return wasm.buf.writeULEB128(i.Index)
-}
-
-// InstructionI32Add is the 'i32.add' instruction
-//
-type InstructionI32Add struct{}
-
-func (i InstructionI32Add) write(wasm *WASMWriter) error {
-	return wasm.writeOpcode(opcodeI32Add)
-}
+type opcode byte

@@ -522,55 +522,16 @@ func (r *WASMReader) readLocals() ([]ValueType, error) {
 func (r *WASMReader) readInstructions() (instructions []Instruction, err error) {
 
 	for {
-		opcodeOffset := r.buf.offset
-		b, err := r.buf.ReadByte()
-
-		c := opcode(b)
-
+		instruction, err := readInstruction(r.buf)
 		if err != nil {
-			if err == io.EOF {
-				return nil, MissingEndInstructionError{
-					Offset: int(opcodeOffset),
-				}
-			} else {
-				return nil, InvalidOpcodeError{
-					Offset:    int(opcodeOffset),
-					Opcode:    c,
-					ReadError: err,
-				}
-			}
+			return nil, err
 		}
 
-		switch c {
-		case opcodeLocalGet:
-			indexOffset := r.buf.offset
-			index, err := r.buf.readULEB128()
-			if err != nil {
-				return nil, InvalidInstructionArgumentError{
-					Offset:    int(indexOffset),
-					Opcode:    c,
-					ReadError: err,
-				}
-			}
-			instructions = append(instructions,
-				InstructionLocalGet{Index: index},
-			)
-
-		case opcodeI32Add:
-			instructions = append(instructions,
-				InstructionI32Add{},
-			)
-
-		case opcodeEnd:
+		if _, ok := instruction.(InstructionEnd); ok {
 			return instructions, nil
-
-		default:
-			return nil, InvalidOpcodeError{
-				Offset:    int(opcodeOffset),
-				Opcode:    c,
-				ReadError: err,
-			}
 		}
+
+		instructions = append(instructions, instruction)
 	}
 }
 
