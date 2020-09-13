@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-//go:generate go run ./utils/version generate
+//go:generate go run ./utils/version/main.go
 
 package cadence
 
