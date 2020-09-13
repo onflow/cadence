@@ -80,7 +80,7 @@ func (w *WASMWriter) writeTypeSection(funcTypes []*FunctionType) error {
 	return w.writeSection(sectionIDType, func() error {
 
 		// write the number of types
-		err := w.buf.writeULEB128(uint32(len(funcTypes)))
+		err := w.buf.writeUint32LEB128(uint32(len(funcTypes)))
 		if err != nil {
 			return err
 		}
@@ -107,7 +107,7 @@ func (w *WASMWriter) writeFuncType(funcType *FunctionType) error {
 	}
 
 	// write the number of parameters
-	err = w.buf.writeULEB128(uint32(len(funcType.Params)))
+	err = w.buf.writeUint32LEB128(uint32(len(funcType.Params)))
 	if err != nil {
 		return err
 	}
@@ -121,7 +121,7 @@ func (w *WASMWriter) writeFuncType(funcType *FunctionType) error {
 	}
 
 	// write the number of results
-	err = w.buf.writeULEB128(uint32(len(funcType.Results)))
+	err = w.buf.writeUint32LEB128(uint32(len(funcType.Results)))
 	if err != nil {
 		return err
 	}
@@ -143,7 +143,7 @@ func (w *WASMWriter) writeImportSection(imports []*Import) error {
 	return w.writeSection(sectionIDImport, func() error {
 
 		// write the number of imports
-		err := w.buf.writeULEB128(uint32(len(imports)))
+		err := w.buf.writeUint32LEB128(uint32(len(imports)))
 		if err != nil {
 			return err
 		}
@@ -184,7 +184,7 @@ func (w *WASMWriter) writeImport(im *Import) error {
 	}
 
 	// write the function type index
-	return w.buf.writeULEB128(im.TypeID)
+	return w.buf.writeUint32LEB128(im.TypeID)
 }
 
 // writeFunctionSection writes the section that declares the types of functions.
@@ -193,14 +193,14 @@ func (w *WASMWriter) writeImport(im *Import) error {
 func (w *WASMWriter) writeFunctionSection(functions []*Function) error {
 	return w.writeSection(sectionIDFunction, func() error {
 		// write the number of functions
-		err := w.buf.writeULEB128(uint32(len(functions)))
+		err := w.buf.writeUint32LEB128(uint32(len(functions)))
 		if err != nil {
 			return err
 		}
 
 		// write the function type ID for each function
 		for _, function := range functions {
-			err = w.buf.writeULEB128(function.TypeID)
+			err = w.buf.writeUint32LEB128(function.TypeID)
 			if err != nil {
 				return err
 			}
@@ -216,7 +216,7 @@ func (w *WASMWriter) writeFunctionSection(functions []*Function) error {
 func (w *WASMWriter) writeCodeSection(functions []*Function) error {
 	return w.writeSection(sectionIDCode, func() error {
 		// write the number of code entries (one for each function)
-		err := w.buf.writeULEB128(uint32(len(functions)))
+		err := w.buf.writeUint32LEB128(uint32(len(functions)))
 		if err != nil {
 			return err
 		}
@@ -240,7 +240,7 @@ func (w *WASMWriter) writeFunctionBody(code *Code) error {
 	return w.writeContentWithSize(func() error {
 
 		// write the number of locals
-		err := w.buf.writeULEB128(uint32(len(code.Locals)))
+		err := w.buf.writeUint32LEB128(uint32(len(code.Locals)))
 		if err != nil {
 			return err
 		}
@@ -248,7 +248,7 @@ func (w *WASMWriter) writeFunctionBody(code *Code) error {
 		// TODO: run-length encode
 		// write each local
 		for _, localValType := range code.Locals {
-			err = w.buf.writeULEB128(1)
+			err = w.buf.writeUint32LEB128(1)
 			if err != nil {
 				return err
 			}
@@ -289,7 +289,7 @@ func (w *WASMWriter) writeName(name string) error {
 	}
 
 	// write the length
-	err := w.buf.writeULEB128(uint32(len(name)))
+	err := w.buf.writeUint32LEB128(uint32(len(name)))
 	if err != nil {
 		return err
 	}
