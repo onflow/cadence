@@ -272,8 +272,14 @@ func (w *WASMWriter) writeFunctionBody(code *Code) error {
 
 // writeOpcode writes the opcode of an instruction
 //
-func (w *WASMWriter) writeOpcode(opcode opcode) error {
-	return w.buf.WriteByte(byte(opcode))
+func (w *WASMWriter) writeOpcode(opcodes ...opcode) error {
+	for _, b := range opcodes {
+		err := w.buf.WriteByte(byte(b))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // writeName writes a name, a UTF-8 byte sequence
