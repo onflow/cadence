@@ -141,6 +141,10 @@ type jsonPathValue struct {
 	Identifier string `json:"identifier"`
 }
 
+type jsonTypeValue struct {
+	StaticType string `json:"staticType"`
+}
+
 const (
 	voidTypeStr             = "Void"
 	optionalTypeStr         = "Optional"
@@ -176,6 +180,7 @@ const (
 	storageReferenceTypeStr = "StorageReference"
 	linkTypeStr             = "Link"
 	pathTypeStr             = "Path"
+	typeTypeStr             = "Type"
 )
 
 // prepare traverses the object graph of the provided value and constructs
@@ -250,6 +255,8 @@ func (e *Encoder) prepare(v cadence.Value) jsonValue {
 		return e.prepareLink(x)
 	case cadence.Path:
 		return e.preparePath(x)
+	case cadence.TypeValue:
+		return e.prepareTypeValue(x)
 	default:
 		panic(fmt.Errorf("unsupported value: %T, %v", v, v))
 	}
@@ -543,6 +550,15 @@ func (e *Encoder) preparePath(x cadence.Path) jsonValue {
 		Value: jsonPathValue{
 			Domain:     x.Domain,
 			Identifier: x.Identifier,
+		},
+	}
+}
+
+func (e *Encoder) prepareTypeValue(x cadence.TypeValue) jsonValue {
+	return jsonValueObject{
+		Type: typeTypeStr,
+		Value: jsonTypeValue{
+			StaticType: x.StaticType,
 		},
 	}
 }

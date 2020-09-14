@@ -102,6 +102,7 @@ const (
 	borrowTypeKey           = "borrowType"
 	domainKey               = "domain"
 	identifierKey           = "identifier"
+	staticTypeKey           = "staticType"
 )
 
 var ErrInvalidJSONCadence = errors.New("invalid JSON Cadence structure")
@@ -190,6 +191,8 @@ func decodeJSON(v interface{}) cadence.Value {
 		return decodeLink(valueJSON)
 	case pathTypeStr:
 		return decodePath(valueJSON)
+	case typeTypeStr:
+		return decodeTypeValue(valueJSON)
 	}
 
 	panic(ErrInvalidJSONCadence)
@@ -591,6 +594,14 @@ func decodePath(valueJSON interface{}) cadence.Path {
 	return cadence.Path{
 		Domain:     obj.GetString(domainKey),
 		Identifier: obj.GetString(identifierKey),
+	}
+}
+
+func decodeTypeValue(valueJSON interface{}) cadence.TypeValue {
+	obj := toObject(valueJSON)
+
+	return cadence.TypeValue{
+		StaticType: obj.GetString(staticTypeKey),
 	}
 }
 
