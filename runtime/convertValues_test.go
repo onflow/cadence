@@ -621,6 +621,24 @@ func exportValueFromScript(t *testing.T, script string) cadence.Value {
 	return value
 }
 
+func TestExportTypeValue(t *testing.T) {
+
+	t.Parallel()
+
+	script := `
+        access(all) fun main(): Type {
+            return Type<Int>()
+        }
+    `
+
+	actual := exportValueFromScript(t, script)
+	expected := cadence.TypeValue{
+		StaticType: "Int",
+	}
+
+	assert.Equal(t, expected, actual)
+}
+
 const fooID = "Foo"
 
 var fooTypeID = fmt.Sprintf("S.%s.%s", utils.TestLocation, fooID)

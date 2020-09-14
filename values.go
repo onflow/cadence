@@ -1026,3 +1026,20 @@ func (Path) Type() Type {
 func (Path) ToGoValue() interface{} {
 	return nil
 }
+
+// TypeValue
+
+type TypeValue struct {
+	// TODO: a future version might want to export the whole type
+	StaticType string
+}
+
+func (TypeValue) isValue() {}
+
+func (TypeValue) Type() Type {
+	return MetaType{}
+}
+
+func (TypeValue) ToGoValue() interface{} {
+	return nil
+}

@@ -112,6 +112,8 @@ func exportValueWithInterpreter(value interpreter.Value, inter *interpreter.Inte
 		return exportLinkValue(v, inter)
 	case interpreter.PathValue:
 		return exportPathValue(v)
+	case interpreter.TypeValue:
+		return exportTypeValue(v, inter)
 	}
 
 	panic(fmt.Sprintf("cannot export value of type %T", value))
@@ -212,9 +214,10 @@ func exportStorageReferenceValue(v *interpreter.StorageReferenceValue) cadence.V
 }
 
 func exportLinkValue(v interpreter.LinkValue, inter *interpreter.Interpreter) cadence.Value {
+	ty := inter.ConvertStaticToSemaType(v.Type).QualifiedString()
 	return cadence.NewLink(
 		v.TargetPath.String(),
-		inter.ConvertStaticToSemaType(v.Type).QualifiedString(),
+		ty,
 	)
 }
 
@@ -355,5 +358,12 @@ func exportPathValue(v interpreter.PathValue) cadence.Value {
 	return cadence.Path{
 		Domain:     v.Domain.Name(),
 		Identifier: v.Identifier,
+	}
+}
+
+func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) cadence.Value {
+	ty := inter.ConvertStaticToSemaType(v.Type).QualifiedString()
+	return cadence.TypeValue{
+		StaticType: ty,
 	}
 }

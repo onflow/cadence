@@ -983,6 +983,19 @@ func TestEncodeLink(t *testing.T) {
 	)
 }
 
+func TestEncodeType(t *testing.T) {
+
+	t.Parallel()
+
+	testEncodeAndDecode(
+		t,
+		cadence.TypeValue{
+			StaticType: "Int",
+		},
+		`{"type":"Type","value":{"staticType":"Int"}}`,
+	)
+}
+
 func TestDecodeFixedPoints(t *testing.T) {
 
 	t.Parallel()
