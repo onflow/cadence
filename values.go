@@ -962,12 +962,12 @@ func (v Contract) ToGoValue() interface{} {
 // Link
 
 type Link struct {
-	TargetPath string
+	TargetPath Path
 	// TODO: a future version might want to export the whole type
 	BorrowType string
 }
 
-func NewLink(targetPath string, borrowType string) Link {
+func NewLink(targetPath Path, borrowType string) Link {
 	return Link{
 		TargetPath: targetPath,
 		BorrowType: borrowType,
@@ -1041,5 +1041,24 @@ func (TypeValue) Type() Type {
 }
 
 func (TypeValue) ToGoValue() interface{} {
+	return nil
+}
+
+// Capability
+
+type Capability struct {
+	Path    Path
+	Address Address
+	// TODO: a future version might want to export the whole type
+	BorrowType string
+}
+
+func (Capability) isValue() {}
+
+func (Capability) Type() Type {
+	return CapabilityType{}
+}
+
+func (Capability) ToGoValue() interface{} {
 	return nil
 }

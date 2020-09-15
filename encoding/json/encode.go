@@ -132,8 +132,8 @@ type jsonStorageReferenceValue struct {
 }
 
 type jsonLinkValue struct {
-	TargetPath string `json:"targetPath"`
-	BorrowType string `json:"borrowType"`
+	TargetPath jsonValue `json:"targetPath"`
+	BorrowType string    `json:"borrowType"`
 }
 
 type jsonPathValue struct {
@@ -143,6 +143,12 @@ type jsonPathValue struct {
 
 type jsonTypeValue struct {
 	StaticType string `json:"staticType"`
+}
+
+type jsonCapabilityValue struct {
+	Path       jsonValue `json:"path"`
+	Address    string    `json:"address"`
+	BorrowType string    `json:"borrowType"`
 }
 
 const (
@@ -181,6 +187,7 @@ const (
 	linkTypeStr             = "Link"
 	pathTypeStr             = "Path"
 	typeTypeStr             = "Type"
+	capabilityTypeStr       = "Capability"
 )
 
 // prepare traverses the object graph of the provided value and constructs
@@ -257,6 +264,8 @@ func (e *Encoder) prepare(v cadence.Value) jsonValue {
 		return e.preparePath(x)
 	case cadence.TypeValue:
 		return e.prepareTypeValue(x)
+	case cadence.Capability:
+		return e.prepareCapability(x)
 	default:
 		panic(fmt.Errorf("unsupported value: %T, %v", v, v))
 	}
@@ -538,7 +547,7 @@ func (e *Encoder) prepareLink(x cadence.Link) jsonValue {
 	return jsonValueObject{
 		Type: linkTypeStr,
 		Value: jsonLinkValue{
-			TargetPath: x.TargetPath,
+			TargetPath: e.preparePath(x.TargetPath),
 			BorrowType: x.BorrowType,
 		},
 	}
@@ -559,6 +568,17 @@ func (e *Encoder) prepareTypeValue(x cadence.TypeValue) jsonValue {
 		Type: typeTypeStr,
 		Value: jsonTypeValue{
 			StaticType: x.StaticType,
+		},
+	}
+}
+
+func (e *Encoder) prepareCapability(x cadence.Capability) jsonValue {
+	return jsonValueObject{
+		Type: capabilityTypeStr,
+		Value: jsonCapabilityValue{
+			Path:       e.preparePath(x.Path),
+			Address:    encodeBytes(x.Address.Bytes()),
+			BorrowType: x.BorrowType,
 		},
 	}
 }
