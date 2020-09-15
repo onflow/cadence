@@ -639,6 +639,31 @@ func TestExportTypeValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
+func TestExportCapabilityValue(t *testing.T) {
+
+	t.Parallel()
+
+	capability := interpreter.CapabilityValue{
+		Address: interpreter.AddressValue{0x1},
+		Path: interpreter.PathValue{
+			Domain:     common.PathDomainStorage,
+			Identifier: "foo",
+		},
+		BorrowType: interpreter.PrimitiveStaticTypeInt,
+	}
+	actual := exportValueWithInterpreter(capability, nil)
+	expected := cadence.Capability{
+		Path: cadence.Path{
+			Domain:     "storage",
+			Identifier: "foo",
+		},
+		Address:    cadence.Address{0x1},
+		BorrowType: "Int",
+	}
+
+	assert.Equal(t, expected, actual)
+}
+
 const fooID = "Foo"
 
 var fooTypeID = fmt.Sprintf("S.%s.%s", utils.TestLocation, fooID)

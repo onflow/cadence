@@ -978,8 +978,11 @@ func TestEncodeLink(t *testing.T) {
 
 	testEncodeAndDecode(
 		t,
-		cadence.NewLink("/storage/foo", "Bar"),
-		`{"type":"Link","value":{"targetPath":"/storage/foo","borrowType":"Bar"}}`,
+		cadence.NewLink(
+			cadence.Path{Domain: "storage", Identifier: "foo"},
+			"Bar",
+		),
+		`{"type":"Link","value":{"targetPath":{"type":"Path","value":{"domain":"storage","identifier":"foo"}},"borrowType":"Bar"}}`,
 	)
 }
 
@@ -993,6 +996,21 @@ func TestEncodeType(t *testing.T) {
 			StaticType: "Int",
 		},
 		`{"type":"Type","value":{"staticType":"Int"}}`,
+	)
+}
+
+func TestEncodeCapability(t *testing.T) {
+
+	t.Parallel()
+
+	testEncodeAndDecode(
+		t,
+		cadence.Capability{
+			Path:       cadence.Path{Domain: "storage", Identifier: "foo"},
+			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+			BorrowType: "Int",
+		},
+		`{"type":"Capability","value":{"path":{"type":"Path","value":{"domain":"storage","identifier":"foo"}},"borrowType":"Int","address":"0x0000000102030405"}}`,
 	)
 }
 
@@ -1251,13 +1269,11 @@ func TestEncodePath(t *testing.T) {
 
 	t.Parallel()
 
-	testAllEncodeAndDecode(t, []encodeTest{
-		{
-			"Simple",
-			cadence.Path{Domain: "storage", Identifier: "foo"},
-			`{"type":"Path","value":{"domain":"storage","identifier":"foo"}}`,
-		},
-	}...)
+	testEncodeAndDecode(
+		t,
+		cadence.Path{Domain: "storage", Identifier: "foo"},
+		`{"type":"Path","value":{"domain":"storage","identifier":"foo"}}`,
+	)
 }
 
 func convertValueFromScript(t *testing.T, script string) cadence.Value {
