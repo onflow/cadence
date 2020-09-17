@@ -94,8 +94,6 @@ func rootState(l *lexer) stateFn {
 		case '>':
 			r = l.next()
 			switch r {
-			case '>':
-				l.emitType(TokenGreaterGreater)
 			case '=':
 				l.emitType(TokenGreaterEqual)
 			default:

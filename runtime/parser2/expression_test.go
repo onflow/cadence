@@ -3257,7 +3257,105 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 		)
 	})
 
-	t.Run("precedence, binary expressions", func(t *testing.T) {
+	t.Run("invocation, one type argument, nested type, no spaces", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("a<T<U>>()")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.InvocationExpression{
+				InvokedExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "a",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				TypeArguments: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.InstantiationType{
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "T",
+									Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+								},
+							},
+							TypeArguments: []*ast.TypeAnnotation{
+								{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "U",
+											Pos:        ast.Position{Line: 1, Column: 4, Offset: 4},
+										},
+									},
+									StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+								},
+							},
+							TypeArgumentsStartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:                ast.Position{Line: 1, Column: 5, Offset: 5},
+						},
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+					},
+				},
+				EndPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+			},
+			result,
+		)
+	})
+
+	t.Run("invocation, one type argument, nested type, spaces", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("a<T< U > >()")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.InvocationExpression{
+				InvokedExpression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "a",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				TypeArguments: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.InstantiationType{
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "T",
+									Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+								},
+							},
+							TypeArguments: []*ast.TypeAnnotation{
+								{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "U",
+											Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+										},
+									},
+									StartPos: ast.Position{Line: 1, Column: 5, Offset: 5},
+								},
+							},
+							TypeArgumentsStartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+							EndPos:                ast.Position{Line: 1, Column: 7, Offset: 7},
+						},
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+					},
+				},
+				EndPos: ast.Position{Line: 1, Column: 11, Offset: 11},
+			},
+			result,
+		)
+	})
+
+	t.Run("precedence, binary expressions, less than", func(t *testing.T) {
 
 		t.Parallel()
 
@@ -3292,6 +3390,132 @@ func TestParseLessThanOrTypeArguments(t *testing.T) {
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("precedence, binary expressions, left shift", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("0 + 1 << 2")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.BinaryExpression{
+				Operation: ast.OperationBitwiseLeftShift,
+				Left: &ast.BinaryExpression{
+					Operation: ast.OperationPlus,
+					Left: &ast.IntegerExpression{
+						Value: big.NewInt(0),
+						Base:  10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					Right: &ast.IntegerExpression{
+						Value: big.NewInt(1),
+						Base:  10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+				},
+				Right: &ast.IntegerExpression{
+					Value: big.NewInt(2),
+					Base:  10,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+						EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("precedence, binary expressions, greater than", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("0 + 1 > 2")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.BinaryExpression{
+				Operation: ast.OperationGreater,
+				Left: &ast.BinaryExpression{
+					Operation: ast.OperationPlus,
+					Left: &ast.IntegerExpression{
+						Value: big.NewInt(0),
+						Base:  10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					Right: &ast.IntegerExpression{
+						Value: big.NewInt(1),
+						Base:  10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+				},
+				Right: &ast.IntegerExpression{
+					Value: big.NewInt(2),
+					Base:  10,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 8, Offset: 8},
+						EndPos:   ast.Position{Line: 1, Column: 8, Offset: 8},
+					},
+				},
+			},
+			result,
+		)
+	})
+
+	t.Run("precedence, binary expressions, right shift", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseExpression("0 + 1 >> 2")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.BinaryExpression{
+				Operation: ast.OperationBitwiseRightShift,
+				Left: &ast.BinaryExpression{
+					Operation: ast.OperationPlus,
+					Left: &ast.IntegerExpression{
+						Value: big.NewInt(0),
+						Base:  10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+							EndPos:   ast.Position{Line: 1, Column: 0, Offset: 0},
+						},
+					},
+					Right: &ast.IntegerExpression{
+						Value: big.NewInt(1),
+						Base:  10,
+						Range: ast.Range{
+							StartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:   ast.Position{Line: 1, Column: 4, Offset: 4},
+						},
+					},
+				},
+				Right: &ast.IntegerExpression{
+					Value: big.NewInt(2),
+					Base:  10,
+					Range: ast.Range{
+						StartPos: ast.Position{Line: 1, Column: 9, Offset: 9},
+						EndPos:   ast.Position{Line: 1, Column: 9, Offset: 9},
 					},
 				},
 			},
