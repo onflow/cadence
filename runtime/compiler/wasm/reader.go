@@ -89,12 +89,31 @@ func (r *WASMReader) readSection() error {
 			return err
 		}
 
+	case sectionIDImport:
+		if r.Module.Imports != nil {
+			return invalidDuplicateSectionError()
+		}
+
+		err = r.readImportSection()
+		if err != nil {
+			return err
+		}
+
 	case sectionIDFunction:
-		if r.Module.functionTypeIDs != nil {
+		if r.Module.functionTypeIndices != nil {
 			return invalidDuplicateSectionError()
 		}
 
 		err = r.readFunctionSection()
+		if err != nil {
+			return err
+		}
+	case sectionIDExport:
+		if r.Module.Exports != nil {
+			return invalidDuplicateSectionError()
+		}
+
+		err = r.readExportSection()
 		if err != nil {
 			return err
 		}
@@ -108,12 +127,15 @@ func (r *WASMReader) readSection() error {
 		if err != nil {
 			return err
 		}
+
+	default:
+		return InvalidSectionIDError{
+			SectionID: sectionID,
+			Offset:    int(sectionIDOffset),
+		}
 	}
 
-	return InvalidSectionIDError{
-		SectionID: sectionID,
-		Offset:    int(sectionIDOffset),
-	}
+	return nil
 }
 
 // readSectionSize reads the content size of a section
@@ -287,7 +309,7 @@ func (r *WASMReader) readImportSection() error {
 
 	imports := make([]*Import, count)
 
-	// read the function type ID for each function
+	// read each import
 	for i := uint32(0); i < count; i++ {
 		im, err := r.readImport()
 		if err != nil {
@@ -324,32 +346,32 @@ func (r *WASMReader) readImport() (*Import, error) {
 	indicatorOffset := r.buf.offset
 	b, err := r.buf.ReadByte()
 
-	typeIndicator := importTypeIndicator(b)
+	indicator := importIndicator(b)
 
 	// TODO: add support for tables, memories, and globals
 
-	if err != nil || typeIndicator != importTypeIndicatorFunction {
-		return nil, InvalidImportTypeIndicatorError{
-			TypeIndicator: typeIndicator,
-			Offset:        int(indicatorOffset),
-			ReadError:     err,
+	if err != nil || indicator != importIndicatorFunction {
+		return nil, InvalidImportIndicatorError{
+			ImportIndicator: indicator,
+			Offset:          int(indicatorOffset),
+			ReadError:       err,
 		}
 	}
 
-	// read the function type ID
-	functionTypeIDOffset := r.buf.offset
-	functionTypeID, err := r.buf.readUint32LEB128()
+	// read the type index
+	typeIndexOffset := r.buf.offset
+	typeIndex, err := r.buf.readUint32LEB128()
 	if err != nil {
-		return nil, InvalidImportSectionFunctionTypeIDError{
-			Offset:    int(functionTypeIDOffset),
+		return nil, InvalidImportSectionTypeIndexError{
+			Offset:    int(typeIndexOffset),
 			ReadError: err,
 		}
 	}
 
 	return &Import{
-		Module: module,
-		Name:   name,
-		TypeID: functionTypeID,
+		Module:    module,
+		Name:      name,
+		TypeIndex: typeIndex,
 	}, nil
 }
 
@@ -373,25 +395,105 @@ func (r *WASMReader) readFunctionSection() error {
 		}
 	}
 
-	functionTypeIDs := make([]uint32, count)
+	functionTypeIndices := make([]uint32, count)
 
-	// read the function type ID for each function
+	// read the type index for each function
 	for i := uint32(0); i < count; i++ {
-		functionTypeIDOffset := r.buf.offset
-		functionTypeID, err := r.buf.readUint32LEB128()
+		typeIndexOffset := r.buf.offset
+		typeIndex, err := r.buf.readUint32LEB128()
 		if err != nil {
-			return InvalidFunctionSectionFunctionTypeIDError{
+			return InvalidFunctionSectionTypeIndexError{
 				Index:     int(i),
-				Offset:    int(functionTypeIDOffset),
+				Offset:    int(typeIndexOffset),
 				ReadError: err,
 			}
 		}
-		functionTypeIDs[i] = functionTypeID
+		functionTypeIndices[i] = typeIndex
 	}
 
-	r.Module.functionTypeIDs = functionTypeIDs
+	r.Module.functionTypeIndices = functionTypeIndices
 
 	return nil
+}
+
+// readExportSection reads the section that declares the exports
+//
+func (r *WASMReader) readExportSection() error {
+
+	err := r.readSectionSize()
+	if err != nil {
+		return err
+	}
+
+	// read the number of exports
+	countOffset := r.buf.offset
+	count, err := r.buf.readUint32LEB128()
+	if err != nil {
+		return InvalidExportSectionExportCountError{
+			Offset:    int(countOffset),
+			ReadError: err,
+		}
+	}
+
+	exports := make([]*Export, count)
+
+	// read each export
+	for i := uint32(0); i < count; i++ {
+		im, err := r.readExport()
+		if err != nil {
+			return InvalidExportError{
+				Index:     int(i),
+				ReadError: err,
+			}
+		}
+		exports[i] = im
+	}
+
+	r.Module.Exports = exports
+
+	return nil
+}
+
+// readExport reads an export in the export section
+//
+func (r *WASMReader) readExport() (*Export, error) {
+
+	// read the name
+	name, err := r.readName()
+	if err != nil {
+		return nil, err
+	}
+
+	// read the type indicator
+	indicatorOffset := r.buf.offset
+	b, err := r.buf.ReadByte()
+
+	indicator := exportIndicator(b)
+
+	// TODO: add support for tables, memories, and globals
+
+	if err != nil || indicator != exportIndicatorFunction {
+		return nil, InvalidExportIndicatorError{
+			ExportIndicator: indicator,
+			Offset:          int(indicatorOffset),
+			ReadError:       err,
+		}
+	}
+
+	// read the function type ID
+	functionIndexOffset := r.buf.offset
+	functionIndex, err := r.buf.readUint32LEB128()
+	if err != nil {
+		return nil, InvalidExportSectionFunctionIndexError{
+			Offset:    int(functionIndexOffset),
+			ReadError: err,
+		}
+	}
+
+	return &Export{
+		Name:          name,
+		FunctionIndex: functionIndex,
+	}, nil
 }
 
 // readCodeSection reads the section that provides the function bodies for the functions

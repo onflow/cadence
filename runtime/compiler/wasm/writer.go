@@ -178,13 +178,13 @@ func (w *WASMWriter) writeImport(im *Import) error {
 	// TODO: add support for tables, memories, and globals
 
 	// write the type indicator
-	err = w.buf.WriteByte(byte(importTypeIndicatorFunction))
+	err = w.buf.WriteByte(byte(importIndicatorFunction))
 	if err != nil {
 		return err
 	}
 
-	// write the function type index
-	return w.buf.writeUint32LEB128(im.TypeID)
+	// write the type index
+	return w.buf.writeUint32LEB128(im.TypeIndex)
 }
 
 // writeFunctionSection writes the section that declares the types of functions.
@@ -198,9 +198,9 @@ func (w *WASMWriter) writeFunctionSection(functions []*Function) error {
 			return err
 		}
 
-		// write the function type ID for each function
+		// write the type index for each function
 		for _, function := range functions {
-			err = w.buf.writeUint32LEB128(function.TypeID)
+			err = w.buf.writeUint32LEB128(function.TypeIndex)
 			if err != nil {
 				return err
 			}
@@ -208,6 +208,51 @@ func (w *WASMWriter) writeFunctionSection(functions []*Function) error {
 
 		return nil
 	})
+}
+
+// writeExportSection writes the section that declares all exports
+//
+func (w *WASMWriter) writeExportSection(exports []*Export) error {
+	return w.writeSection(sectionIDExport, func() error {
+
+		// write the number of exports
+		err := w.buf.writeUint32LEB128(uint32(len(exports)))
+		if err != nil {
+			return err
+		}
+
+		// write each export
+		for _, export := range exports {
+			err = w.writeExport(export)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+// writeExport writes the export
+//
+func (w *WASMWriter) writeExport(export *Export) error {
+
+	// write the name
+	err := w.writeName(export.Name)
+	if err != nil {
+		return err
+	}
+
+	// TODO: add support for tables, memories, and globals
+
+	// write the type indicator
+	err = w.buf.WriteByte(byte(exportIndicatorFunction))
+	if err != nil {
+		return err
+	}
+
+	// write the function index
+	return w.buf.writeUint32LEB128(export.FunctionIndex)
 }
 
 // writeCodeSection writes the section that provides the function bodies for the functions
