@@ -63,7 +63,6 @@ const (
 	TokenLessLess
 	TokenGreater
 	TokenGreaterEqual
-	TokenGreaterGreater
 	TokenEqual
 	TokenEqualEqual
 	TokenExclamationMark
@@ -166,8 +165,6 @@ func (t TokenType) String() string {
 		return `'>'`
 	case TokenGreaterEqual:
 		return `'>='`
-	case TokenGreaterGreater:
-		return `'>>'`
 	case TokenEqual:
 		return `'='`
 	case TokenEqualEqual:

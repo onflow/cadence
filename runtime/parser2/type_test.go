@@ -1178,4 +1178,88 @@ func TestParseInstantiationType(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("one type argument, no spaces", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("T<U>")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.InstantiationType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				TypeArguments: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.NominalType{
+							Identifier: ast.Identifier{
+								Identifier: "U",
+								Pos:        ast.Position{Line: 1, Column: 2, Offset: 2},
+							},
+						},
+						StartPos: ast.Position{Line: 1, Column: 2, Offset: 2},
+					},
+				},
+				TypeArgumentsStartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+				EndPos:                ast.Position{Line: 1, Column: 3, Offset: 3},
+			},
+			result,
+		)
+	})
+
+	t.Run("one type argument, nested, with spaces", func(t *testing.T) {
+
+		t.Parallel()
+
+		result, errs := ParseType("T< U< V >  >")
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			&ast.InstantiationType{
+				Type: &ast.NominalType{
+					Identifier: ast.Identifier{
+						Identifier: "T",
+						Pos:        ast.Position{Line: 1, Column: 0, Offset: 0},
+					},
+				},
+				TypeArguments: []*ast.TypeAnnotation{
+					{
+						IsResource: false,
+						Type: &ast.InstantiationType{
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "U",
+									Pos:        ast.Position{Line: 1, Column: 3, Offset: 3},
+								},
+							},
+							TypeArguments: []*ast.TypeAnnotation{
+								{
+									IsResource: false,
+									Type: &ast.NominalType{
+										Identifier: ast.Identifier{
+											Identifier: "V",
+											Pos:        ast.Position{Line: 1, Column: 6, Offset: 6},
+										},
+									},
+									StartPos: ast.Position{Line: 1, Column: 6, Offset: 6},
+								},
+							},
+							TypeArgumentsStartPos: ast.Position{Line: 1, Column: 4, Offset: 4},
+							EndPos:                ast.Position{Line: 1, Column: 8, Offset: 8},
+						},
+						StartPos: ast.Position{Line: 1, Column: 3, Offset: 3},
+					},
+				},
+				TypeArgumentsStartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
+				EndPos:                ast.Position{Line: 1, Column: 11, Offset: 11},
+			},
+			result,
+		)
+	})
 }

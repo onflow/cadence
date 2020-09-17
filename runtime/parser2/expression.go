@@ -249,17 +249,12 @@ func init() {
 	})
 
 	defineLessThanOrTypeArgumentsExpression()
+	defineGreaterThanOrBitwiseRightShiftExpression()
 
 	defineExpr(binaryExpr{
 		tokenType:        lexer.TokenLessEqual,
 		leftBindingPower: exprLeftBindingPowerComparison,
 		operation:        ast.OperationLessEqual,
-	})
-
-	defineExpr(binaryExpr{
-		tokenType:        lexer.TokenGreater,
-		leftBindingPower: exprLeftBindingPowerComparison,
-		operation:        ast.OperationGreater,
 	})
 
 	defineExpr(binaryExpr{
@@ -309,12 +304,6 @@ func init() {
 		tokenType:        lexer.TokenLessLess,
 		leftBindingPower: exprLeftBindingPowerBitwiseShift,
 		operation:        ast.OperationBitwiseLeftShift,
-	})
-
-	defineExpr(binaryExpr{
-		tokenType:        lexer.TokenGreaterGreater,
-		leftBindingPower: exprLeftBindingPowerBitwiseShift,
-		operation:        ast.OperationBitwiseRightShift,
 	})
 
 	defineExpr(binaryExpr{
@@ -623,6 +612,95 @@ func defineLessThanOrTypeArgumentsExpression() {
 
 				return binaryExpression, false
 			}
+		})
+}
+
+func defineGreaterThanOrBitwiseRightShiftExpression() {
+
+	setExprMetaLeftDenotation(
+		lexer.TokenGreater,
+		func(p *parser, rightBindingPower int, left ast.Expression) (result ast.Expression, done bool) {
+
+			// If the right binding power is higher than any of the potential cases,
+			// then return early
+
+			if rightBindingPower >= exprLeftBindingPowerBitwiseShift &&
+				rightBindingPower >= exprLeftBindingPowerComparison {
+
+				return left, true
+			}
+
+			// Start buffering before skipping the `>` token,
+			// so it can be replayed in case the right binding power
+			// was higher than the determined left binding power.
+
+			p.startBuffering()
+
+			// Skip the `>` token.
+			p.next()
+
+			// If another '>' token appears immediately,
+			// then the operator is actually a bitwise right shift operator
+
+			isBitwiseShift := p.current.Is(lexer.TokenGreater)
+
+			var operation ast.Operation
+			var nextRightBindingPower int
+
+			if isBitwiseShift {
+
+				operation = ast.OperationBitwiseRightShift
+
+				// The expression was determined to be a bitwise shift.
+				// Still, it should have maybe not been parsed if the right binding power
+				// was higher. In that case, replay the buffered tokens and stop.
+
+				if rightBindingPower >= exprLeftBindingPowerBitwiseShift {
+					p.replayBuffered()
+					return left, true
+				}
+
+				// The previous attempt to parse a bitwise right shift succeeded,
+				// accept the buffered tokens.
+
+				p.acceptBuffered()
+
+				nextRightBindingPower = exprLeftBindingPowerBitwiseShift
+
+			} else {
+
+				operation = ast.OperationGreater
+
+				// The previous attempt to parse a bitwise right shift failed,
+				// replay the buffered tokens.
+
+				p.replayBuffered()
+
+				// The expression was determined to *not* be a bitwise shift,
+				// so it must be a comparison expression.
+				//
+				// Like for a normal left denotation,
+				// check if this left denotation applies.
+
+				if rightBindingPower >= exprLeftBindingPowerComparison {
+					return left, true
+				}
+
+				nextRightBindingPower = exprLeftBindingPowerComparison
+			}
+
+			p.next()
+			p.skipSpaceAndComments(true)
+
+			right := parseExpression(p, nextRightBindingPower)
+
+			binaryExpression := &ast.BinaryExpression{
+				Operation: operation,
+				Left:      left,
+				Right:     right,
+			}
+
+			return binaryExpression, false
 		})
 }
 
