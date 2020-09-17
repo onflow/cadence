@@ -125,9 +125,9 @@ func TestWASMWriter_writeImportSection(t *testing.T) {
 
 	imports := []*Import{
 		{
-			Module: "foo",
-			Name:   "bar",
-			TypeID: 1,
+			Module:    "foo",
+			Name:      "bar",
+			TypeIndex: 1,
 		},
 	}
 
@@ -152,7 +152,7 @@ func TestWASMWriter_writeImportSection(t *testing.T) {
 			0x62, 0x61, 0x72,
 			// type indicator: function = 0
 			0x0,
-			// type ID of function: 0
+			// type index of function: 0
 			0x1,
 		},
 		b.data,
@@ -169,8 +169,8 @@ func TestWASMWriter_writeFunctionSection(t *testing.T) {
 	functions := []*Function{
 		{
 			// not used, just for testing
-			Name:   "add",
-			TypeID: 0,
+			Name:      "add",
+			TypeIndex: 0,
 			// not used, just for testing
 			Code: &Code{
 				Locals: []ValueType{
@@ -196,8 +196,46 @@ func TestWASMWriter_writeFunctionSection(t *testing.T) {
 			0x82, 0x80, 0x80, 0x80, 0x0,
 			// function count: 1
 			0x1,
-			// type ID of function: 0
+			// type index of function: 0
 			0x0,
+		},
+		b.data,
+	)
+}
+
+func TestWASMWriter_writeExportSection(t *testing.T) {
+
+	t.Parallel()
+
+	var b buf
+	w := WASMWriter{&b}
+
+	exports := []*Export{
+		{
+			Name:          "foo",
+			FunctionIndex: 1,
+		},
+	}
+
+	err := w.writeExportSection(exports)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		[]byte{
+			// section ID: Export = 7
+			0x7,
+			// section size: 7 (LEB128)
+			0x87, 0x80, 0x80, 0x80, 0x0,
+			// import count: 1
+			0x1,
+			// name length
+			0x3,
+			// name = "foo"
+			0x66, 0x6f, 0x6f,
+			// type indicator: function = 0
+			0x0,
+			// index of function: 0
+			0x1,
 		},
 		b.data,
 	)
@@ -215,7 +253,7 @@ func TestWASMWriter_writeCodeSection(t *testing.T) {
 			// not used, just for testing
 			Name: "add",
 			// not used, just for testing
-			TypeID: 0,
+			TypeIndex: 0,
 			Code: &Code{
 				Locals: []ValueType{
 					ValueTypeI32,
@@ -309,7 +347,7 @@ func TestWASMWriter_writeName(t *testing.T) {
 	})
 }
 
-func TestWASMWriter(t *testing.T) {
+func TestWASMWriterReader(t *testing.T) {
 
 	t.Parallel()
 
@@ -331,9 +369,9 @@ func TestWASMWriter(t *testing.T) {
 
 	imports := []*Import{
 		{
-			Module: "env",
-			Name:   "add",
-			TypeID: 0,
+			Module:    "env",
+			Name:      "add",
+			TypeIndex: 0,
 		},
 	}
 	err = w.writeImportSection(imports)
@@ -342,8 +380,8 @@ func TestWASMWriter(t *testing.T) {
 	functions := []*Function{
 		{
 			// not used, just for testing
-			Name:   "add",
-			TypeID: 0,
+			Name:      "add",
+			TypeIndex: 0,
 			Code: &Code{
 				// not used, just for testing
 				Locals: []ValueType{
@@ -361,33 +399,48 @@ func TestWASMWriter(t *testing.T) {
 	err = w.writeFunctionSection(functions)
 	require.NoError(t, err)
 
+	exports := []*Export{
+		{
+			Name:          "add",
+			FunctionIndex: 0,
+		},
+	}
+	err = w.writeExportSection(exports)
+	require.NoError(t, err)
+
 	err = w.writeCodeSection(functions)
 	require.NoError(t, err)
 
+	expected := []byte{
+		// magic
+		0x0, 0x61, 0x73, 0x6d,
+		// version
+		0x1, 0x0, 0x0, 0x0,
+		// type section
+		0x1,
+		0x87, 0x80, 0x80, 0x80, 0x0,
+		0x1, 0x60, 0x2, 0x7f, 0x7f, 0x1, 0x7f,
+		// import section
+		0x02,
+		0x8b, 0x80, 0x80, 0x80, 0x00,
+		0x01, 0x03, 0x65, 0x6e, 0x76, 0x03, 0x61, 0x64,
+		0x64, 0x00, 0x00,
+		// function section
+		0x3,
+		0x82, 0x80, 0x80, 0x80, 0x0,
+		0x1, 0x0,
+		// export section
+		0x07,
+		0x87, 0x80, 0x80, 0x80, 0x00,
+		0x01, 0x03, 0x61, 0x64, 0x64,
+		0x00, 0x00,
+		// code section
+		0xa, 0x8f, 0x80, 0x80, 0x80, 0x0,
+		0x1, 0x89, 0x80, 0x80, 0x80, 0x0, 0x1, 0x1,
+		0x7f, 0x20, 0x0, 0x20, 0x1, 0x6a, 0xb,
+	}
 	require.Equal(t,
-		[]byte{
-			// magic
-			0x0, 0x61, 0x73, 0x6d,
-			// version
-			0x1, 0x0, 0x0, 0x0,
-			// type section
-			0x1,
-			0x87, 0x80, 0x80, 0x80, 0x0,
-			0x1, 0x60, 0x2, 0x7f, 0x7f, 0x1, 0x7f,
-			// import section
-			0x02,
-			0x8b, 0x80, 0x80, 0x80, 0x00,
-			0x01, 0x03, 0x65, 0x6e, 0x76, 0x03, 0x61, 0x64,
-			0x64, 0x00, 0x00,
-			// function section
-			0x3,
-			0x82, 0x80, 0x80, 0x80, 0x0,
-			0x1, 0x0,
-			// code section
-			0xa, 0x8f, 0x80, 0x80, 0x80, 0x0,
-			0x1, 0x89, 0x80, 0x80, 0x80, 0x0, 0x1, 0x1,
-			0x7f, 0x20, 0x0, 0x20, 0x1, 0x6a, 0xb,
-		},
+		expected,
 		b.data,
 	)
 
@@ -399,8 +452,46 @@ func TestWASMWriter(t *testing.T) {
     (local i32)
     local.get 0
     local.get 1
-    i32.add))
+    i32.add)
+  (export "add" (func 0)))
 `,
 		wasm2wat(b.data),
+	)
+
+	b.offset = 0
+
+	r := WASMReader{buf: &b}
+
+	err = r.readMagicAndVersion()
+	require.NoError(t, err)
+
+	err = r.readSection()
+	require.NoError(t, err)
+
+	require.Equal(t, r.Module.Types, types)
+
+	err = r.readSection()
+	require.NoError(t, err)
+
+	require.Equal(t, r.Module.Imports, imports)
+
+	err = r.readSection()
+	require.NoError(t, err)
+
+	// TODO:
+
+	err = r.readSection()
+	require.NoError(t, err)
+
+	require.Equal(t, r.Module.Exports, exports)
+
+	err = r.readSection()
+	require.NoError(t, err)
+
+	// TODO:
+
+	require.Equal(t,
+		offset(len(expected)),
+		b.offset,
 	)
 }
