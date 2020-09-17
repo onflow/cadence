@@ -293,43 +293,43 @@ func (e InvalidImportError) Unwrap() error {
 	return e.ReadError
 }
 
-// InvalidImportTypeIndicatorError is returned when the WASM binary specifies
+// InvalidImportIndicatorError is returned when the WASM binary specifies
 // an invalid type indicator in the import section
 //
-type InvalidImportTypeIndicatorError struct {
-	Offset        int
-	TypeIndicator importTypeIndicator
-	ReadError     error
+type InvalidImportIndicatorError struct {
+	Offset          int
+	ImportIndicator importIndicator
+	ReadError       error
 }
 
-func (e InvalidImportTypeIndicatorError) Error() string {
+func (e InvalidImportIndicatorError) Error() string {
 	return fmt.Sprintf(
-		"invalid import type indicator %d at offset %d",
-		e.TypeIndicator,
+		"invalid import indicator %d at offset %d",
+		e.ImportIndicator,
 		e.Offset,
 	)
 }
 
-func (e InvalidImportTypeIndicatorError) Unwrap() error {
+func (e InvalidImportIndicatorError) Unwrap() error {
 	return e.ReadError
 }
 
-// InvalidImportSectionFunctionTypeIDError is returned when the WASM binary specifies
-// an invalid function type ID in the import section
+// InvalidImportSectionTypeIndexError is returned when the WASM binary specifies
+// an invalid type index in the import section
 //
-type InvalidImportSectionFunctionTypeIDError struct {
+type InvalidImportSectionTypeIndexError struct {
 	Offset    int
 	ReadError error
 }
 
-func (e InvalidImportSectionFunctionTypeIDError) Error() string {
+func (e InvalidImportSectionTypeIndexError) Error() string {
 	return fmt.Sprintf(
-		"invalid function type ID in import section at offset %d",
+		"invalid type index in import section at offset %d",
 		e.Offset,
 	)
 }
 
-func (e InvalidImportSectionFunctionTypeIDError) Unwrap() error {
+func (e InvalidImportSectionTypeIndexError) Unwrap() error {
 	return e.ReadError
 }
 
@@ -352,24 +352,102 @@ func (e InvalidFunctionSectionFunctionCountError) Unwrap() error {
 	return e.ReadError
 }
 
-// InvalidFunctionSectionFunctionTypeIDError is returned when the WASM binary specifies
-// an invalid function type ID in the function section
+// InvalidFunctionSectionTypeIndexError is returned when the WASM binary specifies
+// an invalid type index in the function section
 //
-type InvalidFunctionSectionFunctionTypeIDError struct {
+type InvalidFunctionSectionTypeIndexError struct {
 	Offset    int
 	Index     int
 	ReadError error
 }
 
-func (e InvalidFunctionSectionFunctionTypeIDError) Error() string {
+func (e InvalidFunctionSectionTypeIndexError) Error() string {
 	return fmt.Sprintf(
-		"invalid function type ID in function section at index %d at offset %d",
+		"invalid type index in function section at index %d at offset %d",
 		e.Index,
 		e.Offset,
 	)
 }
 
-func (e InvalidFunctionSectionFunctionTypeIDError) Unwrap() error {
+func (e InvalidFunctionSectionTypeIndexError) Unwrap() error {
+	return e.ReadError
+}
+
+// InvalidExportSectionExportCountError is returned when the WASM binary specifies
+// an invalid count in the export section
+//
+type InvalidExportSectionExportCountError struct {
+	Offset    int
+	ReadError error
+}
+
+func (e InvalidExportSectionExportCountError) Error() string {
+	return fmt.Sprintf(
+		"invalid export count in export section at offset %d",
+		e.Offset,
+	)
+}
+
+func (e InvalidExportSectionExportCountError) Unwrap() error {
+	return e.ReadError
+}
+
+// InvalidExportError is returned when the WASM binary specifies
+// invalid export in the export section
+//
+type InvalidExportError struct {
+	Index     int
+	ReadError error
+}
+
+func (e InvalidExportError) Error() string {
+	return fmt.Sprintf(
+		"invalid export at index %d",
+		e.Index,
+	)
+}
+
+func (e InvalidExportError) Unwrap() error {
+	return e.ReadError
+}
+
+// InvalidExportIndicatorError is returned when the WASM binary specifies
+// an invalid type indicator in the export section
+//
+type InvalidExportIndicatorError struct {
+	Offset          int
+	ExportIndicator exportIndicator
+	ReadError       error
+}
+
+func (e InvalidExportIndicatorError) Error() string {
+	return fmt.Sprintf(
+		"invalid export indicator %d at offset %d",
+		e.ExportIndicator,
+		e.Offset,
+	)
+}
+
+func (e InvalidExportIndicatorError) Unwrap() error {
+	return e.ReadError
+}
+
+// InvalidExportSectionFunctionIndexError is returned when the WASM binary specifies
+// an invalid type index in the export section
+//
+type InvalidExportSectionFunctionIndexError struct {
+	Offset    int
+	ReadError error
+}
+
+func (e InvalidExportSectionFunctionIndexError) Error() string {
+	return fmt.Sprintf(
+		"invalid type index in export section at offset %d",
+		e.Offset,
+	)
+}
+
+func (e InvalidExportSectionFunctionIndexError) Unwrap() error {
 	return e.ReadError
 }
 

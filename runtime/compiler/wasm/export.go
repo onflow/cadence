@@ -18,14 +18,18 @@
 
 package wasm
 
-// Module represents a module
+// Exports represents an export
 //
-type Module struct {
-	Types []*FunctionType
-	// The type indices of all functions
-	functionTypeIndices []uint32
-	// The bodies of all functions
-	functionBodies []*Code
-	Imports        []*Import
-	Exports        []*Export
+type Export struct {
+	Name string
+	// TODO: add support for tables, memories, and globals
+	FunctionIndex uint32
 }
+
+// exportIndicator is the byte used to indicate the kind of export in the WASM binary
+type exportIndicator byte
+
+const (
+	// exportIndicatorFunction is the byte used to indicate the export of a function in the WASM binary
+	exportIndicatorFunction exportIndicator = 0x0
+)
