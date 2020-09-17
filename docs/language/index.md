@@ -1,7 +1,5 @@
 ---
 title: The Cadence Programming Language
-redirect_from:
-  - /docs/cadence/
 ---
 
 ## Introduction
