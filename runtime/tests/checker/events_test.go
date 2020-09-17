@@ -103,7 +103,7 @@ func TestCheckEventDeclaration(t *testing.T) {
 	t.Run("PrimitiveTypedFields", func(t *testing.T) {
 
 		validTypes := append(
-			sema.AllNumberTypes,
+			sema.AllNumberTypes[:],
 			&sema.StringType{},
 			&sema.BoolType{},
 		)
