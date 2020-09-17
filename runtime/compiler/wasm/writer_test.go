@@ -234,7 +234,7 @@ func TestWASMWriter_writeExportSection(t *testing.T) {
 			0x66, 0x6f, 0x6f,
 			// type indicator: function = 0
 			0x0,
-			// index of function: 0
+			// index of function: 1
 			0x1,
 		},
 		b.data,
