@@ -121,3 +121,51 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 
 	assert.True(t, called)
 }
+
+func TestRuntimeCrypto_hash(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	script := []byte(`
+      import Crypto
+
+      pub fun main() {
+          log(Crypto.SHA3_256.hash("01020304".decodeHex()))
+          log(Crypto.hash("01020304".decodeHex(), algorithm: Crypto.SHA3_256))
+      }
+    `)
+
+	called := false
+
+	var loggedMessages []string
+
+	runtimeInterface := &testRuntimeInterface{
+		hash: func(
+			data []byte,
+			hashAlgorithm string,
+		) []byte {
+			called = true
+			assert.Equal(t, []byte{1, 2, 3, 4}, data)
+			assert.Equal(t, "SHA3_256", hashAlgorithm)
+			return []byte{5, 6, 7, 8}
+		},
+		log: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+	}
+
+	_, err := runtime.ExecuteScript(script, nil, runtimeInterface, utils.TestLocation)
+	require.NoError(t, err)
+
+	assert.Equal(t,
+		[]string{
+			"[5, 6, 7, 8]",
+			"[5, 6, 7, 8]",
+		},
+		loggedMessages,
+	)
+
+	assert.True(t, called)
+}

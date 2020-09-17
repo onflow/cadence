@@ -115,6 +115,7 @@ type testRuntimeInterface struct {
 		signatureAlgorithm string,
 		hashAlgorithm string,
 	) bool
+	hash            func(data []byte, hashAlgorithm string) []byte
 	setCadenceValue func(owner Address, key string, value cadence.Value) (err error)
 }
 
@@ -285,6 +286,13 @@ func (i *testRuntimeInterface) VerifySignature(
 		signatureAlgorithm,
 		hashAlgorithm,
 	)
+}
+
+func (i *testRuntimeInterface) Hash(data []byte, hashAlgorithm string) []byte {
+	if i.hash == nil {
+		return nil
+	}
+	return i.hash(data, hashAlgorithm)
 }
 
 func (i *testRuntimeInterface) HighLevelStorageEnabled() bool {

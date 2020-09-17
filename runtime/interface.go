@@ -86,6 +86,9 @@ type Interface interface {
 		signatureAlgorithm string,
 		hashAlgorithm string,
 	) bool
+
+	// Hash returns the digest of hashing the given data with using the given hash algorithm
+	Hash(data []byte, hashAlgorithm string) []byte
 }
 
 type HighLevelStorage interface {
@@ -193,4 +196,11 @@ func (i *EmptyRuntimeInterface) VerifySignature(
 	_ string,
 ) bool {
 	return false
+}
+
+func (i *EmptyRuntimeInterface) Hash(
+	_ []byte,
+	_ string,
+) []byte {
+	return nil
 }

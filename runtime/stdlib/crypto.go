@@ -24,6 +24,13 @@ type CryptoSignatureVerifier interface {
 	) bool
 }
 
+type CryptoHasher interface {
+	Hash(
+		data []byte,
+		hashAlgorithm string,
+	) []byte
+}
+
 var CryptoChecker = func() *sema.Checker {
 
 	code := internal.MustAssetString("contracts/crypto.cdc")
@@ -54,18 +61,15 @@ var CryptoChecker = func() *sema.Checker {
 	return checker
 }()
 
-var cryptoSignatureVerifierInterfaceType = CryptoChecker.GlobalTypes["SignatureVerifier"].Type.(*sema.InterfaceType)
+var cryptoContractType = CryptoChecker.GlobalTypes["Crypto"].Type.(*sema.CompositeType)
 
-var cryptoSignatureVerifierRestrictedType = &sema.RestrictedType{
-	Type: &sema.AnyType{},
-	Restrictions: []*sema.InterfaceType{
-		cryptoSignatureVerifierInterfaceType,
-	},
-}
-
-var cryptoContractInitializerTypes = []sema.Type{
-	cryptoSignatureVerifierRestrictedType,
-}
+var cryptoContractInitializerTypes = func() (result []sema.Type) {
+	result = make([]sema.Type, len(cryptoContractType.ConstructorParameters))
+	for i, parameter := range cryptoContractType.ConstructorParameters {
+		result[i] = parameter.TypeAnnotation.Type
+	}
+	return result
+}()
 
 func newCryptoContractVerifySignatureFunction(signatureVerifier CryptoSignatureVerifier) interpreter.FunctionValue {
 	return interpreter.NewHostFunctionValue(
@@ -118,7 +122,7 @@ func newCryptoContractVerifySignatureFunction(signatureVerifier CryptoSignatureV
 
 func newCryptoContractSignatureVerifier(signatureVerifier CryptoSignatureVerifier) *interpreter.CompositeValue {
 	implementationTypeID :=
-		sema.TypeID(string(cryptoSignatureVerifierInterfaceType.ID()) + "Impl")
+		sema.TypeID(string(cryptoContractInitializerTypes[0].ID()) + "Impl")
 
 	result := interpreter.NewCompositeValue(
 		CryptoChecker.Location,
@@ -135,10 +139,53 @@ func newCryptoContractSignatureVerifier(signatureVerifier CryptoSignatureVerifie
 	return result
 }
 
+func newCryptoContractHashFunction(hasher CryptoHasher) interpreter.FunctionValue {
+	return interpreter.NewHostFunctionValue(
+		func(invocation interpreter.Invocation) trampoline.Trampoline {
+			data, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[0])
+			if err != nil {
+				panic(fmt.Errorf("hash: invalid data argument: %w", err))
+			}
+
+			hashAlgorithmStringValue, ok := invocation.Arguments[1].(*interpreter.StringValue)
+			if !ok {
+				panic(errors.New("hash: invalid hash algorithm argument: not a string"))
+			}
+			hashAlgorithm := hashAlgorithmStringValue.Str
+
+			digest := hasher.Hash(data, hashAlgorithm)
+
+			result := interpreter.ByteSliceToByteArrayValue(digest)
+
+			return trampoline.Done{Result: result}
+		},
+	)
+}
+
+func newCryptoContractHasher(hasher CryptoHasher) *interpreter.CompositeValue {
+	implementationTypeID :=
+		sema.TypeID(string(cryptoContractInitializerTypes[1].ID()) + "Impl")
+
+	result := interpreter.NewCompositeValue(
+		CryptoChecker.Location,
+		implementationTypeID,
+		common.CompositeKindStructure,
+		nil,
+		nil,
+	)
+
+	result.Functions = map[string]interpreter.FunctionValue{
+		"hash": newCryptoContractHashFunction(hasher),
+	}
+
+	return result
+}
+
 func NewCryptoContract(
 	inter *interpreter.Interpreter,
 	constructor interpreter.FunctionValue,
 	signatureVerifier CryptoSignatureVerifier,
+	hasher CryptoHasher,
 	invocationRange ast.Range,
 ) (
 	*interpreter.CompositeValue,
@@ -147,6 +194,7 @@ func NewCryptoContract(
 
 	var cryptoContractInitializerArguments = []interpreter.Value{
 		newCryptoContractSignatureVerifier(signatureVerifier),
+		newCryptoContractHasher(hasher),
 	}
 
 	value, err := inter.InvokeFunctionValue(
