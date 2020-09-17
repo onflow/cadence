@@ -615,6 +615,15 @@ func defineLessThanOrTypeArgumentsExpression() {
 		})
 }
 
+// defineGreaterThanOrBitwiseRightShiftExpression parses 
+// the greater-than expression (operator `>`, e.g. `1 > 2`) 
+// and the bitwise right shift expression (operator `>>`, e.g. `1 >> 3`).
+//
+// The `>>` operator consists of two `>` tokens, instead of one dedicated `>>` token,
+// because that would introduce a parsing problem for function calls/invocations
+// which have a type argument, where the type argument is a type instantiation,
+// for example, `f<T<U>>()`.
+//
 func defineGreaterThanOrBitwiseRightShiftExpression() {
 
 	setExprMetaLeftDenotation(
