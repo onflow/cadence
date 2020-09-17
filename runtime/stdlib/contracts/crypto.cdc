@@ -11,6 +11,14 @@ pub struct interface SignatureVerifier  {
     ): Bool
 }
 
+pub struct interface Hasher  {
+
+    pub fun hash(
+        data: [UInt8],
+        algorithm: String
+    ): [UInt8]
+}
+
 pub contract Crypto {
 
     pub struct SignatureAlgorithm {
@@ -33,6 +41,10 @@ pub contract Crypto {
         init(name: String) {
             self.name = name
         }
+
+        pub fun hash(_ data: [UInt8]): [UInt8] {
+            return Crypto.hash(data, algorithm: self)
+        }
     }
 
     /// SHA2_256 is Secure Hashing Algorithm 2 (SHA-2) with a 256-bit digest
@@ -40,6 +52,10 @@ pub contract Crypto {
 
     /// SHA3_256 is Secure Hashing Algorithm 3 (SHA-3) with a 256-bit digest
     pub let SHA3_256: HashAlgorithm
+
+    pub fun hash(_ data: [UInt8], algorithm: HashAlgorithm): [UInt8] {
+        return self.hasher.hash(data: data, algorithm: algorithm.name)
+    }
 
     pub struct PublicKey {
         pub let publicKey: [UInt8]
@@ -196,10 +212,12 @@ pub contract Crypto {
     priv let domainSeparationTagUser: String
 
     priv let signatureVerifier: {SignatureVerifier}
+    priv let hasher: {Hasher}
 
-    init(signatureVerifier: {SignatureVerifier}) {
+    init(signatureVerifier: {SignatureVerifier}, hasher: {Hasher}) {
 
         self.signatureVerifier = signatureVerifier
+        self.hasher = hasher
 
         // Initialize constants
 

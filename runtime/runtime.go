@@ -1205,6 +1205,7 @@ func (r *interpreterRuntime) loadContract(
 			inter,
 			constructor,
 			runtimeInterface,
+			runtimeInterface,
 			invocationRange,
 		)
 		if err != nil {
