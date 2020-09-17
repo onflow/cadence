@@ -115,7 +115,7 @@ func TestCheckEventDeclaration(t *testing.T) {
 		t.Parallel()
 
 		validTypes := append(
-			sema.AllNumberTypes,
+			sema.AllNumberTypes[:],
 			&sema.StringType{},
 			&sema.BoolType{},
 		)
