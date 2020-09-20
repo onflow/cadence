@@ -739,3 +739,19 @@ func (e InvalidInstructionVectorArgumentCountError) Error() string {
 func (e InvalidInstructionVectorArgumentCountError) Unwrap() error {
 	return e.ReadError
 }
+
+// InvalidBlockTypeTypeIndexError is returned when the WASM binary specifies
+// an invalid type index as a block type
+//
+type InvalidBlockTypeTypeIndexError struct {
+	TypeIndex int64
+	Offset    int
+}
+
+func (e InvalidBlockTypeTypeIndexError) Error() string {
+	return fmt.Sprintf(
+		"invalid type index in block type at offset %d: %d",
+		e.Offset,
+		e.TypeIndex,
+	)
+}
