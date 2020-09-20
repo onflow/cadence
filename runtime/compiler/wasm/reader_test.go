@@ -20,6 +20,7 @@ package wasm
 
 import (
 	"io"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -1418,6 +1419,35 @@ func TestWASMReader_readInstruction(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, expected, actual)
+	})
+
+	t.Run("block, type index result, type index too large", func(t *testing.T) {
+
+		t.Parallel()
+
+		b := buf{
+			data: []byte{
+				// block
+				0x02,
+				// type index: math.MaxUint32 + 1
+				0x80, 0x80, 0x80, 0x80, 0x10,
+				// unreachable
+				0x0,
+				// end
+				0x0b,
+			},
+			offset: 0,
+		}
+		r := WASMReader{buf: &b}
+
+		_, err := r.readInstruction()
+		require.Equal(t,
+			InvalidBlockTypeTypeIndexError{
+				TypeIndex: math.MaxUint32 + 1,
+				Offset:    1,
+			},
+			err,
+		)
 	})
 
 	t.Run("block, i32 result, second instructions", func(t *testing.T) {

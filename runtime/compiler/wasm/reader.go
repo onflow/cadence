@@ -748,6 +748,10 @@ func (r *WASMReader) readBlockInstructionArgument(allowElse bool) (Block, error)
 
 	for {
 		b, err := r.buf.PeekByte()
+		if err != nil {
+			// TODO: improve error
+			return Block{}, err
+		}
 		if b == byte(opcodeElse) {
 			if !allowElse {
 				return Block{}, InvalidBlockSecondInstructionsError{
@@ -818,13 +822,20 @@ func (r *WASMReader) readBlockType() (BlockType, error) {
 	// the block type is not a value type,
 	// it must be a type index.
 
+	typeIndexOffset := r.buf.offset
 	typeIndex, err := r.buf.readInt64LEB128()
 	if err != nil {
 		// TODO: improve error
 		return nil, err
 	}
-	if typeIndex > math.MaxUint32 {
-		// TODO: report error
+
+	// the type index was read as a int64,
+	// but must fit a uint32
+	if typeIndex < 0 || typeIndex > math.MaxUint32 {
+		return nil, InvalidBlockTypeTypeIndexError{
+			Offset: int(typeIndexOffset),
+			TypeIndex: typeIndex,
+		}
 	}
 
 	return TypeIndexBlockType{
