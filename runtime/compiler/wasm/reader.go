@@ -19,6 +19,7 @@
 package wasm
 
 import (
+	"math"
 	"unicode/utf8"
 )
 
@@ -622,9 +623,8 @@ func (r *WASMReader) readLocals() ([]ValueType, error) {
 // readInstructions reads the instructions for one function in the code sections
 //
 func (r *WASMReader) readInstructions() (instructions []Instruction, err error) {
-
 	for {
-		instruction, err := readInstruction(r.buf)
+		instruction, err := r.readInstruction()
 		if err != nil {
 			return nil, err
 		}
@@ -682,4 +682,168 @@ func (r *WASMReader) readName() (string, error) {
 	}
 
 	return string(name), nil
+}
+
+// readUint32LEB128InstructionArgument reads a uint32 instruction argument
+// (in LEB128 format)
+//
+func (r *WASMReader) readUint32LEB128InstructionArgument() (uint32, error) {
+	offset := r.buf.offset
+	v, err := r.buf.readUint32LEB128()
+	if err != nil {
+		return 0, InvalidInstructionArgumentError{
+			Offset:    int(offset),
+			ReadError: err,
+		}
+	}
+	return v, nil
+}
+
+// readInt32LEB128InstructionArgument reads an int32 instruction argument
+// (in LEB128 format)
+//
+func (r *WASMReader) readInt32LEB128InstructionArgument() (int32, error) {
+	offset := r.buf.offset
+	v, err := r.buf.readInt32LEB128()
+	if err != nil {
+		return 0, InvalidInstructionArgumentError{
+			Offset:    int(offset),
+			ReadError: err,
+		}
+	}
+	return v, nil
+}
+
+// readInt64LEB128InstructionArgument reads an int64 instruction argument
+// (in LEB128 format)
+//
+func (r *WASMReader) readInt64LEB128InstructionArgument() (int64, error) {
+	offset := r.buf.offset
+	v, err := r.buf.readInt64LEB128()
+	if err != nil {
+		return 0, InvalidInstructionArgumentError{
+			Offset:    int(offset),
+			ReadError: err,
+		}
+	}
+	return v, nil
+}
+
+// readBlockInstructionArgument reads a block instruction argument
+//
+func (r *WASMReader) readBlockInstructionArgument(allowElse bool) (Block, error) {
+	// read the block type.
+	blockType, err := r.readBlockType()
+	if err != nil {
+		// TODO: improve error
+		return Block{}, err
+	}
+
+	// read the first sequence of instructions.
+	// `readInstructions` cannot be used, as it does not handle the `else` instruction / opcode.
+
+	var instructions1 []Instruction
+
+	sawElse := false
+
+	for {
+		b, err := r.buf.PeekByte()
+		if b == byte(opcodeElse) {
+			if !allowElse {
+				return Block{}, InvalidBlockSecondInstructionsError{
+					Offset: int(r.buf.offset),
+
+				}
+			}
+			r.buf.offset++
+			sawElse = true
+			break
+		}
+
+		instruction, err := r.readInstruction()
+		if err != nil {
+			// TODO: improve error
+			return Block{}, err
+		}
+
+		if _, ok := instruction.(InstructionEnd); ok {
+			break
+		}
+
+		instructions1 = append(instructions1, instruction)
+	}
+
+	var instructions2 []Instruction
+	if sawElse {
+		// the first set of instructions contained an `else` instruction / opcode,
+		// so read the second set of instructions. the validity was already checked above.
+
+		instructions2, err = r.readInstructions()
+		if err != nil {
+			// TODO: improve error
+			return Block{}, err
+		}
+	}
+
+	return Block{
+		BlockType: blockType,
+		Instructions1: instructions1,
+		Instructions2: instructions2,
+	}, nil
+}
+
+func (r *WASMReader) readBlockType() (BlockType, error) {
+	// it may be the empty block type
+	b, err := r.buf.PeekByte()
+	if err != nil {
+		// TODO: improve error
+		return nil, err
+	}
+	if b == emptyBlockType {
+		r.buf.offset++
+		return nil, nil
+	}
+
+	// it may be a value type
+	blockType, err := r.readBlockTypeValueType()
+	if err != nil {
+		// TODO: improve error
+		return nil, err
+	}
+
+	if blockType != nil {
+		return blockType, nil
+	}
+
+	// the block type is not a value type,
+	// it must be a type index.
+
+	typeIndex, err := r.buf.readInt64LEB128()
+	if err != nil {
+		// TODO: improve error
+		return nil, err
+	}
+	if typeIndex > math.MaxUint32 {
+		// TODO: report error
+	}
+
+	return TypeIndexBlockType{
+		TypeIndex: uint32(typeIndex),
+	}, nil
+}
+
+// readBlockTypeValueType reads a value type block type
+// and returns nil if the next byte is not a valid value type
+//
+func (r *WASMReader) readBlockTypeValueType() (BlockType, error) {
+	b, err := r.buf.PeekByte()
+	if err != nil {
+		return nil, err
+	}
+	valueType := AsValueType(b)
+	if valueType == 0 {
+		return nil, nil
+	}
+	r.buf.offset++
+	return valueType, nil
 }

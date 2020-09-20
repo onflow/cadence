@@ -18,19 +18,6 @@
 
 package wasm
 
-// ValueType is the type of a value
-//
-type ValueType byte
-
-const (
-	// ValueTypeI32 is the i32 type
-	// The value is the byte used in the WASM binary
-	ValueTypeI32 ValueType = 0x7F
-	// ValueTypeI64 is the i64 type.
-	// The value is the byte used in the WASM binary
-	ValueTypeI64 ValueType = 0x7E
-)
-
 // functionTypeIndicator is the byte used to indicate a function type in the WASM binary
 const functionTypeIndicator = 0x60
 
@@ -41,3 +28,4 @@ type FunctionType struct {
 	Params  []ValueType
 	Results []ValueType
 }
+
