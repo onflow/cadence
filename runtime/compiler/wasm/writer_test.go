@@ -1008,3 +1008,273 @@ func TestWASMWriter_writeInstruction(t *testing.T) {
 		)
 	})
 }
+
+func TestWASMWriter_writeInstruction(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("block, i32 result", func(t *testing.T) {
+
+		t.Parallel()
+
+		var b buf
+		w := WASMWriter{&b}
+
+		instruction := InstructionBlock{
+			Block: Block{
+				BlockType:     ValueTypeI32,
+				Instructions1: []Instruction{
+					InstructionI32Const{Value: 1},
+				},
+				Instructions2: nil,
+			},
+		}
+		err := instruction.write(&w)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]byte{
+				// block
+				0x02,
+				// i32
+				0x7f,
+				// i32.const
+				0x41,
+				0x01,
+				// end
+				0x0b,
+			},
+			b.data,
+		)
+	})
+
+	t.Run("block, type index result", func(t *testing.T) {
+
+		t.Parallel()
+
+		var b buf
+		w := WASMWriter{&b}
+
+		instruction := InstructionBlock{
+			Block: Block{
+				BlockType:     TypeIndexBlockType{TypeIndex: 2},
+				Instructions1: []Instruction{
+					InstructionUnreachable{},
+				},
+				Instructions2: nil,
+			},
+		}
+		err := instruction.write(&w)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]byte{
+				// block
+				0x02,
+				// type index: 2
+				0x2,
+				// unreachable
+				0x0,
+				// end
+				0x0b,
+			},
+			b.data,
+		)
+	})
+
+	t.Run("block, i32 result, second instructions", func(t *testing.T) {
+
+		t.Parallel()
+
+		var b buf
+		w := WASMWriter{&b}
+
+		instruction := InstructionBlock{
+			Block: Block{
+				BlockType:     ValueTypeI32,
+				Instructions1: []Instruction{
+					InstructionI32Const{Value: 1},
+				},
+				Instructions2: []Instruction{
+					InstructionI32Const{Value: 2},
+				},
+			},
+		}
+		err := instruction.write(&w)
+		require.Equal(t, InvalidBlockSecondInstructionsError{
+			Offset: 4,
+		}, err)
+	})
+
+	t.Run("loop, i32 result", func(t *testing.T) {
+
+		t.Parallel()
+
+		var b buf
+		w := WASMWriter{&b}
+
+		instruction := InstructionLoop{
+			Block: Block{
+				BlockType:     ValueTypeI32,
+				Instructions1: []Instruction{
+					InstructionI32Const{Value: 1},
+				},
+				Instructions2: nil,
+			},
+		}
+		err := instruction.write(&w)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]byte{
+				// loop
+				0x03,
+				// i32
+				0x7f,
+				// i32.const
+				0x41,
+				0x01,
+				// end
+				0x0b,
+			},
+			b.data,
+		)
+	})
+
+	t.Run("loop, i32 result, second instructions", func(t *testing.T) {
+
+		t.Parallel()
+
+		var b buf
+		w := WASMWriter{&b}
+
+		instruction := InstructionLoop{
+			Block: Block{
+				BlockType:     ValueTypeI32,
+				Instructions1: []Instruction{
+					InstructionI32Const{Value: 1},
+				},
+				Instructions2: []Instruction{
+					InstructionI32Const{Value: 2},
+				},
+			},
+		}
+		err := instruction.write(&w)
+		require.Equal(t, InvalidBlockSecondInstructionsError{
+			Offset: 4,
+		}, err)
+	})
+
+	t.Run("if, i32 result", func(t *testing.T) {
+
+		t.Parallel()
+
+		var b buf
+		w := WASMWriter{&b}
+
+		instruction := InstructionIf{
+			Block: Block{
+				BlockType:     ValueTypeI32,
+				Instructions1: []Instruction{
+					InstructionI32Const{Value: 1},
+				},
+				Instructions2: nil,
+			},
+		}
+		err := instruction.write(&w)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]byte{
+				// if
+				0x04,
+				// i32
+				0x7f,
+				// i32.const
+				0x41,
+				0x01,
+				// end
+				0x0b,
+			},
+			b.data,
+		)
+	})
+
+	t.Run("if-else, i32 result", func(t *testing.T) {
+
+		t.Parallel()
+
+		var b buf
+		w := WASMWriter{&b}
+
+		instruction := InstructionIf{
+			Block: Block{
+				BlockType:     ValueTypeI32,
+				Instructions1: []Instruction{
+					InstructionI32Const{Value: 1},
+				},
+				Instructions2: []Instruction{
+					InstructionI32Const{Value: 2},
+				},
+			},
+		}
+		err := instruction.write(&w)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]byte{
+				// ii
+				0x04,
+				// i32
+				0x7f,
+				// i32.const
+				0x41,
+				0x01,
+				// else
+				0x05,
+				// i32.const
+				0x41,
+				0x02,
+				// end
+				0x0b,
+			},
+			b.data,
+		)
+	})
+
+
+	t.Run("br_table", func(t *testing.T) {
+
+		t.Parallel()
+
+		var b buf
+		w := WASMWriter{&b}
+
+		instruction := InstructionBrTable{
+			LabelIndices: []uint32{3, 2, 1, 0},
+			DefaultLabelIndex: 4,
+		}
+		err := instruction.write(&w)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]byte{
+				// br_table
+				0x0e,
+				// number of branch depths
+				0x04,
+				// 1. branch depth
+				0x03,
+				// 2. branch depth
+				0x02,
+				// 3. branch depth
+				0x01,
+				// 4. branch depth
+				0x00,
+				// default branch depth
+				0x04,
+			},
+			b.data,
+		)
+	})
+}
