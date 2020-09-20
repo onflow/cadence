@@ -25,22 +25,30 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestBuf_writeUint32LEB128(t *testing.T) {
+func TestBuf_Uint32LEB128(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("DWARF spec", func(t *testing.T) {
+	t.Run("DWARF spec + more", func(t *testing.T) {
 
 		t.Parallel()
 
 		// DWARF Debugging Information Format, Version 3, page 140
 
 		for v, expected := range map[uint32][]byte{
+			0:     {0x00},
+			1:     {0x01},
 			2:     {2},
+			63:    {0x3f},
+			64:    {0x40},
 			127:   {127},
 			128:   {0 + 0x80, 1},
 			129:   {1 + 0x80, 1},
 			130:   {2 + 0x80, 1},
+			0x90:  {0x90, 0x01},
+			0x100: {0x80, 0x02},
+			0x101: {0x81, 0x02},
+			0xff:  {0xff, 0x01},
 			12857: {57 + 0x80, 100},
 		} {
 			var b buf
@@ -86,22 +94,30 @@ func TestBuf_writeUint32LEB128(t *testing.T) {
 	})
 }
 
-func TestBuf_writeUint64LEB128(t *testing.T) {
+func TestBuf_Uint64LEB128(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("DWARF spec", func(t *testing.T) {
+	t.Run("DWARF spec + more", func(t *testing.T) {
 
 		t.Parallel()
 
 		// DWARF Debugging Information Format, Version 3, page 140
 
 		for v, expected := range map[uint64][]byte{
+			0:     {0x00},
+			1:     {0x01},
 			2:     {2},
+			63:    {0x3f},
+			64:    {0x40},
 			127:   {127},
 			128:   {0 + 0x80, 1},
 			129:   {1 + 0x80, 1},
 			130:   {2 + 0x80, 1},
+			0x90:  {0x90, 0x01},
+			0x100: {0x80, 0x02},
+			0x101: {0x81, 0x02},
+			0xff:  {0xff, 0x01},
 			12857: {57 + 0x80, 100},
 		} {
 			var b buf
@@ -141,25 +157,34 @@ func TestBuf_writeUint64LEB128(t *testing.T) {
 	})
 }
 
-func TestBuf_writeInt32LEB128(t *testing.T) {
+func TestBuf_Int32LEB128(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("DWARF spec", func(t *testing.T) {
+	t.Run("DWARF spec + more", func(t *testing.T) {
 
 		t.Parallel()
 
 		// DWARF Debugging Information Format, Version 3, page 141
 
 		for v, expected := range map[int32][]byte{
-			2:    {2},
-			-2:   {0x7e},
-			127:  {127 + 0x80, 0},
-			-127: {1 + 0x80, 0x7f},
-			128:  {0 + 0x80, 1},
-			-128: {0 + 0x80, 0x7f},
-			129:  {1 + 0x80, 1},
-			-129: {0x7f + 0x80, 0x7e},
+			0:      {0x00},
+			1:      {0x01},
+			-1:     {0x7f},
+			2:      {2},
+			-2:     {0x7e},
+			63:     {0x3f},
+			-63:    {0x41},
+			64:     {0xc0, 0x00},
+			-64:    {0x40},
+			-65:    {0xbf, 0x7f},
+			127:    {127 + 0x80, 0},
+			-127:   {1 + 0x80, 0x7f},
+			128:    {0 + 0x80, 1},
+			-128:   {0 + 0x80, 0x7f},
+			129:    {1 + 0x80, 1},
+			-129:   {0x7f + 0x80, 0x7e},
+			-12345: {0xc7, 0x9f, 0x7f},
 		} {
 			var b buf
 			err := b.writeInt32LEB128(v)
@@ -209,25 +234,34 @@ func TestBuf_writeInt32LEB128(t *testing.T) {
 	})
 }
 
-func TestBuf_writeInt64LEB128(t *testing.T) {
+func TestBuf_Int64LEB128(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("DWARF spec", func(t *testing.T) {
+	t.Run("DWARF spec + more", func(t *testing.T) {
 
 		t.Parallel()
 
 		// DWARF Debugging Information Format, Version 3, page 141
 
 		for v, expected := range map[int64][]byte{
-			2:    {2},
-			-2:   {0x7e},
-			127:  {127 + 0x80, 0},
-			-127: {1 + 0x80, 0x7f},
-			128:  {0 + 0x80, 1},
-			-128: {0 + 0x80, 0x7f},
-			129:  {1 + 0x80, 1},
-			-129: {0x7f + 0x80, 0x7e},
+			0:      {0x00},
+			1:      {0x01},
+			-1:     {0x7f},
+			2:      {2},
+			-2:     {0x7e},
+			63:     {0x3f},
+			-63:    {0x41},
+			64:     {0xc0, 0x00},
+			-64:    {0x40},
+			-65:    {0xbf, 0x7f},
+			127:    {127 + 0x80, 0},
+			-127:   {1 + 0x80, 0x7f},
+			128:    {0 + 0x80, 1},
+			-128:   {0 + 0x80, 0x7f},
+			129:    {1 + 0x80, 1},
+			-129:   {0x7f + 0x80, 0x7e},
+			-12345: {0xc7, 0x9f, 0x7f},
 		} {
 			var b buf
 			err := b.writeInt64LEB128(v)

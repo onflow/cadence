@@ -18,9 +18,23 @@
 
 package wasm
 
-// Instruction represents an instruction in the code of a WASM binary
-//
-type Instruction interface {
-	isInstruction()
-	write(*WASMWriter) error
+const emptyBlockType byte = 0x40
+
+type BlockType interface{
+	isBlockType()
+	write(writer *WASMWriter) error
 }
+
+type TypeIndexBlockType struct{
+	TypeIndex uint32
+}
+
+func (t TypeIndexBlockType) write(w *WASMWriter) error {
+	// "the type index in a block type is encoded as a positive signed integer,
+	// so that its signed LEB128 bit pattern cannot collide with the encoding of value types or the special code 0x40,
+	// which correspond to the LEB128 encoding of negative integers.
+	// To avoid any loss in the range of allowed indices, it is treated as a 33 bit signed integer."
+	return w.buf.writeInt64LEB128(int64(t.TypeIndex))
+}
+
+func (TypeIndexBlockType) isBlockType() {}
