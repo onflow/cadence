@@ -606,14 +606,12 @@ func (e InvalidOpcodeError) Unwrap() error {
 //
 type InvalidInstructionArgumentError struct {
 	Offset    int
-	Opcode    opcode
 	ReadError error
 }
 
 func (e InvalidInstructionArgumentError) Error() string {
 	return fmt.Sprintf(
-		"invalid argument for instruction with opcode %x in code section at offset %d",
-		e.Opcode,
+		"invalid argument in code section at offset %d",
 		e.Offset,
 	)
 }
@@ -706,4 +704,38 @@ func (e IncompleteNameError) Error() string {
 		e.Expected,
 		e.Actual,
 	)
+}
+
+// InvalidBlockSecondInstructionsError is returned when the WASM binary specifies
+// or the writer is given a second set of instructions in a block that
+// is not allowed to have it (only the 'if' instruction may have it)
+//
+type InvalidBlockSecondInstructionsError struct {
+	Offset int
+}
+
+func (e InvalidBlockSecondInstructionsError) Error() string {
+	return fmt.Sprintf(
+		"invalid second set of instructions at offset %d",
+		e.Offset,
+	)
+}
+
+// InvalidInstructionVectorArgumentCountError is returned when the WASM binary specifies
+// an invalid count for a vector argument of an instruction
+//
+type InvalidInstructionVectorArgumentCountError struct {
+	Offset    int
+	ReadError error
+}
+
+func (e InvalidInstructionVectorArgumentCountError) Error() string {
+	return fmt.Sprintf(
+		"invalid vector count for argument of instruction at offset %d",
+		e.Offset,
+	)
+}
+
+func (e InvalidInstructionVectorArgumentCountError) Unwrap() error {
+	return e.ReadError
 }

@@ -304,15 +304,25 @@ func (w *WASMWriter) writeFunctionBody(code *Code) error {
 			}
 		}
 
-		for _, instruction := range code.Instructions {
-			err = instruction.write(w)
-			if err != nil {
-				return err
-			}
+		err = w.writeInstructions(code.Instructions)
+		if err != nil {
+			return err
 		}
 
 		return w.writeOpcode(opcodeEnd)
 	})
+}
+
+// writeInstructions writes an instruction sequence
+//
+func (w *WASMWriter) writeInstructions(instructions []Instruction) error {
+	for _, instruction := range instructions {
+		err := instruction.write(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // writeOpcode writes the opcode of an instruction
@@ -347,4 +357,54 @@ func (w *WASMWriter) writeName(name string) error {
 
 	// write the name
 	return w.buf.WriteBytes([]byte(name))
+}
+
+// writeBlockInstructionArgument writes a block instruction argument
+//
+func (w *WASMWriter) writeBlockInstructionArgument(block Block, allowElse bool) error {
+
+	// write the block type
+	if block.BlockType != nil {
+		err := block.BlockType.write(w)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := w.buf.WriteByte(emptyBlockType)
+		if err != nil {
+			return err
+		}
+	}
+
+	// write the first sequence of instructions
+	err := w.writeInstructions(block.Instructions1)
+	if err != nil {
+		return err
+	}
+
+	// write the second sequence of instructions.
+	// in an if-instruction, this is the else branch.
+	// in other instructions, it is not allowed.
+
+	if len(block.Instructions2) > 0 {
+		if !allowElse {
+			return InvalidBlockSecondInstructionsError{
+				Offset: int(w.buf.offset),
+			}
+		}
+
+		err := w.writeOpcode(opcodeElse)
+		if err != nil {
+			return err
+		}
+
+		err = w.writeInstructions(block.Instructions2)
+		if err != nil {
+			return err
+		}
+	}
+
+	// write the implicit end instruction / opcode
+
+	return InstructionEnd{}.write(w)
 }

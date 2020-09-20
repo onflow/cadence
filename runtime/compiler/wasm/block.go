@@ -18,9 +18,8 @@
 
 package wasm
 
-// Instruction represents an instruction in the code of a WASM binary
-//
-type Instruction interface {
-	isInstruction()
-	write(*WASMWriter) error
+type Block struct {
+	BlockType     BlockType
+	Instructions1 []Instruction
+	Instructions2 []Instruction
 }

@@ -69,6 +69,14 @@ func (buf *buf) ReadByte() (byte, error) {
 	return b, nil
 }
 
+func (buf *buf) PeekByte() (byte, error) {
+	if buf.offset >= offset(len(buf.data)) {
+		return 0, io.EOF
+	}
+	b := buf.data[buf.offset]
+	return b, nil
+}
+
 func (buf *buf) ReadBytesEqual(expected []byte) (bool, error) {
 	off := buf.offset
 	for _, b := range expected {
