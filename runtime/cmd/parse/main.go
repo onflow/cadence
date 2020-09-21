@@ -1,3 +1,5 @@
+// +build !wasm
+
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
@@ -58,7 +60,7 @@ type result struct {
 	Bench    *benchResult `json:"bench,omitempty"`
 	BenchStr string       `json:"-"`
 	Error    error        `json:"error,omitempty"`
-	Program  *ast.Program
+	Program  *ast.Program `json:"program"`
 }
 
 type output interface {
