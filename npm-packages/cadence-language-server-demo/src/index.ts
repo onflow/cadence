@@ -20,9 +20,8 @@
 import * as monaco from "monaco-editor";
 import {editor} from "monaco-editor";
 import {MonacoServices} from 'monaco-languageclient';
-import {createCadenceLanguageClient} from "./language-client";
 import configureCadence, {CADENCE_LANGUAGE_ID} from "./cadence";
-import {CadenceLanguageServer, Callbacks} from "./language-server";
+import {createServer} from "monaco-languageclient-cadence";
 import ITextModel = editor.ITextModel;
 
 const code1 = `
@@ -85,42 +84,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       MonacoServices.install(editor);
     }
 
-    const callbacks: Callbacks = {
-      // The actual callback will be set as soon as the language server is initialized
-      toServer: null,
-
-      // The actual callback will be set as soon as the language server is initialized
-      onClientClose: null,
-
-      // The actual callback will be set as soon as the language client is initialized
-      onServerClose: null,
-
-      // The actual callback will be set as soon as the language client is initialized
-      toClient: null,
-
-      getAddressCode(address: string): string | undefined {
+    const server = await createServer(
+      'cadence-language-server.wasm',
+      (address: string): string | undefined => {
         if (address === '0000000000000001') {
           return models[0].getValue()
         }
-      },
-    }
+      }
+    )
 
     // The stop button demonstrates how to dispose the editor
     // and stop the language server
 
     buttonElement.addEventListener('click', () => {
       editor.dispose()
-      callbacks.onClientClose()
+      server.close()
     })
-
-    // Start one language server per editor.
-    // Even though one language server can handle multiple documents,
-    // this demonstrates this is possible and is more resilient:
-    // if the server for one editor crashes, it does not break the other editors
-
-    await CadenceLanguageServer.create(callbacks);
-
-    const languageClient = createCadenceLanguageClient(callbacks);
-    languageClient.start()
   }
 })

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 #
 # Cadence - The resource-oriented smart contract programming language
 #

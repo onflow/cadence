@@ -30,6 +30,7 @@ test:
 .PHONY: build
 build:
 	go build -o ./runtime/cmd/parse/parse ./runtime/cmd/parse
+	GOARCH=wasm GOOS=js go build -o ./runtime/cmd/parse/parse.wasm ./runtime/cmd/parse
 	go build -o ./runtime/cmd/check/check ./runtime/cmd/check
 	go build -o ./runtime/cmd/main/main ./runtime/cmd/main
 	cd ./languageserver && make build

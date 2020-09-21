@@ -16,9 +16,7 @@
  * limitations under the License.
  */
 
-
-import {CADENCE_LANGUAGE_ID} from './cadence'
-import {Callbacks} from './language-server'
+import {CadenceLanguageServer, Callbacks} from 'cadence-language-server'
 import {
   createMessageConnection,
   DataCallback,
@@ -57,9 +55,15 @@ export function createCadenceLanguageClient(callbacks: Callbacks) {
       })
     },
     write(msg: Message) {
+      if (!callbacks.toServer) {
+        return
+      }
       callbacks.toServer(null, msg)
     },
     dispose() {
+      if (!callbacks.onClientClose) {
+        return
+      }
       callbacks.onClientClose()
     }
   }
@@ -78,9 +82,12 @@ export function createCadenceLanguageClient(callbacks: Callbacks) {
       })
     },
     listen(dataCallback: DataCallback) {
-      callbacks.toClient = (message) => dataCallback(message)
+      callbacks.toClient = (message: Message) => dataCallback(message)
     },
     dispose() {
+      if (!callbacks.onClientClose) {
+        return
+      }
       callbacks.onClientClose()
     }
   }
@@ -90,7 +97,7 @@ export function createCadenceLanguageClient(callbacks: Callbacks) {
   return new MonacoLanguageClient({
     name: "Cadence Language Client",
     clientOptions: {
-      documentSelector: [CADENCE_LANGUAGE_ID],
+      documentSelector: ['cadence'],
       errorHandler: {
         error: () => ErrorAction.Continue,
         closed: () => CloseAction.DoNotRestart
@@ -103,4 +110,19 @@ export function createCadenceLanguageClient(callbacks: Callbacks) {
       }
     }
   });
+}
+
+export async function createServer(
+  binaryLocation: string,
+  getAddressCode?: (address: string) => string | undefined
+): Promise<CadenceLanguageServer> {
+
+  const callbacks: Callbacks = {
+    getAddressCode: getAddressCode,
+  }
+
+  const server = CadenceLanguageServer.create(binaryLocation, callbacks);
+  const languageClient = createCadenceLanguageClient(callbacks);
+  languageClient.start()
+  return server
 }
