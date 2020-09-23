@@ -2358,17 +2358,6 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 	}
 }
 
-
-func ArrayValueFromBytes(bytes []byte) *interpreter.ArrayValue {
-	byteValues := make([]interpreter.Value, len(bytes))
-
-	for i, b := range bytes {
-		byteValues[i] = interpreter.UInt8Value(b)
-	}
-
-	return interpreter.NewArrayValueUnownedNonCopying(byteValues...)
-}
-
 func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 	t.Parallel()
