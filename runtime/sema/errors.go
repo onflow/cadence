@@ -2775,3 +2775,16 @@ func (e *TypeAnnotationRequiredError) StartPosition() ast.Position {
 func (e *TypeAnnotationRequiredError) EndPosition() ast.Position {
 	return e.Pos
 }
+
+// CyclicImportsError
+
+type CyclicImportsError struct {
+	Location ast.Location
+	ast.Range
+}
+
+func (e *CyclicImportsError) Error() string {
+	return fmt.Sprintf("cyclic import of `%s`", e.Location)
+}
+
+func (*CyclicImportsError) isSemanticError() {}

@@ -112,6 +112,7 @@ type Checker struct {
 	locationHandler                    LocationHandlerFunc
 	importHandler                      ImportHandlerFunc
 	checkHandler                       CheckHandlerFunc
+	isChecking                         bool
 }
 
 type Option func(*Checker) error
@@ -332,6 +333,7 @@ func (checker *Checker) IsChecked() bool {
 
 func (checker *Checker) Check() error {
 	if !checker.IsChecked() {
+		checker.isChecking = true
 		checker.errors = nil
 		check := func() {
 			checker.Program.Accept(checker)
@@ -341,6 +343,7 @@ func (checker *Checker) Check() error {
 		} else {
 			check()
 		}
+		checker.isChecking = false
 		checker.isChecked = true
 	}
 	err := checker.CheckerError()

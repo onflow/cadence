@@ -30,6 +30,7 @@ type Import interface {
 	IsImportableValue(name string) bool
 	AllTypeElements() map[string]ImportElement
 	IsImportableType(name string) bool
+	IsChecking() bool
 }
 
 // ImportElement
@@ -83,6 +84,10 @@ func (i CheckerImport) IsImportableType(name string) bool {
 	return !isPredeclaredType
 }
 
+func (i CheckerImport) IsChecking() bool {
+	return i.Checker.isChecking
+}
+
 // VirtualImport
 
 type VirtualImport struct {
@@ -102,6 +107,10 @@ func (i VirtualImport) AllTypeElements() map[string]ImportElement {
 	return i.TypeElements
 }
 
-func (i VirtualImport) IsImportableType(_ string) bool {
+func (VirtualImport) IsImportableType(_ string) bool {
 	return true
+}
+
+func (VirtualImport) IsChecking() bool {
+	return false
 }

@@ -85,16 +85,18 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 
 	// First, get the Import for the resolved location
 
+	location := resolvedLocation.Location
+
 	var imp Import
 
 	if checker.importHandler != nil {
 		var err *CheckerError
-		imp, err = checker.importHandler(checker, resolvedLocation.Location)
+		imp, err = checker.importHandler(checker, location)
 		if err != nil {
 			checker.report(
 				&ImportedProgramError{
 					CheckerError:   err,
-					ImportLocation: resolvedLocation.Location,
+					ImportLocation: location,
 					Range:          locationRange,
 				},
 			)
@@ -105,8 +107,21 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 	if imp == nil {
 		checker.report(
 			&UnresolvedImportError{
-				ImportLocation: resolvedLocation.Location,
+				ImportLocation: location,
 				Range:          locationRange,
+			},
+		)
+		return
+	}
+
+	// If the import itself is being checked right now,
+	// then the import is cyclic
+
+	if imp.IsChecking() {
+		checker.report(
+			&CyclicImportsError{
+				Location: location,
+				Range:    locationRange,
 			},
 		)
 		return
@@ -204,7 +219,7 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 			available = append(available, identifier)
 		}
 
-		checker.handleMissingImports(missing, available, resolvedLocation.Location)
+		checker.handleMissingImports(missing, available, location)
 	}
 }
 
