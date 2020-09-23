@@ -133,10 +133,12 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 
 	importedCheckerA, err := checker.ParseAndCheckWithOptions(t,
 		`
+          // this function *SHOULD* be imported in the importing program
           pub fun a(): Int {
               return 1
           }
 
+          // this function should *NOT* be imported in the importing program
           pub fun b(): Int {
               return 11
           }
@@ -152,10 +154,12 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 
 	importedCheckerB, err := checker.ParseAndCheckWithOptions(t,
 		`
+          // this function *SHOULD* be imported in the importing program
           pub fun b(): Int {
               return 2
           }
 
+          // this function should *NOT* be imported in the importing program
           pub fun a(): Int {
               return 22
           }
