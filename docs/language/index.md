@@ -39,7 +39,7 @@ Much of the syntax, types, and standard library is inspired by Swift,
 which popularized e.g. optionals, argument labels,
 and provides safe handling of integers and strings.
 
-Resources are based on liner types which were popularized by Rust.
+Resources are based on linear types which were popularized by Rust.
 
 Events are inspired by Solidity.
 

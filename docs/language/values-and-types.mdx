@@ -586,7 +586,7 @@ the execution of the program aborts.
 
 The force-assignment operator is only used for
 [resource types](composite-types#resources) and the move operator (`<-`),
-which are covered the resources section of this document.
+which are covered in the resources section of this document.
 
 ### Conditional Downcasting Operator
 
@@ -1182,8 +1182,8 @@ let integers = {
 ```
 
 Dictionary types are covariant in their key and value types.
-For example, `[Int: String]` is a subtype of `[AnyStruct: String]`
-and also a subtype of `[Int: AnyStruct]`.
+For example, `{Int: String}` is a subtype of `{AnyStruct: String}`
+and also a subtype of `{Int: AnyStruct}`.
 This is safe because dictionaries are value types and not reference types.
 
 ### Dictionary Access

@@ -90,7 +90,7 @@ To summarize the behavior for variable declarations, constant declarations, and 
 | `var`            | `pub` / `access(all)`    | **All**                                              | Current and inner |
 | `var`            | `pub(set)`               | **All**                                              | **All**           |
 
-To summarize the for functions:
+To summarize the behavior for functions:
 
 | Access modifier          | Access scope                                        |
 |:-------------------------|:----------------------------------------------------|

@@ -640,7 +640,7 @@ then the implementation must return the same integer hash value for each of the 
 
 The implementation must also consistently return the same integer hash value during the execution
 of the program when the essential components have not changed.
-The integer hash value must not necessarily be the same across multiple executions.
+The integer hash value need not necessarily be the same across multiple executions.
 
 ```cadence
 struct interface Hashable: Equatable {
