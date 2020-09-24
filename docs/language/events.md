@@ -57,7 +57,7 @@ pub contract Events {
         // Emit event with explicit argument labels
         // Note that the emitted event will only contain the field names,
         // not the argument labels used at the invocation site.
-        emit FooEvent(labelA: 1, labelB: 2)
+        emit BarEvent(labelA: 1, labelB: 2)
     }
 }
 ```
