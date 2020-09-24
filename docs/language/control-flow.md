@@ -11,8 +11,7 @@ If-statements allow a certain piece of code to be executed only when a given con
 The if-statement starts with the `if` keyword, followed by the condition,
 and the code that should be executed if the condition is true
 inside opening and closing braces.
-The condition expression must be Bool
-The braces are required and not optional.
+The condition must be boolean and the braces are required.
 Parentheses around the condition are optional.
 
 ```cadence
@@ -126,8 +125,9 @@ executed if the condition is true inside opening and closing braces.
 The condition must be boolean and the braces are required.
 
 The while-statement will first evaluate the condition.
-If the condition is false, the execution is done.
 If it is true, the piece of code is executed and the evaluation of the condition is repeated.
+If the condition is false, the piece of code is not executed and the execution
+of the whole while-statement is finished.
 Thus, the piece of code is executed zero or more times.
 
 ```cadence
