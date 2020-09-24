@@ -27,12 +27,12 @@ To get started writing Cadence, try it out in the
 [Playground](https://play.onflow.org/).
 
 If you want to develop locally, install the [Flow Command Line
-Client](https://docs.onflow.org/v0.3/docs/cli), which provides the [Flow
-emulator](https://docs.onflow.org/v0.3/docs/emulator) and the [Visual Studio
-Code extension](https://docs.onflow.org/v0.3/docs/visual-studio-code-extension).
+Client](https://github.com/onflow/flow/blob/master/docs/cli.md#flow-cli), which provides the [Flow
+emulator](https://github.com/onflow/flow/blob/master/docs/emulator.md#flow-emulator) and the [Visual Studio
+Code extension](https://github.com/onflow/flow/blob/master/docs/vscode-extension.md#cadence-visual-studio-code-extension).
 The emulator is a lightweight tool that emulates the behaviour of the real Flow
 network. The Visual Studio Code extension enables the development, deployment
-of, and interaction with Cadence contracts
+of, and interaction with Cadence contracts.
 
 ## Documentation
 
