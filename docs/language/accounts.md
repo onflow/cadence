@@ -77,7 +77,7 @@ Every account can be accessed through two types:
       }
   }
 
-  struct DeployedCode {
+  struct DeployedContract {
       let name: String
       let code: [UInt8]
   }
