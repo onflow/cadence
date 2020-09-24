@@ -114,6 +114,18 @@ func LocationsMatch(first, second Location) bool {
 		return false
 	}
 
+	// if one is an Address contract location, compare the address location instead
+	firstLocation, a1acl := first.(AddressContractLocation)
+	secondLocation, a2acl := second.(AddressContractLocation)
+	if a1acl != a2acl {
+		if a1acl {
+			first = firstLocation.AddressLocation
+		}
+		if a2acl {
+			second = secondLocation.AddressLocation
+		}
+	}
+
 	return first.ID() == second.ID()
 }
 
