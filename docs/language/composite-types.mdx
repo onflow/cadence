@@ -918,15 +918,6 @@ res.value
 ```
 
 ```cadence
-// Declare a function which has a resource parameter but does not use it.
-// This function is invalid, because it would cause a loss of the resource.
-//
-pub fun forgetToUse(resource: @SomeResource) {
-    // Invalid: The resource parameter `resource` is not used, but must be.
-}
-```
-
-```cadence
 // Declare a function which has a resource parameter.
 // This function is invalid, because it does not always use the resource parameter,
 // which would cause a loss of the resource.
