@@ -1279,6 +1279,13 @@ func (r *interpreterRuntime) loadContract(
 				formatContractKey(location.Name),
 				false,
 			)
+			if _, ok := storedValue.(interpreter.NilValue); ok {
+				storedValue = runtimeStorage.readValue(
+					address,
+					contractKey,
+					false,
+				)
+			}
 		}
 
 		switch typedValue := storedValue.(type) {
