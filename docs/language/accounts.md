@@ -332,7 +332,7 @@ let hasCountRef = authAccount.borrow<&{HasCount}>(from: /storage/counter)
 // typed as `&{SomethingElse}`.
 //
 // `otherRef` is `nil`, as there is an object stored under path `/storage/counter`,
-// but the stored value of type `Counter` does not conform to to the requested type `{Other}`:
+// but the stored value of type `Counter` does not conform to the requested type `{Other}`:
 // the type `Counter` does not implement the restricted type's restriction `Other`
 
 let otherRef = authAccount.borrow<&{Other}>(from: /storage/counter)

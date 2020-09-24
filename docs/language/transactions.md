@@ -157,7 +157,7 @@ Statements inside of the `post` phase are used
 to verify that your transaction logic has been executed properly.
 It contains zero or more condition checks.
 
-For example, the a transfer transaction might ensure that the final balance has a certain value,
+For example, a transfer transaction might ensure that the final balance has a certain value,
 or e.g. it was incremented by a specific amount.
 
 ```cadence

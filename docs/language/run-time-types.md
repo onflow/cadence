@@ -32,7 +32,7 @@ Type<Int>() == Type<Int>()
 Type<Int>() != Type<String>()
 ```
 
-The function `fun isInstance(_ type: Type): Bool` can be used to check if a value has a certain type,
+The method `fun isInstance(_ type: Type): Bool` can be used to check if a value has a certain type,
 using the concrete run-time type,  and considering subtyping rules,
 
 ```cadence

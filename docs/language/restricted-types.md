@@ -56,7 +56,7 @@ counterRef.count  // is `43`
 // The variable may hold any `Counter`, but only the functionality
 // defined in the given restriction, the interface `HasCount`, may be accessed
 //
-let restrictedCounter: @Counter{Count} <- counter
+let restrictedCounter: @Counter{HasCount} <- counter
 
 // Invalid: Only functionality of restriction `Count` is available,
 // i.e. the read-only field `count`, but not the function `increment` of `Counter`

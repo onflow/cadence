@@ -89,7 +89,7 @@ of authorized accounts (`AuthAccount`) and public accounts (`PublicAccount`):
   If the path is a storage path, the function returns `nil`.
 
   `T` is the type parameter that specifies how the capability can be borrowed.
-  The type argument is optional, i.e. it must not be provided.
+  The type argument is optional, i.e. it need not be provided.
 
 The `getCapability` function does **not** check if the target exists.
 The link is latent.
