@@ -227,12 +227,23 @@ This gives the contract the ability to e.g. read and write to the account's stor
 
 ## Deploying, Updating, and Removing Contracts
 
-### Deploying, Updating, and Removing Contracts
-
 In order for a contract to be used in Cadence, it needs to be deployed to an account.
-The contracts of an account can be accessed through the `contracts` object.
+The deployed contracts of an account can be accessed through the `contracts` object.
 
-#### Deploying a New Contract
+### Deployed Contracts
+
+Accounts store "deployed contracts", that is, the code of the contract:
+
+```cadence
+struct DeployedContract {
+    let name: String
+    let code: [UInt8]
+}
+```
+
+Note that this is not the contract instance that can be acquired by importing it.
+
+### Deploying a New Contract
 
 A new contract can be deployed to an account using the `add` function:
 
@@ -257,11 +268,11 @@ A new contract can be deployed to an account using the `add` function:
   if the given code does not declare exactly one contract or contract interface,
   or if the given name does not match the name of the contract/contract interface declaration in the code.
 
-  Returns the deployed contract.
+  Returns the [deployed contract](#deployed-contracts).
 
 For example, assuming the following contract code should be deployed:
 
-```cadence,file=test-contract.cdc
+```cadence
 pub contract Test {
     pub let message: String
 
@@ -273,7 +284,7 @@ pub contract Test {
 
 The contract can be deployed as follows:
 
-```cadence,file=account-contracts-add.cdc
+```cadence
 // Decode the hex-encoded source code into a byte array
 // using the built-in function `decodeHex`.
 //
@@ -291,9 +302,14 @@ signer.contracts.add(
 )
 ```
 
-#### Updating a Deployed Contract
+### Updating a Deployed Contract
 
 > 🚧 Status: Updating contracts is **experimental**.
+>
+> This function only works for updates of function bodies, conditions, access modifiers, and comments.
+>
+> This function does **not** support other changes, e.g. changes of function signatures (parameters, return type);
+> adding, removing, or updating the name or type of fields; updating type declarations, etc.
 
 A deployed contract can be updated using the `update__experimental` function:
 
@@ -314,12 +330,12 @@ A deployed contract can be updated using the `update__experimental` function:
   if the given code does not declare exactly one contract or contract interface,
   or if the given name does not match the name of the contract/contract interface declaration in the code.
 
-  Returns the deployed contract for the updated contract.
+  Returns the [deployed contract](#deployed-contracts) for the updated contract.
 
 For example, assuming that a contract named `Test` is already deployed to the account
 and it should be updated with the following contract code:
 
-```cadence,file=test-contract.cdc
+```cadence
 pub contract Test {
     pub let message: String
 
@@ -331,7 +347,7 @@ pub contract Test {
 
 The contract can be updated as follows:
 
-```cadence,file=account-contracts-update.cdc
+```cadence
 // Decode the hex-encoded source code into a byte array
 // using the built-in function `decodeHex`.
 //
@@ -345,7 +361,7 @@ let signer: Account = ...
 signer.contracts.update__experimental(name: "Test", code: code)
 ```
 
-#### Getting a Deployed Contract
+### Getting a Deployed Contract
 
 A deployed contract can be get from an account using the `get` function:
 
@@ -353,18 +369,18 @@ A deployed contract can be get from an account using the `get` function:
   fun get(name: String): DeployedContract?
   ```
 
-  Returns the deployed contract for the contract/contract interface with the given name in the account, if any.
+  Returns the [deployed contract](#deployed-contracts) for the contract/contract interface with the given name in the account, if any.
 
   Returns `nil` if no contract/contract interface with the given name exists in the account.
 
 For example, assuming that a contract named `Test` is deployed to an account, the contract can be get as follows:
 
-```cadence,file=account-contracts-get.cdc
+```cadence
 let signer: Account = ...
 let contract = signer.contracts.get(name: "Test")
 ```
 
-#### Removing a Deployed Contract
+### Removing a Deployed Contract
 
 A deployed contract can be removed from an account using the `remove` function:
 
@@ -374,13 +390,13 @@ A deployed contract can be removed from an account using the `remove` function:
 
   Removes the contract/contract interface from the account which has the given name, if any.
 
-  Returns the removed deployed contract, if any.
+  Returns the removed [deployed contract](#deployed-contracts), if any.
 
   Returns `nil` if no contract/contract interface with the given name exist in the account.
 
 For example, assuming that a contract named `Test` is deployed to an account, the contract can be removed as follows:
 
-```cadence,file=account-contracts-remove.cdc
+```cadence
 let signer: Account = ...
 let contract = signer.contracts.remove(name: "Test")
 ```
