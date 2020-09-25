@@ -4806,14 +4806,29 @@ func (t *CompositeType) ID() TypeID {
 	return TypeID(fmt.Sprintf("%s.%s", t.Location.ID(), t.QualifiedIdentifier()))
 }
 
+func (t *CompositeType) LegacyID() TypeID {
+	return TypeID(fmt.Sprintf("%s.%s", t.Location.(ast.AddressContractLocation).AddressLocation.ID(), t.QualifiedIdentifier()))
+}
+
 func (t *CompositeType) Equal(other Type) bool {
 	otherStructure, ok := other.(*CompositeType)
 	if !ok {
 		return false
 	}
 
-	return otherStructure.Kind == t.Kind &&
-		otherStructure.ID() == t.ID()
+	// if one is an Address contract location, compare the address location instead
+	_, ok1 := otherStructure.Location.(ast.AddressContractLocation)
+	_, ok2 := t.Location.(ast.AddressContractLocation)
+	if ok1 != ok2 {
+		if ok1 {
+			return otherStructure.Kind == t.Kind && otherStructure.LegacyID() == t.ID()
+		}
+		if ok2 {
+			return otherStructure.Kind == t.Kind && otherStructure.ID() == t.LegacyID()
+		}
+	}
+
+	return otherStructure.Kind == t.Kind && otherStructure.ID() == t.ID()
 }
 
 func (t *CompositeType) GetMembers() map[string]MemberResolver {
