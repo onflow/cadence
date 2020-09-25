@@ -230,7 +230,7 @@ This gives the contract the ability to e.g. read and write to the account's stor
 In order for a contract to be used in Cadence, it needs to be deployed to an account.
 A contract can be deployed to an account using the `setCode` function of the `AuthAccount` type:
 
-- `fun AuthAccount.setCode(_ code: [UInt8], ... contractInitializerArguments)`
+- `cadence•fun AuthAccount.setCode(_ code: [UInt8], ... contractInitializerArguments)`
 
   The `code` parameter is the byte representation of the source code.
   All additional arguments that are given are passed further to the initializer
