@@ -126,8 +126,8 @@ The condition must be boolean and the braces are required.
 
 The while-statement will first evaluate the condition.
 If it is true, the piece of code is executed and the evaluation of the condition is repeated.
-If the condition is false, the piece of code is not executed and the execution
-of the whole while-statement is finished.
+If the condition is false, the piece of code is not executed 
+and the execution of the whole while-statement is finished.
 Thus, the piece of code is executed zero or more times.
 
 ```cadence
