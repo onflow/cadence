@@ -73,6 +73,20 @@ func (w *WASMWriter) writeContentWithSize(content func() error) error {
 	return w.buf.writeUint32LEB128SizeAt(sizeOffset)
 }
 
+// writeCustomSection writes a custom section with the given name and content.
+// The content is a function that writes the contents of the section.
+//
+func (w *WASMWriter) writeCustomSection(name string, content func() error) error {
+	return w.writeSection(sectionIDCustom, func() error {
+		err := w.writeName(name)
+		if err != nil {
+			return err
+		}
+
+		return content()
+	})
+}
+
 // writeTypeSection writes the section that declares all function types
 // so they can be referenced by index
 //
@@ -175,8 +189,7 @@ func (w *WASMWriter) writeImport(im *Import) error {
 		return err
 	}
 
-	// TODO: add support for tables, memories, and globals
-
+	// TODO: add support for tables, memories, and globals. adjust name section!
 	// write the type indicator
 	err = w.buf.WriteByte(byte(importIndicatorFunction))
 	if err != nil {
@@ -243,8 +256,7 @@ func (w *WASMWriter) writeExport(export *Export) error {
 		return err
 	}
 
-	// TODO: add support for tables, memories, and globals
-
+	// TODO: add support for tables, memories, and globals. adjust name section!
 	// write the type indicator
 	err = w.buf.WriteByte(byte(exportIndicatorFunction))
 	if err != nil {
@@ -407,4 +419,118 @@ func (w *WASMWriter) writeBlockInstructionArgument(block Block, allowElse bool) 
 	// write the implicit end instruction / opcode
 
 	return InstructionEnd{}.write(w)
+}
+
+const customSectionNameName = "name"
+
+// writeNameSection writes the section which declares
+// the names of the module, functions, and locals
+//
+func (w *WASMWriter) writeNameSection(moduleName string, imports []*Import, functions []*Function) error {
+	return w.writeCustomSection(customSectionNameName, func() error {
+
+		// write the module name sub-section
+		err := w.writeNameSectionModuleNameSubSection(moduleName)
+		if err != nil {
+			return err
+		}
+
+		// write the function names sub-section
+		return w.writeNameSectionFunctionNamesSubSection(imports, functions)
+	})
+}
+
+// nameSubSectionID is the ID of a sub-section in the name section of the WASM binary
+//
+type nameSubSectionID byte
+
+const (
+	nameSubSectionIDModuleName    nameSubSectionID = 0
+	nameSubSectionIDFunctionNames nameSubSectionID = 1
+	// TODO:
+	//nameSubSectionIDLocalNames    nameSubSectionID = 2
+)
+
+// writeNameSubSection writes a sub-section in the name section of the WASM binary,
+// with the given sub-section ID and the given content.
+// The content is a function that writes the contents of the section.
+//
+func (w *WASMWriter) writeNameSubSection(nameSubSectionID nameSubSectionID, content func() error) error {
+	// write the name sub-section ID
+	err := w.buf.WriteByte(byte(nameSubSectionID))
+	if err != nil {
+		return err
+	}
+
+	// write the size and the content
+	return w.writeContentWithSize(content)
+}
+
+// writeNameSectionModuleName writes the module name sub-section in the name section of the WASM binary
+//
+func (w *WASMWriter) writeNameSectionModuleNameSubSection(moduleName string) error {
+	return w.writeNameSubSection(nameSubSectionIDModuleName, func() error {
+		return w.writeName(moduleName)
+	})
+}
+
+// writeNameSectionFunctionNames writes the module name sub-section in the name section of the WASM binary
+//
+func (w *WASMWriter) writeNameSectionFunctionNamesSubSection(imports []*Import, functions []*Function) error {
+	return w.writeNameSubSection(nameSubSectionIDFunctionNames, func() error {
+
+		// write the number of function names
+		// TODO: adjust once tables, memories, and globals are supported
+		count := len(imports) + len(functions)
+
+		err := w.buf.writeUint32LEB128(uint32(count))
+		if err != nil {
+			return err
+		}
+
+		// write the name map entries for the imports
+
+		var index uint32
+
+		// TODO: adjust once tables, memories, and globals are supported
+		for _, imp := range imports {
+
+			// write the index
+			err := w.buf.writeUint32LEB128(index)
+			if err != nil {
+				return err
+			}
+
+			index++
+
+			// write the name
+
+			err = w.writeName(imp.FullName())
+			if err != nil {
+				return err
+			}
+		}
+
+		// write the name map entries for the functions
+
+		for _, function := range functions {
+
+			// write the index
+			err := w.buf.writeUint32LEB128(index)
+			if err != nil {
+				return err
+			}
+
+			index++
+
+			// write the name
+
+			err = w.writeName(function.Name)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
 }
