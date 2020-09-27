@@ -18,13 +18,19 @@
 
 package wasm
 
+import "fmt"
+
 // Import represents an import
 //
 type Import struct {
 	Module string
 	Name   string
-	// TODO: add support for tables, memories, and globals
+	// TODO: add support for tables, memories, and globals. adjust name section!
 	TypeIndex uint32
+}
+
+func (imp Import) FullName() string {
+	return fmt.Sprintf("%s.%s", imp.Module, imp.Name)
 }
 
 // importIndicator is the byte used to indicate the kind of import in the WASM binary

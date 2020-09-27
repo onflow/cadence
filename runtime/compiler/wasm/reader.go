@@ -80,6 +80,12 @@ func (r *WASMReader) readSection() error {
 	}
 
 	switch sectionID {
+	case sectionIDCustom:
+		err = r.readCustomSection()
+		if err != nil {
+			return err
+		}
+
 	case sectionIDType:
 		if r.Module.Types != nil {
 			return invalidDuplicateSectionError()
@@ -141,19 +147,18 @@ func (r *WASMReader) readSection() error {
 
 // readSectionSize reads the content size of a section
 //
-func (r *WASMReader) readSectionSize() error {
+func (r *WASMReader) readSectionSize() (uint32, error) {
 	// read the size
 	sizeOffset := r.buf.offset
-	// TODO: use size
-	_, err := r.buf.readUint32LEB128()
+	size, err := r.buf.readUint32LEB128()
 	if err != nil {
-		return InvalidSectionSizeError{
+		return 0, InvalidSectionSizeError{
 			Offset:    int(sizeOffset),
 			ReadError: err,
 		}
 	}
 
-	return nil
+	return size, nil
 }
 
 // readTypeSection reads the section that declares all function types
@@ -161,7 +166,7 @@ func (r *WASMReader) readSectionSize() error {
 //
 func (r *WASMReader) readTypeSection() error {
 
-	err := r.readSectionSize()
+	_, err := r.readSectionSize()
 	if err != nil {
 		return err
 	}
@@ -293,7 +298,7 @@ func (r *WASMReader) readValType() (ValueType, error) {
 //
 func (r *WASMReader) readImportSection() error {
 
-	err := r.readSectionSize()
+	_, err := r.readSectionSize()
 	if err != nil {
 		return err
 	}
@@ -349,8 +354,7 @@ func (r *WASMReader) readImport() (*Import, error) {
 
 	indicator := importIndicator(b)
 
-	// TODO: add support for tables, memories, and globals
-
+	// TODO: add support for tables, memories, and globals. adjust name section!
 	if err != nil || indicator != importIndicatorFunction {
 		return nil, InvalidImportIndicatorError{
 			ImportIndicator: indicator,
@@ -381,7 +385,7 @@ func (r *WASMReader) readImport() (*Import, error) {
 //
 func (r *WASMReader) readFunctionSection() error {
 
-	err := r.readSectionSize()
+	_, err := r.readSectionSize()
 	if err != nil {
 		return err
 	}
@@ -421,7 +425,7 @@ func (r *WASMReader) readFunctionSection() error {
 //
 func (r *WASMReader) readExportSection() error {
 
-	err := r.readSectionSize()
+	_, err := r.readSectionSize()
 	if err != nil {
 		return err
 	}
@@ -471,8 +475,7 @@ func (r *WASMReader) readExport() (*Export, error) {
 
 	indicator := exportIndicator(b)
 
-	// TODO: add support for tables, memories, and globals
-
+	// TODO: add support for tables, memories, and globals. adjust name section!
 	if err != nil || indicator != exportIndicatorFunction {
 		return nil, InvalidExportIndicatorError{
 			ExportIndicator: indicator,
@@ -502,7 +505,7 @@ func (r *WASMReader) readExport() (*Export, error) {
 //
 func (r *WASMReader) readCodeSection() error {
 
-	err := r.readSectionSize()
+	_, err := r.readSectionSize()
 	if err != nil {
 		return err
 	}
@@ -756,7 +759,6 @@ func (r *WASMReader) readBlockInstructionArgument(allowElse bool) (Block, error)
 			if !allowElse {
 				return Block{}, InvalidBlockSecondInstructionsError{
 					Offset: int(r.buf.offset),
-
 				}
 			}
 			r.buf.offset++
@@ -790,7 +792,7 @@ func (r *WASMReader) readBlockInstructionArgument(allowElse bool) (Block, error)
 	}
 
 	return Block{
-		BlockType: blockType,
+		BlockType:     blockType,
 		Instructions1: instructions1,
 		Instructions2: instructions2,
 	}, nil
@@ -833,7 +835,7 @@ func (r *WASMReader) readBlockType() (BlockType, error) {
 	// but must fit a uint32
 	if typeIndex < 0 || typeIndex > math.MaxUint32 {
 		return nil, InvalidBlockTypeTypeIndexError{
-			Offset: int(typeIndexOffset),
+			Offset:    int(typeIndexOffset),
 			TypeIndex: typeIndex,
 		}
 	}
@@ -857,4 +859,44 @@ func (r *WASMReader) readBlockTypeValueType() (BlockType, error) {
 	}
 	r.buf.offset++
 	return valueType, nil
+}
+
+// readCustomSection reads a custom section
+//
+func (r *WASMReader) readCustomSection() error {
+
+	size, err := r.readSectionSize()
+	if err != nil {
+		return err
+	}
+
+	// read the name of the custom section
+
+	nameStartOffset := r.buf.offset
+	name, err := r.readName()
+	if err != nil {
+		return err
+	}
+
+	size = size - uint32(r.buf.offset-nameStartOffset)
+
+	switch name {
+	case customSectionNameName:
+		return r.readNameSection(size)
+	}
+
+	// skip unknown custom sections
+	r.buf.offset += offset(size)
+
+	return nil
+}
+
+// readNameSection reads the section that provides names
+//
+func (r *WASMReader) readNameSection(size uint32) error {
+
+	// TODO: read the names and store them. for now, just skip the content
+	r.buf.offset += offset(size)
+
+	return nil
 }

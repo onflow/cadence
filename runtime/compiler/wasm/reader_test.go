@@ -34,7 +34,12 @@ func TestWASMReader_readMagicAndVersion(t *testing.T) {
 	read := func(data []byte) error {
 		b := buf{data: data}
 		r := WASMReader{buf: &b}
-		return r.readMagicAndVersion()
+		err := r.readMagicAndVersion()
+		if err != nil {
+			return err
+		}
+		require.Equal(t, offset(len(b.data)), b.offset)
+		return nil
 	}
 
 	t.Run("invalid magic, too short", func(t *testing.T) {
@@ -113,7 +118,12 @@ func TestWASMReader_readValType(t *testing.T) {
 	read := func(data []byte) (ValueType, error) {
 		b := buf{data: data}
 		r := WASMReader{buf: &b}
-		return r.readValType()
+		valueType, err := r.readValType()
+		if err != nil {
+			return 0, err
+		}
+		require.Equal(t, offset(len(b.data)), b.offset)
+		return valueType, nil
 	}
 
 	t.Run("too short", func(t *testing.T) {
@@ -180,6 +190,7 @@ func TestWASMReader_readTypeSection(t *testing.T) {
 		if err != nil {
 			return nil, err
 		}
+		require.Equal(t, offset(len(b.data)), b.offset)
 		return r.Module.Types, nil
 	}
 
@@ -463,6 +474,7 @@ func TestWASMReader_readImportSection(t *testing.T) {
 		if err != nil {
 			return nil, err
 		}
+		require.Equal(t, offset(len(b.data)), b.offset)
 		return r.Module.Imports, nil
 	}
 
@@ -703,6 +715,7 @@ func TestWASMReader_readFunctionSection(t *testing.T) {
 		if err != nil {
 			return nil, err
 		}
+		require.Equal(t, offset(len(b.data)), b.offset)
 		return r.Module.functionTypeIndices, nil
 	}
 
@@ -796,6 +809,7 @@ func TestWASMReader_readExportSection(t *testing.T) {
 		if err != nil {
 			return nil, err
 		}
+		require.Equal(t, offset(len(b.data)), b.offset)
 		return r.Module.Exports, nil
 	}
 
@@ -991,6 +1005,7 @@ func TestWASMReader_readCodeSection(t *testing.T) {
 		if err != nil {
 			return nil, err
 		}
+		require.Equal(t, offset(len(b.data)), b.offset)
 		return r.Module.functionBodies, nil
 	}
 
@@ -1267,7 +1282,12 @@ func TestWASMReader_readName(t *testing.T) {
 	read := func(data []byte) (string, error) {
 		b := buf{data: data}
 		r := WASMReader{buf: &b}
-		return r.readName()
+		name, err := r.readName()
+		if err != nil {
+			return "", err
+		}
+		require.Equal(t, offset(len(b.data)), b.offset)
+		return name, nil
 	}
 
 	t.Run("valid", func(t *testing.T) {
@@ -1374,7 +1394,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 
 		expected := InstructionBlock{
 			Block: Block{
-				BlockType:     ValueTypeI32,
+				BlockType: ValueTypeI32,
 				Instructions1: []Instruction{
 					InstructionI32Const{Value: 1},
 				},
@@ -1385,6 +1405,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, expected, actual)
+		require.Equal(t, offset(len(b.data)), b.offset)
 	})
 
 	t.Run("block, type index result", func(t *testing.T) {
@@ -1408,7 +1429,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 
 		expected := InstructionBlock{
 			Block: Block{
-				BlockType:     TypeIndexBlockType{TypeIndex: 2},
+				BlockType: TypeIndexBlockType{TypeIndex: 2},
 				Instructions1: []Instruction{
 					InstructionUnreachable{},
 				},
@@ -1419,6 +1440,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, expected, actual)
+		require.Equal(t, offset(len(b.data)), b.offset)
 	})
 
 	t.Run("block, type index result, type index too large", func(t *testing.T) {
@@ -1503,7 +1525,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 
 		expected := InstructionLoop{
 			Block: Block{
-				BlockType:     ValueTypeI32,
+				BlockType: ValueTypeI32,
 				Instructions1: []Instruction{
 					InstructionI32Const{Value: 1},
 				},
@@ -1514,6 +1536,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, expected, actual)
+		require.Equal(t, offset(len(b.data)), b.offset)
 	})
 
 	t.Run("loop, i32 result, second instructions", func(t *testing.T) {
@@ -1569,7 +1592,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 
 		expected := InstructionIf{
 			Block: Block{
-				BlockType:     ValueTypeI32,
+				BlockType: ValueTypeI32,
 				Instructions1: []Instruction{
 					InstructionI32Const{Value: 1},
 				},
@@ -1580,6 +1603,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, expected, actual)
+		require.Equal(t, offset(len(b.data)), b.offset)
 	})
 
 	t.Run("if-else, i32 result", func(t *testing.T) {
@@ -1609,7 +1633,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 
 		expected := InstructionIf{
 			Block: Block{
-				BlockType:     ValueTypeI32,
+				BlockType: ValueTypeI32,
 				Instructions1: []Instruction{
 					InstructionI32Const{Value: 1},
 				},
@@ -1622,6 +1646,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 		require.NoError(t, err)
 
 		require.Equal(t, expected, actual)
+		require.Equal(t, offset(len(b.data)), b.offset)
 	})
 
 	t.Run("br_table", func(t *testing.T) {
@@ -1650,12 +1675,63 @@ func TestWASMReader_readInstruction(t *testing.T) {
 		r := WASMReader{buf: &b}
 
 		expected := InstructionBrTable{
-			LabelIndices: []uint32{3, 2, 1, 0},
+			LabelIndices:      []uint32{3, 2, 1, 0},
 			DefaultLabelIndex: 4,
 		}
 		actual, err := r.readInstruction()
 		require.NoError(t, err)
 
 		require.Equal(t, expected, actual)
+		require.Equal(t, offset(len(b.data)), b.offset)
 	})
+}
+
+func TestWASMReader_readNameSection(t *testing.T) {
+
+	t.Parallel()
+
+	b := buf{
+		data: []byte{
+			// section size: 37 (LEB128)
+			0xa5, 0x80, 0x80, 0x80, 0x0,
+			// name length
+			0x4,
+			// name = "name"
+			0x6e, 0x61, 0x6d, 0x65,
+			// sub-section ID: module name = 0
+			0x0,
+			// sub-section size: 5 (LEB128)
+			0x85, 0x80, 0x80, 0x80, 0x0,
+			// name length
+			0x4,
+			// name = "test"
+			0x74, 0x65, 0x73, 0x74,
+			// sub-section ID: function names = 1
+			0x1,
+			// sub-section size: 15 (LEB128)
+			0x8f, 0x80, 0x80, 0x80, 0x0,
+			// name count
+			0x2,
+			// function index = 0
+			0x0,
+			// name length
+			0x7,
+			// name = "foo.bar"
+			0x66, 0x6f, 0x6f, 0x2e, 0x62, 0x61, 0x72,
+			// function index = 1
+			0x1,
+			// name length
+			0x3,
+			// name = "add"
+			0x61, 0x64, 0x64,
+		},
+		offset: 0,
+	}
+
+	r := WASMReader{buf: &b}
+
+	err := r.readCustomSection()
+	require.NoError(t, err)
+
+	require.Equal(t, offset(len(b.data)), b.offset)
 }
