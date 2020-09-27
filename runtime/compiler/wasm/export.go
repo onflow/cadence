@@ -22,7 +22,7 @@ package wasm
 //
 type Export struct {
 	Name string
-	// TODO: add support for tables, memories, and globals
+	// TODO: add support for tables, memories, and globals. adjust name section!
 	FunctionIndex uint32
 }
 
