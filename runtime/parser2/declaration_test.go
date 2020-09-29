@@ -2108,7 +2108,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 		)
 	})
 
-	t.Run("emum, two cases one one line", func(t *testing.T) {
+	t.Run("enum, two cases one one line", func(t *testing.T) {
 
 		t.Parallel()
 
