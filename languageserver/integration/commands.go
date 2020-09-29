@@ -328,7 +328,7 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 const deployContractTemplate = `
 transaction(name: String, code: [UInt8]) {
   prepare(signer: AuthAccount) {
-	if signer.contracts.get(name: name) == nil {
+    if signer.contracts.get(name: name) == nil {
       signer.contracts.add(name: name, code: code)
     } else {
       signer.contracts.update__experimental(name: name, code: code)
