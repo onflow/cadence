@@ -39,9 +39,9 @@ func TestRuntimeContract(t *testing.T) {
 	t.Parallel()
 
 	type testCase struct {
-		name        string
-		code        string
-		code2       string
+		name        string // the name of the contract used in add/update calls
+		code        string // the code we use to add the contract
+		code2       string // the code we use to update the contract
 		valid       bool
 		isInterface bool
 	}
