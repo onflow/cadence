@@ -57,7 +57,7 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
        }
     `)
 
-	deployTx := utils.DeploymentTransaction(contract)
+	deployTx := utils.DeploymentTransaction("Test", contract)
 
 	setupTx := []byte(`
 	  import Test from 0xCADE
@@ -105,7 +105,11 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{address}
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ Address, _ string, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
@@ -132,7 +136,7 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
 	assert.NotNil(t, accountCode)
 
 	rType := &cadence.ResourceType{
-		TypeID:     "A.000000000000cade.Test.R",
+		TypeID:     "AC.000000000000cade.Test.Test.R",
 		Identifier: "R",
 		Fields: []cadence.Field{
 			{
@@ -150,9 +154,9 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
 		[]write{
 			{
 				address,
-				"contract",
+				"contract\x1fTest",
 				cadence.NewContract([]cadence.Value{}).WithType(&cadence.ContractType{
-					TypeID:       "A.000000000000cade.Test",
+					TypeID:       "AC.000000000000cade.Test.Test",
 					Identifier:   "Test",
 					Fields:       []cadence.Field{},
 					Initializers: nil,

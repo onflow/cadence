@@ -93,7 +93,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 
 	contract := []byte(simpleDeferralContract)
 
-	deploy := utils.DeploymentTransaction(contract)
+	deploy := utils.DeploymentTransaction("Test", contract)
 
 	setupTx := []byte(`
       import Test from 0xCADE
@@ -133,14 +133,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	}
 
 	runtimeInterface := &testRuntimeInterface{
-		getCode: func(_ Location) (bytes []byte, err error) {
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ Address, _ string) (bytes []byte, err error) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(onRead, onWrite),
 		getSigningAccounts: func() []Address {
 			return []Address{common.BytesToAddress(addressValue.Bytes())}
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -231,7 +232,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	assert.Len(t, writes, 0)
 	require.Len(t, reads, 3)
 	assert.Equal(t,
-		[]byte(contractKey),
+		[]byte(formatContractKey("Test")),
 		reads[0].key,
 	)
 	assert.Equal(t,
@@ -284,7 +285,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 
 	require.Len(t, reads, 3)
 	assert.Equal(t,
-		[]byte(contractKey),
+		[]byte(formatContractKey("Test")),
 		reads[0].key,
 	)
 	assert.Equal(t,
@@ -345,7 +346,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 
 	require.Len(t, reads, 3)
 	assert.Equal(t,
-		[]byte(contractKey),
+		[]byte(formatContractKey("Test")),
 		reads[0].key,
 	)
 	assert.Equal(t,
@@ -406,7 +407,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 
 	require.Len(t, reads, 3)
 	assert.Equal(t,
-		[]byte(contractKey),
+		[]byte(formatContractKey("Test")),
 		reads[0].key,
 	)
 	assert.Equal(t,
@@ -431,7 +432,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	assert.Len(t, writes, 0)
 	require.Len(t, reads, 2)
 	assert.Equal(t,
-		[]byte(contractKey),
+		[]byte(formatContractKey("Test")),
 		reads[0].key,
 	)
 	assert.Equal(t,
@@ -494,7 +495,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 
 	require.Len(t, reads, 3)
 	assert.Equal(t,
-		[]byte(contractKey),
+		[]byte(formatContractKey("Test")),
 		reads[0].key,
 	)
 	assert.Equal(t,
@@ -573,7 +574,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
       }
     `)
 
-	deploy := utils.DeploymentTransaction(contract)
+	deploy := utils.DeploymentTransaction("Test", contract)
 
 	setupTx := []byte(`
       import Test from 0xCADE
@@ -613,6 +614,10 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
 	}
 
 	runtimeInterface := &testRuntimeInterface{
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			return accountCode, nil
+		},
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
@@ -620,7 +625,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{common.BytesToAddress(addressValue.Bytes())}
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -716,7 +721,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
 	assert.Len(t, writes, 0)
 	require.Len(t, reads, 4)
 	assert.Equal(t,
-		[]byte(contractKey),
+		[]byte(formatContractKey("Test")),
 		reads[0].key,
 	)
 	assert.Equal(t,
@@ -784,7 +789,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_DictionaryTransfer(t *te
           transaction {
 
               prepare(signer1: AuthAccount, signer2: AuthAccount) {
-                  signer1.setCode("%s".decodeHex())
+                  signer1.contracts.add(name: "Test", code: "%s".decodeHex())
               }
           }
         `,
@@ -855,7 +860,11 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_DictionaryTransfer(t *te
 				signer2,
 			}
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ Address, _ string, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
@@ -947,7 +956,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Removal(t *testing.T) {
 
 	contract := []byte(simpleDeferralContract)
 
-	deployTx := utils.DeploymentTransaction(contract)
+	deployTx := utils.DeploymentTransaction("Test", contract)
 
 	setupTx := []byte(`
       import Test from 0x1
@@ -1004,7 +1013,11 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Removal(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{signer}
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ Address, _ string, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
@@ -1039,7 +1052,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Destruction(t *testing.T
 
 	contract := []byte(simpleDeferralContract)
 
-	deployTx := utils.DeploymentTransaction(contract)
+	deployTx := utils.DeploymentTransaction("Test", contract)
 
 	setupTx := []byte(`
       import Test from 0x1
@@ -1081,7 +1094,11 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Destruction(t *testing.T
 		getSigningAccounts: func() []Address {
 			return []Address{signer}
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -1123,7 +1140,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Insertion(t *testing.T) 
 
 	contract := []byte(simpleDeferralContract)
 
-	deployTx := utils.DeploymentTransaction(contract)
+	deployTx := utils.DeploymentTransaction("Test", contract)
 
 	setupTx := []byte(`
       import Test from 0x1
@@ -1192,7 +1209,11 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Insertion(t *testing.T) 
 		getSigningAccounts: func() []Address {
 			return []Address{signer}
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -1225,7 +1246,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_ValueTransferAndDestroy(
 
 	contract := []byte(simpleDeferralContract)
 
-	deployTx := utils.DeploymentTransaction(contract)
+	deployTx := utils.DeploymentTransaction("Test", contract)
 
 	setupTx := []byte(`
       import Test from 0x1
@@ -1306,7 +1327,11 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_ValueTransferAndDestroy(
 		getSigningAccounts: func() []Address {
 			return signers
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 			accountCode = code
 			return nil
 		},

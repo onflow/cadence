@@ -33,6 +33,8 @@ import (
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/templates"
 
+	"github.com/onflow/cadence"
+	jsoncdc "github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/languageserver/server"
 )
@@ -40,7 +42,7 @@ import (
 const (
 	CommandSubmitTransaction     = "cadence.server.flow.submitTransaction"
 	CommandExecuteScript         = "cadence.server.flow.executeScript"
-	CommandUpdateAccountCode     = "cadence.server.flow.updateAccountCode"
+	CommandDeployContract        = "cadence.server.flow.deployContract"
 	CommandCreateAccount         = "cadence.server.flow.createAccount"
 	CommandCreateDefaultAccounts = "cadence.server.flow.createDefaultAccounts"
 	CommandSwitchActiveAccount   = "cadence.server.flow.switchActiveAccount"
@@ -57,8 +59,8 @@ func (i *FlowIntegration) commands() []server.Command {
 			Handler: i.executeScript,
 		},
 		{
-			Name:    CommandUpdateAccountCode,
-			Handler: i.updateAccountCode,
+			Name:    CommandDeployContract,
+			Handler: i.deployContract,
 		},
 		{
 			Name:    CommandSwitchActiveAccount,
@@ -280,26 +282,25 @@ RetryLoop:
 	return accounts, nil
 }
 
-// updateAccountCode updates the configured account with the code of the given
+// deployContract deploys the contract to the configured account with the code of the given
 // file.
 //
 // There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
-//   * the address of the account to sign with
-func (i *FlowIntegration) updateAccountCode(conn protocol.Conn, args ...interface{}) (interface{}, error) {
-	conn.LogMessage(&protocol.LogMessageParams{
-		Type:    protocol.Log,
-		Message: fmt.Sprintf("update acct code args: %v", args),
-	})
+//   * the name of the declaration
+//
+func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 
-	expectedArgCount := 1
+	expectedArgCount := 2
 	if len(args) != expectedArgCount {
 		return nil, fmt.Errorf("must have %d args, got: %d", expectedArgCount, len(args))
 	}
+
 	uri, ok := args[0].(string)
 	if !ok {
 		return nil, errors.New("invalid uri argument")
 	}
+
 	doc, ok := i.server.GetDocument(protocol.DocumentUri(uri))
 	if !ok {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
@@ -307,16 +308,55 @@ func (i *FlowIntegration) updateAccountCode(conn protocol.Conn, args ...interfac
 
 	file := parseFileFromURI(uri)
 
+	name, ok := args[1].(string)
+	if !ok {
+		return nil, errors.New("invalid name argument")
+	}
+
 	conn.ShowMessage(&protocol.ShowMessageParams{
 		Type:    protocol.Info,
-		Message: fmt.Sprintf("Deploying %s to account 0x%s", file, i.activeAddress.Hex()),
+		Message: fmt.Sprintf("Deploying contract %s (%s) to account 0x%s", name, file, i.activeAddress.Hex()),
 	})
 
-	accountCode := []byte(doc.Text)
-	tx := templates.UpdateAccountCode(i.activeAddress, accountCode)
+	code := []byte(doc.Text)
+	tx := deployContractTransaction(i.activeAddress, name, code)
 
 	_, err := i.sendTransactionHelper(conn, i.activeAddress, tx)
 	return nil, err
+}
+
+const deployContractTemplate = `
+transaction(name: String, code: [UInt8]) {
+  prepare(signer: AuthAccount) {
+    if signer.contracts.get(name: name) == nil {
+      signer.contracts.add(name: name, code: code)
+    } else {
+      signer.contracts.update__experimental(name: name, code: code)
+    }
+  }
+}
+`
+
+func bytesToCadenceArray(b []byte) cadence.Array {
+	values := make([]cadence.Value, len(b))
+
+	for i, v := range b {
+		values[i] = cadence.NewUInt8(v)
+	}
+
+	return cadence.NewArray(values)
+}
+
+// deployContractTransaction generates a transaction that deploys the given contract to an account.
+func deployContractTransaction(address flow.Address, name string, code []byte) *flow.Transaction {
+	cadenceName := cadence.NewString(name)
+	cadenceCode := bytesToCadenceArray(code)
+
+	return flow.NewTransaction().
+		SetScript([]byte(deployContractTemplate)).
+		AddRawArgument(jsoncdc.MustEncode(cadenceName)).
+		AddRawArgument(jsoncdc.MustEncode(cadenceCode)).
+		AddAuthorizer(address)
 }
 
 // getAccountKey returns the first account key and signer for the given address.

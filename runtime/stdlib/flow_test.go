@@ -33,7 +33,9 @@ func TestFlowEventTypeIDs(t *testing.T) {
 		stdlib.AccountCreatedEventType,
 		stdlib.AccountKeyAddedEventType,
 		stdlib.AccountKeyRemovedEventType,
-		stdlib.AccountCodeUpdatedEventType,
+		stdlib.AccountContractAddedEventType,
+		stdlib.AccountContractUpdatedEventType,
+		stdlib.AccountContractRemovedEventType,
 	} {
 		assert.True(t, strings.HasPrefix(string(ty.ID()), "flow"))
 	}

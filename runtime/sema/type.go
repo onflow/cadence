@@ -4982,35 +4982,6 @@ func (t *AuthAccountType) RewriteWithRestrictedTypes() (result Type, rewritten b
 	return t, false
 }
 
-var authAccountTypeSetCodeFunctionType = &FunctionType{
-	Parameters: []*Parameter{
-		{
-			Label:      ArgumentLabelNotRequired,
-			Identifier: "code",
-			TypeAnnotation: NewTypeAnnotation(
-				&VariableSizedType{
-					Type: &UInt8Type{},
-				},
-			),
-		},
-	},
-	ReturnTypeAnnotation: NewTypeAnnotation(
-		&VoidType{},
-	),
-	// additional arguments are passed to the contract initializer
-	RequiredArgumentCount: RequiredArgumentCount(1),
-}
-
-const authAccountTypeSetCodeFieldDocString = `
-Updates the code in the account with the given code
-`
-
-const authAccountTypeUnsafeNotInitializingSetCodeFieldDocString = `
-**UNSAFE**
-
-Updates the code in the  account with the given code without constructing and initializing the contract
-`
-
 var authAccountTypeAddPublicKeyFunctionType = &FunctionType{
 	Parameters: []*Parameter{
 		{
@@ -5357,28 +5328,6 @@ func (t *AuthAccountType) GetMembers() map[string]MemberResolver {
 					identifier,
 					&AddressType{},
 					accountTypeAddressFieldDocString,
-				)
-			},
-		},
-		"setCode": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					authAccountTypeSetCodeFunctionType,
-					authAccountTypeSetCodeFieldDocString,
-				)
-			},
-		},
-		"unsafeNotInitializingSetCode": {
-			Kind: common.DeclarationKindFunction,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
-				return NewPublicFunctionMember(
-					t,
-					identifier,
-					authAccountTypeSetCodeFunctionType,
-					authAccountTypeUnsafeNotInitializingSetCodeFieldDocString,
 				)
 			},
 		},

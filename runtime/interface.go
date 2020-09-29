@@ -58,8 +58,6 @@ type Interface interface {
 	AddAccountKey(address Address, publicKey []byte) error
 	// RemoveAccountKey removes a key from an account by index.
 	RemoveAccountKey(address Address, index int) (publicKey []byte, err error)
-	// UpdateAccountCode updates the code associated with an account.
-	UpdateAccountCode(address Address, code []byte) (err error)
 	// UpdateAccountContractCode updates the code associated with an account contract.
 	UpdateAccountContractCode(address Address, name string, code []byte) (err error)
 	// GetAccountContractCode returns the code associated with an account contract.

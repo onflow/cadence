@@ -80,16 +80,17 @@ func AsInterfaceType(name string, kind common.CompositeKind) string {
 	}
 }
 
-func DeploymentTransaction(contract []byte) []byte {
+func DeploymentTransaction(name string, contract []byte) []byte {
 	return []byte(fmt.Sprintf(
 		`
           transaction {
 
               prepare(signer: AuthAccount) {
-                  signer.setCode("%s".decodeHex())
+                  signer.contracts.add(name: "%s", code: "%s".decodeHex())
               }
           }
         `,
+		name,
 		hex.EncodeToString(contract),
 	))
 }

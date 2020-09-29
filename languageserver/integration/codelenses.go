@@ -89,20 +89,29 @@ func (i *FlowIntegration) showDeployContractAction(
 		return nil
 	}
 
-	// Show deploy button when there is exactly one contract declaration,
-	// any number of contract interface declarations, and no other actionable
-	// declarations.
+	// Show the deploy button when there is exactly one contract declaration,
+	// and no other actionable declarations.
 	if len(declarations.contracts) == 1 &&
 		len(declarations.transactions) == 0 &&
-		len(declarations.scripts) == 0 {
+		len(declarations.scripts) == 0 &&
+		len(declarations.contractInterfaces) == 0 {
+
+		contract := declarations.contracts[0]
+
+		name := contract.Identifier.Identifier
+
 		return &protocol.CodeLens{
 			Range: conversion.ASTToProtocolRange(
-				declarations.contracts[0].StartPosition(),
-				declarations.contracts[0].StartPosition(),
+				contract.StartPosition(),
+				contract.StartPosition(),
 			),
 			Command: &protocol.Command{
-				Title:     fmt.Sprintf("deploy contract to account 0x%s", i.activeAddress.Hex()),
-				Command:   CommandUpdateAccountCode,
+				Title: fmt.Sprintf(
+					"deploy contract '%s' to account 0x%s",
+					name,
+					i.activeAddress.Hex(),
+				),
+				Command:   CommandDeployContract,
 				Arguments: []interface{}{uri},
 			},
 		}
@@ -120,27 +129,30 @@ func (i *FlowIntegration) showDeployContractInterfaceAction(
 		return nil
 	}
 
-	// Show deploy interface button when there are 1 or more contract interface
-	// declarations, but no other actionable declarations.
-	if len(declarations.contractInterfaces) > 0 &&
+	// Show the deploy button when there is exactly one contract interface declaration,
+	// and no other actionable declarations.
+	if len(declarations.contractInterfaces) == 1 &&
 		len(declarations.transactions) == 0 &&
 		len(declarations.scripts) == 0 &&
 		len(declarations.contracts) == 0 {
-		// decide whether to pluralize
-		pluralInterface := "interface"
-		if len(declarations.contractInterfaces) > 1 {
-			pluralInterface = "interfaces"
-		}
+
+		contractInterface := declarations.contractInterfaces[0]
+
+		name := contractInterface.Identifier.Identifier
 
 		return &protocol.CodeLens{
+			Range: conversion.ASTToProtocolRange(
+				contractInterface.StartPosition(),
+				contractInterface.StartPosition(),
+			),
 			Command: &protocol.Command{
 				Title: fmt.Sprintf(
-					"deploy contract %s to account 0x%s",
-					pluralInterface,
+					"deploy contract interface '%s' to account 0x%s",
+					name,
 					i.activeAddress.Hex(),
 				),
-				Command:   CommandUpdateAccountCode,
-				Arguments: []interface{}{uri},
+				Command:   CommandDeployContract,
+				Arguments: []interface{}{uri, name},
 			},
 		}
 	}
