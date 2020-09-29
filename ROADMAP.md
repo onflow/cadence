@@ -49,7 +49,9 @@ listed in no particular order.
   such as the Flow Execution Node, the Flow Emulator, or Flow Playground,
   is not flexible enough and difficult to extend.
 
-  Refactoring the architecture of the current interface to .
+  Refactor the pull-based architecture of the current interface to an injection-based architecture.
+  
+  Move non-essential type and value declarations out of the core Cadence code.
 
 ## Lower Priority
 
