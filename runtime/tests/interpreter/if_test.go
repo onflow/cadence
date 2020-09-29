@@ -69,7 +69,7 @@ func TestInterpretIfStatement(t *testing.T) {
                return 4
            }
            
-           pub fun testElseIf(): Int {
+           pub fun testElseIfElse(): Int {
                if false {
                    return 2
                } else if false {
@@ -77,7 +77,6 @@ func TestInterpretIfStatement(t *testing.T) {
                } else {
                    return 4
                }
-               return 5
            }
         `,
 		ParseCheckAndInterpretOptions{
