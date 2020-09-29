@@ -719,6 +719,7 @@ func (checker *Checker) declareEnumConstructor(
 		}
 		constructorMembers[caseName] = &Member{
 			ContainerType:   constructorType,
+			// enum cases are always public
 			Access:          ast.AccessPublic,
 			Identifier:      enumCase.Identifier,
 			TypeAnnotation:  memberCaseTypeAnnotation,
