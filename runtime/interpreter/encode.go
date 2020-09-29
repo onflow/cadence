@@ -33,6 +33,16 @@ import (
 
 type cborMap = map[uint64]interface{}
 
+
+// Cadence needs to encode different kinds of objects in CBOR, for instance,
+// dictionaries, structs, resources, etc.
+//
+// However, CBOR only provides one native map type, and no support 
+// for directly representing e.g. structs or resources.
+//
+// To be able to encode/decode such semantically different values, 
+// we define custom CBOR tags.
+
 // !!! *WARNING* !!!
 //
 // Only add new fields to encoded structs by
