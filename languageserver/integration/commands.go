@@ -40,7 +40,6 @@ import (
 const (
 	CommandSubmitTransaction     = "cadence.server.flow.submitTransaction"
 	CommandExecuteScript         = "cadence.server.flow.executeScript"
-	CommandUpdateAccountCode     = "cadence.server.flow.updateAccountCode"
 	CommandCreateAccount         = "cadence.server.flow.createAccount"
 	CommandCreateDefaultAccounts = "cadence.server.flow.createDefaultAccounts"
 	CommandSwitchActiveAccount   = "cadence.server.flow.switchActiveAccount"
@@ -55,10 +54,6 @@ func (i *FlowIntegration) commands() []server.Command {
 		{
 			Name:    CommandExecuteScript,
 			Handler: i.executeScript,
-		},
-		{
-			Name:    CommandUpdateAccountCode,
-			Handler: i.updateAccountCode,
 		},
 		{
 			Name:    CommandSwitchActiveAccount,
@@ -278,45 +273,6 @@ RetryLoop:
 	}
 
 	return accounts, nil
-}
-
-// updateAccountCode updates the configured account with the code of the given
-// file.
-//
-// There should be exactly 2 arguments:
-//   * the DocumentURI of the file to submit
-//   * the address of the account to sign with
-func (i *FlowIntegration) updateAccountCode(conn protocol.Conn, args ...interface{}) (interface{}, error) {
-	conn.LogMessage(&protocol.LogMessageParams{
-		Type:    protocol.Log,
-		Message: fmt.Sprintf("update acct code args: %v", args),
-	})
-
-	expectedArgCount := 1
-	if len(args) != expectedArgCount {
-		return nil, fmt.Errorf("must have %d args, got: %d", expectedArgCount, len(args))
-	}
-	uri, ok := args[0].(string)
-	if !ok {
-		return nil, errors.New("invalid uri argument")
-	}
-	doc, ok := i.server.GetDocument(protocol.DocumentUri(uri))
-	if !ok {
-		return nil, fmt.Errorf("could not find document for URI %s", uri)
-	}
-
-	file := parseFileFromURI(uri)
-
-	conn.ShowMessage(&protocol.ShowMessageParams{
-		Type:    protocol.Info,
-		Message: fmt.Sprintf("Deploying %s to account 0x%s", file, i.activeAddress.Hex()),
-	})
-
-	accountCode := []byte(doc.Text)
-	tx := templates.UpdateAccountCode(i.activeAddress, accountCode)
-
-	_, err := i.sendTransactionHelper(conn, i.activeAddress, tx)
-	return nil, err
 }
 
 // getAccountKey returns the first account key and signer for the given address.

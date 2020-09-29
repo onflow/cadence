@@ -95,7 +95,6 @@ type testRuntimeInterface struct {
 	createAccount             func(payer Address) (address Address, err error)
 	addAccountKey             func(address Address, publicKey []byte) error
 	removeAccountKey          func(address Address, index int) (publicKey []byte, err error)
-	updateAccountCode         func(address Address, code []byte) (err error)
 	updateAccountContractCode func(address Address, name string, code []byte) error
 	getAccountContractCode    func(address Address, name string) (code []byte, err error)
 	removeAccountContractCode func(address Address, name string) (err error)
@@ -180,10 +179,6 @@ func (i *testRuntimeInterface) AddAccountKey(address Address, publicKey []byte) 
 
 func (i *testRuntimeInterface) RemoveAccountKey(address Address, index int) (publicKey []byte, err error) {
 	return i.removeAccountKey(address, index)
-}
-
-func (i *testRuntimeInterface) UpdateAccountCode(address Address, code []byte) (err error) {
-	return i.updateAccountCode(address, code)
 }
 
 func (i *testRuntimeInterface) UpdateAccountContractCode(address Address, name string, code []byte) (err error) {
@@ -869,13 +864,15 @@ func TestRuntimeScriptArguments(t *testing.T) {
 
 	t.Parallel()
 
-	var tests = []struct {
+	type testCase struct {
 		label        string
 		script       string
 		args         [][]byte
 		expectedLogs []string
 		check        func(t *testing.T, err error)
-	}{
+	}
+
+	var tests = []testCase{
 		{
 			label: "No arguments",
 			script: `
@@ -1097,8 +1094,12 @@ func TestRuntimeScriptArguments(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
+	test := func(tt testCase) {
+
 		t.Run(tt.label, func(t *testing.T) {
+
+			t.Parallel()
+
 			rt := NewInterpreterRuntime()
 
 			var loggedMessages []string
@@ -1130,6 +1131,10 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				assert.ElementsMatch(t, tt.expectedLogs, loggedMessages)
 			}
 		})
+	}
+
+	for _, tt := range tests {
+		test(tt)
 	}
 }
 
@@ -2184,48 +2189,6 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 	assert.Equal(t, []string{"42"}, loggedMessages)
 }
 
-func TestRuntimeTransaction_UpdateAccountCodeEmpty(t *testing.T) {
-
-	t.Parallel()
-
-	runtime := NewInterpreterRuntime()
-
-	script := []byte(`
-      transaction {
-
-          prepare(signer: AuthAccount) {
-              signer.setCode([])
-          }
-      }
-    `)
-
-	var accountCode []byte
-	var events []cadence.Event
-
-	runtimeInterface := &testRuntimeInterface{
-		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{{42}}
-		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
-			accountCode = code
-			return nil
-		},
-		emitEvent: func(event cadence.Event) {
-			events = append(events, event)
-		},
-	}
-
-	nextTransactionLocation := newTransactionLocationGenerator()
-
-	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
-
-	require.NoError(t, err)
-
-	assert.NotNil(t, accountCode)
-	assert.Len(t, events, 1)
-}
-
 func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 
 	t.Parallel()
@@ -2424,14 +2387,14 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 		interpreter.Value
 	}
 
-	type test struct {
+	type testCase struct {
 		name      string
 		contract  string
 		arguments []argument
 		check     func(t *testing.T, err error, accountCode []byte, events []cadence.Event, expectedEventType cadence.Type)
 	}
 
-	tests := []test{
+	tests := []testCase{
 		{
 			name: "no arguments",
 			contract: `
@@ -2479,15 +2442,18 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			contract: `
               pub contract Test {}
 
-              fun test() {}
+              fun testCase() {}
             `,
 			arguments: []argument{},
 			check:     expectFailure,
 		},
 	}
 
-	for _, test := range tests {
+	test := func(test testCase) {
+
 		t.Run(test.name, func(t *testing.T) {
+
+			t.Parallel()
 
 			contractArrayCode := fmt.Sprintf(
 				`"%s".decodeHex()`,
@@ -2507,13 +2473,13 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 			script := []byte(fmt.Sprintf(
 				`
-                      transaction {
+                  transaction {
 
-                          prepare(signer: AuthAccount) {
-                              signer.setCode(%s%s)
-                          }
+                      prepare(signer: AuthAccount) {
+                          signer.contracts.add(name: "Test", code: %s%s)
                       }
-                    `,
+                  }
+                `,
 				contractArrayCode,
 				argumentCode,
 			))
@@ -2528,7 +2494,10 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 				getSigningAccounts: func() []Address {
 					return []Address{{42}}
 				},
-				updateAccountCode: func(address Address, code []byte) (err error) {
+				getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+					return accountCode, nil
+				},
+				updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 					accountCode = code
 					return nil
 				},
@@ -2540,12 +2509,16 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			nextTransactionLocation := newTransactionLocationGenerator()
 
 			err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
-			accountCodeUpdatedEventType := exportType(
-				stdlib.AccountCodeUpdatedEventType,
+			exportedEventType := exportType(
+				stdlib.AccountContractAddedEventType,
 				map[sema.TypeID]cadence.Type{},
 			)
-			test.check(t, err, accountCode, events, accountCodeUpdatedEventType)
+			test.check(t, err, accountCode, events, exportedEventType)
 		})
+	}
+
+	for _, testCase := range tests {
+		test(testCase)
 	}
 }
 
@@ -2591,7 +2564,7 @@ func TestRuntimeContractAccount(t *testing.T) {
       }
     `)
 
-	deploy := utils.DeploymentTransaction(contract)
+	deploy := utils.DeploymentTransaction("Test", contract)
 
 	var accountCode []byte
 	var events []cadence.Event
@@ -2604,7 +2577,24 @@ func TestRuntimeContractAccount(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{common.BytesToAddress(addressValue.Bytes())}
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
+			require.Len(t, identifiers, 1)
+			require.IsType(t, AddressLocation{}, location)
+
+			return []ResolvedLocation{
+				{
+					Location: AddressContractLocation{
+						AddressLocation: location.(AddressLocation),
+						Name:            identifiers[0].Identifier,
+					},
+					Identifiers: identifiers,
+				},
+			}
+		},
+		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -2673,7 +2663,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 		}
 	`)
 
-	deploy := utils.DeploymentTransaction(contract)
+	deploy := utils.DeploymentTransaction("Test", contract)
 
 	var accountCode []byte
 	var loggedMessage string
@@ -2686,7 +2676,24 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{addressValue}
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
+			require.Len(t, identifiers, 1)
+			require.IsType(t, AddressLocation{}, location)
+
+			return []ResolvedLocation{
+				{
+					Location: AddressContractLocation{
+						AddressLocation: location.(AddressLocation),
+						Name:            identifiers[0].Identifier,
+					},
+					Identifiers: identifiers,
+				},
+			}
+		},
+		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(address Address, _ string, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -2818,7 +2825,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
 	}
 
-	deploy := utils.DeploymentTransaction([]byte(fungibleTokenContract))
+	deploy := utils.DeploymentTransaction("FungibleToken", []byte(fungibleTokenContract))
 
 	setup1Transaction := []byte(`
       import FungibleToken from 0x01
@@ -2878,7 +2885,25 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{signerAccount}
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
+			require.Len(t, identifiers, 1)
+			require.IsType(t, AddressLocation{}, location)
+
+			return []ResolvedLocation{
+				{
+					Location: AddressContractLocation{
+						AddressLocation: location.(AddressLocation),
+						Name:            identifiers[0].Identifier,
+					},
+					Identifiers: identifiers,
+				},
+			}
+		},
+		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
+			key := string(AddressLocation(address[:]).ID())
+			return accountCodes[key], nil
+		},
+		updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
 			key := string(AddressLocation(address[:]).ID())
 			accountCodes[key] = code
 			return nil
@@ -2921,7 +2946,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
           transaction {
             prepare(signer: AuthAccount) {
                 let acct = AuthAccount(payer: signer)
-                acct.setCode("%s".decodeHex())
+                acct.contracts.add(name: "FungibleToken", code: "%s".decodeHex())
             }
           }
         `,
@@ -2988,7 +3013,25 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{signerAccount}
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
+			require.Len(t, identifiers, 1)
+			require.IsType(t, AddressLocation{}, location)
+
+			return []ResolvedLocation{
+				{
+					Location: AddressContractLocation{
+						AddressLocation: location.(AddressLocation),
+						Name:            identifiers[0].Identifier,
+					},
+					Identifiers: identifiers,
+				},
+			}
+		},
+		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
+			key := string(AddressLocation(address[:]).ID())
+			return accountCodes[key], nil
+		},
+		updateAccountContractCode: func(address Address, _ string, code []byte) (err error) {
 			key := string(AddressLocation(address[:]).ID())
 			accountCodes[key] = code
 			return nil
@@ -3016,16 +3059,17 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
-	makeDeployTransaction := func(code string) []byte {
+	makeDeployTransaction := func(name, code string) []byte {
 		return []byte(fmt.Sprintf(
 			`
               transaction {
                 prepare(signer: AuthAccount) {
                   let acct = AuthAccount(payer: signer)
-                  acct.setCode("%s".decodeHex())
+                  acct.contracts.add(name: "%s", code: "%s".decodeHex())
                 }
               }
             `,
+			name,
 			hex.EncodeToString([]byte(code)),
 		))
 	}
@@ -3115,7 +3159,25 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{{0x1}}
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
+			require.Len(t, identifiers, 1)
+			require.IsType(t, AddressLocation{}, location)
+
+			return []ResolvedLocation{
+				{
+					Location: AddressContractLocation{
+						AddressLocation: location.(AddressLocation),
+						Name:            identifiers[0].Identifier,
+					},
+					Identifiers: identifiers,
+				},
+			}
+		},
+		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
+			key := string(AddressLocation(address[:]).ID())
+			return accountCodes[key], nil
+		},
+		updateAccountContractCode: func(address Address, _ string, code []byte) error {
 			key := string(AddressLocation(address[:]).ID())
 			accountCodes[key] = code
 			return nil
@@ -3128,7 +3190,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 	nextTransactionLocation := newTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
-		makeDeployTransaction(contractInterfaceCode),
+		makeDeployTransaction("TestContractInterface", contractInterfaceCode),
 		nil,
 		runtimeInterface,
 		nextTransactionLocation(),
@@ -3136,7 +3198,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 	require.NoError(t, err)
 
 	err = runtime.ExecuteTransaction(
-		makeDeployTransaction(contractCode),
+		makeDeployTransaction("TestContract", contractCode),
 		nil,
 		runtimeInterface,
 		nextTransactionLocation(),
@@ -3359,7 +3421,7 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 				),
 			)
 
-			deploy := utils.DeploymentTransaction(contract)
+			deploy := utils.DeploymentTransaction("Test", contract)
 
 			var accountCode []byte
 			var events []cadence.Event
@@ -3372,7 +3434,10 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 				getSigningAccounts: func() []Address {
 					return []Address{addressValue.ToAddress()}
 				},
-				updateAccountCode: func(address Address, code []byte) (err error) {
+				getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+					return accountCode, nil
+				},
+				updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 					accountCode = code
 					return nil
 				},
@@ -3417,7 +3482,7 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
       }
     `)
 
-	deploy := utils.DeploymentTransaction(contract)
+	deploy := utils.DeploymentTransaction("Test", contract)
 
 	tx := []byte(`
       import Test from 0x1
@@ -3477,7 +3542,25 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{address}
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
+			require.Len(t, identifiers, 1)
+			require.IsType(t, AddressLocation{}, location)
+
+			return []ResolvedLocation{
+				{
+					Location: AddressContractLocation{
+						AddressLocation: location.(AddressLocation),
+						Name:            identifiers[0].Identifier,
+					},
+					Identifiers: identifiers,
+				},
+			}
+		},
+		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
+			key := string(AddressLocation(address[:]).ID())
+			return accountCodes[key], nil
+		},
+		updateAccountContractCode: func(address Address, _ string, code []byte) error {
 			key := string(AddressLocation(address[:]).ID())
 			accountCodes[key] = code
 			return nil
@@ -3546,7 +3629,7 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
       }
     `)
 
-	deploy := utils.DeploymentTransaction(contract)
+	deploy := utils.DeploymentTransaction("Test", contract)
 
 	tx := []byte(`
       import Test from 0x1
@@ -3619,7 +3702,25 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{address}
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			key := string(AddressLocation(address[:]).ID())
+			return accountCodes[key], nil
+		},
+		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
+			require.Len(t, identifiers, 1)
+			require.IsType(t, AddressLocation{}, location)
+
+			return []ResolvedLocation{
+				{
+					Location: AddressContractLocation{
+						AddressLocation: location.(AddressLocation),
+						Name:            identifiers[0].Identifier,
+					},
+					Identifiers: identifiers,
+				},
+			}
+		},
+		updateAccountContractCode: func(address Address, _ string, code []byte) error {
 			key := string(AddressLocation(address[:]).ID())
 			accountCodes[key] = code
 			return nil
@@ -3693,7 +3794,7 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
       }
     `)
 
-	deploy := utils.DeploymentTransaction(contract)
+	deploy := utils.DeploymentTransaction("Test", contract)
 
 	tx := []byte(`
       import Test from 0x1
@@ -3766,7 +3867,25 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{address}
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
+			require.Len(t, identifiers, 1)
+			require.IsType(t, AddressLocation{}, location)
+
+			return []ResolvedLocation{
+				{
+					Location: AddressContractLocation{
+						AddressLocation: location.(AddressLocation),
+						Name:            identifiers[0].Identifier,
+					},
+					Identifiers: identifiers,
+				},
+			}
+		},
+		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
+			key := string(AddressLocation(address[:]).ID())
+			return accountCodes[key], nil
+		},
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			key := string(AddressLocation(address[:]).ID())
 			accountCodes[key] = code
 			return nil
@@ -4102,7 +4221,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
       }
     `)
 
-	deploy := utils.DeploymentTransaction(contract)
+	deploy := utils.DeploymentTransaction("Test", contract)
 
 	readTx := []byte(`
       import Test from 0xCADE
@@ -4147,7 +4266,24 @@ func TestRuntimeContractWriteback(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{common.BytesToAddress(addressValue.Bytes())}
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
+			require.Len(t, identifiers, 1)
+			require.IsType(t, AddressLocation{}, location)
+
+			return []ResolvedLocation{
+				{
+					Location: AddressContractLocation{
+						AddressLocation: location.(AddressLocation),
+						Name:            identifiers[0].Identifier,
+					},
+					Identifiers: identifiers,
+				},
+			}
+		},
+		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ Address, _ string, code []byte) (err error) {
 			accountCode = code
 			return nil
 		},
@@ -4206,7 +4342,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
       }
     `)
 
-	deploy := utils.DeploymentTransaction(contract)
+	deploy := utils.DeploymentTransaction("Test", contract)
 
 	setupTx := []byte(`
       import Test from 0xCADE
@@ -4240,7 +4376,24 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{common.BytesToAddress(addressValue.Bytes())}
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
+			require.Len(t, identifiers, 1)
+			require.IsType(t, AddressLocation{}, location)
+
+			return []ResolvedLocation{
+				{
+					Location: AddressContractLocation{
+						AddressLocation: location.(AddressLocation),
+						Name:            identifiers[0].Identifier,
+					},
+					Identifiers: identifiers,
+				},
+			}
+		},
+		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -4374,7 +4527,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
         }
     `)
 
-	updateCodeScript := utils.DeploymentTransaction([]byte(helloWorldContract))
+	updateCodeScript := utils.DeploymentTransaction("HelloWorld", []byte(helloWorldContract))
 
 	runtime := NewInterpreterRuntime()
 
@@ -4407,7 +4560,25 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return signerAddresses
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
+			require.Len(t, identifiers, 1)
+			require.IsType(t, AddressLocation{}, location)
+
+			return []ResolvedLocation{
+				{
+					Location: AddressContractLocation{
+						AddressLocation: location.(AddressLocation),
+						Name:            identifiers[0].Identifier,
+					},
+					Identifiers: identifiers,
+				},
+			}
+		},
+		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
+			key := string(AddressLocation(address[:]).ID())
+			return accountCodes[key], nil
+		},
+		updateAccountContractCode: func(address Address, _ string, code []byte) error {
 			key := string(AddressLocation(address[:]).ID())
 			accountCodes[key] = code
 			return nil
@@ -4475,7 +4646,7 @@ func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
         }
     `)
 
-	updateCodeScript := utils.DeploymentTransaction([]byte(helloWorldContract))
+	updateCodeScript := utils.DeploymentTransaction("HelloWorld", []byte(helloWorldContract))
 
 	runtime := NewInterpreterRuntime()
 
@@ -4511,7 +4682,25 @@ func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return signerAddresses
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
+			require.Len(t, identifiers, 1)
+			require.IsType(t, AddressLocation{}, location)
+
+			return []ResolvedLocation{
+				{
+					Location: AddressContractLocation{
+						AddressLocation: location.(AddressLocation),
+						Name:            identifiers[0].Identifier,
+					},
+					Identifiers: identifiers,
+				},
+			}
+		},
+		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
+			key := string(AddressLocation(address[:]).ID())
+			return accountCodes[key], nil
+		},
+		updateAccountContractCode: func(address Address, _ string, code []byte) error {
 			key := string(AddressLocation(address[:]).ID())
 			accountCodes[key] = code
 			return nil
@@ -4539,10 +4728,16 @@ func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
 	require.NoError(t, err)
 
 	// We should only receive a cache hit for the imported program, not the transactions/scripts.
-	require.Equal(t, cacheHits, []string{"A.0100000000000000"})
+	require.Equal(t,
+		[]string{
+			"AC.0100000000000000.HelloWorld",
+			"AC.0100000000000000.HelloWorld",
+		},
+		cacheHits,
+	)
 }
 
-func TestRuntimeTransaction_UpdateAccountCodeUnsafeNotInitializing(t *testing.T) {
+func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 
 	t.Parallel()
 
@@ -4606,17 +4801,18 @@ func TestRuntimeTransaction_UpdateAccountCodeUnsafeNotInitializing(t *testing.T)
       }
     `
 
-	newDeployTransaction := func(code, function string) []byte {
+	newDeployTransaction := func(function, name, code string) []byte {
 		return []byte(fmt.Sprintf(
 			`
               transaction {
 
                   prepare(signer: AuthAccount) {
-                      signer.%s("%s".decodeHex())
+                      signer.contracts.%s(name: "%s", code: "%s".decodeHex())
                   }
               }
             `,
 			function,
+			name,
 			hex.EncodeToString([]byte(code)),
 		))
 	}
@@ -4632,7 +4828,28 @@ func TestRuntimeTransaction_UpdateAccountCodeUnsafeNotInitializing(t *testing.T)
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		updateAccountCode: func(address Address, code []byte) (err error) {
+		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
+			require.Empty(t, identifiers)
+			require.IsType(t, AddressLocation{}, location)
+
+			return []ResolvedLocation{
+				{
+					Location: AddressContractLocation{
+						AddressLocation: location.(AddressLocation),
+						Name:            "Test",
+					},
+					Identifiers: []ast.Identifier{
+						{
+							Identifier: "Test",
+						},
+					},
+				},
+			}
+		},
+		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 			accountCode = code
 			return nil
 		},
@@ -4643,7 +4860,7 @@ func TestRuntimeTransaction_UpdateAccountCodeUnsafeNotInitializing(t *testing.T)
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	deployTx1 := newDeployTransaction(contract1, "setCode")
+	deployTx1 := newDeployTransaction("add", "Test", contract1)
 
 	err := runtime.ExecuteTransaction(deployTx1, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
@@ -4667,7 +4884,7 @@ func TestRuntimeTransaction_UpdateAccountCodeUnsafeNotInitializing(t *testing.T)
 	_, err = runtime.ExecuteScript(script1, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	deployTx2 := newDeployTransaction(contract2, "unsafeNotInitializingSetCode")
+	deployTx2 := newDeployTransaction("update__experimental", "Test", contract2)
 
 	err = runtime.ExecuteTransaction(deployTx2, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)

@@ -42,8 +42,6 @@ func (i *FlowIntegration) codeLenses(uri protocol.DocumentUri, checker *sema.Che
 	}
 
 	addAction(i.showSubmitTransactionAction(uri, declarations))
-	addAction(i.showDeployContractAction(uri, declarations))
-	addAction(i.showDeployContractInterfaceAction(uri, declarations))
 	addAction(i.showExecuteScriptAction(uri, declarations))
 
 	return actions, nil
@@ -72,74 +70,6 @@ func (i *FlowIntegration) showSubmitTransactionAction(
 			Command: &protocol.Command{
 				Title:     fmt.Sprintf("submit transaction with account 0x%s", i.activeAddress.Hex()),
 				Command:   CommandSubmitTransaction,
-				Arguments: []interface{}{uri},
-			},
-		}
-	}
-
-	return nil
-}
-
-func (i *FlowIntegration) showDeployContractAction(
-	uri protocol.DocumentUri,
-	declarations *declarations,
-) *protocol.CodeLens {
-	// Do not show deploy button when no active account exists
-	if i.activeAddress == flow.EmptyAddress {
-		return nil
-	}
-
-	// Show deploy button when there is exactly one contract declaration,
-	// any number of contract interface declarations, and no other actionable
-	// declarations.
-	if len(declarations.contracts) == 1 &&
-		len(declarations.transactions) == 0 &&
-		len(declarations.scripts) == 0 {
-		return &protocol.CodeLens{
-			Range: conversion.ASTToProtocolRange(
-				declarations.contracts[0].StartPosition(),
-				declarations.contracts[0].StartPosition(),
-			),
-			Command: &protocol.Command{
-				Title:     fmt.Sprintf("deploy contract to account 0x%s", i.activeAddress.Hex()),
-				Command:   CommandUpdateAccountCode,
-				Arguments: []interface{}{uri},
-			},
-		}
-	}
-
-	return nil
-}
-
-func (i *FlowIntegration) showDeployContractInterfaceAction(
-	uri protocol.DocumentUri,
-	declarations *declarations,
-) *protocol.CodeLens {
-	// Do not show deploy button when no active account exists
-	if i.activeAddress == flow.EmptyAddress {
-		return nil
-	}
-
-	// Show deploy interface button when there are 1 or more contract interface
-	// declarations, but no other actionable declarations.
-	if len(declarations.contractInterfaces) > 0 &&
-		len(declarations.transactions) == 0 &&
-		len(declarations.scripts) == 0 &&
-		len(declarations.contracts) == 0 {
-		// decide whether to pluralize
-		pluralInterface := "interface"
-		if len(declarations.contractInterfaces) > 1 {
-			pluralInterface = "interfaces"
-		}
-
-		return &protocol.CodeLens{
-			Command: &protocol.Command{
-				Title: fmt.Sprintf(
-					"deploy contract %s to account 0x%s",
-					pluralInterface,
-					i.activeAddress.Hex(),
-				),
-				Command:   CommandUpdateAccountCode,
 				Arguments: []interface{}{uri},
 			},
 		}

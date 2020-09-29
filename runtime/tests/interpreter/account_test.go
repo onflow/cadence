@@ -57,8 +57,6 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 		address,
 		panicFunction,
 		panicFunction,
-		panicFunction,
-		panicFunction,
 		interpreter.AuthAccountContractsValue{},
 	)
 
