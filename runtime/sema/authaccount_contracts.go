@@ -184,7 +184,7 @@ Removes the contract/contract interface from the account which has the given nam
 
 Returns the removed deployed contract, if any.
 
-Returns nil if no contract/contract interface with the given name exist in the account.
+Returns nil if no contract/contract interface with the given name exists in the account.
 `
 
 const AuthAccountContractsTypeRemoveFunctionName = "remove"
