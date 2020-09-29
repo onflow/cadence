@@ -233,6 +233,10 @@ func TestRuntimeContract(t *testing.T) {
 			err := runtime.ExecuteTransaction(addTx, nil, runtimeInterface, nextTransactionLocation())
 			require.Error(t, err)
 
+			// the deployed code should not have been updated,
+			// and no events should have been emitted,
+			// as the deployment should fail
+
 			require.NotEmpty(t, deployedCode)
 			require.Empty(t, events)
 
