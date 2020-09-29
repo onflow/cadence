@@ -68,6 +68,17 @@ func TestInterpretIfStatement(t *testing.T) {
                }
                return 4
            }
+           
+           pub fun testElseIf(): Int {
+               if false {
+                   return 2
+               } else if false {
+                   return 3
+               } else {
+                   return 4
+               }
+               return 5
+           }
         `,
 		ParseCheckAndInterpretOptions{
 			HandleCheckerError: func(err error) {
