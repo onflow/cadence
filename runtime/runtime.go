@@ -1551,6 +1551,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				}
 
 			} else {
+				// We are adding a new contract.
 				// Ensure that no contract/contract interface with the given name exists already
 
 				if len(existingCode) > 0 {
