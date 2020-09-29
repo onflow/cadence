@@ -1539,6 +1539,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			}
 
 			if isUpdate {
+				// We are updating an existing contract.
 				// Ensure that no contract/contract interface with the given name exists already
 
 				if len(existingCode) == 0 {
