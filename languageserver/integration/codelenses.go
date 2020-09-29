@@ -89,12 +89,12 @@ func (i *FlowIntegration) showDeployContractAction(
 		return nil
 	}
 
-	// Show deploy button when there is exactly one contract declaration,
-	// any number of contract interface declarations, and no other actionable
-	// declarations.
+	// Show the deploy button when there is exactly one contract declaration,
+	// and no other actionable declarations.
 	if len(declarations.contracts) == 1 &&
 		len(declarations.transactions) == 0 &&
-		len(declarations.scripts) == 0 {
+		len(declarations.scripts) == 0 &&
+		len(declarations.contractInterfaces) == 0 {
 
 		contract := declarations.contracts[0]
 
@@ -129,8 +129,8 @@ func (i *FlowIntegration) showDeployContractInterfaceAction(
 		return nil
 	}
 
-	// Show deploy interface button when there are 1 or more contract interface
-	// declarations, but no other actionable declarations.
+	// Show the deploy button when there is exactly one contract interface declaration,
+	// and no other actionable declarations.
 	if len(declarations.contractInterfaces) == 1 &&
 		len(declarations.transactions) == 0 &&
 		len(declarations.scripts) == 0 &&
