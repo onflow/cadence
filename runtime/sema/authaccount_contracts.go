@@ -59,7 +59,7 @@ func (*AuthAccountContractsType) IsStorable(_ map[*Member]bool) bool {
 }
 
 func (*AuthAccountContractsType) IsEquatable() bool {
-	// TODO:
+	// TODO: maybe implement equality
 	return false
 }
 
