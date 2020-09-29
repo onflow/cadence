@@ -623,6 +623,9 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 					0xc3,
 					// byte string, length 1
 					0x41,
+					// `-42` in decimal is is `0x2a` in hex.
+					// CBOR requires negative values to be encoded as `-1-n`, which is `-n - 1`, 
+					// which is `0x2a - 0x01`, which equals to `0x29`.
 					0x29,
 				},
 			},
