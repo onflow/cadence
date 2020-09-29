@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/trampoline"
 )
 
@@ -76,13 +77,13 @@ func (v DeployedContractValue) String() string {
 
 func (v DeployedContractValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
 	switch name {
-	case "address":
+	case sema.DeployedContractTypeAddressFieldName:
 		return v.Address
 
-	case "name":
+	case sema.DeployedContractTypeNameFieldName:
 		return v.Name
 
-	case "code":
+	case sema.DeployedContractTypeCodeFieldName:
 		return v.Code
 	}
 

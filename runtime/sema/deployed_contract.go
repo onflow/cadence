@@ -80,13 +80,19 @@ func (t *DeployedContractType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
+const DeployedContractTypeAddressFieldName = "address"
+
 const deployedContractTypeAddressFieldDocString = `
 The address of the account where the contract is deployed at
 `
 
+const DeployedContractTypeNameFieldName = "name"
+
 const deployedContractTypeNameFieldDocString = `
 The name of the contract
 `
+
+const DeployedContractTypeCodeFieldName = "code"
 
 const deployedContractTypeCodeFieldDocString = `
 The code of the contract
@@ -94,7 +100,7 @@ The code of the contract
 
 func (t *DeployedContractType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, map[string]MemberResolver{
-		"address": {
+		DeployedContractTypeAddressFieldName: {
 			Kind: common.DeclarationKindField,
 			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 				return NewPublicConstantFieldMember(
@@ -105,7 +111,7 @@ func (t *DeployedContractType) GetMembers() map[string]MemberResolver {
 				)
 			},
 		},
-		"name": {
+		DeployedContractTypeNameFieldName: {
 			Kind: common.DeclarationKindField,
 			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 				return NewPublicConstantFieldMember(
@@ -116,7 +122,7 @@ func (t *DeployedContractType) GetMembers() map[string]MemberResolver {
 				)
 			},
 		},
-		"code": {
+		DeployedContractTypeCodeFieldName: {
 			Kind: common.DeclarationKindField,
 			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 				return NewPublicConstantFieldMember(
