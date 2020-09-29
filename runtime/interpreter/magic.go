@@ -21,8 +21,7 @@ func HasMagic(data []byte) bool {
 	return bytes.HasPrefix(data, Magic)
 }
 
-// StripMagic returns the given data without the magic prefix,
-// and the version number included in it.
+// StripMagic returns the given data with the magic prefix and version removed.
 //
 // If the data doesn't start with Magic, the data is returned unchanged
 // and the version is 0.
