@@ -1,13 +1,12 @@
 name: "Code scanning"
 
+# Controls when the action will run. Triggers the workflow on push or pull request
+# events but only for the master branch
 on:
   push:
-    branches: [master, ]
+    branches: [ master ]
   pull_request:
-    # The branches below must be a subset of the branches above
-    branches: [master]
-  schedule:
-    - cron: '0 17 * * 2'
+    branches: [ master ]
 
 jobs:
   CodeQL-Build:
