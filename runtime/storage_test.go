@@ -105,20 +105,7 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{address}
 		},
-		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
-			require.Len(t, identifiers, 1)
-			require.IsType(t, AddressLocation{}, location)
-
-			return []ResolvedLocation{
-				{
-					Location: AddressContractLocation{
-						AddressLocation: location.(AddressLocation),
-						Name:            identifiers[0].Identifier,
-					},
-					Identifiers: identifiers,
-				},
-			}
-		},
+		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
 			return accountCode, nil
 		},

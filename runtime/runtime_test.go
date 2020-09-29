@@ -2577,20 +2577,7 @@ func TestRuntimeContractAccount(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{common.BytesToAddress(addressValue.Bytes())}
 		},
-		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
-			require.Len(t, identifiers, 1)
-			require.IsType(t, AddressLocation{}, location)
-
-			return []ResolvedLocation{
-				{
-					Location: AddressContractLocation{
-						AddressLocation: location.(AddressLocation),
-						Name:            identifiers[0].Identifier,
-					},
-					Identifiers: identifiers,
-				},
-			}
-		},
+		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
 			return accountCode, nil
 		},
@@ -2676,20 +2663,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{addressValue}
 		},
-		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
-			require.Len(t, identifiers, 1)
-			require.IsType(t, AddressLocation{}, location)
-
-			return []ResolvedLocation{
-				{
-					Location: AddressContractLocation{
-						AddressLocation: location.(AddressLocation),
-						Name:            identifiers[0].Identifier,
-					},
-					Identifiers: identifiers,
-				},
-			}
-		},
+		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
 			return accountCode, nil
 		},
@@ -2885,20 +2859,7 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{signerAccount}
 		},
-		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
-			require.Len(t, identifiers, 1)
-			require.IsType(t, AddressLocation{}, location)
-
-			return []ResolvedLocation{
-				{
-					Location: AddressContractLocation{
-						AddressLocation: location.(AddressLocation),
-						Name:            identifiers[0].Identifier,
-					},
-					Identifiers: identifiers,
-				},
-			}
-		},
+		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
 			key := string(AddressLocation(address[:]).ID())
 			return accountCodes[key], nil
@@ -3013,20 +2974,7 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{signerAccount}
 		},
-		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
-			require.Len(t, identifiers, 1)
-			require.IsType(t, AddressLocation{}, location)
-
-			return []ResolvedLocation{
-				{
-					Location: AddressContractLocation{
-						AddressLocation: location.(AddressLocation),
-						Name:            identifiers[0].Identifier,
-					},
-					Identifiers: identifiers,
-				},
-			}
-		},
+		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
 			key := string(AddressLocation(address[:]).ID())
 			return accountCodes[key], nil
@@ -3159,20 +3107,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{{0x1}}
 		},
-		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
-			require.Len(t, identifiers, 1)
-			require.IsType(t, AddressLocation{}, location)
-
-			return []ResolvedLocation{
-				{
-					Location: AddressContractLocation{
-						AddressLocation: location.(AddressLocation),
-						Name:            identifiers[0].Identifier,
-					},
-					Identifiers: identifiers,
-				},
-			}
-		},
+		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
 			key := string(AddressLocation(address[:]).ID())
 			return accountCodes[key], nil
@@ -3542,20 +3477,7 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{address}
 		},
-		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
-			require.Len(t, identifiers, 1)
-			require.IsType(t, AddressLocation{}, location)
-
-			return []ResolvedLocation{
-				{
-					Location: AddressContractLocation{
-						AddressLocation: location.(AddressLocation),
-						Name:            identifiers[0].Identifier,
-					},
-					Identifiers: identifiers,
-				},
-			}
-		},
+		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
 			key := string(AddressLocation(address[:]).ID())
 			return accountCodes[key], nil
@@ -3706,20 +3628,7 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
 			key := string(AddressLocation(address[:]).ID())
 			return accountCodes[key], nil
 		},
-		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
-			require.Len(t, identifiers, 1)
-			require.IsType(t, AddressLocation{}, location)
-
-			return []ResolvedLocation{
-				{
-					Location: AddressContractLocation{
-						AddressLocation: location.(AddressLocation),
-						Name:            identifiers[0].Identifier,
-					},
-					Identifiers: identifiers,
-				},
-			}
-		},
+		resolveLocation: singleIdentifierLocationResolver(t),
 		updateAccountContractCode: func(address Address, _ string, code []byte) error {
 			key := string(AddressLocation(address[:]).ID())
 			accountCodes[key] = code
@@ -3867,20 +3776,7 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{address}
 		},
-		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
-			require.Len(t, identifiers, 1)
-			require.IsType(t, AddressLocation{}, location)
-
-			return []ResolvedLocation{
-				{
-					Location: AddressContractLocation{
-						AddressLocation: location.(AddressLocation),
-						Name:            identifiers[0].Identifier,
-					},
-					Identifiers: identifiers,
-				},
-			}
-		},
+		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
 			key := string(AddressLocation(address[:]).ID())
 			return accountCodes[key], nil
@@ -4266,20 +4162,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{common.BytesToAddress(addressValue.Bytes())}
 		},
-		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
-			require.Len(t, identifiers, 1)
-			require.IsType(t, AddressLocation{}, location)
-
-			return []ResolvedLocation{
-				{
-					Location: AddressContractLocation{
-						AddressLocation: location.(AddressLocation),
-						Name:            identifiers[0].Identifier,
-					},
-					Identifiers: identifiers,
-				},
-			}
-		},
+		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
 			return accountCode, nil
 		},
@@ -4376,20 +4259,7 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{common.BytesToAddress(addressValue.Bytes())}
 		},
-		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
-			require.Len(t, identifiers, 1)
-			require.IsType(t, AddressLocation{}, location)
-
-			return []ResolvedLocation{
-				{
-					Location: AddressContractLocation{
-						AddressLocation: location.(AddressLocation),
-						Name:            identifiers[0].Identifier,
-					},
-					Identifiers: identifiers,
-				},
-			}
-		},
+		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
 			return accountCode, nil
 		},
@@ -4560,20 +4430,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return signerAddresses
 		},
-		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
-			require.Len(t, identifiers, 1)
-			require.IsType(t, AddressLocation{}, location)
-
-			return []ResolvedLocation{
-				{
-					Location: AddressContractLocation{
-						AddressLocation: location.(AddressLocation),
-						Name:            identifiers[0].Identifier,
-					},
-					Identifiers: identifiers,
-				},
-			}
-		},
+		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
 			key := string(AddressLocation(address[:]).ID())
 			return accountCodes[key], nil
@@ -4682,20 +4539,7 @@ func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return signerAddresses
 		},
-		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
-			require.Len(t, identifiers, 1)
-			require.IsType(t, AddressLocation{}, location)
-
-			return []ResolvedLocation{
-				{
-					Location: AddressContractLocation{
-						AddressLocation: location.(AddressLocation),
-						Name:            identifiers[0].Identifier,
-					},
-					Identifiers: identifiers,
-				},
-			}
-		},
+		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
 			key := string(AddressLocation(address[:]).ID())
 			return accountCodes[key], nil
@@ -4972,5 +4816,22 @@ func TestRuntime(t *testing.T) {
 		},
 	} {
 		test(testCase)
+	}
+}
+
+func singleIdentifierLocationResolver(t *testing.T) func(identifiers []Identifier, location Location) []ResolvedLocation {
+	return func(identifiers []Identifier, location Location) []ResolvedLocation {
+		require.Len(t, identifiers, 1)
+		require.IsType(t, AddressLocation{}, location)
+
+		return []ResolvedLocation{
+			{
+				Location: AddressContractLocation{
+					AddressLocation: location.(AddressLocation),
+					Name:            identifiers[0].Identifier,
+				},
+				Identifiers: identifiers,
+			},
+		}
 	}
 }
