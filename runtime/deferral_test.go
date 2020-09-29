@@ -245,7 +245,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	assert.Len(t, writes, 0)
 	require.Len(t, reads, 3)
 	assert.Equal(t,
-		[]byte(fmt.Sprintf("%s\x1f%s", contractKey, "Test")),
+		[]byte(formatContractKey("Test")),
 		reads[0].key,
 	)
 	assert.Equal(t,
@@ -298,7 +298,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 
 	require.Len(t, reads, 3)
 	assert.Equal(t,
-		[]byte(fmt.Sprintf("%s\x1f%s", contractKey, "Test")),
+		[]byte(formatContractKey("Test")),
 		reads[0].key,
 	)
 	assert.Equal(t,
@@ -359,7 +359,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 
 	require.Len(t, reads, 3)
 	assert.Equal(t,
-		[]byte(fmt.Sprintf("%s\x1f%s", contractKey, "Test")),
+		[]byte(formatContractKey("Test")),
 		reads[0].key,
 	)
 	assert.Equal(t,
@@ -420,7 +420,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 
 	require.Len(t, reads, 3)
 	assert.Equal(t,
-		[]byte(fmt.Sprintf("%s\x1f%s", contractKey, "Test")),
+		[]byte(formatContractKey("Test")),
 		reads[0].key,
 	)
 	assert.Equal(t,
@@ -445,7 +445,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	assert.Len(t, writes, 0)
 	require.Len(t, reads, 2)
 	assert.Equal(t,
-		[]byte(fmt.Sprintf("%s\x1f%s", contractKey, "Test")),
+		[]byte(formatContractKey("Test")),
 		reads[0].key,
 	)
 	assert.Equal(t,
@@ -508,7 +508,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 
 	require.Len(t, reads, 3)
 	assert.Equal(t,
-		[]byte(fmt.Sprintf("%s\x1f%s", contractKey, "Test")),
+		[]byte(formatContractKey("Test")),
 		reads[0].key,
 	)
 	assert.Equal(t,
@@ -747,7 +747,7 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
 	assert.Len(t, writes, 0)
 	require.Len(t, reads, 4)
 	assert.Equal(t,
-		[]byte(fmt.Sprintf("%s\x1f%s", contractKey, "Test")),
+		[]byte(formatContractKey("Test")),
 		reads[0].key,
 	)
 	assert.Equal(t,
