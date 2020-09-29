@@ -170,7 +170,7 @@ func TestRuntimeContract(t *testing.T) {
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
-		contractKey := []byte("contract\x1fTest")
+		contractKey := []byte(formatContractKey("Test"))
 
 		codeArrayString := interpreter.ByteSliceToByteArrayValue([]byte(tc.code)).String()
 		code2ArrayString := interpreter.ByteSliceToByteArrayValue([]byte(tc.code2)).String()
