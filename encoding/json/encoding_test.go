@@ -978,8 +978,39 @@ func TestEncodeLink(t *testing.T) {
 
 	testEncodeAndDecode(
 		t,
-		cadence.NewLink("/storage/foo", "Bar"),
-		`{"type":"Link","value":{"targetPath":"/storage/foo","borrowType":"Bar"}}`,
+		cadence.NewLink(
+			cadence.Path{Domain: "storage", Identifier: "foo"},
+			"Bar",
+		),
+		`{"type":"Link","value":{"targetPath":{"type":"Path","value":{"domain":"storage","identifier":"foo"}},"borrowType":"Bar"}}`,
+	)
+}
+
+func TestEncodeType(t *testing.T) {
+
+	t.Parallel()
+
+	testEncodeAndDecode(
+		t,
+		cadence.TypeValue{
+			StaticType: "Int",
+		},
+		`{"type":"Type","value":{"staticType":"Int"}}`,
+	)
+}
+
+func TestEncodeCapability(t *testing.T) {
+
+	t.Parallel()
+
+	testEncodeAndDecode(
+		t,
+		cadence.Capability{
+			Path:       cadence.Path{Domain: "storage", Identifier: "foo"},
+			Address:    cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
+			BorrowType: "Int",
+		},
+		`{"type":"Capability","value":{"path":{"type":"Path","value":{"domain":"storage","identifier":"foo"}},"borrowType":"Int","address":"0x0000000102030405"}}`,
 	)
 }
 
@@ -1231,6 +1262,18 @@ func TestExportRecursiveType(t *testing.T) {
 		}.WithType(ty),
 		`{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"foo","value":{"type": "Optional","value":null}}]}}`,
 	)
+
+}
+
+func TestEncodePath(t *testing.T) {
+
+	t.Parallel()
+
+	testEncodeAndDecode(
+		t,
+		cadence.Path{Domain: "storage", Identifier: "foo"},
+		`{"type":"Path","value":{"domain":"storage","identifier":"foo"}}`,
+	)
 }
 
 func convertValueFromScript(t *testing.T, script string) cadence.Value {
@@ -1249,10 +1292,19 @@ func convertValueFromScript(t *testing.T, script string) cadence.Value {
 }
 
 func testAllEncodeAndDecode(t *testing.T, tests ...encodeTest) {
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			testEncodeAndDecode(t, test.val, test.expected)
+
+	test := func(testCase encodeTest) {
+
+		t.Run(testCase.name, func(t *testing.T) {
+
+			t.Parallel()
+
+			testEncodeAndDecode(t, testCase.val, testCase.expected)
 		})
+	}
+
+	for _, testCase := range tests {
+		test(testCase)
 	}
 }
 

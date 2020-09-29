@@ -21,9 +21,14 @@
 package main
 
 import (
+	"flag"
+
 	"github.com/onflow/cadence/languageserver"
 )
 
+var enableFlowClientFlag = flag.Bool("enableFlowClient", true, "enable Flow client functionality")
+
 func main() {
-	languageserver.RunWithStdio()
+	flag.Parse()
+	languageserver.RunWithStdio(*enableFlowClientFlag)
 }

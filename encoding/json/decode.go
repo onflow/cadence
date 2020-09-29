@@ -100,6 +100,11 @@ const (
 	targetKeyKey            = "targetKey"
 	targetPathKey           = "targetPath"
 	borrowTypeKey           = "borrowType"
+	domainKey               = "domain"
+	identifierKey           = "identifier"
+	staticTypeKey           = "staticType"
+	addressKey              = "address"
+	pathKey                 = "path"
 )
 
 var ErrInvalidJSONCadence = errors.New("invalid JSON Cadence structure")
@@ -186,6 +191,12 @@ func decodeJSON(v interface{}) cadence.Value {
 		return decodeStorageReference(valueJSON)
 	case linkTypeStr:
 		return decodeLink(valueJSON)
+	case pathTypeStr:
+		return decodePath(valueJSON)
+	case typeTypeStr:
+		return decodeTypeValue(valueJSON)
+	case capabilityTypeStr:
+		return decodeCapability(valueJSON)
 	}
 
 	panic(ErrInvalidJSONCadence)
@@ -575,10 +586,48 @@ func decodeStorageReference(valueJSON interface{}) cadence.StorageReference {
 func decodeLink(valueJSON interface{}) cadence.Link {
 	obj := toObject(valueJSON)
 
+	targetPath, ok := decodeJSON(obj.Get(targetPathKey)).(cadence.Path)
+	if !ok {
+		// TODO: improve error message
+		panic(ErrInvalidJSONCadence)
+	}
 	return cadence.NewLink(
-		obj.GetString(targetPathKey),
+		targetPath,
 		obj.GetString(borrowTypeKey),
 	)
+}
+
+func decodePath(valueJSON interface{}) cadence.Path {
+	obj := toObject(valueJSON)
+
+	return cadence.Path{
+		Domain:     obj.GetString(domainKey),
+		Identifier: obj.GetString(identifierKey),
+	}
+}
+
+func decodeTypeValue(valueJSON interface{}) cadence.TypeValue {
+	obj := toObject(valueJSON)
+
+	return cadence.TypeValue{
+		StaticType: obj.GetString(staticTypeKey),
+	}
+}
+
+func decodeCapability(valueJSON interface{}) cadence.Capability {
+	obj := toObject(valueJSON)
+
+	path, ok := decodeJSON(obj.Get(pathKey)).(cadence.Path)
+	if !ok {
+		// TODO: improve error message
+		panic(ErrInvalidJSONCadence)
+	}
+
+	return cadence.Capability{
+		Path:       path,
+		Address:    decodeAddress(obj.Get(addressKey)),
+		BorrowType: obj.GetString(borrowTypeKey),
+	}
 }
 
 // JSON types

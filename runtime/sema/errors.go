@@ -525,6 +525,10 @@ func (e *InvalidAccessModifierError) StartPosition() ast.Position {
 }
 
 func (e *InvalidAccessModifierError) EndPosition() ast.Position {
+	if e.Access == ast.AccessNotSpecified {
+		return e.Pos
+	}
+
 	length := len(e.Access.Keyword())
 	return e.Pos.Shifted(length - 1)
 }
@@ -752,7 +756,7 @@ type FieldTypeNotStorableError struct {
 	Name string
 	// Field's type
 	Type Type
-	// StartPosition of the error
+	// Start position of the error
 	Pos ast.Position
 }
 
@@ -762,6 +766,17 @@ func (e *FieldTypeNotStorableError) Error() string {
 		e.Name,
 		e.Type,
 	)
+}
+
+func (*FieldTypeNotStorableError) isSemanticError() {}
+
+func (e *FieldTypeNotStorableError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *FieldTypeNotStorableError) EndPosition() ast.Position {
+	length := len(e.Name)
+	return e.Pos.Shifted(length - 1)
 }
 
 // FunctionExpressionInConditionError
@@ -844,7 +859,7 @@ func (e *InvalidImplementationError) EndPosition() ast.Position {
 
 type InvalidConformanceError struct {
 	Type Type
-	Pos  ast.Position
+	ast.Range
 }
 
 func (e *InvalidConformanceError) Error() string {
@@ -856,13 +871,53 @@ func (e *InvalidConformanceError) Error() string {
 
 func (*InvalidConformanceError) isSemanticError() {}
 
-func (e *InvalidConformanceError) StartPosition() ast.Position {
+// InvalidEnumRawTypeError
+
+type InvalidEnumRawTypeError struct {
+	Type Type
+	ast.Range
+}
+
+func (e *InvalidEnumRawTypeError) Error() string {
+	return fmt.Sprintf(
+		"invalid enum raw type: `%s`",
+		e.Type.QualifiedString(),
+	)
+}
+
+func (*InvalidEnumRawTypeError) isSemanticError() {}
+
+// MissingEnumRawTypeError
+
+type MissingEnumRawTypeError struct {
+	Pos ast.Position
+}
+
+func (e *MissingEnumRawTypeError) Error() string {
+	return "missing enum raw type"
+}
+
+func (*MissingEnumRawTypeError) isSemanticError() {}
+
+func (e *MissingEnumRawTypeError) StartPosition() ast.Position {
 	return e.Pos
 }
 
-func (e *InvalidConformanceError) EndPosition() ast.Position {
+func (e *MissingEnumRawTypeError) EndPosition() ast.Position {
 	return e.Pos
 }
+
+// InvalidEnumConformancesError
+
+type InvalidEnumConformancesError struct {
+	ast.Range
+}
+
+func (e *InvalidEnumConformancesError) Error() string {
+	return "enums cannot conform to interfaces"
+}
+
+func (*InvalidEnumConformancesError) isSemanticError() {}
 
 // ConformanceError
 
@@ -1315,6 +1370,22 @@ func (e *InvalidInterfaceTypeError) SecondaryError() string {
 }
 
 func (*InvalidInterfaceTypeError) isSemanticError() {}
+
+// InvalidInterfaceDeclarationError
+
+type InvalidInterfaceDeclarationError struct {
+	CompositeKind common.CompositeKind
+	ast.Range
+}
+
+func (e *InvalidInterfaceDeclarationError) Error() string {
+	return fmt.Sprintf(
+		"%s interfaces are not supported",
+		e.CompositeKind.Name(),
+	)
+}
+
+func (*InvalidInterfaceDeclarationError) isSemanticError() {}
 
 // IncorrectTransferOperationError
 
@@ -2317,6 +2388,38 @@ func (e *InvalidNestedTypeError) EndPosition() ast.Position {
 	return e.Type.EndPosition()
 }
 
+// InvalidEnumCaseError
+
+type InvalidEnumCaseError struct {
+	ContainerDeclarationKind common.DeclarationKind
+	ast.Range
+}
+
+func (e *InvalidEnumCaseError) Error() string {
+	return fmt.Sprintf(
+		"%s declaration does not allow enum cases",
+		e.ContainerDeclarationKind.Name(),
+	)
+}
+
+func (*InvalidEnumCaseError) isSemanticError() {}
+
+// InvalidNonEnumCaseError
+
+type InvalidNonEnumCaseError struct {
+	ContainerDeclarationKind common.DeclarationKind
+	ast.Range
+}
+
+func (e *InvalidNonEnumCaseError) Error() string {
+	return fmt.Sprintf(
+		"%s declaration only allows enum cases",
+		e.ContainerDeclarationKind.Name(),
+	)
+}
+
+func (*InvalidNonEnumCaseError) isSemanticError() {}
+
 // DeclarationKindMismatchError
 
 type DeclarationKindMismatchError struct {
@@ -2562,22 +2665,6 @@ func (e *AmbiguousRestrictedTypeError) Error() string {
 
 func (*AmbiguousRestrictedTypeError) isSemanticError() {}
 
-// NonOptionalForceError
-
-type NonOptionalForceError struct {
-	Type Type
-	ast.Range
-}
-
-func (e *NonOptionalForceError) Error() string {
-	return fmt.Sprintf(
-		"cannot force non-optional type: `%s`",
-		e.Type.QualifiedString(),
-	)
-}
-
-func (*NonOptionalForceError) isSemanticError() {}
-
 // InvalidPathDomainError
 
 type InvalidPathDomainError struct {
@@ -2788,3 +2875,15 @@ func (e *CyclicImportsError) Error() string {
 }
 
 func (*CyclicImportsError) isSemanticError() {}
+
+// SwitchDefaultPositionError
+
+type SwitchDefaultPositionError struct {
+	ast.Range
+}
+
+func (e *SwitchDefaultPositionError) Error() string {
+	return "the 'default' case must appear at the end of a 'switch' statement"
+}
+
+func (*SwitchDefaultPositionError) isSemanticError() {}

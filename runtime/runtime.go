@@ -1374,6 +1374,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			}
 
 			if isUpdate {
+				// We are updating an existing contract.
 				// Ensure that no contract/contract interface with the given name exists already
 
 				if len(existingCode) == 0 {
@@ -1385,6 +1386,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				}
 
 			} else {
+				// We are adding a new contract.
 				// Ensure that no contract/contract interface with the given name exists already
 
 				if len(existingCode) > 0 {
@@ -1528,7 +1530,17 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	invocationRange ast.Range,
 	options updateAccountContractCodeOptions,
 ) {
-	// If the code declares a contract, instantiate it and store it
+	// If the code declares a contract, instantiate it and store it.
+	//
+	// This function might be called when
+	// 1. A contract is deployed (contractType is non-nil).
+	// 2. A contract interface is deployed (contractType is nil).
+	//
+	// If a contract is deployed, it is only instantiated
+	// when options.createContract is true,
+	// i.e. the Cadence `add` function is used.
+	// If the Cadence `update__experimental` function is used,
+	// the new contract will NOT be deployed (options.createContract is false).
 
 	var contractValue interpreter.OptionalValue = interpreter.NilValue{}
 

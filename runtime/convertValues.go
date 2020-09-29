@@ -110,12 +110,18 @@ func exportValueWithInterpreter(value interpreter.Value, inter *interpreter.Inte
 		return exportStorageReferenceValue(v)
 	case interpreter.LinkValue:
 		return exportLinkValue(v, inter)
+	case interpreter.PathValue:
+		return exportPathValue(v)
+	case interpreter.TypeValue:
+		return exportTypeValue(v, inter)
+	case interpreter.CapabilityValue:
+		return exportCapabilityValue(v, inter)
 	}
 
 	panic(fmt.Sprintf("cannot export value of type %T", value))
 }
 
-func exportSomeValue(v *interpreter.SomeValue, inter *interpreter.Interpreter) cadence.Value {
+func exportSomeValue(v *interpreter.SomeValue, inter *interpreter.Interpreter) cadence.Optional {
 	if v.Value == nil {
 		return cadence.NewOptional(nil)
 	}
@@ -125,7 +131,7 @@ func exportSomeValue(v *interpreter.SomeValue, inter *interpreter.Interpreter) c
 	return cadence.NewOptional(value)
 }
 
-func exportArrayValue(v *interpreter.ArrayValue, inter *interpreter.Interpreter) cadence.Value {
+func exportArrayValue(v *interpreter.ArrayValue, inter *interpreter.Interpreter) cadence.Array {
 	values := make([]cadence.Value, len(v.Values))
 
 	for i, value := range v.Values {
@@ -179,7 +185,7 @@ func exportCompositeValue(v *interpreter.CompositeValue, inter *interpreter.Inte
 	))
 }
 
-func exportDictionaryValue(v *interpreter.DictionaryValue, inter *interpreter.Interpreter) cadence.Value {
+func exportDictionaryValue(v *interpreter.DictionaryValue, inter *interpreter.Interpreter) cadence.Dictionary {
 	pairs := make([]cadence.KeyValuePair, v.Count())
 
 	for i, keyValue := range v.Keys.Values {
@@ -201,7 +207,7 @@ func exportDictionaryValue(v *interpreter.DictionaryValue, inter *interpreter.In
 	return cadence.NewDictionary(pairs)
 }
 
-func exportStorageReferenceValue(v *interpreter.StorageReferenceValue) cadence.Value {
+func exportStorageReferenceValue(v *interpreter.StorageReferenceValue) cadence.StorageReference {
 	return cadence.NewStorageReference(
 		v.Authorized,
 		cadence.NewAddress(v.TargetStorageAddress),
@@ -209,11 +215,33 @@ func exportStorageReferenceValue(v *interpreter.StorageReferenceValue) cadence.V
 	)
 }
 
-func exportLinkValue(v interpreter.LinkValue, inter *interpreter.Interpreter) cadence.Value {
-	return cadence.NewLink(
-		v.TargetPath.String(),
-		inter.ConvertStaticToSemaType(v.Type).QualifiedString(),
-	)
+func exportLinkValue(v interpreter.LinkValue, inter *interpreter.Interpreter) cadence.Link {
+	path := exportPathValue(v.TargetPath)
+	ty := inter.ConvertStaticToSemaType(v.Type).QualifiedString()
+	return cadence.NewLink(path, ty)
+}
+
+func exportPathValue(v interpreter.PathValue) cadence.Path {
+	return cadence.Path{
+		Domain:     v.Domain.Name(),
+		Identifier: v.Identifier,
+	}
+}
+
+func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) cadence.TypeValue {
+	ty := inter.ConvertStaticToSemaType(v.Type).QualifiedString()
+	return cadence.TypeValue{
+		StaticType: ty,
+	}
+}
+
+func exportCapabilityValue(v interpreter.CapabilityValue, inter *interpreter.Interpreter) cadence.Capability {
+	borrowType := inter.ConvertStaticToSemaType(v.BorrowType).QualifiedString()
+	return cadence.Capability{
+		Path:       exportPathValue(v.Path),
+		Address:    cadence.NewAddress(v.Address),
+		BorrowType: borrowType,
+	}
 }
 
 // importValue converts a Cadence value to a runtime value.
@@ -281,6 +309,11 @@ func importValue(value cadence.Value) interpreter.Value {
 		return importCompositeValue(common.CompositeKindResource, v.ResourceType.ID(), v.ResourceType.Fields, v.Fields)
 	case cadence.Event:
 		return importCompositeValue(common.CompositeKindEvent, v.EventType.ID(), v.EventType.Fields, v.Fields)
+	case cadence.Path:
+		return interpreter.PathValue{
+			Domain:     common.PathDomainFromName(v.Domain),
+			Identifier: v.Identifier,
+		}
 	}
 
 	panic(fmt.Sprintf("cannot import value of type %T", value))

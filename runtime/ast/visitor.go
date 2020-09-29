@@ -45,6 +45,7 @@ type StatementVisitor interface {
 	VisitBreakStatement(*BreakStatement) Repr
 	VisitContinueStatement(*ContinueStatement) Repr
 	VisitIfStatement(*IfStatement) Repr
+	VisitSwitchStatement(*SwitchStatement) Repr
 	VisitWhileStatement(*WhileStatement) Repr
 	VisitForStatement(*ForStatement) Repr
 	VisitEmitStatement(*EmitStatement) Repr
@@ -88,6 +89,7 @@ type Visitor interface {
 	VisitCompositeDeclaration(*CompositeDeclaration) Repr
 	VisitInterfaceDeclaration(*InterfaceDeclaration) Repr
 	VisitFieldDeclaration(*FieldDeclaration) Repr
+	VisitEnumCaseDeclaration(*EnumCaseDeclaration) Repr
 	VisitCondition(*Condition) Repr
 	VisitPragmaDeclaration(*PragmaDeclaration) Repr
 	VisitImportDeclaration(*ImportDeclaration) Repr

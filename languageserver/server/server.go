@@ -717,6 +717,13 @@ var declarationCompletionItems = []*protocol.CompletionItem{
 		Detail:           "function declaration",
 		InsertText:       "fun $2($3)${4:: $5} {\n\t$0\n}",
 	},
+	{
+		Kind:             protocol.KeywordCompletion,
+		InsertTextFormat: protocol.SnippetTextFormat,
+		Label:            "enum",
+		Detail:           "enum declaration",
+		InsertText:       "enum $2: $3 {\n\t$0\n}",
+	},
 }
 
 // NOTE: if the document doesn't specify an access modifier yet,
@@ -1198,7 +1205,7 @@ func getDiagnosticsForParentError(
 		if !ok {
 			conn.LogMessage(&protocol.LogMessageParams{
 				Type:    protocol.Error,
-				Message: fmt.Sprintf("Unable to convert non-convertable error to disgnostic: %s", err.Error()),
+				Message: fmt.Sprintf("Unable to convert non-convertable error to diagnostic: %T", childErr),
 			})
 			continue
 		}

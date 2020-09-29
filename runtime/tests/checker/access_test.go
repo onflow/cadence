@@ -104,7 +104,7 @@ func TestCheckAccessModifierCompositeFunctionDeclaration(t *testing.T) {
 
 	require.Len(t, tests, len(ast.BasicAccesses))
 
-	for _, compositeKind := range common.CompositeKindsWithBody {
+	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 
 		compositeKindKeyword := compositeKind.Keyword()
 
@@ -180,7 +180,7 @@ func TestCheckAccessModifierInterfaceFunctionDeclaration(t *testing.T) {
 
 		for access, expectedErr := range tests {
 
-			for _, compositeKind := range common.CompositeKindsWithBody {
+			for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 
 				testName := fmt.Sprintf(
 					"%s/%s interface/%s",
@@ -243,7 +243,7 @@ func TestCheckAccessModifierCompositeConstantFieldDeclaration(t *testing.T) {
 	require.Len(t, tests, len(ast.BasicAccesses))
 
 	for access, expectSuccess := range tests {
-		for _, compositeKind := range common.CompositeKindsWithBody {
+		for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 			for _, isInterface := range []bool{true, false} {
 
 				interfaceKeyword := ""
@@ -293,7 +293,7 @@ func TestCheckAccessModifierCompositeVariableFieldDeclaration(t *testing.T) {
 	t.Parallel()
 
 	for _, access := range ast.BasicAccesses {
-		for _, compositeKind := range common.CompositeKindsWithBody {
+		for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 			for _, isInterface := range []bool{true, false} {
 
 				interfaceKeyword := ""
@@ -589,6 +589,11 @@ func TestCheckAccessModifierGlobalCompositeDeclaration(t *testing.T) {
 						body = "()"
 					}
 
+					conformances := ""
+					if compositeKind == common.CompositeKindEnum {
+						conformances = ": Int"
+					}
+
 					testName := fmt.Sprintf("%s %s/%s/%s",
 						compositeKind.Keyword(),
 						interfaceKeyword,
@@ -601,11 +606,12 @@ func TestCheckAccessModifierGlobalCompositeDeclaration(t *testing.T) {
 						_, err := ParseAndCheckWithOptions(t,
 							fmt.Sprintf(
 								`
-                                  %[1]s %[2]s %[3]s Test %[4]s
+                                  %[1]s %[2]s %[3]s Test%[4]s %[5]s
 	                            `,
 								access.Keyword(),
 								compositeKind.Keyword(),
 								interfaceKeyword,
+								conformances,
 								body,
 							),
 							ParseAndCheckOptions{
@@ -753,7 +759,7 @@ func TestCheckAccessCompositeFunction(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithBody {
+	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 
 		checkModeTests := map[sema.AccessCheckMode]map[ast.Access]func(*testing.T, error){
 			sema.AccessCheckModeStrict: {
@@ -860,7 +866,7 @@ func TestCheckAccessInterfaceFunction(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithBody {
+	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 
 		checkModeTests := map[sema.AccessCheckMode]map[ast.Access]func(*testing.T, error){
 			sema.AccessCheckModeStrict: {
@@ -1004,7 +1010,7 @@ func TestCheckAccessCompositeFieldRead(t *testing.T) {
 
 	require.Len(t, checkModeTests, len(sema.AccessCheckModes))
 
-	for _, compositeKind := range common.CompositeKindsWithBody {
+	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 		for checkMode, checkModeTests := range checkModeTests {
 			require.Len(t, checkModeTests, len(ast.BasicAccesses))
 
@@ -1115,7 +1121,7 @@ func TestCheckAccessInterfaceFieldRead(t *testing.T) {
 
 	require.Len(t, checkModeTests, len(sema.AccessCheckModes))
 
-	for _, compositeKind := range common.CompositeKindsWithBody {
+	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 		for checkMode, checkModeTests := range checkModeTests {
 			require.Len(t, checkModeTests, len(ast.BasicAccesses))
 
@@ -1234,7 +1240,7 @@ func TestCheckAccessCompositeFieldAssignmentAndSwap(t *testing.T) {
 
 	require.Len(t, checkModeTests, len(sema.AccessCheckModes))
 
-	for _, compositeKind := range common.CompositeKindsWithBody {
+	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 		for checkMode, checkModeTests := range checkModeTests {
 			require.Len(t, checkModeTests, len(ast.BasicAccesses))
 
@@ -1370,7 +1376,7 @@ func TestCheckAccessInterfaceFieldWrite(t *testing.T) {
 
 	require.Len(t, checkModeTests, len(sema.AccessCheckModes))
 
-	for _, compositeKind := range common.CompositeKindsWithBody {
+	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 		for checkMode, checkModeTests := range checkModeTests {
 			require.Len(t, checkModeTests, len(ast.BasicAccesses))
 

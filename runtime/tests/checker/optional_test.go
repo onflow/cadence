@@ -216,12 +216,7 @@ func TestCheckCompositeNilEquality(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.AllCompositeKinds {
-
-		if compositeKind == common.CompositeKindEvent {
-			continue
-		}
-
+	test := func(compositeKind common.CompositeKind) {
 		var setupCode, identifier string
 
 		if compositeKind == common.CompositeKindContract {
@@ -237,19 +232,33 @@ func TestCheckCompositeNilEquality(t *testing.T) {
 			identifier = "x"
 		}
 
+		body := "{}"
+		if compositeKind == common.CompositeKindEnum {
+			body = "{ case a }"
+		}
+
+		conformances := ""
+		if compositeKind == common.CompositeKindEnum {
+			conformances = ": Int"
+		}
+
 		t.Run(compositeKind.Name(), func(t *testing.T) {
+
+			t.Parallel()
 
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s X {}
+                      %[1]s X%[2]s %[3]s
 
-                      %[2]s
+                      %[4]s
 
-                      let a = %[3]s == nil
-                      let b = nil == %[3]s
+                      let a = %[5]s == nil
+                      let b = nil == %[5]s
                     `,
 					compositeKind.Keyword(),
+					conformances,
+					body,
 					setupCode,
 					identifier,
 				),
@@ -258,11 +267,6 @@ func TestCheckCompositeNilEquality(t *testing.T) {
 			require.NoError(t, err)
 		})
 	}
-}
-
-func TestCheckInvalidCompositeNilEquality(t *testing.T) {
-
-	t.Parallel()
 
 	for _, compositeKind := range common.AllCompositeKinds {
 
@@ -270,40 +274,63 @@ func TestCheckInvalidCompositeNilEquality(t *testing.T) {
 			continue
 		}
 
-		var setupCode, firstIdentifier, secondIdentifier string
-		if compositeKind == common.CompositeKindContract {
-			firstIdentifier = "X"
-			secondIdentifier = "X"
-		} else {
-			setupCode = fmt.Sprintf(`
+		test(compositeKind)
+	}
+}
+
+func TestCheckInvalidCompositeNilEquality(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(compositeKind common.CompositeKind) {
+
+		t.Run(compositeKind.Name(), func(t *testing.T) {
+
+			t.Parallel()
+
+			var setupCode, firstIdentifier, secondIdentifier string
+
+			if compositeKind == common.CompositeKindContract {
+				firstIdentifier = "X"
+				secondIdentifier = "X"
+			} else {
+				setupCode = fmt.Sprintf(`
                   let x: %[1]sX? %[2]s %[3]s X%[4]s
                   let y: %[1]sX? %[2]s nil
                 `,
-				compositeKind.Annotation(),
-				compositeKind.TransferOperator(),
-				compositeKind.ConstructionKeyword(),
-				constructorArguments(compositeKind),
-			)
-			firstIdentifier = "x"
-			secondIdentifier = "y"
-		}
+					compositeKind.Annotation(),
+					compositeKind.TransferOperator(),
+					compositeKind.ConstructionKeyword(),
+					constructorArguments(compositeKind),
+				)
+				firstIdentifier = "x"
+				secondIdentifier = "y"
+			}
 
-		body := "{}"
-		if compositeKind == common.CompositeKindEvent {
-			body = "()"
-		}
+			body := "{}"
+			switch compositeKind {
+			case common.CompositeKindEvent:
+				body = "()"
+			case common.CompositeKindEnum:
+				body = "{ case a }"
+			}
 
-		t.Run(compositeKind.Name(), func(t *testing.T) {
+			conformances := ""
+			if compositeKind == common.CompositeKindEnum {
+				conformances = ": Int"
+			}
+
 			_, err := ParseAndCheck(t,
 				fmt.Sprintf(
 					`
-                      %[1]s X %[2]s
+                      %[1]s X%[2]s %[3]s
 
-                      %[3]s
+                      %[4]s
 
-                      let a = %[4]s == %[5]s
+                      let a = %[5]s == %[6]s
                     `,
 					compositeKind.Keyword(),
+					conformances,
 					body,
 					setupCode,
 					firstIdentifier,
@@ -311,10 +338,23 @@ func TestCheckInvalidCompositeNilEquality(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			if compositeKind == common.CompositeKindEnum {
+				require.NoError(t, err)
+			} else {
+				errs := ExpectCheckerErrors(t, err, 1)
 
-			assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+				assert.IsType(t, &sema.InvalidBinaryOperandsError{}, errs[0])
+			}
 		})
+	}
+
+	for _, compositeKind := range common.AllCompositeKinds {
+
+		if compositeKind == common.CompositeKindEvent {
+			continue
+		}
+
+		test(compositeKind)
 	}
 }
 

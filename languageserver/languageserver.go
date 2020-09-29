@@ -30,7 +30,7 @@ import (
 	"github.com/onflow/cadence/languageserver/server"
 )
 
-func RunWithStdio() {
+func RunWithStdio(enableFlowClient bool) {
 	if isatty.IsTerminal(os.Stdout.Fd()) {
 		print(
 			"This program implements the Language Server Protocol for Cadence.\n" +
@@ -42,7 +42,7 @@ func RunWithStdio() {
 
 	languageServer := server.NewServer()
 
-	_, err := integration.NewFlowIntegration(languageServer)
+	_, err := integration.NewFlowIntegration(languageServer, enableFlowClient)
 	if err != nil {
 		panic(err)
 	}

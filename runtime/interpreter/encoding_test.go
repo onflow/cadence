@@ -32,13 +32,15 @@ import (
 )
 
 type encodeDecodeTest struct {
-	value        Value
-	encoded      []byte
-	invalid      bool
-	deferred     bool
-	deferrals    *EncodingDeferrals
-	decodedValue Value
-	decodeOnly   bool
+	value                 Value
+	encoded               []byte
+	invalid               bool
+	deferred              bool
+	deferrals             *EncodingDeferrals
+	decodedValue          Value
+	decodeOnly            bool
+	decodeVersionOverride bool
+	decodeVersion         uint16
 }
 
 var testOwner = common.BytesToAddress([]byte{0x42})
@@ -63,7 +65,12 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		encoded = test.encoded
 	}
 
-	decoded, err := DecodeValue(encoded, &testOwner, nil)
+	version := CurrentEncodingVersion
+	if test.decodeVersionOverride {
+		version = test.decodeVersion
+	}
+
+	decoded, err := DecodeValue(encoded, &testOwner, nil, version)
 	if test.invalid {
 		require.Error(t, err)
 	} else {
@@ -678,7 +685,66 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 		)
 	})
 
+	t.Run("negative one", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewIntValueFromInt64(-1),
+				encoded: []byte{
+					0xd8, cborTagIntValue,
+					// negative bignum
+					0xc3,
+					// byte string, length 0
+					0x40,
+				},
+			},
+		)
+	})
+
+	t.Run("negative one, version < 2", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewIntValueFromInt64(-1),
+				encoded: []byte{
+					0xd8, cborTagIntValue,
+					// negative bignum
+					0xc3,
+					// byte string, length 1
+					0x41,
+					0x1,
+				},
+				decodeOnly:            true,
+				decodeVersionOverride: true,
+				decodeVersion:         1,
+			},
+		)
+	})
+
 	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewIntValueFromInt64(-42),
+				encoded: []byte{
+					0xd8, cborTagIntValue,
+					// negative bignum
+					0xc3,
+					// byte string, length 1
+					0x41,
+					// `-42` in decimal is is `0x2a` in hex.
+					// CBOR requires negative values to be encoded as `-1-n`, which is `-n - 1`, 
+					// which is `0x2a - 0x01`, which equals to `0x29`.
+					0x29,
+				},
+			},
+		)
+	})
+
+	t.Run("negative, version < 2", func(t *testing.T) {
+
+		// negative bignums were encoded incorrectly in version < 2:
+		// https://tools.ietf.org/html/rfc7049#section-2.4.2:
+		// "For tag value 3, the value of the bignum is -1 - n."
+		// However, the value was incorrectly encoded as just -n.
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewIntValueFromInt64(-42),
@@ -690,17 +756,39 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 					0x41,
 					0x2a,
 				},
+				decodeOnly:            true,
+				decodeVersionOverride: true,
+				decodeVersion:         1,
 			},
 		)
 	})
 
-	t.Run("RFC", func(t *testing.T) {
-		rfcValue, ok := new(big.Int).SetString("18446744073709551616", 10)
+	t.Run("negative, large (> 64 bit)", func(t *testing.T) {
+		setString, ok := new(big.Int).SetString("-18446744073709551617", 10)
 		require.True(t, ok)
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: NewIntValueFromBigInt(rfcValue),
+				value: NewIntValueFromBigInt(setString),
+				encoded: []byte{
+					0xd8, cborTagIntValue,
+					// negative bignum
+					0xc3,
+					// byte string, length 9
+					0x49,
+					0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+				},
+			},
+		)
+	})
+
+	t.Run("positive, large (> 64 bit)", func(t *testing.T) {
+		bigInt, ok := new(big.Int).SetString("18446744073709551616", 10)
+		require.True(t, ok)
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewIntValueFromBigInt(bigInt),
 				encoded: []byte{
 					// tag
 					0xd8, cborTagIntValue,
@@ -1186,7 +1274,57 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 		)
 	})
 
+	t.Run("negative one", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewInt128ValueFromInt64(-1),
+				encoded: []byte{
+					0xd8, cborTagInt128Value,
+					// negative bignum
+					0xc3,
+					// byte string, length 0
+					0x40,
+				},
+			},
+		)
+	})
+
+	t.Run("negative one, version < 2", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewInt128ValueFromInt64(-1),
+				encoded: []byte{
+					0xd8, cborTagInt128Value,
+					// negative bignum
+					0xc3,
+					// byte string, length 1
+					0x41,
+					0x1,
+				},
+				decodeOnly:            true,
+				decodeVersionOverride: true,
+				decodeVersion:         1,
+			},
+		)
+	})
+
 	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewInt128ValueFromInt64(-42),
+				encoded: []byte{
+					0xd8, cborTagInt128Value,
+					// negative bignum
+					0xc3,
+					// byte string, length 1
+					0x41,
+					0x29,
+				},
+			},
+		)
+	})
+
+	t.Run("negative, version < 2", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewInt128ValueFromInt64(-42),
@@ -1198,6 +1336,9 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 					0x41,
 					0x2a,
 				},
+				decodeOnly:            true,
+				decodeVersionOverride: true,
+				decodeVersion:         1,
 			},
 		)
 	})
@@ -1212,9 +1353,29 @@ func TestEncodeDecodeInt128Value(t *testing.T) {
 					0xc3,
 					// byte string, length 16
 					0x50,
+					0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				},
+			},
+		)
+	})
+
+	t.Run("min, version < 2", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewInt128ValueFromBigInt(sema.Int128TypeMinIntBig),
+				encoded: []byte{
+					0xd8, cborTagInt128Value,
+					// negative bignum
+					0xc3,
+					// byte string, length 16
+					0x50,
 					0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				},
+				decodeOnly:            true,
+				decodeVersionOverride: true,
+				decodeVersion:         1,
 			},
 		)
 	})
@@ -1326,7 +1487,57 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 		)
 	})
 
+	t.Run("negative one", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewInt256ValueFromInt64(-1),
+				encoded: []byte{
+					0xd8, cborTagInt256Value,
+					// negative bignum
+					0xc3,
+					// byte string, length 0
+					0x40,
+				},
+			},
+		)
+	})
+
+	t.Run("negative one, version < 2", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewInt256ValueFromInt64(-1),
+				encoded: []byte{
+					0xd8, cborTagInt256Value,
+					// negative bignum
+					0xc3,
+					// byte string, length 1
+					0x41,
+					0x1,
+				},
+				decodeOnly:            true,
+				decodeVersionOverride: true,
+				decodeVersion:         1,
+			},
+		)
+	})
+
 	t.Run("negative", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewInt256ValueFromInt64(-42),
+				encoded: []byte{
+					0xd8, cborTagInt256Value,
+					// negative bignum
+					0xc3,
+					// byte string, length 1
+					0x41,
+					0x29,
+				},
+			},
+		)
+	})
+
+	t.Run("negative, version < 2", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: NewInt256ValueFromInt64(-42),
@@ -1338,6 +1549,9 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 					0x41,
 					0x2a,
 				},
+				decodeOnly:            true,
+				decodeVersionOverride: true,
+				decodeVersion:         1,
 			},
 		)
 	})
@@ -1352,11 +1566,33 @@ func TestEncodeDecodeInt256Value(t *testing.T) {
 					0xc3,
 					// byte string, length 32
 					0x58, 0x20,
+					0x7f, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+					0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+				},
+			},
+		)
+	})
+
+	t.Run("min, version < 2", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: NewInt256ValueFromBigInt(sema.Int256TypeMinIntBig),
+				encoded: []byte{
+					0xd8, cborTagInt256Value,
+					// negative bignum
+					0xc3,
+					// byte string, length 32
+					0x58, 0x20,
 					0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 					0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 				},
+				decodeOnly:            true,
+				decodeVersionOverride: true,
+				decodeVersion:         1,
 			},
 		)
 	})

@@ -39,9 +39,9 @@ func TestRuntimeContract(t *testing.T) {
 	t.Parallel()
 
 	type testCase struct {
-		name        string
-		code        string
-		code2       string
+		name        string // the name of the contract used in add/update calls
+		code        string // the code we use to add the contract
+		code2       string // the code we use to update the contract
 		valid       bool
 		isInterface bool
 	}
@@ -170,7 +170,7 @@ func TestRuntimeContract(t *testing.T) {
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
-		contractKey := []byte("contract\x1fTest")
+		contractKey := []byte(formatContractKey("Test"))
 
 		codeArrayString := interpreter.ByteSliceToByteArrayValue([]byte(tc.code)).String()
 		code2ArrayString := interpreter.ByteSliceToByteArrayValue([]byte(tc.code2)).String()
@@ -232,6 +232,10 @@ func TestRuntimeContract(t *testing.T) {
 
 			err := runtime.ExecuteTransaction(addTx, nil, runtimeInterface, nextTransactionLocation())
 			require.Error(t, err)
+
+			// the deployed code should not have been updated,
+			// and no events should have been emitted,
+			// as the deployment should fail
 
 			require.NotEmpty(t, deployedCode)
 			require.Empty(t, events)

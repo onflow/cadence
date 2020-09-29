@@ -4149,7 +4149,7 @@ func TestParseInterface(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithBody {
+	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
 		actual, err := parser2.ParseProgram(fmt.Sprintf(`
             %s interface Test {
                 foo: Int

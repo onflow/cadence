@@ -366,10 +366,10 @@ func (l *lexer) scanDecimalOrFixedPointRemainder() TokenType {
 	r := l.next()
 	if r == '.' {
 		l.scanFixedPointRemainder()
-		return TokenFixedPointLiteral
+		return TokenFixedPointNumberLiteral
 	} else {
 		l.backupOne()
-		return TokenDecimalLiteral
+		return TokenDecimalIntegerLiteral
 	}
 }
 

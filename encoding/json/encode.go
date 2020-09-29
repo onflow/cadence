@@ -132,8 +132,23 @@ type jsonStorageReferenceValue struct {
 }
 
 type jsonLinkValue struct {
-	TargetPath string `json:"targetPath"`
-	BorrowType string `json:"borrowType"`
+	TargetPath jsonValue `json:"targetPath"`
+	BorrowType string    `json:"borrowType"`
+}
+
+type jsonPathValue struct {
+	Domain     string `json:"domain"`
+	Identifier string `json:"identifier"`
+}
+
+type jsonTypeValue struct {
+	StaticType string `json:"staticType"`
+}
+
+type jsonCapabilityValue struct {
+	Path       jsonValue `json:"path"`
+	Address    string    `json:"address"`
+	BorrowType string    `json:"borrowType"`
 }
 
 const (
@@ -170,6 +185,9 @@ const (
 	contractTypeStr         = "Contract"
 	storageReferenceTypeStr = "StorageReference"
 	linkTypeStr             = "Link"
+	pathTypeStr             = "Path"
+	typeTypeStr             = "Type"
+	capabilityTypeStr       = "Capability"
 )
 
 // prepare traverses the object graph of the provided value and constructs
@@ -242,6 +260,12 @@ func (e *Encoder) prepare(v cadence.Value) jsonValue {
 		return e.prepareStorageReference(x)
 	case cadence.Link:
 		return e.prepareLink(x)
+	case cadence.Path:
+		return e.preparePath(x)
+	case cadence.TypeValue:
+		return e.prepareTypeValue(x)
+	case cadence.Capability:
+		return e.prepareCapability(x)
 	default:
 		panic(fmt.Errorf("unsupported value: %T, %v", v, v))
 	}
@@ -523,7 +547,37 @@ func (e *Encoder) prepareLink(x cadence.Link) jsonValue {
 	return jsonValueObject{
 		Type: linkTypeStr,
 		Value: jsonLinkValue{
-			TargetPath: x.TargetPath,
+			TargetPath: e.preparePath(x.TargetPath),
+			BorrowType: x.BorrowType,
+		},
+	}
+}
+
+func (e *Encoder) preparePath(x cadence.Path) jsonValue {
+	return jsonValueObject{
+		Type: pathTypeStr,
+		Value: jsonPathValue{
+			Domain:     x.Domain,
+			Identifier: x.Identifier,
+		},
+	}
+}
+
+func (e *Encoder) prepareTypeValue(x cadence.TypeValue) jsonValue {
+	return jsonValueObject{
+		Type: typeTypeStr,
+		Value: jsonTypeValue{
+			StaticType: x.StaticType,
+		},
+	}
+}
+
+func (e *Encoder) prepareCapability(x cadence.Capability) jsonValue {
+	return jsonValueObject{
+		Type: capabilityTypeStr,
+		Value: jsonCapabilityValue{
+			Path:       e.preparePath(x.Path),
+			Address:    encodeBytes(x.Address.Bytes()),
 			BorrowType: x.BorrowType,
 		},
 	}

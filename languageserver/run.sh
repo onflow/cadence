@@ -2,4 +2,4 @@
 
 SCRIPTPATH=$(dirname "$0")
 
-(cd "$SCRIPTPATH" && go run ./cmd/languageserver/main.go)
+(cd "$SCRIPTPATH" && /usr/local/bin/go run ./cmd/languageserver/main.go "$@")

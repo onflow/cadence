@@ -192,6 +192,12 @@ func TestCheckStorable(t *testing.T) {
 
 		for _, compositeKind := range common.AllCompositeKinds {
 
+			// Skip enums, they can't have fields
+
+			if compositeKind == common.CompositeKindEnum {
+				continue
+			}
+
 			// Skip types that cannot be used in events
 
 			if compositeKind == common.CompositeKindEvent &&

@@ -194,21 +194,21 @@ func numberState(l *lexer) stateFn {
 			if l.endOffset-l.startOffset <= 2 {
 				l.emitError(fmt.Errorf("missing digits"))
 			}
-			l.emitValue(TokenBinaryLiteral)
+			l.emitValue(TokenBinaryIntegerLiteral)
 
 		case 'o':
 			l.scanOctalRemainder()
 			if l.endOffset-l.startOffset <= 2 {
 				l.emitError(fmt.Errorf("missing digits"))
 			}
-			l.emitValue(TokenOctalLiteral)
+			l.emitValue(TokenOctalIntegerLiteral)
 
 		case 'x':
 			l.scanHexadecimalRemainder()
 			if l.endOffset-l.startOffset <= 2 {
 				l.emitError(fmt.Errorf("missing digits"))
 			}
-			l.emitValue(TokenHexadecimalLiteral)
+			l.emitValue(TokenHexadecimalIntegerLiteral)
 
 		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 			tokenType := l.scanDecimalOrFixedPointRemainder()
@@ -216,11 +216,11 @@ func numberState(l *lexer) stateFn {
 
 		case '.':
 			l.scanFixedPointRemainder()
-			l.emitValue(TokenFixedPointLiteral)
+			l.emitValue(TokenFixedPointNumberLiteral)
 
 		case EOF:
 			l.backupOne()
-			l.emitValue(TokenDecimalLiteral)
+			l.emitValue(TokenDecimalIntegerLiteral)
 
 		default:
 			prefixChar := r
@@ -230,10 +230,13 @@ func numberState(l *lexer) stateFn {
 				l.next()
 
 				tokenType := l.scanDecimalOrFixedPointRemainder()
+				if tokenType == TokenDecimalIntegerLiteral {
+					tokenType = TokenUnknownBaseIntegerLiteral
+				}
 				l.emitValue(tokenType)
 			} else {
 				l.backupOne()
-				l.emitValue(TokenDecimalLiteral)
+				l.emitValue(TokenDecimalIntegerLiteral)
 			}
 		}
 

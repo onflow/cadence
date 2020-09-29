@@ -373,7 +373,7 @@ A deployed contract can be get from an account using the `get` function:
 
   Returns `nil` if no contract/contract interface with the given name exists in the account.
 
-For example, assuming that a contract named `Test` is deployed to an account, the contract can be get as follows:
+For example, assuming that a contract named `Test` is deployed to an account, the contract can be retrieved as follows:
 
 ```cadence
 let signer: Account = ...

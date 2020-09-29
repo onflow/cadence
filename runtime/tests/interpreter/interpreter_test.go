@@ -99,10 +99,14 @@ func parseCheckAndInterpretWithOptions(
 }
 
 func constructorArguments(compositeKind common.CompositeKind, arguments string) string {
-	if compositeKind == common.CompositeKindContract {
+	switch compositeKind {
+	case common.CompositeKindContract:
 		return ""
+	case common.CompositeKindEnum:
+		return ".a"
+	default:
+		return fmt.Sprintf("(%s)", arguments)
 	}
-	return fmt.Sprintf("(%s)", arguments)
 }
 
 // makeContractValueHandler creates an interpreter option which
@@ -1154,74 +1158,6 @@ func TestInterpretAndOperatorShortCircuitLeftFailure(t *testing.T) {
 	)
 }
 
-func TestInterpretIfStatement(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpretWithOptions(t,
-		`
-           pub fun testTrue(): Int {
-               if true {
-                   return 2
-               } else {
-                   return 3
-               }
-               return 4
-           }
-
-           pub fun testFalse(): Int {
-               if false {
-                   return 2
-               } else {
-                   return 3
-               }
-               return 4
-           }
-
-           pub fun testNoElse(): Int {
-               if true {
-                   return 2
-               }
-               return 3
-           }
-
-           pub fun testElseIf(): Int {
-               if false {
-                   return 2
-               } else if true {
-                   return 3
-               }
-               return 4
-           }
-        `,
-		ParseCheckAndInterpretOptions{
-			HandleCheckerError: func(err error) {
-				errs := checker.ExpectCheckerErrors(t, err, 2)
-
-				assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
-				assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
-			},
-		},
-	)
-
-	for name, expected := range map[string]int64{
-		"testTrue":   2,
-		"testFalse":  3,
-		"testNoElse": 2,
-		"testElseIf": 3,
-	} {
-		t.Run(name, func(t *testing.T) {
-			value, err := inter.Invoke(name)
-			require.NoError(t, err)
-
-			assert.Equal(t,
-				interpreter.NewIntValueFromInt64(expected),
-				value,
-			)
-		})
-	}
-}
-
 func TestInterpretExpressionStatement(t *testing.T) {
 
 	t.Parallel()
@@ -1559,16 +1495,11 @@ func TestInterpretCompositeDeclaration(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.AllCompositeKinds {
-
-		switch compositeKind {
-		case common.CompositeKindContract,
-			common.CompositeKindEvent:
-
-			continue
-		}
+	test := func(compositeKind common.CompositeKind) {
 
 		t.Run(compositeKind.Name(), func(t *testing.T) {
+
+			t.Parallel()
 
 			inter := parseCheckAndInterpretWithOptions(t,
 				fmt.Sprintf(
@@ -1600,6 +1531,19 @@ func TestInterpretCompositeDeclaration(t *testing.T) {
 				value,
 			)
 		})
+	}
+
+	for _, compositeKind := range common.AllCompositeKinds {
+
+		switch compositeKind {
+		case common.CompositeKindContract,
+			common.CompositeKindEvent,
+			common.CompositeKindEnum:
+
+			continue
+		}
+
+		test(compositeKind)
 	}
 }
 
@@ -3269,39 +3213,49 @@ func TestInterpretCompositeNilEquality(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.AllCompositeKinds {
-
-		if compositeKind == common.CompositeKindEvent {
-			continue
-		}
-
-		var setupCode, identifier string
-		if compositeKind == common.CompositeKindContract {
-			identifier = "X"
-		} else {
-			setupCode = fmt.Sprintf(
-				`pub let x: %[1]sX? %[2]s %[3]s X%[4]s`,
-				compositeKind.Annotation(),
-				compositeKind.TransferOperator(),
-				compositeKind.ConstructionKeyword(),
-				constructorArguments(compositeKind, ""),
-			)
-			identifier = "x"
-		}
+	test := func(compositeKind common.CompositeKind) {
 
 		t.Run(compositeKind.Name(), func(t *testing.T) {
+
+			t.Parallel()
+
+			var setupCode, identifier string
+			if compositeKind == common.CompositeKindContract {
+				identifier = "X"
+			} else {
+				setupCode = fmt.Sprintf(
+					`pub let x: %[1]sX? %[2]s %[3]s X%[4]s`,
+					compositeKind.Annotation(),
+					compositeKind.TransferOperator(),
+					compositeKind.ConstructionKeyword(),
+					constructorArguments(compositeKind, ""),
+				)
+				identifier = "x"
+			}
+
+			body := "{}"
+			if compositeKind == common.CompositeKindEnum {
+				body = "{ case a }"
+			}
+
+			conformances := ""
+			if compositeKind == common.CompositeKindEnum {
+				conformances = ": Int"
+			}
 
 			inter := parseCheckAndInterpretWithOptions(t,
 				fmt.Sprintf(
 					`
-                      pub %[1]s X {}
+                      pub %[1]s X%[2]s %[3]s
 
-                      %[2]s
+                      %[4]s
 
-                      pub let y = %[3]s == nil
-                      pub let z = nil == %[3]s
+                      pub let y = %[5]s == nil
+                      pub let z = nil == %[5]s
                     `,
 					compositeKind.Keyword(),
+					conformances,
+					body,
 					setupCode,
 					identifier,
 				),
@@ -3323,208 +3277,15 @@ func TestInterpretCompositeNilEquality(t *testing.T) {
 			)
 		})
 	}
-}
 
-func TestInterpretIfStatementTestWithDeclaration(t *testing.T) {
+	for _, compositeKind := range common.AllCompositeKinds {
 
-	t.Parallel()
+		if compositeKind == common.CompositeKindEvent {
+			continue
+		}
 
-	inter := parseCheckAndInterpret(t, `
-      var branch = 0
-
-      fun test(x: Int?): Int {
-          if var y = x {
-              branch = 1
-              return y
-          } else {
-              branch = 2
-              return 0
-          }
-      }
-    `)
-
-	t.Run("2", func(t *testing.T) {
-		value, err := inter.Invoke(
-			"test",
-			interpreter.NewIntValueFromInt64(2),
-		)
-		require.NoError(t, err)
-		assert.Equal(t,
-			interpreter.NewIntValueFromInt64(2),
-			value,
-		)
-		assert.Equal(t,
-			interpreter.NewIntValueFromInt64(1),
-			inter.Globals["branch"].Value,
-		)
-	})
-
-	t.Run("nil", func(t *testing.T) {
-		value, err := inter.Invoke("test", interpreter.NilValue{})
-		require.NoError(t, err)
-		assert.Equal(t,
-			interpreter.NewIntValueFromInt64(0),
-			value,
-		)
-		assert.Equal(t,
-			interpreter.NewIntValueFromInt64(2),
-			inter.Globals["branch"].Value,
-		)
-	})
-}
-
-func TestInterpretIfStatementTestWithDeclarationAndElse(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-      var branch = 0
-
-      fun test(x: Int?): Int {
-          if var y = x {
-              branch = 1
-              return y
-          }
-          branch = 2
-          return 0
-      }
-    `)
-
-	t.Run("2", func(t *testing.T) {
-		value, err := inter.Invoke(
-			"test",
-			interpreter.NewIntValueFromInt64(2),
-		)
-		require.NoError(t, err)
-		assert.Equal(t,
-			interpreter.NewIntValueFromInt64(2),
-			value,
-		)
-		assert.Equal(t,
-			interpreter.NewIntValueFromInt64(1),
-			inter.Globals["branch"].Value,
-		)
-	})
-
-	t.Run("nil", func(t *testing.T) {
-		value, err := inter.Invoke("test", interpreter.NilValue{})
-		require.NoError(t, err)
-		assert.Equal(t,
-			interpreter.NewIntValueFromInt64(0),
-			value,
-		)
-		assert.Equal(t,
-			interpreter.NewIntValueFromInt64(2),
-			inter.Globals["branch"].Value,
-		)
-
-	})
-}
-
-func TestInterpretIfStatementTestWithDeclarationNestedOptionals(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-      var branch = 0
-
-      fun test(x: Int??): Int? {
-          if var y = x {
-              branch = 1
-              return y
-          } else {
-              branch = 2
-              return 0
-          }
-      }
-    `)
-
-	t.Run("2", func(t *testing.T) {
-		value, err := inter.Invoke(
-			"test",
-			interpreter.NewIntValueFromInt64(2),
-		)
-		require.NoError(t, err)
-		assert.Equal(t,
-			interpreter.NewSomeValueOwningNonCopying(
-				interpreter.NewIntValueFromInt64(2),
-			),
-			value,
-		)
-		assert.Equal(t,
-			interpreter.NewIntValueFromInt64(1),
-			inter.Globals["branch"].Value,
-		)
-	})
-
-	t.Run("nil", func(t *testing.T) {
-		value, err := inter.Invoke("test", interpreter.NilValue{})
-		require.NoError(t, err)
-
-		assert.Equal(t,
-			interpreter.NewSomeValueOwningNonCopying(
-				interpreter.NewIntValueFromInt64(0),
-			),
-			value,
-		)
-		assert.Equal(t,
-			interpreter.NewIntValueFromInt64(2),
-			inter.Globals["branch"].Value,
-		)
-	})
-}
-
-func TestInterpretIfStatementTestWithDeclarationNestedOptionalsExplicitAnnotation(t *testing.T) {
-
-	t.Parallel()
-
-	inter := parseCheckAndInterpret(t, `
-      var branch = 0
-
-      fun test(x: Int??): Int? {
-          if var y: Int? = x {
-              branch = 1
-              return y
-          } else {
-              branch = 2
-              return 0
-          }
-      }
-    `)
-
-	t.Run("2", func(t *testing.T) {
-		value, err := inter.Invoke(
-			"test",
-			interpreter.NewIntValueFromInt64(2),
-		)
-		require.NoError(t, err)
-		assert.Equal(t,
-			interpreter.NewSomeValueOwningNonCopying(
-				interpreter.NewIntValueFromInt64(2),
-			),
-			value,
-		)
-		assert.Equal(t,
-			interpreter.NewIntValueFromInt64(1),
-			inter.Globals["branch"].Value,
-		)
-
-	})
-
-	t.Run("nil", func(t *testing.T) {
-		value, err := inter.Invoke("test", interpreter.NilValue{})
-		require.NoError(t, err)
-		assert.Equal(t,
-			interpreter.NewSomeValueOwningNonCopying(
-				interpreter.NewIntValueFromInt64(0),
-			),
-			value,
-		)
-		assert.Equal(t,
-			interpreter.NewIntValueFromInt64(2),
-			inter.Globals["branch"].Value,
-		)
-	})
+		test(compositeKind)
+	}
 }
 
 func TestInterpretInterfaceConformanceNoRequirements(t *testing.T) {
@@ -3580,7 +3341,7 @@ func TestInterpretInterfaceFieldUse(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithBody {
+	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 
 		if !compositeKind.SupportsInterfaces() {
 			continue
@@ -3657,7 +3418,7 @@ func TestInterpretInterfaceFunctionUse(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithBody {
+	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 
 		if !compositeKind.SupportsInterfaces() {
 			continue
@@ -3722,7 +3483,7 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 
 	t.Parallel()
 
-	for _, compositeKind := range common.CompositeKindsWithBody {
+	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 
 		if !compositeKind.SupportsInterfaces() {
 			continue
@@ -3821,7 +3582,7 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 		2: &interpreter.ConditionError{},
 	}
 
-	for _, compositeKind := range common.CompositeKindsWithBody {
+	for _, compositeKind := range common.CompositeKindsWithFieldsAndFunctions {
 
 		if !compositeKind.SupportsInterfaces() {
 			continue
@@ -7749,6 +7510,19 @@ func TestInterpretForce(t *testing.T) {
 
 		assert.IsType(t, &interpreter.ForceNilError{}, err)
 	})
+
+	t.Run("non-optional", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t, `
+          let x: Int = 1
+          let y = x!
+        `)
+
+		assert.Equal(t,
+			interpreter.NewIntValueFromInt64(1),
+			inter.Globals["y"].Value,
+		)
+	})
 }
 
 func permutations(xs []string) (res [][]string) {
@@ -7877,7 +7651,11 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 		encoded, _, err := interpreter.EncodeValue(test, path, false)
 		require.NoError(t, err)
 
-		decoder, err := interpreter.NewDecoder(bytes.NewReader(encoded), owner)
+		decoder, err := interpreter.NewDecoder(
+			bytes.NewReader(encoded),
+			owner,
+			interpreter.CurrentEncodingVersion,
+		)
 		require.NoError(t, err)
 
 		decoded, err := decoder.Decode(path)

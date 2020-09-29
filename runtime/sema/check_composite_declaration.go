@@ -182,11 +182,11 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 	// NOTE: visit interfaces first
 	// DON'T use `nestedDeclarations`, because of non-deterministic order
 
-	for _, nestedInterface := range declaration.Members.InterfaceDeclarations() {
+	for _, nestedInterface := range declaration.Members.Interfaces() {
 		nestedInterface.Accept(checker)
 	}
 
-	for _, nestedComposite := range declaration.Members.CompositeDeclarations() {
+	for _, nestedComposite := range declaration.Members.Composites() {
 		nestedComposite.Accept(checker)
 	}
 }
@@ -322,7 +322,8 @@ func (checker *Checker) declareNestedDeclarations(
 			switch nestedCompositeKind {
 			case common.CompositeKindResource,
 				common.CompositeKindStructure,
-				common.CompositeKindEvent:
+				common.CompositeKindEvent,
+				common.CompositeKindEnum:
 				break
 
 			default:
@@ -413,6 +414,17 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 		variable,
 	)
 
+	// Resolve conformances
+
+	if declaration.CompositeKind == common.CompositeKindEnum {
+		compositeType.EnumRawType = checker.enumRawType(declaration)
+	} else {
+		compositeType.ExplicitInterfaceConformances =
+			checker.explicitInterfaceConformances(declaration, compositeType)
+	}
+
+	// Register in elaboration
+
 	checker.Elaboration.CompositeDeclarationTypes[declaration] = compositeType
 
 	// Activate new scope for nested declarations
@@ -429,8 +441,8 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 		checker.declareNestedDeclarations(
 			declaration.CompositeKind,
 			declaration.DeclarationKind(),
-			declaration.Members.CompositeDeclarations(),
-			declaration.Members.InterfaceDeclarations(),
+			declaration.Members.Composites(),
+			declaration.Members.Interfaces(),
 		)
 
 	checker.Elaboration.CompositeNestedDeclarations[declaration] = nestedDeclarations
@@ -466,6 +478,8 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 	declarationMembers := map[string]*Member{}
 
+	var enumCases []*ast.EnumCaseDeclaration
+
 	(func() {
 		// Activate new scopes for nested types
 
@@ -477,11 +491,6 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 		checker.declareCompositeNestedTypes(declaration, kind, false)
 
-		// Resolve conformances
-
-		conformances := checker.explicitInterfaceConformances(declaration, compositeType)
-		compositeType.ExplicitInterfaceConformances = conformances
-
 		// NOTE: determine initializer parameter types while nested types are in scope,
 		// and after declaring nested types as the initializer may use nested type in parameters
 
@@ -490,7 +499,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 		// Declare nested declarations' members
 
-		for _, nestedInterfaceDeclaration := range declaration.Members.InterfaceDeclarations() {
+		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
 			checker.declareInterfaceMembers(nestedInterfaceDeclaration)
 		}
 
@@ -507,7 +516,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		//   }
 		// }
 		// ```
-		for _, nestedCompositeDeclaration := range declaration.Members.CompositeDeclarations() {
+		for _, nestedCompositeDeclaration := range declaration.Members.Composites() {
 			checker.declareCompositeMembersAndValue(nestedCompositeDeclaration, kind)
 
 			// Declare nested composites' values (constructor/instance) as members of the containing composite
@@ -560,19 +569,29 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		var fields []string
 		var origins map[string]*Origin
 
-		// Event members are derived from the initializer's parameter list
-
-		if declaration.CompositeKind == common.CompositeKindEvent {
+		switch declaration.CompositeKind {
+		case common.CompositeKindEvent:
+			// Event members are derived from the initializer's parameter list
 			members, fields, origins = checker.eventMembersAndOrigins(
 				initializers[0],
 				compositeType,
 			)
-		} else {
-			members, fields, origins = checker.nonEventMembersAndOrigins(
+
+		case common.CompositeKindEnum:
+			// Enum members are derived from the cases
+			members, fields, enumCases = checker.enumMembersAndOrigins(
+				declaration.Members,
 				compositeType,
-				declaration.Members.Fields(),
-				declaration.Members.Functions(),
+				declaration.DeclarationKind(),
+			)
+			origins = map[string]*Origin{}
+
+		default:
+			members, fields, origins = checker.defaultMembersAndOrigins(
+				declaration.Members,
+				compositeType,
 				kind,
+				declaration.DeclarationKind(),
 			)
 		}
 
@@ -588,57 +607,149 @@ func (checker *Checker) declareCompositeMembersAndValue(
 	constructorType, constructorArgumentLabels := checker.compositeConstructorType(declaration, compositeType)
 	constructorType.Members = declarationMembers
 
-	// If the composite is a contract, declare a value – the contract is a singleton.
+	// If the composite is a contract,
+	// declare a value – the contract is a singleton.
+	//
+	// If the composite is an enum,
+	// declare a special constructor which accepts the raw value,
+	// and declare the enum cases as members on the constructor.
+	//
 	// For all other kinds, declare constructor.
 
 	// NOTE: perform declarations after the nested scope, so they are visible after the declaration
 
-	if compositeType.Kind == common.CompositeKindContract {
-		_, err := checker.valueActivations.Declare(variableDeclaration{
-			identifier: declaration.Identifier.Identifier,
-			ty:         compositeType,
-			// NOTE: contracts are always public
-			access:                   ast.AccessPublic,
-			kind:                     common.DeclarationKindContract,
-			pos:                      declaration.Identifier.Pos,
-			isConstant:               true,
-			argumentLabels:           nil,
-			allowOuterScopeShadowing: false,
-		})
-		checker.report(err)
+	switch compositeType.Kind {
+	case common.CompositeKindContract:
+		checker.declareContractValue(declaration, compositeType, declarationMembers)
 
-		for name, declarationMember := range declarationMembers {
-			if compositeType.Members[name] != nil {
-				continue
-			}
-			compositeType.Members[name] = declarationMember
-		}
-	} else {
+	case common.CompositeKindEnum:
+		checker.declareEnumConstructor(declaration, compositeType, enumCases)
 
-		// Resource and event constructors are effectively always private,
-		// i.e. they should be only constructable by the locations that declare them.
-		//
-		// Instead of enforcing this be declaring the access as private here,
-		// we allow the declared access level and check the construction in the respective
-		// construction expressions, i.e. create expressions for resources
-		// and emit statements for events.
-		//
-		// This improves the user experience for the developer:
-		// If the access would be enforced as private, an import of the composite
-		// would fail with an "not declared" error.
-
-		_, err := checker.valueActivations.Declare(variableDeclaration{
-			identifier:               declaration.Identifier.Identifier,
-			ty:                       constructorType,
-			access:                   declaration.Access,
-			kind:                     declaration.DeclarationKind(),
-			pos:                      declaration.Identifier.Pos,
-			isConstant:               true,
-			argumentLabels:           constructorArgumentLabels,
-			allowOuterScopeShadowing: false,
-		})
-		checker.report(err)
+	default:
+		checker.declareCompositeConstructor(declaration, constructorType, constructorArgumentLabels)
 	}
+}
+
+func (checker *Checker) declareCompositeConstructor(
+	declaration *ast.CompositeDeclaration,
+	constructorType *SpecialFunctionType,
+	constructorArgumentLabels []string,
+) {
+	// Resource and event constructors are effectively always private,
+	// i.e. they should be only constructable by the locations that declare them.
+	//
+	// Instead of enforcing this by declaring the access as private here,
+	// we allow the declared access level and check the construction in the respective
+	// construction expressions, i.e. create expressions for resources
+	// and emit statements for events.
+	//
+	// This improves the user experience for the developer:
+	// If the access would be enforced as private, an import of the composite
+	// would fail with an "not declared" error.
+
+	_, err := checker.valueActivations.Declare(variableDeclaration{
+		identifier:     declaration.Identifier.Identifier,
+		ty:             constructorType,
+		access:         declaration.Access,
+		kind:           declaration.DeclarationKind(),
+		pos:            declaration.Identifier.Pos,
+		isConstant:     true,
+		argumentLabels: constructorArgumentLabels,
+	})
+	checker.report(err)
+}
+
+func (checker *Checker) declareContractValue(
+	declaration *ast.CompositeDeclaration,
+	compositeType *CompositeType,
+	declarationMembers map[string]*Member,
+) {
+	_, err := checker.valueActivations.Declare(variableDeclaration{
+		identifier: declaration.Identifier.Identifier,
+		ty:         compositeType,
+		// NOTE: contracts are always public
+		access:     ast.AccessPublic,
+		kind:       common.DeclarationKindContract,
+		pos:        declaration.Identifier.Pos,
+		isConstant: true,
+	})
+	checker.report(err)
+
+	for name, declarationMember := range declarationMembers {
+		if compositeType.Members[name] != nil {
+			continue
+		}
+		compositeType.Members[name] = declarationMember
+	}
+}
+
+func (checker *Checker) declareEnumConstructor(
+	declaration *ast.CompositeDeclaration,
+	compositeType *CompositeType,
+	enumCases []*ast.EnumCaseDeclaration,
+) {
+
+	constructorMembers := make(map[string]*Member, len(enumCases))
+	constructorOrigins := make(map[string]*Origin, len(enumCases))
+
+	constructorType := &SpecialFunctionType{
+		FunctionType: &FunctionType{
+			Parameters: []*Parameter{
+				{
+					Identifier:     EnumRawValueFieldName,
+					TypeAnnotation: NewTypeAnnotation(compositeType.EnumRawType),
+				},
+			},
+			ReturnTypeAnnotation: NewTypeAnnotation(
+				&OptionalType{
+					Type: compositeType,
+				},
+			),
+		},
+		Members: constructorMembers,
+	}
+
+	memberCaseTypeAnnotation := NewTypeAnnotation(compositeType)
+
+	for _, enumCase := range enumCases {
+		caseName := enumCase.Identifier.Identifier
+
+		if constructorMembers[caseName] != nil {
+			continue
+		}
+		constructorMembers[caseName] = &Member{
+			ContainerType:   constructorType,
+			// enum cases are always public
+			Access:          ast.AccessPublic,
+			Identifier:      enumCase.Identifier,
+			TypeAnnotation:  memberCaseTypeAnnotation,
+			DeclarationKind: common.DeclarationKindField,
+			VariableKind:    ast.VariableKindConstant,
+			DocString:       enumCase.DocString,
+		}
+
+		constructorOrigins[caseName] =
+			checker.recordFieldDeclarationOrigin(
+				enumCase.Identifier,
+				enumCase.Identifier.StartPosition(),
+				enumCase.Identifier.EndPosition(),
+				compositeType,
+			)
+	}
+
+	checker.memberOrigins[constructorType] = constructorOrigins
+
+	_, err := checker.valueActivations.Declare(variableDeclaration{
+		identifier: declaration.Identifier.Identifier,
+		ty:         constructorType,
+		// NOTE: enums are always public
+		access:         ast.AccessPublic,
+		kind:           common.DeclarationKindEnum,
+		pos:            declaration.Identifier.Pos,
+		isConstant:     true,
+		argumentLabels: []string{EnumRawValueFieldName},
+	})
+	checker.report(err)
 }
 
 // checkMemberStorability check that all fields have a type that is storable.
@@ -692,7 +803,7 @@ func (checker *Checker) explicitInterfaceConformances(
 ) []*InterfaceType {
 
 	var interfaceTypes []*InterfaceType
-	seenConformances := map[string]bool{}
+	seenConformances := map[TypeID]bool{}
 
 	for _, conformance := range declaration.Conformances {
 		convertedType := checker.ConvertType(conformance)
@@ -700,9 +811,9 @@ func (checker *Checker) explicitInterfaceConformances(
 		if interfaceType, ok := convertedType.(*InterfaceType); ok {
 			interfaceTypes = append(interfaceTypes, interfaceType)
 
-			conformanceIdentifier := conformance.String()
+			typeID := interfaceType.ID()
 
-			if seenConformances[conformanceIdentifier] {
+			if seenConformances[typeID] {
 				checker.report(
 					&DuplicateConformanceError{
 						CompositeType: compositeType,
@@ -712,19 +823,75 @@ func (checker *Checker) explicitInterfaceConformances(
 				)
 			}
 
-			seenConformances[conformanceIdentifier] = true
+			seenConformances[typeID] = true
 
 		} else if !convertedType.IsInvalidType() {
 			checker.report(
 				&InvalidConformanceError{
-					Type: convertedType,
-					Pos:  conformance.StartPosition(),
+					Type:  convertedType,
+					Range: ast.NewRangeFromPositioned(conformance),
 				},
 			)
 		}
 	}
 
 	return interfaceTypes
+}
+
+func (checker *Checker) enumRawType(declaration *ast.CompositeDeclaration) Type {
+
+	conformanceCount := len(declaration.Conformances)
+
+	// Enums must have exactly one conformance, the raw type
+
+	if conformanceCount == 0 {
+		checker.report(
+			&MissingEnumRawTypeError{
+				Pos: declaration.Identifier.EndPosition().Shifted(1),
+			},
+		)
+
+		return &InvalidType{}
+	}
+
+	// Enums may not conform to interfaces,
+	// i.e. only have one conformance, the raw type
+
+	if conformanceCount > 1 {
+		secondConformance := declaration.Conformances[1]
+		lastConformance := declaration.Conformances[conformanceCount-1]
+
+		checker.report(
+			&InvalidEnumConformancesError{
+				Range: ast.Range{
+					StartPos: secondConformance.StartPosition(),
+					EndPos:   lastConformance.EndPosition(),
+				},
+			},
+		)
+
+		// NOTE: do not return, the first conformance should
+		// still be considered as a raw type
+	}
+
+	// The single conformance is considered the raw type.
+	// It must be an `Integer`-subtype for now.
+
+	conformance := declaration.Conformances[0]
+	rawType := checker.ConvertType(conformance)
+
+	if !rawType.IsInvalidType() &&
+		!IsSubType(rawType, &IntegerType{}) {
+
+		checker.report(
+			&InvalidEnumRawTypeError{
+				Type:  rawType,
+				Range: ast.NewRangeFromPositioned(conformance),
+			},
+		)
+	}
+
+	return rawType
 }
 
 type compositeConformanceCheckOptions struct {
@@ -961,7 +1128,7 @@ func (checker *Checker) checkTypeRequirement(
 		var errorRange ast.Range
 		var foundInterfaceDeclaration bool
 
-		for _, nestedInterfaceDeclaration := range containerDeclaration.Members.InterfaceDeclarations() {
+		for _, nestedInterfaceDeclaration := range containerDeclaration.Members.Interfaces() {
 			nestedInterfaceIdentifier := nestedInterfaceDeclaration.Identifier.Identifier
 			if nestedInterfaceIdentifier == declaredInterfaceType.Identifier {
 				foundInterfaceDeclaration = true
@@ -997,7 +1164,7 @@ func (checker *Checker) checkTypeRequirement(
 
 	var compositeDeclaration *ast.CompositeDeclaration
 
-	for _, nestedCompositeDeclaration := range containerDeclaration.Members.CompositeDeclarations() {
+	for _, nestedCompositeDeclaration := range containerDeclaration.Members.Composites() {
 		nestedCompositeIdentifier := nestedCompositeDeclaration.Identifier.Identifier
 		if nestedCompositeIdentifier == declaredCompositeType.Identifier {
 			compositeDeclaration = nestedCompositeDeclaration
@@ -1090,16 +1257,30 @@ func (checker *Checker) compositeConstructorType(
 	return constructorFunctionType, argumentLabels
 }
 
-func (checker *Checker) nonEventMembersAndOrigins(
+func (checker *Checker) defaultMembersAndOrigins(
+	allMembers *ast.Members,
 	containerType Type,
-	fields []*ast.FieldDeclaration,
-	functions []*ast.FunctionDeclaration,
 	containerKind ContainerKind,
+	containerDeclarationKind common.DeclarationKind,
 ) (
 	members map[string]*Member,
 	fieldNames []string,
 	origins map[string]*Origin,
 ) {
+	fields := allMembers.Fields()
+	functions := allMembers.Functions()
+
+	// Enum cases are invalid
+	enumCases := allMembers.EnumCases()
+	if len(enumCases) > 0 && containerDeclarationKind != common.DeclarationKindUnknown {
+		checker.report(
+			&InvalidEnumCaseError{
+				ContainerDeclarationKind: containerDeclarationKind,
+				Range:                    ast.NewRangeFromPositioned(enumCases[0]),
+			},
+		)
+	}
+
 	requireVariableKind := containerKind != ContainerKindInterface
 	requireNonPrivateMemberAccess := containerKind == ContainerKindInterface
 
@@ -1283,6 +1464,80 @@ func (checker *Checker) eventMembersAndOrigins(
 				parameter.EndPos,
 				typeAnnotation.Type,
 			)
+	}
+
+	return
+}
+
+const EnumRawValueFieldName = "rawValue"
+const enumRawValueFieldDocString = `
+The raw value of the enum case
+`
+
+func (checker *Checker) enumMembersAndOrigins(
+	allMembers *ast.Members,
+	containerType *CompositeType,
+	containerDeclarationKind common.DeclarationKind,
+) (
+	members map[string]*Member,
+	fieldNames []string,
+	enumCases []*ast.EnumCaseDeclaration,
+) {
+	for _, declaration := range allMembers.Declarations {
+
+		// Enum declarations may only contain enum cases
+
+		enumCase, ok := declaration.(*ast.EnumCaseDeclaration)
+		if !ok {
+			checker.report(
+				&InvalidNonEnumCaseError{
+					ContainerDeclarationKind: containerDeclarationKind,
+					Range:                    ast.NewRangeFromPositioned(declaration),
+				},
+			)
+			continue
+		}
+
+		enumCases = append(enumCases, enumCase)
+
+		// Enum cases must be effectively public
+
+		if checker.effectiveCompositeMemberAccess(enumCase.Access) != ast.AccessPublic {
+			checker.report(
+				&InvalidAccessModifierError{
+					DeclarationKind: enumCase.DeclarationKind(),
+					Access:          enumCase.Access,
+					Explanation:     "enum cases must be public",
+					Pos:             enumCase.StartPos,
+				},
+			)
+		}
+	}
+
+	// Members of the enum type are *not* the enum cases!
+	// Each individual enum case is an instance of the enum type,
+	// so only has a single member, the raw value field
+
+	members = map[string]*Member{
+		EnumRawValueFieldName: {
+			ContainerType: containerType,
+			Access:        ast.AccessPublic,
+			Identifier: ast.Identifier{
+				Identifier: EnumRawValueFieldName,
+			},
+			DeclarationKind: common.DeclarationKindField,
+			TypeAnnotation:  NewTypeAnnotation(containerType.EnumRawType),
+			VariableKind:    ast.VariableKindConstant,
+			DocString:       enumRawValueFieldDocString,
+		},
+	}
+
+	// Gather the field names from the members declared above
+
+	for name, member := range members {
+		if member.DeclarationKind == common.DeclarationKindField {
+			fieldNames = append(fieldNames, name)
+		}
 	}
 
 	return
@@ -1482,34 +1737,20 @@ func (checker *Checker) declareSelfValue(selfType Type) {
 func (checker *Checker) checkNestedIdentifiers(members *ast.Members) {
 	positions := map[string]ast.Position{}
 
-	for _, field := range members.Fields() {
-		checker.checkNestedIdentifier(
-			field.Identifier,
-			common.DeclarationKindField,
-			positions,
-		)
-	}
+	for _, declaration := range members.Declarations {
 
-	for _, function := range members.Functions() {
-		checker.checkNestedIdentifier(
-			function.Identifier,
-			common.DeclarationKindFunction,
-			positions,
-		)
-	}
+		if _, ok := declaration.(*ast.SpecialFunctionDeclaration); ok {
+			continue
+		}
 
-	for _, interfaceDeclaration := range members.InterfaceDeclarations() {
-		checker.checkNestedIdentifier(
-			interfaceDeclaration.Identifier,
-			interfaceDeclaration.DeclarationKind(),
-			positions,
-		)
-	}
+		identifier := declaration.DeclarationIdentifier()
+		if identifier == nil {
+			continue
+		}
 
-	for _, compositeDeclaration := range members.CompositeDeclarations() {
 		checker.checkNestedIdentifier(
-			compositeDeclaration.Identifier,
-			compositeDeclaration.DeclarationKind(),
+			*identifier,
+			declaration.DeclarationKind(),
 			positions,
 		)
 	}
@@ -1556,6 +1797,12 @@ func (checker *Checker) checkNestedIdentifier(
 
 func (checker *Checker) VisitFieldDeclaration(_ *ast.FieldDeclaration) ast.Repr {
 	// NOTE: field type is already checked when determining composite function in `compositeType`
+
+	panic(errors.NewUnreachableError())
+}
+
+func (checker *Checker) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) ast.Repr {
+	// NOTE: already checked when checking the composite
 
 	panic(errors.NewUnreachableError())
 }

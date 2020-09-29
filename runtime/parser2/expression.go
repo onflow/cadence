@@ -339,7 +339,7 @@ func init() {
 	defineCastingExpression()
 
 	defineExpr(literalExpr{
-		tokenType: lexer.TokenBinaryLiteral,
+		tokenType: lexer.TokenBinaryIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
 			literal := token.Value.(string)
 			return parseIntegerLiteral(
@@ -353,7 +353,7 @@ func init() {
 	})
 
 	defineExpr(literalExpr{
-		tokenType: lexer.TokenOctalLiteral,
+		tokenType: lexer.TokenOctalIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
 			literal := token.Value.(string)
 			return parseIntegerLiteral(
@@ -367,7 +367,7 @@ func init() {
 	})
 
 	defineExpr(literalExpr{
-		tokenType: lexer.TokenDecimalLiteral,
+		tokenType: lexer.TokenDecimalIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
 			literal := token.Value.(string)
 			return parseIntegerLiteral(
@@ -381,7 +381,7 @@ func init() {
 	})
 
 	defineExpr(literalExpr{
-		tokenType: lexer.TokenHexadecimalLiteral,
+		tokenType: lexer.TokenHexadecimalIntegerLiteral,
 		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
 			literal := token.Value.(string)
 			return parseIntegerLiteral(
@@ -395,7 +395,21 @@ func init() {
 	})
 
 	defineExpr(literalExpr{
-		tokenType: lexer.TokenFixedPointLiteral,
+		tokenType: lexer.TokenUnknownBaseIntegerLiteral,
+		nullDenotation: func(p *parser, token lexer.Token) ast.Expression {
+			literal := token.Value.(string)
+			return parseIntegerLiteral(
+				p,
+				literal,
+				literal[2:],
+				IntegerLiteralKindUnknown,
+				token.Range,
+			)
+		},
+	})
+
+	defineExpr(literalExpr{
+		tokenType: lexer.TokenFixedPointNumberLiteral,
 		nullDenotation: func(_ *parser, token lexer.Token) ast.Expression {
 			return parseFixedPointLiteral(
 				token.Value.(string),
@@ -1473,10 +1487,29 @@ func parseIntegerLiteral(p *parser, literal, text string, kind IntegerLiteralKin
 
 	withoutUnderscores := strings.Replace(text, "_", "", -1)
 
-	base := kind.Base()
-	value, ok := new(big.Int).SetString(withoutUnderscores, base)
-	if !ok {
-		report(InvalidNumberLiteralKindUnknown)
+	var value *big.Int
+	var base int
+
+	if kind == IntegerLiteralKindUnknown {
+		base = 1
+
+		report(InvalidNumberLiteralKindUnknownPrefix)
+	} else {
+		base = kind.Base()
+
+		if withoutUnderscores == "" {
+			report(InvalidNumberLiteralKindMissingDigits)
+		} else {
+			var ok bool
+			value, ok = new(big.Int).SetString(withoutUnderscores, base)
+			if !ok {
+				report(InvalidNumberLiteralKindUnknown)
+			}
+		}
+	}
+
+	if value == nil {
+		value = new(big.Int)
 	}
 
 	return &ast.IntegerExpression{

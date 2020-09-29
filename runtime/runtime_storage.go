@@ -147,7 +147,8 @@ func (s *interpreterRuntimeStorage) readValue(
 		panic(err)
 	}
 
-	storedData = interpreter.StripMagic(storedData)
+	var version uint16
+	storedData, version = interpreter.StripMagic(storedData)
 
 	if len(storedData) == 0 {
 		s.cache[fullKey] = cacheEntry{
@@ -161,7 +162,7 @@ func (s *interpreterRuntimeStorage) readValue(
 
 	reportMetric(
 		func() {
-			storedValue, err = interpreter.DecodeValue(storedData, &address, []string{key})
+			storedValue, err = interpreter.DecodeValue(storedData, &address, []string{key}, version)
 		},
 		s.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
@@ -301,7 +302,7 @@ func (s *interpreterRuntimeStorage) writeCached(inter *interpreter.Interpreter) 
 		}
 
 		if len(newData) > 0 {
-			newData = interpreter.PrependMagic(newData)
+			newData = interpreter.PrependMagic(newData, interpreter.CurrentEncodingVersion)
 		}
 
 		var err error

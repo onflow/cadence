@@ -245,11 +245,20 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		transactionType.Parameters = checker.parameters(declaration.ParameterList)
 	}
 
-	members, fields, origins := checker.nonEventMembersAndOrigins(
+	declarations := make([]ast.Declaration, len(declaration.Fields))
+	for i, field := range declaration.Fields {
+		declarations[i] = field
+	}
+
+	allMembers := &ast.Members{
+		Declarations: declarations,
+	}
+
+	members, fields, origins := checker.defaultMembersAndOrigins(
+		allMembers,
 		transactionType,
-		declaration.Fields,
-		nil,
 		ContainerKindComposite,
+		declaration.DeclarationKind(),
 	)
 
 	transactionType.Members = members

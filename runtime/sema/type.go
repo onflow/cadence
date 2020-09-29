@@ -4741,6 +4741,11 @@ func init() {
 
 // CompositeType
 
+type EnumInfo struct {
+	RawType Type
+	Cases   []string
+}
+
 type CompositeType struct {
 	Location   ast.Location
 	Identifier string
@@ -4755,6 +4760,7 @@ type CompositeType struct {
 	ConstructorParameters []*Parameter
 	nestedTypes           map[string]Type
 	ContainerType         Type
+	EnumRawType           Type
 }
 
 func (t *CompositeType) ExplicitInterfaceConformanceSet() InterfaceSet {
@@ -4869,9 +4875,9 @@ func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
-func (*CompositeType) IsEquatable() bool {
-	// TODO:
-	return false
+func (t *CompositeType) IsEquatable() bool {
+	// TODO: add support for more composite kinds
+	return t.Kind == common.CompositeKindEnum
 }
 
 func (*CompositeType) TypeAnnotationState() TypeAnnotationState {
@@ -5565,10 +5571,11 @@ func (t *PublicAccountType) Resolve(_ map[*TypeParameter]Type) Type {
 // Member
 
 type Member struct {
-	ContainerType   Type
-	Access          ast.Access
-	Identifier      ast.Identifier
-	TypeAnnotation  *TypeAnnotation
+	ContainerType  Type
+	Access         ast.Access
+	Identifier     ast.Identifier
+	TypeAnnotation *TypeAnnotation
+	// TODO: replace with dedicated MemberKind enum
 	DeclarationKind common.DeclarationKind
 	VariableKind    ast.VariableKind
 	ArgumentLabels  []string

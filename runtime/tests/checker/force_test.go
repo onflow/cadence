@@ -52,16 +52,14 @@ func TestCheckForce(t *testing.T) {
 
 	})
 
-	t.Run("invalid: non-optional", func(t *testing.T) {
+	t.Run("non-optional", func(t *testing.T) {
 
 		checker, err := ParseAndCheck(t, `
           let x: Int = 1
           let y = x!
         `)
 
-		errs := ExpectCheckerErrors(t, err, 1)
-
-		assert.IsType(t, &sema.NonOptionalForceError{}, errs[0])
+		require.NoError(t, err)
 
 		assert.Equal(t,
 			&sema.IntType{},
@@ -72,6 +70,11 @@ func TestCheckForce(t *testing.T) {
 			&sema.IntType{},
 			checker.GlobalValues["y"].Type,
 		)
+
+		hints := checker.Hints()
+
+		require.Len(t, hints, 1)
+		require.IsType(t, &sema.RemovalHint{}, hints[0])
 	})
 
 	t.Run("invalid: force resource multiple times", func(t *testing.T) {
