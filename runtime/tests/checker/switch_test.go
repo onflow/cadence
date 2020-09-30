@@ -84,12 +84,15 @@ func TestCheckInvalidSwitchStatementCaseExpression(t *testing.T) {
 	_, err := ParseAndCheck(t, `
       struct S {}
 
-      fun test() {
+      fun test(): Int {
           let s = S()
 
           switch true {
           case s:
+              return 1
           }
+
+          return 2
       }
     `)
 
@@ -107,9 +110,10 @@ func TestCheckInvalidSwitchStatementCaseExpressionInvalidTest(t *testing.T) {
 
       fun test() {
           let s = S()
-
+          var y = 0
           switch x {
           case s:
+              y = 1
           }
       }
     `)
@@ -236,11 +240,12 @@ func TestCheckInvalidSwitchStatementDefaultPosition(t *testing.T) {
 	_, err := ParseAndCheck(t, `
 
       fun test() {
+          var x = 0
           switch true {
           default:
-              // ...
+              x = 1
           case true:
-              // ...
+              x = 2
           }
       }
     `)
@@ -257,11 +262,12 @@ func TestCheckInvalidSwitchStatementDefaultDuplicate(t *testing.T) {
 	_, err := ParseAndCheck(t, `
 
       fun test() {
+          var x = 0
           switch true {
           default:
-              // ...
+              x = 1
           default:
-              // ...
+              x = 2
           }
       }
     `)
@@ -290,4 +296,63 @@ func TestCheckSwitchStatementCaseScope(t *testing.T) {
 	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[0])
+}
+
+func TestCheckSwitchStatementBreakStatement(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+
+      fun test(_ x: Int) {
+          switch x {
+          case 1:
+              break
+          default:
+              break
+          }
+      }
+    `)
+
+	require.NoError(t, err)
+}
+
+func TestCheckInvalidSwitchStatementContinueStatement(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+
+      fun test(_ x: Int) {
+          switch x {
+          case 1:
+              continue
+          default:
+              continue
+          }
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 2)
+
+	assert.IsType(t, &sema.ControlStatementError{}, errs[0])
+	assert.IsType(t, &sema.ControlStatementError{}, errs[1])
+}
+
+func TestCheckInvalidSwitchStatementMissingStatements(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+
+      fun test(_ x: Int) {
+          switch x {
+          case 1:
+          }
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.MissingSwitchCaseStatementsError{}, errs[0])
 }

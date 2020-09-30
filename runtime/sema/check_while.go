@@ -118,7 +118,7 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) ast.R
 
 	// check statement is inside loop
 
-	if !checker.inLoop() {
+	if !(checker.inLoop() || checker.inSwitch()) {
 		checker.report(
 			&ControlStatementError{
 				ControlStatement: common.ControlStatementBreak,

@@ -49,7 +49,9 @@ func (checker *Checker) VisitSwitchStatement(statement *ast.SwitchStatement) ast
 		checker.visitSwitchCase(switchCase, defaultAllowed, testType, testTypeIsValid)
 	}
 
-	checker.checkSwitchCasesStatements(statement.Cases)
+	checker.functionActivations.WithSwitch(func() {
+		checker.checkSwitchCasesStatements(statement.Cases)
+	})
 
 	return nil
 }
@@ -156,7 +158,16 @@ func (checker *Checker) checkSwitchCasesStatements(cases []*ast.SwitchCase) {
 }
 
 func (checker *Checker) checkSwitchCaseStatements(switchCase *ast.SwitchCase) {
+
+	// Switch-cases must have at least one statement.
+	// This avoids cases that look like implicit fallthrough is assumed.
+
 	if len(switchCase.Statements) == 0 {
+		checker.report(
+			&MissingSwitchCaseStatementsError{
+				Pos: switchCase.EndPosition().Shifted(1),
+			},
+		)
 		return
 	}
 

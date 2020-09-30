@@ -36,13 +36,13 @@ type controlReturn interface {
 	isControlReturn()
 }
 
-type loopBreak struct{}
+type controlBreak struct{}
 
-func (loopBreak) isControlReturn() {}
+func (controlBreak) isControlReturn() {}
 
-type loopContinue struct{}
+type controlContinue struct{}
 
-func (loopContinue) isControlReturn() {}
+func (controlContinue) isControlReturn() {}
 
 type functionReturn struct {
 	Value
@@ -1097,11 +1097,11 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 }
 
 func (interpreter *Interpreter) VisitBreakStatement(_ *ast.BreakStatement) ast.Repr {
-	return Done{Result: loopBreak{}}
+	return Done{Result: controlBreak{}}
 }
 
 func (interpreter *Interpreter) VisitContinueStatement(_ *ast.ContinueStatement) ast.Repr {
-	return Done{Result: loopContinue{}}
+	return Done{Result: controlContinue{}}
 }
 
 func (interpreter *Interpreter) VisitIfStatement(statement *ast.IfStatement) ast.Repr {
@@ -1188,7 +1188,15 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 				Statements: switchCase.Statements,
 			}
 
-			return block.Accept(interpreter).(Trampoline)
+			return block.Accept(interpreter).(Trampoline).
+				FlatMap(func(value interface{}) Trampoline {
+
+					if _, ok := value.(controlBreak); ok {
+						return Done{}
+					}
+
+					return Done{Result: value}
+				})
 		}
 
 		// If the case has no expression it is the default case.
@@ -1241,10 +1249,10 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 				FlatMap(func(value interface{}) Trampoline {
 
 					switch value.(type) {
-					case loopBreak:
+					case controlBreak:
 						return Done{}
 
-					case loopContinue:
+					case controlContinue:
 						// NO-OP
 
 					case functionReturn:
@@ -1280,10 +1288,10 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 			FlatMap(func(value interface{}) Trampoline {
 
 				switch value.(type) {
-				case loopBreak:
+				case controlBreak:
 					return Done{}
 
-				case loopContinue:
+				case controlContinue:
 					// NO-OP
 
 				case functionReturn:
