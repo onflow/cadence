@@ -116,7 +116,7 @@ func (checker *Checker) reportResourceUsesInLoop(startPos, endPos ast.Position) 
 
 func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) ast.Repr {
 
-	// check statement is inside loop
+	// Ensure that the `break` statement is inside a loop or switch statement
 
 	if !(checker.inLoop() || checker.inSwitch()) {
 		checker.report(
@@ -132,7 +132,7 @@ func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) ast.R
 
 func (checker *Checker) VisitContinueStatement(statement *ast.ContinueStatement) ast.Repr {
 
-	// check statement is inside loop
+	// Ensure that the `continue` statement is inside a loop statement
 
 	if !checker.inLoop() {
 		checker.report(
