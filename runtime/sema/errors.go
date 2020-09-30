@@ -480,7 +480,7 @@ type ControlStatementError struct {
 
 func (e *ControlStatementError) Error() string {
 	return fmt.Sprintf(
-		"control statement outside of loop: `%s`",
+		"invalid control statement: `%s`",
 		e.ControlStatement.Symbol(),
 	)
 }
@@ -2887,3 +2887,23 @@ func (e *SwitchDefaultPositionError) Error() string {
 }
 
 func (*SwitchDefaultPositionError) isSemanticError() {}
+
+// MissingSwitchCaseStatementsError
+
+type MissingSwitchCaseStatementsError struct {
+	Pos ast.Position
+}
+
+func (e *MissingSwitchCaseStatementsError) Error() string {
+	return "switch cases must have at least one statement"
+}
+
+func (*MissingSwitchCaseStatementsError) isSemanticError() {}
+
+func (e *MissingSwitchCaseStatementsError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingSwitchCaseStatementsError) EndPosition() ast.Position {
+	return e.Pos
+}

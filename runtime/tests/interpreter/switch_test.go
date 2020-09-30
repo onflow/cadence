@@ -108,4 +108,44 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			assert.Equal(t, actual, expected)
 		}
 	})
+
+	t.Run("break", func(t *testing.T) {
+
+		inter := parseCheckAndInterpretWithOptions(t,
+			`
+              fun test(_ x: Int): String {
+                  switch x {
+                  case 1:
+                      break
+                      return "1"
+                  case 2:
+                      return "2"
+                  default:
+                      return "3"
+                  }
+                  return "4"
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					errs := checker.ExpectCheckerErrors(t, err, 1)
+
+					assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+				},
+			},
+		)
+
+		for argument, expected := range map[interpreter.Value]interpreter.Value{
+			interpreter.NewIntValueFromInt64(1): interpreter.NewStringValue("4"),
+			interpreter.NewIntValueFromInt64(2): interpreter.NewStringValue("2"),
+			interpreter.NewIntValueFromInt64(3): interpreter.NewStringValue("3"),
+			interpreter.NewIntValueFromInt64(4): interpreter.NewStringValue("3"),
+		} {
+
+			actual, err := inter.Invoke("test", argument)
+			require.NoError(t, err)
+
+			assert.Equal(t, actual, expected)
+		}
+	})
 }
