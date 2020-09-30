@@ -1294,6 +1294,40 @@ destroy old2
 destroy resources
 ```
 
+### Resource Identifier
+
+Resources have an impicit unique identifier associated with them,
+all resources have a predeclared public field `let uuid: UInt64`.
+
+This identifier will be automatically set when the resource is created,
+and will be unique even after the resource is destroyed,
+i.e. no two resources will ever have the same identifier.
+
+```cadence
+// Declare a resource without any fields.
+resource R {}
+
+// Create two resources
+let r1 <- create R()
+let r2 <- create R()
+
+// Get each resource's unique identifiier
+let id1 = r1.uuid
+let id2 = r2.uuid
+
+// Destroy the first resource
+destroy r1
+
+// Create a third resource
+let r3 <- create R()
+
+let id3 = r3.uuid
+
+id1 != id2  // true
+id2 != id3  // true
+id3 != id1  // true
+```
+
 ## Unbound References / Nulls
 
 There is **no** support for `null`.
