@@ -11,7 +11,8 @@ If-statements allow a certain piece of code to be executed only when a given con
 The if-statement starts with the `if` keyword, followed by the condition,
 and the code that should be executed if the condition is true
 inside opening and closing braces.
-The condition must be boolean and the braces are required.
+The condition expression must be boolean.
+The braces are required and not optional.
 Parentheses around the condition are optional.
 
 ```cadence
@@ -112,6 +113,78 @@ if let number = noNumber {
 }
 ```
 
+## Switch
+
+Switch-statements compare a value against several possible values of the same type, in order.
+When an equal value is found, the associated block of code is executed.
+
+The switch-statement starts with the `switch` keyword, followed by the tested value,
+followed by the cases inside opening and closing braces.
+The test expression must be equatable.
+The braces are required and not optional.
+
+Each case is a separate branch of code execution
+and starts with the `case` keyword,
+followed by a possible value, a colon (`:`),
+and the block of code that should be executed
+if the case's value is equal to the tested value.
+
+The block of code associated with a switch case
+[does not implicitly fall through](#no-implicit-fallthrough),
+and must contain at least one statement.
+Empty blocks are invalid.
+
+An optional default case may be given by using the `default` keyword.
+The block of code of the default case is executed
+when none of the previous case tests succeeded.
+It must always appear last.
+
+```cadence
+fun word(_ n: Int): String {
+    // Test the value of the parameter `n`
+    switch n {
+    case 1:
+        // If the value of variable `n` is equal to `1`,
+        // then return the string "one"
+        return "one"
+    case 2:
+        // If the value of variable `n` is equal to `1`,
+        // then return the string "two"
+        return "two"
+    default:
+        // If the value of variable `n` is neither equal to `1` nor to `2`,
+        // then return the string "other"
+        return "other"
+    }
+}
+```
+
+### `break`
+
+The block of code associated with a switch case may contain a `break` statement.
+It ends the execution of the switch statement immediately
+and transfers control to the code after the switch statement
+
+### No Implicit Fallthrough
+
+Unlike switch statements in some other languages,
+switch statements in Cadence do not "fall through":
+execution of the switch statement finishes as soon as the block of code
+associated with the first matching case is completed.
+No explicit `break` statement is required.
+
+This makes the switch statement safer and easier to use,
+avoiding the accidental execution of more than one switch case.
+
+Some other languages implicitly fall through
+to the block of code associated with the next case,
+so it is common to write cases with an empty block
+to handle multiple values in the same way.
+
+To prevent developers from writing switch statements
+that assume this behaviour, blocks must have at least one statement.
+Empty blocks are invalid.
+
 ## Looping
 
 ### while-statement
@@ -126,7 +199,7 @@ The condition must be boolean and the braces are required.
 
 The while-statement will first evaluate the condition.
 If it is true, the piece of code is executed and the evaluation of the condition is repeated.
-If the condition is false, the piece of code is not executed 
+If the condition is false, the piece of code is not executed
 and the execution of the whole while-statement is finished.
 Thus, the piece of code is executed zero or more times.
 
@@ -170,7 +243,7 @@ for element in array {
 
 ```
 
-### continue and break
+### `continue` and `break`
 
 In for-loops and while-loops, the `continue` statement can be used to stop
 the current iteration of a loop and start the next iteration.
