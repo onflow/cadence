@@ -66,7 +66,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			assert.Equal(t, actual, expected)
+			assert.Equal(t, expected, actual)
 		}
 	})
 
@@ -105,7 +105,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			assert.Equal(t, actual, expected)
+			assert.Equal(t, expected, actual)
 		}
 	})
 
@@ -145,7 +145,46 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			assert.Equal(t, actual, expected)
+			assert.Equal(t, expected, actual)
+		}
+	})
+
+	t.Run("no-implicit fallthrough", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t, `
+          fun test(_ x: Int): [String] {
+              let results: [String] = []
+              switch x {
+              case 1:
+                  results.append("1")
+              case 2:
+                  results.append("2")
+              default:
+                  results.append("3")
+              }
+              return results
+          }
+        `)
+
+		for argument, expected := range map[interpreter.Value]interpreter.Value{
+			interpreter.NewIntValueFromInt64(1): interpreter.NewArrayValueUnownedNonCopying(
+				interpreter.NewStringValue("1"),
+			),
+			interpreter.NewIntValueFromInt64(2): interpreter.NewArrayValueUnownedNonCopying(
+				interpreter.NewStringValue("2"),
+			),
+			interpreter.NewIntValueFromInt64(3): interpreter.NewArrayValueUnownedNonCopying(
+				interpreter.NewStringValue("3"),
+			),
+			interpreter.NewIntValueFromInt64(4): interpreter.NewArrayValueUnownedNonCopying(
+				interpreter.NewStringValue("3"),
+			),
+		} {
+
+			actual, err := inter.Invoke("test", argument)
+			require.NoError(t, err)
+
+			assert.Equal(t, expected, actual)
 		}
 	})
 }

@@ -218,6 +218,36 @@ To prevent developers from writing switch statements
 that assume this behaviour, blocks must have at least one statement.
 Empty blocks are invalid.
 
+```cadence
+fun words(_ n: Int): [String] {
+    // Declare a variable named `result`, an array of strings,
+    // which stores the result
+    let result: [String] = []
+
+    // Test the value of the parameter `n`
+    switch n {
+    case 1:
+        // If the value of variable `n` is equal to `1`,
+        // then append the string "one" to the result array
+        result.append("one")
+    case 2:
+        // If the value of variable `n` is equal to `2`,
+        // then append the string "two" to the result array
+        result.append("two")
+    default:
+        // If the value of variable `n` is neither equal to `1` nor to `2`,
+        // then append the string "other" to the result array
+        result.append("other")
+    }
+    return result
+}
+
+words(1)  // returns `["one"]`
+words(2)  // returns `["two"]`
+words(3)  // returns `["other"]`
+words(4)  // returns `["other"]`
+```
+
 ## Looping
 
 ### while-statement
