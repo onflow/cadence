@@ -148,7 +148,7 @@ fun word(_ n: Int): String {
         // then return the string "one"
         return "one"
     case 2:
-        // If the value of variable `n` is equal to `1`,
+        // If the value of variable `n` is equal to `2`,
         // then return the string "two"
         return "two"
     default:
@@ -157,6 +157,39 @@ fun word(_ n: Int): String {
         return "other"
     }
 }
+
+word(1)  // returns "one"
+word(2)  // returns "two"
+word(3)  // returns "other"
+word(4)  // returns "other"
+```
+
+### Duplicate cases
+
+Cases are tested in order, so if a case is duplicated,
+the block of code associated with the first case that succeeds is executed.
+
+```cadence
+fun test(_ n: Int): String {
+    // Test the value of the parameter `n`
+    switch n {
+    case 1:
+        // If the value of variable `n` is equal to `1`,
+        // then return the string "one"
+        return "one"
+    case 1:
+        // If the value of variable `n` is equal to `1`,
+        // then return the string "also one".
+        // This is a duplicate case for the one above.
+        return "also one"
+    default:
+        // If the value of variable `n` is neither equal to `1` nor to `2`,
+        // then return the string "other"
+        return "other"
+    }
+}
+
+word(1) // returns "one", not "also one"
 ```
 
 ### `break`
