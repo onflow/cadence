@@ -1,5 +1,16 @@
+# v0.8.2 (2020-08-28)
 
-# v0.8.0
+## 🐞 Bug Fixes
+
+- Copy values on return (#355)
+
+# v0.8.1 (2020-08-24)
+
+## 🐞 Bug Fixes
+
+- Validate script argument count (#316)
+
+# v0.8.0 (2020-08-10)
 
 This release focuses on improvements, bug fixes, and bringing the documentation up-to-date.
 
@@ -48,7 +59,7 @@ This release focuses on improvements, bug fixes, and bringing the documentation 
   myEvent := cadence.NewEvent(...).WithType(&myEventType)
   ```
 
-# v0.7.0
+# v0.7.0 (2020-08-05)
 
 This release contains a lot of improvements to the language server, which improve the development experience in the Visual Studio Code extension, and will also soon be integrated into the Flow Playground.
 
@@ -91,7 +102,7 @@ This release contains a lot of improvements to the language server, which improv
 
 - Removed the old parser (#249)
 
-# v0.6.0
+# v0.6.0 (2020-07-14)
 
 This is a small release with some bug fixes, internal improvements, and one breaking change for code that embeds Cadence.
 
@@ -141,7 +152,7 @@ This is a small release with some bug fixes, internal improvements, and one brea
 - Fixed handling of functions in composite values in the JSON-CDC encoding
 - Fixed a potential stack overflow when checking member storability
 
-# v0.5.0
+# v0.5.0 (2020-07-10)
 
 ## ⭐ Features and Improvements
 
@@ -420,7 +431,7 @@ myAccount.addPublicKey([1, 2, 3])
 Consider using `String.decodeHex()` for now until type inference has been improved.
 
 
-# v0.4.0
+# v0.4.0 (2020-06-02)
 
 ## 💥 Breaking Changes
 
@@ -438,7 +449,7 @@ Consider using `String.decodeHex()` for now until type inference has been improv
 - Fixed order of declaring conformances and usages
 - Fixed detection of resource losses in invocation of optional chaining result
 
-# v0.3.0
+# v0.3.0 (2020-05-26)
 
 ## 💥 Breaking Changes
 
