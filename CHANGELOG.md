@@ -1,3 +1,84 @@
+# v0.10.0 (2020-10-01)
+
+## 💥 Breaking Changes
+
+### Contract Deployment
+
+This release adds support for deploying multiple contracts per account.
+The API for deploying has changed:
+
+- The functions `AuthAccount.setCode` and `AuthAccount.unsafeNotInitializingSetCode` were removed (#390).
+- A [new contract management API](https://docs.onflow.org/cadence/language/contracts/#deploying-updating-and-removing-contracts) has been added, which allows adding, updating, and removing multiple contracts per account (#333, #352).
+
+  See the [updated documentation](https://docs.onflow.org/cadence/language/contracts/#deploying-updating-and-removing-contracts) for details and examples.
+
+## ⭐ Features
+
+## Enumerations
+
+This release adds support for enumerations (#344).
+
+For example, a days-of-the-week enum can be declared though:
+
+```swift
+enum Day: UInt8 {
+    case Monday
+    case Tuesday
+    case Wednesday
+    case Thursday
+    case Friday
+    case Saturday
+    case Sunday
+}
+```
+
+See the [documentation](https://docs.onflow.org/cadence/language/enumerations/) for further details and examples.
+
+## Switch Statement
+
+This release adds support for switch statements (#365).
+
+```swift
+fun describe(number: Int): String {
+    switch number {
+    case 1:
+        return "one"
+    case 2:
+        return "two"
+    default:
+        return "other"
+    }
+}
+```
+
+See the [documentation](https://docs.onflow.org/cadence/language/control-flow/#switch) for further details and examples.
+
+## Code Formatter
+
+Development of a code formatter has started, in form of a plugin for Prettier (#348).
+If you would like to contribute, please let us know!
+
+## 🛠 Improvements
+
+- Limitations on data structure complexity are now enforced when decoding and also when encoding storage data, e.g number of array elements, number of dictionary entries, etc. (#370)
+- Using the force-unwrap operator on a non-optional is no longer an error, but a hint is reported suggesting the removal of the unnecessary operation (#347)
+- Language Server: The features requiring a Flow client connection are now optional. This allows using the language server in editors other than Visual Studio Code, such as Emacs, Vim, etc. (#303)
+
+## 🐞 Bug Fixes
+
+- Fixed the encoding of bignums in storage (#370)
+- Fixed the timing of recording composite-type explicit-conformances (#356)
+- Added support for exporting and JSON encoding/decoding of type values and capabilities (#374)
+- Added support for exporting/importing and JSON encoding/decoding of path values (#319)
+- Fixed the handling of empty integer literals in the checker (#354)
+- Fixed the non-storable fields error (#350)
+
+## 📖 Documentation
+
+- Added a [roadmap describing planned features and ideas](https://github.com/onflow/cadence/blob/master/ROADMAP.md) (#367)
+- Various documentation improvements (#385). Thanks to @andrejtokarcik for contributing this!
+
+
 # v0.8.2 (2020-08-28)
 
 ## 🐞 Bug Fixes
