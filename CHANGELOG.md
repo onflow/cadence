@@ -14,7 +14,7 @@ The API for deploying has changed:
 
 ## ⭐ Features
 
-## Enumerations
+### Enumerations
 
 This release adds support for enumerations (#344).
 
@@ -34,7 +34,7 @@ enum Day: UInt8 {
 
 See the [documentation](https://docs.onflow.org/cadence/language/enumerations/) for further details and examples.
 
-## Switch Statement
+### Switch Statement
 
 This release adds support for switch statements (#365).
 
@@ -53,7 +53,7 @@ fun describe(number: Int): String {
 
 See the [documentation](https://docs.onflow.org/cadence/language/control-flow/#switch) for further details and examples.
 
-## Code Formatter
+### Code Formatter
 
 Development of a code formatter has started, in form of a plugin for Prettier (#348).
 If you would like to contribute, please let us know!
