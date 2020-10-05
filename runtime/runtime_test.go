@@ -3185,7 +3185,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 				} else {
 					require.Error(t, err)
 					require.IsType(t, Error{}, err)
-					assert.IsType(t, &interpreter.ConditionError{}, err.(Error).Err)
+					assert.IsType(t, interpreter.ConditionError{}, err.(Error).Err)
 				}
 			})
 		}

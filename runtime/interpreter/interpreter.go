@@ -719,7 +719,7 @@ func (interpreter *Interpreter) prepareInvokeVariable(
 	// function must be defined as a global variable
 	variable, ok := interpreter.Globals[functionName]
 	if !ok {
-		return nil, &NotDeclaredError{
+		return nil, NotDeclaredError{
 			ExpectedKind: common.DeclarationKindFunction,
 			Name:         functionName,
 		}
@@ -730,7 +730,7 @@ func (interpreter *Interpreter) prepareInvokeVariable(
 	// the global variable must be declared as a function
 	functionValue, ok := variableValue.(FunctionValue)
 	if !ok {
-		return nil, &NotInvokableError{
+		return nil, NotInvokableError{
 			Value: variableValue,
 		}
 	}
@@ -741,7 +741,7 @@ func (interpreter *Interpreter) prepareInvokeVariable(
 	invokableType, ok := ty.(sema.InvokableType)
 
 	if !ok {
-		return nil, &NotInvokableError{
+		return nil, NotInvokableError{
 			Value: variableValue,
 		}
 	}
@@ -756,7 +756,7 @@ func (interpreter *Interpreter) prepareInvokeTransaction(
 	arguments []Value,
 ) (trampoline Trampoline, err error) {
 	if index >= len(interpreter.Transactions) {
-		return nil, &TransactionNotDeclaredError{Index: index}
+		return nil, TransactionNotDeclaredError{Index: index}
 	}
 
 	functionValue := interpreter.Transactions[index]
@@ -787,7 +787,7 @@ func (interpreter *Interpreter) prepareInvoke(
 		if functionType.RequiredArgumentCount == nil ||
 			argumentCount < *functionType.RequiredArgumentCount {
 
-			return nil, &ArgumentCountError{
+			return nil, ArgumentCountError{
 				ParameterCount: parameterCount,
 				ArgumentCount:  argumentCount,
 			}
@@ -800,7 +800,7 @@ func (interpreter *Interpreter) prepareInvoke(
 		// TODO: value type is not known, reject for now
 		switch parameterType.(type) {
 		case *sema.AnyStructType, *sema.AnyResourceType:
-			return nil, &NotInvokableError{
+			return nil, NotInvokableError{
 				Value: functionValue,
 			}
 		}
@@ -936,7 +936,7 @@ func (interpreter *Interpreter) functionDeclarationValue(
 // NOTE: consider using NewInterpreter if the value should be predefined in all programs
 func (interpreter *Interpreter) ImportValue(name string, value Value) error {
 	if _, ok := interpreter.Globals[name]; ok {
-		return &RedeclarationError{
+		return RedeclarationError{
 			Name: name,
 		}
 	}
@@ -1059,7 +1059,7 @@ func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) Tra
 					Then(func(result interface{}) {
 						message := result.(*StringValue).Str
 
-						panic(&ConditionError{
+						panic(ConditionError{
 							ConditionKind: condition.Kind,
 							Message:       message,
 							LocationRange: interpreter.locationRange(condition.Test),
@@ -1355,7 +1355,7 @@ func (interpreter *Interpreter) visitAssignment(
 				if _, ok := target.(NilValue); !ok {
 					locationRange := interpreter.locationRange(position)
 
-					panic(&ForceAssignmentToNonNilResourceError{
+					panic(ForceAssignmentToNonNilResourceError{
 						LocationRange: locationRange,
 					})
 				}
@@ -3329,7 +3329,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 				case ast.OperationForceCast:
 					if !isSubType {
 						panic(
-							&TypeMismatchError{
+							TypeMismatchError{
 								ExpectedType:  expectedType,
 								LocationRange: interpreter.locationRange(expression.Expression),
 							},
@@ -3390,7 +3390,7 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 
 			case NilValue:
 				panic(
-					&ForceNilError{
+					ForceNilError{
 						LocationRange: interpreter.locationRange(expression.Expression),
 					},
 				)
@@ -3717,7 +3717,7 @@ func mustPathDomain(
 	}
 
 	panic(
-		&InvalidPathDomainError{
+		InvalidPathDomainError{
 			ActualDomain:    path.Domain,
 			ExpectedDomains: expectedDomains,
 			LocationRange:   locationRange,
@@ -3758,7 +3758,7 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 		if interpreter.storedValueExists(address, key) {
 			panic(
-				&OverwriteError{
+				OverwriteError{
 					Address:       addressValue,
 					Path:          path,
 					LocationRange: invocation.LocationRange,
@@ -4143,7 +4143,7 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 		// Detect cyclic links
 
 		if _, ok := seenKeys[key]; ok {
-			panic(&CyclicLinkError{
+			panic(CyclicLinkError{
 				Address:       addressValue,
 				Paths:         paths,
 				LocationRange: locationRange,

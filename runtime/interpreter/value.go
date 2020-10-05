@@ -5294,7 +5294,7 @@ func (v *CompositeValue) Copy() Value {
 
 func (v *CompositeValue) checkStatus(locationRange LocationRange) {
 	if v.destroyed {
-		panic(&DestroyedCompositeError{
+		panic(DestroyedCompositeError{
 			CompositeKind: v.Kind,
 			LocationRange: locationRange,
 		})
@@ -6026,7 +6026,7 @@ func (v *StorageReferenceValue) String() string {
 func (v *StorageReferenceValue) DynamicType(interpreter *Interpreter) DynamicType {
 	referencedValue := v.referencedValue(interpreter)
 	if referencedValue == nil {
-		panic(&DereferenceError{})
+		panic(DereferenceError{})
 	}
 
 	innerType := (*referencedValue).DynamicType(interpreter)
@@ -6076,7 +6076,7 @@ func (v *StorageReferenceValue) referencedValue(interpreter *Interpreter) *Value
 func (v *StorageReferenceValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
 	referencedValue := v.referencedValue(interpreter)
 	if referencedValue == nil {
-		panic(&DereferenceError{
+		panic(DereferenceError{
 			LocationRange: locationRange,
 		})
 	}
@@ -6087,7 +6087,7 @@ func (v *StorageReferenceValue) GetMember(interpreter *Interpreter, locationRang
 func (v *StorageReferenceValue) SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) {
 	referencedValue := v.referencedValue(interpreter)
 	if referencedValue == nil {
-		panic(&DereferenceError{
+		panic(DereferenceError{
 			LocationRange: locationRange,
 		})
 	}
@@ -6098,7 +6098,7 @@ func (v *StorageReferenceValue) SetMember(interpreter *Interpreter, locationRang
 func (v *StorageReferenceValue) Get(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
 	referencedValue := v.referencedValue(interpreter)
 	if referencedValue == nil {
-		panic(&DereferenceError{
+		panic(DereferenceError{
 			LocationRange: locationRange,
 		})
 	}
@@ -6110,7 +6110,7 @@ func (v *StorageReferenceValue) Get(interpreter *Interpreter, locationRange Loca
 func (v *StorageReferenceValue) Set(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
 	referencedValue := v.referencedValue(interpreter)
 	if referencedValue == nil {
-		panic(&DereferenceError{
+		panic(DereferenceError{
 			LocationRange: locationRange,
 		})
 	}
@@ -6146,7 +6146,7 @@ func (v *EphemeralReferenceValue) String() string {
 func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter) DynamicType {
 	referencedValue := v.referencedValue()
 	if referencedValue == nil {
-		panic(&DereferenceError{})
+		panic(DereferenceError{})
 	}
 
 	innerType := (*referencedValue).DynamicType(interpreter)
@@ -6195,7 +6195,7 @@ func (v *EphemeralReferenceValue) referencedValue() *Value {
 func (v *EphemeralReferenceValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
 	referencedValue := v.referencedValue()
 	if referencedValue == nil {
-		panic(&DereferenceError{
+		panic(DereferenceError{
 			LocationRange: locationRange,
 		})
 	}
@@ -6206,7 +6206,7 @@ func (v *EphemeralReferenceValue) GetMember(interpreter *Interpreter, locationRa
 func (v *EphemeralReferenceValue) SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) {
 	referencedValue := v.referencedValue()
 	if referencedValue == nil {
-		panic(&DereferenceError{
+		panic(DereferenceError{
 			LocationRange: locationRange,
 		})
 	}
@@ -6217,7 +6217,7 @@ func (v *EphemeralReferenceValue) SetMember(interpreter *Interpreter, locationRa
 func (v *EphemeralReferenceValue) Get(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
 	referencedValue := v.referencedValue()
 	if referencedValue == nil {
-		panic(&DereferenceError{
+		panic(DereferenceError{
 			LocationRange: locationRange,
 		})
 	}
@@ -6229,7 +6229,7 @@ func (v *EphemeralReferenceValue) Get(interpreter *Interpreter, locationRange Lo
 func (v *EphemeralReferenceValue) Set(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
 	referencedValue := v.referencedValue()
 	if referencedValue == nil {
-		panic(&DereferenceError{
+		panic(DereferenceError{
 			LocationRange: locationRange,
 		})
 	}

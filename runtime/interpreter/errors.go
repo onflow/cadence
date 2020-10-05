@@ -61,7 +61,7 @@ type NotDeclaredError struct {
 	Name         string
 }
 
-func (e *NotDeclaredError) Error() string {
+func (e NotDeclaredError) Error() string {
 	return fmt.Sprintf(
 		"cannot find %s in this scope: `%s`",
 		e.ExpectedKind.Name(),
@@ -69,7 +69,7 @@ func (e *NotDeclaredError) Error() string {
 	)
 }
 
-func (e *NotDeclaredError) SecondaryError() string {
+func (e NotDeclaredError) SecondaryError() string {
 	return "not found in this scope"
 }
 
@@ -79,7 +79,7 @@ type NotInvokableError struct {
 	Value Value
 }
 
-func (e *NotInvokableError) Error() string {
+func (e NotInvokableError) Error() string {
 	return fmt.Sprintf("cannot call value: %#+v", e.Value)
 }
 
@@ -90,22 +90,12 @@ type ArgumentCountError struct {
 	ArgumentCount  int
 }
 
-func (e *ArgumentCountError) Error() string {
+func (e ArgumentCountError) Error() string {
 	return fmt.Sprintf(
 		"incorrect number of arguments: expected %d, got %d",
 		e.ParameterCount,
 		e.ArgumentCount,
 	)
-}
-
-// InvalidParameterTypeInInvocationError
-
-type InvalidParameterTypeInInvocationError struct {
-	InvalidParameterType sema.Type
-}
-
-func (e *InvalidParameterTypeInInvocationError) Error() string {
-	return fmt.Sprintf("cannot invoke functions with parameter type: `%s`", e.InvalidParameterType)
 }
 
 // TransactionNotDeclaredError
@@ -114,7 +104,7 @@ type TransactionNotDeclaredError struct {
 	Index int
 }
 
-func (e *TransactionNotDeclaredError) Error() string {
+func (e TransactionNotDeclaredError) Error() string {
 	return fmt.Sprintf(
 		"cannot find transaction with index %d in this scope",
 		e.Index,
@@ -129,7 +119,7 @@ type ConditionError struct {
 	LocationRange
 }
 
-func (e *ConditionError) Error() string {
+func (e ConditionError) Error() string {
 	if e.Message == "" {
 		return fmt.Sprintf("%s failed", e.ConditionKind.Name())
 	}
@@ -142,7 +132,7 @@ type RedeclarationError struct {
 	Name string
 }
 
-func (e *RedeclarationError) Error() string {
+func (e RedeclarationError) Error() string {
 	return fmt.Sprintf("cannot redeclare: `%s` is already declared", e.Name)
 }
 
@@ -152,7 +142,7 @@ type DereferenceError struct {
 	LocationRange
 }
 
-func (e *DereferenceError) Error() string {
+func (e DereferenceError) Error() string {
 	return "dereference failed"
 }
 
@@ -187,7 +177,7 @@ type DestroyedCompositeError struct {
 	LocationRange
 }
 
-func (e *DestroyedCompositeError) Error() string {
+func (e DestroyedCompositeError) Error() string {
 	return fmt.Sprintf("%s is destroyed and cannot be accessed anymore", e.CompositeKind.Name())
 }
 
@@ -197,7 +187,7 @@ type ForceAssignmentToNonNilResourceError struct {
 	LocationRange
 }
 
-func (e *ForceAssignmentToNonNilResourceError) Error() string {
+func (e ForceAssignmentToNonNilResourceError) Error() string {
 	return "force assignment to non-nil resource-typed value"
 }
 
@@ -207,7 +197,7 @@ type ForceNilError struct {
 	LocationRange
 }
 
-func (e *ForceNilError) Error() string {
+func (e ForceNilError) Error() string {
 	return "unexpectedly found nil while forcing an Optional value"
 }
 
@@ -218,7 +208,7 @@ type TypeMismatchError struct {
 	LocationRange
 }
 
-func (e *TypeMismatchError) Error() string {
+func (e TypeMismatchError) Error() string {
 	return fmt.Sprintf(
 		"unexpectedly found non-`%s` while force-casting value",
 		e.ExpectedType.QualifiedString(),
@@ -233,11 +223,11 @@ type InvalidPathDomainError struct {
 	LocationRange
 }
 
-func (e *InvalidPathDomainError) Error() string {
+func (e InvalidPathDomainError) Error() string {
 	return "invalid path domain"
 }
 
-func (e *InvalidPathDomainError) SecondaryError() string {
+func (e InvalidPathDomainError) SecondaryError() string {
 
 	domainNames := make([]string, len(e.ExpectedDomains))
 
@@ -260,7 +250,7 @@ type OverwriteError struct {
 	LocationRange
 }
 
-func (e *OverwriteError) Error() string {
+func (e OverwriteError) Error() string {
 	return fmt.Sprintf(
 		"failed to save object: path %s in account %s already stores an object",
 		e.Path,
@@ -276,7 +266,7 @@ type CyclicLinkError struct {
 	LocationRange
 }
 
-func (e *CyclicLinkError) Error() string {
+func (e CyclicLinkError) Error() string {
 	var builder strings.Builder
 	for i, path := range e.Paths {
 		if i > 0 {
