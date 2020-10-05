@@ -104,9 +104,9 @@ func TestInterpretTransactions(t *testing.T) {
         `)
 
 		err := inter.InvokeTransaction(0)
-		require.IsType(t, &interpreter.ConditionError{}, err)
+		require.IsType(t, interpreter.ConditionError{}, err)
 
-		conditionErr := err.(*interpreter.ConditionError)
+		conditionErr := err.(interpreter.ConditionError)
 
 		assert.Equal(t, conditionErr.ConditionKind, ast.ConditionKindPre)
 	})
@@ -156,9 +156,9 @@ func TestInterpretTransactions(t *testing.T) {
         `)
 
 		err := inter.InvokeTransaction(0)
-		require.IsType(t, &interpreter.ConditionError{}, err)
+		require.IsType(t, interpreter.ConditionError{}, err)
 
-		conditionErr := err.(*interpreter.ConditionError)
+		conditionErr := err.(interpreter.ConditionError)
 
 		assert.Equal(t, conditionErr.ConditionKind, ast.ConditionKindPost)
 	})
@@ -188,7 +188,7 @@ func TestInterpretTransactions(t *testing.T) {
 
 		// third transaction is not declared
 		err = inter.InvokeTransaction(2)
-		assert.IsType(t, &interpreter.TransactionNotDeclaredError{}, err)
+		assert.IsType(t, interpreter.TransactionNotDeclaredError{}, err)
 	})
 
 	t.Run("TooFewArguments", func(t *testing.T) {
@@ -199,7 +199,7 @@ func TestInterpretTransactions(t *testing.T) {
         `)
 
 		err := inter.InvokeTransaction(0)
-		assert.IsType(t, &interpreter.ArgumentCountError{}, err)
+		assert.IsType(t, interpreter.ArgumentCountError{}, err)
 	})
 
 	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
@@ -234,11 +234,11 @@ func TestInterpretTransactions(t *testing.T) {
 
 		// first transaction
 		err := inter.InvokeTransaction(0, signer1)
-		assert.IsType(t, &interpreter.ArgumentCountError{}, err)
+		assert.IsType(t, interpreter.ArgumentCountError{}, err)
 
 		// second transaction
 		err = inter.InvokeTransaction(0, signer1, signer2)
-		assert.IsType(t, &interpreter.ArgumentCountError{}, err)
+		assert.IsType(t, interpreter.ArgumentCountError{}, err)
 	})
 
 	t.Run("Parameters", func(t *testing.T) {
