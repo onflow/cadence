@@ -528,8 +528,19 @@ func (v *ArrayValue) Concat(other ConcatenatableValue) Value {
 	return NewArrayValueUnownedNonCopying(concatenated...)
 }
 
-func (v *ArrayValue) Get(_ *Interpreter, _ LocationRange, key Value) Value {
+func (v *ArrayValue) Get(_ *Interpreter, locationRange LocationRange, key Value) Value {
 	integerKey := key.(NumberValue).ToInt()
+	count := v.Count()
+
+	// Check bounds
+	if integerKey < 0 || integerKey >= count {
+		panic(ArrayIndexOutOfBoundsError{
+			Index:         integerKey,
+			MaxIndex:      count - 1,
+			LocationRange: locationRange,
+		})
+	}
+
 	return v.Values[integerKey]
 }
 
