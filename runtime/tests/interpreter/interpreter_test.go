@@ -474,6 +474,35 @@ func TestInterpretArrayIndexing(t *testing.T) {
 	)
 }
 
+func TestInterpretInvalidArrayIndexing(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpret(t, `
+       fun test(): Int {
+           let z = [0, 3]
+           return z[2]
+       }
+    `)
+
+	_, err := inter.Invoke("test")
+
+	require.Equal(t,
+		interpreter.ArrayIndexOutOfBoundsError{
+			Index:    2,
+			MaxIndex: 1,
+			LocationRange: interpreter.LocationRange{
+				Location: TestLocation,
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 71, Line: 4, Column: 19},
+					EndPos:   ast.Position{Offset: 73, Line: 4, Column: 21},
+				},
+			},
+		},
+		err,
+	)
+}
+
 func TestInterpretArrayIndexingAssignment(t *testing.T) {
 
 	t.Parallel()
