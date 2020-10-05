@@ -156,7 +156,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			_, err := inter.Invoke("nonExistent")
 			require.Error(t, err)
 
-			require.IsType(t, &interpreter.ForceNilError{}, err)
+			require.IsType(t, interpreter.ForceNilError{}, err)
 		})
 
 		t.Run("loop", func(t *testing.T) {
@@ -164,7 +164,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			_, err := inter.Invoke("loop")
 			require.Error(t, err)
 
-			require.IsType(t, &interpreter.CyclicLinkError{}, err)
+			require.IsType(t, interpreter.CyclicLinkError{}, err)
 
 			require.Equal(t,
 				err.Error(),
@@ -307,7 +307,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			_, err := inter.Invoke("nonExistent")
 			require.Error(t, err)
 
-			require.IsType(t, &interpreter.ForceNilError{}, err)
+			require.IsType(t, interpreter.ForceNilError{}, err)
 		})
 
 		t.Run("loop", func(t *testing.T) {
@@ -315,7 +315,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			_, err := inter.Invoke("loop")
 			require.Error(t, err)
 
-			require.IsType(t, &interpreter.CyclicLinkError{}, err)
+			require.IsType(t, interpreter.CyclicLinkError{}, err)
 
 			require.Equal(t,
 				err.Error(),
@@ -471,7 +471,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			_, err := inter.Invoke("loop")
 			require.Error(t, err)
 
-			require.IsType(t, &interpreter.CyclicLinkError{}, err)
+			require.IsType(t, interpreter.CyclicLinkError{}, err)
 
 			require.Equal(t,
 				err.Error(),
@@ -622,7 +622,7 @@ func TestInterpretCapability_check(t *testing.T) {
 			_, err := inter.Invoke("loop")
 			require.Error(t, err)
 
-			require.IsType(t, &interpreter.CyclicLinkError{}, err)
+			require.IsType(t, interpreter.CyclicLinkError{}, err)
 
 			require.Equal(t,
 				err.Error(),

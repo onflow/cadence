@@ -173,7 +173,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 				require.Error(t, err)
 
-				require.IsType(t, &interpreter.OverwriteError{}, err)
+				require.IsType(t, interpreter.OverwriteError{}, err)
 			})
 		})
 
@@ -205,7 +205,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 				require.Error(t, err)
 
-				require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+				require.IsType(t, interpreter.InvalidPathDomainError{}, err)
 			})
 
 		}
@@ -255,7 +255,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 				require.Error(t, err)
 
-				require.IsType(t, &interpreter.OverwriteError{}, err)
+				require.IsType(t, interpreter.OverwriteError{}, err)
 			})
 		})
 
@@ -287,7 +287,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 				require.Error(t, err)
 
-				require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+				require.IsType(t, interpreter.InvalidPathDomainError{}, err)
 			})
 
 		}
@@ -404,7 +404,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 				require.Error(t, err)
 
-				require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+				require.IsType(t, interpreter.InvalidPathDomainError{}, err)
 			})
 		}
 	})
@@ -515,7 +515,7 @@ func TestInterpretAuthAccount_load(t *testing.T) {
 
 				require.Error(t, err)
 
-				require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+				require.IsType(t, interpreter.InvalidPathDomainError{}, err)
 			})
 		}
 	})
@@ -635,7 +635,7 @@ func TestInterpretAuthAccount_copy(t *testing.T) {
 
 			require.Error(t, err)
 
-			require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+			require.IsType(t, interpreter.InvalidPathDomainError{}, err)
 		})
 	}
 
@@ -771,7 +771,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 				require.Error(t, err)
 
-				require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+				require.IsType(t, interpreter.InvalidPathDomainError{}, err)
 			})
 		}
 	})
@@ -902,7 +902,7 @@ func TestInterpretAuthAccount_borrow(t *testing.T) {
 
 				require.Error(t, err)
 
-				require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+				require.IsType(t, interpreter.InvalidPathDomainError{}, err)
 			})
 		}
 	})
@@ -1068,7 +1068,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 				require.Error(t, err)
 
-				require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+				require.IsType(t, interpreter.InvalidPathDomainError{}, err)
 			})
 		}
 	})
@@ -1229,7 +1229,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 				require.Error(t, err)
 
-				require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+				require.IsType(t, interpreter.InvalidPathDomainError{}, err)
 			})
 		}
 	})
@@ -1318,7 +1318,7 @@ func TestInterpretAuthAccount_unlink(t *testing.T) {
 
 			require.Error(t, err)
 
-			require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+			require.IsType(t, interpreter.InvalidPathDomainError{}, err)
 		})
 	})
 
@@ -1400,7 +1400,7 @@ func TestInterpretAuthAccount_unlink(t *testing.T) {
 
 			require.Error(t, err)
 
-			require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+			require.IsType(t, interpreter.InvalidPathDomainError{}, err)
 		})
 	})
 }
@@ -1501,7 +1501,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 					require.Error(t, err)
 
-					require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+					require.IsType(t, interpreter.InvalidPathDomainError{}, err)
 				})
 			})
 
@@ -1593,7 +1593,7 @@ func TestInterpretAccount_getLinkTarget(t *testing.T) {
 
 					require.Error(t, err)
 
-					require.IsType(t, &interpreter.InvalidPathDomainError{}, err)
+					require.IsType(t, interpreter.InvalidPathDomainError{}, err)
 				})
 			})
 		})
