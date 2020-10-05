@@ -403,10 +403,10 @@ func (i *FlowIntegration) sendTransactionHelper(
 		return flow.EmptyID, err
 	}
 
-	tx.SetProposalKey(address, accountKey.ID, accountKey.SequenceNumber)
+	tx.SetProposalKey(address, accountKey.Index, accountKey.SequenceNumber)
 	tx.SetPayer(address)
 
-	err = tx.SignEnvelope(address, accountKey.ID, signer)
+	err = tx.SignEnvelope(address, accountKey.Index, signer)
 	if err != nil {
 		return flow.EmptyID, err
 	}
