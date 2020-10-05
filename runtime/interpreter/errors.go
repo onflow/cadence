@@ -292,3 +292,19 @@ func (e *CyclicLinkError) Error() string {
 		paths,
 	)
 }
+
+// ArrayIndexOutOfBoundsError
+
+type ArrayIndexOutOfBoundsError struct {
+	Index    int
+	MaxIndex int
+	LocationRange
+}
+
+func (e ArrayIndexOutOfBoundsError) Error() string {
+	return fmt.Sprintf(
+		"array index out of bounds: got %d, expected max %d",
+		e.Index,
+		e.MaxIndex,
+	)
+}
