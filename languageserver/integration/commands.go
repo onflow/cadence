@@ -376,6 +376,13 @@ func (i *FlowIntegration) sendTransactionHelper(
 		Message: fmt.Sprintf("submitting transaction %d", tx.ID()),
 	})
 
+	block, err := i.flowClient.GetLatestBlock(context.Background(), true)
+	if err != nil {
+		return flow.EmptyID, err
+	}
+
+	tx.SetReferenceBlockID(block.ID)
+
 	err = i.flowClient.SendTransaction(context.Background(), *tx)
 	if err != nil {
 		grpcErr, ok := status.FromError(err)
