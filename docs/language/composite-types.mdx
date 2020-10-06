@@ -1297,7 +1297,7 @@ destroy resources
 ### Resource Identifier
 
 Resources have an implicit unique identifier associated with them,
-all resources have a predeclared public field `let uuid: UInt64`.
+implemented by a predeclared public field `let uuid: UInt64` on each resource.
 
 This identifier will be automatically set when the resource is created,
 and will be unique even after the resource is destroyed,
