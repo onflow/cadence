@@ -6048,7 +6048,7 @@ func (v *StorageReferenceValue) String() string {
 }
 
 func (v *StorageReferenceValue) DynamicType(interpreter *Interpreter) DynamicType {
-	referencedValue := v.referencedValue(interpreter)
+	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
 		panic(DereferenceError{})
 	}
@@ -6086,7 +6086,7 @@ func (*StorageReferenceValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v *StorageReferenceValue) referencedValue(interpreter *Interpreter) *Value {
+func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
 	switch referenced := interpreter.readStored(v.TargetStorageAddress, v.TargetKey, false).(type) {
 	case *SomeValue:
 		return &referenced.Value
@@ -6098,7 +6098,7 @@ func (v *StorageReferenceValue) referencedValue(interpreter *Interpreter) *Value
 }
 
 func (v *StorageReferenceValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	referencedValue := v.referencedValue(interpreter)
+	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
 		panic(DereferenceError{
 			LocationRange: locationRange,
@@ -6109,7 +6109,7 @@ func (v *StorageReferenceValue) GetMember(interpreter *Interpreter, locationRang
 }
 
 func (v *StorageReferenceValue) SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) {
-	referencedValue := v.referencedValue(interpreter)
+	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
 		panic(DereferenceError{
 			LocationRange: locationRange,
@@ -6120,7 +6120,7 @@ func (v *StorageReferenceValue) SetMember(interpreter *Interpreter, locationRang
 }
 
 func (v *StorageReferenceValue) Get(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
-	referencedValue := v.referencedValue(interpreter)
+	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
 		panic(DereferenceError{
 			LocationRange: locationRange,
@@ -6132,7 +6132,7 @@ func (v *StorageReferenceValue) Get(interpreter *Interpreter, locationRange Loca
 }
 
 func (v *StorageReferenceValue) Set(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
-	referencedValue := v.referencedValue(interpreter)
+	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
 		panic(DereferenceError{
 			LocationRange: locationRange,
@@ -6168,7 +6168,7 @@ func (v *EphemeralReferenceValue) String() string {
 }
 
 func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter) DynamicType {
-	referencedValue := v.referencedValue()
+	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
 		panic(DereferenceError{})
 	}
@@ -6202,7 +6202,7 @@ func (*EphemeralReferenceValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v *EphemeralReferenceValue) referencedValue() *Value {
+func (v *EphemeralReferenceValue) ReferencedValue() *Value {
 	// Just like for storage references, references to optionals are unwrapped,
 	// i.e. a reference to `nil` aborts when dereferenced.
 
@@ -6217,7 +6217,7 @@ func (v *EphemeralReferenceValue) referencedValue() *Value {
 }
 
 func (v *EphemeralReferenceValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	referencedValue := v.referencedValue()
+	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
 		panic(DereferenceError{
 			LocationRange: locationRange,
@@ -6228,7 +6228,7 @@ func (v *EphemeralReferenceValue) GetMember(interpreter *Interpreter, locationRa
 }
 
 func (v *EphemeralReferenceValue) SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) {
-	referencedValue := v.referencedValue()
+	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
 		panic(DereferenceError{
 			LocationRange: locationRange,
@@ -6239,7 +6239,7 @@ func (v *EphemeralReferenceValue) SetMember(interpreter *Interpreter, locationRa
 }
 
 func (v *EphemeralReferenceValue) Get(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
-	referencedValue := v.referencedValue()
+	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
 		panic(DereferenceError{
 			LocationRange: locationRange,
@@ -6251,7 +6251,7 @@ func (v *EphemeralReferenceValue) Get(interpreter *Interpreter, locationRange Lo
 }
 
 func (v *EphemeralReferenceValue) Set(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
-	referencedValue := v.referencedValue()
+	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
 		panic(DereferenceError{
 			LocationRange: locationRange,

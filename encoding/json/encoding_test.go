@@ -957,21 +957,6 @@ func TestEncodeContract(t *testing.T) {
 	testAllEncodeAndDecode(t, simpleContract, resourceContract)
 }
 
-func TestEncodeStorageReference(t *testing.T) {
-
-	t.Parallel()
-
-	testEncodeAndDecode(
-		t,
-		cadence.NewStorageReference(
-			false,
-			cadence.BytesToAddress([]byte{1, 2, 3, 4, 5}),
-			"foo",
-		),
-		`{"type":"StorageReference","value":{"authorized":false,"targetStorageAddress":"0x0000000102030405","targetKey":"foo"}}`,
-	)
-}
-
 func TestEncodeLink(t *testing.T) {
 
 	t.Parallel()

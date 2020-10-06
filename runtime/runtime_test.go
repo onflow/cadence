@@ -605,24 +605,6 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			},
 			expectedLogs: []string{"42", `"foo"`},
 		},
-
-		{
-			label: "Invalid non-storable argument type",
-			script: `
-			  transaction(x: ((Int): Int)) {
-				execute {
-				  x(0)
-				}
-			  }
-			`,
-			args: [][]byte{
-				jsoncdc.MustEncode(cadence.NewInt(42)),
-			},
-			check: func(t *testing.T, err error) {
-				assert.Error(t, err)
-				assert.IsType(t, &TransactionParameterTypeNotStorableError{}, errors.Unwrap(err))
-			},
-		},
 		{
 			label: "Invalid bytes",
 			script: `
@@ -1892,30 +1874,82 @@ func TestParseAndCheckProgram(t *testing.T) {
 	})
 }
 
-func TestScriptReturnTypeNotStorableError(t *testing.T) {
+func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	test := func(code string, expected cadence.Value) {
 
-	script := []byte(`
-      pub fun main(): ((): Int) {
-		return fun (): Int {
-			return 0
+		runtime := NewInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() []Address {
+				return []Address{{42}}
+			},
 		}
-      }
-    `)
 
-	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() []Address {
-			return []Address{{42}}
-		},
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		actual, err := runtime.ExecuteScript([]byte(code), nil, runtimeInterface, nextTransactionLocation())
+
+		if expected == nil {
+			require.IsType(t, &InvalidScriptReturnTypeError{}, err)
+		} else {
+			require.NoError(t, err)
+			require.Equal(t, expected, actual)
+		}
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	t.Run("function", func(t *testing.T) {
 
-	_, err := runtime.ExecuteScript(script, nil, runtimeInterface, nextTransactionLocation())
-	assert.IsType(t, &ScriptReturnTypeNotStorableError{}, err)
+		t.Parallel()
+
+		test(
+			`
+              pub fun main(): ((): Int) {
+                  return fun (): Int {
+                      return 0
+                  }
+              }
+            `,
+			nil,
+		)
+	})
+
+	t.Run("reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			`
+              pub fun main(): &Address {
+                  let a: Address = 0x1
+                  return &a as &Address
+              }
+            `,
+			cadence.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+		)
+	})
+
+	t.Run("recursive reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			`
+              pub fun main(): [&AnyStruct] {
+                  let refs: [&AnyStruct] = []
+                  refs.append(&refs as &AnyStruct)
+                  return refs
+              }
+            `,
+			cadence.NewArray([]cadence.Value{
+				cadence.NewArray([]cadence.Value{
+					nil,
+				}),
+			}),
+		)
+	})
 }
 
 func TestScriptParameterTypeNotStorableError(t *testing.T) {
