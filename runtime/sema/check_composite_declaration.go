@@ -595,7 +595,9 @@ func (checker *Checker) declareCompositeMembersAndValue(
 			)
 		}
 
-		checker.checkMemberStorability(members)
+		if compositeType.Kind == common.CompositeKindContract {
+			checker.checkMemberStorability(members)
+		}
 
 		compositeType.Members = members
 		compositeType.Fields = fields
@@ -718,7 +720,7 @@ func (checker *Checker) declareEnumConstructor(
 			continue
 		}
 		constructorMembers[caseName] = &Member{
-			ContainerType:   constructorType,
+			ContainerType: constructorType,
 			// enum cases are always public
 			Access:          ast.AccessPublic,
 			Identifier:      enumCase.Identifier,

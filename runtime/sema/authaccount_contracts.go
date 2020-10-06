@@ -58,6 +58,10 @@ func (*AuthAccountContractsType) IsStorable(_ map[*Member]bool) bool {
 	return false
 }
 
+func (*AuthAccountContractsType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return false
+}
+
 func (*AuthAccountContractsType) IsEquatable() bool {
 	// TODO: maybe implement equality
 	return false

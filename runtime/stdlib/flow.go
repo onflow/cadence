@@ -336,6 +336,10 @@ func (*BlockType) IsStorable(_ map[*sema.Member]bool) bool {
 	return false
 }
 
+func (*BlockType) IsExternallyReturnable(_ map[*sema.Member]bool) bool {
+	return false
+}
+
 func (*BlockType) IsEquatable() bool {
 	// TODO:
 	return false

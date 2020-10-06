@@ -2303,6 +2303,22 @@ func (e *InvalidResourceTransactionParameterError) Error() string {
 
 func (*InvalidResourceTransactionParameterError) isSemanticError() {}
 
+// InvalidNonStorableTransactionParameterTypeError
+
+type InvalidNonStorableTransactionParameterTypeError struct {
+	Type Type
+	ast.Range
+}
+
+func (e *InvalidNonStorableTransactionParameterTypeError) Error() string {
+	return fmt.Sprintf(
+		"transaction parameter must not be storable: `%s`",
+		e.Type.QualifiedString(),
+	)
+}
+
+func (*InvalidNonStorableTransactionParameterTypeError) isSemanticError() {}
+
 // InvalidTransactionFieldAccessModifierError
 
 type InvalidTransactionFieldAccessModifierError struct {

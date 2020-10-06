@@ -332,6 +332,21 @@ func TestCheckTransactions(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("InvalidNonStorableParameter", func(t *testing.T) {
+		test(t,
+			`
+		      transaction(x: ((Int): Int)) {
+				execute {
+				  x(0)
+				}
+			  }
+		    `,
+			[]error{
+				&sema.InvalidNonStorableTransactionParameterTypeError{},
+			},
+		)
+	})
 }
 
 func TestCheckTransactionExecuteScope(t *testing.T) {
