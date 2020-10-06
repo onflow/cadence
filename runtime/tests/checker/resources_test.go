@@ -529,9 +529,11 @@ func TestCheckFieldDeclarationWithResourceAnnotation(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	test := func(kind common.CompositeKind) {
 
 		t.Run(kind.Keyword(), func(t *testing.T) {
+
+			t.Parallel()
 
 			destructor := ""
 			if kind == common.CompositeKindResource {
@@ -575,18 +577,23 @@ func TestCheckFieldDeclarationWithResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[1])
 
 			case common.CompositeKindContract:
-				errs := ExpectCheckerErrors(t, err, 3)
+				errs := ExpectCheckerErrors(t, err, 4)
 
 				// NOTE: one invalid resource annotation error for field, one for parameter
 
 				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[0])
-				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[1])
-				assert.IsType(t, &sema.InvalidMoveError{}, errs[2])
+				assert.IsType(t, &sema.FieldTypeNotStorableError{}, errs[1])
+				assert.IsType(t, &sema.InvalidResourceAnnotationError{}, errs[2])
+				assert.IsType(t, &sema.InvalidMoveError{}, errs[3])
 
 			default:
 				panic(errors.NewUnreachableError())
 			}
 		})
+	}
+
+	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		test(kind)
 	}
 }
 
@@ -594,8 +601,11 @@ func TestCheckFieldDeclarationWithoutResourceAnnotation(t *testing.T) {
 
 	t.Parallel()
 
-	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+	test := func(kind common.CompositeKind) {
+
 		t.Run(kind.Keyword(), func(t *testing.T) {
+
+			t.Parallel()
 
 			destructor := ""
 			if kind == common.CompositeKindResource {
@@ -636,9 +646,10 @@ func TestCheckFieldDeclarationWithoutResourceAnnotation(t *testing.T) {
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[1])
 
 			case common.CompositeKindContract:
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := ExpectCheckerErrors(t, err, 2)
 
-				assert.IsType(t, &sema.InvalidMoveError{}, errs[0])
+				assert.IsType(t, &sema.FieldTypeNotStorableError{}, errs[0])
+				assert.IsType(t, &sema.InvalidMoveError{}, errs[1])
 
 			case common.CompositeKindStructure:
 				require.NoError(t, err)
@@ -647,6 +658,10 @@ func TestCheckFieldDeclarationWithoutResourceAnnotation(t *testing.T) {
 				panic(errors.NewUnreachableError())
 			}
 		})
+	}
+
+	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		test(kind)
 	}
 }
 
@@ -2843,11 +2858,11 @@ func testResourceNesting(
 	}
 
 	testName := fmt.Sprintf(
-		"%s %s / %s %s",
-		outerCompositeKind.Keyword(),
-		outerInterfaceKeyword,
+		"%s %s in %s %s",
 		innerCompositeKind.Keyword(),
 		innerInterfaceKeyword,
+		outerCompositeKind.Keyword(),
+		outerInterfaceKeyword,
 	)
 
 	t.Run(testName, func(t *testing.T) {
@@ -2944,10 +2959,19 @@ func testResourceNesting(
 			}
 
 		case common.CompositeKindResource,
-			common.CompositeKindContract,
 			common.CompositeKindEnum:
 
 			require.NoError(t, err)
+
+		case common.CompositeKindContract:
+
+			if innerCompositeKind == common.CompositeKindEvent {
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				assert.IsType(t, &sema.FieldTypeNotStorableError{}, errs[0])
+			} else {
+				require.NoError(t, err)
+			}
 
 		default:
 			panic(errors.NewUnreachableError())

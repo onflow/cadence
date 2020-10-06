@@ -1363,52 +1363,74 @@ func TestCheckInterfaceWithFieldHavingStructType(t *testing.T) {
 
 	t.Parallel()
 
-	for _, firstKind := range common.CompositeKindsWithFieldsAndFunctions {
-		for _, secondKind := range common.CompositeKindsWithFieldsAndFunctions {
+	test := func(firstKind, secondKind common.CompositeKind) {
 
-			testName := fmt.Sprintf(
-				"%s/%s",
-				firstKind.Keyword(),
-				secondKind.Keyword(),
-			)
+		testName := fmt.Sprintf(
+			"%s in %s",
+			firstKind.Keyword(),
+			secondKind.Keyword(),
+		)
 
-			t.Run(testName, func(t *testing.T) {
+		t.Run(testName, func(t *testing.T) {
 
-				_, err := ParseAndCheck(t,
-					fmt.Sprintf(
-						`
+			t.Parallel()
+
+			_, err := ParseAndCheck(t,
+				fmt.Sprintf(
+					`
                           %[1]s S {}
 
                           %[2]s interface I {
                               s: %[3]sS
                           }
                         `,
-						firstKind.Keyword(),
-						secondKind.Keyword(),
-						firstKind.Annotation(),
-					),
-				)
+					firstKind.Keyword(),
+					secondKind.Keyword(),
+					firstKind.Annotation(),
+				),
+			)
 
-				// `firstKind` is the nested composite kind.
-				// `secondKind` is the container composite kind.
-				// Resource composites can only be nested in resource composite kinds.
+			// `firstKind` is the nested composite kind.
+			// `secondKind` is the container composite kind.
+			// Resource composites can only be nested in resource composite kinds.
 
-				if firstKind == common.CompositeKindResource {
-					switch secondKind {
-					case common.CompositeKindResource,
-						common.CompositeKindContract:
+			switch firstKind {
+			case common.CompositeKindResource:
+				switch secondKind {
+				case common.CompositeKindResource,
+					common.CompositeKindContract:
 
-						require.NoError(t, err)
-
-					default:
-						errs := ExpectCheckerErrors(t, err, 1)
-
-						assert.IsType(t, &sema.InvalidResourceFieldError{}, errs[0])
-					}
-				} else {
 					require.NoError(t, err)
+
+				default:
+					errs := ExpectCheckerErrors(t, err, 1)
+
+					assert.IsType(t, &sema.InvalidResourceFieldError{}, errs[0])
 				}
-			})
+
+			case common.CompositeKindContract:
+				switch secondKind {
+				case common.CompositeKindResource,
+					common.CompositeKindStructure:
+
+					require.NoError(t, err)
+
+				default:
+					errs := ExpectCheckerErrors(t, err, 1)
+
+					assert.IsType(t, &sema.FieldTypeNotStorableError{}, errs[0])
+				}
+
+			default:
+				require.NoError(t, err)
+			}
+		})
+	}
+
+	for _, firstKind := range common.CompositeKindsWithFieldsAndFunctions {
+		for _, secondKind := range common.CompositeKindsWithFieldsAndFunctions {
+
+			test(firstKind, secondKind)
 		}
 	}
 }
