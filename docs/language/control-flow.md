@@ -307,7 +307,7 @@ for element in array {
 ```
 
 To iterate over a dictionary's entries (keys and values), 
-use a for-in loop over the dictionaries keys and get the value for each key:
+use a for-in loop over the dictionary's keys and get the value for each key:
 
 ```cadence
 let dictionary = {"one": 1, "two": 2}
