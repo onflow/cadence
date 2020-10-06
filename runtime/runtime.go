@@ -168,11 +168,9 @@ func (r *interpreterRuntime) ExecuteScript(
 	}
 
 	// Ensure the entry point's return type is valid
-	if _, isVoid := epFunctionType.ReturnTypeAnnotation.Type.(*sema.VoidType); !isVoid {
-		if !epFunctionType.ReturnTypeAnnotation.Type.IsExternallyReturnable(map[*sema.Member]bool{}) {
-			return nil, &InvalidScriptReturnTypeError{
-				Type: epFunctionType.ReturnTypeAnnotation.Type,
-			}
+	if !epFunctionType.ReturnTypeAnnotation.Type.IsExternallyReturnable(map[*sema.Member]bool{}) {
+		return nil, &InvalidScriptReturnTypeError{
+			Type: epFunctionType.ReturnTypeAnnotation.Type,
 		}
 	}
 
