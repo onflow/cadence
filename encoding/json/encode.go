@@ -125,12 +125,6 @@ type jsonCompositeField struct {
 	Value jsonValue `json:"value"`
 }
 
-type jsonStorageReferenceValue struct {
-	Authorized           bool   `json:"authorized"`
-	TargetStorageAddress string `json:"targetStorageAddress"`
-	TargetKey            string `json:"targetKey"`
-}
-
 type jsonLinkValue struct {
 	TargetPath jsonValue `json:"targetPath"`
 	BorrowType string    `json:"borrowType"`
@@ -152,42 +146,41 @@ type jsonCapabilityValue struct {
 }
 
 const (
-	voidTypeStr             = "Void"
-	optionalTypeStr         = "Optional"
-	boolTypeStr             = "Bool"
-	stringTypeStr           = "String"
-	addressTypeStr          = "Address"
-	intTypeStr              = "Int"
-	int8TypeStr             = "Int8"
-	int16TypeStr            = "Int16"
-	int32TypeStr            = "Int32"
-	int64TypeStr            = "Int64"
-	int128TypeStr           = "Int128"
-	int256TypeStr           = "Int256"
-	uintTypeStr             = "UInt"
-	uint8TypeStr            = "UInt8"
-	uint16TypeStr           = "UInt16"
-	uint32TypeStr           = "UInt32"
-	uint64TypeStr           = "UInt64"
-	uint128TypeStr          = "UInt128"
-	uint256TypeStr          = "UInt256"
-	word8TypeStr            = "Word8"
-	word16TypeStr           = "Word16"
-	word32TypeStr           = "Word32"
-	word64TypeStr           = "Word64"
-	fix64TypeStr            = "Fix64"
-	ufix64TypeStr           = "UFix64"
-	arrayTypeStr            = "Array"
-	dictionaryTypeStr       = "Dictionary"
-	structTypeStr           = "Struct"
-	resourceTypeStr         = "Resource"
-	eventTypeStr            = "Event"
-	contractTypeStr         = "Contract"
-	storageReferenceTypeStr = "StorageReference"
-	linkTypeStr             = "Link"
-	pathTypeStr             = "Path"
-	typeTypeStr             = "Type"
-	capabilityTypeStr       = "Capability"
+	voidTypeStr       = "Void"
+	optionalTypeStr   = "Optional"
+	boolTypeStr       = "Bool"
+	stringTypeStr     = "String"
+	addressTypeStr    = "Address"
+	intTypeStr        = "Int"
+	int8TypeStr       = "Int8"
+	int16TypeStr      = "Int16"
+	int32TypeStr      = "Int32"
+	int64TypeStr      = "Int64"
+	int128TypeStr     = "Int128"
+	int256TypeStr     = "Int256"
+	uintTypeStr       = "UInt"
+	uint8TypeStr      = "UInt8"
+	uint16TypeStr     = "UInt16"
+	uint32TypeStr     = "UInt32"
+	uint64TypeStr     = "UInt64"
+	uint128TypeStr    = "UInt128"
+	uint256TypeStr    = "UInt256"
+	word8TypeStr      = "Word8"
+	word16TypeStr     = "Word16"
+	word32TypeStr     = "Word32"
+	word64TypeStr     = "Word64"
+	fix64TypeStr      = "Fix64"
+	ufix64TypeStr     = "UFix64"
+	arrayTypeStr      = "Array"
+	dictionaryTypeStr = "Dictionary"
+	structTypeStr     = "Struct"
+	resourceTypeStr   = "Resource"
+	eventTypeStr      = "Event"
+	contractTypeStr   = "Contract"
+	linkTypeStr       = "Link"
+	pathTypeStr       = "Path"
+	typeTypeStr       = "Type"
+	capabilityTypeStr = "Capability"
 )
 
 // prepare traverses the object graph of the provided value and constructs
@@ -256,8 +249,6 @@ func (e *Encoder) prepare(v cadence.Value) jsonValue {
 		return e.prepareEvent(x)
 	case cadence.Contract:
 		return e.prepareContract(x)
-	case cadence.StorageReference:
-		return e.prepareStorageReference(x)
 	case cadence.Link:
 		return e.prepareLink(x)
 	case cadence.Path:
@@ -528,17 +519,6 @@ func (e *Encoder) prepareComposite(kind, id string, fieldTypes []cadence.Field, 
 		Value: jsonCompositeValue{
 			ID:     id,
 			Fields: compositeFields,
-		},
-	}
-}
-
-func (e *Encoder) prepareStorageReference(x cadence.StorageReference) jsonValue {
-	return jsonValueObject{
-		Type: storageReferenceTypeStr,
-		Value: jsonStorageReferenceValue{
-			Authorized:           x.Authorized,
-			TargetStorageAddress: encodeBytes(x.TargetStorageAddress.Bytes()),
-			TargetKey:            x.TargetKey,
 		},
 	}
 }

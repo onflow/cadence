@@ -89,22 +89,19 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 }
 
 const (
-	typeKey                 = "type"
-	valueKey                = "value"
-	keyKey                  = "key"
-	nameKey                 = "name"
-	fieldsKey               = "fields"
-	idKey                   = "id"
-	authorizedKey           = "authorized"
-	targetStorageAddressKey = "targetStorageAddress"
-	targetKeyKey            = "targetKey"
-	targetPathKey           = "targetPath"
-	borrowTypeKey           = "borrowType"
-	domainKey               = "domain"
-	identifierKey           = "identifier"
-	staticTypeKey           = "staticType"
-	addressKey              = "address"
-	pathKey                 = "path"
+	typeKey       = "type"
+	valueKey      = "value"
+	keyKey        = "key"
+	nameKey       = "name"
+	fieldsKey     = "fields"
+	idKey         = "id"
+	targetPathKey = "targetPath"
+	borrowTypeKey = "borrowType"
+	domainKey     = "domain"
+	identifierKey = "identifier"
+	staticTypeKey = "staticType"
+	addressKey    = "address"
+	pathKey       = "path"
 )
 
 var ErrInvalidJSONCadence = errors.New("invalid JSON Cadence structure")
@@ -187,8 +184,6 @@ func decodeJSON(v interface{}) cadence.Value {
 		return decodeEvent(valueJSON)
 	case contractTypeStr:
 		return decodeContract(valueJSON)
-	case storageReferenceTypeStr:
-		return decodeStorageReference(valueJSON)
 	case linkTypeStr:
 		return decodeLink(valueJSON)
 	case pathTypeStr:
@@ -571,16 +566,6 @@ func decodeContract(valueJSON interface{}) cadence.Contract {
 		Identifier: comp.identifier,
 		Fields:     comp.fieldTypes,
 	})
-}
-
-func decodeStorageReference(valueJSON interface{}) cadence.StorageReference {
-	obj := toObject(valueJSON)
-
-	return cadence.NewStorageReference(
-		obj.GetBool(authorizedKey),
-		decodeAddress(obj.Get(targetStorageAddressKey)),
-		obj.GetString(targetKeyKey),
-	)
 }
 
 func decodeLink(valueJSON interface{}) cadence.Link {

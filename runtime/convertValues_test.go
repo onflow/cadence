@@ -217,7 +217,7 @@ func TestExportValue(t *testing.T) {
 
 			t.Parallel()
 
-			actual := exportValueWithInterpreter(tt.value, nil)
+			actual := exportValueWithInterpreter(tt.value, nil, exportResults{})
 			assert.Equal(t, tt.expected, actual)
 
 			if !tt.skipReverse {
@@ -651,7 +651,7 @@ func TestExportCapabilityValue(t *testing.T) {
 		},
 		BorrowType: interpreter.PrimitiveStaticTypeInt,
 	}
-	actual := exportValueWithInterpreter(capability, nil)
+	actual := exportValueWithInterpreter(capability, nil, exportResults{})
 	expected := cadence.Capability{
 		Path: cadence.Path{
 			Domain:     "storage",

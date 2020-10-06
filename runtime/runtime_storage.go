@@ -247,7 +247,7 @@ func (s *interpreterRuntimeStorage) writeCached(inter *interpreter.Interpreter) 
 
 			var value cadence.Value
 			if entry.value != nil {
-				value = exportValueWithInterpreter(entry.value, inter)
+				value = exportValueWithInterpreter(entry.value, inter, exportResults{})
 			}
 
 			wrapPanic(func() {
