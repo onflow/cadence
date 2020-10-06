@@ -406,6 +406,13 @@ func (i *FlowIntegration) sendTransactionHelper(
 	tx.SetProposalKey(address, accountKey.Index, accountKey.SequenceNumber)
 	tx.SetPayer(address)
 
+	block, err := i.flowClient.GetLatestBlock(context.Background(), true)
+	if err != nil {
+		return flow.EmptyID, err
+	}
+
+	tx.SetReferenceBlockID(block.ID)
+
 	err = tx.SignEnvelope(address, accountKey.Index, signer)
 	if err != nil {
 		return flow.EmptyID, err
