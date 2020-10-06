@@ -293,7 +293,8 @@ be executed at all. Otherwise, the code will execute as many times
 as there are elements in the array.
 
 ```cadence
-var array = ["Hello", "World", "Foo", "Bar"]
+let array = ["Hello", "World", "Foo", "Bar"]
+
 for element in array {
     log(element)
 }
@@ -303,7 +304,24 @@ for element in array {
 // "World"
 // "Foo"
 // "Bar"
+```
 
+To iterate over a dictionary's entries (keys and values), 
+use a for-in loop over the dictionaries keys and get the value for each key:
+
+```cadence
+let dictionary = {"one": 1, "two": 2}
+for key in dictionary.keys {
+    let value = dictionary[key]!
+    log(key)
+    log(value)
+}
+
+// The loop would log:
+// "one"
+// 1
+// "two"
+// 2
 ```
 
 ### `continue` and `break`
