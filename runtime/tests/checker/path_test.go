@@ -50,7 +50,7 @@ func TestCheckPath(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.IsType(t,
-				&sema.PathType{},
+				sema.PathType,
 				checker.GlobalValues["x"].Type,
 			)
 		})

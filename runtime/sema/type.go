@@ -4574,7 +4574,7 @@ func init() {
 		&AddressType{},
 		&AuthAccountType{},
 		&PublicAccountType{},
-		&PathType{},
+		PathType,
 		&CapabilityType{},
 		&DeployedContractType{},
 	}
@@ -5246,7 +5246,7 @@ var authAccountTypeSaveFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		Name:      "T",
-		TypeBound: &StorableType{},
+		TypeBound: StorableType,
 	}
 
 	return &FunctionType{
@@ -5266,7 +5266,7 @@ var authAccountTypeSaveFunctionType = func() *FunctionType {
 			{
 				Label:          "to",
 				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+				TypeAnnotation: NewTypeAnnotation(PathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
@@ -5286,7 +5286,7 @@ var authAccountTypeLoadFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		Name:      "T",
-		TypeBound: &StorableType{},
+		TypeBound: StorableType,
 	}
 
 	return &FunctionType{
@@ -5297,7 +5297,7 @@ var authAccountTypeLoadFunctionType = func() *FunctionType {
 			{
 				Label:          "from",
 				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+				TypeAnnotation: NewTypeAnnotation(PathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -5339,7 +5339,7 @@ var authAccountTypeCopyFunctionType = func() *FunctionType {
 			{
 				Label:          "from",
 				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+				TypeAnnotation: NewTypeAnnotation(PathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -5382,7 +5382,7 @@ var authAccountTypeBorrowFunctionType = func() *FunctionType {
 			{
 				Label:          "from",
 				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+				TypeAnnotation: NewTypeAnnotation(PathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -5427,11 +5427,11 @@ var authAccountTypeLinkFunctionType = func() *FunctionType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "newCapabilityPath",
-				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+				TypeAnnotation: NewTypeAnnotation(PathType),
 			},
 			{
 				Identifier:     "target",
-				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+				TypeAnnotation: NewTypeAnnotation(PathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -5464,7 +5464,7 @@ var authAccountTypeUnlinkFunctionType = &FunctionType{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "capabilityPath",
-			TypeAnnotation: NewTypeAnnotation(&PathType{}),
+			TypeAnnotation: NewTypeAnnotation(PathType),
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
@@ -5492,7 +5492,7 @@ var accountTypeGetCapabilityFunctionType = func() *FunctionType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "capabilityPath",
-				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+				TypeAnnotation: NewTypeAnnotation(PathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -5516,12 +5516,12 @@ var accountTypeGetLinkTargetFunctionType = &FunctionType{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "capabilityPath",
-			TypeAnnotation: NewTypeAnnotation(&PathType{}),
+			TypeAnnotation: NewTypeAnnotation(PathType),
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&OptionalType{
-			Type: &PathType{},
+			Type: PathType,
 		},
 	),
 }
@@ -7127,9 +7127,8 @@ func IsSubType(subType Type, superType Type) bool {
 			}
 		}
 
-	case *StorableType:
-		storableResults := map[*Member]bool{}
-		return subType.IsStorable(storableResults)
+	case *NominalType:
+		return typedSuperType.IsSuperTypeOf(subType)
 	}
 
 	// TODO: enforce type arguments, remove this rule
@@ -7530,70 +7529,6 @@ func (t *RestrictedType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-// PathType
-
-type PathType struct{}
-
-func (*PathType) IsType() {}
-
-func (*PathType) String() string {
-	return "Path"
-}
-
-func (*PathType) QualifiedString() string {
-	return "Path"
-}
-
-func (*PathType) ID() TypeID {
-	return "Path"
-}
-
-func (*PathType) Equal(other Type) bool {
-	_, ok := other.(*PathType)
-	return ok
-}
-
-func (*PathType) IsResourceType() bool {
-	return false
-}
-
-func (*PathType) IsInvalidType() bool {
-	return false
-}
-
-func (*PathType) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*PathType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*PathType) IsEquatable() bool {
-	// TODO:
-	return false
-}
-
-func (*PathType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *PathType) RewriteWithRestrictedTypes() (Type, bool) {
-	return t, false
-}
-
-func (*PathType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *PathType) Resolve(_ map[*TypeParameter]Type) Type {
-	return t
-}
-
-func (t *PathType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
 // CapabilityType
 
 type CapabilityType struct {
@@ -7830,79 +7765,4 @@ func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 			},
 		},
 	})
-}
-
-// StorableType is the supertype of all types which are storable.
-//
-// It is only used as e.g. a type bound, but is not accessible
-// to user programs, i.e. can't be used in type annotations
-// for e.g. parameters, return types, fields, etc.
-//
-type StorableType struct{}
-
-func (*StorableType) IsType() {}
-
-func (*StorableType) String() string {
-	return "Storable"
-}
-
-func (*StorableType) QualifiedString() string {
-	return "Storable"
-}
-
-func (*StorableType) ID() TypeID {
-	return "Storable"
-}
-
-func (*StorableType) Equal(other Type) bool {
-	_, ok := other.(*StorableType)
-	return ok
-}
-
-func (*StorableType) IsResourceType() bool {
-
-	// NOTE: Subtypes may be either resource types or not.
-	//
-	// Returning false here is safe, because this type is
-	// only used as e.g. a type bound, but is not accessible
-	// to user programs, i.e. can't be used in type annotations
-	// for e.g. parameters, return types, fields, etc.
-
-	return false
-}
-
-func (*StorableType) IsInvalidType() bool {
-	return false
-}
-
-func (*StorableType) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*StorableType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return false
-}
-
-func (*StorableType) IsEquatable() bool {
-	return false
-}
-
-func (*StorableType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *StorableType) RewriteWithRestrictedTypes() (Type, bool) {
-	return t, false
-}
-
-func (*StorableType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *StorableType) Resolve(_ map[*TypeParameter]Type) Type {
-	return t
-}
-
-func (t *StorableType) GetMembers() map[string]MemberResolver {
-	return nil
 }

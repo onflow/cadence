@@ -95,14 +95,14 @@ func TestCheckStorable(t *testing.T) {
 	storableTypes := append(
 		sema.AllNumberTypes[:],
 		&sema.AddressType{},
-		&sema.PathType{},
+		sema.PathType,
+		&sema.CapabilityType{},
 		&sema.StringType{},
 		&sema.BoolType{},
 		&sema.MetaType{},
 		&sema.CharacterType{},
 		&sema.AnyStructType{},
 		&sema.AnyResourceType{},
-		&sema.CapabilityType{},
 	)
 
 	for _, storableType := range storableTypes {
