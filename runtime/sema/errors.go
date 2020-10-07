@@ -2312,7 +2312,7 @@ type InvalidNonStorableTransactionParameterTypeError struct {
 
 func (e *InvalidNonStorableTransactionParameterTypeError) Error() string {
 	return fmt.Sprintf(
-		"transaction parameter must not be storable: `%s`",
+		"transaction parameter must be storable: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
