@@ -50,6 +50,12 @@ func exportEvent(event exportableEvent) cadence.Event {
 
 type exportResults map[interpreter.Value]cadence.Value
 
+// exportValueWithInterpreter exports the given internal (interpreter) value to an external value.
+//
+// The export is recursive, the results parameter prevents cycles:
+// it is checked at the start of the recursively called function,
+// and pre-set before a recursive call.
+//
 func exportValueWithInterpreter(
 	value interpreter.Value,
 	inter *interpreter.Interpreter,

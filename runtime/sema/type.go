@@ -82,9 +82,19 @@ type Type interface {
 
 	// IsStorable returns true if the type is allowed to be a stored,
 	// e.g. in a field of a composite type.
+	//
+	// The check if the type is storable is recursive,
+	// the results parameter prevents cycles:
+	// it is checked at the start of the recursively called function,
+	// and pre-set before a recursive call.
 	IsStorable(results map[*Member]bool) bool
 
 	// IsExternallyReturnable returns true if a value of this type can be exported
+	//
+	// The check if the type is externally returnable is recursive,
+	// the results parameter prevents cycles:
+	// it is checked at the start of the recursively called function,
+	// and pre-set before a recursive call.
 	IsExternallyReturnable(results map[*Member]bool) bool
 
 	// IsEquatable returns true if values of the type can be equated
