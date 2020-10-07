@@ -18,25 +18,16 @@
 
 package sema
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
-)
+// PathType
 
-func (checker *Checker) VisitPathExpression(expression *ast.PathExpression) ast.Repr {
-
-	// Check that the domain is valid
-
-	domain := expression.Domain
-
-	if _, ok := common.AllPathDomainsByIdentifier[domain.Identifier]; !ok {
-		checker.report(
-			&InvalidPathDomainError{
-				ActualDomain: domain.Identifier,
-				Range:        ast.NewRangeFromPositioned(domain),
-			},
-		)
-	}
-
-	return PathType
+var PathType = &NominalType{
+	Name:          "Path",
+	QualifiedName: "Path",
+	TypeID:        "Path",
+	IsResource:    false,
+	Storable:      true,
+	// TODO: implement support for equating paths in the future
+	Equatable:            false,
+	ExternallyReturnable: true,
+	IsSuperTypeOf:        nil,
 }

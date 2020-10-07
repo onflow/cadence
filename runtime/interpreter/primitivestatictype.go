@@ -245,7 +245,7 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 	// Storage
 
 	case PrimitiveStaticTypePath:
-		return &sema.PathType{}
+		return sema.PathType
 	case PrimitiveStaticTypeCapability:
 		return &sema.CapabilityType{}
 
@@ -359,12 +359,14 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 
 	// Storage
 
-	case *sema.PathType:
-		return PrimitiveStaticTypePath
 	case *sema.CapabilityType:
 		return PrimitiveStaticTypeCapability
-
-	default:
-		return PrimitiveStaticTypeUnknown
 	}
+
+	switch t {
+	case sema.PathType:
+		return PrimitiveStaticTypePath
+	}
+
+	return PrimitiveStaticTypeUnknown
 }
