@@ -116,7 +116,7 @@ func TestCheckStorable(t *testing.T) {
 		&sema.FunctionType{
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.IntType{}),
 		},
-		&sema.NeverType{},
+		sema.NeverType,
 		&sema.VoidType{},
 		&sema.AuthAccountType{},
 		&sema.PublicAccountType{},

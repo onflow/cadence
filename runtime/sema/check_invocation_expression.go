@@ -138,7 +138,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 
 	// Update the return info for invocations that do not return (i.e. have a `Never` return type)
 
-	if _, ok = returnType.(*NeverType); ok {
+	if returnType == NeverType {
 		functionActivation := checker.functionActivations.Current()
 		functionActivation.ReturnInfo.DefinitelyHalted = true
 	}

@@ -56,7 +56,7 @@ func (checker *Checker) VisitArrayExpression(expression *ast.ArrayExpression) as
 	checker.Elaboration.ArrayExpressionArgumentTypes[expression] = argumentTypes
 
 	if elementType == nil {
-		elementType = &NeverType{}
+		elementType = NeverType
 	}
 
 	checker.Elaboration.ArrayExpressionElementType[expression] = elementType

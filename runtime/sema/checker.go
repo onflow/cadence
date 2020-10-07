@@ -557,7 +557,7 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 		// If the target type is `Never`, the checks below will be performed
 		// (as `Never` is the subtype of all types), but the checks are not valid
 
-		if IsSubType(unwrappedTargetType, &NeverType{}) {
+		if IsSubType(unwrappedTargetType, NeverType) {
 			break
 		}
 
@@ -578,7 +578,7 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 		// If the target type is `Never`, the checks below will be performed
 		// (as `Never` is the subtype of all types), but the checks are not valid
 
-		if IsSubType(unwrappedTargetType, &NeverType{}) {
+		if IsSubType(unwrappedTargetType, NeverType) {
 			break
 		}
 

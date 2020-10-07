@@ -152,7 +152,7 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return &sema.AnyType{}
 
 	case PrimitiveStaticTypeNever:
-		return &sema.NeverType{}
+		return sema.NeverType
 
 	case PrimitiveStaticTypeAnyStruct:
 		return &sema.AnyStructType{}
@@ -266,9 +266,6 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 	case *sema.AnyType:
 		return PrimitiveStaticTypeAny
 
-	case *sema.NeverType:
-		return PrimitiveStaticTypeNever
-
 	case *sema.AnyStructType:
 		return PrimitiveStaticTypeAnyStruct
 
@@ -366,6 +363,8 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 	switch t {
 	case sema.PathType:
 		return PrimitiveStaticTypePath
+	case sema.NeverType:
+		return PrimitiveStaticTypeNever
 	}
 
 	return PrimitiveStaticTypeUnknown

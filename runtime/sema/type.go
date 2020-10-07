@@ -649,68 +649,6 @@ func (t *AnyResourceType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
 }
 
-// NeverType represents the bottom type
-type NeverType struct{}
-
-func (*NeverType) IsType() {}
-
-func (*NeverType) String() string {
-	return "Never"
-}
-
-func (*NeverType) QualifiedString() string {
-	return "Never"
-}
-
-func (*NeverType) ID() TypeID {
-	return "Never"
-}
-
-func (*NeverType) Equal(other Type) bool {
-	_, ok := other.(*NeverType)
-	return ok
-}
-
-func (*NeverType) IsResourceType() bool {
-	return false
-}
-
-func (*NeverType) IsInvalidType() bool {
-	return false
-}
-
-func (*NeverType) IsStorable(_ map[*Member]bool) bool {
-	return false
-}
-
-func (*NeverType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return false
-}
-
-func (*NeverType) IsEquatable() bool {
-	return false
-}
-
-func (*NeverType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *NeverType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-func (*NeverType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *NeverType) Resolve(_ map[*TypeParameter]Type) Type {
-	return t
-}
-
-func (t *NeverType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
 // VoidType represents the void type
 type VoidType struct{}
 
@@ -4567,7 +4505,7 @@ func init() {
 		&VoidType{},
 		&AnyStructType{},
 		&AnyResourceType{},
-		&NeverType{},
+		NeverType,
 		&BoolType{},
 		&CharacterType{},
 		&StringType{},
@@ -6587,7 +6525,7 @@ func IsSubType(subType Type, superType Type) bool {
 		return true
 	}
 
-	if _, ok := subType.(*NeverType); ok {
+	if subType == NeverType {
 		return true
 	}
 
@@ -7128,6 +7066,9 @@ func IsSubType(subType Type, superType Type) bool {
 		}
 
 	case *NominalType:
+		if typedSuperType.IsSuperTypeOf == nil {
+			return false
+		}
 		return typedSuperType.IsSuperTypeOf(subType)
 	}
 
@@ -7189,7 +7130,7 @@ func IsNilType(ty Type) bool {
 		return false
 	}
 
-	if _, ok := optionalType.Type.(*NeverType); !ok {
+	if optionalType.Type != NeverType {
 		return false
 	}
 

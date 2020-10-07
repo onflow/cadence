@@ -83,11 +83,11 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 	}
 
 	if keyType == nil {
-		keyType = &NeverType{}
+		keyType = NeverType
 	}
 
 	if valueType == nil {
-		valueType = &NeverType{}
+		valueType = NeverType
 	}
 
 	if !IsValidDictionaryKeyType(keyType) {
@@ -113,11 +113,14 @@ func (checker *Checker) VisitDictionaryExpression(expression *ast.DictionaryExpr
 func IsValidDictionaryKeyType(keyType Type) bool {
 	// TODO: implement support for more built-in types here and in interpreter
 	switch keyType := keyType.(type) {
-	case *NeverType, *StringType, *BoolType, *CharacterType, *AddressType:
+	case *StringType, *BoolType, *CharacterType, *AddressType:
 		return true
 	case *CompositeType:
 		return keyType.Kind == common.CompositeKindEnum
 	default:
+		if keyType == NeverType {
+			return true
+		}
 		return IsSubType(keyType, &NumberType{})
 	}
 }

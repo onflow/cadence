@@ -26,6 +26,7 @@ type NominalType struct {
 	Name                 string
 	QualifiedName        string
 	TypeID               TypeID
+	IsInvalid            bool
 	IsResource           bool
 	Storable             bool
 	Equatable            bool
@@ -56,8 +57,8 @@ func (t *NominalType) IsResourceType() bool {
 	return t.IsResource
 }
 
-func (*NominalType) IsInvalidType() bool {
-	return false
+func (t *NominalType) IsInvalidType() bool {
+	return t.IsInvalid
 }
 
 func (t *NominalType) IsStorable(_ map[*Member]bool) bool {
