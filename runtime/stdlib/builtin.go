@@ -89,7 +89,7 @@ var PanicFunction = NewStandardLibraryFunction(
 			},
 		},
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(
-			&sema.NeverType{},
+			sema.NeverType,
 		),
 	},
 	func(invocation interpreter.Invocation) trampoline.Trampoline {

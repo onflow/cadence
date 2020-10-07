@@ -339,7 +339,7 @@ func (checker *Checker) checkBinaryExpressionNilCoalescing(
 
 	leftInner := leftOptional.Type
 
-	if _, ok := leftInner.(*NeverType); ok {
+	if leftInner == NeverType {
 		return rightType
 	}
 	canNarrow := false

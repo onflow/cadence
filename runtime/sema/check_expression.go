@@ -174,7 +174,7 @@ func (checker *Checker) VisitBoolExpression(_ *ast.BoolExpression) ast.Repr {
 func (checker *Checker) VisitNilExpression(_ *ast.NilExpression) ast.Repr {
 	// TODO: verify
 	return &OptionalType{
-		Type: &NeverType{},
+		Type: NeverType,
 	}
 }
 
