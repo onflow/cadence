@@ -45,7 +45,7 @@ func (checker *Checker) VisitMemberExpression(expression *ast.MemberExpression) 
 	}
 
 	if member == nil {
-		return &InvalidType{}
+		return InvalidType
 	}
 
 	accessedSelfMember := checker.accessedSelfMember(expression)

@@ -164,7 +164,7 @@ func (checker *Checker) visitAssignmentValueType(
 			},
 		)
 
-		return &InvalidType{}
+		return InvalidType
 	}
 
 	switch target := targetExpression.(type) {
@@ -192,7 +192,7 @@ func (checker *Checker) visitIdentifierExpressionAssignment(
 	// check identifier was declared before
 	variable := checker.findAndCheckValueVariable(target.Identifier, true)
 	if variable == nil {
-		return &InvalidType{}
+		return InvalidType
 	}
 
 	// check identifier is not a constant
@@ -231,7 +231,7 @@ func (checker *Checker) visitIndexExpressionAssignment(
 	elementType = checker.visitIndexExpression(target, true)
 
 	if elementType == nil {
-		return &InvalidType{}
+		return InvalidType
 	}
 
 	if !valueType.IsInvalidType() &&
@@ -259,7 +259,7 @@ func (checker *Checker) visitMemberExpressionAssignment(
 	_, member, isOptional := checker.visitMember(target)
 
 	if member == nil {
-		return &InvalidType{}
+		return InvalidType
 	}
 
 	if isOptional {

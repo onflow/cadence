@@ -58,7 +58,7 @@ type ExpressionStatementResult struct {
 
 var emptyFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: &sema.TypeAnnotation{
-		Type: &sema.VoidType{},
+		Type: sema.VoidType,
 	},
 }
 
@@ -1017,7 +1017,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 			// If there is a return type, declare the constant `result`
 			// which has the return value
 
-			if _, isVoid := returnType.(*sema.VoidType); !isVoid {
+			if returnType != sema.VoidType {
 				interpreter.declareVariable(sema.ResultIdentifier, resultValue)
 			}
 
@@ -3094,7 +3094,7 @@ func (interpreter *Interpreter) initializerFunctionWrapper(
 
 	return interpreter.functionConditionsWrapper(
 		firstInitializer.FunctionDeclaration,
-		&sema.VoidType{},
+		sema.VoidType,
 		lexicalScope,
 	)
 }
@@ -3111,7 +3111,7 @@ func (interpreter *Interpreter) destructorFunctionWrapper(
 
 	return interpreter.functionConditionsWrapper(
 		destructor.FunctionDeclaration,
-		&sema.VoidType{},
+		sema.VoidType,
 		lexicalScope,
 	)
 }
@@ -3447,7 +3447,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 						preConditions,
 						executeTrampoline,
 						postConditionsRewrite.RewrittenPostConditions,
-						&sema.VoidType{},
+						sema.VoidType,
 					)
 				})
 		})
@@ -3704,13 +3704,11 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		}
 
 	case VoidDynamicType:
-		switch superType.(type) {
-		case *sema.VoidType, *sema.AnyStructType:
+		if _, ok := superType.(*sema.AnyStructType); ok {
 			return true
-
-		default:
-			return false
 		}
+
+		return superType == sema.VoidType
 
 	case StringDynamicType:
 		switch superType.(type) {

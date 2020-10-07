@@ -853,7 +853,7 @@ func (checker *Checker) enumRawType(declaration *ast.CompositeDeclaration) Type 
 			},
 		)
 
-		return &InvalidType{}
+		return InvalidType
 	}
 
 	// Enums may not conform to interfaces,
@@ -934,11 +934,11 @@ func (checker *Checker) checkCompositeConformance(
 
 		initializerType := &FunctionType{
 			Parameters:           compositeType.ConstructorParameters,
-			ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
+			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 		}
 		interfaceInitializerType := &FunctionType{
 			Parameters:           interfaceType.InitializerParameters,
-			ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
+			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 		}
 
 		// TODO: subtype?
@@ -1251,7 +1251,7 @@ func (checker *Checker) compositeConstructorType(
 			&SpecialFunctionType{
 				FunctionType: &FunctionType{
 					Parameters:           constructorFunctionType.Parameters,
-					ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
+					ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 				},
 			}
 	}
@@ -1638,7 +1638,7 @@ func (checker *Checker) checkSpecialFunction(
 
 	functionType := &FunctionType{
 		Parameters:           parameters,
-		ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 	}
 
 	checker.checkFunction(

@@ -334,7 +334,7 @@ func (checker *Checker) checkBinaryExpressionNilCoalescing(
 	}
 
 	if leftIsInvalid || !leftIsOptional {
-		return &InvalidType{}
+		return InvalidType
 	}
 
 	leftInner := leftOptional.Type

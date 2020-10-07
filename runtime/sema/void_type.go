@@ -18,37 +18,16 @@
 
 package sema
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-)
-
-func (checker *Checker) VisitDestroyExpression(expression *ast.DestroyExpression) (resultType ast.Repr) {
-	resultType = VoidType
-
-	valueType := expression.Expression.Accept(checker).(Type)
-
-	checker.recordResourceInvalidation(
-		expression.Expression,
-		valueType,
-		ResourceInvalidationKindDestroy,
-	)
-
-	// The destruction of any resource type (even compound resource types)
-
-	if valueType.IsInvalidType() {
-		return
-	}
-
-	if !valueType.IsResourceType() {
-
-		checker.report(
-			&InvalidDestructionError{
-				Range: ast.NewRangeFromPositioned(expression.Expression),
-			},
-		)
-
-		return
-	}
-
-	return
+// VoidType represents the void type
+//
+var VoidType = &NominalType{
+	Name:                 "Void",
+	QualifiedName:        "Void",
+	TypeID:               "Void",
+	IsInvalid:            false,
+	IsResource:           false,
+	Storable:             false,
+	Equatable:            false,
+	ExternallyReturnable: true,
+	IsSuperTypeOf:        nil,
 }

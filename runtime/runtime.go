@@ -157,11 +157,9 @@ func (r *interpreterRuntime) ExecuteScript(
 	// Ensure the entry point's parameter types are storable
 	if len(epFunctionType.Parameters) > 0 {
 		for _, param := range epFunctionType.Parameters {
-			if _, isVoid := param.TypeAnnotation.Type.(*sema.VoidType); !isVoid {
-				if !param.TypeAnnotation.Type.IsStorable(map[*sema.Member]bool{}) {
-					return nil, &ScriptParameterTypeNotStorableError{
-						Type: param.TypeAnnotation.Type,
-					}
+			if !param.TypeAnnotation.Type.IsStorable(map[*sema.Member]bool{}) {
+				return nil, &ScriptParameterTypeNotStorableError{
+					Type: param.TypeAnnotation.Type,
 				}
 			}
 		}

@@ -282,7 +282,7 @@ func (checker *Checker) handleMissingImports(missing []ast.Identifier, available
 
 		_, err := checker.valueActivations.Declare(variableDeclaration{
 			identifier:               identifier.Identifier,
-			ty:                       &InvalidType{},
+			ty:                       InvalidType,
 			access:                   access,
 			kind:                     common.DeclarationKindValue,
 			pos:                      identifier.Pos,
@@ -294,7 +294,7 @@ func (checker *Checker) handleMissingImports(missing []ast.Identifier, available
 		// NOTE: declare type with invalid type to silence rest of program
 		_, err = checker.typeActivations.DeclareType(typeDeclaration{
 			identifier:               identifier,
-			ty:                       &InvalidType{},
+			ty:                       InvalidType,
 			declarationKind:          common.DeclarationKindType,
 			access:                   access,
 			allowOuterScopeShadowing: false,

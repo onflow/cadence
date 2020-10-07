@@ -31,7 +31,7 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 	valueExpression := statement.Value
 	valueType := valueExpression.Accept(checker).(Type)
 
-	var elementType Type = &InvalidType{}
+	var elementType Type = InvalidType
 
 	if !valueType.IsInvalidType() {
 

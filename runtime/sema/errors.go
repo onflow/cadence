@@ -800,7 +800,7 @@ type InvalidReturnValueError struct {
 func (e *InvalidReturnValueError) Error() string {
 	return fmt.Sprintf(
 		"invalid return with value from function with `%s` return type",
-		&VoidType{},
+		VoidType,
 	)
 }
 

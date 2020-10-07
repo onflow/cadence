@@ -146,7 +146,7 @@ func (PrimitiveStaticType) isStaticType() {}
 func (i PrimitiveStaticType) SemaType() sema.Type {
 	switch i {
 	case PrimitiveStaticTypeVoid:
-		return &sema.VoidType{}
+		return sema.VoidType
 
 	case PrimitiveStaticTypeAny:
 		return &sema.AnyType{}
@@ -260,9 +260,6 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 //
 func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 	switch t.(type) {
-	case *sema.VoidType:
-		return PrimitiveStaticTypeVoid
-
 	case *sema.AnyType:
 		return PrimitiveStaticTypeAny
 
@@ -365,6 +362,8 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 		return PrimitiveStaticTypePath
 	case sema.NeverType:
 		return PrimitiveStaticTypeNever
+	case sema.VoidType:
+		return PrimitiveStaticTypeVoid
 	}
 
 	return PrimitiveStaticTypeUnknown
