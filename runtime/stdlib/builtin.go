@@ -45,7 +45,7 @@ var AssertFunction = NewStandardLibraryFunction(
 			},
 		},
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(
-			&sema.VoidType{},
+			sema.VoidType,
 		),
 		RequiredArgumentCount: sema.RequiredArgumentCount(1),
 	},
@@ -121,7 +121,7 @@ var LogFunction = NewStandardLibraryFunction(
 			},
 		},
 		ReturnTypeAnnotation: sema.NewTypeAnnotation(
-			&sema.VoidType{},
+			sema.VoidType,
 		),
 	},
 	func(invocation interpreter.Invocation) trampoline.Trampoline {

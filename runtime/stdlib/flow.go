@@ -73,7 +73,7 @@ var logFunctionType = &sema.FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		&sema.VoidType{},
+		sema.VoidType,
 	),
 }
 

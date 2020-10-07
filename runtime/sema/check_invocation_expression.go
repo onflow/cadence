@@ -36,7 +36,7 @@ func (checker *Checker) VisitInvocationExpression(invocationExpression *ast.Invo
 				Range: ast.NewRangeFromPositioned(invocationExpression),
 			},
 		)
-		return &InvalidType{}
+		return InvalidType
 	}
 
 	return ty
@@ -79,7 +79,7 @@ func (checker *Checker) checkInvocationExpression(invocationExpression *ast.Invo
 				},
 			)
 		}
-		return &InvalidType{}
+		return InvalidType
 	}
 
 	// The invoked expression has a function type,
@@ -425,7 +425,7 @@ func (checker *Checker) checkInvocation(
 	returnType = functionType.ReturnTypeAnnotation.Type.Resolve(typeArguments)
 	if returnType == nil {
 		// TODO: report error? does `checkTypeParameterInference` below already do that?
-		returnType = &InvalidType{}
+		returnType = InvalidType
 	}
 
 	// Check all type parameters have been bound to a type.
@@ -500,7 +500,7 @@ func (checker *Checker) checkInvocationRequiredArgument(
 	if parameterType.Unify(argumentType, typeParameters, checker.report, argumentRange) {
 		parameterType = parameterType.Resolve(typeParameters)
 		if parameterType == nil {
-			parameterType = &InvalidType{}
+			parameterType = InvalidType
 		}
 	}
 

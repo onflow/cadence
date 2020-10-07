@@ -212,7 +212,7 @@ func NewChecker(program *ast.Program, location ast.Location, options ...Option) 
 
 	functionActivations := &FunctionActivations{}
 	functionActivations.EnterFunction(&FunctionType{
-		ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{})},
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType)},
 		0,
 	)
 
@@ -898,7 +898,7 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 
 	case nil:
 		// The AST might contain "holes" if parsing failed
-		return &InvalidType{}
+		return InvalidType
 	}
 
 	panic(&astTypeConversionError{invalidASTType: t})
@@ -1017,7 +1017,7 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 			// If no restricted type is given, and also no restrictions,
 			// the type is ambiguous.
 
-			restrictedType = &InvalidType{}
+			restrictedType = InvalidType
 
 			checker.report(
 				&AmbiguousRestrictedTypeError{
@@ -1243,7 +1243,7 @@ func (checker *Checker) findAndCheckTypeVariable(identifier ast.Identifier, reco
 func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 	variable := checker.findAndCheckTypeVariable(t.Identifier, true)
 	if variable == nil {
-		return &InvalidType{}
+		return InvalidType
 	}
 
 	ty := variable.Type
@@ -1267,7 +1267,7 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 				)
 			}
 
-			return &InvalidType{}
+			return InvalidType
 		}
 
 		resolvedIdentifiers = append(resolvedIdentifiers, identifier)
@@ -1284,7 +1284,7 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 					Pos:          t.StartPosition(),
 				},
 			)
-			return &InvalidType{}
+			return InvalidType
 		}
 	}
 

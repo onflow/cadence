@@ -326,7 +326,7 @@ func TestCheckInvocationWithOnlyVarargs(t *testing.T) {
 							Name: "foo",
 							Type: &sema.FunctionType{
 								ReturnTypeAnnotation: &sema.TypeAnnotation{
-									Type: &sema.VoidType{},
+									Type: sema.VoidType,
 								},
 								RequiredArgumentCount: func() *int {
 									// NOTE: important to check *all* arguments are optional

@@ -7928,7 +7928,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
 				},
 			},
 			ReturnTypeAnnotation: sema.NewTypeAnnotation(
-				&sema.VoidType{},
+				sema.VoidType,
 			),
 		},
 		func(invocation interpreter.Invocation) trampoline.Trampoline {

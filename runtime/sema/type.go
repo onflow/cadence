@@ -649,133 +649,6 @@ func (t *AnyResourceType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
 }
 
-// VoidType represents the void type
-type VoidType struct{}
-
-func (*VoidType) IsType() {}
-
-func (*VoidType) String() string {
-	return "Void"
-}
-
-func (*VoidType) QualifiedString() string {
-	return "Void"
-}
-
-func (*VoidType) ID() TypeID {
-	return "Void"
-}
-
-func (*VoidType) Equal(other Type) bool {
-	_, ok := other.(*VoidType)
-	return ok
-}
-
-func (*VoidType) IsResourceType() bool {
-	return false
-}
-
-func (*VoidType) IsInvalidType() bool {
-	return false
-}
-
-func (*VoidType) IsStorable(_ map[*Member]bool) bool {
-	return false
-}
-
-func (*VoidType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*VoidType) IsEquatable() bool {
-	return false
-}
-
-func (*VoidType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *VoidType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-func (*VoidType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *VoidType) Resolve(_ map[*TypeParameter]Type) Type {
-	return t
-}
-
-func (t *VoidType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// InvalidType represents a type that is invalid.
-// It is the result of type checking failing and
-// can't be expressed in programs.
-//
-type InvalidType struct{}
-
-func (*InvalidType) IsType() {}
-
-func (*InvalidType) String() string {
-	return "<<invalid>>"
-}
-
-func (*InvalidType) QualifiedString() string {
-	return "<<invalid>>"
-}
-
-func (*InvalidType) ID() TypeID {
-	return "<<invalid>>"
-}
-
-func (*InvalidType) Equal(other Type) bool {
-	_, ok := other.(*InvalidType)
-	return ok
-}
-
-func (*InvalidType) IsResourceType() bool {
-	return false
-}
-
-func (*InvalidType) IsInvalidType() bool {
-	return true
-}
-
-func (*InvalidType) IsStorable(_ map[*Member]bool) bool {
-	return false
-}
-
-func (*InvalidType) IsExternallyReturnable(_ map[*Member]bool) bool {
-	return false
-}
-
-func (*InvalidType) IsEquatable() bool {
-	return false
-}
-
-func (*InvalidType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *InvalidType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-func (*InvalidType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *InvalidType) Resolve(_ map[*TypeParameter]Type) Type {
-	return t
-}
-
-func (t *InvalidType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
 // OptionalType represents the optional variant of another type
 type OptionalType struct {
 	Type Type
@@ -3485,7 +3358,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 							},
 						},
 						ReturnTypeAnnotation: NewTypeAnnotation(
-							&VoidType{},
+							VoidType,
 						),
 					},
 					arrayTypeAppendFunctionDocString,
@@ -3553,7 +3426,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 							},
 						},
 						ReturnTypeAnnotation: NewTypeAnnotation(
-							&VoidType{},
+							VoidType,
 						),
 					},
 					arrayTypeInsertFunctionDocString,
@@ -4497,12 +4370,12 @@ var baseTypes map[string]Type
 func init() {
 
 	baseTypes = map[string]Type{
-		"": &VoidType{},
+		"": VoidType,
 	}
 
 	otherTypes := []Type{
 		&MetaType{},
-		&VoidType{},
+		VoidType,
 		&AnyStructType{},
 		&AnyResourceType{},
 		NeverType,
@@ -5153,7 +5026,7 @@ var authAccountTypeAddPublicKeyFunctionType = &FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		&VoidType{},
+		VoidType,
 	),
 }
 
@@ -5172,7 +5045,7 @@ var authAccountTypeRemovePublicKeyFunctionType = &FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		&VoidType{},
+		VoidType,
 	),
 }
 
@@ -5207,7 +5080,7 @@ var authAccountTypeSaveFunctionType = func() *FunctionType {
 				TypeAnnotation: NewTypeAnnotation(PathType),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 	}
 }()
 
@@ -5405,7 +5278,7 @@ var authAccountTypeUnlinkFunctionType = &FunctionType{
 			TypeAnnotation: NewTypeAnnotation(PathType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
+	ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 }
 
 const authAccountTypeUnlinkFunctionDocString = `
@@ -7147,7 +7020,7 @@ type TransactionType struct {
 func (t *TransactionType) EntryPointFunctionType() *FunctionType {
 	return &FunctionType{
 		Parameters:           append(t.Parameters, t.PrepareParameters...),
-		ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 	}
 }
 
@@ -7155,7 +7028,7 @@ func (t *TransactionType) PrepareFunctionType() *SpecialFunctionType {
 	return &SpecialFunctionType{
 		FunctionType: &FunctionType{
 			Parameters:           t.PrepareParameters,
-			ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
+			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 		},
 	}
 }
@@ -7164,7 +7037,7 @@ func (*TransactionType) ExecuteFunctionType() *SpecialFunctionType {
 	return &SpecialFunctionType{
 		FunctionType: &FunctionType{
 			Parameters:           []*Parameter{},
-			ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
+			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 		},
 	}
 }

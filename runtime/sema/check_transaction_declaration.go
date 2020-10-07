@@ -64,7 +64,7 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 
 	checker.visitWithPostConditions(
 		declaration.PostConditions,
-		&VoidType{},
+		VoidType,
 		func() {
 			checker.withSelfResourceInvalidationAllowed(func() {
 				checker.visitTransactionExecuteFunction(declaration.Execute, transactionType)

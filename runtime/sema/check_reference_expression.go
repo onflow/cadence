@@ -106,7 +106,7 @@ func (checker *Checker) VisitReferenceExpression(referenceExpression *ast.Refere
 	}
 
 	if referenceType == nil {
-		return &InvalidType{}
+		return InvalidType
 	}
 
 	return referenceType
