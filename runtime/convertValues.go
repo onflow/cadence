@@ -254,7 +254,7 @@ func exportLinkValue(v interpreter.LinkValue, inter *interpreter.Interpreter) ca
 
 func exportPathValue(v interpreter.PathValue) cadence.Path {
 	return cadence.Path{
-		Domain:     v.Domain.Name(),
+		Domain:     v.Domain.Identifier(),
 		Identifier: v.Identifier,
 	}
 }
@@ -342,7 +342,7 @@ func importValue(value cadence.Value) interpreter.Value {
 		return importCompositeValue(common.CompositeKindEvent, v.EventType.ID(), v.EventType.Fields, v.Fields)
 	case cadence.Path:
 		return interpreter.PathValue{
-			Domain:     common.PathDomainFromName(v.Domain),
+			Domain:     common.PathDomainFromIdentifier(v.Domain),
 			Identifier: v.Identifier,
 		}
 	}

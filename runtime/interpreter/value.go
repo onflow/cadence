@@ -6475,31 +6475,6 @@ func accountGetCapabilityFunction(
 				break
 			}
 
-			if authorized {
-
-				// If the account is an authorized account (`AuthAccount`),
-				// ensure the path has a `private` or `public` domain.
-
-				if !checkPathDomain(
-					path,
-					common.PathDomainPrivate,
-					common.PathDomainPublic,
-				) {
-					return trampoline.Done{Result: NilValue{}}
-				}
-			} else {
-
-				// If the account is a public account (`PublicAccount`),
-				// ensure the path has a `public` domain.
-
-				if !checkPathDomain(
-					path,
-					common.PathDomainPublic,
-				) {
-					return trampoline.Done{Result: NilValue{}}
-				}
-			}
-
 			var borrowStaticType StaticType
 			if borrowType != nil {
 				borrowStaticType = ConvertSemaToStaticType(borrowType)
@@ -6511,9 +6486,7 @@ func accountGetCapabilityFunction(
 				BorrowType: borrowStaticType,
 			}
 
-			result := NewSomeValueOwningNonCopying(capability)
-
-			return trampoline.Done{Result: result}
+			return trampoline.Done{Result: capability}
 		},
 	)
 }

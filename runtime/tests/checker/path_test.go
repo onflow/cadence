@@ -41,7 +41,7 @@ func TestCheckPath(t *testing.T) {
 
 	test := func(domain common.PathDomain) {
 
-		t.Run(fmt.Sprintf("valid: %s", domain.Name()), func(t *testing.T) {
+		t.Run(fmt.Sprintf("valid: %s", domain.Identifier()), func(t *testing.T) {
 
 			t.Parallel()
 

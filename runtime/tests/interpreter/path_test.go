@@ -34,7 +34,7 @@ func TestInterpretPath(t *testing.T) {
 
 	for _, domain := range common.AllPathDomainsByIdentifier {
 
-		t.Run(fmt.Sprintf("valid: %s", domain.Name()), func(t *testing.T) {
+		t.Run(fmt.Sprintf("valid: %s", domain.Identifier()), func(t *testing.T) {
 
 			inter := parseCheckAndInterpret(t,
 				fmt.Sprintf(

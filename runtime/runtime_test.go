@@ -1322,7 +1322,8 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
       transaction {
         prepare(signer: AuthAccount) {
           let publicAccount = getAccount(signer.address)
-          let ref = publicAccount.getCapability(/public/container)!.borrow<&Container>()!
+          let ref = publicAccount.getCapability(/public/container)
+              .borrow<&Container>()!
 
           let length = ref.values.length
           ref.values.append(1)
@@ -1337,7 +1338,9 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
       transaction {
         prepare(signer: AuthAccount) {
           let publicAccount = getAccount(signer.address)
-          let ref = publicAccount.getCapability(/public/container)!.borrow<&Container>()!
+          let ref = publicAccount
+              .getCapability(/public/container)
+              .borrow<&Container>()!
 
           let length = ref.values.length
           ref.values.append(2)
@@ -1709,7 +1712,9 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
       transaction {
         prepare(signer: AuthAccount) {
           let publicAccount = getAccount(signer.address)
-          let ref = publicAccount.getCapability(/public/r)!.borrow<&R>()!
+          let ref = publicAccount
+              .getCapability(/public/r)
+              .borrow<&R>()!
           ref.x()
         }
       }
@@ -1794,7 +1799,9 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 
       transaction {
         prepare(signer: AuthAccount) {
-          let ref = signer.getCapability(/public/r)!.borrow<&AnyResource{RI}>()!
+          let ref = signer
+              .getCapability(/public/r)
+              .borrow<&AnyResource{RI}>()!
           ref.x()
         }
       }
@@ -2184,7 +2191,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
               transaction {
 
                 prepare(signer: AuthAccount) {
-                  log(getAccount(0x%s).getCapability(/public/r)!.borrow<&R>()!.test())
+                  log(getAccount(0x%s).getCapability(/public/r).borrow<&R>()!.test())
                 }
               }
             `,
@@ -3472,7 +3479,7 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
               ref1.logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/r)!.borrow<&Test.R>()!
+              let ref2 = publicAccount.getCapability(/public/r).borrow<&Test.R>()!
               log(ref2.owner?.address)
               ref2.logOwnerAddress()
           }
@@ -3490,7 +3497,7 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
               ref1.logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/r)!.borrow<&Test.R>()!
+              let ref2 = publicAccount.getCapability(/public/r).borrow<&Test.R>()!
               log(ref2.owner?.address)
               ref2.logOwnerAddress()
           }
@@ -3613,7 +3620,7 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
               ref1[1].logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/rs)!.borrow<&[Test.R]>()!
+              let ref2 = publicAccount.getCapability(/public/rs).borrow<&[Test.R]>()!
               log(ref2[0].owner?.address)
               log(ref2[1].owner?.address)
               ref2[0].logOwnerAddress()
@@ -3635,7 +3642,7 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
               ref1[1].logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/rs)!.borrow<&[Test.R]>()!
+              let ref2 = publicAccount.getCapability(/public/rs).borrow<&[Test.R]>()!
               log(ref2[0].owner?.address)
               log(ref2[1].owner?.address)
               ref2[0].logOwnerAddress()
@@ -3765,7 +3772,7 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
               ref1["b"]?.logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/rs)!.borrow<&{String: Test.R}>()!
+              let ref2 = publicAccount.getCapability(/public/rs).borrow<&{String: Test.R}>()!
               log(ref2["a"]?.owner?.address)
               log(ref2["b"]?.owner?.address)
               ref2["a"]?.logOwnerAddress()
@@ -3787,7 +3794,7 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
               ref1["b"]?.logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/rs)!.borrow<&{String: Test.R}>()!
+              let ref2 = publicAccount.getCapability(/public/rs).borrow<&{String: Test.R}>()!
               log(ref2["a"]?.owner?.address)
               log(ref2["b"]?.owner?.address)
               ref2["a"]?.logOwnerAddress()
@@ -3974,7 +3981,7 @@ func TestRuntimeMetrics(t *testing.T) {
 	imported2Location := StringLocation("imported2")
 
 	importedScript2 := []byte(`
-      pub fun getPath(): Path {
+      pub fun getPath(): StoragePath {
         return /storage/foo
       }
     `)
