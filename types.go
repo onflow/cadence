@@ -827,6 +827,46 @@ func (PathType) ID() string {
 	return "Path"
 }
 
+// CapabilityPathType
+
+type CapabilityPathType struct{}
+
+func (CapabilityPathType) isType() {}
+
+func (CapabilityPathType) ID() string {
+	return "CapabilityPath"
+}
+
+// StoragePathType
+
+type StoragePathType struct{}
+
+func (StoragePathType) isType() {}
+
+func (StoragePathType) ID() string {
+	return "StoragePath"
+}
+
+// PublicPathType
+
+type PublicPathType struct{}
+
+func (PublicPathType) isType() {}
+
+func (PublicPathType) ID() string {
+	return "PublicPath"
+}
+
+// PrivatePathType
+
+type PrivatePathType struct{}
+
+func (PrivatePathType) isType() {}
+
+func (PrivatePathType) ID() string {
+	return "PrivatePath"
+}
+
 // CapabilityType
 
 type CapabilityType struct {

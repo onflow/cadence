@@ -4869,3 +4869,27 @@ func singleIdentifierLocationResolver(t *testing.T) func(identifiers []Identifie
 		}
 	}
 }
+
+func TestPanics(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	script := []byte(`
+      pub fun main() {
+		[1][1]
+      }
+    `)
+
+	runtimeInterface := &testRuntimeInterface{
+		getSigningAccounts: func() []Address {
+			return []Address{{42}}
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	_, err := runtime.ExecuteScript(script, nil, runtimeInterface, nextTransactionLocation())
+	assert.Error(t, err)
+}

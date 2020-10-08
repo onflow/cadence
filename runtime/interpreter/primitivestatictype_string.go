@@ -46,6 +46,10 @@ func _() {
 	_ = x[PrimitiveStaticTypeUFix64-72]
 	_ = x[PrimitiveStaticTypePath-76]
 	_ = x[PrimitiveStaticTypeCapability-77]
+	_ = x[PrimitiveStaticTypeStoragePath-78]
+	_ = x[PrimitiveStaticTypeCapabilityPath-79]
+	_ = x[PrimitiveStaticTypePublicPath-80]
+	_ = x[PrimitiveStaticTypePrivatePath-81]
 }
 
 const (
@@ -58,7 +62,7 @@ const (
 	_PrimitiveStaticType_name_6 = "Word8Word16Word32Word64"
 	_PrimitiveStaticType_name_7 = "Fix64"
 	_PrimitiveStaticType_name_8 = "UFix64"
-	_PrimitiveStaticType_name_9 = "PathCapability"
+	_PrimitiveStaticType_name_9 = "PathCapabilityStoragePathCapabilityPathPublicPathPrivatePath"
 )
 
 var (
@@ -69,7 +73,7 @@ var (
 	_PrimitiveStaticType_index_4 = [...]uint8{0, 3, 7, 12, 17, 22, 28, 34}
 	_PrimitiveStaticType_index_5 = [...]uint8{0, 4, 9, 15, 21, 27, 34, 41}
 	_PrimitiveStaticType_index_6 = [...]uint8{0, 5, 11, 17, 23}
-	_PrimitiveStaticType_index_9 = [...]uint8{0, 4, 14}
+	_PrimitiveStaticType_index_9 = [...]uint8{0, 4, 14, 25, 39, 49, 60}
 )
 
 func (i PrimitiveStaticType) String() string {
@@ -98,7 +102,7 @@ func (i PrimitiveStaticType) String() string {
 		return _PrimitiveStaticType_name_7
 	case i == 72:
 		return _PrimitiveStaticType_name_8
-	case 76 <= i && i <= 77:
+	case 76 <= i && i <= 81:
 		i -= 76
 		return _PrimitiveStaticType_name_9[_PrimitiveStaticType_index_9[i]:_PrimitiveStaticType_index_9[i+1]]
 	default:

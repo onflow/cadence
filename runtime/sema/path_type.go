@@ -19,7 +19,7 @@
 package sema
 
 // PathType
-
+//
 var PathType = &NominalType{
 	Name:          "Path",
 	QualifiedName: "Path",
@@ -30,5 +30,63 @@ var PathType = &NominalType{
 	// TODO: implement support for equating paths in the future
 	Equatable:            false,
 	ExternallyReturnable: true,
-	IsSuperTypeOf:        nil,
+	IsSuperTypeOf: func(subType Type) bool {
+		return IsSubType(subType, StoragePathType) ||
+			IsSubType(subType, CapabilityPathType)
+	},
+}
+
+// StoragePathType
+//
+var StoragePathType = &NominalType{
+	Name:          "StoragePath",
+	QualifiedName: "StoragePath",
+	TypeID:        "StoragePath",
+	IsResource:    false,
+	Storable:      true,
+	// TODO: implement support for equating paths in the future
+	Equatable:     false,
+	IsSuperTypeOf: nil,
+}
+
+// CapabilityPathType
+//
+var CapabilityPathType = &NominalType{
+	Name:          "CapabilityPath",
+	QualifiedName: "CapabilityPath",
+	TypeID:        "CapabilityPath",
+	IsResource:    false,
+	Storable:      true,
+	// TODO: implement support for equating paths in the future
+	Equatable: false,
+	IsSuperTypeOf: func(subType Type) bool {
+		return IsSubType(subType, PrivatePathType) ||
+			IsSubType(subType, PublicPathType)
+	},
+}
+
+// PublicPathType
+//
+var PublicPathType = &NominalType{
+	Name:          "PublicPath",
+	QualifiedName: "PublicPath",
+	TypeID:        "PublicPath",
+	IsResource:    false,
+	Storable:      true,
+	// TODO: implement support for equating paths in the future
+	Equatable:     false,
+	IsSuperTypeOf: nil,
+}
+
+// PrivatePathType
+//
+var PrivatePathType = &NominalType{
+	Name:          "PrivatePath",
+	QualifiedName: "PrivatePath",
+	TypeID:        "PrivatePath",
+	IsResource:    false,
+	Storable:      true,
+	// TODO: implement support for equating paths in the future
+	Equatable:     false,
+	IsSuperTypeOf: nil,
 }

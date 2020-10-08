@@ -4386,6 +4386,10 @@ func init() {
 		&AuthAccountType{},
 		&PublicAccountType{},
 		PathType,
+		StoragePathType,
+		CapabilityPathType,
+		PrivatePathType,
+		PublicPathType,
 		&CapabilityType{},
 		&DeployedContractType{},
 	}

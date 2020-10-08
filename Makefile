@@ -49,9 +49,12 @@ lint:
 check-headers:
 	@./check-headers.sh
 
-.PHONY: check-tidy
-check-tidy:
+.PHONY: generate
+generate:
 	go generate -v ./...
+
+.PHONY: check-tidy
+check-tidy: generate
 	go mod tidy
 	cd languageserver; go mod tidy
 	git diff --exit-code
