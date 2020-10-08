@@ -14,8 +14,8 @@ Every account can be accessed through two types:
 
       // Storage operations
 
-      fun getCapability<T>(_ path: Path): Capability<T>?
-      fun getLinkTarget(_ path: Path): Path?
+      fun getCapability<T>(_ path: PublicPath): Capability<T>
+      fun getLinkTarget(_ path: CapabilityPath): Path?
   }
   ```
 
@@ -52,15 +52,15 @@ Every account can be accessed through two types:
 
       // Storage operations
 
-      fun save<T>(_ value: T, to: Path)
-      fun load<T>(from: Path): T?
-      fun copy<T: AnyStruct>(from: Path): T?
+      fun save<T>(_ value: T, to: StoragePath)
+      fun load<T>(from: StoragePath): T?
+      fun copy<T: AnyStruct>(from: StoragePath): T?
 
-      fun borrow<T: &Any>(from: Path): T?
+      fun borrow<T: &Any>(from: StoragePath): T?
 
-      fun link<T: &Any>(_ newCapabilityPath: Path, target: Path): Capability<T>?
-      fun getLinkTarget(_ path: Path): Path?
-      fun unlink(_ path: Path)
+      fun link<T: &Any>(_ newCapabilityPath: CapabilityPath, target: Path): Capability<T>?
+      fun getLinkTarget(_ path: CapabilityPath): Path?
+      fun unlink(_ path: CapabilityPath)
 
       struct Contracts {
           fun add(
@@ -109,8 +109,11 @@ transaction(key: [UInt8]) {
 ## Account Storage
 
 All accounts have storage.
+Both resources and structures can be stored in account storage.
 
-Objects are stored under paths in storage.
+### Paths
+
+Objects are stored under paths.
 Paths consist of a domain and an identifier.
 
 Paths start with the character `/`, followed by the domain, the path separator `/`,
@@ -121,13 +124,35 @@ There are only three valid domains: `storage`, `private`, and `public`.
 
 Objects in storage are always stored in the `storage` domain.
 
-Both resources and structures can be stored in account storage.
+Paths in the storage domain have type `StoragePath`,
+in the private domain `PrivatePath`,
+and in the public domain `PublicPath`.
+
+`PrivatePath` and `PublicPath` are subtypes of `CapabilityPath`.
+
+Both `StoragePath` and `CapabilityPath` are subtypes of `Path`.
+
+<table>
+  <tr>
+    <td colspan="3">Path</td>
+  </tr>
+  <tr>
+    <td colspan="2">CapabilityPath</td>
+    <td colspan="2" rowspan="2">StoragePath</td>
+  </tr>
+  <tr>
+    <td>PrivatePath</td>
+    <td>PublicPath</td>
+  </tr>
+</table>
+
+### Account Storage API
 
 Account storage is accessed through the following functions of `AuthAccount`.
 This means that any code that has access to the authorized account has access
 to all its stored objects.
 
-- `cadence•fun save<T>(_ value: T, to: Path)`
+- `cadence•fun save<T>(_ value: T, to: StoragePath)`
 
   Saves an object to account storage.
   Resources are moved into storage, and structures are copied.
@@ -139,7 +164,7 @@ to all its stored objects.
 
   The path must be a storage path, i.e., only the domain `storage` is allowed.
 
-- `cadence•fun load<T>(from: Path): T?`
+- `cadence•fun load<T>(from: StoragePath): T?`
 
   Loads an object from account storage.
   If no object is stored under the given path, the function returns `nil`.
@@ -157,7 +182,7 @@ to all its stored objects.
 
   The path must be a storage path, i.e., only the domain `storage` is allowed.
 
-- `cadence•fun copy<T: AnyStruct>(from: Path): T?`
+- `cadence•fun copy<T: AnyStruct>(from: StoragePath): T?`
 
   Returns a copy of a structure stored in account storage, without removing it from storage.
 
@@ -264,7 +289,7 @@ as it is necessary for resources,
 it is also possible to create references to objects in storage:
 This is possible using the `borrow` function of an `AuthAccount`:
 
-- `cadence•fun borrow<T: &Any>(from: Path): T?`
+- `cadence•fun borrow<T: &Any>(from: StoragePath): T?`
 
   Returns a reference to an object in storage without removing it from storage.
   If no object is stored under the given path, the function returns `nil`.
