@@ -232,7 +232,7 @@ func (e InvalidPathDomainError) SecondaryError() string {
 	domainNames := make([]string, len(e.ExpectedDomains))
 
 	for i, domain := range e.ExpectedDomains {
-		domainNames[i] = domain.Name()
+		domainNames[i] = domain.Identifier()
 	}
 
 	return fmt.Sprintf(

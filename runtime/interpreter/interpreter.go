@@ -3945,24 +3945,6 @@ func storageKey(path PathValue) string {
 	return fmt.Sprintf("%s\x1F%s", path.Domain.Identifier(), path.Identifier)
 }
 
-func mustPathDomain(
-	path PathValue,
-	locationRange LocationRange,
-	expectedDomains ...common.PathDomain,
-) {
-	if checkPathDomain(path, expectedDomains...) {
-		return
-	}
-
-	panic(
-		InvalidPathDomainError{
-			ActualDomain:    path.Domain,
-			ExpectedDomains: expectedDomains,
-			LocationRange:   locationRange,
-		},
-	)
-}
-
 func checkPathDomain(path PathValue, expectedDomains ...common.PathDomain) bool {
 	actualDomain := path.Domain
 
@@ -3983,14 +3965,6 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 
 		address := addressValue.ToAddress()
 		key := storageKey(path)
-
-		// Ensure the path has a `storage` domain
-
-		mustPathDomain(
-			path,
-			invocation.LocationRange,
-			common.PathDomainStorage,
-		)
 
 		// Prevent an overwrite
 
@@ -4032,14 +4006,6 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 		path := invocation.Arguments[0].(PathValue)
 		key := storageKey(path)
-
-		// Ensure the path has a `storage` domain
-
-		mustPathDomain(
-			path,
-			invocation.LocationRange,
-			common.PathDomainStorage,
-		)
 
 		value := interpreter.readStored(address, key, false)
 
@@ -4087,14 +4053,6 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 		path := invocation.Arguments[0].(PathValue)
 		key := storageKey(path)
-
-		// Ensure the path has a `storage` domain
-
-		mustPathDomain(
-			path,
-			invocation.LocationRange,
-			common.PathDomainStorage,
-		)
 
 		value := interpreter.readStored(address, key, false)
 
@@ -4159,15 +4117,6 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 		newCapabilityKey := storageKey(newCapabilityPath)
 
-		// Ensure the path has a `private` or `public` domain
-
-		mustPathDomain(
-			newCapabilityPath,
-			invocation.LocationRange,
-			common.PathDomainPrivate,
-			common.PathDomainPublic,
-		)
-
 		if interpreter.storedValueExists(address, newCapabilityKey) {
 			return Done{Result: NilValue{}}
 		}
@@ -4210,15 +4159,6 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 
 		capabilityKey := storageKey(capabilityPath)
 
-		// Ensure the path has a `private` or `public` domain
-
-		mustPathDomain(
-			capabilityPath,
-			invocation.LocationRange,
-			common.PathDomainPrivate,
-			common.PathDomainPublic,
-		)
-
 		value := interpreter.readStored(address, capabilityKey, false)
 
 		switch value := value.(type) {
@@ -4249,15 +4189,6 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 
 		capabilityPath := invocation.Arguments[0].(PathValue)
 		capabilityKey := storageKey(capabilityPath)
-
-		// Ensure the path has a `private` or `public` domain
-
-		mustPathDomain(
-			capabilityPath,
-			invocation.LocationRange,
-			common.PathDomainPrivate,
-			common.PathDomainPublic,
-		)
 
 		// Write new value
 

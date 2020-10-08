@@ -58,11 +58,9 @@ func TestCheckAccount_save(t *testing.T) {
 
 	t.Parallel()
 
-	for _, domain := range common.AllPathDomainsByIdentifier {
+	testImplicitTypeArgument := func(domain common.PathDomain) {
 
-		// NOTE: all domains are statically valid at the moment
-
-		domainName := domain.Name()
+		domainName := domain.Identifier()
 		domainIdentifier := domain.Identifier()
 
 		testName := func(kind string) string {
@@ -91,7 +89,13 @@ func TestCheckAccount_save(t *testing.T) {
 				),
 			)
 
-			require.NoError(t, err)
+			if domain == common.PathDomainStorage {
+				require.NoError(t, err)
+			} else {
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			}
 		})
 
 		t.Run(testName("struct"), func(t *testing.T) {
@@ -112,16 +116,19 @@ func TestCheckAccount_save(t *testing.T) {
 				),
 			)
 
-			require.NoError(t, err)
+			if domain == common.PathDomainStorage {
+				require.NoError(t, err)
+			} else {
+				errs := ExpectCheckerErrors(t, err, 1)
 
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			}
 		})
 	}
 
-	for _, domain := range common.AllPathDomainsByIdentifier {
+	testExplicitTypeArgumentCorrect := func(domain common.PathDomain) {
 
-		// NOTE: all domains are statically valid at the moment
-
-		domainName := domain.Name()
+		domainName := domain.Identifier()
 		domainIdentifier := domain.Identifier()
 
 		testName := func(kind string) string {
@@ -150,7 +157,13 @@ func TestCheckAccount_save(t *testing.T) {
 				),
 			)
 
-			require.NoError(t, err)
+			if domain == common.PathDomainStorage {
+				require.NoError(t, err)
+			} else {
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			}
 		})
 
 		t.Run(testName("struct"), func(t *testing.T) {
@@ -171,15 +184,19 @@ func TestCheckAccount_save(t *testing.T) {
 				),
 			)
 
-			require.NoError(t, err)
+			if domain == common.PathDomainStorage {
+				require.NoError(t, err)
+			} else {
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			}
 		})
 	}
 
-	for _, domain := range common.AllPathDomainsByIdentifier {
+	testExplicitTypeArgumentIncorrect := func(domain common.PathDomain) {
 
-		// NOTE: all domains are statically valid at the moment
-
-		domainName := domain.Name()
+		domainName := domain.Identifier()
 		domainIdentifier := domain.Identifier()
 
 		testName := func(kind string) string {
@@ -210,10 +227,19 @@ func TestCheckAccount_save(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			if domain == common.PathDomainStorage {
 
-			require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-			require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+				errs := ExpectCheckerErrors(t, err, 2)
+
+				require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+			} else {
+				errs := ExpectCheckerErrors(t, err, 3)
+
+				require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+				require.IsType(t, &sema.TypeMismatchError{}, errs[2])
+			}
 		})
 
 		t.Run(testName("struct"), func(t *testing.T) {
@@ -236,18 +262,25 @@ func TestCheckAccount_save(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 2)
+			if domain == common.PathDomainStorage {
 
-			require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
-			require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+				errs := ExpectCheckerErrors(t, err, 2)
+
+				require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+			} else {
+				errs := ExpectCheckerErrors(t, err, 3)
+
+				require.IsType(t, &sema.TypeParameterTypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+				require.IsType(t, &sema.TypeMismatchError{}, errs[2])
+			}
 		})
 	}
 
-	for _, domain := range common.AllPathDomainsByIdentifier {
+	testInvalidNonStorable := func(domain common.PathDomain) {
 
-		// NOTE: all domains are statically valid at the moment
-
-		domainName := domain.Name()
+		domainName := domain.Identifier()
 		domainIdentifier := domain.Identifier()
 
 		testName := func(kind string) string {
@@ -277,9 +310,16 @@ func TestCheckAccount_save(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			if domain == common.PathDomainStorage {
+				errs := ExpectCheckerErrors(t, err, 1)
 
-			require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			} else {
+				errs := ExpectCheckerErrors(t, err, 2)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+			}
 		})
 
 		t.Run(testName("implicit type argument"), func(t *testing.T) {
@@ -301,106 +341,116 @@ func TestCheckAccount_save(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			if domain == common.PathDomainStorage {
+				errs := ExpectCheckerErrors(t, err, 1)
 
-			require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			} else {
+				errs := ExpectCheckerErrors(t, err, 2)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+			}
 		})
 	}
 
+	for _, domain := range common.AllPathDomainsByIdentifier {
+		testImplicitTypeArgument(domain)
+		testExplicitTypeArgumentCorrect(domain)
+		testExplicitTypeArgumentIncorrect(domain)
+		testInvalidNonStorable(domain)
+	}
 }
 
 func TestCheckAccount_load(t *testing.T) {
 
 	t.Parallel()
 
-	for _, domain := range common.AllPathDomainsByIdentifier {
-
-		// NOTE: all domains are statically valid at the moment
+	testMissingTypeArguments := func(domain common.PathDomain) {
 
 		testName := fmt.Sprintf(
-			"AuthAccount.load: missing type argument, %s",
-			domain.Name(),
+			"missing type argument, %s",
+			domain.Identifier(),
 		)
 
 		t.Run(testName, func(t *testing.T) {
 
-			t.Run("resource", func(t *testing.T) {
+			t.Parallel()
 
-				_, err := ParseAndCheckAccount(t,
-					fmt.Sprintf(
-						`
-                      resource R {}
-
-                      let r <- authAccount.load(from: /%s/r)
+			_, err := ParseAndCheckAccount(t,
+				fmt.Sprintf(
+					`
+                      let s = authAccount.load(from: /%s/s)
                     `,
-						domain.Identifier(),
-					),
-				)
+					domain.Identifier(),
+				),
+			)
 
+			if domain == common.PathDomainStorage {
 				errs := ExpectCheckerErrors(t, err, 1)
 
 				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
-			})
 
-			t.Run("struct", func(t *testing.T) {
+			} else {
+				errs := ExpectCheckerErrors(t, err, 2)
 
-				_, err := ParseAndCheckAccount(t,
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
+			}
+		})
+	}
+
+	testExplicitTypeArgument := func(domain common.PathDomain) {
+
+		testName := fmt.Sprintf(
+			"explicit type argument, %s",
+			domain.Identifier(),
+		)
+
+		t.Run(testName, func(t *testing.T) {
+
+			t.Parallel()
+
+			t.Run("resource", func(t *testing.T) {
+
+				t.Parallel()
+
+				checker, err := ParseAndCheckAccount(t,
 					fmt.Sprintf(
 						`
-                          struct S {}
+                          resource R {}
 
-                          let s = authAccount.load(from: /%s/s)
+                          let r <- authAccount.load<@R>(from: /%s/r)
                         `,
 						domain.Identifier(),
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				if domain == common.PathDomainStorage {
 
-				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
-			})
-		})
-	}
+					require.NoError(t, err)
 
-	for _, domain := range common.AllPathDomainsByIdentifier {
+					rType := checker.GlobalTypes["R"].Type
 
-		// NOTE: all domains are statically valid at the moment
+					rValueType := checker.GlobalValues["r"].Type
 
-		testName := fmt.Sprintf(
-			"AuthAccount.load: explicit type argument, %s",
-			domain.Name(),
-		)
+					require.Equal(t,
+						&sema.OptionalType{
+							Type: rType,
+						},
+						rValueType,
+					)
 
-		t.Run(testName, func(t *testing.T) {
+				} else {
+					errs := ExpectCheckerErrors(t, err, 1)
 
-			t.Run("resource", func(t *testing.T) {
-
-				checker, err := ParseAndCheckAccount(t,
-					fmt.Sprintf(
-						`
-                      resource R {}
-
-                      let r <- authAccount.load<@R>(from: /%s/r)
-                    `,
-						domain.Identifier(),
-					),
-				)
-
-				require.NoError(t, err)
-
-				rType := checker.GlobalTypes["R"].Type
-
-				rValueType := checker.GlobalValues["r"].Type
-
-				require.Equal(t,
-					&sema.OptionalType{
-						Type: rType,
-					},
-					rValueType,
-				)
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				}
 			})
 
 			t.Run("struct", func(t *testing.T) {
+
+				t.Parallel()
 
 				checker, err := ParseAndCheckAccount(t,
 					fmt.Sprintf(
@@ -413,20 +463,32 @@ func TestCheckAccount_load(t *testing.T) {
 					),
 				)
 
-				require.NoError(t, err)
+				if domain == common.PathDomainStorage {
 
-				sType := checker.GlobalTypes["S"].Type
+					require.NoError(t, err)
 
-				sValueType := checker.GlobalValues["s"].Type
+					sType := checker.GlobalTypes["S"].Type
 
-				require.Equal(t,
-					&sema.OptionalType{
-						Type: sType,
-					},
-					sValueType,
-				)
+					sValueType := checker.GlobalValues["s"].Type
+
+					require.Equal(t,
+						&sema.OptionalType{
+							Type: sType,
+						},
+						sValueType,
+					)
+				} else {
+					errs := ExpectCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				}
 			})
 		})
+	}
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+		testMissingTypeArguments(domain)
+		testExplicitTypeArgument(domain)
 	}
 }
 
@@ -434,16 +496,16 @@ func TestCheckAccount_copy(t *testing.T) {
 
 	t.Parallel()
 
-	for _, domain := range common.AllPathDomainsByIdentifier {
-
-		// NOTE: all domains are statically valid at the moment
+	testMissingTypeArgument := func(domain common.PathDomain) {
 
 		testName := fmt.Sprintf(
-			"AuthAccount.copy: missing type argument, %s",
-			domain.Name(),
+			"missing type argument, %s",
+			domain.Identifier(),
 		)
 
 		t.Run(testName, func(t *testing.T) {
+
+			t.Parallel()
 
 			_, err := ParseAndCheckAccount(t,
 				fmt.Sprintf(
@@ -456,24 +518,34 @@ func TestCheckAccount_copy(t *testing.T) {
 				),
 			)
 
-			errs := ExpectCheckerErrors(t, err, 1)
+			if domain == common.PathDomainStorage {
+				errs := ExpectCheckerErrors(t, err, 1)
 
-			require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+
+			} else {
+				errs := ExpectCheckerErrors(t, err, 2)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
+			}
 		})
 	}
 
-	for _, domain := range common.AllPathDomainsByIdentifier {
-
-		// NOTE: all domains are statically valid at the moment
+	testExplicitTypeArgument := func(domain common.PathDomain) {
 
 		testName := fmt.Sprintf(
-			"AuthAccount.copy: explicit type argument, %s",
-			domain.Name(),
+			"explicit type argument, %s",
+			domain.Identifier(),
 		)
 
 		t.Run(testName, func(t *testing.T) {
 
+			t.Parallel()
+
 			t.Run("struct", func(t *testing.T) {
+
+				t.Parallel()
 
 				checker, err := ParseAndCheckAccount(t,
 					fmt.Sprintf(
@@ -486,21 +558,30 @@ func TestCheckAccount_copy(t *testing.T) {
 					),
 				)
 
-				require.NoError(t, err)
+				if domain == common.PathDomainStorage {
+					require.NoError(t, err)
 
-				sType := checker.GlobalTypes["S"].Type
+					sType := checker.GlobalTypes["S"].Type
 
-				sValueType := checker.GlobalValues["s"].Type
+					sValueType := checker.GlobalValues["s"].Type
 
-				require.Equal(t,
-					&sema.OptionalType{
-						Type: sType,
-					},
-					sValueType,
-				)
+					require.Equal(t,
+						&sema.OptionalType{
+							Type: sType,
+						},
+						sValueType,
+					)
+
+				} else {
+					errs := ExpectCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				}
 			})
 
 			t.Run("resource", func(t *testing.T) {
+
+				t.Parallel()
 
 				_, err := ParseAndCheckAccount(t,
 					fmt.Sprintf(
@@ -513,11 +594,24 @@ func TestCheckAccount_copy(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				if domain == common.PathDomainStorage {
+					errs := ExpectCheckerErrors(t, err, 1)
 
-				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+				} else {
+					errs := ExpectCheckerErrors(t, err, 2)
+
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+				}
 			})
 		})
+	}
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+		testMissingTypeArgument(domain)
+		testExplicitTypeArgument(domain)
 	}
 }
 
@@ -525,18 +619,20 @@ func TestCheckAccount_borrow(t *testing.T) {
 
 	t.Parallel()
 
-	for _, domain := range common.AllPathDomainsByIdentifier {
-
-		// NOTE: all domains are statically valid at the moment
+	testMissingTypeArgument := func(domain common.PathDomain) {
 
 		testName := fmt.Sprintf(
-			"AuthAccount.borrow: missing type argument, %s",
-			domain.Name(),
+			"missing type argument, %s",
+			domain.Identifier(),
 		)
 
 		t.Run(testName, func(t *testing.T) {
 
+			t.Parallel()
+
 			t.Run("resource", func(t *testing.T) {
+
+				t.Parallel()
 
 				_, err := ParseAndCheckAccount(t,
 					fmt.Sprintf(
@@ -547,12 +643,22 @@ func TestCheckAccount_borrow(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				if domain == common.PathDomainStorage {
+					errs := ExpectCheckerErrors(t, err, 1)
 
-				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+
+				} else {
+					errs := ExpectCheckerErrors(t, err, 2)
+
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
+				}
 			})
 
 			t.Run("struct", func(t *testing.T) {
+
+				t.Parallel()
 
 				_, err := ParseAndCheckAccount(t,
 					fmt.Sprintf(
@@ -563,45 +669,55 @@ func TestCheckAccount_borrow(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				if domain == common.PathDomainStorage {
+					errs := ExpectCheckerErrors(t, err, 1)
 
-				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+
+				} else {
+					errs := ExpectCheckerErrors(t, err, 2)
+
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
+				}
 			})
 		})
 	}
 
-	for _, domain := range common.AllPathDomainsByIdentifier {
+	testExplicitTypeArgumentReference := func(domain common.PathDomain, auth bool) {
 
-		// NOTE: all domains are statically valid at the moment
+		authKeyword := ""
+		if auth {
+			authKeyword = "auth"
+		}
 
-		for _, auth := range []bool{false, true} {
+		testName := fmt.Sprintf(
+			"explicit type argument, %s reference, %s",
+			authKeyword,
+			domain.Identifier(),
+		)
 
-			authKeyword := ""
-			if auth {
-				authKeyword = "auth"
-			}
+		t.Run(testName, func(t *testing.T) {
 
-			testName := fmt.Sprintf(
-				"AuthAccount.borrow: explicit type argument, %s reference, %s",
-				authKeyword,
-				domain.Name(),
-			)
+			t.Parallel()
 
-			t.Run(testName, func(t *testing.T) {
+			t.Run("resource", func(t *testing.T) {
 
-				t.Run("resource", func(t *testing.T) {
+				t.Parallel()
 
-					checker, err := ParseAndCheckAccount(t,
-						fmt.Sprintf(
-							`
-                              resource R {}
+				checker, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          resource R {}
 
-                              let r = authAccount.borrow<%s &R>(from: /%s/r)
-                            `,
-							authKeyword,
-							domain.Identifier(),
-						),
-					)
+                          let r = authAccount.borrow<%s &R>(from: /%s/r)
+                        `,
+						authKeyword,
+						domain.Identifier(),
+					),
+				)
+
+				if domain == common.PathDomainStorage {
 
 					require.NoError(t, err)
 
@@ -618,22 +734,30 @@ func TestCheckAccount_borrow(t *testing.T) {
 						},
 						rValueType,
 					)
-				})
+				} else {
+					errs := ExpectCheckerErrors(t, err, 1)
 
-				t.Run("struct", func(t *testing.T) {
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				}
+			})
 
-					checker, err := ParseAndCheckAccount(t,
-						fmt.Sprintf(
-							`
-                              struct S {}
+			t.Run("struct", func(t *testing.T) {
 
-                              let s = authAccount.borrow<%s &S>(from: /%s/s)
-                            `,
-							authKeyword,
-							domain.Identifier(),
-						),
-					)
+				t.Parallel()
 
+				checker, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          struct S {}
+
+                          let s = authAccount.borrow<%s &S>(from: /%s/s)
+                        `,
+						authKeyword,
+						domain.Identifier(),
+					),
+				)
+
+				if domain == common.PathDomainStorage {
 					require.NoError(t, err)
 
 					sType := checker.GlobalTypes["S"].Type
@@ -649,24 +773,29 @@ func TestCheckAccount_borrow(t *testing.T) {
 						},
 						sValueType,
 					)
-				})
+				} else {
+					errs := ExpectCheckerErrors(t, err, 1)
 
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				}
 			})
-		}
+		})
 	}
 
-	for _, domain := range common.AllPathDomainsByIdentifier {
-
-		// NOTE: all domains are statically valid at the moment
+	testExplicitTypeArgumentNonReference := func(domain common.PathDomain) {
 
 		testName := fmt.Sprintf(
-			"AuthAccount.borrow: explicit type argument, non-reference type, %s",
-			domain.Name(),
+			"explicit type argument, non-reference type, %s",
+			domain.Identifier(),
 		)
 
 		t.Run(testName, func(t *testing.T) {
 
+			t.Parallel()
+
 			t.Run("resource", func(t *testing.T) {
+
+				t.Parallel()
 
 				_, err := ParseAndCheckAccount(t,
 					fmt.Sprintf(
@@ -679,12 +808,22 @@ func TestCheckAccount_borrow(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				if domain == common.PathDomainStorage {
 
-				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					errs := ExpectCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				} else {
+					errs := ExpectCheckerErrors(t, err, 2)
+
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+				}
 			})
 
 			t.Run("struct", func(t *testing.T) {
+
+				t.Parallel()
 
 				_, err := ParseAndCheckAccount(t,
 					fmt.Sprintf(
@@ -697,11 +836,29 @@ func TestCheckAccount_borrow(t *testing.T) {
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				if domain == common.PathDomainStorage {
 
-				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					errs := ExpectCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				} else {
+					errs := ExpectCheckerErrors(t, err, 2)
+
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+				}
 			})
 		})
+	}
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+		testMissingTypeArgument(domain)
+
+		for _, auth := range []bool{false, true} {
+			testExplicitTypeArgumentReference(domain, auth)
+		}
+
+		testExplicitTypeArgumentNonReference(domain)
 	}
 }
 
@@ -709,16 +866,139 @@ func TestCheckAccount_link(t *testing.T) {
 
 	t.Parallel()
 
-	for _, domain := range common.AllPathDomainsByIdentifier {
+	testMissingTypeArgument := func(domain common.PathDomain) {
 
 		testName := fmt.Sprintf(
-			"AuthAccount.link: missing type argument, %s",
-			domain.Name(),
+			"missing type argument, %s",
+			domain.Identifier(),
 		)
 
 		t.Run(testName, func(t *testing.T) {
 
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t,
+				fmt.Sprintf(
+					`
+                      fun test(): Capability? {
+                          return authAccount.link(/%s/r, target: /storage/r)
+                      }
+                    `,
+					domain.Identifier(),
+				),
+			)
+
+			switch domain {
+			case common.PathDomainPrivate, common.PathDomainPublic:
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+
+			default:
+				errs := ExpectCheckerErrors(t, err, 2)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[1])
+			}
+		})
+	}
+
+	testExplicitTypeArgumentReference := func(domain common.PathDomain, auth bool) {
+
+		authKeyword := ""
+		if auth {
+			authKeyword = "auth"
+		}
+
+		testName := fmt.Sprintf(
+			"explicit type argument, %s reference, %s",
+			authKeyword,
+			domain.Identifier(),
+		)
+
+		t.Run(testName, func(t *testing.T) {
+
+			t.Parallel()
+
 			t.Run("resource", func(t *testing.T) {
+
+				t.Parallel()
+
+				typeArguments := fmt.Sprintf("<%s &R>", authKeyword)
+
+				_, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          resource R {}
+
+                          fun test(): Capability%[1]s? {
+                              return authAccount.link%[1]s(/%[2]s/r, target: /storage/r)
+                          }
+                        `,
+						typeArguments,
+						domain.Identifier(),
+					),
+				)
+
+				switch domain {
+				case common.PathDomainPrivate, common.PathDomainPublic:
+					require.NoError(t, err)
+
+				default:
+					errs := ExpectCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				}
+			})
+
+			t.Run("struct", func(t *testing.T) {
+
+				t.Parallel()
+
+				typeArguments := fmt.Sprintf("<%s &S>", authKeyword)
+
+				_, err := ParseAndCheckAccount(t,
+					fmt.Sprintf(
+						`
+                          struct S {}
+
+                          fun test(): Capability%[1]s? {
+                              return authAccount.link%[1]s(/%[2]s/s, target: /storage/s)
+                          }
+                        `,
+						typeArguments,
+						domain.Identifier(),
+					),
+				)
+
+				switch domain {
+				case common.PathDomainPrivate, common.PathDomainPublic:
+					require.NoError(t, err)
+
+				default:
+					errs := ExpectCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+				}
+			})
+		})
+	}
+
+	testExplicitTypeArgumentTarget := func(domain, targetDomain common.PathDomain) {
+
+		testName := fmt.Sprintf(
+			"explicit type argument, non-reference type, %s -> %s",
+			domain.Identifier(),
+			targetDomain.Identifier(),
+		)
+
+		t.Run(testName, func(t *testing.T) {
+
+			t.Parallel()
+
+			t.Run("resource", func(t *testing.T) {
+
+				t.Parallel()
 
 				_, err := ParseAndCheckAccount(t,
 					fmt.Sprintf(
@@ -726,19 +1006,31 @@ func TestCheckAccount_link(t *testing.T) {
                           resource R {}
 
                           fun test(): Capability? {
-                              return authAccount.link(/%s/r, target: /storage/r)
+                              return authAccount.link<@R>(/%s/r, target: /%s/r)
                           }
                         `,
 						domain.Identifier(),
+						targetDomain.Identifier(),
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				switch domain {
+				case common.PathDomainPrivate, common.PathDomainPublic:
+					errs := ExpectCheckerErrors(t, err, 1)
 
-				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+				default:
+					errs := ExpectCheckerErrors(t, err, 2)
+
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+				}
 			})
 
 			t.Run("struct", func(t *testing.T) {
+
+				t.Parallel()
 
 				_, err := ParseAndCheckAccount(t,
 					fmt.Sprintf(
@@ -746,152 +1038,52 @@ func TestCheckAccount_link(t *testing.T) {
                           struct S {}
 
                           fun test(): Capability? {
-                              return authAccount.link(/%s/s, target: /storage/s)
+                              return authAccount.link<S>(/%s/s, target: /%s/s)
                           }
                         `,
 						domain.Identifier(),
+						targetDomain.Identifier(),
 					),
 				)
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				switch domain {
+				case common.PathDomainPrivate, common.PathDomainPublic:
+					errs := ExpectCheckerErrors(t, err, 1)
 
-				require.IsType(t, &sema.TypeParameterTypeInferenceError{}, errs[0])
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+				default:
+					errs := ExpectCheckerErrors(t, err, 2)
+
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+					require.IsType(t, &sema.TypeMismatchError{}, errs[1])
+				}
 			})
 		})
 	}
 
 	for _, domain := range common.AllPathDomainsByIdentifier {
+		testMissingTypeArgument(domain)
 
 		for _, auth := range []bool{false, true} {
-
-			authKeyword := ""
-			if auth {
-				authKeyword = "auth"
-			}
-
-			testName := fmt.Sprintf(
-				"AuthAccount.link: explicit type argument, %s reference, %s",
-				authKeyword,
-				domain.Name(),
-			)
-
-			t.Run(testName, func(t *testing.T) {
-
-				t.Run("resource", func(t *testing.T) {
-
-					typeArguments := fmt.Sprintf("<%s &R>", authKeyword)
-
-					_, err := ParseAndCheckAccount(t,
-						fmt.Sprintf(
-							`
-                              resource R {}
-
-                              fun test(): Capability%[1]s? {
-                                  return authAccount.link%[1]s(/%[2]s/r, target: /storage/r)
-                              }
-                            `,
-							typeArguments,
-							domain.Identifier(),
-						),
-					)
-
-					require.NoError(t, err)
-				})
-
-				t.Run("struct", func(t *testing.T) {
-
-					typeArguments := fmt.Sprintf("<%s &S>", authKeyword)
-
-					_, err := ParseAndCheckAccount(t,
-						fmt.Sprintf(
-							`
-                              struct S {}
-
-                              fun test(): Capability%[1]s? {
-                                  return authAccount.link%[1]s(/%[2]s/s, target: /storage/s)
-                              }
-                            `,
-							typeArguments,
-							domain.Identifier(),
-						),
-					)
-
-					require.NoError(t, err)
-				})
-			})
+			testExplicitTypeArgumentReference(domain, auth)
 		}
-	}
-
-	for _, domain := range common.AllPathDomainsByIdentifier {
-
-		// NOTE: storage domain is statically valid at the moment
 
 		for _, targetDomain := range common.AllPathDomainsByIdentifier {
-
-			// NOTE: all target domains are statically valid at the moment
-
-			testName := fmt.Sprintf(
-				"AuthAccount.link: explicit type argument, non-reference type, %s -> %s",
-				domain.Name(),
-				targetDomain.Name(),
-			)
-
-			t.Run(testName, func(t *testing.T) {
-
-				t.Run("resource", func(t *testing.T) {
-
-					_, err := ParseAndCheckAccount(t,
-						fmt.Sprintf(
-							`
-                              resource R {}
-
-                              fun test(): Capability? {
-                                  return authAccount.link<@R>(/%s/r, target: /%s/r)
-                              }
-                            `,
-							domain.Identifier(),
-							targetDomain.Identifier(),
-						),
-					)
-
-					errs := ExpectCheckerErrors(t, err, 1)
-
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-				})
-
-				t.Run("struct", func(t *testing.T) {
-
-					_, err := ParseAndCheckAccount(t,
-						fmt.Sprintf(
-							`
-                              struct S {}
-
-                              fun test(): Capability? {
-                                  return authAccount.link<S>(/%s/s, target: /%s/s)
-                              }
-                            `,
-							domain.Identifier(),
-							targetDomain.Identifier(),
-						),
-					)
-
-					errs := ExpectCheckerErrors(t, err, 1)
-
-					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
-				})
-			})
+			testExplicitTypeArgumentTarget(domain, targetDomain)
 		}
 	}
+}
 
-	for _, domain := range common.AllPathDomainsByIdentifier {
+func TestCheckAccount_unlink(t *testing.T) {
 
-		// NOTE: storage domain is statically valid at the moment
+	t.Parallel()
 
-		testName := fmt.Sprintf(
-			"AuthAccount.unlink: %s",
-			domain.Name(),
-		)
-		t.Run(testName, func(t *testing.T) {
+	test := func(domain common.PathDomain) {
+
+		t.Run(domain.Identifier(), func(t *testing.T) {
+
+			t.Parallel()
 
 			_, err := ParseAndCheckAccount(t,
 				fmt.Sprintf(
@@ -904,38 +1096,68 @@ func TestCheckAccount_link(t *testing.T) {
 				),
 			)
 
-			require.NoError(t, err)
+			switch domain {
+			case common.PathDomainPrivate, common.PathDomainPublic:
+				require.NoError(t, err)
+
+			default:
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			}
+		})
+	}
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+		test(domain)
+	}
+}
+
+func TestCheckAccount_getLinkTarget(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(domain common.PathDomain, accountType, accountVariable string) {
+
+		testName := fmt.Sprintf(
+			"%s.getLinkTarget: %s",
+			accountType,
+			domain.Identifier(),
+		)
+
+		t.Run(testName, func(t *testing.T) {
+
+			t.Parallel()
+
+			_, err := ParseAndCheckAccount(t,
+				fmt.Sprintf(
+					`
+                      let path: Path? = %s.getLinkTarget(/%s/r)
+                    `,
+					accountVariable,
+					domain.Identifier(),
+				),
+			)
+
+			switch domain {
+			case common.PathDomainPrivate, common.PathDomainPublic:
+				require.NoError(t, err)
+
+			default:
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+			}
 		})
 	}
 
 	for _, domain := range common.AllPathDomainsByIdentifier {
 
-		// NOTE: storage domain is statically valid at the moment
-
 		for accountType, accountVariable := range map[string]string{
 			"AuthAccount":   "authAccount",
 			"PublicAccount": "publicAccount",
 		} {
-
-			testName := fmt.Sprintf(
-				"%s.getLinkTarget: %s",
-				accountType,
-				domain.Name(),
-			)
-			t.Run(testName, func(t *testing.T) {
-
-				_, err := ParseAndCheckAccount(t,
-					fmt.Sprintf(
-						`
-                          let path: Path? = %s.getLinkTarget(/%s/r)
-                        `,
-						accountVariable,
-						domain.Identifier(),
-					),
-				)
-
-				require.NoError(t, err)
-			})
+			test(domain, accountType, accountVariable)
 		}
 	}
 }
@@ -943,6 +1165,85 @@ func TestCheckAccount_link(t *testing.T) {
 func TestCheckAccount_getCapability(t *testing.T) {
 
 	t.Parallel()
+
+	test := func(typed bool, accountType string, domain common.PathDomain, accountVariable string) {
+
+		typedPrefix := ""
+		if !typed {
+			typedPrefix = "un"
+		}
+
+		testName := fmt.Sprintf(
+			"%s.getCapability: %s, %styped",
+			accountType,
+			domain.Identifier(),
+			typedPrefix,
+		)
+
+		t.Run(testName, func(t *testing.T) {
+
+			t.Parallel()
+
+			capabilitySuffix := ""
+			if typed {
+				capabilitySuffix = "<&Int>"
+			}
+
+			code := fmt.Sprintf(
+				`
+	              fun test(): Capability%[3]s {
+	                  return %[1]s.getCapability%[3]s(/%[2]s/r)
+	              }
+
+                  let cap = test()
+	            `,
+				accountVariable,
+				domain.Identifier(),
+				capabilitySuffix,
+			)
+
+			checker, err := ParseAndCheckAccount(t, code)
+
+			switch domain {
+			case common.PathDomainPrivate:
+
+				if accountType == "PublicAccount" {
+					errs := ExpectCheckerErrors(t, err, 1)
+
+					require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+					return
+				} else {
+					require.NoError(t, err)
+				}
+
+			case common.PathDomainPublic:
+				require.NoError(t, err)
+
+			default:
+				errs := ExpectCheckerErrors(t, err, 1)
+
+				require.IsType(t, &sema.TypeMismatchError{}, errs[0])
+
+				return
+			}
+
+			var expectedBorrowType sema.Type
+			if typed {
+				expectedBorrowType = &sema.ReferenceType{
+					Type: &sema.IntType{},
+				}
+			}
+
+			capType := checker.GlobalValues["cap"].Type
+			assert.Equal(t,
+				&sema.CapabilityType{
+					BorrowType: expectedBorrowType,
+				},
+				capType,
+			)
+		})
+	}
 
 	for _, domain := range common.AllPathDomainsByIdentifier {
 
@@ -953,61 +1254,7 @@ func TestCheckAccount_getCapability(t *testing.T) {
 
 			for _, typed := range []bool{true, false} {
 
-				typedPrefix := ""
-				if !typed {
-					typedPrefix = "un"
-				}
-
-				testName := fmt.Sprintf(
-					"%s.getCapability: %s, %styped",
-					accountType,
-					domain,
-					typedPrefix,
-				)
-
-				t.Run(testName, func(t *testing.T) {
-
-					capabilitySuffix := ""
-					if typed {
-						capabilitySuffix = "<&Int>"
-					}
-
-					code := fmt.Sprintf(
-						`
-	                      fun test(): Capability%[3]s? {
-	                          return %[1]s.getCapability%[3]s(/%[2]s/r)
-	                      }
-
-                          let cap = test()
-	                    `,
-						accountVariable,
-						domain.Identifier(),
-						capabilitySuffix,
-					)
-					checker, err := ParseAndCheckAccount(
-						t,
-						code,
-					)
-
-					require.NoError(t, err)
-
-					var expectedBorrowType sema.Type
-					if typed {
-						expectedBorrowType = &sema.ReferenceType{
-							Type: &sema.IntType{},
-						}
-					}
-
-					capType := checker.GlobalValues["cap"].Type
-					assert.Equal(t,
-						&sema.OptionalType{
-							Type: &sema.CapabilityType{
-								BorrowType: expectedBorrowType,
-							},
-						},
-						capType,
-					)
-				})
+				test(typed, accountType, domain, accountVariable)
 			}
 		}
 	}

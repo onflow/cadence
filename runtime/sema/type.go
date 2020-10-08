@@ -5081,7 +5081,7 @@ var authAccountTypeSaveFunctionType = func() *FunctionType {
 			{
 				Label:          "to",
 				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(PathType),
+				TypeAnnotation: NewTypeAnnotation(StoragePathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
@@ -5112,7 +5112,7 @@ var authAccountTypeLoadFunctionType = func() *FunctionType {
 			{
 				Label:          "from",
 				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(PathType),
+				TypeAnnotation: NewTypeAnnotation(StoragePathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -5154,7 +5154,7 @@ var authAccountTypeCopyFunctionType = func() *FunctionType {
 			{
 				Label:          "from",
 				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(PathType),
+				TypeAnnotation: NewTypeAnnotation(StoragePathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -5197,7 +5197,7 @@ var authAccountTypeBorrowFunctionType = func() *FunctionType {
 			{
 				Label:          "from",
 				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(PathType),
+				TypeAnnotation: NewTypeAnnotation(StoragePathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -5242,7 +5242,7 @@ var authAccountTypeLinkFunctionType = func() *FunctionType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "newCapabilityPath",
-				TypeAnnotation: NewTypeAnnotation(PathType),
+				TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
 			},
 			{
 				Identifier:     "target",
@@ -5279,7 +5279,7 @@ var authAccountTypeUnlinkFunctionType = &FunctionType{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "capabilityPath",
-			TypeAnnotation: NewTypeAnnotation(PathType),
+			TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
@@ -5289,7 +5289,7 @@ const authAccountTypeUnlinkFunctionDocString = `
 Removes the capability at the given public or private path
 `
 
-var accountTypeGetCapabilityFunctionType = func() *FunctionType {
+var authAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		TypeBound: &ReferenceType{
@@ -5307,15 +5307,44 @@ var accountTypeGetCapabilityFunctionType = func() *FunctionType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "capabilityPath",
-				TypeAnnotation: NewTypeAnnotation(PathType),
+				TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
-			&OptionalType{
-				Type: &CapabilityType{
-					BorrowType: &GenericType{
-						TypeParameter: typeParameter,
-					},
+			&CapabilityType{
+				BorrowType: &GenericType{
+					TypeParameter: typeParameter,
+				},
+			},
+		),
+	}
+}()
+
+var publicAccountTypeGetCapabilityFunctionType = func() *FunctionType {
+
+	typeParameter := &TypeParameter{
+		TypeBound: &ReferenceType{
+			Type: &AnyType{},
+		},
+		Name:     "T",
+		Optional: true,
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "capabilityPath",
+				TypeAnnotation: NewTypeAnnotation(PublicPathType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&CapabilityType{
+				BorrowType: &GenericType{
+					TypeParameter: typeParameter,
 				},
 			},
 		),
@@ -5331,7 +5360,7 @@ var accountTypeGetLinkTargetFunctionType = &FunctionType{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "capabilityPath",
-			TypeAnnotation: NewTypeAnnotation(PathType),
+			TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
@@ -5460,7 +5489,7 @@ func (t *AuthAccountType) GetMembers() map[string]MemberResolver {
 				return NewPublicFunctionMember(
 					t,
 					identifier,
-					accountTypeGetCapabilityFunctionType,
+					authAccountTypeGetCapabilityFunctionType,
 					authAccountTypeGetCapabilityFunctionDocString,
 				)
 			},
@@ -5580,7 +5609,7 @@ func (t *PublicAccountType) GetMembers() map[string]MemberResolver {
 				return NewPublicFunctionMember(
 					t,
 					identifier,
-					accountTypeGetCapabilityFunctionType,
+					publicAccountTypeGetCapabilityFunctionType,
 					publicAccountTypeGetLinkTargetFunctionDocString,
 				)
 			},

@@ -57,7 +57,7 @@ transaction(amount: UFix64, to: Address) {
         let recipient = getAccount(to)
 
         // Get a reference to the recipient's Receiver
-        let receiverRef = recipient.getCapability(/public/exampleTokenReceiver)!.borrow<&{FungibleToken.Receiver}>()
+        let receiverRef = recipient.getCapability(/public/exampleTokenReceiver).borrow<&{FungibleToken.Receiver}>()
 			?? panic("Could not borrow receiver reference to the recipient's Vault")
 
         // Deposit the withdrawn tokens in the recipient's receiver
@@ -78,7 +78,7 @@ self.sentVault <- vaultRef.withdraw(amount: amount)
 }
 execute {
 let recipient = getAccount(to)
-let receiverRef = recipient.getCapability(/public/exampleTokenReceiver)!.borrow<&{FungibleToken.Receiver}>()
+let receiverRef = recipient.getCapability(/public/exampleTokenReceiver).borrow<&{FungibleToken.Receiver}>()
 ?? panic("Could not borrow receiver reference to the recipient's Vault")
 receiverRef.deposit(from: <-self.sentVault)
 }

@@ -32,6 +32,8 @@ func TestInterpretCapability_borrow(t *testing.T) {
 
 	t.Run("resource", func(t *testing.T) {
 
+		t.Parallel()
+
 		inter, _ := testAccount(
 			t,
 			true,
@@ -68,8 +70,8 @@ func TestInterpretCapability_borrow(t *testing.T) {
                   account.link<&R>(/public/loop2, target: /public/loop1)
               }
 
-              fun foo(_ path: Path): Int {
-                  return account.getCapability(path)!.borrow<&R>()!.foo
+              fun foo(_ path: CapabilityPath): Int {
+                  return account.getCapability(path).borrow<&R>()!.foo
               }
 
               fun single(): Int {
@@ -77,15 +79,15 @@ func TestInterpretCapability_borrow(t *testing.T) {
               }
 
               fun singleAuth(): auth &R? {
-                  return account.getCapability(/public/single)!.borrow<auth &R>()
+                  return account.getCapability(/public/single).borrow<auth &R>()
               }
 
               fun singleR2(): &R2? {
-                  return account.getCapability(/public/single)!.borrow<&R2>()
+                  return account.getCapability(/public/single).borrow<&R2>()
               }
 
               fun singleS(): &S? {
-                  return account.getCapability(/public/single)!.borrow<&S>()
+                  return account.getCapability(/public/single).borrow<&S>()
               }
 
               fun double(): Int {
@@ -183,6 +185,8 @@ func TestInterpretCapability_borrow(t *testing.T) {
 
 	t.Run("struct", func(t *testing.T) {
 
+		t.Parallel()
+
 		inter, _ := testAccount(
 			t,
 			true,
@@ -219,8 +223,8 @@ func TestInterpretCapability_borrow(t *testing.T) {
                   account.link<&S>(/public/loop2, target: /public/loop1)
               }
 
-              fun foo(_ path: Path): Int {
-                  return account.getCapability(path)!.borrow<&S>()!.foo
+              fun foo(_ path: CapabilityPath): Int {
+                  return account.getCapability(path).borrow<&S>()!.foo
               }
 
               fun single(): Int {
@@ -228,15 +232,15 @@ func TestInterpretCapability_borrow(t *testing.T) {
               }
 
               fun singleAuth(): auth &S? {
-                  return account.getCapability(/public/single)!.borrow<auth &S>()
+                  return account.getCapability(/public/single).borrow<auth &S>()
               }
 
               fun singleS2(): &S2? {
-                  return account.getCapability(/public/single)!.borrow<&S2>()
+                  return account.getCapability(/public/single).borrow<&S2>()
               }
 
               fun singleR(): &R? {
-                  return account.getCapability(/public/single)!.borrow<&R>()
+                  return account.getCapability(/public/single).borrow<&R>()
               }
 
               fun double(): Int {
@@ -339,6 +343,8 @@ func TestInterpretCapability_check(t *testing.T) {
 
 	t.Run("resource", func(t *testing.T) {
 
+		t.Parallel()
+
 		inter, _ := testAccount(
 			t,
 			true,
@@ -375,8 +381,8 @@ func TestInterpretCapability_check(t *testing.T) {
                   account.link<&R>(/public/loop2, target: /public/loop1)
               }
 
-              fun check(_ path: Path): Bool {
-                  return account.getCapability(path)!.check<&R>()
+              fun check(_ path: CapabilityPath): Bool {
+                  return account.getCapability(path).check<&R>()
               }
 
               fun single(): Bool {
@@ -384,15 +390,15 @@ func TestInterpretCapability_check(t *testing.T) {
               }
 
               fun singleAuth(): Bool {
-                  return account.getCapability(/public/single)!.check<auth &R>()
+                  return account.getCapability(/public/single).check<auth &R>()
               }
 
               fun singleR2(): Bool {
-                  return account.getCapability(/public/single)!.check<&R2>()
+                  return account.getCapability(/public/single).check<&R2>()
               }
 
               fun singleS(): Bool {
-                  return account.getCapability(/public/single)!.check<&S>()
+                  return account.getCapability(/public/single).check<&S>()
               }
 
               fun double(): Bool {
@@ -490,6 +496,8 @@ func TestInterpretCapability_check(t *testing.T) {
 
 	t.Run("struct", func(t *testing.T) {
 
+		t.Parallel()
+
 		inter, _ := testAccount(
 			t,
 			true,
@@ -526,8 +534,8 @@ func TestInterpretCapability_check(t *testing.T) {
                   account.link<&S>(/public/loop2, target: /public/loop1)
               }
 
-              fun check(_ path: Path): Bool {
-                  return account.getCapability(path)!.check<&S>()
+              fun check(_ path: CapabilityPath): Bool {
+                  return account.getCapability(path).check<&S>()
               }
 
               fun single(): Bool {
@@ -535,15 +543,15 @@ func TestInterpretCapability_check(t *testing.T) {
               }
 
               fun singleAuth(): Bool {
-                  return account.getCapability(/public/single)!.check<auth &S>()
+                  return account.getCapability(/public/single).check<auth &S>()
               }
 
               fun singleS2(): Bool {
-                  return account.getCapability(/public/single)!.check<&S2>()
+                  return account.getCapability(/public/single).check<&S2>()
               }
 
               fun singleR(): Bool {
-                  return account.getCapability(/public/single)!.check<&R>()
+                  return account.getCapability(/public/single).check<&R>()
               }
 
               fun double(): Bool {
@@ -638,5 +646,4 @@ func TestInterpretCapability_check(t *testing.T) {
 			require.Equal(t, interpreter.BoolValue(true), value)
 		})
 	})
-
 }
