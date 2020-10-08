@@ -27,16 +27,26 @@ func (checker *Checker) VisitPathExpression(expression *ast.PathExpression) ast.
 
 	// Check that the domain is valid
 
-	domain := expression.Domain
+	domainIdentifier := expression.Domain
 
-	if _, ok := common.AllPathDomainsByIdentifier[domain.Identifier]; !ok {
+	domain, ok := common.AllPathDomainsByIdentifier[domainIdentifier.Identifier]
+	if !ok {
 		checker.report(
 			&InvalidPathDomainError{
-				ActualDomain: domain.Identifier,
-				Range:        ast.NewRangeFromPositioned(domain),
+				ActualDomain: domainIdentifier.Identifier,
+				Range:        ast.NewRangeFromPositioned(domainIdentifier),
 			},
 		)
 	}
 
-	return PathType
+	switch domain {
+	case common.PathDomainStorage:
+		return StoragePathType
+	case common.PathDomainPublic:
+		return PublicPathType
+	case common.PathDomainPrivate:
+		return PrivatePathType
+	default:
+		return PathType
+	}
 }

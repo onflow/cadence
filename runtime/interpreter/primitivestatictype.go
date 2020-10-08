@@ -139,6 +139,10 @@ const (
 
 	PrimitiveStaticTypePath
 	PrimitiveStaticTypeCapability
+	PrimitiveStaticTypeStoragePath
+	PrimitiveStaticTypeCapabilityPath
+	PrimitiveStaticTypePublicPath
+	PrimitiveStaticTypePrivatePath
 )
 
 func (PrimitiveStaticType) isStaticType() {}
@@ -246,6 +250,14 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 
 	case PrimitiveStaticTypePath:
 		return sema.PathType
+	case PrimitiveStaticTypeStoragePath:
+		return sema.StoragePathType
+	case PrimitiveStaticTypeCapabilityPath:
+		return sema.CapabilityPathType
+	case PrimitiveStaticTypePublicPath:
+		return sema.PublicPathType
+	case PrimitiveStaticTypePrivatePath:
+		return sema.PrivatePathType
 	case PrimitiveStaticTypeCapability:
 		return &sema.CapabilityType{}
 
@@ -360,6 +372,14 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 	switch t {
 	case sema.PathType:
 		return PrimitiveStaticTypePath
+	case sema.StoragePathType:
+		return PrimitiveStaticTypeStoragePath
+	case sema.CapabilityPathType:
+		return PrimitiveStaticTypeCapabilityPath
+	case sema.PublicPathType:
+		return PrimitiveStaticTypePublicPath
+	case sema.PrivatePathType:
+		return PrimitiveStaticTypePrivatePath
 	case sema.NeverType:
 		return PrimitiveStaticTypeNever
 	case sema.VoidType:

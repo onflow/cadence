@@ -6646,8 +6646,17 @@ type PathValue struct {
 
 func (PathValue) IsValue() {}
 
-func (PathValue) DynamicType(_ *Interpreter) DynamicType {
-	return PathDynamicType{}
+func (v PathValue) DynamicType(_ *Interpreter) DynamicType {
+	switch v.Domain {
+	case common.PathDomainStorage:
+		return StoragePathDynamicType{}
+	case common.PathDomainPublic:
+		return PublicPathDynamicType{}
+	case common.PathDomainPrivate:
+		return PrivatePathDynamicType{}
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (v PathValue) Copy() Value {

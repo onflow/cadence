@@ -138,6 +138,14 @@ func exportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 		switch t {
 		case sema.PathType:
 			return cadence.PathType{}
+		case sema.StoragePathType:
+			return cadence.StoragePathType{}
+		case sema.PrivatePathType:
+			return cadence.PrivatePathType{}
+		case sema.PublicPathType:
+			return cadence.PublicPathType{}
+		case sema.CapabilityPathType:
+			return cadence.CapabilityPathType{}
 		case sema.NeverType:
 			return cadence.NeverType{}
 		case sema.VoidType:

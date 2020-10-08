@@ -3860,12 +3860,41 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 
 		}
 
-	case PathDynamicType:
+	case PublicPathDynamicType:
 		if _, ok := superType.(*sema.AnyStructType); ok {
 			return true
 		}
 
-		return superType == sema.PathType
+		switch superType {
+		case sema.PublicPathType, sema.CapabilityPathType, sema.PathType:
+			return true
+		default:
+			return false
+		}
+
+	case PrivatePathDynamicType:
+		if _, ok := superType.(*sema.AnyStructType); ok {
+			return true
+		}
+
+		switch superType {
+		case sema.PrivatePathType, sema.CapabilityPathType, sema.PathType:
+			return true
+		default:
+			return false
+		}
+
+	case StoragePathDynamicType:
+		if _, ok := superType.(*sema.AnyStructType); ok {
+			return true
+		}
+
+		switch superType {
+		case sema.StoragePathType, sema.PathType:
+			return true
+		default:
+			return false
+		}
 
 	case PublicAccountDynamicType:
 		switch superType.(type) {
