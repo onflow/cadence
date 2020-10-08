@@ -31,7 +31,7 @@ This allows exposing and hiding certain functionality of a stored object.
 
 Capabilities are created using the `link` function of an authorized account (`AuthAccount`):
 
-- `cadence•fun link<T: &Any>(_ newCapabilityPath: Path, target: Path): Capability<T>?`
+- `cadence•fun link<T: &Any>(_ newCapabilityPath: CapabilityPath, target: Path): Capability<T>?`
 
   `newCapabilityPath` is the public or private path identifying the new capability.
 
@@ -60,14 +60,14 @@ Capabilities are created using the `link` function of an authorized account (`Au
 
 Capabilities can be removed using the `unlink` function of an authorized account (`AuthAccount`):
 
-- `cadence•fun unlink(_ path: Path)`
+- `cadence•fun unlink(_ path: CapabilityPath)`
 
   `path` is the public or private path identifying the capability that should be removed.
 
 To get the target path for a capability, the `getLinkTarget` function
 of an authorized account (`AuthAccount`) or public account (`PublicAccount`) can be used:
 
-- `cadence•fun getLinkTarget(_ path: Path): Path?`
+- `cadence•fun getLinkTarget(_ path: CapabilityPath): Path?`
 
   `path` is the public or private path identifying the capability.
   The function returns the link target path,
@@ -77,7 +77,7 @@ of an authorized account (`AuthAccount`) or public account (`PublicAccount`) can
 Existing capabilities can be obtained by using the `getCapability` function
 of authorized accounts (`AuthAccount`) and public accounts (`PublicAccount`):
 
-- `cadence•fun getCapability<T>(_ at: Path): Capability<T>?`
+- `cadence•fun getCapability<T>(_ at: CapabilityPath): Capability<T>`
 
   For public accounts, the function returns a capability
   if the given path is public.
@@ -172,7 +172,7 @@ let publicAccount = getAccount(0x42)
 // After the call, the declared constant `countCap` has type `Capability<&{HasCount}>`,
 // a capability that results in a reference that has type `&{HasCount}` when borrowed.
 //
-let countCap = publicAccount.getCapability<&{HasCount}>(/public/hasCount)!
+let countCap = publicAccount.getCapability<&{HasCount}>(/public/hasCount)
 
 // Borrow the capability to get a reference to the stored counter.
 //
@@ -219,4 +219,3 @@ let counterRef = countCap.borrow()
 //
 let counterRef2 = publicAccount.borrow<&Counter>(/storage/counter)
 ```
-
