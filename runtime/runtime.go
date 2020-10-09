@@ -139,24 +139,14 @@ func (r *interpreterRuntime) ExecuteScript(
 		return nil, newError(err)
 	}
 
-	const entryPointName = "main"
-
-	entryPointValue, ok := checker.GlobalValues[entryPointName]
-	if !ok {
-		return nil, &MissingEntryPointError{Expected: entryPointName}
+	functionEntryPointType, err := checker.FunctionEntryPointType()
+	if err != nil {
+		return nil, err
 	}
-
-	invokableType, ok := entryPointValue.Type.(sema.InvokableType)
-	if !ok {
-		return nil, &InvalidEntryPointTypeError{
-			Type: entryPointValue.Type,
-		}
-	}
-	epFunctionType := invokableType.InvocationFunctionType()
 
 	// Ensure the entry point's parameter types are storable
-	if len(epFunctionType.Parameters) > 0 {
-		for _, param := range epFunctionType.Parameters {
+	if len(functionEntryPointType.Parameters) > 0 {
+		for _, param := range functionEntryPointType.Parameters {
 			if !param.TypeAnnotation.Type.IsStorable(map[*sema.Member]bool{}) {
 				return nil, &ScriptParameterTypeNotStorableError{
 					Type: param.TypeAnnotation.Type,
@@ -166,14 +156,14 @@ func (r *interpreterRuntime) ExecuteScript(
 	}
 
 	// Ensure the entry point's return type is valid
-	if !epFunctionType.ReturnTypeAnnotation.Type.IsExternallyReturnable(map[*sema.Member]bool{}) {
+	if !functionEntryPointType.ReturnTypeAnnotation.Type.IsExternallyReturnable(map[*sema.Member]bool{}) {
 		return nil, &InvalidScriptReturnTypeError{
-			Type: epFunctionType.ReturnTypeAnnotation.Type,
+			Type: functionEntryPointType.ReturnTypeAnnotation.Type,
 		}
 	}
 
 	interpret := scriptExecutionFunction(
-		epFunctionType.Parameters,
+		functionEntryPointType.Parameters,
 		arguments,
 		runtimeInterface,
 	)
@@ -430,7 +420,7 @@ func validateArgumentParams(
 		parameterType := parameter.TypeAnnotation.Type
 		argument := arguments[i]
 
-		exportedParameterType := exportType(parameterType, map[sema.TypeID]cadence.Type{})
+		exportedParameterType := ExportType(parameterType, map[sema.TypeID]cadence.Type{})
 		var value cadence.Value
 		var err error
 

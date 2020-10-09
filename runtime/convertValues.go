@@ -44,7 +44,7 @@ func exportEvent(event exportableEvent) cadence.Event {
 		fields[i] = exportValueWithInterpreter(field.Value, field.Interpreter(), results)
 	}
 
-	eventType := exportType(event.Type, map[sema.TypeID]cadence.Type{}).(*cadence.EventType)
+	eventType := ExportType(event.Type, map[sema.TypeID]cadence.Type{}).(*cadence.EventType)
 	return cadence.NewEvent(fields).WithType(eventType)
 }
 

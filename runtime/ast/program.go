@@ -20,6 +20,8 @@ package ast
 
 import (
 	"encoding/json"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type Program struct {
@@ -134,6 +136,72 @@ func (p *Program) updateDeclarations() {
 			p._transactionDeclarations = append(p._transactionDeclarations, declaration)
 		}
 	}
+}
+
+// SoleContractDeclaration returns the sole contract declaration, if any,
+// and if there are no other actionable declarations.
+//
+func (p *Program) SoleContractDeclaration() *CompositeDeclaration {
+
+	compositeDeclarations := p.CompositeDeclarations()
+
+	if len(compositeDeclarations) != 1 ||
+		len(p.TransactionDeclarations()) > 0 ||
+		len(p.InterfaceDeclarations()) > 0 ||
+		len(p.FunctionDeclarations()) > 0 {
+
+		return nil
+	}
+
+	compositeDeclaration := compositeDeclarations[0]
+
+	if compositeDeclaration.CompositeKind != common.CompositeKindContract {
+		return nil
+	}
+
+	return compositeDeclaration
+}
+
+// SoleContractInterfaceDeclaration returns the sole contract interface declaration, if any,
+// and if there are no other actionable declarations.
+//
+func (p *Program) SoleContractInterfaceDeclaration() *InterfaceDeclaration {
+
+	interfaceDeclarations := p.InterfaceDeclarations()
+
+	if len(interfaceDeclarations) != 1 ||
+		len(p.TransactionDeclarations()) > 0 ||
+		len(p.FunctionDeclarations()) > 0 ||
+		len(p.CompositeDeclarations()) > 0 {
+
+		return nil
+	}
+
+	interfaceDeclaration := interfaceDeclarations[0]
+
+	if interfaceDeclaration.CompositeKind != common.CompositeKindContract {
+		return nil
+	}
+
+	return interfaceDeclaration
+}
+
+// SoleTransactionDeclaration returns the sole transaction declaration, if any,
+// and if there are no other actionable declarations.
+//
+func (p *Program) SoleTransactionDeclaration() *TransactionDeclaration {
+
+	transactionDeclarations := p.TransactionDeclarations()
+
+	if len(transactionDeclarations) != 1 ||
+		len(p.CompositeDeclarations()) > 0 ||
+		len(p.InterfaceDeclarations()) > 0 ||
+		len(p.FunctionDeclarations()) > 0 {
+
+		return nil
+	}
+
+	return transactionDeclarations[0]
 }
 
 func (p *Program) MarshalJSON() ([]byte, error) {

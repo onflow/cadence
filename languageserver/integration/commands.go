@@ -83,19 +83,17 @@ func (i *FlowIntegration) commands() []server.Command {
 // There should be exactly 1 argument:
 //   * the DocumentURI of the file to submit
 func (i *FlowIntegration) submitTransaction(conn protocol.Conn, args ...interface{}) (interface{}, error) {
-	conn.LogMessage(&protocol.LogMessageParams{
-		Type:    protocol.Log,
-		Message: fmt.Sprintf("submit transaction args: %v", args),
-	})
 
-	expectedArgCount := 1
-	if len(args) != expectedArgCount {
-		return nil, fmt.Errorf("expecting %d arguments, got %d", expectedArgCount, len(args))
+	err := server.CheckCommandArgumentCount(args, 1)
+	if err != nil {
+		return nil, err
 	}
+
 	uri, ok := args[0].(string)
 	if !ok {
-		return nil, errors.New("invalid uri argument")
+		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
 	}
+
 	doc, ok := i.server.GetDocument(protocol.DocumentUri(uri))
 	if !ok {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
@@ -107,29 +105,26 @@ func (i *FlowIntegration) submitTransaction(conn protocol.Conn, args ...interfac
 		SetScript(script).
 		AddAuthorizer(i.activeAddress)
 
-	_, err := i.sendTransactionHelper(conn, i.activeAddress, tx)
+	_, err = i.sendTransactionHelper(conn, i.activeAddress, tx)
 	return nil, err
 }
 
-// executeScript handles executing a script defined in the source document in
-// VS Code.
+// executeScript handles executing a script defined in the source document.
 //
 // There should be exactly 1 argument:
 //   * the DocumentURI of the file to submit
 func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{}) (interface{}, error) {
-	conn.LogMessage(&protocol.LogMessageParams{
-		Type:    protocol.Log,
-		Message: fmt.Sprintf("execute script args: %v", args),
-	})
 
-	expectedArgCount := 1
-	if len(args) != expectedArgCount {
-		return nil, fmt.Errorf("expecting %d arguments, got %d", expectedArgCount, len(args))
+	err := server.CheckCommandArgumentCount(args, 1)
+	if err != nil {
+		return nil, err
 	}
+
 	uri, ok := args[0].(string)
 	if !ok {
-		return nil, errors.New("invalid uri argument")
+		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
 	}
+
 	doc, ok := i.server.GetDocument(protocol.DocumentUri(uri))
 	if !ok {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
@@ -184,15 +179,12 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 // There should be exactly 1 argument:
 //   * the address of the new active account
 func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...interface{}) (interface{}, error) {
-	conn.LogMessage(&protocol.LogMessageParams{
-		Type:    protocol.Log,
-		Message: fmt.Sprintf("set active acct %v", args),
-	})
 
-	expectedArgCount := 1
-	if len(args) != expectedArgCount {
-		return nil, fmt.Errorf("expecting %d arguments, got %d", expectedArgCount, len(args))
+	err := server.CheckCommandArgumentCount(args, 1)
+	if err != nil {
+		return nil, err
 	}
+
 	addrHex, ok := args[0].(string)
 	if !ok {
 		return nil, errors.New("invalid argument")
@@ -210,14 +202,10 @@ func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...interf
 
 // createAccount creates a new account and returns its address.
 func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...interface{}) (interface{}, error) {
-	conn.LogMessage(&protocol.LogMessageParams{
-		Type:    protocol.Log,
-		Message: fmt.Sprintf("create acct args: %v", args),
-	})
 
-	expectedArgCount := 0
-	if len(args) != expectedArgCount {
-		return nil, fmt.Errorf("expecting %d args got: %d", expectedArgCount, len(args))
+	err := server.CheckCommandArgumentCount(args, 0)
+	if err != nil {
+		return nil, err
 	}
 
 	addr, err := i.createAccountHelper(conn)
@@ -232,14 +220,10 @@ func (i *FlowIntegration) createAccount(conn protocol.Conn, args ...interface{})
 //
 // This command will wait until the emulator server is started before submitting any transactions.
 func (i *FlowIntegration) createDefaultAccounts(conn protocol.Conn, args ...interface{}) (interface{}, error) {
-	conn.LogMessage(&protocol.LogMessageParams{
-		Type:    protocol.Log,
-		Message: fmt.Sprintf("create default acct %v", args),
-	})
 
-	expectedArgCount := 1
-	if len(args) != expectedArgCount {
-		return nil, fmt.Errorf("must have %d args, got: %d", expectedArgCount, len(args))
+	err := server.CheckCommandArgumentCount(args, 1)
+	if err != nil {
+		return nil, err
 	}
 
 	n, ok := args[0].(float64)
@@ -291,14 +275,14 @@ RetryLoop:
 //
 func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 
-	expectedArgCount := 2
-	if len(args) != expectedArgCount {
-		return nil, fmt.Errorf("must have %d args, got: %d", expectedArgCount, len(args))
+	err := server.CheckCommandArgumentCount(args, 2)
+	if err != nil {
+		return nil, err
 	}
 
 	uri, ok := args[0].(string)
 	if !ok {
-		return nil, errors.New("invalid uri argument")
+		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
 	}
 
 	doc, ok := i.server.GetDocument(protocol.DocumentUri(uri))
@@ -321,7 +305,7 @@ func (i *FlowIntegration) deployContract(conn protocol.Conn, args ...interface{}
 	code := []byte(doc.Text)
 	tx := deployContractTransaction(i.activeAddress, name, code)
 
-	_, err := i.sendTransactionHelper(conn, i.activeAddress, tx)
+	_, err = i.sendTransactionHelper(conn, i.activeAddress, tx)
 	return nil, err
 }
 

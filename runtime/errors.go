@@ -78,29 +78,6 @@ func (e InvalidTransactionCountError) Error() string {
 	)
 }
 
-// MissingEntryPointError
-
-type MissingEntryPointError struct {
-	Expected string
-}
-
-func (e *MissingEntryPointError) Error() string {
-	return fmt.Sprintf("missing entry point: expected '%s'", e.Expected)
-}
-
-// InvalidEntryPointError
-
-type InvalidEntryPointTypeError struct {
-	Type sema.Type
-}
-
-func (e *InvalidEntryPointTypeError) Error() string {
-	return fmt.Sprintf(
-		"invalid entry point type: `%s`",
-		e.Type.QualifiedString(),
-	)
-}
-
 // InvalidTransactionParameterCountError
 
 type InvalidEntryPointParameterCountError struct {

@@ -2550,7 +2550,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			nextTransactionLocation := newTransactionLocationGenerator()
 
 			err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
-			exportedEventType := exportType(
+			exportedEventType := ExportType(
 				stdlib.AccountContractAddedEventType,
 				map[sema.TypeID]cadence.Type{},
 			)

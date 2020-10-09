@@ -25,15 +25,13 @@ import (
 
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/protocol"
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
 func (i *FlowIntegration) codeLenses(uri protocol.DocumentUri, checker *sema.Checker) ([]*protocol.CodeLens, error) {
 
-	var (
-		declarations = getAllDeclarations(checker.Elaboration)
-		actions      []*protocol.CodeLens
-	)
+	var actions []*protocol.CodeLens
 
 	addAction := func(lens *protocol.CodeLens) {
 		if lens != nil {
@@ -41,49 +39,57 @@ func (i *FlowIntegration) codeLenses(uri protocol.DocumentUri, checker *sema.Che
 		}
 	}
 
-	addAction(i.showSubmitTransactionAction(uri, declarations))
-	addAction(i.showDeployContractAction(uri, declarations))
-	addAction(i.showDeployContractInterfaceAction(uri, declarations))
-	addAction(i.showExecuteScriptAction(uri, declarations))
+	program := checker.Program
+
+	addAction(i.showSubmitTransactionAction(uri, program))
+	addAction(i.showDeployContractAction(uri, program))
+	addAction(i.showDeployContractInterfaceAction(uri, program))
+	addAction(i.showExecuteScriptAction(uri, program))
 
 	return actions, nil
 }
 
 func (i *FlowIntegration) showSubmitTransactionAction(
 	uri protocol.DocumentUri,
-	declarations *declarations,
+	program *ast.Program,
 ) *protocol.CodeLens {
+
 	// Do not show submit button when no active account exists
 	if i.activeAddress == flow.EmptyAddress {
 		return nil
 	}
 
-	// Show submit button when there is exactly one transaction declaration and no
-	// other actionable declarations.
-	if len(declarations.transactions) == 1 &&
-		len(declarations.contracts) == 0 &&
-		len(declarations.contractInterfaces) == 0 &&
-		len(declarations.scripts) == 0 {
-		return &protocol.CodeLens{
-			Range: conversion.ASTToProtocolRange(
-				declarations.transactions[0].StartPosition(),
-				declarations.transactions[0].StartPosition(),
-			),
-			Command: &protocol.Command{
-				Title:     fmt.Sprintf("submit transaction with account 0x%s", i.activeAddress.Hex()),
-				Command:   CommandSubmitTransaction,
-				Arguments: []interface{}{uri},
-			},
-		}
+	// Show submit button when there is exactly one transaction declaration,
+	// and no other actionable declarations.
+
+	transactionDeclaration := program.SoleTransactionDeclaration()
+	if transactionDeclaration == nil {
+		return nil
 	}
 
-	return nil
+	position := transactionDeclaration.StartPosition()
+
+	return &protocol.CodeLens{
+		Range: conversion.ASTToProtocolRange(
+			position,
+			position,
+		),
+		Command: &protocol.Command{
+			Title: fmt.Sprintf(
+				"submit transaction with account 0x%s",
+				i.activeAddress.Hex(),
+			),
+			Command:   CommandSubmitTransaction,
+			Arguments: []interface{}{uri},
+		},
+	}
 }
 
 func (i *FlowIntegration) showDeployContractAction(
 	uri protocol.DocumentUri,
-	declarations *declarations,
+	program *ast.Program,
 ) *protocol.CodeLens {
+
 	// Do not show deploy button when no active account exists
 	if i.activeAddress == flow.EmptyAddress {
 		return nil
@@ -91,39 +97,35 @@ func (i *FlowIntegration) showDeployContractAction(
 
 	// Show the deploy button when there is exactly one contract declaration,
 	// and no other actionable declarations.
-	if len(declarations.contracts) == 1 &&
-		len(declarations.transactions) == 0 &&
-		len(declarations.scripts) == 0 &&
-		len(declarations.contractInterfaces) == 0 {
 
-		contract := declarations.contracts[0]
+	contract := program.SoleContractDeclaration()
 
-		name := contract.Identifier.Identifier
+	name := contract.Identifier.Identifier
 
-		return &protocol.CodeLens{
-			Range: conversion.ASTToProtocolRange(
-				contract.StartPosition(),
-				contract.StartPosition(),
+	position := contract.StartPosition()
+
+	return &protocol.CodeLens{
+		Range: conversion.ASTToProtocolRange(
+			position,
+			position,
+		),
+		Command: &protocol.Command{
+			Title: fmt.Sprintf(
+				"deploy contract '%s' to account 0x%s",
+				name,
+				i.activeAddress.Hex(),
 			),
-			Command: &protocol.Command{
-				Title: fmt.Sprintf(
-					"deploy contract '%s' to account 0x%s",
-					name,
-					i.activeAddress.Hex(),
-				),
-				Command:   CommandDeployContract,
-				Arguments: []interface{}{uri},
-			},
-		}
+			Command:   CommandDeployContract,
+			Arguments: []interface{}{uri},
+		},
 	}
-
-	return nil
 }
 
 func (i *FlowIntegration) showDeployContractInterfaceAction(
 	uri protocol.DocumentUri,
-	declarations *declarations,
+	program *ast.Program,
 ) *protocol.CodeLens {
+
 	// Do not show deploy button when no active account exists
 	if i.activeAddress == flow.EmptyAddress {
 		return nil
@@ -131,57 +133,57 @@ func (i *FlowIntegration) showDeployContractInterfaceAction(
 
 	// Show the deploy button when there is exactly one contract interface declaration,
 	// and no other actionable declarations.
-	if len(declarations.contractInterfaces) == 1 &&
-		len(declarations.transactions) == 0 &&
-		len(declarations.scripts) == 0 &&
-		len(declarations.contracts) == 0 {
 
-		contractInterface := declarations.contractInterfaces[0]
-
-		name := contractInterface.Identifier.Identifier
-
-		return &protocol.CodeLens{
-			Range: conversion.ASTToProtocolRange(
-				contractInterface.StartPosition(),
-				contractInterface.StartPosition(),
-			),
-			Command: &protocol.Command{
-				Title: fmt.Sprintf(
-					"deploy contract interface '%s' to account 0x%s",
-					name,
-					i.activeAddress.Hex(),
-				),
-				Command:   CommandDeployContract,
-				Arguments: []interface{}{uri, name},
-			},
-		}
+	contractInterface := program.SoleContractInterfaceDeclaration()
+	if contractInterface == nil {
+		return nil
 	}
 
-	return nil
+	name := contractInterface.Identifier.Identifier
+
+	position := contractInterface.StartPosition()
+
+	return &protocol.CodeLens{
+		Range: conversion.ASTToProtocolRange(
+			position,
+			position,
+		),
+		Command: &protocol.Command{
+			Title: fmt.Sprintf(
+				"deploy contract interface '%s' to account 0x%s",
+				name,
+				i.activeAddress.Hex(),
+			),
+			Command:   CommandDeployContract,
+			Arguments: []interface{}{uri, name},
+		},
+	}
 }
 
 func (i *FlowIntegration) showExecuteScriptAction(
 	uri protocol.DocumentUri,
-	declarations *declarations,
+	program *ast.Program,
 ) *protocol.CodeLens {
+
 	// Show execute script button when there is exactly one valid script
 	// function and no other actionable declarations.
-	if len(declarations.scripts) == 1 &&
-		len(declarations.contracts) == 0 &&
-		len(declarations.contractInterfaces) == 0 &&
-		len(declarations.transactions) == 0 {
-		return &protocol.CodeLens{
-			Range: conversion.ASTToProtocolRange(
-				declarations.scripts[0].StartPosition(),
-				declarations.scripts[0].StartPosition(),
-			),
-			Command: &protocol.Command{
-				Title:     "execute script",
-				Command:   CommandExecuteScript,
-				Arguments: []interface{}{uri},
-			},
-		}
+
+	functionDeclaration := sema.FunctionEntryPointDeclaration(program)
+	if functionDeclaration == nil {
+		return nil
 	}
 
-	return nil
+	position := functionDeclaration.StartPosition()
+
+	return &protocol.CodeLens{
+		Range: conversion.ASTToProtocolRange(
+			position,
+			position,
+		),
+		Command: &protocol.Command{
+			Title:     "execute script",
+			Command:   CommandExecuteScript,
+			Arguments: []interface{}{uri},
+		},
+	}
 }

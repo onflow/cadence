@@ -27,8 +27,8 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
-// exportType converts a runtime type to its corresponding Go representation.
-func exportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type {
+// ExportType converts a runtime type to its corresponding Go representation.
+func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type {
 
 	typeID := t.ID()
 	if result, ok := results[typeID]; ok {
@@ -161,7 +161,7 @@ func exportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 }
 
 func exportOptionalType(t *sema.OptionalType, results map[sema.TypeID]cadence.Type) cadence.Type {
-	convertedType := exportType(t.Type, results)
+	convertedType := ExportType(t.Type, results)
 
 	return cadence.OptionalType{
 		Type: convertedType,
@@ -169,7 +169,7 @@ func exportOptionalType(t *sema.OptionalType, results map[sema.TypeID]cadence.Ty
 }
 
 func exportVariableSizedType(t *sema.VariableSizedType, results map[sema.TypeID]cadence.Type) cadence.Type {
-	convertedElement := exportType(t.Type, results)
+	convertedElement := ExportType(t.Type, results)
 
 	return cadence.VariableSizedArrayType{
 		ElementType: convertedElement,
@@ -177,7 +177,7 @@ func exportVariableSizedType(t *sema.VariableSizedType, results map[sema.TypeID]
 }
 
 func exportConstantSizedType(t *sema.ConstantSizedType, results map[sema.TypeID]cadence.Type) cadence.Type {
-	convertedElement := exportType(t.Type, results)
+	convertedElement := ExportType(t.Type, results)
 
 	return cadence.ConstantSizedArrayType{
 		Size:        uint(t.Size),
@@ -241,7 +241,7 @@ func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.
 	results[t.ID()] = result
 
 	for i, member := range fieldMembers {
-		convertedFieldType := exportType(member.TypeAnnotation.Type, results)
+		convertedFieldType := ExportType(member.TypeAnnotation.Type, results)
 
 		fields[i] = cadence.Field{
 			Identifier: member.Identifier.Identifier,
@@ -301,7 +301,7 @@ func exportInterfaceType(t *sema.InterfaceType, results map[sema.TypeID]cadence.
 	results[t.ID()] = result
 
 	for i, member := range fieldMembers {
-		convertedFieldType := exportType(member.TypeAnnotation.Type, results)
+		convertedFieldType := ExportType(member.TypeAnnotation.Type, results)
 
 		fields[i] = cadence.Field{
 			Identifier: member.Identifier.Identifier,
@@ -313,8 +313,8 @@ func exportInterfaceType(t *sema.InterfaceType, results map[sema.TypeID]cadence.
 }
 
 func exportDictionaryType(t *sema.DictionaryType, results map[sema.TypeID]cadence.Type) cadence.Type {
-	convertedKeyType := exportType(t.KeyType, results)
-	convertedElementType := exportType(t.ValueType, results)
+	convertedKeyType := ExportType(t.KeyType, results)
+	convertedElementType := ExportType(t.ValueType, results)
 
 	return cadence.DictionaryType{
 		KeyType:     convertedKeyType,
@@ -327,7 +327,7 @@ func exportFunctionType(t *sema.FunctionType, results map[sema.TypeID]cadence.Ty
 	convertedParameters := make([]cadence.Parameter, len(t.Parameters))
 
 	for i, parameter := range t.Parameters {
-		convertedParameterType := exportType(parameter.TypeAnnotation.Type, results)
+		convertedParameterType := ExportType(parameter.TypeAnnotation.Type, results)
 
 		convertedParameters[i] = cadence.Parameter{
 			Label:      parameter.Label,
@@ -336,7 +336,7 @@ func exportFunctionType(t *sema.FunctionType, results map[sema.TypeID]cadence.Ty
 		}
 	}
 
-	convertedReturnType := exportType(t.ReturnTypeAnnotation.Type, results)
+	convertedReturnType := ExportType(t.ReturnTypeAnnotation.Type, results)
 
 	return cadence.Function{
 		Parameters: convertedParameters,
@@ -345,7 +345,7 @@ func exportFunctionType(t *sema.FunctionType, results map[sema.TypeID]cadence.Ty
 }
 
 func exportReferenceType(t *sema.ReferenceType, results map[sema.TypeID]cadence.Type) cadence.ReferenceType {
-	convertedType := exportType(t.Type, results)
+	convertedType := ExportType(t.Type, results)
 
 	return cadence.ReferenceType{
 		Authorized: t.Authorized,
@@ -355,12 +355,12 @@ func exportReferenceType(t *sema.ReferenceType, results map[sema.TypeID]cadence.
 
 func exportRestrictedType(t *sema.RestrictedType, results map[sema.TypeID]cadence.Type) cadence.RestrictedType {
 
-	convertedType := exportType(t.Type, results)
+	convertedType := ExportType(t.Type, results)
 
 	restrictions := make([]cadence.Type, len(t.Restrictions))
 
 	for i, restriction := range t.Restrictions {
-		restrictions[i] = exportType(restriction, results)
+		restrictions[i] = ExportType(restriction, results)
 	}
 
 	return cadence.RestrictedType{
@@ -373,7 +373,7 @@ func exportCapabilityType(t *sema.CapabilityType, results map[sema.TypeID]cadenc
 
 	var borrowType cadence.Type
 	if t.BorrowType != nil {
-		borrowType = exportType(t.BorrowType, results)
+		borrowType = ExportType(t.BorrowType, results)
 	}
 
 	return cadence.CapabilityType{
