@@ -165,9 +165,12 @@ func start(id int) {
 		return res.String(), nil
 	}
 
-	languageServer := server.NewServer()
+	languageServer, err := server.NewServer()
+	if err != nil {
+		panic(err)
+	}
 
-	err := languageServer.SetOptions(
+	err = languageServer.SetOptions(
 		server.WithAddressImportResolver(addressImportResolver),
 	)
 	if err != nil {

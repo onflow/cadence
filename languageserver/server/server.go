@@ -29,6 +29,7 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/jsonrpc2"
 	"github.com/onflow/cadence/runtime"
@@ -245,7 +246,9 @@ func WithInitializationOptionsHandler(handler InitializationOptionsHandler) Opti
 	}
 }
 
-func NewServer() *Server {
+const GetEntryPointParametersCommand = "cadence.server.getEntryPointParameters"
+
+func NewServer() (*Server, error) {
 	server := &Server{
 		checkers:        make(map[protocol.DocumentUri]*sema.Checker),
 		documents:       make(map[protocol.DocumentUri]Document),
@@ -253,7 +256,17 @@ func NewServer() *Server {
 		commands:        make(map[string]CommandHandler),
 	}
 	server.protocolServer = protocol.NewServer(server)
-	return server
+
+	// Set default commands
+
+	for _, command := range server.defaultCommands() {
+		err := server.SetOptions(WithCommand(command))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return server, nil
 }
 
 func (s *Server) SetOptions(options ...Option) error {
@@ -1293,6 +1306,60 @@ func (s *Server) resolveImport(
 func (s *Server) GetDocument(uri protocol.DocumentUri) (doc Document, ok bool) {
 	doc, ok = s.documents[uri]
 	return
+}
+
+func (s *Server) defaultCommands() []Command {
+	return []Command{
+		{
+			Name:    GetEntryPointParametersCommand,
+			Handler: s.getEntryPointParameters,
+		},
+	}
+}
+
+// getEntryPointParameters returns the script or transaction parameters of the source document.
+//
+// There should be exactly 1 argument:
+//   * the DocumentURI of the file to submit
+func (s *Server) getEntryPointParameters(_ protocol.Conn, args ...interface{}) (interface{}, error) {
+
+	err := CheckCommandArgumentCount(args, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	uri, ok := args[0].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
+	}
+
+	checker, ok := s.checkers[protocol.DocumentUri(uri)]
+	if !ok {
+		return nil, fmt.Errorf("could not find document for URI %s", uri)
+	}
+
+	parameters := checker.EntryPointParameters()
+
+	type encodedParameter struct {
+		Name string `json:"name"`
+		Type string `json:"type"`
+	}
+
+	encodedParameters := make([]encodedParameter, len(parameters))
+
+	for i, parameter := range parameters {
+		parameterType := runtime.ExportType(
+			parameter.TypeAnnotation.Type,
+			map[sema.TypeID]cadence.Type{},
+		)
+
+		encodedParameters[i] = encodedParameter{
+			Name: parameter.EffectiveArgumentLabel(),
+			Type: parameterType.ID(),
+		}
+	}
+
+	return encodedParameters, nil
 }
 
 // convertibleError is an error that can be converted to LSP diagnostic.
