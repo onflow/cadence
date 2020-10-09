@@ -2923,3 +2923,26 @@ func (e *MissingSwitchCaseStatementsError) StartPosition() ast.Position {
 func (e *MissingSwitchCaseStatementsError) EndPosition() ast.Position {
 	return e.Pos
 }
+
+// MissingEntryPointError
+
+type MissingEntryPointError struct {
+	Expected string
+}
+
+func (e *MissingEntryPointError) Error() string {
+	return fmt.Sprintf("missing entry point: expected '%s'", e.Expected)
+}
+
+// InvalidEntryPointError
+
+type InvalidEntryPointTypeError struct {
+	Type Type
+}
+
+func (e *InvalidEntryPointTypeError) Error() string {
+	return fmt.Sprintf(
+		"invalid entry point type: `%s`",
+		e.Type.QualifiedString(),
+	)
+}

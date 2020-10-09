@@ -21,6 +21,7 @@ package integration
 import (
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/protocol"
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -36,22 +37,27 @@ func (i *FlowIntegration) diagnostics(
 	diagnostics []protocol.Diagnostic,
 	err error,
 ) {
-	elaboration := checker.Elaboration
 
 	// Warn if there are more than 1 transaction declarations as deployment will fail
-	if len(elaboration.TransactionDeclarationTypes) > 1 {
+	transactionDeclarations := checker.Program.TransactionDeclarations()
+
+	if len(transactionDeclarations) > 1 {
+
 		isFirst := true
-		for declaration := range elaboration.TransactionDeclarationTypes {
+
+		for _, declaration := range transactionDeclarations {
 			// Skip the first declaration
 			if isFirst {
 				isFirst = false
 				continue
 			}
 
+			position := declaration.StartPosition()
+
 			diagnostics = append(diagnostics, protocol.Diagnostic{
 				Range: conversion.ASTToProtocolRange(
-					declaration.StartPosition(),
-					declaration.StartPosition().Shifted(len("transaction")),
+					position,
+					position,
 				),
 				Severity: protocol.SeverityWarning,
 				Message:  "Cannot declare more than one transaction per file",
@@ -59,24 +65,40 @@ func (i *FlowIntegration) diagnostics(
 		}
 	}
 
-	// Warn if there are more than 1 contract declarations as deployment will fail
-	contractDeclarations := getContractDeclarations(checker.Elaboration.CompositeDeclarationTypes)
-	if len(contractDeclarations) > 1 {
+	// Warn if there are more than one composite or interface declaration,
+	// as deployment will fail
+
+	var compositeAndInterfaceDeclarations []ast.Declaration
+
+	for _, compositeDeclaration := range checker.Program.CompositeDeclarations() {
+		compositeAndInterfaceDeclarations = append(compositeAndInterfaceDeclarations, compositeDeclaration)
+	}
+
+	for _, interfaceDeclaration := range checker.Program.InterfaceDeclarations() {
+		compositeAndInterfaceDeclarations = append(compositeAndInterfaceDeclarations, interfaceDeclaration)
+	}
+
+	if len(compositeAndInterfaceDeclarations) > 1 {
+
 		isFirst := true
-		for _, declaration := range contractDeclarations {
+
+		for _, declaration := range compositeAndInterfaceDeclarations {
+
 			// Skip the first declaration
 			if isFirst {
 				isFirst = false
 				continue
 			}
 
+			position := declaration.DeclarationIdentifier().StartPosition()
+
 			diagnostics = append(diagnostics, protocol.Diagnostic{
 				Range: conversion.ASTToProtocolRange(
-					declaration.Identifier.StartPosition(),
-					declaration.Identifier.EndPosition(),
+					position,
+					position,
 				),
 				Severity: protocol.SeverityWarning,
-				Message:  "Cannot declare more than one contract per file",
+				Message:  "Cannot declare more than one top-level type per file",
 			})
 		}
 	}
