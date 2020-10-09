@@ -28,6 +28,7 @@ var StorableType = &NominalType{
 	Name:          "Storable",
 	QualifiedName: "Storable",
 	TypeID:        "Storable",
+	IsInvalid:     false,
 	// NOTE: Subtypes may be either resource types or not.
 	//
 	// Returning false here is safe, because this type is

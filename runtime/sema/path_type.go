@@ -24,6 +24,7 @@ var PathType = &NominalType{
 	Name:          "Path",
 	QualifiedName: "Path",
 	TypeID:        "Path",
+	IsInvalid:     false,
 	IsResource:    false,
 	Storable:      true,
 	// TODO: implement support for equating paths in the future
