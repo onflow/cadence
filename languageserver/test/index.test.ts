@@ -10,11 +10,11 @@ import {
   TextDocumentItem
 } from "vscode-languageserver-protocol"
 
-import { spawn, exec } from 'child_process'
+import { spawn, execSync } from 'child_process'
 import * as path from "path"
 
 beforeAll(() => {
-  exec("go build ../cmd/languageserver")
+  execSync("go build ../cmd/languageserver", {cwd: __dirname})
 })
 
 async function withConnection(f: (connection: ProtocolConnection) => Promise<void>): Promise<void> {
