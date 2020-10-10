@@ -11,6 +11,7 @@ import {
 } from "vscode-languageserver-protocol"
 
 import { spawn, exec } from 'child_process'
+import * as path from "path"
 
 beforeAll(() => {
   exec("go build ../cmd/languageserver")
@@ -18,7 +19,10 @@ beforeAll(() => {
 
 async function withConnection(f: (connection: ProtocolConnection) => Promise<void>): Promise<void> {
 
-  const child = spawn('./languageserver', ['-enableFlowClient=false'])
+  const child = spawn(
+    path.resolve(__dirname, './languageserver'),
+    ['-enableFlowClient=false']
+  )
 
   child.on('exit', (code) => {
     expect(code).toBe(0)
