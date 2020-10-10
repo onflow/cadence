@@ -60,3 +60,26 @@ async function createTestDocument(connection: ProtocolConnection, code: string):
 
   return uri
 }
+
+describe("getEntryPointParameters command", () => {
+
+  async function testCode(code: string) {
+    return withConnection(async (connection) => {
+
+      const uri = await createTestDocument(connection, code)
+
+      const result = await connection.sendRequest(ExecuteCommandRequest.type, {
+        command: "cadence.server.getEntryPointParameters",
+        arguments: [uri]
+      })
+
+      expect(result).toEqual([{name: 'a', type: 'Int'}])
+    })
+  }
+
+  test("script", async() =>
+    testCode("pub fun main(a: Int) {}"))
+
+  test("transaction", async() =>
+    testCode("transaction(a: Int) {}"))
+})
