@@ -21,34 +21,12 @@ GOPATH ?= $(HOME)/go
 # Ensure go bin path is in path (Especially for CI)
 PATH := $(PATH):$(GOPATH)/bin
 
-.PHONY: test
-test:
-	# test all packages
-	GO111MODULE=on go test $(if $(JSON_OUTPUT),-json,) -parallel 8 ./...
-	cd ./languageserver && make test
 
 .PHONY: build
 build:
-	go build -o ./runtime/cmd/parse/parse ./runtime/cmd/parse
-	go build -o ./runtime/cmd/check/check ./runtime/cmd/check
-	go build -o ./runtime/cmd/main/main ./runtime/cmd/main
-	cd ./languageserver && make build
+	go build -o ./cmd/languageserver/languageserver ./cmd/languageserver
+	GOARCH=wasm GOOS=js go build -o ./cmd/languageserver/languageserver.wasm ./cmd/languageserver
 
-.PHONY: install-tools
-install-tools:
-	curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b ${GOPATH}/bin v1.26.0
-
-.PHONY: lint
-lint:
-	golangci-lint run -v ./...
-
-.PHONY: check-headers
-check-headers:
-	@./check-headers.sh
-
-.PHONY: check-tidy
-check-tidy:
-	go generate -v ./...
-	go mod tidy
-	cd languageserver; go mod tidy
-	git diff --exit-code
+.PHONY: test
+test:
+	cd test && npm install && npm t
