@@ -97,6 +97,22 @@ func (e InvalidDuplicateSectionError) Error() string {
 	)
 }
 
+// InvalidSectionOrderError is returned when the WASM binary specifies
+// a non-custom section out-of-order
+//
+type InvalidSectionOrderError struct {
+	Offset    int
+	SectionID sectionID
+}
+
+func (e InvalidSectionOrderError) Error() string {
+	return fmt.Sprintf(
+		"out-of-order section with ID %d at offset %d",
+		e.SectionID,
+		e.Offset,
+	)
+}
+
 // InvalidSectionSizeError is returned when the WASM binary specifies
 // an invalid section size
 //
@@ -371,6 +387,20 @@ func (e InvalidFunctionSectionTypeIndexError) Error() string {
 
 func (e InvalidFunctionSectionTypeIndexError) Unwrap() error {
 	return e.ReadError
+}
+
+// FunctionCountMismatchError is returned when the WASM binary specifies
+// information for a different number of functions than previously specified
+//
+type FunctionCountMismatchError struct {
+	Offset int
+}
+
+func (e FunctionCountMismatchError) Error() string {
+	return fmt.Sprintf(
+		"function count mismatch at offset %d",
+		e.Offset,
+	)
 }
 
 // InvalidExportSectionExportCountError is returned when the WASM binary specifies

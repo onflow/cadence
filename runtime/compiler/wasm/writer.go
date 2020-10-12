@@ -25,7 +25,14 @@ import (
 // WASMWriter allows writing WASM binaries
 //
 type WASMWriter struct {
-	buf *buf
+	buf        *Buffer
+	WriteNames bool
+}
+
+func NewWASMWriter(buf *Buffer) *WASMWriter {
+	return &WASMWriter{
+		buf: buf,
+	}
 }
 
 // writeMagicAndVersion writes the magic byte sequence and version at the beginning of the WASM binary
@@ -533,4 +540,38 @@ func (w *WASMWriter) writeNameSectionFunctionNamesSubSection(imports []*Import, 
 
 		return nil
 	})
+}
+
+func (w *WASMWriter) WriteModule(module *Module) error {
+	if err := w.writeMagicAndVersion(); err != nil {
+		return err
+	}
+
+	if err := w.writeTypeSection(module.Types); err != nil {
+		return err
+	}
+	if err := w.writeImportSection(module.Imports); err != nil {
+		return err
+	}
+	if err := w.writeFunctionSection(module.Functions); err != nil {
+		return err
+	}
+	if err := w.writeExportSection(module.Exports); err != nil {
+		return err
+	}
+	if err := w.writeCodeSection(module.Functions); err != nil {
+		return err
+	}
+
+	if w.WriteNames {
+		if err := w.writeNameSection(
+			module.Name,
+			module.Imports,
+			module.Functions,
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

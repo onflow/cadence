@@ -19,6 +19,7 @@
 package wasm
 
 import (
+	"io"
 	"math"
 	"unicode/utf8"
 )
@@ -26,8 +27,17 @@ import (
 // WASMReader allows reading WASM binaries
 //
 type WASMReader struct {
-	buf    *buf
-	Module Module
+	buf              *Buffer
+	Module           Module
+	lastSectionID    sectionID
+	didReadFunctions bool
+	didReadCode      bool
+}
+
+func NewWASMReader(buf *Buffer) *WASMReader {
+	return &WASMReader{
+		buf: buf,
+	}
 }
 
 // readMagicAndVersion reads the magic byte sequence and version at the beginning of the WASM binary
@@ -79,6 +89,16 @@ func (r *WASMReader) readSection() error {
 		}
 	}
 
+	// "Custom sections may be inserted at any place in this sequence,
+	// while other sections must occur at most once and in the prescribed order."
+
+	if sectionID > 0 && sectionID <= r.lastSectionID {
+		return InvalidSectionOrderError{
+			SectionID: sectionID,
+			Offset:    int(sectionIDOffset),
+		}
+	}
+
 	switch sectionID {
 	case sectionIDCustom:
 		err = r.readCustomSection()
@@ -107,7 +127,7 @@ func (r *WASMReader) readSection() error {
 		}
 
 	case sectionIDFunction:
-		if r.Module.functionTypeIndices != nil {
+		if r.didReadFunctions {
 			return invalidDuplicateSectionError()
 		}
 
@@ -115,6 +135,9 @@ func (r *WASMReader) readSection() error {
 		if err != nil {
 			return err
 		}
+
+		r.didReadFunctions = true
+
 	case sectionIDExport:
 		if r.Module.Exports != nil {
 			return invalidDuplicateSectionError()
@@ -126,7 +149,7 @@ func (r *WASMReader) readSection() error {
 		}
 
 	case sectionIDCode:
-		if r.Module.functionBodies != nil {
+		if r.didReadCode {
 			return invalidDuplicateSectionError()
 		}
 
@@ -135,11 +158,20 @@ func (r *WASMReader) readSection() error {
 			return err
 		}
 
+		r.didReadCode = true
+
 	default:
 		return InvalidSectionIDError{
 			SectionID: sectionID,
 			Offset:    int(sectionIDOffset),
 		}
+	}
+
+	// Keep track of the last read non-custom section ID:
+	// non-custom sections must appear in order
+
+	if sectionID > 0 {
+		r.lastSectionID = sectionID
 	}
 
 	return nil
@@ -416,9 +448,30 @@ func (r *WASMReader) readFunctionSection() error {
 		functionTypeIndices[i] = typeIndex
 	}
 
-	r.Module.functionTypeIndices = functionTypeIndices
+	if !r.ensureModuleFunctions(len(functionTypeIndices)) {
+		return FunctionCountMismatchError{
+			Offset: int(r.buf.offset),
+		}
+	}
+
+	for i, functionTypeIndex := range functionTypeIndices {
+		r.Module.Functions[i].TypeIndex = functionTypeIndex
+	}
 
 	return nil
+}
+
+func (r *WASMReader) ensureModuleFunctions(count int) bool {
+	if r.Module.Functions != nil {
+		return len(r.Module.Functions) == count
+	}
+
+	r.Module.Functions = make([]*Function, count)
+	for i := 0; i < count; i++ {
+		r.Module.Functions[i] = &Function{}
+	}
+
+	return true
 }
 
 // readExportSection reads the section that declares the exports
@@ -535,7 +588,15 @@ func (r *WASMReader) readCodeSection() error {
 		functionBodies[i] = functionBody
 	}
 
-	r.Module.functionBodies = functionBodies
+	if !r.ensureModuleFunctions(len(functionBodies)) {
+		return FunctionCountMismatchError{
+			Offset: int(r.buf.offset),
+		}
+	}
+
+	for i, functionBody := range functionBodies {
+		r.Module.Functions[i].Code = functionBody
+	}
 
 	return nil
 }
@@ -899,4 +960,25 @@ func (r *WASMReader) readNameSection(size uint32) error {
 	r.buf.offset += offset(size)
 
 	return nil
+}
+
+func (r *WASMReader) ReadModule() error {
+	if err := r.readMagicAndVersion(); err != nil {
+		return err
+	}
+
+	for {
+		_, err := r.buf.PeekByte()
+		if err != nil {
+			if err == io.EOF {
+				return nil
+			}
+
+			return err
+		}
+
+		if err = r.readSection(); err != nil {
+			return err
+		}
+	}
 }

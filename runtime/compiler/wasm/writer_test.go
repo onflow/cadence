@@ -59,8 +59,8 @@ func TestWASMWriter_writeMagicAndVersion(t *testing.T) {
 
 	t.Parallel()
 
-	var b buf
-	w := WASMWriter{&b}
+	var b Buffer
+	w := NewWASMWriter(&b)
 
 	err := w.writeMagicAndVersion()
 	require.NoError(t, err)
@@ -80,8 +80,8 @@ func TestWASMWriter_writeTypeSection(t *testing.T) {
 
 	t.Parallel()
 
-	var b buf
-	w := WASMWriter{&b}
+	var b Buffer
+	w := NewWASMWriter(&b)
 
 	err := w.writeTypeSection([]*FunctionType{
 		{
@@ -120,8 +120,8 @@ func TestWASMWriter_writeImportSection(t *testing.T) {
 
 	t.Parallel()
 
-	var b buf
-	w := WASMWriter{&b}
+	var b Buffer
+	w := NewWASMWriter(&b)
 
 	imports := []*Import{
 		{
@@ -163,8 +163,8 @@ func TestWASMWriter_writeFunctionSection(t *testing.T) {
 
 	t.Parallel()
 
-	var b buf
-	w := WASMWriter{&b}
+	var b Buffer
+	w := NewWASMWriter(&b)
 
 	functions := []*Function{
 		{
@@ -207,8 +207,8 @@ func TestWASMWriter_writeExportSection(t *testing.T) {
 
 	t.Parallel()
 
-	var b buf
-	w := WASMWriter{&b}
+	var b Buffer
+	w := NewWASMWriter(&b)
 
 	exports := []*Export{
 		{
@@ -245,8 +245,8 @@ func TestWASMWriter_writeCodeSection(t *testing.T) {
 
 	t.Parallel()
 
-	var b buf
-	w := WASMWriter{&b}
+	var b Buffer
+	w := NewWASMWriter(&b)
 
 	functions := []*Function{
 		{
@@ -307,8 +307,8 @@ func TestWASMWriter_writeName(t *testing.T) {
 
 		t.Parallel()
 
-		var b buf
-		w := WASMWriter{&b}
+		var b Buffer
+		w := NewWASMWriter(&b)
 
 		err := w.writeName("hello")
 		require.NoError(t, err)
@@ -328,8 +328,8 @@ func TestWASMWriter_writeName(t *testing.T) {
 
 		t.Parallel()
 
-		var b buf
-		w := WASMWriter{&b}
+		var b Buffer
+		w := NewWASMWriter(&b)
 
 		name := string([]byte{0xff, 0xfe, 0xfd})
 		err := w.writeName(name)
@@ -351,8 +351,8 @@ func TestWASMWriter_writeNameSection(t *testing.T) {
 
 	t.Parallel()
 
-	var b buf
-	w := WASMWriter{&b}
+	var b Buffer
+	w := NewWASMWriter(&b)
 
 	imports := []*Import{
 		{
@@ -415,67 +415,53 @@ func TestWASMWriterReader(t *testing.T) {
 
 	t.Parallel()
 
-	var b buf
+	var b Buffer
 
-	w := WASMWriter{&b}
+	w := NewWASMWriter(&b)
+	w.WriteNames = true
 
-	err := w.writeMagicAndVersion()
-	require.NoError(t, err)
-
-	types := []*FunctionType{
-		{
-			Params:  []ValueType{ValueTypeI32, ValueTypeI32},
-			Results: []ValueType{ValueTypeI32},
+	module := &Module{
+		Name: "test",
+		Types: []*FunctionType{
+			{
+				Params:  []ValueType{ValueTypeI32, ValueTypeI32},
+				Results: []ValueType{ValueTypeI32},
+			},
 		},
-	}
-	err = w.writeTypeSection(types)
-	require.NoError(t, err)
-
-	imports := []*Import{
-		{
-			Module:    "env",
-			Name:      "add",
-			TypeIndex: 0,
+		Imports: []*Import{
+			{
+				Module:    "env",
+				Name:      "add",
+				TypeIndex: 0,
+			},
 		},
-	}
-	err = w.writeImportSection(imports)
-	require.NoError(t, err)
-
-	functions := []*Function{
-		{
-			// not used, just for testing
-			Name:      "add",
-			TypeIndex: 0,
-			Code: &Code{
+		Exports: []*Export{
+			{
+				Name:          "add",
+				FunctionIndex: 0,
+			},
+		},
+		Functions: []*Function{
+			{
 				// not used, just for testing
-				Locals: []ValueType{
-					ValueTypeI32,
-				},
-				Instructions: []Instruction{
-					InstructionLocalGet{LocalIndex: 0},
-					InstructionLocalGet{LocalIndex: 1},
-					InstructionI32Add{},
+				Name:      "add",
+				TypeIndex: 0,
+				Code: &Code{
+					// not used, just for testing
+					Locals: []ValueType{
+						ValueTypeI32,
+					},
+					Instructions: []Instruction{
+						InstructionLocalGet{LocalIndex: 0},
+						InstructionLocalGet{LocalIndex: 1},
+						InstructionI32Add{},
+					},
 				},
 			},
 		},
 	}
 
-	err = w.writeFunctionSection(functions)
-	require.NoError(t, err)
-
-	exports := []*Export{
-		{
-			Name:          "add",
-			FunctionIndex: 0,
-		},
-	}
-	err = w.writeExportSection(exports)
-	require.NoError(t, err)
-
-	err = w.writeCodeSection(functions)
-	require.NoError(t, err)
-
-	err = w.writeNameSection("test", imports, functions)
+	err := w.WriteModule(module)
 	require.NoError(t, err)
 
 	expected := []byte{
@@ -535,38 +521,22 @@ func TestWASMWriterReader(t *testing.T) {
 
 	b.offset = 0
 
-	r := WASMReader{buf: &b}
-
-	err = r.readMagicAndVersion()
+	r := NewWASMReader(&b)
+	err = r.ReadModule()
 	require.NoError(t, err)
 
-	err = r.readSection()
-	require.NoError(t, err)
+	// prepare the expected module:
+	// remove all names, as the name section is not read yet
 
-	require.Equal(t, r.Module.Types, types)
+	module.Name = ""
+	for _, function := range module.Functions {
+		function.Name = ""
+	}
 
-	err = r.readSection()
-	require.NoError(t, err)
-
-	require.Equal(t, r.Module.Imports, imports)
-
-	err = r.readSection()
-	require.NoError(t, err)
-
-	// TODO:
-
-	err = r.readSection()
-	require.NoError(t, err)
-
-	require.Equal(t, r.Module.Exports, exports)
-
-	err = r.readSection()
-	require.NoError(t, err)
-
-	// TODO:
-
-	err = r.readSection()
-	require.NoError(t, err)
+	require.Equal(t,
+		module,
+		&r.Module,
+	)
 
 	require.Equal(t,
 		offset(len(expected)),
@@ -582,8 +552,8 @@ func TestWASMWriter_writeInstruction(t *testing.T) {
 
 		t.Parallel()
 
-		var b buf
-		w := WASMWriter{&b}
+		var b Buffer
+		w := NewWASMWriter(&b)
 
 		instruction := InstructionBlock{
 			Block: Block{
@@ -594,7 +564,7 @@ func TestWASMWriter_writeInstruction(t *testing.T) {
 				Instructions2: nil,
 			},
 		}
-		err := instruction.write(&w)
+		err := instruction.write(w)
 		require.NoError(t, err)
 
 		require.Equal(t,
@@ -617,8 +587,8 @@ func TestWASMWriter_writeInstruction(t *testing.T) {
 
 		t.Parallel()
 
-		var b buf
-		w := WASMWriter{&b}
+		var b Buffer
+		w := NewWASMWriter(&b)
 
 		instruction := InstructionBlock{
 			Block: Block{
@@ -629,7 +599,7 @@ func TestWASMWriter_writeInstruction(t *testing.T) {
 				Instructions2: nil,
 			},
 		}
-		err := instruction.write(&w)
+		err := instruction.write(w)
 		require.NoError(t, err)
 
 		require.Equal(t,
@@ -651,8 +621,8 @@ func TestWASMWriter_writeInstruction(t *testing.T) {
 
 		t.Parallel()
 
-		var b buf
-		w := WASMWriter{&b}
+		var b Buffer
+		w := NewWASMWriter(&b)
 
 		instruction := InstructionBlock{
 			Block: Block{
@@ -665,7 +635,7 @@ func TestWASMWriter_writeInstruction(t *testing.T) {
 				},
 			},
 		}
-		err := instruction.write(&w)
+		err := instruction.write(w)
 		require.Equal(t, InvalidBlockSecondInstructionsError{
 			Offset: 4,
 		}, err)
@@ -675,8 +645,8 @@ func TestWASMWriter_writeInstruction(t *testing.T) {
 
 		t.Parallel()
 
-		var b buf
-		w := WASMWriter{&b}
+		var b Buffer
+		w := NewWASMWriter(&b)
 
 		instruction := InstructionLoop{
 			Block: Block{
@@ -687,7 +657,7 @@ func TestWASMWriter_writeInstruction(t *testing.T) {
 				Instructions2: nil,
 			},
 		}
-		err := instruction.write(&w)
+		err := instruction.write(w)
 		require.NoError(t, err)
 
 		require.Equal(t,
@@ -710,8 +680,8 @@ func TestWASMWriter_writeInstruction(t *testing.T) {
 
 		t.Parallel()
 
-		var b buf
-		w := WASMWriter{&b}
+		var b Buffer
+		w := NewWASMWriter(&b)
 
 		instruction := InstructionLoop{
 			Block: Block{
@@ -724,7 +694,7 @@ func TestWASMWriter_writeInstruction(t *testing.T) {
 				},
 			},
 		}
-		err := instruction.write(&w)
+		err := instruction.write(w)
 		require.Equal(t, InvalidBlockSecondInstructionsError{
 			Offset: 4,
 		}, err)
@@ -734,8 +704,8 @@ func TestWASMWriter_writeInstruction(t *testing.T) {
 
 		t.Parallel()
 
-		var b buf
-		w := WASMWriter{&b}
+		var b Buffer
+		w := NewWASMWriter(&b)
 
 		instruction := InstructionIf{
 			Block: Block{
@@ -746,7 +716,7 @@ func TestWASMWriter_writeInstruction(t *testing.T) {
 				Instructions2: nil,
 			},
 		}
-		err := instruction.write(&w)
+		err := instruction.write(w)
 		require.NoError(t, err)
 
 		require.Equal(t,
@@ -769,8 +739,8 @@ func TestWASMWriter_writeInstruction(t *testing.T) {
 
 		t.Parallel()
 
-		var b buf
-		w := WASMWriter{&b}
+		var b Buffer
+		w := NewWASMWriter(&b)
 
 		instruction := InstructionIf{
 			Block: Block{
@@ -783,7 +753,7 @@ func TestWASMWriter_writeInstruction(t *testing.T) {
 				},
 			},
 		}
-		err := instruction.write(&w)
+		err := instruction.write(w)
 		require.NoError(t, err)
 
 		require.Equal(t,
@@ -811,14 +781,14 @@ func TestWASMWriter_writeInstruction(t *testing.T) {
 
 		t.Parallel()
 
-		var b buf
-		w := WASMWriter{&b}
+		var b Buffer
+		w := NewWASMWriter(&b)
 
 		instruction := InstructionBrTable{
 			LabelIndices:      []uint32{3, 2, 1, 0},
 			DefaultLabelIndex: 4,
 		}
-		err := instruction.write(&w)
+		err := instruction.write(w)
 		require.NoError(t, err)
 
 		require.Equal(t,
