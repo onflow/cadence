@@ -53,7 +53,6 @@ func TestCompilerSimple(t *testing.T) {
 			},
 			Locals: []ir.Local{
 				{Type: ir.ValTypeInt},
-				{Type: ir.ValTypeInt},
 			},
 			Statement: &ir.Sequence{
 				Stmts: []ir.Stmt{
