@@ -32,8 +32,8 @@ func TestWASMReader_readMagicAndVersion(t *testing.T) {
 	t.Parallel()
 
 	read := func(data []byte) error {
-		b := buf{data: data}
-		r := WASMReader{buf: &b}
+		b := Buffer{data: data}
+		r := NewWASMReader(&b)
 		err := r.readMagicAndVersion()
 		if err != nil {
 			return err
@@ -116,8 +116,8 @@ func TestWASMReader_readValType(t *testing.T) {
 	t.Parallel()
 
 	read := func(data []byte) (ValueType, error) {
-		b := buf{data: data}
-		r := WASMReader{buf: &b}
+		b := Buffer{data: data}
+		r := NewWASMReader(&b)
 		valueType, err := r.readValType()
 		if err != nil {
 			return 0, err
@@ -184,8 +184,8 @@ func TestWASMReader_readTypeSection(t *testing.T) {
 	t.Parallel()
 
 	read := func(data []byte) ([]*FunctionType, error) {
-		b := buf{data: data}
-		r := WASMReader{buf: &b}
+		b := Buffer{data: data}
+		r := NewWASMReader(&b)
 		err := r.readTypeSection()
 		if err != nil {
 			return nil, err
@@ -468,8 +468,8 @@ func TestWASMReader_readImportSection(t *testing.T) {
 	t.Parallel()
 
 	read := func(data []byte) ([]*Import, error) {
-		b := buf{data: data}
-		r := WASMReader{buf: &b}
+		b := Buffer{data: data}
+		r := NewWASMReader(&b)
 		err := r.readImportSection()
 		if err != nil {
 			return nil, err
@@ -708,15 +708,15 @@ func TestWASMReader_readFunctionSection(t *testing.T) {
 
 	t.Parallel()
 
-	read := func(data []byte) ([]uint32, error) {
-		b := buf{data: data}
-		r := WASMReader{buf: &b}
+	read := func(data []byte) ([]*Function, error) {
+		b := Buffer{data: data}
+		r := NewWASMReader(&b)
 		err := r.readFunctionSection()
 		if err != nil {
 			return nil, err
 		}
 		require.Equal(t, offset(len(b.data)), b.offset)
-		return r.Module.functionTypeIndices, nil
+		return r.Module.Functions, nil
 	}
 
 	t.Run("valid", func(t *testing.T) {
@@ -733,7 +733,11 @@ func TestWASMReader_readFunctionSection(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t,
-			[]uint32{0x23},
+			[]*Function{
+				{
+					TypeIndex: 0x23,
+				},
+			},
 			typeIDs,
 		)
 	})
@@ -803,8 +807,8 @@ func TestWASMReader_readExportSection(t *testing.T) {
 	t.Parallel()
 
 	read := func(data []byte) ([]*Export, error) {
-		b := buf{data: data}
-		r := WASMReader{buf: &b}
+		b := Buffer{data: data}
+		r := NewWASMReader(&b)
 		err := r.readExportSection()
 		if err != nil {
 			return nil, err
@@ -998,15 +1002,15 @@ func TestWASMReader_readCodeSection(t *testing.T) {
 
 	t.Parallel()
 
-	read := func(data []byte) ([]*Code, error) {
-		b := buf{data: data}
-		r := WASMReader{buf: &b}
+	read := func(data []byte) ([]*Function, error) {
+		b := Buffer{data: data}
+		r := NewWASMReader(&b)
 		err := r.readCodeSection()
 		if err != nil {
 			return nil, err
 		}
 		require.Equal(t, offset(len(b.data)), b.offset)
-		return r.Module.functionBodies, nil
+		return r.Module.Functions, nil
 	}
 
 	t.Run("valid", func(t *testing.T) {
@@ -1037,15 +1041,17 @@ func TestWASMReader_readCodeSection(t *testing.T) {
 		})
 		require.NoError(t, err)
 		assert.Equal(t,
-			[]*Code{
+			[]*Function{
 				{
-					Locals: []ValueType{
-						ValueTypeI32,
-					},
-					Instructions: []Instruction{
-						InstructionLocalGet{0},
-						InstructionLocalGet{1},
-						InstructionI32Add{},
+					Code: &Code{
+						Locals: []ValueType{
+							ValueTypeI32,
+						},
+						Instructions: []Instruction{
+							InstructionLocalGet{0},
+							InstructionLocalGet{1},
+							InstructionI32Add{},
+						},
 					},
 				},
 			},
@@ -1280,8 +1286,8 @@ func TestWASMReader_readName(t *testing.T) {
 	t.Parallel()
 
 	read := func(data []byte) (string, error) {
-		b := buf{data: data}
-		r := WASMReader{buf: &b}
+		b := Buffer{data: data}
+		r := NewWASMReader(&b)
 		name, err := r.readName()
 		if err != nil {
 			return "", err
@@ -1376,7 +1382,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 
 		t.Parallel()
 
-		b := buf{
+		b := Buffer{
 			data: []byte{
 				// block
 				0x02,
@@ -1390,7 +1396,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 			},
 			offset: 0,
 		}
-		r := WASMReader{buf: &b}
+		r := NewWASMReader(&b)
 
 		expected := InstructionBlock{
 			Block: Block{
@@ -1412,7 +1418,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 
 		t.Parallel()
 
-		b := buf{
+		b := Buffer{
 			data: []byte{
 				// block
 				0x02,
@@ -1425,7 +1431,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 			},
 			offset: 0,
 		}
-		r := WASMReader{buf: &b}
+		r := NewWASMReader(&b)
 
 		expected := InstructionBlock{
 			Block: Block{
@@ -1447,7 +1453,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 
 		t.Parallel()
 
-		b := buf{
+		b := Buffer{
 			data: []byte{
 				// block
 				0x02,
@@ -1460,7 +1466,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 			},
 			offset: 0,
 		}
-		r := WASMReader{buf: &b}
+		r := NewWASMReader(&b)
 
 		_, err := r.readInstruction()
 		require.Equal(t,
@@ -1476,7 +1482,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 
 		t.Parallel()
 
-		b := buf{
+		b := Buffer{
 			data: []byte{
 				// block
 				0x02,
@@ -1495,7 +1501,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 			},
 			offset: 0,
 		}
-		r := WASMReader{buf: &b}
+		r := NewWASMReader(&b)
 
 		_, err := r.readInstruction()
 		require.Equal(t, InvalidBlockSecondInstructionsError{
@@ -1507,7 +1513,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 
 		t.Parallel()
 
-		b := buf{
+		b := Buffer{
 			data: []byte{
 				// loop
 				0x03,
@@ -1521,7 +1527,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 			},
 			offset: 0,
 		}
-		r := WASMReader{buf: &b}
+		r := NewWASMReader(&b)
 
 		expected := InstructionLoop{
 			Block: Block{
@@ -1543,7 +1549,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 
 		t.Parallel()
 
-		b := buf{
+		b := Buffer{
 			data: []byte{
 				// loop
 				0x03,
@@ -1562,7 +1568,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 			},
 			offset: 0,
 		}
-		r := WASMReader{buf: &b}
+		r := NewWASMReader(&b)
 
 		_, err := r.readInstruction()
 		require.Equal(t, InvalidBlockSecondInstructionsError{
@@ -1574,7 +1580,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 
 		t.Parallel()
 
-		b := buf{
+		b := Buffer{
 			data: []byte{
 				// if
 				0x04,
@@ -1588,7 +1594,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 			},
 			offset: 0,
 		}
-		r := WASMReader{buf: &b}
+		r := NewWASMReader(&b)
 
 		expected := InstructionIf{
 			Block: Block{
@@ -1610,7 +1616,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 
 		t.Parallel()
 
-		b := buf{
+		b := Buffer{
 			data: []byte{
 				// loop
 				0x04,
@@ -1629,7 +1635,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 			},
 			offset: 0,
 		}
-		r := WASMReader{buf: &b}
+		r := NewWASMReader(&b)
 
 		expected := InstructionIf{
 			Block: Block{
@@ -1653,7 +1659,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 
 		t.Parallel()
 
-		b := buf{
+		b := Buffer{
 			data: []byte{
 				// br_table
 				0x0e,
@@ -1672,7 +1678,7 @@ func TestWASMReader_readInstruction(t *testing.T) {
 			},
 			offset: 0,
 		}
-		r := WASMReader{buf: &b}
+		r := NewWASMReader(&b)
 
 		expected := InstructionBrTable{
 			LabelIndices:      []uint32{3, 2, 1, 0},
@@ -1690,7 +1696,7 @@ func TestWASMReader_readNameSection(t *testing.T) {
 
 	t.Parallel()
 
-	b := buf{
+	b := Buffer{
 		data: []byte{
 			// section size: 37 (LEB128)
 			0xa5, 0x80, 0x80, 0x80, 0x0,
@@ -1728,7 +1734,7 @@ func TestWASMReader_readNameSection(t *testing.T) {
 		offset: 0,
 	}
 
-	r := WASMReader{buf: &b}
+	r := NewWASMReader(&b)
 
 	err := r.readCustomSection()
 	require.NoError(t, err)
