@@ -43,7 +43,7 @@ const max64bitLEB128ByteCount = 10
 // writeUint32LEB128 encodes and writes the given unsigned 32-bit integer
 // in canonical (with fewest bytes possible) unsigned little endian base 128 format
 //
-func (buf *buf) writeUint32LEB128(v uint32) error {
+func (buf *Buffer) writeUint32LEB128(v uint32) error {
 	if v < 128 {
 		err := buf.WriteByte(uint8(v))
 		if err != nil {
@@ -74,7 +74,7 @@ func (buf *buf) writeUint32LEB128(v uint32) error {
 // writeUint64LEB128 encodes and writes the given unsigned 64-bit integer
 // in canonical (with fewest bytes possible) unsigned little endian base 128 format
 //
-func (buf *buf) writeUint64LEB128(v uint64) error {
+func (buf *Buffer) writeUint64LEB128(v uint64) error {
 	if v < 128 {
 		err := buf.WriteByte(uint8(v))
 		if err != nil {
@@ -106,7 +106,7 @@ func (buf *buf) writeUint64LEB128(v uint64) error {
 // in non-canonical (fixed-size, instead of with fewest bytes possible)
 // unsigned little endian base 128 format
 //
-func (buf *buf) writeUint32LEB128FixedLength(v uint32, length int) error {
+func (buf *Buffer) writeUint32LEB128FixedLength(v uint32, length int) error {
 	for i := 0; i < length; i++ {
 		c := uint8(v & 0x7f)
 		v >>= 7
@@ -126,7 +126,7 @@ func (buf *buf) writeUint32LEB128FixedLength(v uint32, length int) error {
 
 // readUint32LEB128 reads and decodes an unsigned 32-bit integer
 //
-func (buf *buf) readUint32LEB128() (uint32, error) {
+func (buf *Buffer) readUint32LEB128() (uint32, error) {
 	var result uint32
 	var shift, i uint
 	// only read up to maximum number of bytes
@@ -148,7 +148,7 @@ func (buf *buf) readUint32LEB128() (uint32, error) {
 
 // readUint64LEB128 reads and decodes an unsigned 32-bit integer
 //
-func (buf *buf) readUint64LEB128() (uint64, error) {
+func (buf *Buffer) readUint64LEB128() (uint64, error) {
 	var result uint64
 	var shift, i uint
 	// only read up to maximum number of bytes
@@ -171,7 +171,7 @@ func (buf *buf) readUint64LEB128() (uint64, error) {
 // writeInt32LEB128 encodes and writes the given signed 32-bit integer
 // in canonical (with fewest bytes possible) signed little endian base 128 format
 //
-func (buf *buf) writeInt32LEB128(v int32) error {
+func (buf *Buffer) writeInt32LEB128(v int32) error {
 	more := true
 	for more {
 		// low order 7 bits of value
@@ -193,7 +193,7 @@ func (buf *buf) writeInt32LEB128(v int32) error {
 // writeInt64LEB128 encodes and writes the given signed 64-bit integer
 // in canonical (with fewest bytes possible) signed little endian base 128 format
 //
-func (buf *buf) writeInt64LEB128(v int64) error {
+func (buf *Buffer) writeInt64LEB128(v int64) error {
 	more := true
 	for more {
 		// low order 7 bits of value
@@ -214,7 +214,7 @@ func (buf *buf) writeInt64LEB128(v int64) error {
 
 // readInt32LEB128 reads and decodes a signed 32-bit integer
 //
-func (buf *buf) readInt32LEB128() (int32, error) {
+func (buf *Buffer) readInt32LEB128() (int32, error) {
 	var result int32
 	var i uint
 	var b byte = 0x80
@@ -237,7 +237,7 @@ func (buf *buf) readInt32LEB128() (int32, error) {
 
 // readInt64LEB128 reads and decodes a signed 64-bit integer
 //
-func (buf *buf) readInt64LEB128() (int64, error) {
+func (buf *Buffer) readInt64LEB128() (int64, error) {
 	var result int64
 	var i uint
 	var b byte = 0x80
@@ -261,7 +261,7 @@ func (buf *buf) readInt64LEB128() (int64, error) {
 // writeFixedUint32LEB128Space writes a non-canonical 5-byte fixed-size space
 // (instead of the minimal size if canonical encoding would be used)
 //
-func (buf *buf) writeFixedUint32LEB128Space() (offset, error) {
+func (buf *Buffer) writeFixedUint32LEB128Space() (offset, error) {
 	off := buf.offset
 	for i := 0; i < max32bitLEB128ByteCount; i++ {
 		err := buf.WriteByte(0)
@@ -278,7 +278,7 @@ func (buf *buf) writeFixedUint32LEB128Space() (offset, error) {
 // (instead of the minimal size if canonical encoding would be used)
 // at the given offset
 //
-func (buf *buf) writeUint32LEB128SizeAt(off offset) error {
+func (buf *Buffer) writeUint32LEB128SizeAt(off offset) error {
 	currentOff := buf.offset
 	if currentOff < max32bitLEB128ByteCount || currentOff-max32bitLEB128ByteCount < off {
 		return fmt.Errorf("writeUint32LEB128SizeAt: invalid offset: %d", off)
