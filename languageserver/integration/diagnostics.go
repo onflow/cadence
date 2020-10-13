@@ -75,7 +75,6 @@ func (i *FlowIntegration) diagnostics(
 
 	if len(compositeAndInterfaceDeclarations) > 1 {
 
-		isFirst := true
 
 		for _, declaration := range compositeAndInterfaceDeclarations {
 
