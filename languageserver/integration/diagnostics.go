@@ -45,12 +45,7 @@ func (i *FlowIntegration) diagnostics(
 
 		isFirst := true
 
-		for _, declaration := range transactionDeclarations {
-			// Skip the first declaration
-			if isFirst {
-				isFirst = false
-				continue
-			}
+		for _, declaration := range transactionDeclarations[1:] {
 
 			position := declaration.StartPosition()
 
