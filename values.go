@@ -20,6 +20,7 @@ package cadence
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
 	"math/big"
 
@@ -148,6 +149,15 @@ type Address [AddressLength]byte
 
 func NewAddress(b [AddressLength]byte) Address {
 	return b
+}
+
+func NewAddressFromHex(s string) (Address, error) {
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		return Address{}, err
+	}
+
+	return BytesToAddress(b), nil
 }
 
 func (Address) isValue() {}

@@ -17,9 +17,12 @@ require (
 	github.com/segmentio/fasthash v1.0.2
 	github.com/stretchr/testify v1.5.1
 	go.uber.org/goleak v1.0.0
-	golang.org/x/crypto v0.0.0-20200423211502-4bdfaf469ed5
-	golang.org/x/text v0.3.2
-	golang.org/x/tools v0.0.0-20200323144430-8dcfad9e016e // indirect
+	golang.org/x/crypto v0.0.0-20200622213623-75b288015ac9
+	golang.org/x/lint v0.0.0-20200302205851-738671d3881b // indirect
+	golang.org/x/sys v0.0.0-20200828194041-157a740278f4 // indirect
+	golang.org/x/text v0.3.3
+	golang.org/x/tools v0.0.0-20200828161849-5deb26317202 // indirect
+	golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 // indirect
 	gopkg.in/check.v1 v1.0.0-20190902080502-41f04d3bba15 // indirect
 	gopkg.in/yaml.v2 v2.2.5 // indirect
 )
