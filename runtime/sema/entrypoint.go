@@ -50,7 +50,7 @@ func (checker *Checker) FunctionEntryPointType() (*FunctionType, error) {
 
 // FunctionEntryPointDeclaration returns the entry point function declaration, if any.
 //
-// Returns nil if there are multiple function declarations with the same function entry point name.
+// Returns nil if there are multiple function declarations with the same function entry point name, or any other top-level declarations.
 //
 func FunctionEntryPointDeclaration(program *ast.Program) *ast.FunctionDeclaration {
 
