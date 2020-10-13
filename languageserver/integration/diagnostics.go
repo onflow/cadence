@@ -43,8 +43,6 @@ func (i *FlowIntegration) diagnostics(
 
 	if len(transactionDeclarations) > 1 {
 
-		isFirst := true
-
 		for _, declaration := range transactionDeclarations[1:] {
 
 			position := declaration.StartPosition()
@@ -75,14 +73,7 @@ func (i *FlowIntegration) diagnostics(
 
 	if len(compositeAndInterfaceDeclarations) > 1 {
 
-
-		for _, declaration := range compositeAndInterfaceDeclarations {
-
-			// Skip the first declaration
-			if isFirst {
-				isFirst = false
-				continue
-			}
+		for _, declaration := range compositeAndInterfaceDeclarations[1:] {
 
 			position := declaration.DeclarationIdentifier().StartPosition()
 
