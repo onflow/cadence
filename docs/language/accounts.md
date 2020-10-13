@@ -59,6 +59,7 @@ Every account can be accessed through two types:
       fun borrow<T: &Any>(from: StoragePath): T?
 
       fun link<T: &Any>(_ newCapabilityPath: CapabilityPath, target: Path): Capability<T>?
+      fun getCapability<T>(_ path: CapabilityPath): Capability<T>
       fun getLinkTarget(_ path: CapabilityPath): Path?
       fun unlink(_ path: CapabilityPath)
 
