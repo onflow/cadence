@@ -4363,13 +4363,13 @@ func (t *CheckedFunctionType) CheckArgumentExpressions(
 	t.ArgumentExpressionsCheck(checker, argumentExpressions, invocationRange)
 }
 
-// baseTypes are the nominal types available in programs
+// BaseTypes are the nominal types available in programs
 
-var baseTypes map[string]Type
+var BaseTypes map[string]Type
 
 func init() {
 
-	baseTypes = map[string]Type{
+	BaseTypes = map[string]Type{
 		"": VoidType,
 	}
 
@@ -4403,11 +4403,11 @@ func init() {
 		typeName := ty.String()
 
 		// check type is not accidentally redeclared
-		if _, ok := baseTypes[typeName]; ok {
+		if _, ok := BaseTypes[typeName]; ok {
 			panic(errors.NewUnreachableError())
 		}
 
-		baseTypes[typeName] = ty
+		BaseTypes[typeName] = ty
 	}
 }
 
