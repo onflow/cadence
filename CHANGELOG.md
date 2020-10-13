@@ -1,3 +1,91 @@
+# v0.11.0 (2012-10-13)
+
+## 💥 Breaking Changes
+
+### Typed Paths (#403)
+
+Paths are now typed. Paths in the storage domain have type `StoragePath`, in the private domain `PrivatePath`, and in the public domain `PublicPath`.  `PrivatePath` and `PublicPath` are subtypes of `CapabilityPath`. Both `StoragePath` and `CapabilityPath` are subtypes of `Path`.
+
+<table>
+  <tr>
+    <td colspan="3">Path</td>
+  </tr>
+  <tr>
+    <td colspan="2">CapabilityPath</td>
+    <td colspan="2" rowspan="2">StoragePath</td>
+  </tr>
+  <tr>
+    <td>PrivatePath</td>
+    <td>PublicPath</td>
+  </tr>
+</table>
+
+### Storage API (#403)
+
+With paths being typed, it was possible to make the Storage API type-safer and easier to use: It is now statically checked if the correct type of path is given to a function, instead of at run-time, and therefore capability return types can now be non-optional.
+
+The changes are as follows:
+
+For `PublicAccount`:
+
+- old: `fun getCapability<T>(_ path: Path): Capability<T>?` <br/>
+  new: `fun getCapability<T>(_ path: PublicPath): Capability<T>`
+
+- old: `fun getLinkTarget(_ path: Path): Path?` <br />
+  new: `fun getLinkTarget(_ path: CapabilityPath): Path?`
+
+For `AuthAccount`:
+
+- old: `fun save<T>(_ value: T, to: Path)` <br />
+  new: `fun save<T>(_ value: T, to: StoragePath)`
+
+- old: `fun load<T>(from: Path): T?` <br />
+  new: `fun load<T>(from: StoragePath): T?`
+
+- old: `fun copy<T: AnyStruct>(from: Path): T?` <br />
+  new: `fun copy<T: AnyStruct>(from: StoragePath): T?`
+
+- old: `fun borrow<T: &Any>(from: Path): T?` <br />
+  new: `fun borrow<T: &Any>(from: StoragePath): T?`
+
+- old: `fun link<T: &Any>(_ newCapabilityPath: Path, target: Path): Capability<T>?` <br />
+  new: `fun link<T: &Any>(_ newCapabilityPath: CapabilityPath, target: Path): Capability<T>?`
+
+- old: `fun getCapability<T>(_ path: Path): Capability<T>?` <br/>
+  new: `fun getCapability<T>(_ path: CapabilityPath): Capability<T>`
+
+- old: `fun getLinkTarget(_ path: Path): Path?` <br />
+  new: `fun getLinkTarget(_ path: CapabilityPath): Path?`
+
+- old: `fun unlink(_ path: Path)` <br />
+  new: `fun unlink(_ path: CapabilityPath)`
+
+## ⭐ Features
+
+- Added npm packages for components of Cadence. This eases the development of developer tools for Cadence:
+
+  - `cadence-language-server`: The Cadence Language Server
+  - `monaco-languageclient-cadence`: Language Server Protocol client for the the Monaco editor
+  - `cadence-parser`: The Cadence parser
+
+  In addition, there are also examples for the [language server](https://github.com/onflow/cadence/tree/master/npm-packages/cadence-language-server-demo) and the [parser](https://github.com/onflow/cadence/tree/master/npm-packages/cadence-parser-demo) that demonstrate the use of the packages.
+
+- Add a command to the language server that allows getting the entry point (transaction or script) parameters (#406)
+
+## 🛠 Improvements
+
+- Allow references to be returned from from scripts (#400)
+- Panic with a dedicated error for out of bounds array index (#396)
+
+## 📖 Documentation
+
+- Document resource identifiers (#394)
+- Document iteration over dictionary entries (#399)
+
+## 📦 Dependencies
+
+- The changes to the [CBOR library](https://github.com/fxamacker/cbor) have been [merged](https://github.com/fxamacker/cbor/pull/249), so [the `replace` statement that was necessary in the last release](https://github.com/onflow/cadence/releases/tag/v0.10.0) must be removed.
+
 # v0.10.0 (2020-10-01)
 
 ## 💥 Breaking Changes
