@@ -150,6 +150,8 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 			return cadence.NeverType{}
 		case sema.VoidType:
 			return cadence.VoidType{}
+		case sema.InvalidType:
+			return nil
 		}
 
 		panic(fmt.Sprintf("cannot export type of type %T", t))
