@@ -1376,9 +1376,14 @@ func (s *Server) getEntryPointParameters(_ protocol.Conn, args ...interface{}) (
 			map[sema.TypeID]cadence.Type{},
 		)
 
+		var typeID string
+		if parameterType != nil {
+			typeID = parameterType.ID()
+		}
+
 		encodedParameters[i] = encodedParameter{
 			Name: parameter.EffectiveArgumentLabel(),
-			Type: parameterType.ID(),
+			Type: typeID,
 		}
 	}
 
