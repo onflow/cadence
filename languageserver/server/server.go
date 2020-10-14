@@ -388,17 +388,13 @@ func (s *Server) DidOpenTextDocument(conn protocol.Conn, params *protocol.DidOpe
 	uri := params.TextDocument.URI
 	text := params.TextDocument.Text
 
-	diagnostics, err := s.getDiagnostics(conn, uri, text)
-	if err != nil {
-		return err
-	}
-	conn.PublishDiagnostics(&protocol.PublishDiagnosticsParams{
-		URI:         uri,
-		Diagnostics: diagnostics,
-	})
-
 	s.documents[uri] = Document{
 		Text: text,
+	}
+
+	err := s.check(conn, uri, text)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -414,21 +410,48 @@ func (s *Server) DidChangeTextDocument(
 	uri := params.TextDocument.URI
 	text := params.ContentChanges[0].Text
 
-	diagnostics, err := s.getDiagnostics(conn, uri, text)
-	// NOTE: always publish diagnostics
-	conn.PublishDiagnostics(&protocol.PublishDiagnosticsParams{
-		URI:         uri,
-		Diagnostics: diagnostics,
-	})
-	if err != nil {
-		return err
-	}
-
 	s.documents[uri] = Document{
 		Text: text,
 	}
 
+	err := s.check(conn, uri, text)
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+type CadenceCheckCompletedParams struct {
+
+	/*URI defined:
+	 * The URI which was checked.
+	 */
+	URI protocol.DocumentUri `json:"uri"`
+
+	Valid bool `json:"valid"`
+}
+
+const cadenceCheckCompletedMethodName = "cadence/checkCompleted"
+
+func (s *Server) check(conn protocol.Conn, uri protocol.DocumentUri, text string) error {
+
+	diagnostics, err := s.getDiagnostics(conn, uri, text)
+
+	// NOTE: always publish diagnostics and inform the client the checking completed
+
+	conn.PublishDiagnostics(&protocol.PublishDiagnosticsParams{
+		URI:         uri,
+		Diagnostics: diagnostics,
+	})
+
+	valid := len(diagnostics) == 0
+	conn.Notify(cadenceCheckCompletedMethodName, &CadenceCheckCompletedParams{
+		URI:   uri,
+		Valid: valid,
+	})
+
+	return err
 }
 
 // Hover returns contextual type information about the variable at the given
