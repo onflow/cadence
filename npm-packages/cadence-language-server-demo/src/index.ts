@@ -21,7 +21,7 @@ import * as monaco from "monaco-editor";
 import {editor} from "monaco-editor";
 import {MonacoServices} from 'monaco-languageclient';
 import configureCadence, {CADENCE_LANGUAGE_ID} from "./cadence";
-import {createServer} from "monaco-languageclient-cadence";
+import {createServer} from "@onflow/monaco-languageclient-cadence";
 import ITextModel = editor.ITextModel;
 
 const code1 = `

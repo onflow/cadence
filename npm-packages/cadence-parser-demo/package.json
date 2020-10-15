@@ -1,5 +1,4 @@
 {
-  "name": "cadence-parser-demo",
   "description": "A demo for the Cadence parser",
   "private": true,
   "scripts": {
@@ -23,7 +22,7 @@
     "webpack-dev-server": "^3.11.0"
   },
   "dependencies": {
-    "cadence-parser": "file:../cadence-parser",
+    "@onflow/cadence-parser": "file:../cadence-parser",
     "monaco-editor": "^0.20.0",
     "react": "^16.13.1",
     "react-dom": "^16.13.1",

@@ -19,7 +19,7 @@
 
 import * as monaco from "monaco-editor";
 import configureCadence, {CADENCE_LANGUAGE_ID} from "./cadence";
-import {CadenceParser} from "cadence-parser"
+import {CadenceParser} from "@onflow/cadence-parser"
 
 import * as React from "react"
 import * as ReactDOM from "react-dom"

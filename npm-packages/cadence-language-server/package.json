@@ -1,5 +1,5 @@
 {
-  "name": "cadence-language-server",
+  "name": "@onflow/cadence-language-server",
   "version": "0.11.0",
   "description": "The Cadence Language Server",
   "homepage": "https://github.com/onflow/cadence",
