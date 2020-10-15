@@ -37,7 +37,7 @@ module.exports = {
         new CopyPlugin({
             patterns: [
                 {
-                    from: 'node_modules/cadence-parser/dist/cadence-parser.wasm',
+                    from: 'node_modules/@onflow/cadence-parser/dist/cadence-parser.wasm',
                     to: 'cadence-parser.wasm'
                 }
             ]

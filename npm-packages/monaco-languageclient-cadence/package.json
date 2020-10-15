@@ -1,5 +1,5 @@
 {
-  "name": "monaco-languageclient-cadence",
+  "name": "@onflow/monaco-languageclient-cadence",
   "version": "0.1.0",
   "description": "The Cadence Language Server",
   "homepage": "https://github.com/onflow/cadence",
@@ -16,7 +16,7 @@
     "typescript": "^4.0.2"
   },
   "dependencies": {
-    "cadence-language-server": "^0.11.0",
+    "@onflow/cadence-language-server": "^0.11.0",
     "monaco-languageclient": "^0.13.0",
     "vscode-jsonrpc": "^5.0.1"
   },

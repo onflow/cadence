@@ -40,7 +40,7 @@ module.exports = {
         new CopyPlugin({
             patterns: [
                 {
-                    from: 'node_modules/cadence-language-server/dist/cadence-language-server.wasm',
+                    from: 'node_modules/@onflow/cadence-language-server/dist/cadence-language-server.wasm',
                     to: 'cadence-language-server.wasm'
                 }
             ]

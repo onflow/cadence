@@ -16,7 +16,7 @@
  * limitations under the License.
  */
 
-import {CadenceLanguageServer, Callbacks} from 'cadence-language-server'
+import {CadenceLanguageServer, Callbacks} from '@onflow/cadence-language-server'
 import {
   createMessageConnection,
   DataCallback,

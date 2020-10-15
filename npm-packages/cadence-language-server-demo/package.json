@@ -1,7 +1,4 @@
 {
-  "name": "cadence-language-server-demo",
-  "version": "0.8.0",
-  "description": "An example client for the Cadence Language Server, based on Monaco",
   "private": true,
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
@@ -23,10 +20,10 @@
     "webpack-dev-server": "^3.11.0"
   },
   "dependencies": {
-    "cadence-language-server": "file:../cadence-language-server",
+    "@onflow/cadence-language-server": "file:../cadence-language-server",
     "monaco-editor": "^0.21.0",
     "monaco-languageclient": "^0.13.0",
-    "monaco-languageclient-cadence": "file:../monaco-languageclient-cadence",
+    "@onflow/monaco-languageclient-cadence": "file:../monaco-languageclient-cadence",
     "vscode-jsonrpc": "^5.0.1"
   }
 }
