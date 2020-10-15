@@ -1,6 +1,5 @@
 {
   "name": "cadence-parser-demo",
-  "version": "0.8.0",
   "description": "A demo for the Cadence parser",
   "private": true,
   "scripts": {

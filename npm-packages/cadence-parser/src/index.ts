@@ -17,10 +17,13 @@
  */
 
 import {go} from './go.js'
+import WebAssemblyInstantiatedSource = WebAssembly.WebAssemblyInstantiatedSource
 
 declare global {
-  interface Window {
-    [key: string]: any
+  namespace NodeJS {
+    interface Global {
+     [key: string]: any
+    }
   }
 }
 
@@ -33,25 +36,31 @@ export class CadenceParser {
     return `__${CadenceParser.functionNamePrefix}_${name}__`
   }
 
-  public static async create(binaryLocation: string): Promise<CadenceParser> {
+  public static async create(binaryLocation: string | BufferSource): Promise<CadenceParser> {
     await this.ensureLoaded(binaryLocation)
     return new CadenceParser()
   }
 
-  private static async ensureLoaded(binaryLocation: string) {
+  private static async ensureLoaded(urlOrBinary: string | BufferSource) {
     if (this.loaded) {
       return
     }
 
     this.setWriteSync()
 
-    await this.load(binaryLocation)
+    await this.load(urlOrBinary)
     this.loaded = true
   }
 
-  private static async load(binaryLocation: string) {
-    const binary = fetch(binaryLocation)
-    const instantiatedSource = await WebAssembly.instantiateStreaming(binary, go.importObject)
+  private static async load(urlOrBinary: string | BufferSource): Promise<void> {
+    let instantiatedSource: WebAssemblyInstantiatedSource
+    if (typeof urlOrBinary === 'string') {
+      const binaryRequest = fetch(urlOrBinary)
+      instantiatedSource = (await WebAssembly.instantiateStreaming(binaryRequest, go.importObject))
+    } else {
+      instantiatedSource = await WebAssembly.instantiate(urlOrBinary, go.importObject);
+    }
+
     // NOTE: don't await the promise, just ignore it, as it is only resolved when the program exists
     go.run(instantiatedSource.instance).then(() => {})
   }
@@ -59,7 +68,7 @@ export class CadenceParser {
   private constructor() {}
 
   public parse(code: string): any {
-    const result = window[CadenceParser.functionName('parse')](code)
+    const result = global[CadenceParser.functionName('parse')](code)
     return JSON.parse(result)
   }
 
@@ -74,7 +83,7 @@ export class CadenceParser {
     // When the language server writes to a file, e.g. standard output or standard error,
     // then log the output in the console
 
-    window['fs'].writeSync = function (fileDescriptor: number, buf: Uint8Array): number {
+    global.fs.writeSync = function (fileDescriptor: number, buf: Uint8Array): number {
       // Get the currently buffered output for the given file descriptor,
       // or initialize it, if there is no buffered output yet.
 
