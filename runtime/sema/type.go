@@ -4575,7 +4575,7 @@ func init() {
 					return
 				}
 
-				checker.checkAddressLiteral(intExpression)
+				CheckAddressLiteral(intExpression, checker.report)
 			},
 		},
 	}
@@ -4591,13 +4591,13 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 
 		switch argument := argument.(type) {
 		case *ast.IntegerExpression:
-			if checker.checkIntegerLiteral(argument, targetType) {
+			if CheckIntegerLiteral(argument, targetType, checker.report) {
 
 				suggestIntegerLiteralConversionReplacement(checker, argument, targetType, invocationRange)
 			}
 
 		case *ast.FixedPointExpression:
-			if checker.checkFixedPointLiteral(argument, targetType) {
+			if CheckFixedPointLiteral(argument, targetType, checker.report) {
 
 				suggestFixedPointLiteralConversionReplacement(checker, targetType, argument, invocationRange)
 			}

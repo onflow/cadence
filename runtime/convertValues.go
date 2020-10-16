@@ -34,6 +34,11 @@ func exportValue(value exportableValue) cadence.Value {
 	return exportValueWithInterpreter(value.Value, value.Interpreter(), exportResults{})
 }
 
+// ExportValue converts a runtime value to its native Go representation.
+func ExportValue(value interpreter.Value, inter *interpreter.Interpreter) cadence.Value {
+	return exportValueWithInterpreter(value, inter, exportResults{})
+}
+
 // exportEvent converts a runtime event to its native Go representation.
 func exportEvent(event exportableEvent) cadence.Event {
 	fields := make([]cadence.Value, len(event.Fields))
