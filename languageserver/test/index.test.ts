@@ -156,3 +156,26 @@ describe("getContractInitializerParameters command", () => {
       )
   )
 })
+
+describe("parseEntryPointArguments command", () => {
+
+  async function testCode(code: string) {
+    return withConnection(async (connection) => {
+
+      const uri = await createTestDocument(connection, code)
+
+      const result = await connection.sendRequest(ExecuteCommandRequest.type, {
+        command: "cadence.server.parseEntryPointArguments",
+        arguments: [uri, ['0x42']]
+      })
+
+      expect(result).toEqual([{value: '0x0000000000000042', type: 'Address'}])
+    })
+  }
+
+  test("script", async() =>
+    testCode("pub fun main(a: Address) {}"))
+
+  test("transaction", async() =>
+    testCode("transaction(a: Address) {}"))
+})
