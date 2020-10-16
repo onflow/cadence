@@ -29,6 +29,8 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 
+	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/jsonrpc2"
 	"github.com/onflow/cadence/runtime"
@@ -247,6 +249,7 @@ func WithInitializationOptionsHandler(handler InitializationOptionsHandler) Opti
 
 const GetEntryPointParametersCommand = "cadence.server.getEntryPointParameters"
 const GetContractInitializerParametersCommand = "cadence.server.getContractInitializerParameters"
+const ParseEntryPointArgumentsCommand = "cadence.server.parseEntryPointArguments"
 
 func NewServer() (*Server, error) {
 	server := &Server{
@@ -1341,6 +1344,10 @@ func (s *Server) defaultCommands() []Command {
 			Name:    GetContractInitializerParametersCommand,
 			Handler: s.getContractInitializerParameters,
 		},
+		{
+			Name:    ParseEntryPointArgumentsCommand,
+			Handler: s.parseEntryPointArguments,
+		},
 	}
 }
 
@@ -1411,6 +1418,66 @@ func (s *Server) getContractInitializerParameters(_ protocol.Conn, args ...inter
 	encodedParameters := encodeParameters(compositeType.ConstructorParameters)
 
 	return encodedParameters, nil
+}
+
+// parseEntryPointArguments returns the values for the given arguments (literals) for the entry point.
+//
+// There should be exactly 1 argument:
+//   * the DocumentURI of the file to submit
+//   * the array of arguments
+func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...interface{}) (interface{}, error) {
+
+	err := CheckCommandArgumentCount(args, 2)
+	if err != nil {
+		return nil, err
+	}
+
+	uri, ok := args[0].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
+	}
+
+	checker, ok := s.checkers[protocol.DocumentUri(uri)]
+	if !ok {
+		return nil, fmt.Errorf("could not find document for URI %s", uri)
+	}
+
+	arguments, ok := args[1].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid arguments argument: %#+v", args[1])
+	}
+
+	parameters := checker.EntryPointParameters()
+
+	argumentCount := len(arguments)
+	parameterCount := len(parameters)
+	if argumentCount != parameterCount {
+		return nil, fmt.Errorf(
+			"invalid number of arguments: got %d, expected %d",
+			argumentCount,
+			parameterCount,
+		)
+	}
+
+	result := make([]interface{}, len(arguments))
+
+	for i, argument := range arguments {
+		parameter := parameters[i]
+		parameterType := parameter.TypeAnnotation.Type
+
+		argumentCode, ok := argument.(string)
+		if !ok {
+			return nil, fmt.Errorf("invalid argument at index %d: %#+v", i, argument)
+		}
+		value, err := runtime.ParseLiteral(argumentCode, parameterType)
+		if err != nil {
+			return nil, err
+		}
+
+		result[i] = json.Prepare(value)
+	}
+
+	return result, nil
 }
 
 // convertibleError is an error that can be converted to LSP diagnostic.
