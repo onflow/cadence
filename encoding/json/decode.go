@@ -89,19 +89,22 @@ func (d *Decoder) Decode() (value cadence.Value, err error) {
 }
 
 const (
-	typeKey       = "type"
-	valueKey      = "value"
-	keyKey        = "key"
-	nameKey       = "name"
-	fieldsKey     = "fields"
-	idKey         = "id"
-	targetPathKey = "targetPath"
-	borrowTypeKey = "borrowType"
-	domainKey     = "domain"
-	identifierKey = "identifier"
-	staticTypeKey = "staticType"
-	addressKey    = "address"
-	pathKey       = "path"
+	typeKey                    = "type"
+	valueKey                   = "value"
+	keyKey                     = "key"
+	nameKey                    = "name"
+	fieldsKey                  = "fields"
+	idKey                      = "id"
+	compositeTypeKey           = "compositeTypeID"
+	compositeTypeIdentifierKey = "identifier"
+	compositeTypeLocationKey   = "location"
+	targetPathKey              = "targetPath"
+	borrowTypeKey              = "borrowType"
+	domainKey                  = "domain"
+	identifierKey              = "identifier"
+	staticTypeKey              = "staticType"
+	addressKey                 = "address"
+	pathKey                    = "path"
 )
 
 var ErrInvalidJSONCadence = errors.New("invalid JSON Cadence structure")
@@ -481,10 +484,11 @@ func decodeKeyValuePair(valueJSON interface{}) cadence.KeyValuePair {
 }
 
 type composite struct {
-	typeID      string
-	identifier  string
-	fieldValues []cadence.Value
-	fieldTypes  []cadence.Field
+	typeID          string
+	compositeTypeID cadence.CompositeTypeID
+	identifier      string
+	fieldValues     []cadence.Value
+	fieldTypes      []cadence.Field
 }
 
 func decodeComposite(valueJSON interface{}) composite {
@@ -493,6 +497,7 @@ func decodeComposite(valueJSON interface{}) composite {
 	typeID := obj.GetString(idKey)
 
 	identifier := identifierFromTypeID(typeID)
+	compositeTypeID := compositeTypeIDFromObject(obj.Get(compositeTypeKey))
 
 	fields := obj.GetSlice(fieldsKey)
 
@@ -507,10 +512,11 @@ func decodeComposite(valueJSON interface{}) composite {
 	}
 
 	return composite{
-		typeID:      typeID,
-		identifier:  identifier,
-		fieldValues: fieldValues,
-		fieldTypes:  fieldTypes,
+		typeID:          typeID,
+		compositeTypeID: compositeTypeID,
+		identifier:      identifier,
+		fieldValues:     fieldValues,
+		fieldTypes:      fieldTypes,
 	}
 }
 
@@ -532,9 +538,10 @@ func decodeStruct(valueJSON interface{}) cadence.Struct {
 	comp := decodeComposite(valueJSON)
 
 	return cadence.NewStruct(comp.fieldValues).WithType(&cadence.StructType{
-		TypeID:     comp.typeID,
-		Identifier: comp.identifier,
-		Fields:     comp.fieldTypes,
+		TypeID:       comp.typeID,
+		StructTypeID: comp.compositeTypeID,
+		Identifier:   comp.identifier,
+		Fields:       comp.fieldTypes,
 	})
 }
 
@@ -542,9 +549,10 @@ func decodeResource(valueJSON interface{}) cadence.Resource {
 	comp := decodeComposite(valueJSON)
 
 	return cadence.NewResource(comp.fieldValues).WithType(&cadence.ResourceType{
-		TypeID:     comp.typeID,
-		Identifier: comp.identifier,
-		Fields:     comp.fieldTypes,
+		TypeID:         comp.typeID,
+		ResourceTypeID: comp.compositeTypeID,
+		Identifier:     comp.identifier,
+		Fields:         comp.fieldTypes,
 	})
 }
 
@@ -552,9 +560,10 @@ func decodeEvent(valueJSON interface{}) cadence.Event {
 	comp := decodeComposite(valueJSON)
 
 	return cadence.NewEvent(comp.fieldValues).WithType(&cadence.EventType{
-		TypeID:     comp.typeID,
-		Identifier: comp.identifier,
-		Fields:     comp.fieldTypes,
+		TypeID:      comp.typeID,
+		EventTypeID: comp.compositeTypeID,
+		Identifier:  comp.identifier,
+		Fields:      comp.fieldTypes,
 	})
 }
 
@@ -562,9 +571,10 @@ func decodeContract(valueJSON interface{}) cadence.Contract {
 	comp := decodeComposite(valueJSON)
 
 	return cadence.NewContract(comp.fieldValues).WithType(&cadence.ContractType{
-		TypeID:     comp.typeID,
-		Identifier: comp.identifier,
-		Fields:     comp.fieldTypes,
+		TypeID:         comp.typeID,
+		ContractTypeID: comp.compositeTypeID,
+		Identifier:     comp.identifier,
+		Fields:         comp.fieldTypes,
 	})
 }
 
@@ -689,6 +699,18 @@ func toObject(valueJSON interface{}) jsonObject {
 	}
 
 	return v
+}
+
+func compositeTypeIDFromObject(valueJSON interface{}) cadence.CompositeTypeID {
+	object := toObject(valueJSON)
+
+	id := compositeTypeIdentifierKey
+	object.GetString(id)
+
+	return cadence.CompositeTypeID{
+		Location:   object.GetString(compositeTypeLocationKey),
+		Identifier: object.GetString(compositeTypeIdentifierKey),
+	}
 }
 
 func identifierFromTypeID(typeID string) string {

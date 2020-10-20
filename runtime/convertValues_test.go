@@ -493,6 +493,10 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 	barResourceType := &cadence.ResourceType{
 		TypeID:     "S.test.Bar",
 		Identifier: "Bar",
+		ResourceTypeID: cadence.CompositeTypeID{
+			Location:   "S.test",
+			Identifier: "Bar",
+		},
 		Fields: []cadence.Field{
 			{
 				Identifier: "uuid",
@@ -508,6 +512,10 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 	fooResourceType := &cadence.ResourceType{
 		TypeID:     "S.test.Foo",
 		Identifier: "Foo",
+		ResourceTypeID: cadence.CompositeTypeID{
+			Location:   "S.test",
+			Identifier: "Foo",
+		},
 		Fields: []cadence.Field{
 			{
 				Identifier: "uuid",
@@ -667,6 +675,10 @@ func TestExportCapabilityValue(t *testing.T) {
 const fooID = "Foo"
 
 var fooTypeID = fmt.Sprintf("S.%s.%s", utils.TestLocation, fooID)
+var fooCompositeTypeID = cadence.CompositeTypeID{
+	Location:   fmt.Sprintf("S.%s", utils.TestLocation),
+	Identifier: fooID,
+}
 var fooFields = []cadence.Field{
 	{
 		Identifier: "bar",
@@ -685,19 +697,22 @@ var fooResourceFields = []cadence.Field{
 }
 
 var fooStructType = &cadence.StructType{
-	TypeID:     fooTypeID,
-	Identifier: fooID,
-	Fields:     fooFields,
+	TypeID:       fooTypeID,
+	StructTypeID: fooCompositeTypeID,
+	Identifier:   fooID,
+	Fields:       fooFields,
 }
 
 var fooResourceType = &cadence.ResourceType{
-	TypeID:     fooTypeID,
-	Identifier: fooID,
-	Fields:     fooResourceFields,
+	TypeID:         fooTypeID,
+	ResourceTypeID: fooCompositeTypeID,
+	Identifier:     fooID,
+	Fields:         fooResourceFields,
 }
 
 var fooEventType = &cadence.EventType{
-	TypeID:     fooTypeID,
-	Identifier: fooID,
-	Fields:     fooFields,
+	TypeID:      fooTypeID,
+	EventTypeID: fooCompositeTypeID,
+	Identifier:  fooID,
+	Fields:      fooFields,
 }

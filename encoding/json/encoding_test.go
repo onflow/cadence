@@ -569,7 +569,7 @@ func TestEncodeArray(t *testing.T) {
 				cadence.NewInt(3),
 			}).WithType(fooResourceType),
 		}),
-		`{"type":"Array","value":[{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"1"}}]}},{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"2"}}]}},{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"3"}}]}}]}`,
+		`{"type":"Array","value":[{"type":"Resource","value":{"id":"S.test.Foo","compositeTypeID":{"location": "S.test", "identifier":"Foo"},"fields":[{"name":"bar","value":{"type":"Int","value":"1"}}]}},{"type":"Resource","value":{"id":"S.test.Foo","compositeTypeID":{"location": "S.test", "identifier":"Foo"},"fields":[{"name":"bar","value":{"type":"Int","value":"2"}}]}},{"type":"Resource","value":{"id":"S.test.Foo","compositeTypeID":{"location": "S.test", "identifier":"Foo"},"fields":[{"name":"bar","value":{"type":"Int","value":"3"}}]}}]}`,
 	}
 
 	testAllEncodeAndDecode(t,
@@ -658,7 +658,7 @@ func TestEncodeDictionary(t *testing.T) {
 				}).WithType(fooResourceType),
 			},
 		}),
-		`{"type":"Dictionary","value":[{"key":{"type":"String","value":"a"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"1"}}]}}},{"key":{"type":"String","value":"b"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"2"}}]}}},{"key":{"type":"String","value":"c"},"value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"3"}}]}}}]}`,
+		`{"type":"Dictionary","value":[{"key":{"type":"String","value":"a"},"value":{"type":"Resource","value":{"id":"S.test.Foo","compositeTypeID":{"location": "S.test", "identifier":"Foo"}, "fields":[{"name":"bar","value":{"type":"Int","value":"1"}}]}}},{"key":{"type":"String","value":"b"},"value":{"type":"Resource","value":{"id":"S.test.Foo","compositeTypeID":{"location": "S.test", "identifier":"Foo"},"fields":[{"name":"bar","value":{"type":"Int","value":"2"}}]}}},{"key":{"type":"String","value":"c"},"value":{"type":"Resource","value":{"id":"S.test.Foo","compositeTypeID":{"location": "S.test", "identifier":"Foo"},"fields":[{"name":"bar","value":{"type":"Int","value":"3"}}]}}}]}`,
 	}
 
 	testAllEncodeAndDecode(t,
@@ -690,7 +690,7 @@ func TestEncodeResource(t *testing.T) {
 			}
 		`
 
-		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"bar","value":{"type":"Int","value":"42"}}]}}`
+		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","compositeTypeID":{"location": "S.test", "identifier":"Foo"},"fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"bar","value":{"type":"Int","value":"42"}}]}}`
 
 		v := convertValueFromScript(t, script)
 
@@ -720,7 +720,7 @@ func TestEncodeResource(t *testing.T) {
 		`
 
 		// function "foo" should be omitted from resulting JSON
-		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"bar","value":{"type":"Int","value":"42"}}]}}`
+		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","compositeTypeID":{"location": "S.test", "identifier":"Foo"},"fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"bar","value":{"type":"Int","value":"42"}}]}}`
 
 		v := convertValueFromScript(t, script)
 
@@ -760,7 +760,7 @@ func TestEncodeResource(t *testing.T) {
 			}
 		`
 
-		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"bar","value":{"type":"Resource","value":{"id":"S.test.Bar","fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"x","value":{"type":"Int","value":"42"}}]}}}]}}`
+		expectedJSON := `{"type":"Resource","value":{"id":"S.test.Foo","compositeTypeID":{"location": "S.test", "identifier":"Foo"}, "fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"bar","value":{"type":"Resource","value":{"id":"S.test.Bar","compositeTypeID":{"location": "S.test", "identifier":"Bar"}, "fields":[{"name":"uuid","value":{"type":"UInt64","value":"0"}},{"name":"x","value":{"type":"Int","value":"42"}}]}}}]}}`
 
 		v := convertValueFromScript(t, script)
 
@@ -773,7 +773,11 @@ func TestEncodeStruct(t *testing.T) {
 	t.Parallel()
 
 	simpleStructType := &cadence.StructType{
-		TypeID:     "S.test.FooStruct",
+		TypeID: "S.test.FooStruct",
+		StructTypeID: cadence.CompositeTypeID{
+			Location:   "S.test",
+			Identifier: "FooStruct",
+		},
 		Identifier: "FooStruct",
 		Fields: []cadence.Field{
 			{
@@ -795,12 +799,16 @@ func TestEncodeStruct(t *testing.T) {
 				cadence.NewString("foo"),
 			},
 		).WithType(simpleStructType),
-		`{"type":"Struct","value":{"id":"S.test.FooStruct","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
+		`{"type":"Struct","value":{"id":"S.test.FooStruct","compositeTypeID":{"location": "S.test", "identifier":"FooStruct"},"fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
 	}
 
 	resourceStructType := &cadence.StructType{
 		TypeID:     "S.test.FooStruct",
 		Identifier: "FooStruct",
+		StructTypeID: cadence.CompositeTypeID{
+			Location:   "S.test",
+			Identifier: "FooStruct",
+		},
 		Fields: []cadence.Field{
 			{
 				Identifier: "a",
@@ -825,7 +833,7 @@ func TestEncodeStruct(t *testing.T) {
 				).WithType(fooResourceType),
 			},
 		).WithType(resourceStructType),
-		`{"type":"Struct","value":{"id":"S.test.FooStruct","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
+		`{"type":"Struct","value":{"id":"S.test.FooStruct","compositeTypeID":{"location": "S.test", "identifier":"FooStruct"},"fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","compositeTypeID":{"location": "S.test", "identifier":"Foo"},"fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
 	}
 
 	testAllEncodeAndDecode(t, simpleStruct, resourceStruct)
@@ -836,7 +844,11 @@ func TestEncodeEvent(t *testing.T) {
 	t.Parallel()
 
 	simpleEventType := &cadence.EventType{
-		TypeID:     "S.test.FooEvent",
+		TypeID: "S.test.FooEvent",
+		EventTypeID: cadence.CompositeTypeID{
+			Location:   "S.test",
+			Identifier: "FooEvent",
+		},
 		Identifier: "FooEvent",
 		Fields: []cadence.Field{
 			{
@@ -858,12 +870,16 @@ func TestEncodeEvent(t *testing.T) {
 				cadence.NewString("foo"),
 			},
 		).WithType(simpleEventType),
-		`{"type":"Event","value":{"id":"S.test.FooEvent","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
+		`{"type":"Event","value":{"id":"S.test.FooEvent","compositeTypeID":{"location": "S.test", "identifier":"FooEvent"},"fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
 	}
 
 	resourceEventType := &cadence.EventType{
 		TypeID:     "S.test.FooEvent",
 		Identifier: "FooEvent",
+		EventTypeID: cadence.CompositeTypeID{
+			Location:   "S.test",
+			Identifier: "FooEvent",
+		},
 		Fields: []cadence.Field{
 			{
 				Identifier: "a",
@@ -888,7 +904,7 @@ func TestEncodeEvent(t *testing.T) {
 				).WithType(fooResourceType),
 			},
 		).WithType(resourceEventType),
-		`{"type":"Event","value":{"id":"S.test.FooEvent","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
+		`{"type":"Event","value":{"id":"S.test.FooEvent","compositeTypeID":{"location": "S.test", "identifier":"FooEvent"},"fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","compositeTypeID":{"location": "S.test", "identifier":"Foo"},"fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
 	}
 
 	testAllEncodeAndDecode(t, simpleEvent, resourceEvent)
@@ -901,6 +917,10 @@ func TestEncodeContract(t *testing.T) {
 	simpleContractType := &cadence.ContractType{
 		TypeID:     "S.test.FooContract",
 		Identifier: "FooContract",
+		ContractTypeID: cadence.CompositeTypeID{
+			Location:   "S.test",
+			Identifier: "FooContract",
+		},
 		Fields: []cadence.Field{
 			{
 				Identifier: "a",
@@ -921,12 +941,16 @@ func TestEncodeContract(t *testing.T) {
 				cadence.NewString("foo"),
 			},
 		).WithType(simpleContractType),
-		`{"type":"Contract","value":{"id":"S.test.FooContract","fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
+		`{"type":"Contract","value":{"id":"S.test.FooContract","compositeTypeID":{"location": "S.test", "identifier":"FooContract"},"fields":[{"name":"a","value":{"type":"Int","value":"1"}},{"name":"b","value":{"type":"String","value":"foo"}}]}}`,
 	}
 
 	resourceContractType := &cadence.ContractType{
 		TypeID:     "S.test.FooContract",
 		Identifier: "FooContract",
+		ContractTypeID: cadence.CompositeTypeID{
+			Location:   "S.test",
+			Identifier: "FooContract",
+		},
 		Fields: []cadence.Field{
 			{
 				Identifier: "a",
@@ -951,7 +975,7 @@ func TestEncodeContract(t *testing.T) {
 				).WithType(fooResourceType),
 			},
 		).WithType(resourceContractType),
-		`{"type":"Contract","value":{"id":"S.test.FooContract","fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
+		`{"type":"Contract","value":{"id":"S.test.FooContract","compositeTypeID":{"location": "S.test", "identifier":"FooContract"},"fields":[{"name":"a","value":{"type":"String","value":"foo"}},{"name":"b","value":{"type":"Resource","value":{"id":"S.test.Foo","compositeTypeID":{"location": "S.test", "identifier":"Foo"},"fields":[{"name":"bar","value":{"type":"Int","value":"42"}}]}}}]}}`,
 	}
 
 	testAllEncodeAndDecode(t, simpleContract, resourceContract)
@@ -1225,7 +1249,11 @@ func TestExportRecursiveType(t *testing.T) {
 	t.Parallel()
 
 	ty := &cadence.ResourceType{
-		TypeID:     "S.test.Foo",
+		TypeID: "S.test.Foo",
+		ResourceTypeID: cadence.CompositeTypeID{
+			Location:   "S.test",
+			Identifier: "Foo",
+		},
 		Identifier: "Foo",
 		Fields: []cadence.Field{
 			{
@@ -1245,7 +1273,7 @@ func TestExportRecursiveType(t *testing.T) {
 				cadence.Optional{},
 			},
 		}.WithType(ty),
-		`{"type":"Resource","value":{"id":"S.test.Foo","fields":[{"name":"foo","value":{"type": "Optional","value":null}}]}}`,
+		`{"type":"Resource","value":{"id":"S.test.Foo","compositeTypeID":{"location": "S.test", "identifier":"Foo"},"fields":[{"name":"foo","value":{"type": "Optional","value":null}}]}}`,
 	)
 
 }
@@ -1319,6 +1347,10 @@ func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value) {
 var fooResourceType = &cadence.ResourceType{
 	TypeID:     "S.test.Foo",
 	Identifier: "Foo",
+	ResourceTypeID: cadence.CompositeTypeID{
+		Location:   "S.test",
+		Identifier: "Foo",
+	},
 	Fields: []cadence.Field{
 		{
 			Identifier: "bar",

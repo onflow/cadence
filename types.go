@@ -496,6 +496,7 @@ type Parameter struct {
 type CompositeType interface {
 	Type
 	isCompositeType()
+	CompositeTypeID() CompositeTypeID
 	CompositeIdentifier() string
 	CompositeFields() []Field
 	CompositeInitializers() [][]Parameter
@@ -505,6 +506,7 @@ type CompositeType interface {
 
 type StructType struct {
 	TypeID       string
+	StructTypeID CompositeTypeID
 	Identifier   string
 	Fields       []Field
 	Initializers [][]Parameter
@@ -514,6 +516,10 @@ func (*StructType) isType() {}
 
 func (t *StructType) ID() string {
 	return t.TypeID
+}
+
+func (t *StructType) CompositeTypeID() CompositeTypeID {
+	return t.StructTypeID
 }
 
 func (*StructType) isCompositeType() {}
@@ -533,16 +539,21 @@ func (t *StructType) CompositeInitializers() [][]Parameter {
 // ResourceType
 
 type ResourceType struct {
-	TypeID       string
-	Identifier   string
-	Fields       []Field
-	Initializers [][]Parameter
+	TypeID         string
+	ResourceTypeID CompositeTypeID
+	Identifier     string
+	Fields         []Field
+	Initializers   [][]Parameter
 }
 
 func (*ResourceType) isType() {}
 
 func (t *ResourceType) ID() string {
 	return t.TypeID
+}
+
+func (t *ResourceType) CompositeTypeID() CompositeTypeID {
+	return t.ResourceTypeID
 }
 
 func (*ResourceType) isCompositeType() {}
@@ -559,10 +570,15 @@ func (t *ResourceType) CompositeInitializers() [][]Parameter {
 	return t.Initializers
 }
 
-// EventType
+type CompositeTypeID struct {
+	Location   string
+	Identifier string
+}
 
+// EventType
 type EventType struct {
-	TypeID      string
+	TypeID      string // keep for compatibility
+	EventTypeID CompositeTypeID
 	Identifier  string
 	Fields      []Field
 	Initializer []Parameter
@@ -572,6 +588,10 @@ func (*EventType) isType() {}
 
 func (t *EventType) ID() string {
 	return t.TypeID
+}
+
+func (t *EventType) CompositeTypeID() CompositeTypeID {
+	return t.EventTypeID
 }
 
 func (EventType) isCompositeType() {}
@@ -591,16 +611,21 @@ func (t *EventType) CompositeInitializers() [][]Parameter {
 // ContractType
 
 type ContractType struct {
-	TypeID       string
-	Identifier   string
-	Fields       []Field
-	Initializers [][]Parameter
+	TypeID         string
+	Identifier     string
+	Fields         []Field
+	Initializers   [][]Parameter
+	ContractTypeID CompositeTypeID
 }
 
 func (*ContractType) isType() {}
 
 func (t *ContractType) ID() string {
 	return t.TypeID
+}
+
+func (t *ContractType) CompositeTypeID() CompositeTypeID {
+	return t.ContractTypeID
 }
 
 func (*ContractType) isCompositeType() {}

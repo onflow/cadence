@@ -752,8 +752,9 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 					cadence.
 						NewStruct([]cadence.Value{cadence.NewString("bar")}).
 						WithType(&cadence.StructType{
-							TypeID:     "S.test.Foo",
-							Identifier: "Foo",
+							TypeID:       "S.test.Foo",
+							StructTypeID: fooCompositeTypeID,
+							Identifier:   "Foo",
 							Fields: []cadence.Field{
 								{
 									Identifier: "y",
@@ -789,7 +790,11 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 						cadence.
 							NewStruct([]cadence.Value{cadence.NewString("bar")}).
 							WithType(&cadence.StructType{
-								TypeID:     "S.test.Foo",
+								TypeID: "S.test.Foo",
+								StructTypeID: cadence.CompositeTypeID{
+									Location:   "S.test",
+									Identifier: "Foo",
+								},
 								Identifier: "Foo",
 								Fields: []cadence.Field{
 									{

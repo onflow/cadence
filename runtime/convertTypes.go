@@ -190,7 +190,10 @@ func exportConstantSizedType(t *sema.ConstantSizedType, results map[sema.TypeID]
 func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.Type) (result cadence.CompositeType) {
 
 	id := string(t.ID())
-
+	compositeTypeID := cadence.CompositeTypeID{
+		Location:   string(t.Location.ID()),
+		Identifier: t.QualifiedIdentifier(),
+	}
 	fieldMembers := make([]*sema.Member, 0, len(t.Fields))
 
 	for _, identifier := range t.Fields {
@@ -208,30 +211,35 @@ func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.
 	switch t.Kind {
 	case common.CompositeKindStructure:
 		result = &cadence.StructType{
-			TypeID:     id,
-			Identifier: t.Identifier,
-			Fields:     fields,
+			TypeID:       id,
+			StructTypeID: compositeTypeID,
+			Identifier:   t.Identifier,
+			Fields:       fields,
 		}
 
 	case common.CompositeKindResource:
 		result = &cadence.ResourceType{
-			TypeID:     id,
-			Identifier: t.Identifier,
-			Fields:     fields,
+			TypeID:         id,
+			ResourceTypeID: compositeTypeID,
+			Identifier:     t.Identifier,
+			Fields:         fields,
 		}
 
 	case common.CompositeKindEvent:
+
 		result = &cadence.EventType{
-			TypeID:     id,
-			Identifier: t.Identifier,
-			Fields:     fields,
+			TypeID:      id,
+			EventTypeID: compositeTypeID,
+			Identifier:  t.Identifier,
+			Fields:      fields,
 		}
 
 	case common.CompositeKindContract:
 		result = &cadence.ContractType{
-			TypeID:     id,
-			Identifier: t.Identifier,
-			Fields:     fields,
+			TypeID:         id,
+			ContractTypeID: compositeTypeID,
+			Identifier:     t.Identifier,
+			Fields:         fields,
 		}
 
 	default:
