@@ -173,6 +173,12 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 			require.Error(t, err)
 
+			require.IsType(t,
+				interpreter.Error{},
+				err,
+			)
+			err = err.(interpreter.Error).Unwrap()
+
 			require.IsType(t, interpreter.OverwriteError{}, err)
 		})
 	})
@@ -220,6 +226,12 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 			_, err := inter.Invoke("test")
 
 			require.Error(t, err)
+
+			require.IsType(t,
+				interpreter.Error{},
+				err,
+			)
+			err = err.(interpreter.Error).Unwrap()
 
 			require.IsType(t, interpreter.OverwriteError{}, err)
 		})

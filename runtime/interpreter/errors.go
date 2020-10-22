@@ -43,6 +43,20 @@ func (e *unsupportedOperation) Error() string {
 	)
 }
 
+// Error is the containing type for all errors produced by the interpreter.
+type Error struct {
+	Err error
+	LocationRange
+}
+
+func (e Error) Unwrap() error {
+	return e.Err
+}
+
+func (e Error) Error() string {
+	return e.Err.Error()
+}
+
 // ExternalError is an error that occurred externally.
 // It contains the recovered value.
 //

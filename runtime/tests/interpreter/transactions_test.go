@@ -104,8 +104,17 @@ func TestInterpretTransactions(t *testing.T) {
         `)
 
 		err := inter.InvokeTransaction(0)
-		require.IsType(t, interpreter.ConditionError{}, err)
 
+		require.IsType(t,
+			interpreter.Error{},
+			err,
+		)
+		err = err.(interpreter.Error).Unwrap()
+
+		require.IsType(t,
+			interpreter.ConditionError{},
+			err,
+		)
 		conditionErr := err.(interpreter.ConditionError)
 
 		assert.Equal(t, conditionErr.ConditionKind, ast.ConditionKindPre)
@@ -156,8 +165,17 @@ func TestInterpretTransactions(t *testing.T) {
         `)
 
 		err := inter.InvokeTransaction(0)
-		require.IsType(t, interpreter.ConditionError{}, err)
 
+		require.IsType(t,
+			interpreter.Error{},
+			err,
+		)
+		err = err.(interpreter.Error).Unwrap()
+
+		require.IsType(t,
+			interpreter.ConditionError{},
+			err,
+		)
 		conditionErr := err.(interpreter.ConditionError)
 
 		assert.Equal(t, conditionErr.ConditionKind, ast.ConditionKindPost)

@@ -19,6 +19,7 @@
 package interpreter
 
 import (
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/trampoline"
 )
 
@@ -28,7 +29,7 @@ import (
 type StatementTrampoline struct {
 	F           func() trampoline.Trampoline
 	Interpreter *Interpreter
-	Line        int
+	Statement   ast.Statement
 }
 
 // Resume returns the paused computation

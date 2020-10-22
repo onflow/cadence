@@ -297,6 +297,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
+		require.IsType(t,
+			interpreter.Error{},
+			err,
+		)
+		err = err.(interpreter.Error).Unwrap()
+
 		assert.IsType(t, interpreter.UnderflowError{}, err)
 	})
 
@@ -316,6 +322,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
+
+		require.IsType(t,
+			interpreter.Error{},
+			err,
+		)
+		err = err.(interpreter.Error).Unwrap()
 
 		assert.IsType(t, interpreter.OverflowError{}, err)
 	})
@@ -340,6 +352,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				_, err := inter.Invoke("test")
 				require.Error(t, err)
+
+				require.IsType(t,
+					interpreter.Error{},
+					err,
+				)
+				err = err.(interpreter.Error).Unwrap()
 
 				assert.IsType(t, interpreter.UnderflowError{}, err)
 			})
@@ -376,6 +394,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				_, err := inter.Invoke("test")
 				require.Error(t, err)
+
+				require.IsType(t,
+					interpreter.Error{},
+					err,
+				)
+				err = err.(interpreter.Error).Unwrap()
 
 				assert.IsType(t, interpreter.OverflowError{}, err)
 			})
@@ -414,6 +438,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				_, err := inter.Invoke("test")
 				require.Error(t, err)
 
+				require.IsType(t,
+					interpreter.Error{},
+					err,
+				)
+				err = err.(interpreter.Error).Unwrap()
+
 				assert.IsType(t, interpreter.OverflowError{}, err)
 			})
 		}
@@ -451,6 +481,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 				_, err := inter.Invoke("test")
 				require.Error(t, err)
 
+				require.IsType(t,
+					interpreter.Error{},
+					err,
+				)
+				err = err.(interpreter.Error).Unwrap()
+
 				assert.IsType(t, interpreter.OverflowError{}, err)
 			})
 		}
@@ -487,6 +523,12 @@ func TestInterpretFixedPointConversions(t *testing.T) {
 
 				_, err := inter.Invoke("test")
 				require.Error(t, err)
+
+				require.IsType(t,
+					interpreter.Error{},
+					err,
+				)
+				err = err.(interpreter.Error).Unwrap()
 
 				assert.IsType(t, interpreter.UnderflowError{}, err)
 			})
