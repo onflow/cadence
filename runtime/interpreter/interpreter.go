@@ -574,7 +574,7 @@ func (interpreter *Interpreter) Interpret() (err error) {
 type Statement struct {
 	Interpreter *Interpreter
 	Trampoline  Trampoline
-	Line        int
+	Statement   ast.Statement
 }
 
 // runUntilNextStatement executes the trampline until the next statement.
@@ -594,7 +594,7 @@ func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}
 				// not just inner statement trampoline
 				Trampoline:  t,
 				Interpreter: statement.Interpreter,
-				Line:        statement.Line,
+				Statement:   statement.Statement,
 			}
 		}
 
@@ -613,8 +613,36 @@ func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}
 // runAllStatements runs all the statement until there is no more trampoline and returns the result.
 // When there is a statement, it calls the onStatement callback, and then continues the execution.
 func (interpreter *Interpreter) runAllStatements(t Trampoline) interface{} {
+	var statement *Statement
+
+	// Wrap errors if needed
+
+	defer recoverErrors(func(internalErr error) {
+
+		// if the error is already an execution error, use it as is
+		if _, ok := internalErr.(Error); ok {
+			panic(internalErr)
+		}
+
+		// wrap the error with position information
+
+		var posInfo ast.HasPosition
+		// use the position information of the reported error, if any,
+		// or that of the statement otherwise
+		posInfo, ok := internalErr.(ast.HasPosition)
+		if !ok {
+			posInfo = statement.Statement
+		}
+
+		panic(Error{
+			Err:           internalErr,
+			LocationRange: interpreter.locationRange(posInfo),
+		})
+	})
+
 	for {
-		result, statement := interpreter.runUntilNextStatement(t)
+		var result interface{}
+		result, statement = interpreter.runUntilNextStatement(t)
 		if statement == nil {
 			return result
 		}
@@ -966,7 +994,6 @@ func (interpreter *Interpreter) visitStatements(statements []ast.Statement) Tram
 	}
 
 	statement := statements[0]
-	line := statement.StartPosition().Line
 
 	// interpret the first statement, then the remaining ones
 	return StatementTrampoline{
@@ -974,7 +1001,7 @@ func (interpreter *Interpreter) visitStatements(statements []ast.Statement) Tram
 			return statement.Accept(interpreter).(Trampoline)
 		},
 		Interpreter: interpreter,
-		Line:        line,
+		Statement:   statement,
 	}.FlatMap(func(returnValue interface{}) Trampoline {
 		if _, isReturn := returnValue.(controlReturn); isReturn {
 			return Done{Result: returnValue}

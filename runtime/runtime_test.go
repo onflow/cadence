@@ -3205,8 +3205,14 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 					assert.NoError(t, err)
 				} else {
 					require.Error(t, err)
+
 					require.IsType(t, Error{}, err)
-					assert.IsType(t, interpreter.ConditionError{}, err.(Error).Err)
+					err = err.(Error).Unwrap()
+
+					require.IsType(t, interpreter.Error{}, err)
+					err = err.(interpreter.Error).Unwrap()
+
+					assert.IsType(t, interpreter.ConditionError{}, err)
 				}
 			})
 		}
@@ -3952,6 +3958,9 @@ func TestRuntimeComputationLimit(t *testing.T) {
 
 				require.IsType(t, Error{}, err)
 				err = err.(Error).Unwrap()
+
+				require.IsType(t, interpreter.Error{}, err)
+				err = err.(interpreter.Error).Unwrap()
 
 				assert.Equal(t,
 					ComputationLimitExceededError{

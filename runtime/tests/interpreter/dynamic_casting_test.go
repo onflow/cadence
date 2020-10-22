@@ -158,6 +158,12 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 										result,
 									)
 								} else {
+									require.IsType(t,
+										interpreter.Error{},
+										err,
+									)
+									err = err.(interpreter.Error).Unwrap()
+
 									assert.IsType(t,
 										interpreter.TypeMismatchError{},
 										err,
@@ -251,6 +257,12 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 								result,
 							)
 						} else {
+							require.IsType(t,
+								interpreter.Error{},
+								err,
+							)
+							err = err.(interpreter.Error).Unwrap()
+
 							assert.IsType(t,
 								interpreter.TypeMismatchError{},
 								err,
@@ -339,6 +351,12 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 								result,
 							)
 						} else {
+							require.IsType(t,
+								interpreter.Error{},
+								err,
+							)
+							err = err.(interpreter.Error).Unwrap()
+
 							assert.IsType(t,
 								interpreter.TypeMismatchError{},
 								err,
@@ -427,6 +445,12 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 								result,
 							)
 						} else {
+							require.IsType(t,
+								interpreter.Error{},
+								err,
+							)
+							err = err.(interpreter.Error).Unwrap()
+
 							assert.IsType(t,
 								interpreter.TypeMismatchError{},
 								err,
@@ -520,6 +544,12 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 								result,
 							)
 						} else {
+							require.IsType(t,
+								interpreter.Error{},
+								err,
+							)
+							err = err.(interpreter.Error).Unwrap()
+
 							assert.IsType(t,
 								interpreter.TypeMismatchError{},
 								err,
@@ -610,6 +640,12 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 							result,
 						)
 					} else {
+						require.IsType(t,
+							interpreter.Error{},
+							err,
+						)
+						err = err.(interpreter.Error).Unwrap()
+
 						assert.IsType(t,
 							interpreter.TypeMismatchError{},
 							err,
@@ -652,6 +688,12 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 								result,
 							)
 						} else {
+							require.IsType(t,
+								interpreter.Error{},
+								err,
+							)
+							err = err.(interpreter.Error).Unwrap()
+
 							assert.IsType(t,
 								interpreter.TypeMismatchError{},
 								err,
@@ -763,6 +805,12 @@ func testResourceCastInvalid(t *testing.T, types, fromType, targetType string, o
 
 	case ast.OperationForceCast:
 		require.Error(t, err)
+
+		require.IsType(t,
+			interpreter.Error{},
+			err,
+		)
+		err = err.(interpreter.Error).Unwrap()
 
 		require.IsType(t,
 			interpreter.TypeMismatchError{},
@@ -915,6 +963,12 @@ func testStructCastInvalid(t *testing.T, types, fromType, targetType string, ope
 
 	case ast.OperationForceCast:
 		require.Error(t, err)
+
+		require.IsType(t,
+			interpreter.Error{},
+			err,
+		)
+		err = err.(interpreter.Error).Unwrap()
 
 		require.IsType(t,
 			interpreter.TypeMismatchError{},
@@ -1121,6 +1175,12 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 								result,
 							)
 						} else {
+							require.IsType(t,
+								interpreter.Error{},
+								err,
+							)
+							err = err.(interpreter.Error).Unwrap()
+
 							assert.IsType(t,
 								interpreter.TypeMismatchError{},
 								err,
@@ -1213,6 +1273,12 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 								result,
 							)
 						} else {
+							require.IsType(t,
+								interpreter.Error{},
+								err,
+							)
+							err = err.(interpreter.Error).Unwrap()
+
 							assert.IsType(t,
 								interpreter.TypeMismatchError{},
 								err,
@@ -1312,6 +1378,12 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 								result,
 							)
 						} else {
+							require.IsType(t,
+								interpreter.Error{},
+								err,
+							)
+							err = err.(interpreter.Error).Unwrap()
+
 							assert.IsType(t,
 								interpreter.TypeMismatchError{},
 								err,
@@ -2223,6 +2295,12 @@ func testReferenceCastInvalid(t *testing.T, types, fromType, targetType string, 
 
 	case ast.OperationForceCast:
 		require.Error(t, err)
+
+		require.IsType(t,
+			interpreter.Error{},
+			err,
+		)
+		err = err.(interpreter.Error).Unwrap()
 
 		require.IsType(t,
 			interpreter.TypeMismatchError{},
@@ -3472,6 +3550,12 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 								result,
 							)
 						} else {
+							require.IsType(t,
+								interpreter.Error{},
+								err,
+							)
+							err = err.(interpreter.Error).Unwrap()
+
 							assert.IsType(t,
 								interpreter.TypeMismatchError{},
 								err,
