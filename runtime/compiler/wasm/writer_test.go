@@ -19,6 +19,7 @@
 package wasm
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -49,7 +50,11 @@ func wasm2wat(binary []byte) string {
 	cmd := exec.Command("wasm2wat", f.Name())
 	out, err := cmd.Output()
 	if err != nil {
-		panic(err)
+		if ee, ok := err.(*exec.ExitError); ok {
+			panic(fmt.Errorf("wasm2wat failed: %w:\n%s", err, ee.Stderr))
+		} else {
+			panic(fmt.Errorf("wasm2wat failed: %w", err))
+		}
 	}
 
 	return string(out)
@@ -534,6 +539,12 @@ func TestWASMWriterReader(t *testing.T) {
 					FunctionIndex: 0,
 				},
 			},
+			{
+				Name: "mem",
+				Descriptor: MemoryExport{
+					MemoryIndex: 0,
+				},
+			},
 		},
 		Functions: []*Function{
 			{
@@ -600,9 +611,12 @@ func TestWASMWriterReader(t *testing.T) {
 		0x1, 0x1, 0x80, 0x8, 0x80, 0x10,
 		// export section
 		0x07,
-		0x87, 0x80, 0x80, 0x80, 0x00,
-		0x01, 0x03, 0x61, 0x64, 0x64,
+		0x8d, 0x80, 0x80, 0x80, 0x00,
+		0x02,
+		0x03, 0x61, 0x64, 0x64,
 		0x00, 0x00,
+		0x03, 0x6d, 0x65, 0x6d,
+		0x02, 0x00,
 		// code section
 		0xa,
 		0x8f, 0x80, 0x80, 0x80, 0x0,
@@ -641,6 +655,7 @@ func TestWASMWriterReader(t *testing.T) {
     i32.add)
   (memory (;0;) 1024 2048)
   (export "add" (func $env.add))
+  (export "mem" (memory 0))
   (data (;0;) (i32.const 0) "\00\01\02\03"))
 `,
 		wasm2wat(b.data),
