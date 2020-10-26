@@ -21,9 +21,8 @@ package wasm
 // Exports represents an export
 //
 type Export struct {
-	Name string
-	// TODO: add support for tables, memories, and globals. adjust name section!
-	FunctionIndex uint32
+	Name       string
+	Descriptor ExportDescriptor
 }
 
 // exportIndicator is the byte used to indicate the kind of export in the WASM binary
@@ -32,4 +31,28 @@ type exportIndicator byte
 const (
 	// exportIndicatorFunction is the byte used to indicate the export of a function in the WASM binary
 	exportIndicatorFunction exportIndicator = 0x0
+	// exportIndicatorMemory is the byte used to indicate the export of a memory in the WASM binary
+	exportIndicatorMemory exportIndicator = 0x2
 )
+
+// ExportDescriptor represents an export (e.g. a function, memory, etc.)
+//
+type ExportDescriptor interface {
+	isExportDescriptor()
+}
+
+// FunctionExport represents the export of a function
+//
+type FunctionExport struct {
+	FunctionIndex uint32
+}
+
+func (FunctionExport) isExportDescriptor() {}
+
+// MemoryExport represents the export of a memory
+//
+type MemoryExport struct {
+	MemoryIndex uint32
+}
+
+func (MemoryExport) isExportDescriptor() {}

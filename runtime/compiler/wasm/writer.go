@@ -19,6 +19,7 @@
 package wasm
 
 import (
+	"fmt"
 	"unicode/utf8"
 )
 
@@ -322,15 +323,30 @@ func (w *WASMWriter) writeExport(export *Export) error {
 		return err
 	}
 
-	// TODO: add support for tables, memories, and globals. adjust name section!
-	// write the type indicator
-	err = w.buf.WriteByte(byte(exportIndicatorFunction))
+	// TODO: add support for tables and globals. adjust name section!
+
+	var indicator exportIndicator
+	var index uint32
+
+	switch descriptor := export.Descriptor.(type) {
+	case FunctionExport:
+		indicator = exportIndicatorFunction
+		index = descriptor.FunctionIndex
+	case MemoryExport:
+		indicator = exportIndicatorMemory
+		index = descriptor.MemoryIndex
+	default:
+		return fmt.Errorf("unsupported export descripor: %#+v", descriptor)
+	}
+
+	// write the indicator
+	err = w.buf.WriteByte(byte(indicator))
 	if err != nil {
 		return err
 	}
 
-	// write the function index
-	return w.buf.writeUint32LEB128(export.FunctionIndex)
+	// write the index
+	return w.buf.writeUint32LEB128(index)
 }
 
 // writeCodeSection writes the section that provides the function bodies for the functions
@@ -546,7 +562,6 @@ func (w *WASMWriter) writeNameSectionFunctionNamesSubSection(imports []*Import, 
 	return w.writeNameSubSection(nameSubSectionIDFunctionNames, func() error {
 
 		// write the number of function names
-		// TODO: adjust once tables, memories, and globals are supported
 		count := len(imports) + len(functions)
 
 		err := w.buf.writeUint32LEB128(uint32(count))
@@ -558,7 +573,6 @@ func (w *WASMWriter) writeNameSectionFunctionNamesSubSection(imports []*Import, 
 
 		var index uint32
 
-		// TODO: adjust once tables, memories, and globals are supported
 		for _, imp := range imports {
 
 			// write the index

@@ -1035,8 +1035,10 @@ func TestWASMReader_readExportSection(t *testing.T) {
 		assert.Equal(t,
 			[]*Export{
 				{
-					Name:          "foo",
-					FunctionIndex: 1,
+					Name: "foo",
+					Descriptor: FunctionExport{
+						FunctionIndex: 1,
+					},
 				},
 			},
 			typeIndices,
@@ -1145,7 +1147,9 @@ func TestWASMReader_readExportSection(t *testing.T) {
 			0x3,
 			// name = "foo"
 			0x66, 0x6f, 0x6f,
-			// indicator
+			// indicator: invalid
+			0xFF,
+			// index
 			0x1,
 		})
 		require.Error(t, err)
@@ -1154,7 +1158,7 @@ func TestWASMReader_readExportSection(t *testing.T) {
 				Index: 0,
 				ReadError: InvalidExportIndicatorError{
 					Offset:          10,
-					ExportIndicator: 0x1,
+					ExportIndicator: 0xFF,
 					ReadError:       nil,
 				},
 			},
@@ -1183,7 +1187,7 @@ func TestWASMReader_readExportSection(t *testing.T) {
 		assert.Equal(t,
 			InvalidExportError{
 				Index: 0,
-				ReadError: InvalidExportSectionFunctionIndexError{
+				ReadError: InvalidExportSectionIndexError{
 					Offset:    11,
 					ReadError: io.EOF,
 				},

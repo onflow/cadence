@@ -660,8 +660,8 @@ func (r *WASMReader) readExport() (*Export, error) {
 
 	indicator := exportIndicator(b)
 
-	// TODO: add support for tables, memories, and globals. adjust name section!
-	if err != nil || indicator != exportIndicatorFunction {
+	// TODO: add support for tables, and globals. adjust name section!
+	if err != nil {
 		return nil, InvalidExportIndicatorError{
 			ExportIndicator: indicator,
 			Offset:          int(indicatorOffset),
@@ -669,19 +669,39 @@ func (r *WASMReader) readExport() (*Export, error) {
 		}
 	}
 
-	// read the function type ID
-	functionIndexOffset := r.buf.offset
-	functionIndex, err := r.buf.readUint32LEB128()
+	// read the index
+	indexOffset := r.buf.offset
+	index, err := r.buf.readUint32LEB128()
 	if err != nil {
-		return nil, InvalidExportSectionFunctionIndexError{
-			Offset:    int(functionIndexOffset),
+		return nil, InvalidExportSectionIndexError{
+			Offset:    int(indexOffset),
 			ReadError: err,
 		}
 	}
 
+	var descriptor ExportDescriptor
+
+	switch indicator {
+	case exportIndicatorFunction:
+		descriptor = FunctionExport{
+			FunctionIndex: index,
+		}
+
+	case exportIndicatorMemory:
+		descriptor = MemoryExport{
+			MemoryIndex: index,
+		}
+
+	default:
+		return nil, InvalidExportIndicatorError{
+			ExportIndicator: indicator,
+			Offset:          int(indicatorOffset),
+		}
+	}
+
 	return &Export{
-		Name:          name,
-		FunctionIndex: functionIndex,
+		Name:       name,
+		Descriptor: descriptor,
 	}, nil
 }
 
