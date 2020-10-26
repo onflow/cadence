@@ -59,6 +59,14 @@ func (checker *Checker) VisitCastingExpression(expression *ast.CastingExpression
 					},
 				)
 			}
+
+			if _, ok := expression.Expression.(*ast.IdentifierExpression); !ok {
+				checker.report(
+					&InvalidNonIdentifierFailableResourceDowncast{
+						Range: ast.NewRangeFromPositioned(expression.Expression),
+					},
+				)
+			}
 		}
 	}
 

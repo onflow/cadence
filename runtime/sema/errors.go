@@ -2221,6 +2221,22 @@ func (e *InvalidFailableResourceDowncastOutsideOptionalBindingError) Error() str
 
 func (*InvalidFailableResourceDowncastOutsideOptionalBindingError) isSemanticError() {}
 
+// InvalidNonIdentifierFailableResourceDowncast
+
+type InvalidNonIdentifierFailableResourceDowncast struct {
+	ast.Range
+}
+
+func (e *InvalidNonIdentifierFailableResourceDowncast) Error() string {
+	return "cannot failably downcast non-identifier resource"
+}
+
+func (e *InvalidNonIdentifierFailableResourceDowncast) SecondaryError() string {
+	return "consider declaring a variable for this expression"
+}
+
+func (*InvalidNonIdentifierFailableResourceDowncast) isSemanticError() {}
+
 // ReadOnlyTargetAssignmentError
 
 type ReadOnlyTargetAssignmentError struct {
