@@ -802,6 +802,202 @@ func TestWASMReader_readFunctionSection(t *testing.T) {
 	})
 }
 
+func TestWASMReader_readMemorySection(t *testing.T) {
+
+	t.Parallel()
+
+	read := func(data []byte) ([]*Memory, error) {
+		b := Buffer{data: data}
+		r := NewWASMReader(&b)
+		err := r.readMemorySection()
+		if err != nil {
+			return nil, err
+		}
+		require.Equal(t, offset(len(b.data)), b.offset)
+		return r.Module.Memories, nil
+	}
+
+	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		codes, err := read([]byte{
+			// section size: 6 (LEB128)
+			0x86, 0x80, 0x80, 0x80, 0x0,
+			// memory count: 2
+			0x2,
+			// memory type / limit: no max
+			0x0,
+			// limit 1 min
+			0x0,
+			// memory type / limit: max
+			0x1,
+			// limit 2 min
+			0x1,
+			// limit 2 max
+			0x2,
+		})
+		require.NoError(t, err)
+		assert.Equal(t,
+			[]*Memory{
+				{
+					Min: 0,
+					Max: nil,
+				},
+				{
+					Min: 1,
+					Max: func() *uint32 {
+						var max uint32 = 2
+						return &max
+					}(),
+				},
+			},
+			codes,
+		)
+	})
+
+	t.Run("invalid size", func(t *testing.T) {
+
+		t.Parallel()
+
+		segments, err := read([]byte{
+			0x87, 0x80, 0x80,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidSectionSizeError{
+				Offset:    0,
+				ReadError: io.EOF,
+			},
+			err,
+		)
+		assert.Nil(t, segments)
+	})
+
+	t.Run("invalid count", func(t *testing.T) {
+
+		t.Parallel()
+
+		segments, err := read([]byte{
+			// section size: 7 (LEB128)
+			0x80, 0x80, 0x80, 0x80, 0x0,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidMemorySectionMemoryCountError{
+				Offset:    5,
+				ReadError: io.EOF,
+			},
+			err,
+		)
+		assert.Nil(t, segments)
+	})
+
+	t.Run("missing limit indicator", func(t *testing.T) {
+
+		t.Parallel()
+
+		segments, err := read([]byte{
+			// section size: 10 (LEB128)
+			0x8a, 0x80, 0x80, 0x80, 0x0,
+			// segment count
+			0x1,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidMemoryError{
+				Index: 0,
+				ReadError: InvalidLimitIndicatorError{
+					Offset:    6,
+					ReadError: io.EOF,
+				},
+			},
+			err,
+		)
+		assert.Nil(t, segments)
+	})
+
+	t.Run("invalid limit indicator", func(t *testing.T) {
+
+		t.Parallel()
+
+		segments, err := read([]byte{
+			// section size: 10 (LEB128)
+			0x8a, 0x80, 0x80, 0x80, 0x0,
+			// segment count
+			0x1,
+			// limit indicator
+			0xFF,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidMemoryError{
+				Index: 0,
+				ReadError: InvalidLimitIndicatorError{
+					Offset:         6,
+					LimitIndicator: 0xFF,
+				},
+			},
+			err,
+		)
+		assert.Nil(t, segments)
+	})
+
+	t.Run("invalid min", func(t *testing.T) {
+
+		t.Parallel()
+
+		segments, err := read([]byte{
+			// section size: 10 (LEB128)
+			0x8a, 0x80, 0x80, 0x80, 0x0,
+			// segment count
+			0x1,
+			// limit indicator: no max = 0x0
+			0x0,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidMemoryError{
+				Index: 0,
+				ReadError: InvalidLimitMinError{
+					Offset:    7,
+					ReadError: io.EOF,
+				},
+			},
+			err,
+		)
+		assert.Nil(t, segments)
+	})
+
+	t.Run("invalid max", func(t *testing.T) {
+
+		t.Parallel()
+
+		segments, err := read([]byte{
+			// section size: 10 (LEB128)
+			0x8a, 0x80, 0x80, 0x80, 0x0,
+			// segment count
+			0x1,
+			// limit indicator: max = 0x1
+			0x1,
+			// min
+			0x1,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidMemoryError{
+				Index: 0,
+				ReadError: InvalidLimitMaxError{
+					Offset:    8,
+					ReadError: io.EOF,
+				},
+			},
+			err,
+		)
+		assert.Nil(t, segments)
+	})
+}
+
 func TestWASMReader_readExportSection(t *testing.T) {
 
 	t.Parallel()
@@ -1278,6 +1474,233 @@ func TestWASMReader_readCodeSection(t *testing.T) {
 			err,
 		)
 		assert.Nil(t, funcTypes)
+	})
+}
+
+func TestWASMReader_readDataSection(t *testing.T) {
+
+	t.Parallel()
+
+	read := func(data []byte) ([]*Data, error) {
+		b := Buffer{data: data}
+		r := NewWASMReader(&b)
+		err := r.readDataSection()
+		if err != nil {
+			return nil, err
+		}
+		require.Equal(t, offset(len(b.data)), b.offset)
+		return r.Module.Data, nil
+	}
+
+	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		codes, err := read([]byte{
+			// section size: 9 (LEB128)
+			0x89, 0x80, 0x80, 0x80, 0x0,
+			// segment count: 1
+			0x1,
+			// memory index
+			0x1,
+			// i32.const 2
+			0x41, 0x2,
+			// end
+			0xb,
+			// byte count
+			0x3,
+			// init (bytes 0x3, 0x4, 0x5)
+			0x3, 0x4, 0x5,
+		})
+		require.NoError(t, err)
+		assert.Equal(t,
+			[]*Data{
+				{
+					MemoryIndex: 1,
+					Offset: []Instruction{
+						InstructionI32Const{Value: 2},
+					},
+					Init: []byte{3, 4, 5},
+				},
+			},
+			codes,
+		)
+	})
+
+	t.Run("invalid size", func(t *testing.T) {
+
+		t.Parallel()
+
+		segments, err := read([]byte{
+			0x87, 0x80, 0x80,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidSectionSizeError{
+				Offset:    0,
+				ReadError: io.EOF,
+			},
+			err,
+		)
+		assert.Nil(t, segments)
+	})
+
+	t.Run("invalid count", func(t *testing.T) {
+
+		t.Parallel()
+
+		segments, err := read([]byte{
+			// section size: 7 (LEB128)
+			0x80, 0x80, 0x80, 0x80, 0x0,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidDataSectionSegmentCountError{
+				Offset:    5,
+				ReadError: io.EOF,
+			},
+			err,
+		)
+		assert.Nil(t, segments)
+	})
+
+	t.Run("invalid memory index", func(t *testing.T) {
+
+		t.Parallel()
+
+		segments, err := read([]byte{
+			// section size: 10 (LEB128)
+			0x8a, 0x80, 0x80, 0x80, 0x0,
+			// segment count
+			0x1,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidDataSegmentError{
+				Index: 0,
+				ReadError: InvalidDataSectionMemoryIndexError{
+					Offset:    6,
+					ReadError: io.EOF,
+				},
+			},
+			err,
+		)
+		assert.Nil(t, segments)
+	})
+
+	t.Run("invalid instruction", func(t *testing.T) {
+
+		t.Parallel()
+
+		segments, err := read([]byte{
+			// section size: 10 (LEB128)
+			0x8a, 0x80, 0x80, 0x80, 0x0,
+			// segment count
+			0x1,
+			// memory index
+			0x0,
+			// invalid opcode
+			0xff,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidDataSegmentError{
+				Index: 0,
+				ReadError: InvalidOpcodeError{
+					Offset:    7,
+					Opcode:    0xff,
+					ReadError: nil,
+				},
+			},
+			err,
+		)
+		assert.Nil(t, segments)
+	})
+
+	t.Run("missing end", func(t *testing.T) {
+
+		t.Parallel()
+
+		segments, err := read([]byte{
+			// section size: 9 (LEB128)
+			0x89, 0x80, 0x80, 0x80, 0x0,
+			// segment count: 1
+			0x1,
+			// memory index
+			0x1,
+			// i32.const 2
+			0x41, 0x2,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidDataSegmentError{
+				Index: 0,
+				ReadError: MissingEndInstructionError{
+					Offset: 9,
+				},
+			},
+			err,
+		)
+		assert.Nil(t, segments)
+	})
+
+	t.Run("invalid init byte count", func(t *testing.T) {
+
+		t.Parallel()
+
+		segments, err := read([]byte{
+			// section size: 9 (LEB128)
+			0x89, 0x80, 0x80, 0x80, 0x0,
+			// segment count: 1
+			0x1,
+			// memory index
+			0x1,
+			// i32.const 2
+			0x41, 0x2,
+			// end
+			0xb,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidDataSegmentError{
+				Index: 0,
+				ReadError: InvalidDataSectionInitByteCountError{
+					Offset:    10,
+					ReadError: io.EOF,
+				},
+			},
+			err,
+		)
+		assert.Nil(t, segments)
+	})
+
+	t.Run("invalid init bytes", func(t *testing.T) {
+
+		t.Parallel()
+
+		segments, err := read([]byte{
+			// section size: 9 (LEB128)
+			0x89, 0x80, 0x80, 0x80, 0x0,
+			// segment count: 1
+			0x1,
+			// memory index
+			0x1,
+			// i32.const 2
+			0x41, 0x2,
+			// end
+			0xb,
+			// byte count
+			0x2,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidDataSegmentError{
+				Index:     0,
+				ReadError: io.EOF,
+			},
+			err,
+		)
+		assert.Nil(t, segments)
 	})
 }
 

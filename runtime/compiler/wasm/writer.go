@@ -230,6 +230,65 @@ func (w *WASMWriter) writeFunctionSection(functions []*Function) error {
 	})
 }
 
+// writeMemorySection writes the section that declares all memories
+//
+func (w *WASMWriter) writeMemorySection(memories []*Memory) error {
+	return w.writeSection(sectionIDMemory, func() error {
+
+		// write the number of memories
+		err := w.buf.writeUint32LEB128(uint32(len(memories)))
+		if err != nil {
+			return err
+		}
+
+		// write each memory
+		for _, memory := range memories {
+			err = w.writeMemory(memory)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+// writeMemory writes the memory
+//
+func (w *WASMWriter) writeMemory(memory *Memory) error {
+	return w.writeLimit(memory.Max, memory.Min)
+}
+
+func (w *WASMWriter) writeLimit(max *uint32, min uint32) error {
+
+	// write the indicator
+	var indicator = limitIndicatorNoMax
+	if max != nil {
+		indicator = limitIndicatorMax
+	}
+
+	err := w.buf.WriteByte(byte(indicator))
+	if err != nil {
+		return err
+	}
+
+	// write the minimum
+	err = w.buf.writeUint32LEB128(min)
+	if err != nil {
+		return err
+	}
+
+	// write the maximum
+	if max != nil {
+		err := w.buf.writeUint32LEB128(*max)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // writeExportSection writes the section that declares all exports
 //
 func (w *WASMWriter) writeExportSection(exports []*Export) error {
@@ -542,6 +601,66 @@ func (w *WASMWriter) writeNameSectionFunctionNamesSubSection(imports []*Import, 
 	})
 }
 
+// writeDataSection writes the section that declares the data segments
+//
+func (w *WASMWriter) writeDataSection(segments []*Data) error {
+	return w.writeSection(sectionIDData, func() error {
+		// write the number of data segments
+		err := w.buf.writeUint32LEB128(uint32(len(segments)))
+		if err != nil {
+			return err
+		}
+
+		// write each data segment
+		for _, segment := range segments {
+			err = w.writeDataSegment(segment)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+// writeDataSegment writes the data segment
+//
+func (w *WASMWriter) writeDataSegment(segment *Data) error {
+
+	// write the memory index
+	err := w.buf.writeUint32LEB128(segment.MemoryIndex)
+	if err != nil {
+		return err
+	}
+
+	// write the offset instructions
+	err = w.writeInstructions(segment.Offset)
+	if err != nil {
+		return err
+	}
+
+	err = w.writeOpcode(opcodeEnd)
+	if err != nil {
+		return err
+	}
+
+	// write the number of bytes
+	err = w.buf.writeUint32LEB128(uint32(len(segment.Init)))
+	if err != nil {
+		return err
+	}
+
+	// write each byte
+	for _, b := range segment.Init {
+		err = w.buf.WriteByte(b)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func (w *WASMWriter) WriteModule(module *Module) error {
 	if err := w.writeMagicAndVersion(); err != nil {
 		return err
@@ -556,10 +675,16 @@ func (w *WASMWriter) WriteModule(module *Module) error {
 	if err := w.writeFunctionSection(module.Functions); err != nil {
 		return err
 	}
+	if err := w.writeMemorySection(module.Memories); err != nil {
+		return err
+	}
 	if err := w.writeExportSection(module.Exports); err != nil {
 		return err
 	}
 	if err := w.writeCodeSection(module.Functions); err != nil {
+		return err
+	}
+	if err := w.writeDataSection(module.Data); err != nil {
 		return err
 	}
 

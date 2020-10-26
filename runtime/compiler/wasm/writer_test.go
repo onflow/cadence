@@ -203,6 +203,53 @@ func TestWASMWriter_writeFunctionSection(t *testing.T) {
 	)
 }
 
+func TestWASMWriter_writeMemorySection(t *testing.T) {
+
+	t.Parallel()
+
+	var b Buffer
+	w := NewWASMWriter(&b)
+
+	memories := []*Memory{
+		{
+			Min: 1024,
+			Max: nil,
+		},
+		{
+			Min: 2048,
+			Max: func() *uint32 {
+				var max uint32 = 2
+				return &max
+			}(),
+		},
+	}
+
+	err := w.writeMemorySection(memories)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		[]byte{
+			// section ID: Import = 5
+			0x5,
+			// section size: 8 (LEB128)
+			0x88, 0x80, 0x80, 0x80, 0x0,
+			// memory count: 2
+			0x2,
+			// memory type / limit: no max
+			0x0,
+			// limit 1 min: 1024 (LEB128)
+			0x80, 0x8,
+			// memory type / limit: max
+			0x1,
+			// limit 2 min: 2048 (LEB128)
+			0x80, 0x10,
+			// limit 2 max
+			0x2,
+		},
+		b.data,
+	)
+}
+
 func TestWASMWriter_writeExportSection(t *testing.T) {
 
 	t.Parallel()
@@ -294,6 +341,49 @@ func TestWASMWriter_writeCodeSection(t *testing.T) {
 			0x6a,
 			// opcode: end
 			0xb,
+		},
+		b.data,
+	)
+}
+
+func TestWASMWriter_writeDataSection(t *testing.T) {
+
+	t.Parallel()
+
+	var b Buffer
+	w := NewWASMWriter(&b)
+
+	dataSegments := []*Data{
+		{
+			MemoryIndex: 1,
+			Offset: []Instruction{
+				InstructionI32Const{Value: 2},
+			},
+			Init: []byte{3, 4, 5},
+		},
+	}
+
+	err := w.writeDataSection(dataSegments)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		[]byte{
+			// section ID: Import = 11
+			0xB,
+			// section size: 9 (LEB128)
+			0x89, 0x80, 0x80, 0x80, 0x0,
+			// segment count: 1
+			0x1,
+			// memory index
+			0x1,
+			// i32.const 2
+			0x41, 0x2,
+			// end
+			0xb,
+			// byte count
+			0x3,
+			// init (bytes 0x3, 0x4, 0x5)
+			0x3, 0x4, 0x5,
 		},
 		b.data,
 	)
@@ -459,6 +549,24 @@ func TestWASMWriterReader(t *testing.T) {
 				},
 			},
 		},
+		Memories: []*Memory{
+			{
+				Min: 1024,
+				Max: func() *uint32 {
+					var max uint32 = 2048
+					return &max
+				}(),
+			},
+		},
+		Data: []*Data{
+			{
+				MemoryIndex: 0,
+				Offset: []Instruction{
+					InstructionI32Const{Value: 0},
+				},
+				Init: []byte{0x0, 0x1, 0x2, 0x3},
+			},
+		},
 	}
 
 	err := w.WriteModule(module)
@@ -482,15 +590,28 @@ func TestWASMWriterReader(t *testing.T) {
 		0x3,
 		0x82, 0x80, 0x80, 0x80, 0x0,
 		0x1, 0x0,
+		// memory section
+		0x5,
+		0x86, 0x80, 0x80, 0x80, 0x0,
+		0x1, 0x1, 0x80, 0x8, 0x80, 0x10,
 		// export section
 		0x07,
 		0x87, 0x80, 0x80, 0x80, 0x00,
 		0x01, 0x03, 0x61, 0x64, 0x64,
 		0x00, 0x00,
 		// code section
-		0xa, 0x8f, 0x80, 0x80, 0x80, 0x0,
+		0xa,
+		0x8f, 0x80, 0x80, 0x80, 0x0,
 		0x1, 0x89, 0x80, 0x80, 0x80, 0x0, 0x1, 0x1,
 		0x7f, 0x20, 0x0, 0x20, 0x1, 0x6a, 0xb,
+		// data section
+		0xb,
+		0x8a, 0x80, 0x80, 0x80, 0x0,
+		0x1,
+		0x0,
+		0x41, 0x0, 0xb,
+		0x4,
+		0x0, 0x1, 0x2, 0x3,
 		// name section
 		0x0,
 		0xa5, 0x80, 0x80, 0x80, 0x0,
@@ -514,7 +635,9 @@ func TestWASMWriterReader(t *testing.T) {
     local.get 0
     local.get 1
     i32.add)
-  (export "add" (func $env.add)))
+  (memory (;0;) 1024 2048)
+  (export "add" (func $env.add))
+  (data (;0;) (i32.const 0) "\00\01\02\03"))
 `,
 		wasm2wat(b.data),
 	)

@@ -142,6 +142,16 @@ func (r *WASMReader) readSection() error {
 
 		r.didReadFunctions = true
 
+	case sectionIDMemory:
+		if r.Module.Memories != nil {
+			return invalidDuplicateSectionError()
+		}
+
+		err = r.readMemorySection()
+		if err != nil {
+			return err
+		}
+
 	case sectionIDExport:
 		if r.Module.Exports != nil {
 			return invalidDuplicateSectionError()
@@ -163,6 +173,16 @@ func (r *WASMReader) readSection() error {
 		}
 
 		r.didReadCode = true
+
+	case sectionIDData:
+		if r.Module.Data != nil {
+			return invalidDuplicateSectionError()
+		}
+
+		err = r.readDataSection()
+		if err != nil {
+			return err
+		}
 
 	default:
 		return InvalidSectionIDError{
@@ -476,6 +496,114 @@ func (r *WASMReader) ensureModuleFunctions(count int) bool {
 	}
 
 	return true
+}
+
+// readMemorySection reads the section that declares the memories
+//
+func (r *WASMReader) readMemorySection() error {
+
+	_, err := r.readSectionSize()
+	if err != nil {
+		return err
+	}
+
+	// read the number of memories
+	countOffset := r.buf.offset
+	count, err := r.buf.readUint32LEB128()
+	if err != nil {
+		return InvalidMemorySectionMemoryCountError{
+			Offset:    int(countOffset),
+			ReadError: err,
+		}
+	}
+
+	memories := make([]*Memory, count)
+
+	// read each memory
+	for i := uint32(0); i < count; i++ {
+		im, err := r.readMemory()
+		if err != nil {
+			return InvalidMemoryError{
+				Index:     int(i),
+				ReadError: err,
+			}
+		}
+		memories[i] = im
+	}
+
+	r.Module.Memories = memories
+
+	return nil
+}
+
+// readMemory reads a memory in the memory section
+//
+func (r *WASMReader) readMemory() (*Memory, error) {
+	min, max, err := r.readLimit()
+	if err != nil {
+		return nil, err
+	}
+
+	return &Memory{
+		Min: min,
+		Max: max,
+	}, nil
+}
+
+// readLimit reads a limit
+//
+func (r *WASMReader) readLimit() (min uint32, max *uint32, err error) {
+	// read the limit indicator
+	indicatorOffset := r.buf.offset
+	b, err := r.buf.ReadByte()
+	if err != nil {
+		return 0, nil, InvalidLimitIndicatorError{
+			Offset:         int(indicatorOffset),
+			LimitIndicator: b,
+			ReadError:      err,
+		}
+	}
+
+	indicator := limitIndicator(b)
+
+	var readMax bool
+
+	switch indicator {
+	case limitIndicatorNoMax:
+		readMax = false
+	case limitIndicatorMax:
+		readMax = true
+	default:
+		return 0, nil, InvalidLimitIndicatorError{
+			Offset:         int(indicatorOffset),
+			LimitIndicator: byte(indicator),
+		}
+	}
+
+	// read the minimum
+	minOffset := r.buf.offset
+	min, err = r.buf.readUint32LEB128()
+	if err != nil {
+		return 0, nil, InvalidLimitMinError{
+			Offset:    int(minOffset),
+			ReadError: err,
+		}
+	}
+
+	// read the maximum, if given
+	if readMax {
+		maxOffset := r.buf.offset
+		maximum, err := r.buf.readUint32LEB128()
+		if err != nil {
+			return 0, nil, InvalidLimitMaxError{
+				Offset:    int(maxOffset),
+				ReadError: err,
+			}
+		}
+		max = &maximum
+	}
+
+	return min, max, nil
 }
 
 // readExportSection reads the section that declares the exports
@@ -954,6 +1082,92 @@ func (r *WASMReader) readCustomSection() error {
 	r.buf.offset += offset(size)
 
 	return nil
+}
+
+// readDataSection reads the section that declares the data segments
+//
+func (r *WASMReader) readDataSection() error {
+
+	_, err := r.readSectionSize()
+	if err != nil {
+		return err
+	}
+
+	// read the number of data segments
+	countOffset := r.buf.offset
+	count, err := r.buf.readUint32LEB128()
+	if err != nil {
+		return InvalidDataSectionSegmentCountError{
+			Offset:    int(countOffset),
+			ReadError: err,
+		}
+	}
+
+	segments := make([]*Data, count)
+
+	// read each data segment
+	for i := uint32(0); i < count; i++ {
+		segment, err := r.readDataSegment()
+		if err != nil {
+			return InvalidDataSegmentError{
+				Index:     int(i),
+				ReadError: err,
+			}
+		}
+		segments[i] = segment
+	}
+
+	r.Module.Data = segments
+
+	return nil
+}
+
+// readDataSegment reads a segment in the data section
+//
+func (r *WASMReader) readDataSegment() (*Data, error) {
+
+	// read the memory index
+	memoryIndexOffset := r.buf.offset
+	memoryIndex, err := r.buf.readUint32LEB128()
+	if err != nil {
+		return nil, InvalidDataSectionMemoryIndexError{
+			Offset:    int(memoryIndexOffset),
+			ReadError: err,
+		}
+	}
+
+	// read the offset instructions
+	instructions, err := r.readInstructions()
+	if err != nil {
+		return nil, err
+	}
+
+	// read the number of init bytes
+	countOffset := r.buf.offset
+	count, err := r.buf.readUint32LEB128()
+	if err != nil {
+		return nil, InvalidDataSectionInitByteCountError{
+			Offset:    int(countOffset),
+			ReadError: err,
+		}
+	}
+
+	init := make([]byte, count)
+
+	// read each init byte
+	for i := uint32(0); i < count; i++ {
+		b, err := r.buf.ReadByte()
+		if err != nil {
+			return nil, err
+		}
+		init[i] = b
+	}
+
+	return &Data{
+		MemoryIndex: memoryIndex,
+		Offset:      instructions,
+		Init:        init,
+	}, nil
 }
 
 // readNameSection reads the section that provides names
