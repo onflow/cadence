@@ -18,38 +18,19 @@
 
 package wasm
 
-// Module represents a module
+// Memory represents a memory
 //
-type Module struct {
-	Name      string
-	Types     []*FunctionType
-	Functions []*Function
-	Memories  []*Memory
-	Imports   []*Import
-	Exports   []*Export
-	Data      []*Data
+type Memory struct {
+	Min uint32
+	Max *uint32
 }
 
-type ModuleBuilder struct {
-	types     []*FunctionType
-	functions []*Function
-}
+// limitIndicator is the byte used to indicate the kind of limit in the WASM binary
+type limitIndicator byte
 
-func (b *ModuleBuilder) AddFunction(name string, functionType *FunctionType, code *Code) {
-	typeIndex := uint32(len(b.types))
-	b.types = append(b.types, functionType)
-	b.functions = append(b.functions,
-		&Function{
-			Name:      name,
-			TypeIndex: typeIndex,
-			Code:      code,
-		},
-	)
-}
-
-func (b *ModuleBuilder) Build() *Module {
-	return &Module{
-		Types:     b.types,
-		Functions: b.functions,
-	}
-}
+const (
+	// limitIndicatorNoMax is the byte used to indicate a limit with no maximum in the WASM binary
+	limitIndicatorNoMax limitIndicator = 0x0
+	// limitIndicatorMax is the byte used to indicate a limit with no maximum in the WASM binary
+	limitIndicatorMax limitIndicator = 0x1
+)

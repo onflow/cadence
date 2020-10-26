@@ -785,3 +785,176 @@ func (e InvalidBlockTypeTypeIndexError) Error() string {
 		e.TypeIndex,
 	)
 }
+
+// InvalidDataSectionSegmentCountError is returned when the WASM binary specifies
+// an invalid count in the data section
+//
+type InvalidDataSectionSegmentCountError struct {
+	Offset    int
+	ReadError error
+}
+
+func (e InvalidDataSectionSegmentCountError) Error() string {
+	return fmt.Sprintf(
+		"invalid segment count in data section at offset %d",
+		e.Offset,
+	)
+}
+
+func (e InvalidDataSectionSegmentCountError) Unwrap() error {
+	return e.ReadError
+}
+
+// InvalidDataSegmentError is returned when the WASM binary specifies
+// invalid segment in the data section
+//
+type InvalidDataSegmentError struct {
+	Index     int
+	ReadError error
+}
+
+func (e InvalidDataSegmentError) Error() string {
+	return fmt.Sprintf(
+		"invalid data segment at index %d",
+		e.Index,
+	)
+}
+
+func (e InvalidDataSegmentError) Unwrap() error {
+	return e.ReadError
+}
+
+// InvalidDataSectionMemoryIndexError is returned when the WASM binary specifies
+// an invalid memory index in the data section
+//
+type InvalidDataSectionMemoryIndexError struct {
+	Offset    int
+	ReadError error
+}
+
+func (e InvalidDataSectionMemoryIndexError) Error() string {
+	return fmt.Sprintf(
+		"invalid memory index in data section at offset %d",
+		e.Offset,
+	)
+}
+
+func (e InvalidDataSectionMemoryIndexError) Unwrap() error {
+	return e.ReadError
+}
+
+// InvalidDataSectionInitByteCountError is returned when the WASM binary specifies
+// an invalid init byte count in the data section
+//
+type InvalidDataSectionInitByteCountError struct {
+	Offset    int
+	ReadError error
+}
+
+func (e InvalidDataSectionInitByteCountError) Error() string {
+	return fmt.Sprintf(
+		"invalid init byte count in data section at offset %d",
+		e.Offset,
+	)
+}
+
+func (e InvalidDataSectionInitByteCountError) Unwrap() error {
+	return e.ReadError
+}
+
+// InvalidMemorySectionMemoryCountError is returned when the WASM binary specifies
+// an invalid count in the memory section
+//
+type InvalidMemorySectionMemoryCountError struct {
+	Offset    int
+	ReadError error
+}
+
+func (e InvalidMemorySectionMemoryCountError) Error() string {
+	return fmt.Sprintf(
+		"invalid memories count in memory section at offset %d",
+		e.Offset,
+	)
+}
+
+func (e InvalidMemorySectionMemoryCountError) Unwrap() error {
+	return e.ReadError
+}
+
+// InvalidMemoryError is returned when the WASM binary specifies
+// invalid memory in the memory section
+//
+type InvalidMemoryError struct {
+	Index     int
+	ReadError error
+}
+
+func (e InvalidMemoryError) Error() string {
+	return fmt.Sprintf(
+		"invalid memory at index %d",
+		e.Index,
+	)
+}
+
+func (e InvalidMemoryError) Unwrap() error {
+	return e.ReadError
+}
+
+// InvalidLimitIndicatorError is returned when the WASM binary specifies
+// an invalid limit indicator
+//
+type InvalidLimitIndicatorError struct {
+	Offset         int
+	LimitIndicator byte
+	ReadError      error
+}
+
+func (e InvalidLimitIndicatorError) Error() string {
+	return fmt.Sprintf(
+		"invalid limit indicator at offset %d: %x",
+		e.Offset,
+		e.LimitIndicator,
+	)
+}
+
+func (e InvalidLimitIndicatorError) Unwrap() error {
+	return e.ReadError
+}
+
+// InvalidLimitMinError is returned when the WASM binary specifies
+// an invalid limit minimum
+//
+type InvalidLimitMinError struct {
+	Offset    int
+	ReadError error
+}
+
+func (e InvalidLimitMinError) Error() string {
+	return fmt.Sprintf(
+		"invalid limit minimum at offset %d",
+		e.Offset,
+	)
+}
+
+func (e InvalidLimitMinError) Unwrap() error {
+	return e.ReadError
+}
+
+// InvalidLimitMaxError is returned when the WASM binary specifies
+// an invalid limit maximum
+//
+type InvalidLimitMaxError struct {
+	Offset    int
+	ReadError error
+}
+
+func (e InvalidLimitMaxError) Error() string {
+	return fmt.Sprintf(
+		"invalid limit maximum at offset %d",
+		e.Offset,
+	)
+}
+
+func (e InvalidLimitMaxError) Unwrap() error {
+	return e.ReadError
+}

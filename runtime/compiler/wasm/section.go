@@ -44,6 +44,8 @@ const (
 	sectionIDType     sectionID = 1
 	sectionIDImport   sectionID = 2
 	sectionIDFunction sectionID = 3
+	sectionIDMemory   sectionID = 5
 	sectionIDExport   sectionID = 7
 	sectionIDCode     sectionID = 10
+	sectionIDData     sectionID = 11
 )

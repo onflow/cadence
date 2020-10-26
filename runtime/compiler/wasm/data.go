@@ -18,38 +18,13 @@
 
 package wasm
 
-// Module represents a module
+// Data represents a data segment, which initializes a range of memory,
+// at a given offset, with a static vector of bytes.
 //
-type Module struct {
-	Name      string
-	Types     []*FunctionType
-	Functions []*Function
-	Memories  []*Memory
-	Imports   []*Import
-	Exports   []*Export
-	Data      []*Data
-}
-
-type ModuleBuilder struct {
-	types     []*FunctionType
-	functions []*Function
-}
-
-func (b *ModuleBuilder) AddFunction(name string, functionType *FunctionType, code *Code) {
-	typeIndex := uint32(len(b.types))
-	b.types = append(b.types, functionType)
-	b.functions = append(b.functions,
-		&Function{
-			Name:      name,
-			TypeIndex: typeIndex,
-			Code:      code,
-		},
-	)
-}
-
-func (b *ModuleBuilder) Build() *Module {
-	return &Module{
-		Types:     b.types,
-		Functions: b.functions,
-	}
+type Data struct {
+	MemoryIndex uint32
+	// must be constant, as defined in the spec
+	// (https://webassembly.github.io/spec/core/valid/instructions.html#constant-expressions)
+	Offset []Instruction
+	Init   []byte
 }
