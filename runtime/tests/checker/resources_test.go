@@ -74,9 +74,10 @@ func TestCheckFailableCastingWithResourceAnnotation(t *testing.T) {
 			switch compositeKind {
 			case common.CompositeKindResource:
 
-				errs := ExpectCheckerErrors(t, err, 1)
+				errs := ExpectCheckerErrors(t, err, 2)
 
 				assert.IsType(t, &sema.InvalidFailableResourceDowncastOutsideOptionalBindingError{}, errs[0])
+				assert.IsType(t, &sema.InvalidNonIdentifierFailableResourceDowncast{}, errs[1])
 
 			case common.CompositeKindStructure,
 				common.CompositeKindContract,
@@ -1246,10 +1247,11 @@ func TestCheckFailableCastingWithoutResourceAnnotation(t *testing.T) {
 
 			switch compositeKind {
 			case common.CompositeKindResource:
-				errs := ExpectCheckerErrors(t, err, 2)
+				errs := ExpectCheckerErrors(t, err, 3)
 
 				assert.IsType(t, &sema.MissingResourceAnnotationError{}, errs[0])
 				assert.IsType(t, &sema.InvalidFailableResourceDowncastOutsideOptionalBindingError{}, errs[1])
+				assert.IsType(t, &sema.InvalidNonIdentifierFailableResourceDowncast{}, errs[2])
 
 			case common.CompositeKindStructure,
 				common.CompositeKindContract:
@@ -4238,6 +4240,31 @@ func TestCheckInvalidResourceFailableCastOutsideOptionalBinding(t *testing.T) {
 	errs := ExpectCheckerErrors(t, err, 1)
 
 	assert.IsType(t, &sema.InvalidFailableResourceDowncastOutsideOptionalBindingError{}, errs[0])
+}
+
+func TestCheckInvalidResourceFailableCastNonIdentifier(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      resource interface RI {}
+
+      resource R: RI {}
+
+      fun createR(): @{RI} {
+          return <- create R()
+      }
+
+      fun test() {
+          if let r <- createR() as? @R {
+              destroy r
+          }
+      }
+    `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.InvalidNonIdentifierFailableResourceDowncast{}, errs[0])
 }
 
 func TestCheckInvalidUnaryMoveAndCopyTransfer(t *testing.T) {
