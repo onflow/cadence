@@ -259,8 +259,10 @@ func TestWASMWriter_writeExportSection(t *testing.T) {
 
 	exports := []*Export{
 		{
-			Name:          "foo",
-			FunctionIndex: 1,
+			Name: "foo",
+			Descriptor: FunctionExport{
+				FunctionIndex: 1,
+			},
 		},
 	}
 
@@ -527,8 +529,10 @@ func TestWASMWriterReader(t *testing.T) {
 		},
 		Exports: []*Export{
 			{
-				Name:          "add",
-				FunctionIndex: 0,
+				Name: "add",
+				Descriptor: FunctionExport{
+					FunctionIndex: 0,
+				},
 			},
 		},
 		Functions: []*Function{
