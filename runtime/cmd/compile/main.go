@@ -73,8 +73,10 @@ func main() {
 
 		module.Exports = append(module.Exports,
 			&wasm.Export{
-				Name:          functionDeclaration.Identifier.Identifier,
-				FunctionIndex: uint32(i),
+				Name: functionDeclaration.Identifier.Identifier,
+				Descriptor: wasm.FunctionExport{
+					FunctionIndex: uint32(i),
+				},
 			},
 		)
 	}
