@@ -19,6 +19,7 @@
 package parser2
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -1410,7 +1411,6 @@ func TestParseEvent(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{
-
 				&ast.CompositeDeclaration{
 					CompositeKind: common.CompositeKindEvent,
 					Identifier: ast.Identifier{
@@ -2198,4 +2198,2583 @@ func TestParseTransactionDeclaration(t *testing.T) {
 			result,
 		)
 	})
+
+	t.Run("EmptyTransaction", func(t *testing.T) {
+
+		result, errs := ParseProgram(`
+		  transaction {}
+		`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.TransactionDeclaration{
+					Fields:         nil,
+					Prepare:        nil,
+					PreConditions:  nil,
+					PostConditions: nil,
+					Execute:        nil,
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 5, Line: 2, Column: 4},
+						EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
+					},
+				},
+			},
+			result.Declarations,
+		)
+	})
+
+	t.Run("SimpleTransaction", func(t *testing.T) {
+		result, errs := ParseProgram(`
+		  transaction {
+
+		    var x: Int
+
+		    prepare(signer: AuthAccount) {
+	          x = 0
+			}
+
+		    execute {
+	          x = 1 + 1
+			}
+		  }
+		`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.TransactionDeclaration{
+					Fields: []*ast.FieldDeclaration{
+						{
+							Access:       ast.AccessNotSpecified,
+							VariableKind: ast.VariableKindVariable,
+							Identifier: ast.Identifier{
+								Identifier: "x",
+								Pos:        ast.Position{Offset: 30, Line: 4, Column: 10},
+							},
+							TypeAnnotation: &ast.TypeAnnotation{
+								IsResource: false,
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "Int",
+										Pos:        ast.Position{Offset: 33, Line: 4, Column: 13},
+									},
+								},
+								StartPos: ast.Position{Offset: 33, Line: 4, Column: 13},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 26, Line: 4, Column: 6},
+								EndPos:   ast.Position{Offset: 35, Line: 4, Column: 15},
+							},
+						},
+					},
+					Prepare: &ast.SpecialFunctionDeclaration{
+						Kind: common.DeclarationKindPrepare,
+						FunctionDeclaration: &ast.FunctionDeclaration{
+							Access: ast.AccessNotSpecified,
+							Identifier: ast.Identifier{
+								Identifier: "prepare",
+								Pos:        ast.Position{Offset: 44, Line: 6, Column: 6},
+							},
+							ParameterList: &ast.ParameterList{
+								Parameters: []*ast.Parameter{
+									{
+										Label: "",
+										Identifier: ast.Identifier{
+											Identifier: "signer",
+											Pos:        ast.Position{Offset: 52, Line: 6, Column: 14},
+										},
+										TypeAnnotation: &ast.TypeAnnotation{
+											IsResource: false,
+											Type: &ast.NominalType{
+												Identifier: ast.Identifier{
+													Identifier: "AuthAccount",
+													Pos:        ast.Position{Offset: 60, Line: 6, Column: 22},
+												},
+											},
+											StartPos: ast.Position{Offset: 60, Line: 6, Column: 22},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
+											EndPos:   ast.Position{Offset: 70, Line: 6, Column: 32},
+										},
+									},
+								},
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 51, Line: 6, Column: 13},
+									EndPos:   ast.Position{Offset: 71, Line: 6, Column: 33},
+								},
+							},
+							ReturnTypeAnnotation: nil,
+							FunctionBlock: &ast.FunctionBlock{
+								Block: &ast.Block{
+									Statements: []ast.Statement{
+										&ast.AssignmentStatement{
+											Target: &ast.IdentifierExpression{
+												Identifier: ast.Identifier{
+													Identifier: "x",
+													Pos:        ast.Position{Offset: 86, Line: 7, Column: 11},
+												},
+											},
+											Transfer: &ast.Transfer{
+												Operation: ast.TransferOperationCopy,
+												Pos:       ast.Position{Offset: 88, Line: 7, Column: 13},
+											},
+											Value: &ast.IntegerExpression{
+												Value: new(big.Int),
+												Base:  10,
+												Range: ast.Range{
+													StartPos: ast.Position{Offset: 90, Line: 7, Column: 15},
+													EndPos:   ast.Position{Offset: 90, Line: 7, Column: 15},
+												},
+											},
+										},
+									},
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 73, Line: 6, Column: 35},
+										EndPos:   ast.Position{Offset: 95, Line: 8, Column: 3},
+									},
+								},
+								PreConditions:  nil,
+								PostConditions: nil,
+							},
+							StartPos: ast.Position{Offset: 44, Line: 6, Column: 6},
+						},
+					},
+					PreConditions:  nil,
+					PostConditions: nil,
+					Execute: &ast.SpecialFunctionDeclaration{
+						Kind: common.DeclarationKindExecute,
+						FunctionDeclaration: &ast.FunctionDeclaration{
+							Access: ast.AccessNotSpecified,
+							Identifier: ast.Identifier{
+								Identifier: "execute",
+								Pos:        ast.Position{Offset: 104, Line: 10, Column: 6},
+							},
+							ParameterList:        &ast.ParameterList{},
+							ReturnTypeAnnotation: nil,
+							FunctionBlock: &ast.FunctionBlock{
+								Block: &ast.Block{
+									Statements: []ast.Statement{
+										&ast.AssignmentStatement{
+											Target: &ast.IdentifierExpression{
+												Identifier: ast.Identifier{
+													Identifier: "x",
+													Pos:        ast.Position{Offset: 125, Line: 11, Column: 11},
+												},
+											},
+											Transfer: &ast.Transfer{
+												Operation: ast.TransferOperationCopy,
+												Pos:       ast.Position{Offset: 127, Line: 11, Column: 13},
+											},
+											Value: &ast.BinaryExpression{
+												Operation: ast.OperationPlus,
+												Left: &ast.IntegerExpression{
+													Value: big.NewInt(1),
+													Base:  10,
+													Range: ast.Range{
+														StartPos: ast.Position{Offset: 129, Line: 11, Column: 15},
+														EndPos:   ast.Position{Offset: 129, Line: 11, Column: 15},
+													},
+												},
+												Right: &ast.IntegerExpression{
+													Value: big.NewInt(1),
+													Base:  10,
+													Range: ast.Range{
+														StartPos: ast.Position{Offset: 133, Line: 11, Column: 19},
+														EndPos:   ast.Position{Offset: 133, Line: 11, Column: 19},
+													},
+												},
+											},
+										},
+									},
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 112, Line: 10, Column: 14},
+										EndPos:   ast.Position{Offset: 138, Line: 12, Column: 3},
+									},
+								},
+								PreConditions:  nil,
+								PostConditions: nil,
+							},
+							StartPos: ast.Position{Offset: 104, Line: 10, Column: 6},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 5, Line: 2, Column: 4},
+						EndPos:   ast.Position{Offset: 144, Line: 13, Column: 4},
+					},
+				},
+			},
+			result.Declarations,
+		)
+	})
+
+	t.Run("PreExecutePost", func(t *testing.T) {
+		result, errs := ParseProgram(`
+		  transaction {
+
+		    var x: Int
+
+		    prepare(signer: AuthAccount) {
+	          x = 0
+			}
+
+			pre {
+	      	  x == 0
+			}
+
+		    execute {
+	          x = 1 + 1
+			}
+
+		    post {
+	          x == 2
+	        }
+		  }
+		`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.TransactionDeclaration{
+					Fields: []*ast.FieldDeclaration{
+						{
+							Access:       ast.AccessNotSpecified,
+							VariableKind: ast.VariableKindVariable,
+							Identifier: ast.Identifier{
+								Identifier: "x",
+								Pos:        ast.Position{Offset: 30, Line: 4, Column: 10},
+							},
+							TypeAnnotation: &ast.TypeAnnotation{
+								IsResource: false,
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "Int",
+										Pos:        ast.Position{Offset: 33, Line: 4, Column: 13},
+									},
+								},
+								StartPos: ast.Position{Offset: 33, Line: 4, Column: 13},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 26, Line: 4, Column: 6},
+								EndPos:   ast.Position{Offset: 35, Line: 4, Column: 15},
+							},
+						},
+					},
+					Prepare: &ast.SpecialFunctionDeclaration{
+						Kind: common.DeclarationKindPrepare,
+						FunctionDeclaration: &ast.FunctionDeclaration{
+							Access: ast.AccessNotSpecified,
+							Identifier: ast.Identifier{
+								Identifier: "prepare",
+								Pos:        ast.Position{Offset: 44, Line: 6, Column: 6},
+							},
+							ParameterList: &ast.ParameterList{
+								Parameters: []*ast.Parameter{
+									{
+										Label: "",
+										Identifier: ast.Identifier{
+											Identifier: "signer",
+											Pos:        ast.Position{Offset: 52, Line: 6, Column: 14},
+										},
+										TypeAnnotation: &ast.TypeAnnotation{
+											IsResource: false,
+											Type: &ast.NominalType{
+												Identifier: ast.Identifier{
+													Identifier: "AuthAccount",
+													Pos:        ast.Position{Offset: 60, Line: 6, Column: 22},
+												},
+											},
+											StartPos: ast.Position{Offset: 60, Line: 6, Column: 22},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
+											EndPos:   ast.Position{Offset: 70, Line: 6, Column: 32},
+										},
+									},
+								},
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 51, Line: 6, Column: 13},
+									EndPos:   ast.Position{Offset: 71, Line: 6, Column: 33},
+								},
+							},
+							ReturnTypeAnnotation: nil,
+							FunctionBlock: &ast.FunctionBlock{
+								Block: &ast.Block{
+									Statements: []ast.Statement{
+										&ast.AssignmentStatement{
+											Target: &ast.IdentifierExpression{
+												Identifier: ast.Identifier{
+													Identifier: "x",
+													Pos:        ast.Position{Offset: 86, Line: 7, Column: 11},
+												},
+											},
+											Transfer: &ast.Transfer{
+												Operation: ast.TransferOperationCopy,
+												Pos:       ast.Position{Offset: 88, Line: 7, Column: 13},
+											},
+											Value: &ast.IntegerExpression{
+												Value: new(big.Int),
+												Base:  10,
+												Range: ast.Range{
+													StartPos: ast.Position{Offset: 90, Line: 7, Column: 15},
+													EndPos:   ast.Position{Offset: 90, Line: 7, Column: 15},
+												},
+											},
+										},
+									},
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 73, Line: 6, Column: 35},
+										EndPos:   ast.Position{Offset: 95, Line: 8, Column: 3},
+									},
+								},
+								PreConditions:  nil,
+								PostConditions: nil,
+							},
+							StartPos: ast.Position{Offset: 44, Line: 6, Column: 6},
+						},
+					},
+					PreConditions: &ast.Conditions{
+						{
+							Kind: ast.ConditionKindPre,
+							Test: &ast.BinaryExpression{
+								Operation: ast.OperationEqual,
+								Left: &ast.IdentifierExpression{
+									Identifier: ast.Identifier{
+										Identifier: "x",
+										Pos:        ast.Position{Offset: 117, Line: 11, Column: 10},
+									},
+								},
+								Right: &ast.IntegerExpression{
+									Value: new(big.Int),
+									Base:  10,
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 122, Line: 11, Column: 15},
+										EndPos:   ast.Position{Offset: 122, Line: 11, Column: 15},
+									},
+								},
+							},
+						},
+					},
+					PostConditions: &ast.Conditions{
+						{
+							Kind: ast.ConditionKindPost,
+							Test: &ast.BinaryExpression{
+								Operation: ast.OperationEqual,
+								Left: &ast.IdentifierExpression{
+									Identifier: ast.Identifier{
+										Identifier: "x",
+										Pos:        ast.Position{Offset: 197, Line: 19, Column: 11},
+									},
+								},
+								Right: &ast.IntegerExpression{
+									Value: big.NewInt(2),
+									Base:  10,
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 202, Line: 19, Column: 16},
+										EndPos:   ast.Position{Offset: 202, Line: 19, Column: 16},
+									},
+								},
+							},
+						},
+					},
+					Execute: &ast.SpecialFunctionDeclaration{
+						Kind: common.DeclarationKindExecute,
+						FunctionDeclaration: &ast.FunctionDeclaration{
+							Access: ast.AccessNotSpecified,
+							Identifier: ast.Identifier{
+								Identifier: "execute",
+								Pos:        ast.Position{Offset: 136, Line: 14, Column: 6},
+							},
+							ParameterList:        &ast.ParameterList{},
+							ReturnTypeAnnotation: nil,
+							FunctionBlock: &ast.FunctionBlock{
+								Block: &ast.Block{
+									Statements: []ast.Statement{
+										&ast.AssignmentStatement{
+											Target: &ast.IdentifierExpression{
+												Identifier: ast.Identifier{
+													Identifier: "x",
+													Pos:        ast.Position{Offset: 157, Line: 15, Column: 11},
+												},
+											},
+											Transfer: &ast.Transfer{
+												Operation: ast.TransferOperationCopy,
+												Pos:       ast.Position{Offset: 159, Line: 15, Column: 13},
+											},
+											Value: &ast.BinaryExpression{
+												Operation: ast.OperationPlus,
+												Left: &ast.IntegerExpression{
+													Value: big.NewInt(1),
+													Base:  10,
+													Range: ast.Range{
+														StartPos: ast.Position{Offset: 161, Line: 15, Column: 15},
+														EndPos:   ast.Position{Offset: 161, Line: 15, Column: 15},
+													},
+												},
+												Right: &ast.IntegerExpression{
+													Value: big.NewInt(1),
+													Base:  10,
+													Range: ast.Range{
+														StartPos: ast.Position{Offset: 165, Line: 15, Column: 19},
+														EndPos:   ast.Position{Offset: 165, Line: 15, Column: 19},
+													},
+												},
+											},
+										},
+									},
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 144, Line: 14, Column: 14},
+										EndPos:   ast.Position{Offset: 170, Line: 16, Column: 3},
+									},
+								},
+								PreConditions:  nil,
+								PostConditions: nil,
+							},
+							StartPos: ast.Position{Offset: 136, Line: 14, Column: 6},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 5, Line: 2, Column: 4},
+						EndPos:   ast.Position{Offset: 219, Line: 21, Column: 4},
+					},
+				},
+			},
+			result.Declarations,
+		)
+	})
+
+	t.Run("PrePostExecute", func(t *testing.T) {
+		result, errs := ParseProgram(`
+		  transaction {
+
+		    var x: Int
+
+		    prepare(signer: AuthAccount) {
+	          x = 0
+			}
+
+			pre {
+	      	  x == 0
+			}
+
+		    post {
+	          x == 2
+	        }
+
+		    execute {
+	          x = 1 + 1
+			}
+		  }
+		`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{
+				&ast.TransactionDeclaration{
+					Fields: []*ast.FieldDeclaration{
+						{
+							Access:       ast.AccessNotSpecified,
+							VariableKind: ast.VariableKindVariable,
+							Identifier: ast.Identifier{
+								Identifier: "x",
+								Pos:        ast.Position{Offset: 30, Line: 4, Column: 10},
+							},
+							TypeAnnotation: &ast.TypeAnnotation{
+								IsResource: false,
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "Int",
+										Pos:        ast.Position{Offset: 33, Line: 4, Column: 13},
+									},
+								},
+								StartPos: ast.Position{Offset: 33, Line: 4, Column: 13},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 26, Line: 4, Column: 6},
+								EndPos:   ast.Position{Offset: 35, Line: 4, Column: 15},
+							},
+						},
+					},
+					Prepare: &ast.SpecialFunctionDeclaration{
+						Kind: common.DeclarationKindPrepare,
+						FunctionDeclaration: &ast.FunctionDeclaration{
+							Access: ast.AccessNotSpecified,
+							Identifier: ast.Identifier{
+								Identifier: "prepare",
+								Pos:        ast.Position{Offset: 44, Line: 6, Column: 6},
+							},
+							ParameterList: &ast.ParameterList{
+								Parameters: []*ast.Parameter{
+									{
+										Label: "",
+										Identifier: ast.Identifier{
+											Identifier: "signer",
+											Pos:        ast.Position{Offset: 52, Line: 6, Column: 14},
+										},
+										TypeAnnotation: &ast.TypeAnnotation{
+											IsResource: false,
+											Type: &ast.NominalType{
+												Identifier: ast.Identifier{
+													Identifier: "AuthAccount",
+													Pos:        ast.Position{Offset: 60, Line: 6, Column: 22},
+												},
+											},
+											StartPos: ast.Position{Offset: 60, Line: 6, Column: 22},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 52, Line: 6, Column: 14},
+											EndPos:   ast.Position{Offset: 70, Line: 6, Column: 32},
+										},
+									},
+								},
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 51, Line: 6, Column: 13},
+									EndPos:   ast.Position{Offset: 71, Line: 6, Column: 33},
+								},
+							},
+							ReturnTypeAnnotation: nil,
+							FunctionBlock: &ast.FunctionBlock{
+								Block: &ast.Block{
+									Statements: []ast.Statement{
+										&ast.AssignmentStatement{
+											Target: &ast.IdentifierExpression{
+												Identifier: ast.Identifier{
+													Identifier: "x",
+													Pos:        ast.Position{Offset: 86, Line: 7, Column: 11},
+												},
+											},
+											Transfer: &ast.Transfer{
+												Operation: ast.TransferOperationCopy,
+												Pos:       ast.Position{Offset: 88, Line: 7, Column: 13},
+											},
+											Value: &ast.IntegerExpression{
+												Value: new(big.Int),
+												Base:  10,
+												Range: ast.Range{
+													StartPos: ast.Position{Offset: 90, Line: 7, Column: 15},
+													EndPos:   ast.Position{Offset: 90, Line: 7, Column: 15},
+												},
+											},
+										},
+									},
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 73, Line: 6, Column: 35},
+										EndPos:   ast.Position{Offset: 95, Line: 8, Column: 3},
+									},
+								},
+								PreConditions:  nil,
+								PostConditions: nil,
+							},
+							StartPos: ast.Position{Offset: 44, Line: 6, Column: 6},
+						},
+					},
+					PreConditions: &ast.Conditions{
+						{
+							Kind: ast.ConditionKindPre,
+							Test: &ast.BinaryExpression{
+								Operation: ast.OperationEqual,
+								Left: &ast.IdentifierExpression{
+									Identifier: ast.Identifier{
+										Identifier: "x",
+										Pos:        ast.Position{Offset: 117, Line: 11, Column: 10},
+									},
+								},
+								Right: &ast.IntegerExpression{
+									Value: new(big.Int),
+									Base:  10,
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 122, Line: 11, Column: 15},
+										EndPos:   ast.Position{Offset: 122, Line: 11, Column: 15},
+									},
+								},
+							},
+						},
+					},
+					PostConditions: &ast.Conditions{
+						{
+							Kind: ast.ConditionKindPost,
+							Test: &ast.BinaryExpression{
+								Operation: ast.OperationEqual,
+								Left: &ast.IdentifierExpression{
+									Identifier: ast.Identifier{
+										Identifier: "x",
+										Pos:        ast.Position{Offset: 154, Line: 15, Column: 11},
+									},
+								},
+								Right: &ast.IntegerExpression{
+									Value: big.NewInt(2),
+									Base:  10,
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 159, Line: 15, Column: 16},
+										EndPos:   ast.Position{Offset: 159, Line: 15, Column: 16},
+									},
+								},
+							},
+						},
+					},
+					Execute: &ast.SpecialFunctionDeclaration{
+						Kind: common.DeclarationKindExecute,
+						FunctionDeclaration: &ast.FunctionDeclaration{
+							Access: ast.AccessNotSpecified,
+							Identifier: ast.Identifier{
+								Identifier: "execute",
+								Pos:        ast.Position{Offset: 179, Line: 18, Column: 6},
+							},
+							ParameterList:        &ast.ParameterList{},
+							ReturnTypeAnnotation: nil,
+							FunctionBlock: &ast.FunctionBlock{
+								Block: &ast.Block{
+									Statements: []ast.Statement{
+										&ast.AssignmentStatement{
+											Target: &ast.IdentifierExpression{
+												Identifier: ast.Identifier{
+													Identifier: "x",
+													Pos:        ast.Position{Offset: 200, Line: 19, Column: 11},
+												},
+											},
+											Transfer: &ast.Transfer{
+												Operation: ast.TransferOperationCopy,
+												Pos:       ast.Position{Offset: 202, Line: 19, Column: 13},
+											},
+											Value: &ast.BinaryExpression{
+												Operation: ast.OperationPlus,
+												Left: &ast.IntegerExpression{
+													Value: big.NewInt(1),
+													Base:  10,
+													Range: ast.Range{
+														StartPos: ast.Position{Offset: 204, Line: 19, Column: 15},
+														EndPos:   ast.Position{Offset: 204, Line: 19, Column: 15},
+													},
+												},
+												Right: &ast.IntegerExpression{
+													Value: big.NewInt(1),
+													Base:  10,
+													Range: ast.Range{
+														StartPos: ast.Position{Offset: 208, Line: 19, Column: 19},
+														EndPos:   ast.Position{Offset: 208, Line: 19, Column: 19},
+													},
+												},
+											},
+										},
+									},
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 187, Line: 18, Column: 14},
+										EndPos:   ast.Position{Offset: 213, Line: 20, Column: 3},
+									},
+								},
+								PreConditions:  nil,
+								PostConditions: nil,
+							},
+							StartPos: ast.Position{Offset: 179, Line: 18, Column: 6},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 5, Line: 2, Column: 4},
+						EndPos:   ast.Position{Offset: 219, Line: 21, Column: 4},
+					},
+				},
+			},
+			result.Declarations,
+		)
+	})
+}
+
+func TestParseFunctionAndBlock(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseDeclarations(`
+	    fun test() { return }
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.FunctionDeclaration{
+				Access: ast.AccessNotSpecified,
+				Identifier: ast.Identifier{
+					Identifier: "test",
+					Pos:        ast.Position{Offset: 10, Line: 2, Column: 9},
+				},
+				ParameterList: &ast.ParameterList{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
+						EndPos:   ast.Position{Offset: 15, Line: 2, Column: 14},
+					},
+				},
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Pos: ast.Position{Offset: 15, Line: 2, Column: 14},
+						},
+					},
+					StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
+				},
+				FunctionBlock: &ast.FunctionBlock{
+					Block: &ast.Block{
+						Statements: []ast.Statement{
+							&ast.ReturnStatement{
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 19, Line: 2, Column: 18},
+									EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
+								},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
+							EndPos:   ast.Position{Offset: 26, Line: 2, Column: 25},
+						},
+					},
+				},
+				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
+			},
+		},
+		result,
+	)
+}
+
+func TestParseFunctionParameterWithoutLabel(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseDeclarations(`
+	    fun test(x: Int) { }
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.FunctionDeclaration{
+				Access: ast.AccessNotSpecified,
+				Identifier: ast.Identifier{
+					Identifier: "test",
+					Pos:        ast.Position{Offset: 10, Line: 2, Column: 9},
+				},
+				ParameterList: &ast.ParameterList{
+					Parameters: []*ast.Parameter{
+						{
+							Label: "",
+							Identifier: ast.Identifier{
+								Identifier: "x",
+								Pos:        ast.Position{Offset: 15, Line: 2, Column: 14},
+							},
+							TypeAnnotation: &ast.TypeAnnotation{
+								IsResource: false,
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "Int",
+										Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
+									},
+								},
+								StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
+								EndPos:   ast.Position{Offset: 20, Line: 2, Column: 19},
+							},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
+						EndPos:   ast.Position{Offset: 21, Line: 2, Column: 20},
+					},
+				},
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Pos: ast.Position{Offset: 21, Line: 2, Column: 20},
+						},
+					},
+					StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
+				},
+				FunctionBlock: &ast.FunctionBlock{
+					Block: &ast.Block{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
+							EndPos:   ast.Position{Offset: 25, Line: 2, Column: 24},
+						},
+					},
+				},
+				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
+			},
+		},
+		result,
+	)
+}
+
+func TestParseFunctionParameterWithLabel(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseDeclarations(`
+	    fun test(x y: Int) { }
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.FunctionDeclaration{
+				Access: ast.AccessNotSpecified,
+				Identifier: ast.Identifier{
+					Identifier: "test",
+					Pos:        ast.Position{Offset: 10, Line: 2, Column: 9},
+				},
+				ParameterList: &ast.ParameterList{
+					Parameters: []*ast.Parameter{
+						{
+							Label: "x",
+							Identifier: ast.Identifier{
+								Identifier: "y",
+								Pos:        ast.Position{Offset: 17, Line: 2, Column: 16},
+							},
+							TypeAnnotation: &ast.TypeAnnotation{
+								IsResource: false,
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "Int",
+										Pos:        ast.Position{Offset: 20, Line: 2, Column: 19},
+									},
+								},
+								StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
+								EndPos:   ast.Position{Offset: 22, Line: 2, Column: 21},
+							},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 14, Line: 2, Column: 13},
+						EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
+					},
+				},
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Pos: ast.Position{Offset: 23, Line: 2, Column: 22},
+						},
+					},
+					StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
+				},
+				FunctionBlock: &ast.FunctionBlock{
+					Block: &ast.Block{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 25, Line: 2, Column: 24},
+							EndPos:   ast.Position{Offset: 27, Line: 2, Column: 26},
+						},
+					},
+				},
+				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
+			},
+		},
+		result,
+	)
+}
+
+func TestParseStructure(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+        struct Test {
+            pub(set) var foo: Int
+
+            init(foo: Int) {
+                self.foo = foo
+            }
+
+            pub fun getFoo(): Int {
+                return self.foo
+            }
+        }
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.CompositeDeclaration{
+				CompositeKind: common.CompositeKindStructure,
+				Identifier: ast.Identifier{
+					Identifier: "Test",
+					Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
+				},
+				Members: &ast.Members{
+					Declarations: []ast.Declaration{
+						&ast.FieldDeclaration{
+							Access:       ast.AccessPublicSettable,
+							VariableKind: ast.VariableKindVariable,
+							Identifier: ast.Identifier{
+								Identifier: "foo",
+								Pos:        ast.Position{Offset: 48, Line: 3, Column: 25},
+							},
+							TypeAnnotation: &ast.TypeAnnotation{
+								IsResource: false,
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "Int",
+										Pos:        ast.Position{Offset: 53, Line: 3, Column: 30},
+									},
+								},
+								StartPos: ast.Position{Offset: 53, Line: 3, Column: 30},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 35, Line: 3, Column: 12},
+								EndPos:   ast.Position{Offset: 55, Line: 3, Column: 32},
+							},
+						},
+						&ast.SpecialFunctionDeclaration{
+							Kind: common.DeclarationKindInitializer,
+							FunctionDeclaration: &ast.FunctionDeclaration{
+								Identifier: ast.Identifier{
+									Identifier: "init",
+									Pos:        ast.Position{Offset: 70, Line: 5, Column: 12},
+								},
+								ParameterList: &ast.ParameterList{
+									Parameters: []*ast.Parameter{
+										{
+											Label: "",
+											Identifier: ast.Identifier{
+												Identifier: "foo",
+												Pos:        ast.Position{Offset: 75, Line: 5, Column: 17},
+											},
+											TypeAnnotation: &ast.TypeAnnotation{
+												IsResource: false,
+												Type: &ast.NominalType{
+													Identifier: ast.Identifier{
+														Identifier: "Int",
+														Pos:        ast.Position{Offset: 80, Line: 5, Column: 22},
+													},
+												},
+												StartPos: ast.Position{Offset: 80, Line: 5, Column: 22},
+											},
+											Range: ast.Range{
+												StartPos: ast.Position{Offset: 75, Line: 5, Column: 17},
+												EndPos:   ast.Position{Offset: 82, Line: 5, Column: 24},
+											},
+										},
+									},
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 74, Line: 5, Column: 16},
+										EndPos:   ast.Position{Offset: 83, Line: 5, Column: 25},
+									},
+								},
+								FunctionBlock: &ast.FunctionBlock{
+									Block: &ast.Block{
+										Statements: []ast.Statement{
+											&ast.AssignmentStatement{
+												Target: &ast.MemberExpression{
+													Expression: &ast.IdentifierExpression{
+														Identifier: ast.Identifier{
+															Identifier: "self",
+															Pos:        ast.Position{Offset: 103, Line: 6, Column: 16},
+														},
+													},
+													AccessPos: ast.Position{Offset: 107, Line: 6, Column: 20},
+													Identifier: ast.Identifier{
+														Identifier: "foo",
+														Pos:        ast.Position{Offset: 108, Line: 6, Column: 21},
+													},
+												},
+												Transfer: &ast.Transfer{
+													Operation: ast.TransferOperationCopy,
+													Pos:       ast.Position{Offset: 112, Line: 6, Column: 25},
+												},
+												Value: &ast.IdentifierExpression{
+													Identifier: ast.Identifier{
+														Identifier: "foo",
+														Pos:        ast.Position{Offset: 114, Line: 6, Column: 27},
+													},
+												},
+											},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 85, Line: 5, Column: 27},
+											EndPos:   ast.Position{Offset: 130, Line: 7, Column: 12},
+										},
+									},
+								},
+								StartPos: ast.Position{Offset: 70, Line: 5, Column: 12},
+							},
+						},
+						&ast.FunctionDeclaration{
+							Access: ast.AccessPublic,
+							Identifier: ast.Identifier{
+								Identifier: "getFoo",
+								Pos:        ast.Position{Offset: 153, Line: 9, Column: 20},
+							},
+							ParameterList: &ast.ParameterList{
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 159, Line: 9, Column: 26},
+									EndPos:   ast.Position{Offset: 160, Line: 9, Column: 27},
+								},
+							},
+							ReturnTypeAnnotation: &ast.TypeAnnotation{
+								IsResource: false,
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "Int",
+										Pos:        ast.Position{Offset: 163, Line: 9, Column: 30},
+									},
+								},
+								StartPos: ast.Position{Offset: 163, Line: 9, Column: 30},
+							},
+							FunctionBlock: &ast.FunctionBlock{
+								Block: &ast.Block{
+									Statements: []ast.Statement{
+										&ast.ReturnStatement{
+											Expression: &ast.MemberExpression{
+												Expression: &ast.IdentifierExpression{
+													Identifier: ast.Identifier{
+														Identifier: "self",
+														Pos:        ast.Position{Offset: 192, Line: 10, Column: 23},
+													},
+												},
+												AccessPos: ast.Position{Offset: 196, Line: 10, Column: 27},
+												Identifier: ast.Identifier{
+													Identifier: "foo",
+													Pos:        ast.Position{Offset: 197, Line: 10, Column: 28},
+												},
+											},
+											Range: ast.Range{
+												StartPos: ast.Position{Offset: 185, Line: 10, Column: 16},
+												EndPos:   ast.Position{Offset: 199, Line: 10, Column: 30},
+											},
+										},
+									},
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 167, Line: 9, Column: 34},
+										EndPos:   ast.Position{Offset: 213, Line: 11, Column: 12},
+									},
+								},
+							},
+							StartPos: ast.Position{Offset: 145, Line: 9, Column: 12},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   ast.Position{Offset: 223, Line: 12, Column: 8},
+				},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+func TestParseStructureWithConformances(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+        struct Test: Foo, Bar {}
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.CompositeDeclaration{
+				CompositeKind: common.CompositeKindStructure,
+				Identifier: ast.Identifier{
+					Identifier: "Test",
+					Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
+				},
+				Conformances: []*ast.NominalType{
+					{
+						Identifier: ast.Identifier{
+							Identifier: "Foo",
+							Pos:        ast.Position{Offset: 22, Line: 2, Column: 21},
+						},
+					},
+					{
+						Identifier: ast.Identifier{
+							Identifier: "Bar",
+							Pos:        ast.Position{Offset: 27, Line: 2, Column: 26},
+						},
+					},
+				},
+				Members: &ast.Members{},
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   ast.Position{Offset: 32, Line: 2, Column: 31},
+				},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+func TestParsePreAndPostConditions(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+        fun test(n: Int) {
+            pre {
+                n != 0
+                n > 0
+            }
+            post {
+                result == 0
+            }
+            return 0
+        }
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.FunctionDeclaration{
+				Access: ast.AccessNotSpecified,
+				Identifier: ast.Identifier{
+					Identifier: "test",
+					Pos:        ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+				ParameterList: &ast.ParameterList{
+					Parameters: []*ast.Parameter{
+						{
+							Label: "",
+							Identifier: ast.Identifier{
+								Identifier: "n",
+								Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
+							},
+							TypeAnnotation: &ast.TypeAnnotation{
+								IsResource: false,
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "Int",
+										Pos:        ast.Position{Offset: 21, Line: 2, Column: 20},
+									},
+								},
+								StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
+								EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
+							},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
+						EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
+					},
+				},
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "",
+							Pos:        ast.Position{Offset: 24, Line: 2, Column: 23},
+						},
+					},
+					StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+				},
+				FunctionBlock: &ast.FunctionBlock{
+					Block: &ast.Block{
+						Statements: []ast.Statement{
+							&ast.ReturnStatement{
+								Expression: &ast.IntegerExpression{
+									Value: new(big.Int),
+									Base:  10,
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 185, Line: 10, Column: 19},
+										EndPos:   ast.Position{Offset: 185, Line: 10, Column: 19},
+									},
+								},
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 178, Line: 10, Column: 12},
+									EndPos:   ast.Position{Offset: 185, Line: 10, Column: 19},
+								},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 26, Line: 2, Column: 25},
+							EndPos:   ast.Position{Offset: 195, Line: 11, Column: 8},
+						},
+					},
+					PreConditions: &ast.Conditions{
+						{
+							Kind: ast.ConditionKindPre,
+							Test: &ast.BinaryExpression{
+								Operation: ast.OperationNotEqual,
+								Left: &ast.IdentifierExpression{
+									Identifier: ast.Identifier{
+										Identifier: "n",
+										Pos:        ast.Position{Offset: 62, Line: 4, Column: 16},
+									},
+								},
+								Right: &ast.IntegerExpression{
+									Value: new(big.Int),
+									Base:  10,
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 67, Line: 4, Column: 21},
+										EndPos:   ast.Position{Offset: 67, Line: 4, Column: 21},
+									},
+								},
+							},
+						},
+						{
+							Kind: ast.ConditionKindPre,
+							Test: &ast.BinaryExpression{
+								Operation: ast.OperationGreater,
+								Left: &ast.IdentifierExpression{
+									Identifier: ast.Identifier{
+										Identifier: "n",
+										Pos:        ast.Position{Offset: 85, Line: 5, Column: 16},
+									},
+								},
+								Right: &ast.IntegerExpression{
+									Value: new(big.Int),
+									Base:  10,
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 89, Line: 5, Column: 20},
+										EndPos:   ast.Position{Offset: 89, Line: 5, Column: 20},
+									},
+								},
+							},
+						},
+					},
+					PostConditions: &ast.Conditions{
+						{
+							Kind: ast.ConditionKindPost,
+							Test: &ast.BinaryExpression{
+								Operation: ast.OperationEqual,
+								Left: &ast.IdentifierExpression{
+									Identifier: ast.Identifier{
+										Identifier: "result",
+										Pos:        ast.Position{Offset: 140, Line: 8, Column: 16},
+									},
+								},
+								Right: &ast.IntegerExpression{
+									Value: new(big.Int),
+									Base:  10,
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 150, Line: 8, Column: 26},
+										EndPos:   ast.Position{Offset: 150, Line: 8, Column: 26},
+									},
+								},
+							},
+						},
+					},
+				},
+				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+func TestParseConditionMessage(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+        fun test(n: Int) {
+            pre {
+                n >= 0: "n must be positive"
+            }
+            return n
+        }
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.FunctionDeclaration{
+				Access: ast.AccessNotSpecified,
+				Identifier: ast.Identifier{
+					Identifier: "test",
+					Pos:        ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+				ParameterList: &ast.ParameterList{
+					Parameters: []*ast.Parameter{
+						{
+							Label: "",
+							Identifier: ast.Identifier{Identifier: "n",
+								Pos: ast.Position{Offset: 18, Line: 2, Column: 17},
+							},
+							TypeAnnotation: &ast.TypeAnnotation{
+								IsResource: false,
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "Int",
+										Pos:        ast.Position{Offset: 21, Line: 2, Column: 20},
+									},
+								},
+								StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
+								EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
+							},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
+						EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
+					},
+				},
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "",
+							Pos:        ast.Position{Offset: 24, Line: 2, Column: 23},
+						},
+					},
+					StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+				},
+				FunctionBlock: &ast.FunctionBlock{
+					Block: &ast.Block{
+						Statements: []ast.Statement{
+							&ast.ReturnStatement{
+								Expression: &ast.IdentifierExpression{
+									Identifier: ast.Identifier{
+										Identifier: "n",
+										Pos:        ast.Position{Offset: 124, Line: 6, Column: 19},
+									},
+								},
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 117, Line: 6, Column: 12},
+									EndPos:   ast.Position{Offset: 124, Line: 6, Column: 19},
+								},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 26, Line: 2, Column: 25},
+							EndPos:   ast.Position{Offset: 134, Line: 7, Column: 8},
+						},
+					},
+					PreConditions: &ast.Conditions{
+						{
+							Kind: ast.ConditionKindPre,
+							Test: &ast.BinaryExpression{
+								Operation: ast.OperationGreaterEqual,
+								Left: &ast.IdentifierExpression{
+									Identifier: ast.Identifier{
+										Identifier: "n",
+										Pos:        ast.Position{Offset: 62, Line: 4, Column: 16},
+									},
+								},
+								Right: &ast.IntegerExpression{
+									Value: new(big.Int),
+									Base:  10,
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 67, Line: 4, Column: 21},
+										EndPos:   ast.Position{Offset: 67, Line: 4, Column: 21},
+									},
+								},
+							},
+							Message: &ast.StringExpression{
+								Value: "n must be positive",
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 70, Line: 4, Column: 24},
+									EndPos:   ast.Position{Offset: 89, Line: 4, Column: 43},
+								},
+							},
+						},
+					},
+					PostConditions: nil,
+				},
+				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+func TestParseInterface(t *testing.T) {
+
+	t.Parallel()
+
+	for _, kind := range common.CompositeKindsWithFieldsAndFunctions {
+		actual, err := ParseProgram(fmt.Sprintf(`
+            %s interface Test {
+                foo: Int
+
+                init(foo: Int)
+
+                fun getFoo(): Int
+            }
+	    `, kind.Keyword()))
+
+		require.NoError(t, err)
+
+		// only compare AST for one kind: structs
+
+		if kind != common.CompositeKindStructure {
+			continue
+		}
+
+		test := &ast.InterfaceDeclaration{
+			CompositeKind: common.CompositeKindStructure,
+			Identifier: ast.Identifier{
+				Identifier: "Test",
+				Pos:        ast.Position{Offset: 30, Line: 2, Column: 29},
+			},
+			Members: &ast.Members{
+				Declarations: []ast.Declaration{
+					&ast.FieldDeclaration{
+						Access:       ast.AccessNotSpecified,
+						VariableKind: ast.VariableKindNotSpecified,
+						Identifier: ast.Identifier{
+							Identifier: "foo",
+							Pos:        ast.Position{Offset: 53, Line: 3, Column: 16},
+						},
+						TypeAnnotation: &ast.TypeAnnotation{
+							IsResource: false,
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "Int",
+									Pos:        ast.Position{Offset: 58, Line: 3, Column: 21},
+								},
+							},
+							StartPos: ast.Position{Offset: 58, Line: 3, Column: 21},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 53, Line: 3, Column: 16},
+							EndPos:   ast.Position{Offset: 60, Line: 3, Column: 23},
+						},
+					},
+					&ast.SpecialFunctionDeclaration{
+						Kind: common.DeclarationKindInitializer,
+						FunctionDeclaration: &ast.FunctionDeclaration{
+							Identifier: ast.Identifier{
+								Identifier: "init",
+								Pos:        ast.Position{Offset: 79, Line: 5, Column: 16},
+							},
+							ParameterList: &ast.ParameterList{
+								Parameters: []*ast.Parameter{
+									{
+										Label: "",
+										Identifier: ast.Identifier{
+											Identifier: "foo",
+											Pos:        ast.Position{Offset: 84, Line: 5, Column: 21},
+										},
+										TypeAnnotation: &ast.TypeAnnotation{
+											IsResource: false,
+											Type: &ast.NominalType{
+												Identifier: ast.Identifier{
+													Identifier: "Int",
+													Pos:        ast.Position{Offset: 89, Line: 5, Column: 26},
+												},
+											},
+											StartPos: ast.Position{Offset: 89, Line: 5, Column: 26},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 84, Line: 5, Column: 21},
+											EndPos:   ast.Position{Offset: 91, Line: 5, Column: 28},
+										},
+									},
+								},
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 83, Line: 5, Column: 20},
+									EndPos:   ast.Position{Offset: 92, Line: 5, Column: 29},
+								},
+							},
+							FunctionBlock: nil,
+							StartPos:      ast.Position{Offset: 79, Line: 5, Column: 16},
+						},
+					},
+					&ast.FunctionDeclaration{
+						Access: ast.AccessNotSpecified,
+						Identifier: ast.Identifier{
+							Identifier: "getFoo",
+							Pos:        ast.Position{Offset: 115, Line: 7, Column: 20},
+						},
+						ParameterList: &ast.ParameterList{
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 121, Line: 7, Column: 26},
+								EndPos:   ast.Position{Offset: 122, Line: 7, Column: 27},
+							},
+						},
+						ReturnTypeAnnotation: &ast.TypeAnnotation{
+							IsResource: false,
+							Type: &ast.NominalType{
+								Identifier: ast.Identifier{
+									Identifier: "Int",
+									Pos:        ast.Position{Offset: 125, Line: 7, Column: 30},
+								},
+							},
+							StartPos: ast.Position{Offset: 125, Line: 7, Column: 30},
+						},
+						FunctionBlock: nil,
+						StartPos:      ast.Position{Offset: 111, Line: 7, Column: 16},
+					},
+				},
+			},
+			Range: ast.Range{
+				StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
+				EndPos:   ast.Position{Offset: 141, Line: 8, Column: 12},
+			},
+		}
+
+		utils.AssertEqualWithDiff(t,
+			[]ast.Declaration{test},
+			actual.Declarations,
+		)
+	}
+}
+
+func TestPragmaNoArguments(t *testing.T) {
+
+	t.Parallel()
+
+	result, err := ParseProgram(`#pedantic`)
+	require.NoError(t, err)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.PragmaDeclaration{
+				Expression: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "pedantic",
+						Pos:        ast.Position{Offset: 1, Line: 1, Column: 1},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+					EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
+				},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+func TestPragmaArguments(t *testing.T) {
+
+	t.Parallel()
+
+	actual, err := ParseProgram(`#version("1.0")`)
+	require.NoError(t, err)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.PragmaDeclaration{
+				Expression: &ast.InvocationExpression{
+					InvokedExpression: &ast.IdentifierExpression{
+						Identifier: ast.Identifier{
+							Identifier: "version",
+							Pos:        ast.Position{Offset: 1, Line: 1, Column: 1},
+						},
+					},
+					Arguments: ast.Arguments{
+						{
+							Expression: &ast.StringExpression{
+								Value: "1.0",
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 9, Line: 1, Column: 9},
+									EndPos:   ast.Position{Offset: 13, Line: 1, Column: 13},
+								},
+							},
+						},
+					},
+					EndPos: ast.Position{Offset: 14, Line: 1, Column: 14},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
+					EndPos:   ast.Position{Offset: 14, Line: 1, Column: 14},
+				},
+			},
+		},
+		actual.Declarations,
+	)
+}
+
+func TestParseImportWithString(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+        import "test.cdc"
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.ImportDeclaration{
+				Identifiers: nil,
+				Location:    ast.StringLocation("test.cdc"),
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   ast.Position{Offset: 25, Line: 2, Column: 24},
+				},
+				LocationPos: ast.Position{Offset: 16, Line: 2, Column: 15},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+func TestParseImportWithAddress(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+        import 0x1234
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.ImportDeclaration{
+				Identifiers: nil,
+				Location:    ast.AddressLocation{18, 52},
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   ast.Position{Offset: 21, Line: 2, Column: 20},
+				},
+				LocationPos: ast.Position{Offset: 16, Line: 2, Column: 15},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+func TestParseImportWithIdentifiers(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+        import A, b from 0x0
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.ImportDeclaration{
+				Identifiers: []ast.Identifier{
+					{
+						Identifier: "A",
+						Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
+					},
+					{
+						Identifier: "b",
+						Pos:        ast.Position{Offset: 19, Line: 2, Column: 18},
+					},
+				},
+				Location: ast.AddressLocation{0},
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   ast.Position{Offset: 28, Line: 2, Column: 27},
+				},
+				LocationPos: ast.Position{Offset: 26, Line: 2, Column: 25},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+func TestParseFieldWithFromIdentifier(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+      struct S {
+          let from: String
+      }
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.CompositeDeclaration{
+				Access:        ast.AccessNotSpecified,
+				CompositeKind: common.CompositeKindStructure,
+				Identifier: ast.Identifier{
+					Identifier: "S",
+					Pos:        ast.Position{Offset: 14, Line: 2, Column: 13},
+				},
+				Members: &ast.Members{
+					Declarations: []ast.Declaration{
+						&ast.FieldDeclaration{
+							Access:       ast.AccessNotSpecified,
+							VariableKind: ast.VariableKindConstant,
+							Identifier: ast.Identifier{
+								Identifier: "from",
+								Pos:        ast.Position{Offset: 32, Line: 3, Column: 14},
+							},
+							TypeAnnotation: &ast.TypeAnnotation{
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "String",
+										Pos:        ast.Position{Offset: 38, Line: 3, Column: 20},
+									},
+								},
+								StartPos: ast.Position{Offset: 38, Line: 3, Column: 20},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 28, Line: 3, Column: 10},
+								EndPos:   ast.Position{Offset: 43, Line: 3, Column: 25},
+							},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 7, Line: 2, Column: 6},
+					EndPos:   ast.Position{Offset: 51, Line: 4, Column: 6},
+				},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+func TestParseFunctionWithFromIdentifier(t *testing.T) {
+
+	t.Parallel()
+
+	_, errs := ParseProgram(`
+        fun send(from: String, to: String) {}
+	`)
+	require.Empty(t, errs)
+}
+
+func TestParseImportWithFromIdentifier(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+        import from from 0x0
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.ImportDeclaration{
+				Identifiers: []ast.Identifier{
+					{
+						Identifier: "from",
+						Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
+					},
+				},
+				Location: ast.AddressLocation{0},
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   ast.Position{Offset: 28, Line: 2, Column: 27},
+				},
+				LocationPos: ast.Position{Offset: 26, Line: 2, Column: 25},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+func TestParseSemicolonsBetweenDeclarations(t *testing.T) {
+
+	t.Parallel()
+
+	_, errs := ParseProgram(`
+        import from from 0x0;
+        fun foo() {};
+	`)
+	require.Empty(t, errs)
+}
+
+func TestParseResource(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+        resource Test {}
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.CompositeDeclaration{
+				CompositeKind: common.CompositeKindResource,
+				Identifier: ast.Identifier{
+					Identifier: "Test",
+					Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
+				},
+				Members: &ast.Members{},
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
+				},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+func TestParseEventDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+        event Transfer(to: Address, from: Address)
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.CompositeDeclaration{
+				CompositeKind: common.CompositeKindEvent,
+				Identifier: ast.Identifier{
+					Identifier: "Transfer",
+					Pos:        ast.Position{Offset: 15, Line: 2, Column: 14},
+				},
+				Members: &ast.Members{
+					Declarations: []ast.Declaration{
+						&ast.SpecialFunctionDeclaration{
+							Kind: common.DeclarationKindInitializer,
+							FunctionDeclaration: &ast.FunctionDeclaration{
+								ParameterList: &ast.ParameterList{
+									Parameters: []*ast.Parameter{
+										{
+											Label: "",
+											Identifier: ast.Identifier{
+												Identifier: "to",
+												Pos:        ast.Position{Offset: 24, Line: 2, Column: 23},
+											},
+											TypeAnnotation: &ast.TypeAnnotation{
+												IsResource: false,
+												Type: &ast.NominalType{
+													Identifier: ast.Identifier{
+														Identifier: "Address",
+														Pos:        ast.Position{Offset: 28, Line: 2, Column: 27},
+													},
+												},
+												StartPos: ast.Position{Offset: 28, Line: 2, Column: 27},
+											},
+											Range: ast.Range{
+												StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+												EndPos:   ast.Position{Offset: 34, Line: 2, Column: 33},
+											},
+										},
+										{
+											Label: "",
+											Identifier: ast.Identifier{
+												Identifier: "from",
+												Pos:        ast.Position{Offset: 37, Line: 2, Column: 36},
+											},
+											TypeAnnotation: &ast.TypeAnnotation{
+												IsResource: false,
+												Type: &ast.NominalType{
+													Identifier: ast.Identifier{
+														Identifier: "Address",
+														Pos:        ast.Position{Offset: 43, Line: 2, Column: 42},
+													},
+												},
+												StartPos: ast.Position{Offset: 43, Line: 2, Column: 42},
+											},
+											Range: ast.Range{
+												StartPos: ast.Position{Offset: 37, Line: 2, Column: 36},
+												EndPos:   ast.Position{Offset: 49, Line: 2, Column: 48},
+											},
+										},
+									},
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
+										EndPos:   ast.Position{Offset: 50, Line: 2, Column: 49},
+									},
+								},
+								StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
+							},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   ast.Position{Offset: 50, Line: 2, Column: 49},
+				},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+func TestParseEventEmitStatement(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+      fun test() {
+        emit Transfer(to: 1, from: 2)
+      }
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.FunctionDeclaration{
+				Access: ast.AccessNotSpecified,
+				Identifier: ast.Identifier{
+					Identifier: "test",
+					Pos:        ast.Position{Offset: 11, Line: 2, Column: 10},
+				},
+				ParameterList: &ast.ParameterList{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
+						EndPos:   ast.Position{Offset: 16, Line: 2, Column: 15},
+					},
+				},
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "",
+							Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
+						},
+					},
+					StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
+				},
+				FunctionBlock: &ast.FunctionBlock{
+					Block: &ast.Block{
+						Statements: []ast.Statement{
+							&ast.EmitStatement{
+								InvocationExpression: &ast.InvocationExpression{
+									InvokedExpression: &ast.IdentifierExpression{
+										Identifier: ast.Identifier{
+											Identifier: "Transfer",
+											Pos:        ast.Position{Offset: 33, Line: 3, Column: 13},
+										},
+									},
+									Arguments: ast.Arguments{
+										{
+											Label:         "to",
+											LabelStartPos: &ast.Position{Offset: 42, Line: 3, Column: 22},
+											LabelEndPos:   &ast.Position{Offset: 43, Line: 3, Column: 23},
+											Expression: &ast.IntegerExpression{
+												Value: big.NewInt(1),
+												Base:  10,
+												Range: ast.Range{
+													StartPos: ast.Position{Offset: 46, Line: 3, Column: 26},
+													EndPos:   ast.Position{Offset: 46, Line: 3, Column: 26},
+												},
+											},
+										},
+										{
+											Label:         "from",
+											LabelStartPos: &ast.Position{Offset: 49, Line: 3, Column: 29},
+											LabelEndPos:   &ast.Position{Offset: 52, Line: 3, Column: 32},
+											Expression: &ast.IntegerExpression{
+												Value: big.NewInt(2),
+												Base:  10,
+												Range: ast.Range{
+													StartPos: ast.Position{Offset: 55, Line: 3, Column: 35},
+													EndPos:   ast.Position{Offset: 55, Line: 3, Column: 35},
+												},
+											},
+										},
+									},
+									EndPos: ast.Position{Offset: 56, Line: 3, Column: 36},
+								},
+								StartPos: ast.Position{Offset: 28, Line: 3, Column: 8},
+							},
+						},
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
+							EndPos:   ast.Position{Offset: 64, Line: 4, Column: 6},
+						},
+					},
+				},
+				StartPos: ast.Position{Offset: 7, Line: 2, Column: 6},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+func TestParseResourceReturnType(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+        fun test(): @X {}
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.FunctionDeclaration{
+				Identifier: ast.Identifier{
+					Identifier: "test",
+					Pos:        ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+				ParameterList: &ast.ParameterList{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
+						EndPos:   ast.Position{Offset: 18, Line: 2, Column: 17},
+					},
+				},
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					IsResource: true,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "X",
+							Pos:        ast.Position{Offset: 22, Line: 2, Column: 21},
+						},
+					},
+					StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
+				},
+				FunctionBlock: &ast.FunctionBlock{
+					Block: &ast.Block{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+							EndPos:   ast.Position{Offset: 25, Line: 2, Column: 24},
+						},
+					},
+				},
+				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+func TestParseMovingVariableDeclaration(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+        let x <- y
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.VariableDeclaration{
+				IsConstant: true,
+				Identifier: ast.Identifier{
+					Identifier: "x",
+					Pos:        ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+				Value: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "y",
+						Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
+					},
+				},
+				Transfer: &ast.Transfer{
+					Operation: ast.TransferOperationMove,
+					Pos:       ast.Position{Offset: 15, Line: 2, Column: 14},
+				},
+				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+func TestParseResourceParameterType(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+        fun test(x: @X) {}
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.FunctionDeclaration{
+				Identifier: ast.Identifier{
+					Identifier: "test",
+					Pos:        ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					IsResource: false,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "",
+							Pos:        ast.Position{Offset: 23, Line: 2, Column: 22},
+						},
+					},
+					StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
+				},
+				ParameterList: &ast.ParameterList{
+					Parameters: []*ast.Parameter{
+						{
+							Label: "",
+							Identifier: ast.Identifier{
+								Identifier: "x",
+								Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
+							},
+							TypeAnnotation: &ast.TypeAnnotation{
+								IsResource: true,
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "X",
+										Pos:        ast.Position{Offset: 22, Line: 2, Column: 21},
+									},
+								},
+								StartPos: ast.Position{Offset: 21, Line: 2, Column: 20},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 18, Line: 2, Column: 17},
+								EndPos:   ast.Position{Offset: 22, Line: 2, Column: 21},
+							},
+						},
+					},
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 17, Line: 2, Column: 16},
+						EndPos:   ast.Position{Offset: 23, Line: 2, Column: 22},
+					},
+				},
+				FunctionBlock: &ast.FunctionBlock{
+					Block: &ast.Block{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 25, Line: 2, Column: 24},
+							EndPos:   ast.Position{Offset: 26, Line: 2, Column: 25},
+						},
+					},
+				},
+				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+func TestParseMovingVariableDeclarationWithTypeAnnotation(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+        let x: @R <- y
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.VariableDeclaration{
+				IsConstant: true,
+				Identifier: ast.Identifier{
+					Identifier: "x",
+					Pos:        ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+				TypeAnnotation: &ast.TypeAnnotation{
+					IsResource: true,
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Identifier: "R",
+							Pos:        ast.Position{Offset: 17, Line: 2, Column: 16},
+						},
+					},
+					StartPos: ast.Position{Offset: 16, Line: 2, Column: 15},
+				},
+				Value: &ast.IdentifierExpression{
+					Identifier: ast.Identifier{
+						Identifier: "y",
+						Pos:        ast.Position{Offset: 22, Line: 2, Column: 21},
+					},
+				},
+				Transfer: &ast.Transfer{
+					Operation: ast.TransferOperationMove,
+					Pos:       ast.Position{Offset: 19, Line: 2, Column: 18},
+				},
+				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+func TestParseFieldDeclarationWithMoveTypeAnnotation(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+        struct X { x: @R }
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.CompositeDeclaration{
+				CompositeKind: common.CompositeKindStructure,
+				Identifier: ast.Identifier{
+					Identifier: "X",
+					Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
+				},
+				Members: &ast.Members{
+					Declarations: []ast.Declaration{
+						&ast.FieldDeclaration{
+							Access:       ast.AccessNotSpecified,
+							VariableKind: ast.VariableKindNotSpecified,
+							Identifier: ast.Identifier{
+								Identifier: "x",
+								Pos:        ast.Position{Offset: 20, Line: 2, Column: 19},
+							},
+							TypeAnnotation: &ast.TypeAnnotation{
+								IsResource: true,
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "R",
+										Pos:        ast.Position{Offset: 24, Line: 2, Column: 23},
+									},
+								},
+								StartPos: ast.Position{Offset: 23, Line: 2, Column: 22},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 20, Line: 2, Column: 19},
+								EndPos:   ast.Position{Offset: 24, Line: 2, Column: 23},
+							},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   ast.Position{Offset: 26, Line: 2, Column: 25},
+				},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+func TestParseDestructor(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+        resource Test {
+            destroy() {}
+        }
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.CompositeDeclaration{
+				CompositeKind: common.CompositeKindResource,
+				Identifier: ast.Identifier{
+					Identifier: "Test",
+					Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
+				},
+				Members: &ast.Members{
+					Declarations: []ast.Declaration{
+						&ast.SpecialFunctionDeclaration{
+							Kind: common.DeclarationKindDestructor,
+							FunctionDeclaration: &ast.FunctionDeclaration{
+								Identifier: ast.Identifier{
+									Identifier: "destroy",
+									Pos:        ast.Position{Offset: 37, Line: 3, Column: 12},
+								},
+								ParameterList: &ast.ParameterList{
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 44, Line: 3, Column: 19},
+										EndPos:   ast.Position{Offset: 45, Line: 3, Column: 20},
+									},
+								},
+								FunctionBlock: &ast.FunctionBlock{
+									Block: &ast.Block{
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 47, Line: 3, Column: 22},
+											EndPos:   ast.Position{Offset: 48, Line: 3, Column: 23},
+										},
+									},
+								},
+								StartPos: ast.Position{Offset: 37, Line: 3, Column: 12},
+							},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   ast.Position{Offset: 58, Line: 4, Column: 8},
+				},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+        struct Kitty { let id: Int ; init(id: Int) { self.id = id } }
+    `)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.CompositeDeclaration{
+				CompositeKind: common.CompositeKindStructure,
+				Identifier: ast.Identifier{
+					Identifier: "Kitty",
+					Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
+				},
+				Members: &ast.Members{
+					Declarations: []ast.Declaration{
+						&ast.FieldDeclaration{
+							VariableKind: ast.VariableKindConstant,
+							Identifier: ast.Identifier{
+								Identifier: "id",
+								Pos:        ast.Position{Offset: 28, Line: 2, Column: 27},
+							},
+							TypeAnnotation: &ast.TypeAnnotation{
+								Type: &ast.NominalType{
+									Identifier: ast.Identifier{
+										Identifier: "Int",
+										Pos:        ast.Position{Offset: 32, Line: 2, Column: 31},
+									},
+								},
+								StartPos: ast.Position{Offset: 32, Line: 2, Column: 31},
+							},
+							Range: ast.Range{
+								StartPos: ast.Position{Offset: 24, Line: 2, Column: 23},
+								EndPos:   ast.Position{Offset: 34, Line: 2, Column: 33},
+							},
+						},
+						&ast.SpecialFunctionDeclaration{
+							Kind: common.DeclarationKindInitializer,
+							FunctionDeclaration: &ast.FunctionDeclaration{
+								Identifier: ast.Identifier{
+									Identifier: "init",
+									Pos:        ast.Position{Offset: 38, Line: 2, Column: 37},
+								},
+								ParameterList: &ast.ParameterList{
+									Parameters: []*ast.Parameter{
+										{
+											Identifier: ast.Identifier{
+												Identifier: "id",
+												Pos:        ast.Position{Offset: 43, Line: 2, Column: 42},
+											},
+											TypeAnnotation: &ast.TypeAnnotation{
+												Type: &ast.NominalType{
+													Identifier: ast.Identifier{
+														Identifier: "Int",
+														Pos:        ast.Position{Offset: 47, Line: 2, Column: 46},
+													},
+												},
+												StartPos: ast.Position{Offset: 47, Line: 2, Column: 46},
+											},
+											Range: ast.Range{
+												StartPos: ast.Position{Offset: 43, Line: 2, Column: 42},
+												EndPos:   ast.Position{Offset: 49, Line: 2, Column: 48},
+											},
+										},
+									},
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 42, Line: 2, Column: 41},
+										EndPos:   ast.Position{Offset: 50, Line: 2, Column: 49},
+									},
+								},
+								FunctionBlock: &ast.FunctionBlock{
+									Block: &ast.Block{
+										Statements: []ast.Statement{
+											&ast.AssignmentStatement{
+												Target: &ast.MemberExpression{
+													Expression: &ast.IdentifierExpression{
+														Identifier: ast.Identifier{
+															Identifier: "self",
+															Pos:        ast.Position{Offset: 54, Line: 2, Column: 53},
+														},
+													},
+													AccessPos: ast.Position{Offset: 58, Line: 2, Column: 57},
+													Identifier: ast.Identifier{
+														Identifier: "id",
+														Pos:        ast.Position{Offset: 59, Line: 2, Column: 58},
+													},
+												},
+												Transfer: &ast.Transfer{
+													Operation: ast.TransferOperationCopy,
+													Pos:       ast.Position{Offset: 62, Line: 2, Column: 61},
+												},
+												Value: &ast.IdentifierExpression{
+													Identifier: ast.Identifier{
+														Identifier: "id",
+														Pos:        ast.Position{Offset: 64, Line: 2, Column: 63},
+													},
+												},
+											},
+										},
+										Range: ast.Range{
+											StartPos: ast.Position{Offset: 52, Line: 2, Column: 51},
+											EndPos:   ast.Position{Offset: 67, Line: 2, Column: 66},
+										},
+									},
+								},
+								StartPos: ast.Position{Offset: 38, Line: 2, Column: 37},
+							},
+						},
+					},
+				},
+				Range: ast.Range{
+					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
+					EndPos:   ast.Position{Offset: 69, Line: 2, Column: 68},
+				},
+			},
+		},
+		result.Declarations,
+	)
+}
+
+// TODO:
+//func TestParseAccessModifiers(t *testing.T) {
+//
+//	t.Parallel()
+//
+//	type declaration struct {
+//		name, code string
+//	}
+//
+//	declarations := []declaration{
+//		{"variable", "%s var test = 1"},
+//		{"constant", "%s let test = 1"},
+//		{"function", "%s fun test() {}"},
+//	}
+//
+//	for _, compositeKind := range common.AllCompositeKinds {
+//
+//		for _, isInterface := range []bool{true, false} {
+//
+//			if !compositeKind.SupportsInterfaces() && isInterface {
+//				continue
+//			}
+//
+//			interfaceKeyword := ""
+//			if isInterface {
+//				interfaceKeyword = "interface"
+//			}
+//
+//			formatName := func(name string) string {
+//				return fmt.Sprintf(
+//					"%s %s %s",
+//					compositeKind.Keyword(),
+//					interfaceKeyword,
+//					name,
+//				)
+//			}
+//
+//			formatCode := func(format string) string {
+//				return fmt.Sprintf(format, compositeKind.Keyword(), interfaceKeyword)
+//			}
+//
+//			if compositeKind == common.CompositeKindEvent {
+//				declarations = append(declarations,
+//					declaration{
+//						formatName("itself"),
+//						formatCode("%%s %s %s Test()"),
+//					},
+//				)
+//			} else {
+//				declarations = append(declarations,
+//					declaration{
+//						formatName("itself"),
+//						formatCode("%%s %s %s Test {}"),
+//					},
+//					declaration{
+//						formatName("field"),
+//						formatCode("%s %s Test { %%s let test: Int ; init() { self.test = 1 } }"),
+//					},
+//					declaration{
+//						formatName("function"),
+//						formatCode("%s %s Test { %%s fun test() {} }"),
+//					},
+//				)
+//			}
+//		}
+//	}
+//
+//	for _, declaration := range declarations {
+//		for _, access := range ast.BasicAccesses {
+//			testName := fmt.Sprintf("%s/%s", declaration.name, access)
+//			t.Run(testName, func(t *testing.T) {
+//				program := fmt.Sprintf(declaration.code, access.Keyword())
+//				testParse(t, program, nil, nil)
+//			})
+//		}
+//	}
+//}
+
+func TestParsePreconditionWithUnaryNegation(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseProgram(`
+	  fun test() {
+          pre {
+              true: "one"
+              !false: "two"
+          }
+      }
+	`)
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		[]ast.Declaration{
+			&ast.FunctionDeclaration{
+				Access: ast.AccessNotSpecified,
+				Identifier: ast.Identifier{
+					Identifier: "test",
+					Pos:        ast.Position{Offset: 8, Line: 2, Column: 7},
+				},
+				ParameterList: &ast.ParameterList{
+					Range: ast.Range{
+						StartPos: ast.Position{Offset: 12, Line: 2, Column: 11},
+						EndPos:   ast.Position{Offset: 13, Line: 2, Column: 12},
+					},
+				},
+				ReturnTypeAnnotation: &ast.TypeAnnotation{
+					Type: &ast.NominalType{
+						Identifier: ast.Identifier{
+							Pos: ast.Position{Offset: 13, Line: 2, Column: 12},
+						},
+					},
+					StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
+				},
+				FunctionBlock: &ast.FunctionBlock{
+					Block: &ast.Block{
+						Range: ast.Range{
+							StartPos: ast.Position{Offset: 15, Line: 2, Column: 14},
+							EndPos:   ast.Position{Offset: 105, Line: 7, Column: 6},
+						},
+					},
+					PreConditions: &ast.Conditions{
+						{
+							Kind: ast.ConditionKindPre,
+							Test: &ast.BoolExpression{
+								Value: true,
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 47, Line: 4, Column: 14},
+									EndPos:   ast.Position{Offset: 50, Line: 4, Column: 17},
+								},
+							},
+							Message: &ast.StringExpression{
+								Value: "one",
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 53, Line: 4, Column: 20},
+									EndPos:   ast.Position{Offset: 57, Line: 4, Column: 24},
+								},
+							},
+						},
+						{
+							Kind: ast.ConditionKindPre,
+							Test: &ast.UnaryExpression{
+								Operation: ast.OperationNegate,
+								Expression: &ast.BoolExpression{
+									Value: false,
+									Range: ast.Range{
+										StartPos: ast.Position{Offset: 74, Line: 5, Column: 15},
+										EndPos:   ast.Position{Offset: 78, Line: 5, Column: 19},
+									},
+								},
+								StartPos: ast.Position{Offset: 73, Line: 5, Column: 14},
+							},
+							Message: &ast.StringExpression{
+								Value: "two",
+								Range: ast.Range{
+									StartPos: ast.Position{Offset: 81, Line: 5, Column: 22},
+									EndPos:   ast.Position{Offset: 85, Line: 5, Column: 26},
+								},
+							},
+						},
+					},
+				},
+				StartPos: ast.Position{Offset: 4, Line: 2, Column: 3},
+			},
+		},
+		result.Declarations,
+	)
 }
