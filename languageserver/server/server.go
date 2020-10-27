@@ -29,7 +29,6 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/jsonrpc2"
 	"github.com/onflow/cadence/runtime"
@@ -247,6 +246,7 @@ func WithInitializationOptionsHandler(handler InitializationOptionsHandler) Opti
 }
 
 const GetEntryPointParametersCommand = "cadence.server.getEntryPointParameters"
+const GetContractInitializerParametersCommand = "cadence.server.getContractInitializerParameters"
 
 func NewServer() (*Server, error) {
 	server := &Server{
@@ -1337,6 +1337,10 @@ func (s *Server) defaultCommands() []Command {
 			Name:    GetEntryPointParametersCommand,
 			Handler: s.getEntryPointParameters,
 		},
+		{
+			Name:    GetContractInitializerParametersCommand,
+			Handler: s.getContractInitializerParameters,
+		},
 	}
 }
 
@@ -1363,29 +1367,48 @@ func (s *Server) getEntryPointParameters(_ protocol.Conn, args ...interface{}) (
 
 	parameters := checker.EntryPointParameters()
 
-	type encodedParameter struct {
-		Name string `json:"name"`
-		Type string `json:"type"`
+	encodedParameters := encodeParameters(parameters)
+
+	return encodedParameters, nil
+}
+
+// getContractInitializerParameters returns the parameters of the sole contract's initializer in the source document,
+// or none if no initializer is declared, or the program contains none or more than one contract declaration.
+//
+// There should be exactly 1 argument:
+//   * the DocumentURI of the file to submit
+func (s *Server) getContractInitializerParameters(_ protocol.Conn, args ...interface{}) (interface{}, error) {
+
+	err := CheckCommandArgumentCount(args, 1)
+	if err != nil {
+		return nil, err
 	}
 
-	encodedParameters := make([]encodedParameter, len(parameters))
-
-	for i, parameter := range parameters {
-		parameterType := runtime.ExportType(
-			parameter.TypeAnnotation.Type,
-			map[sema.TypeID]cadence.Type{},
-		)
-
-		var typeID string
-		if parameterType != nil {
-			typeID = parameterType.ID()
-		}
-
-		encodedParameters[i] = encodedParameter{
-			Name: parameter.EffectiveArgumentLabel(),
-			Type: typeID,
-		}
+	uri, ok := args[0].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
 	}
+
+	checker, ok := s.checkers[protocol.DocumentUri(uri)]
+	if !ok {
+		return nil, fmt.Errorf("could not find document for URI %s", uri)
+	}
+
+	compositeDeclarations := checker.Program.CompositeDeclarations()
+	if len(compositeDeclarations) != 1 {
+		// NOTE: return allocated slice, so result is `[]` in JSON, nil is serialized to `null`
+		return []Parameter{}, nil
+	}
+
+	compositeDeclaration := compositeDeclarations[0]
+	if compositeDeclaration.CompositeKind != common.CompositeKindContract {
+		// NOTE: return allocated slice, so result is `[]` in JSON, nil is serialized to `null`
+		return []Parameter{}, nil
+	}
+
+	compositeType := checker.Elaboration.CompositeDeclarationTypes[compositeDeclaration]
+
+	encodedParameters := encodeParameters(compositeType.ConstructorParameters)
 
 	return encodedParameters, nil
 }

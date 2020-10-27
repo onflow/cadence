@@ -67,7 +67,7 @@ async function createTestDocument(connection: ProtocolConnection, code: string):
 
 describe("getEntryPointParameters command", () => {
 
-  async function testCode(code: string) {
+  async function testCode(code: string, expectedParameters: object[]) {
     return withConnection(async (connection) => {
 
       const uri = await createTestDocument(connection, code)
@@ -77,13 +77,82 @@ describe("getEntryPointParameters command", () => {
         arguments: [uri]
       })
 
-      expect(result).toEqual([{name: 'a', type: 'Int'}])
+      expect(result).toEqual(expectedParameters)
     })
   }
 
   test("script", async() =>
-    testCode("pub fun main(a: Int) {}"))
+    testCode(
+        `pub fun main(a: Int) {}`,
+        [{name: 'a', type: 'Int'}]
+    )
+  )
 
   test("transaction", async() =>
-    testCode("transaction(a: Int) {}"))
+    testCode(
+        `transaction(a: Int) {}`,
+        [{name: 'a', type: 'Int'}]
+    )
+  )
+})
+
+describe("getContractInitializerParameters command", () => {
+
+  async function testCode(code: string, expectedParameters: object[]) {
+    return withConnection(async (connection) => {
+
+      const uri = await createTestDocument(connection, code)
+
+      const result = await connection.sendRequest(ExecuteCommandRequest.type, {
+        command: "cadence.server.getContractInitializerParameters",
+        arguments: [uri]
+      })
+
+      expect(result).toEqual(expectedParameters)
+    })
+  }
+
+  test("no contract", async() =>
+      testCode(
+          ``,
+          []
+      )
+  )
+
+  test("one contract, no parameters", async() =>
+      testCode(
+          `
+          pub contract C {
+              init() {}
+          }
+          `,
+          [],
+      )
+  )
+
+  test("one contract, one parameter", async() =>
+      testCode(
+          `
+          pub contract C {
+              init(a: Int) {}
+          }
+          `,
+          [{name: 'a', type: 'Int'}],
+      )
+  )
+
+  test("many contracts", async() =>
+      testCode(
+          `
+          pub contract C1 {
+              init(a: Int) {}
+          }
+
+          pub contract C2 {
+              init(b: Int) {}
+          }
+          `,
+          []
+      )
+  )
 })
