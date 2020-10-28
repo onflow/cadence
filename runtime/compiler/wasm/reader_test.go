@@ -1198,6 +1198,79 @@ func TestWASMReader_readExportSection(t *testing.T) {
 	})
 }
 
+func TestWASMReader_readStartSection(t *testing.T) {
+
+	t.Parallel()
+
+	read := func(data []byte) (*uint32, error) {
+		b := Buffer{data: data}
+		r := NewWASMReader(&b)
+		err := r.readStartSection()
+		if err != nil {
+			return nil, err
+		}
+		require.Equal(t, offset(len(b.data)), b.offset)
+		return r.Module.StartFunctionIndex, nil
+	}
+
+	t.Run("valid", func(t *testing.T) {
+
+		t.Parallel()
+
+		typeIDs, err := read([]byte{
+			// section size: 1 (LEB128)
+			0x81, 0x80, 0x80, 0x80, 0x0,
+			// function index: 1
+			0x1,
+		})
+		require.NoError(t, err)
+		assert.Equal(t,
+			func() *uint32 {
+				var funcIndex uint32 = 1
+				return &funcIndex
+			}(),
+			typeIDs,
+		)
+	})
+
+	t.Run("invalid size", func(t *testing.T) {
+
+		t.Parallel()
+
+		funcTypes, err := read([]byte{
+			0x87, 0x80, 0x80,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidSectionSizeError{
+				Offset:    0,
+				ReadError: io.EOF,
+			},
+			err,
+		)
+		assert.Nil(t, funcTypes)
+	})
+
+	t.Run("invalid function type ID", func(t *testing.T) {
+
+		t.Parallel()
+
+		funcTypes, err := read([]byte{
+			// section size: 7 (LEB128)
+			0x81, 0x80, 0x80, 0x80, 0x0,
+		})
+		require.Error(t, err)
+		assert.Equal(t,
+			InvalidStartSectionFunctionIndexError{
+				Offset:    5,
+				ReadError: io.EOF,
+			},
+			err,
+		)
+		assert.Nil(t, funcTypes)
+	})
+}
+
 func TestWASMReader_readCodeSection(t *testing.T) {
 
 	t.Parallel()

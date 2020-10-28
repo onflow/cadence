@@ -349,6 +349,15 @@ func (w *WASMWriter) writeExport(export *Export) error {
 	return w.buf.writeUint32LEB128(index)
 }
 
+// writeStartSection writes the section that declares the start function
+//
+func (w *WASMWriter) writeStartSection(funcIndex uint32) error {
+	return w.writeSection(sectionIDStart, func() error {
+		// write the index of the start function
+		return w.buf.writeUint32LEB128(funcIndex)
+	})
+}
+
 // writeCodeSection writes the section that provides the function bodies for the functions
 // declared by the function section (which only provides the function types)
 //
@@ -679,29 +688,46 @@ func (w *WASMWriter) WriteModule(module *Module) error {
 	if err := w.writeMagicAndVersion(); err != nil {
 		return err
 	}
-
-	if err := w.writeTypeSection(module.Types); err != nil {
-		return err
+	if len(module.Types) > 0 {
+		if err := w.writeTypeSection(module.Types); err != nil {
+			return err
+		}
 	}
-	if err := w.writeImportSection(module.Imports); err != nil {
-		return err
+	if len(module.Imports) > 0 {
+		if err := w.writeImportSection(module.Imports); err != nil {
+			return err
+		}
 	}
-	if err := w.writeFunctionSection(module.Functions); err != nil {
-		return err
+	if len(module.Functions) > 0 {
+		if err := w.writeFunctionSection(module.Functions); err != nil {
+			return err
+		}
 	}
-	if err := w.writeMemorySection(module.Memories); err != nil {
-		return err
+	if len(module.Memories) > 0 {
+		if err := w.writeMemorySection(module.Memories); err != nil {
+			return err
+		}
 	}
-	if err := w.writeExportSection(module.Exports); err != nil {
-		return err
+	if len(module.Exports) > 0 {
+		if err := w.writeExportSection(module.Exports); err != nil {
+			return err
+		}
 	}
-	if err := w.writeCodeSection(module.Functions); err != nil {
-		return err
+	if module.StartFunctionIndex != nil {
+		if err := w.writeStartSection(*module.StartFunctionIndex); err != nil {
+			return err
+		}
 	}
-	if err := w.writeDataSection(module.Data); err != nil {
-		return err
+	if len(module.Functions) > 0 {
+		if err := w.writeCodeSection(module.Functions); err != nil {
+			return err
+		}
 	}
-
+	if len(module.Data) > 0 {
+		if err := w.writeDataSection(module.Data); err != nil {
+			return err
+		}
+	}
 	if w.WriteNames {
 		if err := w.writeNameSection(
 			module.Name,

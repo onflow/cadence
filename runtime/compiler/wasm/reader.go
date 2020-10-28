@@ -162,6 +162,16 @@ func (r *WASMReader) readSection() error {
 			return err
 		}
 
+	case sectionIDStart:
+		if r.Module.StartFunctionIndex != nil {
+			return invalidDuplicateSectionError()
+		}
+
+		err = r.readStartSection()
+		if err != nil {
+			return err
+		}
+
 	case sectionIDCode:
 		if r.didReadCode {
 			return invalidDuplicateSectionError()
@@ -279,17 +289,20 @@ func (r *WASMReader) readFuncType() (*FunctionType, error) {
 
 	// read the type of each parameter
 
-	parameterTypes := make([]ValueType, parameterCount)
+	var parameterTypes []ValueType
+	if parameterCount > 0 {
+		parameterTypes = make([]ValueType, parameterCount)
 
-	for i := uint32(0); i < parameterCount; i++ {
-		parameterType, err := r.readValType()
-		if err != nil {
-			return nil, InvalidFuncTypeParameterTypeError{
-				Index:     int(i),
-				ReadError: err,
+		for i := uint32(0); i < parameterCount; i++ {
+			parameterType, err := r.readValType()
+			if err != nil {
+				return nil, InvalidFuncTypeParameterTypeError{
+					Index:     int(i),
+					ReadError: err,
+				}
 			}
+			parameterTypes[i] = parameterType
 		}
-		parameterTypes[i] = parameterType
 	}
 
 	// read the number of results
@@ -304,17 +317,19 @@ func (r *WASMReader) readFuncType() (*FunctionType, error) {
 
 	// read the type of each result
 
-	resultTypes := make([]ValueType, resultCount)
-
-	for i := uint32(0); i < resultCount; i++ {
-		resultType, err := r.readValType()
-		if err != nil {
-			return nil, InvalidFuncTypeResultTypeError{
-				Index:     int(i),
-				ReadError: err,
+	var resultTypes []ValueType
+	if resultCount > 0 {
+		resultTypes = make([]ValueType, resultCount)
+		for i := uint32(0); i < resultCount; i++ {
+			resultType, err := r.readValType()
+			if err != nil {
+				return nil, InvalidFuncTypeResultTypeError{
+					Index:     int(i),
+					ReadError: err,
+				}
 			}
+			resultTypes[i] = resultType
 		}
-		resultTypes[i] = resultType
 	}
 
 	return &FunctionType{
@@ -705,6 +720,31 @@ func (r *WASMReader) readExport() (*Export, error) {
 	}, nil
 }
 
+// readStartSection reads the section that declares the types of functions.
+// The bodies of these functions will later be provided in the code section
+//
+func (r *WASMReader) readStartSection() error {
+
+	_, err := r.readSectionSize()
+	if err != nil {
+		return err
+	}
+
+	// read the function index
+	functionIndexOffset := r.buf.offset
+	functionIndex, err := r.buf.readUint32LEB128()
+	if err != nil {
+		return InvalidStartSectionFunctionIndexError{
+			Offset:    int(functionIndexOffset),
+			ReadError: err,
+		}
+	}
+
+	r.Module.StartFunctionIndex = &functionIndex
+
+	return nil
+}
+
 // readCodeSection reads the section that provides the function bodies for the functions
 // declared by the function section (which only provides the function types)
 //
@@ -797,6 +837,10 @@ func (r *WASMReader) readLocals() ([]ValueType, error) {
 			Offset:    int(localsCountOffset),
 			ReadError: err,
 		}
+	}
+
+	if localsCount == 0 {
+		return nil, nil
 	}
 
 	locals := make([]ValueType, localsCount)

@@ -958,3 +958,22 @@ func (e InvalidLimitMaxError) Error() string {
 func (e InvalidLimitMaxError) Unwrap() error {
 	return e.ReadError
 }
+
+// InvalidStartSectionFunctionIndexError is returned when the WASM binary specifies
+// an invalid function index in the start section
+//
+type InvalidStartSectionFunctionIndexError struct {
+	Offset    int
+	ReadError error
+}
+
+func (e InvalidStartSectionFunctionIndexError) Error() string {
+	return fmt.Sprintf(
+		"invalid function index in start section at offset %d",
+		e.Offset,
+	)
+}
+
+func (e InvalidStartSectionFunctionIndexError) Unwrap() error {
+	return e.ReadError
+}
