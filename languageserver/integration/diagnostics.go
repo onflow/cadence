@@ -22,6 +22,7 @@ import (
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -38,7 +39,18 @@ func (i *FlowIntegration) diagnostics(
 	err error,
 ) {
 
-	// Warn if there are more than 1 transaction declarations as deployment will fail
+	diagnostics = append(diagnostics, i.transactionDeclarationCountDiagnostics(checker)...)
+	diagnostics = append(diagnostics, i.compositeOrInterfaceDeclarationCountDiagnostics(checker)...)
+
+	return
+}
+
+// transactionDeclarationCountDiagnostics reports diagnostics
+// if there are more than 1 transaction declarations, as deployment will fail
+//
+func (i *FlowIntegration) transactionDeclarationCountDiagnostics(checker *sema.Checker) []protocol.Diagnostic {
+	var diagnostics []protocol.Diagnostic
+
 	transactionDeclarations := checker.Program.TransactionDeclarations()
 
 	if len(transactionDeclarations) > 1 {
@@ -50,7 +62,7 @@ func (i *FlowIntegration) diagnostics(
 			diagnostics = append(diagnostics, protocol.Diagnostic{
 				Range: conversion.ASTToProtocolRange(
 					position,
-					position,
+					position.Shifted(len(parser2.KeywordTransaction)-1),
 				),
 				Severity: protocol.SeverityWarning,
 				Message:  "Cannot declare more than one transaction per file",
@@ -58,8 +70,14 @@ func (i *FlowIntegration) diagnostics(
 		}
 	}
 
-	// Warn if there are more than one composite or interface declaration,
-	// as deployment will fail
+	return diagnostics
+}
+
+// compositeOrInterfaceDeclarationCountDiagnostics reports diagnostics
+// if there are more than one composite or interface declaration, as deployment will fail
+//
+func (i *FlowIntegration) compositeOrInterfaceDeclarationCountDiagnostics(checker *sema.Checker) []protocol.Diagnostic {
+	var diagnostics []protocol.Diagnostic
 
 	var compositeAndInterfaceDeclarations []ast.Declaration
 
@@ -75,12 +93,12 @@ func (i *FlowIntegration) diagnostics(
 
 		for _, declaration := range compositeAndInterfaceDeclarations[1:] {
 
-			position := declaration.DeclarationIdentifier().StartPosition()
+			identifier := declaration.DeclarationIdentifier()
 
 			diagnostics = append(diagnostics, protocol.Diagnostic{
 				Range: conversion.ASTToProtocolRange(
-					position,
-					position,
+					identifier.StartPosition(),
+					identifier.EndPosition(),
 				),
 				Severity: protocol.SeverityWarning,
 				Message:  "Cannot declare more than one top-level type per file",
@@ -88,5 +106,5 @@ func (i *FlowIntegration) diagnostics(
 		}
 	}
 
-	return
+	return diagnostics
 }
