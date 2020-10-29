@@ -24,7 +24,16 @@ async function withConnection(f: (connection: ProtocolConnection) => Promise<voi
     ['-enableFlowClient=false']
   )
 
+  let stderr = ""
+  child.stderr.setEncoding('utf8')
+  child.stderr.on('data', (data) => {
+    stderr += data
+  });
+
   child.on('exit', (code) => {
+    if (code !== 0) {
+      console.error(stderr)
+    }
     expect(code).toBe(0)
   })
 
