@@ -20,6 +20,7 @@ package runtime
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -531,4 +532,94 @@ func TestLiteralValue(t *testing.T) {
 			},
 		)
 	}
+}
+
+func TestParseLiteralArgumentList(t *testing.T) {
+
+	t.Run("invalid", func(t *testing.T) {
+		_, err := ParseLiteralArgumentList("", nil)
+		require.Error(t, err)
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		arguments, err := ParseLiteralArgumentList(`()`, nil)
+		require.NoError(t, err)
+		require.Equal(t, []cadence.Value{}, arguments)
+	})
+
+	t.Run("one argument", func(t *testing.T) {
+		arguments, err := ParseLiteralArgumentList(
+			`(a: 1)`,
+			[]sema.Type{
+				&sema.IntType{},
+			},
+		)
+		require.NoError(t, err)
+		require.Equal(t,
+			[]cadence.Value{
+				cadence.Int{Value: big.NewInt(1)},
+			},
+			arguments,
+		)
+	})
+
+	t.Run("two arguments", func(t *testing.T) {
+		arguments, err := ParseLiteralArgumentList(
+			`(a: 1, 2)`,
+			[]sema.Type{
+				&sema.IntType{},
+				&sema.IntType{},
+			},
+		)
+		require.NoError(t, err)
+		require.Equal(t,
+			[]cadence.Value{
+				cadence.Int{Value: big.NewInt(1)},
+				cadence.Int{Value: big.NewInt(2)},
+			},
+			arguments,
+		)
+	})
+
+	t.Run("invalid second argument", func(t *testing.T) {
+		_, err := ParseLiteralArgumentList(
+			`(a: 1, 2)`,
+			[]sema.Type{
+				&sema.IntType{},
+				&sema.BoolType{},
+			},
+		)
+		require.Error(t, err)
+	})
+
+	t.Run("too many arguments", func(t *testing.T) {
+		_, err := ParseLiteralArgumentList(
+			`(a: 1, 2)`,
+			[]sema.Type{
+				&sema.IntType{},
+			},
+		)
+		require.Error(t, err)
+	})
+
+	t.Run("too few arguments", func(t *testing.T) {
+		_, err := ParseLiteralArgumentList(
+			`(a: 1)`,
+			[]sema.Type{
+				&sema.IntType{},
+				&sema.IntType{},
+			},
+		)
+		require.Error(t, err)
+	})
+
+	t.Run("non-literal argument", func(t *testing.T) {
+		_, err := ParseLiteralArgumentList(
+			`(a: b)`,
+			[]sema.Type{
+				&sema.IntType{},
+			},
+		)
+		require.Error(t, err)
+	})
 }

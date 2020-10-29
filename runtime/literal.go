@@ -33,6 +33,11 @@ var InvalidLiteralError = fmt.Errorf("invalid literal")
 var UnsupportedLiteralError = fmt.Errorf("unsupported literal")
 var LiteralExpressionTypeError = fmt.Errorf("input is not a literal")
 
+// ParseLiteral parses a single literal string, that should have the given type.
+//
+// Returns an error if the literal string is not a literal (e.g. it does not have valid syntax,
+// or does not parse to a literal).
+//
 func ParseLiteral(literal string, ty sema.Type) (cadence.Value, error) {
 	expression, errs := parser2.ParseExpression(literal)
 	if len(errs) > 0 {
@@ -43,6 +48,43 @@ func ParseLiteral(literal string, ty sema.Type) (cadence.Value, error) {
 	}
 
 	return LiteralValue(expression, ty)
+}
+
+// ParseLiteralArgumrntList parses an argument list with literals, that should have the given types.
+//
+// Returns an error if the code is not a valid argument list, or the arguments are not literals.
+//
+func ParseLiteralArgumentList(argumentList string, parameterTypes []sema.Type) ([]cadence.Value, error) {
+	arguments, errs := parser2.ParseArgumentList(argumentList)
+	if len(errs) > 0 {
+		return nil, parser2.Error{
+			Errors: errs,
+		}
+	}
+
+	argumentCount := len(arguments)
+	parameterCount := len(parameterTypes)
+
+	if argumentCount != parameterCount {
+		return nil, fmt.Errorf(
+			"invalid number of arguments: got %d, expected %d",
+			argumentCount,
+			parameterCount,
+		)
+	}
+
+	result := make([]cadence.Value, argumentCount)
+
+	for i, argument := range arguments {
+		parameterType := parameterTypes[i]
+		value, err := LiteralValue(argument.Expression, parameterType)
+		if err != nil {
+			return nil, fmt.Errorf("invalid argument at index %d: %w", i, err)
+		}
+		result[i] = value
+	}
+
+	return result, nil
 }
 
 func arrayLiteralValue(elements []ast.Expression, elementType sema.Type) (cadence.Value, error) {
