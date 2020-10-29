@@ -29,7 +29,6 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 
-	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/jsonrpc2"
