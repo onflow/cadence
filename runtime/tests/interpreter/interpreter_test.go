@@ -491,16 +491,8 @@ func TestInterpretInvalidArrayIndexing(t *testing.T) {
 
 	_, err := inter.Invoke("test")
 
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	err = err.(interpreter.Error).Unwrap()
-
-	require.IsType(t,
-		interpreter.ArrayIndexOutOfBoundsError{},
-		err,
-	)
+	var indexErr interpreter.ArrayIndexOutOfBoundsError
+	RequireErrorAs(t, err, &indexErr)
 
 	require.Equal(t,
 		interpreter.ArrayIndexOutOfBoundsError{
@@ -514,7 +506,7 @@ func TestInterpretInvalidArrayIndexing(t *testing.T) {
 				},
 			},
 		},
-		err,
+		indexErr,
 	)
 }
 
@@ -1933,16 +1925,8 @@ func TestInterpretFunctionPreCondition(t *testing.T) {
 		"test",
 		interpreter.NewIntValueFromInt64(42),
 	)
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	err = err.(interpreter.Error).Unwrap()
-
-	require.IsType(t,
-		interpreter.ConditionError{},
-		err,
-	)
+	var conditionErr interpreter.ConditionError
+	RequireErrorAs(t, err, &conditionErr)
 
 	zero := interpreter.NewIntValueFromInt64(0)
 	value, err := inter.Invoke("test", zero)
@@ -1969,16 +1953,8 @@ func TestInterpretFunctionPostCondition(t *testing.T) {
 		"test",
 		interpreter.NewIntValueFromInt64(42),
 	)
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	err = err.(interpreter.Error).Unwrap()
-
-	require.IsType(t,
-		interpreter.ConditionError{},
-		err,
-	)
+	var conditionErr interpreter.ConditionError
+	RequireErrorAs(t, err, &conditionErr)
 
 	zero := interpreter.NewIntValueFromInt64(0)
 	value, err := inter.Invoke("test", zero)
@@ -2004,16 +1980,9 @@ func TestInterpretFunctionWithResultAndPostConditionWithResult(t *testing.T) {
 		"test",
 		interpreter.NewIntValueFromInt64(42),
 	)
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	err = err.(interpreter.Error).Unwrap()
 
-	require.IsType(t,
-		interpreter.ConditionError{},
-		err,
-	)
+	var conditionErr interpreter.ConditionError
+	RequireErrorAs(t, err, &conditionErr)
 
 	zero := interpreter.NewIntValueFromInt64(0)
 	value, err := inter.Invoke("test", zero)
@@ -2091,21 +2060,12 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPreCondition(t *testing.
 
 	_, err := inter.Invoke("test")
 
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	err = err.(interpreter.Error).Unwrap()
-
-	require.IsType(t,
-		interpreter.ConditionError{},
-		err,
-	)
-	conditionError := err.(interpreter.ConditionError)
+	var conditionErr interpreter.ConditionError
+	RequireErrorAs(t, err, &conditionErr)
 
 	assert.Equal(t,
 		ast.ConditionKindPre,
-		conditionError.ConditionKind,
+		conditionErr.ConditionKind,
 	)
 }
 
@@ -2129,21 +2089,12 @@ func TestInterpretFunctionPostConditionWithBeforeFailingPostCondition(t *testing
 
 	_, err := inter.Invoke("test")
 
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	err = err.(interpreter.Error).Unwrap()
-
-	require.IsType(t,
-		interpreter.ConditionError{},
-		err,
-	)
-	conditionError := err.(interpreter.ConditionError)
+	var conditionErr interpreter.ConditionError
+	RequireErrorAs(t, err, &conditionErr)
 
 	assert.Equal(t,
 		ast.ConditionKindPost,
-		conditionError.ConditionKind,
+		conditionErr.ConditionKind,
 	)
 }
 
@@ -2165,21 +2116,13 @@ func TestInterpretFunctionPostConditionWithMessageUsingStringLiteral(t *testing.
 		"test",
 		interpreter.NewIntValueFromInt64(42),
 	)
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	err = err.(interpreter.Error).Unwrap()
 
-	require.IsType(t,
-		interpreter.ConditionError{},
-		err,
-	)
-	conditionError := err.(interpreter.ConditionError)
+	var conditionErr interpreter.ConditionError
+	RequireErrorAs(t, err, &conditionErr)
 
 	assert.Equal(t,
 		"y should be zero",
-		conditionError.Message,
+		conditionErr.Message,
 	)
 
 	zero := interpreter.NewIntValueFromInt64(0)
@@ -2207,21 +2150,12 @@ func TestInterpretFunctionPostConditionWithMessageUsingResult(t *testing.T) {
 		"test",
 		interpreter.NewIntValueFromInt64(42),
 	)
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	err = err.(interpreter.Error).Unwrap()
-
-	require.IsType(t,
-		interpreter.ConditionError{},
-		err,
-	)
-	conditionError := err.(interpreter.ConditionError)
+	var conditionErr interpreter.ConditionError
+	RequireErrorAs(t, err, &conditionErr)
 
 	assert.Equal(t,
 		"return value",
-		conditionError.Message,
+		conditionErr.Message,
 	)
 
 	zero := interpreter.NewIntValueFromInt64(0)
@@ -2248,21 +2182,13 @@ func TestInterpretFunctionPostConditionWithMessageUsingBefore(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("test", interpreter.NewStringValue("parameter value"))
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	err = err.(interpreter.Error).Unwrap()
 
-	require.IsType(t,
-		interpreter.ConditionError{},
-		err,
-	)
-	conditionError := err.(interpreter.ConditionError)
+	var conditionErr interpreter.ConditionError
+	RequireErrorAs(t, err, &conditionErr)
 
 	assert.Equal(t,
 		"parameter value",
-		conditionError.Message,
+		conditionErr.Message,
 	)
 }
 
@@ -2280,21 +2206,13 @@ func TestInterpretFunctionPostConditionWithMessageUsingParameter(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("test", interpreter.NewStringValue("parameter value"))
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	err = err.(interpreter.Error).Unwrap()
 
-	require.IsType(t,
-		interpreter.ConditionError{},
-		err,
-	)
-	conditionError := err.(interpreter.ConditionError)
+	var conditionErr interpreter.ConditionError
+	RequireErrorAs(t, err, &conditionErr)
 
 	assert.Equal(t,
 		"parameter value",
-		conditionError.Message,
+		conditionErr.Message,
 	)
 }
 
@@ -3691,16 +3609,9 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 			)
 
 			_, err := inter.Invoke("callTest", interpreter.NewIntValueFromInt64(0))
-			require.IsType(t,
-				interpreter.Error{},
-				err,
-			)
-			err = err.(interpreter.Error).Unwrap()
 
-			require.IsType(t,
-				interpreter.ConditionError{},
-				err,
-			)
+			var conditionErr interpreter.ConditionError
+			RequireErrorAs(t, err, &conditionErr)
 
 			value, err := inter.Invoke("callTest", interpreter.NewIntValueFromInt64(1))
 			require.NoError(t, err)
@@ -3711,16 +3622,8 @@ func TestInterpretInterfaceFunctionUseWithPreCondition(t *testing.T) {
 			)
 
 			_, err = inter.Invoke("callTest", interpreter.NewIntValueFromInt64(2))
-			require.IsType(t,
-				interpreter.Error{},
-				err,
-			)
-			err = err.(interpreter.Error).Unwrap()
 
-			require.IsType(t,
-				interpreter.ConditionError{},
-				err,
-			)
+			RequireErrorAs(t, err, &conditionErr)
 		})
 	}
 }
@@ -3902,40 +3805,23 @@ func TestInterpretTypeRequirementWithPreCondition(t *testing.T) {
 
 	t.Run("-1", func(t *testing.T) {
 		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(-1))
-		require.IsType(t,
-			interpreter.Error{},
-			err,
-		)
-		err = err.(interpreter.Error).Unwrap()
 
-		require.IsType(t,
-			interpreter.ConditionError{},
-			err,
-		)
-		conditionError := err.(interpreter.ConditionError)
+		var conditionErr interpreter.ConditionError
+		RequireErrorAs(t, err, &conditionErr)
 
 		// NOTE: The type requirement condition (`Test.Nested`) is evaluated first,
 		//  before the type's conformances (`Also`)
 
-		assert.Equal(t, "x >= 1", conditionError.Message)
+		assert.Equal(t, "x >= 1", conditionErr.Message)
 	})
 
 	t.Run("0", func(t *testing.T) {
 		_, err := inter.Invoke("test", interpreter.NewIntValueFromInt64(0))
 
-		require.IsType(t,
-			interpreter.Error{},
-			err,
-		)
-		err = err.(interpreter.Error).Unwrap()
+		var conditionErr interpreter.ConditionError
+		RequireErrorAs(t, err, &conditionErr)
 
-		require.IsType(t,
-			interpreter.ConditionError{},
-			err,
-		)
-		conditionError := err.(interpreter.ConditionError)
-
-		assert.Equal(t, "x >= 1", conditionError.Message)
+		assert.Equal(t, "x >= 1", conditionErr.Message)
 	})
 
 	t.Run("1", func(t *testing.T) {
@@ -4111,16 +3997,12 @@ func TestInterpretImportError(t *testing.T) {
 
 	_, err = inter.Invoke("test")
 
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	err = err.(interpreter.Error).Unwrap()
+	var panicErr stdlib.PanicError
+	RequireErrorAs(t, err, &panicErr)
 
-	assert.IsType(t, stdlib.PanicError{}, err)
 	assert.Equal(t,
 		"?!",
-		err.(stdlib.PanicError).Message,
+		panicErr.Message,
 	)
 }
 
@@ -6278,16 +6160,8 @@ func TestInterpretReferenceDereferenceFailure(t *testing.T) {
     `)
 
 	_, err := inter.Invoke("test")
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	err = err.(interpreter.Error).Unwrap()
 
-	assert.IsType(t,
-		interpreter.DestroyedCompositeError{},
-		err,
-	)
+	RequireErrorAs(t, err, &interpreter.DestroyedCompositeError{})
 }
 
 func TestInterpretInvalidForwardReferenceCall(t *testing.T) {
@@ -7343,16 +7217,7 @@ func TestInterpretNonStorageReferenceAfterDestruction(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.Error(t, err)
 
-	require.IsType(t,
-		interpreter.Error{},
-		err,
-	)
-	err = err.(interpreter.Error).Unwrap()
-
-	assert.IsType(t,
-		interpreter.DestroyedCompositeError{},
-		err,
-	)
+	RequireErrorAs(t, err, &interpreter.DestroyedCompositeError{})
 }
 
 func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
@@ -7399,16 +7264,7 @@ func TestInterpretNonStorageReferenceToOptional(t *testing.T) {
 		_, err := inter.Invoke("testNil")
 		require.Error(t, err)
 
-		require.IsType(t,
-			interpreter.Error{},
-			err,
-		)
-		err = err.(interpreter.Error).Unwrap()
-
-		assert.IsType(t,
-			interpreter.DereferenceError{},
-			err,
-		)
+		RequireErrorAs(t, err, &interpreter.DereferenceError{})
 	})
 }
 
@@ -7737,16 +7593,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		require.IsType(t,
-			interpreter.Error{},
-			err,
-		)
-		err = err.(interpreter.Error).Unwrap()
-
-		assert.IsType(t,
-			interpreter.ForceAssignmentToNonNilResourceError{},
-			err,
-		)
+		RequireErrorAs(t, err, &interpreter.ForceAssignmentToNonNilResourceError{})
 	})
 
 	t.Run("existing to nil", func(t *testing.T) {
@@ -7782,16 +7629,7 @@ func TestInterpretResourceAssignmentForceTransfer(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		require.IsType(t,
-			interpreter.Error{},
-			err,
-		)
-		err = err.(interpreter.Error).Unwrap()
-
-		assert.IsType(t,
-			interpreter.ForceAssignmentToNonNilResourceError{},
-			err,
-		)
+		RequireErrorAs(t, err, &interpreter.ForceAssignmentToNonNilResourceError{})
 	})
 }
 
@@ -7832,16 +7670,7 @@ func TestInterpretForce(t *testing.T) {
 		_, err := inter.Invoke("test")
 		require.Error(t, err)
 
-		require.IsType(t,
-			interpreter.Error{},
-			err,
-		)
-		err = err.(interpreter.Error).Unwrap()
-
-		require.IsType(t,
-			interpreter.ForceNilError{},
-			err,
-		)
+		RequireErrorAs(t, err, &interpreter.ForceNilError{})
 	})
 
 	t.Run("non-optional", func(t *testing.T) {

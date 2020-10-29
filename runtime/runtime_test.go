@@ -1136,9 +1136,7 @@ func TestRuntimeProgramWithNoTransaction(t *testing.T) {
 
 	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 
-	require.IsType(t, Error{}, err)
-	err = err.(Error).Unwrap()
-	assert.IsType(t, InvalidTransactionCountError{}, err)
+	utils.RequireErrorAs(t, err, &InvalidTransactionCountError{})
 }
 
 func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
@@ -1162,9 +1160,7 @@ func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
 
 	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 
-	require.IsType(t, Error{}, err)
-	err = err.(Error).Unwrap()
-	assert.IsType(t, InvalidTransactionCountError{}, err)
+	utils.RequireErrorAs(t, err, &InvalidTransactionCountError{})
 }
 
 func TestRuntimeStorage(t *testing.T) {
@@ -3206,13 +3202,7 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 				} else {
 					require.Error(t, err)
 
-					require.IsType(t, Error{}, err)
-					err = err.(Error).Unwrap()
-
-					require.IsType(t, interpreter.Error{}, err)
-					err = err.(interpreter.Error).Unwrap()
-
-					assert.IsType(t, interpreter.ConditionError{}, err)
+					utils.RequireErrorAs(t, err, &interpreter.ConditionError{})
 				}
 			})
 		}
@@ -4837,8 +4827,8 @@ func TestRuntime(t *testing.T) {
 				require.NoError(t, err)
 			} else {
 				require.Error(t, err)
-				require.IsType(t, Error{}, err)
-				assert.IsType(t, InvalidEntryPointParameterCountError{}, err.(Error).Unwrap())
+
+				utils.RequireErrorAs(t, err, &InvalidEntryPointParameterCountError{})
 			}
 		})
 	}

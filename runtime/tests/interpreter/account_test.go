@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/onflow/cadence/runtime/trampoline"
 )
 
@@ -173,13 +174,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 			require.Error(t, err)
 
-			require.IsType(t,
-				interpreter.Error{},
-				err,
-			)
-			err = err.(interpreter.Error).Unwrap()
-
-			require.IsType(t, interpreter.OverwriteError{}, err)
+			utils.RequireErrorAs(t, err, &interpreter.OverwriteError{})
 		})
 	})
 
@@ -227,13 +222,7 @@ func TestInterpretAuthAccount_save(t *testing.T) {
 
 			require.Error(t, err)
 
-			require.IsType(t,
-				interpreter.Error{},
-				err,
-			)
-			err = err.(interpreter.Error).Unwrap()
-
-			require.IsType(t, interpreter.OverwriteError{}, err)
+			utils.RequireErrorAs(t, err, &interpreter.OverwriteError{})
 		})
 	})
 }
