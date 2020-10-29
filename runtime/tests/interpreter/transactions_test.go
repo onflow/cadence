@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/tests/utils"
 	"github.com/onflow/cadence/runtime/trampoline"
 )
 
@@ -105,17 +106,8 @@ func TestInterpretTransactions(t *testing.T) {
 
 		err := inter.InvokeTransaction(0)
 
-		require.IsType(t,
-			interpreter.Error{},
-			err,
-		)
-		err = err.(interpreter.Error).Unwrap()
-
-		require.IsType(t,
-			interpreter.ConditionError{},
-			err,
-		)
-		conditionErr := err.(interpreter.ConditionError)
+		var conditionErr interpreter.ConditionError
+		utils.RequireErrorAs(t, err, &conditionErr)
 
 		assert.Equal(t, conditionErr.ConditionKind, ast.ConditionKindPre)
 	})
@@ -166,17 +158,8 @@ func TestInterpretTransactions(t *testing.T) {
 
 		err := inter.InvokeTransaction(0)
 
-		require.IsType(t,
-			interpreter.Error{},
-			err,
-		)
-		err = err.(interpreter.Error).Unwrap()
-
-		require.IsType(t,
-			interpreter.ConditionError{},
-			err,
-		)
-		conditionErr := err.(interpreter.ConditionError)
+		var conditionErr interpreter.ConditionError
+		utils.RequireErrorAs(t, err, &conditionErr)
 
 		assert.Equal(t, conditionErr.ConditionKind, ast.ConditionKindPost)
 	})

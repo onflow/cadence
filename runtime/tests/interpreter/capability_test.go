@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretCapability_borrow(t *testing.T) {
@@ -158,13 +159,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			_, err := inter.Invoke("nonExistent")
 			require.Error(t, err)
 
-			require.IsType(t,
-				interpreter.Error{},
-				err,
-			)
-			err = err.(interpreter.Error).Unwrap()
-
-			require.IsType(t, interpreter.ForceNilError{}, err)
+			utils.RequireErrorAs(t, err, &interpreter.ForceNilError{})
 		})
 
 		t.Run("loop", func(t *testing.T) {
@@ -172,16 +167,11 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			_, err := inter.Invoke("loop")
 			require.Error(t, err)
 
-			require.IsType(t,
-				interpreter.Error{},
-				err,
-			)
-			err = err.(interpreter.Error).Unwrap()
-
-			require.IsType(t, interpreter.CyclicLinkError{}, err)
+			var cyclicLinkErr interpreter.CyclicLinkError
+			utils.RequireErrorAs(t, err, &cyclicLinkErr)
 
 			require.Equal(t,
-				err.Error(),
+				cyclicLinkErr.Error(),
 				"cyclic link in account 0x2a: /public/loop1 -> /public/loop2 -> /public/loop1",
 			)
 		})
@@ -329,13 +319,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			_, err := inter.Invoke("nonExistent")
 			require.Error(t, err)
 
-			require.IsType(t,
-				interpreter.Error{},
-				err,
-			)
-			err = err.(interpreter.Error).Unwrap()
-
-			require.IsType(t, interpreter.ForceNilError{}, err)
+			utils.RequireErrorAs(t, err, &interpreter.ForceNilError{})
 		})
 
 		t.Run("loop", func(t *testing.T) {
@@ -343,16 +327,11 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			_, err := inter.Invoke("loop")
 			require.Error(t, err)
 
-			require.IsType(t,
-				interpreter.Error{},
-				err,
-			)
-			err = err.(interpreter.Error).Unwrap()
-
-			require.IsType(t, interpreter.CyclicLinkError{}, err)
+			var cyclicLinkErr interpreter.CyclicLinkError
+			utils.RequireErrorAs(t, err, &cyclicLinkErr)
 
 			require.Equal(t,
-				err.Error(),
+				cyclicLinkErr.Error(),
 				"cyclic link in account 0x2a: /public/loop1 -> /public/loop2 -> /public/loop1",
 			)
 		})
@@ -507,19 +486,11 @@ func TestInterpretCapability_check(t *testing.T) {
 			_, err := inter.Invoke("loop")
 			require.Error(t, err)
 
-			require.IsType(t,
-				interpreter.Error{},
-				err,
-			)
-			err = err.(interpreter.Error).Unwrap()
-
-			require.IsType(t,
-				interpreter.CyclicLinkError{},
-				err,
-			)
+			var cyclicLinkErr interpreter.CyclicLinkError
+			utils.RequireErrorAs(t, err, &cyclicLinkErr)
 
 			require.Equal(t,
-				err.Error(),
+				cyclicLinkErr.Error(),
 				"cyclic link in account 0x2a: /public/loop1 -> /public/loop2 -> /public/loop1",
 			)
 		})
@@ -669,16 +640,11 @@ func TestInterpretCapability_check(t *testing.T) {
 			_, err := inter.Invoke("loop")
 			require.Error(t, err)
 
-			require.IsType(t,
-				interpreter.Error{},
-				err,
-			)
-			err = err.(interpreter.Error).Unwrap()
-
-			require.IsType(t, interpreter.CyclicLinkError{}, err)
+			var cyclicLinkErr interpreter.CyclicLinkError
+			utils.RequireErrorAs(t, err, &cyclicLinkErr)
 
 			require.Equal(t,
-				err.Error(),
+				cyclicLinkErr.Error(),
 				"cyclic link in account 0x2a: /public/loop1 -> /public/loop2 -> /public/loop1",
 			)
 		})
