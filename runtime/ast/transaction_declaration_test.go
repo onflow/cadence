@@ -42,6 +42,7 @@ func TestTransactionDeclaration_MarshalJSON(t *testing.T) {
 		Prepare:        nil,
 		PreConditions:  &Conditions{},
 		PostConditions: &Conditions{},
+		DocString:      "test",
 		Execute:        nil,
 		Range: Range{
 			StartPos: Position{Offset: 7, Line: 8, Column: 9},
@@ -66,6 +67,7 @@ func TestTransactionDeclaration_MarshalJSON(t *testing.T) {
 		    "PreConditions":  [],
 		    "PostConditions": [],
 		    "Execute":        null,
+            "DocString":      "test",
             "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
             "EndPos": {"Offset": 10, "Line": 11, "Column": 12}
         }

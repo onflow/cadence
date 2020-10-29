@@ -31,6 +31,7 @@ type TransactionDeclaration struct {
 	PreConditions  *Conditions
 	PostConditions *Conditions
 	Execute        *SpecialFunctionDeclaration
+	DocString      string
 	Range
 }
 

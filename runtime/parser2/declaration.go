@@ -89,7 +89,7 @@ func parseDeclaration(p *parser, docString string) ast.Declaration {
 				if access != ast.AccessNotSpecified {
 					panic(fmt.Errorf("invalid access modifier for transaction"))
 				}
-				return parseTransactionDeclaration(p)
+				return parseTransactionDeclaration(p, docString)
 
 			case keywordPriv, keywordPub, keywordAccess:
 				if access != ast.AccessNotSpecified {
