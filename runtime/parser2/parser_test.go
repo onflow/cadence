@@ -331,8 +331,6 @@ func TestParseArgumentList(t *testing.T) {
 		t.Parallel()
 
 		_, errs := ParseArgumentList(`xyz`)
-		require.Empty(t, errs)
-
 		utils.AssertEqualWithDiff(t,
 			[]error{
 				&SyntaxError{
