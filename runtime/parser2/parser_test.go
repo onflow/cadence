@@ -20,6 +20,7 @@ package parser2
 
 import (
 	"fmt"
+	"math/big"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -322,4 +323,101 @@ func TestParseNames(t *testing.T) {
 			assert.IsType(t, Error{}, err)
 		}
 	}
+}
+
+func TestParseArgumentList(t *testing.T) {
+
+	t.Run("invalid", func(t *testing.T) {
+		t.Parallel()
+
+		_, errs := ParseArgumentList(`xyz`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			[]error{
+				&SyntaxError{
+					Message: "expected token '('",
+					Pos:     ast.Position{Offset: 0, Line: 1, Column: 0},
+				},
+			},
+			errs,
+		)
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		t.Parallel()
+
+		result, errs := ParseArgumentList(`()`)
+		require.Empty(t, errs)
+
+		var expected ast.Arguments
+
+		utils.AssertEqualWithDiff(t,
+			expected,
+			result,
+		)
+	})
+
+	t.Run("valid", func(t *testing.T) {
+		t.Parallel()
+
+		result, errs := ParseArgumentList(`(1, b: true)`)
+		require.Empty(t, errs)
+
+		utils.AssertEqualWithDiff(t,
+			ast.Arguments{
+				{
+					Label:         "",
+					LabelStartPos: nil,
+					LabelEndPos:   nil,
+					Expression: &ast.IntegerExpression{
+						Value: big.NewInt(1),
+						Base:  10,
+						Range: ast.Range{
+							StartPos: ast.Position{
+								Offset: 1,
+								Line:   1,
+								Column: 1,
+							},
+							EndPos: ast.Position{
+								Offset: 1,
+								Line:   1,
+								Column: 1,
+							},
+						},
+					},
+				},
+				{
+					Label: "b",
+					LabelStartPos: &ast.Position{
+						Offset: 4,
+						Line:   1,
+						Column: 4,
+					},
+					LabelEndPos: &ast.Position{
+						Offset: 4,
+						Line:   1,
+						Column: 4,
+					},
+					Expression: &ast.BoolExpression{
+						Value: true,
+						Range: ast.Range{
+							StartPos: ast.Position{
+								Offset: 7,
+								Line:   1,
+								Column: 7,
+							},
+							EndPos: ast.Position{
+								Offset: 10,
+								Line:   1,
+								Column: 10,
+							},
+						},
+					},
+				},
+			},
+			result,
+		)
+	})
+
 }

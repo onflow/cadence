@@ -407,6 +407,22 @@ func ParseDeclarations(input string) (declarations []ast.Declaration, errors []e
 	return
 }
 
+func ParseArgumentList(input string) (arguments ast.Arguments, errors []error) {
+	var res interface{}
+	res, errors = Parse(input, func(p *parser) interface{} {
+		p.skipSpaceAndComments(true)
+		p.mustOne(lexer.TokenParenOpen)
+		arguments, _ := parseArgumentListRemainder(p)
+		return arguments
+	})
+	if res == nil {
+		arguments = nil
+		return
+	}
+	arguments = res.([]*ast.Argument)
+	return
+}
+
 func ParseProgram(input string) (program *ast.Program, err error) {
 	var res interface{}
 	var errs []error
