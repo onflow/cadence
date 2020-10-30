@@ -57,7 +57,8 @@ var typeDeclarations = append(
 // information about each document that is used to support CodeLens,
 // transaction submission, and script execution.
 type Document struct {
-	Text string
+	Text    string
+	Version float64
 }
 
 func (d Document) Offset(line, column int) (offset int) {
@@ -150,11 +151,11 @@ type StringImportResolver func(mainPath string, location common.StringLocation) 
 
 // CodeLensProvider is a function that is used to provide code lenses for the given checker
 //
-type CodeLensProvider func(uri protocol.DocumentUri, checker *sema.Checker) ([]*protocol.CodeLens, error)
+type CodeLensProvider func(uri protocol.DocumentUri, version float64, checker *sema.Checker) ([]*protocol.CodeLens, error)
 
 // DiagnosticProvider is a function that is used to provide diagnostics for the given checker
 //
-type DiagnosticProvider func(uri protocol.DocumentUri, checker *sema.Checker) ([]protocol.Diagnostic, error)
+type DiagnosticProvider func(uri protocol.DocumentUri, version float64, checker *sema.Checker) ([]protocol.Diagnostic, error)
 
 // InitializationOptionsHandler is a function that is used to handle initialization options sent by the client
 //
@@ -406,12 +407,14 @@ func (s *Server) DidOpenTextDocument(conn protocol.Conn, params *protocol.DidOpe
 
 	uri := params.TextDocument.URI
 	text := params.TextDocument.Text
+	version := params.TextDocument.Version
 
 	s.documents[uri] = Document{
-		Text: text,
+		Text:    text,
+		Version: version,
 	}
 
-	err := s.check(conn, uri, text)
+	err := s.check(conn, uri, text, version)
 	if err != nil {
 		return err
 	}
@@ -428,12 +431,14 @@ func (s *Server) DidChangeTextDocument(
 
 	uri := params.TextDocument.URI
 	text := params.ContentChanges[0].Text
+	version := params.TextDocument.Version
 
 	s.documents[uri] = Document{
-		Text: text,
+		Text:    text,
+		Version: version,
 	}
 
-	err := s.check(conn, uri, text)
+	err := s.check(conn, uri, text, version)
 	if err != nil {
 		return err
 	}
@@ -453,9 +458,9 @@ type CadenceCheckCompletedParams struct {
 
 const cadenceCheckCompletedMethodName = "cadence/checkCompleted"
 
-func (s *Server) check(conn protocol.Conn, uri protocol.DocumentUri, text string) error {
+func (s *Server) check(conn protocol.Conn, uri protocol.DocumentUri, text string, version float64) error {
 
-	diagnostics, err := s.getDiagnostics(conn, uri, text)
+	diagnostics, err := s.getDiagnostics(conn, uri, text, version)
 
 	// NOTE: always publish diagnostics and inform the client the checking completed
 
@@ -565,9 +570,11 @@ func (s *Server) CodeLens(
 		return
 	}
 
+	version := s.documents[uri].Version
+
 	for _, provider := range s.codeLensProviders {
 		var moreCodeLenses []*protocol.CodeLens
-		moreCodeLenses, err = provider(uri, checker)
+		moreCodeLenses, err = provider(uri, version, checker)
 		if err != nil {
 			return
 		}
@@ -1140,10 +1147,12 @@ func (s *Server) getDiagnostics(
 	conn protocol.Conn,
 	uri protocol.DocumentUri,
 	text string,
+	version float64,
 ) (
 	diagnostics []protocol.Diagnostic,
 	diagnosticsErr error,
 ) {
+
 	// NOTE: Always initialize to an empty slice, i.e DON'T use nil:
 	// The later will be ignored instead of being treated as no items
 	diagnostics = []protocol.Diagnostic{}
@@ -1302,7 +1311,7 @@ func (s *Server) getDiagnostics(
 
 	for _, provider := range s.diagnosticProviders {
 		var extraDiagnostics []protocol.Diagnostic
-		extraDiagnostics, diagnosticsErr = provider(uri, checker)
+		extraDiagnostics, diagnosticsErr = provider(uri, version, checker)
 		if diagnosticsErr != nil {
 			return
 		}
