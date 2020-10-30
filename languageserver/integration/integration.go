@@ -22,6 +22,7 @@ import (
 	"github.com/onflow/flow-go-sdk"
 	"github.com/onflow/flow-go-sdk/client"
 
+	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/languageserver/server"
 )
 
@@ -32,12 +33,14 @@ type FlowIntegration struct {
 	accounts       map[flow.Address]AccountPrivateKey
 	activeAddress  flow.Address
 	serviceAddress flow.Address
+	entryPointInfo map[protocol.DocumentUri]entryPointInfo
 }
 
 func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegration, error) {
 	integration := &FlowIntegration{
-		server:   s,
-		accounts: make(map[flow.Address]AccountPrivateKey),
+		server:         s,
+		accounts:       make(map[flow.Address]AccountPrivateKey),
+		entryPointInfo: map[protocol.DocumentUri]entryPointInfo{},
 	}
 
 	options := []server.Option{

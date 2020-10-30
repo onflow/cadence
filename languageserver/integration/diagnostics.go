@@ -33,12 +33,12 @@ import (
 //
 func (i *FlowIntegration) diagnostics(
 	_ protocol.DocumentUri,
+	_ float64,
 	checker *sema.Checker,
 ) (
 	diagnostics []protocol.Diagnostic,
 	err error,
 ) {
-
 	diagnostics = append(diagnostics, i.transactionDeclarationCountDiagnostics(checker)...)
 	diagnostics = append(diagnostics, i.compositeOrInterfaceDeclarationCountDiagnostics(checker)...)
 
