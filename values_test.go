@@ -9,6 +9,25 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+func TestStringer(t *testing.T) {
+	ufix, _ := NewUFix64("64.01")
+	fix, _ := NewFix64("-32.11")
+
+	stringerTests := map[Value]string{
+		NewUInt(10): "10",
+		ufix:        "64.01000000",
+		fix:         "-32.11000000",
+	}
+
+	for value, expected := range stringerTests {
+		t.Run(fmt.Sprint(value.Type().ID()), func(t *testing.T) {
+			assert.Equal(t,
+				expected,
+				fmt.Sprint(value),
+			)
+		})
+	}
+}
 func TestToBigEndianBytes(t *testing.T) {
 
 	typeTests := map[string]map[NumberValue][]byte{
