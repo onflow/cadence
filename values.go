@@ -22,9 +22,12 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
+	"strconv"
+	"strings"
 
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 )
 
 // Value
@@ -33,6 +36,7 @@ type Value interface {
 	isValue()
 	Type() Type
 	ToGoValue() interface{}
+	//String() string //not really sure if this is needed?
 }
 
 // NumberValue
@@ -58,6 +62,10 @@ func (Void) Type() Type {
 
 func (Void) ToGoValue() interface{} {
 	return nil
+}
+
+func (Void) String() string {
+	return "()"
 }
 
 // Optional
@@ -86,6 +94,13 @@ func (o Optional) ToGoValue() interface{} {
 	return value
 }
 
+func (o Optional) String() string {
+	if o.Value == nil {
+		return "nil"
+	}
+	return fmt.Sprint(o.Value)
+}
+
 // Bool
 
 type Bool bool
@@ -102,6 +117,10 @@ func (Bool) Type() Type {
 
 func (v Bool) ToGoValue() interface{} {
 	return bool(v)
+}
+
+func (v Bool) String() string {
+	return strconv.FormatBool(bool(v))
 }
 
 // String
@@ -122,6 +141,10 @@ func (v String) ToGoValue() interface{} {
 	return string(v)
 }
 
+func (v String) String() string {
+	return strconv.Quote(string(v))
+}
+
 // Bytes
 
 type Bytes []byte
@@ -138,6 +161,10 @@ func (Bytes) Type() Type {
 
 func (v Bytes) ToGoValue() interface{} {
 	return []byte(v)
+}
+
+func (v Bytes) String() string {
+	return string(v[:])
 }
 
 // Address
@@ -214,6 +241,10 @@ func (v Int) ToBigEndianBytes() []byte {
 	return interpreter.SignedBigIntToBigEndianBytes(v.Value)
 }
 
+func (v Int) String() string {
+	return v.Big().String()
+}
+
 // Int8
 
 type Int8 int8
@@ -234,6 +265,10 @@ func (Int8) Type() Type {
 
 func (v Int8) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
+}
+
+func (v Int8) String() string {
+	return strconv.FormatInt(int64(v), 10)
 }
 
 // Int16
@@ -260,6 +295,10 @@ func (v Int16) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v Int16) String() string {
+	return strconv.FormatInt(int64(v), 10)
+}
+
 // Int32
 
 type Int32 int32
@@ -284,6 +323,10 @@ func (v Int32) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v Int32) String() string {
+	return strconv.FormatInt(int64(v), 10)
+}
+
 // Int64
 
 type Int64 int64
@@ -306,6 +349,10 @@ func (v Int64) ToBigEndianBytes() []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, uint64(v))
 	return b
+}
+
+func (v Int64) String() string {
+	return strconv.FormatInt(int64(v), 10)
 }
 
 // Int128
@@ -345,6 +392,10 @@ func (v Int128) ToBigEndianBytes() []byte {
 	return interpreter.SignedBigIntToBigEndianBytes(v.Value)
 }
 
+func (v Int128) String() string {
+	return v.Big().String()
+}
+
 // Int256
 
 type Int256 struct {
@@ -380,6 +431,10 @@ func (v Int256) Big() *big.Int {
 
 func (v Int256) ToBigEndianBytes() []byte {
 	return interpreter.SignedBigIntToBigEndianBytes(v.Value)
+}
+
+func (v Int256) String() string {
+	return v.Big().String()
 }
 
 // UInt
@@ -421,8 +476,11 @@ func (v UInt) ToBigEndianBytes() []byte {
 	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
 }
 
-// UInt8
+func (v UInt) String() string {
+	return v.Big().String()
+}
 
+// UInt8
 type UInt8 uint8
 
 func NewUInt8(v uint8) UInt8 {
@@ -441,6 +499,10 @@ func (v UInt8) ToGoValue() interface{} {
 
 func (v UInt8) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
+}
+
+func (v UInt8) String() string {
+	return strconv.FormatUint(uint64(v), 10)
 }
 
 // UInt16
@@ -467,6 +529,10 @@ func (v UInt16) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v UInt16) String() string {
+	return strconv.FormatUint(uint64(v), 10)
+}
+
 // UInt32
 
 type UInt32 uint32
@@ -491,6 +557,10 @@ func (v UInt32) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v UInt32) String() string {
+	return strconv.FormatUint(uint64(v), 10)
+}
+
 // UInt64
 
 type UInt64 uint64
@@ -513,6 +583,10 @@ func (v UInt64) ToBigEndianBytes() []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, uint64(v))
 	return b
+}
+
+func (v UInt64) String() string {
+	return strconv.FormatUint(uint64(v), 10)
 }
 
 // UInt128
@@ -555,6 +629,10 @@ func (v UInt128) ToBigEndianBytes() []byte {
 	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
 }
 
+func (v UInt128) String() string {
+	return v.Big().String()
+}
+
 // UInt256
 
 type UInt256 struct {
@@ -595,6 +673,10 @@ func (v UInt256) ToBigEndianBytes() []byte {
 	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
 }
 
+func (v UInt256) String() string {
+	return v.Big().String()
+}
+
 // Word8
 
 type Word8 uint8
@@ -615,6 +697,10 @@ func (v Word8) ToGoValue() interface{} {
 
 func (v Word8) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
+}
+
+func (v Word8) String() string {
+	return strconv.FormatUint(uint64(v), 10)
 }
 
 // Word16
@@ -641,6 +727,10 @@ func (v Word16) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v Word16) String() string {
+	return strconv.FormatUint(uint64(v), 10)
+}
+
 // Word32
 
 type Word32 uint32
@@ -665,6 +755,10 @@ func (v Word32) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v Word32) String() string {
+	return strconv.FormatUint(uint64(v), 10)
+}
+
 // Word64
 
 type Word64 uint64
@@ -687,6 +781,10 @@ func (v Word64) ToBigEndianBytes() []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, uint64(v))
 	return b
+}
+
+func (v Word64) String() string {
+	return strconv.FormatUint(uint64(v), 10)
 }
 
 // Fix64
@@ -730,6 +828,23 @@ func (v Fix64) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v Fix64) String() string {
+	integer := int64(v) / sema.Fix64Factor
+	fraction := int64(v) % sema.Fix64Factor
+	negative := fraction < 0
+	var builder strings.Builder
+	if negative {
+		fraction = -fraction
+		if integer == 0 {
+			builder.WriteRune('-')
+		}
+	}
+	builder.WriteString(fmt.Sprint(integer))
+	builder.WriteRune('.')
+	builder.WriteString(PadLeft(strconv.Itoa(int(fraction)), '0', sema.Fix64Scale))
+	return builder.String()
+}
+
 // UFix64
 
 type UFix64 uint64
@@ -770,6 +885,17 @@ func (v UFix64) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v UFix64) String() string {
+	factor := uint64(sema.Fix64Factor)
+	integer := uint64(v) / factor
+	fraction := uint64(v) % factor
+	return fmt.Sprintf(
+		"%d.%s",
+		integer,
+		PadLeft(strconv.Itoa(int(fraction)), '0', sema.Fix64Scale),
+	)
+}
+
 // Array
 
 type Array struct {
@@ -797,6 +923,19 @@ func (v Array) ToGoValue() interface{} {
 	return ret
 }
 
+func (v *Array) String() string {
+	var builder strings.Builder
+	builder.WriteString("[")
+	for i, value := range v.Values {
+		if i > 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteString(fmt.Sprint(value))
+	}
+	builder.WriteString("]")
+	return builder.String()
+}
+
 // Dictionary
 
 type Dictionary struct {
@@ -822,6 +961,23 @@ func (v Dictionary) ToGoValue() interface{} {
 	}
 
 	return ret
+}
+
+func (v *Dictionary) String() string {
+	var builder strings.Builder
+	builder.WriteString("{")
+	i := 0
+	for _, p := range v.Pairs {
+		if i > 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteString(fmt.Sprint(p.Key))
+		builder.WriteString(": ")
+		builder.WriteString(fmt.Sprint(p.Value))
+		i++
+	}
+	builder.WriteString("}")
+	return builder.String()
 }
 
 // KeyValuePair
@@ -863,6 +1019,8 @@ func (v Struct) ToGoValue() interface{} {
 	return ret
 }
 
+// TODO Stringer for Stuct
+
 // Resource
 
 type Resource struct {
@@ -894,6 +1052,8 @@ func (v Resource) ToGoValue() interface{} {
 
 	return ret
 }
+
+// TODO Stringer for Stuct
 
 // Event
 
@@ -927,6 +1087,8 @@ func (v Event) ToGoValue() interface{} {
 	return ret
 }
 
+// TODO Stringer for Event
+
 // Contract
 
 type Contract struct {
@@ -959,6 +1121,8 @@ func (v Contract) ToGoValue() interface{} {
 	return ret
 }
 
+// TODO Stringer for Contract
+
 // Link
 
 type Link struct {
@@ -984,6 +1148,14 @@ func (v Link) ToGoValue() interface{} {
 	return nil
 }
 
+func (v Link) String() string {
+	return fmt.Sprintf(
+		"Link(type: %s, targetPath: %s)",
+		v.BorrowType,
+		v.TargetPath,
+	)
+}
+
 // Path
 
 type Path struct {
@@ -999,6 +1171,14 @@ func (Path) Type() Type {
 
 func (Path) ToGoValue() interface{} {
 	return nil
+}
+
+func (v Path) String() string {
+	return fmt.Sprintf(
+		"/%s/%s",
+		v.Domain,
+		v.Identifier,
+	)
 }
 
 // TypeValue
@@ -1018,6 +1198,10 @@ func (TypeValue) ToGoValue() interface{} {
 	return nil
 }
 
+func (v TypeValue) String() string {
+	return fmt.Sprintf("Type<%s>", v.StaticType)
+}
+
 // Capability
 
 type Capability struct {
@@ -1035,4 +1219,38 @@ func (Capability) Type() Type {
 
 func (Capability) ToGoValue() interface{} {
 	return nil
+}
+
+func (v Capability) String() string {
+	var sb strings.Builder
+
+	sb.WriteString("Capability")
+
+	if v.BorrowType != "" {
+		sb.WriteRune('<')
+		sb.WriteString(v.BorrowType)
+		sb.WriteRune('>')
+	}
+	sb.WriteString("(/")
+	sb.WriteString(v.Address.String())
+	sb.WriteString(v.Path.String())
+	sb.WriteRune(')')
+
+	return sb.String()
+}
+
+func PadLeft(value string, separator rune, minLength uint) string {
+	length := uint(len(value))
+	if length >= minLength {
+		return value
+	}
+	n := int(minLength - length)
+
+	var builder strings.Builder
+	builder.Grow(n)
+	for i := 0; i < n; i++ {
+		builder.WriteRune(separator)
+	}
+	builder.WriteString(value)
+	return builder.String()
 }
