@@ -163,10 +163,6 @@ func (v Bytes) ToGoValue() interface{} {
 	return []byte(v)
 }
 
-func (v Bytes) String() string {
-	return string(v[:])
-}
-
 // Address
 
 const AddressLength = 8
@@ -923,7 +919,7 @@ func (v Array) ToGoValue() interface{} {
 	return ret
 }
 
-func (v *Array) String() string {
+func (v Array) String() string {
 	var builder strings.Builder
 	builder.WriteString("[")
 	for i, value := range v.Values {
@@ -963,7 +959,7 @@ func (v Dictionary) ToGoValue() interface{} {
 	return ret
 }
 
-func (v *Dictionary) String() string {
+func (v Dictionary) String() string {
 	var builder strings.Builder
 	builder.WriteString("{")
 	i := 0
