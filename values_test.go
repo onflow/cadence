@@ -9,50 +9,60 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+type StringTestCase struct {
+	value    Value
+	expected string
+}
+
 func TestStringer(t *testing.T) {
 	ufix, _ := NewUFix64("64.01")
 	fix, _ := NewFix64("-32.11")
-	/*
-		array := NewArray([]Value{
-			NewInt(10),
-			NewString("TEST"),
-		})*/
+
+	array := NewArray([]Value{
+		NewInt(10),
+		NewString("TEST"),
+	})
+
+	kv := KeyValuePair{Key: NewString("key"), Value: NewString("value")}
+
 	//TODO: bytes
-	stringerTests := map[Value]string{
-		NewUInt(10):              "10",
-		NewUInt8(8):              "8",
-		NewUInt16(16):            "16",
-		NewUInt32(32):            "32",
-		NewUInt64(64):            "64",
-		NewUInt128(128):          "128",
-		NewUInt256(256):          "256",
-		NewInt8(-8):              "-8",
-		NewInt16(16):             "16",
-		NewInt32(32):             "32",
-		NewInt64(64):             "64",
-		NewInt128(128):           "128",
-		NewInt256(256):           "256",
-		NewWord8(8):              "8",
-		NewWord16(16):            "16",
-		NewWord32(32):            "32",
-		NewWord64(64):            "64",
-		ufix:                     "64.01000000",
-		fix:                      "-32.11000000",
-		NewVoid():                "()",
-		NewBool(true):            "true",
-		NewBool(false):           "false",
-		NewOptional(ufix):        "64.01000000",
-		NewOptional(nil):         "nil",
-		NewString("Flow ridah!"): "\"Flow ridah!\"", //TODO: Not sure i agree that this should be escaped here
-		//array:                    "[-32.11000000, 64.01000000]",
+	stringerTests := map[string]StringTestCase{
+		"Uint":          StringTestCase{value: NewUInt(10), expected: "10"},
+		"Uint8":         StringTestCase{value: NewUInt8(8), expected: "8"},
+		"Uint16":        StringTestCase{value: NewUInt16(16), expected: "16"},
+		"Uint32":        StringTestCase{value: NewUInt32(32), expected: "32"},
+		"Uint64":        StringTestCase{value: NewUInt64(64), expected: "64"},
+		"Uint128":       StringTestCase{value: NewUInt128(128), expected: "128"},
+		"Uint256":       StringTestCase{value: NewUInt256(256), expected: "256"},
+		"int8":          StringTestCase{value: NewInt8(-8), expected: "-8"},
+		"int16":         StringTestCase{value: NewInt16(-16), expected: "-16"},
+		"int32":         StringTestCase{value: NewInt32(-32), expected: "-32"},
+		"int64":         StringTestCase{value: NewInt64(-64), expected: "-64"},
+		"int128":        StringTestCase{value: NewInt128(-128), expected: "-128"},
+		"int256":        StringTestCase{value: NewInt256(-256), expected: "-256"},
+		"word8":         StringTestCase{value: NewWord8(8), expected: "8"},
+		"word16":        StringTestCase{value: NewWord8(16), expected: "16"},
+		"word32":        StringTestCase{value: NewWord8(32), expected: "32"},
+		"word64":        StringTestCase{value: NewWord8(64), expected: "64"},
+		"ufix":          StringTestCase{value: ufix, expected: "64.01000000"},
+		"fix":           StringTestCase{value: fix, expected: "-32.11000000"},
+		"void":          StringTestCase{value: NewVoid(), expected: "()"},
+		"true":          StringTestCase{value: NewBool(true), expected: "true"},
+		"false":         StringTestCase{value: NewBool(true), expected: "true"},
+		"optionalUfix":  StringTestCase{value: NewOptional(ufix), expected: "64.01000000"},
+		"OptionalEmpty": StringTestCase{value: NewOptional(nil), expected: "nil"},
+		"string":        StringTestCase{value: NewString("Flow ridah!"), expected: "\"Flow ridah!\""}, //TODO: Not sure i agree that this should be escaped here
+		"array":         StringTestCase{value: array, expected: "[10, \"TEST\"]"},
+		"dictionary":    StringTestCase{value: NewDictionary([]KeyValuePair{kv}), expected: "{\"key\": \"value\"}"},
+		"bytes":         StringTestCase{value: NewBytes([]byte("foo")), expected: "[102 111 111]"},
 	}
 
-	for value, expected := range stringerTests {
+	for value, testCase := range stringerTests {
 		//t.Run(fmt.Sprint(value.Type().ID()), func(t *testing.T) { //this fails on Optional test?
-		t.Run("test", func(t *testing.T) {
+		t.Run(value, func(t *testing.T) {
 			assert.Equal(t,
-				expected,
-				fmt.Sprint(value),
+				testCase.expected,
+				fmt.Sprint(testCase.value),
 			)
 		})
 	}
