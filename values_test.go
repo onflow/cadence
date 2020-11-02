@@ -25,7 +25,6 @@ func TestStringer(t *testing.T) {
 
 	kv := KeyValuePair{Key: NewString("key"), Value: NewString("value")}
 
-	//TODO: bytes
 	stringerTests := map[string]StringTestCase{
 		"Uint":          StringTestCase{value: NewUInt(10), expected: "10"},
 		"Uint8":         StringTestCase{value: NewUInt8(8), expected: "8"},
@@ -51,14 +50,14 @@ func TestStringer(t *testing.T) {
 		"false":         StringTestCase{value: NewBool(true), expected: "true"},
 		"optionalUfix":  StringTestCase{value: NewOptional(ufix), expected: "64.01000000"},
 		"OptionalEmpty": StringTestCase{value: NewOptional(nil), expected: "nil"},
-		"string":        StringTestCase{value: NewString("Flow ridah!"), expected: "\"Flow ridah!\""}, //TODO: Not sure i agree that this should be escaped here
-		"array":         StringTestCase{value: array, expected: "[10, \"TEST\"]"},
-		"dictionary":    StringTestCase{value: NewDictionary([]KeyValuePair{kv}), expected: "{\"key\": \"value\"}"},
-		"bytes":         StringTestCase{value: NewBytes([]byte("foo")), expected: "[102 111 111]"},
+		"string":        StringTestCase{value: NewString("Flow ridah!"), expected: "Flow ridah!"}, //TODO: Not sure i agree that this should be escaped here
+		"array":         StringTestCase{value: array, expected: "[10, TEST]"},
+		"dictionary":    StringTestCase{value: NewDictionary([]KeyValuePair{kv}), expected: "{key: value}"},
+		"bytes":         StringTestCase{value: NewBytes([]byte("foo")), expected: "foo"},
+		"address":       StringTestCase{value: NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}), expected: "0000000000000001"},
 	}
 
 	for value, testCase := range stringerTests {
-		//t.Run(fmt.Sprint(value.Type().ID()), func(t *testing.T) { //this fails on Optional test?
 		t.Run(value, func(t *testing.T) {
 			assert.Equal(t,
 				testCase.expected,

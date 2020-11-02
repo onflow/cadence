@@ -36,7 +36,7 @@ type Value interface {
 	isValue()
 	Type() Type
 	ToGoValue() interface{}
-	//String() string //not really sure if this is needed?
+	String() string //not really sure if this is needed?
 }
 
 // NumberValue
@@ -142,7 +142,7 @@ func (v String) ToGoValue() interface{} {
 }
 
 func (v String) String() string {
-	return strconv.Quote(string(v))
+	return string(v)
 }
 
 // Bytes
@@ -161,6 +161,11 @@ func (Bytes) Type() Type {
 
 func (v Bytes) ToGoValue() interface{} {
 	return []byte(v)
+}
+
+//TODO: Is this right?
+func (v Bytes) String() string {
+	return string(v[:])
 }
 
 // Address
