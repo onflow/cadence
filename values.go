@@ -163,7 +163,6 @@ func (v Bytes) ToGoValue() interface{} {
 	return []byte(v)
 }
 
-//TODO: Is this right?
 func (v Bytes) String() string {
 	return string(v[:])
 }
@@ -1020,7 +1019,31 @@ func (v Struct) ToGoValue() interface{} {
 	return ret
 }
 
-// TODO Stringer for Stuct
+func (v Struct) String() string {
+	return FieldsStringer(v.StructType.Identifier, v.StructType.Fields, v.Fields)
+}
+
+func FieldsStringer(identifier string, names []Field, values []Value) string {
+	var fieldNames []string
+	for _, fields := range names {
+		fieldNames = append(fieldNames, fields.Identifier)
+	}
+
+	var builder strings.Builder
+	builder.WriteString(identifier)
+	builder.WriteString(":{")
+	for index, value := range values {
+		if index > 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteString(fieldNames[index])
+		builder.WriteString(": ")
+		builder.WriteString(fmt.Sprint(value))
+	}
+
+	builder.WriteString("}")
+	return builder.String()
+}
 
 // Resource
 
@@ -1054,7 +1077,9 @@ func (v Resource) ToGoValue() interface{} {
 	return ret
 }
 
-// TODO Stringer for Stuct
+func (v Resource) String() string {
+	return FieldsStringer(v.ResourceType.Identifier, v.ResourceType.Fields, v.Fields)
+}
 
 // Event
 
@@ -1087,8 +1112,9 @@ func (v Event) ToGoValue() interface{} {
 
 	return ret
 }
-
-// TODO Stringer for Event
+func (v Event) String() string {
+	return FieldsStringer(v.EventType.Identifier, v.EventType.Fields, v.Fields)
+}
 
 // Contract
 
@@ -1120,6 +1146,10 @@ func (v Contract) ToGoValue() interface{} {
 	}
 
 	return ret
+}
+
+func (v Contract) String() string {
+	return FieldsStringer(v.ContractType.Identifier, v.ContractType.Fields, v.Fields)
 }
 
 // TODO Stringer for Contract

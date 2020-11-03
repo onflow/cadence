@@ -23,7 +23,60 @@ func TestStringer(t *testing.T) {
 		NewString("TEST"),
 	})
 
+	fooResourceType := &ResourceType{
+		TypeID:     "S.test.Foo",
+		Identifier: "FooResource",
+		Fields: []Field{
+			{
+				Identifier: "bar",
+				Type:       IntType{},
+			},
+		},
+	}
+	resource := NewResource([]Value{NewInt(1)}).WithType(fooResourceType)
+
+	simpleEventType := &EventType{
+		TypeID:     "S.test.FooEvent",
+		Identifier: "FooEvent",
+		Fields: []Field{
+			{
+				Identifier: "a",
+				Type:       IntType{},
+			},
+			{
+				Identifier: "b",
+				Type:       StringType{},
+			},
+		},
+	}
+	event := NewEvent(
+		[]Value{
+			NewInt(1),
+			NewString("foo"),
+		},
+	).WithType(simpleEventType)
+
 	kv := KeyValuePair{Key: NewString("key"), Value: NewString("value")}
+	fooStruct := NewStruct([]Value{NewString("bar")}).WithType(&StructType{
+		TypeID:     "S.test.Foo",
+		Identifier: "Foo",
+		Fields: []Field{
+			{
+				Identifier: "y",
+				Type:       StringType{},
+			},
+		},
+	})
+
+	link := NewLink(Path{Domain: "storage", Identifier: "foo"}, "Bar")
+
+	path := Path{Domain: "storage", Identifier: "foo"}
+
+	cap := Capability{
+		Path:       Path{Domain: "storage", Identifier: "foo"},
+		Address:    BytesToAddress([]byte{1, 2, 3, 4, 5}),
+		BorrowType: "Int",
+	}
 
 	stringerTests := map[string]StringTestCase{
 		"Uint":          StringTestCase{value: NewUInt(10), expected: "10"},
@@ -55,6 +108,13 @@ func TestStringer(t *testing.T) {
 		"dictionary":    StringTestCase{value: NewDictionary([]KeyValuePair{kv}), expected: "{key: value}"},
 		"bytes":         StringTestCase{value: NewBytes([]byte("foo")), expected: "foo"},
 		"address":       StringTestCase{value: NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}), expected: "0000000000000001"},
+		"struct":        StringTestCase{value: fooStruct, expected: "Foo:{y: bar}"},
+		"resource":      StringTestCase{value: resource, expected: "FooResource:{bar: 1}"},
+		"event":         StringTestCase{value: event, expected: "FooEvent:{a: 1, b: foo}"},
+		"link":          StringTestCase{value: link, expected: "Link(type: Bar, targetPath: /storage/foo)"},
+		"path":          StringTestCase{value: path, expected: "/storage/foo"},
+		"type":          StringTestCase{value: TypeValue{StaticType: "Int"}, expected: "Type<Int>"},
+		"capability":    StringTestCase{value: cap, expected: "Capability<Int>(/0000000102030405/storage/foo)"},
 	}
 
 	for value, testCase := range stringerTests {
