@@ -1152,8 +1152,6 @@ func (v Contract) String() string {
 	return FieldsStringer(v.ContractType.Identifier, v.ContractType.Fields, v.Fields)
 }
 
-// TODO Stringer for Contract
-
 // Link
 
 type Link struct {
