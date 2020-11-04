@@ -27,18 +27,7 @@ import (
 type Program struct {
 	// all declarations, in the order they are defined
 	Declarations []Declaration
-	// Use `PragmaDeclarations()` instead
-	_pragmaDeclarations []*PragmaDeclaration
-	// Use `ImportDeclarations()` instead
-	_importDeclarations []*ImportDeclaration
-	// Use `Interfaces()` instead
-	_interfaceDeclarations []*InterfaceDeclaration
-	// Use `Composites()` instead
-	_compositeDeclarations []*CompositeDeclaration
-	// Use `FunctionDeclarations()` instead
-	_functionDeclarations []*FunctionDeclaration
-	// Use `TransactionDeclarations()` instead
-	_transactionDeclarations []*TransactionDeclaration
+	indices      programIndices
 }
 
 func (p *Program) StartPosition() Position {
@@ -63,79 +52,27 @@ func (p *Program) Accept(visitor Visitor) Repr {
 }
 
 func (p *Program) PragmaDeclarations() []*PragmaDeclaration {
-	if p._pragmaDeclarations == nil {
-		p.updateDeclarations()
-	}
-	return p._pragmaDeclarations
+	return p.indices.pragmaDeclarations(p.Declarations)
 }
 
 func (p *Program) ImportDeclarations() []*ImportDeclaration {
-	if p._importDeclarations == nil {
-		p.updateDeclarations()
-	}
-	return p._importDeclarations
+	return p.indices.importDeclarations(p.Declarations)
 }
 
 func (p *Program) InterfaceDeclarations() []*InterfaceDeclaration {
-	if p._interfaceDeclarations == nil {
-		p.updateDeclarations()
-	}
-	return p._interfaceDeclarations
+	return p.indices.interfaceDeclarations(p.Declarations)
 }
 
 func (p *Program) CompositeDeclarations() []*CompositeDeclaration {
-	if p._compositeDeclarations == nil {
-		p.updateDeclarations()
-	}
-	return p._compositeDeclarations
+	return p.indices.compositeDeclarations(p.Declarations)
 }
 
 func (p *Program) FunctionDeclarations() []*FunctionDeclaration {
-	if p._functionDeclarations == nil {
-		p.updateDeclarations()
-	}
-	return p._functionDeclarations
+	return p.indices.functionDeclarations(p.Declarations)
 }
 
 func (p *Program) TransactionDeclarations() []*TransactionDeclaration {
-	if p._transactionDeclarations == nil {
-		p.updateDeclarations()
-	}
-	return p._transactionDeclarations
-}
-
-func (p *Program) updateDeclarations() {
-	// Important: allocate instead of nil
-
-	p._pragmaDeclarations = make([]*PragmaDeclaration, 0)
-	p._importDeclarations = make([]*ImportDeclaration, 0)
-	p._compositeDeclarations = make([]*CompositeDeclaration, 0)
-	p._interfaceDeclarations = make([]*InterfaceDeclaration, 0)
-	p._functionDeclarations = make([]*FunctionDeclaration, 0)
-	p._transactionDeclarations = make([]*TransactionDeclaration, 0)
-
-	for _, declaration := range p.Declarations {
-
-		switch declaration := declaration.(type) {
-		case *PragmaDeclaration:
-			p._pragmaDeclarations = append(p._pragmaDeclarations, declaration)
-
-		case *ImportDeclaration:
-			p._importDeclarations = append(p._importDeclarations, declaration)
-
-		case *CompositeDeclaration:
-			p._compositeDeclarations = append(p._compositeDeclarations, declaration)
-
-		case *InterfaceDeclaration:
-			p._interfaceDeclarations = append(p._interfaceDeclarations, declaration)
-
-		case *FunctionDeclaration:
-			p._functionDeclarations = append(p._functionDeclarations, declaration)
-
-		case *TransactionDeclaration:
-			p._transactionDeclarations = append(p._transactionDeclarations, declaration)
-		}
-	}
+	return p.indices.transactionDeclarations(p.Declarations)
 }
 
 // SoleContractDeclaration returns the sole contract declaration, if any,
