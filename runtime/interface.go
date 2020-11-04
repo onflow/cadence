@@ -98,6 +98,9 @@ type Interface interface {
 
 	// Hash returns the digest of hashing the given data with using the given hash algorithm
 	Hash(data []byte, hashAlgorithm string) []byte
+
+	GetStorageUsed(address Address) uint64
+	GetStorageCapacity(address Address) uint64
 }
 
 type HighLevelStorage interface {
@@ -233,4 +236,12 @@ func (i *EmptyRuntimeInterface) Hash(
 	_ string,
 ) []byte {
 	return nil
+}
+
+func (i EmptyRuntimeInterface) GetStorageUsed(_ Address) uint64 {
+	return 0
+}
+
+func (i EmptyRuntimeInterface) GetStorageCapacity(_ Address) uint64 {
+	return 0
 }

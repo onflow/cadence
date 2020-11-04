@@ -6380,9 +6380,10 @@ type AccountValue interface {
 }
 
 // AuthAccountValue
-
 type AuthAccountValue struct {
 	Address                 AddressValue
+	StorageUsedGet          func() UInt64Value
+	StorageCapacityGet      func() UInt64Value
 	addPublicKeyFunction    FunctionValue
 	removePublicKeyFunction FunctionValue
 	contracts               AuthAccountContractsValue
@@ -6390,12 +6391,16 @@ type AuthAccountValue struct {
 
 func NewAuthAccountValue(
 	address AddressValue,
+	storageUsedGet func() UInt64Value,
+	storageCapacityGet func() UInt64Value,
 	addPublicKeyFunction FunctionValue,
 	removePublicKeyFunction FunctionValue,
 	contracts AuthAccountContractsValue,
 ) AuthAccountValue {
 	return AuthAccountValue{
 		Address:                 address,
+		StorageUsedGet:          storageUsedGet,
+		StorageCapacityGet:      storageCapacityGet,
 		addPublicKeyFunction:    addPublicKeyFunction,
 		removePublicKeyFunction: removePublicKeyFunction,
 		contracts:               contracts,
@@ -6512,6 +6517,12 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 	case "address":
 		return v.Address
 
+	case "storageUsed":
+		return v.StorageUsedGet()
+
+	case "storageCapacity":
+		return v.StorageCapacityGet()
+
 	case "addPublicKey":
 		return v.addPublicKeyFunction
 
@@ -6556,13 +6567,21 @@ func (AuthAccountValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ V
 // PublicAccountValue
 
 type PublicAccountValue struct {
-	Address    AddressValue
-	Identifier string
+	Address            AddressValue
+	StorageUsedGet     func() UInt64Value
+	StorageCapacityGet func() UInt64Value
+	Identifier         string
 }
 
-func NewPublicAccountValue(address AddressValue) PublicAccountValue {
+func NewPublicAccountValue(
+	address AddressValue,
+	storageUsedGet func() UInt64Value,
+	storageCapacityGet func() UInt64Value,
+) PublicAccountValue {
 	return PublicAccountValue{
-		Address: address,
+		Address:            address,
+		StorageUsedGet:     storageUsedGet,
+		StorageCapacityGet: storageCapacityGet,
 	}
 }
 
@@ -6611,6 +6630,12 @@ func (v PublicAccountValue) GetMember(inter *Interpreter, _ LocationRange, name 
 	switch name {
 	case "address":
 		return v.Address
+
+	case "storageUsed":
+		return v.StorageUsedGet()
+
+	case "storageCapacity":
+		return v.StorageCapacityGet()
 
 	case "getCapability":
 		return accountGetCapabilityFunction(v.Address, false)

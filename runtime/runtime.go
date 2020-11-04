@@ -265,6 +265,8 @@ func (r *interpreterRuntime) newAuthAccountValue(
 ) interpreter.AuthAccountValue {
 	return interpreter.NewAuthAccountValue(
 		addressValue,
+		func() interpreter.UInt64Value { return interpreter.UInt64Value(runtimeInterface.GetStorageUsed(addressValue.ToAddress())) },
+		func() interpreter.UInt64Value { return interpreter.UInt64Value(runtimeInterface.GetStorageCapacity(addressValue.ToAddress())) },
 		r.newAddPublicKeyFunction(addressValue, runtimeInterface),
 		r.newRemovePublicKeyFunction(addressValue, runtimeInterface),
 		r.newAuthAccountContracts(
@@ -1246,10 +1248,13 @@ func (r *interpreterRuntime) instantiateContract(
 	return contract, err
 }
 
-func (r *interpreterRuntime) newGetAccountFunction(_ Interface) interpreter.HostFunction {
+func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
 		accountAddress := invocation.Arguments[0].(interpreter.AddressValue)
-		publicAccount := interpreter.NewPublicAccountValue(accountAddress)
+		publicAccount := interpreter.NewPublicAccountValue(accountAddress,
+			func() interpreter.UInt64Value { return interpreter.UInt64Value(runtimeInterface.GetStorageUsed(accountAddress.ToAddress())) },
+			func() interpreter.UInt64Value { return interpreter.UInt64Value(runtimeInterface.GetStorageCapacity(accountAddress.ToAddress())) },
+		)
 		return trampoline.Done{Result: publicAccount}
 	}
 }
