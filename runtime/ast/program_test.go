@@ -59,13 +59,41 @@ func TestProgramIndices(t *testing.T) {
 	compositeB := &CompositeDeclaration{}
 	compositeC := &CompositeDeclaration{}
 
+	interfaceA := &InterfaceDeclaration{}
+	interfaceB := &InterfaceDeclaration{}
+	interfaceC := &InterfaceDeclaration{}
+
+	transactionA := &TransactionDeclaration{}
+	transactionB := &TransactionDeclaration{}
+	transactionC := &TransactionDeclaration{}
+
+	importA := &ImportDeclaration{}
+	importB := &ImportDeclaration{}
+	importC := &ImportDeclaration{}
+
+	pragmaA := &PragmaDeclaration{}
+	pragmaB := &PragmaDeclaration{}
+	pragmaC := &PragmaDeclaration{}
+
 	program := &Program{
 		Declarations: []Declaration{
+			importB,
+			pragmaA,
+			transactionC,
 			functionC,
+			interfaceB,
+			transactionA,
 			compositeB,
+			importC,
+			transactionB,
+			importA,
+			interfaceA,
+			pragmaB,
 			functionA,
 			compositeC,
 			functionB,
+			interfaceC,
+			pragmaC,
 			compositeA,
 		},
 	}
@@ -79,6 +107,15 @@ func TestProgramIndices(t *testing.T) {
 			defer wg.Done()
 
 			require.Equal(t,
+				[]*FunctionDeclaration{
+					functionB,
+					functionC,
+					functionA,
+				},
+				program.FunctionDeclarations(),
+			)
+
+			require.Equal(t,
 				[]*CompositeDeclaration{
 					compositeB,
 					compositeC,
@@ -88,16 +125,42 @@ func TestProgramIndices(t *testing.T) {
 			)
 
 			require.Equal(t,
-				[]*FunctionDeclaration{
-					functionB,
-					functionC,
-					functionA,
+				[]*InterfaceDeclaration{
+					interfaceB,
+					interfaceA,
+					interfaceC,
 				},
-				program.FunctionDeclarations(),
+				program.InterfaceDeclarations(),
+			)
+
+			require.Equal(t,
+				[]*TransactionDeclaration{
+					transactionC,
+					transactionA,
+					transactionB,
+				},
+				program.TransactionDeclarations(),
+			)
+
+			require.Equal(t,
+				[]*ImportDeclaration{
+					importB,
+					importC,
+					importA,
+				},
+				program.ImportDeclarations(),
+			)
+
+			require.Equal(t,
+				[]*PragmaDeclaration{
+					pragmaB,
+					pragmaC,
+					pragmaA,
+				},
+				program.PragmaDeclarations(),
 			)
 		}()
 	}
 
 	wg.Wait()
-
 }
