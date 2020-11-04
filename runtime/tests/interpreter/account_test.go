@@ -56,6 +56,8 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 
 	values["authAccount"] = interpreter.NewAuthAccountValue(
 		address,
+		func() interpreter.UInt64Value { return interpreter.UInt64Value(0) },
+		func() interpreter.UInt64Value { return interpreter.UInt64Value(0) },
 		panicFunction,
 		panicFunction,
 		interpreter.AuthAccountContractsValue{},
@@ -70,7 +72,11 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 		IsConstant: true,
 	}
 
-	values["pubAccount"] = interpreter.NewPublicAccountValue(address)
+	values["pubAccount"] = interpreter.NewPublicAccountValue(
+		address,
+		func() interpreter.UInt64Value { return interpreter.UInt64Value(0) },
+		func() interpreter.UInt64Value { return interpreter.UInt64Value(0) },
+	)
 
 	// `account`
 
@@ -1346,3 +1352,48 @@ func TestInterpretAccount_getCapability(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckAccount_StorageFields(t *testing.T) {
+	t.Parallel()
+
+	for accountType, auth := range map[string]bool{
+		"AuthAccount":   true,
+		"PublicAccount": false,
+	} {
+
+		for _, fieldName := range []string{
+			"storageUsed",
+			"storageCapacity",
+		} {
+
+			testName := fmt.Sprintf(
+				"%s.%s",
+				accountType,
+				fieldName,
+			)
+
+			t.Run(testName, func(t *testing.T) {
+
+				code := fmt.Sprintf(
+					`
+	                      fun test(): UInt64 {
+	                          return account.%s
+	                      }
+	                    `,
+					fieldName,
+				)
+				inter, _ := testAccount(
+					t,
+					auth,
+					code,
+				)
+
+				value, err := inter.Invoke("test")
+				require.NoError(t, err)
+
+				assert.Equal(t, interpreter.UInt64Value(0), value)
+			})
+		}
+	}
+}
+
