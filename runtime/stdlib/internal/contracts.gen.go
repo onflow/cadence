@@ -228,8 +228,8 @@ type bintree struct {
 }
 
 var _bintree = &bintree{nil, map[string]*bintree{
-	"contracts": &bintree{nil, map[string]*bintree{
-		"crypto.cdc": &bintree{contractsCryptoCdc, map[string]*bintree{}},
+	"contracts": {nil, map[string]*bintree{
+		"crypto.cdc": {contractsCryptoCdc, map[string]*bintree{}},
 	}},
 }}
 
