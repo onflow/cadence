@@ -20,6 +20,7 @@ package ast
 
 import (
 	"encoding/json"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -30,11 +31,11 @@ func TestProgram_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	members := &Program{
+	program := &Program{
 		Declarations: []Declaration{},
 	}
 
-	actual, err := json.Marshal(members)
+	actual, err := json.Marshal(program)
 	require.NoError(t, err)
 
 	assert.JSONEq(t,
@@ -46,4 +47,57 @@ func TestProgram_MarshalJSON(t *testing.T) {
         `,
 		string(actual),
 	)
+}
+
+func TestProgramIndices(t *testing.T) {
+
+	functionA := &FunctionDeclaration{}
+	functionB := &FunctionDeclaration{}
+	functionC := &FunctionDeclaration{}
+
+	compositeA := &CompositeDeclaration{}
+	compositeB := &CompositeDeclaration{}
+	compositeC := &CompositeDeclaration{}
+
+	program := &Program{
+		Declarations: []Declaration{
+			functionC,
+			compositeB,
+			functionA,
+			compositeC,
+			functionB,
+			compositeA,
+		},
+	}
+
+	var wg sync.WaitGroup
+	const parallelExecutionCount = 10
+
+	for i := 0; i < parallelExecutionCount; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			require.Equal(t,
+				[]*CompositeDeclaration{
+					compositeB,
+					compositeC,
+					compositeA,
+				},
+				program.CompositeDeclarations(),
+			)
+
+			require.Equal(t,
+				[]*FunctionDeclaration{
+					functionB,
+					functionC,
+					functionA,
+				},
+				program.FunctionDeclarations(),
+			)
+		}()
+	}
+
+	wg.Wait()
+
 }
