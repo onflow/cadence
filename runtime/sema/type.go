@@ -5318,6 +5318,14 @@ const accountTypeContractsFieldDocString = `
 The contracts of the account
 `
 
+const accountTypeStorageUsedFieldDocString = `
+The current amount of storage used on the account in bytes
+`
+
+const accountTypeStorageCapacityFieldDocString = `
+The storage capacity on the account in bytes
+`
+
 func (t *AuthAccountType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, map[string]MemberResolver{
 		"address": {
@@ -5328,6 +5336,28 @@ func (t *AuthAccountType) GetMembers() map[string]MemberResolver {
 					identifier,
 					&AddressType{},
 					accountTypeAddressFieldDocString,
+				)
+			},
+		},
+		"storageUsed": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicConstantFieldMember(
+					t,
+					identifier,
+					&UInt64Type{},
+					accountTypeStorageUsedFieldDocString,
+				)
+			},
+		},
+		"storageCapacity": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicConstantFieldMember(
+					t,
+					identifier,
+					&UInt64Type{},
+					accountTypeStorageCapacityFieldDocString,
 				)
 			},
 		},
@@ -5532,6 +5562,28 @@ func (t *PublicAccountType) GetMembers() map[string]MemberResolver {
 					identifier,
 					&AddressType{},
 					accountTypeAddressFieldDocString,
+				)
+			},
+		},
+		"storageUsed": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicConstantFieldMember(
+					t,
+					identifier,
+					&UInt64Type{},
+					accountTypeStorageUsedFieldDocString,
+				)
+			},
+		},
+		"storageCapacity": {
+			Kind: common.DeclarationKindField,
+			Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+				return NewPublicConstantFieldMember(
+					t,
+					identifier,
+					&UInt64Type{},
+					accountTypeStorageCapacityFieldDocString,
 				)
 			},
 		},

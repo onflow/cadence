@@ -118,8 +118,10 @@ type testRuntimeInterface struct {
 		signatureAlgorithm string,
 		hashAlgorithm string,
 	) bool
-	hash            func(data []byte, hashAlgorithm string) []byte
-	setCadenceValue func(owner Address, key string, value cadence.Value) (err error)
+	hash               func(data []byte, hashAlgorithm string) []byte
+	setCadenceValue    func(owner Address, key string, value cadence.Value) (err error)
+	getStorageUsed     func(_ Address) uint64
+	getStorageCapacity func(_ Address) uint64
 }
 
 var _ Interface = &testRuntimeInterface{}
@@ -324,6 +326,14 @@ func (i *testRuntimeInterface) HighLevelStorageEnabled() bool {
 
 func (i *testRuntimeInterface) SetCadenceValue(owner common.Address, key string, value cadence.Value) (err error) {
 	return i.setCadenceValue(owner, key, value)
+}
+
+func (i *testRuntimeInterface) GetStorageUsed(address Address) uint64 {
+	return i.getStorageUsed(address)
+}
+
+func (i *testRuntimeInterface) GetStorageCapacity(address Address) uint64 {
+	return i.getStorageCapacity(address)
 }
 
 func TestRuntimeImport(t *testing.T) {
