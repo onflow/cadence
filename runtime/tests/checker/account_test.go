@@ -1012,3 +1012,48 @@ func TestCheckAccount_getCapability(t *testing.T) {
 		}
 	}
 }
+
+func TestCheckAccount_StorageFields(t *testing.T) {
+	t.Parallel()
+
+	for accountType, accountVariable := range map[string]string{
+		"AuthAccount":   "authAccount",
+		"PublicAccount": "publicAccount",
+	} {
+
+		for _, fieldName := range []string{
+			"storageUsed",
+			"storageCapacity",
+		} {
+
+			testName := fmt.Sprintf(
+				"%s.%s",
+				accountType,
+				fieldName,
+			)
+
+			t.Run(testName, func(t *testing.T) {
+
+				code := fmt.Sprintf(
+					`
+	                      fun test(): UInt64 {
+	                          return %s.%s
+	                      }
+
+                          let cap = test()
+	                    `,
+					accountVariable,
+					fieldName,
+				)
+				checker, err := ParseAndCheckAccount(
+					t,
+					code,
+				)
+
+				require.NoError(t, err)
+				capType := checker.GlobalValues["cap"].Type
+				assert.Equal(t, &sema.UInt64Type{}, capType)
+			})
+		}
+	}
+}
