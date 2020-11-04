@@ -51,29 +51,89 @@ func TestProgram_MarshalJSON(t *testing.T) {
 
 func TestProgramIndices(t *testing.T) {
 
-	functionA := &FunctionDeclaration{}
-	functionB := &FunctionDeclaration{}
-	functionC := &FunctionDeclaration{}
+	functionA := &FunctionDeclaration{
+		Identifier: Identifier{Identifier: "A"},
+	}
+	functionB := &FunctionDeclaration{
+		Identifier: Identifier{Identifier: "B"},
+	}
+	functionC := &FunctionDeclaration{
+		Identifier: Identifier{Identifier: "C"},
+	}
 
-	compositeA := &CompositeDeclaration{}
-	compositeB := &CompositeDeclaration{}
-	compositeC := &CompositeDeclaration{}
+	compositeA := &CompositeDeclaration{
+		Identifier: Identifier{Identifier: "A"},
+	}
+	compositeB := &CompositeDeclaration{
+		Identifier: Identifier{Identifier: "B"},
+	}
+	compositeC := &CompositeDeclaration{
+		Identifier: Identifier{Identifier: "C"},
+	}
 
-	interfaceA := &InterfaceDeclaration{}
-	interfaceB := &InterfaceDeclaration{}
-	interfaceC := &InterfaceDeclaration{}
+	interfaceA := &InterfaceDeclaration{
+		Identifier: Identifier{Identifier: "A"},
+	}
+	interfaceB := &InterfaceDeclaration{
+		Identifier: Identifier{Identifier: "B"},
+	}
+	interfaceC := &InterfaceDeclaration{
+		Identifier: Identifier{Identifier: "C"},
+	}
 
-	transactionA := &TransactionDeclaration{}
-	transactionB := &TransactionDeclaration{}
-	transactionC := &TransactionDeclaration{}
+	transactionA := &TransactionDeclaration{
+		ParameterList: &ParameterList{
+			Parameters: []*Parameter{
+				{
+					Identifier: Identifier{Identifier: "A"},
+				},
+			},
+		},
+	}
+	transactionB := &TransactionDeclaration{
+		ParameterList: &ParameterList{
+			Parameters: []*Parameter{
+				{
+					Identifier: Identifier{Identifier: "B"},
+				},
+			},
+		},
+	}
+	transactionC := &TransactionDeclaration{
+		ParameterList: &ParameterList{
+			Parameters: []*Parameter{
+				{
+					Identifier: Identifier{Identifier: "C"},
+				},
+			},
+		},
+	}
 
-	importA := &ImportDeclaration{}
-	importB := &ImportDeclaration{}
-	importC := &ImportDeclaration{}
+	importA := &ImportDeclaration{
+		Location: StringLocation("A"),
+	}
+	importB := &ImportDeclaration{
+		Location: StringLocation("B"),
+	}
+	importC := &ImportDeclaration{
+		Location: StringLocation("C"),
+	}
 
-	pragmaA := &PragmaDeclaration{}
-	pragmaB := &PragmaDeclaration{}
-	pragmaC := &PragmaDeclaration{}
+	pragmaA := &PragmaDeclaration{
+		Expression: &IdentifierExpression{
+			Identifier: Identifier{Identifier: "A"},
+		},
+	}
+	pragmaB := &PragmaDeclaration{
+		Expression: &IdentifierExpression{
+			Identifier: Identifier{Identifier: "B"},
+		},
+	}
+	pragmaC := &PragmaDeclaration{
+		Expression: &IdentifierExpression{
+			Identifier: Identifier{Identifier: "C"},
+		},
+	}
 
 	program := &Program{
 		Declarations: []Declaration{
@@ -108,9 +168,9 @@ func TestProgramIndices(t *testing.T) {
 
 			require.Equal(t,
 				[]*FunctionDeclaration{
-					functionB,
 					functionC,
 					functionA,
+					functionB,
 				},
 				program.FunctionDeclarations(),
 			)
@@ -153,9 +213,9 @@ func TestProgramIndices(t *testing.T) {
 
 			require.Equal(t,
 				[]*PragmaDeclaration{
+					pragmaA,
 					pragmaB,
 					pragmaC,
-					pragmaA,
 				},
 				program.PragmaDeclarations(),
 			)
