@@ -90,10 +90,3 @@ func (c *Condition) Accept(visitor Visitor) Repr {
 // Conditions
 
 type Conditions []*Condition
-
-func (c *Conditions) Append(conditions Conditions) {
-	if c == nil {
-		return
-	}
-	*c = append(*c, conditions...)
-}
