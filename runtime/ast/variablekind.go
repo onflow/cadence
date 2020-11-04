@@ -45,6 +45,8 @@ var VariableKinds = []VariableKind{
 
 func (k VariableKind) Name() string {
 	switch k {
+	case VariableKindNotSpecified:
+		return ""
 	case VariableKindVariable:
 		return "variable"
 	case VariableKindConstant:
@@ -56,6 +58,8 @@ func (k VariableKind) Name() string {
 
 func (k VariableKind) Keyword() string {
 	switch k {
+	case VariableKindNotSpecified:
+		return ""
 	case VariableKindVariable:
 		return "var"
 	case VariableKindConstant:

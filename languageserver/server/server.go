@@ -1035,12 +1035,19 @@ func (s *Server) ResolveCompletionItem(
 		typeString := member.TypeAnnotation.Type.QualifiedString()
 
 		result.Detail = fmt.Sprintf(
-			"(%s) %s.%s: %s",
-			member.VariableKind.Name(),
+			"%s.%s: %s",
 			member.ContainerType.String(),
 			member.Identifier,
 			typeString,
 		)
+
+		// add the variable kind, if any, as a prefix
+		if member.VariableKind != ast.VariableKindNotSpecified {
+			result.Detail = fmt.Sprintf("(%s) %s",
+				member.VariableKind.Name(),
+				result.Detail,
+			)
+		}
 
 	case common.DeclarationKindFunction:
 		typeString := member.TypeAnnotation.Type.QualifiedString()
