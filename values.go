@@ -36,7 +36,6 @@ type Value interface {
 	isValue()
 	Type() Type
 	ToGoValue() interface{}
-	String() string //not really sure if this is needed?
 }
 
 // NumberValue
