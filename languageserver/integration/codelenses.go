@@ -116,7 +116,7 @@ func (i *FlowIntegration) showDeployContractAction(
 				i.activeAddress.Hex(),
 			),
 			Command:   CommandDeployContract,
-			Arguments: []interface{}{uri},
+			Arguments: []interface{}{uri, name},
 		},
 	}
 }
