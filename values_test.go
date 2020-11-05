@@ -142,13 +142,16 @@ func TestStringer(t *testing.T) {
 		}
 	}
 
-	for typeName, _ := range sema.BaseTypes {
-		typeFullName := fmt.Sprintf("%sType", typeName)
-		t.Run(typeFullName, func(t *testing.T) {
-			assert.True(t,
-				contains(testedTypes, typeFullName),
-				"Should be tested")
-		})
+	for typeName, typeValue := range sema.BaseTypes {
+		_, ok := typeValue.(Value) //only test Values
+		if ok {
+			typeFullName := fmt.Sprintf("%sType", typeName)
+			t.Run(typeFullName, func(t *testing.T) {
+				assert.True(t,
+					contains(testedTypes, typeFullName),
+					"Should be tested")
+			})
+		}
 	}
 }
 
