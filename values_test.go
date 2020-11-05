@@ -2,6 +2,7 @@ package cadence
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,7 +15,17 @@ type StringTestCase struct {
 	expected string
 }
 
+func contains(s []string, e string) bool {
+	for _, a := range s {
+		if a == e {
+			return true
+		}
+	}
+	return false
+}
+
 func TestStringer(t *testing.T) {
+
 	ufix, _ := NewUFix64("64.01")
 	fix, _ := NewFix64("-32.11")
 
@@ -93,9 +104,9 @@ func TestStringer(t *testing.T) {
 		"int128":        StringTestCase{value: NewInt128(-128), expected: "-128"},
 		"int256":        StringTestCase{value: NewInt256(-256), expected: "-256"},
 		"word8":         StringTestCase{value: NewWord8(8), expected: "8"},
-		"word16":        StringTestCase{value: NewWord8(16), expected: "16"},
-		"word32":        StringTestCase{value: NewWord8(32), expected: "32"},
-		"word64":        StringTestCase{value: NewWord8(64), expected: "64"},
+		"word16":        StringTestCase{value: NewWord16(16), expected: "16"},
+		"word32":        StringTestCase{value: NewWord32(32), expected: "32"},
+		"word64":        StringTestCase{value: NewWord64(64), expected: "64"},
 		"ufix":          StringTestCase{value: ufix, expected: "64.01000000"},
 		"fix":           StringTestCase{value: fix, expected: "-32.11000000"},
 		"void":          StringTestCase{value: NewVoid(), expected: "()"},
@@ -117,6 +128,7 @@ func TestStringer(t *testing.T) {
 		"capability":    StringTestCase{value: cap, expected: "Capability<Int>(/0000000102030405/storage/foo)"},
 	}
 
+	var testedTypes []string
 	for value, testCase := range stringerTests {
 		t.Run(value, func(t *testing.T) {
 			assert.Equal(t,
@@ -124,8 +136,22 @@ func TestStringer(t *testing.T) {
 				fmt.Sprint(testCase.value),
 			)
 		})
+		typ := testCase.value.Type()
+		if typ != nil {
+			testedTypes = append(testedTypes, reflect.TypeOf(typ).Name())
+		}
+	}
+
+	for typeName, _ := range sema.BaseTypes {
+		typeFullName := fmt.Sprintf("%sType", typeName)
+		t.Run(typeFullName, func(t *testing.T) {
+			assert.True(t,
+				contains(testedTypes, typeFullName),
+				"Should be tested")
+		})
 	}
 }
+
 func TestToBigEndianBytes(t *testing.T) {
 
 	typeTests := map[string]map[NumberValue][]byte{
