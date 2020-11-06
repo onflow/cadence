@@ -94,3 +94,18 @@ func DeploymentTransaction(name string, contract []byte) []byte {
 		hex.EncodeToString(contract),
 	))
 }
+
+func UpdateTransaction(name string, contract []byte) []byte {
+	return []byte(fmt.Sprintf(
+		`
+          transaction {
+
+              prepare(signer: AuthAccount) {
+                  signer.contracts.update__experimental(name: "%s", code: "%s".decodeHex())
+              }
+          }
+        `,
+		name,
+		hex.EncodeToString(contract),
+	))
+}
