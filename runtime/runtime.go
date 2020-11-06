@@ -1404,7 +1404,14 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				AddressLocation: addressValue[:],
 				Name:            nameArgument,
 			}
-			checker, err := r.ParseAndCheckProgram(code, runtimeInterface, location)
+
+			// NOTE: do NOT use the cache!
+
+			const useCache = false
+
+			functions := r.standardLibraryFunctions(runtimeInterface, runtimeStorage)
+
+			checker, err := r.parseAndCheckProgram(code, runtimeInterface, location, functions, nil, useCache)
 			if err != nil {
 				panic(fmt.Errorf("invalid contract: %w", err))
 			}
