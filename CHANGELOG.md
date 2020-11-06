@@ -62,6 +62,7 @@ For `AuthAccount`:
 
 ## ⭐ Features
 
+- Add a hash function to the crypto contract (#379)
 - Added npm packages for components of Cadence. This eases the development of developer tools for Cadence:
 
   - `cadence-language-server`: The Cadence Language Server
