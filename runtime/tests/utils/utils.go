@@ -107,3 +107,18 @@ func RequireErrorAs(t *testing.T, err error, target interface{}) {
 		target,
 	)
 }
+
+func UpdateTransaction(name string, contract []byte) []byte {
+	return []byte(fmt.Sprintf(
+		`
+          transaction {
+
+              prepare(signer: AuthAccount) {
+                  signer.contracts.update__experimental(name: "%s", code: "%s".decodeHex())
+              }
+          }
+        `,
+		name,
+		hex.EncodeToString(contract),
+	))
+}
