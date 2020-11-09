@@ -33,6 +33,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/trampoline"
 )
@@ -184,7 +185,7 @@ func (VoidValue) SetModified(_ bool) {
 }
 
 func (VoidValue) String() string {
-	return "()"
+	return format.Void
 }
 
 // BoolValue
@@ -231,7 +232,7 @@ func (v BoolValue) Equal(_ *Interpreter, other Value) BoolValue {
 }
 
 func (v BoolValue) String() string {
-	return strconv.FormatBool(bool(v))
+	return format.Bool(bool(v))
 }
 
 func (v BoolValue) KeyString() string {
@@ -5918,7 +5919,7 @@ func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline
 }
 
 func (NilValue) String() string {
-	return "nil"
+	return format.Nil
 }
 
 var nilValueMapFunction = NewHostFunctionValue(
@@ -5998,7 +5999,7 @@ func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRang
 }
 
 func (v *SomeValue) String() string {
-	return fmt.Sprint(v.Value)
+	return v.Value.String()
 }
 
 func (v *SomeValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
