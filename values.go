@@ -1172,8 +1172,7 @@ func (Path) ToGoValue() interface{} {
 }
 
 func (v Path) String() string {
-	return fmt.Sprintf(
-		"/%s/%s",
+	return format.Path(
 		v.Domain,
 		v.Identifier,
 	)

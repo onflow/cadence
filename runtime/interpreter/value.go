@@ -6627,8 +6627,7 @@ func (v PathValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampolin
 }
 
 func (v PathValue) String() string {
-	return fmt.Sprintf(
-		"/%s/%s",
+	return format.Path(
 		v.Domain.Identifier(),
 		v.Identifier,
 	)
