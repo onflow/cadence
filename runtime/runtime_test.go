@@ -4401,7 +4401,7 @@ func TestRuntimeExternalError(t *testing.T) {
 	)
 }
 
-func TestRuntimeUpdateCodeCaching(t *testing.T) {
+func TestRuntimeDeployCodeCaching(t *testing.T) {
 
 	t.Parallel()
 
@@ -4430,7 +4430,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
         }
     `
 
-	createAccountScript := []byte(`
+	createAccountTx := []byte(`
         transaction {
             prepare(signer: AuthAccount) {
                 AuthAccount(payer: signer)
@@ -4438,7 +4438,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
         }
     `)
 
-	updateCodeScript := utils.DeploymentTransaction("HelloWorld", []byte(helloWorldContract))
+	deployTx := utils.DeploymentTransaction("HelloWorld", []byte(helloWorldContract))
 
 	runtime := NewInterpreterRuntime()
 
@@ -4488,20 +4488,158 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	signerAddresses = []Address{{accountCounter}}
-
-	err := runtime.ExecuteTransaction(createAccountScript, nil, runtimeInterface, nextTransactionLocation())
-	require.NoError(t, err)
+	// create the account
 
 	signerAddresses = []Address{{accountCounter}}
 
-	err = runtime.ExecuteTransaction(updateCodeScript, nil, runtimeInterface, nextTransactionLocation())
+	err := runtime.ExecuteTransaction(createAccountTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	callScript := []byte(fmt.Sprintf(callHelloTxTemplate, Address{accountCounter}))
+	// deploy the contract
 
-	err = runtime.ExecuteTransaction(callScript, nil, runtimeInterface, nextTransactionLocation())
+	signerAddresses = []Address{{accountCounter}}
+
+	err = runtime.ExecuteTransaction(deployTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
+
+	// call the hello function
+
+	callTx := []byte(fmt.Sprintf(callHelloTxTemplate, Address{accountCounter}))
+
+	err = runtime.ExecuteTransaction(callTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+}
+
+func TestRuntimeUpdateCodeCaching(t *testing.T) {
+
+	t.Parallel()
+
+	const helloWorldContract1 = `
+      pub contract HelloWorld {
+
+          pub fun hello(): String {
+              return "1"
+          }
+      }
+    `
+
+	const helloWorldContract2 = `
+      pub contract HelloWorld {
+
+          pub fun hello(): String {
+              return "2"
+          }
+      }
+    `
+
+	const callHelloScriptTemplate = `
+        import HelloWorld from 0x%s
+
+        pub fun main(): String {
+            return HelloWorld.hello()
+        }
+    `
+
+	createAccountTx := []byte(`
+        transaction {
+            prepare(signer: AuthAccount) {
+                AuthAccount(payer: signer)
+            }
+        }
+    `)
+
+	deployTx := utils.DeploymentTransaction("HelloWorld", []byte(helloWorldContract1))
+	updateTx := utils.UpdateTransaction("HelloWorld", []byte(helloWorldContract2))
+
+	runtime := NewInterpreterRuntime()
+
+	accountCodes := map[string][]byte{}
+	var events []cadence.Event
+
+	cachedPrograms := map[LocationID]*ast.Program{}
+
+	var accountCounter uint8 = 0
+
+	var signerAddresses []Address
+
+	var cacheHits []string
+
+	runtimeInterface := &testRuntimeInterface{
+		createAccount: func(payer Address) (address Address, err error) {
+			accountCounter++
+			return Address{accountCounter}, nil
+		},
+		getCode: func(location Location) (bytes []byte, err error) {
+			key := string(location.(AddressLocation).ID())
+			return accountCodes[key], nil
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			cachedPrograms[location.ID()] = program
+			return nil
+		},
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			cacheHits = append(cacheHits, string(location.ID()))
+			return cachedPrograms[location.ID()], nil
+		},
+		storage: newTestStorage(nil, nil),
+		getSigningAccounts: func() []Address {
+			return signerAddresses
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
+			key := string(AddressLocation(address[:]).ID())
+			return accountCodes[key], nil
+		},
+		updateAccountContractCode: func(address Address, _ string, code []byte) error {
+			key := string(AddressLocation(address[:]).ID())
+			accountCodes[key] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) {
+			events = append(events, event)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// create the account
+
+	signerAddresses = []Address{{accountCounter}}
+
+	err := runtime.ExecuteTransaction(createAccountTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	// deploy the contract
+
+	cacheHits = nil
+
+	signerAddresses = []Address{{accountCounter}}
+
+	err = runtime.ExecuteTransaction(deployTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+	require.Empty(t, cacheHits)
+
+	// call the initial hello function
+
+	callScript := []byte(fmt.Sprintf(callHelloScriptTemplate, Address{accountCounter}))
+
+	result1, err := runtime.ExecuteScript(callScript, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+	require.Equal(t, cadence.NewString("1"), result1)
+
+	// update the contract
+
+	cacheHits = nil
+
+	err = runtime.ExecuteTransaction(updateTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+	require.Empty(t, cacheHits)
+
+	// call the new hello function
+
+	result2, err := runtime.ExecuteScript(callScript, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+	require.Equal(t, cadence.NewString("2"), result2)
 }
 
 func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
@@ -4536,7 +4674,7 @@ func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
         }
     `
 
-	createAccountScript := []byte(`
+	createAccountTx := []byte(`
         transaction {
             prepare(signer: AuthAccount) {
                 AuthAccount(payer: signer)
@@ -4544,7 +4682,7 @@ func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
         }
     `)
 
-	updateCodeScript := utils.DeploymentTransaction("HelloWorld", []byte(helloWorldContract))
+	deployTx := utils.DeploymentTransaction("HelloWorld", []byte(helloWorldContract))
 
 	runtime := NewInterpreterRuntime()
 
@@ -4599,23 +4737,30 @@ func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
 
 	signerAddresses = []Address{{accountCounter}}
 
-	err := runtime.ExecuteTransaction(createAccountScript, nil, runtimeInterface, nextTransactionLocation())
+	// create the account
+
+	err := runtime.ExecuteTransaction(createAccountTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	signerAddresses = []Address{{accountCounter}}
 
-	err = runtime.ExecuteTransaction(updateCodeScript, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(deployTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	callScript := []byte(fmt.Sprintf(callHelloTxTemplate, Address{accountCounter}))
+	// call the function
 
-	err = runtime.ExecuteTransaction(callScript, nil, runtimeInterface, nextTransactionLocation())
+	callTx := []byte(fmt.Sprintf(callHelloTxTemplate, Address{accountCounter}))
+
+	err = runtime.ExecuteTransaction(callTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	// We should only receive a cache hit for the imported program, not the transactions/scripts.
+
+	// NOTE: if this test case fails with an additional cache hit,
+	// then the deployment is incorrectly using the cache!
+
 	require.Equal(t,
 		[]string{
-			"AC.0100000000000000.HelloWorld",
 			"AC.0100000000000000.HelloWorld",
 		},
 		cacheHits,
