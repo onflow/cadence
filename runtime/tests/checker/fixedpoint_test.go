@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -144,7 +144,7 @@ func TestCheckFixedPointLiteralRanges(t *testing.T) {
 				var builder strings.Builder
 				builder.WriteString(integer.String())
 				builder.WriteRune('.')
-				builder.WriteString(interpreter.PadLeft(fractional.String(), '0', ranged.Scale()))
+				builder.WriteString(format.PadLeft(fractional.String(), '0', ranged.Scale()))
 				return builder.String()
 			}
 

@@ -16,24 +16,40 @@
  * limitations under the License.
  */
 
-package interpreter
+package format
 
 import (
+	"fmt"
+	"strconv"
 	"strings"
+
+	"github.com/onflow/cadence/runtime/sema"
 )
 
-func PadLeft(value string, separator rune, minLength uint) string {
-	length := uint(len(value))
-	if length >= minLength {
-		return value
-	}
-	n := int(minLength - length)
-
+func Fix64(v int64) string {
+	integer := v / sema.Fix64Factor
+	fraction := v % sema.Fix64Factor
+	negative := fraction < 0
 	var builder strings.Builder
-	builder.Grow(n)
-	for i := 0; i < n; i++ {
-		builder.WriteRune(separator)
+	if negative {
+		fraction = -fraction
+		if integer == 0 {
+			builder.WriteRune('-')
+		}
 	}
-	builder.WriteString(value)
+	builder.WriteString(fmt.Sprint(integer))
+	builder.WriteRune('.')
+	builder.WriteString(PadLeft(strconv.Itoa(int(fraction)), '0', sema.Fix64Scale))
 	return builder.String()
+}
+
+func UFix64(v uint64) string {
+	factor := uint64(sema.Fix64Factor)
+	integer := v / factor
+	fraction := v % factor
+	return fmt.Sprintf(
+		"%d.%s",
+		integer,
+		PadLeft(strconv.Itoa(int(fraction)), '0', sema.Fix64Scale),
+	)
 }

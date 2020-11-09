@@ -22,13 +22,11 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
-	"strconv"
 	"strings"
 
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/interpreter"
-	"github.com/onflow/cadence/runtime/sema"
 )
 
 // Value
@@ -830,20 +828,7 @@ func (v Fix64) ToBigEndianBytes() []byte {
 }
 
 func (v Fix64) String() string {
-	integer := int64(v) / sema.Fix64Factor
-	fraction := int64(v) % sema.Fix64Factor
-	negative := fraction < 0
-	var builder strings.Builder
-	if negative {
-		fraction = -fraction
-		if integer == 0 {
-			builder.WriteRune('-')
-		}
-	}
-	builder.WriteString(fmt.Sprint(integer))
-	builder.WriteRune('.')
-	builder.WriteString(PadLeft(strconv.Itoa(int(fraction)), '0', sema.Fix64Scale))
-	return builder.String()
+	return format.Fix64(int64(v))
 }
 
 // UFix64
@@ -887,14 +872,7 @@ func (v UFix64) ToBigEndianBytes() []byte {
 }
 
 func (v UFix64) String() string {
-	factor := uint64(sema.Fix64Factor)
-	integer := uint64(v) / factor
-	fraction := uint64(v) % factor
-	return fmt.Sprintf(
-		"%d.%s",
-		integer,
-		PadLeft(strconv.Itoa(int(fraction)), '0', sema.Fix64Scale),
-	)
+	return format.UFix64(uint64(v))
 }
 
 // Array
@@ -1267,20 +1245,4 @@ func (v Capability) String() string {
 	sb.WriteRune(')')
 
 	return sb.String()
-}
-
-func PadLeft(value string, separator rune, minLength uint) string {
-	length := uint(len(value))
-	if length >= minLength {
-		return value
-	}
-	n := int(minLength - length)
-
-	var builder strings.Builder
-	builder.Grow(n)
-	for i := 0; i < n; i++ {
-		builder.WriteRune(separator)
-	}
-	builder.WriteString(value)
-	return builder.String()
 }
