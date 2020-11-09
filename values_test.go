@@ -9,28 +9,20 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-type StringTestCase struct {
-	value    Value
-	expected string
-}
-
-func contains(s []string, e string) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
-}
-
 func TestStringer(t *testing.T) {
 
 	t.Parallel()
 
-	ufix, _ := NewUFix64("64.01")
-	fix, _ := NewFix64("-32.11")
+	type testCase struct {
+		value    Value
+		expected string
+	}
 
-	stringerTests := map[string]StringTestCase{
+
+	ufix64, _ := NewUFix64("64.01")
+	fix64, _ := NewFix64("-32.11")
+
+	stringerTests := map[string]testCase{
 		"UInt": {
 			value: NewUInt(10),
 			expected: "10",
@@ -99,12 +91,12 @@ func TestStringer(t *testing.T) {
 			value: NewWord64(64),
 			expected: "64",
 		},
-		"UFix": {
-			value: ufix,
+		"UFix64": {
+			value:    ufix64,
 			expected: "64.01000000",
 		},
-		"Fix": {
-			value: fix,
+		"Fix64": {
+			value:    fix64,
 			expected: "-32.11000000",
 		},
 		"Void": {
@@ -120,7 +112,7 @@ func TestStringer(t *testing.T) {
 			expected: "false",
 		},
 		"some": {
-			value: NewOptional(ufix),
+			value: NewOptional(ufix64),
 			expected: "64.01000000",
 		},
 		"nil": {
@@ -222,12 +214,17 @@ func TestStringer(t *testing.T) {
 					Domain: "storage",
 					Identifier: "foo",
 				},
-				"Bar",
+				"Int",
 			),
-			expected: "Link<Bar>(/storage/foo)",
+			expected: "Link<Int>(/storage/foo)",
 		},
 		"Path": {
-			value: Path{Domain: "storage", Identifier: "foo"}, expected: "/storage/foo"},
+			value: Path{
+				Domain: "storage",
+				Identifier: "foo",
+			},
+			expected: "/storage/foo",
+		},
 		"Type": {
 			value: TypeValue{StaticType: "Int"},
 			expected: "Type<Int>()",
@@ -242,7 +239,7 @@ func TestStringer(t *testing.T) {
 		},
 	}
 
-	test := func (name string, testCase StringTestCase) {
+	test := func (name string, testCase testCase) {
 
 		t.Run(name, func(t *testing.T) {
 
