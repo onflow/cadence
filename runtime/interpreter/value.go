@@ -5683,24 +5683,18 @@ func (v *DictionaryValue) Set(inter *Interpreter, locationRange LocationRange, k
 }
 
 func (v *DictionaryValue) String() string {
-	var builder strings.Builder
-	builder.WriteString("{")
-	i := 0
-	for _, keyValue := range v.Keys.Values {
-		if i > 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(fmt.Sprint(keyValue))
-		builder.WriteString(": ")
+	pairs := make([]struct{Key string; Value string}, len(v.Keys.Values))
 
+	for i, keyValue := range v.Keys.Values {
 		key := dictionaryKey(keyValue)
 		value := v.Entries[key]
-		builder.WriteString(fmt.Sprint(value))
-
-		i++
+		pairs[i] = struct{Key string;Value string}{
+			Key: keyValue.String(),
+			Value: value.String(),
+		}
 	}
-	builder.WriteString("}")
-	return builder.String()
+
+	return format.Dictionary(pairs)
 }
 
 func (v *DictionaryValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {

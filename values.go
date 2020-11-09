@@ -938,20 +938,16 @@ func (v Dictionary) ToGoValue() interface{} {
 }
 
 func (v Dictionary) String() string {
-	var builder strings.Builder
-	builder.WriteString("{")
-	i := 0
-	for _, p := range v.Pairs {
-		if i > 0 {
-			builder.WriteString(", ")
+	pairs := make([]struct{Key string; Value string}, len(v.Pairs))
+
+	for i, pair := range v.Pairs {
+		pairs[i] = struct{Key string;Value string}{
+			Key: pair.Key.String(),
+			Value: pair.Value.String(),
 		}
-		builder.WriteString(fmt.Sprint(p.Key))
-		builder.WriteString(": ")
-		builder.WriteString(fmt.Sprint(p.Value))
-		i++
 	}
-	builder.WriteString("}")
-	return builder.String()
+
+	return format.Dictionary(pairs)
 }
 
 // KeyValuePair
