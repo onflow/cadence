@@ -4716,20 +4716,7 @@ func (Fix64Value) SetModified(_ bool) {
 }
 
 func (v Fix64Value) String() string {
-	integer := int64(v) / sema.Fix64Factor
-	fraction := int64(v) % sema.Fix64Factor
-	negative := fraction < 0
-	var builder strings.Builder
-	if negative {
-		fraction = -fraction
-		if integer == 0 {
-			builder.WriteRune('-')
-		}
-	}
-	builder.WriteString(fmt.Sprint(integer))
-	builder.WriteRune('.')
-	builder.WriteString(PadLeft(strconv.Itoa(int(fraction)), '0', sema.Fix64Scale))
-	return builder.String()
+	return format.Fix64(int64(v))
 }
 
 func (v Fix64Value) KeyString() string {
@@ -4973,14 +4960,7 @@ func (UFix64Value) SetModified(_ bool) {
 }
 
 func (v UFix64Value) String() string {
-	factor := uint64(sema.Fix64Factor)
-	integer := uint64(v) / factor
-	fraction := uint64(v) % factor
-	return fmt.Sprintf(
-		"%d.%s",
-		integer,
-		PadLeft(strconv.Itoa(int(fraction)), '0', sema.Fix64Scale),
-	)
+	return format.UFix64(uint64(v))
 }
 
 func (v UFix64Value) KeyString() string {
