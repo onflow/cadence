@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence/fixedpoint"
+	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -36,6 +37,7 @@ type Value interface {
 	isValue()
 	Type() Type
 	ToGoValue() interface{}
+	fmt.Stringer
 }
 
 // NumberValue
@@ -64,7 +66,7 @@ func (Void) ToGoValue() interface{} {
 }
 
 func (Void) String() string {
-	return "()"
+	return format.Void
 }
 
 // Optional
@@ -95,9 +97,9 @@ func (o Optional) ToGoValue() interface{} {
 
 func (o Optional) String() string {
 	if o.Value == nil {
-		return "nil"
+		return format.Nil
 	}
-	return fmt.Sprint(o.Value)
+	return o.Value.String()
 }
 
 // Bool
@@ -119,7 +121,7 @@ func (v Bool) ToGoValue() interface{} {
 }
 
 func (v Bool) String() string {
-	return strconv.FormatBool(bool(v))
+	return format.Bool(bool(v))
 }
 
 // String
