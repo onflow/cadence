@@ -281,8 +281,7 @@ func (v *StringValue) SetModified(modified bool) {
 }
 
 func (v *StringValue) String() string {
-	// TODO: quote like in string literal
-	return strconv.Quote(v.Str)
+	return format.String(v.Str)
 }
 
 func (v *StringValue) KeyString() string {
