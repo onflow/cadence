@@ -126,18 +126,18 @@ func TestStringer(t *testing.T) {
 			value: NewOptional(nil),
 			expected: "nil",
 		},
-		"string": {
+		"String": {
 			value: NewString("Flow ridah!"),
 			expected: "\"Flow ridah!\"",
 		},
-		"array": {
+		"Array": {
 			value: NewArray([]Value{
 				NewInt(10),
 				NewString("TEST"),
 			}),
 			expected: "[10, \"TEST\"]",
 		},
-		"dictionary": {
+		"Dictionary": {
 			value: NewDictionary([]KeyValuePair{
 				{
 					Key: NewString("key"),
@@ -146,13 +146,13 @@ func TestStringer(t *testing.T) {
 			}),
 			expected: "{\"key\": \"value\"}",
 		},
-		"bytes": {
+		"Bytes": {
 			value: NewBytes([]byte{0x1, 0x2}),
 			expected: "[0x1, 0x2]",
 		},
-		"address": {
+		"Address": {
 			value: NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
-			expected: "0000000000000001",
+			expected: "0x1",
 		},
 		"struct": {
 			value: NewStruct([]Value{NewString("bar")}).WithType(&StructType{
@@ -200,7 +200,7 @@ func TestStringer(t *testing.T) {
 				},
 			}), expected: "FooEvent(a: 1, b: \"foo\")",
 		},
-		"link": {
+		"Link": {
 			value: NewLink(
 				Path{
 					Domain: "storage",
@@ -210,19 +210,19 @@ func TestStringer(t *testing.T) {
 			),
 			expected: "Link<Bar>(/storage/foo)",
 		},
-		"path": {
+		"Path": {
 			value: Path{Domain: "storage", Identifier: "foo"}, expected: "/storage/foo"},
-		"type": {
+		"Type": {
 			value: TypeValue{StaticType: "Int"},
 			expected: "Type<Int>()",
 		},
-		"capability": {
+		"Capability": {
 			value: Capability{
 				Path:       Path{Domain: "storage", Identifier: "foo"},
 				Address:    BytesToAddress([]byte{1, 2, 3, 4, 5}),
 				BorrowType: "Int",
 			},
-			expected: "Capability<Int>(/0000000102030405/storage/foo)",
+			expected: "Capability<Int>(address: 0x102030405, path: /storage/foo)",
 		},
 	}
 
@@ -231,7 +231,7 @@ func TestStringer(t *testing.T) {
 		t.Run(value, func(t *testing.T) {
 			assert.Equal(t,
 				testCase.expected,
-				fmt.Sprint(testCase.value),
+				testCase.value.String(),
 			)
 		})
 		typ := testCase.value.Type()
