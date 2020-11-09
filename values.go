@@ -143,7 +143,7 @@ func (v String) ToGoValue() interface{} {
 }
 
 func (v String) String() string {
-	return string(v)
+	return format.String(string(v))
 }
 
 // Bytes
