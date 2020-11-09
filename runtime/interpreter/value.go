@@ -6762,9 +6762,8 @@ func (v LinkValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampolin
 }
 
 func (v LinkValue) String() string {
-	return fmt.Sprintf(
-		"Link(type: %s, targetPath: %s)",
-		v.Type,
-		v.TargetPath,
+	return format.Link(
+		v.Type.String(),
+		v.TargetPath.String(),
 	)
 }

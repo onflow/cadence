@@ -1148,10 +1148,9 @@ func (v Link) ToGoValue() interface{} {
 }
 
 func (v Link) String() string {
-	return fmt.Sprintf(
-		"Link(type: %s, targetPath: %s)",
+	return format.Link(
 		v.BorrowType,
-		v.TargetPath,
+		v.TargetPath.String(),
 	)
 }
 
