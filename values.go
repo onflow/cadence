@@ -165,7 +165,7 @@ func (v Bytes) ToGoValue() interface{} {
 }
 
 func (v Bytes) String() string {
-	return string(v[:])
+	return format.Bytes(v)
 }
 
 // Address
