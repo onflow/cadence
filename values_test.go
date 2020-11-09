@@ -214,7 +214,7 @@ func TestStringer(t *testing.T) {
 			value: Path{Domain: "storage", Identifier: "foo"}, expected: "/storage/foo"},
 		"type": {
 			value: TypeValue{StaticType: "Int"},
-			expected: "Type<Int>",
+			expected: "Type<Int>()",
 		},
 		"capability": {
 			value: Capability{

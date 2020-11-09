@@ -1196,7 +1196,7 @@ func (TypeValue) ToGoValue() interface{} {
 }
 
 func (v TypeValue) String() string {
-	return fmt.Sprintf("Type<%s>", v.StaticType)
+	return format.TypeValue(v.StaticType)
 }
 
 // Capability
