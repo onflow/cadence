@@ -243,7 +243,7 @@ func (v Int) ToBigEndianBytes() []byte {
 }
 
 func (v Int) String() string {
-	return v.Big().String()
+	return format.BigInt(v.Value)
 }
 
 // Int8
@@ -269,7 +269,7 @@ func (v Int8) ToBigEndianBytes() []byte {
 }
 
 func (v Int8) String() string {
-	return strconv.FormatInt(int64(v), 10)
+	return format.Int(int64(v))
 }
 
 // Int16
@@ -297,7 +297,7 @@ func (v Int16) ToBigEndianBytes() []byte {
 }
 
 func (v Int16) String() string {
-	return strconv.FormatInt(int64(v), 10)
+	return format.Int(int64(v))
 }
 
 // Int32
@@ -325,7 +325,7 @@ func (v Int32) ToBigEndianBytes() []byte {
 }
 
 func (v Int32) String() string {
-	return strconv.FormatInt(int64(v), 10)
+	return format.Int(int64(v))
 }
 
 // Int64
@@ -353,7 +353,7 @@ func (v Int64) ToBigEndianBytes() []byte {
 }
 
 func (v Int64) String() string {
-	return strconv.FormatInt(int64(v), 10)
+	return format.Int(int64(v))
 }
 
 // Int128
@@ -394,7 +394,7 @@ func (v Int128) ToBigEndianBytes() []byte {
 }
 
 func (v Int128) String() string {
-	return v.Big().String()
+	return format.BigInt(v.Value)
 }
 
 // Int256
@@ -435,7 +435,7 @@ func (v Int256) ToBigEndianBytes() []byte {
 }
 
 func (v Int256) String() string {
-	return v.Big().String()
+	return format.BigInt(v.Value)
 }
 
 // UInt
@@ -478,7 +478,7 @@ func (v UInt) ToBigEndianBytes() []byte {
 }
 
 func (v UInt) String() string {
-	return v.Big().String()
+	return format.BigInt(v.Value)
 }
 
 // UInt8
@@ -503,7 +503,7 @@ func (v UInt8) ToBigEndianBytes() []byte {
 }
 
 func (v UInt8) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 // UInt16
@@ -531,7 +531,7 @@ func (v UInt16) ToBigEndianBytes() []byte {
 }
 
 func (v UInt16) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 // UInt32
@@ -559,7 +559,7 @@ func (v UInt32) ToBigEndianBytes() []byte {
 }
 
 func (v UInt32) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 // UInt64
@@ -587,7 +587,7 @@ func (v UInt64) ToBigEndianBytes() []byte {
 }
 
 func (v UInt64) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 // UInt128
@@ -631,7 +631,7 @@ func (v UInt128) ToBigEndianBytes() []byte {
 }
 
 func (v UInt128) String() string {
-	return v.Big().String()
+	return format.BigInt(v.Value)
 }
 
 // UInt256
@@ -675,7 +675,7 @@ func (v UInt256) ToBigEndianBytes() []byte {
 }
 
 func (v UInt256) String() string {
-	return v.Big().String()
+	return format.BigInt(v.Value)
 }
 
 // Word8
@@ -701,7 +701,7 @@ func (v Word8) ToBigEndianBytes() []byte {
 }
 
 func (v Word8) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 // Word16
@@ -729,7 +729,7 @@ func (v Word16) ToBigEndianBytes() []byte {
 }
 
 func (v Word16) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 // Word32
@@ -757,7 +757,7 @@ func (v Word32) ToBigEndianBytes() []byte {
 }
 
 func (v Word32) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 // Word64
@@ -785,7 +785,7 @@ func (v Word64) ToBigEndianBytes() []byte {
 }
 
 func (v Word64) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 // Fix64
