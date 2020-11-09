@@ -808,7 +808,7 @@ func (v IntValue) ToBigInt() *big.Int {
 }
 
 func (v IntValue) String() string {
-	return v.BigInt.String()
+	return format.BigInt(v.BigInt)
 }
 
 func (v IntValue) KeyString() string {
@@ -1001,7 +1001,7 @@ func (Int8Value) SetModified(_ bool) {
 }
 
 func (v Int8Value) String() string {
-	return strconv.FormatInt(int64(v), 10)
+	return format.Int(int64(v))
 }
 
 func (v Int8Value) KeyString() string {
@@ -1231,7 +1231,7 @@ func (Int16Value) SetModified(_ bool) {
 }
 
 func (v Int16Value) String() string {
-	return strconv.FormatInt(int64(v), 10)
+	return format.Int(int64(v))
 }
 
 func (v Int16Value) KeyString() string {
@@ -1463,7 +1463,7 @@ func (Int32Value) SetModified(_ bool) {
 }
 
 func (v Int32Value) String() string {
-	return strconv.FormatInt(int64(v), 10)
+	return format.Int(int64(v))
 }
 
 func (v Int32Value) KeyString() string {
@@ -1695,7 +1695,7 @@ func (Int64Value) SetModified(_ bool) {
 }
 
 func (v Int64Value) String() string {
-	return strconv.FormatInt(int64(v), 10)
+	return format.Int(int64(v))
 }
 
 func (v Int64Value) KeyString() string {
@@ -1944,7 +1944,7 @@ func (v Int128Value) ToBigInt() *big.Int {
 }
 
 func (v Int128Value) String() string {
-	return v.BigInt.String()
+	return format.BigInt(v.BigInt)
 }
 
 func (v Int128Value) KeyString() string {
@@ -2234,7 +2234,7 @@ func (v Int256Value) ToBigInt() *big.Int {
 }
 
 func (v Int256Value) String() string {
-	return v.BigInt.String()
+	return format.BigInt(v.BigInt)
 }
 
 func (v Int256Value) KeyString() string {
@@ -2545,7 +2545,7 @@ func (v UIntValue) ToBigInt() *big.Int {
 }
 
 func (v UIntValue) String() string {
-	return v.BigInt.String()
+	return format.BigInt(v.BigInt)
 }
 
 func (v UIntValue) KeyString() string {
@@ -2741,7 +2741,7 @@ func (UInt8Value) SetModified(_ bool) {
 }
 
 func (v UInt8Value) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 func (v UInt8Value) KeyString() string {
@@ -2938,7 +2938,7 @@ func (UInt16Value) SetModified(_ bool) {
 }
 
 func (v UInt16Value) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 func (v UInt16Value) KeyString() string {
@@ -3137,7 +3137,7 @@ func (UInt32Value) SetModified(_ bool) {
 }
 
 func (v UInt32Value) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 func (v UInt32Value) KeyString() string {
@@ -3337,7 +3337,7 @@ func (UInt64Value) SetModified(_ bool) {
 }
 
 func (v UInt64Value) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 func (v UInt64Value) KeyString() string {
@@ -3559,7 +3559,7 @@ func (v UInt128Value) ToBigInt() *big.Int {
 }
 
 func (v UInt128Value) String() string {
-	return v.BigInt.String()
+	return format.BigInt(v.BigInt)
 }
 
 func (v UInt128Value) KeyString() string {
@@ -3818,7 +3818,7 @@ func (v UInt256Value) ToBigInt() *big.Int {
 }
 
 func (v UInt256Value) String() string {
-	return v.BigInt.String()
+	return format.BigInt(v.BigInt)
 }
 
 func (v UInt256Value) KeyString() string {
@@ -4059,7 +4059,7 @@ func (Word8Value) SetModified(_ bool) {
 }
 
 func (v Word8Value) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 func (v Word8Value) KeyString() string {
@@ -4217,7 +4217,7 @@ func (Word16Value) SetModified(_ bool) {
 }
 
 func (v Word16Value) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 func (v Word16Value) KeyString() string {
@@ -4377,7 +4377,7 @@ func (Word32Value) SetModified(_ bool) {
 }
 
 func (v Word32Value) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 func (v Word32Value) KeyString() string {
@@ -4538,7 +4538,7 @@ func (Word64Value) SetModified(_ bool) {
 }
 
 func (v Word64Value) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 func (v Word64Value) KeyString() string {
