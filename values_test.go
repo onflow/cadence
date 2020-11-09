@@ -2,7 +2,6 @@ package cadence
 
 import (
 	"fmt"
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -25,6 +24,8 @@ func contains(s []string, e string) bool {
 }
 
 func TestStringer(t *testing.T) {
+
+	t.Parallel()
 
 	ufix, _ := NewUFix64("64.01")
 	fix, _ := NewFix64("-32.11")
@@ -165,7 +166,7 @@ func TestStringer(t *testing.T) {
 					},
 				},
 			}),
-			expected: "Foo(y: bar)",
+			expected: "Foo(y: \"bar\")",
 		},
 		"resource": {
 			value: NewResource([]Value{NewInt(1)}).WithType(&ResourceType{
@@ -177,7 +178,8 @@ func TestStringer(t *testing.T) {
 						Type:       IntType{},
 					},
 				},
-			}), expected: "FooResource(bar: 1)",
+			}),
+			expected: "FooResource(bar: 1)",
 		},
 		"event": {
 			value: NewEvent(
@@ -198,7 +200,21 @@ func TestStringer(t *testing.T) {
 						Type:       StringType{},
 					},
 				},
-			}), expected: "FooEvent(a: 1, b: \"foo\")",
+			}),
+			expected: "FooEvent(a: 1, b: \"foo\")",
+		},
+		"contract": {
+			value: NewContract([]Value{NewString("bar")}).WithType(&ContractType{
+				TypeID:     "S.test.FooContract",
+				Identifier: "FooContract",
+				Fields: []Field{
+					{
+						Identifier: "y",
+						Type:       StringType{},
+					},
+				},
+			}),
+			expected: "FooContract(y: \"bar\")",
 		},
 		"Link": {
 			value: NewLink(
@@ -226,30 +242,21 @@ func TestStringer(t *testing.T) {
 		},
 	}
 
-	var testedTypes []string
-	for value, testCase := range stringerTests {
-		t.Run(value, func(t *testing.T) {
+	test := func (name string, testCase StringTestCase) {
+
+		t.Run(name, func(t *testing.T) {
+
+			t.Parallel()
+
 			assert.Equal(t,
 				testCase.expected,
 				testCase.value.String(),
 			)
 		})
-		typ := testCase.value.Type()
-		if typ != nil {
-			testedTypes = append(testedTypes, reflect.TypeOf(typ).Name())
-		}
 	}
 
-	for typeName, typeValue := range sema.BaseTypes {
-		_, ok := typeValue.(Value) //only test Values
-		if ok {
-			typeFullName := fmt.Sprintf("%sType", typeName)
-			t.Run(typeFullName, func(t *testing.T) {
-				assert.True(t,
-					contains(testedTypes, typeFullName),
-					"Should be tested")
-			})
-		}
+	for name, testCase := range stringerTests {
+		test(name, testCase)
 	}
 }
 

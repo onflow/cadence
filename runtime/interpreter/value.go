@@ -5416,21 +5416,19 @@ func (v *CompositeValue) SetMember(_ *Interpreter, locationRange LocationRange, 
 }
 
 func (v *CompositeValue) String() string {
-	var builder strings.Builder
-	builder.WriteString(string(v.TypeID))
-	builder.WriteString("(")
-	i := 0
+	fields := make([]struct{Name string; Value string}, 0, len(v.Fields))
 	for name, value := range v.Fields {
-		if i > 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(name)
-		builder.WriteString(": ")
-		builder.WriteString(fmt.Sprint(value))
-		i++
+		fields = append(fields,
+			struct {
+				Name  string
+				Value string
+			}{
+				Name: name,
+				Value: value.String(),
+			},
+		)
 	}
-	builder.WriteString(")")
-	return builder.String()
+	return format.Composite(string(v.TypeID), fields)
 }
 
 func (v *CompositeValue) GetField(name string) Value {
