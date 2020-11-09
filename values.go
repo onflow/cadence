@@ -22,7 +22,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math/big"
-	"strings"
 
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/common"
@@ -991,29 +990,25 @@ func (v Struct) ToGoValue() interface{} {
 }
 
 func (v Struct) String() string {
-	return FieldsStringer(v.StructType.Identifier, v.StructType.Fields, v.Fields)
+	return formatComposite(v.StructType.Identifier, v.StructType.Fields, v.Fields)
 }
 
-func FieldsStringer(identifier string, names []Field, values []Value) string {
-	var fieldNames []string
-	for _, fields := range names {
-		fieldNames = append(fieldNames, fields.Identifier)
+func formatComposite(typeID string, fields []Field, values []Value) string {
+	preparedFields := make([]struct{Name string; Value string}, 0, len(fields))
+	for i, field := range fields {
+		value := values[i]
+		preparedFields = append(preparedFields,
+			struct {
+				Name  string
+				Value string
+			}{
+				Name: field.Identifier,
+				Value: value.String(),
+			},
+		)
 	}
 
-	var builder strings.Builder
-	builder.WriteString(identifier)
-	builder.WriteString(":{")
-	for index, value := range values {
-		if index > 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(fieldNames[index])
-		builder.WriteString(": ")
-		builder.WriteString(fmt.Sprint(value))
-	}
-
-	builder.WriteString("}")
-	return builder.String()
+	return format.Composite(typeID, preparedFields)
 }
 
 // Resource
@@ -1049,7 +1044,7 @@ func (v Resource) ToGoValue() interface{} {
 }
 
 func (v Resource) String() string {
-	return FieldsStringer(v.ResourceType.Identifier, v.ResourceType.Fields, v.Fields)
+	return formatComposite(v.ResourceType.Identifier, v.ResourceType.Fields, v.Fields)
 }
 
 // Event
@@ -1084,7 +1079,7 @@ func (v Event) ToGoValue() interface{} {
 	return ret
 }
 func (v Event) String() string {
-	return FieldsStringer(v.EventType.Identifier, v.EventType.Fields, v.Fields)
+	return formatComposite(v.EventType.Identifier, v.EventType.Fields, v.Fields)
 }
 
 // Contract
@@ -1120,7 +1115,7 @@ func (v Contract) ToGoValue() interface{} {
 }
 
 func (v Contract) String() string {
-	return FieldsStringer(v.ContractType.Identifier, v.ContractType.Fields, v.Fields)
+	return formatComposite(v.ContractType.Identifier, v.ContractType.Fields, v.Fields)
 }
 
 // Link
