@@ -19,13 +19,18 @@
 package format
 
 import (
-	"fmt"
+	"strings"
 )
 
-func Bytes(bytes []byte) string {
-	values := make([]string, len(bytes))
-	for i, b := range bytes {
-		values[i] = fmt.Sprintf("0x%x", b)
+func Array(values []string) string {
+	var builder strings.Builder
+	builder.WriteRune('[')
+	for i, value := range values {
+		if i > 0 {
+			builder.WriteString(", ")
+		}
+		builder.WriteString(value)
 	}
-	return Array(values)
+	builder.WriteRune(']')
+	return builder.String()
 }

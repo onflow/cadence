@@ -903,16 +903,11 @@ func (v Array) ToGoValue() interface{} {
 }
 
 func (v Array) String() string {
-	var builder strings.Builder
-	builder.WriteString("[")
+	values := make([]string, len(v.Values))
 	for i, value := range v.Values {
-		if i > 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(fmt.Sprint(value))
+		values[i] = value.String()
 	}
-	builder.WriteString("]")
-	return builder.String()
+	return format.Array(values)
 }
 
 // Dictionary
