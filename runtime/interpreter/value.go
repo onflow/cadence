@@ -124,7 +124,7 @@ func (TypeValue) SetModified(_ bool) {
 }
 
 func (v TypeValue) String() string {
-	return fmt.Sprintf("Type<%s>", v.Type)
+	return format.TypeValue(v.Type.String())
 }
 
 func (v TypeValue) Equal(inter *Interpreter, other Value) BoolValue {
