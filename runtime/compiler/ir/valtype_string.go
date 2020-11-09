@@ -10,11 +10,12 @@ func _() {
 	var x [1]struct{}
 	_ = x[ValTypeUnknown-0]
 	_ = x[ValTypeInt-1]
+	_ = x[ValTypeString-2]
 }
 
-const _ValType_name = "ValTypeUnknownValTypeInt"
+const _ValType_name = "ValTypeUnknownValTypeIntValTypeString"
 
-var _ValType_index = [...]uint8{0, 14, 24}
+var _ValType_index = [...]uint8{0, 14, 24, 37}
 
 func (i ValType) String() string {
 	if i >= ValType(len(_ValType_index)-1) {

@@ -19,46 +19,11 @@
 package wasm
 
 import (
-	"fmt"
-	"io/ioutil"
-	"os"
-	"os/exec"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func wasm2wat(binary []byte) string {
-	f, err := ioutil.TempFile("", "wasm")
-	if err != nil {
-		panic(err)
-	}
-
-	defer os.Remove(f.Name())
-
-	_, err = f.Write(binary)
-	if err != nil {
-		panic(err)
-	}
-
-	err = f.Close()
-	if err != nil {
-		panic(err)
-	}
-
-	cmd := exec.Command("wasm2wat", f.Name())
-	out, err := cmd.Output()
-	if err != nil {
-		if ee, ok := err.(*exec.ExitError); ok {
-			panic(fmt.Errorf("wasm2wat failed: %w:\n%s", err, ee.Stderr))
-		} else {
-			panic(fmt.Errorf("wasm2wat failed: %w", err))
-		}
-	}
-
-	return string(out)
-}
 
 func TestWASMWriter_writeMagicAndVersion(t *testing.T) {
 
@@ -712,7 +677,7 @@ func TestWASMWriterReader(t *testing.T) {
   (start $start)
   (data (;0;) (i32.const 0) "\00\01\02\03"))
 `,
-		wasm2wat(b.data),
+		WASM2WAT(b.data),
 	)
 
 	b.offset = 0
