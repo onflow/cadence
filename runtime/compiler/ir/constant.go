@@ -32,3 +32,13 @@ func (Int) isConstant() {}
 func (c Int) Accept(v Visitor) Repr {
 	return v.VisitInt(c)
 }
+
+type String struct {
+	Value string
+}
+
+func (String) isConstant() {}
+
+func (c String) Accept(v Visitor) Repr {
+	return v.VisitString(c)
+}
