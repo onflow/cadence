@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence/fixedpoint"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
@@ -191,7 +192,7 @@ func (v Address) Bytes() []byte {
 }
 
 func (v Address) String() string {
-	return v.Hex()
+	return format.Address(common.Address(v))
 }
 
 func (v Address) Hex() string {
@@ -1219,19 +1220,9 @@ func (Capability) ToGoValue() interface{} {
 }
 
 func (v Capability) String() string {
-	var sb strings.Builder
-
-	sb.WriteString("Capability")
-
-	if v.BorrowType != "" {
-		sb.WriteRune('<')
-		sb.WriteString(v.BorrowType)
-		sb.WriteRune('>')
-	}
-	sb.WriteString("(/")
-	sb.WriteString(v.Address.String())
-	sb.WriteString(v.Path.String())
-	sb.WriteRune(')')
-
-	return sb.String()
+	return format.Capability(
+		v.BorrowType,
+		v.Address.String(),
+		v.Path.String(),
+	)
 }

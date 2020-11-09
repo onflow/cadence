@@ -6288,7 +6288,7 @@ func (v AddressValue) KeyString() string {
 }
 
 func (v AddressValue) String() string {
-	return common.Address(v).ShortHexWithPrefix()
+	return format.Address(common.Address(v))
 }
 
 func (AddressValue) GetOwner() *common.Address {
@@ -6680,21 +6680,11 @@ func (v CapabilityValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Tra
 }
 
 func (v CapabilityValue) String() string {
-	var sb strings.Builder
-
-	sb.WriteString("Capability")
-
-	if v.BorrowType != nil {
-		sb.WriteRune('<')
-		sb.WriteString(v.BorrowType.String())
-		sb.WriteRune('>')
-	}
-	sb.WriteString("(/")
-	sb.WriteString(v.Address.String())
-	sb.WriteString(v.Path.String())
-	sb.WriteRune(')')
-
-	return sb.String()
+	return format.Capability(
+		v.BorrowType.String(),
+		v.Address.String(),
+		v.Path.String(),
+	)
 }
 
 func (v CapabilityValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
