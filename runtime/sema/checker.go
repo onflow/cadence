@@ -217,7 +217,7 @@ func NewChecker(program *ast.Program, location ast.Location, options ...Option) 
 	)
 
 	typeActivations := NewValueActivations()
-	for name, baseType := range BaseTypes {
+	for name, baseType := range baseTypes {
 		_, err := typeActivations.DeclareType(typeDeclaration{
 			identifier:               ast.Identifier{Identifier: name},
 			ty:                       baseType,
