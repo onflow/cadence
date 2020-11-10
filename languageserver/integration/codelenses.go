@@ -142,7 +142,6 @@ func (i *FlowIntegration) showDeployContractInterfaceAction(
 // entryPointActions shows an execute button when there is exactly one valid entry point
 // (valid script function or transaction declaration) and no other actionable declarations.
 //
-// NOTE: requires
 //
 func (i *FlowIntegration) entryPointActions(
 	uri protocol.DocumentUri,
