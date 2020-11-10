@@ -50,7 +50,7 @@ func ParseLiteral(literal string, ty sema.Type) (cadence.Value, error) {
 	return LiteralValue(expression, ty)
 }
 
-// ParseLiteralArgumrntList parses an argument list with literals, that should have the given types.
+// ParseLiteralArgumentList parses an argument list with literals, that should have the given types.
 //
 // Returns an error if the code is not a valid argument list, or the arguments are not literals.
 //
