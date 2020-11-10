@@ -92,6 +92,30 @@ func TestAddressLocation_MarshalJSON(t *testing.T) {
 	)
 }
 
+func TestAddressContractLocation_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
+
+	loc := AddressContractLocation{
+		AddressLocation: AddressLocation([]byte{1}),
+		Name:            "A",
+	}
+
+	actual, err := json.Marshal(loc)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "AddressContractLocation",
+            "Address": "0x1",
+            "Name": "A"
+        }
+        `,
+		string(actual),
+	)
+}
+
 func TestImportDeclaration_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
