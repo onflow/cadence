@@ -412,9 +412,6 @@ func TestStringer(t *testing.T) {
 	}
 
 
-	//ufix, _ := NewUFix64("64.01")
-	//fix, _ := NewFix64("-32.11")
-
 	stringerTests := map[string]testCase{
 		"UInt": {
 			value: NewUIntValueFromUint64(10),
@@ -484,14 +481,14 @@ func TestStringer(t *testing.T) {
 			value: Word64Value(64),
 			expected: "64",
 		},
-		//"UFix64": {
-		//	value: ufix,
-		//	expected: "64.01000000",
-		//},
-		//"Fix64": {
-		//	value: fix,
-		//	expected: "-32.11000000",
-		//},
+		"UFix64": {
+			value: NewUFix64ValueWithInteger(64),
+			expected: "64.00000000",
+		},
+		"Fix64": {
+			value: NewFix64ValueWithInteger(-32),
+			expected: "-32.00000000",
+		},
 		"Void": {
 			value: VoidValue{},
 			expected: "()",
@@ -504,10 +501,10 @@ func TestStringer(t *testing.T) {
 			value: BoolValue(false),
 			expected: "false",
 		},
-		//"some": {
-		//	value: NewSomeValueOwningNonCopying(ufix64),
-		//	expected: "64.01000000",
-		//},
+		"some": {
+			value: NewSomeValueOwningNonCopying(BoolValue(true)),
+			expected: "true",
+		},
 		"nil": {
 			value: NilValue{},
 			expected: "nil",
