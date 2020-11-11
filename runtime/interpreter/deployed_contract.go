@@ -37,6 +37,10 @@ type DeployedContractValue struct {
 
 func (DeployedContractValue) IsValue() {}
 
+func (v DeployedContractValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitDeployedContractValue(interpreter, v)
+}
+
 func (DeployedContractValue) DynamicType(_ *Interpreter) DynamicType {
 	return DeployedContractDynamicType{}
 }
