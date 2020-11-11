@@ -43,6 +43,7 @@ import (
 type Value interface {
 	fmt.Stringer
 	IsValue()
+	Accept(interpreter *Interpreter, visitor Visitor)
 	DynamicType(interpreter *Interpreter) DynamicType
 	Copy() Value
 	GetOwner() *common.Address
@@ -97,6 +98,10 @@ type TypeValue struct {
 }
 
 func (TypeValue) IsValue() {}
+
+func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitTypeValue(interpreter, v)
+}
 
 func (TypeValue) DynamicType(_ *Interpreter) DynamicType {
 	return MetaTypeDynamicType{}
@@ -159,6 +164,10 @@ type VoidValue struct{}
 
 func (VoidValue) IsValue() {}
 
+func (v VoidValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitVoidValue(interpreter, v)
+}
+
 func (VoidValue) DynamicType(_ *Interpreter) DynamicType {
 	return VoidDynamicType{}
 }
@@ -193,6 +202,10 @@ func (VoidValue) String() string {
 type BoolValue bool
 
 func (BoolValue) IsValue() {}
+
+func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitBoolValue(interpreter, v)
+}
 
 func (BoolValue) DynamicType(_ *Interpreter) DynamicType {
 	return BoolDynamicType{}
@@ -254,6 +267,10 @@ func NewStringValue(str string) *StringValue {
 }
 
 func (*StringValue) IsValue() {}
+
+func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitStringValue(interpreter, v)
+}
 
 func (*StringValue) DynamicType(_ *Interpreter) DynamicType {
 	return StringDynamicType{}
@@ -455,6 +472,17 @@ func NewArrayValueUnownedNonCopying(values ...Value) *ArrayValue {
 }
 
 func (*ArrayValue) IsValue() {}
+
+func (v *ArrayValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	descend := visitor.VisitArrayValue(interpreter, v)
+	if !descend {
+		return
+	}
+
+	for _, value := range v.Values {
+		value.Accept(interpreter, visitor)
+	}
+}
 
 func (v *ArrayValue) DynamicType(interpreter *Interpreter) DynamicType {
 	elementTypes := make([]DynamicType, len(v.Values))
@@ -768,6 +796,10 @@ func ConvertInt(value Value, _ *Interpreter) Value {
 
 func (v IntValue) IsValue() {}
 
+func (v IntValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitIntValue(interpreter, v)
+}
+
 func (IntValue) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.IntType{}}
 }
@@ -969,6 +1001,10 @@ func (v IntValue) ToBigEndianBytes() []byte {
 type Int8Value int8
 
 func (Int8Value) IsValue() {}
+
+func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitInt8Value(interpreter, v)
+}
 
 func (Int8Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Int8Type{}}
@@ -1199,6 +1235,10 @@ func (v Int8Value) ToBigEndianBytes() []byte {
 type Int16Value int16
 
 func (Int16Value) IsValue() {}
+
+func (v Int16Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitInt16Value(interpreter, v)
+}
 
 func (Int16Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Int16Type{}}
@@ -1432,6 +1472,10 @@ type Int32Value int32
 
 func (Int32Value) IsValue() {}
 
+func (v Int32Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitInt32Value(interpreter, v)
+}
+
 func (Int32Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Int32Type{}}
 }
@@ -1663,6 +1707,10 @@ func (v Int32Value) ToBigEndianBytes() []byte {
 type Int64Value int64
 
 func (Int64Value) IsValue() {}
+
+func (v Int64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitInt64Value(interpreter, v)
+}
 
 func (Int64Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Int64Type{}}
@@ -1903,6 +1951,10 @@ func NewInt128ValueFromBigInt(value *big.Int) Int128Value {
 	return Int128Value{BigInt: value}
 }
 func (v Int128Value) IsValue() {}
+
+func (v Int128Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitInt128Value(interpreter, v)
+}
 
 func (Int128Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Int128Type{}}
@@ -2193,6 +2245,10 @@ func NewInt256ValueFromBigInt(value *big.Int) Int256Value {
 }
 
 func (v Int256Value) IsValue() {}
+
+func (v Int256Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitInt256Value(interpreter, v)
+}
 
 func (Int256Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Int256Type{}}
@@ -2505,6 +2561,10 @@ func ConvertUInt(value Value, _ *Interpreter) Value {
 
 func (v UIntValue) IsValue() {}
 
+func (v UIntValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitUIntValue(interpreter, v)
+}
+
 func (UIntValue) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.UIntType{}}
 }
@@ -2710,6 +2770,10 @@ type UInt8Value uint8
 
 func (UInt8Value) IsValue() {}
 
+func (v UInt8Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitUInt8Value(interpreter, v)
+}
+
 func (UInt8Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.UInt8Type{}}
 }
@@ -2908,6 +2972,10 @@ type UInt16Value uint16
 
 func (UInt16Value) IsValue() {}
 
+func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitUInt16Value(interpreter, v)
+}
+
 func (UInt16Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.UInt16Type{}}
 }
@@ -3105,6 +3173,10 @@ func (v UInt16Value) ToBigEndianBytes() []byte {
 type UInt32Value uint32
 
 func (UInt32Value) IsValue() {}
+
+func (v UInt32Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitUInt32Value(interpreter, v)
+}
 
 func (UInt32Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.UInt32Type{}}
@@ -3305,6 +3377,10 @@ func (v UInt32Value) ToBigEndianBytes() []byte {
 type UInt64Value uint64
 
 func (UInt64Value) IsValue() {}
+
+func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitUInt64Value(interpreter, v)
+}
 
 func (UInt64Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.UInt64Type{}}
@@ -3518,6 +3594,10 @@ func NewUInt128ValueFromBigInt(value *big.Int) UInt128Value {
 }
 
 func (v UInt128Value) IsValue() {}
+
+func (v UInt128Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitUInt128Value(interpreter, v)
+}
 
 func (UInt128Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.UInt128Type{}}
@@ -3778,6 +3858,10 @@ func NewUInt256ValueFromBigInt(value *big.Int) UInt256Value {
 
 func (v UInt256Value) IsValue() {}
 
+func (v UInt256Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitUInt256Value(interpreter, v)
+}
+
 func (UInt256Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.UInt256Type{}}
 }
@@ -4028,6 +4112,10 @@ type Word8Value uint8
 
 func (Word8Value) IsValue() {}
 
+func (v Word8Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitWord8Value(interpreter, v)
+}
+
 func (Word8Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Word8Type{}}
 }
@@ -4187,6 +4275,10 @@ type Word16Value uint16
 
 func (Word16Value) IsValue() {}
 
+func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitWord16Value(interpreter, v)
+}
+
 func (Word16Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Word16Type{}}
 }
@@ -4345,6 +4437,10 @@ func (v Word16Value) ToBigEndianBytes() []byte {
 type Word32Value uint32
 
 func (Word32Value) IsValue() {}
+
+func (v Word32Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitWord32Value(interpreter, v)
+}
 
 func (Word32Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Word32Type{}}
@@ -4506,6 +4602,10 @@ func (v Word32Value) ToBigEndianBytes() []byte {
 type Word64Value uint64
 
 func (Word64Value) IsValue() {}
+
+func (v Word64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitWord64Value(interpreter, v)
+}
 
 func (Word64Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Word64Type{}}
@@ -4684,6 +4784,10 @@ func NewFix64ValueWithInteger(integer int64) Fix64Value {
 }
 
 func (Fix64Value) IsValue() {}
+
+func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitFix64Value(interpreter, v)
+}
 
 func (Fix64Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Fix64Type{}}
@@ -4928,6 +5032,10 @@ func NewUFix64ValueWithInteger(integer uint64) UFix64Value {
 }
 
 func (UFix64Value) IsValue() {}
+
+func (v UFix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitUFix64Value(interpreter, v)
+}
 
 func (UFix64Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.UFix64Type{}}
@@ -5227,6 +5335,16 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 func (*CompositeValue) IsValue() {}
 
+func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	descend := visitor.VisitCompositeValue(interpreter, v)
+	if !descend {
+		return
+	}
+	for _, value := range v.Fields {
+		value.Accept(interpreter, visitor)
+	}
+}
+
 func (v *CompositeValue) DynamicType(interpreter *Interpreter) DynamicType {
 	staticType := interpreter.getCompositeType(v.Location, v.TypeID)
 	return CompositeDynamicType{
@@ -5416,14 +5534,17 @@ func (v *CompositeValue) SetMember(_ *Interpreter, locationRange LocationRange, 
 }
 
 func (v *CompositeValue) String() string {
-	fields := make([]struct{Name string; Value string}, 0, len(v.Fields))
+	fields := make([]struct {
+		Name  string
+		Value string
+	}, 0, len(v.Fields))
 	for name, value := range v.Fields {
 		fields = append(fields,
 			struct {
 				Name  string
 				Value string
 			}{
-				Name: name,
+				Name:  name,
 				Value: value.String(),
 			},
 		)
@@ -5508,6 +5629,20 @@ func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValu
 }
 
 func (*DictionaryValue) IsValue() {}
+
+func (v *DictionaryValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	descend := visitor.VisitDictionaryValue(interpreter, v)
+	if !descend {
+		return
+	}
+	for _, key := range v.Keys.Values {
+		key.Accept(interpreter, visitor)
+
+		// NOTE: Force unwrap. This is safe because we are iterating over the keys.
+		value := v.Get(interpreter, LocationRange{}, key).(*SomeValue).Value
+		value.Accept(interpreter, visitor)
+	}
+}
 
 func (v *DictionaryValue) DynamicType(interpreter *Interpreter) DynamicType {
 	entryTypes := make([]struct{ KeyType, ValueType DynamicType }, len(v.Keys.Values))
@@ -5681,13 +5816,19 @@ func (v *DictionaryValue) Set(inter *Interpreter, locationRange LocationRange, k
 }
 
 func (v *DictionaryValue) String() string {
-	pairs := make([]struct{Key string; Value string}, len(v.Keys.Values))
+	pairs := make([]struct {
+		Key   string
+		Value string
+	}, len(v.Keys.Values))
 
 	for i, keyValue := range v.Keys.Values {
 		key := dictionaryKey(keyValue)
 		value := v.Entries[key]
-		pairs[i] = struct{Key string;Value string}{
-			Key: keyValue.String(),
+		pairs[i] = struct {
+			Key   string
+			Value string
+		}{
+			Key:   keyValue.String(),
 			Value: value.String(),
 		}
 	}
@@ -5853,6 +5994,10 @@ type NilValue struct{}
 
 func (NilValue) IsValue() {}
 
+func (v NilValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitNilValue(interpreter, v)
+}
+
 func (NilValue) DynamicType(_ *Interpreter) DynamicType {
 	return NilDynamicType{}
 }
@@ -5922,6 +6067,14 @@ func NewSomeValueOwningNonCopying(value Value) *SomeValue {
 }
 
 func (*SomeValue) IsValue() {}
+
+func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	descend := visitor.VisitSomeValue(interpreter, v)
+	if !descend {
+		return
+	}
+	v.Value.Accept(interpreter, visitor)
+}
 
 func (v *SomeValue) DynamicType(interpreter *Interpreter) DynamicType {
 	innerType := v.Value.DynamicType(interpreter)
@@ -6009,6 +6162,10 @@ type StorageReferenceValue struct {
 }
 
 func (*StorageReferenceValue) IsValue() {}
+
+func (v *StorageReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitStorageReferenceValue(interpreter, v)
+}
 
 func (v *StorageReferenceValue) String() string {
 	return "StorageReference()"
@@ -6129,6 +6286,10 @@ type EphemeralReferenceValue struct {
 }
 
 func (*EphemeralReferenceValue) IsValue() {}
+
+func (v *EphemeralReferenceValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitEphemeralReferenceValue(interpreter, v)
+}
 
 func (v *EphemeralReferenceValue) String() string {
 	return v.Value.String()
@@ -6273,6 +6434,10 @@ func ConvertAddress(value Value, _ *Interpreter) Value {
 
 func (AddressValue) IsValue() {}
 
+func (v AddressValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitAddressValue(interpreter, v)
+}
+
 func (AddressValue) DynamicType(_ *Interpreter) DynamicType {
 	return AddressDynamicType{}
 }
@@ -6386,6 +6551,10 @@ func NewAuthAccountValue(
 }
 
 func (AuthAccountValue) IsValue() {}
+
+func (v AuthAccountValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitAuthAccountValue(interpreter, v)
+}
 
 func (AuthAccountValue) isAccountValue() {}
 
@@ -6538,6 +6707,10 @@ func NewPublicAccountValue(
 
 func (PublicAccountValue) IsValue() {}
 
+func (v PublicAccountValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitPublicAccountValue(interpreter, v)
+}
+
 func (PublicAccountValue) isAccountValue() {}
 
 func (v PublicAccountValue) AddressValue() AddressValue {
@@ -6611,6 +6784,10 @@ type PathValue struct {
 
 func (PathValue) IsValue() {}
 
+func (v PathValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitPathValue(interpreter, v)
+}
+
 func (v PathValue) DynamicType(_ *Interpreter) DynamicType {
 	switch v.Domain {
 	case common.PathDomainStorage:
@@ -6665,6 +6842,10 @@ type CapabilityValue struct {
 }
 
 func (CapabilityValue) IsValue() {}
+
+func (v CapabilityValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitCapabilityValue(interpreter, v)
+}
 
 func (v CapabilityValue) DynamicType(inter *Interpreter) DynamicType {
 	var borrowType *sema.ReferenceType
@@ -6743,6 +6924,10 @@ type LinkValue struct {
 }
 
 func (LinkValue) IsValue() {}
+
+func (v LinkValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitLinkValue(interpreter, v)
+}
 
 func (LinkValue) DynamicType(_ *Interpreter) DynamicType {
 	panic(errors.NewUnreachableError())

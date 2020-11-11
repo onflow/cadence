@@ -68,6 +68,10 @@ func (f InterpretedFunctionValue) String() string {
 
 func (InterpretedFunctionValue) IsValue() {}
 
+func (v InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitInterpretedFunctionValue(interpreter, v)
+}
+
 func (InterpretedFunctionValue) DynamicType(_ *Interpreter) DynamicType {
 	return FunctionDynamicType{}
 }
@@ -123,6 +127,10 @@ func NewHostFunctionValue(
 
 func (HostFunctionValue) IsValue() {}
 
+func (v HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitHostFunctionValue(interpreter, v)
+}
+
 func (HostFunctionValue) DynamicType(_ *Interpreter) DynamicType {
 	return FunctionDynamicType{}
 }
@@ -174,6 +182,10 @@ func (f BoundFunctionValue) String() string {
 }
 
 func (BoundFunctionValue) IsValue() {}
+
+func (v BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitBoundFunctionValue(interpreter, v)
+}
 
 func (BoundFunctionValue) DynamicType(_ *Interpreter) DynamicType {
 	return FunctionDynamicType{}

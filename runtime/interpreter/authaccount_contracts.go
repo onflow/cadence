@@ -39,6 +39,10 @@ type AuthAccountContractsValue struct {
 
 func (AuthAccountContractsValue) IsValue() {}
 
+func (v AuthAccountContractsValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitAuthAccountContractsValue(interpreter, v)
+}
+
 func (AuthAccountContractsValue) DynamicType(_ *Interpreter) DynamicType {
 	return AuthAccountContractsDynamicType{}
 }
