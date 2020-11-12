@@ -56,8 +56,8 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 
 	values["authAccount"] = interpreter.NewAuthAccountValue(
 		address,
-		func() interpreter.UInt64Value { return interpreter.UInt64Value(0) },
-		func() interpreter.UInt64Value { return interpreter.UInt64Value(0) },
+		returnZero,
+		returnZero,
 		panicFunction,
 		panicFunction,
 		interpreter.AuthAccountContractsValue{},
@@ -74,8 +74,8 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 
 	values["pubAccount"] = interpreter.NewPublicAccountValue(
 		address,
-		func() interpreter.UInt64Value { return interpreter.UInt64Value(0) },
-		func() interpreter.UInt64Value { return interpreter.UInt64Value(0) },
+		returnZero,
+		returnZero,
 	)
 
 	// `account`
@@ -130,6 +130,10 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 	)
 
 	return inter, storedValues
+}
+
+func returnZero() interpreter.UInt64Value {
+	return interpreter.UInt64Value(0)
 }
 
 func TestInterpretAuthAccount_save(t *testing.T) {
@@ -1396,4 +1400,3 @@ func TestCheckAccount_StorageFields(t *testing.T) {
 		}
 	}
 }
-
