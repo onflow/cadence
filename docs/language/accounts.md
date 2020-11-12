@@ -11,8 +11,8 @@ Every account can be accessed through two types:
   struct PublicAccount {
 
       let address: Address
-      let storageUsed: UInt8
-      let storageCapacity: UInt8
+      let storageUsed: UInt64
+      let storageCapacity: UInt64
 
       // Storage operations
 
@@ -42,8 +42,8 @@ Every account can be accessed through two types:
   struct AuthAccount {
 
       let address: Address
-      let storageUsed: UInt8
-      let storageCapacity: UInt8
+      let storageUsed: UInt64
+      let storageCapacity: UInt64
 
       // Contracts
 
@@ -385,11 +385,11 @@ If for any account its storage used is greater than its storage capacity the tra
 An account's storage used and storage capacity can be checked using the `storageUsed` and `storageCapacity` fields.
 The fields represent current values of storage which means this would be true:
 
-```
+```cadence
 let storageUsedBefore = authAccount.storageUsed
 authAccount.save(<-create Counter(count: 123), to: /storage/counter)
 let storageUsedAfter = authAccount.storageUsed
 
-return storageUsedBefore != storageUsedAfter // this is true
+let storageUsedChanged = storageUsedBefore != storageUsedAfter // is true
 ```
 
