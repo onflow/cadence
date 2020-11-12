@@ -120,8 +120,8 @@ type testRuntimeInterface struct {
 	) bool
 	hash               func(data []byte, hashAlgorithm string) []byte
 	setCadenceValue    func(owner Address, key string, value cadence.Value) (err error)
-	getStorageUsed     func(_ Address) uint64
-	getStorageCapacity func(_ Address) uint64
+	getStorageUsed     func(_ Address) (uint64, error)
+	getStorageCapacity func(_ Address) (uint64, error)
 }
 
 var _ Interface = &testRuntimeInterface{}
@@ -328,11 +328,11 @@ func (i *testRuntimeInterface) SetCadenceValue(owner common.Address, key string,
 	return i.setCadenceValue(owner, key, value)
 }
 
-func (i *testRuntimeInterface) GetStorageUsed(address Address) uint64 {
+func (i *testRuntimeInterface) GetStorageUsed(address Address) (uint64, error) {
 	return i.getStorageUsed(address)
 }
 
-func (i *testRuntimeInterface) GetStorageCapacity(address Address) uint64 {
+func (i *testRuntimeInterface) GetStorageCapacity(address Address) (uint64, error) {
 	return i.getStorageCapacity(address)
 }
 
