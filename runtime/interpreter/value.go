@@ -6382,8 +6382,8 @@ type AccountValue interface {
 // AuthAccountValue
 type AuthAccountValue struct {
 	Address                 AddressValue
-	StorageUsedGet          func() UInt64Value
-	StorageCapacityGet      func() UInt64Value
+	storageUsedGet          func() UInt64Value
+	storageCapacityGet      func() UInt64Value
 	addPublicKeyFunction    FunctionValue
 	removePublicKeyFunction FunctionValue
 	contracts               AuthAccountContractsValue
@@ -6399,8 +6399,8 @@ func NewAuthAccountValue(
 ) AuthAccountValue {
 	return AuthAccountValue{
 		Address:                 address,
-		StorageUsedGet:          storageUsedGet,
-		StorageCapacityGet:      storageCapacityGet,
+		storageUsedGet:          storageUsedGet,
+		storageCapacityGet:      storageCapacityGet,
 		addPublicKeyFunction:    addPublicKeyFunction,
 		removePublicKeyFunction: removePublicKeyFunction,
 		contracts:               contracts,
@@ -6518,10 +6518,10 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 		return v.Address
 
 	case "storageUsed":
-		return v.StorageUsedGet()
+		return v.storageUsedGet()
 
 	case "storageCapacity":
-		return v.StorageCapacityGet()
+		return v.storageCapacityGet()
 
 	case "addPublicKey":
 		return v.addPublicKeyFunction
@@ -6568,8 +6568,8 @@ func (AuthAccountValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ V
 
 type PublicAccountValue struct {
 	Address            AddressValue
-	StorageUsedGet     func() UInt64Value
-	StorageCapacityGet func() UInt64Value
+	storageUsedGet     func() UInt64Value
+	storageCapacityGet func() UInt64Value
 	Identifier         string
 }
 
@@ -6580,8 +6580,8 @@ func NewPublicAccountValue(
 ) PublicAccountValue {
 	return PublicAccountValue{
 		Address:            address,
-		StorageUsedGet:     storageUsedGet,
-		StorageCapacityGet: storageCapacityGet,
+		storageUsedGet:     storageUsedGet,
+		storageCapacityGet: storageCapacityGet,
 	}
 }
 
@@ -6632,10 +6632,10 @@ func (v PublicAccountValue) GetMember(inter *Interpreter, _ LocationRange, name 
 		return v.Address
 
 	case "storageUsed":
-		return v.StorageUsedGet()
+		return v.storageUsedGet()
 
 	case "storageCapacity":
-		return v.StorageCapacityGet()
+		return v.storageCapacityGet()
 
 	case "getCapability":
 		return accountGetCapabilityFunction(v.Address, false)
