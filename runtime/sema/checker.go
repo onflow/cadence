@@ -212,7 +212,7 @@ func NewChecker(program *ast.Program, location ast.Location, options ...Option) 
 
 	functionActivations := &FunctionActivations{}
 	functionActivations.EnterFunction(&FunctionType{
-		ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{})},
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType)},
 		0,
 	)
 
@@ -557,17 +557,17 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 		// If the target type is `Never`, the checks below will be performed
 		// (as `Never` is the subtype of all types), but the checks are not valid
 
-		if IsSubType(unwrappedTargetType, &NeverType{}) {
+		if IsSubType(unwrappedTargetType, NeverType) {
 			break
 		}
 
 		if IsSubType(unwrappedTargetType, &IntegerType{}) {
-			checker.checkIntegerLiteral(typedExpression, unwrappedTargetType)
+			CheckIntegerLiteral(typedExpression, unwrappedTargetType, checker.report)
 
 			return true
 
 		} else if IsSubType(unwrappedTargetType, &AddressType{}) {
-			checker.checkAddressLiteral(typedExpression)
+			CheckAddressLiteral(typedExpression, checker.report)
 
 			return true
 		}
@@ -578,15 +578,15 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 		// If the target type is `Never`, the checks below will be performed
 		// (as `Never` is the subtype of all types), but the checks are not valid
 
-		if IsSubType(unwrappedTargetType, &NeverType{}) {
+		if IsSubType(unwrappedTargetType, NeverType) {
 			break
 		}
 
-		valueTypeOK := checker.checkFixedPointLiteral(typedExpression, valueType)
+		valueTypeOK := CheckFixedPointLiteral(typedExpression, valueType, checker.report)
 
 		if IsSubType(unwrappedTargetType, &FixedPointType{}) {
 			if valueTypeOK {
-				checker.checkFixedPointLiteral(typedExpression, unwrappedTargetType)
+				CheckFixedPointLiteral(typedExpression, unwrappedTargetType, checker.report)
 			}
 			return true
 		}
@@ -639,23 +639,23 @@ func (checker *Checker) checkTypeCompatibility(expression ast.Expression, valueT
 	return IsSubType(valueType, targetType)
 }
 
-// checkIntegerLiteral checks that the value of the integer literal
+// CheckIntegerLiteral checks that the value of the integer literal
 // fits into range of the target integer type
 //
-func (checker *Checker) checkIntegerLiteral(expression *ast.IntegerExpression, targetType Type) bool {
+func CheckIntegerLiteral(expression *ast.IntegerExpression, targetType Type, report func(error)) bool {
 	ranged := targetType.(IntegerRangedType)
 	minInt := ranged.MinInt()
 	maxInt := ranged.MaxInt()
 
-	if !checker.checkIntegerRange(expression.Value, minInt, maxInt) {
-		checker.report(
-			&InvalidIntegerLiteralRangeError{
+	if !checkIntegerRange(expression.Value, minInt, maxInt) {
+		if report != nil {
+			report(&InvalidIntegerLiteralRangeError{
 				ExpectedType:   targetType,
 				ExpectedMinInt: minInt,
 				ExpectedMaxInt: maxInt,
 				Range:          ast.NewRangeFromPositioned(expression),
-			},
-		)
+			})
+		}
 
 		return false
 	}
@@ -663,10 +663,10 @@ func (checker *Checker) checkIntegerLiteral(expression *ast.IntegerExpression, t
 	return true
 }
 
-// checkFixedPointLiteral checks that the value of the fixed-point literal
+// CheckFixedPointLiteral checks that the value of the fixed-point literal
 // fits into range of the target fixed-point type
 //
-func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpression, targetType Type) bool {
+func CheckFixedPointLiteral(expression *ast.FixedPointExpression, targetType Type, report func(error)) bool {
 
 	// The target type might just be an integer type,
 	// in which case only the integer range can be checked.
@@ -680,13 +680,13 @@ func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpress
 		maxFractional := targetType.MaxFractional()
 
 		if expression.Scale > scale {
-			checker.report(
-				&InvalidFixedPointLiteralScaleError{
+			if report != nil {
+				report(&InvalidFixedPointLiteralScaleError{
 					ExpectedType:  targetType,
 					ExpectedScale: scale,
 					Range:         ast.NewRangeFromPositioned(expression),
-				},
-			)
+				})
+			}
 
 			return false
 		}
@@ -700,16 +700,16 @@ func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpress
 			maxInt,
 			maxFractional,
 		) {
-			checker.report(
-				&InvalidFixedPointLiteralRangeError{
+			if report != nil {
+				report(&InvalidFixedPointLiteralRangeError{
 					ExpectedType:          targetType,
 					ExpectedMinInt:        minInt,
 					ExpectedMinFractional: minFractional,
 					ExpectedMaxInt:        maxInt,
 					ExpectedMaxFractional: maxFractional,
 					Range:                 ast.NewRangeFromPositioned(expression),
-				},
-			)
+				})
+			}
 
 			return false
 		}
@@ -721,19 +721,18 @@ func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpress
 		integerValue := new(big.Int).Set(expression.UnsignedInteger)
 
 		if expression.Negative {
-			expression.UnsignedInteger.Neg(expression.UnsignedInteger)
+			integerValue.Neg(expression.UnsignedInteger)
 		}
 
-		if !checker.checkIntegerRange(integerValue, minInt, maxInt) {
-
-			checker.report(
-				&InvalidIntegerLiteralRangeError{
+		if !checkIntegerRange(integerValue, minInt, maxInt) {
+			if report != nil {
+				report(&InvalidIntegerLiteralRangeError{
 					ExpectedType:   targetType,
 					ExpectedMinInt: minInt,
 					ExpectedMaxInt: maxInt,
 					Range:          ast.NewRangeFromPositioned(expression),
-				},
-			)
+				})
+			}
 
 			return false
 		}
@@ -742,10 +741,10 @@ func (checker *Checker) checkFixedPointLiteral(expression *ast.FixedPointExpress
 	return true
 }
 
-// checkAddressLiteral checks that the value of the integer literal
+// CheckAddressLiteral checks that the value of the integer literal
 // fits into the range of an address (64 bits), and is hexadecimal
 //
-func (checker *Checker) checkAddressLiteral(expression *ast.IntegerExpression) bool {
+func CheckAddressLiteral(expression *ast.IntegerExpression, report func(error)) bool {
 	ranged := &AddressType{}
 	rangeMin := ranged.MinInt()
 	rangeMax := ranged.MaxInt()
@@ -753,21 +752,21 @@ func (checker *Checker) checkAddressLiteral(expression *ast.IntegerExpression) b
 	valid := true
 
 	if expression.Base != 16 {
-		checker.report(
-			&InvalidAddressLiteralError{
+		if report != nil {
+			report(&InvalidAddressLiteralError{
 				Range: ast.NewRangeFromPositioned(expression),
-			},
-		)
+			})
+		}
 
 		valid = false
 	}
 
-	if !checker.checkIntegerRange(expression.Value, rangeMin, rangeMax) {
-		checker.report(
-			&InvalidAddressLiteralError{
+	if !checkIntegerRange(expression.Value, rangeMin, rangeMax) {
+		if report != nil {
+			report(&InvalidAddressLiteralError{
 				Range: ast.NewRangeFromPositioned(expression),
-			},
-		)
+			})
+		}
 
 		valid = false
 	}
@@ -775,7 +774,7 @@ func (checker *Checker) checkAddressLiteral(expression *ast.IntegerExpression) b
 	return valid
 }
 
-func (checker *Checker) checkIntegerRange(value, min, max *big.Int) bool {
+func checkIntegerRange(value, min, max *big.Int) bool {
 	return (min == nil || value.Cmp(min) >= 0) &&
 		(max == nil || value.Cmp(max) <= 0)
 }
@@ -838,6 +837,10 @@ func (checker *Checker) inLoop() bool {
 	return checker.functionActivations.Current().InLoop()
 }
 
+func (checker *Checker) inSwitch() bool {
+	return checker.functionActivations.Current().InSwitch()
+}
+
 func (checker *Checker) findAndCheckValueVariable(identifier ast.Identifier, recordOccurrence bool) *Variable {
 	variable := checker.valueActivations.Find(identifier.Identifier)
 	if variable == nil {
@@ -894,7 +897,7 @@ func (checker *Checker) ConvertType(t ast.Type) Type {
 
 	case nil:
 		// The AST might contain "holes" if parsing failed
-		return &InvalidType{}
+		return InvalidType
 	}
 
 	panic(&astTypeConversionError{invalidASTType: t})
@@ -1013,7 +1016,7 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 			// If no restricted type is given, and also no restrictions,
 			// the type is ambiguous.
 
-			restrictedType = &InvalidType{}
+			restrictedType = InvalidType
 
 			checker.report(
 				&AmbiguousRestrictedTypeError{
@@ -1239,7 +1242,7 @@ func (checker *Checker) findAndCheckTypeVariable(identifier ast.Identifier, reco
 func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 	variable := checker.findAndCheckTypeVariable(t.Identifier, true)
 	if variable == nil {
-		return &InvalidType{}
+		return InvalidType
 	}
 
 	ty := variable.Type
@@ -1263,7 +1266,7 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 				)
 			}
 
-			return &InvalidType{}
+			return InvalidType
 		}
 
 		resolvedIdentifiers = append(resolvedIdentifiers, identifier)
@@ -1280,7 +1283,7 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 					Pos:          t.StartPosition(),
 				},
 			)
-			return &InvalidType{}
+			return InvalidType
 		}
 	}
 

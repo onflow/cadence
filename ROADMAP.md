@@ -24,6 +24,10 @@ listed in no particular order.
 
     Cadence should provide an API to query/iterate over account storage.
 
+  - [Storage API improvements](https://github.com/onflow/cadence/issues/376)
+  
+    Cadence should provide APIs to overwrite and remove stored values.
+
 - Compilation
 
   Cadence programs are currently executed using a tree-walking interpreter,

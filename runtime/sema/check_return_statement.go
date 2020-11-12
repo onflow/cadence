@@ -38,7 +38,7 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) ast
 		// and the enclosing function's return type is non-Void,
 		// then the return statement is missing an expression
 
-		if _, ok := returnType.(*VoidType); !ok {
+		if returnType != VoidType {
 			checker.report(
 				&MissingReturnValueError{
 					ExpectedValueType: returnType,
@@ -61,7 +61,7 @@ func (checker *Checker) VisitReturnStatement(statement *ast.ReturnStatement) ast
 	// If the enclosing function's return type is Void,
 	// then the return statement should not have a return value
 
-	if _, ok := returnType.(*VoidType); ok {
+	if returnType == VoidType {
 		checker.report(
 			&InvalidReturnValueError{
 				Range: ast.NewRangeFromPositioned(statement.Expression),

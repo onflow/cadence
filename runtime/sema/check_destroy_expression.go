@@ -23,7 +23,7 @@ import (
 )
 
 func (checker *Checker) VisitDestroyExpression(expression *ast.DestroyExpression) (resultType ast.Repr) {
-	resultType = &VoidType{}
+	resultType = VoidType
 
 	valueType := expression.Expression.Accept(checker).(Type)
 

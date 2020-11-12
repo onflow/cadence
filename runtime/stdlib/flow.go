@@ -73,7 +73,7 @@ var logFunctionType = &sema.FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
-		&sema.VoidType{},
+		sema.VoidType,
 	),
 }
 
@@ -333,6 +333,10 @@ func (*BlockType) IsInvalidType() bool {
 }
 
 func (*BlockType) IsStorable(_ map[*sema.Member]bool) bool {
+	return false
+}
+
+func (*BlockType) IsExternallyReturnable(_ map[*sema.Member]bool) bool {
 	return false
 }
 

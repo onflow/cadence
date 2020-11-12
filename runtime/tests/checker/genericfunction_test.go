@@ -67,7 +67,7 @@ func TestCheckGenericFunction(t *testing.T) {
 				&sema.FunctionType{
 					TypeParameters:        nil,
 					Parameters:            nil,
-					ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
+					ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
 					RequiredArgumentCount: nil,
 				},
 			)
@@ -75,7 +75,7 @@ func TestCheckGenericFunction(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t,
-				&sema.VoidType{},
+				sema.VoidType,
 				checker.GlobalValues["res"].Type,
 			)
 		}
@@ -92,7 +92,7 @@ func TestCheckGenericFunction(t *testing.T) {
 			&sema.FunctionType{
 				TypeParameters:        nil,
 				Parameters:            nil,
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -120,7 +120,7 @@ func TestCheckGenericFunction(t *testing.T) {
 					typeParameter,
 				},
 				Parameters:            nil,
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -148,7 +148,7 @@ func TestCheckGenericFunction(t *testing.T) {
 					typeParameter,
 				},
 				Parameters:            nil,
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -194,7 +194,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -240,7 +240,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -279,7 +279,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -318,7 +318,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -363,7 +363,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -418,7 +418,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -579,7 +579,7 @@ func TestCheckGenericFunction(t *testing.T) {
 					typeParameter,
 				},
 				Parameters:            nil,
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -615,7 +615,7 @@ func TestCheckGenericFunction(t *testing.T) {
 					typeParameter,
 				},
 				Parameters:            nil,
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -653,7 +653,7 @@ func TestCheckGenericFunction(t *testing.T) {
 						),
 					},
 				},
-				ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
+				ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
 				RequiredArgumentCount: nil,
 			},
 		)
@@ -880,7 +880,7 @@ func TestCheckGenericFunctionIsInvalid(t *testing.T) {
 				),
 			},
 		},
-		ReturnTypeAnnotation:  sema.NewTypeAnnotation(&sema.VoidType{}),
+		ReturnTypeAnnotation:  sema.NewTypeAnnotation(sema.VoidType),
 		RequiredArgumentCount: nil,
 	}
 

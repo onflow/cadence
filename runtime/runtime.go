@@ -139,41 +139,34 @@ func (r *interpreterRuntime) ExecuteScript(
 		return nil, newError(err)
 	}
 
-	ep, ok := checker.GlobalValues["main"]
-	if !ok {
-		return nil, &MissingEntryPointError{Expected: "main"}
+	functionEntryPointType, err := checker.FunctionEntryPointType()
+	if err != nil {
+		return nil, err
 	}
 
-	invokableType, ok := ep.Type.(sema.InvokableType)
-	if !ok {
-		return nil, &InvalidEntryPointTypeError{
-			Type: ep.Type,
-		}
-	}
-	epSignature := invokableType.InvocationFunctionType()
-
-	// Ensure entrypoint return type is storable
-	storableResults := map[*sema.Member]bool{}
-	if _, isVoid := epSignature.ReturnTypeAnnotation.Type.(*sema.VoidType); !isVoid {
-		if !epSignature.ReturnTypeAnnotation.Type.IsStorable(storableResults) {
-			return nil, &ScriptReturnTypeNotStorableError{
-				Type: epSignature.ReturnTypeAnnotation.Type,
-			}
-		}
-	}
-
-	// Ensure entrypoint parameters type is storable
-	if len(epSignature.Parameters) > 0 {
-		for _, param := range epSignature.Parameters {
-			if _, isVoid := param.TypeAnnotation.Type.(*sema.VoidType); !isVoid {
-				if !param.TypeAnnotation.Type.IsStorable(storableResults) {
-					return nil, &ScriptParameterTypeNotStorableError{
-						Type: param.TypeAnnotation.Type,
-					}
+	// Ensure the entry point's parameter types are storable
+	if len(functionEntryPointType.Parameters) > 0 {
+		for _, param := range functionEntryPointType.Parameters {
+			if !param.TypeAnnotation.Type.IsStorable(map[*sema.Member]bool{}) {
+				return nil, &ScriptParameterTypeNotStorableError{
+					Type: param.TypeAnnotation.Type,
 				}
 			}
 		}
 	}
+
+	// Ensure the entry point's return type is valid
+	if !functionEntryPointType.ReturnTypeAnnotation.Type.IsExternallyReturnable(map[*sema.Member]bool{}) {
+		return nil, &InvalidScriptReturnTypeError{
+			Type: functionEntryPointType.ReturnTypeAnnotation.Type,
+		}
+	}
+
+	interpret := scriptExecutionFunction(
+		functionEntryPointType.Parameters,
+		arguments,
+		runtimeInterface,
+	)
 
 	value, inter, err := r.interpret(
 		location,
@@ -182,7 +175,7 @@ func (r *interpreterRuntime) ExecuteScript(
 		checker,
 		functions,
 		nil,
-		scriptExecutionFunction(epSignature.Parameters, arguments, runtimeInterface),
+		interpret,
 	)
 	if err != nil {
 		return nil, newError(err)
@@ -320,20 +313,6 @@ func (r *interpreterRuntime) ExecuteTransaction(
 		})
 	}
 
-	// Ensure parameter types are storable
-	storableResults := map[*sema.Member]bool{}
-	if len(transactionType.Parameters) > 0 {
-		for _, param := range transactionType.Parameters {
-			if _, isVoid := param.TypeAnnotation.Type.(*sema.VoidType); !isVoid {
-				if !param.TypeAnnotation.Type.IsStorable(storableResults) {
-					return newError(&TransactionParameterTypeNotStorableError{
-						Type: param.TypeAnnotation.Type,
-					})
-				}
-			}
-		}
-	}
-
 	transactionAuthorizerCount := len(transactionType.PrepareParameters)
 	if authorizerCount != transactionAuthorizerCount {
 		return newError(InvalidTransactionAuthorizerCountError{
@@ -443,7 +422,7 @@ func validateArgumentParams(
 		parameterType := parameter.TypeAnnotation.Type
 		argument := arguments[i]
 
-		exportedParameterType := exportType(parameterType, map[sema.TypeID]cadence.Type{})
+		exportedParameterType := ExportType(parameterType, map[sema.TypeID]cadence.Type{})
 		var value cadence.Value
 		var err error
 
@@ -1409,7 +1388,14 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				AddressLocation: addressValue[:],
 				Name:            nameArgument,
 			}
-			checker, err := r.ParseAndCheckProgram(code, runtimeInterface, location)
+
+			// NOTE: do NOT use the cache!
+
+			const useCache = false
+
+			functions := r.standardLibraryFunctions(runtimeInterface, runtimeStorage)
+
+			checker, err := r.parseAndCheckProgram(code, runtimeInterface, location, functions, nil, useCache)
 			if err != nil {
 				panic(fmt.Errorf("invalid contract: %w", err))
 			}

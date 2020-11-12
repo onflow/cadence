@@ -25,18 +25,34 @@ import (
 
 func (checker *Checker) VisitPathExpression(expression *ast.PathExpression) ast.Repr {
 
+	ty, err := CheckPathLiteral(expression)
+	checker.report(err)
+
+	return ty
+}
+
+func CheckPathLiteral(expression *ast.PathExpression) (Type, error) {
+
 	// Check that the domain is valid
 
-	domain := expression.Domain
+	domainIdentifier := expression.Domain
 
-	if _, ok := common.AllPathDomainsByIdentifier[domain.Identifier]; !ok {
-		checker.report(
-			&InvalidPathDomainError{
-				ActualDomain: domain.Identifier,
-				Range:        ast.NewRangeFromPositioned(domain),
-			},
-		)
+	domain, ok := common.AllPathDomainsByIdentifier[domainIdentifier.Identifier]
+	if !ok {
+		return PathType, &InvalidPathDomainError{
+			ActualDomain: domainIdentifier.Identifier,
+			Range:        ast.NewRangeFromPositioned(domainIdentifier),
+		}
 	}
 
-	return &PathType{}
+	switch domain {
+	case common.PathDomainStorage:
+		return StoragePathType, nil
+	case common.PathDomainPublic:
+		return PublicPathType, nil
+	case common.PathDomainPrivate:
+		return PrivatePathType, nil
+	default:
+		return PathType, nil
+	}
 }

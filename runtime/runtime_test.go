@@ -615,24 +615,6 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			},
 			expectedLogs: []string{"42", `"foo"`},
 		},
-
-		{
-			label: "Invalid non-storable argument type",
-			script: `
-			  transaction(x: ((Int): Int)) {
-				execute {
-				  x(0)
-				}
-			  }
-			`,
-			args: [][]byte{
-				jsoncdc.MustEncode(cadence.NewInt(42)),
-			},
-			check: func(t *testing.T, err error) {
-				assert.Error(t, err)
-				assert.IsType(t, &TransactionParameterTypeNotStorableError{}, errors.Unwrap(err))
-			},
-		},
 		{
 			label: "Invalid bytes",
 			script: `
@@ -1164,9 +1146,7 @@ func TestRuntimeProgramWithNoTransaction(t *testing.T) {
 
 	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 
-	require.IsType(t, Error{}, err)
-	err = err.(Error).Unwrap()
-	assert.IsType(t, InvalidTransactionCountError{}, err)
+	utils.RequireErrorAs(t, err, &InvalidTransactionCountError{})
 }
 
 func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
@@ -1190,9 +1170,7 @@ func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
 
 	err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
 
-	require.IsType(t, Error{}, err)
-	err = err.(Error).Unwrap()
-	assert.IsType(t, InvalidTransactionCountError{}, err)
+	utils.RequireErrorAs(t, err, &InvalidTransactionCountError{})
 }
 
 func TestRuntimeStorage(t *testing.T) {
@@ -1350,7 +1328,8 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
       transaction {
         prepare(signer: AuthAccount) {
           let publicAccount = getAccount(signer.address)
-          let ref = publicAccount.getCapability(/public/container)!.borrow<&Container>()!
+          let ref = publicAccount.getCapability(/public/container)
+              .borrow<&Container>()!
 
           let length = ref.values.length
           ref.values.append(1)
@@ -1365,7 +1344,9 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
       transaction {
         prepare(signer: AuthAccount) {
           let publicAccount = getAccount(signer.address)
-          let ref = publicAccount.getCapability(/public/container)!.borrow<&Container>()!
+          let ref = publicAccount
+              .getCapability(/public/container)
+              .borrow<&Container>()!
 
           let length = ref.values.length
           ref.values.append(2)
@@ -1737,7 +1718,9 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
       transaction {
         prepare(signer: AuthAccount) {
           let publicAccount = getAccount(signer.address)
-          let ref = publicAccount.getCapability(/public/r)!.borrow<&R>()!
+          let ref = publicAccount
+              .getCapability(/public/r)
+              .borrow<&R>()!
           ref.x()
         }
       }
@@ -1822,7 +1805,9 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 
       transaction {
         prepare(signer: AuthAccount) {
-          let ref = signer.getCapability(/public/r)!.borrow<&AnyResource{RI}>()!
+          let ref = signer
+              .getCapability(/public/r)
+              .borrow<&AnyResource{RI}>()!
           ref.x()
         }
       }
@@ -1902,30 +1887,82 @@ func TestParseAndCheckProgram(t *testing.T) {
 	})
 }
 
-func TestScriptReturnTypeNotStorableError(t *testing.T) {
+func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 	t.Parallel()
 
-	runtime := NewInterpreterRuntime()
+	test := func(code string, expected cadence.Value) {
 
-	script := []byte(`
-      pub fun main(): ((): Int) {
-		return fun (): Int {
-			return 0
+		runtime := NewInterpreterRuntime()
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() []Address {
+				return []Address{{42}}
+			},
 		}
-      }
-    `)
 
-	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() []Address {
-			return []Address{{42}}
-		},
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		actual, err := runtime.ExecuteScript([]byte(code), nil, runtimeInterface, nextTransactionLocation())
+
+		if expected == nil {
+			require.IsType(t, &InvalidScriptReturnTypeError{}, err)
+		} else {
+			require.NoError(t, err)
+			require.Equal(t, expected, actual)
+		}
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	t.Run("function", func(t *testing.T) {
 
-	_, err := runtime.ExecuteScript(script, nil, runtimeInterface, nextTransactionLocation())
-	assert.IsType(t, &ScriptReturnTypeNotStorableError{}, err)
+		t.Parallel()
+
+		test(
+			`
+              pub fun main(): ((): Int) {
+                  return fun (): Int {
+                      return 0
+                  }
+              }
+            `,
+			nil,
+		)
+	})
+
+	t.Run("reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			`
+              pub fun main(): &Address {
+                  let a: Address = 0x1
+                  return &a as &Address
+              }
+            `,
+			cadence.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+		)
+	})
+
+	t.Run("recursive reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			`
+              pub fun main(): [&AnyStruct] {
+                  let refs: [&AnyStruct] = []
+                  refs.append(&refs as &AnyStruct)
+                  return refs
+              }
+            `,
+			cadence.NewArray([]cadence.Value{
+				cadence.NewArray([]cadence.Value{
+					nil,
+				}),
+			}),
+		)
+	})
 }
 
 func TestScriptParameterTypeNotStorableError(t *testing.T) {
@@ -2160,7 +2197,7 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
               transaction {
 
                 prepare(signer: AuthAccount) {
-                  log(getAccount(0x%s).getCapability(/public/r)!.borrow<&R>()!.test())
+                  log(getAccount(0x%s).getCapability(/public/r).borrow<&R>()!.test())
                 }
               }
             `,
@@ -2519,7 +2556,7 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			nextTransactionLocation := newTransactionLocationGenerator()
 
 			err := runtime.ExecuteTransaction(script, nil, runtimeInterface, nextTransactionLocation())
-			exportedEventType := exportType(
+			exportedEventType := ExportType(
 				stdlib.AccountContractAddedEventType,
 				map[sema.TypeID]cadence.Type{},
 			)
@@ -3174,8 +3211,8 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 					assert.NoError(t, err)
 				} else {
 					require.Error(t, err)
-					require.IsType(t, Error{}, err)
-					assert.IsType(t, &interpreter.ConditionError{}, err.(Error).Err)
+
+					utils.RequireErrorAs(t, err, &interpreter.ConditionError{})
 				}
 			})
 		}
@@ -3448,7 +3485,7 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
               ref1.logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/r)!.borrow<&Test.R>()!
+              let ref2 = publicAccount.getCapability(/public/r).borrow<&Test.R>()!
               log(ref2.owner?.address)
               ref2.logOwnerAddress()
           }
@@ -3466,7 +3503,7 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
               ref1.logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/r)!.borrow<&Test.R>()!
+              let ref2 = publicAccount.getCapability(/public/r).borrow<&Test.R>()!
               log(ref2.owner?.address)
               ref2.logOwnerAddress()
           }
@@ -3589,7 +3626,7 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
               ref1[1].logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/rs)!.borrow<&[Test.R]>()!
+              let ref2 = publicAccount.getCapability(/public/rs).borrow<&[Test.R]>()!
               log(ref2[0].owner?.address)
               log(ref2[1].owner?.address)
               ref2[0].logOwnerAddress()
@@ -3611,7 +3648,7 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
               ref1[1].logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/rs)!.borrow<&[Test.R]>()!
+              let ref2 = publicAccount.getCapability(/public/rs).borrow<&[Test.R]>()!
               log(ref2[0].owner?.address)
               log(ref2[1].owner?.address)
               ref2[0].logOwnerAddress()
@@ -3741,7 +3778,7 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
               ref1["b"]?.logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/rs)!.borrow<&{String: Test.R}>()!
+              let ref2 = publicAccount.getCapability(/public/rs).borrow<&{String: Test.R}>()!
               log(ref2["a"]?.owner?.address)
               log(ref2["b"]?.owner?.address)
               ref2["a"]?.logOwnerAddress()
@@ -3763,7 +3800,7 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
               ref1["b"]?.logOwnerAddress()
 
               let publicAccount = getAccount(0x01)
-              let ref2 = publicAccount.getCapability(/public/rs)!.borrow<&{String: Test.R}>()!
+              let ref2 = publicAccount.getCapability(/public/rs).borrow<&{String: Test.R}>()!
               log(ref2["a"]?.owner?.address)
               log(ref2["b"]?.owner?.address)
               ref2["a"]?.logOwnerAddress()
@@ -3922,6 +3959,9 @@ func TestRuntimeComputationLimit(t *testing.T) {
 				require.IsType(t, Error{}, err)
 				err = err.(Error).Unwrap()
 
+				require.IsType(t, interpreter.Error{}, err)
+				err = err.(interpreter.Error).Unwrap()
+
 				assert.Equal(t,
 					ComputationLimitExceededError{
 						Limit: computationLimit,
@@ -3950,7 +3990,7 @@ func TestRuntimeMetrics(t *testing.T) {
 	imported2Location := StringLocation("imported2")
 
 	importedScript2 := []byte(`
-      pub fun getPath(): Path {
+      pub fun getPath(): StoragePath {
         return /storage/foo
       }
     `)
@@ -4370,7 +4410,7 @@ func TestRuntimeExternalError(t *testing.T) {
 	)
 }
 
-func TestRuntimeUpdateCodeCaching(t *testing.T) {
+func TestRuntimeDeployCodeCaching(t *testing.T) {
 
 	t.Parallel()
 
@@ -4399,7 +4439,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
         }
     `
 
-	createAccountScript := []byte(`
+	createAccountTx := []byte(`
         transaction {
             prepare(signer: AuthAccount) {
                 AuthAccount(payer: signer)
@@ -4407,7 +4447,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
         }
     `)
 
-	updateCodeScript := utils.DeploymentTransaction("HelloWorld", []byte(helloWorldContract))
+	deployTx := utils.DeploymentTransaction("HelloWorld", []byte(helloWorldContract))
 
 	runtime := NewInterpreterRuntime()
 
@@ -4457,20 +4497,158 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	signerAddresses = []Address{{accountCounter}}
-
-	err := runtime.ExecuteTransaction(createAccountScript, nil, runtimeInterface, nextTransactionLocation())
-	require.NoError(t, err)
+	// create the account
 
 	signerAddresses = []Address{{accountCounter}}
 
-	err = runtime.ExecuteTransaction(updateCodeScript, nil, runtimeInterface, nextTransactionLocation())
+	err := runtime.ExecuteTransaction(createAccountTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	callScript := []byte(fmt.Sprintf(callHelloTxTemplate, Address{accountCounter}))
+	// deploy the contract
 
-	err = runtime.ExecuteTransaction(callScript, nil, runtimeInterface, nextTransactionLocation())
+	signerAddresses = []Address{{accountCounter}}
+
+	err = runtime.ExecuteTransaction(deployTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
+
+	// call the hello function
+
+	callTx := []byte(fmt.Sprintf(callHelloTxTemplate, Address{accountCounter}))
+
+	err = runtime.ExecuteTransaction(callTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+}
+
+func TestRuntimeUpdateCodeCaching(t *testing.T) {
+
+	t.Parallel()
+
+	const helloWorldContract1 = `
+      pub contract HelloWorld {
+
+          pub fun hello(): String {
+              return "1"
+          }
+      }
+    `
+
+	const helloWorldContract2 = `
+      pub contract HelloWorld {
+
+          pub fun hello(): String {
+              return "2"
+          }
+      }
+    `
+
+	const callHelloScriptTemplate = `
+        import HelloWorld from 0x%s
+
+        pub fun main(): String {
+            return HelloWorld.hello()
+        }
+    `
+
+	createAccountTx := []byte(`
+        transaction {
+            prepare(signer: AuthAccount) {
+                AuthAccount(payer: signer)
+            }
+        }
+    `)
+
+	deployTx := utils.DeploymentTransaction("HelloWorld", []byte(helloWorldContract1))
+	updateTx := utils.UpdateTransaction("HelloWorld", []byte(helloWorldContract2))
+
+	runtime := NewInterpreterRuntime()
+
+	accountCodes := map[string][]byte{}
+	var events []cadence.Event
+
+	cachedPrograms := map[LocationID]*ast.Program{}
+
+	var accountCounter uint8 = 0
+
+	var signerAddresses []Address
+
+	var cacheHits []string
+
+	runtimeInterface := &testRuntimeInterface{
+		createAccount: func(payer Address) (address Address, err error) {
+			accountCounter++
+			return Address{accountCounter}, nil
+		},
+		getCode: func(location Location) (bytes []byte, err error) {
+			key := string(location.(AddressLocation).ID())
+			return accountCodes[key], nil
+		},
+		cacheProgram: func(location Location, program *ast.Program) error {
+			cachedPrograms[location.ID()] = program
+			return nil
+		},
+		getCachedProgram: func(location Location) (*ast.Program, error) {
+			cacheHits = append(cacheHits, string(location.ID()))
+			return cachedPrograms[location.ID()], nil
+		},
+		storage: newTestStorage(nil, nil),
+		getSigningAccounts: func() []Address {
+			return signerAddresses
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
+			key := string(AddressLocation(address[:]).ID())
+			return accountCodes[key], nil
+		},
+		updateAccountContractCode: func(address Address, _ string, code []byte) error {
+			key := string(AddressLocation(address[:]).ID())
+			accountCodes[key] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) {
+			events = append(events, event)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// create the account
+
+	signerAddresses = []Address{{accountCounter}}
+
+	err := runtime.ExecuteTransaction(createAccountTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+
+	// deploy the contract
+
+	cacheHits = nil
+
+	signerAddresses = []Address{{accountCounter}}
+
+	err = runtime.ExecuteTransaction(deployTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+	require.Empty(t, cacheHits)
+
+	// call the initial hello function
+
+	callScript := []byte(fmt.Sprintf(callHelloScriptTemplate, Address{accountCounter}))
+
+	result1, err := runtime.ExecuteScript(callScript, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+	require.Equal(t, cadence.NewString("1"), result1)
+
+	// update the contract
+
+	cacheHits = nil
+
+	err = runtime.ExecuteTransaction(updateTx, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+	require.Empty(t, cacheHits)
+
+	// call the new hello function
+
+	result2, err := runtime.ExecuteScript(callScript, nil, runtimeInterface, nextTransactionLocation())
+	require.NoError(t, err)
+	require.Equal(t, cadence.NewString("2"), result2)
 }
 
 func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
@@ -4505,7 +4683,7 @@ func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
         }
     `
 
-	createAccountScript := []byte(`
+	createAccountTx := []byte(`
         transaction {
             prepare(signer: AuthAccount) {
                 AuthAccount(payer: signer)
@@ -4513,7 +4691,7 @@ func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
         }
     `)
 
-	updateCodeScript := utils.DeploymentTransaction("HelloWorld", []byte(helloWorldContract))
+	deployTx := utils.DeploymentTransaction("HelloWorld", []byte(helloWorldContract))
 
 	runtime := NewInterpreterRuntime()
 
@@ -4568,23 +4746,30 @@ func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
 
 	signerAddresses = []Address{{accountCounter}}
 
-	err := runtime.ExecuteTransaction(createAccountScript, nil, runtimeInterface, nextTransactionLocation())
+	// create the account
+
+	err := runtime.ExecuteTransaction(createAccountTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	signerAddresses = []Address{{accountCounter}}
 
-	err = runtime.ExecuteTransaction(updateCodeScript, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(deployTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
-	callScript := []byte(fmt.Sprintf(callHelloTxTemplate, Address{accountCounter}))
+	// call the function
 
-	err = runtime.ExecuteTransaction(callScript, nil, runtimeInterface, nextTransactionLocation())
+	callTx := []byte(fmt.Sprintf(callHelloTxTemplate, Address{accountCounter}))
+
+	err = runtime.ExecuteTransaction(callTx, nil, runtimeInterface, nextTransactionLocation())
 	require.NoError(t, err)
 
 	// We should only receive a cache hit for the imported program, not the transactions/scripts.
+
+	// NOTE: if this test case fails with an additional cache hit,
+	// then the deployment is incorrectly using the cache!
+
 	require.Equal(t,
 		[]string{
-			"AC.0100000000000000.HelloWorld",
 			"AC.0100000000000000.HelloWorld",
 		},
 		cacheHits,
@@ -4797,8 +4982,8 @@ func TestRuntime(t *testing.T) {
 				require.NoError(t, err)
 			} else {
 				require.Error(t, err)
-				require.IsType(t, Error{}, err)
-				assert.IsType(t, InvalidEntryPointParameterCountError{}, err.(Error).Unwrap())
+
+				utils.RequireErrorAs(t, err, &InvalidEntryPointParameterCountError{})
 			}
 		})
 	}
@@ -4844,4 +5029,28 @@ func singleIdentifierLocationResolver(t *testing.T) func(identifiers []Identifie
 			},
 		}
 	}
+}
+
+func TestPanics(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	script := []byte(`
+      pub fun main() {
+		[1][1]
+      }
+    `)
+
+	runtimeInterface := &testRuntimeInterface{
+		getSigningAccounts: func() []Address {
+			return []Address{{42}}
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	_, err := runtime.ExecuteScript(script, nil, runtimeInterface, nextTransactionLocation())
+	assert.Error(t, err)
 }

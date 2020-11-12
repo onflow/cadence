@@ -19,6 +19,7 @@
 package parser2
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -268,4 +269,57 @@ func TestParseEOF(t *testing.T) {
 	})
 
 	assert.Empty(t, errs)
+}
+
+func TestParseNames(t *testing.T) {
+
+	t.Parallel()
+
+	names := map[string]bool{
+		// Valid: title-case
+		//
+		"PersonID": true,
+
+		// Valid: with underscore
+		//
+		"token_name": true,
+
+		// Valid: leading underscore and characters
+		//
+		"_balance": true,
+
+		// Valid: leading underscore and numbers
+		"_8264": true,
+
+		// Valid: characters and number
+		//
+		"account2": true,
+
+		// Invalid: leading number
+		//
+		"1something": false,
+
+		// Invalid: invalid character #
+		"_#1": false,
+
+		// Invalid: various invalid characters
+		//
+		"!@#$%^&*": false,
+	}
+
+	for name, validExpected := range names {
+
+		code := fmt.Sprintf(`let %s = 1`, name)
+
+		actual, err := ParseProgram(code)
+
+		if validExpected {
+			assert.NotNil(t, actual)
+			assert.NoError(t, err)
+
+		} else {
+			assert.Nil(t, actual)
+			assert.IsType(t, Error{}, err)
+		}
+	}
 }

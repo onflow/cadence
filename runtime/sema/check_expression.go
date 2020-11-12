@@ -27,7 +27,7 @@ func (checker *Checker) VisitIdentifierExpression(expression *ast.IdentifierExpr
 	identifier := expression.Identifier
 	variable := checker.findAndCheckValueVariable(identifier, true)
 	if variable == nil {
-		return &InvalidType{}
+		return InvalidType
 	}
 
 	valueType := variable.Type
@@ -174,7 +174,7 @@ func (checker *Checker) VisitBoolExpression(_ *ast.BoolExpression) ast.Repr {
 func (checker *Checker) VisitNilExpression(_ *ast.NilExpression) ast.Repr {
 	// TODO: verify
 	return &OptionalType{
-		Type: &NeverType{},
+		Type: NeverType,
 	}
 }
 
@@ -218,7 +218,7 @@ func (checker *Checker) visitIndexExpression(
 	// by getting the expected element
 
 	if targetType.IsInvalidType() {
-		return &InvalidType{}
+		return InvalidType
 	}
 
 	// Check if the type instance is actually indexable. For most types (e.g. arrays and dictionaries)
@@ -235,7 +235,7 @@ func (checker *Checker) visitIndexExpression(
 			},
 		)
 
-		return &InvalidType{}
+		return InvalidType
 	}
 
 	elementType := checker.visitValueIndexingExpression(

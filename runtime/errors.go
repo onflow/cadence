@@ -78,29 +78,6 @@ func (e InvalidTransactionCountError) Error() string {
 	)
 }
 
-// MissingEntryPointError
-
-type MissingEntryPointError struct {
-	Expected string
-}
-
-func (e *MissingEntryPointError) Error() string {
-	return fmt.Sprintf("missing entry point: expected '%s'", e.Expected)
-}
-
-// InvalidEntryPointError
-
-type InvalidEntryPointTypeError struct {
-	Type sema.Type
-}
-
-func (e *InvalidEntryPointTypeError) Error() string {
-	return fmt.Sprintf(
-		"invalid entry point type: `%s`",
-		e.Type.QualifiedString(),
-	)
-}
-
 // InvalidTransactionParameterCountError
 
 type InvalidEntryPointParameterCountError struct {
@@ -166,51 +143,35 @@ func (e *InvalidTypeAssignmentError) Error() string {
 	)
 }
 
-// ScriptReturnTypeNotStorableError is an error that is reported for
-// script return types that are not storable.
+// InvalidScriptReturnTypeError is an error that is reported for
+// invalid script return types.
 //
-// For example, the type `Int` is a storable type,
-// whereas a function type is not.
-
-type ScriptReturnTypeNotStorableError struct {
+// For example, the type `Int` is valid,
+// whereas a function type is not,
+// because it cannot be exported/serialized.
+//
+type InvalidScriptReturnTypeError struct {
 	Type sema.Type
 }
 
-func (e *ScriptReturnTypeNotStorableError) Error() string {
+func (e *InvalidScriptReturnTypeError) Error() string {
 	return fmt.Sprintf(
-		"return type is non-storable type: `%s`",
+		"invalid script return type: `%s`",
 		e.Type.QualifiedString(),
 	)
 }
 
-// ScriptParamterTypeNotStorableError is an error that is reported for
+// ScriptParameterTypeNotStorableError is an error that is reported for
 // script parameter types that are not storable.
 //
 // For example, the type `Int` is a storable type,
 // whereas a function type is not.
-
+//
 type ScriptParameterTypeNotStorableError struct {
 	Type sema.Type
 }
 
 func (e *ScriptParameterTypeNotStorableError) Error() string {
-	return fmt.Sprintf(
-		"parameter type is non-storable type: `%s`",
-		e.Type.QualifiedString(),
-	)
-}
-
-// TransactionParamterTypeNotStorableError is an error that is reported for
-// transaction parameter types that are not storable.
-//
-// For example, the type `Int` is a storable type,
-// whereas a function type is not.
-
-type TransactionParameterTypeNotStorableError struct {
-	Type sema.Type
-}
-
-func (e *TransactionParameterTypeNotStorableError) Error() string {
 	return fmt.Sprintf(
 		"parameter type is non-storable type: `%s`",
 		e.Type.QualifiedString(),

@@ -480,7 +480,7 @@ type ControlStatementError struct {
 
 func (e *ControlStatementError) Error() string {
 	return fmt.Sprintf(
-		"control statement outside of loop: `%s`",
+		"invalid control statement: `%s`",
 		e.ControlStatement.Symbol(),
 	)
 }
@@ -800,7 +800,7 @@ type InvalidReturnValueError struct {
 func (e *InvalidReturnValueError) Error() string {
 	return fmt.Sprintf(
 		"invalid return with value from function with `%s` return type",
-		&VoidType{},
+		VoidType,
 	)
 }
 
@@ -2221,6 +2221,22 @@ func (e *InvalidFailableResourceDowncastOutsideOptionalBindingError) Error() str
 
 func (*InvalidFailableResourceDowncastOutsideOptionalBindingError) isSemanticError() {}
 
+// InvalidNonIdentifierFailableResourceDowncast
+
+type InvalidNonIdentifierFailableResourceDowncast struct {
+	ast.Range
+}
+
+func (e *InvalidNonIdentifierFailableResourceDowncast) Error() string {
+	return "cannot failably downcast non-identifier resource"
+}
+
+func (e *InvalidNonIdentifierFailableResourceDowncast) SecondaryError() string {
+	return "consider declaring a variable for this expression"
+}
+
+func (*InvalidNonIdentifierFailableResourceDowncast) isSemanticError() {}
+
 // ReadOnlyTargetAssignmentError
 
 type ReadOnlyTargetAssignmentError struct {
@@ -2302,6 +2318,22 @@ func (e *InvalidResourceTransactionParameterError) Error() string {
 }
 
 func (*InvalidResourceTransactionParameterError) isSemanticError() {}
+
+// InvalidNonStorableTransactionParameterTypeError
+
+type InvalidNonStorableTransactionParameterTypeError struct {
+	Type Type
+	ast.Range
+}
+
+func (e *InvalidNonStorableTransactionParameterTypeError) Error() string {
+	return fmt.Sprintf(
+		"transaction parameter must be storable: `%s`",
+		e.Type.QualifiedString(),
+	)
+}
+
+func (*InvalidNonStorableTransactionParameterTypeError) isSemanticError() {}
 
 // InvalidTransactionFieldAccessModifierError
 
@@ -2887,3 +2919,46 @@ func (e *SwitchDefaultPositionError) Error() string {
 }
 
 func (*SwitchDefaultPositionError) isSemanticError() {}
+
+// MissingSwitchCaseStatementsError
+
+type MissingSwitchCaseStatementsError struct {
+	Pos ast.Position
+}
+
+func (e *MissingSwitchCaseStatementsError) Error() string {
+	return "switch cases must have at least one statement"
+}
+
+func (*MissingSwitchCaseStatementsError) isSemanticError() {}
+
+func (e *MissingSwitchCaseStatementsError) StartPosition() ast.Position {
+	return e.Pos
+}
+
+func (e *MissingSwitchCaseStatementsError) EndPosition() ast.Position {
+	return e.Pos
+}
+
+// MissingEntryPointError
+
+type MissingEntryPointError struct {
+	Expected string
+}
+
+func (e *MissingEntryPointError) Error() string {
+	return fmt.Sprintf("missing entry point: expected '%s'", e.Expected)
+}
+
+// InvalidEntryPointError
+
+type InvalidEntryPointTypeError struct {
+	Type Type
+}
+
+func (e *InvalidEntryPointTypeError) Error() string {
+	return fmt.Sprintf(
+		"invalid entry point type: `%s`",
+		e.Type.QualifiedString(),
+	)
+}

@@ -33,6 +33,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/trampoline"
 )
@@ -123,7 +124,7 @@ func (TypeValue) SetModified(_ bool) {
 }
 
 func (v TypeValue) String() string {
-	return fmt.Sprintf("Type<%s>", v.Type)
+	return format.TypeValue(v.Type.String())
 }
 
 func (v TypeValue) Equal(inter *Interpreter, other Value) BoolValue {
@@ -184,7 +185,7 @@ func (VoidValue) SetModified(_ bool) {
 }
 
 func (VoidValue) String() string {
-	return "()"
+	return format.Void
 }
 
 // BoolValue
@@ -231,7 +232,7 @@ func (v BoolValue) Equal(_ *Interpreter, other Value) BoolValue {
 }
 
 func (v BoolValue) String() string {
-	return strconv.FormatBool(bool(v))
+	return format.Bool(bool(v))
 }
 
 func (v BoolValue) KeyString() string {
@@ -280,8 +281,7 @@ func (v *StringValue) SetModified(modified bool) {
 }
 
 func (v *StringValue) String() string {
-	// TODO: quote like in string literal
-	return strconv.Quote(v.Str)
+	return format.String(v.Str)
 }
 
 func (v *StringValue) KeyString() string {
@@ -528,8 +528,19 @@ func (v *ArrayValue) Concat(other ConcatenatableValue) Value {
 	return NewArrayValueUnownedNonCopying(concatenated...)
 }
 
-func (v *ArrayValue) Get(_ *Interpreter, _ LocationRange, key Value) Value {
+func (v *ArrayValue) Get(_ *Interpreter, locationRange LocationRange, key Value) Value {
 	integerKey := key.(NumberValue).ToInt()
+	count := v.Count()
+
+	// Check bounds
+	if integerKey < 0 || integerKey >= count {
+		panic(ArrayIndexOutOfBoundsError{
+			Index:         integerKey,
+			MaxIndex:      count - 1,
+			LocationRange: locationRange,
+		})
+	}
+
 	return v.Values[integerKey]
 }
 
@@ -545,16 +556,11 @@ func (v *ArrayValue) SetIndex(index int, value Value) {
 }
 
 func (v *ArrayValue) String() string {
-	var builder strings.Builder
-	builder.WriteString("[")
+	values := make([]string, len(v.Values))
 	for i, value := range v.Values {
-		if i > 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(fmt.Sprint(value))
+		values[i] = value.String()
 	}
-	builder.WriteString("]")
-	return builder.String()
+	return format.Array(values)
 }
 
 func (v *ArrayValue) Append(element Value) {
@@ -797,7 +803,7 @@ func (v IntValue) ToBigInt() *big.Int {
 }
 
 func (v IntValue) String() string {
-	return v.BigInt.String()
+	return format.BigInt(v.BigInt)
 }
 
 func (v IntValue) KeyString() string {
@@ -990,7 +996,7 @@ func (Int8Value) SetModified(_ bool) {
 }
 
 func (v Int8Value) String() string {
-	return strconv.FormatInt(int64(v), 10)
+	return format.Int(int64(v))
 }
 
 func (v Int8Value) KeyString() string {
@@ -1220,7 +1226,7 @@ func (Int16Value) SetModified(_ bool) {
 }
 
 func (v Int16Value) String() string {
-	return strconv.FormatInt(int64(v), 10)
+	return format.Int(int64(v))
 }
 
 func (v Int16Value) KeyString() string {
@@ -1452,7 +1458,7 @@ func (Int32Value) SetModified(_ bool) {
 }
 
 func (v Int32Value) String() string {
-	return strconv.FormatInt(int64(v), 10)
+	return format.Int(int64(v))
 }
 
 func (v Int32Value) KeyString() string {
@@ -1684,7 +1690,7 @@ func (Int64Value) SetModified(_ bool) {
 }
 
 func (v Int64Value) String() string {
-	return strconv.FormatInt(int64(v), 10)
+	return format.Int(int64(v))
 }
 
 func (v Int64Value) KeyString() string {
@@ -1933,7 +1939,7 @@ func (v Int128Value) ToBigInt() *big.Int {
 }
 
 func (v Int128Value) String() string {
-	return v.BigInt.String()
+	return format.BigInt(v.BigInt)
 }
 
 func (v Int128Value) KeyString() string {
@@ -2223,7 +2229,7 @@ func (v Int256Value) ToBigInt() *big.Int {
 }
 
 func (v Int256Value) String() string {
-	return v.BigInt.String()
+	return format.BigInt(v.BigInt)
 }
 
 func (v Int256Value) KeyString() string {
@@ -2534,7 +2540,7 @@ func (v UIntValue) ToBigInt() *big.Int {
 }
 
 func (v UIntValue) String() string {
-	return v.BigInt.String()
+	return format.BigInt(v.BigInt)
 }
 
 func (v UIntValue) KeyString() string {
@@ -2730,7 +2736,7 @@ func (UInt8Value) SetModified(_ bool) {
 }
 
 func (v UInt8Value) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 func (v UInt8Value) KeyString() string {
@@ -2927,7 +2933,7 @@ func (UInt16Value) SetModified(_ bool) {
 }
 
 func (v UInt16Value) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 func (v UInt16Value) KeyString() string {
@@ -3126,7 +3132,7 @@ func (UInt32Value) SetModified(_ bool) {
 }
 
 func (v UInt32Value) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 func (v UInt32Value) KeyString() string {
@@ -3326,7 +3332,7 @@ func (UInt64Value) SetModified(_ bool) {
 }
 
 func (v UInt64Value) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 func (v UInt64Value) KeyString() string {
@@ -3548,7 +3554,7 @@ func (v UInt128Value) ToBigInt() *big.Int {
 }
 
 func (v UInt128Value) String() string {
-	return v.BigInt.String()
+	return format.BigInt(v.BigInt)
 }
 
 func (v UInt128Value) KeyString() string {
@@ -3807,7 +3813,7 @@ func (v UInt256Value) ToBigInt() *big.Int {
 }
 
 func (v UInt256Value) String() string {
-	return v.BigInt.String()
+	return format.BigInt(v.BigInt)
 }
 
 func (v UInt256Value) KeyString() string {
@@ -4048,7 +4054,7 @@ func (Word8Value) SetModified(_ bool) {
 }
 
 func (v Word8Value) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 func (v Word8Value) KeyString() string {
@@ -4206,7 +4212,7 @@ func (Word16Value) SetModified(_ bool) {
 }
 
 func (v Word16Value) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 func (v Word16Value) KeyString() string {
@@ -4366,7 +4372,7 @@ func (Word32Value) SetModified(_ bool) {
 }
 
 func (v Word32Value) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 func (v Word32Value) KeyString() string {
@@ -4527,7 +4533,7 @@ func (Word64Value) SetModified(_ bool) {
 }
 
 func (v Word64Value) String() string {
-	return strconv.FormatUint(uint64(v), 10)
+	return format.Uint(uint64(v))
 }
 
 func (v Word64Value) KeyString() string {
@@ -4705,20 +4711,7 @@ func (Fix64Value) SetModified(_ bool) {
 }
 
 func (v Fix64Value) String() string {
-	integer := int64(v) / sema.Fix64Factor
-	fraction := int64(v) % sema.Fix64Factor
-	negative := fraction < 0
-	var builder strings.Builder
-	if negative {
-		fraction = -fraction
-		if integer == 0 {
-			builder.WriteRune('-')
-		}
-	}
-	builder.WriteString(fmt.Sprint(integer))
-	builder.WriteRune('.')
-	builder.WriteString(PadLeft(strconv.Itoa(int(fraction)), '0', sema.Fix64Scale))
-	return builder.String()
+	return format.Fix64(int64(v))
 }
 
 func (v Fix64Value) KeyString() string {
@@ -4962,14 +4955,7 @@ func (UFix64Value) SetModified(_ bool) {
 }
 
 func (v UFix64Value) String() string {
-	factor := uint64(sema.Fix64Factor)
-	integer := uint64(v) / factor
-	fraction := uint64(v) % factor
-	return fmt.Sprintf(
-		"%d.%s",
-		integer,
-		PadLeft(strconv.Itoa(int(fraction)), '0', sema.Fix64Scale),
-	)
+	return format.UFix64(uint64(v))
 }
 
 func (v UFix64Value) KeyString() string {
@@ -5283,7 +5269,7 @@ func (v *CompositeValue) Copy() Value {
 
 func (v *CompositeValue) checkStatus(locationRange LocationRange) {
 	if v.destroyed {
-		panic(&DestroyedCompositeError{
+		panic(DestroyedCompositeError{
 			CompositeKind: v.Kind,
 			LocationRange: locationRange,
 		})
@@ -5430,21 +5416,19 @@ func (v *CompositeValue) SetMember(_ *Interpreter, locationRange LocationRange, 
 }
 
 func (v *CompositeValue) String() string {
-	var builder strings.Builder
-	builder.WriteString(string(v.TypeID))
-	builder.WriteString("(")
-	i := 0
+	fields := make([]struct{Name string; Value string}, 0, len(v.Fields))
 	for name, value := range v.Fields {
-		if i > 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(name)
-		builder.WriteString(": ")
-		builder.WriteString(fmt.Sprint(value))
-		i++
+		fields = append(fields,
+			struct {
+				Name  string
+				Value string
+			}{
+				Name: name,
+				Value: value.String(),
+			},
+		)
 	}
-	builder.WriteString(")")
-	return builder.String()
+	return format.Composite(string(v.TypeID), fields)
 }
 
 func (v *CompositeValue) GetField(name string) Value {
@@ -5697,24 +5681,18 @@ func (v *DictionaryValue) Set(inter *Interpreter, locationRange LocationRange, k
 }
 
 func (v *DictionaryValue) String() string {
-	var builder strings.Builder
-	builder.WriteString("{")
-	i := 0
-	for _, keyValue := range v.Keys.Values {
-		if i > 0 {
-			builder.WriteString(", ")
-		}
-		builder.WriteString(fmt.Sprint(keyValue))
-		builder.WriteString(": ")
+	pairs := make([]struct{Key string; Value string}, len(v.Keys.Values))
 
+	for i, keyValue := range v.Keys.Values {
 		key := dictionaryKey(keyValue)
 		value := v.Entries[key]
-		builder.WriteString(fmt.Sprint(value))
-
-		i++
+		pairs[i] = struct{Key string;Value string}{
+			Key: keyValue.String(),
+			Value: value.String(),
+		}
 	}
-	builder.WriteString("}")
-	return builder.String()
+
+	return format.Dictionary(pairs)
 }
 
 func (v *DictionaryValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
@@ -5907,7 +5885,7 @@ func (v NilValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampoline
 }
 
 func (NilValue) String() string {
-	return "nil"
+	return format.Nil
 }
 
 var nilValueMapFunction = NewHostFunctionValue(
@@ -5987,7 +5965,7 @@ func (v *SomeValue) Destroy(interpreter *Interpreter, locationRange LocationRang
 }
 
 func (v *SomeValue) String() string {
-	return fmt.Sprint(v.Value)
+	return v.Value.String()
 }
 
 func (v *SomeValue) GetMember(_ *Interpreter, _ LocationRange, name string) Value {
@@ -6037,9 +6015,9 @@ func (v *StorageReferenceValue) String() string {
 }
 
 func (v *StorageReferenceValue) DynamicType(interpreter *Interpreter) DynamicType {
-	referencedValue := v.referencedValue(interpreter)
+	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
-		panic(&DereferenceError{})
+		panic(DereferenceError{})
 	}
 
 	innerType := (*referencedValue).DynamicType(interpreter)
@@ -6075,7 +6053,7 @@ func (*StorageReferenceValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v *StorageReferenceValue) referencedValue(interpreter *Interpreter) *Value {
+func (v *StorageReferenceValue) ReferencedValue(interpreter *Interpreter) *Value {
 	switch referenced := interpreter.readStored(v.TargetStorageAddress, v.TargetKey, false).(type) {
 	case *SomeValue:
 		return &referenced.Value
@@ -6087,9 +6065,9 @@ func (v *StorageReferenceValue) referencedValue(interpreter *Interpreter) *Value
 }
 
 func (v *StorageReferenceValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	referencedValue := v.referencedValue(interpreter)
+	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
-		panic(&DereferenceError{
+		panic(DereferenceError{
 			LocationRange: locationRange,
 		})
 	}
@@ -6098,9 +6076,9 @@ func (v *StorageReferenceValue) GetMember(interpreter *Interpreter, locationRang
 }
 
 func (v *StorageReferenceValue) SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) {
-	referencedValue := v.referencedValue(interpreter)
+	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
-		panic(&DereferenceError{
+		panic(DereferenceError{
 			LocationRange: locationRange,
 		})
 	}
@@ -6109,9 +6087,9 @@ func (v *StorageReferenceValue) SetMember(interpreter *Interpreter, locationRang
 }
 
 func (v *StorageReferenceValue) Get(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
-	referencedValue := v.referencedValue(interpreter)
+	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
-		panic(&DereferenceError{
+		panic(DereferenceError{
 			LocationRange: locationRange,
 		})
 	}
@@ -6121,9 +6099,9 @@ func (v *StorageReferenceValue) Get(interpreter *Interpreter, locationRange Loca
 }
 
 func (v *StorageReferenceValue) Set(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
-	referencedValue := v.referencedValue(interpreter)
+	referencedValue := v.ReferencedValue(interpreter)
 	if referencedValue == nil {
-		panic(&DereferenceError{
+		panic(DereferenceError{
 			LocationRange: locationRange,
 		})
 	}
@@ -6157,9 +6135,9 @@ func (v *EphemeralReferenceValue) String() string {
 }
 
 func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter) DynamicType {
-	referencedValue := v.referencedValue()
+	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
-		panic(&DereferenceError{})
+		panic(DereferenceError{})
 	}
 
 	innerType := (*referencedValue).DynamicType(interpreter)
@@ -6191,7 +6169,7 @@ func (*EphemeralReferenceValue) SetModified(_ bool) {
 	// NO-OP
 }
 
-func (v *EphemeralReferenceValue) referencedValue() *Value {
+func (v *EphemeralReferenceValue) ReferencedValue() *Value {
 	// Just like for storage references, references to optionals are unwrapped,
 	// i.e. a reference to `nil` aborts when dereferenced.
 
@@ -6206,9 +6184,9 @@ func (v *EphemeralReferenceValue) referencedValue() *Value {
 }
 
 func (v *EphemeralReferenceValue) GetMember(interpreter *Interpreter, locationRange LocationRange, name string) Value {
-	referencedValue := v.referencedValue()
+	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
-		panic(&DereferenceError{
+		panic(DereferenceError{
 			LocationRange: locationRange,
 		})
 	}
@@ -6217,9 +6195,9 @@ func (v *EphemeralReferenceValue) GetMember(interpreter *Interpreter, locationRa
 }
 
 func (v *EphemeralReferenceValue) SetMember(interpreter *Interpreter, locationRange LocationRange, name string, value Value) {
-	referencedValue := v.referencedValue()
+	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
-		panic(&DereferenceError{
+		panic(DereferenceError{
 			LocationRange: locationRange,
 		})
 	}
@@ -6228,9 +6206,9 @@ func (v *EphemeralReferenceValue) SetMember(interpreter *Interpreter, locationRa
 }
 
 func (v *EphemeralReferenceValue) Get(interpreter *Interpreter, locationRange LocationRange, key Value) Value {
-	referencedValue := v.referencedValue()
+	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
-		panic(&DereferenceError{
+		panic(DereferenceError{
 			LocationRange: locationRange,
 		})
 	}
@@ -6240,9 +6218,9 @@ func (v *EphemeralReferenceValue) Get(interpreter *Interpreter, locationRange Lo
 }
 
 func (v *EphemeralReferenceValue) Set(interpreter *Interpreter, locationRange LocationRange, key Value, value Value) {
-	referencedValue := v.referencedValue()
+	referencedValue := v.ReferencedValue()
 	if referencedValue == nil {
-		panic(&DereferenceError{
+		panic(DereferenceError{
 			LocationRange: locationRange,
 		})
 	}
@@ -6308,7 +6286,7 @@ func (v AddressValue) KeyString() string {
 }
 
 func (v AddressValue) String() string {
-	return common.Address(v).ShortHexWithPrefix()
+	return format.Address(common.Address(v))
 }
 
 func (AddressValue) GetOwner() *common.Address {
@@ -6469,31 +6447,6 @@ func accountGetCapabilityFunction(
 				break
 			}
 
-			if authorized {
-
-				// If the account is an authorized account (`AuthAccount`),
-				// ensure the path has a `private` or `public` domain.
-
-				if !checkPathDomain(
-					path,
-					common.PathDomainPrivate,
-					common.PathDomainPublic,
-				) {
-					return trampoline.Done{Result: NilValue{}}
-				}
-			} else {
-
-				// If the account is a public account (`PublicAccount`),
-				// ensure the path has a `public` domain.
-
-				if !checkPathDomain(
-					path,
-					common.PathDomainPublic,
-				) {
-					return trampoline.Done{Result: NilValue{}}
-				}
-			}
-
 			var borrowStaticType StaticType
 			if borrowType != nil {
 				borrowStaticType = ConvertSemaToStaticType(borrowType)
@@ -6505,9 +6458,7 @@ func accountGetCapabilityFunction(
 				BorrowType: borrowStaticType,
 			}
 
-			result := NewSomeValueOwningNonCopying(capability)
-
-			return trampoline.Done{Result: result}
+			return trampoline.Done{Result: capability}
 		},
 	)
 }
@@ -6660,8 +6611,17 @@ type PathValue struct {
 
 func (PathValue) IsValue() {}
 
-func (PathValue) DynamicType(_ *Interpreter) DynamicType {
-	return PathDynamicType{}
+func (v PathValue) DynamicType(_ *Interpreter) DynamicType {
+	switch v.Domain {
+	case common.PathDomainStorage:
+		return StoragePathDynamicType{}
+	case common.PathDomainPublic:
+		return PublicPathDynamicType{}
+	case common.PathDomainPrivate:
+		return PrivatePathDynamicType{}
+	default:
+		panic(errors.NewUnreachableError())
+	}
 }
 
 func (v PathValue) Copy() Value {
@@ -6690,8 +6650,7 @@ func (v PathValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampolin
 }
 
 func (v PathValue) String() string {
-	return fmt.Sprintf(
-		"/%s/%s",
+	return format.Path(
 		v.Domain.Identifier(),
 		v.Identifier,
 	)
@@ -6744,21 +6703,11 @@ func (v CapabilityValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Tra
 }
 
 func (v CapabilityValue) String() string {
-	var sb strings.Builder
-
-	sb.WriteString("Capability")
-
-	if v.BorrowType != nil {
-		sb.WriteRune('<')
-		sb.WriteString(v.BorrowType.String())
-		sb.WriteRune('>')
-	}
-	sb.WriteString("(/")
-	sb.WriteString(v.Address.String())
-	sb.WriteString(v.Path.String())
-	sb.WriteRune(')')
-
-	return sb.String()
+	return format.Capability(
+		v.BorrowType.String(),
+		v.Address.String(),
+		v.Path.String(),
+	)
 }
 
 func (v CapabilityValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
@@ -6825,9 +6774,8 @@ func (v LinkValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampolin
 }
 
 func (v LinkValue) String() string {
-	return fmt.Sprintf(
-		"Link(type: %s, targetPath: %s)",
-		v.Type,
-		v.TargetPath,
+	return format.Link(
+		v.Type.String(),
+		v.TargetPath.String(),
 	)
 }

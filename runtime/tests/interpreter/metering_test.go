@@ -111,7 +111,7 @@ func TestInterpretStatementHandler(t *testing.T) {
 
 				occurrences = append(occurrences, occurrence{
 					interpreterID: id,
-					line:          statement.Line,
+					line:          statement.Statement.StartPosition().Line,
 				})
 			},
 		),

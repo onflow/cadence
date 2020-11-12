@@ -78,11 +78,11 @@ type Range struct {
 	EndPos   Position
 }
 
-func (e *Range) StartPosition() Position {
+func (e Range) StartPosition() Position {
 	return e.StartPos
 }
 
-func (e *Range) EndPosition() Position {
+func (e Range) EndPosition() Position {
 	return e.EndPos
 }
 

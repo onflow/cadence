@@ -48,7 +48,7 @@ func TestCheckStorable(t *testing.T) {
 		}
 	}
 
-	generateNestedTypes := func(ty sema.Type) []sema.Type {
+	generateNestedTypes := func(ty sema.Type, includeCapability bool) []sema.Type {
 
 		// TODO: Restricted
 
@@ -60,8 +60,16 @@ func TestCheckStorable(t *testing.T) {
 				KeyType:   &sema.BoolType{},
 				ValueType: ty,
 			},
-			// TODO: https://github.com/onflow/cadence/pull/172
-			// &sema.CapabilityType{BorrowType: ty},
+		}
+
+		if includeCapability {
+			nestedTypes = append(nestedTypes,
+				&sema.CapabilityType{
+					BorrowType: &sema.ReferenceType{
+						Type: ty,
+					},
+				},
+			)
 		}
 
 		if sema.IsValidDictionaryKeyType(ty) {
@@ -82,14 +90,12 @@ func TestCheckStorable(t *testing.T) {
 		ErrorTypes func(compositeKind common.CompositeKind, isInterface bool) []error
 	}
 
-	testCases := []testCase{}
-
-	// Storable types
+	var testCases []testCase
 
 	storableTypes := append(
 		sema.AllNumberTypes[:],
 		&sema.AddressType{},
-		&sema.PathType{},
+		sema.PathType,
 		&sema.CapabilityType{},
 		&sema.StringType{},
 		&sema.BoolType{},
@@ -97,15 +103,43 @@ func TestCheckStorable(t *testing.T) {
 		&sema.CharacterType{},
 		&sema.AnyStructType{},
 		&sema.AnyResourceType{},
-		&sema.CapabilityType{},
 	)
 
 	for _, storableType := range storableTypes {
 		storableTypes = append(
 			storableTypes,
-			generateNestedTypes(storableType)...,
+			generateNestedTypes(storableType, true)...,
 		)
 	}
+
+	nonStorableTypes := []sema.Type{
+		&sema.FunctionType{
+			ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.IntType{}),
+		},
+		sema.NeverType,
+		sema.VoidType,
+		&sema.AuthAccountType{},
+		&sema.PublicAccountType{},
+	}
+
+	// Capabilities of non-storable types are storable
+
+	for _, nonStorableType := range nonStorableTypes {
+		storableTypes = append(
+			storableTypes,
+			&sema.CapabilityType{
+				BorrowType: &sema.ReferenceType{
+					Type: nonStorableType,
+				},
+			},
+		)
+	}
+
+	nonStorableTypes = append(nonStorableTypes,
+		&sema.ReferenceType{
+			Type: &sema.BoolType{},
+		},
+	)
 
 	for _, storableType := range storableTypes {
 		testCases = append(testCases,
@@ -136,23 +170,10 @@ func TestCheckStorable(t *testing.T) {
 		},
 	)
 
-	// Non-storable types
-
-	nonStorableTypes := []sema.Type{
-		&sema.FunctionType{
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.IntType{}),
-		},
-		&sema.NeverType{},
-		&sema.VoidType{},
-		&sema.AuthAccountType{},
-		&sema.PublicAccountType{},
-		&sema.ReferenceType{Type: &sema.BoolType{}},
-	}
-
 	for _, nonStorableType := range nonStorableTypes[:] {
 		nonStorableTypes = append(
 			nonStorableTypes,
-			generateNestedTypes(nonStorableType)...,
+			generateNestedTypes(nonStorableType, false)...,
 		)
 	}
 
@@ -160,10 +181,14 @@ func TestCheckStorable(t *testing.T) {
 		testCases = append(testCases,
 			testCase{
 				Type: nonStorableType,
-				ErrorTypes: func(_ common.CompositeKind, _ bool) []error {
-					return []error{
-						&sema.FieldTypeNotStorableError{},
+				ErrorTypes: func(kind common.CompositeKind, _ bool) []error {
+					if kind == common.CompositeKindContract {
+						return []error{
+							&sema.FieldTypeNotStorableError{},
+						}
 					}
+
+					return nil
 				},
 			},
 		)

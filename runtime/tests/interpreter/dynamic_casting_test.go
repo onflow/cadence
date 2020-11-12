@@ -127,7 +127,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 						for _, otherType := range []sema.Type{
 							&sema.BoolType{},
 							&sema.StringType{},
-							&sema.VoidType{},
+							sema.VoidType,
 						} {
 
 							t.Run(fmt.Sprintf("invalid: from %s to %s", fromType, otherType), func(t *testing.T) {
@@ -158,10 +158,7 @@ func TestInterpretDynamicCastingNumber(t *testing.T) {
 										result,
 									)
 								} else {
-									assert.IsType(t,
-										&interpreter.TypeMismatchError{},
-										err,
-									)
+									utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
 								}
 							})
 						}
@@ -178,7 +175,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 
 	types := []sema.Type{
 		&sema.AnyStructType{},
-		&sema.VoidType{},
+		sema.VoidType,
 	}
 
 	for operation, returnsOptional := range dynamicCastingOperations {
@@ -251,10 +248,7 @@ func TestInterpretDynamicCastingVoid(t *testing.T) {
 								result,
 							)
 						} else {
-							assert.IsType(t,
-								&interpreter.TypeMismatchError{},
-								err,
-							)
+							utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
 						}
 					})
 				}
@@ -309,7 +303,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 
 				for _, otherType := range []sema.Type{
 					&sema.BoolType{},
-					&sema.VoidType{},
+					sema.VoidType,
 					&sema.IntType{},
 				} {
 
@@ -339,10 +333,7 @@ func TestInterpretDynamicCastingString(t *testing.T) {
 								result,
 							)
 						} else {
-							assert.IsType(t,
-								&interpreter.TypeMismatchError{},
-								err,
-							)
+							utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
 						}
 					})
 				}
@@ -397,7 +388,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 
 				for _, otherType := range []sema.Type{
 					&sema.StringType{},
-					&sema.VoidType{},
+					sema.VoidType,
 					&sema.IntType{},
 				} {
 
@@ -427,10 +418,7 @@ func TestInterpretDynamicCastingBool(t *testing.T) {
 								result,
 							)
 						} else {
-							assert.IsType(t,
-								&interpreter.TypeMismatchError{},
-								err,
-							)
+							utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
 						}
 					})
 				}
@@ -489,7 +477,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 
 				for _, otherType := range []sema.Type{
 					&sema.StringType{},
-					&sema.VoidType{},
+					sema.VoidType,
 					&sema.IntType{},
 					&sema.BoolType{},
 				} {
@@ -520,10 +508,7 @@ func TestInterpretDynamicCastingAddress(t *testing.T) {
 								result,
 							)
 						} else {
-							assert.IsType(t,
-								&interpreter.TypeMismatchError{},
-								err,
-							)
+							utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
 						}
 					})
 				}
@@ -610,16 +595,13 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 							result,
 						)
 					} else {
-						assert.IsType(t,
-							&interpreter.TypeMismatchError{},
-							err,
-						)
+						utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
 					}
 				})
 
 				for _, otherType := range []sema.Type{
 					&sema.StringType{},
-					&sema.VoidType{},
+					sema.VoidType,
 					&sema.IntType{},
 					&sema.BoolType{},
 				} {
@@ -652,10 +634,7 @@ func TestInterpretDynamicCastingStruct(t *testing.T) {
 								result,
 							)
 						} else {
-							assert.IsType(t,
-								&interpreter.TypeMismatchError{},
-								err,
-							)
+							utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
 						}
 					})
 				}
@@ -762,12 +741,7 @@ func testResourceCastInvalid(t *testing.T, types, fromType, targetType string, o
 		)
 
 	case ast.OperationForceCast:
-		require.Error(t, err)
-
-		require.IsType(t,
-			&interpreter.TypeMismatchError{},
-			err,
-		)
+		utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -914,12 +888,7 @@ func testStructCastInvalid(t *testing.T, types, fromType, targetType string, ope
 		)
 
 	case ast.OperationForceCast:
-		require.Error(t, err)
-
-		require.IsType(t,
-			&interpreter.TypeMismatchError{},
-			err,
-		)
+		utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -1092,7 +1061,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 
 				for _, otherType := range []sema.Type{
 					&sema.OptionalType{Type: &sema.StringType{}},
-					&sema.OptionalType{Type: &sema.VoidType{}},
+					&sema.OptionalType{Type: sema.VoidType},
 					&sema.OptionalType{Type: &sema.BoolType{}},
 				} {
 
@@ -1121,10 +1090,7 @@ func TestInterpretDynamicCastingSome(t *testing.T) {
 								result,
 							)
 						} else {
-							assert.IsType(t,
-								&interpreter.TypeMismatchError{},
-								err,
-							)
+							utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
 						}
 					})
 				}
@@ -1184,7 +1150,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 
 				for _, otherType := range []sema.Type{
 					&sema.StringType{},
-					&sema.VoidType{},
+					sema.VoidType,
 					&sema.BoolType{},
 				} {
 
@@ -1213,10 +1179,7 @@ func TestInterpretDynamicCastingArray(t *testing.T) {
 								result,
 							)
 						} else {
-							assert.IsType(t,
-								&interpreter.TypeMismatchError{},
-								err,
-							)
+							utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
 						}
 					})
 				}
@@ -1282,7 +1245,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 
 				for _, otherType := range []sema.Type{
 					&sema.StringType{},
-					&sema.VoidType{},
+					sema.VoidType,
 					&sema.BoolType{},
 				} {
 
@@ -1312,10 +1275,7 @@ func TestInterpretDynamicCastingDictionary(t *testing.T) {
 								result,
 							)
 						} else {
-							assert.IsType(t,
-								&interpreter.TypeMismatchError{},
-								err,
-							)
+							utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
 						}
 					})
 				}
@@ -2222,12 +2182,7 @@ func testReferenceCastInvalid(t *testing.T, types, fromType, targetType string, 
 		)
 
 	case ast.OperationForceCast:
-		require.Error(t, err)
-
-		require.IsType(t,
-			&interpreter.TypeMismatchError{},
-			err,
-		)
+		utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -3440,7 +3395,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 
 				for _, otherType := range []sema.Type{
 					&sema.StringType{},
-					&sema.VoidType{},
+					sema.VoidType,
 					&sema.BoolType{},
 				} {
 
@@ -3472,10 +3427,7 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 								result,
 							)
 						} else {
-							assert.IsType(t,
-								&interpreter.TypeMismatchError{},
-								err,
-							)
+							utils.RequireErrorAs(t, err, &interpreter.TypeMismatchError{})
 						}
 					})
 				}

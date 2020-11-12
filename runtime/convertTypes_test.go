@@ -67,6 +67,6 @@ func TestExportRecursiveType(t *testing.T) {
 
 	assert.Equal(t,
 		expected,
-		exportType(ty, map[sema.TypeID]cadence.Type{}),
+		ExportType(ty, map[sema.TypeID]cadence.Type{}),
 	)
 }

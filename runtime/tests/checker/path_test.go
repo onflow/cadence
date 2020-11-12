@@ -33,9 +33,17 @@ func TestCheckPath(t *testing.T) {
 
 	t.Parallel()
 
-	for _, domain := range common.AllPathDomainsByIdentifier {
+	domainTypes := map[common.PathDomain]sema.Type{
+		common.PathDomainStorage: sema.StoragePathType,
+		common.PathDomainPublic:  sema.PublicPathType,
+		common.PathDomainPrivate: sema.PrivatePathType,
+	}
 
-		t.Run(fmt.Sprintf("valid: %s", domain.Name()), func(t *testing.T) {
+	test := func(domain common.PathDomain) {
+
+		t.Run(fmt.Sprintf("valid: %s", domain.Identifier()), func(t *testing.T) {
+
+			t.Parallel()
 
 			checker, err := ParseAndCheck(t,
 				fmt.Sprintf(
@@ -50,10 +58,14 @@ func TestCheckPath(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.IsType(t,
-				&sema.PathType{},
+				domainTypes[domain],
 				checker.GlobalValues["x"].Type,
 			)
 		})
+	}
+
+	for _, domain := range common.AllPathDomainsByIdentifier {
+		test(domain)
 	}
 
 	t.Run("invalid: unsupported domain", func(t *testing.T) {

@@ -36,13 +36,13 @@ type controlReturn interface {
 	isControlReturn()
 }
 
-type loopBreak struct{}
+type controlBreak struct{}
 
-func (loopBreak) isControlReturn() {}
+func (controlBreak) isControlReturn() {}
 
-type loopContinue struct{}
+type controlContinue struct{}
 
-func (loopContinue) isControlReturn() {}
+func (controlContinue) isControlReturn() {}
 
 type functionReturn struct {
 	Value
@@ -58,7 +58,7 @@ type ExpressionStatementResult struct {
 
 var emptyFunctionType = &sema.FunctionType{
 	ReturnTypeAnnotation: &sema.TypeAnnotation{
-		Type: &sema.VoidType{},
+		Type: sema.VoidType,
 	},
 }
 
@@ -574,7 +574,7 @@ func (interpreter *Interpreter) Interpret() (err error) {
 type Statement struct {
 	Interpreter *Interpreter
 	Trampoline  Trampoline
-	Line        int
+	Statement   ast.Statement
 }
 
 // runUntilNextStatement executes the trampline until the next statement.
@@ -594,7 +594,7 @@ func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}
 				// not just inner statement trampoline
 				Trampoline:  t,
 				Interpreter: statement.Interpreter,
-				Line:        statement.Line,
+				Statement:   statement.Statement,
 			}
 		}
 
@@ -613,8 +613,36 @@ func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}
 // runAllStatements runs all the statement until there is no more trampoline and returns the result.
 // When there is a statement, it calls the onStatement callback, and then continues the execution.
 func (interpreter *Interpreter) runAllStatements(t Trampoline) interface{} {
+	var statement *Statement
+
+	// Wrap errors if needed
+
+	defer recoverErrors(func(internalErr error) {
+
+		// if the error is already an execution error, use it as is
+		if _, ok := internalErr.(Error); ok {
+			panic(internalErr)
+		}
+
+		// wrap the error with position information
+
+		var posInfo ast.HasPosition
+		// use the position information of the reported error, if any,
+		// or that of the statement otherwise
+		posInfo, ok := internalErr.(ast.HasPosition)
+		if !ok {
+			posInfo = statement.Statement
+		}
+
+		panic(Error{
+			Err:           internalErr,
+			LocationRange: interpreter.locationRange(posInfo),
+		})
+	})
+
 	for {
-		result, statement := interpreter.runUntilNextStatement(t)
+		var result interface{}
+		result, statement = interpreter.runUntilNextStatement(t)
 		if statement == nil {
 			return result
 		}
@@ -719,7 +747,7 @@ func (interpreter *Interpreter) prepareInvokeVariable(
 	// function must be defined as a global variable
 	variable, ok := interpreter.Globals[functionName]
 	if !ok {
-		return nil, &NotDeclaredError{
+		return nil, NotDeclaredError{
 			ExpectedKind: common.DeclarationKindFunction,
 			Name:         functionName,
 		}
@@ -730,7 +758,7 @@ func (interpreter *Interpreter) prepareInvokeVariable(
 	// the global variable must be declared as a function
 	functionValue, ok := variableValue.(FunctionValue)
 	if !ok {
-		return nil, &NotInvokableError{
+		return nil, NotInvokableError{
 			Value: variableValue,
 		}
 	}
@@ -741,7 +769,7 @@ func (interpreter *Interpreter) prepareInvokeVariable(
 	invokableType, ok := ty.(sema.InvokableType)
 
 	if !ok {
-		return nil, &NotInvokableError{
+		return nil, NotInvokableError{
 			Value: variableValue,
 		}
 	}
@@ -756,7 +784,7 @@ func (interpreter *Interpreter) prepareInvokeTransaction(
 	arguments []Value,
 ) (trampoline Trampoline, err error) {
 	if index >= len(interpreter.Transactions) {
-		return nil, &TransactionNotDeclaredError{Index: index}
+		return nil, TransactionNotDeclaredError{Index: index}
 	}
 
 	functionValue := interpreter.Transactions[index]
@@ -787,7 +815,7 @@ func (interpreter *Interpreter) prepareInvoke(
 		if functionType.RequiredArgumentCount == nil ||
 			argumentCount < *functionType.RequiredArgumentCount {
 
-			return nil, &ArgumentCountError{
+			return nil, ArgumentCountError{
 				ParameterCount: parameterCount,
 				ArgumentCount:  argumentCount,
 			}
@@ -800,7 +828,7 @@ func (interpreter *Interpreter) prepareInvoke(
 		// TODO: value type is not known, reject for now
 		switch parameterType.(type) {
 		case *sema.AnyStructType, *sema.AnyResourceType:
-			return nil, &NotInvokableError{
+			return nil, NotInvokableError{
 				Value: functionValue,
 			}
 		}
@@ -936,7 +964,7 @@ func (interpreter *Interpreter) functionDeclarationValue(
 // NOTE: consider using NewInterpreter if the value should be predefined in all programs
 func (interpreter *Interpreter) ImportValue(name string, value Value) error {
 	if _, ok := interpreter.Globals[name]; ok {
-		return &RedeclarationError{
+		return RedeclarationError{
 			Name: name,
 		}
 	}
@@ -966,7 +994,6 @@ func (interpreter *Interpreter) visitStatements(statements []ast.Statement) Tram
 	}
 
 	statement := statements[0]
-	line := statement.StartPosition().Line
 
 	// interpret the first statement, then the remaining ones
 	return StatementTrampoline{
@@ -974,7 +1001,7 @@ func (interpreter *Interpreter) visitStatements(statements []ast.Statement) Tram
 			return statement.Accept(interpreter).(Trampoline)
 		},
 		Interpreter: interpreter,
-		Line:        line,
+		Statement:   statement,
 	}.FlatMap(func(returnValue interface{}) Trampoline {
 		if _, isReturn := returnValue.(controlReturn); isReturn {
 			return Done{Result: returnValue}
@@ -1017,7 +1044,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 			// If there is a return type, declare the constant `result`
 			// which has the return value
 
-			if _, isVoid := returnType.(*sema.VoidType); !isVoid {
+			if returnType != sema.VoidType {
 				interpreter.declareVariable(sema.ResultIdentifier, resultValue)
 			}
 
@@ -1059,7 +1086,7 @@ func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) Tra
 					Then(func(result interface{}) {
 						message := result.(*StringValue).Str
 
-						panic(&ConditionError{
+						panic(ConditionError{
 							ConditionKind: condition.Kind,
 							Message:       message,
 							LocationRange: interpreter.locationRange(condition.Test),
@@ -1097,11 +1124,11 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 }
 
 func (interpreter *Interpreter) VisitBreakStatement(_ *ast.BreakStatement) ast.Repr {
-	return Done{Result: loopBreak{}}
+	return Done{Result: controlBreak{}}
 }
 
 func (interpreter *Interpreter) VisitContinueStatement(_ *ast.ContinueStatement) ast.Repr {
-	return Done{Result: loopContinue{}}
+	return Done{Result: controlContinue{}}
 }
 
 func (interpreter *Interpreter) VisitIfStatement(statement *ast.IfStatement) ast.Repr {
@@ -1188,7 +1215,15 @@ func (interpreter *Interpreter) VisitSwitchStatement(switchStatement *ast.Switch
 				Statements: switchCase.Statements,
 			}
 
-			return block.Accept(interpreter).(Trampoline)
+			return block.Accept(interpreter).(Trampoline).
+				FlatMap(func(value interface{}) Trampoline {
+
+					if _, ok := value.(controlBreak); ok {
+						return Done{}
+					}
+
+					return Done{Result: value}
+				})
 		}
 
 		// If the case has no expression it is the default case.
@@ -1241,10 +1276,10 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 				FlatMap(func(value interface{}) Trampoline {
 
 					switch value.(type) {
-					case loopBreak:
+					case controlBreak:
 						return Done{}
 
-					case loopContinue:
+					case controlContinue:
 						// NO-OP
 
 					case functionReturn:
@@ -1280,10 +1315,10 @@ func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) a
 			FlatMap(func(value interface{}) Trampoline {
 
 				switch value.(type) {
-				case loopBreak:
+				case controlBreak:
 					return Done{}
 
-				case loopContinue:
+				case controlContinue:
 					// NO-OP
 
 				case functionReturn:
@@ -1414,7 +1449,7 @@ func (interpreter *Interpreter) visitAssignment(
 				if _, ok := target.(NilValue); !ok {
 					locationRange := interpreter.locationRange(position)
 
-					panic(&ForceAssignmentToNonNilResourceError{
+					panic(ForceAssignmentToNonNilResourceError{
 						LocationRange: locationRange,
 					})
 				}
@@ -3086,7 +3121,7 @@ func (interpreter *Interpreter) initializerFunctionWrapper(
 
 	return interpreter.functionConditionsWrapper(
 		firstInitializer.FunctionDeclaration,
-		&sema.VoidType{},
+		sema.VoidType,
 		lexicalScope,
 	)
 }
@@ -3103,7 +3138,7 @@ func (interpreter *Interpreter) destructorFunctionWrapper(
 
 	return interpreter.functionConditionsWrapper(
 		destructor.FunctionDeclaration,
-		&sema.VoidType{},
+		sema.VoidType,
 		lexicalScope,
 	)
 }
@@ -3439,7 +3474,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 						preConditions,
 						executeTrampoline,
 						postConditionsRewrite.RewrittenPostConditions,
-						&sema.VoidType{},
+						sema.VoidType,
 					)
 				})
 		})
@@ -3484,7 +3519,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 				case ast.OperationForceCast:
 					if !isSubType {
 						panic(
-							&TypeMismatchError{
+							TypeMismatchError{
 								ExpectedType:  expectedType,
 								LocationRange: interpreter.locationRange(expression.Expression),
 							},
@@ -3545,7 +3580,7 @@ func (interpreter *Interpreter) VisitForceExpression(expression *ast.ForceExpres
 
 			case NilValue:
 				panic(
-					&ForceNilError{
+					ForceNilError{
 						LocationRange: interpreter.locationRange(expression.Expression),
 					},
 				)
@@ -3696,13 +3731,11 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		}
 
 	case VoidDynamicType:
-		switch superType.(type) {
-		case *sema.VoidType, *sema.AnyStructType:
+		if _, ok := superType.(*sema.AnyStructType); ok {
 			return true
-
-		default:
-			return false
 		}
+
+		return superType == sema.VoidType
 
 	case StringDynamicType:
 		switch superType.(type) {
@@ -3854,11 +3887,38 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 
 		}
 
-	case PathDynamicType:
-		switch superType.(type) {
-		case *sema.PathType, *sema.AnyStructType:
+	case PublicPathDynamicType:
+		if _, ok := superType.(*sema.AnyStructType); ok {
 			return true
+		}
 
+		switch superType {
+		case sema.PublicPathType, sema.CapabilityPathType, sema.PathType:
+			return true
+		default:
+			return false
+		}
+
+	case PrivatePathDynamicType:
+		if _, ok := superType.(*sema.AnyStructType); ok {
+			return true
+		}
+
+		switch superType {
+		case sema.PrivatePathType, sema.CapabilityPathType, sema.PathType:
+			return true
+		default:
+			return false
+		}
+
+	case StoragePathDynamicType:
+		if _, ok := superType.(*sema.AnyStructType); ok {
+			return true
+		}
+
+		switch superType {
+		case sema.StoragePathType, sema.PathType:
+			return true
 		default:
 			return false
 		}
@@ -3912,24 +3972,6 @@ func storageKey(path PathValue) string {
 	return fmt.Sprintf("%s\x1F%s", path.Domain.Identifier(), path.Identifier)
 }
 
-func mustPathDomain(
-	path PathValue,
-	locationRange LocationRange,
-	expectedDomains ...common.PathDomain,
-) {
-	if checkPathDomain(path, expectedDomains...) {
-		return
-	}
-
-	panic(
-		&InvalidPathDomainError{
-			ActualDomain:    path.Domain,
-			ExpectedDomains: expectedDomains,
-			LocationRange:   locationRange,
-		},
-	)
-}
-
 func checkPathDomain(path PathValue, expectedDomains ...common.PathDomain) bool {
 	actualDomain := path.Domain
 
@@ -3951,19 +3993,11 @@ func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValu
 		address := addressValue.ToAddress()
 		key := storageKey(path)
 
-		// Ensure the path has a `storage` domain
-
-		mustPathDomain(
-			path,
-			invocation.LocationRange,
-			common.PathDomainStorage,
-		)
-
 		// Prevent an overwrite
 
 		if interpreter.storedValueExists(address, key) {
 			panic(
-				&OverwriteError{
+				OverwriteError{
 					Address:       addressValue,
 					Path:          path,
 					LocationRange: invocation.LocationRange,
@@ -3999,14 +4033,6 @@ func (interpreter *Interpreter) authAccountReadFunction(addressValue AddressValu
 
 		path := invocation.Arguments[0].(PathValue)
 		key := storageKey(path)
-
-		// Ensure the path has a `storage` domain
-
-		mustPathDomain(
-			path,
-			invocation.LocationRange,
-			common.PathDomainStorage,
-		)
 
 		value := interpreter.readStored(address, key, false)
 
@@ -4054,14 +4080,6 @@ func (interpreter *Interpreter) authAccountBorrowFunction(addressValue AddressVa
 
 		path := invocation.Arguments[0].(PathValue)
 		key := storageKey(path)
-
-		// Ensure the path has a `storage` domain
-
-		mustPathDomain(
-			path,
-			invocation.LocationRange,
-			common.PathDomainStorage,
-		)
 
 		value := interpreter.readStored(address, key, false)
 
@@ -4126,15 +4144,6 @@ func (interpreter *Interpreter) authAccountLinkFunction(addressValue AddressValu
 
 		newCapabilityKey := storageKey(newCapabilityPath)
 
-		// Ensure the path has a `private` or `public` domain
-
-		mustPathDomain(
-			newCapabilityPath,
-			invocation.LocationRange,
-			common.PathDomainPrivate,
-			common.PathDomainPublic,
-		)
-
 		if interpreter.storedValueExists(address, newCapabilityKey) {
 			return Done{Result: NilValue{}}
 		}
@@ -4177,15 +4186,6 @@ func (interpreter *Interpreter) accountGetLinkTargetFunction(addressValue Addres
 
 		capabilityKey := storageKey(capabilityPath)
 
-		// Ensure the path has a `private` or `public` domain
-
-		mustPathDomain(
-			capabilityPath,
-			invocation.LocationRange,
-			common.PathDomainPrivate,
-			common.PathDomainPublic,
-		)
-
 		value := interpreter.readStored(address, capabilityKey, false)
 
 		switch value := value.(type) {
@@ -4216,15 +4216,6 @@ func (interpreter *Interpreter) authAccountUnlinkFunction(addressValue AddressVa
 
 		capabilityPath := invocation.Arguments[0].(PathValue)
 		capabilityKey := storageKey(capabilityPath)
-
-		// Ensure the path has a `private` or `public` domain
-
-		mustPathDomain(
-			capabilityPath,
-			invocation.LocationRange,
-			common.PathDomainPrivate,
-			common.PathDomainPublic,
-		)
 
 		// Write new value
 
@@ -4348,7 +4339,7 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 		// Detect cyclic links
 
 		if _, ok := seenKeys[key]; ok {
-			panic(&CyclicLinkError{
+			panic(CyclicLinkError{
 				Address:       addressValue,
 				Paths:         paths,
 				LocationRange: locationRange,

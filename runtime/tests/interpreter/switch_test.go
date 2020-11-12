@@ -66,7 +66,7 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			assert.Equal(t, actual, expected)
+			assert.Equal(t, expected, actual)
 		}
 	})
 
@@ -105,7 +105,86 @@ func TestInterpretSwitchStatement(t *testing.T) {
 			actual, err := inter.Invoke("test", argument)
 			require.NoError(t, err)
 
-			assert.Equal(t, actual, expected)
+			assert.Equal(t, expected, actual)
+		}
+	})
+
+	t.Run("break", func(t *testing.T) {
+
+		inter := parseCheckAndInterpretWithOptions(t,
+			`
+              fun test(_ x: Int): String {
+                  switch x {
+                  case 1:
+                      break
+                      return "1"
+                  case 2:
+                      return "2"
+                  default:
+                      return "3"
+                  }
+                  return "4"
+              }
+            `,
+			ParseCheckAndInterpretOptions{
+				HandleCheckerError: func(err error) {
+					errs := checker.ExpectCheckerErrors(t, err, 1)
+
+					assert.IsType(t, &sema.UnreachableStatementError{}, errs[0])
+				},
+			},
+		)
+
+		for argument, expected := range map[interpreter.Value]interpreter.Value{
+			interpreter.NewIntValueFromInt64(1): interpreter.NewStringValue("4"),
+			interpreter.NewIntValueFromInt64(2): interpreter.NewStringValue("2"),
+			interpreter.NewIntValueFromInt64(3): interpreter.NewStringValue("3"),
+			interpreter.NewIntValueFromInt64(4): interpreter.NewStringValue("3"),
+		} {
+
+			actual, err := inter.Invoke("test", argument)
+			require.NoError(t, err)
+
+			assert.Equal(t, expected, actual)
+		}
+	})
+
+	t.Run("no-implicit fallthrough", func(t *testing.T) {
+
+		inter := parseCheckAndInterpret(t, `
+          fun test(_ x: Int): [String] {
+              let results: [String] = []
+              switch x {
+              case 1:
+                  results.append("1")
+              case 2:
+                  results.append("2")
+              default:
+                  results.append("3")
+              }
+              return results
+          }
+        `)
+
+		for argument, expected := range map[interpreter.Value]interpreter.Value{
+			interpreter.NewIntValueFromInt64(1): interpreter.NewArrayValueUnownedNonCopying(
+				interpreter.NewStringValue("1"),
+			),
+			interpreter.NewIntValueFromInt64(2): interpreter.NewArrayValueUnownedNonCopying(
+				interpreter.NewStringValue("2"),
+			),
+			interpreter.NewIntValueFromInt64(3): interpreter.NewArrayValueUnownedNonCopying(
+				interpreter.NewStringValue("3"),
+			),
+			interpreter.NewIntValueFromInt64(4): interpreter.NewArrayValueUnownedNonCopying(
+				interpreter.NewStringValue("3"),
+			),
+		} {
+
+			actual, err := inter.Invoke("test", argument)
+			require.NoError(t, err)
+
+			assert.Equal(t, expected, actual)
 		}
 	})
 }

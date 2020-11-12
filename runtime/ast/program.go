@@ -20,23 +20,14 @@ package ast
 
 import (
 	"encoding/json"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 type Program struct {
 	// all declarations, in the order they are defined
 	Declarations []Declaration
-	// Use `PragmaDeclarations()` instead
-	_pragmaDeclarations []*PragmaDeclaration
-	// Use `ImportDeclarations()` instead
-	_importDeclarations []*ImportDeclaration
-	// Use `Interfaces()` instead
-	_interfaceDeclarations []*InterfaceDeclaration
-	// Use `Composites()` instead
-	_compositeDeclarations []*CompositeDeclaration
-	// Use `FunctionDeclarations()` instead
-	_functionDeclarations []*FunctionDeclaration
-	// Use `TransactionDeclarations()` instead
-	_transactionDeclarations []*TransactionDeclaration
+	indices      programIndices
 }
 
 func (p *Program) StartPosition() Position {
@@ -61,79 +52,93 @@ func (p *Program) Accept(visitor Visitor) Repr {
 }
 
 func (p *Program) PragmaDeclarations() []*PragmaDeclaration {
-	if p._pragmaDeclarations == nil {
-		p.updateDeclarations()
-	}
-	return p._pragmaDeclarations
+	return p.indices.pragmaDeclarations(p.Declarations)
 }
 
 func (p *Program) ImportDeclarations() []*ImportDeclaration {
-	if p._importDeclarations == nil {
-		p.updateDeclarations()
-	}
-	return p._importDeclarations
+	return p.indices.importDeclarations(p.Declarations)
 }
 
 func (p *Program) InterfaceDeclarations() []*InterfaceDeclaration {
-	if p._interfaceDeclarations == nil {
-		p.updateDeclarations()
-	}
-	return p._interfaceDeclarations
+	return p.indices.interfaceDeclarations(p.Declarations)
 }
 
 func (p *Program) CompositeDeclarations() []*CompositeDeclaration {
-	if p._compositeDeclarations == nil {
-		p.updateDeclarations()
-	}
-	return p._compositeDeclarations
+	return p.indices.compositeDeclarations(p.Declarations)
 }
 
 func (p *Program) FunctionDeclarations() []*FunctionDeclaration {
-	if p._functionDeclarations == nil {
-		p.updateDeclarations()
-	}
-	return p._functionDeclarations
+	return p.indices.functionDeclarations(p.Declarations)
 }
 
 func (p *Program) TransactionDeclarations() []*TransactionDeclaration {
-	if p._transactionDeclarations == nil {
-		p.updateDeclarations()
-	}
-	return p._transactionDeclarations
+	return p.indices.transactionDeclarations(p.Declarations)
 }
 
-func (p *Program) updateDeclarations() {
-	// Important: allocate instead of nil
+// SoleContractDeclaration returns the sole contract declaration, if any,
+// and if there are no other actionable declarations.
+//
+func (p *Program) SoleContractDeclaration() *CompositeDeclaration {
 
-	p._pragmaDeclarations = make([]*PragmaDeclaration, 0)
-	p._importDeclarations = make([]*ImportDeclaration, 0)
-	p._compositeDeclarations = make([]*CompositeDeclaration, 0)
-	p._interfaceDeclarations = make([]*InterfaceDeclaration, 0)
-	p._functionDeclarations = make([]*FunctionDeclaration, 0)
-	p._transactionDeclarations = make([]*TransactionDeclaration, 0)
+	compositeDeclarations := p.CompositeDeclarations()
 
-	for _, declaration := range p.Declarations {
+	if len(compositeDeclarations) != 1 ||
+		len(p.TransactionDeclarations()) > 0 ||
+		len(p.InterfaceDeclarations()) > 0 ||
+		len(p.FunctionDeclarations()) > 0 {
 
-		switch declaration := declaration.(type) {
-		case *PragmaDeclaration:
-			p._pragmaDeclarations = append(p._pragmaDeclarations, declaration)
-
-		case *ImportDeclaration:
-			p._importDeclarations = append(p._importDeclarations, declaration)
-
-		case *CompositeDeclaration:
-			p._compositeDeclarations = append(p._compositeDeclarations, declaration)
-
-		case *InterfaceDeclaration:
-			p._interfaceDeclarations = append(p._interfaceDeclarations, declaration)
-
-		case *FunctionDeclaration:
-			p._functionDeclarations = append(p._functionDeclarations, declaration)
-
-		case *TransactionDeclaration:
-			p._transactionDeclarations = append(p._transactionDeclarations, declaration)
-		}
+		return nil
 	}
+
+	compositeDeclaration := compositeDeclarations[0]
+
+	if compositeDeclaration.CompositeKind != common.CompositeKindContract {
+		return nil
+	}
+
+	return compositeDeclaration
+}
+
+// SoleContractInterfaceDeclaration returns the sole contract interface declaration, if any,
+// and if there are no other actionable declarations.
+//
+func (p *Program) SoleContractInterfaceDeclaration() *InterfaceDeclaration {
+
+	interfaceDeclarations := p.InterfaceDeclarations()
+
+	if len(interfaceDeclarations) != 1 ||
+		len(p.TransactionDeclarations()) > 0 ||
+		len(p.FunctionDeclarations()) > 0 ||
+		len(p.CompositeDeclarations()) > 0 {
+
+		return nil
+	}
+
+	interfaceDeclaration := interfaceDeclarations[0]
+
+	if interfaceDeclaration.CompositeKind != common.CompositeKindContract {
+		return nil
+	}
+
+	return interfaceDeclaration
+}
+
+// SoleTransactionDeclaration returns the sole transaction declaration, if any,
+// and if there are no other actionable declarations.
+//
+func (p *Program) SoleTransactionDeclaration() *TransactionDeclaration {
+
+	transactionDeclarations := p.TransactionDeclarations()
+
+	if len(transactionDeclarations) != 1 ||
+		len(p.CompositeDeclarations()) > 0 ||
+		len(p.InterfaceDeclarations()) > 0 ||
+		len(p.FunctionDeclarations()) > 0 {
+
+		return nil
+	}
+
+	return transactionDeclarations[0]
 }
 
 func (p *Program) MarshalJSON() ([]byte, error) {

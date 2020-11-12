@@ -59,6 +59,11 @@ func (*DeployedContractType) IsStorable(_ map[*Member]bool) bool {
 	return false
 }
 
+func (*DeployedContractType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	// TODO: add support for exporting deployed contracts
+	return false
+}
+
 func (*DeployedContractType) IsEquatable() bool {
 	// TODO:
 	return false

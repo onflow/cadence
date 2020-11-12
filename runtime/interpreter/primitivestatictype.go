@@ -139,6 +139,10 @@ const (
 
 	PrimitiveStaticTypePath
 	PrimitiveStaticTypeCapability
+	PrimitiveStaticTypeStoragePath
+	PrimitiveStaticTypeCapabilityPath
+	PrimitiveStaticTypePublicPath
+	PrimitiveStaticTypePrivatePath
 )
 
 func (PrimitiveStaticType) isStaticType() {}
@@ -146,13 +150,13 @@ func (PrimitiveStaticType) isStaticType() {}
 func (i PrimitiveStaticType) SemaType() sema.Type {
 	switch i {
 	case PrimitiveStaticTypeVoid:
-		return &sema.VoidType{}
+		return sema.VoidType
 
 	case PrimitiveStaticTypeAny:
 		return &sema.AnyType{}
 
 	case PrimitiveStaticTypeNever:
-		return &sema.NeverType{}
+		return sema.NeverType
 
 	case PrimitiveStaticTypeAnyStruct:
 		return &sema.AnyStructType{}
@@ -245,7 +249,15 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 	// Storage
 
 	case PrimitiveStaticTypePath:
-		return &sema.PathType{}
+		return sema.PathType
+	case PrimitiveStaticTypeStoragePath:
+		return sema.StoragePathType
+	case PrimitiveStaticTypeCapabilityPath:
+		return sema.CapabilityPathType
+	case PrimitiveStaticTypePublicPath:
+		return sema.PublicPathType
+	case PrimitiveStaticTypePrivatePath:
+		return sema.PrivatePathType
 	case PrimitiveStaticTypeCapability:
 		return &sema.CapabilityType{}
 
@@ -260,14 +272,8 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 //
 func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 	switch t.(type) {
-	case *sema.VoidType:
-		return PrimitiveStaticTypeVoid
-
 	case *sema.AnyType:
 		return PrimitiveStaticTypeAny
-
-	case *sema.NeverType:
-		return PrimitiveStaticTypeNever
 
 	case *sema.AnyStructType:
 		return PrimitiveStaticTypeAnyStruct
@@ -359,12 +365,26 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 
 	// Storage
 
-	case *sema.PathType:
-		return PrimitiveStaticTypePath
 	case *sema.CapabilityType:
 		return PrimitiveStaticTypeCapability
-
-	default:
-		return PrimitiveStaticTypeUnknown
 	}
+
+	switch t {
+	case sema.PathType:
+		return PrimitiveStaticTypePath
+	case sema.StoragePathType:
+		return PrimitiveStaticTypeStoragePath
+	case sema.CapabilityPathType:
+		return PrimitiveStaticTypeCapabilityPath
+	case sema.PublicPathType:
+		return PrimitiveStaticTypePublicPath
+	case sema.PrivatePathType:
+		return PrimitiveStaticTypePrivatePath
+	case sema.NeverType:
+		return PrimitiveStaticTypeNever
+	case sema.VoidType:
+		return PrimitiveStaticTypeVoid
+	}
+
+	return PrimitiveStaticTypeUnknown
 }

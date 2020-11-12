@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretCapability_borrow(t *testing.T) {
@@ -31,6 +32,8 @@ func TestInterpretCapability_borrow(t *testing.T) {
 	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
 
 		inter, _ := testAccount(
 			t,
@@ -68,8 +71,8 @@ func TestInterpretCapability_borrow(t *testing.T) {
                   account.link<&R>(/public/loop2, target: /public/loop1)
               }
 
-              fun foo(_ path: Path): Int {
-                  return account.getCapability(path)!.borrow<&R>()!.foo
+              fun foo(_ path: CapabilityPath): Int {
+                  return account.getCapability(path).borrow<&R>()!.foo
               }
 
               fun single(): Int {
@@ -77,15 +80,15 @@ func TestInterpretCapability_borrow(t *testing.T) {
               }
 
               fun singleAuth(): auth &R? {
-                  return account.getCapability(/public/single)!.borrow<auth &R>()
+                  return account.getCapability(/public/single).borrow<auth &R>()
               }
 
               fun singleR2(): &R2? {
-                  return account.getCapability(/public/single)!.borrow<&R2>()
+                  return account.getCapability(/public/single).borrow<&R2>()
               }
 
               fun singleS(): &S? {
-                  return account.getCapability(/public/single)!.borrow<&S>()
+                  return account.getCapability(/public/single).borrow<&S>()
               }
 
               fun double(): Int {
@@ -156,7 +159,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			_, err := inter.Invoke("nonExistent")
 			require.Error(t, err)
 
-			require.IsType(t, &interpreter.ForceNilError{}, err)
+			utils.RequireErrorAs(t, err, &interpreter.ForceNilError{})
 		})
 
 		t.Run("loop", func(t *testing.T) {
@@ -164,10 +167,11 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			_, err := inter.Invoke("loop")
 			require.Error(t, err)
 
-			require.IsType(t, &interpreter.CyclicLinkError{}, err)
+			var cyclicLinkErr interpreter.CyclicLinkError
+			utils.RequireErrorAs(t, err, &cyclicLinkErr)
 
 			require.Equal(t,
-				err.Error(),
+				cyclicLinkErr.Error(),
 				"cyclic link in account 0x2a: /public/loop1 -> /public/loop2 -> /public/loop1",
 			)
 		})
@@ -182,6 +186,8 @@ func TestInterpretCapability_borrow(t *testing.T) {
 	})
 
 	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
 
 		inter, _ := testAccount(
 			t,
@@ -219,8 +225,8 @@ func TestInterpretCapability_borrow(t *testing.T) {
                   account.link<&S>(/public/loop2, target: /public/loop1)
               }
 
-              fun foo(_ path: Path): Int {
-                  return account.getCapability(path)!.borrow<&S>()!.foo
+              fun foo(_ path: CapabilityPath): Int {
+                  return account.getCapability(path).borrow<&S>()!.foo
               }
 
               fun single(): Int {
@@ -228,15 +234,15 @@ func TestInterpretCapability_borrow(t *testing.T) {
               }
 
               fun singleAuth(): auth &S? {
-                  return account.getCapability(/public/single)!.borrow<auth &S>()
+                  return account.getCapability(/public/single).borrow<auth &S>()
               }
 
               fun singleS2(): &S2? {
-                  return account.getCapability(/public/single)!.borrow<&S2>()
+                  return account.getCapability(/public/single).borrow<&S2>()
               }
 
               fun singleR(): &R? {
-                  return account.getCapability(/public/single)!.borrow<&R>()
+                  return account.getCapability(/public/single).borrow<&R>()
               }
 
               fun double(): Int {
@@ -267,7 +273,10 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("single")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewIntValueFromInt64(42), value)
+			require.Equal(t,
+				interpreter.NewIntValueFromInt64(42),
+				value,
+			)
 		})
 
 		t.Run("single S2", func(t *testing.T) {
@@ -299,7 +308,10 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			value, err := inter.Invoke("double")
 			require.NoError(t, err)
 
-			require.Equal(t, interpreter.NewIntValueFromInt64(42), value)
+			require.Equal(t,
+				interpreter.NewIntValueFromInt64(42),
+				value,
+			)
 		})
 
 		t.Run("nonExistent", func(t *testing.T) {
@@ -307,7 +319,7 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			_, err := inter.Invoke("nonExistent")
 			require.Error(t, err)
 
-			require.IsType(t, &interpreter.ForceNilError{}, err)
+			utils.RequireErrorAs(t, err, &interpreter.ForceNilError{})
 		})
 
 		t.Run("loop", func(t *testing.T) {
@@ -315,10 +327,11 @@ func TestInterpretCapability_borrow(t *testing.T) {
 			_, err := inter.Invoke("loop")
 			require.Error(t, err)
 
-			require.IsType(t, &interpreter.CyclicLinkError{}, err)
+			var cyclicLinkErr interpreter.CyclicLinkError
+			utils.RequireErrorAs(t, err, &cyclicLinkErr)
 
 			require.Equal(t,
-				err.Error(),
+				cyclicLinkErr.Error(),
 				"cyclic link in account 0x2a: /public/loop1 -> /public/loop2 -> /public/loop1",
 			)
 		})
@@ -338,6 +351,8 @@ func TestInterpretCapability_check(t *testing.T) {
 	t.Parallel()
 
 	t.Run("resource", func(t *testing.T) {
+
+		t.Parallel()
 
 		inter, _ := testAccount(
 			t,
@@ -375,8 +390,8 @@ func TestInterpretCapability_check(t *testing.T) {
                   account.link<&R>(/public/loop2, target: /public/loop1)
               }
 
-              fun check(_ path: Path): Bool {
-                  return account.getCapability(path)!.check<&R>()
+              fun check(_ path: CapabilityPath): Bool {
+                  return account.getCapability(path).check<&R>()
               }
 
               fun single(): Bool {
@@ -384,15 +399,15 @@ func TestInterpretCapability_check(t *testing.T) {
               }
 
               fun singleAuth(): Bool {
-                  return account.getCapability(/public/single)!.check<auth &R>()
+                  return account.getCapability(/public/single).check<auth &R>()
               }
 
               fun singleR2(): Bool {
-                  return account.getCapability(/public/single)!.check<&R2>()
+                  return account.getCapability(/public/single).check<&R2>()
               }
 
               fun singleS(): Bool {
-                  return account.getCapability(/public/single)!.check<&S>()
+                  return account.getCapability(/public/single).check<&S>()
               }
 
               fun double(): Bool {
@@ -471,10 +486,11 @@ func TestInterpretCapability_check(t *testing.T) {
 			_, err := inter.Invoke("loop")
 			require.Error(t, err)
 
-			require.IsType(t, &interpreter.CyclicLinkError{}, err)
+			var cyclicLinkErr interpreter.CyclicLinkError
+			utils.RequireErrorAs(t, err, &cyclicLinkErr)
 
 			require.Equal(t,
-				err.Error(),
+				cyclicLinkErr.Error(),
 				"cyclic link in account 0x2a: /public/loop1 -> /public/loop2 -> /public/loop1",
 			)
 		})
@@ -489,6 +505,8 @@ func TestInterpretCapability_check(t *testing.T) {
 	})
 
 	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
 
 		inter, _ := testAccount(
 			t,
@@ -526,8 +544,8 @@ func TestInterpretCapability_check(t *testing.T) {
                   account.link<&S>(/public/loop2, target: /public/loop1)
               }
 
-              fun check(_ path: Path): Bool {
-                  return account.getCapability(path)!.check<&S>()
+              fun check(_ path: CapabilityPath): Bool {
+                  return account.getCapability(path).check<&S>()
               }
 
               fun single(): Bool {
@@ -535,15 +553,15 @@ func TestInterpretCapability_check(t *testing.T) {
               }
 
               fun singleAuth(): Bool {
-                  return account.getCapability(/public/single)!.check<auth &S>()
+                  return account.getCapability(/public/single).check<auth &S>()
               }
 
               fun singleS2(): Bool {
-                  return account.getCapability(/public/single)!.check<&S2>()
+                  return account.getCapability(/public/single).check<&S2>()
               }
 
               fun singleR(): Bool {
-                  return account.getCapability(/public/single)!.check<&R>()
+                  return account.getCapability(/public/single).check<&R>()
               }
 
               fun double(): Bool {
@@ -622,10 +640,11 @@ func TestInterpretCapability_check(t *testing.T) {
 			_, err := inter.Invoke("loop")
 			require.Error(t, err)
 
-			require.IsType(t, &interpreter.CyclicLinkError{}, err)
+			var cyclicLinkErr interpreter.CyclicLinkError
+			utils.RequireErrorAs(t, err, &cyclicLinkErr)
 
 			require.Equal(t,
-				err.Error(),
+				cyclicLinkErr.Error(),
 				"cyclic link in account 0x2a: /public/loop1 -> /public/loop2 -> /public/loop1",
 			)
 		})
@@ -638,5 +657,4 @@ func TestInterpretCapability_check(t *testing.T) {
 			require.Equal(t, interpreter.BoolValue(true), value)
 		})
 	})
-
 }

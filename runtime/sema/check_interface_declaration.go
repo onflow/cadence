@@ -304,7 +304,9 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 		declaration.DeclarationKind(),
 	)
 
-	checker.checkMemberStorability(members)
+	if interfaceType.CompositeKind == common.CompositeKindContract {
+		checker.checkMemberStorability(members)
+	}
 
 	interfaceType.Members = members
 	interfaceType.Fields = fields

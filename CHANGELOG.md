@@ -1,5 +1,186 @@
+# v0.11.0 (2012-10-13)
 
-# v0.8.0
+## 💥 Breaking Changes
+
+### Typed Paths (#403)
+
+Paths are now typed. Paths in the storage domain have type `StoragePath`, in the private domain `PrivatePath`, and in the public domain `PublicPath`.  `PrivatePath` and `PublicPath` are subtypes of `CapabilityPath`. Both `StoragePath` and `CapabilityPath` are subtypes of `Path`.
+
+<table>
+  <tr>
+    <td colspan="3">Path</td>
+  </tr>
+  <tr>
+    <td colspan="2">CapabilityPath</td>
+    <td colspan="2" rowspan="2">StoragePath</td>
+  </tr>
+  <tr>
+    <td>PrivatePath</td>
+    <td>PublicPath</td>
+  </tr>
+</table>
+
+### Storage API (#403)
+
+With paths being typed, it was possible to make the Storage API type-safer and easier to use: It is now statically checked if the correct type of path is given to a function, instead of at run-time, and therefore capability return types can now be non-optional.
+
+The changes are as follows:
+
+For `PublicAccount`:
+
+- old: `fun getCapability<T>(_ path: Path): Capability<T>?` <br/>
+  new: `fun getCapability<T>(_ path: PublicPath): Capability<T>`
+
+- old: `fun getLinkTarget(_ path: Path): Path?` <br />
+  new: `fun getLinkTarget(_ path: CapabilityPath): Path?`
+
+For `AuthAccount`:
+
+- old: `fun save<T>(_ value: T, to: Path)` <br />
+  new: `fun save<T>(_ value: T, to: StoragePath)`
+
+- old: `fun load<T>(from: Path): T?` <br />
+  new: `fun load<T>(from: StoragePath): T?`
+
+- old: `fun copy<T: AnyStruct>(from: Path): T?` <br />
+  new: `fun copy<T: AnyStruct>(from: StoragePath): T?`
+
+- old: `fun borrow<T: &Any>(from: Path): T?` <br />
+  new: `fun borrow<T: &Any>(from: StoragePath): T?`
+
+- old: `fun link<T: &Any>(_ newCapabilityPath: Path, target: Path): Capability<T>?` <br />
+  new: `fun link<T: &Any>(_ newCapabilityPath: CapabilityPath, target: Path): Capability<T>?`
+
+- old: `fun getCapability<T>(_ path: Path): Capability<T>?` <br/>
+  new: `fun getCapability<T>(_ path: CapabilityPath): Capability<T>`
+
+- old: `fun getLinkTarget(_ path: Path): Path?` <br />
+  new: `fun getLinkTarget(_ path: CapabilityPath): Path?`
+
+- old: `fun unlink(_ path: Path)` <br />
+  new: `fun unlink(_ path: CapabilityPath)`
+
+## ⭐ Features
+
+- Add a hash function to the crypto contract (#379)
+- Added npm packages for components of Cadence. This eases the development of developer tools for Cadence:
+
+  - `cadence-language-server`: The Cadence Language Server
+  - `monaco-languageclient-cadence`: Language Server Protocol client for the the Monaco editor
+  - `cadence-parser`: The Cadence parser
+
+  In addition, there are also examples for the [language server](https://github.com/onflow/cadence/tree/master/npm-packages/cadence-language-server-demo) and the [parser](https://github.com/onflow/cadence/tree/master/npm-packages/cadence-parser-demo) that demonstrate the use of the packages.
+
+- Add a command to the language server that allows getting the entry point (transaction or script) parameters (#406)
+
+## 🛠 Improvements
+
+- Allow references to be returned from from scripts (#400)
+- Panic with a dedicated error for out of bounds array index (#396)
+
+## 📖 Documentation
+
+- Document resource identifiers (#394)
+- Document iteration over dictionary entries (#399)
+
+## 📦 Dependencies
+
+- The changes to the [CBOR library](https://github.com/fxamacker/cbor) have been [merged](https://github.com/fxamacker/cbor/pull/249), so [the `replace` statement that was necessary in the last release](https://github.com/onflow/cadence/releases/tag/v0.10.0) must be removed.
+
+# v0.10.0 (2020-10-01)
+
+## 💥 Breaking Changes
+
+### Contract Deployment
+
+This release adds support for deploying multiple contracts per account.
+The API for deploying has changed:
+
+- The functions `AuthAccount.setCode` and `AuthAccount.unsafeNotInitializingSetCode` were removed (#390).
+- A [new contract management API](https://docs.onflow.org/cadence/language/contracts/#deploying-updating-and-removing-contracts) has been added, which allows adding, updating, and removing multiple contracts per account (#333, #352).
+
+  See the [updated documentation](https://docs.onflow.org/cadence/language/contracts/#deploying-updating-and-removing-contracts) for details and examples.
+
+## ⭐ Features
+
+### Enumerations
+
+This release adds support for enumerations (#344).
+
+For example, a days-of-the-week enum can be declared though:
+
+```swift
+enum Day: UInt8 {
+    case Monday
+    case Tuesday
+    case Wednesday
+    case Thursday
+    case Friday
+    case Saturday
+    case Sunday
+}
+```
+
+See the [documentation](https://docs.onflow.org/cadence/language/enumerations/) for further details and examples.
+
+### Switch Statement
+
+This release adds support for switch statements (#365).
+
+```swift
+fun describe(number: Int): String {
+    switch number {
+    case 1:
+        return "one"
+    case 2:
+        return "two"
+    default:
+        return "other"
+    }
+}
+```
+
+See the [documentation](https://docs.onflow.org/cadence/language/control-flow/#switch) for further details and examples.
+
+### Code Formatter
+
+Development of a code formatter has started, in form of a plugin for Prettier (#348).
+If you would like to contribute, please let us know!
+
+## 🛠 Improvements
+
+- Limitations on data structure complexity are now enforced when decoding and also when encoding storage data, e.g number of array elements, number of dictionary entries, etc. (#370)
+- Using the force-unwrap operator on a non-optional is no longer an error, but a hint is reported suggesting the removal of the unnecessary operation (#347)
+- Language Server: The features requiring a Flow client connection are now optional. This allows using the language server in editors other than Visual Studio Code, such as Emacs, Vim, etc. (#303)
+
+## 🐞 Bug Fixes
+
+- Fixed the encoding of bignums in storage (#370)
+- Fixed the timing of recording composite-type explicit-conformances (#356)
+- Added support for exporting and JSON encoding/decoding of type values and capabilities (#374)
+- Added support for exporting/importing and JSON encoding/decoding of path values (#319)
+- Fixed the handling of empty integer literals in the checker (#354)
+- Fixed the non-storable fields error (#350)
+
+## 📖 Documentation
+
+- Added a [roadmap describing planned features and ideas](https://github.com/onflow/cadence/blob/master/ROADMAP.md) (#367)
+- Various documentation improvements (#385). Thanks to @andrejtokarcik for contributing this!
+
+
+# v0.8.2 (2020-08-28)
+
+## 🐞 Bug Fixes
+
+- Copy values on return (#355)
+
+# v0.8.1 (2020-08-24)
+
+## 🐞 Bug Fixes
+
+- Validate script argument count (#316)
+
+# v0.8.0 (2020-08-10)
 
 This release focuses on improvements, bug fixes, and bringing the documentation up-to-date.
 
@@ -48,7 +229,7 @@ This release focuses on improvements, bug fixes, and bringing the documentation 
   myEvent := cadence.NewEvent(...).WithType(&myEventType)
   ```
 
-# v0.7.0
+# v0.7.0 (2020-08-05)
 
 This release contains a lot of improvements to the language server, which improve the development experience in the Visual Studio Code extension, and will also soon be integrated into the Flow Playground.
 
@@ -91,7 +272,7 @@ This release contains a lot of improvements to the language server, which improv
 
 - Removed the old parser (#249)
 
-# v0.6.0
+# v0.6.0 (2020-07-14)
 
 This is a small release with some bug fixes, internal improvements, and one breaking change for code that embeds Cadence.
 
@@ -141,7 +322,7 @@ This is a small release with some bug fixes, internal improvements, and one brea
 - Fixed handling of functions in composite values in the JSON-CDC encoding
 - Fixed a potential stack overflow when checking member storability
 
-# v0.5.0
+# v0.5.0 (2020-07-10)
 
 ## ⭐ Features and Improvements
 
@@ -420,7 +601,7 @@ myAccount.addPublicKey([1, 2, 3])
 Consider using `String.decodeHex()` for now until type inference has been improved.
 
 
-# v0.4.0
+# v0.4.0 (2020-06-02)
 
 ## 💥 Breaking Changes
 
@@ -438,7 +619,7 @@ Consider using `String.decodeHex()` for now until type inference has been improv
 - Fixed order of declaring conformances and usages
 - Fixed detection of resource losses in invocation of optional chaining result
 
-# v0.3.0
+# v0.3.0 (2020-05-26)
 
 ## 💥 Breaking Changes
 

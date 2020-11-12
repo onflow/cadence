@@ -64,7 +64,7 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 
 	checker.visitWithPostConditions(
 		declaration.PostConditions,
-		&VoidType{},
+		VoidType,
 		func() {
 			checker.withSelfResourceInvalidationAllowed(func() {
 				checker.visitTransactionExecuteFunction(declaration.Execute, transactionType)
@@ -82,26 +82,40 @@ func (checker *Checker) checkTransactionParameters(declaration *ast.TransactionD
 	checker.checkParameters(declaration.ParameterList, parameters)
 	checker.declareParameters(declaration.ParameterList, parameters)
 
-	// Check that none of the parameters are resources
+	// Check parameter types
 
 	for i, parameter := range parameters {
 		parameterType := parameter.TypeAnnotation.Type
 
-		if parameterType.IsInvalidType() ||
-			!parameterType.IsResourceType() {
+		// Ignore invalid parameter types
 
+		if parameterType.IsInvalidType() {
 			continue
 		}
 
-		astParameter := declaration.ParameterList.Parameters[i]
-		typeRange := ast.NewRangeFromPositioned(astParameter.TypeAnnotation)
+		// Parameters may not be resources
 
-		checker.report(
-			&InvalidResourceTransactionParameterError{
-				Type:  parameterType,
-				Range: typeRange,
-			},
-		)
+		if parameterType.IsResourceType() {
+
+			astParameter := declaration.ParameterList.Parameters[i]
+
+			checker.report(
+				&InvalidResourceTransactionParameterError{
+					Type:  parameterType,
+					Range: ast.NewRangeFromPositioned(astParameter.TypeAnnotation),
+				},
+			)
+		}
+
+		// Parameters must be storable
+
+		if !parameter.TypeAnnotation.Type.IsStorable(map[*Member]bool{}) {
+			checker.report(
+				&InvalidNonStorableTransactionParameterTypeError{
+					Type: parameterType,
+				},
+			)
+		}
 	}
 }
 

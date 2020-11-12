@@ -153,11 +153,23 @@ type FunctionDynamicType struct{}
 
 func (FunctionDynamicType) IsDynamicType() {}
 
-// PathDynamicType
+// PrivatePathDynamicType
 
-type PathDynamicType struct{}
+type PrivatePathDynamicType struct{}
 
-func (PathDynamicType) IsDynamicType() {}
+func (PrivatePathDynamicType) IsDynamicType() {}
+
+// PublicPathDynamicType
+
+type PublicPathDynamicType struct{}
+
+func (PublicPathDynamicType) IsDynamicType() {}
+
+// StoragePathDynamicType
+
+type StoragePathDynamicType struct{}
+
+func (StoragePathDynamicType) IsDynamicType() {}
 
 // CapabilityDynamicType
 

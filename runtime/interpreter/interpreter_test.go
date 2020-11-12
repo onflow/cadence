@@ -81,7 +81,7 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		// NOTE:
 		value := inter.boxOptional(
 			NilValue{},
-			&sema.OptionalType{Type: &sema.NeverType{}},
+			&sema.OptionalType{Type: sema.NeverType},
 			&sema.OptionalType{Type: &sema.OptionalType{Type: &sema.BoolType{}}},
 		)
 		assert.Equal(t,
@@ -94,7 +94,7 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 		// NOTE:
 		value := inter.boxOptional(
 			NewSomeValueOwningNonCopying(NilValue{}),
-			&sema.OptionalType{Type: &sema.OptionalType{Type: &sema.NeverType{}}},
+			&sema.OptionalType{Type: &sema.OptionalType{Type: sema.NeverType}},
 			&sema.OptionalType{Type: &sema.OptionalType{Type: &sema.BoolType{}}},
 		)
 		assert.Equal(t,

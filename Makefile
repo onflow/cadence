@@ -16,9 +16,6 @@
 # limitations under the License.
 #
 
-# Disable go sum database lookup for private repos
-GOPRIVATE=github.com/onflow/*
-
 GOPATH ?= $(HOME)/go
 
 # Ensure go bin path is in path (Especially for CI)
@@ -27,15 +24,16 @@ PATH := $(PATH):$(GOPATH)/bin
 .PHONY: test
 test:
 	# test all packages
-	GO111MODULE=on go test $(if $(JSON_OUTPUT),-json,) -parallel 8 ./...
+	GO111MODULE=on go test $(if $(JSON_OUTPUT),-json,) -parallel 8 -race ./...
+	cd ./languageserver && make test
 
 .PHONY: build
 build:
 	go build -o ./runtime/cmd/parse/parse ./runtime/cmd/parse
+	GOARCH=wasm GOOS=js go build -o ./runtime/cmd/parse/parse.wasm ./runtime/cmd/parse
 	go build -o ./runtime/cmd/check/check ./runtime/cmd/check
 	go build -o ./runtime/cmd/main/main ./runtime/cmd/main
-	(cd languageserver && go build -o ./cmd/languageserver/languageserver ./cmd/languageserver)
-	(cd languageserver && GOARCH=wasm GOOS=js go build -o ./cmd/languageserver/languageserver.wasm ./cmd/languageserver)
+	cd ./languageserver && make build
 
 .PHONY: install-tools
 install-tools:
@@ -49,9 +47,12 @@ lint:
 check-headers:
 	@./check-headers.sh
 
-.PHONY: check-tidy
-check-tidy:
+.PHONY: generate
+generate:
 	go generate -v ./...
+
+.PHONY: check-tidy
+check-tidy: generate
 	go mod tidy
 	cd languageserver; go mod tidy
 	git diff --exit-code

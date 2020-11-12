@@ -29,6 +29,7 @@ import (
 
 	"github.com/mitchellh/mapstructure"
 
+	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/languageserver/conversion"
 	"github.com/onflow/cadence/languageserver/jsonrpc2"
 	"github.com/onflow/cadence/runtime"
@@ -245,7 +246,11 @@ func WithInitializationOptionsHandler(handler InitializationOptionsHandler) Opti
 	}
 }
 
-func NewServer() *Server {
+const GetEntryPointParametersCommand = "cadence.server.getEntryPointParameters"
+const GetContractInitializerParametersCommand = "cadence.server.getContractInitializerParameters"
+const ParseEntryPointArgumentsCommand = "cadence.server.parseEntryPointArguments"
+
+func NewServer() (*Server, error) {
 	server := &Server{
 		checkers:        make(map[protocol.DocumentUri]*sema.Checker),
 		documents:       make(map[protocol.DocumentUri]Document),
@@ -253,7 +258,17 @@ func NewServer() *Server {
 		commands:        make(map[string]CommandHandler),
 	}
 	server.protocolServer = protocol.NewServer(server)
-	return server
+
+	// Set default commands
+
+	for _, command := range server.defaultCommands() {
+		err := server.SetOptions(WithCommand(command))
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return server, nil
 }
 
 func (s *Server) SetOptions(options ...Option) error {
@@ -375,17 +390,13 @@ func (s *Server) DidOpenTextDocument(conn protocol.Conn, params *protocol.DidOpe
 	uri := params.TextDocument.URI
 	text := params.TextDocument.Text
 
-	diagnostics, err := s.getDiagnostics(conn, uri, text)
-	if err != nil {
-		return err
-	}
-	conn.PublishDiagnostics(&protocol.PublishDiagnosticsParams{
-		URI:         uri,
-		Diagnostics: diagnostics,
-	})
-
 	s.documents[uri] = Document{
 		Text: text,
+	}
+
+	err := s.check(conn, uri, text)
+	if err != nil {
+		return err
 	}
 
 	return nil
@@ -401,21 +412,48 @@ func (s *Server) DidChangeTextDocument(
 	uri := params.TextDocument.URI
 	text := params.ContentChanges[0].Text
 
-	diagnostics, err := s.getDiagnostics(conn, uri, text)
-	// NOTE: always publish diagnostics
-	conn.PublishDiagnostics(&protocol.PublishDiagnosticsParams{
-		URI:         uri,
-		Diagnostics: diagnostics,
-	})
-	if err != nil {
-		return err
-	}
-
 	s.documents[uri] = Document{
 		Text: text,
 	}
 
+	err := s.check(conn, uri, text)
+	if err != nil {
+		return err
+	}
+
 	return nil
+}
+
+type CadenceCheckCompletedParams struct {
+
+	/*URI defined:
+	 * The URI which was checked.
+	 */
+	URI protocol.DocumentUri `json:"uri"`
+
+	Valid bool `json:"valid"`
+}
+
+const cadenceCheckCompletedMethodName = "cadence/checkCompleted"
+
+func (s *Server) check(conn protocol.Conn, uri protocol.DocumentUri, text string) error {
+
+	diagnostics, err := s.getDiagnostics(conn, uri, text)
+
+	// NOTE: always publish diagnostics and inform the client the checking completed
+
+	conn.PublishDiagnostics(&protocol.PublishDiagnosticsParams{
+		URI:         uri,
+		Diagnostics: diagnostics,
+	})
+
+	valid := len(diagnostics) == 0
+	conn.Notify(cadenceCheckCompletedMethodName, &CadenceCheckCompletedParams{
+		URI:   uri,
+		Valid: valid,
+	})
+
+	return err
 }
 
 // Hover returns contextual type information about the variable at the given
@@ -997,12 +1035,19 @@ func (s *Server) ResolveCompletionItem(
 		typeString := member.TypeAnnotation.Type.QualifiedString()
 
 		result.Detail = fmt.Sprintf(
-			"(%s) %s.%s: %s",
-			member.VariableKind.Name(),
+			"%s.%s: %s",
 			member.ContainerType.String(),
 			member.Identifier,
 			typeString,
 		)
+
+		// add the variable kind, if any, as a prefix
+		if member.VariableKind != ast.VariableKindNotSpecified {
+			result.Detail = fmt.Sprintf("(%s) %s",
+				member.VariableKind.Name(),
+				result.Detail,
+			)
+		}
 
 	case common.DeclarationKindFunction:
 		typeString := member.TypeAnnotation.Type.QualifiedString()
@@ -1293,6 +1338,152 @@ func (s *Server) resolveImport(
 func (s *Server) GetDocument(uri protocol.DocumentUri) (doc Document, ok bool) {
 	doc, ok = s.documents[uri]
 	return
+}
+
+func (s *Server) defaultCommands() []Command {
+	return []Command{
+		{
+			Name:    GetEntryPointParametersCommand,
+			Handler: s.getEntryPointParameters,
+		},
+		{
+			Name:    GetContractInitializerParametersCommand,
+			Handler: s.getContractInitializerParameters,
+		},
+		{
+			Name:    ParseEntryPointArgumentsCommand,
+			Handler: s.parseEntryPointArguments,
+		},
+	}
+}
+
+// getEntryPointParameters returns the script or transaction parameters of the source document.
+//
+// There should be exactly 1 argument:
+//   * the DocumentURI of the file to submit
+func (s *Server) getEntryPointParameters(_ protocol.Conn, args ...interface{}) (interface{}, error) {
+
+	err := CheckCommandArgumentCount(args, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	uri, ok := args[0].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
+	}
+
+	checker, ok := s.checkers[protocol.DocumentUri(uri)]
+	if !ok {
+		return nil, fmt.Errorf("could not find document for URI %s", uri)
+	}
+
+	parameters := checker.EntryPointParameters()
+
+	encodedParameters := encodeParameters(parameters)
+
+	return encodedParameters, nil
+}
+
+// getContractInitializerParameters returns the parameters of the sole contract's initializer in the source document,
+// or none if no initializer is declared, or the program contains none or more than one contract declaration.
+//
+// There should be exactly 1 argument:
+//   * the DocumentURI of the file to submit
+func (s *Server) getContractInitializerParameters(_ protocol.Conn, args ...interface{}) (interface{}, error) {
+
+	err := CheckCommandArgumentCount(args, 1)
+	if err != nil {
+		return nil, err
+	}
+
+	uri, ok := args[0].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
+	}
+
+	checker, ok := s.checkers[protocol.DocumentUri(uri)]
+	if !ok {
+		return nil, fmt.Errorf("could not find document for URI %s", uri)
+	}
+
+	compositeDeclarations := checker.Program.CompositeDeclarations()
+	if len(compositeDeclarations) != 1 {
+		// NOTE: return allocated slice, so result is `[]` in JSON, nil is serialized to `null`
+		return []Parameter{}, nil
+	}
+
+	compositeDeclaration := compositeDeclarations[0]
+	if compositeDeclaration.CompositeKind != common.CompositeKindContract {
+		// NOTE: return allocated slice, so result is `[]` in JSON, nil is serialized to `null`
+		return []Parameter{}, nil
+	}
+
+	compositeType := checker.Elaboration.CompositeDeclarationTypes[compositeDeclaration]
+
+	encodedParameters := encodeParameters(compositeType.ConstructorParameters)
+
+	return encodedParameters, nil
+}
+
+// parseEntryPointArguments returns the values for the given arguments (literals) for the entry point.
+//
+// There should be exactly 1 argument:
+//   * the DocumentURI of the file to submit
+//   * the array of arguments
+func (s *Server) parseEntryPointArguments(_ protocol.Conn, args ...interface{}) (interface{}, error) {
+
+	err := CheckCommandArgumentCount(args, 2)
+	if err != nil {
+		return nil, err
+	}
+
+	uri, ok := args[0].(string)
+	if !ok {
+		return nil, fmt.Errorf("invalid URI argument: %#+v", args[0])
+	}
+
+	checker, ok := s.checkers[protocol.DocumentUri(uri)]
+	if !ok {
+		return nil, fmt.Errorf("could not find document for URI %s", uri)
+	}
+
+	arguments, ok := args[1].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid arguments argument: %#+v", args[1])
+	}
+
+	parameters := checker.EntryPointParameters()
+
+	argumentCount := len(arguments)
+	parameterCount := len(parameters)
+	if argumentCount != parameterCount {
+		return nil, fmt.Errorf(
+			"invalid number of arguments: got %d, expected %d",
+			argumentCount,
+			parameterCount,
+		)
+	}
+
+	result := make([]interface{}, len(arguments))
+
+	for i, argument := range arguments {
+		parameter := parameters[i]
+		parameterType := parameter.TypeAnnotation.Type
+
+		argumentCode, ok := argument.(string)
+		if !ok {
+			return nil, fmt.Errorf("invalid argument at index %d: %#+v", i, argument)
+		}
+		value, err := runtime.ParseLiteral(argumentCode, parameterType)
+		if err != nil {
+			return nil, err
+		}
+
+		result[i] = json.Prepare(value)
+	}
+
+	return result, nil
 }
 
 // convertibleError is an error that can be converted to LSP diagnostic.

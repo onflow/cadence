@@ -179,7 +179,8 @@ func (checker *Checker) checkFunction(
 // The return is not needed if the function has a `Void` return type.
 //
 func (checker *Checker) checkFunctionExits(functionBlock *ast.FunctionBlock, returnType Type) {
-	if _, returnTypeIsVoid := returnType.(*VoidType); returnTypeIsVoid {
+
+	if returnType == VoidType {
 		return
 	}
 
@@ -319,7 +320,7 @@ func (checker *Checker) visitWithPostConditions(postConditions *ast.Conditions, 
 
 	// If there is a return type, declare the constant `result` which has the return type
 
-	if _, ok := returnType.(*VoidType); !ok {
+	if returnType != VoidType {
 		checker.declareResult(returnType)
 	}
 

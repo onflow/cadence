@@ -45,38 +45,45 @@ func PrettyPrintError(writer io.Writer, err error, filename string, codes map[st
 		i++
 	}
 
-	if parserError, ok := err.(parser2.Error); ok {
-		for _, err := range parserError.Errors {
+	switch typedErr := err.(type) {
+	case parser2.Error:
+		for _, err := range typedErr.Errors {
 			printErr(err, filename)
 		}
-	} else if checkerError, ok := err.(*sema.CheckerError); ok {
-		for _, err := range checkerError.Errors {
+	case *sema.CheckerError:
+		for _, err := range typedErr.Errors {
 			printErr(err, filename)
 			if err, ok := err.(*sema.ImportedProgramError); ok {
-				var filename string
-				switch importLocation := err.ImportLocation.(type) {
-				case ast.StringLocation:
-					filename = string(importLocation)
-				case ast.AddressLocation:
-					filename = importLocation.ToAddress().ShortHexWithPrefix()
-				case ast.IdentifierLocation:
-					filename = string(importLocation)
-				}
+				filename := importLocationFileName(err.ImportLocation)
 
 				for _, nestedErr := range err.CheckerError.Errors {
 					PrettyPrintError(writer, nestedErr, filename, codes)
 				}
 			}
 		}
-	} else if locatedErr, ok := err.(ast.HasImportLocation); ok {
-		location := locatedErr.ImportLocation()
+	case ast.HasImportLocation:
+		location := typedErr.ImportLocation()
 		if location != nil {
-			filename = string(location.(ast.StringLocation))
+			filename = importLocationFileName(location)
 		}
 		printErr(err, filename)
-	} else {
+	default:
 		printErr(err, filename)
 	}
+}
+
+func importLocationFileName(importLocation ast.Location) string {
+	switch importLocation := importLocation.(type) {
+	case ast.StringLocation:
+		return string(importLocation)
+	case ast.AddressLocation:
+		return importLocation.ToAddress().ShortHexWithPrefix()
+	case ast.IdentifierLocation:
+		return string(importLocation)
+	case runtime.FileLocation:
+		return string(importLocation)
+	}
+	return ""
 }
 
 func must(err error, filename string, codes map[string]string) {

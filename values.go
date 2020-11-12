@@ -24,6 +24,8 @@ import (
 	"math/big"
 
 	"github.com/onflow/cadence/fixedpoint"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
@@ -33,6 +35,7 @@ type Value interface {
 	isValue()
 	Type() Type
 	ToGoValue() interface{}
+	fmt.Stringer
 }
 
 // NumberValue
@@ -58,6 +61,10 @@ func (Void) Type() Type {
 
 func (Void) ToGoValue() interface{} {
 	return nil
+}
+
+func (Void) String() string {
+	return format.Void
 }
 
 // Optional
@@ -86,6 +93,13 @@ func (o Optional) ToGoValue() interface{} {
 	return value
 }
 
+func (o Optional) String() string {
+	if o.Value == nil {
+		return format.Nil
+	}
+	return o.Value.String()
+}
+
 // Bool
 
 type Bool bool
@@ -102,6 +116,10 @@ func (Bool) Type() Type {
 
 func (v Bool) ToGoValue() interface{} {
 	return bool(v)
+}
+
+func (v Bool) String() string {
+	return format.Bool(bool(v))
 }
 
 // String
@@ -122,6 +140,10 @@ func (v String) ToGoValue() interface{} {
 	return string(v)
 }
 
+func (v String) String() string {
+	return format.String(string(v))
+}
+
 // Bytes
 
 type Bytes []byte
@@ -138,6 +160,10 @@ func (Bytes) Type() Type {
 
 func (v Bytes) ToGoValue() interface{} {
 	return []byte(v)
+}
+
+func (v Bytes) String() string {
+	return format.Bytes(v)
 }
 
 // Address
@@ -165,7 +191,7 @@ func (v Address) Bytes() []byte {
 }
 
 func (v Address) String() string {
-	return v.Hex()
+	return format.Address(common.Address(v))
 }
 
 func (v Address) Hex() string {
@@ -214,6 +240,10 @@ func (v Int) ToBigEndianBytes() []byte {
 	return interpreter.SignedBigIntToBigEndianBytes(v.Value)
 }
 
+func (v Int) String() string {
+	return format.BigInt(v.Value)
+}
+
 // Int8
 
 type Int8 int8
@@ -234,6 +264,10 @@ func (Int8) Type() Type {
 
 func (v Int8) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
+}
+
+func (v Int8) String() string {
+	return format.Int(int64(v))
 }
 
 // Int16
@@ -260,6 +294,10 @@ func (v Int16) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v Int16) String() string {
+	return format.Int(int64(v))
+}
+
 // Int32
 
 type Int32 int32
@@ -284,6 +322,10 @@ func (v Int32) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v Int32) String() string {
+	return format.Int(int64(v))
+}
+
 // Int64
 
 type Int64 int64
@@ -306,6 +348,10 @@ func (v Int64) ToBigEndianBytes() []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, uint64(v))
 	return b
+}
+
+func (v Int64) String() string {
+	return format.Int(int64(v))
 }
 
 // Int128
@@ -345,6 +391,10 @@ func (v Int128) ToBigEndianBytes() []byte {
 	return interpreter.SignedBigIntToBigEndianBytes(v.Value)
 }
 
+func (v Int128) String() string {
+	return format.BigInt(v.Value)
+}
+
 // Int256
 
 type Int256 struct {
@@ -380,6 +430,10 @@ func (v Int256) Big() *big.Int {
 
 func (v Int256) ToBigEndianBytes() []byte {
 	return interpreter.SignedBigIntToBigEndianBytes(v.Value)
+}
+
+func (v Int256) String() string {
+	return format.BigInt(v.Value)
 }
 
 // UInt
@@ -421,8 +475,11 @@ func (v UInt) ToBigEndianBytes() []byte {
 	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
 }
 
-// UInt8
+func (v UInt) String() string {
+	return format.BigInt(v.Value)
+}
 
+// UInt8
 type UInt8 uint8
 
 func NewUInt8(v uint8) UInt8 {
@@ -441,6 +498,10 @@ func (v UInt8) ToGoValue() interface{} {
 
 func (v UInt8) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
+}
+
+func (v UInt8) String() string {
+	return format.Uint(uint64(v))
 }
 
 // UInt16
@@ -467,6 +528,10 @@ func (v UInt16) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v UInt16) String() string {
+	return format.Uint(uint64(v))
+}
+
 // UInt32
 
 type UInt32 uint32
@@ -491,6 +556,10 @@ func (v UInt32) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v UInt32) String() string {
+	return format.Uint(uint64(v))
+}
+
 // UInt64
 
 type UInt64 uint64
@@ -513,6 +582,10 @@ func (v UInt64) ToBigEndianBytes() []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, uint64(v))
 	return b
+}
+
+func (v UInt64) String() string {
+	return format.Uint(uint64(v))
 }
 
 // UInt128
@@ -555,6 +628,10 @@ func (v UInt128) ToBigEndianBytes() []byte {
 	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
 }
 
+func (v UInt128) String() string {
+	return format.BigInt(v.Value)
+}
+
 // UInt256
 
 type UInt256 struct {
@@ -595,6 +672,10 @@ func (v UInt256) ToBigEndianBytes() []byte {
 	return interpreter.UnsignedBigIntToBigEndianBytes(v.Value)
 }
 
+func (v UInt256) String() string {
+	return format.BigInt(v.Value)
+}
+
 // Word8
 
 type Word8 uint8
@@ -615,6 +696,10 @@ func (v Word8) ToGoValue() interface{} {
 
 func (v Word8) ToBigEndianBytes() []byte {
 	return []byte{byte(v)}
+}
+
+func (v Word8) String() string {
+	return format.Uint(uint64(v))
 }
 
 // Word16
@@ -641,6 +726,10 @@ func (v Word16) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v Word16) String() string {
+	return format.Uint(uint64(v))
+}
+
 // Word32
 
 type Word32 uint32
@@ -665,6 +754,10 @@ func (v Word32) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v Word32) String() string {
+	return format.Uint(uint64(v))
+}
+
 // Word64
 
 type Word64 uint64
@@ -687,6 +780,10 @@ func (v Word64) ToBigEndianBytes() []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, uint64(v))
 	return b
+}
+
+func (v Word64) String() string {
+	return format.Uint(uint64(v))
 }
 
 // Fix64
@@ -730,6 +827,10 @@ func (v Fix64) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v Fix64) String() string {
+	return format.Fix64(int64(v))
+}
+
 // UFix64
 
 type UFix64 uint64
@@ -770,6 +871,10 @@ func (v UFix64) ToBigEndianBytes() []byte {
 	return b
 }
 
+func (v UFix64) String() string {
+	return format.UFix64(uint64(v))
+}
+
 // Array
 
 type Array struct {
@@ -797,6 +902,14 @@ func (v Array) ToGoValue() interface{} {
 	return ret
 }
 
+func (v Array) String() string {
+	values := make([]string, len(v.Values))
+	for i, value := range v.Values {
+		values[i] = value.String()
+	}
+	return format.Array(values)
+}
+
 // Dictionary
 
 type Dictionary struct {
@@ -822,6 +935,19 @@ func (v Dictionary) ToGoValue() interface{} {
 	}
 
 	return ret
+}
+
+func (v Dictionary) String() string {
+	pairs := make([]struct{Key string; Value string}, len(v.Pairs))
+
+	for i, pair := range v.Pairs {
+		pairs[i] = struct{Key string;Value string}{
+			Key: pair.Key.String(),
+			Value: pair.Value.String(),
+		}
+	}
+
+	return format.Dictionary(pairs)
 }
 
 // KeyValuePair
@@ -863,6 +989,28 @@ func (v Struct) ToGoValue() interface{} {
 	return ret
 }
 
+func (v Struct) String() string {
+	return formatComposite(v.StructType.Identifier, v.StructType.Fields, v.Fields)
+}
+
+func formatComposite(typeID string, fields []Field, values []Value) string {
+	preparedFields := make([]struct{Name string; Value string}, 0, len(fields))
+	for i, field := range fields {
+		value := values[i]
+		preparedFields = append(preparedFields,
+			struct {
+				Name  string
+				Value string
+			}{
+				Name: field.Identifier,
+				Value: value.String(),
+			},
+		)
+	}
+
+	return format.Composite(typeID, preparedFields)
+}
+
 // Resource
 
 type Resource struct {
@@ -895,6 +1043,10 @@ func (v Resource) ToGoValue() interface{} {
 	return ret
 }
 
+func (v Resource) String() string {
+	return formatComposite(v.ResourceType.Identifier, v.ResourceType.Fields, v.Fields)
+}
+
 // Event
 
 type Event struct {
@@ -925,6 +1077,9 @@ func (v Event) ToGoValue() interface{} {
 	}
 
 	return ret
+}
+func (v Event) String() string {
+	return formatComposite(v.EventType.Identifier, v.EventType.Fields, v.Fields)
 }
 
 // Contract
@@ -959,6 +1114,10 @@ func (v Contract) ToGoValue() interface{} {
 	return ret
 }
 
+func (v Contract) String() string {
+	return formatComposite(v.ContractType.Identifier, v.ContractType.Fields, v.Fields)
+}
+
 // Link
 
 type Link struct {
@@ -984,30 +1143,11 @@ func (v Link) ToGoValue() interface{} {
 	return nil
 }
 
-// StorageReference
-
-type StorageReference struct {
-	Authorized           bool
-	TargetStorageAddress Address
-	TargetKey            string
-}
-
-func NewStorageReference(authorized bool, targetStorageAddress Address, targetKey string) StorageReference {
-	return StorageReference{
-		Authorized:           authorized,
-		TargetStorageAddress: targetStorageAddress,
-		TargetKey:            targetKey,
-	}
-}
-
-func (StorageReference) isValue() {}
-
-func (v StorageReference) Type() Type {
-	return nil
-}
-
-func (v StorageReference) ToGoValue() interface{} {
-	return nil
+func (v Link) String() string {
+	return format.Link(
+		v.BorrowType,
+		v.TargetPath.String(),
+	)
 }
 
 // Path
@@ -1027,6 +1167,13 @@ func (Path) ToGoValue() interface{} {
 	return nil
 }
 
+func (v Path) String() string {
+	return format.Path(
+		v.Domain,
+		v.Identifier,
+	)
+}
+
 // TypeValue
 
 type TypeValue struct {
@@ -1042,6 +1189,10 @@ func (TypeValue) Type() Type {
 
 func (TypeValue) ToGoValue() interface{} {
 	return nil
+}
+
+func (v TypeValue) String() string {
+	return format.TypeValue(v.StaticType)
 }
 
 // Capability
@@ -1061,4 +1212,12 @@ func (Capability) Type() Type {
 
 func (Capability) ToGoValue() interface{} {
 	return nil
+}
+
+func (v Capability) String() string {
+	return format.Capability(
+		v.BorrowType,
+		v.Address.String(),
+		v.Path.String(),
+	)
 }

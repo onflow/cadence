@@ -40,9 +40,12 @@ func RunWithStdio(enableFlowClient bool) {
 		os.Exit(1)
 	}
 
-	languageServer := server.NewServer()
+	languageServer, err := server.NewServer()
+	if err != nil {
+		panic(err)
+	}
 
-	_, err := integration.NewFlowIntegration(languageServer, enableFlowClient)
+	_, err = integration.NewFlowIntegration(languageServer, enableFlowClient)
 	if err != nil {
 		panic(err)
 	}

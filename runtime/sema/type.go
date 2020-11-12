@@ -82,7 +82,20 @@ type Type interface {
 
 	// IsStorable returns true if the type is allowed to be a stored,
 	// e.g. in a field of a composite type.
+	//
+	// The check if the type is storable is recursive,
+	// the results parameter prevents cycles:
+	// it is checked at the start of the recursively called function,
+	// and pre-set before a recursive call.
 	IsStorable(results map[*Member]bool) bool
+
+	// IsExternallyReturnable returns true if a value of this type can be exported
+	//
+	// The check if the type is externally returnable is recursive,
+	// the results parameter prevents cycles:
+	// it is checked at the start of the recursively called function,
+	// and pre-set before a recursive call.
+	IsExternallyReturnable(results map[*Member]bool) bool
 
 	// IsEquatable returns true if values of the type can be equated
 	IsEquatable() bool
@@ -400,6 +413,10 @@ func (*MetaType) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (*MetaType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*MetaType) IsEquatable() bool {
 	return true
 }
@@ -472,7 +489,12 @@ func (*AnyType) IsInvalidType() bool {
 }
 
 func (*AnyType) IsStorable(_ map[*Member]bool) bool {
-	// The actual storability of a value is checked at run-time
+	// `Any` is never a valid type in user programs
+	return false
+}
+
+func (*AnyType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	// `Any` is never a valid type in user programs
 	return false
 }
 
@@ -535,6 +557,10 @@ func (*AnyStructType) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (*AnyStructType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*AnyStructType) IsEquatable() bool {
 	return false
 }
@@ -594,6 +620,11 @@ func (*AnyResourceType) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (*AnyResourceType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	// The actual returnability of a value is checked at run-time
+	return true
+}
+
 func (*AnyResourceType) IsEquatable() bool {
 	return false
 }
@@ -615,183 +646,6 @@ func (t *AnyResourceType) Resolve(_ map[*TypeParameter]Type) Type {
 }
 
 func (t *AnyResourceType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// NeverType represents the bottom type
-type NeverType struct{}
-
-func (*NeverType) IsType() {}
-
-func (*NeverType) String() string {
-	return "Never"
-}
-
-func (*NeverType) QualifiedString() string {
-	return "Never"
-}
-
-func (*NeverType) ID() TypeID {
-	return "Never"
-}
-
-func (*NeverType) Equal(other Type) bool {
-	_, ok := other.(*NeverType)
-	return ok
-}
-
-func (*NeverType) IsResourceType() bool {
-	return false
-}
-
-func (*NeverType) IsInvalidType() bool {
-	return false
-}
-
-func (*NeverType) IsStorable(_ map[*Member]bool) bool {
-	return false
-}
-
-func (*NeverType) IsEquatable() bool {
-	return false
-}
-
-func (*NeverType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *NeverType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-func (*NeverType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *NeverType) Resolve(_ map[*TypeParameter]Type) Type {
-	return t
-}
-
-func (t *NeverType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// VoidType represents the void type
-type VoidType struct{}
-
-func (*VoidType) IsType() {}
-
-func (*VoidType) String() string {
-	return "Void"
-}
-
-func (*VoidType) QualifiedString() string {
-	return "Void"
-}
-
-func (*VoidType) ID() TypeID {
-	return "Void"
-}
-
-func (*VoidType) Equal(other Type) bool {
-	_, ok := other.(*VoidType)
-	return ok
-}
-
-func (*VoidType) IsResourceType() bool {
-	return false
-}
-
-func (*VoidType) IsInvalidType() bool {
-	return false
-}
-
-func (*VoidType) IsStorable(_ map[*Member]bool) bool {
-	return false
-}
-
-func (*VoidType) IsEquatable() bool {
-	return false
-}
-
-func (*VoidType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *VoidType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-func (*VoidType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *VoidType) Resolve(_ map[*TypeParameter]Type) Type {
-	return t
-}
-
-func (t *VoidType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
-// InvalidType represents a type that is invalid.
-// It is the result of type checking failing and
-// can't be expressed in programs.
-//
-type InvalidType struct{}
-
-func (*InvalidType) IsType() {}
-
-func (*InvalidType) String() string {
-	return "<<invalid>>"
-}
-
-func (*InvalidType) QualifiedString() string {
-	return "<<invalid>>"
-}
-
-func (*InvalidType) ID() TypeID {
-	return "<<invalid>>"
-}
-
-func (*InvalidType) Equal(other Type) bool {
-	_, ok := other.(*InvalidType)
-	return ok
-}
-
-func (*InvalidType) IsResourceType() bool {
-	return false
-}
-
-func (*InvalidType) IsInvalidType() bool {
-	return true
-}
-
-func (*InvalidType) IsStorable(_ map[*Member]bool) bool {
-	return false
-}
-
-func (*InvalidType) IsEquatable() bool {
-	return false
-}
-
-func (*InvalidType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *InvalidType) RewriteWithRestrictedTypes() (result Type, rewritten bool) {
-	return t, false
-}
-
-func (*InvalidType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *InvalidType) Resolve(_ map[*TypeParameter]Type) Type {
-	return t
-}
-
-func (t *InvalidType) GetMembers() map[string]MemberResolver {
 	return withBuiltinMembers(t, nil)
 }
 
@@ -842,6 +696,10 @@ func (t *OptionalType) IsInvalidType() bool {
 
 func (t *OptionalType) IsStorable(results map[*Member]bool) bool {
 	return t.Type.IsStorable(results)
+}
+
+func (t *OptionalType) IsExternallyReturnable(results map[*Member]bool) bool {
+	return t.Type.IsExternallyReturnable(results)
 }
 
 func (t *OptionalType) IsEquatable() bool {
@@ -988,15 +846,19 @@ func (t *GenericType) Equal(other Type) bool {
 	return t.TypeParameter == otherType.TypeParameter
 }
 
-func (t *GenericType) IsResourceType() bool {
+func (*GenericType) IsResourceType() bool {
 	return false
 }
 
-func (t *GenericType) IsInvalidType() bool {
+func (*GenericType) IsInvalidType() bool {
 	return false
 }
 
-func (t *GenericType) IsStorable(_ map[*Member]bool) bool {
+func (*GenericType) IsStorable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (*GenericType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return false
 }
 
@@ -1004,7 +866,7 @@ func (*GenericType) IsEquatable() bool {
 	return false
 }
 
-func (t *GenericType) TypeAnnotationState() TypeAnnotationState {
+func (*GenericType) TypeAnnotationState() TypeAnnotationState {
 	return TypeAnnotationStateValid
 }
 
@@ -1099,6 +961,10 @@ func (*BoolType) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (*BoolType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*BoolType) IsEquatable() bool {
 	return true
 }
@@ -1158,6 +1024,10 @@ func (*CharacterType) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (*CharacterType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*CharacterType) IsEquatable() bool {
 	return true
 }
@@ -1213,6 +1083,10 @@ func (*StringType) IsInvalidType() bool {
 }
 
 func (*StringType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*StringType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -1395,6 +1269,10 @@ func (*NumberType) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (*NumberType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*NumberType) IsEquatable() bool {
 	return true
 }
@@ -1458,6 +1336,10 @@ func (*SignedNumberType) IsInvalidType() bool {
 }
 
 func (*SignedNumberType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*SignedNumberType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -1542,6 +1424,10 @@ func (*IntegerType) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (*IntegerType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*IntegerType) IsEquatable() bool {
 	return true
 }
@@ -1605,6 +1491,10 @@ func (*SignedIntegerType) IsInvalidType() bool {
 }
 
 func (*SignedIntegerType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*SignedIntegerType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -1674,6 +1564,10 @@ func (*IntType) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (*IntType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*IntType) IsEquatable() bool {
 	return true
 }
@@ -1738,6 +1632,10 @@ func (*Int8Type) IsInvalidType() bool {
 }
 
 func (*Int8Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*Int8Type) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -1810,6 +1708,10 @@ func (*Int16Type) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (*Int16Type) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*Int16Type) IsEquatable() bool {
 	return true
 }
@@ -1876,6 +1778,10 @@ func (*Int32Type) IsInvalidType() bool {
 }
 
 func (*Int32Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*Int32Type) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -1948,6 +1854,10 @@ func (*Int64Type) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (*Int64Type) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*Int64Type) IsEquatable() bool {
 	return true
 }
@@ -2014,6 +1924,10 @@ func (*Int128Type) IsInvalidType() bool {
 }
 
 func (*Int128Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*Int128Type) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -2098,6 +2012,10 @@ func (*Int256Type) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (*Int256Type) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*Int256Type) IsEquatable() bool {
 	return true
 }
@@ -2179,6 +2097,10 @@ func (*UIntType) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (*UIntType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*UIntType) IsEquatable() bool {
 	return true
 }
@@ -2245,6 +2167,10 @@ func (*UInt8Type) IsInvalidType() bool {
 }
 
 func (*UInt8Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*UInt8Type) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -2318,6 +2244,10 @@ func (*UInt16Type) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (*UInt16Type) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*UInt16Type) IsEquatable() bool {
 	return true
 }
@@ -2385,6 +2315,10 @@ func (*UInt32Type) IsInvalidType() bool {
 }
 
 func (*UInt32Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*UInt32Type) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -2458,6 +2392,10 @@ func (*UInt64Type) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (*UInt64Type) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*UInt64Type) IsEquatable() bool {
 	return true
 }
@@ -2525,6 +2463,10 @@ func (*UInt128Type) IsInvalidType() bool {
 }
 
 func (*UInt128Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*UInt128Type) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -2604,6 +2546,10 @@ func (*UInt256Type) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (*UInt256Type) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*UInt256Type) IsEquatable() bool {
 	return true
 }
@@ -2680,6 +2626,10 @@ func (*Word8Type) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (*Word8Type) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*Word8Type) IsEquatable() bool {
 	return true
 }
@@ -2747,6 +2697,10 @@ func (*Word16Type) IsInvalidType() bool {
 }
 
 func (*Word16Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*Word16Type) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -2820,6 +2774,10 @@ func (*Word32Type) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (*Word32Type) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*Word32Type) IsEquatable() bool {
 	return true
 }
@@ -2887,6 +2845,10 @@ func (*Word64Type) IsInvalidType() bool {
 }
 
 func (*Word64Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*Word64Type) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -2959,6 +2921,10 @@ func (*FixedPointType) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (*FixedPointType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*FixedPointType) IsEquatable() bool {
 	return true
 }
@@ -3022,6 +2988,10 @@ func (*SignedFixedPointType) IsInvalidType() bool {
 }
 
 func (*SignedFixedPointType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*SignedFixedPointType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -3092,6 +3062,10 @@ func (*Fix64Type) IsInvalidType() bool {
 }
 
 func (*Fix64Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*Fix64Type) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -3183,6 +3157,10 @@ func (*UFix64Type) IsInvalidType() bool {
 }
 
 func (*UFix64Type) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*UFix64Type) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -3380,7 +3358,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 							},
 						},
 						ReturnTypeAnnotation: NewTypeAnnotation(
-							&VoidType{},
+							VoidType,
 						),
 					},
 					arrayTypeAppendFunctionDocString,
@@ -3448,7 +3426,7 @@ func getArrayMembers(arrayType ArrayType) map[string]MemberResolver {
 							},
 						},
 						ReturnTypeAnnotation: NewTypeAnnotation(
-							&VoidType{},
+							VoidType,
 						),
 					},
 					arrayTypeInsertFunctionDocString,
@@ -3570,6 +3548,10 @@ func (t *VariableSizedType) IsStorable(results map[*Member]bool) bool {
 	return t.Type.IsStorable(results)
 }
 
+func (t *VariableSizedType) IsExternallyReturnable(results map[*Member]bool) bool {
+	return t.Type.IsExternallyReturnable(results)
+}
+
 func (*VariableSizedType) IsEquatable() bool {
 	// TODO:
 	return false
@@ -3676,6 +3658,10 @@ func (t *ConstantSizedType) IsInvalidType() bool {
 }
 
 func (t *ConstantSizedType) IsStorable(results map[*Member]bool) bool {
+	return t.Type.IsStorable(results)
+}
+
+func (t *ConstantSizedType) IsExternallyReturnable(results map[*Member]bool) bool {
 	return t.Type.IsStorable(results)
 }
 
@@ -4107,6 +4093,11 @@ func (t *FunctionType) IsStorable(_ map[*Member]bool) bool {
 	return false
 }
 
+func (t *FunctionType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	// Functions cannot be exported, as they cannot be serialized
+	return false
+}
+
 func (*FunctionType) IsEquatable() bool {
 	return false
 }
@@ -4373,28 +4364,32 @@ func (t *CheckedFunctionType) CheckArgumentExpressions(
 }
 
 // baseTypes are the nominal types available in programs
-
+//
 var baseTypes map[string]Type
 
 func init() {
 
 	baseTypes = map[string]Type{
-		"": &VoidType{},
+		"": VoidType,
 	}
 
 	otherTypes := []Type{
 		&MetaType{},
-		&VoidType{},
+		VoidType,
 		&AnyStructType{},
 		&AnyResourceType{},
-		&NeverType{},
+		NeverType,
 		&BoolType{},
 		&CharacterType{},
 		&StringType{},
 		&AddressType{},
 		&AuthAccountType{},
 		&PublicAccountType{},
-		&PathType{},
+		PathType,
+		StoragePathType,
+		CapabilityPathType,
+		PrivatePathType,
+		PublicPathType,
 		&CapabilityType{},
 		&DeployedContractType{},
 	}
@@ -4580,7 +4575,7 @@ func init() {
 					return
 				}
 
-				checker.checkAddressLiteral(intExpression)
+				CheckAddressLiteral(intExpression, checker.report)
 			},
 		},
 	}
@@ -4596,13 +4591,13 @@ func numberFunctionArgumentExpressionsChecker(targetType Type) ArgumentExpressio
 
 		switch argument := argument.(type) {
 		case *ast.IntegerExpression:
-			if checker.checkIntegerLiteral(argument, targetType) {
+			if CheckIntegerLiteral(argument, targetType, checker.report) {
 
 				suggestIntegerLiteralConversionReplacement(checker, argument, targetType, invocationRange)
 			}
 
 		case *ast.FixedPointExpression:
-			if checker.checkFixedPointLiteral(argument, targetType) {
+			if CheckFixedPointLiteral(argument, targetType, checker.report) {
 
 				suggestFixedPointLiteralConversionReplacement(checker, targetType, argument, invocationRange)
 			}
@@ -4863,11 +4858,47 @@ func (*CompositeType) IsInvalidType() bool {
 
 func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
 
+	// Only structures, resources, and enums can be stored
+
+	switch t.Kind {
+	case common.CompositeKindStructure,
+		common.CompositeKindResource,
+		common.CompositeKindEnum:
+		break
+	default:
+		return false
+	}
+
 	// If this composite type has a member which is non-storable,
 	// then the composite type is not storable.
 
 	for _, member := range t.Members {
 		if !member.IsStorable(results) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (t *CompositeType) IsExternallyReturnable(results map[*Member]bool) bool {
+
+	// Only structures, resources, and enums can be stored
+
+	switch t.Kind {
+	case common.CompositeKindStructure,
+		common.CompositeKindResource,
+		common.CompositeKindEnum:
+		break
+	default:
+		return false
+	}
+
+	// If this composite type has a member which is not externally returnable,
+	// then the composite type is not externally returnable.
+
+	for _, member := range t.Members {
+		if !member.IsExternallyReturnable(results) {
 			return false
 		}
 	}
@@ -4970,6 +5001,10 @@ func (*AuthAccountType) IsStorable(_ map[*Member]bool) bool {
 	return false
 }
 
+func (*AuthAccountType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return false
+}
+
 func (*AuthAccountType) IsEquatable() bool {
 	return false
 }
@@ -4995,7 +5030,7 @@ var authAccountTypeAddPublicKeyFunctionType = &FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		&VoidType{},
+		VoidType,
 	),
 }
 
@@ -5014,7 +5049,7 @@ var authAccountTypeRemovePublicKeyFunctionType = &FunctionType{
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
-		&VoidType{},
+		VoidType,
 	),
 }
 
@@ -5026,7 +5061,7 @@ var authAccountTypeSaveFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		Name:      "T",
-		TypeBound: &StorableType{},
+		TypeBound: StorableType,
 	}
 
 	return &FunctionType{
@@ -5046,10 +5081,10 @@ var authAccountTypeSaveFunctionType = func() *FunctionType {
 			{
 				Label:          "to",
 				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+				TypeAnnotation: NewTypeAnnotation(StoragePathType),
 			},
 		},
-		ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 	}
 }()
 
@@ -5066,7 +5101,7 @@ var authAccountTypeLoadFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		Name:      "T",
-		TypeBound: &StorableType{},
+		TypeBound: StorableType,
 	}
 
 	return &FunctionType{
@@ -5077,7 +5112,7 @@ var authAccountTypeLoadFunctionType = func() *FunctionType {
 			{
 				Label:          "from",
 				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+				TypeAnnotation: NewTypeAnnotation(StoragePathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -5119,7 +5154,7 @@ var authAccountTypeCopyFunctionType = func() *FunctionType {
 			{
 				Label:          "from",
 				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+				TypeAnnotation: NewTypeAnnotation(StoragePathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -5162,7 +5197,7 @@ var authAccountTypeBorrowFunctionType = func() *FunctionType {
 			{
 				Label:          "from",
 				Identifier:     "path",
-				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+				TypeAnnotation: NewTypeAnnotation(StoragePathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -5207,11 +5242,11 @@ var authAccountTypeLinkFunctionType = func() *FunctionType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "newCapabilityPath",
-				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+				TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
 			},
 			{
 				Identifier:     "target",
-				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+				TypeAnnotation: NewTypeAnnotation(PathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
@@ -5244,17 +5279,17 @@ var authAccountTypeUnlinkFunctionType = &FunctionType{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "capabilityPath",
-			TypeAnnotation: NewTypeAnnotation(&PathType{}),
+			TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
 		},
 	},
-	ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
+	ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 }
 
 const authAccountTypeUnlinkFunctionDocString = `
 Removes the capability at the given public or private path
 `
 
-var accountTypeGetCapabilityFunctionType = func() *FunctionType {
+var authAccountTypeGetCapabilityFunctionType = func() *FunctionType {
 
 	typeParameter := &TypeParameter{
 		TypeBound: &ReferenceType{
@@ -5272,15 +5307,44 @@ var accountTypeGetCapabilityFunctionType = func() *FunctionType {
 			{
 				Label:          ArgumentLabelNotRequired,
 				Identifier:     "capabilityPath",
-				TypeAnnotation: NewTypeAnnotation(&PathType{}),
+				TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
 			},
 		},
 		ReturnTypeAnnotation: NewTypeAnnotation(
-			&OptionalType{
-				Type: &CapabilityType{
-					BorrowType: &GenericType{
-						TypeParameter: typeParameter,
-					},
+			&CapabilityType{
+				BorrowType: &GenericType{
+					TypeParameter: typeParameter,
+				},
+			},
+		),
+	}
+}()
+
+var publicAccountTypeGetCapabilityFunctionType = func() *FunctionType {
+
+	typeParameter := &TypeParameter{
+		TypeBound: &ReferenceType{
+			Type: &AnyType{},
+		},
+		Name:     "T",
+		Optional: true,
+	}
+
+	return &FunctionType{
+		TypeParameters: []*TypeParameter{
+			typeParameter,
+		},
+		Parameters: []*Parameter{
+			{
+				Label:          ArgumentLabelNotRequired,
+				Identifier:     "capabilityPath",
+				TypeAnnotation: NewTypeAnnotation(PublicPathType),
+			},
+		},
+		ReturnTypeAnnotation: NewTypeAnnotation(
+			&CapabilityType{
+				BorrowType: &GenericType{
+					TypeParameter: typeParameter,
 				},
 			},
 		),
@@ -5296,12 +5360,12 @@ var accountTypeGetLinkTargetFunctionType = &FunctionType{
 		{
 			Label:          ArgumentLabelNotRequired,
 			Identifier:     "capabilityPath",
-			TypeAnnotation: NewTypeAnnotation(&PathType{}),
+			TypeAnnotation: NewTypeAnnotation(CapabilityPathType),
 		},
 	},
 	ReturnTypeAnnotation: NewTypeAnnotation(
 		&OptionalType{
-			Type: &PathType{},
+			Type: PathType,
 		},
 	),
 }
@@ -5455,7 +5519,7 @@ func (t *AuthAccountType) GetMembers() map[string]MemberResolver {
 				return NewPublicFunctionMember(
 					t,
 					identifier,
-					accountTypeGetCapabilityFunctionType,
+					authAccountTypeGetCapabilityFunctionType,
 					authAccountTypeGetCapabilityFunctionDocString,
 				)
 			},
@@ -5536,6 +5600,10 @@ func (*PublicAccountType) IsStorable(_ map[*Member]bool) bool {
 	return false
 }
 
+func (*PublicAccountType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return false
+}
+
 func (*PublicAccountType) IsEquatable() bool {
 	return false
 }
@@ -5593,7 +5661,7 @@ func (t *PublicAccountType) GetMembers() map[string]MemberResolver {
 				return NewPublicFunctionMember(
 					t,
 					identifier,
-					accountTypeGetCapabilityFunctionType,
+					publicAccountTypeGetCapabilityFunctionType,
 					publicAccountTypeGetLinkTargetFunctionDocString,
 				)
 			},
@@ -5676,6 +5744,21 @@ func NewPublicConstantFieldMember(
 
 // IsStorable returns whether a member is a storable field
 func (m *Member) IsStorable(results map[*Member]bool) (result bool) {
+	test := func(t Type) bool {
+		return t.IsStorable(results)
+	}
+	return m.testType(test, results)
+}
+
+// IsExternallyReturnable returns whether a member is externally returnable
+func (m *Member) IsExternallyReturnable(results map[*Member]bool) (result bool) {
+	test := func(t Type) bool {
+		return t.IsExternallyReturnable(results)
+	}
+	return m.testType(test, results)
+}
+
+func (m *Member) testType(test func(Type) bool, results map[*Member]bool) (result bool) {
 
 	// Prevent a potential stack overflow due to cyclic declarations
 	// by keeping track of the result for each member
@@ -5688,9 +5771,8 @@ func (m *Member) IsStorable(results map[*Member]bool) (result bool) {
 		return result
 	}
 
-	// Temporarily assume the member is storable while it's type
-	// is checked for storability. If a recursive call occurs,
-	// the check for an existing result will prevent infinite recursion
+	// Temporarily assume the member passes the test while it's type is tested.
+	// If a recursive call occurs, the check for an existing result will prevent infinite recursion
 
 	results[m] = true
 
@@ -5703,14 +5785,9 @@ func (m *Member) IsStorable(results map[*Member]bool) (result bool) {
 
 		if m.DeclarationKind == common.DeclarationKindField {
 
-			// Fields are not storable
-			// if their type is non-storable
-
 			fieldType := m.TypeAnnotation.Type
 
-			if !fieldType.IsInvalidType() &&
-				!fieldType.IsStorable(results) {
-
+			if !fieldType.IsInvalidType() && !test(fieldType) {
 				return false
 			}
 		}
@@ -5807,6 +5884,24 @@ func (t *InterfaceType) IsStorable(results map[*Member]bool) bool {
 
 	for _, member := range t.Members {
 		if !member.IsStorable(results) {
+			return false
+		}
+	}
+
+	return true
+}
+
+func (t *InterfaceType) IsExternallyReturnable(results map[*Member]bool) bool {
+
+	if t.CompositeKind != common.CompositeKindStructure {
+		return false
+	}
+
+	// If this interface type has a member which is not externally returnable,
+	// then the interface type is not externally returnable.
+
+	for _, member := range t.Members {
+		if !member.IsExternallyReturnable(results) {
 			return false
 		}
 	}
@@ -5914,6 +6009,11 @@ func (t *DictionaryType) IsInvalidType() bool {
 func (t *DictionaryType) IsStorable(results map[*Member]bool) bool {
 	return t.KeyType.IsStorable(results) &&
 		t.ValueType.IsStorable(results)
+}
+
+func (t *DictionaryType) IsExternallyReturnable(results map[*Member]bool) bool {
+	return t.KeyType.IsExternallyReturnable(results) &&
+		t.ValueType.IsExternallyReturnable(results)
 }
 
 func (*DictionaryType) IsEquatable() bool {
@@ -6204,6 +6304,10 @@ func (t *ReferenceType) IsStorable(_ map[*Member]bool) bool {
 	return false
 }
 
+func (t *ReferenceType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*ReferenceType) IsEquatable() bool {
 	return true
 }
@@ -6304,6 +6408,10 @@ func (*AddressType) IsStorable(_ map[*Member]bool) bool {
 	return true
 }
 
+func (*AddressType) IsExternallyReturnable(_ map[*Member]bool) bool {
+	return true
+}
+
 func (*AddressType) IsEquatable() bool {
 	return true
 }
@@ -6375,7 +6483,7 @@ func IsSubType(subType Type, superType Type) bool {
 		return true
 	}
 
-	if _, ok := subType.(*NeverType); ok {
+	if subType == NeverType {
 		return true
 	}
 
@@ -6915,9 +7023,11 @@ func IsSubType(subType Type, superType Type) bool {
 			}
 		}
 
-	case *StorableType:
-		storableResults := map[*Member]bool{}
-		return subType.IsStorable(storableResults)
+	case *NominalType:
+		if typedSuperType.IsSuperTypeOf == nil {
+			return false
+		}
+		return typedSuperType.IsSuperTypeOf(subType)
 	}
 
 	// TODO: enforce type arguments, remove this rule
@@ -6978,7 +7088,7 @@ func IsNilType(ty Type) bool {
 		return false
 	}
 
-	if _, ok := optionalType.Type.(*NeverType); !ok {
+	if optionalType.Type != NeverType {
 		return false
 	}
 
@@ -6995,7 +7105,7 @@ type TransactionType struct {
 func (t *TransactionType) EntryPointFunctionType() *FunctionType {
 	return &FunctionType{
 		Parameters:           append(t.Parameters, t.PrepareParameters...),
-		ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
+		ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 	}
 }
 
@@ -7003,7 +7113,7 @@ func (t *TransactionType) PrepareFunctionType() *SpecialFunctionType {
 	return &SpecialFunctionType{
 		FunctionType: &FunctionType{
 			Parameters:           t.PrepareParameters,
-			ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
+			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 		},
 	}
 }
@@ -7012,7 +7122,7 @@ func (*TransactionType) ExecuteFunctionType() *SpecialFunctionType {
 	return &SpecialFunctionType{
 		FunctionType: &FunctionType{
 			Parameters:           []*Parameter{},
-			ReturnTypeAnnotation: NewTypeAnnotation(&VoidType{}),
+			ReturnTypeAnnotation: NewTypeAnnotation(VoidType),
 		},
 	}
 }
@@ -7045,6 +7155,10 @@ func (*TransactionType) IsInvalidType() bool {
 }
 
 func (*TransactionType) IsStorable(_ map[*Member]bool) bool {
+	return false
+}
+
+func (*TransactionType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return false
 }
 
@@ -7224,6 +7338,20 @@ func (t *RestrictedType) IsStorable(results map[*Member]bool) bool {
 	return true
 }
 
+func (t *RestrictedType) IsExternallyReturnable(results map[*Member]bool) bool {
+	if t.Type != nil && !t.Type.IsExternallyReturnable(results) {
+		return false
+	}
+
+	for _, restriction := range t.Restrictions {
+		if !restriction.IsExternallyReturnable(results) {
+			return false
+		}
+	}
+
+	return true
+}
+
 func (*RestrictedType) IsEquatable() bool {
 	// TODO:
 	return false
@@ -7300,66 +7428,6 @@ func (t *RestrictedType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-// PathType
-
-type PathType struct{}
-
-func (*PathType) IsType() {}
-
-func (*PathType) String() string {
-	return "Path"
-}
-
-func (*PathType) QualifiedString() string {
-	return "Path"
-}
-
-func (*PathType) ID() TypeID {
-	return "Path"
-}
-
-func (*PathType) Equal(other Type) bool {
-	_, ok := other.(*PathType)
-	return ok
-}
-
-func (*PathType) IsResourceType() bool {
-	return false
-}
-
-func (*PathType) IsInvalidType() bool {
-	return false
-}
-
-func (*PathType) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*PathType) IsEquatable() bool {
-	// TODO:
-	return false
-}
-
-func (*PathType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *PathType) RewriteWithRestrictedTypes() (Type, bool) {
-	return t, false
-}
-
-func (*PathType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *PathType) Resolve(_ map[*TypeParameter]Type) Type {
-	return t
-}
-
-func (t *PathType) GetMembers() map[string]MemberResolver {
-	return withBuiltinMembers(t, nil)
-}
-
 // CapabilityType
 
 type CapabilityType struct {
@@ -7427,6 +7495,10 @@ func (t *CapabilityType) TypeAnnotationState() TypeAnnotationState {
 }
 
 func (*CapabilityType) IsStorable(_ map[*Member]bool) bool {
+	return true
+}
+
+func (*CapabilityType) IsExternallyReturnable(_ map[*Member]bool) bool {
 	return true
 }
 
@@ -7592,75 +7664,4 @@ func (t *CapabilityType) GetMembers() map[string]MemberResolver {
 			},
 		},
 	})
-}
-
-// StorableType is the supertype of all types which are storable.
-//
-// It is only used as e.g. a type bound, but is not accessible
-// to user programs, i.e. can't be used in type annotations
-// for e.g. parameters, return types, fields, etc.
-//
-type StorableType struct{}
-
-func (*StorableType) IsType() {}
-
-func (*StorableType) String() string {
-	return "Storable"
-}
-
-func (*StorableType) QualifiedString() string {
-	return "Storable"
-}
-
-func (*StorableType) ID() TypeID {
-	return "Storable"
-}
-
-func (*StorableType) Equal(other Type) bool {
-	_, ok := other.(*StorableType)
-	return ok
-}
-
-func (*StorableType) IsResourceType() bool {
-
-	// NOTE: Subtypes may be either resource types or not.
-	//
-	// Returning false here is safe, because this type is
-	// only used as e.g. a type bound, but is not accessible
-	// to user programs, i.e. can't be used in type annotations
-	// for e.g. parameters, return types, fields, etc.
-
-	return false
-}
-
-func (*StorableType) IsInvalidType() bool {
-	return false
-}
-
-func (*StorableType) IsStorable(_ map[*Member]bool) bool {
-	return true
-}
-
-func (*StorableType) IsEquatable() bool {
-	return false
-}
-
-func (*StorableType) TypeAnnotationState() TypeAnnotationState {
-	return TypeAnnotationStateValid
-}
-
-func (t *StorableType) RewriteWithRestrictedTypes() (Type, bool) {
-	return t, false
-}
-
-func (*StorableType) Unify(_ Type, _ map[*TypeParameter]Type, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *StorableType) Resolve(_ map[*TypeParameter]Type) Type {
-	return t
-}
-
-func (t *StorableType) GetMembers() map[string]MemberResolver {
-	return nil
 }

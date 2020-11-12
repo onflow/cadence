@@ -21,6 +21,7 @@ package sema
 type FunctionActivation struct {
 	ReturnType           Type
 	Loops                int
+	Switches             int
 	ValueActivationDepth int
 	ReturnInfo           *ReturnInfo
 	ReportedDeadCode     bool
@@ -29,6 +30,10 @@ type FunctionActivation struct {
 
 func (a FunctionActivation) InLoop() bool {
 	return a.Loops > 0
+}
+
+func (a FunctionActivation) InSwitch() bool {
+	return a.Switches > 0
 }
 
 type FunctionActivations struct {
@@ -75,16 +80,18 @@ func (a *FunctionActivations) Current() *FunctionActivation {
 	return a.activations[lastIndex]
 }
 
-func (a *FunctionActivations) EnterLoop() {
-	a.Current().Loops++
-}
-
-func (a *FunctionActivations) LeaveLoop() {
-	a.Current().Loops--
-}
-
 func (a *FunctionActivations) WithLoop(f func()) {
-	a.EnterLoop()
-	defer a.LeaveLoop()
+	a.Current().Loops++
+	defer func() {
+		a.Current().Loops--
+	}()
+	f()
+}
+
+func (a *FunctionActivations) WithSwitch(f func()) {
+	a.Current().Switches++
+	defer func() {
+		a.Current().Switches--
+	}()
 	f()
 }
