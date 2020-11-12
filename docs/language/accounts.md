@@ -11,6 +11,8 @@ Every account can be accessed through two types:
   struct PublicAccount {
 
       let address: Address
+      let storageUsed: UInt8
+      let storageCapacity: UInt8
 
       // Storage operations
 
@@ -40,6 +42,8 @@ Every account can be accessed through two types:
   struct AuthAccount {
 
       let address: Address
+      let storageUsed: UInt8
+      let storageCapacity: UInt8
 
       // Contracts
 
@@ -370,3 +374,22 @@ let otherRef = authAccount.borrow<&{Other}>(from: /storage/counter)
 //
 let nonExistentRef = authAccount.borrow<&{HasCount}>(from: /storage/nonExistent)
 ```
+
+## Storage limit
+
+Accounts storage is limited by its storage capacity.
+
+At the end of every transaction all accounts storage used is compared to their storage capacity.
+If for any account its storage used is greater than its storage capacity the transaction fails.
+
+An account's storage used and storage capacity can be checked using the `storageUsed` and `storageCapacity` fields.
+The fields represent current values of storage which means this would be true:
+
+```
+let storageUsedBefore = authAccount.storageUsed
+authAccount.save(<-create Counter(count: 123), to: /storage/counter)
+let storageUsedAfter = authAccount.storageUsed
+
+return storageUsedBefore != storageUsedAfter // this is true
+```
+

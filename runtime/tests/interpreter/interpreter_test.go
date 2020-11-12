@@ -6706,8 +6706,8 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 						return map[string]interpreter.Value{
 							"account": interpreter.NewAuthAccountValue(
 								addressValue,
-								func() interpreter.UInt64Value { return interpreter.UInt64Value(0) },
-								func() interpreter.UInt64Value { return interpreter.UInt64Value(0) },
+								returnZero,
+								returnZero,
 								panicFunction,
 								panicFunction,
 								interpreter.AuthAccountContractsValue{},
@@ -7522,8 +7522,8 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 	values := map[string]interpreter.Value{
 		"account": interpreter.NewAuthAccountValue(
 			addressValue,
-			func() interpreter.UInt64Value { return interpreter.UInt64Value(0) },
-			func() interpreter.UInt64Value { return interpreter.UInt64Value(0) },
+			returnZero,
+			returnZero,
 			panicFunction,
 			panicFunction,
 			interpreter.AuthAccountContractsValue{},

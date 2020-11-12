@@ -260,8 +260,8 @@ func (r *interpreterRuntime) newAuthAccountValue(
 ) interpreter.AuthAccountValue {
 	return interpreter.NewAuthAccountValue(
 		addressValue,
-		func() interpreter.UInt64Value { return interpreter.UInt64Value(runtimeInterface.GetStorageUsed(addressValue.ToAddress())) },
-		func() interpreter.UInt64Value { return interpreter.UInt64Value(runtimeInterface.GetStorageCapacity(addressValue.ToAddress())) },
+		storageUsedGetFunction(addressValue, runtimeInterface),
+		storageCapacityGetFunction(addressValue, runtimeInterface),
 		r.newAddPublicKeyFunction(addressValue, runtimeInterface),
 		r.newRemovePublicKeyFunction(addressValue, runtimeInterface),
 		r.newAuthAccountContracts(
@@ -958,6 +958,19 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 		return trampoline.Done{Result: account}
 	}
 }
+func storageUsedGetFunction(addressValue interpreter.AddressValue, runtimeInterface Interface) func() interpreter.UInt64Value {
+	address := addressValue.ToAddress()
+	return func() interpreter.UInt64Value {
+		return interpreter.UInt64Value(runtimeInterface.GetStorageUsed(address))
+	}
+}
+
+func storageCapacityGetFunction(addressValue interpreter.AddressValue, runtimeInterface Interface) func() interpreter.UInt64Value {
+	address := addressValue.ToAddress()
+	return func() interpreter.UInt64Value {
+		return interpreter.UInt64Value(runtimeInterface.GetStorageCapacity(address))
+	}
+}
 
 func (r *interpreterRuntime) newAddPublicKeyFunction(
 	addressValue interpreter.AddressValue,
@@ -1226,8 +1239,8 @@ func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface) i
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
 		accountAddress := invocation.Arguments[0].(interpreter.AddressValue)
 		publicAccount := interpreter.NewPublicAccountValue(accountAddress,
-			func() interpreter.UInt64Value { return interpreter.UInt64Value(runtimeInterface.GetStorageUsed(accountAddress.ToAddress())) },
-			func() interpreter.UInt64Value { return interpreter.UInt64Value(runtimeInterface.GetStorageCapacity(accountAddress.ToAddress())) },
+			storageUsedGetFunction(accountAddress, runtimeInterface),
+			storageCapacityGetFunction(accountAddress, runtimeInterface),
 		)
 		return trampoline.Done{Result: publicAccount}
 	}

@@ -222,16 +222,16 @@ func TestInterpretTransactions(t *testing.T) {
 
 		signer1 := interpreter.NewAuthAccountValue(
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 1},
-			func() interpreter.UInt64Value { return interpreter.UInt64Value(0) },
-			func() interpreter.UInt64Value { return interpreter.UInt64Value(0) },
+			returnZero,
+			returnZero,
 			panicFunction,
 			panicFunction,
 			interpreter.AuthAccountContractsValue{},
 		)
 		signer2 := interpreter.NewAuthAccountValue(
 			interpreter.AddressValue{0, 0, 0, 0, 0, 0, 0, 2},
-			func() interpreter.UInt64Value { return interpreter.UInt64Value(0) },
-			func() interpreter.UInt64Value { return interpreter.UInt64Value(0) },
+			returnZero,
+			returnZero,
 			panicFunction,
 			panicFunction,
 			interpreter.AuthAccountContractsValue{},
@@ -269,8 +269,8 @@ func TestInterpretTransactions(t *testing.T) {
 		prepareArguments := []interpreter.Value{
 			interpreter.NewAuthAccountValue(
 				interpreter.AddressValue{},
-				func() interpreter.UInt64Value { return interpreter.UInt64Value(0) },
-				func() interpreter.UInt64Value { return interpreter.UInt64Value(0) },
+				returnZero,
+				returnZero,
 				panicFunction,
 				panicFunction,
 				interpreter.AuthAccountContractsValue{},
