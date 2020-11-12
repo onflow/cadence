@@ -25,6 +25,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 // Error is the containing type for all errors produced by the runtime.
@@ -176,4 +177,30 @@ func (e *ScriptParameterTypeNotStorableError) Error() string {
 		"parameter type is non-storable type: `%s`",
 		e.Type.QualifiedString(),
 	)
+}
+
+// ExtendedParsingCheckingError is a special error which aids in debugging checking problems
+// by providing extra information about the state of the environment
+// Separate package to prevent cyclic imports with checker tests
+type ExtendedParsingCheckingError struct {
+	Err            error
+	RuntimeStorage *InterpreterRuntimeStorage
+	Functions      stdlib.StandardLibraryFunctions
+	Code           []byte
+	Location       Location
+	Options        []sema.Option
+	UseCache       bool
+	Checker        *sema.Checker
+}
+
+func (e *ExtendedParsingCheckingError) ChildErrors() []error {
+	return []error{e.Err}
+}
+
+func (e *ExtendedParsingCheckingError) Error() string {
+	return e.Err.Error()
+}
+
+func (e ExtendedParsingCheckingError) Unwrap() error {
+	return e.Err
 }
