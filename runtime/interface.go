@@ -95,11 +95,11 @@ type Interface interface {
 		signatureAlgorithm string,
 		hashAlgorithm string,
 	) bool
-
 	// Hash returns the digest of hashing the given data with using the given hash algorithm
 	Hash(data []byte, hashAlgorithm string) []byte
-
+	// GetStorageUsed returns the current storage used by this address
 	GetStorageUsed(address Address) uint64
+	// GetStorageCapacity returns the current storage capacity of this address
 	GetStorageCapacity(address Address) uint64
 }
 
