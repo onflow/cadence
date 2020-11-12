@@ -35,13 +35,23 @@ jobs:
       run: make test
     - name: Check tidy
       run: make check-tidy
-    - name: Check headers
-      run: make check-headers
 
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
-      - uses: actions/checkout@v2
-      - uses: golangci/golangci-lint-action@v2
-        with:
-          version: v1.29
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - uses: actions/setup-go@v1
+      with:
+        go-version: '1.14.5'
+    - uses: actions/cache@v1
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    - name: Lint
+      run: make lint-github-actions
+    - name: Check license headers
+      run: make check-headers
