@@ -1287,7 +1287,7 @@ func TestCheckAccount_StorageFields(t *testing.T) {
 	                          return %s.%s
 	                      }
 
-                          let cap = test()
+                          let amount = test()
 	                    `,
 					accountVariable,
 					fieldName,
@@ -1298,8 +1298,8 @@ func TestCheckAccount_StorageFields(t *testing.T) {
 				)
 
 				require.NoError(t, err)
-				capType := checker.GlobalValues["cap"].Type
-				assert.Equal(t, &sema.UInt64Type{}, capType)
+				amountType := checker.GlobalValues["amount"].Type
+				assert.Equal(t, &sema.UInt64Type{}, amountType)
 			})
 		}
 	}

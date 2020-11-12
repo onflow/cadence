@@ -961,14 +961,22 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 func storageUsedGetFunction(addressValue interpreter.AddressValue, runtimeInterface Interface) func() interpreter.UInt64Value {
 	address := addressValue.ToAddress()
 	return func() interpreter.UInt64Value {
-		return interpreter.UInt64Value(runtimeInterface.GetStorageUsed(address))
+		var used interpreter.UInt64Value
+		wrapPanic(func() {
+			used = interpreter.UInt64Value(runtimeInterface.GetStorageUsed(address))
+		})
+		return used
 	}
 }
 
 func storageCapacityGetFunction(addressValue interpreter.AddressValue, runtimeInterface Interface) func() interpreter.UInt64Value {
 	address := addressValue.ToAddress()
 	return func() interpreter.UInt64Value {
-		return interpreter.UInt64Value(runtimeInterface.GetStorageCapacity(address))
+		var capacity interpreter.UInt64Value
+		wrapPanic(func() {
+			capacity = interpreter.UInt64Value(runtimeInterface.GetStorageCapacity(address))
+		})
+		return capacity
 	}
 }
 
