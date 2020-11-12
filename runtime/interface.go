@@ -97,10 +97,10 @@ type Interface interface {
 	) bool
 	// Hash returns the digest of hashing the given data with using the given hash algorithm
 	Hash(data []byte, hashAlgorithm string) []byte
-	// GetStorageUsed returns the current storage used by this address
-	GetStorageUsed(address Address) uint64
-	// GetStorageCapacity returns the current storage capacity of this address
-	GetStorageCapacity(address Address) uint64
+	// GetStorageUsed gets storage used in bytes by the address at the moment of the function call.
+	GetStorageUsed(address Address) (value uint64, err error)
+	// GetStorageCapacity gets storage capacity in bytes on the address.
+	GetStorageCapacity(address Address) (value uint64, err error)
 }
 
 type HighLevelStorage interface {
@@ -238,10 +238,10 @@ func (i *EmptyRuntimeInterface) Hash(
 	return nil
 }
 
-func (i EmptyRuntimeInterface) GetStorageUsed(_ Address) uint64 {
-	return 0
+func (i EmptyRuntimeInterface) GetStorageUsed(_ Address) (uint64,error) {
+	return 0, nil
 }
 
-func (i EmptyRuntimeInterface) GetStorageCapacity(_ Address) uint64 {
-	return 0
+func (i EmptyRuntimeInterface) GetStorageCapacity(_ Address) (uint64,error) {
+	return 0, nil
 }
