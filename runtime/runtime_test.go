@@ -39,7 +39,6 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
-	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -2377,7 +2376,14 @@ func TestRuntimeCyclicImport(t *testing.T) {
 
 	require.Error(t, err)
 	require.IsType(t, Error{}, err)
-	assert.IsType(t, ast.CyclicImportsError{}, err.(Error).Unwrap())
+
+	// Temporary to help catch checking error
+	ee := err.(Error).Unwrap()
+
+	require.IsType(t, &ExtendedParsingCheckingError{}, ee)
+	eee := ee.(*ExtendedParsingCheckingError)
+
+	assert.IsType(t, ast.CyclicImportsError{}, eee.Unwrap())
 }
 
 func ArrayValueFromBytes(bytes []byte) *interpreter.ArrayValue {
@@ -3338,7 +3344,7 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 		require.IsType(t, Error{}, err)
 		err = err.(Error).Unwrap()
 
-		errs := checker.ExpectCheckerErrors(t, err, 1)
+		errs := ExpectCheckerErrors(t, err, 1)
 
 		assert.IsType(t, &sema.InvalidTopLevelDeclarationError{}, errs[0])
 	})
@@ -4773,4 +4779,39 @@ func TestRuntime(t *testing.T) {
 	} {
 		test(testCase)
 	}
+}
+
+// Copied to prevent import cycle while importing from tests/checker package
+// while using ExtendedParsingCheckingError
+// This now required `runtime` to get access `ExtendedParsingCheckingError`
+// which in turns requires `runtime` so any import of original function from
+// any other module will introduce cycle
+// If we decide to keep extended debug functionality beyond original
+// debug possible race condition, this would need to be refactored
+func ExpectCheckerErrors(t *testing.T, err error, count int) []error {
+	if count <= 0 && err == nil {
+		return nil
+	}
+
+	require.Error(t, err)
+
+	// Temporary to help catch checking error
+	ee, is := err.(*ExtendedParsingCheckingError)
+	if is {
+		err = ee.Unwrap()
+	}
+
+	assert.IsType(t, &sema.CheckerError{}, err)
+
+	errs := err.(*sema.CheckerError).Errors
+
+	require.Len(t, errs, count)
+
+	// Get the error message, to check that it can be successfully generated
+
+	for _, checkerErr := range errs {
+		_ = checkerErr.Error()
+	}
+
+	return errs
 }

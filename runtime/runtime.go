@@ -298,6 +298,13 @@ func (r *interpreterRuntime) ExecuteTransaction(
 
 	checker, err := r.parseAndCheckProgram(script, runtimeInterface, location, functions, nil, false)
 	if err != nil {
+		ee, is := err.(*ExtendedParsingCheckingError)
+		if is {
+			ee.RuntimeStorage = runtimeStorage
+			ee.Functions = functions
+			//return newError(ee.Err)
+			return newError(ee)
+		}
 		return newError(err)
 	}
 
@@ -516,21 +523,42 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 			program, err = runtimeInterface.GetCachedProgram(location)
 		})
 		if err != nil {
-			return nil, err
+			return nil, &ExtendedParsingCheckingError{
+				Err:       err,
+				Code:      code,
+				Location:  location,
+				Functions: functions,
+				Options:   options,
+				UseCache:  useCache,
+			}
 		}
 	}
 
 	if program == nil {
 		program, err = r.parse(location, code, runtimeInterface)
 		if err != nil {
-			return nil, err
+			return nil, &ExtendedParsingCheckingError{
+				Err:       err,
+				Code:      code,
+				Location:  location,
+				Functions: functions,
+				Options:   options,
+				UseCache:  useCache,
+			}
 		}
 	}
 
 	importResolver := r.importResolver(runtimeInterface)
 	err = program.ResolveImports(importResolver)
 	if err != nil {
-		return nil, err
+		return nil, &ExtendedParsingCheckingError{
+			Err:       err,
+			Code:      code,
+			Location:  location,
+			Functions: functions,
+			Options:   options,
+			UseCache:  useCache,
+		}
 	}
 
 	valueDeclarations := functions.ToValueDeclarations()
@@ -568,12 +596,28 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 		)...,
 	)
 	if err != nil {
-		return nil, err
+		return nil, &ExtendedParsingCheckingError{
+			Err:       err,
+			Code:      code,
+			Location:  location,
+			Functions: functions,
+			Options:   options,
+			UseCache:  useCache,
+			Checker:   checker,
+		}
 	}
 
 	err = checker.Check()
 	if err != nil {
-		return nil, err
+		return nil, &ExtendedParsingCheckingError{
+			Err:       err,
+			Code:      code,
+			Location:  location,
+			Functions: functions,
+			Options:   options,
+			UseCache:  useCache,
+			Checker:   checker,
+		}
 	}
 
 	// After the program has passed semantic analysis, cache the program AST.
