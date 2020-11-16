@@ -27,7 +27,11 @@ import (
 
 func TestBuf_writeULEB128(t *testing.T) {
 
+	t.Parallel()
+
 	t.Run("DWARF spec", func(t *testing.T) {
+
+		t.Parallel()
 
 		// DWARF Debugging Information Format, Version 3, page 140
 
@@ -53,6 +57,13 @@ func TestBuf_writeULEB128(t *testing.T) {
 	})
 
 	t.Run("write: max byte count", func(t *testing.T) {
+
+		t.Parallel()
+
+		// This test ensures that only up to the maximum number of bytes are written
+		// when writing a LEB128-encoded 32-bit number (see max32bitLEB128ByteCount),
+		// i.e. test that only up to 5 bytes are written.
+
 		var b buf
 		err := b.writeULEB128(math.MaxUint32)
 		require.NoError(t, err)
@@ -60,6 +71,14 @@ func TestBuf_writeULEB128(t *testing.T) {
 	})
 
 	t.Run("read: max byte count", func(t *testing.T) {
+
+		t.Parallel()
+
+		// This test ensures that only up to the maximum number of bytes are read
+		// when reading a LEB128-encoded 32-bit number (see max32bitLEB128ByteCount),
+		// i.e. test that only 5 of the 8 given bytes are read,
+		// to ensure the LEB128 parser doesn't keep reading infinitely.
+
 		b := buf{data: []byte{0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88}}
 		_, err := b.readULEB128()
 		require.NoError(t, err)
@@ -104,6 +123,10 @@ func TestBuf_writeSLEB128(t *testing.T) {
 
 		t.Parallel()
 
+		// This test ensures that only up to the maximum number of bytes are written
+		// when writing a LEB128-encoded 32-bit number (see max32bitLEB128ByteCount),
+		// i.e. test that only up to 5 bytes are written.
+
 		var b buf
 		err := b.writeSLEB128(math.MaxInt32)
 		require.NoError(t, err)
@@ -118,6 +141,11 @@ func TestBuf_writeSLEB128(t *testing.T) {
 	t.Run("read: max byte count", func(t *testing.T) {
 
 		t.Parallel()
+
+		// This test ensures that only up to the maximum number of bytes are read
+		// when reading a LEB128-encoded 32-bit number (see max32bitLEB128ByteCount),
+		// i.e. test that only 5 of the 8 given bytes are read,
+		// to ensure the LEB128 parser doesn't keep reading infinitely.
 
 		b := buf{data: []byte{0x81, 0x82, 0x83, 0x84, 0x85, 0x86, 0x87, 0x88}}
 		_, err := b.readSLEB128()
