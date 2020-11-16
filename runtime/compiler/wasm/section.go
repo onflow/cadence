@@ -18,7 +18,24 @@
 
 package wasm
 
-// sectionID is the ID of a section in the WASM binary
+// sectionID is the ID of a section in the WASM binary.
+//
+// See https://webassembly.github.io/spec/core/binary/modules.html#sections:
+//
+// The following section ids are used:
+//
+// 0 = custom section
+// 1 = type section
+// 2 = import section
+// 3 = function section
+// 4 = table section
+// 5 = memory section
+// 6 = global section
+// 7 = export section
+// 8 = start section
+// 9 = element section
+// 10 = code section
+// 11 = data section
 //
 type sectionID byte
 
