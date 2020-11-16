@@ -239,7 +239,7 @@ func TestWasmReader_readTypeSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 7 (LEB128)
+			// section size: 0 (LEB128)
 			0x80, 0x80, 0x80, 0x80, 0x0,
 		})
 		require.Error(t, err)
