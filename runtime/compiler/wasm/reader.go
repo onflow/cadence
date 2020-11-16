@@ -31,6 +31,10 @@ type WASMReader struct {
 
 // readMagicAndVersion reads the magic byte sequence and version at the beginning of the WASM binary
 //
+// See https://webassembly.github.io/spec/core/binary/modules.html#binary-module:
+//
+// The encoding of a module starts with a preamble containing a 4-byte magic number [...] and a version field.
+//
 func (r *WASMReader) readMagicAndVersion() error {
 
 	// Read the magic

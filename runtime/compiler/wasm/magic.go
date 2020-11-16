@@ -18,11 +18,24 @@
 
 package wasm
 
-// wasmMagic is the magic byte sequence that appears at the start of the WASM binary
+// wasmMagic is the magic byte sequence that appears at the start of the WASM binary.
+//
+// See https://webassembly.github.io/spec/core/binary/modules.html#binary-module:
+//
+// The encoding of a module starts with a preamble containing a 4-byte magic number (the string '\0asm')
+//
+// magic ::= 0x00 0x61 0x73 0x6d
 //
 var wasmMagic = []byte{0x00, 0x61, 0x73, 0x6d}
 
 // wasmVersion is the byte sequence that appears after wasmMagic
-// and indicated the version of the WASM binary
+// and indicated the version of the WASM binary.
+//
+// See https://webassembly.github.io/spec/core/binary/modules.html#binary-module:
+//
+// The encoding of a module starts with [...] a version field.
+// The current version of the WebAssembly binary format is 1.
+//
+// version ::= 0x01 0x00 0x00 0x00
 //
 var wasmVersion = []byte{0x01, 0x00, 0x00, 0x00}
