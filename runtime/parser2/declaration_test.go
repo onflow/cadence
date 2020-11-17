@@ -1226,7 +1226,9 @@ func TestParseImportDeclaration(t *testing.T) {
 			[]ast.Declaration{
 				&ast.ImportDeclaration{
 					Identifiers: nil,
-					Location:    ast.AddressLocation{0x42},
+					Location: ast.AddressLocation{
+						Address: common.BytesToAddress([]byte{0x42}),
+					},
 					LocationPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -1339,7 +1341,9 @@ func TestParseImportDeclaration(t *testing.T) {
 							Pos:        ast.Position{Line: 1, Column: 20, Offset: 20},
 						},
 					},
-					Location:    ast.AddressLocation{0x42},
+					Location: ast.AddressLocation{
+						Address: common.BytesToAddress([]byte{0x42}),
+					},
 					LocationPos: ast.Position{Line: 1, Column: 29, Offset: 29},
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -3823,7 +3827,9 @@ func TestParseImportWithAddress(t *testing.T) {
 		[]ast.Declaration{
 			&ast.ImportDeclaration{
 				Identifiers: nil,
-				Location:    ast.AddressLocation{18, 52},
+				Location: ast.AddressLocation{
+					Address: common.BytesToAddress([]byte{0x12, 0x34}),
+				},
 				Range: ast.Range{
 					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 					EndPos:   ast.Position{Offset: 21, Line: 2, Column: 20},
@@ -3840,7 +3846,7 @@ func TestParseImportWithIdentifiers(t *testing.T) {
 	t.Parallel()
 
 	result, errs := ParseProgram(`
-        import A, b from 0x0
+        import A, b from 0x1
 	`)
 	require.Empty(t, errs)
 
@@ -3857,7 +3863,9 @@ func TestParseImportWithIdentifiers(t *testing.T) {
 						Pos:        ast.Position{Offset: 19, Line: 2, Column: 18},
 					},
 				},
-				Location: ast.AddressLocation{0},
+				Location: ast.AddressLocation{
+					Address: common.BytesToAddress([]byte{0x1}),
+				},
 				Range: ast.Range{
 					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 					EndPos:   ast.Position{Offset: 28, Line: 2, Column: 27},
@@ -3939,7 +3947,7 @@ func TestParseImportWithFromIdentifier(t *testing.T) {
 	t.Parallel()
 
 	result, errs := ParseProgram(`
-        import from from 0x0
+        import from from 0x1
 	`)
 	require.Empty(t, errs)
 
@@ -3952,7 +3960,9 @@ func TestParseImportWithFromIdentifier(t *testing.T) {
 						Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
 					},
 				},
-				Location: ast.AddressLocation{0},
+				Location: ast.AddressLocation{
+					Address: common.BytesToAddress([]byte{0x1}),
+				},
 				Range: ast.Range{
 					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 					EndPos:   ast.Position{Offset: 28, Line: 2, Column: 27},

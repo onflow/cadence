@@ -578,7 +578,9 @@ func parseHexadecimalLocation(literal string) ast.AddressLocation {
 		panic(err)
 	}
 
-	return address
+	return ast.AddressLocation{
+		Address: common.BytesToAddress(address),
+	}
 }
 
 // parseEventDeclaration parses an event declaration.
