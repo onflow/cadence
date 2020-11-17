@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -18,77 +19,76 @@ func TestStringer(t *testing.T) {
 		expected string
 	}
 
-
 	ufix64, _ := NewUFix64("64.01")
 	fix64, _ := NewFix64("-32.11")
 
 	stringerTests := map[string]testCase{
 		"UInt": {
-			value: NewUInt(10),
+			value:    NewUInt(10),
 			expected: "10",
 		},
 		"UInt8": {
-			value: NewUInt8(8),
+			value:    NewUInt8(8),
 			expected: "8",
 		},
 		"UInt16": {
-			value: NewUInt16(16),
+			value:    NewUInt16(16),
 			expected: "16",
 		},
 		"UInt32": {
-			value: NewUInt32(32),
+			value:    NewUInt32(32),
 			expected: "32",
 		},
 		"UInt64": {
-			value: NewUInt64(64),
+			value:    NewUInt64(64),
 			expected: "64",
 		},
 		"UInt128": {
-			value: NewUInt128(128),
+			value:    NewUInt128(128),
 			expected: "128",
 		},
 		"UInt256": {
-			value: NewUInt256(256),
+			value:    NewUInt256(256),
 			expected: "256",
 		},
 		"Int8": {
-			value: NewInt8(-8),
+			value:    NewInt8(-8),
 			expected: "-8",
 		},
 		"Int16": {
-			value: NewInt16(-16),
+			value:    NewInt16(-16),
 			expected: "-16",
 		},
 		"Int32": {
-			value: NewInt32(-32),
+			value:    NewInt32(-32),
 			expected: "-32",
 		},
 		"Int64": {
-			value: NewInt64(-64),
+			value:    NewInt64(-64),
 			expected: "-64",
 		},
 		"Int128": {
-			value: NewInt128(-128),
+			value:    NewInt128(-128),
 			expected: "-128",
 		},
 		"Int256": {
-			value: NewInt256(-256),
+			value:    NewInt256(-256),
 			expected: "-256",
 		},
 		"Word8": {
-			value: NewWord8(8),
+			value:    NewWord8(8),
 			expected: "8",
 		},
 		"Word16": {
-			value: NewWord16(16),
+			value:    NewWord16(16),
 			expected: "16",
 		},
 		"Word32": {
-			value: NewWord32(32),
+			value:    NewWord32(32),
 			expected: "32",
 		},
 		"Word64": {
-			value: NewWord64(64),
+			value:    NewWord64(64),
 			expected: "64",
 		},
 		"UFix64": {
@@ -100,27 +100,27 @@ func TestStringer(t *testing.T) {
 			expected: "-32.11000000",
 		},
 		"Void": {
-			value: NewVoid(),
+			value:    NewVoid(),
 			expected: "()",
 		},
 		"true": {
-			value: NewBool(true),
+			value:    NewBool(true),
 			expected: "true",
 		},
 		"false": {
-			value: NewBool(false),
+			value:    NewBool(false),
 			expected: "false",
 		},
 		"some": {
-			value: NewOptional(ufix64),
+			value:    NewOptional(ufix64),
 			expected: "64.01000000",
 		},
 		"nil": {
-			value: NewOptional(nil),
+			value:    NewOptional(nil),
 			expected: "nil",
 		},
 		"String": {
-			value: NewString("Flow ridah!"),
+			value:    NewString("Flow ridah!"),
 			expected: "\"Flow ridah!\"",
 		},
 		"Array": {
@@ -133,18 +133,18 @@ func TestStringer(t *testing.T) {
 		"Dictionary": {
 			value: NewDictionary([]KeyValuePair{
 				{
-					Key: NewString("key"),
+					Key:   NewString("key"),
 					Value: NewString("value"),
 				},
 			}),
 			expected: "{\"key\": \"value\"}",
 		},
 		"Bytes": {
-			value: NewBytes([]byte{0x1, 0x2}),
+			value:    NewBytes([]byte{0x1, 0x2}),
 			expected: "[0x1, 0x2]",
 		},
 		"Address": {
-			value: NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
+			value:    NewAddress([8]byte{0, 0, 0, 0, 0, 0, 0, 1}),
 			expected: "0x1",
 		},
 		"struct": {
@@ -211,7 +211,7 @@ func TestStringer(t *testing.T) {
 		"Link": {
 			value: NewLink(
 				Path{
-					Domain: "storage",
+					Domain:     "storage",
 					Identifier: "foo",
 				},
 				"Int",
@@ -220,13 +220,13 @@ func TestStringer(t *testing.T) {
 		},
 		"Path": {
 			value: Path{
-				Domain: "storage",
+				Domain:     "storage",
 				Identifier: "foo",
 			},
 			expected: "/storage/foo",
 		},
 		"Type": {
-			value: TypeValue{StaticType: "Int"},
+			value:    TypeValue{StaticType: "Int"},
 			expected: "Type<Int>()",
 		},
 		"Capability": {
@@ -239,7 +239,7 @@ func TestStringer(t *testing.T) {
 		},
 	}
 
-	test := func (name string, testCase testCase) {
+	test := func(name string, testCase testCase) {
 
 		t.Run(name, func(t *testing.T) {
 
@@ -445,4 +445,29 @@ func TestToBigEndianBytes(t *testing.T) {
 			})
 		}
 	}
+}
+
+func TestOptional_Type(t *testing.T) {
+
+	t.Run("none", func(t *testing.T) {
+
+		require.Equal(t,
+			OptionalType{
+				Type: NeverType{},
+			},
+			Optional{}.Type(),
+		)
+	})
+
+	t.Run("some", func(t *testing.T) {
+
+		require.Equal(t,
+			OptionalType{
+				Type: Int8Type{},
+			},
+			Optional{
+				Value: Int8(2),
+			}.Type(),
+		)
+	})
 }
