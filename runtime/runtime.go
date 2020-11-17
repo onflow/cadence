@@ -1162,9 +1162,21 @@ func (r *interpreterRuntime) instantiateContract(
 	argumentCount := len(argumentTypes)
 	parameterCount := len(parameterTypes)
 
-	if argumentCount != parameterCount {
-		return nil, fmt.Errorf("invalid argument count: expected %d, got %d", parameterCount, argumentCount)
+	if argumentCount < parameterCount {
+		return nil, fmt.Errorf(
+			"invalid argument count, too few arguments: expected %d, got %d, next missing argument: `%s`",
+			parameterCount, argumentCount,
+			parameterTypes[argumentCount],
+		)
+	} else if argumentCount > parameterCount {
+		return nil, fmt.Errorf(
+			"invalid argument count, too many arguments: expected %d, got %d",
+			parameterCount,
+			argumentCount,
+		)
 	}
+
+	// argumentCount now equals to parameterCount
 
 	// Check arguments match parameter
 
