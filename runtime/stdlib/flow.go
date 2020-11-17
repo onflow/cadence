@@ -21,6 +21,7 @@ package stdlib
 import (
 	"fmt"
 	"math/rand"
+	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -181,6 +182,23 @@ const flowLocationID = "flow"
 
 func (l FlowLocation) ID() ast.LocationID {
 	return ast.NewLocationID(flowLocationID)
+}
+
+func (l FlowLocation) TypeID(qualifiedIdentifier string) ast.TypeID {
+	return ast.NewTypeID(
+		flowLocationID,
+		qualifiedIdentifier,
+	)
+}
+
+func (l FlowLocation) QualifiedIdentifier(typeID ast.TypeID) string {
+	pieces := strings.SplitN(string(typeID), ".", 2)
+
+	if len(pieces) < 2 {
+		return ""
+	}
+
+	return pieces[1]
 }
 
 // built-in event types

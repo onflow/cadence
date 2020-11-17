@@ -24,6 +24,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 func TestIdentifierLocation_MarshalJSON(t *testing.T) {
@@ -70,7 +72,10 @@ func TestAddressLocation_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	loc := AddressLocation([]byte{1})
+	loc := AddressLocation{
+		Address: common.BytesToAddress([]byte{1}),
+		Name:    "A",
+	}
 
 	actual, err := json.Marshal(loc)
 	require.NoError(t, err)
@@ -79,7 +84,8 @@ func TestAddressLocation_MarshalJSON(t *testing.T) {
 		`
         {
             "Type": "AddressLocation",
-            "Address": "0x1"
+            "Address": "0x1",
+            "Name": "A"
         }
         `,
 		string(actual),

@@ -58,7 +58,7 @@ func PrettyPrintError(writer io.Writer, err error, filename string, codes map[st
 				case ast.StringLocation:
 					filename = string(importLocation)
 				case ast.AddressLocation:
-					filename = importLocation.ToAddress().ShortHexWithPrefix()
+					filename = importLocation.Address.ShortHexWithPrefix()
 				case ast.IdentifierLocation:
 					filename = string(importLocation)
 				}

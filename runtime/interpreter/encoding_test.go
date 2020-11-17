@@ -461,9 +461,14 @@ func TestEncodeDecodeComposite(t *testing.T) {
 	})
 
 	t.Run("empty, address location", func(t *testing.T) {
+
 		expected := NewCompositeValue(
-			ast.AddressLocation{0x1},
-			"A.0x1.TestStruct",
+			ast.AddressLocation{
+				Address: common.BytesToAddress([]byte{0x1}),
+				// NOTE: not stored, inferred from type ID
+				Name: "TestContract",
+			},
+			"A.0x1.TestContract.TestStruct",
 			common.CompositeKindStructure,
 			map[string]Value{},
 			nil,
@@ -472,7 +477,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 		testEncodeDecode(t,
 			encodeDecodeTest{
-				value: expected,
+				decodedValue: expected,
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCompositeValue,
@@ -488,10 +493,12 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					0x1,
 					// key 1
 					0x1,
-					// UTF-8 string, length 16
-					0x70,
-					0x41, 0x2e, 0x30, 0x78, 0x31, 0x2e, 0x54, 0x65,
-					0x73, 0x74, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+					// UTF-8 string, length 29
+					0x78, 0x1D,
+					0x41,
+					0x2e, 0x30, 0x78, 0x31,
+					0x2e, 0x54, 0x65, 0x73, 0x74, 0x43, 0x6F, 0x6E, 0x74, 0x72, 0x61, 0x63, 0x74,
+					0x2e, 0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
 					// key 2
 					0x2,
 					// positive integer 1
@@ -501,6 +508,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					// map, 0 pairs of items follow
 					0xa0,
 				},
+				decodeOnly: true,
 			},
 		)
 	})
@@ -545,11 +553,11 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 	t.Run("empty, address location", func(t *testing.T) {
 		expected := NewCompositeValue(
-			ast.AddressContractLocation{
-				AddressLocation: ast.AddressLocation{0x1},
-				Name:            "TestStruct",
+			ast.AddressLocation{
+				Address: common.BytesToAddress([]byte{0x1}),
+				Name:    "TestStruct",
 			},
-			"AC.0x1.TestStruct",
+			"A.0x1.TestStruct",
 			common.CompositeKindStructure,
 			map[string]Value{},
 			nil,
@@ -567,7 +575,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					// key 0
 					0x0,
 					// tag
-					0xd8, cborTagAddressContractLocation,
+					0xd8, cborTagAddressLocation,
 					// map, 4 pairs of items follow
 					0xa2,
 					// key 0
@@ -585,8 +593,8 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					// key 1
 					0x1,
 					// UTF-8 string, length 17
-					0x71,
-					0x41, 0x43, 0x2e, 0x30, 0x78, 0x31, 0x2e, 0x54,
+					0x70,
+					0x41, 0x2e, 0x30, 0x78, 0x31, 0x2e, 0x54,
 					0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
 					// key 2
 					0x2,
@@ -601,7 +609,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		)
 	})
 
-	t.Run("empty, address contract location, address too long", func(t *testing.T) {
+	t.Run("empty, address location, address too long", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				encoded: []byte{
@@ -612,7 +620,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					// key 0
 					0x0,
 					// tag
-					0xd8, cborTagAddressContractLocation,
+					0xd8, cborTagAddressLocation,
 					// map, 4 pairs of items follow
 					0xa2,
 					// key 0
@@ -730,7 +738,7 @@ func TestEncodeDecodeIntValue(t *testing.T) {
 					// byte string, length 1
 					0x41,
 					// `-42` in decimal is is `0x2a` in hex.
-					// CBOR requires negative values to be encoded as `-1-n`, which is `-n - 1`, 
+					// CBOR requires negative values to be encoded as `-1-n`, which is `-n - 1`,
 					// which is `0x2a - 0x01`, which equals to `0x29`.
 					0x29,
 				},
