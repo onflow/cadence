@@ -79,8 +79,17 @@ func NewOptional(value Value) Optional {
 
 func (Optional) isValue() {}
 
-func (Optional) Type() Type {
-	return nil
+func (o Optional) Type() Type {
+	var innerType Type
+	if o.Value == nil {
+		innerType = NeverType{}
+	} else {
+		innerType = o.Value.Type()
+	}
+
+	return OptionalType{
+		Type: innerType,
+	}
 }
 
 func (o Optional) ToGoValue() interface{} {
@@ -938,11 +947,17 @@ func (v Dictionary) ToGoValue() interface{} {
 }
 
 func (v Dictionary) String() string {
-	pairs := make([]struct{Key string; Value string}, len(v.Pairs))
+	pairs := make([]struct {
+		Key   string
+		Value string
+	}, len(v.Pairs))
 
 	for i, pair := range v.Pairs {
-		pairs[i] = struct{Key string;Value string}{
-			Key: pair.Key.String(),
+		pairs[i] = struct {
+			Key   string
+			Value string
+		}{
+			Key:   pair.Key.String(),
 			Value: pair.Value.String(),
 		}
 	}
@@ -994,7 +1009,10 @@ func (v Struct) String() string {
 }
 
 func formatComposite(typeID string, fields []Field, values []Value) string {
-	preparedFields := make([]struct{Name string; Value string}, 0, len(fields))
+	preparedFields := make([]struct {
+		Name  string
+		Value string
+	}, 0, len(fields))
 	for i, field := range fields {
 		value := values[i]
 		preparedFields = append(preparedFields,
@@ -1002,7 +1020,7 @@ func formatComposite(typeID string, fields []Field, values []Value) string {
 				Name  string
 				Value string
 			}{
-				Name: field.Identifier,
+				Name:  field.Identifier,
 				Value: value.String(),
 			},
 		)
