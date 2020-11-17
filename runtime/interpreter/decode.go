@@ -25,6 +25,7 @@ import (
 	"math"
 	"math/big"
 	"strconv"
+	"strings"
 
 	"github.com/fxamacker/cbor/v2"
 
@@ -363,26 +364,9 @@ func (d *Decoder) decodeLocation(l interface{}) (ast.Location, error) {
 	case cborTagIdentifierLocation:
 		return d.decodeIdentifierLocation(content)
 
-	case cborTagAddressContractLocation:
-		return d.decodeAddressContractLocation(content)
-
 	default:
 		return nil, fmt.Errorf("invalid location encoding tag: %d", tag.Number)
 	}
-}
-
-func (d *Decoder) decodeAddressLocation(v interface{}) (ast.Location, error) {
-	b, ok := v.([]byte)
-	if !ok {
-		return nil, fmt.Errorf("invalid address location encoding: %T", v)
-	}
-
-	err := d.checkAddressLength(b)
-	if err != nil {
-		return nil, err
-	}
-
-	return ast.AddressLocation(b), nil
 }
 
 func (d *Decoder) decodeStringLocation(v interface{}) (ast.Location, error) {
@@ -401,18 +385,37 @@ func (d *Decoder) decodeIdentifierLocation(v interface{}) (ast.Location, error) 
 	return ast.IdentifierLocation(s), nil
 }
 
-func (d *Decoder) decodeAddressContractLocation(v interface{}) (ast.Location, error) {
+func (d *Decoder) decodeAddressLocation(v interface{}) (ast.Location, error) {
+
+	// If the encoded location is just a byte slice,
+	// it is the address and no name is provided
+
+	encodedAddress, ok := v.([]byte)
+	if ok {
+		err := d.checkAddressLength(encodedAddress)
+		if err != nil {
+			return nil, err
+		}
+
+		return ast.AddressLocation{
+			Address: common.BytesToAddress(encodedAddress),
+		}, nil
+	}
+
+	// Otherwise, the encoded location is expected to be a map,
+	// which includes both address and name
+
 	encoded, ok := v.(map[interface{}]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid address contract location encoding: %T", v)
+		return nil, fmt.Errorf("invalid address location encoding: %T", v)
 	}
 
 	// Address
 
-	field1 := encoded[encodedAddressContractLocationAddressFieldKey]
-	encodedAddress, ok := field1.([]byte)
+	field1 := encoded[encodedAddressLocationAddressFieldKey]
+	encodedAddress, ok = field1.([]byte)
 	if !ok {
-		return nil, fmt.Errorf("invalid address contract location address encoding: %T", field1)
+		return nil, fmt.Errorf("invalid address location address encoding: %T", field1)
 	}
 
 	err := d.checkAddressLength(encodedAddress)
@@ -422,15 +425,15 @@ func (d *Decoder) decodeAddressContractLocation(v interface{}) (ast.Location, er
 
 	// Name
 
-	field2 := encoded[encodedAddressContractLocationNameFieldKey]
+	field2 := encoded[encodedAddressLocationNameFieldKey]
 	name, ok := field2.(string)
 	if !ok {
-		return nil, fmt.Errorf("invalid address contract location name encoding: %T", field2)
+		return nil, fmt.Errorf("invalid address location name encoding: %T", field2)
 	}
 
-	return ast.AddressContractLocation{
-		AddressLocation: encodedAddress,
-		Name:            name,
+	return ast.AddressLocation{
+		Address: common.BytesToAddress(encodedAddress),
+		Name:    name,
 	}, nil
 }
 
@@ -456,6 +459,29 @@ func (d *Decoder) decodeComposite(v interface{}, path []string) (*CompositeValue
 		return nil, fmt.Errorf("invalid composite type ID encoding: %T", field2)
 	}
 	typeID := sema.TypeID(encodedTypeID)
+
+	// Special case: The decoded location is an address location without name.
+	//
+	// In the first version of the storage format, accounts could only store one contract
+	// instead of several contracts (separated by name), so composite's locations were
+	// address locations without a name, i.e. just the bare address.
+	//
+	// An update added support for multiple contracts per account, which added names to address locations:
+	// Each contract of an account is stored in a distinct location.
+	//
+	// So to keep backwards-compatibility:
+	// If the location is an address location without a name,
+	// then infer the name from the type ID.
+
+	if addressLocation, ok := location.(ast.AddressLocation); ok && addressLocation.Name == "" {
+		qualifiedIdentifier := location.QualifiedIdentifier(typeID)
+		parts := strings.SplitN(qualifiedIdentifier, ".", 2)
+
+		location = ast.AddressLocation{
+			Address: addressLocation.Address,
+			Name:    parts[0],
+		}
+	}
 
 	// Kind
 

@@ -82,7 +82,7 @@ func validTopLevelDeclarations(location ast.Location) []common.DeclarationKind {
 	switch location.(type) {
 	case TransactionLocation:
 		return validTopLevelDeclarationsInTransaction
-	case AddressLocation, AddressContractLocation:
+	case AddressLocation:
 		return validTopLevelDeclarationsInAccountCode
 	}
 
@@ -106,8 +106,6 @@ func reportMetric(
 
 	report(metrics, elapsed)
 }
-
-const contractKey = "contract"
 
 // interpreterRuntime is a interpreter-based version of the Flow runtime.
 type interpreterRuntime struct{}
@@ -708,9 +706,7 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 
 				switch location := location.(type) {
 				case AddressLocation:
-					address = location.ToAddress()
-				case AddressContractLocation:
-					address = location.AddressLocation.ToAddress()
+					address = location.Address
 				default:
 					panic(runtimeErrors.NewUnreachableError())
 				}
@@ -824,11 +820,11 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 		}
 
 		var code []byte
-		if addressContractLocation, ok := location.(AddressContractLocation); ok {
+		if addressLocation, ok := location.(AddressLocation); ok {
 			wrapPanic(func() {
 				code, err = runtimeInterface.GetAccountContractCode(
-					addressContractLocation.AddressLocation.ToAddress(),
-					addressContractLocation.Name,
+					addressLocation.Address,
+					addressLocation.Name,
 				)
 			})
 		} else {
@@ -1053,7 +1049,6 @@ func (r *interpreterRuntime) writeContract(
 	name string,
 	contractValue interpreter.OptionalValue,
 ) {
-
 	runtimeStorage.writeValue(
 		addressValue.ToAddress(),
 		formatContractKey(name),
@@ -1062,12 +1057,9 @@ func (r *interpreterRuntime) writeContract(
 }
 
 func formatContractKey(name string) string {
-	if name == "" {
-		return contractKey
-	}
+	const contractKey = "contract"
 
 	// \x1F = Information Separator One
-
 	return fmt.Sprintf("%s\x1F%s", contractKey, name)
 }
 
@@ -1099,18 +1091,10 @@ func (r *interpreterRuntime) loadContract(
 		var storedValue interpreter.OptionalValue = interpreter.NilValue{}
 
 		switch location := compositeType.Location.(type) {
-		case AddressLocation:
-			address := location.ToAddress()
-			storedValue = runtimeStorage.readValue(
-				address,
-				contractKey,
-				false,
-			)
 
-		case AddressContractLocation:
-			address := location.AddressLocation.ToAddress()
+		case AddressLocation:
 			storedValue = runtimeStorage.readValue(
-				address,
+				location.Address,
 				formatContractKey(location.Name),
 				false,
 			)
@@ -1400,9 +1384,9 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			// Check the code
 
-			location := AddressContractLocation{
-				AddressLocation: addressValue[:],
-				Name:            nameArgument,
+			location := AddressLocation{
+				Address: address,
+				Name:    nameArgument,
 			}
 
 			// NOTE: do NOT use the cache!
@@ -1529,7 +1513,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	name string,
 	code []byte,
 	addressValue interpreter.AddressValue,
-	location AddressContractLocation,
+	location AddressLocation,
 	checker *sema.Checker,
 	contractType *sema.CompositeType,
 	constructorArguments []interpreter.Value,

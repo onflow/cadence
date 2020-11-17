@@ -499,13 +499,13 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 		},
 		resolveLocation: func(identifiers []ast.Identifier, location ast.Location) (result []sema.ResolvedLocation) {
 
-			// Resolve each identifier as an address contract location
+			// Resolve each identifier as an address location
 
 			for _, identifier := range identifiers {
 				result = append(result, sema.ResolvedLocation{
-					Location: ast.AddressContractLocation{
-						AddressLocation: location.(ast.AddressLocation),
-						Name:            identifier.Identifier,
+					Location: ast.AddressLocation{
+						Address: location.(ast.AddressLocation).Address,
+						Name:    identifier.Identifier,
 					},
 					Identifiers: []ast.Identifier{
 						identifier,

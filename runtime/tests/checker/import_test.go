@@ -87,7 +87,7 @@ func TestCheckRepeatedImportResolution(t *testing.T) {
 
 	t.Parallel()
 
-	importedAddressLocation := ast.AddressLocation{0x1}
+	importedAddress := common.BytesToAddress([]byte{0x1})
 
 	importedCheckerX, err := ParseAndCheckWithOptions(t,
 		`
@@ -98,9 +98,9 @@ func TestCheckRepeatedImportResolution(t *testing.T) {
           pub let x = test()
         `,
 		ParseAndCheckOptions{
-			Location: ast.AddressContractLocation{
-				AddressLocation: importedAddressLocation,
-				Name:            "x",
+			Location: ast.AddressLocation{
+				Address: importedAddress,
+				Name:    "x",
 			},
 		},
 	)
@@ -115,9 +115,9 @@ func TestCheckRepeatedImportResolution(t *testing.T) {
           pub let y = test()
         `,
 		ParseAndCheckOptions{
-			Location: ast.AddressContractLocation{
-				AddressLocation: importedAddressLocation,
-				Name:            "y",
+			Location: ast.AddressLocation{
+				Address: importedAddress,
+				Name:    "y",
 			},
 		},
 	)
@@ -134,9 +134,9 @@ func TestCheckRepeatedImportResolution(t *testing.T) {
 					func(identifiers []ast.Identifier, location ast.Location) (result []sema.ResolvedLocation) {
 						for _, identifier := range identifiers {
 							result = append(result, sema.ResolvedLocation{
-								Location: ast.AddressContractLocation{
-									AddressLocation: importedAddressLocation,
-									Name:            identifier.Identifier,
+								Location: ast.AddressLocation{
+									Address: importedAddress,
+									Name:    identifier.Identifier,
 								},
 								Identifiers: []ast.Identifier{
 									identifier,
@@ -148,9 +148,9 @@ func TestCheckRepeatedImportResolution(t *testing.T) {
 				),
 				sema.WithImportHandler(
 					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
-						addressContractLocation := location.(ast.AddressContractLocation)
+						addressLocation := location.(ast.AddressLocation)
 						var importedChecker *sema.Checker
-						switch addressContractLocation.Name {
+						switch addressLocation.Name {
 						case "x":
 							importedChecker = importedCheckerX
 						case "y":
@@ -210,7 +210,7 @@ func TestCheckImportResolutionSplit(t *testing.T) {
 
 	t.Parallel()
 
-	importedAddressLocation := ast.AddressLocation{0x1}
+	importedAddress := common.BytesToAddress([]byte{0x1})
 
 	importedCheckerX, err := ParseAndCheckWithOptions(t,
 		`
@@ -221,9 +221,9 @@ func TestCheckImportResolutionSplit(t *testing.T) {
           pub let x = test()
         `,
 		ParseAndCheckOptions{
-			Location: ast.AddressContractLocation{
-				AddressLocation: importedAddressLocation,
-				Name:            "x",
+			Location: ast.AddressLocation{
+				Address: importedAddress,
+				Name:    "x",
 			},
 		},
 	)
@@ -238,9 +238,9 @@ func TestCheckImportResolutionSplit(t *testing.T) {
           pub let y = test()
         `,
 		ParseAndCheckOptions{
-			Location: ast.AddressContractLocation{
-				AddressLocation: importedAddressLocation,
-				Name:            "y",
+			Location: ast.AddressLocation{
+				Address: importedAddress,
+				Name:    "y",
 			},
 		},
 	)
@@ -256,9 +256,9 @@ func TestCheckImportResolutionSplit(t *testing.T) {
 					func(identifiers []ast.Identifier, location ast.Location) (result []sema.ResolvedLocation) {
 						for _, identifier := range identifiers {
 							result = append(result, sema.ResolvedLocation{
-								Location: ast.AddressContractLocation{
-									AddressLocation: importedAddressLocation,
-									Name:            identifier.Identifier,
+								Location: ast.AddressLocation{
+									Address: importedAddress,
+									Name:    identifier.Identifier,
 								},
 								Identifiers: []ast.Identifier{
 									identifier,
@@ -270,9 +270,9 @@ func TestCheckImportResolutionSplit(t *testing.T) {
 				),
 				sema.WithImportHandler(
 					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
-						addressContractLocation := location.(ast.AddressContractLocation)
+						addressLocation := location.(ast.AddressLocation)
 						var importedChecker *sema.Checker
-						switch addressContractLocation.Name {
+						switch addressLocation.Name {
 						case "x":
 							importedChecker = importedCheckerX
 						case "y":

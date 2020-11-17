@@ -103,6 +103,10 @@ func (d *ImportDeclaration) MarshalJSON() ([]byte, error) {
 type Location interface {
 	// ID returns the canonical ID for this import location.
 	ID() LocationID
+	// TypeID returns a type ID for the given qualified identifier
+	TypeID(qualifiedIdentifier string) TypeID
+	// QualifiedIdentifier returns the qualified identifier for the given type ID
+	QualifiedIdentifier(typeID TypeID) string
 }
 
 func LocationsMatch(first, second Location) bool {
@@ -137,17 +141,14 @@ func LocationFromTypeID(typeID string) Location {
 			return nil
 		}
 
-		return AddressLocation(address)
-
-	case AddressContractLocationPrefix:
-		address, err := hex.DecodeString(pieces[1])
-		if err != nil {
-			return nil
+		var name string
+		if len(pieces) > 2 {
+			name = pieces[2]
 		}
 
-		return AddressContractLocation{
-			AddressLocation: address,
-			Name:            pieces[2],
+		return AddressLocation{
+			Address: common.BytesToAddress(address),
+			Name:    name,
 		}
 	}
 
@@ -155,21 +156,50 @@ func LocationFromTypeID(typeID string) Location {
 }
 
 // LocationID
-
+//
 type LocationID string
 
 func NewLocationID(parts ...string) LocationID {
 	return LocationID(strings.Join(parts, "."))
 }
 
-// IdentifierLocation
+// TypeID
+//
+type TypeID string
 
+func NewTypeID(parts ...string) TypeID {
+	return TypeID(strings.Join(parts, "."))
+}
+
+// IdentifierLocation
+//
 const IdentifierLocationPrefix = "I"
 
 type IdentifierLocation string
 
 func (l IdentifierLocation) ID() LocationID {
-	return NewLocationID(IdentifierLocationPrefix, string(l))
+	return NewLocationID(
+		IdentifierLocationPrefix,
+		string(l),
+	)
+}
+
+func (l IdentifierLocation) TypeID(qualifiedIdentifier string) TypeID {
+	return NewTypeID(
+		IdentifierLocationPrefix,
+		string(l),
+		qualifiedIdentifier,
+	)
+}
+
+func (l IdentifierLocation) QualifiedIdentifier(typeID TypeID) string {
+	pieces := strings.SplitN(string(typeID), ".", 3)
+
+	if len(pieces) < 3 {
+		return ""
+	}
+
+	return pieces[2]
 }
 
 func (l IdentifierLocation) MarshalJSON() ([]byte, error) {
@@ -182,14 +212,35 @@ func (l IdentifierLocation) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// StringLocation
-
 const StringLocationPrefix = "S"
 
+// StringLocation
+//
 type StringLocation string
 
 func (l StringLocation) ID() LocationID {
-	return NewLocationID(StringLocationPrefix, string(l))
+	return NewLocationID(
+		StringLocationPrefix,
+		string(l),
+	)
+}
+
+func (l StringLocation) TypeID(qualifiedIdentifier string) TypeID {
+	return NewTypeID(
+		StringLocationPrefix,
+		string(l),
+		qualifiedIdentifier,
+	)
+}
+
+func (l StringLocation) QualifiedIdentifier(typeID TypeID) string {
+	pieces := strings.SplitN(string(typeID), ".", 3)
+
+	if len(pieces) < 3 {
+		return ""
+	}
+
+	return pieces[2]
 }
 
 func (l StringLocation) MarshalJSON() ([]byte, error) {
@@ -202,66 +253,68 @@ func (l StringLocation) MarshalJSON() ([]byte, error) {
 	})
 }
 
-// AddressLocation
-
 const AddressLocationPrefix = "A"
 
-type AddressLocation []byte
+// AddressLocation is the location of a contract/contract interface at an address
+//
+type AddressLocation struct {
+	Address common.Address
+	Name    string
+}
 
 func (l AddressLocation) String() string {
-	return l.ToAddress().String()
+	if l.Name == "" {
+		return l.Address.String()
+	}
+
+	return fmt.Sprintf(
+		"%s.%s",
+		l.Address.String(),
+		l.Name,
+	)
 }
 
 func (l AddressLocation) ID() LocationID {
-	return NewLocationID(AddressLocationPrefix, l.ToAddress().Hex())
+	if l.Name == "" {
+		return NewLocationID(
+			AddressLocationPrefix,
+			l.Address.Hex(),
+		)
+	}
+
+	return NewLocationID(
+		AddressLocationPrefix,
+		l.Address.Hex(),
+		l.Name,
+	)
 }
 
-func (l AddressLocation) ToAddress() common.Address {
-	return common.BytesToAddress(l)
+func (l AddressLocation) TypeID(qualifiedIdentifier string) TypeID {
+	return NewTypeID(
+		AddressLocationPrefix,
+		l.Address.Hex(),
+		qualifiedIdentifier,
+	)
+}
+
+func (l AddressLocation) QualifiedIdentifier(typeID TypeID) string {
+	pieces := strings.SplitN(string(typeID), ".", 3)
+
+	if len(pieces) < 3 {
+		return ""
+	}
+
+	return pieces[2]
 }
 
 func (l AddressLocation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type    string
 		Address string
-	}{
-		Type:    "AddressLocation",
-		Address: l.ToAddress().ShortHexWithPrefix(),
-	})
-}
-
-const AddressContractLocationPrefix = "AC"
-
-// AddressContractLocation is the location of a contract/contract interface at an address
-
-type AddressContractLocation struct {
-	AddressLocation AddressLocation
-	Name            string
-}
-
-func (l AddressContractLocation) String() string {
-	return fmt.Sprintf("%s.%s",
-		l.AddressLocation.String(),
-		l.Name,
-	)
-}
-
-func (l AddressContractLocation) ID() LocationID {
-	return NewLocationID(
-		AddressContractLocationPrefix,
-		l.AddressLocation.ToAddress().Hex(),
-		l.Name,
-	)
-}
-
-func (l AddressContractLocation) MarshalJSON() ([]byte, error) {
-	return json.Marshal(&struct {
-		Type    string
-		Address string
 		Name    string
 	}{
-		Type:    "AddressContractLocation",
-		Address: l.AddressLocation.ToAddress().ShortHexWithPrefix(),
+		Type:    "AddressLocation",
+		Address: l.Address.ShortHexWithPrefix(),
 		Name:    l.Name,
 	})
 }
