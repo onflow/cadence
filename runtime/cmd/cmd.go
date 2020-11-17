@@ -77,7 +77,7 @@ func importLocationFileName(importLocation ast.Location) string {
 	case ast.StringLocation:
 		return string(importLocation)
 	case ast.AddressLocation:
-		return importLocation.ToAddress().ShortHexWithPrefix()
+		return importLocation.Address.ShortHexWithPrefix()
 	case ast.IdentifierLocation:
 		return string(importLocation)
 	case runtime.FileLocation:

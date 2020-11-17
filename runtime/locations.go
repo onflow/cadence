@@ -20,26 +20,26 @@ package runtime
 
 import (
 	"encoding/hex"
+	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
 )
 
 type (
-	Location                = ast.Location
-	LocationID              = ast.LocationID
-	StringLocation          = ast.StringLocation
-	AddressLocation         = ast.AddressLocation
-	AddressContractLocation = ast.AddressContractLocation
-	Identifier              = ast.Identifier
+	Location        = ast.Location
+	LocationID      = ast.LocationID
+	TypeID          = ast.TypeID
+	StringLocation  = ast.StringLocation
+	AddressLocation = ast.AddressLocation
+	Identifier      = ast.Identifier
 )
 
 const (
-	IdentifierLocationPrefix      = ast.IdentifierLocationPrefix
-	StringLocationPrefix          = ast.StringLocationPrefix
-	AddressLocationPrefix         = ast.AddressLocationPrefix
-	AddressContractLocationPrefix = ast.AddressContractLocationPrefix
-	TransactionLocationPrefix     = "t"
-	ScriptLocationPrefix          = "s"
+	IdentifierLocationPrefix  = ast.IdentifierLocationPrefix
+	StringLocationPrefix      = ast.StringLocationPrefix
+	AddressLocationPrefix     = ast.AddressLocationPrefix
+	TransactionLocationPrefix = "t"
+	ScriptLocationPrefix      = "s"
 )
 
 // TransactionLocation
@@ -47,7 +47,28 @@ const (
 type TransactionLocation []byte
 
 func (l TransactionLocation) ID() ast.LocationID {
-	return ast.NewLocationID(TransactionLocationPrefix, l.String())
+	return ast.NewLocationID(
+		TransactionLocationPrefix,
+		l.String(),
+	)
+}
+
+func (l TransactionLocation) TypeID(qualifiedIdentifier string) TypeID {
+	return ast.NewTypeID(
+		TransactionLocationPrefix,
+		l.String(),
+		qualifiedIdentifier,
+	)
+}
+
+func (l TransactionLocation) QualifiedIdentifier(typeID TypeID) string {
+	pieces := strings.SplitN(string(typeID), ".", 3)
+
+	if len(pieces) < 3 {
+		return ""
+	}
+
+	return pieces[2]
 }
 
 func (l TransactionLocation) String() string {
@@ -59,7 +80,28 @@ func (l TransactionLocation) String() string {
 type ScriptLocation []byte
 
 func (l ScriptLocation) ID() ast.LocationID {
-	return ast.NewLocationID(ScriptLocationPrefix, l.String())
+	return ast.NewLocationID(
+		ScriptLocationPrefix,
+		l.String(),
+	)
+}
+
+func (l ScriptLocation) TypeID(qualifiedIdentifier string) TypeID {
+	return ast.NewTypeID(
+		ScriptLocationPrefix,
+		l.String(),
+		qualifiedIdentifier,
+	)
+}
+
+func (l ScriptLocation) QualifiedIdentifier(typeID TypeID) string {
+	pieces := strings.SplitN(string(typeID), ".", 3)
+
+	if len(pieces) < 3 {
+		return ""
+	}
+
+	return pieces[2]
 }
 
 func (l ScriptLocation) String() string {
@@ -74,6 +116,23 @@ func (l FileLocation) ID() ast.LocationID {
 	return LocationID(l.String())
 }
 
+func (l FileLocation) TypeID(qualifiedIdentifier string) TypeID {
+	return ast.NewTypeID(
+		l.String(),
+		qualifiedIdentifier,
+	)
+}
+
+func (l FileLocation) QualifiedIdentifier(typeID TypeID) string {
+	pieces := strings.SplitN(string(typeID), ".", 2)
+
+	if len(pieces) < 2 {
+		return ""
+	}
+
+	return pieces[1]
+}
+
 func (l FileLocation) String() string {
 	return string(l)
 }
@@ -84,6 +143,23 @@ type REPLLocation struct{}
 
 func (l REPLLocation) ID() LocationID {
 	return LocationID(l.String())
+}
+
+func (l REPLLocation) TypeID(qualifiedIdentifier string) TypeID {
+	return ast.NewTypeID(
+		l.String(),
+		qualifiedIdentifier,
+	)
+}
+
+func (l REPLLocation) QualifiedIdentifier(typeID TypeID) string {
+	pieces := strings.SplitN(string(typeID), ".", 2)
+
+	if len(pieces) < 2 {
+		return ""
+	}
+
+	return pieces[1]
 }
 
 func (l REPLLocation) String() string {

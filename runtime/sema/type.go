@@ -63,7 +63,7 @@ func qualifiedIdentifier(identifier string, containerType Type) string {
 	return sb.String()
 }
 
-type TypeID string
+type TypeID = ast.TypeID
 
 type Type interface {
 	IsType()
@@ -4804,7 +4804,7 @@ func (t *CompositeType) QualifiedIdentifier() string {
 }
 
 func (t *CompositeType) ID() TypeID {
-	return TypeID(fmt.Sprintf("%s.%s", t.Location.ID(), t.QualifiedIdentifier()))
+	return t.Location.TypeID(t.QualifiedIdentifier())
 }
 
 func (t *CompositeType) Equal(other Type) bool {
@@ -5840,7 +5840,7 @@ func (t *InterfaceType) QualifiedIdentifier() string {
 }
 
 func (t *InterfaceType) ID() TypeID {
-	return TypeID(fmt.Sprintf("%s.%s", t.Location.ID(), t.QualifiedIdentifier()))
+	return t.Location.TypeID(t.QualifiedIdentifier())
 }
 
 func (t *InterfaceType) Equal(other Type) bool {
