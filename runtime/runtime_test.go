@@ -2901,12 +2901,20 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 			return []Address{signerAccount}
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
-			key := string(AddressLocation(address[:]).ID())
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
 			return accountCodes[key], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
-			key := string(AddressLocation(address[:]).ID())
+			location := AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
 			accountCodes[key] = code
 			return nil
 		},
@@ -3016,12 +3024,20 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 			return []Address{signerAccount}
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
-			key := string(AddressLocation(address[:]).ID())
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
 			return accountCodes[key], nil
 		},
-		updateAccountContractCode: func(address Address, _ string, code []byte) (err error) {
-			key := string(AddressLocation(address[:]).ID())
+		updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
+			location := AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
 			accountCodes[key] = code
 			return nil
 		},
@@ -3149,12 +3165,20 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 			return []Address{{0x1}}
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
-			key := string(AddressLocation(address[:]).ID())
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
 			return accountCodes[key], nil
 		},
-		updateAccountContractCode: func(address Address, _ string, code []byte) error {
-			key := string(AddressLocation(address[:]).ID())
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
 			accountCodes[key] = code
 			return nil
 		},
@@ -3519,12 +3543,20 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 			return []Address{address}
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
-			key := string(AddressLocation(address[:]).ID())
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
 			return accountCodes[key], nil
 		},
-		updateAccountContractCode: func(address Address, _ string, code []byte) error {
-			key := string(AddressLocation(address[:]).ID())
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
 			accountCodes[key] = code
 			return nil
 		},
@@ -3665,13 +3697,21 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
 		getSigningAccounts: func() []Address {
 			return []Address{address}
 		},
-		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
-			key := string(AddressLocation(address[:]).ID())
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
 			return accountCodes[key], nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		updateAccountContractCode: func(address Address, _ string, code []byte) error {
-			key := string(AddressLocation(address[:]).ID())
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
 			accountCodes[key] = code
 			return nil
 		},
@@ -3818,12 +3858,20 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
 			return []Address{address}
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
-			key := string(AddressLocation(address[:]).ID())
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
 			return accountCodes[key], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
-			key := string(AddressLocation(address[:]).ID())
+			location := AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
 			accountCodes[key] = code
 			return nil
 		},
@@ -4472,12 +4520,20 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 			return signerAddresses
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
-			key := string(AddressLocation(address[:]).ID())
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
 			return accountCodes[key], nil
 		},
-		updateAccountContractCode: func(address Address, _ string, code []byte) error {
-			key := string(AddressLocation(address[:]).ID())
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
 			accountCodes[key] = code
 			return nil
 		},
@@ -4586,12 +4642,20 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 			return signerAddresses
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
-			key := string(AddressLocation(address[:]).ID())
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
 			return accountCodes[key], nil
 		},
-		updateAccountContractCode: func(address Address, _ string, code []byte) error {
-			key := string(AddressLocation(address[:]).ID())
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
 			accountCodes[key] = code
 			return nil
 		},
@@ -4719,12 +4783,20 @@ func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
 			return signerAddresses
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
-		getAccountContractCode: func(address Address, _ string) (code []byte, err error) {
-			key := string(AddressLocation(address[:]).ID())
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
 			return accountCodes[key], nil
 		},
-		updateAccountContractCode: func(address Address, _ string, code []byte) error {
-			key := string(AddressLocation(address[:]).ID())
+		updateAccountContractCode: func(address Address, name string, code []byte) error {
+			location := AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
 			accountCodes[key] = code
 			return nil
 		},
@@ -4761,7 +4833,7 @@ func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
 
 	require.Equal(t,
 		[]string{
-			"AC.0100000000000000.HelloWorld",
+			"A.0100000000000000.HelloWorld",
 		},
 		cacheHits,
 	)
@@ -4864,9 +4936,9 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 
 			return []ResolvedLocation{
 				{
-					Location: AddressContractLocation{
-						AddressLocation: location.(AddressLocation),
-						Name:            "Test",
+					Location: AddressLocation{
+						Address: location.(AddressLocation).Address,
+						Name:    "Test",
 					},
 					Identifiers: []ast.Identifier{
 						{
@@ -5012,9 +5084,9 @@ func singleIdentifierLocationResolver(t *testing.T) func(identifiers []Identifie
 
 		return []ResolvedLocation{
 			{
-				Location: AddressContractLocation{
-					AddressLocation: location.(AddressLocation),
-					Name:            identifiers[0].Identifier,
+				Location: AddressLocation{
+					Address: location.(AddressLocation).Address,
+					Name:    identifiers[0].Identifier,
 				},
 				Identifiers: identifiers,
 			},
