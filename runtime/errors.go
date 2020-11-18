@@ -179,10 +179,10 @@ func (e *ScriptParameterTypeNotStorableError) Error() string {
 	)
 }
 
-// ExtendedParsingCheckingError is a special error which aids in debugging checking problems
-// by providing extra information about the state of the environment
-// Separate package to prevent cyclic imports with checker tests
-type ExtendedParsingCheckingError struct {
+// ParsingCheckingError provides extra information about the state of the environment
+// when a parsing or a checking error occurred
+//
+type ParsingCheckingError struct {
 	Err            error
 	RuntimeStorage *InterpreterRuntimeStorage
 	Functions      stdlib.StandardLibraryFunctions
@@ -193,14 +193,14 @@ type ExtendedParsingCheckingError struct {
 	Checker        *sema.Checker
 }
 
-func (e *ExtendedParsingCheckingError) ChildErrors() []error {
+func (e *ParsingCheckingError) ChildErrors() []error {
 	return []error{e.Err}
 }
 
-func (e *ExtendedParsingCheckingError) Error() string {
+func (e *ParsingCheckingError) Error() string {
 	return e.Err.Error()
 }
 
-func (e ExtendedParsingCheckingError) Unwrap() error {
+func (e ParsingCheckingError) Unwrap() error {
 	return e.Err
 }
