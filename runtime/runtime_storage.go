@@ -48,7 +48,7 @@ type interpreterRuntimeStorage struct {
 	cache                   Cache
 }
 
-// temporary export the type for usage in ExtendedParsingCheckingError
+// temporary export the type for usage in ParsingCheckingError
 type InterpreterRuntimeStorage = interpreterRuntimeStorage
 
 func newInterpreterRuntimeStorage(runtimeInterface Interface) *interpreterRuntimeStorage {
