@@ -997,7 +997,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 
 			publicKey, err := interpreter.ByteArrayValueToByteSlice(publicKeyValue)
 			if err != nil {
-				panic(fmt.Sprintf("addPublicKey requires the first parameter to be an array"))
+				panic("addPublicKey requires the first parameter to be an array")
 			}
 
 			wrapPanic(func() {
@@ -1072,7 +1072,7 @@ func (r *interpreterRuntime) newSetCodeFunction(
 
 			code, err := interpreter.ByteArrayValueToByteSlice(invocation.Arguments[0])
 			if err != nil {
-				panic(fmt.Sprintf("setCode requires the first parameter to be an array of bytes ([Int])"))
+				panic("setCode requires the first parameter to be an array of bytes ([Int])")
 			}
 
 			constructorArguments := invocation.Arguments[requiredArgumentCount:]
@@ -1146,7 +1146,7 @@ func (r *interpreterRuntime) updateAccountCode(
 	}
 
 	if len(contractTypes) > 1 {
-		panic(fmt.Sprintf("code declares more than one contract"))
+		panic("code declares more than one contract")
 	}
 
 	// If the code declares a contract, instantiate it and store it
