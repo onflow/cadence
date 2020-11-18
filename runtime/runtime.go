@@ -298,12 +298,12 @@ func (r *interpreterRuntime) ExecuteTransaction(
 
 	checker, err := r.parseAndCheckProgram(script, runtimeInterface, location, functions, nil, false)
 	if err != nil {
-		ee, is := err.(*ExtendedParsingCheckingError)
-		if is {
-			ee.RuntimeStorage = runtimeStorage
-			ee.Functions = functions
-			return newError(ee)
+		if err, ok := err.(*ExtendedParsingCheckingError); ok {
+			err.RuntimeStorage = runtimeStorage
+			err.Functions = functions
+			return newError(err)
 		}
+
 		return newError(err)
 	}
 
