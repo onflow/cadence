@@ -284,7 +284,7 @@ func (r *interpreterRuntime) ExecuteTransaction(
 
 	checker, err := r.parseAndCheckProgram(script, runtimeInterface, location, functions, nil, false)
 	if err != nil {
-		if err, ok := err.(*ExtendedParsingCheckingError); ok {
+		if err, ok := err.(*ParsingCheckingError); ok {
 			err.RuntimeStorage = runtimeStorage
 			err.Functions = functions
 			return newError(err)
@@ -494,7 +494,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 			program, err = runtimeInterface.GetCachedProgram(location)
 		})
 		if err != nil {
-			return nil, &ExtendedParsingCheckingError{
+			return nil, &ParsingCheckingError{
 				Err:       err,
 				Code:      code,
 				Location:  location,
@@ -508,7 +508,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	if program == nil {
 		program, err = r.parse(location, code, runtimeInterface)
 		if err != nil {
-			return nil, &ExtendedParsingCheckingError{
+			return nil, &ParsingCheckingError{
 				Err:       err,
 				Code:      code,
 				Location:  location,
@@ -575,7 +575,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 		)...,
 	)
 	if err != nil {
-		return nil, &ExtendedParsingCheckingError{
+		return nil, &ParsingCheckingError{
 			Err:       err,
 			Code:      code,
 			Location:  location,
@@ -588,7 +588,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 
 	err = checker.Check()
 	if err != nil {
-		return nil, &ExtendedParsingCheckingError{
+		return nil, &ParsingCheckingError{
 			Err:       err,
 			Code:      code,
 			Location:  location,
