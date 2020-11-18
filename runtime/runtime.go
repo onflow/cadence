@@ -516,53 +516,47 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 ) (*sema.Checker, error) {
 
 	var program *ast.Program
+	var checker *sema.Checker
 	var err error
-	if useCache {
-		wrapPanic(func() {
-			program, err = runtimeInterface.GetCachedProgram(location)
-		})
-		if err != nil {
-			return nil, &ParsingCheckingError{
-				Err:       err,
-				Code:      code,
-				Location:  location,
-				Functions: functions,
-				Options:   options,
-				UseCache:  useCache,
-			}
-		}
-	}
 
-	if program == nil {
-		program, err = r.parse(location, code, runtimeInterface)
-		if err != nil {
-			return nil, &ParsingCheckingError{
-				Err:       err,
-				Code:      code,
-				Location:  location,
-				Functions: functions,
-				Options:   options,
-				UseCache:  useCache,
-			}
-		}
-	}
-
-	importResolver := r.importResolver(runtimeInterface)
-	err = program.ResolveImports(importResolver)
-	if err != nil {
-		return nil, &ParsingCheckingError{
+	wrapError := func(err error) error {
+		return &ParsingCheckingError{
 			Err:       err,
 			Code:      code,
 			Location:  location,
 			Functions: functions,
 			Options:   options,
 			UseCache:  useCache,
+			Checker:   checker,
+			Program:   program,
 		}
+	}
+
+	if useCache {
+		wrapPanic(func() {
+			program, err = runtimeInterface.GetCachedProgram(location)
+		})
+		if err != nil {
+			return nil, wrapError(err)
+		}
+	}
+
+	if program == nil {
+		program, err = r.parse(location, code, runtimeInterface)
+		if err != nil {
+			return nil, wrapError(err)
+		}
+	}
+
+	importResolver := r.importResolver(runtimeInterface)
+	err = program.ResolveImports(importResolver)
+	if err != nil {
+		return nil, wrapError(err)
 	}
 
 	valueDeclarations := functions.ToValueDeclarations()
 
-	checker, err := sema.NewChecker(
+	checker, err = sema.NewChecker(
 		program,
 		location,
 		append(
@@ -595,28 +589,12 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 		)...,
 	)
 	if err != nil {
-		return nil, &ParsingCheckingError{
-			Err:       err,
-			Code:      code,
-			Location:  location,
-			Functions: functions,
-			Options:   options,
-			UseCache:  useCache,
-			Checker:   checker,
-		}
+		return nil, wrapError(err)
 	}
 
 	err = checker.Check()
 	if err != nil {
-		return nil, &ParsingCheckingError{
-			Err:       err,
-			Code:      code,
-			Location:  location,
-			Functions: functions,
-			Options:   options,
-			UseCache:  useCache,
-			Checker:   checker,
-		}
+		return nil, wrapError(err)
 	}
 
 	// After the program has passed semantic analysis, cache the program AST.
