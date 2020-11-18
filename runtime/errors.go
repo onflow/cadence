@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -190,6 +191,7 @@ type ParsingCheckingError struct {
 	Location       Location
 	Options        []sema.Option
 	UseCache       bool
+	Program        *ast.Program
 	Checker        *sema.Checker
 }
 
