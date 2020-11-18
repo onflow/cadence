@@ -286,7 +286,6 @@ func (r *interpreterRuntime) ExecuteTransaction(
 		if is {
 			ee.RuntimeStorage = runtimeStorage
 			ee.Functions = functions
-			//return newError(ee.Err)
 			return newError(ee)
 		}
 		return newError(err)
