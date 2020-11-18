@@ -48,9 +48,6 @@ type interpreterRuntimeStorage struct {
 	cache                   Cache
 }
 
-// temporary export the type for usage in ParsingCheckingError
-type InterpreterRuntimeStorage = interpreterRuntimeStorage
-
 func newInterpreterRuntimeStorage(runtimeInterface Interface) *interpreterRuntimeStorage {
 	highLevelStorageEnabled := false
 	highLevelStorage, ok := runtimeInterface.(HighLevelStorage)
