@@ -285,8 +285,7 @@ func (r *interpreterRuntime) ExecuteTransaction(
 	checker, err := r.parseAndCheckProgram(script, runtimeInterface, location, functions, nil, false)
 	if err != nil {
 		if err, ok := err.(*ParsingCheckingError); ok {
-			err.RuntimeStorage = runtimeStorage
-			err.Functions = functions
+			err.StorageCache = runtimeStorage.cache
 			return newError(err)
 		}
 
@@ -296,7 +295,9 @@ func (r *interpreterRuntime) ExecuteTransaction(
 	transactions := checker.TransactionTypes
 	transactionCount := len(transactions)
 	if transactionCount != 1 {
-		return newError(InvalidTransactionCountError{Count: transactionCount})
+		return newError(InvalidTransactionCountError{
+			Count: transactionCount,
+		})
 	}
 
 	transactionType := transactions[0]
