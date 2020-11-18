@@ -611,7 +611,7 @@ type InvalidVariableKindError struct {
 
 func (e *InvalidVariableKindError) Error() string {
 	if e.Kind == ast.VariableKindNotSpecified {
-		return fmt.Sprintf("missing variable kind")
+		return "missing variable kind"
 	}
 	return fmt.Sprintf("invalid variable kind: `%s`", e.Kind.Name())
 }
