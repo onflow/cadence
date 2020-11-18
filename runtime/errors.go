@@ -26,7 +26,6 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 // Error is the containing type for all errors produced by the runtime.
@@ -223,15 +222,14 @@ func (e *TransactionParameterTypeNotStorableError) Error() string {
 // when a parsing or a checking error occurred
 //
 type ParsingCheckingError struct {
-	Err            error
-	RuntimeStorage *InterpreterRuntimeStorage
-	Functions      stdlib.StandardLibraryFunctions
-	Code           []byte
-	Location       Location
-	Options        []sema.Option
-	UseCache       bool
-	Program        *ast.Program
-	Checker        *sema.Checker
+	Err          error
+	StorageCache Cache
+	Code         []byte
+	Location     Location
+	Options      []sema.Option
+	UseCache     bool
+	Program      *ast.Program
+	Checker      *sema.Checker
 }
 
 func (e *ParsingCheckingError) ChildErrors() []error {
