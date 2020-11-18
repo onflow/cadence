@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2"
@@ -93,15 +92,10 @@ func ExpectCheckerErrors(t *testing.T, err error, count int) []error {
 
 	require.Error(t, err)
 
-	// Temporary to help catch checking error
-	ee, is := err.(*runtime.ExtendedParsingCheckingError)
-	if is {
-		err = ee.Unwrap()
-	}
+	var checkerErr *sema.CheckerError
+	utils.RequireErrorAs(t, err, &checkerErr)
 
-	assert.IsType(t, &sema.CheckerError{}, err)
-
-	errs := err.(*sema.CheckerError).Errors
+	errs := checkerErr.Errors
 
 	require.Len(t, errs, count)
 
