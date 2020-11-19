@@ -582,8 +582,9 @@ type eventCapturingInterface struct {
 	events []cadence.Event
 }
 
-func (t *eventCapturingInterface) EmitEvent(event cadence.Event) {
+func (t *eventCapturingInterface) EmitEvent(event cadence.Event) error {
 	t.events = append(t.events, event)
+	return nil
 }
 
 func exportEventFromScript(t *testing.T, script string) cadence.Event {
