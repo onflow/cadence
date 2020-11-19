@@ -194,7 +194,7 @@ func (i *EmptyRuntimeInterface) GetSigningAccounts() []Address {
 
 func (i *EmptyRuntimeInterface) Log(_ string) {}
 
-func (i *EmptyRuntimeInterface) EmitEvent(_ cadence.Event) error {}
+func (i *EmptyRuntimeInterface) EmitEvent(_ cadence.Event) error {return nil}
 
 func (i *EmptyRuntimeInterface) GenerateUUID() uint64 {
 	return 0
