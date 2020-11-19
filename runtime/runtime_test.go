@@ -100,7 +100,7 @@ type testRuntimeInterface struct {
 	removeAccountContractCode func(address Address, name string) (err error)
 	getSigningAccounts        func() []Address
 	log                       func(string)
-	emitEvent                 func(cadence.Event)
+	emitEvent                 func(cadence.Event) error
 	generateUUID              func() uint64
 	computationLimit          uint64
 	decodeArgument            func(b []byte, t cadence.Type) (cadence.Value, error)
@@ -206,8 +206,8 @@ func (i *testRuntimeInterface) Log(message string) {
 	i.log(message)
 }
 
-func (i *testRuntimeInterface) EmitEvent(event cadence.Event) {
-	i.emitEvent(event)
+func (i *testRuntimeInterface) EmitEvent(event cadence.Event) error {
+	return i.emitEvent(event)
 }
 
 func (i *testRuntimeInterface) GenerateUUID() uint64 {
@@ -2260,8 +2260,9 @@ func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 		createAccount: func(payer Address) (address Address, err error) {
 			return Address{42}, nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
+			return nil
 		},
 	}
 
@@ -2350,8 +2351,9 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 				keys = append(keys, publicKey)
 				return nil
 			},
-			emitEvent: func(event cadence.Event) {
+			emitEvent: func(event cadence.Event) error {
 				events = append(events, event)
+				return nil
 			},
 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
 				return jsoncdc.Decode(b)
@@ -2548,8 +2550,9 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 					accountCode = code
 					return nil
 				},
-				emitEvent: func(event cadence.Event) {
+				emitEvent: func(event cadence.Event) error {
 					events = append(events, event)
+					return nil
 				},
 			}
 
@@ -2632,8 +2635,9 @@ func TestRuntimeContractAccount(t *testing.T) {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
+			return nil
 		},
 	}
 
@@ -2718,7 +2722,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {},
+		emitEvent: func(event cadence.Event) error {return nil},
 		log: func(message string) {
 			loggedMessage = message
 		},
@@ -2924,8 +2928,9 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 			accountCodes[key] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
+			return nil
 		},
 	}
 
@@ -3047,8 +3052,9 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 			accountCodes[key] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
+			return nil
 		},
 	}
 
@@ -3188,8 +3194,9 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 			accountCodes[key] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
+			return nil
 		},
 	}
 
@@ -3447,8 +3454,9 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 					accountCode = code
 					return nil
 				},
-				emitEvent: func(event cadence.Event) {
+				emitEvent: func(event cadence.Event) error {
 					events = append(events, event)
+					return nil
 				},
 			}
 
@@ -3566,8 +3574,9 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 			accountCodes[key] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
+			return nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -3721,8 +3730,9 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
 			accountCodes[key] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
+			return nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -3881,8 +3891,9 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
 			accountCodes[key] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error{
 			events = append(events, event)
+			return nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -4268,8 +4279,9 @@ func TestRuntimeContractWriteback(t *testing.T) {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error{
 			events = append(events, event)
+			return nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -4365,8 +4377,9 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
+			return nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -4546,8 +4559,9 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 			accountCodes[key] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
+			return nil
 		},
 	}
 
@@ -4668,8 +4682,9 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 			accountCodes[key] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error{
 			events = append(events, event)
+			return nil
 		},
 	}
 
@@ -4809,8 +4824,9 @@ func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
 			accountCodes[key] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
+			return nil
 		},
 	}
 
@@ -4964,8 +4980,9 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
+			return nil
 		},
 	}
 

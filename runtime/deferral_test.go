@@ -145,8 +145,9 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
+			return nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -629,8 +630,9 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
+			return nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -868,8 +870,9 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_DictionaryTransfer(t *te
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
+			return nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -1021,8 +1024,9 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Removal(t *testing.T) {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
+			return nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -1102,8 +1106,9 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Destruction(t *testing.T
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
+			return nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -1217,8 +1222,9 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Insertion(t *testing.T) 
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
+			return nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -1335,8 +1341,9 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_ValueTransferAndDestroy(
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
+			return nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
