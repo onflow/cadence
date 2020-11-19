@@ -113,8 +113,9 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
+			return nil
 		},
 		setCadenceValue: func(owner Address, key string, value cadence.Value) (err error) {
 			writes = append(writes, write{
