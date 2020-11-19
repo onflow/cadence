@@ -97,17 +97,6 @@ func DeploymentTransaction(name string, contract []byte) []byte {
 	))
 }
 
-// TODO: switch to require.ErrorAs once released:
-// https://github.com/stretchr/testify/commit/95a9d909e98735cd8211dfc5cbbb6b8b0b665915
-func RequireErrorAs(t *testing.T, err error, target interface{}) {
-	require.True(
-		t,
-		errors2.As(err, target),
-		"error chain must contain a %T",
-		target,
-	)
-}
-
 func UpdateTransaction(name string, contract []byte) []byte {
 	return []byte(fmt.Sprintf(
 		`
