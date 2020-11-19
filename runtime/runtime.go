@@ -511,14 +511,13 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 
 	wrapError := func(err error) error {
 		return &ParsingCheckingError{
-			Err:       err,
-			Code:      code,
-			Location:  location,
-			Functions: functions,
-			Options:   options,
-			UseCache:  useCache,
-			Checker:   checker,
-			Program:   program,
+			Err:      err,
+			Code:     code,
+			Location: location,
+			Options:  options,
+			UseCache: useCache,
+			Checker:  checker,
+			Program:  program,
 		}
 	}
 
