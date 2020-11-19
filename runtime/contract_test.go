@@ -163,8 +163,9 @@ func TestRuntimeContract(t *testing.T) {
 
 				return nil
 			},
-			emitEvent: func(event cadence.Event) {
+			emitEvent: func(event cadence.Event) error {
 				events = append(events, event)
+				return nil
 			},
 		}
 
@@ -518,8 +519,9 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
-		emitEvent: func(event cadence.Event) {
+		emitEvent: func(event cadence.Event) error{
 			events = append(events, event)
+			return nil
 		},
 	}
 

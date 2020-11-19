@@ -67,9 +67,9 @@ type Interface interface {
 	// GetSigningAccounts returns the signing accounts.
 	GetSigningAccounts() []Address
 	// Log logs a string.
-	Log(string)
+	Log(string) error
 	// EmitEvent is called when an event is emitted by the runtime.
-	EmitEvent(cadence.Event)
+	EmitEvent(cadence.Event) (err error)
 	// ValueExists returns true if the given key exists in the storage, owned by the given account.
 	ValueExists(owner, key []byte) (exists bool, err error)
 	// GenerateUUID is called to generate a UUID.
@@ -194,7 +194,7 @@ func (i *EmptyRuntimeInterface) GetSigningAccounts() []Address {
 
 func (i *EmptyRuntimeInterface) Log(_ string) {}
 
-func (i *EmptyRuntimeInterface) EmitEvent(_ cadence.Event) {}
+func (i *EmptyRuntimeInterface) EmitEvent(_ cadence.Event) error {}
 
 func (i *EmptyRuntimeInterface) GenerateUUID() uint64 {
 	return 0
