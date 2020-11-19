@@ -920,10 +920,14 @@ func (r *interpreterRuntime) emitEvent(
 		Fields: fields,
 	}
 
+	var err error
 	exportedEvent := exportEvent(eventValue)
 	wrapPanic(func() {
-		runtimeInterface.EmitEvent(exportedEvent)
+		err = runtimeInterface.EmitEvent(exportedEvent)
 	})
+	if err != nil {
+		panic(err)
+	}
 }
 
 func (r *interpreterRuntime) emitAccountEvent(
@@ -948,10 +952,14 @@ func (r *interpreterRuntime) emitAccountEvent(
 		))
 	}
 
+	var err error
 	exportedEvent := exportEvent(eventValue)
 	wrapPanic(func() {
-		runtimeInterface.EmitEvent(exportedEvent)
+		err = runtimeInterface.EmitEvent(exportedEvent)
 	})
+	if err != nil {
+		panic(err)
+	}
 }
 
 func CodeToHashValue(code []byte) *interpreter.ArrayValue {
