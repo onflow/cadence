@@ -67,7 +67,7 @@ type Interface interface {
 	// GetSigningAccounts returns the signing accounts.
 	GetSigningAccounts() []Address
 	// Log logs a string.
-	Log(string) error
+	Log(string)
 	// EmitEvent is called when an event is emitted by the runtime.
 	EmitEvent(cadence.Event) (err error)
 	// ValueExists returns true if the given key exists in the storage, owned by the given account.
