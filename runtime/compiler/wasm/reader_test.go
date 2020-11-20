@@ -281,7 +281,7 @@ func TestWASMReader_readTypeSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 4 (LEB128)
+			// section size: 2 (LEB128)
 			0x82, 0x80, 0x80, 0x80, 0x0,
 			// type count
 			0x1,
@@ -365,7 +365,7 @@ func TestWASMReader_readTypeSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 4 (LEB128)
+			// section size: 3 (LEB128)
 			0x83, 0x80, 0x80, 0x80, 0x0,
 			// type count
 			0x1,
@@ -390,7 +390,7 @@ func TestWASMReader_readTypeSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 4 (LEB128)
+			// section size: 5 (LEB128)
 			0x85, 0x80, 0x80, 0x80, 0x0,
 			// type count
 			0x1,
@@ -422,7 +422,7 @@ func TestWASMReader_readTypeSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 4 (LEB128)
+			// section size: 5 (LEB128)
 			0x85, 0x80, 0x80, 0x80, 0x0,
 			// type count
 			0x1,
@@ -523,7 +523,7 @@ func TestWASMReader_readImportSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 7 (LEB128)
+			// section size: 0 (LEB128)
 			0x80, 0x80, 0x80, 0x80, 0x0,
 		})
 		require.Error(t, err)
@@ -542,7 +542,7 @@ func TestWASMReader_readImportSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 7 (LEB128)
+			// section size: 1 (LEB128)
 			0x81, 0x80, 0x80, 0x80, 0x0,
 			// import count
 			0x1,
@@ -566,8 +566,8 @@ func TestWASMReader_readImportSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 7 (LEB128)
-			0x81, 0x80, 0x80, 0x80, 0x0,
+			// section size: 5 (LEB128)
+			0x85, 0x80, 0x80, 0x80, 0x0,
 			// import count
 			0x1,
 			// module length
@@ -594,8 +594,8 @@ func TestWASMReader_readImportSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 7 (LEB128)
-			0x81, 0x80, 0x80, 0x80, 0x0,
+			// section size: 9 (LEB128)
+			0x89, 0x80, 0x80, 0x80, 0x0,
 			// import count
 			0x1,
 			// module length
@@ -626,8 +626,8 @@ func TestWASMReader_readImportSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 7 (LEB128)
-			0x81, 0x80, 0x80, 0x80, 0x0,
+			// section size: 10 (LEB128)
+			0x8a, 0x80, 0x80, 0x80, 0x0,
 			// import count
 			0x1,
 			// module length
@@ -661,8 +661,8 @@ func TestWASMReader_readImportSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 7 (LEB128)
-			0x81, 0x80, 0x80, 0x80, 0x0,
+			// section size: 10 (LEB128)
+			0x8a, 0x80, 0x80, 0x80, 0x0,
 			// import count
 			0x1,
 			// module length
@@ -747,7 +747,7 @@ func TestWASMReader_readFunctionSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 7 (LEB128)
+			// section size: 0 (LEB128)
 			0x80, 0x80, 0x80, 0x80, 0x0,
 		})
 		require.Error(t, err)
@@ -766,7 +766,7 @@ func TestWASMReader_readFunctionSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 7 (LEB128)
+			// section size: 1 (LEB128)
 			0x81, 0x80, 0x80, 0x80, 0x0,
 			// function count
 			0x1,
@@ -865,7 +865,7 @@ func TestWASMReader_readCodeSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 7 (LEB128)
+			// section size: 0 (LEB128)
 			0x80, 0x80, 0x80, 0x80, 0x0,
 		})
 		require.Error(t, err)
@@ -884,8 +884,8 @@ func TestWASMReader_readCodeSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 15 (LEB128)
-			0x8f, 0x80, 0x80, 0x80, 0x0,
+			// section size: 1 (LEB128)
+			0x81, 0x80, 0x80, 0x80, 0x0,
 			// function count: 1
 			0x1,
 		})
@@ -908,8 +908,8 @@ func TestWASMReader_readCodeSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 15 (LEB128)
-			0x8f, 0x80, 0x80, 0x80, 0x0,
+			// section size: 6 (LEB128)
+			0x86, 0x80, 0x80, 0x80, 0x0,
 			// function count: 1
 			0x1,
 			// code size: 9 (LEB128)
@@ -934,8 +934,8 @@ func TestWASMReader_readCodeSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 15 (LEB128)
-			0x8f, 0x80, 0x80, 0x80, 0x0,
+			// section size: 7 (LEB128)
+			0x87, 0x80, 0x80, 0x80, 0x0,
 			// function count: 1
 			0x1,
 			// code size: 9 (LEB128)
@@ -962,8 +962,8 @@ func TestWASMReader_readCodeSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 15 (LEB128)
-			0x8f, 0x80, 0x80, 0x80, 0x0,
+			// section size: 8 (LEB128)
+			0x88, 0x80, 0x80, 0x80, 0x0,
 			// function count: 1
 			0x1,
 			// code size: 9 (LEB128)
@@ -996,8 +996,8 @@ func TestWASMReader_readCodeSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 15 (LEB128)
-			0x8f, 0x80, 0x80, 0x80, 0x0,
+			// section size: 10 (LEB128)
+			0x8a, 0x80, 0x80, 0x80, 0x0,
 			// function count: 1
 			0x1,
 			// code size: 9 (LEB128)
@@ -1031,8 +1031,8 @@ func TestWASMReader_readCodeSection(t *testing.T) {
 		t.Parallel()
 
 		funcTypes, err := read([]byte{
-			// section size: 15 (LEB128)
-			0x8f, 0x80, 0x80, 0x80, 0x0,
+			// section size: 14 (LEB128)
+			0x8e, 0x80, 0x80, 0x80, 0x0,
 			// function count: 1
 			0x1,
 			// code size: 9 (LEB128)
