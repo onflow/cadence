@@ -56,6 +56,11 @@ type Runtime interface {
 	//
 	// This function returns an error if the program contains any syntax or semantic errors.
 	ParseAndCheckProgram(code []byte, runtimeInterface Interface, location Location) (*sema.Checker, error)
+
+	// SetCoverageReport activates reporting coverage in the given report.
+	// Passing nil disables coverage reporting (default).
+	//
+	SetCoverageReport(coverageReport *CoverageReport)
 }
 
 var typeDeclarations = append(
@@ -108,7 +113,9 @@ func reportMetric(
 }
 
 // interpreterRuntime is a interpreter-based version of the Flow runtime.
-type interpreterRuntime struct{}
+type interpreterRuntime struct {
+	coverageReport *CoverageReport
+}
 
 type Option func(Runtime)
 
@@ -119,6 +126,10 @@ func NewInterpreterRuntime(options ...Option) Runtime {
 		option(runtime)
 	}
 	return runtime
+}
+
+func (r *interpreterRuntime) SetCoverageReport(coverageReport *CoverageReport) {
+	r.coverageReport = coverageReport
 }
 
 func (r *interpreterRuntime) ExecuteScript(
@@ -646,6 +657,9 @@ func (r *interpreterRuntime) newInterpreter(
 		),
 		interpreter.WithImportLocationHandler(
 			r.importLocationHandler(runtimeInterface),
+		),
+		interpreter.WithOnStatementHandler(
+			r.onStatementHandler(),
 		),
 	}
 
@@ -1732,6 +1746,18 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 			return trampoline.Done{Result: result}
 		},
 	)
+}
+
+func (r *interpreterRuntime) onStatementHandler() interpreter.OnStatementFunc {
+	if r.coverageReport == nil {
+		return nil
+	}
+
+	return func(statement *interpreter.Statement) {
+		location := statement.Interpreter.Checker.Location
+		line := statement.Statement.StartPosition().Line
+		r.coverageReport.AddLineHit(location, line)
+	}
 }
 
 func compositeTypesToIDValues(types []*sema.CompositeType) *interpreter.ArrayValue {
