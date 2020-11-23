@@ -460,28 +460,9 @@ func (d *Decoder) decodeComposite(v interface{}, path []string) (*CompositeValue
 	}
 	typeID := sema.TypeID(encodedTypeID)
 
-	// Special case: The decoded location is an address location without name.
-	//
-	// In the first version of the storage format, accounts could only store one contract
-	// instead of several contracts (separated by name), so composite's locations were
-	// address locations without a name, i.e. just the bare address.
-	//
-	// An update added support for multiple contracts per account, which added names to address locations:
-	// Each contract of an account is stored in a distinct location.
-	//
-	// So to keep backwards-compatibility:
-	// If the location is an address location without a name,
-	// then infer the name from the type ID.
+	// Special case: The decoded location might be an address location which has no name
 
-	if addressLocation, ok := location.(ast.AddressLocation); ok && addressLocation.Name == "" {
-		qualifiedIdentifier := location.QualifiedIdentifier(typeID)
-		parts := strings.SplitN(qualifiedIdentifier, ".", 2)
-
-		location = ast.AddressLocation{
-			Address: addressLocation.Address,
-			Name:    parts[0],
-		}
-	}
+	location = d.inferAddressLocationName(location, typeID)
 
 	// Kind
 
@@ -1118,30 +1099,44 @@ func (d *Decoder) decodeLocationAndTypeID(
 	}
 	typeID := sema.TypeID(encodedTypeID)
 
-	// Special case: The decoded location is an address location without name.
-	//
-	// In the first version of the storage format, accounts could only store one contract
-	// instead of several contracts (separated by name), so composite's locations were
-	// address locations without a name, i.e. just the bare address.
-	//
-	// An update added support for multiple contracts per account, which added names to address locations:
-	// Each contract of an account is stored in a distinct location.
-	//
-	// So to keep backwards-compatibility:
-	// If the location is an address location without a name,
-	// then infer the name from the type ID.
+	// Special case: The decoded location might be an address location which has no name
 
-	if addressLocation, ok := location.(ast.AddressLocation); ok && addressLocation.Name == "" {
-		qualifiedIdentifier := location.QualifiedIdentifier(typeID)
-		parts := strings.SplitN(qualifiedIdentifier, ".", 2)
-
-		location = ast.AddressLocation{
-			Address: addressLocation.Address,
-			Name:    parts[0],
-		}
-	}
+	location = d.inferAddressLocationName(location, typeID)
 
 	return location, typeID, nil
+}
+
+// inferAddressLocationName infers the name for an address location from a type ID.
+//
+// In the first version of the storage format, accounts could only store one contract
+// instead of several contracts (separated by name), so composite's locations were
+// address locations without a name, i.e. just the bare address.
+//
+// An update added support for multiple contracts per account, which added names to address locations:
+// Each contract of an account is stored in a distinct location.
+//
+// So to keep backwards-compatibility:
+// If the location is an address location without a name,
+// then infer the name from the type ID.
+//
+func (d *Decoder) inferAddressLocationName(location ast.Location, typeID sema.TypeID) ast.Location {
+
+	// Only consider address locations which have no name
+
+	addressLocation, ok := location.(ast.AddressLocation)
+	if !ok || addressLocation.Name != "" {
+		return location
+	}
+
+	// The first component of the type ID is the location name
+
+	qualifiedIdentifier := location.QualifiedIdentifier(typeID)
+	parts := strings.SplitN(qualifiedIdentifier, ".", 2)
+
+	return ast.AddressLocation{
+		Address: addressLocation.Address,
+		Name:    parts[0],
+	}
 }
 
 func (d *Decoder) decodeCompositeStaticType(v interface{}) (StaticType, error) {
