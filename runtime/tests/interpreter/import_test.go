@@ -121,15 +121,14 @@ func TestInterpretVirtualImport(t *testing.T) {
 
 // TestInterpretImportMultipleProgramsFromLocation demonstrates how two declarations (`a` and `b`)
 // can be imported from the same location (address location `0x1`).
-// The single location (address location `0x1`) is resolved to two locations
-// (address contract locations `0x1.a` and `0x1.b`).
+// The single location (address location `0x1`) is resolved to two locations (address locations `0x1.a` and `0x1.b`).
 // Each requested declaration is so imported from a a separate program.
 //
 func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 
 	t.Parallel()
 
-	addressLocation := ast.AddressLocation{0x1}
+	address := common.BytesToAddress([]byte{0x1})
 
 	importedCheckerA, err := checker.ParseAndCheckWithOptions(t,
 		`
@@ -144,9 +143,9 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
           }
         `,
 		checker.ParseAndCheckOptions{
-			Location: ast.AddressContractLocation{
-				AddressLocation: addressLocation,
-				Name:            "a",
+			Location: ast.AddressLocation{
+				Address: address,
+				Name:    "a",
 			},
 		},
 	)
@@ -165,9 +164,9 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
           }
         `,
 		checker.ParseAndCheckOptions{
-			Location: ast.AddressContractLocation{
-				AddressLocation: addressLocation,
-				Name:            "b",
+			Location: ast.AddressLocation{
+				Address: address,
+				Name:    "b",
 			},
 		},
 	)
@@ -185,16 +184,20 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 			Options: []sema.Option{
 				sema.WithLocationHandler(
 					func(identifiers []ast.Identifier, location ast.Location) (result []sema.ResolvedLocation) {
+
 						require.Equal(t,
-							addressLocation,
+							ast.AddressLocation{
+								Address: address,
+								Name:    "",
+							},
 							location,
 						)
 
 						for _, identifier := range identifiers {
 							result = append(result, sema.ResolvedLocation{
-								Location: ast.AddressContractLocation{
-									AddressLocation: location.(ast.AddressLocation),
-									Name:            identifier.Identifier,
+								Location: ast.AddressLocation{
+									Address: location.(ast.AddressLocation).Address,
+									Name:    identifier.Identifier,
 								},
 								Identifiers: []ast.Identifier{
 									identifier,
@@ -206,14 +209,14 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 				),
 				sema.WithImportHandler(
 					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
-						require.IsType(t, ast.AddressContractLocation{}, location)
-						addressContractLocation := location.(ast.AddressContractLocation)
+						require.IsType(t, ast.AddressLocation{}, location)
+						addressLocation := location.(ast.AddressLocation)
 
-						assert.Equal(t, addressLocation, addressContractLocation.AddressLocation)
+						assert.Equal(t, address, addressLocation.Address)
 
 						var importedChecker *sema.Checker
 
-						switch addressContractLocation.Name {
+						switch addressLocation.Name {
 						case "a":
 							importedChecker = importedCheckerA
 						case "b":
@@ -234,14 +237,14 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 		importingChecker,
 		interpreter.WithImportLocationHandler(
 			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
-				require.IsType(t, ast.AddressContractLocation{}, location)
-				addressContractLocation := location.(ast.AddressContractLocation)
+				require.IsType(t, ast.AddressLocation{}, location)
+				addressLocation := location.(ast.AddressLocation)
 
-				assert.Equal(t, addressLocation, addressContractLocation.AddressLocation)
+				assert.Equal(t, address, addressLocation.Address)
 
 				var importedChecker *sema.Checker
 
-				switch addressContractLocation.Name {
+				switch addressLocation.Name {
 				case "a":
 					importedChecker = importedCheckerA
 				case "b":

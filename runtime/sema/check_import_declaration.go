@@ -28,12 +28,12 @@ import (
 // 1. Resolution of the import statement.
 //
 //     The default case is that one location is resolved to one location (itself),
-//     though e.g. an address location may also be resolved into multiple "address contract" locations.
+//     though e.g. an address location may also be resolved into multiple address locations.
 //
 //     For example, an import declaration `import a, b from 0x1` specifies the import of the declarations with
 //     the identifiers `a` and `b` from the address location `0x1`.
 //     This import declaration might be resolved into just the location itself, i.e. the address location `0x1`,
-//     but could also be resolved into multiple locations, e.g. the address contract locations `0x1.a` and `0x1.b`.
+//     but could also be resolved into multiple locations, e.g. the address locations `0x1.a` and `0x1.b`.
 //
 // 2. Acquiring the programs for the resolved imports. For each resolved import a separate program can be returned.
 //

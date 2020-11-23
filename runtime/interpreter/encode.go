@@ -143,7 +143,7 @@ const (
 	cborTagAddressLocation
 	cborTagStringLocation
 	cborTagIdentifierLocation
-	cborTagAddressContractLocation
+	_
 	_
 	_
 	_
@@ -844,17 +844,12 @@ func (e *Encoder) prepareCapabilityValue(v CapabilityValue) (interface{}, error)
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	encodedAddressContractLocationAddressFieldKey uint64 = 0
-	encodedAddressContractLocationNameFieldKey    uint64 = 1
+	encodedAddressLocationAddressFieldKey uint64 = 0
+	encodedAddressLocationNameFieldKey    uint64 = 1
 )
 
 func (e *Encoder) prepareLocation(l ast.Location) (interface{}, error) {
 	switch l := l.(type) {
-	case ast.AddressLocation:
-		return cbor.Tag{
-			Number:  cborTagAddressLocation,
-			Content: l.ToAddress().Bytes(),
-		}, nil
 
 	case ast.StringLocation:
 		return cbor.Tag{
@@ -868,13 +863,21 @@ func (e *Encoder) prepareLocation(l ast.Location) (interface{}, error) {
 			Content: string(l),
 		}, nil
 
-	case ast.AddressContractLocation:
+	case ast.AddressLocation:
+		var content interface{}
+
+		if l.Name == "" {
+			content = l.Address.Bytes()
+		} else {
+			content = cborMap{
+				encodedAddressLocationAddressFieldKey: l.Address.Bytes(),
+				encodedAddressLocationNameFieldKey:    l.Name,
+			}
+		}
+
 		return cbor.Tag{
-			Number: cborTagAddressContractLocation,
-			Content: cborMap{
-				encodedAddressContractLocationAddressFieldKey: l.AddressLocation.ToAddress().Bytes(),
-				encodedAddressContractLocationNameFieldKey:    l.Name,
-			},
+			Number:  cborTagAddressLocation,
+			Content: content,
 		}, nil
 
 	default:
