@@ -3286,7 +3286,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					TargetPath: publicPathValue,
 					Type:       ConvertSemaToPrimitiveStaticType(&sema.BoolType{}),
 				},
-				encoded: append(expectedLinkEncodingPrefix[:],
+				encoded: append(
+					expectedLinkEncodingPrefix[:],
 					// tag
 					0xd8, cborTagPrimitiveStaticType,
 					0x6,
@@ -3304,7 +3305,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 						Type: PrimitiveStaticTypeBool,
 					},
 				},
-				encoded: append(expectedLinkEncodingPrefix[:],
+				encoded: append(
+					expectedLinkEncodingPrefix[:],
 					// tag
 					0xd8, cborTagOptionalStaticType,
 					// tag
@@ -3325,7 +3327,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 						Location: utils.TestLocation,
 					},
 				},
-				encoded: append(expectedLinkEncodingPrefix[:],
+				encoded: append(
+					expectedLinkEncodingPrefix[:],
 					// tag
 					0xd8, cborTagCompositeStaticType,
 					// map, 2 pairs of items follow
@@ -3351,6 +3354,47 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 		)
 	})
 
+	t.Run("composite, struct, address location without name", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				decodeOnly: true,
+				decodedValue: LinkValue{
+					TargetPath: publicPathValue,
+					Type: CompositeStaticType{
+						TypeID: "A.0x1.SimpleStruct",
+						Location: ast.AddressLocation{
+							Address: common.BytesToAddress([]byte{0x1}),
+							Name:    "SimpleStruct",
+						},
+					},
+				},
+				encoded: append(
+					expectedLinkEncodingPrefix[:],
+					// tag
+					0xd8, cborTagCompositeStaticType,
+					// map, 2 pairs of items follow
+					0xa2,
+					// key 0
+					0x0,
+					// tag
+					0xd8, cborTagAddressLocation,
+					// byte sequence, length 1
+					0x41,
+					// positive integer 1
+					0x1,
+					// key 1
+					0x1,
+					// UTF-8 string, length 18
+					0x72,
+					// A.0x1.SimpleStruct
+					0x41,
+					0x2E, 0x30, 0x78, 0x31,
+					0x2E, 0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+				),
+			},
+		)
+	})
+
 	t.Run("interface, struct", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -3361,7 +3405,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 						Location: utils.TestLocation,
 					},
 				},
-				encoded: append(expectedLinkEncodingPrefix[:],
+				encoded: append(
+					expectedLinkEncodingPrefix[:],
 					// tag
 					0xd8, cborTagInterfaceStaticType,
 					// map, 2 pairs of items follow
@@ -3387,6 +3432,47 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 		)
 	})
 
+	t.Run("interface, struct, address location without name", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				decodeOnly: true,
+				decodedValue: LinkValue{
+					TargetPath: publicPathValue,
+					Type: InterfaceStaticType{
+						TypeID: "A.0x1.SimpleInterface",
+						Location: ast.AddressLocation{
+							Address: common.BytesToAddress([]byte{0x1}),
+							Name:    "SimpleInterface",
+						},
+					},
+				},
+				encoded: append(
+					expectedLinkEncodingPrefix[:],
+					// tag
+					0xd8, cborTagInterfaceStaticType,
+					// map, 2 pairs of items follow
+					0xa2,
+					// key 0
+					0x0,
+					// tag
+					0xd8, cborTagAddressLocation,
+					// byte sequence, length 1
+					0x41,
+					// positive integer 1
+					0x1,
+					// key 1
+					0x1,
+					// UTF-8 string, length 21
+					0x75,
+					// A.0x1.SimpleInterface
+					0x41,
+					0x2E, 0x30, 0x78, 0x31,
+					0x2E, 0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
+				),
+			},
+		)
+	})
+
 	t.Run("variable-sized, bool", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
@@ -3396,7 +3482,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 						Type: PrimitiveStaticTypeBool,
 					},
 				},
-				encoded: append(expectedLinkEncodingPrefix[:],
+				encoded: append(
+					expectedLinkEncodingPrefix[:],
 					// tag
 					0xd8, cborTagVariableSizedStaticType,
 					// tag
@@ -3417,7 +3504,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 						Size: 42,
 					},
 				},
-				encoded: append(expectedLinkEncodingPrefix[:],
+				encoded: append(
+					expectedLinkEncodingPrefix[:],
 					// tag
 					0xd8, cborTagConstantSizedStaticType,
 					// map, 2 pairs of items follow
@@ -3446,7 +3534,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 						Type:       PrimitiveStaticTypeBool,
 					},
 				},
-				encoded: append(expectedLinkEncodingPrefix[:],
+				encoded: append(
+					expectedLinkEncodingPrefix[:],
 					// tag
 					0xd8, cborTagReferenceStaticType,
 					// map, 2 pairs of items follow
@@ -3475,7 +3564,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 						Type:       PrimitiveStaticTypeBool,
 					},
 				},
-				encoded: append(expectedLinkEncodingPrefix[:],
+				encoded: append(
+					expectedLinkEncodingPrefix[:],
 					// tag
 					0xd8, cborTagReferenceStaticType,
 					// map, 2 pairs of items follow
@@ -3504,7 +3594,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 						ValueType: PrimitiveStaticTypeString,
 					},
 				},
-				encoded: append(expectedLinkEncodingPrefix[:],
+				encoded: append(
+					expectedLinkEncodingPrefix[:],
 					// tag
 					0xd8, cborTagDictionaryStaticType,
 					// map, 2 pairs of items follow
@@ -3546,7 +3637,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 						},
 					},
 				},
-				encoded: append(expectedLinkEncodingPrefix[:],
+				encoded: append(
+					expectedLinkEncodingPrefix[:],
 					// tag
 					0xd8, cborTagRestrictedStaticType,
 					// map, 2 pairs of items follow
@@ -3623,7 +3715,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					TargetPath: publicPathValue,
 					Type:       CapabilityStaticType{},
 				},
-				encoded: append(expectedLinkEncodingPrefix[:],
+				encoded: append(
+					expectedLinkEncodingPrefix[:],
 					// tag
 					0xd8, cborTagCapabilityStaticType,
 					// null
@@ -3642,7 +3735,8 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 						BorrowType: PrimitiveStaticTypeBool,
 					},
 				},
-				encoded: append(expectedLinkEncodingPrefix[:],
+				encoded: append(
+					expectedLinkEncodingPrefix[:],
 					// tag
 					0xd8, cborTagCapabilityStaticType,
 					// tag
