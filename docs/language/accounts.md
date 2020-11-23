@@ -122,7 +122,7 @@ Objects are stored under paths.
 Paths consist of a domain and an identifier.
 
 Paths start with the character `/`, followed by the domain, the path separator `/`,
-and finally the identifier.
+and finally the identifier. Path identifiers can consist of alphanumeric characters in addition to the `_` and `.` characters.
 For example, the path `/storage/test` has the domain `storage` and the identifier `test`.
 
 There are only three valid domains: `storage`, `private`, and `public`.
