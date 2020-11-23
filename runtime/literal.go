@@ -78,7 +78,7 @@ func pathLiteralValue(expression ast.Expression, ty sema.Type) (cadence.Value, e
 
 	return cadence.Path{
 		Domain:     pathExpression.Domain.Identifier,
-		Identifier: pathExpression.Identifier.Identifier,
+		Identifier: pathExpression.Identifier(),
 	}, nil
 }
 

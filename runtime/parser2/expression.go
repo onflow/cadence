@@ -629,8 +629,8 @@ func defineLessThanOrTypeArgumentsExpression() {
 		})
 }
 
-// defineGreaterThanOrBitwiseRightShiftExpression parses 
-// the greater-than expression (operator `>`, e.g. `1 > 2`) 
+// defineGreaterThanOrBitwiseRightShiftExpression parses
+// the greater-than expression (operator `>`, e.g. `1 > 2`)
 // and the bitwise right shift expression (operator `>>`, e.g. `1 >> 3`).
 //
 // The `>>` operator consists of two `>` tokens, instead of one dedicated `>>` token,
@@ -1046,11 +1046,18 @@ func definePathExpression() {
 		func(p *parser, token lexer.Token) ast.Expression {
 			domain := mustIdentifier(p)
 			p.mustOne(lexer.TokenSlash)
-			identifier := mustIdentifier(p)
+
+			var idents []ast.Identifier
+			idents = append(idents, mustIdentifier(p))
+			for p.current.Is(lexer.TokenDot) {
+				p.next()
+				idents = append(idents, mustIdentifier(p))
+			}
+
 			return &ast.PathExpression{
-				Domain:     domain,
-				Identifier: identifier,
-				StartPos:   token.StartPos,
+				Domain:      domain,
+				Identifiers: idents,
+				StartPos:    token.StartPos,
 			}
 		},
 	)

@@ -708,9 +708,40 @@ func TestParsePath(t *testing.T) {
 				Identifier: "foo",
 				Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
 			},
-			Identifier: ast.Identifier{
-				Identifier: "bar",
-				Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+			Identifiers: []ast.Identifier{
+				{
+					Identifier: "bar",
+					Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+				},
+			},
+			StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
+		},
+		result,
+	)
+}
+
+func TestParsePathWithDots(t *testing.T) {
+
+	t.Parallel()
+
+	result, errs := ParseExpression("/foo/bar.baz")
+	require.Empty(t, errs)
+
+	utils.AssertEqualWithDiff(t,
+		&ast.PathExpression{
+			Domain: ast.Identifier{
+				Identifier: "foo",
+				Pos:        ast.Position{Line: 1, Column: 1, Offset: 1},
+			},
+			Identifiers: []ast.Identifier{
+				{
+					Identifier: "bar",
+					Pos:        ast.Position{Line: 1, Column: 5, Offset: 5},
+				},
+				{
+					Identifier: "baz",
+					Pos:        ast.Position{Line: 1, Column: 9, Offset: 9},
+				},
 			},
 			StartPos: ast.Position{Line: 1, Column: 0, Offset: 0},
 		},
@@ -5362,9 +5393,11 @@ func TestParsePathLiteral(t *testing.T) {
 						Identifier: "foo",
 						Pos:        ast.Position{Offset: 15, Line: 2, Column: 14},
 					},
-					Identifier: ast.Identifier{
-						Identifier: "bar",
-						Pos:        ast.Position{Offset: 19, Line: 2, Column: 18},
+					Identifiers: []ast.Identifier{
+						{
+							Identifier: "bar",
+							Pos:        ast.Position{Offset: 19, Line: 2, Column: 18},
+						},
 					},
 				},
 				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},

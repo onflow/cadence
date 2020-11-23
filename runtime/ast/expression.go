@@ -1007,9 +1007,9 @@ func (e *ForceExpression) MarshalJSON() ([]byte, error) {
 // PathExpression
 
 type PathExpression struct {
-	StartPos   Position `json:"-"`
-	Domain     Identifier
-	Identifier Identifier
+	StartPos    Position `json:"-"`
+	Domain      Identifier
+	Identifiers []Identifier
 }
 
 func (*PathExpression) isExpression() {}
@@ -1024,8 +1024,16 @@ func (e *PathExpression) AcceptExp(visitor ExpressionVisitor) Repr {
 	return visitor.VisitPathExpression(e)
 }
 
+func (e *PathExpression) Identifier() string {
+	var idents []string
+	for _, ident := range e.Identifiers {
+		idents = append(idents, ident.Identifier)
+	}
+	return strings.Join(idents, ".")
+}
+
 func (e *PathExpression) String() string {
-	return fmt.Sprintf("/%s/%s", e.Domain, e.Identifier)
+	return fmt.Sprintf("/%s/%s", e.Domain, e.Identifier())
 }
 
 func (e *PathExpression) StartPosition() Position {
@@ -1033,7 +1041,8 @@ func (e *PathExpression) StartPosition() Position {
 }
 
 func (e *PathExpression) EndPosition() Position {
-	return e.Identifier.EndPosition()
+	// Return the final identifier's EndPosition
+	return e.Identifiers[len(e.Identifiers)-1].EndPosition()
 }
 
 func (e *PathExpression) MarshalJSON() ([]byte, error) {

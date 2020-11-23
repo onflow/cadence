@@ -318,9 +318,11 @@ func TestPathExpression_MarshalJSON(t *testing.T) {
 			Identifier: "storage",
 			Pos:        Position{Offset: 4, Line: 5, Column: 6},
 		},
-		Identifier: Identifier{
-			Identifier: "foobar",
-			Pos:        Position{Offset: 7, Line: 8, Column: 9},
+		Identifiers: []Identifier{
+			{
+				Identifier: "foobar",
+				Pos:        Position{Offset: 7, Line: 8, Column: 9},
+			},
 		},
 	}
 
@@ -336,11 +338,11 @@ func TestPathExpression_MarshalJSON(t *testing.T) {
                 "StartPos": {"Offset": 4, "Line": 5, "Column": 6},
                 "EndPos": {"Offset": 10, "Line": 5, "Column": 12}
             },
-            "Identifier": {
+            "Identifiers": [{
                 "Identifier": "foobar",
                 "StartPos": {"Offset": 7, "Line": 8, "Column": 9},
                 "EndPos": {"Offset": 12, "Line": 8, "Column": 14}
-            },
+            }],
             "StartPos": {"Offset": 1, "Line": 2, "Column": 3},
             "EndPos": {"Offset": 12, "Line": 8, "Column": 14}
         }
