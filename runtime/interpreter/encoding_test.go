@@ -394,6 +394,57 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		)
 	})
 
+	t.Run("empty structure, address location without name", func(t *testing.T) {
+		expected := NewCompositeValue(
+			ast.AddressLocation{
+				Address: common.BytesToAddress([]byte{0x1}),
+				Name:    "SimpleStruct",
+			},
+			"A.0x1.SimpleStruct",
+			common.CompositeKindStructure,
+			map[string]Value{},
+			nil,
+		)
+		expected.modified = false
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				decodeOnly:   true,
+				decodedValue: expected,
+				encoded: []byte{
+					// tag
+					0xd8, cborTagCompositeValue,
+					// map, 4 pairs of items follow
+					0xa4,
+					// key 0
+					0x0,
+					// tag
+					0xd8, cborTagAddressLocation,
+					// byte sequence, length 1
+					0x41,
+					// positive integer 1
+					0x1,
+					// key 1
+					0x1,
+					// UTF-8 string, length 18
+					0x72,
+					// A.0x1.SimpleStruct
+					0x41,
+					0x2E, 0x30, 0x78, 0x31,
+					0x2E, 0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+					// key 2
+					0x2,
+					// positive integer 1
+					0x1,
+					// key 3
+					0x3,
+					// map, 0 pairs of items follow
+					0xa0,
+				},
+			},
+		)
+	})
+
 	t.Run("non-empty resource", func(t *testing.T) {
 		stringValue := NewStringValue("test")
 		stringValue.modified = false
