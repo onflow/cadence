@@ -542,7 +542,14 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 				sema.WithPredeclaredValues(valueDeclarations),
 				sema.WithPredeclaredTypes(typeDeclarations),
 				sema.WithValidTopLevelDeclarationsHandler(validTopLevelDeclarations),
-				sema.WithLocationHandler(runtimeInterface.ResolveLocation),
+				sema.WithLocationHandler(func(identifiers []Identifier, location Location) (res []ResolvedLocation) {
+					var err error
+					res, err = runtimeInterface.ResolveLocation(identifiers, location)
+					if err != nil {
+						panic(err)
+					}
+					return
+				}),
 				sema.WithImportHandler(func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
 					switch location {
 					case stdlib.CryptoChecker.Location:
@@ -633,9 +640,13 @@ func (r *interpreterRuntime) newInterpreter(
 		interpreter.WithInjectedCompositeFieldsHandler(
 			r.injectedCompositeFieldsHandler(runtimeInterface, runtimeStorage),
 		),
-		interpreter.WithUUIDHandler(func() (uuid uint64, err error) {
+		interpreter.WithUUIDHandler(func() (uuid uint64) {
 			wrapPanic(func() {
+				var err error
 				uuid, err = runtimeInterface.GenerateUUID()
+				if err != nil {
+					panic(err)
+				}
 			})
 			return
 		}),
