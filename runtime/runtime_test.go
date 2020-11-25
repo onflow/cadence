@@ -290,7 +290,7 @@ func (i *testRuntimeInterface) UnsafeRandom() (uint64, error) {
 	if i.unsafeRandom == nil {
 		return 0, nil
 	}
-	return i.unsafeRandom(), nil
+	return i.unsafeRandom()
 }
 
 func (i *testRuntimeInterface) VerifySignature(
@@ -311,14 +311,14 @@ func (i *testRuntimeInterface) VerifySignature(
 		publicKey,
 		signatureAlgorithm,
 		hashAlgorithm,
-	), nil
+	)
 }
 
 func (i *testRuntimeInterface) Hash(data []byte, hashAlgorithm string) ([]byte, error) {
 	if i.hash == nil {
 		return nil, nil
 	}
-	return i.hash(data, hashAlgorithm), nil
+	return i.hash(data, hashAlgorithm)
 }
 
 func (i *testRuntimeInterface) HighLevelStorageEnabled() bool {
@@ -509,8 +509,8 @@ func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
     `)
 
 	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() []Address {
-			return []Address{{42}}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
 		},
 	}
 
@@ -537,10 +537,10 @@ func TestRuntimeTransactionWithAccount(t *testing.T) {
 	var loggedMessage string
 
 	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() []Address {
+		getSigningAccounts: func() ([]Address, error) {
 			return []Address{
 				common.BytesToAddress([]byte{42}),
-			}
+			}, nil
 		},
 		log: func(message string) {
 			loggedMessage = message
@@ -841,7 +841,7 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			var loggedMessages []string
 
 			runtimeInterface := &testRuntimeInterface{
-				getSigningAccounts: func() []Address { return tt.authorizers },
+				getSigningAccounts: func() ([]Address, error) { return tt.authorizers, nil },
 				decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
 					return jsoncdc.Decode(b)
 				},
@@ -1295,8 +1295,8 @@ func TestRuntimeStorage(t *testing.T) {
 					}
 				},
 				storage: newTestStorage(nil, nil),
-				getSigningAccounts: func() []Address {
-					return []Address{{42}}
+				getSigningAccounts: func() ([]Address, error) {
+					return []Address{{42}}, nil
 				},
 				log: func(message string) {
 					loggedMessages = append(loggedMessages, message)
@@ -1387,8 +1387,8 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 			}
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{{42}}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -1463,8 +1463,8 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 			}
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{{42}}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -1539,8 +1539,8 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 			}
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{{42}}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -1616,8 +1616,8 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 			}
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{{42}}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
 		},
 	}
 
@@ -1683,8 +1683,8 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 			}
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{{42}}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -1756,8 +1756,8 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 			}
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{{42}}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -1843,8 +1843,8 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 			}
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{{42}}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -1918,8 +1918,8 @@ func TestScriptReturnTypeNotStorableError(t *testing.T) {
     `)
 
 	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() []Address {
-			return []Address{{42}}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
 		},
 	}
 
@@ -1942,8 +1942,8 @@ func TestScriptParameterTypeNotStorableError(t *testing.T) {
     `)
 
 	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() []Address {
-			return []Address{{42}}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
 		},
 	}
 
@@ -1966,8 +1966,8 @@ func TestRuntimeSyntaxError(t *testing.T) {
     `)
 
 	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() []Address {
-			return []Address{{42}}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
 		},
 	}
 
@@ -2033,8 +2033,8 @@ func TestRuntimeStorageChanges(t *testing.T) {
 			}
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{{42}}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -2071,8 +2071,8 @@ func TestRuntimeAccountAddress(t *testing.T) {
 	address := common.BytesToAddress([]byte{42})
 
 	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() []Address {
-			return []Address{address}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -2106,8 +2106,8 @@ func TestRuntimePublicAccountAddress(t *testing.T) {
 	address := interpreter.NewAddressValueFromBytes([]byte{0x42})
 
 	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() []Address {
-			return nil
+		getSigningAccounts: func() ([]Address, error) {
+			return nil, nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -2181,8 +2181,8 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 			}
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{address}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -2218,8 +2218,8 @@ func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{{42}}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
 		},
 		createAccount: func(payer Address) (address Address, err error) {
 			return Address{42}, nil
@@ -2305,8 +2305,8 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: newTestStorage(nil, nil),
-			getSigningAccounts: func() []Address {
-				return []Address{{42}}
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
 			},
 			createAccount: func(payer Address) (address Address, err error) {
 				return Address{42}, nil
@@ -2504,8 +2504,8 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 			runtimeInterface := &testRuntimeInterface{
 				storage: newTestStorage(nil, nil),
-				getSigningAccounts: func() []Address {
-					return []Address{{42}}
+				getSigningAccounts: func() ([]Address, error) {
+					return []Address{{42}}, nil
 				},
 				getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
 					return accountCode, nil
@@ -2588,8 +2588,8 @@ func TestRuntimeContractAccount(t *testing.T) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{common.BytesToAddress(addressValue.Bytes())}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
@@ -2675,8 +2675,8 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{addressValue}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{addressValue}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
@@ -2871,8 +2871,8 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 			return accountCodes[key], nil
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{signerAccount}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -2995,8 +2995,8 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 		createAccount: func(payer Address) (address Address, err error) {
 			return address2Value, nil
 		},
-		getSigningAccounts: func() []Address {
-			return []Address{signerAccount}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signerAccount}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -3137,8 +3137,8 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 			nextAccount++
 			return result.ToAddress(), nil
 		},
-		getSigningAccounts: func() []Address {
-			return []Address{{0x1}}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{0x1}}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -3243,8 +3243,8 @@ func TestRuntimeBlock(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() []Address {
-			return nil
+		getSigningAccounts: func() ([]Address, error) {
+			return nil, nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -3291,8 +3291,8 @@ func TestUnsafeRandom(t *testing.T) {
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
-		unsafeRandom: func() uint64 {
-			return 7558174677681708339
+		unsafeRandom: func() (uint64, error) {
+			return 7558174677681708339, nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -3326,8 +3326,8 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
         `)
 
 		runtimeInterface := &testRuntimeInterface{
-			getSigningAccounts: func() []Address {
-				return nil
+			getSigningAccounts: func() ([]Address, error) {
+				return nil, nil
 			},
 		}
 
@@ -3347,8 +3347,8 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
         `)
 
 		runtimeInterface := &testRuntimeInterface{
-			getSigningAccounts: func() []Address {
-				return nil
+			getSigningAccounts: func() ([]Address, error) {
+				return nil, nil
 			},
 		}
 
@@ -3408,8 +3408,8 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 					return accountCode, nil
 				},
 				storage: newTestStorage(nil, nil),
-				getSigningAccounts: func() []Address {
-					return []Address{addressValue.ToAddress()}
+				getSigningAccounts: func() ([]Address, error) {
+					return []Address{addressValue.ToAddress()}, nil
 				},
 				getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
 					return accountCode, nil
@@ -3517,8 +3517,8 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 			return accountCodes[key], nil
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{address}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -3673,8 +3673,8 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
 			return accountCodes[key], nil
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{address}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
 		},
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
 			location := AddressLocation{
@@ -3834,8 +3834,8 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
 			return accountCodes[key], nil
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{address}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -3965,8 +3965,8 @@ func TestRuntimeComputationLimit(t *testing.T) {
 			runtime := NewInterpreterRuntime()
 
 			runtimeInterface := &testRuntimeInterface{
-				getSigningAccounts: func() []Address {
-					return nil
+				getSigningAccounts: func() ([]Address, error) {
+					return nil, nil
 				},
 				computationLimit: computationLimit,
 			}
@@ -4057,8 +4057,8 @@ func TestRuntimeMetrics(t *testing.T) {
 
 		runtimeInterface = &testRuntimeInterface{
 			storage: storage,
-			getSigningAccounts: func() []Address {
-				return []Address{{42}}
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{{42}}, nil
 			},
 			getCode: func(location Location) (bytes []byte, err error) {
 				switch location {
@@ -4229,8 +4229,8 @@ func TestRuntimeContractWriteback(t *testing.T) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(nil, onWrite),
-		getSigningAccounts: func() []Address {
-			return []Address{common.BytesToAddress(addressValue.Bytes())}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
@@ -4327,8 +4327,8 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(nil, onWrite),
-		getSigningAccounts: func() []Address {
-			return []Address{common.BytesToAddress(addressValue.Bytes())}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
@@ -4412,8 +4412,8 @@ func TestRuntimeExternalError(t *testing.T) {
 	type logPanic struct{}
 
 	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() []Address {
-			return nil
+		getSigningAccounts: func() ([]Address, error) {
+			return nil, nil
 		},
 		log: func(message string) {
 			panic(logPanic{})
@@ -4499,8 +4499,8 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 			return cachedPrograms[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return signerAddresses
+		getSigningAccounts: func() ([]Address, error) {
+			return signerAddresses, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -4622,8 +4622,8 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 			return cachedPrograms[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return signerAddresses
+		getSigningAccounts: func() ([]Address, error) {
+			return signerAddresses, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -4764,8 +4764,8 @@ func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
 			return cachedPrograms[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return signerAddresses
+		getSigningAccounts: func() ([]Address, error) {
+			return signerAddresses, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
@@ -4910,13 +4910,13 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{common.BytesToAddress([]byte{0x42})}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{common.BytesToAddress([]byte{0x42})}, nil
 		},
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
 		},
-		resolveLocation: func(identifiers []Identifier, location Location) []ResolvedLocation {
+		resolveLocation: func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
 			require.Empty(t, identifiers)
 			require.IsType(t, AddressLocation{}, location)
 
@@ -4932,7 +4932,7 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 						},
 					},
 				},
-			}
+			}, nil
 		},
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
 			return accountCode, nil
@@ -5064,8 +5064,8 @@ func TestRuntime(t *testing.T) {
 	}
 }
 
-func singleIdentifierLocationResolver(t *testing.T) func(identifiers []Identifier, location Location) []ResolvedLocation {
-	return func(identifiers []Identifier, location Location) []ResolvedLocation {
+func singleIdentifierLocationResolver(t *testing.T) func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
+	return func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
 		require.Len(t, identifiers, 1)
 		require.IsType(t, AddressLocation{}, location)
 
@@ -5077,6 +5077,6 @@ func singleIdentifierLocationResolver(t *testing.T) func(identifiers []Identifie
 				},
 				Identifiers: identifiers,
 			},
-		}
+		}, nil
 	}
 }

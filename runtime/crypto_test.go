@@ -99,7 +99,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 			publicKey []byte,
 			signatureAlgorithm string,
 			hashAlgorithm string,
-		) bool {
+		) (bool, error) {
 			called = true
 			assert.Equal(t, []byte{3, 4}, signature)
 			assert.Equal(t, "user", tag)
@@ -107,7 +107,7 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 			assert.Equal(t, []byte{1, 2}, publicKey)
 			assert.Equal(t, "ECDSA_P256", signatureAlgorithm)
 			assert.Equal(t, "SHA3_256", hashAlgorithm)
-			return true
+			return true, nil
 		},
 	}
 
@@ -145,11 +145,11 @@ func TestRuntimeCrypto_hash(t *testing.T) {
 		hash: func(
 			data []byte,
 			hashAlgorithm string,
-		) []byte {
+		) ([]byte, error) {
 			called = true
 			assert.Equal(t, []byte{1, 2, 3, 4}, data)
 			assert.Equal(t, "SHA3_256", hashAlgorithm)
-			return []byte{5, 6, 7, 8}
+			return []byte{5, 6, 7, 8}, nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
