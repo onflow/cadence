@@ -76,6 +76,8 @@ type Interface interface {
 	GenerateUUID() (uint64, error)
 	// GetComputationLimit returns the computation limit. A value <= 0 means there is no limit
 	GetComputationLimit() uint64
+	// SetComputationUsed reports the amount of computation used.
+	SetComputationUsed(used uint64) error
 	// DecodeArgument decodes a transaction argument against the given type.
 	DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error)
 	// GetCurrentBlockHeight returns the current block height.
@@ -206,6 +208,10 @@ func (i *EmptyRuntimeInterface) GenerateUUID() (uint64, error) {
 
 func (i *EmptyRuntimeInterface) GetComputationLimit() uint64 {
 	return 0
+}
+
+func (i *EmptyRuntimeInterface) SetComputationUsed(uint64) error {
+	return nil
 }
 
 func (i *EmptyRuntimeInterface) DecodeArgument(_ []byte, _ cadence.Type) (cadence.Value, error) {
