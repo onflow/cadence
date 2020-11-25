@@ -1,0 +1,285 @@
+hostEnv
+
+	Set limits on these 
+
+
+	events
+		how to compute size of cadence.Size ? 
+	logs
+
+
+
+	Add Size to Value 
+		- for operation size 
+
+	or  Size of Encoded event (bytes)  ?
+
+
+
+External errors are reported by the runtime but originate from the VM.
+	- ExternalError? 
+
+
+Issues 
+- before we used to panic for not supported methods 
+- GetSigningAccounts needs to return error 
+- GetCurrentBlockHeight needs to return error
+- UnsafeRandom needs to return error 
+
+
+User Level errors 
+	- MethodNotSupportedError
+	- AccountNotFoundError
+		- "account not found"
+	- AccountAlreadyExist 
+		- account with address %s already exists
+	- AccountCodeNotFoundError
+
+
+
+	- AuthorizationFailed (requires some authorization)
+		- code deployment requires authorization from the service account
+
+
+
+	- ContractNotExistError
+
+
+	- AccountPublicKeyNotFoundError
+		"account public key not found"
+	- AccountPublicKeyIsRevokedError
+	- CorruptedAccountError  (parsing a value like key counts)
+		- decoding values from ledger 
+
+	- InvalidPublicKeyError
+
+	- BlockNotFound
+
+
+	- cannot decode runtime public account key
+
+
+
+
+	// key index must be positve, received %d -> we should change it to unsigned int 
+
+|---------|
+|         |
+|_________|
+
+
+Panic and recover?
+
+	TODO add CBOR errors (max limits)
+
+fatal errors (Failure)
+	LedgerFailure
+		-> - e.g. state not found (is not a failure for scripts )
+		- cannot retreive previous contract: %w
+		- cannot retrieve current contract names:
+
+	- UUIDGeneratorFailure 
+
+
+	- BadgerFailure
+		- unexpected failure of GetBlockAtHeight, height %v: %w
+
+
+
+	- CBOREncodingError 
+		cannot encode contract names
+
+	- CBORDecodeError 
+		cannot decode deployed contract names %x: %w
+
+	- RLPEncodingFailed (rlp.EncodeToBytes(&w))
+
+
+	- cache error ?
+
+	- DataDecodingFailed
+		expectedType 
+		value
+
+		e.g. retrieved public key account count bytes (hex-encoded): %x do not represent valid uint64
+
+
+
+
+
+
+
+
+Unknown 
+	- can only get code for an account contract (an AddressLocation)
+
+
+
+
+
+
+Interface Errors (user errors)
+	
+	// transaction data 
+	- ResolveLocation ???
+	- GetCode ??? / resolveImport
+		- (user errors) account error
+			- invalid address 
+			- account not exists 
+			- register not exist (no code deployed at address %d)
+
+		- failure errors
+			- failed to read key %s on account %s: %w
+			- ledger error / trie not found 
+
+	- GetSigningAccounts
+		- (user level) not supported by this environment
+		- no fatal error is defined 
+
+	- GetComputationLimit()
+		- it returns tx level limit if non set it uses the global one 
+		- no error needed
+
+	// Cache 
+	- CacheProgram error 
+	- GetCachedProgram error 
+		- ASTCache errors 
+
+	// ledger interactions
+	- SetValue
+		- same here 
+
+	- GetValue 
+		- leger.Get errors needs to be translated
+
+	- ValueExists 
+
+
+
+	// account managment
+	- CreateAccount
+		- (User Error) CreateAccount is not supported by this environment
+		- failures ?CreateAccount
+			- invokeMetaTransaction	????
+
+
+	- AddAccountKey
+		- user error - account not exist
+		- user error - cannot decode runtime public account key: %w
+		- user error - invalid public key
+		- user error - max limit on keys 
+		- user error - storage exceeded 
+		- user error - CorruptedAccount (key count parsing)
+
+		- fatal - ledger error 
+
+
+		- failed to add public key to account: %w
+
+	- RemoveAccountKey
+		- user error - account not exist
+		- user error - key not exist 
+		- user error - key is already revoked 
+
+	- UpdateAccountContractCode
+		- cannot retreive previous code
+
+	- GetAccountContractCode
+		- cannot retreive previous code
+
+	- RemoveAccountContractCode
+
+
+
+	- ResolveImport ???
+		GetCode
+			no code deployed at address %s
+
+
+	- GetStorageUsed
+	- GetStorageCapacity
+
+	// log 
+	Log
+		- LogLimitError (user)
+	Logs() 
+		- same as events 
+
+	Events returns errors 
+		- only fatal ones if needed 
+
+	EmitEvent(cadence.Event)
+		- EventLimitError (user)
+		- EncodingError (user) - can we set limits ????
+
+	// env helper methods 
+	GenerateUUID 
+		- panic, cannot generate UUID
+		- no user errors 
+
+	DecodeArgument
+		- (user level) DecodeError is needed  , TODO look at jsoncdc.Decode errors
+	GetCurrentBlockHeight
+		- Panic - BlockHeader == nil (GetCurrentBlockHeight is not supported by this environment)
+		- TODO should ^ be panic ? what about this call in scripts 
+
+	GetBlockAtHeight
+		- (user error) not supported
+		- what if it doesn't exist ??? 
+
+		-> GetBlockAtHeight do we really need this? 
+			- should it be parents allowed only ?
+
+
+
+	UnsafeRandom
+
+
+	VerifySignature
+		- this is the big one 
+		- TODO look at errors return from the verifySignatureFromRuntime
+
+
+		> User errors 
+		> DecodePublicKey
+		> Invalid Hash function  (error)
+		> false, error : invalid domain tag
+		> verify results 
+
+
+	Hash
+
+
+	HighLevelStorageEnabled ??? 
+	SetCadenceValue ???
+
+
+hostEnv
+
+
+Address generator errors
+
+
+
+What to measure as event size ?
+	- Cadence Values
+	- Encoded event 
+
+
+
+
+Cadence errors 
+  - RunTimeErrors
+  - ComputationLimitExceededError
+
+
+Transaction Errors 
+	- ?????
+
+	Can have a cadence error
+		- wrap an account error / sign verify error
+
+	Execution Failed
+
+
+VM Fatal errors ()
