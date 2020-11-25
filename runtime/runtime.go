@@ -1318,7 +1318,10 @@ func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpre
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
 		message := fmt.Sprint(invocation.Arguments[0])
 		wrapPanic(func() {
-			runtimeInterface.Log(message)
+			err := runtimeInterface.Log(message)
+			if err != nil {
+				panic(err)
+			}
 		})
 		result := interpreter.VoidValue{}
 		return trampoline.Done{Result: result}
