@@ -1225,7 +1225,9 @@ func TestParseImportDeclaration(t *testing.T) {
 			[]ast.Declaration{
 				&ast.ImportDeclaration{
 					Identifiers: nil,
-					Location:    ast.AddressLocation{0x42},
+					Location: ast.AddressLocation{
+						Address: common.BytesToAddress([]byte{0x42}),
+					},
 					LocationPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -1338,7 +1340,9 @@ func TestParseImportDeclaration(t *testing.T) {
 							Pos:        ast.Position{Line: 1, Column: 20, Offset: 20},
 						},
 					},
-					Location:    ast.AddressLocation{0x42},
+					Location: ast.AddressLocation{
+						Address: common.BytesToAddress([]byte{0x42}),
+					},
 					LocationPos: ast.Position{Line: 1, Column: 29, Offset: 29},
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -2198,4 +2202,5 @@ func TestParseTransactionDeclaration(t *testing.T) {
 			result,
 		)
 	})
+
 }

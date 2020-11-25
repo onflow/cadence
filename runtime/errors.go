@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -200,12 +201,12 @@ func (e *ScriptParameterTypeNotStorableError) Error() string {
 	)
 }
 
-// TransactionParamterTypeNotStorableError is an error that is reported for
+// TransactionParameterTypeNotStorableError is an error that is reported for
 // transaction parameter types that are not storable.
 //
 // For example, the type `Int` is a storable type,
 // whereas a function type is not.
-
+//
 type TransactionParameterTypeNotStorableError struct {
 	Type sema.Type
 }
@@ -215,4 +216,30 @@ func (e *TransactionParameterTypeNotStorableError) Error() string {
 		"parameter type is non-storable type: `%s`",
 		e.Type.QualifiedString(),
 	)
+}
+
+// ParsingCheckingError provides extra information about the state of the environment
+// when a parsing or a checking error occurred
+//
+type ParsingCheckingError struct {
+	Err          error
+	StorageCache Cache
+	Code         []byte
+	Location     Location
+	Options      []sema.Option
+	UseCache     bool
+	Program      *ast.Program
+	Checker      *sema.Checker
+}
+
+func (e *ParsingCheckingError) ChildErrors() []error {
+	return []error{e.Err}
+}
+
+func (e *ParsingCheckingError) Error() string {
+	return e.Err.Error()
+}
+
+func (e ParsingCheckingError) Unwrap() error {
+	return e.Err
 }

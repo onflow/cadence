@@ -84,9 +84,10 @@ func ExpectCheckerErrors(t *testing.T, err error, count int) []error {
 
 	require.Error(t, err)
 
-	assert.IsType(t, &sema.CheckerError{}, err)
+	var checkerErr *sema.CheckerError
+	utils.RequireErrorAs(t, err, &checkerErr)
 
-	errs := err.(*sema.CheckerError).Errors
+	errs := checkerErr.Errors
 
 	require.Len(t, errs, count)
 

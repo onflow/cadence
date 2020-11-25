@@ -82,7 +82,7 @@ func validTopLevelDeclarations(location ast.Location) []common.DeclarationKind {
 	switch location.(type) {
 	case TransactionLocation:
 		return validTopLevelDeclarationsInTransaction
-	case AddressLocation, AddressContractLocation:
+	case AddressLocation:
 		return validTopLevelDeclarationsInAccountCode
 	}
 
@@ -106,8 +106,6 @@ func reportMetric(
 
 	report(metrics, elapsed)
 }
-
-const contractKey = "contract"
 
 // interpreterRuntime is a interpreter-based version of the Flow runtime.
 type interpreterRuntime struct{}
@@ -289,13 +287,20 @@ func (r *interpreterRuntime) ExecuteTransaction(
 
 	checker, err := r.parseAndCheckProgram(script, runtimeInterface, location, functions, nil, false)
 	if err != nil {
+		if err, ok := err.(*ParsingCheckingError); ok {
+			err.StorageCache = runtimeStorage.cache
+			return newError(err)
+		}
+
 		return newError(err)
 	}
 
 	transactions := checker.TransactionTypes
 	transactionCount := len(transactions)
 	if transactionCount != 1 {
-		return newError(InvalidTransactionCountError{Count: transactionCount})
+		return newError(InvalidTransactionCountError{
+			Count: transactionCount,
+		})
 	}
 
 	transactionType := transactions[0]
@@ -501,27 +506,41 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 ) (*sema.Checker, error) {
 
 	var program *ast.Program
+	var checker *sema.Checker
 	var err error
+
+	wrapError := func(err error) error {
+		return &ParsingCheckingError{
+			Err:      err,
+			Code:     code,
+			Location: location,
+			Options:  options,
+			UseCache: useCache,
+			Checker:  checker,
+			Program:  program,
+		}
+	}
+
 	if useCache {
 		wrapPanic(func() {
 			program, err = runtimeInterface.GetCachedProgram(location)
 		})
 		if err != nil {
-			return nil, err
+			return nil, wrapError(err)
 		}
 	}
 
 	if program == nil {
 		program, err = r.parse(location, code, runtimeInterface)
 		if err != nil {
-			return nil, err
+			return nil, wrapError(err)
 		}
 	}
 
 	importResolver := r.importResolver(runtimeInterface)
 	valueDeclarations := functions.ToValueDeclarations()
 
-	checker, err := sema.NewChecker(
+	checker, err = sema.NewChecker(
 		program,
 		location,
 		append(
@@ -574,12 +593,12 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 		)...,
 	)
 	if err != nil {
-		return nil, err
+		return nil, wrapError(err)
 	}
 
 	err = checker.Check()
 	if err != nil {
-		return nil, err
+		return nil, wrapError(err)
 	}
 
 	// After the program has passed semantic analysis, cache the program AST.
@@ -708,9 +727,7 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 
 				switch location := location.(type) {
 				case AddressLocation:
-					address = location.ToAddress()
-				case AddressContractLocation:
-					address = location.AddressLocation.ToAddress()
+					address = location.Address
 				default:
 					panic(runtimeErrors.NewUnreachableError())
 				}
@@ -824,11 +841,11 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 		}
 
 		var code []byte
-		if addressContractLocation, ok := location.(AddressContractLocation); ok {
+		if addressLocation, ok := location.(AddressLocation); ok {
 			wrapPanic(func() {
 				code, err = runtimeInterface.GetAccountContractCode(
-					addressContractLocation.AddressLocation.ToAddress(),
-					addressContractLocation.Name,
+					addressLocation.Address,
+					addressLocation.Name,
 				)
 			})
 		} else {
@@ -1053,7 +1070,6 @@ func (r *interpreterRuntime) writeContract(
 	name string,
 	contractValue interpreter.OptionalValue,
 ) {
-
 	runtimeStorage.writeValue(
 		addressValue.ToAddress(),
 		formatContractKey(name),
@@ -1062,12 +1078,9 @@ func (r *interpreterRuntime) writeContract(
 }
 
 func formatContractKey(name string) string {
-	if name == "" {
-		return contractKey
-	}
+	const contractKey = "contract"
 
 	// \x1F = Information Separator One
-
 	return fmt.Sprintf("%s\x1F%s", contractKey, name)
 }
 
@@ -1099,18 +1112,10 @@ func (r *interpreterRuntime) loadContract(
 		var storedValue interpreter.OptionalValue = interpreter.NilValue{}
 
 		switch location := compositeType.Location.(type) {
-		case AddressLocation:
-			address := location.ToAddress()
-			storedValue = runtimeStorage.readValue(
-				address,
-				contractKey,
-				false,
-			)
 
-		case AddressContractLocation:
-			address := location.AddressLocation.ToAddress()
+		case AddressLocation:
 			storedValue = runtimeStorage.readValue(
-				address,
+				location.Address,
 				formatContractKey(location.Name),
 				false,
 			)
@@ -1400,11 +1405,18 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			// Check the code
 
-			location := AddressContractLocation{
-				AddressLocation: addressValue[:],
-				Name:            nameArgument,
+			location := AddressLocation{
+				Address: address,
+				Name:    nameArgument,
 			}
-			checker, err := r.ParseAndCheckProgram(code, runtimeInterface, location)
+
+			// NOTE: do NOT use the cache!
+
+			const useCache = false
+
+			functions := r.standardLibraryFunctions(runtimeInterface, runtimeStorage)
+
+			checker, err := r.parseAndCheckProgram(code, runtimeInterface, location, functions, nil, useCache)
 			if err != nil {
 				panic(fmt.Errorf("invalid contract: %w", err))
 			}
@@ -1522,7 +1534,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	name string,
 	code []byte,
 	addressValue interpreter.AddressValue,
-	location AddressContractLocation,
+	location AddressLocation,
 	checker *sema.Checker,
 	contractType *sema.CompositeType,
 	constructorArguments []interpreter.Value,

@@ -27,23 +27,25 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 )
 
-type storageKey struct {
-	address common.Address
-	key     string
+type StorageKey struct {
+	Address common.Address
+	Key     string
 }
 
-type cacheEntry struct {
+type Cache map[StorageKey]CacheEntry
+
+type CacheEntry struct {
 	// true indicates that the value definitely must be written, independent of the value.
 	// false indicates that the value may has to be written if the value is modified.
-	mustWrite bool
-	value     interpreter.Value
+	MustWrite bool
+	Value     interpreter.Value
 }
 
 type interpreterRuntimeStorage struct {
 	runtimeInterface        Interface
 	highLevelStorageEnabled bool
 	highLevelStorage        HighLevelStorage
-	cache                   map[storageKey]cacheEntry
+	cache                   Cache
 }
 
 func newInterpreterRuntimeStorage(runtimeInterface Interface) *interpreterRuntimeStorage {
@@ -55,7 +57,7 @@ func newInterpreterRuntimeStorage(runtimeInterface Interface) *interpreterRuntim
 
 	return &interpreterRuntimeStorage{
 		runtimeInterface:        runtimeInterface,
-		cache:                   map[storageKey]cacheEntry{},
+		cache:                   Cache{},
 		highLevelStorage:        highLevelStorage,
 		highLevelStorageEnabled: highLevelStorageEnabled,
 	}
@@ -74,15 +76,15 @@ func (s *interpreterRuntimeStorage) valueExists(
 	key string,
 ) bool {
 
-	fullKey := storageKey{
-		address: address,
-		key:     key,
+	fullKey := StorageKey{
+		Address: address,
+		Key:     key,
 	}
 
 	// Check cache
 
 	if entry, ok := s.cache[fullKey]; ok {
-		return entry.value != nil
+		return entry.Value != nil
 	}
 
 	// Cache miss: Ask interface
@@ -97,9 +99,9 @@ func (s *interpreterRuntimeStorage) valueExists(
 	}
 
 	if !exists {
-		s.cache[fullKey] = cacheEntry{
-			mustWrite: false,
-			value:     nil,
+		s.cache[fullKey] = CacheEntry{
+			MustWrite: false,
+			Value:     nil,
 		}
 	}
 
@@ -120,19 +122,19 @@ func (s *interpreterRuntimeStorage) readValue(
 	deferred bool,
 ) interpreter.OptionalValue {
 
-	fullKey := storageKey{
-		address: address,
-		key:     key,
+	fullKey := StorageKey{
+		Address: address,
+		Key:     key,
 	}
 
 	// Check cache. Return cached value, if any
 
 	if entry, ok := s.cache[fullKey]; ok {
-		if entry.value == nil {
+		if entry.Value == nil {
 			return interpreter.NilValue{}
 		}
 
-		return interpreter.NewSomeValueOwningNonCopying(entry.value)
+		return interpreter.NewSomeValueOwningNonCopying(entry.Value)
 	}
 
 	// Cache miss: Load and deserialize the stored value (if any)
@@ -151,9 +153,9 @@ func (s *interpreterRuntimeStorage) readValue(
 	storedData, version = interpreter.StripMagic(storedData)
 
 	if len(storedData) == 0 {
-		s.cache[fullKey] = cacheEntry{
-			mustWrite: false,
-			value:     nil,
+		s.cache[fullKey] = CacheEntry{
+			MustWrite: false,
+			Value:     nil,
 		}
 		return interpreter.NilValue{}
 	}
@@ -174,9 +176,9 @@ func (s *interpreterRuntimeStorage) readValue(
 	}
 
 	if !deferred {
-		s.cache[fullKey] = cacheEntry{
-			mustWrite: false,
-			value:     storedValue,
+		s.cache[fullKey] = CacheEntry{
+			MustWrite: false,
+			Value:     storedValue,
 		}
 	}
 
@@ -195,23 +197,23 @@ func (s *interpreterRuntimeStorage) writeValue(
 	key string,
 	value interpreter.OptionalValue,
 ) {
-	fullKey := storageKey{
-		address: address,
-		key:     key,
+	fullKey := StorageKey{
+		Address: address,
+		Key:     key,
 	}
 
 	// Only write the value to the cache.
 	// The Cache is finally written back through the runtime interface in `writeCached`
 
 	entry := s.cache[fullKey]
-	entry.mustWrite = true
+	entry.MustWrite = true
 
 	switch typedValue := value.(type) {
 	case *interpreter.SomeValue:
-		entry.value = typedValue.Value
+		entry.Value = typedValue.Value
 
 	case interpreter.NilValue:
-		entry.value = nil
+		entry.Value = nil
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -225,7 +227,7 @@ func (s *interpreterRuntimeStorage) writeValue(
 func (s *interpreterRuntimeStorage) writeCached(inter *interpreter.Interpreter) {
 
 	type writeItem struct {
-		storageKey storageKey
+		storageKey StorageKey
 		value      interpreter.Value
 	}
 
@@ -233,25 +235,25 @@ func (s *interpreterRuntimeStorage) writeCached(inter *interpreter.Interpreter) 
 
 	for fullKey, entry := range s.cache {
 
-		if !entry.mustWrite && entry.value != nil && !entry.value.IsModified() {
+		if !entry.MustWrite && entry.Value != nil && !entry.Value.IsModified() {
 			continue
 		}
 
 		items = append(items, writeItem{
 			storageKey: fullKey,
-			value:      entry.value,
+			value:      entry.Value,
 		})
 
 		if s.highLevelStorageEnabled {
 			var err error
 
 			var value cadence.Value
-			if entry.value != nil {
-				value = exportValueWithInterpreter(entry.value, inter)
+			if entry.Value != nil {
+				value = exportValueWithInterpreter(entry.Value, inter)
 			}
 
 			wrapPanic(func() {
-				err = s.highLevelStorage.SetCadenceValue(fullKey.address, fullKey.key, value)
+				err = s.highLevelStorage.SetCadenceValue(fullKey.Address, fullKey.Key, value)
 			})
 			if err != nil {
 				panic(err)
@@ -268,16 +270,16 @@ func (s *interpreterRuntimeStorage) writeCached(inter *interpreter.Interpreter) 
 		if item.value != nil {
 			var deferrals *interpreter.EncodingDeferrals
 			var err error
-			newData, deferrals, err = s.encodeValue(item.value, item.storageKey.key)
+			newData, deferrals, err = s.encodeValue(item.value, item.storageKey.Key)
 			if err != nil {
 				panic(err)
 			}
 
 			for deferredKey, deferredValue := range deferrals.Values {
 
-				deferredStorageKey := storageKey{
-					address: item.storageKey.address,
-					key:     deferredKey,
+				deferredStorageKey := StorageKey{
+					Address: item.storageKey.Address,
+					Key:     deferredKey,
 				}
 
 				if !deferredValue.IsModified() {
@@ -308,8 +310,8 @@ func (s *interpreterRuntimeStorage) writeCached(inter *interpreter.Interpreter) 
 		var err error
 		wrapPanic(func() {
 			err = s.runtimeInterface.SetValue(
-				item.storageKey.address[:],
-				[]byte(item.storageKey.key),
+				item.storageKey.Address[:],
+				[]byte(item.storageKey.Key),
 				newData,
 			)
 		})

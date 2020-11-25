@@ -45,7 +45,7 @@ func resolveFileImport(mainPath string, location ast.StringLocation) (string, er
 }
 
 func (i *FlowIntegration) resolveAccountImport(location ast.AddressLocation) (string, error) {
-	accountAddr := location.ToAddress()
+	accountAddr := location.Address
 
 	acct, err := i.flowClient.GetAccount(context.Background(), flow.BytesToAddress(accountAddr[:]))
 	if err != nil {

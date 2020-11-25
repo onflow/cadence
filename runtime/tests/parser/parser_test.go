@@ -4383,7 +4383,9 @@ func TestParseImportWithAddress(t *testing.T) {
 		[]Declaration{
 			&ImportDeclaration{
 				Identifiers: nil,
-				Location:    AddressLocation{18, 52},
+				Location: AddressLocation{
+					Address: common.BytesToAddress([]byte{18, 52}),
+				},
 				Range: Range{
 					StartPos: Position{Offset: 9, Line: 2, Column: 8},
 					EndPos:   Position{Offset: 21, Line: 2, Column: 20},
@@ -4418,7 +4420,9 @@ func TestParseImportWithIdentifiers(t *testing.T) {
 						Pos:        Position{Offset: 19, Line: 2, Column: 18},
 					},
 				},
-				Location: AddressLocation{0},
+				Location: AddressLocation{
+					Address: common.BytesToAddress([]byte{0}),
+				},
 				Range: Range{
 					StartPos: Position{Offset: 9, Line: 2, Column: 8},
 					EndPos:   Position{Offset: 28, Line: 2, Column: 27},
@@ -4515,7 +4519,9 @@ func TestParseImportWithFromIdentifier(t *testing.T) {
 						Pos:        Position{Offset: 16, Line: 2, Column: 15},
 					},
 				},
-				Location: AddressLocation{0},
+				Location: AddressLocation{
+					Address: common.BytesToAddress([]byte{0}),
+				},
 				Range: Range{
 					StartPos: Position{Offset: 9, Line: 2, Column: 8},
 					EndPos:   Position{Offset: 28, Line: 2, Column: 27},
