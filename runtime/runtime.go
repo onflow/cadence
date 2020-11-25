@@ -801,6 +801,10 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 			return
 		}
 
+		err := runtimeInterface.SetComputationUsed(used)
+		if err != nil {
+			panic(err)
+		}
 		panic(ComputationLimitExceededError{
 			Limit: limit,
 		})
