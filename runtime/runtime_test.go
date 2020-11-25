@@ -132,7 +132,7 @@ func (i *testRuntimeInterface) ResolveLocation(identifiers []Identifier, locatio
 			{
 				Location:    location,
 				Identifiers: identifiers,
-			}
+			},
 		}, nil
 	}
 	return i.resolveLocation(identifiers, location)
@@ -261,7 +261,7 @@ func (i *testRuntimeInterface) ValueDecoded(duration time.Duration) {
 }
 
 func (i *testRuntimeInterface) GetCurrentBlockHeight() (uint64, error) {
-	return 1,  nil
+	return 1, nil
 }
 
 func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (block Block, exists bool, err error) {
@@ -285,7 +285,7 @@ func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (block Block, exi
 	return block, true, nil
 }
 
-func (i *testRuntimeInterface) UnsafeRandom() (uint64, error){
+func (i *testRuntimeInterface) UnsafeRandom() (uint64, error) {
 	if i.unsafeRandom == nil {
 		return 0, nil
 	}
@@ -2685,7 +2685,7 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error {return nil},
+		emitEvent: func(event cadence.Event) error { return nil },
 		log: func(message string) {
 			loggedMessage = message
 		},
@@ -3854,7 +3854,7 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
 			accountCodes[key] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error{
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
@@ -4239,7 +4239,7 @@ func TestRuntimeContractWriteback(t *testing.T) {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error{
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
@@ -4642,7 +4642,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 			accountCodes[key] = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error{
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
