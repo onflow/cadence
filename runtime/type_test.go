@@ -54,10 +54,10 @@ func TestRuntimeTypeStorage(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
+		getSigningAccounts: func() ([]Address, error) {
 			return []Address{
 				common.BytesToAddress([]byte{42}),
-			}
+			}, nil
 		},
 		log: func(message string) {
 			loggedMessage = message

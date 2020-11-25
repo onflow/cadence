@@ -102,8 +102,8 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{address}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
@@ -258,8 +258,8 @@ func TestRuntimeMagic(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestStorage(nil, onWrite),
-		getSigningAccounts: func() []Address {
-			return []Address{address}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{address}, nil
 		},
 	}
 
