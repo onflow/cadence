@@ -69,7 +69,7 @@ type Interface interface {
 	// Log logs a string.
 	Log(string) error
 	// EmitEvent is called when an event is emitted by the runtime.
-	EmitEvent(cadence.Event) (err error)
+	EmitEvent(cadence.Event) error
 	// ValueExists returns true if the given key exists in the storage, owned by the given account.
 	ValueExists(owner, key []byte) (exists bool, err error)
 	// GenerateUUID is called to generate a UUID.
@@ -127,13 +127,13 @@ type EmptyRuntimeInterface struct{}
 
 var _ Interface = &EmptyRuntimeInterface{}
 
-func (i *EmptyRuntimeInterface) ResolveLocation(identifiers []Identifier, location Location) []ResolvedLocation {
+func (i *EmptyRuntimeInterface) ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
 	return []ResolvedLocation{
 		{
 			Location:    location,
 			Identifiers: identifiers,
 		},
-	}
+	}, nil
 }
 
 func (i *EmptyRuntimeInterface) GetCode(_ Location) ([]byte, error) {
@@ -188,18 +188,20 @@ func (i *EmptyRuntimeInterface) RemoveAccountContractCode(_ Address, _ string) (
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) GetSigningAccounts() []Address {
-	return nil
+func (i *EmptyRuntimeInterface) GetSigningAccounts() ([]Address, error) {
+	return nil, nil
 }
 
-func (i *EmptyRuntimeInterface) Log(_ string) {}
+func (i *EmptyRuntimeInterface) Log(_ string) error {
+	return nil
+}
 
 func (i *EmptyRuntimeInterface) EmitEvent(_ cadence.Event) error {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) GenerateUUID() uint64 {
-	return 0
+func (i *EmptyRuntimeInterface) GenerateUUID() (uint64, error) {
+	return 0, nil
 }
 
 func (i *EmptyRuntimeInterface) GetComputationLimit() uint64 {
@@ -210,16 +212,16 @@ func (i *EmptyRuntimeInterface) DecodeArgument(_ []byte, _ cadence.Type) (cadenc
 	return nil, nil
 }
 
-func (i *EmptyRuntimeInterface) GetCurrentBlockHeight() uint64 {
-	return 0
+func (i *EmptyRuntimeInterface) GetCurrentBlockHeight() (uint64, error) {
+	return 0, nil
 }
 
 func (i *EmptyRuntimeInterface) GetBlockAtHeight(_ uint64) (block Block, exists bool, err error) {
 	return
 }
 
-func (i *EmptyRuntimeInterface) UnsafeRandom() uint64 {
-	return 0
+func (i *EmptyRuntimeInterface) UnsafeRandom() (uint64, error) {
+	return 0, nil
 }
 
 func (i *EmptyRuntimeInterface) VerifySignature(
@@ -229,15 +231,15 @@ func (i *EmptyRuntimeInterface) VerifySignature(
 	_ []byte,
 	_ string,
 	_ string,
-) bool {
-	return false
+) (bool, error) {
+	return false, nil
 }
 
 func (i *EmptyRuntimeInterface) Hash(
 	_ []byte,
 	_ string,
-) []byte {
-	return nil
+) ([]byte, error) {
+	return nil, nil
 }
 
 func (i EmptyRuntimeInterface) GetStorageUsed(_ Address) (uint64, error) {

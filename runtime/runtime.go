@@ -309,9 +309,11 @@ func (r *interpreterRuntime) ExecuteTransaction(
 
 	var authorizers []Address
 	wrapPanic(func() {
-		authorizers = runtimeInterface.GetSigningAccounts()
+		authorizers, err = runtimeInterface.GetSigningAccounts()
 	})
-
+	if err != nil {
+		return newError(err)
+	}
 	// check parameter count
 
 	argumentCount := len(arguments)
@@ -641,9 +643,9 @@ func (r *interpreterRuntime) newInterpreter(
 		interpreter.WithInjectedCompositeFieldsHandler(
 			r.injectedCompositeFieldsHandler(runtimeInterface, runtimeStorage),
 		),
-		interpreter.WithUUIDHandler(func() (uuid uint64) {
+		interpreter.WithUUIDHandler(func() (uuid uint64, err error) {
 			wrapPanic(func() {
-				uuid = runtimeInterface.GenerateUUID()
+				uuid, err = runtimeInterface.GenerateUUID()
 			})
 			return
 		}),
@@ -1318,10 +1320,14 @@ func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpre
 	}
 }
 
-func (r *interpreterRuntime) getCurrentBlockHeight(runtimeInterface Interface) (currentBlockHeight uint64) {
+func (r *interpreterRuntime) getCurrentBlockHeight(runtimeInterface Interface) (currentBlockHeight uint64, err error) {
+	var er error
 	wrapPanic(func() {
-		currentBlockHeight = runtimeInterface.GetCurrentBlockHeight()
+		currentBlockHeight, er = runtimeInterface.GetCurrentBlockHeight()
 	})
+	if er != nil {
+		err = newError(er)
+	}
 	return
 }
 
@@ -1349,7 +1355,10 @@ func (r *interpreterRuntime) getBlockAtHeight(height uint64, runtimeInterface In
 
 func (r *interpreterRuntime) newGetCurrentBlockFunction(runtimeInterface Interface) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
-		height := r.getCurrentBlockHeight(runtimeInterface)
+		height, err := r.getCurrentBlockHeight(runtimeInterface)
+		if err != nil {
+			panic(err)
+		}
 		block, err := r.getBlockAtHeight(height, runtimeInterface)
 		if err != nil {
 			panic(err)
@@ -1378,9 +1387,13 @@ func (r *interpreterRuntime) newGetBlockFunction(runtimeInterface Interface) int
 func (r *interpreterRuntime) newUnsafeRandomFunction(runtimeInterface Interface) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
 		var rand uint64
+		var err error
 		wrapPanic(func() {
-			rand = runtimeInterface.UnsafeRandom()
+			rand, err = runtimeInterface.UnsafeRandom()
 		})
+		if err != nil {
+			panic(err)
+		}
 		return trampoline.Done{Result: interpreter.UInt64Value(rand)}
 	}
 }
