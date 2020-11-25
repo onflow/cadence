@@ -41,7 +41,7 @@ type ResolvedLocation = sema.ResolvedLocation
 
 type Interface interface {
 	// ResolveLocation resolves an import location.
-	ResolveLocation(identifiers []Identifier, location Location) []ResolvedLocation
+	ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
 	// GetCode returns the code at a given location
 	GetCode(location Location) ([]byte, error)
 	// GetCachedProgram attempts to get a parsed program from a cache.
@@ -65,26 +65,26 @@ type Interface interface {
 	// RemoveAccountContractCode removes the code associated with an account contract.
 	RemoveAccountContractCode(address Address, name string) (err error)
 	// GetSigningAccounts returns the signing accounts.
-	GetSigningAccounts() []Address
+	GetSigningAccounts() ([]Address, error)
 	// Log logs a string.
-	Log(string)
+	Log(string) error
 	// EmitEvent is called when an event is emitted by the runtime.
 	EmitEvent(cadence.Event) (err error)
 	// ValueExists returns true if the given key exists in the storage, owned by the given account.
 	ValueExists(owner, key []byte) (exists bool, err error)
 	// GenerateUUID is called to generate a UUID.
-	GenerateUUID() uint64
+	GenerateUUID() (uint64, error)
 	// GetComputationLimit returns the computation limit. A value <= 0 means there is no limit
 	GetComputationLimit() uint64
 	// DecodeArgument decodes a transaction argument against the given type.
 	DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error)
 	// GetCurrentBlockHeight returns the current block height.
-	GetCurrentBlockHeight() uint64
+	GetCurrentBlockHeight() (uint64, error)
 	// GetBlockAtHeight returns the block at the given height.
 	GetBlockAtHeight(height uint64) (block Block, exists bool, err error)
 	// UnsafeRandom returns a random uint64, where the process of random number derivation is not cryptographically
 	// secure.
-	UnsafeRandom() uint64
+	UnsafeRandom() (uint64, error)
 	// VerifySignature returns true if the given signature was produced by signing the given tag + data
 	// using the given public key, signature algorithm, and hash algorithm.
 	VerifySignature(
@@ -94,9 +94,9 @@ type Interface interface {
 		publicKey []byte,
 		signatureAlgorithm string,
 		hashAlgorithm string,
-	) bool
+	) (bool, error)
 	// Hash returns the digest of hashing the given data with using the given hash algorithm
-	Hash(data []byte, hashAlgorithm string) []byte
+	Hash(data []byte, hashAlgorithm string) ([]byte, error)
 	// GetStorageUsed gets storage used in bytes by the address at the moment of the function call.
 	GetStorageUsed(address Address) (value uint64, err error)
 	// GetStorageCapacity gets storage capacity in bytes on the address.
@@ -240,10 +240,10 @@ func (i *EmptyRuntimeInterface) Hash(
 	return nil
 }
 
-func (i EmptyRuntimeInterface) GetStorageUsed(_ Address) (uint64,error) {
+func (i EmptyRuntimeInterface) GetStorageUsed(_ Address) (uint64, error) {
 	return 0, nil
 }
 
-func (i EmptyRuntimeInterface) GetStorageCapacity(_ Address) (uint64,error) {
+func (i EmptyRuntimeInterface) GetStorageCapacity(_ Address) (uint64, error) {
 	return 0, nil
 }
