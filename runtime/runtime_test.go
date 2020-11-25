@@ -202,8 +202,9 @@ func (i *testRuntimeInterface) GetSigningAccounts() ([]Address, error) {
 	return i.getSigningAccounts()
 }
 
-func (i *testRuntimeInterface) Log(message string) {
+func (i *testRuntimeInterface) Log(message string) error {
 	i.log(message)
+	return nil
 }
 
 func (i *testRuntimeInterface) EmitEvent(event cadence.Event) error {
