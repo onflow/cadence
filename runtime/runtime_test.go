@@ -222,6 +222,10 @@ func (i *testRuntimeInterface) GetComputationLimit() uint64 {
 	return i.computationLimit
 }
 
+func (i *testRuntimeInterface) SetComputationUsed(uint64) error {
+	return nil
+}
+
 func (i *testRuntimeInterface) DecodeArgument(b []byte, t cadence.Type) (cadence.Value, error) {
 	return i.decodeArgument(b, t)
 }
