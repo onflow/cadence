@@ -21,14 +21,14 @@ type CryptoSignatureVerifier interface {
 		publicKey []byte,
 		signatureAlgorithm string,
 		hashAlgorithm string,
-	) bool
+	) (bool, error)
 }
 
 type CryptoHasher interface {
 	Hash(
 		data []byte,
 		hashAlgorithm string,
-	) []byte
+	) ([]byte, error)
 }
 
 var CryptoChecker = func() *sema.Checker {
@@ -107,13 +107,16 @@ func newCryptoContractVerifySignatureFunction(signatureVerifier CryptoSignatureV
 			}
 			hashAlgorithm := hashAlgorithmStringValue.Str
 
-			isValid := signatureVerifier.VerifySignature(signature,
+			isValid, err := signatureVerifier.VerifySignature(signature,
 				tag,
 				signedData,
 				publicKey,
 				signatureAlgorithm,
 				hashAlgorithm,
 			)
+			if err != nil {
+				panic(fmt.Errorf("VerifySignature: failed to verify the signature: %w", err))
+			}
 
 			return trampoline.Done{Result: interpreter.BoolValue(isValid)}
 		},
@@ -153,7 +156,11 @@ func newCryptoContractHashFunction(hasher CryptoHasher) interpreter.FunctionValu
 			}
 			hashAlgorithm := hashAlgorithmStringValue.Str
 
-			digest := hasher.Hash(data, hashAlgorithm)
+			digest, err := hasher.Hash(data, hashAlgorithm)
+			if err != nil {
+				panic(fmt.Errorf("hash: hashing failed: %w", err))
+
+			}
 
 			result := interpreter.ByteSliceToByteArrayValue(digest)
 
