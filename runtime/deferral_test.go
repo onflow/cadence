@@ -138,8 +138,8 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(onRead, onWrite),
-		getSigningAccounts: func() []Address {
-			return []Address{common.BytesToAddress(addressValue.Bytes())}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
 		},
 		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 			accountCode = code
@@ -623,8 +623,8 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(onRead, onWrite),
-		getSigningAccounts: func() []Address {
-			return []Address{common.BytesToAddress(addressValue.Bytes())}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
 		},
 		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 			accountCode = code
@@ -856,11 +856,11 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_DictionaryTransfer(t *te
 			return accountCode, nil
 		},
 		storage: newTestStorage(onRead, onWrite),
-		getSigningAccounts: func() []Address {
+		getSigningAccounts: func() ([]Address, error) {
 			return []Address{
 				signer1,
 				signer2,
-			}
+			}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
@@ -1013,8 +1013,8 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Removal(t *testing.T) {
 			return accountCode, nil
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{signer}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signer}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
@@ -1095,8 +1095,8 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Destruction(t *testing.T
 			return accountCode, nil
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{signer}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signer}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
@@ -1211,8 +1211,8 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Insertion(t *testing.T) 
 			return accountCode, nil
 		},
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{signer}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{signer}, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
@@ -1330,8 +1330,8 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_ValueTransferAndDestroy(
 			return accountCode, nil
 		},
 		storage: testStorage,
-		getSigningAccounts: func() []Address {
-			return signers
+		getSigningAccounts: func() ([]Address, error) {
+			return signers, nil
 		},
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {

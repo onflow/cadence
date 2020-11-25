@@ -134,8 +134,8 @@ func TestRuntimeContract(t *testing.T) {
 
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
-			getSigningAccounts: func() []Address {
-				return []Address{signerAddress}
+			getSigningAccounts: func() ([]Address, error) {
+				return []Address{signerAddress}, nil
 			},
 			log: func(message string) {
 				loggedMessages = append(loggedMessages, message)
@@ -471,8 +471,8 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestStorage(nil, nil),
-		getSigningAccounts: func() []Address {
-			return []Address{common.BytesToAddress([]byte{0x1})}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{common.BytesToAddress([]byte{0x1})}, nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			key := contractKey{
@@ -498,7 +498,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 			delete(deployedContracts, key)
 			return nil
 		},
-		resolveLocation: func(identifiers []ast.Identifier, location ast.Location) (result []sema.ResolvedLocation) {
+		resolveLocation: func(identifiers []ast.Identifier, location ast.Location) (result []sema.ResolvedLocation, err error) {
 
 			// Resolve each identifier as an address location
 
@@ -519,7 +519,7 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
 		},
-		emitEvent: func(event cadence.Event) error{
+		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
 			return nil
 		},
