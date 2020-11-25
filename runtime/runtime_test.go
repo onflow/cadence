@@ -87,7 +87,7 @@ func newTestStorage(
 }
 
 type testRuntimeInterface struct {
-	resolveLocation           func(identifiers []Identifier, location Location) []ResolvedLocation
+	resolveLocation           func(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
 	getCode                   func(_ Location) ([]byte, error)
 	getCachedProgram          func(Location) (*ast.Program, error)
 	cacheProgram              func(Location, *ast.Program) error
@@ -98,10 +98,10 @@ type testRuntimeInterface struct {
 	updateAccountContractCode func(address Address, name string, code []byte) error
 	getAccountContractCode    func(address Address, name string) (code []byte, err error)
 	removeAccountContractCode func(address Address, name string) (err error)
-	getSigningAccounts        func() []Address
+	getSigningAccounts        func() ([]Address, error)
 	log                       func(string)
 	emitEvent                 func(cadence.Event) error
-	generateUUID              func() uint64
+	generateUUID              func() (uint64, error)
 	computationLimit          uint64
 	decodeArgument            func(b []byte, t cadence.Type) (cadence.Value, error)
 	programParsed             func(location ast.Location, duration time.Duration)
@@ -109,7 +109,7 @@ type testRuntimeInterface struct {
 	programInterpreted        func(location ast.Location, duration time.Duration)
 	valueEncoded              func(duration time.Duration)
 	valueDecoded              func(duration time.Duration)
-	unsafeRandom              func() uint64
+	unsafeRandom              func() (uint64, error)
 	verifySignature           func(
 		signature []byte,
 		tag string,
@@ -117,8 +117,8 @@ type testRuntimeInterface struct {
 		publicKey []byte,
 		signatureAlgorithm string,
 		hashAlgorithm string,
-	) bool
-	hash               func(data []byte, hashAlgorithm string) []byte
+	) (bool, error)
+	hash               func(data []byte, hashAlgorithm string) ([]byte, error)
 	setCadenceValue    func(owner Address, key string, value cadence.Value) (err error)
 	getStorageUsed     func(_ Address) (uint64, error)
 	getStorageCapacity func(_ Address) (uint64, error)
@@ -126,14 +126,14 @@ type testRuntimeInterface struct {
 
 var _ Interface = &testRuntimeInterface{}
 
-func (i *testRuntimeInterface) ResolveLocation(identifiers []Identifier, location Location) []ResolvedLocation {
+func (i *testRuntimeInterface) ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
 	if i.resolveLocation == nil {
 		return []ResolvedLocation{
 			{
 				Location:    location,
 				Identifiers: identifiers,
-			},
-		}
+			}
+		}, nil
 	}
 	return i.resolveLocation(identifiers, location)
 }
@@ -195,9 +195,9 @@ func (i *testRuntimeInterface) RemoveAccountContractCode(address Address, name s
 	return i.removeAccountContractCode(address, name)
 }
 
-func (i *testRuntimeInterface) GetSigningAccounts() []Address {
+func (i *testRuntimeInterface) GetSigningAccounts() ([]Address, error) {
 	if i.getSigningAccounts == nil {
-		return nil
+		return nil, nil
 	}
 	return i.getSigningAccounts()
 }
@@ -210,9 +210,9 @@ func (i *testRuntimeInterface) EmitEvent(event cadence.Event) error {
 	return i.emitEvent(event)
 }
 
-func (i *testRuntimeInterface) GenerateUUID() uint64 {
+func (i *testRuntimeInterface) GenerateUUID() (uint64, error) {
 	if i.generateUUID == nil {
-		return 0
+		return 0, nil
 	}
 	return i.generateUUID()
 }
@@ -260,8 +260,8 @@ func (i *testRuntimeInterface) ValueDecoded(duration time.Duration) {
 	i.valueDecoded(duration)
 }
 
-func (i *testRuntimeInterface) GetCurrentBlockHeight() uint64 {
-	return 1
+func (i *testRuntimeInterface) GetCurrentBlockHeight() (uint64, error) {
+	return 1,  nil
 }
 
 func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (block Block, exists bool, err error) {
@@ -285,11 +285,11 @@ func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (block Block, exi
 	return block, true, nil
 }
 
-func (i *testRuntimeInterface) UnsafeRandom() uint64 {
+func (i *testRuntimeInterface) UnsafeRandom() (uint64, error){
 	if i.unsafeRandom == nil {
-		return 0
+		return 0, nil
 	}
-	return i.unsafeRandom()
+	return i.unsafeRandom(), nil
 }
 
 func (i *testRuntimeInterface) VerifySignature(
@@ -299,9 +299,9 @@ func (i *testRuntimeInterface) VerifySignature(
 	publicKey []byte,
 	signatureAlgorithm string,
 	hashAlgorithm string,
-) bool {
+) (bool, error) {
 	if i.verifySignature == nil {
-		return false
+		return false, nil
 	}
 	return i.verifySignature(
 		signature,
@@ -310,14 +310,14 @@ func (i *testRuntimeInterface) VerifySignature(
 		publicKey,
 		signatureAlgorithm,
 		hashAlgorithm,
-	)
+	), nil
 }
 
-func (i *testRuntimeInterface) Hash(data []byte, hashAlgorithm string) []byte {
+func (i *testRuntimeInterface) Hash(data []byte, hashAlgorithm string) ([]byte, error) {
 	if i.hash == nil {
-		return nil
+		return nil, nil
 	}
-	return i.hash(data, hashAlgorithm)
+	return i.hash(data, hashAlgorithm), nil
 }
 
 func (i *testRuntimeInterface) HighLevelStorageEnabled() bool {
