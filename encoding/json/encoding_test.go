@@ -1265,10 +1265,14 @@ func convertValueFromScript(t *testing.T, script string) cadence.Value {
 	rt := runtime.NewInterpreterRuntime()
 
 	value, err := rt.ExecuteScript(
-		[]byte(script),
-		nil,
-		&runtime.EmptyRuntimeInterface{},
-		runtime.StringLocation("test"),
+		runtime.Script{
+			Source:    []byte(script),
+			Arguments: nil,
+		},
+		runtime.Context{
+			Interface: &runtime.EmptyRuntimeInterface{},
+			Location:  runtime.StringLocation("test"),
+		},
 	)
 
 	require.NoError(t, err)

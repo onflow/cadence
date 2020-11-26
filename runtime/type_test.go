@@ -66,10 +66,26 @@ func TestRuntimeTypeStorage(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(tx1, nil, runtimeInterface, nextTransactionLocation())
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: tx1,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(tx2, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: tx2,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	assert.Equal(t, `"Int"`, loggedMessage)

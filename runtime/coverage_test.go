@@ -74,7 +74,15 @@ func TestRuntimeCoverage(t *testing.T) {
 
 	runtime.SetCoverageReport(coverageReport)
 
-	value, err := runtime.ExecuteScript(script, nil, runtimeInterface, nextTransactionLocation())
+	value, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	assert.Equal(t, cadence.NewInt(42), value)

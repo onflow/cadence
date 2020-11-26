@@ -157,7 +157,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	nextTransactionLocation := newTransactionLocationGenerator()
 
 	clearReadsAndWrites()
-	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, nextTransactionLocation())
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	assert.NotNil(t, accountCode)
@@ -165,7 +173,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	assert.Len(t, writes, 1)
 
 	clearReadsAndWrites()
-	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: setupTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	assert.Len(t, writes, 1)
@@ -186,7 +202,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
     `)
 
 	clearReadsAndWrites()
-	err = runtime.ExecuteTransaction(insertTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: insertTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	cStorageKey := []byte("storage\x1fc")
@@ -225,7 +249,14 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	clearReadsAndWrites()
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(readTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: readTx},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"2", "2"}, loggedMessages)
@@ -265,7 +296,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	clearReadsAndWrites()
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(updateTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: updateTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"3"}, loggedMessages)
@@ -318,7 +357,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	clearReadsAndWrites()
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(replaceTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: replaceTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -379,7 +426,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	clearReadsAndWrites()
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(removeTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: removeTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -425,7 +480,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	clearReadsAndWrites()
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(readTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: readTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"nil", "nil"}, loggedMessages)
@@ -466,7 +529,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 	clearReadsAndWrites()
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(destroyTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: destroyTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -642,7 +713,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
 	nextTransactionLocation := newTransactionLocationGenerator()
 
 	clearReadsAndWrites()
-	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, nextTransactionLocation())
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	assert.NotNil(t, accountCode)
@@ -650,7 +729,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
 	assert.Len(t, writes, 1)
 
 	clearReadsAndWrites()
-	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: setupTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	assert.Len(t, writes, 1)
@@ -673,7 +760,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
     `)
 
 	clearReadsAndWrites()
-	err = runtime.ExecuteTransaction(insertTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: insertTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	cStorageKey := []byte("storage\x1fc")
@@ -715,7 +810,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
 	clearReadsAndWrites()
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(readTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: readTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	assert.Equal(t, []string{"2"}, loggedMessages)
@@ -882,7 +985,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_DictionaryTransfer(t *te
 	nextTransactionLocation := newTransactionLocationGenerator()
 
 	clearReadsAndWrites()
-	err := runtime.ExecuteTransaction(deploy, nil, runtimeInterface, nextTransactionLocation())
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	assert.NotNil(t, accountCode)
@@ -890,7 +1001,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_DictionaryTransfer(t *te
 	assert.Len(t, writes, 1)
 
 	clearReadsAndWrites()
-	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: setupTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	cStorageKey := []byte("storage\x1fc")
@@ -929,7 +1048,15 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_DictionaryTransfer(t *te
 	clearReadsAndWrites()
 	loggedMessages = nil
 
-	err = runtime.ExecuteTransaction(transferTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: transferTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	require.Len(t, writes, 7)
@@ -1035,16 +1162,48 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Removal(t *testing.T) {
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(deployTx, nil, runtimeInterface, nextTransactionLocation())
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: setupTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(borrowTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: borrowTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(loadTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: loadTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 }
 
@@ -1117,13 +1276,38 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Destruction(t *testing.T
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(deployTx, nil, runtimeInterface, nextTransactionLocation())
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+
+		Script{
+			Source: setupTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(testTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: testTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -1233,16 +1417,48 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Insertion(t *testing.T) 
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	err := runtime.ExecuteTransaction(deployTx, nil, runtimeInterface, nextTransactionLocation())
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: setupTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(borrowTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: borrowTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
-	err = runtime.ExecuteTransaction(loadTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: loadTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 }
 
@@ -1353,26 +1569,74 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_ValueTransferAndDestroy(
 	nextTransactionLocation := newTransactionLocationGenerator()
 
 	signers = []Address{signer1}
-	err := runtime.ExecuteTransaction(deployTx, nil, runtimeInterface, nextTransactionLocation())
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deployTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	signers = []Address{signer2}
-	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: setupTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	signers = []Address{signer3}
-	err = runtime.ExecuteTransaction(setupTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: setupTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	signers = []Address{signer2}
-	err = runtime.ExecuteTransaction(mintTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: mintTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	signers = []Address{signer2, signer3}
-	err = runtime.ExecuteTransaction(transferTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: transferTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 
 	signers = []Address{signer3}
-	err = runtime.ExecuteTransaction(destroyTx, nil, runtimeInterface, nextTransactionLocation())
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: destroyTx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
 	require.NoError(t, err)
 }

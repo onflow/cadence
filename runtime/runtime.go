@@ -38,24 +38,34 @@ import (
 	"github.com/onflow/cadence/runtime/trampoline"
 )
 
+type Script struct {
+	Source    []byte
+	Arguments [][]byte
+}
+
+type Context struct {
+	Interface Interface
+	Location  Location
+}
+
 // Runtime is a runtime capable of executing Cadence.
 type Runtime interface {
 	// ExecuteScript executes the given script.
 	//
 	// This function returns an error if the program has errors (e.g syntax errors, type errors),
 	// or if the execution fails.
-	ExecuteScript(script []byte, arguments [][]byte, runtimeInterface Interface, location Location) (cadence.Value, error)
+	ExecuteScript(Script, Context) (cadence.Value, error)
 
 	// ExecuteTransaction executes the given transaction.
 	//
 	// This function returns an error if the program has errors (e.g syntax errors, type errors),
 	// or if the execution fails.
-	ExecuteTransaction(script []byte, arguments [][]byte, runtimeInterface Interface, location Location) error
+	ExecuteTransaction(Script, Context) error
 
 	// ParseAndCheckProgram parses and checks the given code without executing the program.
 	//
 	// This function returns an error if the program contains any syntax or semantic errors.
-	ParseAndCheckProgram(code []byte, runtimeInterface Interface, location Location) (*sema.Checker, error)
+	ParseAndCheckProgram(source []byte, context Context) (*sema.Checker, error)
 
 	// SetCoverageReport activates reporting coverage in the given report.
 	// Passing nil disables coverage reporting (default).
@@ -132,18 +142,13 @@ func (r *interpreterRuntime) SetCoverageReport(coverageReport *CoverageReport) {
 	r.coverageReport = coverageReport
 }
 
-func (r *interpreterRuntime) ExecuteScript(
-	script []byte,
-	arguments [][]byte,
-	runtimeInterface Interface,
-	location Location,
-) (cadence.Value, error) {
+func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cadence.Value, error) {
 
-	runtimeStorage := newInterpreterRuntimeStorage(runtimeInterface)
+	runtimeStorage := newInterpreterRuntimeStorage(context.Interface)
 
-	functions := r.standardLibraryFunctions(runtimeInterface, runtimeStorage)
+	functions := r.standardLibraryFunctions(context.Interface, runtimeStorage)
 
-	checker, err := r.parseAndCheckProgram(script, runtimeInterface, location, functions, nil, false)
+	checker, err := r.parseAndCheckProgram(script.Source, context, functions, nil, false)
 	if err != nil {
 		return nil, newError(err)
 	}
@@ -173,13 +178,13 @@ func (r *interpreterRuntime) ExecuteScript(
 
 	interpret := scriptExecutionFunction(
 		functionEntryPointType.Parameters,
-		arguments,
-		runtimeInterface,
+		script.Arguments,
+		context.Interface,
 	)
 
 	value, inter, err := r.interpret(
-		location,
-		runtimeInterface,
+		context.Location,
+		context.Interface,
 		runtimeStorage,
 		checker,
 		functions,
@@ -200,7 +205,13 @@ func (r *interpreterRuntime) ExecuteScript(
 	return exportValue(value), nil
 }
 
-func scriptExecutionFunction(parameters []*sema.Parameter, arguments [][]byte, runtimeInterface Interface) func(inter *interpreter.Interpreter) (interpreter.Value, error) {
+type interpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, error)
+
+func scriptExecutionFunction(
+	parameters []*sema.Parameter,
+	arguments [][]byte,
+	runtimeInterface Interface,
+) interpretFunc {
 	return func(inter *interpreter.Interpreter) (interpreter.Value, error) {
 		values, err := validateArgumentParams(
 			inter,
@@ -213,8 +224,6 @@ func scriptExecutionFunction(parameters []*sema.Parameter, arguments [][]byte, r
 		return inter.Invoke("main", values...)
 	}
 }
-
-type interpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, error)
 
 func (r *interpreterRuntime) interpret(
 	location ast.Location,
@@ -281,17 +290,13 @@ func (r *interpreterRuntime) newAuthAccountValue(
 	)
 }
 
-func (r *interpreterRuntime) ExecuteTransaction(
-	script []byte,
-	arguments [][]byte,
-	runtimeInterface Interface,
-	location Location,
-) error {
-	runtimeStorage := newInterpreterRuntimeStorage(runtimeInterface)
+func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) error {
 
-	functions := r.standardLibraryFunctions(runtimeInterface, runtimeStorage)
+	runtimeStorage := newInterpreterRuntimeStorage(context.Interface)
 
-	checker, err := r.parseAndCheckProgram(script, runtimeInterface, location, functions, nil, false)
+	functions := r.standardLibraryFunctions(context.Interface, runtimeStorage)
+
+	checker, err := r.parseAndCheckProgram(script.Source, context, functions, nil, false)
 	if err != nil {
 		if err, ok := err.(*ParsingCheckingError); ok {
 			err.StorageCache = runtimeStorage.cache
@@ -313,14 +318,14 @@ func (r *interpreterRuntime) ExecuteTransaction(
 
 	var authorizers []Address
 	wrapPanic(func() {
-		authorizers, err = runtimeInterface.GetSigningAccounts()
+		authorizers, err = context.Interface.GetSigningAccounts()
 	})
 	if err != nil {
 		return newError(err)
 	}
 	// check parameter count
 
-	argumentCount := len(arguments)
+	argumentCount := len(script.Arguments)
 	authorizerCount := len(authorizers)
 
 	transactionParameterCount := len(transactionType.Parameters)
@@ -346,21 +351,22 @@ func (r *interpreterRuntime) ExecuteTransaction(
 	for i, address := range authorizers {
 		authorizerValues[i] = r.newAuthAccountValue(
 			interpreter.NewAddressValue(address),
-			runtimeInterface, runtimeStorage,
+			context.Interface,
+			runtimeStorage,
 		)
 	}
 
 	_, inter, err := r.interpret(
-		location,
-		runtimeInterface,
+		context.Location,
+		context.Interface,
 		runtimeStorage,
 		checker,
 		functions,
 		nil,
 		r.transactionExecutionFunction(
 			transactionType.Parameters,
-			arguments,
-			runtimeInterface,
+			script.Arguments,
+			context.Interface,
 			authorizerValues,
 		),
 	)
@@ -478,11 +484,11 @@ func validateArgumentParams(
 }
 
 // ParseAndCheckProgram parses the given script and runs type check.
-func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, runtimeInterface Interface, location Location) (*sema.Checker, error) {
-	runtimeStorage := newInterpreterRuntimeStorage(runtimeInterface)
-	functions := r.standardLibraryFunctions(runtimeInterface, runtimeStorage)
+func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) (*sema.Checker, error) {
+	runtimeStorage := newInterpreterRuntimeStorage(context.Interface)
+	functions := r.standardLibraryFunctions(context.Interface, runtimeStorage)
 
-	checker, err := r.parseAndCheckProgram(code, runtimeInterface, location, functions, nil, true)
+	checker, err := r.parseAndCheckProgram(code, context, functions, nil, true)
 	if err != nil {
 		return nil, newError(err)
 	}
@@ -492,8 +498,7 @@ func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, runtimeInterface 
 
 func (r *interpreterRuntime) parseAndCheckProgram(
 	code []byte,
-	runtimeInterface Interface,
-	location Location,
+	context Context,
 	functions stdlib.StandardLibraryFunctions,
 	options []sema.Option,
 	useCache bool,
@@ -507,7 +512,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 		return &ParsingCheckingError{
 			Err:      err,
 			Code:     code,
-			Location: location,
+			Location: context.Location,
 			Options:  options,
 			UseCache: useCache,
 			Checker:  checker,
@@ -517,7 +522,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 
 	if useCache {
 		wrapPanic(func() {
-			program, err = runtimeInterface.GetCachedProgram(location)
+			program, err = context.Interface.GetCachedProgram(context.Location)
 		})
 		if err != nil {
 			return nil, wrapError(err)
@@ -525,18 +530,18 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	}
 
 	if program == nil {
-		program, err = r.parse(location, code, runtimeInterface)
+		program, err = r.parse(code, context.Location, context.Interface)
 		if err != nil {
 			return nil, wrapError(err)
 		}
 	}
 
-	importResolver := r.importResolver(runtimeInterface)
+	importResolver := r.importResolver(context.Interface)
 	valueDeclarations := functions.ToValueDeclarations()
 
 	checker, err = sema.NewChecker(
 		program,
-		location,
+		context.Location,
 		append(
 			[]sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),
@@ -545,7 +550,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 				sema.WithLocationHandler(
 					func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
 						wrapPanic(func() {
-							res, err = runtimeInterface.ResolveLocation(identifiers, location)
+							res, err = context.Interface.ResolveLocation(identifiers, location)
 						})
 						return
 					},
@@ -585,7 +590,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 						func() {
 							check()
 						},
-						runtimeInterface,
+						context.Interface,
 						func(metrics Metrics, duration time.Duration) {
 							metrics.ProgramChecked(location, duration)
 						},
@@ -606,7 +611,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 
 	// After the program has passed semantic analysis, cache the program AST.
 	wrapPanic(func() {
-		err = runtimeInterface.CacheProgram(location, program)
+		err = context.Interface.CacheProgram(context.Location, program)
 	})
 	if err != nil {
 		return nil, err
@@ -873,7 +878,7 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 			return nil, nil
 		}
 
-		program, err = r.parse(location, code, runtimeInterface)
+		program, err = r.parse(code, location, runtimeInterface)
 		if err != nil {
 			return nil, err
 		}
@@ -890,8 +895,8 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 }
 
 func (r *interpreterRuntime) parse(
-	location ast.Location,
 	script []byte,
+	location ast.Location,
 	runtimeInterface Interface,
 ) (
 	program *ast.Program,
@@ -1498,7 +1503,12 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			functions := r.standardLibraryFunctions(runtimeInterface, runtimeStorage)
 
-			checker, err := r.parseAndCheckProgram(code, runtimeInterface, location, functions, nil, useCache)
+			context := Context{
+				Interface: runtimeInterface,
+				Location:  location,
+			}
+
+			checker, err := r.parseAndCheckProgram(code, context, functions, nil, useCache)
 			if err != nil {
 				panic(fmt.Errorf("invalid contract: %w", err))
 			}

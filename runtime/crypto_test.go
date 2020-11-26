@@ -44,7 +44,15 @@ func TestRuntimeCrypto_import(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{}
 
-	result, err := runtime.ExecuteScript(script, nil, runtimeInterface, utils.TestLocation)
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  utils.TestLocation,
+		},
+	)
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -111,7 +119,15 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 		},
 	}
 
-	result, err := runtime.ExecuteScript(script, nil, runtimeInterface, utils.TestLocation)
+	result, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  utils.TestLocation,
+		},
+	)
 	require.NoError(t, err)
 
 	assert.Equal(t,
@@ -156,7 +172,15 @@ func TestRuntimeCrypto_hash(t *testing.T) {
 		},
 	}
 
-	_, err := runtime.ExecuteScript(script, nil, runtimeInterface, utils.TestLocation)
+	_, err := runtime.ExecuteScript(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  utils.TestLocation,
+		},
+	)
 	require.NoError(t, err)
 
 	assert.Equal(t,
