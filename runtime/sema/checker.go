@@ -122,7 +122,10 @@ func WithPredeclaredValues(predeclaredValues map[string]ValueDeclaration) Option
 		checker.PredeclaredValues = predeclaredValues
 
 		for name, declaration := range predeclaredValues {
-			checker.declareValue(name, declaration)
+			variable := checker.declareValue(name, declaration)
+			if variable == nil {
+				continue
+			}
 			checker.declareGlobalValue(name)
 		}
 
@@ -282,12 +285,20 @@ func (checker *Checker) SetAllCheckers(allCheckers map[ast.LocationID]*Checker) 
 func (checker *Checker) declareBaseValues() {
 	for name, declaration := range BaseValues {
 		variable := checker.declareValue(name, declaration)
+		if variable == nil {
+			continue
+		}
 		variable.IsBaseValue = true
 		checker.declareGlobalValue(name)
 	}
 }
 
 func (checker *Checker) declareValue(name string, declaration ValueDeclaration) *Variable {
+
+	if !declaration.ValueDeclarationAvailable(checker.Location) {
+		return nil
+	}
+
 	variable, err := checker.valueActivations.Declare(variableDeclaration{
 		identifier: name,
 		ty:         declaration.ValueDeclarationType(),
