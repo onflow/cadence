@@ -34,6 +34,7 @@ type StandardLibraryFunction struct {
 	Type           sema.InvokableType
 	Function       interpreter.HostFunctionValue
 	ArgumentLabels []string
+	Available      func(ast.Location) bool
 }
 
 func (f StandardLibraryFunction) ValueDeclarationType() sema.Type {
@@ -50,6 +51,13 @@ func (StandardLibraryFunction) ValueDeclarationPosition() ast.Position {
 
 func (StandardLibraryFunction) ValueDeclarationIsConstant() bool {
 	return true
+}
+
+func (f StandardLibraryFunction) ValueDeclarationAvailable(location ast.Location) bool {
+	if f.Available == nil {
+		return true
+	}
+	return f.Available(location)
 }
 
 func (f StandardLibraryFunction) ValueDeclarationArgumentLabels() []string {

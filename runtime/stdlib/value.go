@@ -29,6 +29,7 @@ type StandardLibraryValue struct {
 	Type       sema.Type
 	Kind       common.DeclarationKind
 	IsConstant bool
+	Available  func(ast.Location) bool
 }
 
 func (v StandardLibraryValue) ValueDeclarationType() sema.Type {
@@ -48,6 +49,13 @@ func (StandardLibraryValue) ValueDeclarationPosition() ast.Position {
 
 func (v StandardLibraryValue) ValueDeclarationIsConstant() bool {
 	return v.IsConstant
+}
+
+func (f StandardLibraryValue) ValueDeclarationAvailable(location ast.Location) bool {
+	if f.Available == nil {
+		return true
+	}
+	return f.Available(location)
 }
 
 func (StandardLibraryValue) ValueDeclarationArgumentLabels() []string {

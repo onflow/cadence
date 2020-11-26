@@ -29,6 +29,7 @@ type ValueDeclaration interface {
 	ValueDeclarationPosition() ast.Position
 	ValueDeclarationIsConstant() bool
 	ValueDeclarationArgumentLabels() []string
+	ValueDeclarationAvailable(ast.Location) bool
 }
 
 type TypeDeclaration interface {
