@@ -593,10 +593,13 @@ func exportEventFromScript(t *testing.T, script string) cadence.Event {
 	inter := &eventCapturingInterface{}
 
 	_, err := rt.ExecuteScript(
-		[]byte(script),
-		nil,
-		inter,
-		utils.TestLocation,
+		Script{
+			Source: []byte(script),
+		},
+		Context{
+			Interface: inter,
+			Location:  utils.TestLocation,
+		},
 	)
 
 	require.NoError(t, err)
@@ -611,10 +614,13 @@ func exportValueFromScript(t *testing.T, script string) cadence.Value {
 	rt := NewInterpreterRuntime()
 
 	value, err := rt.ExecuteScript(
-		[]byte(script),
-		nil,
-		&EmptyRuntimeInterface{},
-		utils.TestLocation,
+		Script{
+			Source: []byte(script),
+		},
+		Context{
+			Interface: &EmptyRuntimeInterface{},
+			Location:  utils.TestLocation,
+		},
 	)
 
 	require.NoError(t, err)

@@ -178,7 +178,16 @@ func TestRuntimeContract(t *testing.T) {
 
 		t.Run("add", func(t *testing.T) {
 
-			err := runtime.ExecuteTransaction(addTx, nil, runtimeInterface, nextTransactionLocation())
+			err := runtime.ExecuteTransaction(
+				Script{
+					Source:    addTx,
+					Arguments: nil,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
 
 			if tc.valid {
 				require.NoError(t, err)
@@ -231,7 +240,15 @@ func TestRuntimeContract(t *testing.T) {
 			loggedMessages = nil
 			events = nil
 
-			err := runtime.ExecuteTransaction(addTx, nil, runtimeInterface, nextTransactionLocation())
+			err := runtime.ExecuteTransaction(
+				Script{
+					Source: addTx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
 			require.Error(t, err)
 
 			// the deployed code should not have been updated,
@@ -250,7 +267,15 @@ func TestRuntimeContract(t *testing.T) {
 			loggedMessages = nil
 			events = nil
 
-			err := runtime.ExecuteTransaction(updateTx, nil, runtimeInterface, nextTransactionLocation())
+			err := runtime.ExecuteTransaction(
+				Script{
+					Source: updateTx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
 			require.NoError(t, err)
 
 			require.Equal(t, []byte(tc.code2), deployedCode)
@@ -287,7 +312,15 @@ func TestRuntimeContract(t *testing.T) {
 			loggedMessages = nil
 			events = nil
 
-			err := runtime.ExecuteTransaction(removeTx, nil, runtimeInterface, nextTransactionLocation())
+			err := runtime.ExecuteTransaction(
+				Script{
+					Source: removeTx,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
 			require.NoError(t, err)
 
 			require.Empty(t, deployedCode)
@@ -535,7 +568,14 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 		{"C", contractC},
 	} {
 		tx := addTx(contract.name, contract.code)
-		err := runtime.ExecuteTransaction(tx, nil, runtimeInterface, nextTransactionLocation())
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: tx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			})
 		require.NoError(t, err)
 	}
 
@@ -552,7 +592,15 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 
 		loggedMessages = nil
 
-		err := runtime.ExecuteTransaction(tx, nil, runtimeInterface, nextTransactionLocation())
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: tx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
 		require.NoError(t, err)
 	})
 
@@ -569,7 +617,15 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 
 		loggedMessages = nil
 
-		err := runtime.ExecuteTransaction(tx, nil, runtimeInterface, nextTransactionLocation())
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: tx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
 		require.NoError(t, err)
 	})
 
@@ -586,8 +642,15 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 
 		loggedMessages = nil
 
-		err := runtime.ExecuteTransaction(tx, nil, runtimeInterface, nextTransactionLocation())
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: tx,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
 		require.NoError(t, err)
 	})
-
 }
