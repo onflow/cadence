@@ -4411,35 +4411,9 @@ func init() {
 	}
 }
 
-// baseValues are the values available in programs
-
+// BaseValues are the values available in programs
+//
 var BaseValues = map[string]ValueDeclaration{}
-
-type baseFunction struct {
-	name           string
-	invokableType  InvokableType
-	argumentLabels []string
-}
-
-func (f baseFunction) ValueDeclarationType() Type {
-	return f.invokableType
-}
-
-func (baseFunction) ValueDeclarationKind() common.DeclarationKind {
-	return common.DeclarationKindFunction
-}
-
-func (baseFunction) ValueDeclarationPosition() ast.Position {
-	return ast.Position{}
-}
-
-func (baseFunction) ValueDeclarationIsConstant() bool {
-	return true
-}
-
-func (f baseFunction) ValueDeclarationArgumentLabels() []string {
-	return f.argumentLabels
-}
 
 var AllSignedFixedPointTypes = []Type{
 	&Fix64Type{},
