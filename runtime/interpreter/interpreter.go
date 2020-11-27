@@ -78,7 +78,7 @@ type OnEventEmittedFunc func(
 	inter *Interpreter,
 	event *CompositeValue,
 	eventType *sema.CompositeType,
-)
+) error
 
 // OnStatementFunc is a function that is triggered when a statement is about to be executed.
 //
@@ -160,7 +160,7 @@ type ImportLocationHandlerFunc func(
 ) Import
 
 // UUIDHandlerFunc is a function that handles the generation of UUIDs.
-type UUIDHandlerFunc func() uint64
+type UUIDHandlerFunc func() (uint64, error)
 
 // CompositeTypeCode contains the the "prepared" / "callable" "code"
 // for the functions and the destructor of a composite
@@ -2530,7 +2530,18 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			fields := map[string]Value{}
 
 			if declaration.CompositeKind == common.CompositeKindResource {
-				uuid := interpreter.uuidHandler()
+
+				if interpreter.uuidHandler == nil {
+					panic(UUIDUnavailableError{
+						LocationRange: invocation.LocationRange,
+					})
+				}
+
+				uuid, err := interpreter.uuidHandler()
+				if err != nil {
+					panic(err)
+				}
+
 				fields[sema.ResourceUUIDFieldName] = UInt64Value(uuid)
 			}
 
@@ -3462,7 +3473,16 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 
 			eventType := interpreter.Checker.Elaboration.EmitStatementEventTypes[statement]
 
-			interpreter.onEventEmitted(interpreter, event, eventType)
+			if interpreter.onEventEmitted == nil {
+				panic(EventEmissionUnavailableError{
+					LocationRange: interpreter.locationRange(statement),
+				})
+			}
+
+			err := interpreter.onEventEmitted(interpreter, event, eventType)
+			if err != nil {
+				panic(err)
+			}
 
 			// NOTE: no result, so it does *not* act like a return-statement
 			return Done{}
