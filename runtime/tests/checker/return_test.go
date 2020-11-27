@@ -188,7 +188,7 @@ func TestCheckInvalidMissingReturnStatementStructFunction(t *testing.T) {
 type exitTest struct {
 	body              string
 	exits             bool
-	valueDeclarations map[string]sema.ValueDeclaration
+	valueDeclarations []sema.ValueDeclaration
 	errors            []error
 }
 
@@ -421,7 +421,7 @@ func TestCheckNeverInvocationExits(t *testing.T) {
 
 	valueDeclarations := stdlib.StandardLibraryFunctions{
 		stdlib.PanicFunction,
-	}.ToValueDeclarations()
+	}.ToSemaValueDeclarations()
 
 	testExits(
 		t,

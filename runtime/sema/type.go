@@ -4518,6 +4518,9 @@ func init() {
 }
 
 func init() {
+
+	// Declare a conversion function for the address type
+
 	addressType := &AddressType{}
 	typeName := addressType.String()
 

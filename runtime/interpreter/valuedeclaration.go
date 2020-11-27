@@ -16,26 +16,14 @@
  * limitations under the License.
  */
 
-package sema
+package interpreter
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/common"
 )
 
 type ValueDeclaration interface {
 	ValueDeclarationName() string
-	ValueDeclarationType() Type
-	ValueDeclarationKind() common.DeclarationKind
-	ValueDeclarationPosition() ast.Position
-	ValueDeclarationIsConstant() bool
-	ValueDeclarationArgumentLabels() []string
+	ValueDeclarationValue() Value
 	ValueDeclarationAvailable(ast.Location) bool
-}
-
-type TypeDeclaration interface {
-	TypeDeclarationName() string
-	TypeDeclarationType() Type
-	TypeDeclarationKind() common.DeclarationKind
-	TypeDeclarationPosition() ast.Position
 }

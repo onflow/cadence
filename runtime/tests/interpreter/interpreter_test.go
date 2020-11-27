@@ -1431,9 +1431,9 @@ func TestInterpretHostFunction(t *testing.T) {
 		program,
 		TestLocation,
 		sema.WithPredeclaredValues(
-			stdlib.StandardLibraryFunctions{
+			[]sema.ValueDeclaration{
 				testFunction,
-			}.ToValueDeclarations(),
+			},
 		),
 	)
 	require.NoError(t, err)
@@ -1443,9 +1443,9 @@ func TestInterpretHostFunction(t *testing.T) {
 
 	inter, err := interpreter.NewInterpreter(
 		checker,
-		interpreter.WithPredefinedValues(
-			map[string]interpreter.Value{
-				testFunction.Name: testFunction.Function,
+		interpreter.WithPredeclaredValues(
+			[]interpreter.ValueDeclaration{
+				testFunction,
 			},
 		),
 	)
@@ -1508,9 +1508,9 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 		program,
 		TestLocation,
 		sema.WithPredeclaredValues(
-			stdlib.StandardLibraryFunctions{
+			[]sema.ValueDeclaration{
 				testFunction,
-			}.ToValueDeclarations(),
+			},
 		),
 	)
 	require.NoError(t, err)
@@ -1520,9 +1520,9 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 
 	inter, err := interpreter.NewInterpreter(
 		checker,
-		interpreter.WithPredefinedValues(
-			map[string]interpreter.Value{
-				testFunction.Name: testFunction.Function,
+		interpreter.WithPredeclaredValues(
+			[]interpreter.ValueDeclaration{
+				testFunction,
 			},
 		),
 	)
@@ -3927,7 +3927,7 @@ func TestInterpretImportError(t *testing.T) {
 	valueDeclarations :=
 		stdlib.StandardLibraryFunctions{
 			stdlib.PanicFunction,
-		}.ToValueDeclarations()
+		}.ToSemaValueDeclarations()
 
 	importedChecker, err := checker.ParseAndCheckWithOptions(t,
 		`
@@ -3973,11 +3973,11 @@ func TestInterpretImportError(t *testing.T) {
 
 	values := stdlib.StandardLibraryFunctions{
 		stdlib.PanicFunction,
-	}.ToValues()
+	}.ToInterpreterValueDeclarations()
 
 	inter, err := interpreter.NewInterpreter(
 		importingChecker,
-		interpreter.WithPredefinedValues(values),
+		interpreter.WithPredeclaredValues(values),
 		interpreter.WithImportLocationHandler(
 			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
 				assert.Equal(t,
@@ -6444,8 +6444,8 @@ func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
 			stdlib.PanicFunction,
 		}
 
-	valueDeclarations := standardLibraryFunctions.ToValueDeclarations()
-	predefinedValues := standardLibraryFunctions.ToValues()
+	valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
+	values := standardLibraryFunctions.ToInterpreterValueDeclarations()
 
 	inter := parseCheckAndInterpretWithOptions(t,
 		`
@@ -6465,7 +6465,7 @@ func TestInterpretOptionalChainingFieldReadAndNilCoalescing(t *testing.T) {
 				sema.WithPredeclaredValues(valueDeclarations),
 			},
 			Options: []interpreter.Option{
-				interpreter.WithPredefinedValues(predefinedValues),
+				interpreter.WithPredeclaredValues(values),
 			},
 		},
 	)
@@ -6485,8 +6485,8 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
 			stdlib.PanicFunction,
 		}
 
-	valueDeclarations := standardLibraryFunctions.ToValueDeclarations()
-	predefinedValues := standardLibraryFunctions.ToValues()
+	valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
+	values := standardLibraryFunctions.ToInterpreterValueDeclarations()
 
 	inter := parseCheckAndInterpretWithOptions(t,
 		`
@@ -6504,7 +6504,7 @@ func TestInterpretOptionalChainingFunctionCallAndNilCoalescing(t *testing.T) {
 				sema.WithPredeclaredValues(valueDeclarations),
 			},
 			Options: []interpreter.Option{
-				interpreter.WithPredefinedValues(predefinedValues),
+				interpreter.WithPredeclaredValues(values),
 			},
 		},
 	)
@@ -6637,14 +6637,14 @@ func TestInterpretFungibleTokenContract(t *testing.T) {
 			stdlib.PanicFunction,
 		}
 
-	valueDeclarations := standardLibraryFunctions.ToValueDeclarations()
-	predefinedValues := standardLibraryFunctions.ToValues()
+	valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
+	values := standardLibraryFunctions.ToInterpreterValueDeclarations()
 
 	inter := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
 			Options: []interpreter.Option{
-				interpreter.WithPredefinedValues(predefinedValues),
+				interpreter.WithPredeclaredValues(values),
 				makeContractValueHandler(nil, nil, nil),
 			},
 			CheckerOptions: []sema.Option{
@@ -7346,8 +7346,8 @@ func TestInterpretHexDecode(t *testing.T) {
 				stdlib.PanicFunction,
 			}
 
-		valueDeclarations := standardLibraryFunctions.ToValueDeclarations()
-		predefinedValues := standardLibraryFunctions.ToValues()
+		valueDeclarations := standardLibraryFunctions.ToSemaValueDeclarations()
+		values := standardLibraryFunctions.ToInterpreterValueDeclarations()
 
 		inter := parseCheckAndInterpretWithOptions(t,
 			`
@@ -7402,7 +7402,7 @@ func TestInterpretHexDecode(t *testing.T) {
 					sema.WithPredeclaredValues(valueDeclarations),
 				},
 				Options: []interpreter.Option{
-					interpreter.WithPredefinedValues(predefinedValues),
+					interpreter.WithPredeclaredValues(values),
 				},
 			},
 		)
@@ -7512,17 +7512,10 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 
 	// `authAccount`
 
-	valueDeclarations := map[string]sema.ValueDeclaration{
-		"account": stdlib.StandardLibraryValue{
-			Name:       "account",
-			Type:       &sema.AuthAccountType{},
-			Kind:       common.DeclarationKindConstant,
-			IsConstant: true,
-		},
-	}
-
-	values := map[string]interpreter.Value{
-		"account": interpreter.NewAuthAccountValue(
+	valueDeclaration := stdlib.StandardLibraryValue{
+		Name: "account",
+		Type: &sema.AuthAccountType{},
+		Value: interpreter.NewAuthAccountValue(
 			addressValue,
 			returnZero,
 			returnZero,
@@ -7530,16 +7523,22 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			panicFunction,
 			interpreter.AuthAccountContractsValue{},
 		),
+		Kind:       common.DeclarationKindConstant,
+		IsConstant: true,
 	}
 
 	inter := parseCheckAndInterpretWithOptions(t,
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(valueDeclarations),
+				sema.WithPredeclaredValues([]sema.ValueDeclaration{
+					valueDeclaration,
+				}),
 			},
 			Options: []interpreter.Option{
-				interpreter.WithPredefinedValues(values),
+				interpreter.WithPredeclaredValues([]interpreter.ValueDeclaration{
+					valueDeclaration,
+				}),
 				interpreter.WithStorageExistenceHandler(checker),
 				interpreter.WithStorageReadHandler(getter),
 				interpreter.WithStorageWriteHandler(setter),
@@ -8081,11 +8080,11 @@ func TestInterpretNestedDestroy(t *testing.T) {
 	valueDeclarations :=
 		stdlib.StandardLibraryFunctions{
 			logFunction,
-		}.ToValueDeclarations()
+		}.ToSemaValueDeclarations()
 
 	values := stdlib.StandardLibraryFunctions{
 		logFunction,
-	}.ToValues()
+	}.ToInterpreterValueDeclarations()
 
 	inter := parseCheckAndInterpretWithOptions(t,
 		`
@@ -8133,7 +8132,7 @@ func TestInterpretNestedDestroy(t *testing.T) {
         `,
 		ParseCheckAndInterpretOptions{
 			Options: []interpreter.Option{
-				interpreter.WithPredefinedValues(values),
+				interpreter.WithPredeclaredValues(values),
 			},
 			CheckerOptions: []sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),

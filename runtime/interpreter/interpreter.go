@@ -213,7 +213,8 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 
 type Interpreter struct {
 	Checker                        *sema.Checker
-	PredefinedValues               map[string]Value
+	PredeclaredValues              []ValueDeclaration
+	effectivePredeclaredValues     map[string]ValueDeclaration
 	activations                    *activations.Activations
 	Globals                        map[string]*Variable
 	allInterpreters                map[ast.LocationID]*Interpreter
@@ -276,18 +277,21 @@ func WithOnFunctionInvocationHandler(handler OnFunctionInvocationFunc) Option {
 	}
 }
 
-// WithPredefinedValues returns an interpreter option which declares
-// the given the predefined values.
+// WithPredeclaredValues returns an interpreter option which declares
+// the given the predeclared values.
 //
-func WithPredefinedValues(predefinedValues map[string]Value) Option {
+func WithPredeclaredValues(predeclaredValues []ValueDeclaration) Option {
 	return func(interpreter *Interpreter) error {
-		interpreter.PredefinedValues = predefinedValues
+		interpreter.PredeclaredValues = predeclaredValues
 
-		for name, value := range predefinedValues {
-			err := interpreter.ImportValue(name, value)
-			if err != nil {
-				return err
+		for _, declaration := range predeclaredValues {
+			variable := interpreter.declareValue(declaration)
+			if variable == nil {
+				continue
 			}
+			name := declaration.ValueDeclarationName()
+			interpreter.Globals[name] = variable
+			interpreter.effectivePredeclaredValues[name] = declaration
 		}
 
 		return nil
@@ -405,9 +409,10 @@ func withTypeCodes(typeCodes TypeCodes) Option {
 
 func NewInterpreter(checker *sema.Checker, options ...Option) (*Interpreter, error) {
 	interpreter := &Interpreter{
-		Checker:     checker,
-		activations: &activations.Activations{},
-		Globals:     map[string]*Variable{},
+		Checker:                    checker,
+		activations:                &activations.Activations{},
+		Globals:                    map[string]*Variable{},
+		effectivePredeclaredValues: map[string]ValueDeclaration{},
 	}
 
 	defaultOptions := []Option{
@@ -961,7 +966,8 @@ func (interpreter *Interpreter) functionDeclarationValue(
 	}
 }
 
-// NOTE: consider using NewInterpreter if the value should be predefined in all programs
+// NOTE: consider using NewInterpreter and WithPredeclaredValues if the value should be predeclared in all locations
+//
 func (interpreter *Interpreter) ImportValue(name string, value Value) error {
 	if _, ok := interpreter.Globals[name]; ok {
 		return RedeclarationError{
@@ -1402,6 +1408,18 @@ func (interpreter *Interpreter) movingStorageIndexExpression(expression ast.Expr
 	}
 
 	return indexExpression
+}
+
+func (interpreter *Interpreter) declareValue(declaration ValueDeclaration) *Variable {
+
+	if !declaration.ValueDeclarationAvailable(interpreter.Checker.Location) {
+		return nil
+	}
+
+	return interpreter.declareVariable(
+		declaration.ValueDeclarationName(),
+		declaration.ValueDeclarationValue(),
+	)
 }
 
 // declareVariable declares a variable in the latest scope
@@ -3281,7 +3299,7 @@ func (interpreter *Interpreter) ensureLoaded(
 	var err error
 	subInterpreter, err = NewInterpreter(
 		importedChecker,
-		WithPredefinedValues(interpreter.PredefinedValues),
+		WithPredeclaredValues(interpreter.PredeclaredValues),
 		WithOnEventEmittedHandler(interpreter.onEventEmitted),
 		WithOnStatementHandler(interpreter.onStatement),
 		WithOnLoopIterationHandler(interpreter.onLoopIteration),
@@ -3369,7 +3387,7 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 
 		// don't import predeclared values
 		if subInterpreter.Checker != nil {
-			if _, ok := subInterpreter.Checker.PredeclaredValues[name]; ok {
+			if subInterpreter.Checker.HasEffectivePredeclaredValue(name) {
 				continue
 			}
 		}
@@ -3990,18 +4008,6 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 //
 func storageKey(path PathValue) string {
 	return fmt.Sprintf("%s\x1F%s", path.Domain.Identifier(), path.Identifier)
-}
-
-func checkPathDomain(path PathValue, expectedDomains ...common.PathDomain) bool {
-	actualDomain := path.Domain
-
-	for _, expectedDomain := range expectedDomains {
-		if actualDomain == expectedDomain {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (interpreter *Interpreter) authAccountSaveFunction(addressValue AddressValue) HostFunctionValue {

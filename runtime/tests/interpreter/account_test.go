@@ -38,8 +38,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 
 	address := interpreter.NewAddressValueFromBytes([]byte{42})
 
-	valueDeclarations := map[string]sema.ValueDeclaration{}
-	values := map[string]interpreter.Value{}
+	var valueDeclarations stdlib.StandardLibraryValues
 
 	panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {
 		panic(errors.NewUnreachableError())
@@ -47,46 +46,48 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 
 	// `authAccount`
 
-	valueDeclarations["authAccount"] = stdlib.StandardLibraryValue{
-		Name:       "authAccount",
-		Type:       &sema.AuthAccountType{},
+	authAccountValueDeclaration := stdlib.StandardLibraryValue{
+		Name: "authAccount",
+		Type: &sema.AuthAccountType{},
+		Value: interpreter.NewAuthAccountValue(
+			address,
+			returnZero,
+			returnZero,
+			panicFunction,
+			panicFunction,
+			interpreter.AuthAccountContractsValue{},
+		),
 		Kind:       common.DeclarationKindConstant,
 		IsConstant: true,
 	}
-
-	values["authAccount"] = interpreter.NewAuthAccountValue(
-		address,
-		returnZero,
-		returnZero,
-		panicFunction,
-		panicFunction,
-		interpreter.AuthAccountContractsValue{},
-	)
+	valueDeclarations = append(valueDeclarations, authAccountValueDeclaration)
 
 	// `pubAccount`
 
-	valueDeclarations["pubAccount"] = stdlib.StandardLibraryValue{
-		Name:       "pubAccount",
-		Type:       &sema.PublicAccountType{},
+	pubAccountValueDeclaration := stdlib.StandardLibraryValue{
+		Name: "pubAccount",
+		Type: &sema.PublicAccountType{},
+		Value: interpreter.NewPublicAccountValue(
+			address,
+			returnZero,
+			returnZero,
+		),
 		Kind:       common.DeclarationKindConstant,
 		IsConstant: true,
 	}
-
-	values["pubAccount"] = interpreter.NewPublicAccountValue(
-		address,
-		returnZero,
-		returnZero,
-	)
+	valueDeclarations = append(valueDeclarations, pubAccountValueDeclaration)
 
 	// `account`
 
+	var accountValueDeclaration stdlib.StandardLibraryValue
+
 	if auth {
-		valueDeclarations["account"] = valueDeclarations["authAccount"]
-		values["account"] = values["authAccount"]
+		accountValueDeclaration = authAccountValueDeclaration
 	} else {
-		valueDeclarations["account"] = valueDeclarations["pubAccount"]
-		values["account"] = values["pubAccount"]
+		accountValueDeclaration = pubAccountValueDeclaration
 	}
+	accountValueDeclaration.Name = "account"
+	valueDeclarations = append(valueDeclarations, accountValueDeclaration)
 
 	storedValues := map[string]interpreter.OptionalValue{}
 
@@ -118,10 +119,10 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 		code,
 		ParseCheckAndInterpretOptions{
 			CheckerOptions: []sema.Option{
-				sema.WithPredeclaredValues(valueDeclarations),
+				sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
 			},
 			Options: []interpreter.Option{
-				interpreter.WithPredefinedValues(values),
+				interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
 				interpreter.WithStorageExistenceHandler(storageChecker),
 				interpreter.WithStorageReadHandler(storageGetter),
 				interpreter.WithStorageWriteHandler(storageSetter),

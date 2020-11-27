@@ -59,7 +59,6 @@ func TestCheckRepeatedImport(t *testing.T) {
 			Location: utils.ImportedLocation,
 		},
 	)
-
 	require.NoError(t, err)
 
 	_, err = ParseAndCheckWithOptions(t,
@@ -79,7 +78,6 @@ func TestCheckRepeatedImport(t *testing.T) {
 			},
 		},
 	)
-
 	require.NoError(t, err)
 }
 

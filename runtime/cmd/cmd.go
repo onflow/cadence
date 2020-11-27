@@ -136,7 +136,7 @@ func PrepareChecker(program *ast.Program, filename string, codes map[string]stri
 	checker, err := sema.NewChecker(
 		program,
 		location,
-		sema.WithPredeclaredValues(valueDeclarations.ToValueDeclarations()),
+		sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
 		sema.WithPredeclaredTypes(typeDeclarations),
 		sema.WithImportHandler(
 			func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
@@ -187,7 +187,7 @@ func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checke
 
 	inter, err := interpreter.NewInterpreter(
 		checker,
-		interpreter.WithPredefinedValues(valueDeclarations.ToValues()),
+		interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
 		interpreter.WithUUIDHandler(func() (uint64, error) {
 			defer func() { uuid++ }()
 			return uuid, nil

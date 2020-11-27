@@ -37,6 +37,22 @@ func TestInterpretEquality(t *testing.T) {
 
 		t.Parallel()
 
+		capabilityValue := interpreter.CapabilityValue{
+			Address: interpreter.NewAddressValue(common.BytesToAddress([]byte{0x1})),
+			Path: interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "something",
+			},
+		}
+
+		capabilityValueDeclarartion := stdlib.StandardLibraryValue{
+			Name:       "cap",
+			Type:       &sema.CapabilityType{},
+			Value:      capabilityValue,
+			Kind:       common.DeclarationKindConstant,
+			IsConstant: true,
+		}
+
 		inter := parseCheckAndInterpretWithOptions(t,
 			`
               let maybeCapNonNil: Capability? = cap
@@ -46,24 +62,13 @@ func TestInterpretEquality(t *testing.T) {
 		    `,
 			ParseCheckAndInterpretOptions{
 				Options: []interpreter.Option{
-					interpreter.WithPredefinedValues(map[string]interpreter.Value{
-						"cap": interpreter.CapabilityValue{
-							Address: interpreter.NewAddressValue(common.BytesToAddress([]byte{0x1})),
-							Path: interpreter.PathValue{
-								Domain:     common.PathDomainStorage,
-								Identifier: "something",
-							},
-						},
+					interpreter.WithPredeclaredValues([]interpreter.ValueDeclaration{
+						capabilityValueDeclarartion,
 					}),
 				},
 				CheckerOptions: []sema.Option{
-					sema.WithPredeclaredValues(map[string]sema.ValueDeclaration{
-						"cap": stdlib.StandardLibraryValue{
-							Name:       "cap",
-							Type:       &sema.CapabilityType{},
-							Kind:       common.DeclarationKindConstant,
-							IsConstant: true,
-						},
+					sema.WithPredeclaredValues([]sema.ValueDeclaration{
+						capabilityValueDeclarartion,
 					}),
 				},
 			},

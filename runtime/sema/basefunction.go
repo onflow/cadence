@@ -29,6 +29,10 @@ type baseFunction struct {
 	argumentLabels []string
 }
 
+func (f baseFunction) ValueDeclarationName() string {
+	return f.name
+}
+
 func (f baseFunction) ValueDeclarationType() Type {
 	return f.invokableType
 }

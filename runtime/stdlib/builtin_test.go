@@ -39,13 +39,13 @@ func TestAssert(t *testing.T) {
 	checker, err := sema.NewChecker(
 		program,
 		utils.TestLocation,
-		sema.WithPredeclaredValues(BuiltinFunctions.ToValueDeclarations()),
+		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
 	)
 	require.Nil(t, err)
 
 	inter, err := interpreter.NewInterpreter(
 		checker,
-		interpreter.WithPredefinedValues(BuiltinFunctions.ToValues()),
+		interpreter.WithPredeclaredValues(BuiltinFunctions.ToInterpreterValueDeclarations()),
 	)
 	require.Nil(t, err)
 
@@ -88,13 +88,13 @@ func TestPanic(t *testing.T) {
 	checker, err := sema.NewChecker(
 		&ast.Program{},
 		utils.TestLocation,
-		sema.WithPredeclaredValues(BuiltinFunctions.ToValueDeclarations()),
+		sema.WithPredeclaredValues(BuiltinFunctions.ToSemaValueDeclarations()),
 	)
 	require.Nil(t, err)
 
 	inter, err := interpreter.NewInterpreter(
 		checker,
-		interpreter.WithPredefinedValues(BuiltinFunctions.ToValues()),
+		interpreter.WithPredeclaredValues(BuiltinFunctions.ToInterpreterValueDeclarations()),
 	)
 	require.Nil(t, err)
 

@@ -2078,8 +2078,8 @@ func TestParseAndCheckProgram(t *testing.T) {
 		_, err := runtime.ParseAndCheckProgram(
 			script,
 			Context{
-				runtimeInterface,
-				nextTransactionLocation(),
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
 			},
 		)
 		assert.NotNil(t, err)
@@ -3610,8 +3610,8 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 			Source: deployTransaction,
 		},
 		Context{
-			runtimeInterface,
-			nextTransactionLocation(),
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
 		},
 	)
 	require.NoError(t, err)
