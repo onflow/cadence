@@ -3333,25 +3333,27 @@ func TestInterpretDynamicCastingCapability(t *testing.T) {
 			},
 		),
 	}
+	capabilityValueDeclaration := stdlib.StandardLibraryValue{
+		Name: "cap",
+		Type: &sema.CapabilityType{
+			BorrowType: &sema.ReferenceType{
+				Type: structType,
+			},
+		},
+		Value:      capabilityValue,
+		Kind:       common.DeclarationKindConstant,
+		IsConstant: true,
+	}
 
 	options := ParseCheckAndInterpretOptions{
 		CheckerOptions: []sema.Option{
-			sema.WithPredeclaredValues(map[string]sema.ValueDeclaration{
-				"cap": stdlib.StandardLibraryValue{
-					Name: "cap",
-					Type: &sema.CapabilityType{
-						BorrowType: &sema.ReferenceType{
-							Type: structType,
-						},
-					},
-					Kind:       common.DeclarationKindConstant,
-					IsConstant: true,
-				},
+			sema.WithPredeclaredValues([]sema.ValueDeclaration{
+				capabilityValueDeclaration,
 			}),
 		},
 		Options: []interpreter.Option{
-			interpreter.WithPredefinedValues(map[string]interpreter.Value{
-				"cap": capabilityValue,
+			interpreter.WithPredeclaredValues([]interpreter.ValueDeclaration{
+				capabilityValueDeclaration,
 			}),
 		},
 	}

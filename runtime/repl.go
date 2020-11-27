@@ -46,7 +46,7 @@ func NewREPL(onError func(error), onResult func(interpreter.Value), checkerOptio
 
 	checkerOptions = append(
 		[]sema.Option{
-			sema.WithPredeclaredValues(valueDeclarations.ToValueDeclarations()),
+			sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
 			sema.WithPredeclaredTypes(typeDeclarations),
 			sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
 		},
@@ -62,13 +62,13 @@ func NewREPL(onError func(error), onResult func(interpreter.Value), checkerOptio
 		return nil, err
 	}
 
-	values := valueDeclarations.ToValues()
+	values := valueDeclarations.ToInterpreterValueDeclarations()
 
 	var uuid uint64
 
 	inter, err := interpreter.NewInterpreter(
 		checker,
-		interpreter.WithPredefinedValues(values),
+		interpreter.WithPredeclaredValues(values),
 		interpreter.WithUUIDHandler(func() (uint64, error) {
 			defer func() { uuid++ }()
 			return uuid, nil

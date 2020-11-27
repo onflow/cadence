@@ -66,12 +66,11 @@ func (i CheckerImport) AllValueElements() map[string]ImportElement {
 }
 
 func (i CheckerImport) IsImportableValue(name string) bool {
-	_, isBaseValue := BaseValues[name]
-	if isBaseValue {
+	if _, ok := BaseValues[name]; ok {
 		return false
 	}
 
-	_, isPredeclaredValue := i.Checker.PredeclaredValues[name]
+	_, isPredeclaredValue := i.Checker.effectivePredeclaredValues[name]
 	return !isPredeclaredValue
 }
 
@@ -80,7 +79,11 @@ func (i CheckerImport) AllTypeElements() map[string]ImportElement {
 }
 
 func (i CheckerImport) IsImportableType(name string) bool {
-	_, isPredeclaredType := i.Checker.PredeclaredTypes[name]
+	if _, ok := baseTypes[name]; ok {
+		return false
+	}
+
+	_, isPredeclaredType := i.Checker.effectivePredeclaredTypes[name]
 	return !isPredeclaredType
 }
 

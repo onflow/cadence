@@ -37,6 +37,14 @@ type StandardLibraryFunction struct {
 	Available      func(ast.Location) bool
 }
 
+func (f StandardLibraryFunction) ValueDeclarationName() string {
+	return f.Name
+}
+
+func (f StandardLibraryFunction) ValueDeclarationValue() interpreter.Value {
+	return f.Function
+}
+
 func (f StandardLibraryFunction) ValueDeclarationType() sema.Type {
 	return f.Type
 }
@@ -91,20 +99,20 @@ func NewStandardLibraryFunction(
 
 type StandardLibraryFunctions []StandardLibraryFunction
 
-func (functions StandardLibraryFunctions) ToValueDeclarations() map[string]sema.ValueDeclaration {
-	valueDeclarations := make(map[string]sema.ValueDeclaration, len(functions))
-	for _, function := range functions {
-		valueDeclarations[function.Name] = function
+func (functions StandardLibraryFunctions) ToSemaValueDeclarations() []sema.ValueDeclaration {
+	valueDeclarations := make([]sema.ValueDeclaration, len(functions))
+	for i, function := range functions {
+		valueDeclarations[i] = function
 	}
 	return valueDeclarations
 }
 
-func (functions StandardLibraryFunctions) ToValues() map[string]interpreter.Value {
-	values := make(map[string]interpreter.Value, len(functions))
-	for _, function := range functions {
-		values[function.Name] = function.Function
+func (functions StandardLibraryFunctions) ToInterpreterValueDeclarations() []interpreter.ValueDeclaration {
+	valueDeclarations := make([]interpreter.ValueDeclaration, len(functions))
+	for i, function := range functions {
+		valueDeclarations[i] = function
 	}
-	return values
+	return valueDeclarations
 }
 
 // AssertionError

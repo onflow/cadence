@@ -81,8 +81,10 @@ type ImportHandlerFunc func(checker *Checker, location ast.Location) (Import, *C
 type Checker struct {
 	Program                            *ast.Program
 	Location                           ast.Location
-	PredeclaredValues                  map[string]ValueDeclaration
-	PredeclaredTypes                   map[string]TypeDeclaration
+	PredeclaredValues                  []ValueDeclaration
+	effectivePredeclaredValues         map[string]ValueDeclaration
+	PredeclaredTypes                   []TypeDeclaration
+	effectivePredeclaredTypes          map[string]TypeDeclaration
 	allCheckers                        map[ast.LocationID]*Checker
 	accessCheckMode                    AccessCheckMode
 	errors                             []error
@@ -117,28 +119,32 @@ type Checker struct {
 
 type Option func(*Checker) error
 
-func WithPredeclaredValues(predeclaredValues map[string]ValueDeclaration) Option {
+func WithPredeclaredValues(predeclaredValues []ValueDeclaration) Option {
 	return func(checker *Checker) error {
 		checker.PredeclaredValues = predeclaredValues
 
-		for name, declaration := range predeclaredValues {
-			variable := checker.declareValue(name, declaration)
+		for _, declaration := range predeclaredValues {
+			variable := checker.declareValue(declaration)
 			if variable == nil {
 				continue
 			}
-			checker.declareGlobalValue(name)
+			checker.GlobalValues[variable.Identifier] = variable
+			checker.effectivePredeclaredValues[variable.Identifier] = declaration
 		}
 
 		return nil
 	}
 }
 
-func WithPredeclaredTypes(predeclaredTypes map[string]TypeDeclaration) Option {
+func WithPredeclaredTypes(predeclaredTypes []TypeDeclaration) Option {
 	return func(checker *Checker) error {
 		checker.PredeclaredTypes = predeclaredTypes
 
-		for name, declaration := range predeclaredTypes {
-			checker.declareTypeDeclaration(name, declaration)
+		for _, declaration := range predeclaredTypes {
+			checker.declareTypeDeclaration(declaration)
+
+			name := declaration.TypeDeclarationName()
+			checker.effectivePredeclaredTypes[name] = declaration
 		}
 
 		return nil
@@ -234,20 +240,22 @@ func NewChecker(program *ast.Program, location ast.Location, options ...Option) 
 	}
 
 	checker := &Checker{
-		Program:             program,
-		Location:            location,
-		valueActivations:    NewValueActivations(),
-		resources:           &Resources{},
-		typeActivations:     typeActivations,
-		functionActivations: functionActivations,
-		GlobalValues:        map[string]*Variable{},
-		GlobalTypes:         map[string]*Variable{},
-		Occurrences:         NewOccurrences(),
-		MemberAccesses:      NewMemberAccesses(),
-		containerTypes:      map[Type]bool{},
-		variableOrigins:     map[*Variable]*Origin{},
-		memberOrigins:       map[Type]map[string]*Origin{},
-		Elaboration:         NewElaboration(),
+		Program:                    program,
+		Location:                   location,
+		valueActivations:           NewValueActivations(),
+		resources:                  &Resources{},
+		typeActivations:            typeActivations,
+		functionActivations:        functionActivations,
+		GlobalValues:               map[string]*Variable{},
+		GlobalTypes:                map[string]*Variable{},
+		Occurrences:                NewOccurrences(),
+		MemberAccesses:             NewMemberAccesses(),
+		containerTypes:             map[Type]bool{},
+		variableOrigins:            map[*Variable]*Origin{},
+		memberOrigins:              map[Type]map[string]*Origin{},
+		Elaboration:                NewElaboration(),
+		effectivePredeclaredValues: map[string]ValueDeclaration{},
+		effectivePredeclaredTypes:  map[string]TypeDeclaration{},
 	}
 
 	checker.beforeExtractor = NewBeforeExtractor(checker.report)
@@ -283,22 +291,23 @@ func (checker *Checker) SetAllCheckers(allCheckers map[ast.LocationID]*Checker) 
 }
 
 func (checker *Checker) declareBaseValues() {
-	for name, declaration := range BaseValues {
-		variable := checker.declareValue(name, declaration)
+	for _, declaration := range BaseValues {
+		variable := checker.declareValue(declaration)
 		if variable == nil {
 			continue
 		}
 		variable.IsBaseValue = true
-		checker.declareGlobalValue(name)
+		checker.GlobalValues[variable.Identifier] = variable
 	}
 }
 
-func (checker *Checker) declareValue(name string, declaration ValueDeclaration) *Variable {
+func (checker *Checker) declareValue(declaration ValueDeclaration) *Variable {
 
 	if !declaration.ValueDeclarationAvailable(checker.Location) {
 		return nil
 	}
 
+	name := declaration.ValueDeclarationName()
 	variable, err := checker.valueActivations.Declare(variableDeclaration{
 		identifier: name,
 		ty:         declaration.ValueDeclarationType(),
@@ -315,9 +324,9 @@ func (checker *Checker) declareValue(name string, declaration ValueDeclaration) 
 	return variable
 }
 
-func (checker *Checker) declareTypeDeclaration(name string, declaration TypeDeclaration) {
+func (checker *Checker) declareTypeDeclaration(declaration TypeDeclaration) {
 	identifier := ast.Identifier{
-		Identifier: name,
+		Identifier: declaration.TypeDeclarationName(),
 		Pos:        declaration.TypeDeclarationPosition(),
 	}
 
@@ -392,11 +401,11 @@ func (checker *Checker) UserDefinedValues() map[string]*Variable {
 			continue
 		}
 
-		if _, ok := checker.PredeclaredValues[key]; ok {
+		if _, ok := checker.effectivePredeclaredValues[key]; ok {
 			continue
 		}
 
-		if _, ok := checker.PredeclaredTypes[key]; ok {
+		if _, ok := checker.effectivePredeclaredTypes[key]; ok {
 			continue
 		}
 
@@ -2281,4 +2290,9 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 
 func (checker *Checker) Hints() []Hint {
 	return checker.hints
+}
+
+func (checker *Checker) HasEffectivePredeclaredValue(name string) bool {
+	_, ok := checker.effectivePredeclaredValues[name]
+	return ok
 }

@@ -335,7 +335,7 @@ func TestCheckInvocationWithOnlyVarargs(t *testing.T) {
 								}(),
 							},
 						},
-					}.ToValueDeclarations(),
+					}.ToSemaValueDeclarations(),
 				),
 			},
 		},
