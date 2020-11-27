@@ -72,7 +72,7 @@ type ResolvedLocation struct {
 	Identifiers []ast.Identifier
 }
 
-type LocationHandlerFunc func(identifiers []ast.Identifier, location ast.Location) []ResolvedLocation
+type LocationHandlerFunc func(identifiers []ast.Identifier, location ast.Location) ([]ResolvedLocation, error)
 
 type ImportHandlerFunc func(checker *Checker, location ast.Location) (Import, *CheckerError)
 

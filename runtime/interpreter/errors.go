@@ -192,7 +192,7 @@ func (e *DestroyedCompositeError) Error() string {
 }
 
 // ForceAssignmentToNonNilResourceError
-
+//
 type ForceAssignmentToNonNilResourceError struct {
 	LocationRange
 }
@@ -202,7 +202,7 @@ func (e *ForceAssignmentToNonNilResourceError) Error() string {
 }
 
 // ForceNilError
-
+//
 type ForceNilError struct {
 	LocationRange
 }
@@ -212,7 +212,7 @@ func (e *ForceNilError) Error() string {
 }
 
 // TypeMismatchError
-
+//
 type TypeMismatchError struct {
 	ExpectedType sema.Type
 	LocationRange
@@ -226,7 +226,7 @@ func (e *TypeMismatchError) Error() string {
 }
 
 // InvalidPathDomainError
-
+//
 type InvalidPathDomainError struct {
 	ActualDomain    common.PathDomain
 	ExpectedDomains []common.PathDomain
@@ -253,7 +253,7 @@ func (e *InvalidPathDomainError) SecondaryError() string {
 }
 
 // OverwriteError
-
+//
 type OverwriteError struct {
 	Address AddressValue
 	Path    PathValue
@@ -269,7 +269,7 @@ func (e *OverwriteError) Error() string {
 }
 
 // CyclicLinkError
-
+//
 type CyclicLinkError struct {
 	Address AddressValue
 	Paths   []PathValue
@@ -291,4 +291,40 @@ func (e *CyclicLinkError) Error() string {
 		e.Address,
 		paths,
 	)
+}
+
+// ArrayIndexOutOfBoundsError
+//
+type ArrayIndexOutOfBoundsError struct {
+	Index    int
+	MaxIndex int
+	LocationRange
+}
+
+func (e ArrayIndexOutOfBoundsError) Error() string {
+	return fmt.Sprintf(
+		"array index out of bounds: got %d, expected max %d",
+		e.Index,
+		e.MaxIndex,
+	)
+}
+
+// EventEmissionUnavailableError
+//
+type EventEmissionUnavailableError struct {
+	LocationRange
+}
+
+func (e EventEmissionUnavailableError) Error() string {
+	return "cannot emit event: unavailable"
+}
+
+// UUIDUnavailableError
+//
+type UUIDUnavailableError struct {
+	LocationRange
+}
+
+func (e UUIDUnavailableError) Error() string {
+	return "cannot get UUID: unavailable"
 }

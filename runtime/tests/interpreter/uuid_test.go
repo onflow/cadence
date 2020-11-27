@@ -93,9 +93,9 @@ func TestInterpretResourceUUID(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		importingChecker,
 		interpreter.WithUUIDHandler(
-			func() uint64 {
+			func() (uint64, error) {
 				defer func() { uuid++ }()
-				return uuid
+				return uuid, nil
 			},
 		),
 		interpreter.WithImportLocationHandler(

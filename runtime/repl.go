@@ -69,9 +69,9 @@ func NewREPL(onError func(error), onResult func(interpreter.Value), checkerOptio
 	inter, err := interpreter.NewInterpreter(
 		checker,
 		interpreter.WithPredefinedValues(values),
-		interpreter.WithUUIDHandler(func() uint64 {
+		interpreter.WithUUIDHandler(func() (uint64, error) {
 			defer func() { uuid++ }()
-			return uuid
+			return uuid, nil
 		}),
 	)
 	if err != nil {
