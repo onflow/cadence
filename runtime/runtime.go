@@ -651,13 +651,13 @@ func (r *interpreterRuntime) newInterpreter(
 			r.injectedCompositeFieldsHandler(runtimeInterface, runtimeStorage),
 		),
 		interpreter.WithUUIDHandler(func() (uuid uint64) {
+			var err error
 			wrapPanic(func() {
-				var err error
 				uuid, err = runtimeInterface.GenerateUUID()
-				if err != nil {
-					panic(err)
-				}
 			})
+			if err != nil {
+				panic(err)
+			}
 			return
 		}),
 		interpreter.WithContractValueHandler(
@@ -1327,12 +1327,13 @@ func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, r
 func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
 		message := fmt.Sprint(invocation.Arguments[0])
+		var err error
 		wrapPanic(func() {
-			err := runtimeInterface.Log(message)
-			if err != nil {
-				panic(err)
-			}
+			err = runtimeInterface.Log(message)
 		})
+		if err != nil {
+			panic(err)
+		}
 		result := interpreter.VoidValue{}
 		return trampoline.Done{Result: result}
 	}
