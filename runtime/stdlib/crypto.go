@@ -115,7 +115,7 @@ func newCryptoContractVerifySignatureFunction(signatureVerifier CryptoSignatureV
 				hashAlgorithm,
 			)
 			if err != nil {
-				panic(fmt.Errorf("VerifySignature: failed to verify the signature: %w", err))
+				panic(err)
 			}
 
 			return trampoline.Done{Result: interpreter.BoolValue(isValid)}
@@ -158,7 +158,7 @@ func newCryptoContractHashFunction(hasher CryptoHasher) interpreter.FunctionValu
 
 			digest, err := hasher.Hash(data, hashAlgorithm)
 			if err != nil {
-				panic(fmt.Errorf("hash: hashing failed: %w", err))
+				panic(err)
 
 			}
 

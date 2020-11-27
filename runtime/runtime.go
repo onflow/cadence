@@ -554,7 +554,9 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 				sema.WithValidTopLevelDeclarationsHandler(validTopLevelDeclarations),
 				sema.WithLocationHandler(func(identifiers []Identifier, location Location) (res []ResolvedLocation) {
 					var err error
-					res, err = runtimeInterface.ResolveLocation(identifiers, location)
+					wrapPanic(func() {
+						res, err = runtimeInterface.ResolveLocation(identifiers, location)
+					})
 					if err != nil {
 						panic(err)
 					}
@@ -801,7 +803,10 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 			return
 		}
 
-		err := runtimeInterface.SetComputationUsed(used)
+		var err error
+		wrapPanic(func() {
+			err = runtimeInterface.SetComputationUsed(used)
+		})
 		if err != nil {
 			panic(err)
 		}
@@ -1345,7 +1350,7 @@ func (r *interpreterRuntime) getCurrentBlockHeight(runtimeInterface Interface) (
 		currentBlockHeight, er = runtimeInterface.GetCurrentBlockHeight()
 	})
 	if er != nil {
-		err = newError(er)
+		return 0, newError(er)
 	}
 	return
 }
@@ -1374,7 +1379,11 @@ func (r *interpreterRuntime) getBlockAtHeight(height uint64, runtimeInterface In
 
 func (r *interpreterRuntime) newGetCurrentBlockFunction(runtimeInterface Interface) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
-		height, err := r.getCurrentBlockHeight(runtimeInterface)
+		var height uint64
+		var err error
+		wrapPanic(func() {
+			height, err = r.getCurrentBlockHeight(runtimeInterface)
+		})
 		if err != nil {
 			panic(err)
 		}
