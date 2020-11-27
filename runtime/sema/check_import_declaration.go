@@ -50,7 +50,11 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 		EndPos: declaration.LocationPos,
 	}
 
-	resolvedLocations := checker.resolveLocation(declaration.Identifiers, declaration.Location)
+	resolvedLocations, err := checker.resolveLocation(declaration.Identifiers, declaration.Location)
+	if err != nil {
+		checker.report(err)
+		return nil
+	}
 
 	checker.Elaboration.ImportDeclarationsResolvedLocations[declaration] = resolvedLocations
 
@@ -61,7 +65,7 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 	return nil
 }
 
-func (checker *Checker) resolveLocation(identifiers []ast.Identifier, location ast.Location) []ResolvedLocation {
+func (checker *Checker) resolveLocation(identifiers []ast.Identifier, location ast.Location) ([]ResolvedLocation, error) {
 
 	// If no location handler is available,
 	// default to resolving to a single location that declares all identifiers
@@ -72,12 +76,11 @@ func (checker *Checker) resolveLocation(identifiers []ast.Identifier, location a
 				Location:    location,
 				Identifiers: identifiers,
 			},
-		}
+		}, nil
 	}
 
 	// A location handler is available,
 	// use it to resolve the location / identifiers
-
 	return checker.locationHandler(identifiers, location)
 }
 

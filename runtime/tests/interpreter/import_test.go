@@ -183,7 +183,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithLocationHandler(
-					func(identifiers []ast.Identifier, location ast.Location) (result []sema.ResolvedLocation) {
+					func(identifiers []ast.Identifier, location ast.Location) (result []sema.ResolvedLocation, err error) {
 
 						require.Equal(t,
 							ast.AddressLocation{

@@ -131,7 +131,7 @@ func TestCheckRepeatedImportResolution(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithLocationHandler(
-					func(identifiers []ast.Identifier, location ast.Location) (result []sema.ResolvedLocation) {
+					func(identifiers []ast.Identifier, location ast.Location) (result []sema.ResolvedLocation, err error) {
 						for _, identifier := range identifiers {
 							result = append(result, sema.ResolvedLocation{
 								Location: ast.AddressLocation{
@@ -253,7 +253,7 @@ func TestCheckImportResolutionSplit(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithLocationHandler(
-					func(identifiers []ast.Identifier, location ast.Location) (result []sema.ResolvedLocation) {
+					func(identifiers []ast.Identifier, location ast.Location) (result []sema.ResolvedLocation, err error) {
 						for _, identifier := range identifiers {
 							result = append(result, sema.ResolvedLocation{
 								Location: ast.AddressLocation{

@@ -77,9 +77,9 @@ func parseCheckAndInterpretWithOptions(
 
 	interpreterOptions := append(
 		[]interpreter.Option{
-			interpreter.WithUUIDHandler(func() uint64 {
+			interpreter.WithUUIDHandler(func() (uint64, error) {
 				uuid++
-				return uuid
+				return uuid, nil
 			}),
 		},
 		options.Options...,
@@ -3714,8 +3714,8 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						}
 					}
 
-					uuidHandler := interpreter.WithUUIDHandler(func() uint64 {
-						return 0
+					uuidHandler := interpreter.WithUUIDHandler(func() (uint64, error) {
+						return 0, nil
 					})
 
 					if compositeKind == common.CompositeKindContract {
@@ -5701,8 +5701,9 @@ func TestInterpretEmitEvent(t *testing.T) {
 	)
 
 	inter.SetOnEventEmittedHandler(
-		func(_ *interpreter.Interpreter, event *interpreter.CompositeValue, eventType *sema.CompositeType) {
+		func(_ *interpreter.Interpreter, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
 			actualEvents = append(actualEvents, event)
+			return nil
 		},
 	)
 
@@ -5901,8 +5902,9 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			var actualEvents []*interpreter.CompositeValue
 
 			inter.SetOnEventEmittedHandler(
-				func(_ *interpreter.Interpreter, event *interpreter.CompositeValue, eventType *sema.CompositeType) {
+				func(_ *interpreter.Interpreter, event *interpreter.CompositeValue, eventType *sema.CompositeType) error {
 					actualEvents = append(actualEvents, event)
+					return nil
 				},
 			)
 

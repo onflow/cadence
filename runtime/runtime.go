@@ -542,44 +542,44 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 				sema.WithPredeclaredValues(valueDeclarations),
 				sema.WithPredeclaredTypes(typeDeclarations),
 				sema.WithValidTopLevelDeclarationsHandler(validTopLevelDeclarations),
-				sema.WithLocationHandler(func(identifiers []Identifier, location Location) (res []ResolvedLocation) {
-					var err error
-					wrapPanic(func() {
-						res, err = runtimeInterface.ResolveLocation(identifiers, location)
-					})
-					if err != nil {
-						panic(err)
-					}
-					return
-				}),
-				sema.WithImportHandler(func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
-					switch location {
-					case stdlib.CryptoChecker.Location:
-						return sema.CheckerImport{
-							Checker: stdlib.CryptoChecker,
-						}, nil
-
-					default:
-						var program *ast.Program
-						var err error
-						checker, checkerErr := checker.EnsureLoaded(location, func() *ast.Program {
-							program, err = importResolver(location)
-							return program
+				sema.WithLocationHandler(
+					func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
+						wrapPanic(func() {
+							res, err = runtimeInterface.ResolveLocation(identifiers, location)
 						})
-						// TODO: improve
-						if err != nil {
-							return nil, &sema.CheckerError{
-								Errors: []error{err},
+						return
+					},
+				),
+				sema.WithImportHandler(
+					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+						switch location {
+						case stdlib.CryptoChecker.Location:
+							return sema.CheckerImport{
+								Checker: stdlib.CryptoChecker,
+							}, nil
+
+						default:
+							var program *ast.Program
+							var err error
+							checker, checkerErr := checker.EnsureLoaded(location, func() *ast.Program {
+								program, err = importResolver(location)
+								return program
+							})
+							// TODO: improve
+							if err != nil {
+								return nil, &sema.CheckerError{
+									Errors: []error{err},
+								}
 							}
+							if checkerErr != nil {
+								return nil, checkerErr
+							}
+							return sema.CheckerImport{
+								Checker: checker,
+							}, nil
 						}
-						if checkerErr != nil {
-							return nil, checkerErr
-						}
-						return sema.CheckerImport{
-							Checker: checker,
-						}, nil
-					}
-				}),
+					},
+				),
 				sema.WithCheckHandler(func(location ast.Location, check func()) {
 					reportMetric(
 						func() {
@@ -630,8 +630,8 @@ func (r *interpreterRuntime) newInterpreter(
 				inter *interpreter.Interpreter,
 				eventValue *interpreter.CompositeValue,
 				eventType *sema.CompositeType,
-			) {
-				r.emitEvent(inter, runtimeInterface, eventValue, eventType)
+			) error {
+				return r.emitEvent(inter, runtimeInterface, eventValue, eventType)
 			},
 		),
 		interpreter.WithStorageKeyHandler(
@@ -642,14 +642,10 @@ func (r *interpreterRuntime) newInterpreter(
 		interpreter.WithInjectedCompositeFieldsHandler(
 			r.injectedCompositeFieldsHandler(runtimeInterface, runtimeStorage),
 		),
-		interpreter.WithUUIDHandler(func() (uuid uint64) {
-			var err error
+		interpreter.WithUUIDHandler(func() (uuid uint64, err error) {
 			wrapPanic(func() {
 				uuid, err = runtimeInterface.GenerateUUID()
 			})
-			if err != nil {
-				panic(err)
-			}
 			return
 		}),
 		interpreter.WithContractValueHandler(
@@ -923,7 +919,7 @@ func (r *interpreterRuntime) emitEvent(
 	runtimeInterface Interface,
 	event *interpreter.CompositeValue,
 	eventType *sema.CompositeType,
-) {
+) error {
 	fields := make([]exportableValue, len(eventType.ConstructorParameters))
 
 	for i, parameter := range eventType.ConstructorParameters {
@@ -940,9 +936,7 @@ func (r *interpreterRuntime) emitEvent(
 	wrapPanic(func() {
 		err = runtimeInterface.EmitEvent(exportedEvent)
 	})
-	if err != nil {
-		panic(err)
-	}
+	return err
 }
 
 func (r *interpreterRuntime) emitAccountEvent(
