@@ -1454,6 +1454,13 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			nameArgument := nameValue.Str
 
+			if nameArgument == "" {
+				panic(errors.New(
+					"contract name argument cannot be empty." +
+						"it must match the name of the deployed contract declaration or contract interface declaration",
+				))
+			}
+
 			address := addressValue.ToAddress()
 			existingCode, err := runtimeInterface.GetAccountContractCode(address, nameArgument)
 			if err != nil {
@@ -1526,20 +1533,26 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			var contractType *sema.CompositeType
 			var contractInterfaceType *sema.InterfaceType
 			var declaredName string
+			var declarationKind common.DeclarationKind
 
 			switch {
 			case len(contractTypes) == 1 && len(contractInterfaceTypes) == 0:
 				contractType = contractTypes[0]
 				declaredName = contractType.Identifier
 				deployedType = contractType
+				declarationKind = common.DeclarationKindContract
 			case len(contractInterfaceTypes) == 1 && len(contractTypes) == 0:
 				contractInterfaceType = contractInterfaceTypes[0]
 				declaredName = contractInterfaceType.Identifier
 				deployedType = contractInterfaceType
+				declarationKind = common.DeclarationKindContractInterface
 			}
 
 			if deployedType == nil {
-				panic(errors.New("invalid contract: the code must declare exactly one contract or contract interface"))
+				panic(fmt.Errorf(
+					"invalid %s: the code must declare exactly one contract or contract interface",
+					declarationKind.Name(),
+				))
 			}
 
 			// The declared contract or contract interface must have the name
@@ -1547,8 +1560,10 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			if declaredName != nameArgument {
 				panic(fmt.Errorf(
-					"invalid contract: the declaration must have the same name as the given name argument. epected %q, got %q",
-					nameValue.Str,
+					"invalid %s: the name of the declaration must match the name argument."+
+						"name argument: %q, declaration name: %q",
+					declarationKind.Name(),
+					nameArgument,
 					declaredName,
 				))
 			}
