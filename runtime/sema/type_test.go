@@ -185,14 +185,14 @@ func TestRestrictedType_StringAndID(t *testing.T) {
 		interfaceType := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I",
-			Location:      ast.StringLocation("b"),
+			Location:      common.StringLocation("b"),
 		}
 
 		ty := &RestrictedType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
-				Location:   ast.StringLocation("a"),
+				Location:   common.StringLocation("a"),
 			},
 			Restrictions: []*InterfaceType{interfaceType},
 		}
@@ -215,20 +215,20 @@ func TestRestrictedType_StringAndID(t *testing.T) {
 		i1 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I1",
-			Location:      ast.StringLocation("b"),
+			Location:      common.StringLocation("b"),
 		}
 
 		i2 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I2",
-			Location:      ast.StringLocation("c"),
+			Location:      common.StringLocation("c"),
 		}
 
 		ty := &RestrictedType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
-				Location:   ast.StringLocation("a"),
+				Location:   common.StringLocation("a"),
 			},
 			Restrictions: []*InterfaceType{i1, i2},
 		}
@@ -252,7 +252,7 @@ func TestRestrictedType_StringAndID(t *testing.T) {
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
-				Location:   ast.StringLocation("a"),
+				Location:   common.StringLocation("a"),
 			},
 		}
 
@@ -279,20 +279,20 @@ func TestRestrictedType_Equals(t *testing.T) {
 		i1 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I1",
-			Location:      ast.StringLocation("b"),
+			Location:      common.StringLocation("b"),
 		}
 
 		i2 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I2",
-			Location:      ast.StringLocation("b"),
+			Location:      common.StringLocation("b"),
 		}
 
 		a := &RestrictedType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
-				Location:   ast.StringLocation("a"),
+				Location:   common.StringLocation("a"),
 			},
 			Restrictions: []*InterfaceType{i1},
 		}
@@ -301,7 +301,7 @@ func TestRestrictedType_Equals(t *testing.T) {
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
-				Location:   ast.StringLocation("a"),
+				Location:   common.StringLocation("a"),
 			},
 			Restrictions: []*InterfaceType{i1, i2},
 		}
@@ -316,20 +316,20 @@ func TestRestrictedType_Equals(t *testing.T) {
 		i1 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I1",
-			Location:      ast.StringLocation("b"),
+			Location:      common.StringLocation("b"),
 		}
 
 		i2 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I2",
-			Location:      ast.StringLocation("b"),
+			Location:      common.StringLocation("b"),
 		}
 
 		a := &RestrictedType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
-				Location:   ast.StringLocation("a"),
+				Location:   common.StringLocation("a"),
 			},
 			Restrictions: []*InterfaceType{i1, i2},
 		}
@@ -338,7 +338,7 @@ func TestRestrictedType_Equals(t *testing.T) {
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
-				Location:   ast.StringLocation("a"),
+				Location:   common.StringLocation("a"),
 			},
 			Restrictions: []*InterfaceType{i1},
 		}
@@ -353,20 +353,20 @@ func TestRestrictedType_Equals(t *testing.T) {
 		i1 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I1",
-			Location:      ast.StringLocation("b"),
+			Location:      common.StringLocation("b"),
 		}
 
 		i2 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I2",
-			Location:      ast.StringLocation("b"),
+			Location:      common.StringLocation("b"),
 		}
 
 		a := &RestrictedType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
-				Location:   ast.StringLocation("a"),
+				Location:   common.StringLocation("a"),
 			},
 			Restrictions: []*InterfaceType{i1, i2},
 		}
@@ -375,7 +375,7 @@ func TestRestrictedType_Equals(t *testing.T) {
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R",
-				Location:   ast.StringLocation("a"),
+				Location:   common.StringLocation("a"),
 			},
 			Restrictions: []*InterfaceType{i1, i2},
 		}
@@ -390,20 +390,20 @@ func TestRestrictedType_Equals(t *testing.T) {
 		i1 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I1",
-			Location:      ast.StringLocation("b"),
+			Location:      common.StringLocation("b"),
 		}
 
 		i2 := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I2",
-			Location:      ast.StringLocation("b"),
+			Location:      common.StringLocation("b"),
 		}
 
 		a := &RestrictedType{
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R1",
-				Location:   ast.StringLocation("a"),
+				Location:   common.StringLocation("a"),
 			},
 			Restrictions: []*InterfaceType{i1, i2},
 		}
@@ -412,7 +412,7 @@ func TestRestrictedType_Equals(t *testing.T) {
 			Type: &CompositeType{
 				Kind:       common.CompositeKindResource,
 				Identifier: "R2",
-				Location:   ast.StringLocation("a"),
+				Location:   common.StringLocation("a"),
 			},
 			Restrictions: []*InterfaceType{i1, i2},
 		}
@@ -432,7 +432,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 		resourceType := &CompositeType{
 			Kind:       common.CompositeKindResource,
 			Identifier: "R",
-			Location:   ast.StringLocation("a"),
+			Location:   common.StringLocation("a"),
 			Fields:     []string{},
 			Members:    map[string]*Member{},
 		}
@@ -475,7 +475,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 		resourceType := &CompositeType{
 			Kind:       common.CompositeKindResource,
 			Identifier: "R",
-			Location:   ast.StringLocation("a"),
+			Location:   common.StringLocation("a"),
 			Fields:     []string{},
 			Members:    map[string]*Member{},
 		}

@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -532,7 +531,7 @@ func TestStringer(t *testing.T) {
 		},
 		"composite": {
 			value: NewCompositeValue(
-				ast.StringLocation("test"),
+				common.StringLocation("test"),
 				"S.test.Foo",
 				common.CompositeKindResource,
 				map[string]Value{

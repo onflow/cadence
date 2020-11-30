@@ -29,15 +29,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 )
 
 // TestLocation is used as the default location for programs in tests.
-const TestLocation = ast.StringLocation("test")
+const TestLocation = common.StringLocation("test")
 
 // ImportedLocation is used as the default location for imported programs in tests.
-const ImportedLocation = ast.StringLocation("imported")
+const ImportedLocation = common.StringLocation("imported")
 
 // AssertEqualWithDiff asserts that two objects are equal.
 //

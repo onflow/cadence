@@ -25,7 +25,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -396,7 +395,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 	t.Run("empty structure, address location without name", func(t *testing.T) {
 		expected := NewCompositeValue(
-			ast.AddressLocation{
+			common.AddressLocation{
 				Address: common.BytesToAddress([]byte{0x1}),
 				Name:    "SimpleStruct",
 			},
@@ -514,7 +513,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 	t.Run("empty, address location", func(t *testing.T) {
 
 		expected := NewCompositeValue(
-			ast.AddressLocation{
+			common.AddressLocation{
 				Address: common.BytesToAddress([]byte{0x1}),
 				// NOTE: not stored, inferred from type ID
 				Name: "TestContract",
@@ -604,7 +603,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 	t.Run("empty, address location", func(t *testing.T) {
 		expected := NewCompositeValue(
-			ast.AddressLocation{
+			common.AddressLocation{
 				Address: common.BytesToAddress([]byte{0x1}),
 				Name:    "TestStruct",
 			},
@@ -3413,7 +3412,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					TargetPath: publicPathValue,
 					Type: CompositeStaticType{
 						TypeID: "A.0x1.SimpleStruct",
-						Location: ast.AddressLocation{
+						Location: common.AddressLocation{
 							Address: common.BytesToAddress([]byte{0x1}),
 							Name:    "SimpleStruct",
 						},
@@ -3491,7 +3490,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					TargetPath: publicPathValue,
 					Type: InterfaceStaticType{
 						TypeID: "A.0x1.SimpleInterface",
-						Location: ast.AddressLocation{
+						Location: common.AddressLocation{
 							Address: common.BytesToAddress([]byte{0x1}),
 							Name:    "SimpleInterface",
 						},

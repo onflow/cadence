@@ -31,7 +31,7 @@ type ValueDeclaration struct {
 	Kind           common.DeclarationKind
 	IsConstant     bool
 	ArgumentLabels []string
-	Available      func(ast.Location) bool
+	Available      func(common.Location) bool
 	Value          interpreter.Value
 }
 
@@ -63,7 +63,7 @@ func (v ValueDeclaration) ValueDeclarationArgumentLabels() []string {
 	return v.ArgumentLabels
 }
 
-func (v ValueDeclaration) ValueDeclarationAvailable(location ast.Location) bool {
+func (v ValueDeclaration) ValueDeclarationAvailable(location common.Location) bool {
 	if v.Available == nil {
 		return true
 	}

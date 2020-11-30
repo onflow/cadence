@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
@@ -61,7 +62,7 @@ func PrettyPrintError(writer io.Writer, err error, filename string, codes map[st
 				}
 			}
 		}
-	case ast.HasImportLocation:
+	case common.HasImportLocation:
 		location := typedErr.ImportLocation()
 		if location != nil {
 			filename = importLocationFileName(location)
@@ -72,15 +73,13 @@ func PrettyPrintError(writer io.Writer, err error, filename string, codes map[st
 	}
 }
 
-func importLocationFileName(importLocation ast.Location) string {
+func importLocationFileName(importLocation common.Location) string {
 	switch importLocation := importLocation.(type) {
-	case ast.StringLocation:
+	case common.StringLocation:
 		return string(importLocation)
-	case ast.AddressLocation:
+	case common.AddressLocation:
 		return importLocation.Address.ShortHexWithPrefix()
-	case ast.IdentifierLocation:
-		return string(importLocation)
-	case runtime.FileLocation:
+	case common.IdentifierLocation:
 		return string(importLocation)
 	}
 	return ""
@@ -132,15 +131,15 @@ var typeDeclarations = append(
 // PrepareChecker prepares and initializes a checker with a given code as a string,
 // and a filename which is used for pretty-printing errors, if any
 func PrepareChecker(program *ast.Program, filename string, codes map[string]string, must func(error)) (*sema.Checker, func(error)) {
-	location := runtime.FileLocation(filename)
+	location := common.StringLocation(filename)
 	checker, err := sema.NewChecker(
 		program,
 		location,
 		sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
 		sema.WithPredeclaredTypes(typeDeclarations),
 		sema.WithImportHandler(
-			func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
-				stringLocation, ok := location.(ast.StringLocation)
+			func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
+				stringLocation, ok := location.(common.StringLocation)
 
 				if !ok {
 					return nil, &sema.CheckerError{

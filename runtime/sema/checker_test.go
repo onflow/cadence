@@ -23,7 +23,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 func TestOptionalSubtyping(t *testing.T) {
@@ -62,7 +62,7 @@ func TestCompositeType_ID(t *testing.T) {
 
 	t.Parallel()
 
-	location := ast.StringLocation("x")
+	location := common.StringLocation("x")
 
 	t.Run("composite in composite", func(t *testing.T) {
 
@@ -113,7 +113,7 @@ func TestInterfaceType_ID(t *testing.T) {
 
 	t.Parallel()
 
-	location := ast.StringLocation("x")
+	location := common.StringLocation("x")
 
 	t.Run("interface in composite", func(t *testing.T) {
 

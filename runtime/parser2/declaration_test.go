@@ -1203,7 +1203,7 @@ func TestParseImportDeclaration(t *testing.T) {
 			[]ast.Declaration{
 				&ast.ImportDeclaration{
 					Identifiers: nil,
-					Location:    ast.StringLocation("foo"),
+					Location:    common.StringLocation("foo"),
 					LocationPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -1226,7 +1226,7 @@ func TestParseImportDeclaration(t *testing.T) {
 			[]ast.Declaration{
 				&ast.ImportDeclaration{
 					Identifiers: nil,
-					Location: ast.AddressLocation{
+					Location: common.AddressLocation{
 						Address: common.BytesToAddress([]byte{0x42}),
 					},
 					LocationPos: ast.Position{Line: 1, Column: 8, Offset: 8},
@@ -1281,7 +1281,7 @@ func TestParseImportDeclaration(t *testing.T) {
 							Pos:        ast.Position{Line: 1, Column: 8, Offset: 8},
 						},
 					},
-					Location:    ast.StringLocation("bar"),
+					Location:    common.StringLocation("bar"),
 					LocationPos: ast.Position{Line: 1, Column: 17, Offset: 17},
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -1341,7 +1341,7 @@ func TestParseImportDeclaration(t *testing.T) {
 							Pos:        ast.Position{Line: 1, Column: 20, Offset: 20},
 						},
 					},
-					Location: ast.AddressLocation{
+					Location: common.AddressLocation{
 						Address: common.BytesToAddress([]byte{0x42}),
 					},
 					LocationPos: ast.Position{Line: 1, Column: 29, Offset: 29},
@@ -1389,7 +1389,7 @@ func TestParseImportDeclaration(t *testing.T) {
 			[]ast.Declaration{
 				&ast.ImportDeclaration{
 					Identifiers: nil,
-					Location:    ast.IdentifierLocation("foo"),
+					Location:    common.IdentifierLocation("foo"),
 					LocationPos: ast.Position{Line: 1, Column: 8, Offset: 8},
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
@@ -3802,7 +3802,7 @@ func TestParseImportWithString(t *testing.T) {
 		[]ast.Declaration{
 			&ast.ImportDeclaration{
 				Identifiers: nil,
-				Location:    ast.StringLocation("test.cdc"),
+				Location:    common.StringLocation("test.cdc"),
 				Range: ast.Range{
 					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 					EndPos:   ast.Position{Offset: 25, Line: 2, Column: 24},
@@ -3827,7 +3827,7 @@ func TestParseImportWithAddress(t *testing.T) {
 		[]ast.Declaration{
 			&ast.ImportDeclaration{
 				Identifiers: nil,
-				Location: ast.AddressLocation{
+				Location: common.AddressLocation{
 					Address: common.BytesToAddress([]byte{0x12, 0x34}),
 				},
 				Range: ast.Range{
@@ -3863,7 +3863,7 @@ func TestParseImportWithIdentifiers(t *testing.T) {
 						Pos:        ast.Position{Offset: 19, Line: 2, Column: 18},
 					},
 				},
-				Location: ast.AddressLocation{
+				Location: common.AddressLocation{
 					Address: common.BytesToAddress([]byte{0x1}),
 				},
 				Range: ast.Range{
@@ -3960,7 +3960,7 @@ func TestParseImportWithFromIdentifier(t *testing.T) {
 						Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
 					},
 				},
-				Location: ast.AddressLocation{
+				Location: common.AddressLocation{
 					Address: common.BytesToAddress([]byte{0x1}),
 				},
 				Range: ast.Range{

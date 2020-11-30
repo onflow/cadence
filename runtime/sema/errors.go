@@ -1044,7 +1044,7 @@ func (*MissingConformanceError) isSemanticError() {}
 // UnresolvedImportError
 
 type UnresolvedImportError struct {
-	ImportLocation ast.Location
+	ImportLocation common.Location
 	ast.Range
 }
 
@@ -1058,7 +1058,7 @@ func (*UnresolvedImportError) isSemanticError() {}
 
 type NotExportedError struct {
 	Name           string
-	ImportLocation ast.Location
+	ImportLocation common.Location
 	Available      []string
 	Pos            ast.Position
 }
@@ -1097,7 +1097,7 @@ func (e *NotExportedError) EndPosition() ast.Position {
 
 type ImportedProgramError struct {
 	CheckerError   *CheckerError
-	ImportLocation ast.Location
+	ImportLocation common.Location
 	ast.Range
 }
 
@@ -2898,7 +2898,7 @@ func (e *TypeAnnotationRequiredError) EndPosition() ast.Position {
 // CyclicImportsError
 
 type CyclicImportsError struct {
-	Location ast.Location
+	Location common.Location
 	ast.Range
 }
 

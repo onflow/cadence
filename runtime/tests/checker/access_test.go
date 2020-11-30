@@ -729,7 +729,7 @@ func TestCheckAccessImportGlobalValue(t *testing.T) {
 						Options: []sema.Option{
 							sema.WithAccessCheckMode(checkMode),
 							sema.WithImportHandler(
-								func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+								func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
 									importChecker, err := checker.EnsureLoaded(
 										location,
 										func() *ast.Program {
@@ -1867,7 +1867,7 @@ func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
 					Options: []sema.Option{
 						sema.WithAccessCheckMode(checkMode),
 						sema.WithImportHandler(
-							func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+							func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
 								importChecker, err := checker.EnsureLoaded(
 									location,
 									func() *ast.Program {
@@ -1927,7 +1927,7 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
 						importChecker, err := checker.EnsureLoaded(
 							location,
 							func() *ast.Program {

@@ -49,7 +49,7 @@ func (baseFunction) ValueDeclarationIsConstant() bool {
 	return true
 }
 
-func (baseFunction) ValueDeclarationAvailable(_ ast.Location) bool {
+func (baseFunction) ValueDeclarationAvailable(_ common.Location) bool {
 	return true
 }
 

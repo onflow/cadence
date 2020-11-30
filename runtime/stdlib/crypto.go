@@ -40,7 +40,7 @@ var CryptoChecker = func() *sema.Checker {
 		panic(err)
 	}
 
-	location := ast.IdentifierLocation("Crypto")
+	location := common.IdentifierLocation("Crypto")
 
 	var checker *sema.Checker
 	checker, err = sema.NewChecker(

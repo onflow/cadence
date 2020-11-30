@@ -24,7 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
@@ -36,7 +36,7 @@ func ParseAndCheck(t *testing.T, code string) (*sema.Checker, error) {
 }
 
 type ParseAndCheckOptions struct {
-	Location         ast.Location
+	Location         common.Location
 	IgnoreParseError bool
 	Options          []sema.Option
 }

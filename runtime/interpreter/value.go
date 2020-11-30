@@ -30,7 +30,6 @@ import (
 	"github.com/rivo/uniseg"
 	"golang.org/x/text/unicode/norm"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
@@ -5269,7 +5268,7 @@ func (v UFix64Value) ToBigEndianBytes() []byte {
 // CompositeValue
 
 type CompositeValue struct {
-	Location       ast.Location
+	Location       common.Location
 	TypeID         sema.TypeID
 	Kind           common.CompositeKind
 	Fields         map[string]Value
@@ -5283,7 +5282,7 @@ type CompositeValue struct {
 }
 
 func NewCompositeValue(
-	location ast.Location,
+	location common.Location,
 	typeID sema.TypeID,
 	kind common.CompositeKind,
 	fields map[string]Value,
@@ -5462,7 +5461,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	// Get the correct interpreter. The program code might need to be loaded.
 	// NOTE: standard library values have no location
 
-	if v.Location != nil && !ast.LocationsMatch(interpreter.Checker.Location, v.Location) {
+	if v.Location != nil && !common.LocationsMatch(interpreter.Checker.Location, v.Location) {
 		interpreter = interpreter.ensureLoaded(
 			v.Location,
 			func() Import {

@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 func TestRuntimeCoverage(t *testing.T) {
@@ -60,7 +61,7 @@ func TestRuntimeCoverage(t *testing.T) {
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
-			case StringLocation("imported"):
+			case common.StringLocation("imported"):
 				return importedScript, nil
 			default:
 				return nil, fmt.Errorf("unknown import location: %s", location)

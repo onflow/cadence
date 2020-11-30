@@ -21,7 +21,7 @@ package cadence
 import (
 	"unicode/utf8"
 
-	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -40,7 +40,7 @@ func Fuzz(data []byte) int {
 
 	checker, err := sema.NewChecker(
 		program,
-		ast.StringLocation("test"),
+		common.StringLocation("test"),
 		sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
 	)
 	if err != nil {

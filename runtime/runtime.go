@@ -49,7 +49,7 @@ type Context struct {
 	PredeclaredValues []ValueDeclaration
 }
 
-func (c Context) WithLocation(location AddressLocation) Context {
+func (c Context) WithLocation(location common.AddressLocation) Context {
 	result := c
 	result.Location = location
 	return result
@@ -85,7 +85,7 @@ var typeDeclarations = append(
 	stdlib.BuiltinTypes...,
 ).ToTypeDeclarations()
 
-type ImportResolver = func(location Location) (program *ast.Program, e error)
+type ImportResolver = func(location common.Location) (program *ast.Program, e error)
 
 var validTopLevelDeclarationsInTransaction = []common.DeclarationKind{
 	common.DeclarationKindImport,
@@ -100,11 +100,11 @@ var validTopLevelDeclarationsInAccountCode = []common.DeclarationKind{
 	common.DeclarationKindContractInterface,
 }
 
-func validTopLevelDeclarations(location ast.Location) []common.DeclarationKind {
+func validTopLevelDeclarations(location common.Location) []common.DeclarationKind {
 	switch location.(type) {
-	case TransactionLocation:
+	case common.TransactionLocation:
 		return validTopLevelDeclarationsInTransaction
-	case AddressLocation:
+	case common.AddressLocation:
 		return validTopLevelDeclarationsInAccountCode
 	}
 
@@ -565,7 +565,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 					},
 				),
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
 						switch location {
 						case stdlib.CryptoChecker.Location:
 							return sema.CheckerImport{
@@ -594,7 +594,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 						}
 					},
 				),
-				sema.WithCheckHandler(func(location ast.Location, check func()) {
+				sema.WithCheckHandler(func(location common.Location, check func()) {
 					reportMetric(
 						func() {
 							check()
@@ -711,7 +711,7 @@ func (r *interpreterRuntime) newInterpreter(
 func (r *interpreterRuntime) importLocationHandler(runtimeInterface Interface) interpreter.ImportLocationHandlerFunc {
 	importResolver := r.importResolver(runtimeInterface)
 
-	return func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
+	return func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 		switch location {
 		case stdlib.CryptoChecker.Location:
 			return interpreter.ProgramImport{
@@ -752,7 +752,7 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 				var address Address
 
 				switch location := location.(type) {
-				case AddressLocation:
+				case common.AddressLocation:
 					address = location.Address
 				default:
 					panic(runtimeErrors.NewUnreachableError())
@@ -874,7 +874,7 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 		}
 
 		var code []byte
-		if addressLocation, ok := location.(AddressLocation); ok {
+		if addressLocation, ok := location.(common.AddressLocation); ok {
 			wrapPanic(func() {
 				code, err = runtimeInterface.GetAccountContractCode(
 					addressLocation.Address,
@@ -911,7 +911,7 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 
 func (r *interpreterRuntime) parse(
 	script []byte,
-	location ast.Location,
+	location common.Location,
 	runtimeInterface Interface,
 ) (
 	program *ast.Program,
@@ -1181,7 +1181,7 @@ func (r *interpreterRuntime) loadContract(
 
 		switch location := compositeType.Location.(type) {
 
-		case AddressLocation:
+		case common.AddressLocation:
 			storedValue = runtimeStorage.readValue(
 				location.Address,
 				formatContractKey(location.Name),
@@ -1277,7 +1277,7 @@ func (r *interpreterRuntime) instantiateContract(
 				// If the contract is the deployed contract, instantiate it using
 				// the provided constructor and given arguments
 
-				if ast.LocationsMatch(compositeType.Location, contractType.Location) &&
+				if common.LocationsMatch(compositeType.Location, contractType.Location) &&
 					compositeType.Identifier == contractType.Identifier {
 
 					value, err := inter.InvokeFunctionValue(constructor,
@@ -1512,7 +1512,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			// Check the code
 
-			location := AddressLocation{
+			location := common.AddressLocation{
 				Address: address,
 				Name:    nameArgument,
 			}
@@ -1825,16 +1825,6 @@ func (r *interpreterRuntime) onStatementHandler() interpreter.OnStatementFunc {
 		line := statement.Statement.StartPosition().Line
 		r.coverageReport.AddLineHit(location, line)
 	}
-}
-
-func compositeTypesToIDValues(types []*sema.CompositeType) *interpreter.ArrayValue {
-	typeIDValues := make([]interpreter.Value, len(types))
-
-	for i, typ := range types {
-		typeIDValues[i] = interpreter.NewStringValue(string(typ.ID()))
-	}
-
-	return interpreter.NewArrayValueUnownedNonCopying(typeIDValues...)
 }
 
 // Block

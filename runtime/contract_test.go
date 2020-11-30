@@ -531,14 +531,14 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 			delete(deployedContracts, key)
 			return nil
 		},
-		resolveLocation: func(identifiers []ast.Identifier, location ast.Location) (result []sema.ResolvedLocation, err error) {
+		resolveLocation: func(identifiers []ast.Identifier, location common.Location) (result []sema.ResolvedLocation, err error) {
 
 			// Resolve each identifier as an address location
 
 			for _, identifier := range identifiers {
 				result = append(result, sema.ResolvedLocation{
-					Location: ast.AddressLocation{
-						Address: location.(ast.AddressLocation).Address,
+					Location: common.AddressLocation{
+						Address: location.(common.AddressLocation).Address,
 						Name:    identifier.Identifier,
 					},
 					Identifiers: []ast.Identifier{
