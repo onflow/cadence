@@ -1560,7 +1560,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			if declaredName != nameArgument {
 				panic(fmt.Errorf(
-					"invalid %s: the name of the declaration must match the name argument."+
+					"invalid %s: the name argument must match the name of the declaration"+
 						"name argument: %q, declaration name: %q",
 					declarationKind.Name(),
 					nameArgument,
