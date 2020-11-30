@@ -30,7 +30,7 @@ type StandardLibraryValue struct {
 	Type      sema.Type
 	Value     interpreter.Value
 	Kind      common.DeclarationKind
-	Available func(ast.Location) bool
+	Available func(common.Location) bool
 }
 
 func (v StandardLibraryValue) ValueDeclarationName() string {
@@ -57,7 +57,7 @@ func (v StandardLibraryValue) ValueDeclarationIsConstant() bool {
 	return v.Kind != common.DeclarationKindVariable
 }
 
-func (v StandardLibraryValue) ValueDeclarationAvailable(location ast.Location) bool {
+func (v StandardLibraryValue) ValueDeclarationAvailable(location common.Location) bool {
 	if v.Available == nil {
 		return true
 	}

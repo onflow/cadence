@@ -19,11 +19,9 @@
 package runtime
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -399,10 +397,12 @@ func importCompositeValue(
 		fields[fieldType.Identifier] = importValue(fieldValue)
 	}
 
-	location := ast.LocationFromTypeID(typeID)
-	if location == nil {
-		panic(errors.New("invalid type ID"))
-	}
+	// TODO:
+	var location common.Location
+	//location := common.LocationFromTypeID(typeID)
+	//if location == nil {
+	//	panic(errors.New("invalid type ID"))
+	//}
 
 	return interpreter.NewCompositeValue(
 		location,

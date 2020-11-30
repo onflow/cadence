@@ -65,7 +65,7 @@ func (checker *Checker) declareImportDeclaration(declaration *ast.ImportDeclarat
 	return nil
 }
 
-func (checker *Checker) resolveLocation(identifiers []ast.Identifier, location ast.Location) ([]ResolvedLocation, error) {
+func (checker *Checker) resolveLocation(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error) {
 
 	// If no location handler is available,
 	// default to resolving to a single location that declares all identifiers
@@ -228,7 +228,7 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 
 // EnsureLoaded finds or create a checker for the imported program and checks it.
 //
-func (checker *Checker) EnsureLoaded(location ast.Location, loadProgram func() *ast.Program) (*Checker, *CheckerError) {
+func (checker *Checker) EnsureLoaded(location common.Location, loadProgram func() *ast.Program) (*Checker, *CheckerError) {
 
 	locationID := location.ID()
 
@@ -269,7 +269,7 @@ func (checker *Checker) EnsureLoaded(location ast.Location, loadProgram func() *
 	return subChecker, checkerErr
 }
 
-func (checker *Checker) handleMissingImports(missing []ast.Identifier, available []string, importLocation ast.Location) {
+func (checker *Checker) handleMissingImports(missing []ast.Identifier, available []string, importLocation common.Location) {
 	for _, identifier := range missing {
 		checker.report(
 			&NotExportedError{

@@ -29,7 +29,6 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -346,7 +345,7 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 	}, nil
 }
 
-func (d *Decoder) decodeLocation(l interface{}) (ast.Location, error) {
+func (d *Decoder) decodeLocation(l interface{}) (common.Location, error) {
 	tag, ok := l.(cbor.Tag)
 	if !ok {
 		return nil, fmt.Errorf("invalid location encoding: %T", l)
@@ -369,23 +368,23 @@ func (d *Decoder) decodeLocation(l interface{}) (ast.Location, error) {
 	}
 }
 
-func (d *Decoder) decodeStringLocation(v interface{}) (ast.Location, error) {
+func (d *Decoder) decodeStringLocation(v interface{}) (common.Location, error) {
 	s, ok := v.(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid string location encoding: %T", v)
 	}
-	return ast.StringLocation(s), nil
+	return common.StringLocation(s), nil
 }
 
-func (d *Decoder) decodeIdentifierLocation(v interface{}) (ast.Location, error) {
+func (d *Decoder) decodeIdentifierLocation(v interface{}) (common.Location, error) {
 	s, ok := v.(string)
 	if !ok {
 		return nil, fmt.Errorf("invalid identifier location encoding: %T", v)
 	}
-	return ast.IdentifierLocation(s), nil
+	return common.IdentifierLocation(s), nil
 }
 
-func (d *Decoder) decodeAddressLocation(v interface{}) (ast.Location, error) {
+func (d *Decoder) decodeAddressLocation(v interface{}) (common.Location, error) {
 
 	// If the encoded location is just a byte slice,
 	// it is the address and no name is provided
@@ -397,7 +396,7 @@ func (d *Decoder) decodeAddressLocation(v interface{}) (ast.Location, error) {
 			return nil, err
 		}
 
-		return ast.AddressLocation{
+		return common.AddressLocation{
 			Address: common.BytesToAddress(encodedAddress),
 		}, nil
 	}
@@ -431,7 +430,7 @@ func (d *Decoder) decodeAddressLocation(v interface{}) (ast.Location, error) {
 		return nil, fmt.Errorf("invalid address location name encoding: %T", field2)
 	}
 
-	return ast.AddressLocation{
+	return common.AddressLocation{
 		Address: common.BytesToAddress(encodedAddress),
 		Name:    name,
 	}, nil
@@ -1077,7 +1076,7 @@ func (d *Decoder) decodeLocationAndTypeID(
 	locationKeyIndex uint64,
 	typeIDKeyIndex uint64,
 ) (
-	ast.Location,
+	common.Location,
 	sema.TypeID,
 	error,
 ) {
@@ -1119,11 +1118,11 @@ func (d *Decoder) decodeLocationAndTypeID(
 // If the location is an address location without a name,
 // then infer the name from the type ID.
 //
-func (d *Decoder) inferAddressLocationName(location ast.Location, typeID sema.TypeID) ast.Location {
+func (d *Decoder) inferAddressLocationName(location common.Location, typeID sema.TypeID) common.Location {
 
 	// Only consider address locations which have no name
 
-	addressLocation, ok := location.(ast.AddressLocation)
+	addressLocation, ok := location.(common.AddressLocation)
 	if !ok || addressLocation.Name != "" {
 		return location
 	}
@@ -1133,7 +1132,7 @@ func (d *Decoder) inferAddressLocationName(location ast.Location, typeID sema.Ty
 	qualifiedIdentifier := location.QualifiedIdentifier(typeID)
 	parts := strings.SplitN(qualifiedIdentifier, ".", 2)
 
-	return ast.AddressLocation{
+	return common.AddressLocation{
 		Address: addressLocation.Address,
 		Name:    parts[0],
 	}

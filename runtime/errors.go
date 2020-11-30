@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -186,7 +187,7 @@ type ParsingCheckingError struct {
 	Err          error
 	StorageCache Cache
 	Code         []byte
-	Location     Location
+	Location     common.Location
 	Options      []sema.Option
 	UseCache     bool
 	Program      *ast.Program

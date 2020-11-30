@@ -63,7 +63,7 @@ func qualifiedIdentifier(identifier string, containerType Type) string {
 	return sb.String()
 }
 
-type TypeID = ast.TypeID
+type TypeID = common.TypeID
 
 type Type interface {
 	IsType()
@@ -192,7 +192,7 @@ type CompositeKindedType interface {
 //
 type LocatedType interface {
 	Type
-	GetLocation() ast.Location
+	GetLocation() common.Location
 }
 
 // ParameterizedType is a type which might have type parameters
@@ -4721,7 +4721,7 @@ type EnumInfo struct {
 }
 
 type CompositeType struct {
-	Location   ast.Location
+	Location   common.Location
 	Identifier string
 	Kind       common.CompositeKind
 	// an internal set of field `ExplicitInterfaceConformances`
@@ -4774,7 +4774,7 @@ func (t *CompositeType) GetCompositeKind() common.CompositeKind {
 	return t.Kind
 }
 
-func (t *CompositeType) GetLocation() ast.Location {
+func (t *CompositeType) GetLocation() common.Location {
 	return t.Location
 }
 
@@ -5781,7 +5781,7 @@ func (m *Member) testType(test func(Type) bool, results map[*Member]bool) (resul
 // InterfaceType
 
 type InterfaceType struct {
-	Location      ast.Location
+	Location      common.Location
 	Identifier    string
 	CompositeKind common.CompositeKind
 	Members       map[string]*Member
@@ -5810,7 +5810,7 @@ func (t *InterfaceType) GetCompositeKind() common.CompositeKind {
 	return t.CompositeKind
 }
 
-func (t *InterfaceType) GetLocation() ast.Location {
+func (t *InterfaceType) GetLocation() common.Location {
 	return t.Location
 }
 

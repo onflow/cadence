@@ -370,7 +370,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 
 	var identifiers []ast.Identifier
 
-	var location ast.Location
+	var location common.Location
 	var locationPos ast.Position
 	var endPos ast.Position
 
@@ -382,7 +382,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 		case lexer.TokenString:
 			parsedString, errs := parseStringLiteral(p.current.Value.(string))
 			p.report(errs...)
-			location = ast.StringLocation(parsedString)
+			location = common.StringLocation(parsedString)
 
 		case lexer.TokenHexadecimalIntegerLiteral:
 			location = parseHexadecimalLocation(p.current.Value.(string))
@@ -396,7 +396,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 	}
 
 	setIdentifierLocation := func(identifier ast.Identifier) {
-		location = ast.IdentifierLocation(identifier.Identifier)
+		location = common.IdentifierLocation(identifier.Identifier)
 		locationPos = identifier.Pos
 		endPos = identifier.EndPosition()
 	}
@@ -562,7 +562,7 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 	}
 }
 
-func parseHexadecimalLocation(literal string) ast.AddressLocation {
+func parseHexadecimalLocation(literal string) common.AddressLocation {
 	bytes := []byte(strings.Replace(literal[2:], "_", "", -1))
 
 	length := len(bytes)
@@ -578,7 +578,7 @@ func parseHexadecimalLocation(literal string) ast.AddressLocation {
 		panic(err)
 	}
 
-	return ast.AddressLocation{
+	return common.AddressLocation{
 		Address: common.BytesToAddress(address),
 	}
 }

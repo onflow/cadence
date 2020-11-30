@@ -16,12 +16,38 @@
  * limitations under the License.
  */
 
-package interpreter
+package ast
 
-import "github.com/onflow/cadence/runtime/common"
+import (
+	"encoding/json"
+)
 
-type ValueDeclaration interface {
-	ValueDeclarationName() string
-	ValueDeclarationValue() Value
-	ValueDeclarationAvailable(common.Location) bool
+// Identifier
+
+type Identifier struct {
+	Identifier string
+	Pos        Position
+}
+
+func (i Identifier) String() string {
+	return i.Identifier
+}
+
+func (i Identifier) StartPosition() Position {
+	return i.Pos
+}
+
+func (i Identifier) EndPosition() Position {
+	length := len(i.Identifier)
+	return i.Pos.Shifted(length - 1)
+}
+
+func (i Identifier) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		Identifier string
+		Range
+	}{
+		Identifier: i.Identifier,
+		Range:      NewRangeFromPositioned(i),
+	})
 }

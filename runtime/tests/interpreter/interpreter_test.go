@@ -3876,7 +3876,7 @@ func TestInterpretImport(t *testing.T) {
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
 						assert.Equal(t,
 							ImportedLocation,
 							location,
@@ -3895,7 +3895,7 @@ func TestInterpretImport(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		importingChecker,
 		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
+			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
 					ImportedLocation,
 					location,
@@ -3955,7 +3955,7 @@ func TestInterpretImportError(t *testing.T) {
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
 						assert.Equal(t,
 							ImportedLocation,
 							location,
@@ -3979,7 +3979,7 @@ func TestInterpretImportError(t *testing.T) {
 		importingChecker,
 		interpreter.WithPredeclaredValues(values),
 		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
+			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
 					ImportedLocation,
 					location,
@@ -5272,7 +5272,7 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
 						assert.Equal(t,
 							ImportedLocation,
 							location,
@@ -5291,7 +5291,7 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
 	inter, err := interpreter.NewInterpreter(
 		importingChecker,
 		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
+			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
 					ImportedLocation,
 					location,
@@ -6698,7 +6698,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 				interpreter.WithInjectedCompositeFieldsHandler(
 					func(
 						_ *interpreter.Interpreter,
-						_ ast.Location,
+						_ common.Location,
 						_ sema.TypeID,
 						_ common.CompositeKind,
 					) map[string]interpreter.Value {
@@ -6770,7 +6770,7 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
 						assert.Equal(t,
 							ImportedLocation,
 							location,
@@ -6789,7 +6789,7 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 	inter, err := interpreter.NewInterpreter(
 		importingChecker,
 		interpreter.WithImportLocationHandler(
-			func(inter *interpreter.Interpreter, location ast.Location) interpreter.Import {
+			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
 					ImportedLocation,
 					location,

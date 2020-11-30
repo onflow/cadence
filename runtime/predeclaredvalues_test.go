@@ -24,7 +24,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
@@ -55,8 +54,8 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 		Kind:           common.DeclarationKindFunction,
 		IsConstant:     true,
 		ArgumentLabels: nil,
-		Available: func(location ast.Location) bool {
-			addressLocation, ok := location.(ast.AddressLocation)
+		Available: func(location common.Location) bool {
+			addressLocation, ok := location.(common.AddressLocation)
 			return ok && addressLocation.Address == address2
 		},
 		Value: nil,
@@ -79,8 +78,8 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 		Kind:           common.DeclarationKindFunction,
 		IsConstant:     true,
 		ArgumentLabels: nil,
-		Available: func(location ast.Location) bool {
-			addressLocation, ok := location.(ast.AddressLocation)
+		Available: func(location common.Location) bool {
+			addressLocation, ok := location.(common.AddressLocation)
 			return ok && addressLocation.Address == address4
 		},
 		Value: nil,

@@ -27,7 +27,6 @@ import (
 
 	"github.com/fxamacker/cbor/v2"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -848,22 +847,22 @@ const (
 	encodedAddressLocationNameFieldKey    uint64 = 1
 )
 
-func (e *Encoder) prepareLocation(l ast.Location) (interface{}, error) {
+func (e *Encoder) prepareLocation(l common.Location) (interface{}, error) {
 	switch l := l.(type) {
 
-	case ast.StringLocation:
+	case common.StringLocation:
 		return cbor.Tag{
 			Number:  cborTagStringLocation,
 			Content: string(l),
 		}, nil
 
-	case ast.IdentifierLocation:
+	case common.IdentifierLocation:
 		return cbor.Tag{
 			Number:  cborTagIdentifierLocation,
 			Content: string(l),
 		}, nil
 
-	case ast.AddressLocation:
+	case common.AddressLocation:
 		var content interface{}
 
 		if l.Name == "" {

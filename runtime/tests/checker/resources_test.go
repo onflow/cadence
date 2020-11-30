@@ -1468,7 +1468,7 @@ func TestCheckInvalidCreateImportedResource(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
 						return sema.CheckerImport{
 							Checker: importedChecker,
 						}, nil

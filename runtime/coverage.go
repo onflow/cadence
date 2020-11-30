@@ -18,9 +18,7 @@
 
 package runtime
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-)
+import "github.com/onflow/cadence/runtime/common"
 
 // LocationCoverage records coverage information for a location
 //
@@ -41,10 +39,10 @@ func NewLocationCoverage() *LocationCoverage {
 // CoverageReport is a collection of coverage per location
 //
 type CoverageReport struct {
-	Coverage map[ast.LocationID]*LocationCoverage `json:"coverage"`
+	Coverage map[common.LocationID]*LocationCoverage `json:"coverage"`
 }
 
-func (r *CoverageReport) AddLineHit(location ast.Location, line int) {
+func (r *CoverageReport) AddLineHit(location common.Location, line int) {
 	locationID := location.ID()
 	locationCoverage := r.Coverage[locationID]
 	if locationCoverage == nil {
@@ -56,6 +54,6 @@ func (r *CoverageReport) AddLineHit(location ast.Location, line int) {
 
 func NewCoverageReport() *CoverageReport {
 	return &CoverageReport{
-		Coverage: map[ast.LocationID]*LocationCoverage{},
+		Coverage: map[common.LocationID]*LocationCoverage{},
 	}
 }

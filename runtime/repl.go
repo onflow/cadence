@@ -22,6 +22,7 @@ import (
 	"sort"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser2"
@@ -55,7 +56,7 @@ func NewREPL(onError func(error), onResult func(interpreter.Value), checkerOptio
 
 	checker, err := sema.NewChecker(
 		nil,
-		REPLLocation{},
+		common.REPLLocation{},
 		checkerOptions...,
 	)
 	if err != nil {

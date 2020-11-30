@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -476,7 +475,7 @@ func TestCheckTopLevelContractRestriction(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithValidTopLevelDeclarationsHandler(
-					func(_ ast.Location) []common.DeclarationKind {
+					func(_ common.Location) []common.DeclarationKind {
 						return []common.DeclarationKind{
 							common.DeclarationKindContract,
 							common.DeclarationKindImport,
@@ -513,7 +512,7 @@ func TestCheckInvalidTopLevelContractRestriction(t *testing.T) {
 				ParseAndCheckOptions{
 					Options: []sema.Option{
 						sema.WithValidTopLevelDeclarationsHandler(
-							func(_ ast.Location) []common.DeclarationKind {
+							func(_ common.Location) []common.DeclarationKind {
 								return []common.DeclarationKind{
 									common.DeclarationKindContractInterface,
 									common.DeclarationKindContract,

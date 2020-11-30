@@ -74,19 +74,19 @@ func TestCheckPredeclaredValues(t *testing.T) {
 		// Only predeclare a function 'foo' for 0x2 and 0x4.
 		// Both functions have the same name, but different types.
 
-		location1 := ast.AddressLocation{
+		location1 := common.AddressLocation{
 			Address: common.BytesToAddress([]byte{0x1}),
 		}
 
-		location2 := ast.AddressLocation{
+		location2 := common.AddressLocation{
 			Address: common.BytesToAddress([]byte{0x2}),
 		}
 
-		location3 := ast.AddressLocation{
+		location3 := common.AddressLocation{
 			Address: common.BytesToAddress([]byte{0x3}),
 		}
 
-		location4 := ast.AddressLocation{
+		location4 := common.AddressLocation{
 			Address: common.BytesToAddress([]byte{0x4}),
 		}
 
@@ -97,8 +97,8 @@ func TestCheckPredeclaredValues(t *testing.T) {
 					Type: sema.VoidType,
 				},
 			},
-			Available: func(location ast.Location) bool {
-				addressLocation, ok := location.(ast.AddressLocation)
+			Available: func(location common.Location) bool {
+				addressLocation, ok := location.(common.AddressLocation)
 				return ok && addressLocation == location2
 			},
 		}
@@ -117,8 +117,8 @@ func TestCheckPredeclaredValues(t *testing.T) {
 					Type: sema.VoidType,
 				},
 			},
-			Available: func(location ast.Location) bool {
-				addressLocation, ok := location.(ast.AddressLocation)
+			Available: func(location common.Location) bool {
+				addressLocation, ok := location.(common.AddressLocation)
 				return ok && addressLocation == location4
 			},
 		}
@@ -152,7 +152,7 @@ func TestCheckPredeclaredValues(t *testing.T) {
 						},
 					),
 					sema.WithImportHandler(
-						func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+						func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
 							checker, err := checker.EnsureLoaded(location, func() *ast.Program {
 								switch location {
 								case location2:

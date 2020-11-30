@@ -22,7 +22,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -42,7 +42,7 @@ type StaticType interface {
 // CompositeStaticType
 
 type CompositeStaticType struct {
-	Location ast.Location
+	Location common.Location
 	TypeID   sema.TypeID
 }
 
@@ -59,7 +59,7 @@ func (t CompositeStaticType) String() string {
 // InterfaceStaticType
 
 type InterfaceStaticType struct {
-	Location ast.Location
+	Location common.Location
 	TypeID   sema.TypeID
 }
 
@@ -256,8 +256,8 @@ func convertToInterfaceStaticType(t *sema.InterfaceType) InterfaceStaticType {
 
 func ConvertStaticToSemaType(
 	typ StaticType,
-	getInterface func(location ast.Location, id sema.TypeID) *sema.InterfaceType,
-	getComposite func(location ast.Location, id sema.TypeID) *sema.CompositeType,
+	getInterface func(location common.Location, id sema.TypeID) *sema.InterfaceType,
+	getComposite func(location common.Location, id sema.TypeID) *sema.CompositeType,
 ) sema.Type {
 	switch t := typ.(type) {
 	case CompositeStaticType:

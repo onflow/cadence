@@ -30,6 +30,7 @@ import (
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/cmd"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -59,8 +60,8 @@ func RunREPL() {
 		},
 		[]sema.Option{
 			sema.WithImportHandler(
-				func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
-					stringLocation, ok := location.(ast.StringLocation)
+				func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
+					stringLocation, ok := location.(common.StringLocation)
 
 					if !ok {
 						return nil, &sema.CheckerError{

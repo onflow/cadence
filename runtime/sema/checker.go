@@ -63,29 +63,29 @@ var beforeType = func() *FunctionType {
 	}
 }()
 
-type ValidTopLevelDeclarationsHandlerFunc = func(ast.Location) []common.DeclarationKind
+type ValidTopLevelDeclarationsHandlerFunc = func(common.Location) []common.DeclarationKind
 
-type CheckHandlerFunc func(location ast.Location, check func())
+type CheckHandlerFunc func(location common.Location, check func())
 
 type ResolvedLocation struct {
-	Location    ast.Location
+	Location    common.Location
 	Identifiers []ast.Identifier
 }
 
-type LocationHandlerFunc func(identifiers []ast.Identifier, location ast.Location) ([]ResolvedLocation, error)
+type LocationHandlerFunc func(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
 
-type ImportHandlerFunc func(checker *Checker, location ast.Location) (Import, *CheckerError)
+type ImportHandlerFunc func(checker *Checker, location common.Location) (Import, *CheckerError)
 
 // Checker
 
 type Checker struct {
 	Program                            *ast.Program
-	Location                           ast.Location
+	Location                           common.Location
 	PredeclaredValues                  []ValueDeclaration
 	effectivePredeclaredValues         map[string]ValueDeclaration
 	PredeclaredTypes                   []TypeDeclaration
 	effectivePredeclaredTypes          map[string]TypeDeclaration
-	allCheckers                        map[ast.LocationID]*Checker
+	allCheckers                        map[common.LocationID]*Checker
 	accessCheckMode                    AccessCheckMode
 	errors                             []error
 	hints                              []Hint
@@ -176,7 +176,7 @@ func WithValidTopLevelDeclarationsHandler(handler ValidTopLevelDeclarationsHandl
 // WithAllCheckers returns a checker option which sets
 // the given map of checkers as the map of all checkers.
 //
-func WithAllCheckers(allCheckers map[ast.LocationID]*Checker) Option {
+func WithAllCheckers(allCheckers map[common.LocationID]*Checker) Option {
 	return func(checker *Checker) error {
 		checker.SetAllCheckers(allCheckers)
 		return nil
@@ -213,7 +213,7 @@ func WithImportHandler(handler ImportHandlerFunc) Option {
 	}
 }
 
-func NewChecker(program *ast.Program, location ast.Location, options ...Option) (*Checker, error) {
+func NewChecker(program *ast.Program, location common.Location, options ...Option) (*Checker, error) {
 
 	if location == nil {
 		return nil, &MissingLocationError{}
@@ -263,7 +263,7 @@ func NewChecker(program *ast.Program, location ast.Location, options ...Option) 
 	checker.declareBaseValues()
 
 	defaultOptions := []Option{
-		WithAllCheckers(map[ast.LocationID]*Checker{}),
+		WithAllCheckers(map[common.LocationID]*Checker{}),
 	}
 
 	for _, option := range append(defaultOptions, options...) {
@@ -283,7 +283,7 @@ func NewChecker(program *ast.Program, location ast.Location, options ...Option) 
 
 // SetAllCheckers sets the given map of checkers as the map of all checkers.
 //
-func (checker *Checker) SetAllCheckers(allCheckers map[ast.LocationID]*Checker) {
+func (checker *Checker) SetAllCheckers(allCheckers map[common.LocationID]*Checker) {
 	checker.allCheckers = allCheckers
 
 	// Register self

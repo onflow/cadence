@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -38,6 +39,8 @@ type Block struct {
 }
 
 type ResolvedLocation = sema.ResolvedLocation
+type Identifier = ast.Identifier
+type Location = common.Location
 
 type Interface interface {
 	// ResolveLocation resolves an import location.
@@ -118,9 +121,9 @@ type HighLevelStorage interface {
 }
 
 type Metrics interface {
-	ProgramParsed(location ast.Location, duration time.Duration)
-	ProgramChecked(location ast.Location, duration time.Duration)
-	ProgramInterpreted(location ast.Location, duration time.Duration)
+	ProgramParsed(location common.Location, duration time.Duration)
+	ProgramChecked(location common.Location, duration time.Duration)
+	ProgramInterpreted(location common.Location, duration time.Duration)
 	ValueEncoded(duration time.Duration)
 	ValueDecoded(duration time.Duration)
 }

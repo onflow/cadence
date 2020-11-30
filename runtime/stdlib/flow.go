@@ -178,20 +178,20 @@ func DefaultFlowBuiltinImpls() FlowBuiltinImpls {
 
 type FlowLocation struct{}
 
-const flowLocationID = "flow"
+const FlowLocationPrefix = "flow"
 
-func (l FlowLocation) ID() ast.LocationID {
-	return ast.NewLocationID(flowLocationID)
+func (l FlowLocation) ID() common.LocationID {
+	return common.NewLocationID(FlowLocationPrefix)
 }
 
-func (l FlowLocation) TypeID(qualifiedIdentifier string) ast.TypeID {
-	return ast.NewTypeID(
-		flowLocationID,
+func (l FlowLocation) TypeID(qualifiedIdentifier string) common.TypeID {
+	return common.NewTypeID(
+		FlowLocationPrefix,
 		qualifiedIdentifier,
 	)
 }
 
-func (l FlowLocation) QualifiedIdentifier(typeID ast.TypeID) string {
+func (l FlowLocation) QualifiedIdentifier(typeID common.TypeID) string {
 	pieces := strings.SplitN(string(typeID), ".", 2)
 
 	if len(pieces) < 2 {

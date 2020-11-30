@@ -16,12 +16,32 @@
  * limitations under the License.
  */
 
-package interpreter
+package common
 
-import "github.com/onflow/cadence/runtime/common"
+import (
+	"encoding/json"
+	"testing"
 
-type ValueDeclaration interface {
-	ValueDeclarationName() string
-	ValueDeclarationValue() Value
-	ValueDeclarationAvailable(common.Location) bool
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+func TestTransactionLocation_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
+
+	loc := TransactionLocation([]byte{0x1, 0x2})
+
+	actual, err := json.Marshal(loc)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "TransactionLocation",
+            "Transaction": "0102"
+        }
+        `,
+		string(actual),
+	)
 }

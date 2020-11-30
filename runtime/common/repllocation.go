@@ -16,12 +16,39 @@
  * limitations under the License.
  */
 
-package interpreter
+package common
 
-import "github.com/onflow/cadence/runtime/common"
+import (
+	"strings"
+)
 
-type ValueDeclaration interface {
-	ValueDeclarationName() string
-	ValueDeclarationValue() Value
-	ValueDeclarationAvailable(common.Location) bool
+const REPLLocationPrefix = "REPL"
+
+// REPLLocation
+//
+type REPLLocation struct{}
+
+func (l REPLLocation) ID() LocationID {
+	return REPLLocationPrefix
+}
+
+func (l REPLLocation) TypeID(qualifiedIdentifier string) TypeID {
+	return NewTypeID(
+		REPLLocationPrefix,
+		qualifiedIdentifier,
+	)
+}
+
+func (l REPLLocation) QualifiedIdentifier(typeID TypeID) string {
+	pieces := strings.SplitN(string(typeID), ".", 2)
+
+	if len(pieces) < 2 {
+		return ""
+	}
+
+	return pieces[1]
+}
+
+func (l REPLLocation) String() string {
+	return REPLLocationPrefix
 }

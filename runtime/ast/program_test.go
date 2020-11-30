@@ -25,6 +25,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/onflow/cadence/runtime/common"
 )
 
 func TestProgram_MarshalJSON(t *testing.T) {
@@ -110,13 +112,13 @@ func TestProgramIndices(t *testing.T) {
 	}
 
 	importA := &ImportDeclaration{
-		Location: StringLocation("A"),
+		Location: common.StringLocation("A"),
 	}
 	importB := &ImportDeclaration{
-		Location: StringLocation("B"),
+		Location: common.StringLocation("B"),
 	}
 	importC := &ImportDeclaration{
-		Location: StringLocation("C"),
+		Location: common.StringLocation("C"),
 	}
 
 	pragmaA := &PragmaDeclaration{
