@@ -322,3 +322,59 @@ func TestRuntimeMagic(t *testing.T) {
 		writes,
 	)
 }
+
+func TestAccountStorageStorage(t *testing.T) {
+	runtime := NewInterpreterRuntime()
+
+	script := []byte(`
+      transaction {
+        prepare(signer: AuthAccount) {
+           let before = signer.storageUsed
+           signer.save(42, to: /storage/answer)
+           let after = signer.storageUsed
+           log(after != before)
+        }
+      }
+    `)
+
+	var loggedMessages []string
+
+	storage := newTestStorage(nil, nil)
+
+	runtimeInterface := &testRuntimeInterface{
+		storage: storage,
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
+		},
+		getStorageUsed: func(_ Address) (uint64, error) {
+			var amount uint64 = 0
+
+			for _, data := range storage.storedValues {
+				amount += uint64(len(data))
+			}
+
+			return amount, nil
+		},
+		log: func(message string) {
+			loggedMessages = append(loggedMessages, message)
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		[]string{"true"},
+		loggedMessages,
+	)
+}

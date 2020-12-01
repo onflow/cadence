@@ -6708,7 +6708,9 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 						return map[string]interpreter.Value{
 							"account": interpreter.NewAuthAccountValue(
 								addressValue,
-								returnZero,
+								func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
+									return 0
+								},
 								returnZero,
 								panicFunction,
 								panicFunction,
@@ -7517,7 +7519,9 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 		Type: &sema.AuthAccountType{},
 		Value: interpreter.NewAuthAccountValue(
 			addressValue,
-			returnZero,
+			func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
+				return 0
+			},
 			returnZero,
 			panicFunction,
 			panicFunction,

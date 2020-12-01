@@ -6525,7 +6525,7 @@ type AccountValue interface {
 // AuthAccountValue
 type AuthAccountValue struct {
 	Address                 AddressValue
-	storageUsedGet          func() UInt64Value
+	storageUsedGet          func(interpreter *Interpreter) UInt64Value
 	storageCapacityGet      func() UInt64Value
 	addPublicKeyFunction    FunctionValue
 	removePublicKeyFunction FunctionValue
@@ -6534,7 +6534,7 @@ type AuthAccountValue struct {
 
 func NewAuthAccountValue(
 	address AddressValue,
-	storageUsedGet func() UInt64Value,
+	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
 	addPublicKeyFunction FunctionValue,
 	removePublicKeyFunction FunctionValue,
@@ -6638,7 +6638,7 @@ func (v AuthAccountValue) GetMember(inter *Interpreter, _ LocationRange, name st
 		return v.Address
 
 	case "storageUsed":
-		return v.storageUsedGet()
+		return v.storageUsedGet(inter)
 
 	case "storageCapacity":
 		return v.storageCapacityGet()
@@ -6688,14 +6688,14 @@ func (AuthAccountValue) SetMember(_ *Interpreter, _ LocationRange, _ string, _ V
 
 type PublicAccountValue struct {
 	Address            AddressValue
-	storageUsedGet     func() UInt64Value
+	storageUsedGet     func(interpreter *Interpreter) UInt64Value
 	storageCapacityGet func() UInt64Value
 	Identifier         string
 }
 
 func NewPublicAccountValue(
 	address AddressValue,
-	storageUsedGet func() UInt64Value,
+	storageUsedGet func(interpreter *Interpreter) UInt64Value,
 	storageCapacityGet func() UInt64Value,
 ) PublicAccountValue {
 	return PublicAccountValue{
@@ -6756,7 +6756,7 @@ func (v PublicAccountValue) GetMember(inter *Interpreter, _ LocationRange, name 
 		return v.Address
 
 	case "storageUsed":
-		return v.storageUsedGet()
+		return v.storageUsedGet(inter)
 
 	case "storageCapacity":
 		return v.storageCapacityGet()
