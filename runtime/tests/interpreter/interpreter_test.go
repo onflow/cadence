@@ -7523,8 +7523,7 @@ func TestInterpretResourceOwnerFieldUse(t *testing.T) {
 			panicFunction,
 			interpreter.AuthAccountContractsValue{},
 		),
-		Kind:       common.DeclarationKindConstant,
-		IsConstant: true,
+		Kind: common.DeclarationKindConstant,
 	}
 
 	inter := parseCheckAndInterpretWithOptions(t,

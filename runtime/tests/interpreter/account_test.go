@@ -57,8 +57,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 			panicFunction,
 			interpreter.AuthAccountContractsValue{},
 		),
-		Kind:       common.DeclarationKindConstant,
-		IsConstant: true,
+		Kind: common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, authAccountValueDeclaration)
 
@@ -72,8 +71,7 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 			returnZero,
 			returnZero,
 		),
-		Kind:       common.DeclarationKindConstant,
-		IsConstant: true,
+		Kind: common.DeclarationKindConstant,
 	}
 	valueDeclarations = append(valueDeclarations, pubAccountValueDeclaration)
 

@@ -45,12 +45,11 @@ func TestInterpretEquality(t *testing.T) {
 			},
 		}
 
-		capabilityValueDeclarartion := stdlib.StandardLibraryValue{
-			Name:       "cap",
-			Type:       &sema.CapabilityType{},
-			Value:      capabilityValue,
-			Kind:       common.DeclarationKindConstant,
-			IsConstant: true,
+		capabilityValueDeclaration := stdlib.StandardLibraryValue{
+			Name:  "cap",
+			Type:  &sema.CapabilityType{},
+			Value: capabilityValue,
+			Kind:  common.DeclarationKindConstant,
 		}
 
 		inter := parseCheckAndInterpretWithOptions(t,
@@ -63,12 +62,12 @@ func TestInterpretEquality(t *testing.T) {
 			ParseCheckAndInterpretOptions{
 				Options: []interpreter.Option{
 					interpreter.WithPredeclaredValues([]interpreter.ValueDeclaration{
-						capabilityValueDeclarartion,
+						capabilityValueDeclaration,
 					}),
 				},
 				CheckerOptions: []sema.Option{
 					sema.WithPredeclaredValues([]sema.ValueDeclaration{
-						capabilityValueDeclarartion,
+						capabilityValueDeclaration,
 					}),
 				},
 			},
