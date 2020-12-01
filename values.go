@@ -1005,7 +1005,7 @@ func (v Struct) ToGoValue() interface{} {
 }
 
 func (v Struct) String() string {
-	return formatComposite(v.StructType.Identifier, v.StructType.Fields, v.Fields)
+	return formatComposite(v.StructType.ID(), v.StructType.Fields, v.Fields)
 }
 
 func formatComposite(typeID string, fields []Field, values []Value) string {
@@ -1062,7 +1062,7 @@ func (v Resource) ToGoValue() interface{} {
 }
 
 func (v Resource) String() string {
-	return formatComposite(v.ResourceType.Identifier, v.ResourceType.Fields, v.Fields)
+	return formatComposite(v.ResourceType.ID(), v.ResourceType.Fields, v.Fields)
 }
 
 // Event
@@ -1097,7 +1097,7 @@ func (v Event) ToGoValue() interface{} {
 	return ret
 }
 func (v Event) String() string {
-	return formatComposite(v.EventType.Identifier, v.EventType.Fields, v.Fields)
+	return formatComposite(v.EventType.ID(), v.EventType.Fields, v.Fields)
 }
 
 // Contract
@@ -1133,7 +1133,7 @@ func (v Contract) ToGoValue() interface{} {
 }
 
 func (v Contract) String() string {
-	return formatComposite(v.ContractType.Identifier, v.ContractType.Fields, v.Fields)
+	return formatComposite(v.ContractType.ID(), v.ContractType.Fields, v.Fields)
 }
 
 // Link

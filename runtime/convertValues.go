@@ -338,11 +338,29 @@ func importValue(value cadence.Value) interpreter.Value {
 	case cadence.Dictionary:
 		return importDictionaryValue(v)
 	case cadence.Struct:
-		return importCompositeValue(common.CompositeKindStructure, v.StructType.ID(), v.StructType.Fields, v.Fields)
+		return importCompositeValue(
+			common.CompositeKindStructure,
+			v.StructType.Location,
+			v.StructType.QualifiedIdentifier,
+			v.StructType.Fields,
+			v.Fields,
+		)
 	case cadence.Resource:
-		return importCompositeValue(common.CompositeKindResource, v.ResourceType.ID(), v.ResourceType.Fields, v.Fields)
+		return importCompositeValue(
+			common.CompositeKindResource,
+			v.ResourceType.Location,
+			v.ResourceType.QualifiedIdentifier,
+			v.ResourceType.Fields,
+			v.Fields,
+		)
 	case cadence.Event:
-		return importCompositeValue(common.CompositeKindEvent, v.EventType.ID(), v.EventType.Fields, v.Fields)
+		return importCompositeValue(
+			common.CompositeKindEvent,
+			v.EventType.Location,
+			v.EventType.QualifiedIdentifier,
+			v.EventType.Fields,
+			v.Fields,
+		)
 	case cadence.Path:
 		return interpreter.PathValue{
 			Domain:     common.PathDomainFromIdentifier(v.Domain),
@@ -385,7 +403,8 @@ func importDictionaryValue(v cadence.Dictionary) *interpreter.DictionaryValue {
 
 func importCompositeValue(
 	kind common.CompositeKind,
-	typeID string,
+	location Location,
+	qualifiedIdentifier string,
 	fieldTypes []cadence.Field,
 	fieldValues []cadence.Value,
 ) *interpreter.CompositeValue {
@@ -397,16 +416,9 @@ func importCompositeValue(
 		fields[fieldType.Identifier] = importValue(fieldValue)
 	}
 
-	// TODO:
-	var location common.Location
-	//location := common.LocationFromTypeID(typeID)
-	//if location == nil {
-	//	panic(errors.New("invalid type ID"))
-	//}
-
 	return interpreter.NewCompositeValue(
 		location,
-		sema.TypeID(typeID),
+		location.TypeID(qualifiedIdentifier),
 		kind,
 		fields,
 		nil,

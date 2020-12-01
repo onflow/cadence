@@ -189,8 +189,6 @@ func exportConstantSizedType(t *sema.ConstantSizedType, results map[sema.TypeID]
 
 func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.Type) (result cadence.CompositeType) {
 
-	id := string(t.ID())
-
 	fieldMembers := make([]*sema.Member, 0, len(t.Fields))
 
 	for _, identifier := range t.Fields {
@@ -208,30 +206,30 @@ func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.
 	switch t.Kind {
 	case common.CompositeKindStructure:
 		result = &cadence.StructType{
-			TypeID:     id,
-			Identifier: t.Identifier,
-			Fields:     fields,
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
+			Fields:              fields,
 		}
 
 	case common.CompositeKindResource:
 		result = &cadence.ResourceType{
-			TypeID:     id,
-			Identifier: t.Identifier,
-			Fields:     fields,
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
+			Fields:              fields,
 		}
 
 	case common.CompositeKindEvent:
 		result = &cadence.EventType{
-			TypeID:     id,
-			Identifier: t.Identifier,
-			Fields:     fields,
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
+			Fields:              fields,
 		}
 
 	case common.CompositeKindContract:
 		result = &cadence.ContractType{
-			TypeID:     id,
-			Identifier: t.Identifier,
-			Fields:     fields,
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
+			Fields:              fields,
 		}
 
 	default:
@@ -256,8 +254,6 @@ func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.
 
 func exportInterfaceType(t *sema.InterfaceType, results map[sema.TypeID]cadence.Type) (result cadence.InterfaceType) {
 
-	id := string(t.ID())
-
 	fieldMembers := make([]*sema.Member, 0, len(t.Fields))
 
 	for _, identifier := range t.Fields {
@@ -275,23 +271,23 @@ func exportInterfaceType(t *sema.InterfaceType, results map[sema.TypeID]cadence.
 	switch t.CompositeKind {
 	case common.CompositeKindStructure:
 		result = &cadence.StructInterfaceType{
-			TypeID:     id,
-			Identifier: t.Identifier,
-			Fields:     fields,
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
+			Fields:              fields,
 		}
 
 	case common.CompositeKindResource:
 		result = &cadence.ResourceInterfaceType{
-			TypeID:     id,
-			Identifier: t.Identifier,
-			Fields:     fields,
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
+			Fields:              fields,
 		}
 
 	case common.CompositeKindContract:
 		result = &cadence.ContractInterfaceType{
-			TypeID:     id,
-			Identifier: t.Identifier,
-			Fields:     fields,
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
+			Fields:              fields,
 		}
 
 	default:

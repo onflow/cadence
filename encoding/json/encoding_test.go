@@ -30,8 +30,8 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/encoding/json"
 	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 type encodeTest struct {
@@ -774,8 +774,8 @@ func TestEncodeStruct(t *testing.T) {
 	t.Parallel()
 
 	simpleStructType := &cadence.StructType{
-		TypeID:     "S.test.FooStruct",
-		Identifier: "FooStruct",
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooStruct",
 		Fields: []cadence.Field{
 			{
 				Identifier: "a",
@@ -800,8 +800,8 @@ func TestEncodeStruct(t *testing.T) {
 	}
 
 	resourceStructType := &cadence.StructType{
-		TypeID:     "S.test.FooStruct",
-		Identifier: "FooStruct",
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooStruct",
 		Fields: []cadence.Field{
 			{
 				Identifier: "a",
@@ -837,8 +837,8 @@ func TestEncodeEvent(t *testing.T) {
 	t.Parallel()
 
 	simpleEventType := &cadence.EventType{
-		TypeID:     "S.test.FooEvent",
-		Identifier: "FooEvent",
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooEvent",
 		Fields: []cadence.Field{
 			{
 				Identifier: "a",
@@ -863,8 +863,8 @@ func TestEncodeEvent(t *testing.T) {
 	}
 
 	resourceEventType := &cadence.EventType{
-		TypeID:     "S.test.FooEvent",
-		Identifier: "FooEvent",
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooEvent",
 		Fields: []cadence.Field{
 			{
 				Identifier: "a",
@@ -900,8 +900,8 @@ func TestEncodeContract(t *testing.T) {
 	t.Parallel()
 
 	simpleContractType := &cadence.ContractType{
-		TypeID:     "S.test.FooContract",
-		Identifier: "FooContract",
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooContract",
 		Fields: []cadence.Field{
 			{
 				Identifier: "a",
@@ -926,8 +926,8 @@ func TestEncodeContract(t *testing.T) {
 	}
 
 	resourceContractType := &cadence.ContractType{
-		TypeID:     "S.test.FooContract",
-		Identifier: "FooContract",
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "FooContract",
 		Fields: []cadence.Field{
 			{
 				Identifier: "a",
@@ -1226,8 +1226,8 @@ func TestExportRecursiveType(t *testing.T) {
 	t.Parallel()
 
 	ty := &cadence.ResourceType{
-		TypeID:     "S.test.Foo",
-		Identifier: "Foo",
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "Foo",
 		Fields: []cadence.Field{
 			{
 				Identifier: "foo",
@@ -1272,7 +1272,7 @@ func convertValueFromScript(t *testing.T, script string) cadence.Value {
 		},
 		runtime.Context{
 			Interface: &runtime.EmptyRuntimeInterface{},
-			Location:  common.StringLocation("test"),
+			Location:  utils.TestLocation,
 		},
 	)
 
@@ -1322,8 +1322,8 @@ func testDecode(t *testing.T, actualJSON string, expectedVal cadence.Value) {
 }
 
 var fooResourceType = &cadence.ResourceType{
-	TypeID:     "S.test.Foo",
-	Identifier: "Foo",
+	Location:            utils.TestLocation,
+	QualifiedIdentifier: "Foo",
 	Fields: []cadence.Field{
 		{
 			Identifier: "bar",

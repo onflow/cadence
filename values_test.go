@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestStringer(t *testing.T) {
@@ -149,8 +150,8 @@ func TestStringer(t *testing.T) {
 		},
 		"struct": {
 			value: NewStruct([]Value{NewString("bar")}).WithType(&StructType{
-				TypeID:     "S.test.Foo",
-				Identifier: "Foo",
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "FooStruct",
 				Fields: []Field{
 					{
 						Identifier: "y",
@@ -158,12 +159,12 @@ func TestStringer(t *testing.T) {
 					},
 				},
 			}),
-			expected: "Foo(y: \"bar\")",
+			expected: "S.test.FooStruct(y: \"bar\")",
 		},
 		"resource": {
 			value: NewResource([]Value{NewInt(1)}).WithType(&ResourceType{
-				TypeID:     "S.test.Foo",
-				Identifier: "FooResource",
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "FooResource",
 				Fields: []Field{
 					{
 						Identifier: "bar",
@@ -171,7 +172,7 @@ func TestStringer(t *testing.T) {
 					},
 				},
 			}),
-			expected: "FooResource(bar: 1)",
+			expected: "S.test.FooResource(bar: 1)",
 		},
 		"event": {
 			value: NewEvent(
@@ -180,8 +181,8 @@ func TestStringer(t *testing.T) {
 					NewString("foo"),
 				},
 			).WithType(&EventType{
-				TypeID:     "S.test.FooEvent",
-				Identifier: "FooEvent",
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "FooEvent",
 				Fields: []Field{
 					{
 						Identifier: "a",
@@ -193,12 +194,12 @@ func TestStringer(t *testing.T) {
 					},
 				},
 			}),
-			expected: "FooEvent(a: 1, b: \"foo\")",
+			expected: "S.test.FooEvent(a: 1, b: \"foo\")",
 		},
 		"contract": {
 			value: NewContract([]Value{NewString("bar")}).WithType(&ContractType{
-				TypeID:     "S.test.FooContract",
-				Identifier: "FooContract",
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "FooContract",
 				Fields: []Field{
 					{
 						Identifier: "y",
@@ -206,7 +207,7 @@ func TestStringer(t *testing.T) {
 					},
 				},
 			}),
-			expected: "FooContract(y: \"bar\")",
+			expected: "S.test.FooContract(y: \"bar\")",
 		},
 		"Link": {
 			value: NewLink(
