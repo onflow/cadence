@@ -55,7 +55,9 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 
 	values["authAccount"] = interpreter.NewAuthAccountValue(
 		address,
-		returnZero,
+		func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
+			return 0
+		},
 		returnZero,
 		panicFunction,
 		panicFunction,
@@ -73,7 +75,9 @@ func testAccount(t *testing.T, auth bool, code string) (*interpreter.Interpreter
 
 	values["pubAccount"] = interpreter.NewPublicAccountValue(
 		address,
-		returnZero,
+		func(interpreter *interpreter.Interpreter) interpreter.UInt64Value {
+			return 0
+		},
 		returnZero,
 	)
 
