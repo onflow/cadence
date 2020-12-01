@@ -20,6 +20,7 @@ package common
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 )
 
@@ -62,4 +63,52 @@ func (l StringLocation) MarshalJSON() ([]byte, error) {
 		Type:   "StringLocation",
 		String: string(l),
 	})
+}
+
+func init() {
+	RegisterTypeIDDecoder(
+		StringLocationPrefix,
+		func(typeID string) (location Location, qualifiedIdentifier string, err error) {
+			return decodeStringLocationTypeID(typeID)
+		},
+	)
+}
+
+func decodeStringLocationTypeID(typeID string) (StringLocation, string, error) {
+
+	const errorMessagePrefix = "invalid string location type ID"
+
+	newError := func(message string) (StringLocation, string, error) {
+		return "", "", fmt.Errorf("%s: %s", errorMessagePrefix, message)
+	}
+
+	if typeID == "" {
+		return newError("missing prefix")
+	}
+
+	parts := strings.SplitN(typeID, ".", 3)
+
+	pieceCount := len(parts)
+	switch pieceCount {
+	case 1:
+		return newError("missing location")
+	case 2:
+		return newError("missing qualified identifier")
+	}
+
+	prefix := parts[0]
+
+	if prefix != StringLocationPrefix {
+		return "", "", fmt.Errorf(
+			"%s: invalid prefix: expected %q, got %q",
+			errorMessagePrefix,
+			StringLocationPrefix,
+			prefix,
+		)
+	}
+
+	location := StringLocation(parts[1])
+	qualifiedIdentifier := parts[2]
+
+	return location, qualifiedIdentifier, nil
 }

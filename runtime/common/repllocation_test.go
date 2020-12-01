@@ -26,11 +26,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTransactionLocation_MarshalJSON(t *testing.T) {
+func TestREPLLocation_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	loc := TransactionLocation([]byte{0x1, 0x2})
+	loc := REPLLocation{}
 
 	actual, err := json.Marshal(loc)
 	require.NoError(t, err)
@@ -38,15 +38,14 @@ func TestTransactionLocation_MarshalJSON(t *testing.T) {
 	assert.JSONEq(t,
 		`
         {
-            "Type": "TransactionLocation",
-            "Transaction": "0102"
+            "Type": "REPLLocation"
         }
         `,
 		string(actual),
 	)
 }
 
-func TestDecodeTransactionLocationTypeID(t *testing.T) {
+func TestDecodeREPLLocationTypeID(t *testing.T) {
 
 	t.Parallel()
 
@@ -54,43 +53,35 @@ func TestDecodeTransactionLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeTransactionLocationTypeID("")
-		require.EqualError(t, err, "invalid transaction location type ID: missing prefix")
-	})
-
-	t.Run("missing location", func(t *testing.T) {
-
-		t.Parallel()
-
-		_, _, err := decodeTransactionLocationTypeID("t")
-		require.EqualError(t, err, "invalid transaction location type ID: missing location")
+		_, _, err := decodeREPLLocationTypeID("")
+		require.EqualError(t, err, "invalid REPL location type ID: missing prefix")
 	})
 
 	t.Run("missing qualified identifier", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeTransactionLocationTypeID("t.test")
-		require.EqualError(t, err, "invalid transaction location type ID: missing qualified identifier")
+		_, _, err := decodeREPLLocationTypeID("REPL")
+		require.EqualError(t, err, "invalid REPL location type ID: missing qualified identifier")
 	})
 
 	t.Run("missing qualified identifier", func(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeTransactionLocationTypeID("X.test.T")
-		require.EqualError(t, err, "invalid transaction location type ID: invalid prefix: expected \"t\", got \"X\"")
+		_, _, err := decodeREPLLocationTypeID("X.T")
+		require.EqualError(t, err, "invalid REPL location type ID: invalid prefix: expected \"REPL\", got \"X\"")
 	})
 
 	t.Run("qualified identifier with one part", func(t *testing.T) {
 
 		t.Parallel()
 
-		location, qualifiedIdentifier, err := decodeTransactionLocationTypeID("t.0102.T")
+		location, qualifiedIdentifier, err := decodeREPLLocationTypeID("REPL.T")
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			TransactionLocation{0x1, 0x2},
+			REPLLocation{},
 			location,
 		)
 		assert.Equal(t, "T", qualifiedIdentifier)
@@ -100,11 +91,11 @@ func TestDecodeTransactionLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		location, qualifiedIdentifier, err := decodeTransactionLocationTypeID("t.0102.T.U")
+		location, qualifiedIdentifier, err := decodeREPLLocationTypeID("REPL.T.U")
 		require.NoError(t, err)
 
 		assert.Equal(t,
-			TransactionLocation{0x1, 0x2},
+			REPLLocation{},
 			location,
 		)
 		assert.Equal(t, "T.U", qualifiedIdentifier)

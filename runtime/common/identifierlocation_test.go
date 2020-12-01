@@ -45,3 +45,68 @@ func TestIdentifierLocation_MarshalJSON(t *testing.T) {
 		string(actual),
 	)
 }
+
+func TestDecodeIdentifierLocationTypeID(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("missing prefix", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, _, err := decodeIdentifierLocationTypeID("")
+		require.EqualError(t, err, "invalid identifier location type ID: missing prefix")
+	})
+
+	t.Run("missing location", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, _, err := decodeIdentifierLocationTypeID("I")
+		require.EqualError(t, err, "invalid identifier location type ID: missing location")
+	})
+
+	t.Run("missing qualified identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, _, err := decodeIdentifierLocationTypeID("I.test")
+		require.EqualError(t, err, "invalid identifier location type ID: missing qualified identifier")
+	})
+
+	t.Run("missing qualified identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, _, err := decodeIdentifierLocationTypeID("X.test.T")
+		require.EqualError(t, err, "invalid identifier location type ID: invalid prefix: expected \"I\", got \"X\"")
+	})
+
+	t.Run("qualified identifier with one part", func(t *testing.T) {
+
+		t.Parallel()
+
+		location, qualifiedIdentifier, err := decodeIdentifierLocationTypeID("I.test.T")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			IdentifierLocation("test"),
+			location,
+		)
+		assert.Equal(t, "T", qualifiedIdentifier)
+	})
+
+	t.Run("qualified identifier with two parts", func(t *testing.T) {
+
+		t.Parallel()
+
+		location, qualifiedIdentifier, err := decodeIdentifierLocationTypeID("I.test.T.U")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			IdentifierLocation("test"),
+			location,
+		)
+		assert.Equal(t, "T.U", qualifiedIdentifier)
+	})
+}

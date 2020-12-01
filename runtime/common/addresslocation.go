@@ -19,6 +19,7 @@
 package common
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -88,4 +89,70 @@ func (l AddressLocation) MarshalJSON() ([]byte, error) {
 		Address: l.Address.ShortHexWithPrefix(),
 		Name:    l.Name,
 	})
+}
+
+func init() {
+	RegisterTypeIDDecoder(
+		AddressLocationPrefix,
+		func(typeID string) (location Location, qualifiedIdentifier string, err error) {
+			return decodeAddressLocationTypeID(typeID)
+		},
+	)
+}
+
+func decodeAddressLocationTypeID(typeID string) (AddressLocation, string, error) {
+
+	const errorMessagePrefix = "invalid address location type ID"
+
+	newError := func(message string) (AddressLocation, string, error) {
+		return AddressLocation{}, "", fmt.Errorf("%s: %s", errorMessagePrefix, message)
+	}
+
+	if typeID == "" {
+		return newError("missing prefix")
+	}
+
+	parts := strings.SplitN(typeID, ".", 4)
+
+	pieceCount := len(parts)
+	switch pieceCount {
+	case 1:
+		return newError("missing location")
+	case 2:
+		return newError("missing qualified identifier")
+	}
+
+	prefix := parts[0]
+
+	if prefix != AddressLocationPrefix {
+		return AddressLocation{}, "", fmt.Errorf(
+			"%s: invalid prefix: expected %q, got %q",
+			errorMessagePrefix,
+			AddressLocationPrefix,
+			prefix,
+		)
+	}
+
+	address, err := hex.DecodeString(parts[1])
+	if err != nil {
+		return AddressLocation{}, "", fmt.Errorf(
+			"%s: invalid address: %w",
+			errorMessagePrefix,
+			err,
+		)
+	}
+
+	name := parts[2]
+	qualifiedIdentifier := name
+
+	if pieceCount > 3 {
+		qualifiedIdentifier = fmt.Sprintf("%s.%s", qualifiedIdentifier, parts[3])
+	}
+
+	location := AddressLocation{
+		Address: BytesToAddress(address),
+		Name:    name,
+	}
+
+	return location, qualifiedIdentifier, nil
 }
