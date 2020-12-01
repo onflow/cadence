@@ -19,6 +19,8 @@
 package common
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 )
 
@@ -60,6 +62,34 @@ type TypeID string
 
 func NewTypeID(parts ...string) TypeID {
 	return TypeID(strings.Join(parts, "."))
+}
+
+type TypeIDDecoder = func(typeID string) (location Location, qualifiedIdentifier string, err error)
+
+var typeIDDecoders = map[string]TypeIDDecoder{}
+
+func RegisterTypeIDDecoder(prefix string, decoder TypeIDDecoder) {
+	if _, ok := typeIDDecoders[prefix]; ok {
+		panic(fmt.Errorf("cannot register type ID decoder for already registered prefix: %s", prefix))
+	}
+	typeIDDecoders[prefix] = decoder
+}
+
+func DecodeTypeID(typeID string) (location Location, qualifiedIdentifier string, err error) {
+	pieces := strings.Split(typeID, ".")
+
+	if len(pieces) < 1 {
+		return nil, "", errors.New("invalid type ID: missing prefix")
+	}
+
+	prefix := pieces[0]
+
+	decoder, ok := typeIDDecoders[prefix]
+	if !ok {
+		return nil, "", fmt.Errorf("invalid type ID: cannot decode prefix %q", prefix)
+	}
+
+	return decoder(typeID)
 }
 
 // HasImportLocation

@@ -21,6 +21,7 @@ package common
 import (
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"strings"
 )
 
@@ -67,4 +68,60 @@ func (l TransactionLocation) MarshalJSON() ([]byte, error) {
 		Type:        "TransactionLocation",
 		Transaction: l.String(),
 	})
+}
+
+func init() {
+	RegisterTypeIDDecoder(
+		TransactionLocationPrefix,
+		func(typeID string) (location Location, qualifiedIdentifier string, err error) {
+			return decodeTransactionLocationTypeID(typeID)
+		},
+	)
+}
+
+func decodeTransactionLocationTypeID(typeID string) (TransactionLocation, string, error) {
+
+	const errorMessagePrefix = "invalid transaction location type ID"
+
+	newError := func(message string) (TransactionLocation, string, error) {
+		return nil, "", fmt.Errorf("%s: %s", errorMessagePrefix, message)
+	}
+
+	if typeID == "" {
+		return newError("missing prefix")
+	}
+
+	parts := strings.SplitN(typeID, ".", 3)
+
+	pieceCount := len(parts)
+	switch pieceCount {
+	case 1:
+		return newError("missing location")
+	case 2:
+		return newError("missing qualified identifier")
+	}
+
+	prefix := parts[0]
+
+	if prefix != TransactionLocationPrefix {
+		return nil, "", fmt.Errorf(
+			"%s: invalid prefix: expected %q, got %q",
+			errorMessagePrefix,
+			TransactionLocationPrefix,
+			prefix,
+		)
+	}
+
+	location, err := hex.DecodeString(parts[1])
+	if err != nil {
+		return nil, "", fmt.Errorf(
+			"%s: invalid location: %w",
+			errorMessagePrefix,
+			err,
+		)
+	}
+
+	qualifiedIdentifier := parts[2]
+
+	return location, qualifiedIdentifier, nil
 }

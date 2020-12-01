@@ -16,27 +16,104 @@
  * limitations under the License.
  */
 
-package stdlib_test
+package stdlib
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 func TestFlowEventTypeIDs(t *testing.T) {
 	for _, ty := range []sema.Type{
-		stdlib.AccountCreatedEventType,
-		stdlib.AccountKeyAddedEventType,
-		stdlib.AccountKeyRemovedEventType,
-		stdlib.AccountContractAddedEventType,
-		stdlib.AccountContractUpdatedEventType,
-		stdlib.AccountContractRemovedEventType,
+		AccountCreatedEventType,
+		AccountKeyAddedEventType,
+		AccountKeyRemovedEventType,
+		AccountContractAddedEventType,
+		AccountContractUpdatedEventType,
+		AccountContractRemovedEventType,
 	} {
 		assert.True(t, strings.HasPrefix(string(ty.ID()), "flow"))
 	}
+}
+
+func TestFlowLocation_MarshalJSON(t *testing.T) {
+
+	t.Parallel()
+
+	loc := FlowLocation{}
+
+	actual, err := json.Marshal(loc)
+	require.NoError(t, err)
+
+	assert.JSONEq(t,
+		`
+        {
+            "Type": "FlowLocation"
+        }
+        `,
+		string(actual),
+	)
+}
+
+func TestDecodeFlowLocationTypeID(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("missing prefix", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, _, err := decodeFlowLocationTypeID("")
+		require.EqualError(t, err, "invalid Flow location type ID: missing prefix")
+	})
+
+	t.Run("missing qualified identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, _, err := decodeFlowLocationTypeID("flow")
+		require.EqualError(t, err, "invalid Flow location type ID: missing qualified identifier")
+	})
+
+	t.Run("missing qualified identifier", func(t *testing.T) {
+
+		t.Parallel()
+
+		_, _, err := decodeFlowLocationTypeID("X.T")
+		require.EqualError(t, err, "invalid Flow location type ID: invalid prefix: expected \"flow\", got \"X\"")
+	})
+
+	t.Run("qualified identifier with one part", func(t *testing.T) {
+
+		t.Parallel()
+
+		location, qualifiedIdentifier, err := decodeFlowLocationTypeID("flow.T")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			FlowLocation{},
+			location,
+		)
+		assert.Equal(t, "T", qualifiedIdentifier)
+	})
+
+	t.Run("qualified identifier with two parts", func(t *testing.T) {
+
+		t.Parallel()
+
+		location, qualifiedIdentifier, err := decodeFlowLocationTypeID("flow.T.U")
+		require.NoError(t, err)
+
+		assert.Equal(t,
+			FlowLocation{},
+			location,
+		)
+		assert.Equal(t, "T.U", qualifiedIdentifier)
+	})
 }

@@ -19,6 +19,7 @@
 package stdlib
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -199,6 +200,58 @@ func (l FlowLocation) QualifiedIdentifier(typeID common.TypeID) string {
 	}
 
 	return pieces[1]
+}
+
+func (l FlowLocation) MarshalJSON() ([]byte, error) {
+	return json.Marshal(&struct {
+		Type string
+	}{
+		Type: "FlowLocation",
+	})
+}
+
+func init() {
+	common.RegisterTypeIDDecoder(
+		FlowLocationPrefix,
+		func(typeID string) (location common.Location, qualifiedIdentifier string, err error) {
+			return decodeFlowLocationTypeID(typeID)
+		},
+	)
+}
+
+func decodeFlowLocationTypeID(typeID string) (FlowLocation, string, error) {
+
+	const errorMessagePrefix = "invalid Flow location type ID"
+
+	newError := func(message string) (FlowLocation, string, error) {
+		return FlowLocation{}, "", fmt.Errorf("%s: %s", errorMessagePrefix, message)
+	}
+
+	if typeID == "" {
+		return newError("missing prefix")
+	}
+
+	parts := strings.SplitN(typeID, ".", 2)
+
+	pieceCount := len(parts)
+	if pieceCount == 1 {
+		return newError("missing qualified identifier")
+	}
+
+	prefix := parts[0]
+
+	if prefix != FlowLocationPrefix {
+		return FlowLocation{}, "", fmt.Errorf(
+			"%s: invalid prefix: expected %q, got %q",
+			errorMessagePrefix,
+			FlowLocationPrefix,
+			prefix,
+		)
+	}
+
+	qualifiedIdentifier := parts[1]
+
+	return FlowLocation{}, qualifiedIdentifier, nil
 }
 
 // built-in event types
