@@ -531,7 +531,7 @@ func TestStringer(t *testing.T) {
 		},
 		"composite": {
 			value: NewCompositeValue(
-				common.StringLocation("test"),
+				utils.TestLocation,
 				"S.test.Foo",
 				common.CompositeKindResource,
 				map[string]Value{

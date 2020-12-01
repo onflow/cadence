@@ -30,6 +30,7 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence"
+	"github.com/onflow/cadence/runtime/common"
 )
 
 // A Decoder decodes JSON-encoded representations of Cadence values.
@@ -481,18 +482,21 @@ func decodeKeyValuePair(valueJSON interface{}) cadence.KeyValuePair {
 }
 
 type composite struct {
-	typeID      string
-	identifier  string
-	fieldValues []cadence.Value
-	fieldTypes  []cadence.Field
+	location            common.Location
+	qualifiedIdentifier string
+	fieldValues         []cadence.Value
+	fieldTypes          []cadence.Field
 }
 
 func decodeComposite(valueJSON interface{}) composite {
 	obj := toObject(valueJSON)
 
 	typeID := obj.GetString(idKey)
-
-	identifier := identifierFromTypeID(typeID)
+	location, qualifiedIdentifier, err := common.DecodeTypeID(typeID)
+	if err != nil {
+		// TODO: improve error
+		panic(ErrInvalidJSONCadence)
+	}
 
 	fields := obj.GetSlice(fieldsKey)
 
@@ -507,10 +511,10 @@ func decodeComposite(valueJSON interface{}) composite {
 	}
 
 	return composite{
-		typeID:      typeID,
-		identifier:  identifier,
-		fieldValues: fieldValues,
-		fieldTypes:  fieldTypes,
+		location:            location,
+		qualifiedIdentifier: qualifiedIdentifier,
+		fieldValues:         fieldValues,
+		fieldTypes:          fieldTypes,
 	}
 }
 
@@ -532,9 +536,9 @@ func decodeStruct(valueJSON interface{}) cadence.Struct {
 	comp := decodeComposite(valueJSON)
 
 	return cadence.NewStruct(comp.fieldValues).WithType(&cadence.StructType{
-		TypeID:     comp.typeID,
-		Identifier: comp.identifier,
-		Fields:     comp.fieldTypes,
+		Location:            comp.location,
+		QualifiedIdentifier: comp.qualifiedIdentifier,
+		Fields:              comp.fieldTypes,
 	})
 }
 
@@ -542,9 +546,9 @@ func decodeResource(valueJSON interface{}) cadence.Resource {
 	comp := decodeComposite(valueJSON)
 
 	return cadence.NewResource(comp.fieldValues).WithType(&cadence.ResourceType{
-		TypeID:     comp.typeID,
-		Identifier: comp.identifier,
-		Fields:     comp.fieldTypes,
+		Location:            comp.location,
+		QualifiedIdentifier: comp.qualifiedIdentifier,
+		Fields:              comp.fieldTypes,
 	})
 }
 
@@ -552,9 +556,9 @@ func decodeEvent(valueJSON interface{}) cadence.Event {
 	comp := decodeComposite(valueJSON)
 
 	return cadence.NewEvent(comp.fieldValues).WithType(&cadence.EventType{
-		TypeID:     comp.typeID,
-		Identifier: comp.identifier,
-		Fields:     comp.fieldTypes,
+		Location:            comp.location,
+		QualifiedIdentifier: comp.qualifiedIdentifier,
+		Fields:              comp.fieldTypes,
 	})
 }
 
@@ -562,9 +566,9 @@ func decodeContract(valueJSON interface{}) cadence.Contract {
 	comp := decodeComposite(valueJSON)
 
 	return cadence.NewContract(comp.fieldValues).WithType(&cadence.ContractType{
-		TypeID:     comp.typeID,
-		Identifier: comp.identifier,
-		Fields:     comp.fieldTypes,
+		Location:            comp.location,
+		QualifiedIdentifier: comp.qualifiedIdentifier,
+		Fields:              comp.fieldTypes,
 	})
 }
 

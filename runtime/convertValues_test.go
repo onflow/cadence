@@ -491,8 +491,8 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 	t.Parallel()
 
 	barResourceType := &cadence.ResourceType{
-		TypeID:     "S.test.Bar",
-		Identifier: "Bar",
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "Bar",
 		Fields: []cadence.Field{
 			{
 				Identifier: "uuid",
@@ -506,8 +506,8 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 	}
 
 	fooResourceType := &cadence.ResourceType{
-		TypeID:     "S.test.Foo",
-		Identifier: "Foo",
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "Foo",
 		Fields: []cadence.Field{
 			{
 				Identifier: "uuid",
@@ -671,9 +671,6 @@ func TestExportCapabilityValue(t *testing.T) {
 	assert.Equal(t, expected, actual)
 }
 
-const fooID = "Foo"
-
-var fooTypeID = fmt.Sprintf("S.%s.%s", utils.TestLocation, fooID)
 var fooFields = []cadence.Field{
 	{
 		Identifier: "bar",
@@ -692,19 +689,19 @@ var fooResourceFields = []cadence.Field{
 }
 
 var fooStructType = &cadence.StructType{
-	TypeID:     fooTypeID,
-	Identifier: fooID,
-	Fields:     fooFields,
+	Location:            utils.TestLocation,
+	QualifiedIdentifier: "Foo",
+	Fields:              fooFields,
 }
 
 var fooResourceType = &cadence.ResourceType{
-	TypeID:     fooTypeID,
-	Identifier: fooID,
-	Fields:     fooResourceFields,
+	Location:            utils.TestLocation,
+	QualifiedIdentifier: "Foo",
+	Fields:              fooResourceFields,
 }
 
 var fooEventType = &cadence.EventType{
-	TypeID:     fooTypeID,
-	Identifier: fooID,
-	Fields:     fooFields,
+	Location:            utils.TestLocation,
+	QualifiedIdentifier: "Foo",
+	Fields:              fooFields,
 }

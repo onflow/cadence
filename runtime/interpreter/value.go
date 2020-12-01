@@ -5268,7 +5268,8 @@ func (v UFix64Value) ToBigEndianBytes() []byte {
 // CompositeValue
 
 type CompositeValue struct {
-	Location       common.Location
+	Location common.Location
+	// TODO: replace with qualified identifier. Type ID can be constructed from location + qualified identifier
 	TypeID         sema.TypeID
 	Kind           common.CompositeKind
 	Fields         map[string]Value

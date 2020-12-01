@@ -53,8 +53,8 @@ func TestExportRecursiveType(t *testing.T) {
 	}
 
 	expected := &cadence.ResourceType{
-		TypeID:     "S.test.Foo",
-		Identifier: "Foo",
+		Location:            utils.TestLocation,
+		QualifiedIdentifier: "Foo",
 		Fields: []cadence.Field{
 			{
 				Identifier: "foo",
