@@ -41,21 +41,21 @@ type CacheEntry struct {
 	Value     interpreter.Value
 }
 
-type interpreterRuntimeStorage struct {
+type runtimeStorage struct {
 	runtimeInterface        Interface
 	highLevelStorageEnabled bool
 	highLevelStorage        HighLevelStorage
 	cache                   Cache
 }
 
-func newInterpreterRuntimeStorage(runtimeInterface Interface) *interpreterRuntimeStorage {
+func newRuntimeStorage(runtimeInterface Interface) *runtimeStorage {
 	highLevelStorageEnabled := false
 	highLevelStorage, ok := runtimeInterface.(HighLevelStorage)
 	if ok {
 		highLevelStorageEnabled = highLevelStorage.HighLevelStorageEnabled()
 	}
 
-	return &interpreterRuntimeStorage{
+	return &runtimeStorage{
 		runtimeInterface:        runtimeInterface,
 		cache:                   Cache{},
 		highLevelStorage:        highLevelStorage,
@@ -71,7 +71,7 @@ func newInterpreterRuntimeStorage(runtimeInterface Interface) *interpreterRuntim
 // If there is a cache miss, the key is read from storage through the runtime interface,
 // places in the cache, and returned.
 //
-func (s *interpreterRuntimeStorage) valueExists(
+func (s *runtimeStorage) valueExists(
 	address common.Address,
 	key string,
 ) bool {
@@ -116,7 +116,7 @@ func (s *interpreterRuntimeStorage) valueExists(
 // If there is a cache miss, the key is read from storage through the runtime interface,
 // places in the cache, and returned.
 //
-func (s *interpreterRuntimeStorage) readValue(
+func (s *runtimeStorage) readValue(
 	address common.Address,
 	key string,
 	deferred bool,
@@ -192,7 +192,7 @@ func (s *interpreterRuntimeStorage) readValue(
 // It does *not* serialize/save the value in  storage (through the runtime interface).
 // (The Cache is finally written back through the runtime interface in `writeCached`.)
 //
-func (s *interpreterRuntimeStorage) writeValue(
+func (s *runtimeStorage) writeValue(
 	address common.Address,
 	key string,
 	value interpreter.OptionalValue,
@@ -224,7 +224,7 @@ func (s *interpreterRuntimeStorage) writeValue(
 
 // writeCached serializes/saves all values in the cache in storage (through the runtime interface).
 //
-func (s *interpreterRuntimeStorage) writeCached(inter *interpreter.Interpreter) {
+func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 
 	type writeItem struct {
 		storageKey StorageKey
@@ -321,7 +321,7 @@ func (s *interpreterRuntimeStorage) writeCached(inter *interpreter.Interpreter) 
 	}
 }
 
-func (s *interpreterRuntimeStorage) encodeValue(
+func (s *runtimeStorage) encodeValue(
 	value interpreter.Value,
 	path string,
 ) (
@@ -341,7 +341,7 @@ func (s *interpreterRuntimeStorage) encodeValue(
 	return
 }
 
-func (s *interpreterRuntimeStorage) move(
+func (s *runtimeStorage) move(
 	oldOwner common.Address, oldKey string,
 	newOwner common.Address, newKey string,
 ) {
