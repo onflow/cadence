@@ -152,8 +152,10 @@ that is to be initialized.
 Field types must be storable. Non-storable types are:
 
 - Functions
-- [Accounts (`AuthAccount` / `PublicAccount`)(../accounts)
+- [Accounts (`AuthAccount` / `PublicAccount`)](../accounts)
 - [Transactions](../transactions)
+- [References](../references): References are ephemeral.
+  Consider [storing a capability and borrowing it](../capability-based-access-control) when needed instead.
 
 Fields can be read (if they are constant or variable) and set (if they are variable),
 using the access syntax: the composite value is followed by a dot (`.`)
