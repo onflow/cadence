@@ -34,10 +34,9 @@ func ParseAndCheckAccount(t *testing.T, code string) (*sema.Checker, error) {
 
 	constantDeclaration := func(name string, ty sema.Type) stdlib.StandardLibraryValue {
 		return stdlib.StandardLibraryValue{
-			Name:       name,
-			Type:       ty,
-			Kind:       common.DeclarationKindConstant,
-			IsConstant: true,
+			Name: name,
+			Type: ty,
+			Kind: common.DeclarationKindConstant,
 		}
 	}
 

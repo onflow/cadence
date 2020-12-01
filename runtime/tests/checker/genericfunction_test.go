@@ -38,10 +38,9 @@ func parseAndCheckWithTestValue(t *testing.T, code string, ty sema.Type) (*sema.
 			Options: []sema.Option{
 				sema.WithPredeclaredValues([]sema.ValueDeclaration{
 					stdlib.StandardLibraryValue{
-						Name:       "test",
-						Type:       ty,
-						Kind:       common.DeclarationKindConstant,
-						IsConstant: true,
+						Name: "test",
+						Type: ty,
+						Kind: common.DeclarationKindConstant,
 					},
 				}),
 			},

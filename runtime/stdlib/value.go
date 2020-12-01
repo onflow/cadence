@@ -26,12 +26,11 @@ import (
 )
 
 type StandardLibraryValue struct {
-	Name       string
-	Type       sema.Type
-	Value      interpreter.Value
-	Kind       common.DeclarationKind
-	IsConstant bool
-	Available  func(ast.Location) bool
+	Name      string
+	Type      sema.Type
+	Value     interpreter.Value
+	Kind      common.DeclarationKind
+	Available func(ast.Location) bool
 }
 
 func (v StandardLibraryValue) ValueDeclarationName() string {
@@ -47,10 +46,7 @@ func (v StandardLibraryValue) ValueDeclarationType() sema.Type {
 }
 
 func (v StandardLibraryValue) ValueDeclarationKind() common.DeclarationKind {
-	if v.IsConstant {
-		return common.DeclarationKindConstant
-	}
-	return common.DeclarationKindVariable
+	return v.Kind
 }
 
 func (StandardLibraryValue) ValueDeclarationPosition() ast.Position {
@@ -58,7 +54,7 @@ func (StandardLibraryValue) ValueDeclarationPosition() ast.Position {
 }
 
 func (v StandardLibraryValue) ValueDeclarationIsConstant() bool {
-	return v.IsConstant
+	return v.Kind != common.DeclarationKindVariable
 }
 
 func (v StandardLibraryValue) ValueDeclarationAvailable(location ast.Location) bool {
