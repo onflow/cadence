@@ -125,6 +125,7 @@ func (r *REPL) Accept(code string) (inputIsComplete bool) {
 	result, errs := parser2.ParseStatements(code)
 	if len(errs) > 0 {
 		err = parser2.Error{
+			Code:   code,
 			Errors: errs,
 		}
 	}

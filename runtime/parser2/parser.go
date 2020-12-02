@@ -415,6 +415,7 @@ func ParseProgram(input string) (program *ast.Program, err error) {
 	})
 	if len(errs) > 0 {
 		err = Error{
+			Code:   input,
 			Errors: errs,
 		}
 	}

@@ -30,15 +30,15 @@ import (
 // Error
 
 type Error struct {
+	Code   string
 	Errors []error
 }
 
 func (e Error) Error() string {
 	var sb strings.Builder
 	sb.WriteString("Parsing failed:\n")
-		// TODO: capture code in error and include in codes argument
-		PrettyPrintError(e, "", map[string]string{})
 	printErr := pretty.NewErrorPrettyPrinter(&sb, false).
+		PrettyPrintError(e, "", map[string]string{"": e.Code})
 	if printErr != nil {
 		panic(printErr)
 	}
