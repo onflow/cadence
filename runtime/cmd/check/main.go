@@ -33,6 +33,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/cmd"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
 )
@@ -177,7 +178,9 @@ func runPath(path string, bench bool, useColor bool) (res result, succeeded bool
 	var program *ast.Program
 	var must func(error)
 
-	codes := map[string]string{}
+	codes := map[common.Location]string{}
+
+	location := common.StringLocation(path)
 
 	func() {
 		defer func() {
@@ -187,15 +190,15 @@ func runPath(path string, bench bool, useColor bool) (res result, succeeded bool
 			}
 		}()
 
-		program, must = cmd.PrepareProgram(code, path, codes)
+		program, must = cmd.PrepareProgram(code, location, codes)
 
-		checker, _ = cmd.PrepareChecker(program, path, codes, must)
+		checker, _ = cmd.PrepareChecker(program, location, codes, must)
 
 		err = checker.Check()
 		if err != nil {
 			var builder strings.Builder
 			printErr := pretty.NewErrorPrettyPrinter(&builder, useColor).
-				PrettyPrintError(err, path, codes)
+				PrettyPrintError(err, location, codes)
 			if printErr != nil {
 				panic(printErr)
 			}
@@ -210,7 +213,7 @@ func runPath(path string, bench bool, useColor bool) (res result, succeeded bool
 	if bench && err == nil {
 		benchRes := testing.Benchmark(func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				checker, must = cmd.PrepareChecker(program, path, codes, must)
+				checker, must = cmd.PrepareChecker(program, location, codes, must)
 				must(checker.Check())
 				if err != nil {
 					panic(err)

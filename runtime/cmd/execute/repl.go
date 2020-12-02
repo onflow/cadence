@@ -36,8 +36,6 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-const replLocation = "REPL"
-
 func RunREPL() {
 	printWelcome()
 
@@ -45,9 +43,11 @@ func RunREPL() {
 	lineIsContinuation := false
 	code := ""
 
-	codes := map[string]string{}
+	codes := map[common.Location]string{}
 
 	errorPrettyPrinter := pretty.NewErrorPrettyPrinter(os.Stderr, true)
+
+	replLocation := common.REPLLocation{}
 
 	repl, err := runtime.NewREPL(
 		func(err error) {
@@ -80,8 +80,7 @@ func RunREPL() {
 					importChecker, err := checker.EnsureLoaded(
 						location,
 						func() *ast.Program {
-							filename := string(stringLocation)
-							imported, _ := cmd.PrepareProgramFromFile(filename, codes)
+							imported, _ := cmd.PrepareProgramFromFile(stringLocation, codes)
 							return imported
 						},
 					)
