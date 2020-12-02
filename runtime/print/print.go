@@ -1,25 +1,9 @@
-/*
- * Cadence - The resource-oriented smart contract programming language
- *
- * Copyright 2019-2020 Dapper Labs, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-package runtime
+package print
 
 import (
 	"fmt"
+	"io"
+	goRuntime "runtime"
 	"sort"
 	"strconv"
 	"strings"
@@ -27,6 +11,7 @@ import (
 	"github.com/logrusorgru/aurora"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 )
 
@@ -73,8 +58,8 @@ type excerpt struct {
 	isError  bool
 }
 
-func newExcerpt(obj interface{}, message string, isError bool) *excerpt {
-	excerpt := &excerpt{
+func newExcerpt(obj interface{}, message string, isError bool) excerpt {
+	excerpt := excerpt{
 		message: message,
 		isError: isError,
 	}
@@ -88,36 +73,7 @@ func newExcerpt(obj interface{}, message string, isError bool) *excerpt {
 	return excerpt
 }
 
-func PrettyPrintError(err error, filename string, code string, useColor bool) string {
-	var builder strings.Builder
-
-	builder.WriteString(FormatErrorMessage(err.Error(), useColor))
-
-	message := ""
-	if secondaryError, ok := err.(errors.SecondaryError); ok {
-		message = secondaryError.SecondaryError()
-	}
-
-	excerpts := []*excerpt{
-		newExcerpt(err, message, true),
-	}
-
-	if errorNotes, ok := err.(errors.ErrorNotes); ok {
-		for _, errorNote := range errorNotes.ErrorNotes() {
-			excerpts = append(excerpts,
-				newExcerpt(errorNote, errorNote.Message(), false),
-			)
-		}
-	}
-
-	sortExcerpts(excerpts)
-
-	writeCodeExcerpts(&builder, excerpts, filename, code, useColor)
-
-	return builder.String()
-}
-
-func sortExcerpts(excerpts []*excerpt) {
+func sortExcerpts(excerpts []excerpt) {
 	sort.Slice(excerpts, func(i, j int) bool {
 		first := excerpts[i]
 		second := excerpts[j]
@@ -137,12 +93,115 @@ func sortExcerpts(excerpts []*excerpt) {
 	})
 }
 
-func writeCodeExcerpts(
-	builder *strings.Builder,
-	excerpts []*excerpt,
+type ErrorPrettyPrinter struct {
+	writer   io.Writer
+	useColor bool
+}
+
+func NewErrorPrettyPrinter(writer io.Writer, useColor bool) ErrorPrettyPrinter {
+	return ErrorPrettyPrinter{
+		writer:   writer,
+		useColor: useColor,
+	}
+}
+
+func (p ErrorPrettyPrinter) writeString(str string) {
+	_, err := p.writer.Write([]byte(str))
+	if err != nil {
+		panic(err)
+	}
+}
+
+func (p ErrorPrettyPrinter) PrettyPrintError(err error, location string, codes map[string]string) error {
+
+	// writeString panics when the write to the writer fails, so recover those errors and return them.
+	// This way we don't need to if-err for every single writer write
+
+	defer func() {
+		if r := recover(); r != nil {
+			switch r := r.(type) {
+			case goRuntime.Error:
+				// Don't recover Go's or external panics
+				panic(r)
+			case error:
+				err = r
+			default:
+				err = fmt.Errorf("%s", r)
+			}
+		}
+	}()
+
+	i := 0
+	var printError func(err error, location string) error
+	printError = func(err error, location string) error {
+
+		if err, ok := err.(errors.ParentError); ok {
+			for _, childErr := range err.ChildErrors() {
+
+				if childErr, ok := childErr.(common.HasImportLocation); ok {
+					importLocation := childErr.ImportLocation()
+					if importLocation != nil {
+						location = importLocation.String()
+					}
+				}
+
+				printErr := printError(childErr, location)
+				if printErr != nil {
+					return printErr
+				}
+			}
+
+			return nil
+		}
+
+		if err, ok := err.(common.HasImportLocation); ok {
+			importLocation := err.ImportLocation()
+			if importLocation != nil {
+				location = importLocation.String()
+			}
+		}
+
+		if i > 0 {
+			p.writeString("\n")
+		}
+		p.prettyPrintError(err, location, codes[location])
+		i++
+		return nil
+	}
+
+	return printError(err, location)
+}
+
+func (p ErrorPrettyPrinter) prettyPrintError(err error, filename string, code string) {
+
+	p.writeString(FormatErrorMessage(err.Error(), p.useColor))
+
+	message := ""
+	if secondaryError, ok := err.(errors.SecondaryError); ok {
+		message = secondaryError.SecondaryError()
+	}
+
+	excerpts := []excerpt{
+		newExcerpt(err, message, true),
+	}
+
+	if errorNotes, ok := err.(errors.ErrorNotes); ok {
+		for _, errorNote := range errorNotes.ErrorNotes() {
+			excerpts = append(excerpts,
+				newExcerpt(errorNote, errorNote.Message(), false),
+			)
+		}
+	}
+
+	sortExcerpts(excerpts)
+
+	p.writeCodeExcerpts(excerpts, filename, code)
+}
+
+func (p ErrorPrettyPrinter) writeCodeExcerpts(
+	excerpts []excerpt,
 	filename string,
 	code string,
-	useColor bool,
 ) {
 	var lastLineNumber int
 
@@ -159,47 +218,47 @@ func writeCodeExcerpts(
 
 			// prepare line number string
 			lineNumberString = plainLineNumberString + " | "
-			if useColor {
+			if p.useColor {
 				lineNumberString = colorizeMeta(lineNumberString)
 			}
 		}
 
 		// write arrow, filename, and position (if any)
 		if i == 0 {
-			writeCodeExcerptLocation(builder, useColor, filename, lineNumberLength, excerpt.startPos)
+			p.writeCodeExcerptLocation(filename, lineNumberLength, excerpt.startPos)
 		}
 
 		// code, if position
 		if excerpt.startPos != nil && len(code) > 0 {
 
 			if i > 0 && lastLineNumber != 0 && excerpt.startPos.Line-1 > lastLineNumber {
-				writeCodeExcerptContinuation(builder, lineNumberLength, useColor)
+				p.writeCodeExcerptContinuation(lineNumberLength)
 			}
 			lastLineNumber = excerpt.startPos.Line
 
 			// prepare empty line numbers
 			emptyLineNumbers := strings.Repeat(" ", lineNumberLength+1) + "|"
-			if useColor {
+			if p.useColor {
 				emptyLineNumbers = colorizeMeta(emptyLineNumbers)
 			}
 
 			// empty line
-			builder.WriteString(emptyLineNumbers)
-			builder.WriteString("\n")
+			p.writeString(emptyLineNumbers)
+			p.writeString("\n")
 
 			// line number
-			builder.WriteString(lineNumberString)
+			p.writeString(lineNumberString)
 
 			// code line
 			line := lines[excerpt.startPos.Line-1]
-			builder.WriteString(line)
-			builder.WriteString("\n")
+			p.writeString(line)
+			p.writeString("\n")
 
 			// indicator line
-			builder.WriteString(emptyLineNumbers)
+			p.writeString(emptyLineNumbers)
 
 			for i := 0; i <= excerpt.startPos.Column; i++ {
-				builder.WriteString(" ")
+				p.writeString(" ")
 			}
 
 			columns := 1
@@ -213,79 +272,77 @@ func writeCodeExcerpts(
 			}
 
 			indicators := strings.Repeat(indicator, columns)
-			if useColor {
+			if p.useColor {
 				if excerpt.isError {
 					indicators = colorizeError(indicators)
 				} else {
 					indicators = colorizeNote(indicators)
 				}
 			}
-			builder.WriteString(indicators)
+			p.writeString(indicators)
 
 			if excerpt.message != "" {
 				message := excerpt.message
-				builder.WriteString(" ")
-				if useColor {
+				p.writeString(" ")
+				if p.useColor {
 					if excerpt.isError {
 						message = colorizeError(message)
 					} else {
 						message = colorizeNote(message)
 					}
 				}
-				builder.WriteString(message)
+				p.writeString(message)
 			}
 
-			builder.WriteString("\n")
+			p.writeString("\n")
 		} else {
 			lastLineNumber = 0
 		}
 	}
 }
 
-func writeCodeExcerptLocation(
-	builder *strings.Builder,
-	useColor bool,
-	filename string,
+func (p ErrorPrettyPrinter) writeCodeExcerptLocation(
+	location string,
 	lineNumberLength int,
 	startPosition *ast.Position,
 ) {
 	// write spaces before arrow
 	for i := 0; i < lineNumberLength; i++ {
-		builder.WriteString(" ")
+		p.writeString(" ")
 	}
 
 	// write arrow
-	if useColor {
-		builder.WriteString(colorizeMeta(excerptArrow))
+	if p.useColor {
+		p.writeString(colorizeMeta(excerptArrow))
 	} else {
-		builder.WriteString(excerptArrow)
+		p.writeString(excerptArrow)
 	}
 
-	// write filename
-	builder.WriteString(filename)
+	// write location
+	p.writeString(location)
 
 	// write position (line and column)
 	if startPosition != nil {
-		_, err := fmt.Fprintf(builder, ":%d:%d", startPosition.Line, startPosition.Column)
+		_, err := fmt.Fprintf(p.writer, ":%d:%d", startPosition.Line, startPosition.Column)
 		if err != nil {
 			panic(err)
 		}
 	}
-	builder.WriteString("\n")
+	p.writeString("\n")
 }
 
-func writeCodeExcerptContinuation(builder *strings.Builder, lineNumberLength int, useColor bool) {
+func (p ErrorPrettyPrinter) writeCodeExcerptContinuation(lineNumberLength int) {
 	// write spaces before dots
 	for i := 0; i < lineNumberLength; i++ {
-		builder.WriteString(" ")
+		p.writeString(" ")
 	}
 
 	// write dots
 	dots := excerptDots
-	if useColor {
+	if p.useColor {
 		dots = colorizeMeta(dots)
 	}
-	builder.WriteString(dots)
+	p.writeString(dots)
 
-	builder.WriteString("\n")
+	p.writeString("\n")
 }

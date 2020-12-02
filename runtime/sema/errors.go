@@ -26,6 +26,7 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	print2 "github.com/onflow/cadence/runtime/print"
 )
 
 // astTypeConversionError
@@ -82,7 +83,15 @@ type CheckerError struct {
 }
 
 func (e CheckerError) Error() string {
-	return "Checking failed"
+	var sb strings.Builder
+	sb.WriteString("Checking failed:\n")
+	printErr := print2.NewErrorPrettyPrinter(&sb, false).
+		// TODO: capture codes in error and include in codes argument
+		PrettyPrintError(e, "", map[string]string{})
+	if printErr != nil {
+		panic(printErr)
+	}
+	return sb.String()
 }
 
 func (e CheckerError) ChildErrors() []error {
@@ -1096,16 +1105,20 @@ func (e *NotExportedError) EndPosition() ast.Position {
 // ImportedProgramError
 
 type ImportedProgramError struct {
-	CheckerError   *CheckerError
-	ImportLocation common.Location
+	CheckerError *CheckerError
+	Location     common.Location
 	ast.Range
 }
 
 func (e *ImportedProgramError) Error() string {
 	return fmt.Sprintf(
 		"checking of imported program `%s` failed",
-		e.ImportLocation,
+		e.Location,
 	)
+}
+
+func (e *ImportedProgramError) ImportLocation() common.Location {
+	return e.Location
 }
 
 func (e *ImportedProgramError) ChildErrors() []error {

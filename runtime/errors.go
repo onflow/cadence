@@ -24,8 +24,8 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
+	print2 "github.com/onflow/cadence/runtime/print"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -45,8 +45,12 @@ func (e Error) Unwrap() error {
 func (e Error) Error() string {
 	var sb strings.Builder
 	sb.WriteString("Execution failed:\n")
-	sb.WriteString(errors.UnrollChildErrors(e.Err))
-	sb.WriteString("\n")
+	printErr := print2.NewErrorPrettyPrinter(&sb, false).
+		// TODO: capture codes in error and include in codes argument
+		PrettyPrintError(e, "", map[string]string{})
+	if printErr != nil {
+		panic(printErr)
+	}
 	return sb.String()
 }
 

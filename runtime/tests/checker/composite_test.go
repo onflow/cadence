@@ -20,13 +20,11 @@ package checker
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
@@ -2196,9 +2194,7 @@ func TestCheckMutualTypeUseTopLevel(t *testing.T) {
 
 						_, err := ParseAndCheck(t, code)
 
-						if !assert.NoError(t, err) {
-							cmd.PrettyPrintError(os.Stdout, err, "", map[string]string{"": code})
-						}
+						require.NoError(t, err)
 					})
 				}
 			}

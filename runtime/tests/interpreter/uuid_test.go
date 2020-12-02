@@ -19,13 +19,11 @@
 package interpreter
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -81,11 +79,6 @@ func TestInterpretResourceUUID(t *testing.T) {
 			},
 		},
 	)
-
-	if err != nil {
-		cmd.PrettyPrintError(os.Stdout, err, "", map[string]string{"": ""})
-	}
-
 	require.NoError(t, err)
 
 	var uuid uint64

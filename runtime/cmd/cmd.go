@@ -20,76 +20,27 @@ package cmd
 
 import (
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 
-	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser2"
+	print2 "github.com/onflow/cadence/runtime/print"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
-
-func PrettyPrintError(writer io.Writer, err error, filename string, codes map[string]string) {
-	i := 0
-	printErr := func(err error, filename string) {
-		if i > 0 {
-			println()
-		}
-		_, writeErr := writer.Write([]byte(runtime.PrettyPrintError(err, filename, codes[filename], true)))
-		if writeErr != nil {
-			panic(writeErr)
-		}
-		i++
-	}
-
-	switch typedErr := err.(type) {
-	case parser2.Error:
-		for _, err := range typedErr.Errors {
-			printErr(err, filename)
-		}
-	case *sema.CheckerError:
-		for _, err := range typedErr.Errors {
-			printErr(err, filename)
-			if err, ok := err.(*sema.ImportedProgramError); ok {
-				filename := importLocationFileName(err.ImportLocation)
-
-				for _, nestedErr := range err.CheckerError.Errors {
-					PrettyPrintError(writer, nestedErr, filename, codes)
-				}
-			}
-		}
-	case common.HasImportLocation:
-		location := typedErr.ImportLocation()
-		if location != nil {
-			filename = importLocationFileName(location)
-		}
-		printErr(err, filename)
-	default:
-		printErr(err, filename)
-	}
-}
-
-func importLocationFileName(importLocation common.Location) string {
-	switch importLocation := importLocation.(type) {
-	case common.StringLocation:
-		return string(importLocation)
-	case common.AddressLocation:
-		return importLocation.Address.ShortHexWithPrefix()
-	case common.IdentifierLocation:
-		return string(importLocation)
-	}
-	return ""
-}
 
 func must(err error, filename string, codes map[string]string) {
 	if err == nil {
 		return
 	}
-	PrettyPrintError(os.Stderr, err, filename, codes)
+	printErr := print2.NewErrorPrettyPrinter(os.Stderr, true).
+		PrettyPrintError(err, filename, codes)
+	if printErr != nil {
+		panic(printErr)
+	}
 	os.Exit(1)
 }
 
@@ -200,6 +151,6 @@ func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checke
 }
 
 func ExitWithError(message string) {
-	print(runtime.FormatErrorMessage(message, true))
+	print(print2.FormatErrorMessage(message, true))
 	os.Exit(1)
 }

@@ -22,13 +22,11 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
@@ -739,10 +737,7 @@ func TestCheckArraySubtyping(t *testing.T) {
 					interfaceType,
 				),
 			)
-
-			if !assert.NoError(t, err) {
-				cmd.PrettyPrintError(os.Stdout, err, "", map[string]string{"": ""})
-			}
+			require.NoError(t, err)
 		})
 	}
 }

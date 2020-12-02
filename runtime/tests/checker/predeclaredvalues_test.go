@@ -184,7 +184,7 @@ func TestCheckPredeclaredValues(t *testing.T) {
 
 		var importedProgramError *sema.ImportedProgramError
 		utils.RequireErrorAs(t, errs[0], &importedProgramError)
-		require.Equal(t, location3, importedProgramError.ImportLocation)
+		require.Equal(t, location3, importedProgramError.Location)
 		importedErrs := ExpectCheckerErrors(t, importedProgramError.CheckerError, 1)
 		require.IsType(t, &sema.NotDeclaredError{}, importedErrs[0])
 

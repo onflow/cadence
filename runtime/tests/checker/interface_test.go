@@ -20,13 +20,11 @@ package checker
 
 import (
 	"fmt"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
@@ -1836,11 +1834,9 @@ func TestCheckContractInterfaceFungibleToken(t *testing.T) {
 	t.Parallel()
 
 	const code = examples.FungibleTokenContractInterface
-	_, err := ParseAndCheck(t, code)
 
-	if !assert.NoError(t, err) {
-		cmd.PrettyPrintError(os.Stdout, err, "", map[string]string{"": code})
-	}
+	_, err := ParseAndCheck(t, code)
+	require.NoError(t, err)
 }
 
 func TestCheckContractInterfaceFungibleTokenConformance(t *testing.T) {
@@ -1850,10 +1846,7 @@ func TestCheckContractInterfaceFungibleTokenConformance(t *testing.T) {
 	code := examples.FungibleTokenContractInterface + "\n" + examples.ExampleFungibleTokenContract
 
 	_, err := ParseAndCheckWithPanic(t, code)
-
-	if !assert.NoError(t, err) {
-		cmd.PrettyPrintError(os.Stdout, err, "", map[string]string{"": code})
-	}
+	require.NoError(t, err)
 }
 
 func TestCheckContractInterfaceFungibleTokenUse(t *testing.T) {
@@ -1882,9 +1875,7 @@ func TestCheckContractInterfaceFungibleTokenUse(t *testing.T) {
 
 	_, err := ParseAndCheckWithPanic(t, code)
 
-	if !assert.NoError(t, err) {
-		cmd.PrettyPrintError(os.Stdout, err, "", map[string]string{"": code})
-	}
+	require.NoError(t, err)
 }
 
 // TestCheckInvalidInterfaceUseAsTypeSuggestion tests that an interface

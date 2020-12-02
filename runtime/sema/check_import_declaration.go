@@ -98,9 +98,9 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 		if err != nil {
 			checker.report(
 				&ImportedProgramError{
-					CheckerError:   err,
-					ImportLocation: location,
-					Range:          locationRange,
+					CheckerError: err,
+					Location:     location,
+					Range:        locationRange,
 				},
 			)
 			return
