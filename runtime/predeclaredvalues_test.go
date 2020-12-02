@@ -122,7 +122,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
-			Location:  ScriptLocation{},
+			Location:  common.ScriptLocation{},
 			PredeclaredValues: []ValueDeclaration{
 				valueDeclaration1,
 				valueDeclaration2,
