@@ -39,8 +39,8 @@ func TestParseInvalid(t *testing.T) {
 
 	t.Parallel()
 
-	_, errs := ParseExpression("#")
-	require.NotEmpty(t, errs)
+	_, err := ParseProgram("X")
+	require.EqualError(t, err, "Parsing failed:\nerror: unexpected token: identifier\n --> :1:0\n  |\n1 | X\n  | ^\n")
 }
 
 func TestParseBuffering(t *testing.T) {
