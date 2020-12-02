@@ -23,6 +23,7 @@ import (
 	"strings"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/pretty"
 )
@@ -38,7 +39,7 @@ func (e Error) Error() string {
 	var sb strings.Builder
 	sb.WriteString("Parsing failed:\n")
 	printErr := pretty.NewErrorPrettyPrinter(&sb, false).
-		PrettyPrintError(e, "", map[string]string{"": e.Code})
+		PrettyPrintError(e, nil, map[common.Location]string{nil: e.Code})
 	if printErr != nil {
 		panic(printErr)
 	}

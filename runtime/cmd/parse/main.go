@@ -32,6 +32,7 @@ import (
 	"time"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/pretty"
 )
@@ -104,8 +105,9 @@ func (s stdoutOutput) Append(r result) {
 	}
 
 	if r.Error != nil {
+		location := common.StringLocation(r.Path)
 		printErr := pretty.NewErrorPrettyPrinter(os.Stdout, true).
-			PrettyPrintError(r.Error, r.Path, map[string]string{r.Path: r.Code})
+			PrettyPrintError(r.Error, location, map[common.Location]string{location: r.Code})
 		if printErr != nil {
 			panic(printErr)
 		}

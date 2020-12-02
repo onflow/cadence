@@ -112,7 +112,7 @@ func (p ErrorPrettyPrinter) writeString(str string) {
 	}
 }
 
-func (p ErrorPrettyPrinter) PrettyPrintError(err error, location string, codes map[string]string) error {
+func (p ErrorPrettyPrinter) PrettyPrintError(err error, location common.Location, codes map[common.Location]string) error {
 
 	// writeString panics when the write to the writer fails, so recover those errors and return them.
 	// This way we don't need to if-err for every single writer write
@@ -132,8 +132,8 @@ func (p ErrorPrettyPrinter) PrettyPrintError(err error, location string, codes m
 	}()
 
 	i := 0
-	var printError func(err error, location string) error
-	printError = func(err error, location string) error {
+	var printError func(err error, location common.Location) error
+	printError = func(err error, location common.Location) error {
 
 		if err, ok := err.(errors.ParentError); ok {
 			for _, childErr := range err.ChildErrors() {
@@ -141,7 +141,7 @@ func (p ErrorPrettyPrinter) PrettyPrintError(err error, location string, codes m
 				if childErr, ok := childErr.(common.HasImportLocation); ok {
 					importLocation := childErr.ImportLocation()
 					if importLocation != nil {
-						location = importLocation.String()
+						location = importLocation
 					}
 				}
 
@@ -157,7 +157,7 @@ func (p ErrorPrettyPrinter) PrettyPrintError(err error, location string, codes m
 		if err, ok := err.(common.HasImportLocation); ok {
 			importLocation := err.ImportLocation()
 			if importLocation != nil {
-				location = importLocation.String()
+				location = importLocation
 			}
 		}
 
@@ -172,7 +172,7 @@ func (p ErrorPrettyPrinter) PrettyPrintError(err error, location string, codes m
 	return printError(err, location)
 }
 
-func (p ErrorPrettyPrinter) prettyPrintError(err error, filename string, code string) {
+func (p ErrorPrettyPrinter) prettyPrintError(err error, location common.Location, code string) {
 
 	p.writeString(FormatErrorMessage(err.Error(), p.useColor))
 
@@ -195,12 +195,12 @@ func (p ErrorPrettyPrinter) prettyPrintError(err error, filename string, code st
 
 	sortExcerpts(excerpts)
 
-	p.writeCodeExcerpts(excerpts, filename, code)
+	p.writeCodeExcerpts(excerpts, location, code)
 }
 
 func (p ErrorPrettyPrinter) writeCodeExcerpts(
 	excerpts []excerpt,
-	filename string,
+	location common.Location,
 	code string,
 ) {
 	var lastLineNumber int
@@ -223,9 +223,9 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 			}
 		}
 
-		// write arrow, filename, and position (if any)
+		// write arrow, location, and position (if any)
 		if i == 0 {
-			p.writeCodeExcerptLocation(filename, lineNumberLength, excerpt.startPos)
+			p.writeCodeExcerptLocation(location, lineNumberLength, excerpt.startPos)
 		}
 
 		// code, if position
@@ -302,7 +302,7 @@ func (p ErrorPrettyPrinter) writeCodeExcerpts(
 }
 
 func (p ErrorPrettyPrinter) writeCodeExcerptLocation(
-	location string,
+	location common.Location,
 	lineNumberLength int,
 	startPosition *ast.Position,
 ) {
@@ -318,8 +318,10 @@ func (p ErrorPrettyPrinter) writeCodeExcerptLocation(
 		p.writeString(excerptArrow)
 	}
 
-	// write location
-	p.writeString(location)
+	// write location, if any
+	if location != nil {
+		p.writeString(location.String())
+	}
 
 	// write position (line and column)
 	if startPosition != nil {

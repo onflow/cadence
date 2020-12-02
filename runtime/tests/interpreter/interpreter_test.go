@@ -70,9 +70,8 @@ func parseCheckAndInterpretWithOptions(
 	} else {
 		if !assert.NoError(t, err) {
 			var sb strings.Builder
-			location := checker.Location.String()
 			printErr := pretty.NewErrorPrettyPrinter(&sb, true).
-				PrettyPrintError(err, location, map[string]string{location: code})
+				PrettyPrintError(err, checker.Location, map[common.Location]string{checker.Location: code})
 			if printErr != nil {
 				panic(printErr)
 			}

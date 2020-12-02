@@ -32,38 +32,38 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
-func must(err error, filename string, codes map[string]string) {
+func must(err error, location common.Location, codes map[common.Location]string) {
 	if err == nil {
 		return
 	}
 	printErr := pretty.NewErrorPrettyPrinter(os.Stderr, true).
-		PrettyPrintError(err, filename, codes)
+		PrettyPrintError(err, location, codes)
 	if printErr != nil {
 		panic(printErr)
 	}
 	os.Exit(1)
 }
 
-func mustClosure(filename string, codes map[string]string) func(error) {
+func mustClosure(location common.Location, codes map[common.Location]string) func(error) {
 	return func(e error) {
-		must(e, filename, codes)
+		must(e, location, codes)
 	}
 }
 
-func PrepareProgramFromFile(filename string, codes map[string]string) (*ast.Program, func(error)) {
-	codeBytes, err := ioutil.ReadFile(filename)
+func PrepareProgramFromFile(location common.StringLocation, codes map[common.Location]string) (*ast.Program, func(error)) {
+	codeBytes, err := ioutil.ReadFile(string(location))
 
-	program, must := PrepareProgram(string(codeBytes), filename, codes)
+	program, must := PrepareProgram(string(codeBytes), location, codes)
 	must(err)
 
 	return program, must
 }
 
-func PrepareProgram(code string, filename string, codes map[string]string) (*ast.Program, func(error)) {
-	must := mustClosure(filename, codes)
+func PrepareProgram(code string, location common.Location, codes map[common.Location]string) (*ast.Program, func(error)) {
+	must := mustClosure(location, codes)
 
 	program, err := parser2.ParseProgram(code)
-	codes[filename] = code
+	codes[location] = code
 	must(err)
 
 	return program, must
@@ -81,8 +81,12 @@ var typeDeclarations = append(
 
 // PrepareChecker prepares and initializes a checker with a given code as a string,
 // and a filename which is used for pretty-printing errors, if any
-func PrepareChecker(program *ast.Program, filename string, codes map[string]string, must func(error)) (*sema.Checker, func(error)) {
-	location := common.StringLocation(filename)
+func PrepareChecker(
+	program *ast.Program,
+	location common.Location,
+	codes map[common.Location]string,
+	must func(error),
+) (*sema.Checker, func(error)) {
 	checker, err := sema.NewChecker(
 		program,
 		location,
@@ -103,8 +107,7 @@ func PrepareChecker(program *ast.Program, filename string, codes map[string]stri
 				importChecker, err := checker.EnsureLoaded(
 					location,
 					func() *ast.Program {
-						filename := string(stringLocation)
-						imported, _ := PrepareProgramFromFile(filename, codes)
+						imported, _ := PrepareProgramFromFile(stringLocation, codes)
 						return imported
 					},
 				)
@@ -125,11 +128,13 @@ func PrepareChecker(program *ast.Program, filename string, codes map[string]stri
 
 func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checker, func(error)) {
 
-	codes := map[string]string{}
+	codes := map[common.Location]string{}
 
-	program, must := PrepareProgramFromFile(filename, codes)
+	location := common.StringLocation(filename)
 
-	checker, must := PrepareChecker(program, filename, codes, must)
+	program, must := PrepareProgramFromFile(location, codes)
+
+	checker, must := PrepareChecker(program, location, codes, must)
 
 	must(checker.Check())
 
