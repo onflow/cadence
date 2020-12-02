@@ -1,4 +1,4 @@
-package print
+package pretty
 
 import (
 	"fmt"

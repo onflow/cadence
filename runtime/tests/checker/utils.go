@@ -27,7 +27,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/parser2"
-	print2 "github.com/onflow/cadence/runtime/print"
+	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -56,7 +56,7 @@ func ParseAndCheckWithOptions(
 	if !options.IgnoreParseError && !assert.NoError(t, err) {
 		var sb strings.Builder
 		location := options.Location.String()
-		printErr := print2.NewErrorPrettyPrinter(&sb, true).
+		printErr := pretty.NewErrorPrettyPrinter(&sb, true).
 			PrettyPrintError(err, location, map[string]string{location: code})
 		if printErr != nil {
 			panic(printErr)

@@ -32,7 +32,7 @@ import (
 	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
-	print2 "github.com/onflow/cadence/runtime/print"
+	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -47,7 +47,7 @@ func RunREPL() {
 
 	codes := map[string]string{}
 
-	errorPrettyPrinter := print2.NewErrorPrettyPrinter(os.Stderr, true)
+	errorPrettyPrinter := pretty.NewErrorPrettyPrinter(os.Stderr, true)
 
 	repl, err := runtime.NewREPL(
 		func(err error) {

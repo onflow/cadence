@@ -33,7 +33,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/cmd"
-	print2 "github.com/onflow/cadence/runtime/print"
+	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -194,7 +194,7 @@ func runPath(path string, bench bool, useColor bool) (res result, succeeded bool
 		err = checker.Check()
 		if err != nil {
 			var builder strings.Builder
-			printErr := print2.NewErrorPrettyPrinter(&builder, useColor).
+			printErr := pretty.NewErrorPrettyPrinter(&builder, useColor).
 				PrettyPrintError(err, path, codes)
 			if printErr != nil {
 				panic(printErr)

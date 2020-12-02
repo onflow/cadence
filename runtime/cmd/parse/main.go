@@ -33,7 +33,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/parser2"
-	print2 "github.com/onflow/cadence/runtime/print"
+	"github.com/onflow/cadence/runtime/pretty"
 )
 
 var benchFlag = flag.Bool("bench", false, "benchmark the parser")
@@ -104,7 +104,7 @@ func (s stdoutOutput) Append(r result) {
 	}
 
 	if r.Error != nil {
-		printErr := print2.NewErrorPrettyPrinter(os.Stdout, true).
+		printErr := pretty.NewErrorPrettyPrinter(os.Stdout, true).
 			PrettyPrintError(r.Error, r.Path, map[string]string{r.Path: r.Code})
 		if printErr != nil {
 			panic(printErr)
