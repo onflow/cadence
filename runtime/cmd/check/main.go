@@ -178,7 +178,7 @@ func runPath(path string, bench bool, useColor bool) (res result, succeeded bool
 	var program *ast.Program
 	var must func(error)
 
-	codes := map[common.Location]string{}
+	codes := map[common.LocationID]string{}
 
 	location := common.StringLocation(path)
 

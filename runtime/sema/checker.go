@@ -376,7 +376,8 @@ func (checker *Checker) Check() error {
 func (checker *Checker) CheckerError() *CheckerError {
 	if len(checker.errors) > 0 {
 		return &CheckerError{
-			Errors: checker.errors,
+			Location: checker.Location,
+			Errors:   checker.errors,
 		}
 	}
 	return nil

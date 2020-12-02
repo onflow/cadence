@@ -47,9 +47,17 @@ type Context struct {
 	Interface         Interface
 	Location          Location
 	PredeclaredValues []ValueDeclaration
+	Codes             map[common.LocationID]string
 }
 
-func (c Context) WithLocation(location common.AddressLocation) Context {
+func (c *Context) SetCode(location common.Location, code string) {
+	if c.Codes == nil {
+		c.Codes = map[common.LocationID]string{}
+	}
+	c.Codes[location.ID()] = code
+}
+
+func (c Context) WithLocation(location common.Location) Context {
 	result := c
 	result.Location = location
 	return result
@@ -534,14 +542,16 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 		}
 	}
 
+	context.SetCode(context.Location, string(code))
+
 	if program == nil {
-		program, err = r.parse(code, context.Location, context.Interface)
+		program, err = r.parse(code, context)
 		if err != nil {
 			return nil, wrapError(err)
 		}
 	}
 
-	importResolver := r.importResolver(context.Interface)
+	importResolver := r.importResolver(context)
 	valueDeclarations := functions.ToSemaValueDeclarations()
 
 	for _, predeclaredValue := range context.PredeclaredValues {
@@ -582,7 +592,9 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 							// TODO: improve
 							if err != nil {
 								return nil, &sema.CheckerError{
-									Errors: []error{err},
+									Errors:   []error{err},
+									Location: location,
+									Codes:    context.Codes,
 								}
 							}
 							if checkerErr != nil {
@@ -687,7 +699,7 @@ func (r *interpreterRuntime) newInterpreter(
 			},
 		),
 		interpreter.WithImportLocationHandler(
-			r.importLocationHandler(context.Interface),
+			r.importLocationHandler(context),
 		),
 		interpreter.WithOnStatementHandler(
 			r.onStatementHandler(),
@@ -708,8 +720,9 @@ func (r *interpreterRuntime) newInterpreter(
 	)
 }
 
-func (r *interpreterRuntime) importLocationHandler(runtimeInterface Interface) interpreter.ImportLocationHandlerFunc {
-	importResolver := r.importResolver(runtimeInterface)
+func (r *interpreterRuntime) importLocationHandler(context Context) interpreter.ImportLocationHandlerFunc {
+
+	importResolver := r.importResolver(context)
 
 	return func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 		switch location {
@@ -860,11 +873,13 @@ func (r *interpreterRuntime) standardLibraryFunctions(
 	)
 }
 
-func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportResolver {
+func (r *interpreterRuntime) importResolver(startContext Context) ImportResolver {
 	return func(location Location) (program *ast.Program, err error) {
 
+		context := startContext.WithLocation(location)
+
 		wrapPanic(func() {
-			program, err = runtimeInterface.GetCachedProgram(location)
+			program, err = context.Interface.GetCachedProgram(location)
 		})
 		if err != nil {
 			return nil, err
@@ -876,14 +891,14 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 		var code []byte
 		if addressLocation, ok := location.(common.AddressLocation); ok {
 			wrapPanic(func() {
-				code, err = runtimeInterface.GetAccountContractCode(
+				code, err = context.Interface.GetAccountContractCode(
 					addressLocation.Address,
 					addressLocation.Name,
 				)
 			})
 		} else {
 			wrapPanic(func() {
-				code, err = runtimeInterface.GetCode(location)
+				code, err = context.Interface.GetCode(location)
 			})
 		}
 		if err != nil {
@@ -893,13 +908,15 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 			return nil, nil
 		}
 
-		program, err = r.parse(code, location, runtimeInterface)
+		context.SetCode(location, string(code))
+
+		program, err = r.parse(code, context)
 		if err != nil {
 			return nil, err
 		}
 
 		wrapPanic(func() {
-			err = runtimeInterface.CacheProgram(location, program)
+			err = context.Interface.CacheProgram(location, program)
 		})
 		if err != nil {
 			return nil, err
@@ -911,8 +928,7 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 
 func (r *interpreterRuntime) parse(
 	script []byte,
-	location common.Location,
-	runtimeInterface Interface,
+	context Context,
 ) (
 	program *ast.Program,
 	err error,
@@ -924,9 +940,9 @@ func (r *interpreterRuntime) parse(
 
 	reportMetric(
 		parse,
-		runtimeInterface,
+		context.Interface,
 		func(metrics Metrics, duration time.Duration) {
-			metrics.ProgramParsed(location, duration)
+			metrics.ProgramParsed(context.Location, duration)
 		},
 	)
 
