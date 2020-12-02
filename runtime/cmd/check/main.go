@@ -33,6 +33,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/cmd"
+	print2 "github.com/onflow/cadence/runtime/print"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -145,8 +146,10 @@ func run(paths []string, bench bool, json bool) {
 		out = newStdoutOutput()
 	}
 
+	useColor := !json
+
 	for _, path := range paths {
-		res, runSucceeded := runPath(path, bench)
+		res, runSucceeded := runPath(path, bench, useColor)
 		if !runSucceeded {
 			allSucceeded = false
 		}
@@ -161,7 +164,7 @@ func run(paths []string, bench bool, json bool) {
 	}
 }
 
-func runPath(path string, bench bool) (res result, succeeded bool) {
+func runPath(path string, bench bool, useColor bool) (res result, succeeded bool) {
 	res = result{
 		Path: path,
 	}
@@ -191,7 +194,11 @@ func runPath(path string, bench bool) (res result, succeeded bool) {
 		err = checker.Check()
 		if err != nil {
 			var builder strings.Builder
-			cmd.PrettyPrintError(&builder, err, path, codes)
+			printErr := print2.NewErrorPrettyPrinter(&builder, useColor).
+				PrettyPrintError(err, path, codes)
+			if printErr != nil {
+				panic(printErr)
+			}
 			res.Error = builder.String()
 		}
 	}()

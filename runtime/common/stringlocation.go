@@ -55,6 +55,10 @@ func (l StringLocation) QualifiedIdentifier(typeID TypeID) string {
 	return pieces[2]
 }
 
+func (l StringLocation) String() string {
+	return string(l)
+}
+
 func (l StringLocation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type   string

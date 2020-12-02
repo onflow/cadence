@@ -28,6 +28,7 @@ import (
 // This could be a file, a transaction, or a smart contract.
 //
 type Location interface {
+	fmt.Stringer
 	// ID returns the canonical ID for this import location.
 	ID() LocationID
 	// TypeID returns a type ID for the given qualified identifier

@@ -32,10 +32,11 @@ import (
 	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	print2 "github.com/onflow/cadence/runtime/print"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
-const replFilename = "REPL"
+const replLocation = "REPL"
 
 func RunREPL() {
 	printWelcome()
@@ -46,10 +47,15 @@ func RunREPL() {
 
 	codes := map[string]string{}
 
+	errorPrettyPrinter := print2.NewErrorPrettyPrinter(os.Stderr, true)
+
 	repl, err := runtime.NewREPL(
 		func(err error) {
-			// TODO: handle imports
-			cmd.PrettyPrintError(os.Stderr, err, replFilename, map[string]string{replFilename: code})
+			codes[replLocation] = code
+			printErr := errorPrettyPrinter.PrettyPrintError(err, replLocation, codes)
+			if printErr != nil {
+				panic(printErr)
+			}
 		},
 		func(value interpreter.Value) {
 			if _, isVoid := value.(*interpreter.VoidValue); isVoid || value == nil {

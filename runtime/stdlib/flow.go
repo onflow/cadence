@@ -202,6 +202,10 @@ func (l FlowLocation) QualifiedIdentifier(typeID common.TypeID) string {
 	return pieces[1]
 }
 
+func (l FlowLocation) String() string {
+	return "flow"
+}
+
 func (l FlowLocation) MarshalJSON() ([]byte, error) {
 	return json.Marshal(&struct {
 		Type string

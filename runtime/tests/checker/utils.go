@@ -19,14 +19,15 @@
 package checker
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2"
+	print2 "github.com/onflow/cadence/runtime/print"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -47,14 +48,21 @@ func ParseAndCheckWithOptions(
 	options ParseAndCheckOptions,
 ) (*sema.Checker, error) {
 
-	program, err := parser2.ParseProgram(code)
-	if !options.IgnoreParseError && !assert.NoError(t, err) {
-		assert.FailNow(t, errors.UnrollChildErrors(err))
-		return nil, err
-	}
-
 	if options.Location == nil {
 		options.Location = utils.TestLocation
+	}
+
+	program, err := parser2.ParseProgram(code)
+	if !options.IgnoreParseError && !assert.NoError(t, err) {
+		var sb strings.Builder
+		location := options.Location.String()
+		printErr := print2.NewErrorPrettyPrinter(&sb, true).
+			PrettyPrintError(err, location, map[string]string{location: code})
+		if printErr != nil {
+			panic(printErr)
+		}
+		assert.FailNow(t, sb.String())
+		return nil, err
 	}
 
 	checkerOptions := append(
