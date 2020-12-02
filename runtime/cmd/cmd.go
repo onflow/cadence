@@ -27,7 +27,7 @@ import (
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser2"
-	print2 "github.com/onflow/cadence/runtime/print"
+	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 )
@@ -36,7 +36,7 @@ func must(err error, filename string, codes map[string]string) {
 	if err == nil {
 		return
 	}
-	printErr := print2.NewErrorPrettyPrinter(os.Stderr, true).
+	printErr := pretty.NewErrorPrettyPrinter(os.Stderr, true).
 		PrettyPrintError(err, filename, codes)
 	if printErr != nil {
 		panic(printErr)
@@ -151,6 +151,6 @@ func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checke
 }
 
 func ExitWithError(message string) {
-	print(print2.FormatErrorMessage(message, true))
+	println(pretty.FormatErrorMessage(message, true))
 	os.Exit(1)
 }

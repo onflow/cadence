@@ -4680,7 +4680,6 @@ func TestParseExpression(t *testing.T) {
 			Errors: errs,
 		}
 	}
-
 	require.NoError(t, err)
 
 	expected := &ast.BinaryExpression{

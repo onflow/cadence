@@ -24,7 +24,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
-	print2 "github.com/onflow/cadence/runtime/print"
+	"github.com/onflow/cadence/runtime/pretty"
 )
 
 // Error
@@ -36,9 +36,9 @@ type Error struct {
 func (e Error) Error() string {
 	var sb strings.Builder
 	sb.WriteString("Parsing failed:\n")
-	printErr := print2.NewErrorPrettyPrinter(&sb, false).
 		// TODO: capture code in error and include in codes argument
 		PrettyPrintError(e, "", map[string]string{})
+	printErr := pretty.NewErrorPrettyPrinter(&sb, false).
 	if printErr != nil {
 		panic(printErr)
 	}

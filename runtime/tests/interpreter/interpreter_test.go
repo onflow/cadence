@@ -33,7 +33,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/parser2"
-	print2 "github.com/onflow/cadence/runtime/print"
+	"github.com/onflow/cadence/runtime/pretty"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/checker"
@@ -71,7 +71,7 @@ func parseCheckAndInterpretWithOptions(
 		if !assert.NoError(t, err) {
 			var sb strings.Builder
 			location := checker.Location.String()
-			printErr := print2.NewErrorPrettyPrinter(&sb, true).
+			printErr := pretty.NewErrorPrettyPrinter(&sb, true).
 				PrettyPrintError(err, location, map[string]string{location: code})
 			if printErr != nil {
 				panic(printErr)
