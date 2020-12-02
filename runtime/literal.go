@@ -37,6 +37,7 @@ func ParseLiteral(literal string, ty sema.Type) (cadence.Value, error) {
 	expression, errs := parser2.ParseExpression(literal)
 	if len(errs) > 0 {
 		return nil, parser2.Error{
+			Code:   literal,
 			Errors: errs,
 		}
 	}
