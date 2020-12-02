@@ -47,7 +47,7 @@ func (e Error) Error() string {
 	sb.WriteString("Execution failed:\n")
 	printErr := pretty.NewErrorPrettyPrinter(&sb, false).
 		// TODO: capture codes in error and include in codes argument
-		PrettyPrintError(e, nil, map[common.Location]string{})
+		PrettyPrintError(e, nil, map[common.LocationID]string{})
 	if printErr != nil {
 		panic(printErr)
 	}

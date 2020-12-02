@@ -112,7 +112,7 @@ func (p ErrorPrettyPrinter) writeString(str string) {
 	}
 }
 
-func (p ErrorPrettyPrinter) PrettyPrintError(err error, location common.Location, codes map[common.Location]string) error {
+func (p ErrorPrettyPrinter) PrettyPrintError(err error, location common.Location, codes map[common.LocationID]string) error {
 
 	// writeString panics when the write to the writer fails, so recover those errors and return them.
 	// This way we don't need to if-err for every single writer write
@@ -164,7 +164,13 @@ func (p ErrorPrettyPrinter) PrettyPrintError(err error, location common.Location
 		if i > 0 {
 			p.writeString("\n")
 		}
-		p.prettyPrintError(err, location, codes[location])
+
+		var locationID common.LocationID
+		if location != nil {
+			locationID = location.ID()
+		}
+
+		p.prettyPrintError(err, location, codes[locationID])
 		i++
 		return nil
 	}

@@ -79,17 +79,20 @@ func (e *MissingLocationError) Error() string {
 // CheckerError
 
 type CheckerError struct {
-	//Location common.Location
-	//Codes map[string]
-	Errors []error
+	Location common.Location
+	Codes    map[common.LocationID]string
+	Errors   []error
 }
 
 func (e CheckerError) Error() string {
 	var sb strings.Builder
 	sb.WriteString("Checking failed:\n")
+	codes := e.Codes
+	if codes == nil {
+		codes = map[common.LocationID]string{}
+	}
 	printErr := pretty.NewErrorPrettyPrinter(&sb, false).
-		// TODO: capture codes in error and include in codes argument
-		PrettyPrintError(e, nil, map[common.Location]string{})
+		PrettyPrintError(e, e.Location, codes)
 	if printErr != nil {
 		panic(printErr)
 	}

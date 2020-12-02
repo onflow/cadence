@@ -55,8 +55,9 @@ func ParseAndCheckWithOptions(
 	program, err := parser2.ParseProgram(code)
 	if !options.IgnoreParseError && !assert.NoError(t, err) {
 		var sb strings.Builder
+		locationID := options.Location.ID()
 		printErr := pretty.NewErrorPrettyPrinter(&sb, true).
-			PrettyPrintError(err, options.Location, map[common.Location]string{options.Location: code})
+			PrettyPrintError(err, options.Location, map[common.LocationID]string{locationID: code})
 		if printErr != nil {
 			panic(printErr)
 		}

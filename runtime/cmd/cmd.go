@@ -32,7 +32,7 @@ import (
 	"github.com/onflow/cadence/runtime/stdlib"
 )
 
-func must(err error, location common.Location, codes map[common.Location]string) {
+func must(err error, location common.Location, codes map[common.LocationID]string) {
 	if err == nil {
 		return
 	}
@@ -44,13 +44,13 @@ func must(err error, location common.Location, codes map[common.Location]string)
 	os.Exit(1)
 }
 
-func mustClosure(location common.Location, codes map[common.Location]string) func(error) {
+func mustClosure(location common.Location, codes map[common.LocationID]string) func(error) {
 	return func(e error) {
 		must(e, location, codes)
 	}
 }
 
-func PrepareProgramFromFile(location common.StringLocation, codes map[common.Location]string) (*ast.Program, func(error)) {
+func PrepareProgramFromFile(location common.StringLocation, codes map[common.LocationID]string) (*ast.Program, func(error)) {
 	codeBytes, err := ioutil.ReadFile(string(location))
 
 	program, must := PrepareProgram(string(codeBytes), location, codes)
@@ -59,11 +59,11 @@ func PrepareProgramFromFile(location common.StringLocation, codes map[common.Loc
 	return program, must
 }
 
-func PrepareProgram(code string, location common.Location, codes map[common.Location]string) (*ast.Program, func(error)) {
+func PrepareProgram(code string, location common.Location, codes map[common.LocationID]string) (*ast.Program, func(error)) {
 	must := mustClosure(location, codes)
 
 	program, err := parser2.ParseProgram(code)
-	codes[location] = code
+	codes[location.ID()] = code
 	must(err)
 
 	return program, must
@@ -84,7 +84,7 @@ var typeDeclarations = append(
 func PrepareChecker(
 	program *ast.Program,
 	location common.Location,
-	codes map[common.Location]string,
+	codes map[common.LocationID]string,
 	must func(error),
 ) (*sema.Checker, func(error)) {
 	checker, err := sema.NewChecker(
@@ -93,19 +93,21 @@ func PrepareChecker(
 		sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
 		sema.WithPredeclaredTypes(typeDeclarations),
 		sema.WithImportHandler(
-			func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
-				stringLocation, ok := location.(common.StringLocation)
+			func(checker *sema.Checker, importedLocation common.Location) (sema.Import, *sema.CheckerError) {
+				stringLocation, ok := importedLocation.(common.StringLocation)
 
 				if !ok {
 					return nil, &sema.CheckerError{
+						Location: location,
+						Codes:    codes,
 						Errors: []error{
-							fmt.Errorf("cannot import `%s`. only files are supported", location),
+							fmt.Errorf("cannot import `%s`. only files are supported", importedLocation),
 						},
 					}
 				}
 
 				importChecker, err := checker.EnsureLoaded(
-					location,
+					importedLocation,
 					func() *ast.Program {
 						imported, _ := PrepareProgramFromFile(stringLocation, codes)
 						return imported
@@ -128,7 +130,7 @@ func PrepareChecker(
 
 func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checker, func(error)) {
 
-	codes := map[common.Location]string{}
+	codes := map[common.LocationID]string{}
 
 	location := common.StringLocation(filename)
 

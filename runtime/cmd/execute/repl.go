@@ -43,16 +43,16 @@ func RunREPL() {
 	lineIsContinuation := false
 	code := ""
 
-	codes := map[common.Location]string{}
+	codes := map[common.LocationID]string{}
 
 	errorPrettyPrinter := pretty.NewErrorPrettyPrinter(os.Stderr, true)
 
-	replLocation := common.REPLLocation{}
+	location := common.REPLLocation{}
 
 	repl, err := runtime.NewREPL(
 		func(err error) {
-			codes[replLocation] = code
-			printErr := errorPrettyPrinter.PrettyPrintError(err, replLocation, codes)
+			codes[location.ID()] = code
+			printErr := errorPrettyPrinter.PrettyPrintError(err, location, codes)
 			if printErr != nil {
 				panic(printErr)
 			}
@@ -66,19 +66,21 @@ func RunREPL() {
 		},
 		[]sema.Option{
 			sema.WithImportHandler(
-				func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
-					stringLocation, ok := location.(common.StringLocation)
+				func(checker *sema.Checker, importedLocation common.Location) (sema.Import, *sema.CheckerError) {
+					stringLocation, ok := importedLocation.(common.StringLocation)
 
 					if !ok {
 						return nil, &sema.CheckerError{
+							Location: location,
+							Codes:    codes,
 							Errors: []error{
-								fmt.Errorf("cannot import `%s`. only files are supported", location),
+								fmt.Errorf("cannot import `%s`. only files are supported", importedLocation),
 							},
 						}
 					}
 
 					importChecker, err := checker.EnsureLoaded(
-						location,
+						importedLocation,
 						func() *ast.Program {
 							imported, _ := cmd.PrepareProgramFromFile(stringLocation, codes)
 							return imported

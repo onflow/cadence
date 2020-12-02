@@ -107,7 +107,7 @@ func (s stdoutOutput) Append(r result) {
 	if r.Error != nil {
 		location := common.StringLocation(r.Path)
 		printErr := pretty.NewErrorPrettyPrinter(os.Stdout, true).
-			PrettyPrintError(r.Error, location, map[common.Location]string{location: r.Code})
+			PrettyPrintError(r.Error, location, map[common.LocationID]string{location.ID(): r.Code})
 		if printErr != nil {
 			panic(printErr)
 		}
