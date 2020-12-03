@@ -47,14 +47,11 @@ type Context struct {
 	Interface         Interface
 	Location          Location
 	PredeclaredValues []ValueDeclaration
-	Codes             map[common.LocationID]string
+	codes             map[common.LocationID]string
 }
 
-func (c *Context) SetCode(location common.Location, code string) {
-	if c.Codes == nil {
-		c.Codes = map[common.LocationID]string{}
-	}
-	c.Codes[location.ID()] = code
+func (c Context) SetCode(location common.Location, code string) {
+	c.codes[location.ID()] = code
 }
 
 func (c Context) WithLocation(location common.Location) Context {
@@ -158,6 +155,9 @@ func (r *interpreterRuntime) SetCoverageReport(coverageReport *CoverageReport) {
 }
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cadence.Value, error) {
+	if context.codes == nil {
+		context.codes = map[common.LocationID]string{}
+	}
 
 	runtimeStorage := newRuntimeStorage(context.Interface)
 
@@ -165,30 +165,32 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 
 	checker, err := r.parseAndCheckProgram(script.Source, context, functions, nil, false)
 	if err != nil {
-		return nil, newError(err)
+		return nil, newError(err, context)
 	}
 
 	functionEntryPointType, err := checker.FunctionEntryPointType()
 	if err != nil {
-		return nil, err
+		return nil, newError(err, context)
 	}
 
 	// Ensure the entry point's parameter types are storable
 	if len(functionEntryPointType.Parameters) > 0 {
 		for _, param := range functionEntryPointType.Parameters {
 			if !param.TypeAnnotation.Type.IsStorable(map[*sema.Member]bool{}) {
-				return nil, &ScriptParameterTypeNotStorableError{
+				err = &ScriptParameterTypeNotStorableError{
 					Type: param.TypeAnnotation.Type,
 				}
+				return nil, newError(err, context)
 			}
 		}
 	}
 
 	// Ensure the entry point's return type is valid
 	if !functionEntryPointType.ReturnTypeAnnotation.Type.IsExternallyReturnable(map[*sema.Member]bool{}) {
-		return nil, &InvalidScriptReturnTypeError{
+		err = &InvalidScriptReturnTypeError{
 			Type: functionEntryPointType.ReturnTypeAnnotation.Type,
 		}
+		return nil, newError(err, context)
 	}
 
 	interpret := scriptExecutionFunction(
@@ -206,7 +208,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		interpret,
 	)
 	if err != nil {
-		return nil, newError(err)
+		return nil, newError(err, context)
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage.
@@ -305,6 +307,9 @@ func (r *interpreterRuntime) newAuthAccountValue(
 }
 
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) error {
+	if context.codes == nil {
+		context.codes = map[common.LocationID]string{}
+	}
 
 	runtimeStorage := newRuntimeStorage(context.Interface)
 
@@ -314,18 +319,19 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 	if err != nil {
 		if err, ok := err.(*ParsingCheckingError); ok {
 			err.StorageCache = runtimeStorage.cache
-			return newError(err)
+			return newError(err, context)
 		}
 
-		return newError(err)
+		return newError(err, context)
 	}
 
 	transactions := checker.TransactionTypes
 	transactionCount := len(transactions)
 	if transactionCount != 1 {
-		return newError(InvalidTransactionCountError{
+		err = InvalidTransactionCountError{
 			Count: transactionCount,
-		})
+		}
+		return newError(err, context)
 	}
 
 	transactionType := transactions[0]
@@ -335,7 +341,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		authorizers, err = context.Interface.GetSigningAccounts()
 	})
 	if err != nil {
-		return newError(err)
+		return newError(err, context)
 	}
 	// check parameter count
 
@@ -344,18 +350,20 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 
 	transactionParameterCount := len(transactionType.Parameters)
 	if argumentCount != transactionParameterCount {
-		return newError(InvalidEntryPointParameterCountError{
+		err = InvalidEntryPointParameterCountError{
 			Expected: transactionParameterCount,
 			Actual:   argumentCount,
-		})
+		}
+		return newError(err, context)
 	}
 
 	transactionAuthorizerCount := len(transactionType.PrepareParameters)
 	if authorizerCount != transactionAuthorizerCount {
-		return newError(InvalidTransactionAuthorizerCountError{
+		err = InvalidTransactionAuthorizerCountError{
 			Expected: transactionAuthorizerCount,
 			Actual:   authorizerCount,
-		})
+		}
+		return newError(err, context)
 	}
 
 	// gather authorizers
@@ -384,7 +392,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		),
 	)
 	if err != nil {
-		return newError(err)
+		return newError(err, context)
 	}
 
 	// Write back all stored values, which were actually just cached, back into storage
@@ -498,12 +506,16 @@ func validateArgumentParams(
 
 // ParseAndCheckProgram parses the given script and runs type check.
 func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) (*sema.Checker, error) {
+	if context.codes == nil {
+		context.codes = map[common.LocationID]string{}
+	}
+
 	runtimeStorage := newRuntimeStorage(context.Interface)
 	functions := r.standardLibraryFunctions(context, runtimeStorage)
 
 	checker, err := r.parseAndCheckProgram(code, context, functions, nil, true)
 	if err != nil {
-		return nil, newError(err)
+		return nil, newError(err, context)
 	}
 
 	return checker, nil
@@ -533,6 +545,8 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 		}
 	}
 
+	context.SetCode(context.Location, string(code))
+
 	if useCache {
 		wrapPanic(func() {
 			program, err = context.Interface.GetCachedProgram(context.Location)
@@ -541,8 +555,6 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 			return nil, wrapError(err)
 		}
 	}
-
-	context.SetCode(context.Location, string(code))
 
 	if program == nil {
 		program, err = r.parse(code, context)
@@ -594,7 +606,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 								return nil, &sema.CheckerError{
 									Errors:   []error{err},
 									Location: location,
-									Codes:    context.Codes,
+									Codes:    context.codes,
 								}
 							}
 							if checkerErr != nil {
@@ -1377,13 +1389,9 @@ func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpre
 }
 
 func (r *interpreterRuntime) getCurrentBlockHeight(runtimeInterface Interface) (currentBlockHeight uint64, err error) {
-	var er error
 	wrapPanic(func() {
-		currentBlockHeight, er = runtimeInterface.GetCurrentBlockHeight()
+		currentBlockHeight, err = runtimeInterface.GetCurrentBlockHeight()
 	})
-	if er != nil {
-		return 0, newError(er)
-	}
 	return
 }
 
