@@ -31,11 +31,17 @@ import (
 
 // Error is the containing type for all errors produced by the runtime.
 type Error struct {
-	Err error
+	Err      error
+	Location common.Location
+	Codes    map[common.LocationID]string
 }
 
-func newError(err error) Error {
-	return Error{Err: err}
+func newError(err error, context Context) Error {
+	return Error{
+		Err:      err,
+		Location: context.Location,
+		Codes:    context.codes,
+	}
 }
 
 func (e Error) Unwrap() error {
@@ -46,8 +52,7 @@ func (e Error) Error() string {
 	var sb strings.Builder
 	sb.WriteString("Execution failed:\n")
 	printErr := pretty.NewErrorPrettyPrinter(&sb, false).
-		// TODO: capture codes in error and include in codes argument
-		PrettyPrintError(e, nil, map[common.LocationID]string{})
+		PrettyPrintError(e.Err, e.Location, e.Codes)
 	if printErr != nil {
 		panic(printErr)
 	}

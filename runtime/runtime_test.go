@@ -2131,7 +2131,8 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 		)
 
 		if expected == nil {
-			require.IsType(t, &InvalidScriptReturnTypeError{}, err)
+			var subErr *InvalidScriptReturnTypeError
+			utils.RequireErrorAs(t, err, &subErr)
 		} else {
 			require.NoError(t, err)
 			require.Equal(t, expected, actual)
@@ -2219,7 +2220,9 @@ func TestScriptParameterTypeNotStorableError(t *testing.T) {
 			Location:  nextTransactionLocation(),
 		},
 	)
-	assert.IsType(t, &ScriptParameterTypeNotStorableError{}, err)
+
+	var subErr *ScriptParameterTypeNotStorableError
+	utils.RequireErrorAs(t, err, &subErr)
 }
 
 func TestRuntimeSyntaxError(t *testing.T) {
