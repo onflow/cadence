@@ -641,7 +641,7 @@ func (interpreter *Interpreter) runAllStatements(t Trampoline) interface{} {
 
 		panic(Error{
 			Err:           internalErr,
-			LocationRange: interpreter.locationRange(posInfo),
+			LocationRange: statement.Interpreter.locationRange(posInfo),
 		})
 	})
 
