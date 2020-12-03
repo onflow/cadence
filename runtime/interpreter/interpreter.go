@@ -618,6 +618,7 @@ func (interpreter *Interpreter) runUntilNextStatement(t Trampoline) (interface{}
 // runAllStatements runs all the statement until there is no more trampoline and returns the result.
 // When there is a statement, it calls the onStatement callback, and then continues the execution.
 func (interpreter *Interpreter) runAllStatements(t Trampoline) interface{} {
+
 	var statement *Statement
 
 	// Wrap errors if needed
@@ -1072,36 +1073,44 @@ func (interpreter *Interpreter) visitConditions(conditions []*ast.Condition) Tra
 		return Done{}
 	}
 
-	// interpret the first condition, then the remaining ones
+	// interpret the first condition, then the remaining ones.
+	// treat the condition as a statement, so we get position information in case of an error
 	condition := conditions[0]
-	return condition.Accept(interpreter).(Trampoline).
-		FlatMap(func(value interface{}) Trampoline {
-			result := value.(BoolValue)
+	return StatementTrampoline{
+		F: func() Trampoline {
+			return condition.Accept(interpreter).(Trampoline)
+		},
+		Interpreter: interpreter,
+		Statement: &ast.ExpressionStatement{
+			Expression: condition.Test,
+		},
+	}.FlatMap(func(value interface{}) Trampoline {
+		result := value.(BoolValue)
 
-			if !result {
+		if !result {
 
-				var messageTrampoline Trampoline
+			var messageTrampoline Trampoline
 
-				if condition.Message == nil {
-					messageTrampoline = Done{Result: NewStringValue("")}
-				} else {
-					messageTrampoline = condition.Message.Accept(interpreter).(Trampoline)
-				}
-
-				return messageTrampoline.
-					Then(func(result interface{}) {
-						message := result.(*StringValue).Str
-
-						panic(ConditionError{
-							ConditionKind: condition.Kind,
-							Message:       message,
-							LocationRange: interpreter.locationRange(condition.Test),
-						})
-					})
+			if condition.Message == nil {
+				messageTrampoline = Done{Result: NewStringValue("")}
+			} else {
+				messageTrampoline = condition.Message.Accept(interpreter).(Trampoline)
 			}
 
-			return interpreter.visitConditions(conditions[1:])
-		})
+			return messageTrampoline.
+				Then(func(result interface{}) {
+					message := result.(*StringValue).Str
+
+					panic(ConditionError{
+						ConditionKind: condition.Kind,
+						Message:       message,
+						LocationRange: interpreter.locationRange(condition.Test),
+					})
+				})
+		}
+
+		return interpreter.visitConditions(conditions[1:])
+	})
 }
 
 func (interpreter *Interpreter) VisitCondition(condition *ast.Condition) ast.Repr {
