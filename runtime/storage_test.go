@@ -310,8 +310,8 @@ func TestAccountStorageStorage(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
-		getSigningAccounts: func() ([]Address, error) {
-			return []Address{{42}}, nil
+		getSigningAccounts: func() []Address {
+			return []Address{{42}}
 		},
 		getStorageUsed: func(_ Address) (uint64, error) {
 			var amount uint64 = 0
@@ -330,13 +330,10 @@ func TestAccountStorageStorage(t *testing.T) {
 	nextTransactionLocation := newTransactionLocationGenerator()
 
 	err := runtime.ExecuteTransaction(
-		Script{
-			Source: script,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
+		script,
+		nil,
+		runtimeInterface,
+		nextTransactionLocation(),
 	)
 	require.NoError(t, err)
 
