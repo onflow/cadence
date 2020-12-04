@@ -28,6 +28,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -301,7 +302,7 @@ func TestExportDictionaryValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            access(all) fun main(): {String: Int} {
+            pub fun main(): {String: Int} {
                 return {}
             }
         `
@@ -317,7 +318,7 @@ func TestExportDictionaryValue(t *testing.T) {
 		t.Parallel()
 
 		script := `
-            access(all) fun main(): {String: Int} {
+            pub fun main(): {String: Int} {
                 return {
                     "a": 1,
                     "b": 2
@@ -346,7 +347,7 @@ func TestExportAddressValue(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        access(all) fun main(): Address {
+        pub fun main(): Address {
             return 0x42
         }
     `
@@ -364,15 +365,15 @@ func TestExportStructValue(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        access(all) struct Foo {
-            access(all) let bar: Int
+        pub struct Foo {
+            pub let bar: Int
 
             init(bar: Int) {
                 self.bar = bar
             }
         }
 
-        access(all) fun main(): Foo {
+        pub fun main(): Foo {
             return Foo(bar: 42)
         }
     `
@@ -388,15 +389,15 @@ func TestExportResourceValue(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        access(all) resource Foo {
-            access(all) let bar: Int
+        pub resource Foo {
+            pub let bar: Int
 
             init(bar: Int) {
                 self.bar = bar
             }
         }
 
-        access(all) fun main(): @Foo {
+        pub fun main(): @Foo {
             return <- create Foo(bar: 42)
         }
     `
@@ -416,15 +417,15 @@ func TestExportResourceArrayValue(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        access(all) resource Foo {
-            access(all) let bar: Int
+        pub resource Foo {
+            pub let bar: Int
 
             init(bar: Int) {
                 self.bar = bar
             }
         }
 
-        access(all) fun main(): @[Foo] {
+        pub fun main(): @[Foo] {
             return <- [<- create Foo(bar: 1), <- create Foo(bar: 2)]
         }
     `
@@ -449,15 +450,15 @@ func TestExportResourceDictionaryValue(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        access(all) resource Foo {
-            access(all) let bar: Int
+        pub resource Foo {
+            pub let bar: Int
 
             init(bar: Int) {
                 self.bar = bar
             }
         }
 
-        access(all) fun main(): @{String: Foo} {
+        pub fun main(): @{String: Foo} {
             return <- {
                 "a": <- create Foo(bar: 1),
                 "b": <- create Foo(bar: 2)
@@ -521,16 +522,16 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
 	}
 
 	script := `
-        access(all) resource Bar {
-            access(all) let x: Int
+        pub resource Bar {
+            pub let x: Int
 
             init(x: Int) {
                 self.x = x
             }
         }
 
-        access(all) resource Foo {
-            access(all) let bar: @Bar
+        pub resource Foo {
+            pub let bar: @Bar
 
             init(bar: @Bar) {
                 self.bar <- bar
@@ -541,7 +542,7 @@ func TestExportNestedResourceValueFromScript(t *testing.T) {
             }
         }
 
-        access(all) fun main(): @Foo {
+        pub fun main(): @Foo {
             return <- create Foo(bar: <- create Bar(x: 42))
         }
     `
@@ -563,9 +564,9 @@ func TestExportEventValue(t *testing.T) {
 	t.Parallel()
 
 	script := `
-        access(all) event Foo(bar: Int)
+        pub event Foo(bar: Int)
 
-        access(all) fun main() {
+        pub fun main() {
             emit Foo(bar: 42)
         }
     `
@@ -632,43 +633,172 @@ func TestExportTypeValue(t *testing.T) {
 
 	t.Parallel()
 
-	script := `
-        access(all) fun main(): Type {
-            return Type<Int>()
-        }
-    `
+	t.Run("Int", func(t *testing.T) {
 
-	actual := exportValueFromScript(t, script)
-	expected := cadence.TypeValue{
-		StaticType: "Int",
-	}
+		t.Parallel()
 
-	assert.Equal(t, expected, actual)
+		script := `
+            pub fun main(): Type {
+                return Type<Int>()
+            }
+        `
+
+		actual := exportValueFromScript(t, script)
+		expected := cadence.TypeValue{
+			StaticType: "Int",
+		}
+
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("struct", func(t *testing.T) {
+
+		t.Parallel()
+
+		script := `
+            pub struct S {}
+
+            pub fun main(): Type {
+                return Type<S>()
+            }
+        `
+
+		actual := exportValueFromScript(t, script)
+		expected := cadence.TypeValue{
+			StaticType: "S.test.S",
+		}
+
+		assert.Equal(t, expected, actual)
+	})
 }
 
 func TestExportCapabilityValue(t *testing.T) {
 
 	t.Parallel()
 
-	capability := interpreter.CapabilityValue{
-		Address: interpreter.AddressValue{0x1},
-		Path: interpreter.PathValue{
-			Domain:     common.PathDomainStorage,
-			Identifier: "foo",
-		},
-		BorrowType: interpreter.PrimitiveStaticTypeInt,
-	}
-	actual := exportValueWithInterpreter(capability, nil, exportResults{})
-	expected := cadence.Capability{
-		Path: cadence.Path{
-			Domain:     "storage",
-			Identifier: "foo",
-		},
-		Address:    cadence.Address{0x1},
-		BorrowType: "Int",
-	}
+	t.Run("Int", func(t *testing.T) {
 
-	assert.Equal(t, expected, actual)
+		capability := interpreter.CapabilityValue{
+			Address: interpreter.AddressValue{0x1},
+			Path: interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "foo",
+			},
+			BorrowType: interpreter.PrimitiveStaticTypeInt,
+		}
+		actual := exportValueWithInterpreter(capability, nil, exportResults{})
+		expected := cadence.Capability{
+			Path: cadence.Path{
+				Domain:     "storage",
+				Identifier: "foo",
+			},
+			Address:    cadence.Address{0x1},
+			BorrowType: "Int",
+		}
+
+		assert.Equal(t, expected, actual)
+
+	})
+
+	t.Run("Struct", func(t *testing.T) {
+
+		program, err := parser2.ParseProgram(`pub struct S {}`)
+		require.NoError(t, err)
+
+		checker, err := sema.NewChecker(program, utils.TestLocation)
+		require.NoError(t, err)
+
+		err = checker.Check()
+		require.NoError(t, err)
+
+		inter, err := interpreter.NewInterpreter(checker)
+		require.NoError(t, err)
+
+		capability := interpreter.CapabilityValue{
+			Address: interpreter.AddressValue{0x1},
+			Path: interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "foo",
+			},
+			BorrowType: interpreter.CompositeStaticType{
+				TypeID:   utils.TestLocation.TypeID("S"),
+				Location: utils.TestLocation,
+			},
+		}
+		actual := exportValueWithInterpreter(capability, inter, exportResults{})
+		expected := cadence.Capability{
+			Path: cadence.Path{
+				Domain:     "storage",
+				Identifier: "foo",
+			},
+			Address:    cadence.Address{0x1},
+			BorrowType: "S.test.S",
+		}
+
+		assert.Equal(t, expected, actual)
+	})
+}
+
+func TestExportLinkValue(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("Int", func(t *testing.T) {
+
+		link := interpreter.LinkValue{
+			TargetPath: interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "foo",
+			},
+			Type: interpreter.PrimitiveStaticTypeInt,
+		}
+		actual := exportValueWithInterpreter(link, nil, exportResults{})
+		expected := cadence.Link{
+			TargetPath: cadence.Path{
+				Domain:     "storage",
+				Identifier: "foo",
+			},
+			BorrowType: "Int",
+		}
+
+		assert.Equal(t, expected, actual)
+	})
+
+	t.Run("Struct", func(t *testing.T) {
+
+		program, err := parser2.ParseProgram(`pub struct S {}`)
+		require.NoError(t, err)
+
+		checker, err := sema.NewChecker(program, utils.TestLocation)
+		require.NoError(t, err)
+
+		err = checker.Check()
+		require.NoError(t, err)
+
+		inter, err := interpreter.NewInterpreter(checker)
+		require.NoError(t, err)
+
+		capability := interpreter.LinkValue{
+			TargetPath: interpreter.PathValue{
+				Domain:     common.PathDomainStorage,
+				Identifier: "foo",
+			},
+			Type: interpreter.CompositeStaticType{
+				TypeID:   utils.TestLocation.TypeID("S"),
+				Location: utils.TestLocation,
+			},
+		}
+		actual := exportValueWithInterpreter(capability, inter, exportResults{})
+		expected := cadence.Link{
+			TargetPath: cadence.Path{
+				Domain:     "storage",
+				Identifier: "foo",
+			},
+			BorrowType: "S.test.S",
+		}
+
+		assert.Equal(t, expected, actual)
+	})
 }
 
 var fooFields = []cadence.Field{

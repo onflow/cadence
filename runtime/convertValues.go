@@ -251,7 +251,7 @@ func exportDictionaryValue(
 
 func exportLinkValue(v interpreter.LinkValue, inter *interpreter.Interpreter) cadence.Link {
 	path := exportPathValue(v.TargetPath)
-	ty := inter.ConvertStaticToSemaType(v.Type).QualifiedString()
+	ty := string(inter.ConvertStaticToSemaType(v.Type).ID())
 	return cadence.NewLink(path, ty)
 }
 
@@ -263,14 +263,14 @@ func exportPathValue(v interpreter.PathValue) cadence.Path {
 }
 
 func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) cadence.TypeValue {
-	ty := inter.ConvertStaticToSemaType(v.Type).QualifiedString()
+	ty := string(inter.ConvertStaticToSemaType(v.Type).ID())
 	return cadence.TypeValue{
 		StaticType: ty,
 	}
 }
 
 func exportCapabilityValue(v interpreter.CapabilityValue, inter *interpreter.Interpreter) cadence.Capability {
-	borrowType := inter.ConvertStaticToSemaType(v.BorrowType).QualifiedString()
+	borrowType := string(inter.ConvertStaticToSemaType(v.BorrowType).ID())
 	return cadence.Capability{
 		Path:       exportPathValue(v.Path),
 		Address:    cadence.NewAddress(v.Address),

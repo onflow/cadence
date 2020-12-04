@@ -678,15 +678,15 @@ func TestEncodeResource(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			access(all) resource Foo {
-				access(all) let bar: Int
+			pub resource Foo {
+				pub let bar: Int
 	
 				init(bar: Int) {
 					self.bar = bar
 				}
 			}
 	
-			access(all) fun main(): @Foo {
+			pub fun main(): @Foo {
 				return <- create Foo(bar: 42)
 			}
 		`
@@ -703,8 +703,8 @@ func TestEncodeResource(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			access(all) resource Foo {
-				access(all) let bar: Int
+			pub resource Foo {
+				pub let bar: Int
 	
 				pub fun foo(): String {
 					return "foo"
@@ -715,7 +715,7 @@ func TestEncodeResource(t *testing.T) {
 				}
 			}
 	
-			access(all) fun main(): @Foo {
+			pub fun main(): @Foo {
 				return <- create Foo(bar: 42)
 			}
 		`
@@ -736,16 +736,16 @@ func TestEncodeResource(t *testing.T) {
 		t.Parallel()
 
 		script := `
-			access(all) resource Bar {
-				access(all) let x: Int
+			pub resource Bar {
+				pub let x: Int
 	
 				init(x: Int) {
 					self.x = x
 				}
 			}
 	
-			access(all) resource Foo {
-				access(all) let bar: @Bar
+			pub resource Foo {
+				pub let bar: @Bar
 	
 				init(bar: @Bar) {
 					self.bar <- bar
@@ -756,7 +756,7 @@ func TestEncodeResource(t *testing.T) {
 				}
 			}
 	
-			access(all) fun main(): @Foo {
+			pub fun main(): @Foo {
 				return <- create Foo(bar: <- create Bar(x: 42))
 			}
 		`
