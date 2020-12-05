@@ -139,7 +139,7 @@ type StorageKeyHandlerFunc func(
 type InjectedCompositeFieldsHandlerFunc func(
 	inter *Interpreter,
 	location common.Location,
-	typeID sema.TypeID,
+	qualifiedIdentifier string,
 	compositeKind common.CompositeKind,
 ) map[string]Value
 
@@ -2484,7 +2484,6 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	})()
 
 	compositeType := interpreter.Checker.Elaboration.CompositeDeclarationTypes[declaration]
-	typeID := compositeType.ID()
 
 	var initializerFunction FunctionValue
 	if declaration.CompositeKind == common.CompositeKindEvent {
@@ -2567,6 +2566,8 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 	location := interpreter.Checker.Location
 
+	qualifiedIdentifier := compositeType.QualifiedIdentifier()
+
 	constructor := NewHostFunctionValue(
 		func(invocation Invocation) Trampoline {
 
@@ -2576,7 +2577,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				injectedFields = interpreter.injectedCompositeFieldsHandler(
 					interpreter,
 					location,
-					typeID,
+					qualifiedIdentifier,
 					declaration.CompositeKind,
 				)
 			}
@@ -2600,13 +2601,13 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 			}
 
 			value := &CompositeValue{
-				Location:       location,
-				TypeID:         typeID,
-				Kind:           declaration.CompositeKind,
-				Fields:         fields,
-				InjectedFields: injectedFields,
-				Functions:      functions,
-				Destructor:     destructorFunction,
+				Location:            location,
+				QualifiedIdentifier: qualifiedIdentifier,
+				Kind:                declaration.CompositeKind,
+				Fields:              fields,
+				InjectedFields:      injectedFields,
+				Functions:           functions,
+				Destructor:          destructorFunction,
 				// NOTE: new value has no owner
 				Owner:    nil,
 				modified: true,
@@ -2674,7 +2675,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	lexicalScope = lexicalScope.Insert(identifier, variable)
 
 	compositeType := interpreter.Checker.Elaboration.CompositeDeclarationTypes[declaration]
-	typeID := compositeType.ID()
+	qualifiedIdentifier := compositeType.QualifiedIdentifier()
 
 	location := interpreter.Checker.Location
 
@@ -2699,10 +2700,10 @@ func (interpreter *Interpreter) declareEnumConstructor(
 		}
 
 		caseValue := &CompositeValue{
-			Location: location,
-			TypeID:   typeID,
-			Kind:     declaration.CompositeKind,
-			Fields:   caseValueFields,
+			Location:            location,
+			QualifiedIdentifier: qualifiedIdentifier,
+			Kind:                declaration.CompositeKind,
+			Fields:              caseValueFields,
 			// NOTE: new value has no owner
 			Owner:    nil,
 			modified: true,

@@ -345,10 +345,10 @@ func TestEncodeDecodeComposite(t *testing.T) {
 
 	t.Parallel()
 
-	t.Run("empty structure, string location", func(t *testing.T) {
+	t.Run("empty structure, string location, qualified identifier", func(t *testing.T) {
 		expected := NewCompositeValue(
 			utils.TestLocation,
-			"S.test.TestStruct",
+			"TestStruct",
 			common.CompositeKindStructure,
 			map[string]Value{},
 			nil,
@@ -358,6 +358,51 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: expected,
+				encoded: []byte{
+					// tag
+					0xd8, cborTagCompositeValue,
+					// map, 4 pairs of items follow
+					0xa4,
+					// key 0
+					0x0,
+					// tag
+					0xd8, cborTagStringLocation,
+					// UTF-8 string, length 4
+					0x64,
+					// t, e, s, t
+					0x74, 0x65, 0x73, 0x74,
+					// key 2
+					0x2,
+					// positive integer 1
+					0x1,
+					// key 3
+					0x3,
+					// map, 0 pairs of items follow
+					0xa0,
+					// key 4
+					0x4,
+					// UTF-8 string, length 10
+					0x6a,
+					0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+				},
+			},
+		)
+	})
+
+	t.Run("empty structure, string location, type ID", func(t *testing.T) {
+		expected := NewCompositeValue(
+			utils.TestLocation,
+			"TestStruct",
+			common.CompositeKindStructure,
+			map[string]Value{},
+			nil,
+		)
+		expected.modified = false
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				decodeOnly:   true,
+				decodedValue: expected,
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCompositeValue,
@@ -399,7 +444,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 				Address: common.BytesToAddress([]byte{0x1}),
 				Name:    "SimpleStruct",
 			},
-			"A.0x1.SimpleStruct",
+			"SimpleStruct",
 			common.CompositeKindStructure,
 			map[string]Value{},
 			nil,
@@ -425,12 +470,15 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					0x1,
 					// key 1
 					0x1,
-					// UTF-8 string, length 18
-					0x72,
-					// A.0x1.SimpleStruct
+					// UTF-8 string, length 31
+					0x78, 0x1F,
+					// A.0000000000000001.SimpleStruct
 					0x41,
-					0x2E, 0x30, 0x78, 0x31,
-					0x2E, 0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+					0x2E,
+					0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+					0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x31,
+					0x2E,
+					0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
 					// key 2
 					0x2,
 					// positive integer 1
@@ -444,13 +492,13 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		)
 	})
 
-	t.Run("non-empty resource", func(t *testing.T) {
+	t.Run("non-empty resource, qualified identifier", func(t *testing.T) {
 		stringValue := NewStringValue("test")
 		stringValue.modified = false
 
 		expected := NewCompositeValue(
 			utils.TestLocation,
-			"S.test.TestResource",
+			"TestResource",
 			common.CompositeKindResource,
 			map[string]Value{
 				"true":   BoolValue(true),
@@ -463,6 +511,71 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: expected,
+				encoded: []byte{
+					// tag
+					0xd8, cborTagCompositeValue,
+					// map, 4 pairs of items follow
+					0xa4,
+					// key 0
+					0x0,
+					// tag
+					0xd8, cborTagStringLocation,
+					// UTF-8 string, length 4
+					0x64,
+					// t, e, s, t
+					0x74, 0x65, 0x73, 0x74,
+					// key 2
+					0x2,
+					// positive integer 2
+					0x2,
+					// key 3
+					0x3,
+					// map, 2 pairs of items follow
+					0xa2,
+					// UTF-8 string, length 4
+					0x64,
+					// t, r, u, e
+					0x74, 0x72, 0x75, 0x65,
+					// true
+					0xf5,
+					// UTF-8 string, length 6
+					0x66,
+					// s, t, r, i, n, g
+					0x73, 0x74, 0x72, 0x69, 0x6e, 0x67,
+					// UTF-8 string, length 4
+					0x64,
+					// t, e, s, t
+					0x74, 0x65, 0x73, 0x74,
+					// key 4
+					0x4,
+					// UTF-8 string, length 12
+					0x6c,
+					0x54, 0x65, 0x73, 0x74, 0x52, 0x65, 0x73, 0x6f, 0x75, 0x72, 0x63, 0x65,
+				},
+			},
+		)
+	})
+
+	t.Run("non-empty resource, type ID", func(t *testing.T) {
+		stringValue := NewStringValue("test")
+		stringValue.modified = false
+
+		expected := NewCompositeValue(
+			utils.TestLocation,
+			"TestResource",
+			common.CompositeKindResource,
+			map[string]Value{
+				"true":   BoolValue(true),
+				"string": stringValue,
+			},
+			nil,
+		)
+		expected.modified = false
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				decodeOnly:   true,
+				decodedValue: expected,
 				encoded: []byte{
 					// tag
 					0xd8, cborTagCompositeValue,
@@ -510,7 +623,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 		)
 	})
 
-	t.Run("empty, address location", func(t *testing.T) {
+	t.Run("empty, address location, nested", func(t *testing.T) {
 
 		expected := NewCompositeValue(
 			common.AddressLocation{
@@ -518,7 +631,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 				// NOTE: not stored, inferred from type ID
 				Name: "TestContract",
 			},
-			"A.0x1.TestContract.TestStruct",
+			"TestContract.TestStruct",
 			common.CompositeKindStructure,
 			map[string]Value{},
 			nil,
@@ -543,12 +656,16 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					0x1,
 					// key 1
 					0x1,
-					// UTF-8 string, length 29
-					0x78, 0x1D,
+					// UTF-8 string, length 42
+					0x78, 0x2a,
 					0x41,
-					0x2e, 0x30, 0x78, 0x31,
-					0x2e, 0x54, 0x65, 0x73, 0x74, 0x43, 0x6F, 0x6E, 0x74, 0x72, 0x61, 0x63, 0x74,
-					0x2e, 0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+					0x2e,
+					0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+					0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x31,
+					0x2e,
+					0x54, 0x65, 0x73, 0x74, 0x43, 0x6F, 0x6E, 0x74, 0x72, 0x61, 0x63, 0x74,
+					0x2e,
+					0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
 					// key 2
 					0x2,
 					// positive integer 1
@@ -607,7 +724,7 @@ func TestEncodeDecodeComposite(t *testing.T) {
 				Address: common.BytesToAddress([]byte{0x1}),
 				Name:    "TestStruct",
 			},
-			"A.0x1.TestStruct",
+			"TestStruct",
 			common.CompositeKindStructure,
 			map[string]Value{},
 			nil,
@@ -640,12 +757,6 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					0x6a,
 					0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75,
 					0x63, 0x74,
-					// key 1
-					0x1,
-					// UTF-8 string, length 17
-					0x70,
-					0x41, 0x2e, 0x30, 0x78, 0x31, 0x2e, 0x54,
-					0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
 					// key 2
 					0x2,
 					// positive integer 1
@@ -654,6 +765,12 @@ func TestEncodeDecodeComposite(t *testing.T) {
 					0x3,
 					// map, 0 pairs of items follow
 					0xa0,
+					// key 4
+					0x4,
+					// UTF-8 string, length 10
+					0x6a,
+					0x54, 0x65, 0x73, 0x74, 0x53, 0x74, 0x72, 0x75,
+					0x63, 0x74,
 				},
 			},
 		)
@@ -3411,7 +3528,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				decodedValue: LinkValue{
 					TargetPath: publicPathValue,
 					Type: CompositeStaticType{
-						TypeID: "A.0x1.SimpleStruct",
+						TypeID: "A.0000000000000001.SimpleStruct",
 						Location: common.AddressLocation{
 							Address: common.BytesToAddress([]byte{0x1}),
 							Name:    "SimpleStruct",
@@ -3434,12 +3551,15 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					0x1,
 					// key 1
 					0x1,
-					// UTF-8 string, length 18
-					0x72,
-					// A.0x1.SimpleStruct
+					// UTF-8 string, length 31
+					0x78, 0x1F,
+					// A.0000000000000001.SimpleStruct
 					0x41,
-					0x2E, 0x30, 0x78, 0x31,
-					0x2E, 0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+					0x2E,
+					0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+					0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x31,
+					0x2E,
+					0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
 				),
 			},
 		)
@@ -3474,9 +3594,11 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					// UTF-8 string, length 22
 					0x76,
 					// S.test.SimpleInterface
-					0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x53,
-					0x69, 0x6d, 0x70, 0x6c, 0x65, 0x49, 0x6e, 0x74,
-					0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
+					0x53,
+					0x2e,
+					0x74, 0x65, 0x73, 0x74,
+					0x2e,
+					0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
 				),
 			},
 		)
@@ -3489,7 +3611,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				decodedValue: LinkValue{
 					TargetPath: publicPathValue,
 					Type: InterfaceStaticType{
-						TypeID: "A.0x1.SimpleInterface",
+						TypeID: "A.0000000000000001.SimpleInterface",
 						Location: common.AddressLocation{
 							Address: common.BytesToAddress([]byte{0x1}),
 							Name:    "SimpleInterface",
@@ -3512,12 +3634,15 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					0x1,
 					// key 1
 					0x1,
-					// UTF-8 string, length 21
-					0x75,
-					// A.0x1.SimpleInterface
+					// UTF-8 string, length 34
+					0x78, 0x22,
+					// A.0000000000000001.SimpleInterface
 					0x41,
-					0x2E, 0x30, 0x78, 0x31,
-					0x2E, 0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
+					0x2E,
+					0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30,
+					0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x31,
+					0x2E,
+					0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
 				),
 			},
 		)
@@ -3806,7 +3931,7 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		key1.modified = false
 		value1 := NewCompositeValue(
 			utils.TestLocation,
-			"S.test.R",
+			"R",
 			common.CompositeKindResource,
 			map[string]Value{},
 			nil,
@@ -3816,7 +3941,7 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		key2 := BoolValue(true)
 		value2 := NewCompositeValue(
 			utils.TestLocation,
-			"S.test.R2",
+			"R2",
 			common.CompositeKindResource,
 			map[string]Value{},
 			nil,

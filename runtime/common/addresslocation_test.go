@@ -74,7 +74,7 @@ func TestDecodeAddressLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeAddressLocationTypeID("A.01")
+		_, _, err := decodeAddressLocationTypeID("A.0000000000000001")
 		require.EqualError(t, err, "invalid address location type ID: missing qualified identifier")
 	})
 
@@ -82,7 +82,7 @@ func TestDecodeAddressLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		_, _, err := decodeAddressLocationTypeID("X.01.T")
+		_, _, err := decodeAddressLocationTypeID("X.0000000000000001.T")
 		require.EqualError(t, err, "invalid address location type ID: invalid prefix: expected \"A\", got \"X\"")
 	})
 
@@ -90,7 +90,7 @@ func TestDecodeAddressLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		location, qualifiedIdentifier, err := decodeAddressLocationTypeID("A.01.T")
+		location, qualifiedIdentifier, err := decodeAddressLocationTypeID("A.0000000000000001.T")
 		require.NoError(t, err)
 
 		assert.Equal(t,
@@ -107,7 +107,7 @@ func TestDecodeAddressLocationTypeID(t *testing.T) {
 
 		t.Parallel()
 
-		location, qualifiedIdentifier, err := decodeAddressLocationTypeID("A.01.T.U")
+		location, qualifiedIdentifier, err := decodeAddressLocationTypeID("A.0000000000000001.T.U")
 		require.NoError(t, err)
 
 		assert.Equal(t,

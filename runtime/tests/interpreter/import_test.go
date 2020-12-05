@@ -74,9 +74,9 @@ func TestInterpretVirtualImport(t *testing.T) {
 						return interpreter.VirtualImport{
 							Globals: map[string]interpreter.Value{
 								"Foo": &interpreter.CompositeValue{
-									Location: location,
-									TypeID:   "I.Foo.Foo",
-									Kind:     common.CompositeKindContract,
+									Location:            location,
+									QualifiedIdentifier: "Foo",
+									Kind:                common.CompositeKindContract,
 									Functions: map[string]interpreter.FunctionValue{
 										"bar": interpreter.NewHostFunctionValue(
 											func(invocation interpreter.Invocation) trampoline.Trampoline {

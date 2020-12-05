@@ -418,7 +418,7 @@ func importCompositeValue(
 
 	return interpreter.NewCompositeValue(
 		location,
-		location.TypeID(qualifiedIdentifier),
+		qualifiedIdentifier,
 		kind,
 		fields,
 		nil,

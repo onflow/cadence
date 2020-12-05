@@ -5722,7 +5722,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 	expectedEvents := []*interpreter.CompositeValue{
 		interpreter.NewCompositeValue(
 			TestLocation,
-			transferEventType.ID(),
+			TestLocation.QualifiedIdentifier(transferEventType.ID()),
 			common.CompositeKindEvent,
 			map[string]interpreter.Value{
 				"to":   interpreter.NewIntValueFromInt64(1),
@@ -5732,7 +5732,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 		),
 		interpreter.NewCompositeValue(
 			TestLocation,
-			transferEventType.ID(),
+			TestLocation.QualifiedIdentifier(transferEventType.ID()),
 			common.CompositeKindEvent,
 			map[string]interpreter.Value{
 				"to":   interpreter.NewIntValueFromInt64(3),
@@ -5742,7 +5742,7 @@ func TestInterpretEmitEvent(t *testing.T) {
 		),
 		interpreter.NewCompositeValue(
 			TestLocation,
-			transferAmountEventType.ID(),
+			TestLocation.QualifiedIdentifier(transferAmountEventType.ID()),
 			common.CompositeKindEvent,
 			map[string]interpreter.Value{
 				"to":     interpreter.NewIntValueFromInt64(1),
@@ -5816,7 +5816,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			value: func() interpreter.Value {
 				v := interpreter.NewCompositeValue(
 					TestLocation,
-					"S.test.S",
+					"S",
 					common.CompositeKindStructure,
 					map[string]interpreter.Value{},
 					nil,
@@ -5917,10 +5917,11 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)
 
+			testType := inter.Checker.GlobalTypes["Test"].Type
 			expectedEvents := []*interpreter.CompositeValue{
 				interpreter.NewCompositeValue(
 					TestLocation,
-					inter.Checker.GlobalTypes["Test"].Type.ID(),
+					TestLocation.QualifiedIdentifier(testType.ID()),
 					common.CompositeKindEvent,
 					map[string]interpreter.Value{
 						"value": value.value,
@@ -6561,7 +6562,7 @@ func TestInterpretCompositeDeclarationNestedTypeScopingOuterInner(t *testing.T) 
 
 	assert.Equal(t,
 		sema.TypeID("S.test.Test.X"),
-		x1.(*interpreter.CompositeValue).TypeID,
+		x1.(*interpreter.CompositeValue).TypeID(),
 	)
 
 	require.IsType(t,
@@ -6571,7 +6572,7 @@ func TestInterpretCompositeDeclarationNestedTypeScopingOuterInner(t *testing.T) 
 
 	assert.Equal(t,
 		sema.TypeID("S.test.Test.X"),
-		x2.(*interpreter.CompositeValue).TypeID,
+		x2.(*interpreter.CompositeValue).TypeID(),
 	)
 }
 
@@ -6604,7 +6605,7 @@ func TestInterpretCompositeDeclarationNestedConstructor(t *testing.T) {
 
 	assert.Equal(t,
 		sema.TypeID("S.test.Test.X"),
-		x.(*interpreter.CompositeValue).TypeID,
+		x.(*interpreter.CompositeValue).TypeID(),
 	)
 }
 
@@ -6705,7 +6706,7 @@ func TestInterpretContractAccountFieldUse(t *testing.T) {
 					func(
 						_ *interpreter.Interpreter,
 						_ common.Location,
-						_ sema.TypeID,
+						_ string,
 						_ common.CompositeKind,
 					) map[string]interpreter.Value {
 						panicFunction := interpreter.NewHostFunctionValue(func(invocation interpreter.Invocation) trampoline.Trampoline {

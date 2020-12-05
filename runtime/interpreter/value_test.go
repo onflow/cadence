@@ -31,7 +31,7 @@ import (
 func newTestCompositeValue(owner common.Address) *CompositeValue {
 	return NewCompositeValue(
 		utils.TestLocation,
-		"S.test.Test",
+		"Test",
 		common.CompositeKindStructure,
 		map[string]Value{},
 		&owner,
@@ -532,7 +532,7 @@ func TestStringer(t *testing.T) {
 		"composite": {
 			value: NewCompositeValue(
 				utils.TestLocation,
-				"S.test.Foo",
+				"Foo",
 				common.CompositeKindResource,
 				map[string]Value{
 					"y": NewStringValue("bar"),
@@ -613,7 +613,7 @@ func TestVisitor(t *testing.T) {
 	value = NewDictionaryValueUnownedNonCopying(NewStringValue("42"), value)
 	value = NewCompositeValue(
 		utils.TestLocation,
-		"S.test.Foo",
+		"Foo",
 		common.CompositeKindStructure,
 		map[string]Value{
 			"foo": value,

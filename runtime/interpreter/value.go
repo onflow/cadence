@@ -5204,23 +5204,22 @@ func (v UFix64Value) ToBigEndianBytes() []byte {
 // CompositeValue
 
 type CompositeValue struct {
-	Location common.Location
-	// TODO: replace with qualified identifier. Type ID can be constructed from location + qualified identifier
-	TypeID         sema.TypeID
-	Kind           common.CompositeKind
-	Fields         map[string]Value
-	InjectedFields map[string]Value
-	NestedValues   map[string]Value
-	Functions      map[string]FunctionValue
-	Destructor     FunctionValue
-	Owner          *common.Address
-	destroyed      bool
-	modified       bool
+	Location            common.Location
+	QualifiedIdentifier string
+	Kind                common.CompositeKind
+	Fields              map[string]Value
+	InjectedFields      map[string]Value
+	NestedValues        map[string]Value
+	Functions           map[string]FunctionValue
+	Destructor          FunctionValue
+	Owner               *common.Address
+	destroyed           bool
+	modified            bool
 }
 
 func NewCompositeValue(
 	location common.Location,
-	typeID sema.TypeID,
+	qualifiedIdentifier string,
 	kind common.CompositeKind,
 	fields map[string]Value,
 	owner *common.Address,
@@ -5229,12 +5228,12 @@ func NewCompositeValue(
 		fields = map[string]Value{}
 	}
 	return &CompositeValue{
-		Location: location,
-		TypeID:   typeID,
-		Kind:     kind,
-		Fields:   fields,
-		Owner:    owner,
-		modified: true,
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifier,
+		Kind:                kind,
+		Fields:              fields,
+		Owner:               owner,
+		modified:            true,
 	}
 }
 
@@ -5242,7 +5241,7 @@ func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange Locatio
 
 	// if composite was deserialized, dynamically link in the destructor
 	if v.Destructor == nil {
-		v.Destructor = interpreter.typeCodes.CompositeCodes[v.TypeID].DestructorFunction
+		v.Destructor = interpreter.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
 	}
 
 	destructor := v.Destructor
@@ -5282,7 +5281,7 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (v *CompositeValue) DynamicType(interpreter *Interpreter) DynamicType {
-	staticType := interpreter.getCompositeType(v.Location, v.TypeID)
+	staticType := interpreter.getCompositeType(v.Location, v.TypeID())
 	return CompositeDynamicType{
 		StaticType: staticType,
 	}
@@ -5306,15 +5305,15 @@ func (v *CompositeValue) Copy() Value {
 	// NOTE: not copying functions or destructor – they are linked in
 
 	return &CompositeValue{
-		Location:       v.Location,
-		TypeID:         v.TypeID,
-		Kind:           v.Kind,
-		Fields:         newFields,
-		InjectedFields: v.InjectedFields,
-		NestedValues:   v.NestedValues,
-		Functions:      v.Functions,
-		Destructor:     v.Destructor,
-		destroyed:      v.destroyed,
+		Location:            v.Location,
+		QualifiedIdentifier: v.QualifiedIdentifier,
+		Kind:                v.Kind,
+		Fields:              newFields,
+		InjectedFields:      v.InjectedFields,
+		NestedValues:        v.NestedValues,
+		Functions:           v.Functions,
+		Destructor:          v.Destructor,
+		destroyed:           v.destroyed,
 		// NOTE: new value has no owner
 		Owner:    nil,
 		modified: true,
@@ -5416,7 +5415,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		v.InjectedFields = interpreter.injectedCompositeFieldsHandler(
 			interpreter,
 			v.Location,
-			v.TypeID,
+			v.QualifiedIdentifier,
 			v.Kind,
 		)
 	}
@@ -5444,7 +5443,7 @@ func (v *CompositeValue) InitializeFunctions(interpreter *Interpreter) {
 		return
 	}
 
-	v.Functions = interpreter.typeCodes.CompositeCodes[v.TypeID].CompositeFunctions
+	v.Functions = interpreter.typeCodes.CompositeCodes[v.TypeID()].CompositeFunctions
 }
 
 func (v *CompositeValue) OwnerValue() OptionalValue {
@@ -5485,7 +5484,7 @@ func (v *CompositeValue) String() string {
 			},
 		)
 	}
-	return format.Composite(string(v.TypeID), fields)
+	return format.Composite(string(v.TypeID()), fields)
 }
 
 func (v *CompositeValue) GetField(name string) Value {
@@ -5514,6 +5513,10 @@ func (v *CompositeValue) KeyString() string {
 	}
 
 	panic(errors.NewUnreachableError())
+}
+
+func (v *CompositeValue) TypeID() common.TypeID {
+	return v.Location.TypeID(v.QualifiedIdentifier)
 }
 
 // DictionaryValue

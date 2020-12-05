@@ -227,11 +227,20 @@ func (d *Decoder) decodeValue(v interface{}, path []string) (Value, error) {
 			return d.decodeType(v.Content)
 
 		default:
-			return nil, fmt.Errorf("unsupported decoded tag: %d, %v", v.Number, v.Content)
+			return nil, fmt.Errorf(
+				"unsupported decoded tag (@ %s): %d, %v",
+				strings.Join(path, "."),
+				v.Number,
+				v.Content,
+			)
 		}
 
 	default:
-		return nil, fmt.Errorf("unsupported decoded type: %[1]T, %[1]v", v)
+		return nil, fmt.Errorf(
+			"unsupported decoded type (@ %s): %[2]T, %[2]v",
+			strings.Join(path, "."),
+			v,
+		)
 	}
 }
 
@@ -243,11 +252,17 @@ func (d *Decoder) decodeString(v string) Value {
 
 func (d *Decoder) decodeArray(v []interface{}, path []string) (*ArrayValue, error) {
 	values := make([]Value, len(v))
+
 	for i, value := range v {
 		valuePath := append(path[:], strconv.Itoa(i))
 		res, err := d.decodeValue(value, valuePath)
 		if err != nil {
-			return nil, fmt.Errorf("invalid array element encoding: %w", err)
+			return nil, fmt.Errorf(
+				"invalid array element encoding (@ %s, %d): %w",
+				strings.Join(path, "."),
+				i,
+				err,
+			)
 		}
 		values[i] = res
 	}
@@ -262,23 +277,41 @@ func (d *Decoder) decodeArray(v []interface{}, path []string) (*ArrayValue, erro
 func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryValue, error) {
 	encoded, ok := v.(map[interface{}]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid dictionary encoding: %T", v)
+		return nil, fmt.Errorf(
+			"invalid dictionary encoding (@ %s): %T",
+			strings.Join(path, "."),
+			v,
+		)
 	}
 
-	encodedKeys, ok := encoded[encodedDictionaryValueKeysFieldKey].([]interface{})
+	keysField := encoded[encodedDictionaryValueKeysFieldKey]
+	encodedKeys, ok := keysField.([]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid dictionary keys encoding")
+		return nil, fmt.Errorf(
+			"invalid dictionary keys encoding (@ %s): %T",
+			strings.Join(path, "."),
+			keysField,
+		)
 	}
 
 	keysPath := append(path[:], dictionaryKeyPathPrefix)
 	keys, err := d.decodeArray(encodedKeys, keysPath)
 	if err != nil {
-		return nil, fmt.Errorf("invalid dictionary keys encoding: %w", err)
+		return nil, fmt.Errorf(
+			"invalid dictionary keys encoding (@ %s): %w",
+			strings.Join(path, "."),
+			err,
+		)
 	}
 
-	encodedEntries, ok := encoded[encodedDictionaryValueEntriesFieldKey].(map[interface{}]interface{})
+	entriesField := encoded[encodedDictionaryValueEntriesFieldKey]
+	encodedEntries, ok := entriesField.(map[interface{}]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid dictionary entries encoding")
+		return nil, fmt.Errorf(
+			"invalid dictionary entries encoding (@ %s): %T",
+			strings.Join(path, "."),
+			entriesField,
+		)
 	}
 
 	keyCount := keys.Count()
@@ -290,7 +323,8 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 	countMismatch := entryCount != keyCount
 	if countMismatch && entryCount != 0 {
 		return nil, fmt.Errorf(
-			"invalid dictionary encoding: key and entry count mismatch: expected %d, got %d",
+			"invalid dictionary encoding (@ %s): key and entry count mismatch: expected %d, got %d",
+			strings.Join(path, "."),
 			keyCount,
 			entryCount,
 		)
@@ -318,20 +352,34 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 	} else {
 		entries = make(map[string]Value, entryCount)
 
+		index := 0
+
 		for key, value := range encodedEntries {
 
 			keyString, ok := key.(string)
 			if !ok {
-				return nil, fmt.Errorf("invalid dictionary key encoding")
+				return nil, fmt.Errorf(
+					"invalid dictionary key encoding (@ %s, %d): %T",
+					strings.Join(path, "."),
+					index,
+					key,
+				)
 			}
 
 			valuePath := append(path[:], dictionaryValuePathPrefix, keyString)
 			decodedValue, err := d.decodeValue(value, valuePath)
 			if err != nil {
-				return nil, fmt.Errorf("invalid dictionary value encoding: %w", err)
+				return nil, fmt.Errorf(
+					"invalid dictionary value encoding (@ %s, %s): %w",
+					strings.Join(path, "."),
+					key,
+					err,
+				)
 			}
 
 			entries[keyString] = decodedValue
+
+			index++
 		}
 	}
 
@@ -440,63 +488,130 @@ func (d *Decoder) decodeComposite(v interface{}, path []string) (*CompositeValue
 
 	encoded, ok := v.(map[interface{}]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid composite encoding: %T", v)
+		return nil, fmt.Errorf(
+			"invalid composite encoding (@ %s): %T",
+			strings.Join(path, "."),
+			v,
+		)
 	}
 
 	// Location
 
 	location, err := d.decodeLocation(encoded[encodedCompositeValueLocationFieldKey])
 	if err != nil {
-		return nil, fmt.Errorf("invalid composite location encoding: %w", err)
+		return nil, fmt.Errorf(
+			"invalid composite location encoding (@ %s): %w",
+			strings.Join(path, "."),
+			err,
+		)
 	}
 
-	// Type ID
+	// Qualified identifier or Type ID.
+	//
+	// An earlier version of the format stored the whole type ID.
+	// However, the composite already stores the location,
+	// so the current version of the format only stores the qualified identifier.
 
-	field2 := encoded[encodedCompositeValueTypeIDFieldKey]
-	encodedTypeID, ok := field2.(string)
-	if !ok {
-		return nil, fmt.Errorf("invalid composite type ID encoding: %T", field2)
+	var qualifiedIdentifier string
+
+	qualifiedIdentifierField := encoded[encodedCompositeValueQualifiedIdentifierFieldKey]
+	if qualifiedIdentifierField != nil {
+		qualifiedIdentifier, ok = qualifiedIdentifierField.(string)
+		if !ok {
+			return nil, fmt.Errorf(
+				"invalid composite qualified identifier encoding (@ %s): %T",
+				strings.Join(path, "."),
+				qualifiedIdentifierField,
+			)
+		}
+	} else {
+		typeIDField := encoded[encodedCompositeValueTypeIDFieldKey]
+		if typeIDField != nil {
+
+			encodedTypeID, ok := typeIDField.(string)
+			if !ok {
+				return nil, fmt.Errorf(
+					"invalid composite type ID encoding (@ %s): %T",
+					strings.Join(path, "."),
+					typeIDField,
+				)
+			}
+
+			_, qualifiedIdentifier, err = common.DecodeTypeID(encodedTypeID)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"invalid composite type ID (@ %s): %w",
+					strings.Join(path, "."),
+					err,
+				)
+			}
+
+			// Special case: The decoded location might be an address location which has no name
+
+			location = d.inferAddressLocationName(location, qualifiedIdentifier)
+		} else {
+			return nil, fmt.Errorf(
+				"missing composite qualified identifier or type ID (@ %s)",
+				strings.Join(path, "."),
+			)
+		}
 	}
-	typeID := sema.TypeID(encodedTypeID)
-
-	// Special case: The decoded location might be an address location which has no name
-
-	location = d.inferAddressLocationName(location, typeID)
 
 	// Kind
 
-	field3 := encoded[encodedCompositeValueKindFieldKey]
-	encodedKind, ok := field3.(uint64)
+	kindField := encoded[encodedCompositeValueKindFieldKey]
+	encodedKind, ok := kindField.(uint64)
 	if !ok {
-		return nil, fmt.Errorf("invalid composite kind encoding: %T", field3)
+		return nil, fmt.Errorf(
+			"invalid composite kind encoding (@ %s): %T",
+			strings.Join(path, "."),
+			kindField,
+		)
 	}
 	kind := common.CompositeKind(encodedKind)
 
 	// Fields
 
-	field4 := encoded[encodedCompositeValueFieldsFieldKey]
-	encodedFields, ok := field4.(map[interface{}]interface{})
+	fieldsField := encoded[encodedCompositeValueFieldsFieldKey]
+	encodedFields, ok := fieldsField.(map[interface{}]interface{})
 	if !ok {
-		return nil, fmt.Errorf("invalid composite fields encoding")
+		return nil, fmt.Errorf(
+			"invalid composite fields encoding (@ %s): %T",
+			strings.Join(path, "."),
+			fieldsField,
+		)
 	}
 
 	fields := make(map[string]Value, len(encodedFields))
 
+	index := 0
 	for name, value := range encodedFields {
 		nameString, ok := name.(string)
 		if !ok {
-			return nil, fmt.Errorf("invalid dictionary field name encoding: %T", name)
+			return nil, fmt.Errorf(
+				"invalid dictionary field name encoding (@ %s, %d): %T",
+				strings.Join(path, "."),
+				index,
+				name,
+			)
 		}
 		valuePath := append(path[:], nameString)
 		decodedValue, err := d.decodeValue(value, valuePath)
 		if err != nil {
-			return nil, fmt.Errorf("invalid dictionary field value encoding: %w", err)
+			return nil, fmt.Errorf(
+				"invalid dictionary field value encoding (@ %s, %s): %w",
+				strings.Join(path, "."),
+				name,
+				err,
+			)
 		}
 
 		fields[nameString] = decodedValue
+
+		index++
 	}
 
-	compositeValue := NewCompositeValue(location, typeID, kind, fields, d.owner)
+	compositeValue := NewCompositeValue(location, qualifiedIdentifier, kind, fields, d.owner)
 	compositeValue.modified = false
 	return compositeValue, nil
 }
@@ -829,7 +944,11 @@ func (d *Decoder) decodeUFix64(v interface{}) (UFix64Value, error) {
 func (d *Decoder) decodeSome(v interface{}, path []string) (*SomeValue, error) {
 	value, err := d.decodeValue(v, path)
 	if err != nil {
-		return nil, fmt.Errorf("invalid some value encoding: %w", err)
+		return nil, fmt.Errorf(
+			"invalid some value encoding (@ %s): %w",
+			strings.Join(path, "."),
+			err,
+		)
 	}
 
 	return &SomeValue{
@@ -1100,12 +1219,13 @@ func (d *Decoder) decodeLocationAndTypeID(
 
 	// Special case: The decoded location might be an address location which has no name
 
-	location = d.inferAddressLocationName(location, typeID)
+	qualifiedIdentifier := location.QualifiedIdentifier(typeID)
+	location = d.inferAddressLocationName(location, qualifiedIdentifier)
 
 	return location, typeID, nil
 }
 
-// inferAddressLocationName infers the name for an address location from a type ID.
+// inferAddressLocationName infers the name for an address location from a qualified identifier.
 //
 // In the first version of the storage format, accounts could only store one contract
 // instead of several contracts (separated by name), so composite's locations were
@@ -1116,9 +1236,9 @@ func (d *Decoder) decodeLocationAndTypeID(
 //
 // So to keep backwards-compatibility:
 // If the location is an address location without a name,
-// then infer the name from the type ID.
+// then infer the name from the qualified identifier.
 //
-func (d *Decoder) inferAddressLocationName(location common.Location, typeID sema.TypeID) common.Location {
+func (d *Decoder) inferAddressLocationName(location common.Location, qualifiedIdentifier string) common.Location {
 
 	// Only consider address locations which have no name
 
@@ -1129,7 +1249,6 @@ func (d *Decoder) inferAddressLocationName(location common.Location, typeID sema
 
 	// The first component of the type ID is the location name
 
-	qualifiedIdentifier := location.QualifiedIdentifier(typeID)
 	parts := strings.SplitN(qualifiedIdentifier, ".", 2)
 
 	return common.AddressLocation{
