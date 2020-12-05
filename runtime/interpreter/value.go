@@ -5281,7 +5281,7 @@ func (v *CompositeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (v *CompositeValue) DynamicType(interpreter *Interpreter) DynamicType {
-	staticType := interpreter.getCompositeType(v.Location, v.TypeID())
+	staticType := interpreter.getCompositeType(v.Location, v.QualifiedIdentifier)
 	return CompositeDynamicType{
 		StaticType: staticType,
 	}

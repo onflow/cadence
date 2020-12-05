@@ -4417,11 +4417,11 @@ func (interpreter *Interpreter) getCapabilityFinalTargetStorageKey(
 func (interpreter *Interpreter) ConvertStaticToSemaType(staticType StaticType) sema.Type {
 	return ConvertStaticToSemaType(
 		staticType,
-		func(location common.Location, typeID sema.TypeID) *sema.InterfaceType {
-			return interpreter.getInterfaceType(location, typeID)
+		func(location common.Location, qualifiedIdentifier string) *sema.InterfaceType {
+			return interpreter.getInterfaceType(location, qualifiedIdentifier)
 		},
-		func(location common.Location, typeID sema.TypeID) *sema.CompositeType {
-			return interpreter.getCompositeType(location, typeID)
+		func(location common.Location, qualifiedIdentifier string) *sema.CompositeType {
+			return interpreter.getCompositeType(location, qualifiedIdentifier)
 		},
 	)
 }
@@ -4447,13 +4447,15 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 	return checker.Elaboration
 }
 
-func (interpreter *Interpreter) getCompositeType(location common.Location, typeID sema.TypeID) *sema.CompositeType {
+func (interpreter *Interpreter) getCompositeType(location common.Location, qualifiedIdentifier string) *sema.CompositeType {
 	elaboration := interpreter.getElaboration(location)
+	typeID := location.TypeID(qualifiedIdentifier)
 	return elaboration.CompositeTypes[typeID]
 }
 
-func (interpreter *Interpreter) getInterfaceType(location common.Location, typeID sema.TypeID) *sema.InterfaceType {
+func (interpreter *Interpreter) getInterfaceType(location common.Location, qualifiedIdentifier string) *sema.InterfaceType {
 	elaboration := interpreter.getElaboration(location)
+	typeID := location.TypeID(qualifiedIdentifier)
 	return elaboration.InterfaceTypes[typeID]
 }
 

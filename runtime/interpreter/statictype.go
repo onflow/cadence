@@ -42,34 +42,34 @@ type StaticType interface {
 // CompositeStaticType
 
 type CompositeStaticType struct {
-	Location common.Location
-	TypeID   sema.TypeID
+	Location            common.Location
+	QualifiedIdentifier string
 }
 
 func (CompositeStaticType) isStaticType() {}
 
 func (t CompositeStaticType) String() string {
 	return fmt.Sprintf(
-		"CompositeStaticType(Location: %s, TypeID: %s)",
+		"CompositeStaticType(Location: %s, QualifiedIdentifier: %s)",
 		t.Location,
-		t.TypeID,
+		t.QualifiedIdentifier,
 	)
 }
 
 // InterfaceStaticType
 
 type InterfaceStaticType struct {
-	Location common.Location
-	TypeID   sema.TypeID
+	Location            common.Location
+	QualifiedIdentifier string
 }
 
 func (InterfaceStaticType) isStaticType() {}
 
 func (t InterfaceStaticType) String() string {
 	return fmt.Sprintf(
-		"InterfaceStaticType(Location: %s, TypeID: %s)",
+		"InterfaceStaticType(Location: %s, QualifiedIdentifier: %s)",
 		t.Location,
-		t.TypeID,
+		t.QualifiedIdentifier,
 	)
 }
 
@@ -181,8 +181,8 @@ func ConvertSemaToStaticType(t sema.Type) StaticType {
 	switch t := t.(type) {
 	case *sema.CompositeType:
 		return CompositeStaticType{
-			Location: t.Location,
-			TypeID:   t.ID(),
+			Location:            t.Location,
+			QualifiedIdentifier: t.QualifiedIdentifier(),
 		}
 
 	case *sema.InterfaceType:
@@ -249,22 +249,22 @@ func convertSemaReferenceToStaticReferenceType(t *sema.ReferenceType) ReferenceS
 
 func convertToInterfaceStaticType(t *sema.InterfaceType) InterfaceStaticType {
 	return InterfaceStaticType{
-		Location: t.Location,
-		TypeID:   t.ID(),
+		Location:            t.Location,
+		QualifiedIdentifier: t.QualifiedIdentifier(),
 	}
 }
 
 func ConvertStaticToSemaType(
 	typ StaticType,
-	getInterface func(location common.Location, id sema.TypeID) *sema.InterfaceType,
-	getComposite func(location common.Location, id sema.TypeID) *sema.CompositeType,
+	getInterface func(location common.Location, qualifiedIdentifier string) *sema.InterfaceType,
+	getComposite func(location common.Location, qualifiedIdentifier string) *sema.CompositeType,
 ) sema.Type {
 	switch t := typ.(type) {
 	case CompositeStaticType:
-		return getComposite(t.Location, t.TypeID)
+		return getComposite(t.Location, t.QualifiedIdentifier)
 
 	case InterfaceStaticType:
-		return getInterface(t.Location, t.TypeID)
+		return getInterface(t.Location, t.QualifiedIdentifier)
 
 	case VariableSizedStaticType:
 		return &sema.VariableSizedType{
@@ -292,7 +292,7 @@ func ConvertStaticToSemaType(
 		restrictions := make([]*sema.InterfaceType, len(t.Restrictions))
 
 		for i, restriction := range t.Restrictions {
-			restrictions[i] = getInterface(restriction.Location, restriction.TypeID)
+			restrictions[i] = getInterface(restriction.Location, restriction.QualifiedIdentifier)
 		}
 
 		return &sema.RestrictedType{

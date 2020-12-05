@@ -3484,14 +3484,50 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 		)
 	})
 
-	t.Run("composite, struct", func(t *testing.T) {
+	t.Run("composite, struct, qualified identifier", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: LinkValue{
 					TargetPath: publicPathValue,
 					Type: CompositeStaticType{
-						TypeID:   "S.test.SimpleStruct",
-						Location: utils.TestLocation,
+						Location:            utils.TestLocation,
+						QualifiedIdentifier: "SimpleStruct",
+					},
+				},
+				encoded: append(
+					expectedLinkEncodingPrefix[:],
+					// tag
+					0xd8, cborTagCompositeStaticType,
+					// map, 2 pairs of items follow
+					0xa2,
+					// key 0
+					0x0,
+					// tag
+					0xd8, cborTagStringLocation,
+					// UTF-8 string, length 4
+					0x64,
+					// t, e, s, t
+					0x74, 0x65, 0x73, 0x74,
+					// key 1
+					0x2,
+					// UTF-8 string, length 12
+					0x6c,
+					// SimpleStruct
+					0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x53, 0x74, 0x72, 0x75, 0x63, 0x74,
+				),
+			},
+		)
+	})
+
+	t.Run("composite, struct, type ID", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				decodeOnly: true,
+				decodedValue: LinkValue{
+					TargetPath: publicPathValue,
+					Type: CompositeStaticType{
+						Location:            utils.TestLocation,
+						QualifiedIdentifier: "SimpleStruct",
 					},
 				},
 				encoded: append(
@@ -3528,11 +3564,11 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				decodedValue: LinkValue{
 					TargetPath: publicPathValue,
 					Type: CompositeStaticType{
-						TypeID: "A.0000000000000001.SimpleStruct",
 						Location: common.AddressLocation{
 							Address: common.BytesToAddress([]byte{0x1}),
 							Name:    "SimpleStruct",
 						},
+						QualifiedIdentifier: "SimpleStruct",
 					},
 				},
 				encoded: append(
@@ -3565,14 +3601,50 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 		)
 	})
 
-	t.Run("interface, struct", func(t *testing.T) {
+	t.Run("interface, struct, qualified identifier", func(t *testing.T) {
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				value: LinkValue{
 					TargetPath: publicPathValue,
 					Type: InterfaceStaticType{
-						TypeID:   "S.test.SimpleInterface",
-						Location: utils.TestLocation,
+						Location:            utils.TestLocation,
+						QualifiedIdentifier: "SimpleInterface",
+					},
+				},
+				encoded: append(
+					expectedLinkEncodingPrefix[:],
+					// tag
+					0xd8, cborTagInterfaceStaticType,
+					// map, 2 pairs of items follow
+					0xa2,
+					// key 0
+					0x0,
+					// tag
+					0xd8, cborTagStringLocation,
+					// UTF-8 string, length 4
+					0x64,
+					// t, e, s, t
+					0x74, 0x65, 0x73, 0x74,
+					// key 1
+					0x2,
+					// UTF-8 string, length 22
+					0x6F,
+					// SimpleInterface
+					0x53, 0x69, 0x6d, 0x70, 0x6c, 0x65, 0x49, 0x6e, 0x74, 0x65, 0x72, 0x66, 0x61, 0x63, 0x65,
+				),
+			},
+		)
+	})
+
+	t.Run("interface, struct, type ID", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				decodeOnly: true,
+				decodedValue: LinkValue{
+					TargetPath: publicPathValue,
+					Type: InterfaceStaticType{
+						Location:            utils.TestLocation,
+						QualifiedIdentifier: "SimpleInterface",
 					},
 				},
 				encoded: append(
@@ -3611,11 +3683,11 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 				decodedValue: LinkValue{
 					TargetPath: publicPathValue,
 					Type: InterfaceStaticType{
-						TypeID: "A.0000000000000001.SimpleInterface",
 						Location: common.AddressLocation{
 							Address: common.BytesToAddress([]byte{0x1}),
 							Name:    "SimpleInterface",
 						},
+						QualifiedIdentifier: "SimpleInterface",
 					},
 				},
 				encoded: append(
@@ -3797,17 +3869,17 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					TargetPath: publicPathValue,
 					Type: RestrictedStaticType{
 						Type: CompositeStaticType{
-							TypeID:   "S.test.S",
-							Location: utils.TestLocation,
+							Location:            utils.TestLocation,
+							QualifiedIdentifier: "S",
 						},
 						Restrictions: []InterfaceStaticType{
 							{
-								TypeID:   "S.test.I1",
-								Location: utils.TestLocation,
+								Location:            utils.TestLocation,
+								QualifiedIdentifier: "I1",
 							},
 							{
-								TypeID:   "S.test.I2",
-								Location: utils.TestLocation,
+								Location:            utils.TestLocation,
+								QualifiedIdentifier: "I2",
 							},
 						},
 					},
@@ -3832,12 +3904,12 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					0x64,
 					// t, e, s, t
 					0x74, 0x65, 0x73, 0x74,
-					// key 1
-					0x1,
-					// UTF-8 string, length 8
-					0x68,
-					// S.test.S
-					0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x53,
+					// key 2
+					0x2,
+					// UTF-8 string, length 1
+					0x61,
+					// S
+					0x53,
 					// key 1
 					0x1,
 					// array, length 2
@@ -3854,12 +3926,12 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					0x64,
 					// t, e, s, t
 					0x74, 0x65, 0x73, 0x74,
-					// key 1
-					0x1,
-					// UTF-8 string, length 9
-					0x69,
-					// S.test.I1
-					0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x49, 0x31,
+					// key 2
+					0x2,
+					// UTF-8 string, length 2
+					0x62,
+					// I1
+					0x49, 0x31,
 					// tag
 					0xd8, cborTagInterfaceStaticType,
 					// map, 2 pairs of items follow
@@ -3872,12 +3944,12 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 					0x64,
 					// t, e, s, t
 					0x74, 0x65, 0x73, 0x74,
-					// key 1
-					0x1,
-					// UTF-8 string, length 9
-					0x69,
-					// S.test.I2
-					0x53, 0x2e, 0x74, 0x65, 0x73, 0x74, 0x2e, 0x49, 0x32,
+					// key 2
+					0x2,
+					// UTF-8 string, length 2
+					0x62,
+					// I2
+					0x49, 0x32,
 				),
 			},
 		)
