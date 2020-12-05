@@ -142,12 +142,13 @@ func newCryptoContractVerifySignatureFunction(signatureVerifier CryptoSignatureV
 }
 
 func newCryptoContractSignatureVerifier(signatureVerifier CryptoSignatureVerifier) *interpreter.CompositeValue {
-	implementationTypeID :=
-		sema.TypeID(string(cryptoContractInitializerTypes[0].ID()) + "Impl")
+	implIdentifier := CryptoChecker.Location.
+		QualifiedIdentifier(cryptoContractInitializerTypes[0].ID()) +
+		"Impl"
 
 	result := interpreter.NewCompositeValue(
 		CryptoChecker.Location,
-		implementationTypeID,
+		implIdentifier,
 		common.CompositeKindStructure,
 		nil,
 		nil,
@@ -188,12 +189,13 @@ func newCryptoContractHashFunction(hasher CryptoHasher) interpreter.FunctionValu
 }
 
 func newCryptoContractHasher(hasher CryptoHasher) *interpreter.CompositeValue {
-	implementationTypeID :=
-		sema.TypeID(string(cryptoContractInitializerTypes[1].ID()) + "Impl")
+	implIdentifier := CryptoChecker.Location.
+		QualifiedIdentifier(cryptoContractInitializerTypes[1].ID()) +
+		"Impl"
 
 	result := interpreter.NewCompositeValue(
 		CryptoChecker.Location,
-		implementationTypeID,
+		implIdentifier,
 		common.CompositeKindStructure,
 		nil,
 		nil,

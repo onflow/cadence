@@ -763,7 +763,7 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 	return func(
 		_ *interpreter.Interpreter,
 		location Location,
-		_ sema.TypeID,
+		_ string,
 		compositeKind common.CompositeKind,
 	) map[string]interpreter.Value {
 

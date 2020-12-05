@@ -710,10 +710,11 @@ func (e *Encoder) prepareDictionaryValue(
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	encodedCompositeValueLocationFieldKey uint64 = 0
-	encodedCompositeValueTypeIDFieldKey   uint64 = 1
-	encodedCompositeValueKindFieldKey     uint64 = 2
-	encodedCompositeValueFieldsFieldKey   uint64 = 3
+	encodedCompositeValueLocationFieldKey            uint64 = 0
+	encodedCompositeValueTypeIDFieldKey              uint64 = 1
+	encodedCompositeValueKindFieldKey                uint64 = 2
+	encodedCompositeValueFieldsFieldKey              uint64 = 3
+	encodedCompositeValueQualifiedIdentifierFieldKey uint64 = 4
 )
 
 func (e *Encoder) prepareCompositeValue(
@@ -744,10 +745,10 @@ func (e *Encoder) prepareCompositeValue(
 	return cbor.Tag{
 		Number: cborTagCompositeValue,
 		Content: cborMap{
-			encodedCompositeValueLocationFieldKey: location,
-			encodedCompositeValueTypeIDFieldKey:   string(v.TypeID),
-			encodedCompositeValueKindFieldKey:     uint(v.Kind),
-			encodedCompositeValueFieldsFieldKey:   fields,
+			encodedCompositeValueLocationFieldKey:            location,
+			encodedCompositeValueKindFieldKey:                uint(v.Kind),
+			encodedCompositeValueFieldsFieldKey:              fields,
+			encodedCompositeValueQualifiedIdentifierFieldKey: v.QualifiedIdentifier,
 		},
 	}, nil
 }
