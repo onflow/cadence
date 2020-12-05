@@ -721,8 +721,8 @@ func TestExportCapabilityValue(t *testing.T) {
 				Identifier: "foo",
 			},
 			BorrowType: interpreter.CompositeStaticType{
-				TypeID:   utils.TestLocation.TypeID("S"),
-				Location: utils.TestLocation,
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "S",
 			},
 		}
 		actual := exportValueWithInterpreter(capability, inter, exportResults{})
@@ -784,8 +784,8 @@ func TestExportLinkValue(t *testing.T) {
 				Identifier: "foo",
 			},
 			Type: interpreter.CompositeStaticType{
-				TypeID:   utils.TestLocation.TypeID("S"),
-				Location: utils.TestLocation,
+				Location:            utils.TestLocation,
+				QualifiedIdentifier: "S",
 			},
 		}
 		actual := exportValueWithInterpreter(capability, inter, exportResults{})

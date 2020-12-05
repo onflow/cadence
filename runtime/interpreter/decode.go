@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"math"
@@ -1190,16 +1191,16 @@ func (d *Decoder) decodeOptionalStaticType(v interface{}) (StaticType, error) {
 	}, nil
 }
 
-func (d *Decoder) decodeLocationAndTypeID(
+func (d *Decoder) decodeStaticTypeLocationAndQualifiedIdentifier(
 	v interface{},
 	locationKeyIndex uint64,
 	typeIDKeyIndex uint64,
+	qualifiedIdentifierIndex uint64,
 ) (
 	common.Location,
-	sema.TypeID,
+	string,
 	error,
 ) {
-
 	encoded, ok := v.(map[interface{}]interface{})
 	if !ok {
 		return nil, "", fmt.Errorf("invalid static type encoding: %T", v)
@@ -1210,19 +1211,39 @@ func (d *Decoder) decodeLocationAndTypeID(
 		return nil, "", fmt.Errorf("invalid static type location encoding: %w", err)
 	}
 
-	field2 := encoded[typeIDKeyIndex]
-	encodedTypeID, ok := field2.(string)
-	if !ok {
-		return nil, "", fmt.Errorf("invalid static type type ID encoding: %T", field2)
+	var qualifiedIdentifier string
+
+	qualifiedIdentifierField := encoded[qualifiedIdentifierIndex]
+	if qualifiedIdentifierField != nil {
+		qualifiedIdentifier, ok = qualifiedIdentifierField.(string)
+		if !ok {
+			return nil, "", fmt.Errorf(
+				"invalid static type qualified identifier encoding: %T",
+				qualifiedIdentifierField,
+			)
+		}
+	} else {
+
+		typeIDField := encoded[typeIDKeyIndex]
+
+		if typeIDField != nil {
+
+			encodedTypeID, ok := typeIDField.(string)
+			if !ok {
+				return nil, "", fmt.Errorf("invalid static type type ID encoding: %T", typeIDField)
+			}
+			typeID := sema.TypeID(encodedTypeID)
+
+			// Special case: The decoded location might be an address location which has no name
+
+			qualifiedIdentifier = location.QualifiedIdentifier(typeID)
+			location = d.inferAddressLocationName(location, qualifiedIdentifier)
+		} else {
+			return nil, "", errors.New("missing static type qualified identifier or type ID")
+		}
 	}
-	typeID := sema.TypeID(encodedTypeID)
 
-	// Special case: The decoded location might be an address location which has no name
-
-	qualifiedIdentifier := location.QualifiedIdentifier(typeID)
-	location = d.inferAddressLocationName(location, qualifiedIdentifier)
-
-	return location, typeID, nil
+	return location, qualifiedIdentifier, nil
 }
 
 // inferAddressLocationName infers the name for an address location from a qualified identifier.
@@ -1258,34 +1279,36 @@ func (d *Decoder) inferAddressLocationName(location common.Location, qualifiedId
 }
 
 func (d *Decoder) decodeCompositeStaticType(v interface{}) (StaticType, error) {
-	location, typeID, err := d.decodeLocationAndTypeID(
+	location, qualifiedIdentifier, err := d.decodeStaticTypeLocationAndQualifiedIdentifier(
 		v,
 		encodedCompositeStaticTypeLocationFieldKey,
 		encodedCompositeStaticTypeTypeIDFieldKey,
+		encodedCompositeStaticTypeQualifiedIdentifierFieldKey,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("invalid composite static type encoding: %w", err)
 	}
 
 	return CompositeStaticType{
-		Location: location,
-		TypeID:   typeID,
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifier,
 	}, nil
 }
 
 func (d *Decoder) decodeInterfaceStaticType(v interface{}) (StaticType, error) {
-	location, typeID, err := d.decodeLocationAndTypeID(
+	location, qualifiedIdentifier, err := d.decodeStaticTypeLocationAndQualifiedIdentifier(
 		v,
 		encodedInterfaceStaticTypeLocationFieldKey,
 		encodedInterfaceStaticTypeTypeIDFieldKey,
+		encodedInterfaceStaticTypeQualifiedIdentifierFieldKey,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("invalid interface static type encoding: %w", err)
 	}
 
 	return InterfaceStaticType{
-		Location: location,
-		TypeID:   typeID,
+		Location:            location,
+		QualifiedIdentifier: qualifiedIdentifier,
 	}, nil
 }
 

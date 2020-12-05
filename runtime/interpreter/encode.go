@@ -963,8 +963,9 @@ func (e *Encoder) prepareOptionalStaticType(v OptionalStaticType) (interface{}, 
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	encodedCompositeStaticTypeLocationFieldKey uint64 = 0
-	encodedCompositeStaticTypeTypeIDFieldKey   uint64 = 1
+	encodedCompositeStaticTypeLocationFieldKey            uint64 = 0
+	encodedCompositeStaticTypeTypeIDFieldKey              uint64 = 1
+	encodedCompositeStaticTypeQualifiedIdentifierFieldKey uint64 = 2
 )
 
 func (e *Encoder) prepareCompositeStaticType(v CompositeStaticType) (interface{}, error) {
@@ -973,20 +974,20 @@ func (e *Encoder) prepareCompositeStaticType(v CompositeStaticType) (interface{}
 		return nil, err
 	}
 
-	// TODO: optimize, decode location from type ID
 	return cbor.Tag{
 		Number: cborTagCompositeStaticType,
 		Content: cborMap{
-			encodedCompositeStaticTypeLocationFieldKey: location,
-			encodedCompositeStaticTypeTypeIDFieldKey:   string(v.TypeID),
+			encodedCompositeStaticTypeLocationFieldKey:            location,
+			encodedCompositeStaticTypeQualifiedIdentifierFieldKey: v.QualifiedIdentifier,
 		},
 	}, nil
 }
 
 // NOTE: NEVER change, only add/increment; ensure uint64
 const (
-	encodedInterfaceStaticTypeLocationFieldKey uint64 = 0
-	encodedInterfaceStaticTypeTypeIDFieldKey   uint64 = 1
+	encodedInterfaceStaticTypeLocationFieldKey            uint64 = 0
+	encodedInterfaceStaticTypeTypeIDFieldKey              uint64 = 1
+	encodedInterfaceStaticTypeQualifiedIdentifierFieldKey uint64 = 2
 )
 
 func (e *Encoder) prepareInterfaceStaticType(v InterfaceStaticType) (interface{}, error) {
@@ -995,12 +996,11 @@ func (e *Encoder) prepareInterfaceStaticType(v InterfaceStaticType) (interface{}
 		return nil, err
 	}
 
-	// TODO: optimize, decode location from type ID
 	return cbor.Tag{
 		Number: cborTagInterfaceStaticType,
 		Content: cborMap{
-			encodedInterfaceStaticTypeLocationFieldKey: location,
-			encodedInterfaceStaticTypeTypeIDFieldKey:   string(v.TypeID),
+			encodedInterfaceStaticTypeLocationFieldKey:            location,
+			encodedInterfaceStaticTypeQualifiedIdentifierFieldKey: v.QualifiedIdentifier,
 		},
 	}, nil
 }
