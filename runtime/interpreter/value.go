@@ -4792,12 +4792,7 @@ func (v Fix64Value) Div(other NumberValue) NumberValue {
 		panic(OverflowError{})
 	}
 
-	res := result.Int64()
-	if res == 0 && v != 0 {
-		panic(OverflowError{})
-	}
-
-	return Fix64Value(res)
+	return Fix64Value(result.Int64())
 }
 
 func (v Fix64Value) Mod(other NumberValue) NumberValue {
@@ -5012,12 +5007,7 @@ func (v UFix64Value) Div(other NumberValue) NumberValue {
 		panic(OverflowError{})
 	}
 
-	res := result.Uint64()
-	if res == 0 && v != 0 {
-		panic(OverflowError{})
-	}
-
-	return UFix64Value(res)
+	return UFix64Value(result.Uint64())
 }
 
 func (v UFix64Value) Mod(other NumberValue) NumberValue {
