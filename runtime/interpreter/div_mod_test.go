@@ -3142,6 +3142,11 @@ func TestDivFix64(t *testing.T) {
 		Fix64Value(1).
 			Div(NewFix64ValueWithInteger(2))
 	})
+
+	assert.Equal(t,
+		Fix64Value(1535399),
+		NewFix64ValueWithInteger(1543219).Div(NewFix64ValueWithInteger(100509284)),
+	)
 }
 
 func TestModFix64(t *testing.T) {
@@ -3252,6 +3257,11 @@ func TestDivModUFix64(t *testing.T) {
 		UFix64Value(1).
 			Div(NewUFix64ValueWithInteger(2))
 	})
+
+	assert.Equal(t,
+		UFix64Value(1535399),
+		NewUFix64ValueWithInteger(1543219).Div(NewUFix64ValueWithInteger(100509284)),
+	)
 }
 
 // TestNegativeMod ensures that modulo uses the dividend's sign
