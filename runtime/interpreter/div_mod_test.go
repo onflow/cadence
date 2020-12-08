@@ -3133,15 +3133,17 @@ func TestDivFix64(t *testing.T) {
 			Div(NewFix64ValueWithInteger(sema.Fix64Factor)),
 	)
 
-	assert.Panics(t, func() {
+	assert.Equal(t,
+		Fix64Value(0),
 		NewFix64ValueWithInteger(1).
-			Div(Fix64Value(Fix64MaxValue))
-	})
+			Div(Fix64Value(Fix64MaxValue)),
+	)
 
-	assert.Panics(t, func() {
+	assert.Equal(t,
+		Fix64Value(0),
 		Fix64Value(1).
-			Div(NewFix64ValueWithInteger(2))
-	})
+			Div(NewFix64ValueWithInteger(2)),
+	)
 
 	assert.Equal(t,
 		Fix64Value(1535399),
@@ -3248,15 +3250,17 @@ func TestDivModUFix64(t *testing.T) {
 			Div(NewUFix64ValueWithInteger(sema.Fix64Factor)),
 	)
 
-	assert.Panics(t, func() {
+	assert.Equal(t,
+		UFix64Value(0),
 		NewUFix64ValueWithInteger(1).
-			Div(UFix64Value(UFix64MaxValue))
-	})
+			Div(UFix64Value(UFix64MaxValue)),
+	)
 
-	assert.Panics(t, func() {
+	assert.Equal(t,
+		UFix64Value(0),
 		UFix64Value(1).
-			Div(NewUFix64ValueWithInteger(2))
-	})
+			Div(NewUFix64ValueWithInteger(2)),
+	)
 
 	assert.Equal(t,
 		UFix64Value(1535399),
