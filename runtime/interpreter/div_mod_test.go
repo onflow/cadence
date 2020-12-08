@@ -3075,60 +3075,6 @@ func TestModInt256(t *testing.T) {
 	}
 }
 
-func TestReciprocalFix64(t *testing.T) {
-
-	t.Parallel()
-
-	assert.PanicsWithValue(t,
-		DivisionByZeroError{},
-		func() {
-			Fix64Value(0).Reciprocal()
-		},
-	)
-
-	assert.Equal(t,
-		Fix64Value(sema.Fix64Factor),
-		Fix64Value(sema.Fix64Factor).Reciprocal(),
-	)
-
-	assert.Equal(t,
-		Fix64Value(1),
-		Fix64Value(Fix64MaxDivisorValue).Reciprocal(),
-	)
-
-	assert.Equal(t,
-		Fix64Value(0),
-		Fix64Value(2*Fix64MaxDivisorValue).Reciprocal(),
-	)
-}
-
-func TestReciprocalUFix64(t *testing.T) {
-
-	t.Parallel()
-
-	assert.PanicsWithValue(t,
-		DivisionByZeroError{},
-		func() {
-			UFix64Value(0).Reciprocal()
-		},
-	)
-
-	assert.Equal(t,
-		UFix64Value(sema.Fix64Factor),
-		UFix64Value(sema.Fix64Factor).Reciprocal(),
-	)
-
-	assert.Equal(t,
-		UFix64Value(1),
-		UFix64Value(Fix64MaxDivisorValue).Reciprocal(),
-	)
-
-	assert.Equal(t,
-		UFix64Value(0),
-		UFix64Value(2*Fix64MaxDivisorValue).Reciprocal(),
-	)
-}
-
 func TestDivFix64(t *testing.T) {
 
 	t.Parallel()
@@ -3184,12 +3130,17 @@ func TestDivFix64(t *testing.T) {
 	assert.Equal(t,
 		Fix64Value(1),
 		NewFix64ValueWithInteger(1).
-			Div(Fix64Value(Fix64MaxDivisorValue)),
+			Div(NewFix64ValueWithInteger(sema.Fix64Factor)),
 	)
 
 	assert.Panics(t, func() {
 		NewFix64ValueWithInteger(1).
-			Div(Fix64Value(Fix64MaxDivisorValue + 1))
+			Div(Fix64Value(Fix64MaxValue))
+	})
+
+	assert.Panics(t, func() {
+		Fix64Value(1).
+			Div(NewFix64ValueWithInteger(2))
 	})
 }
 
@@ -3289,12 +3240,17 @@ func TestDivModUFix64(t *testing.T) {
 	assert.Equal(t,
 		UFix64Value(1),
 		NewUFix64ValueWithInteger(1).
-			Div(UFix64Value(UFix64MaxDivisorValue)),
+			Div(NewUFix64ValueWithInteger(sema.Fix64Factor)),
 	)
 
 	assert.Panics(t, func() {
 		NewUFix64ValueWithInteger(1).
-			Div(UFix64Value(UFix64MaxDivisorValue + 1))
+			Div(UFix64Value(UFix64MaxValue))
+	})
+
+	assert.Panics(t, func() {
+		UFix64Value(1).
+			Div(NewUFix64ValueWithInteger(2))
 	})
 }
 

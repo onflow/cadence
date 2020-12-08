@@ -4763,12 +4763,11 @@ func (v Word64Value) ToBigEndianBytes() []byte {
 }
 
 // Fix64Value
+//
+type Fix64Value int64
 
 const Fix64MaxValue = math.MaxInt64
-const Fix64MaxDivisorValue = sema.Fix64Factor * sema.Fix64Factor
 const Fix64MaxIntDividend = Fix64MaxValue / sema.Fix64Factor
-
-type Fix64Value int64
 
 func NewFix64ValueWithInteger(integer int64) Fix64Value {
 
@@ -4850,65 +4849,41 @@ func (v Fix64Value) Minus(other NumberValue) NumberValue {
 	return v - o
 }
 
-var Fix64MulPrecision = int64(math.Sqrt(float64(sema.Fix64Factor)))
-
 func (v Fix64Value) Mul(other NumberValue) NumberValue {
 	o := other.(Fix64Value)
 
-	x1 := int64(v) / sema.Fix64Factor
-	x2 := int64(v) % sema.Fix64Factor
+	a := new(big.Int).SetInt64(int64(v))
+	b := new(big.Int).SetInt64(int64(o))
 
-	y1 := int64(o) / sema.Fix64Factor
-	y2 := int64(o) % sema.Fix64Factor
+	result := new(big.Int).Mul(a, b)
+	result.Div(result, sema.Fix64FactorBig)
 
-	x1y1 := x1 * y1
-	if x1 != 0 && x1y1/x1 != y1 {
+	if !result.IsInt64() {
 		panic(OverflowError{})
 	}
 
-	x1y1Fixed := x1y1 * sema.Fix64Factor
-	if x1y1 != 0 && x1y1Fixed/x1y1 != sema.Fix64Factor {
-		panic(OverflowError{})
-	}
-	x1y1 = x1y1Fixed
-
-	x2y1 := x2 * y1
-	if x2 != 0 && x2y1/x2 != y1 {
-		panic(OverflowError{})
-	}
-
-	x1y2 := x1 * y2
-	if x1 != 0 && x1y2/x1 != y2 {
-		panic(OverflowError{})
-	}
-
-	x2 = x2 / Fix64MulPrecision
-	y2 = y2 / Fix64MulPrecision
-	x2y2 := x2 * y2
-	if x2 != 0 && x2y2/x2 != y2 {
-		panic(OverflowError{})
-	}
-
-	result := x1y1
-	result = safeAddInt64(result, x2y1)
-	result = safeAddInt64(result, x1y2)
-	result = safeAddInt64(result, x2y2)
-	return Fix64Value(result)
-}
-
-func (v Fix64Value) Reciprocal() Fix64Value {
-	if v == 0 {
-		panic(DivisionByZeroError{})
-	}
-	return Fix64MaxDivisorValue / v
+	return Fix64Value(result.Int64())
 }
 
 func (v Fix64Value) Div(other NumberValue) NumberValue {
 	o := other.(Fix64Value)
-	if o > Fix64MaxDivisorValue {
+
+	a := new(big.Int).SetInt64(int64(v))
+	b := new(big.Int).SetInt64(int64(o))
+
+	result := new(big.Int).Mul(a, sema.Fix64FactorBig)
+	result.Div(result, b)
+
+	if !result.IsInt64() {
 		panic(OverflowError{})
 	}
-	return v.Mul(o.Reciprocal())
+
+	res := result.Int64()
+	if res == 0 && v != 0 {
+		panic(OverflowError{})
+	}
+
+	return Fix64Value(res)
 }
 
 func (v Fix64Value) Mod(other NumberValue) NumberValue {
@@ -5016,11 +4991,10 @@ func (v Fix64Value) ToBigEndianBytes() []byte {
 }
 
 // UFix64Value
-
+//
 type UFix64Value uint64
 
 const UFix64MaxValue = math.MaxUint64
-const UFix64MaxDivisorValue = sema.Fix64Factor * sema.Fix64Factor
 const UFix64MaxIntDividend = UFix64MaxValue / sema.Fix64Factor
 
 func NewUFix64ValueWithInteger(integer uint64) UFix64Value {
@@ -5092,67 +5066,41 @@ func (v UFix64Value) Minus(other NumberValue) NumberValue {
 	return diff
 }
 
-var UFix64MulPrecision = uint64(math.Sqrt(float64(sema.Fix64Factor)))
-
 func (v UFix64Value) Mul(other NumberValue) NumberValue {
 	o := other.(UFix64Value)
 
-	factor := uint64(sema.Fix64Factor)
+	a := new(big.Int).SetUint64(uint64(v))
+	b := new(big.Int).SetUint64(uint64(o))
 
-	x1 := uint64(v) / factor
-	x2 := uint64(v) % factor
+	result := new(big.Int).Mul(a, b)
+	result.Div(result, sema.Fix64FactorBig)
 
-	y1 := uint64(o) / factor
-	y2 := uint64(o) % factor
-
-	x1y1 := x1 * y1
-	if x1 != 0 && x1y1/x1 != y1 {
+	if !result.IsUint64() {
 		panic(OverflowError{})
 	}
 
-	x1y1Fixed := x1y1 * factor
-	if x1y1 != 0 && x1y1Fixed/x1y1 != factor {
-		panic(OverflowError{})
-	}
-	x1y1 = x1y1Fixed
-
-	x2y1 := x2 * y1
-	if x2 != 0 && x2y1/x2 != y1 {
-		panic(OverflowError{})
-	}
-
-	x1y2 := x1 * y2
-	if x1 != 0 && x1y2/x1 != y2 {
-		panic(OverflowError{})
-	}
-
-	x2 = x2 / UFix64MulPrecision
-	y2 = y2 / UFix64MulPrecision
-	x2y2 := x2 * y2
-	if x2 != 0 && x2y2/x2 != y2 {
-		panic(OverflowError{})
-	}
-
-	result := x1y1
-	result = safeAddUint64(result, x2y1)
-	result = safeAddUint64(result, x1y2)
-	result = safeAddUint64(result, x2y2)
-	return UFix64Value(result)
-}
-
-func (v UFix64Value) Reciprocal() UFix64Value {
-	if v == 0 {
-		panic(DivisionByZeroError{})
-	}
-	return UFix64MaxDivisorValue / v
+	return UFix64Value(result.Uint64())
 }
 
 func (v UFix64Value) Div(other NumberValue) NumberValue {
 	o := other.(UFix64Value)
-	if o > UFix64MaxDivisorValue {
+
+	a := new(big.Int).SetUint64(uint64(v))
+	b := new(big.Int).SetUint64(uint64(o))
+
+	result := new(big.Int).Mul(a, sema.Fix64FactorBig)
+	result.Div(result, b)
+
+	if !result.IsUint64() {
 		panic(OverflowError{})
 	}
-	return v.Mul(o.Reciprocal())
+
+	res := result.Uint64()
+	if res == 0 && v != 0 {
+		panic(OverflowError{})
+	}
+
+	return UFix64Value(res)
 }
 
 func (v UFix64Value) Mod(other NumberValue) NumberValue {
