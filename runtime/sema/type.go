@@ -3030,6 +3030,8 @@ func (t *SignedFixedPointType) GetMembers() map[string]MemberResolver {
 const Fix64Scale = fixedpoint.Fix64Scale
 const Fix64Factor = fixedpoint.Fix64Factor
 
+var Fix64FactorBig = new(big.Int).SetUint64(uint64(Fix64Factor))
+
 // Fix64Type represents the 64-bit signed decimal fixed-point type `Fix64`
 // which has a scale of Fix64Scale, and checks for overflow and underflow
 type Fix64Type struct{}
