@@ -3079,6 +3079,8 @@ func TestDivFix64(t *testing.T) {
 
 	t.Parallel()
 
+	const fix64MaxIntDividend = Fix64MaxValue / sema.Fix64Factor
+
 	tests := []struct {
 		a, b  int64
 		valid bool
@@ -3086,29 +3088,29 @@ func TestDivFix64(t *testing.T) {
 		{0, 0, false},
 		{1, 0, false},
 		{2, 0, false},
-		{Fix64MaxIntDividend, 0, false},
-		{Fix64MaxIntDividend + 1, 0, false},
+		{fix64MaxIntDividend, 0, false},
+		{fix64MaxIntDividend + 1, 0, false},
 		{-1, 0, false},
 
 		{0, 1, true},
 		{1, 1, true},
 		{2, 1, true},
-		{Fix64MaxIntDividend, 1, true},
-		{Fix64MaxIntDividend + 1, 1, false},
+		{fix64MaxIntDividend, 1, true},
+		{fix64MaxIntDividend + 1, 1, false},
 		{-1, 1, true},
 
 		{0, 2, true},
 		{1, 2, true},
 		{2, 2, true},
-		{Fix64MaxIntDividend, 2, true},
-		{Fix64MaxIntDividend + 1, 2, false},
+		{fix64MaxIntDividend, 2, true},
+		{fix64MaxIntDividend + 1, 2, false},
 		{-1, 2, true},
 
 		{0, -1, true},
 		{1, -1, true},
 		{2, -1, true},
-		{Fix64MaxIntDividend, -1, true},
-		{Fix64MaxIntDividend + 1, -1, false},
+		{fix64MaxIntDividend, -1, true},
+		{fix64MaxIntDividend + 1, -1, false},
 		{-1, -1, true},
 	}
 
@@ -3196,6 +3198,8 @@ func TestDivModUFix64(t *testing.T) {
 
 	t.Parallel()
 
+	const ufix64MaxIntDividend = UFix64MaxValue / sema.Fix64Factor
+
 	tests := []struct {
 		a, b  uint64
 		valid bool
@@ -3203,20 +3207,20 @@ func TestDivModUFix64(t *testing.T) {
 		{0, 0, false},
 		{1, 0, false},
 		{2, 0, false},
-		{UFix64MaxIntDividend, 0, false},
-		{UFix64MaxIntDividend + 1, 0, false},
+		{ufix64MaxIntDividend, 0, false},
+		{ufix64MaxIntDividend + 1, 0, false},
 
 		{0, 1, true},
 		{1, 1, true},
 		{2, 1, true},
-		{UFix64MaxIntDividend, 1, true},
-		{UFix64MaxIntDividend + 1, 1, false},
+		{ufix64MaxIntDividend, 1, true},
+		{ufix64MaxIntDividend + 1, 1, false},
 
 		{0, 2, true},
 		{1, 2, true},
 		{2, 2, true},
-		{UFix64MaxIntDividend, 2, true},
-		{UFix64MaxIntDividend + 1, 2, false},
+		{ufix64MaxIntDividend, 2, true},
+		{ufix64MaxIntDividend + 1, 2, false},
 	}
 
 	for _, test := range tests {

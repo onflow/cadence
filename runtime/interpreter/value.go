@@ -4672,7 +4672,6 @@ func (v Word64Value) ToBigEndianBytes() []byte {
 type Fix64Value int64
 
 const Fix64MaxValue = math.MaxInt64
-const Fix64MaxIntDividend = Fix64MaxValue / sema.Fix64Factor
 
 func NewFix64ValueWithInteger(integer int64) Fix64Value {
 
@@ -4904,7 +4903,6 @@ func (v Fix64Value) ToBigEndianBytes() []byte {
 type UFix64Value uint64
 
 const UFix64MaxValue = math.MaxUint64
-const UFix64MaxIntDividend = UFix64MaxValue / sema.Fix64Factor
 
 func NewUFix64ValueWithInteger(integer uint64) UFix64Value {
 	if integer > sema.UFix64TypeMaxInt {
