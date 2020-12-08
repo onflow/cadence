@@ -1270,7 +1270,7 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 	for _, identifier := range t.NestedIdentifiers {
 		switch typedResult := ty.(type) {
 		case ContainerType:
-			ty = typedResult.NestedTypes()[identifier.Identifier]
+			ty, _ = typedResult.NestedTypes().Get(identifier.Identifier)
 
 		default:
 			if !typedResult.IsInvalidType() {
