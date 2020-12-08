@@ -4,6 +4,7 @@ go 1.13
 
 require (
 	github.com/c-bata/go-prompt v0.2.3
+	github.com/cheekybits/genny v1.0.0
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/fxamacker/cbor/v2 v2.2.1-0.20201006223149-25f67fca9803
 	github.com/go-test/deep v1.0.5
