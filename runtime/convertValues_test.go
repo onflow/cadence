@@ -670,6 +670,21 @@ func TestExportTypeValue(t *testing.T) {
 
 		assert.Equal(t, expected, actual)
 	})
+
+	t.Run("without static type", func(t *testing.T) {
+
+		t.Parallel()
+
+		value := interpreter.TypeValue{
+			Type: nil,
+		}
+		actual := exportValueWithInterpreter(value, nil, exportResults{})
+		expected := cadence.TypeValue{
+			StaticType: "",
+		}
+
+		assert.Equal(t, expected, actual)
+	})
 }
 
 func TestExportCapabilityValue(t *testing.T) {

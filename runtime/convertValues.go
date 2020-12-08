@@ -263,9 +263,13 @@ func exportPathValue(v interpreter.PathValue) cadence.Path {
 }
 
 func exportTypeValue(v interpreter.TypeValue, inter *interpreter.Interpreter) cadence.TypeValue {
-	ty := string(inter.ConvertStaticToSemaType(v.Type).ID())
+	var typeID string
+	staticType := v.Type
+	if staticType != nil {
+		typeID = string(inter.ConvertStaticToSemaType(staticType).ID())
+	}
 	return cadence.TypeValue{
-		StaticType: ty,
+		StaticType: typeID,
 	}
 }
 

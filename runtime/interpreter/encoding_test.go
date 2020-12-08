@@ -4178,4 +4178,20 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("without static type", func(t *testing.T) {
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				value: TypeValue{
+					Type: nil,
+				},
+				encoded: []byte{
+					// tag
+					0xd8, cborTagTypeValue,
+					// map, 0 pairs of items follow
+					0xa0,
+				},
+			},
+		)
+	})
 }

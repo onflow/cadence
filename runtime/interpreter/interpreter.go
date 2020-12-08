@@ -4499,13 +4499,19 @@ func (interpreter *Interpreter) getMember(self Value, locationRange LocationRang
 			return NewHostFunctionValue(
 				func(invocation Invocation) Trampoline {
 					firstArgument := invocation.Arguments[0]
+					typeValue := firstArgument.(TypeValue)
 
+					staticType := typeValue.Type
+
+					// Values are never instances of unknown types
+					if staticType == nil {
+						return Done{Result: BoolValue(false)}
+					}
+
+					semaType := interpreter.ConvertStaticToSemaType(staticType)
 					// NOTE: not invocation.Self, as that is only set for composite values
 					dynamicType := self.DynamicType(interpreter)
-					ty := interpreter.ConvertStaticToSemaType(
-						firstArgument.(TypeValue).Type,
-					)
-					result := IsSubType(dynamicType, ty)
+					result := IsSubType(dynamicType, semaType)
 					return Done{Result: BoolValue(result)}
 				},
 			)
