@@ -1122,15 +1122,22 @@ const (
 )
 
 func (e *Encoder) prepareTypeValue(v TypeValue) (interface{}, error) {
-	staticType, err := e.prepareStaticType(v.Type)
-	if err != nil {
-		return nil, err
+
+	content := cborMap{}
+
+	staticType := v.Type
+	if staticType != nil {
+		preparedStaticType, err := e.prepareStaticType(staticType)
+		if err != nil {
+			return nil, err
+		}
+
+		content[encodedTypeValueTypeFieldKey] = preparedStaticType
 	}
+
 	return cbor.Tag{
-		Number: cborTagTypeValue,
-		Content: cborMap{
-			encodedTypeValueTypeFieldKey: staticType,
-		},
+		Number:  cborTagTypeValue,
+		Content: content,
 	}, nil
 }
 

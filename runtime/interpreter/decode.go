@@ -1436,19 +1436,25 @@ func (d *Decoder) decodeRestrictedStaticType(v interface{}) (StaticType, error) 
 }
 
 func (d *Decoder) decodeType(v interface{}) (TypeValue, error) {
+
 	encoded, ok := v.(map[interface{}]interface{})
 	if !ok {
 		return TypeValue{}, fmt.Errorf("invalid type encoding")
 	}
 
-	decodedStaticType, err := d.decodeStaticType(encoded[encodedTypeValueTypeFieldKey])
-	if err != nil {
-		return TypeValue{}, fmt.Errorf("invalid type encoding: %w", err)
-	}
+	var staticType StaticType
 
-	staticType, ok := decodedStaticType.(StaticType)
-	if !ok {
-		return TypeValue{}, fmt.Errorf("invalid type encoding: %T", decodedStaticType)
+	staticTypeField, ok := encoded[encodedTypeValueTypeFieldKey]
+	if ok {
+		decodedStaticType, err := d.decodeStaticType(staticTypeField)
+		if err != nil {
+			return TypeValue{}, fmt.Errorf("invalid type encoding: %w", err)
+		}
+
+		staticType, ok = decodedStaticType.(StaticType)
+		if !ok {
+			return TypeValue{}, fmt.Errorf("invalid type encoding: %T", decodedStaticType)
+		}
 	}
 
 	return TypeValue{

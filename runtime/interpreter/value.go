@@ -128,17 +128,31 @@ func (TypeValue) SetModified(_ bool) {
 }
 
 func (v TypeValue) String() string {
-	return format.TypeValue(v.Type.String())
+	var typeString string
+	staticType := v.Type
+	if staticType != nil {
+		typeString = staticType.String()
+	}
+	return format.TypeValue(typeString)
 }
 
 func (v TypeValue) Equal(inter *Interpreter, other Value) BoolValue {
-	otherMetaType, ok := other.(TypeValue)
+	otherTypeValue, ok := other.(TypeValue)
 	if !ok {
 		return false
 	}
 
-	ty := inter.ConvertStaticToSemaType(v.Type)
-	otherTy := inter.ConvertStaticToSemaType(otherMetaType.Type)
+	// Unknown types are never equal to another type
+
+	staticType := v.Type
+	otherStaticType := otherTypeValue.Type
+
+	if staticType == nil || otherStaticType == nil {
+		return false
+	}
+
+	ty := inter.ConvertStaticToSemaType(staticType)
+	otherTy := inter.ConvertStaticToSemaType(otherStaticType)
 
 	return BoolValue(ty.Equal(otherTy))
 }
@@ -146,8 +160,12 @@ func (v TypeValue) Equal(inter *Interpreter, other Value) BoolValue {
 func (v TypeValue) GetMember(inter *Interpreter, _ LocationRange, name string) Value {
 	switch name {
 	case "identifier":
-		ty := inter.ConvertStaticToSemaType(v.Type)
-		return NewStringValue(ty.QualifiedString())
+		var typeID string
+		staticType := v.Type
+		if staticType != nil {
+			typeID = string(inter.ConvertStaticToSemaType(staticType).ID())
+		}
+		return NewStringValue(typeID)
 	}
 
 	return nil

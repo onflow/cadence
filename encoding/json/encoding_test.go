@@ -976,13 +976,29 @@ func TestEncodeType(t *testing.T) {
 
 	t.Parallel()
 
-	testEncodeAndDecode(
-		t,
-		cadence.TypeValue{
-			StaticType: "Int",
-		},
-		`{"type":"Type","value":{"staticType":"Int"}}`,
-	)
+	t.Run("with static type", func(t *testing.T) {
+
+		t.Parallel()
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{
+				StaticType: "Int",
+			},
+			`{"type":"Type","value":{"staticType":"Int"}}`,
+		)
+
+	})
+	t.Run("without static type", func(t *testing.T) {
+
+		t.Parallel()
+
+		testEncodeAndDecode(
+			t,
+			cadence.TypeValue{},
+			`{"type":"Type","value":{"staticType":""}}`,
+		)
+	})
 }
 
 func TestEncodeCapability(t *testing.T) {

@@ -598,8 +598,15 @@ func decodePath(valueJSON interface{}) cadence.Path {
 func decodeTypeValue(valueJSON interface{}) cadence.TypeValue {
 	obj := toObject(valueJSON)
 
+	var staticType string
+
+	staticTypeProperty, ok := obj[staticTypeKey]
+	if ok && staticTypeProperty != nil {
+		staticType = toString(staticTypeProperty)
+	}
+
 	return cadence.TypeValue{
-		StaticType: obj.GetString(staticTypeKey),
+		StaticType: staticType,
 	}
 }
 
