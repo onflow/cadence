@@ -202,3 +202,9 @@ func (DeployedContractDynamicType) IsDynamicType() {}
 type AuthAccountContractsDynamicType struct{}
 
 func (AuthAccountContractsDynamicType) IsDynamicType() {}
+
+// BlockDynamicType
+
+type BlockDynamicType struct{}
+
+func (BlockDynamicType) IsDynamicType() {}

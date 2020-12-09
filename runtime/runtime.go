@@ -1395,7 +1395,7 @@ func (r *interpreterRuntime) getCurrentBlockHeight(runtimeInterface Interface) (
 	return
 }
 
-func (r *interpreterRuntime) getBlockAtHeight(height uint64, runtimeInterface Interface) (*BlockValue, error) {
+func (r *interpreterRuntime) getBlockAtHeight(height uint64, runtimeInterface Interface) (*interpreter.BlockValue, error) {
 
 	var block Block
 	var exists bool
@@ -1861,16 +1861,7 @@ func (r *interpreterRuntime) onStatementHandler() interpreter.OnStatementFunc {
 	}
 }
 
-// Block
-
-type BlockValue struct {
-	Height    interpreter.UInt64Value
-	View      interpreter.UInt64Value
-	ID        *interpreter.ArrayValue
-	Timestamp interpreter.Fix64Value
-}
-
-func NewBlockValue(block Block) BlockValue {
+func NewBlockValue(block Block) interpreter.BlockValue {
 
 	// height
 	heightValue := interpreter.UInt64Value(block.Height)
@@ -1879,7 +1870,7 @@ func NewBlockValue(block Block) BlockValue {
 	viewValue := interpreter.UInt64Value(block.View)
 
 	// ID
-	var values = make([]interpreter.Value, stdlib.BlockIDSize)
+	var values = make([]interpreter.Value, sema.BlockIDSize)
 	for i, b := range block.Hash {
 		values[i] = interpreter.UInt8Value(b)
 	}
@@ -1889,81 +1880,10 @@ func NewBlockValue(block Block) BlockValue {
 	// TODO: verify
 	timestampValue := interpreter.NewFix64ValueWithInteger(time.Unix(0, block.Timestamp).Unix())
 
-	return BlockValue{
+	return interpreter.BlockValue{
 		Height:    heightValue,
 		View:      viewValue,
 		ID:        idValue,
 		Timestamp: timestampValue,
 	}
-}
-
-func (BlockValue) IsValue() {}
-
-func (v BlockValue) Accept(interpreter *interpreter.Interpreter, visitor interpreter.Visitor) {
-	visitor.VisitValue(interpreter, v)
-}
-
-func (BlockValue) DynamicType(*interpreter.Interpreter) interpreter.DynamicType {
-	return nil
-}
-
-func (v BlockValue) Copy() interpreter.Value {
-	return v
-}
-
-func (BlockValue) GetOwner() *common.Address {
-	// value is never owned
-	return nil
-}
-
-func (BlockValue) SetOwner(_ *common.Address) {
-	// NO-OP: value cannot be owned
-}
-
-func (BlockValue) IsModified() bool {
-	return false
-}
-
-func (BlockValue) SetModified(_ bool) {
-	// NO-OP
-}
-
-func (v BlockValue) GetMember(_ *interpreter.Interpreter, _ interpreter.LocationRange, name string) interpreter.Value {
-	switch name {
-	case "height":
-		return v.Height
-
-	case "view":
-		return v.View
-
-	case "id":
-		return v.ID
-
-	case "timestamp":
-		return v.Timestamp
-	}
-
-	return nil
-}
-
-func (v BlockValue) SetMember(_ *interpreter.Interpreter, _ interpreter.LocationRange, _ string, _ interpreter.Value) {
-	panic(runtimeErrors.NewUnreachableError())
-}
-
-func (v BlockValue) IDAsByteArray() [stdlib.BlockIDSize]byte {
-	var byteArray [stdlib.BlockIDSize]byte
-	for i, b := range v.ID.Values {
-		byteArray[i] = byte(b.(interpreter.UInt8Value))
-	}
-	return byteArray
-}
-
-func (v BlockValue) String() string {
-	return fmt.Sprintf(
-		"Block(height: %s, view: %s, id: 0x%x, timestamp: %s)",
-		v.Height,
-		v.View,
-		v.IDAsByteArray(),
-		v.Timestamp,
-	)
 }

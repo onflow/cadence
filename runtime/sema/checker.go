@@ -1991,7 +1991,7 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 	// All types have a predeclared member `fun getType(): Type`
 
 	addPredeclaredMember(
-		getTypeFunctionName,
+		GetTypeFunctionName,
 		getTypeFunctionType,
 		common.DeclarationKindFunction,
 		ast.AccessPublic,

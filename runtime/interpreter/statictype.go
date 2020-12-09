@@ -36,7 +36,7 @@ import (
 //
 type StaticType interface {
 	fmt.Stringer
-	isStaticType()
+	IsStaticType()
 }
 
 // CompositeStaticType
@@ -46,7 +46,7 @@ type CompositeStaticType struct {
 	QualifiedIdentifier string
 }
 
-func (CompositeStaticType) isStaticType() {}
+func (CompositeStaticType) IsStaticType() {}
 
 func (t CompositeStaticType) String() string {
 	return fmt.Sprintf(
@@ -63,7 +63,7 @@ type InterfaceStaticType struct {
 	QualifiedIdentifier string
 }
 
-func (InterfaceStaticType) isStaticType() {}
+func (InterfaceStaticType) IsStaticType() {}
 
 func (t InterfaceStaticType) String() string {
 	return fmt.Sprintf(
@@ -79,7 +79,7 @@ type VariableSizedStaticType struct {
 	Type StaticType
 }
 
-func (VariableSizedStaticType) isStaticType() {}
+func (VariableSizedStaticType) IsStaticType() {}
 
 func (t VariableSizedStaticType) String() string {
 	return fmt.Sprintf("[%s]", t.Type)
@@ -92,7 +92,7 @@ type ConstantSizedStaticType struct {
 	Size int64
 }
 
-func (ConstantSizedStaticType) isStaticType() {}
+func (ConstantSizedStaticType) IsStaticType() {}
 
 func (t ConstantSizedStaticType) String() string {
 	return fmt.Sprintf("[%s; %d]", t.Type, t.Size)
@@ -105,7 +105,7 @@ type DictionaryStaticType struct {
 	ValueType StaticType
 }
 
-func (DictionaryStaticType) isStaticType() {}
+func (DictionaryStaticType) IsStaticType() {}
 
 func (t DictionaryStaticType) String() string {
 	return fmt.Sprintf("{%s: %s}", t.KeyType, t.ValueType)
@@ -117,7 +117,7 @@ type OptionalStaticType struct {
 	Type StaticType
 }
 
-func (OptionalStaticType) isStaticType() {}
+func (OptionalStaticType) IsStaticType() {}
 
 func (t OptionalStaticType) String() string {
 	return fmt.Sprintf("%s?", t.Type)
@@ -130,7 +130,7 @@ type RestrictedStaticType struct {
 	Restrictions []InterfaceStaticType
 }
 
-func (RestrictedStaticType) isStaticType() {}
+func (RestrictedStaticType) IsStaticType() {}
 
 func (t RestrictedStaticType) String() string {
 	restrictions := make([]string, len(t.Restrictions))
@@ -149,7 +149,7 @@ type ReferenceStaticType struct {
 	Type       StaticType
 }
 
-func (ReferenceStaticType) isStaticType() {}
+func (ReferenceStaticType) IsStaticType() {}
 
 func (t ReferenceStaticType) String() string {
 	auth := ""
@@ -166,7 +166,7 @@ type CapabilityStaticType struct {
 	BorrowType StaticType
 }
 
-func (CapabilityStaticType) isStaticType() {}
+func (CapabilityStaticType) IsStaticType() {}
 
 func (t CapabilityStaticType) String() string {
 	if t.BorrowType != nil {

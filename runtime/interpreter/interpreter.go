@@ -4011,6 +4011,15 @@ func IsSubType(subType DynamicType, superType sema.Type) bool {
 		default:
 			return false
 		}
+
+	case BlockDynamicType:
+		switch superType.(type) {
+		case *sema.BlockType, *sema.AnyStructType:
+			return true
+
+		default:
+			return false
+		}
 	}
 
 	return false
@@ -4496,31 +4505,48 @@ func (interpreter *Interpreter) getMember(self Value, locationRange LocationRang
 	if result == nil {
 		switch identifier {
 		case sema.IsInstanceFunctionName:
-			return NewHostFunctionValue(
-				func(invocation Invocation) Trampoline {
-					firstArgument := invocation.Arguments[0]
-					typeValue := firstArgument.(TypeValue)
-
-					staticType := typeValue.Type
-
-					// Values are never instances of unknown types
-					if staticType == nil {
-						return Done{Result: BoolValue(false)}
-					}
-
-					semaType := interpreter.ConvertStaticToSemaType(staticType)
-					// NOTE: not invocation.Self, as that is only set for composite values
-					dynamicType := self.DynamicType(interpreter)
-					result := IsSubType(dynamicType, semaType)
-					return Done{Result: BoolValue(result)}
-				},
-			)
+			return interpreter.isInstanceFunction(self)
+		case sema.GetTypeFunctionName:
+			return interpreter.getTypeFunction(self)
 		}
 	}
 	if result == nil {
 		panic(errors.NewUnreachableError())
 	}
 	return result
+}
+
+func (interpreter *Interpreter) isInstanceFunction(self Value) HostFunctionValue {
+	return NewHostFunctionValue(
+		func(invocation Invocation) Trampoline {
+			firstArgument := invocation.Arguments[0]
+			typeValue := firstArgument.(TypeValue)
+
+			staticType := typeValue.Type
+
+			// Values are never instances of unknown types
+			if staticType == nil {
+				return Done{Result: BoolValue(false)}
+			}
+
+			semaType := interpreter.ConvertStaticToSemaType(staticType)
+			// NOTE: not invocation.Self, as that is only set for composite values
+			dynamicType := self.DynamicType(interpreter)
+			result := IsSubType(dynamicType, semaType)
+			return Done{Result: BoolValue(result)}
+		},
+	)
+}
+
+func (interpreter *Interpreter) getTypeFunction(self Value) HostFunctionValue {
+	return NewHostFunctionValue(
+		func(invocation Invocation) Trampoline {
+			result := TypeValue{
+				Type: self.StaticType(),
+			}
+			return Done{Result: result}
+		},
+	)
 }
 
 func (interpreter *Interpreter) setMember(self Value, locationRange LocationRange, identifier string, value Value) {

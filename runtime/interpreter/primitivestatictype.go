@@ -52,8 +52,8 @@ const (
 	PrimitiveStaticTypeAddress
 	PrimitiveStaticTypeString
 	PrimitiveStaticTypeCharacter
-	_
-	_
+	PrimitiveStaticTypeMetaType
+	PrimitiveStaticTypeBlock
 	_
 	_
 	_
@@ -105,7 +105,7 @@ const (
 	PrimitiveStaticTypeUInt256
 	_
 
-	// Word *
+	// Word*
 	_
 	PrimitiveStaticTypeWord8
 	PrimitiveStaticTypeWord16
@@ -143,9 +143,22 @@ const (
 	PrimitiveStaticTypeCapabilityPath
 	PrimitiveStaticTypePublicPath
 	PrimitiveStaticTypePrivatePath
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	_
+	PrimitiveStaticTypeAuthAccount
+	PrimitiveStaticTypePublicAccount
+	PrimitiveStaticTypeDeployedContract
+	PrimitiveStaticTypeAuthAccountContracts
+	_
 )
 
-func (PrimitiveStaticType) isStaticType() {}
+func (PrimitiveStaticType) IsStaticType() {}
 
 func (i PrimitiveStaticType) SemaType() sema.Type {
 	switch i {
@@ -175,6 +188,12 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 
 	case PrimitiveStaticTypeCharacter:
 		return &sema.CharacterType{}
+
+	case PrimitiveStaticTypeMetaType:
+		return &sema.MetaType{}
+
+	case PrimitiveStaticTypeBlock:
+		return &sema.BlockType{}
 
 	// Number
 
@@ -260,6 +279,14 @@ func (i PrimitiveStaticType) SemaType() sema.Type {
 		return sema.PrivatePathType
 	case PrimitiveStaticTypeCapability:
 		return &sema.CapabilityType{}
+	case PrimitiveStaticTypeAuthAccount:
+		return &sema.AuthAccountType{}
+	case PrimitiveStaticTypePublicAccount:
+		return &sema.PublicAccountType{}
+	case PrimitiveStaticTypeDeployedContract:
+		return &sema.DeployedContractType{}
+	case PrimitiveStaticTypeAuthAccountContracts:
+		return &sema.AuthAccountContractsType{}
 
 	default:
 		panic(errors.NewUnreachableError())
@@ -292,6 +319,12 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 
 	case *sema.CharacterType:
 		return PrimitiveStaticTypeCharacter
+
+	case *sema.MetaType:
+		return PrimitiveStaticTypeMetaType
+
+	case *sema.BlockType:
+		return PrimitiveStaticTypeBlock
 
 	// Number
 
@@ -344,7 +377,7 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 	case *sema.UInt256Type:
 		return PrimitiveStaticTypeUInt256
 
-	// Word *
+	// Word*
 
 	case *sema.Word8Type:
 		return PrimitiveStaticTypeWord8
@@ -367,6 +400,14 @@ func ConvertSemaToPrimitiveStaticType(t sema.Type) PrimitiveStaticType {
 
 	case *sema.CapabilityType:
 		return PrimitiveStaticTypeCapability
+	case *sema.AuthAccountType:
+		return PrimitiveStaticTypeAuthAccount
+	case *sema.PublicAccountType:
+		return PrimitiveStaticTypePublicAccount
+	case *sema.DeployedContractType:
+		return PrimitiveStaticTypeDeployedContract
+	case *sema.AuthAccountContractsType:
+		return PrimitiveStaticTypeAuthAccountContracts
 	}
 
 	switch t {

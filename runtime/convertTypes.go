@@ -24,7 +24,6 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/sema"
-	"github.com/onflow/cadence/runtime/stdlib"
 )
 
 // ExportType converts a runtime type to its corresponding Go representation.
@@ -123,7 +122,7 @@ func ExportType(t sema.Type, results map[sema.TypeID]cadence.Type) cadence.Type 
 			return exportReferenceType(t, results)
 		case *sema.RestrictedType:
 			return exportRestrictedType(t, results)
-		case *stdlib.BlockType:
+		case *sema.BlockType:
 			return cadence.BlockType{}
 		case *sema.CheckedFunctionType:
 			return exportFunctionType(t.FunctionType, results)

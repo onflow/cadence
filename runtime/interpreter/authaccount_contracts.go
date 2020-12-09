@@ -47,6 +47,10 @@ func (AuthAccountContractsValue) DynamicType(_ *Interpreter) DynamicType {
 	return AuthAccountContractsDynamicType{}
 }
 
+func (AuthAccountContractsValue) StaticType() StaticType {
+	return PrimitiveStaticTypeAuthAccountContracts
+}
+
 func (v AuthAccountContractsValue) Copy() Value {
 	return v
 }
