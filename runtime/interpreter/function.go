@@ -68,12 +68,17 @@ func (f InterpretedFunctionValue) String() string {
 
 func (InterpretedFunctionValue) IsValue() {}
 
-func (v InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	visitor.VisitInterpretedFunctionValue(interpreter, v)
+func (f InterpretedFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitInterpretedFunctionValue(interpreter, f)
 }
 
 func (InterpretedFunctionValue) DynamicType(_ *Interpreter) DynamicType {
 	return FunctionDynamicType{}
+}
+
+func (f InterpretedFunctionValue) StaticType() StaticType {
+	// TODO: add function static type, convert f.Type
+	return nil
 }
 
 func (f InterpretedFunctionValue) Copy() Value {
@@ -127,12 +132,17 @@ func NewHostFunctionValue(
 
 func (HostFunctionValue) IsValue() {}
 
-func (v HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	visitor.VisitHostFunctionValue(interpreter, v)
+func (f HostFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitHostFunctionValue(interpreter, f)
 }
 
 func (HostFunctionValue) DynamicType(_ *Interpreter) DynamicType {
 	return FunctionDynamicType{}
+}
+
+func (HostFunctionValue) StaticType() StaticType {
+	// TODO: add function static type, store static type in host function value
+	return nil
 }
 
 func (f HostFunctionValue) Copy() Value {
@@ -183,12 +193,16 @@ func (f BoundFunctionValue) String() string {
 
 func (BoundFunctionValue) IsValue() {}
 
-func (v BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
-	visitor.VisitBoundFunctionValue(interpreter, v)
+func (f BoundFunctionValue) Accept(interpreter *Interpreter, visitor Visitor) {
+	visitor.VisitBoundFunctionValue(interpreter, f)
 }
 
 func (BoundFunctionValue) DynamicType(_ *Interpreter) DynamicType {
 	return FunctionDynamicType{}
+}
+
+func (f BoundFunctionValue) StaticType() StaticType {
+	return f.Function.StaticType()
 }
 
 func (f BoundFunctionValue) Copy() Value {

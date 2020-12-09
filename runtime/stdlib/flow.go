@@ -24,7 +24,6 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
@@ -80,7 +79,7 @@ var logFunctionType = &sema.FunctionType{
 }
 
 var getCurrentBlockFunctionType = &sema.FunctionType{
-	ReturnTypeAnnotation: sema.NewTypeAnnotation(&BlockType{}),
+	ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.BlockType{}),
 }
 
 var getBlockFunctionType = &sema.FunctionType{
@@ -95,7 +94,7 @@ var getBlockFunctionType = &sema.FunctionType{
 	},
 	ReturnTypeAnnotation: sema.NewTypeAnnotation(
 		&sema.OptionalType{
-			Type: &BlockType{},
+			Type: &sema.BlockType{},
 		},
 	),
 }
@@ -372,150 +371,4 @@ var AccountContractRemovedEventType = newFlowEventType(
 	AccountEventContractParameter,
 )
 
-// BlockType
-
-type BlockType struct{}
-
-func (*BlockType) IsType() {}
-
-func (*BlockType) String() string {
-	return "Block"
-}
-
-func (*BlockType) QualifiedString() string {
-	return "Block"
-}
-
-func (*BlockType) ID() sema.TypeID {
-	return "Block"
-}
-
-func (*BlockType) Equal(other sema.Type) bool {
-	_, ok := other.(*BlockType)
-	return ok
-}
-
-func (*BlockType) IsResourceType() bool {
-	return false
-}
-
-func (*BlockType) TypeAnnotationState() sema.TypeAnnotationState {
-	return sema.TypeAnnotationStateValid
-}
-
-func (*BlockType) IsInvalidType() bool {
-	return false
-}
-
-func (*BlockType) IsStorable(_ map[*sema.Member]bool) bool {
-	return false
-}
-
-func (*BlockType) IsExternallyReturnable(_ map[*sema.Member]bool) bool {
-	return false
-}
-
-func (*BlockType) IsEquatable() bool {
-	// TODO:
-	return false
-}
-
-func (t *BlockType) RewriteWithRestrictedTypes() (sema.Type, bool) {
-	return t, false
-}
-
-const BlockIDSize = 32
-
-var blockIDFieldType = &sema.ConstantSizedType{
-	Type: &sema.UInt8Type{},
-	Size: BlockIDSize,
-}
-
-const blockTypeHeightFieldDocString = `
-The height of the block.
-
-If the blockchain is viewed as a tree with the genesis block at the root, the height of a node is the number of edges between the node and the genesis block
-`
-
-const blockTypeViewFieldDocString = `
-The view of the block.
-
-It is a detail of the consensus algorithm. It is a monotonically increasing integer and counts rounds in the consensus algorithm. Since not all rounds result in a finalized block, the view number is strictly greater than or equal to the block height
-`
-
-const blockTypeTimestampFieldDocString = `
-The ID of the block.
-
-It is essentially the hash of the block
-`
-
-const blockTypeIdFieldDocString = `
-The timestamp of the block.
-
-It is the local clock time of the block proposer when it generates the block
-`
-
-func (t *BlockType) GetMembers() map[string]sema.MemberResolver {
-	return map[string]sema.MemberResolver{
-		"height": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *sema.Member {
-				return sema.NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&sema.UInt64Type{},
-					blockTypeHeightFieldDocString,
-				)
-			},
-		},
-		"view": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *sema.Member {
-				return sema.NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&sema.UInt64Type{},
-					blockTypeViewFieldDocString,
-				)
-			},
-		},
-		"timestamp": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *sema.Member {
-				return sema.NewPublicConstantFieldMember(
-					t,
-					identifier,
-					&sema.UFix64Type{},
-					blockTypeTimestampFieldDocString,
-				)
-			},
-		},
-		"id": {
-			Kind: common.DeclarationKindField,
-			Resolve: func(identifier string, _ ast.Range, _ func(error)) *sema.Member {
-				return sema.NewPublicConstantFieldMember(
-					t,
-					identifier,
-					blockIDFieldType,
-					blockTypeIdFieldDocString,
-				)
-			},
-		},
-	}
-}
-
-func (t *BlockType) Unify(_ sema.Type, _ map[*sema.TypeParameter]sema.Type, _ func(err error), _ ast.Range) bool {
-	return false
-}
-
-func (t *BlockType) Resolve(_ map[*sema.TypeParameter]sema.Type) sema.Type {
-	return t
-}
-
-var FlowBuiltInTypes = StandardLibraryTypes{
-	StandardLibraryType{
-		Name: "Block",
-		Type: &BlockType{},
-		Kind: common.DeclarationKindType,
-	},
-}
+var FlowBuiltInTypes StandardLibraryTypes

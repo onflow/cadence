@@ -45,6 +45,10 @@ func (DeployedContractValue) DynamicType(_ *Interpreter) DynamicType {
 	return DeployedContractDynamicType{}
 }
 
+func (DeployedContractValue) StaticType() StaticType {
+	return PrimitiveStaticTypeDeployedContract
+}
+
 func (v DeployedContractValue) Copy() Value {
 	return v
 }

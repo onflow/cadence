@@ -49,6 +49,7 @@ type Value interface {
 	SetOwner(address *common.Address)
 	IsModified() bool
 	SetModified(modified bool)
+	StaticType() StaticType
 }
 
 // ValueIndexableValue
@@ -104,6 +105,10 @@ func (v TypeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (TypeValue) DynamicType(_ *Interpreter) DynamicType {
 	return MetaTypeDynamicType{}
+}
+
+func (TypeValue) StaticType() StaticType {
+	return PrimitiveStaticTypeMetaType
 }
 
 func (v TypeValue) Copy() Value {
@@ -189,6 +194,10 @@ func (VoidValue) DynamicType(_ *Interpreter) DynamicType {
 	return VoidDynamicType{}
 }
 
+func (VoidValue) StaticType() StaticType {
+	return PrimitiveStaticTypeVoid
+}
+
 func (v VoidValue) Copy() Value {
 	return v
 }
@@ -226,6 +235,10 @@ func (v BoolValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (BoolValue) DynamicType(_ *Interpreter) DynamicType {
 	return BoolDynamicType{}
+}
+
+func (BoolValue) StaticType() StaticType {
+	return PrimitiveStaticTypeBool
 }
 
 func (v BoolValue) Copy() Value {
@@ -294,6 +307,10 @@ func (v *StringValue) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (*StringValue) DynamicType(_ *Interpreter) DynamicType {
 	return StringDynamicType{}
+}
+
+func (StringValue) StaticType() StaticType {
+	return PrimitiveStaticTypeString
 }
 
 func (v *StringValue) Copy() Value {
@@ -514,6 +531,11 @@ func (v *ArrayValue) DynamicType(interpreter *Interpreter) DynamicType {
 	return ArrayDynamicType{
 		ElementTypes: elementTypes,
 	}
+}
+
+func (v *ArrayValue) StaticType() StaticType {
+	// TODO: store static type in array values
+	return nil
 }
 
 func (v *ArrayValue) Copy() Value {
@@ -824,6 +846,10 @@ func (IntValue) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.IntType{}}
 }
 
+func (IntValue) StaticType() StaticType {
+	return PrimitiveStaticTypeInt
+}
+
 func (v IntValue) Copy() Value {
 	return IntValue{new(big.Int).Set(v.BigInt)}
 }
@@ -1028,6 +1054,10 @@ func (v Int8Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (Int8Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Int8Type{}}
+}
+
+func (Int8Value) StaticType() StaticType {
+	return PrimitiveStaticTypeInt8
 }
 
 func (v Int8Value) Copy() Value {
@@ -1262,6 +1292,10 @@ func (v Int16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (Int16Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Int16Type{}}
+}
+
+func (Int16Value) StaticType() StaticType {
+	return PrimitiveStaticTypeInt16
 }
 
 func (v Int16Value) Copy() Value {
@@ -1500,6 +1534,10 @@ func (Int32Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Int32Type{}}
 }
 
+func (Int32Value) StaticType() StaticType {
+	return PrimitiveStaticTypeInt32
+}
+
 func (v Int32Value) Copy() Value {
 	return v
 }
@@ -1734,6 +1772,10 @@ func (v Int64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (Int64Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Int64Type{}}
+}
+
+func (Int64Value) StaticType() StaticType {
+	return PrimitiveStaticTypeInt64
 }
 
 func (v Int64Value) Copy() Value {
@@ -1978,6 +2020,10 @@ func (v Int128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (Int128Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Int128Type{}}
+}
+
+func (Int128Value) StaticType() StaticType {
+	return PrimitiveStaticTypeInt128
 }
 
 func (v Int128Value) Copy() Value {
@@ -2272,6 +2318,10 @@ func (v Int256Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (Int256Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Int256Type{}}
+}
+
+func (Int256Value) StaticType() StaticType {
+	return PrimitiveStaticTypeInt256
 }
 
 func (v Int256Value) Copy() Value {
@@ -2589,6 +2639,10 @@ func (UIntValue) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.UIntType{}}
 }
 
+func (UIntValue) StaticType() StaticType {
+	return PrimitiveStaticTypeUInt
+}
+
 func (v UIntValue) Copy() Value {
 	return UIntValue{new(big.Int).Set(v.BigInt)}
 }
@@ -2798,6 +2852,10 @@ func (UInt8Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.UInt8Type{}}
 }
 
+func (UInt8Value) StaticType() StaticType {
+	return PrimitiveStaticTypeUInt8
+}
+
 func (v UInt8Value) Copy() Value {
 	return v
 }
@@ -2998,6 +3056,10 @@ func (v UInt16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (UInt16Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.UInt16Type{}}
+}
+
+func (UInt16Value) StaticType() StaticType {
+	return PrimitiveStaticTypeUInt16
 }
 
 func (v UInt16Value) Copy() Value {
@@ -3202,6 +3264,10 @@ func (UInt32Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.UInt32Type{}}
 }
 
+func (UInt32Value) StaticType() StaticType {
+	return PrimitiveStaticTypeUInt32
+}
+
 func (v UInt32Value) Copy() Value {
 	return v
 }
@@ -3404,6 +3470,10 @@ func (v UInt64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (UInt64Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.UInt64Type{}}
+}
+
+func (UInt64Value) StaticType() StaticType {
+	return PrimitiveStaticTypeUInt64
 }
 
 func (v UInt64Value) Copy() Value {
@@ -3621,6 +3691,10 @@ func (v UInt128Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (UInt128Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.UInt128Type{}}
+}
+
+func (UInt128Value) StaticType() StaticType {
+	return PrimitiveStaticTypeUInt128
 }
 
 func (v UInt128Value) Copy() Value {
@@ -3886,6 +3960,10 @@ func (UInt256Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.UInt256Type{}}
 }
 
+func (UInt256Value) StaticType() StaticType {
+	return PrimitiveStaticTypeUInt256
+}
+
 func (v UInt256Value) Copy() Value {
 	return UInt256Value{new(big.Int).Set(v.BigInt)}
 }
@@ -4140,6 +4218,10 @@ func (Word8Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Word8Type{}}
 }
 
+func (Word8Value) StaticType() StaticType {
+	return PrimitiveStaticTypeWord8
+}
+
 func (v Word8Value) Copy() Value {
 	return v
 }
@@ -4301,6 +4383,10 @@ func (v Word16Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (Word16Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Word16Type{}}
+}
+
+func (Word16Value) StaticType() StaticType {
+	return PrimitiveStaticTypeWord16
 }
 
 func (v Word16Value) Copy() Value {
@@ -4466,6 +4552,10 @@ func (Word32Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Word32Type{}}
 }
 
+func (Word32Value) StaticType() StaticType {
+	return PrimitiveStaticTypeWord32
+}
+
 func (v Word32Value) Copy() Value {
 	return v
 }
@@ -4629,6 +4719,10 @@ func (v Word64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (Word64Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Word64Type{}}
+}
+
+func (Word64Value) StaticType() StaticType {
+	return PrimitiveStaticTypeWord64
 }
 
 func (v Word64Value) Copy() Value {
@@ -4809,6 +4903,10 @@ func (v Fix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (Fix64Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.Fix64Type{}}
+}
+
+func (Fix64Value) StaticType() StaticType {
+	return PrimitiveStaticTypeFix64
 }
 
 func (v Fix64Value) Copy() Value {
@@ -5026,6 +5124,10 @@ func (v UFix64Value) Accept(interpreter *Interpreter, visitor Visitor) {
 
 func (UFix64Value) DynamicType(_ *Interpreter) DynamicType {
 	return NumberDynamicType{&sema.UFix64Type{}}
+}
+
+func (UFix64Value) StaticType() StaticType {
+	return PrimitiveStaticTypeUFix64
 }
 
 func (v UFix64Value) Copy() Value {
@@ -5305,6 +5407,13 @@ func (v *CompositeValue) DynamicType(interpreter *Interpreter) DynamicType {
 	staticType := interpreter.getCompositeType(v.Location, v.QualifiedIdentifier)
 	return CompositeDynamicType{
 		StaticType: staticType,
+	}
+}
+
+func (v *CompositeValue) StaticType() StaticType {
+	return CompositeStaticType{
+		Location: v.Location,
+		TypeID:   v.TypeID(),
 	}
 }
 
@@ -5621,6 +5730,11 @@ func (v *DictionaryValue) DynamicType(interpreter *Interpreter) DynamicType {
 	return DictionaryDynamicType{
 		EntryTypes: entryTypes,
 	}
+}
+
+func (v *DictionaryValue) StaticType() StaticType {
+	// TODO: store static type in dictionary values
+	return nil
 }
 
 func (v *DictionaryValue) Copy() Value {
@@ -5962,6 +6076,12 @@ func (NilValue) DynamicType(_ *Interpreter) DynamicType {
 	return NilDynamicType{}
 }
 
+func (NilValue) StaticType() StaticType {
+	return OptionalStaticType{
+		Type: PrimitiveStaticTypeNever,
+	}
+}
+
 func (NilValue) isOptionalValue() {}
 
 func (v NilValue) Copy() Value {
@@ -6039,6 +6159,16 @@ func (v *SomeValue) Accept(interpreter *Interpreter, visitor Visitor) {
 func (v *SomeValue) DynamicType(interpreter *Interpreter) DynamicType {
 	innerType := v.Value.DynamicType(interpreter)
 	return SomeDynamicType{InnerType: innerType}
+}
+
+func (v *SomeValue) StaticType() StaticType {
+	innerType := v.Value.StaticType()
+	if innerType == nil {
+		return nil
+	}
+	return OptionalStaticType{
+		Type: innerType,
+	}
 }
 
 func (*SomeValue) isOptionalValue() {}
@@ -6143,6 +6273,11 @@ func (v *StorageReferenceValue) DynamicType(interpreter *Interpreter) DynamicTyp
 		authorized: v.Authorized,
 		innerType:  innerType,
 	}
+}
+
+func (v *StorageReferenceValue) StaticType() StaticType {
+	// TODO:
+	return nil
 }
 
 func (v *StorageReferenceValue) Copy() Value {
@@ -6267,6 +6402,11 @@ func (v *EphemeralReferenceValue) DynamicType(interpreter *Interpreter) DynamicT
 		authorized: v.Authorized,
 		innerType:  innerType,
 	}
+}
+
+func (v *EphemeralReferenceValue) StaticType() StaticType {
+	// TODO:
+	return nil
 }
 
 func (v *EphemeralReferenceValue) Copy() Value {
@@ -6402,6 +6542,10 @@ func (AddressValue) DynamicType(_ *Interpreter) DynamicType {
 	return AddressDynamicType{}
 }
 
+func (AddressValue) StaticType() StaticType {
+	return PrimitiveStaticTypeAddress
+}
+
 func (v AddressValue) Copy() Value {
 	return v
 }
@@ -6524,6 +6668,10 @@ func (v AuthAccountValue) AddressValue() AddressValue {
 
 func (AuthAccountValue) DynamicType(_ *Interpreter) DynamicType {
 	return AuthAccountDynamicType{}
+}
+
+func (AuthAccountValue) StaticType() StaticType {
+	return PrimitiveStaticTypeAuthAccount
 }
 
 func (v AuthAccountValue) Copy() Value {
@@ -6681,6 +6829,10 @@ func (PublicAccountValue) DynamicType(_ *Interpreter) DynamicType {
 	return PublicAccountDynamicType{}
 }
 
+func (PublicAccountValue) StaticType() StaticType {
+	return PrimitiveStaticTypePublicAccount
+}
+
 func (v PublicAccountValue) Copy() Value {
 	return v
 }
@@ -6761,6 +6913,19 @@ func (v PathValue) DynamicType(_ *Interpreter) DynamicType {
 	}
 }
 
+func (v PathValue) StaticType() StaticType {
+	switch v.Domain {
+	case common.PathDomainStorage:
+		return PrimitiveStaticTypeStoragePath
+	case common.PathDomainPublic:
+		return PrimitiveStaticTypePublicPath
+	case common.PathDomainPrivate:
+		return PrimitiveStaticTypePrivatePath
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
 func (v PathValue) Copy() Value {
 	return v
 }
@@ -6823,6 +6988,12 @@ func (v CapabilityValue) DynamicType(inter *Interpreter) DynamicType {
 
 	return CapabilityDynamicType{
 		BorrowType: borrowType,
+	}
+}
+
+func (v CapabilityValue) StaticType() StaticType {
+	return CapabilityStaticType{
+		BorrowType: v.BorrowType,
 	}
 }
 
@@ -6898,7 +7069,11 @@ func (v LinkValue) Accept(interpreter *Interpreter, visitor Visitor) {
 }
 
 func (LinkValue) DynamicType(_ *Interpreter) DynamicType {
-	panic(errors.NewUnreachableError())
+	return nil
+}
+
+func (LinkValue) StaticType() StaticType {
+	return nil
 }
 
 func (v LinkValue) Copy() Value {

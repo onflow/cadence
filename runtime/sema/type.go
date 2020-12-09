@@ -295,7 +295,7 @@ Returns true if the object conforms to the given type at runtime
 
 // getType
 
-const getTypeFunctionName = "getType"
+const GetTypeFunctionName = "getType"
 
 var getTypeFunctionType = &FunctionType{
 	ReturnTypeAnnotation: NewTypeAnnotation(
@@ -358,7 +358,7 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 
 	// All types have a predeclared member `fun getType(): Type`
 
-	members[getTypeFunctionName] = MemberResolver{
+	members[GetTypeFunctionName] = MemberResolver{
 		Kind: common.DeclarationKindFunction,
 		Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
 			return NewPublicFunctionMember(
@@ -4422,6 +4422,7 @@ func init() {
 		PublicPathType,
 		&CapabilityType{},
 		&DeployedContractType{},
+		&BlockType{},
 	}
 
 	types := append(

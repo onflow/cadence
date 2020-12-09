@@ -27,6 +27,7 @@ import (
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
 func TestInterpretMetaTypeEquality(t *testing.T) {
@@ -273,7 +274,7 @@ func TestInterpretIsInstance(t *testing.T) {
 		result bool
 	}{
 		{
-			name: "string is an instance of string",
+			name: "string is an instance of String",
 			code: `
               let stringType = Type<String>()
               let result = "abc".isInstance(stringType)
@@ -281,7 +282,7 @@ func TestInterpretIsInstance(t *testing.T) {
 			result: true,
 		},
 		{
-			name: "int is an instance of int",
+			name: "int is an instance of Int",
 			code: `
               let intType = Type<Int>()
               let result = (1).isInstance(intType)
@@ -300,7 +301,7 @@ func TestInterpretIsInstance(t *testing.T) {
 			result: true,
 		},
 		{
-			name: "int is not an instance of string",
+			name: "int is not an instance of String",
 			code: `
               let stringType = Type<String>()
               let result = (1).isInstance(stringType)
@@ -318,7 +319,7 @@ func TestInterpretIsInstance(t *testing.T) {
 			result: false,
 		},
 		{
-			name: "resource is not an instance of string",
+			name: "resource is not an instance of String",
 			code: `
               resource R {}
 
@@ -379,6 +380,72 @@ func TestInterpretIsInstance(t *testing.T) {
 
 			assert.Equal(t,
 				interpreter.BoolValue(testCase.result),
+				inter.Globals["result"].Value,
+			)
+		})
+	}
+}
+
+func TestInterpretGetType(t *testing.T) {
+
+	t.Parallel()
+
+	cases := []struct {
+		name   string
+		code   string
+		result interpreter.Value
+	}{
+		{
+			name: "String",
+			code: `
+              let result = "abc".getType()
+            `,
+			result: interpreter.TypeValue{
+				Type: interpreter.PrimitiveStaticTypeString,
+			},
+		},
+		{
+			name: "Int",
+			code: `
+              let result = (1).getType()
+            `,
+			result: interpreter.TypeValue{
+				Type: interpreter.PrimitiveStaticTypeInt,
+			},
+		},
+		{
+			name: "resource",
+			code: `
+              resource R {}
+
+              let r <- create R()
+              let result = r.getType()
+            `,
+			result: interpreter.TypeValue{
+				Type: interpreter.CompositeStaticType{
+					Location: utils.TestLocation,
+					TypeID:   "S.test.R",
+				},
+			},
+		},
+		{
+			name: "array",
+			code: `
+              let result = [].getType()
+            `,
+			result: interpreter.TypeValue{
+				// TODO: not yet supported
+				Type: nil,
+			},
+		},
+	}
+
+	for _, testCase := range cases {
+		t.Run(testCase.name, func(t *testing.T) {
+			inter := parseCheckAndInterpret(t, testCase.code)
+
+			assert.Equal(t,
+				testCase.result,
 				inter.Globals["result"].Value,
 			)
 		})

@@ -60,4 +60,4 @@ func (types StandardLibraryTypes) ToTypeDeclarations() []sema.TypeDeclaration {
 
 // BuiltinTypes
 
-var BuiltinTypes = StandardLibraryTypes{}
+var BuiltinTypes StandardLibraryTypes
