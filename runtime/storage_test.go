@@ -311,8 +311,8 @@ func TestAccountStorageStorage(t *testing.T) {
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: storage,
-		getSigningAccounts: func() []Address {
-			return []Address{{42}}
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{{42}}, nil
 		},
 		getStorageUsed: func(_ Address) (uint64, error) {
 			var amount uint64 = 0
