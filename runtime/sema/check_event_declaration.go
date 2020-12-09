@@ -77,10 +77,11 @@ func IsValidEventParameterType(t Type) bool {
 			return false
 		}
 		for _, member := range t.Members {
-			if member.DeclarationKind == common.DeclarationKindField {
-				if !IsValidEventParameterType(member.TypeAnnotation.Type) {
-					return false
-				}
+			if member.DeclarationKind == common.DeclarationKindField &&
+				!member.IgnoreInSerialization &&
+				!IsValidEventParameterType(member.TypeAnnotation.Type) {
+
+				return false
 			}
 		}
 		return true

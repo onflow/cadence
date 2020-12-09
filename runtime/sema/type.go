@@ -293,6 +293,20 @@ const isInstanceFunctionDocString = `
 Returns true if the object conforms to the given type at runtime
 `
 
+// getType
+
+const getTypeFunctionName = "getType"
+
+var getTypeFunctionType = &FunctionType{
+	ReturnTypeAnnotation: NewTypeAnnotation(
+		&MetaType{},
+	),
+}
+
+const getTypeFunctionDocString = `
+Returns the type of the value
+`
+
 // toString
 
 const ToStringFunctionName = "toString"
@@ -338,6 +352,20 @@ func withBuiltinMembers(ty Type, members map[string]MemberResolver) map[string]M
 				identifier,
 				isInstanceFunctionType,
 				isInstanceFunctionDocString,
+			)
+		},
+	}
+
+	// All types have a predeclared member `fun getType(): Type`
+
+	members[getTypeFunctionName] = MemberResolver{
+		Kind: common.DeclarationKindFunction,
+		Resolve: func(identifier string, _ ast.Range, _ func(error)) *Member {
+			return NewPublicFunctionMember(
+				ty,
+				identifier,
+				getTypeFunctionType,
+				getTypeFunctionDocString,
 			)
 		},
 	}

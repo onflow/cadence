@@ -1988,6 +1988,17 @@ func (checker *Checker) predeclaredMembers(containerType Type) []*Member {
 		isInstanceFunctionDocString,
 	)
 
+	// All types have a predeclared member `fun getType(): Type`
+
+	addPredeclaredMember(
+		getTypeFunctionName,
+		getTypeFunctionType,
+		common.DeclarationKindFunction,
+		ast.AccessPublic,
+		true,
+		getTypeFunctionDocString,
+	)
+
 	if compositeKindedType, ok := containerType.(CompositeKindedType); ok {
 
 		switch compositeKindedType.GetCompositeKind() {
