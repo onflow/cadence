@@ -296,7 +296,7 @@ let code = "70756220636f6e...".decodeHex()
 
 let signer: Account = ...
 signer.contracts.add(
-    name: "Test"
+    name: "Test",
     code: code,
     message: "I'm a new contract in an existing account"
 )
