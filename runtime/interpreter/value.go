@@ -248,7 +248,10 @@ func (v BoolValue) String() string {
 }
 
 func (v BoolValue) KeyString() string {
-	return v.String()
+	if v {
+		return "true"
+	}
+	return "false"
 }
 
 // StringValue
@@ -6386,7 +6389,7 @@ func (v AddressValue) Copy() Value {
 }
 
 func (v AddressValue) KeyString() string {
-	return v.String()
+	return hex.EncodeToString(v[:])
 }
 
 func (v AddressValue) String() string {
@@ -6768,6 +6771,14 @@ func (v PathValue) Destroy(_ *Interpreter, _ LocationRange) trampoline.Trampolin
 func (v PathValue) String() string {
 	return format.Path(
 		v.Domain.Identifier(),
+		v.Identifier,
+	)
+}
+
+func (v PathValue) KeyString() string {
+	return fmt.Sprintf(
+		"/%s/%s",
+		v.Domain,
 		v.Identifier,
 	)
 }

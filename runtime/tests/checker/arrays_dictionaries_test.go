@@ -917,10 +917,15 @@ func TestCheckDictionaryKeyTypesExpressions(t *testing.T) {
 	t.Parallel()
 
 	tests := map[string]string{
-		"String":    `"abc"`,
-		"Character": `"X"`,
-		"Address":   `0x1`,
-		"Bool":      `true`,
+		"String":         `"abc"`,
+		"Character":      `"X"`,
+		"Address":        `0x1`,
+		"Bool":           `true`,
+		"Path":           `/storage/a`,
+		"StoragePath":    `/storage/a`,
+		"PublicPath":     `/public/a`,
+		"PrivatePath":    `/private/a`,
+		"CapabilityPath": `/private/a`,
 	}
 
 	for _, integerType := range sema.AllIntegerTypes {
