@@ -5412,8 +5412,8 @@ func (v *CompositeValue) DynamicType(interpreter *Interpreter) DynamicType {
 
 func (v *CompositeValue) StaticType() StaticType {
 	return CompositeStaticType{
-		Location: v.Location,
-		TypeID:   v.TypeID(),
+		Location:            v.Location,
+		QualifiedIdentifier: v.QualifiedIdentifier,
 	}
 }
 
