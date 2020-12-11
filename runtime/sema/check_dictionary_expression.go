@@ -118,9 +118,8 @@ func IsValidDictionaryKeyType(keyType Type) bool {
 	case *CompositeType:
 		return keyType.Kind == common.CompositeKindEnum
 	default:
-		if keyType == NeverType {
-			return true
-		}
-		return IsSubType(keyType, &NumberType{})
+		return keyType == NeverType ||
+			IsSubType(keyType, &NumberType{}) ||
+			IsSubType(keyType, PathType)
 	}
 }
