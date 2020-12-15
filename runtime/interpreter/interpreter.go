@@ -2620,6 +2620,11 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 				// needs to be available for nested declarations
 
 				variable.Value = value
+
+				// Also, immediately set the nested values,
+				// as the initializer of the contract may use nested declarations
+
+				value.NestedValues = members
 			}
 
 			var initializationTrampoline Trampoline = Done{}
