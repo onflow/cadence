@@ -630,19 +630,19 @@ func (interpreter *Interpreter) runAllStatements(t Trampoline) interface{} {
 			panic(internalErr)
 		}
 
-		// wrap the error with position information
+		// wrap the error with position information if needed
 
-		var posInfo ast.HasPosition
-		// use the position information of the reported error, if any,
-		// or that of the statement otherwise
-		posInfo, ok := internalErr.(ast.HasPosition)
+		_, ok := internalErr.(ast.HasPosition)
 		if !ok {
-			posInfo = statement.Statement
+			internalErr = PositionedError{
+				Err:   internalErr,
+				Range: ast.NewRangeFromPositioned(statement.Statement),
+			}
 		}
 
 		panic(Error{
-			Err:           internalErr,
-			LocationRange: statement.Interpreter.locationRange(posInfo),
+			Err:      internalErr,
+			Location: statement.Interpreter.Checker.Location,
 		})
 	})
 

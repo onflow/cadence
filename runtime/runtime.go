@@ -1561,7 +1561,10 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			checker, err := r.parseAndCheckProgram(code, context, functions, nil, useCache)
 			if err != nil {
-				panic(fmt.Errorf("invalid contract: %w", err))
+				panic(&InvalidContractDeploymentError{
+					Err:           err,
+					LocationRange: invocation.LocationRange,
+				})
 			}
 
 			// The code may declare exactly one contract or one contract interface.

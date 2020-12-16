@@ -103,6 +103,10 @@ func (e CheckerError) ChildErrors() []error {
 	return e.Errors
 }
 
+func (e CheckerError) ImportLocation() common.Location {
+	return e.Location
+}
+
 // SemanticError
 
 type SemanticError interface {

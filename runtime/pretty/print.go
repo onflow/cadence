@@ -153,6 +153,13 @@ func (p ErrorPrettyPrinter) PrettyPrintError(err error, location common.Location
 	var printError func(err error, location common.Location) error
 	printError = func(err error, location common.Location) error {
 
+		if err, ok := err.(common.HasImportLocation); ok {
+			importLocation := err.ImportLocation()
+			if importLocation != nil {
+				location = importLocation
+			}
+		}
+
 		if err, ok := err.(errors.ParentError); ok {
 			for _, childErr := range err.ChildErrors() {
 
@@ -170,13 +177,6 @@ func (p ErrorPrettyPrinter) PrettyPrintError(err error, location common.Location
 			}
 
 			return nil
-		}
-
-		if err, ok := err.(common.HasImportLocation); ok {
-			importLocation := err.ImportLocation()
-			if importLocation != nil {
-				location = importLocation
-			}
 		}
 
 		if i > 0 {
