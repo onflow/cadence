@@ -30,7 +30,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/crypto/sha3"
 
 	"github.com/onflow/cadence"
 	jsoncdc "github.com/onflow/cadence/encoding/json"
@@ -2694,201 +2693,6 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 	}
 }
 
-func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
-
-	t.Parallel()
-
-	expectSuccess := func(t *testing.T, err error, accountCode []byte, events []cadence.Event, expectedEventType cadence.Type) {
-		require.NoError(t, err)
-
-		assert.NotNil(t, accountCode)
-
-		require.Len(t, events, 1)
-
-		event := events[0]
-
-		require.Equal(t, event.Type(), expectedEventType)
-
-		expectedEventCompositeType := expectedEventType.(*cadence.EventType)
-
-		codeHashParameterIndex := -1
-
-		for i, field := range expectedEventCompositeType.Fields {
-			if field.Identifier != stdlib.AccountEventCodeHashParameter.Identifier {
-				continue
-			}
-			codeHashParameterIndex = i
-		}
-
-		if codeHashParameterIndex < 0 {
-			t.Error("couldn't find code hash parameter in event type")
-		}
-
-		expectedCodeHash := sha3.Sum256(accountCode)
-
-		codeHashValue := event.Fields[codeHashParameterIndex]
-
-		actualCodeHash, err := interpreter.ByteArrayValueToByteSlice(importValue(codeHashValue))
-		require.NoError(t, err)
-
-		require.Equal(t, expectedCodeHash[:], actualCodeHash)
-	}
-
-	expectFailure := func(t *testing.T, err error, accountCode []byte, events []cadence.Event, _ cadence.Type) {
-		require.Error(t, err)
-
-		assert.Nil(t, accountCode)
-		assert.Len(t, events, 0)
-	}
-
-	type argument interface {
-		interpreter.Value
-	}
-
-	type testCase struct {
-		name      string
-		contract  string
-		arguments []argument
-		check     func(t *testing.T, err error, accountCode []byte, events []cadence.Event, expectedEventType cadence.Type)
-	}
-
-	tests := []testCase{
-		{
-			name: "no arguments",
-			contract: `
-              pub contract Test {}
-            `,
-			arguments: []argument{},
-			check:     expectSuccess,
-		},
-		{
-			name: "with argument",
-			contract: `
-              pub contract Test {
-                  init(_ x: Int) {}
-              }
-            `,
-			arguments: []argument{
-				interpreter.NewIntValueFromInt64(1),
-			},
-			check: expectSuccess,
-		},
-		{
-			name: "with incorrect argument",
-			contract: `
-              pub contract Test {
-                  init(_ x: Int) {}
-              }
-            `,
-			arguments: []argument{
-				interpreter.BoolValue(true),
-			},
-			check: expectFailure,
-		},
-		{
-			name: "additional argument",
-			contract: `
-              pub contract Test {}
-            `,
-			arguments: []argument{
-				interpreter.NewIntValueFromInt64(1),
-			},
-			check: expectFailure,
-		},
-		{
-			name: "additional code which is invalid at top-level",
-			contract: `
-              pub contract Test {}
-
-              fun testCase() {}
-            `,
-			arguments: []argument{},
-			check:     expectFailure,
-		},
-	}
-
-	test := func(test testCase) {
-
-		t.Run(test.name, func(t *testing.T) {
-
-			t.Parallel()
-
-			contractArrayCode := fmt.Sprintf(
-				`"%s".decodeHex()`,
-				hex.EncodeToString([]byte(test.contract)),
-			)
-
-			argumentCodes := make([]string, len(test.arguments))
-
-			for i, argument := range test.arguments {
-				argumentCodes[i] = argument.String()
-			}
-
-			argumentCode := strings.Join(argumentCodes, ", ")
-			if len(test.arguments) > 0 {
-				argumentCode = ", " + argumentCode
-			}
-
-			script := []byte(fmt.Sprintf(
-				`
-                  transaction {
-
-                      prepare(signer: AuthAccount) {
-                          signer.contracts.add(name: "Test", code: %s%s)
-                      }
-                  }
-                `,
-				contractArrayCode,
-				argumentCode,
-			))
-
-			runtime := NewInterpreterRuntime()
-
-			var accountCode []byte
-			var events []cadence.Event
-
-			runtimeInterface := &testRuntimeInterface{
-				storage: newTestStorage(nil, nil),
-				getSigningAccounts: func() ([]Address, error) {
-					return []Address{{42}}, nil
-				},
-				getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
-					return accountCode, nil
-				},
-				updateAccountContractCode: func(_ Address, _ string, code []byte) error {
-					accountCode = code
-					return nil
-				},
-				emitEvent: func(event cadence.Event) error {
-					events = append(events, event)
-					return nil
-				},
-			}
-
-			nextTransactionLocation := newTransactionLocationGenerator()
-
-			err := runtime.ExecuteTransaction(
-				Script{
-					Source: script,
-				},
-				Context{
-					Interface: runtimeInterface,
-					Location:  nextTransactionLocation(),
-				},
-			)
-			exportedEventType := ExportType(
-				stdlib.AccountContractAddedEventType,
-				map[sema.TypeID]cadence.Type{},
-			)
-			test.check(t, err, accountCode, events, exportedEventType)
-		})
-	}
-
-	for _, testCase := range tests {
-		test(testCase)
-	}
-}
-
 func TestRuntimeContractAccount(t *testing.T) {
 
 	t.Parallel()
@@ -4552,19 +4356,14 @@ func TestRuntimeComputationLimit(t *testing.T) {
 			if test.ok {
 				require.NoError(t, err)
 			} else {
-				require.Error(t, err)
-
-				require.IsType(t, Error{}, err)
-				err = err.(Error).Unwrap()
-
-				require.IsType(t, interpreter.Error{}, err)
-				err = err.(interpreter.Error).Unwrap()
+				var computationLimitErr ComputationLimitExceededError
+				utils.RequireErrorAs(t, err, &computationLimitErr)
 
 				assert.Equal(t,
 					ComputationLimitExceededError{
 						Limit: computationLimit,
 					},
-					err,
+					computationLimitErr,
 				)
 			}
 		})

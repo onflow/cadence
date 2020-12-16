@@ -45,8 +45,8 @@ func (e *unsupportedOperation) Error() string {
 
 // Error is the containing type for all errors produced by the interpreter.
 type Error struct {
-	Err error
-	LocationRange
+	Err      error
+	Location common.Location
 }
 
 func (e Error) Unwrap() error {
@@ -54,6 +54,29 @@ func (e Error) Unwrap() error {
 }
 
 func (e Error) Error() string {
+	return e.Err.Error()
+}
+
+func (e Error) ChildErrors() []error {
+	return []error{e.Err}
+}
+
+func (e Error) ImportLocation() common.Location {
+	return e.Location
+}
+
+// PositionedError wraps an unpositioned error with position info
+//
+type PositionedError struct {
+	Err error
+	ast.Range
+}
+
+func (e PositionedError) Unwrap() error {
+	return e.Err
+}
+
+func (e PositionedError) Error() string {
 	return e.Err.Error()
 }
 

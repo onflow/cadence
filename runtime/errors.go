@@ -211,6 +211,44 @@ func (e *ParsingCheckingError) Error() string {
 	return e.Err.Error()
 }
 
-func (e ParsingCheckingError) Unwrap() error {
+func (e *ParsingCheckingError) Unwrap() error {
 	return e.Err
+}
+
+func (e *ParsingCheckingError) ImportLocation() common.Location {
+	return e.Location
+}
+
+// InvalidContractDeploymentError
+//
+type InvalidContractDeploymentError struct {
+	Err error
+	interpreter.LocationRange
+}
+
+func (*InvalidContractDeploymentError) Error() string {
+	return "cannot deploy invalid contract"
+}
+
+func (e *InvalidContractDeploymentError) ChildErrors() []error {
+	return []error{
+		&InvalidContractDeploymentOriginError{
+			LocationRange: e.LocationRange,
+		},
+		e.Err,
+	}
+}
+
+func (e *InvalidContractDeploymentError) Unwrap() error {
+	return e.Err
+}
+
+// InvalidContractDeploymentOriginError
+//
+type InvalidContractDeploymentOriginError struct {
+	interpreter.LocationRange
+}
+
+func (*InvalidContractDeploymentOriginError) Error() string {
+	return "cannot deploy invalid contract"
 }
