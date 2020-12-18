@@ -226,7 +226,7 @@ type InvalidContractDeploymentError struct {
 	interpreter.LocationRange
 }
 
-func (*InvalidContractDeploymentError) Error() string {
+func (e *InvalidContractDeploymentError) Error() string {
 	return fmt.Sprintf("cannot deploy invalid contract: %s", e.Err.Error())
 }
 
