@@ -227,7 +227,7 @@ type InvalidContractDeploymentError struct {
 }
 
 func (*InvalidContractDeploymentError) Error() string {
-	return "cannot deploy invalid contract"
+	return fmt.Sprintf("cannot deploy invalid contract: %s", e.Err.Error())
 }
 
 func (e *InvalidContractDeploymentError) ChildErrors() []error {
