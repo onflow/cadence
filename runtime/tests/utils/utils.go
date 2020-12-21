@@ -96,6 +96,20 @@ func DeploymentTransaction(name string, contract []byte) []byte {
 	))
 }
 
+func RemovalTransaction(name string) []byte {
+	return []byte(fmt.Sprintf(
+		`
+          transaction {
+
+              prepare(signer: AuthAccount) {
+                  signer.contracts.remove(name: "%s")
+              }
+          }
+        `,
+		name,
+	))
+}
+
 func UpdateTransaction(name string, contract []byte) []byte {
 	return []byte(fmt.Sprintf(
 		`

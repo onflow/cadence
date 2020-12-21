@@ -3092,6 +3092,127 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
 	assert.Equal(t, `"destroyed"`, loggedMessage)
 }
 
+func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	addressValue := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+	}
+
+	contract := []byte(`
+        pub contract Test {
+            pub resource R {
+                // test that the destructor is linked back into the nested resource
+                // after being loaded from storage
+                destroy() {
+                    log("destroyed")
+                }
+            }
+
+            init() {
+                // store nested resource in account on deployment
+                self.account.save(<-create R(), to: /storage/r)
+            }
+        }
+    `)
+
+	tx := []byte(`
+        // NOTE: *not* importing concrete implementation.
+        //   Should be imported automatically when loading the value from storage
+
+		transaction {
+
+			prepare(acct: AuthAccount) {
+                let r <- acct.load<@AnyResource>(from: /storage/r)
+				destroy r
+			}
+		}
+	`)
+
+	deploy := utils.DeploymentTransaction("Test", contract)
+	removal := utils.RemovalTransaction("Test")
+
+	var accountCode []byte
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		storage: newTestStorage(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{addressValue}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateAccountContractCode: func(address Address, _ string, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		removeAccountContractCode: func(_ Address, _ string) (err error) {
+			accountCode = nil
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error { return nil },
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy the contract
+
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: deploy,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.NotNil(t, accountCode)
+
+	// Remove the contract
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: removal,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Nil(t, accountCode)
+
+	// Destroy
+
+	err = runtime.ExecuteTransaction(
+		Script{
+			Source: tx,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+
+	var typeLoadingErr interpreter.TypeLoadingError
+	utils.RequireErrorAs(t, err, &typeLoadingErr)
+
+	require.Equal(t,
+		common.AddressLocation{Address: addressValue}.TypeID("Test.R"),
+		typeLoadingErr.TypeID,
+	)
+}
+
 const fungibleTokenContract = `
 pub contract FungibleToken {
 
