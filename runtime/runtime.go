@@ -876,9 +876,6 @@ func (r *interpreterRuntime) importResolver(runtimeInterface Interface) ImportRe
 		if err != nil {
 			return nil, err
 		}
-		if code == nil {
-			return nil, nil
-		}
 
 		program, err = r.parse(location, code, runtimeInterface)
 		if err != nil {

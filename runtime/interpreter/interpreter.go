@@ -4450,12 +4450,24 @@ func (interpreter *Interpreter) getElaboration(location ast.Location) *sema.Elab
 
 func (interpreter *Interpreter) getCompositeType(location ast.Location, typeID sema.TypeID) *sema.CompositeType {
 	elaboration := interpreter.getElaboration(location)
-	return elaboration.CompositeTypes[typeID]
+	ty := elaboration.CompositeTypes[typeID]
+	if ty == nil {
+		panic(TypeLoadingError{
+			TypeID: typeID,
+		})
+	}
+	return ty
 }
 
 func (interpreter *Interpreter) getInterfaceType(location ast.Location, typeID sema.TypeID) *sema.InterfaceType {
 	elaboration := interpreter.getElaboration(location)
-	return elaboration.InterfaceTypes[typeID]
+	ty := elaboration.InterfaceTypes[typeID]
+	if ty == nil {
+		panic(TypeLoadingError{
+			TypeID: typeID,
+		})
+	}
+	return ty
 }
 
 func (interpreter *Interpreter) reportLoopIteration(pos ast.HasPosition) {
