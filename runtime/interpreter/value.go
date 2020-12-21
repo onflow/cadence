@@ -5362,6 +5362,8 @@ func NewCompositeValue(
 
 func (v *CompositeValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
 
+	interpreter = v.getInterpreter(interpreter)
+
 	// if composite was deserialized, dynamically link in the destructor
 	if v.Destructor == nil {
 		v.Destructor = interpreter.typeCodes.CompositeCodes[v.TypeID()].DestructorFunction
@@ -5524,17 +5526,7 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 		return value
 	}
 
-	// Get the correct interpreter. The program code might need to be loaded.
-	// NOTE: standard library values have no location
-
-	if v.Location != nil && !common.LocationsMatch(interpreter.Checker.Location, v.Location) {
-		interpreter = interpreter.ensureLoaded(
-			v.Location,
-			func() Import {
-				return interpreter.importLocationHandler(interpreter, v.Location)
-			},
-		)
-	}
+	interpreter = v.getInterpreter(interpreter)
 
 	// If the composite value was deserialized, dynamically link in the functions
 	// and get injected fields
@@ -5566,6 +5558,23 @@ func (v *CompositeValue) GetMember(interpreter *Interpreter, locationRange Locat
 	}
 
 	return nil
+}
+
+func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
+
+	// Get the correct interpreter. The program code might need to be loaded.
+	// NOTE: standard library values have no location
+
+	if v.Location == nil || common.LocationsMatch(interpreter.Checker.Location, v.Location) {
+		return interpreter
+	}
+
+	return interpreter.ensureLoaded(
+		v.Location,
+		func() Import {
+			return interpreter.importLocationHandler(interpreter, v.Location)
+		},
+	)
 }
 
 func (v *CompositeValue) InitializeFunctions(interpreter *Interpreter) {
