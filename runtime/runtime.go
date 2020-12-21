@@ -916,9 +916,6 @@ func (r *interpreterRuntime) importResolver(startContext Context) ImportResolver
 		if err != nil {
 			return nil, err
 		}
-		if code == nil {
-			return nil, nil
-		}
 
 		context.SetCode(location, string(code))
 

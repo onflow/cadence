@@ -332,3 +332,13 @@ type UUIDUnavailableError struct {
 func (e UUIDUnavailableError) Error() string {
 	return "cannot get UUID: unavailable"
 }
+
+// TypeLoadingError
+
+type TypeLoadingError struct {
+	TypeID common.TypeID
+}
+
+func (e TypeLoadingError) Error() string {
+	return fmt.Sprintf("failed to load type: %s", e.TypeID)
+}
