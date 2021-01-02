@@ -1077,8 +1077,8 @@ Instead, use a swap statement to replace the resource with another resource.
 let child <- create Child(name: "Child 1")
 let parent <- create Parent(name: "Parent", child: <-child)
 
-child.name  // is "Child"
-parent.child.name  // is "Child"
+child.name  // is "Child 1"
+parent.child.name  // is "Child 1"
 
 // Invalid: Cannot move resource out of variable resource field.
 let childAgain <- parent.child
