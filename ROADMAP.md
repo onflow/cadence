@@ -16,10 +16,6 @@ listed in no particular order.
 
 - Storage API
 
-  - [Typed Paths](https://github.com/onflow/cadence/issues/369)
-
-    Cadence should provide a simpler API to acquire capabilities.
-
   - [Storage querying API](https://github.com/onflow/cadence/issues/208)
 
     Cadence should provide an API to query/iterate over account storage.
@@ -117,15 +113,6 @@ listed in no particular order.
 
   Cadence's failable casting operator `as?` should allow conversion
   just like the static casting operator `as` does.
-
-- Bounds checking for array and string indexing
-
-  Cadence performs bounds checks for arrays and strings.
-
-  However, currently the interpreter relies on Go's bounds checks, which is safe,
-  but a better error message could help developers.
-  A specific runtime error should be thrown when attempting to read or assign
-  an array or string index that is out of bounds.
 
 - Overloading based on argument labels
 
