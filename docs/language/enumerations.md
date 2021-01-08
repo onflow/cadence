@@ -58,5 +58,5 @@ let nothing = Color(rawValue: 5)  // is `nil`
 Color.red == Color.red  // is `true`
 Color(rawValue: 1) == Color.green  // is `true`
 // Different enum cases are not the same
-Color.red != Color.blue  // is `false`
+Color.red != Color.blue  // is `true`
 ```
