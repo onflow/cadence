@@ -203,8 +203,8 @@ github.com/olekukonko/tablewriter v0.0.1/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXW
 github.com/olekukonko/tablewriter v0.0.2-0.20190409134802-7e037d187b0c/go.mod h1:vsDQFd/mU46D+Z4whnwzcISnGGzXWMclvtLoiIKAKIo=
 github.com/onflow/cadence v0.10.0 h1:mYv5Chgk44mPKKXCRP+jnYaS6yBXOlpBOYUfI1q1L6w=
 github.com/onflow/cadence v0.10.0/go.mod h1:ORAnWydDsrefAUazeD1g+l7vjNwEuJAcZ7bMz1KnSbg=
-github.com/onflow/cadence v0.11.1-0.20201105040114-0ce5dbf72748 h1:Q6qIPDSOP/9sBbNA7HHz10BTupQkhpRlBdOv0a1LpxU=
-github.com/onflow/cadence v0.11.1-0.20201105040114-0ce5dbf72748/go.mod h1:8NwJGO535nnY/+QWEMDc2rhvOFChToWQ9Bg7fUIIc/I=
+github.com/onflow/cadence v0.12.2 h1:p5JmUF93Z2c7eKZKHSDUzvAGlheYYHCe8LzM2Bk+J3s=
+github.com/onflow/cadence v0.12.2/go.mod h1:8NwJGO535nnY/+QWEMDc2rhvOFChToWQ9Bg7fUIIc/I=
 github.com/onflow/flow-go-sdk v0.12.0 h1:hbBmdRu09OYlMqp5ElizzhdpvFdUgHPulU2/Ymtyy0I=
 github.com/onflow/flow-go-sdk v0.12.0/go.mod h1:BPmRrrpVYewuwF380K8baSnPrDBOZ33tTC4AvUhmA5A=
 github.com/onflow/flow/protobuf/go/flow v0.1.8 h1:jBR8aXEL0MOh3gVJmCr0KYXmtG3JUBhzADonKkYE6oI=

@@ -46,7 +46,8 @@ import (
 var valueDeclarations = append(
 	stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{}),
 	stdlib.BuiltinFunctions...,
-).ToValueDeclarations()
+).ToSemaValueDeclarations()
+
 var typeDeclarations = append(
 	stdlib.FlowBuiltInTypes,
 	stdlib.BuiltinTypes...,
@@ -137,11 +138,11 @@ type CommandHandler func(conn protocol.Conn, args ...interface{}) (interface{}, 
 
 // AddressImportResolver is a function that is used to resolve address imports
 //
-type AddressImportResolver func(location ast.AddressLocation) (string, error)
+type AddressImportResolver func(location common.AddressLocation) (string, error)
 
 // StringImportResolver is a function that is used to resolve string imports
 //
-type StringImportResolver func(mainPath string, location ast.StringLocation) (string, error)
+type StringImportResolver func(mainPath string, location common.StringLocation) (string, error)
 
 // CodeLensProvider is a function that is used to provide code lenses for the given checker
 //
@@ -1162,10 +1163,10 @@ func (s *Server) getDiagnostics(
 	var checker *sema.Checker
 	checker, diagnosticsErr = sema.NewChecker(
 		program,
-		runtime.FileLocation(uri),
+		common.StringLocation(uri),
 		sema.WithPredeclaredValues(valueDeclarations),
 		sema.WithPredeclaredTypes(typeDeclarations),
-		sema.WithImportHandler(func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
+		sema.WithImportHandler(func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
 			switch location {
 			case stdlib.CryptoChecker.Location:
 				return sema.CheckerImport{
@@ -1298,7 +1299,7 @@ func parse(conn protocol.Conn, code, location string) (*ast.Program, error) {
 
 func (s *Server) resolveImport(
 	mainPath string,
-	location ast.Location,
+	location common.Location,
 ) (
 	program *ast.Program,
 	err error,
@@ -1313,13 +1314,13 @@ func (s *Server) resolveImport(
 
 	var code string
 	switch loc := location.(type) {
-	case ast.StringLocation:
+	case common.StringLocation:
 		if s.resolveStringImport == nil {
 			return nil, nil
 		}
 		code, err = s.resolveStringImport(mainPath, loc)
 
-	case ast.AddressLocation:
+	case common.AddressLocation:
 		if s.resolveAddressImport == nil {
 			return nil, nil
 		}
