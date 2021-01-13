@@ -48,16 +48,31 @@ type Context struct {
 	Location          Location
 	PredeclaredValues []ValueDeclaration
 	codes             map[common.LocationID]string
+	programs          map[common.LocationID]*ast.Program
 }
 
 func (c Context) SetCode(location common.Location, code string) {
 	c.codes[location.ID()] = code
 }
 
+func (c Context) SetProgram(location common.Location, program *ast.Program) {
+	c.programs[location.ID()] = program
+}
+
 func (c Context) WithLocation(location common.Location) Context {
 	result := c
 	result.Location = location
 	return result
+}
+
+func (c *Context) InitializeCodesAndPrograms() {
+	if c.codes == nil {
+		c.codes = map[common.LocationID]string{}
+	}
+
+	if c.programs == nil {
+		c.programs = map[common.LocationID]*ast.Program{}
+	}
 }
 
 // Runtime is a runtime capable of executing Cadence.
@@ -155,9 +170,7 @@ func (r *interpreterRuntime) SetCoverageReport(coverageReport *CoverageReport) {
 }
 
 func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cadence.Value, error) {
-	if context.codes == nil {
-		context.codes = map[common.LocationID]string{}
-	}
+	context.InitializeCodesAndPrograms()
 
 	runtimeStorage := newRuntimeStorage(context.Interface)
 
@@ -307,9 +320,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 }
 
 func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) error {
-	if context.codes == nil {
-		context.codes = map[common.LocationID]string{}
-	}
+	context.InitializeCodesAndPrograms()
 
 	runtimeStorage := newRuntimeStorage(context.Interface)
 
@@ -317,11 +328,6 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 
 	checker, err := r.parseAndCheckProgram(script.Source, context, functions, nil, false)
 	if err != nil {
-		if err, ok := err.(*ParsingCheckingError); ok {
-			err.StorageCache = runtimeStorage.cache
-			return newError(err, context)
-		}
-
 		return newError(err, context)
 	}
 
@@ -506,9 +512,7 @@ func validateArgumentParams(
 
 // ParseAndCheckProgram parses the given script and runs type check.
 func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) (*sema.Checker, error) {
-	if context.codes == nil {
-		context.codes = map[common.LocationID]string{}
-	}
+	context.InitializeCodesAndPrograms()
 
 	runtimeStorage := newRuntimeStorage(context.Interface)
 	functions := r.standardLibraryFunctions(context, runtimeStorage)
@@ -536,12 +540,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	wrapError := func(err error) error {
 		return &ParsingCheckingError{
 			Err:      err,
-			Code:     code,
 			Location: context.Location,
-			Options:  options,
-			UseCache: useCache,
-			Checker:  checker,
-			Program:  program,
 		}
 	}
 
@@ -561,6 +560,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 		if err != nil {
 			return nil, wrapError(err)
 		}
+		context.SetProgram(context.Location, program)
 	}
 
 	importResolver := r.importResolver(context)
@@ -923,6 +923,8 @@ func (r *interpreterRuntime) importResolver(startContext Context) ImportResolver
 		if err != nil {
 			return nil, err
 		}
+
+		context.SetProgram(location, program)
 
 		wrapPanic(func() {
 			err = context.Interface.CacheProgram(location, program)

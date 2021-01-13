@@ -3959,10 +3959,10 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 		)
 		require.Error(t, err)
 
-		require.IsType(t, Error{}, err)
-		err = err.(Error).Unwrap()
+		var checkerErr *sema.CheckerError
+		utils.RequireErrorAs(t, err, &checkerErr)
 
-		errs := checker.ExpectCheckerErrors(t, err, 1)
+		errs := checker.ExpectCheckerErrors(t, checkerErr, 1)
 
 		assert.IsType(t, &sema.InvalidTopLevelDeclarationError{}, errs[0])
 	})

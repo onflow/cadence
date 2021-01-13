@@ -34,6 +34,7 @@ type Error struct {
 	Err      error
 	Location common.Location
 	Codes    map[common.LocationID]string
+	Programs map[common.LocationID]*ast.Program
 }
 
 func newError(err error, context Context) Error {
@@ -41,6 +42,7 @@ func newError(err error, context Context) Error {
 		Err:      err,
 		Location: context.Location,
 		Codes:    context.codes,
+		Programs: context.programs,
 	}
 }
 
@@ -189,18 +191,12 @@ func (e *ScriptParameterTypeNotStorableError) Error() string {
 	)
 }
 
-// ParsingCheckingError provides extra information about the state of the environment
-// when a parsing or a checking error occurred
+// ParsingCheckingError is an error wrapper
+// for a parsing or a checking error at a specific location
 //
 type ParsingCheckingError struct {
-	Err          error
-	StorageCache Cache
-	Code         []byte
-	Location     common.Location
-	Options      []sema.Option
-	UseCache     bool
-	Program      *ast.Program
-	Checker      *sema.Checker
+	Err      error
+	Location common.Location
 }
 
 func (e *ParsingCheckingError) ChildErrors() []error {
