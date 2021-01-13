@@ -24,11 +24,11 @@ import (
 	"io/ioutil"
 	"path"
 
-	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/flow-go-sdk"
 )
 
-func resolveFileImport(mainPath string, location ast.StringLocation) (string, error) {
+func resolveFileImport(mainPath string, location common.StringLocation) (string, error) {
 	filename := path.Join(path.Dir(mainPath), string(location))
 
 	if filename == mainPath {
@@ -43,8 +43,8 @@ func resolveFileImport(mainPath string, location ast.StringLocation) (string, er
 	return string(data), nil
 }
 
-func (i *FlowIntegration) resolveAccountImport(location ast.AddressLocation) (string, error) {
-	accountAddr := location.ToAddress()
+func (i *FlowIntegration) resolveAccountImport(location common.AddressLocation) (string, error) {
+	accountAddr := location.Address
 
 	acct, err := i.flowClient.GetAccount(context.Background(), flow.BytesToAddress(accountAddr[:]))
 	if err != nil {
