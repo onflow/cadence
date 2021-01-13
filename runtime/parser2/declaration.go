@@ -85,7 +85,7 @@ func parseDeclaration(p *parser, docString string) ast.Declaration {
 			case keywordStruct, keywordResource, keywordContract, keywordEnum:
 				return parseCompositeOrInterfaceDeclaration(p, access, accessPos, docString)
 
-			case keywordTransaction:
+			case KeywordTransaction:
 				if access != ast.AccessNotSpecified {
 					panic(fmt.Errorf("invalid access modifier for transaction"))
 				}
