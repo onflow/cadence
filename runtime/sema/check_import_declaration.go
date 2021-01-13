@@ -232,7 +232,7 @@ func (checker *Checker) EnsureLoaded(location common.Location, loadProgram func(
 
 	locationID := location.ID()
 
-	subChecker, ok := checker.allCheckers[locationID]
+	subChecker, ok := checker.AllCheckers[locationID]
 	if ok {
 		return subChecker, nil
 	}
@@ -246,13 +246,13 @@ func (checker *Checker) EnsureLoaded(location common.Location, loadProgram func(
 			WithPredeclaredTypes(checker.PredeclaredTypes),
 			WithAccessCheckMode(checker.accessCheckMode),
 			WithValidTopLevelDeclarationsHandler(checker.validTopLevelDeclarationsHandler),
-			WithAllCheckers(checker.allCheckers),
+			WithAllCheckers(checker.AllCheckers),
 			WithCheckHandler(checker.checkHandler),
 			WithImportHandler(checker.importHandler),
 			WithLocationHandler(checker.locationHandler),
 		)
 		if err == nil {
-			checker.allCheckers[locationID] = subChecker
+			checker.AllCheckers[locationID] = subChecker
 		}
 	}
 

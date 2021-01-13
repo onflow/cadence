@@ -85,7 +85,7 @@ type Checker struct {
 	effectivePredeclaredValues         map[string]ValueDeclaration
 	PredeclaredTypes                   []TypeDeclaration
 	effectivePredeclaredTypes          map[string]TypeDeclaration
-	allCheckers                        map[common.LocationID]*Checker
+	AllCheckers                        map[common.LocationID]*Checker
 	accessCheckMode                    AccessCheckMode
 	errors                             []error
 	hints                              []Hint
@@ -284,10 +284,10 @@ func NewChecker(program *ast.Program, location common.Location, options ...Optio
 // SetAllCheckers sets the given map of checkers as the map of all checkers.
 //
 func (checker *Checker) SetAllCheckers(allCheckers map[common.LocationID]*Checker) {
-	checker.allCheckers = allCheckers
+	checker.AllCheckers = allCheckers
 
 	// Register self
-	checker.allCheckers[checker.Location.ID()] = checker
+	checker.AllCheckers[checker.Location.ID()] = checker
 }
 
 func (checker *Checker) declareBaseValues() {
