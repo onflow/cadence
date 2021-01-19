@@ -49,7 +49,8 @@ func NewFlowIntegration(s *server.Server, enableFlowClient bool) (*FlowIntegrati
 		options = append(options,
 			server.WithInitializationOptionsHandler(integration.initialize),
 			server.WithCodeLensProvider(integration.codeLenses),
-			server.WithAddressImportResolver(integration.resolveAccountImport),
+			server.WithAddressImportResolver(integration.resolveAddressImport),
+			server.WithAddressContractNamesResolver(integration.resolveAddressContractNames),
 		)
 
 		for _, command := range integration.commands() {

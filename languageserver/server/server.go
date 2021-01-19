@@ -140,6 +140,10 @@ type CommandHandler func(conn protocol.Conn, args ...interface{}) (interface{}, 
 //
 type AddressImportResolver func(location common.AddressLocation) (string, error)
 
+// AddressContractNamesResolver is a function that is used to resolve contract names of an address
+//
+type AddressContractNamesResolver func(address common.Address) ([]string, error)
+
 // StringImportResolver is a function that is used to resolve string imports
 //
 type StringImportResolver func(mainPath string, location common.StringLocation) (string, error)
@@ -165,6 +169,8 @@ type Server struct {
 	commands map[string]CommandHandler
 	// resolveAddressImport is the optional function that is used to resolve address imports
 	resolveAddressImport AddressImportResolver
+	// resolveAddressContractNames is the optional function that is used to resolve contract names for an address
+	resolveAddressContractNames AddressContractNamesResolver
 	// resolveStringImport is the optional function that is used to resolve string imports
 	resolveStringImport StringImportResolver
 	// codeLensProviders are the functions that are used to provide code lenses for a checker
@@ -203,6 +209,16 @@ func WithCommand(command Command) Option {
 func WithAddressImportResolver(resolver AddressImportResolver) Option {
 	return func(s *Server) error {
 		s.resolveAddressImport = resolver
+		return nil
+	}
+}
+
+// WithAddressContractNamesResolver returns a server option that sets the given function
+// as the function that is used to resolve contract names of an address
+//
+func WithAddressContractNamesResolver(resolver AddressContractNamesResolver) Option {
+	return func(s *Server) error {
+		s.resolveAddressContractNames = resolver
 		return nil
 	}
 }
@@ -1166,6 +1182,72 @@ func (s *Server) getDiagnostics(
 		common.StringLocation(uri),
 		sema.WithPredeclaredValues(valueDeclarations),
 		sema.WithPredeclaredTypes(typeDeclarations),
+		sema.WithLocationHandler(
+			func(identifiers []ast.Identifier, location common.Location) ([]sema.ResolvedLocation, error) {
+				addressLocation, isAddress := location.(common.AddressLocation)
+
+				// if the location is not an address location, e.g. an identifier location (`import Crypto`),
+				// then return a single resolved location which declares all identifiers.
+
+				if !isAddress {
+					return []runtime.ResolvedLocation{
+						{
+							Location:    location,
+							Identifiers: identifiers,
+						},
+					}, nil
+				}
+
+				// if the location is an address,
+				// and no specific identifiers where requested in the import statement,
+				// then fetch all identifiers at this address
+
+				if len(identifiers) == 0 {
+					// if there is no contract name resolver,
+					// then return no resolved locations
+
+					if s.resolveAddressContractNames == nil {
+						return nil, nil
+					}
+
+					contractNames, err := s.resolveAddressContractNames(addressLocation.Address)
+					if err != nil {
+						panic(err)
+					}
+
+					// if there are no contracts deployed,
+					// then return no resolved locations
+
+					if len(contractNames) == 0 {
+						return nil, nil
+					}
+
+					identifiers = make([]ast.Identifier, len(contractNames))
+
+					for i := range identifiers {
+						identifiers[i] = runtime.Identifier{
+							Identifier: contractNames[i],
+						}
+					}
+				}
+
+				// return one resolved location per identifier.
+				// each resolved location is an address contract location
+
+				resolvedLocations := make([]runtime.ResolvedLocation, len(identifiers))
+				for i := range resolvedLocations {
+					identifier := identifiers[i]
+					resolvedLocations[i] = runtime.ResolvedLocation{
+						Location: common.AddressLocation{
+							Address: addressLocation.Address,
+							Name:    identifier.Identifier,
+						},
+						Identifiers: []runtime.Identifier{identifier},
+					}
+				}
+
+				return resolvedLocations, nil
+			}),
 		sema.WithImportHandler(func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
 			switch location {
 			case stdlib.CryptoChecker.Location:
