@@ -100,6 +100,10 @@ func (i *FlowIntegration) showDeployContractAction(
 
 	contract := program.SoleContractDeclaration()
 
+	if contract == nil {
+		return nil
+	}
+
 	name := contract.Identifier.Identifier
 
 	position := contract.StartPosition()
