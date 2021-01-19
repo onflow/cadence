@@ -404,7 +404,7 @@ func (i *FlowIntegration) sendTransactionHelper(
 
 	conn.LogMessage(&protocol.LogMessageParams{
 		Type:    protocol.Info,
-		Message: fmt.Sprintf("submitting transaction %d", tx.ID()),
+		Message: fmt.Sprintf("submitting transaction %s", tx.ID().Hex()),
 	})
 
 	err = i.flowClient.SendTransaction(context.Background(), *tx)
@@ -494,6 +494,11 @@ func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (addr flow.Add
 	}
 
 	i.accounts[addr] = i.config.ServiceAccountKey
+
+	conn.LogMessage(&protocol.LogMessageParams{
+		Type:    protocol.Info,
+		Message: fmt.Sprintf("Created account with address: %s", addr.Hex()),
+	})
 
 	return addr, nil
 }
