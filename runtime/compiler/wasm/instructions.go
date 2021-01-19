@@ -188,7 +188,7 @@ func (i InstructionBrIf) write(w *WASMWriter) error {
 // InstructionBrTable is the 'br_table' instruction
 //
 type InstructionBrTable struct {
-	LabelIndices      []uint32
+	LabelIndices []uint32
 	DefaultLabelIndex uint32
 }
 
@@ -210,9 +210,9 @@ func (i InstructionBrTable) write(w *WASMWriter) error {
 	for i := 0; i < labelIndicesCount; i++ {
 		labelIndicesElement := labelIndices[i]
 		err = w.buf.writeUint32LEB128(labelIndicesElement)
-		if err != nil {
-			return err
-		}
+	if err != nil {
+		return err
+	}
 	}
 
 	defaultLabelIndex := i.DefaultLabelIndex
@@ -265,7 +265,7 @@ func (i InstructionCall) write(w *WASMWriter) error {
 // InstructionCallIndirect is the 'call_indirect' instruction
 //
 type InstructionCallIndirect struct {
-	TypeIndex  uint32
+	TypeIndex uint32
 	TableIndex uint32
 }
 
@@ -1690,7 +1690,7 @@ func (r *WASMReader) readInstruction() (Instruction, error) {
 		labelIndicesCount, err := r.buf.readUint32LEB128()
 		if err != nil {
 			return nil, InvalidInstructionVectorArgumentCountError{
-				Offset:    int(labelIndicesCountOffset),
+				Offset: int(labelIndicesCountOffset),
 				ReadError: err,
 			}
 		}
@@ -1699,9 +1699,9 @@ func (r *WASMReader) readInstruction() (Instruction, error) {
 
 		for i := uint32(0); i < labelIndicesCount; i++ {
 			labelIndicesElement, err := r.readUint32LEB128InstructionArgument()
-			if err != nil {
-				return nil, err
-			}
+		if err != nil {
+			return nil, err
+		}
 			labelIndices[i] = labelIndicesElement
 		}
 
@@ -1711,7 +1711,7 @@ func (r *WASMReader) readInstruction() (Instruction, error) {
 		}
 
 		return InstructionBrTable{
-			LabelIndices:      labelIndices,
+			LabelIndices: labelIndices,
 			DefaultLabelIndex: defaultLabelIndex,
 		}, nil
 
@@ -1737,7 +1737,7 @@ func (r *WASMReader) readInstruction() (Instruction, error) {
 		}
 
 		return InstructionCallIndirect{
-			TypeIndex:  typeIndex,
+			TypeIndex: typeIndex,
 			TableIndex: tableIndex,
 		}, nil
 
