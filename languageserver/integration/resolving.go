@@ -43,13 +43,42 @@ func resolveFileImport(mainPath string, location common.StringLocation) (string,
 	return string(data), nil
 }
 
-func (i *FlowIntegration) resolveAccountImport(location common.AddressLocation) (string, error) {
-	accountAddr := location.Address
-
-	acct, err := i.flowClient.GetAccount(context.Background(), flow.BytesToAddress(accountAddr[:]))
+func (i *FlowIntegration) resolveAddressContractNames(address common.Address) ([]string, error) {
+	account, err := i.getAccount(address)
 	if err != nil {
-		return "", fmt.Errorf("cannot get account with address 0x%s. err: %w", accountAddr, err)
+		return nil, err
 	}
 
-	return string(acct.Code), nil
+	names := make([]string, len(account.Contracts))
+	var index int
+	for name := range account.Contracts {
+		names[index] = name
+		index++
+	}
+
+	return names, nil
+}
+
+func (i *FlowIntegration) resolveAddressImport(location common.AddressLocation) (string, error) {
+
+	account, err := i.getAccount(location.Address)
+	if err != nil {
+		return "", err
+	}
+
+	return string(account.Contracts[location.Name]), nil
+}
+
+func (i *FlowIntegration) getAccount(address common.Address) (*flow.Account, error) {
+
+	account, err := i.flowClient.GetAccount(context.Background(), flow.BytesToAddress(address[:]))
+	if err != nil {
+		return nil, fmt.Errorf(
+			"cannot get account with address %s: %w",
+			address.ShortHexWithPrefix(),
+			err,
+		)
+	}
+
+	return account, nil
 }
