@@ -19,11 +19,12 @@
 package integration
 
 import (
-	"github.com/onflow/cadence/languageserver/conversion"
-	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
+
+	"github.com/onflow/cadence/languageserver/conversion"
+	"github.com/onflow/cadence/languageserver/protocol"
 )
 
 // diagnostics gets extra non-error diagnostics based on a checker.

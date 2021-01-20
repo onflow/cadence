@@ -35,6 +35,7 @@ import (
 
 	"github.com/onflow/cadence"
 	jsoncdc "github.com/onflow/cadence/encoding/json"
+
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/languageserver/server"
 )
@@ -217,7 +218,7 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 //
 // There should be exactly 1 argument:
 //   * the address of the new active account
-func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...interface{}) (interface{}, error) {
+func (i *FlowIntegration) switchActiveAccount(_ protocol.Conn, args ...interface{}) (interface{}, error) {
 
 	err := server.CheckCommandArgumentCount(args, 1)
 	if err != nil {
