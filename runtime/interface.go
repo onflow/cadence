@@ -51,10 +51,13 @@ type Accounts interface {
 	CreateAccount(caller Location) (address Address, err error)
 	// Exists returns true if the account exists
 	Exists(address Address) (exists bool, err error)
-	// SuspendAccount suspends an account
+
+	// SuspendAccount suspends an account (set suspend flag to true)
 	SuspendAccount(address Address, caller Location) error
-	// UnsuspendAccount unsuspend an account
+	// UnsuspendAccount unsuspend an account (set suspend flag to false)
 	UnsuspendAccount(address Address, caller Location) error
+	// returns true if account is suspended
+	IsSuspended(address Address) (isSuspended bool, err error)
 
 	// TODO ramtin merge this with 	Code(location Location) error
 	// AccountContractCode returns the code associated with an account contract.
@@ -64,48 +67,71 @@ type Accounts interface {
 	// RemoveContractCode removes the code associated with an account contract.
 	RemoveContractCode(address AddressLocation, caller Location) (err error)
 
+	// Value gets a value for the given key in the storage, owned by the given account.
+	Value(address Address, key []byte, caller Location) (value []byte, err error)
+	// SetValue sets a value for the given key in the storage, owned by the given account.
+	SetValue(address Address, key []byte, value []byte, caller Location) (err error)
+	// ValueExists returns true if the given key exists in the storage, owned by the given account.
+	ValueExists(address Address, key []byte, caller Location) (exists bool, err error)
+
+	// StoredKeys returns list of keys and their sizes owned by this account
+	StoredKeys(address Address, caller Location) (keys [][]byte, sizes []uint64, err error)
+	// StorageUsed gets storage used in bytes by the address at the moment of the function call.
+	StorageUsed(address Address, caller Location) (value uint64, err error)
+	// Note: StorageCapacity has been moved to injected methods (similar to get balance)
+
 	// AddAccountKey appends a key to an account.
 	AddAccountKey(address Address, publicKey []byte, caller Location) error
 	// RemoveAccountKey removes a key from an account by index.
-	RevokeAccountKey(address Address, index uint, caller Location) (publicKey []byte, err error)
+	RevokeAccountKey(address Address, index uint, caller Location) error
+	// AccountPublicKey returns the account key for the given index
+	AccountPublicKey(address Address, index uint, caller Location) (publicKey []byte, err error)
+	// VerifyAccountSignature verifies a signature for the given address and index
 	// TODO RAMTIN do I need the tag here?
-	VerifyAccountSignature(address Address, index uint, signature []byte, tag string, signedData []byte) (bool, error)
-
-	// StoredKeys returns list of keys and their sizes owned by this account
-	StoredKeys(caller Location)
-	// StorageUsed gets storage used in bytes by the address at the moment of the function call.
-	StorageUsed(address Address, caller Location) (value uint64, err error)
-	// StorageCapacity gets storage capacity in bytes on the address.
-	StorageCapacity(address Address, caller Location) (value uint64, err error) // Do we need this?
-
-	// Value gets a value for the given key in the storage, owned by the given account.
-	Value(owner, key []byte, caller Location) (value []byte, err error)
-	// SetValue sets a value for the given key in the storage, owned by the given account.
-	SetValue(owner, key, value []byte, caller Location) (err error)
-	// ValueExists returns true if the given key exists in the storage, owned by the given account.
-	ValueExists(owner, key []byte, caller Location) (exists bool, err error)
+	VerifyAccountSignature(address Address, index uint, signature []byte, tag string, signedData []byte, caller Location) (isValid bool, err error)
 }
 
+// Results won't be directly callable by users
+// and will be used by the runtime to capture outputs
 type Results interface {
+	// AppendLog appends a log to the log collection
 	AppendLog(string) error
+	// Logs returns all the logs
 	Logs() ([]string, error)
+	// returns log i of the log collection
+	Log(i) (string, error)
 
+	// AppendEvent appends an event to the event collection
 	AppendEvent(cadence.Event) error
+	// Events returns all the events
 	Events() ([]cadence.Event, error)
+	// returns event i of the event collection
+	Event(i) (cadence.Event, error)
 
+	// AppendError appends a non-fatal error
 	AppendError(error)
+	// return all the errors
 	Errors() multierror.Error
 
+	// AddComputationUsed adds a new uint64 value to the computationUsed (computation accumulator)
 	AddComputationUsed(uint64)
+	// ComputationSpent returns the total amount of computation spent during the execution
 	ComputationSpent() uint64
 }
 
 type Metrics interface {
+	// ProgramParsed captures the time spent on parsing the program
 	ProgramParsed(location common.Location, duration time.Duration)
+	// ProgramChecked captures the time spent on checking the parsed program
 	ProgramChecked(location common.Location, duration time.Duration)
+	// ProgramInterpreted captures the time spent on interpreting the parsed and checked program
 	ProgramInterpreted(location common.Location, duration time.Duration)
 
+	// ValueEncoded captures the time spent on encoding a value
+	// TODO: maybe add type
 	ValueEncoded(duration time.Duration)
+	// ValueDecoded capture the time spent on decoding an encoded value
+	// TODO: maybe add type
 	ValueDecoded(duration time.Duration)
 }
 

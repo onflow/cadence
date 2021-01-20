@@ -158,11 +158,10 @@ func validTopLevelDeclarations(location common.Location) []common.DeclarationKin
 
 func reportMetric(
 	f func(),
-	runtimeInterface Interface,
+	metrics Metrics,
 	report func(Metrics, time.Duration),
 ) {
-	metrics, ok := runtimeInterface.(Metrics)
-	if !ok {
+	if metrics == nil {
 		f()
 		return
 	}
