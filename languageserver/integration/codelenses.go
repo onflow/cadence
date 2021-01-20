@@ -25,10 +25,11 @@ import (
 
 	"github.com/onflow/cadence"
 	jsoncdc "github.com/onflow/cadence/encoding/json"
-	"github.com/onflow/cadence/languageserver/conversion"
-	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/sema"
+
+	"github.com/onflow/cadence/languageserver/conversion"
+	"github.com/onflow/cadence/languageserver/protocol"
 )
 
 func (i *FlowIntegration) codeLenses(

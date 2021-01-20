@@ -1,16 +1,16 @@
 import {
+  createProtocolConnection,
+  DidOpenTextDocumentNotification,
+  ExecuteCommandRequest,
+  ExitNotification,
+  InitializeRequest,
+  ProtocolConnection,
   StreamMessageReader,
   StreamMessageWriter,
-  ProtocolConnection,
-  createProtocolConnection,
-  InitializeRequest,
-  ExitNotification,
-  ExecuteCommandRequest,
-  DidOpenTextDocumentNotification,
   TextDocumentItem
 } from "vscode-languageserver-protocol"
 
-import { spawn, execSync } from 'child_process'
+import {execSync, spawn} from 'child_process'
 import * as path from "path"
 
 beforeAll(() => {
