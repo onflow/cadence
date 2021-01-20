@@ -45,6 +45,13 @@ type Identifier = ast.Identifier
 type Location = common.Location
 type AddressLocation = common.AddressLocation
 
+// Accounts manages changes to the accounts, account keys and account storage
+//
+// errors returns by methods are non-fatal ones (e.g. accountNotExist),
+// fatal errors (e.g. Storage failure) are called by panic inside the methods
+// methods with power of edits have caller as an argument which can be used
+// to limit access to these method calls from smart contracts only, transaction only, or
+// specific smart contracts (e.g. service account).
 type Accounts interface {
 
 	// creates a new account address and set the exists flag for this account
@@ -91,6 +98,9 @@ type Accounts interface {
 	VerifyAccountSignature(address Address, index uint, signature []byte, tag string, signedData []byte, caller Location) (isValid bool, err error)
 }
 
+// Results are responsible to capture artifacts generated
+// when running the runnable
+//
 // Results won't be directly callable by users
 // and will be used by the runtime to capture outputs
 type Results interface {

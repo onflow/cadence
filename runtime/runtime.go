@@ -77,8 +77,9 @@ func (c *Context) InitializeCodesAndPrograms() {
 	}
 }
 
-// Runnable can be run by a runner (including transactions, system operations, or read only scripts)
-// includes all the read-only data provided for the execution
+// Runnable can be run by a runner
+//
+// Runnable provides read-only data needed for execution
 type Runnable interface {
 	// Source returns the cadence script to be executed
 	Source() []byte
@@ -102,9 +103,11 @@ type Runnable interface {
 //
 // note that non-fatal runtime errors are captured inside the result
 // and error should only be used for returning fatal errors.
-// TODO add injectable methods
 type Runner interface {
+	// Run runs transactions
 	Run(Runnable, Context) error
+
+	// RunScript runs scripts (read-only operations)
 	RunScript(Runnable, Context) (cadence.Value, error)
 }
 
