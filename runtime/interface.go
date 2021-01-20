@@ -21,6 +21,8 @@ package runtime
 import (
 	"time"
 
+	"github.com/hashicorp/go-multierror"
+
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -41,75 +43,74 @@ type Block struct {
 type ResolvedLocation = sema.ResolvedLocation
 type Identifier = ast.Identifier
 type Location = common.Location
+type AddressLocation = common.AddressLocation
 
-type Interface interface {
-	// ResolveLocation resolves an import location.
-	ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
-	// GetCode returns the code at a given location
-	GetCode(location Location) ([]byte, error)
-	// GetCachedProgram attempts to get a parsed program from a cache.
-	GetCachedProgram(Location) (*ast.Program, error)
-	// CacheProgram adds a parsed program to a cache.
-	CacheProgram(Location, *ast.Program) error
-	// GetValue gets a value for the given key in the storage, owned by the given account.
-	GetValue(owner, key []byte) (value []byte, err error)
-	// SetValue sets a value for the given key in the storage, owned by the given account.
-	SetValue(owner, key, value []byte) (err error)
-	// CreateAccount creates a new account.
-	CreateAccount(payer Address) (address Address, err error)
-	// AddAccountKey appends a key to an account.
-	AddAccountKey(address Address, publicKey []byte) error
-	// RemoveAccountKey removes a key from an account by index.
-	RemoveAccountKey(address Address, index int) (publicKey []byte, err error)
+type Accounts interface {
+
+	// creates a new account address and set the exists flag for this account
+	CreateAccount(caller Location) (address Address, err error)
+	// Exists returns true if the account exists
+	Exists(address Address) (exists bool, err error)
+	// SuspendAccount suspends an account
+	SuspendAccount(address Address, caller Location) error
+	// UnsuspendAccount unsuspend an account
+	UnsuspendAccount(address Address, caller Location) error
+
+	// TODO ramtin merge this with 	Code(location Location) error
+	// AccountContractCode returns the code associated with an account contract.
+	ContractCode(address AddressLocation) (code []byte, err error)
 	// UpdateAccountContractCode updates the code associated with an account contract.
-	UpdateAccountContractCode(address Address, name string, code []byte) (err error)
-	// GetAccountContractCode returns the code associated with an account contract.
-	GetAccountContractCode(address Address, name string) (code []byte, err error)
-	// RemoveAccountContractCode removes the code associated with an account contract.
-	RemoveAccountContractCode(address Address, name string) (err error)
-	// GetSigningAccounts returns the signing accounts.
-	GetSigningAccounts() ([]Address, error)
-	// Log logs a string.
-	Log(string) error
-	// EmitEvent is called when an event is emitted by the runtime.
-	EmitEvent(cadence.Event) error
+	UpdateContractCode(address AddressLocation, code []byte, caller Location) (err error)
+	// RemoveContractCode removes the code associated with an account contract.
+	RemoveContractCode(address AddressLocation, caller Location) (err error)
+
+	// AddAccountKey appends a key to an account.
+	AddAccountKey(address Address, publicKey []byte, caller Location) error
+	// RemoveAccountKey removes a key from an account by index.
+	RevokeAccountKey(address Address, index uint, caller Location) (publicKey []byte, err error)
+	// TODO RAMTIN do I need the tag here?
+	VerifyAccountSignature(address Address, index uint, signature []byte, tag string, signedData []byte) (bool, error)
+
+	// StoredKeys returns list of keys and their sizes owned by this account
+	StoredKeys(caller Location)
+	// StorageUsed gets storage used in bytes by the address at the moment of the function call.
+	StorageUsed(address Address, caller Location) (value uint64, err error)
+	// StorageCapacity gets storage capacity in bytes on the address.
+	StorageCapacity(address Address, caller Location) (value uint64, err error) // Do we need this?
+
+	// Value gets a value for the given key in the storage, owned by the given account.
+	Value(owner, key []byte, caller Location) (value []byte, err error)
+	// SetValue sets a value for the given key in the storage, owned by the given account.
+	SetValue(owner, key, value []byte, caller Location) (err error)
 	// ValueExists returns true if the given key exists in the storage, owned by the given account.
-	ValueExists(owner, key []byte) (exists bool, err error)
-	// GenerateUUID is called to generate a UUID.
-	GenerateUUID() (uint64, error)
-	// GetComputationLimit returns the computation limit. A value <= 0 means there is no limit
-	GetComputationLimit() uint64
-	// SetComputationUsed reports the amount of computation used.
-	SetComputationUsed(used uint64) error
-	// DecodeArgument decodes a transaction argument against the given type.
-	DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error)
-	// GetCurrentBlockHeight returns the current block height.
-	GetCurrentBlockHeight() (uint64, error)
-	// GetBlockAtHeight returns the block at the given height.
-	GetBlockAtHeight(height uint64) (block Block, exists bool, err error)
-	// UnsafeRandom returns a random uint64, where the process of random number derivation is not cryptographically
-	// secure.
-	UnsafeRandom() (uint64, error)
-	// VerifySignature returns true if the given signature was produced by signing the given tag + data
-	// using the given public key, signature algorithm, and hash algorithm.
-	VerifySignature(
-		signature []byte,
-		tag string,
-		signedData []byte,
-		publicKey []byte,
-		signatureAlgorithm string,
-		hashAlgorithm string,
-	) (bool, error)
-	// Hash returns the digest of hashing the given data with using the given hash algorithm
-	Hash(data []byte, hashAlgorithm string) ([]byte, error)
-	// GetStorageUsed gets storage used in bytes by the address at the moment of the function call.
-	GetStorageUsed(address Address) (value uint64, err error)
-	// GetStorageCapacity gets storage capacity in bytes on the address.
-	GetStorageCapacity(address Address) (value uint64, err error)
+	ValueExists(owner, key []byte, caller Location) (exists bool, err error)
 }
 
-type HighLevelStorage interface {
-	Interface
+type Results interface {
+	AppendLog(string) error
+	Logs() ([]string, error)
+
+	AppendEvent(cadence.Event) error
+	Events() ([]cadence.Event, error)
+
+	AppendError(error)
+	Errors() multierror.Error
+
+	AddComputationUsed(uint64)
+	ComputationSpent() uint64
+}
+
+type Metrics interface {
+	ProgramParsed(location common.Location, duration time.Duration)
+	ProgramChecked(location common.Location, duration time.Duration)
+	ProgramInterpreted(location common.Location, duration time.Duration)
+
+	ValueEncoded(duration time.Duration)
+	ValueDecoded(duration time.Duration)
+}
+
+type HighLevelAccounts interface {
+	Accounts
 
 	// HighLevelStorageEnabled should return true
 	// if the functions of HighLevelStorage should be called,
@@ -118,14 +119,6 @@ type HighLevelStorage interface {
 
 	// SetCadenceValue sets a value for the given key in the storage, owned by the given account.
 	SetCadenceValue(owner Address, key string, value cadence.Value) (err error)
-}
-
-type Metrics interface {
-	ProgramParsed(location common.Location, duration time.Duration)
-	ProgramChecked(location common.Location, duration time.Duration)
-	ProgramInterpreted(location common.Location, duration time.Duration)
-	ValueEncoded(duration time.Duration)
-	ValueDecoded(duration time.Duration)
 }
 
 type EmptyRuntimeInterface struct{}

@@ -44,7 +44,9 @@ type Script struct {
 }
 
 type Context struct {
-	Interface         Interface
+	Accounts          Accounts
+	Results           Results
+	Metrics           Metrics
 	Location          Location
 	PredeclaredValues []ValueDeclaration
 	codes             map[common.LocationID]string
@@ -75,25 +77,48 @@ func (c *Context) InitializeCodesAndPrograms() {
 	}
 }
 
+// Runnable can be run by a runner (including transactions, system operations, or read only scripts)
+// includes all the read-only data provided for the execution
+type Runnable interface {
+	// Source returns the cadence script to be executed
+	Source() []byte
+	// Arguments returns arguments for this script
+	Arguments() [][]byte
+	// ComputationLimit returns the max computation limit allowed while running
+	// Ramtin: (we might not need this to be passed and just be enforced in the Results)
+	ComputationLimit() uint64
+	// IsAuthorizer returns true if the address is an authorizer of this transaction
+	IsAuthorizer(address Address) bool
+	// Authorizers returns a list address who authorized this script
+	// TODO ideally we should only use IsAuthorizer for authorization, this way
+	// we can return true for the system operations and return false for all the read-only scripts
+	// Ramtin: Similarly this might not be passed to cadence and be enforced in the accounts
+	Authorizers() []Address
+}
+
+// Runner runs a "Runnable" and stores result into "Results".
+// It returns fatal errors
+// A runner augments the Cadence runtime with the host functionality.
+//
+// note that non-fatal runtime errors are captured inside the result
+// and error should only be used for returning fatal errors.
+// TODO add injectable methods
+type Runner interface {
+	Run(Runnable, Context) error
+	RunScript(Runnable, Context) (cadence.Value, error)
+}
+
 // Runtime is a runtime capable of executing Cadence.
 type Runtime interface {
-	// ExecuteScript executes the given script.
-	//
-	// This function returns an error if the program has errors (e.g syntax errors, type errors),
-	// or if the execution fails.
-	ExecuteScript(Script, Context) (cadence.Value, error)
-
-	// ExecuteTransaction executes the given transaction.
-	//
-	// This function returns an error if the program has errors (e.g syntax errors, type errors),
-	// or if the execution fails.
-	ExecuteTransaction(Script, Context) error
+	Runner
 
 	// ParseAndCheckProgram parses and checks the given code without executing the program.
 	//
 	// This function returns an error if the program contains any syntax or semantic errors.
 	ParseAndCheckProgram(source []byte, context Context) (*sema.Checker, error)
 
+	// RAMTIN: this can be moved to construction and doesn't have to be a method I guess,
+	// unless there are cases that we change the reporting in between transactions.
 	// SetCoverageReport activates reporting coverage in the given report.
 	// Passing nil disables coverage reporting (default).
 	//
