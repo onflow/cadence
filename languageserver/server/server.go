@@ -414,10 +414,7 @@ func (s *Server) DidOpenTextDocument(conn protocol.Conn, params *protocol.DidOpe
 		Version: version,
 	}
 
-	err := s.check(conn, uri, text, version)
-	if err != nil {
-		return err
-	}
+	s.checkAndPublishDiagnostics(conn, uri, text, version)
 
 	return nil
 }
@@ -438,10 +435,7 @@ func (s *Server) DidChangeTextDocument(
 		Version: version,
 	}
 
-	err := s.check(conn, uri, text, version)
-	if err != nil {
-		return err
-	}
+	s.checkAndPublishDiagnostics(conn, uri, text, version)
 
 	return nil
 }
@@ -458,24 +452,27 @@ type CadenceCheckCompletedParams struct {
 
 const cadenceCheckCompletedMethodName = "cadence/checkCompleted"
 
-func (s *Server) check(conn protocol.Conn, uri protocol.DocumentUri, text string, version float64) error {
+func (s *Server) checkAndPublishDiagnostics(
+	conn protocol.Conn,
+	uri protocol.DocumentUri,
+	text string,
+	version float64,
+) {
 
-	diagnostics, err := s.getDiagnostics(conn, uri, text, version)
+	diagnostics, _ := s.getDiagnostics(conn, uri, text, version)
 
 	// NOTE: always publish diagnostics and inform the client the checking completed
 
-	conn.PublishDiagnostics(&protocol.PublishDiagnosticsParams{
+	_ = conn.PublishDiagnostics(&protocol.PublishDiagnosticsParams{
 		URI:         uri,
 		Diagnostics: diagnostics,
 	})
 
 	valid := len(diagnostics) == 0
-	conn.Notify(cadenceCheckCompletedMethodName, &CadenceCheckCompletedParams{
+	_ = conn.Notify(cadenceCheckCompletedMethodName, &CadenceCheckCompletedParams{
 		URI:   uri,
 		Valid: valid,
 	})
-
-	return err
 }
 
 // Hover returns contextual type information about the variable at the given
@@ -1107,6 +1104,7 @@ func (s *Server) ResolveCompletionItem(
 // We register all the commands we support in registerCommands and populate
 // their corresponding handler at server initialization.
 func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteCommandParams) (interface{}, error) {
+
 	conn.LogMessage(&protocol.LogMessageParams{
 		Type:    protocol.Log,
 		Message: fmt.Sprintf("called execute command: %s", params.Command),
@@ -1122,10 +1120,12 @@ func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteComm
 // Shutdown tells the server to stop accepting any new requests. This can only
 // be followed by a call to Exit, which exits the process.
 func (*Server) Shutdown(conn protocol.Conn) error {
+
 	conn.ShowMessage(&protocol.ShowMessageParams{
 		Type:    protocol.Warning,
 		Message: "Cadence language server is shutting down",
 	})
+
 	return nil
 }
 
