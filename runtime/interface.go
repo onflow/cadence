@@ -99,14 +99,14 @@ type Results interface {
 	// Logs returns all the logs
 	Logs() ([]string, error)
 	// returns log i of the log collection
-	Log(i) (string, error)
+	Log(i uint) (string, error)
 
 	// AppendEvent appends an event to the event collection
 	AppendEvent(cadence.Event) error
 	// Events returns all the events
 	Events() ([]cadence.Event, error)
 	// returns event i of the event collection
-	Event(i) (cadence.Event, error)
+	Event(i uint) (cadence.Event, error)
 
 	// AppendError appends a non-fatal error
 	AppendError(error)
