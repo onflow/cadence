@@ -91,11 +91,8 @@ func (server *Server) Start(stream ObjectStream) <-chan struct{} {
 	return server.conn.DisconnectNotify()
 }
 
-func (server *Server) Notify(method string, params interface{}) {
-	err := server.conn.Notify(context.Background(), method, params)
-	if err != nil {
-		panic(err)
-	}
+func (server *Server) Notify(method string, params interface{}) error {
+	return server.conn.Notify(context.Background(), method, params)
 }
 
 func (server *Server) Call(method string, params interface{}) error {
