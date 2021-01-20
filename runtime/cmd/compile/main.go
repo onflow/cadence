@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/cmd"
+	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/compiler"
 	"github.com/onflow/cadence/runtime/compiler/ir"
 	"github.com/onflow/cadence/runtime/compiler/wasm"
@@ -35,11 +36,15 @@ func main() {
 		cmd.ExitWithError("no input file")
 	}
 
-	filename := args[1]
+	path := args[1]
 
-	program, must := cmd.PrepareProgramFromFile(filename)
+	location := common.StringLocation(path)
 
-	checker, must := cmd.PrepareChecker(program, filename, must)
+	codes := map[common.LocationID]string{}
+
+	program, must := cmd.PrepareProgramFromFile(location, codes)
+
+	checker, must := cmd.PrepareChecker(program, location, codes, must)
 
 	must(checker.Check())
 
