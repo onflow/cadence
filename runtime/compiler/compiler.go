@@ -98,6 +98,11 @@ func (compiler *Compiler) VisitEmitStatement(_ *ast.EmitStatement) ast.Repr {
 	panic(errors.NewUnreachableError())
 }
 
+func (compiler *Compiler) VisitSwitchStatement(_ *ast.SwitchStatement) ast.Repr {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
 func (compiler *Compiler) VisitVariableDeclaration(declaration *ast.VariableDeclaration) ast.Repr {
 
 	// TODO: potential storage removal
@@ -365,6 +370,11 @@ func (compiler *Compiler) VisitImportDeclaration(_ *ast.ImportDeclaration) ast.R
 }
 
 func (compiler *Compiler) VisitTransactionDeclaration(_ *ast.TransactionDeclaration) ast.Repr {
+	// TODO
+	panic(errors.NewUnreachableError())
+}
+
+func (compiler *Compiler) VisitEnumCaseDeclaration(_ *ast.EnumCaseDeclaration) ast.Repr {
 	// TODO
 	panic(errors.NewUnreachableError())
 }
