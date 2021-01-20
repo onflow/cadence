@@ -58,6 +58,8 @@ type Accounts interface {
 	CreateAccount(caller Location) (address Address, err error)
 	// Exists returns true if the account exists
 	Exists(address Address) (exists bool, err error)
+	// NumberOfAccounts returns the number of accounts
+	NumberOfAccounts(caller Address) (count uint64, err error)
 
 	// SuspendAccount suspends an account (set suspend flag to true)
 	SuspendAccount(address Address, caller Location) error
