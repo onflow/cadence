@@ -1385,24 +1385,24 @@ func (r *interpreterRuntime) instantiateContract(
 	return contract, err
 }
 
-func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, runtimeStorage *runtimeStorage) interpreter.HostFunction {
+func (r *interpreterRuntime) newGetAccountFunction(accounts Accounts, runtimeStorage *runtimeStorage) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
 		accountAddress := invocation.Arguments[0].(interpreter.AddressValue)
 		publicAccount := interpreter.NewPublicAccountValue(
 			accountAddress,
-			storageUsedGetFunction(accountAddress, runtimeInterface, runtimeStorage),
+			storageUsedGetFunction(accountAddress, accounts, runtimeStorage),
 			storageCapacityGetFunction(accountAddress, runtimeInterface),
 		)
 		return trampoline.Done{Result: publicAccount}
 	}
 }
 
-func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpreter.HostFunction {
+func (r *interpreterRuntime) newLogFunction(results Results) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
 		message := fmt.Sprint(invocation.Arguments[0])
 		var err error
 		wrapPanic(func() {
-			err = runtimeInterface.Log(message)
+			err = results.Log(message)
 		})
 		if err != nil {
 			panic(err)

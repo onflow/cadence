@@ -54,8 +54,8 @@ type AddressLocation = common.AddressLocation
 // specific smart contracts (e.g. service account).
 type Accounts interface {
 
-	// creates a new account address and set the exists flag for this account
-	CreateAccount(caller Location) (address Address, err error)
+	// NewAccount creates a new account address and set the exists flag for this account
+	NewAccount(caller Location) (address Address, err error)
 	// Exists returns true if the account exists
 	Exists(address Address) (exists bool, err error)
 	// NumberOfAccounts returns the number of accounts
