@@ -85,16 +85,11 @@ type Runnable interface {
 	Source() []byte
 	// Arguments returns arguments for this script
 	Arguments() [][]byte
+	// Authorizers returns a list address who has authorized this script
+	Authorizers() []Address
 	// ComputationLimit returns the max computation limit allowed while running
 	// Ramtin: (we might not need this to be passed and just be enforced in the Results)
 	ComputationLimit() uint64
-	// IsAuthorizer returns true if the address is an authorizer of this transaction
-	IsAuthorizer(address Address) bool
-	// Authorizers returns a list address who authorized this script
-	// TODO ideally we should only use IsAuthorizer for authorization, this way
-	// we can return true for the system operations and return false for all the read-only scripts
-	// Ramtin: Similarly this might not be passed to cadence and be enforced in the accounts
-	Authorizers() []Address
 }
 
 // Runner runs a "Runnable" and stores result into "Results".
