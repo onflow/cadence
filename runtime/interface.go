@@ -76,7 +76,7 @@ type Accounts interface {
 	// RemoveContractCode removes the code associated with an account contract.
 	RemoveContractCode(address AddressLocation, caller Location) (err error)
 	// Contracts returns a list of contract names under this account
-	Contracts(address AddressLocation) (Name []string, err error)
+	Contracts(address AddressLocation, caller Location) (Name []string, err error)
 
 	// Value gets a value for the given key in the storage, owned by the given account.
 	Value(address Address, key []byte, caller Location) (value []byte, err error)
