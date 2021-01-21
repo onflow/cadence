@@ -90,6 +90,9 @@ type Runnable interface {
 	// ComputationLimit returns the max computation limit allowed while running
 	// Ramtin: (we might not need this to be passed and just be enforced in the Results)
 	ComputationLimit() uint64
+	// TODO: get rid of this decoding argument and merge it with arguments()
+	// DecodeArgument decodes a transaction argument against the given type.
+	DecodeArgument(argument []byte, argumentType cadence.Type) (cadence.Value, error)
 }
 
 // Runner runs a "Runnable" and stores result into "Results".
@@ -985,7 +988,7 @@ func (r *interpreterRuntime) parse(
 // emitEvent converts an event value to native Go types and emits it to the runtime interface.
 func (r *interpreterRuntime) emitEvent(
 	inter *interpreter.Interpreter,
-	runtimeInterface Interface,
+	results Results,
 	event *interpreter.CompositeValue,
 	eventType *sema.CompositeType,
 ) error {
@@ -1003,14 +1006,14 @@ func (r *interpreterRuntime) emitEvent(
 	var err error
 	exportedEvent := exportEvent(eventValue)
 	wrapPanic(func() {
-		err = runtimeInterface.EmitEvent(exportedEvent)
+		err = results.EmitEvent(exportedEvent)
 	})
 	return err
 }
 
 func (r *interpreterRuntime) emitAccountEvent(
 	eventType *sema.CompositeType,
-	runtimeInterface Interface,
+	results Results,
 	eventFields []exportableValue,
 ) {
 	eventValue := exportableEvent{
@@ -1033,7 +1036,7 @@ func (r *interpreterRuntime) emitAccountEvent(
 	var err error
 	exportedEvent := exportEvent(eventValue)
 	wrapPanic(func() {
-		err = runtimeInterface.EmitEvent(exportedEvent)
+		err = results.EmitEvent(exportedEvent)
 	})
 	if err != nil {
 		panic(err)
@@ -1084,7 +1087,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 }
 func storageUsedGetFunction(
 	addressValue interpreter.AddressValue,
-	runtimeInterface Interface,
+	accounts Accounts,
 	runtimeStorage *runtimeStorage,
 ) func(inter *interpreter.Interpreter) interpreter.UInt64Value {
 	address := addressValue.ToAddress()
@@ -1097,7 +1100,7 @@ func storageUsedGetFunction(
 		var capacity uint64
 		var err error
 		wrapPanic(func() {
-			capacity, err = runtimeInterface.GetStorageUsed(address)
+			capacity, err = accounts.GetStorageUsed(address)
 		})
 		if err != nil {
 			panic(err)

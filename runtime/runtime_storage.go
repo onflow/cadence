@@ -42,24 +42,24 @@ type CacheEntry struct {
 }
 
 type runtimeStorage struct {
-	runtimeInterface        Interface
-	highLevelStorageEnabled bool
-	highLevelStorage        HighLevelStorage
-	cache                   Cache
+	accounts                 Accounts
+	highLevelAccountsEnabled bool
+	highLevelAccounts        HighLevelAccounts
+	cache                    Cache
 }
 
-func newRuntimeStorage(runtimeInterface Interface) *runtimeStorage {
-	highLevelStorageEnabled := false
-	highLevelStorage, ok := runtimeInterface.(HighLevelStorage)
+func newRuntimeStorage(accounts Accounts) *runtimeStorage {
+	highLevelAccountsEnabled := false
+	highLevelAccounts, ok := accounts.(HighLevelStorage)
 	if ok {
-		highLevelStorageEnabled = highLevelStorage.HighLevelStorageEnabled()
+		highLevelAccountsEnabled = highLevelAccounts.HighLevelStorageEnabled()
 	}
 
 	return &runtimeStorage{
-		runtimeInterface:        runtimeInterface,
-		cache:                   Cache{},
-		highLevelStorage:        highLevelStorage,
-		highLevelStorageEnabled: highLevelStorageEnabled,
+		accounts:                 accounts,
+		cache:                    Cache{},
+		highLevelAccounts:        highLevelAccounts,
+		highLevelAccountsEnabled: highLevelAccountsEnabled,
 	}
 }
 
@@ -92,7 +92,7 @@ func (s *runtimeStorage) valueExists(
 	var exists bool
 	var err error
 	wrapPanic(func() {
-		exists, err = s.runtimeInterface.ValueExists(address[:], []byte(key))
+		exists, err = s.accounts.ValueExists(address[:], []byte(key))
 	})
 	if err != nil {
 		panic(err)
@@ -143,7 +143,7 @@ func (s *runtimeStorage) readValue(
 	var storedData []byte
 	var err error
 	wrapPanic(func() {
-		storedData, err = s.runtimeInterface.GetValue(address[:], []byte(key))
+		storedData, err = s.accounts.Value(address[:], []byte(key))
 	})
 	if err != nil {
 		panic(err)
@@ -309,7 +309,7 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 
 		var err error
 		wrapPanic(func() {
-			err = s.runtimeInterface.SetValue(
+			err = s.accounts.SetValue(
 				item.storageKey.Address[:],
 				[]byte(item.storageKey.Key),
 				newData,
@@ -345,18 +345,18 @@ func (s *runtimeStorage) move(
 	oldOwner common.Address, oldKey string,
 	newOwner common.Address, newKey string,
 ) {
-	data, err := s.runtimeInterface.GetValue(oldOwner[:], []byte(oldKey))
+	data, err := s.accounts.Value(oldOwner[:], []byte(oldKey))
 	if err != nil {
 		panic(err)
 	}
 
-	err = s.runtimeInterface.SetValue(oldOwner[:], []byte(oldKey), nil)
+	err = s.accounts.SetValue(oldOwner[:], []byte(oldKey), nil)
 	if err != nil {
 		panic(err)
 	}
 
 	// NOTE: not prefix with magic, as data is moved, so might already have it
-	err = s.runtimeInterface.SetValue(newOwner[:], []byte(newKey), data)
+	err = s.accounts.SetValue(newOwner[:], []byte(newKey), data)
 	if err != nil {
 		panic(err)
 	}
