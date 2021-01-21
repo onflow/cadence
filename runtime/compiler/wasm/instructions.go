@@ -18,6 +18,7 @@
  */
 
 //go:generate go run ./gen/main.go
+//go:generate go fmt instructions.go
 
 package wasm
 
