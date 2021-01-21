@@ -434,7 +434,7 @@ func main() {
 		"goGenerateComment": func() string {
 			// NOTE: must be templated/injected, as otherwise
 			// it will be detected itself as a go generate invocation itself
-			return "//go:generate go run ./gen/main.go\n//go:generate go fmt instructions.go"
+			return "//go:generate go run ./gen/main.go\n//go:generate go fmt $GOFILE"
 		},
 		"switch": func(group instructionGroup) (string, error) {
 			res, err := generateSwitch(group)
