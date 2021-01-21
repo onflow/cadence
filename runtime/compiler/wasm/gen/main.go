@@ -146,7 +146,7 @@ type argumentType interface {
 	Write(variable string) string
 }
 
-type ArgumentTypeUint32 struct {}
+type ArgumentTypeUint32 struct{}
 
 func (t ArgumentTypeUint32) isArgumentType() {}
 
@@ -174,7 +174,7 @@ func (t ArgumentTypeUint32) Write(variable string) string {
 	)
 }
 
-type ArgumentTypeInt32 struct {}
+type ArgumentTypeInt32 struct{}
 
 func (t ArgumentTypeInt32) isArgumentType() {}
 
@@ -202,7 +202,7 @@ func (t ArgumentTypeInt32) Write(variable string) string {
 	)
 }
 
-type ArgumentTypeInt64 struct {}
+type ArgumentTypeInt64 struct{}
 
 func (t ArgumentTypeInt64) isArgumentType() {}
 
@@ -229,7 +229,6 @@ func (t ArgumentTypeInt64) Write(variable string) string {
 		variable,
 	)
 }
-
 
 type ArgumentTypeBlock struct {
 	AllowElse bool
@@ -322,7 +321,6 @@ func (t ArgumentTypeVector) Write(variable string) string {
 		elementVariable,
 	)
 }
-
 
 type argument struct {
 	Identifier string
@@ -436,7 +434,7 @@ func main() {
 		"goGenerateComment": func() string {
 			// NOTE: must be templated/injected, as otherwise
 			// it will be detected itself as a go generate invocation itself
-			return "//go:generate go run ./gen/main.go"
+			return "//go:generate go run ./gen/main.go\n//go:generate go fmt instructions.go"
 		},
 		"switch": func(group instructionGroup) (string, error) {
 			res, err := generateSwitch(group)
@@ -486,57 +484,57 @@ func main() {
 	declare([]instruction{
 		// Control Instructions
 		{
-			Name: "unreachable",
-			Opcodes: opcodes{0x0},
+			Name:      "unreachable",
+			Opcodes:   opcodes{0x0},
 			Arguments: arguments{},
 		},
 		{
-			Name: "nop",
-			Opcodes: opcodes{0x01},
+			Name:      "nop",
+			Opcodes:   opcodes{0x01},
 			Arguments: arguments{},
 		},
 		{
-			Name: "block",
+			Name:    "block",
 			Opcodes: opcodes{0x02},
 			Arguments: arguments{
 				{"Block", ArgumentTypeBlock{AllowElse: false}},
 			},
 		},
 		{
-			Name: "loop",
+			Name:    "loop",
 			Opcodes: opcodes{0x03},
 			Arguments: arguments{
 				{"Block", ArgumentTypeBlock{AllowElse: false}},
 			},
 		},
 		{
-			Name: "if",
+			Name:    "if",
 			Opcodes: opcodes{0x04},
 			Arguments: arguments{
 				{"Block", ArgumentTypeBlock{AllowElse: true}},
 			},
 		},
 		{
-			Name: "end",
-			Opcodes: opcodes{0x0B},
+			Name:      "end",
+			Opcodes:   opcodes{0x0B},
 			Arguments: arguments{},
 		},
 		{
-			Name: "br",
+			Name:    "br",
 			Opcodes: opcodes{0x0C},
 			Arguments: arguments{
 				{"LabelIndex", indexArgumentType},
 			},
 		},
 		{
-			Name: "br_if",
+			Name:    "br_if",
 			Opcodes: opcodes{0x0D},
 			Arguments: arguments{
 				{"LabelIndex", indexArgumentType},
 			},
 		},
 		{
-			Name: "br_table",
+			Name:    "br_table",
 			Opcodes: opcodes{0x0E},
 			Arguments: arguments{
 				{"LabelIndices", ArgumentTypeVector{indexArgumentType}},
@@ -544,19 +542,19 @@ func main() {
 			},
 		},
 		{
-			Name: "return",
-			Opcodes: opcodes{0x0F},
+			Name:      "return",
+			Opcodes:   opcodes{0x0F},
 			Arguments: arguments{},
 		},
 		{
-			Name: "call",
+			Name:    "call",
 			Opcodes: opcodes{0x10},
 			Arguments: arguments{
 				{"FuncIndex", indexArgumentType},
 			},
 		},
 		{
-			Name: "call_indirect",
+			Name:    "call_indirect",
 			Opcodes: opcodes{0x11},
 			Arguments: arguments{
 				{"TypeIndex", indexArgumentType},
@@ -565,19 +563,19 @@ func main() {
 		},
 		// Reference Instructions
 		{
-			Name: "ref.null",
+			Name:    "ref.null",
 			Opcodes: opcodes{0xD0},
 			Arguments: arguments{
 				{"TypeIndex", indexArgumentType},
 			},
 		},
 		{
-			Name: "ref.is_null",
-			Opcodes: opcodes{0xD1},
+			Name:      "ref.is_null",
+			Opcodes:   opcodes{0xD1},
 			Arguments: arguments{},
 		},
 		{
-			Name: "ref.func",
+			Name:    "ref.func",
 			Opcodes: opcodes{0xD2},
 			Arguments: arguments{
 				{"FuncIndex", indexArgumentType},
@@ -585,46 +583,46 @@ func main() {
 		},
 		// Parametric Instructions
 		{
-			Name: "drop",
-			Opcodes: opcodes{0x1A},
+			Name:      "drop",
+			Opcodes:   opcodes{0x1A},
 			Arguments: arguments{},
 		},
 		{
-			Name: "select",
-			Opcodes: opcodes{0x1B},
+			Name:      "select",
+			Opcodes:   opcodes{0x1B},
 			Arguments: arguments{},
 		},
 		// Variable Instructions
 		{
-			Name: "local.get",
+			Name:    "local.get",
 			Opcodes: opcodes{0x20},
 			Arguments: arguments{
 				{"LocalIndex", indexArgumentType},
 			},
 		},
 		{
-			Name: "local.set",
+			Name:    "local.set",
 			Opcodes: opcodes{0x21},
 			Arguments: arguments{
 				{"LocalIndex", indexArgumentType},
 			},
 		},
 		{
-			Name: "local.tee",
+			Name:    "local.tee",
 			Opcodes: opcodes{0x22},
 			Arguments: arguments{
 				{"LocalIndex", indexArgumentType},
 			},
 		},
 		{
-			Name: "global.get",
+			Name:    "global.get",
 			Opcodes: opcodes{0x23},
 			Arguments: arguments{
 				{"GlobalIndex", indexArgumentType},
 			},
 		},
 		{
-			Name: "global.set",
+			Name:    "global.set",
 			Opcodes: opcodes{0x24},
 			Arguments: arguments{
 				{"GlobalIndex", indexArgumentType},
@@ -633,7 +631,7 @@ func main() {
 		// Numeric Instructions
 		// const instructions are followed by the respective literal
 		{
-			Name: "i32.const",
+			Name:    "i32.const",
 			Opcodes: opcodes{0x41},
 			Arguments: arguments{
 				// i32, "Uninterpreted integers are encoded as signed integers."
@@ -641,7 +639,7 @@ func main() {
 			},
 		},
 		{
-			Name: "i64.const",
+			Name:    "i64.const",
 			Opcodes: opcodes{0x42},
 			Arguments: arguments{
 				// i64, "Uninterpreted integers are encoded as signed integers."
@@ -650,311 +648,311 @@ func main() {
 		},
 		// All other numeric instructions are plain opcodes without any immediates.
 		{
-			Name: "i32.eqz",
-			Opcodes: opcodes{0x45},
+			Name:      "i32.eqz",
+			Opcodes:   opcodes{0x45},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i32.eq",
-			Opcodes: opcodes{0x46},
+			Name:      "i32.eq",
+			Opcodes:   opcodes{0x46},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i32.ne",
-			Opcodes: opcodes{0x47},
+			Name:      "i32.ne",
+			Opcodes:   opcodes{0x47},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i32.lt_s",
-			Opcodes: opcodes{0x48},
+			Name:      "i32.lt_s",
+			Opcodes:   opcodes{0x48},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i32.lt_u",
-			Opcodes: opcodes{0x49},
+			Name:      "i32.lt_u",
+			Opcodes:   opcodes{0x49},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i32.gt_s",
-			Opcodes: opcodes{0x4a},
+			Name:      "i32.gt_s",
+			Opcodes:   opcodes{0x4a},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i32.gt_u",
-			Opcodes: opcodes{0x4b},
+			Name:      "i32.gt_u",
+			Opcodes:   opcodes{0x4b},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i32.le_s",
-			Opcodes: opcodes{0x4c},
+			Name:      "i32.le_s",
+			Opcodes:   opcodes{0x4c},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i32.le_u",
-			Opcodes: opcodes{0x4d},
+			Name:      "i32.le_u",
+			Opcodes:   opcodes{0x4d},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i32.ge_s",
-			Opcodes: opcodes{0x4e},
+			Name:      "i32.ge_s",
+			Opcodes:   opcodes{0x4e},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i32.ge_u",
-			Opcodes: opcodes{0x4f},
+			Name:      "i32.ge_u",
+			Opcodes:   opcodes{0x4f},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i64.eqz",
-			Opcodes: opcodes{0x50},
+			Name:      "i64.eqz",
+			Opcodes:   opcodes{0x50},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i64.eq",
-			Opcodes: opcodes{0x51},
+			Name:      "i64.eq",
+			Opcodes:   opcodes{0x51},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i64.ne",
-			Opcodes: opcodes{0x52},
+			Name:      "i64.ne",
+			Opcodes:   opcodes{0x52},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i64.lt_s",
-			Opcodes: opcodes{0x53},
+			Name:      "i64.lt_s",
+			Opcodes:   opcodes{0x53},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i64.lt_u",
-			Opcodes: opcodes{0x54},
+			Name:      "i64.lt_u",
+			Opcodes:   opcodes{0x54},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i64.gt_s",
-			Opcodes: opcodes{0x55},
+			Name:      "i64.gt_s",
+			Opcodes:   opcodes{0x55},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i64.gt_u",
-			Opcodes: opcodes{0x56},
+			Name:      "i64.gt_u",
+			Opcodes:   opcodes{0x56},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i64.le_s",
-			Opcodes: opcodes{0x57},
+			Name:      "i64.le_s",
+			Opcodes:   opcodes{0x57},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i64.le_u",
-			Opcodes: opcodes{0x58},
+			Name:      "i64.le_u",
+			Opcodes:   opcodes{0x58},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i64.ge_s",
-			Opcodes: opcodes{0x59},
+			Name:      "i64.ge_s",
+			Opcodes:   opcodes{0x59},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i64.ge_u",
-			Opcodes: opcodes{0x5a},
-			Arguments: arguments{},
-		},
-
-		{
-			Name: "i32.clz",
-			Opcodes: opcodes{0x67},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i32.ctz",
-			Opcodes: opcodes{0x68},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i32.popcnt",
-			Opcodes: opcodes{0x69},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i32.add",
-			Opcodes: opcodes{0x6a},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i32.sub",
-			Opcodes: opcodes{0x6b},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i32.mul",
-			Opcodes: opcodes{0x6c},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i32.div_s",
-			Opcodes: opcodes{0x6d},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i32.div_u",
-			Opcodes: opcodes{0x6e},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i32.rem_s",
-			Opcodes: opcodes{0x6f},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i32.rem_u",
-			Opcodes: opcodes{0x70},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i32.and",
-			Opcodes: opcodes{0x71},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i32.or",
-			Opcodes: opcodes{0x72},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i32.xor",
-			Opcodes: opcodes{0x73},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i32.shl",
-			Opcodes: opcodes{0x74},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i32.shr_s",
-			Opcodes: opcodes{0x75},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i32.shr_u",
-			Opcodes: opcodes{0x76},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i32.rotl",
-			Opcodes: opcodes{0x77},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i32.rotr",
-			Opcodes: opcodes{0x78},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i64.clz",
-			Opcodes: opcodes{0x79},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i64.ctz",
-			Opcodes: opcodes{0x7a},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i64.popcnt",
-			Opcodes: opcodes{0x7b},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i64.add",
-			Opcodes: opcodes{0x7c},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i64.sub",
-			Opcodes: opcodes{0x7d},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i64.mul",
-			Opcodes: opcodes{0x7e},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i64.div_s",
-			Opcodes: opcodes{0x7f},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i64.div_u",
-			Opcodes: opcodes{0x80},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i64.rem_s",
-			Opcodes: opcodes{0x81},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i64.rem_u",
-			Opcodes: opcodes{0x82},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i64.and",
-			Opcodes: opcodes{0x83},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i64.or",
-			Opcodes: opcodes{0x84},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i64.xor",
-			Opcodes: opcodes{0x85},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i64.shl",
-			Opcodes: opcodes{0x86},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i64.shr_s",
-			Opcodes: opcodes{0x87},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i64.shr_u",
-			Opcodes: opcodes{0x88},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i64.rotl",
-			Opcodes: opcodes{0x89},
-			Arguments: arguments{},
-		},
-		{
-			Name: "i64.rotr",
-			Opcodes: opcodes{0x8a},
+			Name:      "i64.ge_u",
+			Opcodes:   opcodes{0x5a},
 			Arguments: arguments{},
 		},
 
 		{
-			Name: "i32.wrap_i64",
-			Opcodes: opcodes{0xa7},
+			Name:      "i32.clz",
+			Opcodes:   opcodes{0x67},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i32.ctz",
+			Opcodes:   opcodes{0x68},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i32.popcnt",
+			Opcodes:   opcodes{0x69},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i32.add",
+			Opcodes:   opcodes{0x6a},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i32.sub",
+			Opcodes:   opcodes{0x6b},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i32.mul",
+			Opcodes:   opcodes{0x6c},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i32.div_s",
+			Opcodes:   opcodes{0x6d},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i32.div_u",
+			Opcodes:   opcodes{0x6e},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i32.rem_s",
+			Opcodes:   opcodes{0x6f},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i32.rem_u",
+			Opcodes:   opcodes{0x70},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i32.and",
+			Opcodes:   opcodes{0x71},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i32.or",
+			Opcodes:   opcodes{0x72},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i32.xor",
+			Opcodes:   opcodes{0x73},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i32.shl",
+			Opcodes:   opcodes{0x74},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i32.shr_s",
+			Opcodes:   opcodes{0x75},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i32.shr_u",
+			Opcodes:   opcodes{0x76},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i32.rotl",
+			Opcodes:   opcodes{0x77},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i32.rotr",
+			Opcodes:   opcodes{0x78},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i64.clz",
+			Opcodes:   opcodes{0x79},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i64.ctz",
+			Opcodes:   opcodes{0x7a},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i64.popcnt",
+			Opcodes:   opcodes{0x7b},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i64.add",
+			Opcodes:   opcodes{0x7c},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i64.sub",
+			Opcodes:   opcodes{0x7d},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i64.mul",
+			Opcodes:   opcodes{0x7e},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i64.div_s",
+			Opcodes:   opcodes{0x7f},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i64.div_u",
+			Opcodes:   opcodes{0x80},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i64.rem_s",
+			Opcodes:   opcodes{0x81},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i64.rem_u",
+			Opcodes:   opcodes{0x82},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i64.and",
+			Opcodes:   opcodes{0x83},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i64.or",
+			Opcodes:   opcodes{0x84},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i64.xor",
+			Opcodes:   opcodes{0x85},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i64.shl",
+			Opcodes:   opcodes{0x86},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i64.shr_s",
+			Opcodes:   opcodes{0x87},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i64.shr_u",
+			Opcodes:   opcodes{0x88},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i64.rotl",
+			Opcodes:   opcodes{0x89},
+			Arguments: arguments{},
+		},
+		{
+			Name:      "i64.rotr",
+			Opcodes:   opcodes{0x8a},
 			Arguments: arguments{},
 		},
 
 		{
-			Name: "i64.extend_i32_s",
-			Opcodes: opcodes{0xac},
+			Name:      "i32.wrap_i64",
+			Opcodes:   opcodes{0xa7},
+			Arguments: arguments{},
+		},
+
+		{
+			Name:      "i64.extend_i32_s",
+			Opcodes:   opcodes{0xac},
 			Arguments: arguments{},
 		},
 		{
-			Name: "i64.extend_i32_u",
-			Opcodes: opcodes{0xad},
+			Name:      "i64.extend_i32_u",
+			Opcodes:   opcodes{0xad},
 			Arguments: arguments{},
 		},
 	})
