@@ -202,8 +202,16 @@ func TestInterpretEnumInContract(t *testing.T) {
 		},
 	)
 
+	c := inter.Globals["C"].Value
+	require.IsType(t, &interpreter.CompositeValue{}, c)
+	contract := c.(*interpreter.CompositeValue)
+
+	e := contract.Fields["e"]
+	require.IsType(t, &interpreter.CompositeValue{}, c)
+	enumCase := e.(*interpreter.CompositeValue)
+
 	require.Equal(t,
-		nil,
-		inter.Globals["C"].Value,
+		interpreter.UInt8Value(0),
+		enumCase.Fields["rawValue"],
 	)
 }
