@@ -218,3 +218,25 @@ func TestCheckEnumConstructor(t *testing.T) {
 
 	require.NoError(t, err)
 }
+
+func TestCheckEnumInContract(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+      contract C {
+          enum E: UInt8 {
+              pub case a
+              pub case b
+          }
+
+          var e: E
+
+          init() {
+              self.e = E.a
+          }
+      }
+    `)
+
+	require.NoError(t, err)
+}

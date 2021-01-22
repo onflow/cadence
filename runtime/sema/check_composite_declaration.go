@@ -244,20 +244,28 @@ func (checker *Checker) declareCompositeNestedTypes(
 
 				nestedCompositeType := nestedType.(*CompositeType)
 
+				// Always determine composite constructor type
+
 				nestedConstructorType, nestedConstructorArgumentLabels :=
 					checker.compositeConstructorType(nestedCompositeDeclaration, nestedCompositeType)
 
-				_, err := checker.valueActivations.Declare(variableDeclaration{
-					identifier:               nestedCompositeDeclaration.Identifier.Identifier,
-					ty:                       nestedConstructorType,
-					access:                   nestedCompositeDeclaration.Access,
-					kind:                     nestedCompositeDeclaration.DeclarationKind(),
-					pos:                      nestedCompositeDeclaration.Identifier.Pos,
-					isConstant:               true,
-					argumentLabels:           nestedConstructorArgumentLabels,
-					allowOuterScopeShadowing: false,
-				})
-				checker.report(err)
+				switch nestedCompositeType.Kind {
+				case common.CompositeKindContract:
+					// not supported
+
+				case common.CompositeKindEnum:
+					checker.declareEnumConstructor(
+						nestedCompositeDeclaration,
+						nestedCompositeType,
+					)
+
+				default:
+					checker.declareCompositeConstructor(
+						nestedCompositeDeclaration,
+						nestedConstructorType,
+						nestedConstructorArgumentLabels,
+					)
+				}
 			}
 		}
 	}
@@ -478,8 +486,6 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 	declarationMembers := map[string]*Member{}
 
-	var enumCases []*ast.EnumCaseDeclaration
-
 	(func() {
 		// Activate new scopes for nested types
 
@@ -579,12 +585,11 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 		case common.CompositeKindEnum:
 			// Enum members are derived from the cases
-			members, fields, enumCases = checker.enumMembersAndOrigins(
+			members, fields, origins = checker.enumMembersAndOrigins(
 				declaration.Members,
 				compositeType,
 				declaration.DeclarationKind(),
 			)
-			origins = map[string]*Origin{}
 
 		default:
 			members, fields, origins = checker.defaultMembersAndOrigins(
@@ -622,13 +627,24 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 	switch compositeType.Kind {
 	case common.CompositeKindContract:
-		checker.declareContractValue(declaration, compositeType, declarationMembers)
+		checker.declareContractValue(
+			declaration,
+			compositeType,
+			declarationMembers,
+		)
 
 	case common.CompositeKindEnum:
-		checker.declareEnumConstructor(declaration, compositeType, enumCases)
+		checker.declareEnumConstructor(
+			declaration,
+			compositeType,
+		)
 
 	default:
-		checker.declareCompositeConstructor(declaration, constructorType, constructorArgumentLabels)
+		checker.declareCompositeConstructor(
+			declaration,
+			constructorType,
+			constructorArgumentLabels,
+		)
 	}
 }
 
@@ -650,13 +666,14 @@ func (checker *Checker) declareCompositeConstructor(
 	// would fail with an "not declared" error.
 
 	_, err := checker.valueActivations.Declare(variableDeclaration{
-		identifier:     declaration.Identifier.Identifier,
-		ty:             constructorType,
-		access:         declaration.Access,
-		kind:           declaration.DeclarationKind(),
-		pos:            declaration.Identifier.Pos,
-		isConstant:     true,
-		argumentLabels: constructorArgumentLabels,
+		identifier:               declaration.Identifier.Identifier,
+		ty:                       constructorType,
+		access:                   declaration.Access,
+		kind:                     declaration.DeclarationKind(),
+		pos:                      declaration.Identifier.Pos,
+		isConstant:               true,
+		argumentLabels:           constructorArgumentLabels,
+		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
 }
@@ -688,8 +705,9 @@ func (checker *Checker) declareContractValue(
 func (checker *Checker) declareEnumConstructor(
 	declaration *ast.CompositeDeclaration,
 	compositeType *CompositeType,
-	enumCases []*ast.EnumCaseDeclaration,
 ) {
+
+	enumCases := declaration.Members.EnumCases()
 
 	constructorMembers := make(map[string]*Member, len(enumCases))
 	constructorOrigins := make(map[string]*Origin, len(enumCases))
@@ -1483,7 +1501,7 @@ func (checker *Checker) enumMembersAndOrigins(
 ) (
 	members map[string]*Member,
 	fieldNames []string,
-	enumCases []*ast.EnumCaseDeclaration,
+	origins map[string]*Origin,
 ) {
 	for _, declaration := range allMembers.Declarations {
 
@@ -1499,8 +1517,6 @@ func (checker *Checker) enumMembersAndOrigins(
 			)
 			continue
 		}
-
-		enumCases = append(enumCases, enumCase)
 
 		// Enum cases must be effectively public
 
@@ -1533,6 +1549,10 @@ func (checker *Checker) enumMembersAndOrigins(
 			DocString:       enumRawValueFieldDocString,
 		},
 	}
+
+	// No origins available for the only member which was declared above
+
+	origins = map[string]*Origin{}
 
 	// Gather the field names from the members declared above
 
