@@ -130,9 +130,14 @@ type RestrictedStaticType struct {
 	Restrictions []InterfaceStaticType
 }
 
-func (RestrictedStaticType) IsStaticType() {}
+// NOTE: must be pointer receiver, as static types get used in type values,
+// which are used as keys in maps when exporting.
+// Key types in Go maps must be (transitively) hashable types,
+// and slices are not, but `Restrictions` is one.
+//
+func (*RestrictedStaticType) IsStaticType() {}
 
-func (t RestrictedStaticType) String() string {
+func (t *RestrictedStaticType) String() string {
 	restrictions := make([]string, len(t.Restrictions))
 
 	for i, restriction := range t.Restrictions {
@@ -217,7 +222,7 @@ func ConvertSemaToStaticType(t sema.Type) StaticType {
 			restrictions[i] = convertToInterfaceStaticType(restriction)
 		}
 
-		return RestrictedStaticType{
+		return &RestrictedStaticType{
 			Type:         ConvertSemaToStaticType(t.Type),
 			Restrictions: restrictions,
 		}
@@ -288,7 +293,7 @@ func ConvertStaticToSemaType(
 			Type: ConvertStaticToSemaType(t.Type, getInterface, getComposite),
 		}
 
-	case RestrictedStaticType:
+	case *RestrictedStaticType:
 		restrictions := make([]*sema.InterfaceType, len(t.Restrictions))
 
 		for i, restriction := range t.Restrictions {
