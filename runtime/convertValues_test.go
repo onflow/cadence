@@ -685,6 +685,51 @@ func TestExportTypeValue(t *testing.T) {
 
 		assert.Equal(t, expected, actual)
 	})
+
+	t.Run("with restricted static type", func(t *testing.T) {
+
+		t.Parallel()
+
+		program, err := parser2.ParseProgram(`
+          pub struct interface SI {}
+
+          pub struct S: SI {}
+
+        `)
+		require.NoError(t, err)
+
+		checker, err := sema.NewChecker(program, utils.TestLocation)
+		require.NoError(t, err)
+
+		err = checker.Check()
+		require.NoError(t, err)
+
+		inter, err := interpreter.NewInterpreter(checker)
+		require.NoError(t, err)
+
+		ty := interpreter.TypeValue{
+			Type: &interpreter.RestrictedStaticType{
+				Type: interpreter.CompositeStaticType{
+					Location:            utils.TestLocation,
+					QualifiedIdentifier: "S",
+				},
+				Restrictions: []interpreter.InterfaceStaticType{
+					{
+						Location:            utils.TestLocation,
+						QualifiedIdentifier: "SI",
+					},
+				},
+			},
+		}
+
+		assert.Equal(t,
+			cadence.TypeValue{
+				StaticType: "S.test.S{S.test.SI}",
+			},
+			ExportValue(ty, inter),
+		)
+	})
+
 }
 
 func TestExportCapabilityValue(t *testing.T) {

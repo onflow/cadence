@@ -1429,7 +1429,7 @@ func (d *Decoder) decodeRestrictedStaticType(v interface{}) (StaticType, error) 
 		restrictions[i] = restriction
 	}
 
-	return RestrictedStaticType{
+	return &RestrictedStaticType{
 		Type:         restrictedType,
 		Restrictions: restrictions,
 	}, nil
