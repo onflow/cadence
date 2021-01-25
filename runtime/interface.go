@@ -56,8 +56,8 @@ type Accounts interface {
 
 	// NewAccount creates a new account address and set the exists flag for this account
 	NewAccount(caller Location) (address Address, err error)
-	// Exists returns true if the account exists
-	Exists(address Address) (exists bool, err error)
+	// AccountExists returns true if the account exists
+	AccountExists(address Address) (exists bool, err error)
 	// NumberOfAccounts returns the number of accounts
 	NumberOfAccounts(caller Address) (count uint64, err error)
 
@@ -66,7 +66,7 @@ type Accounts interface {
 	// UnsuspendAccount unsuspend an account (set suspend flag to false)
 	UnsuspendAccount(address Address, caller Location) error
 	// returns true if account is suspended
-	IsSuspended(address Address) (isSuspended bool, err error)
+	IsAccountSuspended(address Address) (isSuspended bool, err error)
 
 	// TODO ramtin merge this with 	Code(location Location) error
 	// AccountContractCode returns the code associated with an account contract.
