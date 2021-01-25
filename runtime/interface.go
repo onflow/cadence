@@ -133,6 +133,17 @@ type Results interface {
 	ComputationSpent() uint64
 }
 
+// Cache provides caching functionality to the cadence runtime
+//
+// cache should be tx failure aware (rollback changes)
+// cache should not break verification (register touches when returns)
+type Cache interface {
+	// GetCachedProgram attempts to get a parsed program from a cache.
+	GetCachedProgram(Location) (*ast.Program, error)
+	// CacheProgram adds a parsed program to a cache.
+	CacheProgram(Location, *ast.Program) error
+}
+
 type Metrics interface {
 	// ProgramParsed captures the time spent on parsing the program
 	ProgramParsed(location common.Location, duration time.Duration)

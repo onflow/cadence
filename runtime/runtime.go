@@ -47,6 +47,7 @@ type Context struct {
 	Accounts          Accounts
 	Results           Results
 	Metrics           Metrics
+	Cache             Cache
 	Location          Location
 	PredeclaredValues []ValueDeclaration
 	codes             map[common.LocationID]string
