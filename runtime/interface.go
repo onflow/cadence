@@ -99,6 +99,7 @@ type Accounts interface {
 	AccountPublicKey(address Address, index uint, caller Location) (publicKey []byte, err error)
 	// VerifyAccountSignature verifies a signature for the given address and index
 	// TODO RAMTIN do I need the tag here?
+	// Note that a verify signature for non-account keys is also injected to the env
 	VerifyAccountSignature(address Address, index uint, signature []byte, tag string, signedData []byte, caller Location) (isValid bool, err error)
 }
 
