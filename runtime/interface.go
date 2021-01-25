@@ -68,6 +68,7 @@ type Accounts interface {
 	// returns true if account is suspended
 	IsAccountSuspended(address Address) (isSuspended bool, err error)
 
+	ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
 	// TODO ramtin merge this with 	Code(location Location) error
 	// AccountContractCode returns the code associated with an account contract.
 	ContractCode(address AddressLocation) (code []byte, err error)
@@ -132,13 +133,16 @@ type Results interface {
 	AddComputationUsed(uint64)
 	// ComputationSpent returns the total amount of computation spent during the execution
 	ComputationSpent() uint64
+	// ComputationLimit returns the max computation limit allowed while running
+	// Ramtin: (we might not need this to be passed and just be enforced in the Results)
+	ComputationLimit() uint64
 }
 
-// Cache provides caching functionality to the cadence runtime
+// CacheProvider provides caching functionality to the cadence runtime
 //
 // cache should be tx failure aware (rollback changes)
 // cache should not break verification (register touches when returns)
-type Cache interface {
+type CacheProvider interface {
 	// GetCachedProgram attempts to get a parsed program from a cache.
 	GetCachedProgram(Location) (*ast.Program, error)
 	// CacheProgram adds a parsed program to a cache.
@@ -173,11 +177,92 @@ type HighLevelAccounts interface {
 	SetCadenceValue(owner Address, key string, value cadence.Value) (err error)
 }
 
-type EmptyRuntimeInterface struct{}
+type EmptyAccounts struct{}
 
-var _ Interface = &EmptyRuntimeInterface{}
+// TODO ramtin create empty accounts, ...
+var _ Accounts = &EmptyAccounts{}
 
-func (i *EmptyRuntimeInterface) ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
+func (i *EmptyAccounts) NewAccount(_ Location) ([]byte, error) {
+	return nil, nil
+}
+
+func (i *EmptyAccounts) AccountExists(_ Address) (bool, error) {
+	return false, nil
+}
+
+func (i *EmptyAccounts) NumberOfAccounts(_ Address) (uint64, error) {
+	return 0, nil
+}
+
+func (i *EmptyAccounts) SuspendAccount(_ Address, _ Location) error {
+	return nil
+}
+
+func (i *EmptyAccounts) UnsuspendAccount(_ Address, _ Location) error {
+	return nil
+}
+
+func (i *EmptyAccounts) IsAccountSuspended(_ Address) (bool, error) {
+	return false, nil
+}
+
+func (i *EmptyAccounts) ContractCode(_ AddressLocation) ([]byte, error) {
+	return nil, nil
+}
+
+func (i *EmptyAccounts) ValueExists(_, _ []byte) (exists bool, err error) {
+	return false, nil
+}
+
+func (i *EmptyAccounts) GetValue(_, _ []byte) (value []byte, err error) {
+	return nil, nil
+}
+
+func (i *EmptyAccounts) SetValue(_, _, _ []byte) error {
+	return nil
+}
+
+func (i *EmptyAccounts) CreateAccount(_ Address) (address Address, err error) {
+	return Address{}, nil
+}
+
+func (i *EmptyAccounts) AddAccountKey(_ Address, _ []byte, _ Location) error {
+	return nil
+}
+
+func (i *EmptyAccounts) RevokeAccountKey(_ Address, _ int, _ Location) error {
+	return nil
+}
+
+func (i *EmptyAccounts) AccountPublicKey(_ Address, _ uint, _ Location) ([]byte, error) {
+	return nil, nil
+}
+
+func (i *EmptyAccounts) UpdateAccountCode(_ Address, _ []byte) error {
+	return nil
+}
+
+func (i *EmptyAccounts) UpdateAccountContractCode(_ Address, _ string, _ []byte) (err error) {
+	return nil
+}
+
+func (i *EmptyAccounts) AccountContractCode(_ Address, _ string) (code []byte, err error) {
+	return nil, nil
+}
+
+func (i *EmptyAccounts) RemoveAccountContractCode(_ Address, _ string) (err error) {
+	return nil
+}
+
+func (i EmptyAccounts) GetStorageUsed(_ Address) (uint64, error) {
+	return 0, nil
+}
+
+func (i EmptyAccounts) GetStorageCapacity(_ Address) (uint64, error) {
+	return 0, nil
+}
+
+func (i *EmptyAccounts) ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
 	return []ResolvedLocation{
 		{
 			Location:    location,
@@ -186,120 +271,68 @@ func (i *EmptyRuntimeInterface) ResolveLocation(identifiers []Identifier, locati
 	}, nil
 }
 
-func (i *EmptyRuntimeInterface) GetCode(_ Location) ([]byte, error) {
-	return nil, nil
-}
+// func (i *EmptyAccounts) GetCachedProgram(_ Location) (*ast.Program, error) {
+// 	return nil, nil
+// }
 
-func (i *EmptyRuntimeInterface) GetCachedProgram(_ Location) (*ast.Program, error) {
-	return nil, nil
-}
+// func (i *EmptyAccounts) CacheProgram(_ Location, _ *ast.Program) error {
+// 	return nil
+// }
 
-func (i *EmptyRuntimeInterface) CacheProgram(_ Location, _ *ast.Program) error {
-	return nil
-}
+// func (i *EmptyRuntimeInterface) GetSigningAccounts() ([]Address, error) {
+// 	return nil, nil
+// }
 
-func (i *EmptyRuntimeInterface) ValueExists(_, _ []byte) (exists bool, err error) {
-	return false, nil
-}
+// func (i *EmptyRuntimeInterface) Log(_ string) error {
+// 	return nil
+// }
 
-func (i *EmptyRuntimeInterface) GetValue(_, _ []byte) (value []byte, err error) {
-	return nil, nil
-}
+// func (i *EmptyRuntimeInterface) EmitEvent(_ cadence.Event) error {
+// 	return nil
+// }
 
-func (i *EmptyRuntimeInterface) SetValue(_, _, _ []byte) error {
-	return nil
-}
+// func (i *EmptyRuntimeInterface) GenerateUUID() (uint64, error) {
+// 	return 0, nil
+// }
 
-func (i *EmptyRuntimeInterface) CreateAccount(_ Address) (address Address, err error) {
-	return Address{}, nil
-}
+// func (i *EmptyRuntimeInterface) GetComputationLimit() uint64 {
+// 	return 0
+// }
 
-func (i *EmptyRuntimeInterface) AddAccountKey(_ Address, _ []byte) error {
-	return nil
-}
+// func (i *EmptyRuntimeInterface) SetComputationUsed(uint64) error {
+// 	return nil
+// }
 
-func (i *EmptyRuntimeInterface) RemoveAccountKey(_ Address, _ int) (publicKey []byte, err error) {
-	return nil, nil
-}
+// func (i *EmptyRuntimeInterface) DecodeArgument(_ []byte, _ cadence.Type) (cadence.Value, error) {
+// 	return nil, nil
+// }
 
-func (i *EmptyRuntimeInterface) UpdateAccountCode(_ Address, _ []byte) error {
-	return nil
-}
+// func (i *EmptyRuntimeInterface) GetCurrentBlockHeight() (uint64, error) {
+// 	return 0, nil
+// }
 
-func (i *EmptyRuntimeInterface) UpdateAccountContractCode(_ Address, _ string, _ []byte) (err error) {
-	return nil
-}
+// func (i *EmptyRuntimeInterface) GetBlockAtHeight(_ uint64) (block Block, exists bool, err error) {
+// 	return
+// }
 
-func (i *EmptyRuntimeInterface) GetAccountContractCode(_ Address, _ string) (code []byte, err error) {
-	return nil, nil
-}
+// func (i *EmptyRuntimeInterface) UnsafeRandom() (uint64, error) {
+// 	return 0, nil
+// }
 
-func (i *EmptyRuntimeInterface) RemoveAccountContractCode(_ Address, _ string) (err error) {
-	return nil
-}
+// func (i *EmptyRuntimeInterface) VerifySignature(
+// 	_ []byte,
+// 	_ string,
+// 	_ []byte,
+// 	_ []byte,
+// 	_ string,
+// 	_ string,
+// ) (bool, error) {
+// 	return false, nil
+// }
 
-func (i *EmptyRuntimeInterface) GetSigningAccounts() ([]Address, error) {
-	return nil, nil
-}
-
-func (i *EmptyRuntimeInterface) Log(_ string) error {
-	return nil
-}
-
-func (i *EmptyRuntimeInterface) EmitEvent(_ cadence.Event) error {
-	return nil
-}
-
-func (i *EmptyRuntimeInterface) GenerateUUID() (uint64, error) {
-	return 0, nil
-}
-
-func (i *EmptyRuntimeInterface) GetComputationLimit() uint64 {
-	return 0
-}
-
-func (i *EmptyRuntimeInterface) SetComputationUsed(uint64) error {
-	return nil
-}
-
-func (i *EmptyRuntimeInterface) DecodeArgument(_ []byte, _ cadence.Type) (cadence.Value, error) {
-	return nil, nil
-}
-
-func (i *EmptyRuntimeInterface) GetCurrentBlockHeight() (uint64, error) {
-	return 0, nil
-}
-
-func (i *EmptyRuntimeInterface) GetBlockAtHeight(_ uint64) (block Block, exists bool, err error) {
-	return
-}
-
-func (i *EmptyRuntimeInterface) UnsafeRandom() (uint64, error) {
-	return 0, nil
-}
-
-func (i *EmptyRuntimeInterface) VerifySignature(
-	_ []byte,
-	_ string,
-	_ []byte,
-	_ []byte,
-	_ string,
-	_ string,
-) (bool, error) {
-	return false, nil
-}
-
-func (i *EmptyRuntimeInterface) Hash(
-	_ []byte,
-	_ string,
-) ([]byte, error) {
-	return nil, nil
-}
-
-func (i EmptyRuntimeInterface) GetStorageUsed(_ Address) (uint64, error) {
-	return 0, nil
-}
-
-func (i EmptyRuntimeInterface) GetStorageCapacity(_ Address) (uint64, error) {
-	return 0, nil
-}
+// func (i *EmptyRuntimeInterface) Hash(
+// 	_ []byte,
+// 	_ string,
+// ) ([]byte, error) {
+// 	return nil, nil
+// }
