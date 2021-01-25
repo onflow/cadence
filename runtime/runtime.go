@@ -103,8 +103,8 @@ type Runnable interface {
 // note that non-fatal runtime errors are captured inside the result
 // and error should only be used for returning fatal errors.
 type Runner interface {
-	// Run runs transactions
-	Run(Runnable, Context) error
+	// RunTransaction runs a transactions
+	RunTransaction(Runnable, Context) error
 
 	// RunScript runs scripts (read-only operations)
 	RunScript(Runnable, Context) (cadence.Value, error)
