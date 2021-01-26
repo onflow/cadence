@@ -52,7 +52,7 @@ type ParseAndCheckOptions struct {
 var checkConcurrently = flag.Int(
 	"cadence.checkConcurrently",
 	0,
-	"check programs N times, concurrently. useful for detecting data races with the -race flag",
+	"check programs N times, concurrently. useful for detecting non-determinism, and data races with the -race flag",
 )
 
 func ParseAndCheckWithOptions(
@@ -108,8 +108,9 @@ func ParseAndCheckWithOptions(
 		// Run 10 additional checks in parallel,
 		// and ensure all reported errors are equal.
 		//
-		// This is useful when combined with Go testing's race detector,
-		// which allows detecting data race conditions.
+		// This is useful to detect non-determinism ,
+		// and when combined with Go testing's race detector,
+		// allows detecting data race conditions.
 
 		concurrency := *checkConcurrently
 
