@@ -116,6 +116,8 @@ type Results interface {
 	Logs() ([]string, error)
 	// returns log i of the log collection
 	Log(i uint) (string, error)
+	// returns number of logs
+	LogCounts() uint
 
 	// AppendEvent appends an event to the event collection
 	AppendEvent(cadence.Event) error
@@ -123,11 +125,17 @@ type Results interface {
 	Events() ([]cadence.Event, error)
 	// returns event i of the event collection
 	Event(i uint) (cadence.Event, error)
+	// returns number of events
+	EventCounts() uint
 
 	// AppendError appends a non-fatal error
 	AppendError(error)
 	// return all the errors
 	Errors() multierror.Error
+	// returns event i of the event collection
+	Error(i uint) error
+	// returns number of errors
+	ErrorCounts() uint
 
 	// AddComputationUsed adds a new uint64 value to the computationUsed (computation accumulator)
 	AddComputationUsed(uint64)
