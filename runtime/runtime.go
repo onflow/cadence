@@ -39,8 +39,27 @@ import (
 )
 
 type Script struct {
-	Source    []byte
-	Arguments [][]byte
+	source      []byte
+	arguments   []cadence.Value
+	authorizers []Address
+}
+
+func NewScript(source []byte, arguments []cadence.Value, authorizers []Address) *Script {
+	return &Script{source: source,
+		arguments:   arguments,
+		authorizers: authorizers}
+}
+
+func (s *Script) Source() []byte {
+	return s.source
+}
+
+func (s *Script) Arguments(argumentTypes []cadence.Type) ([]cadence.Value, error) {
+	return s.arguments, nil
+}
+
+func (s *Script) Authorizers() []Address {
+	return s.authorizers
 }
 
 type Context struct {
