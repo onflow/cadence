@@ -32,6 +32,12 @@ type StorageKey struct {
 	Key     string
 }
 
+type StorageValue []byte
+type StorageKeyIterator interface {
+	Next() StorageKey
+	Size() uint64
+}
+
 type Cache map[StorageKey]CacheEntry
 
 type CacheEntry struct {
@@ -44,7 +50,7 @@ type CacheEntry struct {
 type runtimeStorage struct {
 	accountstorage           AccountStorage
 	highLevelAccountsEnabled bool
-	highLevelAccounts        HighLevelAccounts
+	highLevelAccountStorage  HighLevelAccountStorage
 	cache                    Cache
 }
 
@@ -52,7 +58,7 @@ func newRuntimeStorage(accountstorage AccountStorage) *runtimeStorage {
 	highLevelAccountsEnabled := false
 	highLevelAccounts, ok := accounts.(HighLevelStorage)
 	if ok {
-		highLevelAccountsEnabled = highLevelAccounts.HighLevelStorageEnabled()
+		highLevelAccountsEnabled = highLevelAccountStorage.HighLevelStorageEnabled()
 	}
 
 	return &runtimeStorage{

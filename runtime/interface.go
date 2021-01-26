@@ -84,24 +84,17 @@ type AccountContracts interface {
 	// RemoveContractCode removes the code associated with an account contract.
 	RemoveContractCode(address AddressLocation, caller Location) (err error)
 	// Contracts returns a list of contract names under this account
-	Contracts(address AddressLocation, caller Location) (Name []string, err error)
-}
-
-type StorageKey []byte
-type StorageValue []byte
-type StorageKeyIterator interface {
-	Next() StorageKey
-	Size() uint64
+	Contracts(address AddressLocation, caller Location) (name []string, err error)
 }
 
 // AccountStorage stores and retrives account key/values
 type AccountStorage interface {
 	// Value gets a value for the given key in the storage, owned by the given account.
-	Value(address Address, key StorageKey, caller Location) (value StorageValue, err error)
+	Value(key StorageKey, caller Location) (value StorageValue, err error)
 	// SetValue sets a value for the given key in the storage, owned by the given account.
-	SetValue(address Address, key StorageKey, value StorageValue, caller Location) (err error)
+	SetValue(key StorageKey, value StorageValue, caller Location) (err error)
 	// ValueExists returns true if the given key exists in the storage, owned by the given account.
-	ValueExists(address Address, key StorageKey, caller Location) (exists bool, err error)
+	ValueExists(key StorageKey, caller Location) (exists bool, err error)
 	// StoredKeys returns list of keys and their sizes owned by this account
 	StoredKeys(address Address, caller Location) (iter StorageKeyIterator, err error)
 	// StorageUsed gets storage used in bytes by the address at the moment of the function call.
@@ -204,9 +197,7 @@ type Metrics interface {
 	ValueDecoded(duration time.Duration)
 }
 
-type HighLevelAccounts interface {
-	Accounts
-
+type HighLevelAccountStorage interface {
 	// HighLevelStorageEnabled should return true
 	// if the functions of HighLevelStorage should be called,
 	// e.g. SetCadenceValue
@@ -218,11 +209,10 @@ type HighLevelAccounts interface {
 
 type EmptyAccounts struct{}
 
-// TODO ramtin create empty accounts, ...
 var _ Accounts = &EmptyAccounts{}
 
-func (i *EmptyAccounts) NewAccount(_ Location) ([]byte, error) {
-	return nil, nil
+func (i *EmptyAccounts) NewAccount(_ Location) (Address, error) {
+	return Address{}, nil
 }
 
 func (i *EmptyAccounts) AccountExists(_ Address) (bool, error) {
@@ -245,60 +235,68 @@ func (i *EmptyAccounts) IsAccountSuspended(_ Address) (bool, error) {
 	return false, nil
 }
 
-func (i *EmptyAccounts) ContractCode(_ AddressLocation) ([]byte, error) {
+type EmptyAccountContracts struct{}
+
+var _ AccountContracts = &EmptyAccountContracts{}
+
+func (i *EmptyAccountContracts) ContractCode(_ AddressLocation) ([]byte, error) {
 	return nil, nil
 }
 
-func (i *EmptyAccounts) ValueExists(_, _ []byte) (exists bool, err error) {
+func (i *EmptyAccountContracts) UpdateContractCode(_ AddressLocation, _ []byte, _ Location) (err error) {
+	return nil
+}
+
+func (i *EmptyAccountContracts) RemoveContractCode(_ AddressLocation, _ Location) (err error) {
+	return nil
+}
+
+func (i *EmptyAccountContracts) Contracts(_ AddressLocation, _ Location) (name []string, err error) {
+	return nil, nil
+}
+
+type EmptyAccountStorage struct{}
+
+var _ AccountStorage = &EmptyAccountStorage{}
+
+func (i *EmptyAccountStorage) ValueExists(_ StorageKey, _ Location) (exists bool, err error) {
 	return false, nil
 }
 
-func (i *EmptyAccounts) GetValue(_, _ []byte) (value []byte, err error) {
+func (i *EmptyAccountStorage) Value(_ StorageKey, _ Location) (value StorageValue, err error) {
 	return nil, nil
 }
 
-func (i *EmptyAccounts) SetValue(_, _, _ []byte) error {
+func (i *EmptyAccountStorage) SetValue(_ StorageKey, _ StorageValue, _ Location) error {
 	return nil
 }
 
-func (i *EmptyAccounts) CreateAccount(_ Address) (address Address, err error) {
-	return Address{}, nil
-}
-
-func (i *EmptyAccounts) AddAccountKey(_ Address, _ []byte, _ Location) error {
-	return nil
-}
-
-func (i *EmptyAccounts) RevokeAccountKey(_ Address, _ int, _ Location) error {
-	return nil
-}
-
-func (i *EmptyAccounts) AccountPublicKey(_ Address, _ uint, _ Location) ([]byte, error) {
-	return nil, nil
-}
-
-func (i *EmptyAccounts) UpdateAccountCode(_ Address, _ []byte) error {
-	return nil
-}
-
-func (i *EmptyAccounts) UpdateAccountContractCode(_ Address, _ string, _ []byte) (err error) {
-	return nil
-}
-
-func (i *EmptyAccounts) AccountContractCode(_ Address, _ string) (code []byte, err error) {
-	return nil, nil
-}
-
-func (i *EmptyAccounts) RemoveAccountContractCode(_ Address, _ string) (err error) {
-	return nil
-}
-
-func (i EmptyAccounts) GetStorageUsed(_ Address) (uint64, error) {
+func (i EmptyAccountStorage) StorageUsed(_ Address, _ Location) (uint64, error) {
 	return 0, nil
 }
 
-func (i EmptyAccounts) GetStorageCapacity(_ Address) (uint64, error) {
+func (i EmptyAccountStorage) StorageCapacity(_ Address, _ Location) (uint64, error) {
 	return 0, nil
+}
+
+func (i EmptyAccountStorage) StoredKeys(_ Address, _ Location) (StorageKeyIterator, error) {
+	return nil, nil
+}
+
+type EmptyAccountKeys struct{}
+
+var _ AccountKeys = &EmptyAccountKeys{}
+
+func (i *EmptyAccountKeys) AddAccountKey(_ Address, _ []byte, _ Location) error {
+	return nil
+}
+
+func (i *EmptyAccountKeys) RevokeAccountKey(_ Address, _ int, _ Location) ([]byte, error) {
+	return nil, nil
+}
+
+func (i *EmptyAccountKeys) AccountPublicKey(_ Address, _ int, _ Location) ([]byte, error) {
+	return nil, nil
 }
 
 func (i *EmptyAccounts) ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
@@ -310,17 +308,41 @@ func (i *EmptyAccounts) ResolveLocation(identifiers []Identifier, location Locat
 	}, nil
 }
 
-// func (i *EmptyAccounts) GetCachedProgram(_ Location) (*ast.Program, error) {
-// 	return nil, nil
-// }
+type EmptyCryptoProvider struct{}
 
-// func (i *EmptyAccounts) CacheProgram(_ Location, _ *ast.Program) error {
-// 	return nil
-// }
+var _ CryptoProvider = &EmptyCryptoProvider{}
 
-// func (i *EmptyRuntimeInterface) GetSigningAccounts() ([]Address, error) {
-// 	return nil, nil
-// }
+func (i *EmptyCryptoProvider) VerifySignature(
+	_ []byte,
+	_ string,
+	_ []byte,
+	_ []byte,
+	_ string,
+	_ string,
+) (bool, error) {
+	return false, nil
+}
+
+func (i *EmptyCryptoProvider) Hash(
+	_ []byte,
+	_ string,
+) ([]byte, error) {
+	return nil, nil
+}
+
+type EmptyCacheProvider struct{}
+
+var _ CacheProvider = &EmptyCacheProvider{}
+
+func (i *EmptyCacheProvider) GetCachedProgram(_ Location) (*ast.Program, error) {
+	return nil, nil
+}
+
+func (i *EmptyCacheProvider) CacheProgram(_ Location, _ *ast.Program) error {
+	return nil
+}
+
+// TODO : add empty results
 
 // func (i *EmptyRuntimeInterface) Log(_ string) error {
 // 	return nil
@@ -328,10 +350,6 @@ func (i *EmptyAccounts) ResolveLocation(identifiers []Identifier, location Locat
 
 // func (i *EmptyRuntimeInterface) EmitEvent(_ cadence.Event) error {
 // 	return nil
-// }
-
-// func (i *EmptyRuntimeInterface) GenerateUUID() (uint64, error) {
-// 	return 0, nil
 // }
 
 // func (i *EmptyRuntimeInterface) GetComputationLimit() uint64 {
@@ -342,10 +360,6 @@ func (i *EmptyAccounts) ResolveLocation(identifiers []Identifier, location Locat
 // 	return nil
 // }
 
-// func (i *EmptyRuntimeInterface) DecodeArgument(_ []byte, _ cadence.Type) (cadence.Value, error) {
-// 	return nil, nil
-// }
-
 // func (i *EmptyRuntimeInterface) GetCurrentBlockHeight() (uint64, error) {
 // 	return 0, nil
 // }
@@ -354,24 +368,10 @@ func (i *EmptyAccounts) ResolveLocation(identifiers []Identifier, location Locat
 // 	return
 // }
 
-// func (i *EmptyRuntimeInterface) UnsafeRandom() (uint64, error) {
+// func (i *EmptyRuntimeInterface) GenerateUUID() (uint64, error) {
 // 	return 0, nil
 // }
 
-// func (i *EmptyRuntimeInterface) VerifySignature(
-// 	_ []byte,
-// 	_ string,
-// 	_ []byte,
-// 	_ []byte,
-// 	_ string,
-// 	_ string,
-// ) (bool, error) {
-// 	return false, nil
-// }
-
-// func (i *EmptyRuntimeInterface) Hash(
-// 	_ []byte,
-// 	_ string,
-// ) ([]byte, error) {
-// 	return nil, nil
+// func (i *EmptyRuntimeInterface) UnsafeRandom() (uint64, error) {
+// 	return 0, nil
 // }
