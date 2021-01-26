@@ -18,6 +18,10 @@
 
 package ast
 
+import (
+	"sync"
+)
+
 type Parameter struct {
 	Label          string
 	Identifier     Identifier
@@ -38,6 +42,7 @@ func (p Parameter) EffectiveArgumentLabel() string {
 }
 
 type ParameterList struct {
+	once                    sync.Once
 	Parameters              []*Parameter
 	_parametersByIdentifier map[string]*Parameter
 	Range
@@ -59,12 +64,14 @@ func (l *ParameterList) EffectiveArgumentLabels() []string {
 }
 
 func (l *ParameterList) ParametersByIdentifier() map[string]*Parameter {
-	if l._parametersByIdentifier == nil {
-		parametersByIdentifier := make(map[string]*Parameter, len(l.Parameters))
-		for _, parameter := range l.Parameters {
-			parametersByIdentifier[parameter.Identifier.Identifier] = parameter
-		}
-		l._parametersByIdentifier = parametersByIdentifier
-	}
+	l.once.Do(l.initialize)
 	return l._parametersByIdentifier
+}
+
+func (l *ParameterList) initialize() {
+	parametersByIdentifier := make(map[string]*Parameter, len(l.Parameters))
+	for _, parameter := range l.Parameters {
+		parametersByIdentifier[parameter.Identifier.Identifier] = parameter
+	}
+	l._parametersByIdentifier = parametersByIdentifier
 }
