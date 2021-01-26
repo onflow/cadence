@@ -339,8 +339,8 @@ func (r *interpreterRuntime) newAuthAccountValue(
 		addressValue,
 		storageUsedGetFunction(addressValue, context.Accounts, runtimeStorage),
 		storageCapacityGetFunction(addressValue, context.Accounts),
-		r.newAddPublicKeyFunction(addressValue, context.Accounts),
-		r.newRemovePublicKeyFunction(addressValue, context.Accounts),
+		r.newAddPublicKeyFunction(addressValue, context.AccountKeys, context.Results),
+		r.newRemovePublicKeyFunction(addressValue, context.AccountKeys, context.Results),
 		r.newAuthAccountContracts(
 			addressValue,
 			context,
@@ -1111,6 +1111,7 @@ func storageCapacityGetFunction(addressValue interpreter.AddressValue, accounts 
 func (r *interpreterRuntime) newAddPublicKeyFunction(
 	addressValue interpreter.AddressValue,
 	accountKeys AccountKeys,
+	results Results,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
@@ -1130,7 +1131,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 
 			r.emitAccountEvent(
 				stdlib.AccountKeyAddedEventType,
-				runtimeInterface,
+				results,
 				[]exportableValue{
 					newExportableValue(addressValue, nil),
 					newExportableValue(publicKeyValue, nil),
@@ -1145,7 +1146,8 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 
 func (r *interpreterRuntime) newRemovePublicKeyFunction(
 	addressValue interpreter.AddressValue,
-	accounts Accounts,
+	accountKeys AccountKeys,
+	results Results,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
@@ -1154,7 +1156,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 			var publicKey []byte
 			var err error
 			wrapPanic(func() {
-				publicKey, err = accounts.RevokeAccountKey(addressValue.ToAddress(), index.ToInt())
+				publicKey, err = accountKeys.RevokeAccountKey(addressValue.ToAddress(), index.ToInt(), invocation.Self.Location)
 			})
 			if err != nil {
 				panic(err)
@@ -1164,7 +1166,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 
 			r.emitAccountEvent(
 				stdlib.AccountKeyRemovedEventType,
-				runtimeInterface,
+				results,
 				[]exportableValue{
 					newExportableValue(addressValue, nil),
 					newExportableValue(publicKeyValue, nil),
@@ -1375,7 +1377,7 @@ func (r *interpreterRuntime) newGetAccountFunction(accounts Accounts, runtimeSto
 		publicAccount := interpreter.NewPublicAccountValue(
 			accountAddress,
 			storageUsedGetFunction(accountAddress, accounts, runtimeStorage),
-			storageCapacityGetFunction(accountAddress, runtimeInterface),
+			storageCapacityGetFunction(accountAddress, accounts),
 		)
 		return trampoline.Done{Result: publicAccount}
 	}
@@ -1386,7 +1388,7 @@ func (r *interpreterRuntime) newLogFunction(results Results) interpreter.HostFun
 		message := fmt.Sprint(invocation.Arguments[0])
 		var err error
 		wrapPanic(func() {
-			err = results.Log(message)
+			err = results.AppendLog(message)
 		})
 		if err != nil {
 			panic(err)
@@ -1483,8 +1485,8 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 		Address:        addressValue,
 		AddFunction:    r.newAuthAccountContractsChangeFunction(addressValue, context, runtimeStorage, false),
 		UpdateFunction: r.newAuthAccountContractsChangeFunction(addressValue, context, runtimeStorage, true),
-		GetFunction:    r.newAuthAccountContractsGetFunction(addressValue, context.Interface),
-		RemoveFunction: r.newAuthAccountContractsRemoveFunction(addressValue, context.Interface, runtimeStorage),
+		GetFunction:    r.newAuthAccountContractsGetFunction(addressValue, context.AccountContracts),
+		RemoveFunction: r.newAuthAccountContractsRemoveFunction(addressValue, context.AccountContracts, runtimeStorage),
 	}
 }
 
@@ -1522,7 +1524,8 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			}
 
 			address := addressValue.ToAddress()
-			existingCode, err := startContext.Interface.GetAccountContractCode(address, nameArgument)
+
+			existingCode, err := startContext.AccountContracts.ContractCode(common.AddressLocation{address, nameArgument})
 			if err != nil {
 				panic(err)
 			}
@@ -1660,13 +1663,13 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			if isUpdate {
 				r.emitAccountEvent(
 					stdlib.AccountContractUpdatedEventType,
-					startContext.Interface,
+					startContext.Results,
 					eventArguments,
 				)
 			} else {
 				r.emitAccountEvent(
 					stdlib.AccountContractAddedEventType,
-					startContext.Interface,
+					startContext.Results,
 					eventArguments,
 				)
 			}
@@ -1746,9 +1749,10 @@ func (r *interpreterRuntime) updateAccountContractCode(
 
 	var err error
 
+	// TODO: Ramtin figure out the caller
 	// NOTE: only update account code if contract instantiation succeeded
 	wrapPanic(func() {
-		err = context.Interface.UpdateAccountContractCode(address, name, code)
+		err = context.AccountContracts.UpdateContractCode(address, name, code)
 	})
 	if err != nil {
 		panic(err)
@@ -1761,7 +1765,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 
 func (r *interpreterRuntime) newAuthAccountContractsGetFunction(
 	addressValue interpreter.AddressValue,
-	accounts Accounts,
+	accountContracts AccountContracts,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
@@ -1773,7 +1777,7 @@ func (r *interpreterRuntime) newAuthAccountContractsGetFunction(
 			var code []byte
 			var err error
 			wrapPanic(func() {
-				code, err = accounts.ContractCode(address, nameArgument)
+				code, err = accountContracts.ContractCode(address, nameArgument)
 			})
 			if err != nil {
 				panic(err)
@@ -1798,7 +1802,7 @@ func (r *interpreterRuntime) newAuthAccountContractsGetFunction(
 
 func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 	addressValue interpreter.AddressValue,
-	accounts Accounts,
+	accountContracts AccountContracts,
 	runtimeStorage *runtimeStorage,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
@@ -1811,7 +1815,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 			var code []byte
 			var err error
 			wrapPanic(func() {
-				code, err = accounts.ContractCode(address, nameArgument)
+				code, err = accountContracts.ContractCode(address, nameArgument)
 			})
 			if err != nil {
 				panic(err)
@@ -1821,7 +1825,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 
 			if len(code) > 0 {
 				wrapPanic(func() {
-					err = accounts.RemoveContractCode(address, nameArgument)
+					err = accountContracts.RemoveContractCode(address, nameArgument)
 				})
 				if err != nil {
 					panic(err)

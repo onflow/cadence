@@ -114,9 +114,9 @@ type AccountKeys interface {
 	// AddAccountKey appends a key to an account.
 	AddAccountKey(address Address, publicKey []byte, caller Location) error
 	// RemoveAccountKey removes a key from an account by index.
-	RevokeAccountKey(address Address, index uint, caller Location) error
+	RevokeAccountKey(address Address, index int, caller Location) (publicKey []byte, err error)
 	// AccountPublicKey returns the account key for the given index
-	AccountPublicKey(address Address, index uint, caller Location) (publicKey []byte, err error)
+	AccountPublicKey(address Address, index int, caller Location) (publicKey []byte, err error)
 }
 
 // Results are responsible to capture artifacts generated
