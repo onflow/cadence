@@ -48,6 +48,7 @@ type Context struct {
 	Results           Results
 	Metrics           Metrics
 	CacheProvider     CacheProvider
+	CryptoProvider    CryptoProvider
 	Location          Location
 	PredeclaredValues []ValueDeclaration
 	codes             map[common.LocationID]string
@@ -644,7 +645,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 
 	// After the program has passed semantic analysis, cache the program AST.
 	wrapPanic(func() {
-		err = context.Interface.CacheProgram(context.Location, program)
+		err = context.CacheProvider.CacheProgram(context.Location, program)
 	})
 	if err != nil {
 		return nil, err
@@ -675,7 +676,7 @@ func (r *interpreterRuntime) newInterpreter(
 				eventValue *interpreter.CompositeValue,
 				eventType *sema.CompositeType,
 			) error {
-				return r.emitEvent(inter, context.Interface, eventValue, eventType)
+				return r.emitEvent(inter, context.Results, eventValue, eventType)
 			},
 		),
 		interpreter.WithStorageKeyHandler(
@@ -686,12 +687,12 @@ func (r *interpreterRuntime) newInterpreter(
 		interpreter.WithInjectedCompositeFieldsHandler(
 			r.injectedCompositeFieldsHandler(context, runtimeStorage),
 		),
-		interpreter.WithUUIDHandler(func() (uuid uint64, err error) {
-			wrapPanic(func() {
-				uuid, err = context.Interface.GenerateUUID()
-			})
-			return
-		}),
+		// interpreter.WithUUIDHandler(func() (uuid uint64, err error) {
+		// 	wrapPanic(func() {
+		// 		uuid, err = context.Interface.GenerateUUID()
+		// 	})
+		// 	return
+		// }),
 		interpreter.WithContractValueHandler(
 			func(
 				inter *interpreter.Interpreter,
@@ -705,7 +706,7 @@ func (r *interpreterRuntime) newInterpreter(
 					compositeType,
 					constructor,
 					invocationRange,
-					context.Interface,
+					context.CryptoProvider,
 					runtimeStorage,
 				)
 			},
@@ -723,7 +724,7 @@ func (r *interpreterRuntime) newInterpreter(
 	)
 
 	defaultOptions = append(defaultOptions,
-		r.meteringInterpreterOptions(context.Interface)...,
+		r.meteringInterpreterOptions(context.Results)...,
 	)
 
 	return interpreter.NewInterpreter(
@@ -874,12 +875,12 @@ func (r *interpreterRuntime) standardLibraryFunctions(
 ) stdlib.StandardLibraryFunctions {
 	return append(
 		stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{
-			CreateAccount:   r.newCreateAccountFunction(context, runtimeStorage),
-			GetAccount:      r.newGetAccountFunction(context.Interface, runtimeStorage),
-			Log:             r.newLogFunction(context.Interface),
-			GetCurrentBlock: r.newGetCurrentBlockFunction(context.Interface),
-			GetBlock:        r.newGetBlockFunction(context.Interface),
-			UnsafeRandom:    r.newUnsafeRandomFunction(context.Interface),
+			CreateAccount: r.newCreateAccountFunction(context, runtimeStorage),
+			GetAccount:    r.newGetAccountFunction(context.Accounts, runtimeStorage),
+			Log:           r.newLogFunction(context.Results),
+			// GetCurrentBlock: r.newGetCurrentBlockFunction(context.Interface),
+			// GetBlock:        r.newGetBlockFunction(context.Interface),
+			// UnsafeRandom:    r.newUnsafeRandomFunction(context.Interface),
 		}),
 		stdlib.BuiltinFunctions...,
 	)
@@ -891,7 +892,7 @@ func (r *interpreterRuntime) importResolver(startContext Context) ImportResolver
 		context := startContext.WithLocation(location)
 
 		wrapPanic(func() {
-			program, err = context.Interface.GetCachedProgram(location)
+			program, err = context.CacheProvider.GetCachedProgram(location)
 		})
 		if err != nil {
 			return nil, err
@@ -903,14 +904,12 @@ func (r *interpreterRuntime) importResolver(startContext Context) ImportResolver
 		var code []byte
 		if addressLocation, ok := location.(common.AddressLocation); ok {
 			wrapPanic(func() {
-				code, err = context.Interface.GetAccountContractCode(
-					addressLocation.Address,
-					addressLocation.Name,
-				)
+				code, err = context.Accounts.ContractCode(addressLocation)
 			})
+			// TODO : do we need this ?
 		} else {
 			wrapPanic(func() {
-				code, err = context.Interface.GetCode(location)
+				code, err = context.Accounts.GetCode(location)
 			})
 		}
 		if err != nil {
@@ -1193,7 +1192,7 @@ func (r *interpreterRuntime) loadContract(
 	compositeType *sema.CompositeType,
 	constructor interpreter.FunctionValue,
 	invocationRange ast.Range,
-	runtimeInterface Interface,
+	cryptoProvider CryptoProvider,
 	runtimeStorage *runtimeStorage,
 ) *interpreter.CompositeValue {
 
@@ -1202,8 +1201,8 @@ func (r *interpreterRuntime) loadContract(
 		contract, err := stdlib.NewCryptoContract(
 			inter,
 			constructor,
-			runtimeInterface,
-			runtimeInterface,
+			cryptoProvider,
+			cryptoProvider,
 			invocationRange,
 		)
 		if err != nil {

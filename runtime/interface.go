@@ -149,6 +149,21 @@ type CacheProvider interface {
 	CacheProgram(Location, *ast.Program) error
 }
 
+type CryptoProvider interface {
+	// VerifySignature returns true if the given signature was produced by signing the given tag + data
+	// using the given public key, signature algorithm, and hash algorithm.
+	VerifySignature(
+		signature []byte,
+		tag string,
+		signedData []byte,
+		publicKey []byte,
+		signatureAlgorithm string,
+		hashAlgorithm string,
+	) (bool, error)
+	// Hash returns the digest of hashing the given data with using the given hash algorithm
+	Hash(data []byte, hashAlgorithm string) ([]byte, error)
+}
+
 type Metrics interface {
 	// ProgramParsed captures the time spent on parsing the program
 	ProgramParsed(location common.Location, duration time.Duration)
