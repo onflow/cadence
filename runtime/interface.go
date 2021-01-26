@@ -68,10 +68,15 @@ type Accounts interface {
 	IsAccountSuspended(address Address) (isSuspended bool, err error)
 }
 
+type LocationResolver interface {
+	// GetCode returns the code at a given location
+	GetCode(location Location) ([]byte, error)
+	// ResolveLocation resolves an import location.
+	ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
+}
+
 // AccountContracts manages contracts stored under accounts
 type AccountContracts interface {
-	ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
-	// TODO ramtin merge this with 	Code(location Location) error
 	// AccountContractCode returns the code associated with an account contract.
 	ContractCode(address AddressLocation) (code []byte, err error)
 	// UpdateAccountContractCode updates the code associated with an account contract.

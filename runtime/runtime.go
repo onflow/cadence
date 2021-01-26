@@ -52,6 +52,7 @@ type Context struct {
 	Metrics           Metrics
 	CacheProvider     CacheProvider
 	CryptoProvider    CryptoProvider
+	LocationResolver  LocationResolver
 	Location          Location
 	PredeclaredValues []ValueDeclaration
 	codes             map[common.LocationID]string
@@ -196,7 +197,7 @@ func (r *interpreterRuntime) SetCoverageReport(coverageReport *CoverageReport) {
 func (r *interpreterRuntime) RunScript(runnable Runnable, context Context) (cadence.Value, error) {
 	context.InitializeCodesAndPrograms()
 
-	runtimeStorage := newRuntimeStorage(context.Accounts)
+	runtimeStorage := newRuntimeStorage(context.AccountStorage)
 
 	functions := r.standardLibraryFunctions(context, runtimeStorage)
 
@@ -210,9 +211,12 @@ func (r *interpreterRuntime) RunScript(runnable Runnable, context Context) (cade
 		return nil, newError(err, context)
 	}
 
+	exportedParameterTypes := make([]cadence.Type, len(functionEntryPointType.Parameters))
+
 	// Ensure the entry point's parameter types are storable
 	if len(functionEntryPointType.Parameters) > 0 {
 		for _, param := range functionEntryPointType.Parameters {
+			exportedParameterTypes = append(exportedParameterTypes, ExportType(param.TypeAnnotation.Type, map[sema.TypeID]cadence.Type{}))
 			if !param.TypeAnnotation.Type.IsStorable(map[*sema.Member]bool{}) {
 				err = &ScriptParameterTypeNotStorableError{
 					Type: param.TypeAnnotation.Type,
@@ -232,7 +236,7 @@ func (r *interpreterRuntime) RunScript(runnable Runnable, context Context) (cade
 
 	var arguments []cadence.Value
 	wrapPanic(func() {
-		arguments, err = runnable.Arguments(functionEntryPointType.Parameters)
+		arguments, err = runnable.Arguments(exportedParameterTypes)
 	})
 
 	interpret := scriptExecutionFunction(
@@ -350,7 +354,7 @@ func (r *interpreterRuntime) RunTransaction(runnable Runnable, context Context) 
 
 	context.InitializeCodesAndPrograms()
 
-	runtimeStorage := newRuntimeStorage(context.Accounts)
+	runtimeStorage := newRuntimeStorage(context.AccountStorage)
 
 	functions := r.standardLibraryFunctions(context, runtimeStorage)
 
@@ -373,9 +377,14 @@ func (r *interpreterRuntime) RunTransaction(runnable Runnable, context Context) 
 	authorizers := runnable.Authorizers()
 	// check parameter count
 
+	exportedParameterTypes := make([]cadence.Type, len(transactionType.Parameters))
+	for _, param := range transactionType.Parameters {
+		exportedParameterTypes = append(exportedParameterTypes, ExportType(param.TypeAnnotation.Type, map[sema.TypeID]cadence.Type{}))
+
+	}
 	var arguments []cadence.Value
 	wrapPanic(func() {
-		arguments, err = runnable.Arguments(transactionType.Parameters)
+		arguments, err = runnable.Arguments(exportedParameterTypes)
 	})
 	argumentCount := len(arguments)
 	authorizerCount := len(authorizers)
@@ -450,7 +459,7 @@ func wrapPanic(f func()) {
 
 func (r *interpreterRuntime) transactionExecutionFunction(
 	parameters []*sema.Parameter,
-	arguments []interpreter.Value,
+	arguments []cadence.Value,
 	authorizerValues []interpreter.Value,
 ) interpretFunc {
 	return func(inter *interpreter.Interpreter) (interpreter.Value, error) {
@@ -471,7 +480,7 @@ func (r *interpreterRuntime) transactionExecutionFunction(
 
 func validateArgumentParams(
 	inter *interpreter.Interpreter,
-	arguments []interpreter.Value,
+	arguments []cadence.Value,
 	parameters []*sema.Parameter,
 ) (
 	[]interpreter.Value,
@@ -493,8 +502,6 @@ func validateArgumentParams(
 	for i, parameter := range parameters {
 		parameterType := parameter.TypeAnnotation.Type
 		argument := arguments[i]
-
-		exportedParameterType := ExportType(parameterType, map[sema.TypeID]cadence.Type{})
 		arg := importValue(argument)
 
 		// Check that decoded value is a subtype of static parameter type
@@ -585,7 +592,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 				sema.WithLocationHandler(
 					func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
 						wrapPanic(func() {
-							res, err = context.AccountContracts.ResolveLocation(identifiers, location)
+							res, err = context.LocationResolver.ResolveLocation(identifiers, location)
 						})
 						return
 					},
@@ -912,7 +919,7 @@ func (r *interpreterRuntime) importResolver(startContext Context) ImportResolver
 			// TODO : do we need this ?
 		} else {
 			wrapPanic(func() {
-				code, err = context.AccountContracts.Code(location)
+				code, err = context.LocationResolver.GetCode(location)
 			})
 		}
 		if err != nil {
@@ -1051,7 +1058,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 
 		r.emitAccountEvent(
 			stdlib.AccountCreatedEventType,
-			context.Interface,
+			context.Results,
 			[]exportableValue{
 				newExportableValue(addressValue, nil),
 			},
@@ -1103,7 +1110,7 @@ func storageCapacityGetFunction(addressValue interpreter.AddressValue, accounts 
 
 func (r *interpreterRuntime) newAddPublicKeyFunction(
 	addressValue interpreter.AddressValue,
-	accounts Accounts,
+	accountKeys AccountKeys,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
@@ -1115,7 +1122,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 			}
 
 			wrapPanic(func() {
-				err = accounts.AddAccountKey(addressValue.ToAddress(), publicKey)
+				err = accountKeys.AddAccountKey(addressValue.ToAddress(), publicKey)
 			})
 			if err != nil {
 				panic(err)
