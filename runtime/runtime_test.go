@@ -19,8 +19,6 @@
 package runtime
 
 import (
-	"bytes"
-	"encoding/binary"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -28,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-multierror"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -85,47 +84,186 @@ func newTestStorage(
 	return storage
 }
 
-type testRuntimeInterface struct {
-	resolveLocation           func(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
-	getCode                   func(_ Location) ([]byte, error)
-	getCachedProgram          func(Location) (*ast.Program, error)
-	cacheProgram              func(Location, *ast.Program) error
-	storage                   testRuntimeInterfaceStorage
-	createAccount             func(payer Address) (address Address, err error)
-	addAccountKey             func(address Address, publicKey []byte) error
-	removeAccountKey          func(address Address, index int) (publicKey []byte, err error)
-	updateAccountContractCode func(address Address, name string, code []byte) error
-	getAccountContractCode    func(address Address, name string) (code []byte, err error)
-	removeAccountContractCode func(address Address, name string) (err error)
-	getSigningAccounts        func() ([]Address, error)
-	log                       func(string)
-	emitEvent                 func(cadence.Event) error
-	generateUUID              func() (uint64, error)
-	computationLimit          uint64
-	decodeArgument            func(b []byte, t cadence.Type) (cadence.Value, error)
-	programParsed             func(location common.Location, duration time.Duration)
-	programChecked            func(location common.Location, duration time.Duration)
-	programInterpreted        func(location common.Location, duration time.Duration)
-	valueEncoded              func(duration time.Duration)
-	valueDecoded              func(duration time.Duration)
-	unsafeRandom              func() (uint64, error)
-	verifySignature           func(
-		signature []byte,
-		tag string,
-		signedData []byte,
-		publicKey []byte,
-		signatureAlgorithm string,
-		hashAlgorithm string,
-	) (bool, error)
-	hash               func(data []byte, hashAlgorithm string) ([]byte, error)
-	setCadenceValue    func(owner Address, key string, value cadence.Value) (err error)
-	getStorageUsed     func(_ Address) (uint64, error)
-	getStorageCapacity func(_ Address) (uint64, error)
+type testAccountsInterface struct {
+	newAccount         func(caller Location) (address Address, err error)
+	accountExists      func(address Address) (exists bool, err error)
+	numberOfAccounts   func(caller Location) (count uint64, err error)
+	suspendAccount     func(address Address, caller Location) error
+	unsuspendAccount   func(address Address, caller Location) error
+	isAccountSuspended func(address Address) (isSuspended bool, err error)
 }
 
-var _ Interface = &testRuntimeInterface{}
+var _ Accounts = &testAccountsInterface{}
 
-func (i *testRuntimeInterface) ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
+func (i *testAccountsInterface) NewAccount(caller Location) (Address, error) {
+	if i.newAccount == nil {
+		return Address{}, nil
+	}
+	return i.newAccount(caller)
+}
+
+func (i *testAccountsInterface) AccountExists(address Address) (bool, error) {
+	if i.accountExists == nil {
+		return false, nil
+	}
+	return i.accountExists(address)
+}
+
+func (i *testAccountsInterface) NumberOfAccounts(caller Location) (uint64, error) {
+	if i.numberOfAccounts == nil {
+		return 0, nil
+	}
+	return i.numberOfAccounts(caller)
+}
+
+func (i *testAccountsInterface) SuspendAccount(address Address, caller Location) error {
+	if i.suspendAccount == nil {
+		return nil
+	}
+	return i.suspendAccount(address, caller)
+}
+
+func (i *testAccountsInterface) UnsuspendAccount(address Address, caller Location) error {
+	if i.unsuspendAccount == nil {
+		return nil
+	}
+	return i.unsuspendAccount(address, caller)
+}
+
+func (i *testAccountsInterface) IsAccountSuspended(address Address) (bool, error) {
+	if i.isAccountSuspended == nil {
+		return false, nil
+	}
+	return i.isAccountSuspended(address)
+}
+
+type testAccountContractsInterface struct {
+	contractCode       func(address AddressLocation) (code []byte, err error)
+	updateContractCode func(address AddressLocation, code []byte, caller Location) (err error)
+	removeContractCode func(address AddressLocation, caller Location) (err error)
+	contracts          func(address AddressLocation, caller Location) (name []string, err error)
+}
+
+var _ AccountContracts = &testAccountContractsInterface{}
+
+func (i *testAccountContractsInterface) ContractCode(address AddressLocation) ([]byte, error) {
+	if i.contractCode == nil {
+		return nil, nil
+	}
+	return i.contractCode(address)
+}
+
+func (i *testAccountContractsInterface) UpdateContractCode(address AddressLocation, code []byte, caller Location) (err error) {
+	if i.updateContractCode == nil {
+		return nil
+	}
+	return i.updateContractCode(address, code, caller)
+}
+
+func (i *testAccountContractsInterface) RemoveContractCode(address AddressLocation, caller Location) (err error) {
+	if i.removeContractCode == nil {
+		return nil
+	}
+	return i.removeContractCode(address, caller)
+}
+
+func (i *testAccountContractsInterface) Contracts(address AddressLocation, caller Location) (name []string, err error) {
+	if i.contracts == nil {
+		return nil, nil
+	}
+	return i.contracts(address, caller)
+}
+
+type testAccountStorageInterface struct {
+	value       func(key StorageKey, caller Location) (value StorageValue, err error)
+	setValue    func(key StorageKey, value StorageValue, caller Location) (err error)
+	valueExists func(key StorageKey, caller Location) (exists bool, err error)
+	storedKeys  func(address Address, caller Location) (iter StorageKeyIterator, err error)
+	storageUsed func(address Address, caller Location) (value uint64, err error)
+}
+
+var _ AccountStorage = &testAccountStorageInterface{}
+
+func (i *testAccountStorageInterface) Value(key StorageKey, caller Location) (StorageValue, error) {
+	if i.value == nil {
+		return nil, nil
+	}
+	return i.value(key, caller)
+}
+
+func (i *testAccountStorageInterface) SetValue(key StorageKey, value StorageValue, caller Location) error {
+	if i.setValue == nil {
+		return nil
+	}
+	return i.setValue(key, value, caller)
+
+}
+
+func (i *testAccountStorageInterface) ValueExists(key StorageKey, caller Location) (exists bool, err error) {
+	if i.valueExists == nil {
+		return false, nil
+	}
+	return i.valueExists()
+}
+
+func (i *testAccountStorageInterface) StorageUsed(address Address, caller Location) (value uint64, err error) {
+	if i.storageUsed == nil {
+		return 0, nil
+	}
+	return i.storageUsed(address, caller)
+}
+
+func (i *testAccountStorageInterface) StoredKeys(address Address, caller Location) (StorageKeyIterator, error) {
+	if i.storedKeys == nil {
+		return nil, nil
+	}
+	return i.storedKeys(address, caller)
+}
+
+type testAccountKeysInterface struct {
+	addAccountKey    func(address Address, publicKey []byte, caller Location) error
+	revokeAccountKey func(address Address, index int, caller Location) (publicKey []byte, err error)
+	accountPublicKey func(address Address, index int, caller Location) (publicKey []byte, err error)
+}
+
+var _ AccountKeys = &testAccountKeysInterface{}
+
+func (i *testAccountKeysInterface) AddAccountKey(address Address, publicKey []byte, caller Location) error {
+	if i.addAccountKey == nil {
+		return nil
+	}
+	return i.addAccountKey(address, publicKey, caller)
+}
+
+func (i *testAccountKeysInterface) RevokeAccountKey(address Address, index int, caller Location) ([]byte, error) {
+	if i.revokeAccountKey == nil {
+		return nil, nil
+	}
+	return i.revokeAccountKey(address, index, caller)
+}
+
+func (i *testAccountKeysInterface) AccountPublicKey(address Address, index int, caller Location) ([]byte, error) {
+	if i.accountPublicKey == nil {
+		return nil, nil
+	}
+	return i.accountPublicKey(address, index, caller)
+}
+
+type testLocationResolverInterface struct {
+	getCode         func(location Location) ([]byte, error)
+	resolveLocation func(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
+}
+
+var _ LocationResolver = &testLocationResolverInterface{}
+
+func (i *testLocationResolverInterface) GetCode(location Location) ([]byte, error) {
+	if i.getCode == nil {
+		return nil, nil
+	}
+	return i.getCode(location)
+}
+
+func (i *testLocationResolverInterface) ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
 	if i.resolveLocation == nil {
 		return []ResolvedLocation{
 			{
@@ -137,166 +275,168 @@ func (i *testRuntimeInterface) ResolveLocation(identifiers []Identifier, locatio
 	return i.resolveLocation(identifiers, location)
 }
 
-func (i *testRuntimeInterface) GetCode(location Location) ([]byte, error) {
-	if i.getCode == nil {
-		return nil, nil
-	}
-	return i.getCode(location)
+type testCacheProviderInterface struct {
+	getCachedProgram func(Location) (*ast.Program, error)
+	cacheProgram     func(Location, *ast.Program) error
 }
 
-func (i *testRuntimeInterface) GetCachedProgram(location Location) (*ast.Program, error) {
+var _ CacheProvider = &testCacheProviderInterface{}
+
+func (i *testCacheProviderInterface) GetCachedProgram(l Location) (*ast.Program, error) {
 	if i.getCachedProgram == nil {
 		return nil, nil
 	}
-	return i.getCachedProgram(location)
+	return i.getCachedProgram(l)
 }
 
-func (i *testRuntimeInterface) CacheProgram(location Location, program *ast.Program) error {
+func (i *testCacheProviderInterface) CacheProgram(l Location, p *ast.Program) error {
 	if i.cacheProgram == nil {
 		return nil
 	}
-	return i.cacheProgram(location, program)
+	return i.cacheProgram(l, p)
 }
 
-func (i *testRuntimeInterface) ValueExists(owner, key []byte) (exists bool, err error) {
-	return i.storage.valueExists(owner, key)
+type testResultsInterface struct {
+	appendLog          func(log string) error
+	logs               func() ([]string, error)
+	logAt              func(index uint) (string, error)
+	logCount           func() uint
+	appendEvent        func(event cadence.Event) error
+	events             func() ([]cadence.Event, error)
+	eventAt            func(index uint) (cadence.Event, error)
+	eventCount         func() uint
+	appendError        func(err error) error
+	errors             func() multierror.Error
+	errorAt            func(index uint) (Error, error)
+	errorCount         func() uint
+	addComputationUsed func(c uint64) error
+	computationSpent   func() uint64
+	computationLimit   func() uint64
 }
 
-func (i *testRuntimeInterface) GetValue(owner, key []byte) (value []byte, err error) {
-	return i.storage.getValue(owner, key)
+var _ Results = &testResultsInterface{}
+
+func (i *testResultsInterface) AppendLog(log string) error {
+	if i.appendLog == nil {
+		return nil
+	}
+	return i.appendLog(log)
 }
 
-func (i *testRuntimeInterface) SetValue(owner, key, value []byte) (err error) {
-	return i.storage.setValue(owner, key, value)
-}
-
-func (i *testRuntimeInterface) CreateAccount(payer Address) (address Address, err error) {
-	return i.createAccount(payer)
-}
-
-func (i *testRuntimeInterface) AddAccountKey(address Address, publicKey []byte) error {
-	return i.addAccountKey(address, publicKey)
-}
-
-func (i *testRuntimeInterface) RemoveAccountKey(address Address, index int) (publicKey []byte, err error) {
-	return i.removeAccountKey(address, index)
-}
-
-func (i *testRuntimeInterface) UpdateAccountContractCode(address Address, name string, code []byte) (err error) {
-	return i.updateAccountContractCode(address, name, code)
-}
-
-func (i *testRuntimeInterface) GetAccountContractCode(address Address, name string) (code []byte, err error) {
-	return i.getAccountContractCode(address, name)
-}
-
-func (i *testRuntimeInterface) RemoveAccountContractCode(address Address, name string) (err error) {
-	return i.removeAccountContractCode(address, name)
-}
-
-func (i *testRuntimeInterface) GetSigningAccounts() ([]Address, error) {
-	if i.getSigningAccounts == nil {
+func (i *testResultsInterface) Logs() ([]string, error) {
+	if i.logs == nil {
 		return nil, nil
 	}
-	return i.getSigningAccounts()
+	return i.logs()
 }
 
-func (i *testRuntimeInterface) Log(message string) error {
-	i.log(message)
-	return nil
-}
-
-func (i *testRuntimeInterface) EmitEvent(event cadence.Event) error {
-	return i.emitEvent(event)
-}
-
-func (i *testRuntimeInterface) GenerateUUID() (uint64, error) {
-	if i.generateUUID == nil {
-		return 0, nil
+func (i *testResultsInterface) LogAt(index uint) (string, error) {
+	if i.logAt == nil {
+		return "", nil
 	}
-	return i.generateUUID()
+	return i.logAt(index)
 }
 
-func (i *testRuntimeInterface) GetComputationLimit() uint64 {
-	return i.computationLimit
-}
-
-func (i *testRuntimeInterface) SetComputationUsed(uint64) error {
-	return nil
-}
-
-func (i *testRuntimeInterface) DecodeArgument(b []byte, t cadence.Type) (cadence.Value, error) {
-	return i.decodeArgument(b, t)
-}
-
-func (i *testRuntimeInterface) ProgramParsed(location common.Location, duration time.Duration) {
-	if i.programParsed == nil {
-		return
+func (i *testResultsInterface) LogCount() uint {
+	if i.logCount == nil {
+		return 0
 	}
-	i.programParsed(location, duration)
+	return i.logCount()
 }
 
-func (i *testRuntimeInterface) ProgramChecked(location common.Location, duration time.Duration) {
-	if i.programChecked == nil {
-		return
+func (i *testResultsInterface) AppendEvent(event cadence.Event) error {
+	if i.appendEvent == nil {
+		return nil
 	}
-	i.programChecked(location, duration)
+	return i.appendEvent(event)
 }
 
-func (i *testRuntimeInterface) ProgramInterpreted(location common.Location, duration time.Duration) {
-	if i.programInterpreted == nil {
-		return
+func (i *testResultsInterface) Events() ([]cadence.Event, error) {
+	if i.events == nil {
+		return nil, nil
 	}
-	i.programInterpreted(location, duration)
+	return i.events()
 }
 
-func (i *testRuntimeInterface) ValueEncoded(duration time.Duration) {
-	if i.valueEncoded == nil {
-		return
+func (i *testResultsInterface) EventAt(index uint) (cadence.Event, error) {
+	if i.eventAt == nil {
+		return cadence.Event{}, nil
 	}
-	i.valueEncoded(duration)
+	return i.eventAt(index)
 }
 
-func (i *testRuntimeInterface) ValueDecoded(duration time.Duration) {
-	if i.valueDecoded == nil {
-		return
+func (i *testResultsInterface) EventCount() uint {
+	if i.eventCount == nil {
+		return 0
 	}
-	i.valueDecoded(duration)
+	return i.eventCount()
 }
 
-func (i *testRuntimeInterface) GetCurrentBlockHeight() (uint64, error) {
-	return 1, nil
-}
-
-func (i *testRuntimeInterface) GetBlockAtHeight(height uint64) (block Block, exists bool, err error) {
-
-	buf := new(bytes.Buffer)
-	err = binary.Write(buf, binary.BigEndian, height)
-	if err != nil {
-		panic(err)
+func (i *testResultsInterface) AppendError(err error) error {
+	if i.appendError == nil {
+		return nil
 	}
+	return i.appendError(err)
 
-	encoded := buf.Bytes()
-	var hash BlockHash
-	copy(hash[sema.BlockIDSize-len(encoded):], encoded)
-
-	block = Block{
-		Height:    height,
-		View:      height,
-		Hash:      hash,
-		Timestamp: time.Unix(int64(height), 0).UnixNano(),
-	}
-	return block, true, nil
 }
 
-func (i *testRuntimeInterface) UnsafeRandom() (uint64, error) {
-	if i.unsafeRandom == nil {
-		return 0, nil
+func (i *testResultsInterface) Errors() multierror.Error {
+	if i.errors == nil {
+		return multierror.Error{}
 	}
-	return i.unsafeRandom()
+	return i.errors()
 }
 
-func (i *testRuntimeInterface) VerifySignature(
+func (i *testResultsInterface) ErrorAt(index uint) (Error, error) {
+	if i.errorAt == nil {
+		return Error{}, nil
+	}
+	return i.errorAt(index)
+}
+
+func (i *testResultsInterface) ErrorCount() uint {
+	if i.errorCount == nil {
+		return 0
+	}
+	return i.errorCount()
+}
+
+func (i *testResultsInterface) AddComputationUsed(c uint64) error {
+	if addComputationUsed == nil {
+		return nil
+	}
+	return i.addComputationUsed(c)
+}
+
+func (i *testResultsInterface) ComputationSpent() uint64 {
+	if i.computationSpent == nil {
+		return 0
+	}
+	return i.computationSpent()
+}
+
+func (i *testResultsInterface) ComputationLimit() uint64 {
+	if i.computationLimit == nil {
+		return 0
+	}
+	return i.computationLimit()
+}
+
+type testCryptoProviderInterface struct {
+	verifySignature func(
+		signature []byte,
+		tag string,
+		signedData []byte,
+		publicKey []byte,
+		signatureAlgorithm string,
+		hashAlgorithm string,
+	) (bool, error)
+	hash func(data []byte, hashAlgorithm string) ([]byte, error)
+}
+
+var _ CryptoProvider = &testCryptoProviderInterface{}
+
+func (i *testCryptoProviderInterface) VerifySignature(
 	signature []byte,
 	tag string,
 	signedData []byte,
@@ -317,27 +457,11 @@ func (i *testRuntimeInterface) VerifySignature(
 	)
 }
 
-func (i *testRuntimeInterface) Hash(data []byte, hashAlgorithm string) ([]byte, error) {
+func (i *testCryptoProviderInterface) Hash(data []byte, hashAlgorithm string) ([]byte, error) {
 	if i.hash == nil {
 		return nil, nil
 	}
 	return i.hash(data, hashAlgorithm)
-}
-
-func (i *testRuntimeInterface) HighLevelStorageEnabled() bool {
-	return i.setCadenceValue != nil
-}
-
-func (i *testRuntimeInterface) SetCadenceValue(owner common.Address, key string, value cadence.Value) (err error) {
-	return i.setCadenceValue(owner, key, value)
-}
-
-func (i *testRuntimeInterface) GetStorageUsed(address Address) (uint64, error) {
-	return i.getStorageUsed(address)
-}
-
-func (i *testRuntimeInterface) GetStorageCapacity(address Address) (uint64, error) {
-	return i.getStorageCapacity(address)
 }
 
 func TestRuntimeImport(t *testing.T) {

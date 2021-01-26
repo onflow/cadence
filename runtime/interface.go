@@ -58,7 +58,7 @@ type Accounts interface {
 	// AccountExists returns true if the account exists
 	AccountExists(address Address) (exists bool, err error)
 	// NumberOfAccounts returns the number of accounts
-	NumberOfAccounts(caller Address) (count uint64, err error)
+	NumberOfAccounts(caller Location) (count uint64, err error)
 
 	// SuspendAccount suspends an account (set suspend flag to true)
 	SuspendAccount(address Address, caller Location) error
@@ -66,13 +66,6 @@ type Accounts interface {
 	UnsuspendAccount(address Address, caller Location) error
 	// returns true if account is suspended
 	IsAccountSuspended(address Address) (isSuspended bool, err error)
-}
-
-type LocationResolver interface {
-	// GetCode returns the code at a given location
-	GetCode(location Location) ([]byte, error)
-	// ResolveLocation resolves an import location.
-	ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
 }
 
 // AccountContracts manages contracts stored under accounts
@@ -112,6 +105,13 @@ type AccountKeys interface {
 	AccountPublicKey(address Address, index int, caller Location) (publicKey []byte, err error)
 }
 
+type LocationResolver interface {
+	// GetCode returns the code at a given location
+	GetCode(location Location) ([]byte, error)
+	// ResolveLocation resolves an import location.
+	ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
+}
+
 // Results are responsible to capture artifacts generated
 // when running the runnable
 //
@@ -123,7 +123,7 @@ type Results interface {
 	// Logs returns all the logs
 	Logs() ([]string, error)
 	// returns log i of the log collection
-	Log(i uint) (string, error)
+	LogAt(i uint) (string, error)
 	// returns number of logs
 	LogCount() uint
 
@@ -132,7 +132,7 @@ type Results interface {
 	// Events returns all the events
 	Events() ([]cadence.Event, error)
 	// returns event i of the event collection
-	Event(i uint) (cadence.Event, error)
+	EventAt(i uint) (cadence.Event, error)
 	// returns number of events
 	EventCount() uint
 
@@ -142,7 +142,7 @@ type Results interface {
 	Errors() multierror.Error
 	// returns event i of the event collection, the first error is the actual runtime error, the second error
 	// returns if there is any error while fetching the error i
-	Error(i uint) (Error, error)
+	ErrorAt(i uint) (Error, error)
 	// returns number of errors
 	ErrorCount() uint
 
@@ -219,7 +219,7 @@ func (i *EmptyAccounts) AccountExists(_ Address) (bool, error) {
 	return false, nil
 }
 
-func (i *EmptyAccounts) NumberOfAccounts(_ Address) (uint64, error) {
+func (i *EmptyAccounts) NumberOfAccounts(_ Location) (uint64, error) {
 	return 0, nil
 }
 
@@ -299,15 +299,6 @@ func (i *EmptyAccountKeys) AccountPublicKey(_ Address, _ int, _ Location) ([]byt
 	return nil, nil
 }
 
-func (i *EmptyAccounts) ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
-	return []ResolvedLocation{
-		{
-			Location:    location,
-			Identifiers: identifiers,
-		},
-	}, nil
-}
-
 type EmptyCryptoProvider struct{}
 
 var _ CryptoProvider = &EmptyCryptoProvider{}
@@ -354,7 +345,7 @@ func (i *EmptyResults) Logs() ([]string, error) {
 	return nil, nil
 }
 
-func (i *EmptyResults) Log(_ uint) (string, error) {
+func (i *EmptyResults) LogAt(_ uint) (string, error) {
 	return "", nil
 }
 
@@ -370,7 +361,7 @@ func (i *EmptyResults) Events() ([]cadence.Event, error) {
 	return nil, nil
 }
 
-func (i *EmptyResults) Event(_ uint) (cadence.Event, error) {
+func (i *EmptyResults) EventAt(_ uint) (cadence.Event, error) {
 	return cadence.Event{}, nil
 }
 
@@ -378,7 +369,7 @@ func (i *EmptyResults) EventCount() uint {
 	return 0
 }
 
-func (i *EmptyResults) AppendError(error) error {
+func (i *EmptyResults) AppendError(_ error) error {
 	return nil
 }
 
@@ -386,7 +377,7 @@ func (i *EmptyResults) Errors() multierror.Error {
 	return multierror.Error{}
 }
 
-func (i *EmptyResults) Error(_ uint) (Error, error) {
+func (i *EmptyResults) ErrorAt(_ uint) (Error, error) {
 	return Error{}, nil
 }
 
@@ -420,4 +411,13 @@ func (i *EmptyResults) ComputationLimit() uint64 {
 
 // func (i *EmptyRuntimeInterface) UnsafeRandom() (uint64, error) {
 // 	return 0, nil
+// }
+
+// func (i *EmptyAccounts) ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
+// 	return []ResolvedLocation{
+// 		{
+// 			Location:    location,
+// 			Identifiers: identifiers,
+// 		},
+// 	}, nil
 // }
