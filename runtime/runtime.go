@@ -337,7 +337,7 @@ func (r *interpreterRuntime) newAuthAccountValue(
 ) interpreter.AuthAccountValue {
 	return interpreter.NewAuthAccountValue(
 		addressValue,
-		storageUsedGetFunction(addressValue, context.Accounts, runtimeStorage),
+		storageUsedGetFunction(addressValue, context.AccountStorage, runtimeStorage),
 		storageCapacityGetFunction(addressValue, context.Accounts),
 		r.newAddPublicKeyFunction(addressValue, context.AccountKeys, context.Results),
 		r.newRemovePublicKeyFunction(addressValue, context.AccountKeys, context.Results),
@@ -1071,7 +1071,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 }
 func storageUsedGetFunction(
 	addressValue interpreter.AddressValue,
-	accounts Accounts,
+	accountStorage AccountStorage,
 	runtimeStorage *runtimeStorage,
 ) func(inter *interpreter.Interpreter) interpreter.UInt64Value {
 	address := addressValue.ToAddress()
@@ -1084,7 +1084,7 @@ func storageUsedGetFunction(
 		var capacity uint64
 		var err error
 		wrapPanic(func() {
-			capacity, err = accounts.GetStorageUsed(address)
+			capacity, err = accountStorage.StorageUsed(address)
 		})
 		if err != nil {
 			panic(err)
@@ -1349,7 +1349,7 @@ func (r *interpreterRuntime) instantiateContract(
 					compositeType,
 					constructor,
 					invocationRange,
-					context.Interface,
+					context.CryptoProvider,
 					runtimeStorage,
 				)
 			},

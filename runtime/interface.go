@@ -137,7 +137,7 @@ type Results interface {
 	EventCount() uint
 
 	// AppendError appends a non-fatal error
-	AppendError(error)
+	AppendError(error) error
 	// return all the errors
 	Errors() multierror.Error
 	// returns event i of the event collection, the first error is the actual runtime error, the second error
@@ -342,23 +342,69 @@ func (i *EmptyCacheProvider) CacheProgram(_ Location, _ *ast.Program) error {
 	return nil
 }
 
-// TODO : add empty results
+type EmptyResults struct{}
 
-// func (i *EmptyRuntimeInterface) Log(_ string) error {
-// 	return nil
-// }
+var _ Results = &EmptyResults{}
 
-// func (i *EmptyRuntimeInterface) EmitEvent(_ cadence.Event) error {
-// 	return nil
-// }
+func (i *EmptyResults) AppendLog(_ string) error {
+	return nil
+}
 
-// func (i *EmptyRuntimeInterface) GetComputationLimit() uint64 {
-// 	return 0
-// }
+func (i *EmptyResults) Logs() ([]string, error) {
+	return nil, nil
+}
 
-// func (i *EmptyRuntimeInterface) SetComputationUsed(uint64) error {
-// 	return nil
-// }
+func (i *EmptyResults) Log(_ uint) (string, error) {
+	return "", nil
+}
+
+func (i *EmptyResults) LogCount() uint {
+	return 0
+}
+
+func (i *EmptyResults) AppendEvent(_ cadence.Event) error {
+	return nil
+}
+
+func (i *EmptyResults) Events() ([]cadence.Event, error) {
+	return nil, nil
+}
+
+func (i *EmptyResults) Event(_ uint) (cadence.Event, error) {
+	return cadence.Event{}, nil
+}
+
+func (i *EmptyResults) EventCount() uint {
+	return 0
+}
+
+func (i *EmptyResults) AppendError(error) error {
+	return nil
+}
+
+func (i *EmptyResults) Errors() multierror.Error {
+	return multierror.Error{}
+}
+
+func (i *EmptyResults) Error(_ uint) (Error, error) {
+	return Error{}, nil
+}
+
+func (i *EmptyResults) ErrorCount() uint {
+	return 0
+}
+
+func (i *EmptyResults) AddComputationUsed(_ uint64) error {
+	return nil
+}
+
+func (i *EmptyResults) ComputationSpent() uint64 {
+	return 0
+}
+
+func (i *EmptyResults) ComputationLimit() uint64 {
+	return 0
+}
 
 // func (i *EmptyRuntimeInterface) GetCurrentBlockHeight() (uint64, error) {
 // 	return 0, nil
