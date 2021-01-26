@@ -82,16 +82,23 @@ type AccountContracts interface {
 	Contracts(address AddressLocation, caller Location) (Name []string, err error)
 }
 
+type StorageKey []byte
+type StorageValue []byte
+type StorageKeyIterator interface {
+	Next() StorageKey
+	Size() uint64
+}
+
 // AccountStorage stores and retrives account key/values
 type AccountStorage interface {
 	// Value gets a value for the given key in the storage, owned by the given account.
-	Value(address Address, key []byte, caller Location) (value []byte, err error)
+	Value(address Address, key StorageKey, caller Location) (value StorageValue, err error)
 	// SetValue sets a value for the given key in the storage, owned by the given account.
-	SetValue(address Address, key []byte, value []byte, caller Location) (err error)
+	SetValue(address Address, key StorageKey, value StorageValue, caller Location) (err error)
 	// ValueExists returns true if the given key exists in the storage, owned by the given account.
-	ValueExists(address Address, key []byte, caller Location) (exists bool, err error)
+	ValueExists(address Address, key StorageKey, caller Location) (exists bool, err error)
 	// StoredKeys returns list of keys and their sizes owned by this account
-	StoredKeys(address Address, caller Location) (keys [][]byte, sizes []uint64, err error)
+	StoredKeys(address Address, caller Location) (iter StorageKeyIterator, err error)
 	// StorageUsed gets storage used in bytes by the address at the moment of the function call.
 	StorageUsed(address Address, caller Location) (value uint64, err error)
 	// Note: StorageCapacity has been moved to injected methods (similar to get balance)
