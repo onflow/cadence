@@ -42,13 +42,13 @@ type CacheEntry struct {
 }
 
 type runtimeStorage struct {
-	accounts                 Accounts
+	accountstorage           AccountStorage
 	highLevelAccountsEnabled bool
 	highLevelAccounts        HighLevelAccounts
 	cache                    Cache
 }
 
-func newRuntimeStorage(accounts Accounts) *runtimeStorage {
+func newRuntimeStorage(accountstorage AccountStorage) *runtimeStorage {
 	highLevelAccountsEnabled := false
 	highLevelAccounts, ok := accounts.(HighLevelStorage)
 	if ok {
@@ -56,7 +56,7 @@ func newRuntimeStorage(accounts Accounts) *runtimeStorage {
 	}
 
 	return &runtimeStorage{
-		accounts:                 accounts,
+		accountstorage:           accountstorage,
 		cache:                    Cache{},
 		highLevelAccounts:        highLevelAccounts,
 		highLevelAccountsEnabled: highLevelAccountsEnabled,
@@ -143,7 +143,7 @@ func (s *runtimeStorage) readValue(
 	var storedData []byte
 	var err error
 	wrapPanic(func() {
-		storedData, err = s.accounts.Value(address[:], []byte(key))
+		storedData, err = s.accountstorage.Value(address[:], []byte(key))
 	})
 	if err != nil {
 		panic(err)
@@ -309,7 +309,7 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 
 		var err error
 		wrapPanic(func() {
-			err = s.accounts.SetValue(
+			err = s.accountstorage.SetValue(
 				item.storageKey.Address[:],
 				[]byte(item.storageKey.Key),
 				newData,
@@ -345,18 +345,18 @@ func (s *runtimeStorage) move(
 	oldOwner common.Address, oldKey string,
 	newOwner common.Address, newKey string,
 ) {
-	data, err := s.accounts.Value(oldOwner[:], []byte(oldKey))
+	data, err := s.accountstorage.Value(oldOwner[:], []byte(oldKey))
 	if err != nil {
 		panic(err)
 	}
 
-	err = s.accounts.SetValue(oldOwner[:], []byte(oldKey), nil)
+	err = s.accountstorage.SetValue(oldOwner[:], []byte(oldKey), nil)
 	if err != nil {
 		panic(err)
 	}
 
 	// NOTE: not prefix with magic, as data is moved, so might already have it
-	err = s.accounts.SetValue(newOwner[:], []byte(newKey), data)
+	err = s.accountstorage.SetValue(newOwner[:], []byte(newKey), data)
 	if err != nil {
 		panic(err)
 	}

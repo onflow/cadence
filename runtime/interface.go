@@ -45,7 +45,7 @@ type Identifier = ast.Identifier
 type Location = common.Location
 type AddressLocation = common.AddressLocation
 
-// Accounts manages changes to the accounts, account keys and account storage
+// Accounts manages changes to the accounts
 //
 // errors returns by methods are non-fatal ones (e.g. accountNotExist),
 // fatal errors (e.g. Storage failure) are called by panic inside the methods
@@ -53,7 +53,6 @@ type AddressLocation = common.AddressLocation
 // to limit access to these method calls from smart contracts only, transaction only, or
 // specific smart contracts (e.g. service account).
 type Accounts interface {
-
 	// NewAccount creates a new account address and set the exists flag for this account
 	NewAccount(caller Location) (address Address, err error)
 	// AccountExists returns true if the account exists
@@ -67,7 +66,10 @@ type Accounts interface {
 	UnsuspendAccount(address Address, caller Location) error
 	// returns true if account is suspended
 	IsAccountSuspended(address Address) (isSuspended bool, err error)
+}
 
+// AccountContracts manages contracts stored under accounts
+type AccountContracts interface {
 	ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
 	// TODO ramtin merge this with 	Code(location Location) error
 	// AccountContractCode returns the code associated with an account contract.
@@ -78,30 +80,31 @@ type Accounts interface {
 	RemoveContractCode(address AddressLocation, caller Location) (err error)
 	// Contracts returns a list of contract names under this account
 	Contracts(address AddressLocation, caller Location) (Name []string, err error)
+}
 
+// AccountStorage stores and retrives account key/values
+type AccountStorage interface {
 	// Value gets a value for the given key in the storage, owned by the given account.
 	Value(address Address, key []byte, caller Location) (value []byte, err error)
 	// SetValue sets a value for the given key in the storage, owned by the given account.
 	SetValue(address Address, key []byte, value []byte, caller Location) (err error)
 	// ValueExists returns true if the given key exists in the storage, owned by the given account.
 	ValueExists(address Address, key []byte, caller Location) (exists bool, err error)
-
 	// StoredKeys returns list of keys and their sizes owned by this account
 	StoredKeys(address Address, caller Location) (keys [][]byte, sizes []uint64, err error)
 	// StorageUsed gets storage used in bytes by the address at the moment of the function call.
 	StorageUsed(address Address, caller Location) (value uint64, err error)
 	// Note: StorageCapacity has been moved to injected methods (similar to get balance)
+}
 
+// AccountKeys manages account keys
+type AccountKeys interface {
 	// AddAccountKey appends a key to an account.
 	AddAccountKey(address Address, publicKey []byte, caller Location) error
 	// RemoveAccountKey removes a key from an account by index.
 	RevokeAccountKey(address Address, index uint, caller Location) error
 	// AccountPublicKey returns the account key for the given index
 	AccountPublicKey(address Address, index uint, caller Location) (publicKey []byte, err error)
-	// VerifyAccountSignature verifies a signature for the given address and index
-	// TODO RAMTIN do I need the tag here?
-	// Note that a verify signature for non-account keys is also injected to the env
-	VerifyAccountSignature(address Address, index uint, signature []byte, tag string, signedData []byte, caller Location) (isValid bool, err error)
 }
 
 // Results are responsible to capture artifacts generated
@@ -139,7 +142,7 @@ type Results interface {
 	ErrorCount() uint
 
 	// AddComputationUsed adds a new uint64 value to the computationUsed (computation accumulator)
-	AddComputationUsed(uint64)
+	AddComputationUsed(uint64) error
 	// ComputationSpent returns the total amount of computation spent during the execution
 	ComputationSpent() uint64
 	// ComputationLimit returns the max computation limit allowed while running

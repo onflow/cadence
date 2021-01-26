@@ -45,6 +45,9 @@ type Script struct {
 
 type Context struct {
 	Accounts          Accounts
+	AccountContracts  AccountContracts
+	AccountStorage    AccountStorage
+	AccountKeys       AccountKeys
 	Results           Results
 	Metrics           Metrics
 	CacheProvider     CacheProvider
@@ -515,7 +518,7 @@ func validateArgumentParams(
 func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) (*sema.Checker, error) {
 	context.InitializeCodesAndPrograms()
 
-	runtimeStorage := newRuntimeStorage(context.Interface)
+	runtimeStorage := newRuntimeStorage(context.AccountStorage)
 	functions := r.standardLibraryFunctions(context, runtimeStorage)
 
 	checker, err := r.parseAndCheckProgram(code, context, functions, nil, true)
@@ -582,7 +585,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 				sema.WithLocationHandler(
 					func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
 						wrapPanic(func() {
-							res, err = context.Accounts.ResolveLocation(identifiers, location)
+							res, err = context.AccountContracts.ResolveLocation(identifiers, location)
 						})
 						return
 					},
@@ -840,7 +843,7 @@ func (r *interpreterRuntime) meteringInterpreterOptions(results Results) []inter
 
 		var err error
 		wrapPanic(func() {
-			err = results.AddComputationUsed(used)
+			err = results.AddComputationUsed(1)
 		})
 		if err != nil {
 			panic(err)
@@ -904,12 +907,12 @@ func (r *interpreterRuntime) importResolver(startContext Context) ImportResolver
 		var code []byte
 		if addressLocation, ok := location.(common.AddressLocation); ok {
 			wrapPanic(func() {
-				code, err = context.Accounts.ContractCode(addressLocation)
+				code, err = context.AccountContracts.ContractCode(addressLocation)
 			})
 			// TODO : do we need this ?
 		} else {
 			wrapPanic(func() {
-				code, err = context.Accounts.GetCode(location)
+				code, err = context.AccountContracts.Code(location)
 			})
 		}
 		if err != nil {
@@ -926,7 +929,7 @@ func (r *interpreterRuntime) importResolver(startContext Context) ImportResolver
 		context.SetProgram(location, program)
 
 		wrapPanic(func() {
-			err = context.Interface.CacheProgram(location, program)
+			err = context.CacheProvider.CacheProgram(location, program)
 		})
 		if err != nil {
 			return nil, err
@@ -950,7 +953,7 @@ func (r *interpreterRuntime) parse(
 
 	reportMetric(
 		parse,
-		context.Interface,
+		context.Metrics,
 		func(metrics Metrics, duration time.Duration) {
 			metrics.ProgramParsed(context.Location, duration)
 		},
@@ -980,7 +983,7 @@ func (r *interpreterRuntime) emitEvent(
 	var err error
 	exportedEvent := exportEvent(eventValue)
 	wrapPanic(func() {
-		err = results.EmitEvent(exportedEvent)
+		err = results.AppendEvent(exportedEvent)
 	})
 	return err
 }
@@ -1010,7 +1013,7 @@ func (r *interpreterRuntime) emitAccountEvent(
 	var err error
 	exportedEvent := exportEvent(eventValue)
 	wrapPanic(func() {
-		err = results.EmitEvent(exportedEvent)
+		err = results.AppendEvent(exportedEvent)
 	})
 	if err != nil {
 		panic(err)
@@ -1038,7 +1041,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 		var address Address
 		var err error
 		wrapPanic(func() {
-			address, err = context.Interface.CreateAccount(payer.AddressValue().ToAddress())
+			address, err = context.Accounts.NewAccount(payer.AddressValue().ToAddress())
 		})
 		if err != nil {
 			panic(err)
