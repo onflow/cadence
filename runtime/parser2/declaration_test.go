@@ -2224,7 +2224,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 					},
 				},
 			},
-			result.Declarations,
+			result.Declarations(),
 		)
 	})
 
@@ -2409,7 +2409,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 					},
 				},
 			},
-			result.Declarations,
+			result.Declarations(),
 		)
 	})
 
@@ -2644,7 +2644,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 					},
 				},
 			},
-			result.Declarations,
+			result.Declarations(),
 		)
 	})
 
@@ -2879,7 +2879,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 					},
 				},
 			},
-			result.Declarations,
+			result.Declarations(),
 		)
 	})
 }
@@ -3265,7 +3265,7 @@ func TestParseStructure(t *testing.T) {
 				},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3307,7 +3307,7 @@ func TestParseStructureWithConformances(t *testing.T) {
 				},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3467,7 +3467,7 @@ func TestParsePreAndPostConditions(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3586,7 +3586,7 @@ func TestParseConditionMessage(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3718,7 +3718,7 @@ func TestParseInterface(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{test},
-			actual.Declarations,
+			actual.Declarations(),
 		)
 	}
 }
@@ -3745,7 +3745,7 @@ func TestPragmaNoArguments(t *testing.T) {
 				},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3785,7 +3785,7 @@ func TestPragmaArguments(t *testing.T) {
 				},
 			},
 		},
-		actual.Declarations,
+		actual.Declarations(),
 	)
 }
 
@@ -3810,7 +3810,7 @@ func TestParseImportWithString(t *testing.T) {
 				LocationPos: ast.Position{Offset: 16, Line: 2, Column: 15},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3837,7 +3837,7 @@ func TestParseImportWithAddress(t *testing.T) {
 				LocationPos: ast.Position{Offset: 16, Line: 2, Column: 15},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3873,7 +3873,7 @@ func TestParseImportWithIdentifiers(t *testing.T) {
 				LocationPos: ast.Position{Offset: 26, Line: 2, Column: 25},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3928,7 +3928,7 @@ func TestParseFieldWithFromIdentifier(t *testing.T) {
 				},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3970,7 +3970,7 @@ func TestParseImportWithFromIdentifier(t *testing.T) {
 				LocationPos: ast.Position{Offset: 26, Line: 2, Column: 25},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4009,7 +4009,7 @@ func TestParseResource(t *testing.T) {
 				},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4096,7 +4096,7 @@ func TestParseEventDeclaration(t *testing.T) {
 				},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4188,7 +4188,7 @@ func TestParseEventEmitStatement(t *testing.T) {
 				StartPos: ast.Position{Offset: 7, Line: 2, Column: 6},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4235,7 +4235,7 @@ func TestParseResourceReturnType(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4269,7 +4269,7 @@ func TestParseMovingVariableDeclaration(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4339,7 +4339,7 @@ func TestParseResourceParameterType(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4383,7 +4383,7 @@ func TestParseMovingVariableDeclarationWithTypeAnnotation(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4436,7 +4436,7 @@ func TestParseFieldDeclarationWithMoveTypeAnnotation(t *testing.T) {
 				},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4493,7 +4493,7 @@ func TestParseDestructor(t *testing.T) {
 				},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4616,7 +4616,7 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 				},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4785,6 +4785,6 @@ func TestParsePreconditionWithUnaryNegation(t *testing.T) {
 				StartPos: ast.Position{Offset: 4, Line: 2, Column: 3},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }

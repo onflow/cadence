@@ -146,9 +146,7 @@ func (r *REPL) Accept(code string) (inputIsComplete bool) {
 
 		switch typedElement := element.(type) {
 		case ast.Declaration:
-			program := &ast.Program{
-				Declarations: []ast.Declaration{typedElement},
-			}
+			program := ast.NewProgram([]ast.Declaration{typedElement})
 
 			if !r.check(program, code) {
 				return
