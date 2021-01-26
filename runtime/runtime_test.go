@@ -98,6 +98,30 @@ func newTestStorage(
 	return storage
 }
 
+type Script struct {
+	source      []byte
+	arguments   []cadence.Value
+	authorizers []Address
+}
+
+func NewScript(source []byte, arguments []cadence.Value, authorizers []Address) *Script {
+	return &Script{source: source,
+		arguments:   arguments,
+		authorizers: authorizers}
+}
+
+func (s *Script) Source() []byte {
+	return s.source
+}
+
+func (s *Script) Arguments(argumentTypes []cadence.Type) ([]cadence.Value, error) {
+	return s.arguments, nil
+}
+
+func (s *Script) Authorizers() []Address {
+	return s.authorizers
+}
+
 type testAccountsInterface struct {
 	newAccount         func(caller Location) (address Address, err error)
 	accountExists      func(address Address) (exists bool, err error)
