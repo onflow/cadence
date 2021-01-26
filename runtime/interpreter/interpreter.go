@@ -898,7 +898,7 @@ func recoverErrors(onError func(error)) {
 func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
 	interpreter.prepareInterpretation()
 
-	return interpreter.visitGlobalDeclarations(program.Declarations)
+	return interpreter.visitGlobalDeclarations(program.Declarations())
 }
 
 func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ast.Repr {

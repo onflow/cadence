@@ -1415,7 +1415,7 @@ func TestParseParametersAndArrayTypes(t *testing.T) {
 				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -1470,7 +1470,7 @@ func TestParseDictionaryTypeInVariableDeclaration(t *testing.T) {
 				StartPos: ast.Position{Offset: 6, Line: 2, Column: 5},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -1734,7 +1734,7 @@ func TestParseIntegerTypes(t *testing.T) {
 
 	utils.AssertEqualWithDiff(t,
 		[]ast.Declaration{a, b, c, d, e, f, g, h},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -1810,7 +1810,7 @@ func TestParseFunctionTypeInVariableDeclaration(t *testing.T) {
 				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -1891,7 +1891,7 @@ func TestParseFunctionArrayType(t *testing.T) {
 				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -1971,7 +1971,7 @@ func TestParseFunctionTypeWithArrayReturnType(t *testing.T) {
 				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -2059,7 +2059,7 @@ func TestParseFunctionTypeWithFunctionReturnTypeInParentheses(t *testing.T) {
 				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -2147,7 +2147,7 @@ func TestParseFunctionTypeWithFunctionReturnType(t *testing.T) {
 				StartPos: ast.Position{Offset: 3, Line: 2, Column: 2},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -2199,7 +2199,7 @@ func TestParseOptionalTypeDouble(t *testing.T) {
 				StartPos: ast.Position{Offset: 8, Line: 2, Column: 7},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -2254,7 +2254,7 @@ func TestParseFunctionTypeWithResourceTypeAnnotation(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -2312,7 +2312,7 @@ func TestParseReferenceTypeInVariableDeclaration(t *testing.T) {
 				StartPos: ast.Position{Offset: 8, Line: 2, Column: 7},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -2364,7 +2364,7 @@ func TestParseOptionalReference(t *testing.T) {
 				StartPos: ast.Position{Offset: 8, Line: 2, Column: 7},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -2427,7 +2427,7 @@ func TestParseRestrictedReferenceTypeWithBaseType(t *testing.T) {
 				StartPos: ast.Position{Offset: 8, Line: 2, Column: 7},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -2484,7 +2484,7 @@ func TestParseRestrictedReferenceTypeWithoutBaseType(t *testing.T) {
 				StartPos: ast.Position{Offset: 8, Line: 2, Column: 7},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -2547,7 +2547,7 @@ func TestParseOptionalRestrictedType(t *testing.T) {
 				StartPos: ast.Position{Offset: 8, Line: 2, Column: 7},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -2604,7 +2604,7 @@ func TestParseOptionalRestrictedTypeOnlyRestrictions(t *testing.T) {
 				StartPos: ast.Position{Offset: 8, Line: 2, Column: 7},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -2655,7 +2655,7 @@ func TestParseAuthorizedReferenceType(t *testing.T) {
 				ParentIfStatement: nil,
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -2731,7 +2731,7 @@ func TestParseInstantiationTypeInVariableDeclaration(t *testing.T) {
 				StartPos: ast.Position{Offset: 7, Line: 2, Column: 6},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 

@@ -480,9 +480,11 @@ func (checker *Checker) VisitProgram(program *ast.Program) ast.Repr {
 
 	// Check all declarations
 
-	checker.checkTopLevelDeclarationValidity(program.Declarations)
+	declarations := program.Declarations()
 
-	for _, declaration := range program.Declarations {
+	checker.checkTopLevelDeclarationValidity(declarations)
+
+	for _, declaration := range declarations {
 
 		// Skip import declarations, they are already handled above
 		if _, isImport := declaration.(*ast.ImportDeclaration); isImport {

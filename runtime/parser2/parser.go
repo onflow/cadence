@@ -439,9 +439,11 @@ func ParseProgram(input string) (program *ast.Program, err error) {
 		program = nil
 		return
 	}
-	program = &ast.Program{
-		Declarations: res.([]ast.Declaration),
-	}
+
+	declarations := res.([]ast.Declaration)
+
+	program = ast.NewProgram(declarations)
+
 	return
 }
 

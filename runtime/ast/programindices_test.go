@@ -113,8 +113,8 @@ func TestProgramIndices(t *testing.T) {
 		},
 	}
 
-	program := &Program{
-		Declarations: []Declaration{
+	program := NewProgram(
+		[]Declaration{
 			importB,
 			pragmaA,
 			transactionC,
@@ -134,7 +134,7 @@ func TestProgramIndices(t *testing.T) {
 			pragmaC,
 			compositeA,
 		},
-	}
+	)
 
 	var wg sync.WaitGroup
 	const parallelExecutionCount = 10

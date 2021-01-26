@@ -30,9 +30,7 @@ func TestProgram_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	program := &Program{
-		Declarations: []Declaration{},
-	}
+	program := NewProgram([]Declaration{})
 
 	actual, err := json.Marshal(program)
 	require.NoError(t, err)
