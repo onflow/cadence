@@ -48,23 +48,23 @@ type CacheEntry struct {
 }
 
 type runtimeStorage struct {
-	accountstorage           AccountStorage
+	accountStorage           AccountStorage
 	highLevelAccountsEnabled bool
 	highLevelAccountStorage  HighLevelAccountStorage
 	cache                    Cache
 }
 
-func newRuntimeStorage(accountstorage AccountStorage) *runtimeStorage {
+func newRuntimeStorage(accountStorage AccountStorage) *runtimeStorage {
 	highLevelAccountsEnabled := false
-	highLevelAccounts, ok := accounts.(HighLevelStorage)
+	highLevelAccounts, ok := accountStorage.(HighLevelAccountStorage)
 	if ok {
-		highLevelAccountsEnabled = highLevelAccountStorage.HighLevelStorageEnabled()
+		highLevelAccountsEnabled = highLevelAccounts.HighLevelStorageEnabled()
 	}
 
 	return &runtimeStorage{
-		accountstorage:           accountstorage,
+		accountStorage:           accountStorage,
 		cache:                    Cache{},
-		highLevelAccounts:        highLevelAccounts,
+		highLevelAccountStorage:  highLevelAccounts,
 		highLevelAccountsEnabled: highLevelAccountsEnabled,
 	}
 }
@@ -98,7 +98,7 @@ func (s *runtimeStorage) valueExists(
 	var exists bool
 	var err error
 	wrapPanic(func() {
-		exists, err = s.accounts.ValueExists(address[:], []byte(key))
+		exists, err = s.accountStorage.ValueExists(StorageKey{address[:], []byte(key)})
 	})
 	if err != nil {
 		panic(err)
@@ -149,7 +149,7 @@ func (s *runtimeStorage) readValue(
 	var storedData []byte
 	var err error
 	wrapPanic(func() {
-		storedData, err = s.accountstorage.Value(address[:], []byte(key))
+		storedData, err = s.accountStorage.Value(StorageKey{address[:], []byte(key)})
 	})
 	if err != nil {
 		panic(err)

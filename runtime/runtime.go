@@ -1048,7 +1048,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 		var address Address
 		var err error
 		wrapPanic(func() {
-			address, err = context.Accounts.NewAccount(payer.AddressValue().ToAddress())
+			address, err = context.Accounts.NewAccount(invocation.Self.Location)
 		})
 		if err != nil {
 			panic(err)
@@ -1122,8 +1122,9 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 				panic("addPublicKey requires the first argument to be a byte array")
 			}
 
+			// TODO RAMTIN validate if this is a right way of passing location
 			wrapPanic(func() {
-				err = accountKeys.AddAccountKey(addressValue.ToAddress(), publicKey)
+				err = accountKeys.AddAccountKey(addressValue.ToAddress(), publicKey, invocation.Self.Location)
 			})
 			if err != nil {
 				panic(err)
@@ -1486,7 +1487,7 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 		AddFunction:    r.newAuthAccountContractsChangeFunction(addressValue, context, runtimeStorage, false),
 		UpdateFunction: r.newAuthAccountContractsChangeFunction(addressValue, context, runtimeStorage, true),
 		GetFunction:    r.newAuthAccountContractsGetFunction(addressValue, context.AccountContracts),
-		RemoveFunction: r.newAuthAccountContractsRemoveFunction(addressValue, context.AccountContracts, runtimeStorage),
+		RemoveFunction: r.newAuthAccountContractsRemoveFunction(addressValue, context.AccountContracts, context.Results, runtimeStorage),
 	}
 }
 
@@ -1752,7 +1753,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 	// TODO: Ramtin figure out the caller
 	// NOTE: only update account code if contract instantiation succeeded
 	wrapPanic(func() {
-		err = context.AccountContracts.UpdateContractCode(address, name, code)
+		err = context.AccountContracts.UpdateContractCode(AddressLocation{address, name}, code)
 	})
 	if err != nil {
 		panic(err)
@@ -1777,7 +1778,7 @@ func (r *interpreterRuntime) newAuthAccountContractsGetFunction(
 			var code []byte
 			var err error
 			wrapPanic(func() {
-				code, err = accountContracts.ContractCode(address, nameArgument)
+				code, err = accountContracts.ContractCode(AddressLocation{address, nameArgument})
 			})
 			if err != nil {
 				panic(err)
@@ -1803,6 +1804,7 @@ func (r *interpreterRuntime) newAuthAccountContractsGetFunction(
 func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 	addressValue interpreter.AddressValue,
 	accountContracts AccountContracts,
+	results Results,
 	runtimeStorage *runtimeStorage,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
@@ -1815,7 +1817,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 			var code []byte
 			var err error
 			wrapPanic(func() {
-				code, err = accountContracts.ContractCode(address, nameArgument)
+				code, err = accountContracts.ContractCode(AddressLocation{address, nameArgument})
 			})
 			if err != nil {
 				panic(err)
@@ -1825,7 +1827,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 
 			if len(code) > 0 {
 				wrapPanic(func() {
-					err = accountContracts.RemoveContractCode(address, nameArgument)
+					err = accountContracts.RemoveContractCode(AddressLocation{address, nameArgument}, invocation.Self.Location)
 				})
 				if err != nil {
 					panic(err)
@@ -1842,7 +1844,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 
 				r.emitAccountEvent(
 					stdlib.AccountContractRemovedEventType,
-					runtimeInterface,
+					results,
 					[]exportableValue{
 						newExportableValue(addressValue, nil),
 						newExportableValue(codeHashValue, nil),
