@@ -197,7 +197,7 @@ func (r *interpreterRuntime) SetCoverageReport(coverageReport *CoverageReport) {
 func (r *interpreterRuntime) RunScript(runnable Runnable, context Context) (cadence.Value, error) {
 	context.InitializeCodesAndPrograms()
 
-	runtimeStorage := newRuntimeStorage(context.AccountStorage)
+	runtimeStorage := newRuntimeStorage(context.AccountStorage, context.Metrics)
 
 	functions := r.standardLibraryFunctions(context, runtimeStorage)
 
@@ -354,7 +354,7 @@ func (r *interpreterRuntime) RunTransaction(runnable Runnable, context Context) 
 
 	context.InitializeCodesAndPrograms()
 
-	runtimeStorage := newRuntimeStorage(context.AccountStorage)
+	runtimeStorage := newRuntimeStorage(context.AccountStorage, context.Metrics)
 
 	functions := r.standardLibraryFunctions(context, runtimeStorage)
 
@@ -525,7 +525,7 @@ func validateArgumentParams(
 func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) (*sema.Checker, error) {
 	context.InitializeCodesAndPrograms()
 
-	runtimeStorage := newRuntimeStorage(context.AccountStorage)
+	runtimeStorage := newRuntimeStorage(context.AccountStorage, context.Metrics)
 	functions := r.standardLibraryFunctions(context, runtimeStorage)
 
 	checker, err := r.parseAndCheckProgram(code, context, functions, nil, true)
@@ -886,7 +886,7 @@ func (r *interpreterRuntime) standardLibraryFunctions(
 	return append(
 		stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{
 			CreateAccount: r.newCreateAccountFunction(context, runtimeStorage),
-			GetAccount:    r.newGetAccountFunction(context.Accounts, runtimeStorage),
+			GetAccount:    r.newGetAccountFunction(context.AccountStorage, context.Accounts, runtimeStorage),
 			Log:           r.newLogFunction(context.Results),
 			// GetCurrentBlock: r.newGetCurrentBlockFunction(context.Interface),
 			// GetBlock:        r.newGetBlockFunction(context.Interface),
@@ -1037,13 +1037,14 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 	runtimeStorage *runtimeStorage,
 ) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
-		payer, ok := invocation.Arguments[0].(interpreter.AuthAccountValue)
-		if !ok {
-			panic(fmt.Sprintf(
-				"%[1]s requires the third argument to be an %[1]s",
-				&sema.AuthAccountType{},
-			))
-		}
+		// TODO RAMTIN : clean me
+		// payer, ok := invocation.Arguments[0].(interpreter.AuthAccountValue)
+		// if !ok {
+		// 	panic(fmt.Sprintf(
+		// 		"%[1]s requires the third argument to be an %[1]s",
+		// 		&sema.AuthAccountType{},
+		// 	))
+		// }
 
 		var address Address
 		var err error
@@ -1083,8 +1084,9 @@ func storageUsedGetFunction(
 
 		var capacity uint64
 		var err error
+		// TODO RAMTIN fix me (location)
 		wrapPanic(func() {
-			capacity, err = accountStorage.StorageUsed(address)
+			capacity, err = accountStorage.StorageUsed(address, common.AddressLocation{})
 		})
 		if err != nil {
 			panic(err)
@@ -1094,13 +1096,16 @@ func storageUsedGetFunction(
 }
 
 func storageCapacityGetFunction(addressValue interpreter.AddressValue, accounts Accounts) func() interpreter.UInt64Value {
-	address := addressValue.ToAddress()
+	// TODO RAMTIN clean me
+	// address := addressValue.ToAddress()
 	return func() interpreter.UInt64Value {
 		var capacity uint64
 		var err error
-		wrapPanic(func() {
-			capacity, err = accounts.GetStorageCapacity(address)
-		})
+
+		// TODO Ramtin fix me
+		// wrapPanic(func() {
+		// 	capacity, err = accounts.GetStorageCapacity(address)
+		// })
 		if err != nil {
 			panic(err)
 		}
@@ -1372,12 +1377,12 @@ func (r *interpreterRuntime) instantiateContract(
 	return contract, err
 }
 
-func (r *interpreterRuntime) newGetAccountFunction(accounts Accounts, runtimeStorage *runtimeStorage) interpreter.HostFunction {
+func (r *interpreterRuntime) newGetAccountFunction(accountStorage AccountStorage, accounts Accounts, runtimeStorage *runtimeStorage) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
 		accountAddress := invocation.Arguments[0].(interpreter.AddressValue)
 		publicAccount := interpreter.NewPublicAccountValue(
 			accountAddress,
-			storageUsedGetFunction(accountAddress, accounts, runtimeStorage),
+			storageUsedGetFunction(accountAddress, accountStorage, runtimeStorage),
 			storageCapacityGetFunction(accountAddress, accounts),
 		)
 		return trampoline.Done{Result: publicAccount}
@@ -1750,10 +1755,10 @@ func (r *interpreterRuntime) updateAccountContractCode(
 
 	var err error
 
-	// TODO: Ramtin figure out the caller
+	// TODO: Ramtin figure out the caller (fix me)
 	// NOTE: only update account code if contract instantiation succeeded
 	wrapPanic(func() {
-		err = context.AccountContracts.UpdateContractCode(AddressLocation{address, name}, code)
+		err = context.AccountContracts.UpdateContractCode(AddressLocation{address, name}, code, common.AddressLocation{})
 	})
 	if err != nil {
 		panic(err)

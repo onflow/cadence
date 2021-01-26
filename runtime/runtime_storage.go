@@ -49,12 +49,13 @@ type CacheEntry struct {
 
 type runtimeStorage struct {
 	accountStorage           AccountStorage
+	metrics                  Metrics
 	highLevelAccountsEnabled bool
 	highLevelAccountStorage  HighLevelAccountStorage
 	cache                    Cache
 }
 
-func newRuntimeStorage(accountStorage AccountStorage) *runtimeStorage {
+func newRuntimeStorage(accountStorage AccountStorage, metrics Metrics) *runtimeStorage {
 	highLevelAccountsEnabled := false
 	highLevelAccounts, ok := accountStorage.(HighLevelAccountStorage)
 	if ok {
@@ -63,6 +64,7 @@ func newRuntimeStorage(accountStorage AccountStorage) *runtimeStorage {
 
 	return &runtimeStorage{
 		accountStorage:           accountStorage,
+		metrics:                  metrics,
 		cache:                    Cache{},
 		highLevelAccountStorage:  highLevelAccounts,
 		highLevelAccountsEnabled: highLevelAccountsEnabled,
@@ -97,8 +99,9 @@ func (s *runtimeStorage) valueExists(
 
 	var exists bool
 	var err error
+	// TODO RAMTIN fix me
 	wrapPanic(func() {
-		exists, err = s.accountStorage.ValueExists(StorageKey{address[:], []byte(key)})
+		exists, err = s.accountStorage.ValueExists(StorageKey{address, key}, common.AddressLocation{})
 	})
 	if err != nil {
 		panic(err)
@@ -148,8 +151,9 @@ func (s *runtimeStorage) readValue(
 
 	var storedData []byte
 	var err error
+	// TODO Ramtin fix me
 	wrapPanic(func() {
-		storedData, err = s.accountStorage.Value(StorageKey{address[:], []byte(key)})
+		storedData, err = s.accountStorage.Value(StorageKey{address, key}, common.AddressLocation{})
 	})
 	if err != nil {
 		panic(err)
@@ -172,7 +176,7 @@ func (s *runtimeStorage) readValue(
 		func() {
 			storedValue, err = interpreter.DecodeValue(storedData, &address, []string{key}, version)
 		},
-		s.runtimeInterface,
+		s.metrics,
 		func(metrics Metrics, duration time.Duration) {
 			metrics.ValueDecoded(duration)
 		},
@@ -250,7 +254,7 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 			value:      entry.Value,
 		})
 
-		if s.highLevelStorageEnabled {
+		if s.highLevelAccountsEnabled {
 			var err error
 
 			var value cadence.Value
@@ -259,7 +263,7 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 			}
 
 			wrapPanic(func() {
-				err = s.highLevelStorage.SetCadenceValue(fullKey.Address, fullKey.Key, value)
+				err = s.highLevelAccountStorage.SetCadenceValue(fullKey.Address, fullKey.Key, value)
 			})
 			if err != nil {
 				panic(err)
@@ -313,12 +317,14 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 			newData = interpreter.PrependMagic(newData, interpreter.CurrentEncodingVersion)
 		}
 
+		// TODO RAMTIN fix me
 		var err error
 		wrapPanic(func() {
-			err = s.accountstorage.SetValue(
-				item.storageKey.Address[:],
-				[]byte(item.storageKey.Key),
+			err = s.accountStorage.SetValue(StorageKey{
+				item.storageKey.Address,
+				item.storageKey.Key},
 				newData,
+				common.AddressLocation{},
 			)
 		})
 		if err != nil {
@@ -339,7 +345,7 @@ func (s *runtimeStorage) encodeValue(
 		func() {
 			data, deferrals, err = interpreter.EncodeValue(value, []string{path}, true)
 		},
-		s.runtimeInterface,
+		s.metrics,
 		func(metrics Metrics, duration time.Duration) {
 			metrics.ValueEncoded(duration)
 		},
@@ -351,18 +357,19 @@ func (s *runtimeStorage) move(
 	oldOwner common.Address, oldKey string,
 	newOwner common.Address, newKey string,
 ) {
-	data, err := s.accountstorage.Value(oldOwner[:], []byte(oldKey))
+	// TODO RAMTIN (fix me)
+	data, err := s.accountStorage.Value(StorageKey{oldOwner, oldKey}, common.AddressLocation{})
 	if err != nil {
 		panic(err)
 	}
-
-	err = s.accountstorage.SetValue(oldOwner[:], []byte(oldKey), nil)
+	// TODO RAMTIN (fix me)
+	err = s.accountStorage.SetValue(StorageKey{oldOwner, oldKey}, nil, common.AddressLocation{})
 	if err != nil {
 		panic(err)
 	}
-
+	// TODO RAMTIN (fix me)
 	// NOTE: not prefix with magic, as data is moved, so might already have it
-	err = s.accountstorage.SetValue(newOwner[:], []byte(newKey), data)
+	err = s.accountStorage.SetValue(StorageKey{newOwner, newKey}, data, common.AddressLocation{})
 	if err != nil {
 		panic(err)
 	}
