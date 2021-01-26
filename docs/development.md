@@ -14,7 +14,7 @@
 
 This will automatically recompile the language server every time it is started.
 
-## How can data races in the checker be detected?
+## How is it possible to detect non-determinism and data races in the checker?
 
 Run the checker tests with the `cadence.checkConcurrently` flag, e.g.
 
@@ -24,3 +24,4 @@ go test -race -v ./runtime/tests/checker -cadence.checkConcurrently=10
 
 This runs each check of a checker test 10 times, concurrently,
 and asserts that the checker errors of all checks are equal.
+
