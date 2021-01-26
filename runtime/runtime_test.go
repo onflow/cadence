@@ -488,7 +488,11 @@ func TestRuntimeImport(t *testing.T) {
         }
     `)
 
-	runtimeInterface := &testRuntimeInterface{
+	accounts := &testAccountsInterface{}
+	accountContracts := &testAccountContractsInterface{}
+	accountStorage := &testAccountStorageInterface{}
+	accountKeys := &testAccountKeysInterface{}
+	locationResolver := &testLocationResolverInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
 			case common.StringLocation("imported"):
@@ -498,6 +502,8 @@ func TestRuntimeImport(t *testing.T) {
 			}
 		},
 	}
+	cacheProvider := &testCacheProviderInterface{}
+	results := &testResultsInterface{}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
@@ -506,8 +512,14 @@ func TestRuntimeImport(t *testing.T) {
 			Source: script,
 		},
 		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			CacheProvider:    cacheProvider,
+			Results:          results,
+			Location:         nextTransactionLocation(),
 		},
 	)
 	require.NoError(t, err)
@@ -531,7 +543,22 @@ func TestRuntimeProgramCache(t *testing.T) {
 	importedScriptLocation := common.StringLocation("imported")
 
 	runtime := NewInterpreterRuntime()
-	runtimeInterface := &testRuntimeInterface{
+
+	accounts := &testAccountsInterface{}
+	accountContracts := &testAccountContractsInterface{}
+	accountStorage := &testAccountStorageInterface{}
+	accountKeys := &testAccountKeysInterface{}
+	locationResolver := &testLocationResolverInterface{
+		getCode: func(location Location) ([]byte, error) {
+			switch location {
+			case importedScriptLocation:
+				return importedScript, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+	}
+	cacheProvider := &testCacheProviderInterface{
 		getCachedProgram: func(location common.Location) (*ast.Program, error) {
 			program, found := programCache[location.ID()]
 			cacheHits[location.ID()] = found
@@ -544,15 +571,8 @@ func TestRuntimeProgramCache(t *testing.T) {
 			programCache[location.ID()] = program
 			return nil
 		},
-		getCode: func(location Location) ([]byte, error) {
-			switch location {
-			case importedScriptLocation:
-				return importedScript, nil
-			default:
-				return nil, fmt.Errorf("unknown import location: %s", location)
-			}
-		},
 	}
+	results := &testResultsInterface{}
 
 	t.Run("empty cache, cache miss", func(t *testing.T) {
 
@@ -570,8 +590,14 @@ func TestRuntimeProgramCache(t *testing.T) {
 		_, err := runtime.ParseAndCheckProgram(
 			script,
 			Context{
-				Interface: runtimeInterface,
-				Location:  scriptLocation,
+				Accounts:         accounts,
+				AccountContracts: accountContracts,
+				AccountStorage:   accountStorage,
+				AccountKeys:      accountKeys,
+				LocationResolver: locationResolver,
+				CacheProvider:    cacheProvider,
+				Results:          results,
+				Location:         scriptLocation,
 			},
 		)
 		assert.NoError(t, err)
@@ -601,8 +627,14 @@ func TestRuntimeProgramCache(t *testing.T) {
 		_, err := runtime.ParseAndCheckProgram(
 			script,
 			Context{
-				Interface: runtimeInterface,
-				Location:  scriptLocation,
+				Accounts:         accounts,
+				AccountContracts: accountContracts,
+				AccountStorage:   accountStorage,
+				AccountKeys:      accountKeys,
+				LocationResolver: locationResolver,
+				CacheProvider:    cacheProvider,
+				Results:          results,
+				Location:         scriptLocation,
 			},
 		)
 		assert.NoError(t, err)
@@ -627,8 +659,14 @@ func TestRuntimeProgramCache(t *testing.T) {
 		_, err := runtime.ParseAndCheckProgram(
 			script,
 			Context{
-				Interface: runtimeInterface,
-				Location:  scriptLocation,
+				Accounts:         accounts,
+				AccountContracts: accountContracts,
+				AccountStorage:   accountStorage,
+				AccountKeys:      accountKeys,
+				LocationResolver: locationResolver,
+				CacheProvider:    cacheProvider,
+				Results:          results,
+				Location:         scriptLocation,
 			},
 		)
 		assert.NoError(t, err)
@@ -674,8 +712,14 @@ func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
 			Source: script,
 		},
 		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			CacheProvider:    cacheProvider,
+			Results:          results,
+			Location:         nextTransactionLocation(),
 		},
 	)
 	assert.Error(t, err)
@@ -1316,9 +1360,13 @@ func TestRuntimeProgramWithNoTransaction(t *testing.T) {
 
 	script := []byte(`
       pub fun main() {}
-    `)
+	`)
+
+	XXXXXXXXX
 
 	runtimeInterface := &testRuntimeInterface{}
+
+	accountsInterface := &testAccountsInterface{}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
@@ -1328,6 +1376,7 @@ func TestRuntimeProgramWithNoTransaction(t *testing.T) {
 		},
 		Context{
 			Interface: runtimeInterface,
+			Accounts:  accountsInterface,
 			Location:  nextTransactionLocation(),
 		},
 	)
