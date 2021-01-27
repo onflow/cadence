@@ -18,10 +18,6 @@
 
 package interpreter
 
-import (
-	"github.com/onflow/cadence/runtime/ast"
-)
-
 // Import
 
 type Import interface {
@@ -37,10 +33,10 @@ type VirtualImport struct {
 
 func (VirtualImport) isImport() {}
 
-// ProgramImport
+// InterpreterImport
 
-type ProgramImport struct {
-	Program *ast.Program
+type InterpreterImport struct {
+	Interpreter *Interpreter
 }
 
-func (ProgramImport) isImport() {}
+func (InterpreterImport) isImport() {}
