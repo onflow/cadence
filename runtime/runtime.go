@@ -561,6 +561,13 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 			return nil, wrapError(err)
 		}
 		context.SetProgram(context.Location, program)
+
+		wrapPanic(func() {
+			err = context.Interface.CacheProgram(context.Location, program)
+		})
+		if err != nil {
+			return nil, wrapError(err)
+		}
 	}
 
 	importResolver := r.importResolver(context)
@@ -640,14 +647,6 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	err = checker.Check()
 	if err != nil {
 		return nil, wrapError(err)
-	}
-
-	// After the program has passed semantic analysis, cache the program AST.
-	wrapPanic(func() {
-		err = context.Interface.CacheProgram(context.Location, program)
-	})
-	if err != nil {
-		return nil, err
 	}
 
 	return checker, nil
