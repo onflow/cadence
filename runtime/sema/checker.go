@@ -74,7 +74,7 @@ type ResolvedLocation struct {
 
 type LocationHandlerFunc func(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
 
-type ImportHandlerFunc func(checker *Checker, location common.Location) (Import, *CheckerError)
+type ImportHandlerFunc func(checker *Checker, location common.Location) (Import, error)
 
 // Checker
 
@@ -83,7 +83,6 @@ type Checker struct {
 	Location                           common.Location
 	PredeclaredValues                  []ValueDeclaration
 	PredeclaredTypes                   []TypeDeclaration
-	AllCheckers                        map[common.LocationID]*Checker
 	accessCheckMode                    AccessCheckMode
 	errors                             []error
 	hints                              []Hint
@@ -110,7 +109,6 @@ type Checker struct {
 	locationHandler                    LocationHandlerFunc
 	importHandler                      ImportHandlerFunc
 	checkHandler                       CheckHandlerFunc
-	isChecking                         bool
 }
 
 type Option func(*Checker) error
@@ -165,16 +163,6 @@ func WithAccessCheckMode(mode AccessCheckMode) Option {
 func WithValidTopLevelDeclarationsHandler(handler ValidTopLevelDeclarationsHandlerFunc) Option {
 	return func(checker *Checker) error {
 		checker.validTopLevelDeclarationsHandler = handler
-		return nil
-	}
-}
-
-// WithAllCheckers returns a checker option which sets
-// the given map of checkers as the map of all checkers.
-//
-func WithAllCheckers(allCheckers map[common.LocationID]*Checker) Option {
-	return func(checker *Checker) error {
-		checker.SetAllCheckers(allCheckers)
 		return nil
 	}
 }
@@ -264,11 +252,7 @@ func NewChecker(program *ast.Program, location common.Location, options ...Optio
 
 	checker.declareBaseValues()
 
-	defaultOptions := []Option{
-		WithAllCheckers(map[common.LocationID]*Checker{}),
-	}
-
-	for _, option := range append(defaultOptions, options...) {
+	for _, option := range options {
 		err := option(checker)
 		if err != nil {
 			return nil, err
@@ -281,15 +265,6 @@ func NewChecker(program *ast.Program, location common.Location, options ...Optio
 	}
 
 	return checker, nil
-}
-
-// SetAllCheckers sets the given map of checkers as the map of all checkers.
-//
-func (checker *Checker) SetAllCheckers(allCheckers map[common.LocationID]*Checker) {
-	checker.AllCheckers = allCheckers
-
-	// Register self
-	checker.AllCheckers[checker.Location.ID()] = checker
 }
 
 func (checker *Checker) declareBaseValues() {
@@ -359,7 +334,7 @@ func (checker *Checker) IsChecked() bool {
 
 func (checker *Checker) Check() error {
 	if !checker.IsChecked() {
-		checker.isChecking = true
+		checker.Elaboration.IsChecking = true
 		checker.errors = nil
 		check := func() {
 			checker.Program.Accept(checker)
@@ -369,7 +344,7 @@ func (checker *Checker) Check() error {
 		} else {
 			check()
 		}
-		checker.isChecking = false
+		checker.Elaboration.IsChecking = false
 		checker.isChecked = true
 	}
 	err := checker.CheckerError()
