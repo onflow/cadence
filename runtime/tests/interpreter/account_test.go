@@ -756,7 +756,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					actualBorrowType := capability.(interpreter.CapabilityValue).BorrowType
 
-					rType := inter.Checker.Elaboration.GlobalTypes["R"].Type
+					rType := inter.Program.Elaboration.GlobalTypes["R"].Type
 
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
 						&sema.ReferenceType{
@@ -798,7 +798,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					actualBorrowType := capability.(interpreter.CapabilityValue).BorrowType
 
-					r2Type := inter.Checker.Elaboration.GlobalTypes["R2"].Type
+					r2Type := inter.Program.Elaboration.GlobalTypes["R2"].Type
 
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
 						&sema.ReferenceType{
@@ -891,7 +891,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					actualBorrowType := capability.(interpreter.CapabilityValue).BorrowType
 
-					sType := inter.Checker.Elaboration.GlobalTypes["S"].Type
+					sType := inter.Program.Elaboration.GlobalTypes["S"].Type
 
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
 						&sema.ReferenceType{
@@ -933,7 +933,7 @@ func TestInterpretAuthAccount_link(t *testing.T) {
 
 					actualBorrowType := capability.(interpreter.CapabilityValue).BorrowType
 
-					s2Type := inter.Checker.Elaboration.GlobalTypes["S2"].Type
+					s2Type := inter.Program.Elaboration.GlobalTypes["S2"].Type
 
 					expectedBorrowType := interpreter.ConvertSemaToStaticType(
 						&sema.ReferenceType{

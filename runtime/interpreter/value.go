@@ -5565,7 +5565,7 @@ func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
 	// Get the correct interpreter. The program code might need to be loaded.
 	// NOTE: standard library values have no location
 
-	if v.Location == nil || common.LocationsMatch(interpreter.Checker.Location, v.Location) {
+	if v.Location == nil || common.LocationsMatch(interpreter.Location, v.Location) {
 		return interpreter
 	}
 
