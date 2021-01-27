@@ -21,7 +21,6 @@ package runtime
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/hashicorp/go-multierror"
@@ -82,21 +81,21 @@ func (s *Script) Authorizers() []Address {
 }
 
 type testAccountsInterface struct {
-	newAccount         func(caller Location) (address Address, err error)
+	newAccount         func() (address Address, err error)
 	accountExists      func(address Address) (exists bool, err error)
-	numberOfAccounts   func(caller Location) (count uint64, err error)
-	suspendAccount     func(address Address, caller Location) error
-	unsuspendAccount   func(address Address, caller Location) error
+	numberOfAccounts   func() (count uint64, err error)
+	suspendAccount     func(address Address) error
+	unsuspendAccount   func(address Address) error
 	isAccountSuspended func(address Address) (isSuspended bool, err error)
 }
 
 var _ Accounts = &testAccountsInterface{}
 
-func (i *testAccountsInterface) NewAccount(caller Location) (Address, error) {
+func (i *testAccountsInterface) NewAccount() (Address, error) {
 	if i.newAccount == nil {
 		return Address{}, nil
 	}
-	return i.newAccount(caller)
+	return i.newAccount()
 }
 
 func (i *testAccountsInterface) AccountExists(address Address) (bool, error) {
@@ -106,25 +105,25 @@ func (i *testAccountsInterface) AccountExists(address Address) (bool, error) {
 	return i.accountExists(address)
 }
 
-func (i *testAccountsInterface) NumberOfAccounts(caller Location) (uint64, error) {
+func (i *testAccountsInterface) NumberOfAccounts() (uint64, error) {
 	if i.numberOfAccounts == nil {
 		return 0, nil
 	}
-	return i.numberOfAccounts(caller)
+	return i.numberOfAccounts()
 }
 
-func (i *testAccountsInterface) SuspendAccount(address Address, caller Location) error {
+func (i *testAccountsInterface) SuspendAccount(address Address) error {
 	if i.suspendAccount == nil {
 		return nil
 	}
-	return i.suspendAccount(address, caller)
+	return i.suspendAccount(address)
 }
 
-func (i *testAccountsInterface) UnsuspendAccount(address Address, caller Location) error {
+func (i *testAccountsInterface) UnsuspendAccount(address Address) error {
 	if i.unsuspendAccount == nil {
 		return nil
 	}
-	return i.unsuspendAccount(address, caller)
+	return i.unsuspendAccount(address)
 }
 
 func (i *testAccountsInterface) IsAccountSuspended(address Address) (bool, error) {
@@ -136,9 +135,9 @@ func (i *testAccountsInterface) IsAccountSuspended(address Address) (bool, error
 
 type testAccountContractsInterface struct {
 	contractCode       func(address AddressLocation) (code []byte, err error)
-	updateContractCode func(address AddressLocation, code []byte, caller Location) (err error)
-	removeContractCode func(address AddressLocation, caller Location) (err error)
-	contracts          func(address AddressLocation, caller Location) (name []string, err error)
+	updateContractCode func(address AddressLocation, code []byte) (err error)
+	removeContractCode func(address AddressLocation) (err error)
+	contracts          func(address AddressLocation) (name []string, err error)
 }
 
 var _ AccountContracts = &testAccountContractsInterface{}
@@ -150,64 +149,60 @@ func (i *testAccountContractsInterface) ContractCode(address AddressLocation) ([
 	return i.contractCode(address)
 }
 
-func (i *testAccountContractsInterface) UpdateContractCode(address AddressLocation, code []byte, caller Location) (err error) {
+func (i *testAccountContractsInterface) UpdateContractCode(address AddressLocation, code []byte) (err error) {
 	if i.updateContractCode == nil {
 		return nil
 	}
-	return i.updateContractCode(address, code, caller)
+	return i.updateContractCode(address, code)
 }
 
-func (i *testAccountContractsInterface) RemoveContractCode(address AddressLocation, caller Location) (err error) {
+func (i *testAccountContractsInterface) RemoveContractCode(address AddressLocation) (err error) {
 	if i.removeContractCode == nil {
 		return nil
 	}
-	return i.removeContractCode(address, caller)
+	return i.removeContractCode(address)
 }
 
-func (i *testAccountContractsInterface) Contracts(address AddressLocation, caller Location) (name []string, err error) {
+func (i *testAccountContractsInterface) Contracts(address AddressLocation) (name []string, err error) {
 	if i.contracts == nil {
 		return nil, nil
 	}
-	return i.contracts(address, caller)
+	return i.contracts(address)
 }
 
 type testAccountStorageInterface struct {
-	storedValues map[string][]byte
-	getValue     func(key StorageKey, caller Location) (value StorageValue, err error)
-	setValue     func(key StorageKey, value StorageValue, caller Location) (err error)
-	valueExists  func(key StorageKey, caller Location) (exists bool, err error)
-	storedKeys   func(address Address, caller Location) (iter StorageKeyIterator, err error)
-	storageUsed  func(address Address, caller Location) (value uint64, err error)
+	storedValues map[string]StorageValue
+	getValue     func(key StorageKey) (value StorageValue, err error)
+	setValue     func(key StorageKey, value StorageValue) (err error)
+	valueExists  func(key StorageKey) (exists bool, err error)
+	storedKeys   func(address Address) (iter StorageKeyIterator, err error)
+	storageUsed  func(address Address) (value uint64, err error)
 }
 
 func newTestStorage(
-	onRead func(owner, key, value []byte),
-	onWrite func(owner, key, value []byte),
+	onRead func(key StorageKey, value StorageValue),
+	onWrite func(key StorageKey, value StorageValue),
 ) testAccountStorageInterface {
 
-	storageKey := func(owner, key string) string {
-		return strings.Join([]string{owner, key}, "|")
-	}
-
-	storedValues := map[string][]byte{}
+	storedValues := map[string]StorageValue{}
 
 	storage := testAccountStorageInterface{
 		storedValues: storedValues,
-		valueExists: func(owner, key []byte) (bool, error) {
-			value := storedValues[storageKey(string(owner), string(key))]
+		valueExists: func(key StorageKey) (bool, error) {
+			value := storedValues[key.String()]
 			return len(value) > 0, nil
 		},
-		getValue: func(owner, key []byte) (value []byte, err error) {
-			value = storedValues[storageKey(string(owner), string(key))]
+		getValue: func(key StorageKey) (value StorageValue, err error) {
+			value = storedValues[key.String()]
 			if onRead != nil {
-				onRead(owner, key, value)
+				onRead(key, value)
 			}
 			return value, nil
 		},
-		setValue: func(owner, key, value []byte) (err error) {
-			storedValues[storageKey(string(owner), string(key))] = value
+		setValue: func(key StorageKey, value StorageValue) (err error) {
+			storedValues[key.String()] = value
 			if onWrite != nil {
-				onWrite(owner, key, value)
+				onWrite(key, value)
 			}
 			return nil
 		},
@@ -218,69 +213,69 @@ func newTestStorage(
 
 var _ AccountStorage = &testAccountStorageInterface{}
 
-func (i *testAccountStorageInterface) GetValue(key StorageKey, caller Location) (StorageValue, error) {
+func (i *testAccountStorageInterface) GetValue(key StorageKey) (StorageValue, error) {
 	if i.getValue == nil {
 		return nil, nil
 	}
-	return i.getValue(key, caller)
+	return i.getValue(key)
 }
 
-func (i *testAccountStorageInterface) SetValue(key StorageKey, value StorageValue, caller Location) error {
+func (i *testAccountStorageInterface) SetValue(key StorageKey, value StorageValue) error {
 	if i.setValue == nil {
 		return nil
 	}
-	return i.setValue(key, value, caller)
+	return i.setValue(key, value)
 
 }
 
-func (i *testAccountStorageInterface) ValueExists(key StorageKey, caller Location) (exists bool, err error) {
+func (i *testAccountStorageInterface) ValueExists(key StorageKey) (exists bool, err error) {
 	if i.valueExists == nil {
 		return false, nil
 	}
-	return i.valueExists(key, caller)
+	return i.valueExists(key)
 }
 
-func (i *testAccountStorageInterface) StorageUsed(address Address, caller Location) (value uint64, err error) {
+func (i *testAccountStorageInterface) StorageUsed(address Address) (value uint64, err error) {
 	if i.storageUsed == nil {
 		return 0, nil
 	}
-	return i.storageUsed(address, caller)
+	return i.storageUsed(address)
 }
 
-func (i *testAccountStorageInterface) StoredKeys(address Address, caller Location) (StorageKeyIterator, error) {
+func (i *testAccountStorageInterface) StoredKeys(address Address) (StorageKeyIterator, error) {
 	if i.storedKeys == nil {
 		return nil, nil
 	}
-	return i.storedKeys(address, caller)
+	return i.storedKeys(address)
 }
 
 type testAccountKeysInterface struct {
-	addAccountKey    func(address Address, publicKey []byte, caller Location) error
-	revokeAccountKey func(address Address, index int, caller Location) (publicKey []byte, err error)
-	accountPublicKey func(address Address, index int, caller Location) (publicKey []byte, err error)
+	addAccountKey    func(address Address, publicKey []byte) error
+	revokeAccountKey func(address Address, index int) (publicKey []byte, err error)
+	accountPublicKey func(address Address, index int) (publicKey []byte, err error)
 }
 
 var _ AccountKeys = &testAccountKeysInterface{}
 
-func (i *testAccountKeysInterface) AddAccountKey(address Address, publicKey []byte, caller Location) error {
+func (i *testAccountKeysInterface) AddAccountKey(address Address, publicKey []byte) error {
 	if i.addAccountKey == nil {
 		return nil
 	}
-	return i.addAccountKey(address, publicKey, caller)
+	return i.addAccountKey(address, publicKey)
 }
 
-func (i *testAccountKeysInterface) RevokeAccountKey(address Address, index int, caller Location) ([]byte, error) {
+func (i *testAccountKeysInterface) RevokeAccountKey(address Address, index int) ([]byte, error) {
 	if i.revokeAccountKey == nil {
 		return nil, nil
 	}
-	return i.revokeAccountKey(address, index, caller)
+	return i.revokeAccountKey(address, index)
 }
 
-func (i *testAccountKeysInterface) AccountPublicKey(address Address, index int, caller Location) ([]byte, error) {
+func (i *testAccountKeysInterface) AccountPublicKey(address Address, index int) ([]byte, error) {
 	if i.accountPublicKey == nil {
 		return nil, nil
 	}
-	return i.accountPublicKey(address, index, caller)
+	return i.accountPublicKey(address, index)
 }
 
 type testLocationResolverInterface struct {

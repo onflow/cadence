@@ -275,15 +275,15 @@ func (i *EmptyAccountStorage) SetValue(_ StorageKey, _ StorageValue) error {
 	return nil
 }
 
-func (i EmptyAccountStorage) StorageUsed(_ Address) (uint64, error) {
+func (i *EmptyAccountStorage) StorageUsed(_ Address) (uint64, error) {
 	return 0, nil
 }
 
-func (i EmptyAccountStorage) StorageCapacity(_ Address) (uint64, error) {
+func (i *EmptyAccountStorage) StorageCapacity(_ Address) (uint64, error) {
 	return 0, nil
 }
 
-func (i EmptyAccountStorage) StoredKeys(_ Address) (StorageKeyIterator, error) {
+func (i *EmptyAccountStorage) StoredKeys(_ Address) (StorageKeyIterator, error) {
 	return nil, nil
 }
 
