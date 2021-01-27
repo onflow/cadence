@@ -579,7 +579,7 @@ func TestExportEventValue(t *testing.T) {
 
 // mock runtime.Interface to capture events
 type eventCapturingInterface struct {
-	EmptyRuntimeInterface
+	EmptyResults
 	events []cadence.Event
 }
 

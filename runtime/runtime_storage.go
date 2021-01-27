@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"strings"
 	"time"
 
 	"github.com/onflow/cadence"
@@ -32,6 +33,16 @@ type StorageKey struct {
 	Key     string
 }
 
+func (s *StorageKey) String() string {
+	return strings.Join([]string{s.Address.String(), s.Key}, "|")
+}
+
+type StorageValue []byte
+type StorageKeyIterator interface {
+	Next() StorageKey
+	Size() uint64
+}
+
 type Cache map[StorageKey]CacheEntry
 
 type CacheEntry struct {
@@ -42,24 +53,26 @@ type CacheEntry struct {
 }
 
 type runtimeStorage struct {
-	runtimeInterface        Interface
-	highLevelStorageEnabled bool
-	highLevelStorage        HighLevelStorage
-	cache                   Cache
+	accountStorage           AccountStorage
+	metrics                  Metrics
+	highLevelAccountsEnabled bool
+	highLevelAccountStorage  HighLevelAccountStorage
+	cache                    Cache
 }
 
-func newRuntimeStorage(runtimeInterface Interface) *runtimeStorage {
-	highLevelStorageEnabled := false
-	highLevelStorage, ok := runtimeInterface.(HighLevelStorage)
+func newRuntimeStorage(accountStorage AccountStorage, metrics Metrics) *runtimeStorage {
+	highLevelAccountsEnabled := false
+	highLevelAccounts, ok := accountStorage.(HighLevelAccountStorage)
 	if ok {
-		highLevelStorageEnabled = highLevelStorage.HighLevelStorageEnabled()
+		highLevelAccountsEnabled = highLevelAccounts.HighLevelStorageEnabled()
 	}
 
 	return &runtimeStorage{
-		runtimeInterface:        runtimeInterface,
-		cache:                   Cache{},
-		highLevelStorage:        highLevelStorage,
-		highLevelStorageEnabled: highLevelStorageEnabled,
+		accountStorage:           accountStorage,
+		metrics:                  metrics,
+		cache:                    Cache{},
+		highLevelAccountStorage:  highLevelAccounts,
+		highLevelAccountsEnabled: highLevelAccountsEnabled,
 	}
 }
 
@@ -92,7 +105,7 @@ func (s *runtimeStorage) valueExists(
 	var exists bool
 	var err error
 	wrapPanic(func() {
-		exists, err = s.runtimeInterface.ValueExists(address[:], []byte(key))
+		exists, err = s.accountStorage.ValueExists(StorageKey{address, key})
 	})
 	if err != nil {
 		panic(err)
@@ -143,7 +156,7 @@ func (s *runtimeStorage) readValue(
 	var storedData []byte
 	var err error
 	wrapPanic(func() {
-		storedData, err = s.runtimeInterface.GetValue(address[:], []byte(key))
+		storedData, err = s.accountStorage.GetValue(StorageKey{address, key})
 	})
 	if err != nil {
 		panic(err)
@@ -166,7 +179,7 @@ func (s *runtimeStorage) readValue(
 		func() {
 			storedValue, err = interpreter.DecodeValue(storedData, &address, []string{key}, version)
 		},
-		s.runtimeInterface,
+		s.metrics,
 		func(metrics Metrics, duration time.Duration) {
 			metrics.ValueDecoded(duration)
 		},
@@ -244,7 +257,7 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 			value:      entry.Value,
 		})
 
-		if s.highLevelStorageEnabled {
+		if s.highLevelAccountsEnabled {
 			var err error
 
 			var value cadence.Value
@@ -253,7 +266,7 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 			}
 
 			wrapPanic(func() {
-				err = s.highLevelStorage.SetCadenceValue(fullKey.Address, fullKey.Key, value)
+				err = s.highLevelAccountStorage.SetCadenceValue(fullKey.Address, fullKey.Key, value)
 			})
 			if err != nil {
 				panic(err)
@@ -309,9 +322,9 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 
 		var err error
 		wrapPanic(func() {
-			err = s.runtimeInterface.SetValue(
-				item.storageKey.Address[:],
-				[]byte(item.storageKey.Key),
+			err = s.accountStorage.SetValue(StorageKey{
+				item.storageKey.Address,
+				item.storageKey.Key},
 				newData,
 			)
 		})
@@ -333,7 +346,7 @@ func (s *runtimeStorage) encodeValue(
 		func() {
 			data, deferrals, err = interpreter.EncodeValue(value, []string{path}, true)
 		},
-		s.runtimeInterface,
+		s.metrics,
 		func(metrics Metrics, duration time.Duration) {
 			metrics.ValueEncoded(duration)
 		},
@@ -345,18 +358,16 @@ func (s *runtimeStorage) move(
 	oldOwner common.Address, oldKey string,
 	newOwner common.Address, newKey string,
 ) {
-	data, err := s.runtimeInterface.GetValue(oldOwner[:], []byte(oldKey))
+	data, err := s.accountStorage.GetValue(StorageKey{oldOwner, oldKey})
 	if err != nil {
 		panic(err)
 	}
-
-	err = s.runtimeInterface.SetValue(oldOwner[:], []byte(oldKey), nil)
+	err = s.accountStorage.SetValue(StorageKey{oldOwner, oldKey}, nil)
 	if err != nil {
 		panic(err)
 	}
-
 	// NOTE: not prefix with magic, as data is moved, so might already have it
-	err = s.runtimeInterface.SetValue(newOwner[:], []byte(newKey), data)
+	err = s.accountStorage.SetValue(StorageKey{newOwner, newKey}, data)
 	if err != nil {
 		panic(err)
 	}

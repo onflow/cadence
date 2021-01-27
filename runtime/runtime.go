@@ -38,13 +38,17 @@ import (
 	"github.com/onflow/cadence/runtime/trampoline"
 )
 
-type Script struct {
-	Source    []byte
-	Arguments [][]byte
-}
-
 type Context struct {
-	Interface         Interface
+	Accounts          Accounts
+	AccountContracts  AccountContracts
+	AccountStorage    AccountStorage
+	AccountKeys       AccountKeys
+	Results           Results
+	Metrics           Metrics
+	ProgramCache      ProgramCache
+	CryptoProvider    CryptoProvider
+	LocationResolver  LocationResolver
+	Utils             Utils
 	Location          Location
 	PredeclaredValues []ValueDeclaration
 	codes             map[common.LocationID]string
@@ -75,25 +79,43 @@ func (c *Context) InitializeCodesAndPrograms() {
 	}
 }
 
+// Runnable can be run by a runner
+//
+// Runnable provides read-only data needed for execution
+type Runnable interface {
+	// Source returns the cadence script to be executed
+	Source() []byte
+	// Arguments returns arguments for this script
+	Arguments(argumentTypes []cadence.Type) ([]cadence.Value, error)
+	// Authorizers returns a list address who has authorized this script
+	Authorizers() []Address
+}
+
+// Runner runs a "Runnable" and stores result into "Results".
+// It returns fatal errors
+// A runner augments the Cadence runtime with the host functionality.
+//
+// note that non-fatal runtime errors are captured inside the result
+// and error should only be used for returning fatal errors.
+type Runner interface {
+	// RunTransaction runs a transactions
+	RunTransaction(Runnable, Context) error
+
+	// RunScript runs scripts (read-only operations)
+	RunScript(Runnable, Context) (cadence.Value, error)
+}
+
 // Runtime is a runtime capable of executing Cadence.
 type Runtime interface {
-	// ExecuteScript executes the given script.
-	//
-	// This function returns an error if the program has errors (e.g syntax errors, type errors),
-	// or if the execution fails.
-	ExecuteScript(Script, Context) (cadence.Value, error)
-
-	// ExecuteTransaction executes the given transaction.
-	//
-	// This function returns an error if the program has errors (e.g syntax errors, type errors),
-	// or if the execution fails.
-	ExecuteTransaction(Script, Context) error
+	Runner
 
 	// ParseAndCheckProgram parses and checks the given code without executing the program.
 	//
 	// This function returns an error if the program contains any syntax or semantic errors.
 	ParseAndCheckProgram(source []byte, context Context) (*sema.Checker, error)
 
+	// RAMTIN: this can be moved to construction and doesn't have to be a method I guess,
+	// unless there are cases that we change the reporting in between transactions.
 	// SetCoverageReport activates reporting coverage in the given report.
 	// Passing nil disables coverage reporting (default).
 	//
@@ -133,11 +155,10 @@ func validTopLevelDeclarations(location common.Location) []common.DeclarationKin
 
 func reportMetric(
 	f func(),
-	runtimeInterface Interface,
+	metrics Metrics,
 	report func(Metrics, time.Duration),
 ) {
-	metrics, ok := runtimeInterface.(Metrics)
-	if !ok {
+	if metrics == nil {
 		f()
 		return
 	}
@@ -169,14 +190,14 @@ func (r *interpreterRuntime) SetCoverageReport(coverageReport *CoverageReport) {
 	r.coverageReport = coverageReport
 }
 
-func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cadence.Value, error) {
+func (r *interpreterRuntime) RunScript(runnable Runnable, context Context) (cadence.Value, error) {
 	context.InitializeCodesAndPrograms()
 
-	runtimeStorage := newRuntimeStorage(context.Interface)
+	runtimeStorage := newRuntimeStorage(context.AccountStorage, context.Metrics)
 
 	functions := r.standardLibraryFunctions(context, runtimeStorage)
 
-	checker, err := r.parseAndCheckProgram(script.Source, context, functions, nil, false)
+	checker, err := r.parseAndCheckProgram(runnable.Source(), context, functions, nil, false)
 	if err != nil {
 		return nil, newError(err, context)
 	}
@@ -186,9 +207,12 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		return nil, newError(err, context)
 	}
 
+	exportedParameterTypes := make([]cadence.Type, len(functionEntryPointType.Parameters))
+
 	// Ensure the entry point's parameter types are storable
 	if len(functionEntryPointType.Parameters) > 0 {
 		for _, param := range functionEntryPointType.Parameters {
+			exportedParameterTypes = append(exportedParameterTypes, ExportType(param.TypeAnnotation.Type, map[sema.TypeID]cadence.Type{}))
 			if !param.TypeAnnotation.Type.IsStorable(map[*sema.Member]bool{}) {
 				err = &ScriptParameterTypeNotStorableError{
 					Type: param.TypeAnnotation.Type,
@@ -206,10 +230,14 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		return nil, newError(err, context)
 	}
 
+	var arguments []cadence.Value
+	wrapPanic(func() {
+		arguments, err = runnable.Arguments(exportedParameterTypes)
+	})
+
 	interpret := scriptExecutionFunction(
 		functionEntryPointType.Parameters,
-		script.Arguments,
-		context.Interface,
+		arguments,
 	)
 
 	value, inter, err := r.interpret(
@@ -238,13 +266,11 @@ type interpretFunc func(inter *interpreter.Interpreter) (interpreter.Value, erro
 
 func scriptExecutionFunction(
 	parameters []*sema.Parameter,
-	arguments [][]byte,
-	runtimeInterface Interface,
+	arguments []cadence.Value,
 ) interpretFunc {
 	return func(inter *interpreter.Interpreter) (interpreter.Value, error) {
 		values, err := validateArgumentParams(
 			inter,
-			runtimeInterface,
 			arguments,
 			parameters)
 		if err != nil {
@@ -282,7 +308,7 @@ func (r *interpreterRuntime) interpret(
 			}
 			result, err = f(inter)
 		},
-		context.Interface,
+		context.Metrics,
 		func(metrics Metrics, duration time.Duration) {
 			metrics.ProgramInterpreted(context.Location, duration)
 		},
@@ -307,10 +333,10 @@ func (r *interpreterRuntime) newAuthAccountValue(
 ) interpreter.AuthAccountValue {
 	return interpreter.NewAuthAccountValue(
 		addressValue,
-		storageUsedGetFunction(addressValue, context.Interface, runtimeStorage),
-		storageCapacityGetFunction(addressValue, context.Interface),
-		r.newAddPublicKeyFunction(addressValue, context.Interface),
-		r.newRemovePublicKeyFunction(addressValue, context.Interface),
+		storageUsedGetFunction(addressValue, context.AccountStorage, runtimeStorage),
+		storageCapacityGetFunction(addressValue, context.Accounts),
+		r.newAddPublicKeyFunction(addressValue, context.AccountKeys, context.Results),
+		r.newRemovePublicKeyFunction(addressValue, context.AccountKeys, context.Results),
 		r.newAuthAccountContracts(
 			addressValue,
 			context,
@@ -319,14 +345,16 @@ func (r *interpreterRuntime) newAuthAccountValue(
 	)
 }
 
-func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) error {
+func (r *interpreterRuntime) RunTransaction(runnable Runnable, context Context) error {
+	source := runnable.Source()
+
 	context.InitializeCodesAndPrograms()
 
-	runtimeStorage := newRuntimeStorage(context.Interface)
+	runtimeStorage := newRuntimeStorage(context.AccountStorage, context.Metrics)
 
 	functions := r.standardLibraryFunctions(context, runtimeStorage)
 
-	checker, err := r.parseAndCheckProgram(script.Source, context, functions, nil, false)
+	checker, err := r.parseAndCheckProgram(source, context, functions, nil, false)
 	if err != nil {
 		return newError(err, context)
 	}
@@ -342,16 +370,19 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 
 	transactionType := transactions[0]
 
-	var authorizers []Address
-	wrapPanic(func() {
-		authorizers, err = context.Interface.GetSigningAccounts()
-	})
-	if err != nil {
-		return newError(err, context)
-	}
+	authorizers := runnable.Authorizers()
 	// check parameter count
 
-	argumentCount := len(script.Arguments)
+	exportedParameterTypes := make([]cadence.Type, len(transactionType.Parameters))
+	for _, param := range transactionType.Parameters {
+		exportedParameterTypes = append(exportedParameterTypes, ExportType(param.TypeAnnotation.Type, map[sema.TypeID]cadence.Type{}))
+
+	}
+	var arguments []cadence.Value
+	wrapPanic(func() {
+		arguments, err = runnable.Arguments(exportedParameterTypes)
+	})
+	argumentCount := len(arguments)
 	authorizerCount := len(authorizers)
 
 	transactionParameterCount := len(transactionType.Parameters)
@@ -373,9 +404,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 	}
 
 	// gather authorizers
-
 	authorizerValues := make([]interpreter.Value, authorizerCount)
-
 	for i, address := range authorizers {
 		authorizerValues[i] = r.newAuthAccountValue(
 			interpreter.NewAddressValue(address),
@@ -392,8 +421,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		nil,
 		r.transactionExecutionFunction(
 			transactionType.Parameters,
-			script.Arguments,
-			context.Interface,
+			arguments,
 			authorizerValues,
 		),
 	)
@@ -427,20 +455,19 @@ func wrapPanic(f func()) {
 
 func (r *interpreterRuntime) transactionExecutionFunction(
 	parameters []*sema.Parameter,
-	arguments [][]byte,
-	runtimeInterface Interface,
+	arguments []cadence.Value,
 	authorizerValues []interpreter.Value,
 ) interpretFunc {
 	return func(inter *interpreter.Interpreter) (interpreter.Value, error) {
 		values, err := validateArgumentParams(
 			inter,
-			runtimeInterface,
 			arguments,
 			parameters,
 		)
 		if err != nil {
 			return nil, err
 		}
+
 		allArguments := append(values, authorizerValues...)
 		err = inter.InvokeTransaction(0, allArguments...)
 		return nil, err
@@ -449,8 +476,7 @@ func (r *interpreterRuntime) transactionExecutionFunction(
 
 func validateArgumentParams(
 	inter *interpreter.Interpreter,
-	runtimeInterface Interface,
-	arguments [][]byte,
+	arguments []cadence.Value,
 	parameters []*sema.Parameter,
 ) (
 	[]interpreter.Value,
@@ -472,26 +498,7 @@ func validateArgumentParams(
 	for i, parameter := range parameters {
 		parameterType := parameter.TypeAnnotation.Type
 		argument := arguments[i]
-
-		exportedParameterType := ExportType(parameterType, map[sema.TypeID]cadence.Type{})
-		var value cadence.Value
-		var err error
-
-		wrapPanic(func() {
-			value, err = runtimeInterface.DecodeArgument(
-				argument,
-				exportedParameterType,
-			)
-		})
-
-		if err != nil {
-			return nil, &InvalidEntryPointArgumentError{
-				Index: i,
-				Err:   err,
-			}
-		}
-
-		arg := importValue(value)
+		arg := importValue(argument)
 
 		// Check that decoded value is a subtype of static parameter type
 		if !interpreter.IsSubType(arg.DynamicType(inter), parameterType) {
@@ -514,7 +521,7 @@ func validateArgumentParams(
 func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) (*sema.Checker, error) {
 	context.InitializeCodesAndPrograms()
 
-	runtimeStorage := newRuntimeStorage(context.Interface)
+	runtimeStorage := newRuntimeStorage(context.AccountStorage, context.Metrics)
 	functions := r.standardLibraryFunctions(context, runtimeStorage)
 
 	checker, err := r.parseAndCheckProgram(code, context, functions, nil, true)
@@ -548,7 +555,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 
 	if useCache {
 		wrapPanic(func() {
-			program, err = context.Interface.GetCachedProgram(context.Location)
+			program, err = context.ProgramCache.GetCachedProgram(context.Location)
 		})
 		if err != nil {
 			return nil, wrapError(err)
@@ -581,7 +588,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 				sema.WithLocationHandler(
 					func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
 						wrapPanic(func() {
-							res, err = context.Interface.ResolveLocation(identifiers, location)
+							res, err = context.LocationResolver.ResolveLocation(identifiers, location)
 						})
 						return
 					},
@@ -623,7 +630,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 						func() {
 							check()
 						},
-						context.Interface,
+						context.Metrics,
 						func(metrics Metrics, duration time.Duration) {
 							metrics.ProgramChecked(location, duration)
 						},
@@ -644,7 +651,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 
 	// After the program has passed semantic analysis, cache the program AST.
 	wrapPanic(func() {
-		err = context.Interface.CacheProgram(context.Location, program)
+		err = context.ProgramCache.CacheProgram(context.Location, program)
 	})
 	if err != nil {
 		return nil, err
@@ -675,7 +682,7 @@ func (r *interpreterRuntime) newInterpreter(
 				eventValue *interpreter.CompositeValue,
 				eventType *sema.CompositeType,
 			) error {
-				return r.emitEvent(inter, context.Interface, eventValue, eventType)
+				return r.emitEvent(inter, context.Results, eventValue, eventType)
 			},
 		),
 		interpreter.WithStorageKeyHandler(
@@ -688,7 +695,7 @@ func (r *interpreterRuntime) newInterpreter(
 		),
 		interpreter.WithUUIDHandler(func() (uuid uint64, err error) {
 			wrapPanic(func() {
-				uuid, err = context.Interface.GenerateUUID()
+				uuid, err = context.Utils.GenerateUUID()
 			})
 			return
 		}),
@@ -705,7 +712,7 @@ func (r *interpreterRuntime) newInterpreter(
 					compositeType,
 					constructor,
 					invocationRange,
-					context.Interface,
+					context.CryptoProvider,
 					runtimeStorage,
 				)
 			},
@@ -723,7 +730,7 @@ func (r *interpreterRuntime) newInterpreter(
 	)
 
 	defaultOptions = append(defaultOptions,
-		r.meteringInterpreterOptions(context.Interface)...,
+		r.meteringInterpreterOptions(context.Results)...,
 	)
 
 	return interpreter.NewInterpreter(
@@ -815,10 +822,10 @@ func (r *interpreterRuntime) storageInterpreterOptions(runtimeStorage *runtimeSt
 	}
 }
 
-func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interface) []interpreter.Option {
+func (r *interpreterRuntime) meteringInterpreterOptions(results Results) []interpreter.Option {
 	var limit uint64
 	wrapPanic(func() {
-		limit = runtimeInterface.GetComputationLimit()
+		limit = results.ComputationLimit()
 	})
 	if limit == 0 {
 		return nil
@@ -839,7 +846,7 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 
 		var err error
 		wrapPanic(func() {
-			err = runtimeInterface.SetComputationUsed(used)
+			err = results.AddComputationUsed(1)
 		})
 		if err != nil {
 			panic(err)
@@ -874,12 +881,12 @@ func (r *interpreterRuntime) standardLibraryFunctions(
 ) stdlib.StandardLibraryFunctions {
 	return append(
 		stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{
-			CreateAccount:   r.newCreateAccountFunction(context, runtimeStorage),
-			GetAccount:      r.newGetAccountFunction(context.Interface, runtimeStorage),
-			Log:             r.newLogFunction(context.Interface),
-			GetCurrentBlock: r.newGetCurrentBlockFunction(context.Interface),
-			GetBlock:        r.newGetBlockFunction(context.Interface),
-			UnsafeRandom:    r.newUnsafeRandomFunction(context.Interface),
+			CreateAccount: r.newCreateAccountFunction(context, runtimeStorage),
+			GetAccount:    r.newGetAccountFunction(context.AccountStorage, context.Accounts, runtimeStorage),
+			Log:           r.newLogFunction(context.Results),
+			// GetCurrentBlock: r.newGetCurrentBlockFunction(context.Interface),
+			// GetBlock:        r.newGetBlockFunction(context.Interface),
+			// UnsafeRandom:    r.newUnsafeRandomFunction(context.Interface),
 		}),
 		stdlib.BuiltinFunctions...,
 	)
@@ -891,7 +898,7 @@ func (r *interpreterRuntime) importResolver(startContext Context) ImportResolver
 		context := startContext.WithLocation(location)
 
 		wrapPanic(func() {
-			program, err = context.Interface.GetCachedProgram(location)
+			program, err = context.ProgramCache.GetCachedProgram(location)
 		})
 		if err != nil {
 			return nil, err
@@ -903,14 +910,12 @@ func (r *interpreterRuntime) importResolver(startContext Context) ImportResolver
 		var code []byte
 		if addressLocation, ok := location.(common.AddressLocation); ok {
 			wrapPanic(func() {
-				code, err = context.Interface.GetAccountContractCode(
-					addressLocation.Address,
-					addressLocation.Name,
-				)
+				code, err = context.AccountContracts.ContractCode(addressLocation)
 			})
+			// TODO : do we need this ?
 		} else {
 			wrapPanic(func() {
-				code, err = context.Interface.GetCode(location)
+				code, err = context.LocationResolver.GetCode(location)
 			})
 		}
 		if err != nil {
@@ -927,7 +932,7 @@ func (r *interpreterRuntime) importResolver(startContext Context) ImportResolver
 		context.SetProgram(location, program)
 
 		wrapPanic(func() {
-			err = context.Interface.CacheProgram(location, program)
+			err = context.ProgramCache.CacheProgram(location, program)
 		})
 		if err != nil {
 			return nil, err
@@ -951,7 +956,7 @@ func (r *interpreterRuntime) parse(
 
 	reportMetric(
 		parse,
-		context.Interface,
+		context.Metrics,
 		func(metrics Metrics, duration time.Duration) {
 			metrics.ProgramParsed(context.Location, duration)
 		},
@@ -963,7 +968,7 @@ func (r *interpreterRuntime) parse(
 // emitEvent converts an event value to native Go types and emits it to the runtime interface.
 func (r *interpreterRuntime) emitEvent(
 	inter *interpreter.Interpreter,
-	runtimeInterface Interface,
+	results Results,
 	event *interpreter.CompositeValue,
 	eventType *sema.CompositeType,
 ) error {
@@ -981,14 +986,14 @@ func (r *interpreterRuntime) emitEvent(
 	var err error
 	exportedEvent := exportEvent(eventValue)
 	wrapPanic(func() {
-		err = runtimeInterface.EmitEvent(exportedEvent)
+		err = results.AppendEvent(exportedEvent)
 	})
 	return err
 }
 
 func (r *interpreterRuntime) emitAccountEvent(
 	eventType *sema.CompositeType,
-	runtimeInterface Interface,
+	results Results,
 	eventFields []exportableValue,
 ) {
 	eventValue := exportableEvent{
@@ -1011,7 +1016,7 @@ func (r *interpreterRuntime) emitAccountEvent(
 	var err error
 	exportedEvent := exportEvent(eventValue)
 	wrapPanic(func() {
-		err = runtimeInterface.EmitEvent(exportedEvent)
+		err = results.AppendEvent(exportedEvent)
 	})
 	if err != nil {
 		panic(err)
@@ -1028,18 +1033,19 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 	runtimeStorage *runtimeStorage,
 ) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
-		payer, ok := invocation.Arguments[0].(interpreter.AuthAccountValue)
-		if !ok {
-			panic(fmt.Sprintf(
-				"%[1]s requires the third argument to be an %[1]s",
-				&sema.AuthAccountType{},
-			))
-		}
+		// TODO RAMTIN : clean me
+		// payer, ok := invocation.Arguments[0].(interpreter.AuthAccountValue)
+		// if !ok {
+		// 	panic(fmt.Sprintf(
+		// 		"%[1]s requires the third argument to be an %[1]s",
+		// 		&sema.AuthAccountType{},
+		// 	))
+		// }
 
 		var address Address
 		var err error
 		wrapPanic(func() {
-			address, err = context.Interface.CreateAccount(payer.AddressValue().ToAddress())
+			address, err = context.Accounts.NewAccount()
 		})
 		if err != nil {
 			panic(err)
@@ -1049,7 +1055,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 
 		r.emitAccountEvent(
 			stdlib.AccountCreatedEventType,
-			context.Interface,
+			context.Results,
 			[]exportableValue{
 				newExportableValue(addressValue, nil),
 			},
@@ -1062,7 +1068,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 }
 func storageUsedGetFunction(
 	addressValue interpreter.AddressValue,
-	runtimeInterface Interface,
+	accountStorage AccountStorage,
 	runtimeStorage *runtimeStorage,
 ) func(inter *interpreter.Interpreter) interpreter.UInt64Value {
 	address := addressValue.ToAddress()
@@ -1075,7 +1081,7 @@ func storageUsedGetFunction(
 		var capacity uint64
 		var err error
 		wrapPanic(func() {
-			capacity, err = runtimeInterface.GetStorageUsed(address)
+			capacity, err = accountStorage.StorageUsed(address)
 		})
 		if err != nil {
 			panic(err)
@@ -1084,14 +1090,17 @@ func storageUsedGetFunction(
 	}
 }
 
-func storageCapacityGetFunction(addressValue interpreter.AddressValue, runtimeInterface Interface) func() interpreter.UInt64Value {
-	address := addressValue.ToAddress()
+func storageCapacityGetFunction(addressValue interpreter.AddressValue, accounts Accounts) func() interpreter.UInt64Value {
+	// TODO RAMTIN clean me
+	// address := addressValue.ToAddress()
 	return func() interpreter.UInt64Value {
 		var capacity uint64
 		var err error
-		wrapPanic(func() {
-			capacity, err = runtimeInterface.GetStorageCapacity(address)
-		})
+
+		// TODO Ramtin fix me
+		// wrapPanic(func() {
+		// 	capacity, err = accounts.GetStorageCapacity(address)
+		// })
 		if err != nil {
 			panic(err)
 		}
@@ -1101,7 +1110,8 @@ func storageCapacityGetFunction(addressValue interpreter.AddressValue, runtimeIn
 
 func (r *interpreterRuntime) newAddPublicKeyFunction(
 	addressValue interpreter.AddressValue,
-	runtimeInterface Interface,
+	accountKeys AccountKeys,
+	results Results,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
@@ -1112,8 +1122,9 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 				panic("addPublicKey requires the first argument to be a byte array")
 			}
 
+			// TODO RAMTIN validate if this is a right way of passing location
 			wrapPanic(func() {
-				err = runtimeInterface.AddAccountKey(addressValue.ToAddress(), publicKey)
+				err = accountKeys.AddAccountKey(addressValue.ToAddress(), publicKey)
 			})
 			if err != nil {
 				panic(err)
@@ -1121,7 +1132,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 
 			r.emitAccountEvent(
 				stdlib.AccountKeyAddedEventType,
-				runtimeInterface,
+				results,
 				[]exportableValue{
 					newExportableValue(addressValue, nil),
 					newExportableValue(publicKeyValue, nil),
@@ -1136,7 +1147,8 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 
 func (r *interpreterRuntime) newRemovePublicKeyFunction(
 	addressValue interpreter.AddressValue,
-	runtimeInterface Interface,
+	accountKeys AccountKeys,
+	results Results,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
@@ -1145,7 +1157,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 			var publicKey []byte
 			var err error
 			wrapPanic(func() {
-				publicKey, err = runtimeInterface.RemoveAccountKey(addressValue.ToAddress(), index.ToInt())
+				publicKey, err = accountKeys.RevokeAccountKey(addressValue.ToAddress(), index.ToInt())
 			})
 			if err != nil {
 				panic(err)
@@ -1155,7 +1167,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 
 			r.emitAccountEvent(
 				stdlib.AccountKeyRemovedEventType,
-				runtimeInterface,
+				results,
 				[]exportableValue{
 					newExportableValue(addressValue, nil),
 					newExportableValue(publicKeyValue, nil),
@@ -1193,7 +1205,7 @@ func (r *interpreterRuntime) loadContract(
 	compositeType *sema.CompositeType,
 	constructor interpreter.FunctionValue,
 	invocationRange ast.Range,
-	runtimeInterface Interface,
+	cryptoProvider CryptoProvider,
 	runtimeStorage *runtimeStorage,
 ) *interpreter.CompositeValue {
 
@@ -1202,8 +1214,8 @@ func (r *interpreterRuntime) loadContract(
 		contract, err := stdlib.NewCryptoContract(
 			inter,
 			constructor,
-			runtimeInterface,
-			runtimeInterface,
+			cryptoProvider,
+			cryptoProvider,
 			invocationRange,
 		)
 		if err != nil {
@@ -1337,7 +1349,7 @@ func (r *interpreterRuntime) instantiateContract(
 					compositeType,
 					constructor,
 					invocationRange,
-					context.Interface,
+					context.CryptoProvider,
 					runtimeStorage,
 				)
 			},
@@ -1360,24 +1372,24 @@ func (r *interpreterRuntime) instantiateContract(
 	return contract, err
 }
 
-func (r *interpreterRuntime) newGetAccountFunction(runtimeInterface Interface, runtimeStorage *runtimeStorage) interpreter.HostFunction {
+func (r *interpreterRuntime) newGetAccountFunction(accountStorage AccountStorage, accounts Accounts, runtimeStorage *runtimeStorage) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
 		accountAddress := invocation.Arguments[0].(interpreter.AddressValue)
 		publicAccount := interpreter.NewPublicAccountValue(
 			accountAddress,
-			storageUsedGetFunction(accountAddress, runtimeInterface, runtimeStorage),
-			storageCapacityGetFunction(accountAddress, runtimeInterface),
+			storageUsedGetFunction(accountAddress, accountStorage, runtimeStorage),
+			storageCapacityGetFunction(accountAddress, accounts),
 		)
 		return trampoline.Done{Result: publicAccount}
 	}
 }
 
-func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpreter.HostFunction {
+func (r *interpreterRuntime) newLogFunction(results Results) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
 		message := fmt.Sprint(invocation.Arguments[0])
 		var err error
 		wrapPanic(func() {
-			err = runtimeInterface.Log(message)
+			err = results.AppendLog(message)
 		})
 		if err != nil {
 			panic(err)
@@ -1387,83 +1399,83 @@ func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpre
 	}
 }
 
-func (r *interpreterRuntime) getCurrentBlockHeight(runtimeInterface Interface) (currentBlockHeight uint64, err error) {
-	wrapPanic(func() {
-		currentBlockHeight, err = runtimeInterface.GetCurrentBlockHeight()
-	})
-	return
-}
+// func (r *interpreterRuntime) getCurrentBlockHeight(runtimeInterface Interface) (currentBlockHeight uint64, err error) {
+// 	wrapPanic(func() {
+// 		currentBlockHeight, err = runtimeInterface.GetCurrentBlockHeight()
+// 	})
+// 	return
+// }
 
-func (r *interpreterRuntime) getBlockAtHeight(height uint64, runtimeInterface Interface) (*interpreter.BlockValue, error) {
+// func (r *interpreterRuntime) getBlockAtHeight(height uint64, runtimeInterface Interface) (*interpreter.BlockValue, error) {
 
-	var block Block
-	var exists bool
-	var err error
+// 	var block Block
+// 	var exists bool
+// 	var err error
 
-	wrapPanic(func() {
-		block, exists, err = runtimeInterface.GetBlockAtHeight(height)
-	})
+// 	wrapPanic(func() {
+// 		block, exists, err = runtimeInterface.GetBlockAtHeight(height)
+// 	})
 
-	if err != nil {
-		return nil, err
-	}
+// 	if err != nil {
+// 		return nil, err
+// 	}
 
-	if !exists {
-		return nil, nil
-	}
+// 	if !exists {
+// 		return nil, nil
+// 	}
 
-	blockValue := NewBlockValue(block)
-	return &blockValue, nil
-}
+// 	blockValue := NewBlockValue(block)
+// 	return &blockValue, nil
+// }
 
-func (r *interpreterRuntime) newGetCurrentBlockFunction(runtimeInterface Interface) interpreter.HostFunction {
-	return func(invocation interpreter.Invocation) trampoline.Trampoline {
-		var height uint64
-		var err error
-		wrapPanic(func() {
-			height, err = r.getCurrentBlockHeight(runtimeInterface)
-		})
-		if err != nil {
-			panic(err)
-		}
-		block, err := r.getBlockAtHeight(height, runtimeInterface)
-		if err != nil {
-			panic(err)
-		}
-		return trampoline.Done{Result: *block}
-	}
-}
+// func (r *interpreterRuntime) newGetCurrentBlockFunction(runtimeInterface Interface) interpreter.HostFunction {
+// 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
+// 		var height uint64
+// 		var err error
+// 		wrapPanic(func() {
+// 			height, err = r.getCurrentBlockHeight(runtimeInterface)
+// 		})
+// 		if err != nil {
+// 			panic(err)
+// 		}
+// 		block, err := r.getBlockAtHeight(height, runtimeInterface)
+// 		if err != nil {
+// 			panic(err)
+// 		}
+// 		return trampoline.Done{Result: *block}
+// 	}
+// }
 
-func (r *interpreterRuntime) newGetBlockFunction(runtimeInterface Interface) interpreter.HostFunction {
-	return func(invocation interpreter.Invocation) trampoline.Trampoline {
-		height := uint64(invocation.Arguments[0].(interpreter.UInt64Value))
-		block, err := r.getBlockAtHeight(height, runtimeInterface)
-		if err != nil {
-			panic(err)
-		}
-		var result interpreter.Value
-		if block == nil {
-			result = interpreter.NilValue{}
-		} else {
-			result = interpreter.NewSomeValueOwningNonCopying(*block)
-		}
-		return trampoline.Done{Result: result}
-	}
-}
+// func (r *interpreterRuntime) newGetBlockFunction(runtimeInterface Interface) interpreter.HostFunction {
+// 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
+// 		height := uint64(invocation.Arguments[0].(interpreter.UInt64Value))
+// 		block, err := r.getBlockAtHeight(height, runtimeInterface)
+// 		if err != nil {
+// 			panic(err)
+// 		}
+// 		var result interpreter.Value
+// 		if block == nil {
+// 			result = interpreter.NilValue{}
+// 		} else {
+// 			result = interpreter.NewSomeValueOwningNonCopying(*block)
+// 		}
+// 		return trampoline.Done{Result: result}
+// 	}
+// }
 
-func (r *interpreterRuntime) newUnsafeRandomFunction(runtimeInterface Interface) interpreter.HostFunction {
-	return func(invocation interpreter.Invocation) trampoline.Trampoline {
-		var rand uint64
-		var err error
-		wrapPanic(func() {
-			rand, err = runtimeInterface.UnsafeRandom()
-		})
-		if err != nil {
-			panic(err)
-		}
-		return trampoline.Done{Result: interpreter.UInt64Value(rand)}
-	}
-}
+// func (r *interpreterRuntime) newUnsafeRandomFunction(runtimeInterface Interface) interpreter.HostFunction {
+// 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
+// 		var rand uint64
+// 		var err error
+// 		wrapPanic(func() {
+// 			rand, err = runtimeInterface.UnsafeRandom()
+// 		})
+// 		if err != nil {
+// 			panic(err)
+// 		}
+// 		return trampoline.Done{Result: interpreter.UInt64Value(rand)}
+// 	}
+// }
 
 func (r *interpreterRuntime) newAuthAccountContracts(
 	addressValue interpreter.AddressValue,
@@ -1474,8 +1486,8 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 		Address:        addressValue,
 		AddFunction:    r.newAuthAccountContractsChangeFunction(addressValue, context, runtimeStorage, false),
 		UpdateFunction: r.newAuthAccountContractsChangeFunction(addressValue, context, runtimeStorage, true),
-		GetFunction:    r.newAuthAccountContractsGetFunction(addressValue, context.Interface),
-		RemoveFunction: r.newAuthAccountContractsRemoveFunction(addressValue, context.Interface, runtimeStorage),
+		GetFunction:    r.newAuthAccountContractsGetFunction(addressValue, context.AccountContracts),
+		RemoveFunction: r.newAuthAccountContractsRemoveFunction(addressValue, context.AccountContracts, context.Results, runtimeStorage),
 	}
 }
 
@@ -1513,7 +1525,8 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			}
 
 			address := addressValue.ToAddress()
-			existingCode, err := startContext.Interface.GetAccountContractCode(address, nameArgument)
+
+			existingCode, err := startContext.AccountContracts.ContractCode(common.AddressLocation{address, nameArgument})
 			if err != nil {
 				panic(err)
 			}
@@ -1651,13 +1664,13 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			if isUpdate {
 				r.emitAccountEvent(
 					stdlib.AccountContractUpdatedEventType,
-					startContext.Interface,
+					startContext.Results,
 					eventArguments,
 				)
 			} else {
 				r.emitAccountEvent(
 					stdlib.AccountContractAddedEventType,
-					startContext.Interface,
+					startContext.Results,
 					eventArguments,
 				)
 			}
@@ -1739,7 +1752,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 
 	// NOTE: only update account code if contract instantiation succeeded
 	wrapPanic(func() {
-		err = context.Interface.UpdateAccountContractCode(address, name, code)
+		err = context.AccountContracts.UpdateContractCode(AddressLocation{address, name}, code)
 	})
 	if err != nil {
 		panic(err)
@@ -1752,7 +1765,7 @@ func (r *interpreterRuntime) updateAccountContractCode(
 
 func (r *interpreterRuntime) newAuthAccountContractsGetFunction(
 	addressValue interpreter.AddressValue,
-	runtimeInterface Interface,
+	accountContracts AccountContracts,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
 		func(invocation interpreter.Invocation) trampoline.Trampoline {
@@ -1764,7 +1777,7 @@ func (r *interpreterRuntime) newAuthAccountContractsGetFunction(
 			var code []byte
 			var err error
 			wrapPanic(func() {
-				code, err = runtimeInterface.GetAccountContractCode(address, nameArgument)
+				code, err = accountContracts.ContractCode(AddressLocation{address, nameArgument})
 			})
 			if err != nil {
 				panic(err)
@@ -1789,7 +1802,8 @@ func (r *interpreterRuntime) newAuthAccountContractsGetFunction(
 
 func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 	addressValue interpreter.AddressValue,
-	runtimeInterface Interface,
+	accountContracts AccountContracts,
+	results Results,
 	runtimeStorage *runtimeStorage,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
@@ -1802,7 +1816,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 			var code []byte
 			var err error
 			wrapPanic(func() {
-				code, err = runtimeInterface.GetAccountContractCode(address, nameArgument)
+				code, err = accountContracts.ContractCode(AddressLocation{address, nameArgument})
 			})
 			if err != nil {
 				panic(err)
@@ -1812,7 +1826,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 
 			if len(code) > 0 {
 				wrapPanic(func() {
-					err = runtimeInterface.RemoveAccountContractCode(address, nameArgument)
+					err = accountContracts.RemoveContractCode(AddressLocation{address, nameArgument})
 				})
 				if err != nil {
 					panic(err)
@@ -1829,7 +1843,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 
 				r.emitAccountEvent(
 					stdlib.AccountContractRemovedEventType,
-					runtimeInterface,
+					results,
 					[]exportableValue{
 						newExportableValue(addressValue, nil),
 						newExportableValue(codeHashValue, nil),
