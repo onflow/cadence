@@ -94,7 +94,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 			},
 			CheckerOptions: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
 						return sema.VirtualImport{
 							ValueElements: map[string]sema.ImportElement{
 								"Foo": {
@@ -208,7 +208,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 					},
 				),
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
 						require.IsType(t, common.AddressLocation{}, location)
 						addressLocation := location.(common.AddressLocation)
 
@@ -221,10 +221,15 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 							importedChecker = importedCheckerA
 						case "b":
 							importedChecker = importedCheckerB
+						default:
+							t.Errorf(
+								"invalid address location location name: %s",
+								addressLocation.Name,
+							)
 						}
 
-						return sema.CheckerImport{
-							Checker: importedChecker,
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
 						}, nil
 					},
 				),
