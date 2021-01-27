@@ -32,7 +32,9 @@ import (
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -4402,75 +4404,73 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 // 	)
 // }
 
-// func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
+func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
 
-// 	t.Parallel()
+	t.Parallel()
 
-// 	t.Run("transaction with function", func(t *testing.T) {
-// 		runtime := NewInterpreterRuntime()
+	t.Run("transaction with function", func(t *testing.T) {
+		runtime := NewInterpreterRuntime()
 
-// 		script := []byte(`
-//           pub fun test() {}
+		script := []byte(`
+          pub fun test() {}
 
-//           transaction {}
-//         `)
+          transaction {}
+		`)
 
-// 		runtimeInterface := &testRuntimeInterface{
-// 			getSigningAccounts: func() ([]Address, error) {
-// 				return nil, nil
-// 			},
-// 		}
+		nextTransactionLocation := newTransactionLocationGenerator()
 
-// 		nextTransactionLocation := newTransactionLocationGenerator()
+		err := runtime.RunTransaction(
+			NewScript([]byte(script), nil, []Address{}),
+			Context{
+				Accounts:         &testAccountsInterface{},
+				AccountContracts: &testAccountContractsInterface{},
+				AccountStorage:   newTestStorage(nil, nil),
+				AccountKeys:      &testAccountKeysInterface{},
+				LocationResolver: &testLocationResolverInterface{},
+				ProgramCache:     &testProgramCacheInterface{},
+				Results:          &testResultsInterface{},
+				Utils:            &testUtilsInterface{},
+				Location:         nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+	})
 
-// 		err := runtime.RunTransaction(
-// 			Script{
-// 				Source: script,
-// 			},
-// 			Context{
-// 				Interface: runtimeInterface,
-// 				Location:  nextTransactionLocation(),
-// 			},
-// 		)
-// 		require.NoError(t, err)
-// 	})
+	t.Run("transaction with resource", func(t *testing.T) {
+		runtime := NewInterpreterRuntime()
 
-// 	t.Run("transaction with resource", func(t *testing.T) {
-// 		runtime := NewInterpreterRuntime()
+		script := []byte(`
+          pub resource R {}
 
-// 		script := []byte(`
-//           pub resource R {}
+          transaction {}
+        `)
 
-//           transaction {}
-//         `)
+		nextTransactionLocation := newTransactionLocationGenerator()
 
-// 		runtimeInterface := &testRuntimeInterface{
-// 			getSigningAccounts: func() ([]Address, error) {
-// 				return nil, nil
-// 			},
-// 		}
+		err := runtime.RunTransaction(
+			NewScript([]byte(script), nil, []Address{}),
+			Context{
+				Accounts:         &testAccountsInterface{},
+				AccountContracts: &testAccountContractsInterface{},
+				AccountStorage:   newTestStorage(nil, nil),
+				AccountKeys:      &testAccountKeysInterface{},
+				LocationResolver: &testLocationResolverInterface{},
+				ProgramCache:     &testProgramCacheInterface{},
+				Results:          &testResultsInterface{},
+				Utils:            &testUtilsInterface{},
+				Location:         nextTransactionLocation(),
+			},
+		)
+		require.Error(t, err)
 
-// 		nextTransactionLocation := newTransactionLocationGenerator()
+		var checkerErr *sema.CheckerError
+		utils.RequireErrorAs(t, err, &checkerErr)
 
-// 		err := runtime.RunTransaction(
-// 			Script{
-// 				Source: script,
-// 			},
-// 			Context{
-// 				Interface: runtimeInterface,
-// 				Location:  nextTransactionLocation(),
-// 			},
-// 		)
-// 		require.Error(t, err)
+		errs := checker.ExpectCheckerErrors(t, checkerErr, 1)
 
-// 		var checkerErr *sema.CheckerError
-// 		utils.RequireErrorAs(t, err, &checkerErr)
-
-// 		errs := checker.ExpectCheckerErrors(t, checkerErr, 1)
-
-// 		assert.IsType(t, &sema.InvalidTopLevelDeclarationError{}, errs[0])
-// 	})
-// }
+		assert.IsType(t, &sema.InvalidTopLevelDeclarationError{}, errs[0])
+	})
+}
 
 // func TestRuntimeStoreIntegerTypes(t *testing.T) {
 
