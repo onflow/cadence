@@ -704,7 +704,10 @@ func TestExportTypeValue(t *testing.T) {
 		err = checker.Check()
 		require.NoError(t, err)
 
-		inter, err := interpreter.NewInterpreter(checker)
+		inter, err := interpreter.NewInterpreter(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		require.NoError(t, err)
 
 		ty := interpreter.TypeValue{
@@ -771,7 +774,10 @@ func TestExportCapabilityValue(t *testing.T) {
 		err = checker.Check()
 		require.NoError(t, err)
 
-		inter, err := interpreter.NewInterpreter(checker)
+		inter, err := interpreter.NewInterpreter(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		require.NoError(t, err)
 
 		capability := interpreter.CapabilityValue{
@@ -835,7 +841,10 @@ func TestExportLinkValue(t *testing.T) {
 		err = checker.Check()
 		require.NoError(t, err)
 
-		inter, err := interpreter.NewInterpreter(checker)
+		inter, err := interpreter.NewInterpreter(
+			interpreter.ProgramFromChecker(checker),
+			checker.Location,
+		)
 		require.NoError(t, err)
 
 		capability := interpreter.LinkValue{

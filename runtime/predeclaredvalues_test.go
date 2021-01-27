@@ -140,7 +140,7 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 	var importedProgramError *sema.ImportedProgramError
 	utils.RequireErrorAs(t, errs[0], &importedProgramError)
 	//require.Equal(t, location3, importedProgramError.ImportLocation)
-	importedErrs := checker.ExpectCheckerErrors(t, importedProgramError.CheckerError, 1)
+	importedErrs := checker.ExpectCheckerErrors(t, importedProgramError.Err, 1)
 	require.IsType(t, &sema.NotDeclaredError{}, importedErrs[0])
 
 	// The illegal use of 'foo' in 0x1 should be reported
