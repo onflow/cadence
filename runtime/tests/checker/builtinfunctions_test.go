@@ -53,7 +53,7 @@ func TestCheckToString(t *testing.T) {
 
 			assert.Equal(t,
 				&sema.StringType{},
-				checker.GlobalValues["res"].Type,
+				checker.Elaboration.GlobalValues["res"].Type,
 			)
 		})
 	}
@@ -78,7 +78,7 @@ func TestCheckToBytes(t *testing.T) {
 			&sema.VariableSizedType{
 				Type: &sema.UInt8Type{},
 			},
-			checker.GlobalValues["res"].Type,
+			checker.Elaboration.GlobalValues["res"].Type,
 		)
 	})
 }
@@ -102,7 +102,7 @@ func TestCheckToBigEndianBytes(t *testing.T) {
 				&sema.VariableSizedType{
 					Type: &sema.UInt8Type{},
 				},
-				checker.GlobalValues["res"].Type,
+				checker.Elaboration.GlobalValues["res"].Type,
 			)
 		})
 	}

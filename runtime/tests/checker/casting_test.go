@@ -51,7 +51,7 @@ func TestCheckCastingIntLiteralToIntegerType(t *testing.T) {
 
 			assert.Equal(t,
 				integerType,
-				checker.GlobalValues["x"].Type,
+				checker.Elaboration.GlobalValues["x"].Type,
 			)
 
 			assert.NotEmpty(t, checker.Elaboration.CastingTargetTypes)
@@ -88,7 +88,7 @@ func TestCheckCastingIntLiteralToAnyStruct(t *testing.T) {
 
 	assert.Equal(t,
 		&sema.AnyStructType{},
-		checker.GlobalValues["x"].Type,
+		checker.Elaboration.GlobalValues["x"].Type,
 	)
 
 	assert.NotEmpty(t, checker.Elaboration.CastingTargetTypes)
@@ -157,7 +157,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			require.NoError(t, err)
 
-			r2Type := checker.GlobalValues["r2"].Type
+			r2Type := checker.Elaboration.GlobalValues["r2"].Type
 
 			require.IsType(t,
 				&sema.RestrictedType{},
@@ -206,7 +206,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			require.NoError(t, err)
 
-			r2Type := checker.GlobalValues["r2"].Type
+			r2Type := checker.Elaboration.GlobalValues["r2"].Type
 
 			require.IsType(t,
 				&sema.RestrictedType{},
@@ -299,7 +299,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			require.NoError(t, err)
 
-			r2Type := checker.GlobalValues["r2"].Type
+			r2Type := checker.Elaboration.GlobalValues["r2"].Type
 
 			require.IsType(t,
 				&sema.RestrictedType{},
@@ -531,7 +531,7 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			require.NoError(t, err)
 
-			r2Type := checker.GlobalValues["r2"].Type
+			r2Type := checker.Elaboration.GlobalValues["r2"].Type
 
 			require.IsType(t,
 				&sema.CompositeType{},
@@ -843,11 +843,11 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			require.NoError(t, err)
 
-			iType := checker.GlobalTypes["I"].Type
+			iType := checker.Elaboration.GlobalTypes["I"].Type
 
 			require.IsType(t, &sema.InterfaceType{}, iType)
 
-			r2Type := checker.GlobalValues["r2"].Type
+			r2Type := checker.Elaboration.GlobalValues["r2"].Type
 
 			require.IsType(t,
 				&sema.RestrictedType{
@@ -901,11 +901,11 @@ func TestCheckCastResourceType(t *testing.T) {
 
 			require.NoError(t, err)
 
-			i2Type := checker.GlobalTypes["I2"].Type
+			i2Type := checker.Elaboration.GlobalTypes["I2"].Type
 
 			require.IsType(t, &sema.InterfaceType{}, i2Type)
 
-			r2Type := checker.GlobalValues["r2"].Type
+			r2Type := checker.Elaboration.GlobalValues["r2"].Type
 
 			require.IsType(t,
 				&sema.RestrictedType{
@@ -1307,7 +1307,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			require.NoError(t, err)
 
-			s2Type := checker.GlobalValues["s2"].Type
+			s2Type := checker.Elaboration.GlobalValues["s2"].Type
 
 			require.IsType(t,
 				&sema.RestrictedType{},
@@ -1326,7 +1326,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			require.NoError(t, err)
 
-			s2Type := checker.GlobalValues["s2"].Type
+			s2Type := checker.Elaboration.GlobalValues["s2"].Type
 
 			require.IsType(t,
 				&sema.OptionalType{
@@ -1358,7 +1358,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			require.NoError(t, err)
 
-			s2Type := checker.GlobalValues["s2"].Type
+			s2Type := checker.Elaboration.GlobalValues["s2"].Type
 
 			require.IsType(t,
 				&sema.RestrictedType{},
@@ -1437,7 +1437,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			require.NoError(t, err)
 
-			s2Type := checker.GlobalValues["s2"].Type
+			s2Type := checker.Elaboration.GlobalValues["s2"].Type
 
 			require.IsType(t,
 				&sema.RestrictedType{},
@@ -1632,7 +1632,7 @@ func TestCheckCastStructType(t *testing.T) {
 
 			require.NoError(t, err)
 
-			s2Type := checker.GlobalValues["s2"].Type
+			s2Type := checker.Elaboration.GlobalValues["s2"].Type
 
 			require.IsType(t,
 				&sema.CompositeType{},
@@ -1895,11 +1895,11 @@ func TestCheckCastStructType(t *testing.T) {
 
 			require.NoError(t, err)
 
-			iType := checker.GlobalTypes["I"].Type
+			iType := checker.Elaboration.GlobalTypes["I"].Type
 
 			require.IsType(t, &sema.InterfaceType{}, iType)
 
-			s2Type := checker.GlobalValues["s2"].Type
+			s2Type := checker.Elaboration.GlobalValues["s2"].Type
 
 			require.IsType(t,
 				&sema.RestrictedType{
@@ -1946,11 +1946,11 @@ func TestCheckCastStructType(t *testing.T) {
 
 			require.NoError(t, err)
 
-			i2Type := checker.GlobalTypes["I2"].Type
+			i2Type := checker.Elaboration.GlobalTypes["I2"].Type
 
 			require.IsType(t, &sema.InterfaceType{}, i2Type)
 
-			s2Type := checker.GlobalValues["s2"].Type
+			s2Type := checker.Elaboration.GlobalValues["s2"].Type
 
 			require.IsType(t,
 				&sema.RestrictedType{

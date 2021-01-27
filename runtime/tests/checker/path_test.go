@@ -59,7 +59,7 @@ func TestCheckPath(t *testing.T) {
 
 			assert.IsType(t,
 				domainTypes[domain],
-				checker.GlobalValues["x"].Type,
+				checker.Elaboration.GlobalValues["x"].Type,
 			)
 		})
 	}

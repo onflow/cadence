@@ -42,12 +42,12 @@ func TestCheckConstantAndVariableDeclarations(t *testing.T) {
 
 	assert.IsType(t,
 		&sema.IntType{},
-		checker.GlobalValues["x"].Type,
+		checker.Elaboration.GlobalValues["x"].Type,
 	)
 
 	assert.IsType(t,
 		&sema.IntType{},
-		checker.GlobalValues["y"].Type,
+		checker.Elaboration.GlobalValues["y"].Type,
 	)
 }
 
@@ -388,22 +388,22 @@ func TestCheckVariableDeclarationSecondValue(t *testing.T) {
 
 	assert.IsType(t,
 		&sema.CompositeType{},
-		checker.GlobalValues["x"].Type,
+		checker.Elaboration.GlobalValues["x"].Type,
 	)
 
 	assert.IsType(t,
 		&sema.CompositeType{},
-		checker.GlobalValues["y"].Type,
+		checker.Elaboration.GlobalValues["y"].Type,
 	)
 
 	assert.IsType(t,
 		&sema.CompositeType{},
-		checker.GlobalValues["z"].Type,
+		checker.Elaboration.GlobalValues["z"].Type,
 	)
 
 	assert.IsType(t,
 		&sema.CompositeType{},
-		checker.GlobalValues["r"].Type,
+		checker.Elaboration.GlobalValues["r"].Type,
 	)
 }
 
@@ -427,22 +427,22 @@ func TestCheckVariableDeclarationSecondValueDictionary(t *testing.T) {
 
 	assert.IsType(t,
 		&sema.CompositeType{},
-		checker.GlobalValues["x"].Type,
+		checker.Elaboration.GlobalValues["x"].Type,
 	)
 
 	assert.IsType(t,
 		&sema.DictionaryType{},
-		checker.GlobalValues["ys"].Type,
+		checker.Elaboration.GlobalValues["ys"].Type,
 	)
 
 	assert.IsType(t,
 		&sema.OptionalType{},
-		checker.GlobalValues["z"].Type,
+		checker.Elaboration.GlobalValues["z"].Type,
 	)
 
 	assert.IsType(t,
 		&sema.OptionalType{},
-		checker.GlobalValues["r"].Type,
+		checker.Elaboration.GlobalValues["r"].Type,
 	)
 }
 

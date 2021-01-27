@@ -39,7 +39,7 @@ func TestCheckCharacterLiteral(t *testing.T) {
 
 	assert.Equal(t,
 		&sema.CharacterType{},
-		checker.GlobalValues["a"].Type,
+		checker.Elaboration.GlobalValues["a"].Type,
 	)
 }
 
