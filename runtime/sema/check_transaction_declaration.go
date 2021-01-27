@@ -283,5 +283,5 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 	}
 
 	checker.Elaboration.TransactionDeclarationTypes[declaration] = transactionType
-	checker.TransactionTypes = append(checker.TransactionTypes, transactionType)
+	checker.Elaboration.TransactionTypes = append(checker.Elaboration.TransactionTypes, transactionType)
 }

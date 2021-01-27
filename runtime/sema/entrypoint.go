@@ -30,7 +30,7 @@ const FunctionEntryPointName = "main"
 //
 func (checker *Checker) FunctionEntryPointType() (*FunctionType, error) {
 
-	entryPointValue, ok := checker.GlobalValues[FunctionEntryPointName]
+	entryPointValue, ok := checker.Elaboration.GlobalValues[FunctionEntryPointName]
 	if !ok {
 		return nil, &MissingEntryPointError{
 			Expected: FunctionEntryPointName,

@@ -429,9 +429,9 @@ func TestCheckAccount_load(t *testing.T) {
 
 					require.NoError(t, err)
 
-					rType := checker.GlobalTypes["R"].Type
+					rType := checker.Elaboration.GlobalTypes["R"].Type
 
-					rValueType := checker.GlobalValues["r"].Type
+					rValueType := checker.Elaboration.GlobalValues["r"].Type
 
 					require.Equal(t,
 						&sema.OptionalType{
@@ -466,9 +466,9 @@ func TestCheckAccount_load(t *testing.T) {
 
 					require.NoError(t, err)
 
-					sType := checker.GlobalTypes["S"].Type
+					sType := checker.Elaboration.GlobalTypes["S"].Type
 
-					sValueType := checker.GlobalValues["s"].Type
+					sValueType := checker.Elaboration.GlobalValues["s"].Type
 
 					require.Equal(t,
 						&sema.OptionalType{
@@ -560,9 +560,9 @@ func TestCheckAccount_copy(t *testing.T) {
 				if domain == common.PathDomainStorage {
 					require.NoError(t, err)
 
-					sType := checker.GlobalTypes["S"].Type
+					sType := checker.Elaboration.GlobalTypes["S"].Type
 
-					sValueType := checker.GlobalValues["s"].Type
+					sValueType := checker.Elaboration.GlobalValues["s"].Type
 
 					require.Equal(t,
 						&sema.OptionalType{
@@ -720,9 +720,9 @@ func TestCheckAccount_borrow(t *testing.T) {
 
 					require.NoError(t, err)
 
-					rType := checker.GlobalTypes["R"].Type
+					rType := checker.Elaboration.GlobalTypes["R"].Type
 
-					rValueType := checker.GlobalValues["r"].Type
+					rValueType := checker.Elaboration.GlobalValues["r"].Type
 
 					require.Equal(t,
 						&sema.OptionalType{
@@ -759,9 +759,9 @@ func TestCheckAccount_borrow(t *testing.T) {
 				if domain == common.PathDomainStorage {
 					require.NoError(t, err)
 
-					sType := checker.GlobalTypes["S"].Type
+					sType := checker.Elaboration.GlobalTypes["S"].Type
 
-					sValueType := checker.GlobalValues["s"].Type
+					sValueType := checker.Elaboration.GlobalValues["s"].Type
 
 					require.Equal(t,
 						&sema.OptionalType{
@@ -1234,7 +1234,7 @@ func TestCheckAccount_getCapability(t *testing.T) {
 				}
 			}
 
-			capType := checker.GlobalValues["cap"].Type
+			capType := checker.Elaboration.GlobalValues["cap"].Type
 			assert.Equal(t,
 				&sema.CapabilityType{
 					BorrowType: expectedBorrowType,
@@ -1297,7 +1297,7 @@ func TestCheckAccount_StorageFields(t *testing.T) {
 				)
 
 				require.NoError(t, err)
-				amountType := checker.GlobalValues["amount"].Type
+				amountType := checker.Elaboration.GlobalValues["amount"].Type
 				assert.Equal(t, &sema.UInt64Type{}, amountType)
 			})
 		}

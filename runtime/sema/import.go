@@ -62,7 +62,7 @@ func variablesToImportElements(variables map[string]*Variable) map[string]Import
 }
 
 func (i CheckerImport) AllValueElements() map[string]ImportElement {
-	return variablesToImportElements(i.Checker.GlobalValues)
+	return variablesToImportElements(i.Checker.Elaboration.GlobalValues)
 }
 
 func (i CheckerImport) IsImportableValue(name string) bool {
@@ -75,7 +75,7 @@ func (i CheckerImport) IsImportableValue(name string) bool {
 }
 
 func (i CheckerImport) AllTypeElements() map[string]ImportElement {
-	return variablesToImportElements(i.Checker.GlobalTypes)
+	return variablesToImportElements(i.Checker.Elaboration.GlobalTypes)
 }
 
 func (i CheckerImport) IsImportableType(name string) bool {
