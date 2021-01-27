@@ -23,9 +23,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -123,13 +121,13 @@ func TestCheckPredeclaredValues(t *testing.T) {
 			},
 		}
 
-		program2, err := parser2.ParseProgram(`let x = foo()`)
+		checker2, err := ParseAndCheck(t, `let x = foo()`)
 		require.NoError(t, err)
 
-		program3, err := parser2.ParseProgram(`let y = foo()`)
+		checker3, err := ParseAndCheck(t, `let y = foo()`)
 		require.NoError(t, err)
 
-		program4, err := parser2.ParseProgram(`let z = foo(1)`)
+		checker4, err := ParseAndCheck(t, `let z = foo(1)`)
 		require.NoError(t, err)
 
 		_, err = ParseAndCheckWithOptions(t,
@@ -152,25 +150,24 @@ func TestCheckPredeclaredValues(t *testing.T) {
 						},
 					),
 					sema.WithImportHandler(
-						func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
-							checker, err := checker.EnsureLoaded(location, func() *ast.Program {
+						func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+
+							getChecker := func() *sema.Checker {
 								switch location {
 								case location2:
-									return program2
+									return checker2
 								case location3:
-									return program3
+									return checker3
 								case location4:
-									return program4
+									return checker4
 								default:
 									t.Fatal("invalid location", location)
 									return nil
 								}
-							})
-							if err != nil {
-								return nil, err
 							}
-							return sema.CheckerImport{
-								Checker: checker,
+
+							return sema.ElaborationImport{
+								Elaboration: getChecker().Elaboration,
 							}, nil
 						},
 					),
@@ -185,7 +182,7 @@ func TestCheckPredeclaredValues(t *testing.T) {
 		var importedProgramError *sema.ImportedProgramError
 		utils.RequireErrorAs(t, errs[0], &importedProgramError)
 		require.Equal(t, location3, importedProgramError.Location)
-		importedErrs := ExpectCheckerErrors(t, importedProgramError.CheckerError, 1)
+		importedErrs := ExpectCheckerErrors(t, importedProgramError.Err, 1)
 		require.IsType(t, &sema.NotDeclaredError{}, importedErrs[0])
 
 		// The illegal use of 'foo' in 0x1 should be reported
