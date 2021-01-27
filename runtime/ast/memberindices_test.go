@@ -87,8 +87,8 @@ func TestMemberIndices(t *testing.T) {
 		Identifier: Identifier{Identifier: "C"},
 	}
 
-	members := &Members{
-		Declarations: []Declaration{
+	members := NewMembers(
+		[]Declaration{
 			specialFunctionB,
 			enumCaseA,
 			compositeC,
@@ -108,7 +108,7 @@ func TestMemberIndices(t *testing.T) {
 			enumCaseC,
 			functionA,
 		},
-	}
+	)
 
 	var wg sync.WaitGroup
 	const parallelExecutionCount = 10

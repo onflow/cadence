@@ -625,16 +625,16 @@ func parseEventDeclaration(
 			},
 		}
 
+	members := ast.NewMembers([]ast.Declaration{
+		initializer,
+	})
+
 	return &ast.CompositeDeclaration{
 		Access:        access,
 		CompositeKind: common.CompositeKindEvent,
 		Identifier:    identifier,
-		Members: &ast.Members{
-			Declarations: []ast.Declaration{
-				initializer,
-			},
-		},
-		DocString: docString,
+		Members:       members,
+		DocString:     docString,
 		Range: ast.Range{
 			StartPos: startPos,
 			EndPos:   parameterList.EndPos,
@@ -856,14 +856,9 @@ func parseCompositeOrInterfaceDeclaration(
 //
 //     membersAndNestedDeclarations : ( memberOrNestedDeclaration ';'* )*
 //
-func parseMembersAndNestedDeclarations(
-	p *parser,
-	endTokenType lexer.TokenType,
-) (
-	members *ast.Members,
-) {
+func parseMembersAndNestedDeclarations(p *parser, endTokenType lexer.TokenType) *ast.Members {
 
-	members = &ast.Members{}
+	var declarations []ast.Declaration
 
 	for {
 		_, docString := p.parseTrivia(triviaOptions{
@@ -878,15 +873,15 @@ func parseMembersAndNestedDeclarations(
 			continue
 
 		case endTokenType, lexer.TokenEOF:
-			return
+			return ast.NewMembers(declarations)
 
 		default:
 			memberOrNestedDeclaration := parseMemberOrNestedDeclaration(p, docString)
 			if memberOrNestedDeclaration == nil {
-				return
+				return ast.NewMembers(declarations)
 			}
 
-			members.Declarations = append(members.Declarations, memberOrNestedDeclaration)
+			declarations = append(declarations, memberOrNestedDeclaration)
 		}
 	}
 }

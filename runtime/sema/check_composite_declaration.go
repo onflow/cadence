@@ -1503,7 +1503,7 @@ func (checker *Checker) enumMembersAndOrigins(
 	fieldNames []string,
 	origins map[string]*Origin,
 ) {
-	for _, declaration := range allMembers.Declarations {
+	for _, declaration := range allMembers.Declarations() {
 
 		// Enum declarations may only contain enum cases
 
@@ -1759,7 +1759,7 @@ func (checker *Checker) declareSelfValue(selfType Type) {
 func (checker *Checker) checkNestedIdentifiers(members *ast.Members) {
 	positions := map[string]ast.Position{}
 
-	for _, declaration := range members.Declarations {
+	for _, declaration := range members.Declarations() {
 
 		if _, ok := declaration.(*ast.SpecialFunctionDeclaration); ok {
 			continue
