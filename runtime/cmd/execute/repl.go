@@ -28,12 +28,9 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime"
-	"github.com/onflow/cadence/runtime/ast"
-	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/pretty"
-	"github.com/onflow/cadence/runtime/sema"
 )
 
 func RunREPL() {
@@ -43,15 +40,10 @@ func RunREPL() {
 	lineIsContinuation := false
 	code := ""
 
-	codes := map[common.LocationID]string{}
-
 	errorPrettyPrinter := pretty.NewErrorPrettyPrinter(os.Stderr, true)
 
-	location := common.REPLLocation{}
-
 	repl, err := runtime.NewREPL(
-		func(err error) {
-			codes[location.ID()] = code
+		func(err error, location common.Location, codes map[common.LocationID]string) {
 			printErr := errorPrettyPrinter.PrettyPrintError(err, location, codes)
 			if printErr != nil {
 				panic(printErr)
@@ -64,38 +56,7 @@ func RunREPL() {
 
 			println(colorizeResult(value))
 		},
-		[]sema.Option{
-			sema.WithImportHandler(
-				func(checker *sema.Checker, importedLocation common.Location) (sema.Import, *sema.CheckerError) {
-					stringLocation, ok := importedLocation.(common.StringLocation)
-
-					if !ok {
-						return nil, &sema.CheckerError{
-							Location: location,
-							Codes:    codes,
-							Errors: []error{
-								fmt.Errorf("cannot import `%s`. only files are supported", importedLocation),
-							},
-						}
-					}
-
-					importChecker, err := checker.EnsureLoaded(
-						importedLocation,
-						func() *ast.Program {
-							imported, _ := cmd.PrepareProgramFromFile(stringLocation, codes)
-							return imported
-						},
-					)
-					if err != nil {
-						return nil, err
-					}
-
-					return sema.CheckerImport{
-						Checker: importChecker,
-					}, nil
-				},
-			),
-		},
+		nil,
 	)
 
 	if err != nil {
