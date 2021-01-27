@@ -178,7 +178,7 @@ type REPLSuggestion struct {
 func (r *REPL) Suggestions() (result []REPLSuggestion) {
 	names := map[string]string{}
 
-	for name, variable := range r.checker.GlobalValues {
+	for name, variable := range r.checker.Elaboration.GlobalValues {
 		if names[name] != "" {
 			continue
 		}

@@ -331,7 +331,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		return newError(err, context)
 	}
 
-	transactions := checker.TransactionTypes
+	transactions := checker.Elaboration.TransactionTypes
 	transactionCount := len(transactions)
 	if transactionCount != 1 {
 		err = InvalidTransactionCountError{
@@ -1570,7 +1570,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			var contractTypes []*sema.CompositeType
 			var contractInterfaceTypes []*sema.InterfaceType
 
-			for _, variable := range checker.GlobalTypes {
+			for _, variable := range checker.Elaboration.GlobalTypes {
 				switch ty := variable.Type.(type) {
 				case *sema.CompositeType:
 					if ty.Kind == common.CompositeKindContract {
