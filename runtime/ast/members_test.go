@@ -30,9 +30,7 @@ func TestMembers_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	members := &Members{
-		Declarations: []Declaration{},
-	}
+	members := NewMembers([]Declaration{})
 
 	actual, err := json.Marshal(members)
 	require.NoError(t, err)

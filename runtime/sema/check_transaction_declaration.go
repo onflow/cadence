@@ -264,9 +264,7 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 		declarations[i] = field
 	}
 
-	allMembers := &ast.Members{
-		Declarations: declarations,
-	}
+	allMembers := ast.NewMembers(declarations)
 
 	members, fields, origins := checker.defaultMembersAndOrigins(
 		allMembers,
