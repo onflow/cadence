@@ -70,6 +70,7 @@ type Elaboration struct {
 	TransactionTypes                    []*TransactionType
 	EffectivePredeclaredValues          map[string]ValueDeclaration
 	EffectivePredeclaredTypes           map[string]TypeDeclaration
+	IsChecking                          bool
 }
 
 func NewElaboration() *Elaboration {
