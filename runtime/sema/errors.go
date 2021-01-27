@@ -1114,8 +1114,8 @@ func (e *NotExportedError) EndPosition() ast.Position {
 // ImportedProgramError
 
 type ImportedProgramError struct {
-	CheckerError *CheckerError
-	Location     common.Location
+	Err      error
+	Location common.Location
 	ast.Range
 }
 
@@ -1131,7 +1131,11 @@ func (e *ImportedProgramError) ImportLocation() common.Location {
 }
 
 func (e *ImportedProgramError) ChildErrors() []error {
-	return e.CheckerError.Errors
+	parentErr, ok := e.Err.(errors.ParentError)
+	if !ok {
+		return nil
+	}
+	return parentErr.ChildErrors()
 }
 
 func (*ImportedProgramError) isSemanticError() {}
