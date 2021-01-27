@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"strings"
 	"time"
 
 	"github.com/onflow/cadence"
@@ -30,6 +31,10 @@ import (
 type StorageKey struct {
 	Address common.Address
 	Key     string
+}
+
+func (s *StorageKey) String() string {
+	return strings.Join([]string{s.Address.String(), s.Key}, "|")
 }
 
 type StorageValue []byte

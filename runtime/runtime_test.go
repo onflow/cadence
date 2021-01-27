@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"testing"
@@ -30,6 +31,8 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -182,11 +185,11 @@ type testAccountStorageInterface struct {
 func newTestStorage(
 	onRead func(key StorageKey, value StorageValue),
 	onWrite func(key StorageKey, value StorageValue),
-) testAccountStorageInterface {
+) *testAccountStorageInterface {
 
 	storedValues := map[string]StorageValue{}
 
-	storage := testAccountStorageInterface{
+	return &testAccountStorageInterface{
 		storedValues: storedValues,
 		valueExists: func(key StorageKey) (bool, error) {
 			value := storedValues[key.String()]
@@ -207,8 +210,6 @@ func newTestStorage(
 			return nil
 		},
 	}
-
-	return storage
 }
 
 var _ AccountStorage = &testAccountStorageInterface{}
@@ -323,6 +324,19 @@ func (i *testProgramCacheInterface) CacheProgram(l Location, p *ast.Program) err
 		return nil
 	}
 	return i.cacheProgram(l, p)
+}
+
+type testUtilsInterface struct {
+	generateUUID func() (uint64, error)
+}
+
+var _ ProgramCache = &testProgramCacheInterface{}
+
+func (i *testUtilsInterface) GenerateUUID() (uint64, error) {
+	if i.generateUUID == nil {
+		return 0, nil
+	}
+	return i.generateUUID()
 }
 
 type testResultsInterface struct {
@@ -1543,6 +1557,7 @@ func TestRuntimeStorage(t *testing.T) {
 			accounts := &testAccountsInterface{}
 			accountContracts := &testAccountContractsInterface{}
 			accountStorage := newTestStorage(nil, nil)
+			utils := &testUtilsInterface{}
 			accountKeys := &testAccountKeysInterface{}
 			locationResolver := &testLocationResolverInterface{
 				getCode: func(location Location) ([]byte, error) {
@@ -1573,6 +1588,7 @@ func TestRuntimeStorage(t *testing.T) {
 					LocationResolver: locationResolver,
 					ProgramCache:     programCache,
 					Results:          results,
+					Utils:            utils,
 					Location:         nextTransactionLocation(),
 				},
 			)
@@ -1652,8 +1668,10 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 
 	accounts := &testAccountsInterface{}
 	accountContracts := &testAccountContractsInterface{}
-	accountStorage := &testAccountStorageInterface{}
+	accountStorage := newTestStorage(nil, nil)
+	utils := &testUtilsInterface{}
 	accountKeys := &testAccountKeysInterface{}
+
 	locationResolver := &testLocationResolverInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
@@ -1682,6 +1700,7 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 			LocationResolver: locationResolver,
 			ProgramCache:     programCache,
 			Results:          results,
+			Utils:            utils,
 			Location:         nextTransactionLocation(),
 		},
 	)
@@ -1766,7 +1785,8 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 
 	accounts := &testAccountsInterface{}
 	accountContracts := &testAccountContractsInterface{}
-	accountStorage := &testAccountStorageInterface{}
+	accountStorage := newTestStorage(nil, nil)
+	utils := &testUtilsInterface{}
 	accountKeys := &testAccountKeysInterface{}
 	locationResolver := &testLocationResolverInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
@@ -1796,6 +1816,7 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 			LocationResolver: locationResolver,
 			ProgramCache:     programCache,
 			Results:          results,
+			Utils:            utils,
 			Location:         nextTransactionLocation(),
 		},
 	)
@@ -1868,7 +1889,8 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 	accounts := &testAccountsInterface{}
 	accountContracts := &testAccountContractsInterface{}
-	accountStorage := &testAccountStorageInterface{}
+	accountStorage := newTestStorage(nil, nil)
+	utils := &testUtilsInterface{}
 	accountKeys := &testAccountKeysInterface{}
 	locationResolver := &testLocationResolverInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
@@ -1898,6 +1920,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 			LocationResolver: locationResolver,
 			ProgramCache:     programCache,
 			Results:          results,
+			Utils:            utils,
 			Location:         nextTransactionLocation(),
 		},
 	)
@@ -1921,2117 +1944,2349 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 	assert.Contains(t, loggedMessages, "42")
 }
 
-// // TestRuntimeCompositeFunctionInvocationFromImportingProgram checks
-// // that member functions of imported composites can be invoked from an importing program.
-// // See https://github.com/dapperlabs/flow-go/issues/838
-// //
-// func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	runtime := NewInterpreterRuntime()
-
-// 	imported := []byte(`
-//       // function must have arguments
-//       pub fun x(x: Int) {}
-
-//       // invocation must be in composite
-//       pub resource Y {
-//         pub fun x() {
-//           x(x: 1)
-//         }
-//       }
-
-//       pub fun createY(): @Y {
-//         return <-create Y()
-//       }
-//     `)
-
-// 	script1 := []byte(`
-//       import Y, createY from "imported"
-
-//       transaction {
-//         prepare(signer: AuthAccount) {
-//           signer.save(<-createY(), to: /storage/y)
-//         }
-//       }
-//     `)
-
-// 	script2 := []byte(`
-//       import Y from "imported"
-
-//       transaction {
-//         prepare(signer: AuthAccount) {
-//           let y <- signer.load<@Y>(from: /storage/y)
-//           y?.x()
-//           destroy y
-//         }
-//       }
-//     `)
-
-// 	runtimeInterface := &testRuntimeInterface{
-// 		getCode: func(location Location) (bytes []byte, err error) {
-// 			switch location {
-// 			case common.StringLocation("imported"):
-// 				return imported, nil
-// 			default:
-// 				return nil, fmt.Errorf("unknown import location: %s", location)
-// 			}
-// 		},
-// 		storage: newTestStorage(nil, nil),
-// 		getSigningAccounts: func() ([]Address, error) {
-// 			return []Address{{42}}, nil
-// 		},
-// 	}
-
-// 	nextTransactionLocation := newTransactionLocationGenerator()
-
-// 	err := runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: script1,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	err = runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: script2,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-// }
-
-// func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	runtime := NewInterpreterRuntime()
-
-// 	imported := []byte(`
-//       pub resource R {
-//         pub fun x() {
-//           log("x!")
-//         }
-//       }
-
-//       pub fun createR(): @R {
-//         return <- create R()
-//       }
-//     `)
-
-// 	script1 := []byte(`
-//       import R, createR from "imported"
-
-//       transaction {
-
-//         prepare(signer: AuthAccount) {
-//           signer.save(<-createR(), to: /storage/r)
-//         }
-//       }
-//     `)
-
-// 	script2 := []byte(`
-//       import R from "imported"
-
-//       transaction {
-
-//         prepare(signer: AuthAccount) {
-//           let ref = signer.borrow<&R>(from: /storage/r)!
-//           ref.x()
-//         }
-//       }
-//     `)
-
-// 	var loggedMessages []string
-
-// 	runtimeInterface := &testRuntimeInterface{
-// 		getCode: func(location Location) (bytes []byte, err error) {
-// 			switch location {
-// 			case common.StringLocation("imported"):
-// 				return imported, nil
-// 			default:
-// 				return nil, fmt.Errorf("unknown import location: %s", location)
-// 			}
-// 		},
-// 		storage: newTestStorage(nil, nil),
-// 		getSigningAccounts: func() ([]Address, error) {
-// 			return []Address{{42}}, nil
-// 		},
-// 		log: func(message string) {
-// 			loggedMessages = append(loggedMessages, message)
-// 		},
-// 	}
-
-// 	nextTransactionLocation := newTransactionLocationGenerator()
-
-// 	err := runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: script1,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	err = runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: script2,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	assert.Equal(t, []string{"\"x!\""}, loggedMessages)
-// }
-
-// func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	runtime := NewInterpreterRuntime()
-
-// 	imported := []byte(`
-//       pub resource R {
-//         pub fun x() {
-//           log("x!")
-//         }
-//       }
-
-//       pub fun createR(): @R {
-//           return <- create R()
-//       }
-//     `)
-
-// 	script1 := []byte(`
-//       import R, createR from "imported"
-
-//       transaction {
-
-//         prepare(signer: AuthAccount) {
-//           signer.save(<-createR(), to: /storage/r)
-//           signer.link<&R>(/public/r, target: /storage/r)
-//         }
-//       }
-//     `)
-
-// 	script2 := []byte(`
-//       import R from "imported"
-
-//       transaction {
-//         prepare(signer: AuthAccount) {
-//           let publicAccount = getAccount(signer.address)
-//           let ref = publicAccount
-//               .getCapability(/public/r)
-//               .borrow<&R>()!
-//           ref.x()
-//         }
-//       }
-//     `)
-
-// 	var loggedMessages []string
-
-// 	runtimeInterface := &testRuntimeInterface{
-// 		getCode: func(location Location) (bytes []byte, err error) {
-// 			switch location {
-// 			case common.StringLocation("imported"):
-// 				return imported, nil
-// 			default:
-// 				return nil, fmt.Errorf("unknown import location: %s", location)
-// 			}
-// 		},
-// 		storage: newTestStorage(nil, nil),
-// 		getSigningAccounts: func() ([]Address, error) {
-// 			return []Address{{42}}, nil
-// 		},
-// 		log: func(message string) {
-// 			loggedMessages = append(loggedMessages, message)
-// 		},
-// 	}
-
-// 	nextTransactionLocation := newTransactionLocationGenerator()
-
-// 	err := runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: script1,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	err = runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: script2,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	assert.Equal(t, []string{"\"x!\""}, loggedMessages)
-// }
-
-// func TestRuntimeResourceContractWithInterface(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	runtime := NewInterpreterRuntime()
-
-// 	imported1 := []byte(`
-//       pub resource interface RI {
-//         pub fun x()
-//       }
-//     `)
-
-// 	imported2 := []byte(`
-//       import RI from "imported1"
-
-//       pub resource R: RI {
-//         pub fun x() {
-//           log("x!")
-//         }
-//       }
-
-//       pub fun createR(): @R {
-//         return <- create R()
-//       }
-//     `)
-
-// 	script1 := []byte(`
-//       import RI from "imported1"
-//       import R, createR from "imported2"
-
-//       transaction {
-//         prepare(signer: AuthAccount) {
-//           signer.save(<-createR(), to: /storage/r)
-//           signer.link<&AnyResource{RI}>(/public/r, target: /storage/r)
-//         }
-//       }
-//     `)
-
-// 	// TODO: Get rid of the requirement that the underlying type must be imported.
-// 	//   This requires properly initializing Interpreter.CompositeFunctions.
-// 	//   Also initialize Interpreter.DestructorFunctions
-
-// 	script2 := []byte(`
-//       import RI from "imported1"
-//       import R from "imported2"
-
-//       transaction {
-//         prepare(signer: AuthAccount) {
-//           let ref = signer
-//               .getCapability(/public/r)
-//               .borrow<&AnyResource{RI}>()!
-//           ref.x()
-//         }
-//       }
-//     `)
-
-// 	var loggedMessages []string
-
-// 	runtimeInterface := &testRuntimeInterface{
-// 		getCode: func(location Location) (bytes []byte, err error) {
-// 			switch location {
-// 			case common.StringLocation("imported1"):
-// 				return imported1, nil
-// 			case common.StringLocation("imported2"):
-// 				return imported2, nil
-// 			default:
-// 				return nil, fmt.Errorf("unknown import location: %s", location)
-// 			}
-// 		},
-// 		storage: newTestStorage(nil, nil),
-// 		getSigningAccounts: func() ([]Address, error) {
-// 			return []Address{{42}}, nil
-// 		},
-// 		log: func(message string) {
-// 			loggedMessages = append(loggedMessages, message)
-// 		},
-// 	}
-
-// 	nextTransactionLocation := newTransactionLocationGenerator()
-
-// 	err := runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: script1,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	err = runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: script2,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	assert.Equal(t, []string{"\"x!\""}, loggedMessages)
-// }
-
-// func TestParseAndCheckProgram(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	t.Run("ValidProgram", func(t *testing.T) {
-// 		runtime := NewInterpreterRuntime()
-
-// 		script := []byte("pub fun test(): Int { return 42 }")
-// 		runtimeInterface := &testRuntimeInterface{}
-
-// 		nextTransactionLocation := newTransactionLocationGenerator()
-
-// 		_, err := runtime.ParseAndCheckProgram(
-// 			script,
-// 			Context{
-// 				Interface: runtimeInterface,
-// 				Location:  nextTransactionLocation(),
-// 			},
-// 		)
-// 		assert.NoError(t, err)
-// 	})
-
-// 	t.Run("InvalidSyntax", func(t *testing.T) {
-// 		runtime := NewInterpreterRuntime()
-
-// 		script := []byte("invalid syntax")
-// 		runtimeInterface := &testRuntimeInterface{}
-
-// 		nextTransactionLocation := newTransactionLocationGenerator()
-
-// 		_, err := runtime.ParseAndCheckProgram(
-// 			script,
-// 			Context{
-// 				Interface: runtimeInterface,
-// 				Location:  nextTransactionLocation(),
-// 			},
-// 		)
-// 		assert.NotNil(t, err)
-// 	})
-
-// 	t.Run("InvalidSemantics", func(t *testing.T) {
-// 		runtime := NewInterpreterRuntime()
-
-// 		script := []byte(`pub let a: Int = "b"`)
-// 		runtimeInterface := &testRuntimeInterface{}
-
-// 		nextTransactionLocation := newTransactionLocationGenerator()
-
-// 		_, err := runtime.ParseAndCheckProgram(
-// 			script,
-// 			Context{
-// 				Interface: runtimeInterface,
-// 				Location:  nextTransactionLocation(),
-// 			},
-// 		)
-// 		assert.NotNil(t, err)
-// 	})
-// }
-
-// func TestScriptReturnTypeNotReturnableError(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	test := func(code string, expected cadence.Value) {
-
-// 		runtime := NewInterpreterRuntime()
-
-// 		runtimeInterface := &testRuntimeInterface{
-// 			getSigningAccounts: func() ([]Address, error) {
-// 				return []Address{{42}}, nil
-// 			},
-// 		}
-
-// 		nextTransactionLocation := newTransactionLocationGenerator()
-
-// 		actual, err := runtime.ExecuteScript(
-// 			Script{
-// 				Source: []byte(code),
-// 			},
-// 			Context{
-// 				Interface: runtimeInterface,
-// 				Location:  nextTransactionLocation(),
-// 			},
-// 		)
-
-// 		if expected == nil {
-// 			var subErr *InvalidScriptReturnTypeError
-// 			utils.RequireErrorAs(t, err, &subErr)
-// 		} else {
-// 			require.NoError(t, err)
-// 			require.Equal(t, expected, actual)
-// 		}
-// 	}
-
-// 	t.Run("function", func(t *testing.T) {
-
-// 		t.Parallel()
-
-// 		test(
-// 			`
-//               pub fun main(): ((): Int) {
-//                   return fun (): Int {
-//                       return 0
-//                   }
-//               }
-//             `,
-// 			nil,
-// 		)
-// 	})
-
-// 	t.Run("reference", func(t *testing.T) {
-
-// 		t.Parallel()
-
-// 		test(
-// 			`
-//               pub fun main(): &Address {
-//                   let a: Address = 0x1
-//                   return &a as &Address
-//               }
-//             `,
-// 			cadence.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
-// 		)
-// 	})
-
-// 	t.Run("recursive reference", func(t *testing.T) {
-
-// 		t.Parallel()
-
-// 		test(
-// 			`
-//               pub fun main(): [&AnyStruct] {
-//                   let refs: [&AnyStruct] = []
-//                   refs.append(&refs as &AnyStruct)
-//                   return refs
-//               }
-//             `,
-// 			cadence.NewArray([]cadence.Value{
-// 				cadence.NewArray([]cadence.Value{
-// 					nil,
-// 				}),
-// 			}),
-// 		)
-// 	})
-// }
-
-// func TestScriptParameterTypeNotStorableError(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	runtime := NewInterpreterRuntime()
-
-// 	script := []byte(`
-//       pub fun main(x: ((): Int)) {
-// 		return
-//       }
-//     `)
-
-// 	runtimeInterface := &testRuntimeInterface{
-// 		getSigningAccounts: func() ([]Address, error) {
-// 			return []Address{{42}}, nil
-// 		},
-// 	}
-
-// 	nextTransactionLocation := newTransactionLocationGenerator()
-
-// 	_, err := runtime.ExecuteScript(
-// 		Script{
-// 			Source: script,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-
-// 	var subErr *ScriptParameterTypeNotStorableError
-// 	utils.RequireErrorAs(t, err, &subErr)
-// }
-
-// func TestRuntimeSyntaxError(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	runtime := NewInterpreterRuntime()
-
-// 	script := []byte(`
-//       pub fun main(): String {
-//           return "Hello World!
-//       }
-//     `)
-
-// 	runtimeInterface := &testRuntimeInterface{
-// 		getSigningAccounts: func() ([]Address, error) {
-// 			return []Address{{42}}, nil
-// 		},
-// 	}
-
-// 	nextTransactionLocation := newTransactionLocationGenerator()
-
-// 	_, err := runtime.ExecuteScript(
-// 		Script{
-// 			Source: script,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	assert.Error(t, err)
-// }
-
-// func TestRuntimeStorageChanges(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	runtime := NewInterpreterRuntime()
-
-// 	imported := []byte(`
-//       pub resource X {
-//         pub(set) var x: Int
-
-//         init() {
-//           self.x = 0
-//         }
-//       }
-
-//       pub fun createX(): @X {
-//           return <-create X()
-//       }
-//     `)
-
-// 	script1 := []byte(`
-//       import X, createX from "imported"
-
-//       transaction {
-//         prepare(signer: AuthAccount) {
-//           signer.save(<-createX(), to: /storage/x)
-
-//           let ref = signer.borrow<&X>(from: /storage/x)!
-//           ref.x = 1
-//         }
-//       }
-//     `)
-
-// 	script2 := []byte(`
-//       import X from "imported"
-
-//       transaction {
-//         prepare(signer: AuthAccount) {
-//           let ref = signer.borrow<&X>(from: /storage/x)!
-//           log(ref.x)
-//         }
-//       }
-//     `)
-
-// 	var loggedMessages []string
-
-// 	runtimeInterface := &testRuntimeInterface{
-// 		getCode: func(location Location) (bytes []byte, err error) {
-// 			switch location {
-// 			case common.StringLocation("imported"):
-// 				return imported, nil
-// 			default:
-// 				return nil, fmt.Errorf("unknown import location: %s", location)
-// 			}
-// 		},
-// 		storage: newTestStorage(nil, nil),
-// 		getSigningAccounts: func() ([]Address, error) {
-// 			return []Address{{42}}, nil
-// 		},
-// 		log: func(message string) {
-// 			loggedMessages = append(loggedMessages, message)
-// 		},
-// 	}
-
-// 	nextTransactionLocation := newTransactionLocationGenerator()
-
-// 	err := runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: script1,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	err = runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: script2,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	assert.Equal(t, []string{"1"}, loggedMessages)
-// }
-
-// func TestRuntimeAccountAddress(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	runtime := NewInterpreterRuntime()
-
-// 	script := []byte(`
-//       transaction {
-//         prepare(signer: AuthAccount) {
-//           log(signer.address)
-//         }
-//       }
-//     `)
-
-// 	var loggedMessages []string
-
-// 	address := common.BytesToAddress([]byte{42})
-
-// 	runtimeInterface := &testRuntimeInterface{
-// 		getSigningAccounts: func() ([]Address, error) {
-// 			return []Address{address}, nil
-// 		},
-// 		log: func(message string) {
-// 			loggedMessages = append(loggedMessages, message)
-// 		},
-// 	}
-
-// 	nextTransactionLocation := newTransactionLocationGenerator()
-
-// 	err := runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: script,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	assert.Equal(t, []string{"0x2a"}, loggedMessages)
-// }
-
-// func TestRuntimePublicAccountAddress(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	runtime := NewInterpreterRuntime()
-
-// 	script := []byte(`
-//       transaction {
-//         prepare() {
-//           log(getAccount(0x42).address)
-//         }
-//       }
-//     `)
-
-// 	var loggedMessages []string
-
-// 	address := interpreter.NewAddressValueFromBytes([]byte{0x42})
-
-// 	runtimeInterface := &testRuntimeInterface{
-// 		getSigningAccounts: func() ([]Address, error) {
-// 			return nil, nil
-// 		},
-// 		log: func(message string) {
-// 			loggedMessages = append(loggedMessages, message)
-// 		},
-// 	}
-
-// 	nextTransactionLocation := newTransactionLocationGenerator()
-
-// 	err := runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: script,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	assert.Equal(t, []string{fmt.Sprint(address)}, loggedMessages)
-// }
-
-// func TestRuntimeAccountPublishAndAccess(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	runtime := NewInterpreterRuntime()
-
-// 	imported := []byte(`
-//       pub resource R {
-//         pub fun test(): Int {
-//           return 42
-//         }
-//       }
-
-//       pub fun createR(): @R {
-//         return <-create R()
-//       }
-//     `)
-
-// 	script1 := []byte(`
-//       import "imported"
-
-//       transaction {
-//         prepare(signer: AuthAccount) {
-//           signer.save(<-createR(), to: /storage/r)
-//           signer.link<&R>(/public/r, target: /storage/r)
-//         }
-//       }
-//     `)
-
-// 	address := common.BytesToAddress([]byte{42})
-
-// 	script2 := []byte(
-// 		fmt.Sprintf(
-// 			`
-//               import "imported"
-
-//               transaction {
-
-//                 prepare(signer: AuthAccount) {
-//                   log(getAccount(0x%s).getCapability(/public/r).borrow<&R>()!.test())
-//                 }
-//               }
-//             `,
-// 			address,
-// 		),
-// 	)
-
-// 	var loggedMessages []string
-
-// 	runtimeInterface := &testRuntimeInterface{
-// 		getCode: func(location Location) ([]byte, error) {
-// 			switch location {
-// 			case common.StringLocation("imported"):
-// 				return imported, nil
-// 			default:
-// 				return nil, fmt.Errorf("unknown import location: %s", location)
-// 			}
-// 		},
-// 		storage: newTestStorage(nil, nil),
-// 		getSigningAccounts: func() ([]Address, error) {
-// 			return []Address{address}, nil
-// 		},
-// 		log: func(message string) {
-// 			loggedMessages = append(loggedMessages, message)
-// 		},
-// 	}
-
-// 	nextTransactionLocation := newTransactionLocationGenerator()
-
-// 	err := runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: script1,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	err = runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: script2,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	assert.Equal(t, []string{"42"}, loggedMessages)
-// }
-
-// func TestRuntimeTransaction_CreateAccount(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	runtime := NewInterpreterRuntime()
-
-// 	script := []byte(`
-//       transaction {
-//         prepare(signer: AuthAccount) {
-//           AuthAccount(payer: signer)
-//         }
-//       }
-//     `)
-
-// 	var events []cadence.Event
-
-// 	runtimeInterface := &testRuntimeInterface{
-// 		storage: newTestStorage(nil, nil),
-// 		getSigningAccounts: func() ([]Address, error) {
-// 			return []Address{{42}}, nil
-// 		},
-// 		createAccount: func(payer Address) (address Address, err error) {
-// 			return Address{42}, nil
-// 		},
-// 		emitEvent: func(event cadence.Event) error {
-// 			events = append(events, event)
-// 			return nil
-// 		},
-// 	}
-
-// 	nextTransactionLocation := newTransactionLocationGenerator()
-
-// 	err := runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: script,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	require.Len(t, events, 1)
-// 	assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type().ID())
-// }
-
-// func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
-// 	runtime := NewInterpreterRuntime()
-
-// 	keyA := cadence.NewArray([]cadence.Value{
-// 		cadence.NewUInt8(1),
-// 		cadence.NewUInt8(2),
-// 		cadence.NewUInt8(3),
-// 	})
-
-// 	keyB := cadence.NewArray([]cadence.Value{
-// 		cadence.NewUInt8(4),
-// 		cadence.NewUInt8(5),
-// 		cadence.NewUInt8(6),
-// 	})
-
-// 	keys := cadence.NewArray([]cadence.Value{
-// 		keyA,
-// 		keyB,
-// 	})
-
-// 	var tests = []struct {
-// 		name     string
-// 		code     string
-// 		keyCount int
-// 		args     []cadence.Value
-// 		expected [][]byte
-// 	}{
-// 		{
-// 			name: "Single key",
-// 			code: `
-// 			  transaction(keyA: [UInt8]) {
-// 				prepare(signer: AuthAccount) {
-// 				  let acct = AuthAccount(payer: signer)
-// 				  acct.addPublicKey(keyA)
-// 				}
-// 			  }
-// 			`,
-// 			keyCount: 1,
-// 			args:     []cadence.Value{keyA},
-// 			expected: [][]byte{{1, 2, 3}},
-// 		},
-// 		{
-// 			name: "Multiple keys",
-// 			code: `
-// 			  transaction(keys: [[UInt8]]) {
-// 				prepare(signer: AuthAccount) {
-// 				  let acct = AuthAccount(payer: signer)
-// 				  for key in keys {
-// 					acct.addPublicKey(key)
-// 				  }
-// 				}
-// 			  }
-// 			`,
-// 			keyCount: 2,
-// 			args:     []cadence.Value{keys},
-// 			expected: [][]byte{{1, 2, 3}, {4, 5, 6}},
-// 		},
-// 	}
-
-// 	for _, tt := range tests {
-
-// 		var events []cadence.Event
-// 		var keys [][]byte
-
-// 		runtimeInterface := &testRuntimeInterface{
-// 			storage: newTestStorage(nil, nil),
-// 			getSigningAccounts: func() ([]Address, error) {
-// 				return []Address{{42}}, nil
-// 			},
-// 			createAccount: func(payer Address) (address Address, err error) {
-// 				return Address{42}, nil
-// 			},
-// 			addAccountKey: func(address Address, publicKey []byte) error {
-// 				keys = append(keys, publicKey)
-// 				return nil
-// 			},
-// 			emitEvent: func(event cadence.Event) error {
-// 				events = append(events, event)
-// 				return nil
-// 			},
-// 			decodeArgument: func(b []byte, t cadence.Type) (value cadence.Value, err error) {
-// 				return jsoncdc.Decode(b)
-// 			},
-// 		}
-
-// 		t.Run(tt.name, func(t *testing.T) {
-// 			args := make([][]byte, len(tt.args))
-// 			for i, arg := range tt.args {
-// 				var err error
-// 				args[i], err = jsoncdc.Encode(arg)
-// 				if err != nil {
-// 					panic(fmt.Errorf("broken test: invalid argument: %w", err))
-// 				}
-// 			}
-
-// 			err := runtime.ExecuteTransaction(
-// 				Script{
-// 					Source:    []byte(tt.code),
-// 					Arguments: args,
-// 				},
-// 				Context{
-// 					Interface: runtimeInterface,
-// 					Location:  utils.TestLocation,
-// 				},
-// 			)
-// 			require.NoError(t, err)
-// 			assert.Len(t, events, tt.keyCount+1)
-// 			assert.Len(t, keys, tt.keyCount)
-// 			assert.Equal(t, tt.expected, keys)
-
-// 			assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type().ID())
-
-// 			for _, event := range events[1:] {
-// 				assert.EqualValues(t, stdlib.AccountKeyAddedEventType.ID(), event.Type().ID())
-// 			}
-// 		})
-// 	}
-// }
-
-// func TestRuntimeContractAccount(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	runtime := NewInterpreterRuntime()
-
-// 	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
-
-// 	contract := []byte(`
-//       pub contract Test {
-//           pub let address: Address
-
-//           init() {
-//               // field 'account' can be used, as it is considered initialized
-//               self.address = self.account.address
-//           }
-
-//           // test that both functions are linked back into restored composite values,
-//           // and also injected fields are injected back into restored composite values
-//           //
-//           pub fun test(): Address {
-//               return self.account.address
-//           }
-//       }
-//     `)
-
-// 	script1 := []byte(`
-//       import Test from 0xCADE
-
-//       pub fun main(): Address {
-//           return Test.address
-//       }
-//     `)
-
-// 	script2 := []byte(`
-//       import Test from 0xCADE
-
-//       pub fun main(): Address {
-//           return Test.test()
-//       }
-//     `)
-
-// 	deploy := utils.DeploymentTransaction("Test", contract)
-
-// 	var accountCode []byte
-// 	var events []cadence.Event
-
-// 	runtimeInterface := &testRuntimeInterface{
-// 		getCode: func(_ Location) (bytes []byte, err error) {
-// 			return accountCode, nil
-// 		},
-// 		storage: newTestStorage(nil, nil),
-// 		getSigningAccounts: func() ([]Address, error) {
-// 			return []Address{common.BytesToAddress(addressValue.Bytes())}, nil
-// 		},
-// 		resolveLocation: singleIdentifierLocationResolver(t),
-// 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
-// 			return accountCode, nil
-// 		},
-// 		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
-// 			accountCode = code
-// 			return nil
-// 		},
-// 		emitEvent: func(event cadence.Event) error {
-// 			events = append(events, event)
-// 			return nil
-// 		},
-// 	}
-
-// 	nextTransactionLocation := newTransactionLocationGenerator()
-
-// 	err := runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: deploy,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	assert.NotNil(t, accountCode)
-
-// 	t.Run("", func(t *testing.T) {
-// 		value, err := runtime.ExecuteScript(
-// 			Script{
-// 				Source: script1,
-// 			},
-// 			Context{
-// 				Interface: runtimeInterface,
-// 				Location:  nextTransactionLocation(),
-// 			},
-// 		)
-// 		require.NoError(t, err)
-
-// 		assert.Equal(t, addressValue, value)
-// 	})
-
-// 	t.Run("", func(t *testing.T) {
-// 		value, err := runtime.ExecuteScript(
-// 			Script{
-// 				Source: script2,
-// 			},
-// 			Context{
-// 				Interface: runtimeInterface,
-// 				Location:  nextTransactionLocation(),
-// 			},
-// 		)
-// 		require.NoError(t, err)
-
-// 		assert.Equal(t, addressValue, value)
-// 	})
-// }
-
-// func TestRuntimeContractNestedResource(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	runtime := NewInterpreterRuntime()
-
-// 	addressValue := Address{
-// 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-// 	}
-
-// 	contract := []byte(`
-//         pub contract Test {
-//             pub resource R {
-//                 // test that the hello function is linked back into the nested resource
-//                 // after being loaded from storage
-//                 pub fun hello(): String {
-//                     return "Hello World!"
-//                 }
-//             }
-
-//             init() {
-//                 // store nested resource in account on deployment
-//                 self.account.save(<-create R(), to: /storage/r)
-//             }
-//         }
-//     `)
-
-// 	tx := []byte(`
-// 		import Test from 0x01
-
-// 		transaction {
-
-// 			prepare(acct: AuthAccount) {
-// 				log(acct.borrow<&Test.R>(from: /storage/r)?.hello())
-// 			}
-// 		}
-// 	`)
-
-// 	deploy := utils.DeploymentTransaction("Test", contract)
-
-// 	var accountCode []byte
-// 	var loggedMessage string
-
-// 	runtimeInterface := &testRuntimeInterface{
-// 		getCode: func(_ Location) (bytes []byte, err error) {
-// 			return accountCode, nil
-// 		},
-// 		storage: newTestStorage(nil, nil),
-// 		getSigningAccounts: func() ([]Address, error) {
-// 			return []Address{addressValue}, nil
-// 		},
-// 		resolveLocation: singleIdentifierLocationResolver(t),
-// 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
-// 			return accountCode, nil
-// 		},
-// 		updateAccountContractCode: func(addess Address, _ string, code []byte) error {
-// 			accountCode = code
-// 			return nil
-// 		},
-// 		emitEvent: func(event cadence.Event) error { return nil },
-// 		log: func(message string) {
-// 			loggedMessage = message
-// 		},
-// 	}
-
-// 	nextTransactionLocation := newTransactionLocationGenerator()
-
-// 	err := runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: deploy,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	assert.NotNil(t, accountCode)
-
-// 	err = runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: tx,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	assert.Equal(t, `"Hello World!"`, loggedMessage)
-// }
-
-// func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	runtime := NewInterpreterRuntime()
-
-// 	addressValue := Address{
-// 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-// 	}
-
-// 	contract := []byte(`
-//         pub contract Test {
-//             pub resource R {
-//                 // test that the destructor is linked back into the nested resource
-//                 // after being loaded from storage
-//                 destroy() {
-//                     log("destroyed")
-//                 }
-//             }
-
-//             init() {
-//                 // store nested resource in account on deployment
-//                 self.account.save(<-create R(), to: /storage/r)
-//             }
-//         }
-//     `)
-
-// 	tx := []byte(`
-// 		import Test from 0x01
-
-// 		transaction {
-
-// 			prepare(acct: AuthAccount) {
-//                 let r <- acct.load<@Test.R>(from: /storage/r)
-// 				destroy r
-// 			}
-// 		}
-// 	`)
-
-// 	deploy := utils.DeploymentTransaction("Test", contract)
-
-// 	var accountCode []byte
-// 	var loggedMessage string
-
-// 	runtimeInterface := &testRuntimeInterface{
-// 		getCode: func(_ Location) (bytes []byte, err error) {
-// 			return accountCode, nil
-// 		},
-// 		storage: newTestStorage(nil, nil),
-// 		getSigningAccounts: func() ([]Address, error) {
-// 			return []Address{addressValue}, nil
-// 		},
-// 		resolveLocation: singleIdentifierLocationResolver(t),
-// 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
-// 			return accountCode, nil
-// 		},
-// 		updateAccountContractCode: func(address Address, _ string, code []byte) error {
-// 			accountCode = code
-// 			return nil
-// 		},
-// 		emitEvent: func(event cadence.Event) error { return nil },
-// 		log: func(message string) {
-// 			loggedMessage = message
-// 		},
-// 	}
-
-// 	nextTransactionLocation := newTransactionLocationGenerator()
-
-// 	err := runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: deploy,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	assert.NotNil(t, accountCode)
-
-// 	err = runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: tx,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		})
-// 	require.NoError(t, err)
-
-// 	assert.Equal(t, `"destroyed"`, loggedMessage)
-// }
-
-// func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	runtime := NewInterpreterRuntime()
-
-// 	addressValue := Address{
-// 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-// 	}
-
-// 	contract := []byte(`
-//         pub contract Test {
-//             pub resource R {
-//                 // test that the destructor is linked back into the nested resource
-//                 // after being loaded from storage
-//                 destroy() {
-//                     log("destroyed")
-//                 }
-//             }
-
-//             init() {
-//                 // store nested resource in account on deployment
-//                 self.account.save(<-create R(), to: /storage/r)
-//             }
-//         }
-//     `)
-
-// 	tx := []byte(`
-//         // NOTE: *not* importing concrete implementation.
-//         //   Should be imported automatically when loading the value from storage
-
-// 		transaction {
-
-// 			prepare(acct: AuthAccount) {
-//                 let r <- acct.load<@AnyResource>(from: /storage/r)
-// 				destroy r
-// 			}
-// 		}
-// 	`)
-
-// 	deploy := utils.DeploymentTransaction("Test", contract)
-
-// 	var accountCode []byte
-// 	var loggedMessage string
-
-// 	runtimeInterface := &testRuntimeInterface{
-// 		getCode: func(_ Location) (bytes []byte, err error) {
-// 			return accountCode, nil
-// 		},
-// 		storage: newTestStorage(nil, nil),
-// 		getSigningAccounts: func() ([]Address, error) {
-// 			return []Address{addressValue}, nil
-// 		},
-// 		resolveLocation: singleIdentifierLocationResolver(t),
-// 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
-// 			return accountCode, nil
-// 		},
-// 		updateAccountContractCode: func(address Address, _ string, code []byte) error {
-// 			accountCode = code
-// 			return nil
-// 		},
-// 		emitEvent: func(event cadence.Event) error { return nil },
-// 		log: func(message string) {
-// 			loggedMessage = message
-// 		},
-// 	}
-
-// 	nextTransactionLocation := newTransactionLocationGenerator()
-
-// 	err := runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: deploy,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	assert.NotNil(t, accountCode)
-
-// 	err = runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: tx,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	assert.Equal(t, `"destroyed"`, loggedMessage)
-// }
-
-// func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	runtime := NewInterpreterRuntime()
-
-// 	addressValue := Address{
-// 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-// 	}
-
-// 	contract := []byte(`
-//         pub contract Test {
-//             pub resource R {
-//                 // test that the destructor is linked back into the nested resource
-//                 // after being loaded from storage
-//                 destroy() {
-//                     log("destroyed")
-//                 }
-//             }
-
-//             init() {
-//                 // store nested resource in account on deployment
-//                 self.account.save(<-create R(), to: /storage/r)
-//             }
-//         }
-//     `)
-
-// 	tx := []byte(`
-//         // NOTE: *not* importing concrete implementation.
-//         //   Should be imported automatically when loading the value from storage
-
-// 		transaction {
-
-// 			prepare(acct: AuthAccount) {
-//                 let r <- acct.load<@AnyResource>(from: /storage/r)
-// 				destroy r
-// 			}
-// 		}
-// 	`)
-
-// 	deploy := utils.DeploymentTransaction("Test", contract)
-// 	removal := utils.RemovalTransaction("Test")
-
-// 	var accountCode []byte
-
-// 	runtimeInterface := &testRuntimeInterface{
-// 		getCode: func(_ Location) (bytes []byte, err error) {
-// 			return accountCode, nil
-// 		},
-// 		storage: newTestStorage(nil, nil),
-// 		getSigningAccounts: func() ([]Address, error) {
-// 			return []Address{addressValue}, nil
-// 		},
-// 		resolveLocation: singleIdentifierLocationResolver(t),
-// 		getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
-// 			return accountCode, nil
-// 		},
-// 		updateAccountContractCode: func(address Address, _ string, code []byte) error {
-// 			accountCode = code
-// 			return nil
-// 		},
-// 		removeAccountContractCode: func(_ Address, _ string) (err error) {
-// 			accountCode = nil
-// 			return nil
-// 		},
-// 		emitEvent: func(event cadence.Event) error { return nil },
-// 	}
-
-// 	nextTransactionLocation := newTransactionLocationGenerator()
-
-// 	// Deploy the contract
-
-// 	err := runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: deploy,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	assert.NotNil(t, accountCode)
-
-// 	// Remove the contract
-
-// 	err = runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: removal,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	assert.Nil(t, accountCode)
-
-// 	// Destroy
-
-// 	err = runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: tx,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-
-// 	var typeLoadingErr interpreter.TypeLoadingError
-// 	utils.RequireErrorAs(t, err, &typeLoadingErr)
-
-// 	require.Equal(t,
-// 		common.AddressLocation{Address: addressValue}.TypeID("Test.R"),
-// 		typeLoadingErr.TypeID,
-// 	)
-// }
-
-// const fungibleTokenContract = `
-// pub contract FungibleToken {
-
-//     pub resource interface Provider {
-//         pub fun withdraw(amount: Int): @Vault {
-//             pre {
-//                 amount > 0:
-//                     "Withdrawal amount must be positive"
-//             }
-//             post {
-//                 result.balance == amount:
-//                     "Incorrect amount returned"
-//             }
-//         }
-//     }
-
-//     pub resource interface Receiver {
-//         pub balance: Int
-
-//         init(balance: Int) {
-//             pre {
-//                 balance >= 0:
-//                     "Initial balance must be non-negative"
-//             }
-//             post {
-//                 self.balance == balance:
-//                     "Balance must be initialized to the initial balance"
-//             }
-//         }
-
-//         pub fun deposit(from: @AnyResource{Receiver}) {
-//             pre {
-//                 from.balance > 0:
-//                     "Deposit balance needs to be positive!"
-//             }
-//             post {
-//                 self.balance == before(self.balance) + before(from.balance):
-//                     "Incorrect amount removed"
-//             }
-//         }
-//     }
-
-//     pub resource Vault: Provider, Receiver {
-
-//         pub var balance: Int
-
-//         init(balance: Int) {
-//             self.balance = balance
-//         }
-
-//         pub fun withdraw(amount: Int): @Vault {
-//             self.balance = self.balance - amount
-//             return <-create Vault(balance: amount)
-//         }
-
-//         // transfer combines withdraw and deposit into one function call
-//         pub fun transfer(to: &AnyResource{Receiver}, amount: Int) {
-//             pre {
-//                 amount <= self.balance:
-//                     "Insufficient funds"
-//             }
-//             post {
-//                 self.balance == before(self.balance) - amount:
-//                     "Incorrect amount removed"
-//             }
-//             to.deposit(from: <-self.withdraw(amount: amount))
-//         }
-
-//         pub fun deposit(from: @AnyResource{Receiver}) {
-//             self.balance = self.balance + from.balance
-//             destroy from
-//         }
-
-//         pub fun createEmptyVault(): @Vault {
-//             return <-create Vault(balance: 0)
-//         }
-//     }
-
-//     pub fun createEmptyVault(): @Vault {
-//         return <-create Vault(balance: 0)
-//     }
-
-//     pub resource VaultMinter {
-//         pub fun mintTokens(amount: Int, recipient: &AnyResource{Receiver}) {
-//             recipient.deposit(from: <-create Vault(balance: amount))
-//         }
-//     }
-
-//     init() {
-//         self.account.save(<-create Vault(balance: 30), to: /storage/vault)
-//         self.account.save(<-create VaultMinter(), to: /storage/minter)
-//     }
-// }
-// `
-
-// func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	runtime := NewInterpreterRuntime()
-
-// 	address1Value := Address{
-// 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-// 	}
-
-// 	address2Value := Address{
-// 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-// 	}
-
-// 	deploy := utils.DeploymentTransaction("FungibleToken", []byte(fungibleTokenContract))
-
-// 	setup1Transaction := []byte(`
-//       import FungibleToken from 0x01
-
-//       transaction {
-
-//           prepare(acct: AuthAccount) {
-
-//               acct.link<&AnyResource{FungibleToken.Receiver}>(
-//                   /public/receiver,
-//                   target: /storage/vault
-//               )
-
-//               acct.link<&FungibleToken.Vault>(
-//                   /private/vault,
-//                   target: /storage/vault
-//               )
-//           }
-//       }
-//     `)
-
-// 	setup2Transaction := []byte(`
-//       // NOTE: import location not the same as in setup1Transaction
-//       import FungibleToken from 0x01
-
-//       transaction {
-
-//           prepare(acct: AuthAccount) {
-//               let vault <- FungibleToken.createEmptyVault()
-
-//               acct.save(<-vault, to: /storage/vault)
-
-//               acct.link<&AnyResource{FungibleToken.Receiver}>(
-//                   /public/receiver,
-//                   target: /storage/vault
-//               )
-
-//               acct.link<&FungibleToken.Vault>(
-//                   /private/vault,
-//                   target: /storage/vault
-//               )
-//           }
-//       }
-//     `)
-
-// 	accountCodes := map[string][]byte{}
-// 	var events []cadence.Event
-
-// 	signerAccount := address1Value
-
-// 	runtimeInterface := &testRuntimeInterface{
-// 		getCode: func(location Location) (bytes []byte, err error) {
-// 			key := string(location.(common.AddressLocation).ID())
-// 			return accountCodes[key], nil
-// 		},
-// 		storage: newTestStorage(nil, nil),
-// 		getSigningAccounts: func() ([]Address, error) {
-// 			return []Address{signerAccount}, nil
-// 		},
-// 		resolveLocation: singleIdentifierLocationResolver(t),
-// 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-// 			location := common.AddressLocation{
-// 				Address: address,
-// 				Name:    name,
-// 			}
-// 			key := string(location.ID())
-// 			return accountCodes[key], nil
-// 		},
-// 		updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
-// 			location := common.AddressLocation{
-// 				Address: address,
-// 				Name:    name,
-// 			}
-// 			key := string(location.ID())
-// 			accountCodes[key] = code
-// 			return nil
-// 		},
-// 		emitEvent: func(event cadence.Event) error {
-// 			events = append(events, event)
-// 			return nil
-// 		},
-// 	}
-
-// 	nextTransactionLocation := newTransactionLocationGenerator()
-
-// 	err := runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: deploy,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	err = runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: setup1Transaction,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	signerAccount = address2Value
-
-// 	err = runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: setup2Transaction,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-// }
-
-// func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	runtime := NewInterpreterRuntime()
-
-// 	address1Value := Address{
-// 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
-// 	}
-
-// 	address2Value := Address{
-// 		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
-// 	}
-
-// 	deploy := []byte(fmt.Sprintf(
-// 		`
-//           transaction {
-//             prepare(signer: AuthAccount) {
-//                 let acct = AuthAccount(payer: signer)
-//                 acct.contracts.add(name: "FungibleToken", code: "%s".decodeHex())
-//             }
-//           }
-//         `,
-// 		hex.EncodeToString([]byte(fungibleTokenContract)),
-// 	))
-
-// 	setup1Transaction := []byte(`
-//       import FungibleToken from 0x2
-
-//       transaction {
-
-//           prepare(acct: AuthAccount) {
-//               acct.link<&AnyResource{FungibleToken.Receiver}>(
-//                   /public/receiver,
-//                   target: /storage/vault
-//               )
-
-//               acct.link<&FungibleToken.Vault>(
-//                   /private/vault,
-//                   target: /storage/vault
-//               )
-//           }
-//       }
-//     `)
-
-// 	setup2Transaction := []byte(`
-//       // NOTE: import location not the same as in setup1Transaction
-//       import FungibleToken from 0x02
-
-//       transaction {
-
-//           prepare(acct: AuthAccount) {
-//               let vault <- FungibleToken.createEmptyVault()
-
-//               acct.save(<-vault, to: /storage/vault)
-
-//               acct.link<&AnyResource{FungibleToken.Receiver}>(
-//                   /public/receiver,
-//                   target: /storage/vault
-//               )
-
-//               acct.link<&FungibleToken.Vault>(
-//                   /private/vault,
-//                   target: /storage/vault
-//               )
-//           }
-//       }
-//     `)
-
-// 	accountCodes := map[string][]byte{}
-// 	var events []cadence.Event
-
-// 	signerAccount := address1Value
-
-// 	runtimeInterface := &testRuntimeInterface{
-// 		getCode: func(location Location) (bytes []byte, err error) {
-// 			key := string(location.(common.AddressLocation).ID())
-// 			return accountCodes[key], nil
-// 		},
-// 		storage: newTestStorage(nil, nil),
-// 		createAccount: func(payer Address) (address Address, err error) {
-// 			return address2Value, nil
-// 		},
-// 		getSigningAccounts: func() ([]Address, error) {
-// 			return []Address{signerAccount}, nil
-// 		},
-// 		resolveLocation: singleIdentifierLocationResolver(t),
-// 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-// 			location := common.AddressLocation{
-// 				Address: address,
-// 				Name:    name,
-// 			}
-// 			key := string(location.ID())
-// 			return accountCodes[key], nil
-// 		},
-// 		updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
-// 			location := common.AddressLocation{
-// 				Address: address,
-// 				Name:    name,
-// 			}
-// 			key := string(location.ID())
-// 			accountCodes[key] = code
-// 			return nil
-// 		},
-// 		emitEvent: func(event cadence.Event) error {
-// 			events = append(events, event)
-// 			return nil
-// 		},
-// 	}
-
-// 	nextTransactionLocation := newTransactionLocationGenerator()
-
-// 	err := runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: deploy,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	err = runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: setup1Transaction,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	err = runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: setup2Transaction,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-// }
-
-// func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
-
-// 	t.Parallel()
-
-// 	runtime := NewInterpreterRuntime()
-
-// 	makeDeployTransaction := func(name, code string) []byte {
-// 		return []byte(fmt.Sprintf(
-// 			`
-//               transaction {
-//                 prepare(signer: AuthAccount) {
-//                   let acct = AuthAccount(payer: signer)
-//                   acct.contracts.add(name: "%s", code: "%s".decodeHex())
-//                 }
-//               }
-//             `,
-// 			name,
-// 			hex.EncodeToString([]byte(code)),
-// 		))
-// 	}
-
-// 	contractInterfaceCode := `
-//       pub contract interface TestContractInterface {
-
-//           pub resource interface RInterface {
-
-//               pub fun check(a: Int, b: Int) {
-//                   pre { a > 1 }
-//                   post { b > 1 }
-//               }
-//           }
-//       }
-// 	`
-
-// 	contractCode := `
-// 	  import TestContractInterface from 0x2
-
-// 	  pub contract TestContract: TestContractInterface {
-
-// 	      pub resource R: TestContractInterface.RInterface {
-
-// 	          pub fun check(a: Int, b: Int) {
-// 	              pre { a < 3 }
-//                   post { b < 3 }
-// 	          }
-// 	      }
-
-// 	      pub fun createR(): @R {
-// 	          return <-create R()
-// 	      }
-// 	   }
-// 	`
-
-// 	setupCode := []byte(`
-// 	  import TestContractInterface from 0x2
-// 	  import TestContract from 0x3
-
-// 	  transaction {
-// 	      prepare(signer: AuthAccount) {
-// 	          signer.save(<-TestContract.createR(), to: /storage/r)
-// 	      }
-// 	  }
-// 	`)
-
-// 	makeUseCode := func(a int, b int) []byte {
-// 		return []byte(
-// 			fmt.Sprintf(
-// 				`
-// 	              import TestContractInterface from 0x2
-
-//                   // NOTE: *not* importing concrete implementation.
-//                   //   Should be imported automatically when loading the value from storage
-
-// 	              // import TestContract from 0x3
-
-// 	              transaction {
-// 	                  prepare(signer: AuthAccount) {
-// 	                      signer.borrow<&AnyResource{TestContractInterface.RInterface}>(from: /storage/r)?.check(a: %d, b: %d)
-// 	                  }
-// 	              }
-// 	            `,
-// 				a,
-// 				b,
-// 			),
-// 		)
-// 	}
-
-// 	accountCodes := map[string][]byte{}
-// 	var events []cadence.Event
-
-// 	var nextAccount byte = 0x2
-
-// 	runtimeInterface := &testRuntimeInterface{
-// 		getCode: func(location Location) (bytes []byte, err error) {
-// 			key := string(location.(common.AddressLocation).ID())
-// 			return accountCodes[key], nil
-// 		},
-// 		storage: newTestStorage(nil, nil),
-// 		createAccount: func(payer Address) (address Address, err error) {
-// 			result := interpreter.NewAddressValueFromBytes([]byte{nextAccount})
-// 			nextAccount++
-// 			return result.ToAddress(), nil
-// 		},
-// 		getSigningAccounts: func() ([]Address, error) {
-// 			return []Address{{0x1}}, nil
-// 		},
-// 		resolveLocation: singleIdentifierLocationResolver(t),
-// 		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
-// 			location := common.AddressLocation{
-// 				Address: address,
-// 				Name:    name,
-// 			}
-// 			key := string(location.ID())
-// 			return accountCodes[key], nil
-// 		},
-// 		updateAccountContractCode: func(address Address, name string, code []byte) error {
-// 			location := common.AddressLocation{
-// 				Address: address,
-// 				Name:    name,
-// 			}
-// 			key := string(location.ID())
-// 			accountCodes[key] = code
-// 			return nil
-// 		},
-// 		emitEvent: func(event cadence.Event) error {
-// 			events = append(events, event)
-// 			return nil
-// 		},
-// 	}
-
-// 	nextTransactionLocation := newTransactionLocationGenerator()
-
-// 	deployTransaction := makeDeployTransaction("TestContractInterface", contractInterfaceCode)
-// 	err := runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: deployTransaction,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	deployTransaction = makeDeployTransaction("TestContract", contractCode)
-// 	err = runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: deployTransaction,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	err = runtime.ExecuteTransaction(
-// 		Script{
-// 			Source: setupCode,
-// 		},
-// 		Context{
-// 			Interface: runtimeInterface,
-// 			Location:  nextTransactionLocation(),
-// 		},
-// 	)
-// 	require.NoError(t, err)
-
-// 	for a := 1; a <= 3; a++ {
-// 		for b := 1; b <= 3; b++ {
-
-// 			t.Run(fmt.Sprintf("%d/%d", a, b), func(t *testing.T) {
-
-// 				err = runtime.ExecuteTransaction(
-// 					Script{
-// 						Source: makeUseCode(a, b),
-// 					},
-// 					Context{
-// 						Interface: runtimeInterface,
-// 						Location:  nextTransactionLocation(),
-// 					},
-// 				)
-
-// 				if a == 2 && b == 2 {
-// 					assert.NoError(t, err)
-// 				} else {
-// 					require.Error(t, err)
-
-// 					utils.RequireErrorAs(t, err, &interpreter.ConditionError{})
-// 				}
-// 			})
-// 		}
-// 	}
-// }
+// TestRuntimeCompositeFunctionInvocationFromImportingProgram checks
+// that member functions of imported composites can be invoked from an importing program.
+// See https://github.com/dapperlabs/flow-go/issues/838
+//
+func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	imported := []byte(`
+      // function must have arguments
+      pub fun x(x: Int) {}
+
+      // invocation must be in composite
+      pub resource Y {
+        pub fun x() {
+          x(x: 1)
+        }
+      }
+
+      pub fun createY(): @Y {
+        return <-create Y()
+      }
+    `)
+
+	script1 := []byte(`
+      import Y, createY from "imported"
+
+      transaction {
+        prepare(signer: AuthAccount) {
+          signer.save(<-createY(), to: /storage/y)
+        }
+      }
+    `)
+
+	script2 := []byte(`
+      import Y from "imported"
+
+      transaction {
+        prepare(signer: AuthAccount) {
+          let y <- signer.load<@Y>(from: /storage/y)
+          y?.x()
+          destroy y
+        }
+      }
+    `)
+
+	var loggedMessages []string
+	accounts := &testAccountsInterface{}
+	accountContracts := &testAccountContractsInterface{}
+	accountStorage := newTestStorage(nil, nil)
+	utils := &testUtilsInterface{}
+	accountKeys := &testAccountKeysInterface{}
+	locationResolver := &testLocationResolverInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			switch location {
+			case common.StringLocation("imported"):
+				return imported, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+	}
+	programCache := &testProgramCacheInterface{}
+	results := &testResultsInterface{appendLog: func(message string) error {
+		loggedMessages = append(loggedMessages, message)
+		return nil
+	}}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.RunTransaction(
+		NewScript([]byte(script1), nil, []Address{{42}}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            utils,
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = runtime.RunTransaction(
+		NewScript([]byte(script2), nil, []Address{{42}}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            utils,
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+}
+
+func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	imported := []byte(`
+      pub resource R {
+        pub fun x() {
+          log("x!")
+        }
+      }
+
+      pub fun createR(): @R {
+        return <- create R()
+      }
+    `)
+
+	script1 := []byte(`
+      import R, createR from "imported"
+
+      transaction {
+
+        prepare(signer: AuthAccount) {
+          signer.save(<-createR(), to: /storage/r)
+        }
+      }
+    `)
+
+	script2 := []byte(`
+      import R from "imported"
+
+      transaction {
+
+        prepare(signer: AuthAccount) {
+          let ref = signer.borrow<&R>(from: /storage/r)!
+          ref.x()
+        }
+      }
+    `)
+
+	var loggedMessages []string
+
+	accounts := &testAccountsInterface{}
+	accountContracts := &testAccountContractsInterface{}
+	accountStorage := newTestStorage(nil, nil)
+	utils := &testUtilsInterface{}
+	accountKeys := &testAccountKeysInterface{}
+	locationResolver := &testLocationResolverInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			switch location {
+			case common.StringLocation("imported"):
+				return imported, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+	}
+	programCache := &testProgramCacheInterface{}
+	results := &testResultsInterface{appendLog: func(message string) error {
+		loggedMessages = append(loggedMessages, message)
+		return nil
+	}}
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.RunTransaction(
+		NewScript([]byte(script1), nil, []Address{{42}}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            utils,
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = runtime.RunTransaction(
+		NewScript([]byte(script2), nil, []Address{{42}}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            utils,
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"\"x!\""}, loggedMessages)
+}
+
+func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	imported := []byte(`
+      pub resource R {
+        pub fun x() {
+          log("x!")
+        }
+      }
+
+      pub fun createR(): @R {
+          return <- create R()
+      }
+    `)
+
+	script1 := []byte(`
+      import R, createR from "imported"
+
+      transaction {
+
+        prepare(signer: AuthAccount) {
+          signer.save(<-createR(), to: /storage/r)
+          signer.link<&R>(/public/r, target: /storage/r)
+        }
+      }
+    `)
+
+	script2 := []byte(`
+      import R from "imported"
+
+      transaction {
+        prepare(signer: AuthAccount) {
+          let publicAccount = getAccount(signer.address)
+          let ref = publicAccount
+              .getCapability(/public/r)
+              .borrow<&R>()!
+          ref.x()
+        }
+      }
+    `)
+
+	var loggedMessages []string
+
+	accounts := &testAccountsInterface{}
+	accountContracts := &testAccountContractsInterface{}
+	accountStorage := newTestStorage(nil, nil)
+	utils := &testUtilsInterface{}
+	accountKeys := &testAccountKeysInterface{}
+	locationResolver := &testLocationResolverInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			switch location {
+			case common.StringLocation("imported"):
+				return imported, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+	}
+	programCache := &testProgramCacheInterface{}
+	results := &testResultsInterface{appendLog: func(message string) error {
+		loggedMessages = append(loggedMessages, message)
+		return nil
+	}}
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.RunTransaction(
+		NewScript([]byte(script1), nil, []Address{{42}}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            utils,
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = runtime.RunTransaction(
+		NewScript([]byte(script2), nil, []Address{{42}}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            utils,
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"\"x!\""}, loggedMessages)
+}
+
+func TestRuntimeResourceContractWithInterface(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	imported1 := []byte(`
+      pub resource interface RI {
+        pub fun x()
+      }
+    `)
+
+	imported2 := []byte(`
+      import RI from "imported1"
+
+      pub resource R: RI {
+        pub fun x() {
+          log("x!")
+        }
+      }
+
+      pub fun createR(): @R {
+        return <- create R()
+      }
+    `)
+
+	script1 := []byte(`
+      import RI from "imported1"
+      import R, createR from "imported2"
+
+      transaction {
+        prepare(signer: AuthAccount) {
+          signer.save(<-createR(), to: /storage/r)
+          signer.link<&AnyResource{RI}>(/public/r, target: /storage/r)
+        }
+      }
+    `)
+
+	// TODO: Get rid of the requirement that the underlying type must be imported.
+	//   This requires properly initializing Interpreter.CompositeFunctions.
+	//   Also initialize Interpreter.DestructorFunctions
+
+	script2 := []byte(`
+      import RI from "imported1"
+      import R from "imported2"
+
+      transaction {
+        prepare(signer: AuthAccount) {
+          let ref = signer
+              .getCapability(/public/r)
+              .borrow<&AnyResource{RI}>()!
+          ref.x()
+        }
+      }
+    `)
+
+	var loggedMessages []string
+
+	accounts := &testAccountsInterface{}
+	accountContracts := &testAccountContractsInterface{}
+	accountStorage := newTestStorage(nil, nil)
+	utils := &testUtilsInterface{}
+	accountKeys := &testAccountKeysInterface{}
+	locationResolver := &testLocationResolverInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			switch location {
+			case common.StringLocation("imported1"):
+				return imported1, nil
+			case common.StringLocation("imported2"):
+				return imported2, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+	}
+	programCache := &testProgramCacheInterface{}
+	results := &testResultsInterface{appendLog: func(message string) error {
+		loggedMessages = append(loggedMessages, message)
+		return nil
+	}}
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.RunTransaction(
+		NewScript([]byte(script1), nil, []Address{{42}}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            utils,
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = runtime.RunTransaction(
+		NewScript([]byte(script2), nil, []Address{{42}}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            utils,
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"\"x!\""}, loggedMessages)
+}
+
+func TestParseAndCheckProgram(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("ValidProgram", func(t *testing.T) {
+		runtime := NewInterpreterRuntime()
+
+		script := []byte("pub fun test(): Int { return 42 }")
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		_, err := runtime.ParseAndCheckProgram(
+			script,
+			Context{
+				Accounts:         &testAccountsInterface{},
+				AccountContracts: &testAccountContractsInterface{},
+				AccountStorage:   newTestStorage(nil, nil),
+				AccountKeys:      &testAccountKeysInterface{},
+				LocationResolver: &testLocationResolverInterface{},
+				ProgramCache:     &testProgramCacheInterface{},
+				Results:          &testResultsInterface{},
+				Utils:            &testUtilsInterface{},
+				Location:         nextTransactionLocation(),
+			},
+		)
+		assert.NoError(t, err)
+	})
+
+	t.Run("InvalidSyntax", func(t *testing.T) {
+		runtime := NewInterpreterRuntime()
+
+		script := []byte("invalid syntax")
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		_, err := runtime.ParseAndCheckProgram(
+			script,
+			Context{
+				Accounts:         &testAccountsInterface{},
+				AccountContracts: &testAccountContractsInterface{},
+				AccountStorage:   newTestStorage(nil, nil),
+				AccountKeys:      &testAccountKeysInterface{},
+				LocationResolver: &testLocationResolverInterface{},
+				ProgramCache:     &testProgramCacheInterface{},
+				Results:          &testResultsInterface{},
+				Utils:            &testUtilsInterface{},
+				Location:         nextTransactionLocation(),
+			},
+		)
+		assert.NotNil(t, err)
+	})
+
+	t.Run("InvalidSemantics", func(t *testing.T) {
+		runtime := NewInterpreterRuntime()
+
+		script := []byte(`pub let a: Int = "b"`)
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		_, err := runtime.ParseAndCheckProgram(
+			script,
+			Context{
+				Accounts:         &testAccountsInterface{},
+				AccountContracts: &testAccountContractsInterface{},
+				AccountStorage:   newTestStorage(nil, nil),
+				AccountKeys:      &testAccountKeysInterface{},
+				LocationResolver: &testLocationResolverInterface{},
+				ProgramCache:     &testProgramCacheInterface{},
+				Results:          &testResultsInterface{},
+				Utils:            &testUtilsInterface{},
+				Location:         nextTransactionLocation(),
+			},
+		)
+		assert.NotNil(t, err)
+	})
+}
+
+func TestScriptReturnTypeNotReturnableError(t *testing.T) {
+
+	t.Parallel()
+
+	test := func(code string, expected cadence.Value) {
+
+		runtime := NewInterpreterRuntime()
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		actual, err := runtime.RunScript(
+			NewScript([]byte(code), nil, []Address{{42}}),
+			Context{
+				Accounts:         &testAccountsInterface{},
+				AccountContracts: &testAccountContractsInterface{},
+				AccountStorage:   newTestStorage(nil, nil),
+				AccountKeys:      &testAccountKeysInterface{},
+				LocationResolver: &testLocationResolverInterface{},
+				ProgramCache:     &testProgramCacheInterface{},
+				Results:          &testResultsInterface{},
+				Utils:            &testUtilsInterface{},
+				Location:         nextTransactionLocation(),
+			},
+		)
+
+		if expected == nil {
+			var subErr *InvalidScriptReturnTypeError
+			utils.RequireErrorAs(t, err, &subErr)
+		} else {
+			require.NoError(t, err)
+			require.Equal(t, expected, actual)
+		}
+	}
+
+	t.Run("function", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			`
+              pub fun main(): ((): Int) {
+                  return fun (): Int {
+                      return 0
+                  }
+              }
+            `,
+			nil,
+		)
+	})
+
+	t.Run("reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			`
+              pub fun main(): &Address {
+                  let a: Address = 0x1
+                  return &a as &Address
+              }
+            `,
+			cadence.Address{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1},
+		)
+	})
+
+	t.Run("recursive reference", func(t *testing.T) {
+
+		t.Parallel()
+
+		test(
+			`
+              pub fun main(): [&AnyStruct] {
+                  let refs: [&AnyStruct] = []
+                  refs.append(&refs as &AnyStruct)
+                  return refs
+              }
+            `,
+			cadence.NewArray([]cadence.Value{
+				cadence.NewArray([]cadence.Value{
+					nil,
+				}),
+			}),
+		)
+	})
+}
+
+func TestScriptParameterTypeNotStorableError(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	script := []byte(`
+      pub fun main(x: ((): Int)) {
+		return
+      }
+    `)
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	_, err := runtime.RunScript(
+		NewScript([]byte(script), nil, []Address{{42}}),
+		Context{
+			Accounts:         &testAccountsInterface{},
+			AccountContracts: &testAccountContractsInterface{},
+			AccountStorage:   newTestStorage(nil, nil),
+			AccountKeys:      &testAccountKeysInterface{},
+			LocationResolver: &testLocationResolverInterface{},
+			ProgramCache:     &testProgramCacheInterface{},
+			Results:          &testResultsInterface{},
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+
+	var subErr *ScriptParameterTypeNotStorableError
+	utils.RequireErrorAs(t, err, &subErr)
+}
+
+func TestRuntimeSyntaxError(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	script := []byte(`
+      pub fun main(): String {
+          return "Hello World!
+      }
+    `)
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	_, err := runtime.RunScript(
+		NewScript([]byte(script), nil, []Address{{42}}),
+		Context{
+			Accounts:         &testAccountsInterface{},
+			AccountContracts: &testAccountContractsInterface{},
+			AccountStorage:   newTestStorage(nil, nil),
+			AccountKeys:      &testAccountKeysInterface{},
+			LocationResolver: &testLocationResolverInterface{},
+			ProgramCache:     &testProgramCacheInterface{},
+			Results:          &testResultsInterface{},
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+	assert.Error(t, err)
+}
+
+func TestRuntimeStorageChanges(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	imported := []byte(`
+      pub resource X {
+        pub(set) var x: Int
+
+        init() {
+          self.x = 0
+        }
+      }
+
+      pub fun createX(): @X {
+          return <-create X()
+      }
+    `)
+
+	script1 := []byte(`
+      import X, createX from "imported"
+
+      transaction {
+        prepare(signer: AuthAccount) {
+          signer.save(<-createX(), to: /storage/x)
+
+          let ref = signer.borrow<&X>(from: /storage/x)!
+          ref.x = 1
+        }
+      }
+    `)
+
+	script2 := []byte(`
+      import X from "imported"
+
+      transaction {
+        prepare(signer: AuthAccount) {
+          let ref = signer.borrow<&X>(from: /storage/x)!
+          log(ref.x)
+        }
+      }
+    `)
+
+	var loggedMessages []string
+
+	accounts := &testAccountsInterface{}
+	accountContracts := &testAccountContractsInterface{}
+	accountStorage := newTestStorage(nil, nil)
+	utils := &testUtilsInterface{}
+	accountKeys := &testAccountKeysInterface{}
+	locationResolver := &testLocationResolverInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			switch location {
+			case common.StringLocation("imported"):
+				return imported, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+	}
+	programCache := &testProgramCacheInterface{}
+	results := &testResultsInterface{appendLog: func(message string) error {
+		loggedMessages = append(loggedMessages, message)
+		return nil
+	}}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.RunTransaction(
+		NewScript([]byte(script1), nil, []Address{{42}}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            utils,
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = runtime.RunTransaction(
+		NewScript([]byte(script2), nil, []Address{{42}}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            utils,
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"1"}, loggedMessages)
+}
+
+func TestRuntimeAccountAddress(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	script := []byte(`
+      transaction {
+        prepare(signer: AuthAccount) {
+          log(signer.address)
+        }
+      }
+    `)
+
+	accounts := &testAccountsInterface{}
+	accountContracts := &testAccountContractsInterface{}
+	accountStorage := newTestStorage(nil, nil)
+	utils := &testUtilsInterface{}
+	accountKeys := &testAccountKeysInterface{}
+	locationResolver := &testLocationResolverInterface{}
+	programCache := &testProgramCacheInterface{}
+	var loggedMessages []string
+	results := &testResultsInterface{appendLog: func(message string) error {
+		loggedMessages = append(loggedMessages, message)
+		return nil
+	}}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.RunTransaction(
+		NewScript([]byte(script), nil, []Address{common.BytesToAddress([]byte{42})}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            utils,
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"0x2a"}, loggedMessages)
+}
+
+func TestRuntimePublicAccountAddress(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	script := []byte(`
+      transaction {
+        prepare() {
+          log(getAccount(0x42).address)
+        }
+      }
+    `)
+
+	var loggedMessages []string
+
+	address := interpreter.NewAddressValueFromBytes([]byte{0x42})
+
+	accounts := &testAccountsInterface{}
+	accountContracts := &testAccountContractsInterface{}
+	accountStorage := newTestStorage(nil, nil)
+	utils := &testUtilsInterface{}
+	accountKeys := &testAccountKeysInterface{}
+	locationResolver := &testLocationResolverInterface{}
+	programCache := &testProgramCacheInterface{}
+	results := &testResultsInterface{appendLog: func(message string) error {
+		loggedMessages = append(loggedMessages, message)
+		return nil
+	}}
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.RunTransaction(
+		NewScript([]byte(script), nil, []Address{}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            utils,
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{fmt.Sprint(address)}, loggedMessages)
+}
+
+func TestRuntimeAccountPublishAndAccess(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	imported := []byte(`
+      pub resource R {
+        pub fun test(): Int {
+          return 42
+        }
+      }
+
+      pub fun createR(): @R {
+        return <-create R()
+      }
+    `)
+
+	script1 := []byte(`
+      import "imported"
+
+      transaction {
+        prepare(signer: AuthAccount) {
+          signer.save(<-createR(), to: /storage/r)
+          signer.link<&R>(/public/r, target: /storage/r)
+        }
+      }
+    `)
+
+	address := common.BytesToAddress([]byte{42})
+
+	script2 := []byte(
+		fmt.Sprintf(
+			`
+              import "imported"
+
+              transaction {
+
+                prepare(signer: AuthAccount) {
+                  log(getAccount(0x%s).getCapability(/public/r).borrow<&R>()!.test())
+                }
+              }
+            `,
+			address,
+		),
+	)
+
+	var loggedMessages []string
+
+	accounts := &testAccountsInterface{}
+	accountContracts := &testAccountContractsInterface{}
+	accountStorage := newTestStorage(nil, nil)
+	utils := &testUtilsInterface{}
+	accountKeys := &testAccountKeysInterface{}
+	locationResolver := &testLocationResolverInterface{
+		getCode: func(location Location) ([]byte, error) {
+			switch location {
+			case common.StringLocation("imported"):
+				return imported, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+	}
+	programCache := &testProgramCacheInterface{}
+	results := &testResultsInterface{appendLog: func(message string) error {
+		loggedMessages = append(loggedMessages, message)
+		return nil
+	}}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.RunTransaction(
+		NewScript([]byte(script1), nil, []Address{address}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            utils,
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = runtime.RunTransaction(
+		NewScript([]byte(script2), nil, []Address{address}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            utils,
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, []string{"42"}, loggedMessages)
+}
+
+func TestRuntimeTransaction_CreateAccount(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	script := []byte(`
+      transaction {
+        prepare(signer: AuthAccount) {
+          AuthAccount(payer: signer)
+        }
+      }
+    `)
+
+	var events []cadence.Event
+
+	accounts := &testAccountsInterface{
+		newAccount: func() (address Address, err error) {
+			return Address{42}, nil
+		},
+	}
+	accountContracts := &testAccountContractsInterface{}
+	accountStorage := newTestStorage(nil, nil)
+	utils := &testUtilsInterface{}
+	accountKeys := &testAccountKeysInterface{}
+	locationResolver := &testLocationResolverInterface{}
+	programCache := &testProgramCacheInterface{}
+	results := &testResultsInterface{
+		appendEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.RunTransaction(
+		NewScript([]byte(script), nil, []Address{{42}}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            utils,
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	require.Len(t, events, 1)
+	assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type().ID())
+}
+
+func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
+	runtime := NewInterpreterRuntime()
+
+	keyA := cadence.NewArray([]cadence.Value{
+		cadence.NewUInt8(1),
+		cadence.NewUInt8(2),
+		cadence.NewUInt8(3),
+	})
+
+	keyB := cadence.NewArray([]cadence.Value{
+		cadence.NewUInt8(4),
+		cadence.NewUInt8(5),
+		cadence.NewUInt8(6),
+	})
+
+	keys := cadence.NewArray([]cadence.Value{
+		keyA,
+		keyB,
+	})
+
+	var tests = []struct {
+		name     string
+		code     string
+		keyCount int
+		args     []cadence.Value
+		expected [][]byte
+	}{
+		{
+			name: "Single key",
+			code: `
+			  transaction(keyA: [UInt8]) {
+				prepare(signer: AuthAccount) {
+				  let acct = AuthAccount(payer: signer)
+				  acct.addPublicKey(keyA)
+				}
+			  }
+			`,
+			keyCount: 1,
+			args:     []cadence.Value{keyA},
+			expected: [][]byte{{1, 2, 3}},
+		},
+		{
+			name: "Multiple keys",
+			code: `
+			  transaction(keys: [[UInt8]]) {
+				prepare(signer: AuthAccount) {
+				  let acct = AuthAccount(payer: signer)
+				  for key in keys {
+					acct.addPublicKey(key)
+				  }
+				}
+			  }
+			`,
+			keyCount: 2,
+			args:     []cadence.Value{keys},
+			expected: [][]byte{{1, 2, 3}, {4, 5, 6}},
+		},
+	}
+
+	for _, tt := range tests {
+
+		var events []cadence.Event
+		var keys [][]byte
+
+		accounts := &testAccountsInterface{
+			newAccount: func() (address Address, err error) {
+				return Address{42}, nil
+			},
+		}
+		accountContracts := &testAccountContractsInterface{}
+		accountStorage := newTestStorage(nil, nil)
+		accountKeys := &testAccountKeysInterface{
+			addAccountKey: func(address Address, publicKey []byte) error {
+				keys = append(keys, publicKey)
+				return nil
+			},
+		}
+		locationResolver := &testLocationResolverInterface{}
+		programCache := &testProgramCacheInterface{}
+		results := &testResultsInterface{
+			appendEvent: func(event cadence.Event) error {
+				events = append(events, event)
+				return nil
+			},
+		}
+		t.Run(tt.name, func(t *testing.T) {
+			err := runtime.RunTransaction(
+				NewScript([]byte(tt.code), tt.args, []Address{{42}}),
+				Context{
+					Accounts:         accounts,
+					AccountContracts: accountContracts,
+					AccountStorage:   accountStorage,
+					AccountKeys:      accountKeys,
+					LocationResolver: locationResolver,
+					ProgramCache:     programCache,
+					Results:          results,
+					Utils:            &testUtilsInterface{},
+					Location:         utils.TestLocation,
+				},
+			)
+			require.NoError(t, err)
+			assert.Len(t, events, tt.keyCount+1)
+			assert.Len(t, keys, tt.keyCount)
+			assert.Equal(t, tt.expected, keys)
+
+			assert.EqualValues(t, stdlib.AccountCreatedEventType.ID(), events[0].Type().ID())
+
+			for _, event := range events[1:] {
+				assert.EqualValues(t, stdlib.AccountKeyAddedEventType.ID(), event.Type().ID())
+			}
+		})
+	}
+}
+
+func TestRuntimeContractAccount(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	addressValue := cadence.BytesToAddress([]byte{0xCA, 0xDE})
+
+	contract := []byte(`
+      pub contract Test {
+          pub let address: Address
+
+          init() {
+              // field 'account' can be used, as it is considered initialized
+              self.address = self.account.address
+          }
+
+          // test that both functions are linked back into restored composite values,
+          // and also injected fields are injected back into restored composite values
+          //
+          pub fun test(): Address {
+              return self.account.address
+          }
+      }
+    `)
+
+	script1 := []byte(`
+      import Test from 0xCADE
+
+      pub fun main(): Address {
+          return Test.address
+      }
+    `)
+
+	script2 := []byte(`
+      import Test from 0xCADE
+
+      pub fun main(): Address {
+          return Test.test()
+      }
+    `)
+
+	deploy := utils.DeploymentTransaction("Test", contract)
+
+	var accountCode []byte
+	var events []cadence.Event
+
+	accounts := &testAccountsInterface{}
+	accountContracts := &testAccountContractsInterface{
+		contractCode: func(_ AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateContractCode: func(_ AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+	}
+	accountStorage := newTestStorage(nil, nil)
+	accountKeys := &testAccountKeysInterface{}
+	locationResolver := &testLocationResolverInterface{
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+	}
+
+	programCache := &testProgramCacheInterface{}
+	results := &testResultsInterface{
+		appendEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.RunTransaction(
+		NewScript([]byte(deploy), nil, []Address{common.BytesToAddress(addressValue.Bytes())}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.NotNil(t, accountCode)
+
+	t.Run("", func(t *testing.T) {
+		value, err := runtime.RunScript(
+			NewScript([]byte(script1), nil, []Address{common.BytesToAddress(addressValue.Bytes())}),
+			Context{
+				Accounts:         accounts,
+				AccountContracts: accountContracts,
+				AccountStorage:   accountStorage,
+				AccountKeys:      accountKeys,
+				LocationResolver: locationResolver,
+				ProgramCache:     programCache,
+				Results:          results,
+				Utils:            &testUtilsInterface{},
+				Location:         nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, addressValue, value)
+	})
+
+	t.Run("", func(t *testing.T) {
+		value, err := runtime.RunScript(
+			NewScript([]byte(script2), nil, []Address{common.BytesToAddress(addressValue.Bytes())}),
+			Context{
+				Accounts:         accounts,
+				AccountContracts: accountContracts,
+				AccountStorage:   accountStorage,
+				AccountKeys:      accountKeys,
+				LocationResolver: locationResolver,
+				ProgramCache:     programCache,
+				Results:          results,
+				Utils:            &testUtilsInterface{},
+				Location:         nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, addressValue, value)
+	})
+}
+
+func TestRuntimeContractNestedResource(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	addressValue := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+	}
+
+	contract := []byte(`
+        pub contract Test {
+            pub resource R {
+                // test that the hello function is linked back into the nested resource
+                // after being loaded from storage
+                pub fun hello(): String {
+                    return "Hello World!"
+                }
+            }
+
+            init() {
+                // store nested resource in account on deployment
+                self.account.save(<-create R(), to: /storage/r)
+            }
+        }
+    `)
+
+	tx := []byte(`
+		import Test from 0x01
+
+		transaction {
+
+			prepare(acct: AuthAccount) {
+				log(acct.borrow<&Test.R>(from: /storage/r)?.hello())
+			}
+		}
+	`)
+
+	deploy := utils.DeploymentTransaction("Test", contract)
+
+	var accountCode []byte
+	var loggedMessage string
+
+	accounts := &testAccountsInterface{}
+	accountContracts := &testAccountContractsInterface{
+		contractCode: func(_ AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateContractCode: func(_ AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+	}
+	accountStorage := newTestStorage(nil, nil)
+	accountKeys := &testAccountKeysInterface{}
+	programCache := &testProgramCacheInterface{}
+	locationResolver := &testLocationResolverInterface{
+		getCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+	}
+	results := &testResultsInterface{
+		appendEvent: func(event cadence.Event) error { return nil },
+		appendLog: func(message string) error {
+			loggedMessage = message
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.RunTransaction(
+		NewScript([]byte(deploy), nil, []Address{addressValue}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.NotNil(t, accountCode)
+
+	err = runtime.RunTransaction(
+		NewScript([]byte(tx), nil, []Address{addressValue}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, `"Hello World!"`, loggedMessage)
+}
+
+func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	addressValue := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+	}
+
+	contract := []byte(`
+        pub contract Test {
+            pub resource R {
+                // test that the destructor is linked back into the nested resource
+                // after being loaded from storage
+                destroy() {
+                    log("destroyed")
+                }
+            }
+
+            init() {
+                // store nested resource in account on deployment
+                self.account.save(<-create R(), to: /storage/r)
+            }
+        }
+    `)
+
+	tx := []byte(`
+		import Test from 0x01
+
+		transaction {
+
+			prepare(acct: AuthAccount) {
+                let r <- acct.load<@Test.R>(from: /storage/r)
+				destroy r
+			}
+		}
+	`)
+
+	deploy := utils.DeploymentTransaction("Test", contract)
+
+	var accountCode []byte
+	var loggedMessage string
+
+	accounts := &testAccountsInterface{}
+	accountContracts := &testAccountContractsInterface{
+		contractCode: func(_ AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateContractCode: func(_ AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+	}
+	accountStorage := newTestStorage(nil, nil)
+	accountKeys := &testAccountKeysInterface{}
+	programCache := &testProgramCacheInterface{}
+	locationResolver := &testLocationResolverInterface{
+		getCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+	}
+	results := &testResultsInterface{
+		appendEvent: func(event cadence.Event) error { return nil },
+		appendLog: func(message string) error {
+			loggedMessage = message
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.RunTransaction(
+		NewScript([]byte(deploy), nil, []Address{addressValue}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.NotNil(t, accountCode)
+
+	err = runtime.RunTransaction(
+		NewScript([]byte(tx), nil, []Address{addressValue}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		})
+	require.NoError(t, err)
+
+	assert.Equal(t, `"destroyed"`, loggedMessage)
+}
+
+func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	addressValue := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+	}
+
+	contract := []byte(`
+        pub contract Test {
+            pub resource R {
+                // test that the destructor is linked back into the nested resource
+                // after being loaded from storage
+                destroy() {
+                    log("destroyed")
+                }
+            }
+
+            init() {
+                // store nested resource in account on deployment
+                self.account.save(<-create R(), to: /storage/r)
+            }
+        }
+    `)
+
+	tx := []byte(`
+        // NOTE: *not* importing concrete implementation.
+        //   Should be imported automatically when loading the value from storage
+
+		transaction {
+
+			prepare(acct: AuthAccount) {
+                let r <- acct.load<@AnyResource>(from: /storage/r)
+				destroy r
+			}
+		}
+	`)
+
+	deploy := utils.DeploymentTransaction("Test", contract)
+
+	var accountCode []byte
+	var loggedMessage string
+
+	accounts := &testAccountsInterface{}
+	accountContracts := &testAccountContractsInterface{
+		contractCode: func(_ AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateContractCode: func(_ AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+	}
+	accountStorage := newTestStorage(nil, nil)
+	accountKeys := &testAccountKeysInterface{}
+	programCache := &testProgramCacheInterface{}
+	locationResolver := &testLocationResolverInterface{
+		getCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+	}
+	results := &testResultsInterface{
+		appendEvent: func(event cadence.Event) error { return nil },
+		appendLog: func(message string) error {
+			loggedMessage = message
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.RunTransaction(
+		NewScript([]byte(deploy), nil, []Address{addressValue}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.NotNil(t, accountCode)
+
+	err = runtime.RunTransaction(
+		NewScript([]byte(tx), nil, []Address{addressValue}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Equal(t, `"destroyed"`, loggedMessage)
+}
+
+func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	addressValue := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+	}
+
+	contract := []byte(`
+        pub contract Test {
+            pub resource R {
+                // test that the destructor is linked back into the nested resource
+                // after being loaded from storage
+                destroy() {
+                    log("destroyed")
+                }
+            }
+
+            init() {
+                // store nested resource in account on deployment
+                self.account.save(<-create R(), to: /storage/r)
+            }
+        }
+    `)
+
+	tx := []byte(`
+        // NOTE: *not* importing concrete implementation.
+        //   Should be imported automatically when loading the value from storage
+
+		transaction {
+
+			prepare(acct: AuthAccount) {
+                let r <- acct.load<@AnyResource>(from: /storage/r)
+				destroy r
+			}
+		}
+	`)
+
+	deploy := utils.DeploymentTransaction("Test", contract)
+	removal := utils.RemovalTransaction("Test")
+
+	var accountCode []byte
+
+	accounts := &testAccountsInterface{}
+	accountContracts := &testAccountContractsInterface{
+		contractCode: func(_ AddressLocation) (code []byte, err error) {
+			return accountCode, nil
+		},
+		updateContractCode: func(_ AddressLocation, code []byte) error {
+			accountCode = code
+			return nil
+		},
+		removeContractCode: func(_ AddressLocation) (err error) {
+			accountCode = nil
+			return nil
+		},
+	}
+	accountStorage := newTestStorage(nil, nil)
+	accountKeys := &testAccountKeysInterface{}
+	programCache := &testProgramCacheInterface{}
+	locationResolver := &testLocationResolverInterface{
+		getCode: func(_ Location) (bytes []byte, err error) {
+			return accountCode, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+	}
+	results := &testResultsInterface{
+		appendEvent: func(event cadence.Event) error { return nil },
+	}
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	// Deploy the contract
+
+	err := runtime.RunTransaction(
+		NewScript([]byte(deploy), nil, []Address{addressValue}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.NotNil(t, accountCode)
+
+	// Remove the contract
+
+	err = runtime.RunTransaction(
+		NewScript([]byte(removal), nil, []Address{addressValue}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	assert.Nil(t, accountCode)
+
+	// Destroy
+
+	err = runtime.RunTransaction(
+		NewScript([]byte(tx), nil, []Address{addressValue}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+
+	var typeLoadingErr interpreter.TypeLoadingError
+	utils.RequireErrorAs(t, err, &typeLoadingErr)
+
+	require.Equal(t,
+		common.AddressLocation{Address: addressValue}.TypeID("Test.R"),
+		typeLoadingErr.TypeID,
+	)
+}
+
+const fungibleTokenContract = `
+pub contract FungibleToken {
+
+    pub resource interface Provider {
+        pub fun withdraw(amount: Int): @Vault {
+            pre {
+                amount > 0:
+                    "Withdrawal amount must be positive"
+            }
+            post {
+                result.balance == amount:
+                    "Incorrect amount returned"
+            }
+        }
+    }
+
+    pub resource interface Receiver {
+        pub balance: Int
+
+        init(balance: Int) {
+            pre {
+                balance >= 0:
+                    "Initial balance must be non-negative"
+            }
+            post {
+                self.balance == balance:
+                    "Balance must be initialized to the initial balance"
+            }
+        }
+
+        pub fun deposit(from: @AnyResource{Receiver}) {
+            pre {
+                from.balance > 0:
+                    "Deposit balance needs to be positive!"
+            }
+            post {
+                self.balance == before(self.balance) + before(from.balance):
+                    "Incorrect amount removed"
+            }
+        }
+    }
+
+    pub resource Vault: Provider, Receiver {
+
+        pub var balance: Int
+
+        init(balance: Int) {
+            self.balance = balance
+        }
+
+        pub fun withdraw(amount: Int): @Vault {
+            self.balance = self.balance - amount
+            return <-create Vault(balance: amount)
+        }
+
+        // transfer combines withdraw and deposit into one function call
+        pub fun transfer(to: &AnyResource{Receiver}, amount: Int) {
+            pre {
+                amount <= self.balance:
+                    "Insufficient funds"
+            }
+            post {
+                self.balance == before(self.balance) - amount:
+                    "Incorrect amount removed"
+            }
+            to.deposit(from: <-self.withdraw(amount: amount))
+        }
+
+        pub fun deposit(from: @AnyResource{Receiver}) {
+            self.balance = self.balance + from.balance
+            destroy from
+        }
+
+        pub fun createEmptyVault(): @Vault {
+            return <-create Vault(balance: 0)
+        }
+    }
+
+    pub fun createEmptyVault(): @Vault {
+        return <-create Vault(balance: 0)
+    }
+
+    pub resource VaultMinter {
+        pub fun mintTokens(amount: Int, recipient: &AnyResource{Receiver}) {
+            recipient.deposit(from: <-create Vault(balance: amount))
+        }
+    }
+
+    init() {
+        self.account.save(<-create Vault(balance: 30), to: /storage/vault)
+        self.account.save(<-create VaultMinter(), to: /storage/minter)
+    }
+}
+`
+
+func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	address1Value := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+	}
+
+	address2Value := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
+	}
+
+	deploy := utils.DeploymentTransaction("FungibleToken", []byte(fungibleTokenContract))
+
+	setup1Transaction := []byte(`
+      import FungibleToken from 0x01
+
+      transaction {
+
+          prepare(acct: AuthAccount) {
+
+              acct.link<&AnyResource{FungibleToken.Receiver}>(
+                  /public/receiver,
+                  target: /storage/vault
+              )
+
+              acct.link<&FungibleToken.Vault>(
+                  /private/vault,
+                  target: /storage/vault
+              )
+          }
+      }
+    `)
+
+	setup2Transaction := []byte(`
+      // NOTE: import location not the same as in setup1Transaction
+      import FungibleToken from 0x01
+
+      transaction {
+
+          prepare(acct: AuthAccount) {
+              let vault <- FungibleToken.createEmptyVault()
+
+              acct.save(<-vault, to: /storage/vault)
+
+              acct.link<&AnyResource{FungibleToken.Receiver}>(
+                  /public/receiver,
+                  target: /storage/vault
+              )
+
+              acct.link<&FungibleToken.Vault>(
+                  /private/vault,
+                  target: /storage/vault
+              )
+          }
+      }
+    `)
+
+	accountCodes := map[string][]byte{}
+	var events []cadence.Event
+
+	signerAccount := address1Value
+
+	accounts := &testAccountsInterface{}
+	accountContracts := &testAccountContractsInterface{
+		contractCode: func(location AddressLocation) (code []byte, err error) {
+			key := string(location.ID())
+			return accountCodes[key], nil
+		},
+		updateContractCode: func(location AddressLocation, code []byte) error {
+			key := string(location.ID())
+			accountCodes[key] = code
+			return nil
+		},
+	}
+	accountStorage := newTestStorage(nil, nil)
+	accountKeys := &testAccountKeysInterface{}
+	programCache := &testProgramCacheInterface{}
+	locationResolver := &testLocationResolverInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			key := string(location.(common.AddressLocation).ID())
+			return accountCodes[key], nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+	}
+	results := &testResultsInterface{
+		appendEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.RunTransaction(
+		NewScript([]byte(deploy), nil, []Address{signerAccount}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = runtime.RunTransaction(
+		NewScript([]byte(setup1Transaction), nil, []Address{signerAccount}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	signerAccount = address2Value
+
+	err = runtime.RunTransaction(
+		NewScript([]byte(setup2Transaction), nil, []Address{signerAccount}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+}
+
+func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	address1Value := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
+	}
+
+	address2Value := Address{
+		0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2,
+	}
+
+	deploy := []byte(fmt.Sprintf(
+		`
+          transaction {
+            prepare(signer: AuthAccount) {
+                let acct = AuthAccount(payer: signer)
+                acct.contracts.add(name: "FungibleToken", code: "%s".decodeHex())
+            }
+          }
+        `,
+		hex.EncodeToString([]byte(fungibleTokenContract)),
+	))
+
+	setup1Transaction := []byte(`
+      import FungibleToken from 0x2
+
+      transaction {
+
+          prepare(acct: AuthAccount) {
+              acct.link<&AnyResource{FungibleToken.Receiver}>(
+                  /public/receiver,
+                  target: /storage/vault
+              )
+
+              acct.link<&FungibleToken.Vault>(
+                  /private/vault,
+                  target: /storage/vault
+              )
+          }
+      }
+    `)
+
+	setup2Transaction := []byte(`
+      // NOTE: import location not the same as in setup1Transaction
+      import FungibleToken from 0x02
+
+      transaction {
+
+          prepare(acct: AuthAccount) {
+              let vault <- FungibleToken.createEmptyVault()
+
+              acct.save(<-vault, to: /storage/vault)
+
+              acct.link<&AnyResource{FungibleToken.Receiver}>(
+                  /public/receiver,
+                  target: /storage/vault
+              )
+
+              acct.link<&FungibleToken.Vault>(
+                  /private/vault,
+                  target: /storage/vault
+              )
+          }
+      }
+    `)
+
+	accountCodes := map[string][]byte{}
+	var events []cadence.Event
+
+	signerAccount := address1Value
+
+	accounts := &testAccountsInterface{
+		newAccount: func() (address Address, err error) {
+			return address2Value, nil
+		},
+	}
+	accountContracts := &testAccountContractsInterface{
+		contractCode: func(location AddressLocation) (code []byte, err error) {
+			key := string(location.ID())
+			return accountCodes[key], nil
+		},
+		updateContractCode: func(location AddressLocation, code []byte) error {
+			key := string(location.ID())
+			accountCodes[key] = code
+			return nil
+		},
+	}
+	accountStorage := newTestStorage(nil, nil)
+	accountKeys := &testAccountKeysInterface{}
+	programCache := &testProgramCacheInterface{}
+	locationResolver := &testLocationResolverInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			key := string(location.(common.AddressLocation).ID())
+			return accountCodes[key], nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+	}
+	results := &testResultsInterface{
+		appendEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	err := runtime.RunTransaction(
+		NewScript([]byte(deploy), nil, []Address{signerAccount}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = runtime.RunTransaction(
+		NewScript([]byte(setup1Transaction), nil, []Address{signerAccount}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = runtime.RunTransaction(
+		NewScript([]byte(setup2Transaction), nil, []Address{signerAccount}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+}
+
+func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	makeDeployTransaction := func(name, code string) []byte {
+		return []byte(fmt.Sprintf(
+			`
+              transaction {
+                prepare(signer: AuthAccount) {
+                  let acct = AuthAccount(payer: signer)
+                  acct.contracts.add(name: "%s", code: "%s".decodeHex())
+                }
+              }
+            `,
+			name,
+			hex.EncodeToString([]byte(code)),
+		))
+	}
+
+	contractInterfaceCode := `
+      pub contract interface TestContractInterface {
+
+          pub resource interface RInterface {
+
+              pub fun check(a: Int, b: Int) {
+                  pre { a > 1 }
+                  post { b > 1 }
+              }
+          }
+      }
+	`
+
+	contractCode := `
+	  import TestContractInterface from 0x2
+
+	  pub contract TestContract: TestContractInterface {
+
+	      pub resource R: TestContractInterface.RInterface {
+
+	          pub fun check(a: Int, b: Int) {
+	              pre { a < 3 }
+                  post { b < 3 }
+	          }
+	      }
+
+	      pub fun createR(): @R {
+	          return <-create R()
+	      }
+	   }
+	`
+
+	setupCode := []byte(`
+	  import TestContractInterface from 0x2
+	  import TestContract from 0x3
+
+	  transaction {
+	      prepare(signer: AuthAccount) {
+	          signer.save(<-TestContract.createR(), to: /storage/r)
+	      }
+	  }
+	`)
+
+	makeUseCode := func(a int, b int) []byte {
+		return []byte(
+			fmt.Sprintf(
+				`
+	              import TestContractInterface from 0x2
+
+                  // NOTE: *not* importing concrete implementation.
+                  //   Should be imported automatically when loading the value from storage
+
+	              // import TestContract from 0x3
+
+	              transaction {
+	                  prepare(signer: AuthAccount) {
+	                      signer.borrow<&AnyResource{TestContractInterface.RInterface}>(from: /storage/r)?.check(a: %d, b: %d)
+	                  }
+	              }
+	            `,
+				a,
+				b,
+			),
+		)
+	}
+
+	accountCodes := map[string][]byte{}
+	var events []cadence.Event
+
+	var nextAccount byte = 0x2
+
+	accounts := &testAccountsInterface{
+		newAccount: func() (address Address, err error) {
+			result := interpreter.NewAddressValueFromBytes([]byte{nextAccount})
+			nextAccount++
+			return result.ToAddress(), nil
+		},
+	}
+	accountContracts := &testAccountContractsInterface{
+		contractCode: func(location AddressLocation) (code []byte, err error) {
+			key := string(location.ID())
+			return accountCodes[key], nil
+		},
+		updateContractCode: func(location AddressLocation, code []byte) error {
+			key := string(location.ID())
+			accountCodes[key] = code
+			return nil
+		},
+	}
+	accountStorage := newTestStorage(nil, nil)
+	accountKeys := &testAccountKeysInterface{}
+	programCache := &testProgramCacheInterface{}
+	locationResolver := &testLocationResolverInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			key := string(location.(common.AddressLocation).ID())
+			return accountCodes[key], nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+	}
+	results := &testResultsInterface{
+		appendEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	deployTransaction := makeDeployTransaction("TestContractInterface", contractInterfaceCode)
+
+	err := runtime.RunTransaction(
+		NewScript([]byte(deployTransaction), nil, []Address{{0x1}}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	deployTransaction = makeDeployTransaction("TestContract", contractCode)
+	err = runtime.RunTransaction(
+		NewScript([]byte(deployTransaction), nil, []Address{{0x1}}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	err = runtime.RunTransaction(
+		NewScript([]byte(setupCode), nil, []Address{{0x1}}),
+		Context{
+			Accounts:         accounts,
+			AccountContracts: accountContracts,
+			AccountStorage:   accountStorage,
+			AccountKeys:      accountKeys,
+			LocationResolver: locationResolver,
+			ProgramCache:     programCache,
+			Results:          results,
+			Utils:            &testUtilsInterface{},
+			Location:         nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+
+	for a := 1; a <= 3; a++ {
+		for b := 1; b <= 3; b++ {
+
+			t.Run(fmt.Sprintf("%d/%d", a, b), func(t *testing.T) {
+
+				err = runtime.RunTransaction(
+					NewScript(makeUseCode(a, b), nil, []Address{{0x1}}),
+					Context{
+						Accounts:         accounts,
+						AccountContracts: accountContracts,
+						AccountStorage:   accountStorage,
+						AccountKeys:      accountKeys,
+						LocationResolver: locationResolver,
+						ProgramCache:     programCache,
+						Results:          results,
+						Utils:            &testUtilsInterface{},
+						Location:         nextTransactionLocation(),
+					},
+				)
+
+				if a == 2 && b == 2 {
+					assert.NoError(t, err)
+				} else {
+					require.Error(t, err)
+
+					utils.RequireErrorAs(t, err, &interpreter.ConditionError{})
+				}
+			})
+		}
+	}
+}
 
 // func TestRuntimeBlock(t *testing.T) {
 
@@ -4072,7 +4327,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	nextTransactionLocation := newTransactionLocationGenerator()
 
-// 	err := runtime.ExecuteTransaction(
+// 	err := runtime.RunTransaction(
 // 		Script{
 // 			Source: script,
 // 		},
@@ -4128,7 +4383,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	nextTransactionLocation := newTransactionLocationGenerator()
 
-// 	err := runtime.ExecuteTransaction(
+// 	err := runtime.RunTransaction(
 // 		Script{
 // 			Source: script,
 // 		},
@@ -4168,7 +4423,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 		nextTransactionLocation := newTransactionLocationGenerator()
 
-// 		err := runtime.ExecuteTransaction(
+// 		err := runtime.RunTransaction(
 // 			Script{
 // 				Source: script,
 // 			},
@@ -4197,7 +4452,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 		nextTransactionLocation := newTransactionLocationGenerator()
 
-// 		err := runtime.ExecuteTransaction(
+// 		err := runtime.RunTransaction(
 // 			Script{
 // 				Source: script,
 // 			},
@@ -4277,7 +4532,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 			nextTransactionLocation := newTransactionLocationGenerator()
 
-// 			err := runtime.ExecuteTransaction(
+// 			err := runtime.RunTransaction(
 // 				Script{
 // 					Source: deploy,
 // 				},
@@ -4408,7 +4663,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	nextTransactionLocation := newTransactionLocationGenerator()
 
-// 	err := runtime.ExecuteTransaction(
+// 	err := runtime.RunTransaction(
 // 		Script{
 // 			Source: deploy,
 // 		},
@@ -4419,7 +4674,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 // 	)
 // 	require.NoError(t, err)
 
-// 	err = runtime.ExecuteTransaction(
+// 	err = runtime.RunTransaction(
 // 		Script{
 // 			Source: tx,
 // 		},
@@ -4440,7 +4695,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 // 	)
 
 // 	loggedMessages = nil
-// 	err = runtime.ExecuteTransaction(
+// 	err = runtime.RunTransaction(
 // 		Script{
 // 			Source: tx2,
 // 		},
@@ -4588,7 +4843,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	nextTransactionLocation := newTransactionLocationGenerator()
 
-// 	err := runtime.ExecuteTransaction(
+// 	err := runtime.RunTransaction(
 // 		Script{
 // 			Source: deploy,
 // 		},
@@ -4599,7 +4854,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 // 	)
 // 	require.NoError(t, err)
 
-// 	err = runtime.ExecuteTransaction(
+// 	err = runtime.RunTransaction(
 // 		Script{
 // 			Source: tx,
 // 		},
@@ -4623,7 +4878,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 // 	)
 
 // 	loggedMessages = nil
-// 	err = runtime.ExecuteTransaction(
+// 	err = runtime.RunTransaction(
 // 		Script{
 // 			Source: tx2,
 // 		},
@@ -4773,7 +5028,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	nextTransactionLocation := newTransactionLocationGenerator()
 
-// 	err := runtime.ExecuteTransaction(
+// 	err := runtime.RunTransaction(
 // 		Script{
 // 			Source: deploy,
 // 		},
@@ -4784,7 +5039,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 // 	)
 // 	require.NoError(t, err)
 
-// 	err = runtime.ExecuteTransaction(
+// 	err = runtime.RunTransaction(
 // 		Script{
 // 			Source: tx,
 // 		},
@@ -4808,7 +5063,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 // 	)
 
 // 	loggedMessages = nil
-// 	err = runtime.ExecuteTransaction(
+// 	err = runtime.RunTransaction(
 // 		Script{
 // 			Source: tx2,
 // 		},
@@ -4904,7 +5159,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 			nextTransactionLocation := newTransactionLocationGenerator()
 
-// 			err := runtime.ExecuteTransaction(
+// 			err := runtime.RunTransaction(
 // 				Script{
 // 					Source: script,
 // 				},
@@ -5032,7 +5287,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 // 	nextTransactionLocation := newTransactionLocationGenerator()
 
 // 	transactionLocation := nextTransactionLocation()
-// 	err := runtime.ExecuteTransaction(
+// 	err := runtime.RunTransaction(
 // 		Script{
 // 			Source: script1,
 // 		},
@@ -5070,7 +5325,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	transactionLocation = nextTransactionLocation()
 
-// 	err = runtime.ExecuteTransaction(
+// 	err = runtime.RunTransaction(
 // 		Script{
 // 			Source: script2,
 // 		},
@@ -5204,7 +5459,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	nextTransactionLocation := newTransactionLocationGenerator()
 
-// 	err := runtime.ExecuteTransaction(
+// 	err := runtime.RunTransaction(
 // 		Script{
 // 			Source: deploy,
 // 		},
@@ -5219,7 +5474,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	assert.Len(t, writes, 1)
 
-// 	err = runtime.ExecuteTransaction(
+// 	err = runtime.RunTransaction(
 // 		Script{
 // 			Source: readTx,
 // 		},
@@ -5232,7 +5487,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	assert.Len(t, writes, 1)
 
-// 	err = runtime.ExecuteTransaction(
+// 	err = runtime.RunTransaction(
 // 		Script{
 // 			Source: writeTx,
 // 		},
@@ -5325,7 +5580,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	nextTransactionLocation := newTransactionLocationGenerator()
 
-// 	err := runtime.ExecuteTransaction(
+// 	err := runtime.RunTransaction(
 // 		Script{
 // 			Source: deploy,
 // 		},
@@ -5340,7 +5595,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	assert.Len(t, writes, 1)
 
-// 	err = runtime.ExecuteTransaction(
+// 	err = runtime.RunTransaction(
 // 		Script{
 // 			Source: setupTx,
 // 		},
@@ -5364,7 +5619,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 //       }
 //     `)
 
-// 	err = runtime.ExecuteTransaction(
+// 	err = runtime.RunTransaction(
 // 		Script{
 // 			Source: readTx,
 // 		},
@@ -5389,7 +5644,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 //       }
 //     `)
 
-// 	err = runtime.ExecuteTransaction(
+// 	err = runtime.RunTransaction(
 // 		Script{
 // 			Source: writeTx,
 // 		},
@@ -5435,7 +5690,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 // 			Recovered: logPanic{},
 // 		},
 // 		func() {
-// 			_ = runtime.ExecuteTransaction(
+// 			_ = runtime.RunTransaction(
 // 				Script{
 // 					Source: script,
 // 				},
@@ -5548,7 +5803,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	signerAddresses = []Address{{accountCounter}}
 
-// 	err := runtime.ExecuteTransaction(
+// 	err := runtime.RunTransaction(
 // 		Script{
 // 			Source: createAccountTx,
 // 		},
@@ -5563,7 +5818,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	signerAddresses = []Address{{accountCounter}}
 
-// 	err = runtime.ExecuteTransaction(
+// 	err = runtime.RunTransaction(
 // 		Script{
 // 			Source: deployTx,
 // 		},
@@ -5578,7 +5833,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	callTx := []byte(fmt.Sprintf(callHelloTxTemplate, Address{accountCounter}))
 
-// 	err = runtime.ExecuteTransaction(
+// 	err = runtime.RunTransaction(
 // 		Script{
 // 			Source: callTx,
 // 		},
@@ -5695,7 +5950,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	signerAddresses = []Address{{accountCounter}}
 
-// 	err := runtime.ExecuteTransaction(
+// 	err := runtime.RunTransaction(
 // 		Script{
 // 			Source: createAccountTx,
 // 		},
@@ -5712,7 +5967,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	signerAddresses = []Address{{accountCounter}}
 
-// 	err = runtime.ExecuteTransaction(
+// 	err = runtime.RunTransaction(
 // 		Script{
 // 			Source: deployTx,
 // 		},
@@ -5728,7 +5983,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	callScript := []byte(fmt.Sprintf(callHelloScriptTemplate, Address{accountCounter}))
 
-// 	result1, err := runtime.ExecuteScript(
+// 	result1, err := runtime.RunScript(
 // 		Script{
 // 			Source: callScript,
 // 		},
@@ -5744,7 +5999,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	cacheHits = nil
 
-// 	err = runtime.ExecuteTransaction(
+// 	err = runtime.RunTransaction(
 // 		Script{
 // 			Source: updateTx,
 // 		},
@@ -5758,7 +6013,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	// call the new hello function
 
-// 	result2, err := runtime.ExecuteScript(
+// 	result2, err := runtime.RunScript(
 // 		Script{
 // 			Source: callScript,
 // 		},
@@ -5877,7 +6132,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	// create the account
 
-// 	err := runtime.ExecuteTransaction(
+// 	err := runtime.RunTransaction(
 // 		Script{
 // 			Source: createAccountTx,
 // 		},
@@ -5890,7 +6145,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	signerAddresses = []Address{{accountCounter}}
 
-// 	err = runtime.ExecuteTransaction(
+// 	err = runtime.RunTransaction(
 // 		Script{
 // 			Source: deployTx,
 // 		},
@@ -5905,7 +6160,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	callTx := []byte(fmt.Sprintf(callHelloTxTemplate, Address{accountCounter}))
 
-// 	err = runtime.ExecuteTransaction(
+// 	err = runtime.RunTransaction(
 // 		Script{
 // 			Source: callTx,
 // 		},
@@ -6055,7 +6310,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	deployTx1 := newDeployTransaction("add", "Test", contract1)
 
-// 	err := runtime.ExecuteTransaction(
+// 	err := runtime.RunTransaction(
 // 		Script{
 // 			Source: deployTx1,
 // 		},
@@ -6082,7 +6337,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 //       }
 //     `)
 
-// 	_, err = runtime.ExecuteScript(
+// 	_, err = runtime.RunScript(
 // 		Script{
 // 			Source: script1,
 // 		},
@@ -6095,7 +6350,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	deployTx2 := newDeployTransaction("update__experimental", "Test", contract2)
 
-// 	err = runtime.ExecuteTransaction(
+// 	err = runtime.RunTransaction(
 // 		Script{
 // 			Source: deployTx2,
 // 		},
@@ -6123,7 +6378,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 //       }
 //     `)
 
-// 	_, err = runtime.ExecuteScript(
+// 	_, err = runtime.RunScript(
 // 		Script{
 // 			Source: script2,
 // 		},
@@ -6162,7 +6417,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 			t.Parallel()
 
-// 			_, err := runtime.ExecuteScript(
+// 			_, err := runtime.RunScript(
 // 				Script{
 // 					Source:    script,
 // 					Arguments: tc.arguments,
@@ -6209,22 +6464,22 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 // 	}
 // }
 
-// func singleIdentifierLocationResolver(t *testing.T) func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
-// 	return func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
-// 		require.Len(t, identifiers, 1)
-// 		require.IsType(t, common.AddressLocation{}, location)
+func singleIdentifierLocationResolver(t *testing.T) func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
+	return func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
+		require.Len(t, identifiers, 1)
+		require.IsType(t, common.AddressLocation{}, location)
 
-// 		return []ResolvedLocation{
-// 			{
-// 				Location: common.AddressLocation{
-// 					Address: location.(common.AddressLocation).Address,
-// 					Name:    identifiers[0].Identifier,
-// 				},
-// 				Identifiers: identifiers,
-// 			},
-// 		}, nil
-// 	}
-// }
+		return []ResolvedLocation{
+			{
+				Location: common.AddressLocation{
+					Address: location.(common.AddressLocation).Address,
+					Name:    identifiers[0].Identifier,
+				},
+				Identifiers: identifiers,
+			},
+		}, nil
+	}
+}
 
 // func TestPanics(t *testing.T) {
 
@@ -6246,7 +6501,7 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 // 	nextTransactionLocation := newTransactionLocationGenerator()
 
-// 	_, err := runtime.ExecuteScript(
+// 	_, err := runtime.RunScript(
 // 		Script{
 // 			Source: script,
 // 		},
