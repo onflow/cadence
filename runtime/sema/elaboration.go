@@ -68,6 +68,8 @@ type Elaboration struct {
 	GlobalValues                        map[string]*Variable
 	GlobalTypes                         map[string]*Variable
 	TransactionTypes                    []*TransactionType
+	EffectivePredeclaredValues          map[string]ValueDeclaration
+	EffectivePredeclaredTypes           map[string]TypeDeclaration
 }
 
 func NewElaboration() *Elaboration {
@@ -111,5 +113,7 @@ func NewElaboration() *Elaboration {
 		ImportDeclarationsResolvedLocations:    map[*ast.ImportDeclaration][]ResolvedLocation{},
 		GlobalValues:                           map[string]*Variable{},
 		GlobalTypes:                            map[string]*Variable{},
+		EffectivePredeclaredValues:             map[string]ValueDeclaration{},
+		EffectivePredeclaredTypes:              map[string]TypeDeclaration{},
 	}
 }

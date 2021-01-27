@@ -769,7 +769,7 @@ func (interpreter *Interpreter) prepareInvokeVariable(
 		}
 	}
 
-	ty := interpreter.Program.Elaboration.GlobalValues[functionName].Type
+	ty := interpreter.Checker.Elaboration.GlobalValues[functionName].Type
 
 	// function must be invokable
 	invokableType, ok := ty.(sema.InvokableType)
@@ -795,7 +795,7 @@ func (interpreter *Interpreter) prepareInvokeTransaction(
 
 	functionValue := interpreter.Transactions[index]
 
-	transactionType := interpreter.Program.Elaboration.TransactionTypes[index]
+	transactionType := interpreter.Checker.Elaboration.TransactionTypes[index]
 	functionType := transactionType.EntryPointFunctionType()
 
 	return interpreter.prepareInvoke(functionValue, functionType, arguments)
@@ -3405,7 +3405,7 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 
 		// don't import predeclared values
 		if subInterpreter.Checker != nil {
-			if subInterpreter.Checker.HasEffectivePredeclaredValue(name) {
+			if _, ok := subInterpreter.Checker.Elaboration.EffectivePredeclaredValues[name]; ok {
 				continue
 			}
 		}
