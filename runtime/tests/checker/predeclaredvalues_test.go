@@ -121,16 +121,57 @@ func TestCheckPredeclaredValues(t *testing.T) {
 			},
 		}
 
-		checker2, err := ParseAndCheck(t, `let x = foo()`)
-		require.NoError(t, err)
+		predeclaredValuesOption := sema.WithPredeclaredValues(
+			[]sema.ValueDeclaration{
+				valueDeclaration1,
+				valueDeclaration2,
+			},
+		)
 
-		checker3, err := ParseAndCheck(t, `let y = foo()`)
-		require.NoError(t, err)
+		checker2, err2 := ParseAndCheckWithOptions(t,
+			`let x = foo()`,
+			ParseAndCheckOptions{
+				Location: location2,
+				Options: []sema.Option{
+					predeclaredValuesOption,
+				},
+			},
+		)
 
-		checker4, err := ParseAndCheck(t, `let z = foo(1)`)
-		require.NoError(t, err)
+		checker3, err3 := ParseAndCheckWithOptions(t,
+			`let y = foo()`,
+			ParseAndCheckOptions{
+				Location: location3,
+				Options: []sema.Option{
+					predeclaredValuesOption,
+				},
+			},
+		)
 
-		_, err = ParseAndCheckWithOptions(t,
+		checker4, err4 := ParseAndCheckWithOptions(t,
+			`let z = foo(1)`,
+			ParseAndCheckOptions{
+				Location: location4,
+				Options: []sema.Option{
+					predeclaredValuesOption,
+				},
+			},
+		)
+
+		getChecker := func(location common.Location) (*sema.Checker, error) {
+			switch location {
+			case location2:
+				return checker2, err2
+			case location3:
+				return checker3, err3
+			case location4:
+				return checker4, err4
+			default:
+				t.Fatal("invalid location", location)
+				return nil, nil
+			}
+		}
+		_, err := ParseAndCheckWithOptions(t,
 			`
               import 0x2
               import 0x3
@@ -143,31 +184,17 @@ func TestCheckPredeclaredValues(t *testing.T) {
 			ParseAndCheckOptions{
 				Location: location1,
 				Options: []sema.Option{
-					sema.WithPredeclaredValues(
-						[]sema.ValueDeclaration{
-							valueDeclaration1,
-							valueDeclaration2,
-						},
-					),
+					predeclaredValuesOption,
 					sema.WithImportHandler(
 						func(checker *sema.Checker, location common.Location) (sema.Import, error) {
 
-							getChecker := func() *sema.Checker {
-								switch location {
-								case location2:
-									return checker2
-								case location3:
-									return checker3
-								case location4:
-									return checker4
-								default:
-									t.Fatal("invalid location", location)
-									return nil
-								}
+							importedChecker, importErr := getChecker(location)
+							if importErr != nil {
+								return nil, importErr
 							}
 
 							return sema.ElaborationImport{
-								Elaboration: getChecker().Elaboration,
+								Elaboration: importedChecker.Elaboration,
 							}, nil
 						},
 					),
