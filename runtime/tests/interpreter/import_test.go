@@ -239,7 +239,8 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	require.NoError(t, err)
 
 	inter, err := interpreter.NewInterpreter(
-		importingChecker,
+		interpreter.ProgramFromChecker(importingChecker),
+		importingChecker.Location,
 		interpreter.WithImportLocationHandler(
 			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				require.IsType(t, common.AddressLocation{}, location)
@@ -258,8 +259,14 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 					return nil
 				}
 
-				return interpreter.ProgramImport{
-					Program: importedChecker.Program,
+				program := interpreter.ProgramFromChecker(importedChecker)
+				subInterpreter, err := inter.NewSubInterpreter(program, location)
+				if err != nil {
+					panic(err)
+				}
+
+				return interpreter.InterpreterImport{
+					Interpreter: subInterpreter,
 				}
 			},
 		),
