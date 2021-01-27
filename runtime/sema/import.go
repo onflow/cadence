@@ -70,7 +70,7 @@ func (i CheckerImport) IsImportableValue(name string) bool {
 		return false
 	}
 
-	_, isPredeclaredValue := i.Checker.effectivePredeclaredValues[name]
+	_, isPredeclaredValue := i.Checker.Elaboration.EffectivePredeclaredValues[name]
 	return !isPredeclaredValue
 }
 
@@ -83,7 +83,7 @@ func (i CheckerImport) IsImportableType(name string) bool {
 		return false
 	}
 
-	_, isPredeclaredType := i.Checker.effectivePredeclaredTypes[name]
+	_, isPredeclaredType := i.Checker.Elaboration.EffectivePredeclaredTypes[name]
 	return !isPredeclaredType
 }
 

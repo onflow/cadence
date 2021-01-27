@@ -82,9 +82,7 @@ type Checker struct {
 	Program                            *ast.Program
 	Location                           common.Location
 	PredeclaredValues                  []ValueDeclaration
-	effectivePredeclaredValues         map[string]ValueDeclaration
 	PredeclaredTypes                   []TypeDeclaration
-	effectivePredeclaredTypes          map[string]TypeDeclaration
 	AllCheckers                        map[common.LocationID]*Checker
 	accessCheckMode                    AccessCheckMode
 	errors                             []error
@@ -126,7 +124,7 @@ func WithPredeclaredValues(predeclaredValues []ValueDeclaration) Option {
 				continue
 			}
 			checker.Elaboration.GlobalValues[variable.Identifier] = variable
-			checker.effectivePredeclaredValues[variable.Identifier] = declaration
+			checker.Elaboration.EffectivePredeclaredValues[variable.Identifier] = declaration
 		}
 
 		return nil
@@ -141,7 +139,7 @@ func WithPredeclaredTypes(predeclaredTypes []TypeDeclaration) Option {
 			checker.declareTypeDeclaration(declaration)
 
 			name := declaration.TypeDeclarationName()
-			checker.effectivePredeclaredTypes[name] = declaration
+			checker.Elaboration.EffectivePredeclaredTypes[name] = declaration
 		}
 
 		return nil
@@ -237,20 +235,18 @@ func NewChecker(program *ast.Program, location common.Location, options ...Optio
 	}
 
 	checker := &Checker{
-		Program:                    program,
-		Location:                   location,
-		valueActivations:           NewValueActivations(),
-		resources:                  &Resources{},
-		typeActivations:            typeActivations,
-		functionActivations:        functionActivations,
-		Occurrences:                NewOccurrences(),
-		MemberAccesses:             NewMemberAccesses(),
-		containerTypes:             map[Type]bool{},
-		variableOrigins:            map[*Variable]*Origin{},
-		memberOrigins:              map[Type]map[string]*Origin{},
-		Elaboration:                NewElaboration(),
-		effectivePredeclaredValues: map[string]ValueDeclaration{},
-		effectivePredeclaredTypes:  map[string]TypeDeclaration{},
+		Program:             program,
+		Location:            location,
+		valueActivations:    NewValueActivations(),
+		resources:           &Resources{},
+		typeActivations:     typeActivations,
+		functionActivations: functionActivations,
+		Occurrences:         NewOccurrences(),
+		MemberAccesses:      NewMemberAccesses(),
+		containerTypes:      map[Type]bool{},
+		variableOrigins:     map[*Variable]*Origin{},
+		memberOrigins:       map[Type]map[string]*Origin{},
+		Elaboration:         NewElaboration(),
 	}
 
 	checker.beforeExtractor = NewBeforeExtractor(checker.report)
@@ -397,11 +393,11 @@ func (checker *Checker) UserDefinedValues() map[string]*Variable {
 			continue
 		}
 
-		if _, ok := checker.effectivePredeclaredValues[key]; ok {
+		if _, ok := checker.Elaboration.EffectivePredeclaredValues[key]; ok {
 			continue
 		}
 
-		if _, ok := checker.effectivePredeclaredTypes[key]; ok {
+		if _, ok := checker.Elaboration.EffectivePredeclaredTypes[key]; ok {
 			continue
 		}
 
@@ -2299,9 +2295,4 @@ func (checker *Checker) convertInstantiationType(t *ast.InstantiationType) Type 
 
 func (checker *Checker) Hints() []Hint {
 	return checker.hints
-}
-
-func (checker *Checker) HasEffectivePredeclaredValue(name string) bool {
-	_, ok := checker.effectivePredeclaredValues[name]
-	return ok
 }
