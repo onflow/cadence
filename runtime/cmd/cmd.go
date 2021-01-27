@@ -79,6 +79,8 @@ var typeDeclarations = append(
 	stdlib.BuiltinTypes...,
 ).ToTypeDeclarations()
 
+var checkers = map[common.LocationID]*sema.Checker{}
+
 // PrepareChecker prepares and initializes a checker with a given code as a string,
 // and a filename which is used for pretty-printing errors, if any
 func PrepareChecker(
@@ -93,7 +95,7 @@ func PrepareChecker(
 		sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
 		sema.WithPredeclaredTypes(typeDeclarations),
 		sema.WithImportHandler(
-			func(checker *sema.Checker, importedLocation common.Location) (sema.Import, *sema.CheckerError) {
+			func(checker *sema.Checker, importedLocation common.Location) (sema.Import, error) {
 				stringLocation, ok := importedLocation.(common.StringLocation)
 
 				if !ok {
@@ -106,19 +108,15 @@ func PrepareChecker(
 					}
 				}
 
-				importChecker, err := checker.EnsureLoaded(
-					importedLocation,
-					func() *ast.Program {
-						imported, _ := PrepareProgramFromFile(stringLocation, codes)
-						return imported
-					},
-				)
-				if err != nil {
-					return nil, err
+				importedChecker, ok := checkers[importedLocation.ID()]
+				if !ok {
+					importedProgram, _ := PrepareProgramFromFile(stringLocation, codes)
+					importedChecker, _ = PrepareChecker(importedProgram, importedLocation, codes, must)
+					checkers[importedLocation.ID()] = importedChecker
 				}
 
-				return sema.CheckerImport{
-					Checker: importChecker,
+				return sema.ElaborationImport{
+					Elaboration: importedChecker.Elaboration,
 				}, nil
 			},
 		),
@@ -143,7 +141,8 @@ func PrepareInterpreter(filename string) (*interpreter.Interpreter, *sema.Checke
 	var uuid uint64
 
 	inter, err := interpreter.NewInterpreter(
-		checker,
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
 		interpreter.WithPredeclaredValues(valueDeclarations.ToInterpreterValueDeclarations()),
 		interpreter.WithUUIDHandler(func() (uint64, error) {
 			defer func() { uuid++ }()

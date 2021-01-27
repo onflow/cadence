@@ -19,9 +19,11 @@
 package runtime
 
 import (
+	"fmt"
 	"sort"
 
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/cmd"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -34,31 +36,71 @@ import (
 type REPL struct {
 	checker  *sema.Checker
 	inter    *interpreter.Interpreter
-	onError  func(error)
+	onError  func(err error, location common.Location, codes map[common.LocationID]string)
 	onResult func(interpreter.Value)
+	codes    map[common.LocationID]string
 }
 
-func NewREPL(onError func(error), onResult func(interpreter.Value), checkerOptions []sema.Option) (*REPL, error) {
+func NewREPL(
+	onError func(err error, location common.Location, codes map[common.LocationID]string),
+	onResult func(interpreter.Value),
+	checkerOptions []sema.Option,
+) (*REPL, error) {
 
 	valueDeclarations := append(
 		stdlib.FlowBuiltInFunctions(stdlib.DefaultFlowBuiltinImpls()),
 		stdlib.BuiltinFunctions...,
 	)
 
+	checkers := map[common.LocationID]*sema.Checker{}
+	codes := map[common.LocationID]string{}
+
+	var newChecker func(program *ast.Program, location common.Location) (*sema.Checker, error)
+
 	checkerOptions = append(
 		[]sema.Option{
 			sema.WithPredeclaredValues(valueDeclarations.ToSemaValueDeclarations()),
 			sema.WithPredeclaredTypes(typeDeclarations),
 			sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
+			sema.WithImportHandler(
+				func(checker *sema.Checker, importedLocation common.Location) (sema.Import, error) {
+					stringLocation, ok := importedLocation.(common.StringLocation)
+
+					if !ok {
+						return nil, &sema.CheckerError{
+							Location: checker.Location,
+							Codes:    codes,
+							Errors: []error{
+								fmt.Errorf("cannot import `%s`. only files are supported", importedLocation),
+							},
+						}
+					}
+
+					importedChecker, ok := checkers[importedLocation.ID()]
+					if !ok {
+						importedProgram, _ := cmd.PrepareProgramFromFile(stringLocation, codes)
+						importedChecker, _ = newChecker(importedProgram, importedLocation)
+						checkers[importedLocation.ID()] = importedChecker
+					}
+
+					return sema.ElaborationImport{
+						Elaboration: importedChecker.Elaboration,
+					}, nil
+				},
+			),
 		},
 		checkerOptions...,
 	)
 
-	checker, err := sema.NewChecker(
-		nil,
-		common.REPLLocation{},
-		checkerOptions...,
-	)
+	newChecker = func(program *ast.Program, location common.Location) (*sema.Checker, error) {
+		return sema.NewChecker(
+			program,
+			common.REPLLocation{},
+			checkerOptions...,
+		)
+	}
+
+	checker, err := newChecker(nil, common.REPLLocation{})
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +110,8 @@ func NewREPL(onError func(error), onResult func(interpreter.Value), checkerOptio
 	var uuid uint64
 
 	inter, err := interpreter.NewInterpreter(
-		checker,
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
 		interpreter.WithPredeclaredValues(values),
 		interpreter.WithUUIDHandler(func() (uint64, error) {
 			defer func() { uuid++ }()
@@ -84,6 +127,7 @@ func NewREPL(onError func(error), onResult func(interpreter.Value), checkerOptio
 		inter:    inter,
 		onError:  onError,
 		onResult: onResult,
+		codes:    codes,
 	}
 	return repl, nil
 }
@@ -94,7 +138,7 @@ func (r *REPL) handleCheckerError(code string) bool {
 		return true
 	}
 	if r.onError != nil {
-		r.onError(err)
+		r.onError(err, r.checker.Location, r.codes)
 	}
 	return false
 }
@@ -113,6 +157,7 @@ func (r *REPL) execute(element ast.Element) {
 
 func (r *REPL) check(element ast.Element, code string) bool {
 	element.Accept(r.checker)
+	r.codes[r.checker.Location.ID()] = code
 	return r.handleCheckerError(code)
 }
 
@@ -135,7 +180,7 @@ func (r *REPL) Accept(code string) (inputIsComplete bool) {
 	}
 
 	if err != nil {
-		r.onError(err)
+		r.onError(err, r.checker.Location, r.codes)
 		return
 	}
 
