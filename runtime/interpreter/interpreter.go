@@ -761,7 +761,7 @@ func (interpreter *Interpreter) prepareInvokeVariable(
 		}
 	}
 
-	ty := interpreter.Checker.GlobalValues[functionName].Type
+	ty := interpreter.Program.Elaboration.GlobalValues[functionName].Type
 
 	// function must be invokable
 	invokableType, ok := ty.(sema.InvokableType)
@@ -787,7 +787,7 @@ func (interpreter *Interpreter) prepareInvokeTransaction(
 
 	functionValue := interpreter.Transactions[index]
 
-	transactionType := interpreter.Checker.TransactionTypes[index]
+	transactionType := interpreter.Program.Elaboration.TransactionTypes[index]
 	functionType := transactionType.EntryPointFunctionType()
 
 	return interpreter.prepareInvoke(functionValue, functionType, arguments)
