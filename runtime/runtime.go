@@ -45,9 +45,10 @@ type Context struct {
 	AccountKeys       AccountKeys
 	Results           Results
 	Metrics           Metrics
-	CacheProvider     CacheProvider
+	ProgramCache      ProgramCache
 	CryptoProvider    CryptoProvider
 	LocationResolver  LocationResolver
+	Utils             Utils
 	Location          Location
 	PredeclaredValues []ValueDeclaration
 	codes             map[common.LocationID]string
@@ -554,7 +555,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 
 	if useCache {
 		wrapPanic(func() {
-			program, err = context.CacheProvider.GetCachedProgram(context.Location)
+			program, err = context.ProgramCache.GetCachedProgram(context.Location)
 		})
 		if err != nil {
 			return nil, wrapError(err)
@@ -650,7 +651,7 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 
 	// After the program has passed semantic analysis, cache the program AST.
 	wrapPanic(func() {
-		err = context.CacheProvider.CacheProgram(context.Location, program)
+		err = context.ProgramCache.CacheProgram(context.Location, program)
 	})
 	if err != nil {
 		return nil, err
@@ -692,12 +693,12 @@ func (r *interpreterRuntime) newInterpreter(
 		interpreter.WithInjectedCompositeFieldsHandler(
 			r.injectedCompositeFieldsHandler(context, runtimeStorage),
 		),
-		// interpreter.WithUUIDHandler(func() (uuid uint64, err error) {
-		// 	wrapPanic(func() {
-		// 		uuid, err = context.Interface.GenerateUUID()
-		// 	})
-		// 	return
-		// }),
+		interpreter.WithUUIDHandler(func() (uuid uint64, err error) {
+			wrapPanic(func() {
+				uuid, err = context.Utils.GenerateUUID()
+			})
+			return
+		}),
 		interpreter.WithContractValueHandler(
 			func(
 				inter *interpreter.Interpreter,
@@ -897,7 +898,7 @@ func (r *interpreterRuntime) importResolver(startContext Context) ImportResolver
 		context := startContext.WithLocation(location)
 
 		wrapPanic(func() {
-			program, err = context.CacheProvider.GetCachedProgram(location)
+			program, err = context.ProgramCache.GetCachedProgram(location)
 		})
 		if err != nil {
 			return nil, err
@@ -931,7 +932,7 @@ func (r *interpreterRuntime) importResolver(startContext Context) ImportResolver
 		context.SetProgram(location, program)
 
 		wrapPanic(func() {
-			err = context.CacheProvider.CacheProgram(location, program)
+			err = context.ProgramCache.CacheProgram(location, program)
 		})
 		if err != nil {
 			return nil, err
@@ -1044,7 +1045,7 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 		var address Address
 		var err error
 		wrapPanic(func() {
-			address, err = context.Accounts.NewAccount(invocation.Self.Location)
+			address, err = context.Accounts.NewAccount()
 		})
 		if err != nil {
 			panic(err)
@@ -1079,9 +1080,8 @@ func storageUsedGetFunction(
 
 		var capacity uint64
 		var err error
-		// TODO RAMTIN fix me (location)
 		wrapPanic(func() {
-			capacity, err = accountStorage.StorageUsed(address, common.AddressLocation{})
+			capacity, err = accountStorage.StorageUsed(address)
 		})
 		if err != nil {
 			panic(err)
@@ -1124,7 +1124,7 @@ func (r *interpreterRuntime) newAddPublicKeyFunction(
 
 			// TODO RAMTIN validate if this is a right way of passing location
 			wrapPanic(func() {
-				err = accountKeys.AddAccountKey(addressValue.ToAddress(), publicKey, invocation.Self.Location)
+				err = accountKeys.AddAccountKey(addressValue.ToAddress(), publicKey)
 			})
 			if err != nil {
 				panic(err)
@@ -1157,7 +1157,7 @@ func (r *interpreterRuntime) newRemovePublicKeyFunction(
 			var publicKey []byte
 			var err error
 			wrapPanic(func() {
-				publicKey, err = accountKeys.RevokeAccountKey(addressValue.ToAddress(), index.ToInt(), invocation.Self.Location)
+				publicKey, err = accountKeys.RevokeAccountKey(addressValue.ToAddress(), index.ToInt())
 			})
 			if err != nil {
 				panic(err)
@@ -1750,10 +1750,9 @@ func (r *interpreterRuntime) updateAccountContractCode(
 
 	var err error
 
-	// TODO: Ramtin figure out the caller (fix me)
 	// NOTE: only update account code if contract instantiation succeeded
 	wrapPanic(func() {
-		err = context.AccountContracts.UpdateContractCode(AddressLocation{address, name}, code, common.AddressLocation{})
+		err = context.AccountContracts.UpdateContractCode(AddressLocation{address, name}, code)
 	})
 	if err != nil {
 		panic(err)
@@ -1827,7 +1826,7 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 
 			if len(code) > 0 {
 				wrapPanic(func() {
-					err = accountContracts.RemoveContractCode(AddressLocation{address, nameArgument}, invocation.Self.Location)
+					err = accountContracts.RemoveContractCode(AddressLocation{address, nameArgument})
 				})
 				if err != nil {
 					panic(err)

@@ -99,9 +99,8 @@ func (s *runtimeStorage) valueExists(
 
 	var exists bool
 	var err error
-	// TODO RAMTIN fix me
 	wrapPanic(func() {
-		exists, err = s.accountStorage.ValueExists(StorageKey{address, key}, common.AddressLocation{})
+		exists, err = s.accountStorage.ValueExists(StorageKey{address, key})
 	})
 	if err != nil {
 		panic(err)
@@ -151,9 +150,8 @@ func (s *runtimeStorage) readValue(
 
 	var storedData []byte
 	var err error
-	// TODO Ramtin fix me
 	wrapPanic(func() {
-		storedData, err = s.accountStorage.Value(StorageKey{address, key}, common.AddressLocation{})
+		storedData, err = s.accountStorage.GetValue(StorageKey{address, key})
 	})
 	if err != nil {
 		panic(err)
@@ -317,14 +315,12 @@ func (s *runtimeStorage) writeCached(inter *interpreter.Interpreter) {
 			newData = interpreter.PrependMagic(newData, interpreter.CurrentEncodingVersion)
 		}
 
-		// TODO RAMTIN fix me
 		var err error
 		wrapPanic(func() {
 			err = s.accountStorage.SetValue(StorageKey{
 				item.storageKey.Address,
 				item.storageKey.Key},
 				newData,
-				common.AddressLocation{},
 			)
 		})
 		if err != nil {
@@ -357,19 +353,16 @@ func (s *runtimeStorage) move(
 	oldOwner common.Address, oldKey string,
 	newOwner common.Address, newKey string,
 ) {
-	// TODO RAMTIN (fix me)
-	data, err := s.accountStorage.Value(StorageKey{oldOwner, oldKey}, common.AddressLocation{})
+	data, err := s.accountStorage.GetValue(StorageKey{oldOwner, oldKey})
 	if err != nil {
 		panic(err)
 	}
-	// TODO RAMTIN (fix me)
-	err = s.accountStorage.SetValue(StorageKey{oldOwner, oldKey}, nil, common.AddressLocation{})
+	err = s.accountStorage.SetValue(StorageKey{oldOwner, oldKey}, nil)
 	if err != nil {
 		panic(err)
 	}
-	// TODO RAMTIN (fix me)
 	// NOTE: not prefix with magic, as data is moved, so might already have it
-	err = s.accountStorage.SetValue(StorageKey{newOwner, newKey}, data, common.AddressLocation{})
+	err = s.accountStorage.SetValue(StorageKey{newOwner, newKey}, data)
 	if err != nil {
 		panic(err)
 	}
