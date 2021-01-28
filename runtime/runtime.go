@@ -43,38 +43,6 @@ type Script struct {
 	Arguments [][]byte
 }
 
-type Context struct {
-	Interface         Interface
-	Location          Location
-	PredeclaredValues []ValueDeclaration
-	codes             map[common.LocationID]string
-	programs          map[common.LocationID]*ast.Program
-}
-
-func (c Context) SetCode(location common.Location, code string) {
-	c.codes[location.ID()] = code
-}
-
-func (c Context) SetProgram(location common.Location, program *ast.Program) {
-	c.programs[location.ID()] = program
-}
-
-func (c Context) WithLocation(location common.Location) Context {
-	result := c
-	result.Location = location
-	return result
-}
-
-func (c *Context) InitializeCodesAndPrograms() {
-	if c.codes == nil {
-		c.codes = map[common.LocationID]string{}
-	}
-
-	if c.programs == nil {
-		c.programs = map[common.LocationID]*ast.Program{}
-	}
-}
-
 // Runtime is a runtime capable of executing Cadence.
 type Runtime interface {
 	// ExecuteScript executes the given script.
