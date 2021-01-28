@@ -1287,7 +1287,7 @@ func convertValueFromScript(t *testing.T, script string) cadence.Value {
 			Arguments: nil,
 		},
 		runtime.Context{
-			Interface: &runtime.EmptyRuntimeInterface{},
+			Interface: runtime.NewEmptyRuntimeInterface(),
 			Location:  utils.TestLocation,
 		},
 	)
