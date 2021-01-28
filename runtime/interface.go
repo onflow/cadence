@@ -47,10 +47,17 @@ type Interface interface {
 	ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
 	// GetCode returns the code at a given location
 	GetCode(location Location) ([]byte, error)
+
 	// GetCachedProgram attempts to get a parsed program from a cache.
 	GetCachedProgram(Location) (*ast.Program, error)
 	// CacheProgram adds a parsed program to a cache.
 	CacheProgram(Location, *ast.Program) error
+
+	// GetCachedElaboration attempts to get an elaboration from a cache.
+	GetCachedElaboration(Location) (*sema.Elaboration, error)
+	// CacheElaboration adds an elaboration to a cache.
+	CacheElaboration(Location, *sema.Elaboration) error
+
 	// GetValue gets a value for the given key in the storage, owned by the given account.
 	GetValue(owner, key []byte) (value []byte, err error)
 	// SetValue sets a value for the given key in the storage, owned by the given account.
@@ -150,6 +157,14 @@ func (i *EmptyRuntimeInterface) GetCachedProgram(_ Location) (*ast.Program, erro
 }
 
 func (i *EmptyRuntimeInterface) CacheProgram(_ Location, _ *ast.Program) error {
+	return nil
+}
+
+func (i *EmptyRuntimeInterface) GetCachedElaboration(Location) (*sema.Elaboration, error) {
+	return nil, nil
+}
+
+func (i *EmptyRuntimeInterface) CacheElaboration(Location, *sema.Elaboration) error {
 	return nil
 }
 
