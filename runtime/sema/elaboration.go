@@ -18,7 +18,11 @@
 
 package sema
 
-import "github.com/onflow/cadence/runtime/ast"
+import (
+	"sync"
+
+	"github.com/onflow/cadence/runtime/ast"
+)
 
 type MemberInfo struct {
 	Member       *Member
@@ -27,6 +31,7 @@ type MemberInfo struct {
 }
 
 type Elaboration struct {
+	lock                                   *sync.RWMutex
 	FunctionDeclarationFunctionTypes       map[*ast.FunctionDeclaration]*FunctionType
 	VariableDeclarationValueTypes          map[*ast.VariableDeclaration]Type
 	VariableDeclarationSecondValueTypes    map[*ast.VariableDeclaration]Type
@@ -70,11 +75,12 @@ type Elaboration struct {
 	TransactionTypes                    []*TransactionType
 	EffectivePredeclaredValues          map[string]ValueDeclaration
 	EffectivePredeclaredTypes           map[string]TypeDeclaration
-	IsChecking                          bool
+	isChecking                          bool
 }
 
 func NewElaboration() *Elaboration {
 	return &Elaboration{
+		lock:                                   new(sync.RWMutex),
 		FunctionDeclarationFunctionTypes:       map[*ast.FunctionDeclaration]*FunctionType{},
 		VariableDeclarationValueTypes:          map[*ast.VariableDeclaration]Type{},
 		VariableDeclarationSecondValueTypes:    map[*ast.VariableDeclaration]Type{},
@@ -117,6 +123,18 @@ func NewElaboration() *Elaboration {
 		EffectivePredeclaredValues:             map[string]ValueDeclaration{},
 		EffectivePredeclaredTypes:              map[string]TypeDeclaration{},
 	}
+}
+
+func (e *Elaboration) IsChecking() bool {
+	e.lock.RLock()
+	defer e.lock.RUnlock()
+	return e.isChecking
+}
+
+func (e *Elaboration) setIsChecking(isChecking bool) {
+	e.lock.Lock()
+	defer e.lock.Unlock()
+	e.isChecking = isChecking
 }
 
 // FunctionEntryPointType returns the type of the entry point function declaration, if any.
