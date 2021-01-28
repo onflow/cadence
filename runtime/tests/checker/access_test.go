@@ -1545,6 +1545,119 @@ func TestCheckAccessInterfaceFieldVariableDeclarationWithSecondValue(t *testing.
 	}
 }
 
+func TestCheckAccessImportGlobalValue(t *testing.T) {
+
+	t.Parallel()
+
+	checkModeTests := map[sema.AccessCheckMode]func(*testing.T, error){
+		sema.AccessCheckModeStrict: func(t *testing.T, err error) {
+			errs := ExpectCheckerErrors(t, err, 2)
+
+			require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+			assert.Equal(t,
+				"a",
+				errs[0].(*sema.InvalidAccessError).Name,
+			)
+
+			require.IsType(t, &sema.InvalidAccessError{}, errs[1])
+			assert.Equal(t,
+				"c",
+				errs[1].(*sema.InvalidAccessError).Name,
+			)
+		},
+		sema.AccessCheckModeNotSpecifiedRestricted: func(t *testing.T, err error) {
+			errs := ExpectCheckerErrors(t, err, 2)
+
+			require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+			assert.Equal(t,
+				"a",
+				errs[0].(*sema.InvalidAccessError).Name,
+			)
+
+			require.IsType(t, &sema.InvalidAccessError{}, errs[1])
+			assert.Equal(t,
+				"c",
+				errs[1].(*sema.InvalidAccessError).Name,
+			)
+		},
+		sema.AccessCheckModeNotSpecifiedUnrestricted: func(t *testing.T, err error) {
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+			assert.Equal(t,
+				"a",
+				errs[0].(*sema.InvalidAccessError).Name,
+			)
+		},
+		sema.AccessCheckModeNone: expectSuccess,
+	}
+
+	require.Len(t, checkModeTests, len(sema.AccessCheckModes))
+
+	for checkMode, check := range checkModeTests {
+
+		t.Run(checkMode.String(), func(t *testing.T) {
+
+			lastAccessModifier := ""
+			if checkMode == sema.AccessCheckModeStrict {
+				lastAccessModifier = "priv"
+			}
+
+			tests := []string{
+				fmt.Sprintf(
+					`
+                      priv fun a() {}
+                      pub fun b() {}
+                      %s fun c() {}
+                    `,
+					lastAccessModifier,
+				),
+			}
+
+			for _, variableKind := range ast.VariableKinds {
+
+				tests = append(tests,
+					fmt.Sprintf(
+						`
+                           priv %[1]s a = 1
+                           pub %[1]s b = 2
+                           %[2]s %[1]s c = 3
+                        `,
+						variableKind.Keyword(),
+						lastAccessModifier,
+					),
+				)
+			}
+
+			for _, test := range tests {
+
+				_, err := ParseAndCheckWithOptions(t,
+					`
+                       import a, b, c from "imported"
+                    `,
+					ParseAndCheckOptions{
+						Options: []sema.Option{
+							sema.WithAccessCheckMode(checkMode),
+							sema.WithImportHandler(
+								func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+									importedChecker, err := ParseAndCheck(t, test)
+									require.NoError(t, err)
+
+									return sema.ElaborationImport{
+										Elaboration: importedChecker.Elaboration,
+									}, nil
+								},
+							),
+						},
+					},
+				)
+
+				check(t, err)
+			}
+		})
+	}
+}
+
 func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
 
 	t.Parallel()
