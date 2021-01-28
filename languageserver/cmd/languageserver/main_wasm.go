@@ -27,8 +27,9 @@ import (
 	"sync"
 	"syscall/js"
 
-	"github.com/onflow/cadence/languageserver/server"
 	"github.com/onflow/cadence/runtime/common"
+
+	"github.com/onflow/cadence/languageserver/server"
 )
 
 const globalFunctionNamePrefix = "CADENCE_LANGUAGE_SERVER"

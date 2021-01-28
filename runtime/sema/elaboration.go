@@ -65,6 +65,11 @@ type Elaboration struct {
 	InvocationExpressionTypeArguments   map[*ast.InvocationExpression]map[*TypeParameter]Type
 	IdentifierInInvocationTypes         map[*ast.IdentifierExpression]Type
 	ImportDeclarationsResolvedLocations map[*ast.ImportDeclaration][]ResolvedLocation
+	GlobalValues                        map[string]*Variable
+	GlobalTypes                         map[string]*Variable
+	TransactionTypes                    []*TransactionType
+	EffectivePredeclaredValues          map[string]ValueDeclaration
+	EffectivePredeclaredTypes           map[string]TypeDeclaration
 }
 
 func NewElaboration() *Elaboration {
@@ -106,5 +111,9 @@ func NewElaboration() *Elaboration {
 		InvocationExpressionTypeArguments:      map[*ast.InvocationExpression]map[*TypeParameter]Type{},
 		IdentifierInInvocationTypes:            map[*ast.IdentifierExpression]Type{},
 		ImportDeclarationsResolvedLocations:    map[*ast.ImportDeclaration][]ResolvedLocation{},
+		GlobalValues:                           map[string]*Variable{},
+		GlobalTypes:                            map[string]*Variable{},
+		EffectivePredeclaredValues:             map[string]ValueDeclaration{},
+		EffectivePredeclaredTypes:              map[string]TypeDeclaration{},
 	}
 }

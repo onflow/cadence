@@ -175,3 +175,43 @@ func TestInterpretEnumInstance(t *testing.T) {
 		inter.Globals["res"].Value,
 	)
 }
+
+func TestInterpretEnumInContract(t *testing.T) {
+
+	t.Parallel()
+
+	inter := parseCheckAndInterpretWithOptions(t,
+		`
+          contract C {
+              enum E: UInt8 {
+                  pub case a
+                  pub case b
+              }
+
+              var e: E
+
+              init() {
+                  self.e = E.a
+              }
+          }
+        `,
+		ParseCheckAndInterpretOptions{
+			Options: []interpreter.Option{
+				makeContractValueHandler(nil, nil, nil),
+			},
+		},
+	)
+
+	c := inter.Globals["C"].Value
+	require.IsType(t, &interpreter.CompositeValue{}, c)
+	contract := c.(*interpreter.CompositeValue)
+
+	e := contract.Fields["e"]
+	require.IsType(t, &interpreter.CompositeValue{}, e)
+	enumCase := e.(*interpreter.CompositeValue)
+
+	require.Equal(t,
+		interpreter.UInt8Value(0),
+		enumCase.Fields["rawValue"],
+	)
+}

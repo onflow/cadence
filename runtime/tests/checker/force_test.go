@@ -42,12 +42,12 @@ func TestCheckForce(t *testing.T) {
 
 		assert.Equal(t,
 			&sema.OptionalType{Type: &sema.IntType{}},
-			checker.GlobalValues["x"].Type,
+			checker.Elaboration.GlobalValues["x"].Type,
 		)
 
 		assert.Equal(t,
 			&sema.IntType{},
-			checker.GlobalValues["y"].Type,
+			checker.Elaboration.GlobalValues["y"].Type,
 		)
 
 	})
@@ -63,12 +63,12 @@ func TestCheckForce(t *testing.T) {
 
 		assert.Equal(t,
 			&sema.IntType{},
-			checker.GlobalValues["x"].Type,
+			checker.Elaboration.GlobalValues["x"].Type,
 		)
 
 		assert.Equal(t,
 			&sema.IntType{},
-			checker.GlobalValues["y"].Type,
+			checker.Elaboration.GlobalValues["y"].Type,
 		)
 
 		hints := checker.Hints()

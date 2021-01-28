@@ -59,8 +59,8 @@ func TestWASMWriter_writeMagicAndVersion(t *testing.T) {
 
 	t.Parallel()
 
-	var b buf
-	w := WASMWriter{&b}
+	var b Buffer
+	w := NewWASMWriter(&b)
 
 	err := w.writeMagicAndVersion()
 	require.NoError(t, err)
@@ -80,8 +80,8 @@ func TestWASMWriter_writeTypeSection(t *testing.T) {
 
 	t.Parallel()
 
-	var b buf
-	w := WASMWriter{&b}
+	var b Buffer
+	w := NewWASMWriter(&b)
 
 	err := w.writeTypeSection([]*FunctionType{
 		{
@@ -120,14 +120,14 @@ func TestWASMWriter_writeImportSection(t *testing.T) {
 
 	t.Parallel()
 
-	var b buf
-	w := WASMWriter{&b}
+	var b Buffer
+	w := NewWASMWriter(&b)
 
 	imports := []*Import{
 		{
-			Module: "foo",
-			Name:   "bar",
-			TypeID: 1,
+			Module:    "foo",
+			Name:      "bar",
+			TypeIndex: 1,
 		},
 	}
 
@@ -152,7 +152,7 @@ func TestWASMWriter_writeImportSection(t *testing.T) {
 			0x62, 0x61, 0x72,
 			// type indicator: function = 0
 			0x0,
-			// type ID of function: 0
+			// type index of function: 0
 			0x1,
 		},
 		b.data,
@@ -163,14 +163,14 @@ func TestWASMWriter_writeFunctionSection(t *testing.T) {
 
 	t.Parallel()
 
-	var b buf
-	w := WASMWriter{&b}
+	var b Buffer
+	w := NewWASMWriter(&b)
 
 	functions := []*Function{
 		{
 			// not used, just for testing
-			Name:   "add",
-			TypeID: 0,
+			Name:      "add",
+			TypeIndex: 0,
 			// not used, just for testing
 			Code: &Code{
 				Locals: []ValueType{
@@ -196,8 +196,93 @@ func TestWASMWriter_writeFunctionSection(t *testing.T) {
 			0x82, 0x80, 0x80, 0x80, 0x0,
 			// function count: 1
 			0x1,
-			// type ID of function: 0
+			// type index of function: 0
 			0x0,
+		},
+		b.data,
+	)
+}
+
+func TestWASMWriter_writeMemorySection(t *testing.T) {
+
+	t.Parallel()
+
+	var b Buffer
+	w := NewWASMWriter(&b)
+
+	memories := []*Memory{
+		{
+			Min: 1024,
+			Max: nil,
+		},
+		{
+			Min: 2048,
+			Max: func() *uint32 {
+				var max uint32 = 2
+				return &max
+			}(),
+		},
+	}
+
+	err := w.writeMemorySection(memories)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		[]byte{
+			// section ID: Import = 5
+			0x5,
+			// section size: 8 (LEB128)
+			0x88, 0x80, 0x80, 0x80, 0x0,
+			// memory count: 2
+			0x2,
+			// memory type / limit: no max
+			0x0,
+			// limit 1 min: 1024 (LEB128)
+			0x80, 0x8,
+			// memory type / limit: max
+			0x1,
+			// limit 2 min: 2048 (LEB128)
+			0x80, 0x10,
+			// limit 2 max
+			0x2,
+		},
+		b.data,
+	)
+}
+
+func TestWASMWriter_writeExportSection(t *testing.T) {
+
+	t.Parallel()
+
+	var b Buffer
+	w := NewWASMWriter(&b)
+
+	exports := []*Export{
+		{
+			Name:          "foo",
+			FunctionIndex: 1,
+		},
+	}
+
+	err := w.writeExportSection(exports)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		[]byte{
+			// section ID: Export = 7
+			0x7,
+			// section size: 7 (LEB128)
+			0x87, 0x80, 0x80, 0x80, 0x0,
+			// import count: 1
+			0x1,
+			// name length
+			0x3,
+			// name = "foo"
+			0x66, 0x6f, 0x6f,
+			// type indicator: function = 0
+			0x0,
+			// index of function: 1
+			0x1,
 		},
 		b.data,
 	)
@@ -207,15 +292,15 @@ func TestWASMWriter_writeCodeSection(t *testing.T) {
 
 	t.Parallel()
 
-	var b buf
-	w := WASMWriter{&b}
+	var b Buffer
+	w := NewWASMWriter(&b)
 
 	functions := []*Function{
 		{
 			// not used, just for testing
 			Name: "add",
 			// not used, just for testing
-			TypeID: 0,
+			TypeIndex: 0,
 			Code: &Code{
 				Locals: []ValueType{
 					ValueTypeI32,
@@ -261,6 +346,49 @@ func TestWASMWriter_writeCodeSection(t *testing.T) {
 	)
 }
 
+func TestWASMWriter_writeDataSection(t *testing.T) {
+
+	t.Parallel()
+
+	var b Buffer
+	w := NewWASMWriter(&b)
+
+	dataSegments := []*Data{
+		{
+			MemoryIndex: 1,
+			Offset: []Instruction{
+				InstructionI32Const{Value: 2},
+			},
+			Init: []byte{3, 4, 5},
+		},
+	}
+
+	err := w.writeDataSection(dataSegments)
+	require.NoError(t, err)
+
+	require.Equal(t,
+		[]byte{
+			// section ID: Import = 11
+			0xB,
+			// section size: 9 (LEB128)
+			0x89, 0x80, 0x80, 0x80, 0x0,
+			// segment count: 1
+			0x1,
+			// memory index
+			0x1,
+			// i32.const 2
+			0x41, 0x2,
+			// end
+			0xb,
+			// byte count
+			0x3,
+			// init (bytes 0x3, 0x4, 0x5)
+			0x3, 0x4, 0x5,
+		},
+		b.data,
+	)
+}
+
 func TestWASMWriter_writeName(t *testing.T) {
 
 	t.Parallel()
@@ -269,8 +397,8 @@ func TestWASMWriter_writeName(t *testing.T) {
 
 		t.Parallel()
 
-		var b buf
-		w := WASMWriter{&b}
+		var b Buffer
+		w := NewWASMWriter(&b)
 
 		err := w.writeName("hello")
 		require.NoError(t, err)
@@ -290,8 +418,8 @@ func TestWASMWriter_writeName(t *testing.T) {
 
 		t.Parallel()
 
-		var b buf
-		w := WASMWriter{&b}
+		var b Buffer
+		w := NewWASMWriter(&b)
 
 		name := string([]byte{0xff, 0xfe, 0xfd})
 		err := w.writeName(name)
@@ -309,98 +437,501 @@ func TestWASMWriter_writeName(t *testing.T) {
 	})
 }
 
-func TestWASMWriter(t *testing.T) {
+func TestWASMWriter_writeNameSection(t *testing.T) {
 
 	t.Parallel()
 
-	var b buf
-
-	w := WASMWriter{&b}
-
-	err := w.writeMagicAndVersion()
-	require.NoError(t, err)
-
-	types := []*FunctionType{
-		{
-			Params:  []ValueType{ValueTypeI32, ValueTypeI32},
-			Results: []ValueType{ValueTypeI32},
-		},
-	}
-	err = w.writeTypeSection(types)
-	require.NoError(t, err)
+	var b Buffer
+	w := NewWASMWriter(&b)
 
 	imports := []*Import{
 		{
-			Module: "env",
-			Name:   "add",
-			TypeID: 0,
+			Module: "foo",
+			Name:   "bar",
 		},
 	}
-	err = w.writeImportSection(imports)
-	require.NoError(t, err)
 
 	functions := []*Function{
 		{
-			// not used, just for testing
-			Name:   "add",
-			TypeID: 0,
-			Code: &Code{
-				// not used, just for testing
-				Locals: []ValueType{
-					ValueTypeI32,
-				},
-				Instructions: []Instruction{
-					InstructionLocalGet{0},
-					InstructionLocalGet{1},
-					InstructionI32Add{},
-				},
-			},
+			Name: "add",
 		},
 	}
 
-	err = w.writeFunctionSection(functions)
-	require.NoError(t, err)
-
-	err = w.writeCodeSection(functions)
+	err := w.writeNameSection("test", imports, functions)
 	require.NoError(t, err)
 
 	require.Equal(t,
 		[]byte{
-			// magic
-			0x0, 0x61, 0x73, 0x6d,
-			// version
-			0x1, 0x0, 0x0, 0x0,
-			// type section
+			// Section ID: Custom = 0
+			0x0,
+			// section size: 37 (LEB128)
+			0xa5, 0x80, 0x80, 0x80, 0x0,
+			// name length
+			0x4,
+			// name = "name"
+			0x6e, 0x61, 0x6d, 0x65,
+			// sub-section ID: module name = 0
+			0x0,
+			// sub-section size: 5 (LEB128)
+			0x85, 0x80, 0x80, 0x80, 0x0,
+			// name length
+			0x4,
+			// name = "test"
+			0x74, 0x65, 0x73, 0x74,
+			// sub-section ID: function names = 1
 			0x1,
-			0x87, 0x80, 0x80, 0x80, 0x0,
-			0x1, 0x60, 0x2, 0x7f, 0x7f, 0x1, 0x7f,
-			// import section
-			0x02,
-			0x8b, 0x80, 0x80, 0x80, 0x00,
-			0x01, 0x03, 0x65, 0x6e, 0x76, 0x03, 0x61, 0x64,
-			0x64, 0x00, 0x00,
-			// function section
+			// sub-section size: 15 (LEB128)
+			0x8f, 0x80, 0x80, 0x80, 0x0,
+			// name count
+			0x2,
+			// function index = 0
+			0x0,
+			// name length
+			0x7,
+			// name = "foo.bar"
+			0x66, 0x6f, 0x6f, 0x2e, 0x62, 0x61, 0x72,
+			// function index = 1
+			0x1,
+			// name length
 			0x3,
-			0x82, 0x80, 0x80, 0x80, 0x0,
-			0x1, 0x0,
-			// code section
-			0xa, 0x8f, 0x80, 0x80, 0x80, 0x0,
-			0x1, 0x89, 0x80, 0x80, 0x80, 0x0, 0x1, 0x1,
-			0x7f, 0x20, 0x0, 0x20, 0x1, 0x6a, 0xb,
+			// name = "add"
+			0x61, 0x64, 0x64,
 		},
+		b.data,
+	)
+}
+
+func TestWASMWriterReader(t *testing.T) {
+
+	t.Parallel()
+
+	var b Buffer
+
+	w := NewWASMWriter(&b)
+	w.WriteNames = true
+
+	module := &Module{
+		Name: "test",
+		Types: []*FunctionType{
+			{
+				Params:  []ValueType{ValueTypeI32, ValueTypeI32},
+				Results: []ValueType{ValueTypeI32},
+			},
+		},
+		Imports: []*Import{
+			{
+				Module:    "env",
+				Name:      "add",
+				TypeIndex: 0,
+			},
+		},
+		Exports: []*Export{
+			{
+				Name:          "add",
+				FunctionIndex: 0,
+			},
+		},
+		Functions: []*Function{
+			{
+				// not used, just for testing
+				Name:      "add",
+				TypeIndex: 0,
+				Code: &Code{
+					// not used, just for testing
+					Locals: []ValueType{
+						ValueTypeI32,
+					},
+					Instructions: []Instruction{
+						InstructionLocalGet{LocalIndex: 0},
+						InstructionLocalGet{LocalIndex: 1},
+						InstructionI32Add{},
+					},
+				},
+			},
+		},
+		Memories: []*Memory{
+			{
+				Min: 1024,
+				Max: func() *uint32 {
+					var max uint32 = 2048
+					return &max
+				}(),
+			},
+		},
+		Data: []*Data{
+			{
+				MemoryIndex: 0,
+				Offset: []Instruction{
+					InstructionI32Const{Value: 0},
+				},
+				Init: []byte{0x0, 0x1, 0x2, 0x3},
+			},
+		},
+	}
+
+	err := w.WriteModule(module)
+	require.NoError(t, err)
+
+	expected := []byte{
+		// magic
+		0x0, 0x61, 0x73, 0x6d,
+		// version
+		0x1, 0x0, 0x0, 0x0,
+		// type section
+		0x1,
+		0x87, 0x80, 0x80, 0x80, 0x0,
+		0x1, 0x60, 0x2, 0x7f, 0x7f, 0x1, 0x7f,
+		// import section
+		0x02,
+		0x8b, 0x80, 0x80, 0x80, 0x00,
+		0x01, 0x03, 0x65, 0x6e, 0x76, 0x03, 0x61, 0x64,
+		0x64, 0x00, 0x00,
+		// function section
+		0x3,
+		0x82, 0x80, 0x80, 0x80, 0x0,
+		0x1, 0x0,
+		// memory section
+		0x5,
+		0x86, 0x80, 0x80, 0x80, 0x0,
+		0x1, 0x1, 0x80, 0x8, 0x80, 0x10,
+		// export section
+		0x07,
+		0x87, 0x80, 0x80, 0x80, 0x00,
+		0x01, 0x03, 0x61, 0x64, 0x64,
+		0x00, 0x00,
+		// code section
+		0xa,
+		0x8f, 0x80, 0x80, 0x80, 0x0,
+		0x1, 0x89, 0x80, 0x80, 0x80, 0x0, 0x1, 0x1,
+		0x7f, 0x20, 0x0, 0x20, 0x1, 0x6a, 0xb,
+		// data section
+		0xb,
+		0x8a, 0x80, 0x80, 0x80, 0x0,
+		0x1,
+		0x0,
+		0x41, 0x0, 0xb,
+		0x4,
+		0x0, 0x1, 0x2, 0x3,
+		// name section
+		0x0,
+		0xa5, 0x80, 0x80, 0x80, 0x0,
+		0x4, 0x6e, 0x61, 0x6d, 0x65, 0x0, 0x85, 0x80,
+		0x80, 0x80, 0x0, 0x4, 0x74, 0x65, 0x73, 0x74,
+		0x1, 0x8f, 0x80, 0x80, 0x80, 0x0, 0x2, 0x0,
+		0x7, 0x65, 0x6e, 0x76, 0x2e, 0x61, 0x64, 0x64,
+		0x1, 0x3, 0x61, 0x64, 0x64,
+	}
+	require.Equal(t,
+		expected,
 		b.data,
 	)
 
 	require.Equal(t,
-		`(module
+		`(module $test
   (type (;0;) (func (param i32 i32) (result i32)))
-  (import "env" "add" (func (;0;) (type 0)))
-  (func (;1;) (type 0) (param i32 i32) (result i32)
+  (import "env" "add" (func $env.add (type 0)))
+  (func $add (type 0) (param i32 i32) (result i32)
     (local i32)
     local.get 0
     local.get 1
-    i32.add))
+    i32.add)
+  (memory (;0;) 1024 2048)
+  (export "add" (func $env.add))
+  (data (;0;) (i32.const 0) "\00\01\02\03"))
 `,
 		wasm2wat(b.data),
 	)
+
+	b.offset = 0
+
+	r := NewWASMReader(&b)
+	err = r.ReadModule()
+	require.NoError(t, err)
+
+	// prepare the expected module:
+	// remove all names, as the name section is not read yet
+
+	module.Name = ""
+	for _, function := range module.Functions {
+		function.Name = ""
+	}
+
+	require.Equal(t,
+		module,
+		&r.Module,
+	)
+
+	require.Equal(t,
+		offset(len(expected)),
+		b.offset,
+	)
+}
+
+func TestWASMWriter_writeInstruction(t *testing.T) {
+
+	t.Parallel()
+
+	t.Run("block, i32 result", func(t *testing.T) {
+
+		t.Parallel()
+
+		var b Buffer
+		w := NewWASMWriter(&b)
+
+		instruction := InstructionBlock{
+			Block: Block{
+				BlockType: ValueTypeI32,
+				Instructions1: []Instruction{
+					InstructionI32Const{Value: 1},
+				},
+				Instructions2: nil,
+			},
+		}
+		err := instruction.write(w)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]byte{
+				// block
+				0x02,
+				// i32
+				0x7f,
+				// i32.const
+				0x41,
+				0x01,
+				// end
+				0x0b,
+			},
+			b.data,
+		)
+	})
+
+	t.Run("block, type index result", func(t *testing.T) {
+
+		t.Parallel()
+
+		var b Buffer
+		w := NewWASMWriter(&b)
+
+		instruction := InstructionBlock{
+			Block: Block{
+				BlockType: TypeIndexBlockType{TypeIndex: 2},
+				Instructions1: []Instruction{
+					InstructionUnreachable{},
+				},
+				Instructions2: nil,
+			},
+		}
+		err := instruction.write(w)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]byte{
+				// block
+				0x02,
+				// type index: 2
+				0x2,
+				// unreachable
+				0x0,
+				// end
+				0x0b,
+			},
+			b.data,
+		)
+	})
+
+	t.Run("block, i32 result, second instructions", func(t *testing.T) {
+
+		t.Parallel()
+
+		var b Buffer
+		w := NewWASMWriter(&b)
+
+		instruction := InstructionBlock{
+			Block: Block{
+				BlockType: ValueTypeI32,
+				Instructions1: []Instruction{
+					InstructionI32Const{Value: 1},
+				},
+				Instructions2: []Instruction{
+					InstructionI32Const{Value: 2},
+				},
+			},
+		}
+		err := instruction.write(w)
+		require.Equal(t, InvalidBlockSecondInstructionsError{
+			Offset: 4,
+		}, err)
+	})
+
+	t.Run("loop, i32 result", func(t *testing.T) {
+
+		t.Parallel()
+
+		var b Buffer
+		w := NewWASMWriter(&b)
+
+		instruction := InstructionLoop{
+			Block: Block{
+				BlockType: ValueTypeI32,
+				Instructions1: []Instruction{
+					InstructionI32Const{Value: 1},
+				},
+				Instructions2: nil,
+			},
+		}
+		err := instruction.write(w)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]byte{
+				// loop
+				0x03,
+				// i32
+				0x7f,
+				// i32.const
+				0x41,
+				0x01,
+				// end
+				0x0b,
+			},
+			b.data,
+		)
+	})
+
+	t.Run("loop, i32 result, second instructions", func(t *testing.T) {
+
+		t.Parallel()
+
+		var b Buffer
+		w := NewWASMWriter(&b)
+
+		instruction := InstructionLoop{
+			Block: Block{
+				BlockType: ValueTypeI32,
+				Instructions1: []Instruction{
+					InstructionI32Const{Value: 1},
+				},
+				Instructions2: []Instruction{
+					InstructionI32Const{Value: 2},
+				},
+			},
+		}
+		err := instruction.write(w)
+		require.Equal(t, InvalidBlockSecondInstructionsError{
+			Offset: 4,
+		}, err)
+	})
+
+	t.Run("if, i32 result", func(t *testing.T) {
+
+		t.Parallel()
+
+		var b Buffer
+		w := NewWASMWriter(&b)
+
+		instruction := InstructionIf{
+			Block: Block{
+				BlockType: ValueTypeI32,
+				Instructions1: []Instruction{
+					InstructionI32Const{Value: 1},
+				},
+				Instructions2: nil,
+			},
+		}
+		err := instruction.write(w)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]byte{
+				// if
+				0x04,
+				// i32
+				0x7f,
+				// i32.const
+				0x41,
+				0x01,
+				// end
+				0x0b,
+			},
+			b.data,
+		)
+	})
+
+	t.Run("if-else, i32 result", func(t *testing.T) {
+
+		t.Parallel()
+
+		var b Buffer
+		w := NewWASMWriter(&b)
+
+		instruction := InstructionIf{
+			Block: Block{
+				BlockType: ValueTypeI32,
+				Instructions1: []Instruction{
+					InstructionI32Const{Value: 1},
+				},
+				Instructions2: []Instruction{
+					InstructionI32Const{Value: 2},
+				},
+			},
+		}
+		err := instruction.write(w)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]byte{
+				// ii
+				0x04,
+				// i32
+				0x7f,
+				// i32.const
+				0x41,
+				0x01,
+				// else
+				0x05,
+				// i32.const
+				0x41,
+				0x02,
+				// end
+				0x0b,
+			},
+			b.data,
+		)
+	})
+
+	t.Run("br_table", func(t *testing.T) {
+
+		t.Parallel()
+
+		var b Buffer
+		w := NewWASMWriter(&b)
+
+		instruction := InstructionBrTable{
+			LabelIndices:      []uint32{3, 2, 1, 0},
+			DefaultLabelIndex: 4,
+		}
+		err := instruction.write(w)
+		require.NoError(t, err)
+
+		require.Equal(t,
+			[]byte{
+				// br_table
+				0x0e,
+				// number of branch depths
+				0x04,
+				// 1. branch depth
+				0x03,
+				// 2. branch depth
+				0x02,
+				// 3. branch depth
+				0x01,
+				// 4. branch depth
+				0x00,
+				// default branch depth
+				0x04,
+			},
+			b.data,
+		)
+	})
 }

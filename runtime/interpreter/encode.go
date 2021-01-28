@@ -931,7 +931,7 @@ func (e *Encoder) prepareStaticType(t StaticType) (interface{}, error) {
 	case DictionaryStaticType:
 		return e.prepareDictionaryStaticType(v)
 
-	case RestrictedStaticType:
+	case *RestrictedStaticType:
 		return e.prepareRestrictedStaticType(v)
 
 	case CapabilityStaticType:
@@ -1091,7 +1091,7 @@ const (
 	encodedRestrictedStaticTypeRestrictionsFieldKey uint64 = 1
 )
 
-func (e *Encoder) prepareRestrictedStaticType(v RestrictedStaticType) (interface{}, error) {
+func (e *Encoder) prepareRestrictedStaticType(v *RestrictedStaticType) (interface{}, error) {
 	restrictedType, err := e.prepareStaticType(v.Type)
 	if err != nil {
 		return nil, err

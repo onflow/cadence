@@ -79,7 +79,7 @@ var CryptoChecker = func() *sema.Checker {
 	return checker
 }()
 
-var cryptoContractType = CryptoChecker.GlobalTypes["Crypto"].Type.(*sema.CompositeType)
+var cryptoContractType = CryptoChecker.Elaboration.GlobalTypes["Crypto"].Type.(*sema.CompositeType)
 
 var cryptoContractInitializerTypes = func() (result []sema.Type) {
 	result = make([]sema.Type, len(cryptoContractType.ConstructorParameters))

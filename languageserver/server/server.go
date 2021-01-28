@@ -30,8 +30,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 
 	"github.com/onflow/cadence/encoding/json"
-	"github.com/onflow/cadence/languageserver/conversion"
-	"github.com/onflow/cadence/languageserver/jsonrpc2"
 	"github.com/onflow/cadence/runtime"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
@@ -39,6 +37,9 @@ import (
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
+
+	"github.com/onflow/cadence/languageserver/conversion"
+	"github.com/onflow/cadence/languageserver/jsonrpc2"
 
 	"github.com/onflow/cadence/languageserver/protocol"
 )
@@ -57,7 +58,8 @@ var typeDeclarations = append(
 // information about each document that is used to support CodeLens,
 // transaction submission, and script execution.
 type Document struct {
-	Text string
+	Text    string
+	Version float64
 }
 
 func (d Document) Offset(line, column int) (offset int) {
@@ -140,17 +142,21 @@ type CommandHandler func(conn protocol.Conn, args ...interface{}) (interface{}, 
 //
 type AddressImportResolver func(location common.AddressLocation) (string, error)
 
+// AddressContractNamesResolver is a function that is used to resolve contract names of an address
+//
+type AddressContractNamesResolver func(address common.Address) ([]string, error)
+
 // StringImportResolver is a function that is used to resolve string imports
 //
 type StringImportResolver func(mainPath string, location common.StringLocation) (string, error)
 
 // CodeLensProvider is a function that is used to provide code lenses for the given checker
 //
-type CodeLensProvider func(uri protocol.DocumentUri, checker *sema.Checker) ([]*protocol.CodeLens, error)
+type CodeLensProvider func(uri protocol.DocumentUri, version float64, checker *sema.Checker) ([]*protocol.CodeLens, error)
 
 // DiagnosticProvider is a function that is used to provide diagnostics for the given checker
 //
-type DiagnosticProvider func(uri protocol.DocumentUri, checker *sema.Checker) ([]protocol.Diagnostic, error)
+type DiagnosticProvider func(uri protocol.DocumentUri, version float64, checker *sema.Checker) ([]protocol.Diagnostic, error)
 
 // InitializationOptionsHandler is a function that is used to handle initialization options sent by the client
 //
@@ -165,6 +171,8 @@ type Server struct {
 	commands map[string]CommandHandler
 	// resolveAddressImport is the optional function that is used to resolve address imports
 	resolveAddressImport AddressImportResolver
+	// resolveAddressContractNames is the optional function that is used to resolve contract names for an address
+	resolveAddressContractNames AddressContractNamesResolver
 	// resolveStringImport is the optional function that is used to resolve string imports
 	resolveStringImport StringImportResolver
 	// codeLensProviders are the functions that are used to provide code lenses for a checker
@@ -203,6 +211,16 @@ func WithCommand(command Command) Option {
 func WithAddressImportResolver(resolver AddressImportResolver) Option {
 	return func(s *Server) error {
 		s.resolveAddressImport = resolver
+		return nil
+	}
+}
+
+// WithAddressContractNamesResolver returns a server option that sets the given function
+// as the function that is used to resolve contract names of an address
+//
+func WithAddressContractNamesResolver(resolver AddressContractNamesResolver) Option {
+	return func(s *Server) error {
+		s.resolveAddressContractNames = resolver
 		return nil
 	}
 }
@@ -390,15 +408,14 @@ func (s *Server) DidOpenTextDocument(conn protocol.Conn, params *protocol.DidOpe
 
 	uri := params.TextDocument.URI
 	text := params.TextDocument.Text
+	version := params.TextDocument.Version
 
 	s.documents[uri] = Document{
-		Text: text,
+		Text:    text,
+		Version: version,
 	}
 
-	err := s.check(conn, uri, text)
-	if err != nil {
-		return err
-	}
+	s.checkAndPublishDiagnostics(conn, uri, text, version)
 
 	return nil
 }
@@ -412,15 +429,14 @@ func (s *Server) DidChangeTextDocument(
 
 	uri := params.TextDocument.URI
 	text := params.ContentChanges[0].Text
+	version := params.TextDocument.Version
 
 	s.documents[uri] = Document{
-		Text: text,
+		Text:    text,
+		Version: version,
 	}
 
-	err := s.check(conn, uri, text)
-	if err != nil {
-		return err
-	}
+	s.checkAndPublishDiagnostics(conn, uri, text, version)
 
 	return nil
 }
@@ -437,24 +453,27 @@ type CadenceCheckCompletedParams struct {
 
 const cadenceCheckCompletedMethodName = "cadence/checkCompleted"
 
-func (s *Server) check(conn protocol.Conn, uri protocol.DocumentUri, text string) error {
+func (s *Server) checkAndPublishDiagnostics(
+	conn protocol.Conn,
+	uri protocol.DocumentUri,
+	text string,
+	version float64,
+) {
 
-	diagnostics, err := s.getDiagnostics(conn, uri, text)
+	diagnostics, _ := s.getDiagnostics(conn, uri, text, version)
 
 	// NOTE: always publish diagnostics and inform the client the checking completed
 
-	conn.PublishDiagnostics(&protocol.PublishDiagnosticsParams{
+	_ = conn.PublishDiagnostics(&protocol.PublishDiagnosticsParams{
 		URI:         uri,
 		Diagnostics: diagnostics,
 	})
 
 	valid := len(diagnostics) == 0
-	conn.Notify(cadenceCheckCompletedMethodName, &CadenceCheckCompletedParams{
+	_ = conn.Notify(cadenceCheckCompletedMethodName, &CadenceCheckCompletedParams{
 		URI:   uri,
 		Valid: valid,
 	})
-
-	return err
 }
 
 // Hover returns contextual type information about the variable at the given
@@ -549,9 +568,11 @@ func (s *Server) CodeLens(
 		return
 	}
 
+	version := s.documents[uri].Version
+
 	for _, provider := range s.codeLensProviders {
 		var moreCodeLenses []*protocol.CodeLens
-		moreCodeLenses, err = provider(uri, checker)
+		moreCodeLenses, err = provider(uri, version, checker)
 		if err != nil {
 			return
 		}
@@ -1084,6 +1105,7 @@ func (s *Server) ResolveCompletionItem(
 // We register all the commands we support in registerCommands and populate
 // their corresponding handler at server initialization.
 func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteCommandParams) (interface{}, error) {
+
 	conn.LogMessage(&protocol.LogMessageParams{
 		Type:    protocol.Log,
 		Message: fmt.Sprintf("called execute command: %s", params.Command),
@@ -1099,10 +1121,12 @@ func (s *Server) ExecuteCommand(conn protocol.Conn, params *protocol.ExecuteComm
 // Shutdown tells the server to stop accepting any new requests. This can only
 // be followed by a call to Exit, which exits the process.
 func (*Server) Shutdown(conn protocol.Conn) error {
+
 	conn.ShowMessage(&protocol.ShowMessageParams{
 		Type:    protocol.Warning,
 		Message: "Cadence language server is shutting down",
 	})
+
 	return nil
 }
 
@@ -1124,10 +1148,12 @@ func (s *Server) getDiagnostics(
 	conn protocol.Conn,
 	uri protocol.DocumentUri,
 	text string,
+	version float64,
 ) (
 	diagnostics []protocol.Diagnostic,
 	diagnosticsErr error,
 ) {
+
 	// NOTE: Always initialize to an empty slice, i.e DON'T use nil:
 	// The later will be ignored instead of being treated as no items
 	diagnostics = []protocol.Diagnostic{}
@@ -1166,6 +1192,72 @@ func (s *Server) getDiagnostics(
 		common.StringLocation(uri),
 		sema.WithPredeclaredValues(valueDeclarations),
 		sema.WithPredeclaredTypes(typeDeclarations),
+		sema.WithLocationHandler(
+			func(identifiers []ast.Identifier, location common.Location) ([]sema.ResolvedLocation, error) {
+				addressLocation, isAddress := location.(common.AddressLocation)
+
+				// if the location is not an address location, e.g. an identifier location (`import Crypto`),
+				// then return a single resolved location which declares all identifiers.
+
+				if !isAddress {
+					return []runtime.ResolvedLocation{
+						{
+							Location:    location,
+							Identifiers: identifiers,
+						},
+					}, nil
+				}
+
+				// if the location is an address,
+				// and no specific identifiers where requested in the import statement,
+				// then fetch all identifiers at this address
+
+				if len(identifiers) == 0 {
+					// if there is no contract name resolver,
+					// then return no resolved locations
+
+					if s.resolveAddressContractNames == nil {
+						return nil, nil
+					}
+
+					contractNames, err := s.resolveAddressContractNames(addressLocation.Address)
+					if err != nil {
+						panic(err)
+					}
+
+					// if there are no contracts deployed,
+					// then return no resolved locations
+
+					if len(contractNames) == 0 {
+						return nil, nil
+					}
+
+					identifiers = make([]ast.Identifier, len(contractNames))
+
+					for i := range identifiers {
+						identifiers[i] = runtime.Identifier{
+							Identifier: contractNames[i],
+						}
+					}
+				}
+
+				// return one resolved location per identifier.
+				// each resolved location is an address contract location
+
+				resolvedLocations := make([]runtime.ResolvedLocation, len(identifiers))
+				for i := range resolvedLocations {
+					identifier := identifiers[i]
+					resolvedLocations[i] = runtime.ResolvedLocation{
+						Location: common.AddressLocation{
+							Address: addressLocation.Address,
+							Name:    identifier.Identifier,
+						},
+						Identifiers: []runtime.Identifier{identifier},
+					}
+				}
+
+				return resolvedLocations, nil
+			}),
 		sema.WithImportHandler(func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
 			switch location {
 			case stdlib.CryptoChecker.Location:
@@ -1220,7 +1312,7 @@ func (s *Server) getDiagnostics(
 
 	for _, provider := range s.diagnosticProviders {
 		var extraDiagnostics []protocol.Diagnostic
-		extraDiagnostics, diagnosticsErr = provider(uri, checker)
+		extraDiagnostics, diagnosticsErr = provider(uri, version, checker)
 		if diagnosticsErr != nil {
 			return
 		}

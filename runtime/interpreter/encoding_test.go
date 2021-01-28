@@ -3867,7 +3867,7 @@ func TestEncodeDecodeLinkValue(t *testing.T) {
 			encodeDecodeTest{
 				value: LinkValue{
 					TargetPath: publicPathValue,
-					Type: RestrictedStaticType{
+					Type: &RestrictedStaticType{
 						Type: CompositeStaticType{
 							Location:            utils.TestLocation,
 							QualifiedIdentifier: "S",

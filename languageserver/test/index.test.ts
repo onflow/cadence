@@ -1,16 +1,16 @@
 import {
+  createProtocolConnection,
+  DidOpenTextDocumentNotification,
+  ExecuteCommandRequest,
+  ExitNotification,
+  InitializeRequest,
+  ProtocolConnection,
   StreamMessageReader,
   StreamMessageWriter,
-  ProtocolConnection,
-  createProtocolConnection,
-  InitializeRequest,
-  ExitNotification,
-  ExecuteCommandRequest,
-  DidOpenTextDocumentNotification,
   TextDocumentItem
 } from "vscode-languageserver-protocol"
 
-import { spawn, execSync } from 'child_process'
+import {execSync, spawn} from 'child_process'
 import * as path from "path"
 
 beforeAll(() => {
@@ -24,7 +24,16 @@ async function withConnection(f: (connection: ProtocolConnection) => Promise<voi
     ['-enableFlowClient=false']
   )
 
+  let stderr = ""
+  child.stderr.setEncoding('utf8')
+  child.stderr.on('data', (data) => {
+    stderr += data
+  });
+
   child.on('exit', (code) => {
+    if (code !== 0) {
+      console.error(stderr)
+    }
     expect(code).toBe(0)
   })
 

@@ -35,6 +35,7 @@ import (
 
 	"github.com/onflow/cadence"
 	jsoncdc "github.com/onflow/cadence/encoding/json"
+
 	"github.com/onflow/cadence/languageserver/protocol"
 	"github.com/onflow/cadence/languageserver/server"
 )
@@ -80,11 +81,12 @@ func (i *FlowIntegration) commands() []server.Command {
 // submitTransaction handles submitting a transaction defined in the
 // source document in VS Code.
 //
-// There should be exactly 1 argument:
+// There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
+//   * the arguments, encoded as JSON-CDC
 func (i *FlowIntegration) submitTransaction(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 
-	err := server.CheckCommandArgumentCount(args, 1)
+	err := server.CheckCommandArgumentCount(args, 2)
 	if err != nil {
 		return nil, err
 	}
@@ -97,6 +99,11 @@ func (i *FlowIntegration) submitTransaction(conn protocol.Conn, args ...interfac
 	doc, ok := i.server.GetDocument(protocol.DocumentUri(uri))
 	if !ok {
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
+	}
+
+	rawTransactionArguments, ok := args[1].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid transaction arguments: %#+v", args[1])
 	}
 
 	script := []byte(doc.Text)
@@ -105,17 +112,27 @@ func (i *FlowIntegration) submitTransaction(conn protocol.Conn, args ...interfac
 		SetScript(script).
 		AddAuthorizer(i.activeAddress)
 
+	for i, rawTransactionArgument := range rawTransactionArguments {
+		transactionArgumentString, ok := rawTransactionArgument.(string)
+		if !ok {
+			return nil, fmt.Errorf("invalid transaction argument at index %d: %#+v", i, rawTransactionArgument)
+		}
+
+		tx.AddRawArgument([]byte(transactionArgumentString))
+	}
+
 	_, err = i.sendTransactionHelper(conn, i.activeAddress, tx)
 	return nil, err
 }
 
 // executeScript handles executing a script defined in the source document.
 //
-// There should be exactly 1 argument:
+// There should be exactly 2 arguments:
 //   * the DocumentURI of the file to submit
+//   * the arguments, encoded as JSON-CDC
 func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{}) (interface{}, error) {
 
-	err := server.CheckCommandArgumentCount(args, 1)
+	err := server.CheckCommandArgumentCount(args, 2)
 	if err != nil {
 		return nil, err
 	}
@@ -130,8 +147,31 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 		return nil, fmt.Errorf("could not find document for URI %s", uri)
 	}
 
+	rawScriptArguments, ok := args[1].([]interface{})
+	if !ok {
+		return nil, fmt.Errorf("invalid script arguments: %#+v", args[1])
+	}
+
+	// TODO: remove this decoding.
+	// The Flow Go SDK doesn't allow sending a script with raw arguments,
+	// so decode them for now (and then they get re-encoded, but that's negligible)
+
+	scriptArguments := make([]cadence.Value, len(rawScriptArguments))
+	for i, rawScriptArgument := range rawScriptArguments {
+		scriptArgumentString, ok := rawScriptArgument.(string)
+		if !ok {
+			return nil, fmt.Errorf("invalid script argument at index %d: %#+v", i, rawScriptArgument)
+		}
+
+		scriptArgument, err := jsoncdc.Decode([]byte(scriptArgumentString))
+		if err != nil {
+			return nil, fmt.Errorf("invalid script argument at index %d: %w", i, err)
+		}
+		scriptArguments[i] = scriptArgument
+	}
+
 	script := []byte(doc.Text)
-	res, err := i.flowClient.ExecuteScriptAtLatestBlock(context.Background(), script, nil)
+	res, err := i.flowClient.ExecuteScriptAtLatestBlock(context.Background(), script, scriptArguments)
 	if err != nil {
 
 		grpcErr, ok := status.FromError(err)
@@ -158,7 +198,7 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 		} else {
 			conn.LogMessage(&protocol.LogMessageParams{
 				Type:    protocol.Warning,
-				Message: fmt.Sprintf("Failed to submit transaction: %s", err.Error()),
+				Message: fmt.Sprintf("Failed to execute script: %s", err.Error()),
 			})
 		}
 
@@ -178,7 +218,7 @@ func (i *FlowIntegration) executeScript(conn protocol.Conn, args ...interface{})
 //
 // There should be exactly 1 argument:
 //   * the address of the new active account
-func (i *FlowIntegration) switchActiveAccount(conn protocol.Conn, args ...interface{}) (interface{}, error) {
+func (i *FlowIntegration) switchActiveAccount(_ protocol.Conn, args ...interface{}) (interface{}, error) {
 
 	err := server.CheckCommandArgumentCount(args, 1)
 	if err != nil {
@@ -404,7 +444,7 @@ func (i *FlowIntegration) sendTransactionHelper(
 
 	conn.LogMessage(&protocol.LogMessageParams{
 		Type:    protocol.Info,
-		Message: fmt.Sprintf("submitting transaction %d", tx.ID()),
+		Message: fmt.Sprintf("submitting transaction %s", tx.ID().Hex()),
 	})
 
 	err = i.flowClient.SendTransaction(context.Background(), *tx)
@@ -494,6 +534,11 @@ func (i *FlowIntegration) createAccountHelper(conn protocol.Conn) (addr flow.Add
 	}
 
 	i.accounts[addr] = i.config.ServiceAccountKey
+
+	conn.LogMessage(&protocol.LogMessageParams{
+		Type:    protocol.Info,
+		Message: fmt.Sprintf("Created account with address: %s", addr.Hex()),
+	})
 
 	return addr, nil
 }

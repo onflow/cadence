@@ -22,11 +22,4 @@ package wasm
 //
 type opcode byte
 
-const (
-	// opcodeEnd is the opcode for the 'end' instruction
-	opcodeEnd opcode = 0x0B
-	// opcodeLocalGet is the opcode for the 'local.get' instruction
-	opcodeLocalGet opcode = 0x20
-	// opcodeI32Add is the opcode for the 'i32.add' instruction
-	opcodeI32Add opcode = 0x6a
-)
+const opcodeElse opcode = 0x05

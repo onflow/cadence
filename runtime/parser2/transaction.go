@@ -42,7 +42,7 @@ import (
 //         )
 //         '}'
 //
-func parseTransactionDeclaration(p *parser) *ast.TransactionDeclaration {
+func parseTransactionDeclaration(p *parser, docString string) *ast.TransactionDeclaration {
 
 	startPos := p.current.StartPos
 
@@ -164,6 +164,7 @@ func parseTransactionDeclaration(p *parser) *ast.TransactionDeclaration {
 		PreConditions:  preConditions,
 		PostConditions: postConditions,
 		Execute:        execute,
+		DocString:      docString,
 		Range: ast.Range{
 			StartPos: startPos,
 			EndPos:   endPos,

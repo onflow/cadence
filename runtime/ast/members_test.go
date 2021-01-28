@@ -20,22 +20,17 @@ package ast
 
 import (
 	"encoding/json"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/onflow/cadence/runtime/common"
 )
 
 func TestMembers_MarshalJSON(t *testing.T) {
 
 	t.Parallel()
 
-	members := &Members{
-		Declarations: []Declaration{},
-	}
+	members := NewMembers([]Declaration{})
 
 	actual, err := json.Marshal(members)
 	require.NoError(t, err)
@@ -48,154 +43,4 @@ func TestMembers_MarshalJSON(t *testing.T) {
         `,
 		string(actual),
 	)
-}
-
-func TestMemberIndices(t *testing.T) {
-
-	fieldA := &FieldDeclaration{
-		Identifier: Identifier{Identifier: "A"},
-	}
-	fieldB := &FieldDeclaration{
-		Identifier: Identifier{Identifier: "B"},
-	}
-	fieldC := &FieldDeclaration{
-		Identifier: Identifier{Identifier: "C"},
-	}
-
-	functionA := &FunctionDeclaration{
-		Identifier: Identifier{Identifier: "A"},
-	}
-	functionB := &FunctionDeclaration{
-		Identifier: Identifier{Identifier: "B"},
-	}
-	functionC := &FunctionDeclaration{
-		Identifier: Identifier{Identifier: "C"},
-	}
-
-	specialFunctionA := &SpecialFunctionDeclaration{
-		Kind: common.DeclarationKindInitializer,
-	}
-	specialFunctionB := &SpecialFunctionDeclaration{
-		Kind: common.DeclarationKindDestructor,
-	}
-	specialFunctionC := &SpecialFunctionDeclaration{}
-
-	compositeA := &CompositeDeclaration{
-		Identifier: Identifier{Identifier: "A"},
-	}
-	compositeB := &CompositeDeclaration{
-		Identifier: Identifier{Identifier: "B"},
-	}
-	compositeC := &CompositeDeclaration{
-		Identifier: Identifier{Identifier: "C"},
-	}
-
-	interfaceA := &InterfaceDeclaration{
-		Identifier: Identifier{Identifier: "A"},
-	}
-	interfaceB := &InterfaceDeclaration{
-		Identifier: Identifier{Identifier: "B"},
-	}
-	interfaceC := &InterfaceDeclaration{
-		Identifier: Identifier{Identifier: "C"},
-	}
-
-	enumCaseA := &EnumCaseDeclaration{
-		Identifier: Identifier{Identifier: "A"},
-	}
-	enumCaseB := &EnumCaseDeclaration{
-		Identifier: Identifier{Identifier: "B"},
-	}
-	enumCaseC := &EnumCaseDeclaration{
-		Identifier: Identifier{Identifier: "C"},
-	}
-
-	members := &Members{
-		Declarations: []Declaration{
-			specialFunctionB,
-			enumCaseA,
-			compositeC,
-			fieldC,
-			interfaceB,
-			compositeA,
-			functionB,
-			specialFunctionC,
-			compositeB,
-			specialFunctionA,
-			interfaceA,
-			enumCaseB,
-			fieldA,
-			functionC,
-			fieldB,
-			interfaceC,
-			enumCaseC,
-			functionA,
-		},
-	}
-
-	var wg sync.WaitGroup
-	const parallelExecutionCount = 10
-
-	for i := 0; i < parallelExecutionCount; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
-			require.Equal(t,
-				[]*FieldDeclaration{
-					fieldC,
-					fieldA,
-					fieldB,
-				},
-				members.Fields(),
-			)
-
-			require.Equal(t,
-				[]*FunctionDeclaration{
-					functionB,
-					functionC,
-					functionA,
-				},
-				members.Functions(),
-			)
-
-			require.Equal(t,
-				[]*SpecialFunctionDeclaration{
-					specialFunctionB,
-					specialFunctionC,
-					specialFunctionA,
-				},
-				members.SpecialFunctions(),
-			)
-
-			require.Equal(t,
-				[]*InterfaceDeclaration{
-					interfaceB,
-					interfaceA,
-					interfaceC,
-				},
-				members.Interfaces(),
-			)
-
-			require.Equal(t,
-				[]*CompositeDeclaration{
-					compositeC,
-					compositeA,
-					compositeB,
-				},
-				members.Composites(),
-			)
-
-			require.Equal(t,
-				[]*EnumCaseDeclaration{
-					enumCaseA,
-					enumCaseB,
-					enumCaseC,
-				},
-				members.EnumCases(),
-			)
-		}()
-	}
-
-	wg.Wait()
 }

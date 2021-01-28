@@ -331,7 +331,7 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 		return newError(err, context)
 	}
 
-	transactions := checker.TransactionTypes
+	transactions := checker.Elaboration.TransactionTypes
 	transactionCount := len(transactions)
 	if transactionCount != 1 {
 		err = InvalidTransactionCountError{
@@ -561,6 +561,13 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 			return nil, wrapError(err)
 		}
 		context.SetProgram(context.Location, program)
+
+		wrapPanic(func() {
+			err = context.Interface.CacheProgram(context.Location, program)
+		})
+		if err != nil {
+			return nil, wrapError(err)
+		}
 	}
 
 	importResolver := r.importResolver(context)
@@ -640,14 +647,6 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	err = checker.Check()
 	if err != nil {
 		return nil, wrapError(err)
-	}
-
-	// After the program has passed semantic analysis, cache the program AST.
-	wrapPanic(func() {
-		err = context.Interface.CacheProgram(context.Location, program)
-	})
-	if err != nil {
-		return nil, err
 	}
 
 	return checker, nil
@@ -1571,7 +1570,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			var contractTypes []*sema.CompositeType
 			var contractInterfaceTypes []*sema.InterfaceType
 
-			for _, variable := range checker.GlobalTypes {
+			for _, variable := range checker.Elaboration.GlobalTypes {
 				switch ty := variable.Type.(type) {
 				case *sema.CompositeType:
 					if ty.Kind == common.CompositeKindContract {

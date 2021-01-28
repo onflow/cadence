@@ -1421,8 +1421,8 @@ func TestParseEvent(t *testing.T) {
 						Identifier: "E",
 						Pos:        ast.Position{Offset: 6, Line: 1, Column: 6},
 					},
-					Members: &ast.Members{
-						Declarations: []ast.Declaration{
+					Members: ast.NewMembers(
+						[]ast.Declaration{
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
@@ -1436,7 +1436,7 @@ func TestParseEvent(t *testing.T) {
 								},
 							},
 						},
-					},
+					),
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 0, Line: 1, Column: 0},
 						EndPos:   ast.Position{Offset: 8, Line: 1, Column: 8},
@@ -1464,8 +1464,8 @@ func TestParseEvent(t *testing.T) {
 						Identifier: "E2",
 						Pos:        ast.Position{Offset: 12, Line: 1, Column: 12},
 					},
-					Members: &ast.Members{
-						Declarations: []ast.Declaration{
+					Members: ast.NewMembers(
+						[]ast.Declaration{
 							&ast.SpecialFunctionDeclaration{
 								Kind: common.DeclarationKindInitializer,
 								FunctionDeclaration: &ast.FunctionDeclaration{
@@ -1523,7 +1523,7 @@ func TestParseEvent(t *testing.T) {
 								},
 							},
 						},
-					},
+					),
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 1, Line: 1, Column: 1},
 						EndPos:   ast.Position{Offset: 38, Line: 1, Column: 38},
@@ -1711,8 +1711,8 @@ func TestParseCompositeDeclaration(t *testing.T) {
 						Identifier: "Test",
 						Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
 					},
-					Members: &ast.Members{
-						Declarations: []ast.Declaration{
+					Members: ast.NewMembers(
+						[]ast.Declaration{
 							&ast.FieldDeclaration{
 								Access:       ast.AccessPublicSettable,
 								VariableKind: ast.VariableKindVariable,
@@ -1863,7 +1863,7 @@ func TestParseCompositeDeclaration(t *testing.T) {
 								StartPos: ast.Position{Offset: 157, Line: 9, Column: 14},
 							},
 						},
-					},
+					),
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 11, Line: 2, Column: 10},
 						EndPos:   ast.Position{Offset: 241, Line: 12, Column: 10},
@@ -1957,8 +1957,8 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 						Identifier: "Test",
 						Pos:        ast.Position{Offset: 28, Line: 2, Column: 27},
 					},
-					Members: &ast.Members{
-						Declarations: []ast.Declaration{
+					Members: ast.NewMembers(
+						[]ast.Declaration{
 							&ast.FieldDeclaration{
 								Access:       ast.AccessPublicSettable,
 								VariableKind: ast.VariableKindVariable,
@@ -2101,7 +2101,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 								},
 							},
 						},
-					},
+					),
 					Range: ast.Range{
 						StartPos: ast.Position{Offset: 11, Line: 2, Column: 10},
 						EndPos:   ast.Position{Offset: 216, Line: 12, Column: 10},
@@ -2128,8 +2128,8 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 						Identifier: "E",
 						Pos:        ast.Position{Line: 1, Column: 10, Offset: 10},
 					},
-					Members: &ast.Members{
-						Declarations: []ast.Declaration{
+					Members: ast.NewMembers(
+						[]ast.Declaration{
 							&ast.EnumCaseDeclaration{
 								Access: ast.AccessNotSpecified,
 								Identifier: ast.Identifier{
@@ -2147,7 +2147,7 @@ func TestParseInterfaceDeclaration(t *testing.T) {
 								StartPos: ast.Position{Line: 1, Column: 23, Offset: 23},
 							},
 						},
-					},
+					),
 					Range: ast.Range{
 						StartPos: ast.Position{Line: 1, Column: 1, Offset: 1},
 						EndPos:   ast.Position{Line: 1, Column: 34, Offset: 34},
@@ -2224,7 +2224,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 					},
 				},
 			},
-			result.Declarations,
+			result.Declarations(),
 		)
 	})
 
@@ -2409,7 +2409,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 					},
 				},
 			},
-			result.Declarations,
+			result.Declarations(),
 		)
 	})
 
@@ -2644,7 +2644,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 					},
 				},
 			},
-			result.Declarations,
+			result.Declarations(),
 		)
 	})
 
@@ -2879,7 +2879,7 @@ func TestParseTransactionDeclaration(t *testing.T) {
 					},
 				},
 			},
-			result.Declarations,
+			result.Declarations(),
 		)
 	})
 }
@@ -3106,8 +3106,8 @@ func TestParseStructure(t *testing.T) {
 					Identifier: "Test",
 					Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
 				},
-				Members: &ast.Members{
-					Declarations: []ast.Declaration{
+				Members: ast.NewMembers(
+					[]ast.Declaration{
 						&ast.FieldDeclaration{
 							Access:       ast.AccessPublicSettable,
 							VariableKind: ast.VariableKindVariable,
@@ -3258,14 +3258,14 @@ func TestParseStructure(t *testing.T) {
 							StartPos: ast.Position{Offset: 145, Line: 9, Column: 12},
 						},
 					},
-				},
+				),
 				Range: ast.Range{
 					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 					EndPos:   ast.Position{Offset: 223, Line: 12, Column: 8},
 				},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3307,7 +3307,7 @@ func TestParseStructureWithConformances(t *testing.T) {
 				},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3467,7 +3467,7 @@ func TestParsePreAndPostConditions(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3586,7 +3586,7 @@ func TestParseConditionMessage(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3619,8 +3619,8 @@ func TestParseInterface(t *testing.T) {
 				Identifier: "Test",
 				Pos:        ast.Position{Offset: 30, Line: 2, Column: 29},
 			},
-			Members: &ast.Members{
-				Declarations: []ast.Declaration{
+			Members: ast.NewMembers(
+				[]ast.Declaration{
 					&ast.FieldDeclaration{
 						Access:       ast.AccessNotSpecified,
 						VariableKind: ast.VariableKindNotSpecified,
@@ -3709,7 +3709,7 @@ func TestParseInterface(t *testing.T) {
 						StartPos:      ast.Position{Offset: 111, Line: 7, Column: 16},
 					},
 				},
-			},
+			),
 			Range: ast.Range{
 				StartPos: ast.Position{Offset: 13, Line: 2, Column: 12},
 				EndPos:   ast.Position{Offset: 141, Line: 8, Column: 12},
@@ -3718,7 +3718,7 @@ func TestParseInterface(t *testing.T) {
 
 		utils.AssertEqualWithDiff(t,
 			[]ast.Declaration{test},
-			actual.Declarations,
+			actual.Declarations(),
 		)
 	}
 }
@@ -3745,7 +3745,7 @@ func TestPragmaNoArguments(t *testing.T) {
 				},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3785,7 +3785,7 @@ func TestPragmaArguments(t *testing.T) {
 				},
 			},
 		},
-		actual.Declarations,
+		actual.Declarations(),
 	)
 }
 
@@ -3810,7 +3810,7 @@ func TestParseImportWithString(t *testing.T) {
 				LocationPos: ast.Position{Offset: 16, Line: 2, Column: 15},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3837,7 +3837,7 @@ func TestParseImportWithAddress(t *testing.T) {
 				LocationPos: ast.Position{Offset: 16, Line: 2, Column: 15},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3873,7 +3873,7 @@ func TestParseImportWithIdentifiers(t *testing.T) {
 				LocationPos: ast.Position{Offset: 26, Line: 2, Column: 25},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3897,8 +3897,8 @@ func TestParseFieldWithFromIdentifier(t *testing.T) {
 					Identifier: "S",
 					Pos:        ast.Position{Offset: 14, Line: 2, Column: 13},
 				},
-				Members: &ast.Members{
-					Declarations: []ast.Declaration{
+				Members: ast.NewMembers(
+					[]ast.Declaration{
 						&ast.FieldDeclaration{
 							Access:       ast.AccessNotSpecified,
 							VariableKind: ast.VariableKindConstant,
@@ -3921,14 +3921,14 @@ func TestParseFieldWithFromIdentifier(t *testing.T) {
 							},
 						},
 					},
-				},
+				),
 				Range: ast.Range{
 					StartPos: ast.Position{Offset: 7, Line: 2, Column: 6},
 					EndPos:   ast.Position{Offset: 51, Line: 4, Column: 6},
 				},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -3970,7 +3970,7 @@ func TestParseImportWithFromIdentifier(t *testing.T) {
 				LocationPos: ast.Position{Offset: 26, Line: 2, Column: 25},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4009,7 +4009,7 @@ func TestParseResource(t *testing.T) {
 				},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4030,8 +4030,8 @@ func TestParseEventDeclaration(t *testing.T) {
 					Identifier: "Transfer",
 					Pos:        ast.Position{Offset: 15, Line: 2, Column: 14},
 				},
-				Members: &ast.Members{
-					Declarations: []ast.Declaration{
+				Members: ast.NewMembers(
+					[]ast.Declaration{
 						&ast.SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindInitializer,
 							FunctionDeclaration: &ast.FunctionDeclaration{
@@ -4089,14 +4089,14 @@ func TestParseEventDeclaration(t *testing.T) {
 							},
 						},
 					},
-				},
+				),
 				Range: ast.Range{
 					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 					EndPos:   ast.Position{Offset: 50, Line: 2, Column: 49},
 				},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4188,7 +4188,7 @@ func TestParseEventEmitStatement(t *testing.T) {
 				StartPos: ast.Position{Offset: 7, Line: 2, Column: 6},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4235,7 +4235,7 @@ func TestParseResourceReturnType(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4269,7 +4269,7 @@ func TestParseMovingVariableDeclaration(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4339,7 +4339,7 @@ func TestParseResourceParameterType(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4383,7 +4383,7 @@ func TestParseMovingVariableDeclarationWithTypeAnnotation(t *testing.T) {
 				StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4404,8 +4404,8 @@ func TestParseFieldDeclarationWithMoveTypeAnnotation(t *testing.T) {
 					Identifier: "X",
 					Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
 				},
-				Members: &ast.Members{
-					Declarations: []ast.Declaration{
+				Members: ast.NewMembers(
+					[]ast.Declaration{
 						&ast.FieldDeclaration{
 							Access:       ast.AccessNotSpecified,
 							VariableKind: ast.VariableKindNotSpecified,
@@ -4429,14 +4429,14 @@ func TestParseFieldDeclarationWithMoveTypeAnnotation(t *testing.T) {
 							},
 						},
 					},
-				},
+				),
 				Range: ast.Range{
 					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 					EndPos:   ast.Position{Offset: 26, Line: 2, Column: 25},
 				},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4459,8 +4459,8 @@ func TestParseDestructor(t *testing.T) {
 					Identifier: "Test",
 					Pos:        ast.Position{Offset: 18, Line: 2, Column: 17},
 				},
-				Members: &ast.Members{
-					Declarations: []ast.Declaration{
+				Members: ast.NewMembers(
+					[]ast.Declaration{
 						&ast.SpecialFunctionDeclaration{
 							Kind: common.DeclarationKindDestructor,
 							FunctionDeclaration: &ast.FunctionDeclaration{
@@ -4486,14 +4486,14 @@ func TestParseDestructor(t *testing.T) {
 							},
 						},
 					},
-				},
+				),
 				Range: ast.Range{
 					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 					EndPos:   ast.Position{Offset: 58, Line: 4, Column: 8},
 				},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4514,8 +4514,8 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 					Identifier: "Kitty",
 					Pos:        ast.Position{Offset: 16, Line: 2, Column: 15},
 				},
-				Members: &ast.Members{
-					Declarations: []ast.Declaration{
+				Members: ast.NewMembers(
+					[]ast.Declaration{
 						&ast.FieldDeclaration{
 							VariableKind: ast.VariableKindConstant,
 							Identifier: ast.Identifier{
@@ -4609,14 +4609,14 @@ func TestParseCompositeDeclarationWithSemicolonSeparatedMembers(t *testing.T) {
 							},
 						},
 					},
-				},
+				),
 				Range: ast.Range{
 					StartPos: ast.Position{Offset: 9, Line: 2, Column: 8},
 					EndPos:   ast.Position{Offset: 69, Line: 2, Column: 68},
 				},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }
 
@@ -4785,6 +4785,6 @@ func TestParsePreconditionWithUnaryNegation(t *testing.T) {
 				StartPos: ast.Position{Offset: 4, Line: 2, Column: 3},
 			},
 		},
-		result.Declarations,
+		result.Declarations(),
 	)
 }

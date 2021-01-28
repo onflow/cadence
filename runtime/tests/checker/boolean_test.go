@@ -39,6 +39,6 @@ func TestCheckBoolean(t *testing.T) {
 
 	assert.Equal(t,
 		&sema.BoolType{},
-		checker.GlobalValues["x"].Type,
+		checker.Elaboration.GlobalValues["x"].Type,
 	)
 }

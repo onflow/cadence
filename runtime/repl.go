@@ -146,9 +146,7 @@ func (r *REPL) Accept(code string) (inputIsComplete bool) {
 
 		switch typedElement := element.(type) {
 		case ast.Declaration:
-			program := &ast.Program{
-				Declarations: []ast.Declaration{typedElement},
-			}
+			program := ast.NewProgram([]ast.Declaration{typedElement})
 
 			if !r.check(program, code) {
 				return
@@ -180,7 +178,7 @@ type REPLSuggestion struct {
 func (r *REPL) Suggestions() (result []REPLSuggestion) {
 	names := map[string]string{}
 
-	for name, variable := range r.checker.GlobalValues {
+	for name, variable := range r.checker.Elaboration.GlobalValues {
 		if names[name] != "" {
 			continue
 		}

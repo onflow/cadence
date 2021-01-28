@@ -1,4 +1,167 @@
-# v0.11.0 (2012-10-13)
+
+# v0.12.3 (2021-01-13)
+
+## 🛠 Improvements
+
+- Improve the parsing / checking error (#525)
+
+# v0.12.2 (2021-01-13)
+
+## 🛠 Improvements
+
+- Export all checkers (#524)
+
+## 📖 Documentation
+
+- Add grammar for Cadence  (#522)
+- Add developer documentation (#523)
+- Fix typos in documentation (#519)
+
+
+# v0.12.1 (2021-01-07)
+
+## 🛠 Improvements
+
+- Improve the contract deployment error message (#507)
+
+## 🐞 Bug Fixes
+
+- Gracefully handle type loading failure (#510)
+
+## 📖 Documentation
+
+- Remove completed items from roadmap (#515)
+- Add presentation about implementation (#506)
+
+
+# v0.10.5 (2021-01-07)
+
+## 🛠 Improvements
+
+- Improve fixed-point multiplication and division (#508)
+- Make AST thread-safe (#440)
+
+## 🐞 Bug Fixes
+
+- Gracefully handle type loading failure (#511)
+
+
+# v0.12.0 (2020-12-15)
+
+## ⭐ Features
+
+- Add `getType` function (#493): It is now possible to get the [run-time type](https://docs.onflow.org/cadence/language/run-time-types/) of a value
+- Flush the cache of the storage before querying the used storage amount (#480)
+- Structured type identifiers (#477)
+- Allow host environment to predeclare values, predicated on location (#472)
+- Add a visitor for interpreter values (#449)
+- Add support for imports in WASM writer and reader (#368)
+- Add support for coverage reports (#465)
+- Add storage fields to accounts (#439)
+- Implement `fmt.Stringer` for `cadence.Value` (#434)
+- Add a function to parse a literal with a given target type (#417)
+
+## 🛠 Improvements
+
+- Extend event parameter types and dictionary key types (#497)
+- Optimize composite and interface static types (#489)
+- Optimize composite values (#488)
+- Fix the export of static types (#487)
+- Improve error pretty printing (#481)
+- Improve fixed-point multiplication and division (#490)
+- Improve error messages for contract deployment name argument checks (#475)
+- Add a test for decoding a struct with an address location without name (#469)
+- Refactor address locations, make composite decoding backwards-compatible (#457)
+- Improve error message when there are constructor argument (#455)
+- Make AST thread-safe (#440)
+- Add position information to interpreter errors (#424)
+
+## 🐞 Bug Fixes
+
+- Declare new contract's nested values before evaluating initializer (#504)
+- Infer address location name from type ID for static types (#468)
+- Fix optional value's type function (#458)
+- Don't use the cache when deploying or updating account code (#447)
+- Properly handle unspecified variable kind (#441)
+- Prevent resource loss in failable downcasts (#426)
+
+## 💥 Breaking Changes
+
+This release contains no source-breaking changes for Cadence programs, but the following breaking changes when embedding Cadence:
+
+- Structured type identifiers (#477)
+- Add error return value to all interface methods (#470)
+
+## 📖 Documentation
+
+- Document that references are not storable and suggest using capabilities (#478)
+- Update the diagram illustrating the architecture of the runtime (#476)
+- Document the current options for syntax highlighting (#444)
+
+
+# v0.10.4 (2020-12-09)
+
+## 🛠 Improvements
+
+- Allow non-fatal errors for all interface functions (#494, #495)
+- Panic with array index out of bounds error (#496)
+
+
+# v0.10.3 (2020-12-04)
+
+## ⭐ Features
+
+- Add storage fields to accounts (#485)
+
+## 🛠 Improvements
+
+- Flush the cache of the storage before querying the used storage amount (#486)
+
+
+# v0.11.2 (2020-11-30)
+
+## ⭐ Features
+
+- Extended debug (#464)
+
+## 🛠 Improvements
+
+- Refactor address locations, make composite decoding backwards-compatible (#461)
+
+
+# v0.10.2 (2020-11-23)
+
+## ⭐ Features
+
+- Extended debug (#463)
+
+## 🛠 Improvements
+
+- Refactor address locations, make composite decoding backwards-compatible (#460)
+
+
+# v0.9.3 (2020-11-19)
+
+## ⭐ Features
+
+- Wrap errors to provide additional information (#451)
+
+
+# v0.11.1 (2020-11-09)
+
+## 🐞 Bug Fixes
+
+- Don't use the cache when deploying or updating account code (#447)
+
+
+# v0.10.1 (2020-11-06)
+
+## 🐞 Bug Fixes
+
+- Don't use the cache when deploying or updating account code (#447)
+
+
+# v0.11.0 (2020-10-13)
 
 ## 💥 Breaking Changes
 

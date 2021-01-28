@@ -769,7 +769,7 @@ func (interpreter *Interpreter) prepareInvokeVariable(
 		}
 	}
 
-	ty := interpreter.Checker.GlobalValues[functionName].Type
+	ty := interpreter.Checker.Elaboration.GlobalValues[functionName].Type
 
 	// function must be invokable
 	invokableType, ok := ty.(sema.InvokableType)
@@ -795,7 +795,7 @@ func (interpreter *Interpreter) prepareInvokeTransaction(
 
 	functionValue := interpreter.Transactions[index]
 
-	transactionType := interpreter.Checker.TransactionTypes[index]
+	transactionType := interpreter.Checker.Elaboration.TransactionTypes[index]
 	functionType := transactionType.EntryPointFunctionType()
 
 	return interpreter.prepareInvoke(functionValue, functionType, arguments)
@@ -906,7 +906,7 @@ func recoverErrors(onError func(error)) {
 func (interpreter *Interpreter) VisitProgram(program *ast.Program) ast.Repr {
 	interpreter.prepareInterpretation()
 
-	return interpreter.visitGlobalDeclarations(program.Declarations)
+	return interpreter.visitGlobalDeclarations(program.Declarations())
 }
 
 func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.FunctionDeclaration) ast.Repr {
@@ -915,6 +915,7 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 
 	functionType := interpreter.Checker.Elaboration.FunctionDeclarationFunctionTypes[declaration]
 
+	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
 	variable := interpreter.findOrDeclareVariable(identifier)
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time
@@ -2433,6 +2434,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	value Value,
 ) {
 	identifier := declaration.Identifier.Identifier
+	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
 	variable := interpreter.findOrDeclareVariable(identifier)
 
 	// Make the value available in the initializer
@@ -2675,6 +2677,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	value Value,
 ) {
 	identifier := declaration.Identifier.Identifier
+	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
 	variable := interpreter.findOrDeclareVariable(identifier)
 
 	lexicalScope = lexicalScope.Insert(identifier, variable)
@@ -3402,7 +3405,7 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 
 		// don't import predeclared values
 		if subInterpreter.Checker != nil {
-			if subInterpreter.Checker.HasEffectivePredeclaredValue(name) {
+			if _, ok := subInterpreter.Checker.Elaboration.EffectivePredeclaredValues[name]; ok {
 				continue
 			}
 		}

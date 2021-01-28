@@ -18,28 +18,9 @@
 
 package wasm
 
+// Instruction represents an instruction in the code of a WASM binary
+//
 type Instruction interface {
+	isInstruction()
 	write(*WASMWriter) error
-}
-
-// InstructionLocalGet is the 'local.get' instruction
-//
-type InstructionLocalGet struct {
-	Index uint32
-}
-
-func (i InstructionLocalGet) write(wasm *WASMWriter) error {
-	err := wasm.writeOpcode(opcodeLocalGet)
-	if err != nil {
-		return err
-	}
-	return wasm.buf.writeULEB128(i.Index)
-}
-
-// InstructionI32Add is the 'i32.add' instruction
-//
-type InstructionI32Add struct{}
-
-func (i InstructionI32Add) write(wasm *WASMWriter) error {
-	return wasm.writeOpcode(opcodeI32Add)
 }

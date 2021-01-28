@@ -21,10 +21,35 @@ package wasm
 // Module represents a module
 //
 type Module struct {
-	Types []*FunctionType
-	// The type IDs of all functions
-	functionTypeIDs []uint32
-	// The bodies of all functions
-	functionBodies []*Code
-	Imports        []*Import
+	Name      string
+	Types     []*FunctionType
+	Functions []*Function
+	Memories  []*Memory
+	Imports   []*Import
+	Exports   []*Export
+	Data      []*Data
+}
+
+type ModuleBuilder struct {
+	types     []*FunctionType
+	functions []*Function
+}
+
+func (b *ModuleBuilder) AddFunction(name string, functionType *FunctionType, code *Code) {
+	typeIndex := uint32(len(b.types))
+	b.types = append(b.types, functionType)
+	b.functions = append(b.functions,
+		&Function{
+			Name:      name,
+			TypeIndex: typeIndex,
+			Code:      code,
+		},
+	)
+}
+
+func (b *ModuleBuilder) Build() *Module {
+	return &Module{
+		Types:     b.types,
+		Functions: b.functions,
+	}
 }

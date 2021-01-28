@@ -18,19 +18,25 @@
 
 package wasm
 
+import "fmt"
+
 // Import represents an import
 //
 type Import struct {
 	Module string
 	Name   string
-	// TODO: add support for tables, memories, and globals
-	TypeID uint32
+	// TODO: add support for tables, memories, and globals. adjust name section!
+	TypeIndex uint32
 }
 
-// importTypeIndicator is the byte used to indicate the import type in the WASM binary
-type importTypeIndicator byte
+func (imp Import) FullName() string {
+	return fmt.Sprintf("%s.%s", imp.Module, imp.Name)
+}
+
+// importIndicator is the byte used to indicate the kind of import in the WASM binary
+type importIndicator byte
 
 const (
-	// importTypeIndicatorFunction is the byte used to indicate the import of a function in the WASM binary
-	importTypeIndicatorFunction importTypeIndicator = 0x0
+	// importIndicatorFunction is the byte used to indicate the import of a function in the WASM binary
+	importIndicatorFunction importIndicator = 0x0
 )

@@ -25,7 +25,14 @@ import (
 // WASMWriter allows writing WASM binaries
 //
 type WASMWriter struct {
-	buf *buf
+	buf        *Buffer
+	WriteNames bool
+}
+
+func NewWASMWriter(buf *Buffer) *WASMWriter {
+	return &WASMWriter{
+		buf: buf,
+	}
 }
 
 // writeMagicAndVersion writes the magic byte sequence and version at the beginning of the WASM binary
@@ -73,6 +80,20 @@ func (w *WASMWriter) writeContentWithSize(content func() error) error {
 	return w.buf.writeUint32LEB128SizeAt(sizeOffset)
 }
 
+// writeCustomSection writes a custom section with the given name and content.
+// The content is a function that writes the contents of the section.
+//
+func (w *WASMWriter) writeCustomSection(name string, content func() error) error {
+	return w.writeSection(sectionIDCustom, func() error {
+		err := w.writeName(name)
+		if err != nil {
+			return err
+		}
+
+		return content()
+	})
+}
+
 // writeTypeSection writes the section that declares all function types
 // so they can be referenced by index
 //
@@ -80,7 +101,7 @@ func (w *WASMWriter) writeTypeSection(funcTypes []*FunctionType) error {
 	return w.writeSection(sectionIDType, func() error {
 
 		// write the number of types
-		err := w.buf.writeULEB128(uint32(len(funcTypes)))
+		err := w.buf.writeUint32LEB128(uint32(len(funcTypes)))
 		if err != nil {
 			return err
 		}
@@ -107,7 +128,7 @@ func (w *WASMWriter) writeFuncType(funcType *FunctionType) error {
 	}
 
 	// write the number of parameters
-	err = w.buf.writeULEB128(uint32(len(funcType.Params)))
+	err = w.buf.writeUint32LEB128(uint32(len(funcType.Params)))
 	if err != nil {
 		return err
 	}
@@ -121,7 +142,7 @@ func (w *WASMWriter) writeFuncType(funcType *FunctionType) error {
 	}
 
 	// write the number of results
-	err = w.buf.writeULEB128(uint32(len(funcType.Results)))
+	err = w.buf.writeUint32LEB128(uint32(len(funcType.Results)))
 	if err != nil {
 		return err
 	}
@@ -143,7 +164,7 @@ func (w *WASMWriter) writeImportSection(imports []*Import) error {
 	return w.writeSection(sectionIDImport, func() error {
 
 		// write the number of imports
-		err := w.buf.writeULEB128(uint32(len(imports)))
+		err := w.buf.writeUint32LEB128(uint32(len(imports)))
 		if err != nil {
 			return err
 		}
@@ -175,16 +196,15 @@ func (w *WASMWriter) writeImport(im *Import) error {
 		return err
 	}
 
-	// TODO: add support for tables, memories, and globals
-
+	// TODO: add support for tables, memories, and globals. adjust name section!
 	// write the type indicator
-	err = w.buf.WriteByte(byte(importTypeIndicatorFunction))
+	err = w.buf.WriteByte(byte(importIndicatorFunction))
 	if err != nil {
 		return err
 	}
 
-	// write the function type index
-	return w.buf.writeULEB128(im.TypeID)
+	// write the type index
+	return w.buf.writeUint32LEB128(im.TypeIndex)
 }
 
 // writeFunctionSection writes the section that declares the types of functions.
@@ -193,14 +213,14 @@ func (w *WASMWriter) writeImport(im *Import) error {
 func (w *WASMWriter) writeFunctionSection(functions []*Function) error {
 	return w.writeSection(sectionIDFunction, func() error {
 		// write the number of functions
-		err := w.buf.writeULEB128(uint32(len(functions)))
+		err := w.buf.writeUint32LEB128(uint32(len(functions)))
 		if err != nil {
 			return err
 		}
 
-		// write the function type ID for each function
+		// write the type index for each function
 		for _, function := range functions {
-			err = w.buf.writeULEB128(function.TypeID)
+			err = w.buf.writeUint32LEB128(function.TypeIndex)
 			if err != nil {
 				return err
 			}
@@ -210,13 +230,116 @@ func (w *WASMWriter) writeFunctionSection(functions []*Function) error {
 	})
 }
 
+// writeMemorySection writes the section that declares all memories
+//
+func (w *WASMWriter) writeMemorySection(memories []*Memory) error {
+	return w.writeSection(sectionIDMemory, func() error {
+
+		// write the number of memories
+		err := w.buf.writeUint32LEB128(uint32(len(memories)))
+		if err != nil {
+			return err
+		}
+
+		// write each memory
+		for _, memory := range memories {
+			err = w.writeMemory(memory)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+// writeMemory writes the memory
+//
+func (w *WASMWriter) writeMemory(memory *Memory) error {
+	return w.writeLimit(memory.Max, memory.Min)
+}
+
+func (w *WASMWriter) writeLimit(max *uint32, min uint32) error {
+
+	// write the indicator
+	var indicator = limitIndicatorNoMax
+	if max != nil {
+		indicator = limitIndicatorMax
+	}
+
+	err := w.buf.WriteByte(byte(indicator))
+	if err != nil {
+		return err
+	}
+
+	// write the minimum
+	err = w.buf.writeUint32LEB128(min)
+	if err != nil {
+		return err
+	}
+
+	// write the maximum
+	if max != nil {
+		err := w.buf.writeUint32LEB128(*max)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// writeExportSection writes the section that declares all exports
+//
+func (w *WASMWriter) writeExportSection(exports []*Export) error {
+	return w.writeSection(sectionIDExport, func() error {
+
+		// write the number of exports
+		err := w.buf.writeUint32LEB128(uint32(len(exports)))
+		if err != nil {
+			return err
+		}
+
+		// write each export
+		for _, export := range exports {
+			err = w.writeExport(export)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+// writeExport writes the export
+//
+func (w *WASMWriter) writeExport(export *Export) error {
+
+	// write the name
+	err := w.writeName(export.Name)
+	if err != nil {
+		return err
+	}
+
+	// TODO: add support for tables, memories, and globals. adjust name section!
+	// write the type indicator
+	err = w.buf.WriteByte(byte(exportIndicatorFunction))
+	if err != nil {
+		return err
+	}
+
+	// write the function index
+	return w.buf.writeUint32LEB128(export.FunctionIndex)
+}
+
 // writeCodeSection writes the section that provides the function bodies for the functions
 // declared by the function section (which only provides the function types)
 //
 func (w *WASMWriter) writeCodeSection(functions []*Function) error {
 	return w.writeSection(sectionIDCode, func() error {
 		// write the number of code entries (one for each function)
-		err := w.buf.writeULEB128(uint32(len(functions)))
+		err := w.buf.writeUint32LEB128(uint32(len(functions)))
 		if err != nil {
 			return err
 		}
@@ -240,7 +363,7 @@ func (w *WASMWriter) writeFunctionBody(code *Code) error {
 	return w.writeContentWithSize(func() error {
 
 		// write the number of locals
-		err := w.buf.writeULEB128(uint32(len(code.Locals)))
+		err := w.buf.writeUint32LEB128(uint32(len(code.Locals)))
 		if err != nil {
 			return err
 		}
@@ -248,7 +371,7 @@ func (w *WASMWriter) writeFunctionBody(code *Code) error {
 		// TODO: run-length encode
 		// write each local
 		for _, localValType := range code.Locals {
-			err = w.buf.writeULEB128(1)
+			err = w.buf.writeUint32LEB128(1)
 			if err != nil {
 				return err
 			}
@@ -259,21 +382,37 @@ func (w *WASMWriter) writeFunctionBody(code *Code) error {
 			}
 		}
 
-		for _, instruction := range code.Instructions {
-			err = instruction.write(w)
-			if err != nil {
-				return err
-			}
+		err = w.writeInstructions(code.Instructions)
+		if err != nil {
+			return err
 		}
 
 		return w.writeOpcode(opcodeEnd)
 	})
 }
 
+// writeInstructions writes an instruction sequence
+//
+func (w *WASMWriter) writeInstructions(instructions []Instruction) error {
+	for _, instruction := range instructions {
+		err := instruction.write(w)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // writeOpcode writes the opcode of an instruction
 //
-func (w *WASMWriter) writeOpcode(opcode opcode) error {
-	return w.buf.WriteByte(byte(opcode))
+func (w *WASMWriter) writeOpcode(opcodes ...opcode) error {
+	for _, b := range opcodes {
+		err := w.buf.WriteByte(byte(b))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // writeName writes a name, a UTF-8 byte sequence
@@ -289,11 +428,275 @@ func (w *WASMWriter) writeName(name string) error {
 	}
 
 	// write the length
-	err := w.buf.writeULEB128(uint32(len(name)))
+	err := w.buf.writeUint32LEB128(uint32(len(name)))
 	if err != nil {
 		return err
 	}
 
 	// write the name
 	return w.buf.WriteBytes([]byte(name))
+}
+
+// writeBlockInstructionArgument writes a block instruction argument
+//
+func (w *WASMWriter) writeBlockInstructionArgument(block Block, allowElse bool) error {
+
+	// write the block type
+	if block.BlockType != nil {
+		err := block.BlockType.write(w)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := w.buf.WriteByte(emptyBlockType)
+		if err != nil {
+			return err
+		}
+	}
+
+	// write the first sequence of instructions
+	err := w.writeInstructions(block.Instructions1)
+	if err != nil {
+		return err
+	}
+
+	// write the second sequence of instructions.
+	// in an if-instruction, this is the else branch.
+	// in other instructions, it is not allowed.
+
+	if len(block.Instructions2) > 0 {
+		if !allowElse {
+			return InvalidBlockSecondInstructionsError{
+				Offset: int(w.buf.offset),
+			}
+		}
+
+		err := w.writeOpcode(opcodeElse)
+		if err != nil {
+			return err
+		}
+
+		err = w.writeInstructions(block.Instructions2)
+		if err != nil {
+			return err
+		}
+	}
+
+	// write the implicit end instruction / opcode
+
+	return InstructionEnd{}.write(w)
+}
+
+const customSectionNameName = "name"
+
+// writeNameSection writes the section which declares
+// the names of the module, functions, and locals
+//
+func (w *WASMWriter) writeNameSection(moduleName string, imports []*Import, functions []*Function) error {
+	return w.writeCustomSection(customSectionNameName, func() error {
+
+		// write the module name sub-section
+		err := w.writeNameSectionModuleNameSubSection(moduleName)
+		if err != nil {
+			return err
+		}
+
+		// write the function names sub-section
+		return w.writeNameSectionFunctionNamesSubSection(imports, functions)
+	})
+}
+
+// nameSubSectionID is the ID of a sub-section in the name section of the WASM binary
+//
+type nameSubSectionID byte
+
+const (
+	nameSubSectionIDModuleName    nameSubSectionID = 0
+	nameSubSectionIDFunctionNames nameSubSectionID = 1
+	// TODO:
+	//nameSubSectionIDLocalNames    nameSubSectionID = 2
+)
+
+// writeNameSubSection writes a sub-section in the name section of the WASM binary,
+// with the given sub-section ID and the given content.
+// The content is a function that writes the contents of the section.
+//
+func (w *WASMWriter) writeNameSubSection(nameSubSectionID nameSubSectionID, content func() error) error {
+	// write the name sub-section ID
+	err := w.buf.WriteByte(byte(nameSubSectionID))
+	if err != nil {
+		return err
+	}
+
+	// write the size and the content
+	return w.writeContentWithSize(content)
+}
+
+// writeNameSectionModuleName writes the module name sub-section in the name section of the WASM binary
+//
+func (w *WASMWriter) writeNameSectionModuleNameSubSection(moduleName string) error {
+	return w.writeNameSubSection(nameSubSectionIDModuleName, func() error {
+		return w.writeName(moduleName)
+	})
+}
+
+// writeNameSectionFunctionNames writes the module name sub-section in the name section of the WASM binary
+//
+func (w *WASMWriter) writeNameSectionFunctionNamesSubSection(imports []*Import, functions []*Function) error {
+	return w.writeNameSubSection(nameSubSectionIDFunctionNames, func() error {
+
+		// write the number of function names
+		// TODO: adjust once tables, memories, and globals are supported
+		count := len(imports) + len(functions)
+
+		err := w.buf.writeUint32LEB128(uint32(count))
+		if err != nil {
+			return err
+		}
+
+		// write the name map entries for the imports
+
+		var index uint32
+
+		// TODO: adjust once tables, memories, and globals are supported
+		for _, imp := range imports {
+
+			// write the index
+			err := w.buf.writeUint32LEB128(index)
+			if err != nil {
+				return err
+			}
+
+			index++
+
+			// write the name
+
+			err = w.writeName(imp.FullName())
+			if err != nil {
+				return err
+			}
+		}
+
+		// write the name map entries for the functions
+
+		for _, function := range functions {
+
+			// write the index
+			err := w.buf.writeUint32LEB128(index)
+			if err != nil {
+				return err
+			}
+
+			index++
+
+			// write the name
+
+			err = w.writeName(function.Name)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+// writeDataSection writes the section that declares the data segments
+//
+func (w *WASMWriter) writeDataSection(segments []*Data) error {
+	return w.writeSection(sectionIDData, func() error {
+		// write the number of data segments
+		err := w.buf.writeUint32LEB128(uint32(len(segments)))
+		if err != nil {
+			return err
+		}
+
+		// write each data segment
+		for _, segment := range segments {
+			err = w.writeDataSegment(segment)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+}
+
+// writeDataSegment writes the data segment
+//
+func (w *WASMWriter) writeDataSegment(segment *Data) error {
+
+	// write the memory index
+	err := w.buf.writeUint32LEB128(segment.MemoryIndex)
+	if err != nil {
+		return err
+	}
+
+	// write the offset instructions
+	err = w.writeInstructions(segment.Offset)
+	if err != nil {
+		return err
+	}
+
+	err = w.writeOpcode(opcodeEnd)
+	if err != nil {
+		return err
+	}
+
+	// write the number of bytes
+	err = w.buf.writeUint32LEB128(uint32(len(segment.Init)))
+	if err != nil {
+		return err
+	}
+
+	// write each byte
+	for _, b := range segment.Init {
+		err = w.buf.WriteByte(b)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (w *WASMWriter) WriteModule(module *Module) error {
+	if err := w.writeMagicAndVersion(); err != nil {
+		return err
+	}
+
+	if err := w.writeTypeSection(module.Types); err != nil {
+		return err
+	}
+	if err := w.writeImportSection(module.Imports); err != nil {
+		return err
+	}
+	if err := w.writeFunctionSection(module.Functions); err != nil {
+		return err
+	}
+	if err := w.writeMemorySection(module.Memories); err != nil {
+		return err
+	}
+	if err := w.writeExportSection(module.Exports); err != nil {
+		return err
+	}
+	if err := w.writeCodeSection(module.Functions); err != nil {
+		return err
+	}
+	if err := w.writeDataSection(module.Data); err != nil {
+		return err
+	}
+
+	if w.WriteNames {
+		if err := w.writeNameSection(
+			module.Name,
+			module.Imports,
+			module.Functions,
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

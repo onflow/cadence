@@ -75,7 +75,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 			assert.Equal(t,
 				sema.VoidType,
-				checker.GlobalValues["res"].Type,
+				checker.Elaboration.GlobalValues["res"].Type,
 			)
 		}
 	})
@@ -154,8 +154,13 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		require.NoError(t, err)
 
-		invocationExpression :=
-			checker.Program.Declarations[0].(*ast.VariableDeclaration).Value.(*ast.InvocationExpression)
+		declarations := checker.Program.Declarations()
+
+		require.IsType(t, &ast.VariableDeclaration{}, declarations[0])
+		variableDeclaration := declarations[0].(*ast.VariableDeclaration)
+
+		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
+		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
 		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
@@ -200,8 +205,13 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		require.NoError(t, err)
 
-		invocationExpression :=
-			checker.Program.Declarations[0].(*ast.VariableDeclaration).Value.(*ast.InvocationExpression)
+		declarations := checker.Program.Declarations()
+
+		require.IsType(t, &ast.VariableDeclaration{}, declarations[0])
+		variableDeclaration := declarations[0].(*ast.VariableDeclaration)
+
+		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
+		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
 		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
@@ -369,8 +379,13 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		require.NoError(t, err)
 
-		invocationExpression :=
-			checker.Program.Declarations[0].(*ast.VariableDeclaration).Value.(*ast.InvocationExpression)
+		declarations := checker.Program.Declarations()
+
+		require.IsType(t, &ast.VariableDeclaration{}, declarations[0])
+		variableDeclaration := declarations[0].(*ast.VariableDeclaration)
+
+		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
+		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
 		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
@@ -489,8 +504,13 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		require.NoError(t, err)
 
-		invocationExpression :=
-			checker.Program.Declarations[0].(*ast.VariableDeclaration).Value.(*ast.InvocationExpression)
+		declarations := checker.Program.Declarations()
+
+		require.IsType(t, &ast.VariableDeclaration{}, declarations[0])
+		variableDeclaration := declarations[0].(*ast.VariableDeclaration)
+
+		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
+		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
 		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
@@ -501,7 +521,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		assert.IsType(t,
 			&sema.IntType{},
-			checker.GlobalValues["res"].Type,
+			checker.Elaboration.GlobalValues["res"].Type,
 		)
 	})
 
@@ -544,8 +564,13 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		require.NoError(t, err)
 
-		invocationExpression :=
-			checker.Program.Declarations[0].(*ast.VariableDeclaration).Value.(*ast.InvocationExpression)
+		declarations := checker.Program.Declarations()
+
+		require.IsType(t, &ast.VariableDeclaration{}, declarations[0])
+		variableDeclaration := declarations[0].(*ast.VariableDeclaration)
+
+		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
+		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
 		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
@@ -556,7 +581,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		assert.IsType(t,
 			&sema.IntType{},
-			checker.GlobalValues["res"].Type,
+			checker.Elaboration.GlobalValues["res"].Type,
 		)
 	})
 
@@ -585,8 +610,13 @@ func TestCheckGenericFunction(t *testing.T) {
 
 		require.NoError(t, err)
 
-		invocationExpression :=
-			checker.Program.Declarations[0].(*ast.VariableDeclaration).Value.(*ast.InvocationExpression)
+		declarations := checker.Program.Declarations()
+
+		require.IsType(t, &ast.VariableDeclaration{}, declarations[0])
+		variableDeclaration := declarations[0].(*ast.VariableDeclaration)
+
+		require.IsType(t, &ast.InvocationExpression{}, variableDeclaration.Value)
+		invocationExpression := variableDeclaration.Value.(*ast.InvocationExpression)
 
 		typeParameterTypes := checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 
@@ -739,7 +769,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 				assert.Equal(t,
 					test.generateType(&sema.IntType{}),
-					checker.GlobalValues["res"].Type,
+					checker.Elaboration.GlobalValues["res"].Type,
 				)
 			})
 		}
@@ -847,7 +877,7 @@ func TestCheckGenericFunction(t *testing.T) {
 
 				assert.Equal(t,
 					test.generateType(&sema.IntType{}),
-					checker.GlobalValues["res"].Type,
+					checker.Elaboration.GlobalValues["res"].Type,
 				)
 			})
 		}
