@@ -60,7 +60,7 @@ type Runtime interface {
 	// ParseAndCheckProgram parses and checks the given code without executing the program.
 	//
 	// This function returns an error if the program contains any syntax or semantic errors.
-	ParseAndCheckProgram(source []byte, context Context) (*sema.Checker, error)
+	ParseAndCheckProgram(source []byte, context Context) (*interpreter.Program, error)
 
 	// SetCoverageReport activates reporting coverage in the given report.
 	// Passing nil disables coverage reporting (default).
@@ -142,14 +142,17 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 
 	runtimeStorage := newRuntimeStorage(context.Interface)
 
-	functions := r.standardLibraryFunctions(context, runtimeStorage)
+	var checkerOptions []sema.Option
+	var interpreterOptions []interpreter.Option
 
-	checker, err := r.parseAndCheckProgram(script.Source, context, functions, nil, false)
+	functions := r.standardLibraryFunctions(context, runtimeStorage, interpreterOptions, checkerOptions)
+
+	program, err := r.parseAndCheckProgram(script.Source, context, functions, checkerOptions, false)
 	if err != nil {
 		return nil, newError(err, context)
 	}
 
-	functionEntryPointType, err := checker.Elaboration.FunctionEntryPointType()
+	functionEntryPointType, err := program.Elaboration.FunctionEntryPointType()
 	if err != nil {
 		return nil, newError(err, context)
 	}
@@ -181,11 +184,12 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 	)
 
 	value, inter, err := r.interpret(
+		program,
 		context,
 		runtimeStorage,
-		checker,
 		functions,
-		nil,
+		interpreterOptions,
+		checkerOptions,
 		interpret,
 	)
 	if err != nil {
@@ -223,11 +227,12 @@ func scriptExecutionFunction(
 }
 
 func (r *interpreterRuntime) interpret(
+	program *interpreter.Program,
 	context Context,
 	runtimeStorage *runtimeStorage,
-	checker *sema.Checker,
 	functions stdlib.StandardLibraryFunctions,
-	options []interpreter.Option,
+	interpreterOptions []interpreter.Option,
+	checkerOptions []sema.Option,
 	f interpretFunc,
 ) (
 	exportableValue,
@@ -235,7 +240,14 @@ func (r *interpreterRuntime) interpret(
 	error,
 ) {
 
-	inter, err := r.newInterpreter(checker, context, functions, runtimeStorage, options)
+	inter, err := r.newInterpreter(
+		program,
+		context,
+		functions,
+		runtimeStorage,
+		interpreterOptions,
+		checkerOptions,
+	)
 	if err != nil {
 		return exportableValue{}, nil, err
 	}
@@ -272,6 +284,8 @@ func (r *interpreterRuntime) newAuthAccountValue(
 	addressValue interpreter.AddressValue,
 	context Context,
 	runtimeStorage *runtimeStorage,
+	interpreterOptions []interpreter.Option,
+	checkerOptions []sema.Option,
 ) interpreter.AuthAccountValue {
 	return interpreter.NewAuthAccountValue(
 		addressValue,
@@ -283,6 +297,8 @@ func (r *interpreterRuntime) newAuthAccountValue(
 			addressValue,
 			context,
 			runtimeStorage,
+			interpreterOptions,
+			checkerOptions,
 		),
 	)
 }
@@ -292,14 +308,17 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 
 	runtimeStorage := newRuntimeStorage(context.Interface)
 
-	functions := r.standardLibraryFunctions(context, runtimeStorage)
+	var interpreterOptions []interpreter.Option
+	var checkerOptions []sema.Option
 
-	checker, err := r.parseAndCheckProgram(script.Source, context, functions, nil, false)
+	functions := r.standardLibraryFunctions(context, runtimeStorage, interpreterOptions, checkerOptions)
+
+	program, err := r.parseAndCheckProgram(script.Source, context, functions, checkerOptions, false)
 	if err != nil {
 		return newError(err, context)
 	}
 
-	transactions := checker.Elaboration.TransactionTypes
+	transactions := program.Elaboration.TransactionTypes
 	transactionCount := len(transactions)
 	if transactionCount != 1 {
 		err = InvalidTransactionCountError{
@@ -349,15 +368,18 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 			interpreter.NewAddressValue(address),
 			context,
 			runtimeStorage,
+			interpreterOptions,
+			checkerOptions,
 		)
 	}
 
 	_, inter, err := r.interpret(
+		program,
 		context,
 		runtimeStorage,
-		checker,
 		functions,
-		nil,
+		interpreterOptions,
+		checkerOptions,
 		r.transactionExecutionFunction(
 			transactionType.Parameters,
 			script.Arguments,
@@ -479,18 +501,22 @@ func validateArgumentParams(
 }
 
 // ParseAndCheckProgram parses the given script and runs type check.
-func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) (*sema.Checker, error) {
+func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) (*interpreter.Program, error) {
 	context.InitializeCodesAndPrograms()
 
 	runtimeStorage := newRuntimeStorage(context.Interface)
-	functions := r.standardLibraryFunctions(context, runtimeStorage)
 
-	checker, err := r.parseAndCheckProgram(code, context, functions, nil, true)
+	var interpreterOptions []interpreter.Option
+	var checkerOptions []sema.Option
+
+	functions := r.standardLibraryFunctions(context, runtimeStorage, interpreterOptions, checkerOptions)
+
+	program, err := r.parseAndCheckProgram(code, context, functions, checkerOptions, true)
 	if err != nil {
 		return nil, newError(err, context)
 	}
 
-	return checker, nil
+	return program, nil
 }
 
 func (r *interpreterRuntime) parseAndCheckProgram(
@@ -499,11 +525,35 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	functions stdlib.StandardLibraryFunctions,
 	options []sema.Option,
 	useCache bool,
-) (*sema.Checker, error) {
+) (
+	*interpreter.Program,
+	error,
+) {
 
-	var program *ast.Program
-	var checker *sema.Checker
-	var err error
+	parsed, err := r.parseCode(code, context, useCache)
+	if err != nil {
+		return nil, err
+	}
+
+	elaboration, err := r.check(parsed, context, functions, options, useCache)
+	if err != nil {
+		return nil, err
+	}
+
+	return &interpreter.Program{
+		Program:     parsed,
+		Elaboration: elaboration,
+	}, nil
+}
+
+func (r *interpreterRuntime) parseCode(
+	code []byte,
+	context Context,
+	useCache bool,
+) (
+	program *ast.Program,
+	err error,
+) {
 
 	wrapError := func(err error) error {
 		return &ParsingCheckingError{
@@ -521,33 +571,99 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 		if err != nil {
 			return nil, wrapError(err)
 		}
+		if program != nil {
+			return program, nil
+		}
 	}
 
-	if program == nil {
-		program, err = r.parse(code, context)
-		if err != nil {
-			return nil, wrapError(err)
-		}
-		context.SetProgram(context.Location, program)
+	reportMetric(
+		func() {
+			program, err = parser2.ParseProgram(string(code))
+		},
+		context.Interface,
+		func(metrics Metrics, duration time.Duration) {
+			metrics.ProgramParsed(context.Location, duration)
+		},
+	)
+	if err != nil {
+		return nil, wrapError(err)
+	}
 
+	context.SetProgram(context.Location, program)
+
+	wrapPanic(func() {
+		err = context.Interface.CacheProgram(context.Location, program)
+	})
+	if err != nil {
+		return nil, wrapError(err)
+	}
+
+	return program, nil
+}
+
+func (r *interpreterRuntime) parseLocation(
+	context Context,
+	useCache bool,
+) (
+	program *ast.Program,
+	err error,
+) {
+	if useCache {
 		wrapPanic(func() {
-			err = context.Interface.CacheProgram(context.Location, program)
+			program, err = context.Interface.GetCachedProgram(context.Location)
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	code, err := r.getCode(context)
+	if err != nil {
+		return nil, err
+	}
+
+	return r.parseCode(code, context, useCache)
+}
+
+func (r *interpreterRuntime) check(
+	program *ast.Program,
+	startContext Context,
+	functions stdlib.StandardLibraryFunctions,
+	options []sema.Option,
+	useCache bool,
+) (
+	elaboration *sema.Elaboration,
+	err error,
+) {
+
+	wrapError := func(err error) error {
+		return &ParsingCheckingError{
+			Err:      err,
+			Location: startContext.Location,
+		}
+	}
+
+	if useCache {
+		wrapPanic(func() {
+			elaboration, err = startContext.Interface.GetCachedElaboration(startContext.Location)
 		})
 		if err != nil {
 			return nil, wrapError(err)
 		}
+		if elaboration != nil {
+			return elaboration, nil
+		}
 	}
 
-	importResolver := r.importResolver(context)
 	valueDeclarations := functions.ToSemaValueDeclarations()
 
-	for _, predeclaredValue := range context.PredeclaredValues {
+	for _, predeclaredValue := range startContext.PredeclaredValues {
 		valueDeclarations = append(valueDeclarations, predeclaredValue)
 	}
 
-	checker, err = sema.NewChecker(
+	checker, err := sema.NewChecker(
 		program,
-		context.Location,
+		startContext.Location,
 		append(
 			[]sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),
@@ -556,49 +672,36 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 				sema.WithLocationHandler(
 					func(identifiers []Identifier, location Location) (res []ResolvedLocation, err error) {
 						wrapPanic(func() {
-							res, err = context.Interface.ResolveLocation(identifiers, location)
+							res, err = startContext.Interface.ResolveLocation(identifiers, location)
 						})
 						return
 					},
 				),
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
 						switch location {
 						case stdlib.CryptoChecker.Location:
-							return sema.CheckerImport{
-								Checker: stdlib.CryptoChecker,
-							}, nil
+							elaboration = stdlib.CryptoChecker.Elaboration
 
 						default:
-							var program *ast.Program
-							var err error
-							checker, checkerErr := checker.EnsureLoaded(location, func() *ast.Program {
-								program, err = importResolver(location)
-								return program
-							})
-							// TODO: improve
+							context := startContext.WithLocation(location)
+							program, err := r.checkLocation(context, functions, options, true)
 							if err != nil {
-								return nil, &sema.CheckerError{
-									Errors:   []error{err},
-									Location: location,
-									Codes:    context.codes,
-								}
+								return nil, err
 							}
-							if checkerErr != nil {
-								return nil, checkerErr
-							}
-							return sema.CheckerImport{
-								Checker: checker,
-							}, nil
+
+							elaboration = program.Elaboration
 						}
+
+						return sema.ElaborationImport{
+							Elaboration: elaboration,
+						}, nil
 					},
 				),
 				sema.WithCheckHandler(func(location common.Location, check func()) {
 					reportMetric(
-						func() {
-							check()
-						},
-						context.Interface,
+						check,
+						startContext.Interface,
 						func(metrics Metrics, duration time.Duration) {
 							metrics.ProgramChecked(location, duration)
 						},
@@ -612,20 +715,73 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 		return nil, wrapError(err)
 	}
 
+	// NOTE: cache elaboration *before* checking,
+	// so it is returned when there is a cyclic import
+
+	elaboration = checker.Elaboration
+
+	wrapPanic(func() {
+		err = startContext.Interface.CacheElaboration(startContext.Location, elaboration)
+	})
+	if err != nil {
+		return nil, wrapError(err)
+	}
+
 	err = checker.Check()
 	if err != nil {
 		return nil, wrapError(err)
 	}
 
-	return checker, nil
+	return elaboration, nil
+}
+
+func (r *interpreterRuntime) checkLocation(
+	context Context,
+	functions stdlib.StandardLibraryFunctions,
+	options []sema.Option,
+	useCache bool,
+) (
+	*interpreter.Program,
+	error,
+) {
+	var err error
+	var program *ast.Program
+	program, err = r.parseLocation(context, useCache)
+	if err != nil {
+		return nil, err
+	}
+
+	var elaboration *sema.Elaboration
+
+	if useCache {
+		wrapPanic(func() {
+			elaboration, err = context.Interface.GetCachedElaboration(context.Location)
+		})
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if elaboration == nil {
+		elaboration, err = r.check(program, context, functions, options, useCache)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &interpreter.Program{
+		Program:     program,
+		Elaboration: elaboration,
+	}, nil
 }
 
 func (r *interpreterRuntime) newInterpreter(
-	checker *sema.Checker,
+	program *interpreter.Program,
 	context Context,
 	functions stdlib.StandardLibraryFunctions,
 	runtimeStorage *runtimeStorage,
-	options []interpreter.Option,
+	interpreterOptions []interpreter.Option,
+	checkerOptions []sema.Option,
 ) (*interpreter.Interpreter, error) {
 
 	values := functions.ToInterpreterValueDeclarations()
@@ -651,7 +807,7 @@ func (r *interpreterRuntime) newInterpreter(
 			},
 		),
 		interpreter.WithInjectedCompositeFieldsHandler(
-			r.injectedCompositeFieldsHandler(context, runtimeStorage),
+			r.injectedCompositeFieldsHandler(context, runtimeStorage, interpreterOptions, checkerOptions),
 		),
 		interpreter.WithUUIDHandler(func() (uuid uint64, err error) {
 			wrapPanic(func() {
@@ -678,7 +834,7 @@ func (r *interpreterRuntime) newInterpreter(
 			},
 		),
 		interpreter.WithImportLocationHandler(
-			r.importLocationHandler(context),
+			r.importLocationHandler(context, functions, checkerOptions),
 		),
 		interpreter.WithOnStatementHandler(
 			r.onStatementHandler(),
@@ -694,30 +850,46 @@ func (r *interpreterRuntime) newInterpreter(
 	)
 
 	return interpreter.NewInterpreter(
-		checker,
-		append(defaultOptions, options...)...,
+		program,
+		context.Location,
+		append(
+			defaultOptions,
+			interpreterOptions...,
+		)...,
 	)
 }
 
-func (r *interpreterRuntime) importLocationHandler(context Context) interpreter.ImportLocationHandlerFunc {
-
-	importResolver := r.importResolver(context)
+func (r *interpreterRuntime) importLocationHandler(
+	startContext Context,
+	functions stdlib.StandardLibraryFunctions,
+	checkerOptions []sema.Option,
+) interpreter.ImportLocationHandlerFunc {
 
 	return func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 		switch location {
 		case stdlib.CryptoChecker.Location:
-			return interpreter.ProgramImport{
-				Program: stdlib.CryptoChecker.Program,
+			program := interpreter.ProgramFromChecker(stdlib.CryptoChecker)
+			subInterpreter, err := inter.NewSubInterpreter(program, location)
+			if err != nil {
+				panic(err)
+			}
+			return interpreter.InterpreterImport{
+				Interpreter: subInterpreter,
 			}
 
 		default:
-			program, err := importResolver(location)
+			context := startContext.WithLocation(location)
+			program, err := r.checkLocation(context, functions, checkerOptions, true)
 			if err != nil {
 				panic(err)
 			}
 
-			return interpreter.ProgramImport{
-				Program: program,
+			subInterpreter, err := inter.NewSubInterpreter(program, location)
+			if err != nil {
+				panic(err)
+			}
+			return interpreter.InterpreterImport{
+				Interpreter: subInterpreter,
 			}
 		}
 	}
@@ -726,6 +898,8 @@ func (r *interpreterRuntime) importLocationHandler(context Context) interpreter.
 func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 	context Context,
 	runtimeStorage *runtimeStorage,
+	interpreterOptions []interpreter.Option,
+	checkerOptions []sema.Option,
 ) interpreter.InjectedCompositeFieldsHandlerFunc {
 	return func(
 		_ *interpreter.Interpreter,
@@ -753,7 +927,13 @@ func (r *interpreterRuntime) injectedCompositeFieldsHandler(
 				addressValue := interpreter.NewAddressValue(address)
 
 				return map[string]interpreter.Value{
-					"account": r.newAuthAccountValue(addressValue, context, runtimeStorage),
+					"account": r.newAuthAccountValue(
+						addressValue,
+						context,
+						runtimeStorage,
+						interpreterOptions,
+						checkerOptions,
+					),
 				}
 			}
 		}
@@ -838,10 +1018,12 @@ func (r *interpreterRuntime) meteringInterpreterOptions(runtimeInterface Interfa
 func (r *interpreterRuntime) standardLibraryFunctions(
 	context Context,
 	runtimeStorage *runtimeStorage,
+	interpreterOptions []interpreter.Option,
+	checkerOptions []sema.Option,
 ) stdlib.StandardLibraryFunctions {
 	return append(
 		stdlib.FlowBuiltInFunctions(stdlib.FlowBuiltinImpls{
-			CreateAccount:   r.newCreateAccountFunction(context, runtimeStorage),
+			CreateAccount:   r.newCreateAccountFunction(context, runtimeStorage, interpreterOptions, checkerOptions),
 			GetAccount:      r.newGetAccountFunction(context.Interface, runtimeStorage),
 			Log:             r.newLogFunction(context.Interface),
 			GetCurrentBlock: r.newGetCurrentBlockFunction(context.Interface),
@@ -852,79 +1034,24 @@ func (r *interpreterRuntime) standardLibraryFunctions(
 	)
 }
 
-func (r *interpreterRuntime) importResolver(startContext Context) ImportResolver {
-	return func(location Location) (program *ast.Program, err error) {
-
-		context := startContext.WithLocation(location)
-
+func (r *interpreterRuntime) getCode(context Context) (code []byte, err error) {
+	if addressLocation, ok := context.Location.(common.AddressLocation); ok {
 		wrapPanic(func() {
-			program, err = context.Interface.GetCachedProgram(location)
+			code, err = context.Interface.GetAccountContractCode(
+				addressLocation.Address,
+				addressLocation.Name,
+			)
 		})
-		if err != nil {
-			return nil, err
-		}
-		if program != nil {
-			return program, nil
-		}
-
-		var code []byte
-		if addressLocation, ok := location.(common.AddressLocation); ok {
-			wrapPanic(func() {
-				code, err = context.Interface.GetAccountContractCode(
-					addressLocation.Address,
-					addressLocation.Name,
-				)
-			})
-		} else {
-			wrapPanic(func() {
-				code, err = context.Interface.GetCode(location)
-			})
-		}
-		if err != nil {
-			return nil, err
-		}
-
-		context.SetCode(location, string(code))
-
-		program, err = r.parse(code, context)
-		if err != nil {
-			return nil, err
-		}
-
-		context.SetProgram(location, program)
-
+	} else {
 		wrapPanic(func() {
-			err = context.Interface.CacheProgram(location, program)
+			code, err = context.Interface.GetCode(context.Location)
 		})
-		if err != nil {
-			return nil, err
-		}
-
-		return program, nil
 	}
-}
-
-func (r *interpreterRuntime) parse(
-	script []byte,
-	context Context,
-) (
-	program *ast.Program,
-	err error,
-) {
-
-	parse := func() {
-		program, err = parser2.ParseProgram(string(script))
+	if err != nil {
+		return nil, err
 	}
 
-	reportMetric(
-		parse,
-		context.Interface,
-		func(metrics Metrics, duration time.Duration) {
-			metrics.ProgramParsed(context.Location, duration)
-		},
-	)
-
-	return
+	return code, nil
 }
 
 // emitEvent converts an event value to native Go types and emits it to the runtime interface.
@@ -993,6 +1120,8 @@ func CodeToHashValue(code []byte) *interpreter.ArrayValue {
 func (r *interpreterRuntime) newCreateAccountFunction(
 	context Context,
 	runtimeStorage *runtimeStorage,
+	interpreterOptions []interpreter.Option,
+	checkerOptions []sema.Option,
 ) interpreter.HostFunction {
 	return func(invocation interpreter.Invocation) trampoline.Trampoline {
 		payer, ok := invocation.Arguments[0].(interpreter.AuthAccountValue)
@@ -1022,7 +1151,13 @@ func (r *interpreterRuntime) newCreateAccountFunction(
 			},
 		)
 
-		account := r.newAuthAccountValue(addressValue, context, runtimeStorage)
+		account := r.newAuthAccountValue(
+			addressValue,
+			context,
+			runtimeStorage,
+			interpreterOptions,
+			checkerOptions,
+		)
 
 		return trampoline.Done{Result: account}
 	}
@@ -1204,13 +1339,15 @@ func (r *interpreterRuntime) loadContract(
 }
 
 func (r *interpreterRuntime) instantiateContract(
+	program *interpreter.Program,
 	context Context,
 	contractType *sema.CompositeType,
 	constructorArguments []interpreter.Value,
 	argumentTypes []sema.Type,
 	runtimeStorage *runtimeStorage,
-	checker *sema.Checker,
 	functions stdlib.StandardLibraryFunctions,
+	interpreterOptions []interpreter.Option,
+	checkerOptions []sema.Option,
 	invocationRange ast.Range,
 ) (
 	interpreter.Value,
@@ -1268,7 +1405,8 @@ func (r *interpreterRuntime) instantiateContract(
 
 	var contract *interpreter.CompositeValue
 
-	interpreterOptions := []interpreter.Option{
+	allInterpreterOptions := append(
+		interpreterOptions[:],
 		interpreter.WithContractValueHandler(
 			func(
 				inter *interpreter.Interpreter,
@@ -1309,14 +1447,15 @@ func (r *interpreterRuntime) instantiateContract(
 				)
 			},
 		),
-	}
+	)
 
 	_, _, err := r.interpret(
+		program,
 		context,
 		runtimeStorage,
-		checker,
 		functions,
-		interpreterOptions,
+		allInterpreterOptions,
+		checkerOptions,
 		nil,
 	)
 
@@ -1436,20 +1575,49 @@ func (r *interpreterRuntime) newAuthAccountContracts(
 	addressValue interpreter.AddressValue,
 	context Context,
 	runtimeStorage *runtimeStorage,
+	interpreterOptions []interpreter.Option,
+	checkerOptions []sema.Option,
 ) interpreter.AuthAccountContractsValue {
 	return interpreter.AuthAccountContractsValue{
-		Address:        addressValue,
-		AddFunction:    r.newAuthAccountContractsChangeFunction(addressValue, context, runtimeStorage, false),
-		UpdateFunction: r.newAuthAccountContractsChangeFunction(addressValue, context, runtimeStorage, true),
-		GetFunction:    r.newAuthAccountContractsGetFunction(addressValue, context.Interface),
-		RemoveFunction: r.newAuthAccountContractsRemoveFunction(addressValue, context.Interface, runtimeStorage),
+		Address: addressValue,
+		AddFunction: r.newAuthAccountContractsChangeFunction(
+			addressValue,
+			context,
+			runtimeStorage,
+			interpreterOptions,
+			checkerOptions,
+			false,
+		),
+		UpdateFunction: r.newAuthAccountContractsChangeFunction(
+			addressValue,
+			context,
+			runtimeStorage,
+			interpreterOptions,
+			checkerOptions,
+			true,
+		),
+		GetFunction: r.newAuthAccountContractsGetFunction(
+			addressValue,
+			context.Interface,
+		),
+		RemoveFunction: r.newAuthAccountContractsRemoveFunction(
+			addressValue,
+			context.Interface,
+			runtimeStorage,
+		),
 	}
 }
 
+// newAuthAccountContractsChangeFunction called when e.g.
+// - adding: `AuthAccount.contracts.add(name: "Foo", code: [...])` (isUpdate = false)
+// - updating: `AuthAccount.contracts.update__experimental(name: "Foo", code: [...])` (isUpdate = true)
+//
 func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 	addressValue interpreter.AddressValue,
 	startContext Context,
 	runtimeStorage *runtimeStorage,
+	interpreterOptions []interpreter.Option,
+	checkerOptions []sema.Option,
 	isUpdate bool,
 ) interpreter.HostFunctionValue {
 	return interpreter.NewHostFunctionValue(
@@ -1523,9 +1691,9 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			const useCache = false
 
-			functions := r.standardLibraryFunctions(context, runtimeStorage)
+			functions := r.standardLibraryFunctions(context, runtimeStorage, interpreterOptions, checkerOptions)
 
-			checker, err := r.parseAndCheckProgram(code, context, functions, nil, useCache)
+			program, err := r.parseAndCheckProgram(code, context, functions, checkerOptions, useCache)
 			if err != nil {
 				panic(&InvalidContractDeploymentError{
 					Err:           err,
@@ -1538,7 +1706,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			var contractTypes []*sema.CompositeType
 			var contractInterfaceTypes []*sema.InterfaceType
 
-			for _, variable := range checker.Elaboration.GlobalTypes {
+			for _, variable := range program.Elaboration.GlobalTypes {
 				switch ty := variable.Type.(type) {
 				case *sema.CompositeType:
 					if ty.Kind == common.CompositeKindContract {
@@ -1592,16 +1760,18 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			}
 
 			r.updateAccountContractCode(
+				program,
 				context,
 				runtimeStorage,
 				declaredName,
 				code,
 				addressValue,
-				checker,
 				contractType,
 				constructorArguments,
 				constructorArgumentTypes,
 				invocation.LocationRange.Range,
+				interpreterOptions,
+				checkerOptions,
 				updateAccountContractCodeOptions{
 					createContract: !isUpdate,
 				},
@@ -1648,16 +1818,18 @@ type updateAccountContractCodeOptions struct {
 // This function is only used for the new account code/contract API.
 //
 func (r *interpreterRuntime) updateAccountContractCode(
+	program *interpreter.Program,
 	context Context,
 	runtimeStorage *runtimeStorage,
 	name string,
 	code []byte,
 	addressValue interpreter.AddressValue,
-	checker *sema.Checker,
 	contractType *sema.CompositeType,
 	constructorArguments []interpreter.Value,
 	constructorArgumentTypes []sema.Type,
 	invocationRange ast.Range,
+	interpreterOptions []interpreter.Option,
+	checkerOptions []sema.Option,
 	options updateAccountContractCodeOptions,
 ) {
 	// If the code declares a contract, instantiate it and store it.
@@ -1680,16 +1852,18 @@ func (r *interpreterRuntime) updateAccountContractCode(
 
 	if createContract {
 
-		functions := r.standardLibraryFunctions(context, runtimeStorage)
+		functions := r.standardLibraryFunctions(context, runtimeStorage, interpreterOptions, checkerOptions)
 
 		contract, err := r.instantiateContract(
+			program,
 			context,
 			contractType,
 			constructorArguments,
 			constructorArgumentTypes,
 			runtimeStorage,
-			checker,
 			functions,
+			interpreterOptions,
+			checkerOptions,
 			invocationRange,
 		)
 
@@ -1824,7 +1998,7 @@ func (r *interpreterRuntime) onStatementHandler() interpreter.OnStatementFunc {
 	}
 
 	return func(statement *interpreter.Statement) {
-		location := statement.Interpreter.Checker.Location
+		location := statement.Interpreter.Location
 		line := statement.Statement.StartPosition().Line
 		r.coverageReport.AddLineHit(location, line)
 	}
