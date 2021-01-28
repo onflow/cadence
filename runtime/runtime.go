@@ -679,6 +679,7 @@ func (r *interpreterRuntime) check(
 				),
 				sema.WithImportHandler(
 					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+						var elaboration *sema.Elaboration
 						switch location {
 						case stdlib.CryptoChecker.Location:
 							elaboration = stdlib.CryptoChecker.Elaboration
