@@ -579,7 +579,7 @@ func TestExportEventValue(t *testing.T) {
 
 // mock runtime.Interface to capture events
 type eventCapturingInterface struct {
-	EmptyRuntimeInterface
+	emptyRuntimeInterface
 	events []cadence.Event
 }
 
@@ -592,6 +592,7 @@ func exportEventFromScript(t *testing.T, script string) cadence.Event {
 	rt := NewInterpreterRuntime()
 
 	inter := &eventCapturingInterface{}
+	inter.programs = map[common.LocationID]*interpreter.Program{}
 
 	_, err := rt.ExecuteScript(
 		Script{
@@ -619,7 +620,7 @@ func exportValueFromScript(t *testing.T, script string) cadence.Value {
 			Source: []byte(script),
 		},
 		Context{
-			Interface: &EmptyRuntimeInterface{},
+			Interface: NewEmptyRuntimeInterface(),
 			Location:  utils.TestLocation,
 		},
 	)
