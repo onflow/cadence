@@ -915,6 +915,7 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 
 	functionType := interpreter.Checker.Elaboration.FunctionDeclarationFunctionTypes[declaration]
 
+	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
 	variable := interpreter.findOrDeclareVariable(identifier)
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time
@@ -2433,6 +2434,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	value Value,
 ) {
 	identifier := declaration.Identifier.Identifier
+	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
 	variable := interpreter.findOrDeclareVariable(identifier)
 
 	// Make the value available in the initializer
@@ -2675,6 +2677,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	value Value,
 ) {
 	identifier := declaration.Identifier.Identifier
+	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
 	variable := interpreter.findOrDeclareVariable(identifier)
 
 	lexicalScope = lexicalScope.Insert(identifier, variable)
