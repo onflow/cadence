@@ -4759,6 +4759,9 @@ func TestRuntimeMetrics(t *testing.T) {
 		valueDecoded       int
 	}
 
+	cachedPrograms := map[common.LocationID]*ast.Program{}
+	cachedElaborations := map[common.LocationID]*sema.Elaboration{}
+
 	newRuntimeInterface := func() (runtimeInterface Interface, r *reports) {
 
 		r = &reports{
@@ -4796,6 +4799,21 @@ func TestRuntimeMetrics(t *testing.T) {
 			},
 			valueDecoded: func(duration time.Duration) {
 				r.valueDecoded++
+			},
+			cacheProgram: func(location Location, program *ast.Program) error {
+				cachedPrograms[location.ID()] = program
+				return nil
+			},
+			getCachedProgram: func(location Location) (*ast.Program, error) {
+				return cachedPrograms[location.ID()], nil
+			},
+
+			cacheElaboration: func(location Location, elaboration *sema.Elaboration) error {
+				cachedElaborations[location.ID()] = elaboration
+				return nil
+			},
+			getCachedElaboration: func(location Location) (*sema.Elaboration, error) {
+				return cachedElaborations[location.ID()], nil
 			},
 		}
 
