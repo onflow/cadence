@@ -333,7 +333,7 @@ func (checker *Checker) IsChecked() bool {
 
 func (checker *Checker) Check() error {
 	if !checker.IsChecked() {
-		checker.Elaboration.IsChecking = true
+		checker.Elaboration.setIsChecking(true)
 		checker.errors = nil
 		check := func() {
 			checker.Program.Accept(checker)
@@ -343,7 +343,7 @@ func (checker *Checker) Check() error {
 		} else {
 			check()
 		}
-		checker.Elaboration.IsChecking = false
+		checker.Elaboration.setIsChecking(false)
 		checker.isChecked = true
 	}
 	err := checker.CheckerError()
