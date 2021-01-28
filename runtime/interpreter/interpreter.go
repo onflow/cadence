@@ -552,6 +552,14 @@ func (interpreter *Interpreter) findVariable(name string) *Variable {
 	return result.(*Variable)
 }
 
+func (interpreter *Interpreter) findOrDeclareVariable(name string) *Variable {
+	variable := interpreter.findVariable(name)
+	if variable == nil {
+		variable = interpreter.declareVariable(name, nil)
+	}
+	return variable
+}
+
 func (interpreter *Interpreter) setVariable(name string, variable *Variable) {
 	interpreter.activations.Set(name, variable)
 }
@@ -907,10 +915,7 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 
 	functionType := interpreter.Checker.Elaboration.FunctionDeclarationFunctionTypes[declaration]
 
-	variable := interpreter.findVariable(identifier)
-	if variable == nil {
-		panic(errors.NewUnreachableError())
-	}
+	variable := interpreter.findOrDeclareVariable(identifier)
 
 	// lexical scope: variables in functions are bound to what is visible at declaration time
 	lexicalScope := interpreter.activations.CurrentOrNew()
@@ -2428,11 +2433,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	value Value,
 ) {
 	identifier := declaration.Identifier.Identifier
-
-	variable := interpreter.findVariable(identifier)
-	if variable == nil {
-		panic(errors.NewUnreachableError())
-	}
+	variable := interpreter.findOrDeclareVariable(identifier)
 
 	// Make the value available in the initializer
 	lexicalScope = lexicalScope.Insert(identifier, variable)
@@ -2674,10 +2675,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 	value Value,
 ) {
 	identifier := declaration.Identifier.Identifier
-	variable := interpreter.findVariable(identifier)
-	if variable == nil {
-		panic(errors.NewUnreachableError())
-	}
+	variable := interpreter.findOrDeclareVariable(identifier)
 
 	lexicalScope = lexicalScope.Insert(identifier, variable)
 
