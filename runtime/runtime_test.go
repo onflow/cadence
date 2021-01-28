@@ -25,6 +25,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -357,7 +359,7 @@ func TestRuntimeImport(t *testing.T) {
 
 	importedScript := []byte(`
       pub fun answer(): Int {
-        return 42
+          return 42
       }
     `)
 
@@ -373,6 +375,7 @@ func TestRuntimeImport(t *testing.T) {
         }
     `)
 
+	var checkCount int
 	programs := map[common.LocationID]*interpreter.Program{}
 
 	runtimeInterface := &testRuntimeInterface{
@@ -384,6 +387,9 @@ func TestRuntimeImport(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
+		programChecked: func(location common.Location, duration time.Duration) {
+			checkCount += 1
+		},
 		setProgram: func(location Location, program *interpreter.Program) error {
 			programs[location.ID()] = program
 			return nil
@@ -393,20 +399,112 @@ func TestRuntimeImport(t *testing.T) {
 		},
 	}
 
-	nextTransactionLocation := newTransactionLocationGenerator()
+	const transactionCount = 10
+	for i := 0; i < transactionCount; i++ {
 
-	value, err := runtime.ExecuteScript(
-		Script{
-			Source: script,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
+		nextTransactionLocation := newTransactionLocationGenerator()
 
-	assert.Equal(t, cadence.NewInt(42), value)
+		value, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, cadence.NewInt(42), value)
+	}
+	require.Equal(t, transactionCount+1, checkCount)
+}
+
+func TestRuntimeConcurrentImport(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	importedScript := []byte(`
+      pub fun answer(): Int {
+          return 42
+      }
+    `)
+
+	script := []byte(`
+      import "imported"
+
+      pub fun main(): Int {
+          let answer = answer()
+          if answer != 42 {
+            panic("?!")
+          }
+          return answer
+        }
+    `)
+
+	var checkCount uint64
+	var programsLock sync.RWMutex
+	programs := map[common.LocationID]*interpreter.Program{}
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			switch location {
+			case common.StringLocation("imported"):
+				return importedScript, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+		programChecked: func(location common.Location, duration time.Duration) {
+			atomic.AddUint64(&checkCount, 1)
+		},
+		setProgram: func(location Location, program *interpreter.Program) error {
+			programsLock.Lock()
+			defer programsLock.Unlock()
+
+			programs[location.ID()] = program
+
+			return nil
+		},
+		getProgram: func(location Location) (*interpreter.Program, error) {
+			programsLock.RLock()
+			defer programsLock.RUnlock()
+
+			program := programs[location.ID()]
+
+			return program, nil
+		},
+	}
+
+	var wg sync.WaitGroup
+	const concurrency uint64 = 10
+	for i := uint64(0); i < concurrency; i++ {
+		nextTransactionLocation := newTransactionLocationGenerator()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			value, err := runtime.ExecuteScript(
+				Script{
+					Source: script,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  nextTransactionLocation(),
+				},
+			)
+			require.NoError(t, err)
+
+			assert.Equal(t, cadence.NewInt(42), value)
+		}()
+	}
+	wg.Wait()
+
+	//TODO:
+	//require.Equal(t, concurrency+1, checkCount)
 }
 
 func TestRuntimeProgramSetAndGet(t *testing.T) {
