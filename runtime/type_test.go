@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 func TestRuntimeTypeStorage(t *testing.T) {
@@ -52,6 +53,7 @@ func TestRuntimeTypeStorage(t *testing.T) {
     `)
 
 	var loggedMessage string
+	programs := map[common.LocationID]*interpreter.Program{}
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestStorage(nil, nil),
@@ -62,6 +64,13 @@ func TestRuntimeTypeStorage(t *testing.T) {
 		},
 		log: func(message string) {
 			loggedMessage = message
+		},
+		setProgram: func(location Location, program *interpreter.Program) error {
+			programs[location.ID()] = program
+			return nil
+		},
+		getProgram: func(location Location) (*interpreter.Program, error) {
+			return programs[location.ID()], nil
 		},
 	}
 
