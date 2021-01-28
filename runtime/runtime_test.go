@@ -90,6 +90,8 @@ type testRuntimeInterface struct {
 	getCode                   func(_ Location) ([]byte, error)
 	getCachedProgram          func(Location) (*ast.Program, error)
 	cacheProgram              func(Location, *ast.Program) error
+	getCachedElaboration      func(Location) (*sema.Elaboration, error)
+	cacheElaboration          func(Location, *sema.Elaboration) error
 	storage                   testRuntimeInterfaceStorage
 	createAccount             func(payer Address) (address Address, err error)
 	addAccountKey             func(address Address, publicKey []byte) error
@@ -156,6 +158,20 @@ func (i *testRuntimeInterface) CacheProgram(location Location, program *ast.Prog
 		return nil
 	}
 	return i.cacheProgram(location, program)
+}
+
+func (i *testRuntimeInterface) GetCachedElaboration(location Location) (*sema.Elaboration, error) {
+	if i.getCachedElaboration == nil {
+		return nil, nil
+	}
+	return i.getCachedElaboration(location)
+}
+
+func (i *testRuntimeInterface) CacheElaboration(location Location, elaboration *sema.Elaboration) error {
+	if i.cacheElaboration == nil {
+		return nil
+	}
+	return i.cacheElaboration(location, elaboration)
 }
 
 func (i *testRuntimeInterface) ValueExists(owner, key []byte) (exists bool, err error) {
