@@ -181,7 +181,7 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 		return nil, newError(err, context)
 	}
 
-	functionEntryPointType, err := checker.FunctionEntryPointType()
+	functionEntryPointType, err := checker.Elaboration.FunctionEntryPointType()
 	if err != nil {
 		return nil, newError(err, context)
 	}
