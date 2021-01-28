@@ -118,3 +118,27 @@ func NewElaboration() *Elaboration {
 		EffectivePredeclaredTypes:              map[string]TypeDeclaration{},
 	}
 }
+
+// FunctionEntryPointType returns the type of the entry point function declaration, if any.
+//
+// Returns an error if no valid entry point function declaration exists.
+//
+func (e *Elaboration) FunctionEntryPointType() (*FunctionType, error) {
+
+	entryPointValue, ok := e.GlobalValues[FunctionEntryPointName]
+	if !ok {
+		return nil, &MissingEntryPointError{
+			Expected: FunctionEntryPointName,
+		}
+	}
+
+	invokableType, ok := entryPointValue.Type.(InvokableType)
+	if !ok {
+		return nil, &InvalidEntryPointTypeError{
+			Type: entryPointValue.Type,
+		}
+	}
+
+	functionType := invokableType.InvocationFunctionType()
+	return functionType, nil
+}
