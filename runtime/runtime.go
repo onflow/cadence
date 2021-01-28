@@ -145,9 +145,19 @@ func (r *interpreterRuntime) ExecuteScript(script Script, context Context) (cade
 	var checkerOptions []sema.Option
 	var interpreterOptions []interpreter.Option
 
-	functions := r.standardLibraryFunctions(context, runtimeStorage, interpreterOptions, checkerOptions)
+	functions := r.standardLibraryFunctions(
+		context,
+		runtimeStorage,
+		interpreterOptions,
+		checkerOptions,
+	)
 
-	program, err := r.parseAndCheckProgram(script.Source, context, functions, checkerOptions, false)
+	program, err := r.parseAndCheckProgram(
+		script.Source,
+		context,
+		functions,
+		checkerOptions,
+	)
 	if err != nil {
 		return nil, newError(err, context)
 	}
@@ -311,9 +321,19 @@ func (r *interpreterRuntime) ExecuteTransaction(script Script, context Context) 
 	var interpreterOptions []interpreter.Option
 	var checkerOptions []sema.Option
 
-	functions := r.standardLibraryFunctions(context, runtimeStorage, interpreterOptions, checkerOptions)
+	functions := r.standardLibraryFunctions(
+		context,
+		runtimeStorage,
+		interpreterOptions,
+		checkerOptions,
+	)
 
-	program, err := r.parseAndCheckProgram(script.Source, context, functions, checkerOptions, false)
+	program, err := r.parseAndCheckProgram(
+		script.Source,
+		context,
+		functions,
+		checkerOptions,
+	)
 	if err != nil {
 		return newError(err, context)
 	}
@@ -500,7 +520,9 @@ func validateArgumentParams(
 	return argumentValues, nil
 }
 
-// ParseAndCheckProgram parses the given script and runs type check.
+// ParseAndCheckProgram parses the given code and checks it.
+// Returns a program that can be interpreted (AST + elaboration).
+//
 func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) (*interpreter.Program, error) {
 	context.InitializeCodesAndPrograms()
 
@@ -509,9 +531,19 @@ func (r *interpreterRuntime) ParseAndCheckProgram(code []byte, context Context) 
 	var interpreterOptions []interpreter.Option
 	var checkerOptions []sema.Option
 
-	functions := r.standardLibraryFunctions(context, runtimeStorage, interpreterOptions, checkerOptions)
+	functions := r.standardLibraryFunctions(
+		context,
+		runtimeStorage,
+		interpreterOptions,
+		checkerOptions,
+	)
 
-	program, err := r.parseAndCheckProgram(code, context, functions, checkerOptions, true)
+	program, err := r.parseAndCheckProgram(
+		code,
+		context,
+		functions,
+		checkerOptions,
+	)
 	if err != nil {
 		return nil, newError(err, context)
 	}
@@ -523,38 +555,11 @@ func (r *interpreterRuntime) parseAndCheckProgram(
 	code []byte,
 	context Context,
 	functions stdlib.StandardLibraryFunctions,
-	options []sema.Option,
-	useCache bool,
+	checkerOptions []sema.Option,
 ) (
-	*interpreter.Program,
-	error,
-) {
-
-	parsed, err := r.parseCode(code, context, useCache)
-	if err != nil {
-		return nil, err
-	}
-
-	elaboration, err := r.check(parsed, context, functions, options, useCache)
-	if err != nil {
-		return nil, err
-	}
-
-	return &interpreter.Program{
-		Program:     parsed,
-		Elaboration: elaboration,
-	}, nil
-}
-
-func (r *interpreterRuntime) parseCode(
-	code []byte,
-	context Context,
-	useCache bool,
-) (
-	program *ast.Program,
+	program *interpreter.Program,
 	err error,
 ) {
-
 	wrapError := func(err error) error {
 		return &ParsingCheckingError{
 			Err:      err,
@@ -564,21 +569,12 @@ func (r *interpreterRuntime) parseCode(
 
 	context.SetCode(context.Location, string(code))
 
-	if useCache {
-		wrapPanic(func() {
-			program, err = context.Interface.GetCachedProgram(context.Location)
-		})
-		if err != nil {
-			return nil, wrapError(err)
-		}
-		if program != nil {
-			return program, nil
-		}
-	}
+	// Parse
 
+	var parse *ast.Program
 	reportMetric(
 		func() {
-			program, err = parser2.ParseProgram(string(code))
+			parse, err = parser2.ParseProgram(string(code))
 		},
 		context.Interface,
 		func(metrics Metrics, duration time.Duration) {
@@ -589,71 +585,41 @@ func (r *interpreterRuntime) parseCode(
 		return nil, wrapError(err)
 	}
 
-	context.SetProgram(context.Location, program)
+	context.SetProgram(context.Location, parse)
 
-	wrapPanic(func() {
-		err = context.Interface.CacheProgram(context.Location, program)
-	})
+	// Check
+
+	elaboration, err := r.check(parse, context, functions, checkerOptions)
 	if err != nil {
 		return nil, wrapError(err)
 	}
 
-	return program, nil
-}
+	// Return
 
-func (r *interpreterRuntime) parseLocation(
-	context Context,
-	useCache bool,
-) (
-	program *ast.Program,
-	err error,
-) {
-	if useCache {
-		wrapPanic(func() {
-			program, err = context.Interface.GetCachedProgram(context.Location)
-		})
-		if err != nil {
-			return nil, err
-		}
+	program = &interpreter.Program{
+		Program:     parse,
+		Elaboration: elaboration,
 	}
 
-	code, err := r.getCode(context)
+	wrapPanic(func() {
+		err = context.Interface.SetProgram(context.Location, program)
+	})
 	if err != nil {
 		return nil, err
 	}
 
-	return r.parseCode(code, context, useCache)
+	return program, nil
 }
 
 func (r *interpreterRuntime) check(
 	program *ast.Program,
 	startContext Context,
 	functions stdlib.StandardLibraryFunctions,
-	options []sema.Option,
-	useCache bool,
+	checkerOptions []sema.Option,
 ) (
 	elaboration *sema.Elaboration,
 	err error,
 ) {
-
-	wrapError := func(err error) error {
-		return &ParsingCheckingError{
-			Err:      err,
-			Location: startContext.Location,
-		}
-	}
-
-	if useCache {
-		wrapPanic(func() {
-			elaboration, err = startContext.Interface.GetCachedElaboration(startContext.Location)
-		})
-		if err != nil {
-			return nil, wrapError(err)
-		}
-		if elaboration != nil {
-			return elaboration, nil
-		}
-	}
 
 	valueDeclarations := functions.ToSemaValueDeclarations()
 
@@ -686,7 +652,8 @@ func (r *interpreterRuntime) check(
 
 						default:
 							context := startContext.WithLocation(location)
-							program, err := r.checkLocation(context, functions, options, true)
+
+							program, err := r.getProgram(context, functions, checkerOptions)
 							if err != nil {
 								return nil, err
 							}
@@ -709,71 +676,24 @@ func (r *interpreterRuntime) check(
 					)
 				}),
 			},
-			options...,
+			checkerOptions...,
 		)...,
 	)
-	if err != nil {
-		return nil, wrapError(err)
-	}
-
-	// NOTE: cache elaboration *before* checking,
-	// so it is returned when there is a cyclic import
-
-	elaboration = checker.Elaboration
-
-	wrapPanic(func() {
-		err = startContext.Interface.CacheElaboration(startContext.Location, elaboration)
-	})
-	if err != nil {
-		return nil, wrapError(err)
-	}
-
-	err = checker.Check()
-	if err != nil {
-		return nil, wrapError(err)
-	}
-
-	return elaboration, nil
-}
-
-func (r *interpreterRuntime) checkLocation(
-	context Context,
-	functions stdlib.StandardLibraryFunctions,
-	options []sema.Option,
-	useCache bool,
-) (
-	*interpreter.Program,
-	error,
-) {
-	var err error
-	var program *ast.Program
-	program, err = r.parseLocation(context, useCache)
 	if err != nil {
 		return nil, err
 	}
 
-	var elaboration *sema.Elaboration
+	// TODO: set elaboration *before* checking,
+	// so it is returned when there is a cyclic import
 
-	if useCache {
-		wrapPanic(func() {
-			elaboration, err = context.Interface.GetCachedElaboration(context.Location)
-		})
-		if err != nil {
-			return nil, err
-		}
+	elaboration = checker.Elaboration
+
+	err = checker.Check()
+	if err != nil {
+		return nil, err
 	}
 
-	if elaboration == nil {
-		elaboration, err = r.check(program, context, functions, options, useCache)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return &interpreter.Program{
-		Program:     program,
-		Elaboration: elaboration,
-	}, nil
+	return elaboration, nil
 }
 
 func (r *interpreterRuntime) newInterpreter(
@@ -880,7 +800,8 @@ func (r *interpreterRuntime) importLocationHandler(
 
 		default:
 			context := startContext.WithLocation(location)
-			program, err := r.checkLocation(context, functions, checkerOptions, true)
+
+			program, err := r.getProgram(context, functions, checkerOptions)
 			if err != nil {
 				panic(err)
 			}
@@ -894,6 +815,49 @@ func (r *interpreterRuntime) importLocationHandler(
 			}
 		}
 	}
+}
+
+// getProgram returns the existing program at the given location, if available.
+// If it is not available, it loads the code, and then parses and checks it.
+//
+func (r *interpreterRuntime) getProgram(
+	context Context,
+	functions stdlib.StandardLibraryFunctions,
+	checkerOptions []sema.Option,
+) (
+	program *interpreter.Program,
+	err error,
+) {
+
+	wrapPanic(func() {
+		program, err = context.Interface.GetProgram(context.Location)
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if program == nil {
+
+		var code []byte
+		code, err = r.getCode(context)
+		if err != nil {
+			return nil, err
+		}
+
+		program, err = r.parseAndCheckProgram(
+			code,
+			context,
+			functions,
+			checkerOptions,
+		)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	context.SetProgram(context.Location, program.Program)
+
+	return program, nil
 }
 
 func (r *interpreterRuntime) injectedCompositeFieldsHandler(
@@ -1688,13 +1652,21 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 
 			context := startContext.WithLocation(location)
 
-			// NOTE: do NOT use the cache!
+			functions := r.standardLibraryFunctions(
+				context,
+				runtimeStorage,
+				interpreterOptions,
+				checkerOptions,
+			)
 
-			const useCache = false
+			// NOTE: do NOT get the program from the host environment!
 
-			functions := r.standardLibraryFunctions(context, runtimeStorage, interpreterOptions, checkerOptions)
-
-			program, err := r.parseAndCheckProgram(code, context, functions, checkerOptions, useCache)
+			program, err := r.parseAndCheckProgram(
+				code,
+				context,
+				functions,
+				checkerOptions,
+			)
 			if err != nil {
 				panic(&InvalidContractDeploymentError{
 					Err:           err,
@@ -1945,6 +1917,18 @@ func (r *interpreterRuntime) newAuthAccountContractsRemoveFunction(
 			var err error
 			wrapPanic(func() {
 				code, err = runtimeInterface.GetAccountContractCode(address, nameArgument)
+			})
+			if err != nil {
+				panic(err)
+			}
+
+			location := common.AddressLocation{
+				Address: address,
+				Name:    nameArgument,
+			}
+
+			wrapPanic(func() {
+				err = runtimeInterface.SetProgram(location, nil)
 			})
 			if err != nil {
 				panic(err)

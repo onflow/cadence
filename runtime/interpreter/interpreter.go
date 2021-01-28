@@ -4459,20 +4459,35 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 }
 
 func (interpreter *Interpreter) getCompositeType(location common.Location, qualifiedIdentifier string) *sema.CompositeType {
-	elaboration := interpreter.getElaboration(location)
 	typeID := location.TypeID(qualifiedIdentifier)
+
+	elaboration := interpreter.getElaboration(location)
+	if elaboration == nil {
+		panic(TypeLoadingError{
+			TypeID: typeID,
+		})
+	}
+
 	ty := elaboration.CompositeTypes[typeID]
 	if ty == nil {
 		panic(TypeLoadingError{
 			TypeID: typeID,
 		})
 	}
+
 	return ty
 }
 
 func (interpreter *Interpreter) getInterfaceType(location common.Location, qualifiedIdentifier string) *sema.InterfaceType {
-	elaboration := interpreter.getElaboration(location)
 	typeID := location.TypeID(qualifiedIdentifier)
+
+	elaboration := interpreter.getElaboration(location)
+	if elaboration == nil {
+		panic(TypeLoadingError{
+			TypeID: typeID,
+		})
+	}
+
 	ty := elaboration.InterfaceTypes[typeID]
 	if ty == nil {
 		panic(TypeLoadingError{
