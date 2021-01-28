@@ -267,6 +267,20 @@ func NewChecker(program *ast.Program, location common.Location, options ...Optio
 	return checker, nil
 }
 
+func (checker *Checker) SubChecker(program *ast.Program, location common.Location) (*Checker, error) {
+	return NewChecker(
+		program,
+		location,
+		WithPredeclaredValues(checker.PredeclaredValues),
+		WithPredeclaredTypes(checker.PredeclaredTypes),
+		WithAccessCheckMode(checker.accessCheckMode),
+		WithValidTopLevelDeclarationsHandler(checker.validTopLevelDeclarationsHandler),
+		WithCheckHandler(checker.checkHandler),
+		WithImportHandler(checker.importHandler),
+		WithLocationHandler(checker.locationHandler),
+	)
+}
+
 func (checker *Checker) declareBaseValues() {
 	for _, declaration := range BaseValues {
 		variable := checker.declareValue(declaration)
