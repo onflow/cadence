@@ -88,7 +88,7 @@ func (i ElaborationImport) IsImportableType(name string) bool {
 }
 
 func (i ElaborationImport) IsChecking() bool {
-	return i.Elaboration.IsChecking
+	return i.Elaboration.IsChecking()
 }
 
 // VirtualImport
