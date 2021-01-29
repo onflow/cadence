@@ -32,7 +32,7 @@ type BlockValue struct {
 	Height    UInt64Value
 	View      UInt64Value
 	ID        *ArrayValue
-	Timestamp Fix64Value
+	Timestamp UFix64Value
 }
 
 func (BlockValue) IsValue() {}
