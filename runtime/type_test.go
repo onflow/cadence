@@ -103,7 +103,6 @@ func TestBlockTimestamp(t *testing.T) {
 				log(ts.isInstance(Type<UFix64>()))
 
 				var div: UFix64 = 4.0
-				var x = ts as UFix64
 
 				// Shouldn't panic
 				var result = ts/div
@@ -133,5 +132,5 @@ func TestBlockTimestamp(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	assert.True(t, loggedMessage == "true", "Block.Timestamp is not UFix64")
+	assert.Equal(t, "True", loggedMessage, "Block.Timestamp is not UFix64")
 }
