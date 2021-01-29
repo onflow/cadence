@@ -1879,7 +1879,7 @@ func NewBlockValue(block Block) interpreter.BlockValue {
 
 	// timestamp
 	// TODO: verify
-	timestampValue := interpreter.NewFix64ValueWithInteger(time.Unix(0, block.Timestamp).Unix())
+	timestampValue := interpreter.NewUFix64ValueWithInteger(uint64(time.Unix(0, block.Timestamp).Unix()))
 
 	return interpreter.BlockValue{
 		Height:    heightValue,

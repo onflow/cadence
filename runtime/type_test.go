@@ -90,3 +90,48 @@ func TestRuntimeTypeStorage(t *testing.T) {
 
 	assert.Equal(t, `"Int"`, loggedMessage)
 }
+
+
+func TestBlockTimestamp(t *testing.T) {
+	t.Parallel()
+	runtime := NewInterpreterRuntime()
+	script := []byte(`
+		transaction {
+			prepare() {
+				let block = getCurrentBlock()
+				var ts: UFix64 = block.timestamp
+				log(ts.isInstance(Type<UFix64>()))
+
+				var div: UFix64 = 4.0
+				var x = ts as UFix64
+
+				// Shouldn't panic
+				var result = ts/div
+			}
+		}
+    `)
+
+	var loggedMessage string
+
+	runtimeInterface := &testRuntimeInterface{
+		getSigningAccounts: func() ([]Address, error) {
+			return nil, nil
+		},
+		log: func(message string) {
+			loggedMessage = message
+		},
+	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+	err := runtime.ExecuteTransaction(
+		Script{
+			Source: script,
+		},
+		Context{
+			Interface: runtimeInterface,
+			Location:  nextTransactionLocation(),
+		},
+	)
+	require.NoError(t, err)
+	assert.True(t, loggedMessage == "true", "Block.Timestamp is not UFix64")
+}
