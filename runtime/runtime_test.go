@@ -738,14 +738,16 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 
 	t.Parallel()
 
-	var tests = []struct {
+	type testCase struct {
 		label        string
 		script       string
 		args         [][]byte
 		authorizers  []Address
 		expectedLogs []string
 		check        func(t *testing.T, err error)
-	}{
+	}
+
+	var tests = []testCase{
 		{
 			label: "Single argument",
 			script: `
@@ -995,8 +997,10 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.label, func(t *testing.T) {
+	test := func(tc testCase) {
+
+		t.Run(tc.label, func(t *testing.T) {
+			t.Parallel()
 			rt := NewInterpreterRuntime()
 
 			var loggedMessages []string
@@ -1004,7 +1008,9 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 			programs := map[common.LocationID]*interpreter.Program{}
 
 			runtimeInterface := &testRuntimeInterface{
-				getSigningAccounts: func() ([]Address, error) { return tt.authorizers, nil },
+				getSigningAccounts: func() ([]Address, error) {
+					return tc.authorizers, nil
+				},
 				decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
 					return jsoncdc.Decode(b)
 				},
@@ -1022,8 +1028,8 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 
 			err := rt.ExecuteTransaction(
 				Script{
-					Source:    []byte(tt.script),
-					Arguments: tt.args,
+					Source:    []byte(tc.script),
+					Arguments: tc.args,
 				},
 				Context{
 					Interface: runtimeInterface,
@@ -1031,17 +1037,21 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				},
 			)
 
-			if tt.check != nil {
-				tt.check(t, err)
+			if tc.check != nil {
+				tc.check(t, err)
 			} else {
 				if !assert.NoError(t, err) {
 					for err := err; err != nil; err = errors.Unwrap(err) {
 						t.Log(err)
 					}
 				}
-				assert.ElementsMatch(t, tt.expectedLogs, loggedMessages)
+				assert.ElementsMatch(t, tc.expectedLogs, loggedMessages)
 			}
 		})
+	}
+
+	for _, tt := range tests {
+		test(tt)
 	}
 }
 
@@ -6448,7 +6458,8 @@ func TestRuntime(t *testing.T) {
 	test := func(tc testCase) {
 		t.Run(tc.name, func(t *testing.T) {
 
-			t.Parallel()
+			// NOTE: to parallelize this sub-test,
+			// access to `programs` must be made thread-safe first
 
 			_, err := runtime.ExecuteScript(
 				Script{
