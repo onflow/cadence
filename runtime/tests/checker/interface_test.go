@@ -27,6 +27,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/examples"
 	. "github.com/onflow/cadence/runtime/tests/utils"
@@ -1847,6 +1848,60 @@ func TestCheckContractInterfaceFungibleTokenConformance(t *testing.T) {
 
 	_, err := ParseAndCheckWithPanic(t, code)
 	require.NoError(t, err)
+}
+
+func BenchmarkContractInterfaceFungibleToken(b *testing.B) {
+
+	const code = examples.FungibleTokenContractInterface
+
+	program, err := parser2.ParseProgram(code)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		checker, err := sema.NewChecker(
+			program,
+			TestLocation,
+			sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
+		)
+		if err != nil {
+			b.Fatal(err)
+		}
+		err = checker.Check()
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
+
+	code := examples.FungibleTokenContractInterface + "\n" + examples.ExampleFungibleTokenContract
+
+	program, err := parser2.ParseProgram(code)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		checker, err := sema.NewChecker(
+			program,
+			TestLocation,
+			sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
+		)
+		if err != nil {
+			b.Fatal(err)
+		}
+		err = checker.Check()
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
 }
 
 func TestCheckContractInterfaceFungibleTokenUse(t *testing.T) {
