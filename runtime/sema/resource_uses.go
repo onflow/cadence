@@ -43,13 +43,15 @@ type ResourceUses struct {
 }
 
 func (p ResourceUses) AllPositions() (result []ast.Position) {
-	s := p.positions
-	for s.Size() != 0 {
-		var e hamt.Entry
-		e, _, s = s.FirstRest()
-		position := e.(ResourceUseEntry).Position
+	_ = p.positions.ForEach(func(entry hamt.Entry, i interface{}) error {
+		position := entry.(ResourceUseEntry).Position
 		result = append(result, position)
-	}
+
+		// NOTE: when changing this function to return an error,
+		// also return it from the outer function,
+		// as the outer error is currently ignored!
+		return nil
+	})
 	return
 }
 
