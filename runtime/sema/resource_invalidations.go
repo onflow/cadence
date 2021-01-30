@@ -25,13 +25,15 @@ type ResourceInvalidations struct {
 }
 
 func (ris ResourceInvalidations) All() (result []ResourceInvalidation) {
-	s := ris.invalidations
-	for s.Size() != 0 {
-		var e hamt.Entry
-		e, s = s.FirstRest()
-		invalidation := e.(ResourceInvalidationEntry).ResourceInvalidation
+	_ = ris.invalidations.ForEach(func(entry hamt.Entry) error {
+		invalidation := entry.(ResourceInvalidationEntry).ResourceInvalidation
 		result = append(result, invalidation)
-	}
+
+		// NOTE: when changing this function to return an error,
+		// also return it from the outer function,
+		// as the outer error is currently ignored!
+		return nil
+	})
 	return
 }
 

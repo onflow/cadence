@@ -172,13 +172,10 @@ func TestResourceResources_FirstRest(t *testing.T) {
 
 	result := map[*Variable][]ResourceInvalidation{}
 
-	var resource interface{}
-	var resourceInfo ResourceInfo
-	for resources.Size() != 0 {
-		resource, resourceInfo, resources = resources.FirstRest()
+	resources.ForEach(func(resource interface{}, info ResourceInfo) {
 		variable := resource.(*Variable)
-		result[variable] = resourceInfo.Invalidations.All()
-	}
+		result[variable] = info.Invalidations.All()
+	})
 
 	assert.Len(t, result, 2)
 
