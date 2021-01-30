@@ -38,20 +38,6 @@ func NewActivation() Activation {
 	return Activation(hamt.NewMap())
 }
 
-// FirstRest returns the first entry (key-value pair) in the activation,
-// and the remaining entries in the activation.
-// It can be used to iterate over all entries of the activation.
-//
-func (a Activation) FirstRest() (string, interface{}, Activation) {
-	entry, value, rest := hamt.Map(a).FirstRest()
-	if entry == nil {
-		return "", nil, Activation{}
-	}
-
-	name := string(entry.(common.StringEntry))
-	return name, value, Activation(rest)
-}
-
 // Find returns the value for a given key in the activation.
 // It returns nil if no value is found.
 //
@@ -63,6 +49,16 @@ func (a Activation) Find(name string) interface{} {
 //
 func (a Activation) Insert(name string, value interface{}) Activation {
 	return Activation(hamt.Map(a).Insert(common.StringEntry(name), value))
+}
+
+// ForEach calls the given function for each entry (key-value pair) in the activation.
+// It can be used to iterate over all entries of the activation.
+//
+func (a Activation) ForEach(f func(string, interface{}) error) error {
+	return hamt.Map(a).ForEach(func(entry hamt.Entry, v interface{}) error {
+		name := string(entry.(common.StringEntry))
+		return f(name, v)
+	})
 }
 
 // Activations is a stack of activation records.
