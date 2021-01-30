@@ -59,16 +59,15 @@ func (ms *MemberSet) Contains(member *Member) bool {
 func (ms *MemberSet) Intersection(b *MemberSet) *MemberSet {
 	result := hamt.NewSet()
 
-	set := ms.set
-
-	for set.Size() != 0 {
-		var entry hamt.Entry
-		entry, set = set.FirstRest()
-
-		if b.set.Include(entry) {
-			result = result.Insert(entry)
+	_ = ms.set.ForEach(func(entry hamt.Entry) error {
+		if !b.set.Include(entry) {
+			return nil
 		}
-	}
+
+		result = result.Insert(entry)
+
+		return nil
+	})
 
 	return &MemberSet{result}
 }
