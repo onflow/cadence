@@ -105,7 +105,9 @@ func (checker *Checker) declareFunctionDeclaration(
 	})
 	checker.report(err)
 
-	checker.recordFunctionDeclarationOrigin(declaration, functionType)
+	if checker.originsAndOccurrencesEnabled {
+		checker.recordFunctionDeclarationOrigin(declaration, functionType)
+	}
 }
 
 func (checker *Checker) checkFunction(
@@ -280,7 +282,9 @@ func (checker *Checker) declareParameters(
 			Pos:             &identifier.Pos,
 		}
 		checker.valueActivations.Set(identifier.Identifier, variable)
-		checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
+		if checker.originsAndOccurrencesEnabled {
+			checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
+		}
 	}
 }
 

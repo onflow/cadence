@@ -71,7 +71,9 @@ func (checker *Checker) VisitForStatement(statement *ast.ForStatement) ast.Repr 
 		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
-	checker.recordVariableDeclarationOccurrence(identifier, variable)
+	if checker.originsAndOccurrencesEnabled {
+		checker.recordVariableDeclarationOccurrence(identifier, variable)
+	}
 
 	// The body of the loop will maybe be evaluated.
 	// That means that resource invalidations and

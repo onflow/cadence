@@ -1258,6 +1258,7 @@ func (s *Server) getDiagnostics(
 
 				return resolvedLocations, nil
 			}),
+		// TODO: sema.WithOriginsAndOccurrencesEnabled(true),
 		sema.WithImportHandler(func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
 			switch location {
 			case stdlib.CryptoChecker.Location:

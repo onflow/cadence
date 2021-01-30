@@ -93,10 +93,11 @@ type Checker struct {
 	containerTypes                     map[Type]bool
 	functionActivations                *FunctionActivations
 	inCondition                        bool
+	originsAndOccurrencesEnabled       bool
 	Occurrences                        *Occurrences
-	MemberAccesses                     *MemberAccesses
 	variableOrigins                    map[*Variable]*Origin
 	memberOrigins                      map[Type]map[string]*Origin
+	MemberAccesses                     *MemberAccesses
 	isChecked                          bool
 	inCreate                           bool
 	inInvocation                       bool
@@ -208,6 +209,16 @@ func WithImportHandler(handler ImportHandlerFunc) Option {
 	}
 }
 
+// WithOriginsAndOccurrencesEnabled returns a checker option which enables/disables
+// if origins and occurrences are recorded.
+//
+func WithOriginsAndOccurrencesEnabled(enabled bool) Option {
+	return func(checker *Checker) error {
+		checker.originsAndOccurrencesEnabled = enabled
+		return nil
+	}
+}
+
 func NewChecker(program *ast.Program, location common.Location, options ...Option) (*Checker, error) {
 
 	if location == nil {
@@ -242,10 +253,10 @@ func NewChecker(program *ast.Program, location common.Location, options ...Optio
 		typeActivations:     typeActivations,
 		functionActivations: functionActivations,
 		Occurrences:         NewOccurrences(),
-		MemberAccesses:      NewMemberAccesses(),
-		containerTypes:      map[Type]bool{},
 		variableOrigins:     map[*Variable]*Origin{},
 		memberOrigins:       map[Type]map[string]*Origin{},
+		MemberAccesses:      NewMemberAccesses(),
+		containerTypes:      map[Type]bool{},
 		Elaboration:         NewElaboration(),
 	}
 
@@ -311,7 +322,9 @@ func (checker *Checker) declareValue(declaration ValueDeclaration) *Variable {
 		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
-	checker.recordVariableDeclarationOccurrence(name, variable)
+	if checker.originsAndOccurrencesEnabled {
+		checker.recordVariableDeclarationOccurrence(name, variable)
+	}
 	return variable
 }
 
@@ -335,7 +348,9 @@ func (checker *Checker) declareTypeDeclaration(declaration TypeDeclaration) {
 		},
 	)
 	checker.report(err)
-	checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
+	if checker.originsAndOccurrencesEnabled {
+		checker.recordVariableDeclarationOccurrence(identifier.Identifier, variable)
+	}
 }
 
 func (checker *Checker) IsChecked() bool {
@@ -868,7 +883,7 @@ func (checker *Checker) findAndCheckValueVariable(identifier ast.Identifier, rec
 		return nil
 	}
 
-	if recordOccurrence && identifier.Identifier != "" {
+	if checker.originsAndOccurrencesEnabled && recordOccurrence && identifier.Identifier != "" {
 		checker.recordVariableReferenceOccurrence(
 			identifier.StartPosition(),
 			identifier.EndPosition(),
@@ -1242,7 +1257,7 @@ func (checker *Checker) findAndCheckTypeVariable(identifier ast.Identifier, reco
 		return nil
 	}
 
-	if recordOccurrence && identifier.Identifier != "" {
+	if checker.originsAndOccurrencesEnabled && recordOccurrence && identifier.Identifier != "" {
 		checker.recordVariableReferenceOccurrence(
 			identifier.StartPosition(),
 			identifier.EndPosition(),
@@ -1356,6 +1371,10 @@ func (checker *Checker) parameters(parameterList *ast.ParameterList) []*Paramete
 }
 
 func (checker *Checker) recordVariableReferenceOccurrence(startPos, endPos ast.Position, variable *Variable) {
+	if !checker.originsAndOccurrencesEnabled {
+		return
+	}
+
 	origin, ok := checker.variableOrigins[variable]
 	if !ok {
 		startPos2 := variable.Pos
@@ -1389,6 +1408,10 @@ func (checker *Checker) recordFieldDeclarationOrigin(
 	startPos, endPos ast.Position,
 	fieldType Type,
 ) *Origin {
+	if !checker.originsAndOccurrencesEnabled {
+		return nil
+	}
+
 	startPosition := identifier.StartPosition()
 	endPosition := identifier.EndPosition()
 
@@ -1412,6 +1435,10 @@ func (checker *Checker) recordFunctionDeclarationOrigin(
 	function *ast.FunctionDeclaration,
 	functionType *FunctionType,
 ) *Origin {
+	if !checker.originsAndOccurrencesEnabled {
+		return nil
+	}
+
 	startPosition := function.Identifier.StartPosition()
 	endPosition := function.Identifier.EndPosition()
 

@@ -144,8 +144,6 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 		checker.resources.AddUse(accessedSelfMember, expression.Identifier.Pos)
 	}
 
-	origins := checker.memberOrigins[accessedType]
-
 	identifier := expression.Identifier.Identifier
 	identifierStartPosition := expression.Identifier.StartPosition()
 	identifierEndPosition := expression.Identifier.EndPosition()
@@ -217,12 +215,16 @@ func (checker *Checker) visitMember(expression *ast.MemberExpression) (accessedT
 			)
 		}
 	} else {
-		origin := origins[identifier]
-		checker.Occurrences.Put(
-			identifierStartPosition,
-			identifierEndPosition,
-			origin,
-		)
+
+		if checker.originsAndOccurrencesEnabled {
+			origins := checker.memberOrigins[accessedType]
+			origin := origins[identifier]
+			checker.Occurrences.Put(
+				identifierStartPosition,
+				identifierEndPosition,
+				origin,
+			)
+		}
 
 		// Check access and report if inaccessible
 

@@ -29,6 +29,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/examples"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -1886,6 +1887,12 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 		b.Fatal(err)
 	}
 
+	panicDeclarationOption := sema.WithPredeclaredValues(
+		stdlib.StandardLibraryFunctions{
+			stdlib.PanicFunction,
+		}.ToSemaValueDeclarations(),
+	)
+
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {
@@ -1893,6 +1900,7 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 			program,
 			TestLocation,
 			sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
+			panicDeclarationOption,
 		)
 		if err != nil {
 			b.Fatal(err)
