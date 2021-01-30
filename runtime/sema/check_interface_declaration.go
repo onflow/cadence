@@ -308,7 +308,9 @@ func (checker *Checker) declareInterfaceMembers(declaration *ast.InterfaceDeclar
 
 	interfaceType.Members = members
 	interfaceType.Fields = fields
-	checker.memberOrigins[interfaceType] = origins
+	if checker.originsAndOccurrencesEnabled {
+		checker.memberOrigins[interfaceType] = origins
+	}
 
 	// NOTE: determine initializer parameter types while nested types are in scope,
 	// and after declaring nested types as the initializer may use nested type in parameters

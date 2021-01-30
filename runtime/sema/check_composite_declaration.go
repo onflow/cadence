@@ -409,10 +409,13 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 		allowOuterScopeShadowing: false,
 	})
 	checker.report(err)
-	checker.recordVariableDeclarationOccurrence(
-		identifier.Identifier,
-		variable,
-	)
+
+	if checker.originsAndOccurrencesEnabled {
+		checker.recordVariableDeclarationOccurrence(
+			identifier.Identifier,
+			variable,
+		)
+	}
 
 	// Resolve conformances
 
@@ -584,7 +587,9 @@ func (checker *Checker) declareCompositeMembersAndValue(
 				compositeType,
 				declaration.DeclarationKind(),
 			)
-			origins = map[string]*Origin{}
+			if checker.originsAndOccurrencesEnabled {
+				origins = map[string]*Origin{}
+			}
 
 		default:
 			members, fields, origins = checker.defaultMembersAndOrigins(
@@ -599,7 +604,9 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 		compositeType.Members = members
 		compositeType.Fields = fields
-		checker.memberOrigins[compositeType] = origins
+		if checker.originsAndOccurrencesEnabled {
+			checker.memberOrigins[compositeType] = origins
+		}
 	})()
 
 	// Always determine composite constructor type
@@ -690,7 +697,11 @@ func (checker *Checker) declareEnumConstructor(
 ) {
 
 	constructorMembers := make(map[string]*Member, len(enumCases))
-	constructorOrigins := make(map[string]*Origin, len(enumCases))
+
+	var constructorOrigins map[string]*Origin
+	if checker.originsAndOccurrencesEnabled {
+		constructorOrigins = make(map[string]*Origin, len(enumCases))
+	}
 
 	constructorType := &SpecialFunctionType{
 		FunctionType: &FunctionType{
@@ -718,7 +729,7 @@ func (checker *Checker) declareEnumConstructor(
 			continue
 		}
 		constructorMembers[caseName] = &Member{
-			ContainerType:   constructorType,
+			ContainerType: constructorType,
 			// enum cases are always public
 			Access:          ast.AccessPublic,
 			Identifier:      enumCase.Identifier,
@@ -728,16 +739,20 @@ func (checker *Checker) declareEnumConstructor(
 			DocString:       enumCase.DocString,
 		}
 
-		constructorOrigins[caseName] =
-			checker.recordFieldDeclarationOrigin(
-				enumCase.Identifier,
-				enumCase.Identifier.StartPosition(),
-				enumCase.Identifier.EndPosition(),
-				compositeType,
-			)
+		if checker.originsAndOccurrencesEnabled && constructorOrigins != nil {
+			constructorOrigins[caseName] =
+				checker.recordFieldDeclarationOrigin(
+					enumCase.Identifier,
+					enumCase.Identifier.StartPosition(),
+					enumCase.Identifier.EndPosition(),
+					compositeType,
+				)
+		}
 	}
 
-	checker.memberOrigins[constructorType] = constructorOrigins
+	if checker.originsAndOccurrencesEnabled {
+		checker.memberOrigins[constructorType] = constructorOrigins
+	}
 
 	_, err := checker.valueActivations.Declare(variableDeclaration{
 		identifier: declaration.Identifier.Identifier,
@@ -1286,7 +1301,9 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 	memberCount := len(fields) + len(functions)
 	members = make(map[string]*Member, memberCount)
-	origins = make(map[string]*Origin, memberCount)
+	if checker.originsAndOccurrencesEnabled {
+		origins = make(map[string]*Origin, memberCount)
+	}
 
 	predeclaredMembers := checker.predeclaredMembers(containerType)
 	invalidIdentifiers := make(map[string]bool, len(predeclaredMembers))
@@ -1359,13 +1376,15 @@ func (checker *Checker) defaultMembersAndOrigins(
 			DocString:       field.DocString,
 		}
 
-		origins[identifier] =
-			checker.recordFieldDeclarationOrigin(
-				field.Identifier,
-				field.StartPos,
-				field.EndPos,
-				fieldTypeAnnotation.Type,
-			)
+		if checker.originsAndOccurrencesEnabled && origins != nil {
+			origins[identifier] =
+				checker.recordFieldDeclarationOrigin(
+					field.Identifier,
+					field.StartPos,
+					field.EndPos,
+					fieldTypeAnnotation.Type,
+				)
+		}
 
 		if requireVariableKind &&
 			field.VariableKind == ast.VariableKindNotSpecified {
@@ -1421,8 +1440,10 @@ func (checker *Checker) defaultMembersAndOrigins(
 			DocString:       function.DocString,
 		}
 
-		origins[identifier] =
-			checker.recordFunctionDeclarationOrigin(function, functionType)
+		if checker.originsAndOccurrencesEnabled && origins != nil {
+			origins[identifier] =
+				checker.recordFunctionDeclarationOrigin(function, functionType)
+		}
 	}
 
 	return members, fieldNames, origins
@@ -1439,7 +1460,9 @@ func (checker *Checker) eventMembersAndOrigins(
 	parameters := initializer.FunctionDeclaration.ParameterList.Parameters
 
 	members = make(map[string]*Member, len(parameters))
-	origins = make(map[string]*Origin, len(parameters))
+	if checker.originsAndOccurrencesEnabled {
+		origins = make(map[string]*Origin, len(parameters))
+	}
 
 	for i, parameter := range parameters {
 		typeAnnotation := containerType.ConstructorParameters[i].TypeAnnotation
@@ -1457,13 +1480,15 @@ func (checker *Checker) eventMembersAndOrigins(
 			VariableKind:    ast.VariableKindConstant,
 		}
 
-		origins[identifier.Identifier] =
-			checker.recordFieldDeclarationOrigin(
-				identifier,
-				parameter.StartPos,
-				parameter.EndPos,
-				typeAnnotation.Type,
-			)
+		if checker.originsAndOccurrencesEnabled && origins != nil {
+			origins[identifier.Identifier] =
+				checker.recordFieldDeclarationOrigin(
+					identifier,
+					parameter.StartPos,
+					parameter.EndPos,
+					typeAnnotation.Type,
+				)
+		}
 	}
 
 	return
@@ -1728,7 +1753,9 @@ func (checker *Checker) declareSelfValue(selfType Type) {
 		Pos:             nil,
 	}
 	checker.valueActivations.Set(SelfIdentifier, self)
-	checker.recordVariableDeclarationOccurrence(SelfIdentifier, self)
+	if checker.originsAndOccurrencesEnabled {
+		checker.recordVariableDeclarationOccurrence(SelfIdentifier, self)
+	}
 }
 
 // checkNestedIdentifiers checks that nested identifiers, i.e. fields, functions,

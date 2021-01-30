@@ -1120,6 +1120,7 @@ func (s *Server) getDiagnostics(
 		runtime.FileLocation(uri),
 		sema.WithPredeclaredValues(valueDeclarations),
 		sema.WithPredeclaredTypes(typeDeclarations),
+		sema.WithOriginsAndOccurrencesEnabled(true),
 		sema.WithImportHandler(func(checker *sema.Checker, location ast.Location) (sema.Import, *sema.CheckerError) {
 			switch location {
 			case stdlib.CryptoChecker.Location:
