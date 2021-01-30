@@ -263,7 +263,9 @@ func (checker *Checker) declareTransactionDeclaration(declaration *ast.Transacti
 
 	transactionType.Members = members
 	transactionType.Fields = fields
-	checker.memberOrigins[transactionType] = origins
+	if checker.originsAndOccurrencesEnabled {
+		checker.memberOrigins[transactionType] = origins
+	}
 
 	if declaration.Prepare != nil {
 		parameterList := declaration.Prepare.FunctionDeclaration.ParameterList

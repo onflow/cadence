@@ -31,6 +31,7 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
+	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/examples"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -1864,12 +1865,18 @@ func BenchmarkContractInterfaceFungibleToken(b *testing.B) {
 
 func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 
-	code := examples.FungibleTokenContractInterface + "\n" + examples.ExampleFungibleTokenContract
+	code := examples.FungibleTokenContractInterface + "\n\n" + examples.ExampleFungibleTokenContract
 
 	program, err := parser2.ParseProgram(code)
 	if err != nil {
 		b.Fatal(err)
 	}
+
+	panicDeclarationOption := sema.WithPredeclaredValues(
+		stdlib.StandardLibraryFunctions{
+			stdlib.PanicFunction,
+		}.ToValueDeclarations(),
+	)
 
 	b.ResetTimer()
 
@@ -1878,12 +1885,14 @@ func BenchmarkCheckContractInterfaceFungibleTokenConformance(b *testing.B) {
 			program,
 			TestLocation,
 			sema.WithAccessCheckMode(sema.AccessCheckModeNotSpecifiedUnrestricted),
+			panicDeclarationOption,
 		)
 		if err != nil {
 			b.Fatal(err)
 		}
 		err = checker.Check()
 		if err != nil {
+			cmd.PrettyPrintError(os.Stdout, err, "", map[string]string{"": ""})
 			b.Fatal(err)
 		}
 	}
