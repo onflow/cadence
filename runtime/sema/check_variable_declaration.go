@@ -222,7 +222,9 @@ func (checker *Checker) visitVariableDeclaration(declaration *ast.VariableDeclar
 		allowOuterScopeShadowing: true,
 	})
 	checker.report(err)
-	checker.recordVariableDeclarationOccurrence(identifier, variable)
+	if checker.originsAndOccurrencesEnabled {
+		checker.recordVariableDeclarationOccurrence(identifier, variable)
+	}
 }
 
 func (checker *Checker) checkVariableDeclarationUsability(declaration *ast.VariableDeclaration) {
