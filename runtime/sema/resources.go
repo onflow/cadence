@@ -50,7 +50,7 @@ type Resources struct {
 func (ris *Resources) String() string {
 	var builder strings.Builder
 	builder.WriteString("Resources:")
-	ris.ForEachResourceInfo(func(resource interface{}, info ResourceInfo) {
+	ris.ForEach(func(resource interface{}, info ResourceInfo) {
 		builder.WriteString("- ")
 		builder.WriteString(fmt.Sprint(resource))
 		builder.WriteString(": ")
@@ -58,17 +58,6 @@ func (ris *Resources) String() string {
 		builder.WriteRune('\n')
 	})
 	return builder.String()
-}
-
-func (ris *Resources) ForEachResourceInfo(f func(resource interface{}, info ResourceInfo)) {
-	var resource interface{}
-	var info ResourceInfo
-
-	resources := ris
-	for resources.Size() != 0 {
-		resource, info, resources = resources.FirstRest()
-		f(resource, info)
-	}
 }
 
 // entry returns a `hamt` entry for the given resource.
@@ -143,12 +132,17 @@ func (ris *Resources) Size() int {
 	return ris.resources.Size()
 }
 
-func (ris *Resources) FirstRest() (interface{}, ResourceInfo, *Resources) {
-	entry, value, rest := ris.resources.FirstRest()
-	resource := entry.(interfaceentry.InterfaceEntry).Interface
-	info := value.(ResourceInfo)
-	resources := &Resources{resources: rest}
-	return resource, info, resources
+func (ris *Resources) ForEach(f func(resource interface{}, info ResourceInfo)) {
+	_ = ris.resources.ForEach(func(entry hamt.Entry, i interface{}) error {
+		resource := entry.(interfaceentry.InterfaceEntry).Interface
+		info := i.(ResourceInfo)
+		f(resource, info)
+
+		// NOTE: when changing this function to return an error,
+		// also return it from the outer function,
+		// as the outer error is currently ignored!
+		return nil
+	})
 }
 
 // MergeBranches merges the given resources from two branches into these resources.
@@ -224,15 +218,11 @@ func (infos BranchesResourceInfos) Add(
 	resources *Resources,
 	setValue func(*BranchesResourceInfo, ResourceInfo),
 ) {
-	var resource interface{}
-	var resourceInfo ResourceInfo
-
-	for resources.Size() != 0 {
-		resource, resourceInfo, resources = resources.FirstRest()
+	resources.ForEach(func(resource interface{}, info ResourceInfo) {
 		branchesResourceInfo := infos[resource]
-		setValue(&branchesResourceInfo, resourceInfo)
+		setValue(&branchesResourceInfo, info)
 		infos[resource] = branchesResourceInfo
-	}
+	})
 }
 
 func NewBranchesResourceInfos(thenResources *Resources, elseResources *Resources) BranchesResourceInfos {

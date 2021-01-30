@@ -59,12 +59,8 @@ func (checker *Checker) VisitWhileStatement(statement *ast.WhileStatement) ast.R
 }
 
 func (checker *Checker) reportResourceUsesInLoop(startPos, endPos ast.Position) {
-	var resource interface{}
-	var info ResourceInfo
 
-	resources := checker.resources
-	for resources.Size() != 0 {
-		resource, info, resources = resources.FirstRest()
+	checker.resources.ForEach(func(resource interface{}, info ResourceInfo) {
 
 		// If the resource is a variable,
 		// only report an error if the variable was declared outside the loop
@@ -74,13 +70,13 @@ func (checker *Checker) reportResourceUsesInLoop(startPos, endPos ast.Position) 
 			variable.Pos.Compare(startPos) > 0 &&
 			variable.Pos.Compare(endPos) < 0 {
 
-			continue
+			return
 		}
 
 		// Only report an error if the resource was invalidated
 
 		if info.Invalidations.IsEmpty() {
-			continue
+			return
 		}
 
 		invalidations := info.Invalidations.All()
@@ -111,7 +107,7 @@ func (checker *Checker) reportResourceUsesInLoop(startPos, endPos ast.Position) 
 				},
 			)
 		}
-	}
+	})
 }
 
 func (checker *Checker) VisitBreakStatement(statement *ast.BreakStatement) ast.Repr {
