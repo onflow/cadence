@@ -30,22 +30,18 @@ func NewActivation() Activation {
 	return Activation(hamt.NewMap())
 }
 
-func (a Activation) FirstRest() (string, interface{}, Activation) {
-	entry, value, rest := hamt.Map(a).FirstRest()
-	if entry == nil {
-		return "", nil, Activation{}
-	}
-
-	name := string(entry.(common.StringEntry))
-	return name, value, Activation(rest)
-}
-
 func (a Activation) Find(name string) interface{} {
 	return hamt.Map(a).Find(common.StringEntry(name))
 }
 
 func (a Activation) Insert(name string, value interface{}) Activation {
 	return Activation(hamt.Map(a).Insert(common.StringEntry(name), value))
+}
+func (a Activation) ForEach(cb func(string, interface{}) error) error {
+	return hamt.Map(a).ForEach(func(entry hamt.Entry, v interface{}) error {
+		name := string(entry.(common.StringEntry))
+		return cb(name, v)
+	})
 }
 
 // Activations is a stack of activation records.
