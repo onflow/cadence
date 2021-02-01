@@ -95,11 +95,11 @@ type Activations struct {
 	activations []*Activation
 }
 
-// current returns the current / most nested activation,
+// Current returns the current / most nested activation,
 // which can be found at the top of the stack.
 // It returns nil if there is no active activation.
 //
-func (a *Activations) current() *Activation {
+func (a *Activations) Current() *Activation {
 	count := len(a.activations)
 	if count < 1 {
 		return nil
@@ -112,7 +112,7 @@ func (a *Activations) current() *Activation {
 // or if there is no current activation.
 //
 func (a *Activations) Find(key string) interface{} {
-	current := a.current()
+	current := a.Current()
 	if current == nil {
 		return nil
 	}
@@ -122,7 +122,7 @@ func (a *Activations) Find(key string) interface{} {
 // Set sets the key value pair int the current scope.
 //
 func (a *Activations) Set(name string, value interface{}) {
-	current := a.current()
+	current := a.Current()
 	// create the first scope if there is no scope
 	if current == nil {
 		current = NewActivation(nil)
@@ -137,7 +137,7 @@ func (a *Activations) Set(name string, value interface{}) {
 // The new activation has the current activation as its parent.
 //
 func (a *Activations) PushNew() {
-	a.Push(NewActivation(a.current()))
+	a.Push(NewActivation(a.Current()))
 }
 
 // Push pushes the given activation
@@ -165,7 +165,7 @@ func (a *Activations) Pop() {
 // or if it does not exists, a new activation
 //
 func (a *Activations) CurrentOrNew() *Activation {
-	current := a.current()
+	current := a.Current()
 	if current == nil {
 		return NewActivation(nil)
 	}
