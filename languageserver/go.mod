@@ -8,7 +8,7 @@ require (
 	github.com/onflow/cadence v0.8.0
 	github.com/onflow/flow-go-sdk v0.9.0
 	github.com/sourcegraph/jsonrpc2 v0.0.0-20191222043438-96c4efab7ee2
-	github.com/stretchr/testify v1.5.1
+	github.com/stretchr/testify v1.7.0
 	google.golang.org/grpc v1.30.0
 )
 

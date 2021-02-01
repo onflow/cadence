@@ -48,6 +48,13 @@ func (a Activation) Insert(name string, value interface{}) Activation {
 	return Activation(hamt.Map(a).Insert(common.StringEntry(name), value))
 }
 
+func (a Activation) ForEach(cb func(string, interface{}) error) error {
+	return hamt.Map(a).ForEach(func(entry hamt.Entry, v interface{}) error {
+		name := string(entry.(common.StringEntry))
+		return cb(name, v)
+	})
+}
+
 // Activations is a stack of activation records.
 // Each entry represents a new scope.
 //

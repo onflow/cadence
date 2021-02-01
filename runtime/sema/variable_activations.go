@@ -161,23 +161,15 @@ func (a *VariableActivations) VariablesDeclaredInAndBelow(depth int) map[string]
 
 	activation := a.activations.CurrentOrNew()
 
-	var name string
-	var value interface{}
-
-	for {
-		name, value, activation = activation.FirstRest()
-		if name == "" {
-			break
-		}
-
+	_ = activation.ForEach(func(name string, value interface{}) error {
 		variable := value.(*Variable)
 
-		if variable.ActivationDepth < depth {
-			continue
+		if variable.ActivationDepth >= depth {
+			variables[name] = variable
 		}
 
-		variables[name] = variable
-	}
+		return nil
+	})
 
 	return variables
 }
