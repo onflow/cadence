@@ -30,14 +30,14 @@ type VariableActivations struct {
 
 func NewValueActivations() *VariableActivations {
 	valueActivations := &activations.Activations{}
-	valueActivations.Push(activations.NewActivation())
+	valueActivations.Push(activations.NewActivation(nil))
 	return &VariableActivations{
 		activations: valueActivations,
 	}
 }
 
 func (a *VariableActivations) Enter() {
-	a.activations.PushCurrent()
+	a.activations.PushNew()
 }
 
 func (a *VariableActivations) Leave() {
@@ -161,17 +161,22 @@ func (a *VariableActivations) VariablesDeclaredInAndBelow(depth int) map[string]
 
 	activation := a.activations.CurrentOrNew()
 
-	_ = activation.ForEach(func(name string, value interface{}) error {
-		variable := value.(*Variable)
+	for activation != nil {
+		_ = activation.ForEach(func(name string, value interface{}) error {
 
-		if variable.ActivationDepth < depth {
+			variable := value.(*Variable)
+
+			if variable.ActivationDepth < depth {
+				return nil
+			}
+
+			variables[name] = variable
+
 			return nil
-		}
+		})
 
-		variables[name] = variable
-
-		return nil
-	})
+		activation = activation.Parent
+	}
 
 	return variables
 }

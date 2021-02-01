@@ -35,7 +35,7 @@ func TestActivations(t *testing.T) {
 	assert.Equal(t, activations.Find("a"), 1)
 	assert.Nil(t, activations.Find("b"))
 
-	activations.PushCurrent()
+	activations.PushNew()
 
 	activations.Set("a", 2)
 	activations.Set("b", 3)
@@ -44,7 +44,7 @@ func TestActivations(t *testing.T) {
 	assert.Equal(t, activations.Find("b"), 3)
 	assert.Nil(t, activations.Find("c"))
 
-	activations.PushCurrent()
+	activations.PushNew()
 
 	activations.Set("a", 5)
 	activations.Set("c", 4)

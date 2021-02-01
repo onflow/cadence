@@ -21,44 +21,63 @@
 //
 package activations
 
-import (
-	"github.com/raviqqe/hamt"
-
-	"github.com/onflow/cadence/runtime/common"
-)
-
-// An Activation is an immutable map of strings to arbitrary values.
+// An Activation is a map of strings to arbitrary values.
 // It can be used to represent an active scope in a program,
 // i.e. it can be used as a symbol table during semantic analysis,
 // or as an activation record during interpretation.
 //
-type Activation hamt.Map
+type Activation struct {
+	entries map[string]interface{}
+	Depth   int
+	Parent  *Activation
+}
 
-func NewActivation() Activation {
-	return Activation(hamt.NewMap())
+func NewActivation(parent *Activation) *Activation {
+	var depth int
+	if parent != nil {
+		depth = parent.Depth + 1
+	}
+	return &Activation{
+		entries: map[string]interface{}{},
+		Depth:   depth,
+		Parent:  parent,
+	}
 }
 
 // Find returns the value for a given key in the activation.
 // It returns nil if no value is found.
 //
-func (a Activation) Find(name string) interface{} {
-	return hamt.Map(a).Find(common.StringEntry(name))
+func (a *Activation) Find(name string) interface{} {
+	result, ok := a.entries[name]
+	if ok {
+		return result
+	}
+
+	if a.Parent != nil {
+		return a.Parent.Find(name)
+	}
+
+	return nil
 }
 
-// Insert inserts the given key-value pair into the activation.
+// Set sets the given key-value pair in the activation.
 //
-func (a Activation) Insert(name string, value interface{}) Activation {
-	return Activation(hamt.Map(a).Insert(common.StringEntry(name), value))
+func (a *Activation) Set(name string, value interface{}) {
+	a.entries[name] = value
 }
 
 // ForEach calls the given function for each entry (key-value pair) in the activation.
 // It can be used to iterate over all entries of the activation.
 //
-func (a Activation) ForEach(f func(string, interface{}) error) error {
-	return hamt.Map(a).ForEach(func(entry hamt.Entry, v interface{}) error {
-		name := string(entry.(common.StringEntry))
-		return f(name, v)
-	})
+func (a *Activation) ForEach(cb func(string, interface{}) error) error {
+	for name, v := range a.entries {
+		err := cb(name, v)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // Activations is a stack of activation records.
@@ -73,7 +92,7 @@ func (a Activation) ForEach(f func(string, interface{}) error) error {
 // that share data with their parents.
 //
 type Activations struct {
-	activations []Activation
+	activations []*Activation
 }
 
 // current returns the current / most nested activation,
@@ -85,8 +104,7 @@ func (a *Activations) current() *Activation {
 	if count < 1 {
 		return nil
 	}
-	current := a.activations[count-1]
-	return &current
+	return a.activations[count-1]
 }
 
 // Find returns the value for a given key in the current activation.
@@ -101,43 +119,31 @@ func (a *Activations) Find(key string) interface{} {
 	return current.Find(key)
 }
 
-// Set adds the new key value pair to the current activation.
-// The current activation is updated in an immutable way.
+// Set sets the key value pair int the current scope.
 //
 func (a *Activations) Set(name string, value interface{}) {
 	current := a.current()
 	// create the first scope if there is no scope
 	if current == nil {
-		a.PushCurrent()
-		current = &a.activations[0]
+		current = NewActivation(nil)
+		a.Push(current)
 	}
 
-	count := len(a.activations)
-	// update the current scope in an immutable way,
-	// which builds on top of the old "current" activation value
-	// without mutating it.
-	a.activations[count-1] = current.Insert(name, value)
+	current.Set(name, value)
 }
 
-// PushCurrent makes a copy of the current activation,
-// and pushes it to the top of the activation stack,
-// so that the `Find` method only needs to look up a certain record by name
-// from the current activation record,
-// without having to go through each activation in the stack.
+// PushNew pushes a new empty activation
+// to the top of the activation stack.
+// The new activation has the current activation as its parent.
 //
-func (a *Activations) PushCurrent() {
-	current := a.current()
-	if current == nil {
-		first := NewActivation()
-		current = &first
-	}
-	a.Push(*current)
+func (a *Activations) PushNew() {
+	a.Push(NewActivation(a.current()))
 }
 
 // Push pushes the given activation
 // onto the top of the activation stack.
 //
-func (a *Activations) Push(activation Activation) {
+func (a *Activations) Push(activation *Activation) {
 	a.activations = append(
 		a.activations,
 		activation,
@@ -158,13 +164,13 @@ func (a *Activations) Pop() {
 // CurrentOrNew returns the current activation,
 // or if it does not exists, a new activation
 //
-func (a *Activations) CurrentOrNew() Activation {
+func (a *Activations) CurrentOrNew() *Activation {
 	current := a.current()
 	if current == nil {
-		return NewActivation()
+		return NewActivation(nil)
 	}
 
-	return *current
+	return current
 }
 
 // Depth returns the depth (size) of the activation stack.

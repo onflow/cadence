@@ -55,7 +55,7 @@ type InterpretedFunctionValue struct {
 	Interpreter      *Interpreter
 	ParameterList    *ast.ParameterList
 	Type             *sema.FunctionType
-	Activation       activations.Activation
+	Activation       *activations.Activation
 	BeforeStatements []ast.Statement
 	PreConditions    ast.Conditions
 	Statements       []ast.Statement
