@@ -2704,7 +2704,7 @@ func TestCheckInvalidResourceLossThroughReturn(t *testing.T) {
 	assert.IsType(t, &sema.UnreachableStatementError{}, errs[1])
 }
 
-func TestCheckInvalidResourceLossThroughReturnInIfStatementThrenBranch(t *testing.T) {
+func TestCheckInvalidResourceLossThroughReturnInIfStatementThenBranch(t *testing.T) {
 
 	t.Parallel()
 

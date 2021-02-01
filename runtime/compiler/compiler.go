@@ -317,7 +317,7 @@ func (compiler *Compiler) VisitBlock(block *ast.Block) ast.Repr {
 
 	// Block scope: each block gets an activation record
 
-	compiler.activations.PushCurrent()
+	compiler.activations.PushNew()
 	defer compiler.activations.Pop()
 
 	// Compile each statement in the block

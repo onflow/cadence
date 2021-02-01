@@ -922,7 +922,7 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 	lexicalScope := interpreter.activations.CurrentOrNew()
 
 	// make the function itself available inside the function
-	lexicalScope = lexicalScope.Insert(identifier, variable)
+	lexicalScope.Set(identifier, variable)
 
 	variable.Value = interpreter.functionDeclarationValue(
 		declaration,
@@ -937,7 +937,7 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 func (interpreter *Interpreter) functionDeclarationValue(
 	declaration *ast.FunctionDeclaration,
 	functionType *sema.FunctionType,
-	lexicalScope activations.Activation,
+	lexicalScope *activations.Activation,
 ) InterpretedFunctionValue {
 
 	var preConditions ast.Conditions
@@ -984,7 +984,7 @@ func (interpreter *Interpreter) ImportValue(name string, value Value) error {
 
 func (interpreter *Interpreter) VisitBlock(block *ast.Block) ast.Repr {
 	// block scope: each block gets an activation record
-	interpreter.activations.PushCurrent()
+	interpreter.activations.PushNew()
 
 	return interpreter.visitStatements(block.Statements).
 		Then(func(_ interface{}) {
@@ -1032,7 +1032,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 ) Trampoline {
 
 	// block scope: each function block gets an activation record
-	interpreter.activations.PushCurrent()
+	interpreter.activations.PushNew()
 
 	return interpreter.visitStatements(beforeStatements).
 		FlatMap(func(_ interface{}) Trampoline {
@@ -1191,7 +1191,7 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 				valueType := interpreter.Checker.Elaboration.VariableDeclarationValueTypes[declaration]
 				unwrappedValueCopy := interpreter.copyAndConvert(someValue.Value, valueType, targetType)
 
-				interpreter.activations.PushCurrent()
+				interpreter.activations.PushNew()
 				interpreter.declareVariable(
 					declaration.Identifier.Identifier,
 					unwrappedValueCopy,
@@ -1309,7 +1309,7 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 }
 
 func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) ast.Repr {
-	interpreter.activations.PushCurrent()
+	interpreter.activations.PushNew()
 
 	variable := interpreter.declareVariable(
 		statement.Identifier.Identifier,
@@ -1435,8 +1435,7 @@ func (interpreter *Interpreter) declareValue(declaration ValueDeclaration) *Vari
 // declareVariable declares a variable in the latest scope
 func (interpreter *Interpreter) declareVariable(identifier string, value Value) *Variable {
 	// NOTE: semantic analysis already checked possible invalid redeclaration
-	depth := interpreter.activations.Depth()
-	variable := NewVariable(value, depth)
+	variable := NewVariable(value)
 	interpreter.setVariable(identifier, variable)
 	return variable
 }
@@ -2235,7 +2234,7 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	// Start a new activation record.
 	// Lexical scope: use the function declaration's activation record,
 	// not the current one (which would be dynamic scope)
-	interpreter.activations.Push(function.Activation)
+	interpreter.activations.Push(activations.NewActivation(function.Activation))
 
 	// Make `self` available, if any
 	if invocation.Self != nil {
@@ -2414,9 +2413,9 @@ func (interpreter *Interpreter) VisitCompositeDeclaration(declaration *ast.Compo
 //
 func (interpreter *Interpreter) declareCompositeValue(
 	declaration *ast.CompositeDeclaration,
-	lexicalScope activations.Activation,
+	lexicalScope *activations.Activation,
 ) (
-	scope activations.Activation,
+	scope *activations.Activation,
 	value Value,
 ) {
 	if declaration.CompositeKind == common.CompositeKindEnum {
@@ -2428,9 +2427,9 @@ func (interpreter *Interpreter) declareCompositeValue(
 
 func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	declaration *ast.CompositeDeclaration,
-	lexicalScope activations.Activation,
+	lexicalScope *activations.Activation,
 ) (
-	scope activations.Activation,
+	scope *activations.Activation,
 	value Value,
 ) {
 	identifier := declaration.Identifier.Identifier
@@ -2438,7 +2437,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	variable := interpreter.findOrDeclareVariable(identifier)
 
 	// Make the value available in the initializer
-	lexicalScope = lexicalScope.Insert(identifier, variable)
+	lexicalScope.Set(identifier, variable)
 
 	// Evaluate nested declarations in a new scope, so values
 	// of nested declarations won't be visible after the containing declaration
@@ -2446,13 +2445,13 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	members := map[string]Value{}
 
 	(func() {
-		interpreter.activations.PushCurrent()
+		interpreter.activations.PushNew()
 		defer interpreter.activations.Pop()
 
 		// Pre-declare empty variables for all interfaces, composites, and function declarations
 		predeclare := func(identifier ast.Identifier) {
 			name := identifier.Identifier
-			lexicalScope = lexicalScope.Insert(
+			lexicalScope.Set(
 				name,
 				interpreter.declareVariable(name, nil),
 			)
@@ -2671,16 +2670,16 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 
 func (interpreter *Interpreter) declareEnumConstructor(
 	declaration *ast.CompositeDeclaration,
-	lexicalScope activations.Activation,
+	lexicalScope *activations.Activation,
 ) (
-	scope activations.Activation,
+	scope *activations.Activation,
 	value Value,
 ) {
 	identifier := declaration.Identifier.Identifier
 	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
 	variable := interpreter.findOrDeclareVariable(identifier)
 
-	lexicalScope = lexicalScope.Insert(identifier, variable)
+	lexicalScope.Set(identifier, variable)
 
 	compositeType := interpreter.Checker.Elaboration.CompositeDeclarationTypes[declaration]
 	qualifiedIdentifier := compositeType.QualifiedIdentifier()
@@ -2746,7 +2745,7 @@ func (interpreter *Interpreter) declareEnumConstructor(
 
 func (interpreter *Interpreter) compositeInitializerFunction(
 	compositeDeclaration *ast.CompositeDeclaration,
-	lexicalScope activations.Activation,
+	lexicalScope *activations.Activation,
 ) *InterpretedFunctionValue {
 
 	// TODO: support multiple overloaded initializers
@@ -2795,7 +2794,7 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 
 func (interpreter *Interpreter) compositeDestructorFunction(
 	compositeDeclaration *ast.CompositeDeclaration,
-	lexicalScope activations.Activation,
+	lexicalScope *activations.Activation,
 ) *InterpretedFunctionValue {
 
 	destructor := compositeDeclaration.Members.Destructor()
@@ -2837,7 +2836,7 @@ func (interpreter *Interpreter) compositeDestructorFunction(
 
 func (interpreter *Interpreter) compositeFunctions(
 	compositeDeclaration *ast.CompositeDeclaration,
-	lexicalScope activations.Activation,
+	lexicalScope *activations.Activation,
 ) map[string]FunctionValue {
 
 	functions := map[string]FunctionValue{}
@@ -2856,7 +2855,7 @@ func (interpreter *Interpreter) compositeFunctions(
 
 func (interpreter *Interpreter) functionWrappers(
 	members *ast.Members,
-	lexicalScope activations.Activation,
+	lexicalScope *activations.Activation,
 ) map[string]FunctionWrapper {
 
 	functionWrappers := map[string]FunctionWrapper{}
@@ -2882,7 +2881,7 @@ func (interpreter *Interpreter) functionWrappers(
 
 func (interpreter *Interpreter) compositeFunction(
 	functionDeclaration *ast.FunctionDeclaration,
-	lexicalScope activations.Activation,
+	lexicalScope *activations.Activation,
 ) InterpretedFunctionValue {
 
 	functionType := interpreter.Checker.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
@@ -3083,13 +3082,13 @@ func (interpreter *Interpreter) VisitInterfaceDeclaration(declaration *ast.Inter
 
 func (interpreter *Interpreter) declareInterface(
 	declaration *ast.InterfaceDeclaration,
-	lexicalScope activations.Activation,
+	lexicalScope *activations.Activation,
 ) {
 	// Evaluate nested declarations in a new scope, so values
 	// of nested declarations won't be visible after the containing declaration
 
 	(func() {
-		interpreter.activations.PushCurrent()
+		interpreter.activations.PushNew()
 		defer interpreter.activations.Pop()
 
 		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
@@ -3117,13 +3116,13 @@ func (interpreter *Interpreter) declareInterface(
 
 func (interpreter *Interpreter) declareTypeRequirement(
 	declaration *ast.CompositeDeclaration,
-	lexicalScope activations.Activation,
+	lexicalScope *activations.Activation,
 ) {
 	// Evaluate nested declarations in a new scope, so values
 	// of nested declarations won't be visible after the containing declaration
 
 	(func() {
-		interpreter.activations.PushCurrent()
+		interpreter.activations.PushNew()
 		defer interpreter.activations.Pop()
 
 		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
@@ -3151,7 +3150,7 @@ func (interpreter *Interpreter) declareTypeRequirement(
 
 func (interpreter *Interpreter) initializerFunctionWrapper(
 	members *ast.Members,
-	lexicalScope activations.Activation,
+	lexicalScope *activations.Activation,
 ) FunctionWrapper {
 
 	// TODO: support multiple overloaded initializers
@@ -3175,7 +3174,7 @@ func (interpreter *Interpreter) initializerFunctionWrapper(
 
 func (interpreter *Interpreter) destructorFunctionWrapper(
 	members *ast.Members,
-	lexicalScope activations.Activation,
+	lexicalScope *activations.Activation,
 ) FunctionWrapper {
 
 	destructor := members.Destructor()
@@ -3193,7 +3192,7 @@ func (interpreter *Interpreter) destructorFunctionWrapper(
 func (interpreter *Interpreter) functionConditionsWrapper(
 	declaration *ast.FunctionDeclaration,
 	returnType sema.Type,
-	lexicalScope activations.Activation,
+	lexicalScope *activations.Activation,
 ) FunctionWrapper {
 
 	if declaration.FunctionBlock == nil {
@@ -3222,7 +3221,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 			// Start a new activation record.
 			// Lexical scope: use the function declaration's activation record,
 			// not the current one (which would be dynamic scope)
-			interpreter.activations.Push(lexicalScope)
+			interpreter.activations.Push(activations.NewActivation(lexicalScope))
 
 			if declaration.ParameterList != nil {
 				interpreter.bindParameterArguments(
@@ -3343,7 +3342,7 @@ func (interpreter *Interpreter) ensureLoaded(
 		// prepare the interpreter
 
 		for name, value := range virtualImport.Globals {
-			variable := NewVariable(value, 0)
+			variable := NewVariable(value)
 			subInterpreter.setVariable(name, variable)
 			subInterpreter.Globals[name] = variable
 		}
@@ -3457,7 +3456,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 
 	transactionFunction := NewHostFunctionValue(
 		func(invocation Invocation) Trampoline {
-			interpreter.activations.Push(lexicalScope)
+			interpreter.activations.Push(activations.NewActivation(lexicalScope))
 
 			invocation.Self = self
 			interpreter.declareVariable(sema.SelfIdentifier, self)
