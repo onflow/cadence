@@ -182,7 +182,7 @@ func (i *FlowIntegration) entryPointActions(
 			i.activeAddress.Hex(),
 		)
 		argumentListConjunction = "and"
-		command = CommandExecuteScript
+		command = CommandSubmitTransaction
 	}
 
 	argumentLists := entryPointInfo.pragmaArguments[:]
