@@ -1477,7 +1477,7 @@ func (checker *Checker) leaveValueScope(checkResourceLoss bool) {
 //
 func (checker *Checker) checkResourceLoss(depth int) {
 
-	for name, variable := range checker.valueActivations.VariablesDeclaredInAndBelow(depth) {
+	checker.valueActivations.ForEachVariablesDeclaredInAndBelow(depth, func(name string, variable *Variable) {
 
 		// TODO: handle `self` and `result` properly
 
@@ -1494,9 +1494,8 @@ func (checker *Checker) checkResourceLoss(depth int) {
 					},
 				},
 			)
-
 		}
-	}
+	})
 }
 
 type recordedResourceInvalidation struct {

@@ -156,27 +156,21 @@ func (a *VariableActivations) DeclareImplicitConstant(
 	)
 }
 
-func (a *VariableActivations) VariablesDeclaredInAndBelow(depth int) map[string]*Variable {
-	variables := map[string]*Variable{}
+func (a *VariableActivations) ForEachVariablesDeclaredInAndBelow(depth int, f func(name string, value *Variable)) {
 
-	activation := a.activations.CurrentOrNew()
+	activation := a.activations.Current()
 
 	for activation != nil {
 		_ = activation.ForEach(func(name string, value interface{}) error {
-
 			variable := value.(*Variable)
 
-			if variable.ActivationDepth < depth {
-				return nil
+			if variable.ActivationDepth >= depth {
+				f(name, variable)
 			}
-
-			variables[name] = variable
 
 			return nil
 		})
 
 		activation = activation.Parent
 	}
-
-	return variables
 }
