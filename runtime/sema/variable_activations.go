@@ -37,7 +37,7 @@ func NewValueActivations() *VariableActivations {
 }
 
 func (a *VariableActivations) Enter() {
-	a.activations.PushNew()
+	a.activations.PushNewWithCurrent()
 }
 
 func (a *VariableActivations) Leave() {

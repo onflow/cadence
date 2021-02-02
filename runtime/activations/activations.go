@@ -133,19 +133,28 @@ func (a *Activations) Set(name string, value interface{}) {
 	current := a.Current()
 	// create the first scope if there is no scope
 	if current == nil {
-		current = NewActivation(nil)
-		a.Push(current)
+		current = a.PushNewWithParent(nil)
 	}
 
 	current.Set(name, value)
 }
 
-// PushNew pushes a new empty activation
+// PushNewWithParent pushes a new empty activation
+// to the top of the activation stack.
+// The new activation has the given parent as its parent.
+//
+func (a *Activations) PushNewWithParent(parent *Activation) *Activation {
+	activation := NewActivation(parent)
+	a.Push(activation)
+	return activation
+}
+
+// PushNewWithCurrent pushes a new empty activation
 // to the top of the activation stack.
 // The new activation has the current activation as its parent.
 //
-func (a *Activations) PushNew() {
-	a.Push(NewActivation(a.Current()))
+func (a *Activations) PushNewWithCurrent() {
+	a.PushNewWithParent(a.Current())
 }
 
 // Push pushes the given activation
