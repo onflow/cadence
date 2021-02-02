@@ -393,10 +393,10 @@ func TestRuntimeImport(t *testing.T) {
 		},
 	}
 
+	nextTransactionLocation := newTransactionLocationGenerator()
+
 	const transactionCount = 10
 	for i := 0; i < transactionCount; i++ {
-
-		nextTransactionLocation := newTransactionLocationGenerator()
 
 		value, err := runtime.ExecuteScript(
 			Script{
@@ -472,10 +472,13 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 		},
 	}
 
+	nextTransactionLocation := newTransactionLocationGenerator()
+
 	var wg sync.WaitGroup
 	const concurrency uint64 = 10
 	for i := uint64(0); i < concurrency; i++ {
-		nextTransactionLocation := newTransactionLocationGenerator()
+
+		location := nextTransactionLocation()
 
 		wg.Add(1)
 		go func() {
@@ -487,7 +490,7 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 				},
 				Context{
 					Interface: runtimeInterface,
-					Location:  nextTransactionLocation(),
+					Location:  location,
 				},
 			)
 			require.NoError(t, err)
