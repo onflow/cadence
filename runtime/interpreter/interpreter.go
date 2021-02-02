@@ -2234,7 +2234,7 @@ func (interpreter *Interpreter) invokeInterpretedFunction(
 	// Start a new activation record.
 	// Lexical scope: use the function declaration's activation record,
 	// not the current one (which would be dynamic scope)
-	interpreter.activations.Push(activations.NewActivation(function.Activation))
+	interpreter.activations.PushNewWithParent(function.Activation)
 
 	// Make `self` available, if any
 	if invocation.Self != nil {
@@ -3221,7 +3221,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 			// Start a new activation record.
 			// Lexical scope: use the function declaration's activation record,
 			// not the current one (which would be dynamic scope)
-			interpreter.activations.Push(activations.NewActivation(lexicalScope))
+			interpreter.activations.PushNewWithParent(lexicalScope)
 
 			if declaration.ParameterList != nil {
 				interpreter.bindParameterArguments(
@@ -3456,7 +3456,7 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 
 	transactionFunction := NewHostFunctionValue(
 		func(invocation Invocation) Trampoline {
-			interpreter.activations.Push(activations.NewActivation(lexicalScope))
+			interpreter.activations.PushNewWithParent(lexicalScope)
 
 			invocation.Self = self
 			interpreter.declareVariable(sema.SelfIdentifier, self)
