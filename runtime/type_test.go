@@ -91,13 +91,65 @@ func TestRuntimeTypeStorage(t *testing.T) {
 	assert.Equal(t, `"Int"`, loggedMessage)
 }
 
-
 func TestBlockTimestamp(t *testing.T) {
+
 	t.Parallel()
-	runtime := NewInterpreterRuntime()
-	script := []byte(`
-		transaction {
-			prepare() {
+
+	t.Run("transaction", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := NewInterpreterRuntime()
+
+		script := []byte(`
+			transaction {
+				prepare() {
+					let block = getCurrentBlock()
+					var ts: UFix64 = block.timestamp
+					log(ts.isInstance(Type<UFix64>()))
+
+					var div: UFix64 = 4.0
+
+					// Shouldn't panic
+					var res = ts/div
+				}
+			}
+        `)
+
+		var loggedMessage string
+
+		runtimeInterface := &testRuntimeInterface{
+			getSigningAccounts: func() ([]Address, error) {
+				return nil, nil
+			},
+			log: func(message string) {
+				loggedMessage = message
+			},
+		}
+
+		nextTransactionLocation := newTransactionLocationGenerator()
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+		assert.Equal(t, "true", loggedMessage, "Block.timestamp is not UFix64")
+
+	})
+
+	t.Run("script", func(t *testing.T) {
+
+		t.Parallel()
+
+		runtime := NewInterpreterRuntime()
+
+		script := []byte(`
+			pub fun main(): [UFix64] {
 				let block = getCurrentBlock()
 				var ts: UFix64 = block.timestamp
 				log(ts.isInstance(Type<UFix64>()))
@@ -105,32 +157,32 @@ func TestBlockTimestamp(t *testing.T) {
 				var div: UFix64 = 4.0
 
 				// Shouldn't panic
-				var result = ts/div
+				var res = ts/div
+
+				return [ts, res]
 			}
+        `)
+
+		var loggedMessage string
+
+		runtimeInterface := &testRuntimeInterface{
+			log: func(message string) {
+				loggedMessage = message
+			},
 		}
-    `)
 
-	var loggedMessage string
+		_, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  common.ScriptLocation{},
+			},
+		)
 
-	runtimeInterface := &testRuntimeInterface{
-		getSigningAccounts: func() ([]Address, error) {
-			return nil, nil
-		},
-		log: func(message string) {
-			loggedMessage = message
-		},
-	}
+		require.NoError(t, err)
+		assert.Equal(t, "true", loggedMessage, "Block.timestamp is not UFix64")
 
-	nextTransactionLocation := newTransactionLocationGenerator()
-	err := runtime.ExecuteTransaction(
-		Script{
-			Source: script,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
-	assert.Equal(t, "True", loggedMessage, "Block.Timestamp is not UFix64")
+	})
 }
