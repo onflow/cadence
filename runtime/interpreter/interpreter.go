@@ -3301,7 +3301,7 @@ func (interpreter *Interpreter) ensureLoaded(
 		// prepare the interpreter
 
 		for name, value := range virtualImport.Globals {
-			variable := NewVariable(value, 0)
+			variable := NewVariable(value)
 			subInterpreter.setVariable(name, variable)
 			subInterpreter.Globals[name] = variable
 		}
