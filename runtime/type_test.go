@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
 )
 
@@ -152,7 +153,6 @@ func TestBlockTimestamp(t *testing.T) {
 			pub fun main(): [UFix64] {
 				let block = getCurrentBlock()
 				var ts: UFix64 = block.timestamp
-				log(ts.isInstance(Type<UFix64>()))
 
 				var div: UFix64 = 4.0
 
@@ -163,26 +163,24 @@ func TestBlockTimestamp(t *testing.T) {
 			}
         `)
 
-		var loggedMessage string
-
-		runtimeInterface := &testRuntimeInterface{
-			log: func(message string) {
-				loggedMessage = message
-			},
-		}
-
-		_, err := runtime.ExecuteScript(
+		value, err := runtime.ExecuteScript(
 			Script{
 				Source: script,
 			},
 			Context{
-				Interface: runtimeInterface,
+				Interface: &testRuntimeInterface{},
 				Location:  common.ScriptLocation{},
 			},
 		)
 
 		require.NoError(t, err)
-		assert.Equal(t, "true", loggedMessage, "Block.timestamp is not UFix64")
+		require.NotNil(t, value)
 
+		require.IsType(t, cadence.Array{}, value)
+		values := value.(cadence.Array).Values
+
+		require.Equal(t, 2, len(values))
+		assert.IsType(t, cadence.UFix64Type{}, values[0].Type())
+		assert.IsType(t, cadence.UFix64Type{}, values[1].Type())
 	})
 }
