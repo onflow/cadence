@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 func TestRuntimeError(t *testing.T) {
@@ -40,17 +39,7 @@ func TestRuntimeError(t *testing.T) {
 
 		script := []byte(`X`)
 
-		programs := map[common.LocationID]*interpreter.Program{}
-
-		runtimeInterface := &testRuntimeInterface{
-			setProgram: func(location Location, program *interpreter.Program) error {
-				programs[location.ID()] = program
-				return nil
-			},
-			getProgram: func(location Location) (*interpreter.Program, error) {
-				return programs[location.ID()], nil
-			},
-		}
+		runtimeInterface := &testRuntimeInterface{}
 
 		location := common.ScriptLocation{0x1}
 
@@ -82,17 +71,7 @@ func TestRuntimeError(t *testing.T) {
 
 		script := []byte(`fun test() {}`)
 
-		programs := map[common.LocationID]*interpreter.Program{}
-
-		runtimeInterface := &testRuntimeInterface{
-			setProgram: func(location Location, program *interpreter.Program) error {
-				programs[location.ID()] = program
-				return nil
-			},
-			getProgram: func(location Location) (*interpreter.Program, error) {
-				return programs[location.ID()], nil
-			},
-		}
+		runtimeInterface := &testRuntimeInterface{}
 
 		location := common.ScriptLocation{0x1}
 
@@ -131,17 +110,7 @@ func TestRuntimeError(t *testing.T) {
             }
         `)
 
-		programs := map[common.LocationID]*interpreter.Program{}
-
-		runtimeInterface := &testRuntimeInterface{
-			setProgram: func(location Location, program *interpreter.Program) error {
-				programs[location.ID()] = program
-				return nil
-			},
-			getProgram: func(location Location) (*interpreter.Program, error) {
-				return programs[location.ID()], nil
-			},
-		}
+		runtimeInterface := &testRuntimeInterface{}
 
 		location := common.ScriptLocation{0x1}
 
@@ -175,8 +144,6 @@ func TestRuntimeError(t *testing.T) {
 
 		script := []byte(`import "imported"`)
 
-		programs := map[common.LocationID]*interpreter.Program{}
-
 		runtimeInterface := &testRuntimeInterface{
 			getCode: func(location Location) (bytes []byte, err error) {
 				switch location {
@@ -185,13 +152,6 @@ func TestRuntimeError(t *testing.T) {
 				default:
 					return nil, fmt.Errorf("unknown import location: %s", location)
 				}
-			},
-			setProgram: func(location Location, program *interpreter.Program) error {
-				programs[location.ID()] = program
-				return nil
-			},
-			getProgram: func(location Location) (*interpreter.Program, error) {
-				return programs[location.ID()], nil
 			},
 		}
 
@@ -227,8 +187,6 @@ func TestRuntimeError(t *testing.T) {
 
 		script := []byte(`import "imported"`)
 
-		programs := map[common.LocationID]*interpreter.Program{}
-
 		runtimeInterface := &testRuntimeInterface{
 			getCode: func(location Location) (bytes []byte, err error) {
 				switch location {
@@ -237,13 +195,6 @@ func TestRuntimeError(t *testing.T) {
 				default:
 					return nil, fmt.Errorf("unknown import location: %s", location)
 				}
-			},
-			setProgram: func(location Location, program *interpreter.Program) error {
-				programs[location.ID()] = program
-				return nil
-			},
-			getProgram: func(location Location) (*interpreter.Program, error) {
-				return programs[location.ID()], nil
 			},
 		}
 
@@ -292,8 +243,6 @@ func TestRuntimeError(t *testing.T) {
             }
         `)
 
-		programs := map[common.LocationID]*interpreter.Program{}
-
 		runtimeInterface := &testRuntimeInterface{
 			getCode: func(location Location) (bytes []byte, err error) {
 				switch location {
@@ -302,13 +251,6 @@ func TestRuntimeError(t *testing.T) {
 				default:
 					return nil, fmt.Errorf("unknown import location: %s", location)
 				}
-			},
-			setProgram: func(location Location, program *interpreter.Program) error {
-				programs[location.ID()] = program
-				return nil
-			},
-			getProgram: func(location Location) (*interpreter.Program, error) {
-				return programs[location.ID()], nil
 			},
 		}
 

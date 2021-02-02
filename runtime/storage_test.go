@@ -26,7 +26,6 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -98,18 +97,9 @@ func TestRuntimeHighLevelStorage(t *testing.T) {
 
 	var writes []write
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -296,19 +286,10 @@ func TestRuntimeMagic(t *testing.T) {
 		})
 	}
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestStorage(nil, onWrite),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 	}
 
@@ -363,7 +344,6 @@ func TestAccountStorageStorage(t *testing.T) {
     `)
 
 	var loggedMessages []string
-	programs := map[common.LocationID]*interpreter.Program{}
 
 	storage := newTestStorage(nil, nil)
 
@@ -371,13 +351,6 @@ func TestAccountStorageStorage(t *testing.T) {
 		storage: storage,
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		getStorageUsed: func(_ Address) (uint64, error) {
 			var amount uint64 = 0

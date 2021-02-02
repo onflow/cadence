@@ -132,8 +132,6 @@ func TestRuntimeContract(t *testing.T) {
 
 		storage := newTestStorage(nil, nil)
 
-		programs := map[common.LocationID]*interpreter.Program{}
-
 		runtimeInterface := &testRuntimeInterface{
 			storage: storage,
 			getSigningAccounts: func() ([]Address, error) {
@@ -141,13 +139,6 @@ func TestRuntimeContract(t *testing.T) {
 			},
 			log: func(message string) {
 				loggedMessages = append(loggedMessages, message)
-			},
-			setProgram: func(location Location, program *interpreter.Program) error {
-				programs[location.ID()] = program
-				return nil
-			},
-			getProgram: func(location Location) (*interpreter.Program, error) {
-				return programs[location.ID()], nil
 			},
 			updateAccountContractCode: func(address Address, name string, code []byte) error {
 				require.Equal(t, tc.name, name)
@@ -510,19 +501,11 @@ func TestRuntimeImportMultipleContracts(t *testing.T) {
 
 	var events []cadence.Event
 	var loggedMessages []string
-	programs := map[common.LocationID]*interpreter.Program{}
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{common.BytesToAddress([]byte{0x1})}, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) error {
 			key := contractKey{
