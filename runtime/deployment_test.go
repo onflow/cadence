@@ -29,7 +29,6 @@ import (
 	"golang.org/x/crypto/sha3"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
@@ -140,7 +139,6 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 
 		runtime := NewInterpreterRuntime()
 
-		programs := map[common.LocationID]*interpreter.Program{}
 		var accountCode []byte
 		var events []cadence.Event
 
@@ -148,13 +146,6 @@ func TestRuntimeTransactionWithContractDeployment(t *testing.T) {
 			storage: newTestStorage(nil, nil),
 			getSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
-			},
-			setProgram: func(location Location, program *interpreter.Program) error {
-				programs[location.ID()] = program
-				return nil
-			},
-			getProgram: func(location Location) (*interpreter.Program, error) {
-				return programs[location.ID()], nil
 			},
 			getAccountContractCode: func(_ Address, _ string) (code []byte, err error) {
 				return accountCode, nil

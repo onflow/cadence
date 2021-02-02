@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/checker"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -102,8 +101,6 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		getAccountContractCode: func(address Address, name string) (bytes []byte, err error) {
 			switch address {
@@ -116,13 +113,6 @@ func TestRuntimePredeclaredValues(t *testing.T) {
 			default:
 				return nil, fmt.Errorf("unknown address: %s", address.ShortHexWithPrefix())
 			}
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 	}
 

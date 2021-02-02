@@ -121,8 +121,9 @@ type testRuntimeInterface struct {
 	) (bool, error)
 	hash                   func(data []byte, hashAlgorithm string) ([]byte, error)
 	setCadenceValue        func(owner Address, key string, value cadence.Value) (err error)
-	getStorageUsed         func(address Address) (uint64, error)
-	getStorageCapacity     func(address Address) (uint64, error)
+	getStorageUsed         func(_ Address) (uint64, error)
+	getStorageCapacity     func(_ Address) (uint64, error)
+	programs               map[common.LocationID]*interpreter.Program
 	implementationDebugLog func(message string) error
 }
 
@@ -150,15 +151,24 @@ func (i *testRuntimeInterface) GetCode(location Location) ([]byte, error) {
 
 func (i *testRuntimeInterface) GetProgram(location Location) (*interpreter.Program, error) {
 	if i.getProgram == nil {
-		panic("missing required function getProgram")
+		if i.programs == nil {
+			i.programs = map[common.LocationID]*interpreter.Program{}
+		}
+		return i.programs[location.ID()], nil
 	}
+
 	return i.getProgram(location)
 }
 
 func (i *testRuntimeInterface) SetProgram(location Location, program *interpreter.Program) error {
 	if i.setProgram == nil {
-		panic("missing required function setProgram")
+		if i.programs == nil {
+			i.programs = map[common.LocationID]*interpreter.Program{}
+		}
+		i.programs[location.ID()] = program
+		return nil
 	}
+
 	return i.setProgram(location, program)
 }
 
@@ -376,7 +386,6 @@ func TestRuntimeImport(t *testing.T) {
     `)
 
 	var checkCount int
-	programs := map[common.LocationID]*interpreter.Program{}
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
@@ -389,13 +398,6 @@ func TestRuntimeImport(t *testing.T) {
 		},
 		programChecked: func(location common.Location, duration time.Duration) {
 			checkCount += 1
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 	}
 
@@ -653,18 +655,9 @@ func TestRuntimeInvalidTransactionArgumentAccount(t *testing.T) {
       }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 	}
 
@@ -698,8 +691,6 @@ func TestRuntimeTransactionWithAccount(t *testing.T) {
 
 	var loggedMessage string
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{
@@ -708,13 +699,6 @@ func TestRuntimeTransactionWithAccount(t *testing.T) {
 		},
 		log: func(message string) {
 			loggedMessage = message
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 	}
 
@@ -1005,8 +989,6 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 
 			var loggedMessages []string
 
-			programs := map[common.LocationID]*interpreter.Program{}
-
 			runtimeInterface := &testRuntimeInterface{
 				getSigningAccounts: func() ([]Address, error) {
 					return tc.authorizers, nil
@@ -1016,13 +998,6 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				},
 				log: func(message string) {
 					loggedMessages = append(loggedMessages, message)
-				},
-				setProgram: func(location Location, program *interpreter.Program) error {
-					programs[location.ID()] = program
-					return nil
-				},
-				getProgram: func(location Location) (*interpreter.Program, error) {
-					return programs[location.ID()], nil
 				},
 			}
 
@@ -1298,7 +1273,6 @@ func TestRuntimeScriptArguments(t *testing.T) {
 			rt := NewInterpreterRuntime()
 
 			var loggedMessages []string
-			programs := map[common.LocationID]*interpreter.Program{}
 
 			runtimeInterface := &testRuntimeInterface{
 				decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
@@ -1306,13 +1280,6 @@ func TestRuntimeScriptArguments(t *testing.T) {
 				},
 				log: func(message string) {
 					loggedMessages = append(loggedMessages, message)
-				},
-				setProgram: func(location Location, program *interpreter.Program) error {
-					programs[location.ID()] = program
-					return nil
-				},
-				getProgram: func(location Location) (*interpreter.Program, error) {
-					return programs[location.ID()], nil
 				},
 			}
 
@@ -1355,17 +1322,7 @@ func TestRuntimeProgramWithNoTransaction(t *testing.T) {
       pub fun main() {}
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
-	runtimeInterface := &testRuntimeInterface{
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
-		},
-	}
+	runtimeInterface := &testRuntimeInterface{}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
@@ -1397,17 +1354,7 @@ func TestRuntimeProgramWithMultipleTransaction(t *testing.T) {
       }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
-	runtimeInterface := &testRuntimeInterface{
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
-		},
-	}
+	runtimeInterface := &testRuntimeInterface{}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
@@ -1513,8 +1460,6 @@ func TestRuntimeStorage(t *testing.T) {
 
 			var loggedMessages []string
 
-			programs := map[common.LocationID]*interpreter.Program{}
-
 			runtimeInterface := &testRuntimeInterface{
 				getCode: func(location Location) ([]byte, error) {
 					switch location {
@@ -1523,13 +1468,6 @@ func TestRuntimeStorage(t *testing.T) {
 					default:
 						return nil, fmt.Errorf("unknown import location: %s", location)
 					}
-				},
-				setProgram: func(location Location, program *interpreter.Program) error {
-					programs[location.ID()] = program
-					return nil
-				},
-				getProgram: func(location Location) (*interpreter.Program, error) {
-					return programs[location.ID()], nil
 				},
 				storage: newTestStorage(nil, nil),
 				getSigningAccounts: func() ([]Address, error) {
@@ -1625,8 +1563,6 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 
 	var loggedMessages []string
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
@@ -1635,13 +1571,6 @@ func TestRuntimeStorageMultipleTransactionsResourceWithArray(t *testing.T) {
 			default:
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -1734,8 +1663,6 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 
 	var loggedMessages []string
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
@@ -1744,13 +1671,6 @@ func TestRuntimeStorageMultipleTransactionsResourceFunction(t *testing.T) {
 			default:
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -1835,8 +1755,6 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 
 	var loggedMessages []string
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
@@ -1845,13 +1763,6 @@ func TestRuntimeStorageMultipleTransactionsResourceField(t *testing.T) {
 			default:
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -1937,8 +1848,6 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
       }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
@@ -1947,13 +1856,6 @@ func TestRuntimeCompositeFunctionInvocationFromImportingProgram(t *testing.T) {
 			default:
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -2029,8 +1931,6 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 
 	var loggedMessages []string
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
@@ -2039,13 +1939,6 @@ func TestRuntimeResourceContractUseThroughReference(t *testing.T) {
 			default:
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -2129,8 +2022,6 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 
 	var loggedMessages []string
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
@@ -2139,13 +2030,6 @@ func TestRuntimeResourceContractUseThroughLink(t *testing.T) {
 			default:
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -2241,8 +2125,6 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 
 	var loggedMessages []string
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
@@ -2260,13 +2142,6 @@ func TestRuntimeResourceContractWithInterface(t *testing.T) {
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 	}
 
@@ -2304,18 +2179,8 @@ func TestParseAndCheckProgram(t *testing.T) {
 	t.Run("ValidProgram", func(t *testing.T) {
 		runtime := NewInterpreterRuntime()
 
-		programs := map[common.LocationID]*interpreter.Program{}
-
 		script := []byte("pub fun test(): Int { return 42 }")
-		runtimeInterface := &testRuntimeInterface{
-			setProgram: func(location Location, program *interpreter.Program) error {
-				programs[location.ID()] = program
-				return nil
-			},
-			getProgram: func(location Location) (*interpreter.Program, error) {
-				return programs[location.ID()], nil
-			},
-		}
+		runtimeInterface := &testRuntimeInterface{}
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
@@ -2332,18 +2197,8 @@ func TestParseAndCheckProgram(t *testing.T) {
 	t.Run("InvalidSyntax", func(t *testing.T) {
 		runtime := NewInterpreterRuntime()
 
-		programs := map[common.LocationID]*interpreter.Program{}
-
 		script := []byte("invalid syntax")
-		runtimeInterface := &testRuntimeInterface{
-			setProgram: func(location Location, program *interpreter.Program) error {
-				programs[location.ID()] = program
-				return nil
-			},
-			getProgram: func(location Location) (*interpreter.Program, error) {
-				return programs[location.ID()], nil
-			},
-		}
+		runtimeInterface := &testRuntimeInterface{}
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
@@ -2360,18 +2215,8 @@ func TestParseAndCheckProgram(t *testing.T) {
 	t.Run("InvalidSemantics", func(t *testing.T) {
 		runtime := NewInterpreterRuntime()
 
-		programs := map[common.LocationID]*interpreter.Program{}
-
 		script := []byte(`pub let a: Int = "b"`)
-		runtimeInterface := &testRuntimeInterface{
-			setProgram: func(location Location, program *interpreter.Program) error {
-				programs[location.ID()] = program
-				return nil
-			},
-			getProgram: func(location Location) (*interpreter.Program, error) {
-				return programs[location.ID()], nil
-			},
-		}
+		runtimeInterface := &testRuntimeInterface{}
 
 		nextTransactionLocation := newTransactionLocationGenerator()
 
@@ -2394,18 +2239,9 @@ func TestScriptReturnTypeNotReturnableError(t *testing.T) {
 
 		runtime := NewInterpreterRuntime()
 
-		programs := map[common.LocationID]*interpreter.Program{}
-
 		runtimeInterface := &testRuntimeInterface{
 			getSigningAccounts: func() ([]Address, error) {
 				return []Address{{42}}, nil
-			},
-			setProgram: func(location Location, program *interpreter.Program) error {
-				programs[location.ID()] = program
-				return nil
-			},
-			getProgram: func(location Location) (*interpreter.Program, error) {
-				return programs[location.ID()], nil
 			},
 		}
 
@@ -2494,18 +2330,9 @@ func TestScriptParameterTypeNotStorableError(t *testing.T) {
       }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 	}
 
@@ -2537,18 +2364,9 @@ func TestRuntimeSyntaxError(t *testing.T) {
       }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 	}
 
@@ -2612,8 +2430,6 @@ func TestRuntimeStorageChanges(t *testing.T) {
 
 	var loggedMessages []string
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
@@ -2622,13 +2438,6 @@ func TestRuntimeStorageChanges(t *testing.T) {
 			default:
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -2684,18 +2493,9 @@ func TestRuntimeAccountAddress(t *testing.T) {
 
 	address := common.BytesToAddress([]byte{42})
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{address}, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -2736,18 +2536,9 @@ func TestRuntimePublicAccountAddress(t *testing.T) {
 
 	address := interpreter.NewAddressValueFromBytes([]byte{0x42})
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		getSigningAccounts: func() ([]Address, error) {
 			return nil, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -2818,7 +2609,6 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 	)
 
 	var loggedMessages []string
-	programs := map[common.LocationID]*interpreter.Program{}
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) ([]byte, error) {
@@ -2828,13 +2618,6 @@ func TestRuntimeAccountPublishAndAccess(t *testing.T) {
 			default:
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -2887,7 +2670,6 @@ func TestRuntimeTransaction_CreateAccount(t *testing.T) {
     `)
 
 	var events []cadence.Event
-	programs := map[common.LocationID]*interpreter.Program{}
 
 	runtimeInterface := &testRuntimeInterface{
 		storage: newTestStorage(nil, nil),
@@ -2896,13 +2678,6 @@ func TestRuntimeTransaction_CreateAccount(t *testing.T) {
 		},
 		createAccount: func(payer Address) (address Address, err error) {
 			return Address{42}, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
@@ -2988,7 +2763,6 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 
 	for _, tt := range tests {
 
-		programs := map[common.LocationID]*interpreter.Program{}
 		var events []cadence.Event
 		var keys [][]byte
 
@@ -3003,13 +2777,6 @@ func TestRuntimeTransaction_AddPublicKey(t *testing.T) {
 			addAccountKey: func(address Address, publicKey []byte) error {
 				keys = append(keys, publicKey)
 				return nil
-			},
-			setProgram: func(location Location, program *interpreter.Program) error {
-				programs[location.ID()] = program
-				return nil
-			},
-			getProgram: func(location Location) (*interpreter.Program, error) {
-				return programs[location.ID()], nil
 			},
 			emitEvent: func(event cadence.Event) error {
 				events = append(events, event)
@@ -3098,7 +2865,6 @@ func TestRuntimeContractAccount(t *testing.T) {
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	var accountCode []byte
 	var events []cadence.Event
 
@@ -3117,13 +2883,6 @@ func TestRuntimeContractAccount(t *testing.T) {
 		updateAccountContractCode: func(_ Address, _ string, code []byte) error {
 			accountCode = code
 			return nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		emitEvent: func(event cadence.Event) error {
 			events = append(events, event)
@@ -3217,7 +2976,6 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	var accountCode []byte
 	var loggedMessage string
 
@@ -3236,13 +2994,6 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 		updateAccountContractCode: func(addess Address, _ string, code []byte) error {
 			accountCode = code
 			return nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		emitEvent: func(event cadence.Event) error {
 			return nil
@@ -3322,20 +3073,12 @@ func TestRuntimeStorageLoadedDestructionConcreteType(t *testing.T) {
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	var accountCode []byte
 	var loggedMessage string
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -3425,20 +3168,12 @@ func TestRuntimeStorageLoadedDestructionAnyResource(t *testing.T) {
 
 	deploy := utils.DeploymentTransaction("Test", contract)
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	var accountCode []byte
 	var loggedMessage string
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -3530,19 +3265,11 @@ func TestRuntimeStorageLoadedDestructionAfterRemoval(t *testing.T) {
 	deploy := utils.DeploymentTransaction("Test", contract)
 	removal := utils.RemovalTransaction("Test")
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	var accountCode []byte
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -3771,7 +3498,6 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
       }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	accountCodes := map[string][]byte{}
 	var events []cadence.Event
 
@@ -3781,13 +3507,6 @@ func TestRuntimeFungibleTokenUpdateAccountCode(t *testing.T) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			key := string(location.(common.AddressLocation).ID())
 			return accountCodes[key], nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -3924,7 +3643,6 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
       }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	accountCodes := map[string][]byte{}
 	var events []cadence.Event
 
@@ -3934,13 +3652,6 @@ func TestRuntimeFungibleTokenCreateAccount(t *testing.T) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			key := string(location.(common.AddressLocation).ID())
 			return accountCodes[key], nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		createAccount: func(payer Address) (address Address, err error) {
@@ -4096,7 +3807,6 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 		)
 	}
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	accountCodes := map[string][]byte{}
 	var events []cadence.Event
 
@@ -4106,13 +3816,6 @@ func TestRuntimeInvokeStoredInterfaceFunction(t *testing.T) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			key := string(location.(common.AddressLocation).ID())
 			return accountCodes[key], nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		createAccount: func(payer Address) (address Address, err error) {
@@ -4237,19 +3940,11 @@ func TestRuntimeBlock(t *testing.T) {
       }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
 		getSigningAccounts: func() ([]Address, error) {
 			return nil, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
@@ -4301,7 +3996,6 @@ func TestUnsafeRandom(t *testing.T) {
       }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
@@ -4310,13 +4004,6 @@ func TestUnsafeRandom(t *testing.T) {
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 	}
 
@@ -4354,18 +4041,9 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
           transaction {}
         `)
 
-		programs := map[common.LocationID]*interpreter.Program{}
-
 		runtimeInterface := &testRuntimeInterface{
 			getSigningAccounts: func() ([]Address, error) {
 				return nil, nil
-			},
-			setProgram: func(location Location, program *interpreter.Program) error {
-				programs[location.ID()] = program
-				return nil
-			},
-			getProgram: func(location Location) (*interpreter.Program, error) {
-				return programs[location.ID()], nil
 			},
 		}
 
@@ -4392,18 +4070,9 @@ func TestRuntimeTransactionTopLevelDeclarations(t *testing.T) {
           transaction {}
         `)
 
-		programs := map[common.LocationID]*interpreter.Program{}
-
 		runtimeInterface := &testRuntimeInterface{
 			getSigningAccounts: func() ([]Address, error) {
 				return nil, nil
-			},
-			setProgram: func(location Location, program *interpreter.Program) error {
-				programs[location.ID()] = program
-				return nil
-			},
-			getProgram: func(location Location) (*interpreter.Program, error) {
-				return programs[location.ID()], nil
 			},
 		}
 
@@ -4463,20 +4132,12 @@ func TestRuntimeStoreIntegerTypes(t *testing.T) {
 
 			deploy := utils.DeploymentTransaction("Test", contract)
 
-			programs := map[common.LocationID]*interpreter.Program{}
 			var accountCode []byte
 			var events []cadence.Event
 
 			runtimeInterface := &testRuntimeInterface{
 				getCode: func(_ Location) (bytes []byte, err error) {
 					return accountCode, nil
-				},
-				setProgram: func(location Location, program *interpreter.Program) error {
-					programs[location.ID()] = program
-					return nil
-				},
-				getProgram: func(location Location) (*interpreter.Program, error) {
-					return programs[location.ID()], nil
 				},
 				storage: newTestStorage(nil, nil),
 				getSigningAccounts: func() ([]Address, error) {
@@ -4585,7 +4246,6 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
       }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	accountCodes := map[string][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
@@ -4594,13 +4254,6 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			key := string(location.(common.AddressLocation).ID())
 			return accountCodes[key], nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -4772,7 +4425,6 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
       }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	accountCodes := map[string][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
@@ -4781,13 +4433,6 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			key := string(location.(common.AddressLocation).ID())
 			return accountCodes[key], nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -4964,7 +4609,6 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
       }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	accountCodes := map[string][]byte{}
 	var events []cadence.Event
 	var loggedMessages []string
@@ -4973,13 +4617,6 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			key := string(location.(common.AddressLocation).ID())
 			return accountCodes[key], nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -5136,18 +4773,9 @@ func TestRuntimeComputationLimit(t *testing.T) {
 
 			runtime := NewInterpreterRuntime()
 
-			programs := map[common.LocationID]*interpreter.Program{}
-
 			runtimeInterface := &testRuntimeInterface{
 				getSigningAccounts: func() ([]Address, error) {
 					return nil, nil
-				},
-				setProgram: func(location Location, program *interpreter.Program) error {
-					programs[location.ID()] = program
-					return nil
-				},
-				getProgram: func(location Location) (*interpreter.Program, error) {
-					return programs[location.ID()], nil
 				},
 				computationLimit: computationLimit,
 			}
@@ -5242,8 +4870,6 @@ func TestRuntimeMetrics(t *testing.T) {
 			programInterpreted: map[common.LocationID]int{},
 		}
 
-		programs := map[common.LocationID]*interpreter.Program{}
-
 		runtimeInterface = &testRuntimeInterface{
 			storage: storage,
 			getSigningAccounts: func() ([]Address, error) {
@@ -5258,13 +4884,6 @@ func TestRuntimeMetrics(t *testing.T) {
 				default:
 					return nil, fmt.Errorf("unknown import location: %s", location)
 				}
-			},
-			setProgram: func(location Location, program *interpreter.Program) error {
-				programs[location.ID()] = program
-				return nil
-			},
-			getProgram: func(location Location) (*interpreter.Program, error) {
-				return programs[location.ID()], nil
 			},
 			programParsed: func(location common.Location, duration time.Duration) {
 				r.programParsed[location.ID()]++
@@ -5423,7 +5042,6 @@ func TestRuntimeContractWriteback(t *testing.T) {
        }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	var accountCode []byte
 	var events []cadence.Event
 	var loggedMessages []string
@@ -5440,13 +5058,6 @@ func TestRuntimeContractWriteback(t *testing.T) {
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, onWrite),
 		getSigningAccounts: func() ([]Address, error) {
@@ -5553,7 +5164,6 @@ func TestRuntimeStorageWriteback(t *testing.T) {
        }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	var accountCode []byte
 	var events []cadence.Event
 	var loggedMessages []string
@@ -5570,13 +5180,6 @@ func TestRuntimeStorageWriteback(t *testing.T) {
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, onWrite),
 		getSigningAccounts: func() ([]Address, error) {
@@ -5695,18 +5298,9 @@ func TestRuntimeExternalError(t *testing.T) {
 
 	type logPanic struct{}
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		getSigningAccounts: func() ([]Address, error) {
 			return nil, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		log: func(message string) {
 			panic(logPanic{})
@@ -5777,8 +5371,6 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 	accountCodes := map[string][]byte{}
 	var events []cadence.Event
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	var accountCounter uint8 = 0
 
 	var signerAddresses []Address
@@ -5791,13 +5383,6 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			key := string(location.(common.AddressLocation).ID())
 			return accountCodes[key], nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -5921,8 +5506,6 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	accountCodes := map[string][]byte{}
 	var events []cadence.Event
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	var accountCounter uint8 = 0
 
 	var signerAddresses []Address
@@ -5937,14 +5520,6 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			key := string(location.(common.AddressLocation).ID())
 			return accountCodes[key], nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			programHits = append(programHits, string(location.ID()))
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -6290,7 +5865,6 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 		))
 	}
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	var accountCode []byte
 	var events []cadence.Event
 
@@ -6301,13 +5875,6 @@ func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
 		},
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		resolveLocation: func(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
 			require.Empty(t, identifiers)
@@ -6430,18 +5997,9 @@ func TestRuntime(t *testing.T) {
 
 	runtime := NewInterpreterRuntime()
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
 			return jsoncdc.Decode(b)
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 	}
 
@@ -6537,18 +6095,9 @@ func TestPanics(t *testing.T) {
       }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		getSigningAccounts: func() ([]Address, error) {
 			return []Address{{42}}, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 	}
 
