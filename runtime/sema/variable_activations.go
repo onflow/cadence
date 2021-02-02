@@ -30,7 +30,7 @@ type VariableActivations struct {
 
 func NewValueActivations() *VariableActivations {
 	valueActivations := &activations.Activations{}
-	valueActivations.Push(activations.NewActivation(nil))
+	valueActivations.PushNewWithParent(nil)
 	return &VariableActivations{
 		activations: valueActivations,
 	}
