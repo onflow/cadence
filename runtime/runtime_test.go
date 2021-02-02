@@ -500,7 +500,12 @@ func TestRuntimeConcurrentImport(t *testing.T) {
 	}
 	wg.Wait()
 
-	//TODO:
+	// TODO:
+	//   Ideally we would expect the imported program only be checked once
+	//   (`concurrency` transactions + 1 for the imported program),
+	//   however, currently the imported program gets re-checked if it is currently being checked.
+	//   This can probably be optimized by synchronizing the checking of a program using `sync`.
+	//
 	//require.Equal(t, concurrency+1, checkCount)
 }
 
