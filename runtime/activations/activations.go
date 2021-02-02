@@ -70,11 +70,19 @@ func (a *Activation) Set(name string, value interface{}) {
 // It can be used to iterate over all entries of the activation.
 //
 func (a *Activation) ForEach(cb func(string, interface{}) error) error {
-	for name, v := range a.entries {
-		err := cb(name, v)
-		if err != nil {
-			return err
+
+	activation := a
+
+	for activation != nil {
+
+		for name, v := range activation.entries {
+			err := cb(name, v)
+			if err != nil {
+				return err
+			}
 		}
+
+		activation = activation.Parent
 	}
 
 	return nil

@@ -160,17 +160,13 @@ func (a *VariableActivations) ForEachVariablesDeclaredInAndBelow(depth int, f fu
 
 	activation := a.activations.Current()
 
-	for activation != nil {
-		_ = activation.ForEach(func(name string, value interface{}) error {
-			variable := value.(*Variable)
+	_ = activation.ForEach(func(name string, value interface{}) error {
+		variable := value.(*Variable)
 
-			if variable.ActivationDepth >= depth {
-				f(name, variable)
-			}
+		if variable.ActivationDepth >= depth {
+			f(name, variable)
+		}
 
-			return nil
-		})
-
-		activation = activation.Parent
-	}
+		return nil
+	})
 }
