@@ -369,3 +369,19 @@ func TestCheckInvalidResourceCapturingJustMemberAccess(t *testing.T) {
 	assert.IsType(t, &sema.ResourceCapturingError{}, errs[0])
 	assert.IsType(t, &sema.ResourceLossError{}, errs[1])
 }
+
+func TestCheckInvalidFunctionWithResult(t *testing.T) {
+
+	t.Parallel()
+
+	_, err := ParseAndCheck(t, `
+     fun test(): Int {
+         let result = 0
+         return result
+     }
+   `)
+
+	errs := ExpectCheckerErrors(t, err, 1)
+
+	assert.IsType(t, &sema.RedeclarationError{}, errs[0])
+}
