@@ -984,7 +984,7 @@ func (interpreter *Interpreter) ImportValue(name string, value Value) error {
 
 func (interpreter *Interpreter) VisitBlock(block *ast.Block) ast.Repr {
 	// block scope: each block gets an activation record
-	interpreter.activations.PushNew()
+	interpreter.activations.PushNewWithCurrent()
 
 	return interpreter.visitStatements(block.Statements).
 		Then(func(_ interface{}) {
@@ -1032,7 +1032,7 @@ func (interpreter *Interpreter) visitFunctionBody(
 ) Trampoline {
 
 	// block scope: each function block gets an activation record
-	interpreter.activations.PushNew()
+	interpreter.activations.PushNewWithCurrent()
 
 	return interpreter.visitStatements(beforeStatements).
 		FlatMap(func(_ interface{}) Trampoline {
@@ -1191,7 +1191,7 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 				valueType := interpreter.Checker.Elaboration.VariableDeclarationValueTypes[declaration]
 				unwrappedValueCopy := interpreter.copyAndConvert(someValue.Value, valueType, targetType)
 
-				interpreter.activations.PushNew()
+				interpreter.activations.PushNewWithCurrent()
 				interpreter.declareVariable(
 					declaration.Identifier.Identifier,
 					unwrappedValueCopy,
@@ -1309,7 +1309,7 @@ func (interpreter *Interpreter) VisitWhileStatement(statement *ast.WhileStatemen
 }
 
 func (interpreter *Interpreter) VisitForStatement(statement *ast.ForStatement) ast.Repr {
-	interpreter.activations.PushNew()
+	interpreter.activations.PushNewWithCurrent()
 
 	variable := interpreter.declareVariable(
 		statement.Identifier.Identifier,
@@ -2445,7 +2445,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 	members := map[string]Value{}
 
 	(func() {
-		interpreter.activations.PushNew()
+		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()
 
 		// Pre-declare empty variables for all interfaces, composites, and function declarations
@@ -3088,7 +3088,7 @@ func (interpreter *Interpreter) declareInterface(
 	// of nested declarations won't be visible after the containing declaration
 
 	(func() {
-		interpreter.activations.PushNew()
+		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()
 
 		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
@@ -3122,7 +3122,7 @@ func (interpreter *Interpreter) declareTypeRequirement(
 	// of nested declarations won't be visible after the containing declaration
 
 	(func() {
-		interpreter.activations.PushNew()
+		interpreter.activations.PushNewWithCurrent()
 		defer interpreter.activations.Pop()
 
 		for _, nestedInterfaceDeclaration := range declaration.Members.Interfaces() {
