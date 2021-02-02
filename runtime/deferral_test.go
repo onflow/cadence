@@ -28,7 +28,6 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -107,7 +106,6 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
        }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	var accountCode []byte
 	var events []cadence.Event
 	var loggedMessages []string
@@ -138,13 +136,6 @@ func TestRuntimeStorageDeferredResourceDictionaryValues(t *testing.T) {
 		resolveLocation: singleIdentifierLocationResolver(t),
 		getAccountContractCode: func(_ Address, _ string) (bytes []byte, err error) {
 			return accountCode, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(onRead, onWrite),
 		getSigningAccounts: func() ([]Address, error) {
@@ -668,7 +659,6 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
        }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	var accountCode []byte
 	var events []cadence.Event
 	var loggedMessages []string
@@ -702,13 +692,6 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Nested(t *testing.T) {
 		},
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(onRead, onWrite),
 		getSigningAccounts: func() ([]Address, error) {
@@ -932,7 +915,6 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_DictionaryTransfer(t *te
        }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	var accountCode []byte
 	var events []cadence.Event
 	var loggedMessages []string
@@ -975,13 +957,6 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_DictionaryTransfer(t *te
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(onRead, onWrite),
 		getSigningAccounts: func() ([]Address, error) {
@@ -1154,7 +1129,6 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Removal(t *testing.T) {
       }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	var accountCode []byte
 	var events []cadence.Event
 	var loggedMessages []string
@@ -1164,13 +1138,6 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Removal(t *testing.T) {
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -1276,7 +1243,6 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Destruction(t *testing.T
       }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	var accountCode []byte
 	var events []cadence.Event
 	var loggedMessages []string
@@ -1286,13 +1252,6 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Destruction(t *testing.T
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -1425,7 +1384,6 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Insertion(t *testing.T) 
       }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
 	var accountCode []byte
 	var events []cadence.Event
 	var loggedMessages []string
@@ -1435,13 +1393,6 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_Insertion(t *testing.T) 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -1587,20 +1538,12 @@ func TestRuntimeStorageDeferredResourceDictionaryValues_ValueTransferAndDestroy(
 	signer3 := common.BytesToAddress([]byte{0x3})
 
 	var signers []Address
-	programs := map[common.LocationID]*interpreter.Program{}
 
 	testStorage := newTestStorage(nil, nil)
 
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(_ Location) (bytes []byte, err error) {
 			return accountCode, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 		storage: testStorage,
 		getSigningAccounts: func() ([]Address, error) {

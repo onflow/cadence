@@ -25,8 +25,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
 
@@ -44,17 +42,7 @@ func TestRuntimeCrypto_import(t *testing.T) {
       }
     `)
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
-	runtimeInterface := &testRuntimeInterface{
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
-		},
-	}
+	runtimeInterface := &testRuntimeInterface{}
 
 	result, err := runtime.ExecuteScript(
 		Script{
@@ -111,8 +99,6 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 
 	called := false
 
-	programs := map[common.LocationID]*interpreter.Program{}
-
 	runtimeInterface := &testRuntimeInterface{
 		verifySignature: func(
 			signature []byte,
@@ -130,13 +116,6 @@ func TestRuntimeCrypto_verify(t *testing.T) {
 			assert.Equal(t, "ECDSA_P256", signatureAlgorithm)
 			assert.Equal(t, "SHA3_256", hashAlgorithm)
 			return true, nil
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 	}
 
@@ -177,7 +156,6 @@ func TestRuntimeCrypto_hash(t *testing.T) {
 	called := false
 
 	var loggedMessages []string
-	programs := map[common.LocationID]*interpreter.Program{}
 
 	runtimeInterface := &testRuntimeInterface{
 		hash: func(
@@ -191,13 +169,6 @@ func TestRuntimeCrypto_hash(t *testing.T) {
 		},
 		log: func(message string) {
 			loggedMessages = append(loggedMessages, message)
-		},
-		setProgram: func(location Location, program *interpreter.Program) error {
-			programs[location.ID()] = program
-			return nil
-		},
-		getProgram: func(location Location) (*interpreter.Program, error) {
-			return programs[location.ID()], nil
 		},
 	}
 
