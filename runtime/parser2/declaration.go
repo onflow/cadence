@@ -441,24 +441,15 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 
 			case lexer.TokenIdentifier:
 
-				if p.current.Value == keywordFrom {
+				if p.current.Value != keywordFrom {
+					identifier := tokenToIdentifier(p.current)
+					identifiers = append(identifiers, identifier)
 
-					if !expectCommaOrFrom {
-						if isCurrentTokenAnImportedIdentifier(p) {
-							identifier := tokenToIdentifier(p.current)
-							identifiers = append(identifiers, identifier)
+					expectCommaOrFrom = true
+					break
+				}
 
-							expectCommaOrFrom = true
-							break
-						}
-
-						panic(fmt.Errorf(
-							"expected %s, got keyword %q",
-							lexer.TokenIdentifier,
-							p.current.Value,
-						))
-					}
-
+				if expectCommaOrFrom {
 					atEnd = true
 
 					// Skip the `from` keyword
@@ -466,12 +457,21 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 					p.skipSpaceAndComments(true)
 
 					parseLocation()
-				} else {
-					identifier := tokenToIdentifier(p.current)
-					identifiers = append(identifiers, identifier)
-
-					expectCommaOrFrom = true
+					break
 				}
+
+				if !isCurrentTokenAnImportedIdentifier(p) {
+					panic(fmt.Errorf(
+						"expected %s, got keyword %q",
+						lexer.TokenIdentifier,
+						p.current.Value,
+					))
+				}
+
+				identifier := tokenToIdentifier(p.current)
+				identifiers = append(identifiers, identifier)
+
+				expectCommaOrFrom = true
 
 			case lexer.TokenEOF:
 				panic(fmt.Errorf(
