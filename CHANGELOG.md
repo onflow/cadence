@@ -1,4 +1,92 @@
 
+# v0.12.6 (2021-02-02)
+
+## 🛠 Improvements
+
+- Optimize activations (#571)
+- Make occurrences and origins optional (#570)
+- Update to hamt 37930cf9f7d8, which contains ForEach, optimize activations (#569)
+- Move global values, global types, and transaction types to elaboration (#558)
+- Improve AST indices (#556)
+- Cache programs before checking succeeded, properly wrap returned error (#557)
+
+Performance of checking and interpretation has been improved, 
+e.g. for `BenchmarkCheckContractInterfaceFungibleTokenConformance`:
+
+| Commit   | Description                                    |  Ops |          Time |
+|----------|------------------------------------------------|------:|--------------:|
+| 21764d89 | Baseline, v0.12.5                              |   595 | 2018162 ns/op |
+| df2ba05d | Update hamt, use ForEach everywhere            |  1821 |  658515 ns/op |
+| 6088ce01 | Optional occurrences and origins recording     |  2258 |  530121 ns/op |
+| 429a7796 | Optimize activations, replace use of HAMT map  |  3667 |  327368 ns/op |
+
+
+## ⭐ Features
+
+- Optionally run checker tests concurrently (#554)
+
+## 🐞 Bug Fixes
+
+- Fix runtime type of Block.timestamp (#575)
+- Use correct CommandSubmitTransaction command in entrypoint code lens (#568)
+- Revert "always find the declared variable (#408)" (#561)
+- Make parameter list thread-safe (#555)
+
+## 📖 Documentation
+
+- More developer documentation (#535)
+- Update the roadmap (#553)
+- Document how to inject value declarations (#547)
+
+
+
+# v0.10.6 (2021-01-30)
+
+## 🛠 Improvements
+
+- Update to hamt 37930cf9f7d8, use `ForEach` instead of `FirstRest` (#566)
+- Make checker occurrences and origins optional (#567)
+
+# v0.12.5 (2021-01-22)
+
+## ⭐ Features
+
+- WebAssembly: Add support for memory and data sections (#425)
+- Start of a compiler, with IR and WASM code generator (#409)
+- Language Server: Parse pragma arguments declarations and show codelenses (#432)
+
+## 🛠 Improvements
+
+- Update the parser NPM package (#544)
+- Update the language server and Monaco client NPM packages (#545)
+- Interpreter: Always find the declared variable (#408)
+
+## 🐞 Bug Fixes
+
+- Fix the export of type values with restricted static types (#551)
+- Fix nested enum declarations (#549)
+- Language Server: Don't panic when notifications fail (#543)
+
+# v0.12.4 (2021-01-20)
+
+## ⭐ Features
+
+- Argument list parsing and transaction declaration docstrings (#528)
+- Add support for name section in WASM binary (#388)
+- Add more WASM instructions (#381)
+- Add support for export section in WASM binary writer and reader (#377)
+- Generate code for instructions (#372)
+
+## 🛠 Improvements
+
+- WebAssembly package improvements (#542)
+- Generate code for instructions (#372)
+
+## 🐞 Bug Fixes
+
+- Add support for multiple contracts per account to the language server (#540)
+
+
 # v0.12.3 (2021-01-13)
 
 ## 🛠 Improvements
