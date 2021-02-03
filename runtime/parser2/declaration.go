@@ -444,6 +444,14 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 				if p.current.Value == keywordFrom {
 
 					if !expectCommaOrFrom {
+						if isCurrentTokenAnImportedIdentifier(p) {
+							identifier := tokenToIdentifier(p.current)
+							identifiers = append(identifiers, identifier)
+
+							expectCommaOrFrom = true
+							break
+						}
+
 						panic(fmt.Errorf(
 							"expected %s, got keyword %q",
 							lexer.TokenIdentifier,
@@ -559,6 +567,31 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			EndPos:   endPos,
 		},
 		LocationPos: locationPos,
+	}
+}
+
+// isCurrentTokenAnImportedIdentifier check whether the current token
+// needs to be processed as an imported identifier or not.
+func isCurrentTokenAnImportedIdentifier(p *parser) bool {
+	p.startBuffering()
+
+	// skip the 'from' keyword.
+	p.next()
+	p.skipSpaceAndComments(true)
+
+	defer func() {
+		p.replayBuffered()
+	}()
+
+	// Lookahead the next token to determine whether to treat 'from' token
+	// as an imported-identifier, or the 'from' keyword at the end of identifiers.
+	switch p.current.Type {
+	case lexer.TokenIdentifier:
+		return p.current.Value == keywordFrom
+	case lexer.TokenComma:
+		return true
+	default:
+		return false
 	}
 }
 
