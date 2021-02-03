@@ -413,7 +413,7 @@ func compileFunctionType(functionType *sema.FunctionType) ir.FuncType {
 
 	// compile return / result type
 	var resultTypes []ir.ValType
-	if _, isVoid := functionType.ReturnTypeAnnotation.Type.(*sema.VoidType); !isVoid {
+	if functionType.ReturnTypeAnnotation.Type != sema.VoidType {
 		resultTypes = []ir.ValType{
 			compileValueType(functionType.ReturnTypeAnnotation.Type),
 		}
