@@ -54,7 +54,8 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		test.value.SetOwner(&testOwner)
 
 		var err error
-		encoded, deferrals, err = EncodeValue(test.value, nil, test.deferred)
+
+		encoded, deferrals, err = EncodeValue(test.value, nil, test.deferred, nil)
 		require.NoError(t, err)
 
 		if test.encoded != nil {
@@ -4194,4 +4195,38 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 			},
 		)
 	})
+}
+
+func TestEncodePrepareCallback(t *testing.T) {
+
+	value := NewArrayValueUnownedNonCopying(Int8Value(42))
+
+	type prepareCallback struct {
+		value Value
+		path  []string
+	}
+
+	var prepareCallbacks []prepareCallback
+
+	_, _, err := EncodeValue(value, nil, false, func(value Value, path []string) {
+		prepareCallbacks = append(prepareCallbacks, prepareCallback{
+			value: value,
+			path:  path,
+		})
+	})
+	require.NoError(t, err)
+
+	require.Equal(t,
+		[]prepareCallback{
+			{
+				value: value,
+				path:  nil,
+			},
+			{
+				value: value.Values[0],
+				path:  []string{"0"},
+			},
+		},
+		prepareCallbacks,
+	)
 }
