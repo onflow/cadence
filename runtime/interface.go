@@ -69,8 +69,8 @@ type Interface interface {
 	RemoveAccountContractCode(address Address, name string) (err error)
 	// GetSigningAccounts returns the signing accounts.
 	GetSigningAccounts() ([]Address, error)
-	// Log logs a string.
-	Log(string) error
+	// ProgramLog logs program logs.
+	ProgramLog(string) error
 	// EmitEvent is called when an event is emitted by the runtime.
 	EmitEvent(cadence.Event) error
 	// ValueExists returns true if the given key exists in the storage, owned by the given account.
@@ -106,6 +106,8 @@ type Interface interface {
 	GetStorageUsed(address Address) (value uint64, err error)
 	// GetStorageCapacity gets storage capacity in bytes on the address.
 	GetStorageCapacity(address Address) (value uint64, err error)
+	// ImplementationDebugLog logs implementation log statements on a debug-level
+	ImplementationDebugLog(message string) error
 }
 
 type HighLevelStorage interface {
@@ -197,7 +199,7 @@ func (i *EmptyRuntimeInterface) GetSigningAccounts() ([]Address, error) {
 	return nil, nil
 }
 
-func (i *EmptyRuntimeInterface) Log(_ string) error {
+func (i *EmptyRuntimeInterface) ProgramLog(_ string) error {
 	return nil
 }
 
@@ -231,6 +233,10 @@ func (i *EmptyRuntimeInterface) GetBlockAtHeight(_ uint64) (block Block, exists 
 
 func (i *EmptyRuntimeInterface) UnsafeRandom() (uint64, error) {
 	return 0, nil
+}
+
+func (i *EmptyRuntimeInterface) ImplementationDebugLog(_ string) error {
+	return nil
 }
 
 func (i *EmptyRuntimeInterface) VerifySignature(

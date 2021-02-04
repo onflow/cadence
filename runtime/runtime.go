@@ -1376,7 +1376,7 @@ func (r *interpreterRuntime) newLogFunction(runtimeInterface Interface) interpre
 		message := fmt.Sprint(invocation.Arguments[0])
 		var err error
 		wrapPanic(func() {
-			err = runtimeInterface.Log(message)
+			err = runtimeInterface.ProgramLog(message)
 		})
 		if err != nil {
 			panic(err)
