@@ -172,15 +172,14 @@ type ContainerType interface {
 func VisitContainerAndNested(t ContainerType, visit func(ty Type)) {
 	visit(t)
 
-	for p := t.NestedTypes().Oldest(); p != nil; p = p.Next() {
-		nestedType := p.Value
+	t.NestedTypes().Foreach(func(_ string, nestedType Type) {
 
 		if nestedContainerType, ok := nestedType.(ContainerType); ok {
 			VisitContainerAndNested(nestedContainerType, visit)
 		} else {
 			visit(nestedType)
 		}
-	}
+	})
 }
 
 // CompositeKindedType is a type which has a composite kind

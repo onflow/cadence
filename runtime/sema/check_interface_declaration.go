@@ -134,10 +134,7 @@ func (checker *Checker) declareInterfaceNestedTypes(
 	interfaceType := checker.Elaboration.InterfaceDeclarationTypes[declaration]
 	nestedDeclarations := checker.Elaboration.InterfaceNestedDeclarations[declaration]
 
-	for p := interfaceType.nestedTypes.Oldest(); p != nil; p = p.Next() {
-		name := p.Key
-		nestedType := p.Value
-
+	interfaceType.nestedTypes.Foreach(func(name string, nestedType Type) {
 		nestedDeclaration := nestedDeclarations[name]
 
 		identifier := nestedDeclaration.DeclarationIdentifier()
@@ -156,7 +153,7 @@ func (checker *Checker) declareInterfaceNestedTypes(
 			allowOuterScopeShadowing: false,
 		})
 		checker.report(err)
-	}
+	})
 }
 
 func (checker *Checker) checkInterfaceFunctions(

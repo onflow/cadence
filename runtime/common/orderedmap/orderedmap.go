@@ -107,6 +107,14 @@ func (om *KeyTypeValueTypeOrderedMap) Newest() *KeyTypeValueTypePair {
 	return listElementToPair(om.list.Back())
 }
 
+// Foreach iterates over the entries of the map in the insertion order, and invokes
+// the provided function for each key-value pair.
+func (om *KeyTypeValueTypeOrderedMap) Foreach(f func(key KeyType, value ValueType)) {
+	for pair := om.Oldest(); pair != nil; pair = pair.next() {
+		f(pair.Key, pair.Value)
+	}
+}
+
 // KeyTypeValueTypePair
 //
 type KeyTypeValueTypePair struct {
@@ -116,13 +124,13 @@ type KeyTypeValueTypePair struct {
 	element *list.Element
 }
 
-// Next returns a pointer to the next pair.
-func (p *KeyTypeValueTypePair) Next() *KeyTypeValueTypePair {
+// next returns a pointer to the next pair.
+func (p *KeyTypeValueTypePair) next() *KeyTypeValueTypePair {
 	return listElementToPair(p.element.Next())
 }
 
-// Prev returns a pointer to the previous pair.
-func (p *KeyTypeValueTypePair) Prev() *KeyTypeValueTypePair {
+// prev returns a pointer to the previous pair.
+func (p *KeyTypeValueTypePair) prev() *KeyTypeValueTypePair {
 	return listElementToPair(p.element.Prev())
 }
 

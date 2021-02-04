@@ -209,9 +209,7 @@ func (checker *Checker) declareCompositeNestedTypes(
 	compositeType := checker.Elaboration.CompositeDeclarationTypes[declaration]
 	nestedDeclarations := checker.Elaboration.CompositeNestedDeclarations[declaration]
 
-	for p := compositeType.nestedTypes.Oldest(); p != nil; p = p.Next() {
-		name := p.Key
-		nestedType := p.Value
+	compositeType.nestedTypes.Foreach(func(name string, nestedType Type) {
 
 		nestedDeclaration := nestedDeclarations[name]
 
@@ -271,7 +269,7 @@ func (checker *Checker) declareCompositeNestedTypes(
 				}
 			}
 		}
-	}
+	})
 }
 
 func (checker *Checker) declareNestedDeclarations(
@@ -560,13 +558,10 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		// in which case it is a type requirement,
 		// and this nested composite type implicitly conforms to it.
 
-		for p := compositeType.NestedTypes().Oldest(); p != nil; p = p.Next() {
-			nestedTypeIdentifier := p.Key
-			nestedType := p.Value
-
+		compositeType.NestedTypes().Foreach(func(nestedTypeIdentifier string, nestedType Type) {
 			nestedCompositeType, ok := nestedType.(*CompositeType)
 			if !ok {
-				continue
+				return
 			}
 
 			for _, compositeTypeConformance := range compositeType.ExplicitInterfaceConformances {
@@ -584,7 +579,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 
 				nestedCompositeType.AddImplicitTypeRequirementConformance(typeRequirement)
 			}
-		}
+		})
 
 		// Declare members
 		// NOTE: *After* declaring nested composite and interface declarations
@@ -1027,26 +1022,23 @@ func (checker *Checker) checkCompositeConformance(
 
 	// Determine missing nested composite type definitions
 
-	for p := interfaceType.nestedTypes.Oldest(); p != nil; p = p.Next() {
-
-		name := p.Key
-		typeRequirement := p.Value
+	interfaceType.nestedTypes.Foreach(func(name string, typeRequirement Type) {
 
 		// Only nested composite declarations are type requirements of the interface
 
 		requiredCompositeType, ok := typeRequirement.(*CompositeType)
 		if !ok {
-			continue
+			return
 		}
 
 		nestedCompositeType, ok := compositeType.nestedTypes.Get(name)
 		if !ok {
 			missingNestedCompositeTypes = append(missingNestedCompositeTypes, requiredCompositeType)
-			continue
+			return
 		}
 
 		checker.checkTypeRequirement(nestedCompositeType, compositeDeclaration, requiredCompositeType)
-	}
+	})
 
 	if len(missingMembers) > 0 ||
 		len(memberMismatches) > 0 ||

@@ -104,6 +104,14 @@ func (om *StringTypeOrderedMap) Newest() *StringTypePair {
 	return listElementToPair(om.list.Back())
 }
 
+// Foreach iterates over the entries of the map in the insertion order, and invokes
+// the provided function for each key-value pair.
+func (om *StringTypeOrderedMap) Foreach(f func(key string, value Type)) {
+	for pair := om.Oldest(); pair != nil; pair = pair.next() {
+		f(pair.Key, pair.Value)
+	}
+}
+
 // StringTypePair
 //
 type StringTypePair struct {
@@ -113,13 +121,13 @@ type StringTypePair struct {
 	element *list.Element
 }
 
-// Next returns a pointer to the next pair.
-func (p *StringTypePair) Next() *StringTypePair {
+// next returns a pointer to the next pair.
+func (p *StringTypePair) next() *StringTypePair {
 	return listElementToPair(p.element.Next())
 }
 
-// Prev returns a pointer to the previous pair.
-func (p *StringTypePair) Prev() *StringTypePair {
+// prev returns a pointer to the previous pair.
+func (p *StringTypePair) prev() *StringTypePair {
 	return listElementToPair(p.element.Prev())
 }
 
