@@ -1282,7 +1282,6 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 		switch typedResult := ty.(type) {
 		case ContainerType:
 			ty, _ = typedResult.NestedTypes().Get(identifier.Identifier)
-
 		default:
 			if !typedResult.IsInvalidType() {
 				checker.report(
