@@ -417,6 +417,7 @@ func (e *Encoder) prepare(
 
 	default:
 		return nil, EncodingUnsupportedValueError{
+			Path:  path,
 			Value: v,
 		}
 	}

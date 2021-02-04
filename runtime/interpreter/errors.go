@@ -370,8 +370,13 @@ func (e TypeLoadingError) Error() string {
 //
 type EncodingUnsupportedValueError struct {
 	Value Value
+	Path  []string
 }
 
 func (e EncodingUnsupportedValueError) Error() string {
-	return fmt.Sprintf("unsupported value: %[1]T, %[1]v", e.Value)
+	return fmt.Sprintf(
+		"unsupported value to path [%s]: %[1]T, %[1]v",
+		strings.Join(e.Path, ","),
+		e.Value,
+	)
 }
