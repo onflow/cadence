@@ -266,7 +266,7 @@ func newFlowEventType(identifier string, parameters ...*sema.Parameter) *sema.Co
 		Location:   FlowLocation{},
 		Identifier: identifier,
 		Fields:     []string{},
-		Members:    map[string]*sema.Member{},
+		Members:    sema.NewStringMemberOrderedMap(),
 	}
 
 	for _, parameter := range parameters {
@@ -275,14 +275,13 @@ func newFlowEventType(identifier string, parameters ...*sema.Parameter) *sema.Co
 			parameter.Identifier,
 		)
 
-		eventType.Members[parameter.Identifier] =
-			sema.NewPublicConstantFieldMember(
-				eventType,
-				parameter.Identifier,
-				parameter.TypeAnnotation.Type,
-				// TODO: add docstring support for parameters
-				"",
-			)
+		eventType.Members.Set(parameter.Identifier, sema.NewPublicConstantFieldMember(
+			eventType,
+			parameter.Identifier,
+			parameter.TypeAnnotation.Type,
+			// TODO: add docstring support for parameters
+			"",
+		))
 
 		eventType.ConstructorParameters = append(
 			eventType.ConstructorParameters,

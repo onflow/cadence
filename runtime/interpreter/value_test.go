@@ -628,7 +628,7 @@ func TestVisitor(t *testing.T) {
 }
 
 func TestBlockValue(t *testing.T) {
-	var block BlockValue = BlockValue{ 4, 5, &ArrayValue{}, 5.0}
+	var block BlockValue = BlockValue{4, 5, &ArrayValue{}, 5.0}
 	// static type test
 	var actualTs UFix64Value = block.Timestamp
 	const expectedTs UFix64Value = 5.0

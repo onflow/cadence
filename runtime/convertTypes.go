@@ -191,9 +191,9 @@ func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.
 	fieldMembers := make([]*sema.Member, 0, len(t.Fields))
 
 	for _, identifier := range t.Fields {
-		member := t.Members[identifier]
+		member, ok := t.Members.Get(identifier)
 
-		if member.IgnoreInSerialization {
+		if !ok || member.IgnoreInSerialization {
 			continue
 		}
 
@@ -256,9 +256,9 @@ func exportInterfaceType(t *sema.InterfaceType, results map[sema.TypeID]cadence.
 	fieldMembers := make([]*sema.Member, 0, len(t.Fields))
 
 	for _, identifier := range t.Fields {
-		member := t.Members[identifier]
+		member, ok := t.Members.Get(identifier)
 
-		if member.IgnoreInSerialization {
+		if !ok || member.IgnoreInSerialization {
 			continue
 		}
 

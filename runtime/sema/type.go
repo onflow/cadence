@@ -4352,13 +4352,13 @@ func (t *FunctionType) GetMembers() map[string]MemberResolver {
 
 type SpecialFunctionType struct {
 	*FunctionType
-	Members map[string]*Member
+	Members *StringMemberOrderedMap
 }
 
 func (t *SpecialFunctionType) GetMembers() map[string]MemberResolver {
 	// TODO: optimize
-	members := make(map[string]MemberResolver, len(t.Members))
-	for name, loopMember := range t.Members {
+	members := make(map[string]MemberResolver, t.Members.Len())
+	t.Members.Foreach(func(name string, loopMember *Member) {
 		// NOTE: don't capture loop variable
 		member := loopMember
 		members[name] = MemberResolver{
@@ -4367,7 +4367,7 @@ func (t *SpecialFunctionType) GetMembers() map[string]MemberResolver {
 				return member
 			},
 		}
-	}
+	})
 
 	return withBuiltinMembers(t, members)
 }
@@ -4758,7 +4758,7 @@ type CompositeType struct {
 	explicitInterfaceConformanceSet     InterfaceSet
 	ExplicitInterfaceConformances       []*InterfaceType
 	ImplicitTypeRequirementConformances []*CompositeType
-	Members                             map[string]*Member
+	Members                             *StringMemberOrderedMap
 	Fields                              []string
 	// TODO: add support for overloaded initializers
 	ConstructorParameters []*Parameter
@@ -4828,8 +4828,8 @@ func (t *CompositeType) Equal(other Type) bool {
 
 func (t *CompositeType) GetMembers() map[string]MemberResolver {
 	// TODO: optimize
-	members := make(map[string]MemberResolver, len(t.Members))
-	for name, loopMember := range t.Members {
+	members := make(map[string]MemberResolver, t.Members.Len())
+	t.Members.Foreach(func(name string, loopMember *Member) {
 		// NOTE: don't capture loop variable
 		member := loopMember
 		members[name] = MemberResolver{
@@ -4838,7 +4838,7 @@ func (t *CompositeType) GetMembers() map[string]MemberResolver {
 				return member
 			},
 		}
-	}
+	})
 
 	// Check conformances.
 	// If this composite type results from a normal composite declaration,
@@ -4881,8 +4881,8 @@ func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
 	// If this composite type has a member which is non-storable,
 	// then the composite type is not storable.
 
-	for _, member := range t.Members {
-		if !member.IsStorable(results) {
+	for p := t.Members.Oldest(); p != nil; p = p.Next() {
+		if !p.Value.IsStorable(results) {
 			return false
 		}
 	}
@@ -4906,8 +4906,8 @@ func (t *CompositeType) IsExternallyReturnable(results map[*Member]bool) bool {
 	// If this composite type has a member which is not externally returnable,
 	// then the composite type is not externally returnable.
 
-	for _, member := range t.Members {
-		if !member.IsExternallyReturnable(results) {
+	for p := t.Members.Oldest(); p != nil; p = p.Next() {
+		if !p.Value.IsExternallyReturnable(results) {
 			return false
 		}
 	}
@@ -5818,7 +5818,7 @@ type InterfaceType struct {
 	Location      common.Location
 	Identifier    string
 	CompositeKind common.CompositeKind
-	Members       map[string]*Member
+	Members       *StringMemberOrderedMap
 	Fields        []string
 	// TODO: add support for overloaded initializers
 	InitializerParameters []*Parameter
@@ -5868,8 +5868,8 @@ func (t *InterfaceType) Equal(other Type) bool {
 
 func (t *InterfaceType) GetMembers() map[string]MemberResolver {
 	// TODO: optimize
-	members := make(map[string]MemberResolver, len(t.Members))
-	for name, loopMember := range t.Members {
+	members := make(map[string]MemberResolver, t.Members.Len())
+	t.Members.Foreach(func(name string, loopMember *Member) {
 		// NOTE: don't capture loop variable
 		member := loopMember
 		members[name] = MemberResolver{
@@ -5878,7 +5878,7 @@ func (t *InterfaceType) GetMembers() map[string]MemberResolver {
 				return member
 			},
 		}
-	}
+	})
 	return withBuiltinMembers(t, members)
 }
 
@@ -5895,8 +5895,8 @@ func (t *InterfaceType) IsStorable(results map[*Member]bool) bool {
 	// If this interface type has a member which is non-storable,
 	// then the interface type is not storable.
 
-	for _, member := range t.Members {
-		if !member.IsStorable(results) {
+	for p := t.Members.Oldest(); p != nil; p = p.Next() {
+		if !p.Value.IsStorable(results) {
 			return false
 		}
 	}
@@ -5913,8 +5913,8 @@ func (t *InterfaceType) IsExternallyReturnable(results map[*Member]bool) bool {
 	// If this interface type has a member which is not externally returnable,
 	// then the interface type is not externally returnable.
 
-	for _, member := range t.Members {
-		if !member.IsExternallyReturnable(results) {
+	for p := t.Members.Oldest(); p != nil; p = p.Next() {
+		if !p.Value.IsExternallyReturnable(results) {
 			return false
 		}
 	}
@@ -7109,7 +7109,7 @@ func IsNilType(ty Type) bool {
 }
 
 type TransactionType struct {
-	Members           map[string]*Member
+	Members           *StringMemberOrderedMap
 	Fields            []string
 	PrepareParameters []*Parameter
 	Parameters        []*Parameter
@@ -7189,8 +7189,8 @@ func (t *TransactionType) RewriteWithRestrictedTypes() (Type, bool) {
 
 func (t *TransactionType) GetMembers() map[string]MemberResolver {
 	// TODO: optimize
-	members := make(map[string]MemberResolver, len(t.Members))
-	for name, loopMember := range t.Members {
+	members := make(map[string]MemberResolver, t.Members.Len())
+	t.Members.Foreach(func(name string, loopMember *Member) {
 		// NOTE: don't capture loop variable
 		member := loopMember
 		members[name] = MemberResolver{
@@ -7199,7 +7199,7 @@ func (t *TransactionType) GetMembers() map[string]MemberResolver {
 				return member
 			},
 		}
-	}
+	})
 	return withBuiltinMembers(t, members)
 }
 

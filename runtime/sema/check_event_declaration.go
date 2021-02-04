@@ -76,7 +76,8 @@ func IsValidEventParameterType(t Type) bool {
 		if t.Kind != common.CompositeKindStructure {
 			return false
 		}
-		for _, member := range t.Members {
+		for p := t.Members.Oldest(); p != nil; p = p.Next() {
+			member := p.Value
 			if member.DeclarationKind == common.DeclarationKindField &&
 				!member.IgnoreInSerialization &&
 				!IsValidEventParameterType(member.TypeAnnotation.Type) {

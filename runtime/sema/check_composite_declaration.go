@@ -86,7 +86,10 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 
 		for _, field := range declaration.Members.Fields() {
 			fieldName := field.Identifier.Identifier
-			member := compositeType.Members[fieldName]
+			member, ok := compositeType.Members.Get(fieldName)
+			if !ok {
+				continue
+			}
 			fieldMembers[member] = field
 		}
 
@@ -408,6 +411,7 @@ func (checker *Checker) declareCompositeType(declaration *ast.CompositeDeclarati
 		Kind:        declaration.CompositeKind,
 		Identifier:  identifier.Identifier,
 		nestedTypes: NewStringTypeOrderedMap(),
+		Members:     NewStringMemberOrderedMap(),
 	}
 
 	variable, err := checker.typeActivations.DeclareType(typeDeclaration{
@@ -488,7 +492,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		panic(errors.NewUnreachableError())
 	}
 
-	declarationMembers := map[string]*Member{}
+	declarationMembers := NewStringMemberOrderedMap()
 
 	(func() {
 		// Activate new scopes for nested types
@@ -537,7 +541,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 			nestedCompositeDeclarationVariable :=
 				checker.valueActivations.Find(identifier.Identifier)
 
-			declarationMembers[nestedCompositeDeclarationVariable.Identifier] = &Member{
+			declarationMembers.Set(nestedCompositeDeclarationVariable.Identifier, &Member{
 				Identifier:            identifier,
 				Access:                nestedCompositeDeclaration.Access,
 				ContainerType:         compositeType,
@@ -546,7 +550,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 				VariableKind:          ast.VariableKindConstant,
 				IgnoreInSerialization: true,
 				DocString:             nestedCompositeDeclaration.DocString,
-			}
+			})
 		}
 
 		// Declare implicit type requirement conformances, if any,
@@ -584,7 +588,7 @@ func (checker *Checker) declareCompositeMembersAndValue(
 		// Declare members
 		// NOTE: *After* declaring nested composite and interface declarations
 
-		var members map[string]*Member
+		var members *StringMemberOrderedMap
 		var fields []string
 		var origins map[string]*Origin
 
@@ -696,7 +700,7 @@ func (checker *Checker) declareCompositeConstructor(
 func (checker *Checker) declareContractValue(
 	declaration *ast.CompositeDeclaration,
 	compositeType *CompositeType,
-	declarationMembers map[string]*Member,
+	declarationMembers *StringMemberOrderedMap,
 ) {
 	_, err := checker.valueActivations.Declare(variableDeclaration{
 		identifier: declaration.Identifier.Identifier,
@@ -709,12 +713,12 @@ func (checker *Checker) declareContractValue(
 	})
 	checker.report(err)
 
-	for name, declarationMember := range declarationMembers {
-		if compositeType.Members[name] != nil {
-			continue
+	declarationMembers.Foreach(func(name string, declarationMember *Member) {
+		if _, ok := compositeType.Members.Get(name); ok {
+			return
 		}
-		compositeType.Members[name] = declarationMember
-	}
+		compositeType.Members.Set(name, declarationMember)
+	})
 }
 
 func (checker *Checker) declareEnumConstructor(
@@ -724,7 +728,7 @@ func (checker *Checker) declareEnumConstructor(
 
 	enumCases := declaration.Members.EnumCases()
 
-	constructorMembers := make(map[string]*Member, len(enumCases))
+	constructorMembers := NewStringMemberOrderedMap()
 
 	var constructorOrigins map[string]*Origin
 	if checker.originsAndOccurrencesEnabled {
@@ -753,10 +757,10 @@ func (checker *Checker) declareEnumConstructor(
 	for _, enumCase := range enumCases {
 		caseName := enumCase.Identifier.Identifier
 
-		if constructorMembers[caseName] != nil {
+		if _, ok := constructorMembers.Get(caseName); ok {
 			continue
 		}
-		constructorMembers[caseName] = &Member{
+		constructorMembers.Set(caseName, &Member{
 			ContainerType: constructorType,
 			// enum cases are always public
 			Access:          ast.AccessPublic,
@@ -765,7 +769,7 @@ func (checker *Checker) declareEnumConstructor(
 			DeclarationKind: common.DeclarationKindField,
 			VariableKind:    ast.VariableKindConstant,
 			DocString:       enumCase.DocString,
-		}
+		})
 
 		if checker.originsAndOccurrencesEnabled && constructorOrigins != nil {
 			constructorOrigins[caseName] =
@@ -797,14 +801,14 @@ func (checker *Checker) declareEnumConstructor(
 
 // checkMemberStorability check that all fields have a type that is storable.
 //
-func (checker *Checker) checkMemberStorability(members map[string]*Member) {
+func (checker *Checker) checkMemberStorability(members *StringMemberOrderedMap) {
 
 	storableResults := map[*Member]bool{}
 
-	for _, member := range members {
+	members.Foreach(func(_ string, member *Member) {
 
 		if member.IsStorable(storableResults) {
-			continue
+			return
 		}
 
 		checker.report(
@@ -814,7 +818,7 @@ func (checker *Checker) checkMemberStorability(members map[string]*Member) {
 				Pos:  member.Identifier.Pos,
 			},
 		)
-	}
+	})
 }
 
 func (checker *Checker) initializerParameters(initializers []*ast.SpecialFunctionDeclaration) []*Parameter {
@@ -993,21 +997,21 @@ func (checker *Checker) checkCompositeConformance(
 
 	// Determine missing members and member conformance
 
-	for name, interfaceMember := range interfaceType.Members {
+	interfaceType.Members.Foreach(func(name string, interfaceMember *Member) {
 
 		// Conforming types do not provide a concrete member
 		// for the member in the interface if it is predeclared
 
 		if interfaceMember.Predeclared {
-			continue
+			return
 		}
 
-		compositeMember, ok := compositeType.Members[name]
+		compositeMember, ok := compositeType.Members.Get(name)
 		if !ok {
 			if options.checkMissingMembers {
 				missingMembers = append(missingMembers, interfaceMember)
 			}
-			continue
+			return
 		}
 
 		if !checker.memberSatisfied(compositeMember, interfaceMember) {
@@ -1018,7 +1022,7 @@ func (checker *Checker) checkCompositeConformance(
 				},
 			)
 		}
-	}
+	})
 
 	// Determine missing nested composite type definitions
 
@@ -1306,7 +1310,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 	containerKind ContainerKind,
 	containerDeclarationKind common.DeclarationKind,
 ) (
-	members map[string]*Member,
+	members *StringMemberOrderedMap,
 	fieldNames []string,
 	origins map[string]*Origin,
 ) {
@@ -1328,7 +1332,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 	requireNonPrivateMemberAccess := containerKind == ContainerKindInterface
 
 	memberCount := len(fields) + len(functions)
-	members = make(map[string]*Member, memberCount)
+	members = NewStringMemberOrderedMap()
 	if checker.originsAndOccurrencesEnabled {
 		origins = make(map[string]*Origin, memberCount)
 	}
@@ -1338,7 +1342,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 
 	for _, predeclaredMember := range predeclaredMembers {
 		name := predeclaredMember.Identifier.Identifier
-		members[name] = predeclaredMember
+		members.Set(name, predeclaredMember)
 		invalidIdentifiers[name] = true
 
 		if predeclaredMember.DeclarationKind == common.DeclarationKindField {
@@ -1394,7 +1398,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 			)
 		}
 
-		members[identifier] = &Member{
+		members.Set(identifier, &Member{
 			ContainerType:   containerType,
 			Access:          field.Access,
 			Identifier:      field.Identifier,
@@ -1402,7 +1406,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 			TypeAnnotation:  fieldTypeAnnotation,
 			VariableKind:    field.VariableKind,
 			DocString:       field.DocString,
-		}
+		})
 
 		if checker.originsAndOccurrencesEnabled && origins != nil {
 			origins[identifier] =
@@ -1457,7 +1461,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 			)
 		}
 
-		members[identifier] = &Member{
+		members.Set(identifier, &Member{
 			ContainerType:   containerType,
 			Access:          function.Access,
 			Identifier:      function.Identifier,
@@ -1466,7 +1470,7 @@ func (checker *Checker) defaultMembersAndOrigins(
 			VariableKind:    ast.VariableKindConstant,
 			ArgumentLabels:  argumentLabels,
 			DocString:       function.DocString,
-		}
+		})
 
 		if checker.originsAndOccurrencesEnabled && origins != nil {
 			origins[identifier] =
@@ -1481,13 +1485,13 @@ func (checker *Checker) eventMembersAndOrigins(
 	initializer *ast.SpecialFunctionDeclaration,
 	containerType *CompositeType,
 ) (
-	members map[string]*Member,
+	members *StringMemberOrderedMap,
 	fieldNames []string,
 	origins map[string]*Origin,
 ) {
 	parameters := initializer.FunctionDeclaration.ParameterList.Parameters
 
-	members = make(map[string]*Member, len(parameters))
+	members = NewStringMemberOrderedMap()
 	if checker.originsAndOccurrencesEnabled {
 		origins = make(map[string]*Origin, len(parameters))
 	}
@@ -1499,14 +1503,14 @@ func (checker *Checker) eventMembersAndOrigins(
 
 		fieldNames = append(fieldNames, identifier.Identifier)
 
-		members[identifier.Identifier] = &Member{
+		members.Set(identifier.Identifier, &Member{
 			ContainerType:   containerType,
 			Access:          ast.AccessPublic,
 			Identifier:      identifier,
 			DeclarationKind: common.DeclarationKindField,
 			TypeAnnotation:  typeAnnotation,
 			VariableKind:    ast.VariableKindConstant,
-		}
+		})
 
 		if checker.originsAndOccurrencesEnabled && origins != nil {
 			origins[identifier.Identifier] =
@@ -1532,7 +1536,7 @@ func (checker *Checker) enumMembersAndOrigins(
 	containerType *CompositeType,
 	containerDeclarationKind common.DeclarationKind,
 ) (
-	members map[string]*Member,
+	members *StringMemberOrderedMap,
 	fieldNames []string,
 	origins map[string]*Origin,
 ) {
@@ -1569,19 +1573,18 @@ func (checker *Checker) enumMembersAndOrigins(
 	// Each individual enum case is an instance of the enum type,
 	// so only has a single member, the raw value field
 
-	members = map[string]*Member{
-		EnumRawValueFieldName: {
-			ContainerType: containerType,
-			Access:        ast.AccessPublic,
-			Identifier: ast.Identifier{
-				Identifier: EnumRawValueFieldName,
-			},
-			DeclarationKind: common.DeclarationKindField,
-			TypeAnnotation:  NewTypeAnnotation(containerType.EnumRawType),
-			VariableKind:    ast.VariableKindConstant,
-			DocString:       enumRawValueFieldDocString,
+	members = NewStringMemberOrderedMap()
+	members.Set(EnumRawValueFieldName, &Member{
+		ContainerType: containerType,
+		Access:        ast.AccessPublic,
+		Identifier: ast.Identifier{
+			Identifier: EnumRawValueFieldName,
 		},
-	}
+		DeclarationKind: common.DeclarationKindField,
+		TypeAnnotation:  NewTypeAnnotation(containerType.EnumRawType),
+		VariableKind:    ast.VariableKindConstant,
+		DocString:       enumRawValueFieldDocString,
+	})
 
 	// No origins available for the only member which was declared above
 
@@ -1589,11 +1592,11 @@ func (checker *Checker) enumMembersAndOrigins(
 
 	// Gather the field names from the members declared above
 
-	for name, member := range members {
+	members.Foreach(func(name string, member *Member) {
 		if member.DeclarationKind == common.DeclarationKindField {
 			fieldNames = append(fieldNames, name)
 		}
-	}
+	})
 
 	return
 }
@@ -1886,7 +1889,7 @@ func (checker *Checker) checkUnknownSpecialFunctions(functions []*ast.SpecialFun
 func (checker *Checker) checkDestructors(
 	destructors []*ast.SpecialFunctionDeclaration,
 	fields map[string]*ast.FieldDeclaration,
-	members map[string]*Member,
+	members *StringMemberOrderedMap,
 	containerType Type,
 	containerDeclarationKind common.DeclarationKind,
 	containerKind ContainerKind,
@@ -1942,7 +1945,7 @@ func (checker *Checker) checkDestructors(
 // In interfaces this is allowed.
 //
 func (checker *Checker) checkNoDestructorNoResourceFields(
-	members map[string]*Member,
+	members *StringMemberOrderedMap,
 	fields map[string]*ast.FieldDeclaration,
 	containerType Type,
 	containerKind ContainerKind,
@@ -1951,7 +1954,10 @@ func (checker *Checker) checkNoDestructorNoResourceFields(
 		return
 	}
 
-	for memberName, member := range members {
+	for p := members.Oldest(); p != nil; p = p.Next() {
+		member := p.Value
+		memberName := p.Key
+
 		// NOTE: check type, not resource annotation:
 		// the field could have a wrong annotation
 		if !member.TypeAnnotation.Type.IsResourceType() {
@@ -2015,15 +2021,15 @@ func (checker *Checker) checkCompositeResourceInvalidated(containerType Type) {
 // checkResourceFieldsInvalidated checks that all resource fields for a container
 // type are invalidated.
 //
-func (checker *Checker) checkResourceFieldsInvalidated(containerType Type, members map[string]*Member) {
-	for _, member := range members {
+func (checker *Checker) checkResourceFieldsInvalidated(containerType Type, members *StringMemberOrderedMap) {
+	members.Foreach(func(_ string, member *Member) {
 
 		// NOTE: check the of the type annotation, not the type annotation's
 		// resource marker: the field could have an incorrect type annotation
 		// that is missing the resource marker even though it is required
 
 		if !member.TypeAnnotation.Type.IsResourceType() {
-			continue
+			return
 		}
 
 		info := checker.resources.Get(member)
@@ -2036,7 +2042,7 @@ func (checker *Checker) checkResourceFieldsInvalidated(containerType Type, membe
 				},
 			)
 		}
-	}
+	})
 }
 
 // checkResourceUseAfterInvalidation checks if a resource (variable or composite member)

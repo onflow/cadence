@@ -434,7 +434,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 			Identifier: "R",
 			Location:   common.StringLocation("a"),
 			Fields:     []string{},
-			Members:    map[string]*Member{},
+			Members:    NewStringMemberOrderedMap(),
 		}
 		ty := &RestrictedType{
 			Type:         resourceType,
@@ -442,12 +442,12 @@ func TestRestrictedType_GetMember(t *testing.T) {
 		}
 
 		fieldName := "s"
-		resourceType.Members[fieldName] = NewPublicConstantFieldMember(
+		resourceType.Members.Set(fieldName, NewPublicConstantFieldMember(
 			ty.Type,
 			fieldName,
 			&IntType{},
 			"",
-		)
+		))
 
 		actualMembers := ty.GetMembers()
 
@@ -469,7 +469,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 		interfaceType := &InterfaceType{
 			CompositeKind: common.CompositeKindResource,
 			Identifier:    "I",
-			Members:       map[string]*Member{},
+			Members:       NewStringMemberOrderedMap(),
 		}
 
 		resourceType := &CompositeType{
@@ -477,7 +477,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 			Identifier: "R",
 			Location:   common.StringLocation("a"),
 			Fields:     []string{},
-			Members:    map[string]*Member{},
+			Members:    NewStringMemberOrderedMap(),
 		}
 		restrictedType := &RestrictedType{
 			Type: resourceType,
@@ -488,12 +488,12 @@ func TestRestrictedType_GetMember(t *testing.T) {
 
 		fieldName := "s"
 
-		resourceType.Members[fieldName] = NewPublicConstantFieldMember(
+		resourceType.Members.Set(fieldName, NewPublicConstantFieldMember(
 			restrictedType.Type,
 			fieldName,
 			&IntType{},
 			"",
-		)
+		))
 
 		interfaceMember := NewPublicConstantFieldMember(
 			restrictedType.Type,
@@ -501,7 +501,7 @@ func TestRestrictedType_GetMember(t *testing.T) {
 			&IntType{},
 			"",
 		)
-		interfaceType.Members[fieldName] = interfaceMember
+		interfaceType.Members.Set(fieldName, interfaceMember)
 
 		actualMembers := restrictedType.GetMembers()
 

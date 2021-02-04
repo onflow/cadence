@@ -27,17 +27,17 @@ package sema
 
 import "container/list"
 
-// StringTypeOrderedMap
+// StringMemberOrderedMap
 //
-type StringTypeOrderedMap struct {
-	pairs map[string]*StringTypePair
+type StringMemberOrderedMap struct {
+	pairs map[string]*StringMemberPair
 	list  *list.List
 }
 
-// NewStringTypeOrderedMap creates a new StringTypeOrderedMap.
-func NewStringTypeOrderedMap() *StringTypeOrderedMap {
-	return &StringTypeOrderedMap{
-		pairs: make(map[string]*StringTypePair),
+// NewStringMemberOrderedMap creates a new StringMemberOrderedMap.
+func NewStringMemberOrderedMap() *StringMemberOrderedMap {
+	return &StringMemberOrderedMap{
+		pairs: make(map[string]*StringMemberPair),
 		list:  list.New(),
 	}
 }
@@ -45,7 +45,7 @@ func NewStringTypeOrderedMap() *StringTypeOrderedMap {
 // Get returns the value associated with the given key.
 // Returns nil if not found.
 // The second return value indicates if the key is present in the map.
-func (om *StringTypeOrderedMap) Get(key string) (Type, bool) {
+func (om *StringMemberOrderedMap) Get(key string) (*Member, bool) {
 	if pair, present := om.pairs[key]; present {
 		return pair.Value, present
 	}
@@ -54,20 +54,20 @@ func (om *StringTypeOrderedMap) Get(key string) (Type, bool) {
 
 // GetPair returns the key-value pair associated with the given key.
 // Returns nil if not found.
-func (om *StringTypeOrderedMap) GetPair(key string) *StringTypePair {
+func (om *StringMemberOrderedMap) GetPair(key string) *StringMemberPair {
 	return om.pairs[key]
 }
 
 // Set sets the key-value pair, and returns what `Get` would have returned
 // on that key prior to the call to `Set`.
-func (om *StringTypeOrderedMap) Set(key string, value Type) (Type, bool) {
+func (om *StringMemberOrderedMap) Set(key string, value *Member) (*Member, bool) {
 	if pair, present := om.pairs[key]; present {
 		oldValue := pair.Value
 		pair.Value = value
 		return oldValue, true
 	}
 
-	pair := &StringTypePair{
+	pair := &StringMemberPair{
 		Key:   key,
 		Value: value,
 	}
@@ -79,7 +79,7 @@ func (om *StringTypeOrderedMap) Set(key string, value Type) (Type, bool) {
 
 // Delete removes the key-value pair, and returns what `Get` would have returned
 // on that key prior to the call to `Delete`.
-func (om *StringTypeOrderedMap) Delete(key string) (Type, bool) {
+func (om *StringMemberOrderedMap) Delete(key string) (*Member, bool) {
 	if pair, present := om.pairs[key]; present {
 		om.list.Remove(pair.element)
 		delete(om.pairs, key)
@@ -90,50 +90,50 @@ func (om *StringTypeOrderedMap) Delete(key string) (Type, bool) {
 }
 
 // Len returns the length of the ordered map.
-func (om *StringTypeOrderedMap) Len() int {
+func (om *StringMemberOrderedMap) Len() int {
 	return len(om.pairs)
 }
 
 // Oldest returns a pointer to the oldest pair.
-func (om *StringTypeOrderedMap) Oldest() *StringTypePair {
-	return listElementToPair(om.list.Front())
+func (om *StringMemberOrderedMap) Oldest() *StringMemberPair {
+	return listElementToStringMemberPair(om.list.Front())
 }
 
 // Newest returns a pointer to the newest pair.
-func (om *StringTypeOrderedMap) Newest() *StringTypePair {
-	return listElementToPair(om.list.Back())
+func (om *StringMemberOrderedMap) Newest() *StringMemberPair {
+	return listElementToStringMemberPair(om.list.Back())
 }
 
 // Foreach iterates over the entries of the map in the insertion order, and invokes
 // the provided function for each key-value pair.
-func (om *StringTypeOrderedMap) Foreach(f func(key string, value Type)) {
-	for pair := om.Oldest(); pair != nil; pair = pair.next() {
+func (om *StringMemberOrderedMap) Foreach(f func(key string, value *Member)) {
+	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
 		f(pair.Key, pair.Value)
 	}
 }
 
-// StringTypePair
+// StringMemberPair
 //
-type StringTypePair struct {
+type StringMemberPair struct {
 	Key   string
-	Value Type
+	Value *Member
 
 	element *list.Element
 }
 
 // next returns a pointer to the next pair.
-func (p *StringTypePair) next() *StringTypePair {
-	return listElementToPair(p.element.Next())
+func (p *StringMemberPair) Next() *StringMemberPair {
+	return listElementToStringMemberPair(p.element.Next())
 }
 
 // prev returns a pointer to the previous pair.
-func (p *StringTypePair) prev() *StringTypePair {
-	return listElementToPair(p.element.Prev())
+func (p *StringMemberPair) Prev() *StringMemberPair {
+	return listElementToStringMemberPair(p.element.Prev())
 }
 
-func listElementToPair(element *list.Element) *StringTypePair {
+func listElementToStringMemberPair(element *list.Element) *StringMemberPair {
 	if element == nil {
 		return nil
 	}
-	return element.Value.(*StringTypePair)
+	return element.Value.(*StringMemberPair)
 }

@@ -39,7 +39,7 @@ func (checker *Checker) VisitTransactionDeclaration(declaration *ast.Transaction
 
 	for _, field := range declaration.Fields {
 		fieldName := field.Identifier.Identifier
-		member := transactionType.Members[fieldName]
+		member, _ := transactionType.Members.Get(fieldName)
 		fieldMembers[member] = field
 	}
 
