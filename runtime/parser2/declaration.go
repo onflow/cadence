@@ -441,31 +441,28 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 
 			case lexer.TokenIdentifier:
 
-				if p.current.Value != keywordFrom {
-					identifier := tokenToIdentifier(p.current)
-					identifiers = append(identifiers, identifier)
+				if p.current.Value == keywordFrom {
+					if expectCommaOrFrom {
+						atEnd = true
 
-					expectCommaOrFrom = true
-					break
-				}
+						// Skip the `from` keyword
+						p.next()
+						p.skipSpaceAndComments(true)
 
-				if expectCommaOrFrom {
-					atEnd = true
+						parseLocation()
+						break
+					}
 
-					// Skip the `from` keyword
-					p.next()
-					p.skipSpaceAndComments(true)
+					if !isNextTokenCommaOrFrom(p) {
+						panic(fmt.Errorf(
+							"expected %s, got keyword %q",
+							lexer.TokenIdentifier,
+							p.current.Value,
+						))
+					}
 
-					parseLocation()
-					break
-				}
-
-				if !isCurrentTokenAnImportedIdentifier(p) {
-					panic(fmt.Errorf(
-						"expected %s, got keyword %q",
-						lexer.TokenIdentifier,
-						p.current.Value,
-					))
+					// If the next token is either comma or 'from' token, then fall through
+					// and process the current 'from' token as an identifier.
 				}
 
 				identifier := tokenToIdentifier(p.current)
@@ -570,21 +567,16 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 	}
 }
 
-// isCurrentTokenAnImportedIdentifier check whether the current token
-// needs to be processed as an imported identifier or not.
-func isCurrentTokenAnImportedIdentifier(p *parser) bool {
+// isNextTokenCommaOrFrom check whether the token to follow is a comma or a from token.
+func isNextTokenCommaOrFrom(p *parser) bool {
 	p.startBuffering()
+	defer p.replayBuffered()
 
-	// skip the 'from' keyword.
+	// skip the current token
 	p.next()
 	p.skipSpaceAndComments(true)
 
-	defer func() {
-		p.replayBuffered()
-	}()
-
-	// Lookahead the next token to determine whether to treat 'from' token
-	// as an imported-identifier, or the 'from' keyword at the end of identifiers.
+	// Lookahead the next token
 	switch p.current.Type {
 	case lexer.TokenIdentifier:
 		return p.current.Value == keywordFrom
