@@ -416,7 +416,9 @@ func (e *Encoder) prepare(
 		return e.prepareTypeValue(v)
 
 	default:
-		return nil, fmt.Errorf("unsupported value: %[1]T, %[1]v", v)
+		return nil, EncodingUnsupportedValueError{
+			Value: v,
+		}
 	}
 }
 
