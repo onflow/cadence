@@ -357,11 +357,21 @@ func (e UUIDUnavailableError) Error() string {
 }
 
 // TypeLoadingError
-
+//
 type TypeLoadingError struct {
 	TypeID common.TypeID
 }
 
 func (e TypeLoadingError) Error() string {
 	return fmt.Sprintf("failed to load type: %s", e.TypeID)
+}
+
+// EncodingUnsupportedValueError
+//
+type EncodingUnsupportedValueError struct {
+	Value Value
+}
+
+func (e EncodingUnsupportedValueError) Error() string {
+	return fmt.Sprintf("unsupported value: %[1]T, %[1]v", e.Value)
 }
