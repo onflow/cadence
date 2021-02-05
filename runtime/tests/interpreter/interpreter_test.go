@@ -7877,6 +7877,7 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 			bytes.NewReader(encoded),
 			owner,
 			interpreter.CurrentEncodingVersion,
+			nil,
 		)
 		require.NoError(t, err)
 
