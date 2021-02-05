@@ -5907,12 +5907,23 @@ func (v *DictionaryValue) String() string {
 	for i, keyValue := range v.Keys.Values {
 		key := dictionaryKey(keyValue)
 		value := v.Entries[key]
+
+		// Value is potentially deferred,
+		// so might be nil
+
+		var valueString string
+		if value == nil {
+			valueString = "..."
+		} else {
+			valueString = value.String()
+		}
+
 		pairs[i] = struct {
 			Key   string
 			Value string
 		}{
 			Key:   keyValue.String(),
-			Value: value.String(),
+			Value: valueString,
 		}
 	}
 
