@@ -376,7 +376,7 @@ func (s *runtimeStorage) move(
 
 func (s *runtimeStorage) decodeCallback(value interface{}, path []string) {
 	logMessage := fmt.Sprintf(
-		"decoding value for key %[1]s: %[2]T, %[2]v",
+		"decoding value for key %s: %T",
 		path,
 		value,
 	)
