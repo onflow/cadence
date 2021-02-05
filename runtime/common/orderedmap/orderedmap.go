@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2021 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -99,12 +99,12 @@ func (om *KeyTypeValueTypeOrderedMap) Len() int {
 
 // Oldest returns a pointer to the oldest pair.
 func (om *KeyTypeValueTypeOrderedMap) Oldest() *KeyTypeValueTypePair {
-	return listElementToPair(om.list.Front())
+	return listElementToKeyTypeValueTypePair(om.list.Front())
 }
 
 // Newest returns a pointer to the newest pair.
 func (om *KeyTypeValueTypeOrderedMap) Newest() *KeyTypeValueTypePair {
-	return listElementToPair(om.list.Back())
+	return listElementToKeyTypeValueTypePair(om.list.Back())
 }
 
 // Foreach iterates over the entries of the map in the insertion order, and invokes
@@ -126,15 +126,15 @@ type KeyTypeValueTypePair struct {
 
 // next returns a pointer to the next pair.
 func (p *KeyTypeValueTypePair) next() *KeyTypeValueTypePair {
-	return listElementToPair(p.element.Next())
+	return listElementToKeyTypeValueTypePair(p.element.Next())
 }
 
 // prev returns a pointer to the previous pair.
 func (p *KeyTypeValueTypePair) prev() *KeyTypeValueTypePair {
-	return listElementToPair(p.element.Prev())
+	return listElementToKeyTypeValueTypePair(p.element.Prev())
 }
 
-func listElementToPair(element *list.Element) *KeyTypeValueTypePair {
+func listElementToKeyTypeValueTypePair(element *list.Element) *KeyTypeValueTypePair {
 	if element == nil {
 		return nil
 	}
