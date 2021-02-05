@@ -370,7 +370,7 @@ func (s *runtimeStorage) move(
 
 func (s *runtimeStorage) prepareCallback(value interpreter.Value, path []string) {
 	logMessage := fmt.Sprintf(
-		"encoding value for key %[1]s: %[2]T, %[2]v",
+		"encoding value for key %s: %T",
 		path,
 		value,
 	)
@@ -381,5 +381,4 @@ func (s *runtimeStorage) prepareCallback(value interpreter.Value, path []string)
 	if err != nil {
 		panic(err)
 	}
-
 }
