@@ -6560,7 +6560,7 @@ func (v AddressValue) Copy() Value {
 }
 
 func (v AddressValue) KeyString() string {
-	return hex.EncodeToString(v[:])
+	return common.Address(v).ShortHexWithPrefix()
 }
 
 func (v AddressValue) String() string {

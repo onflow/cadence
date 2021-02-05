@@ -19,6 +19,7 @@
 package runtime
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/onflow/cadence"
@@ -331,7 +332,12 @@ func (s *runtimeStorage) encodeValue(
 ) {
 	reportMetric(
 		func() {
-			data, deferrals, err = interpreter.EncodeValue(value, []string{path}, true)
+			data, deferrals, err = interpreter.EncodeValue(
+				value,
+				[]string{path},
+				true,
+				s.prepareCallback,
+			)
 		},
 		s.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
@@ -360,4 +366,20 @@ func (s *runtimeStorage) move(
 	if err != nil {
 		panic(err)
 	}
+}
+
+func (s *runtimeStorage) prepareCallback(value interpreter.Value, path []string) {
+	logMessage := fmt.Sprintf(
+		"encoding value for key %[1]s: %[2]T, %[2]v",
+		path,
+		value,
+	)
+	var err error
+	wrapPanic(func() {
+		err = s.runtimeInterface.ImplementationDebugLog(logMessage)
+	})
+	if err != nil {
+		panic(err)
+	}
+
 }

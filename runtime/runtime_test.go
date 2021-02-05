@@ -117,10 +117,11 @@ type testRuntimeInterface struct {
 		signatureAlgorithm string,
 		hashAlgorithm string,
 	) (bool, error)
-	hash               func(data []byte, hashAlgorithm string) ([]byte, error)
-	setCadenceValue    func(owner Address, key string, value cadence.Value) (err error)
-	getStorageUsed     func(_ Address) (uint64, error)
-	getStorageCapacity func(_ Address) (uint64, error)
+	hash                   func(data []byte, hashAlgorithm string) ([]byte, error)
+	setCadenceValue        func(owner Address, key string, value cadence.Value) (err error)
+	getStorageUsed         func(address Address) (uint64, error)
+	getStorageCapacity     func(address Address) (uint64, error)
+	implementationDebugLog func(message string) error
 }
 
 var _ Interface = &testRuntimeInterface{}
@@ -201,7 +202,7 @@ func (i *testRuntimeInterface) GetSigningAccounts() ([]Address, error) {
 	return i.getSigningAccounts()
 }
 
-func (i *testRuntimeInterface) Log(message string) error {
+func (i *testRuntimeInterface) ProgramLog(message string) error {
 	i.log(message)
 	return nil
 }
@@ -338,6 +339,13 @@ func (i *testRuntimeInterface) GetStorageUsed(address Address) (uint64, error) {
 
 func (i *testRuntimeInterface) GetStorageCapacity(address Address) (uint64, error) {
 	return i.getStorageCapacity(address)
+}
+
+func (i *testRuntimeInterface) ImplementationDebugLog(message string) error {
+	if i.implementationDebugLog == nil {
+		return nil
+	}
+	return i.implementationDebugLog(message)
 }
 
 func TestRuntimeImport(t *testing.T) {
