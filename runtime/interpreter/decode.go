@@ -342,32 +342,31 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 			currentKeyString := keyAddressValue.KeyString()
 			wrongKeyString := hex.EncodeToString(keyAddressValue[:])
 
-			// Is the value for this key stored using the wrong key string format for address values?
+			// Is there a value stored with the current format?
+			// Then no migration is necessary.
 
-			if encodedEntries[wrongKeyString] != nil {
-
-				hasAddressValueKeyInWrongPre3Format = true
-
-				// Migrate the value from the wrong format to the current format
-
-				encodedEntries[currentKeyString] = encodedEntries[wrongKeyString]
-				delete(encodedEntries, wrongKeyString)
-
-			} else {
-
-				// There is no value stored for the wrong key string format.
-				// Ensure that an entry is stored for the current format.
-
-				if encodedEntries[currentKeyString] == nil {
-
-					return nil, fmt.Errorf(
-						"invalid dictionary address value key: "+
-							"could neither find entry for wrong format key %s, nor for current format key %s",
-						wrongKeyString,
-						currentKeyString,
-					)
-				}
+			if encodedEntries[currentKeyString] != nil {
+				continue
 			}
+
+			// Is there at least a value stored in the wrong key string format?
+
+			if encodedEntries[wrongKeyString] == nil {
+
+				return nil, fmt.Errorf(
+					"invalid dictionary address value key: "+
+						"could neither find entry for wrong format key %s, nor for current format key %s",
+					wrongKeyString,
+					currentKeyString,
+				)
+			}
+
+			// Migrate the value from the wrong format to the current format
+
+			hasAddressValueKeyInWrongPre3Format = true
+
+			encodedEntries[currentKeyString] = encodedEntries[wrongKeyString]
+			delete(encodedEntries, wrongKeyString)
 		}
 	}
 
