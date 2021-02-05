@@ -1,7 +1,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2021 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -273,9 +273,9 @@ func TestOrderedMapOperations(t *testing.T) {
 
 		var loopResult []*Fruit
 		om.Foreach(func(key KeyType, value ValueType) {
-			switch value.(type) {
+			switch value := value.(type) {
 			case *Fruit:
-				loopResult = append(loopResult, value.(*Fruit))
+				loopResult = append(loopResult, value)
 			}
 		})
 
