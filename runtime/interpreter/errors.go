@@ -375,7 +375,7 @@ type EncodingUnsupportedValueError struct {
 
 func (e EncodingUnsupportedValueError) Error() string {
 	return fmt.Sprintf(
-		"unsupported value to path [%s]: %[1]T, %[1]v",
+		"encoding unsupported value to path [%s]: %[2]T, %[2]v",
 		strings.Join(e.Path, ","),
 		e.Value,
 	)

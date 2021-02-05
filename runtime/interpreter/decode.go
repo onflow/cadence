@@ -318,6 +318,54 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 	keyCount := keys.Count()
 	entryCount := len(encodedEntries)
 
+	// In versions <= 2, the dictionary key string function was accidentally changed without version change.
+	//
+	// Detect the older format, where addresses were encoded with prefix 0x prefix and in short form,
+	// i.e. without leading zeros.
+	//
+	// Migrate the keys to the new format, i.e. without 0x prefix and in full length.
+
+	var hasAddressValueKeyInPre3Format bool
+
+	if d.version < 3 {
+		for _, keyValue := range keys.Values {
+			keyAddressValue, ok := keyValue.(AddressValue)
+			if !ok {
+				continue
+			}
+
+			currentKeyString := keyAddressValue.KeyString()
+			oldKeyString := common.Address(keyAddressValue).ShortHexWithPrefix()
+
+			// Is the value for this key stored using the old key string format for address values?
+
+			if encodedEntries[oldKeyString] != nil {
+
+				hasAddressValueKeyInPre3Format = true
+
+				// Migrate the value from the old format to the new format
+
+				encodedEntries[currentKeyString] = encodedEntries[oldKeyString]
+				delete(encodedEntries, oldKeyString)
+
+			} else {
+
+				// There is no value stored for the old key string format.
+				// Ensure that an entry is stored for the new format.
+
+				if encodedEntries[currentKeyString] == nil {
+
+					return nil, fmt.Errorf(
+						"invalid dictionary address value key: "+
+							"could neither find entry for old format key %s, nor for current format key %s",
+						oldKeyString,
+						currentKeyString,
+					)
+				}
+			}
+		}
+	}
+
 	// The number of entries must either match the number of keys,
 	// or be zero in case the values are deferred
 
@@ -341,6 +389,13 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 	isDeferred := countMismatch && entryCount == 0
 
 	if isDeferred {
+
+		if hasAddressValueKeyInPre3Format {
+			return nil, fmt.Errorf(
+				"invalid dictionary (@ %s): dictionary with address values in pre-3 format and deferred values",
+				strings.Join(path, "."),
+			)
+		}
 
 		deferred = make(map[string]string, keyCount)
 		entries = map[string]Value{}
