@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -318,16 +319,20 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 	keyCount := keys.Count()
 	entryCount := len(encodedEntries)
 
-	// In versions <= 2, the dictionary key string function was accidentally changed without version change.
+	// In versions <= 2, the dictionary key string function
+	// was accidentally, temporarily changed without a version change.
 	//
-	// Detect the older format, where addresses were encoded with prefix 0x prefix and in short form,
-	// i.e. without leading zeros.
+	// The key string format for address values is:
+	// prefix the address with 0x, encode in hex, and strip leading zeros.
 	//
-	// Migrate the keys to the new format, i.e. without 0x prefix and in full length.
+	// Temporarily and accidentally the format was:
+	// no 0x prefix, and encode and in full length hex.
+	//
+	// Detect this temporary format and correct it
 
 	var hasAddressValueKeyInPre3Format bool
 
-	if d.version < 3 {
+	if d.version <= 2 {
 		for _, keyValue := range keys.Values {
 			keyAddressValue, ok := keyValue.(AddressValue)
 			if !ok {
@@ -335,30 +340,30 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 			}
 
 			currentKeyString := keyAddressValue.KeyString()
-			oldKeyString := common.Address(keyAddressValue).ShortHexWithPrefix()
+			wrongKeyString := hex.EncodeToString(keyAddressValue[:])
 
-			// Is the value for this key stored using the old key string format for address values?
+			// Is the value for this key stored using the wrong key string format for address values?
 
-			if encodedEntries[oldKeyString] != nil {
+			if encodedEntries[wrongKeyString] != nil {
 
 				hasAddressValueKeyInPre3Format = true
 
-				// Migrate the value from the old format to the new format
+				// Migrate the value from the wrong format to the current format
 
-				encodedEntries[currentKeyString] = encodedEntries[oldKeyString]
-				delete(encodedEntries, oldKeyString)
+				encodedEntries[currentKeyString] = encodedEntries[wrongKeyString]
+				delete(encodedEntries, wrongKeyString)
 
 			} else {
 
-				// There is no value stored for the old key string format.
-				// Ensure that an entry is stored for the new format.
+				// There is no value stored for the wrong key string format.
+				// Ensure that an entry is stored for the current format.
 
 				if encodedEntries[currentKeyString] == nil {
 
 					return nil, fmt.Errorf(
 						"invalid dictionary address value key: "+
-							"could neither find entry for old format key %s, nor for current format key %s",
-						oldKeyString,
+							"could neither find entry for wrong format key %s, nor for current format key %s",
+						wrongKeyString,
 						currentKeyString,
 					)
 				}
