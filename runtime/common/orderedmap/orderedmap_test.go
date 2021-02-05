@@ -38,7 +38,7 @@ type Fruit struct {
 // TestOrderedMapOperations tests the operations of the generic map.
 func TestOrderedMapOperations(t *testing.T) {
 
-	// Run the test sequentially
+	t.Parallel()
 
 	t.Run("test constructor", func(t *testing.T) {
 		om := NewKeyTypeValueTypeOrderedMap()
@@ -268,7 +268,7 @@ func TestOrderedMapOperations(t *testing.T) {
 		require.Nil(t, om.Newest())
 	})
 
-	t.Run("test map get newest for empty map", func(t *testing.T) {
+	t.Run("test map foreach", func(t *testing.T) {
 		om, insertedValues := createAndPopulateMap(t)
 
 		var loopResult []*Fruit
@@ -344,6 +344,11 @@ func createAndPopulateMap(t *testing.T) (*KeyTypeValueTypeOrderedMap, []*Fruit) 
 	for _, fruit := range fruits {
 		om.Set(fruit.name, fruit)
 	}
+
+	require.NotNil(t, om.list)
+	require.NotNil(t, om.pairs)
+	require.Equal(t, 3, len(om.pairs))
+	require.Equal(t, 3, om.list.Len())
 
 	return om, fruits
 }
