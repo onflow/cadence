@@ -20,6 +20,7 @@ package interpreter
 
 import (
 	"bytes"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -318,6 +319,57 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 	keyCount := keys.Count()
 	entryCount := len(encodedEntries)
 
+	// In versions <= 2, the dictionary key string function
+	// was accidentally, temporarily changed without a version change.
+	//
+	// The key string format for address values is:
+	// prefix the address with 0x, encode in hex, and strip leading zeros.
+	//
+	// Temporarily and accidentally the format was:
+	// no 0x prefix, and encode and in full length hex.
+	//
+	// Detect this temporary format and correct it
+
+	var hasAddressValueKeyInWrongPre3Format bool
+
+	if d.version <= 2 {
+		for _, keyValue := range keys.Values {
+			keyAddressValue, ok := keyValue.(AddressValue)
+			if !ok {
+				continue
+			}
+
+			currentKeyString := keyAddressValue.KeyString()
+			wrongKeyString := hex.EncodeToString(keyAddressValue[:])
+
+			// Is there a value stored with the current format?
+			// Then no migration is necessary.
+
+			if encodedEntries[currentKeyString] != nil {
+				continue
+			}
+
+			// Is there at least a value stored in the wrong key string format?
+
+			if encodedEntries[wrongKeyString] == nil {
+
+				return nil, fmt.Errorf(
+					"invalid dictionary address value key: "+
+						"could neither find entry for wrong format key %s, nor for current format key %s",
+					wrongKeyString,
+					currentKeyString,
+				)
+			}
+
+			// Migrate the value from the wrong format to the current format
+
+			hasAddressValueKeyInWrongPre3Format = true
+
+			encodedEntries[currentKeyString] = encodedEntries[wrongKeyString]
+			delete(encodedEntries, wrongKeyString)
+		}
+	}
+
 	// The number of entries must either match the number of keys,
 	// or be zero in case the values are deferred
 
@@ -341,6 +393,13 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 	isDeferred := countMismatch && entryCount == 0
 
 	if isDeferred {
+
+		if hasAddressValueKeyInWrongPre3Format {
+			return nil, fmt.Errorf(
+				"invalid dictionary (@ %s): dictionary with address values in pre-3 format and deferred values",
+				strings.Join(path, "."),
+			)
+		}
 
 		deferred = make(map[string]string, keyCount)
 		entries = map[string]Value{}

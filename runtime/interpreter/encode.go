@@ -188,11 +188,14 @@ type EncodingDeferrals struct {
 	Moves  []EncodingDeferralMove
 }
 
+type EncodingPrepareCallback func(value Value, path []string)
+
 // Encoder converts Values into CBOR-encoded bytes.
 //
 type Encoder struct {
-	enc      *cbor.Encoder
-	deferred bool
+	enc             *cbor.Encoder
+	deferred        bool
+	prepareCallback EncodingPrepareCallback
 }
 
 // EncodeValue returns the CBOR-encoded representation of the given value.
@@ -208,13 +211,13 @@ type Encoder struct {
 // which have not been encoded, and which values need to be moved
 // from a previous storage key to another storage key.
 //
-func EncodeValue(value Value, path []string, deferred bool) (
+func EncodeValue(value Value, path []string, deferred bool, prepareCallback EncodingPrepareCallback) (
 	encoded []byte,
 	deferrals *EncodingDeferrals,
 	err error,
 ) {
 	var w bytes.Buffer
-	enc, err := NewEncoder(&w, deferred)
+	enc, err := NewEncoder(&w, deferred, prepareCallback)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -245,7 +248,7 @@ func EncodeValue(value Value, path []string, deferred bool) (
 // NewEncoder initializes an Encoder that will write CBOR-encoded bytes
 // to the given io.Writer.
 //
-func NewEncoder(w io.Writer, deferred bool) (*Encoder, error) {
+func NewEncoder(w io.Writer, deferred bool, prepareCallback EncodingPrepareCallback) (*Encoder, error) {
 	options := cbor.CanonicalEncOptions()
 	options.BigIntConvert = cbor.BigIntConvertNone
 	encMode, err := options.EncMode()
@@ -254,8 +257,9 @@ func NewEncoder(w io.Writer, deferred bool) (*Encoder, error) {
 	}
 	enc := encMode.NewEncoder(w)
 	return &Encoder{
-		enc:      enc,
-		deferred: deferred,
+		enc:             enc,
+		deferred:        deferred,
+		prepareCallback: prepareCallback,
 	}, nil
 }
 
@@ -289,6 +293,10 @@ func (e *Encoder) prepare(
 	interface{},
 	error,
 ) {
+	if e.prepareCallback != nil {
+		e.prepareCallback(v, path)
+	}
+
 	switch v := v.(type) {
 
 	case NilValue:
@@ -416,7 +424,10 @@ func (e *Encoder) prepare(
 		return e.prepareTypeValue(v)
 
 	default:
-		return nil, fmt.Errorf("unsupported value: %[1]T, %[1]v", v)
+		return nil, EncodingUnsupportedValueError{
+			Path:  path,
+			Value: v,
+		}
 	}
 }
 

@@ -54,7 +54,8 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		test.value.SetOwner(&testOwner)
 
 		var err error
-		encoded, deferrals, err = EncodeValue(test.value, nil, test.deferred)
+
+		encoded, deferrals, err = EncodeValue(test.value, nil, test.deferred, nil)
 		require.NoError(t, err)
 
 		if test.encoded != nil {
@@ -339,6 +340,53 @@ func TestEncodeDecodeDictionary(t *testing.T) {
 			},
 		)
 	})
+
+	t.Run("temporary address value key string change in format version 2", func(t *testing.T) {
+		expected := NewDictionaryValueUnownedNonCopying(
+			NewAddressValueFromBytes([]byte{0x42}),
+			Int8Value(42),
+		)
+		expected.Keys.modified = false
+		expected.modified = false
+
+		testEncodeDecode(t,
+			encodeDecodeTest{
+				decodeOnly:            true,
+				decodedValue:          expected,
+				decodeVersionOverride: true,
+				decodeVersion:         2,
+				encoded: []byte{
+					// tag
+					0xd8, cborTagDictionaryValue,
+					// map, 2 pairs of items follow
+					0xa2,
+					// key 0
+					0x0,
+					// array, 1 item follows
+					0x81,
+					// tag
+					0xd8, cborTagAddressValue,
+					// byte sequence, length 1
+					0x41,
+					// address
+					0x42,
+					// key 1
+					0x1,
+					// map, 1 pair of items follow
+					0xa1,
+					// UTF-8 string, length 16
+					0x70,
+					// "0000000000000042"
+					0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x30, 0x34, 0x32,
+					// tag
+					0xd8, cborTagInt8Value,
+					// positive integer 42
+					0x18,
+					0x2a,
+				},
+			})
+	})
+
 }
 
 func TestEncodeDecodeComposite(t *testing.T) {
@@ -4194,4 +4242,38 @@ func TestEncodeDecodeTypeValue(t *testing.T) {
 			},
 		)
 	})
+}
+
+func TestEncodePrepareCallback(t *testing.T) {
+
+	value := NewArrayValueUnownedNonCopying(Int8Value(42))
+
+	type prepareCallback struct {
+		value Value
+		path  []string
+	}
+
+	var prepareCallbacks []prepareCallback
+
+	_, _, err := EncodeValue(value, nil, false, func(value Value, path []string) {
+		prepareCallbacks = append(prepareCallbacks, prepareCallback{
+			value: value,
+			path:  path,
+		})
+	})
+	require.NoError(t, err)
+
+	require.Equal(t,
+		[]prepareCallback{
+			{
+				value: value,
+				path:  nil,
+			},
+			{
+				value: value.Values[0],
+				path:  []string{"0"},
+			},
+		},
+		prepareCallbacks,
+	)
 }

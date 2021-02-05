@@ -5,7 +5,7 @@
 /*
  * Cadence - The resource-oriented smart contract programming language
  *
- * Copyright 2019-2020 Dapper Labs, Inc.
+ * Copyright 2019-2021 Dapper Labs, Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -121,12 +121,12 @@ type StringMemberPair struct {
 	element *list.Element
 }
 
-// next returns a pointer to the next pair.
+// Next returns a pointer to the next pair.
 func (p *StringMemberPair) Next() *StringMemberPair {
 	return listElementToStringMemberPair(p.element.Next())
 }
 
-// prev returns a pointer to the previous pair.
+// Prev returns a pointer to the previous pair.
 func (p *StringMemberPair) Prev() *StringMemberPair {
 	return listElementToStringMemberPair(p.element.Prev())
 }

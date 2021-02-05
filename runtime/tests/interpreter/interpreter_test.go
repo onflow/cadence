@@ -7774,7 +7774,7 @@ func TestInterpretCompositeValueFieldEncodingOrder(t *testing.T) {
 			0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1,
 		})
 
-		encoded, _, err := interpreter.EncodeValue(test, nil, false)
+		encoded, _, err := interpreter.EncodeValue(test, nil, false, nil)
 		require.NoError(t, err)
 
 		encodings[i] = encoded
@@ -7830,7 +7830,7 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 		test.SetOwner(owner)
 
 		var path []string = nil
-		encoded, _, err := interpreter.EncodeValue(test, path, false)
+		encoded, _, err := interpreter.EncodeValue(test, path, false, nil)
 		require.NoError(t, err)
 
 		decoder, err := interpreter.NewDecoder(
