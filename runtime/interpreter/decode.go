@@ -35,12 +35,15 @@ import (
 	"github.com/onflow/cadence/runtime/sema"
 )
 
+type DecodingCallback func(value interface{}, path []string)
+
 // A Decoder decodes CBOR-encoded representations of values.
 //
 type Decoder struct {
-	decoder *cbor.Decoder
-	owner   *common.Address
-	version uint16
+	decoder        *cbor.Decoder
+	owner          *common.Address
+	version        uint16
+	decodeCallback DecodingCallback
 }
 
 // Decode returns a value decoded from its CBOR-encoded representation,
@@ -50,11 +53,19 @@ type Decoder struct {
 // For example, path elements are appended for array elements (the index),
 // dictionary values (the key), and composites (the field name).
 //
-func DecodeValue(b []byte, owner *common.Address, path []string, version uint16) (Value, error) {
+func DecodeValue(
+	data []byte,
+	owner *common.Address,
+	path []string,
+	version uint16,
+	decodeCallback DecodingCallback,
+) (
+	Value,
+	error,
+) {
+	reader := bytes.NewReader(data)
 
-	reader := bytes.NewReader(b)
-
-	decoder, err := NewDecoder(reader, owner, version)
+	decoder, err := NewDecoder(reader, owner, version, decodeCallback)
 	if err != nil {
 		return nil, err
 	}
@@ -72,16 +83,25 @@ func DecodeValue(b []byte, owner *common.Address, path []string, version uint16)
 //
 // It sets the given address as the owner (can be `nil`).
 //
-func NewDecoder(r io.Reader, owner *common.Address, version uint16) (*Decoder, error) {
+func NewDecoder(
+	reader io.Reader,
+	owner *common.Address,
+	version uint16,
+	decodeCallback DecodingCallback,
+) (
+	*Decoder,
+	error,
+) {
 	dm, err := decMode()
 	if err != nil {
 		return nil, err
 	}
 
 	return &Decoder{
-		decoder: dm.NewDecoder(r),
-		owner:   owner,
-		version: version,
+		decoder:        dm.NewDecoder(reader),
+		owner:          owner,
+		version:        version,
+		decodeCallback: decodeCallback,
 	}, nil
 }
 
@@ -107,6 +127,11 @@ func (d *Decoder) Decode(path []string) (Value, error) {
 }
 
 func (d *Decoder) decodeValue(v interface{}, path []string) (Value, error) {
+
+	if d.decodeCallback != nil {
+		d.decodeCallback(v, path)
+	}
+
 	switch v := v.(type) {
 
 	// CBOR Types
