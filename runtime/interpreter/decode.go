@@ -330,7 +330,7 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 	//
 	// Detect this temporary format and correct it
 
-	var hasAddressValueKeyInPre3Format bool
+	var hasAddressValueKeyInWrongPre3Format bool
 
 	if d.version <= 2 {
 		for _, keyValue := range keys.Values {
@@ -346,7 +346,7 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 
 			if encodedEntries[wrongKeyString] != nil {
 
-				hasAddressValueKeyInPre3Format = true
+				hasAddressValueKeyInWrongPre3Format = true
 
 				// Migrate the value from the wrong format to the current format
 
@@ -395,7 +395,7 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 
 	if isDeferred {
 
-		if hasAddressValueKeyInPre3Format {
+		if hasAddressValueKeyInWrongPre3Format {
 			return nil, fmt.Errorf(
 				"invalid dictionary (@ %s): dictionary with address values in pre-3 format and deferred values",
 				strings.Join(path, "."),
