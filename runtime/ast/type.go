@@ -64,6 +64,7 @@ type Type interface {
 	HasPosition
 	fmt.Stringer
 	isType()
+	Equal(other Type) bool
 }
 
 // NominalType represents a named type
@@ -111,6 +112,15 @@ func (t *NominalType) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (t *NominalType) Equal(other Type) bool {
+	otherNominalType, ok := other.(*NominalType)
+	if !ok {
+		return false
+	}
+
+	return t.Identifier.Identifier == otherNominalType.Identifier.Identifier
+}
+
 // OptionalType represents am optional variant of another type
 
 type OptionalType struct {
@@ -145,6 +155,15 @@ func (t *OptionalType) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (t *OptionalType) Equal(other Type) bool {
+	otherOptionalType, ok := other.(*OptionalType)
+	if !ok {
+		return false
+	}
+
+	return t.Type.Equal(otherOptionalType.Type)
+}
+
 // VariableSizedType is a variable sized array type
 
 type VariableSizedType struct {
@@ -167,6 +186,15 @@ func (t *VariableSizedType) MarshalJSON() ([]byte, error) {
 		Type:  "VariableSizedType",
 		Alias: (*Alias)(t),
 	})
+}
+
+func (t *VariableSizedType) Equal(other Type) bool {
+	otherVarSizedType, ok := other.(*VariableSizedType)
+	if !ok {
+		return false
+	}
+
+	return t.Type.Equal(otherVarSizedType.Type)
 }
 
 // ConstantSizedType is a constant sized array type
@@ -194,6 +222,16 @@ func (t *ConstantSizedType) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (t *ConstantSizedType) Equal(other Type) bool {
+	otherConstSizedType, ok := other.(*ConstantSizedType)
+	if !ok {
+		return false
+	}
+
+	return t.Size == otherConstSizedType.Size &&
+		t.Type.Equal(otherConstSizedType.Type)
+}
+
 // DictionaryType
 
 type DictionaryType struct {
@@ -217,6 +255,16 @@ func (t *DictionaryType) MarshalJSON() ([]byte, error) {
 		Type:  "DictionaryType",
 		Alias: (*Alias)(t),
 	})
+}
+
+func (t *DictionaryType) Equal(other Type) bool {
+	dictionaryType, ok := other.(*DictionaryType)
+	if !ok {
+		return false
+	}
+
+	return t.KeyType.Equal(dictionaryType.KeyType) &&
+		t.KeyType.Equal(dictionaryType.KeyType)
 }
 
 // FunctionType
@@ -250,6 +298,26 @@ func (t *FunctionType) MarshalJSON() ([]byte, error) {
 		Type:  "FunctionType",
 		Alias: (*Alias)(t),
 	})
+}
+
+func (t *FunctionType) Equal(other Type) bool {
+	otherFuncType, ok := other.(*FunctionType)
+	if !ok {
+		return false
+	}
+
+	if len(t.ParameterTypeAnnotations) != len(otherFuncType.ParameterTypeAnnotations) {
+		return false
+	}
+
+	for index, paramAnnot := range t.ParameterTypeAnnotations {
+		otherParamAnnot := otherFuncType.ParameterTypeAnnotations[index]
+		if !paramAnnot.Type.Equal(otherParamAnnot.Type) {
+			return false
+		}
+	}
+
+	return t.ReturnTypeAnnotation.Type.Equal(otherFuncType.ReturnTypeAnnotation.Type)
 }
 
 // ReferenceType
@@ -293,6 +361,16 @@ func (t *ReferenceType) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (t *ReferenceType) Equal(other Type) bool {
+	otherRefType, ok := other.(*ReferenceType)
+	if !ok {
+		return false
+	}
+
+	return t.Authorized == otherRefType.Authorized &&
+		t.Type.Equal(otherRefType.Type)
+}
+
 // RestrictedType
 
 type RestrictedType struct {
@@ -328,6 +406,30 @@ func (t *RestrictedType) MarshalJSON() ([]byte, error) {
 		Type:  "RestrictedType",
 		Alias: (*Alias)(t),
 	})
+}
+
+func (t *RestrictedType) Equal(other Type) bool {
+	otherRestrictedType, ok := other.(*RestrictedType)
+	if !ok {
+		return false
+	}
+
+	if !t.Type.Equal(otherRestrictedType.Type) {
+		return false
+	}
+
+	if len(t.Restrictions) != len(otherRestrictedType.Restrictions) {
+		return false
+	}
+
+	for index, restriction := range t.Restrictions {
+		otherRestriction := otherRestrictedType.Restrictions[index]
+		if !restriction.Equal(otherRestriction) {
+			return false
+		}
+	}
+
+	return true
 }
 
 // InstantiationType represents an instantiation of a generic (nominal) type
@@ -374,4 +476,28 @@ func (t *InstantiationType) MarshalJSON() ([]byte, error) {
 		Range: NewRangeFromPositioned(t),
 		Alias: (*Alias)(t),
 	})
+}
+
+func (t *InstantiationType) Equal(other Type) bool {
+	otherInstType, ok := other.(*InstantiationType)
+	if !ok {
+		return false
+	}
+
+	if !t.Type.Equal(otherInstType.Type) {
+		return false
+	}
+
+	if len(t.TypeArguments) != len(otherInstType.TypeArguments) {
+		return false
+	}
+
+	for index, typeArgs := range t.TypeArguments {
+		otherTypeArgs := otherInstType.TypeArguments[index]
+		if !typeArgs.Type.Equal(otherTypeArgs.Type) {
+			return false
+		}
+	}
+
+	return true
 }
