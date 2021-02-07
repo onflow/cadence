@@ -6017,3 +6017,316 @@ func TestPanics(t *testing.T) {
 	)
 	assert.Error(t, err)
 }
+
+func TestContractUpdateValidation(t *testing.T) {
+
+	t.Parallel()
+
+	runtime := NewInterpreterRuntime()
+
+	newDeployTransaction := func(function, name, code string) []byte {
+		return []byte(fmt.Sprintf(`
+			transaction {
+				prepare(signer: AuthAccount) {
+					signer.contracts.%s(name: "%s", code: "%s".decodeHex())
+				}
+			}`,
+			function,
+			name,
+			hex.EncodeToString([]byte(code)),
+		))
+	}
+
+	accountCode := &testAccountStorage{accounts: map[string][]byte{}}
+	var events []cadence.Event
+	runtimeInterface := getMockedRuntimeInterfaceForTxUpdate(t, accountCode, events)
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	deployAndUpdate := func(name string, oldCode string, newCode string) error {
+		deployTx1 := newDeployTransaction("add", name, oldCode)
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		deployTx2 := newDeployTransaction("update__experimental", name, newCode)
+		err = runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx2,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		return err
+	}
+
+	t.Run("change field type", func(t *testing.T) {
+		const oldCode = `
+      		pub contract Test1 {
+          		pub var a: String
+				init() {
+					self.a = "hello"
+				}
+      		}`
+
+		const newCode = `
+			pub contract Test1 {
+				pub var a: Int
+				init() {
+					self.a = 0
+				}
+			}`
+
+		err := deployAndUpdate("Test1", oldCode, newCode)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "error: cannot update contract `Test1` in account 0x42: "+
+			"type annotations does not match for field `a`. expected `String`, found `Int`")
+	})
+
+	t.Run("add field", func(t *testing.T) {
+		const oldCode = `
+      		pub contract Test2 {
+          		pub var a: String
+				init() {
+					self.a = "hello"
+				}
+      		}`
+
+		const newCode = `
+			pub contract Test2 {
+				pub var a: String
+				pub var b: Int
+				init() {
+					self.a = "hello"
+					self.b = 0
+				}
+			}`
+
+		err := deployAndUpdate("Test2", oldCode, newCode)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(),
+			"cannot update contract `Test2` in account 0x42: too many fields. expected 1, found 2")
+	})
+
+	t.Run("remove field", func(t *testing.T) {
+		const oldCode = `
+      		pub contract Test3 {
+          		pub var a: String
+				pub var b: Int
+				init() {
+					self.a = "hello"
+					self.b = 0
+				}
+      		}`
+
+		const newCode = `
+			pub contract Test3 {
+				pub var a: String
+				
+				init() {
+					self.a = "hello"
+				}
+			}`
+
+		err := deployAndUpdate("Test3", oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("change nested decl field type", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test4 {
+
+				pub var a: @TestResource
+
+				init() {
+					self.a <- create Test4.TestResource()
+				}
+
+				pub resource TestResource {
+
+					pub let b: Int
+
+					init() {
+						self.b = 1234
+					}
+				}
+			}`
+
+		const newCode = `
+			pub contract Test4 {
+
+				pub var a: @Test4.TestResource
+
+				init() {
+					self.a <- create Test4.TestResource()
+				}
+
+				pub resource TestResource {
+
+					pub let b: String
+
+					init() {
+						self.b = "string_1234"
+					}
+				}
+			}`
+
+		err := deployAndUpdate("Test4", oldCode, newCode)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(),
+			"cannot update contract `Test4` in account 0x42: type annotations does not "+
+				"match for field `b` in `TestResource`. expected `Int`, found `String`")
+	})
+
+	t.Run("add field to nested decl", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test5 {
+
+				pub var a: @TestResource
+
+				init() {
+					self.a <- create Test5.TestResource()
+				}
+
+				pub resource TestResource {
+
+					pub var b: String
+
+					init() {
+						self.b = "hello"
+					}
+				}
+			}`
+
+		const newCode = `
+			pub contract Test5 {
+
+				pub var a: @Test5.TestResource
+
+				init() {
+					self.a <- create Test5.TestResource()
+				}
+
+				pub resource TestResource {
+
+					pub var b: String
+					pub var c: Int
+
+					init() {
+						self.b = "hello"
+						self.c = 0
+					}
+				}
+			}`
+
+		err := deployAndUpdate("Test5", oldCode, newCode)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(),
+			"error: cannot update contract `Test5` in account 0x42: "+
+				"too many fields in `TestResource`. expected 1, found 2")
+	})
+
+	//t.Run("add field to nested decl", func(t *testing.T) {
+	//	// TODO:
+	//	assert.FailNow(t, "Add a test case for self recursion")
+	//})
+
+	t.Run("add field to nested decl", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test6 {
+
+				pub var x: [TestStruct; 1]
+
+				init() {
+					self.x = [TestStruct()]
+				}
+
+				pub struct TestStruct {
+					pub let a: Int
+					pub var b: Int
+
+					init() {
+						self.a = 123
+						self.b = 456
+					}
+				}
+			}`
+
+		const newCode = `
+			pub contract Test6 {
+
+				pub var x: [TestStruct; 1]
+
+				init() {
+					self.x = [TestStruct()]
+				}
+
+				pub struct TestStruct {
+					pub let a: Int
+					pub var b: String
+
+					init() {
+						self.a = 123
+						self.b = "string_456"
+					}
+				}
+			}`
+
+		err := deployAndUpdate("Test6", oldCode, newCode)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(),
+			"cannot update contract `Test6` in account 0x42: type annotations does not match "+
+				"for field `b` in `TestStruct`. expected `Int`, found `String`")
+	})
+}
+
+type testAccountStorage struct {
+	accounts map[string][]byte
+}
+
+func getMockedRuntimeInterfaceForTxUpdate(
+	t *testing.T,
+	accountStorage *testAccountStorage,
+	events []cadence.Event) *testRuntimeInterface {
+
+	return &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			key := string(location.(common.AddressLocation).ID())
+			return accountStorage.accounts[key], nil
+		},
+		storage: newTestStorage(nil, nil),
+		getSigningAccounts: func() ([]Address, error) {
+			return []Address{common.BytesToAddress([]byte{0x42})}, nil
+		},
+		resolveLocation: singleIdentifierLocationResolver(t),
+		getAccountContractCode: func(address Address, name string) (code []byte, err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
+			return accountStorage.accounts[key], nil
+		},
+		updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
+			location := common.AddressLocation{
+				Address: address,
+				Name:    name,
+			}
+			key := string(location.ID())
+			accountStorage.accounts[key] = code
+			return nil
+		},
+		emitEvent: func(event cadence.Event) error {
+			events = append(events, event)
+			return nil
+		},
+	}
+}

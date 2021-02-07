@@ -118,7 +118,21 @@ func (t *NominalType) Equal(other Type) bool {
 		return false
 	}
 
-	return t.Identifier.Identifier == otherNominalType.Identifier.Identifier
+	if t.Identifier.Identifier != otherNominalType.Identifier.Identifier {
+		return false
+	}
+
+	if len(t.NestedIdentifiers) != len(otherNominalType.NestedIdentifiers) {
+		return false
+	}
+
+	for index, identifier := range t.NestedIdentifiers {
+		otherIdentifier := otherNominalType.NestedIdentifiers[index]
+		if identifier.Identifier != otherIdentifier.Identifier {
+			return false
+		}
+	}
+	return true
 }
 
 // OptionalType represents am optional variant of another type
@@ -228,7 +242,8 @@ func (t *ConstantSizedType) Equal(other Type) bool {
 		return false
 	}
 
-	return t.Size == otherConstSizedType.Size &&
+	return t.Size.Value.Cmp(otherConstSizedType.Size.Value) == 0 &&
+		t.Size.Base == otherConstSizedType.Size.Base &&
 		t.Type.Equal(otherConstSizedType.Type)
 }
 
