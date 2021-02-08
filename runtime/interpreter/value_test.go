@@ -649,7 +649,16 @@ func TestVisitor(t *testing.T) {
 }
 
 func TestBlockValue(t *testing.T) {
-	var block BlockValue = BlockValue{4, 5, &ArrayValue{}, 5.0}
+
+	t.Parallel()
+
+	block := BlockValue{
+		Height:    4,
+		View:      5,
+		ID:        NewArrayValueUnownedNonCopying(),
+		Timestamp: 5.0,
+	}
+
 	// static type test
 	var actualTs = block.Timestamp
 	const expectedTs UFix64Value = 5.0
