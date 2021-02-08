@@ -36,7 +36,9 @@ func TestInterpreterOptionalBoxing(t *testing.T) {
 	checker, err := sema.NewChecker(nil, utils.TestLocation)
 	require.NoError(t, err)
 
-	inter, err := NewInterpreter(checker)
+	program := ProgramFromChecker(checker)
+
+	inter, err := NewInterpreter(program, checker.Location)
 	require.NoError(t, err)
 
 	t.Run("Bool to Bool?", func(t *testing.T) {
@@ -111,7 +113,9 @@ func TestInterpreterBoxing(t *testing.T) {
 	checker, err := sema.NewChecker(nil, utils.TestLocation)
 	require.NoError(t, err)
 
-	inter, err := NewInterpreter(checker)
+	program := ProgramFromChecker(checker)
+
+	inter, err := NewInterpreter(program, checker.Location)
 	require.NoError(t, err)
 
 	for _, anyType := range []sema.Type{

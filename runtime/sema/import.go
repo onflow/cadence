@@ -34,7 +34,7 @@ type Import interface {
 }
 
 // ImportElement
-
+//
 type ImportElement struct {
 	DeclarationKind common.DeclarationKind
 	Access          ast.Access
@@ -42,10 +42,10 @@ type ImportElement struct {
 	ArgumentLabels  []string
 }
 
-// CheckerImport
-
-type CheckerImport struct {
-	Checker *Checker
+// ElaborationImport
+//
+type ElaborationImport struct {
+	Elaboration *Elaboration
 }
 
 func variablesToImportElements(variables map[string]*Variable) map[string]ImportElement {
@@ -61,34 +61,34 @@ func variablesToImportElements(variables map[string]*Variable) map[string]Import
 	return elements
 }
 
-func (i CheckerImport) AllValueElements() map[string]ImportElement {
-	return variablesToImportElements(i.Checker.Elaboration.GlobalValues)
+func (i ElaborationImport) AllValueElements() map[string]ImportElement {
+	return variablesToImportElements(i.Elaboration.GlobalValues)
 }
 
-func (i CheckerImport) IsImportableValue(name string) bool {
+func (i ElaborationImport) IsImportableValue(name string) bool {
 	if _, ok := BaseValues[name]; ok {
 		return false
 	}
 
-	_, isPredeclaredValue := i.Checker.Elaboration.EffectivePredeclaredValues[name]
+	_, isPredeclaredValue := i.Elaboration.EffectivePredeclaredValues[name]
 	return !isPredeclaredValue
 }
 
-func (i CheckerImport) AllTypeElements() map[string]ImportElement {
-	return variablesToImportElements(i.Checker.Elaboration.GlobalTypes)
+func (i ElaborationImport) AllTypeElements() map[string]ImportElement {
+	return variablesToImportElements(i.Elaboration.GlobalTypes)
 }
 
-func (i CheckerImport) IsImportableType(name string) bool {
+func (i ElaborationImport) IsImportableType(name string) bool {
 	if _, ok := baseTypes[name]; ok {
 		return false
 	}
 
-	_, isPredeclaredType := i.Checker.Elaboration.EffectivePredeclaredTypes[name]
+	_, isPredeclaredType := i.Elaboration.EffectivePredeclaredTypes[name]
 	return !isPredeclaredType
 }
 
-func (i CheckerImport) IsChecking() bool {
-	return i.Checker.isChecking
+func (i ElaborationImport) IsChecking() bool {
+	return i.Elaboration.IsChecking()
 }
 
 // VirtualImport

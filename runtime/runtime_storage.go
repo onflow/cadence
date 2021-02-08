@@ -165,7 +165,13 @@ func (s *runtimeStorage) readValue(
 
 	reportMetric(
 		func() {
-			storedValue, err = interpreter.DecodeValue(storedData, &address, []string{key}, version)
+			storedValue, err = interpreter.DecodeValue(
+				storedData,
+				&address,
+				[]string{key},
+				version,
+				s.decodeCallback,
+			)
 		},
 		s.runtimeInterface,
 		func(metrics Metrics, duration time.Duration) {
@@ -368,9 +374,9 @@ func (s *runtimeStorage) move(
 	}
 }
 
-func (s *runtimeStorage) prepareCallback(value interpreter.Value, path []string) {
+func (s *runtimeStorage) decodeCallback(value interface{}, path []string) {
 	logMessage := fmt.Sprintf(
-		"encoding value for key %[1]s: %[2]T, %[2]v",
+		"decoding value for key %s: %T",
 		path,
 		value,
 	)
@@ -382,4 +388,19 @@ func (s *runtimeStorage) prepareCallback(value interpreter.Value, path []string)
 		panic(err)
 	}
 
+}
+
+func (s *runtimeStorage) prepareCallback(value interpreter.Value, path []string) {
+	logMessage := fmt.Sprintf(
+		"encoding value for key %s: %T",
+		path,
+		value,
+	)
+	var err error
+	wrapPanic(func() {
+		err = s.runtimeInterface.ImplementationDebugLog(logMessage)
+	})
+	if err != nil {
+		panic(err)
+	}
 }

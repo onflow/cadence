@@ -68,7 +68,7 @@ func main() {
 		if version == 0 {
 			continue
 		}
-		_, err = interpreter.DecodeValue(data, nil, nil, version)
+		_, err = interpreter.DecodeValue(data, nil, nil, version, nil)
 		if err != nil {
 			log.Fatal(err)
 		}

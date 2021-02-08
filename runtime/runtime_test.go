@@ -25,6 +25,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -88,8 +90,8 @@ func newTestStorage(
 type testRuntimeInterface struct {
 	resolveLocation           func(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
 	getCode                   func(_ Location) ([]byte, error)
-	getCachedProgram          func(Location) (*ast.Program, error)
-	cacheProgram              func(Location, *ast.Program) error
+	getProgram                func(Location) (*interpreter.Program, error)
+	setProgram                func(Location, *interpreter.Program) error
 	storage                   testRuntimeInterfaceStorage
 	createAccount             func(payer Address) (address Address, err error)
 	addAccountKey             func(address Address, publicKey []byte) error
@@ -119,11 +121,13 @@ type testRuntimeInterface struct {
 	) (bool, error)
 	hash                   func(data []byte, hashAlgorithm string) ([]byte, error)
 	setCadenceValue        func(owner Address, key string, value cadence.Value) (err error)
-	getStorageUsed         func(address Address) (uint64, error)
-	getStorageCapacity     func(address Address) (uint64, error)
+	getStorageUsed         func(_ Address) (uint64, error)
+	getStorageCapacity     func(_ Address) (uint64, error)
+	programs               map[common.LocationID]*interpreter.Program
 	implementationDebugLog func(message string) error
 }
 
+// testRuntimeInterface should implement Interface
 var _ Interface = &testRuntimeInterface{}
 
 func (i *testRuntimeInterface) ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
@@ -145,18 +149,27 @@ func (i *testRuntimeInterface) GetCode(location Location) ([]byte, error) {
 	return i.getCode(location)
 }
 
-func (i *testRuntimeInterface) GetCachedProgram(location Location) (*ast.Program, error) {
-	if i.getCachedProgram == nil {
-		return nil, nil
+func (i *testRuntimeInterface) GetProgram(location Location) (*interpreter.Program, error) {
+	if i.getProgram == nil {
+		if i.programs == nil {
+			i.programs = map[common.LocationID]*interpreter.Program{}
+		}
+		return i.programs[location.ID()], nil
 	}
-	return i.getCachedProgram(location)
+
+	return i.getProgram(location)
 }
 
-func (i *testRuntimeInterface) CacheProgram(location Location, program *ast.Program) error {
-	if i.cacheProgram == nil {
+func (i *testRuntimeInterface) SetProgram(location Location, program *interpreter.Program) error {
+	if i.setProgram == nil {
+		if i.programs == nil {
+			i.programs = map[common.LocationID]*interpreter.Program{}
+		}
+		i.programs[location.ID()] = program
 		return nil
 	}
-	return i.cacheProgram(location, program)
+
+	return i.setProgram(location, program)
 }
 
 func (i *testRuntimeInterface) ValueExists(owner, key []byte) (exists bool, err error) {
@@ -356,7 +369,7 @@ func TestRuntimeImport(t *testing.T) {
 
 	importedScript := []byte(`
       pub fun answer(): Int {
-        return 42
+          return 42
       }
     `)
 
@@ -372,6 +385,8 @@ func TestRuntimeImport(t *testing.T) {
         }
     `)
 
+	var checkCount int
+
 	runtimeInterface := &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			switch location {
@@ -381,51 +396,154 @@ func TestRuntimeImport(t *testing.T) {
 				return nil, fmt.Errorf("unknown import location: %s", location)
 			}
 		},
+		programChecked: func(location common.Location, duration time.Duration) {
+			checkCount += 1
+		},
 	}
 
 	nextTransactionLocation := newTransactionLocationGenerator()
 
-	value, err := runtime.ExecuteScript(
-		Script{
-			Source: script,
-		},
-		Context{
-			Interface: runtimeInterface,
-			Location:  nextTransactionLocation(),
-		},
-	)
-	require.NoError(t, err)
+	const transactionCount = 10
+	for i := 0; i < transactionCount; i++ {
 
-	assert.Equal(t, cadence.NewInt(42), value)
+		value, err := runtime.ExecuteScript(
+			Script{
+				Source: script,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		assert.Equal(t, cadence.NewInt(42), value)
+	}
+	require.Equal(t, transactionCount+1, checkCount)
 }
 
-func TestRuntimeProgramCache(t *testing.T) {
+func TestRuntimeConcurrentImport(t *testing.T) {
 
 	t.Parallel()
 
-	programCache := map[common.LocationID]*ast.Program{}
-	cacheHits := make(map[common.LocationID]bool)
+	runtime := NewInterpreterRuntime()
 
 	importedScript := []byte(`
-	transaction {
-		prepare() {}
-		execute {}
+      pub fun answer(): Int {
+          return 42
+      }
+    `)
+
+	script := []byte(`
+      import "imported"
+
+      pub fun main(): Int {
+          let answer = answer()
+          if answer != 42 {
+            panic("?!")
+          }
+          return answer
+        }
+    `)
+
+	var checkCount uint64
+	var programsLock sync.RWMutex
+	programs := map[common.LocationID]*interpreter.Program{}
+
+	runtimeInterface := &testRuntimeInterface{
+		getCode: func(location Location) (bytes []byte, err error) {
+			switch location {
+			case common.StringLocation("imported"):
+				return importedScript, nil
+			default:
+				return nil, fmt.Errorf("unknown import location: %s", location)
+			}
+		},
+		programChecked: func(location common.Location, duration time.Duration) {
+			atomic.AddUint64(&checkCount, 1)
+		},
+		setProgram: func(location Location, program *interpreter.Program) error {
+			programsLock.Lock()
+			defer programsLock.Unlock()
+
+			programs[location.ID()] = program
+
+			return nil
+		},
+		getProgram: func(location Location) (*interpreter.Program, error) {
+			programsLock.RLock()
+			defer programsLock.RUnlock()
+
+			program := programs[location.ID()]
+
+			return program, nil
+		},
 	}
+
+	nextTransactionLocation := newTransactionLocationGenerator()
+
+	var wg sync.WaitGroup
+	const concurrency uint64 = 10
+	for i := uint64(0); i < concurrency; i++ {
+
+		location := nextTransactionLocation()
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			value, err := runtime.ExecuteScript(
+				Script{
+					Source: script,
+				},
+				Context{
+					Interface: runtimeInterface,
+					Location:  location,
+				},
+			)
+			require.NoError(t, err)
+
+			assert.Equal(t, cadence.NewInt(42), value)
+		}()
+	}
+	wg.Wait()
+
+	// TODO:
+	//   Ideally we would expect the imported program only be checked once
+	//   (`concurrency` transactions + 1 for the imported program),
+	//   however, currently the imported program gets re-checked if it is currently being checked.
+	//   This can probably be optimized by synchronizing the checking of a program using `sync`.
+	//
+	//require.Equal(t, concurrency+1, checkCount)
+}
+
+func TestRuntimeProgramSetAndGet(t *testing.T) {
+
+	t.Parallel()
+
+	programs := map[common.LocationID]*interpreter.Program{}
+	programsHits := make(map[common.LocationID]bool)
+
+	importedScript := []byte(`
+      transaction {
+          prepare() {}
+          execute {}
+      }
 	`)
 	importedScriptLocation := common.StringLocation("imported")
 
 	runtime := NewInterpreterRuntime()
 	runtimeInterface := &testRuntimeInterface{
-		getCachedProgram: func(location common.Location) (*ast.Program, error) {
-			program, found := programCache[location.ID()]
-			cacheHits[location.ID()] = found
+		getProgram: func(location common.Location) (*interpreter.Program, error) {
+			program, found := programs[location.ID()]
+			programsHits[location.ID()] = found
 			if !found {
 				return nil, nil
 			}
 			return program, nil
 		},
-		cacheProgram: func(location common.Location, program *ast.Program) error {
-			programCache[location.ID()] = program
+		setProgram: func(location common.Location, program *interpreter.Program) error {
+			programs[location.ID()] = program
 			return nil
 		},
 		getCode: func(location Location) ([]byte, error) {
@@ -438,19 +556,19 @@ func TestRuntimeProgramCache(t *testing.T) {
 		},
 	}
 
-	t.Run("empty cache, cache miss", func(t *testing.T) {
+	t.Run("empty programs, miss", func(t *testing.T) {
 
 		script := []byte(`
-		import "imported"
+          import "imported"
 
-		transaction {
-			prepare() {}
-			execute {}
-		}
+          transaction {
+              prepare() {}
+              execute {}
+          }
 		`)
 		scriptLocation := common.StringLocation("placeholder")
 
-		// Initial call, should parse script, store result in cache.
+		// Initial call, should parse script, store program.
 		_, err := runtime.ParseAndCheckProgram(
 			script,
 			Context{
@@ -460,28 +578,28 @@ func TestRuntimeProgramCache(t *testing.T) {
 		)
 		assert.NoError(t, err)
 
-		// Program was added to cache.
-		cachedProgram, exists := programCache[scriptLocation.ID()]
+		// Program was added to stored programs.
+		storedProgram, exists := programs[scriptLocation.ID()]
 		assert.True(t, exists)
-		assert.NotNil(t, cachedProgram)
+		assert.NotNil(t, storedProgram)
 
-		// Script was not in cache.
-		assert.False(t, cacheHits[scriptLocation.ID()])
+		// Script was not in stored programs.
+		assert.False(t, programsHits[scriptLocation.ID()])
 	})
 
-	t.Run("program previously parsed, cache hit", func(t *testing.T) {
+	t.Run("program previously parsed, hit", func(t *testing.T) {
 
 		script := []byte(`
-		import "imported"
+          import "imported"
 
-		transaction {
-			prepare() {}
-			execute {}
-		}
+          transaction {
+              prepare() {}
+              execute {}
+          }
 		`)
 		scriptLocation := common.StringLocation("placeholder")
 
-		// Call a second time to hit the cache
+		// Call a second time to hit stored programs.
 		_, err := runtime.ParseAndCheckProgram(
 			script,
 			Context{
@@ -491,23 +609,23 @@ func TestRuntimeProgramCache(t *testing.T) {
 		)
 		assert.NoError(t, err)
 
-		// Script was in cache.
-		assert.True(t, cacheHits[scriptLocation.ID()])
+		// Script was not in stored programs.
+		assert.False(t, programsHits[scriptLocation.ID()])
 	})
 
-	t.Run("imported program previously parsed, cache hit", func(t *testing.T) {
+	t.Run("imported program previously parsed, hit", func(t *testing.T) {
 
 		script := []byte(`
-		import "imported"
+          import "imported"
 
-		transaction {
-			prepare() {}
-			execute {}
-		}
+          transaction {
+              prepare() {}
+              execute {}
+          }
 		`)
 		scriptLocation := common.StringLocation("placeholder")
 
-		// Call a second time to hit the cache
+		// Call a second time to hit the stored programs
 		_, err := runtime.ParseAndCheckProgram(
 			script,
 			Context{
@@ -517,10 +635,10 @@ func TestRuntimeProgramCache(t *testing.T) {
 		)
 		assert.NoError(t, err)
 
-		// Script was in cache.
-		assert.True(t, cacheHits[scriptLocation.ID()])
-		// Import was in cache.
-		assert.True(t, cacheHits[importedScriptLocation.ID()])
+		// Script was not in stored programs.
+		assert.False(t, programsHits[scriptLocation.ID()])
+		// Import was in stored programs.
+		assert.True(t, programsHits[importedScriptLocation.ID()])
 	})
 }
 
@@ -612,14 +730,16 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 
 	t.Parallel()
 
-	var tests = []struct {
+	type testCase struct {
 		label        string
 		script       string
 		args         [][]byte
 		authorizers  []Address
 		expectedLogs []string
 		check        func(t *testing.T, err error)
-	}{
+	}
+
+	var tests = []testCase{
 		{
 			label: "Single argument",
 			script: `
@@ -869,14 +989,18 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.label, func(t *testing.T) {
+	test := func(tc testCase) {
+
+		t.Run(tc.label, func(t *testing.T) {
+			t.Parallel()
 			rt := NewInterpreterRuntime()
 
 			var loggedMessages []string
 
 			runtimeInterface := &testRuntimeInterface{
-				getSigningAccounts: func() ([]Address, error) { return tt.authorizers, nil },
+				getSigningAccounts: func() ([]Address, error) {
+					return tc.authorizers, nil
+				},
 				decodeArgument: func(b []byte, t cadence.Type) (cadence.Value, error) {
 					return jsoncdc.Decode(b)
 				},
@@ -887,8 +1011,8 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 
 			err := rt.ExecuteTransaction(
 				Script{
-					Source:    []byte(tt.script),
-					Arguments: tt.args,
+					Source:    []byte(tc.script),
+					Arguments: tc.args,
 				},
 				Context{
 					Interface: runtimeInterface,
@@ -896,17 +1020,21 @@ func TestRuntimeTransactionWithArguments(t *testing.T) {
 				},
 			)
 
-			if tt.check != nil {
-				tt.check(t, err)
+			if tc.check != nil {
+				tc.check(t, err)
 			} else {
 				if !assert.NoError(t, err) {
 					for err := err; err != nil; err = errors.Unwrap(err) {
 						t.Log(err)
 					}
 				}
-				assert.ElementsMatch(t, tt.expectedLogs, loggedMessages)
+				assert.ElementsMatch(t, tc.expectedLogs, loggedMessages)
 			}
 		})
+	}
+
+	for _, tt := range tests {
+		test(tt)
 	}
 }
 
@@ -2875,7 +3003,9 @@ func TestRuntimeContractNestedResource(t *testing.T) {
 			accountCode = code
 			return nil
 		},
-		emitEvent: func(event cadence.Event) error { return nil },
+		emitEvent: func(event cadence.Event) error {
+			return nil
+		},
 		log: func(message string) {
 			loggedMessage = message
 		},
@@ -4126,7 +4256,6 @@ func TestInterpretResourceOwnerFieldUseComposite(t *testing.T) {
 
 	accountCodes := map[string][]byte{}
 	var events []cadence.Event
-
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
@@ -4306,7 +4435,6 @@ func TestInterpretResourceOwnerFieldUseArray(t *testing.T) {
 
 	accountCodes := map[string][]byte{}
 	var events []cadence.Event
-
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
@@ -4491,7 +4619,6 @@ func TestInterpretResourceOwnerFieldUseDictionary(t *testing.T) {
 
 	accountCodes := map[string][]byte{}
 	var events []cadence.Event
-
 	var loggedMessages []string
 
 	runtimeInterface := &testRuntimeInterface{
@@ -5252,8 +5379,6 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 	accountCodes := map[string][]byte{}
 	var events []cadence.Event
 
-	cachedPrograms := map[common.LocationID]*ast.Program{}
-
 	var accountCounter uint8 = 0
 
 	var signerAddresses []Address
@@ -5266,13 +5391,6 @@ func TestRuntimeDeployCodeCaching(t *testing.T) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			key := string(location.(common.AddressLocation).ID())
 			return accountCodes[key], nil
-		},
-		cacheProgram: func(location Location, program *ast.Program) error {
-			cachedPrograms[location.ID()] = program
-			return nil
-		},
-		getCachedProgram: func(location Location) (*ast.Program, error) {
-			return cachedPrograms[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -5396,13 +5514,11 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	accountCodes := map[string][]byte{}
 	var events []cadence.Event
 
-	cachedPrograms := map[common.LocationID]*ast.Program{}
-
 	var accountCounter uint8 = 0
 
 	var signerAddresses []Address
 
-	var cacheHits []string
+	var programHits []string
 
 	runtimeInterface := &testRuntimeInterface{
 		createAccount: func(payer Address) (address Address, err error) {
@@ -5412,14 +5528,6 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 		getCode: func(location Location) (bytes []byte, err error) {
 			key := string(location.(common.AddressLocation).ID())
 			return accountCodes[key], nil
-		},
-		cacheProgram: func(location Location, program *ast.Program) error {
-			cachedPrograms[location.ID()] = program
-			return nil
-		},
-		getCachedProgram: func(location Location) (*ast.Program, error) {
-			cacheHits = append(cacheHits, string(location.ID()))
-			return cachedPrograms[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -5468,7 +5576,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 
 	// deploy the contract
 
-	cacheHits = nil
+	programHits = nil
 
 	signerAddresses = []Address{{accountCounter}}
 
@@ -5482,7 +5590,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Empty(t, cacheHits)
+	require.Empty(t, programHits)
 
 	// call the initial hello function
 
@@ -5502,7 +5610,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 
 	// update the contract
 
-	cacheHits = nil
+	programHits = nil
 
 	err = runtime.ExecuteTransaction(
 		Script{
@@ -5514,7 +5622,7 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 		},
 	)
 	require.NoError(t, err)
-	require.Empty(t, cacheHits)
+	require.Empty(t, programHits)
 
 	// call the new hello function
 
@@ -5531,10 +5639,10 @@ func TestRuntimeUpdateCodeCaching(t *testing.T) {
 	require.Equal(t, cadence.NewString("2"), result2)
 }
 
-func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
+func TestRuntimeNoProgramsHitForToplevelPrograms(t *testing.T) {
 
-	// We do not want to hit the cache for toplevel programs (scripts and
-	// transactions) until we have moved the caching layer to Cadence.
+	// We do not want to hit the stored programs for toplevel programs
+	// (scripts and transactions) until we have moved the caching layer to Cadence.
 
 	t.Parallel()
 
@@ -5578,13 +5686,13 @@ func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
 	accountCodes := map[string][]byte{}
 	var events []cadence.Event
 
-	cachedPrograms := map[common.LocationID]*ast.Program{}
+	programs := map[common.LocationID]*interpreter.Program{}
 
 	var accountCounter uint8 = 0
 
 	var signerAddresses []Address
 
-	var cacheHits []string
+	var programsHits []string
 
 	runtimeInterface := &testRuntimeInterface{
 		createAccount: func(payer Address) (address Address, err error) {
@@ -5595,13 +5703,13 @@ func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
 			key := string(location.(common.AddressLocation).ID())
 			return accountCodes[key], nil
 		},
-		cacheProgram: func(location Location, program *ast.Program) error {
-			cachedPrograms[location.ID()] = program
+		setProgram: func(location Location, program *interpreter.Program) error {
+			programs[location.ID()] = program
 			return nil
 		},
-		getCachedProgram: func(location Location) (*ast.Program, error) {
-			cacheHits = append(cacheHits, string(location.ID()))
-			return cachedPrograms[location.ID()], nil
+		getProgram: func(location Location) (*interpreter.Program, error) {
+			programsHits = append(programsHits, string(location.ID()))
+			return programs[location.ID()], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -5678,15 +5786,11 @@ func TestRuntimeNoCacheHitForToplevelPrograms(t *testing.T) {
 
 	// We should only receive a cache hit for the imported program, not the transactions/scripts.
 
-	// NOTE: if this test case fails with an additional cache hit,
-	// then the deployment is incorrectly using the cache!
+	require.GreaterOrEqual(t, len(programsHits), 1)
 
-	require.Equal(t,
-		[]string{
-			"A.0100000000000000.HelloWorld",
-		},
-		cacheHits,
-	)
+	for _, cacheHit := range programsHits {
+		require.Equal(t, "A.0100000000000000.HelloWorld", cacheHit)
+	}
 }
 
 func TestRuntimeTransaction_ContractUpdate(t *testing.T) {
@@ -5920,7 +6024,8 @@ func TestRuntime(t *testing.T) {
 	test := func(tc testCase) {
 		t.Run(tc.name, func(t *testing.T) {
 
-			t.Parallel()
+			// NOTE: to parallelize this sub-test,
+			// access to `programs` must be made thread-safe first
 
 			_, err := runtime.ExecuteScript(
 				Script{

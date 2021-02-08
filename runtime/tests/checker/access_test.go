@@ -27,7 +27,6 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	. "github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -626,132 +625,6 @@ func TestCheckAccessModifierGlobalCompositeDeclaration(t *testing.T) {
 				}
 			}
 		}
-	}
-}
-
-func TestCheckAccessImportGlobalValue(t *testing.T) {
-
-	t.Parallel()
-
-	checkModeTests := map[sema.AccessCheckMode]func(*testing.T, error){
-		sema.AccessCheckModeStrict: func(t *testing.T, err error) {
-			errs := ExpectCheckerErrors(t, err, 2)
-
-			require.IsType(t, &sema.InvalidAccessError{}, errs[0])
-			assert.Equal(t,
-				"a",
-				errs[0].(*sema.InvalidAccessError).Name,
-			)
-
-			require.IsType(t, &sema.InvalidAccessError{}, errs[1])
-			assert.Equal(t,
-				"c",
-				errs[1].(*sema.InvalidAccessError).Name,
-			)
-		},
-		sema.AccessCheckModeNotSpecifiedRestricted: func(t *testing.T, err error) {
-			errs := ExpectCheckerErrors(t, err, 2)
-
-			require.IsType(t, &sema.InvalidAccessError{}, errs[0])
-			assert.Equal(t,
-				"a",
-				errs[0].(*sema.InvalidAccessError).Name,
-			)
-
-			require.IsType(t, &sema.InvalidAccessError{}, errs[1])
-			assert.Equal(t,
-				"c",
-				errs[1].(*sema.InvalidAccessError).Name,
-			)
-		},
-		sema.AccessCheckModeNotSpecifiedUnrestricted: func(t *testing.T, err error) {
-			errs := ExpectCheckerErrors(t, err, 1)
-
-			require.IsType(t, &sema.InvalidAccessError{}, errs[0])
-			assert.Equal(t,
-				"a",
-				errs[0].(*sema.InvalidAccessError).Name,
-			)
-		},
-		sema.AccessCheckModeNone: expectSuccess,
-	}
-
-	require.Len(t, checkModeTests, len(sema.AccessCheckModes))
-
-	for checkMode, check := range checkModeTests {
-
-		t.Run(checkMode.String(), func(t *testing.T) {
-
-			lastAccessModifier := ""
-			if checkMode == sema.AccessCheckModeStrict {
-				lastAccessModifier = "priv"
-			}
-
-			tests := []string{
-				fmt.Sprintf(
-					`
-                      priv fun a() {}
-                      pub fun b() {}
-                      %s fun c() {}
-                    `,
-					lastAccessModifier,
-				),
-			}
-
-			for _, variableKind := range ast.VariableKinds {
-
-				tests = append(tests,
-					fmt.Sprintf(
-						`
-                           priv %[1]s a = 1
-                           pub %[1]s b = 2
-                           %[2]s %[1]s c = 3
-                        `,
-						variableKind.Keyword(),
-						lastAccessModifier,
-					),
-				)
-			}
-
-			for _, test := range tests {
-				// NOTE: only parse, don't check imported program.
-				// will be checked by checker checking importing program
-
-				imported, err := parser2.ParseProgram(test)
-
-				require.NoError(t, err)
-
-				_, err = ParseAndCheckWithOptions(t,
-					`
-                       import a, b, c from "imported"
-                    `,
-					ParseAndCheckOptions{
-						Options: []sema.Option{
-							sema.WithAccessCheckMode(checkMode),
-							sema.WithImportHandler(
-								func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
-									importChecker, err := checker.EnsureLoaded(
-										location,
-										func() *ast.Program {
-											return imported
-										},
-									)
-									if err != nil {
-										return nil, err
-									}
-
-									return sema.CheckerImport{
-										Checker: importChecker,
-									}, nil
-								},
-							),
-						},
-					},
-				)
-
-				check(t, err)
-			}
-		})
 	}
 }
 
@@ -1672,6 +1545,119 @@ func TestCheckAccessInterfaceFieldVariableDeclarationWithSecondValue(t *testing.
 	}
 }
 
+func TestCheckAccessImportGlobalValue(t *testing.T) {
+
+	t.Parallel()
+
+	checkModeTests := map[sema.AccessCheckMode]func(*testing.T, error){
+		sema.AccessCheckModeStrict: func(t *testing.T, err error) {
+			errs := ExpectCheckerErrors(t, err, 2)
+
+			require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+			assert.Equal(t,
+				"a",
+				errs[0].(*sema.InvalidAccessError).Name,
+			)
+
+			require.IsType(t, &sema.InvalidAccessError{}, errs[1])
+			assert.Equal(t,
+				"c",
+				errs[1].(*sema.InvalidAccessError).Name,
+			)
+		},
+		sema.AccessCheckModeNotSpecifiedRestricted: func(t *testing.T, err error) {
+			errs := ExpectCheckerErrors(t, err, 2)
+
+			require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+			assert.Equal(t,
+				"a",
+				errs[0].(*sema.InvalidAccessError).Name,
+			)
+
+			require.IsType(t, &sema.InvalidAccessError{}, errs[1])
+			assert.Equal(t,
+				"c",
+				errs[1].(*sema.InvalidAccessError).Name,
+			)
+		},
+		sema.AccessCheckModeNotSpecifiedUnrestricted: func(t *testing.T, err error) {
+			errs := ExpectCheckerErrors(t, err, 1)
+
+			require.IsType(t, &sema.InvalidAccessError{}, errs[0])
+			assert.Equal(t,
+				"a",
+				errs[0].(*sema.InvalidAccessError).Name,
+			)
+		},
+		sema.AccessCheckModeNone: expectSuccess,
+	}
+
+	require.Len(t, checkModeTests, len(sema.AccessCheckModes))
+
+	for checkMode, check := range checkModeTests {
+
+		t.Run(checkMode.String(), func(t *testing.T) {
+
+			lastAccessModifier := ""
+			if checkMode == sema.AccessCheckModeStrict {
+				lastAccessModifier = "priv"
+			}
+
+			tests := []string{
+				fmt.Sprintf(
+					`
+                      priv fun a() {}
+                      pub fun b() {}
+                      %s fun c() {}
+                    `,
+					lastAccessModifier,
+				),
+			}
+
+			for _, variableKind := range ast.VariableKinds {
+
+				tests = append(tests,
+					fmt.Sprintf(
+						`
+                           priv %[1]s a = 1
+                           pub %[1]s b = 2
+                           %[2]s %[1]s c = 3
+                        `,
+						variableKind.Keyword(),
+						lastAccessModifier,
+					),
+				)
+			}
+
+			for _, test := range tests {
+
+				_, err := ParseAndCheckWithOptions(t,
+					`
+                       import a, b, c from "imported"
+                    `,
+					ParseAndCheckOptions{
+						Options: []sema.Option{
+							sema.WithAccessCheckMode(checkMode),
+							sema.WithImportHandler(
+								func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+									importedChecker, err := ParseAndCheck(t, test)
+									require.NoError(t, err)
+
+									return sema.ElaborationImport{
+										Elaboration: importedChecker.Elaboration,
+									}, nil
+								},
+							),
+						},
+					},
+				)
+
+				check(t, err)
+			}
+		})
+	}
+}
+
 func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
 
 	t.Parallel()
@@ -1823,28 +1809,12 @@ func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
 
 		t.Run(checkMode.String(), func(t *testing.T) {
 
-			// NOTE: only parse, don't check imported program.
-			// will be checked by checker checking importing program
-
 			lastAccessModifier := ""
 			if checkMode == sema.AccessCheckModeStrict {
 				lastAccessModifier = "priv"
 			}
 
-			imported, err := parser2.ParseProgram(
-				fmt.Sprintf(
-					`
-                       priv var a = 1
-                       pub var b = 2
-                       %s var c = 3
-                    `,
-					lastAccessModifier,
-				),
-			)
-
-			require.NoError(t, err)
-
-			_, err = ParseAndCheckWithOptions(t,
+			_, err := ParseAndCheckWithOptions(t,
 				`
                   import a, b, c from "imported"
 
@@ -1867,19 +1837,22 @@ func TestCheckAccessImportGlobalValueAssignmentAndSwap(t *testing.T) {
 					Options: []sema.Option{
 						sema.WithAccessCheckMode(checkMode),
 						sema.WithImportHandler(
-							func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
-								importChecker, err := checker.EnsureLoaded(
-									location,
-									func() *ast.Program {
-										return imported
-									},
-								)
-								if err != nil {
-									return nil, err
-								}
+							func(checker *sema.Checker, location common.Location) (sema.Import, error) {
 
-								return sema.CheckerImport{
-									Checker: importChecker,
+								imported, err := ParseAndCheck(t,
+									fmt.Sprintf(
+										`
+                                           priv var a = 1
+                                           pub var b = 2
+                                           %s var c = 3
+                                        `,
+										lastAccessModifier,
+									),
+								)
+								require.NoError(t, err)
+
+								return sema.ElaborationImport{
+									Elaboration: imported.Elaboration,
 								}, nil
 							},
 						),
@@ -1896,23 +1869,7 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 
 	t.Parallel()
 
-	// NOTE: only parse, don't check imported program.
-	// will be checked by checker checking importing program
-
-	imported, err := parser2.ParseProgram(`
-       pub resource R {}
-
-       pub fun createR(): @R {
-           return <-create R()
-       }
-
-       priv var x <- createR()
-       pub var y <- createR()
-    `)
-
-	require.NoError(t, err)
-
-	_, err = ParseAndCheckWithOptions(t,
+	_, err := ParseAndCheckWithOptions(t,
 		`
            import x, y, createR from "imported"
 
@@ -1927,19 +1884,22 @@ func TestCheckAccessImportGlobalValueVariableDeclarationWithSecondValue(t *testi
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
-						importChecker, err := checker.EnsureLoaded(
-							location,
-							func() *ast.Program {
-								return imported
-							},
-						)
-						if err != nil {
-							return nil, err
-						}
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
 
-						return sema.CheckerImport{
-							Checker: importChecker,
+						imported, err := ParseAndCheck(t, `
+                           pub resource R {}
+
+                           pub fun createR(): @R {
+                               return <-create R()
+                           }
+
+                           priv var x <- createR()
+                           pub var y <- createR()
+                        `)
+						require.NoError(t, err)
+
+						return sema.ElaborationImport{
+							Elaboration: imported.Elaboration,
 						}, nil
 					},
 				),

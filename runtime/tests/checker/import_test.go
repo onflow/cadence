@@ -69,9 +69,9 @@ func TestCheckRepeatedImport(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
-						return sema.CheckerImport{
-							Checker: importedChecker,
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
 						}, nil
 					},
 				),
@@ -145,7 +145,7 @@ func TestCheckRepeatedImportResolution(t *testing.T) {
 					},
 				),
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
 						addressLocation := location.(common.AddressLocation)
 						var importedChecker *sema.Checker
 						switch addressLocation.Name {
@@ -154,8 +154,8 @@ func TestCheckRepeatedImportResolution(t *testing.T) {
 						case "y":
 							importedChecker = importedCheckerY
 						}
-						return sema.CheckerImport{
-							Checker: importedChecker,
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
 						}, nil
 					},
 				),
@@ -189,9 +189,9 @@ func TestCheckInvalidRepeatedImport(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
-						return sema.CheckerImport{
-							Checker: importedChecker,
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
 						}, nil
 					},
 				),
@@ -267,7 +267,7 @@ func TestCheckImportResolutionSplit(t *testing.T) {
 					},
 				),
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
 						addressLocation := location.(common.AddressLocation)
 						var importedChecker *sema.Checker
 						switch addressLocation.Name {
@@ -276,8 +276,8 @@ func TestCheckImportResolutionSplit(t *testing.T) {
 						case "y":
 							importedChecker = importedCheckerY
 						}
-						return sema.CheckerImport{
-							Checker: importedChecker,
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
 						}, nil
 					},
 				),
@@ -314,9 +314,9 @@ func TestCheckImportAll(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
-						return sema.CheckerImport{
-							Checker: importedChecker,
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
 						}, nil
 					},
 				),
@@ -351,9 +351,9 @@ func TestCheckInvalidImportUnexported(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
-						return sema.CheckerImport{
-							Checker: importedChecker,
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
 						}, nil
 					},
 				),
@@ -394,9 +394,9 @@ func TestCheckImportSome(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
-						return sema.CheckerImport{
-							Checker: importedChecker,
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
 						}, nil
 					},
 				),
@@ -411,35 +411,24 @@ func TestCheckInvalidImportedError(t *testing.T) {
 
 	t.Parallel()
 
-	// NOTE: only parse, don't check imported program.
-	// will be checked by checker checking importing program
-
-	importedProgram, err := parser2.ParseProgram(`
-       let x: Bool = 1
-    `)
-
-	require.NoError(t, err)
-
-	_, err = ParseAndCheckWithOptions(t,
+	_, err := ParseAndCheckWithOptions(t,
 		`
            import x from "imported"
         `,
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
-						importedChecker, err := checker.EnsureLoaded(
-							location,
-							func() *ast.Program {
-								return importedProgram
-							},
-						)
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+
+						importedChecker, err := ParseAndCheck(t, `
+                          let x: Bool = 1
+                        `)
 						if err != nil {
 							return nil, err
 						}
 
-						return sema.CheckerImport{
-							Checker: importedChecker,
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
 						}, nil
 					},
 				),
@@ -512,9 +501,9 @@ func TestCheckImportTypes(t *testing.T) {
 				ParseAndCheckOptions{
 					Options: []sema.Option{
 						sema.WithImportHandler(
-							func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
-								return sema.CheckerImport{
-									Checker: importedChecker,
+							func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+								return sema.ElaborationImport{
+									Elaboration: importedChecker.Elaboration,
 								}, nil
 							},
 						),
@@ -550,35 +539,51 @@ func TestCheckInvalidImportCycleSelf(t *testing.T) {
 
 	require.NoError(t, err)
 
-	_, err = ParseAndCheckWithOptions(t,
-		code,
-		ParseAndCheckOptions{
-			Location: utils.TestLocation,
-			Options: []sema.Option{
-				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
-						importedChecker, err := checker.EnsureLoaded(
-							location,
-							func() *ast.Program {
-								return importedProgram
-							},
-						)
-						if err != nil {
-							return nil, err
-						}
+	elaborations := map[common.LocationID]*sema.Elaboration{}
 
-						return sema.CheckerImport{
-							Checker: importedChecker,
-						}, nil
-					},
-				),
+	check := func(code string, location common.Location) error {
+		_, err := ParseAndCheckWithOptions(t,
+			code,
+			ParseAndCheckOptions{
+				Location: location,
+				Options: []sema.Option{
+					sema.WithImportHandler(
+						func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+
+							elaboration, ok := elaborations[location.ID()]
+							if !ok {
+								subChecker, err := checker.SubChecker(importedProgram, location)
+								if err != nil {
+									return nil, err
+								}
+								elaborations[location.ID()] = subChecker.Elaboration
+								err = subChecker.Check()
+								if err != nil {
+									return nil, err
+								}
+								elaboration = subChecker.Elaboration
+							}
+
+							return sema.ElaborationImport{
+								Elaboration: elaboration,
+							}, nil
+						},
+					),
+				},
 			},
-		},
-	)
+		)
+		return err
+	}
+
+	err = check(code, utils.TestLocation)
 
 	errs := ExpectCheckerErrors(t, err, 1)
 
-	assert.IsType(t, &sema.CyclicImportsError{}, errs[0])
+	require.IsType(t, &sema.ImportedProgramError{}, errs[0])
+	childErrs := errs[0].(*sema.ImportedProgramError).ChildErrors()
+
+	require.Len(t, childErrs, 1)
+	assert.IsType(t, &sema.CyclicImportsError{}, childErrs[0])
 }
 
 func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
@@ -614,33 +619,45 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
 	programOdd, err := parser2.ParseProgram(codeOdd)
 	require.NoError(t, err)
 
+	getProgram := func(location common.Location) *ast.Program {
+		switch location {
+		case common.StringLocation("even"):
+			return programEven
+		case common.StringLocation("odd"):
+			return programOdd
+		}
+
+		t.Fatalf("invalid import: %#+v", location)
+		return nil
+	}
+
+	elaborations := map[common.LocationID]*sema.Elaboration{}
+
 	_, err = ParseAndCheckWithOptions(t,
 		codeEven,
 		ParseAndCheckOptions{
 			Location: common.StringLocation("even"),
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
-						importedChecker, err := checker.EnsureLoaded(
-							location,
-							func() *ast.Program {
-								switch location {
-								case common.StringLocation("even"):
-									return programEven
-								case common.StringLocation("odd"):
-									return programOdd
-								}
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+						importedProgram := getProgram(location)
 
-								t.Fatalf("invalid import: %#+v", location)
-								return nil
-							},
-						)
-						if err != nil {
-							return nil, err
+						elaboration, ok := elaborations[location.ID()]
+						if !ok {
+							subChecker, err := checker.SubChecker(importedProgram, location)
+							if err != nil {
+								return nil, err
+							}
+							elaborations[location.ID()] = subChecker.Elaboration
+							err = subChecker.Check()
+							if err != nil {
+								return nil, err
+							}
+							elaboration = subChecker.Elaboration
 						}
 
-						return sema.CheckerImport{
-							Checker: importedChecker,
+						return sema.ElaborationImport{
+							Elaboration: elaboration,
 						}, nil
 					},
 				),
@@ -653,12 +670,18 @@ func TestCheckInvalidImportCycleTwoLocations(t *testing.T) {
 	require.IsType(t, &sema.ImportedProgramError{}, errs[0])
 	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
 
-	importedProgramError := errs[0].(*sema.ImportedProgramError).CheckerError
+	importedProgramError := errs[0].(*sema.ImportedProgramError).Err
 
 	errs = ExpectCheckerErrors(t, importedProgramError, 2)
 
+	require.IsType(t, &sema.ImportedProgramError{}, errs[0])
+	require.IsType(t, &sema.NotDeclaredError{}, errs[1])
+
+	importedProgramError = errs[0].(*sema.ImportedProgramError).Err
+
+	errs = ExpectCheckerErrors(t, importedProgramError, 2)
 	require.IsType(t, &sema.CyclicImportsError{}, errs[0])
-	assert.IsType(t, &sema.NotDeclaredError{}, errs[1])
+	require.IsType(t, &sema.NotDeclaredError{}, errs[1])
 }
 
 func TestCheckImportVirtual(t *testing.T) {
@@ -694,7 +717,7 @@ func TestCheckImportVirtual(t *testing.T) {
 		ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
 						return sema.VirtualImport{
 							ValueElements: map[string]sema.ImportElement{
 								"Foo": {

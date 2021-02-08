@@ -5565,7 +5565,7 @@ func (v *CompositeValue) getInterpreter(interpreter *Interpreter) *Interpreter {
 	// Get the correct interpreter. The program code might need to be loaded.
 	// NOTE: standard library values have no location
 
-	if v.Location == nil || common.LocationsMatch(interpreter.Checker.Location, v.Location) {
+	if v.Location == nil || common.LocationsMatch(interpreter.Location, v.Location) {
 		return interpreter
 	}
 
@@ -5907,12 +5907,23 @@ func (v *DictionaryValue) String() string {
 	for i, keyValue := range v.Keys.Values {
 		key := dictionaryKey(keyValue)
 		value := v.Entries[key]
+
+		// Value is potentially deferred,
+		// so might be nil
+
+		var valueString string
+		if value == nil {
+			valueString = "..."
+		} else {
+			valueString = value.String()
+		}
+
 		pairs[i] = struct {
 			Key   string
 			Value string
 		}{
 			Key:   keyValue.String(),
-			Value: value.String(),
+			Value: valueString,
 		}
 	}
 

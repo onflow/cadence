@@ -573,6 +573,25 @@ func TestStringer(t *testing.T) {
 			},
 			expected: "Capability<Int>(address: 0x102030405, path: /storage/foo)",
 		},
+		"Dictionary with non-deferred values": {
+			value: NewDictionaryValueUnownedNonCopying(
+				NewStringValue("a"), UInt8Value(42),
+				NewStringValue("b"), UInt8Value(99),
+			),
+			expected: `{"a": 42, "b": 99}`,
+		},
+		"Dictionary with deferred value": {
+			value: &DictionaryValue{
+				Keys: NewArrayValueUnownedNonCopying(
+					NewStringValue("a"),
+					NewStringValue("b"),
+				),
+				Entries: map[string]Value{
+					NewStringValue("a").KeyString(): UInt8Value(42),
+				},
+			},
+			expected: `{"a": 42, "b": ...}`,
+		},
 	}
 
 	test := func(name string, testCase testCase) {
@@ -594,6 +613,8 @@ func TestStringer(t *testing.T) {
 }
 
 func TestVisitor(t *testing.T) {
+
+	t.Parallel()
 
 	var intVisits, stringVisits int
 
@@ -630,7 +651,7 @@ func TestVisitor(t *testing.T) {
 func TestBlockValue(t *testing.T) {
 	var block BlockValue = BlockValue{4, 5, &ArrayValue{}, 5.0}
 	// static type test
-	var actualTs UFix64Value = block.Timestamp
+	var actualTs = block.Timestamp
 	const expectedTs UFix64Value = 5.0
 	assert.Equal(t, expectedTs, actualTs)
 }

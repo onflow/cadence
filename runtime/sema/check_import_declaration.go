@@ -93,14 +93,14 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 	var imp Import
 
 	if checker.importHandler != nil {
-		var err *CheckerError
+		var err error
 		imp, err = checker.importHandler(checker, location)
 		if err != nil {
 			checker.report(
 				&ImportedProgramError{
-					CheckerError: err,
-					Location:     location,
-					Range:        locationRange,
+					Err:      err,
+					Location: location,
+					Range:    locationRange,
 				},
 			)
 			return
@@ -224,50 +224,6 @@ func (checker *Checker) importResolvedLocation(resolvedLocation ResolvedLocation
 
 		checker.handleMissingImports(missing, available, location)
 	}
-}
-
-// EnsureLoaded finds or create a checker for the imported program and checks it.
-//
-func (checker *Checker) EnsureLoaded(location common.Location, loadProgram func() *ast.Program) (*Checker, *CheckerError) {
-
-	locationID := location.ID()
-
-	subChecker, ok := checker.AllCheckers[locationID]
-	if ok {
-		return subChecker, nil
-	}
-
-	if !ok || subChecker == nil {
-		var err error
-		subChecker, err = NewChecker(
-			loadProgram(),
-			location,
-			WithPredeclaredValues(checker.PredeclaredValues),
-			WithPredeclaredTypes(checker.PredeclaredTypes),
-			WithAccessCheckMode(checker.accessCheckMode),
-			WithValidTopLevelDeclarationsHandler(checker.validTopLevelDeclarationsHandler),
-			WithAllCheckers(checker.AllCheckers),
-			WithCheckHandler(checker.checkHandler),
-			WithImportHandler(checker.importHandler),
-			WithLocationHandler(checker.locationHandler),
-			WithOriginsAndOccurrencesEnabled(checker.originsAndOccurrencesEnabled),
-		)
-		if err == nil {
-			checker.AllCheckers[locationID] = subChecker
-		}
-	}
-
-	// Check the imported program, if any.
-
-	var checkerErr *CheckerError
-	if subChecker.Program != nil {
-		// NOTE: ignore generic `error`-typed result, get internal `*CheckerError`
-
-		_ = subChecker.Check()
-		checkerErr = subChecker.CheckerError()
-	}
-
-	return subChecker, checkerErr
 }
 
 func (checker *Checker) handleMissingImports(missing []ast.Identifier, available []string, importLocation common.Location) {
