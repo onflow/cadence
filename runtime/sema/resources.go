@@ -82,7 +82,7 @@ func (ris *Resources) Get(resource interface{}) ResourceInfo {
 //
 func (ris *Resources) AddInvalidation(resource interface{}, invalidation ResourceInvalidation) {
 	info := ris.Get(resource)
-	info.Invalidations = info.Invalidations.Insert(invalidation)
+	info.Invalidations.Insert(invalidation)
 	if invalidation.Kind.IsDefinite() {
 		info.DefinitivelyInvalidated = true
 	}
@@ -95,7 +95,7 @@ func (ris *Resources) AddInvalidation(resource interface{}, invalidation Resourc
 //
 func (ris *Resources) RemoveTemporaryInvalidation(resource interface{}, invalidation ResourceInvalidation) {
 	info := ris.Get(resource)
-	info.Invalidations = info.Invalidations.Delete(invalidation)
+	info.Invalidations.Delete(invalidation)
 	entry := ris.entry(resource)
 	ris.resources = ris.resources.Insert(entry, info)
 }
@@ -184,16 +184,14 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 		// so only merge invalidations and uses if the branch did not return
 
 		if !thenResources.Returns {
-			info.Invalidations = info.Invalidations.
-				Merge(infoTuple.thenInfo.Invalidations)
+			info.Invalidations.Merge(infoTuple.thenInfo.Invalidations)
 
 			info.UsePositions = info.UsePositions.
 				Merge(infoTuple.thenInfo.UsePositions)
 		}
 
 		if !elseReturns {
-			info.Invalidations = info.Invalidations.
-				Merge(infoTuple.elseInfo.Invalidations)
+			info.Invalidations.Merge(infoTuple.elseInfo.Invalidations)
 
 			info.UsePositions = info.UsePositions.
 				Merge(infoTuple.elseInfo.UsePositions)
