@@ -1,3 +1,21 @@
+/*
+ * Cadence - The resource-oriented smart contract programming language
+ *
+ * Copyright 2019-2021 Dapper Labs, Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package runtime
 
 import (
@@ -7,72 +25,93 @@ import (
 )
 
 type ContractUpdateValidator struct {
-	oldContract             *ast.CompositeDeclaration
-	newContract             *ast.CompositeDeclaration
+	oldDeclaration          ast.Declaration
+	newDeclaration          ast.Declaration
 	oldNestedCompositeDecls map[string]*ast.CompositeDeclaration
 	newNestedCompositeDecls map[string]*ast.CompositeDeclaration
-	entryPoint              string
+	entryPointName          string
 	currentDeclName         string
 	currentFieldName        string
 	visitedDecls            map[string]bool
 }
 
 // ContractUpdateValidator should implement ast.TypeEqualityChecker
-var typeEqualityChecker ast.TypeEqualityChecker = &ContractUpdateValidator{}
+var _ ast.TypeEqualityChecker = &ContractUpdateValidator{}
 
 func NewContractUpdateValidator(
-	r *interpreterRuntime,
+	runtime *interpreterRuntime,
 	context Context,
 	existingCode []byte,
-	newProgram *ast.Program) (*ContractUpdateValidator, error) {
+	newProgram *ast.Program) *ContractUpdateValidator {
 
-	oldProgram, err := r.parse(existingCode, context)
+	oldProgram, err := runtime.parse(existingCode, context)
 	if err != nil {
-		return nil, err
+		// Not a user error. Hence panic
+		panic(err)
 	}
 
 	oldCompDecls := oldProgram.CompositeDeclarations()
-	if oldCompDecls == nil || len(oldCompDecls) != 1 {
+	oldInterfaceDecls := oldProgram.InterfaceDeclarations()
+	var oldDecl ast.Declaration
+
+	if len(oldCompDecls) == 1 {
+		oldDecl = oldCompDecls[0]
+	} else if len(oldInterfaceDecls) == 1 {
+		oldDecl = oldInterfaceDecls[0]
+	} else {
 		panic(errors.NewUnreachableError())
 	}
 
 	newCompDecls := newProgram.CompositeDeclarations()
-	if newCompDecls == nil || len(newCompDecls) != 1 {
+	newInterfaceDecls := newProgram.InterfaceDeclarations()
+	var newDecl ast.Declaration
+
+	if len(newCompDecls) == 1 {
+		newDecl = newCompDecls[0]
+	} else if len(newInterfaceDecls) == 1 {
+		newDecl = newInterfaceDecls[0]
+	} else {
 		panic(errors.NewUnreachableError())
 	}
 
 	return &ContractUpdateValidator{
-			oldContract:  oldCompDecls[0],
-			newContract:  newCompDecls[0],
-			visitedDecls: map[string]bool{}},
-		nil
+		oldDeclaration: oldDecl,
+		newDeclaration: newDecl,
+		visitedDecls:   map[string]bool{}}
 }
 
 func (validator *ContractUpdateValidator) Validate() error {
-	validator.entryPoint = validator.newContract.Identifier.Identifier
-	return validator.checkCompositeDeclUpdatability(validator.oldContract, validator.newContract)
+	// Do not allow converting between 'contracts' and 'contract-interfaces'.
+	if validator.oldDeclaration.DeclarationKind() != validator.newDeclaration.DeclarationKind() {
+		return fmt.Errorf("trying to convert a %s to a %s",
+			validator.oldDeclaration.DeclarationKind().Name(),
+			validator.newDeclaration.DeclarationKind().Name())
+	}
+
+	validator.entryPointName = getDeclarationName(validator.newDeclaration)
+	return validator.checkDeclarationUpdatability(validator.oldDeclaration, validator.newDeclaration)
 }
 
-func (validator *ContractUpdateValidator) checkCompositeDeclUpdatability(
-	oldCompositeDecl *ast.CompositeDeclaration,
-	newCompositeDecl *ast.CompositeDeclaration) error {
+func (validator *ContractUpdateValidator) checkDeclarationUpdatability(
+	oldDeclaration ast.Declaration,
+	newDeclaration ast.Declaration) error {
 
 	parentDeclName := validator.currentDeclName
-	validator.currentDeclName = newCompositeDecl.Identifier.Identifier
+	validator.currentDeclName = getDeclarationName(newDeclaration)
 	defer func() {
 		validator.currentDeclName = parentDeclName
 	}()
 
-	// If the same same decl is already visited, then do no check again.
-	// This also is used to avoid getting stuck on circular dependencies between composite decls.
+	// If the same same decl is already visited, then do not check again.
+	// This also avoids getting stuck on circular dependencies between composite decls.
 	if validator.visitedDecls[validator.currentDeclName] {
 		return nil
 	}
 
 	validator.visitedDecls[validator.currentDeclName] = true
 
-	oldFields := oldCompositeDecl.Members.Fields()
-	newFields := newCompositeDecl.Members.Fields()
+	oldFields := getDeclarationMembers(oldDeclaration).Fields()
+	newFields := getDeclarationMembers(newDeclaration).Fields()
 
 	// Updated contract has to have at-most the same number of field as the old contract.
 	// Any additional field may cause crashes/garbage-values when deserializing the
@@ -81,7 +120,7 @@ func (validator *ContractUpdateValidator) checkCompositeDeclUpdatability(
 
 	// This is a fail-fast check.
 	if len(oldFields) < len(newFields) {
-		if validator.isNestedDecl() {
+		if validator.isInNestedDecl() {
 			return fmt.Errorf("too many fields in `%s`. expected %d, found %d",
 				validator.currentDeclName, len(oldFields), len(newFields))
 		}
@@ -115,8 +154,10 @@ func (validator *ContractUpdateValidator) visitField(newField *ast.FieldDeclarat
 
 	oldType := oldFiledTypes[validator.currentFieldName]
 	if oldType == nil {
-		if validator.isNestedDecl() {
-			return fmt.Errorf("found new field `%s` in `%s", validator.currentDeclName, validator.currentFieldName)
+		if validator.isInNestedDecl() {
+			return fmt.Errorf("found new field `%s` in `%s",
+				validator.currentDeclName,
+				validator.currentFieldName)
 		}
 
 		return fmt.Errorf("found new field `%s`", validator.currentFieldName)
@@ -131,10 +172,14 @@ func (validator *ContractUpdateValidator) CheckNominalTypeEquality(expected *ast
 		return validator.getTypeMismatchError(expected, found)
 	}
 
+	// First check whether the names are equal.
 	ok = validator.checkNameEquality(expected, foundNominalType)
 	if !ok {
 		return validator.getTypeMismatchError(expected, found)
 	}
+
+	// Then, check whether the fields of the two composite declarations
+	// referred by this nominal type, are also compatible.
 
 	var compositeDeclName string
 	if isQualifiedName(foundNominalType) {
@@ -142,9 +187,6 @@ func (validator *ContractUpdateValidator) CheckNominalTypeEquality(expected *ast
 	} else {
 		compositeDeclName = foundNominalType.Identifier.Identifier
 	}
-
-	// If the two types are nominal, then the fields of the two composite declarations
-	// referred by this nominal type, also needs to be compatible.
 
 	validator.loadCompositeDecls()
 
@@ -162,7 +204,7 @@ func (validator *ContractUpdateValidator) CheckNominalTypeEquality(expected *ast
 		return nil
 	}
 
-	return validator.checkCompositeDeclUpdatability(oldCompositeDecl, newCompositeDecl)
+	return validator.checkDeclarationUpdatability(oldCompositeDecl, newCompositeDecl)
 }
 
 func (validator *ContractUpdateValidator) CheckOptionalTypeEquality(expected *ast.OptionalType, found ast.Type) error {
@@ -257,12 +299,12 @@ func (validator *ContractUpdateValidator) CheckInstantiationTypeEquality(expecte
 	return nil
 }
 
-func (validator *ContractUpdateValidator) CheckFunctionTypeEquality(expected *ast.FunctionType, found ast.Type) error {
+func (validator *ContractUpdateValidator) CheckFunctionTypeEquality(_ *ast.FunctionType, _ ast.Type) error {
 	// Non storable type
 	panic(errors.NewUnreachableError())
 }
 
-func (validator *ContractUpdateValidator) CheckReferenceTypeEquality(expected *ast.ReferenceType, found ast.Type) error {
+func (validator *ContractUpdateValidator) CheckReferenceTypeEquality(_ *ast.ReferenceType, _ ast.Type) error {
 	// Non storable type
 	panic(errors.NewUnreachableError())
 }
@@ -270,14 +312,14 @@ func (validator *ContractUpdateValidator) CheckReferenceTypeEquality(expected *a
 func (validator *ContractUpdateValidator) loadCompositeDecls() {
 	if validator.oldNestedCompositeDecls == nil {
 		validator.oldNestedCompositeDecls = map[string]*ast.CompositeDeclaration{}
-		for _, nestedComposite := range validator.oldContract.Members.Composites() {
+		for _, nestedComposite := range getDeclarationMembers(validator.oldDeclaration).Composites() {
 			validator.oldNestedCompositeDecls[nestedComposite.Identifier.Identifier] = nestedComposite
 		}
 	}
 
 	if validator.newNestedCompositeDecls == nil {
 		validator.newNestedCompositeDecls = map[string]*ast.CompositeDeclaration{}
-		for _, nestedComposite := range validator.newContract.Members.Composites() {
+		for _, nestedComposite := range getDeclarationMembers(validator.newDeclaration).Composites() {
 			validator.newNestedCompositeDecls[nestedComposite.Identifier.Identifier] = nestedComposite
 		}
 	}
@@ -304,18 +346,8 @@ func (validator *ContractUpdateValidator) checkNameEquality(expectedType *ast.No
 	if expectedType.Identifier.Identifier != foundType.Identifier.Identifier {
 		return false
 	}
-	if len(expectedType.NestedIdentifiers) != len(foundType.NestedIdentifiers) {
-		return false
-	}
 
-	for index, identifier := range expectedType.NestedIdentifiers {
-		otherIdentifier := foundType.NestedIdentifiers[index]
-		if identifier.Identifier != otherIdentifier.Identifier {
-			return false
-		}
-	}
-
-	return true
+	return checkSliceEquality(expectedType.NestedIdentifiers, foundType.NestedIdentifiers)
 }
 
 func (validator *ContractUpdateValidator) checkIdentifierEquality(
@@ -328,7 +360,7 @@ func (validator *ContractUpdateValidator) checkIdentifierEquality(
 
 	// If the first identifier (i.e: 'A') refers to a composite decl that is not the enclosing contract,
 	// then it must be referring to an imported contract. That means the two types are no longer the same.
-	if qualifiedNominalType.Identifier.Identifier != validator.oldContract.Identifier.Identifier {
+	if qualifiedNominalType.Identifier.Identifier != validator.entryPointName {
 		return false
 	}
 
@@ -340,29 +372,57 @@ func (validator *ContractUpdateValidator) checkIdentifierEquality(
 }
 
 func (validator *ContractUpdateValidator) getTypeMismatchError(
-	oldType ast.Type,
-	newType ast.Type) error {
+	expectedType ast.Type,
+	foundType ast.Type) error {
 
-	if validator.isNestedDecl() {
-		return fmt.Errorf("type annotations does not match for field `%s` in `%s`. expected `%s`, found `%s`",
-			validator.currentFieldName, validator.currentDeclName, oldType, newType)
+	if validator.isInNestedDecl() {
+		return fmt.Errorf("type annotation does not match for field `%s` in `%s`. expected `%s`, found `%s`",
+			validator.currentFieldName,
+			validator.currentDeclName,
+			expectedType,
+			foundType)
 	}
 
-	return fmt.Errorf("type annotations does not match for field `%s`. expected `%s`, found `%s`",
-		validator.currentFieldName, oldType, newType)
+	return fmt.Errorf("type annotation does not match for field `%s`. expected `%s`, found `%s`",
+		validator.currentFieldName,
+		expectedType,
+		foundType)
 }
 
-func (validator *ContractUpdateValidator) isNestedDecl() bool {
-	return validator.entryPoint != validator.currentDeclName
+// isInNestedDecl checks whether the currently visiting declaration is a nested one.
+func (validator *ContractUpdateValidator) isInNestedDecl() bool {
+	return validator.entryPointName != validator.currentDeclName
 }
 
-func checkSliceEquality(slice1 []ast.Identifier, slice2 []ast.Identifier) bool {
-	if len(slice1) != len(slice2) {
+func getDeclarationName(declaration ast.Declaration) string {
+	switch decl := declaration.(type) {
+	case *ast.CompositeDeclaration:
+		return decl.Identifier.Identifier
+	case *ast.InterfaceDeclaration:
+		return decl.Identifier.Identifier
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func getDeclarationMembers(declaration ast.Declaration) *ast.Members {
+	switch decl := declaration.(type) {
+	case *ast.CompositeDeclaration:
+		return decl.Members
+	case *ast.InterfaceDeclaration:
+		return decl.Members
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func checkSliceEquality(expected []ast.Identifier, found []ast.Identifier) bool {
+	if len(expected) != len(found) {
 		return false
 	}
 
-	for index, element := range slice2 {
-		if slice1[index] != element {
+	for index, element := range found {
+		if expected[index] != element {
 			return false
 		}
 	}

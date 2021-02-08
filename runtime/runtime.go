@@ -1228,7 +1228,6 @@ func (r *interpreterRuntime) loadContract(
 		case *interpreter.SomeValue:
 			return typedValue.Value.(*interpreter.CompositeValue)
 		case interpreter.NilValue:
-			fmt.Printf(typedValue.String())
 			panic("failed to load contract")
 		default:
 			panic(runtimeErrors.NewUnreachableError())
@@ -1625,22 +1624,16 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			}
 
 			if isUpdate {
-				handleContractUpdateError := func(err error) {
-					if err != nil {
-						panic(&InvalidContractDeploymentError{
-							Err: fmt.Errorf("cannot update contract `%s` in account %s: %s",
-								nameArgument,
-								address.ShortHexWithPrefix(),
-								err.Error()),
-						})
-					}
+				validator := NewContractUpdateValidator(r, context, existingCode, checker.Program)
+				err := validator.Validate()
+				if err != nil {
+					panic(&InvalidContractDeploymentError{
+						Err: fmt.Errorf("cannot update contract `%s` in account %s: %s",
+							nameArgument,
+							address.ShortHexWithPrefix(),
+							err.Error()),
+					})
 				}
-
-				validator, err := NewContractUpdateValidator(r, context, existingCode, checker.Program)
-				handleContractUpdateError(err)
-
-				err = validator.Validate()
-				handleContractUpdateError(err)
 			}
 
 			r.updateAccountContractCode(

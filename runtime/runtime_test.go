@@ -6037,13 +6037,13 @@ func TestContractUpdateValidation(t *testing.T) {
 		))
 	}
 
-	accountCode := &testAccountStorage{accounts: map[string][]byte{}}
+	accountCode := map[string][]byte{}
 	var events []cadence.Event
 	runtimeInterface := getMockedRuntimeInterfaceForTxUpdate(t, accountCode, events)
 	nextTransactionLocation := newTransactionLocationGenerator()
 
 	deployAndUpdate := func(name string, oldCode string, newCode string) error {
-		deployTx1 := newDeployTransaction("add", name, oldCode)
+		deployTx1 := newDeployTransaction(sema.AuthAccountContractsTypeAddFunctionName, name, oldCode)
 		err := runtime.ExecuteTransaction(
 			Script{
 				Source: deployTx1,
@@ -6055,7 +6055,7 @@ func TestContractUpdateValidation(t *testing.T) {
 		)
 		require.NoError(t, err)
 
-		deployTx2 := newDeployTransaction("update__experimental", name, newCode)
+		deployTx2 := newDeployTransaction(sema.AuthAccountContractsTypeUpdateExperimentalFunctionName, name, newCode)
 		err = runtime.ExecuteTransaction(
 			Script{
 				Source: deployTx2,
@@ -6088,7 +6088,7 @@ func TestContractUpdateValidation(t *testing.T) {
 		err := deployAndUpdate("Test1", oldCode, newCode)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "error: cannot update contract `Test1` in account 0x42: "+
-			"type annotations does not match for field `a`. expected `String`, found `Int`")
+			"type annotation does not match for field `a`. expected `String`, found `Int`")
 	})
 
 	t.Run("add field", func(t *testing.T) {
@@ -6182,7 +6182,7 @@ func TestContractUpdateValidation(t *testing.T) {
 		err := deployAndUpdate("Test4", oldCode, newCode)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(),
-			"cannot update contract `Test4` in account 0x42: type annotations does not "+
+			"cannot update contract `Test4` in account 0x42: type annotation does not "+
 				"match for field `b` in `TestResource`. expected `Int`, found `String`")
 	})
 
@@ -6234,12 +6234,7 @@ func TestContractUpdateValidation(t *testing.T) {
 				"too many fields in `TestResource`. expected 1, found 2")
 	})
 
-	//t.Run("add field to nested decl", func(t *testing.T) {
-	//	// TODO:
-	//	assert.FailNow(t, "Add a test case for self recursion")
-	//})
-
-	t.Run("add field to nested decl", func(t *testing.T) {
+	t.Run("change indirect field type", func(t *testing.T) {
 		const oldCode = `
 			pub contract Test6 {
 
@@ -6283,24 +6278,356 @@ func TestContractUpdateValidation(t *testing.T) {
 		err := deployAndUpdate("Test6", oldCode, newCode)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(),
-			"cannot update contract `Test6` in account 0x42: type annotations does not match "+
+			"cannot update contract `Test6` in account 0x42: type annotation does not match "+
 				"for field `b` in `TestStruct`. expected `Int`, found `String`")
 	})
-}
 
-type testAccountStorage struct {
-	accounts map[string][]byte
+	t.Run("circular types refs", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test7{
+
+				pub var x: {String: Foo}
+
+				init() {
+					self.x = { "foo" : Foo() }
+				}
+
+				pub struct Foo {
+
+					pub let a: Foo?
+					pub let b: Bar
+
+					init() {
+						self.a = nil
+						self.b = Bar()
+					}
+				}
+
+				pub struct Bar {
+
+					pub let c: Foo?
+					pub let d: Bar?
+
+					init() {
+						self.c = nil
+						self.d = nil
+					}
+				}
+			}`
+
+		const newCode = `
+			pub contract Test7 {
+
+				pub var x: {String: Foo}
+
+				init() {
+					self.x = { "foo" : Foo() }
+				}
+
+				pub struct Foo {
+
+					pub let a: Foo?
+					pub let b: Bar
+
+					init() {
+						self.a = nil
+						self.b = Bar()
+					}
+				}
+
+				pub struct Bar {
+
+					pub let c: Foo?
+					pub let d: String
+
+					init() {
+						self.c = nil
+						self.d = "string_d"
+					}
+				}
+			}`
+
+		err := deployAndUpdate("Test7", oldCode, newCode)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(),
+			"cannot update contract `Test7` in account 0x42: type annotation does not match "+
+				"for field `d` in `Bar`. expected `Bar?`, found `String`")
+	})
+
+	t.Run("qualified vs unqualified nominal type", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test8 {
+
+				pub var x: Test8.TestStruct
+				pub var y: TestStruct
+
+				init() {
+					self.x = Test8.TestStruct()
+					self.y = TestStruct()
+				}
+
+				pub struct TestStruct {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		const newCode = `
+			pub contract Test8 {
+
+				pub var x: TestStruct
+				pub var y: Test8.TestStruct
+
+				init() {
+					self.x = TestStruct()
+					self.y = Test8.TestStruct()
+				}
+
+				pub struct TestStruct {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		err := deployAndUpdate("Test8", oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("change imported nominal type to local", func(t *testing.T) {
+		const importCode = `
+			pub contract Test9Import {
+
+				pub struct TestStruct {
+					pub let a: Int
+					pub var b: Int
+
+					init() {
+						self.a = 123
+						self.b = 456
+					}
+				}
+			}`
+
+		deployTx1 := newDeployTransaction("add", "Test9Import", importCode)
+		err := runtime.ExecuteTransaction(
+			Script{
+				Source: deployTx1,
+			},
+			Context{
+				Interface: runtimeInterface,
+				Location:  nextTransactionLocation(),
+			},
+		)
+		require.NoError(t, err)
+
+		const oldCode = `
+			import Test9Import from 0x42
+
+			pub contract Test9 {
+
+				pub var x: Test9Import.TestStruct
+
+				init() {
+					self.x = Test9Import.TestStruct()
+				}
+			}`
+
+		const newCode = `
+			pub contract Test9 {
+
+				pub var x: TestStruct
+
+				init() {
+					self.x = TestStruct()
+				}
+
+				pub struct TestStruct {
+					pub let a: Int
+					pub var b: Int
+
+					init() {
+						self.a = 123
+						self.b = 456
+					}
+				}
+			}`
+
+		err = deployAndUpdate("Test9", oldCode, newCode)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(),
+			"cannot update contract `Test9` in account 0x42: type annotation does not match "+
+				"for field `x`. expected `Test9Import.TestStruct`, found `TestStruct`")
+	})
+
+	t.Run("contract interface update", func(t *testing.T) {
+		const oldCode = `
+			pub contract interface Test10 {
+				pub var a: String
+				pub fun getA() : String
+			}`
+
+		const newCode = `
+			pub contract interface Test10 {
+				pub var a: Int
+				pub fun getA() : Int
+			}`
+
+		err := deployAndUpdate("Test10", oldCode, newCode)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(),
+			"cannot update contract `Test10` in account 0x42: type annotation does not match "+
+				"for field `a`. expected `String`, found `Int`")
+	})
+
+	t.Run("convert interface to contract", func(t *testing.T) {
+		const oldCode = `
+			pub contract interface Test11 {
+				pub var a: String
+				pub fun getA() : String
+			}`
+
+		const newCode = `
+			pub contract Test11 {
+
+				pub var a: String
+
+				init() {
+					self.a = "hello"
+				}
+
+				pub fun getA() : String {
+					return self.a
+				}
+			}`
+
+		err := deployAndUpdate("Test11", oldCode, newCode)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(),
+			"cannot update contract `Test11` in account 0x42: "+
+				"trying to convert a contract interface to a contract")
+	})
+
+	t.Run("convert contract to interface", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test12 {
+
+				pub var a: String
+
+				init() {
+					self.a = "hello"
+				}
+
+				pub fun getA() : String {
+					return self.a
+				}
+			}`
+
+		const newCode = `
+			pub contract interface Test12 {
+				pub var a: String
+				pub fun getA() : String
+			}`
+
+		err := deployAndUpdate("Test12", oldCode, newCode)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(),
+			"cannot update contract `Test12` in account 0x42: "+
+				"trying to convert a contract to a contract interface")
+	})
+
+	t.Run("change non stored", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test13 {
+
+				pub var x: UsedStruct
+
+				init() {
+					self.x = UsedStruct()
+				}
+
+				pub struct UsedStruct {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+
+					pub fun getA() : Int {
+						return self.a
+					}
+				}
+
+				pub struct UnusedStruct {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+
+					pub fun getA() : Int {
+						return self.a
+					}
+				}
+			}`
+
+		const newCode = `
+			pub contract Test13 {
+
+				pub var x: UsedStruct
+
+				init() {
+					self.x = UsedStruct()
+				}
+
+				pub struct UsedStruct {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+
+					pub fun getA() : String {
+						return "hello_123"
+					}
+
+					pub fun getA_new() : Int {
+						return self.a
+					}
+				}
+
+				pub struct UnusedStruct {
+					pub let a: String
+
+					init() {
+						self.a = "string_456"
+					}
+
+					pub fun getA() : String {
+						return self.a
+					}
+				}
+			}`
+
+		err := deployAndUpdate("Test13", oldCode, newCode)
+		require.NoError(t, err)
+	})
 }
 
 func getMockedRuntimeInterfaceForTxUpdate(
 	t *testing.T,
-	accountStorage *testAccountStorage,
+	accountStorage map[string][]byte,
 	events []cadence.Event) *testRuntimeInterface {
 
 	return &testRuntimeInterface{
 		getCode: func(location Location) (bytes []byte, err error) {
 			key := string(location.(common.AddressLocation).ID())
-			return accountStorage.accounts[key], nil
+			return accountStorage[key], nil
 		},
 		storage: newTestStorage(nil, nil),
 		getSigningAccounts: func() ([]Address, error) {
@@ -6313,7 +6640,7 @@ func getMockedRuntimeInterfaceForTxUpdate(
 				Name:    name,
 			}
 			key := string(location.ID())
-			return accountStorage.accounts[key], nil
+			return accountStorage[key], nil
 		},
 		updateAccountContractCode: func(address Address, name string, code []byte) (err error) {
 			location := common.AddressLocation{
@@ -6321,7 +6648,7 @@ func getMockedRuntimeInterfaceForTxUpdate(
 				Name:    name,
 			}
 			key := string(location.ID())
-			accountStorage.accounts[key] = code
+			accountStorage[key] = code
 			return nil
 		},
 		emitEvent: func(event cadence.Event) error {
