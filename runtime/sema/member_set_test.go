@@ -230,4 +230,29 @@ func TestMemberSet_Intersection(t *testing.T) {
 	assert.False(t, result.Contains(memberB))
 	assert.True(t, result.Contains(memberC))
 	assert.False(t, result.Contains(memberD))
+
+	assert.True(t, A.Contains(memberA))
+	assert.False(t, A.Contains(memberB))
+	assert.False(t, A.Contains(memberC))
+	assert.False(t, A.Contains(memberD))
+
+	assert.True(t, AB.Contains(memberA))
+	assert.True(t, AB.Contains(memberB))
+	assert.False(t, AB.Contains(memberC))
+	assert.False(t, AB.Contains(memberD))
+
+	assert.True(t, ABC.Contains(memberA))
+	assert.True(t, ABC.Contains(memberB))
+	assert.True(t, ABC.Contains(memberC))
+	assert.False(t, ABC.Contains(memberD))
+
+	assert.True(t, AD.Contains(memberA))
+	assert.False(t, AD.Contains(memberB))
+	assert.False(t, AD.Contains(memberC))
+	assert.True(t, AD.Contains(memberD))
+
+	assert.True(t, ADC.Contains(memberA))
+	assert.False(t, ADC.Contains(memberB))
+	assert.True(t, ADC.Contains(memberC))
+	assert.True(t, ADC.Contains(memberD))
 }
