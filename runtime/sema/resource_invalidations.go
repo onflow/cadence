@@ -43,21 +43,18 @@ func (ris ResourceInvalidations) Include(invalidation ResourceInvalidation) bool
 	})
 }
 
-func (ris ResourceInvalidations) Insert(invalidation ResourceInvalidation) ResourceInvalidations {
+func (ris *ResourceInvalidations) Insert(invalidation ResourceInvalidation) {
 	entry := ResourceInvalidationEntry{invalidation}
-	newInvalidations := ris.invalidations.Insert(entry)
-	return ResourceInvalidations{newInvalidations}
+	ris.invalidations = ris.invalidations.Insert(entry)
 }
 
-func (ris ResourceInvalidations) Delete(invalidation ResourceInvalidation) ResourceInvalidations {
+func (ris *ResourceInvalidations) Delete(invalidation ResourceInvalidation) {
 	entry := ResourceInvalidationEntry{invalidation}
-	newInvalidations := ris.invalidations.Delete(entry)
-	return ResourceInvalidations{newInvalidations}
+	ris.invalidations = ris.invalidations.Delete(entry)
 }
 
-func (ris ResourceInvalidations) Merge(other ResourceInvalidations) ResourceInvalidations {
-	newInvalidations := ris.invalidations.Merge(other.invalidations)
-	return ResourceInvalidations{newInvalidations}
+func (ris *ResourceInvalidations) Merge(other ResourceInvalidations) {
+	ris.invalidations = ris.invalidations.Merge(other.invalidations)
 }
 
 func (ris ResourceInvalidations) Size() int {
