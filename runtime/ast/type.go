@@ -64,7 +64,7 @@ type Type interface {
 	HasPosition
 	fmt.Stringer
 	isType()
-	Equal(other Type) bool
+	Equal(other Type, checker TypeEqualityChecker) error
 }
 
 // NominalType represents a named type
@@ -112,27 +112,8 @@ func (t *NominalType) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (t *NominalType) Equal(other Type) bool {
-	otherNominalType, ok := other.(*NominalType)
-	if !ok {
-		return false
-	}
-
-	if t.Identifier.Identifier != otherNominalType.Identifier.Identifier {
-		return false
-	}
-
-	if len(t.NestedIdentifiers) != len(otherNominalType.NestedIdentifiers) {
-		return false
-	}
-
-	for index, identifier := range t.NestedIdentifiers {
-		otherIdentifier := otherNominalType.NestedIdentifiers[index]
-		if identifier.Identifier != otherIdentifier.Identifier {
-			return false
-		}
-	}
-	return true
+func (t *NominalType) Equal(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckNominalTypeEquality(t, other)
 }
 
 // OptionalType represents am optional variant of another type
@@ -169,13 +150,8 @@ func (t *OptionalType) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (t *OptionalType) Equal(other Type) bool {
-	otherOptionalType, ok := other.(*OptionalType)
-	if !ok {
-		return false
-	}
-
-	return t.Type.Equal(otherOptionalType.Type)
+func (t *OptionalType) Equal(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckOptionalTypeEquality(t, other)
 }
 
 // VariableSizedType is a variable sized array type
@@ -202,13 +178,8 @@ func (t *VariableSizedType) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (t *VariableSizedType) Equal(other Type) bool {
-	otherVarSizedType, ok := other.(*VariableSizedType)
-	if !ok {
-		return false
-	}
-
-	return t.Type.Equal(otherVarSizedType.Type)
+func (t *VariableSizedType) Equal(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckVariableSizedTypeEquality(t, other)
 }
 
 // ConstantSizedType is a constant sized array type
@@ -236,15 +207,8 @@ func (t *ConstantSizedType) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (t *ConstantSizedType) Equal(other Type) bool {
-	otherConstSizedType, ok := other.(*ConstantSizedType)
-	if !ok {
-		return false
-	}
-
-	return t.Size.Value.Cmp(otherConstSizedType.Size.Value) == 0 &&
-		t.Size.Base == otherConstSizedType.Size.Base &&
-		t.Type.Equal(otherConstSizedType.Type)
+func (t *ConstantSizedType) Equal(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckConstantSizedTypeEquality(t, other)
 }
 
 // DictionaryType
@@ -272,14 +236,8 @@ func (t *DictionaryType) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (t *DictionaryType) Equal(other Type) bool {
-	dictionaryType, ok := other.(*DictionaryType)
-	if !ok {
-		return false
-	}
-
-	return t.KeyType.Equal(dictionaryType.KeyType) &&
-		t.KeyType.Equal(dictionaryType.KeyType)
+func (t *DictionaryType) Equal(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckDictionaryTypeEquality(t, other)
 }
 
 // FunctionType
@@ -315,24 +273,8 @@ func (t *FunctionType) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (t *FunctionType) Equal(other Type) bool {
-	otherFuncType, ok := other.(*FunctionType)
-	if !ok {
-		return false
-	}
-
-	if len(t.ParameterTypeAnnotations) != len(otherFuncType.ParameterTypeAnnotations) {
-		return false
-	}
-
-	for index, paramAnnot := range t.ParameterTypeAnnotations {
-		otherParamAnnot := otherFuncType.ParameterTypeAnnotations[index]
-		if !paramAnnot.Type.Equal(otherParamAnnot.Type) {
-			return false
-		}
-	}
-
-	return t.ReturnTypeAnnotation.Type.Equal(otherFuncType.ReturnTypeAnnotation.Type)
+func (t *FunctionType) Equal(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckFunctionTypeEquality(t, other)
 }
 
 // ReferenceType
@@ -376,14 +318,8 @@ func (t *ReferenceType) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (t *ReferenceType) Equal(other Type) bool {
-	otherRefType, ok := other.(*ReferenceType)
-	if !ok {
-		return false
-	}
-
-	return t.Authorized == otherRefType.Authorized &&
-		t.Type.Equal(otherRefType.Type)
+func (t *ReferenceType) Equal(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckReferenceTypeEquality(t, other)
 }
 
 // RestrictedType
@@ -423,28 +359,8 @@ func (t *RestrictedType) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (t *RestrictedType) Equal(other Type) bool {
-	otherRestrictedType, ok := other.(*RestrictedType)
-	if !ok {
-		return false
-	}
-
-	if !t.Type.Equal(otherRestrictedType.Type) {
-		return false
-	}
-
-	if len(t.Restrictions) != len(otherRestrictedType.Restrictions) {
-		return false
-	}
-
-	for index, restriction := range t.Restrictions {
-		otherRestriction := otherRestrictedType.Restrictions[index]
-		if !restriction.Equal(otherRestriction) {
-			return false
-		}
-	}
-
-	return true
+func (t *RestrictedType) Equal(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckRestrictedTypeEquality(t, other)
 }
 
 // InstantiationType represents an instantiation of a generic (nominal) type
@@ -493,26 +409,18 @@ func (t *InstantiationType) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (t *InstantiationType) Equal(other Type) bool {
-	otherInstType, ok := other.(*InstantiationType)
-	if !ok {
-		return false
-	}
+func (t *InstantiationType) Equal(other Type, checker TypeEqualityChecker) error {
+	return checker.CheckInstantiationTypeEquality(t, other)
+}
 
-	if !t.Type.Equal(otherInstType.Type) {
-		return false
-	}
-
-	if len(t.TypeArguments) != len(otherInstType.TypeArguments) {
-		return false
-	}
-
-	for index, typeArgs := range t.TypeArguments {
-		otherTypeArgs := otherInstType.TypeArguments[index]
-		if !typeArgs.Type.Equal(otherTypeArgs.Type) {
-			return false
-		}
-	}
-
-	return true
+type TypeEqualityChecker interface {
+	CheckNominalTypeEquality(*NominalType, Type) error
+	CheckOptionalTypeEquality(*OptionalType, Type) error
+	CheckVariableSizedTypeEquality(*VariableSizedType, Type) error
+	CheckConstantSizedTypeEquality(*ConstantSizedType, Type) error
+	CheckDictionaryTypeEquality(*DictionaryType, Type) error
+	CheckFunctionTypeEquality(*FunctionType, Type) error
+	CheckReferenceTypeEquality(*ReferenceType, Type) error
+	CheckRestrictedTypeEquality(*RestrictedType, Type) error
+	CheckInstantiationTypeEquality(*InstantiationType, Type) error
 }

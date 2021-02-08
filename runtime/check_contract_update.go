@@ -17,6 +17,9 @@ type ContractUpdateValidator struct {
 	visitedDecls            map[string]bool
 }
 
+// ContractUpdateValidator should implement ast.TypeEqualityChecker
+var typeEqualityChecker ast.TypeEqualityChecker = &ContractUpdateValidator{}
+
 func NewContractUpdateValidator(
 	r *interpreterRuntime,
 	context Context,
@@ -119,37 +122,10 @@ func (validator *ContractUpdateValidator) visitField(newField *ast.FieldDeclarat
 		return fmt.Errorf("found new field `%s`", validator.currentFieldName)
 	}
 
-	return validator.checkType(oldType, newField.TypeAnnotation.Type)
+	return oldType.Equal(newField.TypeAnnotation.Type, validator)
 }
 
-func (validator *ContractUpdateValidator) checkType(oldType ast.Type, newType ast.Type) error {
-	switch expectedType := oldType.(type) {
-	case *ast.NominalType:
-		return validator.checkNominalTypeEquality(expectedType, newType)
-	case *ast.OptionalType:
-		return validator.checkOptionalTypeEquality(expectedType, newType)
-	case *ast.VariableSizedType:
-		return validator.checkVarSizedTypeEquality(expectedType, newType)
-	case *ast.ConstantSizedType:
-		return validator.checkConstantSizedTypeEquality(expectedType, newType)
-	case *ast.DictionaryType:
-		return validator.checkDictionaryTypeEquality(expectedType, newType)
-	case *ast.RestrictedType:
-		return validator.checkRestrictedTypeEquality(expectedType, newType)
-	case *ast.FunctionType:
-	case *ast.ReferenceType:
-		// non storable type
-		panic(errors.NewUnreachableError())
-	default:
-		if !newType.Equal(oldType) {
-			return validator.getTypeMismatchError(oldType, newType)
-		}
-	}
-
-	return nil
-}
-
-func (validator *ContractUpdateValidator) checkNominalTypeEquality(expected *ast.NominalType, found ast.Type) error {
+func (validator *ContractUpdateValidator) CheckNominalTypeEquality(expected *ast.NominalType, found ast.Type) error {
 	foundNominalType, ok := found.(*ast.NominalType)
 	if !ok {
 		return validator.getTypeMismatchError(expected, found)
@@ -189,68 +165,68 @@ func (validator *ContractUpdateValidator) checkNominalTypeEquality(expected *ast
 	return validator.checkCompositeDeclUpdatability(oldCompositeDecl, newCompositeDecl)
 }
 
-func (validator *ContractUpdateValidator) checkOptionalTypeEquality(expected *ast.OptionalType, found ast.Type) error {
+func (validator *ContractUpdateValidator) CheckOptionalTypeEquality(expected *ast.OptionalType, found ast.Type) error {
 	foundOptionalType, ok := found.(*ast.OptionalType)
 	if !ok {
 		return validator.getTypeMismatchError(expected, found)
 	}
 
-	return validator.checkType(expected.Type, foundOptionalType.Type)
+	return expected.Type.Equal(foundOptionalType.Type, validator)
 }
 
-func (validator *ContractUpdateValidator) checkVarSizedTypeEquality(expected *ast.VariableSizedType, found ast.Type) error {
+func (validator *ContractUpdateValidator) CheckVariableSizedTypeEquality(expected *ast.VariableSizedType, found ast.Type) error {
 	foundVarSizedType, ok := found.(*ast.VariableSizedType)
 	if !ok {
 		return validator.getTypeMismatchError(expected, found)
 	}
 
-	return validator.checkType(expected.Type, foundVarSizedType.Type)
+	return expected.Type.Equal(foundVarSizedType.Type, validator)
 }
 
-func (validator *ContractUpdateValidator) checkConstantSizedTypeEquality(expected *ast.ConstantSizedType, found ast.Type) error {
-	foundVarSizedType, ok := found.(*ast.ConstantSizedType)
+func (validator *ContractUpdateValidator) CheckConstantSizedTypeEquality(expected *ast.ConstantSizedType, found ast.Type) error {
+	foundConstSizedType, ok := found.(*ast.ConstantSizedType)
 	if !ok {
 		return validator.getTypeMismatchError(expected, found)
 	}
 
 	// Check size
-	if foundVarSizedType.Size.Value.Cmp(expected.Size.Value) != 0 ||
-		foundVarSizedType.Size.Base != expected.Size.Base {
+	if foundConstSizedType.Size.Value.Cmp(expected.Size.Value) != 0 ||
+		foundConstSizedType.Size.Base != expected.Size.Base {
 		return validator.getTypeMismatchError(expected, found)
 	}
 
 	// Check type
-	return validator.checkType(expected.Type, foundVarSizedType.Type)
+	return expected.Type.Equal(foundConstSizedType.Type, validator)
 }
 
-func (validator *ContractUpdateValidator) checkDictionaryTypeEquality(expected *ast.DictionaryType, found ast.Type) error {
+func (validator *ContractUpdateValidator) CheckDictionaryTypeEquality(expected *ast.DictionaryType, found ast.Type) error {
 	foundDictionaryType, ok := found.(*ast.DictionaryType)
 	if !ok {
 		return validator.getTypeMismatchError(expected, found)
 	}
 
-	err := validator.checkType(expected.KeyType, foundDictionaryType.KeyType)
+	err := expected.KeyType.Equal(foundDictionaryType.KeyType, validator)
 	if err != nil {
 		return err
 	}
 
-	return validator.checkType(expected.ValueType, foundDictionaryType.ValueType)
+	return expected.ValueType.Equal(foundDictionaryType.ValueType, validator)
 }
 
-func (validator *ContractUpdateValidator) checkRestrictedTypeEquality(expected *ast.RestrictedType, found ast.Type) error {
+func (validator *ContractUpdateValidator) CheckRestrictedTypeEquality(expected *ast.RestrictedType, found ast.Type) error {
 	foundRestrictedType, ok := found.(*ast.RestrictedType)
 	if !ok {
 		return validator.getTypeMismatchError(expected, found)
 	}
 
-	err := validator.checkType(expected.Type, foundRestrictedType.Type)
+	err := expected.Type.Equal(foundRestrictedType.Type, validator)
 	if err != nil || len(expected.Restrictions) != len(foundRestrictedType.Restrictions) {
 		return validator.getTypeMismatchError(expected, found)
 	}
 
 	for index, expectedRestriction := range expected.Restrictions {
 		foundRestriction := foundRestrictedType.Restrictions[index]
-		err := validator.checkType(expectedRestriction, foundRestriction)
+		err := expectedRestriction.Equal(foundRestriction, validator)
 		if err != nil {
 			return validator.getTypeMismatchError(expected, found)
 		}
@@ -259,25 +235,36 @@ func (validator *ContractUpdateValidator) checkRestrictedTypeEquality(expected *
 	return nil
 }
 
-func (validator *ContractUpdateValidator) checkInstantiationTypeEquality(expected *ast.InstantiationType, found ast.Type) error {
+func (validator *ContractUpdateValidator) CheckInstantiationTypeEquality(expected *ast.InstantiationType, found ast.Type) error {
 	foundInstType, ok := found.(*ast.InstantiationType)
 	if !ok {
 		return validator.getTypeMismatchError(expected, found)
 	}
 
-	err := validator.checkType(expected.Type, foundInstType.Type)
+	err := expected.Type.Equal(foundInstType.Type, validator)
 	if err != nil || len(expected.TypeArguments) != len(foundInstType.TypeArguments) {
 		return validator.getTypeMismatchError(expected, found)
 	}
 
 	for index, typeArgs := range expected.TypeArguments {
 		otherTypeArgs := foundInstType.TypeArguments[index]
-		if !typeArgs.Type.Equal(otherTypeArgs.Type) {
+		err := typeArgs.Type.Equal(otherTypeArgs.Type, validator)
+		if err != nil {
 			return validator.getTypeMismatchError(expected, found)
 		}
 	}
 
 	return nil
+}
+
+func (validator *ContractUpdateValidator) CheckFunctionTypeEquality(expected *ast.FunctionType, found ast.Type) error {
+	// Non storable type
+	panic(errors.NewUnreachableError())
+}
+
+func (validator *ContractUpdateValidator) CheckReferenceTypeEquality(expected *ast.ReferenceType, found ast.Type) error {
+	// Non storable type
+	panic(errors.NewUnreachableError())
 }
 
 func (validator *ContractUpdateValidator) loadCompositeDecls() {
@@ -296,23 +283,39 @@ func (validator *ContractUpdateValidator) loadCompositeDecls() {
 	}
 }
 
-func (validator *ContractUpdateValidator) checkNameEquality(oldNominalType *ast.NominalType, newNominalType *ast.NominalType) bool {
-	oldIsQualifiedName := isQualifiedName(oldNominalType)
-	newIsQualifiedName := isQualifiedName(newNominalType)
+func (validator *ContractUpdateValidator) checkNameEquality(expectedType *ast.NominalType, foundType *ast.NominalType) bool {
+	isExpectedQualifiedName := isQualifiedName(expectedType)
+	isFoundQualifiedName := isQualifiedName(foundType)
 
 	// A field with a composite type can be defined in two ways:
 	// 	- Using type name (var x @ResourceName)
 	//	- Using qualified type name (var x @ContractName.ResourceName)
 
-	if oldIsQualifiedName && !newIsQualifiedName {
-		return validator.checkIdentifierEquality(oldNominalType, newNominalType)
+	if isExpectedQualifiedName && !isFoundQualifiedName {
+		return validator.checkIdentifierEquality(expectedType, foundType)
 	}
 
-	if newIsQualifiedName && !oldIsQualifiedName {
-		return validator.checkIdentifierEquality(newNominalType, oldNominalType)
+	if isFoundQualifiedName && !isExpectedQualifiedName {
+		return validator.checkIdentifierEquality(foundType, expectedType)
 	}
 
-	return newNominalType.Equal(oldNominalType)
+	// At this point, either both are qualified names, or both are simple names.
+	// Thus, do a one-to-one match.
+	if expectedType.Identifier.Identifier != foundType.Identifier.Identifier {
+		return false
+	}
+	if len(expectedType.NestedIdentifiers) != len(foundType.NestedIdentifiers) {
+		return false
+	}
+
+	for index, identifier := range expectedType.NestedIdentifiers {
+		otherIdentifier := foundType.NestedIdentifiers[index]
+		if identifier.Identifier != otherIdentifier.Identifier {
+			return false
+		}
+	}
+
+	return true
 }
 
 func (validator *ContractUpdateValidator) checkIdentifierEquality(
@@ -323,7 +326,7 @@ func (validator *ContractUpdateValidator) checkIdentifierEquality(
 	// qualifiedNominalType -> identifier: A, nestedIdentifiers: [foo, bar, ...]
 	// simpleNominalType -> identifier: foo,  nestedIdentifiers: [bar, ...]
 
-	// If the qualified identifier refers to a composite decl that is not the enclosing contract,
+	// If the first identifier (i.e: 'A') refers to a composite decl that is not the enclosing contract,
 	// then it must be referring to an imported contract. That means the two types are no longer the same.
 	if qualifiedNominalType.Identifier.Identifier != validator.oldContract.Identifier.Identifier {
 		return false
@@ -333,7 +336,7 @@ func (validator *ContractUpdateValidator) checkIdentifierEquality(
 		return false
 	}
 
-	return isEqual(simpleNominalType.NestedIdentifiers, qualifiedNominalType.NestedIdentifiers[1:])
+	return checkSliceEquality(simpleNominalType.NestedIdentifiers, qualifiedNominalType.NestedIdentifiers[1:])
 }
 
 func (validator *ContractUpdateValidator) getTypeMismatchError(
@@ -353,13 +356,13 @@ func (validator *ContractUpdateValidator) isNestedDecl() bool {
 	return validator.entryPoint != validator.currentDeclName
 }
 
-func isEqual(array1 []ast.Identifier, array2 []ast.Identifier) bool {
-	if len(array1) != len(array2) {
+func checkSliceEquality(slice1 []ast.Identifier, slice2 []ast.Identifier) bool {
+	if len(slice1) != len(slice2) {
 		return false
 	}
 
-	for index, element := range array2 {
-		if array1[index] != element {
+	for index, element := range slice2 {
+		if slice1[index] != element {
 			return false
 		}
 	}
