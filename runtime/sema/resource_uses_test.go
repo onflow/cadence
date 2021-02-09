@@ -305,3 +305,60 @@ func TestResourceUses(t *testing.T) {
 		forEachResult,
 	)
 }
+
+func TestResourceUses_Merge(t *testing.T) {
+
+	t.Parallel()
+
+	posA := ast.Position{Offset: 0}
+	posB := ast.Position{Offset: 1}
+	posC := ast.Position{Offset: 2}
+	posD := ast.Position{Offset: 3}
+
+	A := &sema.ResourceUses{}
+	A.Add(posA)
+
+	AB := A.Clone()
+	AB.Add(posB)
+
+	ABC := AB.Clone()
+	ABC.Add(posC)
+
+	AD := A.Clone()
+	AD.Add(posD)
+
+	ADC := AD.Clone()
+	ADC.Add(posC)
+
+	result := AB.Clone()
+	result.Merge(*ADC)
+	assert.True(t, result.Contains(posA))
+	assert.True(t, result.Contains(posB))
+	assert.True(t, result.Contains(posC))
+	assert.True(t, result.Contains(posD))
+
+	assert.True(t, A.Contains(posA))
+	assert.False(t, A.Contains(posB))
+	assert.False(t, A.Contains(posC))
+	assert.False(t, A.Contains(posD))
+
+	assert.True(t, AB.Contains(posA))
+	assert.True(t, AB.Contains(posB))
+	assert.False(t, AB.Contains(posC))
+	assert.False(t, AB.Contains(posD))
+
+	assert.True(t, ABC.Contains(posA))
+	assert.True(t, ABC.Contains(posB))
+	assert.True(t, ABC.Contains(posC))
+	assert.False(t, ABC.Contains(posD))
+
+	assert.True(t, AD.Contains(posA))
+	assert.False(t, AD.Contains(posB))
+	assert.False(t, AD.Contains(posC))
+	assert.True(t, AD.Contains(posD))
+
+	assert.True(t, ADC.Contains(posA))
+	assert.False(t, ADC.Contains(posB))
+	assert.True(t, ADC.Contains(posC))
+	assert.True(t, ADC.Contains(posD))
+}

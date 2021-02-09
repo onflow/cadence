@@ -109,7 +109,7 @@ func (ris *Resources) RemoveTemporaryMoveInvalidation(resource interface{}, inva
 //
 func (ris *Resources) AddUse(resource interface{}, use ast.Position) {
 	info := ris.Get(resource)
-	info.UsePositions.Insert(use)
+	info.UsePositions.Add(use)
 	entry := ris.entry(resource)
 	ris.resources = ris.resources.Insert(entry, info)
 }
