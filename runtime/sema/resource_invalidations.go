@@ -125,8 +125,8 @@ func (ris ResourceInvalidations) IsEmpty() bool {
 // Clone returns a new child resource invalidation set that contains all entries of this parent set.
 // Changes to the returned set will only be applied in the returned set, not the parent.
 //
-func (ris *ResourceInvalidations) Clone() *ResourceInvalidations {
-	return &ResourceInvalidations{
+func (ris *ResourceInvalidations) Clone() ResourceInvalidations {
+	return ResourceInvalidations{
 		Parent: ris,
 	}
 }
