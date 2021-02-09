@@ -202,6 +202,10 @@ func (i *emptyRuntimeInterface) RemoveAccountKey(_ Address, _ int) (publicKey []
 	return nil, nil
 }
 
+func (i *emptyRuntimeInterface) UpdateAccountCode(_ Address, _ []byte) error {
+	return nil
+}
+
 func (i *emptyRuntimeInterface) UpdateAccountContractCode(_ Address, _ string, _ []byte) (err error) {
 	return nil
 }
