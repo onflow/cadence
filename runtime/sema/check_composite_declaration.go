@@ -90,6 +90,7 @@ func (checker *Checker) visitCompositeDeclaration(declaration *ast.CompositeDecl
 			if !ok {
 				continue
 			}
+
 			fieldMembers[member] = field
 		}
 
@@ -541,16 +542,18 @@ func (checker *Checker) declareCompositeMembersAndValue(
 			nestedCompositeDeclarationVariable :=
 				checker.valueActivations.Find(identifier.Identifier)
 
-			declarationMembers.Set(nestedCompositeDeclarationVariable.Identifier, &Member{
-				Identifier:            identifier,
-				Access:                nestedCompositeDeclaration.Access,
-				ContainerType:         compositeType,
-				TypeAnnotation:        NewTypeAnnotation(nestedCompositeDeclarationVariable.Type),
-				DeclarationKind:       nestedCompositeDeclarationVariable.DeclarationKind,
-				VariableKind:          ast.VariableKindConstant,
-				IgnoreInSerialization: true,
-				DocString:             nestedCompositeDeclaration.DocString,
-			})
+			declarationMembers.Set(
+				nestedCompositeDeclarationVariable.Identifier,
+				&Member{
+					Identifier:            identifier,
+					Access:                nestedCompositeDeclaration.Access,
+					ContainerType:         compositeType,
+					TypeAnnotation:        NewTypeAnnotation(nestedCompositeDeclarationVariable.Type),
+					DeclarationKind:       nestedCompositeDeclarationVariable.DeclarationKind,
+					VariableKind:          ast.VariableKindConstant,
+					IgnoreInSerialization: true,
+					DocString:             nestedCompositeDeclaration.DocString,
+				})
 		}
 
 		// Declare implicit type requirement conformances, if any,
@@ -760,16 +763,18 @@ func (checker *Checker) declareEnumConstructor(
 		if _, ok := constructorMembers.Get(caseName); ok {
 			continue
 		}
-		constructorMembers.Set(caseName, &Member{
-			ContainerType: constructorType,
-			// enum cases are always public
-			Access:          ast.AccessPublic,
-			Identifier:      enumCase.Identifier,
-			TypeAnnotation:  memberCaseTypeAnnotation,
-			DeclarationKind: common.DeclarationKindField,
-			VariableKind:    ast.VariableKindConstant,
-			DocString:       enumCase.DocString,
-		})
+		constructorMembers.Set(
+			caseName,
+			&Member{
+				ContainerType: constructorType,
+				// enum cases are always public
+				Access:          ast.AccessPublic,
+				Identifier:      enumCase.Identifier,
+				TypeAnnotation:  memberCaseTypeAnnotation,
+				DeclarationKind: common.DeclarationKindField,
+				VariableKind:    ast.VariableKindConstant,
+				DocString:       enumCase.DocString,
+			})
 
 		if checker.originsAndOccurrencesEnabled && constructorOrigins != nil {
 			constructorOrigins[caseName] =
@@ -1398,15 +1403,17 @@ func (checker *Checker) defaultMembersAndOrigins(
 			)
 		}
 
-		members.Set(identifier, &Member{
-			ContainerType:   containerType,
-			Access:          field.Access,
-			Identifier:      field.Identifier,
-			DeclarationKind: declarationKind,
-			TypeAnnotation:  fieldTypeAnnotation,
-			VariableKind:    field.VariableKind,
-			DocString:       field.DocString,
-		})
+		members.Set(
+			identifier,
+			&Member{
+				ContainerType:   containerType,
+				Access:          field.Access,
+				Identifier:      field.Identifier,
+				DeclarationKind: declarationKind,
+				TypeAnnotation:  fieldTypeAnnotation,
+				VariableKind:    field.VariableKind,
+				DocString:       field.DocString,
+			})
 
 		if checker.originsAndOccurrencesEnabled && origins != nil {
 			origins[identifier] =
@@ -1461,16 +1468,18 @@ func (checker *Checker) defaultMembersAndOrigins(
 			)
 		}
 
-		members.Set(identifier, &Member{
-			ContainerType:   containerType,
-			Access:          function.Access,
-			Identifier:      function.Identifier,
-			DeclarationKind: declarationKind,
-			TypeAnnotation:  fieldTypeAnnotation,
-			VariableKind:    ast.VariableKindConstant,
-			ArgumentLabels:  argumentLabels,
-			DocString:       function.DocString,
-		})
+		members.Set(
+			identifier,
+			&Member{
+				ContainerType:   containerType,
+				Access:          function.Access,
+				Identifier:      function.Identifier,
+				DeclarationKind: declarationKind,
+				TypeAnnotation:  fieldTypeAnnotation,
+				VariableKind:    ast.VariableKindConstant,
+				ArgumentLabels:  argumentLabels,
+				DocString:       function.DocString,
+			})
 
 		if checker.originsAndOccurrencesEnabled && origins != nil {
 			origins[identifier] =
@@ -1503,14 +1512,16 @@ func (checker *Checker) eventMembersAndOrigins(
 
 		fieldNames = append(fieldNames, identifier.Identifier)
 
-		members.Set(identifier.Identifier, &Member{
-			ContainerType:   containerType,
-			Access:          ast.AccessPublic,
-			Identifier:      identifier,
-			DeclarationKind: common.DeclarationKindField,
-			TypeAnnotation:  typeAnnotation,
-			VariableKind:    ast.VariableKindConstant,
-		})
+		members.Set(
+			identifier.Identifier,
+			&Member{
+				ContainerType:   containerType,
+				Access:          ast.AccessPublic,
+				Identifier:      identifier,
+				DeclarationKind: common.DeclarationKindField,
+				TypeAnnotation:  typeAnnotation,
+				VariableKind:    ast.VariableKindConstant,
+			})
 
 		if checker.originsAndOccurrencesEnabled && origins != nil {
 			origins[identifier.Identifier] =
@@ -1574,17 +1585,19 @@ func (checker *Checker) enumMembersAndOrigins(
 	// so only has a single member, the raw value field
 
 	members = NewStringMemberOrderedMap()
-	members.Set(EnumRawValueFieldName, &Member{
-		ContainerType: containerType,
-		Access:        ast.AccessPublic,
-		Identifier: ast.Identifier{
-			Identifier: EnumRawValueFieldName,
-		},
-		DeclarationKind: common.DeclarationKindField,
-		TypeAnnotation:  NewTypeAnnotation(containerType.EnumRawType),
-		VariableKind:    ast.VariableKindConstant,
-		DocString:       enumRawValueFieldDocString,
-	})
+	members.Set(
+		EnumRawValueFieldName,
+		&Member{
+			ContainerType: containerType,
+			Access:        ast.AccessPublic,
+			Identifier: ast.Identifier{
+				Identifier: EnumRawValueFieldName,
+			},
+			DeclarationKind: common.DeclarationKindField,
+			TypeAnnotation:  NewTypeAnnotation(containerType.EnumRawType),
+			VariableKind:    ast.VariableKindConstant,
+			DocString:       enumRawValueFieldDocString,
+		})
 
 	// No origins available for the only member which was declared above
 
@@ -1954,9 +1967,9 @@ func (checker *Checker) checkNoDestructorNoResourceFields(
 		return
 	}
 
-	for p := members.Oldest(); p != nil; p = p.Next() {
-		member := p.Value
-		memberName := p.Key
+	for pair := members.Oldest(); pair != nil; pair = pair.Next() {
+		member := pair.Value
+		memberName := pair.Key
 
 		// NOTE: check type, not resource annotation:
 		// the field could have a wrong annotation

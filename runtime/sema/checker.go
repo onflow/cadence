@@ -1007,8 +1007,9 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 
 				prevMemberType, ok := previousDeclaringInterfaceType.Members.Get(name)
 				if !ok {
-					return
+					panic(errors.NewUnreachableError())
 				}
+
 				previousMemberType := prevMemberType.TypeAnnotation.Type
 
 				if !memberType.IsInvalidType() &&

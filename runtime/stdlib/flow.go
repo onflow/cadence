@@ -275,13 +275,15 @@ func newFlowEventType(identifier string, parameters ...*sema.Parameter) *sema.Co
 			parameter.Identifier,
 		)
 
-		eventType.Members.Set(parameter.Identifier, sema.NewPublicConstantFieldMember(
-			eventType,
+		eventType.Members.Set(
 			parameter.Identifier,
-			parameter.TypeAnnotation.Type,
-			// TODO: add docstring support for parameters
-			"",
-		))
+			sema.NewPublicConstantFieldMember(
+				eventType,
+				parameter.Identifier,
+				parameter.TypeAnnotation.Type,
+				// TODO: add docstring support for parameters
+				"",
+			))
 
 		eventType.ConstructorParameters = append(
 			eventType.ConstructorParameters,

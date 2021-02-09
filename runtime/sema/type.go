@@ -4881,8 +4881,8 @@ func (t *CompositeType) IsStorable(results map[*Member]bool) bool {
 	// If this composite type has a member which is non-storable,
 	// then the composite type is not storable.
 
-	for p := t.Members.Oldest(); p != nil; p = p.Next() {
-		if !p.Value.IsStorable(results) {
+	for pair := t.Members.Oldest(); pair != nil; pair = pair.Next() {
+		if !pair.Value.IsStorable(results) {
 			return false
 		}
 	}
@@ -5895,8 +5895,8 @@ func (t *InterfaceType) IsStorable(results map[*Member]bool) bool {
 	// If this interface type has a member which is non-storable,
 	// then the interface type is not storable.
 
-	for p := t.Members.Oldest(); p != nil; p = p.Next() {
-		if !p.Value.IsStorable(results) {
+	for pair := t.Members.Oldest(); pair != nil; pair = pair.Next() {
+		if !pair.Value.IsStorable(results) {
 			return false
 		}
 	}
@@ -5913,8 +5913,8 @@ func (t *InterfaceType) IsExternallyReturnable(results map[*Member]bool) bool {
 	// If this interface type has a member which is not externally returnable,
 	// then the interface type is not externally returnable.
 
-	for p := t.Members.Oldest(); p != nil; p = p.Next() {
-		if !p.Value.IsExternallyReturnable(results) {
+	for pair := t.Members.Oldest(); pair != nil; pair = pair.Next() {
+		if !pair.Value.IsExternallyReturnable(results) {
 			return false
 		}
 	}

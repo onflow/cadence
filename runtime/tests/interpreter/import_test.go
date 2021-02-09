@@ -41,14 +41,16 @@ func TestInterpretVirtualImport(t *testing.T) {
 	}
 
 	fooType.Members = sema.NewStringMemberOrderedMap()
-	fooType.Members.Set("bar", sema.NewPublicFunctionMember(
-		fooType,
+	fooType.Members.Set(
 		"bar",
-		&sema.FunctionType{
-			ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.UInt64Type{}),
-		},
-		"",
-	))
+		sema.NewPublicFunctionMember(
+			fooType,
+			"bar",
+			&sema.FunctionType{
+				ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.UInt64Type{}),
+			},
+			"",
+		))
 
 	const code = `
        import Foo
