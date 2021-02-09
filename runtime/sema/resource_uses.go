@@ -53,6 +53,8 @@ func (rus *ResourceUses) ForEach(cb func(pos ast.Position, use ResourceUse) erro
 	return nil
 }
 
+// Contains returns true if the given resource use position exists in the set.
+//
 func (rus ResourceUses) Contains(pos ast.Position) bool {
 	if rus.positions != nil {
 		_, ok := rus.positions[pos]
@@ -142,7 +144,7 @@ func (rus ResourceUses) Size() int {
 }
 
 // Clone returns a new child resource use set that contains all entries of this parent set.
-// Changes to the returned set will only be applied in this set, not the parent.
+// Changes to the returned set will only be applied in the returned set, not the parent.
 //
 func (rus *ResourceUses) Clone() *ResourceUses {
 	return &ResourceUses{
