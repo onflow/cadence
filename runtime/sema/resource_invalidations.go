@@ -19,20 +19,47 @@
 package sema
 
 type ResourceInvalidations struct {
+	Parent        *ResourceInvalidations
 	invalidations map[ResourceInvalidation]struct{}
 }
 
 // ForEach calls the given function for each resource invalidation in the set.
 // It can be used to iterate over all invalidations.
 //
-func (ris ResourceInvalidations) ForEach(cb func(invalidation ResourceInvalidation) error) error {
-	for invalidation := range ris.invalidations {
-		err := cb(invalidation)
-		if err != nil {
-			return err
+func (ris *ResourceInvalidations) ForEach(cb func(invalidation ResourceInvalidation) error) error {
+
+	resourceInvalidations := ris
+
+	for resourceInvalidations != nil {
+
+		for invalidation := range resourceInvalidations.invalidations {
+			err := cb(invalidation)
+			if err != nil {
+				return err
+			}
+		}
+
+		resourceInvalidations = resourceInvalidations.Parent
+	}
+
+	return nil
+}
+
+// Contains returns true if the given resource use position exists in the set.
+//
+func (ris ResourceInvalidations) Contains(invalidation ResourceInvalidation) bool {
+	if ris.invalidations != nil {
+		_, ok := ris.invalidations[invalidation]
+		if ok {
+			return true
 		}
 	}
-	return nil
+
+	if ris.Parent != nil {
+		return ris.Parent.Contains(invalidation)
+	}
+
+	return false
 }
 
 // All returns a slice with all resource invalidations in the set.
@@ -49,9 +76,12 @@ func (ris ResourceInvalidations) All() (result []ResourceInvalidation) {
 	return
 }
 
-// Insert adds the given resource invalidation to this set.
+// Add adds the given resource invalidation to this set.
 //
-func (ris *ResourceInvalidations) Insert(invalidation ResourceInvalidation) {
+func (ris *ResourceInvalidations) Add(invalidation ResourceInvalidation) {
+	if ris.Contains(invalidation) {
+		return
+	}
 	if ris.invalidations == nil {
 		ris.invalidations = map[ResourceInvalidation]struct{}{}
 	}
@@ -71,7 +101,7 @@ func (ris *ResourceInvalidations) Delete(invalidation ResourceInvalidation) {
 //
 func (ris *ResourceInvalidations) Merge(other ResourceInvalidations) {
 	_ = other.ForEach(func(invalidation ResourceInvalidation) error {
-		ris.Insert(invalidation)
+		ris.Add(invalidation)
 
 		// NOTE: when changing this function to return an error,
 		// also return it from the outer function,
@@ -90,4 +120,13 @@ func (ris ResourceInvalidations) Size() int {
 //
 func (ris ResourceInvalidations) IsEmpty() bool {
 	return ris.Size() == 0
+}
+
+// Clone returns a new child resource invalidation set that contains all entries of this parent set.
+// Changes to the returned set will only be applied in the returned set, not the parent.
+//
+func (ris *ResourceInvalidations) Clone() *ResourceInvalidations {
+	return &ResourceInvalidations{
+		Parent: ris,
+	}
 }

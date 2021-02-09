@@ -83,7 +83,7 @@ func (ris *Resources) Get(resource interface{}) ResourceInfo {
 //
 func (ris *Resources) AddInvalidation(resource interface{}, invalidation ResourceInvalidation) {
 	info := ris.Get(resource)
-	info.Invalidations.Insert(invalidation)
+	info.Invalidations.Add(invalidation)
 	if invalidation.Kind.IsDefinite() {
 		info.DefinitivelyInvalidated = true
 	}
