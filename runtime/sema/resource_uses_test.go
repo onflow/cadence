@@ -77,7 +77,8 @@ func TestResourceUses(t *testing.T) {
 
 	// Child set with also B
 
-	resourceUses = resourceUses.Clone()
+	withB := resourceUses.Clone()
+	resourceUses = &withB
 
 	// ... Assert state before
 
@@ -172,7 +173,8 @@ func TestResourceUses(t *testing.T) {
 
 	// Child set with also C
 
-	resourceUses = resourceUses.Clone()
+	withC := resourceUses.Clone()
+	resourceUses = &withC
 
 	// ... Assert state before
 
@@ -331,7 +333,7 @@ func TestResourceUses_Merge(t *testing.T) {
 	ADC.Add(posC)
 
 	result := AB.Clone()
-	result.Merge(*ADC)
+	result.Merge(ADC)
 	assert.True(t, result.Contains(posA))
 	assert.True(t, result.Contains(posB))
 	assert.True(t, result.Contains(posC))

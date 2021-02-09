@@ -82,7 +82,8 @@ func TestResourceInvalidations(t *testing.T) {
 
 	// Child set with also B
 
-	resourceInvalidations = resourceInvalidations.Clone()
+	withB := resourceInvalidations.Clone()
+	resourceInvalidations = &withB
 
 	// ... Assert state before
 
@@ -135,9 +136,10 @@ func TestResourceInvalidations(t *testing.T) {
 		resourceInvalidations.All(),
 	)
 
-	// Child set with also B
+	// Child set with also C
 
-	resourceInvalidations = resourceInvalidations.Clone()
+	withC := resourceInvalidations.Clone()
+	resourceInvalidations = &withC
 
 	// ... Assert state before
 
@@ -290,7 +292,7 @@ func TestResourceInvalidations_Merge(t *testing.T) {
 	ADC.Add(invalidationC)
 
 	result := AB.Clone()
-	result.Merge(*ADC)
+	result.Merge(ADC)
 	assert.True(t, result.Contains(invalidationA))
 	assert.True(t, result.Contains(invalidationB))
 	assert.True(t, result.Contains(invalidationC))

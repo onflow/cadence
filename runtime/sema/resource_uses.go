@@ -146,8 +146,8 @@ func (rus ResourceUses) Size() int {
 // Clone returns a new child resource use set that contains all entries of this parent set.
 // Changes to the returned set will only be applied in the returned set, not the parent.
 //
-func (rus *ResourceUses) Clone() *ResourceUses {
-	return &ResourceUses{
+func (rus *ResourceUses) Clone() ResourceUses {
+	return ResourceUses{
 		Parent: rus,
 	}
 }
