@@ -122,8 +122,10 @@ func (rus *ResourceUses) Merge(other ResourceUses) {
 	}
 
 	_ = other.ForEach(func(pos ast.Position, use ResourceUse) error {
-		// TODO: really overwrite potential existing use with UseAfterInvalidationReported == true
-		//   with new UseAfterInvalidationReported == false ? check Contains?
+		if !use.UseAfterInvalidationReported {
+			use.UseAfterInvalidationReported = rus.getOrEmpty(pos).UseAfterInvalidationReported
+		}
+
 		rus.positions[pos] = use
 
 		// NOTE: when changing this function to return an error,
