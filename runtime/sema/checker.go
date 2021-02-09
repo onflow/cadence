@@ -237,7 +237,7 @@ func NewChecker(program *ast.Program, location common.Location, options ...Optio
 		Program:             program,
 		Location:            location,
 		valueActivations:    NewValueActivations(),
-		resources:           &Resources{},
+		resources:           NewResources(),
 		typeActivations:     typeActivations,
 		functionActivations: functionActivations,
 		Occurrences:         NewOccurrences(),

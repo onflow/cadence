@@ -30,7 +30,7 @@ func TestResources_Add(t *testing.T) {
 
 	t.Parallel()
 
-	resources := &Resources{}
+	resources := NewResources()
 
 	varX := &Variable{
 		Identifier: "x",
@@ -134,11 +134,11 @@ func TestResources_Add(t *testing.T) {
 	assert.Empty(t, resources.Get(varZ).Invalidations.All())
 }
 
-func TestResourceResources_FirstRest(t *testing.T) {
+func TestResourceResources_ForEach(t *testing.T) {
 
 	t.Parallel()
 
-	resources := &Resources{}
+	resources := NewResources()
 
 	varX := &Variable{
 		Identifier: "x",
@@ -211,8 +211,8 @@ func TestResources_MergeBranches(t *testing.T) {
 
 	t.Parallel()
 
-	resourcesThen := &Resources{}
-	resourcesElse := &Resources{}
+	resourcesThen := NewResources()
+	resourcesElse := NewResources()
 
 	varX := &Variable{
 		Identifier: "x",
@@ -256,7 +256,7 @@ func TestResources_MergeBranches(t *testing.T) {
 	})
 
 	// treat var Y already invalidated in main
-	resources := &Resources{}
+	resources := NewResources()
 	resources.AddInvalidation(varY, ResourceInvalidation{
 		Kind:     ResourceInvalidationKindMoveDefinite,
 		StartPos: ast.Position{Line: 0, Column: 0},
