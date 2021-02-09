@@ -18,15 +18,27 @@
 
 package sema
 
-import "github.com/raviqqe/hamt"
-
 type ResourceInvalidations struct {
-	invalidations hamt.Set
+	invalidations map[ResourceInvalidation]struct{}
 }
 
+// ForEach calls the given function for each resource invalidation in the set.
+// It can be used to iterate over all invalidations.
+//
+func (ris ResourceInvalidations) ForEach(cb func(invalidation ResourceInvalidation) error) error {
+	for invalidation := range ris.invalidations {
+		err := cb(invalidation)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// All returns a slice with all resources invalidations in the set.
+//
 func (ris ResourceInvalidations) All() (result []ResourceInvalidation) {
-	_ = ris.invalidations.ForEach(func(entry hamt.Entry) error {
-		invalidation := entry.(ResourceInvalidationEntry).ResourceInvalidation
+	_ = ris.ForEach(func(invalidation ResourceInvalidation) error {
 		result = append(result, invalidation)
 
 		// NOTE: when changing this function to return an error,
@@ -37,30 +49,45 @@ func (ris ResourceInvalidations) All() (result []ResourceInvalidation) {
 	return
 }
 
-func (ris ResourceInvalidations) Include(invalidation ResourceInvalidation) bool {
-	return ris.invalidations.Include(ResourceInvalidationEntry{
-		ResourceInvalidation: invalidation,
+// Insert adds the given resource invalidation to this set.
+//
+func (ris *ResourceInvalidations) Insert(invalidation ResourceInvalidation) {
+	if ris.invalidations == nil {
+		ris.invalidations = map[ResourceInvalidation]struct{}{}
+	}
+	ris.invalidations[invalidation] = struct{}{}
+}
+
+// Delete removed the given resource invalidation from this set.
+//
+func (ris *ResourceInvalidations) Delete(invalidation ResourceInvalidation) {
+	if ris.invalidations == nil {
+		return
+	}
+	delete(ris.invalidations, invalidation)
+}
+
+// Merge adds the resource invalidations of the given set to this set.
+//
+func (ris *ResourceInvalidations) Merge(other ResourceInvalidations) {
+	_ = other.ForEach(func(invalidation ResourceInvalidation) error {
+		ris.Insert(invalidation)
+
+		// NOTE: when changing this function to return an error,
+		// also return it from the outer function,
+		// as the outer error is currently ignored!
+		return nil
 	})
 }
 
-func (ris *ResourceInvalidations) Insert(invalidation ResourceInvalidation) {
-	entry := ResourceInvalidationEntry{invalidation}
-	ris.invalidations = ris.invalidations.Insert(entry)
-}
-
-func (ris *ResourceInvalidations) Delete(invalidation ResourceInvalidation) {
-	entry := ResourceInvalidationEntry{invalidation}
-	ris.invalidations = ris.invalidations.Delete(entry)
-}
-
-func (ris *ResourceInvalidations) Merge(other ResourceInvalidations) {
-	ris.invalidations = ris.invalidations.Merge(other.invalidations)
-}
-
+// Size returns the number of resource invalidations in this set.
+//
 func (ris ResourceInvalidations) Size() int {
-	return ris.invalidations.Size()
+	return len(ris.invalidations)
 }
 
+// IsEmpty returns true if this set contains no resource invalidations.
+//
 func (ris ResourceInvalidations) IsEmpty() bool {
 	return ris.Size() == 0
 }
