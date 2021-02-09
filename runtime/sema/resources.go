@@ -26,6 +26,7 @@ import (
 
 	"github.com/onflow/cadence/runtime/ast"
 	interfaceentry "github.com/onflow/cadence/runtime/common/interface_entry"
+	"github.com/onflow/cadence/runtime/errors"
 )
 
 // ResourceInfo is the info for a resource.
@@ -90,10 +91,14 @@ func (ris *Resources) AddInvalidation(resource interface{}, invalidation Resourc
 	ris.resources = ris.resources.Insert(entry, info)
 }
 
-// RemoveTemporaryInvalidation removes the given invalidation
+// RemoveTemporaryMoveInvalidation removes the given invalidation
 // from the set of invalidations for the given resource.
 //
-func (ris *Resources) RemoveTemporaryInvalidation(resource interface{}, invalidation ResourceInvalidation) {
+func (ris *Resources) RemoveTemporaryMoveInvalidation(resource interface{}, invalidation ResourceInvalidation) {
+	if invalidation.Kind != ResourceInvalidationKindMoveTemporary {
+		panic(errors.NewUnreachableError())
+	}
+
 	info := ris.Get(resource)
 	info.Invalidations.Delete(invalidation)
 	entry := ris.entry(resource)
