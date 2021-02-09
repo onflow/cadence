@@ -190,7 +190,7 @@ func (checker *Checker) checkMemberInvocationResourceInvalidation(invokedExpress
 		return
 	}
 
-	checker.resources.RemoveTemporaryInvalidation(
+	checker.resources.RemoveTemporaryMoveInvalidation(
 		invalidation.resource,
 		invalidation.invalidation,
 	)
