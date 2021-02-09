@@ -27,33 +27,65 @@ type ResourceUse struct {
 }
 
 type ResourceUses struct {
+	Parent    *ResourceUses
 	positions map[ast.Position]ResourceUse
 }
 
 // ForEach calls the given function for each resource use in the set.
 // It can be used to iterate over all uses.
 //
-func (rus ResourceUses) ForEach(cb func(pos ast.Position, use ResourceUse) error) error {
-	for pos, use := range rus.positions {
-		err := cb(pos, use)
-		if err != nil {
-			return err
+func (rus *ResourceUses) ForEach(cb func(pos ast.Position, use ResourceUse) error) error {
+
+	resourceUses := rus
+
+	for resourceUses != nil {
+
+		for pos, use := range resourceUses.positions {
+			err := cb(pos, use)
+			if err != nil {
+				return err
+			}
 		}
+
+		resourceUses = resourceUses.Parent
 	}
+
 	return nil
 }
 
 func (rus ResourceUses) Contains(pos ast.Position) bool {
-	if rus.positions == nil {
-		return false
+	if rus.positions != nil {
+		_, ok := rus.positions[pos]
+		if ok {
+			return true
+		}
 	}
-	_, ok := rus.positions[pos]
-	return ok
+
+	if rus.Parent != nil {
+		return rus.Parent.Contains(pos)
+	}
+
+	return false
 }
 
-// Insert adds the given resource use to this set.
+func (rus ResourceUses) getOrEmpty(pos ast.Position) ResourceUse {
+	if rus.positions != nil {
+		use, ok := rus.positions[pos]
+		if ok {
+			return use
+		}
+	}
+
+	if rus.Parent != nil {
+		return rus.Parent.getOrEmpty(pos)
+	}
+
+	return ResourceUse{}
+}
+
+// Add adds the given resource use to this set.
 //
-func (rus *ResourceUses) Insert(pos ast.Position) {
+func (rus *ResourceUses) Add(pos ast.Position) {
 	if rus.Contains(pos) {
 		return
 	}
@@ -67,11 +99,11 @@ func (rus *ResourceUses) Insert(pos ast.Position) {
 // of the resource at the given position as reported.
 //
 func (rus *ResourceUses) MarkUseAfterInvalidationReported(pos ast.Position) {
+	use := rus.getOrEmpty(pos)
+	use.UseAfterInvalidationReported = true
 	if rus.positions == nil {
 		rus.positions = map[ast.Position]ResourceUse{}
 	}
-	use := rus.positions[pos]
-	use.UseAfterInvalidationReported = true
 	rus.positions[pos] = use
 }
 
@@ -79,11 +111,7 @@ func (rus *ResourceUses) MarkUseAfterInvalidationReported(pos ast.Position) {
 // of the resource at the given position is reported.
 //
 func (rus ResourceUses) IsUseAfterInvalidationReported(pos ast.Position) bool {
-	if rus.positions == nil {
-		return false
-	}
-	use := rus.positions[pos]
-	return use.UseAfterInvalidationReported
+	return rus.getOrEmpty(pos).UseAfterInvalidationReported
 }
 
 // Merge adds the resource uses of the given set to this set.
@@ -95,7 +123,7 @@ func (rus *ResourceUses) Merge(other ResourceUses) {
 
 	_ = other.ForEach(func(pos ast.Position, use ResourceUse) error {
 		// TODO: really overwrite potential existing use with UseAfterInvalidationReported == true
-		//   with new UseAfterInvalidationReported == false ?
+		//   with new UseAfterInvalidationReported == false ? check Contains?
 		rus.positions[pos] = use
 
 		// NOTE: when changing this function to return an error,
@@ -109,4 +137,13 @@ func (rus *ResourceUses) Merge(other ResourceUses) {
 //
 func (rus ResourceUses) Size() int {
 	return len(rus.positions)
+}
+
+// Clone returns a new child resource use set that contains all entries of this parent set.
+// Changes to the returned set will only be applied in this set, not the parent.
+//
+func (rus *ResourceUses) Clone() *ResourceUses {
+	return &ResourceUses{
+		Parent: rus,
+	}
 }
