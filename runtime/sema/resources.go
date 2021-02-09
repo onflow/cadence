@@ -109,14 +109,14 @@ func (ris *Resources) RemoveTemporaryMoveInvalidation(resource interface{}, inva
 //
 func (ris *Resources) AddUse(resource interface{}, use ast.Position) {
 	info := ris.Get(resource)
-	info.UsePositions = info.UsePositions.Insert(use)
+	info.UsePositions.Insert(use)
 	entry := ris.entry(resource)
 	ris.resources = ris.resources.Insert(entry, info)
 }
 
 func (ris *Resources) MarkUseAfterInvalidationReported(resource interface{}, pos ast.Position) {
 	info := ris.Get(resource)
-	info.UsePositions = info.UsePositions.MarkUseAfterInvalidationReported(pos)
+	info.UsePositions.MarkUseAfterInvalidationReported(pos)
 	entry := ris.entry(resource)
 	ris.resources = ris.resources.Insert(entry, info)
 }
@@ -190,16 +190,12 @@ func (ris *Resources) MergeBranches(thenResources *Resources, elseResources *Res
 
 		if !thenResources.Returns {
 			info.Invalidations.Merge(infoTuple.thenInfo.Invalidations)
-
-			info.UsePositions = info.UsePositions.
-				Merge(infoTuple.thenInfo.UsePositions)
+			info.UsePositions.Merge(infoTuple.thenInfo.UsePositions)
 		}
 
 		if !elseReturns {
 			info.Invalidations.Merge(infoTuple.elseInfo.Invalidations)
-
-			info.UsePositions = info.UsePositions.
-				Merge(infoTuple.elseInfo.UsePositions)
+			info.UsePositions.Merge(infoTuple.elseInfo.UsePositions)
 		}
 
 		entry := ris.entry(resource)

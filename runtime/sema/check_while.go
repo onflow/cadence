@@ -81,18 +81,18 @@ func (checker *Checker) reportResourceUsesInLoop(startPos, endPos ast.Position) 
 
 		invalidations := info.Invalidations.All()
 
-		for _, usePosition := range info.UsePositions.AllPositions() {
+		_ = info.UsePositions.ForEach(func(usePosition ast.Position, _ ResourceUse) error {
 
 			// Only report an error if the use is inside the loop
 
 			if usePosition.Compare(startPos) < 0 ||
 				usePosition.Compare(endPos) > 0 {
 
-				continue
+				return nil
 			}
 
 			if checker.resources.IsUseAfterInvalidationReported(resource, usePosition) {
-				continue
+				return nil
 			}
 
 			checker.resources.MarkUseAfterInvalidationReported(resource, usePosition)
@@ -106,7 +106,9 @@ func (checker *Checker) reportResourceUsesInLoop(startPos, endPos ast.Position) 
 					InLoop:        true,
 				},
 			)
-		}
+
+			return nil
+		})
 	})
 }
 
