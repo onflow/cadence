@@ -170,7 +170,7 @@ func TestResourceUses(t *testing.T) {
 		forEachResult,
 	)
 
-	// Child set with also B
+	// Child set with also C
 
 	resourceUses = resourceUses.Clone()
 

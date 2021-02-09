@@ -104,7 +104,7 @@ func (ms *MemberSet) Intersection(otherMS *MemberSet) *MemberSet {
 }
 
 // Clone returns a new child member set that contains all entries of this parent set.
-// Changes to the returned set will only be applied in this set, not the parent.
+// Changes to the returned set will only be applied in the returned set, not the parent.
 //
 func (ms *MemberSet) Clone() *MemberSet {
 	return NewMemberSet(ms)
