@@ -19,8 +19,6 @@
 package sema
 
 import (
-	"github.com/raviqqe/hamt"
-
 	"github.com/onflow/cadence/runtime/ast"
 )
 
@@ -28,67 +26,87 @@ type ResourceUse struct {
 	UseAfterInvalidationReported bool
 }
 
-type ResourceUseEntry struct {
-	ast.Position
-}
-
-func (e ResourceUseEntry) Equal(other hamt.Entry) bool {
-	return e.Position == other.(ResourceUseEntry).Position
-}
-
-////
-
 type ResourceUses struct {
-	positions hamt.Map
+	positions map[ast.Position]ResourceUse
 }
 
-func (p ResourceUses) AllPositions() (result []ast.Position) {
-	_ = p.positions.ForEach(func(entry hamt.Entry, i interface{}) error {
-		position := entry.(ResourceUseEntry).Position
-		result = append(result, position)
+// ForEach calls the given function for each resource use in the set.
+// It can be used to iterate over all uses.
+//
+func (rus ResourceUses) ForEach(cb func(pos ast.Position, use ResourceUse) error) error {
+	for pos, use := range rus.positions {
+		err := cb(pos, use)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (rus ResourceUses) Contains(pos ast.Position) bool {
+	if rus.positions == nil {
+		return false
+	}
+	_, ok := rus.positions[pos]
+	return ok
+}
+
+// Insert adds the given resource use to this set.
+//
+func (rus *ResourceUses) Insert(pos ast.Position) {
+	if rus.Contains(pos) {
+		return
+	}
+	if rus.positions == nil {
+		rus.positions = map[ast.Position]ResourceUse{}
+	}
+	rus.positions[pos] = ResourceUse{}
+}
+
+// MarkUseAfterInvalidationReported marks the use after invalidation
+// of the resource at the given position as reported.
+//
+func (rus *ResourceUses) MarkUseAfterInvalidationReported(pos ast.Position) {
+	if rus.positions == nil {
+		rus.positions = map[ast.Position]ResourceUse{}
+	}
+	use := rus.positions[pos]
+	use.UseAfterInvalidationReported = true
+	rus.positions[pos] = use
+}
+
+// IsUseAfterInvalidationReported returns true if the use after invalidation
+// of the resource at the given position is reported.
+//
+func (rus ResourceUses) IsUseAfterInvalidationReported(pos ast.Position) bool {
+	if rus.positions == nil {
+		return false
+	}
+	use := rus.positions[pos]
+	return use.UseAfterInvalidationReported
+}
+
+// Merge adds the resource uses of the given set to this set.
+//
+func (rus *ResourceUses) Merge(other ResourceUses) {
+	if rus.positions == nil {
+		rus.positions = map[ast.Position]ResourceUse{}
+	}
+
+	_ = other.ForEach(func(pos ast.Position, use ResourceUse) error {
+		// TODO: really overwrite potential existing use with UseAfterInvalidationReported == true
+		//   with new UseAfterInvalidationReported == false ?
+		rus.positions[pos] = use
 
 		// NOTE: when changing this function to return an error,
 		// also return it from the outer function,
 		// as the outer error is currently ignored!
 		return nil
 	})
-	return
 }
 
-func (p ResourceUses) Include(pos ast.Position) bool {
-	return p.positions.Include(ResourceUseEntry{pos})
-}
-
-func (p ResourceUses) Insert(pos ast.Position) ResourceUses {
-	if p.Include(pos) {
-		return p
-	}
-	entry := ResourceUseEntry{pos}
-	newPositions := p.positions.Insert(entry, ResourceUse{})
-	return ResourceUses{newPositions}
-}
-
-func (p ResourceUses) MarkUseAfterInvalidationReported(pos ast.Position) ResourceUses {
-	entry := ResourceUseEntry{pos}
-	value := p.positions.Find(entry)
-	use := value.(ResourceUse)
-	use.UseAfterInvalidationReported = true
-	newPositions := p.positions.Insert(entry, use)
-	return ResourceUses{newPositions}
-}
-
-func (p ResourceUses) IsUseAfterInvalidationReported(pos ast.Position) bool {
-	entry := ResourceUseEntry{pos}
-	value := p.positions.Find(entry)
-	use := value.(ResourceUse)
-	return use.UseAfterInvalidationReported
-}
-
-func (p ResourceUses) Merge(other ResourceUses) ResourceUses {
-	newPositions := p.positions.Merge(other.positions)
-	return ResourceUses{newPositions}
-}
-
-func (p ResourceUses) Size() int {
-	return p.positions.Size()
+// Size returns the number of resource uses in this set.
+//
+func (rus ResourceUses) Size() int {
+	return len(rus.positions)
 }

@@ -35,7 +35,7 @@ func (ris ResourceInvalidations) ForEach(cb func(invalidation ResourceInvalidati
 	return nil
 }
 
-// All returns a slice with all resources invalidations in the set.
+// All returns a slice with all resource invalidations in the set.
 //
 func (ris ResourceInvalidations) All() (result []ResourceInvalidation) {
 	_ = ris.ForEach(func(invalidation ResourceInvalidation) error {
@@ -58,7 +58,7 @@ func (ris *ResourceInvalidations) Insert(invalidation ResourceInvalidation) {
 	ris.invalidations[invalidation] = struct{}{}
 }
 
-// Delete removed the given resource invalidation from this set.
+// Delete removes the given resource invalidation from this set.
 //
 func (ris *ResourceInvalidations) Delete(invalidation ResourceInvalidation) {
 	if ris.invalidations == nil {
