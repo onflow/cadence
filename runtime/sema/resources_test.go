@@ -317,3 +317,129 @@ func TestResources_MergeBranches(t *testing.T) {
 		},
 	)
 }
+
+func TestResources_Clone(t *testing.T) {
+
+	t.Parallel()
+
+	varX := &Variable{Identifier: "x"}
+	varY := &Variable{Identifier: "y"}
+	varZ := &Variable{Identifier: "z"}
+
+	// Parent set with only X
+
+	// ... Prepare
+
+	resources := NewResources()
+
+	// add invalidation for X
+
+	resources.AddInvalidation(varX, ResourceInvalidation{
+		Kind:     ResourceInvalidationKindMoveDefinite,
+		StartPos: ast.Position{Line: 1, Column: 1},
+		EndPos:   ast.Position{Line: 1, Column: 1},
+	})
+
+	// ... Assert state after
+
+	assert.ElementsMatch(t,
+		resources.Get(varX).Invalidations.All(),
+		[]ResourceInvalidation{
+			{
+				Kind:     ResourceInvalidationKindMoveDefinite,
+				StartPos: ast.Position{Line: 1, Column: 1},
+				EndPos:   ast.Position{Line: 1, Column: 1},
+			},
+		},
+	)
+	assert.Empty(t, resources.Get(varY).Invalidations.All())
+	assert.Empty(t, resources.Get(varZ).Invalidations.All())
+
+	// Child set with also invalidation for Y
+
+	withXY := resources.Clone()
+
+	// ... Assert state before
+
+	assert.ElementsMatch(t,
+		resources.Get(varX).Invalidations.All(),
+		[]ResourceInvalidation{
+			{
+				Kind:     ResourceInvalidationKindMoveDefinite,
+				StartPos: ast.Position{Line: 1, Column: 1},
+				EndPos:   ast.Position{Line: 1, Column: 1},
+			},
+		},
+	)
+	assert.Empty(t, resources.Get(varY).Invalidations.All())
+	assert.Empty(t, resources.Get(varZ).Invalidations.All())
+
+	assert.ElementsMatch(t,
+		withXY.Get(varX).Invalidations.All(),
+		[]ResourceInvalidation{
+			{
+				Kind:     ResourceInvalidationKindMoveDefinite,
+				StartPos: ast.Position{Line: 1, Column: 1},
+				EndPos:   ast.Position{Line: 1, Column: 1},
+			},
+		},
+	)
+	assert.Empty(t, withXY.Get(varY).Invalidations.All())
+	assert.Empty(t, withXY.Get(varZ).Invalidations.All())
+
+	// ... Add invalidation for Y and another for X
+
+	withXY.AddInvalidation(varY, ResourceInvalidation{
+		Kind:     ResourceInvalidationKindMoveDefinite,
+		StartPos: ast.Position{Line: 2, Column: 2},
+		EndPos:   ast.Position{Line: 2, Column: 2},
+	})
+
+	withXY.AddInvalidation(varX, ResourceInvalidation{
+		Kind:     ResourceInvalidationKindMoveDefinite,
+		StartPos: ast.Position{Line: 3, Column: 3},
+		EndPos:   ast.Position{Line: 3, Column: 3},
+	})
+
+	// ... Assert state after
+
+	assert.ElementsMatch(t,
+		resources.Get(varX).Invalidations.All(),
+		[]ResourceInvalidation{
+			{
+				Kind:     ResourceInvalidationKindMoveDefinite,
+				StartPos: ast.Position{Line: 1, Column: 1},
+				EndPos:   ast.Position{Line: 1, Column: 1},
+			},
+		},
+	)
+	assert.Empty(t, resources.Get(varY).Invalidations.All())
+	assert.Empty(t, resources.Get(varZ).Invalidations.All())
+
+	assert.ElementsMatch(t,
+		withXY.Get(varX).Invalidations.All(),
+		[]ResourceInvalidation{
+			{
+				Kind:     ResourceInvalidationKindMoveDefinite,
+				StartPos: ast.Position{Line: 1, Column: 1},
+				EndPos:   ast.Position{Line: 1, Column: 1},
+			},
+			{
+				Kind:     ResourceInvalidationKindMoveDefinite,
+				StartPos: ast.Position{Line: 3, Column: 3},
+				EndPos:   ast.Position{Line: 3, Column: 3},
+			},
+		},
+	)
+	assert.ElementsMatch(t,
+		withXY.Get(varY).Invalidations.All(),
+		[]ResourceInvalidation{
+			{
+				Kind:     ResourceInvalidationKindMoveDefinite,
+				StartPos: ast.Position{Line: 2, Column: 2},
+				EndPos:   ast.Position{Line: 2, Column: 2},
+			},
+		},
+	)
+	assert.Empty(t, withXY.Get(varZ).Invalidations.All())
+}
