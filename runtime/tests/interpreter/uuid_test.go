@@ -65,14 +65,14 @@ func TestInterpretResourceUUID(t *testing.T) {
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
 						assert.Equal(t,
 							ImportedLocation,
 							location,
 						)
 
-						return sema.CheckerImport{
-							Checker: importedChecker,
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
 						}, nil
 					},
 				),
@@ -84,7 +84,8 @@ func TestInterpretResourceUUID(t *testing.T) {
 	var uuid uint64
 
 	inter, err := interpreter.NewInterpreter(
-		importingChecker,
+		interpreter.ProgramFromChecker(importingChecker),
+		importingChecker.Location,
 		interpreter.WithUUIDHandler(
 			func() (uint64, error) {
 				defer func() { uuid++ }()
@@ -97,8 +98,15 @@ func TestInterpretResourceUUID(t *testing.T) {
 					ImportedLocation,
 					location,
 				)
-				return interpreter.ProgramImport{
-					Program: importedChecker.Program,
+
+				program := interpreter.ProgramFromChecker(importedChecker)
+				subInterpreter, err := inter.NewSubInterpreter(program, location)
+				if err != nil {
+					panic(err)
+				}
+
+				return interpreter.InterpreterImport{
+					Interpreter: subInterpreter,
 				}
 			},
 		),

@@ -18,25 +18,19 @@
 
 package interpreter
 
-// Import
+import (
+	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/sema"
+)
 
-type Import interface {
-	isImport()
+type Program struct {
+	Program     *ast.Program
+	Elaboration *sema.Elaboration
 }
 
-// VirtualImport
-
-type VirtualImport struct {
-	Globals   map[string]Value
-	TypeCodes TypeCodes
+func ProgramFromChecker(checker *sema.Checker) *Program {
+	return &Program{
+		Program:     checker.Program,
+		Elaboration: checker.Elaboration,
+	}
 }
-
-func (VirtualImport) isImport() {}
-
-// InterpreterImport
-
-type InterpreterImport struct {
-	Interpreter *Interpreter
-}
-
-func (InterpreterImport) isImport() {}

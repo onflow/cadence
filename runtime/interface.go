@@ -24,6 +24,7 @@ import (
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -47,10 +48,21 @@ type Interface interface {
 	ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error)
 	// GetCode returns the code at a given location
 	GetCode(location Location) ([]byte, error)
-	// GetCachedProgram attempts to get a parsed program from a cache.
-	GetCachedProgram(Location) (*ast.Program, error)
-	// CacheProgram adds a parsed program to a cache.
-	CacheProgram(Location, *ast.Program) error
+	// GetProgram attempts gets the program for the given location, if available.
+	//
+	// NOTE: During execution, this function must always return the *same* program,
+	// i.e. it may NOT return a different program,
+	// an elaboration in the program that is not annotating the AST in the program;
+	// or a program/elaboration and then nothing in a subsequent call.
+	//
+	// This function must also return what was set using SetProgram,
+	// it may NOT return something different or nothing (!) after SetProgram was called.
+	//
+	// This is not a caching function!
+	//
+	GetProgram(Location) (*interpreter.Program, error)
+	// SetProgram sets the program for the given location.
+	SetProgram(Location, *interpreter.Program) error
 	// GetValue gets a value for the given key in the storage, owned by the given account.
 	GetValue(owner, key []byte) (value []byte, err error)
 	// SetValue sets a value for the given key in the storage, owned by the given account.
@@ -130,11 +142,20 @@ type Metrics interface {
 	ValueDecoded(duration time.Duration)
 }
 
-type EmptyRuntimeInterface struct{}
+type emptyRuntimeInterface struct {
+	programs map[common.LocationID]*interpreter.Program
+}
 
-var _ Interface = &EmptyRuntimeInterface{}
+// emptyRuntimeInterface should implement Interface
+var _ Interface = &emptyRuntimeInterface{}
 
-func (i *EmptyRuntimeInterface) ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
+func NewEmptyRuntimeInterface() Interface {
+	return &emptyRuntimeInterface{
+		programs: map[common.LocationID]*interpreter.Program{},
+	}
+}
+
+func (i *emptyRuntimeInterface) ResolveLocation(identifiers []Identifier, location Location) ([]ResolvedLocation, error) {
 	return []ResolvedLocation{
 		{
 			Location:    location,
@@ -143,103 +164,105 @@ func (i *EmptyRuntimeInterface) ResolveLocation(identifiers []Identifier, locati
 	}, nil
 }
 
-func (i *EmptyRuntimeInterface) GetCode(_ Location) ([]byte, error) {
-	return nil, nil
-}
+func (i *emptyRuntimeInterface) SetProgram(location Location, program *interpreter.Program) error {
+	i.programs[location.ID()] = program
 
-func (i *EmptyRuntimeInterface) GetCachedProgram(_ Location) (*ast.Program, error) {
-	return nil, nil
-}
-
-func (i *EmptyRuntimeInterface) CacheProgram(_ Location, _ *ast.Program) error {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) ValueExists(_, _ []byte) (exists bool, err error) {
+func (i *emptyRuntimeInterface) GetProgram(location Location) (*interpreter.Program, error) {
+	return i.programs[location.ID()], nil
+}
+
+func (i *emptyRuntimeInterface) GetCode(_ Location) ([]byte, error) {
+	return nil, nil
+}
+
+func (i *emptyRuntimeInterface) ValueExists(_, _ []byte) (exists bool, err error) {
 	return false, nil
 }
 
-func (i *EmptyRuntimeInterface) GetValue(_, _ []byte) (value []byte, err error) {
+func (i *emptyRuntimeInterface) GetValue(_, _ []byte) (value []byte, err error) {
 	return nil, nil
 }
 
-func (i *EmptyRuntimeInterface) SetValue(_, _, _ []byte) error {
+func (i *emptyRuntimeInterface) SetValue(_, _, _ []byte) error {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) CreateAccount(_ Address) (address Address, err error) {
+func (i *emptyRuntimeInterface) CreateAccount(_ Address) (address Address, err error) {
 	return Address{}, nil
 }
 
-func (i *EmptyRuntimeInterface) AddAccountKey(_ Address, _ []byte) error {
+func (i *emptyRuntimeInterface) AddAccountKey(_ Address, _ []byte) error {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) RemoveAccountKey(_ Address, _ int) (publicKey []byte, err error) {
+func (i *emptyRuntimeInterface) RemoveAccountKey(_ Address, _ int) (publicKey []byte, err error) {
 	return nil, nil
 }
 
-func (i *EmptyRuntimeInterface) UpdateAccountCode(_ Address, _ []byte) error {
+func (i *emptyRuntimeInterface) UpdateAccountCode(_ Address, _ []byte) error {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) UpdateAccountContractCode(_ Address, _ string, _ []byte) (err error) {
+func (i *emptyRuntimeInterface) UpdateAccountContractCode(_ Address, _ string, _ []byte) (err error) {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) GetAccountContractCode(_ Address, _ string) (code []byte, err error) {
+func (i *emptyRuntimeInterface) GetAccountContractCode(_ Address, _ string) (code []byte, err error) {
 	return nil, nil
 }
 
-func (i *EmptyRuntimeInterface) RemoveAccountContractCode(_ Address, _ string) (err error) {
+func (i *emptyRuntimeInterface) RemoveAccountContractCode(_ Address, _ string) (err error) {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) GetSigningAccounts() ([]Address, error) {
+func (i *emptyRuntimeInterface) GetSigningAccounts() ([]Address, error) {
 	return nil, nil
 }
 
-func (i *EmptyRuntimeInterface) ProgramLog(_ string) error {
+func (i *emptyRuntimeInterface) ProgramLog(_ string) error {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) EmitEvent(_ cadence.Event) error {
+func (i *emptyRuntimeInterface) EmitEvent(_ cadence.Event) error {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) GenerateUUID() (uint64, error) {
+func (i *emptyRuntimeInterface) GenerateUUID() (uint64, error) {
 	return 0, nil
 }
 
-func (i *EmptyRuntimeInterface) GetComputationLimit() uint64 {
+func (i *emptyRuntimeInterface) GetComputationLimit() uint64 {
 	return 0
 }
 
-func (i *EmptyRuntimeInterface) SetComputationUsed(uint64) error {
+func (i *emptyRuntimeInterface) SetComputationUsed(uint64) error {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) DecodeArgument(_ []byte, _ cadence.Type) (cadence.Value, error) {
+func (i *emptyRuntimeInterface) DecodeArgument(_ []byte, _ cadence.Type) (cadence.Value, error) {
 	return nil, nil
 }
 
-func (i *EmptyRuntimeInterface) GetCurrentBlockHeight() (uint64, error) {
+func (i *emptyRuntimeInterface) GetCurrentBlockHeight() (uint64, error) {
 	return 0, nil
 }
 
-func (i *EmptyRuntimeInterface) GetBlockAtHeight(_ uint64) (block Block, exists bool, err error) {
+func (i *emptyRuntimeInterface) GetBlockAtHeight(_ uint64) (block Block, exists bool, err error) {
 	return
 }
 
-func (i *EmptyRuntimeInterface) UnsafeRandom() (uint64, error) {
+func (i *emptyRuntimeInterface) UnsafeRandom() (uint64, error) {
 	return 0, nil
 }
 
-func (i *EmptyRuntimeInterface) ImplementationDebugLog(_ string) error {
+func (i *emptyRuntimeInterface) ImplementationDebugLog(_ string) error {
 	return nil
 }
 
-func (i *EmptyRuntimeInterface) VerifySignature(
+func (i *emptyRuntimeInterface) VerifySignature(
 	_ []byte,
 	_ string,
 	_ []byte,
@@ -250,17 +273,17 @@ func (i *EmptyRuntimeInterface) VerifySignature(
 	return false, nil
 }
 
-func (i *EmptyRuntimeInterface) Hash(
+func (i *emptyRuntimeInterface) Hash(
 	_ []byte,
 	_ string,
 ) ([]byte, error) {
 	return nil, nil
 }
 
-func (i EmptyRuntimeInterface) GetStorageUsed(_ Address) (uint64, error) {
+func (i emptyRuntimeInterface) GetStorageUsed(_ Address) (uint64, error) {
 	return 0, nil
 }
 
-func (i EmptyRuntimeInterface) GetStorageCapacity(_ Address) (uint64, error) {
+func (i emptyRuntimeInterface) GetStorageCapacity(_ Address) (uint64, error) {
 	return 0, nil
 }

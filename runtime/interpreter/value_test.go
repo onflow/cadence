@@ -658,6 +658,7 @@ func TestBlockValue(t *testing.T) {
 		ID:        NewArrayValueUnownedNonCopying(),
 		Timestamp: 5.0,
 	}
+
 	// static type test
 	var actualTs = block.Timestamp
 	const expectedTs UFix64Value = 5.0

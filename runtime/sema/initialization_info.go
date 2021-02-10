@@ -35,7 +35,7 @@ func NewInitializationInfo(
 	return &InitializationInfo{
 		ContainerType:           containerType,
 		FieldMembers:            fieldMembers,
-		InitializedFieldMembers: &MemberSet{},
+		InitializedFieldMembers: NewMemberSet(nil),
 	}
 }
 

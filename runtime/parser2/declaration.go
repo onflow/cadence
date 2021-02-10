@@ -442,8 +442,18 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			case lexer.TokenIdentifier:
 
 				if p.current.Value == keywordFrom {
+					if expectCommaOrFrom {
+						atEnd = true
 
-					if !expectCommaOrFrom {
+						// Skip the `from` keyword
+						p.next()
+						p.skipSpaceAndComments(true)
+
+						parseLocation()
+						break
+					}
+
+					if !isNextTokenCommaOrFrom(p) {
 						panic(fmt.Errorf(
 							"expected %s, got keyword %q",
 							lexer.TokenIdentifier,
@@ -451,19 +461,14 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 						))
 					}
 
-					atEnd = true
-
-					// Skip the `from` keyword
-					p.next()
-					p.skipSpaceAndComments(true)
-
-					parseLocation()
-				} else {
-					identifier := tokenToIdentifier(p.current)
-					identifiers = append(identifiers, identifier)
-
-					expectCommaOrFrom = true
+					// If the next token is either comma or 'from' token, then fall through
+					// and process the current 'from' token as an identifier.
 				}
+
+				identifier := tokenToIdentifier(p.current)
+				identifiers = append(identifiers, identifier)
+
+				expectCommaOrFrom = true
 
 			case lexer.TokenEOF:
 				panic(fmt.Errorf(
@@ -559,6 +564,26 @@ func parseImportDeclaration(p *parser) *ast.ImportDeclaration {
 			EndPos:   endPos,
 		},
 		LocationPos: locationPos,
+	}
+}
+
+// isNextTokenCommaOrFrom check whether the token to follow is a comma or a from token.
+func isNextTokenCommaOrFrom(p *parser) bool {
+	p.startBuffering()
+	defer p.replayBuffered()
+
+	// skip the current token
+	p.next()
+	p.skipSpaceAndComments(true)
+
+	// Lookahead the next token
+	switch p.current.Type {
+	case lexer.TokenIdentifier:
+		return p.current.Value == keywordFrom
+	case lexer.TokenComma:
+		return true
+	default:
+		return false
 	}
 }
 

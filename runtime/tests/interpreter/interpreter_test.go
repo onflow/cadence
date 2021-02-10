@@ -92,7 +92,8 @@ func parseCheckAndInterpretWithOptions(
 	)
 
 	inter, err := interpreter.NewInterpreter(
-		checker,
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
 		interpreterOptions...,
 	)
 
@@ -1448,7 +1449,8 @@ func TestInterpretHostFunction(t *testing.T) {
 	require.NoError(t, err)
 
 	inter, err := interpreter.NewInterpreter(
-		checker,
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
 		interpreter.WithPredeclaredValues(
 			[]interpreter.ValueDeclaration{
 				testFunction,
@@ -1525,7 +1527,8 @@ func TestInterpretHostFunctionWithVariableArguments(t *testing.T) {
 	require.NoError(t, err)
 
 	inter, err := interpreter.NewInterpreter(
-		checker,
+		interpreter.ProgramFromChecker(checker),
+		checker.Location,
 		interpreter.WithPredeclaredValues(
 			[]interpreter.ValueDeclaration{
 				testFunction,
@@ -3727,7 +3730,8 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 					if compositeKind == common.CompositeKindContract {
 
 						inter, err := interpreter.NewInterpreter(
-							checker,
+							interpreter.ProgramFromChecker(checker),
+							checker.Location,
 							makeContractValueHandler(
 								[]interpreter.Value{
 									interpreter.NewIntValueFromInt64(value),
@@ -3746,7 +3750,11 @@ func TestInterpretInitializerWithInterfacePreCondition(t *testing.T) {
 						err = inter.Interpret()
 						check(err)
 					} else {
-						inter, err := interpreter.NewInterpreter(checker, uuidHandler)
+						inter, err := interpreter.NewInterpreter(
+							interpreter.ProgramFromChecker(checker),
+							checker.Location,
+							uuidHandler,
+						)
 						require.NoError(t, err)
 
 						err = inter.Interpret()
@@ -3882,14 +3890,14 @@ func TestInterpretImport(t *testing.T) {
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
 						assert.Equal(t,
 							ImportedLocation,
 							location,
 						)
 
-						return sema.CheckerImport{
-							Checker: importedChecker,
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
 						}, nil
 					},
 				),
@@ -3899,15 +3907,23 @@ func TestInterpretImport(t *testing.T) {
 	require.NoError(t, err)
 
 	inter, err := interpreter.NewInterpreter(
-		importingChecker,
+		interpreter.ProgramFromChecker(importingChecker),
+		importingChecker.Location,
 		interpreter.WithImportLocationHandler(
 			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
 					ImportedLocation,
 					location,
 				)
-				return interpreter.ProgramImport{
-					Program: importedChecker.Program,
+
+				program := interpreter.ProgramFromChecker(importedChecker)
+				subInterpreter, err := inter.NewSubInterpreter(program, location)
+				if err != nil {
+					panic(err)
+				}
+
+				return interpreter.InterpreterImport{
+					Interpreter: subInterpreter,
 				}
 			},
 		),
@@ -3961,14 +3977,14 @@ func TestInterpretImportError(t *testing.T) {
 			Options: []sema.Option{
 				sema.WithPredeclaredValues(valueDeclarations),
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
 						assert.Equal(t,
 							ImportedLocation,
 							location,
 						)
 
-						return sema.CheckerImport{
-							Checker: importedChecker,
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
 						}, nil
 					},
 				),
@@ -3982,7 +3998,8 @@ func TestInterpretImportError(t *testing.T) {
 	}.ToInterpreterValueDeclarations()
 
 	inter, err := interpreter.NewInterpreter(
-		importingChecker,
+		interpreter.ProgramFromChecker(importingChecker),
+		importingChecker.Location,
 		interpreter.WithPredeclaredValues(values),
 		interpreter.WithImportLocationHandler(
 			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
@@ -3990,8 +4007,15 @@ func TestInterpretImportError(t *testing.T) {
 					ImportedLocation,
 					location,
 				)
-				return interpreter.ProgramImport{
-					Program: importedChecker.Program,
+
+				program := interpreter.ProgramFromChecker(importedChecker)
+				subInterpreter, err := inter.NewSubInterpreter(program, location)
+				if err != nil {
+					panic(err)
+				}
+
+				return interpreter.InterpreterImport{
+					Interpreter: subInterpreter,
 				}
 			},
 		),
@@ -5283,14 +5307,14 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
 						assert.Equal(t,
 							ImportedLocation,
 							location,
 						)
 
-						return sema.CheckerImport{
-							Checker: importedChecker,
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
 						}, nil
 					},
 				),
@@ -5300,15 +5324,23 @@ func TestInterpretCompositeFunctionInvocationFromImportingProgram(t *testing.T) 
 	require.NoError(t, err)
 
 	inter, err := interpreter.NewInterpreter(
-		importingChecker,
+		interpreter.ProgramFromChecker(importingChecker),
+		importingChecker.Location,
 		interpreter.WithImportLocationHandler(
 			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
 					ImportedLocation,
 					location,
 				)
-				return interpreter.ProgramImport{
-					Program: importedChecker.Program,
+
+				program := interpreter.ProgramFromChecker(importedChecker)
+				subInterpreter, err := inter.NewSubInterpreter(program, location)
+				if err != nil {
+					panic(err)
+				}
+
+				return interpreter.InterpreterImport{
+					Interpreter: subInterpreter,
 				}
 			},
 		),
@@ -5721,8 +5753,8 @@ func TestInterpretEmitEvent(t *testing.T) {
 	_, err := inter.Invoke("test")
 	require.NoError(t, err)
 
-	transferEventType := inter.Checker.Elaboration.GlobalTypes["Transfer"].Type
-	transferAmountEventType := inter.Checker.Elaboration.GlobalTypes["TransferAmount"].Type
+	transferEventType := inter.Program.Elaboration.GlobalTypes["Transfer"].Type
+	transferAmountEventType := inter.Program.Elaboration.GlobalTypes["TransferAmount"].Type
 
 	expectedEvents := []*interpreter.CompositeValue{
 		interpreter.NewCompositeValue(
@@ -5922,7 +5954,7 @@ func TestInterpretEmitEventParameterTypes(t *testing.T) {
 			_, err := inter.Invoke("test")
 			require.NoError(t, err)
 
-			testType := inter.Checker.Elaboration.GlobalTypes["Test"].Type
+			testType := inter.Program.Elaboration.GlobalTypes["Test"].Type
 			expectedEvents := []*interpreter.CompositeValue{
 				interpreter.NewCompositeValue(
 					TestLocation,
@@ -6782,14 +6814,14 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 		checker.ParseAndCheckOptions{
 			Options: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
 						assert.Equal(t,
 							ImportedLocation,
 							location,
 						)
 
-						return sema.CheckerImport{
-							Checker: importedChecker,
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
 						}, nil
 					},
 				),
@@ -6799,15 +6831,23 @@ func TestInterpretConformToImportedInterface(t *testing.T) {
 	require.NoError(t, err)
 
 	inter, err := interpreter.NewInterpreter(
-		importingChecker,
+		interpreter.ProgramFromChecker(importingChecker),
+		importingChecker.Location,
 		interpreter.WithImportLocationHandler(
 			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				assert.Equal(t,
 					ImportedLocation,
 					location,
 				)
-				return interpreter.ProgramImport{
-					Program: importedChecker.Program,
+
+				program := interpreter.ProgramFromChecker(importedChecker)
+				subInterpreter, err := inter.NewSubInterpreter(program, location)
+				if err != nil {
+					panic(err)
+				}
+
+				return interpreter.InterpreterImport{
+					Interpreter: subInterpreter,
 				}
 			},
 		),
@@ -7837,6 +7877,7 @@ func TestInterpretDictionaryValueEncodingOrder(t *testing.T) {
 			bytes.NewReader(encoded),
 			owner,
 			interpreter.CurrentEncodingVersion,
+			nil,
 		)
 		require.NoError(t, err)
 

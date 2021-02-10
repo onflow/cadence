@@ -23,6 +23,7 @@ import (
 	"math/big"
 	"testing"
 
+	"github.com/fxamacker/cbor/v2"
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
@@ -70,7 +71,7 @@ func testEncodeDecode(t *testing.T, test encodeDecodeTest) {
 		version = test.decodeVersion
 	}
 
-	decoded, err := DecodeValue(encoded, &testOwner, nil, version)
+	decoded, err := DecodeValue(encoded, &testOwner, nil, version, nil)
 	if test.invalid {
 		require.Error(t, err)
 	} else {
@@ -4255,7 +4256,7 @@ func TestEncodePrepareCallback(t *testing.T) {
 
 	var prepareCallbacks []prepareCallback
 
-	_, _, err := EncodeValue(value, nil, false, func(value Value, path []string) {
+	data, _, err := EncodeValue(value, nil, false, func(value Value, path []string) {
 		prepareCallbacks = append(prepareCallbacks, prepareCallback{
 			value: value,
 			path:  path,
@@ -4275,5 +4276,68 @@ func TestEncodePrepareCallback(t *testing.T) {
 			},
 		},
 		prepareCallbacks,
+	)
+
+	utils.AssertEqualWithDiff(t,
+		[]byte{
+			// array with 1 item follow
+			0x81,
+			// tag
+			0xd8, cborTagInt8Value,
+			// positive integer 42
+			0x18,
+			0x2a,
+		},
+		data,
+	)
+}
+
+func TestDecodeCallback(t *testing.T) {
+
+	data := []byte{
+		// array with 1 item follow
+		0x81,
+		// tag
+		0xd8, cborTagInt8Value,
+		// positive integer 42
+		0x18,
+		0x2a,
+	}
+
+	type decodeCallback struct {
+		value interface{}
+		path  []string
+	}
+
+	var decodeCallbacks []decodeCallback
+
+	_, err := DecodeValue(data, nil, nil, CurrentEncodingVersion, func(value interface{}, path []string) {
+		decodeCallbacks = append(decodeCallbacks, decodeCallback{
+			value: value,
+			path:  path,
+		})
+	})
+	require.NoError(t, err)
+
+	require.Equal(t,
+		[]decodeCallback{
+			{
+				value: []interface{}{
+					cbor.Tag{
+						Number:  cborTagInt8Value,
+						Content: uint64(42),
+					},
+				},
+				path: nil,
+			},
+			{
+				value: cbor.Tag{
+					Number:  cborTagInt8Value,
+					Content: uint64(42),
+				},
+				path: []string{"0"},
+			},
+		},
+		decodeCallbacks,
 	)
 }

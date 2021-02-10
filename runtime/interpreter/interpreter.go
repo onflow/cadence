@@ -212,13 +212,13 @@ func (c TypeCodes) Merge(codes TypeCodes) {
 }
 
 type Interpreter struct {
-	Checker                        *sema.Checker
+	Program                        *Program
+	Location                       common.Location
 	PredeclaredValues              []ValueDeclaration
 	effectivePredeclaredValues     map[string]ValueDeclaration
 	activations                    *activations.Activations
 	Globals                        map[string]*Variable
 	allInterpreters                map[common.LocationID]*Interpreter
-	allCheckers                    map[common.LocationID]*sema.Checker
 	typeCodes                      TypeCodes
 	Transactions                   []*HostFunctionValue
 	onEventEmitted                 OnEventEmittedFunc
@@ -233,6 +233,7 @@ type Interpreter struct {
 	contractValueHandler           ContractValueHandlerFunc
 	importLocationHandler          ImportLocationHandlerFunc
 	uuidHandler                    UUIDHandlerFunc
+	interpreted                    bool
 }
 
 type Option func(*Interpreter) error
@@ -388,16 +389,6 @@ func WithAllInterpreters(allInterpreters map[common.LocationID]*Interpreter) Opt
 	}
 }
 
-// WithAllCheckers returns an interpreter option which sets
-// the given map of checkers as the map of all checkers.
-//
-func WithAllCheckers(allCheckers map[common.LocationID]*sema.Checker) Option {
-	return func(interpreter *Interpreter) error {
-		interpreter.SetAllCheckers(allCheckers)
-		return nil
-	}
-}
-
 // withTypeCodes returns an interpreter option which sets the type codes.
 //
 func withTypeCodes(typeCodes TypeCodes) Option {
@@ -407,9 +398,11 @@ func withTypeCodes(typeCodes TypeCodes) Option {
 	}
 }
 
-func NewInterpreter(checker *sema.Checker, options ...Option) (*Interpreter, error) {
+func NewInterpreter(program *Program, location common.Location, options ...Option) (*Interpreter, error) {
+
 	interpreter := &Interpreter{
-		Checker:                    checker,
+		Program:                    program,
+		Location:                   location,
 		activations:                &activations.Activations{},
 		Globals:                    map[string]*Variable{},
 		effectivePredeclaredValues: map[string]ValueDeclaration{},
@@ -417,7 +410,6 @@ func NewInterpreter(checker *sema.Checker, options ...Option) (*Interpreter, err
 
 	defaultOptions := []Option{
 		WithAllInterpreters(map[common.LocationID]*Interpreter{}),
-		WithAllCheckers(map[common.LocationID]*sema.Checker{}),
 		withTypeCodes(TypeCodes{
 			CompositeCodes:       map[sema.TypeID]CompositeTypeCode{},
 			InterfaceCodes:       map[sema.TypeID]WrapperCode{},
@@ -516,17 +508,7 @@ func (interpreter *Interpreter) SetAllInterpreters(allInterpreters map[common.Lo
 	interpreter.allInterpreters = allInterpreters
 
 	// Register self
-	interpreter.allInterpreters[interpreter.Checker.Location.ID()] = interpreter
-}
-
-// SetAllCheckers sets the given map of checkers as the map of all checkers.
-//
-func (interpreter *Interpreter) SetAllCheckers(allCheckers map[common.LocationID]*sema.Checker) {
-	interpreter.allCheckers = allCheckers
-
-	// Register self
-	checker := interpreter.Checker
-	interpreter.allCheckers[checker.Location.ID()] = checker
+	interpreter.allInterpreters[interpreter.Location.ID()] = interpreter
 }
 
 // setTypeCodes sets the type codes.
@@ -539,7 +521,7 @@ func (interpreter *Interpreter) setTypeCodes(typeCodes TypeCodes) {
 //
 func (interpreter *Interpreter) locationRange(hasPosition ast.HasPosition) LocationRange {
 	return LocationRange{
-		Location: interpreter.Checker.Location,
+		Location: interpreter.Location,
 		Range:    ast.NewRangeFromPositioned(hasPosition),
 	}
 }
@@ -565,13 +547,18 @@ func (interpreter *Interpreter) setVariable(name string, variable *Variable) {
 }
 
 func (interpreter *Interpreter) Interpret() (err error) {
+	if interpreter.interpreted {
+		return
+	}
+
 	// recover internal panics and return them as an error
 	defer recoverErrors(func(internalErr error) {
 		err = internalErr
 	})
 
-	// declare all declarations and then run all statements
 	interpreter.runAllStatements(interpreter.interpret())
+
+	interpreter.interpreted = true
 
 	return nil
 }
@@ -642,7 +629,7 @@ func (interpreter *Interpreter) runAllStatements(t Trampoline) interface{} {
 
 		panic(Error{
 			Err:      internalErr,
-			Location: statement.Interpreter.Checker.Location,
+			Location: statement.Interpreter.Location,
 		})
 	})
 
@@ -683,11 +670,11 @@ func getStatement(t Trampoline) *StatementTrampoline {
 // interpret returns a Trampoline that is done when all top-level declarations
 // have been declared and evaluated.
 func (interpreter *Interpreter) interpret() Trampoline {
-	return interpreter.Checker.Program.Accept(interpreter).(Trampoline)
+	return interpreter.Program.Program.Accept(interpreter).(Trampoline)
 }
 
 func (interpreter *Interpreter) prepareInterpretation() {
-	program := interpreter.Checker.Program
+	program := interpreter.Program.Program
 
 	// Pre-declare empty variables for all interfaces, composites, and function declarations
 	for _, declaration := range program.InterfaceDeclarations() {
@@ -769,7 +756,7 @@ func (interpreter *Interpreter) prepareInvokeVariable(
 		}
 	}
 
-	ty := interpreter.Checker.Elaboration.GlobalValues[functionName].Type
+	ty := interpreter.Program.Elaboration.GlobalValues[functionName].Type
 
 	// function must be invokable
 	invokableType, ok := ty.(sema.InvokableType)
@@ -795,7 +782,7 @@ func (interpreter *Interpreter) prepareInvokeTransaction(
 
 	functionValue := interpreter.Transactions[index]
 
-	transactionType := interpreter.Checker.Elaboration.TransactionTypes[index]
+	transactionType := interpreter.Program.Elaboration.TransactionTypes[index]
 	functionType := transactionType.EntryPointFunctionType()
 
 	return interpreter.prepareInvoke(functionValue, functionType, arguments)
@@ -913,7 +900,7 @@ func (interpreter *Interpreter) VisitFunctionDeclaration(declaration *ast.Functi
 
 	identifier := declaration.Identifier.Identifier
 
-	functionType := interpreter.Checker.Elaboration.FunctionDeclarationFunctionTypes[declaration]
+	functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionTypes[declaration]
 
 	// NOTE: find *or* declare, as the function might have not been pre-declared (e.g. in the REPL)
 	variable := interpreter.findOrDeclareVariable(identifier)
@@ -950,7 +937,7 @@ func (interpreter *Interpreter) functionDeclarationValue(
 
 	if declaration.FunctionBlock.PostConditions != nil {
 		postConditionsRewrite :=
-			interpreter.Checker.Elaboration.PostConditionsRewrite[declaration.FunctionBlock.PostConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite[declaration.FunctionBlock.PostConditions]
 
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
 		beforeStatements = postConditionsRewrite.BeforeStatements
@@ -1129,8 +1116,8 @@ func (interpreter *Interpreter) VisitReturnStatement(statement *ast.ReturnStatem
 		Map(func(result interface{}) interface{} {
 			value := result.(Value)
 
-			valueType := interpreter.Checker.Elaboration.ReturnStatementValueTypes[statement]
-			returnType := interpreter.Checker.Elaboration.ReturnStatementReturnTypes[statement]
+			valueType := interpreter.Program.Elaboration.ReturnStatementValueTypes[statement]
+			returnType := interpreter.Program.Elaboration.ReturnStatementReturnTypes[statement]
 
 			// NOTE: copy on return
 			value = interpreter.copyAndConvert(value, valueType, returnType)
@@ -1187,8 +1174,8 @@ func (interpreter *Interpreter) visitIfStatementWithVariableDeclaration(
 
 			if someValue, ok := result.(*SomeValue); ok {
 
-				targetType := interpreter.Checker.Elaboration.VariableDeclarationTargetTypes[declaration]
-				valueType := interpreter.Checker.Elaboration.VariableDeclarationValueTypes[declaration]
+				targetType := interpreter.Program.Elaboration.VariableDeclarationTargetTypes[declaration]
+				valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
 				unwrappedValueCopy := interpreter.copyAndConvert(someValue.Value, valueType, targetType)
 
 				interpreter.activations.PushNewWithCurrent()
@@ -1381,9 +1368,9 @@ func (interpreter *Interpreter) visitPotentialStorageRemoval(expression ast.Expr
 // then declares the variable with the name bound to the value
 func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.VariableDeclaration) ast.Repr {
 
-	targetType := interpreter.Checker.Elaboration.VariableDeclarationTargetTypes[declaration]
-	valueType := interpreter.Checker.Elaboration.VariableDeclarationValueTypes[declaration]
-	secondValueType := interpreter.Checker.Elaboration.VariableDeclarationSecondValueTypes[declaration]
+	targetType := interpreter.Program.Elaboration.VariableDeclarationTargetTypes[declaration]
+	valueType := interpreter.Program.Elaboration.VariableDeclarationValueTypes[declaration]
+	secondValueType := interpreter.Program.Elaboration.VariableDeclarationSecondValueTypes[declaration]
 
 	return interpreter.visitPotentialStorageRemoval(declaration.Value).
 		FlatMap(func(result interface{}) Trampoline {
@@ -1413,7 +1400,7 @@ func (interpreter *Interpreter) VisitVariableDeclaration(declaration *ast.Variab
 
 func (interpreter *Interpreter) movingStorageIndexExpression(expression ast.Expression) *ast.IndexExpression {
 	indexExpression, ok := expression.(*ast.IndexExpression)
-	if !ok || !interpreter.Checker.Elaboration.IsResourceMovingStorageIndexExpression[indexExpression] {
+	if !ok || !interpreter.Program.Elaboration.IsResourceMovingStorageIndexExpression[indexExpression] {
 		return nil
 	}
 
@@ -1422,7 +1409,7 @@ func (interpreter *Interpreter) movingStorageIndexExpression(expression ast.Expr
 
 func (interpreter *Interpreter) declareValue(declaration ValueDeclaration) *Variable {
 
-	if !declaration.ValueDeclarationAvailable(interpreter.Checker.Location) {
+	if !declaration.ValueDeclarationAvailable(interpreter.Location) {
 		return nil
 	}
 
@@ -1441,8 +1428,8 @@ func (interpreter *Interpreter) declareVariable(identifier string, value Value) 
 }
 
 func (interpreter *Interpreter) VisitAssignmentStatement(assignment *ast.AssignmentStatement) ast.Repr {
-	targetType := interpreter.Checker.Elaboration.AssignmentStatementTargetTypes[assignment]
-	valueType := interpreter.Checker.Elaboration.AssignmentStatementValueTypes[assignment]
+	targetType := interpreter.Program.Elaboration.AssignmentStatementTargetTypes[assignment]
+	valueType := interpreter.Program.Elaboration.AssignmentStatementValueTypes[assignment]
 
 	target := assignment.Target
 	value := assignment.Value
@@ -1497,8 +1484,8 @@ func (interpreter *Interpreter) visitAssignment(
 
 func (interpreter *Interpreter) VisitSwapStatement(swap *ast.SwapStatement) ast.Repr {
 
-	leftType := interpreter.Checker.Elaboration.SwapStatementLeftTypes[swap]
-	rightType := interpreter.Checker.Elaboration.SwapStatementRightTypes[swap]
+	leftType := interpreter.Program.Elaboration.SwapStatementLeftTypes[swap]
+	rightType := interpreter.Program.Elaboration.SwapStatementRightTypes[swap]
 
 	// Evaluate the left expression
 	return interpreter.assignmentGetterSetter(swap.Left).
@@ -1840,8 +1827,8 @@ func (interpreter *Interpreter) VisitBinaryExpression(expression *ast.BinaryExpr
 						Map(func(result interface{}) interface{} {
 							value := result.(Value)
 
-							rightType := interpreter.Checker.Elaboration.BinaryExpressionRightTypes[expression]
-							resultType := interpreter.Checker.Elaboration.BinaryExpressionResultTypes[expression]
+							rightType := interpreter.Program.Elaboration.BinaryExpressionRightTypes[expression]
+							resultType := interpreter.Program.Elaboration.BinaryExpressionResultTypes[expression]
 
 							// NOTE: important to convert both any and optional
 							return interpreter.convertAndBox(value, rightType, resultType)
@@ -1978,8 +1965,8 @@ func (interpreter *Interpreter) VisitArrayExpression(expression *ast.ArrayExpres
 		FlatMap(func(result interface{}) Trampoline {
 			values := result.(*ArrayValue)
 
-			argumentTypes := interpreter.Checker.Elaboration.ArrayExpressionArgumentTypes[expression]
-			elementType := interpreter.Checker.Elaboration.ArrayExpressionElementType[expression]
+			argumentTypes := interpreter.Program.Elaboration.ArrayExpressionArgumentTypes[expression]
+			elementType := interpreter.Program.Elaboration.ArrayExpressionElementType[expression]
 
 			copies := make([]Value, len(values.Values))
 			for i, argument := range values.Values {
@@ -1995,8 +1982,8 @@ func (interpreter *Interpreter) VisitDictionaryExpression(expression *ast.Dictio
 	return interpreter.visitEntries(expression.Entries).
 		FlatMap(func(result interface{}) Trampoline {
 
-			entryTypes := interpreter.Checker.Elaboration.DictionaryExpressionEntryTypes[expression]
-			dictionaryType := interpreter.Checker.Elaboration.DictionaryExpressionType[expression]
+			entryTypes := interpreter.Program.Elaboration.DictionaryExpressionEntryTypes[expression]
+			dictionaryType := interpreter.Program.Elaboration.DictionaryExpressionType[expression]
 
 			newDictionary := NewDictionaryValueUnownedNonCopying()
 			for i, dictionaryEntryValues := range result.([]DictionaryEntryValues) {
@@ -2127,11 +2114,11 @@ func (interpreter *Interpreter) VisitInvocationExpression(invocationExpression *
 					arguments := result.(*ArrayValue).Values
 
 					typeParameterTypes :=
-						interpreter.Checker.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
+						interpreter.Program.Elaboration.InvocationExpressionTypeArguments[invocationExpression]
 					argumentTypes :=
-						interpreter.Checker.Elaboration.InvocationExpressionArgumentTypes[invocationExpression]
+						interpreter.Program.Elaboration.InvocationExpressionArgumentTypes[invocationExpression]
 					parameterTypes :=
-						interpreter.Checker.Elaboration.InvocationExpressionParameterTypes[invocationExpression]
+						interpreter.Program.Elaboration.InvocationExpressionParameterTypes[invocationExpression]
 
 					invocation := interpreter.functionValueInvocationTrampoline(
 						function,
@@ -2211,7 +2198,7 @@ func (interpreter *Interpreter) functionValueInvocationTrampoline(
 	// TODO: optimize: only potentially used by host-functions
 
 	locationRange := LocationRange{
-		Location: interpreter.Checker.Location,
+		Location: interpreter.Location,
 		Range:    invocationRange,
 	}
 
@@ -2348,7 +2335,7 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 	// lexical scope: variables in functions are bound to what is visible at declaration time
 	lexicalScope := interpreter.activations.CurrentOrNew()
 
-	functionType := interpreter.Checker.Elaboration.FunctionExpressionFunctionType[expression]
+	functionType := interpreter.Program.Elaboration.FunctionExpressionFunctionType[expression]
 
 	var preConditions ast.Conditions
 	if expression.FunctionBlock.PreConditions != nil {
@@ -2360,7 +2347,7 @@ func (interpreter *Interpreter) VisitFunctionExpression(expression *ast.Function
 
 	if expression.FunctionBlock.PostConditions != nil {
 		postConditionsRewrite :=
-			interpreter.Checker.Elaboration.PostConditionsRewrite[expression.FunctionBlock.PostConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite[expression.FunctionBlock.PostConditions]
 
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
 		beforeStatements = postConditionsRewrite.BeforeStatements
@@ -2484,7 +2471,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		}
 	})()
 
-	compositeType := interpreter.Checker.Elaboration.CompositeDeclarationTypes[declaration]
+	compositeType := interpreter.Program.Elaboration.CompositeDeclarationTypes[declaration]
 
 	var initializerFunction FunctionValue
 	if declaration.CompositeKind == common.CompositeKindEvent {
@@ -2565,7 +2552,7 @@ func (interpreter *Interpreter) declareNonEnumCompositeValue(
 		CompositeFunctions: functions,
 	}
 
-	location := interpreter.Checker.Location
+	location := interpreter.Location
 
 	qualifiedIdentifier := compositeType.QualifiedIdentifier()
 
@@ -2681,10 +2668,10 @@ func (interpreter *Interpreter) declareEnumConstructor(
 
 	lexicalScope.Set(identifier, variable)
 
-	compositeType := interpreter.Checker.Elaboration.CompositeDeclarationTypes[declaration]
+	compositeType := interpreter.Program.Elaboration.CompositeDeclarationTypes[declaration]
 	qualifiedIdentifier := compositeType.QualifiedIdentifier()
 
-	location := interpreter.Checker.Location
+	location := interpreter.Location
 
 	intType := &sema.IntType{}
 
@@ -2757,7 +2744,7 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 	}
 
 	initializer = initializers[0]
-	functionType := interpreter.Checker.Elaboration.SpecialFunctionTypes[initializer].FunctionType
+	functionType := interpreter.Program.Elaboration.SpecialFunctionTypes[initializer].FunctionType
 
 	parameterList := initializer.FunctionDeclaration.ParameterList
 
@@ -2774,7 +2761,7 @@ func (interpreter *Interpreter) compositeInitializerFunction(
 	postConditions := initializer.FunctionDeclaration.FunctionBlock.PostConditions
 	if postConditions != nil {
 		postConditionsRewrite :=
-			interpreter.Checker.Elaboration.PostConditionsRewrite[postConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite[postConditions]
 
 		beforeStatements = postConditionsRewrite.BeforeStatements
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
@@ -2817,7 +2804,7 @@ func (interpreter *Interpreter) compositeDestructorFunction(
 	postConditions := destructor.FunctionDeclaration.FunctionBlock.PostConditions
 	if postConditions != nil {
 		postConditionsRewrite :=
-			interpreter.Checker.Elaboration.PostConditionsRewrite[postConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite[postConditions]
 
 		beforeStatements = postConditionsRewrite.BeforeStatements
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
@@ -2862,7 +2849,7 @@ func (interpreter *Interpreter) functionWrappers(
 
 	for _, functionDeclaration := range members.Functions() {
 
-		functionType := interpreter.Checker.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
+		functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
 
 		name := functionDeclaration.Identifier.Identifier
 		functionWrapper := interpreter.functionConditionsWrapper(
@@ -2884,7 +2871,7 @@ func (interpreter *Interpreter) compositeFunction(
 	lexicalScope *activations.Activation,
 ) InterpretedFunctionValue {
 
-	functionType := interpreter.Checker.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
+	functionType := interpreter.Program.Elaboration.FunctionDeclarationFunctionTypes[functionDeclaration]
 
 	var preConditions ast.Conditions
 
@@ -2898,7 +2885,7 @@ func (interpreter *Interpreter) compositeFunction(
 	if functionDeclaration.FunctionBlock.PostConditions != nil {
 
 		postConditionsRewrite :=
-			interpreter.Checker.Elaboration.PostConditionsRewrite[functionDeclaration.FunctionBlock.PostConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite[functionDeclaration.FunctionBlock.PostConditions]
 
 		beforeStatements = postConditionsRewrite.BeforeStatements
 		postConditions = postConditionsRewrite.RewrittenPostConditions
@@ -3100,7 +3087,7 @@ func (interpreter *Interpreter) declareInterface(
 		}
 	})()
 
-	interfaceType := interpreter.Checker.Elaboration.InterfaceDeclarationTypes[declaration]
+	interfaceType := interpreter.Program.Elaboration.InterfaceDeclarationTypes[declaration]
 	typeID := interfaceType.ID()
 
 	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(declaration.Members, lexicalScope)
@@ -3134,7 +3121,7 @@ func (interpreter *Interpreter) declareTypeRequirement(
 		}
 	})()
 
-	compositeType := interpreter.Checker.Elaboration.CompositeDeclarationTypes[declaration]
+	compositeType := interpreter.Program.Elaboration.CompositeDeclarationTypes[declaration]
 	typeID := compositeType.ID()
 
 	initializerFunctionWrapper := interpreter.initializerFunctionWrapper(declaration.Members, lexicalScope)
@@ -3210,7 +3197,7 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 	if declaration.FunctionBlock.PostConditions != nil {
 
 		postConditionsRewrite :=
-			interpreter.Checker.Elaboration.PostConditionsRewrite[declaration.FunctionBlock.PostConditions]
+			interpreter.Program.Elaboration.PostConditionsRewrite[declaration.FunctionBlock.PostConditions]
 
 		beforeStatements = postConditionsRewrite.BeforeStatements
 		rewrittenPostConditions = postConditionsRewrite.RewrittenPostConditions
@@ -3273,49 +3260,72 @@ func (interpreter *Interpreter) functionConditionsWrapper(
 func (interpreter *Interpreter) ensureLoaded(
 	location common.Location,
 	loadLocation func() Import,
-) (subInterpreter *Interpreter) {
+) *Interpreter {
 
 	locationID := location.ID()
 
 	// If a sub-interpreter already exists, return it
 
-	subInterpreter = interpreter.allInterpreters[locationID]
+	subInterpreter := interpreter.allInterpreters[locationID]
 	if subInterpreter != nil {
 		return subInterpreter
 	}
 
-	// Create a sub-checker and sub-interpreter
-
-	var importedChecker *sema.Checker
+	// Load the import
 
 	var virtualImport *VirtualImport
 
-	var checkerErr *sema.CheckerError
-	importedChecker, checkerErr = interpreter.Checker.EnsureLoaded(location, func() *ast.Program {
-		imported := loadLocation()
+	imported := loadLocation()
 
-		switch imported := imported.(type) {
-		case VirtualImport:
-			virtualImport = &imported
-			return nil
-
-		case ProgramImport:
-			return imported.Program
-
-		default:
-			panic(errors.NewUnreachableError())
+	switch imported := imported.(type) {
+	case InterpreterImport:
+		subInterpreter = imported.Interpreter
+		err := subInterpreter.Interpret()
+		if err != nil {
+			panic(err)
 		}
-	})
-	if importedChecker == nil {
-		panic("missing checker")
-	}
-	if checkerErr != nil {
-		panic(checkerErr)
-	}
 
-	var err error
-	subInterpreter, err = NewInterpreter(
-		importedChecker,
+		return subInterpreter
+
+	case VirtualImport:
+		virtualImport = &imported
+
+		var err error
+		// NOTE: virtual import, no program
+		subInterpreter, err = interpreter.NewSubInterpreter(nil, location)
+		if err != nil {
+			panic(err)
+		}
+
+		// If the imported location is a virtual import,
+		// prepare the interpreter
+
+		for name, value := range virtualImport.Globals {
+			variable := NewVariable(value)
+			subInterpreter.setVariable(name, variable)
+			subInterpreter.Globals[name] = variable
+		}
+
+		subInterpreter.typeCodes.
+			Merge(virtualImport.TypeCodes)
+
+		return subInterpreter
+
+	default:
+		panic(errors.NewUnreachableError())
+	}
+}
+
+func (interpreter *Interpreter) NewSubInterpreter(
+	program *Program,
+	location common.Location,
+	options ...Option,
+) (
+	*Interpreter,
+	error,
+) {
+
+	defaultOptions := []Option{
 		WithPredeclaredValues(interpreter.PredeclaredValues),
 		WithOnEventEmittedHandler(interpreter.onEventEmitted),
 		WithOnStatementHandler(interpreter.onStatement),
@@ -3330,34 +3340,17 @@ func (interpreter *Interpreter) ensureLoaded(
 		WithImportLocationHandler(interpreter.importLocationHandler),
 		WithUUIDHandler(interpreter.uuidHandler),
 		WithAllInterpreters(interpreter.allInterpreters),
-		WithAllCheckers(interpreter.allCheckers),
 		withTypeCodes(interpreter.typeCodes),
+	}
+
+	return NewInterpreter(
+		program,
+		location,
+		append(
+			defaultOptions,
+			options...,
+		)...,
 	)
-	if err != nil {
-		panic(err)
-	}
-
-	if virtualImport != nil {
-		// If the imported location is a virtual import,
-		// prepare the interpreter
-
-		for name, value := range virtualImport.Globals {
-			variable := NewVariable(value)
-			subInterpreter.setVariable(name, variable)
-			subInterpreter.Globals[name] = variable
-		}
-
-		subInterpreter.typeCodes.
-			Merge(virtualImport.TypeCodes)
-
-	} else {
-		// If the imported location is an interpreted program,
-		// evaluate its top-level declarations
-
-		subInterpreter.runAllStatements(subInterpreter.interpret())
-	}
-
-	return subInterpreter
 }
 
 func (interpreter *Interpreter) VisitPragmaDeclaration(_ *ast.PragmaDeclaration) ast.Repr {
@@ -3366,7 +3359,7 @@ func (interpreter *Interpreter) VisitPragmaDeclaration(_ *ast.PragmaDeclaration)
 
 func (interpreter *Interpreter) VisitImportDeclaration(declaration *ast.ImportDeclaration) ast.Repr {
 
-	resolvedLocations := interpreter.Checker.Elaboration.ImportDeclarationsResolvedLocations[declaration]
+	resolvedLocations := interpreter.Program.Elaboration.ImportDeclarationsResolvedLocations[declaration]
 
 	for _, resolvedLocation := range resolvedLocations {
 		interpreter.importResolvedLocation(resolvedLocation)
@@ -3403,8 +3396,8 @@ func (interpreter *Interpreter) importResolvedLocation(resolvedLocation sema.Res
 	for name, variable := range variables {
 
 		// don't import predeclared values
-		if subInterpreter.Checker != nil {
-			if _, ok := subInterpreter.Checker.Elaboration.EffectivePredeclaredValues[name]; ok {
+		if subInterpreter.Program != nil {
+			if _, ok := subInterpreter.Program.Elaboration.EffectivePredeclaredValues[name]; ok {
 				continue
 			}
 		}
@@ -3427,7 +3420,7 @@ func (interpreter *Interpreter) VisitTransactionDeclaration(declaration *ast.Tra
 }
 
 func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.TransactionDeclaration) {
-	transactionType := interpreter.Checker.Elaboration.TransactionDeclarationTypes[declaration]
+	transactionType := interpreter.Program.Elaboration.TransactionDeclarationTypes[declaration]
 
 	lexicalScope := interpreter.activations.CurrentOrNew()
 
@@ -3446,10 +3439,10 @@ func (interpreter *Interpreter) declareTransactionEntryPoint(declaration *ast.Tr
 	}
 
 	postConditionsRewrite :=
-		interpreter.Checker.Elaboration.PostConditionsRewrite[declaration.PostConditions]
+		interpreter.Program.Elaboration.PostConditionsRewrite[declaration.PostConditions]
 
 	self := &CompositeValue{
-		Location: interpreter.Checker.Location,
+		Location: interpreter.Location,
 		Fields:   map[string]Value{},
 		modified: true,
 	}
@@ -3533,7 +3526,7 @@ func (interpreter *Interpreter) VisitEmitStatement(statement *ast.EmitStatement)
 		FlatMap(func(result interface{}) Trampoline {
 			event := result.(*CompositeValue)
 
-			eventType := interpreter.Checker.Elaboration.EmitStatementEventTypes[statement]
+			eventType := interpreter.Program.Elaboration.EmitStatementEventTypes[statement]
 
 			if interpreter.onEventEmitted == nil {
 				panic(EventEmissionUnavailableError{
@@ -3556,7 +3549,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 		Map(func(result interface{}) interface{} {
 			value := result.(Value)
 
-			expectedType := interpreter.Checker.Elaboration.CastingTargetTypes[expression]
+			expectedType := interpreter.Program.Elaboration.CastingTargetTypes[expression]
 
 			switch expression.Operation {
 			case ast.OperationFailableCast, ast.OperationForceCast:
@@ -3588,7 +3581,7 @@ func (interpreter *Interpreter) VisitCastingExpression(expression *ast.CastingEx
 				}
 
 			case ast.OperationCast:
-				staticValueType := interpreter.Checker.Elaboration.CastingStaticValueTypes[expression]
+				staticValueType := interpreter.Program.Elaboration.CastingStaticValueTypes[expression]
 				return interpreter.convertAndBox(value, staticValueType, expectedType)
 
 			default:
@@ -4456,28 +4449,44 @@ func (interpreter *Interpreter) getElaboration(location common.Location) *sema.E
 
 	locationID := location.ID()
 
-	checker := inter.allCheckers[locationID]
-	if checker == nil {
+	subInterpreter := inter.allInterpreters[locationID]
+	if subInterpreter == nil || subInterpreter.Program == nil {
 		return nil
 	}
-	return checker.Elaboration
+
+	return subInterpreter.Program.Elaboration
 }
 
 func (interpreter *Interpreter) getCompositeType(location common.Location, qualifiedIdentifier string) *sema.CompositeType {
-	elaboration := interpreter.getElaboration(location)
 	typeID := location.TypeID(qualifiedIdentifier)
+
+	elaboration := interpreter.getElaboration(location)
+	if elaboration == nil {
+		panic(TypeLoadingError{
+			TypeID: typeID,
+		})
+	}
+
 	ty := elaboration.CompositeTypes[typeID]
 	if ty == nil {
 		panic(TypeLoadingError{
 			TypeID: typeID,
 		})
 	}
+
 	return ty
 }
 
 func (interpreter *Interpreter) getInterfaceType(location common.Location, qualifiedIdentifier string) *sema.InterfaceType {
-	elaboration := interpreter.getElaboration(location)
 	typeID := location.TypeID(qualifiedIdentifier)
+
+	elaboration := interpreter.getElaboration(location)
+	if elaboration == nil {
+		panic(TypeLoadingError{
+			TypeID: typeID,
+		})
+	}
+
 	ty := elaboration.InterfaceTypes[typeID]
 	if ty == nil {
 		panic(TypeLoadingError{

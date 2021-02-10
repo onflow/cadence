@@ -16,27 +16,7 @@
  * limitations under the License.
  */
 
-package interpreter
+package sema
 
-// Import
-
-type Import interface {
-	isImport()
-}
-
-// VirtualImport
-
-type VirtualImport struct {
-	Globals   map[string]Value
-	TypeCodes TypeCodes
-}
-
-func (VirtualImport) isImport() {}
-
-// InterpreterImport
-
-type InterpreterImport struct {
-	Interpreter *Interpreter
-}
-
-func (InterpreterImport) isImport() {}
+//go:generate go run github.com/cheekybits/genny -pkg=sema -in=../common/orderedmap/orderedmap.go -out=ordered_map_string_type.go gen "KeyType=string ValueType=Type"
+//go:generate go run github.com/cheekybits/genny -pkg=sema -in=../common/orderedmap/orderedmap.go -out=ordered_map_string_member.go gen "KeyType=string ValueType=*Member"

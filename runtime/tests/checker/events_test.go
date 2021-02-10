@@ -248,9 +248,9 @@ func TestCheckEmitEvent(t *testing.T) {
 			ParseAndCheckOptions{
 				Options: []sema.Option{
 					sema.WithImportHandler(
-						func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
-							return sema.CheckerImport{
-								Checker: importedChecker,
+						func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+							return sema.ElaborationImport{
+								Elaboration: importedChecker.Elaboration,
 							}, nil
 						},
 					),

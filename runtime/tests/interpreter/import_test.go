@@ -40,16 +40,17 @@ func TestInterpretVirtualImport(t *testing.T) {
 		Kind:       common.CompositeKindContract,
 	}
 
-	fooType.Members = map[string]*sema.Member{
-		"bar": sema.NewPublicFunctionMember(
+	fooType.Members = sema.NewStringMemberOrderedMap()
+	fooType.Members.Set(
+		"bar",
+		sema.NewPublicFunctionMember(
 			fooType,
 			"bar",
 			&sema.FunctionType{
 				ReturnTypeAnnotation: sema.NewTypeAnnotation(&sema.UInt64Type{}),
 			},
 			"",
-		),
-	}
+		))
 
 	const code = `
        import Foo
@@ -94,7 +95,7 @@ func TestInterpretVirtualImport(t *testing.T) {
 			},
 			CheckerOptions: []sema.Option{
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
 						return sema.VirtualImport{
 							ValueElements: map[string]sema.ImportElement{
 								"Foo": {
@@ -208,7 +209,7 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 					},
 				),
 				sema.WithImportHandler(
-					func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
+					func(checker *sema.Checker, location common.Location) (sema.Import, error) {
 						require.IsType(t, common.AddressLocation{}, location)
 						addressLocation := location.(common.AddressLocation)
 
@@ -221,10 +222,15 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 							importedChecker = importedCheckerA
 						case "b":
 							importedChecker = importedCheckerB
+						default:
+							t.Errorf(
+								"invalid address location location name: %s",
+								addressLocation.Name,
+							)
 						}
 
-						return sema.CheckerImport{
-							Checker: importedChecker,
+						return sema.ElaborationImport{
+							Elaboration: importedChecker.Elaboration,
 						}, nil
 					},
 				),
@@ -234,7 +240,8 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 	require.NoError(t, err)
 
 	inter, err := interpreter.NewInterpreter(
-		importingChecker,
+		interpreter.ProgramFromChecker(importingChecker),
+		importingChecker.Location,
 		interpreter.WithImportLocationHandler(
 			func(inter *interpreter.Interpreter, location common.Location) interpreter.Import {
 				require.IsType(t, common.AddressLocation{}, location)
@@ -253,8 +260,14 @@ func TestInterpretImportMultipleProgramsFromLocation(t *testing.T) {
 					return nil
 				}
 
-				return interpreter.ProgramImport{
-					Program: importedChecker.Program,
+				program := interpreter.ProgramFromChecker(importedChecker)
+				subInterpreter, err := inter.NewSubInterpreter(program, location)
+				if err != nil {
+					panic(err)
+				}
+
+				return interpreter.InterpreterImport{
+					Interpreter: subInterpreter,
 				}
 			},
 		),

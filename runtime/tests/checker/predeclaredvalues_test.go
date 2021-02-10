@@ -23,9 +23,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/parser2"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/stdlib"
 	"github.com/onflow/cadence/runtime/tests/utils"
@@ -123,16 +121,57 @@ func TestCheckPredeclaredValues(t *testing.T) {
 			},
 		}
 
-		program2, err := parser2.ParseProgram(`let x = foo()`)
-		require.NoError(t, err)
+		predeclaredValuesOption := sema.WithPredeclaredValues(
+			[]sema.ValueDeclaration{
+				valueDeclaration1,
+				valueDeclaration2,
+			},
+		)
 
-		program3, err := parser2.ParseProgram(`let y = foo()`)
-		require.NoError(t, err)
+		checker2, err2 := ParseAndCheckWithOptions(t,
+			`let x = foo()`,
+			ParseAndCheckOptions{
+				Location: location2,
+				Options: []sema.Option{
+					predeclaredValuesOption,
+				},
+			},
+		)
 
-		program4, err := parser2.ParseProgram(`let z = foo(1)`)
-		require.NoError(t, err)
+		checker3, err3 := ParseAndCheckWithOptions(t,
+			`let y = foo()`,
+			ParseAndCheckOptions{
+				Location: location3,
+				Options: []sema.Option{
+					predeclaredValuesOption,
+				},
+			},
+		)
 
-		_, err = ParseAndCheckWithOptions(t,
+		checker4, err4 := ParseAndCheckWithOptions(t,
+			`let z = foo(1)`,
+			ParseAndCheckOptions{
+				Location: location4,
+				Options: []sema.Option{
+					predeclaredValuesOption,
+				},
+			},
+		)
+
+		getChecker := func(location common.Location) (*sema.Checker, error) {
+			switch location {
+			case location2:
+				return checker2, err2
+			case location3:
+				return checker3, err3
+			case location4:
+				return checker4, err4
+			default:
+				t.Fatal("invalid location", location)
+				return nil, nil
+			}
+		}
+		_, err := ParseAndCheckWithOptions(t,
 			`
               import 0x2
               import 0x3
@@ -145,32 +184,17 @@ func TestCheckPredeclaredValues(t *testing.T) {
 			ParseAndCheckOptions{
 				Location: location1,
 				Options: []sema.Option{
-					sema.WithPredeclaredValues(
-						[]sema.ValueDeclaration{
-							valueDeclaration1,
-							valueDeclaration2,
-						},
-					),
+					predeclaredValuesOption,
 					sema.WithImportHandler(
-						func(checker *sema.Checker, location common.Location) (sema.Import, *sema.CheckerError) {
-							checker, err := checker.EnsureLoaded(location, func() *ast.Program {
-								switch location {
-								case location2:
-									return program2
-								case location3:
-									return program3
-								case location4:
-									return program4
-								default:
-									t.Fatal("invalid location", location)
-									return nil
-								}
-							})
-							if err != nil {
-								return nil, err
+						func(checker *sema.Checker, location common.Location) (sema.Import, error) {
+
+							importedChecker, importErr := getChecker(location)
+							if importErr != nil {
+								return nil, importErr
 							}
-							return sema.CheckerImport{
-								Checker: checker,
+
+							return sema.ElaborationImport{
+								Elaboration: importedChecker.Elaboration,
 							}, nil
 						},
 					),
@@ -185,7 +209,7 @@ func TestCheckPredeclaredValues(t *testing.T) {
 		var importedProgramError *sema.ImportedProgramError
 		utils.RequireErrorAs(t, errs[0], &importedProgramError)
 		require.Equal(t, location3, importedProgramError.Location)
-		importedErrs := ExpectCheckerErrors(t, importedProgramError.CheckerError, 1)
+		importedErrs := ExpectCheckerErrors(t, importedProgramError.Err, 1)
 		require.IsType(t, &sema.NotDeclaredError{}, importedErrs[0])
 
 		// The illegal use of 'foo' in 0x1 should be reported

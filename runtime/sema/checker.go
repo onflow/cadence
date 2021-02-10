@@ -74,7 +74,7 @@ type ResolvedLocation struct {
 
 type LocationHandlerFunc func(identifiers []ast.Identifier, location common.Location) ([]ResolvedLocation, error)
 
-type ImportHandlerFunc func(checker *Checker, location common.Location) (Import, *CheckerError)
+type ImportHandlerFunc func(checker *Checker, location common.Location) (Import, error)
 
 // Checker
 
@@ -83,7 +83,6 @@ type Checker struct {
 	Location                           common.Location
 	PredeclaredValues                  []ValueDeclaration
 	PredeclaredTypes                   []TypeDeclaration
-	AllCheckers                        map[common.LocationID]*Checker
 	accessCheckMode                    AccessCheckMode
 	errors                             []error
 	hints                              []Hint
@@ -110,7 +109,6 @@ type Checker struct {
 	locationHandler                    LocationHandlerFunc
 	importHandler                      ImportHandlerFunc
 	checkHandler                       CheckHandlerFunc
-	isChecking                         bool
 }
 
 type Option func(*Checker) error
@@ -165,16 +163,6 @@ func WithAccessCheckMode(mode AccessCheckMode) Option {
 func WithValidTopLevelDeclarationsHandler(handler ValidTopLevelDeclarationsHandlerFunc) Option {
 	return func(checker *Checker) error {
 		checker.validTopLevelDeclarationsHandler = handler
-		return nil
-	}
-}
-
-// WithAllCheckers returns a checker option which sets
-// the given map of checkers as the map of all checkers.
-//
-func WithAllCheckers(allCheckers map[common.LocationID]*Checker) Option {
-	return func(checker *Checker) error {
-		checker.SetAllCheckers(allCheckers)
 		return nil
 	}
 }
@@ -264,11 +252,7 @@ func NewChecker(program *ast.Program, location common.Location, options ...Optio
 
 	checker.declareBaseValues()
 
-	defaultOptions := []Option{
-		WithAllCheckers(map[common.LocationID]*Checker{}),
-	}
-
-	for _, option := range append(defaultOptions, options...) {
+	for _, option := range options {
 		err := option(checker)
 		if err != nil {
 			return nil, err
@@ -283,13 +267,18 @@ func NewChecker(program *ast.Program, location common.Location, options ...Optio
 	return checker, nil
 }
 
-// SetAllCheckers sets the given map of checkers as the map of all checkers.
-//
-func (checker *Checker) SetAllCheckers(allCheckers map[common.LocationID]*Checker) {
-	checker.AllCheckers = allCheckers
-
-	// Register self
-	checker.AllCheckers[checker.Location.ID()] = checker
+func (checker *Checker) SubChecker(program *ast.Program, location common.Location) (*Checker, error) {
+	return NewChecker(
+		program,
+		location,
+		WithPredeclaredValues(checker.PredeclaredValues),
+		WithPredeclaredTypes(checker.PredeclaredTypes),
+		WithAccessCheckMode(checker.accessCheckMode),
+		WithValidTopLevelDeclarationsHandler(checker.validTopLevelDeclarationsHandler),
+		WithCheckHandler(checker.checkHandler),
+		WithImportHandler(checker.importHandler),
+		WithLocationHandler(checker.locationHandler),
+	)
 }
 
 func (checker *Checker) declareBaseValues() {
@@ -359,7 +348,7 @@ func (checker *Checker) IsChecked() bool {
 
 func (checker *Checker) Check() error {
 	if !checker.IsChecked() {
-		checker.isChecking = true
+		checker.Elaboration.setIsChecking(true)
 		checker.errors = nil
 		check := func() {
 			checker.Program.Accept(checker)
@@ -369,7 +358,7 @@ func (checker *Checker) Check() error {
 		} else {
 			check()
 		}
-		checker.isChecking = false
+		checker.Elaboration.setIsChecking(false)
 		checker.isChecked = true
 	}
 	err := checker.CheckerError()
@@ -1009,13 +998,19 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 		// TODO: also include interface conformances's members
 		//   once interfaces can have conformances
 
-		for name := range restrictionInterfaceType.Members {
+		restrictionInterfaceType.Members.Foreach(func(name string, member *Member) {
 			if previousDeclaringInterfaceType, ok := memberSet[name]; ok {
 
 				// If there is an overlap in members, ensure the members have the same type
 
-				memberType := restrictionInterfaceType.Members[name].TypeAnnotation.Type
-				previousMemberType := previousDeclaringInterfaceType.Members[name].TypeAnnotation.Type
+				memberType := member.TypeAnnotation.Type
+
+				prevMemberType, ok := previousDeclaringInterfaceType.Members.Get(name)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				previousMemberType := prevMemberType.TypeAnnotation.Type
 
 				if !memberType.IsInvalidType() &&
 					!previousMemberType.IsInvalidType() &&
@@ -1033,7 +1028,7 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 			} else {
 				memberSet[name] = restrictionInterfaceType
 			}
-		}
+		})
 	}
 
 	if restrictedType == nil {
@@ -1281,8 +1276,7 @@ func (checker *Checker) convertNominalType(t *ast.NominalType) Type {
 	for _, identifier := range t.NestedIdentifiers {
 		switch typedResult := ty.(type) {
 		case ContainerType:
-			ty = typedResult.NestedTypes()[identifier.Identifier]
-
+			ty, _ = typedResult.NestedTypes().Get(identifier.Identifier)
 		default:
 			if !typedResult.IsInvalidType() {
 				checker.report(
@@ -1682,7 +1676,7 @@ func (checker *Checker) checkUnusedExpressionResourceLoss(expressionType Type, e
 // in non resource composites (concrete or interface)
 //
 func (checker *Checker) checkResourceFieldNesting(
-	members map[string]*Member,
+	members *StringMemberOrderedMap,
 	compositeKind common.CompositeKind,
 	fieldPositionGetter func(name string) ast.Position,
 ) {
@@ -1698,13 +1692,12 @@ func (checker *Checker) checkResourceFieldNesting(
 	// The field is not a resource or contract, check if there are
 	// any fields that have a resource type  and report them
 
-	for name, member := range members {
-
+	members.Foreach(func(name string, member *Member) {
 		// NOTE: check type, not resource annotation:
 		// the field could have a wrong annotation
 
 		if !member.TypeAnnotation.Type.IsResourceType() {
-			continue
+			return
 		}
 
 		pos := fieldPositionGetter(name)
@@ -1716,7 +1709,7 @@ func (checker *Checker) checkResourceFieldNesting(
 				Pos:           pos,
 			},
 		)
-	}
+	})
 }
 
 // checkPotentiallyUnevaluated runs the given type checking function

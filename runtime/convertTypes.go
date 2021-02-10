@@ -23,6 +23,7 @@ import (
 
 	"github.com/onflow/cadence"
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -191,7 +192,11 @@ func exportCompositeType(t *sema.CompositeType, results map[sema.TypeID]cadence.
 	fieldMembers := make([]*sema.Member, 0, len(t.Fields))
 
 	for _, identifier := range t.Fields {
-		member := t.Members[identifier]
+		member, ok := t.Members.Get(identifier)
+
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
 		if member.IgnoreInSerialization {
 			continue
@@ -256,7 +261,11 @@ func exportInterfaceType(t *sema.InterfaceType, results map[sema.TypeID]cadence.
 	fieldMembers := make([]*sema.Member, 0, len(t.Fields))
 
 	for _, identifier := range t.Fields {
-		member := t.Members[identifier]
+		member, ok := t.Members.Get(identifier)
+
+		if !ok {
+			panic(errors.NewUnreachableError())
+		}
 
 		if member.IgnoreInSerialization {
 			continue
