@@ -1125,8 +1125,9 @@ resource R {}
 
 // Declare a constant for an array of resources.
 // Create two resources and move them into the array.
+// `resources` has type `@[R]`
 //
-let resources: @[R] <- [
+let resources <- [
     <-create R(),
     <-create R()
 ]
@@ -1161,8 +1162,9 @@ The same applies to dictionaries.
 ```cadence
 // Declare a constant for a dictionary of resources.
 // Create two resources and move them into the dictionary.
+// `resources` has type `@{String: R}`
 //
-let resources: @{String: R} <- {
+let resources <- {
     "r1": <-create R(),
     "r2": <-create R()
 }
