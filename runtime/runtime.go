@@ -1733,7 +1733,7 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			}
 
 			if isUpdate {
-				validator := NewContractUpdateValidator(r, context, existingCode, checker.Program)
+				validator := NewContractUpdateValidator(existingCode, program.Program)
 				err := validator.Validate()
 				if err != nil {
 					panic(&InvalidContractDeploymentError{

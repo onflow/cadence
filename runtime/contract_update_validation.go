@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/onflow/cadence/runtime/ast"
 	"github.com/onflow/cadence/runtime/errors"
+	"github.com/onflow/cadence/runtime/parser2"
 )
 
 type ContractUpdateValidator struct {
@@ -32,19 +33,15 @@ type ContractUpdateValidator struct {
 	entryPointName          string
 	currentDeclName         string
 	currentFieldName        string
-	visitedDecls            map[string]bool
+	visited                 map[string]bool
 }
 
 // ContractUpdateValidator should implement ast.TypeEqualityChecker
 var _ ast.TypeEqualityChecker = &ContractUpdateValidator{}
 
-func NewContractUpdateValidator(
-	runtime *interpreterRuntime,
-	context Context,
-	existingCode []byte,
-	newProgram *ast.Program) *ContractUpdateValidator {
+func NewContractUpdateValidator(existingCode []byte, newProgram *ast.Program) *ContractUpdateValidator {
 
-	oldProgram, err := runtime.parse(existingCode, context)
+	oldProgram, err := parser2.ParseProgram(string(existingCode))
 	if err != nil {
 		// Not a user error. Hence panic
 		panic(err)
@@ -52,8 +49,8 @@ func NewContractUpdateValidator(
 
 	oldCompDecls := oldProgram.CompositeDeclarations()
 	oldInterfaceDecls := oldProgram.InterfaceDeclarations()
-	var oldDecl ast.Declaration
 
+	var oldDecl ast.Declaration
 	if len(oldCompDecls) == 1 {
 		oldDecl = oldCompDecls[0]
 	} else if len(oldInterfaceDecls) == 1 {
@@ -64,8 +61,8 @@ func NewContractUpdateValidator(
 
 	newCompDecls := newProgram.CompositeDeclarations()
 	newInterfaceDecls := newProgram.InterfaceDeclarations()
-	var newDecl ast.Declaration
 
+	var newDecl ast.Declaration
 	if len(newCompDecls) == 1 {
 		newDecl = newCompDecls[0]
 	} else if len(newInterfaceDecls) == 1 {
@@ -77,7 +74,7 @@ func NewContractUpdateValidator(
 	return &ContractUpdateValidator{
 		oldDeclaration: oldDecl,
 		newDeclaration: newDecl,
-		visitedDecls:   map[string]bool{}}
+		visited:        map[string]bool{}}
 }
 
 func (validator *ContractUpdateValidator) Validate() error {
@@ -102,13 +99,13 @@ func (validator *ContractUpdateValidator) checkDeclarationUpdatability(
 		validator.currentDeclName = parentDeclName
 	}()
 
-	// If the same same decl is already visited, then do not check again.
+	// If the same decl is already visited, then do not check again.
 	// This also avoids getting stuck on circular dependencies between composite decls.
-	if validator.visitedDecls[validator.currentDeclName] {
+	if validator.visited[validator.currentDeclName] {
 		return nil
 	}
 
-	validator.visitedDecls[validator.currentDeclName] = true
+	validator.visited[validator.currentDeclName] = true
 
 	oldFields := getDeclarationMembers(oldDeclaration).Fields()
 	newFields := getDeclarationMembers(newDeclaration).Fields()
@@ -145,7 +142,10 @@ func (validator *ContractUpdateValidator) checkDeclarationUpdatability(
 	return nil
 }
 
-func (validator *ContractUpdateValidator) visitField(newField *ast.FieldDeclaration, oldFiledTypes map[string]ast.Type) error {
+func (validator *ContractUpdateValidator) visitField(
+	newField *ast.FieldDeclaration,
+	oldFiledTypes map[string]ast.Type) error {
+
 	prevFieldName := validator.currentFieldName
 	validator.currentFieldName = newField.Identifier.Identifier
 	defer func() {
