@@ -26,6 +26,44 @@ import (
 	"github.com/onflow/cadence/runtime/errors"
 )
 
+/*
+
+
+   ┌────────────────────────┐
+   │                        │
+   │       Resources:       │      ┌─────────────────┐                ┏━━━━━━━━━━┓
+   │                        │      │                 │                ▼          ┃
+   │  map[interface{}]Info ━╋━━━━━▶│      Info:      │       ┌────────────────┐  ┃
+   │                        │      │                 │       │                │  ┃
+   └────────────────────────┘      │  Invalidations ━╋━━━━━━▶│ Invalidations: │  ┃
+                                   │                 │       │                │  ┃
+                │                  │      Uses ━━━━━━╋━━━┓   └────────────────┘  ┃
+                                   │                 │   ┃                       ┃          ┏━━━━━━━━┓
+                │                  └─────────────────┘   ┃            │          ┃          ▼        ┃
+                                                         ┃                       ┃    ┌───────────┐  ┃
+             Clone                          │            ┃            │          ┃    │           │  ┃
+                                                         ┗━━━━━━━━━━━━━━━━━━━━━━━╋━━━▶│   Uses:   │  ┃
+                │                        Clone                        │          ┃    │           │  ┃
+                                                                                 ┃    └───────────┘  ┃
+                ▼                           │                      Clone         ┃                   ┃
+   ┌────────────────────────┐                                                    ┃          │        ┃
+   │                        │               ▼                         │          ┃                   ┃
+   │       Resources:       │      ┌─────────────────┐                           ┃          │        ┃
+   │                        │      │                 │                ▼          ┃                   ┃
+   │  map[interface{}]Info ━╋━━━━━▶│      Info:      │       ┌────────────────┐  ┃       Clone       ┃
+   │                        │      │                 │       │                │  ┃                   ┃
+   └────────────────────────┘      │  Invalidations ━╋━━━━━━▶│ Invalidations: │  ┃          │        ┃
+                                   │                 │       │                │  ┃                   ┃
+                                   │      Uses ━━━━━━╋━━━┓   │     Parent ━━━━╋━━┛          │        ┃
+                                   │                 │   ┃   │                │                      ┃
+                                   └─────────────────┘   ┃   └────────────────┘             ▼        ┃
+                                                         ┃                            ┌───────────┐  ┃
+                                                         ┃                            │   Uses:   │  ┃
+                                                         ┗━━━━━━━━━━━━━━━━━━━━━━━━━━━▶│           │  ┃
+                                                                                      │  Parent ━━╋━━┛
+                                                                                      └───────────┘
+*/
+
 // ResourceInfo is the info for a resource.
 //
 type ResourceInfo struct {
@@ -38,7 +76,7 @@ type ResourceInfo struct {
 	UsePositions ResourceUses
 }
 
-func (ri *ResourceInfo) Clone() ResourceInfo {
+func (ri ResourceInfo) Clone() ResourceInfo {
 	return ResourceInfo{
 		DefinitivelyInvalidated: ri.DefinitivelyInvalidated,
 		Invalidations:           ri.Invalidations.Clone(),
