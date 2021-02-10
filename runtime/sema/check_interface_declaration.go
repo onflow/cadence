@@ -210,6 +210,7 @@ func (checker *Checker) declareInterfaceType(declaration *ast.InterfaceDeclarati
 		Identifier:    identifier.Identifier,
 		CompositeKind: declaration.CompositeKind,
 		nestedTypes:   NewStringTypeOrderedMap(),
+		Members:       NewStringMemberOrderedMap(),
 	}
 
 	variable, err := checker.typeActivations.DeclareType(typeDeclaration{

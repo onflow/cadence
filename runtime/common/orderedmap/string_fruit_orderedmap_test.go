@@ -107,7 +107,7 @@ func (om *StringFruitOrderedMap) Newest() *StringFruitPair {
 // Foreach iterates over the entries of the map in the insertion order, and invokes
 // the provided function for each key-value pair.
 func (om *StringFruitOrderedMap) Foreach(f func(key string, value *Fruit)) {
-	for pair := om.Oldest(); pair != nil; pair = pair.next() {
+	for pair := om.Oldest(); pair != nil; pair = pair.Next() {
 		f(pair.Key, pair.Value)
 	}
 }
@@ -121,13 +121,13 @@ type StringFruitPair struct {
 	element *list.Element
 }
 
-// next returns a pointer to the next pair.
-func (p *StringFruitPair) next() *StringFruitPair {
+// Next returns a pointer to the next pair.
+func (p *StringFruitPair) Next() *StringFruitPair {
 	return listElementToStringFruitPair(p.element.Next())
 }
 
-// prev returns a pointer to the previous pair.
-func (p *StringFruitPair) prev() *StringFruitPair {
+// Prev returns a pointer to the previous pair.
+func (p *StringFruitPair) Prev() *StringFruitPair {
 	return listElementToStringFruitPair(p.element.Prev())
 }
 

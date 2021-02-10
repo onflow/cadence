@@ -18,4 +18,5 @@
 
 package sema
 
-//go:generate go run github.com/cheekybits/genny -pkg=sema -in=../common/orderedmap/orderedmap.go -out=stringtypeorderedmap.go gen "KeyType=string ValueType=Type"
+//go:generate go run github.com/cheekybits/genny -pkg=sema -in=../common/orderedmap/orderedmap.go -out=ordered_map_string_type.go gen "KeyType=string ValueType=Type"
+//go:generate go run github.com/cheekybits/genny -pkg=sema -in=../common/orderedmap/orderedmap.go -out=ordered_map_string_member.go gen "KeyType=string ValueType=*Member"

@@ -998,13 +998,19 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 		// TODO: also include interface conformances's members
 		//   once interfaces can have conformances
 
-		for name := range restrictionInterfaceType.Members {
+		restrictionInterfaceType.Members.Foreach(func(name string, member *Member) {
 			if previousDeclaringInterfaceType, ok := memberSet[name]; ok {
 
 				// If there is an overlap in members, ensure the members have the same type
 
-				memberType := restrictionInterfaceType.Members[name].TypeAnnotation.Type
-				previousMemberType := previousDeclaringInterfaceType.Members[name].TypeAnnotation.Type
+				memberType := member.TypeAnnotation.Type
+
+				prevMemberType, ok := previousDeclaringInterfaceType.Members.Get(name)
+				if !ok {
+					panic(errors.NewUnreachableError())
+				}
+
+				previousMemberType := prevMemberType.TypeAnnotation.Type
 
 				if !memberType.IsInvalidType() &&
 					!previousMemberType.IsInvalidType() &&
@@ -1022,7 +1028,7 @@ func (checker *Checker) convertRestrictedType(t *ast.RestrictedType) Type {
 			} else {
 				memberSet[name] = restrictionInterfaceType
 			}
-		}
+		})
 	}
 
 	if restrictedType == nil {
@@ -1670,7 +1676,7 @@ func (checker *Checker) checkUnusedExpressionResourceLoss(expressionType Type, e
 // in non resource composites (concrete or interface)
 //
 func (checker *Checker) checkResourceFieldNesting(
-	members map[string]*Member,
+	members *StringMemberOrderedMap,
 	compositeKind common.CompositeKind,
 	fieldPositionGetter func(name string) ast.Position,
 ) {
@@ -1686,13 +1692,12 @@ func (checker *Checker) checkResourceFieldNesting(
 	// The field is not a resource or contract, check if there are
 	// any fields that have a resource type  and report them
 
-	for name, member := range members {
-
+	members.Foreach(func(name string, member *Member) {
 		// NOTE: check type, not resource annotation:
 		// the field could have a wrong annotation
 
 		if !member.TypeAnnotation.Type.IsResourceType() {
-			continue
+			return
 		}
 
 		pos := fieldPositionGetter(name)
@@ -1704,7 +1709,7 @@ func (checker *Checker) checkResourceFieldNesting(
 				Pos:           pos,
 			},
 		)
-	}
+	})
 }
 
 // checkPotentiallyUnevaluated runs the given type checking function

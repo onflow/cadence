@@ -1744,8 +1744,8 @@ func TestCheckCompositeConstructorUseInInitializerAndFunction(t *testing.T) {
 				structureType.Identifier,
 			)
 
-			testFunctionMember := structureType.Members["test"]
-
+			testFunctionMember, ok := structureType.Members.Get("test")
+			require.True(t, ok)
 			assert.IsType(t, &sema.FunctionType{}, testFunctionMember.TypeAnnotation.Type)
 
 			testFunctionType := testFunctionMember.TypeAnnotation.Type.(*sema.FunctionType)
