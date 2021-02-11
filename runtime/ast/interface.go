@@ -58,6 +58,10 @@ func (d *InterfaceDeclaration) DeclarationKind() common.DeclarationKind {
 	return d.CompositeKind.DeclarationKind(true)
 }
 
+func (d *InterfaceDeclaration) DeclarationMembers() *Members {
+	return d.Members
+}
+
 func (d *InterfaceDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias InterfaceDeclaration
 	return json.Marshal(&struct {

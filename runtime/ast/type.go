@@ -64,7 +64,7 @@ type Type interface {
 	HasPosition
 	fmt.Stringer
 	isType()
-	Equal(other Type, checker TypeEqualityChecker) error
+	CheckEqual(other Type, checker TypeEqualityChecker) error
 }
 
 // NominalType represents a named type
@@ -112,7 +112,11 @@ func (t *NominalType) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (t *NominalType) Equal(other Type, checker TypeEqualityChecker) error {
+func (t *NominalType) IsQualifiedName() bool {
+	return len(t.NestedIdentifiers) > 0
+}
+
+func (t *NominalType) CheckEqual(other Type, checker TypeEqualityChecker) error {
 	return checker.CheckNominalTypeEquality(t, other)
 }
 
@@ -150,7 +154,7 @@ func (t *OptionalType) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (t *OptionalType) Equal(other Type, checker TypeEqualityChecker) error {
+func (t *OptionalType) CheckEqual(other Type, checker TypeEqualityChecker) error {
 	return checker.CheckOptionalTypeEquality(t, other)
 }
 
@@ -178,7 +182,7 @@ func (t *VariableSizedType) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (t *VariableSizedType) Equal(other Type, checker TypeEqualityChecker) error {
+func (t *VariableSizedType) CheckEqual(other Type, checker TypeEqualityChecker) error {
 	return checker.CheckVariableSizedTypeEquality(t, other)
 }
 
@@ -207,7 +211,7 @@ func (t *ConstantSizedType) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (t *ConstantSizedType) Equal(other Type, checker TypeEqualityChecker) error {
+func (t *ConstantSizedType) CheckEqual(other Type, checker TypeEqualityChecker) error {
 	return checker.CheckConstantSizedTypeEquality(t, other)
 }
 
@@ -236,7 +240,7 @@ func (t *DictionaryType) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (t *DictionaryType) Equal(other Type, checker TypeEqualityChecker) error {
+func (t *DictionaryType) CheckEqual(other Type, checker TypeEqualityChecker) error {
 	return checker.CheckDictionaryTypeEquality(t, other)
 }
 
@@ -273,7 +277,7 @@ func (t *FunctionType) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (t *FunctionType) Equal(other Type, checker TypeEqualityChecker) error {
+func (t *FunctionType) CheckEqual(other Type, checker TypeEqualityChecker) error {
 	return checker.CheckFunctionTypeEquality(t, other)
 }
 
@@ -318,7 +322,7 @@ func (t *ReferenceType) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (t *ReferenceType) Equal(other Type, checker TypeEqualityChecker) error {
+func (t *ReferenceType) CheckEqual(other Type, checker TypeEqualityChecker) error {
 	return checker.CheckReferenceTypeEquality(t, other)
 }
 
@@ -359,7 +363,7 @@ func (t *RestrictedType) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (t *RestrictedType) Equal(other Type, checker TypeEqualityChecker) error {
+func (t *RestrictedType) CheckEqual(other Type, checker TypeEqualityChecker) error {
 	return checker.CheckRestrictedTypeEquality(t, other)
 }
 
@@ -409,7 +413,7 @@ func (t *InstantiationType) MarshalJSON() ([]byte, error) {
 	})
 }
 
-func (t *InstantiationType) Equal(other Type, checker TypeEqualityChecker) error {
+func (t *InstantiationType) CheckEqual(other Type, checker TypeEqualityChecker) error {
 	return checker.CheckInstantiationTypeEquality(t, other)
 }
 

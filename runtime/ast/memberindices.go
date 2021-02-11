@@ -46,6 +46,8 @@ type memberIndices struct {
 	_functions []*FunctionDeclaration
 	// Use `FunctionsByIdentifier()` instead
 	_functionsByIdentifier map[string]*FunctionDeclaration
+	// Use `CompositesByIdentifier()` instead
+	_compositesByIdentifier map[string]*CompositeDeclaration
 	// Use `Interfaces()` instead
 	_interfaces []*InterfaceDeclaration
 	// Use `Composites()` instead
@@ -62,6 +64,11 @@ func (i *memberIndices) FieldsByIdentifier(declarations []Declaration) map[strin
 func (i *memberIndices) FunctionsByIdentifier(declarations []Declaration) map[string]*FunctionDeclaration {
 	i.once.Do(i.initializer(declarations))
 	return i._functionsByIdentifier
+}
+
+func (i *memberIndices) CompositesByIdentifier(declarations []Declaration) map[string]*CompositeDeclaration {
+	i.once.Do(i.initializer(declarations))
+	return i._compositesByIdentifier
 }
 
 func (i *memberIndices) Initializers(declarations []Declaration) []*SpecialFunctionDeclaration {
@@ -123,8 +130,10 @@ func (i *memberIndices) init(declarations []Declaration) {
 	i._destructors = make([]*SpecialFunctionDeclaration, 0)
 	i._initializers = make([]*SpecialFunctionDeclaration, 0)
 
-	i._interfaces = make([]*InterfaceDeclaration, 0)
 	i._composites = make([]*CompositeDeclaration, 0)
+	i._compositesByIdentifier = make(map[string]*CompositeDeclaration)
+
+	i._interfaces = make([]*InterfaceDeclaration, 0)
 	i._enumCases = make([]*EnumCaseDeclaration, 0)
 
 	for _, declaration := range declarations {
@@ -152,6 +161,7 @@ func (i *memberIndices) init(declarations []Declaration) {
 
 		case *CompositeDeclaration:
 			i._composites = append(i._composites, declaration)
+			i._compositesByIdentifier[declaration.Identifier.Identifier] = declaration
 
 		case *EnumCaseDeclaration:
 			i._enumCases = append(i._enumCases, declaration)

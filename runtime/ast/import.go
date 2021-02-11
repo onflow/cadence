@@ -53,6 +53,10 @@ func (d *ImportDeclaration) DeclarationAccess() Access {
 	return AccessNotSpecified
 }
 
+func (d *ImportDeclaration) DeclarationMembers() *Members {
+	return nil
+}
+
 func (d *ImportDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias ImportDeclaration
 	return json.Marshal(&struct {

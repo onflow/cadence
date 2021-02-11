@@ -73,6 +73,10 @@ func (m *Members) FunctionsByIdentifier() map[string]*FunctionDeclaration {
 	return m.indices.FunctionsByIdentifier(m.declarations)
 }
 
+func (m *Members) CompositesByIdentifier() map[string]*CompositeDeclaration {
+	return m.indices.CompositesByIdentifier(m.declarations)
+}
+
 func (m *Members) Initializers() []*SpecialFunctionDeclaration {
 	return m.indices.Initializers(m.declarations)
 }

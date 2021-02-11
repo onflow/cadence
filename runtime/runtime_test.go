@@ -6175,8 +6175,8 @@ func TestContractUpdateValidation(t *testing.T) {
 
 	t.Run("change field type", func(t *testing.T) {
 		const oldCode = `
-      		pub contract Test1 {
-          		pub var a: String
+			pub contract Test1 {
+				pub var a: String
 				init() {
 					self.a = "hello"
 				}
@@ -6193,7 +6193,7 @@ func TestContractUpdateValidation(t *testing.T) {
 		err := deployAndUpdate("Test1", oldCode, newCode)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "error: cannot update contract `Test1` in account 0x42: "+
-			"type annotation does not match for field `a`. expected `String`, found `Int`")
+			"type annotation does not match for field `a` in `Test1`. expected `String`, found `Int`")
 	})
 
 	t.Run("add field", func(t *testing.T) {
@@ -6218,7 +6218,7 @@ func TestContractUpdateValidation(t *testing.T) {
 		err := deployAndUpdate("Test2", oldCode, newCode)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(),
-			"cannot update contract `Test2` in account 0x42: too many fields. expected 1, found 2")
+			"cannot update contract `Test2` in account 0x42: too many fields in `Test2`. expected 1, found 2")
 	})
 
 	t.Run("remove field", func(t *testing.T) {
@@ -6567,7 +6567,7 @@ func TestContractUpdateValidation(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(),
 			"cannot update contract `Test9` in account 0x42: type annotation does not match "+
-				"for field `x`. expected `Test9Import.TestStruct`, found `TestStruct`")
+				"for field `x` in `Test9`. expected `Test9Import.TestStruct`, found `TestStruct`")
 	})
 
 	t.Run("contract interface update", func(t *testing.T) {
@@ -6587,7 +6587,7 @@ func TestContractUpdateValidation(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(),
 			"cannot update contract `Test10` in account 0x42: type annotation does not match "+
-				"for field `a`. expected `String`, found `Int`")
+				"for field `a` in `Test10`. expected `String`, found `Int`")
 	})
 
 	t.Run("convert interface to contract", func(t *testing.T) {
@@ -6720,7 +6720,13 @@ func TestContractUpdateValidation(t *testing.T) {
 			}`
 
 		err := deployAndUpdate("Test13", oldCode, newCode)
-		require.NoError(t, err)
+
+		// Changing unused public composite types should also fail, since those could be
+		// referred by anyone in the chain, and may cause data inconsistency.
+		require.Error(t, err)
+		assert.Contains(t, err.Error(),
+			"error: cannot update contract `Test13` in account 0x42: type annotation does not match "+
+				"for field `a` in `UnusedStruct`. expected `Int`, found `String`")
 	})
 }
 

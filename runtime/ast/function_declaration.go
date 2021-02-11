@@ -76,6 +76,10 @@ func (d *FunctionDeclaration) ToExpression() *FunctionExpression {
 	}
 }
 
+func (d *FunctionDeclaration) DeclarationMembers() *Members {
+	return nil
+}
+
 func (d *FunctionDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias FunctionDeclaration
 	return json.Marshal(&struct {
@@ -121,6 +125,10 @@ func (d *SpecialFunctionDeclaration) DeclarationKind() common.DeclarationKind {
 
 func (d *SpecialFunctionDeclaration) DeclarationAccess() Access {
 	return d.FunctionDeclaration.DeclarationAccess()
+}
+
+func (d *SpecialFunctionDeclaration) DeclarationMembers() *Members {
+	return nil
 }
 
 func (d *SpecialFunctionDeclaration) MarshalJSON() ([]byte, error) {

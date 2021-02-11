@@ -51,6 +51,10 @@ func (d *PragmaDeclaration) DeclarationAccess() Access {
 	return AccessNotSpecified
 }
 
+func (d *PragmaDeclaration) DeclarationMembers() *Members {
+	return nil
+}
+
 func (d *PragmaDeclaration) MarshalJSON() ([]byte, error) {
 	type Alias PragmaDeclaration
 	return json.Marshal(&struct {

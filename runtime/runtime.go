@@ -1733,16 +1733,25 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			}
 
 			if isUpdate {
-				validator := NewContractUpdateValidator(existingCode, program.Program)
-				err := validator.Validate()
-				if err != nil {
+				handleContractUpdateError := func(err error) {
+					if err == nil {
+						return
+					}
+
 					panic(&InvalidContractDeploymentError{
-						Err: fmt.Errorf("cannot update contract `%s` in account %s: %s",
+						Err: fmt.Errorf("cannot update contract `%s` in account %s: %w",
 							nameArgument,
 							address.ShortHexWithPrefix(),
-							err.Error()),
+							err),
 					})
 				}
+
+				oldProgram, err := parser2.ParseProgram(string(existingCode))
+				handleContractUpdateError(err)
+
+				validator := NewContractUpdateValidator(oldProgram, program.Program)
+				err = validator.Validate()
+				handleContractUpdateError(err)
 			}
 
 			r.updateAccountContractCode(

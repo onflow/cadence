@@ -248,3 +248,89 @@ type InvalidContractDeploymentOriginError struct {
 func (*InvalidContractDeploymentOriginError) Error() string {
 	return "cannot deploy invalid contract"
 }
+
+// Contract update related errors
+
+// TooManyFieldsError is reported during a contract update, when the new contract has
+// more fields than the existing contract.
+type TooManyFieldsError struct {
+	declName       string
+	expectedFields int
+	foundFields    int
+	ast.Range
+}
+
+func (e *TooManyFieldsError) Error() string {
+	return fmt.Sprintf("too many fields in `%s`. expected %d, found %d",
+		e.declName,
+		e.expectedFields,
+		e.foundFields,
+	)
+}
+
+// FieldTypeMismatchError is reported during a contract update, when a type of a field
+// does not match the existing type of the same field.
+type FieldTypeMismatchError struct {
+	declName     string
+	fieldName    string
+	expectedType ast.Type
+	foundType    ast.Type
+	ast.Range
+}
+
+func (e *FieldTypeMismatchError) Error() string {
+	return fmt.Sprintf("type annotation does not match for field `%s` in `%s`. expected `%s`, found `%s`",
+		e.fieldName,
+		e.declName,
+		e.expectedType,
+		e.foundType,
+	)
+}
+
+// ExtraneousFieldError  is reported during a contract update, when the new contract
+// has more fields than the existing contract.
+type ExtraneousFieldError struct {
+	declName  string
+	fieldName string
+	ast.Range
+}
+
+func (e *ExtraneousFieldError) Error() string {
+	return fmt.Sprintf("found new field `%s` in `%s",
+		e.fieldName,
+		e.declName,
+	)
+}
+
+// ContractNotFoundError is reported during a contract update, if no contract can be
+// found in the program.
+type ContractNotFoundError struct {
+	ast.Range
+}
+
+func (e *ContractNotFoundError) Error() string {
+	return "cannot find any contract or contract interface"
+}
+
+// InvalidContractKindChangeError is reported during a contract update, when an attempt is made
+// to convert an existing contract to a contract interface, or vise versa.
+type InvalidContractKindChangeError struct {
+	oldKind string
+	newKind string
+	ast.Range
+}
+
+func (e *InvalidContractKindChangeError) Error() string {
+	return fmt.Sprintf("trying to convert a %s to a %s", e.oldKind, e.newKind)
+}
+
+// InvalidNonStorableTypeUsageError is reported during a contract update, when an attempt is made
+// to use a non-storable type as a field of a composite declaration.
+type InvalidNonStorableTypeUsageError struct {
+	nonStorableType ast.Type
+	ast.Range
+}
+
+func (e *InvalidNonStorableTypeUsageError) Error() string {
+	return fmt.Sprintf("cannot use non-storable type `%s` in a composite type field", e.nonStorableType)
+}
