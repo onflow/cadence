@@ -1659,7 +1659,29 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 				checkerOptions,
 			)
 
-			// NOTE: do NOT get the program from the host environment!
+			handleContractUpdateError := func(err error) {
+				if err == nil {
+					return
+				}
+
+				panic(&InvalidContractDeploymentError{
+					Err: fmt.Errorf("cannot update contract `%s` in account %s: %w",
+						nameArgument,
+						address.ShortHexWithPrefix(),
+						err),
+				})
+			}
+
+			var cachedProgram *interpreter.Program
+			if isUpdate {
+				// Get the old program from host environment, if available. This is an optimization
+				// so that old program doesn't need to be re-parsed for update validation.
+				cachedProgram, err = context.Interface.GetProgram(context.Location)
+				handleContractUpdateError(err)
+			}
+
+			// NOTE: do NOT use the program obtained from the host environment, as the current program.
+			// Always re-parse and re-check the new program.
 
 			program, err := r.parseAndCheckProgram(
 				code,
@@ -1733,21 +1755,13 @@ func (r *interpreterRuntime) newAuthAccountContractsChangeFunction(
 			}
 
 			if isUpdate {
-				handleContractUpdateError := func(err error) {
-					if err == nil {
-						return
-					}
-
-					panic(&InvalidContractDeploymentError{
-						Err: fmt.Errorf("cannot update contract `%s` in account %s: %w",
-							nameArgument,
-							address.ShortHexWithPrefix(),
-							err),
-					})
+				var oldProgram *ast.Program
+				if cachedProgram != nil {
+					oldProgram = cachedProgram.Program
+				} else {
+					oldProgram, err = parser2.ParseProgram(string(existingCode))
+					handleContractUpdateError(err)
 				}
-
-				oldProgram, err := parser2.ParseProgram(string(existingCode))
-				handleContractUpdateError(err)
 
 				validator := NewContractUpdateValidator(oldProgram, program.Program)
 				err = validator.Validate()
