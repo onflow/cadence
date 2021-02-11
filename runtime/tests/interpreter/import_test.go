@@ -73,19 +73,25 @@ func TestInterpretVirtualImport(t *testing.T) {
 						)
 
 						return interpreter.VirtualImport{
-							Globals: map[string]interpreter.Value{
-								"Foo": &interpreter.CompositeValue{
-									Location:            location,
-									QualifiedIdentifier: "Foo",
-									Kind:                common.CompositeKindContract,
-									Functions: map[string]interpreter.FunctionValue{
-										"bar": interpreter.NewHostFunctionValue(
-											func(invocation interpreter.Invocation) trampoline.Trampoline {
-												return trampoline.Done{
-													Result: interpreter.NewIntValueFromInt64(42),
-												}
-											},
-										),
+							Globals: []struct {
+								Name  string
+								Value interpreter.Value
+							}{
+								{
+									Name: "Foo",
+									Value: &interpreter.CompositeValue{
+										Location:            location,
+										QualifiedIdentifier: "Foo",
+										Kind:                common.CompositeKindContract,
+										Functions: map[string]interpreter.FunctionValue{
+											"bar": interpreter.NewHostFunctionValue(
+												func(invocation interpreter.Invocation) trampoline.Trampoline {
+													return trampoline.Done{
+														Result: interpreter.NewIntValueFromInt64(42),
+													}
+												},
+											),
+										},
 									},
 								},
 							},

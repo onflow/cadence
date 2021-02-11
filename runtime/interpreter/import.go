@@ -27,7 +27,10 @@ type Import interface {
 // VirtualImport
 
 type VirtualImport struct {
-	Globals   map[string]Value
+	Globals []struct {
+		Name  string
+		Value Value
+	}
 	TypeCodes TypeCodes
 }
 
