@@ -2737,9 +2737,9 @@ func (e *InvalidPathDomainError) Error() string {
 func (*InvalidPathDomainError) isSemanticError() {}
 
 var validPathDomainDescription = func() string {
-	words := make([]string, 0, len(common.AllPathDomainsByIdentifier))
+	words := make([]string, 0, len(common.AllPathDomains))
 
-	for domain := range common.AllPathDomainsByIdentifier {
+	for _, domain := range common.AllPathDomains {
 		words = append(words, fmt.Sprintf("`%s`", domain))
 	}
 
