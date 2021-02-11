@@ -48,6 +48,8 @@ type memberIndices struct {
 	_functionsByIdentifier map[string]*FunctionDeclaration
 	// Use `CompositesByIdentifier()` instead
 	_compositesByIdentifier map[string]*CompositeDeclaration
+	// Use `InterfacesByIdentifier()` instead
+	_interfacesByIdentifier map[string]*InterfaceDeclaration
 	// Use `Interfaces()` instead
 	_interfaces []*InterfaceDeclaration
 	// Use `Composites()` instead
@@ -69,6 +71,11 @@ func (i *memberIndices) FunctionsByIdentifier(declarations []Declaration) map[st
 func (i *memberIndices) CompositesByIdentifier(declarations []Declaration) map[string]*CompositeDeclaration {
 	i.once.Do(i.initializer(declarations))
 	return i._compositesByIdentifier
+}
+
+func (i *memberIndices) InterfacesByIdentifier(declarations []Declaration) map[string]*InterfaceDeclaration {
+	i.once.Do(i.initializer(declarations))
+	return i._interfacesByIdentifier
 }
 
 func (i *memberIndices) Initializers(declarations []Declaration) []*SpecialFunctionDeclaration {
@@ -134,6 +141,8 @@ func (i *memberIndices) init(declarations []Declaration) {
 	i._compositesByIdentifier = make(map[string]*CompositeDeclaration)
 
 	i._interfaces = make([]*InterfaceDeclaration, 0)
+	i._interfacesByIdentifier = make(map[string]*InterfaceDeclaration)
+
 	i._enumCases = make([]*EnumCaseDeclaration, 0)
 
 	for _, declaration := range declarations {
@@ -158,6 +167,7 @@ func (i *memberIndices) init(declarations []Declaration) {
 
 		case *InterfaceDeclaration:
 			i._interfaces = append(i._interfaces, declaration)
+			i._interfacesByIdentifier[declaration.Identifier.Identifier] = declaration
 
 		case *CompositeDeclaration:
 			i._composites = append(i._composites, declaration)

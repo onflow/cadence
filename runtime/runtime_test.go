@@ -6192,8 +6192,9 @@ func TestContractUpdateValidation(t *testing.T) {
 
 		err := deployAndUpdate("Test1", oldCode, newCode)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(), "error: cannot update contract `Test1` in account 0x42: "+
-			"type annotation does not match for field `a` in `Test1`. expected `String`, found `Int`")
+		assert.Contains(t, err.Error(),
+			"cannot update contract `Test1` in account 0x42: mismatching field `a` in `Test1`: "+
+				"incompatible type annotations. expected `String`, found `Int`")
 	})
 
 	t.Run("add field", func(t *testing.T) {
@@ -6287,8 +6288,8 @@ func TestContractUpdateValidation(t *testing.T) {
 		err := deployAndUpdate("Test4", oldCode, newCode)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(),
-			"cannot update contract `Test4` in account 0x42: type annotation does not "+
-				"match for field `b` in `TestResource`. expected `Int`, found `String`")
+			"cannot update contract `Test4` in account 0x42: mismatching field `b` in `TestResource`: "+
+				"incompatible type annotations. expected `Int`, found `String`")
 	})
 
 	t.Run("add field to nested decl", func(t *testing.T) {
@@ -6335,7 +6336,7 @@ func TestContractUpdateValidation(t *testing.T) {
 		err := deployAndUpdate("Test5", oldCode, newCode)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(),
-			"error: cannot update contract `Test5` in account 0x42: "+
+			"cannot update contract `Test5` in account 0x42: "+
 				"too many fields in `TestResource`. expected 1, found 2")
 	})
 
@@ -6383,8 +6384,8 @@ func TestContractUpdateValidation(t *testing.T) {
 		err := deployAndUpdate("Test6", oldCode, newCode)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(),
-			"cannot update contract `Test6` in account 0x42: type annotation does not match "+
-				"for field `b` in `TestStruct`. expected `Int`, found `String`")
+			"cannot update contract `Test6` in account 0x42: mismatching field `b` in `TestStruct`: "+
+				"incompatible type annotations. expected `Int`, found `String`")
 	})
 
 	t.Run("circular types refs", func(t *testing.T) {
@@ -6455,8 +6456,8 @@ func TestContractUpdateValidation(t *testing.T) {
 		err := deployAndUpdate("Test7", oldCode, newCode)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(),
-			"cannot update contract `Test7` in account 0x42: type annotation does not match "+
-				"for field `d` in `Bar`. expected `Bar?`, found `String`")
+			"cannot update contract `Test7` in account 0x42: mismatching field `d` in `Bar`: "+
+				"incompatible type annotations. expected `Bar?`, found `String`")
 	})
 
 	t.Run("qualified vs unqualified nominal type", func(t *testing.T) {
@@ -6566,8 +6567,8 @@ func TestContractUpdateValidation(t *testing.T) {
 		err = deployAndUpdate("Test9", oldCode, newCode)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(),
-			"cannot update contract `Test9` in account 0x42: type annotation does not match "+
-				"for field `x` in `Test9`. expected `Test9Import.TestStruct`, found `TestStruct`")
+			"cannot update contract `Test9` in account 0x42: mismatching field `x` in `Test9`: "+
+				"incompatible type annotations. expected `Test9Import.TestStruct`, found `TestStruct`")
 	})
 
 	t.Run("contract interface update", func(t *testing.T) {
@@ -6586,8 +6587,8 @@ func TestContractUpdateValidation(t *testing.T) {
 		err := deployAndUpdate("Test10", oldCode, newCode)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(),
-			"cannot update contract `Test10` in account 0x42: type annotation does not match "+
-				"for field `a` in `Test10`. expected `String`, found `Int`")
+			"cannot update contract `Test10` in account 0x42: mismatching field `a` in `Test10`: "+
+				"incompatible type annotations. expected `String`, found `Int`")
 	})
 
 	t.Run("convert interface to contract", func(t *testing.T) {
@@ -6615,7 +6616,7 @@ func TestContractUpdateValidation(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(),
 			"cannot update contract `Test11` in account 0x42: "+
-				"trying to convert a contract interface to a contract")
+				"trying to convert contract interface `Test11` to a contract")
 	})
 
 	t.Run("convert contract to interface", func(t *testing.T) {
@@ -6643,7 +6644,7 @@ func TestContractUpdateValidation(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(),
 			"cannot update contract `Test12` in account 0x42: "+
-				"trying to convert a contract to a contract interface")
+				"trying to convert contract `Test12` to a contract interface")
 	})
 
 	t.Run("change non stored", func(t *testing.T) {
@@ -6725,8 +6726,150 @@ func TestContractUpdateValidation(t *testing.T) {
 		// referred by anyone in the chain, and may cause data inconsistency.
 		require.Error(t, err)
 		assert.Contains(t, err.Error(),
-			"error: cannot update contract `Test13` in account 0x42: type annotation does not match "+
-				"for field `a` in `UnusedStruct`. expected `Int`, found `String`")
+			"cannot update contract `Test13` in account 0x42: mismatching field `a` in `UnusedStruct`: "+
+				"incompatible type annotations. expected `Int`, found `String`")
+	})
+
+	t.Run("change enum type", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test14 {
+
+				pub var x: Foo
+
+				init() {
+					self.x = Foo.up
+				}
+
+				pub enum Foo: UInt8 {
+					pub case up
+					pub case down
+				}
+			}`
+
+		const newCode = `
+			pub contract Test14 {
+
+				pub var x: Foo
+
+				init() {
+					self.x = Foo.up
+				}
+
+				pub enum Foo: UInt128 {
+					pub case up
+					pub case down
+				}
+			}`
+
+		err := deployAndUpdate("Test14", oldCode, newCode)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(),
+			"cannot update contract `Test14` in account 0x42: conformances does not match: "+
+				"incompatible type annotations. expected `UInt8`, found `UInt128`")
+	})
+
+	t.Run("change nested interface", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test15 {
+
+				pub var x: AnyStruct{TestStruct}?
+
+				init() {
+					self.x = nil
+				}
+
+				pub struct interface TestStruct {
+					pub let a: String
+					pub var b: Int
+				}
+			}`
+
+		const newCode = `
+			pub contract Test15 {
+
+				pub var x: AnyStruct{TestStruct}?
+
+				init() {
+					self.x = nil
+				}
+
+				pub struct interface TestStruct {
+					pub let a: Int
+					pub var b: Int
+				}
+			}`
+
+		err := deployAndUpdate("Test15", oldCode, newCode)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(),
+			"cannot update contract `Test15` in account 0x42: mismatching field `a` in `TestStruct`: "+
+				"incompatible type annotations. expected `String`, found `Int`")
+	})
+
+	t.Run("change nested interface to struct", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test16 {
+				pub struct interface TestStruct {
+					pub var a: Int
+				}
+			}`
+
+		const newCode = `
+			pub contract Test16 {
+				pub struct TestStruct {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		err := deployAndUpdate("Test16", oldCode, newCode)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(),
+			"cannot update contract `Test16` in account 0x42: trying to convert structure interface"+
+				" `TestStruct` to a structure")
+	})
+
+	t.Run("adding a nested struct", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test17 {
+			}`
+
+		const newCode = `
+			pub contract Test17 {
+				pub struct TestStruct {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		err := deployAndUpdate("Test17", oldCode, newCode)
+		require.NoError(t, err)
+	})
+
+	t.Run("removing a nested struct", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test18 {
+				pub struct TestStruct {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		const newCode = `
+			pub contract Test18 {
+			}`
+
+		err := deployAndUpdate("Test18", oldCode, newCode)
+		require.NoError(t, err)
 	})
 }
 
