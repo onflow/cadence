@@ -629,8 +629,8 @@ func defineLessThanOrTypeArgumentsExpression() {
 		})
 }
 
-// defineGreaterThanOrBitwiseRightShiftExpression parses 
-// the greater-than expression (operator `>`, e.g. `1 > 2`) 
+// defineGreaterThanOrBitwiseRightShiftExpression parses
+// the greater-than expression (operator `>`, e.g. `1 > 2`)
 // and the bitwise right shift expression (operator `>>`, e.g. `1 >> 3`).
 //
 // The `>>` operator consists of two `>` tokens, instead of one dedicated `>>` token,
@@ -804,10 +804,22 @@ func defineCastingExpression() {
 		},
 	)
 
-	for tokenType, operation := range map[lexer.TokenType]ast.Operation{
-		lexer.TokenAsExclamationMark: ast.OperationForceCast,
-		lexer.TokenAsQuestionMark:    ast.OperationFailableCast,
+	for _, tokenOperation := range []struct {
+		token     lexer.TokenType
+		operation ast.Operation
+	}{
+		{
+			token:     lexer.TokenAsExclamationMark,
+			operation: ast.OperationForceCast,
+		},
+		{
+			token:     lexer.TokenAsQuestionMark,
+			operation: ast.OperationFailableCast,
+		},
 	} {
+		operation := tokenOperation.operation
+		tokenType := tokenOperation.token
+
 		// Rebind operation, so the closure captures to current iteration's value,
 		// i.e. the next iteration doesn't override `operation`
 
