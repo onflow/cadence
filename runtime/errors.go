@@ -313,7 +313,7 @@ type ExtraneousFieldError struct {
 }
 
 func (e *ExtraneousFieldError) Error() string {
-	return fmt.Sprintf("found new field `%s` in `%s",
+	return fmt.Sprintf("found new field `%s` in `%s`",
 		e.fieldName,
 		e.declName,
 	)

@@ -6224,19 +6224,19 @@ func TestContractUpdateValidation(t *testing.T) {
 
 	t.Run("remove field", func(t *testing.T) {
 		const oldCode = `
-      		pub contract Test3 {
-          		pub var a: String
+			pub contract Test3 {
+				pub var a: String
 				pub var b: Int
 				init() {
 					self.a = "hello"
 					self.b = 0
 				}
-      		}`
+			}`
 
 		const newCode = `
 			pub contract Test3 {
 				pub var a: String
-				
+
 				init() {
 					self.a = "hello"
 				}
@@ -6871,6 +6871,30 @@ func TestContractUpdateValidation(t *testing.T) {
 		err := deployAndUpdate("Test18", oldCode, newCode)
 		require.NoError(t, err)
 	})
+
+	t.Run("add and remove field", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test19 {
+				pub var a: String
+				init() {
+					self.a = "hello"
+				}
+			}`
+
+		const newCode = `
+			pub contract Test19 {
+				pub var b: Int
+				init() {
+					self.b = 0
+				}
+			}`
+
+		err := deployAndUpdate("Test19", oldCode, newCode)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(),
+			"error: cannot update contract `Test19` in account 0x42: found new field `b` in `Test19`")
+	})
+
 }
 
 func getMockedRuntimeInterfaceForTxUpdate(

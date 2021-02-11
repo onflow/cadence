@@ -131,7 +131,16 @@ func (validator *ContractUpdateValidator) checkFields(
 	}
 
 	for _, newField := range newFields {
-		err := validator.checkField(newField, oldFields[newField.Identifier.Identifier])
+		oldField := oldFields[newField.Identifier.Identifier]
+		if oldField == nil {
+			return &ExtraneousFieldError{
+				declName:  newDeclaration.DeclarationIdentifier().Identifier,
+				fieldName: newField.Identifier.Identifier,
+				Range:     ast.NewRangeFromPositioned(newField.Identifier),
+			}
+		}
+
+		err := validator.checkField(newField, oldField)
 		if err != nil {
 			return err
 		}
@@ -146,13 +155,6 @@ func (validator *ContractUpdateValidator) checkField(
 ) error {
 
 	oldType := oldField.TypeAnnotation.Type
-	if oldType == nil {
-		return &ExtraneousFieldError{
-			declName:  newField.DeclarationIdentifier().Identifier,
-			fieldName: newField.Identifier.Identifier,
-			Range:     ast.NewRangeFromPositioned(newField.Identifier),
-		}
-	}
 
 	err := oldType.CheckEqual(newField.TypeAnnotation.Type, validator)
 	if err != nil {
