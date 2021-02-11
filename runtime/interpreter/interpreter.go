@@ -3300,10 +3300,10 @@ func (interpreter *Interpreter) ensureLoaded(
 		// If the imported location is a virtual import,
 		// prepare the interpreter
 
-		for name, value := range virtualImport.Globals {
-			variable := NewVariable(value)
-			subInterpreter.setVariable(name, variable)
-			subInterpreter.Globals[name] = variable
+		for _, global := range virtualImport.Globals {
+			variable := NewVariable(global.Value)
+			subInterpreter.setVariable(global.Name, variable)
+			subInterpreter.Globals[global.Name] = variable
 		}
 
 		subInterpreter.typeCodes.
