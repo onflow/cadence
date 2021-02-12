@@ -32,6 +32,7 @@ import (
 	"github.com/fxamacker/cbor/v2"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/sema"
 )
 
@@ -409,7 +410,7 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 	}
 
 	var entries map[string]Value
-	var deferred map[string]string
+	var deferred *orderedmap.StringStringOrderedMap
 	var deferredOwner *common.Address
 
 	// Are the values in the dictionary deferred, i.e. are they encoded
@@ -426,12 +427,13 @@ func (d *Decoder) decodeDictionary(v interface{}, path []string) (*DictionaryVal
 			)
 		}
 
-		deferred = make(map[string]string, keyCount)
+		deferred = orderedmap.NewStringStringOrderedMap()
 		entries = map[string]Value{}
 		deferredOwner = d.owner
 		for _, keyValue := range keys.Values {
 			key := dictionaryKey(keyValue)
-			deferred[key] = joinPath(append(path[:], dictionaryValuePathPrefix, key))
+			deferredStorageKey := joinPath(append(path[:], dictionaryValuePathPrefix, key))
+			deferred.Set(key, deferredStorageKey)
 		}
 
 	} else {

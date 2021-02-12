@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"math"
 	"math/big"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -32,6 +31,7 @@ import (
 	"golang.org/x/text/unicode/norm"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/errors"
 	"github.com/onflow/cadence/runtime/format"
 	"github.com/onflow/cadence/runtime/sema"
@@ -5677,10 +5677,10 @@ type DictionaryValue struct {
 	// stay stored in the deferred owner's account until the end of the transaction.
 	DeferredOwner *common.Address
 	// DeferredKeys are the keys which are deferred and have not been loaded from storage yet.
-	DeferredKeys map[string]string
+	DeferredKeys *orderedmap.StringStringOrderedMap
 	// prevDeferredKeys are the keys which are deferred and have been loaded from storage,
 	// i.e. they are keys that were previously in DeferredKeys.
-	prevDeferredKeys map[string]string
+	prevDeferredKeys *orderedmap.StringStringOrderedMap
 }
 
 func NewDictionaryValueUnownedNonCopying(keysAndValues ...Value) *DictionaryValue {
@@ -5829,13 +5829,8 @@ func (v *DictionaryValue) Destroy(inter *Interpreter, locationRange LocationRang
 		maybeDestroy(value)
 	}
 
-	if v.DeferredKeys != nil {
-		writeDeferredKeys(inter, *v.DeferredOwner, v.DeferredKeys)
-	}
-
-	if v.prevDeferredKeys != nil {
-		writeDeferredKeys(inter, *v.DeferredOwner, v.prevDeferredKeys)
-	}
+	writeDeferredKeys(inter, v.DeferredOwner, v.DeferredKeys)
+	writeDeferredKeys(inter, v.DeferredOwner, v.prevDeferredKeys)
 
 	return result
 }
@@ -5851,13 +5846,12 @@ func (v *DictionaryValue) Get(inter *Interpreter, _ LocationRange, keyValue Valu
 	// and keep it as an entry in memory
 
 	if v.DeferredKeys != nil {
-		storageKey, ok := v.DeferredKeys[key]
+		storageKey, ok := v.DeferredKeys.Delete(key)
 		if ok {
-			delete(v.DeferredKeys, key)
 			if v.prevDeferredKeys == nil {
-				v.prevDeferredKeys = map[string]string{}
+				v.prevDeferredKeys = orderedmap.NewStringStringOrderedMap()
 			}
-			v.prevDeferredKeys[key] = storageKey
+			v.prevDeferredKeys.Set(key, storageKey)
 
 			storedValue := inter.readStored(*v.DeferredOwner, storageKey, true)
 			v.Entries[key] = storedValue.(*SomeValue).Value
@@ -6010,7 +6004,7 @@ func (v *DictionaryValue) Remove(inter *Interpreter, locationRange LocationRange
 	// to make sure it is stored or destroyed later
 
 	if v.prevDeferredKeys != nil {
-		if storageKey, ok := v.prevDeferredKeys[key]; ok {
+		if storageKey, ok := v.prevDeferredKeys.Get(key); ok {
 			inter.writeStored(*v.DeferredOwner, storageKey, NilValue{})
 		}
 	}
@@ -6071,18 +6065,13 @@ func (v *DictionaryValue) Insert(inter *Interpreter, locationRange LocationRange
 	}
 }
 
-func writeDeferredKeys(inter *Interpreter, owner common.Address, keysToStorageKeys map[string]string) {
-	orderedStorageKeys := make([]string, 0, len(keysToStorageKeys))
-
-	// NOTE: iterate over the storage keys, i.e. the values of the map!
-	for _, storageKey := range keysToStorageKeys {
-		orderedStorageKeys = append(orderedStorageKeys, storageKey)
+func writeDeferredKeys(inter *Interpreter, owner *common.Address, keysToStorageKeys *orderedmap.StringStringOrderedMap) {
+	if keysToStorageKeys == nil {
+		return
 	}
 
-	sort.Strings(orderedStorageKeys)
-
-	for _, storageKey := range orderedStorageKeys { //nolint:maprange
-		inter.writeStored(owner, storageKey, NilValue{})
+	for pair := keysToStorageKeys.Oldest(); pair != nil; pair = pair.Next() {
+		inter.writeStored(*owner, pair.Value, NilValue{})
 	}
 }
 
