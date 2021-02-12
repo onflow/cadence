@@ -45,11 +45,12 @@ func NewStringTypeOrderedMap() *StringTypeOrderedMap {
 // Get returns the value associated with the given key.
 // Returns nil if not found.
 // The second return value indicates if the key is present in the map.
-func (om *StringTypeOrderedMap) Get(key string) (Type, bool) {
-	if pair, present := om.pairs[key]; present {
+func (om *StringTypeOrderedMap) Get(key string) (result Type, present bool) {
+	var pair *StringTypePair
+	if pair, present = om.pairs[key]; present {
 		return pair.Value, present
 	}
-	return nil, false
+	return
 }
 
 // GetPair returns the key-value pair associated with the given key.
@@ -60,33 +61,38 @@ func (om *StringTypeOrderedMap) GetPair(key string) *StringTypePair {
 
 // Set sets the key-value pair, and returns what `Get` would have returned
 // on that key prior to the call to `Set`.
-func (om *StringTypeOrderedMap) Set(key string, value Type) (Type, bool) {
-	if pair, present := om.pairs[key]; present {
-		oldValue := pair.Value
+func (om *StringTypeOrderedMap) Set(key string, value Type) (oldValue Type, present bool) {
+	var pair *StringTypePair
+	if pair, present = om.pairs[key]; present {
+		oldValue = pair.Value
 		pair.Value = value
-		return oldValue, true
+		return
 	}
 
-	pair := &StringTypePair{
+	pair = &StringTypePair{
 		Key:   key,
 		Value: value,
 	}
 	pair.element = om.list.PushBack(pair)
 	om.pairs[key] = pair
 
-	return nil, false
+	return
 }
 
 // Delete removes the key-value pair, and returns what `Get` would have returned
 // on that key prior to the call to `Delete`.
-func (om *StringTypeOrderedMap) Delete(key string) (Type, bool) {
-	if pair, present := om.pairs[key]; present {
-		om.list.Remove(pair.element)
-		delete(om.pairs, key)
-		return pair.Value, true
+func (om *StringTypeOrderedMap) Delete(key string) (oldValue Type, present bool) {
+	var pair *StringTypePair
+	pair, present = om.pairs[key]
+	if !present {
+		return
 	}
 
-	return nil, false
+	om.list.Remove(pair.element)
+	delete(om.pairs, key)
+	oldValue = pair.Value
+
+	return
 }
 
 // Len returns the length of the ordered map.
