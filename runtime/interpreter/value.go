@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math"
 	"math/big"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -5806,7 +5807,7 @@ func (v *DictionaryValue) SetModified(modified bool) {
 	v.modified = modified
 }
 
-func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
+func (v *DictionaryValue) Destroy(inter *Interpreter, locationRange LocationRange) trampoline.Trampoline {
 	var result trampoline.Trampoline = trampoline.Done{}
 
 	maybeDestroy := func(value interface{}) {
@@ -5817,23 +5818,23 @@ func (v *DictionaryValue) Destroy(interpreter *Interpreter, locationRange Locati
 
 		result = result.
 			FlatMap(func(_ interface{}) trampoline.Trampoline {
-				return destroyableValue.Destroy(interpreter, locationRange)
+				return destroyableValue.Destroy(inter, locationRange)
 			})
 	}
 
 	for _, keyValue := range v.Keys.Values {
 		// Don't use `Entries` here: the value might be deferred and needs to be loaded
-		value := v.Get(interpreter, locationRange, keyValue)
+		value := v.Get(inter, locationRange, keyValue)
 		maybeDestroy(keyValue)
 		maybeDestroy(value)
 	}
 
-	for _, storageKey := range v.DeferredKeys {
-		interpreter.writeStored(*v.DeferredOwner, storageKey, NilValue{})
+	if v.DeferredKeys != nil {
+		writeDeferredKeys(inter, *v.DeferredOwner, v.DeferredKeys)
 	}
 
-	for _, storageKey := range v.prevDeferredKeys {
-		interpreter.writeStored(*v.DeferredOwner, storageKey, NilValue{})
+	if v.prevDeferredKeys != nil {
+		writeDeferredKeys(inter, *v.DeferredOwner, v.prevDeferredKeys)
 	}
 
 	return result
@@ -6067,6 +6068,21 @@ func (v *DictionaryValue) Insert(inter *Interpreter, locationRange LocationRange
 
 	default:
 		panic(errors.NewUnreachableError())
+	}
+}
+
+func writeDeferredKeys(inter *Interpreter, owner common.Address, keysToStorageKeys map[string]string) {
+	orderedStorageKeys := make([]string, 0, len(keysToStorageKeys))
+
+	// NOTE: iterate over the storage keys, i.e. the values of the map!
+	for _, storageKey := range keysToStorageKeys {
+		orderedStorageKeys = append(orderedStorageKeys, storageKey)
+	}
+
+	sort.Strings(orderedStorageKeys)
+
+	for _, storageKey := range orderedStorageKeys { //nolint:maprange
+		inter.writeStored(owner, storageKey, NilValue{})
 	}
 }
 
