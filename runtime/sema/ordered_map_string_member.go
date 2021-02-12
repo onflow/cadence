@@ -45,11 +45,12 @@ func NewStringMemberOrderedMap() *StringMemberOrderedMap {
 // Get returns the value associated with the given key.
 // Returns nil if not found.
 // The second return value indicates if the key is present in the map.
-func (om *StringMemberOrderedMap) Get(key string) (*Member, bool) {
-	if pair, present := om.pairs[key]; present {
+func (om *StringMemberOrderedMap) Get(key string) (result *Member, present bool) {
+	var pair *StringMemberPair
+	if pair, present = om.pairs[key]; present {
 		return pair.Value, present
 	}
-	return nil, false
+	return
 }
 
 // GetPair returns the key-value pair associated with the given key.
@@ -60,33 +61,38 @@ func (om *StringMemberOrderedMap) GetPair(key string) *StringMemberPair {
 
 // Set sets the key-value pair, and returns what `Get` would have returned
 // on that key prior to the call to `Set`.
-func (om *StringMemberOrderedMap) Set(key string, value *Member) (*Member, bool) {
-	if pair, present := om.pairs[key]; present {
-		oldValue := pair.Value
+func (om *StringMemberOrderedMap) Set(key string, value *Member) (oldValue *Member, present bool) {
+	var pair *StringMemberPair
+	if pair, present = om.pairs[key]; present {
+		oldValue = pair.Value
 		pair.Value = value
-		return oldValue, true
+		return
 	}
 
-	pair := &StringMemberPair{
+	pair = &StringMemberPair{
 		Key:   key,
 		Value: value,
 	}
 	pair.element = om.list.PushBack(pair)
 	om.pairs[key] = pair
 
-	return nil, false
+	return
 }
 
 // Delete removes the key-value pair, and returns what `Get` would have returned
 // on that key prior to the call to `Delete`.
-func (om *StringMemberOrderedMap) Delete(key string) (*Member, bool) {
-	if pair, present := om.pairs[key]; present {
-		om.list.Remove(pair.element)
-		delete(om.pairs, key)
-		return pair.Value, true
+func (om *StringMemberOrderedMap) Delete(key string) (oldValue *Member, present bool) {
+	var pair *StringMemberPair
+	pair, present = om.pairs[key]
+	if !present {
+		return
 	}
 
-	return nil, false
+	om.list.Remove(pair.element)
+	delete(om.pairs, key)
+	oldValue = pair.Value
+
+	return
 }
 
 // Len returns the length of the ordered map.
