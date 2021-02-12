@@ -671,7 +671,11 @@ func (e *Encoder) prepareDictionaryValue(
 
 		if deferred {
 
-			deferredStorageKey, isDeferred := v.DeferredKeys[key]
+			var deferredStorageKey string
+			var isDeferred bool
+			if v.DeferredKeys != nil {
+				deferredStorageKey, isDeferred = v.DeferredKeys.Get(key)
+			}
 
 			// If the value is not deferred, i.e. it is in memory,
 			// then it must be stored under a separate storage key

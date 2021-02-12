@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/common/orderedmap"
 	"github.com/onflow/cadence/runtime/sema"
 	"github.com/onflow/cadence/runtime/tests/utils"
 )
@@ -4076,6 +4077,10 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 		expected.modified = false
 		expected.Keys.modified = false
 
+		deferredKeys := orderedmap.NewStringStringOrderedMap()
+		deferredKeys.Set("test", "v\x1ftest")
+		deferredKeys.Set("true", "v\x1ftrue")
+
 		testEncodeDecode(t,
 			encodeDecodeTest{
 				deferred: true,
@@ -4110,10 +4115,7 @@ func TestEncodeDecodeDictionaryDeferred(t *testing.T) {
 					Keys:          expected.Keys,
 					Entries:       map[string]Value{},
 					DeferredOwner: &testOwner,
-					DeferredKeys: map[string]string{
-						"test": "v\x1ftest",
-						"true": "v\x1ftrue",
-					},
+					DeferredKeys:  deferredKeys,
 				},
 			},
 		)
