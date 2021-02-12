@@ -20,58 +20,79 @@ package runtime
 
 import (
 	"github.com/onflow/cadence/runtime/ast"
+	"github.com/onflow/cadence/runtime/interpreter"
 )
 
 type ContractUpdateValidator struct {
-	oldProgram     *ast.Program
-	newProgram     *ast.Program
-	newDeclaration ast.Declaration
-	currentDecl    ast.Declaration
-	visited        map[ast.Declaration]bool
+	location     Location
+	contractName string
+	oldProgram   *ast.Program
+	newProgram   *ast.Program
+	rootDecl     ast.Declaration
+	currentDecl  ast.Declaration
+	visited      map[ast.Declaration]bool
+	errors       []error
 }
 
 // ContractUpdateValidator should implement ast.TypeEqualityChecker
 var _ ast.TypeEqualityChecker = &ContractUpdateValidator{}
 
-func NewContractUpdateValidator(oldProgram *ast.Program, newProgram *ast.Program) *ContractUpdateValidator {
+func NewContractUpdateValidator(
+	location Location,
+	contractName string,
+	oldProgram *ast.Program,
+	newProgram *ast.Program,
+) *ContractUpdateValidator {
+
 	return &ContractUpdateValidator{
-		oldProgram: oldProgram,
-		newProgram: newProgram,
-		visited:    map[ast.Declaration]bool{},
+		location:     location,
+		oldProgram:   oldProgram,
+		newProgram:   newProgram,
+		contractName: contractName,
+		visited:      map[ast.Declaration]bool{},
 	}
 }
 
 func (validator *ContractUpdateValidator) Validate() error {
 	oldRootDecl, err := getRootDeclaration(validator.oldProgram)
 	if err != nil {
-		return err
+		validator.report(err)
+		return validator.getContractUpdateError()
 	}
 
 	newRootDecl, err := getRootDeclaration(validator.newProgram)
 	if err != nil {
-		return err
+		validator.report(err)
+		return validator.getContractUpdateError()
 	}
 
-	validator.newDeclaration = newRootDecl
+	validator.rootDecl = newRootDecl
+	validator.checkDeclarationUpdatability(oldRootDecl, newRootDecl)
 
-	return validator.checkDeclarationUpdatability(oldRootDecl, newRootDecl)
+	if len(validator.errors) == 0 {
+		return nil
+	}
+
+	return validator.getContractUpdateError()
 }
 
 func (validator *ContractUpdateValidator) checkDeclarationUpdatability(
 	oldDeclaration ast.Declaration,
 	newDeclaration ast.Declaration,
-) error {
+) {
 
 	// Do not allow converting between different types of composite declarations:
 	// e.g: - 'contracts' and 'contract-interfaces',
 	//      - 'structs' and 'enums'
 	if oldDeclaration.DeclarationKind() != newDeclaration.DeclarationKind() {
-		return &InvalidDeclarationKindChangeError{
+		validator.report(&InvalidDeclarationKindChangeError{
 			name:    oldDeclaration.DeclarationIdentifier().Identifier,
-			oldKind: oldDeclaration.DeclarationKind().Name(),
-			newKind: newDeclaration.DeclarationKind().Name(),
+			oldKind: oldDeclaration.DeclarationKind(),
+			newKind: newDeclaration.DeclarationKind(),
 			Range:   ast.NewRangeFromPositioned(newDeclaration),
-		}
+		})
+
+		return
 	}
 
 	parentDecl := validator.currentDecl
@@ -83,33 +104,22 @@ func (validator *ContractUpdateValidator) checkDeclarationUpdatability(
 	// If the same decl is already visited, then do not check again.
 	// This also avoids getting stuck on circular dependencies between composite decls.
 	if validator.visited[newDeclaration] {
-		return nil
+		return
 	}
 	validator.visited[newDeclaration] = true
 
-	err := validator.checkFields(oldDeclaration, newDeclaration)
-	if err != nil {
-		return err
-	}
+	validator.checkFields(oldDeclaration, newDeclaration)
 
-	err = validator.checkNestedDeclarations(oldDeclaration, newDeclaration)
-	if err != nil {
-		return err
-	}
+	validator.checkNestedDeclarations(oldDeclaration, newDeclaration)
 
 	switch newDecl := newDeclaration.(type) {
 	case *ast.CompositeDeclaration:
 		oldDecl := oldDeclaration.(*ast.CompositeDeclaration)
-		return validator.checkConformances(oldDecl, newDecl)
+		validator.checkConformances(oldDecl, newDecl)
 	}
-
-	return nil
 }
 
-func (validator *ContractUpdateValidator) checkFields(
-	oldDeclaration ast.Declaration,
-	newDeclaration ast.Declaration,
-) error {
+func (validator *ContractUpdateValidator) checkFields(oldDeclaration ast.Declaration, newDeclaration ast.Declaration) {
 
 	oldFields := oldDeclaration.DeclarationMembers().FieldsByIdentifier()
 	newFields := newDeclaration.DeclarationMembers().Fields()
@@ -119,59 +129,40 @@ func (validator *ContractUpdateValidator) checkFields(
 	// already-stored data. However, having less number of fields is fine for now. It will
 	// only leave some unused-data, and will not do any harm to the programs that are running.
 
-	// This is a fail-fast check.
-	if len(oldFields) < len(newFields) {
-		currentDeclName := newDeclaration.DeclarationIdentifier()
-		return &TooManyFieldsError{
-			declName:       currentDeclName.Identifier,
-			expectedFields: len(oldFields),
-			foundFields:    len(newFields),
-			Range:          ast.NewRangeFromPositioned(currentDeclName),
-		}
-	}
-
 	for _, newField := range newFields {
 		oldField := oldFields[newField.Identifier.Identifier]
 		if oldField == nil {
-			return &ExtraneousFieldError{
+			validator.report(&ExtraneousFieldError{
 				declName:  newDeclaration.DeclarationIdentifier().Identifier,
 				fieldName: newField.Identifier.Identifier,
 				Range:     ast.NewRangeFromPositioned(newField.Identifier),
-			}
+			})
+
+			continue
 		}
 
-		err := validator.checkField(newField, oldField)
-		if err != nil {
-			return err
-		}
+		validator.checkField(newField, oldField)
 	}
-
-	return nil
 }
 
-func (validator *ContractUpdateValidator) checkField(
-	newField *ast.FieldDeclaration,
-	oldField *ast.FieldDeclaration,
-) error {
-
-	oldType := oldField.TypeAnnotation.Type
-
-	err := oldType.CheckEqual(newField.TypeAnnotation.Type, validator)
-	if err != nil {
-		return &FieldMismatchError{
-			declName:  validator.currentDecl.DeclarationIdentifier().Identifier,
-			fieldName: newField.Identifier.Identifier,
-			err:       err,
-			Range:     ast.NewRangeFromPositioned(newField),
-		}
+func (validator *ContractUpdateValidator) checkField(newField *ast.FieldDeclaration, oldField *ast.FieldDeclaration) {
+	err := oldField.TypeAnnotation.Type.CheckEqual(newField.TypeAnnotation.Type, validator)
+	if err == nil {
+		return
 	}
-	return nil
+
+	validator.report(&FieldMismatchError{
+		declName:  validator.currentDecl.DeclarationIdentifier().Identifier,
+		fieldName: newField.Identifier.Identifier,
+		err:       err,
+		Range:     ast.NewRangeFromPositioned(newField),
+	})
 }
 
 func (validator *ContractUpdateValidator) checkNestedDeclarations(
 	oldDeclaration ast.Declaration,
 	newDeclaration ast.Declaration,
-) error {
+) {
 
 	oldNestedCompositeDecls := oldDeclaration.DeclarationMembers().CompositesByIdentifier()
 	oldNestedInterfaceDecls := oldDeclaration.DeclarationMembers().InterfacesByIdentifier()
@@ -198,10 +189,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 			continue
 		}
 
-		err := validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
-		if err != nil {
-			return err
-		}
+		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
 	}
 
 	newNestedInterfaces := newDeclaration.DeclarationMembers().Interfaces()
@@ -212,13 +200,8 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 			continue
 		}
 
-		err := validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
-		if err != nil {
-			return err
-		}
+		validator.checkDeclarationUpdatability(oldNestedDecl, newNestedDecl)
 	}
-
-	return nil
 }
 
 func (validator *ContractUpdateValidator) CheckNominalTypeEquality(expected *ast.NominalType, found ast.Type) error {
@@ -378,7 +361,7 @@ func (validator *ContractUpdateValidator) checkIdentifierEquality(
 
 	// If the first identifier (i.e: 'A') refers to a composite decl that is not the enclosing contract,
 	// then it must be referring to an imported contract. That means the two types are no longer the same.
-	if qualifiedNominalType.Identifier.Identifier != validator.newDeclaration.DeclarationIdentifier().Identifier {
+	if qualifiedNominalType.Identifier.Identifier != validator.rootDecl.DeclarationIdentifier().Identifier {
 		return false
 	}
 
@@ -392,30 +375,50 @@ func (validator *ContractUpdateValidator) checkIdentifierEquality(
 func (validator *ContractUpdateValidator) checkConformances(
 	oldEnum *ast.CompositeDeclaration,
 	newEnum *ast.CompositeDeclaration,
-) error {
+) {
 
 	oldConformances := oldEnum.Conformances
 	newConformances := newEnum.Conformances
 
 	if len(oldConformances) != len(newConformances) {
-		return &ConformanceCountMismatchError{
+		validator.report(&ConformanceCountMismatchError{
 			expected: len(oldConformances),
 			found:    len(newConformances),
 			Range:    ast.NewRangeFromPositioned(newEnum.Identifier),
-		}
+		})
+
+		// If the lengths are not the same, trying to match the conformance
+		// may result in too many regression errors. hence return.
+		return
 	}
 
 	for index, conformance := range oldConformances {
 		err := conformance.CheckEqual(newConformances[index], validator)
 		if err != nil {
-			return &ConformanceMismatchError{
-				err:   err,
-				Range: ast.NewRangeFromPositioned(conformance),
-			}
+			validator.report(&ConformanceMismatchError{
+				declName: newEnum.Identifier.Identifier,
+				err:      err,
+				Range:    ast.NewRangeFromPositioned(conformance),
+			})
 		}
 	}
+}
 
-	return nil
+func (validator *ContractUpdateValidator) report(err error) {
+	if err == nil {
+		return
+	}
+	validator.errors = append(validator.errors, err)
+}
+
+func (validator *ContractUpdateValidator) getContractUpdateError() error {
+	return &ContractUpdateError{
+		contractName: validator.contractName,
+		Errors:       validator.errors,
+		LocationRange: interpreter.LocationRange{
+			Location: validator.location,
+		},
+	}
 }
 
 func getTypeMismatchError(expectedType ast.Type, foundType ast.Type) *TypeMismatchError {

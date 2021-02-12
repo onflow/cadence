@@ -6192,9 +6192,9 @@ func TestContractUpdateValidation(t *testing.T) {
 
 		err := deployAndUpdate("Test1", oldCode, newCode)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(),
-			"cannot update contract `Test1` in account 0x42: mismatching field `a` in `Test1`: "+
-				"incompatible type annotations. expected `String`, found `Int`")
+
+		cause := getErrorCause(t, err, "Test1")
+		assertFieldTypeMismatchError(t, cause, "Test1", "a", "String", "Int")
 	})
 
 	t.Run("add field", func(t *testing.T) {
@@ -6218,8 +6218,9 @@ func TestContractUpdateValidation(t *testing.T) {
 
 		err := deployAndUpdate("Test2", oldCode, newCode)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(),
-			"cannot update contract `Test2` in account 0x42: too many fields in `Test2`. expected 1, found 2")
+
+		cause := getErrorCause(t, err, "Test2")
+		assertExtraneousFieldError(t, cause, "Test2", "b")
 	})
 
 	t.Run("remove field", func(t *testing.T) {
@@ -6287,9 +6288,9 @@ func TestContractUpdateValidation(t *testing.T) {
 
 		err := deployAndUpdate("Test4", oldCode, newCode)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(),
-			"cannot update contract `Test4` in account 0x42: mismatching field `b` in `TestResource`: "+
-				"incompatible type annotations. expected `Int`, found `String`")
+
+		cause := getErrorCause(t, err, "Test4")
+		assertFieldTypeMismatchError(t, cause, "TestResource", "b", "Int", "String")
 	})
 
 	t.Run("add field to nested decl", func(t *testing.T) {
@@ -6335,9 +6336,9 @@ func TestContractUpdateValidation(t *testing.T) {
 
 		err := deployAndUpdate("Test5", oldCode, newCode)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(),
-			"cannot update contract `Test5` in account 0x42: "+
-				"too many fields in `TestResource`. expected 1, found 2")
+
+		cause := getErrorCause(t, err, "Test5")
+		assertExtraneousFieldError(t, cause, "TestResource", "c")
 	})
 
 	t.Run("change indirect field type", func(t *testing.T) {
@@ -6383,9 +6384,9 @@ func TestContractUpdateValidation(t *testing.T) {
 
 		err := deployAndUpdate("Test6", oldCode, newCode)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(),
-			"cannot update contract `Test6` in account 0x42: mismatching field `b` in `TestStruct`: "+
-				"incompatible type annotations. expected `Int`, found `String`")
+
+		cause := getErrorCause(t, err, "Test6")
+		assertFieldTypeMismatchError(t, cause, "TestStruct", "b", "Int", "String")
 	})
 
 	t.Run("circular types refs", func(t *testing.T) {
@@ -6455,9 +6456,9 @@ func TestContractUpdateValidation(t *testing.T) {
 
 		err := deployAndUpdate("Test7", oldCode, newCode)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(),
-			"cannot update contract `Test7` in account 0x42: mismatching field `d` in `Bar`: "+
-				"incompatible type annotations. expected `Bar?`, found `String`")
+
+		cause := getErrorCause(t, err, "Test7")
+		assertFieldTypeMismatchError(t, cause, "Bar", "d", "Bar?", "String")
 	})
 
 	t.Run("qualified vs unqualified nominal type", func(t *testing.T) {
@@ -6566,9 +6567,9 @@ func TestContractUpdateValidation(t *testing.T) {
 
 		err = deployAndUpdate("Test9", oldCode, newCode)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(),
-			"cannot update contract `Test9` in account 0x42: mismatching field `x` in `Test9`: "+
-				"incompatible type annotations. expected `Test9Import.TestStruct`, found `TestStruct`")
+
+		cause := getErrorCause(t, err, "Test9")
+		assertFieldTypeMismatchError(t, cause, "Test9", "x", "Test9Import.TestStruct", "TestStruct")
 	})
 
 	t.Run("contract interface update", func(t *testing.T) {
@@ -6586,9 +6587,9 @@ func TestContractUpdateValidation(t *testing.T) {
 
 		err := deployAndUpdate("Test10", oldCode, newCode)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(),
-			"cannot update contract `Test10` in account 0x42: mismatching field `a` in `Test10`: "+
-				"incompatible type annotations. expected `String`, found `Int`")
+
+		cause := getErrorCause(t, err, "Test10")
+		assertFieldTypeMismatchError(t, cause, "Test10", "a", "String", "Int")
 	})
 
 	t.Run("convert interface to contract", func(t *testing.T) {
@@ -6614,9 +6615,15 @@ func TestContractUpdateValidation(t *testing.T) {
 
 		err := deployAndUpdate("Test11", oldCode, newCode)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(),
-			"cannot update contract `Test11` in account 0x42: "+
-				"trying to convert contract interface `Test11` to a contract")
+
+		cause := getErrorCause(t, err, "Test11")
+		assertDeclTypeChangeError(
+			t,
+			cause,
+			"Test11",
+			common.DeclarationKindContractInterface,
+			common.DeclarationKindContract,
+		)
 	})
 
 	t.Run("convert contract to interface", func(t *testing.T) {
@@ -6642,9 +6649,15 @@ func TestContractUpdateValidation(t *testing.T) {
 
 		err := deployAndUpdate("Test12", oldCode, newCode)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(),
-			"cannot update contract `Test12` in account 0x42: "+
-				"trying to convert contract `Test12` to a contract interface")
+
+		cause := getErrorCause(t, err, "Test12")
+		assertDeclTypeChangeError(
+			t,
+			cause,
+			"Test12",
+			common.DeclarationKindContract,
+			common.DeclarationKindContractInterface,
+		)
 	})
 
 	t.Run("change non stored", func(t *testing.T) {
@@ -6725,9 +6738,9 @@ func TestContractUpdateValidation(t *testing.T) {
 		// Changing unused public composite types should also fail, since those could be
 		// referred by anyone in the chain, and may cause data inconsistency.
 		require.Error(t, err)
-		assert.Contains(t, err.Error(),
-			"cannot update contract `Test13` in account 0x42: mismatching field `a` in `UnusedStruct`: "+
-				"incompatible type annotations. expected `Int`, found `String`")
+
+		cause := getErrorCause(t, err, "Test13")
+		assertFieldTypeMismatchError(t, cause, "UnusedStruct", "a", "Int", "String")
 	})
 
 	t.Run("change enum type", func(t *testing.T) {
@@ -6763,9 +6776,9 @@ func TestContractUpdateValidation(t *testing.T) {
 
 		err := deployAndUpdate("Test14", oldCode, newCode)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(),
-			"cannot update contract `Test14` in account 0x42: conformances does not match: "+
-				"incompatible type annotations. expected `UInt8`, found `UInt128`")
+
+		cause := getErrorCause(t, err, "Test14")
+		assertConformanceMismatchError(t, cause, "Foo", "UInt8", "UInt128")
 	})
 
 	t.Run("change nested interface", func(t *testing.T) {
@@ -6801,9 +6814,9 @@ func TestContractUpdateValidation(t *testing.T) {
 
 		err := deployAndUpdate("Test15", oldCode, newCode)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(),
-			"cannot update contract `Test15` in account 0x42: mismatching field `a` in `TestStruct`: "+
-				"incompatible type annotations. expected `String`, found `Int`")
+
+		cause := getErrorCause(t, err, "Test15")
+		assertFieldTypeMismatchError(t, cause, "TestStruct", "a", "String", "Int")
 	})
 
 	t.Run("change nested interface to struct", func(t *testing.T) {
@@ -6827,9 +6840,15 @@ func TestContractUpdateValidation(t *testing.T) {
 
 		err := deployAndUpdate("Test16", oldCode, newCode)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(),
-			"cannot update contract `Test16` in account 0x42: trying to convert structure interface"+
-				" `TestStruct` to a structure")
+
+		cause := getErrorCause(t, err, "Test16")
+		assertDeclTypeChangeError(
+			t,
+			cause,
+			"TestStruct",
+			common.DeclarationKindStructureInterface,
+			common.DeclarationKindStructure,
+		)
 	})
 
 	t.Run("adding a nested struct", func(t *testing.T) {
@@ -6891,10 +6910,224 @@ func TestContractUpdateValidation(t *testing.T) {
 
 		err := deployAndUpdate("Test19", oldCode, newCode)
 		require.Error(t, err)
-		assert.Contains(t, err.Error(),
-			"error: cannot update contract `Test19` in account 0x42: found new field `b` in `Test19`")
+
+		cause := getErrorCause(t, err, "Test19")
+		assertExtraneousFieldError(t, cause, "Test19", "b")
 	})
 
+	t.Run("multiple errors", func(t *testing.T) {
+		const oldCode = `
+			pub contract Test20 {
+				pub var a: String
+
+				init() {
+					self.a = "hello"
+				}
+
+				pub struct interface TestStruct {
+					pub var a: Int
+				}
+			}`
+
+		const newCode = `
+			pub contract Test20 {
+				pub var a: Int
+				pub var b: String
+
+				init() {
+					self.a = 0
+					self.b = "hello"
+				}
+
+				pub struct TestStruct {
+					pub let a: Int
+
+					init() {
+						self.a = 123
+					}
+				}
+			}`
+
+		err := deployAndUpdate("Test20", oldCode, newCode)
+		require.Error(t, err)
+
+		updateErr := getContractUpdateError(t, err)
+		require.NotNil(t, updateErr)
+		assert.Equal(t, fmt.Sprintf("cannot update contract `%s`", "Test20"), updateErr.Error())
+
+		childErrors := updateErr.ChildErrors()
+		require.Equal(t, 3, len(childErrors))
+
+		assertFieldTypeMismatchError(t, childErrors[0], "Test20", "a", "String", "Int")
+
+		assertExtraneousFieldError(t, childErrors[1], "Test20", "b")
+
+		assertDeclTypeChangeError(
+			t,
+			childErrors[2],
+			"TestStruct",
+			common.DeclarationKindStructureInterface,
+			common.DeclarationKindStructure,
+		)
+	})
+
+	t.Run("check error messages", func(t *testing.T) {
+		const oldCode = `
+            pub contract Test21 {
+                pub var a: String
+
+                init() {
+                    self.a = "hello"
+                }
+
+                pub struct interface TestStruct {
+                    pub var a: Int
+                }
+            }`
+
+		const newCode = `
+            pub contract Test21 {
+                pub var a: Int
+                pub var b: String
+
+                init() {
+                    self.a = 0
+                    self.b = "hello"
+                }
+
+                pub struct TestStruct {
+                    pub let a: Int
+
+                    init() {
+                        self.a = 123
+                    }
+                }
+            }`
+
+		err := deployAndUpdate("Test21", oldCode, newCode)
+		require.Error(t, err)
+
+		const expectedError = "error: mismatching field `a` in `Test21`\n" +
+			" --> 0000000000000042.Test21:3:16\n" +
+			"  |\n" +
+			"3 |                 pub var a: Int\n" +
+			"  |                 ^^^^^^^^^^^^^^ incompatible type annotations. expected `String`, found `Int`\n" +
+			"\n" +
+			"error: found new field `b` in `Test21`\n" +
+			" --> 0000000000000042.Test21:4:24\n" +
+			"  |\n" +
+			"4 |                 pub var b: String\n" +
+			"  |                         ^\n" +
+			"\n" +
+			"error: trying to convert structure interface `TestStruct` to a structure\n" +
+			"  --> 0000000000000042.Test21:11:16\n" +
+			"   |\n" +
+			"11 |                 pub struct TestStruct {\n" +
+			"   |                 ^"
+
+		require.Contains(t, err.Error(), expectedError)
+	})
+}
+
+func assertDeclTypeChangeError(
+	t *testing.T,
+	err error,
+	erroneousDeclName string,
+	oldKind common.DeclarationKind,
+	newKind common.DeclarationKind,
+) {
+
+	require.NotNil(t, err)
+	require.IsType(t, &InvalidDeclarationKindChangeError{}, err)
+	declTypeChangeError := err.(*InvalidDeclarationKindChangeError)
+	assert.Equal(
+		t,
+		fmt.Sprintf("trying to convert %s `%s` to a %s", oldKind.Name(), erroneousDeclName, newKind.Name()),
+		declTypeChangeError.Error(),
+	)
+}
+
+func assertExtraneousFieldError(t *testing.T, err error, erroneousDeclName string, fieldName string) {
+	require.NotNil(t, err)
+	require.IsType(t, &ExtraneousFieldError{}, err)
+	extraFieldError := err.(*ExtraneousFieldError)
+	assert.Equal(t, fmt.Sprintf("found new field `%s` in `%s`", fieldName, erroneousDeclName), extraFieldError.Error())
+}
+
+func assertFieldTypeMismatchError(
+	t *testing.T,
+	err error,
+	erroneousDeclName string,
+	fieldName string,
+	expectedType string,
+	foundType string,
+) {
+
+	require.NotNil(t, err)
+	require.IsType(t, &FieldMismatchError{}, err)
+	fieldMismatchError := err.(*FieldMismatchError)
+	assert.Equal(
+		t,
+		fmt.Sprintf("mismatching field `%s` in `%s`", fieldName, erroneousDeclName),
+		fieldMismatchError.Error(),
+	)
+
+	assert.IsType(t, &TypeMismatchError{}, fieldMismatchError.err)
+	assert.Equal(
+		t,
+		fmt.Sprintf("incompatible type annotations. expected `%s`, found `%s`", expectedType, foundType),
+		fieldMismatchError.err.Error(),
+	)
+}
+
+func assertConformanceMismatchError(
+	t *testing.T,
+	err error,
+	erroneousDeclName string,
+	expectedType string,
+	foundType string,
+) {
+
+	require.NotNil(t, err)
+	require.IsType(t, &ConformanceMismatchError{}, err)
+	conformanceMismatchError := err.(*ConformanceMismatchError)
+	assert.Equal(
+		t,
+		fmt.Sprintf("conformances does not match in `%s`", erroneousDeclName),
+		conformanceMismatchError.Error(),
+	)
+
+	assert.IsType(t, &TypeMismatchError{}, conformanceMismatchError.err)
+	assert.Equal(
+		t,
+		fmt.Sprintf("incompatible type annotations. expected `%s`, found `%s`", expectedType, foundType),
+		conformanceMismatchError.err.Error(),
+	)
+}
+
+func getErrorCause(t *testing.T, err error, contractName string) error {
+	updateErr := getContractUpdateError(t, err)
+	assert.Equal(t, fmt.Sprintf("cannot update contract `%s`", contractName), updateErr.Error())
+
+	require.Equal(t, 1, len(updateErr.ChildErrors()))
+	childError := updateErr.ChildErrors()[0]
+
+	return childError
+}
+
+func getContractUpdateError(t *testing.T, err error) *ContractUpdateError {
+	require.NotNil(t, err)
+	require.IsType(t, Error{}, err)
+	runtimeError := err.(Error)
+
+	require.IsType(t, interpreter.Error{}, runtimeError.Err)
+	interpreterError := runtimeError.Err.(interpreter.Error)
+
+	require.IsType(t, &InvalidContractDeploymentError{}, interpreterError.Err)
+	deploymentError := interpreterError.Err.(*InvalidContractDeploymentError)
+
+	require.IsType(t, &ContractUpdateError{}, deploymentError.Err)
+	return deploymentError.Err.(*ContractUpdateError)
 }
 
 func getMockedRuntimeInterfaceForTxUpdate(
