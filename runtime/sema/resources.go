@@ -135,7 +135,7 @@ func (ris *Resources) RemoveTemporaryMoveInvalidation(resource interface{}, inva
 	}
 
 	info := ris.resources[resource]
-	info.Invalidations.Delete(invalidation)
+	info.Invalidations.DeleteLocally(invalidation)
 	ris.resources[resource] = info
 }
 
