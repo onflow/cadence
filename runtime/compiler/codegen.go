@@ -207,6 +207,7 @@ var addFunctionType = &wasm.FunctionType{
 }
 
 func (codeGen *wasmCodeGen) addRuntimeImports() {
+	// NOTE: ensure to update the imports in the vm
 	codeGen.runtimeFunctionIndexInt = codeGen.addRuntimeImport("Int", constantFunctionType)
 	codeGen.runtimeFunctionIndexString = codeGen.addRuntimeImport("String", constantFunctionType)
 	codeGen.runtimeFunctionIndexAdd = codeGen.addRuntimeImport("add", addFunctionType)

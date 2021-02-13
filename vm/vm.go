@@ -125,6 +125,10 @@ func NewVM(wasm []byte) (VM, error) {
 		return leftNumber.Plus(rightNumber), nil
 	})
 
+	// NOTE: wasmtime currently does not support specifying imports by name,
+	// unlike other WebAssembly APIs like wasmer, JavaScript, etc.,
+	// i.e. imports are imported in the order they are given.
+
 	instance, err := wasmtime.NewInstance(
 		store,
 		module,
