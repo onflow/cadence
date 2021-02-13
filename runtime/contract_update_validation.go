@@ -30,13 +30,14 @@ type ContractUpdateValidator struct {
 	newProgram   *ast.Program
 	rootDecl     ast.Declaration
 	currentDecl  ast.Declaration
-	visited      map[ast.Declaration]bool
 	errors       []error
 }
 
 // ContractUpdateValidator should implement ast.TypeEqualityChecker
 var _ ast.TypeEqualityChecker = &ContractUpdateValidator{}
 
+// NewContractUpdateValidator initializes and returns a validator, without performing any validation.
+// Invoke the `Validate()` method of the validator returned, to start validating the contract.
 func NewContractUpdateValidator(
 	location Location,
 	contractName string,
@@ -49,31 +50,51 @@ func NewContractUpdateValidator(
 		oldProgram:   oldProgram,
 		newProgram:   newProgram,
 		contractName: contractName,
-		visited:      map[ast.Declaration]bool{},
 	}
 }
 
+// Validate validates the contract update, and returns an error if it is an invalid update.
 func (validator *ContractUpdateValidator) Validate() error {
-	oldRootDecl, err := getRootDeclaration(validator.oldProgram)
-	if err != nil {
-		validator.report(err)
+	oldRootDecl := validator.getRootDeclaration(validator.oldProgram)
+	if validator.hasErrors() {
 		return validator.getContractUpdateError()
 	}
 
-	newRootDecl, err := getRootDeclaration(validator.newProgram)
-	if err != nil {
-		validator.report(err)
+	newRootDecl := validator.getRootDeclaration(validator.newProgram)
+	if validator.hasErrors() {
 		return validator.getContractUpdateError()
 	}
 
 	validator.rootDecl = newRootDecl
 	validator.checkDeclarationUpdatability(oldRootDecl, newRootDecl)
 
-	if len(validator.errors) == 0 {
-		return nil
+	if validator.hasErrors() {
+		return validator.getContractUpdateError()
 	}
 
-	return validator.getContractUpdateError()
+	return nil
+}
+
+func (validator *ContractUpdateValidator) getRootDeclaration(program *ast.Program) ast.Declaration {
+	compositeDecl := program.SoleContractDeclaration()
+	if compositeDecl != nil {
+		return compositeDecl
+	}
+
+	interfaceDecl := program.SoleContractInterfaceDeclaration()
+	if interfaceDecl != nil {
+		return interfaceDecl
+	}
+
+	validator.report(&ContractNotFoundError{
+		Range: ast.NewRangeFromPositioned(program),
+	})
+
+	return nil
+}
+
+func (validator *ContractUpdateValidator) hasErrors() bool {
+	return len(validator.errors) > 0
 }
 
 func (validator *ContractUpdateValidator) checkDeclarationUpdatability(
@@ -100,13 +121,6 @@ func (validator *ContractUpdateValidator) checkDeclarationUpdatability(
 	defer func() {
 		validator.currentDecl = parentDecl
 	}()
-
-	// If the same decl is already visited, then do not check again.
-	// This also avoids getting stuck on circular dependencies between composite decls.
-	if validator.visited[newDeclaration] {
-		return
-	}
-	validator.visited[newDeclaration] = true
 
 	validator.checkFields(oldDeclaration, newDeclaration)
 
@@ -390,9 +404,9 @@ func (validator *ContractUpdateValidator) checkConformances(
 		return
 	}
 
-	for index, conformance := range oldConformances {
+	for index, oldConformance := range oldConformances {
 		newConformance := newConformances[index]
-		err := conformance.CheckEqual(newConformance, validator)
+		err := oldConformance.CheckEqual(newConformance, validator)
 		if err != nil {
 			validator.report(&ConformanceMismatchError{
 				declName: newEnum.Identifier.Identifier,
@@ -425,22 +439,6 @@ func getTypeMismatchError(expectedType ast.Type, foundType ast.Type) *TypeMismat
 		expectedType: expectedType,
 		foundType:    foundType,
 		Range:        ast.NewRangeFromPositioned(foundType),
-	}
-}
-
-func getRootDeclaration(program *ast.Program) (ast.Declaration, error) {
-	compositeDecl := program.SoleContractDeclaration()
-	if compositeDecl != nil {
-		return compositeDecl, nil
-	}
-
-	interfaceDecl := program.SoleContractInterfaceDeclaration()
-	if interfaceDecl != nil {
-		return interfaceDecl, nil
-	}
-
-	return nil, &ContractNotFoundError{
-		Range: ast.NewRangeFromPositioned(program),
 	}
 }
 

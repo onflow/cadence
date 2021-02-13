@@ -7037,7 +7037,7 @@ func assertDeclTypeChangeError(
 	newKind common.DeclarationKind,
 ) {
 
-	require.NotNil(t, err)
+	require.Error(t, err)
 	require.IsType(t, &InvalidDeclarationKindChangeError{}, err)
 	declTypeChangeError := err.(*InvalidDeclarationKindChangeError)
 	assert.Equal(
@@ -7048,7 +7048,7 @@ func assertDeclTypeChangeError(
 }
 
 func assertExtraneousFieldError(t *testing.T, err error, erroneousDeclName string, fieldName string) {
-	require.NotNil(t, err)
+	require.Error(t, err)
 	require.IsType(t, &ExtraneousFieldError{}, err)
 	extraFieldError := err.(*ExtraneousFieldError)
 	assert.Equal(t, fmt.Sprintf("found new field `%s` in `%s`", fieldName, erroneousDeclName), extraFieldError.Error())
@@ -7088,7 +7088,7 @@ func assertConformanceMismatchError(
 	foundType string,
 ) {
 
-	require.NotNil(t, err)
+	require.Error(t, err)
 	require.IsType(t, &ConformanceMismatchError{}, err)
 	conformanceMismatchError := err.(*ConformanceMismatchError)
 	assert.Equal(
@@ -7116,7 +7116,7 @@ func getErrorCause(t *testing.T, err error, contractName string) error {
 }
 
 func getContractUpdateError(t *testing.T, err error) *ContractUpdateError {
-	require.NotNil(t, err)
+	require.Error(t, err)
 	require.IsType(t, Error{}, err)
 	runtimeError := err.(Error)
 
