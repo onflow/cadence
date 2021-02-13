@@ -88,9 +88,12 @@ func (ris *ResourceInvalidations) Add(invalidation ResourceInvalidation) {
 	ris.invalidations[invalidation] = struct{}{}
 }
 
-// Delete removes the given resource invalidation from this set.
+// DeleteLocally removes the given resource invalidation from this current set.
 //
-func (ris *ResourceInvalidations) Delete(invalidation ResourceInvalidation) {
+// NOTE: the invalidation still might exist in a parent afterwards,
+// i.e. call to Contains might still return true!
+//
+func (ris *ResourceInvalidations) DeleteLocally(invalidation ResourceInvalidation) {
 	if ris.invalidations == nil {
 		return
 	}
