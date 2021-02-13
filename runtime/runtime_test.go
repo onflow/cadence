@@ -7063,7 +7063,7 @@ func assertFieldTypeMismatchError(
 	foundType string,
 ) {
 
-	require.NotNil(t, err)
+	require.Error(t, err)
 	require.IsType(t, &FieldMismatchError{}, err)
 	fieldMismatchError := err.(*FieldMismatchError)
 	assert.Equal(

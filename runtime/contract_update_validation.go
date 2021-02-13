@@ -112,10 +112,10 @@ func (validator *ContractUpdateValidator) checkDeclarationUpdatability(
 
 	validator.checkNestedDeclarations(oldDeclaration, newDeclaration)
 
-	switch newDecl := newDeclaration.(type) {
-	case *ast.CompositeDeclaration:
-		oldDecl := oldDeclaration.(*ast.CompositeDeclaration)
-		validator.checkConformances(oldDecl, newDecl)
+	if newDecl, ok := newDeclaration.(*ast.CompositeDeclaration); ok {
+		if oldDecl, ok := oldDeclaration.(*ast.CompositeDeclaration); ok {
+			validator.checkConformances(oldDecl, newDecl)
+		}
 	}
 }
 
@@ -141,22 +141,20 @@ func (validator *ContractUpdateValidator) checkFields(oldDeclaration ast.Declara
 			continue
 		}
 
-		validator.checkField(newField, oldField)
+		validator.checkField(oldField, newField)
 	}
 }
 
-func (validator *ContractUpdateValidator) checkField(newField *ast.FieldDeclaration, oldField *ast.FieldDeclaration) {
+func (validator *ContractUpdateValidator) checkField(oldField *ast.FieldDeclaration, newField *ast.FieldDeclaration) {
 	err := oldField.TypeAnnotation.Type.CheckEqual(newField.TypeAnnotation.Type, validator)
-	if err == nil {
-		return
+	if err != nil {
+		validator.report(&FieldMismatchError{
+			declName:  validator.currentDecl.DeclarationIdentifier().Identifier,
+			fieldName: newField.Identifier.Identifier,
+			err:       err,
+			Range:     ast.NewRangeFromPositioned(newField),
+		})
 	}
-
-	validator.report(&FieldMismatchError{
-		declName:  validator.currentDecl.DeclarationIdentifier().Identifier,
-		fieldName: newField.Identifier.Identifier,
-		err:       err,
-		Range:     ast.NewRangeFromPositioned(newField),
-	})
 }
 
 func (validator *ContractUpdateValidator) checkNestedDeclarations(
@@ -167,7 +165,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 	oldNestedCompositeDecls := oldDeclaration.DeclarationMembers().CompositesByIdentifier()
 	oldNestedInterfaceDecls := oldDeclaration.DeclarationMembers().InterfacesByIdentifier()
 
-	getCompositeOrInterfaceDecl := func(name string) (ast.Declaration, bool) {
+	getOldCompositeOrInterfaceDecl := func(name string) (ast.Declaration, bool) {
 		oldCompositeDecl := oldNestedCompositeDecls[name]
 		if oldCompositeDecl != nil {
 			return oldCompositeDecl, true
@@ -183,7 +181,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 
 	newNestedCompositeDecls := newDeclaration.DeclarationMembers().Composites()
 	for _, newNestedDecl := range newNestedCompositeDecls {
-		oldNestedDecl, found := getCompositeOrInterfaceDecl(newNestedDecl.Identifier.Identifier)
+		oldNestedDecl, found := getOldCompositeOrInterfaceDecl(newNestedDecl.Identifier.Identifier)
 		if !found {
 			// Then its a new declaration
 			continue
@@ -194,7 +192,7 @@ func (validator *ContractUpdateValidator) checkNestedDeclarations(
 
 	newNestedInterfaces := newDeclaration.DeclarationMembers().Interfaces()
 	for _, newNestedDecl := range newNestedInterfaces {
-		oldNestedDecl, found := getCompositeOrInterfaceDecl(newNestedDecl.Identifier.Identifier)
+		oldNestedDecl, found := getOldCompositeOrInterfaceDecl(newNestedDecl.Identifier.Identifier)
 		if !found {
 			// Then this is a new declaration.
 			continue
@@ -393,12 +391,13 @@ func (validator *ContractUpdateValidator) checkConformances(
 	}
 
 	for index, conformance := range oldConformances {
-		err := conformance.CheckEqual(newConformances[index], validator)
+		newConformance := newConformances[index]
+		err := conformance.CheckEqual(newConformance, validator)
 		if err != nil {
 			validator.report(&ConformanceMismatchError{
 				declName: newEnum.Identifier.Identifier,
 				err:      err,
-				Range:    ast.NewRangeFromPositioned(conformance),
+				Range:    ast.NewRangeFromPositioned(newConformance),
 			})
 		}
 	}
@@ -425,7 +424,7 @@ func getTypeMismatchError(expectedType ast.Type, foundType ast.Type) *TypeMismat
 	return &TypeMismatchError{
 		expectedType: expectedType,
 		foundType:    foundType,
-		Range:        ast.NewRangeFromPositioned(expectedType),
+		Range:        ast.NewRangeFromPositioned(foundType),
 	}
 }
 
