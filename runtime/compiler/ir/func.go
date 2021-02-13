@@ -30,6 +30,6 @@ func (f *Func) Accept(v Visitor) Repr {
 }
 
 type FuncType struct {
-	Params []ValType
-	Result ValType
+	Params  []ValType
+	Results []ValType
 }

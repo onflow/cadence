@@ -30,27 +30,3 @@ type Module struct {
 	StartFunctionIndex *uint32
 	Data               []*Data
 }
-
-type ModuleBuilder struct {
-	types     []*FunctionType
-	functions []*Function
-}
-
-func (b *ModuleBuilder) AddFunction(name string, functionType *FunctionType, code *Code) {
-	typeIndex := uint32(len(b.types))
-	b.types = append(b.types, functionType)
-	b.functions = append(b.functions,
-		&Function{
-			Name:      name,
-			TypeIndex: typeIndex,
-			Code:      code,
-		},
-	)
-}
-
-func (b *ModuleBuilder) Build() *Module {
-	return &Module{
-		Types:     b.types,
-		Functions: b.functions,
-	}
-}
