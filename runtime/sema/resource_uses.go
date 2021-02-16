@@ -28,7 +28,7 @@ type ResourceUse struct {
 
 type ResourceUses struct {
 	Parent    *ResourceUses
-	positions map[ast.Position]ResourceUse
+	positions *AstPositionResourceUseOrderedMap
 }
 
 // ForEach calls the given function for each resource use in the set.
@@ -40,10 +40,15 @@ func (rus *ResourceUses) ForEach(cb func(pos ast.Position, use ResourceUse) erro
 
 	for resourceUses != nil {
 
-		for pos, use := range resourceUses.positions {
-			err := cb(pos, use)
-			if err != nil {
-				return err
+		if resourceUses.positions != nil {
+			for pair := resourceUses.positions.Oldest(); pair != nil; pair = pair.Next() {
+				pos := pair.Key
+				use := pair.Value
+
+				err := cb(pos, use)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -57,7 +62,7 @@ func (rus *ResourceUses) ForEach(cb func(pos ast.Position, use ResourceUse) erro
 //
 func (rus ResourceUses) Contains(pos ast.Position) bool {
 	if rus.positions != nil {
-		_, ok := rus.positions[pos]
+		_, ok := rus.positions.Get(pos)
 		if ok {
 			return true
 		}
@@ -72,7 +77,7 @@ func (rus ResourceUses) Contains(pos ast.Position) bool {
 
 func (rus ResourceUses) getOrEmpty(pos ast.Position) ResourceUse {
 	if rus.positions != nil {
-		use, ok := rus.positions[pos]
+		use, ok := rus.positions.Get(pos)
 		if ok {
 			return use
 		}
@@ -92,9 +97,9 @@ func (rus *ResourceUses) Add(pos ast.Position) {
 		return
 	}
 	if rus.positions == nil {
-		rus.positions = map[ast.Position]ResourceUse{}
+		rus.positions = NewAstPositionResourceUseOrderedMap()
 	}
-	rus.positions[pos] = ResourceUse{}
+	rus.positions.Set(pos, ResourceUse{})
 }
 
 // MarkUseAfterInvalidationReported marks the use after invalidation
@@ -104,9 +109,9 @@ func (rus *ResourceUses) MarkUseAfterInvalidationReported(pos ast.Position) {
 	use := rus.getOrEmpty(pos)
 	use.UseAfterInvalidationReported = true
 	if rus.positions == nil {
-		rus.positions = map[ast.Position]ResourceUse{}
+		rus.positions = NewAstPositionResourceUseOrderedMap()
 	}
-	rus.positions[pos] = use
+	rus.positions.Set(pos, use)
 }
 
 // IsUseAfterInvalidationReported returns true if the use after invalidation
@@ -120,7 +125,7 @@ func (rus ResourceUses) IsUseAfterInvalidationReported(pos ast.Position) bool {
 //
 func (rus *ResourceUses) Merge(other ResourceUses) {
 	if rus.positions == nil {
-		rus.positions = map[ast.Position]ResourceUse{}
+		rus.positions = NewAstPositionResourceUseOrderedMap()
 	}
 
 	_ = other.ForEach(func(pos ast.Position, use ResourceUse) error {
@@ -128,7 +133,7 @@ func (rus *ResourceUses) Merge(other ResourceUses) {
 			use.UseAfterInvalidationReported = rus.getOrEmpty(pos).UseAfterInvalidationReported
 		}
 
-		rus.positions[pos] = use
+		rus.positions.Set(pos, use)
 
 		// NOTE: when changing this function to return an error,
 		// also return it from the outer function,
@@ -140,7 +145,14 @@ func (rus *ResourceUses) Merge(other ResourceUses) {
 // Size returns the number of resource uses in this set.
 //
 func (rus ResourceUses) Size() int {
-	return len(rus.positions)
+	var size int
+	if rus.Parent != nil {
+		size = rus.Parent.Size()
+	}
+	if rus.positions == nil {
+		return size
+	}
+	return size + rus.positions.Len()
 }
 
 // Clone returns a new child resource use set that contains all entries of this parent set.
