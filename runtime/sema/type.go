@@ -23,6 +23,7 @@ import (
 	"math"
 	"math/big"
 	"strings"
+	"sync"
 
 	"github.com/onflow/cadence/fixedpoint"
 	"github.com/onflow/cadence/runtime/ast"
@@ -4755,7 +4756,8 @@ type CompositeType struct {
 	Identifier string
 	Kind       common.CompositeKind
 	// an internal set of field `ExplicitInterfaceConformances`
-	explicitInterfaceConformanceSet     InterfaceSet
+	explicitInterfaceConformanceSet     *InterfaceSet
+	explicitInterfaceConformanceSetOnce sync.Once
 	ExplicitInterfaceConformances       []*InterfaceType
 	ImplicitTypeRequirementConformances []*CompositeType
 	Members                             *StringMemberOrderedMap
@@ -4767,18 +4769,21 @@ type CompositeType struct {
 	EnumRawType           Type
 }
 
-func (t *CompositeType) ExplicitInterfaceConformanceSet() InterfaceSet {
-	if t.explicitInterfaceConformanceSet == nil {
+func (t *CompositeType) ExplicitInterfaceConformanceSet() *InterfaceSet {
+	t.initializeExplicitInterfaceConformanceSet()
+	return t.explicitInterfaceConformanceSet
+}
+
+func (t *CompositeType) initializeExplicitInterfaceConformanceSet() {
+	t.explicitInterfaceConformanceSetOnce.Do(func() {
 		// TODO: also include conformances' conformances recursively
 		//   once interface can have conformances
 
-		t.explicitInterfaceConformanceSet = make(InterfaceSet, len(t.ExplicitInterfaceConformances))
+		t.explicitInterfaceConformanceSet = NewInterfaceSet()
 		for _, conformance := range t.ExplicitInterfaceConformances {
 			t.explicitInterfaceConformanceSet.Add(conformance)
 		}
-	}
-
-	return t.explicitInterfaceConformanceSet
+	})
 }
 
 func (t *CompositeType) AddImplicitTypeRequirementConformance(typeRequirement *CompositeType) {
@@ -4846,13 +4851,14 @@ func (t *CompositeType) GetMembers() map[string]MemberResolver {
 	// However, if this composite type is a type requirement,
 	// it acts like an interface and does not have to declare members.
 
-	for conformance := range t.ExplicitInterfaceConformanceSet() {
-		for name, resolver := range conformance.GetMembers() {
-			if _, ok := members[name]; !ok {
-				members[name] = resolver
+	t.ExplicitInterfaceConformanceSet().
+		ForEach(func(conformance *InterfaceType) {
+			for name, resolver := range conformance.GetMembers() {
+				if _, ok := members[name]; !ok {
+					members[name] = resolver
+				}
 			}
-		}
-	}
+		})
 
 	return withBuiltinMembers(t, members)
 }
@@ -6993,11 +6999,8 @@ func IsSubType(subType Type, superType Type) bool {
 			}
 
 			// TODO: once interfaces can conform to interfaces, include
-			if _, ok := typedSubType.ExplicitInterfaceConformanceSet()[typedSuperType]; ok {
-				return true
-			}
-
-			return false
+			return typedSubType.ExplicitInterfaceConformanceSet().
+				Includes(typedSuperType)
 
 		case *InterfaceType:
 			// TODO: Once interfaces can conform to interfaces, check conformances here
@@ -7211,29 +7214,6 @@ func (t *TransactionType) Resolve(_ map[*TypeParameter]Type) Type {
 	return t
 }
 
-// InterfaceSet
-
-type InterfaceSet map[*InterfaceType]struct{}
-
-func (s InterfaceSet) IsSubsetOf(other InterfaceSet) bool {
-	for interfaceType := range s {
-		if _, ok := other[interfaceType]; !ok {
-			return false
-		}
-	}
-
-	return true
-}
-
-func (s InterfaceSet) Includes(interfaceType *InterfaceType) bool {
-	_, ok := s[interfaceType]
-	return ok
-}
-
-func (s InterfaceSet) Add(interfaceType *InterfaceType) {
-	s[interfaceType] = struct{}{}
-}
-
 // RestrictedType
 //
 // No restrictions implies the type is fully restricted,
@@ -7243,17 +7223,22 @@ type RestrictedType struct {
 	Type         Type
 	Restrictions []*InterfaceType
 	// an internal set of field `Restrictions`
-	restrictionSet InterfaceSet
+	restrictionSet     *InterfaceSet
+	restrictionSetOnce sync.Once
 }
 
-func (t *RestrictedType) RestrictionSet() InterfaceSet {
-	if t.restrictionSet == nil {
-		t.restrictionSet = make(InterfaceSet, len(t.Restrictions))
-		for _, restriction := range t.Restrictions {
-			t.restrictionSet[restriction] = struct{}{}
-		}
-	}
+func (t *RestrictedType) RestrictionSet() *InterfaceSet {
+	t.initializeRestrictionSet()
 	return t.restrictionSet
+}
+
+func (t *RestrictedType) initializeRestrictionSet() {
+	t.restrictionSetOnce.Do(func() {
+		t.restrictionSet = NewInterfaceSet()
+		for _, restriction := range t.Restrictions {
+			t.restrictionSet.Add(restriction)
+		}
+	})
 }
 
 func (*RestrictedType) IsType() {}
@@ -7308,8 +7293,7 @@ func (t *RestrictedType) Equal(other Type) bool {
 	restrictionSet := t.RestrictionSet()
 	otherRestrictionSet := otherRestrictedType.RestrictionSet()
 
-	count := len(restrictionSet)
-	if count != len(otherRestrictionSet) {
+	if restrictionSet.Len() != otherRestrictionSet.Len() {
 		return false
 	}
 
