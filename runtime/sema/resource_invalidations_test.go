@@ -61,6 +61,8 @@ func TestResourceInvalidations(t *testing.T) {
 	assert.False(t, resourceInvalidations.Contains(invalidationB))
 	assert.False(t, resourceInvalidations.Contains(invalidationC))
 
+	assert.Equal(t, 1, resourceInvalidations.Size())
+
 	var forEachResult []sema.ResourceInvalidation
 
 	err := resourceInvalidations.ForEach(func(invalidation sema.ResourceInvalidation) error {
@@ -86,6 +88,12 @@ func TestResourceInvalidations(t *testing.T) {
 	resourceInvalidations = &withB
 
 	// ... Assert state before
+
+	assert.True(t, resourceInvalidations.Contains(invalidationA))
+	assert.False(t, resourceInvalidations.Contains(invalidationB))
+	assert.False(t, resourceInvalidations.Contains(invalidationC))
+
+	assert.Equal(t, 1, resourceInvalidations.Size())
 
 	forEachResult = nil
 
@@ -116,6 +124,8 @@ func TestResourceInvalidations(t *testing.T) {
 	assert.True(t, resourceInvalidations.Contains(invalidationB))
 	assert.False(t, resourceInvalidations.Contains(invalidationC))
 
+	assert.Equal(t, 2, resourceInvalidations.Size())
+
 	forEachResult = nil
 
 	err = resourceInvalidations.ForEach(func(invalidation sema.ResourceInvalidation) error {
@@ -142,6 +152,12 @@ func TestResourceInvalidations(t *testing.T) {
 	resourceInvalidations = &withC
 
 	// ... Assert state before
+
+	assert.True(t, resourceInvalidations.Contains(invalidationA))
+	assert.True(t, resourceInvalidations.Contains(invalidationB))
+	assert.False(t, resourceInvalidations.Contains(invalidationC))
+
+	assert.Equal(t, 2, resourceInvalidations.Size())
 
 	forEachResult = nil
 
@@ -174,6 +190,8 @@ func TestResourceInvalidations(t *testing.T) {
 	assert.True(t, resourceInvalidations.Contains(invalidationB))
 	assert.True(t, resourceInvalidations.Contains(invalidationC))
 
+	assert.Equal(t, 3, resourceInvalidations.Size())
+
 	forEachResult = nil
 
 	err = resourceInvalidations.ForEach(func(invalidation sema.ResourceInvalidation) error {
@@ -203,6 +221,8 @@ func TestResourceInvalidations(t *testing.T) {
 	assert.True(t, resourceInvalidations.Contains(invalidationB))
 	assert.False(t, resourceInvalidations.Contains(invalidationC))
 
+	assert.Equal(t, 2, resourceInvalidations.Size())
+
 	forEachResult = nil
 
 	err = resourceInvalidations.ForEach(func(invalidation sema.ResourceInvalidation) error {
@@ -230,6 +250,8 @@ func TestResourceInvalidations(t *testing.T) {
 	assert.True(t, resourceInvalidations.Contains(invalidationA))
 	assert.False(t, resourceInvalidations.Contains(invalidationB))
 	assert.False(t, resourceInvalidations.Contains(invalidationC))
+
+	assert.Equal(t, 1, resourceInvalidations.Size())
 
 	forEachResult = nil
 
