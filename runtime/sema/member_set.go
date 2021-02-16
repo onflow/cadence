@@ -22,30 +22,35 @@ package sema
 //
 type MemberSet struct {
 	Parent  *MemberSet
-	members map[*Member]struct{}
+	members *MemberStructOrderedMap
 }
 
 // NewMemberSet returns an empty member set.
 //
 func NewMemberSet(parent *MemberSet) *MemberSet {
 	return &MemberSet{
-		members: map[*Member]struct{}{},
-		Parent:  parent,
+		Parent: parent,
 	}
 }
 
 // Add inserts a member into the set.
 //
 func (ms *MemberSet) Add(member *Member) {
-	ms.members[member] = struct{}{}
+	if ms.members == nil {
+		ms.members = NewMemberStructOrderedMap()
+	}
+
+	ms.members.Set(member, struct{}{})
 }
 
 // Contains returns true if the given member exists in the set.
 //
 func (ms *MemberSet) Contains(member *Member) bool {
-	_, ok := ms.members[member]
-	if ok {
-		return true
+	if ms.members != nil {
+		_, ok := ms.members.Get(member)
+		if ok {
+			return true
+		}
 	}
 
 	if ms.Parent != nil {
@@ -65,17 +70,21 @@ func (ms *MemberSet) ForEach(cb func(member *Member) error) error {
 
 	for memberSet != nil {
 
-		for member := range memberSet.members {
-			if visited[member] {
-				continue
-			}
+		if memberSet.members != nil {
+			for pair := memberSet.members.Oldest(); pair != nil; pair = pair.Next() {
+				member := pair.Key
 
-			err := cb(member)
-			if err != nil {
-				return err
-			}
+				if visited[member] {
+					continue
+				}
 
-			visited[member] = true
+				err := cb(member)
+				if err != nil {
+					return err
+				}
+
+				visited[member] = true
+			}
 		}
 
 		memberSet = memberSet.Parent
