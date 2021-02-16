@@ -331,17 +331,27 @@ func (validator *ContractUpdateValidator) CheckInstantiationTypeEquality(expecte
 	return nil
 }
 
-func (validator *ContractUpdateValidator) CheckFunctionTypeEquality(funcType *ast.FunctionType, _ ast.Type) error {
+func (validator *ContractUpdateValidator) CheckFunctionTypeEquality(expected *ast.FunctionType, found ast.Type) error {
+	_, ok := found.(*ast.FunctionType)
+	if !ok {
+		return getTypeMismatchError(expected, found)
+	}
+
 	return &InvalidNonStorableTypeUsageError{
-		nonStorableType: funcType,
-		Range:           ast.NewRangeFromPositioned(funcType),
+		nonStorableType: found,
+		Range:           ast.NewRangeFromPositioned(found),
 	}
 }
 
-func (validator *ContractUpdateValidator) CheckReferenceTypeEquality(refType *ast.ReferenceType, _ ast.Type) error {
+func (validator *ContractUpdateValidator) CheckReferenceTypeEquality(expected *ast.ReferenceType, found ast.Type) error {
+	_, ok := found.(*ast.ReferenceType)
+	if !ok {
+		return getTypeMismatchError(expected, found)
+	}
+
 	return &InvalidNonStorableTypeUsageError{
-		nonStorableType: refType,
-		Range:           ast.NewRangeFromPositioned(refType),
+		nonStorableType: found,
+		Range:           ast.NewRangeFromPositioned(found),
 	}
 }
 
