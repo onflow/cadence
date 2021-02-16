@@ -20,7 +20,7 @@ package sema
 
 type ResourceInvalidations struct {
 	Parent        *ResourceInvalidations
-	invalidations map[ResourceInvalidation]struct{}
+	invalidations *ResourceInvalidationStructOrderedMap
 }
 
 // ForEach calls the given function for each resource invalidation in the set.
@@ -32,10 +32,14 @@ func (ris *ResourceInvalidations) ForEach(cb func(invalidation ResourceInvalidat
 
 	for resourceInvalidations != nil {
 
-		for invalidation := range resourceInvalidations.invalidations {
-			err := cb(invalidation)
-			if err != nil {
-				return err
+		if resourceInvalidations.invalidations != nil {
+			for pair := resourceInvalidations.invalidations.Oldest(); pair != nil; pair = pair.Next() {
+				invalidation := pair.Key
+
+				err := cb(invalidation)
+				if err != nil {
+					return err
+				}
 			}
 		}
 
@@ -49,7 +53,7 @@ func (ris *ResourceInvalidations) ForEach(cb func(invalidation ResourceInvalidat
 //
 func (ris ResourceInvalidations) Contains(invalidation ResourceInvalidation) bool {
 	if ris.invalidations != nil {
-		_, ok := ris.invalidations[invalidation]
+		_, ok := ris.invalidations.Get(invalidation)
 		if ok {
 			return true
 		}
@@ -83,9 +87,9 @@ func (ris *ResourceInvalidations) Add(invalidation ResourceInvalidation) {
 		return
 	}
 	if ris.invalidations == nil {
-		ris.invalidations = map[ResourceInvalidation]struct{}{}
+		ris.invalidations = NewResourceInvalidationStructOrderedMap()
 	}
-	ris.invalidations[invalidation] = struct{}{}
+	ris.invalidations.Set(invalidation, struct{}{})
 }
 
 // DeleteLocally removes the given resource invalidation from this current set.
@@ -97,7 +101,7 @@ func (ris *ResourceInvalidations) DeleteLocally(invalidation ResourceInvalidatio
 	if ris.invalidations == nil {
 		return
 	}
-	delete(ris.invalidations, invalidation)
+	ris.invalidations.Delete(invalidation)
 }
 
 // Merge adds the resource invalidations of the given set to this set.
@@ -116,7 +120,14 @@ func (ris *ResourceInvalidations) Merge(other ResourceInvalidations) {
 // Size returns the number of resource invalidations in this set.
 //
 func (ris ResourceInvalidations) Size() int {
-	return len(ris.invalidations)
+	var size int
+	if ris.Parent != nil {
+		size = ris.Parent.Size()
+	}
+	if ris.invalidations == nil {
+		return size
+	}
+	return size + ris.invalidations.Len()
 }
 
 // IsEmpty returns true if this set contains no resource invalidations.
