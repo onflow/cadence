@@ -22,3 +22,4 @@
 package orderedmap
 
 //go:generate go run github.com/cheekybits/genny -pkg=orderedmap -in=orderedmap.go -out=orderedmap_string_string.go gen "KeyType=string ValueType=string"
+//go:generate go run github.com/cheekybits/genny -pkg=orderedmap -in=orderedmap.go -out=orderedmap_string_interface.go gen "KeyType=string ValueType=interface{}"
